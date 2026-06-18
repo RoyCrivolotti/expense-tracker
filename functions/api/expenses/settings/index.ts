@@ -1,5 +1,5 @@
 import type { Env, ExpensesData } from '../../../_shared/env'
-import type { ExpenseSettings } from '../../../../src/types'
+import type { ExpenseSettings } from '../../../../src/domain/types'
 import { updateSettings } from '../../../_shared/dbConfig'
 import { json, readJson } from '../../../_shared/http'
 

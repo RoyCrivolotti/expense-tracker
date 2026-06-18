@@ -12,7 +12,7 @@
  * flags.
  */
 import { readFileSync, writeFileSync } from 'node:fs'
-import { parseWorkbookCsv } from '../src/data/parseWorkbookCsv'
+import { parseWorkbookCsv } from '../src/domain/data/parseWorkbookCsv'
 
 /** The seed file belongs to Roy; matches the backfill in 0003_multi_user.sql. */
 const OWNER = 'owner@example.com'

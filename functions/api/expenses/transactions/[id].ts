@@ -1,5 +1,5 @@
 import type { Env, ExpensesData } from '../../../_shared/env'
-import type { NewTransaction } from '../../../../src/data/dataSource'
+import type { NewTransaction } from '../../../../src/domain/data/dataSource'
 import { deleteTransaction, updateTransaction } from '../../../_shared/dbWrite'
 import { HttpError, json, readJson } from '../../../_shared/http'
 

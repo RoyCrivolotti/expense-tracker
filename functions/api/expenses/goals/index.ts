@@ -1,5 +1,5 @@
 import type { Env, ExpensesData } from '../../../_shared/env'
-import type { GoalInputs } from '../../../../src/types'
+import type { GoalInputs } from '../../../../src/domain/types'
 import { updateGoals } from '../../../_shared/dbConfig'
 import { json, readJson } from '../../../_shared/http'
 

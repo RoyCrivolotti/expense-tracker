@@ -7,7 +7,7 @@ import type {
   GoalInputs,
   StoredTransaction,
   TxnType,
-} from '../../src/types'
+} from '../../src/domain/types'
 
 export interface CategoryRow {
   id: number

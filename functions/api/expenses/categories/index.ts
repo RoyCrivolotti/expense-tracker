@@ -1,5 +1,5 @@
 import type { Env, ExpensesData } from '../../../_shared/env'
-import type { NewCategory } from '../../../../src/data/dataSource'
+import type { NewCategory } from '../../../../src/domain/data/dataSource'
 import { createCategory } from '../../../_shared/dbConfig'
 import { HttpError, json, readJson } from '../../../_shared/http'
 
