@@ -28,7 +28,7 @@ jobs:
         with:
           node-version: '22'
 
-      - run: npm install --no-workspaces
+      - run: rm -f package-lock.json && npm install --no-workspaces
       - run: npm run verify
 
   deploy:
@@ -47,7 +47,7 @@ jobs:
         with:
           node-version: '22'
 
-      - run: npm install --no-workspaces
+      - run: rm -f package-lock.json && npm install --no-workspaces
 
       - name: Sync allowed users (Access + ALLOWED_EMAILS)
         env:
