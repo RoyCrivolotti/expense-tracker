@@ -13,6 +13,7 @@ export default defineConfig([
     'private/static/legacy',
     'private/content',
     'coverage',
+    'site-ui/**',
   ]),
   {
     files: ['**/*.{ts,tsx}'],
