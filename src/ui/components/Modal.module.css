@@ -1,0 +1,76 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: fade 0.15s ease;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+.sheet {
+  width: 100%;
+  max-width: 30rem;
+  max-height: 92dvh;
+  overflow-y: auto;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 1.25rem 1.25rem 0 0;
+  padding: 1rem 1.1rem calc(1.1rem + env(safe-area-inset-bottom, 0));
+  animation: slide-up 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+.header h2 {
+  font-size: 1.05rem;
+  margin: 0;
+}
+.close {
+  width: 1.7rem;
+  height: 1.7rem;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.body {
+  display: block;
+}
+
+@media (min-width: 560px) {
+  .overlay {
+    align-items: center;
+  }
+  .sheet {
+    border-radius: 1.25rem;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes slide-up {
+  from {
+    transform: translateY(2rem);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

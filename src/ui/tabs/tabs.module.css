@@ -1,0 +1,193 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+}
+
+.analyticsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.analyticsSection + .analyticsSection {
+  margin-top: 2.5rem;
+  padding-top: 0.25rem;
+}
+
+.analyticsSection:first-child > :first-child {
+  margin-top: 0;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.sectionHeader > :first-child {
+  margin-right: auto;
+}
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem 0.75rem;
+}
+@media (min-width: 560px) {
+  .kpiGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+.filterTop {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+.selectBtn {
+  flex: none;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.7rem;
+  background: var(--color-bg);
+  color: var(--color-accent);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.search,
+.selectRow select {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.7rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.9rem;
+}
+.filterTop .search {
+  flex: 1;
+  min-width: 0;
+}
+.selectRow {
+  display: flex;
+  gap: 0.6rem;
+}
+.selectRow select {
+  flex: 1;
+}
+
+.defaultAccountField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.defaultAccountLabel {
+  font-size: 0.88rem;
+  color: var(--color-muted);
+}
+.defaultAccountSelect {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.7rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.resultSummary {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  padding: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.defRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0;
+  font-size: 0.92rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.defRow:last-child {
+  border-bottom: 0;
+}
+.defTotal {
+  font-weight: 680;
+}
+
+.dataHint {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin: 0 0 0.8rem;
+}
+.importBtn {
+  width: 100%;
+  padding: 0.7rem;
+  border: 1px solid var(--color-accent);
+  border-radius: 0.7rem;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.importBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.batchBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--exp-bottom-bar) + env(safe-area-inset-bottom, 0px));
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--color-border);
+  font-size: 0.88rem;
+}
+.batchDelete {
+  padding: 0.55rem 0.9rem;
+  border: 0;
+  border-radius: 0.6rem;
+  background: var(--exp-expense, #e5484d);
+  color: #fff;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.batchDelete:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+@media (min-width: 768px) {
+  .batchBar {
+    bottom: 0;
+    max-width: var(--exp-max);
+    margin: 0 auto;
+    border-radius: 0.75rem 0.75rem 0 0;
+  }
+}

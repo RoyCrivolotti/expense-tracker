@@ -1,0 +1,9 @@
+node_modules/
+dist/
+content/
+site-ui/
+.DS_Store
+*.local
+.env
+.env.*
+!.env.example
