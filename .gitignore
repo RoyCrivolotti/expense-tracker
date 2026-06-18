@@ -7,3 +7,4 @@ site-ui/
 .env
 .env.*
 !.env.example
+site-ui/
