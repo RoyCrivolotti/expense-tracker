@@ -11,6 +11,7 @@ ALTER TABLE categories ADD COLUMN owner TEXT NOT NULL DEFAULT '';
 ALTER TABLE accounts ADD COLUMN owner TEXT NOT NULL DEFAULT '';
 ALTER TABLE transactions ADD COLUMN owner TEXT NOT NULL DEFAULT '';
 
+-- backfill placeholder; production used the real Access email at first deploy.
 UPDATE categories SET owner = 'owner@example.com';
 UPDATE accounts SET owner = 'owner@example.com';
 UPDATE transactions SET owner = 'owner@example.com';

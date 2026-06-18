@@ -3,29 +3,31 @@
 The **live app** at expenses.crivolotti.com stays private (Cloudflare Access). This
 doc covers whether the **source repo** can be made public.
 
-## Verdict: not ready without cleanup
+## Verdict: code-ready; history rewrite still required
 
-Architecture is sound enough to share as a template, but the git tree and history
-currently contain PII and personal financial fixtures.
+Application code, fixtures, and migrations in **HEAD** use placeholders. Git **history**
+may still contain earlier commits with PII until you run [HISTORY_REWRITE.md](./HISTORY_REWRITE.md).
 
-## Blockers before `gh repo edit --visibility public`
+## Checklist before `gh repo edit --visibility public`
 
-| Item | Location | Action |
-| --- | --- | --- |
-| Real email allowlist | `config/allowed-emails.json` | Gitignored; use `allowed-emails.example.json` + local file or `ALLOWED_EMAILS` secret in CI |
-| Emails in migration | `migrations/0003_multi_user.sql` | Redact to placeholder in a new migration doc; **git history still leaks** unless rewritten |
-| Seed script owner | `scripts/gen-seed-sql.ts` | Use `EXPENSE_OWNER` env (no hardcoded email) |
-| Personal finance in tests | `engine.test.ts`, parity test | Replace workbook-derived amounts with generic fixtures |
-| Cloudflare IDs | workflow + sync script | Move to secrets/env only |
-| Finance CSV | `content/` | Already gitignored |
+| Item | Status |
+| --- | --- |
+| Real email allowlist | Gitignored; `allowed-emails.example.json` + `ALLOWED_EMAILS` secret |
+| Migration backfill email | Placeholder `owner@example.com` in `0003_multi_user.sql` |
+| Seed script owner | `EXPENSE_OWNER` env required |
+| Personal finance in tests | Parity test skipped without local CSV |
+| Cloudflare account ID | Env var in CI; not a secret but scoped to your account |
+| Finance CSV | Gitignored under `content/` |
+| FK ownership on writes | Implemented + tested |
+| API write scoping tests | `functions/_shared/dbWrite.test.ts` |
+| Git history PII | Run history rewrite (see below) |
 
-## Safe to publish as-is
+## Safe to publish as-is (HEAD)
 
-- Application code and domain layer (no holdings/transactions in source)
-- Public hostnames in docs (not secrets)
+- Application code and domain layer
 - Test emails like `roy@example.com` in auth tests
+- Public hostnames in docs
 
-## Recommended even if staying private
+## After going public
 
-- FK ownership checks on API writes (`accountId` / `categoryId` scoped to owner)
-- API integration tests for auth middleware and owner scoping
+Keep the repo private on GitHub if you prefer; architecture is documented either way.
