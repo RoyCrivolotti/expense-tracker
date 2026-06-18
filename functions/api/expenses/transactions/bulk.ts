@@ -1,7 +1,7 @@
 import type { Env, ExpensesData } from '../../../_shared/env'
 import { deleteTransactions } from '../../../_shared/dbWrite'
 import { HttpError, json, readJson } from '../../../_shared/http'
-import { parseDeleteTransactionIds } from '../../../../src/data/transactionIds'
+import { parseDeleteTransactionIds } from '../../../../src/domain/data/transactionIds'
 
 interface BulkDeleteBody {
   ids: unknown

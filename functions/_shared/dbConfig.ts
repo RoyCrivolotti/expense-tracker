@@ -3,8 +3,8 @@ import type {
   Category,
   ExpenseSettings,
   GoalInputs,
-} from '../../src/types'
-import type { NewAccount, NewCategory } from '../../src/data/dataSource'
+} from '../../src/domain/types'
+import type { NewAccount, NewCategory } from '../../src/domain/data/dataSource'
 import type { Env } from './env'
 import { HttpError } from './http'
 import {

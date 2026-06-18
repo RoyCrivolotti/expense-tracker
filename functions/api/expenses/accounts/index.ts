@@ -1,5 +1,5 @@
 import type { Env, ExpensesData } from '../../../_shared/env'
-import type { NewAccount } from '../../../../src/data/dataSource'
+import type { NewAccount } from '../../../../src/domain/data/dataSource'
 import { createAccount } from '../../../_shared/dbConfig'
 import { HttpError, json, readJson } from '../../../_shared/http'
 

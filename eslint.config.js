@@ -16,6 +16,7 @@ export default defineConfig([
   ]),
   {
     files: ['**/*.{ts,tsx}'],
+    ignores: ['functions/**/*.test.ts'],
     extends: [
       js.configs.recommended,
       tseslint.configs.recommendedTypeChecked,
@@ -42,6 +43,17 @@ export default defineConfig([
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/consistent-type-imports': 'error',
+    },
+  },
+  {
+    files: ['functions/**/*.test.ts'],
+    extends: [js.configs.recommended, tseslint.configs.recommended],
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.node },
+    },
+    rules: {
+      'max-lines-per-function': 'off',
+      'max-lines': 'off',
     },
   },
   {
