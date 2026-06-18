@@ -8,36 +8,35 @@
 
 ## DreamHost DNS (one-time)
 
-Add a CNAME in the `crivolotti.com` zone:
-
 | Record name | Type | Target |
 | --- | --- | --- |
 | `expenses` | CNAME | `expense-tracker-3hq.pages.dev` |
 
-Then add **expenses.crivolotti.com** as a custom domain on the `expense-tracker` Pages project (Cloudflare dashboard → Workers & Pages → expense-tracker → Custom domains).
+Add **expenses.crivolotti.com** as a custom domain on the expense-tracker Pages project.
 
 ## Cloudflare Access
 
-Add **expenses.crivolotti.com** to the existing **roy-admin** Access application (Zero Trust → Access → Applications → roy-admin → add public hostname). Same Google allowlist as the admin hub.
+Add **expenses.crivolotti.com** to the **roy-admin** Access application (same Google allowlist as admin-hub).
 
 ## D1 + ALLOWED_EMAILS
 
-Bindings live on the **expense-tracker** Pages project (not roy-admin). Database name: `roy-expenses`.
+D1 binding lives on the **expense-tracker** Pages project. Database name: `roy-expenses`.
+
+**Local:** copy `config/allowed-emails.example.json` → `config/allowed-emails.json` (gitignored).
+
+**CI:** set GitHub secret `ALLOWED_EMAILS` (JSON array or comma-separated emails).
 
 ```bash
-# One-time: create Pages project + bind D1 (see Cloudflare API in repo history or dashboard)
-# Migrate binding OFF roy-admin ONTO expense-tracker when cut over.
-
-npm run sync:allowed-users   # reads config/allowed-emails.json
+npm run sync:allowed-users
 ```
 
 ## CI
 
-Push to `main` → verify + deploy **this repo only**. Copy `CLOUDFLARE_API_TOKEN` from the old monorepo secrets.
+Push to `main` → verify → `sync:allowed-users` → deploy.
+
+Secrets: `CLOUDFLARE_API_TOKEN`, `ALLOWED_EMAILS`.
 
 ## Migrations
-
-Add `migrations/NNNN_*.sql`, apply manually:
 
 ```bash
 npx wrangler d1 execute roy-expenses --remote --file=migrations/NNNN_name.sql
@@ -45,4 +44,8 @@ npx wrangler d1 execute roy-expenses --remote --file=migrations/NNNN_name.sql
 
 ## Old URL
 
-`https://roy-admin.crivolotti.com/expenses.html` redirects to this app (301 configured in admin-hub `_redirects`).
+`https://roy-admin.crivolotti.com/expenses` redirects here (301 in admin-hub `_redirects`).
+
+## Public repo?
+
+See [PUBLIC_READINESS.md](./PUBLIC_READINESS.md) before changing repository visibility.

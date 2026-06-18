@@ -4,7 +4,7 @@
  * - expense-tracker Pages ALLOWED_EMAILS (production + preview)
  * - Cloudflare Access allow policy on the roy-admin application (both hostnames)
  */
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
@@ -16,7 +16,27 @@ const ACCESS_APP_NAME = 'roy-admin'
 const DB_ID = '3dcefc85-e172-4fd0-a623-f2f15120c9d9'
 
 function loadEmails() {
-  const raw = JSON.parse(readFileSync(join(ROOT, 'config/allowed-emails.json'), 'utf8'))
+  const fromEnv = process.env.ALLOWED_EMAILS?.trim()
+  if (fromEnv) {
+    if (fromEnv.startsWith('[')) {
+      const raw = JSON.parse(fromEnv)
+      if (!Array.isArray(raw) || raw.length === 0) {
+        throw new Error('ALLOWED_EMAILS JSON must be a non-empty array')
+      }
+      return [...new Set(raw.map((e) => String(e).trim().toLowerCase()))]
+    }
+    const list = fromEnv.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+    if (list.length === 0) throw new Error('ALLOWED_EMAILS must list at least one email')
+    return [...new Set(list)]
+  }
+
+  const filePath = join(ROOT, 'config/allowed-emails.json')
+  if (!existsSync(filePath)) {
+    throw new Error(
+      'config/allowed-emails.json missing — copy allowed-emails.example.json or set ALLOWED_EMAILS',
+    )
+  }
+  const raw = JSON.parse(readFileSync(filePath, 'utf8'))
   if (!Array.isArray(raw) || raw.length === 0) {
     throw new Error('allowed-emails.json must be a non-empty array')
   }

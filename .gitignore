@@ -1,5 +1,6 @@
 node_modules/
 dist/
 content/
+config/allowed-emails.json
 site-ui/
 .DS_Store
