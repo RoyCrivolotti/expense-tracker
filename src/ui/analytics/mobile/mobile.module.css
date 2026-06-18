@@ -1,0 +1,119 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.tabBar {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  margin: 0 -0.25rem;
+  padding: 0 0.25rem;
+}
+
+.tabBar::-webkit-scrollbar {
+  display: none;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.monthCard {
+  background: var(--color-bg-subtle, color-mix(in srgb, var(--color-text) 4%, var(--color-bg)));
+  border: 1px solid var(--color-border);
+  border-radius: 0.85rem;
+  padding: 0.75rem 0.9rem;
+}
+
+.monthHeader {
+  font-weight: 650;
+  font-size: 0.88rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.3rem 0;
+  font-size: 0.88rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.row:last-child {
+  border-bottom: 0;
+}
+
+.rowLabel {
+  color: var(--color-text-muted);
+}
+
+.rowValue {
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Accordion */
+.accordion {
+  background: var(--color-bg-subtle, color-mix(in srgb, var(--color-text) 4%, var(--color-bg)));
+  border: 1px solid var(--color-border);
+  border-radius: 0.85rem;
+  overflow: hidden;
+}
+
+.accordionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 0.9rem;
+  width: 100%;
+  border: none;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 650;
+  font-size: 0.88rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.accordionBody {
+  padding: 0 0.9rem 0.75rem;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+}
+
+.badgeDanger {
+  background: color-mix(in srgb, var(--exp-danger) 16%, transparent);
+  color: var(--exp-danger);
+}
+
+.badgeSuccess {
+  background: color-mix(in srgb, var(--exp-success) 16%, transparent);
+  color: var(--exp-success);
+}
+
+.badgeMuted {
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  color: var(--color-text-muted);
+}

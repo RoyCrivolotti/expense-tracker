@@ -1,0 +1,81 @@
+/**
+ * Expense-tracker theme. Extends the shared design tokens (tokens.css) with
+ * semantic finance colours and a couple of layout variables. Scoped to the
+ * private expenses bundle; dark mode follows the OS unless overridden via
+ * Settings → Appearance (sets html[data-exp-theme]).
+ */
+:root {
+  --exp-income: #16a34a;
+  --exp-expense: #dc2626;
+  --exp-refund: #2563eb;
+  --exp-investment: #7c3aed;
+  --exp-success: #16a34a;
+  --exp-warning: #d97706;
+  --exp-danger: #dc2626;
+  --exp-track: #e7e7e2;
+
+  --exp-rail: 15rem;
+  --exp-rail-collapsed: 4.5rem;
+  --exp-bottom-bar: 4rem;
+  --exp-max: 56rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-exp-theme='light']) {
+    --exp-income: #4ade80;
+    --exp-expense: #f87171;
+    --exp-refund: #60a5fa;
+    --exp-investment: #c4b5fd;
+    --exp-success: #4ade80;
+    --exp-warning: #fbbf24;
+    --exp-danger: #f87171;
+    --exp-track: #2a2f38;
+  }
+}
+
+/* Manual overrides (Settings → Appearance). */
+html[data-exp-theme='light'] {
+  color-scheme: light;
+  --color-bg: #f7f7f5;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f0f0ee;
+  --color-text: #1a1a1a;
+  --color-text-muted: #5b5b5b;
+  --color-border: #e2e2dd;
+  --color-accent: #2e5e8c;
+  --color-accent-contrast: #ffffff;
+  --exp-income: #16a34a;
+  --exp-expense: #dc2626;
+  --exp-refund: #2563eb;
+  --exp-investment: #7c3aed;
+  --exp-success: #16a34a;
+  --exp-warning: #d97706;
+  --exp-danger: #dc2626;
+  --exp-track: #e7e7e2;
+}
+
+html[data-exp-theme='dark'] {
+  color-scheme: dark;
+  --color-bg: #0f1115;
+  --color-surface: #181b21;
+  --color-surface-muted: #20242c;
+  --color-text: #eef1f5;
+  --color-text-muted: #9aa3b0;
+  --color-border: #2a2f38;
+  --color-accent: #6fb1ff;
+  --color-accent-contrast: #0f1115;
+  --exp-income: #4ade80;
+  --exp-expense: #f87171;
+  --exp-refund: #60a5fa;
+  --exp-investment: #c4b5fd;
+  --exp-success: #4ade80;
+  --exp-warning: #fbbf24;
+  --exp-danger: #f87171;
+  --exp-track: #2a2f38;
+}
+
+.expRoot {
+  min-height: 100dvh;
+  background: var(--color-bg);
+  color: var(--color-text);
+}

@@ -1,0 +1,108 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.types {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.4rem;
+}
+.typeBtn {
+  padding: 0.5rem 0.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.6rem;
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.typeActive {
+  color: #fff;
+  border-color: transparent;
+}
+.typeActive[data-type='expense'] {
+  background: var(--exp-expense);
+}
+.typeActive[data-type='income'] {
+  background: var(--exp-income);
+}
+.typeActive[data-type='investment'] {
+  background: var(--exp-investment);
+}
+.typeActive[data-type='refund'] {
+  background: var(--exp-refund);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1;
+}
+.label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+.field input,
+.field select {
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.6rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.95rem;
+}
+.amount {
+  font-size: 1.4rem !important;
+  font-weight: 680;
+  font-variant-numeric: tabular-nums;
+}
+
+.row {
+  display: flex;
+  gap: 0.7rem;
+}
+
+.error {
+  color: var(--exp-danger);
+  font-size: 0.82rem;
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.3rem;
+}
+.save {
+  flex: 1;
+  padding: 0.8rem;
+  border: 0;
+  border-radius: 0.7rem;
+  background: var(--color-accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.save:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.delete {
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--exp-danger);
+  border-radius: 0.7rem;
+  background: none;
+  color: var(--exp-danger);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}

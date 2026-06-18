@@ -1,0 +1,106 @@
+.scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--color-text) 4%, var(--color-bg));
+}
+
+.table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.table th,
+.table td {
+  padding: 0.42rem 0.5rem;
+  text-align: right;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  background: color-mix(in srgb, var(--color-text) 7%, var(--color-bg));
+  font-weight: 650;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
+  z-index: 1;
+}
+
+/* First column = label, left-aligned and sticky for horizontal scroll. */
+.table th:first-child,
+.table td:first-child {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  background: var(--color-bg);
+  font-weight: 600;
+}
+.table thead th:first-child {
+  background: color-mix(in srgb, var(--color-text) 7%, var(--color-bg));
+  z-index: 2;
+}
+
+.table tbody tr:hover td {
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+.table tbody tr:hover td:first-child {
+  background: color-mix(in srgb, var(--color-text) 7%, var(--color-bg));
+}
+
+.totalRow td {
+  font-weight: 700;
+  border-top: 2px solid var(--color-border);
+  border-bottom: 0;
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+.pos {
+  color: var(--exp-income);
+}
+.neg {
+  color: var(--exp-expense);
+}
+.over {
+  color: var(--exp-danger);
+  font-weight: 650;
+}
+.warn {
+  color: var(--exp-warning);
+}
+.zero {
+  color: var(--color-text-muted);
+  opacity: 0.55;
+}
+
+.note {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  margin: 0 0 0.35rem;
+  line-height: 1.45;
+  max-width: 52rem;
+}
+
+.cashInput {
+  width: 5.5rem;
+  padding: 0.25rem 0.35rem;
+  text-align: right;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 0.4rem;
+}
+.cashInput:focus-visible {
+  outline: 2px solid var(--exp-income);
+  outline-offset: 1px;
+}
