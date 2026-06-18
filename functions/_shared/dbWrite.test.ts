@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
 import { insertTransaction, updateTransaction } from './dbWrite'
-import { HttpError } from './http'
 import type { Env } from './env'
 
 function envWith(first: unknown): Env {
