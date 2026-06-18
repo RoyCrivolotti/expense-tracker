@@ -12,7 +12,7 @@ Add a CNAME in the `crivolotti.com` zone:
 
 | Record name | Type | Target |
 | --- | --- | --- |
-| `expenses` | CNAME | `expense-tracker.pages.dev` |
+| `expenses` | CNAME | `expense-tracker-3hq.pages.dev` |
 
 Then add **expenses.crivolotti.com** as a custom domain on the `expense-tracker` Pages project (Cloudflare dashboard → Workers & Pages → expense-tracker → Custom domains).
 
