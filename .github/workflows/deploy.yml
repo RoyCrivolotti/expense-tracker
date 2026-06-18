@@ -52,6 +52,7 @@ jobs:
       - name: Sync allowed users (Access + ALLOWED_EMAILS)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ALLOWED_EMAILS: ${{ secrets.ALLOWED_EMAILS }}
         run: node scripts/sync-allowed-users.mjs
 
       - name: Deploy expense-tracker

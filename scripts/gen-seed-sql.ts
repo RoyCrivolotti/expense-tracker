@@ -14,8 +14,11 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { parseWorkbookCsv } from '../src/domain/data/parseWorkbookCsv'
 
-/** The seed file belongs to Roy; matches the backfill in 0003_multi_user.sql. */
-const OWNER = 'owner@example.com'
+/** Owner for seeded rows; set EXPENSE_OWNER for your environment. */
+const OWNER = process.env.EXPENSE_OWNER?.trim().toLowerCase()
+if (!OWNER) {
+  throw new Error('Set EXPENSE_OWNER to the Cloudflare Access email for seeded rows')
+}
 
 const dir = process.env.FINANCIAL_REVIEW_DIR
 if (!dir) throw new Error('Set FINANCIAL_REVIEW_DIR to the finance-review checkout')
