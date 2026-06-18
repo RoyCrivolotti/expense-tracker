@@ -13,6 +13,7 @@ import {
   type TxnRow,
 } from './rows'
 import { HttpError } from './http'
+import { assertOwnedAccount, assertOwnedCategory } from './ownership'
 
 async function deriveOne(env: Env, owner: string, stored: StoredTransaction): Promise<Transaction> {
   const acc = await env.DB.prepare('SELECT * FROM accounts WHERE id = ? AND owner = ?')
@@ -34,6 +35,8 @@ export async function insertTransaction(
   owner: string,
   input: NewTransaction,
 ): Promise<Transaction> {
+  await assertOwnedAccount(env, owner, input.accountId)
+  await assertOwnedCategory(env, owner, input.categoryId)
   const row = await env.DB.prepare(
     `INSERT INTO transactions
        (owner, date, budget_month, description, account_id, category_id, type, amount_cents, cancelled, notes)
@@ -81,6 +84,8 @@ export async function updateTransaction(
 ): Promise<Transaction> {
   const keys = (Object.keys(patch) as (keyof NewTransaction)[]).filter((k) => k in COLUMN)
   if (keys.length === 0) throw new HttpError(400, 'Empty patch')
+  if (patch.accountId != null) await assertOwnedAccount(env, owner, patch.accountId)
+  if (patch.categoryId != null) await assertOwnedCategory(env, owner, patch.categoryId)
   const sets = keys.map((k) => `${COLUMN[k]} = ?`).concat("updated_at = datetime('now')")
   const values = keys.map((k) => patchValue(k, patch[k]))
   const row = await env.DB.prepare(
@@ -115,6 +120,7 @@ export async function setStatementPaid(
   yearMonth: string,
   paid: boolean,
 ) {
+  await assertOwnedAccount(env, owner, accountId)
   const row = await env.DB.prepare(
     `INSERT INTO account_statements (owner, account_id, year_month, paid, paid_on)
      VALUES (?, ?, ?, ?, ?)
