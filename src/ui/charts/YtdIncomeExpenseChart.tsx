@@ -60,8 +60,9 @@ export function YtdIncomeExpenseChart({ model, month }: Props) {
 
   return (
     <figure className={styles.figure}>
-      <figcaption className={styles.caption}>
-        YTD income vs expenses ({year}) · net {formatCents(gap)}
+      <figcaption className={styles.captionSplit}>
+        <span className={styles.captionHeading}>YTD {year}</span>
+        <span className={styles.captionValue}>Net saving {formatCents(gap)}</span>
       </figcaption>
       <YtdLineChartView
         points={points}
