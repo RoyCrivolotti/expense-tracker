@@ -9,6 +9,7 @@ import { DefinitionsEditor } from '../definitions/DefinitionsEditor'
 import { AppearanceSetting } from '../settings/AppearanceSetting'
 import { DefaultAccountSetting } from '../settings/DefaultAccountSetting'
 import { ExportDataSection } from '../settings/ExportDataSection'
+import { AccessRequestsSetting } from '../settings/AccessRequestsSetting'
 import styles from './tabs.module.css'
 
 interface SettingsTabProps {
@@ -17,6 +18,7 @@ interface SettingsTabProps {
   actions?: ExpenseActions | undefined
   theme: ExpenseTheme
   onThemeChange: (next: ExpenseTheme) => void
+  ownerAccess?: { pendingCount: number } | undefined
 }
 
 function Definitions({ model }: { model: ExpenseModel }) {
@@ -83,9 +85,17 @@ function Definitions({ model }: { model: ExpenseModel }) {
   )
 }
 
-export function SettingsTab({ model, month, actions, theme, onThemeChange }: SettingsTabProps) {
+export function SettingsTab({
+  model,
+  month,
+  actions,
+  theme,
+  onThemeChange,
+  ownerAccess,
+}: SettingsTabProps) {
   return (
     <div className={styles.stack}>
+      {ownerAccess ? <AccessRequestsSetting pendingCount={ownerAccess.pendingCount} /> : null}
       <AppearanceSetting theme={theme} onChange={onThemeChange} />
 
       <SectionTitle>Export</SectionTitle>

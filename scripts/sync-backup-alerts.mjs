@@ -73,7 +73,6 @@ async function main() {
   if (!TOKEN) throw new Error('No Cloudflare token — set CLOUDFLARE_API_TOKEN or run wrangler login')
   const config = loadAlertConfig()
   await syncPagesEnv(config)
-  console.log('')
   console.log('Also required (one-time): enable Email Sending on your domain and bind EMAIL on this Pages project.')
 }
 

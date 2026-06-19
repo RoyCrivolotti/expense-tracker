@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Sync config/access.json + secrets to expense-tracker Pages env vars for access control.
+ * Sync config/access.json + OWNER_EMAIL to expense-tracker Pages env vars.
  */
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -14,14 +14,7 @@ const PAGES_PROJECT = 'expense-tracker'
 
 function loadAccessConfig() {
   const fromEnv = process.env.OWNER_EMAIL?.trim().toLowerCase()
-  if (fromEnv) {
-    return {
-      ownerEmail: fromEnv,
-      appOrigin: (process.env.APP_ORIGIN ?? 'https://expenses.crivolotti.com').trim(),
-      emailFrom: (process.env.ACCESS_EMAIL_FROM ?? process.env.BACKUP_ALERT_FROM ?? '').trim(),
-      emailFromName: (process.env.ACCESS_EMAIL_FROM_NAME ?? 'Expense tracker').trim(),
-    }
-  }
+  if (fromEnv) return { ownerEmail: fromEnv }
 
   const filePath = join(ROOT, 'config/access.json')
   if (!existsSync(filePath)) {
@@ -30,12 +23,7 @@ function loadAccessConfig() {
   const raw = JSON.parse(readFileSync(filePath, 'utf8'))
   const ownerEmail = String(raw.ownerEmail ?? '').trim().toLowerCase()
   if (!ownerEmail) throw new Error('access.json "ownerEmail" is required')
-  return {
-    ownerEmail,
-    appOrigin: String(raw.appOrigin ?? 'https://expenses.crivolotti.com').trim(),
-    emailFrom: String(raw.emailFrom ?? '').trim(),
-    emailFromName: String(raw.emailFromName ?? 'Expense tracker').trim(),
-  }
+  return { ownerEmail }
 }
 
 async function cf(path, init = {}) {
@@ -56,24 +44,11 @@ async function cf(path, init = {}) {
 }
 
 async function syncPagesEnv(config) {
-  const approveSecret = process.env.ACCESS_APPROVE_SECRET?.trim()
-  if (!approveSecret) {
-    throw new Error('ACCESS_APPROVE_SECRET env var is required (generate with: openssl rand -base64 32)')
-  }
-
   const project = await cf(`/accounts/${ACCOUNT_ID}/pages/projects/${PAGES_PROJECT}`)
   const configs = project.deployment_configs ?? {}
   const patch = { deployment_configs: {} }
   const vars = {
     OWNER_EMAIL: { type: 'plain_text', value: config.ownerEmail },
-    APP_ORIGIN: { type: 'plain_text', value: config.appOrigin },
-    ACCESS_APPROVE_SECRET: { type: 'secret_text', value: approveSecret },
-    ...(config.emailFrom
-      ? {
-          ACCESS_EMAIL_FROM: { type: 'plain_text', value: config.emailFrom },
-          ACCESS_EMAIL_FROM_NAME: { type: 'plain_text', value: config.emailFromName },
-        }
-      : {}),
   }
 
   for (const env of ['production', 'preview']) {

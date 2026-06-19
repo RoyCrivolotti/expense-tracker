@@ -2,22 +2,20 @@ import { useEffect, useState } from 'react'
 import type { ExpenseDataSource } from '../../data/dataSource'
 import { fetchAccessStatus, type AccessStatusResponse } from '../../data/accessApi'
 import { ExpensesApp } from '../ExpensesApp'
-import { ApproveAccessScreen } from './ApproveAccessScreen'
+import { OwnerAccessAdminScreen } from './OwnerAccessAdminScreen'
 import { RequestAccessScreen } from './RequestAccessScreen'
 import styles from '../ExpensesApp.module.css'
 
-function approveTokenFromLocation(): string | null {
-  if (!window.location.pathname.startsWith('/access/approve')) return null
-  return new URL(window.location.search, window.location.origin).searchParams.get('token')
+function isAdminPath(): boolean {
+  return window.location.pathname.startsWith('/access/admin')
 }
 
 export function AccessGate({ source }: { source: ExpenseDataSource }) {
-  const approveToken = approveTokenFromLocation()
   const [access, setAccess] = useState<AccessStatusResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (approveToken) return
+    if (isAdminPath()) return
     let active = true
     fetchAccessStatus()
       .then((status) => {
@@ -29,13 +27,25 @@ export function AccessGate({ source }: { source: ExpenseDataSource }) {
     return () => {
       active = false
     }
-  }, [approveToken])
+  }, [])
 
-  if (approveToken) return <ApproveAccessScreen token={approveToken} />
+  if (isAdminPath()) return <OwnerAccessAdminScreen />
   if (error) return <div className={styles.center}>Couldn&apos;t check access: {error}</div>
   if (!access) return <div className={styles.center}>Loading…</div>
-  if (access.status === 'allowed') return <ExpensesApp source={source} />
+  if (access.status === 'allowed') {
+    const ownerAccess =
+      access.isOwner && access.pendingCount !== undefined
+        ? { pendingCount: access.pendingCount }
+        : undefined
+    return <ExpensesApp source={source} {...(ownerAccess ? { ownerAccess } : {})} />
+  }
   return (
-    <RequestAccessScreen email={access.email} initialStatus={access.status === 'pending' ? 'pending' : 'none'} />
+    <RequestAccessScreen
+      email={access.email}
+      initialAccess={{
+        status: access.status,
+        ...(access.requestedAt ? { requestedAt: access.requestedAt } : {}),
+      }}
+    />
   )
 }

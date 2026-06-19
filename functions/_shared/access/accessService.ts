@@ -1,38 +1,43 @@
 import type { AccessRepository } from '../../domain/ports/accessRepository'
 import type { Env } from '../env'
 import { HttpError } from '../http'
-import { isEmailAllowed, requireOwnerEmail } from './accessAuthorizer'
-import { createApproveToken, hashToken, parseApproveToken } from './accessTokens'
+import { isEmailAllowed, isOwnerEmail, requireOwnerEmail } from './accessAuthorizer'
 
-export type AccessStatus = 'allowed' | 'pending' | 'none'
+export type AccessStatus = 'allowed' | 'pending' | 'rejected' | 'none'
 
-export interface AccessNotifier {
-  notifyOwnerNewRequest(requesterEmail: string, approveUrl: string): Promise<void>
-  notifyRequesterGranted(requesterEmail: string): Promise<void>
+export interface AccessStatusResult {
+  status: AccessStatus
+  email: string
+  isOwner?: boolean
+  pendingCount?: number
+  requestedAt?: string
 }
 
 export interface AccessServiceDeps {
   repo: AccessRepository
   env: Env
-  notifier: AccessNotifier
-  appOrigin: string
-}
-
-function approveSecret(env: Env): string {
-  const secret = env.ACCESS_APPROVE_SECRET?.trim()
-  if (!secret) throw new HttpError(503, 'Approve secret not configured')
-  return secret
 }
 
 export async function getAccessStatus(
   deps: AccessServiceDeps,
   email: string,
-): Promise<{ status: AccessStatus; email: string }> {
+): Promise<AccessStatusResult> {
   if (await isEmailAllowed(deps.repo, deps.env, email)) {
-    return { status: 'allowed', email }
+    const owner = isOwnerEmail(deps.env, email)
+    const pendingCount = owner ? await deps.repo.countPendingRequests() : undefined
+    return {
+      status: 'allowed',
+      email,
+      ...(owner ? { isOwner: true, pendingCount: pendingCount ?? 0 } : {}),
+    }
   }
   const pending = await deps.repo.findPendingRequest(email)
-  return { status: pending ? 'pending' : 'none', email }
+  if (pending) return { status: 'pending', email, requestedAt: pending.requestedAt }
+  const latest = await deps.repo.findLatestRequest(email)
+  if (latest?.status === 'rejected') {
+    return { status: 'rejected', email, requestedAt: latest.requestedAt }
+  }
+  return { status: 'none', email }
 }
 
 export async function submitAccessRequest(
@@ -45,47 +50,91 @@ export async function submitAccessRequest(
   const existing = await deps.repo.findPendingRequest(email)
   if (existing) return { status: 'pending' }
 
-  const requestId = crypto.randomUUID()
-  const secret = approveSecret(deps.env)
-  const { token, expiresAt } = await createApproveToken(requestId, secret)
-  const tokenHash = await hashToken(token)
-  await deps.repo.createRequest({ id: requestId, email, tokenHash, expiresAt })
-
-  const approveUrl = `${deps.appOrigin}/access/approve?token=${encodeURIComponent(token)}`
-  await deps.notifier.notifyOwnerNewRequest(email, approveUrl)
+  await deps.repo.createRequest({ id: crypto.randomUUID(), email })
   return { status: 'pending' }
 }
 
-export async function previewAccessApproval(
+export async function listPendingAccessRequests(
   deps: AccessServiceDeps,
-  token: string,
   approverEmail: string,
-): Promise<{ email: string; requestId: string }> {
+): Promise<Array<{ id: string; email: string; requestedAt: string }>> {
   requireOwnerEmail(deps.env, approverEmail)
-  const parsed = await parseApproveToken(token, approveSecret(deps.env))
-  if (!parsed) throw new HttpError(400, 'Invalid or expired link')
-  const tokenHash = await hashToken(token)
-  const request = await deps.repo.findRequestByTokenHash(tokenHash)
-  if (!request || request.status !== 'pending') {
-    throw new HttpError(400, 'Invalid or expired link')
-  }
-  if (request.id !== parsed.requestId) throw new HttpError(400, 'Invalid or expired link')
-  if (new Date(request.expiresAt).getTime() < Date.now()) {
-    throw new HttpError(400, 'Invalid or expired link')
-  }
-  return { email: request.email, requestId: request.id }
+  const rows = await deps.repo.listPendingRequests()
+  return rows.map((row) => ({
+    id: row.id,
+    email: row.email,
+    requestedAt: row.requestedAt,
+  }))
 }
 
-export async function confirmAccessApproval(
+export async function listActiveAccessUsers(
   deps: AccessServiceDeps,
-  token: string,
+  approverEmail: string,
+): Promise<
+  Array<{
+    email: string
+    grantedAt: string
+    grantedBy: string | null
+    lastSeenAt: string | null
+    isOwner: boolean
+  }>
+> {
+  requireOwnerEmail(deps.env, approverEmail)
+  const rows = await deps.repo.listActiveUsers()
+  return rows.map((row) => ({
+    email: row.email,
+    grantedAt: row.grantedAt,
+    grantedBy: row.grantedBy,
+    lastSeenAt: row.lastSeenAt,
+    isOwner: isOwnerEmail(deps.env, row.email),
+  }))
+}
+
+async function loadPendingRequest(deps: AccessServiceDeps, requestId: string) {
+  const request = await deps.repo.findRequestById(requestId)
+  if (!request || request.status !== 'pending') {
+    throw new HttpError(400, 'Request not found or already handled')
+  }
+  return request
+}
+
+export async function approveAccessRequestById(
+  deps: AccessServiceDeps,
+  requestId: string,
   approverEmail: string,
 ): Promise<{ email: string }> {
-  const preview = await previewAccessApproval(deps, token, approverEmail)
-  await deps.repo.grantAccess(preview.email, approverEmail)
-  await deps.repo.markRequestApproved(preview.requestId)
-  await deps.notifier.notifyRequesterGranted(preview.email)
-  return { email: preview.email }
+  requireOwnerEmail(deps.env, approverEmail)
+  const request = await loadPendingRequest(deps, requestId)
+  await deps.repo.grantAccess(request.email, approverEmail)
+  await deps.repo.markRequestApproved(requestId)
+  return { email: request.email }
+}
+
+export async function rejectAccessRequestById(
+  deps: AccessServiceDeps,
+  requestId: string,
+  approverEmail: string,
+): Promise<{ email: string }> {
+  requireOwnerEmail(deps.env, approverEmail)
+  const request = await loadPendingRequest(deps, requestId)
+  await deps.repo.markRequestRejected(requestId)
+  return { email: request.email }
+}
+
+export async function revokeAccessByEmail(
+  deps: AccessServiceDeps,
+  targetEmail: string,
+  approverEmail: string,
+): Promise<{ email: string }> {
+  requireOwnerEmail(deps.env, approverEmail)
+  const email = targetEmail.trim().toLowerCase()
+  if (!email) throw new HttpError(400, 'Missing email')
+  if (isOwnerEmail(deps.env, email)) {
+    throw new HttpError(400, 'Cannot revoke the owner')
+  }
+  const revoked = await deps.repo.revokeAccess(email)
+  if (!revoked) throw new HttpError(404, 'Active user not found')
+  return { email }
 }
 
 export async function touchLastSeenIfNeeded(

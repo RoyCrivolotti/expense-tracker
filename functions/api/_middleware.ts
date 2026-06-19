@@ -28,7 +28,7 @@ export const onRequest: PagesFunction<Env, string, ExpensesData> = async (contex
 
     await requireAllowedEmail(accessRepo, context.env, email)
     context.data.owner = email
-    const deps = createAccessDeps(context.request, context.env)
+    const deps = createAccessDeps(context.env)
     await touchLastSeenIfNeeded(deps, email)
     return await context.next()
   } catch (e) {

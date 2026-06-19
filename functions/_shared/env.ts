@@ -4,18 +4,12 @@ import type { AccessRepository } from '../domain/ports/accessRepository'
 export interface Env {
   DB: D1Database
   BACKUPS?: R2Bucket
-  /** Cloudflare Email Sending binding (optional). */
+  /** Cloudflare Email Sending binding (optional; backup alerts only). */
   EMAIL?: SendEmail
   /** Bootstrap fallback when allowed_users is empty (comma-separated). */
   ALLOWED_EMAILS?: string
-  /** App owner — receives access requests and may approve. */
+  /** App owner — may approve access requests in the admin panel. */
   OWNER_EMAIL?: string
-***REMOVED***
-***REMOVED***
-***REMOVED***
-***REMOVED***
-***REMOVED***
-***REMOVED***
   BACKUP_RETENTION_DAYS?: string
   BACKUP_MAX_BUCKET_BYTES?: string
   BACKUP_MAX_SNAPSHOT_BYTES?: string

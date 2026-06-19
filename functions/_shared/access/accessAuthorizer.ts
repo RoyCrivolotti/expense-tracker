@@ -38,6 +38,11 @@ export function requireOwnerEmail(env: Env, email: string): void {
   if (email !== owner) throw new HttpError(403, 'Owner only')
 }
 
+export function isOwnerEmail(env: Env, email: string): boolean {
+  const owner = env.OWNER_EMAIL?.trim().toLowerCase()
+  return Boolean(owner && email === owner)
+}
+
 export function ownerEmail(env: Env): string {
   const owner = env.OWNER_EMAIL?.trim().toLowerCase()
   if (!owner) throw new HttpError(503, 'Owner not configured')

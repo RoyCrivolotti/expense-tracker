@@ -105,27 +105,41 @@ export async function findPendingRequestRow(
   return row ? toAccessRequest(row) : null
 }
 
-export async function findRequestByTokenHashRow(
+export async function listPendingRequestRows(db: D1Database): Promise<AccessRequest[]> {
+  const result = await db
+    .prepare("SELECT * FROM access_requests WHERE status = 'pending' ORDER BY requested_at ASC")
+    .all<AccessRequestRow>()
+  return (result.results ?? []).map(toAccessRequest)
+}
+
+export async function countPendingRequestRows(db: D1Database): Promise<number> {
+  const row = await db
+    .prepare("SELECT COUNT(*) AS n FROM access_requests WHERE status = 'pending'")
+    .first<{ n: number }>()
+  return row?.n ?? 0
+}
+
+export async function findRequestByIdRow(
   db: D1Database,
-  tokenHash: string,
+  id: string,
 ): Promise<AccessRequest | null> {
   const row = await db
-    .prepare('SELECT * FROM access_requests WHERE token_hash = ?')
-    .bind(tokenHash)
+    .prepare('SELECT * FROM access_requests WHERE id = ?')
+    .bind(id)
     .first<AccessRequestRow>()
   return row ? toAccessRequest(row) : null
 }
 
 export async function insertAccessRequest(
   db: D1Database,
-  input: { id: string; email: string; tokenHash: string; expiresAt: string },
+  input: { id: string; email: string },
 ): Promise<void> {
   await db
     .prepare(
       `INSERT INTO access_requests (id, email, token_hash, expires_at, status)
-       VALUES (?, ?, ?, ?, 'pending')`,
+       VALUES (?, ?, ?, datetime('now', '+1 year'), 'pending')`,
     )
-    .bind(input.id, input.email, input.tokenHash, input.expiresAt)
+    .bind(input.id, input.email, input.id)
     .run()
 }
 
@@ -134,6 +148,32 @@ export async function markRequestApprovedRow(db: D1Database, id: string): Promis
     .prepare("UPDATE access_requests SET status = 'approved' WHERE id = ?")
     .bind(id)
     .run()
+}
+
+export async function markRequestRejectedRow(db: D1Database, id: string): Promise<void> {
+  await db
+    .prepare("UPDATE access_requests SET status = 'rejected' WHERE id = ?")
+    .bind(id)
+    .run()
+}
+
+export async function findLatestRequestByEmailRow(
+  db: D1Database,
+  email: string,
+): Promise<AccessRequest | null> {
+  const row = await db
+    .prepare('SELECT * FROM access_requests WHERE email = ? ORDER BY requested_at DESC LIMIT 1')
+    .bind(email)
+    .first<AccessRequestRow>()
+  return row ? toAccessRequest(row) : null
+}
+
+export async function revokeAllowedUserRow(db: D1Database, email: string): Promise<boolean> {
+  const result = await db
+    .prepare("UPDATE allowed_users SET status = 'revoked' WHERE email = ? AND status = 'active'")
+    .bind(email)
+    .run()
+  return (result.meta.changes ?? 0) > 0
 }
 
 export async function touchLastSeenRow(
