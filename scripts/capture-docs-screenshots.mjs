@@ -12,6 +12,14 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = join(ROOT, 'docs/screenshots')
 const BASE = 'http://127.0.0.1:5173'
 
+/** Match initExpenseTheme — dark only for README shots. */
+async function applyDarkTheme(page) {
+  await page.addInitScript(() => {
+    localStorage.setItem('exp-theme', 'dark')
+    document.documentElement.setAttribute('data-exp-theme', 'dark')
+  })
+}
+
 async function waitForServer(ms = 30000) {
   const start = Date.now()
   while (Date.now() - start < ms) {
@@ -38,14 +46,17 @@ async function capture() {
   const { chromium } = await import('playwright')
   mkdirSync(OUT, { recursive: true })
   const browser = await chromium.launch()
-  const desktop = await browser.newContext({ viewport: { width: 1280, height: 800 } })
+  const contextOpts = { colorScheme: 'dark' }
+  const desktop = await browser.newContext({ viewport: { width: 1280, height: 800 }, ...contextOpts })
   const mobile = await browser.newContext({
     viewport: { width: 390, height: 844 },
     isMobile: true,
     hasTouch: true,
+    ...contextOpts,
   })
 
   const d = await desktop.newPage()
+  await applyDarkTheme(d)
   await d.goto(`${BASE}/`)
   await d.waitForSelector('text=Recent activity', { timeout: 15000 })
   await d.screenshot({ path: join(OUT, 'dashboard-desktop.png') })
@@ -56,6 +67,7 @@ async function capture() {
   await d.screenshot({ path: join(OUT, 'analytics-desktop.png') })
 
   const m = await mobile.newPage()
+  await applyDarkTheme(m)
   await m.goto(`${BASE}/`)
   await m.waitForSelector('text=Recent activity', { timeout: 15000 })
   await m.screenshot({ path: join(OUT, 'dashboard-mobile.png') })
