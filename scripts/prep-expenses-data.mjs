@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Copy expenses_v3.csv from investing-docs for local CSV dev mode.
- * FINANCIAL_REVIEW_DIR defaults to ~/Repos/personal/finance-review.
+ * Copy expenses_v3.csv into content/ for local CSV dev mode.
+ * Priority: DOCS_CAPTURE fixture → FINANCIAL_REVIEW_DIR → demo fixture.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
@@ -25,6 +25,6 @@ if (process.env.DOCS_CAPTURE === '1') {
   writeFileSync(csvDest, readFileSync(csvSrc, 'utf8'))
   console.log('prep-expenses-data: bundled expenses_v3.csv')
 } else {
-  writeFileSync(csvDest, '# expenses_v3.csv not found in finance-review/data\n')
-  console.warn('prep-expenses-data: CSV not found — using placeholder')
+  writeFileSync(csvDest, readFileSync(demoFixture, 'utf8'))
+  console.log('prep-expenses-data: using fixtures/demo-expenses.csv')
 }
