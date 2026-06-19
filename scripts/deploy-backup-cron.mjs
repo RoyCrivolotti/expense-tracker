@@ -13,6 +13,10 @@ execSync('node scripts/ensure-function-symlinks.mjs', { cwd: ROOT, stdio: 'inher
 execSync('npx wrangler deploy --config workers/backup-cron/wrangler.toml', {
   cwd: ROOT,
   stdio: 'inherit',
-  env: process.env,
+  env: {
+    ...process.env,
+    CLOUDFLARE_ACCOUNT_ID:
+      process.env.CLOUDFLARE_ACCOUNT_ID ?? '800abdfb2ec1687266f66fd349c41d6a',
+  },
 })
 console.log('expense-backup-cron: deployed (cron 0 4 * * * UTC, Workers free tier)')
