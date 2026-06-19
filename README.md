@@ -1,16 +1,16 @@
 # Expense tracker
 
-Personal budget and transaction tracker at **https://expenses.crivolotti.com**.
+Personal budget and transaction tracker. A live instance runs at **https://expenses.crivolotti.com** (Cloudflare Access + D1 allowlist — authentication does not mean access; the owner approves users in-app).
 
 - **Cloudflare Access** (Google sign-in) — who can authenticate
-- **D1 allowlist + in-app admin** — who can use the app (owner approves from `/access/admin`)
+- **D1 allowlist + in-app admin** — who can use the app (`/access/admin`)
 - **Row-level tenancy** — each user's data is scoped by email in D1
 
-Shared UI: [`site-ui`](https://github.com/RoyCrivolotti/site-ui) (pinned in CI).
+Shared UI: [`site-ui`](https://github.com/RoyCrivolotti/site-ui) (cloned automatically by `npm run verify`).
 
 ## Screenshots
 
-Local dev with sample CSV data (`npm run dev`). Access admin shots use `DOCS_CAPTURE=1` mocks.
+Dark theme, fixture data (`fixtures/demo-expenses.csv`). Access admin uses `DOCS_CAPTURE=1` mocks.
 
 | Dashboard (desktop) | Dashboard (mobile) |
 | --- | --- |
@@ -24,51 +24,48 @@ Local dev with sample CSV data (`npm run dev`). Access admin shots use `DOCS_CAP
 | --- | --- |
 | ![Access admin desktop](./docs/screenshots/access-admin-desktop.png) | ![Access admin mobile](./docs/screenshots/access-admin-mobile.png) |
 
-Regenerate: `npm run capture:screenshots` (installs Chromium via Playwright on first run).
+Regenerate: `npm run capture:screenshots` (Playwright + Chromium).
 
 ## Local dev
 
 ```bash
-# From ~/Repos/personal — link shared UI package first
-./link-site-ui.sh && npm install
+git clone https://github.com/RoyCrivolotti/expense-tracker.git
 cd expense-tracker
-
-cp config/access.example.json config/access.json   # set your owner email (gitignored)
-cp config/allowed-emails.example.json config/allowed-emails.json   # optional bootstrap list
-
-npm run dev   # CSV from finance-review when FINANCIAL_REVIEW_DIR is set
+npm install
+npm run dev
 ```
 
-Dev mode loads **CSV data** (not D1). Production uses the API. `/access/admin` works in dev when the API is available, or with `DOCS_CAPTURE=1` mocks for docs.
+Opens at `http://localhost:5173` with **read-only CSV data** from `fixtures/demo-expenses.csv` (copied to gitignored `content/` on start). Production uses the D1-backed API.
 
-## Config files (gitignored)
+To point dev at your own workbook export, set `FINANCIAL_REVIEW_DIR` to a directory containing `data/expenses_v3.csv` before `npm run dev`.
 
-| File | Purpose |
-| --- | --- |
-| `config/access.json` | Your **owner email** for `npm run sync:access-env` (copied from `access.example.json`) |
-| `config/allowed-emails.json` | One-time D1 bootstrap list for `npm run bootstrap:allowed-users` |
-| `config/backup-alerts.json` | Optional backup alert recipients |
-| `content/` | Local CSV copy from finance-review (never committed) |
+`/access/admin` works against a deployed API, or with `DOCS_CAPTURE=1` mocks (`npm run capture:screenshots`).
 
-CI uses GitHub secrets instead of these files (`OWNER_EMAIL`, `ALLOWED_EMAILS`, …).
+## Self-hosting
 
-## Verify & deploy
+Example configs are in the repo; your values go in gitignored copies:
+
+| Example | Copy to | Purpose |
+| --- | --- | --- |
+| [`config/access.example.json`](config/access.example.json) | `config/access.json` | Owner email → `OWNER_EMAIL` Pages env |
+| [`config/allowed-emails.example.json`](config/allowed-emails.example.json) | `config/allowed-emails.json` | Bootstrap D1 allowlist |
+| [`config/backup-alerts.example.json`](config/backup-alerts.example.json) | `config/backup-alerts.json` | Optional backup alert recipients |
 
 ```bash
 npm run verify
-npm run sync:access-env      # push OWNER_EMAIL to Pages
-npm run bootstrap:allowed-users   # seed D1 allowlist (when needed)
+cp config/access.example.json config/access.json   # edit ownerEmail
+npm run sync:access-env
+npm run bootstrap:allowed-users   # when seeding allowlist
 npm run deploy
 ```
 
-**GitHub secrets:** `CLOUDFLARE_API_TOKEN`, `OWNER_EMAIL`, `ALLOWED_EMAILS`, `FINANCIAL_REVIEW_PAT`.
+Full DNS, Access, D1, and CI setup: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Docs
 
-- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — DNS, Access, D1, backups, CI
-- [docs/PUBLIC_READINESS.md](docs/PUBLIC_READINESS.md) — before making the repo public
-- [docs/HISTORY_REWRITE.md](docs/HISTORY_REWRITE.md) — git history hygiene
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — hosting and access control
+- [docs/PUBLIC_READINESS.md](docs/PUBLIC_READINESS.md) — secrets, data boundaries, history hygiene
 
 ## License
 
-Proprietary — see [LICENSE](./LICENSE). Source may be published for transparency; unauthorized use is prohibited.
+Proprietary — see [LICENSE](./LICENSE). Source is public for transparency; unauthorized use is prohibited.
