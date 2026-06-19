@@ -1,6 +1,39 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <rect width="64" height="64" rx="14" fill="#2e5e8c" />
-  <text x="50%" y="52%" dominant-baseline="central" text-anchor="middle"
-        font-family="-apple-system, Segoe UI, system-ui, sans-serif"
-        font-size="34" font-weight="700" fill="#ffffff">R</text>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#141820" />
+      <stop offset="100%" stop-color="#0f1115" />
+    </linearGradient>
+    <linearGradient id="letter" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#c5d0de" />
+    </linearGradient>
+    <linearGradient id="edge" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#6fb1ff" stop-opacity="0.45" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#bg)" />
+  <text
+    x="32"
+    y="33"
+    text-anchor="middle"
+    dominant-baseline="central"
+    font-family="-apple-system, BlinkMacSystemFont, system-ui, sans-serif"
+    font-size="38"
+    font-weight="700"
+    fill="none"
+    stroke="url(#edge)"
+    stroke-width="2.2"
+  >E</text>
+  <text
+    x="32"
+    y="33"
+    text-anchor="middle"
+    dominant-baseline="central"
+    font-family="-apple-system, BlinkMacSystemFont, system-ui, sans-serif"
+    font-size="38"
+    font-weight="700"
+    fill="url(#letter)"
+  >E</text>
 </svg>
