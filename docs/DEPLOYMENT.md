@@ -43,9 +43,9 @@ The allowlist lives in D1 (`allowed_users`). New users request access in the app
 
 **Local config (gitignored):** `config/allowed-emails.json`, `config/access.json`.
 
-**Owner admin (`/access/admin`):** approve or reject pending requests, revoke active users (except owner), view `last_seen_at` per user. Settings shows a badge when requests are pending.
+**Owner admin (`/access/admin`):** approve or reject pending requests, revoke active users (except owner; **deletes their D1 expense data**), view last activity per user. Settings shows a badge when requests are pending.
 
-**Not yet:** purge revoked-user expense data (separate operation).
+**R2 backups:** daily snapshots under `{email}/` in `roy-expenses-backups` are not deleted on revoke (manual cleanup if needed).
 
 ## D1 + legacy ALLOWED_EMAILS
 

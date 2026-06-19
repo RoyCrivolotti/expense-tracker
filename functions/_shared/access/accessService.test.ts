@@ -158,15 +158,21 @@ describe('accessService', () => {
     ])
   })
 
-  it('revokes an active user but not the owner', async () => {
+  it('revokes an active user, purges data, but not the owner', async () => {
+    const batch = vi.fn().mockResolvedValue(undefined)
+    const prepare = vi.fn(() => ({ bind: vi.fn().mockReturnThis() }))
     const serviceDeps = deps({
       revokeAccess: vi.fn().mockResolvedValue(true),
     })
+    serviceDeps.env.DB = { prepare, batch } as unknown as D1Database
+
     await expect(
       revokeAccessByEmail(serviceDeps, 'owner@example.com', 'owner@example.com'),
     ).rejects.toBeInstanceOf(HttpError)
+
     const result = await revokeAccessByEmail(serviceDeps, 'guest@example.com', 'owner@example.com')
-    expect(result.email).toBe('guest@example.com')
+    expect(result).toEqual({ email: 'guest@example.com', dataPurged: true })
     expect(serviceDeps.repo.revokeAccess).toHaveBeenCalledWith('guest@example.com')
+    expect(batch).toHaveBeenCalledOnce()
   })
 })

@@ -9,5 +9,5 @@ export const onRequestPost: PagesFunction<Env, string, ExpensesData> = async (co
   if (!email) return json({ error: 'Missing email' }, 400)
   const deps = createAccessDeps(context.env)
   const result = await revokeAccessByEmail(deps, email, context.data.authenticatedEmail)
-  return json({ email: result.email, revoked: true })
+  return json({ email: result.email, revoked: true, dataPurged: result.dataPurged })
 }
