@@ -54,6 +54,16 @@ export interface DayGroup {
   transactions: Transaction[]
 }
 
+/** Net expense total for a list (expense − refund; excludes income and investments). */
+export function netSpendCents(transactions: Transaction[]): number {
+  let total = 0
+  for (const txn of transactions) {
+    if (txn.type === 'income' || txn.type === 'investment') continue
+    total += txn.type === 'refund' ? -txn.amountCents : txn.amountCents
+  }
+  return total
+}
+
 /** Group an already-sorted list into day buckets, preserving order. */
 export function groupByDay(transactions: Transaction[]): DayGroup[] {
   const groups: DayGroup[] = []
