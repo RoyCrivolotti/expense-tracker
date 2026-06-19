@@ -32,23 +32,31 @@
 .caption {
   font-size: 0.875rem;
   font-weight: 600;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.625rem;
   color: var(--color-text);
+}
+
+.chartWrap {
+  position: relative;
+  width: 100%;
 }
 
 .svg {
   width: 100%;
-  max-width: 360px;
   height: auto;
   display: block;
+  touch-action: none;
+  cursor: crosshair;
 }
 
 .barIncome {
   fill: var(--exp-success);
+  transition: opacity 0.15s ease;
 }
 
 .barExpense {
   fill: var(--exp-danger);
+  transition: opacity 0.15s ease;
 }
 
 .lineIncome {
@@ -59,15 +67,103 @@
   stroke: var(--exp-danger);
 }
 
+.axisLine {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.gridLine {
+  stroke: color-mix(in srgb, var(--color-text) 10%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.yLabel,
 .axisLabel {
-  font-size: 9px;
+  font-size: 10px;
   fill: var(--color-text-muted);
+}
+
+.dimmed {
+  opacity: 0.35;
+}
+
+.crosshair {
+  stroke: color-mix(in srgb, var(--color-text) 35%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  pointer-events: none;
+}
+
+.dotIncome {
+  fill: var(--exp-success);
+  stroke: var(--color-bg);
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.dotExpense {
+  fill: var(--exp-danger);
+  stroke: var(--color-bg);
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.tooltip {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  z-index: 2;
+  min-width: 9.5rem;
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 6px);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-text) 12%, transparent);
+  pointer-events: none;
+}
+
+.tooltipTitle {
+  margin: 0 0 var(--space-xs);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.tooltipList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.75rem;
+}
+
+.tooltipList li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: 2px;
+}
+
+.tooltip_income span:last-child {
+  color: var(--exp-success);
+  font-weight: 600;
+}
+
+.tooltip_expense span:last-child {
+  color: var(--exp-danger);
+  font-weight: 600;
+}
+
+.tooltip_neutral span:last-child {
+  color: var(--color-text);
+  font-weight: 600;
 }
 
 .legend {
   display: flex;
-  gap: 1rem;
-  margin-top: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  margin-top: 0.625rem;
   font-size: 0.75rem;
   color: var(--color-text-muted);
 }
@@ -94,14 +190,28 @@
 .pieRow {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-md);
-  align-items: flex-start;
+  gap: var(--space-lg);
+  align-items: center;
 }
 
 .pieSvg {
-  width: 160px;
-  height: 160px;
+  width: min(100%, 200px);
+  height: auto;
   flex-shrink: 0;
+  touch-action: none;
+}
+
+@media (min-width: 720px) {
+  .pieSvg {
+    width: 220px;
+  }
+}
+
+.pieSlice {
+  stroke: var(--color-bg);
+  stroke-width: 1.5;
+  transition: opacity 0.15s ease;
+  cursor: pointer;
 }
 
 .pieLegend {
@@ -110,7 +220,7 @@
   padding: 0;
   font-size: 0.875rem;
   flex: 1;
-  min-width: 140px;
+  min-width: 160px;
 }
 
 .pieLegend li {
@@ -118,6 +228,13 @@
   align-items: baseline;
   gap: var(--space-xs);
   margin-bottom: var(--space-xs);
+  padding: 2px 4px;
+  border-radius: var(--radius-sm, 4px);
+  cursor: default;
+}
+
+.legendActive {
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .swatch {

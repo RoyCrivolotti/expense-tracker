@@ -1,11 +1,11 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
 import { computeCategoryActuals } from '../../engine'
-import { formatCents } from '../../engine/money'
+import { CategoryPieChartView, type PieSlice } from './CategoryPieChartView'
 import styles from './charts.module.css'
 
-const SIZE = 200
-const R = 72
+const SIZE = 220
+const R = 80
 const CX = SIZE / 2
 const CY = SIZE / 2
 
@@ -29,7 +29,7 @@ function arcPath(startAngle: number, endAngle: number): string {
   return `M ${CX} ${CY} L ${x1} ${y1} A ${R} ${R} 0 ${large} 1 ${x2} ${y2} Z`
 }
 
-function buildSlices(model: ExpenseModel, month: string) {
+function buildSlices(model: ExpenseModel, month: string): PieSlice[] | null {
   const actuals = computeCategoryActuals(model.dataset.transactions, model.dataset.categories, {
     includeForecast: true,
   })
@@ -41,18 +41,20 @@ function buildSlices(model: ExpenseModel, month: string) {
   if (total === 0) return null
 
   let angle = -Math.PI / 2
-  const paths = positive.map((s, i) => {
+  return positive.map((s, i) => {
     const start = angle
     const sweep = (s.cents / total) * Math.PI * 2
     angle += sweep
+    const mid = start + sweep / 2
     return {
       ...s,
       d: arcPath(start, angle),
-      color: SLICE_COLORS[i % SLICE_COLORS.length] ?? SLICE_COLORS[0],
+      color: SLICE_COLORS[i % SLICE_COLORS.length] ?? 'var(--chart-1)',
       total,
+      labelX: CX + R * 0.55 * Math.cos(mid),
+      labelY: CY + R * 0.55 * Math.sin(mid),
     }
   })
-  return paths
 }
 
 interface Props {
@@ -63,30 +65,20 @@ interface Props {
 /** Expense share by category for the selected budget month. */
 export function CategoryPieChart({ model, month }: Props) {
   const paths = useMemo(() => buildSlices(model, month), [model, month])
+  const [active, setActive] = useState<number | null>(null)
+
   if (!paths) return null
-  const total = paths[0]?.total ?? 1
 
   return (
     <figure className={styles.figure}>
       <figcaption className={styles.caption}>Expenses by category ({month})</figcaption>
-      <div className={styles.pieRow}>
-        <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className={styles.pieSvg} role="img" aria-label="Category expense pie chart">
-          {paths.map((p) => (
-            <path key={p.name} d={p.d} fill={p.color} />
-          ))}
-        </svg>
-        <ul className={styles.pieLegend}>
-          {paths.map((p) => (
-            <li key={p.name}>
-              <span className={styles.swatch} style={{ background: p.color }} />
-              {p.name}{' '}
-              <span className={styles.muted}>
-                {formatCents(p.cents)} ({Math.round((p.cents / total) * 100)}%)
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <CategoryPieChartView
+        paths={paths}
+        active={active}
+        onShow={setActive}
+        onHide={() => setActive(null)}
+        onTouchEnd={() => window.setTimeout(() => setActive(null), 2800)}
+      />
     </figure>
   )
 }
