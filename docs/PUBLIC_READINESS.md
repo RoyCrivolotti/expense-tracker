@@ -3,11 +3,11 @@
 The **live app** at expenses.crivolotti.com stays private (Cloudflare Access). This
 doc covers whether the **source repo** can be made public.
 
-## Verdict: public-ready after history rewrite
+## Verdict: public-ready
 
-Application code, fixtures, and migrations in **HEAD** use placeholders. Git **history**
-must be scrubbed with [HISTORY_REWRITE.md](./HISTORY_REWRITE.md) before visibility
-change; verify with the `git log -S` checks in that doc.
+Application code, fixtures, migrations, and **git history** use placeholders only.
+History was rewritten with `git filter-repo` (2026-06-18); verify anytime with the
+`git log -S` checks in [HISTORY_REWRITE.md](./HISTORY_REWRITE.md).
 
 ## Checklist before `gh repo edit --visibility public`
 
@@ -22,7 +22,7 @@ change; verify with the `git log -S` checks in that doc.
 | FK ownership on writes | Implemented + tested |
 | API write scoping tests | `functions/_shared/dbWrite.test.ts` (unit) |
 | API integration tests | `functions/api/expenses/transactions/write.integration.test.ts` |
-| Git history PII | Run + verify per [HISTORY_REWRITE.md](./HISTORY_REWRITE.md) |
+| Git history PII | Rewritten + verified (see [HISTORY_REWRITE.md](./HISTORY_REWRITE.md)) |
 
 ## Safe to publish as-is (HEAD)
 
