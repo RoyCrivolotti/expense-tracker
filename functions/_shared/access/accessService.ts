@@ -1,6 +1,7 @@
 import type { AccessRepository } from '../../domain/ports/accessRepository'
 import type { Env } from '../env'
 import { HttpError } from '../http'
+import { purgeOwnerExpenseData } from '../ownerDataPurge'
 import { isEmailAllowed, isOwnerEmail, requireOwnerEmail } from './accessAuthorizer'
 
 export type AccessStatus = 'allowed' | 'pending' | 'rejected' | 'none'
@@ -125,7 +126,7 @@ export async function revokeAccessByEmail(
   deps: AccessServiceDeps,
   targetEmail: string,
   approverEmail: string,
-): Promise<{ email: string }> {
+): Promise<{ email: string; dataPurged: true }> {
   requireOwnerEmail(deps.env, approverEmail)
   const email = targetEmail.trim().toLowerCase()
   if (!email) throw new HttpError(400, 'Missing email')
@@ -134,7 +135,8 @@ export async function revokeAccessByEmail(
   }
   const revoked = await deps.repo.revokeAccess(email)
   if (!revoked) throw new HttpError(404, 'Active user not found')
-  return { email }
+  await purgeOwnerExpenseData(deps.env.DB, email)
+  return { email, dataPurged: true }
 }
 
 export async function touchLastSeenIfNeeded(

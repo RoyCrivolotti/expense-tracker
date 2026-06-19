@@ -5,8 +5,8 @@ import { formatDateTime, formatRelativeTime } from './formatRelativeTime'
 import styles from './AccessScreen.module.css'
 
 function lastSeenLabel(lastSeenAt: string | null): string {
-  if (!lastSeenAt) return 'Never seen'
-  return `Last seen ${formatRelativeTime(lastSeenAt)}`
+  if (!lastSeenAt) return 'No app activity yet'
+  return `Last active ${formatRelativeTime(lastSeenAt)}`
 }
 
 export function ActiveUsersSection({
@@ -20,7 +20,13 @@ export function ActiveUsersSection({
   const [error, setError] = useState<string | null>(null)
 
   async function onRevoke(email: string) {
-    if (!window.confirm(`Revoke access for ${email}?`)) return
+    if (
+      !window.confirm(
+        `Revoke access for ${email}? Their expense data will be permanently deleted.`,
+      )
+    ) {
+      return
+    }
     setBusyEmail(email)
     setError(null)
     try {
