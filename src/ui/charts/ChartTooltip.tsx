@@ -1,5 +1,7 @@
+import { createPortal } from 'react-dom'
 import styles from './charts.module.css'
-import { useTooltipClamp } from './useTooltipClamp'
+import { useDockedTooltip } from './useDockedTooltip'
+import { useTooltipPosition } from './useTooltipPosition'
 
 export interface TooltipLine {
   label: string
@@ -7,24 +9,20 @@ export interface TooltipLine {
   tone?: 'income' | 'expense' | 'neutral'
 }
 
+interface Anchor {
+  x: number
+  y: number
+}
+
 interface Props {
   title: string
   lines: TooltipLine[]
-  leftPct: number
+  anchor: Anchor | null
 }
 
-export function ChartTooltip({ title, lines, leftPct }: Props) {
-  const clamped = Math.min(92, Math.max(8, leftPct))
-  const contentKey = `${title}|${lines.map((line) => `${line.label}:${line.value}`).join('|')}`
-  const { ref, shiftX } = useTooltipClamp(clamped, contentKey)
-
+function TooltipBody({ title, lines }: Pick<Props, 'title' | 'lines'>) {
   return (
-    <div
-      ref={ref}
-      className={styles.tooltip}
-      style={{ left: `${clamped}%`, transform: `translateX(calc(-50% + ${shiftX}px))` }}
-      role="tooltip"
-    >
+    <>
       <p className={styles.tooltipTitle}>{title}</p>
       <ul className={styles.tooltipList}>
         {lines.map((line) => (
@@ -34,6 +32,47 @@ export function ChartTooltip({ title, lines, leftPct }: Props) {
           </li>
         ))}
       </ul>
-    </div>
+    </>
   )
+}
+
+function contentKey(title: string, lines: TooltipLine[]) {
+  return `${title}|${lines.map((line) => `${line.label}:${line.value}`).join('|')}`
+}
+
+function FloatingTooltip({ title, lines, anchor }: Props) {
+  const key = contentKey(title, lines)
+  const { ref, pos } = useTooltipPosition(anchor?.x ?? null, anchor?.y ?? null, key)
+
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
+    <div
+      ref={ref}
+      className={styles.tooltipFixed}
+      style={{
+        left: pos?.left ?? 0,
+        top: pos?.top ?? 0,
+        visibility: pos ? 'visible' : 'hidden',
+      }}
+      role="tooltip"
+    >
+      <TooltipBody title={title} lines={lines} />
+    </div>,
+    document.body,
+  )
+}
+
+export function ChartTooltip({ title, lines, anchor }: Props) {
+  const docked = useDockedTooltip()
+
+  if (docked) {
+    return (
+      <div className={styles.tooltipDocked} role="tooltip">
+        <TooltipBody title={title} lines={lines} />
+      </div>
+    )
+  }
+
+  return <FloatingTooltip title={title} lines={lines} anchor={anchor} />
 }
