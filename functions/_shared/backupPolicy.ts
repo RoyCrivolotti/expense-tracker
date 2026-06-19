@@ -1,4 +1,4 @@
-import defaults from '@config/backup-policy.json'
+import defaults from '../config/backup-policy.json'
 import type { Env } from './env'
 
 /** Tunable limits for R2 JSON backups — defaults in config/backup-policy.json. */

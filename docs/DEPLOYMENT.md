@@ -52,7 +52,9 @@ See [PUBLIC_READINESS.md](./PUBLIC_READINESS.md) before changing repository visi
 
 ## Scheduled backups (R2)
 
-> **Deferred (2026-06):** R2 enablement blocked on Cloudflare's side. Code and `BACKUPS` binding are ready; finish when R2 is available (not urgent — D1 is the source of truth and CSV export covers manual backup for now). Checklist: enable R2 → `npm run setup:backups` → cron `0 4 * * *` → deploy.
+> **Deferred (2026-06):** R2 enablement blocked on Cloudflare's side. Code is ready; finish when R2 is available (not urgent — D1 is the source of truth and CSV export covers manual backup for now). Checklist: enable R2 → `npm run setup:backups` → cron `0 4 * * *` → deploy.
+>
+> If `setup:backups` was run before R2 was enabled, it may have bound `BACKUPS` to a missing bucket and **blocked deploy**. Remove the binding with `node scripts/remove-backups-binding.mjs`, then deploy; re-run `npm run setup:backups` once R2 works.
 
 Daily cron exports each owner's full dataset to R2 as JSON. R2's free tier (10 GB-month storage, 1M Class A ops) is ample for this app; policy defaults in [`config/backup-policy.json`](../config/backup-policy.json) cap total backup storage at **512 MB** (~5% of free tier) and retain **14 days** of daily snapshots. Oldest files are deleted first when over budget. Optional Pages env vars override the JSON: `BACKUP_RETENTION_DAYS`, `BACKUP_MAX_BUCKET_BYTES`, `BACKUP_MAX_SNAPSHOT_BYTES`.
 
@@ -74,7 +76,9 @@ npm run sync:backup-alerts
 
 Requires Cloudflare **Email Sending** enabled on your domain and an `EMAIL` binding on this Pages project. No addresses are hardcoded in source — only env vars `BACKUP_ALERT_TO`, `BACKUP_ALERT_FROM`, `BACKUP_ALERT_FROM_NAME`.
 
-**Ports & adapters** (for swapping vendors): persistence → `ExpenseRepository`; object storage → `BackupStore`; auth → `AuthProvider`; email → `EmailSender`. Interfaces live in `src/domain/ports/` and are imported as `@domain/...` in Functions code.
+**Ports & adapters** (for swapping vendors): persistence → `ExpenseRepository`; object storage → `BackupStore`; auth → `AuthProvider`; email → `EmailSender`. Interfaces live in `src/domain/ports/`.
+
+Functions import domain code via `functions/domain` → `../src/domain` (symlink). Cloudflare’s Pages Functions bundler does not honour Wrangler `alias` config, so `@domain/...` cannot be used in `functions/` — the Vite app still uses `@domain/*` / `@config/*` path aliases.
 
 Automated setup (R2 bucket + binding) — uses wrangler OAuth when logged in locally:
 

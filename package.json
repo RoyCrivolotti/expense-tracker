@@ -11,7 +11,7 @@
     "typecheck": "tsc -b --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "verify": "node scripts/ensure-site-ui-for-verify.mjs && npm run lint && npm run typecheck && npm run test && npm run build",
+    "verify": "node scripts/ensure-site-ui-for-verify.mjs && node scripts/ensure-function-symlinks.mjs && npm run lint && npm run typecheck && npm run test && npm run build",
     "deploy": "bash scripts/deploy.sh",
     "sync:allowed-users": "node scripts/sync-allowed-users.mjs",
     "setup:backups": "node scripts/setup-backup-infrastructure.mjs",

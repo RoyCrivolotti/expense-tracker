@@ -1,5 +1,5 @@
 import type { Env, ExpensesData } from '../../../_shared/env'
-import type { GoalInputs } from '@domain/types'
+import type { GoalInputs } from '../../../domain/types'
 import { json, readJson } from '../../../_shared/http'
 
 export const onRequestPut: PagesFunction<Env, string, ExpensesData> = async (context) => {

@@ -1,4 +1,4 @@
-import type { BackupAlerts } from '@domain/ports/backupAlerts'
+import type { BackupAlerts } from '../../domain/ports/backupAlerts'
 import {
   createEmailBackupAlerts,
   consoleBackupAlerts,

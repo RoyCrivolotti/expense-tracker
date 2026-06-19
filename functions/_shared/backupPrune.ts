@@ -1,4 +1,4 @@
-import type { BackupObjectMeta, BackupStore } from '@domain/ports/backupStore'
+import type { BackupObjectMeta, BackupStore } from '../domain/ports/backupStore'
 import type { BackupPolicy } from './backupPolicy'
 import { dateKeyFromObjectKey, utcDateFromKey } from './backupKeys'
 

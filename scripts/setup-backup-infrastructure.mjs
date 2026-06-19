@@ -45,17 +45,18 @@ function ensureBucket() {
       env: { ...process.env, CLOUDFLARE_ACCOUNT_ID: ACCOUNT_ID },
     })
     console.log(`R2 bucket ${BUCKET} created`)
+    return true
   } catch (err) {
     const out = String(err.stderr ?? err.stdout ?? err.message)
     if (out.includes('already exists') || out.includes('AlreadyExists')) {
       console.log(`R2 bucket ${BUCKET} already exists`)
-      return
+      return true
     }
     if (out.includes('10042') || out.includes('enable R2')) {
       console.warn(
         'R2 is not enabled on this account — enable it in the Cloudflare dashboard first, then re-run.',
       )
-      return
+      return false
     }
     throw err
   }
@@ -89,7 +90,11 @@ async function main() {
       'No Cloudflare token — set CLOUDFLARE_API_TOKEN or run wrangler login',
     )
   }
-  ensureBucket()
+  const bucketReady = ensureBucket()
+  if (!bucketReady) {
+    console.warn('Skipping BACKUPS binding until R2 bucket exists.')
+    return
+  }
   await syncBackupsBinding()
   console.log('')
   console.log('Manual step: add cron trigger on the expense-tracker Pages project:')

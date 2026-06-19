@@ -1,5 +1,5 @@
 import type { Env, ExpensesData } from '../../../_shared/env'
-import type { NewAccount } from '@domain/data/dataSource'
+import type { NewAccount } from '../../../domain/data/dataSource'
 import { HttpError, json, readJson } from '../../../_shared/http'
 
 export const onRequestPost: PagesFunction<Env, string, ExpensesData> = async (context) => {

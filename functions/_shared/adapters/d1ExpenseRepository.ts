@@ -1,4 +1,4 @@
-import type { ExpenseRepository } from '@domain/ports/expenseRepository'
+import type { ExpenseRepository } from '../../domain/ports/expenseRepository'
 import type { Env } from '../env'
 import { loadDataset, listOwners } from '../db'
 import {

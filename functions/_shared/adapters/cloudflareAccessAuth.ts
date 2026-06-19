@@ -1,4 +1,4 @@
-import type { AuthProvider } from '@domain/ports/authProvider'
+import type { AuthProvider } from '../../domain/ports/authProvider'
 import { HttpError } from '../http'
 
 const ACCESS_EMAIL_HEADER = 'Cf-Access-Authenticated-User-Email'
