@@ -1,7 +1,9 @@
+import type { EventContext } from '@cloudflare/workers-types'
 import type { Env, ExpensesData } from './env'
 import { onRequest as authMiddleware } from '../api/_middleware'
 
 type RouteHandler = PagesFunction<Env, string, ExpensesData>
+type HandlerContext = EventContext<Env, string, ExpensesData>
 
 interface InvokeOptions {
   env: Env
@@ -11,6 +13,25 @@ interface InvokeOptions {
   params?: Record<string, string>
   /** Omit header when false; defaults to owner@example.com. */
   email?: string | false
+}
+
+function handlerContext(
+  request: Request,
+  env: Env,
+  params: Record<string, string>,
+  data: ExpensesData,
+  next: HandlerContext['next'],
+): HandlerContext {
+  return {
+    request,
+    env,
+    params,
+    data,
+    functionPath: '/api/expenses/transactions',
+    waitUntil: () => undefined,
+    passThroughOnException: () => undefined,
+    next,
+  } as unknown as HandlerContext
 }
 
 /** Run a Pages route handler through the real auth middleware (integration tests). */
@@ -33,23 +54,13 @@ export async function invokePagesRoute(
   )
   const data: ExpensesData = { owner: '' }
   const params = options.params ?? {}
-  const base = {
-    request,
-    env: options.env,
-    params,
-    data,
-    functionPath: '/api/expenses/transactions',
-    waitUntil: () => undefined,
-    passThroughOnException: () => undefined,
-  }
-  return authMiddleware({
-    ...base,
-    next: () =>
-      Promise.resolve(
-        handler({
-          ...base,
-          next: () => Promise.resolve(new Response(null, { status: 404 })),
-        }),
+  const routeNext: HandlerContext['next'] = () =>
+    Promise.resolve(
+      handler(
+        handlerContext(request, options.env, params, data, () =>
+          Promise.resolve(new Response(null, { status: 404 })),
+        ),
       ),
-  })
+    )
+  return authMiddleware(handlerContext(request, options.env, params, data, routeNext))
 }
