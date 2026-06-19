@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "npm run prep:data && vite",
-    "build": "npm run prep:data && vite build",
+    "build": "npm run generate-icons && npm run prep:data && vite build",
     "prep:data": "node scripts/prep-expenses-data.mjs",
+    "generate-icons": "node scripts/generate-icons.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "lint": "eslint .",
@@ -37,6 +38,7 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
     "jsdom": "^29.1.1",
+    "sharp": "^0.35.1",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12",
