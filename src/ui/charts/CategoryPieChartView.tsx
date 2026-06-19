@@ -1,5 +1,7 @@
+import { useRef } from 'react'
 import { formatCents } from '../../engine/money'
 import { ChartTooltip } from './ChartTooltip'
+import { useSvgAnchor } from './useSvgAnchor'
 import styles from './charts.module.css'
 
 const SIZE = 220
@@ -22,33 +24,55 @@ interface Props {
   onTouchEnd: () => void
 }
 
+function PiePaths({
+  paths,
+  active,
+  onShow,
+  onHide,
+  onTouchEnd,
+}: Pick<Props, 'paths' | 'active' | 'onShow' | 'onHide' | 'onTouchEnd'>) {
+  return paths.map((p, i) => (
+    <path
+      key={p.name}
+      d={p.d}
+      fill={p.color}
+      className={active != null && active !== i ? styles.dimmed : styles.pieSlice}
+      onPointerEnter={() => onShow(i)}
+      onPointerLeave={(e) => {
+        if (e.pointerType === 'mouse') onHide()
+      }}
+      onPointerDown={() => onShow(i)}
+      onPointerUp={onTouchEnd}
+    />
+  ))
+}
+
 export function CategoryPieChartView({ paths, active, onShow, onHide, onTouchEnd }: Props) {
+  const svgRef = useRef<SVGSVGElement>(null)
   const total = paths[0]?.total ?? 1
   const focus = active != null ? paths[active] : null
+  const anchor = useSvgAnchor(
+    svgRef,
+    focus ? focus.labelX : null,
+    focus ? focus.labelY : null,
+  )
 
   return (
     <div className={styles.pieRow}>
       <div className={styles.pieChartCol}>
-        <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className={styles.pieSvg} role="img" aria-label="Category expense pie chart">
-          {paths.map((p, i) => (
-            <path
-              key={p.name}
-              d={p.d}
-              fill={p.color}
-              className={active != null && active !== i ? styles.dimmed : styles.pieSlice}
-              onPointerEnter={() => onShow(i)}
-              onPointerLeave={(e) => {
-                if (e.pointerType === 'mouse') onHide()
-              }}
-              onPointerDown={() => onShow(i)}
-              onPointerUp={onTouchEnd}
-            />
-          ))}
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${SIZE} ${SIZE}`}
+          className={styles.pieSvg}
+          role="img"
+          aria-label="Category expense pie chart"
+        >
+          <PiePaths paths={paths} active={active} onShow={onShow} onHide={onHide} onTouchEnd={onTouchEnd} />
         </svg>
         {focus && (
           <ChartTooltip
+            anchor={anchor}
             title={focus.name}
-            leftPct={(focus.labelX / SIZE) * 100}
             lines={[
               { label: 'Amount', value: formatCents(focus.cents), tone: 'expense' },
               { label: 'Share', value: `${Math.round((focus.cents / total) * 100)}%`, tone: 'neutral' },

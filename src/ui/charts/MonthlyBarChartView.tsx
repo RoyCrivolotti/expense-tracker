@@ -1,7 +1,9 @@
+import { useRef } from 'react'
 import { formatCents } from '../../engine/money'
 import { ChartTooltip } from './ChartTooltip'
 import { ChartYAxis } from './ChartYAxis'
 import { CHART_H, CHART_W, PAD, monthLabel, yAt } from './chartLayout'
+import { useSvgAnchor } from './useSvgAnchor'
 import styles from './charts.module.css'
 
 export interface BarRow {
@@ -31,11 +33,14 @@ export function MonthlyBarChartView({
   xForIndex,
   pointerHandlers,
 }: Props) {
+  const svgRef = useRef<SVGSVGElement>(null)
   const focus = active != null ? rows[active] : null
+  const anchor = useSvgAnchor(svgRef, focus ? focusX : null, focus ? PAD.top : null)
 
   return (
     <div className={styles.chartWrap}>
       <svg
+        ref={svgRef}
         viewBox={`0 0 ${CHART_W} ${CHART_H}`}
         className={styles.svg}
         role="img"
@@ -64,8 +69,8 @@ export function MonthlyBarChartView({
       </svg>
       {focus && (
         <ChartTooltip
+          anchor={anchor}
           title={monthLabel(focus.month)}
-          leftPct={(focusX / CHART_W) * 100}
           lines={[
             { label: 'Income', value: formatCents(focus.income), tone: 'income' },
             { label: 'Expenses', value: formatCents(focus.expenses), tone: 'expense' },
