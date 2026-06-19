@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const DB_NAME = 'roy-expenses'
+const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID ?? '800abdfb2ec1687266f66fd349c41d6a'
 
 function loadEmails() {
   const fromEnv = process.env.ALLOWED_EMAILS?.trim()
