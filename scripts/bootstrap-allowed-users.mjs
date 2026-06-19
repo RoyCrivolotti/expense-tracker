@@ -36,7 +36,7 @@ function runRemote(sql) {
   execSync(`npx wrangler d1 execute ${DB_NAME} --remote --command ${JSON.stringify(sql)}`, {
     cwd: ROOT,
     stdio: 'inherit',
-    env: process.env,
+    env: { ...process.env, CLOUDFLARE_ACCOUNT_ID: ACCOUNT_ID },
   })
 }
 
