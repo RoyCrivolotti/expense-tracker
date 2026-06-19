@@ -16,8 +16,8 @@ Application code, fixtures, migrations, and **current HEAD** use placeholders on
 | Migration backfill email | Placeholder `owner@example.com` in `0003_multi_user.sql` |
 | Test fixtures | `*@example.com` only |
 | Cloudflare account / D1 IDs | In wrangler config and scripts — not secret, but identifies your account |
-| Resend / email-approve path | Removed from HEAD; scrub from history before publish (see below) |
-| Git history PII | Run [HISTORY_REWRITE.md](./HISTORY_REWRITE.md) before `gh repo edit --visibility public` |
+| Email-approve experiment | Removed from HEAD; obsolete files stripped from history (2026-06-19) |
+| Git history PII | Rewritten 2026-06-19; re-verify before public ([HISTORY_REWRITE.md](./HISTORY_REWRITE.md)) |
 
 ## What `config/access.json` is
 
@@ -46,7 +46,7 @@ It does **not** contain API keys or allowlists. User allowlisting lives in D1 (`
 
 ## History hygiene
 
-After the brief email-approve experiment (never used in production), run `git filter-repo` per [HISTORY_REWRITE.md](./HISTORY_REWRITE.md) to drop obsolete access-notifier files and Resend references from all commits.
+The short-lived email-approve experiment (never used in production) was removed from HEAD; obsolete notifier/token/approve files and unused env vars were stripped from history with `git filter-repo` (see [HISTORY_REWRITE.md](./HISTORY_REWRITE.md)).
 
 ## After going public
 
