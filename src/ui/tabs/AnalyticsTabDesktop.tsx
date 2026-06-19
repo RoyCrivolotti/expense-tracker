@@ -20,7 +20,6 @@ export function AnalyticsTabDesktop({
 }) {
   return (
     <div className={styles.stack}>
-      <InsightsCharts model={model} month={month} />
       <section className={styles.analyticsSection}>
         <SectionTitle>Monthly summary</SectionTitle>
         <p className={tableStyles.note}>
@@ -54,6 +53,8 @@ export function AnalyticsTabDesktop({
         <SectionTitle>Yearly overview</SectionTitle>
         <YearlyOverviewTable model={model} />
       </section>
+
+      <InsightsCharts model={model} month={month} />
     </div>
   )
 }

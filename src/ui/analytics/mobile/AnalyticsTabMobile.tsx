@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { ExpenseModel } from '../../useExpenseData'
 import type { ExpenseActions } from '../../actions'
 import { SegmentedControl } from '../../components/SegmentedControl'
+import { InsightsCharts } from '../../charts/InsightsCharts'
 import { MonthlySummaryMobile } from './MonthlySummaryMobile'
 import { MonthlyTotalsMobile } from './MonthlyTotalsMobile'
 import { CashReconMobile } from './CashReconMobile'
@@ -17,15 +18,15 @@ const SECTIONS: { value: Section; label: string }[] = [
   { value: 'year', label: 'Year' },
 ]
 
-import { InsightsCharts } from '../../charts/InsightsCharts'
-
 export function AnalyticsTabMobile({
   model,
   month,
+  onMonthChange,
   actions,
 }: {
   model: ExpenseModel
   month: string
+  onMonthChange: (month: string) => void
   actions?: ExpenseActions | undefined
 }) {
   const [section, setSection] = useState<Section>('summary')
@@ -42,8 +43,8 @@ export function AnalyticsTabMobile({
       </div>
       {section === 'summary' && (
         <>
+          <MonthlySummaryMobile model={model} month={month} onMonthChange={onMonthChange} />
           <InsightsCharts model={model} month={month} />
-          <MonthlySummaryMobile model={model} />
         </>
       )}
       {section === 'totals' && <MonthlyTotalsMobile model={model} />}

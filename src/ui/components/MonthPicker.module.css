@@ -31,3 +31,18 @@
   min-width: 7.5rem;
   text-align: center;
 }
+
+.pickerBar {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-radius: var(--radius-md, 8px);
+  padding: 0.45rem 0.55rem;
+  background: color-mix(in srgb, var(--color-text) 4%, var(--color-bg));
+}
+
+.pickerBar .label {
+  flex: 1;
+  min-width: 0;
+}

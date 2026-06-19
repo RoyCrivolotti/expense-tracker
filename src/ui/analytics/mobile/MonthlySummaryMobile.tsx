@@ -1,14 +1,19 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import type { ExpenseModel } from '../../useExpenseData'
 import { computeBudgetHealth } from '../../../engine'
 import { MonthPicker } from '../../components/MonthPicker'
 import { BudgetBar } from '../../components/BudgetBar'
-import { Card } from '../../components/primitives'
+import { Card, SectionTitle } from '../../components/primitives'
 import styles from './mobile.module.css'
 
-export function MonthlySummaryMobile({ model }: { model: ExpenseModel }) {
+interface Props {
+  model: ExpenseModel
+  month: string
+  onMonthChange: (month: string) => void
+}
+
+export function MonthlySummaryMobile({ model, month, onMonthChange }: Props) {
   const { dataset, months, lookup } = model
-  const [month, setMonth] = useState(months[months.length - 1] ?? '')
 
   const budgets = useMemo(() => {
     return computeBudgetHealth(dataset.transactions, dataset.categories, month, {
@@ -20,8 +25,9 @@ export function MonthlySummaryMobile({ model }: { model: ExpenseModel }) {
 
   return (
     <div className={styles.section}>
-      <MonthPicker months={months} value={month} onChange={setMonth} />
-      <p className={styles.hint}>Budget vs actual (includes forecast charges).</p>
+      <SectionTitle>Budget vs actual</SectionTitle>
+      <MonthPicker months={months} value={month} onChange={onMonthChange} layout="bar" />
+      <p className={styles.hint}>Includes forecast (unpaid card) charges.</p>
       <Card>
         {budgets.map((b) => (
           <BudgetBar
