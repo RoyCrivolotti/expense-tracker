@@ -25,27 +25,4 @@ describe('requireUser', () => {
       expect((e as HttpError).status).toBe(401)
     }
   })
-
-  it('enforces ALLOWED_EMAILS when configured', () => {
-    const request = new Request('https://expenses.test/api/expenses', {
-      headers: { 'Cf-Access-Authenticated-User-Email': 'other@example.com' },
-    })
-    expect(() =>
-      requireUser(request, testEnv({ ALLOWED_EMAILS: 'roy@example.com' })),
-    ).toThrow(HttpError)
-    try {
-      requireUser(request, testEnv({ ALLOWED_EMAILS: 'roy@example.com' }))
-    } catch (e) {
-      expect((e as HttpError).status).toBe(403)
-    }
-  })
-
-  it('allows listed emails regardless of header casing', () => {
-    const request = new Request('https://expenses.test/api/expenses', {
-      headers: { 'Cf-Access-Authenticated-User-Email': 'Roy@Example.com' },
-    })
-    expect(requireUser(request, testEnv({ ALLOWED_EMAILS: 'roy@example.com' }))).toBe(
-      'roy@example.com',
-    )
-  })
 })

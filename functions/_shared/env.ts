@@ -1,11 +1,21 @@
 import type { ExpenseRepository } from '../domain/ports/expenseRepository'
+import type { AccessRepository } from '../domain/ports/accessRepository'
 
 export interface Env {
   DB: D1Database
   BACKUPS?: R2Bucket
   /** Cloudflare Email Sending binding (optional). */
   EMAIL?: SendEmail
+  /** Bootstrap fallback when allowed_users is empty (comma-separated). */
   ALLOWED_EMAILS?: string
+  /** App owner — receives access requests and may approve. */
+  OWNER_EMAIL?: string
+***REMOVED***
+***REMOVED***
+***REMOVED***
+***REMOVED***
+***REMOVED***
+***REMOVED***
   BACKUP_RETENTION_DAYS?: string
   BACKUP_MAX_BUCKET_BYTES?: string
   BACKUP_MAX_SNAPSHOT_BYTES?: string
@@ -25,4 +35,6 @@ export interface Env {
 export interface ExpensesData extends Record<string, unknown> {
   owner: string
   repo: ExpenseRepository
+  authenticatedEmail: string
+  accessRepo: AccessRepository
 }
