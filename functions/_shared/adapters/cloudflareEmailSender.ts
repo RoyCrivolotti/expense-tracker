@@ -1,4 +1,4 @@
-import type { EmailSender } from '@domain/ports/emailSender'
+import type { EmailSender } from '../../domain/ports/emailSender'
 
 export interface EmailFrom {
   address: string

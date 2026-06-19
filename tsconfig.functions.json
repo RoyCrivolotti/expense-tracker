@@ -9,8 +9,8 @@
     "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
-      "@domain/*": ["src/domain/*"],
-      "@config/*": ["config/*"]
+      "@domain/*": ["functions/domain/*", "src/domain/*"],
+      "@config/*": ["functions/config/*", "config/*"]
     },
 
     "moduleResolution": "bundler",

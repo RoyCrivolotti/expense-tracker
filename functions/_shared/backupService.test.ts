@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { ExpenseRepository } from '@domain/ports/expenseRepository'
-import type { BackupStore } from '@domain/ports/backupStore'
-import type { BackupAlerts } from '@domain/ports/backupAlerts'
+import type { ExpenseRepository } from '../domain/ports/expenseRepository'
+import type { BackupStore } from '../domain/ports/backupStore'
+import type { BackupAlerts } from '../domain/ports/backupAlerts'
 import { createBackupDeps, runAllBackups } from './backupService'
 
 function mockRepo(overrides: Partial<ExpenseRepository> = {}): ExpenseRepository {

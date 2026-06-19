@@ -1,4 +1,4 @@
-import type { BackupObjectMeta, BackupStore } from '@domain/ports/backupStore'
+import type { BackupObjectMeta, BackupStore } from '../../domain/ports/backupStore'
 
 /** Cloudflare R2 adapter for {@link BackupStore}. */
 export function createR2BackupStore(bucket: R2Bucket): BackupStore {

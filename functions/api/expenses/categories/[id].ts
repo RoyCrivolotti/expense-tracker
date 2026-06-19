@@ -1,5 +1,5 @@
 import type { Env, ExpensesData } from '../../../_shared/env'
-import type { NewCategory } from '@domain/data/dataSource'
+import type { NewCategory } from '../../../domain/data/dataSource'
 import { HttpError, json, readJson } from '../../../_shared/http'
 
 function parseId(params: Record<string, string | string[]>): number {

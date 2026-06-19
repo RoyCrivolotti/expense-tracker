@@ -1,5 +1,5 @@
 import type { Env, ExpensesData } from '../../../_shared/env'
-import type { NewTransaction } from '@domain/data/dataSource'
+import type { NewTransaction } from '../../../domain/data/dataSource'
 import { HttpError, json, readJson } from '../../../_shared/http'
 
 function validate(input: NewTransaction): NewTransaction {

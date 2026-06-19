@@ -1,4 +1,4 @@
-import type { ExpenseRepository } from '@domain/ports/expenseRepository'
+import type { ExpenseRepository } from '../domain/ports/expenseRepository'
 
 export interface Env {
   DB: D1Database

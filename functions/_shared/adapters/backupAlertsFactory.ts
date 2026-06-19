@@ -1,4 +1,4 @@
-import type { BackupAlerts, BucketLimitDetails, LargeSnapshotDetails } from '@domain/ports/backupAlerts'
+import type { BackupAlerts, BucketLimitDetails, LargeSnapshotDetails } from '../../domain/ports/backupAlerts'
 
 /** Logs backup alert events to the Worker/Pages Function log stream. */
 export const consoleBackupAlerts: BackupAlerts = {
