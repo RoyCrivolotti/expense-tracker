@@ -18,6 +18,7 @@ function TabView({
   tab,
   model,
   month,
+  onMonthChange,
   actions,
   theme,
   onThemeChange,
@@ -25,6 +26,7 @@ function TabView({
   tab: TabId
   model: ExpenseModel
   month: string
+  onMonthChange: (month: string) => void
   actions?: ExpenseActions | undefined
   theme: ExpenseTheme
   onThemeChange: (next: ExpenseTheme) => void
@@ -33,7 +35,14 @@ function TabView({
     case 'transactions':
       return <TransactionsTab model={model} month={month} actions={actions} />
     case 'analytics':
-      return <AnalyticsTab model={model} month={month} actions={actions} />
+      return (
+        <AnalyticsTab
+          model={model}
+          month={month}
+          onMonthChange={onMonthChange}
+          actions={actions}
+        />
+      )
     case 'settings':
       return (
         <SettingsTab
@@ -84,6 +93,7 @@ export function ExpensesApp({ source }: { source: ExpenseDataSource }) {
         tab={tab}
         model={model}
         month={activeMonth}
+        onMonthChange={setMonth}
         actions={actions}
         theme={theme}
         onThemeChange={setTheme}

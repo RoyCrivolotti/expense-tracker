@@ -26,6 +26,8 @@
   font-size: 0.75rem;
   color: var(--color-text-muted);
   line-height: 1.4;
+  text-align: center;
+  margin: -0.25rem 0 0;
 }
 
 .monthCard {

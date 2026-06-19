@@ -5,16 +5,19 @@ interface MonthPickerProps {
   months: string[]
   value: string
   onChange: (month: string) => void
+  /** compact: inline pill (header). bar: full-width strip for section toolbars. */
+  layout?: 'compact' | 'bar'
 }
 
-export function MonthPicker({ months, value, onChange }: MonthPickerProps) {
+export function MonthPicker({ months, value, onChange, layout = 'compact' }: MonthPickerProps) {
   const index = months.indexOf(value)
   const go = (delta: number) => {
     const next = months[index + delta]
     if (next) onChange(next)
   }
+  const rootClass = layout === 'bar' ? `${styles.picker} ${styles.pickerBar}` : styles.picker
   return (
-    <div className={styles.picker}>
+    <div className={rootClass}>
       <button
         type="button"
         onClick={() => go(-1)}
