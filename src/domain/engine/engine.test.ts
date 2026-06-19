@@ -6,6 +6,7 @@ import { fv, nper, pmt } from './finance'
 import { deriveStatus, deriveTransactions } from './status'
 import { computeMonthlyTotals } from './monthlyTotals'
 import { computeBudgetHealth } from './categoryBudget'
+import { netSpendCents } from './transactions'
 
 describe('money', () => {
   it('parses EU currency strings to cents', () => {
@@ -157,6 +158,18 @@ describe('monthly totals', () => {
     expect(jan.netSavingCents).toBe(450000 - 140000)
     // Feb card charge is unpaid -> forecast -> excluded from posted totals.
     expect(totals.get('2026-02')).toBeUndefined()
+  })
+})
+
+describe('netSpendCents', () => {
+  it('sums expenses minus refunds and skips income and investments', () => {
+    const txns = [
+      { type: 'expense' as const, amountCents: 10000 },
+      { type: 'refund' as const, amountCents: 2000 },
+      { type: 'investment' as const, amountCents: 50000 },
+      { type: 'income' as const, amountCents: 80000 },
+    ]
+    expect(netSpendCents(txns as never)).toBe(8000)
   })
 })
 

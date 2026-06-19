@@ -39,6 +39,7 @@ export function AnalyticsTabMobile({
           value={section}
           onChange={setSection}
           ariaLabel="Analytics section"
+          layout="bar"
         />
       </div>
       {section === 'summary' && (

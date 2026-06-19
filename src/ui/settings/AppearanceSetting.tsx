@@ -23,6 +23,7 @@ export function AppearanceSetting({
         value={theme}
         onChange={onChange}
         ariaLabel="Colour theme"
+        layout="bar"
       />
     </>
   )
