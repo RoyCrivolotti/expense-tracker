@@ -1,7 +1,6 @@
 # Git history rewrite (before public repo)
 
-HEAD is scrubbed of personal emails in migrations and config. Older commits may still
-contain them. Before `gh repo edit --visibility public`:
+HEAD is scrubbed of personal emails in migrations and config. Older commits may still contain them. Before `gh repo edit --visibility public`:
 
 ```bash
 # Install: brew install git-filter-repo
@@ -21,16 +20,41 @@ git remote add origin git@github.com:RoyCrivolotti/expense-tracker.git
 git push --force origin main
 ```
 
-Verify no PII remains in **file content** across all commits:
+## Remove obsolete email-access artifacts
+
+The in-app admin path replaced a short-lived email-approve experiment. These paths are stripped from all commits:
 
 ```bash
-git log --all -S 'owner@example.com' --oneline   # expect empty
-git log --all -S 'user2@example.com' --oneline      # expect empty
-git log --all -S 'user3@example.com' --oneline   # expect empty
+git filter-repo --invert-paths --force \
+  --path functions/_shared/access/accessNotifier.ts \
+  --path functions/_shared/access/accessTokens.ts \
+  --path functions/_shared/access/accessTokens.test.ts \
+  --path functions/_shared/adapters/createAccessNotifier.ts \
+  --path functions/api/access/approve.ts \
+  --path src/ui/access/ApproveAccessScreen.tsx
 ```
 
-`git filter-repo` removes `origin`; re-add it before pushing. Re-clone on other
-machines after the force push.
+Remove the word “Resend” from the email port comment (never used):
 
-After rewrite, rotate any credentials that ever appeared in history (unlikely here,
-but good hygiene).
+```bash
+cat >/tmp/expense-tracker-resend-replacements.txt <<'EOF'
+==>
+EOF
+git filter-repo --replace-text /tmp/expense-tracker-resend-replacements.txt --force
+rm /tmp/expense-tracker-resend-replacements.txt
+```
+
+Re-add `origin` and force-push after each filter-repo run (`filter-repo` removes remotes).
+
+## Verify no PII remains in file content across all commits
+
+```bash
+git log --all -S 'owner@example.com' --oneline   # expect empty (real addresses)
+git log --all -S '@gmail.com' --oneline          # expect empty
+git log --all -S 'Resend' --oneline              # expect empty
+git log --all -S 'ACCESS_APPROVE_SECRET' --oneline  # expect empty after scrub
+```
+
+`git filter-repo` removes `origin`; re-add it before pushing. Re-clone on other machines after the force push.
+
+After rewrite, rotate any credentials that ever appeared in history (unlikely here, but good hygiene).
