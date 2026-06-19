@@ -1,4 +1,5 @@
 import styles from './charts.module.css'
+import { useTooltipClamp } from './useTooltipClamp'
 
 export interface TooltipLine {
   label: string
@@ -14,18 +15,22 @@ interface Props {
 
 export function ChartTooltip({ title, lines, leftPct }: Props) {
   const clamped = Math.min(92, Math.max(8, leftPct))
+  const contentKey = `${title}|${lines.map((line) => `${line.label}:${line.value}`).join('|')}`
+  const { ref, shiftX } = useTooltipClamp(clamped, contentKey)
+
   return (
     <div
+      ref={ref}
       className={styles.tooltip}
-      style={{ left: `${clamped}%` }}
+      style={{ left: `${clamped}%`, transform: `translateX(calc(-50% + ${shiftX}px))` }}
       role="tooltip"
     >
       <p className={styles.tooltipTitle}>{title}</p>
       <ul className={styles.tooltipList}>
         {lines.map((line) => (
           <li key={line.label} className={styles[`tooltip_${line.tone ?? 'neutral'}`]}>
-            <span>{line.label}</span>
-            <span>{line.value}</span>
+            <span className={styles.tooltipLabel}>{line.label}</span>
+            <span className={styles.tooltipValue}>{line.value}</span>
           </li>
         ))}
       </ul>
