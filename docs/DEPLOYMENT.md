@@ -38,7 +38,7 @@ The allowlist lives in D1 (`allowed_users`). New users request access in the app
 2. Copy `config/access.example.json` → `config/access.json` (owner email, app URL, sender).
 3. Generate approve secret: `openssl rand -base64 32` → GitHub secret `ACCESS_APPROVE_SECRET`.
 4. Sync Pages env: `npm run sync:access-env` (local: needs `config/access.json`; CI: `OWNER_EMAIL` + `ACCESS_APPROVE_SECRET` secrets).
-5. Bootstrap D1 from existing list: `npm run bootstrap:allowed-users` (uses `config/allowed-emails.json` or `ALLOWED_EMAILS`).
+5. Bootstrap D1 from existing list (one-time / when adding emails): `npm run bootstrap:allowed-users` (uses `config/allowed-emails.json` or `ALLOWED_EMAILS`). Not run in CI — the deploy token lacks D1 execute; use wrangler OAuth locally or grant D1 Edit on the token.
 
 **GitHub secrets:** `ACCESS_APPROVE_SECRET`, `OWNER_EMAIL`, `ALLOWED_EMAILS` (bootstrap), `CLOUDFLARE_API_TOKEN`.
 

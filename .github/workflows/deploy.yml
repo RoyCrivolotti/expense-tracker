@@ -57,13 +57,6 @@ jobs:
           APP_ORIGIN: https://expenses.crivolotti.com
         run: npm run sync:access-env
 
-      - name: Bootstrap allowed users in D1
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
-          ALLOWED_EMAILS: ${{ secrets.ALLOWED_EMAILS }}
-        run: npm run bootstrap:allowed-users
-
       - name: Deploy expense-tracker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
