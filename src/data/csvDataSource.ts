@@ -3,7 +3,7 @@
  * into private/content by scripts/prep-reports.mjs). Read-only — proves the
  * compute engine and UI before any backend exists.
  */
-import csvText from '../../../content/expenses_v3.csv?raw'
+import csvText from '../../content/expenses_v3.csv?raw'
 import type { ExpenseDataset } from '../types'
 import { parseWorkbookCsv } from './parseWorkbookCsv'
 import type { ExpenseDataSource } from './dataSource'

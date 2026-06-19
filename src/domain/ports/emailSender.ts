@@ -4,7 +4,7 @@ export interface OutboundEmail {
   text: string
 }
 
-/** Sends transactional email (Cloudflare Email, SES, …). */
+/** Sends transactional email (Cloudflare Email binding). */
 export interface EmailSender {
   send(message: OutboundEmail): Promise<void>
 }

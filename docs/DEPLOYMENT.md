@@ -30,7 +30,7 @@ CLOUDFLARE_API_TOKEN=… npm run setup:access-google
 
 ## App access control (D1 + in-app admin)
 
-The allowlist lives in D1 (`allowed_users`). New users request access in the app; the owner approves from **Settings → Access requests** or `/access/admin`.
+The allowlist lives in D1 (`allowed_users`). New users request access in the app; the owner approves from **Settings → Manage access** or `/access/admin`.
 
 **Setup:**
 

@@ -17,7 +17,11 @@ const csvDest = join(contentDir, 'expenses_v3.csv')
 
 mkdirSync(contentDir, { recursive: true })
 
-if (existsSync(csvSrc)) {
+const demoFixture = join(root, 'fixtures/demo-expenses.csv')
+if (process.env.DOCS_CAPTURE === '1') {
+  writeFileSync(csvDest, readFileSync(demoFixture, 'utf8'))
+  console.log('prep-expenses-data: using fixtures/demo-expenses.csv (DOCS_CAPTURE)')
+} else if (existsSync(csvSrc)) {
   writeFileSync(csvDest, readFileSync(csvSrc, 'utf8'))
   console.log('prep-expenses-data: bundled expenses_v3.csv')
 } else {
