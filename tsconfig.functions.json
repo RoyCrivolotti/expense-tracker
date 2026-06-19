@@ -29,7 +29,7 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["functions/**/*.ts", "src/domain/**/*.ts"],
+  "include": ["functions/**/*.ts", "src/domain/**/*.ts", "workers/**/*.ts"],
   "exclude": ["**/*.test.ts"],
   "files": [
     "functions/api/expenses/transactions/[id].ts",

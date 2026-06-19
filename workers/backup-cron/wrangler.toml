@@ -1,0 +1,17 @@
+# Daily D1 → R2 snapshots. Cron lives here — Pages does not support cron triggers.
+name = "expense-backup-cron"
+main = "src/index.ts"
+compatibility_date = "2024-11-12"
+account_id = "800abdfb2ec1687266f66fd349c41d6a"
+
+[triggers]
+crons = ["0 4 * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "roy-expenses"
+database_id = "3dcefc85-e172-4fd0-a623-f2f15120c9d9"
+
+[[r2_buckets]]
+binding = "BACKUPS"
+bucket_name = "roy-expenses-backups"

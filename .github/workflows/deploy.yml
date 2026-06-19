@@ -49,13 +49,26 @@ jobs:
 
       - run: rm -f package-lock.json && npm install --no-workspaces
 
-      - name: Sync allowed users (Access + ALLOWED_EMAILS)
+      - name: Sync access env (owner + approve secret)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          OWNER_EMAIL: ${{ secrets.OWNER_EMAIL }}
+          ACCESS_APPROVE_SECRET: ${{ secrets.ACCESS_APPROVE_SECRET }}
+          APP_ORIGIN: https://expenses.crivolotti.com
+        run: npm run sync:access-env
+
+      - name: Bootstrap allowed users in D1
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           ALLOWED_EMAILS: ${{ secrets.ALLOWED_EMAILS }}
-        run: node scripts/sync-allowed-users.mjs
+        run: npm run bootstrap:allowed-users
 
       - name: Deploy expense-tracker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npm run deploy
+
+      - name: Deploy backup cron worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npm run deploy:backup-cron

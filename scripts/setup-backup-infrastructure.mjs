@@ -4,9 +4,7 @@
  * 1. Create R2 bucket roy-expenses-backups (wrangler)
  * 2. Bind BACKUPS on expense-tracker Pages (production + preview)
  *
- * Cron trigger for functions/scheduled.ts must be added in the dashboard
- * (Workers & Pages → expense-tracker → Settings → Functions → Cron triggers:
- * 0 4 * * *). No public API for Pages Function cron as of 2026-06.
+ * Cron runs on the expense-backup-cron Worker — deploy with npm run deploy:backup-cron.
  */
 import { execSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
@@ -97,9 +95,7 @@ async function main() {
   }
   await syncBackupsBinding()
   console.log('')
-  console.log('Manual step: add cron trigger on the expense-tracker Pages project:')
-  console.log('  Dashboard → Workers & Pages → expense-tracker → Settings → Functions')
-  console.log('  Cron triggers → Add → schedule 0 4 * * * (04:00 UTC daily)')
+  console.log('Next: npm run deploy:backup-cron  (Worker cron 0 4 * * * UTC)')
 }
 
 main().catch((err) => {

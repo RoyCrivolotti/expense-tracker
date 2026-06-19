@@ -1,5 +1,6 @@
 import type { EventContext } from '@cloudflare/workers-types'
 import type { Env, ExpensesData } from './env'
+import { createD1AccessRepository } from './adapters/d1AccessRepository'
 import { createD1ExpenseRepository } from './adapters/d1ExpenseRepository'
 import { onRequest as authMiddleware } from '../api/_middleware'
 
@@ -35,6 +36,49 @@ function handlerContext(
   } as unknown as HandlerContext
 }
 
+function defaultTestEnv(overrides: Env): Env {
+  return {
+    ALLOWED_EMAILS: 'owner@example.com',
+    ...overrides,
+  }
+}
+
+/** Mock D1 access tables so middleware allowlist falls back to ALLOWED_EMAILS. */
+function withAccessTableMocks(env: Env): Env {
+  const base = env.DB
+  return {
+    ...env,
+    DB: {
+      prepare(sql: string) {
+        if (sql.includes('allowed_users')) {
+          if (sql.includes('COUNT(*)')) {
+            return {
+              first: () => Promise.resolve({ n: 0 }),
+              bind: () => ({ first: () => Promise.resolve({ n: 0 }) }),
+            }
+          }
+          if (sql.includes('SELECT 1')) {
+            return {
+              bind: () => ({ first: () => Promise.resolve(null) }),
+            }
+          }
+          if (sql.includes('last_seen_at')) {
+            return {
+              bind: () => ({ run: () => Promise.resolve({}) }),
+            }
+          }
+          if (sql.includes('SELECT *')) {
+            return {
+              bind: () => ({ first: () => Promise.resolve(null) }),
+            }
+          }
+        }
+        return base.prepare(sql)
+      },
+    } as unknown as D1Database,
+  }
+}
+
 /** Run a Pages route handler through the real auth middleware (integration tests). */
 export async function invokePagesRoute(
   handler: RouteHandler,
@@ -53,18 +97,21 @@ export async function invokePagesRoute(
     options.url ?? 'https://expenses.test/api/expenses/transactions',
     init,
   )
+  const env = withAccessTableMocks(defaultTestEnv(options.env))
   const data: ExpensesData = {
     owner: '',
-    repo: createD1ExpenseRepository(options.env),
+    authenticatedEmail: '',
+    accessRepo: createD1AccessRepository(env),
+    repo: createD1ExpenseRepository(env),
   }
   const params = options.params ?? {}
   const routeNext: HandlerContext['next'] = () =>
     Promise.resolve(
       handler(
-        handlerContext(request, options.env, params, data, () =>
+        handlerContext(request, env, params, data, () =>
           Promise.resolve(new Response(null, { status: 404 })),
         ),
       ),
     )
-  return authMiddleware(handlerContext(request, options.env, params, data, routeNext))
+  return authMiddleware(handlerContext(request, env, params, data, routeNext))
 }

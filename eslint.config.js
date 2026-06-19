@@ -8,16 +8,15 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 export default defineConfig([
   globalIgnores([
     'dist',
-    'dist',
-    'dist',
     'private/static/legacy',
     'private/content',
     'coverage',
     'site-ui/**',
+    'workers/**/.wrangler/**',
   ]),
   {
     files: ['**/*.{ts,tsx}'],
-    ignores: ['functions/**/*.test.ts'],
+    ignores: ['functions/**/*.test.ts', 'workers/**'],
     extends: [
       js.configs.recommended,
       tseslint.configs.recommendedTypeChecked,
@@ -47,7 +46,28 @@ export default defineConfig([
     },
   },
   {
-    files: ['functions/**/*.test.ts'],
+    files: ['workers/**/*.ts'],
+    extends: [js.configs.recommended, tseslint.configs.recommendedTypeChecked],
+    languageOptions: {
+      globals: globals.worker,
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      'max-lines': ['error', { max: 200, skipBlankLines: true, skipComments: true }],
+      'max-lines-per-function': [
+        'error',
+        { max: 60, skipBlankLines: true, skipComments: true },
+      ],
+      complexity: ['error', 12],
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/consistent-type-imports': 'error',
+    },
+  },
+  {
     extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: {
       globals: { ...globals.browser, ...globals.node },
