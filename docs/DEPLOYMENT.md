@@ -58,9 +58,20 @@ npm run sync:access-env
 
 ## CI
 
-Push to `main` → verify → sync access env → bootstrap D1 → deploy (+ backup cron worker).
+Push to `main` → verify → sync access env → deploy Pages → deploy backup cron worker (non-blocking if token lacks Workers scope).
 
 Secrets: `CLOUDFLARE_API_TOKEN`, `ALLOWED_EMAILS`, `OWNER_EMAIL`.
+
+**`CLOUDFLARE_API_TOKEN` permissions** (Cloudflare dashboard → My Profile → API Tokens → edit token):
+
+| Scope | Permission | Used for |
+| ----- | ---------- | -------- |
+| Account → Cloudflare Pages | Edit | Pages deploy |
+| Account → D1 | Edit | bootstrap / migrations (optional in CI) |
+| Account → Workers Scripts | Edit | `expense-backup-cron` deploy |
+| Account → Workers R2 Storage | Edit | backup bucket bindings |
+
+If Workers Scripts Edit is missing, CI still deploys the app but skips the cron worker with a warning. Deploy the worker locally once after updating the token, or run `npm run deploy:backup-cron` with `wrangler login`.
 
 ## Migrations
 
