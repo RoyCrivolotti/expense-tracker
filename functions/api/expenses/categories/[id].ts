@@ -1,6 +1,5 @@
 import type { Env, ExpensesData } from '../../../_shared/env'
-import type { NewCategory } from '../../../../src/domain/data/dataSource'
-import { updateCategory } from '../../../_shared/dbConfig'
+import type { NewCategory } from '@domain/data/dataSource'
 import { HttpError, json, readJson } from '../../../_shared/http'
 
 function parseId(params: Record<string, string | string[]>): number {
@@ -13,5 +12,6 @@ function parseId(params: Record<string, string | string[]>): number {
 export const onRequestPatch: PagesFunction<Env, string, ExpensesData> = async (context) => {
   const id = parseId(context.params)
   const patch = await readJson<Partial<NewCategory>>(context.request)
-  return json(await updateCategory(context.env, context.data.owner, id, patch))
+  const { repo, owner } = context.data
+  return json(await repo.updateCategory(owner, id, patch))
 }

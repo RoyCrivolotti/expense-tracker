@@ -8,9 +8,11 @@ import styles from './tabs.module.css'
 
 export function AnalyticsTab({
   model,
+  month,
   actions,
 }: {
   model: ExpenseModel
+  month: string
   actions?: ExpenseActions | undefined
 }) {
   const isMobile = useIsMobile()
@@ -25,8 +27,8 @@ export function AnalyticsTab({
   }
 
   return isMobile ? (
-    <AnalyticsTabMobile model={model} actions={actions} />
+    <AnalyticsTabMobile model={model} month={month} actions={actions} />
   ) : (
-    <AnalyticsTabDesktop model={model} actions={actions} />
+    <AnalyticsTabDesktop model={model} month={month} actions={actions} />
   )
 }

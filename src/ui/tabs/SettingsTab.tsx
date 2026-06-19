@@ -8,10 +8,12 @@ import { StatementToggles } from '../components/StatementToggles'
 import { DefinitionsEditor } from '../definitions/DefinitionsEditor'
 import { AppearanceSetting } from '../settings/AppearanceSetting'
 import { DefaultAccountSetting } from '../settings/DefaultAccountSetting'
+import { ExportDataSection } from '../settings/ExportDataSection'
 import styles from './tabs.module.css'
 
 interface SettingsTabProps {
   model: ExpenseModel
+  month: string
   actions?: ExpenseActions | undefined
   theme: ExpenseTheme
   onThemeChange: (next: ExpenseTheme) => void
@@ -81,10 +83,15 @@ function Definitions({ model }: { model: ExpenseModel }) {
   )
 }
 
-export function SettingsTab({ model, actions, theme, onThemeChange }: SettingsTabProps) {
+export function SettingsTab({ model, month, actions, theme, onThemeChange }: SettingsTabProps) {
   return (
     <div className={styles.stack}>
       <AppearanceSetting theme={theme} onChange={onThemeChange} />
+
+      <SectionTitle>Export</SectionTitle>
+      <Card>
+        <ExportDataSection model={model} month={month} />
+      </Card>
 
       {actions && (
         <DefaultAccountSetting

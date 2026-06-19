@@ -1,5 +1,4 @@
 import type { Env, ExpensesData } from '../../../_shared/env'
-import { setStatementPaid } from '../../../_shared/dbWrite'
 import { HttpError, json, readJson } from '../../../_shared/http'
 
 interface SetPaidBody {
@@ -13,13 +12,8 @@ export const onRequestPut: PagesFunction<Env, string, ExpensesData> = async (con
   if (!body.accountId || !/^\d{4}-\d{2}$/.test(body.yearMonth ?? '')) {
     throw new HttpError(400, 'accountId and yearMonth (YYYY-MM) are required')
   }
+  const { repo, owner } = context.data
   return json(
-    await setStatementPaid(
-      context.env,
-      context.data.owner,
-      body.accountId,
-      body.yearMonth,
-      Boolean(body.paid),
-    ),
+    await repo.setStatementPaid(owner, body.accountId, body.yearMonth, Boolean(body.paid)),
   )
 }

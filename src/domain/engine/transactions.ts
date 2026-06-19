@@ -1,13 +1,14 @@
-/**
- * Transaction querying: filtering and grouping by day for the list views.
- */
 import type { Transaction, TxnStatus } from '../types'
 
 export interface TxnFilter {
   month?: string
   categoryId?: number
   accountId?: number
+  type?: Transaction['type'] | 'all'
   status?: TxnStatus | 'all'
+  /** ISO date range on calendar date (inclusive). When set, `month` is ignored. */
+  dateFrom?: string
+  dateTo?: string
   /** Case-insensitive substring match against the description and notes. */
   query?: string
 }
@@ -17,11 +18,26 @@ function matchesQuery(txn: Transaction, query: string): boolean {
   return haystack.includes(query.toLowerCase())
 }
 
-function matches(txn: Transaction, filter: TxnFilter): boolean {
+function matchesPeriod(txn: Transaction, filter: TxnFilter): boolean {
+  if (filter.dateFrom || filter.dateTo) {
+    if (filter.dateFrom && txn.date < filter.dateFrom) return false
+    if (filter.dateTo && txn.date > filter.dateTo) return false
+    return true
+  }
   if (filter.month && txn.budgetMonth !== filter.month) return false
+  return true
+}
+
+function matchesTypeAndStatus(txn: Transaction, filter: TxnFilter): boolean {
+  if (filter.type && filter.type !== 'all' && txn.type !== filter.type) return false
+  if (filter.status && filter.status !== 'all' && txn.status !== filter.status) return false
+  return true
+}
+
+function matchesDimensions(txn: Transaction, filter: TxnFilter): boolean {
   if (filter.categoryId != null && txn.categoryId !== filter.categoryId) return false
   if (filter.accountId != null && txn.accountId !== filter.accountId) return false
-  if (filter.status && filter.status !== 'all' && txn.status !== filter.status) return false
+  if (!matchesTypeAndStatus(txn, filter)) return false
   if (filter.query && !matchesQuery(txn, filter.query)) return false
   return true
 }
@@ -29,7 +45,7 @@ function matches(txn: Transaction, filter: TxnFilter): boolean {
 /** Filter then sort newest first (by calendar date, then id for stability). */
 export function filterTransactions(transactions: Transaction[], filter: TxnFilter): Transaction[] {
   return transactions
-    .filter((txn) => matches(txn, filter))
+    .filter((txn) => matchesPeriod(txn, filter) && matchesDimensions(txn, filter))
     .sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)
 }
 

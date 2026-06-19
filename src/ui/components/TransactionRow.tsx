@@ -4,12 +4,14 @@ import { STATUS_LABEL, type Lookup } from '../format'
 import { Money } from './Money'
 import { Pill } from './primitives'
 import { confirmDeleteOne } from './confirmDelete'
+import { CategoryIcon } from './CategoryIcon'
 import styles from './TransactionList.module.css'
 
 function RowBody({ txn, lookup }: { txn: Transaction; lookup: Lookup }) {
+  const cat = lookup.category(txn.categoryId)
   return (
     <>
-      <span className={styles.dot} data-type={txn.type} aria-hidden />
+      <CategoryIcon icon={cat?.icon} name={cat?.name ?? '?'} className={styles.catIcon} />
       <span className={styles.body}>
         <span className={styles.desc}>
           {txn.description || lookup.categoryName(txn.categoryId)}

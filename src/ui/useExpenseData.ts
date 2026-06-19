@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { ExpenseDataset } from '../types'
-import { sortedMonths } from '../engine/dates'
 import type { ExpenseDataSource } from '../data/dataSource'
-import { buildDescriptionIndex, type DescriptionIndex } from '../data/descriptionIndex'
-import { buildLookup, type Lookup } from './format'
+import type { DescriptionIndex } from '../data/descriptionIndex'
+import type { Lookup } from './format'
+import { buildExpenseModel } from './buildExpenseModel'
 
 export interface ExpenseModel {
   dataset: ExpenseDataset
@@ -21,6 +21,8 @@ interface LoadState {
 
 export interface ExpenseData extends LoadState {
   reload: () => void
+  /** Apply a pure dataset transform and rebuild the view model without a network round-trip. */
+  applyPatch: (patch: (dataset: ExpenseDataset) => ExpenseDataset) => void
 }
 
 export function useExpenseData(source: ExpenseDataSource): ExpenseData {
@@ -28,22 +30,21 @@ export function useExpenseData(source: ExpenseDataSource): ExpenseData {
   const [version, setVersion] = useState(0)
   const reload = useCallback(() => setVersion((v) => v + 1), [])
 
+  const applyPatch = useCallback((patch: (dataset: ExpenseDataset) => ExpenseDataset) => {
+    setState((prev) => {
+      if (prev.status !== 'ready' || !prev.model) return prev
+      const nextDataset = patch(prev.model.dataset)
+      return { status: 'ready', model: buildExpenseModel(nextDataset) }
+    })
+  }, [])
+
   useEffect(() => {
     let active = true
     source
       .load()
-      .then((dataset: ExpenseDataset) => {
+      .then((dataset) => {
         if (!active) return
-        const months = sortedMonths(dataset.transactions.map((t) => t.budgetMonth))
-        setState({
-          status: 'ready',
-          model: {
-            dataset,
-            lookup: buildLookup(dataset),
-            descriptionIndex: buildDescriptionIndex(dataset.transactions),
-            months,
-          },
-        })
+        setState({ status: 'ready', model: buildExpenseModel(dataset) })
       })
       .catch((err: unknown) => {
         if (active)
@@ -54,5 +55,5 @@ export function useExpenseData(source: ExpenseDataSource): ExpenseData {
     }
   }, [source, version])
 
-  return { ...state, reload }
+  return { ...state, reload, applyPatch }
 }

@@ -6,6 +6,12 @@
     "module": "esnext",
     "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom", "node"],
     "skipLibCheck": true,
+    "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
+    "paths": {
+      "@domain/*": ["src/domain/*"],
+      "@config/*": ["config/*"]
+    },
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,

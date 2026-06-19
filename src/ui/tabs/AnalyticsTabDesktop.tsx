@@ -6,17 +6,21 @@ import { MonthlyTotalsTable } from '../analytics/MonthlyTotalsTable'
 import { CashReconciliationTable } from '../analytics/CashReconciliationTable'
 import { YearlyOverviewTable } from '../analytics/YearlyOverviewTable'
 import tableStyles from '../analytics/analytics.module.css'
+import { InsightsCharts } from '../charts/InsightsCharts'
 import styles from './tabs.module.css'
 
 export function AnalyticsTabDesktop({
   model,
+  month,
   actions,
 }: {
   model: ExpenseModel
+  month: string
   actions?: ExpenseActions | undefined
 }) {
   return (
     <div className={styles.stack}>
+      <InsightsCharts model={model} month={month} />
       <section className={styles.analyticsSection}>
         <SectionTitle>Monthly summary</SectionTitle>
         <p className={tableStyles.note}>

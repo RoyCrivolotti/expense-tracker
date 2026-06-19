@@ -1,5 +1,5 @@
-import type { ExpenseDataset } from '../../src/domain/types'
-import { deriveTransactions } from '../../src/domain/engine/status'
+import type { ExpenseDataset } from '@domain/types'
+import { deriveTransactions } from '@domain/engine/status'
 import type { Env } from './env'
 import {
   toAccount,
@@ -74,4 +74,18 @@ export async function loadDataset(env: Env, owner: string): Promise<ExpenseDatas
           expectedRealReturn: 0,
         },
   }
+}
+
+/** Distinct owner emails that have rows in D1 (used by scheduled backups). */
+export async function listOwners(env: Env): Promise<string[]> {
+  const result = await env.DB.prepare(
+    `SELECT owner FROM (
+       SELECT owner FROM transactions
+       UNION
+       SELECT owner FROM categories
+       UNION
+       SELECT owner FROM settings
+     ) GROUP BY owner ORDER BY owner`,
+  ).all<{ owner: string }>()
+  return (result.results ?? []).map((r) => r.owner).filter(Boolean)
 }

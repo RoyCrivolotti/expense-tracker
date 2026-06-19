@@ -64,8 +64,7 @@
   cursor: pointer;
   white-space: nowrap;
 }
-.search,
-.selectRow select {
+.search {
   width: 100%;
   padding: 0.6rem 0.75rem;
   border: 1px solid var(--color-border);
@@ -74,6 +73,24 @@
   color: var(--color-text);
   font: inherit;
   font-size: 0.9rem;
+}
+.selectRow select,
+.selectRow input[type='date'] {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.7rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.9rem;
+}
+.dateRangeToggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
 }
 .filterTop .search {
   flex: 1;

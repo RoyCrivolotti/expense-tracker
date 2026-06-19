@@ -1,6 +1,5 @@
 import type { Env, ExpensesData } from '../../../_shared/env'
-import type { NewTransaction } from '../../../../src/domain/data/dataSource'
-import { insertTransaction } from '../../../_shared/dbWrite'
+import type { NewTransaction } from '@domain/data/dataSource'
 import { HttpError, json, readJson } from '../../../_shared/http'
 
 function validate(input: NewTransaction): NewTransaction {
@@ -13,5 +12,6 @@ function validate(input: NewTransaction): NewTransaction {
 
 export const onRequestPost: PagesFunction<Env, string, ExpensesData> = async (context) => {
   const input = validate(await readJson<NewTransaction>(context.request))
-  return json(await insertTransaction(context.env, context.data.owner, input), 201)
+  const { repo, owner } = context.data
+  return json(await repo.insertTransaction(owner, input), 201)
 }

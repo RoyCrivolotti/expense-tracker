@@ -20,14 +20,25 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
     <div className={styles.stack}>
       <TxnFilters
         categories={model.dataset.categories}
+        accounts={model.dataset.accounts}
         query={state.query}
         status={state.status}
         categoryId={state.categoryId}
+        accountId={state.accountId}
+        txnType={state.txnType}
+        useDateRange={state.useDateRange}
+        dateFrom={state.dateFrom}
+        dateTo={state.dateTo}
         selectMode={state.selectMode}
         canSelect={state.canDelete}
         onQuery={state.setQuery}
         onCategory={state.setCategoryId}
+        onAccount={state.setAccountId}
         onStatus={state.setStatus}
+        onTxnType={state.setTxnType}
+        onUseDateRange={state.setUseDateRange}
+        onDateFrom={state.setDateFrom}
+        onDateTo={state.setDateTo}
         onToggleSelectMode={state.toggleSelectMode}
       />
 

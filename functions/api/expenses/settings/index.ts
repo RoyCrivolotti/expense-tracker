@@ -1,9 +1,9 @@
 import type { Env, ExpensesData } from '../../../_shared/env'
-import type { ExpenseSettings } from '../../../../src/domain/types'
-import { updateSettings } from '../../../_shared/dbConfig'
+import type { ExpenseSettings } from '@domain/types'
 import { json, readJson } from '../../../_shared/http'
 
 export const onRequestPut: PagesFunction<Env, string, ExpensesData> = async (context) => {
   const patch = await readJson<Partial<ExpenseSettings>>(context.request)
-  return json(await updateSettings(context.env, context.data.owner, patch))
+  const { repo, owner } = context.data
+  return json(await repo.updateSettings(owner, patch))
 }

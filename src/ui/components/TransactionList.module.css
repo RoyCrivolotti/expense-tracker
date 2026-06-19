@@ -72,6 +72,10 @@
   opacity: 0.75;
 }
 
+.catIcon {
+  flex-shrink: 0;
+}
+
 .row {
   display: flex;
   align-items: center;

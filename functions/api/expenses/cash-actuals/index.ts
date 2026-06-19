@@ -1,5 +1,4 @@
 import type { Env, ExpensesData } from '../../../_shared/env'
-import { clearCashActual, setCashActual } from '../../../_shared/dbWrite'
 import { HttpError, json, readJson } from '../../../_shared/http'
 
 interface SetCashActualBody {
@@ -13,14 +12,13 @@ export const onRequestPut: PagesFunction<Env, string, ExpensesData> = async (con
   if (!/^\d{4}-\d{2}$/.test(body.yearMonth ?? '')) {
     throw new HttpError(400, 'yearMonth (YYYY-MM) is required')
   }
+  const { repo, owner } = context.data
   if (body.actualCashCents === null) {
-    await clearCashActual(context.env, context.data.owner, body.yearMonth)
+    await repo.clearCashActual(owner, body.yearMonth)
     return json({ yearMonth: body.yearMonth, actualCashCents: null })
   }
   if (!Number.isInteger(body.actualCashCents)) {
     throw new HttpError(400, 'actualCashCents (integer) is required')
   }
-  return json(
-    await setCashActual(context.env, context.data.owner, body.yearMonth, body.actualCashCents),
-  )
+  return json(await repo.setCashActual(owner, body.yearMonth, body.actualCashCents))
 }

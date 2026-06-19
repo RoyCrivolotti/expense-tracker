@@ -11,9 +11,11 @@
     "typecheck": "tsc -b --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "verify": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "verify": "node scripts/ensure-site-ui-for-verify.mjs && npm run lint && npm run typecheck && npm run test && npm run build",
     "deploy": "bash scripts/deploy.sh",
-    "sync:allowed-users": "node scripts/sync-allowed-users.mjs"
+    "sync:allowed-users": "node scripts/sync-allowed-users.mjs",
+    "setup:backups": "node scripts/setup-backup-infrastructure.mjs",
+    "sync:backup-alerts": "node scripts/sync-backup-alerts.mjs"
   },
   "dependencies": {
     "@crivolotti/site-ui": "file:./site-ui",
