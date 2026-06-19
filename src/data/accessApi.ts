@@ -1,8 +1,25 @@
-export type AccessStatus = 'allowed' | 'pending' | 'none'
+export type AccessStatus = 'allowed' | 'pending' | 'rejected' | 'none'
 
 export interface AccessStatusResponse {
   status: AccessStatus
   email: string
+  isOwner?: boolean
+  pendingCount?: number
+  requestedAt?: string
+}
+
+export interface PendingAccessRequest {
+  id: string
+  email: string
+  requestedAt: string
+}
+
+export interface ActiveAccessUser {
+  email: string
+  grantedAt: string
+  grantedBy: string | null
+  lastSeenAt: string | null
+  isOwner: boolean
 }
 
 async function req<T>(url: string, init?: RequestInit): Promise<T> {
@@ -32,14 +49,34 @@ export function requestAccess(): Promise<{ status: 'pending' }> {
   return req('/api/access/request', { method: 'POST' })
 }
 
-export function previewAccessApproval(token: string): Promise<{ email: string; requestId: string }> {
-  return req(`/api/access/approve?token=${encodeURIComponent(token)}`)
+export function fetchPendingAccessRequests(): Promise<{ requests: PendingAccessRequest[] }> {
+  return req('/api/access/admin/pending')
 }
 
-export function confirmAccessApproval(token: string): Promise<{ email: string; approved: true }> {
-  return req('/api/access/approve', {
+export function fetchActiveAccessUsers(): Promise<{ users: ActiveAccessUser[] }> {
+  return req('/api/access/admin/users')
+}
+
+export function approveAccessRequest(requestId: string): Promise<{ email: string; approved: true }> {
+  return req('/api/access/admin/approve', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ token }),
+    body: JSON.stringify({ requestId }),
+  })
+}
+
+export function rejectAccessRequest(requestId: string): Promise<{ email: string; rejected: true }> {
+  return req('/api/access/admin/reject', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ requestId }),
+  })
+}
+
+export function revokeAccessUser(email: string): Promise<{ email: string; revoked: true }> {
+  return req('/api/access/admin/revoke', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email }),
   })
 }

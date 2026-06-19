@@ -11,9 +11,14 @@ function repo(activeCount: number, allowed = false): AccessRepository {
     listActiveUsers: vi.fn(),
     grantAccess: vi.fn(),
     findPendingRequest: vi.fn(),
-    findRequestByTokenHash: vi.fn(),
+    listPendingRequests: vi.fn(),
+    countPendingRequests: vi.fn(),
+    findRequestById: vi.fn(),
+    findLatestRequest: vi.fn(),
     createRequest: vi.fn(),
     markRequestApproved: vi.fn(),
+    markRequestRejected: vi.fn(),
+    revokeAccess: vi.fn(),
     touchLastSeen: vi.fn(),
   }
 }

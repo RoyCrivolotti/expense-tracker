@@ -22,6 +22,7 @@ function TabView({
   actions,
   theme,
   onThemeChange,
+  ownerAccess,
 }: {
   tab: TabId
   model: ExpenseModel
@@ -30,6 +31,7 @@ function TabView({
   actions?: ExpenseActions | undefined
   theme: ExpenseTheme
   onThemeChange: (next: ExpenseTheme) => void
+  ownerAccess?: { pendingCount: number } | undefined
 }) {
   switch (tab) {
     case 'transactions':
@@ -51,6 +53,7 @@ function TabView({
           actions={actions}
           theme={theme}
           onThemeChange={onThemeChange}
+          ownerAccess={ownerAccess}
         />
       )
     default:
@@ -58,28 +61,57 @@ function TabView({
   }
 }
 
-export function ExpensesApp({ source }: { source: ExpenseDataSource }) {
+export function ExpensesApp({
+  source,
+  ownerAccess,
+}: {
+  source: ExpenseDataSource
+  ownerAccess?: { pendingCount: number }
+}) {
   const data = useExpenseData(source)
-  const [theme, setTheme] = useExpenseTheme()
-  const [tab, setTab] = useState<TabId>('dashboard')
-  const [month, setMonth] = useState<string | null>(null)
-  const [modal, setModal] = useState<ExpenseModalState>(null)
-  const actions = useExpenseActions(source, data.applyPatch, setModal)
 
   if (data.status === 'loading') return <div className={styles.center}>Loading…</div>
   if (data.status === 'error' || !data.model) {
     return <div className={styles.center}>Couldn't load expense data: {data.error}</div>
   }
 
-  const model = data.model
+  return (
+    <ExpensesAppLoaded
+      source={source}
+      model={data.model}
+      applyPatch={data.applyPatch}
+      {...(ownerAccess ? { ownerAccess } : {})}
+    />
+  )
+}
+
+function ExpensesAppLoaded({
+  source,
+  model,
+  applyPatch,
+  ownerAccess,
+}: {
+  source: ExpenseDataSource
+  model: ExpenseModel
+  applyPatch: ReturnType<typeof useExpenseData>['applyPatch']
+  ownerAccess?: { pendingCount: number }
+}) {
+  const [theme, setTheme] = useExpenseTheme()
+  const [tab, setTab] = useState<TabId>('dashboard')
+  const [month, setMonth] = useState<string | null>(null)
+  const [modal, setModal] = useState<ExpenseModalState>(null)
+  const actions = useExpenseActions(source, applyPatch, setModal)
+
   const activeMonth = month ?? model.months[model.months.length - 1] ?? ''
   const showPicker = tab !== 'settings' && model.months.length > 0
+  const settingsBadge = ownerAccess?.pendingCount ?? 0
 
   return (
     <AppShell
       activeId={tab}
       onSelect={setTab}
       title="Expenses"
+      settingsBadge={settingsBadge}
       {...(actions ? { onAdd: actions.onAdd } : {})}
       {...(showPicker
         ? {
@@ -97,6 +129,7 @@ export function ExpensesApp({ source }: { source: ExpenseDataSource }) {
         actions={actions}
         theme={theme}
         onThemeChange={setTheme}
+        ownerAccess={ownerAccess}
       />
       {modal && (
         <TransactionModal
@@ -104,7 +137,7 @@ export function ExpensesApp({ source }: { source: ExpenseDataSource }) {
           source={source}
           editing={modal.mode === 'edit' ? modal.txn : null}
           onClose={() => setModal(null)}
-          applyPatch={data.applyPatch}
+          applyPatch={applyPatch}
         />
       )}
     </AppShell>

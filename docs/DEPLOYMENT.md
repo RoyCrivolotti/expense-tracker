@@ -28,25 +28,24 @@ Or, with a token that has Zero Trust Access edit scope (the CI `CLOUDFLARE_API_T
 CLOUDFLARE_API_TOKEN=… npm run setup:access-google
 ```
 
-## App access control (D1 + email)
+## App access control (D1 + in-app admin)
 
-The allowlist lives in D1 (`allowed_users`). New users request access in the app; the owner approves via a signed email link.
+The allowlist lives in D1 (`allowed_users`). New users request access in the app; the owner approves from **Settings → Access requests** or `/access/admin`.
 
 **Setup:**
 
 1. Run migration `migrations/0005_access_control.sql`.
-2. Copy `config/access.example.json` → `config/access.json` (owner email, app URL, sender).
-3. Generate approve secret: `openssl rand -base64 32` → GitHub secret `ACCESS_APPROVE_SECRET`.
-4. Sync Pages env: `npm run sync:access-env` (local: needs `config/access.json`; CI: `OWNER_EMAIL` + `ACCESS_APPROVE_SECRET` secrets).
-5. Bootstrap D1 from existing list (one-time / when adding emails): `npm run bootstrap:allowed-users` (uses `config/allowed-emails.json` or `ALLOWED_EMAILS`). Not run in CI — the deploy token lacks D1 execute; use wrangler OAuth locally or grant D1 Edit on the token.
+2. Copy `config/access.example.json` → `config/access.json` (owner email only).
+3. Sync Pages env: `npm run sync:access-env` (local: `config/access.json`; CI: `OWNER_EMAIL` secret).
+4. Bootstrap D1 from existing list (one-time / when adding emails): `npm run bootstrap:allowed-users`.
 
-**GitHub secrets:** `ACCESS_APPROVE_SECRET`, `OWNER_EMAIL`, `ALLOWED_EMAILS` (bootstrap), `CLOUDFLARE_API_TOKEN`.
+**GitHub secrets:** `OWNER_EMAIL`, `ALLOWED_EMAILS` (bootstrap), `CLOUDFLARE_API_TOKEN`.
 
 **Local config (gitignored):** `config/allowed-emails.json`, `config/access.json`.
 
-Requires Cloudflare **Email Sending** + `EMAIL` binding on Pages (same as backup alerts). Reuses `BACKUP_ALERT_FROM` when `ACCESS_EMAIL_FROM` is unset.
+**Owner admin (`/access/admin`):** approve or reject pending requests, revoke active users (except owner), view `last_seen_at` per user. Settings shows a badge when requests are pending.
 
-**Phase 2 (later):** in-app user admin — revoke access, purge data, view `last_seen_at`.
+**Not yet:** purge revoked-user expense data (separate operation).
 
 ## D1 + legacy ALLOWED_EMAILS
 
@@ -61,7 +60,7 @@ npm run sync:access-env
 
 Push to `main` → verify → sync access env → bootstrap D1 → deploy (+ backup cron worker).
 
-Secrets: `CLOUDFLARE_API_TOKEN`, `ALLOWED_EMAILS`, `OWNER_EMAIL`, `ACCESS_APPROVE_SECRET`.
+Secrets: `CLOUDFLARE_API_TOKEN`, `ALLOWED_EMAILS`, `OWNER_EMAIL`.
 
 ## Migrations
 
@@ -104,7 +103,7 @@ If the Worker's `BACKUPS` binding is missing, the handler logs a warning and ski
 npm run sync:backup-alerts
 ```
 
-Requires Cloudflare **Email Sending** enabled on your domain and an `EMAIL` binding on this Pages project. The cron Worker logs alerts to Workers observability when `EMAIL` is not bound. No addresses are hardcoded in source — only env vars `BACKUP_ALERT_TO`, `BACKUP_ALERT_FROM`, `BACKUP_ALERT_FROM_NAME`.
+Requires Cloudflare **Email Sending** enabled on your domain and an `EMAIL` binding on this Pages project. The cron Worker logs alerts to Workers observability when `EMAIL` is not bound. Env vars: `BACKUP_ALERT_TO`, `BACKUP_ALERT_FROM`, `BACKUP_ALERT_FROM_NAME`.
 
 **Ports & adapters** (for swapping vendors): persistence → `ExpenseRepository`; object storage → `BackupStore`; auth → `AuthProvider`; email → `EmailSender`. Interfaces live in `src/domain/ports/`.
 

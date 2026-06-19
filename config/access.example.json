@@ -1,6 +1,3 @@
 {
-  "ownerEmail": "you@example.com",
-  "appOrigin": "https://expenses.crivolotti.com",
-  "emailFrom": "notifications@crivolotti.com",
-  "emailFromName": "Expense tracker"
+  "ownerEmail": "you@example.com"
 }
