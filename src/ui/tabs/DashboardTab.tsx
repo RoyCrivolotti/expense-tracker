@@ -34,10 +34,12 @@ function budgetComparator(sort: BudgetSort, order: Map<number, number>) {
 
 function BudgetsSection({
   budgets,
+  icons,
   sort,
   onSort,
 }: {
   budgets: BudgetHealth[]
+  icons: Map<number, string | undefined>
   sort: BudgetSort
   onSort: (sort: BudgetSort) => void
 }) {
@@ -62,6 +64,7 @@ function BudgetsSection({
             <BudgetBar
               key={b.categoryId}
               name={b.name}
+              icon={icons.get(b.categoryId)}
               actualCents={b.actualCents}
               budgetCents={b.budgetCents}
               ratio={b.ratio}
@@ -90,6 +93,10 @@ export function DashboardTab({ model, month, actions }: DashboardTabProps) {
       .filter((b) => b.budgetCents > 0)
       .sort(budgetComparator(budgetSort, order))
   }, [dataset, month, budgetSort])
+  const categoryIcons = useMemo(
+    () => new Map(dataset.categories.map((c) => [c.id, c.icon])),
+    [dataset.categories],
+  )
   const recent = useMemo(
     () => filterTransactions(dataset.transactions, { month }).slice(0, 8),
     [dataset, month],
@@ -104,7 +111,12 @@ export function DashboardTab({ model, month, actions }: DashboardTabProps) {
         <Kpi label="Invested" cents={totals?.investmentsCents ?? 0} type="investment" />
       </Card>
 
-      <BudgetsSection budgets={budgets} sort={budgetSort} onSort={setBudgetSort} />
+      <BudgetsSection
+        budgets={budgets}
+        icons={categoryIcons}
+        sort={budgetSort}
+        onSort={setBudgetSort}
+      />
 
       <SectionTitle>Recent activity</SectionTitle>
       <Card>

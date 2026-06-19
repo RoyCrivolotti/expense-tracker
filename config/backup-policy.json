@@ -1,0 +1,6 @@
+{
+  "retentionDays": 14,
+  "maxBucketBytes": 536870912,
+  "maxSnapshotBytes": 5242880,
+  "bucketAlertThresholdFraction": 0.8
+}

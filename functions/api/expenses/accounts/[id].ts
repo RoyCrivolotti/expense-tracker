@@ -1,6 +1,5 @@
 import type { Env, ExpensesData } from '../../../_shared/env'
-import type { NewAccount } from '../../../../src/domain/data/dataSource'
-import { updateAccount } from '../../../_shared/dbConfig'
+import type { NewAccount } from '@domain/data/dataSource'
 import { HttpError, json, readJson } from '../../../_shared/http'
 
 function parseId(params: Record<string, string | string[]>): number {
@@ -13,5 +12,6 @@ function parseId(params: Record<string, string | string[]>): number {
 export const onRequestPatch: PagesFunction<Env, string, ExpensesData> = async (context) => {
   const id = parseId(context.params)
   const patch = await readJson<Partial<NewAccount>>(context.request)
-  return json(await updateAccount(context.env, context.data.owner, id, patch))
+  const { repo, owner } = context.data
+  return json(await repo.updateAccount(owner, id, patch))
 }

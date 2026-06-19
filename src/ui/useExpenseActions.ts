@@ -1,36 +1,72 @@
 import { useMemo } from 'react'
+import type { ExpenseDataset } from '../types'
 import type { ExpenseDataSource } from '../data/dataSource'
 import type { ExpenseActions, ExpenseModalState } from './actions'
+import {
+  patchAfterAccount,
+  patchAfterBulkDelete,
+  patchAfterCashActual,
+  patchAfterCategory,
+  patchAfterGoals,
+  patchAfterSettings,
+  patchAfterStatementPaid,
+  patchAfterTransactionDelete,
+} from './datasetPatches'
 
 type OpenModal = (state: Exclude<ExpenseModalState, null>) => void
+type ApplyPatch = (patch: (dataset: ExpenseDataset) => ExpenseDataset) => void
 
 /** Build the write-actions object, or `undefined` for read-only sources. */
 export function useExpenseActions(
   source: ExpenseDataSource,
-  reload: () => void,
+  applyPatch: ApplyPatch,
   openModal: OpenModal,
 ): ExpenseActions | undefined {
   return useMemo(() => {
     if (!source.canWrite) return undefined
-    const after = async (work: Promise<unknown>) => {
-      await work
-      reload()
-    }
     return {
       onAdd: () => openModal({ mode: 'add' }),
       onEdit: (txn) => openModal({ mode: 'edit', txn }),
-      deleteTransaction: (id) => after(source.deleteTransaction!(id)),
-      deleteTransactions: (ids) => after(source.deleteTransactions!(ids)),
-      setStatementPaid: (accountId, yearMonth, paid) =>
-        after(source.setStatementPaid!(accountId, yearMonth, paid)),
-      setCashActual: (yearMonth, actualCashCents) =>
-        after(source.setCashActual!(yearMonth, actualCashCents)),
-      createCategory: (input) => after(source.createCategory!(input)),
-      updateCategory: (id, patch) => after(source.updateCategory!(id, patch)),
-      createAccount: (input) => after(source.createAccount!(input)),
-      updateAccount: (id, patch) => after(source.updateAccount!(id, patch)),
-      updateSettings: (patch) => after(source.updateSettings!(patch)),
-      updateGoals: (patch) => after(source.updateGoals!(patch)),
+      deleteTransaction: async (id) => {
+        await source.deleteTransaction!(id)
+        applyPatch((d) => patchAfterTransactionDelete(d, id))
+      },
+      deleteTransactions: async (ids) => {
+        await source.deleteTransactions!(ids)
+        applyPatch((d) => patchAfterBulkDelete(d, ids))
+      },
+      setStatementPaid: async (accountId, yearMonth, paid) => {
+        const stmt = await source.setStatementPaid!(accountId, yearMonth, paid)
+        applyPatch((d) => patchAfterStatementPaid(d, stmt))
+      },
+      setCashActual: async (yearMonth, actualCashCents) => {
+        const row = await source.setCashActual!(yearMonth, actualCashCents)
+        applyPatch((d) => patchAfterCashActual(d, row, yearMonth))
+      },
+      createCategory: async (input) => {
+        const category = await source.createCategory!(input)
+        applyPatch((d) => patchAfterCategory(d, category))
+      },
+      updateCategory: async (id, patch) => {
+        const category = await source.updateCategory!(id, patch)
+        applyPatch((d) => patchAfterCategory(d, category))
+      },
+      createAccount: async (input) => {
+        const account = await source.createAccount!(input)
+        applyPatch((d) => patchAfterAccount(d, account))
+      },
+      updateAccount: async (id, patch) => {
+        const account = await source.updateAccount!(id, patch)
+        applyPatch((d) => patchAfterAccount(d, account))
+      },
+      updateSettings: async (patch) => {
+        const settings = await source.updateSettings!(patch)
+        applyPatch((d) => patchAfterSettings(d, settings))
+      },
+      updateGoals: async (patch) => {
+        const goals = await source.updateGoals!(patch)
+        applyPatch((d) => patchAfterGoals(d, goals))
+      },
     }
-  }, [source, reload, openModal])
+  }, [source, applyPatch, openModal])
 }

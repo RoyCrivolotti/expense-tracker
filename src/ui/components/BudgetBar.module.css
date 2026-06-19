@@ -11,6 +11,9 @@
 .name {
   font-size: 0.9rem;
   font-weight: 550;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 .values {
   font-size: 0.85rem;

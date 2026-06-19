@@ -6,6 +6,7 @@ import type { ExpenseActions } from '../actions'
 import { Card, SectionTitle } from '../components/primitives'
 import { Money } from '../components/Money'
 import { ConfigModal, type EditTarget } from './ConfigModal'
+import { CategoryIcon } from '../components/CategoryIcon'
 import styles from './definitions.module.css'
 import tabStyles from '../tabs/tabs.module.css'
 
@@ -13,11 +14,13 @@ type OnEdit = (target: EditTarget) => void
 
 function DefRow({
   name,
+  icon,
   meta,
   active,
   onEdit,
 }: {
   name: string
+  icon?: string | undefined
   meta: string
   active?: boolean
   onEdit: () => void
@@ -25,7 +28,9 @@ function DefRow({
   return (
     <div className={active === false ? `${styles.row} ${styles.inactive}` : styles.row}>
       <div className={styles.rowMain}>
-        <span className={styles.rowName}>{name}</span>
+        <span className={styles.rowName}>
+          <CategoryIcon icon={icon} name={name} /> {name}
+        </span>
         <span className={styles.rowMeta}>{meta}</span>
       </div>
       <button type="button" className={styles.editBtn} onClick={onEdit}>
@@ -63,6 +68,7 @@ function CategoryList({ model, onEdit }: { model: ExpenseModel; onEdit: OnEdit }
         <DefRow
           key={c.id}
           name={c.name}
+          icon={c.icon}
           active={c.active}
           meta={`${formatCents(c.monthlyBudgetCents)} · order ${c.sortOrder}`}
           onEdit={() => onEdit({ kind: 'category', record: c })}

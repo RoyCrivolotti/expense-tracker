@@ -1,0 +1,5 @@
+{
+  "to": ["you@example.com"],
+  "fromAddress": "expenses-alerts@crivolotti.com",
+  "fromName": "Expense tracker backups"
+}

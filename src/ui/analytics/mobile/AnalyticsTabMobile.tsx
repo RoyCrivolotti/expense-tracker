@@ -17,11 +17,15 @@ const SECTIONS: { value: Section; label: string }[] = [
   { value: 'year', label: 'Year' },
 ]
 
+import { InsightsCharts } from '../../charts/InsightsCharts'
+
 export function AnalyticsTabMobile({
   model,
+  month,
   actions,
 }: {
   model: ExpenseModel
+  month: string
   actions?: ExpenseActions | undefined
 }) {
   const [section, setSection] = useState<Section>('summary')
@@ -36,7 +40,12 @@ export function AnalyticsTabMobile({
           ariaLabel="Analytics section"
         />
       </div>
-      {section === 'summary' && <MonthlySummaryMobile model={model} />}
+      {section === 'summary' && (
+        <>
+          <InsightsCharts model={model} month={month} />
+          <MonthlySummaryMobile model={model} />
+        </>
+      )}
       {section === 'totals' && <MonthlyTotalsMobile model={model} />}
       {section === 'cash' && (
         <CashReconMobile

@@ -1,7 +1,6 @@
 import type { Env, ExpensesData } from '../../../_shared/env'
-import { deleteTransactions } from '../../../_shared/dbWrite'
 import { HttpError, json, readJson } from '../../../_shared/http'
-import { parseDeleteTransactionIds } from '../../../../src/domain/data/transactionIds'
+import { parseDeleteTransactionIds } from '@domain/data/transactionIds'
 
 interface BulkDeleteBody {
   ids: unknown
@@ -15,6 +14,7 @@ export const onRequestDelete: PagesFunction<Env, string, ExpensesData> = async (
   } catch (e) {
     throw new HttpError(400, e instanceof Error ? e.message : 'Invalid ids')
   }
-  const deleted = await deleteTransactions(context.env, context.data.owner, ids)
+  const { repo, owner } = context.data
+  const deleted = await repo.deleteTransactions(owner, ids)
   return json({ deleted, requested: ids.length })
 }

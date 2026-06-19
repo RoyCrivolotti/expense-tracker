@@ -7,7 +7,7 @@ import { Card } from '../../components/primitives'
 import styles from './mobile.module.css'
 
 export function MonthlySummaryMobile({ model }: { model: ExpenseModel }) {
-  const { dataset, months } = model
+  const { dataset, months, lookup } = model
   const [month, setMonth] = useState(months[months.length - 1] ?? '')
 
   const budgets = useMemo(() => {
@@ -27,6 +27,7 @@ export function MonthlySummaryMobile({ model }: { model: ExpenseModel }) {
           <BudgetBar
             key={b.categoryId}
             name={b.name}
+            icon={lookup.category(b.categoryId)?.icon}
             actualCents={b.actualCents}
             budgetCents={b.budgetCents}
             ratio={b.ratio}

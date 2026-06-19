@@ -1,0 +1,134 @@
+.chartSection {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+@media (min-width: 720px) {
+  .chartSection {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chartSection .fullWidth {
+    grid-column: 1 / -1;
+  }
+}
+
+.figure {
+  margin: 0;
+  padding: var(--space-md, 1rem);
+  background: color-mix(in srgb, var(--color-text) 4%, var(--color-bg));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 8px);
+  --chart-1: var(--exp-success);
+  --chart-2: #5b8def;
+  --chart-3: #c084fc;
+  --chart-4: #f59e0b;
+  --chart-5: #14b8a6;
+  --chart-6: #f472b6;
+  --chart-7: #64748b;
+  --chart-8: #84cc16;
+}
+
+.caption {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--color-text);
+}
+
+.svg {
+  width: 100%;
+  max-width: 360px;
+  height: auto;
+  display: block;
+}
+
+.barIncome {
+  fill: var(--exp-success);
+}
+
+.barExpense {
+  fill: var(--exp-danger);
+}
+
+.lineIncome {
+  stroke: var(--exp-success);
+}
+
+.lineExpense {
+  stroke: var(--exp-danger);
+}
+
+.axisLabel {
+  font-size: 9px;
+  fill: var(--color-text-muted);
+}
+
+.legend {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.legendIncome::before,
+.legendExpense::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.legendIncome::before {
+  background: var(--exp-success);
+}
+
+.legendExpense::before {
+  background: var(--exp-danger);
+}
+
+.pieRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  align-items: flex-start;
+}
+
+.pieSvg {
+  width: 160px;
+  height: 160px;
+  flex-shrink: 0;
+}
+
+.pieLegend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.875rem;
+  flex: 1;
+  min-width: 140px;
+}
+
+.pieLegend li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-xs);
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.muted {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}

@@ -14,6 +14,7 @@ export type EditTarget =
 
 const CATEGORY_FIELDS: FieldSpec[] = [
   { key: 'name', label: 'Name', kind: 'text' },
+  { key: 'icon', label: 'Icon (emoji)', kind: 'text' },
   { key: 'monthlyBudgetCents', label: 'Monthly budget (€)', kind: 'money' },
   { key: 'sortOrder', label: 'Sort order', kind: 'number' },
   { key: 'active', label: 'Active', kind: 'toggle' },

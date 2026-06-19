@@ -33,10 +33,16 @@ function TabView({
     case 'transactions':
       return <TransactionsTab model={model} month={month} actions={actions} />
     case 'analytics':
-      return <AnalyticsTab model={model} actions={actions} />
+      return <AnalyticsTab model={model} month={month} actions={actions} />
     case 'settings':
       return (
-        <SettingsTab model={model} actions={actions} theme={theme} onThemeChange={onThemeChange} />
+        <SettingsTab
+          model={model}
+          month={month}
+          actions={actions}
+          theme={theme}
+          onThemeChange={onThemeChange}
+        />
       )
     default:
       return <DashboardTab model={model} month={month} actions={actions} />
@@ -49,7 +55,7 @@ export function ExpensesApp({ source }: { source: ExpenseDataSource }) {
   const [tab, setTab] = useState<TabId>('dashboard')
   const [month, setMonth] = useState<string | null>(null)
   const [modal, setModal] = useState<ExpenseModalState>(null)
-  const actions = useExpenseActions(source, data.reload, setModal)
+  const actions = useExpenseActions(source, data.applyPatch, setModal)
 
   if (data.status === 'loading') return <div className={styles.center}>Loading…</div>
   if (data.status === 'error' || !data.model) {
@@ -88,7 +94,7 @@ export function ExpensesApp({ source }: { source: ExpenseDataSource }) {
           source={source}
           editing={modal.mode === 'edit' ? modal.txn : null}
           onClose={() => setModal(null)}
-          reload={data.reload}
+          applyPatch={data.applyPatch}
         />
       )}
     </AppShell>

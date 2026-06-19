@@ -1,5 +1,6 @@
 import type { EventContext } from '@cloudflare/workers-types'
 import type { Env, ExpensesData } from './env'
+import { createD1ExpenseRepository } from './adapters/d1ExpenseRepository'
 import { onRequest as authMiddleware } from '../api/_middleware'
 
 type RouteHandler = PagesFunction<Env, string, ExpensesData>
@@ -52,7 +53,10 @@ export async function invokePagesRoute(
     options.url ?? 'https://expenses.test/api/expenses/transactions',
     init,
   )
-  const data: ExpensesData = { owner: '' }
+  const data: ExpensesData = {
+    owner: '',
+    repo: createD1ExpenseRepository(options.env),
+  }
   const params = options.params ?? {}
   const routeNext: HandlerContext['next'] = () =>
     Promise.resolve(

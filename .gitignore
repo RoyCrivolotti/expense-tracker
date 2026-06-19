@@ -2,5 +2,6 @@ node_modules/
 dist/
 content/
 config/allowed-emails.json
+config/backup-alerts.json
 site-ui/
 .DS_Store
