@@ -74,8 +74,24 @@ html[data-exp-theme='dark'] {
   --exp-track: #2a2f38;
 }
 
+html,
+body {
+  overflow-x: clip;
+  max-width: 100%;
+  overscroll-behavior-x: none;
+}
+
 .expRoot {
   min-height: 100dvh;
   background: var(--color-bg);
   color: var(--color-text);
+  overflow-x: clip;
+  max-width: 100%;
+  min-width: 0;
+}
+
+#root {
+  overflow-x: clip;
+  max-width: 100%;
+  min-width: 0;
 }

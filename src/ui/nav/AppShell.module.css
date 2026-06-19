@@ -3,6 +3,15 @@
   display: grid;
   grid-template-columns: 1fr;
   background: var(--color-bg);
+  overflow-x: clip;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.main {
+  min-width: 0;
+  overflow-x: clip;
+  max-width: 100%;
 }
 
 /* ---- Mobile bottom bar (default) ---- */
@@ -80,6 +89,8 @@
   width: 100%;
   max-width: var(--exp-max);
   margin: 0 auto;
+  min-width: 0;
+  overflow-x: clip;
   padding: 1rem 1rem calc(var(--exp-bottom-bar) + env(safe-area-inset-bottom, 0px) + 5.5rem);
 }
 
