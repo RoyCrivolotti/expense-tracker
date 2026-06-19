@@ -4,6 +4,7 @@ import { useExpenseData, type ExpenseModel } from './useExpenseData'
 import { useExpenseActions } from './useExpenseActions'
 import type { ExpenseActions, ExpenseModalState } from './actions'
 import { useExpenseTheme, type ExpenseTheme } from './hooks/useExpenseTheme'
+import { needsOnboarding } from '../domain/onboarding/needsOnboarding'
 import { AppShell } from './nav/AppShell'
 import type { TabId } from './nav/navItems'
 import { MonthPicker } from './components/MonthPicker'
@@ -12,6 +13,8 @@ import { DashboardTab } from './tabs/DashboardTab'
 import { TransactionsTab } from './tabs/TransactionsTab'
 import { AnalyticsTab } from './tabs/AnalyticsTab'
 import { SettingsTab } from './tabs/SettingsTab'
+import { OnboardingWizard } from './onboarding/OnboardingWizard'
+import { isOnboardingSkipped, skipOnboarding } from './onboarding/onboardingStorage'
 import styles from './ExpensesApp.module.css'
 
 function TabView({
@@ -100,6 +103,9 @@ function ExpensesAppLoaded({
   const [tab, setTab] = useState<TabId>('dashboard')
   const [month, setMonth] = useState<string | null>(null)
   const [modal, setModal] = useState<ExpenseModalState>(null)
+  const [onboardingOpen, setOnboardingOpen] = useState(
+    () => source.canWrite && needsOnboarding(model.dataset) && !isOnboardingSkipped(),
+  )
   const actions = useExpenseActions(source, applyPatch, setModal)
 
   const activeMonth = month ?? model.months[model.months.length - 1] ?? ''
@@ -107,30 +113,46 @@ function ExpensesAppLoaded({
   const settingsBadge = ownerAccess?.pendingCount ?? 0
 
   return (
-    <AppShell
-      activeId={tab}
-      onSelect={setTab}
-      title="Expenses"
-      settingsBadge={settingsBadge}
-      {...(actions ? { onAdd: actions.onAdd } : {})}
-      {...(showPicker
-        ? {
-            headerRight: (
-              <MonthPicker months={model.months} value={activeMonth} onChange={setMonth} />
-            ),
-          }
-        : {})}
-    >
-      <TabView
-        tab={tab}
-        model={model}
-        month={activeMonth}
-        onMonthChange={setMonth}
-        actions={actions}
-        theme={theme}
-        onThemeChange={setTheme}
-        ownerAccess={ownerAccess}
-      />
+    <>
+      {onboardingOpen ? (
+        <OnboardingWizard
+          source={source}
+          applyPatch={applyPatch}
+          onDone={() => {
+            setOnboardingOpen(false)
+            actions?.onAdd()
+          }}
+          onSkip={() => {
+            skipOnboarding()
+            setOnboardingOpen(false)
+          }}
+        />
+      ) : null}
+      <AppShell
+        activeId={tab}
+        onSelect={setTab}
+        title="Expenses"
+        settingsBadge={settingsBadge}
+        {...(actions ? { onAdd: actions.onAdd } : {})}
+        {...(showPicker
+          ? {
+              headerRight: (
+                <MonthPicker months={model.months} value={activeMonth} onChange={setMonth} />
+              ),
+            }
+          : {})}
+      >
+        <TabView
+          tab={tab}
+          model={model}
+          month={activeMonth}
+          onMonthChange={setMonth}
+          actions={actions}
+          theme={theme}
+          onThemeChange={setTheme}
+          ownerAccess={ownerAccess}
+        />
+      </AppShell>
       {modal && (
         <TransactionModal
           model={model}
@@ -140,6 +162,6 @@ function ExpensesAppLoaded({
           applyPatch={applyPatch}
         />
       )}
-    </AppShell>
+    </>
   )
 }

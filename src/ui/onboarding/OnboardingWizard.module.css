@@ -1,0 +1,211 @@
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.progressDot,
+.progressDotActive {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: var(--color-border);
+}
+
+.progressDotActive {
+  background: var(--color-accent, var(--exp-accent));
+}
+
+.progressLabel {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.stepBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.lead {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--color-text);
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.hintWarn {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--exp-warning);
+}
+
+.error {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: var(--exp-danger);
+}
+
+.categoryList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.categoryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  background: var(--color-bg-subtle, color-mix(in srgb, var(--color-text) 4%, var(--color-bg)));
+}
+
+.categoryCheck {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.budgetField {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.budgetField input {
+  width: 4.25rem;
+  text-align: right;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.45rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.budgetField input:disabled {
+  opacity: 0.45;
+}
+
+.budgetSuffix {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.fieldLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.field input {
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.65rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.primaryBtn,
+.secondaryBtn {
+  padding: 0.55rem 1rem;
+  border-radius: 0.65rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primaryBtn {
+  border: 0;
+  background: var(--color-accent, var(--exp-accent));
+  color: var(--color-accent-text, #fff);
+}
+
+.primaryBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.secondaryBtn {
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+}
+
+.secondaryBtn:disabled {
+  opacity: 0.5;
+}
+
+.skipLink {
+  display: block;
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.35rem;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.skipLink:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
