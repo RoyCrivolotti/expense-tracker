@@ -1,6 +1,6 @@
 export const CHART_W = 360
-export const CHART_H = 188
-export const PAD = { top: 14, right: 12, bottom: 30, left: 52 } as const
+export const CHART_H = 200
+export const PAD = { top: 18, right: 16, bottom: 34, left: 54 } as const
 
 export function monthLabel(ym: string): string {
   const [, m] = ym.split('-')

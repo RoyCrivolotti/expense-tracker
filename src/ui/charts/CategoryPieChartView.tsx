@@ -28,7 +28,7 @@ export function CategoryPieChartView({ paths, active, onShow, onHide, onTouchEnd
 
   return (
     <div className={styles.pieRow}>
-      <div className={styles.chartWrap}>
+      <div className={styles.pieChartCol}>
         <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className={styles.pieSvg} role="img" aria-label="Category expense pie chart">
           {paths.map((p, i) => (
             <path
@@ -64,11 +64,10 @@ export function CategoryPieChartView({ paths, active, onShow, onHide, onTouchEnd
             onMouseEnter={() => onShow(i)}
             onMouseLeave={onHide}
           >
-            <span className={styles.swatch} style={{ background: p.color }} />
-            {p.name}{' '}
-            <span className={styles.muted}>
-              {formatCents(p.cents)} ({Math.round((p.cents / total) * 100)}%)
-            </span>
+            <span className={styles.swatch} style={{ background: p.color }} aria-hidden />
+            <span className={styles.pieLegendName}>{p.name}</span>
+            <span className={styles.pieLegendAmount}>{formatCents(p.cents)}</span>
+            <span className={styles.pieLegendPct}>{Math.round((p.cents / total) * 100)}%</span>
           </li>
         ))}
       </ul>
