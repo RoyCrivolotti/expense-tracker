@@ -6,8 +6,10 @@ export interface Env {
   BACKUPS?: R2Bucket
   /** Cloudflare Email Sending binding (optional; backup alerts only). */
   EMAIL?: SendEmail
-  /** Bootstrap fallback when allowed_users is empty (comma-separated). */
+  /** Bootstrap fallback when allowed_users is empty (comma-separated). Requires ALLOW_BOOTSTRAP=1. */
   ALLOWED_EMAILS?: string
+  /** Set to "1" to allow ALLOWED_EMAILS env fallback when D1 allowlist is empty. */
+  ALLOW_BOOTSTRAP?: string
   /** App owner — may approve access requests in the admin panel. */
   OWNER_EMAIL?: string
   BACKUP_RETENTION_DAYS?: string
