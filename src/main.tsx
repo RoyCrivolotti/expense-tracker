@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import '@crivolotti/site-ui/theme/tokens.css'
+import '@crivolotti/folio-ui/theme/tokens.css'
 import './ui/theme.css'
 import { initExpenseTheme } from './ui/hooks/expenseThemeInit'
 import { resolveSource } from './data/resolveSource'
