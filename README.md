@@ -6,7 +6,7 @@ Personal budget and transaction tracker. A live instance runs at **https://expen
 - **D1 allowlist + in-app admin** — who can use the app (`/access/admin`)
 - **Row-level tenancy** — each user's data is scoped by email in D1
 
-Shared UI: [`folio-ui`](https://github.com/RoyCrivolotti/folio-ui) on [npm](https://www.npmjs.com/package/@crivolotti/folio-ui) (`@crivolotti/folio-ui@^1.1.0`).
+Shared UI: [`folio-ui`](https://github.com/RoyCrivolotti/folio-ui) (`@crivolotti/folio-ui`, pinned to tag `v1.1.0` via git until npm publish).
 
 ## Screenshots
 
@@ -40,6 +40,8 @@ Opens at `http://localhost:5173` with **read-only CSV data** from `fixtures/demo
 To point dev at your own workbook export, set `FINANCIAL_REVIEW_DIR` to a directory containing `data/expenses_v3.csv` before `npm run dev`.
 
 `/access/admin` works against a deployed API, or with `DOCS_CAPTURE=1` mocks (`npm run capture:screenshots`).
+
+Copy [`.env.example`](./.env.example) → `.env` for hub cross-links (`VITE_*_URL`).
 
 ## Self-hosting
 
