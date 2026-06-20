@@ -1,5 +1,6 @@
 node_modules/
 dist/
+.env
 content/
 config/allowed-emails.json
 config/access.json

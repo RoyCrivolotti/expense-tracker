@@ -7,7 +7,7 @@ function parseEnvAllowlist(raw: string | undefined): string[] {
   return [...new Set(raw.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean))]
 }
 
-/** D1 allowlist with ALLOWED_EMAILS env fallback when the table is empty. */
+/** D1 allowlist; ALLOWED_EMAILS env fallback only when table is empty and ALLOW_BOOTSTRAP=1. */
 export async function isEmailAllowed(
   repo: AccessRepository,
   env: Env,
@@ -15,6 +15,7 @@ export async function isEmailAllowed(
 ): Promise<boolean> {
   const activeCount = await repo.countActiveUsers()
   if (activeCount === 0) {
+    if (env.ALLOW_BOOTSTRAP !== '1') return false
     const fallback = parseEnvAllowlist(env.ALLOWED_EMAILS)
     if (fallback.length === 0) return false
     return fallback.includes(email)

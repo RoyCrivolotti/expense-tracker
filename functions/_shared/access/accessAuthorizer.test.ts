@@ -24,10 +24,19 @@ function repo(activeCount: number, allowed = false): AccessRepository {
 }
 
 describe('isEmailAllowed', () => {
-  it('uses ALLOWED_EMAILS when D1 allowlist is empty', async () => {
-    const env: Env = { DB: {} as D1Database, ALLOWED_EMAILS: 'roy@example.com' }
+  it('uses ALLOWED_EMAILS when D1 is empty and ALLOW_BOOTSTRAP=1', async () => {
+    const env: Env = {
+      DB: {} as D1Database,
+      ALLOWED_EMAILS: 'roy@example.com',
+      ALLOW_BOOTSTRAP: '1',
+    }
     await expect(isEmailAllowed(repo(0), env, 'roy@example.com')).resolves.toBe(true)
     await expect(isEmailAllowed(repo(0), env, 'other@example.com')).resolves.toBe(false)
+  })
+
+  it('denies everyone when D1 is empty and ALLOW_BOOTSTRAP is unset', async () => {
+    const env: Env = { DB: {} as D1Database, ALLOWED_EMAILS: 'roy@example.com' }
+    await expect(isEmailAllowed(repo(0), env, 'roy@example.com')).resolves.toBe(false)
   })
 
   it('denies everyone when D1 and env are empty', async () => {
