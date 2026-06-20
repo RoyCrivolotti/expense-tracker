@@ -5,5 +5,4 @@ config/allowed-emails.json
 config/access.json
 workers/**/.wrangler/
 config/backup-alerts.json
-site-ui/
 .DS_Store

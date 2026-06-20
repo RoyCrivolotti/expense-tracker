@@ -37,7 +37,7 @@ export function AccessGate({ source }: { source: ExpenseDataSource }) {
       access.isOwner && access.pendingCount !== undefined
         ? { pendingCount: access.pendingCount }
         : undefined
-    return <ExpensesApp source={source} {...(ownerAccess ? { ownerAccess } : {})} />
+    return <ExpensesApp source={source} accountEmail={access.email} {...(ownerAccess ? { ownerAccess } : {})} />
   }
   return (
     <RequestAccessScreen
