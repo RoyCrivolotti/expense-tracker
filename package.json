@@ -28,6 +28,10 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
   },
+  "optionalDependencies": {
+    "@rolldown/binding-darwin-arm64": "1.0.3",
+    "@rolldown/binding-linux-x64-gnu": "1.0.3"
+  },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260617.1",
     "@eslint/js": "^10.0.1",
