@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { HubMenuRoot, HubMenuTrigger } from '@crivolotti/folio-ui'
+import { HubMenuRoot, HubMenuTrigger } from 'folio-shell'
 import { getExpenseHubNavItems } from '../../hubNavItems'
 import { navItems, type TabId } from './navItems'
 import { PlusIcon } from '../icons'

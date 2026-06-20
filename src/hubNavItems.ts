@@ -1,4 +1,4 @@
-import type { HubNavItem } from '@crivolotti/folio-ui'
+import type { HubNavItem } from 'folio-shell'
 import {
   ArchiveIcon,
   BookIcon,
@@ -7,7 +7,7 @@ import {
   getSiteUrls,
   HomeIcon,
   WalletIcon,
-} from '@crivolotti/folio-ui'
+} from 'folio-shell'
 
 /** Cross-app navigation from the expense tracker. */
 export function getExpenseHubNavItems(): HubNavItem[] {

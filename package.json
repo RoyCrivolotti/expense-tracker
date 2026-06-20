@@ -24,7 +24,7 @@
     "capture:screenshots": "node scripts/capture-docs-screenshots.mjs"
   },
   "dependencies": {
-    "@crivolotti/folio-ui": "git+https://github.com/RoyCrivolotti/folio-ui.git#v1.1.0",
+    "folio-shell": "git+https://github.com/RoyCrivolotti/folio-shell.git#v1.0.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
   },

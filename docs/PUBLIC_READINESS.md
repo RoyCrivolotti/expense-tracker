@@ -29,7 +29,7 @@ Copy from [`config/access.example.json`](../config/access.example.json):
 
 Used by `npm run sync:access-env` to set **`OWNER_EMAIL`** on Cloudflare Pages (owner admin UI). Not an API key and not the user allowlist.
 
-**Shared UI:** [`@crivolotti/folio-ui`](https://github.com/RoyCrivolotti/folio-ui) (git tag `v1.1.0`; see folio-ui README for npm).
+**Shared UI:** [`folio-shell`](https://github.com/RoyCrivolotti/folio-shell) on [npm](https://www.npmjs.com/package/folio-shell).
 
 ## History hygiene
 

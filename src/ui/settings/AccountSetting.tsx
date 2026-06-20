@@ -1,4 +1,4 @@
-import { cloudflareAccessLogoutUrl } from '@crivolotti/folio-ui'
+import { cloudflareAccessLogoutUrl } from 'folio-shell'
 import { Card, SectionTitle } from '../components/primitives'
 import styles from './AccountSetting.module.css'
 

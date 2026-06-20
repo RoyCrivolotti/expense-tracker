@@ -6,7 +6,7 @@ Personal budget and transaction tracker. A live instance runs at **https://expen
 - **D1 allowlist + in-app admin** — who can use the app (`/access/admin`)
 - **Row-level tenancy** — each user's data is scoped by email in D1
 
-Shared UI: [`folio-ui`](https://github.com/RoyCrivolotti/folio-ui) (`@crivolotti/folio-ui`, pinned to tag `v1.1.0` via git until npm publish).
+Shared UI: [`folio-shell`](https://github.com/RoyCrivolotti/folio-shell) on [npm](https://www.npmjs.com/package/folio-shell) (`folio-shell@^1.0.0`).
 
 ## Screenshots
 
