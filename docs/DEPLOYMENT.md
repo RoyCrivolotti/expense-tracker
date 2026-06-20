@@ -51,7 +51,7 @@ The allowlist lives in D1 (`allowed_users`). New users request access in the app
 
 ## D1 + legacy ALLOWED_EMAILS
 
-D1 binding: `roy-expenses`. `ALLOWED_EMAILS` Pages env is a **bootstrap fallback** when `allowed_users` is empty; after bootstrap, D1 is authoritative.
+D1 binding: `roy-expenses`. `ALLOWED_EMAILS` Pages env is a **bootstrap fallback** when `allowed_users` is empty, but only if `ALLOW_BOOTSTRAP=1` is also set. After bootstrap, D1 is authoritative and the env fallback is ignored.
 
 ```bash
 npm run bootstrap:allowed-users

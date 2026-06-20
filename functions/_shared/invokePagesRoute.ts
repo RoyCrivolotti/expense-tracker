@@ -39,6 +39,7 @@ function handlerContext(
 function defaultTestEnv(overrides: Env): Env {
   return {
     ALLOWED_EMAILS: 'owner@example.com',
+    ALLOW_BOOTSTRAP: '1',
     ...overrides,
   }
 }
