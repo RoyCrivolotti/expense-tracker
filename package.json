@@ -12,7 +12,7 @@
     "typecheck": "tsc -b --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "verify": "node scripts/ensure-site-ui-for-verify.mjs && node scripts/ensure-function-symlinks.mjs && npm run lint && npm run typecheck && npm run test && npm run build",
+    "verify": "node scripts/ensure-function-symlinks.mjs && npm run lint && npm run typecheck && npm run test && npm run build",
     "deploy": "bash scripts/deploy.sh",
     "deploy:backup-cron": "node scripts/deploy-backup-cron.mjs",
     "sync:allowed-users": "node scripts/sync-allowed-users.mjs",
@@ -24,7 +24,7 @@
     "capture:screenshots": "node scripts/capture-docs-screenshots.mjs"
   },
   "dependencies": {
-    "@crivolotti/site-ui": "file:./site-ui",
+    "@crivolotti/folio-ui": "git+https://github.com/RoyCrivolotti/folio-ui.git#v1.1.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
   },

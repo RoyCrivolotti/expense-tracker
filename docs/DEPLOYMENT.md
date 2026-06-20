@@ -28,6 +28,8 @@ Or, with a token that has Zero Trust Access edit scope (the CI `CLOUDFLARE_API_T
 CLOUDFLARE_API_TOKEN=… npm run setup:access-google
 ```
 
+**Sign out:** Hub menu and Settings show a link to `/cdn-cgi/access/logout`, which clears the Cloudflare Access session cookie only (D1 allowlist unchanged). Optional redirect: `/cdn-cgi/access/logout?redirect_url=<encoded-url>`.
+
 ## App access control (D1 + in-app admin)
 
 The allowlist lives in D1 (`allowed_users`). New users request access in the app; the owner approves from **Settings → Manage access** or `/access/admin`.

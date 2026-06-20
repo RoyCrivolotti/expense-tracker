@@ -9,6 +9,7 @@ import { DefinitionsEditor } from '../definitions/DefinitionsEditor'
 import { AppearanceSetting } from '../settings/AppearanceSetting'
 import { DefaultAccountSetting } from '../settings/DefaultAccountSetting'
 import { ExportDataSection } from '../settings/ExportDataSection'
+import { AccountSetting } from '../settings/AccountSetting'
 import { AccessRequestsSetting } from '../settings/AccessRequestsSetting'
 import styles from './tabs.module.css'
 
@@ -19,6 +20,7 @@ interface SettingsTabProps {
   theme: ExpenseTheme
   onThemeChange: (next: ExpenseTheme) => void
   ownerAccess?: { pendingCount: number } | undefined
+  accountEmail?: string | undefined
 }
 
 function Definitions({ model }: { model: ExpenseModel }) {
@@ -92,9 +94,11 @@ export function SettingsTab({
   theme,
   onThemeChange,
   ownerAccess,
+  accountEmail,
 }: SettingsTabProps) {
   return (
     <div className={styles.stack}>
+      {accountEmail ? <AccountSetting email={accountEmail} /> : null}
       {ownerAccess ? <AccessRequestsSetting pendingCount={ownerAccess.pendingCount} /> : null}
       <AppearanceSetting theme={theme} onChange={onThemeChange} />
 

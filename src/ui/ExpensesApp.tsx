@@ -26,6 +26,7 @@ function TabView({
   theme,
   onThemeChange,
   ownerAccess,
+  accountEmail,
 }: {
   tab: TabId
   model: ExpenseModel
@@ -35,6 +36,7 @@ function TabView({
   theme: ExpenseTheme
   onThemeChange: (next: ExpenseTheme) => void
   ownerAccess?: { pendingCount: number } | undefined
+  accountEmail?: string | undefined
 }) {
   switch (tab) {
     case 'transactions':
@@ -57,6 +59,7 @@ function TabView({
           theme={theme}
           onThemeChange={onThemeChange}
           ownerAccess={ownerAccess}
+          accountEmail={accountEmail}
         />
       )
     default:
@@ -67,9 +70,11 @@ function TabView({
 export function ExpensesApp({
   source,
   ownerAccess,
+  accountEmail,
 }: {
   source: ExpenseDataSource
   ownerAccess?: { pendingCount: number }
+  accountEmail?: string
 }) {
   const data = useExpenseData(source)
 
@@ -84,6 +89,7 @@ export function ExpensesApp({
       model={data.model}
       applyPatch={data.applyPatch}
       {...(ownerAccess ? { ownerAccess } : {})}
+      {...(accountEmail ? { accountEmail } : {})}
     />
   )
 }
@@ -93,11 +99,13 @@ function ExpensesAppLoaded({
   model,
   applyPatch,
   ownerAccess,
+  accountEmail,
 }: {
   source: ExpenseDataSource
   model: ExpenseModel
   applyPatch: ReturnType<typeof useExpenseData>['applyPatch']
   ownerAccess?: { pendingCount: number }
+  accountEmail?: string
 }) {
   const [theme, setTheme] = useExpenseTheme()
   const [tab, setTab] = useState<TabId>('dashboard')
@@ -151,6 +159,7 @@ function ExpensesAppLoaded({
           theme={theme}
           onThemeChange={setTheme}
           ownerAccess={ownerAccess}
+          accountEmail={accountEmail}
         />
       </AppShell>
       {modal && (

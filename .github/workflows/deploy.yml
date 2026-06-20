@@ -17,18 +17,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
-        with:
-          repository: RoyCrivolotti/site-ui
-          ref: v1.0.2
-          path: site-ui
-          token: ${{ secrets.FINANCIAL_REVIEW_PAT }}
 
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - run: rm -f package-lock.json && npm install --no-workspaces
+      - run: npm ci
       - run: npm run verify
 
   deploy:
@@ -36,18 +30,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
-        with:
-          repository: RoyCrivolotti/site-ui
-          ref: v1.0.2
-          path: site-ui
-          token: ${{ secrets.FINANCIAL_REVIEW_PAT }}
 
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - run: rm -f package-lock.json && npm install --no-workspaces
+      - run: npm ci
 
       - name: Sync access env (owner)
         env:
