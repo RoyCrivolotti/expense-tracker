@@ -36,7 +36,7 @@ The allowlist lives in D1 (`allowed_users`). New users request access in the app
 
 **Setup:**
 
-1. Run migration `migrations/0005_access_control.sql`.
+1. Run migrations `migrations/0005_access_control.sql` and `migrations/0006_user_group_grants.sql`.
 2. Copy `config/access.example.json` → `config/access.json` (owner email only).
 3. Sync Pages env: `npm run sync:access-env` (local: `config/access.json`; CI: `OWNER_EMAIL` secret).
 4. Bootstrap D1 from existing list (one-time / when adding emails): `npm run bootstrap:allowed-users`.
@@ -45,7 +45,9 @@ The allowlist lives in D1 (`allowed_users`). New users request access in the app
 
 **Local config (gitignored):** `config/allowed-emails.json`, `config/access.json`.
 
-**Owner admin (`/access/admin`):** approve or reject pending requests, revoke active users (except owner; **deletes their D1 expense data**), view last activity per user. Settings shows a badge when requests are pending.
+**Owner admin (`/access/admin`):** approve or reject pending requests; toggle **group access** per user (Expense Tracker, Financial documents, Legacy site); **Revoke all** removes the user and deletes expense data. New approvals grant **Expense Tracker only** by default — enable finance/legacy manually. Settings shows a badge when requests are pending.
+
+**Group access (hide-only MVP):** D1 table `user_group_grants` stores which resource groups each user may see. Hub cards and navigation filter client-side. Expense API requires the `expenses` group. Direct URLs to admin-hub HTML still work for anyone on Cloudflare Access (server enforcement deferred). See workspace `ARCHITECTURE.md`.
 
 **R2 backups:** daily snapshots under `{email}/` in `roy-expenses-backups` are not deleted on revoke (manual cleanup if needed).
 

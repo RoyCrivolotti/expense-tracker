@@ -20,6 +20,10 @@ function repo(activeCount: number, allowed = false): AccessRepository {
     markRequestRejected: vi.fn(),
     revokeAccess: vi.fn(),
     touchLastSeen: vi.fn(),
+    listGroupGrants: vi.fn(),
+    grantGroup: vi.fn(),
+    revokeGroup: vi.fn(),
+    revokeAllGroups: vi.fn(),
   }
 }
 

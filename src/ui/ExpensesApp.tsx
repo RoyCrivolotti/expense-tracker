@@ -5,6 +5,7 @@ import { useExpenseActions } from './useExpenseActions'
 import type { ExpenseActions, ExpenseModalState } from './actions'
 import { useExpenseTheme, type ExpenseTheme } from './hooks/useExpenseTheme'
 import { needsOnboarding } from '../domain/onboarding/needsOnboarding'
+import { type GroupGrants } from '../domain/accessGroups'
 import { AppShell } from './nav/AppShell'
 import type { TabId } from './nav/navItems'
 import { MonthPicker } from './components/MonthPicker'
@@ -71,10 +72,12 @@ export function ExpensesApp({
   source,
   ownerAccess,
   accountEmail,
+  hubGrants,
 }: {
   source: ExpenseDataSource
   ownerAccess?: { pendingCount: number }
   accountEmail?: string
+  hubGrants: GroupGrants
 }) {
   const data = useExpenseData(source)
 
@@ -88,6 +91,7 @@ export function ExpensesApp({
       source={source}
       model={data.model}
       applyPatch={data.applyPatch}
+      hubGrants={hubGrants}
       {...(ownerAccess ? { ownerAccess } : {})}
       {...(accountEmail ? { accountEmail } : {})}
     />
@@ -100,12 +104,14 @@ function ExpensesAppLoaded({
   applyPatch,
   ownerAccess,
   accountEmail,
+  hubGrants,
 }: {
   source: ExpenseDataSource
   model: ExpenseModel
   applyPatch: ReturnType<typeof useExpenseData>['applyPatch']
   ownerAccess?: { pendingCount: number }
   accountEmail?: string
+  hubGrants: GroupGrants
 }) {
   const [theme, setTheme] = useExpenseTheme()
   const [tab, setTab] = useState<TabId>('dashboard')
@@ -141,6 +147,7 @@ function ExpensesAppLoaded({
         onSelect={setTab}
         title="Expenses"
         settingsBadge={settingsBadge}
+        hubGrants={hubGrants}
         {...(actions ? { onAdd: actions.onAdd } : {})}
         {...(showPicker
           ? {

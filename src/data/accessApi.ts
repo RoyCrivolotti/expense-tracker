@@ -1,11 +1,21 @@
 export type AccessStatus = 'allowed' | 'pending' | 'rejected' | 'none'
 
+export type AccessGroupId = 'expenses' | 'finance' | 'legacy'
+
+export type GroupGrants = Record<AccessGroupId, boolean>
+
 export interface AccessStatusResponse {
   status: AccessStatus
   email: string
   isOwner?: boolean
   pendingCount?: number
   requestedAt?: string
+  groups?: GroupGrants
+}
+
+export interface AccessGroupMeta {
+  id: AccessGroupId
+  label: string
 }
 
 export interface PendingAccessRequest {
@@ -20,6 +30,7 @@ export interface ActiveAccessUser {
   grantedBy: string | null
   lastSeenAt: string | null
   isOwner: boolean
+  groups: GroupGrants
 }
 
 async function req<T>(url: string, init?: RequestInit): Promise<T> {
@@ -43,6 +54,14 @@ async function req<T>(url: string, init?: RequestInit): Promise<T> {
 
 export function fetchAccessStatus(): Promise<AccessStatusResponse> {
   return req<AccessStatusResponse>('/api/access/status')
+}
+
+export function fetchAccessGrants(): Promise<{ groups: GroupGrants }> {
+  return req<{ groups: GroupGrants }>('/api/access/grants')
+}
+
+export function fetchAccessGroups(): Promise<{ groups: AccessGroupMeta[] }> {
+  return req<{ groups: AccessGroupMeta[] }>('/api/access/groups')
 }
 
 export function requestAccess(): Promise<{ status: 'pending' }> {
@@ -70,6 +89,17 @@ export function rejectAccessRequest(requestId: string): Promise<{ email: string;
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ requestId }),
+  })
+}
+
+export function updateUserGroupGrants(
+  email: string,
+  groups: Partial<Record<AccessGroupId, boolean>>,
+): Promise<{ email: string; groups: GroupGrants }> {
+  return req(`/api/access/admin/users/${encodeURIComponent(email)}/grants`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ groups }),
   })
 }
 

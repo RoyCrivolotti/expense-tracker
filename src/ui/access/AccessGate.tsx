@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { ExpenseDataSource } from '../../data/dataSource'
 import { fetchAccessStatus, type AccessStatusResponse } from '../../data/accessApi'
-import { ExpensesApp } from '../ExpensesApp'
 import { OwnerAccessAdminScreen } from './OwnerAccessAdminScreen'
-import { RequestAccessScreen } from './RequestAccessScreen'
+import { AllowedAccessView, DeniedAccessView } from './AccessGateViews'
 import styles from '../ExpensesApp.module.css'
 
 function isAdminPath(): boolean {
@@ -32,20 +31,6 @@ export function AccessGate({ source }: { source: ExpenseDataSource }) {
   if (isAdminPath()) return <OwnerAccessAdminScreen />
   if (error) return <div className={styles.center}>Couldn&apos;t check access: {error}</div>
   if (!access) return <div className={styles.center}>Loading…</div>
-  if (access.status === 'allowed') {
-    const ownerAccess =
-      access.isOwner && access.pendingCount !== undefined
-        ? { pendingCount: access.pendingCount }
-        : undefined
-    return <ExpensesApp source={source} accountEmail={access.email} {...(ownerAccess ? { ownerAccess } : {})} />
-  }
-  return (
-    <RequestAccessScreen
-      email={access.email}
-      initialAccess={{
-        status: access.status,
-        ...(access.requestedAt ? { requestedAt: access.requestedAt } : {}),
-      }}
-    />
-  )
+  if (access.status === 'allowed') return <AllowedAccessView access={access} source={source} />
+  return <DeniedAccessView access={access} />
 }

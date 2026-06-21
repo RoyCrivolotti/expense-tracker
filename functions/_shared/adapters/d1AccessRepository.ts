@@ -1,4 +1,5 @@
 import type { AccessRepository } from '../../domain/ports/accessRepository'
+import { isAccessGroupId } from '../../domain/accessGroups'
 import type { Env } from '../env'
 import {
   countPendingRequestRows,
@@ -16,6 +17,10 @@ import {
   revokeAllowedUserRow,
   touchLastSeenRow,
   upsertAllowedUser,
+  listGroupGrantIds,
+  grantGroupRow,
+  revokeGroupRow,
+  revokeAllGroupRows,
 } from '../access/accessDb'
 
 export function createD1AccessRepository(env: Env): AccessRepository {
@@ -41,5 +46,12 @@ export function createD1AccessRepository(env: Env): AccessRepository {
     markRequestRejected: (id) => markRequestRejectedRow(db, id),
     revokeAccess: (email) => revokeAllowedUserRow(db, email),
     touchLastSeen: (email, seenAt) => touchLastSeenRow(db, email, seenAt),
+    listGroupGrants: async (email) => {
+      const ids = await listGroupGrantIds(db, email)
+      return ids.filter(isAccessGroupId)
+    },
+    grantGroup: (email, groupId, grantedBy) => grantGroupRow(db, email, groupId, grantedBy),
+    revokeGroup: (email, groupId) => revokeGroupRow(db, email, groupId),
+    revokeAllGroups: (email) => revokeAllGroupRows(db, email),
   }
 }

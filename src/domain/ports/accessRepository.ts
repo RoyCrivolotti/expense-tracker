@@ -1,3 +1,5 @@
+import type { AccessGroupId } from '../accessGroups'
+
 export type AllowedUserStatus = 'active' | 'revoked'
 
 export interface AllowedUser {
@@ -36,4 +38,8 @@ export interface AccessRepository {
   markRequestRejected(id: string): Promise<void>
   revokeAccess(email: string): Promise<boolean>
   touchLastSeen(email: string, seenAt: string): Promise<void>
+  listGroupGrants(email: string): Promise<AccessGroupId[]>
+  grantGroup(email: string, groupId: AccessGroupId, grantedBy: string): Promise<void>
+  revokeGroup(email: string, groupId: AccessGroupId): Promise<boolean>
+  revokeAllGroups(email: string): Promise<void>
 }
