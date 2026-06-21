@@ -1,3 +1,4 @@
+import type { ServerResponse } from 'node:http'
 import type { Plugin } from 'vite'
 
 const MOCK_PENDING = {
@@ -10,6 +11,14 @@ const MOCK_PENDING = {
   ],
 }
 
+const MOCK_GROUPS = {
+  groups: [
+    { id: 'expenses', label: 'Expense Tracker' },
+    { id: 'finance', label: 'Financial documents' },
+    { id: 'legacy', label: 'Legacy site (2019)' },
+  ],
+}
+
 const MOCK_USERS = {
   users: [
     {
@@ -18,6 +27,7 @@ const MOCK_USERS = {
       grantedBy: null,
       lastSeenAt: '2026-06-19T12:00:00.000Z',
       isOwner: true,
+      groups: { expenses: true, finance: true, legacy: true },
     },
     {
       email: 'guest@example.com',
@@ -25,11 +35,17 @@ const MOCK_USERS = {
       grantedBy: 'owner@example.com',
       lastSeenAt: null,
       isOwner: false,
+      groups: { expenses: true, finance: false, legacy: false },
     },
   ],
 }
 
-/** Mocks /api/access/admin/* when DOCS_CAPTURE=1 (screenshot runs only). */
+function jsonResponse(res: ServerResponse, body: unknown) {
+  res.writeHead(200, { 'Content-Type': 'application/json' })
+  res.end(JSON.stringify(body))
+}
+
+/** Mocks access admin APIs when DOCS_CAPTURE=1 (screenshot runs only). */
 export function docsCaptureMocks(): Plugin {
   return {
     name: 'docs-capture-mocks',
@@ -38,13 +54,15 @@ export function docsCaptureMocks(): Plugin {
       server.middlewares.use((req, res, next) => {
         const path = req.url?.split('?')[0]
         if (path === '/api/access/admin/pending') {
-          res.writeHead(200, { 'Content-Type': 'application/json' })
-          res.end(JSON.stringify(MOCK_PENDING))
+          jsonResponse(res, MOCK_PENDING)
           return
         }
         if (path === '/api/access/admin/users') {
-          res.writeHead(200, { 'Content-Type': 'application/json' })
-          res.end(JSON.stringify(MOCK_USERS))
+          jsonResponse(res, MOCK_USERS)
+          return
+        }
+        if (path === '/api/access/groups') {
+          jsonResponse(res, MOCK_GROUPS)
           return
         }
         next()
