@@ -2,6 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_DOCS_CAPTURE?: string
+  readonly VITE_ONCALL_URL?: string
 }
 
 interface ImportMeta {

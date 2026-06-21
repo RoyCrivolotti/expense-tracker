@@ -27,7 +27,7 @@ const MOCK_USERS = {
       grantedBy: null,
       lastSeenAt: '2026-06-19T12:00:00.000Z',
       isOwner: true,
-      groups: { expenses: true, finance: true, legacy: true },
+      groups: { expenses: true, finance: true, legacy: true, oncall: true },
     },
     {
       email: 'guest@example.com',
@@ -35,7 +35,7 @@ const MOCK_USERS = {
       grantedBy: 'owner@example.com',
       lastSeenAt: null,
       isOwner: false,
-      groups: { expenses: true, finance: false, legacy: false },
+      groups: { expenses: true, finance: false, legacy: false, oncall: false },
     },
   ],
 }

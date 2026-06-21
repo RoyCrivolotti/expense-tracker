@@ -70,7 +70,7 @@ describe('accessService', () => {
       email: 'owner@example.com',
       isOwner: true,
       pendingCount: 2,
-      groups: { expenses: true, finance: true, legacy: true },
+      groups: { expenses: true, finance: true, legacy: true, oncall: true },
     })
   })
 
@@ -156,8 +156,8 @@ describe('accessService', () => {
       ),
     })
     const users = await listActiveAccessUsers(serviceDeps, 'owner@example.com')
-    expect(users[0]?.groups).toEqual({ expenses: true, finance: true, legacy: true })
-    expect(users[1]?.groups).toEqual({ expenses: true, finance: false, legacy: false })
+    expect(users[0]?.groups).toEqual({ expenses: true, finance: true, legacy: true, oncall: true })
+    expect(users[1]?.groups).toEqual({ expenses: true, finance: false, legacy: false, oncall: false })
   })
 
   it('revokes an active user, purges data, but not the owner', async () => {
@@ -210,6 +210,6 @@ describe('accessService', () => {
       listGroupGrants: vi.fn().mockResolvedValue(['expenses', 'legacy']),
     })
     const groups = await getGroupGrantsForUser(serviceDeps, 'guest@example.com')
-    expect(groups).toEqual({ expenses: true, finance: false, legacy: true })
+    expect(groups).toEqual({ expenses: true, finance: false, legacy: true, oncall: false })
   })
 })

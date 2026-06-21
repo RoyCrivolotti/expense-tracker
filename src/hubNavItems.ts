@@ -10,6 +10,7 @@ import {
 } from 'folio-shell'
 import type { GroupGrants } from './domain/accessGroups'
 import { filterByGroupAccess, hasGroupGrant, type AccessGroupId } from './domain/accessGroups'
+import { getOncallUrl } from './config/oncallUrl'
 
 interface HubLinkDef {
   href: string
@@ -20,10 +21,12 @@ interface HubLinkDef {
 
 function hubLinks(): HubLinkDef[] {
   const { adminHub, expenses } = getSiteUrls()
+  const oncall = getOncallUrl()
   const base = adminHub.replace(/\/$/, '')
   return [
     { href: `${base}/`, label: 'Hub', groupId: 'finance', Icon: HomeIcon },
     { href: expenses, label: 'Expense Tracker', groupId: 'expenses', Icon: WalletIcon },
+    { href: oncall, label: 'On-call pay', groupId: 'oncall', Icon: ChartIcon },
     {
       href: `${base}/constitution.html`,
       label: 'Investment Constitution',
