@@ -66,6 +66,7 @@ Full DNS, Access, D1, and CI setup: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 ## Docs
 
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — hosting and access control
+- [docs/TESTING.md](docs/TESTING.md) — unit and API integration tests
 - [docs/PUBLIC_READINESS.md](docs/PUBLIC_READINESS.md) — secrets, data boundaries, history hygiene
 
 ## License
