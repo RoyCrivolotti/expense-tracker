@@ -12,12 +12,12 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = join(ROOT, 'docs/screenshots')
 const BASE = 'http://127.0.0.1:5173'
 
-/** Match initExpenseTheme — dark only for README shots. */
-async function applyDarkTheme(page) {
-  await page.addInitScript(() => {
-    localStorage.setItem('exp-theme', 'dark')
-    document.documentElement.setAttribute('data-exp-theme', 'dark')
-  })
+async function applyTheme(page, theme) {
+  await page.addInitScript((selected) => {
+    localStorage.setItem('exp-theme', selected)
+    if (selected === 'system') document.documentElement.removeAttribute('data-exp-theme')
+    else document.documentElement.setAttribute('data-exp-theme', selected)
+  }, theme)
 }
 
 async function waitForServer(ms = 30000) {
@@ -42,21 +42,33 @@ function startDev() {
   })
 }
 
+async function waitForAccessAdmin(page) {
+  await page.waitForSelector('text=Access management', { timeout: 15000 })
+  await page.waitForSelector('text=Revoke all', { timeout: 15000 })
+  await page.waitForSelector('text=Financial documents', { timeout: 15000 })
+}
+
 async function capture() {
   const { chromium } = await import('playwright')
   mkdirSync(OUT, { recursive: true })
   const browser = await chromium.launch()
-  const contextOpts = { colorScheme: 'dark' }
-  const desktop = await browser.newContext({ viewport: { width: 1280, height: 800 }, ...contextOpts })
-  const mobile = await browser.newContext({
+  const desktopDark = await browser.newContext({
+    viewport: { width: 1280, height: 800 },
+    colorScheme: 'dark',
+  })
+  const mobileDark = await browser.newContext({
     viewport: { width: 390, height: 844 },
     isMobile: true,
     hasTouch: true,
-    ...contextOpts,
+    colorScheme: 'dark',
+  })
+  const desktopLight = await browser.newContext({
+    viewport: { width: 1280, height: 800 },
+    colorScheme: 'light',
   })
 
-  const d = await desktop.newPage()
-  await applyDarkTheme(d)
+  const d = await desktopDark.newPage()
+  await applyTheme(d, 'dark')
   await d.goto(`${BASE}/`)
   await d.waitForSelector('text=Recent activity', { timeout: 15000 })
   await d.screenshot({ path: join(OUT, 'dashboard-desktop.png') })
@@ -66,8 +78,14 @@ async function capture() {
   await d.waitForTimeout(400)
   await d.screenshot({ path: join(OUT, 'analytics-desktop.png') })
 
-  const m = await mobile.newPage()
-  await applyDarkTheme(m)
+  const light = await desktopLight.newPage()
+  await applyTheme(light, 'light')
+  await light.goto(`${BASE}/`)
+  await light.waitForSelector('text=Recent activity', { timeout: 15000 })
+  await light.screenshot({ path: join(OUT, 'dashboard-desktop-light.png') })
+
+  const m = await mobileDark.newPage()
+  await applyTheme(m, 'dark')
   await m.goto(`${BASE}/`)
   await m.waitForSelector('text=Recent activity', { timeout: 15000 })
   await m.screenshot({ path: join(OUT, 'dashboard-mobile.png') })
@@ -77,11 +95,11 @@ async function capture() {
   await m.screenshot({ path: join(OUT, 'settings-mobile.png') })
 
   await m.goto(`${BASE}/access/admin`)
-  await m.waitForSelector('text=Access management', { timeout: 15000 })
+  await waitForAccessAdmin(m)
   await m.screenshot({ path: join(OUT, 'access-admin-mobile.png') })
 
   await d.goto(`${BASE}/access/admin`)
-  await d.waitForSelector('text=Access management', { timeout: 15000 })
+  await waitForAccessAdmin(d)
   await d.screenshot({ path: join(OUT, 'access-admin-desktop.png') })
 
   await browser.close()
