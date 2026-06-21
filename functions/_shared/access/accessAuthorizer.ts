@@ -49,3 +49,20 @@ export function ownerEmail(env: Env): string {
   if (!owner) throw new HttpError(503, 'Owner not configured')
   return owner
 }
+
+export async function requireExpensesGroupGrant(
+  repo: AccessRepository,
+  env: Env,
+  email: string,
+): Promise<void> {
+  if (isOwnerEmail(env, email)) return
+  const activeCount = await repo.countActiveUsers()
+  if (activeCount === 0 && env.ALLOW_BOOTSTRAP === '1') {
+    const fallback = parseEnvAllowlist(env.ALLOWED_EMAILS)
+    if (fallback.includes(email)) return
+  }
+  const granted = await repo.listGroupGrants(email)
+  if (!granted.includes('expenses')) {
+    throw new HttpError(403, 'Expense tracker access not granted')
+  }
+}

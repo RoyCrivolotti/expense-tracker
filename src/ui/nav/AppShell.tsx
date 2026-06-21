@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { HubMenuRoot, HubMenuTrigger } from 'folio-shell'
+import type { GroupGrants } from '../../domain/accessGroups'
 import { getExpenseHubNavItems } from '../../hubNavItems'
 import { navItems, type TabId } from './navItems'
 import { PlusIcon } from '../icons'
@@ -12,6 +13,7 @@ interface AppShellProps {
   headerRight?: ReactNode
   onAdd?: () => void
   settingsBadge?: number
+  hubGrants: GroupGrants
   children: ReactNode
 }
 
@@ -61,10 +63,11 @@ export function AppShell({
   headerRight,
   onAdd,
   settingsBadge = 0,
+  hubGrants,
   children,
 }: AppShellProps) {
   return (
-    <HubMenuRoot anchor="inline" navItems={getExpenseHubNavItems()}>
+    <HubMenuRoot anchor="inline" navItems={getExpenseHubNavItems(hubGrants)}>
       <div className={styles.shell}>
         <aside className={styles.rail} aria-label="Sections">
           <div className={styles.brand}>Finance</div>

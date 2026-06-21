@@ -74,6 +74,13 @@ function withAccessTableMocks(env: Env): Env {
             }
           }
         }
+        if (sql.includes('user_group_grants')) {
+          return {
+            bind: () => ({
+              all: () => Promise.resolve({ results: [{ group_id: 'expenses' }] }),
+            }),
+          }
+        }
         return base.prepare(sql)
       },
     } as unknown as D1Database,
