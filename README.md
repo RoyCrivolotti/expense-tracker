@@ -10,7 +10,9 @@ Shared UI: [`folio-shell`](https://github.com/RoyCrivolotti/folio-shell) on [npm
 
 ## Screenshots
 
-Dark theme, fixture data (`fixtures/demo-expenses.csv`). Access admin uses `DOCS_CAPTURE=1` mocks.
+Fixture data (`fixtures/demo-expenses.csv`). Access admin uses `DOCS_CAPTURE=1` mocks (includes group toggles).
+
+**Dark mode** (default in README):
 
 | Dashboard (desktop) | Dashboard (mobile) |
 | --- | --- |
@@ -23,6 +25,12 @@ Dark theme, fixture data (`fixtures/demo-expenses.csv`). Access admin uses `DOCS
 | Access admin (desktop) | Access admin (mobile) |
 | --- | --- |
 | ![Access admin desktop](./docs/screenshots/access-admin-desktop.png) | ![Access admin mobile](./docs/screenshots/access-admin-mobile.png) |
+
+**Light mode** (Settings → Appearance also offers System / Light / Dark):
+
+| Dashboard (desktop, light) |
+| --- |
+| ![Dashboard desktop light](./docs/screenshots/dashboard-desktop-light.png) |
 
 Regenerate: `npm run capture:screenshots` (Playwright + Chromium).
 

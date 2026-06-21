@@ -8,7 +8,7 @@ export function AccessRequestsSetting({ pendingCount }: { pendingCount: number }
       <Card>
         <div className={styles.row}>
           <p className={styles.hint}>
-            Approve or reject requests, revoke access, and review last-seen activity.
+            Approve or reject requests, toggle group access, revoke users, and review last-seen activity.
           </p>
           <a className={styles.link} href="/access/admin">
             Manage access
