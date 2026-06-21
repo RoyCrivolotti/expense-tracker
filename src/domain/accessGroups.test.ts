@@ -6,6 +6,7 @@ describe('accessGroups', () => {
     expenses: true,
     finance: false,
     legacy: true,
+    oncall: false,
   }
 
   it('hasGroupGrant reflects grant map', () => {

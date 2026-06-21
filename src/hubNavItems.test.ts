@@ -7,6 +7,7 @@ describe('expense hub navigation (group grants)', () => {
       expenses: true,
       finance: false,
       legacy: false,
+      oncall: false,
     })
     expect(items.map((item) => item.label)).toEqual(['Expense Tracker'])
   })
@@ -16,6 +17,7 @@ describe('expense hub navigation (group grants)', () => {
       expenses: false,
       finance: true,
       legacy: true,
+      oncall: false,
     })
     expect(items.map((item) => item.label)).toEqual([
       'Hub',
@@ -28,10 +30,10 @@ describe('expense hub navigation (group grants)', () => {
 
   it('reports expense tracker availability from grants', () => {
     expect(
-      canUseExpenseTracker({ expenses: true, finance: false, legacy: false }),
+      canUseExpenseTracker({ expenses: true, finance: false, legacy: false, oncall: false }),
     ).toBe(true)
     expect(
-      canUseExpenseTracker({ expenses: false, finance: true, legacy: true }),
+      canUseExpenseTracker({ expenses: false, finance: true, legacy: true, oncall: true }),
     ).toBe(false)
   })
 })

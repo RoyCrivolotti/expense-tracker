@@ -42,7 +42,7 @@ describe('access API (middleware + routes + D1)', () => {
     })
     expect(response.status).toBe(200)
     expect(await readJson(response)).toEqual({
-      groups: { expenses: true, finance: true, legacy: true },
+      groups: { expenses: true, finance: true, legacy: true, oncall: true },
     })
   })
 
@@ -59,7 +59,7 @@ describe('access API (middleware + routes + D1)', () => {
       email: GUEST,
     })
     expect(await readJson(response)).toEqual({
-      groups: { expenses: true, finance: false, legacy: true },
+      groups: { expenses: true, finance: false, legacy: true, oncall: false },
     })
   })
 
@@ -72,7 +72,7 @@ describe('access API (middleware + routes + D1)', () => {
       email: GUEST,
     })
     const body = await readJson<{ groups: Array<{ id: string; label: string }> }>(response)
-    expect(body.groups.map((group) => group.id)).toEqual(['expenses', 'finance', 'legacy'])
+    expect(body.groups.map((group) => group.id)).toEqual(['expenses', 'finance', 'legacy', 'oncall'])
   })
 
   it('approves a pending request with expenses group only', async () => {
@@ -97,7 +97,7 @@ describe('access API (middleware + routes + D1)', () => {
     })
     expect(await readJson(status)).toMatchObject({
       status: 'allowed',
-      groups: { expenses: true, finance: false, legacy: false },
+      groups: { expenses: true, finance: false, legacy: false, oncall: false },
     })
   })
 
@@ -117,7 +117,7 @@ describe('access API (middleware + routes + D1)', () => {
     })
     expect(await readJson(enableLegacy)).toEqual({
       email: GUEST,
-      groups: { expenses: true, finance: true, legacy: true },
+      groups: { expenses: true, finance: true, legacy: true, oncall: false },
     })
 
     const removeExpenses = await invokeApiRoute({
@@ -131,7 +131,7 @@ describe('access API (middleware + routes + D1)', () => {
     })
     expect(await readJson(removeExpenses)).toEqual({
       email: GUEST,
-      groups: { expenses: false, finance: true, legacy: true },
+      groups: { expenses: false, finance: true, legacy: true, oncall: false },
     })
     expect(store.purgedOwners).toEqual([GUEST])
   })
@@ -189,7 +189,7 @@ describe('access API (middleware + routes + D1)', () => {
     })
     expect(response.status).toBe(200)
     expect(await readJson(response)).toEqual({
-      groups: { expenses: false, finance: true, legacy: false },
+      groups: { expenses: false, finance: true, legacy: false, oncall: false },
     })
   })
 })
