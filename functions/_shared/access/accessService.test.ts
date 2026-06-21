@@ -3,10 +3,12 @@ import type { AccessRepository } from '../../domain/ports/accessRepository'
 import {
   approveAccessRequestById,
   getAccessStatus,
+  getGroupGrantsForUser,
   listActiveAccessUsers,
   rejectAccessRequestById,
   revokeAccessByEmail,
   submitAccessRequest,
+  updateUserGroupGrants,
 } from './accessService'
 import type { AccessServiceDeps } from './accessService'
 import { HttpError } from '../http'
@@ -35,6 +37,10 @@ function deps(overrides: Partial<AccessRepository> = {}): AccessServiceDeps {
     markRequestRejected: vi.fn(),
     revokeAccess: vi.fn(),
     touchLastSeen: vi.fn(),
+    listGroupGrants: vi.fn().mockResolvedValue(['expenses']),
+    grantGroup: vi.fn(),
+    revokeGroup: vi.fn(),
+    revokeAllGroups: vi.fn(),
     ...overrides,
   }
   return {
@@ -53,7 +59,7 @@ const pendingRequest = {
 }
 
 describe('accessService', () => {
-  it('returns owner pending count when allowed owner checks status', async () => {
+  it('returns owner pending count and all groups when allowed owner checks status', async () => {
     const serviceDeps = deps({
       isAllowed: vi.fn().mockResolvedValue(true),
       countPendingRequests: vi.fn().mockResolvedValue(2),
@@ -64,6 +70,7 @@ describe('accessService', () => {
       email: 'owner@example.com',
       isOwner: true,
       pendingCount: 2,
+      groups: { expenses: true, finance: true, legacy: true },
     })
   })
 
@@ -101,13 +108,19 @@ describe('accessService', () => {
     })
   })
 
-  it('approves a pending request by id for the owner', async () => {
+  it('approves a pending request with expenses group only', async () => {
     const serviceDeps = deps({
       findRequestById: vi.fn().mockResolvedValue(pendingRequest),
     })
     const result = await approveAccessRequestById(serviceDeps, 'req-1', 'owner@example.com')
     expect(result.email).toBe('new@example.com')
     expect(serviceDeps.repo.grantAccess).toHaveBeenCalledWith('new@example.com', 'owner@example.com')
+    expect(serviceDeps.repo.grantGroup).toHaveBeenCalledWith(
+      'new@example.com',
+      'expenses',
+      'owner@example.com',
+    )
+    expect(serviceDeps.repo.grantGroup).toHaveBeenCalledTimes(1)
     expect(serviceDeps.repo.markRequestApproved).toHaveBeenCalledWith('req-1')
   })
 
@@ -120,7 +133,7 @@ describe('accessService', () => {
     expect(serviceDeps.repo.markRequestRejected).toHaveBeenCalledWith('req-1')
   })
 
-  it('lists active users with owner flag', async () => {
+  it('lists active users with owner flag and groups', async () => {
     const serviceDeps = deps({
       listActiveUsers: vi.fn().mockResolvedValue([
         {
@@ -138,24 +151,13 @@ describe('accessService', () => {
           lastSeenAt: null,
         },
       ]),
+      listGroupGrants: vi.fn(async (email: string) =>
+        email === 'guest@example.com' ? ['expenses'] : ['expenses', 'finance'],
+      ),
     })
     const users = await listActiveAccessUsers(serviceDeps, 'owner@example.com')
-    expect(users).toEqual([
-      {
-        email: 'owner@example.com',
-        grantedAt: '2026-01-01',
-        grantedBy: null,
-        lastSeenAt: '2026-06-01',
-        isOwner: true,
-      },
-      {
-        email: 'guest@example.com',
-        grantedAt: '2026-02-01',
-        grantedBy: 'owner@example.com',
-        lastSeenAt: null,
-        isOwner: false,
-      },
-    ])
+    expect(users[0]?.groups).toEqual({ expenses: true, finance: true, legacy: true })
+    expect(users[1]?.groups).toEqual({ expenses: true, finance: false, legacy: false })
   })
 
   it('revokes an active user, purges data, but not the owner', async () => {
@@ -173,6 +175,41 @@ describe('accessService', () => {
     const result = await revokeAccessByEmail(serviceDeps, 'guest@example.com', 'owner@example.com')
     expect(result).toEqual({ email: 'guest@example.com', dataPurged: true })
     expect(serviceDeps.repo.revokeAccess).toHaveBeenCalledWith('guest@example.com')
+    expect(serviceDeps.repo.revokeAllGroups).toHaveBeenCalledWith('guest@example.com')
     expect(batch).toHaveBeenCalledOnce()
+  })
+
+  it('purges expense data when expenses group is removed', async () => {
+    const batch = vi.fn().mockResolvedValue(undefined)
+    const prepare = vi.fn(() => ({ bind: vi.fn().mockReturnThis() }))
+    const serviceDeps = deps({
+      getAllowedUser: vi.fn().mockResolvedValue({
+        email: 'guest@example.com',
+        status: 'active',
+        grantedAt: '2026-01-01',
+        grantedBy: 'owner@example.com',
+        lastSeenAt: null,
+      }),
+      revokeGroup: vi.fn().mockResolvedValue(true),
+      listGroupGrants: vi.fn().mockResolvedValue([]),
+    })
+    serviceDeps.env.DB = { prepare, batch } as unknown as D1Database
+
+    await updateUserGroupGrants(
+      serviceDeps,
+      'guest@example.com',
+      'owner@example.com',
+      { expenses: false },
+    )
+    expect(serviceDeps.repo.revokeGroup).toHaveBeenCalledWith('guest@example.com', 'expenses')
+    expect(batch).toHaveBeenCalledOnce()
+  })
+
+  it('resolves group grants for a guest', async () => {
+    const serviceDeps = deps({
+      listGroupGrants: vi.fn().mockResolvedValue(['expenses', 'legacy']),
+    })
+    const groups = await getGroupGrantsForUser(serviceDeps, 'guest@example.com')
+    expect(groups).toEqual({ expenses: true, finance: false, legacy: true })
   })
 })

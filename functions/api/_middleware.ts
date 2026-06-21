@@ -1,5 +1,5 @@
 import { resolveAuthenticatedEmail } from '../_shared/access/resolveAuthenticated'
-import { requireAllowedEmail } from '../_shared/access/accessAuthorizer'
+import { requireAllowedEmail, requireExpensesGroupGrant } from '../_shared/access/accessAuthorizer'
 import { touchLastSeenIfNeeded } from '../_shared/access/accessService'
 import { createAccessDeps } from '../_shared/access/createAccessDeps'
 import type { Env, ExpensesData } from '../_shared/env'
@@ -27,6 +27,7 @@ export const onRequest: PagesFunction<Env, string, ExpensesData> = async (contex
     }
 
     await requireAllowedEmail(accessRepo, context.env, email)
+    await requireExpensesGroupGrant(accessRepo, context.env, email)
     context.data.owner = email
     const deps = createAccessDeps(context.env)
     await touchLastSeenIfNeeded(deps, email)
