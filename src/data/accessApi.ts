@@ -1,6 +1,6 @@
 export type AccessStatus = 'allowed' | 'pending' | 'rejected' | 'none'
 
-export type AccessGroupId = 'expenses' | 'finance' | 'legacy'
+export type AccessGroupId = 'expenses' | 'finance' | 'legacy' | 'oncall'
 
 export type GroupGrants = Record<AccessGroupId, boolean>
 

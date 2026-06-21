@@ -12,11 +12,15 @@ export const ACCESS_GROUPS = {
     id: 'legacy',
     label: 'Legacy site (2019)',
   },
+  oncall: {
+    id: 'oncall',
+    label: 'On-call pay',
+  },
 } as const
 
 export type AccessGroupId = keyof typeof ACCESS_GROUPS
 
-export const ACCESS_GROUP_IDS = ['expenses', 'finance', 'legacy'] as const satisfies readonly AccessGroupId[]
+export const ACCESS_GROUP_IDS = ['expenses', 'finance', 'legacy', 'oncall'] as const satisfies readonly AccessGroupId[]
 
 export type GroupGrants = Record<AccessGroupId, boolean>
 
@@ -31,6 +35,7 @@ export function allGroupsGranted(): GroupGrants {
     expenses: true,
     finance: true,
     legacy: true,
+    oncall: true,
   }
 }
 
@@ -39,6 +44,7 @@ export function emptyGroupGrants(): GroupGrants {
     expenses: false,
     finance: false,
     legacy: false,
+    oncall: false,
   }
 }
 
