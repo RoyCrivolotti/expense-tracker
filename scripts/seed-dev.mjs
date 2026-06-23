@@ -15,13 +15,19 @@ const DEV_DB = process.env.DEV_D1_NAME ?? 'roy-expenses-dev'
 
 mkdirSync(join(ROOT, '.tmp'), { recursive: true })
 
-console.log(`Exporting ${PROD_DB} → ${DUMP}`)
-execSync(`npx wrangler d1 export ${PROD_DB} --remote --output=${DUMP}`, {
-  cwd: ROOT,
-  stdio: 'inherit',
-})
+const skipExport = process.env.SEED_SKIP_EXPORT === '1'
 
-console.log(`Importing into ${DEV_DB}`)
+if (!skipExport) {
+  console.log(`Exporting ${PROD_DB} → ${DUMP}`)
+  execSync(`npx wrangler d1 export ${PROD_DB} --remote --output=${DUMP}`, {
+    cwd: ROOT,
+    stdio: 'inherit',
+  })
+} else {
+  console.log(`Skipping export — using existing ${DUMP}`)
+}
+
+console.log(`Importing into ${DEV_DB} (empty DB — do not run migrate:dev first)`)
 execSync(`npx wrangler d1 execute ${DEV_DB} --remote --file=${DUMP}`, {
   cwd: ROOT,
   stdio: 'inherit',

@@ -16,8 +16,8 @@ One-time and maintenance scripts not wired into daily dev.
 
 1. `wrangler d1 create roy-expenses-dev` — copy id to `config/dev.json` (from `config/dev.example.json`)
 2. `npm run setup:dev-bindings`
-3. `npm run migrate:dev`
-4. `npm run seed:dev` (copies prod data; dump stays in `.tmp/`, never commit)
+3. `npm run seed:dev` — imports prod schema + data into empty dev DB (**do not** run `migrate:dev` first; the export includes CREATE TABLE)
+4. Re-seed later: delete/recreate `roy-expenses-dev` or use `SEED_SKIP_EXPORT=1 npm run seed:dev` with a fresh empty DB
 5. `npm run setup:access-preview` (adds `dev.expense-tracker-3hq.pages.dev` to Access)
 6. PRs run `.github/workflows/deploy-dev.yml` → verify + preview deploy
 

@@ -61,7 +61,12 @@ async function main() {
 
   await cf(`/accounts/${ACCOUNT_ID}/pages/projects/${PAGES_PROJECT}`, {
     method: 'PATCH',
-    body: JSON.stringify({ deployment_configs: { preview: previewBase } }),
+    body: JSON.stringify({
+      deployment_configs: {
+        production: configs.production ?? {},
+        preview: previewBase,
+      },
+    }),
   })
   console.log(`Pages ${PAGES_PROJECT} preview DB → ${d1DatabaseId} (roy-expenses-dev)`)
 }
