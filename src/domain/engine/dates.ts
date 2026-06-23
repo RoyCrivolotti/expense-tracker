@@ -92,3 +92,15 @@ export function defaultBudgetMonth(isoDate: string): string {
 export function sortedMonths(months: Iterable<string>): string[] {
   return Array.from(new Set(months)).sort((a, b) => a.localeCompare(b))
 }
+
+/** Budget month immediately before `yearMonth`, e.g. 2026-01 → 2025-12. */
+export function priorBudgetMonth(yearMonth: string): string {
+  const [y, m] = yearMonth.split('-').map(Number)
+  let py = y ?? 0
+  let pm = (m ?? 1) - 1
+  if (pm < 1) {
+    pm = 12
+    py -= 1
+  }
+  return `${py}-${String(pm).padStart(2, '0')}`
+}

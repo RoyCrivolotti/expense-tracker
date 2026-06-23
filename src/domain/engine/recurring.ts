@@ -6,7 +6,7 @@
  */
 
 import type { Transaction, TxnType } from '../types'
-import { defaultBudgetMonth } from './dates'
+import { defaultBudgetMonth, priorBudgetMonth } from './dates'
 
 function normalizeDesc(description: string): string {
   return description.trim().toLowerCase()
@@ -39,6 +39,12 @@ interface OccurrenceGroup {
   categoryId: number
   amountCents: number
   dates: string[]
+  budgetMonths: Set<string>
+}
+
+export interface DetectRecurringOptions {
+  /** Scope suggestions to this budget month (requires prior-month activity). */
+  forBudgetMonth?: string
 }
 
 const MIN_OCCURRENCES = 3
@@ -78,6 +84,7 @@ export function groupTransactions(transactions: Transaction[]): OccurrenceGroup[
     const existing = map.get(key)
     if (existing) {
       existing.dates.push(txn.date)
+      existing.budgetMonths.add(txn.budgetMonth)
       existing.categoryId = txn.categoryId
       existing.amountCents = txn.amountCents
       existing.label = txn.description
@@ -92,6 +99,7 @@ export function groupTransactions(transactions: Transaction[]): OccurrenceGroup[
         categoryId: txn.categoryId,
         amountCents: txn.amountCents,
         dates: [txn.date],
+        budgetMonths: new Set([txn.budgetMonth]),
       })
     }
   }
@@ -207,34 +215,51 @@ function buildSuggestion(
 
 const MIN_REGULARITY = 0.6
 
+function trySuggestGroup(
+  group: OccurrenceGroup,
+  transactions: Transaction[],
+  forMonth: string | undefined,
+  priorMonth: string | null,
+): RecurringSuggestion | null {
+  if (priorMonth && !group.budgetMonths.has(priorMonth)) return null
+
+  const sorted = [...group.dates].sort()
+  const gaps = sorted.slice(1).map((d, i) => daysBetween(sorted[i]!, d))
+  if (gaps.length === 0) return null
+
+  const medianGap = median(gaps)
+  const frequency = classifyFrequency(medianGap)
+  if (!frequency) return null
+
+  const regularity = regularityScore(gaps)
+  if (regularity < MIN_REGULARITY) return null
+
+  const predictedDate = predictNextDate(frequency, sorted)
+  if (!predictedDate) return null
+
+  const predictedBM = defaultBudgetMonth(predictedDate)
+  if (forMonth && predictedBM !== forMonth) return null
+  if (isAlreadyEntered(group.key, predictedBM, transactions)) return null
+
+  return buildSuggestion(group, frequency, Math.min(regularity, 1), predictedDate)
+}
+
 /**
  * Detect recurring transactions from history. Returns suggestions for
  * upcoming occurrences that haven't been entered yet.
  */
-export function detectRecurring(transactions: Transaction[]): RecurringSuggestion[] {
+export function detectRecurring(
+  transactions: Transaction[],
+  options?: DetectRecurringOptions,
+): RecurringSuggestion[] {
+  const forMonth = options?.forBudgetMonth
+  const priorMonth = forMonth ? priorBudgetMonth(forMonth) : null
   const groups = groupTransactions(transactions)
   const suggestions: RecurringSuggestion[] = []
 
   for (const group of groups) {
-    const sorted = [...group.dates].sort()
-    const gaps = sorted.slice(1).map((d, i) => daysBetween(sorted[i]!, d))
-    if (gaps.length === 0) continue
-
-    const medianGap = median(gaps)
-    const frequency = classifyFrequency(medianGap)
-    if (!frequency) continue
-
-    const regularity = regularityScore(gaps)
-    if (regularity < MIN_REGULARITY) continue
-
-    const predictedDate = predictNextDate(frequency, sorted)
-    if (!predictedDate) continue
-
-    const predictedBM = defaultBudgetMonth(predictedDate)
-    if (isAlreadyEntered(group.key, predictedBM, transactions)) continue
-
-    const confidence = Math.min(regularity, 1)
-    suggestions.push(buildSuggestion(group, frequency, confidence, predictedDate))
+    const suggestion = trySuggestGroup(group, transactions, forMonth, priorMonth)
+    if (suggestion) suggestions.push(suggestion)
   }
 
   return suggestions.sort((a, b) => a.predictedDate.localeCompare(b.predictedDate))
