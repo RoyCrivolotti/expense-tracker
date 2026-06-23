@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import type { RecurringSuggestion } from '../../engine'
 import type { TransactionSeed } from '../actions'
 import type { Lookup } from '../format'
+import { formatDayLabel } from '../format'
 import { formatCents } from '../../engine/money'
 import { Card, EmptyState, SectionTitle } from '../components/primitives'
 import styles from './UpcomingCard.module.css'
@@ -71,6 +72,7 @@ function SuggestionRow({
         <span className={styles.desc}>{suggestion.description}</span>
         <span className={styles.meta}>
           {categoryName} · {formatCents(suggestion.amountCents)} ·{' '}
+          {formatDayLabel(suggestion.predictedDate)} ·{' '}
           <FrequencyLabel frequency={suggestion.frequency} />
         </span>
       </div>

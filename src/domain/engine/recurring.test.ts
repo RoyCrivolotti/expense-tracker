@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { Transaction } from '../types'
+import { priorBudgetMonth } from './dates'
 import {
   classifyFrequency,
   detectRecurring,
@@ -181,5 +182,43 @@ describe('detectRecurring', () => {
     const suggestions = detectRecurring(txns)
     expect(suggestions[0]!.amountCents).toBe(3500)
     expect(suggestions[0]!.categoryId).toBe(8)
+  })
+
+  it('excludes groups missing from the prior budget month', () => {
+    const txns = monthlyDates(2026, 1, 5, 5).map((date) =>
+      makeTxn({ date, description: 'Psicólogo', budgetMonth: date.slice(0, 7) }),
+    )
+    const suggestions = detectRecurring(txns, { forBudgetMonth: '2026-07' })
+    expect(suggestions.find((s) => s.description === 'Psicólogo')).toBeUndefined()
+  })
+
+  it('includes groups present in the prior budget month', () => {
+    const txns = monthlyDates(2026, 3, 5, 4).map((date) =>
+      makeTxn({ date, description: 'Rent', budgetMonth: date.slice(0, 7), amountCents: 85000 }),
+    )
+    const suggestions = detectRecurring(txns, { forBudgetMonth: '2026-07' })
+    expect(suggestions).toHaveLength(1)
+    expect(suggestions[0]!.description).toBe('Rent')
+    expect(suggestions[0]!.predictedBudgetMonth).toBe('2026-07')
+  })
+
+  it('filters predictions to the requested budget month only', () => {
+    const txns = monthlyDates(2025, 10, 5, 8).map((date) =>
+      makeTxn({ date, description: 'Spotify', budgetMonth: date.slice(0, 7) }),
+    )
+    const july = detectRecurring(txns, { forBudgetMonth: '2026-07' })
+    const august = detectRecurring(txns, { forBudgetMonth: '2026-08' })
+    expect(july.every((s) => s.predictedBudgetMonth === '2026-07')).toBe(true)
+    expect(august.every((s) => s.predictedBudgetMonth === '2026-08')).toBe(true)
+  })
+})
+
+describe('priorBudgetMonth', () => {
+  it('steps back within the same year', () => {
+    expect(priorBudgetMonth('2026-07')).toBe('2026-06')
+  })
+
+  it('wraps across year boundary', () => {
+    expect(priorBudgetMonth('2026-01')).toBe('2025-12')
   })
 })

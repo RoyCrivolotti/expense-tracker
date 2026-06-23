@@ -87,7 +87,12 @@ export function AppShell({
         </div>
 
         {onAdd && (
-          <button type="button" className={styles.fab} onClick={onAdd} aria-label="Add transaction">
+          <button
+            type="button"
+            className={styles.fab}
+            onClick={() => onAdd()}
+            aria-label="Add transaction"
+          >
             <PlusIcon />
           </button>
         )}
