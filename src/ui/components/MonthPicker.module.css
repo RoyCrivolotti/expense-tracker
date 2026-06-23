@@ -1,15 +1,3 @@
-.wrapCompact {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  max-width: 100%;
-}
-
-.wrapBar {
-  display: flex;
-  width: 100%;
-}
-
 .picker {
   display: inline-flex;
   align-items: center;
@@ -57,26 +45,4 @@
 .pickerBar .label {
   flex: 1;
   min-width: 0;
-}
-
-.latestBtn {
-  flex-shrink: 0;
-  border: 0;
-  padding: 0;
-  background: none;
-  color: var(--color-text-muted);
-  font: inherit;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.latestBtn:hover {
-  color: var(--color-text);
-}
-
-.pickerBar .latestBtn {
-  margin-left: auto;
 }
