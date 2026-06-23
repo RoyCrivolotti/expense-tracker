@@ -54,9 +54,18 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
       />
 
       <div className={styles.resultSummary}>
-        <span>{state.results.length} transactions</span>
-        <span>
-          Net spend <Money cents={state.totalCents} />
+        {state.hasActiveFilters && !state.selectMode ? (
+          <button type="button" className={styles.filterClear} onClick={state.clearFilters}>
+            Clear filters
+          </button>
+        ) : (
+          <span />
+        )}
+        <span className={styles.resultStats}>
+          <span>{state.results.length} transactions</span>
+          <span>
+            Net spend <Money cents={state.totalCents} />
+          </span>
         </span>
       </div>
 
