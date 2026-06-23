@@ -153,10 +153,38 @@
 .resultSummary {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
   font-size: 0.82rem;
   color: var(--color-text-muted);
   padding: 0.25rem;
   margin-bottom: 0.25rem;
+}
+
+.resultStats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem 0.75rem;
+  margin-left: auto;
+  text-align: right;
+}
+
+.filterClear {
+  flex-shrink: 0;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.filterClear:hover {
+  color: var(--color-text);
 }
 
 .defRow {
