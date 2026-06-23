@@ -10,7 +10,7 @@ Shared UI: [`folio-shell`](https://github.com/RoyCrivolotti/folio-shell) on [npm
 
 ## Screenshots
 
-Fixture data (`fixtures/demo-expenses.csv`). Access admin uses `DOCS_CAPTURE=1` mocks (includes group toggles).
+Fixture data (`fixtures/demo-expenses.csv`). Access admin and Transactions **Upcoming** card use `DOCS_CAPTURE=1` mocks (write stub + access API mocks).
 
 **Dark mode** (default in README):
 
@@ -25,6 +25,16 @@ Fixture data (`fixtures/demo-expenses.csv`). Access admin uses `DOCS_CAPTURE=1` 
 | Access admin (desktop) | Access admin (mobile) |
 | --- | --- |
 | ![Access admin desktop](./docs/screenshots/access-admin-desktop.png) | ![Access admin mobile](./docs/screenshots/access-admin-mobile.png) |
+
+**Transactions** (mobile): collapsible filters, recurring **Upcoming** suggestions, active-filter badge with **Clear filters**, and **»** jump to latest budget month when viewing a past month.
+
+| Default (filters collapsed) | Filters expanded |
+| --- | --- |
+| ![Transactions mobile](./docs/screenshots/transactions-mobile.png) | ![Transactions filters](./docs/screenshots/transactions-mobile-filters.png) |
+
+| Active filters + clear | Past month (» latest) |
+| --- | --- |
+| ![Transactions active filters](./docs/screenshots/transactions-mobile-active.png) | ![Transactions past month](./docs/screenshots/transactions-mobile-past.png) |
 
 **Light mode** (Settings → Appearance also offers System / Light / Dark):
 

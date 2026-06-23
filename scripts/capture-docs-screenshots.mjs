@@ -48,6 +48,62 @@ async function waitForAccessAdmin(page) {
   await page.waitForSelector('text=Financial documents', { timeout: 15000 })
 }
 
+async function goToTransactions(page) {
+  await page.getByRole('button', { name: 'Transactions' }).click()
+  await page.waitForSelector('input[placeholder*="Search description"]', { timeout: 15000 })
+}
+
+async function filtersExpanded(page) {
+  return page.getByRole('button', { name: /Filters/ }).getAttribute('aria-expanded')
+}
+
+async function setFiltersExpanded(page, open) {
+  const btn = page.getByRole('button', { name: /Filters/ })
+  const expanded = await filtersExpanded(page)
+  const want = open ? 'true' : 'false'
+  if (expanded !== want) {
+    await btn.click()
+    await page.waitForTimeout(200)
+  }
+}
+
+async function setMonthLabel(page, monthName) {
+  const pattern = new RegExp(`${monthName} 2026`)
+  for (let i = 0; i < 12; i++) {
+    if (await page.getByText(pattern).isVisible()) return
+    await page.getByRole('button', { name: 'Previous month' }).click()
+    await page.waitForTimeout(150)
+  }
+  throw new Error(`Could not navigate to month: ${monthName}`)
+}
+
+async function captureTransactionsMobile(m) {
+  await m.goto(`${BASE}/`)
+  await m.waitForSelector('text=Recent activity', { timeout: 15000 })
+  await goToTransactions(m)
+  await m.waitForSelector('text=Upcoming', { timeout: 15000 })
+  await setFiltersExpanded(m, false)
+  await m.waitForTimeout(300)
+  await m.screenshot({ path: join(OUT, 'transactions-mobile.png') })
+
+  await setFiltersExpanded(m, true)
+  await m.waitForTimeout(300)
+  await m.screenshot({ path: join(OUT, 'transactions-mobile-filters.png') })
+
+  await m.locator('select').first().selectOption({ label: 'Groceries' })
+  await setFiltersExpanded(m, false)
+  await m.waitForSelector('text=Clear filters', { timeout: 15000 })
+  await m.waitForTimeout(300)
+  await m.screenshot({ path: join(OUT, 'transactions-mobile-active.png') })
+
+  await m.getByRole('button', { name: 'Clear filters' }).click()
+  await setMonthLabel(m, 'May')
+  await setFiltersExpanded(m, false)
+  await m.waitForSelector('button[aria-label="Go to latest budget month"]', { timeout: 15000 })
+  await m.waitForTimeout(300)
+  await m.screenshot({ path: join(OUT, 'transactions-mobile-past.png') })
+}
+
 async function capture() {
   const { chromium } = await import('playwright')
   mkdirSync(OUT, { recursive: true })
@@ -86,6 +142,8 @@ async function capture() {
 
   const m = await mobileDark.newPage()
   await applyTheme(m, 'dark')
+  await captureTransactionsMobile(m)
+
   await m.goto(`${BASE}/`)
   await m.waitForSelector('text=Recent activity', { timeout: 15000 })
   await m.screenshot({ path: join(OUT, 'dashboard-mobile.png') })
