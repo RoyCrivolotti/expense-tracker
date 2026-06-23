@@ -1,4 +1,5 @@
 import type { Account, Category, TxnType } from '../../types'
+import { CloseIcon } from '../icons'
 import type { StatusFilter } from './TxnFilters'
 import styles from './tabs.module.css'
 
@@ -17,14 +18,26 @@ export function SearchRow({
 }) {
   return (
     <div className={styles.filterTop}>
-      <input
-        className={styles.search}
-        type="search"
-        placeholder="Search description or notes…"
-        value={query}
-        onChange={(e) => onQuery(e.target.value)}
-        disabled={selectMode}
-      />
+      <div className={styles.searchWrap}>
+        <input
+          className={styles.search}
+          type="search"
+          placeholder="Search description or notes…"
+          value={query}
+          onChange={(e) => onQuery(e.target.value)}
+          disabled={selectMode}
+        />
+        {query && !selectMode && (
+          <button
+            type="button"
+            className={styles.searchClear}
+            onClick={() => onQuery('')}
+            aria-label="Clear search"
+          >
+            <CloseIcon />
+          </button>
+        )}
+      </div>
       {canSelect && (
         <button type="button" className={styles.selectBtn} onClick={onToggleSelectMode}>
           {selectMode ? 'Cancel' : 'Select'}
