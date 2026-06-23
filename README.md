@@ -18,23 +18,31 @@ Fixture data (`fixtures/demo-expenses.csv`). Access admin and Transactions **Upc
 | --- | --- |
 | ![Dashboard desktop](./docs/screenshots/dashboard-desktop.png) | ![Dashboard mobile](./docs/screenshots/dashboard-mobile.png) |
 
-| Analytics (desktop) | Settings → Manage access (mobile) |
+| Transactions (desktop) | Transactions (mobile) |
 | --- | --- |
-| ![Analytics desktop](./docs/screenshots/analytics-desktop.png) | ![Settings mobile](./docs/screenshots/settings-mobile.png) |
+| ![Transactions desktop](./docs/screenshots/transactions-desktop.png) | ![Transactions mobile](./docs/screenshots/transactions-mobile.png) |
+
+| Analytics (desktop) | Analytics (mobile) |
+| --- | --- |
+| ![Analytics desktop](./docs/screenshots/analytics-desktop.png) | ![Analytics mobile](./docs/screenshots/analytics-mobile.png) |
+
+| Settings (desktop) | Settings (mobile) |
+| --- | --- |
+| ![Settings desktop](./docs/screenshots/settings-desktop.png) | ![Settings mobile](./docs/screenshots/settings-mobile.png) |
 
 | Access admin (desktop) | Access admin (mobile) |
 | --- | --- |
 | ![Access admin desktop](./docs/screenshots/access-admin-desktop.png) | ![Access admin mobile](./docs/screenshots/access-admin-mobile.png) |
 
-**Transactions** (mobile): collapsible filters, recurring **Upcoming** suggestions, active-filter badge with **Clear filters**, and **»** jump to latest budget month when viewing a past month.
+**Transactions** (mobile detail): collapsible filters, recurring **Upcoming** suggestions, active-filter badge with **Clear filters**, and **»** jump to latest budget month when viewing a past month.
 
-| Default (filters collapsed) | Filters expanded |
+| Filters expanded | Active filters + clear |
 | --- | --- |
-| ![Transactions mobile](./docs/screenshots/transactions-mobile.png) | ![Transactions filters](./docs/screenshots/transactions-mobile-filters.png) |
+| ![Transactions filters](./docs/screenshots/transactions-mobile-filters.png) | ![Transactions active filters](./docs/screenshots/transactions-mobile-active.png) |
 
-| Active filters + clear | Past month (» latest) |
+| Past month (» latest) | |
 | --- | --- |
-| ![Transactions active filters](./docs/screenshots/transactions-mobile-active.png) | ![Transactions past month](./docs/screenshots/transactions-mobile-past.png) |
+| ![Transactions past month](./docs/screenshots/transactions-mobile-past.png) | |
 
 **Light mode** (Settings → Appearance also offers System / Light / Dark):
 
