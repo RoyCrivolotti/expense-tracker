@@ -1,5 +1,16 @@
-import type { ExpenseSettings, GoalInputs, Transaction } from '../types'
+import type { ExpenseSettings, GoalInputs, Transaction, TxnType } from '../types'
 import type { NewAccount, NewCategory } from '../data/dataSource'
+
+/** Pre-filled fields passed to the add modal from a recurring suggestion. */
+export interface TransactionSeed {
+  description: string
+  type: TxnType
+  accountId: number
+  categoryId: number
+  amountCents: number
+  date: string
+  budgetMonth: string
+}
 
 /**
  * Mutation handlers passed down to tabs only when the active data source can
@@ -9,7 +20,7 @@ import type { NewAccount, NewCategory } from '../data/dataSource'
  */
 export interface ExpenseActions {
   onEdit: (txn: Transaction) => void
-  onAdd: () => void
+  onAdd: (seed?: TransactionSeed) => void
   deleteTransaction: (id: number) => Promise<void>
   deleteTransactions: (ids: number[]) => Promise<void>
   setStatementPaid: (accountId: number, yearMonth: string, paid: boolean) => Promise<void>
@@ -22,4 +33,7 @@ export interface ExpenseActions {
   updateGoals: (patch: Partial<GoalInputs>) => Promise<void>
 }
 
-export type ExpenseModalState = { mode: 'add' } | { mode: 'edit'; txn: Transaction } | null
+export type ExpenseModalState =
+  | { mode: 'add'; seed?: TransactionSeed }
+  | { mode: 'edit'; txn: Transaction }
+  | null

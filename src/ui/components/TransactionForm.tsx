@@ -3,6 +3,7 @@ import type { Transaction } from '../../types'
 import type { NewTransaction } from '../../data/dataSource'
 import { parseEuroToCents } from '../../engine/money'
 import type { ExpenseModel } from '../useExpenseData'
+import type { TransactionSeed } from '../actions'
 import { Fields } from './TransactionFields'
 import { initialFields, type FormFields, type Setter } from './transactionFormState'
 import { acceptDescriptionSuggestion } from './transactionFormActions'
@@ -11,6 +12,7 @@ import styles from './TransactionForm.module.css'
 interface FormProps {
   model: ExpenseModel
   editing: Transaction | null
+  seed?: TransactionSeed | undefined
   onSubmit: (input: NewTransaction, id?: number) => Promise<void>
   onDelete?: ((id: number) => Promise<void>) | undefined
   onClose: () => void
@@ -30,8 +32,8 @@ function toInput(form: FormFields, cents: number, editing: Transaction | null): 
   }
 }
 
-export function TransactionForm({ model, editing, onSubmit, onDelete, onClose }: FormProps) {
-  const [form, setForm] = useState<FormFields>(() => initialFields(editing, model))
+export function TransactionForm({ model, editing, seed, onSubmit, onDelete, onClose }: FormProps) {
+  const [form, setForm] = useState<FormFields>(() => initialFields(editing, model, seed))
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const set: Setter = (key, value) => setForm((f) => ({ ...f, [key]: value }))
