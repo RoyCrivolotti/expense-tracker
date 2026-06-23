@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import type { ExpenseDataset } from '../types'
 import type { ExpenseDataSource } from '../data/dataSource'
 import type { ExpenseActions, ExpenseModalState } from './actions'
+import { openAddModal } from './transactionSeed'
 import {
   patchAfterAccount,
   patchAfterBulkDelete,
@@ -25,7 +26,7 @@ export function useExpenseActions(
   return useMemo(() => {
     if (!source.canWrite) return undefined
     return {
-      onAdd: (seed) => openModal({ mode: 'add', ...(seed ? { seed } : {}) }),
+      onAdd: (seed) => openAddModal(openModal, seed),
       onEdit: (txn) => openModal({ mode: 'edit', txn }),
       deleteTransaction: async (id) => {
         await source.deleteTransaction!(id)
