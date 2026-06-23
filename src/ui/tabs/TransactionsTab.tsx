@@ -42,6 +42,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
         dateTo={state.dateTo}
         selectMode={state.selectMode}
         canSelect={state.canDelete}
+        secondaryFilterCount={state.secondaryFilterCount}
         onQuery={state.setQuery}
         onCategory={state.setCategoryId}
         onAccount={state.setAccountId}

@@ -18,39 +18,34 @@ export function MonthPicker({ months, value, onChange, layout = 'compact' }: Mon
     if (next) onChange(next)
   }
   const rootClass = layout === 'bar' ? `${styles.picker} ${styles.pickerBar}` : styles.picker
-  const latestBtn = showLatest ? (
-    <button
-      type="button"
-      className={styles.latestBtn}
-      onClick={() => onChange(latestMonth)}
-      aria-label="Go to latest budget month"
-    >
-      Latest
-    </button>
-  ) : null
   return (
-    <div className={layout === 'bar' ? styles.wrapBar : styles.wrapCompact}>
-      <div className={rootClass}>
+    <div className={rootClass}>
+      <button
+        type="button"
+        onClick={() => go(-1)}
+        disabled={index <= 0}
+        aria-label="Previous month"
+      >
+        ‹
+      </button>
+      <span className={styles.label}>{fullMonthLabel(value)}</span>
+      <button
+        type="button"
+        onClick={() => go(1)}
+        disabled={index < 0 || index >= months.length - 1}
+        aria-label="Next month"
+      >
+        ›
+      </button>
+      {showLatest ? (
         <button
           type="button"
-          onClick={() => go(-1)}
-          disabled={index <= 0}
-          aria-label="Previous month"
+          onClick={() => onChange(latestMonth)}
+          aria-label="Go to latest budget month"
         >
-          ‹
+          »
         </button>
-        <span className={styles.label}>{fullMonthLabel(value)}</span>
-        <button
-          type="button"
-          onClick={() => go(1)}
-          disabled={index < 0 || index >= months.length - 1}
-          aria-label="Next month"
-        >
-          ›
-        </button>
-        {layout === 'bar' ? latestBtn : null}
-      </div>
-      {layout === 'compact' ? latestBtn : null}
+      ) : null}
     </div>
   )
 }

@@ -39,6 +39,15 @@ function useTxnListFilters(month: string) {
       useDateRange,
     [query, categoryId, accountId, txnType, status, useDateRange],
   )
+  const secondaryFilterCount = useMemo(
+    () =>
+      (categoryId !== 'all' ? 1 : 0) +
+      (accountId !== 'all' ? 1 : 0) +
+      (txnType !== 'all' ? 1 : 0) +
+      (status !== 'all' ? 1 : 0) +
+      (useDateRange ? 1 : 0),
+    [categoryId, accountId, txnType, status, useDateRange],
+  )
   const clearFilters = () => {
     setQuery('')
     setCategoryId('all')
@@ -68,6 +77,7 @@ function useTxnListFilters(month: string) {
     setDateTo,
     filter,
     hasActiveFilters,
+    secondaryFilterCount,
     clearFilters,
   }
 }

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { Account, Category, TxnStatus, TxnType } from '../../types'
 import styles from './tabs.module.css'
 import {
@@ -22,6 +23,7 @@ export interface TxnFiltersProps {
   dateTo: string
   selectMode: boolean
   canSelect: boolean
+  secondaryFilterCount: number
   onQuery: (value: string) => void
   onCategory: (value: number | 'all') => void
   onAccount: (value: number | 'all') => void
@@ -34,6 +36,9 @@ export interface TxnFiltersProps {
 }
 
 export function TxnFilters(props: TxnFiltersProps) {
+  const [expanded, setExpanded] = useState(false)
+  const chevron = expanded ? '▾' : '▸'
+
   return (
     <div className={styles.filters}>
       <SearchRow
@@ -43,31 +48,49 @@ export function TxnFilters(props: TxnFiltersProps) {
         onQuery={props.onQuery}
         onToggleSelectMode={props.onToggleSelectMode}
       />
-      <CategoryAccountRow
-        categories={props.categories}
-        accounts={props.accounts}
-        categoryId={props.categoryId}
-        accountId={props.accountId}
-        selectMode={props.selectMode}
-        onCategory={props.onCategory}
-        onAccount={props.onAccount}
-      />
-      <StatusTypeRow
-        status={props.status}
-        txnType={props.txnType}
-        selectMode={props.selectMode}
-        onStatus={props.onStatus}
-        onTxnType={props.onTxnType}
-      />
-      <DateRangeRow
-        useDateRange={props.useDateRange}
-        dateFrom={props.dateFrom}
-        dateTo={props.dateTo}
-        selectMode={props.selectMode}
-        onUseDateRange={props.onUseDateRange}
-        onDateFrom={props.onDateFrom}
-        onDateTo={props.onDateTo}
-      />
+      <button
+        type="button"
+        className={styles.filterToggle}
+        onClick={() => setExpanded((open) => !open)}
+        disabled={props.selectMode}
+        aria-expanded={expanded}
+      >
+        <span>{chevron} Filters</span>
+        {props.secondaryFilterCount > 0 ? (
+          <span className={styles.filterToggleBadge} aria-label={`${props.secondaryFilterCount} active filters`}>
+            {props.secondaryFilterCount}
+          </span>
+        ) : null}
+      </button>
+      {expanded ? (
+        <div className={styles.filterSecondary}>
+          <CategoryAccountRow
+            categories={props.categories}
+            accounts={props.accounts}
+            categoryId={props.categoryId}
+            accountId={props.accountId}
+            selectMode={props.selectMode}
+            onCategory={props.onCategory}
+            onAccount={props.onAccount}
+          />
+          <StatusTypeRow
+            status={props.status}
+            txnType={props.txnType}
+            selectMode={props.selectMode}
+            onStatus={props.onStatus}
+            onTxnType={props.onTxnType}
+          />
+          <DateRangeRow
+            useDateRange={props.useDateRange}
+            dateFrom={props.dateFrom}
+            dateTo={props.dateTo}
+            selectMode={props.selectMode}
+            onUseDateRange={props.onUseDateRange}
+            onDateFrom={props.onDateFrom}
+            onDateTo={props.onDateTo}
+          />
+        </div>
+      ) : null}
     </div>
   )
 }
