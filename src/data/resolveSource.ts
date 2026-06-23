@@ -8,6 +8,10 @@ import { apiDataSource } from './apiDataSource'
  */
 export async function resolveSource(): Promise<ExpenseDataSource> {
   if (import.meta.env.DEV) {
+    if (import.meta.env.VITE_DOCS_CAPTURE) {
+      const { docsCaptureDataSource } = await import('./docsCaptureDataSource')
+      return docsCaptureDataSource
+    }
     const { csvDataSource } = await import('./csvDataSource')
     return csvDataSource
   }

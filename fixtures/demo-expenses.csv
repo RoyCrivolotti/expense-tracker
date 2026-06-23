@@ -30,15 +30,31 @@ May;TRUE;TRUE
 Jun;FALSE;FALSE
 
 Budget Month;Date;Description;Account;Category;Type;Amount;Status;Notes
+March;01 Mar 2026;Payroll;Main Debit;;Income;3.200,00 €;Posted;
+March;05 Mar 2026;Gym membership;Main Debit;Health;Expense;35,00 €;Posted;
+March;08 Mar 2026;Weekly shop;Main Debit;Groceries;Expense;58,20 €;Posted;
+March;10 Mar 2026;Streaming;Travel Card;Entertainment;Expense;14,99 €;Posted;
+March;12 Mar 2026;Metro pass;Main Debit;Transport;Expense;40,00 €;Posted;
+March;15 Mar 2026;Electric bill;Main Debit;Utilities;Expense;88,50 €;Posted;
+April;01 Apr 2026;Payroll;Main Debit;;Income;3.200,00 €;Posted;
+April;05 Apr 2026;Gym membership;Main Debit;Health;Expense;35,00 €;Posted;
+April;09 Apr 2026;Supermarket;Main Debit;Groceries;Expense;64,10 €;Posted;
+April;10 Apr 2026;Streaming;Travel Card;Entertainment;Expense;14,99 €;Posted;
+April;14 Apr 2026;Café brunch;Main Debit;Dining out;Expense;26,00 €;Posted;
+April;18 Apr 2026;Pharmacy;Main Debit;Health;Expense;16,40 €;Posted;
+May;01 May 2026;Payroll;Main Debit;;Income;3.200,00 €;Posted;
+May;05 May 2026;Gym membership;Main Debit;Health;Expense;35,00 €;Posted;
+May;10 May 2026;Streaming;Travel Card;Entertainment;Expense;14,99 €;Posted;
+May;12 May 2026;Weekly shop;Main Debit;Groceries;Expense;55,00 €;Posted;
+May;18 May 2026;Dinner out;Main Debit;Dining out;Expense;42,30 €;Posted;
+May;22 May 2026;Metro pass;Main Debit;Transport;Expense;40,00 €;Posted;
+May;28 May 2026;Electric bill;Main Debit;Utilities;Expense;91,00 €;Posted;
 June;01 Jun 2026;Payroll;Main Debit;;Income;3.200,00 €;Posted;
 June;02 Jun 2026;Supermarket;Main Debit;Groceries;Expense;62,40 €;Posted;
 June;04 Jun 2026;Metro pass;Main Debit;Transport;Expense;40,00 €;Posted;
 June;05 Jun 2026;Café brunch;Main Debit;Dining out;Expense;28,50 €;Posted;
 June;07 Jun 2026;Electric bill;Main Debit;Utilities;Expense;94,20 €;Posted;
 June;08 Jun 2026;Pharmacy;Main Debit;Health;Expense;18,90 €;Posted;
-June;10 Jun 2026;Streaming;Travel Card;Entertainment;Expense;14,99 €;Posted;
 June;12 Jun 2026;Weekly shop;Main Debit;Groceries;Expense;71,15 €;Posted;
 June;14 Jun 2026;Dinner out;Main Debit;Dining out;Expense;46,80 €;Posted;
 June;15 Jun 2026;Index fund;Main Debit;;Investment;400,00 €;Posted;
-May;28 May 2026;Salary;Main Debit;;Income;3.200,00 €;Posted;
-May;20 May 2026;Groceries;Main Debit;Groceries;Expense;55,00 €;Posted;
