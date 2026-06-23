@@ -2,8 +2,6 @@ node_modules/
 dist/
 .env
 content/
-samples/
-reports/
 config/allowed-emails.json
 config/access.json
 workers/**/.wrangler/
