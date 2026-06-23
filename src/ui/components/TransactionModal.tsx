@@ -3,6 +3,7 @@ import type { NewTransaction } from '../../data/dataSource'
 import type { ExpenseDataSource } from '../../data/dataSource'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseDataset } from '../../types'
+import type { TransactionSeed } from '../actions'
 import {
   patchAfterTransactionCreate,
   patchAfterTransactionDelete,
@@ -15,11 +16,12 @@ interface Props {
   model: ExpenseModel
   source: ExpenseDataSource
   editing: Transaction | null
+  seed?: TransactionSeed | undefined
   onClose: () => void
   applyPatch: (patch: (dataset: ExpenseDataset) => ExpenseDataset) => void
 }
 
-export function TransactionModal({ model, source, editing, onClose, applyPatch }: Props) {
+export function TransactionModal({ model, source, editing, seed, onClose, applyPatch }: Props) {
   const submit = async (input: NewTransaction, id?: number) => {
     if (id != null) {
       const txn = await source.updateTransaction!(id, input)
@@ -41,6 +43,7 @@ export function TransactionModal({ model, source, editing, onClose, applyPatch }
       <TransactionForm
         model={model}
         editing={editing}
+        seed={seed}
         onSubmit={submit}
         onDelete={onDelete}
         onClose={onClose}

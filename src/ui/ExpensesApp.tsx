@@ -174,6 +174,7 @@ function ExpensesAppLoaded({
           model={model}
           source={source}
           editing={modal.mode === 'edit' ? modal.txn : null}
+          seed={modal.mode === 'add' ? modal.seed : undefined}
           onClose={() => setModal(null)}
           applyPatch={applyPatch}
         />
