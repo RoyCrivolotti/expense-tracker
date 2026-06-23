@@ -30,7 +30,7 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": ["functions/**/*.ts", "src/domain/**/*.ts", "workers/**/*.ts"],
-  "exclude": ["**/*.test.ts"],
+  "exclude": ["**/*.test.ts", "src/domain/reconciliation/**"],
   "files": [
     "functions/api/expenses/transactions/[id].ts",
     "functions/api/expenses/categories/[id].ts",
