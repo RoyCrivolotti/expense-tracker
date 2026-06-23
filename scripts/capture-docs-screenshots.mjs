@@ -38,8 +38,22 @@ function startDev() {
   return spawn('npm', ['run', 'dev', '--', '--host', '127.0.0.1', '--port', '5173'], {
     cwd: ROOT,
     env: { ...process.env, DOCS_CAPTURE: '1' },
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stdio: 'ignore',
+    detached: true,
   })
+}
+
+function stopDev(dev) {
+  if (!dev.pid) return
+  try {
+    process.kill(-dev.pid, 'SIGTERM')
+  } catch {
+    try {
+      dev.kill('SIGTERM')
+    } catch {
+      /* already exited */
+    }
+  }
 }
 
 async function waitForAccessAdmin(page) {
@@ -77,14 +91,18 @@ async function setMonthLabel(page, monthName) {
   throw new Error(`Could not navigate to month: ${monthName}`)
 }
 
+async function captureTransactionsDefault(page, filename) {
+  await page.goto(`${BASE}/`)
+  await page.waitForSelector('text=Recent activity', { timeout: 15000 })
+  await goToTransactions(page)
+  await page.waitForSelector('text=Upcoming', { timeout: 15000 })
+  await setFiltersExpanded(page, false)
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: join(OUT, filename) })
+}
+
 async function captureTransactionsMobile(m) {
-  await m.goto(`${BASE}/`)
-  await m.waitForSelector('text=Recent activity', { timeout: 15000 })
-  await goToTransactions(m)
-  await m.waitForSelector('text=Upcoming', { timeout: 15000 })
-  await setFiltersExpanded(m, false)
-  await m.waitForTimeout(300)
-  await m.screenshot({ path: join(OUT, 'transactions-mobile.png') })
+  await captureTransactionsDefault(m, 'transactions-mobile.png')
 
   await setFiltersExpanded(m, true)
   await m.waitForTimeout(300)
@@ -129,10 +147,21 @@ async function capture() {
   await d.waitForSelector('text=Recent activity', { timeout: 15000 })
   await d.screenshot({ path: join(OUT, 'dashboard-desktop.png') })
 
+  await captureTransactionsDefault(d, 'transactions-desktop.png')
+
   await d.getByRole('button', { name: 'Analytics' }).click()
-  await d.waitForSelector('text=Analytics', { timeout: 15000 })
+  await d.waitForSelector('text=Monthly summary', { timeout: 15000 })
   await d.waitForTimeout(400)
   await d.screenshot({ path: join(OUT, 'analytics-desktop.png') })
+
+  await d.getByRole('button', { name: 'Settings' }).click()
+  await d.waitForSelector('text=Manage access', { timeout: 15000 })
+  await d.waitForTimeout(300)
+  await d.screenshot({ path: join(OUT, 'settings-desktop.png') })
+
+  await d.goto(`${BASE}/access/admin`)
+  await waitForAccessAdmin(d)
+  await d.screenshot({ path: join(OUT, 'access-admin-desktop.png') })
 
   const light = await desktopLight.newPage()
   await applyTheme(light, 'light')
@@ -148,6 +177,11 @@ async function capture() {
   await m.waitForSelector('text=Recent activity', { timeout: 15000 })
   await m.screenshot({ path: join(OUT, 'dashboard-mobile.png') })
 
+  await m.getByRole('button', { name: 'Analytics' }).click()
+  await m.waitForSelector('text=Budget vs actual', { timeout: 15000 })
+  await m.waitForTimeout(300)
+  await m.screenshot({ path: join(OUT, 'analytics-mobile.png') })
+
   await m.getByRole('button', { name: 'Settings' }).click()
   await m.waitForSelector('text=Manage access', { timeout: 15000 })
   await m.screenshot({ path: join(OUT, 'settings-mobile.png') })
@@ -155,10 +189,6 @@ async function capture() {
   await m.goto(`${BASE}/access/admin`)
   await waitForAccessAdmin(m)
   await m.screenshot({ path: join(OUT, 'access-admin-mobile.png') })
-
-  await d.goto(`${BASE}/access/admin`)
-  await waitForAccessAdmin(d)
-  await d.screenshot({ path: join(OUT, 'access-admin-desktop.png') })
 
   await browser.close()
 }
@@ -169,5 +199,5 @@ try {
   await capture()
   console.log(`Screenshots written to ${OUT}`)
 } finally {
-  dev.kill('SIGTERM')
+  stopDev(dev)
 }
