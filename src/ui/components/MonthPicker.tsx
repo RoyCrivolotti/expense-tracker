@@ -11,30 +11,46 @@ interface MonthPickerProps {
 
 export function MonthPicker({ months, value, onChange, layout = 'compact' }: MonthPickerProps) {
   const index = months.indexOf(value)
+  const latestMonth = months[months.length - 1]
+  const showLatest = latestMonth !== undefined && value !== latestMonth
   const go = (delta: number) => {
     const next = months[index + delta]
     if (next) onChange(next)
   }
   const rootClass = layout === 'bar' ? `${styles.picker} ${styles.pickerBar}` : styles.picker
+  const latestBtn = showLatest ? (
+    <button
+      type="button"
+      className={styles.latestBtn}
+      onClick={() => onChange(latestMonth)}
+      aria-label="Go to latest budget month"
+    >
+      Latest
+    </button>
+  ) : null
   return (
-    <div className={rootClass}>
-      <button
-        type="button"
-        onClick={() => go(-1)}
-        disabled={index <= 0}
-        aria-label="Previous month"
-      >
-        ‹
-      </button>
-      <span className={styles.label}>{fullMonthLabel(value)}</span>
-      <button
-        type="button"
-        onClick={() => go(1)}
-        disabled={index < 0 || index >= months.length - 1}
-        aria-label="Next month"
-      >
-        ›
-      </button>
+    <div className={layout === 'bar' ? styles.wrapBar : styles.wrapCompact}>
+      <div className={rootClass}>
+        <button
+          type="button"
+          onClick={() => go(-1)}
+          disabled={index <= 0}
+          aria-label="Previous month"
+        >
+          ‹
+        </button>
+        <span className={styles.label}>{fullMonthLabel(value)}</span>
+        <button
+          type="button"
+          onClick={() => go(1)}
+          disabled={index < 0 || index >= months.length - 1}
+          aria-label="Next month"
+        >
+          ›
+        </button>
+        {layout === 'bar' ? latestBtn : null}
+      </div>
+      {layout === 'compact' ? latestBtn : null}
     </div>
   )
 }

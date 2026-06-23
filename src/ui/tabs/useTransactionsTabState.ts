@@ -29,6 +29,26 @@ function useTxnListFilters(month: string) {
     }),
     [useDateRange, dateFrom, dateTo, month, status, categoryId, accountId, txnType, query],
   )
+  const hasActiveFilters = useMemo(
+    () =>
+      query.trim() !== '' ||
+      categoryId !== 'all' ||
+      accountId !== 'all' ||
+      txnType !== 'all' ||
+      status !== 'all' ||
+      useDateRange,
+    [query, categoryId, accountId, txnType, status, useDateRange],
+  )
+  const clearFilters = () => {
+    setQuery('')
+    setCategoryId('all')
+    setAccountId('all')
+    setTxnType('all')
+    setStatus('all')
+    setUseDateRange(false)
+    setDateFrom('')
+    setDateTo('')
+  }
   return {
     categoryId,
     setCategoryId,
@@ -47,6 +67,8 @@ function useTxnListFilters(month: string) {
     dateTo,
     setDateTo,
     filter,
+    hasActiveFilters,
+    clearFilters,
   }
 }
 
