@@ -2,11 +2,17 @@ import { useMemo, useState } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import type { BudgetHealth } from '../../engine'
-import { computeBudgetHealth, computeMonthlyTotals, filterTransactions } from '../../engine'
+import {
+  computeBudgetHealth,
+  computeMonthlyTotals,
+  detectRecurring,
+  filterTransactions,
+} from '../../engine'
 import { Card, EmptyState, Kpi, SectionTitle } from '../components/primitives'
 import { SegmentedControl } from '../components/SegmentedControl'
 import { BudgetBar } from '../components/BudgetBar'
 import { TransactionList } from '../components/TransactionList'
+import { UpcomingCard } from './UpcomingCard'
 import styles from './tabs.module.css'
 
 interface DashboardTabProps {
@@ -101,6 +107,7 @@ export function DashboardTab({ model, month, actions }: DashboardTabProps) {
     () => filterTransactions(dataset.transactions, { month }).slice(0, 8),
     [dataset, month],
   )
+  const upcoming = useMemo(() => detectRecurring(dataset.transactions), [dataset])
 
   return (
     <div className={styles.stack}>
@@ -110,6 +117,10 @@ export function DashboardTab({ model, month, actions }: DashboardTabProps) {
         <Kpi label="Net saving" cents={totals?.netSavingCents ?? 0} signed />
         <Kpi label="Invested" cents={totals?.investmentsCents ?? 0} type="investment" />
       </Card>
+
+      {actions && upcoming.length > 0 && (
+        <UpcomingCard suggestions={upcoming} lookup={lookup} onAdd={actions.onAdd} />
+      )}
 
       <BudgetsSection
         budgets={budgets}

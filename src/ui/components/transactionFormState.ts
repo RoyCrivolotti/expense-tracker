@@ -2,6 +2,7 @@ import type { Transaction, TxnType } from '../../types'
 import { resolveDefaultAccountId } from '../../data/defaultAccount'
 import { defaultBudgetMonth } from '../../engine/dates'
 import type { ExpenseModel } from '../useExpenseData'
+import type { TransactionSeed } from '../actions'
 
 export interface FormFields {
   type: TxnType
@@ -18,8 +19,12 @@ export type Setter = <K extends keyof FormFields>(key: K, value: FormFields[K]) 
 
 const todayIso = () => new Date().toISOString().slice(0, 10)
 
-/** Seed the form from an existing transaction, or sensible defaults for a new one. */
-export function initialFields(editing: Transaction | null, model: ExpenseModel): FormFields {
+/** Seed the form from an existing transaction, a recurring suggestion, or sensible defaults. */
+export function initialFields(
+  editing: Transaction | null,
+  model: ExpenseModel,
+  seed?: TransactionSeed,
+): FormFields {
   const { categories, accounts } = model.dataset
   if (editing) {
     return {
@@ -31,6 +36,18 @@ export function initialFields(editing: Transaction | null, model: ExpenseModel):
       date: editing.date,
       budgetMonth: editing.budgetMonth,
       notes: editing.notes ?? '',
+    }
+  }
+  if (seed) {
+    return {
+      type: seed.type,
+      amount: String(seed.amountCents / 100),
+      description: seed.description,
+      categoryId: seed.categoryId,
+      accountId: seed.accountId,
+      date: seed.date,
+      budgetMonth: seed.budgetMonth,
+      notes: '',
     }
   }
   const today = todayIso()

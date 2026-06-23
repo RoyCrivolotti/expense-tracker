@@ -25,7 +25,7 @@ export function useExpenseActions(
   return useMemo(() => {
     if (!source.canWrite) return undefined
     return {
-      onAdd: () => openModal({ mode: 'add' }),
+      onAdd: (seed) => openModal({ mode: 'add', ...(seed ? { seed } : {}) }),
       onEdit: (txn) => openModal({ mode: 'edit', txn }),
       deleteTransaction: async (id) => {
         await source.deleteTransaction!(id)
