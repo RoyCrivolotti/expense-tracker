@@ -7,6 +7,7 @@ import type {
 import type { NewAccount, NewCategory } from '../domain/data/dataSource'
 import type { Env } from './env'
 import { HttpError } from './http'
+import { assertOwnedAccount } from './ownership'
 import {
   toAccount,
   toCategory,
@@ -130,6 +131,9 @@ export async function updateSettings(
   owner: string,
   patch: Partial<ExpenseSettings>,
 ): Promise<ExpenseSettings> {
+  if (patch.defaultAccountId != null) {
+    await assertOwnedAccount(env, owner, patch.defaultAccountId)
+  }
   const { sets, values } = buildUpdate(SETTINGS_COLUMNS, patch, coerceSettings)
   await env.DB.prepare('INSERT OR IGNORE INTO settings (owner) VALUES (?)').bind(owner).run()
   const row = await env.DB.prepare(`UPDATE settings SET ${sets} WHERE owner = ? RETURNING *`)

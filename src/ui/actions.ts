@@ -1,5 +1,5 @@
 import type { ExpenseSettings, GoalInputs, Transaction, TxnType } from '../types'
-import type { NewAccount, NewCategory } from '../data/dataSource'
+import type { NewAccount, NewCategory, NewTransaction } from '../data/dataSource'
 
 /** Pre-filled fields passed to the add modal from a recurring suggestion. */
 export interface TransactionSeed {
@@ -21,6 +21,9 @@ export interface TransactionSeed {
 export interface ExpenseActions {
   onEdit: (txn: Transaction) => void
   onAdd: (seed?: TransactionSeed) => void
+  createTransaction: (input: NewTransaction) => Promise<void>
+  createTransactions: (inputs: NewTransaction[]) => Promise<void>
+  updateTransaction: (id: number, patch: Partial<NewTransaction>) => Promise<void>
   deleteTransaction: (id: number) => Promise<void>
   deleteTransactions: (ids: number[]) => Promise<void>
   setStatementPaid: (accountId: number, yearMonth: string, paid: boolean) => Promise<void>

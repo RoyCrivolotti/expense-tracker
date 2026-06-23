@@ -1,6 +1,8 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
+  readonly VITE_APP_ENV?: string
+  readonly VITE_STAGING_PRODUCTION_URL?: string
   readonly VITE_DOCS_CAPTURE?: string
 }
 

@@ -1,6 +1,7 @@
-import { useEffect, type ReactNode } from 'react'
+import { useRef, type ReactNode } from 'react'
 import { CloseIcon } from '../icons'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 import styles from './Modal.module.css'
 
 interface ModalProps {
@@ -11,18 +12,13 @@ interface ModalProps {
 
 export function Modal({ title, onClose, children }: ModalProps) {
   useBodyScrollLock(true)
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  const sheetRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(sheetRef, onClose)
 
   return (
     <div className={styles.overlay} onClick={onClose} role="presentation">
       <div
+        ref={sheetRef}
         className={styles.sheet}
         role="dialog"
         aria-modal="true"

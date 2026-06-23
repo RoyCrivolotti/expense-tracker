@@ -1,0 +1,10 @@
+{
+  "d1DatabaseId": "REPLACE_AFTER_wrangler_d1_create_roy-expenses-dev",
+  "d1DatabaseName": "roy-expenses-dev",
+  "previewBranch": "dev",
+  "previewHostname": "dev.expense-tracker-3hq.pages.dev",
+  "stagingAccessHostnames": [
+    "dev.expense-tracker-3hq.pages.dev",
+    "roy-private.pages.dev"
+  ]
+}

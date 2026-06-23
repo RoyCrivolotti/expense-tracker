@@ -2,7 +2,7 @@
 /**
  * One-time / idempotent setup for scheduled D1 → R2 backups:
  * 1. Create R2 bucket roy-expenses-backups (wrangler)
- * 2. Bind BACKUPS on expense-tracker Pages (production + preview)
+ * 2. Bind BACKUPS on expense-tracker Pages (production only; preview uses dev D1 via setup-dev-bindings)
  *
  * Cron runs on the expense-backup-cron Worker — deploy with npm run deploy:backup-cron.
  */
@@ -64,22 +64,20 @@ async function syncBackupsBinding() {
   const project = await cf(`/accounts/${ACCOUNT_ID}/pages/projects/${PAGES_PROJECT}`)
   const configs = project.deployment_configs ?? {}
   const patch = { deployment_configs: {} }
-  for (const env of ['production', 'preview']) {
-    const base = configs[env] ?? {}
-    patch.deployment_configs[env] = {
-      ...base,
-      d1_databases: { DB: { id: DB_ID } },
-      r2_buckets: {
-        ...(base.r2_buckets ?? {}),
-        BACKUPS: { name: BUCKET },
-      },
-    }
+  const base = configs.production ?? {}
+  patch.deployment_configs.production = {
+    ...base,
+    d1_databases: { DB: { id: DB_ID } },
+    r2_buckets: {
+      ...(base.r2_buckets ?? {}),
+      BACKUPS: { name: BUCKET },
+    },
   }
   await cf(`/accounts/${ACCOUNT_ID}/pages/projects/${PAGES_PROJECT}`, {
     method: 'PATCH',
     body: JSON.stringify(patch),
   })
-  console.log(`Pages ${PAGES_PROJECT} BACKUPS → ${BUCKET} (production + preview)`)
+  console.log(`Pages ${PAGES_PROJECT} BACKUPS → ${BUCKET} (production only)`)
 }
 
 async function main() {

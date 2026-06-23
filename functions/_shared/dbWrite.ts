@@ -98,7 +98,23 @@ export async function updateTransaction(
 }
 
 export async function deleteTransaction(env: Env, owner: string, id: number): Promise<void> {
-  await env.DB.prepare('DELETE FROM transactions WHERE id = ? AND owner = ?').bind(id, owner).run()
+  const result = await env.DB.prepare('DELETE FROM transactions WHERE id = ? AND owner = ?')
+    .bind(id, owner)
+    .run()
+  if ((result.meta.changes ?? 0) === 0) throw new HttpError(404, 'Transaction not found')
+}
+
+/** Insert many transactions; each row is validated and status-derived like insertTransaction. */
+export async function bulkInsertTransactions(
+  env: Env,
+  owner: string,
+  inputs: NewTransaction[],
+): Promise<Transaction[]> {
+  const saved: Transaction[] = []
+  for (const input of inputs) {
+    saved.push(await insertTransaction(env, owner, input))
+  }
+  return saved
 }
 
 /** Delete many rows in one statement; only ids owned by `owner` are removed. */

@@ -24,6 +24,7 @@ export interface ExpenseDataSource {
   readonly canWrite: boolean
   load(): Promise<ExpenseDataset>
   createTransaction?(input: NewTransaction): Promise<Transaction>
+  createTransactions?(inputs: NewTransaction[]): Promise<Transaction[]>
   updateTransaction?(id: number, patch: Partial<NewTransaction>): Promise<Transaction>
   deleteTransaction?(id: number): Promise<void>
   deleteTransactions?(ids: number[]): Promise<{ deleted: number; requested: number }>

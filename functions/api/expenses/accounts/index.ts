@@ -6,5 +6,5 @@ export const onRequestPost: PagesFunction<Env, string, ExpensesData> = async (co
   const input = await readJson<NewAccount>(context.request)
   if (!input.name?.trim()) throw new HttpError(400, 'Account name is required')
   const { repo, owner } = context.data
-  return json(await repo.createAccount(owner, input))
+  return json(await repo.createAccount(owner, input), 201)
 }

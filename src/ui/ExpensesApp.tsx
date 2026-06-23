@@ -169,16 +169,36 @@ function ExpensesAppLoaded({
           accountEmail={accountEmail}
         />
       </AppShell>
-      {modal && (
-        <TransactionModal
+      {modal && actions && (
+        <ActiveTransactionModal
+          modal={modal}
+          actions={actions}
           model={model}
-          source={source}
-          editing={modal.mode === 'edit' ? modal.txn : null}
-          seed={modal.mode === 'add' ? modal.seed : undefined}
           onClose={() => setModal(null)}
-          applyPatch={applyPatch}
         />
       )}
     </>
+  )
+}
+
+function ActiveTransactionModal({
+  modal,
+  actions,
+  model,
+  onClose,
+}: {
+  modal: Exclude<ExpenseModalState, null>
+  actions: ExpenseActions
+  model: ExpenseModel
+  onClose: () => void
+}) {
+  return (
+    <TransactionModal
+      model={model}
+      actions={actions}
+      editing={modal.mode === 'edit' ? modal.txn : null}
+      seed={modal.mode === 'add' ? modal.seed : undefined}
+      onClose={onClose}
+    />
   )
 }

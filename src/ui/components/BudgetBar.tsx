@@ -19,7 +19,14 @@ interface BudgetBarProps {
   status: BudgetStatus
 }
 
-export function BudgetBar({ name, icon, actualCents, budgetCents, ratio, status }: BudgetBarProps) {
+export function BudgetBar({
+  name,
+  icon,
+  actualCents,
+  budgetCents,
+  ratio,
+  status,
+}: BudgetBarProps) {
   const pct = Math.min(100, Math.round(ratio * 100))
   return (
     <div className={styles.row}>
