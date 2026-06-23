@@ -21,7 +21,8 @@
     "setup:access-google": "node scripts/setup-access-google.mjs",
     "setup:backups": "node scripts/setup-backup-infrastructure.mjs",
     "sync:backup-alerts": "node scripts/sync-backup-alerts.mjs",
-    "capture:screenshots": "node scripts/capture-docs-screenshots.mjs"
+    "capture:screenshots": "node scripts/capture-docs-screenshots.mjs",
+    "reconcile:dates": "tsx scripts/reconcile-dates.ts"
   },
   "dependencies": {
     "folio-shell": "^1.0.2",
@@ -40,7 +41,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
-    "@types/node": "^24.12.3",
+    "@types/node": "^24.13.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
@@ -55,6 +56,7 @@
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12",
     "vitest": "^4.1.9",
-    "wrangler": "^4.101.0"
+    "wrangler": "^4.101.0",
+    "xlsx": "^0.18.5"
   }
 }
