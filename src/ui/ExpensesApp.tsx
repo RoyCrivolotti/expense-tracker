@@ -28,9 +28,6 @@ function TabView({
   onThemeChange,
   ownerAccess,
   accountEmail,
-  pendingCategoryFilter,
-  onPendingCategoryApplied,
-  onSelectCategory,
 }: {
   tab: TabId
   model: ExpenseModel
@@ -41,21 +38,10 @@ function TabView({
   onThemeChange: (next: ExpenseTheme) => void
   ownerAccess?: { pendingCount: number } | undefined
   accountEmail?: string | undefined
-  pendingCategoryFilter?: number | null | undefined
-  onPendingCategoryApplied?: (() => void) | undefined
-  onSelectCategory?: ((categoryId: number) => void) | undefined
 }) {
   switch (tab) {
     case 'transactions':
-      return (
-        <TransactionsTab
-          model={model}
-          month={month}
-          actions={actions}
-          pendingCategoryFilter={pendingCategoryFilter}
-          onPendingCategoryApplied={onPendingCategoryApplied}
-        />
-      )
+      return <TransactionsTab model={model} month={month} actions={actions} />
     case 'analytics':
       return (
         <AnalyticsTab
@@ -78,14 +64,7 @@ function TabView({
         />
       )
     default:
-      return (
-        <DashboardTab
-          model={model}
-          month={month}
-          actions={actions}
-          onSelectCategory={onSelectCategory}
-        />
-      )
+      return <DashboardTab model={model} month={month} actions={actions} />
   }
 }
 
@@ -138,16 +117,10 @@ function ExpensesAppLoaded({
   const [tab, setTab] = useState<TabId>('dashboard')
   const [month, setMonth] = useState<string | null>(null)
   const [modal, setModal] = useState<ExpenseModalState>(null)
-  const [pendingCategoryFilter, setPendingCategoryFilter] = useState<number | null>(null)
   const [onboardingOpen, setOnboardingOpen] = useState(
     () => source.canWrite && needsOnboarding(model.dataset) && !isOnboardingSkipped(),
   )
   const actions = useExpenseActions(source, applyPatch, setModal)
-
-  const handleSelectCategory = (categoryId: number) => {
-    setPendingCategoryFilter(categoryId)
-    setTab('transactions')
-  }
 
   const activeMonth = month ?? model.months[model.months.length - 1] ?? ''
   const showPicker = tab !== 'settings' && model.months.length > 0
@@ -194,9 +167,6 @@ function ExpensesAppLoaded({
           onThemeChange={setTheme}
           ownerAccess={ownerAccess}
           accountEmail={accountEmail}
-          pendingCategoryFilter={pendingCategoryFilter}
-          onPendingCategoryApplied={() => setPendingCategoryFilter(null)}
-          onSelectCategory={handleSelectCategory}
         />
       </AppShell>
       {modal && actions && (

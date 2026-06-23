@@ -13,6 +13,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "verify": "node scripts/ensure-function-symlinks.mjs && npm run lint && npm run typecheck && npm run test && npm run build",
+    "build:staging": "npm run generate-icons && npm run prep:data && vite build --mode staging",
     "deploy": "bash scripts/deploy.sh",
     "deploy:dev": "bash scripts/deploy-dev.sh",
     "setup:dev-bindings": "node scripts/setup-dev-bindings.mjs",
@@ -28,7 +29,7 @@
     "capture:screenshots": "node scripts/capture-docs-screenshots.mjs"
   },
   "dependencies": {
-    "folio-shell": "^1.0.2",
+    "folio-shell": "^1.0.3",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
   },

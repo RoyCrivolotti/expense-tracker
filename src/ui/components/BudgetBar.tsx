@@ -1,4 +1,3 @@
-import type { KeyboardEvent } from 'react'
 import { Money } from './Money'
 import { Pill } from './primitives'
 import type { BudgetStatus } from '../../engine/categoryBudget'
@@ -18,8 +17,6 @@ interface BudgetBarProps {
   budgetCents: number
   ratio: number
   status: BudgetStatus
-  categoryId?: number | undefined
-  onSelect?: ((categoryId: number) => void) | undefined
 }
 
 export function BudgetBar({
@@ -29,32 +26,10 @@ export function BudgetBar({
   budgetCents,
   ratio,
   status,
-  categoryId,
-  onSelect,
 }: BudgetBarProps) {
   const pct = Math.min(100, Math.round(ratio * 100))
-  const tappable = categoryId != null && onSelect != null
-  const handleClick = tappable ? () => onSelect(categoryId) : undefined
-  const handleKey = tappable
-    ? (e: KeyboardEvent) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onSelect(categoryId)
-        }
-      }
-    : undefined
   return (
-    <div
-      className={`${styles.row}${tappable ? ` ${styles.tappable}` : ''}`}
-      {...(tappable
-        ? {
-            role: 'button' as const,
-            tabIndex: 0,
-            onClick: handleClick,
-            onKeyDown: handleKey,
-          }
-        : {})}
-    >
+    <div className={styles.row}>
       <div className={styles.head}>
         <span className={styles.name}>
           <CategoryIcon icon={icon} name={name} /> {name}

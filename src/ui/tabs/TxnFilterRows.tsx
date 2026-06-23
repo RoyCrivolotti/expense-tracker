@@ -67,6 +67,7 @@ export function CategoryAccountRow({
   return (
     <div className={styles.selectRow}>
       <select
+        className={categoryId !== 'all' ? styles.activeSelect : undefined}
         value={categoryId}
         onChange={(e) => onCategory(e.target.value === 'all' ? 'all' : Number(e.target.value))}
         disabled={selectMode}
@@ -79,6 +80,7 @@ export function CategoryAccountRow({
         ))}
       </select>
       <select
+        className={accountId !== 'all' ? styles.activeSelect : undefined}
         value={accountId}
         onChange={(e) => onAccount(e.target.value === 'all' ? 'all' : Number(e.target.value))}
         disabled={selectMode}
@@ -110,6 +112,7 @@ export function StatusTypeRow({
   return (
     <div className={styles.selectRow}>
       <select
+        className={status !== 'all' ? styles.activeSelect : undefined}
         value={status}
         onChange={(e) => onStatus(e.target.value as StatusFilter)}
         disabled={selectMode}
@@ -120,6 +123,7 @@ export function StatusTypeRow({
         <option value="cancelled">Cancelled</option>
       </select>
       <select
+        className={txnType !== 'all' ? styles.activeSelect : undefined}
         value={txnType}
         onChange={(e) => onTxnType(e.target.value as TxnType | 'all')}
         disabled={selectMode}

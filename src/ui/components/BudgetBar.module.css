@@ -1,15 +1,6 @@
 .row {
   padding: 0.55rem 0;
 }
-.tappable {
-  cursor: pointer;
-  border-radius: var(--radius-sm, 6px);
-  margin: 0 -0.35rem;
-  padding: 0.55rem 0.35rem;
-}
-.tappable:hover {
-  background: var(--color-surface-hover, rgba(0, 0, 0, 0.04));
-}
 .head {
   display: flex;
   justify-content: space-between;
