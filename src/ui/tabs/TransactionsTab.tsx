@@ -14,10 +14,21 @@ interface TransactionsTabProps {
   model: ExpenseModel
   month: string
   actions?: ExpenseActions | undefined
+  pendingCategoryFilter?: number | null | undefined
+  onPendingCategoryApplied?: (() => void) | undefined
 }
 
-export function TransactionsTab({ model, month, actions }: TransactionsTabProps) {
-  const state = useTransactionsTabState(model, month, actions)
+export function TransactionsTab({
+  model,
+  month,
+  actions,
+  pendingCategoryFilter,
+  onPendingCategoryApplied,
+}: TransactionsTabProps) {
+  const state = useTransactionsTabState(model, month, actions, {
+    pendingCategoryFilter,
+    onPendingCategoryApplied,
+  })
   const upcoming = useMemo(
     () => detectRecurring(model.dataset.transactions, { forBudgetMonth: month }),
     [model.dataset, month],

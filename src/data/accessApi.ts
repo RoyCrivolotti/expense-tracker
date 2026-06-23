@@ -1,8 +1,9 @@
+import type { AccessGroupId, GroupGrants } from '../domain/accessGroups'
+import { req } from './apiClient'
+
+export type { AccessGroupId, GroupGrants }
+
 export type AccessStatus = 'allowed' | 'pending' | 'rejected' | 'none'
-
-export type AccessGroupId = 'expenses' | 'finance' | 'legacy' | 'oncall'
-
-export type GroupGrants = Record<AccessGroupId, boolean>
 
 export interface AccessStatusResponse {
   status: AccessStatus
@@ -33,31 +34,8 @@ export interface ActiveAccessUser {
   groups: GroupGrants
 }
 
-async function req<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    credentials: 'same-origin',
-    headers: { accept: 'application/json', ...(init?.headers ?? {}) },
-    ...init,
-  })
-  if (!res.ok) {
-    let message = `Request failed (${res.status})`
-    try {
-      const body = (await res.json()) as { error?: string }
-      if (body.error) message = body.error
-    } catch {
-      /* ignore */
-    }
-    throw new Error(message)
-  }
-  return res.json() as Promise<T>
-}
-
 export function fetchAccessStatus(): Promise<AccessStatusResponse> {
   return req<AccessStatusResponse>('/api/access/status')
-}
-
-export function fetchAccessGrants(): Promise<{ groups: GroupGrants }> {
-  return req<{ groups: GroupGrants }>('/api/access/grants')
 }
 
 export function fetchAccessGroups(): Promise<{ groups: AccessGroupMeta[] }> {

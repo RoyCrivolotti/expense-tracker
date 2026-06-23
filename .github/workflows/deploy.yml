@@ -13,7 +13,7 @@ env:
   CLOUDFLARE_ACCOUNT_ID: '800abdfb2ec1687266f66fd349c41d6a'
 
 jobs:
-  verify:
+  ship:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,26 +26,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: npm
 
       - run: npm ci
       - run: npm run verify
-
-  deploy:
-    needs: verify
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Use HTTPS for git-based npm dependencies
-        run: |
-          git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
-          git config --global url."https://github.com/".insteadOf "git@github.com:"
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - run: npm ci
 
       - name: Sync access env (owner)
         env:

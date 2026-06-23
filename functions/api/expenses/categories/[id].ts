@@ -1,16 +1,10 @@
 import type { Env, ExpensesData } from '../../../_shared/env'
 import type { NewCategory } from '../../../domain/data/dataSource'
-import { HttpError, json, readJson } from '../../../_shared/http'
-
-function parseId(params: Record<string, string | string[]>): number {
-  const raw = Array.isArray(params.id) ? params.id[0] : params.id
-  const id = Number(raw)
-  if (!Number.isInteger(id) || id <= 0) throw new HttpError(400, 'Invalid category id')
-  return id
-}
+import { json, readJson } from '../../../_shared/http'
+import { parseNumericId } from '../../../_shared/params'
 
 export const onRequestPatch: PagesFunction<Env, string, ExpensesData> = async (context) => {
-  const id = parseId(context.params)
+  const id = parseNumericId(context.params, 'id')
   const patch = await readJson<Partial<NewCategory>>(context.request)
   const { repo, owner } = context.data
   return json(await repo.updateCategory(owner, id, patch))

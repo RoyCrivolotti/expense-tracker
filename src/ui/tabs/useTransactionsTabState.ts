@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { TxnType } from '../../types'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
@@ -86,10 +86,23 @@ export function useTransactionsTabState(
   model: ExpenseModel,
   month: string,
   actions?: ExpenseActions,
+  opts?: {
+    pendingCategoryFilter?: number | null | undefined
+    onPendingCategoryApplied?: (() => void) | undefined
+  },
 ) {
   const filters = useTxnListFilters(month)
+  const { setCategoryId } = filters
   const selection = useTransactionSelection(actions)
   const isMobile = useIsMobile()
+  const pendingCategoryFilter = opts?.pendingCategoryFilter
+  const onPendingCategoryApplied = opts?.onPendingCategoryApplied
+
+  useEffect(() => {
+    if (pendingCategoryFilter == null) return
+    setCategoryId(pendingCategoryFilter)
+    onPendingCategoryApplied?.()
+  }, [pendingCategoryFilter, onPendingCategoryApplied, setCategoryId])
 
   const results = useMemo(
     () => filterTransactions(model.dataset.transactions, filters.filter),

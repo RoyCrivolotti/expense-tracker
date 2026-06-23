@@ -10,6 +10,7 @@ import {
 import { Card, EmptyState, Kpi, SectionTitle } from '../components/primitives'
 import { SegmentedControl } from '../components/SegmentedControl'
 import { BudgetBar } from '../components/BudgetBar'
+import { GoalsCard } from '../components/GoalsCard'
 import { TransactionList } from '../components/TransactionList'
 import styles from './tabs.module.css'
 
@@ -17,6 +18,7 @@ interface DashboardTabProps {
   model: ExpenseModel
   month: string
   actions?: ExpenseActions | undefined
+  onSelectCategory?: ((categoryId: number) => void) | undefined
 }
 
 type BudgetSort = 'size' | 'order' | 'overbudget'
@@ -41,11 +43,13 @@ function BudgetsSection({
   icons,
   sort,
   onSort,
+  onSelectCategory,
 }: {
   budgets: BudgetHealth[]
   icons: Map<number, string | undefined>
   sort: BudgetSort
   onSort: (sort: BudgetSort) => void
+  onSelectCategory?: ((categoryId: number) => void) | undefined
 }) {
   return (
     <>
@@ -73,6 +77,8 @@ function BudgetsSection({
               budgetCents={b.budgetCents}
               ratio={b.ratio}
               status={b.status}
+              categoryId={b.categoryId}
+              {...(onSelectCategory ? { onSelect: onSelectCategory } : {})}
             />
           ))
         )}
@@ -81,7 +87,7 @@ function BudgetsSection({
   )
 }
 
-export function DashboardTab({ model, month, actions }: DashboardTabProps) {
+export function DashboardTab({ model, month, actions, onSelectCategory }: DashboardTabProps) {
   const { dataset, lookup } = model
   const [budgetSort, setBudgetSort] = useState<BudgetSort>('size')
 
@@ -115,11 +121,14 @@ export function DashboardTab({ model, month, actions }: DashboardTabProps) {
         <Kpi label="Invested" cents={totals?.investmentsCents ?? 0} type="investment" />
       </Card>
 
+      <GoalsCard dataset={dataset} />
+
       <BudgetsSection
         budgets={budgets}
         icons={categoryIcons}
         sort={budgetSort}
         onSort={setBudgetSort}
+        onSelectCategory={onSelectCategory}
       />
 
       <SectionTitle>Recent activity</SectionTitle>

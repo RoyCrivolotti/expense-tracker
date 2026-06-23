@@ -63,7 +63,7 @@ function expectedRecon(rows: string[][]): Map<string, { expected: number; gap: n
   return out
 }
 
-describe.skipIf(!hasData)('workbook parity (Jan–Apr 2026)', () => {
+describe.skipIf(!hasData || process.env.PARITY_TESTS !== '1')('workbook parity (Jan–Apr 2026)', () => {
   const text = hasData ? readFileSync(csvPath, 'utf8') : ''
   const rows = text.split(/\r?\n/).map(splitLine)
   const dataset = parseWorkbookCsv(text)

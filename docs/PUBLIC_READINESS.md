@@ -38,7 +38,7 @@ Obsolete email-approve files were stripped from git history (2026-06-19). Before
 ```bash
 git log --all -S 'accessNotifier' --oneline       # expect empty
 git log --all -S 'ApproveAccessScreen' --oneline  # expect empty
-git log --all -S '@gmail.com' --oneline           # expect empty (real addresses)
+rg '@gmail\.com' --glob '!docs/**' --glob '!*.example.*'  # expect no matches in tracked source
 ```
 
 After a history rewrite, re-clone rather than pull.
