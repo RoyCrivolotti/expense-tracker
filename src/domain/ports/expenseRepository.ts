@@ -36,4 +36,5 @@ export interface ExpenseRepository {
   updateAccount(owner: string, id: number, patch: Partial<NewAccount>): Promise<Account>
   updateSettings(owner: string, patch: Partial<ExpenseSettings>): Promise<ExpenseSettings>
   updateGoals(owner: string, patch: Partial<GoalInputs>): Promise<GoalInputs>
+  bulkInsertTransactions(owner: string, inputs: NewTransaction[]): Promise<Transaction[]>
 }

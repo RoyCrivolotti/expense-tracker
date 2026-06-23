@@ -76,6 +76,11 @@
   cursor: default;
 }
 
+.filterToggleActive,
+.filterToggleActive:hover:not(:disabled) {
+  color: var(--color-accent);
+}
+
 .filterToggleBadge {
   display: inline-flex;
   align-items: center;
@@ -174,6 +179,10 @@
 }
 .selectRow select {
   flex: 1;
+}
+.activeSelect {
+  border-color: var(--color-accent);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
 }
 
 .defaultAccountField {

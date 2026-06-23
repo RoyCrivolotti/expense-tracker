@@ -1,23 +1,30 @@
 import type { Env, ExpensesData } from '../../../_shared/env'
 import type { NewTransaction } from '../../../domain/data/dataSource'
-import { HttpError, json, readJson } from '../../../_shared/http'
-
-function parseId(params: Record<string, string | string[]>): number {
-  const raw = Array.isArray(params.id) ? params.id[0] : params.id
-  const id = Number(raw)
-  if (!Number.isInteger(id) || id <= 0) throw new HttpError(400, 'Invalid transaction id')
-  return id
-}
+import {
+  patchTransaction,
+  removeTransaction,
+} from '../../../domain/application/transactionService'
+import { mapAppError } from '../../../_shared/mapAppError'
+import { json, readJson } from '../../../_shared/http'
+import { parseNumericId } from '../../../_shared/params'
 
 export const onRequestPatch: PagesFunction<Env, string, ExpensesData> = async (context) => {
-  const id = parseId(context.params)
+  const id = parseNumericId(context.params, 'id')
   const patch = await readJson<Partial<NewTransaction>>(context.request)
   const { repo, owner } = context.data
-  return json(await repo.updateTransaction(owner, id, patch))
+  try {
+    return json(await patchTransaction(repo, owner, id, patch))
+  } catch (error) {
+    mapAppError(error)
+  }
 }
 
 export const onRequestDelete: PagesFunction<Env, string, ExpensesData> = async (context) => {
   const { repo, owner } = context.data
-  await repo.deleteTransaction(owner, parseId(context.params))
-  return json({ ok: true })
+  try {
+    await removeTransaction(repo, owner, parseNumericId(context.params, 'id'))
+    return json({ ok: true })
+  } catch (error) {
+    mapAppError(error)
+  }
 }

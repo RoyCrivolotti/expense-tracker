@@ -10,6 +10,8 @@ import {
 import { Card, EmptyState, Kpi, SectionTitle } from '../components/primitives'
 import { SegmentedControl } from '../components/SegmentedControl'
 import { BudgetBar } from '../components/BudgetBar'
+import { GoalsCard } from '../components/GoalsCard'
+import { CardStatementsCard } from '../components/CardStatementsCard'
 import { TransactionList } from '../components/TransactionList'
 import styles from './tabs.module.css'
 
@@ -115,12 +117,16 @@ export function DashboardTab({ model, month, actions }: DashboardTabProps) {
         <Kpi label="Invested" cents={totals?.investmentsCents ?? 0} type="investment" />
       </Card>
 
+      <CardStatementsCard dataset={dataset} month={month} />
+
       <BudgetsSection
         budgets={budgets}
         icons={categoryIcons}
         sort={budgetSort}
         onSort={setBudgetSort}
       />
+
+      <GoalsCard dataset={dataset} />
 
       <SectionTitle>Recent activity</SectionTitle>
       <Card>

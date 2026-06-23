@@ -8,4 +8,6 @@ config/allowed-emails.json
 config/access.json
 workers/**/.wrangler/
 config/backup-alerts.json
+config/dev.json
+.tmp/
 .DS_Store

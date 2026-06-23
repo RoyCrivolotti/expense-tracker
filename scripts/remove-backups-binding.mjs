@@ -31,19 +31,17 @@ async function main() {
   const project = await cf(`/accounts/${ACCOUNT_ID}/pages/projects/${PAGES_PROJECT}`)
   const configs = project.deployment_configs ?? {}
   const patch = { deployment_configs: {} }
-  for (const env of ['production', 'preview']) {
-    const base = { ...(configs[env] ?? {}) }
-    if (base.r2_buckets?.BACKUPS) {
-      base.r2_buckets = { ...base.r2_buckets, BACKUPS: null }
-    }
-    base.d1_databases = { DB: { id: DB_ID } }
-    patch.deployment_configs[env] = base
+  const base = { ...(configs.production ?? {}) }
+  if (base.r2_buckets?.BACKUPS) {
+    base.r2_buckets = { ...base.r2_buckets, BACKUPS: null }
   }
+  base.d1_databases = { DB: { id: DB_ID } }
+  patch.deployment_configs.production = base
   await cf(`/accounts/${ACCOUNT_ID}/pages/projects/${PAGES_PROJECT}`, {
     method: 'PATCH',
     body: JSON.stringify(patch),
   })
-  console.log(`Removed BACKUPS R2 binding from ${PAGES_PROJECT} (production + preview)`)
+  console.log(`Removed BACKUPS R2 binding from ${PAGES_PROJECT} (production only)`)
 }
 
 main().catch((err) => {

@@ -61,6 +61,17 @@ export function patchAfterTransactionDelete(
   return d
 }
 
+export function patchAfterBulkCreate(
+  dataset: ExpenseDataset,
+  txns: Transaction[],
+): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  d.transactions = [...d.transactions, ...txns].sort(
+    (a, b) => b.date.localeCompare(a.date) || b.id - a.id,
+  )
+  return d
+}
+
 export function patchAfterBulkDelete(
   dataset: ExpenseDataset,
   ids: number[],

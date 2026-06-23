@@ -35,6 +35,9 @@ export const docsCaptureDataSource: ExpenseDataSource = {
   createTransaction(input) {
     return Promise.resolve(stubTxn(input))
   },
+  createTransactions(inputs) {
+    return Promise.resolve(inputs.map((input) => stubTxn(input)))
+  },
   updateTransaction(id, patch) {
     return Promise.resolve(stubTxn({ ...patch, id } as NewTransaction & { id: number }))
   },

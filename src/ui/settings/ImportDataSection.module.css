@@ -1,0 +1,47 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+.fileInput {
+  display: none;
+}
+.summary {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+.errors {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.8rem;
+  color: var(--exp-danger, #c0392b);
+}
+.previewWrap {
+  overflow-x: auto;
+}
+.preview {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.preview th,
+.preview td {
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+.preview th {
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.more {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+.done {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--exp-success, #2d8a4e);
+}

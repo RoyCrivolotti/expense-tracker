@@ -1,17 +1,20 @@
 import { useMemo } from 'react'
 import type { ExpenseDataset } from '../types'
-import type { ExpenseDataSource } from '../data/dataSource'
+import type { ExpenseDataSource, NewTransaction } from '../data/dataSource'
 import type { ExpenseActions, ExpenseModalState } from './actions'
 import { openAddModal } from './transactionSeed'
 import {
   patchAfterAccount,
+  patchAfterBulkCreate,
   patchAfterBulkDelete,
   patchAfterCashActual,
   patchAfterCategory,
   patchAfterGoals,
   patchAfterSettings,
   patchAfterStatementPaid,
+  patchAfterTransactionCreate,
   patchAfterTransactionDelete,
+  patchAfterTransactionUpdate,
 } from './datasetPatches'
 
 type OpenModal = (state: Exclude<ExpenseModalState, null>) => void
@@ -28,6 +31,18 @@ export function useExpenseActions(
     return {
       onAdd: (seed) => openAddModal(openModal, seed),
       onEdit: (txn) => openModal({ mode: 'edit', txn }),
+      createTransaction: async (input: NewTransaction) => {
+        const txn = await source.createTransaction!(input)
+        applyPatch((d) => patchAfterTransactionCreate(d, txn))
+      },
+      createTransactions: async (inputs: NewTransaction[]) => {
+        const txns = await source.createTransactions!(inputs)
+        applyPatch((d) => patchAfterBulkCreate(d, txns))
+      },
+      updateTransaction: async (id: number, patch: Partial<NewTransaction>) => {
+        const txn = await source.updateTransaction!(id, patch)
+        applyPatch((d) => patchAfterTransactionUpdate(d, txn))
+      },
       deleteTransaction: async (id) => {
         await source.deleteTransaction!(id)
         applyPatch((d) => patchAfterTransactionDelete(d, id))

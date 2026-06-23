@@ -8,8 +8,7 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 export default defineConfig([
   globalIgnores([
     'dist',
-    'private/static/legacy',
-    'private/content',
+    'content',
     'coverage',
     'workers/**/.wrangler/**',
   ]),

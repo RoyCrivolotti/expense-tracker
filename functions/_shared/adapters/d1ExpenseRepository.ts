@@ -2,6 +2,7 @@ import type { ExpenseRepository } from '../../domain/ports/expenseRepository'
 import type { Env } from '../env'
 import { loadDataset, listOwners } from '../db'
 import {
+  bulkInsertTransactions,
   clearCashActual,
   deleteTransaction,
   deleteTransactions,
@@ -38,5 +39,6 @@ export function createD1ExpenseRepository(env: Env): ExpenseRepository {
     updateAccount: (owner, id, patch) => updateAccount(env, owner, id, patch),
     updateSettings: (owner, patch) => updateSettings(env, owner, patch),
     updateGoals: (owner, patch) => updateGoals(env, owner, patch),
+    bulkInsertTransactions: (owner, inputs) => bulkInsertTransactions(env, owner, inputs),
   }
 }

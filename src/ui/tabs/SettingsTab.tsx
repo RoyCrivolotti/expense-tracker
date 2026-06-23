@@ -9,6 +9,7 @@ import { DefinitionsEditor } from '../definitions/DefinitionsEditor'
 import { AppearanceSetting } from '../settings/AppearanceSetting'
 import { DefaultAccountSetting } from '../settings/DefaultAccountSetting'
 import { ExportDataSection } from '../settings/ExportDataSection'
+import { ImportDataSection } from '../settings/ImportDataSection'
 import { AccountSetting } from '../settings/AccountSetting'
 import { AccessRequestsSetting } from '../settings/AccessRequestsSetting'
 import styles from './tabs.module.css'
@@ -106,6 +107,15 @@ export function SettingsTab({
       <Card>
         <ExportDataSection model={model} month={month} />
       </Card>
+
+      {actions && (
+        <>
+          <SectionTitle>Import</SectionTitle>
+          <Card>
+            <ImportDataSection model={model} actions={actions} />
+          </Card>
+        </>
+      )}
 
       {actions && (
         <DefaultAccountSetting

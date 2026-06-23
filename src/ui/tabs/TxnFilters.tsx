@@ -50,7 +50,9 @@ export function TxnFilters(props: TxnFiltersProps) {
       />
       <button
         type="button"
-        className={styles.filterToggle}
+        className={`${styles.filterToggle}${
+          props.secondaryFilterCount > 0 ? ` ${styles.filterToggleActive}` : ''
+        }`}
         onClick={() => setExpanded((open) => !open)}
         disabled={props.selectMode}
         aria-expanded={expanded}
