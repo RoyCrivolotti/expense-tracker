@@ -323,6 +323,10 @@
   align-items: center;
 }
 
+.editNotice + .saveRow {
+  margin-top: 0.75rem;
+}
+
 .editNotice {
   display: flex;
   flex-direction: column;
@@ -332,6 +336,10 @@
   border: 1px solid color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
   border-radius: 8px;
   background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+}
+
+.editNotice .chartHint {
+  margin-bottom: 0;
 }
 
 .intro {
