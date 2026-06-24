@@ -21,6 +21,7 @@
     "setup:staging-domains": "node scripts/setup-staging-domains.mjs",
     "setup:access-apps": "node scripts/setup-access-apps.mjs",
     "setup:access-migrate": "node scripts/setup-access-migrate.mjs",
+    "setup:staging-redirects": "node scripts/setup-staging-redirects.mjs",
     "setup:access-preview": "node scripts/setup-access-preview.mjs",
     "migrate:dev": "node scripts/migrate-dev.mjs",
     "seed:dev": "node scripts/seed-dev.mjs",
