@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import {
   Line,
   LineChart,
@@ -53,7 +54,7 @@ function mergedChartData(lines: LineDef[]) {
   })
 }
 
-export function NetWorthChart({
+function NetWorthChartImpl({
   scenarios,
   draft,
   variant = 'default',
@@ -62,8 +63,8 @@ export function NetWorthChart({
   draft: NewGoalScenario
   variant?: 'default' | 'hero'
 }) {
-  const lines = buildLines(scenarios, draft)
-  const data = mergedChartData(lines)
+  const lines = useMemo(() => buildLines(scenarios, draft), [scenarios, draft])
+  const data = useMemo(() => mergedChartData(lines), [lines])
   const isHero = variant === 'hero'
   const cardClass = isHero ? `${styles.chartCard} ${styles.heroChart}` : styles.chartCard
   const height = isHero ? 'clamp(220px, 40dvh, 320px)' : 300
@@ -106,3 +107,5 @@ export function NetWorthChart({
     </Card>
   )
 }
+
+export const NetWorthChart = memo(NetWorthChartImpl)

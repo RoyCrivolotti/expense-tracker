@@ -173,6 +173,7 @@ function ExpensesAppLoaded({
         title="Expenses"
         settingsBadge={settingsBadge}
         hubGrants={hubGrants}
+        compactFooter={tab === 'goals'}
         {...(actions ? { onAdd: actions.onAdd } : {})}
         {...(showPicker
           ? {

@@ -32,11 +32,6 @@
 
 @media (max-width: 899px) {
   .heroBlock {
-    position: sticky;
-    top: 3.25rem;
-    z-index: 10;
-    background: var(--color-bg);
-    padding-bottom: 0.35rem;
     margin: 0 -0.15rem;
     padding-inline: 0.15rem;
   }
@@ -191,6 +186,11 @@
   font-size: 0.8125rem;
   white-space: nowrap;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, background-color 0.1s ease;
+}
+.chip:active {
+  transform: scale(0.96);
 }
 
 .chipActive {
@@ -242,11 +242,16 @@
   background: transparent;
   color: var(--color-text-muted);
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, background-color 0.1s ease, color 0.1s ease;
 }
 
 .iconBtn:hover {
   background: var(--color-bg);
   color: var(--color-text);
+}
+.iconBtn:active {
+  transform: scale(0.92);
 }
 
 .chartCard {
@@ -331,6 +336,8 @@
   background: var(--color-surface);
   color: var(--color-text);
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, filter 0.1s ease;
 }
 
 .btnPrimary {
@@ -341,4 +348,20 @@
 
 .btn:hover {
   filter: brightness(0.97);
+}
+.btn:active {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip,
+  .iconBtn,
+  .btn {
+    transition: none;
+  }
+  .chip:active,
+  .iconBtn:active,
+  .btn:active {
+    transform: none;
+  }
 }
