@@ -10,7 +10,7 @@ import {
 } from '../../engine'
 import { Money } from './Money'
 import { PercentStepper } from './PercentStepper'
-import { Card, SectionTitle } from './primitives'
+import { Card, EmptyState, SectionTitle } from './primitives'
 import { formatMonths, formatYears } from './goalsFormat'
 import styles from './GoalsCard.module.css'
 
@@ -51,7 +51,20 @@ export function GoalsCard({ dataset, actions, onOpenGoals }: GoalsCardProps) {
   }, [dataset, goalInputs])
 
   if (goalInputs.housePriceCents === 0 && goalInputs.longTermTargetCents === 0) {
-    return null
+    return (
+      <>
+        <SectionTitle>Goals</SectionTitle>
+        <Card>
+          <EmptyState
+            actionLabel={onOpenGoals ? 'Open Goals' : undefined}
+            onAction={onOpenGoals}
+          >
+            Model multi-scenario wealth projections: house purchase timing, FIRE milestones, and
+            net worth over time.
+          </EmptyState>
+        </Card>
+      </>
+    )
   }
 
   const perMonth = formatCents(metrics.avgMonthlySavingsCents)

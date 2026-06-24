@@ -1,12 +1,23 @@
 # Expense tracker
 
-Personal budget and transaction tracker. A live instance runs at **https://expenses.crivolotti.com** (Cloudflare Access + D1 allowlist — authentication does not mean access; the owner approves users in-app).
+Personal budget and transaction tracker with cash reconciliation, card settlement modeling, and multi-scenario wealth projections. A live instance runs at **https://expenses.crivolotti.com** (Cloudflare Access + D1 allowlist — authentication does not mean access; the owner approves users in-app).
 
 - **Cloudflare Access** (Google sign-in) — who can authenticate
 - **D1 allowlist + in-app admin** — who can use the app (`/access/admin`)
 - **Row-level tenancy** — each user's data is scoped by email in D1
 
-Shared UI: [`folio-shell`](https://github.com/RoyCrivolotti/folio-shell) on [npm](https://www.npmjs.com/package/folio-shell) (`folio-shell@^1.0.2`).
+Shared UI: [`folio-shell`](https://github.com/RoyCrivolotti/folio-shell) on [npm](https://www.npmjs.com/package/folio-shell) (`folio-shell@^1.0.4`).
+
+## Features
+
+| Area | Highlights |
+| --- | --- |
+| **Dashboard** | Monthly KPIs, budget health, card statements, Goals teaser |
+| **Transactions** | Filters, batch delete, recurring **Upcoming** suggestions |
+| **Analytics** | Budget vs actual, mobile segments + desktop tables |
+| **Goals** | Multi-scenario net-worth projections, FIRE/housing controls, comparison charts |
+| **Settings** | Categories, accounts, import/export, access admin (owner) |
+| **Engine** | Derived transaction status (never stored), cash recon gap, deferred card settlement |
 
 ## Screenshots
 
@@ -25,6 +36,10 @@ Fixture data (`fixtures/demo-expenses.csv`). Access admin and Transactions **Upc
 | Analytics (desktop) | Analytics (mobile) |
 | --- | --- |
 | ![Analytics desktop](./docs/screenshots/analytics-desktop.png) | ![Analytics mobile](./docs/screenshots/analytics-mobile.png) |
+
+| Goals (desktop) | Goals (mobile) |
+| --- | --- |
+| ![Goals desktop](./docs/screenshots/goals-desktop.png) | ![Goals mobile](./docs/screenshots/goals-mobile.png) |
 
 | Settings (desktop) | Settings (mobile) |
 | --- | --- |
@@ -78,6 +93,7 @@ Example configs are in the repo; your values go in gitignored copies:
 | [`config/access.example.json`](config/access.example.json) | `config/access.json` | Owner email → `OWNER_EMAIL` Pages env |
 | [`config/allowed-emails.example.json`](config/allowed-emails.example.json) | `config/allowed-emails.json` | Bootstrap D1 allowlist |
 | [`config/backup-alerts.example.json`](config/backup-alerts.example.json) | `config/backup-alerts.json` | Optional backup alert recipients |
+| [`config/goal-scenarios.seed.example.json`](config/goal-scenarios.seed.example.json) | `config/goal-scenarios.seed.json` | Demo or private goal scenarios → `npm run seed:scenarios` |
 
 ```bash
 npm run verify
@@ -91,7 +107,9 @@ Full DNS, Access, D1, and CI setup: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Docs
 
-- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — hosting and access control
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — hosting, access control, migrations through `0008`
+- [docs/GOALS-MODEL.md](docs/GOALS-MODEL.md) — wealth projection assumptions
+- [docs/OPS.md](docs/OPS.md) — staging, backups, ops scripts
 - [docs/TESTING.md](docs/TESTING.md) — unit and API integration tests
 - [docs/PUBLIC_READINESS.md](docs/PUBLIC_READINESS.md) — secrets, data boundaries, history hygiene
 

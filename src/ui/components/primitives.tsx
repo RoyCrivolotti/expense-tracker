@@ -50,6 +50,26 @@ export function Pill({
   return <span className={`${styles.pill} ${styles[tone]}`}>{children}</span>
 }
 
-export function EmptyState({ children }: { children: ReactNode }) {
-  return <p className={styles.empty}>{children}</p>
+export function EmptyState({
+  children,
+  actionLabel,
+  onAction,
+}: {
+  children: ReactNode
+  actionLabel?: string | undefined
+  onAction?: (() => void) | undefined
+}) {
+  return (
+    <div className={styles.emptyWrap}>
+      <span className={styles.emptyIcon} aria-hidden>
+        ◇
+      </span>
+      <p className={styles.emptyMessage}>{children}</p>
+      {actionLabel && onAction ? (
+        <button type="button" className={styles.emptyAction} onClick={onAction}>
+          {actionLabel}
+        </button>
+      ) : null}
+    </div>
+  )
 }

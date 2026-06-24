@@ -20,6 +20,16 @@ The **source repo** is public. The **live app** at expenses.crivolotti.com remai
 | Daily backups | R2 (`{email}/YYYY-MM-DD.json`) |
 | Deploy credentials | GitHub Actions secrets (`CLOUDFLARE_API_TOKEN`, …) |
 
+## Private seed paths
+
+| Script / env | Reads |
+| --- | --- |
+| `npm run prep:data` | `fixtures/demo-expenses.csv` → gitignored `content/` |
+| `FINANCIAL_REVIEW_DIR` + dev | `data/expenses_v3.csv` from private finance-review |
+| `npm run seed:dev` | Local D1 seed from workbook export |
+| `npm run seed:scenarios` | `config/goal-scenarios.seed.json` or `FINANCIAL_REVIEW_DIR/config/goal-scenarios.seed.json` |
+| `scripts/gen-seed-sql.ts` | Private workbook → SQL (ops, not in verify) |
+
 ## `config/access.json`
 
 Copy from [`config/access.example.json`](../config/access.example.json):
@@ -34,12 +44,20 @@ Used by `npm run sync:access-env` to set **`OWNER_EMAIL`** on Cloudflare Pages (
 
 ## History hygiene
 
-Obsolete email-approve files were stripped from git history (2026-06-19). Before trusting a fork or old clone, spot-check:
+Obsolete email-approve files were stripped from **current file contents** (2026-06-19). Git history may still contain scrub commits or author metadata — that is expected and does not mean secrets remain in HEAD.
+
+**HEAD tree (must be clean):**
 
 ```bash
-git log --all -S 'accessNotifier' --oneline       # expect empty
-git log --all -S 'ApproveAccessScreen' --oneline  # expect empty
-rg '@gmail\.com' --glob '!docs/**' --glob '!*.example.*'  # expect no matches in tracked source
+rg '@gmail\.com' --glob '!docs/**' --glob '!*.example.*'   # no matches in tracked source
+rg 'Beckham|PATH_PRESETS' --glob '!docs/**'               # no personal goal literals
 ```
 
-After a history rewrite, re-clone rather than pull.
+**History (informational — hits from scrub commits are OK):**
+
+```bash
+git log --all -S 'accessNotifier' --oneline       # may list history-rewrite commits
+git log --all -S 'ApproveAccessScreen' --oneline
+```
+
+Commit **author email** in metadata is not removed by content scrubs. After a history rewrite, re-clone rather than pull.

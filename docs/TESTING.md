@@ -16,7 +16,7 @@ PARITY_TESTS=1 npm test   # optional workbook parity (private CSV)
 | --- | --- | --- |
 | Domain / engine | `src/domain/**/*.test.ts` | Pure compute rules |
 | Service / shared | `functions/_shared/**/*.test.ts` | Backup, auth, DB helpers |
-| **API integration** | `functions/api/access/access.integration.test.ts`, `functions/api/expenses/expenses.integration.test.ts`, `write.integration.test.ts` | Middleware + handlers + in-memory repo or D1 |
+| **API integration** | `functions/api/access/access.integration.test.ts`, `functions/api/expenses/expenses.integration.test.ts`, `functions/api/expenses/transactions/write.integration.test.ts` | Middleware + handlers + in-memory repo or D1 |
 | Hub nav | `src/hubNavItems.test.ts` | Group grants → visible cross-app links |
 | UI hooks | `src/ui/**/*.test.tsx` | Hook behaviour (RTL) |
 
@@ -24,7 +24,9 @@ PARITY_TESTS=1 npm test   # optional workbook parity (private CSV)
 
 Use `functions/_shared/testing/invokeApiRoute.ts` for access routes (real middleware + in-memory D1).
 
-Use `functions/_shared/testing/invokeExpenseRoute.ts` for expense routes (in-memory `ExpenseRepository`).
+Use `functions/_shared/testing/invokeExpenseApiRoute.ts` for expense routes (real middleware + injected in-memory `ExpenseRepository`).
+
+Use `functions/_shared/invokePagesRoute.ts` for transaction write validation against mocked D1 ownership checks.
 
 Example flows in `access.integration.test.ts`:
 

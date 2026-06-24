@@ -38,16 +38,16 @@ The allowlist lives in D1 (`allowed_users`). New users request access in the app
 
 **Setup:**
 
-1. Run migrations `migrations/0005_access_control.sql`, `0006_user_group_grants.sql`, and `0007_oncall_group.sql`.
+1. Run migrations through `migrations/0008_goal_scenarios.sql` (includes `0005_access_control.sql`, `0006_user_group_grants.sql`, `0007_oncall_group.sql`).
 2. Copy `config/access.example.json` → `config/access.json` (owner email only).
 3. Sync Pages env: `npm run sync:access-env` (local: `config/access.json`; CI: `OWNER_EMAIL` secret).
 4. Bootstrap D1 from existing list (one-time / when adding emails): `npm run bootstrap:allowed-users`.
 
-**GitHub secrets:** `OWNER_EMAIL`, `CLOUDFLARE_API_TOKEN`. (`ALLOWED_EMAILS` is for manual bootstrap only — not used in CI deploy.)
+**GitHub secrets:** `OWNER_EMAIL`, `CLOUDFLARE_API_TOKEN`. (`ALLOWED_EMAILS` is optional for local `bootstrap:allowed-users` only — not read by CI deploy.)
 
 **Local config (gitignored):** `config/allowed-emails.json`, `config/access.json`.
 
-**Owner admin (`/access/admin`):** approve or reject pending requests; toggle **group access** per user (Expense Tracker, Financial documents, Legacy site, On-call pay); **Revoke all** removes the user and deletes expense data. New approvals grant **Expense Tracker only** by default — enable finance/legacy/oncall manually. Settings shows a badge when requests are pending.
+**Owner admin (`/access/admin`):** approve or reject pending requests; toggle **group access** per user (Expense Tracker, Financial documents, Legacy site, On-call pay); **Revoke all** removes the user and deletes expense data (including `goal_scenarios`). New approvals grant **Expense Tracker only** by default — enable finance/legacy/oncall manually. Settings shows a badge when requests are pending.
 
 **Group access (hide-only MVP):** D1 table `user_group_grants` stores which resource groups each user may see. Hub cards and navigation filter client-side. Expense API requires the `expenses` group. Direct URLs to admin-hub HTML still work for anyone on Cloudflare Access (server enforcement deferred). See workspace `ARCHITECTURE.md`.
 
@@ -64,11 +64,11 @@ npm run sync:access-env
 
 ## CI
 
-Push to `main` → verify → sync access env → deploy Pages → deploy backup cron worker (non-blocking if token lacks Workers scope).
+Push to `main` → verify (includes migration doc gate) → sync access env → deploy Pages → deploy backup cron worker.
 
 Pull requests → verify + deploy **dev preview** (`.github/workflows/deploy-dev.yml`). See [OPS.md](./OPS.md) for staging setup.
 
-Secrets: `CLOUDFLARE_API_TOKEN`, `ALLOWED_EMAILS`, `OWNER_EMAIL`.
+Secrets: `CLOUDFLARE_API_TOKEN`, `OWNER_EMAIL`.
 
 **`CLOUDFLARE_API_TOKEN` permissions** (Cloudflare dashboard → My Profile → API Tokens → edit token):
 
@@ -79,13 +79,15 @@ Secrets: `CLOUDFLARE_API_TOKEN`, `ALLOWED_EMAILS`, `OWNER_EMAIL`.
 | Account → Workers Scripts | Edit | `expense-backup-cron` deploy |
 | Account → Workers R2 Storage | Edit | backup bucket bindings |
 
-If Workers Scripts Edit is missing, CI still deploys the app but skips the cron worker with a warning. Deploy the worker locally once after updating the token, or run `npm run deploy:backup-cron` with `wrangler login`.
+If Workers Scripts Edit is missing, CI deploy of the backup cron worker fails until the token is updated. Deploy the worker locally once after updating the token, or run `npm run deploy:backup-cron` with `wrangler login`.
 
 ## Migrations
 
 ```bash
 npx wrangler d1 execute roy-expenses --remote --file=migrations/NNNN_name.sql
 ```
+
+Apply through `0008_goal_scenarios.sql` on production. Personal goal scenarios: `npm run seed:scenarios` (reads gitignored seed config or `FINANCIAL_REVIEW_DIR`).
 
 ## Old URL
 

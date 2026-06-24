@@ -46,11 +46,13 @@ function BudgetsSection({
   icons,
   sort,
   onSort,
+  onOpenSettings,
 }: {
   budgets: BudgetHealth[]
   icons: Map<number, string | undefined>
   sort: BudgetSort
   onSort: (sort: BudgetSort) => void
+  onOpenSettings?: () => void
 }) {
   return (
     <>
@@ -67,7 +69,12 @@ function BudgetsSection({
       </div>
       <Card>
         {budgets.length === 0 ? (
-          <EmptyState>No budgeted categories yet.</EmptyState>
+          <EmptyState
+            actionLabel={onOpenSettings ? 'Set budgets in Settings' : undefined}
+            onAction={onOpenSettings}
+          >
+            No budgeted categories yet.
+          </EmptyState>
         ) : (
           budgets.map((b) => (
             <BudgetBar
@@ -127,6 +134,7 @@ export function DashboardTab({ model, month, actions, onNavigate }: DashboardTab
         icons={categoryIcons}
         sort={budgetSort}
         onSort={setBudgetSort}
+        onOpenSettings={() => onNavigate?.('settings')}
       />
 
       <GoalsCard dataset={dataset} actions={actions} onOpenGoals={() => onNavigate?.('goals')} />

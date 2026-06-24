@@ -16,6 +16,7 @@ interface TransactionListProps {
   onToggleSelect?: (id: number) => void
   onToggleDate?: (ids: number[]) => void
   swipeDelete?: boolean
+  onClearFilters?: () => void
 }
 
 export function TransactionList({
@@ -28,9 +29,17 @@ export function TransactionList({
   onToggleSelect,
   onToggleDate,
   swipeDelete = false,
+  onClearFilters,
 }: TransactionListProps) {
   if (transactions.length === 0) {
-    return <EmptyState>No transactions match these filters.</EmptyState>
+    return (
+      <EmptyState
+        actionLabel={onClearFilters ? 'Clear filters' : undefined}
+        onAction={onClearFilters}
+      >
+        No transactions match these filters.
+      </EmptyState>
+    )
   }
 
   const groups = groupByDay(transactions)
