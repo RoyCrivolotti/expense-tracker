@@ -7,7 +7,7 @@ Full chain: **roy-dev** (landing) → **roy-private** (admin hub) → **dev expe
 | https://roy-dev.pages.dev | `roy-dev` | Public landing (staging banner) |
 | https://roy-private.pages.dev | `roy-private` | Admin hub + reports (Access) |
 | https://dev.expense-tracker-3hq.pages.dev | `expense-tracker` branch `dev` | Expense SPA + API (Access) |
-| https://dev.oncall-tracker.pages.dev | `oncall-tracker` branch `dev` | On-call SPA + API (Access) |
+| https://dev.oncall-tracker-20h.pages.dev | `oncall-tracker` branch `dev` | On-call SPA + API (Access) |
 
 All private surfaces share the **roy-admin** Cloudflare Access app (Google login). Without the staging hostnames on that app, APIs return `401 Not authenticated`.
 
@@ -54,7 +54,7 @@ Settings → Import includes a **Download template** with the header and one exa
 Add to **roy-admin** Access application:
 
 - `dev.expense-tracker-3hq.pages.dev`
-- `dev.oncall-tracker.pages.dev`
+- `dev.oncall-tracker-20h.pages.dev`
 - `roy-private.pages.dev`
 
 `npm run setup:access-preview` needs `CLOUDFLARE_API_TOKEN` with **Zero Trust → Access → Edit**. Wrangler OAuth alone cannot do this.
