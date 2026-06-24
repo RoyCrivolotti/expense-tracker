@@ -137,8 +137,8 @@
     --goals-reclaim-side: calc(var(--goals-blank-each) * 0.3);
     --goals-reclaim-total: calc(var(--goals-reclaim-side) * 2);
     max-width: calc(var(--exp-max) + var(--goals-reclaim-total));
-    margin-left: calc(1rem - var(--goals-reclaim-side));
-    margin-right: calc(1rem - var(--goals-reclaim-side));
+    margin-left: auto;
+    margin-right: auto;
   }
 }
 

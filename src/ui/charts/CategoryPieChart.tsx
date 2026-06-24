@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState, useCallback } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
 import { computeCategoryActuals } from '../../engine'
 import { CategoryPieChartView, type PieSlice } from './CategoryPieChartView'
+import { PINNED_TOOLTIP_MS } from './useChartFocus'
+import { useDismissOnOutsidePointer } from './useDismissOnOutsidePointer'
 import styles from './charts.module.css'
 
 const SIZE = 220
@@ -66,18 +68,35 @@ interface Props {
 export function CategoryPieChart({ model, month }: Props) {
   const paths = useMemo(() => buildSlices(model, month), [model, month])
   const [active, setActive] = useState<number | null>(null)
+  const containerRef = useRef<HTMLElement>(null)
+  const touchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const dismiss = useCallback(() => {
+    if (touchTimer.current) {
+      clearTimeout(touchTimer.current)
+      touchTimer.current = null
+    }
+    setActive(null)
+  }, [])
+
+  useDismissOnOutsidePointer(containerRef, active != null, dismiss)
+
+  const onTouchEnd = useCallback(() => {
+    if (touchTimer.current) clearTimeout(touchTimer.current)
+    touchTimer.current = setTimeout(dismiss, PINNED_TOOLTIP_MS)
+  }, [dismiss])
 
   if (!paths) return null
 
   return (
-    <figure className={styles.figure}>
+    <figure ref={containerRef} className={styles.figure}>
       <figcaption className={styles.caption}>Expenses by category ({month})</figcaption>
       <CategoryPieChartView
         paths={paths}
         active={active}
         onShow={setActive}
-        onHide={() => setActive(null)}
-        onTouchEnd={() => window.setTimeout(() => setActive(null), 2800)}
+        onHide={dismiss}
+        onTouchEnd={onTouchEnd}
       />
     </figure>
   )

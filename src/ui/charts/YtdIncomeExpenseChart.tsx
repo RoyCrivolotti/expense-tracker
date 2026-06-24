@@ -43,7 +43,7 @@ export function YtdIncomeExpenseChart({ model, month }: Props) {
     [innerW, innerH, maxVal, points.length],
   )
   const xForIndex = useCallback((i: number) => coords(i, 0).x, [coords])
-  const { active, ...pointerHandlers } = useChartFocus(points.length, xForIndex)
+  const { active, containerRef, ...pointerHandlers } = useChartFocus(points.length, xForIndex)
 
   if (points.length === 0) return null
 
@@ -59,7 +59,7 @@ export function YtdIncomeExpenseChart({ model, month }: Props) {
   const gap = last ? last.cumIncome - last.cumExpense : 0
 
   return (
-    <figure className={styles.figure}>
+    <figure ref={containerRef} className={styles.figure}>
       <figcaption className={styles.captionSplit}>
         <span className={styles.captionHeading}>YTD savings ({year})</span>
         <span className={styles.captionValue}>{formatCents(gap)}</span>
