@@ -4,6 +4,7 @@ import type { NewGoalScenario } from '../../../../data/dataSource'
 import { MILESTONE_CENTS, projectNetWorth, scenarioToParams } from '../../../../engine'
 import { Card } from '../../../components/primitives'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
+import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
 import { sparseLabels } from '../../../charts/linearScale'
 import { formatEuroShort } from '../chartTheme'
@@ -68,6 +69,10 @@ function NetWorthChartImpl({
   const { years, series, names } = useMemo(() => buildSeries(scenarios, draft), [scenarios, draft])
   const refLines = useMemo(() => MILESTONE_CENTS.filter((m) => m <= 100_000_000), [])
   const labels = useMemo(() => sparseLabels(years, 5), [years])
+  const legend: LegendItem[] = series.map((s, idx) => ({
+    label: names[idx] ?? s.id,
+    color: s.color,
+  }))
   const isHero = variant === 'hero'
 
   const tooltip = (i: number): { title: string; lines: TooltipLine[] } => ({
@@ -96,6 +101,7 @@ function NetWorthChartImpl({
         ariaLabel="Invested portfolio projection by year"
         tooltip={tooltip}
       />
+      <ChartLegend items={legend} />
     </Card>
   )
 }

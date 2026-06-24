@@ -9,10 +9,16 @@ import {
 } from '../../../../engine'
 import { Card } from '../../../components/primitives'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
+import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
 import { sparseLabels } from '../../../charts/linearScale'
 import { formatEuroShort } from '../chartTheme'
 import styles from '../goals.module.css'
+
+const FIRE_LEGEND: LegendItem[] = [
+  { label: 'Portfolio balance', color: '#8b5cf6' },
+  { label: 'FI target', color: 'color-mix(in srgb, var(--color-text) 45%, transparent)' },
+]
 
 function FireChartImpl({ draft }: { draft: NewGoalScenario }) {
   const { fiTarget, fiYear, balances } = useMemo(() => {
@@ -55,6 +61,7 @@ function FireChartImpl({ draft }: { draft: NewGoalScenario }) {
         ariaLabel="FIRE drawdown projection by year"
         tooltip={tooltip}
       />
+      <ChartLegend items={FIRE_LEGEND} />
     </Card>
   )
 }

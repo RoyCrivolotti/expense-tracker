@@ -130,16 +130,38 @@ interface PercentFieldProps {
   value: number
   min?: number
   max?: number
+  step?: number
   onChange: (v: number) => void
+  showSlider?: boolean
 }
 
-export function PercentField({ label, value, min = 0, max = 0.2, onChange }: PercentFieldProps) {
+export function PercentField({
+  label,
+  value,
+  min = 0,
+  max = 0.2,
+  step = 0.001,
+  onChange,
+  showSlider = true,
+}: PercentFieldProps) {
   return (
     <div className={styles.field}>
       <div className={styles.fieldRow}>
         <span className={styles.fieldLabel}>{label}</span>
         <PercentStepper value={value} min={min} max={max} onChange={onChange} />
       </div>
+      {showSlider ? (
+        <input
+          className={styles.range}
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          aria-label={label}
+          onChange={(e) => onChange(Number(e.target.value))}
+        />
+      ) : null}
     </div>
   )
 }

@@ -1,82 +1,72 @@
 import { memo, useMemo } from 'react'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { formatCents, monthlyMortgageCents, scenarioToParams } from '../../../../engine'
+import { projectRentVsBuy, scenarioToParams } from '../../../../engine'
 import { Card } from '../../../components/primitives'
-import { ChartGrid, ChartXLabels } from '../../../charts/linearChartParts'
-import { makeScale, niceScale } from '../../../charts/linearScale'
+import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
+import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
+import type { TooltipLine } from '../../../charts/ChartTooltip'
+import { sparseLabels } from '../../../charts/linearScale'
 import { formatEuroShort } from '../chartTheme'
-import chartStyles from '../../../charts/charts.module.css'
 import styles from '../goals.module.css'
 
-const W = 360
-const H = 180
-const PAD = { top: 22, right: 16, bottom: 28, left: 56 }
+const LEGEND: LegendItem[] = [
+  { label: 'Rent & invest', color: 'var(--exp-warning)' },
+  { label: 'Buy now', color: 'var(--exp-investment)' },
+]
 
 function RentVsOwnChartImpl({ draft }: { draft: NewGoalScenario }) {
-  const data = useMemo(() => {
-    const mortgage = monthlyMortgageCents(scenarioToParams({ ...draft, id: 0 }))
-    return [
-      { label: 'Rent', value: draft.rentMonthlyCents },
-      { label: 'Mortgage', value: mortgage },
-    ]
-  }, [draft])
+  const { points, breakevenYear } = useMemo(
+    () =>
+      projectRentVsBuy({
+        params: scenarioToParams({ ...draft, id: 0 }),
+        rentMonthlyCents: draft.rentMonthlyCents,
+      }),
+    [draft],
+  )
+  const years = points.map((p) => p.year)
+  const labels = useMemo(() => sparseLabels(years, 5), [years])
 
-  const innerH = H - PAD.top - PAD.bottom
-  const innerW = W - PAD.left - PAD.right
-  const nice = niceScale(0, Math.max(1, ...data.map((d) => d.value)))
-  const scaleY = makeScale(nice.min, nice.max, PAD.top + innerH, PAD.top)
-  const step = innerW / data.length
-  const barW = Math.min(64, step * 0.5)
-  const xForIndex = (i: number) => PAD.left + step * i + step / 2
+  const series: ChartSeries[] = [
+    { id: 'rent', color: 'var(--exp-warning)', values: points.map((p) => p.rentNetWorthCents) },
+    { id: 'buy', color: 'var(--exp-investment)', values: points.map((p) => p.buyNetWorthCents) },
+  ]
+
+  const tooltip = (i: number): { title: string; lines: TooltipLine[] } => ({
+    title: `Year ${years[i] ?? i}`,
+    lines: [
+      { label: 'Rent & invest', value: formatEuroShort(points[i]?.rentNetWorthCents ?? 0), tone: 'neutral' },
+      { label: 'Buy now', value: formatEuroShort(points[i]?.buyNetWorthCents ?? 0), tone: 'neutral' },
+    ],
+  })
+
+  if (points.length === 0) {
+    return (
+      <Card className={styles.chartCard}>
+        <h3 className={styles.chartTitle}>Rent vs buy</h3>
+        <p className={styles.chartHint}>Set a house price to compare renting against buying now.</p>
+      </Card>
+    )
+  }
 
   return (
     <Card className={styles.chartCard}>
-      <h3 className={styles.chartTitle}>Rent vs own (monthly)</h3>
-      <p className={styles.chartHint}>Mortgage payment at purchase vs current rent assumption.</p>
-      <div className={chartStyles.chartWrap}>
-        <svg
-          viewBox={`0 0 ${W} ${H}`}
-          className={chartStyles.svg}
-          role="img"
-          aria-label="Monthly rent versus mortgage payment"
-        >
-          <ChartGrid
-            ticks={nice.ticks}
-            scaleY={scaleY}
-            x0={PAD.left}
-            x1={W - PAD.right}
-            formatValue={formatEuroShort}
-          />
-          {data.map((d, i) => {
-            const y = scaleY(d.value)
-            return (
-              <g key={d.label}>
-                <rect
-                  x={xForIndex(i) - barW / 2}
-                  y={y}
-                  width={barW}
-                  height={scaleY(0) - y}
-                  rx={5}
-                  fill="var(--color-accent)"
-                />
-                <text
-                  x={xForIndex(i)}
-                  y={y - 6}
-                  textAnchor="middle"
-                  className={chartStyles.axisLabel}
-                >
-                  {formatCents(d.value)}
-                </text>
-              </g>
-            )
-          })}
-          <ChartXLabels
-            labels={data.map((d) => d.label)}
-            xForIndex={xForIndex}
-            y={H - 8}
-          />
-        </svg>
-      </div>
+      <h3 className={styles.chartTitle}>Rent vs buy (net worth)</h3>
+      <p className={styles.chartHint}>
+        {breakevenYear != null
+          ? `Buying overtakes renting around year ${breakevenYear}.`
+          : 'Renting and investing stays ahead across the whole horizon.'}{' '}
+        Higher is better. The renter invests the down payment plus any monthly surplus; assumes
+        constant real rent and 1.5%/yr home carry costs.
+      </p>
+      <LinearChart
+        height={210}
+        series={series}
+        xLabels={labels}
+        formatValue={formatEuroShort}
+        ariaLabel="Net worth from renting versus buying by year"
+        tooltip={tooltip}
+      />
+      <ChartLegend items={LEGEND} />
     </Card>
   )
 }

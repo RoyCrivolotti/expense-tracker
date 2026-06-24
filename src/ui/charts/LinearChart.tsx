@@ -104,9 +104,8 @@ export function LinearChart({
             <path
               key={s.id}
               d={areaPath(top, bottom)}
-              fill={s.color}
+              style={{ fill: s.color, stroke: s.color }}
               fillOpacity={0.4}
-              stroke={s.color}
               strokeOpacity={0.7}
               strokeWidth={1}
             />
@@ -116,8 +115,8 @@ export function LinearChart({
           <path
             key={s.id}
             d={linePath(pointsOf(s.values, geo.xForIndex, geo.scaleY))}
+            style={{ stroke: s.color }}
             fill="none"
-            stroke={s.color}
             strokeWidth={s.width ?? 2}
             strokeDasharray={s.dashed ? '6 4' : undefined}
           />
@@ -148,8 +147,7 @@ export function LinearChart({
                 cx={focusX}
                 cy={geo.scaleY(s.values[active] ?? 0)}
                 r={3.5}
-                fill={s.color}
-                stroke="var(--color-bg)"
+                style={{ fill: s.color, stroke: 'var(--color-bg)' }}
                 strokeWidth={1.5}
               />
             ))}
