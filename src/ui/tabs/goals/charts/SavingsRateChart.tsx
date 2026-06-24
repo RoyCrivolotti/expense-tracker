@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { Card } from '../../../components/primitives'
+import { ChartShell } from './ChartShell'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
@@ -27,10 +27,12 @@ function SavingsRateChartImpl({
   draft,
   monthly,
   height = 210,
+  embedded = false,
 }: {
   draft: NewGoalScenario
   monthly: MonthlySaving[]
   height?: number
+  embedded?: boolean
 }) {
   const recent = useMemo(() => monthly.slice(-18), [monthly])
   const labels = useMemo(() => {
@@ -43,10 +45,10 @@ function SavingsRateChartImpl({
 
   if (recent.length === 0) {
     return (
-      <Card className={styles.chartCard}>
+      <ChartShell embedded={embedded}>
         <h3 className={styles.chartTitle}>Actual saving vs plan</h3>
         <p className={styles.chartHint}>No monthly history yet to compare against your plan.</p>
-      </Card>
+      </ChartShell>
     )
   }
 
@@ -62,7 +64,7 @@ function SavingsRateChartImpl({
   })
 
   return (
-    <Card className={styles.chartCard}>
+    <ChartShell embedded={embedded}>
       <h3 className={styles.chartTitle}>Actual saving vs plan</h3>
       <p className={styles.chartHint}>
         Monthly net saving from posted transactions vs the{' '}
@@ -78,7 +80,7 @@ function SavingsRateChartImpl({
         tooltip={tooltip}
       />
       <ChartLegend items={LEGEND} />
-    </Card>
+    </ChartShell>
   )
 }
 

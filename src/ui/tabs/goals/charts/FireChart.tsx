@@ -7,7 +7,7 @@ import {
   scenarioToParams,
   yearsToFi,
 } from '../../../../engine'
-import { Card } from '../../../components/primitives'
+import { ChartShell } from './ChartShell'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
@@ -23,9 +23,11 @@ const FIRE_LEGEND: LegendItem[] = [
 function FireChartImpl({
   draft,
   height = 210,
+  embedded = false,
 }: {
   draft: NewGoalScenario
   height?: number
+  embedded?: boolean
 }) {
   const { fiTarget, fiYear, balances } = useMemo(() => {
     const params = scenarioToParams({ ...draft, id: 0 })
@@ -51,7 +53,7 @@ function FireChartImpl({
   })
 
   return (
-    <Card className={styles.chartCard}>
+    <ChartShell embedded={embedded}>
       <h3 className={styles.chartTitle}>FIRE drawdown</h3>
       <p className={styles.chartHint}>
         FI target {formatEuroShort(fiTarget)}
@@ -68,7 +70,7 @@ function FireChartImpl({
         tooltip={tooltip}
       />
       <ChartLegend items={FIRE_LEGEND} />
-    </Card>
+    </ChartShell>
   )
 }
 

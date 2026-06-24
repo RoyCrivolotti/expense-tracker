@@ -13,15 +13,32 @@ interface ScenarioManagerProps {
   hiddenIds: ReadonlySet<number>
   canWrite: boolean
   actions?: ExpenseActions | undefined
+  dirty: boolean
   onSelect: (scenario: GoalScenario) => void
   onSelectEditing: () => void
   onToggleVisible: (id: number) => void
   onSaveDraft: (name: string) => void
+  onSaveChanges: () => void
+  onDiscard: () => void
 }
 
-export function ScenarioManager(props: ScenarioManagerProps) {
-  const { scenarios, activeId, draftName, hiddenIds, canWrite, actions } = props
-  const activeScenario = scenarios.find((s) => s.id === activeId)
+function SaveControls({
+  activeScenario,
+  dirty,
+  canWrite,
+  draftName,
+  onSaveDraft,
+  onSaveChanges,
+  onDiscard,
+}: {
+  activeScenario: GoalScenario | null
+  dirty: boolean
+  canWrite: boolean
+  draftName: string
+  onSaveDraft: (name: string) => void
+  onSaveChanges: () => void
+  onDiscard: () => void
+}) {
   // Default the save field to the draft name, following it as the draft changes
   // (React's "store previous prop" pattern — no effect, no cascading render).
   const [saveName, setSaveName] = useState(draftName)
@@ -30,6 +47,62 @@ export function ScenarioManager(props: ScenarioManagerProps) {
     setSeenDraftName(draftName)
     setSaveName(draftName)
   }
+
+  if (!canWrite) {
+    return <p className={styles.chartHint}>Read-only session — scenarios cannot be saved.</p>
+  }
+
+  return (
+    <>
+      {activeScenario && dirty ? (
+        <div className={styles.editNotice}>
+          <p className={styles.chartHint}>
+            Unsaved changes to <strong>{activeScenario.name}</strong>.
+          </p>
+          <div className={styles.btnRow}>
+            <button
+              type="button"
+              className={`${styles.btn} ${styles.btnPrimary}`}
+              onClick={onSaveChanges}
+            >
+              Save changes
+            </button>
+            <button type="button" className={styles.btn} onClick={onDiscard}>
+              Discard
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {!activeScenario ? (
+        <p className={styles.chartHint}>
+          Editing an unsaved draft — changes update the charts live but are not stored until you
+          save.
+        </p>
+      ) : null}
+      <div className={styles.saveRow}>
+        <input
+          className={styles.renameInput}
+          value={saveName}
+          aria-label="Name for new scenario"
+          placeholder="Scenario name"
+          onChange={(e) => setSaveName(e.target.value)}
+        />
+        <button
+          type="button"
+          className={activeScenario ? styles.btn : `${styles.btn} ${styles.btnPrimary}`}
+          disabled={saveName.trim().length === 0}
+          onClick={() => onSaveDraft(saveName.trim())}
+        >
+          {activeScenario ? 'Save as new' : 'Save as scenario'}
+        </button>
+      </div>
+    </>
+  )
+}
+
+export function ScenarioManager(props: ScenarioManagerProps) {
+  const { scenarios, activeId, hiddenIds, canWrite, actions } = props
+  const activeScenario = scenarios.find((s) => s.id === activeId) ?? null
 
   return (
     <Card>
@@ -60,33 +133,15 @@ export function ScenarioManager(props: ScenarioManagerProps) {
           actions={actions}
         />
       ) : null}
-      {activeId === null ? (
-        <p className={styles.chartHint}>
-          Editing an unsaved draft — changes update the charts live but are not stored until you
-          save.
-        </p>
-      ) : null}
-      {canWrite ? (
-        <div className={styles.saveRow}>
-          <input
-            className={styles.renameInput}
-            value={saveName}
-            aria-label="Name for new scenario"
-            placeholder="Scenario name"
-            onChange={(e) => setSaveName(e.target.value)}
-          />
-          <button
-            type="button"
-            className={`${styles.btn} ${styles.btnPrimary}`}
-            disabled={saveName.trim().length === 0}
-            onClick={() => props.onSaveDraft(saveName.trim())}
-          >
-            Save as scenario
-          </button>
-        </div>
-      ) : (
-        <p className={styles.chartHint}>Read-only session — scenarios cannot be saved.</p>
-      )}
+      <SaveControls
+        activeScenario={activeScenario}
+        dirty={props.dirty}
+        canWrite={canWrite}
+        draftName={props.draftName}
+        onSaveDraft={props.onSaveDraft}
+        onSaveChanges={props.onSaveChanges}
+        onDiscard={props.onDiscard}
+      />
     </Card>
   )
 }

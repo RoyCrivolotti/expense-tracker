@@ -27,6 +27,20 @@ function scenarioToDraft(s: GoalScenario): NewGoalScenario {
   return rest
 }
 
+// Fields the controls can change; used to detect unsaved edits to a saved plan.
+const EDIT_KEYS = [
+  'startInvestedCents',
+  'monthlyContributionCents',
+  'expectedRealReturn',
+  'horizonYears',
+  'housePriceCents',
+  'downPaymentFraction',
+  'housePurchaseYear',
+  'rentMonthlyCents',
+  'annualSpendCents',
+  'safeWithdrawalRate',
+] as const satisfies readonly (keyof NewGoalScenario)[]
+
 export function GoalsTab({ model, actions }: GoalsTabProps) {
   const { dataset } = model
   const monthly = useMemo<MonthlySaving[]>(() => {
@@ -52,10 +66,21 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
   // slider never blocks on the projection recompute (keeps the thumb at 60fps).
   const deferredDraft = useDeferredValue(draft)
 
+  // Editing keeps the saved plan active; we track dirtiness rather than
+  // detaching to a fresh draft, so the user can save changes in place.
   const patchDraft = useCallback((patch: Partial<NewGoalScenario>) => {
-    setActiveId(null)
     setDraft((prev) => ({ ...prev, ...patch }))
   }, [])
+
+  const activeScenario = useMemo(
+    () => dataset.goalScenarios.find((s) => s.id === activeId) ?? null,
+    [dataset.goalScenarios, activeId],
+  )
+
+  const dirty = useMemo(() => {
+    if (!activeScenario) return false
+    return EDIT_KEYS.some((k) => draft[k] !== activeScenario[k])
+  }, [activeScenario, draft])
 
   const onSelectScenario = useCallback((scenario: GoalScenario) => {
     setActiveId(scenario.id)
@@ -65,6 +90,15 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
   const onSelectEditing = useCallback(() => {
     setActiveId(null)
   }, [])
+
+  const onSaveChanges = useCallback(() => {
+    if (!actions || activeId == null) return
+    void actions.updateScenario(activeId, draft)
+  }, [actions, activeId, draft])
+
+  const onDiscard = useCallback(() => {
+    if (activeScenario) setDraft(scenarioToDraft(activeScenario))
+  }, [activeScenario])
 
   const onToggleVisible = useCallback((id: number) => {
     setHiddenIds((prev) => {
@@ -122,10 +156,13 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
             hiddenIds={hiddenIds}
             canWrite={actions != null}
             actions={actions}
+            dirty={dirty}
             onSelect={onSelectScenario}
             onSelectEditing={onSelectEditing}
             onToggleVisible={onToggleVisible}
             onSaveDraft={onSaveDraft}
+            onSaveChanges={onSaveChanges}
+            onDiscard={onDiscard}
           />
           <Card>
             <GoalControls draft={draft} onChange={patchDraft} />

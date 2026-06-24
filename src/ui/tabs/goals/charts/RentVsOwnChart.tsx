@@ -1,7 +1,7 @@
 import { memo, useMemo } from 'react'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import { projectRentVsBuy, scenarioToParams } from '../../../../engine'
-import { Card } from '../../../components/primitives'
+import { ChartShell } from './ChartShell'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
@@ -17,9 +17,11 @@ const LEGEND: LegendItem[] = [
 function RentVsOwnChartImpl({
   draft,
   height = 210,
+  embedded = false,
 }: {
   draft: NewGoalScenario
   height?: number
+  embedded?: boolean
 }) {
   const { points, breakevenYear } = useMemo(
     () =>
@@ -47,15 +49,15 @@ function RentVsOwnChartImpl({
 
   if (points.length === 0) {
     return (
-      <Card className={styles.chartCard}>
+      <ChartShell embedded={embedded}>
         <h3 className={styles.chartTitle}>Rent vs buy</h3>
         <p className={styles.chartHint}>Set a house price to compare renting against buying now.</p>
-      </Card>
+      </ChartShell>
     )
   }
 
   return (
-    <Card className={styles.chartCard}>
+    <ChartShell embedded={embedded}>
       <h3 className={styles.chartTitle}>Rent vs buy (net worth)</h3>
       <p className={styles.chartHint}>
         {breakevenYear != null
@@ -73,7 +75,7 @@ function RentVsOwnChartImpl({
         tooltip={tooltip}
       />
       <ChartLegend items={LEGEND} />
-    </Card>
+    </ChartShell>
   )
 }
 

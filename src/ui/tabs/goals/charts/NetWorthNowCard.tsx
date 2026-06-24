@@ -19,11 +19,22 @@ function NetWorthNowCardImpl({ draft }: { draft: NewGoalScenario }) {
       <h3 className={styles.chartTitle}>Where you are today</h3>
       {pct != null ? (
         <>
-          <p className={styles.chartHint}>
-            {formatCents(current)} invested · {pct.toFixed(0)}% of your {formatCents(fiTarget)} FI
-            target (from future annual spend at FI, not current spending)
-            {nextMilestone != null ? ` · next milestone ${formatCents(nextMilestone)}` : ''}
-          </p>
+          <ul className={styles.nowList}>
+            <li>
+              <strong>{formatCents(current)}</strong> invested
+            </li>
+            <li>
+              <strong>{pct.toFixed(0)}%</strong> of your {formatCents(fiTarget)} FI target
+              <span className={styles.nowListNote}>
+                target is from future annual spend at FI, not current spending
+              </span>
+            </li>
+            {nextMilestone != null ? (
+              <li>
+                Next milestone: <strong>{formatCents(nextMilestone)}</strong>
+              </li>
+            ) : null}
+          </ul>
           <div
             className={styles.progressTrack}
             role="img"
