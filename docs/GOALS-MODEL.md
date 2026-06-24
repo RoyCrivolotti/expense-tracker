@@ -22,9 +22,19 @@ from D1 only.
 | House appreciation | 2.5% / year |
 | Mortgage | 3% × 30 years |
 | Rent (when not owning) | €1,200 / month |
+| Home carry (rent vs buy) | 1.5% / year of home value (maintenance + tax + insurance; engine default, not yet a UI control) |
 
 `housePurchaseYear`: `null` = never buy; `0` = owned from day one (capital already
 allocated); `N > 0` = buy after year N (withdraw down payment + costs that year).
+
+## Rent vs buy
+
+Symmetric **net worth** comparison via `projectRentVsBuy` (`src/domain/engine/rentVsBuy.ts`):
+
+- **Rent & invest:** starts with down payment + transaction costs in a side portfolio; each year invests the surplus when rent + invested cash beats buyer outlay.
+- **Buy now:** equity (appreciation − mortgage) plus any side portfolio when buying costs less than renting.
+
+Breakeven = first year buyer net worth ≥ renter net worth. Simplifications: constant real rent, fixed carry rate, no selling costs. See [AUDIT-2026-06-GOALS.md](./AUDIT-2026-06-GOALS.md) for assumptions.
 
 ## Milestones
 
