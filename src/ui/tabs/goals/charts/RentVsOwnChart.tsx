@@ -14,7 +14,13 @@ const LEGEND: LegendItem[] = [
   { label: 'Buy now', color: 'var(--exp-investment)' },
 ]
 
-function RentVsOwnChartImpl({ draft }: { draft: NewGoalScenario }) {
+function RentVsOwnChartImpl({
+  draft,
+  height = 210,
+}: {
+  draft: NewGoalScenario
+  height?: number
+}) {
   const { points, breakevenYear } = useMemo(
     () =>
       projectRentVsBuy({
@@ -59,7 +65,7 @@ function RentVsOwnChartImpl({ draft }: { draft: NewGoalScenario }) {
         constant real rent and 1.5%/yr home carry costs.
       </p>
       <LinearChart
-        height={210}
+        height={height}
         series={series}
         xLabels={labels}
         formatValue={formatEuroShort}

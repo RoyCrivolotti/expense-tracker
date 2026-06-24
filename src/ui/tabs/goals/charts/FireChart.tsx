@@ -20,7 +20,13 @@ const FIRE_LEGEND: LegendItem[] = [
   { label: 'FI target', color: 'color-mix(in srgb, var(--color-text) 45%, transparent)' },
 ]
 
-function FireChartImpl({ draft }: { draft: NewGoalScenario }) {
+function FireChartImpl({
+  draft,
+  height = 210,
+}: {
+  draft: NewGoalScenario
+  height?: number
+}) {
   const { fiTarget, fiYear, balances } = useMemo(() => {
     const params = scenarioToParams({ ...draft, id: 0 })
     const target = fireNumber(draft.annualSpendCents, draft.safeWithdrawalRate)
@@ -50,10 +56,10 @@ function FireChartImpl({ draft }: { draft: NewGoalScenario }) {
       <p className={styles.chartHint}>
         FI target {formatEuroShort(fiTarget)}
         {fiYear != null ? ` · reached year ${fiYear}` : ' · not reached in horizon'}. Post-FI
-        portfolio with constant real withdrawal.
+        only: year 0 on this chart is the FI year, not today. Constant real withdrawal after that.
       </p>
       <LinearChart
-        height={210}
+        height={height}
         series={series}
         xLabels={labels}
         refLines={[fiTarget]}

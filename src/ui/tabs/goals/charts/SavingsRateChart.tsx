@@ -26,9 +26,11 @@ function monthLabel(month: string): string {
 function SavingsRateChartImpl({
   draft,
   monthly,
+  height = 210,
 }: {
   draft: NewGoalScenario
   monthly: MonthlySaving[]
+  height?: number
 }) {
   const recent = useMemo(() => monthly.slice(-18), [monthly])
   const labels = useMemo(() => {
@@ -67,7 +69,7 @@ function SavingsRateChartImpl({
         {formatEuroShort(draft.monthlyContributionCents)}/mo this scenario assumes.
       </p>
       <LinearChart
-        height={210}
+        height={height}
         series={series}
         xLabels={labels}
         refLines={[draft.monthlyContributionCents]}

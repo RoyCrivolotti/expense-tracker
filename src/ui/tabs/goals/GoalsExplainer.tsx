@@ -6,20 +6,24 @@ const TERMS: { term: string; body: string }[] = [
     body: 'A saved set of assumptions (return, contribution, horizon, house plans). Each one is a colored line on the projection so you can compare futures side by side.',
   },
   {
+    term: 'Horizon (years)',
+    body: 'How far the projection runs: years 0 through your horizon. Portfolio and housing assumptions apply over this window. FI is also searched within it.',
+  },
+  {
     term: 'FIRE / FI',
-    body: 'Financial Independence: the point where your invested portfolio is large enough to cover your spending without a salary. "Retire Early" is optional — FI just means work becomes a choice.',
+    body: 'Financial Independence: the point where your invested portfolio is large enough to cover your spending without a salary. "Retire Early" is optional. FI is found within your horizon if contributions and return get you there in time.',
   },
   {
     term: 'FI target',
-    body: 'The portfolio size that makes you financially independent. Calculated as your annual spend divided by the safe withdrawal rate.',
+    body: 'The portfolio size that makes you financially independent: annual spend at FI divided by the withdrawal rate. Used for progress today, but withdrawals in charts only start once FI is reached within the horizon.',
   },
   {
     term: 'Safe withdrawal rate (SWR)',
-    body: 'The share of your portfolio you can spend each year and reasonably expect it to last. 4% is the common rule of thumb; lower is more conservative.',
+    body: 'The share of your portfolio you would spend each year after FI. 4% is the common rule of thumb; lower is more conservative (spend less, higher FI target). Does not affect accumulation years before FI.',
   },
   {
     term: 'Drawdown',
-    body: 'What happens to the portfolio after you reach FI and start living off it: it keeps growing with returns while you withdraw your spending each year.',
+    body: 'What happens to the portfolio after you reach FI: it keeps growing with returns while you withdraw your annual spend each year. Chart years count from the FI year, not from today. If FI is not reached within the horizon, the drawdown chart shows the target only.',
   },
 ]
 
