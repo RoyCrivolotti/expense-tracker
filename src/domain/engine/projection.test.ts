@@ -1,83 +1,87 @@
+import { existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
-  DEFAULT_ANNUAL_CONTRIB_CENTS,
   DEFAULT_HOUSE_APPRECIATION,
   DEFAULT_MORTGAGE_RATE,
   DEFAULT_MORTGAGE_TERM_YEARS,
   DEFAULT_REAL_RETURN,
-  DOWN_PAYMENT_FRACTION,
-  DEFAULT_HOUSE_PRICE_CENTS,
-  REMOVED_PATH_PRESETS,
-  TRANSACTION_COSTS_CENTS,
+  DEFAULT_TRANSACTION_COSTS_CENTS,
+  MILESTONE_CENTS,
 } from './projectionConstants'
 import {
   projectInvested,
+  projectNetWorth,
   yearsToTarget,
   type ProjectionParams,
 } from './projection'
 
-function pathParams(
-  startInvestedCents: number,
-  housePurchaseYear: number | null,
-): ProjectionParams {
+function baseParams(overrides: Partial<ProjectionParams> = {}): ProjectionParams {
   return {
-    startInvestedCents,
-    monthlyContributionCents: Math.round(DEFAULT_ANNUAL_CONTRIB_CENTS / 12),
+    startInvestedCents: 10_000_000,
+    monthlyContributionCents: 100_000,
     annualContributionGrowth: 0,
     expectedRealReturn: DEFAULT_REAL_RETURN,
     horizonYears: 40,
-    housePriceCents: DEFAULT_HOUSE_PRICE_CENTS,
-    downPaymentFraction: DOWN_PAYMENT_FRACTION,
-    housePurchaseYear,
-    transactionCostsCents: TRANSACTION_COSTS_CENTS,
+    housePriceCents: 400_000_000,
+    downPaymentFraction: 0.2,
+    housePurchaseYear: null,
+    transactionCostsCents: DEFAULT_TRANSACTION_COSTS_CENTS,
     mortgageTermYears: DEFAULT_MORTGAGE_TERM_YEARS,
     mortgageRateAnnual: DEFAULT_MORTGAGE_RATE,
     houseAppreciationRate: DEFAULT_HOUSE_APPRECIATION,
+    ...overrides,
   }
 }
 
 describe('projection invested milestones', () => {
-  const matrix = {
-    path2: [0, 0, 3, 7, 10, 16, 20],
-    path3: [3, 11, 16, 20, 23, 29, 33],
-    path4: [0, 0, 3, 15, 18, 24, 28],
-  } as const
-
-  const milestones = [
-    10_000_000, 20_000_000, 30_000_000, 40_000_000, 50_000_000, 75_000_000, 100_000_000,
-  ]
-
-  it('matches finance-review milestone_matrix.csv for Path 2', () => {
-    const params = pathParams(REMOVED_PATH_PRESETS.path2.startInvestedCents, null)
+  it('compound growth reaches €200k from €100k start with steady contributions', () => {
+    const params = baseParams()
     const series = projectInvested(params)
-    milestones.forEach((m, i) => {
-      expect(yearsToTarget(series, m)).toBe(matrix.path2[i])
-    })
+    expect(series[0]).toBe(10_000_000)
+    expect(yearsToTarget(series, 20_000_000)).toBeGreaterThan(0)
+    expect(yearsToTarget(series, 20_000_000)).toBeLessThan(15)
   })
 
-  it('matches finance-review milestone_matrix.csv for Path 3', () => {
-    const params = pathParams(REMOVED_PATH_PRESETS.path3.startInvestedCents, 0)
-    const series = projectInvested(params)
-    milestones.forEach((m, i) => {
-      expect(yearsToTarget(series, m)).toBe(matrix.path3[i])
-    })
+  it('house from day one tracks equity separately from invested balance', () => {
+    const owned = projectNetWorth(
+      baseParams({ startInvestedCents: 1_000_000, housePurchaseYear: 0 }),
+    )
+    expect(owned[5]!.houseEquityCents).toBeGreaterThan(0)
+    expect(owned[5]!.netWorthCents).toBeGreaterThan(owned[5]!.investedCents)
   })
 
-  it('matches finance-review milestone_matrix.csv for Path 4', () => {
-    const params = pathParams(REMOVED_PATH_PRESETS.path4.startInvestedCents, 5)
-    const series = projectInvested(params)
-    milestones.forEach((m, i) => {
-      expect(yearsToTarget(series, m)).toBe(matrix.path4[i])
-    })
+  it('house purchase at year 5 reduces invested vs a no-purchase path', () => {
+    const shared = {
+      startInvestedCents: 5_000_000,
+      housePriceCents: 10_000_000,
+      downPaymentFraction: 0.2,
+      transactionCostsCents: 100_000,
+      monthlyContributionCents: 10_000,
+    }
+    const withPurchase = projectInvested(baseParams({ ...shared, housePurchaseYear: 5 }))
+    const without = projectInvested(baseParams({ ...shared, housePurchaseYear: null }))
+    expect(withPurchase[5]).toBeLessThan(without[5]!)
+  })
+
+  it('maps milestone cents to year indices monotonically', () => {
+    const series = projectInvested(baseParams())
+    let prev = -1
+    for (const m of MILESTONE_CENTS) {
+      const yr = yearsToTarget(series, m)
+      if (yr === null) break
+      expect(yr).toBeGreaterThan(prev)
+      prev = yr
+    }
   })
 })
 
 describe('annualSavingsFromCashflow', () => {
-  it('derives realistic tier from €75,960 gross', async () => {
+  it('derives savings from gross minus expenses', async () => {
     const { annualSavingsFromCashflow } = await import('./projection')
-    const savings = annualSavingsFromCashflow(7_596_000, 475_000)
-    expect(savings).toBeGreaterThanOrEqual(600_000 - 5000)
-    expect(savings).toBeLessThanOrEqual(600_000 + 5000)
+    const savings = annualSavingsFromCashflow(6_000_000, 200_000, 0.65, 0)
+    const monthlyNet = Math.round((6_000_000 * 0.65) / 12)
+    expect(savings).toBe((monthlyNet - 200_000) * 12)
   })
 })
 
@@ -85,5 +89,61 @@ describe('fireNumber', () => {
   it('computes 25x at 4% SWR', async () => {
     const { fireNumber } = await import('./projection')
     expect(fireNumber(4_000_000, 0.04)).toBe(100_000_000)
+  })
+})
+
+const frDir = process.env.FINANCIAL_REVIEW_DIR?.trim()
+const hasFrParity =
+  frDir &&
+  existsSync(join(frDir, 'data/milestone_matrix.csv')) &&
+  existsSync(join(frDir, 'config/goal-scenarios.seed.json'))
+
+describe.skipIf(!hasFrParity)('finance-review milestone parity (local only)', () => {
+  it('matches milestone_matrix.csv for seeded paths', () => {
+    const seed = JSON.parse(
+      readFileSync(join(frDir!, 'config/goal-scenarios.seed.json'), 'utf8'),
+    ) as { scenarios: Array<{
+      name: string
+      startInvestedCents: number
+      monthlyContributionCents: number
+      annualContributionGrowth: number
+      expectedRealReturn: number
+      housePriceCents: number
+      downPaymentFraction: number
+      housePurchaseYear: number | null
+      transactionCostsCents: number
+      mortgageTermYears: number
+      mortgageRateAnnual: number
+      houseAppreciationRate: number
+    }> }
+
+    const csv = readFileSync(join(frDir!, 'data/milestone_matrix.csv'), 'utf8').trim().split('\n')
+    const headers = csv[0]!.split(',').slice(1)
+    const milestones = headers.map((h) => Number(h.replace(/[^\d]/g, '')) * 1000 * 100)
+
+    for (const row of csv.slice(1)) {
+      const [pathName, ...years] = row.split(',')
+      const scenario = seed.scenarios.find((s) => s.name === pathName)
+      if (!scenario) continue
+      const params: ProjectionParams = {
+        startInvestedCents: scenario.startInvestedCents,
+        monthlyContributionCents: scenario.monthlyContributionCents,
+        annualContributionGrowth: scenario.annualContributionGrowth,
+        expectedRealReturn: scenario.expectedRealReturn,
+        horizonYears: 40,
+        housePriceCents: scenario.housePriceCents,
+        downPaymentFraction: scenario.downPaymentFraction,
+        housePurchaseYear: scenario.housePurchaseYear,
+        transactionCostsCents: scenario.transactionCostsCents,
+        mortgageTermYears: scenario.mortgageTermYears,
+        mortgageRateAnnual: scenario.mortgageRateAnnual,
+        houseAppreciationRate: scenario.houseAppreciationRate,
+      }
+      const series = projectInvested(params)
+      milestones.forEach((m, i) => {
+        const expected = years[i] === '40+' ? null : Number(years[i])
+        expect(yearsToTarget(series, m)).toBe(expected)
+      })
+    }
   })
 })

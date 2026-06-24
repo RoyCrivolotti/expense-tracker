@@ -6,6 +6,7 @@ samples/
 reports/
 config/allowed-emails.json
 config/access.json
+config/goal-scenarios.seed.json
 workers/**/.wrangler/
 config/backup-alerts.json
 config/dev.json

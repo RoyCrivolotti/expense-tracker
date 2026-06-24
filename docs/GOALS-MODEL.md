@@ -1,36 +1,30 @@
 # Goals projection model
 
-Canonical assumptions for the interactive Goals view, ported from
-`finance-review/scripts/03_refinement.py` and `05_savings_sensitivity.py`.
+Year-by-year wealth projection for the Goals tab. Canonical personal assumptions
+live in the private `finance-review` repo; the public app reads saved scenarios
+from D1 only.
 
 ## Return and contributions
 
-| Parameter | Value |
+| Parameter | Default (demo) |
 | --- | --- |
-| Real return (default) | 7% / year |
-| Realistic annual contribution | €600 / year (€255 / month) |
-| Net retention | 71.2% of gross |
-| On-call (future) | €500 / month |
+| Real return | 7% / year |
+| Contribution growth | 0% / year (adjustable per scenario) |
+| Net retention (salary model) | 65% of gross (adjustable) |
 
 ## Housing
 
-| Parameter | Value |
+| Parameter | Default (demo) |
 | --- | --- |
-| House price | €400,000 |
-| Down payment | 30% (€157,500) |
-| Transaction costs | €8,000 |
-| Path 4 purchase year | Year 5 |
+| House price | User input / saved scenario |
+| Down payment | 20% |
+| Transaction costs | €500 |
 | House appreciation | 2.5% / year |
-| Mortgage | 2% × 30 years |
-| Rent (Path 2/4) | ~€1,500 / month |
+| Mortgage | 3% × 30 years |
+| Rent (when not owning) | €1,200 / month |
 
-## Path starting invested balances
-
-| Path | Start invested | House timing |
-| --- | ---: | --- |
-| Path 2 | €100,000 | Never |
-| Path 3 | €50,000 | Owned from day one |
-| Path 4 | €100,000 | Buy at year 5 (withdraw €165,500) |
+`housePurchaseYear`: `null` = never buy; `0` = owned from day one (capital already
+allocated); `N > 0` = buy after year N (withdraw down payment + costs that year).
 
 ## Milestones
 
@@ -38,8 +32,7 @@ Canonical assumptions for the interactive Goals view, ported from
 
 ## FIRE / withdrawal
 
-Safe withdrawal rate defaults to 4% (25× annual spend). Constitution independence
-target uses ~5–6% real over 30 years; adjustable in the UI.
+Safe withdrawal rate defaults to 4% (25× annual spend). Adjustable per scenario.
 
 ## Engine formula
 
@@ -58,3 +51,10 @@ invested[y] -= downPayment + transactionCosts
 House equity after purchase: `housePrice × (1 + appreciation)^yearsOwned`.
 
 Net worth = invested + house equity − mortgage balance.
+
+## Seeding personal scenarios
+
+Copy [`config/goal-scenarios.seed.example.json`](../config/goal-scenarios.seed.example.json)
+to gitignored `config/goal-scenarios.seed.json`, or maintain
+`config/goal-scenarios.seed.json` in `finance-review`, then run
+`scripts/seed-scenarios.ts`. See [`PUBLIC_READINESS.md`](./PUBLIC_READINESS.md).
