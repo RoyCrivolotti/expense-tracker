@@ -10,6 +10,11 @@ import { ChartShell } from './ChartShell'
 import { formatEuroShort } from '../chartTheme'
 import styles from '../goals.module.css'
 
+function shortName(name: string): string {
+  const colon = name.indexOf(':')
+  return colon >= 0 ? name.slice(0, colon).trim() : name
+}
+
 function cellColor(years: number | null): string {
   if (years === null) return '#fecaca'
   if (years === 0) return '#166534'
@@ -33,9 +38,9 @@ interface Row {
 
 function buildRows(scenarios: GoalScenario[], draft: NewGoalScenario): Row[] {
   const all = [
-    ...scenarios.map((s) => ({ name: s.name, color: s.color, params: scenarioToParams(s) })),
+    ...scenarios.map((s) => ({ name: shortName(s.name), color: s.color, params: scenarioToParams(s) })),
     {
-      name: `${draft.name} (editing)`,
+      name: `${shortName(draft.name)} (editing)`,
       color: draft.color,
       params: scenarioToParams({ ...draft, id: 0 }),
     },
@@ -62,13 +67,13 @@ function MilestoneMatrixImpl({
     <ChartShell embedded={embedded}>
       <h3 className={styles.chartTitle}>Years to milestone</h3>
       <p className={styles.chartHint}>Invested portfolio only — same matrix as finance-review chart 20.</p>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
+      <div className={styles.milestoneScroll}>
+        <table className={styles.milestoneTable}>
           <thead>
             <tr>
-              <th style={{ textAlign: 'left', padding: '0.35rem' }}>Scenario</th>
+              <th className={styles.milestoneScenarioHead}>Scenario</th>
               {MILESTONE_CENTS.map((m) => (
-                <th key={m} style={{ padding: '0.35rem', textAlign: 'center' }}>
+                <th key={m} className={styles.milestoneHead}>
                   {formatEuroShort(m)}
                 </th>
               ))}
@@ -77,19 +82,20 @@ function MilestoneMatrixImpl({
           <tbody>
             {rows.map((row) => (
               <tr key={row.name}>
-                <td style={{ padding: '0.35rem', whiteSpace: 'nowrap' }}>
-                  <span className={styles.swatch} style={{ background: row.color, display: 'inline-block', marginRight: 6 }} />
+                <td className={styles.milestoneScenarioCell}>
+                  <span
+                    className={styles.swatch}
+                    style={{ background: row.color, display: 'inline-block', marginRight: 6 }}
+                  />
                   {row.name}
                 </td>
                 {row.cells.map((years, i) => (
                   <td
                     key={MILESTONE_CENTS[i]}
+                    className={styles.milestoneCell}
                     style={{
-                      padding: '0.35rem',
-                      textAlign: 'center',
                       background: cellColor(years),
                       color: years !== null && years > 12 ? '#fff' : '#111',
-                      fontWeight: 600,
                     }}
                   >
                     {cellLabel(years)}
