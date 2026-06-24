@@ -47,15 +47,15 @@ describe('dates', () => {
   })
 })
 
-describe('finance primitives (match workbook live calcs)', () => {
-  it('PMT reproduces the mortgage payment', () => {
-    expect(pmt(0.02 / 12, 360, 315000)).toBeCloseTo(1164.3, 1)
+describe('finance primitives', () => {
+  it('PMT amortizes a loan', () => {
+    expect(pmt(0.02 / 12, 360, 240_000)).toBeCloseTo(887, 0)
   })
-  it('FV reproduces the projected portfolio', () => {
-    expect(fv(0.05, 20, 1849.47 * 12, 272500)).toBeCloseTo(1500000, -2)
+  it('FV compounds contributions and principal', () => {
+    expect(fv(0.05, 20, 2_000 * 12, 100_000)).toBeCloseTo(1_058_912.67, 0)
   })
-  it('NPER reproduces years to the long-term target', () => {
-    expect(nper(0.05, 1849.47 * 12, 272500, 400000)).toBeCloseTo(3.357, 2)
+  it('NPER finds years to target', () => {
+    expect(nper(0.05, 2_000 * 12, 100_000, 400_000)).toBeCloseTo(8.545, 2)
   })
 })
 
