@@ -24,3 +24,23 @@
   border-color: var(--color-accent);
   color: var(--color-accent);
 }
+
+/* Subtle opacity-only crossfade when switching tabs. No slide (slides read as
+   "webby" on mobile); this matches the quiet push of native settings screens.
+   Keyed on tab id so React remounts the pane and replays the animation. */
+.tabPane {
+  animation: tabIn 0.12s ease;
+}
+@keyframes tabIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tabPane {
+    animation: none;
+  }
+}

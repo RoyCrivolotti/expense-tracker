@@ -36,7 +36,7 @@ function NavList({
         <li key={id}>
           <button
             type="button"
-            className={`${styles.navBtn} ${activeId === id ? styles.active : ''}`}
+            className={`${styles.navBtn} tapActive ${activeId === id ? styles.active : ''}`}
             aria-current={activeId === id ? 'page' : undefined}
             onClick={() => onSelect(id)}
           >

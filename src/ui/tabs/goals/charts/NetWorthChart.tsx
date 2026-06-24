@@ -1,57 +1,59 @@
 import { memo, useMemo } from 'react'
-import {
-  Line,
-  LineChart,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
 import type { GoalScenario } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { scenarioToParams, projectNetWorth } from '../../../../engine'
-import { MILESTONE_CENTS } from '../../../../engine'
+import { MILESTONE_CENTS, projectNetWorth, scenarioToParams } from '../../../../engine'
 import { Card } from '../../../components/primitives'
-import { GOAL_CHART_MARGIN, chartTooltipStyle, formatEuroShort } from '../chartTheme'
+import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
+import type { TooltipLine } from '../../../charts/ChartTooltip'
+import { sparseLabels } from '../../../charts/linearScale'
+import { formatEuroShort } from '../chartTheme'
 import styles from '../goals.module.css'
 
-interface LineDef {
+interface RawLine {
   id: string
   name: string
   color: string
-  points: { year: number; invested: number }[]
+  dashed: boolean
+  points: { year: number; investedCents: number }[]
 }
 
-function buildLines(saved: GoalScenario[], draft: NewGoalScenario): LineDef[] {
-  const lines: LineDef[] = saved.map((s) => {
-    const series = projectNetWorth(scenarioToParams(s))
-    return {
-      id: `saved-${s.id}`,
-      name: s.name,
-      color: s.color,
-      points: series.map((p) => ({ year: p.year, invested: p.investedCents })),
-    }
-  })
-  const draftSeries = projectNetWorth(scenarioToParams({ ...draft, id: 0 }))
+function rawLines(saved: GoalScenario[], draft: NewGoalScenario): RawLine[] {
+  const lines: RawLine[] = saved.map((s) => ({
+    id: `saved-${s.id}`,
+    name: s.name,
+    color: s.color,
+    dashed: false,
+    points: projectNetWorth(scenarioToParams(s)),
+  }))
   lines.push({
     id: 'draft',
     name: `${draft.name} (editing)`,
     color: draft.color,
-    points: draftSeries.map((p) => ({ year: p.year, invested: p.investedCents })),
+    dashed: true,
+    points: projectNetWorth(scenarioToParams({ ...draft, id: 0 })),
   })
   return lines
 }
 
-function mergedChartData(lines: LineDef[]) {
-  const years = lines[0]?.points.map((p) => p.year) ?? []
-  return years.map((year) => {
-    const row: Record<string, number> = { year }
-    lines.forEach((line) => {
-      row[line.id] = line.points.find((p) => p.year === year)?.invested ?? 0
-    })
-    return row
+function buildSeries(
+  saved: GoalScenario[],
+  draft: NewGoalScenario,
+): { years: number[]; series: ChartSeries[]; names: string[] } {
+  const lines = rawLines(saved, draft)
+  const yearSet = new Set<number>()
+  lines.forEach((l) => l.points.forEach((p) => yearSet.add(p.year)))
+  const years = [...yearSet].sort((a, b) => a - b)
+  const series: ChartSeries[] = lines.map((l) => {
+    const byYear = new Map(l.points.map((p) => [p.year, p.investedCents]))
+    return {
+      id: l.id,
+      color: l.color,
+      values: years.map((y) => byYear.get(y) ?? 0),
+      dashed: l.dashed,
+      ...(l.id === 'draft' ? { width: 2.5 } : {}),
+    }
   })
+  return { years, series, names: lines.map((l) => l.name) }
 }
 
 function NetWorthChartImpl({
@@ -63,47 +65,37 @@ function NetWorthChartImpl({
   draft: NewGoalScenario
   variant?: 'default' | 'hero'
 }) {
-  const lines = useMemo(() => buildLines(scenarios, draft), [scenarios, draft])
-  const data = useMemo(() => mergedChartData(lines), [lines])
+  const { years, series, names } = useMemo(() => buildSeries(scenarios, draft), [scenarios, draft])
+  const refLines = useMemo(() => MILESTONE_CENTS.filter((m) => m <= 100_000_000), [])
+  const labels = useMemo(() => sparseLabels(years, 5), [years])
   const isHero = variant === 'hero'
-  const cardClass = isHero ? `${styles.chartCard} ${styles.heroChart}` : styles.chartCard
-  const height = isHero ? 'clamp(220px, 40dvh, 320px)' : 300
+
+  const tooltip = (i: number): { title: string; lines: TooltipLine[] } => ({
+    title: `Year ${years[i] ?? i}`,
+    lines: series.map((s, idx) => ({
+      label: names[idx] ?? s.id,
+      value: formatEuroShort(s.values[i] ?? 0),
+      tone: 'neutral',
+    })),
+  })
 
   return (
-    <Card className={cardClass}>
+    <Card className={isHero ? `${styles.chartCard} ${styles.heroChart}` : styles.chartCard}>
       <h3 className={styles.chartTitle}>Invested portfolio projection</h3>
       {!isHero ? (
         <p className={styles.chartHint}>
           Compare saved scenarios plus your live edits. House purchase shows as a dip.
         </p>
       ) : null}
-      <div className={styles.chartWrap} style={{ height }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={GOAL_CHART_MARGIN}>
-            <XAxis dataKey="year" tick={{ fontSize: 11 }} label={{ value: 'Years', fontSize: 11, dy: 8 }} />
-            <YAxis tickFormatter={formatEuroShort} tick={{ fontSize: 11 }} width={48} />
-            <Tooltip
-              formatter={(v: number) => formatEuroShort(v)}
-              contentStyle={chartTooltipStyle()}
-            />
-            {MILESTONE_CENTS.filter((m) => m <= 100_000_000).map((m) => (
-              <ReferenceLine key={m} y={m} stroke="var(--color-border)" strokeDasharray="4 4" />
-            ))}
-            {lines.map((line) => (
-              <Line
-                key={line.id}
-                type="monotone"
-                dataKey={line.id}
-                name={line.name}
-                stroke={line.color}
-                strokeWidth={line.id === 'draft' ? 2.5 : 2}
-                strokeDasharray={line.id === 'draft' ? '6 4' : undefined}
-                dot={false}
-              />
-            ))}
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      <LinearChart
+        height={isHero ? 230 : 210}
+        series={series}
+        xLabels={labels}
+        refLines={refLines}
+        formatValue={formatEuroShort}
+        ariaLabel="Invested portfolio projection by year"
+        tooltip={tooltip}
+      />
     </Card>
   )
 }

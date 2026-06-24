@@ -27,7 +27,7 @@ export function Modal({ title, onClose, children }: ModalProps) {
       >
         <header className={styles.header}>
           <h2>{title}</h2>
-          <button type="button" onClick={onClose} aria-label="Close" className={styles.close}>
+          <button type="button" onClick={onClose} aria-label="Close" className={`${styles.close} tapActive`}>
             <CloseIcon />
           </button>
         </header>

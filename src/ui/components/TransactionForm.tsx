@@ -82,7 +82,7 @@ export function TransactionForm({ model, editing, seed, onSubmit, onDelete, onCl
             Delete
           </button>
         )}
-        <button type="submit" className={styles.save} disabled={busy}>
+        <button type="submit" className={`${styles.save} tapActive`} disabled={busy}>
           {busy ? 'Saving…' : editing ? 'Save changes' : 'Add transaction'}
         </button>
       </div>

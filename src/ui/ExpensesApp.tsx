@@ -9,6 +9,7 @@ import { type GroupGrants } from '../domain/accessGroups'
 import { AppShell } from './nav/AppShell'
 import type { TabId } from './nav/navItems'
 import { MonthPicker } from './components/MonthPicker'
+import { AppLoadingSkeleton } from './components/AppLoadingSkeleton'
 import { TransactionModal } from './components/TransactionModal'
 import { DashboardTab } from './tabs/DashboardTab'
 import { TransactionsTab } from './tabs/TransactionsTab'
@@ -19,6 +20,9 @@ import { isOnboardingSkipped, skipOnboarding } from './onboarding/onboardingStor
 import styles from './ExpensesApp.module.css'
 
 const GoalsTab = lazy(() => import('./tabs/goals/GoalsTab'))
+
+// Tabs without a month picker / FAB-heavy footer: trim the large bottom dead zone.
+const COMPACT_FOOTER_TABS: ReadonlySet<TabId> = new Set(['goals', 'analytics', 'settings'])
 
 function TabView({
   tab,
@@ -98,7 +102,7 @@ export function ExpensesApp({
 }) {
   const data = useExpenseData(source)
 
-  if (data.status === 'loading') return <div className={styles.center}>Loading…</div>
+  if (data.status === 'loading') return <AppLoadingSkeleton label="Loading expenses" />
   if (data.status === 'error' || !data.model) {
     return (
       <div className={styles.center}>
@@ -173,7 +177,7 @@ function ExpensesAppLoaded({
         title="Expenses"
         settingsBadge={settingsBadge}
         hubGrants={hubGrants}
-        compactFooter={tab === 'goals'}
+        compactFooter={COMPACT_FOOTER_TABS.has(tab)}
         {...(actions ? { onAdd: actions.onAdd } : {})}
         {...(showPicker
           ? {
@@ -183,18 +187,20 @@ function ExpensesAppLoaded({
             }
           : {})}
       >
-        <TabView
-          tab={tab}
-          model={model}
-          month={activeMonth}
-          onMonthChange={setMonth}
-          actions={actions}
-          theme={theme}
-          onThemeChange={setTheme}
-          ownerAccess={ownerAccess}
-          accountEmail={accountEmail}
-          onNavigate={setTab}
-        />
+        <div key={tab} className={styles.tabPane}>
+          <TabView
+            tab={tab}
+            model={model}
+            month={activeMonth}
+            onMonthChange={setMonth}
+            actions={actions}
+            theme={theme}
+            onThemeChange={setTheme}
+            ownerAccess={ownerAccess}
+            accountEmail={accountEmail}
+            onNavigate={setTab}
+          />
+        </div>
       </AppShell>
       {modal && actions && (
         <ActiveTransactionModal

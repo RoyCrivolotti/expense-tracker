@@ -1,30 +1,43 @@
 import { memo, useMemo } from 'react'
-import {
-  Area,
-  AreaChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import { projectNetWorth, scenarioToParams } from '../../../../engine'
 import { Card } from '../../../components/primitives'
-import { GOAL_CHART_MARGIN, chartTooltipStyle, formatEuroShort } from '../chartTheme'
+import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
+import type { TooltipLine } from '../../../charts/ChartTooltip'
+import { sparseLabels } from '../../../charts/linearScale'
+import { formatEuroShort } from '../chartTheme'
 import styles from '../goals.module.css'
 
 function CompositionChartImpl({ draft }: { draft: NewGoalScenario }) {
-  const data = useMemo(
-    () =>
-      projectNetWorth(scenarioToParams({ ...draft, id: 0 })).map((p) => ({
-        year: p.year,
-        invested: p.investedCents,
-        house: p.houseEquityCents,
-        mortgage: -p.mortgageBalanceCents,
-        netWorth: p.netWorthCents,
-      })),
+  const points = useMemo(
+    () => projectNetWorth(scenarioToParams({ ...draft, id: 0 })),
     [draft],
   )
+  const years = points.map((p) => p.year)
+  const labels = useMemo(() => sparseLabels(years, 5), [years])
+
+  const series: ChartSeries[] = [
+    { id: 'invested', color: '#6366f1', kind: 'area', values: points.map((p) => p.investedCents) },
+    { id: 'house', color: '#10b981', kind: 'area', values: points.map((p) => p.houseEquityCents) },
+    {
+      id: 'mortgage',
+      color: '#ef4444',
+      kind: 'area',
+      values: points.map((p) => -p.mortgageBalanceCents),
+    },
+  ]
+
+  const tooltip = (i: number): { title: string; lines: TooltipLine[] } => {
+    const p = points[i]
+    return {
+      title: `Year ${years[i] ?? i}`,
+      lines: [
+        { label: 'Invested', value: formatEuroShort(p?.investedCents ?? 0), tone: 'neutral' },
+        { label: 'House equity', value: formatEuroShort(p?.houseEquityCents ?? 0), tone: 'neutral' },
+        { label: 'Mortgage', value: formatEuroShort(p?.mortgageBalanceCents ?? 0), tone: 'neutral' },
+      ],
+    }
+  }
 
   return (
     <Card className={styles.chartCard}>
@@ -32,18 +45,14 @@ function CompositionChartImpl({ draft }: { draft: NewGoalScenario }) {
       <p className={styles.chartHint}>
         Invested portfolio + house equity − mortgage for the scenario you are editing.
       </p>
-      <div className={styles.chartWrap} style={{ height: 260 }}>
-        <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={GOAL_CHART_MARGIN}>
-          <XAxis dataKey="year" tick={{ fontSize: 11 }} />
-          <YAxis tickFormatter={formatEuroShort} tick={{ fontSize: 11 }} width={56} />
-          <Tooltip formatter={(v: number) => formatEuroShort(Math.abs(v))} contentStyle={chartTooltipStyle()} />
-          <Area type="monotone" dataKey="invested" stackId="1" stroke="#6366f1" fill="#6366f1" fillOpacity={0.5} />
-          <Area type="monotone" dataKey="house" stackId="1" stroke="#10b981" fill="#10b981" fillOpacity={0.4} />
-          <Area type="monotone" dataKey="mortgage" stackId="1" stroke="#ef4444" fill="#ef4444" fillOpacity={0.3} />
-        </AreaChart>
-        </ResponsiveContainer>
-      </div>
+      <LinearChart
+        height={230}
+        series={series}
+        xLabels={labels}
+        formatValue={formatEuroShort}
+        ariaLabel="Net worth composition by year"
+        tooltip={tooltip}
+      />
     </Card>
   )
 }
