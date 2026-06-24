@@ -1,0 +1,38 @@
+{
+  "prodApp": "roy-admin",
+  "stagingApp": "roy-admin-staging",
+  "prodHostnames": [
+    "roy-admin.crivolotti.com",
+    "expenses.crivolotti.com",
+    "oncall.crivolotti.com"
+  ],
+  "stagingHostnames": [
+    "stg-admin.crivolotti.com",
+    "stg-expenses.crivolotti.com",
+    "stg-oncall.crivolotti.com"
+  ],
+  "legacyStagingHostnames": [
+    "roy-private.pages.dev",
+    "dev.expense-tracker-3hq.pages.dev",
+    "dev.oncall-tracker-20h.pages.dev"
+  ],
+  "publicStagingHostnames": ["stg.crivolotti.com"],
+  "pagesProjects": {
+    "admin": {
+      "project": "roy-private",
+      "customDomain": "stg-admin.crivolotti.com"
+    },
+    "landing": {
+      "project": "roy-dev",
+      "customDomain": "stg.crivolotti.com"
+    },
+    "expenses": {
+      "project": "roy-expenses-stg",
+      "customDomain": "stg-expenses.crivolotti.com"
+    },
+    "oncall": {
+      "project": "roy-oncall-stg",
+      "customDomain": "stg-oncall.crivolotti.com"
+    }
+  }
+}

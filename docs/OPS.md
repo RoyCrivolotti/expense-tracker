@@ -1,39 +1,68 @@
 # Dev staging — expense-tracker
 
-Full chain: **roy-dev** (landing) → **roy-private** (admin hub) → **dev expense tracker** + **dev on-call tracker**.
+Full chain: **stg.crivolotti.com** (landing) → **stg-admin** (admin hub) → **stg-expenses** + **stg-oncall**.
 
 | URL | Pages project | Role |
 | --- | --- | --- |
-| https://roy-dev.pages.dev | `roy-dev` | Public landing (staging banner) |
-| https://roy-private.pages.dev | `roy-private` | Admin hub + reports (Access) |
-| https://dev.expense-tracker-3hq.pages.dev | `expense-tracker` branch `dev` | Expense SPA + API (Access) |
-| https://dev.oncall-tracker-20h.pages.dev | `oncall-tracker` branch `dev` | On-call SPA + API (Access) |
+| https://stg.crivolotti.com | `roy-dev` | Public landing (staging banner) |
+| https://stg-admin.crivolotti.com | `roy-private` | Admin hub + reports (Access) |
+| https://stg-expenses.crivolotti.com | `roy-expenses-stg` | Expense SPA + API (Access) |
+| https://stg-oncall.crivolotti.com | `roy-oncall-stg` | On-call SPA + API (Access) |
 
-All private surfaces share the **roy-admin** Cloudflare Access app (Google login). Without the staging hostnames on that app, APIs return `401 Not authenticated`.
+Private staging surfaces use the **roy-admin-staging** Cloudflare Access app (Google login). Production uses **roy-admin** only (`roy-admin.crivolotti.com`, `expenses.crivolotti.com`, `oncall.crivolotti.com`). Hostname registry: `config/staging-access.json`.
 
 ## One-time setup
 
-### expense-tracker
+### 1. Pages projects + D1 bindings
+
+**expense-tracker**
 
 1. `wrangler d1 create roy-expenses-dev` → copy id to `config/dev.json`
-2. `npm run setup:dev-bindings`
+2. `npm run setup:staging-project` (creates `roy-expenses-stg`, binds D1)
 3. `npm run seed:dev` (empty DB; **do not** run `migrate:dev` first)
-4. `npm run setup:access-preview` (or add hostnames in Access dashboard — see below)
 
-### admin-hub
+**oncall-tracker**
+
+1. `wrangler d1 create roy-oncall-dev` → copy id + roy-expenses-dev access id into `config/dev.json`
+2. `npm run setup:staging-project` (creates `roy-oncall-stg`, binds D1)
+
+**admin-hub**
 
 1. `npm run setup:staging-bindings` (D1 → roy-expenses-dev, OWNER_EMAIL)
 2. `npm run deploy:staging` → `roy-private` Pages project
 
-### landing
+**landing**
 
-1. `npm run deploy:staging` → `roy-dev` Pages project (uses committed `.env.staging`)
+1. `npm run deploy:staging` → `roy-dev` Pages project
 
-### oncall-tracker
+### 2. Custom domains + DreamHost DNS
 
-1. `wrangler d1 create roy-oncall-dev` → copy id + roy-expenses-dev access id into `config/dev.json`
-2. `npm run setup:dev-bindings`
-3. `npm run deploy:dev` → `oncall-tracker` branch `dev`
+From **expense-tracker** (registers domains in Pages + prints CNAME table):
+
+```bash
+npm run setup:staging-domains
+```
+
+Then add the four CNAME records in DreamHost (see [crivolotti-site README](../crivolotti-site/README.md) DNS table).
+
+### 3. Cloudflare Access (two apps)
+
+```bash
+CLOUDFLARE_API_TOKEN=… npm run setup:access-apps      # create/sync roy-admin-staging + prod hostnames
+CLOUDFLARE_API_TOKEN=… npm run setup:access-google -- --app roy-admin-staging
+CLOUDFLARE_API_TOKEN=… npm run setup:access-migrate   # remove legacy pages.dev hostnames from roy-admin
+```
+
+Token needs **Zero Trust → Access → Edit**. Wrangler OAuth alone cannot do this.
+
+### 4. Deploy staging builds
+
+```bash
+# expense-tracker, oncall-tracker, admin-hub, landing
+npm run deploy:dev   # or deploy:staging for hub/landing
+```
+
+Sign in once at any staging Access hostname; cookie applies across all three private staging URLs.
 
 ## CSV import format
 
@@ -49,25 +78,18 @@ Transaction import expects the same header as export (see `src/domain/data/expor
 
 Settings → Import includes a **Download template** with the header and one example row.
 
-## Access hostnames (required)
-
-Add to **roy-admin** Access application:
-
-- `dev.expense-tracker-3hq.pages.dev`
-- `dev.oncall-tracker-20h.pages.dev`
-- `roy-private.pages.dev`
-
-`npm run setup:access-preview` needs `CLOUDFLARE_API_TOKEN` with **Zero Trust → Access → Edit**. Wrangler OAuth alone cannot do this.
-
 ## Scripts (expense-tracker)
 
 | Script | npm alias | Purpose |
 | --- | --- | --- |
-| `scripts/setup-dev-bindings.mjs` | `setup:dev-bindings` | Preview → `roy-expenses-dev` D1 |
-| `scripts/setup-access-preview.mjs` | `setup:access-preview` | Staging hostnames on Access app |
+| `scripts/setup-staging-project.mjs` | `setup:staging-project` | Create `roy-expenses-stg` + D1 bindings |
+| `scripts/setup-staging-domains.mjs` | `setup:staging-domains` | Register custom domains; print DreamHost CNAMEs |
+| `scripts/setup-access-apps.mjs` | `setup:access-apps` | Sync prod + staging Access apps |
+| `scripts/setup-access-migrate.mjs` | `setup:access-migrate` | Strip staging hostnames from `roy-admin` |
+| `scripts/setup-dev-bindings.mjs` | `setup:dev-bindings` | Re-apply D1 bindings on `roy-expenses-stg` |
 | `scripts/seed-dev.mjs` | `seed:dev` | Prod D1 export → dev (`.tmp/` gitignored) |
 | `scripts/migrate-dev.mjs` | `migrate:dev` | Apply new migrations to dev (post-seed only) |
-| `scripts/deploy-dev.sh` | `deploy:dev` | Deploy expense-tracker branch `dev` |
+| `scripts/deploy-dev.sh` | `deploy:dev` | Deploy to `roy-expenses-stg` |
 
 PRs on expense-tracker run `.github/workflows/deploy-dev.yml`.
 
