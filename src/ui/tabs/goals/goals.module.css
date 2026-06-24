@@ -16,20 +16,6 @@
   min-width: 0;
 }
 
-.chartsColumn {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  order: 1;
-}
-
-.controlsColumn {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  order: 2;
-}
-
 @media (max-width: 899px) {
   .heroBlock {
     margin: 0 -0.15rem;
@@ -37,25 +23,47 @@
   }
 }
 
+/*
+ * Mobile: single column in DOM order — Where you are today, Scenarios,
+ * projection, controls, detailed charts. Desktop: inputs (scenarios +
+ * controls) on a sticky left column, outputs (snapshot, projection, detail)
+ * on the right, via grid areas so one DOM order serves both.
+ */
 @media (min-width: 900px) {
   .layout {
     display: grid;
     grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+    grid-template-areas:
+      'scenarios now'
+      'controls hero'
+      'controls secondary';
     align-items: start;
     gap: 1.25rem;
   }
 
-  .controlsColumn {
-    order: 1;
+  .areaNow {
+    grid-area: now;
+  }
+
+  .areaScenarios {
+    grid-area: scenarios;
+  }
+
+  .areaHero {
+    grid-area: hero;
+  }
+
+  .areaSecondary {
+    grid-area: secondary;
+  }
+
+  .areaControls {
+    grid-area: controls;
     position: sticky;
     top: 4rem;
     align-self: start;
     max-height: calc(100dvh - 5rem);
     overflow-y: auto;
-  }
-
-  .chartsColumn {
-    order: 2;
   }
 }
 
@@ -677,6 +685,17 @@
 }
 .btn:active {
   transform: scale(0.97);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn:disabled:hover {
+  filter: none;
+}
+.btn:disabled:active {
+  transform: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
