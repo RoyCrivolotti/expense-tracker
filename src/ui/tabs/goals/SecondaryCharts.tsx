@@ -99,13 +99,20 @@ function SecondaryTabPicker({
   onViewChange: (v: SecondaryView) => void
 }) {
   return (
-    <SegmentedControl
-      layout="scroll"
-      ariaLabel="Secondary chart view"
-      options={[...VIEWS]}
-      value={view}
-      onChange={onViewChange}
-    />
+    <div className={styles.chipRow} role="radiogroup" aria-label="Secondary chart view">
+      {VIEWS.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          role="radio"
+          aria-checked={view === opt.value}
+          className={`${styles.chip}${view === opt.value ? ` ${styles.chipActive}` : ''}`}
+          onClick={() => onViewChange(opt.value)}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
   )
 }
 
