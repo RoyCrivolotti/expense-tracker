@@ -162,6 +162,7 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
             scenarios={visibleScenarios}
             draft={deferredDraft}
             activeId={activeId}
+            dirty={dirty}
             variant="hero"
             footer={<GoalsNarrative draft={deferredDraft} compact />}
           />
