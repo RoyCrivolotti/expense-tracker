@@ -7,6 +7,7 @@ import { spawn } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { assertGoalsSecondaryTabsNoOverlap } from './verify-goals-mobile-tabs.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = join(ROOT, 'docs/screenshots/gallery')
@@ -170,6 +171,7 @@ const GOALS_MOBILE_VIEWS = [
 
 async function captureGoalsMobile(page) {
   await goToGoals(page)
+  await assertGoalsSecondaryTabsNoOverlap(page)
   await page.screenshot({ path: join(OUT, 'goals-mobile.png') })
 
   await page.getByText('What do these terms mean?').click()
