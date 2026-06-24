@@ -34,7 +34,12 @@ function CompactNarrative({ draft }: { draft: NewGoalScenario }) {
     y500 != null ? `€500k at yr ${y500}` : null,
     fiYear != null ? `FI at yr ${fiYear}` : null,
   ].filter(Boolean)
-  return <p className={styles.summaryLine}>{parts.join(' · ')}</p>
+  return (
+    <>
+      <span className={styles.chartFooterLabel}>Current plan summary</span>
+      <p className={styles.summaryLine}>{parts.join(' · ')}</p>
+    </>
+  )
 }
 
 function FullNarrative({ draft }: { draft: NewGoalScenario }) {

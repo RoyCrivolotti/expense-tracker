@@ -9,7 +9,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const OUT = join(ROOT, 'docs/screenshots')
+const OUT = join(ROOT, 'docs/screenshots/gallery')
 const BASE = 'http://127.0.0.1:5173'
 
 async function applyTheme(page, theme) {
