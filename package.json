@@ -33,7 +33,7 @@
     "capture:screenshots": "node scripts/capture-docs-screenshots.mjs"
   },
   "dependencies": {
-    "folio-shell": "^1.0.3",
+    "folio-shell": "^1.0.4",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
   },
