@@ -122,6 +122,16 @@ async function captureTransactionsMobile(m) {
   await m.screenshot({ path: join(OUT, 'transactions-mobile-past.png') })
 }
 
+async function captureGoals(page, filename) {
+  await page.goto(`${BASE}/`)
+  await page.waitForSelector('text=Recent activity', { timeout: 15000 })
+  await page.getByRole('button', { name: 'Goals' }).click()
+  await page.waitForSelector('text=Invested portfolio projection', { timeout: 15000 })
+  await page.waitForSelector('text=Comparison lines', { timeout: 15000 })
+  await page.waitForTimeout(500)
+  await page.screenshot({ path: join(OUT, filename) })
+}
+
 async function capture() {
   const { chromium } = await import('playwright')
   mkdirSync(OUT, { recursive: true })
@@ -154,6 +164,8 @@ async function capture() {
   await d.waitForTimeout(400)
   await d.screenshot({ path: join(OUT, 'analytics-desktop.png') })
 
+  await captureGoals(d, 'goals-desktop.png')
+
   await d.getByRole('button', { name: 'Settings' }).click()
   await d.waitForSelector('text=Manage access', { timeout: 15000 })
   await d.waitForTimeout(300)
@@ -181,6 +193,8 @@ async function capture() {
   await m.waitForSelector('text=Budget vs actual', { timeout: 15000 })
   await m.waitForTimeout(300)
   await m.screenshot({ path: join(OUT, 'analytics-mobile.png') })
+
+  await captureGoals(m, 'goals-mobile.png')
 
   await m.getByRole('button', { name: 'Settings' }).click()
   await m.waitForSelector('text=Manage access', { timeout: 15000 })

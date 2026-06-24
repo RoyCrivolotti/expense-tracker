@@ -9,8 +9,8 @@ from D1 only.
 | Parameter | Default (demo) |
 | --- | --- |
 | Real return | 7% / year |
-| Contribution growth | 0% / year (adjustable per scenario) |
-| Net retention (salary model) | 65% of gross (adjustable) |
+| Contribution growth | 0% / year (adjustable per scenario in Goals UI) |
+| Net retention (salary model) | 65% of gross — **engine helper only** (`annualSavingsFromCashflow`); charts use explicit `monthlyContributionCents` |
 
 ## Housing
 

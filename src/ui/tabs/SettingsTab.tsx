@@ -130,7 +130,12 @@ export function SettingsTab({
           <SectionTitle>Card statements</SectionTitle>
           <Card>
             {model.months.length === 0 ? (
-              <EmptyState>No data yet — add transactions to get started.</EmptyState>
+              <EmptyState
+                actionLabel="Add transaction"
+                onAction={actions.onAdd}
+              >
+                No data yet — add transactions to get started.
+              </EmptyState>
             ) : (
               <StatementToggles model={model} onToggle={actions.setStatementPaid} />
             )}

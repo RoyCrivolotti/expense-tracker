@@ -1,0 +1,82 @@
+import type { EventContext } from '@cloudflare/workers-types'
+import type { Env, ExpensesData } from '../env'
+import type { ExpenseRepository } from '../../domain/ports/expenseRepository'
+import { createD1AccessRepository } from '../adapters/d1AccessRepository'
+import { createD1ExpenseRepository } from '../adapters/d1ExpenseRepository'
+import { onRequest as authMiddleware } from '../../api/_middleware'
+
+type RouteHandler = PagesFunction<Env, string, ExpensesData>
+type HandlerContext = EventContext<Env, string, ExpensesData>
+
+export interface InvokeExpenseApiOptions {
+  handler: RouteHandler
+  repo: ExpenseRepository
+  env: Env
+  url: string
+  method?: string
+  body?: unknown
+  params?: Record<string, string>
+  /** Omit header when false; defaults to owner@example.com. */
+  email?: string | false
+}
+
+function handlerContext(
+  request: Request,
+  env: Env,
+  params: Record<string, string>,
+  data: ExpensesData,
+  next: HandlerContext['next'],
+  functionPath: string,
+): HandlerContext {
+  return {
+    request,
+    env,
+    params,
+    data,
+    functionPath,
+    waitUntil: () => undefined,
+    passThroughOnException: () => undefined,
+    next,
+  } as unknown as HandlerContext
+}
+
+/** Run an expense route through auth middleware with an injected in-memory repository. */
+export async function invokeExpenseApiRoute(
+  options: InvokeExpenseApiOptions,
+): Promise<Response> {
+  const headers = new Headers()
+  if (options.email !== false) {
+    headers.set('Cf-Access-Authenticated-User-Email', options.email ?? 'owner@example.com')
+  }
+  const init: RequestInit = { method: options.method ?? 'GET', headers }
+  if (options.body !== undefined) {
+    headers.set('content-type', 'application/json')
+    init.body = JSON.stringify(options.body)
+  }
+  const request = new Request(options.url, init)
+  const env = options.env
+  const data: ExpensesData = {
+    owner: '',
+    authenticatedEmail: '',
+    accessRepo: createD1AccessRepository(env),
+    repo: createD1ExpenseRepository(env),
+  }
+  const params = options.params ?? {}
+  const pathname = new URL(options.url).pathname
+  const routeNext: HandlerContext['next'] = () => {
+    data.repo = options.repo
+    return Promise.resolve(
+      options.handler(
+        handlerContext(
+          request,
+          env,
+          params,
+          data,
+          () => Promise.resolve(new Response(null, { status: 404 })),
+          pathname,
+        ),
+      ),
+    )
+  }
+  return authMiddleware(handlerContext(request, env, params, data, routeNext, pathname))
+}

@@ -100,7 +100,14 @@ export function ExpensesApp({
 
   if (data.status === 'loading') return <div className={styles.center}>Loading…</div>
   if (data.status === 'error' || !data.model) {
-    return <div className={styles.center}>Couldn't load expense data: {data.error}</div>
+    return (
+      <div className={styles.center}>
+        <p>Couldn&apos;t load expense data{data.error ? `: ${data.error}` : ''}.</p>
+        <button type="button" className={styles.retryButton} onClick={data.reload}>
+          Try again
+        </button>
+      </div>
+    )
   }
 
   return (

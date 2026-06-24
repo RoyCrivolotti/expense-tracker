@@ -76,6 +76,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
         selectMode={state.selectMode}
         selectedIds={state.selected}
         swipeDelete={state.isMobile && state.canDelete && !state.selectMode}
+        {...(state.hasActiveFilters ? { onClearFilters: state.clearFilters } : {})}
         {...(actions ? { onSelect: actions.onEdit } : {})}
         {...(actions
           ? {
