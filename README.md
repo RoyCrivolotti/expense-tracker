@@ -21,79 +21,31 @@ Shared UI: [`folio-shell`](https://github.com/RoyCrivolotti/folio-shell) on [npm
 
 ## Screenshots
 
-Fixture data (`fixtures/demo-expenses.csv`). Access admin and Transactions **Upcoming** card use `DOCS_CAPTURE=1` mocks (write stub + access API mocks).
+Fixture data (`fixtures/demo-expenses.csv`). A **full gallery** (Goals deep dives, transaction filter states, access admin, light mode) lives in [docs/SCREENSHOT-GALLERY.md](./docs/SCREENSHOT-GALLERY.md).
 
-**Dark mode** (default in README):
+**Dark mode** (default):
 
 | Dashboard (desktop) | Dashboard (mobile) |
 | --- | --- |
-| ![Dashboard desktop](./docs/screenshots/dashboard-desktop.png) | ![Dashboard mobile](./docs/screenshots/dashboard-mobile.png) |
+| ![Dashboard desktop](./docs/screenshots/gallery/dashboard-desktop.png) | ![Dashboard mobile](./docs/screenshots/gallery/dashboard-mobile.png) |
 
 | Transactions (desktop) | Transactions (mobile) |
 | --- | --- |
-| ![Transactions desktop](./docs/screenshots/transactions-desktop.png) | ![Transactions mobile](./docs/screenshots/transactions-mobile.png) |
+| ![Transactions desktop](./docs/screenshots/gallery/transactions-desktop.png) | ![Transactions mobile](./docs/screenshots/gallery/transactions-mobile.png) |
 
 | Analytics (desktop) | Analytics (mobile) |
 | --- | --- |
-| ![Analytics desktop](./docs/screenshots/analytics-desktop.png) | ![Analytics mobile](./docs/screenshots/analytics-mobile.png) |
+| ![Analytics desktop](./docs/screenshots/gallery/analytics-desktop.png) | ![Analytics mobile](./docs/screenshots/gallery/analytics-mobile.png) |
 
 | Goals (desktop) | Goals (mobile) |
 | --- | --- |
-| ![Goals desktop](./docs/screenshots/goals-desktop.png) | ![Goals mobile](./docs/screenshots/goals-mobile.png) |
-
-**Goals** (multi-scenario wealth planner): three saved paths plus an unsaved draft, FI progress, FIRE drawdown, rent-vs-buy net worth, and actual saving vs plan. Desktop secondary charts grid; mobile uses a segmented chart picker.
-
-| Desktop hero (3-path compare) | Full page |
-| --- | --- |
-| ![Goals desktop hero](./docs/screenshots/goals-desktop.png) | ![Goals desktop full](./docs/screenshots/goals-desktop-full.png) |
-
-| Glossary (desktop) | Secondary charts (desktop) |
-| --- | --- |
-| ![Goals explainer desktop](./docs/screenshots/goals-desktop-explainer.png) | ![Goals charts desktop](./docs/screenshots/goals-desktop-charts.png) |
-
-| Mobile scenarios | Mobile glossary |
-| --- | --- |
-| ![Goals scenarios mobile](./docs/screenshots/goals-mobile-scenarios.png) | ![Goals explainer mobile](./docs/screenshots/goals-mobile-explainer.png) |
-
-| Composition | FIRE drawdown |
-| --- | --- |
-| ![Goals composition mobile](./docs/screenshots/goals-mobile-composition.png) | ![Goals FIRE mobile](./docs/screenshots/goals-mobile-fire.png) |
-
-| Rent vs buy | Actual saving vs plan |
-| --- | --- |
-| ![Goals rent mobile](./docs/screenshots/goals-mobile-rent.png) | ![Goals savings mobile](./docs/screenshots/goals-mobile-savings.png) |
-
-| Milestones | |
-| --- | --- |
-| ![Goals milestones mobile](./docs/screenshots/goals-mobile-milestones.png) | |
-
-Goals screenshots use `DOCS_CAPTURE=1` with three demo scenarios from [`fixtures/demo-goal-scenarios.json`](fixtures/demo-goal-scenarios.json). See [docs/AUDIT-2026-06-GOALS.md](./docs/AUDIT-2026-06-GOALS.md) for the post-Goals audit.
+| ![Goals desktop](./docs/screenshots/gallery/goals-desktop.png) | ![Goals mobile](./docs/screenshots/gallery/goals-mobile.png) |
 
 | Settings (desktop) | Settings (mobile) |
 | --- | --- |
-| ![Settings desktop](./docs/screenshots/settings-desktop.png) | ![Settings mobile](./docs/screenshots/settings-mobile.png) |
+| ![Settings desktop](./docs/screenshots/gallery/settings-desktop.png) | ![Settings mobile](./docs/screenshots/gallery/settings-mobile.png) |
 
-| Access admin (desktop) | Access admin (mobile) |
-| --- | --- |
-| ![Access admin desktop](./docs/screenshots/access-admin-desktop.png) | ![Access admin mobile](./docs/screenshots/access-admin-mobile.png) |
-
-**Transactions** (mobile detail): collapsible filters, recurring **Upcoming** suggestions, active-filter badge with **Clear filters**, and **»** jump to latest budget month when viewing a past month.
-
-| Filters expanded | Active filters + clear |
-| --- | --- |
-| ![Transactions filters](./docs/screenshots/transactions-mobile-filters.png) | ![Transactions active filters](./docs/screenshots/transactions-mobile-active.png) |
-
-| Past month (» latest) | |
-| --- | --- |
-| ![Transactions past month](./docs/screenshots/transactions-mobile-past.png) | |
-
-**Light mode** (Settings → Appearance also offers System / Light / Dark):
-
-| Dashboard (desktop, light) |
-| --- |
-| ![Dashboard desktop light](./docs/screenshots/dashboard-desktop-light.png) |
-
-Regenerate: `npm run capture:screenshots` (Playwright + Chromium).
+Regenerate: `npm run capture:screenshots` (Playwright + Chromium). Writes to `docs/screenshots/gallery/`.
 
 ## Local dev
 
@@ -136,6 +88,7 @@ Full DNS, Access, D1, and CI setup: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 ## Docs
 
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — hosting, access control, migrations through `0008`
+- [docs/SCREENSHOT-GALLERY.md](docs/SCREENSHOT-GALLERY.md) — full UI screenshot reference
 - [docs/GOALS-MODEL.md](docs/GOALS-MODEL.md) — wealth projection assumptions
 - [docs/OPS.md](docs/OPS.md) — staging, backups, ops scripts
 - [docs/TESTING.md](docs/TESTING.md) — unit and API integration tests

@@ -105,8 +105,8 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
               scenarios={visibleScenarios}
               draft={deferredDraft}
               variant="hero"
+              footer={<GoalsNarrative draft={deferredDraft} compact />}
             />
-            <GoalsNarrative draft={deferredDraft} compact />
           </div>
           <SecondaryCharts
             scenarios={dataset.goalScenarios}

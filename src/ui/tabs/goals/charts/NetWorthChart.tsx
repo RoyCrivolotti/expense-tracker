@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react'
+import { memo, useMemo, type ReactNode } from 'react'
 import type { GoalScenario } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import { MILESTONE_CENTS, projectNetWorth, scenarioToParams } from '../../../../engine'
@@ -61,10 +61,12 @@ function NetWorthChartImpl({
   scenarios,
   draft,
   variant = 'default',
+  footer,
 }: {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
   variant?: 'default' | 'hero'
+  footer?: ReactNode
 }) {
   const { years, series, names } = useMemo(() => buildSeries(scenarios, draft), [scenarios, draft])
   const refLines = useMemo(() => MILESTONE_CENTS.filter((m) => m <= 100_000_000), [])
@@ -102,6 +104,7 @@ function NetWorthChartImpl({
         tooltip={tooltip}
       />
       <ChartLegend items={legend} />
+      {footer != null ? <div className={styles.chartFooter}>{footer}</div> : null}
     </Card>
   )
 }
