@@ -6,7 +6,7 @@ import {
   scenarioToParams,
   yearsToTargetFromProjection,
 } from '../../../../engine'
-import { Card } from '../../../components/primitives'
+import { ChartShell } from './ChartShell'
 import { formatEuroShort } from '../chartTheme'
 import styles from '../goals.module.css'
 
@@ -50,14 +50,16 @@ function buildRows(scenarios: GoalScenario[], draft: NewGoalScenario): Row[] {
 function MilestoneMatrixImpl({
   scenarios,
   draft,
+  embedded = false,
 }: {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
+  embedded?: boolean
 }) {
   const rows = useMemo(() => buildRows(scenarios, draft), [scenarios, draft])
 
   return (
-    <Card className={styles.chartCard}>
+    <ChartShell embedded={embedded}>
       <h3 className={styles.chartTitle}>Years to milestone</h3>
       <p className={styles.chartHint}>Invested portfolio only — same matrix as finance-review chart 20.</p>
       <div style={{ overflowX: 'auto' }}>
@@ -98,7 +100,7 @@ function MilestoneMatrixImpl({
           </tbody>
         </table>
       </div>
-    </Card>
+    </ChartShell>
   )
 }
 

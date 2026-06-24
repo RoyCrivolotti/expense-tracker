@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import { SegmentedControl } from '../../components/SegmentedControl'
+import { Card } from '../../components/primitives'
 import { CompositionChart } from './charts/CompositionChart'
 import { MilestoneMatrix } from './charts/MilestoneMatrix'
 import { FireChart } from './charts/FireChart'
@@ -42,6 +43,33 @@ function useGoalsNarrow(): boolean {
   return narrow
 }
 
+/** Tracks whether a horizontally scrollable element has more content off either edge. */
+function useScrollEdges() {
+  const ref = useRef<HTMLDivElement>(null)
+  const [edges, setEdges] = useState({ atStart: true, atEnd: true })
+  const update = useCallback(() => {
+    const el = ref.current
+    if (!el) return
+    const atStart = el.scrollLeft <= 1
+    const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 1
+    setEdges((prev) =>
+      prev.atStart === atStart && prev.atEnd === atEnd ? prev : { atStart, atEnd },
+    )
+  }, [])
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    update()
+    el.addEventListener('scroll', update, { passive: true })
+    window.addEventListener('resize', update)
+    return () => {
+      el.removeEventListener('scroll', update)
+      window.removeEventListener('resize', update)
+    }
+  }, [update])
+  return { ref, ...edges }
+}
+
 interface SecondaryChartsProps {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
@@ -54,39 +82,42 @@ function SecondaryViewChart({
   draft,
   monthly,
   chartHeight,
+  embedded = false,
 }: {
   view: SecondaryView
   scenarios: GoalScenario[]
   draft: NewGoalScenario
   monthly: MonthlySaving[]
   chartHeight?: number | undefined
+  embedded?: boolean
 }) {
+  const h = chartHeight
   switch (view) {
     case 'composition':
-      return chartHeight != null ? (
-        <CompositionChart draft={draft} height={chartHeight} />
+      return h != null ? (
+        <CompositionChart draft={draft} height={h} embedded={embedded} />
       ) : (
-        <CompositionChart draft={draft} />
+        <CompositionChart draft={draft} embedded={embedded} />
       )
     case 'milestones':
-      return <MilestoneMatrix scenarios={scenarios} draft={draft} />
+      return <MilestoneMatrix scenarios={scenarios} draft={draft} embedded={embedded} />
     case 'fire':
-      return chartHeight != null ? (
-        <FireChart draft={draft} height={chartHeight} />
+      return h != null ? (
+        <FireChart draft={draft} height={h} embedded={embedded} />
       ) : (
-        <FireChart draft={draft} />
+        <FireChart draft={draft} embedded={embedded} />
       )
     case 'rent':
-      return chartHeight != null ? (
-        <RentVsOwnChart draft={draft} height={chartHeight} />
+      return h != null ? (
+        <RentVsOwnChart draft={draft} height={h} embedded={embedded} />
       ) : (
-        <RentVsOwnChart draft={draft} />
+        <RentVsOwnChart draft={draft} embedded={embedded} />
       )
     case 'savings':
-      return chartHeight != null ? (
-        <SavingsRateChart draft={draft} monthly={monthly} height={chartHeight} />
+      return h != null ? (
+        <SavingsRateChart draft={draft} monthly={monthly} height={h} embedded={embedded} />
       ) : (
-        <SavingsRateChart draft={draft} monthly={monthly} />
+        <SavingsRateChart draft={draft} monthly={monthly} embedded={embedded} />
       )
   }
 }
@@ -98,21 +129,70 @@ function SecondaryTabPicker({
   view: SecondaryView
   onViewChange: (v: SecondaryView) => void
 }) {
+  const { ref, atStart, atEnd } = useScrollEdges()
+  const scrollStep = (dir: 1 | -1) => ref.current?.scrollBy({ left: dir * 140, behavior: 'smooth' })
+  const cls = [
+    styles.tabScroller,
+    atStart ? '' : styles.canScrollLeft,
+    atEnd ? '' : styles.canScrollRight,
+  ]
+    .filter(Boolean)
+    .join(' ')
+
   return (
-    <div className={styles.chipRow} role="radiogroup" aria-label="Secondary chart view">
-      {VIEWS.map((opt) => (
-        <button
-          key={opt.value}
-          type="button"
-          role="radio"
-          aria-checked={view === opt.value}
-          className={`${styles.chip}${view === opt.value ? ` ${styles.chipActive}` : ''}`}
-          onClick={() => onViewChange(opt.value)}
-        >
-          {opt.label}
-        </button>
-      ))}
+    <div className={cls}>
+      <button
+        type="button"
+        className={`${styles.tabChevron} ${styles.tabChevronLeft}`}
+        aria-label="Scroll chart tabs left"
+        tabIndex={-1}
+        onClick={() => scrollStep(-1)}
+      >
+        ‹
+      </button>
+      <div className={styles.chipRow} role="radiogroup" aria-label="Secondary chart view" ref={ref}>
+        {VIEWS.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            role="radio"
+            aria-checked={view === opt.value}
+            className={`${styles.chip}${view === opt.value ? ` ${styles.chipActive}` : ''}`}
+            onClick={() => onViewChange(opt.value)}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        className={`${styles.tabChevron} ${styles.tabChevronRight}`}
+        aria-label="Scroll chart tabs right"
+        tabIndex={-1}
+        onClick={() => scrollStep(1)}
+      >
+        ›
+      </button>
     </div>
+  )
+}
+
+function TabbedChart({
+  view,
+  onViewChange,
+  children,
+}: {
+  view: SecondaryView
+  onViewChange: (v: SecondaryView) => void
+  children: ReactNode
+}) {
+  return (
+    <Card className={styles.tabbedChart}>
+      <div className={styles.tabHeader}>
+        <SecondaryTabPicker view={view} onViewChange={onViewChange} />
+      </div>
+      <div className={styles.tabBody}>{children}</div>
+    </Card>
   )
 }
 
@@ -143,21 +223,22 @@ export function SecondaryCharts({ scenarios, draft, monthly }: SecondaryChartsPr
 
   if (narrow) {
     return (
-      <div className={styles.secondaryMobile}>
-        <SecondaryTabPicker view={view} onViewChange={setView} />
+      <TabbedChart view={view} onViewChange={setView}>
         <SecondaryViewChart
           view={view}
           scenarios={scenarios}
           draft={draft}
           monthly={monthly}
+          embedded
         />
-      </div>
+      </TabbedChart>
     )
   }
 
   return (
     <div className={styles.secondaryDesktop}>
-      <div className={styles.secondaryToolbar}>
+      <div className={styles.secondaryHeader}>
+        <h3 className={styles.secondaryHeading}>Detailed charts</h3>
         <SegmentedControl
           layout="compact"
           ariaLabel="Secondary charts layout"
@@ -169,16 +250,16 @@ export function SecondaryCharts({ scenarios, draft, monthly }: SecondaryChartsPr
       {desktopLayout === 'stack' ? (
         <SecondaryChartStack scenarios={scenarios} draft={draft} monthly={monthly} />
       ) : (
-        <div className={styles.secondaryMobile}>
-          <SecondaryTabPicker view={view} onViewChange={setView} />
+        <TabbedChart view={view} onViewChange={setView}>
           <SecondaryViewChart
             view={view}
             scenarios={scenarios}
             draft={draft}
             monthly={monthly}
             chartHeight={STACK_CHART_HEIGHT}
+            embedded
           />
-        </div>
+        </TabbedChart>
       )}
     </div>
   )

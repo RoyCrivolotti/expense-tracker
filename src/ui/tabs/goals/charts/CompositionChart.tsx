@@ -1,7 +1,7 @@
 import { memo, useMemo } from 'react'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import { projectNetWorth, scenarioToParams } from '../../../../engine'
-import { Card } from '../../../components/primitives'
+import { ChartShell } from './ChartShell'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
@@ -18,9 +18,11 @@ const COMPOSITION_LEGEND: LegendItem[] = [
 function CompositionChartImpl({
   draft,
   height = 230,
+  embedded = false,
 }: {
   draft: NewGoalScenario
   height?: number
+  embedded?: boolean
 }) {
   const points = useMemo(
     () => projectNetWorth(scenarioToParams({ ...draft, id: 0 })),
@@ -63,7 +65,7 @@ function CompositionChartImpl({
   }
 
   return (
-    <Card className={styles.chartCard}>
+    <ChartShell embedded={embedded}>
       <h3 className={styles.chartTitle}>Net worth composition</h3>
       <p className={styles.chartHint}>
         Invested portfolio + house equity − mortgage for the scenario you are editing.
@@ -77,7 +79,7 @@ function CompositionChartImpl({
         tooltip={tooltip}
       />
       <ChartLegend items={COMPOSITION_LEGEND} />
-    </Card>
+    </ChartShell>
   )
 }
 

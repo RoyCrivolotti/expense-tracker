@@ -27,17 +27,29 @@ function getNarrativeStats(draft: NewGoalScenario) {
   return { end, y500, y1m, fiYear, fiTarget }
 }
 
+interface PlanStat {
+  label: string
+  value: string
+}
+
 function CompactNarrative({ draft }: { draft: NewGoalScenario }) {
   const { end, y500, fiYear } = getNarrativeStats(draft)
-  const parts = [
-    `${formatCents(end?.netWorthCents ?? 0)} net worth in ${draft.horizonYears} yrs`,
-    y500 != null ? `€500k at yr ${y500}` : null,
-    fiYear != null ? `FI at yr ${fiYear}` : null,
-  ].filter(Boolean)
+  const stats: PlanStat[] = [
+    { label: `Net worth in ${draft.horizonYears} yrs`, value: formatCents(end?.netWorthCents ?? 0) },
+    y500 != null ? { label: '€500k invested', value: `Year ${y500}` } : null,
+    fiYear != null ? { label: 'Financial independence', value: `Year ${fiYear}` } : null,
+  ].filter((s): s is PlanStat => s != null)
   return (
     <>
       <span className={styles.chartFooterLabel}>Current plan summary</span>
-      <p className={styles.summaryLine}>{parts.join(' · ')}</p>
+      <div className={styles.statStrip}>
+        {stats.map((s) => (
+          <div key={s.label} className={styles.statItem}>
+            <span className={styles.statValue}>{s.value}</span>
+            <span className={styles.statLabel}>{s.label}</span>
+          </div>
+        ))}
+      </div>
     </>
   )
 }
