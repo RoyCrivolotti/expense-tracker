@@ -47,3 +47,25 @@
   padding: 0.38rem 0.5rem;
   font-size: 0.78rem;
 }
+
+.groupScroll {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  gap: 0.35rem;
+  overflow-x: auto;
+  border-radius: var(--radius-md, 8px);
+  padding: 0.2rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.groupScroll::-webkit-scrollbar {
+  display: none;
+}
+
+.groupScroll .seg {
+  flex: none;
+  padding: 0.38rem 0.85rem;
+  font-size: 0.8125rem;
+}

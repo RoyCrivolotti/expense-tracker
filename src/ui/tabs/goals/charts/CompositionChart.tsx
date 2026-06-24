@@ -15,7 +15,13 @@ const COMPOSITION_LEGEND: LegendItem[] = [
   { label: 'Mortgage owed', color: 'var(--exp-danger)' },
 ]
 
-function CompositionChartImpl({ draft }: { draft: NewGoalScenario }) {
+function CompositionChartImpl({
+  draft,
+  height = 230,
+}: {
+  draft: NewGoalScenario
+  height?: number
+}) {
   const points = useMemo(
     () => projectNetWorth(scenarioToParams({ ...draft, id: 0 })),
     [draft],
@@ -63,7 +69,7 @@ function CompositionChartImpl({ draft }: { draft: NewGoalScenario }) {
         Invested portfolio + house equity − mortgage for the scenario you are editing.
       </p>
       <LinearChart
-        height={230}
+        height={height}
         series={series}
         xLabels={labels}
         formatValue={formatEuroShort}

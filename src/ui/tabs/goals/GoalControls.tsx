@@ -90,20 +90,31 @@ export function GoalControls({ draft, onChange }: GoalControlsProps) {
         />
       </ControlSection>
       <ControlSection title="FIRE / withdrawal">
+        <p className={styles.fieldHint}>
+          Models life after financial independence, not withdrawals today. FI is searched within
+          your Horizon (years); if never reached, drawdown charts show the target only.
+        </p>
         <MoneyField
-          label="Annual spend"
+          label="Annual spend at FI"
           value={draft.annualSpendCents}
           max={150_000_00}
           step={1_000_00}
           onChange={(v) => onChange({ annualSpendCents: v })}
         />
+        <p className={styles.fieldHint}>
+          Yearly cost of living you would need the portfolio to cover after FI (within the horizon).
+        </p>
         <PercentField
-          label="Safe withdrawal rate"
+          label="Withdrawal rate at FI"
           value={draft.safeWithdrawalRate}
-          min={0.03}
+          min={0.005}
           max={0.06}
           onChange={(v) => onChange({ safeWithdrawalRate: v })}
         />
+        <p className={styles.fieldHint}>
+          Share of the portfolio you would spend each year once FI (4% is the usual rule of thumb).
+          Lower rate = spend less = higher FI target. FI target = annual spend ÷ this rate.
+        </p>
       </ControlSection>
     </div>
   )

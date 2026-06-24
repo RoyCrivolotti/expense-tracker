@@ -92,8 +92,9 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
     <div className={styles.stack}>
       <SectionTitle>Goals</SectionTitle>
       <p className={styles.intro}>
-        Project your net worth and financial independence under different assumptions. Adjust the
-        controls to model a future, save it as a scenario, then compare scenarios on the charts.
+        Project your net worth and financial independence under different assumptions. Horizon sets
+        how far the projection runs and where FI is searched. Adjust the controls, save a scenario,
+        then compare scenarios on the charts.
       </p>
       <GoalsExplainer />
       <div className={styles.layout}>

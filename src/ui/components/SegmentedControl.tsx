@@ -10,8 +10,8 @@ interface SegmentedControlProps<T extends string> {
   value: T
   onChange: (value: T) => void
   ariaLabel: string
-  /** compact: inline pill. bar: full-width equal segments. */
-  layout?: 'compact' | 'bar'
+  /** compact: inline pill. bar: full-width equal segments. scroll: horizontal chip row. */
+  layout?: 'compact' | 'bar' | 'scroll'
 }
 
 /** Compact pill-style toggle for small sets of mutually exclusive options. */
@@ -22,7 +22,12 @@ export function SegmentedControl<T extends string>({
   ariaLabel,
   layout = 'compact',
 }: SegmentedControlProps<T>) {
-  const groupClass = layout === 'bar' ? `${styles.group} ${styles.groupBar}` : styles.group
+  const groupClass =
+    layout === 'bar'
+      ? `${styles.group} ${styles.groupBar}`
+      : layout === 'scroll'
+        ? `${styles.group} ${styles.groupScroll}`
+        : styles.group
   return (
     <div className={groupClass} role="radiogroup" aria-label={ariaLabel}>
       {options.map((opt) => (

@@ -19,7 +19,15 @@ const VIEWS = [
 
 type SecondaryView = (typeof VIEWS)[number]['value']
 
+const DESKTOP_LAYOUT = [
+  { value: 'stack', label: 'All charts' },
+  { value: 'tabs', label: 'One chart' },
+] as const
+
+type DesktopLayout = (typeof DESKTOP_LAYOUT)[number]['value']
+
 const NARROW_MQ = '(max-width: 899px)'
+const STACK_CHART_HEIGHT = 280
 
 function useGoalsNarrow(): boolean {
   const [narrow, setNarrow] = useState(() =>
@@ -40,36 +48,131 @@ interface SecondaryChartsProps {
   monthly: MonthlySaving[]
 }
 
+function SecondaryViewChart({
+  view,
+  scenarios,
+  draft,
+  monthly,
+  chartHeight,
+}: {
+  view: SecondaryView
+  scenarios: GoalScenario[]
+  draft: NewGoalScenario
+  monthly: MonthlySaving[]
+  chartHeight?: number | undefined
+}) {
+  switch (view) {
+    case 'composition':
+      return chartHeight != null ? (
+        <CompositionChart draft={draft} height={chartHeight} />
+      ) : (
+        <CompositionChart draft={draft} />
+      )
+    case 'milestones':
+      return <MilestoneMatrix scenarios={scenarios} draft={draft} />
+    case 'fire':
+      return chartHeight != null ? (
+        <FireChart draft={draft} height={chartHeight} />
+      ) : (
+        <FireChart draft={draft} />
+      )
+    case 'rent':
+      return chartHeight != null ? (
+        <RentVsOwnChart draft={draft} height={chartHeight} />
+      ) : (
+        <RentVsOwnChart draft={draft} />
+      )
+    case 'savings':
+      return chartHeight != null ? (
+        <SavingsRateChart draft={draft} monthly={monthly} height={chartHeight} />
+      ) : (
+        <SavingsRateChart draft={draft} monthly={monthly} />
+      )
+  }
+}
+
+function SecondaryTabPicker({
+  view,
+  onViewChange,
+}: {
+  view: SecondaryView
+  onViewChange: (v: SecondaryView) => void
+}) {
+  return (
+    <SegmentedControl
+      layout="scroll"
+      ariaLabel="Secondary chart view"
+      options={[...VIEWS]}
+      value={view}
+      onChange={onViewChange}
+    />
+  )
+}
+
+function SecondaryChartStack({
+  scenarios,
+  draft,
+  monthly,
+}: {
+  scenarios: GoalScenario[]
+  draft: NewGoalScenario
+  monthly: MonthlySaving[]
+}) {
+  return (
+    <div className={styles.secondaryStack}>
+      <CompositionChart draft={draft} height={STACK_CHART_HEIGHT} />
+      <MilestoneMatrix scenarios={scenarios} draft={draft} />
+      <FireChart draft={draft} height={STACK_CHART_HEIGHT} />
+      <RentVsOwnChart draft={draft} height={STACK_CHART_HEIGHT} />
+      <SavingsRateChart draft={draft} monthly={monthly} height={STACK_CHART_HEIGHT} />
+    </div>
+  )
+}
+
 export function SecondaryCharts({ scenarios, draft, monthly }: SecondaryChartsProps) {
   const narrow = useGoalsNarrow()
   const [view, setView] = useState<SecondaryView>('composition')
+  const [desktopLayout, setDesktopLayout] = useState<DesktopLayout>('stack')
 
-  if (!narrow) {
+  if (narrow) {
     return (
-      <div className={styles.secondaryGrid}>
-        <CompositionChart draft={draft} />
-        <MilestoneMatrix scenarios={scenarios} draft={draft} />
-        <FireChart draft={draft} />
-        <RentVsOwnChart draft={draft} />
-        <SavingsRateChart draft={draft} monthly={monthly} />
+      <div className={styles.secondaryMobile}>
+        <SecondaryTabPicker view={view} onViewChange={setView} />
+        <SecondaryViewChart
+          view={view}
+          scenarios={scenarios}
+          draft={draft}
+          monthly={monthly}
+        />
       </div>
     )
   }
 
   return (
-    <div className={styles.secondaryMobile}>
-      <SegmentedControl
-        layout="bar"
-        ariaLabel="Secondary chart view"
-        options={[...VIEWS]}
-        value={view}
-        onChange={setView}
-      />
-      {view === 'composition' ? <CompositionChart draft={draft} /> : null}
-      {view === 'milestones' ? <MilestoneMatrix scenarios={scenarios} draft={draft} /> : null}
-      {view === 'fire' ? <FireChart draft={draft} /> : null}
-      {view === 'rent' ? <RentVsOwnChart draft={draft} /> : null}
-      {view === 'savings' ? <SavingsRateChart draft={draft} monthly={monthly} /> : null}
+    <div className={styles.secondaryDesktop}>
+      <div className={styles.secondaryToolbar}>
+        <SegmentedControl
+          layout="compact"
+          ariaLabel="Secondary charts layout"
+          options={[...DESKTOP_LAYOUT]}
+          value={desktopLayout}
+          onChange={setDesktopLayout}
+        />
+      </div>
+      {desktopLayout === 'stack' ? (
+        <SecondaryChartStack scenarios={scenarios} draft={draft} monthly={monthly} />
+      ) : (
+        <div className={styles.secondaryMobile}>
+          <SecondaryTabPicker view={view} onViewChange={setView} />
+          <SecondaryViewChart
+            view={view}
+            scenarios={scenarios}
+            draft={draft}
+            monthly={monthly}
+            chartHeight={STACK_CHART_HEIGHT}
+          />
+        </div>
+      )}
     </div>
   )
 }
