@@ -1,16 +1,28 @@
 import { useCallback, useRef, useState } from 'react'
+import { useDismissOnOutsidePointer } from './useDismissOnOutsidePointer'
+
+/** How long a tap-pinned tooltip stays visible before auto-dismiss. */
+export const PINNED_TOOLTIP_MS = 5600
 
 /** Hover (desktop) or tap/hold (touch) focus on the nearest chart index. */
 export function useChartFocus(length: number, xForIndex: (i: number) => number) {
   const [active, setActive] = useState<number | null>(null)
+  const containerRef = useRef<HTMLElement>(null)
   const touchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const clearTouchTimer = () => {
+  const clearTouchTimer = useCallback(() => {
     if (touchTimer.current) {
       clearTimeout(touchTimer.current)
       touchTimer.current = null
     }
-  }
+  }, [])
+
+  const dismiss = useCallback(() => {
+    clearTouchTimer()
+    setActive(null)
+  }, [clearTouchTimer])
+
+  useDismissOnOutsidePointer(containerRef, active != null, dismiss)
 
   const pick = useCallback(
     (clientX: number, svg: SVGSVGElement) => {
@@ -51,13 +63,13 @@ export function useChartFocus(length: number, xForIndex: (i: number) => number) 
   const onPointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
     if (e.pointerType === 'mouse') return
     clearTouchTimer()
-    touchTimer.current = setTimeout(() => setActive(null), 2800)
+    touchTimer.current = setTimeout(dismiss, PINNED_TOOLTIP_MS)
   }
 
   const onPointerLeave = (e: React.PointerEvent<SVGSVGElement>) => {
     if (e.pointerType !== 'mouse') return
-    setActive(null)
+    dismiss()
   }
 
-  return { active, onPointerMove, onPointerDown, onPointerUp, onPointerLeave }
+  return { active, containerRef, onPointerMove, onPointerDown, onPointerUp, onPointerLeave }
 }

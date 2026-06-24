@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useMemo, useRef, type RefObject } from 'react'
 import { ChartTooltip, type TooltipLine } from './ChartTooltip'
 import { ChartGrid, ChartXLabels } from './linearChartParts'
 import { useChartFocus } from './useChartFocus'
@@ -72,14 +72,14 @@ export function LinearChart({
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   const geo = useGeometry(series, height, refLines)
-  const { active, ...handlers } = useChartFocus(geo.n, geo.xForIndex)
+  const { active, containerRef, ...handlers } = useChartFocus(geo.n, geo.xForIndex)
   const focusX = active != null ? geo.xForIndex(active) : 0
   const anchor = useSvgAnchor(svgRef, active != null ? focusX : null, active != null ? PAD.top : null)
   const tip = active != null ? tooltip(active) : null
   const lines = series.filter((s) => s.kind !== 'area')
 
   return (
-    <div className={styles.chartWrap}>
+    <div ref={containerRef as RefObject<HTMLDivElement | null>} className={styles.chartWrap}>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${W} ${height}`}

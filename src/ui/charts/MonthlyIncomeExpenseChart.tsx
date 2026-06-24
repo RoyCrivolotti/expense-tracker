@@ -31,12 +31,12 @@ export function MonthlyIncomeExpenseChart({ model }: Props) {
   const barW = Math.min(16, groupW / 3)
   const maxVal = chartMax(rows.flatMap((r) => [r.income, r.expenses]))
   const xForIndex = useCallback((i: number) => PAD.left + i * groupW + groupW / 2, [groupW])
-  const { active, ...pointerHandlers } = useChartFocus(rows.length, xForIndex)
+  const { active, containerRef, ...pointerHandlers } = useChartFocus(rows.length, xForIndex)
 
   if (rows.length === 0) return null
 
   return (
-    <figure className={styles.figure}>
+    <figure ref={containerRef} className={styles.figure}>
       <figcaption className={styles.caption}>Income vs expenses (recent months)</figcaption>
       <MonthlyBarChartView
         rows={rows}

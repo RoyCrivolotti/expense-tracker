@@ -137,47 +137,51 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
       </p>
       <GoalsExplainer />
       <div className={styles.layout}>
-        <div className={styles.areaNow}>
-          <NetWorthNowCard draft={deferredDraft} />
+        <div className={styles.areaSidebar}>
+          <div className={styles.areaScenarios}>
+            <ScenarioManager
+              scenarios={dataset.goalScenarios}
+              activeId={activeId}
+              draftName={draft.name}
+              hiddenIds={hiddenIds}
+              canWrite={actions != null}
+              actions={actions}
+              dirty={dirty}
+              onSelect={onSelectScenario}
+              onSelectEditing={onSelectEditing}
+              onToggleVisible={onToggleVisible}
+              onSaveDraft={onSaveDraft}
+              onSaveChanges={onSaveChanges}
+              onDiscard={onDiscard}
+            />
+          </div>
+          <div className={styles.areaControls}>
+            <Card>
+              <GoalControls draft={draft} onChange={patchDraft} />
+            </Card>
+          </div>
         </div>
-        <div className={styles.areaScenarios}>
-          <ScenarioManager
-            scenarios={dataset.goalScenarios}
-            activeId={activeId}
-            draftName={draft.name}
-            hiddenIds={hiddenIds}
-            canWrite={actions != null}
-            actions={actions}
-            dirty={dirty}
-            onSelect={onSelectScenario}
-            onSelectEditing={onSelectEditing}
-            onToggleVisible={onToggleVisible}
-            onSaveDraft={onSaveDraft}
-            onSaveChanges={onSaveChanges}
-            onDiscard={onDiscard}
-          />
-        </div>
-        <div className={`${styles.heroBlock} ${styles.areaHero}`}>
-          <NetWorthChart
-            scenarios={visibleScenarios}
-            draft={deferredDraft}
-            activeId={activeId}
-            dirty={dirty}
-            variant="hero"
-            footer={<GoalsNarrative draft={deferredDraft} compact />}
-          />
-        </div>
-        <div className={styles.areaSecondary}>
-          <SecondaryCharts
-            scenarios={dataset.goalScenarios}
-            draft={deferredDraft}
-            monthly={monthly}
-          />
-        </div>
-        <div className={styles.areaControls}>
-          <Card>
-            <GoalControls draft={draft} onChange={patchDraft} />
-          </Card>
+        <div className={styles.areaOutputs}>
+          <div className={styles.areaNow}>
+            <NetWorthNowCard draft={deferredDraft} />
+          </div>
+          <div className={`${styles.heroBlock} ${styles.areaHero}`}>
+            <NetWorthChart
+              scenarios={visibleScenarios}
+              draft={deferredDraft}
+              activeId={activeId}
+              dirty={dirty}
+              variant="hero"
+              footer={<GoalsNarrative draft={deferredDraft} compact />}
+            />
+          </div>
+          <div className={styles.areaSecondary}>
+            <SecondaryCharts
+              scenarios={dataset.goalScenarios}
+              draft={deferredDraft}
+              monthly={monthly}
+            />
+          </div>
         </div>
       </div>
     </div>
