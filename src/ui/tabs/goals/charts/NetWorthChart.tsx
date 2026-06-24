@@ -22,11 +22,13 @@ function rawLines(
   saved: GoalScenario[],
   draft: NewGoalScenario,
   activeId: number | null,
+  dirty: boolean,
 ): RawLine[] {
-  // The active scenario is represented by the live "(editing)" line, so drop its
-  // saved copy to avoid drawing the same plan twice.
+  // The active scenario is normally represented by the live "(editing)" line, so
+  // drop its saved copy to avoid drawing the same plan twice. Keep it while the
+  // edit is dirty so the saved baseline stays visible to compare against.
   const lines: RawLine[] = saved
-    .filter((s) => s.id !== activeId)
+    .filter((s) => s.id !== activeId || dirty)
     .map((s) => ({
       id: `saved-${s.id}`,
       name: s.name,
@@ -48,8 +50,9 @@ function buildSeries(
   saved: GoalScenario[],
   draft: NewGoalScenario,
   activeId: number | null,
+  dirty: boolean,
 ): { years: number[]; series: ChartSeries[]; names: string[] } {
-  const lines = rawLines(saved, draft, activeId)
+  const lines = rawLines(saved, draft, activeId, dirty)
   const yearSet = new Set<number>()
   lines.forEach((l) => l.points.forEach((p) => yearSet.add(p.year)))
   const years = [...yearSet].sort((a, b) => a - b)
@@ -70,18 +73,20 @@ function NetWorthChartImpl({
   scenarios,
   draft,
   activeId = null,
+  dirty = false,
   variant = 'default',
   footer,
 }: {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
   activeId?: number | null
+  dirty?: boolean
   variant?: 'default' | 'hero'
   footer?: ReactNode
 }) {
   const { years, series, names } = useMemo(
-    () => buildSeries(scenarios, draft, activeId),
-    [scenarios, draft, activeId],
+    () => buildSeries(scenarios, draft, activeId, dirty),
+    [scenarios, draft, activeId, dirty],
   )
   const refLines = useMemo(() => MILESTONE_CENTS.filter((m) => m <= 100_000_000), [])
   const labels = useMemo(() => sparseLabels(years, 5), [years])
