@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { Account, Category, TxnStatus, TxnType } from '../../types'
 import styles from './tabs.module.css'
+import { ActiveFilterChips } from './ActiveFilterChips'
+import { buildActiveFilterChips } from './txnFilterChips'
 import {
   CategoryAccountRow,
   DateRangeRow,
@@ -38,6 +40,7 @@ export interface TxnFiltersProps {
 export function TxnFilters(props: TxnFiltersProps) {
   const [expanded, setExpanded] = useState(false)
   const chevron = expanded ? '▾' : '▸'
+  const activeChips = useMemo(() => buildActiveFilterChips(props), [props])
 
   return (
     <div className={styles.filters}>
@@ -64,6 +67,7 @@ export function TxnFilters(props: TxnFiltersProps) {
           </span>
         ) : null}
       </button>
+      {!expanded ? <ActiveFilterChips chips={activeChips} /> : null}
       {expanded ? (
         <div className={styles.filterSecondary}>
           <CategoryAccountRow

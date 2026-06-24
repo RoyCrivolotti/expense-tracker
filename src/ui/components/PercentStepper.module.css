@@ -1,0 +1,42 @@
+.wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.input {
+  width: 3.5rem;
+  padding: 0.25rem 0.35rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: right;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.btn:hover:not(:disabled) {
+  background: var(--color-surface-hover, rgba(0, 0, 0, 0.04));
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.static {
+  font-size: 0.85rem;
+  font-weight: 600;
+}

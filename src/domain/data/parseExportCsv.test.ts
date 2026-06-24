@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { EXPORT_CSV_HEADER } from './exportCsvFormat'
 import { parseExportCsv } from './parseExportCsv'
 import type { ExpenseDataset } from '../types'
 
@@ -34,9 +35,7 @@ const VALID_ROW =
 
 describe('parseExportCsv', () => {
   it('parses a valid export row', () => {
-    const header =
-      'id,date,budget_month,description,category,account,type,amount_cents,status,cancelled,notes'
-    const { rows, errors } = parseExportCsv(`${header}\n${VALID_ROW}`, DATASET)
+    const { rows, errors } = parseExportCsv(`${EXPORT_CSV_HEADER}\n${VALID_ROW}`, DATASET)
     expect(errors).toHaveLength(0)
     expect(rows).toHaveLength(1)
     expect(rows[0]?.input).toMatchObject({

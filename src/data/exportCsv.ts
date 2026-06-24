@@ -1,4 +1,5 @@
 import type { ExpenseDataset } from '../types'
+import { EXPORT_CSV_HEADER } from '../domain/data/exportCsvFormat'
 
 function esc(value: string): string {
   if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`
@@ -15,8 +16,7 @@ export function exportTransactionsCsv(
   const txns = opts.month
     ? dataset.transactions.filter((t) => t.budgetMonth === opts.month)
     : dataset.transactions
-  const header =
-    'id,date,budget_month,description,category,account,type,amount_cents,status,cancelled,notes'
+  const header = EXPORT_CSV_HEADER
   const rows = txns.map((t) =>
     [
       t.id,

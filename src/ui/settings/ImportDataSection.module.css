@@ -3,6 +3,20 @@
   flex-direction: column;
   gap: 0.65rem;
 }
+.guide {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+.guide code {
+  font-size: 0.78rem;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
 .fileInput {
   display: none;
 }

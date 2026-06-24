@@ -4,9 +4,9 @@
  */
 import type { ExpenseDataset, TxnType } from '../types'
 import type { NewTransaction } from './dataSource'
+import { EXPORT_CSV_HEADER, EXPORT_CSV_TYPES } from './exportCsvFormat'
 
-const HEADER =
-  'id,date,budget_month,description,category,account,type,amount_cents,status,cancelled,notes'
+export { EXPORT_CSV_HEADER } from './exportCsvFormat'
 
 export interface ParsedExportRow {
   input: NewTransaction
@@ -45,7 +45,7 @@ function parseCsvLine(line: string): string[] {
   return fields
 }
 
-const VALID_TYPES = new Set<TxnType>(['expense', 'income', 'investment', 'refund'])
+const VALID_TYPES = new Set<TxnType>(EXPORT_CSV_TYPES)
 
 function resolveName<T extends { name: string; id: number }>(
   items: T[],
@@ -125,10 +125,10 @@ export function parseExportCsv(text: string, dataset: ExpenseDataset): ParseExpo
   const lines = text.trim().split(/\r?\n/)
   if (lines.length === 0) return { rows: [], errors: [] }
   const header = lines[0]?.trim()
-  if (header !== HEADER) {
+  if (header !== EXPORT_CSV_HEADER) {
     return {
       rows: [],
-      errors: [{ line: 1, message: `Expected header: ${HEADER}` }],
+      errors: [{ line: 1, message: `Expected header: ${EXPORT_CSV_HEADER}` }],
     }
   }
   const rows: ParsedExportRow[] = []

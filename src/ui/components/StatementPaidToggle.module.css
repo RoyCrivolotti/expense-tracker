@@ -1,0 +1,11 @@
+.btn {
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

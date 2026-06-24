@@ -36,6 +36,12 @@ export function parsePercentToFraction(raw: string): number {
   return Number.isNaN(value) ? 0 : value / 100
 }
 
+/** Format a fraction as a EU percentage string, e.g. 0.05 -> "5,0%". */
+export function formatPercent(fraction: number, decimals = 1): string {
+  const pct = fraction * 100
+  return `${pct.toLocaleString('de-DE', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}%`
+}
+
 /** Format integer cents as a euro string, e.g. 145660 -> "1.456,60 €". */
 export function formatCents(cents: number, withSymbol = true): string {
   const negative = cents < 0

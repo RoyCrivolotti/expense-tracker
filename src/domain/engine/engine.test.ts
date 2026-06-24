@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Account, AccountStatement, Transaction } from '../types'
-import { formatCents, parseEuroToCents, parsePercentToFraction } from './money'
+import { formatCents, formatPercent, parseEuroToCents, parsePercentToFraction } from './money'
 import { budgetMonthFromName, defaultBudgetMonth, parseHumanDate } from './dates'
 import { fv, nper, pmt } from './finance'
 import { deriveStatus, deriveTransactions } from './status'
@@ -24,6 +24,10 @@ describe('money', () => {
   it('parses percentages to fractions', () => {
     expect(parsePercentToFraction('40,0%')).toBeCloseTo(0.4, 6)
     expect(parsePercentToFraction('9,2%')).toBeCloseTo(0.092, 6)
+  })
+  it('formats fractions as EU percentages', () => {
+    expect(formatPercent(0.05)).toBe('5,0%')
+    expect(formatPercent(0.092)).toBe('9,2%')
   })
 })
 
