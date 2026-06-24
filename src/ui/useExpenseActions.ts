@@ -10,6 +10,9 @@ import {
   patchAfterCashActual,
   patchAfterCategory,
   patchAfterGoals,
+  patchAfterScenarioCreate,
+  patchAfterScenarioDelete,
+  patchAfterScenarioUpdate,
   patchAfterSettings,
   patchAfterStatementPaid,
   patchAfterTransactionCreate,
@@ -82,6 +85,18 @@ export function useExpenseActions(
       updateGoals: async (patch) => {
         const goals = await source.updateGoals!(patch)
         applyPatch((d) => patchAfterGoals(d, goals))
+      },
+      createScenario: async (input) => {
+        const scenario = await source.createScenario!(input)
+        applyPatch((d) => patchAfterScenarioCreate(d, scenario))
+      },
+      updateScenario: async (id, patch) => {
+        const scenario = await source.updateScenario!(id, patch)
+        applyPatch((d) => patchAfterScenarioUpdate(d, scenario))
+      },
+      deleteScenario: async (id) => {
+        await source.deleteScenario!(id)
+        applyPatch((d) => patchAfterScenarioDelete(d, id))
       },
     }
   }, [source, applyPatch, openModal])

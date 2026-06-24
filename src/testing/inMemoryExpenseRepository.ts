@@ -1,4 +1,4 @@
-import type { NewAccount, NewCategory, NewTransaction } from '../domain/data/dataSource'
+import type { NewAccount, NewCategory, NewGoalScenario, NewTransaction } from '../domain/data/dataSource'
 import type { ExpenseRepository } from '../domain/ports/expenseRepository'
 import { deriveStatus, deriveTransactions } from '../domain/engine/status'
 import type {
@@ -9,6 +9,7 @@ import type {
   ExpenseDataset,
   ExpenseSettings,
   GoalInputs,
+  GoalScenario,
   StoredTransaction,
   Transaction,
 } from '../domain/types'
@@ -24,6 +25,7 @@ interface OwnerStore {
   cashActuals: CashActual[]
   settings: ExpenseSettings
   goalInputs: GoalInputs
+  goalScenarios: GoalScenario[]
 }
 
 const DEFAULT_SETTINGS: ExpenseSettings = {
@@ -70,6 +72,7 @@ function emptyStore(seed: ExpenseRepositorySeed = {}): OwnerStore {
     cashActuals: [...(seed.cashActuals ?? [])],
     settings: { ...DEFAULT_SETTINGS, ...seed.settings },
     goalInputs: { ...DEFAULT_GOALS, ...seed.goalInputs },
+    goalScenarios: [...(seed.goalScenarios ?? [])],
   }
 }
 
@@ -139,6 +142,7 @@ export function inMemoryExpenseRepository(
         cashActuals: [...store.cashActuals],
         settings: { ...store.settings },
         goalInputs: { ...store.goalInputs },
+        goalScenarios: [...store.goalScenarios],
       })
     },
 
@@ -284,6 +288,37 @@ export function inMemoryExpenseRepository(
       if (keys.length === 0) throw new RepoHttpError(400, 'Empty patch')
       store.goalInputs = { ...store.goalInputs, ...patch }
       return Promise.resolve({ ...store.goalInputs })
+    },
+
+    createScenario: (owner, input) => {
+      const store = storeFor(owner)
+      if (!input.name?.trim()) throw new RepoHttpError(400, 'Scenario name is required')
+      const scenario: GoalScenario = {
+        id: nextId(store.goalScenarios),
+        ...input,
+        name: input.name.trim(),
+      }
+      store.goalScenarios.push(scenario)
+      return Promise.resolve({ ...scenario })
+    },
+
+    updateScenario: (owner, id, patch) => {
+      const store = storeFor(owner)
+      const index = store.goalScenarios.findIndex((s) => s.id === id)
+      if (index < 0) throw new RepoHttpError(404, 'Scenario not found')
+      const keys = Object.keys(patch) as (keyof NewGoalScenario)[]
+      if (keys.length === 0) throw new RepoHttpError(400, 'Empty patch')
+      const updated = { ...store.goalScenarios[index]!, ...patch, id }
+      store.goalScenarios[index] = updated
+      return Promise.resolve({ ...updated })
+    },
+
+    deleteScenario: (owner, id) => {
+      const store = storeFor(owner)
+      const index = store.goalScenarios.findIndex((s) => s.id === id)
+      if (index < 0) throw new RepoHttpError(404, 'Scenario not found')
+      store.goalScenarios.splice(index, 1)
+      return Promise.resolve()
     },
   }
 }

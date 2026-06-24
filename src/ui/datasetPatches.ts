@@ -7,6 +7,7 @@ import type {
   ExpenseDataset,
   ExpenseSettings,
   GoalInputs,
+  GoalScenario,
   Transaction,
 } from '../types'
 
@@ -132,5 +133,35 @@ export function patchAfterSettings(
 export function patchAfterGoals(dataset: ExpenseDataset, goals: GoalInputs): ExpenseDataset {
   const d = cloneDataset(dataset)
   d.goalInputs = goals
+  return d
+}
+
+export function patchAfterScenarioCreate(
+  dataset: ExpenseDataset,
+  scenario: GoalScenario,
+): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  d.goalScenarios = [...d.goalScenarios, scenario].sort(
+    (a, b) => a.sortOrder - b.sortOrder || a.id - b.id,
+  )
+  return d
+}
+
+export function patchAfterScenarioUpdate(
+  dataset: ExpenseDataset,
+  scenario: GoalScenario,
+): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  upsertById(d.goalScenarios, scenario)
+  d.goalScenarios.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+  return d
+}
+
+export function patchAfterScenarioDelete(
+  dataset: ExpenseDataset,
+  id: number,
+): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  d.goalScenarios = d.goalScenarios.filter((s) => s.id !== id)
   return d
 }

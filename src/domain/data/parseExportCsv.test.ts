@@ -22,6 +22,7 @@ const DATASET: ExpenseDataset = {
     horizonYears: 0,
     expectedRealReturn: 0,
   },
+  goalScenarios: [],
   settings: {
     openingCashCents: 0,
     openingInvestmentCents: 0,

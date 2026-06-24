@@ -5,6 +5,7 @@ import type {
   Category,
   ExpenseSettings,
   GoalInputs,
+  GoalScenario,
   StoredTransaction,
   TxnType,
 } from '../domain/types'
@@ -131,5 +132,51 @@ export function toGoalInputs(r: GoalRow): GoalInputs {
     longTermTargetCents: r.long_term_target_cents,
     horizonYears: r.horizon_years,
     expectedRealReturn: r.expected_real_return,
+  }
+}
+
+export interface GoalScenarioRow {
+  id: number
+  name: string
+  color: string
+  sort_order: number
+  start_invested_cents: number
+  monthly_contribution_cents: number
+  annual_contribution_growth: number
+  expected_real_return: number
+  horizon_years: number
+  house_price_cents: number
+  down_payment_fraction: number
+  house_purchase_year: number | null
+  transaction_costs_cents: number
+  mortgage_term_years: number
+  mortgage_rate_annual: number
+  house_appreciation_rate: number
+  rent_monthly_cents: number
+  annual_spend_cents: number
+  safe_withdrawal_rate: number
+}
+
+export function toGoalScenario(r: GoalScenarioRow): GoalScenario {
+  return {
+    id: r.id,
+    name: r.name,
+    color: r.color,
+    sortOrder: r.sort_order,
+    startInvestedCents: r.start_invested_cents,
+    monthlyContributionCents: r.monthly_contribution_cents,
+    annualContributionGrowth: r.annual_contribution_growth,
+    expectedRealReturn: r.expected_real_return,
+    horizonYears: r.horizon_years,
+    housePriceCents: r.house_price_cents,
+    downPaymentFraction: r.down_payment_fraction,
+    housePurchaseYear: r.house_purchase_year,
+    transactionCostsCents: r.transaction_costs_cents,
+    mortgageTermYears: r.mortgage_term_years,
+    mortgageRateAnnual: r.mortgage_rate_annual,
+    houseAppreciationRate: r.house_appreciation_rate,
+    rentMonthlyCents: r.rent_monthly_cents,
+    annualSpendCents: r.annual_spend_cents,
+    safeWithdrawalRate: r.safe_withdrawal_rate,
   }
 }

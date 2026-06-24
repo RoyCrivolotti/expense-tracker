@@ -10,9 +10,10 @@ import type {
   ExpenseDataset,
   ExpenseSettings,
   GoalInputs,
+  GoalScenario,
   Transaction,
 } from '../types'
-import type { ExpenseDataSource, NewAccount, NewCategory, NewTransaction } from './dataSource'
+import type { ExpenseDataSource, NewAccount, NewCategory, NewGoalScenario, NewTransaction } from './dataSource'
 import { req } from './apiClient'
 
 const BASE = '/api/expenses'
@@ -95,4 +96,19 @@ export const apiDataSource: ExpenseDataSource = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(patch),
     }),
+  createScenario: (input: NewGoalScenario) =>
+    req<GoalScenario>(`${BASE}/scenarios`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    }),
+  updateScenario: (id: number, patch: Partial<NewGoalScenario>) =>
+    req<GoalScenario>(`${BASE}/scenarios/${id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(patch),
+    }),
+  deleteScenario: async (id: number) => {
+    await req(`${BASE}/scenarios/${id}`, { method: 'DELETE' })
+  },
 }

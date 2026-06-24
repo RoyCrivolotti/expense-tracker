@@ -1,5 +1,5 @@
 import type { ExpenseSettings, GoalInputs, Transaction, TxnType } from '../types'
-import type { NewAccount, NewCategory, NewTransaction } from '../data/dataSource'
+import type { NewAccount, NewCategory, NewGoalScenario, NewTransaction } from '../data/dataSource'
 
 /** Pre-filled fields passed to the add modal from a recurring suggestion. */
 export interface TransactionSeed {
@@ -34,6 +34,9 @@ export interface ExpenseActions {
   updateAccount: (id: number, patch: Partial<NewAccount>) => Promise<void>
   updateSettings: (patch: Partial<ExpenseSettings>) => Promise<void>
   updateGoals: (patch: Partial<GoalInputs>) => Promise<void>
+  createScenario: (input: NewGoalScenario) => Promise<void>
+  updateScenario: (id: number, patch: Partial<NewGoalScenario>) => Promise<void>
+  deleteScenario: (id: number) => Promise<void>
 }
 
 export type ExpenseModalState =

@@ -15,10 +15,13 @@ import { CardStatementsCard } from '../components/CardStatementsCard'
 import { TransactionList } from '../components/TransactionList'
 import styles from './tabs.module.css'
 
+import type { TabId } from '../nav/navItems'
+
 interface DashboardTabProps {
   model: ExpenseModel
   month: string
   actions?: ExpenseActions | undefined
+  onNavigate?: (tab: TabId) => void
 }
 
 type BudgetSort = 'size' | 'order' | 'overbudget'
@@ -83,7 +86,7 @@ function BudgetsSection({
   )
 }
 
-export function DashboardTab({ model, month, actions }: DashboardTabProps) {
+export function DashboardTab({ model, month, actions, onNavigate }: DashboardTabProps) {
   const { dataset, lookup } = model
   const [budgetSort, setBudgetSort] = useState<BudgetSort>('size')
 
@@ -126,7 +129,7 @@ export function DashboardTab({ model, month, actions }: DashboardTabProps) {
         onSort={setBudgetSort}
       />
 
-      <GoalsCard dataset={dataset} actions={actions} />
+      <GoalsCard dataset={dataset} actions={actions} onOpenGoals={() => onNavigate?.('goals')} />
 
       <SectionTitle>Recent activity</SectionTitle>
       <Card>

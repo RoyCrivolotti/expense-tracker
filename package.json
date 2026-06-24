@@ -21,10 +21,10 @@
     "setup:staging-domains": "node scripts/setup-staging-domains.mjs",
     "setup:access-apps": "node scripts/setup-access-apps.mjs",
     "setup:access-migrate": "node scripts/setup-access-migrate.mjs",
-    "setup:staging-redirects": "node scripts/setup-staging-redirects.mjs",
     "setup:access-preview": "node scripts/setup-access-preview.mjs",
     "migrate:dev": "node scripts/migrate-dev.mjs",
     "seed:dev": "node scripts/seed-dev.mjs",
+    "seed:scenarios": "npx tsx scripts/seed-scenarios.ts",
     "deploy:backup-cron": "node scripts/deploy-backup-cron.mjs",
     "bootstrap:allowed-users": "node scripts/bootstrap-allowed-users.mjs",
     "sync:access-env": "node scripts/sync-access-env.mjs",
@@ -36,7 +36,8 @@
   "dependencies": {
     "folio-shell": "^1.0.4",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react-dom": "^19.2.6",
+    "recharts": "^2.15.4"
   },
   "optionalDependencies": {
     "@rolldown/binding-darwin-arm64": "1.0.3",
