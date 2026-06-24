@@ -41,7 +41,8 @@ export function FireChart({ draft }: { draft: NewGoalScenario }) {
         {fiYear != null ? ` · reached year ${fiYear}` : ' · not reached in horizon'}.
         Post-FI portfolio with constant real withdrawal.
       </p>
-      <ResponsiveContainer width="100%" height={220}>
+      <div className={styles.chartWrap} style={{ height: 220 }}>
+        <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={GOAL_CHART_MARGIN}>
           <XAxis dataKey="year" tick={{ fontSize: 11 }} />
           <YAxis tickFormatter={formatEuroShort} tick={{ fontSize: 11 }} width={56} />
@@ -49,7 +50,8 @@ export function FireChart({ draft }: { draft: NewGoalScenario }) {
           <ReferenceLine y={fiTarget} stroke="#7c3aed" strokeDasharray="4 4" />
           <Line type="monotone" dataKey="balance" stroke="#8b5cf6" strokeWidth={2} dot={false} />
         </LineChart>
-      </ResponsiveContainer>
+        </ResponsiveContainer>
+      </div>
     </Card>
   )
 }

@@ -22,10 +22,7 @@ interface LineDef {
   points: { year: number; invested: number }[]
 }
 
-function buildLines(
-  saved: GoalScenario[],
-  draft: NewGoalScenario,
-): LineDef[] {
+function buildLines(saved: GoalScenario[], draft: NewGoalScenario): LineDef[] {
   const lines: LineDef[] = saved.map((s) => {
     const series = projectNetWorth(scenarioToParams(s))
     return {
@@ -59,49 +56,53 @@ function mergedChartData(lines: LineDef[]) {
 export function NetWorthChart({
   scenarios,
   draft,
+  variant = 'default',
 }: {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
+  variant?: 'default' | 'hero'
 }) {
   const lines = buildLines(scenarios, draft)
   const data = mergedChartData(lines)
+  const isHero = variant === 'hero'
+  const cardClass = isHero ? `${styles.chartCard} ${styles.heroChart}` : styles.chartCard
+  const height = isHero ? 'clamp(220px, 40dvh, 320px)' : 300
 
   return (
-    <Card className={styles.chartCard}>
+    <Card className={cardClass}>
       <h3 className={styles.chartTitle}>Invested portfolio projection</h3>
-      <p className={styles.chartHint}>
-        Compare saved scenarios plus your live edits. House purchase shows as a dip.
-      </p>
-      <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={data} margin={GOAL_CHART_MARGIN}>
-          <XAxis dataKey="year" tick={{ fontSize: 11 }} label={{ value: 'Years', fontSize: 11, dy: 8 }} />
-          <YAxis tickFormatter={formatEuroShort} tick={{ fontSize: 11 }} width={56} />
-          <Tooltip
-            formatter={(v: number) => formatEuroShort(v)}
-            contentStyle={chartTooltipStyle()}
-          />
-          {MILESTONE_CENTS.filter((m) => m <= 100_000_000).map((m) => (
-            <ReferenceLine
-              key={m}
-              y={m}
-              stroke="var(--color-border)"
-              strokeDasharray="4 4"
+      {!isHero ? (
+        <p className={styles.chartHint}>
+          Compare saved scenarios plus your live edits. House purchase shows as a dip.
+        </p>
+      ) : null}
+      <div className={styles.chartWrap} style={{ height }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={GOAL_CHART_MARGIN}>
+            <XAxis dataKey="year" tick={{ fontSize: 11 }} label={{ value: 'Years', fontSize: 11, dy: 8 }} />
+            <YAxis tickFormatter={formatEuroShort} tick={{ fontSize: 11 }} width={48} />
+            <Tooltip
+              formatter={(v: number) => formatEuroShort(v)}
+              contentStyle={chartTooltipStyle()}
             />
-          ))}
-          {lines.map((line) => (
-            <Line
-              key={line.id}
-              type="monotone"
-              dataKey={line.id}
-              name={line.name}
-              stroke={line.color}
-              strokeWidth={line.id === 'draft' ? 2.5 : 2}
-              strokeDasharray={line.id === 'draft' ? '6 4' : undefined}
-              dot={false}
-            />
-          ))}
-        </LineChart>
-      </ResponsiveContainer>
+            {MILESTONE_CENTS.filter((m) => m <= 100_000_000).map((m) => (
+              <ReferenceLine key={m} y={m} stroke="var(--color-border)" strokeDasharray="4 4" />
+            ))}
+            {lines.map((line) => (
+              <Line
+                key={line.id}
+                type="monotone"
+                dataKey={line.id}
+                name={line.name}
+                stroke={line.color}
+                strokeWidth={line.id === 'draft' ? 2.5 : 2}
+                strokeDasharray={line.id === 'draft' ? '6 4' : undefined}
+                dot={false}
+              />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </Card>
   )
 }

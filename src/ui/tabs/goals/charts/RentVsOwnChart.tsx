@@ -26,17 +26,19 @@ export function RentVsOwnChart({ draft }: { draft: NewGoalScenario }) {
       <p className={styles.chartHint}>
         Mortgage payment at purchase vs current rent assumption.
       </p>
-      <ResponsiveContainer width="100%" height={180}>
+      <div className={styles.chartWrap} style={{ height: 180 }}>
+        <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={GOAL_CHART_MARGIN}>
           <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-          <YAxis tickFormatter={(v: number) => formatCents(v)} tick={{ fontSize: 11 }} width={56} />
+          <YAxis tickFormatter={(v: number) => formatCents(v)} tick={{ fontSize: 11 }} width={48} />
           <Tooltip
             formatter={(v: number | string) => formatCents(Number(v))}
             contentStyle={chartTooltipStyle()}
           />
           <Bar dataKey="monthly" fill="var(--color-accent)" radius={[6, 6, 0, 0]} />
         </BarChart>
-      </ResponsiveContainer>
+        </ResponsiveContainer>
+      </div>
     </Card>
   )
 }

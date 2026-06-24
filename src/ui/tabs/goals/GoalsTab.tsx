@@ -8,12 +8,9 @@ import { Card, SectionTitle } from '../../components/primitives'
 import { GoalControls } from './GoalControls'
 import { ScenarioManager } from './ScenarioManager'
 import { GoalsNarrative } from './GoalsNarrative'
+import { SecondaryCharts } from './SecondaryCharts'
 import { draftFromDataset } from './goalsDefaults'
 import { NetWorthChart } from './charts/NetWorthChart'
-import { CompositionChart } from './charts/CompositionChart'
-import { MilestoneMatrix } from './charts/MilestoneMatrix'
-import { FireChart } from './charts/FireChart'
-import { RentVsOwnChart } from './charts/RentVsOwnChart'
 import styles from './goals.module.css'
 
 interface GoalsTabProps {
@@ -43,12 +40,17 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
   const [activeId, setActiveId] = useState<number | null>(null)
 
   const patchDraft = useCallback((patch: Partial<NewGoalScenario>) => {
+    setActiveId(null)
     setDraft((prev) => ({ ...prev, ...patch }))
   }, [])
 
   const onSelectScenario = useCallback((scenario: GoalScenario) => {
     setActiveId(scenario.id)
     setDraft(scenarioToDraft(scenario))
+  }, [])
+
+  const onSelectEditing = useCallback(() => {
+    setActiveId(null)
   }, [])
 
   const onSaveDraft = useCallback(() => {
@@ -62,27 +64,32 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
   return (
     <div className={styles.stack}>
       <SectionTitle>Goals</SectionTitle>
-      <GoalsNarrative draft={draft} />
-      <div className={styles.grid2}>
-        <div className={styles.panel}>
-          <Card>
-            <GoalControls draft={draft} onChange={patchDraft} />
-          </Card>
+      <div className={styles.layout}>
+        <div className={styles.chartsColumn}>
+          <div className={styles.heroBlock}>
+            <NetWorthChart
+              scenarios={dataset.goalScenarios}
+              draft={draft}
+              variant="hero"
+            />
+            <GoalsNarrative draft={draft} compact />
+          </div>
+          <SecondaryCharts scenarios={dataset.goalScenarios} draft={draft} />
+        </div>
+        <div className={styles.controlsColumn}>
           <ScenarioManager
             scenarios={dataset.goalScenarios}
             activeId={activeId}
+            editingName={draft.name}
             canWrite={actions != null}
             actions={actions}
             onSelect={onSelectScenario}
+            onSelectEditing={onSelectEditing}
             onSaveDraft={onSaveDraft}
           />
-        </div>
-        <div className={styles.panel}>
-          <NetWorthChart scenarios={dataset.goalScenarios} draft={draft} />
-          <CompositionChart draft={draft} />
-          <MilestoneMatrix scenarios={dataset.goalScenarios} draft={draft} />
-          <FireChart draft={draft} />
-          <RentVsOwnChart draft={draft} />
+          <Card>
+            <GoalControls draft={draft} onChange={patchDraft} />
+          </Card>
         </div>
       </div>
     </div>
