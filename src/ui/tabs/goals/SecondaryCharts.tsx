@@ -6,13 +6,15 @@ import { CompositionChart } from './charts/CompositionChart'
 import { MilestoneMatrix } from './charts/MilestoneMatrix'
 import { FireChart } from './charts/FireChart'
 import { RentVsOwnChart } from './charts/RentVsOwnChart'
+import { SavingsRateChart, type MonthlySaving } from './charts/SavingsRateChart'
 import styles from './goals.module.css'
 
 const VIEWS = [
   { value: 'composition', label: 'Composition' },
   { value: 'milestones', label: 'Milestones' },
   { value: 'fire', label: 'FIRE' },
-  { value: 'rent', label: 'Rent vs own' },
+  { value: 'rent', label: 'Rent vs buy' },
+  { value: 'savings', label: 'Saving' },
 ] as const
 
 type SecondaryView = (typeof VIEWS)[number]['value']
@@ -35,9 +37,10 @@ function useGoalsNarrow(): boolean {
 interface SecondaryChartsProps {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
+  monthly: MonthlySaving[]
 }
 
-export function SecondaryCharts({ scenarios, draft }: SecondaryChartsProps) {
+export function SecondaryCharts({ scenarios, draft, monthly }: SecondaryChartsProps) {
   const narrow = useGoalsNarrow()
   const [view, setView] = useState<SecondaryView>('composition')
 
@@ -48,6 +51,7 @@ export function SecondaryCharts({ scenarios, draft }: SecondaryChartsProps) {
         <MilestoneMatrix scenarios={scenarios} draft={draft} />
         <FireChart draft={draft} />
         <RentVsOwnChart draft={draft} />
+        <SavingsRateChart draft={draft} monthly={monthly} />
       </div>
     )
   }
@@ -65,6 +69,7 @@ export function SecondaryCharts({ scenarios, draft }: SecondaryChartsProps) {
       {view === 'milestones' ? <MilestoneMatrix scenarios={scenarios} draft={draft} /> : null}
       {view === 'fire' ? <FireChart draft={draft} /> : null}
       {view === 'rent' ? <RentVsOwnChart draft={draft} /> : null}
+      {view === 'savings' ? <SavingsRateChart draft={draft} monthly={monthly} /> : null}
     </div>
   )
 }

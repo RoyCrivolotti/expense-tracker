@@ -199,6 +199,137 @@
   color: var(--color-accent);
 }
 
+.chipGroup {
+  flex: none;
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.chipGroup.chipActive {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
+}
+
+.chipHidden {
+  opacity: 0.5;
+}
+
+.chipSelect {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.5rem 0.35rem 0.65rem;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.chipEye {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  border: none;
+  border-left: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.chipEye:hover {
+  color: var(--color-text);
+}
+
+.renameInput {
+  flex: 1;
+  min-width: 0;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.8125rem;
+}
+
+.saveRow {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.intro {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  margin: 0 0 0.5rem;
+  max-width: 70ch;
+}
+
+.glossary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin: 0;
+}
+
+.glossaryItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.glossaryTerm {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.glossaryBody {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.emptyState {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+  margin: 0.25rem 0 0.5rem;
+}
+
+.progressTrack {
+  height: 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 10%, transparent);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--exp-investment);
+  transition: width 0.2s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progressFill {
+    transition: none;
+  }
+}
+
 .scenarioToolbar {
   display: flex;
   align-items: center;

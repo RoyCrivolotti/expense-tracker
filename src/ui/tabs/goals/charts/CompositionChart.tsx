@@ -3,10 +3,17 @@ import type { NewGoalScenario } from '../../../../data/dataSource'
 import { projectNetWorth, scenarioToParams } from '../../../../engine'
 import { Card } from '../../../components/primitives'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
+import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
 import { sparseLabels } from '../../../charts/linearScale'
 import { formatEuroShort } from '../chartTheme'
 import styles from '../goals.module.css'
+
+const COMPOSITION_LEGEND: LegendItem[] = [
+  { label: 'Invested portfolio', color: 'var(--exp-investment)' },
+  { label: 'House equity', color: 'var(--exp-income)' },
+  { label: 'Mortgage owed', color: 'var(--exp-danger)' },
+]
 
 function CompositionChartImpl({ draft }: { draft: NewGoalScenario }) {
   const points = useMemo(
@@ -17,11 +24,21 @@ function CompositionChartImpl({ draft }: { draft: NewGoalScenario }) {
   const labels = useMemo(() => sparseLabels(years, 5), [years])
 
   const series: ChartSeries[] = [
-    { id: 'invested', color: '#6366f1', kind: 'area', values: points.map((p) => p.investedCents) },
-    { id: 'house', color: '#10b981', kind: 'area', values: points.map((p) => p.houseEquityCents) },
+    {
+      id: 'invested',
+      color: 'var(--exp-investment)',
+      kind: 'area',
+      values: points.map((p) => p.investedCents),
+    },
+    {
+      id: 'house',
+      color: 'var(--exp-income)',
+      kind: 'area',
+      values: points.map((p) => p.houseEquityCents),
+    },
     {
       id: 'mortgage',
-      color: '#ef4444',
+      color: 'var(--exp-danger)',
       kind: 'area',
       values: points.map((p) => -p.mortgageBalanceCents),
     },
@@ -53,6 +70,7 @@ function CompositionChartImpl({ draft }: { draft: NewGoalScenario }) {
         ariaLabel="Net worth composition by year"
         tooltip={tooltip}
       />
+      <ChartLegend items={COMPOSITION_LEGEND} />
     </Card>
   )
 }
