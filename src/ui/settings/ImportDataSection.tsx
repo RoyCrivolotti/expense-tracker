@@ -1,6 +1,11 @@
 import { useCallback, useRef, useState } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
+import {
+  buildImportCsvTemplate,
+  describeExportCsvColumns,
+  EXPORT_CSV_TYPES,
+} from '../../domain/data/exportCsvFormat'
 import { parseExportCsv, type ParseExportResult } from '../../domain/data/parseExportCsv'
 import { Money } from '../components/Money'
 import styles from '../definitions/definitions.module.css'
@@ -42,6 +47,16 @@ function PreviewTable({ result }: { result: ParseExportResult }) {
   )
 }
 
+function downloadTemplateCsv(): void {
+  const blob = new Blob([buildImportCsvTemplate()], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'expenses-import-template.csv'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export function ImportDataSection({ model, actions }: ImportDataSectionProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [result, setResult] = useState<ParseExportResult | null>(null)
@@ -69,8 +84,24 @@ export function ImportDataSection({ model, actions }: ImportDataSectionProps) {
     }
   }, [actions, result])
 
+  const types = EXPORT_CSV_TYPES.join(', ')
+
   return (
     <div className={importStyles.root}>
+      <p className={importStyles.guide}>
+        CSV must match the export format exactly. Columns: {describeExportCsvColumns()}.{' '}
+        <code>category</code> and <code>account</code> must match existing names.{' '}
+        <code>type</code> is one of {types}. <code>amount_cents</code> is integer cents (always
+        positive). Easiest path: export from Settings first, edit, then re-import.
+      </p>
+      <div className={importStyles.actions}>
+        <button type="button" className={styles.addBtn} onClick={() => inputRef.current?.click()}>
+          Choose CSV file
+        </button>
+        <button type="button" className={styles.addBtn} onClick={downloadTemplateCsv}>
+          Download template
+        </button>
+      </div>
       <input
         ref={inputRef}
         type="file"
@@ -82,9 +113,6 @@ export function ImportDataSection({ model, actions }: ImportDataSectionProps) {
           e.target.value = ''
         }}
       />
-      <button type="button" className={styles.addBtn} onClick={() => inputRef.current?.click()}>
-        Choose CSV file
-      </button>
       {result && (
         <>
           <p className={importStyles.summary}>

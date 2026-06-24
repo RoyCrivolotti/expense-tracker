@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { fullMonthLabel } from '../../engine/dates'
 import { isStatementPaid } from '../../engine/status'
 import type { ExpenseModel } from '../useExpenseData'
-import { Pill } from './primitives'
+import { StatementPaidToggle } from './StatementPaidToggle'
 import styles from './StatementToggles.module.css'
 
 interface Props {
@@ -43,7 +43,7 @@ export function StatementToggles({ model, onToggle }: Props) {
                   onClick={() => void toggle(account.id, m, !paid)}
                 >
                   {fullMonthLabel(m)}
-                  <Pill tone={paid ? 'success' : 'warning'}>{paid ? 'Paid' : 'Unpaid'}</Pill>
+                  <StatementPaidToggle paid={paid} />
                 </button>
               )
             })}

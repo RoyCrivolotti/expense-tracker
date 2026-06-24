@@ -117,7 +117,7 @@ export function DashboardTab({ model, month, actions }: DashboardTabProps) {
         <Kpi label="Invested" cents={totals?.investmentsCents ?? 0} type="investment" />
       </Card>
 
-      <CardStatementsCard dataset={dataset} month={month} />
+      <CardStatementsCard dataset={dataset} month={month} actions={actions} />
 
       <BudgetsSection
         budgets={budgets}
@@ -126,7 +126,7 @@ export function DashboardTab({ model, month, actions }: DashboardTabProps) {
         onSort={setBudgetSort}
       />
 
-      <GoalsCard dataset={dataset} />
+      <GoalsCard dataset={dataset} actions={actions} />
 
       <SectionTitle>Recent activity</SectionTitle>
       <Card>
