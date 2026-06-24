@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import type { GoalScenario } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import {
@@ -46,14 +47,14 @@ function buildRows(scenarios: GoalScenario[], draft: NewGoalScenario): Row[] {
   }))
 }
 
-export function MilestoneMatrix({
+function MilestoneMatrixImpl({
   scenarios,
   draft,
 }: {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
 }) {
-  const rows = buildRows(scenarios, draft)
+  const rows = useMemo(() => buildRows(scenarios, draft), [scenarios, draft])
 
   return (
     <Card className={styles.chartCard}>
@@ -100,3 +101,5 @@ export function MilestoneMatrix({
     </Card>
   )
 }
+
+export const MilestoneMatrix = memo(MilestoneMatrixImpl)

@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import {
   Bar,
   BarChart,
@@ -12,13 +13,14 @@ import { Card } from '../../../components/primitives'
 import { GOAL_CHART_MARGIN, chartTooltipStyle } from '../chartTheme'
 import styles from '../goals.module.css'
 
-export function RentVsOwnChart({ draft }: { draft: NewGoalScenario }) {
-  const params = scenarioToParams({ ...draft, id: 0 })
-  const mortgage = monthlyMortgageCents(params)
-  const data = [
-    { label: 'Rent', monthly: draft.rentMonthlyCents },
-    { label: 'Mortgage', monthly: mortgage },
-  ]
+function RentVsOwnChartImpl({ draft }: { draft: NewGoalScenario }) {
+  const data = useMemo(() => {
+    const mortgage = monthlyMortgageCents(scenarioToParams({ ...draft, id: 0 }))
+    return [
+      { label: 'Rent', monthly: draft.rentMonthlyCents },
+      { label: 'Mortgage', monthly: mortgage },
+    ]
+  }, [draft])
 
   return (
     <Card className={styles.chartCard}>
@@ -42,3 +44,5 @@ export function RentVsOwnChart({ draft }: { draft: NewGoalScenario }) {
     </Card>
   )
 }
+
+export const RentVsOwnChart = memo(RentVsOwnChartImpl)

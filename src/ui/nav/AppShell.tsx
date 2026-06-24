@@ -14,6 +14,8 @@ interface AppShellProps {
   onAdd?: () => void
   settingsBadge?: number
   hubGrants: GroupGrants
+  /** Trim the large bottom scroll padding (tabs without a month picker / long lists). */
+  compactFooter?: boolean
   children: ReactNode
 }
 
@@ -64,6 +66,7 @@ export function AppShell({
   onAdd,
   settingsBadge = 0,
   hubGrants,
+  compactFooter = false,
   children,
 }: AppShellProps) {
   return (
@@ -83,7 +86,9 @@ export function AppShell({
             <h1 className={styles.title}>{title}</h1>
             <div className={styles.headerRight}>{headerRight}</div>
           </header>
-          <main className={styles.content}>{children}</main>
+          <main className={`${styles.content} ${compactFooter ? styles.contentCompact : ''}`}>
+            {children}
+          </main>
         </div>
 
         {onAdd && (

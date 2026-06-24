@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import {
   Area,
   AreaChart,
@@ -12,14 +13,18 @@ import { Card } from '../../../components/primitives'
 import { GOAL_CHART_MARGIN, chartTooltipStyle, formatEuroShort } from '../chartTheme'
 import styles from '../goals.module.css'
 
-export function CompositionChart({ draft }: { draft: NewGoalScenario }) {
-  const data = projectNetWorth(scenarioToParams({ ...draft, id: 0 })).map((p) => ({
-    year: p.year,
-    invested: p.investedCents,
-    house: p.houseEquityCents,
-    mortgage: -p.mortgageBalanceCents,
-    netWorth: p.netWorthCents,
-  }))
+function CompositionChartImpl({ draft }: { draft: NewGoalScenario }) {
+  const data = useMemo(
+    () =>
+      projectNetWorth(scenarioToParams({ ...draft, id: 0 })).map((p) => ({
+        year: p.year,
+        invested: p.investedCents,
+        house: p.houseEquityCents,
+        mortgage: -p.mortgageBalanceCents,
+        netWorth: p.netWorthCents,
+      })),
+    [draft],
+  )
 
   return (
     <Card className={styles.chartCard}>
@@ -42,3 +47,5 @@ export function CompositionChart({ draft }: { draft: NewGoalScenario }) {
     </Card>
   )
 }
+
+export const CompositionChart = memo(CompositionChartImpl)

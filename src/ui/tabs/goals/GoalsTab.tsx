@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useDeferredValue, useMemo, useState } from 'react'
 import type { ExpenseModel } from '../../useExpenseData'
 import type { ExpenseActions } from '../../actions'
 import type { GoalScenario } from '../../../types'
@@ -38,6 +38,9 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
 
   const [draft, setDraft] = useState<NewGoalScenario>(initialDraft)
   const [activeId, setActiveId] = useState<number | null>(null)
+  // Controls read `draft` (instant); charts read the deferred copy so dragging a
+  // slider never blocks on the projection recompute (keeps the thumb at 60fps).
+  const deferredDraft = useDeferredValue(draft)
 
   const patchDraft = useCallback((patch: Partial<NewGoalScenario>) => {
     setActiveId(null)
@@ -69,12 +72,12 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
           <div className={styles.heroBlock}>
             <NetWorthChart
               scenarios={dataset.goalScenarios}
-              draft={draft}
+              draft={deferredDraft}
               variant="hero"
             />
-            <GoalsNarrative draft={draft} compact />
+            <GoalsNarrative draft={deferredDraft} compact />
           </div>
-          <SecondaryCharts scenarios={dataset.goalScenarios} draft={draft} />
+          <SecondaryCharts scenarios={dataset.goalScenarios} draft={deferredDraft} />
         </div>
         <div className={styles.controlsColumn}>
           <ScenarioManager

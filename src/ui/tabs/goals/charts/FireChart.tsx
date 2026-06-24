@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import {
   Line,
   LineChart,
@@ -19,19 +20,25 @@ import { Card } from '../../../components/primitives'
 import { GOAL_CHART_MARGIN, chartTooltipStyle, formatEuroShort } from '../chartTheme'
 import styles from '../goals.module.css'
 
-export function FireChart({ draft }: { draft: NewGoalScenario }) {
-  const params = scenarioToParams({ ...draft, id: 0 })
-  const fiTarget = fireNumber(draft.annualSpendCents, draft.safeWithdrawalRate)
-  const fiYear = yearsToFi(params, draft.annualSpendCents, draft.safeWithdrawalRate)
-  const growth = projectNetWorth(params)
-  const fiPortfolio = fiYear != null ? growth[fiYear]?.netWorthCents ?? fiTarget : fiTarget
-  const drawdown = projectDrawdown(
-    fiPortfolio,
-    draft.annualSpendCents,
-    draft.expectedRealReturn,
-    Math.min(30, draft.horizonYears),
-  )
-  const data = drawdown.map((bal, year) => ({ year, balance: bal }))
+function FireChartImpl({ draft }: { draft: NewGoalScenario }) {
+  const { fiTarget, fiYear, data } = useMemo(() => {
+    const params = scenarioToParams({ ...draft, id: 0 })
+    const target = fireNumber(draft.annualSpendCents, draft.safeWithdrawalRate)
+    const year = yearsToFi(params, draft.annualSpendCents, draft.safeWithdrawalRate)
+    const growth = projectNetWorth(params)
+    const fiPortfolio = year != null ? growth[year]?.netWorthCents ?? target : target
+    const drawdown = projectDrawdown(
+      fiPortfolio,
+      draft.annualSpendCents,
+      draft.expectedRealReturn,
+      Math.min(30, draft.horizonYears),
+    )
+    return {
+      fiTarget: target,
+      fiYear: year,
+      data: drawdown.map((bal, y) => ({ year: y, balance: bal })),
+    }
+  }, [draft])
 
   return (
     <Card className={styles.chartCard}>
@@ -55,3 +62,5 @@ export function FireChart({ draft }: { draft: NewGoalScenario }) {
     </Card>
   )
 }
+
+export const FireChart = memo(FireChartImpl)
