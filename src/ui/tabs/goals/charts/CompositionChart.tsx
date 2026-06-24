@@ -27,7 +27,8 @@ export function CompositionChart({ draft }: { draft: NewGoalScenario }) {
       <p className={styles.chartHint}>
         Invested portfolio + house equity − mortgage for the scenario you are editing.
       </p>
-      <ResponsiveContainer width="100%" height={260}>
+      <div className={styles.chartWrap} style={{ height: 260 }}>
+        <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={GOAL_CHART_MARGIN}>
           <XAxis dataKey="year" tick={{ fontSize: 11 }} />
           <YAxis tickFormatter={formatEuroShort} tick={{ fontSize: 11 }} width={56} />
@@ -36,7 +37,8 @@ export function CompositionChart({ draft }: { draft: NewGoalScenario }) {
           <Area type="monotone" dataKey="house" stackId="1" stroke="#10b981" fill="#10b981" fillOpacity={0.4} />
           <Area type="monotone" dataKey="mortgage" stackId="1" stroke="#ef4444" fill="#ef4444" fillOpacity={0.3} />
         </AreaChart>
-      </ResponsiveContainer>
+        </ResponsiveContainer>
+      </div>
     </Card>
   )
 }
