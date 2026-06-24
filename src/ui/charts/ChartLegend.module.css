@@ -9,6 +9,12 @@
   color: var(--color-text-muted);
 }
 
+.legendStack {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 0.3rem;
+}
+
 .item {
   display: inline-flex;
   align-items: center;

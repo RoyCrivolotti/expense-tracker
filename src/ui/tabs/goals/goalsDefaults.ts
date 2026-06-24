@@ -11,7 +11,7 @@ import {
   DEFAULT_RENT_MONTHLY_CENTS,
   DEFAULT_SWR,
   DEFAULT_TRANSACTION_COSTS_CENTS,
-  SCENARIO_COLORS,
+  pickScenarioColor,
 } from '../../../engine'
 
 export { duplicateScenario } from '../../../engine'
@@ -23,7 +23,7 @@ export function draftFromDataset(
   const { goalInputs, settings } = dataset
   return {
     name: 'Current plan',
-    color: SCENARIO_COLORS[0] ?? '#6366f1',
+    color: pickScenarioColor(dataset.goalScenarios.map((s) => s.color)),
     sortOrder: 0,
     startInvestedCents: settings.liquidNetWorthCents,
     monthlyContributionCents: avgMonthlySavingCents,

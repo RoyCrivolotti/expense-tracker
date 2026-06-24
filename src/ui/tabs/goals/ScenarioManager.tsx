@@ -54,20 +54,29 @@ function SaveControls({
 
   return (
     <>
-      {activeScenario && dirty ? (
+      {activeScenario ? (
         <div className={styles.editNotice}>
           <p className={styles.chartHint}>
-            Unsaved changes to <strong>{activeScenario.name}</strong>.
+            {dirty ? (
+              <>
+                Unsaved changes to <strong>{activeScenario.name}</strong>.
+              </>
+            ) : (
+              <>
+                Editing <strong>{activeScenario.name}</strong> — no unsaved changes.
+              </>
+            )}
           </p>
           <div className={styles.btnRow}>
             <button
               type="button"
               className={`${styles.btn} ${styles.btnPrimary}`}
+              disabled={!dirty}
               onClick={onSaveChanges}
             >
               Save changes
             </button>
-            <button type="button" className={styles.btn} onClick={onDiscard}>
+            <button type="button" className={styles.btn} disabled={!dirty} onClick={onDiscard}>
               Discard
             </button>
           </div>
@@ -130,6 +139,7 @@ export function ScenarioManager(props: ScenarioManagerProps) {
           key={activeScenario.id}
           scenario={activeScenario}
           scenarioCount={scenarios.length}
+          usedColors={scenarios.map((s) => s.color)}
           actions={actions}
         />
       ) : null}

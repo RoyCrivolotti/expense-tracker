@@ -18,14 +18,22 @@ interface RawLine {
   points: { year: number; investedCents: number }[]
 }
 
-function rawLines(saved: GoalScenario[], draft: NewGoalScenario): RawLine[] {
-  const lines: RawLine[] = saved.map((s) => ({
-    id: `saved-${s.id}`,
-    name: s.name,
-    color: s.color,
-    dashed: false,
-    points: projectNetWorth(scenarioToParams(s)),
-  }))
+function rawLines(
+  saved: GoalScenario[],
+  draft: NewGoalScenario,
+  activeId: number | null,
+): RawLine[] {
+  // The active scenario is represented by the live "(editing)" line, so drop its
+  // saved copy to avoid drawing the same plan twice.
+  const lines: RawLine[] = saved
+    .filter((s) => s.id !== activeId)
+    .map((s) => ({
+      id: `saved-${s.id}`,
+      name: s.name,
+      color: s.color,
+      dashed: false,
+      points: projectNetWorth(scenarioToParams(s)),
+    }))
   lines.push({
     id: 'draft',
     name: `${draft.name} (editing)`,
@@ -39,8 +47,9 @@ function rawLines(saved: GoalScenario[], draft: NewGoalScenario): RawLine[] {
 function buildSeries(
   saved: GoalScenario[],
   draft: NewGoalScenario,
+  activeId: number | null,
 ): { years: number[]; series: ChartSeries[]; names: string[] } {
-  const lines = rawLines(saved, draft)
+  const lines = rawLines(saved, draft, activeId)
   const yearSet = new Set<number>()
   lines.forEach((l) => l.points.forEach((p) => yearSet.add(p.year)))
   const years = [...yearSet].sort((a, b) => a - b)
@@ -60,15 +69,20 @@ function buildSeries(
 function NetWorthChartImpl({
   scenarios,
   draft,
+  activeId = null,
   variant = 'default',
   footer,
 }: {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
+  activeId?: number | null
   variant?: 'default' | 'hero'
   footer?: ReactNode
 }) {
-  const { years, series, names } = useMemo(() => buildSeries(scenarios, draft), [scenarios, draft])
+  const { years, series, names } = useMemo(
+    () => buildSeries(scenarios, draft, activeId),
+    [scenarios, draft, activeId],
+  )
   const refLines = useMemo(() => MILESTONE_CENTS.filter((m) => m <= 100_000_000), [])
   const labels = useMemo(() => sparseLabels(years, 5), [years])
   const legend: LegendItem[] = series.map((s, idx) => ({
@@ -103,7 +117,7 @@ function NetWorthChartImpl({
         ariaLabel="Invested portfolio projection by year"
         tooltip={tooltip}
       />
-      <ChartLegend items={legend} />
+      <ChartLegend items={legend} variant="stack" />
       {footer != null ? <div className={styles.chartFooter}>{footer}</div> : null}
     </Card>
   )

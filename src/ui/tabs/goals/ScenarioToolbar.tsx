@@ -7,6 +7,7 @@ import styles from './goals.module.css'
 interface ScenarioToolbarProps {
   scenario: GoalScenario
   scenarioCount: number
+  usedColors: readonly string[]
   actions: ExpenseActions
 }
 
@@ -15,7 +16,12 @@ interface ScenarioToolbarProps {
  * editor. Mounted with a `key` of the scenario id so the rename field resets
  * cleanly when a different scenario is selected.
  */
-export function ScenarioToolbar({ scenario, scenarioCount, actions }: ScenarioToolbarProps) {
+export function ScenarioToolbar({
+  scenario,
+  scenarioCount,
+  usedColors,
+  actions,
+}: ScenarioToolbarProps) {
   const [name, setName] = useState(scenario.name)
 
   const commitName = () => {
@@ -40,7 +46,9 @@ export function ScenarioToolbar({ scenario, scenarioCount, actions }: ScenarioTo
         <button
           type="button"
           className={styles.btn}
-          onClick={() => void actions.createScenario(duplicateScenario(scenario, scenarioCount))}
+          onClick={() =>
+            void actions.createScenario(duplicateScenario(scenario, scenarioCount, usedColors))
+          }
         >
           Duplicate
         </button>

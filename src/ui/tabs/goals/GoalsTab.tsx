@@ -3,7 +3,7 @@ import type { ExpenseModel } from '../../useExpenseData'
 import type { ExpenseActions } from '../../actions'
 import type { GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
-import { averageMonthlySaving, computeMonthlyTotals } from '../../../engine'
+import { averageMonthlySaving, computeMonthlyTotals, pickScenarioColor } from '../../../engine'
 import { Card, SectionTitle } from '../../components/primitives'
 import { GoalControls } from './GoalControls'
 import { ScenarioManager } from './ScenarioManager'
@@ -112,9 +112,14 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
   const onSaveDraft = useCallback(
     (name: string) => {
       if (!actions) return
-      void actions.createScenario({ ...draft, name, sortOrder: dataset.goalScenarios.length })
+      void actions.createScenario({
+        ...draft,
+        name,
+        color: pickScenarioColor(dataset.goalScenarios.map((s) => s.color)),
+        sortOrder: dataset.goalScenarios.length,
+      })
     },
-    [actions, draft, dataset.goalScenarios.length],
+    [actions, draft, dataset.goalScenarios],
   )
 
   const visibleScenarios = useMemo(
@@ -132,23 +137,10 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
       </p>
       <GoalsExplainer />
       <div className={styles.layout}>
-        <div className={styles.chartsColumn}>
+        <div className={styles.areaNow}>
           <NetWorthNowCard draft={deferredDraft} />
-          <div className={styles.heroBlock}>
-            <NetWorthChart
-              scenarios={visibleScenarios}
-              draft={deferredDraft}
-              variant="hero"
-              footer={<GoalsNarrative draft={deferredDraft} compact />}
-            />
-          </div>
-          <SecondaryCharts
-            scenarios={dataset.goalScenarios}
-            draft={deferredDraft}
-            monthly={monthly}
-          />
         </div>
-        <div className={styles.controlsColumn}>
+        <div className={styles.areaScenarios}>
           <ScenarioManager
             scenarios={dataset.goalScenarios}
             activeId={activeId}
@@ -164,9 +156,27 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
             onSaveChanges={onSaveChanges}
             onDiscard={onDiscard}
           />
+        </div>
+        <div className={`${styles.heroBlock} ${styles.areaHero}`}>
+          <NetWorthChart
+            scenarios={visibleScenarios}
+            draft={deferredDraft}
+            activeId={activeId}
+            variant="hero"
+            footer={<GoalsNarrative draft={deferredDraft} compact />}
+          />
+        </div>
+        <div className={styles.areaControls}>
           <Card>
             <GoalControls draft={draft} onChange={patchDraft} />
           </Card>
+        </div>
+        <div className={styles.areaSecondary}>
+          <SecondaryCharts
+            scenarios={dataset.goalScenarios}
+            draft={deferredDraft}
+            monthly={monthly}
+          />
         </div>
       </div>
     </div>
