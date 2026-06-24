@@ -17,6 +17,24 @@
     "dev.oncall-tracker-20h.pages.dev"
   ],
   "publicStagingHostnames": ["stg.crivolotti.com"],
+  "legacyRedirects": [
+    {
+      "hostname": "roy-private.pages.dev",
+      "target": "https://stg-admin.crivolotti.com"
+    },
+    {
+      "hostname": "dev.expense-tracker-3hq.pages.dev",
+      "target": "https://stg-expenses.crivolotti.com"
+    },
+    {
+      "hostname": "dev.oncall-tracker-20h.pages.dev",
+      "target": "https://stg-oncall.crivolotti.com"
+    },
+    {
+      "hostname": "roy-dev.pages.dev",
+      "target": "https://stg.crivolotti.com"
+    }
+  ],
   "pagesProjects": {
     "admin": {
       "project": "roy-private",

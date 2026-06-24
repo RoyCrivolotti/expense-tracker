@@ -55,6 +55,16 @@ CLOUDFLARE_API_TOKEN=… npm run setup:access-migrate   # remove legacy pages.de
 
 Token needs **Zero Trust → Access → Edit**. Wrangler OAuth alone cannot do this.
 
+### 3.5 Legacy pages.dev redirects
+
+After Access migration, route old staging `*.pages.dev` URLs to custom domains via account Bulk Redirects:
+
+```bash
+CLOUDFLARE_API_TOKEN=… npm run setup:staging-redirects
+```
+
+Token needs **Account Filter Lists Edit** + **Bulk URL Redirects Edit**. Registry: `legacyRedirects` in `config/staging-access.json`.
+
 ### 4. Deploy staging builds
 
 ```bash
@@ -86,6 +96,7 @@ Settings → Import includes a **Download template** with the header and one exa
 | `scripts/setup-staging-domains.mjs` | `setup:staging-domains` | Register custom domains; print DreamHost CNAMEs |
 | `scripts/setup-access-apps.mjs` | `setup:access-apps` | Sync prod + staging Access apps |
 | `scripts/setup-access-migrate.mjs` | `setup:access-migrate` | Strip staging hostnames from `roy-admin` |
+| `scripts/setup-staging-redirects.mjs` | `setup:staging-redirects` | Bulk Redirects: legacy pages.dev → stg custom domains |
 | `scripts/setup-dev-bindings.mjs` | `setup:dev-bindings` | Re-apply D1 bindings on `roy-expenses-stg` |
 | `scripts/seed-dev.mjs` | `seed:dev` | Prod D1 export → dev (`.tmp/` gitignored) |
 | `scripts/migrate-dev.mjs` | `migrate:dev` | Apply new migrations to dev (post-seed only) |
