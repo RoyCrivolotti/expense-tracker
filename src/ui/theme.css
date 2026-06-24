@@ -95,3 +95,21 @@ body {
   max-width: 100%;
   min-width: 0;
 }
+
+/* Shared tactile press feedback for buttons/controls. Native apps give a
+   subtle scale on touch-down; web buttons usually only have :hover, which
+   does nothing on touch. Apply alongside a component's own class. */
+.tapActive {
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease;
+}
+.tapActive:active {
+  transform: scale(0.97);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tapActive,
+  .tapActive:active {
+    transition: none;
+    transform: none;
+  }
+}

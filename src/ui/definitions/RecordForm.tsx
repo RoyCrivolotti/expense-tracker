@@ -102,7 +102,7 @@ export function RecordForm({ fields, initial, submitLabel, onSubmit, onClose }: 
       ))}
       {err && <p className={formStyles.error}>{err}</p>}
       <div className={formStyles.actions}>
-        <button type="submit" className={formStyles.save} disabled={busy}>
+        <button type="submit" className={`${formStyles.save} tapActive`} disabled={busy}>
           {busy ? 'Saving…' : submitLabel}
         </button>
       </div>

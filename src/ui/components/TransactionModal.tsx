@@ -2,6 +2,7 @@ import type { Transaction } from '../../types'
 import type { NewTransaction } from '../../data/dataSource'
 import type { ExpenseActions, TransactionSeed } from '../actions'
 import type { ExpenseModel } from '../useExpenseData'
+import { useToast } from '../hooks/useToast'
 import { Modal } from './Modal'
 import { TransactionForm } from './TransactionForm'
 
@@ -14,9 +15,21 @@ interface Props {
 }
 
 export function TransactionModal({ model, actions, editing, seed, onClose }: Props) {
+  const { showToast } = useToast()
+
   const submit = async (input: NewTransaction, id?: number) => {
-    if (id != null) await actions.updateTransaction(id, input)
-    else await actions.createTransaction(input)
+    if (id != null) {
+      await actions.updateTransaction(id, input)
+      showToast('Transaction updated', 'success')
+    } else {
+      await actions.createTransaction(input)
+      showToast('Transaction added', 'success')
+    }
+  }
+
+  const remove = async (id: number) => {
+    await actions.deleteTransaction(id)
+    showToast('Transaction deleted', 'success')
   }
 
   return (
@@ -26,7 +39,7 @@ export function TransactionModal({ model, actions, editing, seed, onClose }: Pro
         editing={editing}
         seed={seed}
         onSubmit={submit}
-        onDelete={actions.deleteTransaction}
+        onDelete={remove}
         onClose={onClose}
       />
     </Modal>

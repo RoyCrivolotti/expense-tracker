@@ -137,6 +137,13 @@
   pointer-events: none;
 }
 
+.refLine {
+  stroke: color-mix(in srgb, var(--color-text) 45%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  pointer-events: none;
+}
+
 .dotIncome {
   fill: var(--exp-success);
   stroke: var(--color-bg);

@@ -5,6 +5,7 @@ import {
   type PendingAccessRequest,
 } from '../../data/accessApi'
 import { Card, Pill } from '../components/primitives'
+import { useToast } from '../hooks/useToast'
 import { formatDateTime, formatRelativeTime } from './formatRelativeTime'
 import styles from './AccessScreen.module.css'
 
@@ -15,9 +16,8 @@ export function PendingRequestsSection({
   requests: PendingAccessRequest[]
   onChange: (next: PendingAccessRequest[]) => void
 }) {
+  const { showToast } = useToast()
   const [busyId, setBusyId] = useState<string | null>(null)
-  const [toast, setToast] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
 
   async function handle(
     requestId: string,
@@ -25,14 +25,13 @@ export function PendingRequestsSection({
     email: string,
   ) {
     setBusyId(requestId)
-    setError(null)
     try {
       if (action === 'approve') await approveAccessRequest(requestId)
       else await rejectAccessRequest(requestId)
       onChange(requests.filter((row) => row.id !== requestId))
-      setToast(action === 'approve' ? `Approved ${email}` : `Rejected ${email}`)
+      showToast(action === 'approve' ? `Approved ${email}` : `Rejected ${email}`, 'success')
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      showToast(err instanceof Error ? err.message : String(err), 'error')
     } finally {
       setBusyId(null)
     }
@@ -44,7 +43,6 @@ export function PendingRequestsSection({
 
   return (
     <>
-      {toast ? <p className={styles.toast}>{toast}</p> : null}
       <ul className={styles.requestList}>
         {requests.map((row) => (
           <li key={row.id}>
@@ -78,7 +76,6 @@ export function PendingRequestsSection({
           </li>
         ))}
       </ul>
-      {error ? <p className={styles.error}>{error}</p> : null}
     </>
   )
 }

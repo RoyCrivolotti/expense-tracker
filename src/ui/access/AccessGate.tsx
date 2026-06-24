@@ -3,6 +3,7 @@ import type { ExpenseDataSource } from '../../data/dataSource'
 import { fetchAccessStatus, type AccessStatusResponse } from '../../data/accessApi'
 import { OwnerAccessAdminScreen } from './OwnerAccessAdminScreen'
 import { AllowedAccessView, DeniedAccessView } from './AccessGateViews'
+import { AppLoadingSkeleton } from '../components/AppLoadingSkeleton'
 import styles from '../ExpensesApp.module.css'
 
 function isAdminPath(): boolean {
@@ -30,7 +31,7 @@ export function AccessGate({ source }: { source: ExpenseDataSource }) {
 
   if (isAdminPath()) return <OwnerAccessAdminScreen />
   if (error) return <div className={styles.center}>Couldn&apos;t check access: {error}</div>
-  if (!access) return <div className={styles.center}>Loading…</div>
+  if (!access) return <AppLoadingSkeleton label="Checking access" />
   if (access.status === 'allowed') return <AllowedAccessView access={access} source={source} />
   return <DeniedAccessView access={access} />
 }

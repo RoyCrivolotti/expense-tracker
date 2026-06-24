@@ -31,7 +31,9 @@ export function SegmentedControl<T extends string>({
           type="button"
           role="radio"
           aria-checked={opt.value === value}
-          className={opt.value === value ? `${styles.seg} ${styles.active}` : styles.seg}
+          className={
+            opt.value === value ? `${styles.seg} tapActive ${styles.active}` : `${styles.seg} tapActive`
+          }
           onClick={() => onChange(opt.value)}
         >
           {opt.label}

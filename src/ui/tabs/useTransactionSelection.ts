@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import type { ExpenseActions } from '../actions'
 import { confirmDeleteMany } from '../components/confirmDelete'
+import { useToast } from '../hooks/useToast'
 import { toggleDateSelection } from './selectionUtils'
 
 export function useTransactionSelection(actions?: ExpenseActions) {
+  const { showToast } = useToast()
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(() => new Set())
   const [busy, setBusy] = useState(false)
@@ -33,10 +35,14 @@ export function useTransactionSelection(actions?: ExpenseActions) {
 
   const deleteSelected = async () => {
     if (!actions || selected.size === 0 || !confirmDeleteMany(selected.size)) return
+    const count = selected.size
     setBusy(true)
     try {
       await actions.deleteTransactions([...selected])
       exitSelect()
+      showToast(`Deleted ${count} transaction${count === 1 ? '' : 's'}`, 'success')
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not delete', 'error')
     } finally {
       setBusy(false)
     }

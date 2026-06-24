@@ -4,6 +4,7 @@ import { StagingFrame } from 'folio-shell'
 import 'folio-shell/theme/tokens.css'
 import './ui/theme.css'
 import { initExpenseTheme } from './ui/hooks/expenseThemeInit'
+import { ToastProvider } from './ui/hooks/ToastProvider'
 import { resolveSource } from './data/resolveSource'
 import { ExpensesApp } from './ui/ExpensesApp'
 import { AccessGate } from './ui/access/AccessGate'
@@ -20,7 +21,9 @@ initExpenseTheme()
 function renderApp(node: ReactNode) {
   root.render(
     <StrictMode>
-      <StagingFrame productionUrl={stagingProductionUrl}>{node}</StagingFrame>
+      <StagingFrame productionUrl={stagingProductionUrl}>
+        <ToastProvider>{node}</ToastProvider>
+      </StagingFrame>
     </StrictMode>,
   )
 }
