@@ -62,6 +62,17 @@ async function waitForAccessAdmin(page) {
   await page.waitForSelector('text=Financial documents', { timeout: 15000 })
 }
 
+async function waitForDashboard(page) {
+  await page.waitForSelector('text=Recent activity', { timeout: 15000 })
+  // Tab panes fade in over 120ms; shooting on selector match alone captures a greyed frame.
+  await page.waitForFunction(() => {
+    const pane = document.querySelector('[class*="tabPane"]')
+    if (!pane) return true
+    return parseFloat(getComputedStyle(pane).opacity) > 0.95
+  })
+  await page.waitForTimeout(150)
+}
+
 async function goToTransactions(page) {
   await page.getByRole('button', { name: 'Transactions' }).click()
   await page.waitForSelector('input[placeholder*="Search description"]', { timeout: 15000 })
@@ -184,22 +195,25 @@ async function capture() {
   const desktopDark = await browser.newContext({
     viewport: { width: 1280, height: 800 },
     colorScheme: 'dark',
+    reducedMotion: 'reduce',
   })
   const mobileDark = await browser.newContext({
     viewport: { width: 390, height: 844 },
     isMobile: true,
     hasTouch: true,
     colorScheme: 'dark',
+    reducedMotion: 'reduce',
   })
   const desktopLight = await browser.newContext({
     viewport: { width: 1280, height: 800 },
     colorScheme: 'light',
+    reducedMotion: 'reduce',
   })
 
   const d = await desktopDark.newPage()
   await applyTheme(d, 'dark')
   await d.goto(`${BASE}/`)
-  await d.waitForSelector('text=Recent activity', { timeout: 15000 })
+  await waitForDashboard(d)
   await d.screenshot({ path: join(OUT, 'dashboard-desktop.png') })
 
   await captureTransactionsDefault(d, 'transactions-desktop.png')
@@ -223,7 +237,7 @@ async function capture() {
   const light = await desktopLight.newPage()
   await applyTheme(light, 'light')
   await light.goto(`${BASE}/`)
-  await light.waitForSelector('text=Recent activity', { timeout: 15000 })
+  await waitForDashboard(light)
   await light.screenshot({ path: join(OUT, 'dashboard-desktop-light.png') })
 
   const m = await mobileDark.newPage()
@@ -231,7 +245,7 @@ async function capture() {
   await captureTransactionsMobile(m)
 
   await m.goto(`${BASE}/`)
-  await m.waitForSelector('text=Recent activity', { timeout: 15000 })
+  await waitForDashboard(m)
   await m.screenshot({ path: join(OUT, 'dashboard-mobile.png') })
 
   await m.getByRole('button', { name: 'Analytics' }).click()
