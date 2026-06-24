@@ -16,6 +16,8 @@ interface AppShellProps {
   hubGrants: GroupGrants
   /** Trim the large bottom scroll padding (tabs without a month picker / long lists). */
   compactFooter?: boolean
+  /** Widen the content column on Goals desktop so chart tables fit without scrolling. */
+  goalsWide?: boolean
   children: ReactNode
 }
 
@@ -67,6 +69,7 @@ export function AppShell({
   settingsBadge = 0,
   hubGrants,
   compactFooter = false,
+  goalsWide = false,
   children,
 }: AppShellProps) {
   return (
@@ -86,7 +89,9 @@ export function AppShell({
             <h1 className={styles.title}>{title}</h1>
             <div className={styles.headerRight}>{headerRight}</div>
           </header>
-          <main className={`${styles.content} ${compactFooter ? styles.contentCompact : ''}`}>
+          <main
+            className={`${styles.content} ${compactFooter ? styles.contentCompact : ''} ${goalsWide ? styles.contentGoals : ''}`}
+          >
             {children}
           </main>
         </div>

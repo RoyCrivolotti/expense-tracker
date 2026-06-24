@@ -24,15 +24,13 @@
 }
 
 /*
- * Mobile: single column in DOM order — Where you are today, Scenarios,
- * projection, controls, detailed charts. Desktop: inputs (scenarios +
- * controls) on a sticky left column, outputs (snapshot, projection, detail)
- * on the right, via grid areas so one DOM order serves both.
+ * Mobile: Where you are today → Scenarios → projection → detailed charts →
+ * controls (sliders last). Desktop: sticky inputs left, outputs right via grid.
  */
 @media (min-width: 900px) {
   .layout {
     display: grid;
-    grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+    grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
     grid-template-areas:
       'scenarios now'
       'controls hero'
@@ -646,6 +644,39 @@
   .tabScroller::after {
     transition: none;
   }
+}
+
+.milestoneScroll {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.milestoneTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  table-layout: fixed;
+}
+
+.milestoneScenarioHead,
+.milestoneScenarioCell {
+  text-align: left;
+  padding: 0.3rem 0.35rem 0.3rem 0;
+  width: 5.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.milestoneHead,
+.milestoneCell {
+  padding: 0.3rem 0.15rem;
+  text-align: center;
+}
+
+.milestoneCell {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .secondaryStack {

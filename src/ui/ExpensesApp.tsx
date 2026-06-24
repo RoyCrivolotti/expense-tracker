@@ -178,6 +178,7 @@ function ExpensesAppLoaded({
         settingsBadge={settingsBadge}
         hubGrants={hubGrants}
         compactFooter={COMPACT_FOOTER_TABS.has(tab)}
+        goalsWide={tab === 'goals'}
         {...(actions ? { onAdd: actions.onAdd } : {})}
         {...(showPicker
           ? {

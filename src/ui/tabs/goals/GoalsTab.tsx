@@ -167,17 +167,17 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
             footer={<GoalsNarrative draft={deferredDraft} compact />}
           />
         </div>
-        <div className={styles.areaControls}>
-          <Card>
-            <GoalControls draft={draft} onChange={patchDraft} />
-          </Card>
-        </div>
         <div className={styles.areaSecondary}>
           <SecondaryCharts
             scenarios={dataset.goalScenarios}
             draft={deferredDraft}
             monthly={monthly}
           />
+        </div>
+        <div className={styles.areaControls}>
+          <Card>
+            <GoalControls draft={draft} onChange={patchDraft} />
+          </Card>
         </div>
       </div>
     </div>

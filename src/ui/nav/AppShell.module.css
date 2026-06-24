@@ -121,6 +121,33 @@
   padding-bottom: calc(var(--exp-bottom-bar) + env(safe-area-inset-bottom, 0px) + 1.5rem);
 }
 
+/*
+ * Goals desktop: reclaim 30% of the side blank space (from centering at --exp-max)
+ * and give it all to the chart column. Left pane stays the same width but sits
+ * further left; the right panel grows by the full reclaimed amount.
+ */
+@media (min-width: 900px) {
+  .contentGoals {
+    --goals-rail: var(--exp-rail-collapsed);
+    --goals-content-pad: 2rem;
+    --goals-blank-each: max(
+      0px,
+      (100vw - var(--goals-rail) - var(--goals-content-pad) - var(--exp-max)) / 2
+    );
+    --goals-reclaim-side: calc(var(--goals-blank-each) * 0.3);
+    --goals-reclaim-total: calc(var(--goals-reclaim-side) * 2);
+    max-width: calc(var(--exp-max) + var(--goals-reclaim-total));
+    margin-left: calc(1rem - var(--goals-reclaim-side));
+    margin-right: calc(1rem - var(--goals-reclaim-side));
+  }
+}
+
+@media (min-width: 1024px) {
+  .contentGoals {
+    --goals-rail: var(--exp-rail);
+  }
+}
+
 .header {
   position: sticky;
   top: 0;
