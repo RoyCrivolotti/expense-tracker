@@ -122,14 +122,59 @@ async function captureTransactionsMobile(m) {
   await m.screenshot({ path: join(OUT, 'transactions-mobile-past.png') })
 }
 
-async function captureGoals(page, filename) {
+async function goToGoals(page) {
   await page.goto(`${BASE}/`)
   await page.waitForSelector('text=Recent activity', { timeout: 15000 })
   await page.getByRole('button', { name: 'Goals' }).click()
   await page.waitForSelector('text=Invested portfolio projection', { timeout: 15000 })
-  await page.waitForSelector('text=Comparison lines', { timeout: 15000 })
+  await page.waitForSelector('text=Scenarios', { timeout: 15000 })
+  await page.getByRole('button', { name: 'Path A', exact: true }).waitFor({ timeout: 15000 })
   await page.waitForTimeout(500)
-  await page.screenshot({ path: join(OUT, filename) })
+}
+
+async function captureGoalsDesktop(page) {
+  await goToGoals(page)
+  await page.screenshot({ path: join(OUT, 'goals-desktop.png') })
+
+  await page.getByText('What do these terms mean?').click()
+  await page.waitForTimeout(250)
+  await page.screenshot({ path: join(OUT, 'goals-desktop-explainer.png') })
+  await page.getByText('What do these terms mean?').click()
+
+  await page.locator('text=Net worth composition').scrollIntoViewIfNeeded()
+  await page.waitForTimeout(350)
+  await page.screenshot({ path: join(OUT, 'goals-desktop-charts.png') })
+
+  await goToGoals(page)
+  await page.screenshot({ path: join(OUT, 'goals-desktop-full.png'), fullPage: true })
+}
+
+const GOALS_MOBILE_VIEWS = [
+  { label: 'Composition', file: 'composition' },
+  { label: 'Milestones', file: 'milestones' },
+  { label: 'FIRE', file: 'fire' },
+  { label: 'Rent vs buy', file: 'rent' },
+  { label: 'Saving', file: 'savings' },
+]
+
+async function captureGoalsMobile(page) {
+  await goToGoals(page)
+  await page.screenshot({ path: join(OUT, 'goals-mobile.png') })
+
+  await page.getByText('What do these terms mean?').click()
+  await page.waitForTimeout(250)
+  await page.screenshot({ path: join(OUT, 'goals-mobile-explainer.png') })
+  await page.getByText('What do these terms mean?').click()
+
+  await page.getByRole('button', { name: 'Path B', exact: true }).scrollIntoViewIfNeeded()
+  await page.waitForTimeout(350)
+  await page.screenshot({ path: join(OUT, 'goals-mobile-scenarios.png') })
+
+  for (const view of GOALS_MOBILE_VIEWS) {
+    await page.getByRole('radio', { name: view.label }).click()
+    await page.waitForTimeout(450)
+    await page.screenshot({ path: join(OUT, `goals-mobile-${view.file}.png`) })
+  }
 }
 
 async function capture() {
@@ -164,7 +209,7 @@ async function capture() {
   await d.waitForTimeout(400)
   await d.screenshot({ path: join(OUT, 'analytics-desktop.png') })
 
-  await captureGoals(d, 'goals-desktop.png')
+  await captureGoalsDesktop(d)
 
   await d.getByRole('button', { name: 'Settings' }).click()
   await d.waitForSelector('text=Manage access', { timeout: 15000 })
@@ -194,7 +239,7 @@ async function capture() {
   await m.waitForTimeout(300)
   await m.screenshot({ path: join(OUT, 'analytics-mobile.png') })
 
-  await captureGoals(m, 'goals-mobile.png')
+  await captureGoalsMobile(m)
 
   await m.getByRole('button', { name: 'Settings' }).click()
   await m.waitForSelector('text=Manage access', { timeout: 15000 })

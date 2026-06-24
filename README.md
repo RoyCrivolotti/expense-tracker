@@ -41,6 +41,34 @@ Fixture data (`fixtures/demo-expenses.csv`). Access admin and Transactions **Upc
 | --- | --- |
 | ![Goals desktop](./docs/screenshots/goals-desktop.png) | ![Goals mobile](./docs/screenshots/goals-mobile.png) |
 
+**Goals** (multi-scenario wealth planner): three saved paths plus an unsaved draft, FI progress, FIRE drawdown, rent-vs-buy net worth, and actual saving vs plan. Desktop secondary charts grid; mobile uses a segmented chart picker.
+
+| Desktop hero (3-path compare) | Full page |
+| --- | --- |
+| ![Goals desktop hero](./docs/screenshots/goals-desktop.png) | ![Goals desktop full](./docs/screenshots/goals-desktop-full.png) |
+
+| Glossary (desktop) | Secondary charts (desktop) |
+| --- | --- |
+| ![Goals explainer desktop](./docs/screenshots/goals-desktop-explainer.png) | ![Goals charts desktop](./docs/screenshots/goals-desktop-charts.png) |
+
+| Mobile scenarios | Mobile glossary |
+| --- | --- |
+| ![Goals scenarios mobile](./docs/screenshots/goals-mobile-scenarios.png) | ![Goals explainer mobile](./docs/screenshots/goals-mobile-explainer.png) |
+
+| Composition | FIRE drawdown |
+| --- | --- |
+| ![Goals composition mobile](./docs/screenshots/goals-mobile-composition.png) | ![Goals FIRE mobile](./docs/screenshots/goals-mobile-fire.png) |
+
+| Rent vs buy | Actual saving vs plan |
+| --- | --- |
+| ![Goals rent mobile](./docs/screenshots/goals-mobile-rent.png) | ![Goals savings mobile](./docs/screenshots/goals-mobile-savings.png) |
+
+| Milestones | |
+| --- | --- |
+| ![Goals milestones mobile](./docs/screenshots/goals-mobile-milestones.png) | |
+
+Goals screenshots use `DOCS_CAPTURE=1` with three demo scenarios from [`fixtures/demo-goal-scenarios.json`](fixtures/demo-goal-scenarios.json). See [docs/AUDIT-2026-06-GOALS.md](./docs/AUDIT-2026-06-GOALS.md) for the post-Goals audit.
+
 | Settings (desktop) | Settings (mobile) |
 | --- | --- |
 | ![Settings desktop](./docs/screenshots/settings-desktop.png) | ![Settings mobile](./docs/screenshots/settings-mobile.png) |

@@ -1,0 +1,61 @@
+{
+  "scenarios": [
+    {
+      "name": "Path A: Invest only",
+      "sortOrder": 0,
+      "startInvestedCents": 100000000,
+      "monthlyContributionCents": 50000,
+      "annualContributionGrowth": 0,
+      "expectedRealReturn": 0.07,
+      "horizonYears": 30,
+      "housePriceCents": 400000000,
+      "downPaymentFraction": 0.2,
+      "housePurchaseYear": null,
+      "transactionCostsCents": 50000,
+      "mortgageTermYears": 30,
+      "mortgageRateAnnual": 0.03,
+      "houseAppreciationRate": 0.025,
+      "rentMonthlyCents": 120000,
+      "annualSpendCents": 4000000,
+      "safeWithdrawalRate": 0.04
+    },
+    {
+      "name": "Path B: House now",
+      "sortOrder": 1,
+      "startInvestedCents": 50000000,
+      "monthlyContributionCents": 50000,
+      "annualContributionGrowth": 0,
+      "expectedRealReturn": 0.07,
+      "horizonYears": 30,
+      "housePriceCents": 400000000,
+      "downPaymentFraction": 0.2,
+      "housePurchaseYear": 0,
+      "transactionCostsCents": 50000,
+      "mortgageTermYears": 30,
+      "mortgageRateAnnual": 0.03,
+      "houseAppreciationRate": 0.025,
+      "rentMonthlyCents": 120000,
+      "annualSpendCents": 4000000,
+      "safeWithdrawalRate": 0.04
+    },
+    {
+      "name": "Path C: Buy in year 5",
+      "sortOrder": 2,
+      "startInvestedCents": 100000000,
+      "monthlyContributionCents": 50000,
+      "annualContributionGrowth": 0,
+      "expectedRealReturn": 0.07,
+      "horizonYears": 30,
+      "housePriceCents": 400000000,
+      "downPaymentFraction": 0.2,
+      "housePurchaseYear": 5,
+      "transactionCostsCents": 50000,
+      "mortgageTermYears": 30,
+      "mortgageRateAnnual": 0.03,
+      "houseAppreciationRate": 0.025,
+      "rentMonthlyCents": 120000,
+      "annualSpendCents": 4000000,
+      "safeWithdrawalRate": 0.04
+    }
+  ]
+}
