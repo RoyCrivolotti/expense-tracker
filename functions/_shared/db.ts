@@ -6,6 +6,7 @@ import {
   toCashActual,
   toCategory,
   toGoalInputs,
+  toGoalScenario,
   toSettings,
   toStatement,
   toStoredTxn,
@@ -13,6 +14,7 @@ import {
   type CashActualRow,
   type CategoryRow,
   type GoalRow,
+  type GoalScenarioRow,
   type SettingsRow,
   type StatementRow,
   type TxnRow,
@@ -25,7 +27,7 @@ async function rows<T>(db: D1Database, sql: string, owner: string): Promise<T[]>
 
 /** Read every table for one owner and assemble a dataset with derived statuses. */
 export async function loadDataset(env: Env, owner: string): Promise<ExpenseDataset> {
-  const [categories, accounts, txns, statements, cashActuals, settingsRow, goalRow] =
+  const [categories, accounts, txns, statements, cashActuals, settingsRow, goalRow, scenarioRows] =
     await Promise.all([
       rows<CategoryRow>(
         env.DB,
@@ -42,6 +44,11 @@ export async function loadDataset(env: Env, owner: string): Promise<ExpenseDatas
       rows<CashActualRow>(env.DB, 'SELECT * FROM cash_actuals WHERE owner = ?', owner),
       env.DB.prepare('SELECT * FROM settings WHERE owner = ?').bind(owner).first<SettingsRow>(),
       env.DB.prepare('SELECT * FROM goal_inputs WHERE owner = ?').bind(owner).first<GoalRow>(),
+      rows<GoalScenarioRow>(
+        env.DB,
+        'SELECT * FROM goal_scenarios WHERE owner = ? ORDER BY sort_order, id',
+        owner,
+      ),
     ])
 
   const mappedAccounts = accounts.map(toAccount)
@@ -73,6 +80,7 @@ export async function loadDataset(env: Env, owner: string): Promise<ExpenseDatas
           horizonYears: 0,
           expectedRealReturn: 0,
         },
+    goalScenarios: scenarioRows.map(toGoalScenario),
   }
 }
 

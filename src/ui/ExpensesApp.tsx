@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import type { ExpenseDataSource } from '../data/dataSource'
 import { useExpenseData, type ExpenseModel } from './useExpenseData'
 import { useExpenseActions } from './useExpenseActions'
@@ -18,6 +18,8 @@ import { OnboardingWizard } from './onboarding/OnboardingWizard'
 import { isOnboardingSkipped, skipOnboarding } from './onboarding/onboardingStorage'
 import styles from './ExpensesApp.module.css'
 
+const GoalsTab = lazy(() => import('./tabs/goals/GoalsTab'))
+
 function TabView({
   tab,
   model,
@@ -28,6 +30,7 @@ function TabView({
   onThemeChange,
   ownerAccess,
   accountEmail,
+  onNavigate,
 }: {
   tab: TabId
   model: ExpenseModel
@@ -38,6 +41,7 @@ function TabView({
   onThemeChange: (next: ExpenseTheme) => void
   ownerAccess?: { pendingCount: number } | undefined
   accountEmail?: string | undefined
+  onNavigate: (tab: TabId) => void
 }) {
   switch (tab) {
     case 'transactions':
@@ -50,6 +54,12 @@ function TabView({
           onMonthChange={onMonthChange}
           actions={actions}
         />
+      )
+    case 'goals':
+      return (
+        <Suspense fallback={<div className={styles.center}>Loading goals…</div>}>
+          <GoalsTab model={model} actions={actions} />
+        </Suspense>
       )
     case 'settings':
       return (
@@ -64,7 +74,14 @@ function TabView({
         />
       )
     default:
-      return <DashboardTab model={model} month={month} actions={actions} />
+      return (
+        <DashboardTab
+          model={model}
+          month={month}
+          actions={actions}
+          onNavigate={onNavigate}
+        />
+      )
   }
 }
 
@@ -123,7 +140,8 @@ function ExpensesAppLoaded({
   const actions = useExpenseActions(source, applyPatch, setModal)
 
   const activeMonth = month ?? model.months[model.months.length - 1] ?? ''
-  const showPicker = tab !== 'settings' && model.months.length > 0
+  const showPicker =
+    tab !== 'settings' && tab !== 'goals' && model.months.length > 0
   const settingsBadge = ownerAccess?.pendingCount ?? 0
 
   return (
@@ -167,6 +185,7 @@ function ExpensesAppLoaded({
           onThemeChange={setTheme}
           ownerAccess={ownerAccess}
           accountEmail={accountEmail}
+          onNavigate={setTab}
         />
       </AppShell>
       {modal && actions && (

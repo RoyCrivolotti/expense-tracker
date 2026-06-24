@@ -14,9 +14,12 @@ import {
 import {
   createAccount,
   createCategory,
+  createScenario,
+  deleteScenario,
   updateAccount,
   updateCategory,
   updateGoals,
+  updateScenario,
   updateSettings,
 } from '../dbConfig'
 
@@ -39,6 +42,9 @@ export function createD1ExpenseRepository(env: Env): ExpenseRepository {
     updateAccount: (owner, id, patch) => updateAccount(env, owner, id, patch),
     updateSettings: (owner, patch) => updateSettings(env, owner, patch),
     updateGoals: (owner, patch) => updateGoals(env, owner, patch),
+    createScenario: (owner, input) => createScenario(env, owner, input),
+    updateScenario: (owner, id, patch) => updateScenario(env, owner, id, patch),
+    deleteScenario: (owner, id) => deleteScenario(env, owner, id),
     bulkInsertTransactions: (owner, inputs) => bulkInsertTransactions(env, owner, inputs),
   }
 }

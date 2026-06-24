@@ -84,6 +84,33 @@ export interface GoalInputs {
   expectedRealReturn: number
 }
 
+/**
+ * A saved comparison scenario for the Goals projection view.
+ * Money in integer cents; rates as fractions.
+ */
+export interface GoalScenario {
+  id: number
+  name: string
+  color: string
+  sortOrder: number
+  startInvestedCents: number
+  monthlyContributionCents: number
+  annualContributionGrowth: number
+  expectedRealReturn: number
+  horizonYears: number
+  housePriceCents: number
+  downPaymentFraction: number
+  /** null = never buy; 0 = owned from day one. */
+  housePurchaseYear: number | null
+  transactionCostsCents: number
+  mortgageTermYears: number
+  mortgageRateAnnual: number
+  houseAppreciationRate: number
+  rentMonthlyCents: number
+  annualSpendCents: number
+  safeWithdrawalRate: number
+}
+
 /** Opening balances and other scalar settings used by running-balance views. */
 export interface ExpenseSettings {
   openingCashCents: number
@@ -112,5 +139,6 @@ export interface ExpenseDataset {
   accountStatements: AccountStatement[]
   cashActuals: CashActual[]
   goalInputs: GoalInputs
+  goalScenarios: GoalScenario[]
   settings: ExpenseSettings
 }

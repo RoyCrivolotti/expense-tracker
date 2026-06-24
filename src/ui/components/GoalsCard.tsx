@@ -17,6 +17,7 @@ import styles from './GoalsCard.module.css'
 interface GoalsCardProps {
   dataset: ExpenseDataset
   actions?: ExpenseActions | undefined
+  onOpenGoals?: () => void
 }
 
 function GoalRow({
@@ -39,7 +40,7 @@ function GoalRow({
   )
 }
 
-export function GoalsCard({ dataset, actions }: GoalsCardProps) {
+export function GoalsCard({ dataset, actions, onOpenGoals }: GoalsCardProps) {
   const { goalInputs } = dataset
   const metrics = useMemo(() => {
     const totals = [...computeMonthlyTotals(dataset.transactions).values()]
@@ -65,7 +66,17 @@ export function GoalsCard({ dataset, actions }: GoalsCardProps) {
 
   return (
     <>
-      <SectionTitle>Goals</SectionTitle>
+      <SectionTitle>
+        Goals
+        {onOpenGoals ? (
+          <>
+            {' '}
+            <button type="button" className={styles.openLink} onClick={onOpenGoals}>
+              View projections
+            </button>
+          </>
+        ) : null}
+      </SectionTitle>
       <Card>
         <GoalRow
           label="Time to down payment"

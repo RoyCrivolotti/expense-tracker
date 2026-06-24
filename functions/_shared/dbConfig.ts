@@ -3,8 +3,9 @@ import type {
   Category,
   ExpenseSettings,
   GoalInputs,
+  GoalScenario,
 } from '../domain/types'
-import type { NewAccount, NewCategory } from '../domain/data/dataSource'
+import type { NewAccount, NewCategory, NewGoalScenario } from '../domain/data/dataSource'
 import type { Env } from './env'
 import { HttpError } from './http'
 import { assertOwnedAccount } from './ownership'
@@ -12,10 +13,12 @@ import {
   toAccount,
   toCategory,
   toGoalInputs,
+  toGoalScenario,
   toSettings,
   type AccountRow,
   type CategoryRow,
   type GoalRow,
+  type GoalScenarioRow,
   type SettingsRow,
 } from './rows'
 
@@ -165,4 +168,94 @@ export async function updateGoals(
     .first<GoalRow>()
   if (!row) throw new HttpError(500, 'Goals update failed')
   return toGoalInputs(row)
+}
+
+const SCENARIO_COLUMNS: ColumnMap<NewGoalScenario> = {
+  name: 'name',
+  color: 'color',
+  sortOrder: 'sort_order',
+  startInvestedCents: 'start_invested_cents',
+  monthlyContributionCents: 'monthly_contribution_cents',
+  annualContributionGrowth: 'annual_contribution_growth',
+  expectedRealReturn: 'expected_real_return',
+  horizonYears: 'horizon_years',
+  housePriceCents: 'house_price_cents',
+  downPaymentFraction: 'down_payment_fraction',
+  housePurchaseYear: 'house_purchase_year',
+  transactionCostsCents: 'transaction_costs_cents',
+  mortgageTermYears: 'mortgage_term_years',
+  mortgageRateAnnual: 'mortgage_rate_annual',
+  houseAppreciationRate: 'house_appreciation_rate',
+  rentMonthlyCents: 'rent_monthly_cents',
+  annualSpendCents: 'annual_spend_cents',
+  safeWithdrawalRate: 'safe_withdrawal_rate',
+}
+
+const coerceScenario: Coerce<NewGoalScenario> = (_k, v) => v ?? null
+
+export async function createScenario(
+  env: Env,
+  owner: string,
+  input: NewGoalScenario,
+): Promise<GoalScenario> {
+  if (!input.name?.trim()) throw new HttpError(400, 'Scenario name is required')
+  const row = await env.DB.prepare(
+    `INSERT INTO goal_scenarios (
+       owner, name, color, sort_order,
+       start_invested_cents, monthly_contribution_cents, annual_contribution_growth,
+       expected_real_return, horizon_years,
+       house_price_cents, down_payment_fraction, house_purchase_year, transaction_costs_cents,
+       mortgage_term_years, mortgage_rate_annual, house_appreciation_rate,
+       rent_monthly_cents, annual_spend_cents, safe_withdrawal_rate
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     RETURNING *`,
+  )
+    .bind(
+      owner,
+      input.name.trim(),
+      input.color,
+      input.sortOrder,
+      input.startInvestedCents,
+      input.monthlyContributionCents,
+      input.annualContributionGrowth,
+      input.expectedRealReturn,
+      input.horizonYears,
+      input.housePriceCents,
+      input.downPaymentFraction,
+      input.housePurchaseYear,
+      input.transactionCostsCents,
+      input.mortgageTermYears,
+      input.mortgageRateAnnual,
+      input.houseAppreciationRate,
+      input.rentMonthlyCents,
+      input.annualSpendCents,
+      input.safeWithdrawalRate,
+    )
+    .first<GoalScenarioRow>()
+  if (!row) throw new HttpError(500, 'Scenario insert failed')
+  return toGoalScenario(row)
+}
+
+export async function updateScenario(
+  env: Env,
+  owner: string,
+  id: number,
+  patch: Partial<NewGoalScenario>,
+): Promise<GoalScenario> {
+  const { sets, values } = buildUpdate(SCENARIO_COLUMNS, patch, coerceScenario)
+  const row = await env.DB.prepare(
+    `UPDATE goal_scenarios SET ${sets}, updated_at = datetime('now')
+     WHERE id = ? AND owner = ? RETURNING *`,
+  )
+    .bind(...values, id, owner)
+    .first<GoalScenarioRow>()
+  if (!row) throw new HttpError(404, 'Scenario not found')
+  return toGoalScenario(row)
+}
+
+export async function deleteScenario(env: Env, owner: string, id: number): Promise<void> {
+  const result = await env.DB.prepare('DELETE FROM goal_scenarios WHERE id = ? AND owner = ?')
+    .bind(id, owner)
+    .run()
+  if (result.meta.changes === 0) throw new HttpError(404, 'Scenario not found')
 }

@@ -29,6 +29,7 @@ const dataset: ExpenseDataset = {
     horizonYears: 0,
     expectedRealReturn: 0,
   },
+  goalScenarios: [],
 }
 
 describe('resolveDescriptionTemplate', () => {

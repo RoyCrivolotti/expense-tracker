@@ -11,6 +11,7 @@ import type {
   ExpenseDataset,
   ExpenseSettings,
   GoalInputs,
+  GoalScenario,
   StoredTransaction,
   Transaction,
 } from '../types'
@@ -18,6 +19,7 @@ import type {
 export type NewTransaction = Omit<StoredTransaction, 'id'>
 export type NewCategory = Omit<Category, 'id'>
 export type NewAccount = Omit<Account, 'id'>
+export type NewGoalScenario = Omit<GoalScenario, 'id'>
 
 export interface ExpenseDataSource {
   /** Whether mutations are supported; the UI hides add/edit when false. */
@@ -38,4 +40,7 @@ export interface ExpenseDataSource {
   updateAccount?(id: number, patch: Partial<NewAccount>): Promise<Account>
   updateSettings?(patch: Partial<ExpenseSettings>): Promise<ExpenseSettings>
   updateGoals?(patch: Partial<GoalInputs>): Promise<GoalInputs>
+  createScenario?(input: NewGoalScenario): Promise<GoalScenario>
+  updateScenario?(id: number, patch: Partial<NewGoalScenario>): Promise<GoalScenario>
+  deleteScenario?(id: number): Promise<void>
 }

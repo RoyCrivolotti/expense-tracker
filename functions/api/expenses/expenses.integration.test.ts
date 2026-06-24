@@ -7,6 +7,8 @@ import { onRequestPost as createCategory } from './categories/index'
 import { onRequestPatch as patchCategory } from './categories/[id]'
 import { onRequestPut as putSettings } from './settings/index'
 import { onRequestPut as putGoals } from './goals/index'
+import { onRequestPost as createScenario } from './scenarios/index'
+import { onRequestPatch as patchScenario, onRequestDelete as deleteScenario } from './scenarios/[id]'
 
 const OWNER = 'owner@example.com'
 
@@ -118,5 +120,62 @@ describe('expenses API (handlers + in-memory repo)', () => {
     )
     expect(goals.housePriceCents).toBe(400000000)
     expect(goals.downPaymentFraction).toBe(0.4)
+  })
+
+  it('creates, updates, and deletes a goal scenario', async () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    const created = await invokeExpenseRoute({
+      handler: createScenario,
+      repo,
+      owner: OWNER,
+      url: 'https://expenses.test/api/expenses/scenarios',
+      body: {
+        name: 'Path 2',
+        color: '#6366f1',
+        sortOrder: 0,
+        startInvestedCents: 100000000,
+        monthlyContributionCents: 50000,
+        annualContributionGrowth: 0,
+        expectedRealReturn: 0.07,
+        horizonYears: 30,
+        housePriceCents: 400000000,
+        downPaymentFraction: 0.3,
+        housePurchaseYear: null,
+        transactionCostsCents: 800000,
+        mortgageTermYears: 30,
+        mortgageRateAnnual: 0.02,
+        houseAppreciationRate: 0.025,
+        rentMonthlyCents: 150000,
+        annualSpendCents: 4000000,
+        safeWithdrawalRate: 0.04,
+      },
+    })
+    expect(created.status).toBe(201)
+    const scenario = await readJson<{ id: number; name: string }>(created)
+    expect(scenario.name).toBe('Path 2')
+
+    const updated = await invokeExpenseRoute({
+      handler: patchScenario,
+      repo,
+      owner: OWNER,
+      method: 'PATCH',
+      url: `https://expenses.test/api/expenses/scenarios/${scenario.id}`,
+      params: { id: String(scenario.id) },
+      body: { name: 'Path 2 updated' },
+    })
+    expect(updated.status).toBe(200)
+    expect((await readJson<{ name: string }>(updated)).name).toBe('Path 2 updated')
+
+    const deleted = await invokeExpenseRoute({
+      handler: deleteScenario,
+      repo,
+      owner: OWNER,
+      method: 'DELETE',
+      url: `https://expenses.test/api/expenses/scenarios/${scenario.id}`,
+      params: { id: String(scenario.id) },
+    })
+    expect(deleted.status).toBe(200)
+    const dataset = await repo.loadDataset(OWNER)
+    expect(dataset.goalScenarios).toHaveLength(0)
   })
 })
