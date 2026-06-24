@@ -16,6 +16,7 @@ The **source repo** is public. The **live app** at expenses.crivolotti.com remai
 | Email allowlist | D1 `allowed_users`; bootstrap via gitignored `config/allowed-emails.json` or CI secret |
 | Owner email | Gitignored `config/access.json`; CI `OWNER_EMAIL` secret |
 | Personal workbook CSV | Gitignored `content/`; optional `FINANCIAL_REVIEW_DIR` for local dev |
+| Goal scenario seeds (Path balances, house price) | Gitignored `config/goal-scenarios.seed.json` or `FINANCIAL_REVIEW_DIR/config/goal-scenarios.seed.json` (private repo); D1 + R2 after seed |
 | Daily backups | R2 (`{email}/YYYY-MM-DD.json`) |
 | Deploy credentials | GitHub Actions secrets (`CLOUDFLARE_API_TOKEN`, …) |
 

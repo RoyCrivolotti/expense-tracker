@@ -108,7 +108,7 @@ describe('expenses API (handlers + in-memory repo)', () => {
       method: 'PUT',
       url: 'https://expenses.test/api/expenses/goals',
       body: {
-        housePriceCents: 400000000,
+        housePriceCents: 400_000_000,
         downPaymentFraction: 0.4,
         mortgageTermYears: 30,
         mortgageRateAnnual: 0.02,
@@ -118,7 +118,7 @@ describe('expenses API (handlers + in-memory repo)', () => {
     const goals = await readJson<{ housePriceCents: number; downPaymentFraction: number }>(
       response,
     )
-    expect(goals.housePriceCents).toBe(400000000)
+    expect(goals.housePriceCents).toBe(400_000_000)
     expect(goals.downPaymentFraction).toBe(0.4)
   })
 
@@ -130,15 +130,15 @@ describe('expenses API (handlers + in-memory repo)', () => {
       owner: OWNER,
       url: 'https://expenses.test/api/expenses/scenarios',
       body: {
-        name: 'Path 2',
+        name: 'Demo scenario',
         color: '#6366f1',
         sortOrder: 0,
-        startInvestedCents: 100000000,
-        monthlyContributionCents: 50000,
+        startInvestedCents: 1_000_000,
+        monthlyContributionCents: 50_000,
         annualContributionGrowth: 0,
         expectedRealReturn: 0.07,
         horizonYears: 30,
-        housePriceCents: 400000000,
+        housePriceCents: 400_000_000,
         downPaymentFraction: 0.3,
         housePurchaseYear: null,
         transactionCostsCents: 800000,
@@ -152,7 +152,7 @@ describe('expenses API (handlers + in-memory repo)', () => {
     })
     expect(created.status).toBe(201)
     const scenario = await readJson<{ id: number; name: string }>(created)
-    expect(scenario.name).toBe('Path 2')
+    expect(scenario.name).toBe('Demo scenario')
 
     const updated = await invokeExpenseRoute({
       handler: patchScenario,
@@ -161,10 +161,10 @@ describe('expenses API (handlers + in-memory repo)', () => {
       method: 'PATCH',
       url: `https://expenses.test/api/expenses/scenarios/${scenario.id}`,
       params: { id: String(scenario.id) },
-      body: { name: 'Path 2 updated' },
+      body: { name: 'Demo scenario updated' },
     })
     expect(updated.status).toBe(200)
-    expect((await readJson<{ name: string }>(updated)).name).toBe('Path 2 updated')
+    expect((await readJson<{ name: string }>(updated)).name).toBe('Demo scenario updated')
 
     const deleted = await invokeExpenseRoute({
       handler: deleteScenario,

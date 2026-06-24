@@ -159,7 +159,7 @@ export function yearsToTargetFromProjection(
   return yearsToTarget(series, targetCents)
 }
 
-/** Annual savings from gross salary minus monthly expenses (Beckham net model). */
+/** Annual savings from gross salary minus monthly expenses (net retention model). */
 export function annualSavingsFromCashflow(
   grossCents: number,
   expenseMonthlyCents: number,
