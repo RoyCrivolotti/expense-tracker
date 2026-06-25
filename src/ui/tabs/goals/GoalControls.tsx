@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import type { NewGoalScenario } from '../../../data/dataSource'
+import { formatCents } from '../../../engine'
 import {
   MoneyField,
   NumberField,
@@ -7,6 +8,15 @@ import {
   PurchaseYearField,
 } from './goalControlFields'
 import styles from './goals.module.css'
+
+function purchaseSummary(draft: NewGoalScenario): string | null {
+  const purchaseYear = draft.housePurchaseYear
+  if (purchaseYear === null || purchaseYear === 0) return null
+  const down = Math.round(draft.housePriceCents * draft.downPaymentFraction)
+  const fees = draft.transactionCostsCents
+  const total = down + fees
+  return `Purchase cost from portfolio: ${formatCents(down)} down + ${formatCents(fees)} fees = ${formatCents(total)} (dip on the invested line in year ${purchaseYear}).`
+}
 
 interface GoalControlsProps {
   draft: NewGoalScenario
@@ -31,6 +41,7 @@ function ControlSection({
 }
 
 export function GoalControls({ draft, onChange }: GoalControlsProps) {
+  const purchaseHint = purchaseSummary(draft)
   return (
     <div className={styles.controlsStack}>
       <ControlSection title="Portfolio">
@@ -76,11 +87,23 @@ export function GoalControls({ draft, onChange }: GoalControlsProps) {
           max={0.5}
           onChange={(v) => onChange({ downPaymentFraction: v })}
         />
+        <MoneyField
+          label="Purchase fees"
+          value={draft.transactionCostsCents}
+          max={5_000_000}
+          step={50_000}
+          onChange={(v) => onChange({ transactionCostsCents: v })}
+        />
+        <p className={styles.fieldHint}>
+          Notary, agency, and closing costs withdrawn with the down payment in the purchase
+          year.
+        </p>
         <PurchaseYearField
           value={draft.housePurchaseYear}
           maxYear={draft.horizonYears}
           onChange={(v) => onChange({ housePurchaseYear: v })}
         />
+        {purchaseHint ? <p className={styles.fieldHint}>{purchaseHint}</p> : null}
         <MoneyField
           label="Rent (monthly)"
           value={draft.rentMonthlyCents}

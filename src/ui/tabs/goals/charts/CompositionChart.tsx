@@ -1,12 +1,13 @@
 import { memo, useMemo } from 'react'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { projectNetWorth, scenarioToParams } from '../../../../engine'
+import { projectNetWorth, purchaseYearBreakdown, scenarioToParams } from '../../../../engine'
 import { ChartShell } from './ChartShell'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
 import { sparseLabels } from '../../../charts/linearScale'
 import { formatEuroShort } from '../chartTheme'
+import { purchaseBreakdownTooltipLines } from '../purchaseTooltip'
 import styles from '../goals.module.css'
 
 const COMPOSITION_LEGEND: LegendItem[] = [
@@ -54,14 +55,20 @@ function CompositionChartImpl({
 
   const tooltip = (i: number): { title: string; lines: TooltipLine[] } => {
     const p = points[i]
-    return {
-      title: `Year ${years[i] ?? i}`,
-      lines: [
-        { label: 'Invested', value: formatEuroShort(p?.investedCents ?? 0), tone: 'neutral' },
-        { label: 'House equity', value: formatEuroShort(p?.houseEquityCents ?? 0), tone: 'neutral' },
-        { label: 'Mortgage', value: formatEuroShort(p?.mortgageBalanceCents ?? 0), tone: 'neutral' },
-      ],
-    }
+    const year = years[i] ?? i
+    const lines: TooltipLine[] = [
+      { label: 'Invested', value: formatEuroShort(p?.investedCents ?? 0), tone: 'neutral' },
+      { label: 'House equity', value: formatEuroShort(p?.houseEquityCents ?? 0), tone: 'neutral' },
+      { label: 'Mortgage', value: formatEuroShort(p?.mortgageBalanceCents ?? 0), tone: 'neutral' },
+      {
+        label: 'Net worth',
+        value: formatEuroShort(p?.netWorthCents ?? 0),
+        tone: 'neutral',
+      },
+    ]
+    const breakdown = purchaseYearBreakdown(scenarioToParams({ ...draft, id: 0 }), year)
+    if (breakdown) lines.push(...purchaseBreakdownTooltipLines(breakdown))
+    return { title: `Year ${year}`, lines }
   }
 
   return (

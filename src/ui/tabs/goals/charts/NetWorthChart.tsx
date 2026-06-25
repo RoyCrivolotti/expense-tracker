@@ -1,13 +1,14 @@
 import { memo, useMemo, type ReactNode } from 'react'
 import type { GoalScenario } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { MILESTONE_CENTS, projectNetWorth, scenarioToParams } from '../../../../engine'
+import { MILESTONE_CENTS, projectNetWorth, purchaseYearBreakdown, scenarioToParams } from '../../../../engine'
 import { Card } from '../../../components/primitives'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
 import { sparseLabels } from '../../../charts/linearScale'
 import { formatEuroShort } from '../chartTheme'
+import { purchaseBreakdownTooltipLines } from '../purchaseTooltip'
 import styles from '../goals.module.css'
 
 interface RawLine {
@@ -96,23 +97,33 @@ function NetWorthChartImpl({
   }))
   const isHero = variant === 'hero'
 
-  const tooltip = (i: number): { title: string; lines: TooltipLine[] } => ({
-    title: `Year ${years[i] ?? i}`,
-    lines: series.map((s, idx) => ({
+  const tooltip = (i: number): { title: string; lines: TooltipLine[] } => {
+    const year = years[i] ?? i
+    const lines: TooltipLine[] = series.map((s, idx) => ({
       label: names[idx] ?? s.id,
       value: formatEuroShort(s.values[i] ?? 0),
       tone: 'neutral',
-    })),
-  })
+    }))
+    const breakdown = purchaseYearBreakdown(scenarioToParams({ ...draft, id: 0 }), year)
+    if (breakdown) lines.push(...purchaseBreakdownTooltipLines(breakdown))
+    return { title: `Year ${year}`, lines }
+  }
 
   return (
     <Card className={isHero ? `${styles.chartCard} ${styles.heroChart}` : styles.chartCard}>
       <h3 className={styles.chartTitle}>Invested portfolio projection</h3>
       {!isHero ? (
         <p className={styles.chartHint}>
-          Compare saved scenarios plus your live edits. House purchase shows as a dip.
+          Compare saved scenarios plus your live edits. At a purchase year, return and
+          contributions apply before the down payment is withdrawn — hover that year for
+          the breakdown.
         </p>
-      ) : null}
+      ) : (
+        <p className={styles.chartHint}>
+          At a purchase year, return and contributions apply before the down payment is
+          withdrawn — hover that year for the breakdown.
+        </p>
+      )}
       <LinearChart
         height={isHero ? 230 : 210}
         series={series}

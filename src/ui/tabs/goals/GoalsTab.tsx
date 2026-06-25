@@ -36,6 +36,7 @@ const EDIT_KEYS = [
   'housePriceCents',
   'downPaymentFraction',
   'housePurchaseYear',
+  'transactionCostsCents',
   'rentMonthlyCents',
   'annualSpendCents',
   'safeWithdrawalRate',
