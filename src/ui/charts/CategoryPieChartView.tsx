@@ -21,7 +21,6 @@ interface Props {
   active: number | null
   onShow: (index: number) => void
   onHide: () => void
-  onTouchEnd: () => void
 }
 
 function PiePaths({
@@ -29,8 +28,7 @@ function PiePaths({
   active,
   onShow,
   onHide,
-  onTouchEnd,
-}: Pick<Props, 'paths' | 'active' | 'onShow' | 'onHide' | 'onTouchEnd'>) {
+}: Pick<Props, 'paths' | 'active' | 'onShow' | 'onHide'>) {
   return paths.map((p, i) => (
     <path
       key={p.name}
@@ -42,12 +40,11 @@ function PiePaths({
         if (e.pointerType === 'mouse') onHide()
       }}
       onPointerDown={() => onShow(i)}
-      onPointerUp={onTouchEnd}
     />
   ))
 }
 
-export function CategoryPieChartView({ paths, active, onShow, onHide, onTouchEnd }: Props) {
+export function CategoryPieChartView({ paths, active, onShow, onHide }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   const total = paths[0]?.total ?? 1
   const focus = active != null ? paths[active] : null
@@ -67,7 +64,7 @@ export function CategoryPieChartView({ paths, active, onShow, onHide, onTouchEnd
           role="img"
           aria-label="Category expense pie chart"
         >
-          <PiePaths paths={paths} active={active} onShow={onShow} onHide={onHide} onTouchEnd={onTouchEnd} />
+          <PiePaths paths={paths} active={active} onShow={onShow} onHide={onHide} />
         </svg>
         {focus && (
           <ChartTooltip

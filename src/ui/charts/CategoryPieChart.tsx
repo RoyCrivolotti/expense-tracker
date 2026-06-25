@@ -2,7 +2,6 @@ import { useMemo, useRef, useState, useCallback } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
 import { computeCategoryActuals } from '../../engine'
 import { CategoryPieChartView, type PieSlice } from './CategoryPieChartView'
-import { PINNED_TOOLTIP_MS } from './useChartFocus'
 import { useDismissOnOutsidePointer } from './useDismissOnOutsidePointer'
 import styles from './charts.module.css'
 
@@ -69,22 +68,10 @@ export function CategoryPieChart({ model, month }: Props) {
   const paths = useMemo(() => buildSlices(model, month), [model, month])
   const [active, setActive] = useState<number | null>(null)
   const containerRef = useRef<HTMLElement>(null)
-  const touchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const dismiss = useCallback(() => {
-    if (touchTimer.current) {
-      clearTimeout(touchTimer.current)
-      touchTimer.current = null
-    }
-    setActive(null)
-  }, [])
+  const dismiss = useCallback(() => setActive(null), [])
 
   useDismissOnOutsidePointer(containerRef, active != null, dismiss)
-
-  const onTouchEnd = useCallback(() => {
-    if (touchTimer.current) clearTimeout(touchTimer.current)
-    touchTimer.current = setTimeout(dismiss, PINNED_TOOLTIP_MS)
-  }, [dismiss])
 
   if (!paths) return null
 
@@ -96,7 +83,6 @@ export function CategoryPieChart({ model, month }: Props) {
         active={active}
         onShow={setActive}
         onHide={dismiss}
-        onTouchEnd={onTouchEnd}
       />
     </figure>
   )
