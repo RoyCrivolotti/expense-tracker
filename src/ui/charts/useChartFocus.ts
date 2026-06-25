@@ -1,26 +1,12 @@
 import { useCallback, useRef, useState } from 'react'
 import { useDismissOnOutsidePointer } from './useDismissOnOutsidePointer'
 
-/** How long a tap-pinned tooltip stays visible before auto-dismiss. */
-export const PINNED_TOOLTIP_MS = 5600
-
-/** Hover (desktop) or tap/hold (touch) focus on the nearest chart index. */
+/** Hover (desktop) or tap (touch) focus on the nearest chart index. */
 export function useChartFocus(length: number, xForIndex: (i: number) => number) {
   const [active, setActive] = useState<number | null>(null)
   const containerRef = useRef<HTMLElement>(null)
-  const touchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const clearTouchTimer = useCallback(() => {
-    if (touchTimer.current) {
-      clearTimeout(touchTimer.current)
-      touchTimer.current = null
-    }
-  }, [])
-
-  const dismiss = useCallback(() => {
-    clearTouchTimer()
-    setActive(null)
-  }, [clearTouchTimer])
+  const dismiss = useCallback(() => setActive(null), [])
 
   useDismissOnOutsidePointer(containerRef, active != null, dismiss)
 
@@ -50,20 +36,12 @@ export function useChartFocus(length: number, xForIndex: (i: number) => number) 
   )
 
   const onPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
-    clearTouchTimer()
     pick(e.clientX, e.currentTarget)
   }
 
   const onPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
-    clearTouchTimer()
     pick(e.clientX, e.currentTarget)
     e.currentTarget.setPointerCapture(e.pointerId)
-  }
-
-  const onPointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
-    if (e.pointerType === 'mouse') return
-    clearTouchTimer()
-    touchTimer.current = setTimeout(dismiss, PINNED_TOOLTIP_MS)
   }
 
   const onPointerLeave = (e: React.PointerEvent<SVGSVGElement>) => {
@@ -71,5 +49,5 @@ export function useChartFocus(length: number, xForIndex: (i: number) => number) 
     dismiss()
   }
 
-  return { active, containerRef, onPointerMove, onPointerDown, onPointerUp, onPointerLeave }
+  return { active, containerRef, onPointerMove, onPointerDown, onPointerLeave }
 }
