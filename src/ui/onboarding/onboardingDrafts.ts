@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { CATEGORY_PRESETS, type CategoryPreset } from '../../domain/onboarding/presets'
+import { formatEuroInput, parseEuroToCents } from '../../engine/money'
 
 export interface CategoryDraft {
   presetId: string
@@ -16,7 +17,7 @@ export function useCategoryDrafts() {
     CATEGORY_PRESETS.map((p) => ({
       presetId: presetId(p.name),
       selected: true,
-      budgetEuros: String(p.defaultBudgetCents / 100),
+      budgetEuros: formatEuroInput(p.defaultBudgetCents),
     })),
   )
 }
@@ -26,8 +27,7 @@ export function buildSelectedPresets(drafts: CategoryDraft[]): CategoryPreset[] 
     if (!draft.selected) return []
     const preset = CATEGORY_PRESETS[index]
     if (!preset) return []
-    const euros = Number(draft.budgetEuros)
-    const monthlyBudgetCents = Number.isFinite(euros) ? Math.max(0, Math.round(euros * 100)) : 0
+    const monthlyBudgetCents = Math.max(0, parseEuroToCents(draft.budgetEuros))
     return [{ ...preset, defaultBudgetCents: monthlyBudgetCents }]
   })
 }

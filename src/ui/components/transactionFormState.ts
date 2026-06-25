@@ -1,6 +1,7 @@
 import type { Transaction, TxnType } from '../../types'
 import { resolveDefaultAccountId } from '../../data/defaultAccount'
 import { defaultBudgetMonth } from '../../engine/dates'
+import { formatEuroInput } from '../../engine/money'
 import type { ExpenseModel } from '../useExpenseData'
 import type { TransactionSeed } from '../actions'
 
@@ -29,7 +30,7 @@ export function initialFields(
   if (editing) {
     return {
       type: editing.type,
-      amount: String(editing.amountCents / 100),
+      amount: formatEuroInput(editing.amountCents),
       description: editing.description,
       categoryId: editing.categoryId,
       accountId: editing.accountId,
@@ -41,7 +42,7 @@ export function initialFields(
   if (seed) {
     return {
       type: seed.type,
-      amount: String(seed.amountCents / 100),
+      amount: formatEuroInput(seed.amountCents),
       description: seed.description,
       categoryId: seed.categoryId,
       accountId: seed.accountId,
