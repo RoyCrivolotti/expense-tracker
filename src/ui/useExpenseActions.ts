@@ -89,6 +89,7 @@ export function useExpenseActions(
       createScenario: async (input) => {
         const scenario = await source.createScenario!(input)
         applyPatch((d) => patchAfterScenarioCreate(d, scenario))
+        return scenario
       },
       updateScenario: async (id, patch) => {
         const scenario = await source.updateScenario!(id, patch)

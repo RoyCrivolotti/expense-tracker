@@ -9,6 +9,7 @@ interface ScenarioToolbarProps {
   scenarioCount: number
   usedColors: readonly string[]
   actions: ExpenseActions
+  onScenarioCreated: (scenario: GoalScenario) => void
 }
 
 /**
@@ -21,6 +22,7 @@ export function ScenarioToolbar({
   scenarioCount,
   usedColors,
   actions,
+  onScenarioCreated,
 }: ScenarioToolbarProps) {
   const [name, setName] = useState(scenario.name)
 
@@ -46,9 +48,11 @@ export function ScenarioToolbar({
         <button
           type="button"
           className={styles.btn}
-          onClick={() =>
-            void actions.createScenario(duplicateScenario(scenario, scenarioCount, usedColors))
-          }
+          onClick={() => {
+            void actions
+              .createScenario(duplicateScenario(scenario, scenarioCount, usedColors))
+              .then(onScenarioCreated)
+          }}
         >
           Duplicate
         </button>
