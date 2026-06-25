@@ -42,6 +42,11 @@ export function formatPercent(fraction: number, decimals = 1): string {
   return `${pct.toLocaleString('de-DE', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}%`
 }
 
+/** EU euros string for editable text inputs, e.g. 110 -> "1,10". */
+export function formatEuroInput(cents: number): string {
+  return formatCents(cents, false)
+}
+
 /** Format integer cents as a euro string, e.g. 145660 -> "1.456,60 €". */
 export function formatCents(cents: number, withSymbol = true): string {
   const negative = cents < 0

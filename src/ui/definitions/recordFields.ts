@@ -1,3 +1,5 @@
+import { formatEuroInput, parseEuroToCents } from '../../engine/money'
+
 /**
  * Declarative field specs for the small definition forms (categories, accounts,
  * opening balances, goals). Keeps the editor generic so each form is a data list,
@@ -20,7 +22,7 @@ export type FieldValue = string | number | boolean
 export function toInput(kind: FieldKind, raw: unknown): InputValue {
   if (kind === 'toggle') return Boolean(raw)
   if (raw == null) return ''
-  if (kind === 'money') return String(Number(raw) / 100)
+  if (kind === 'money') return formatEuroInput(Number(raw))
   if (kind === 'percent') return String(Number(raw) * 100)
   if (kind === 'number') return String(Number(raw))
   return typeof raw === 'string' ? raw : ''
@@ -29,7 +31,7 @@ export function toInput(kind: FieldKind, raw: unknown): InputValue {
 /** Form input representation -> domain value. */
 export function fromInput(kind: FieldKind, value: InputValue): FieldValue {
   if (kind === 'toggle') return Boolean(value)
-  if (kind === 'money') return Math.round(Number(value) * 100)
+  if (kind === 'money') return parseEuroToCents(String(value))
   if (kind === 'percent') return Number(value) / 100
   if (kind === 'number') return Number(value)
   return String(value)

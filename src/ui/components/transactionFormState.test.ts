@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
+import type { Transaction } from '../../types'
 import type { ExpenseModel } from '../useExpenseData'
 import type { TransactionSeed } from '../actions'
+import { parseEuroToCents } from '../../engine/money'
 import { initialFields } from './transactionFormState'
 
 function minimalModel(): ExpenseModel {
@@ -41,8 +43,23 @@ function minimalModel(): ExpenseModel {
   }
 }
 
+function editingTxn(amountCents: number): Transaction {
+  return {
+    id: 1,
+    date: '2026-07-05',
+    budgetMonth: '2026-07',
+    description: 'Coffee',
+    accountId: 2,
+    categoryId: 3,
+    type: 'expense',
+    amountCents,
+    status: 'posted',
+    cancelled: false,
+  }
+}
+
 describe('initialFields', () => {
-  it('maps a recurring seed into form defaults', () => {
+  it('maps a recurring seed into EU-formatted amount', () => {
     const seed: TransactionSeed = {
       description: 'Rent',
       type: 'expense',
@@ -55,7 +72,7 @@ describe('initialFields', () => {
     const fields = initialFields(null, minimalModel(), seed)
     expect(fields).toEqual({
       type: 'expense',
-      amount: '1456.6',
+      amount: '1.456,60',
       description: 'Rent',
       categoryId: 3,
       accountId: 2,
@@ -63,5 +80,10 @@ describe('initialFields', () => {
       budgetMonth: '2026-07',
       notes: '',
     })
+  })
+
+  it.each([110, 1010, 145660])('round-trips edit amount %i cents through parseEuroToCents', (cents) => {
+    const fields = initialFields(editingTxn(cents), minimalModel())
+    expect(parseEuroToCents(fields.amount)).toBe(cents)
   })
 })

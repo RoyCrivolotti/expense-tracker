@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Account, AccountStatement, Transaction } from '../types'
-import { formatCents, formatPercent, parseEuroToCents, parsePercentToFraction } from './money'
+import { formatCents, formatEuroInput, formatPercent, parseEuroToCents, parsePercentToFraction } from './money'
 import { budgetMonthFromName, defaultBudgetMonth, parseHumanDate } from './dates'
 import { fv, nper, pmt } from './finance'
 import { deriveStatus, deriveTransactions } from './status'
@@ -20,6 +20,15 @@ describe('money', () => {
   it('formats cents back to EU strings', () => {
     expect(formatCents(145660)).toBe('1.456,60 €')
     expect(formatCents(-63906)).toBe('-639,06 €')
+  })
+  it('formatEuroInput matches formatCents without symbol', () => {
+    expect(formatEuroInput(110)).toBe('1,10')
+    expect(formatEuroInput(145660)).toBe('1.456,60')
+  })
+  it('treats dot as thousands separator — do not seed inputs with JS decimals', () => {
+    expect(parseEuroToCents('1,10')).toBe(110)
+    expect(parseEuroToCents('1.10')).toBe(11000)
+    expect(parseEuroToCents('1.1')).toBe(1100)
   })
   it('parses percentages to fractions', () => {
     expect(parsePercentToFraction('40,0%')).toBeCloseTo(0.4, 6)
