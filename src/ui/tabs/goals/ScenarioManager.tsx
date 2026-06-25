@@ -20,6 +20,7 @@ interface ScenarioManagerProps {
   onSaveDraft: (name: string) => void
   onSaveChanges: () => void
   onDiscard: () => void
+  onScenarioCreated: (scenario: GoalScenario) => void
 }
 
 function SaveControls({
@@ -141,6 +142,7 @@ export function ScenarioManager(props: ScenarioManagerProps) {
           scenarioCount={scenarios.length}
           usedColors={scenarios.map((s) => s.color)}
           actions={actions}
+          onScenarioCreated={props.onScenarioCreated}
         />
       ) : null}
       <SaveControls

@@ -137,7 +137,7 @@ export function DashboardTab({ model, month, actions, onNavigate }: DashboardTab
         onOpenSettings={() => onNavigate?.('settings')}
       />
 
-      <GoalsCard dataset={dataset} actions={actions} onOpenGoals={() => onNavigate?.('goals')} />
+      <GoalsCard dataset={dataset} onOpenGoals={() => onNavigate?.('goals')} />
 
       <SectionTitle>Recent activity</SectionTitle>
       <Card>

@@ -11,6 +11,7 @@ import { GoalsExplainer } from './GoalsExplainer'
 import { GoalsNarrative } from './GoalsNarrative'
 import { SecondaryCharts } from './SecondaryCharts'
 import { draftFromDataset } from './goalsDefaults'
+import { lastAddedScenario, writePinnedScenarioId } from './scenarioSelection'
 import { NetWorthChart } from './charts/NetWorthChart'
 import { NetWorthNowCard } from './charts/NetWorthNowCard'
 import type { MonthlySaving } from './charts/SavingsRateChart'
@@ -42,6 +43,18 @@ const EDIT_KEYS = [
   'safeWithdrawalRate',
 ] as const satisfies readonly (keyof NewGoalScenario)[]
 
+function bootstrapEditor(
+  dataset: ExpenseModel['dataset'],
+  avgSaving: number,
+): { activeId: number | null; draft: NewGoalScenario } {
+  const last = lastAddedScenario(dataset.goalScenarios)
+  if (last) {
+    writePinnedScenarioId(last.id)
+    return { activeId: last.id, draft: scenarioToDraft(last) }
+  }
+  return { activeId: null, draft: draftFromDataset(dataset, avgSaving) }
+}
+
 export function GoalsTab({ model, actions }: GoalsTabProps) {
   const { dataset } = model
   const monthly = useMemo<MonthlySaving[]>(() => {
@@ -55,13 +68,12 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
     [monthly],
   )
 
-  const initialDraft = useMemo(
-    () => draftFromDataset(dataset, avgSaving),
-    [dataset, avgSaving],
+  const [activeId, setActiveId] = useState<number | null>(
+    () => bootstrapEditor(dataset, avgSaving).activeId,
   )
-
-  const [draft, setDraft] = useState<NewGoalScenario>(initialDraft)
-  const [activeId, setActiveId] = useState<number | null>(null)
+  const [draft, setDraft] = useState<NewGoalScenario>(
+    () => bootstrapEditor(dataset, avgSaving).draft,
+  )
   const [hiddenIds, setHiddenIds] = useState<ReadonlySet<number>>(() => new Set())
   // Controls read `draft` (instant); charts read the deferred copy so dragging a
   // slider never blocks on the projection recompute (keeps the thumb at 60fps).
@@ -83,10 +95,13 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
     return EDIT_KEYS.some((k) => draft[k] !== activeScenario[k])
   }, [activeScenario, draft])
 
-  const onSelectScenario = useCallback((scenario: GoalScenario) => {
+  const selectScenario = useCallback((scenario: GoalScenario) => {
     setActiveId(scenario.id)
     setDraft(scenarioToDraft(scenario))
+    writePinnedScenarioId(scenario.id)
   }, [])
+
+  const onSelectScenario = selectScenario
 
   const onSelectEditing = useCallback(() => {
     setActiveId(null)
@@ -111,16 +126,24 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
   }, [])
 
   const onSaveDraft = useCallback(
-    (name: string) => {
+    async (name: string) => {
       if (!actions) return
-      void actions.createScenario({
+      const scenario = await actions.createScenario({
         ...draft,
         name,
         color: pickScenarioColor(dataset.goalScenarios.map((s) => s.color)),
         sortOrder: dataset.goalScenarios.length,
       })
+      selectScenario(scenario)
     },
-    [actions, draft, dataset.goalScenarios],
+    [actions, draft, dataset.goalScenarios, selectScenario],
+  )
+
+  const handleSaveDraft = useCallback(
+    (name: string) => {
+      void onSaveDraft(name)
+    },
+    [onSaveDraft],
   )
 
   const visibleScenarios = useMemo(
@@ -151,9 +174,10 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
               onSelect={onSelectScenario}
               onSelectEditing={onSelectEditing}
               onToggleVisible={onToggleVisible}
-              onSaveDraft={onSaveDraft}
+              onSaveDraft={handleSaveDraft}
               onSaveChanges={onSaveChanges}
               onDiscard={onDiscard}
+              onScenarioCreated={selectScenario}
             />
           </div>
           <div className={styles.areaControls}>

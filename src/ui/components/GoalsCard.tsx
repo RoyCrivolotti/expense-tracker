@@ -1,56 +1,34 @@
-import { useMemo, type ReactNode } from 'react'
+import { useMemo } from 'react'
 import type { ExpenseDataset } from '../../types'
-import type { ExpenseActions } from '../actions'
 import {
-  computeGoals,
   averageMonthlySaving,
   computeMonthlyTotals,
-  formatCents,
-  formatPercent,
 } from '../../engine'
-import { Money } from './Money'
-import { PercentStepper } from './PercentStepper'
 import { Card, EmptyState, SectionTitle } from './primitives'
-import { formatMonths, formatYears } from './goalsFormat'
+import { scenarioHeadline } from '../tabs/goals/scenarioHeadline'
+import { resolveDashboardScenario } from '../tabs/goals/scenarioSelection'
 import styles from './GoalsCard.module.css'
 
 interface GoalsCardProps {
   dataset: ExpenseDataset
-  actions?: ExpenseActions | undefined
   onOpenGoals?: () => void
 }
 
-function GoalRow({
-  label,
-  hint,
-  value,
-  valueClassName,
-}: {
-  label: string
-  hint: string
-  value: ReactNode
-  valueClassName?: string
-}) {
-  return (
-    <div className={styles.row}>
-      <span className={styles.labelGroup}>
-        <span className={styles.label}>{label}</span>
-        <span className={styles.hint}>{hint}</span>
-      </span>
-      <span className={valueClassName ?? styles.value}>{value}</span>
-    </div>
+export function GoalsCard({ dataset, onOpenGoals }: GoalsCardProps) {
+  const scenario = useMemo(
+    () => resolveDashboardScenario(dataset.goalScenarios),
+    [dataset.goalScenarios],
   )
-}
-
-export function GoalsCard({ dataset, actions, onOpenGoals }: GoalsCardProps) {
-  const { goalInputs } = dataset
-  const metrics = useMemo(() => {
+  const avgSaving = useMemo(() => {
     const totals = [...computeMonthlyTotals(dataset.transactions).values()]
-    const avgSaving = averageMonthlySaving(totals.map((t) => t.netSavingCents))
-    return computeGoals(goalInputs, avgSaving, dataset.settings.liquidNetWorthCents)
-  }, [dataset, goalInputs])
+    return averageMonthlySaving(totals.map((t) => t.netSavingCents))
+  }, [dataset.transactions])
+  const headline = useMemo(
+    () => (scenario ? scenarioHeadline(scenario, avgSaving) : null),
+    [scenario, avgSaving],
+  )
 
-  if (goalInputs.housePriceCents === 0 && goalInputs.longTermTargetCents === 0) {
+  if (!scenario || !headline) {
     return (
       <>
         <SectionTitle>Goals</SectionTitle>
@@ -67,17 +45,6 @@ export function GoalsCard({ dataset, actions, onOpenGoals }: GoalsCardProps) {
     )
   }
 
-  const perMonth = formatCents(metrics.avgMonthlySavingsCents)
-  const returnPct = formatPercent(goalInputs.expectedRealReturn)
-  const downPaymentHint =
-    metrics.monthsToDownPayment === 0
-      ? 'Deposit target already covered'
-      : `${perMonth}/mo toward ${formatCents(metrics.downPaymentCents)} deposit`
-
-  const onReturnChange = actions
-    ? (fraction: number) => void actions.updateGoals({ expectedRealReturn: fraction })
-    : undefined
-
   return (
     <>
       <SectionTitle>
@@ -92,30 +59,13 @@ export function GoalsCard({ dataset, actions, onOpenGoals }: GoalsCardProps) {
         ) : null}
       </SectionTitle>
       <Card>
-        <GoalRow
-          label="Time to down payment"
-          hint={downPaymentHint}
-          value={formatMonths(metrics.monthsToDownPayment)}
-        />
-        <GoalRow
-          label="Time to long-term target"
-          hint={`${returnPct} real · ${perMonth}/mo · target ${formatCents(metrics.longTermTargetCents)}`}
-          value={formatYears(metrics.yearsToLongTermGoal)}
-        />
-        <GoalRow
-          label="Projected surplus"
-          hint={`${goalInputs.horizonYears}yr horizon · portfolio ${formatCents(metrics.projectedPortfolioCents)}`}
-          value={<Money cents={metrics.surplusCents} signed className={styles.value} />}
-          valueClassName={`${styles.value} ${styles.valueSurplus}`}
-        />
-        <div className={styles.assumption}>
-          <span className={styles.assumptionLabel}>Expected real return</span>
-          <PercentStepper value={goalInputs.expectedRealReturn} onChange={onReturnChange} />
-        </div>
-        <p className={styles.footer}>
-          Surplus = projected portfolio minus long-term target after {goalInputs.horizonYears} years
-          at your average net saving rate.
-        </p>
+        <p className={styles.primary}>{headline.primary}</p>
+        <p className={styles.secondary}>{headline.secondary}</p>
+        {onOpenGoals ? (
+          <button type="button" className={styles.cta} onClick={onOpenGoals}>
+            Open Goals
+          </button>
+        ) : null}
       </Card>
     </>
   )
