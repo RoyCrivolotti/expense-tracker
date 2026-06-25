@@ -37,10 +37,15 @@ jobs:
           OWNER_EMAIL: ${{ secrets.OWNER_EMAIL }}
         run: npm run sync:access-env
 
-      - name: Deploy expense-tracker
+      - name: Deploy expense-tracker (production)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npm run deploy
+
+      - name: Deploy staging (roy-expenses-stg)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npm run deploy:dev
 
       - name: Deploy backup cron worker
         env:

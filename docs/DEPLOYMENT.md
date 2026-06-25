@@ -64,9 +64,9 @@ npm run sync:access-env
 
 ## CI
 
-Push to `main` → verify (includes migration doc gate) → sync access env → deploy Pages → deploy backup cron worker.
+Push to `main` → verify → sync access env → deploy **production** (`expense-tracker`) and **staging** (`roy-expenses-stg`) → deploy backup cron worker.
 
-Pull requests → verify + deploy **dev preview** (`.github/workflows/deploy-dev.yml`). See [OPS.md](./OPS.md) for staging setup.
+Pull requests → verify + deploy **staging** only (`.github/workflows/deploy-dev.yml`). See [OPS.md](./OPS.md) for staging setup.
 
 Secrets: `CLOUDFLARE_API_TOKEN`, `OWNER_EMAIL`.
 
