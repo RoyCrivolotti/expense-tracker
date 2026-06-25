@@ -21,7 +21,8 @@ export function SearchRow({
       <div className={styles.searchWrap}>
         <input
           className={styles.search}
-          type="search"
+          type="text"
+          inputMode="search"
           placeholder="Search description or notes…"
           value={query}
           onChange={(e) => onQuery(e.target.value)}
