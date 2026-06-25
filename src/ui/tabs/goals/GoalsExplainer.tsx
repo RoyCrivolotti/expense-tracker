@@ -2,6 +2,14 @@ import styles from './goals.module.css'
 
 const TERMS: { term: string; body: string }[] = [
   {
+    term: 'House purchase year',
+    body: 'When you buy: null = never; 0 = already own (capital allocated); N > 0 = buy after year N. In that year the model grows your portfolio first, then withdraws down payment plus purchase fees. Equity appears in the composition chart — the invested line dip is not your total net worth falling by that amount.',
+  },
+  {
+    term: 'Purchase fees',
+    body: 'Notary, agency, and closing costs (default €500 in demo). Withdrawn from the invested portfolio together with the down payment in the purchase year.',
+  },
+  {
     term: 'Scenario',
     body: 'A saved set of assumptions (return, contribution, horizon, house plans). Each one is a colored line on the projection so you can compare futures side by side.',
   },

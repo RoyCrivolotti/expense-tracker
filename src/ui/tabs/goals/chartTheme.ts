@@ -7,6 +7,13 @@ export function formatEuroShort(cents: number): string {
   return formatCents(cents)
 }
 
+export function formatSignedEuroShort(cents: number): string {
+  const abs = formatEuroShort(Math.abs(cents))
+  if (cents > 0) return `+${abs}`
+  if (cents < 0) return `−${abs}`
+  return abs
+}
+
 export const GOAL_CHART_MARGIN = { top: 12, right: 16, left: 8, bottom: 8 }
 
 export function chartTooltipStyle(): CSSProperties {

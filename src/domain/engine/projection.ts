@@ -79,6 +79,56 @@ function purchaseWithdrawalCents(params: ProjectionParams): number {
   return down + params.transactionCostsCents
 }
 
+export interface PurchaseYearBreakdown {
+  year: number
+  startInvestedCents: number
+  growthCents: number
+  contributionCents: number
+  beforePurchaseCents: number
+  downPaymentCents: number
+  transactionCostsCents: number
+  totalWithdrawalCents: number
+  endInvestedCents: number
+  netChangeCents: number
+}
+
+/** Step-by-step invested balance at a deferred house-purchase year (null if not applicable). */
+export function purchaseYearBreakdown(
+  params: ProjectionParams,
+  year: number,
+): PurchaseYearBreakdown | null {
+  const purchaseYear = params.housePurchaseYear
+  if (purchaseYear === null || purchaseYear <= 0 || year !== purchaseYear) return null
+
+  const points = projectNetWorth(params)
+  const prior = points.find((p) => p.year === year - 1)
+  const current = points.find((p) => p.year === year)
+  if (!prior || !current) return null
+
+  const startInvestedCents = prior.investedCents
+  const contributionCents = current.annualContributionCents
+  const afterGrowthCents = Math.round(startInvestedCents * (1 + params.expectedRealReturn))
+  const growthCents = afterGrowthCents - startInvestedCents
+  const beforePurchaseCents = afterGrowthCents + contributionCents
+  const downPaymentCents = Math.round(params.housePriceCents * params.downPaymentFraction)
+  const transactionCostsCents = params.transactionCostsCents
+  const totalWithdrawalCents = purchaseWithdrawalCents(params)
+  const endInvestedCents = current.investedCents
+
+  return {
+    year,
+    startInvestedCents,
+    growthCents,
+    contributionCents,
+    beforePurchaseCents,
+    downPaymentCents,
+    transactionCostsCents,
+    totalWithdrawalCents,
+    endInvestedCents,
+    netChangeCents: endInvestedCents - startInvestedCents,
+  }
+}
+
 /** Simulate invested portfolio + housing net worth year-by-year. */
 export function projectNetWorth(params: ProjectionParams): YearPoint[] {
   const loanCents =

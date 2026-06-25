@@ -238,6 +238,19 @@
   font-weight: 600;
 }
 
+.tooltipDetail {
+  font-size: 0.75rem;
+}
+
+.tooltipDetail .tooltipLabel {
+  color: var(--color-text-muted);
+  opacity: 0.9;
+}
+
+.tooltipDetail .tooltipValue {
+  font-weight: 500;
+}
+
 .legend {
   display: flex;
   flex-wrap: wrap;

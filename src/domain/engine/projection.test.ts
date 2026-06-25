@@ -12,6 +12,7 @@ import {
 import {
   projectInvested,
   projectNetWorth,
+  purchaseYearBreakdown,
   yearsToTarget,
   type ProjectionParams,
 } from './projection'
@@ -62,6 +63,28 @@ describe('projection invested milestones', () => {
     const withPurchase = projectInvested(baseParams({ ...shared, housePurchaseYear: 5 }))
     const without = projectInvested(baseParams({ ...shared, housePurchaseYear: null }))
     expect(withPurchase[5]).toBeLessThan(without[5]!)
+  })
+
+  it('purchaseYearBreakdown explains chart step vs full withdrawal', () => {
+    const params = baseParams({
+      startInvestedCents: 27_000_000,
+      monthlyContributionCents: 100_000,
+      expectedRealReturn: 0.05,
+      horizonYears: 30,
+      housePriceCents: 37_000_000,
+      downPaymentFraction: 0.35,
+      housePurchaseYear: 10,
+      transactionCostsCents: 50_000,
+      annualContributionGrowth: 0,
+    })
+    const breakdown = purchaseYearBreakdown(params, 10)
+    expect(breakdown).not.toBeNull()
+    expect(breakdown!.totalWithdrawalCents).toBe(12_950_000 + 50_000)
+    expect(breakdown!.endInvestedCents).toBe(projectInvested(params)[10])
+    expect(breakdown!.netChangeCents).toBe(
+      breakdown!.endInvestedCents - breakdown!.startInvestedCents,
+    )
+    expect(Math.abs(breakdown!.netChangeCents)).toBeLessThan(breakdown!.totalWithdrawalCents)
   })
 
   it('maps milestone cents to year indices monotonically', () => {

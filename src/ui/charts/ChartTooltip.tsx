@@ -7,6 +7,7 @@ export interface TooltipLine {
   label: string
   value: string
   tone?: 'income' | 'expense' | 'neutral'
+  variant?: 'default' | 'detail'
 }
 
 interface Anchor {
@@ -26,7 +27,10 @@ function TooltipBody({ title, lines }: Pick<Props, 'title' | 'lines'>) {
       <p className={styles.tooltipTitle}>{title}</p>
       <ul className={styles.tooltipList}>
         {lines.map((line) => (
-          <li key={line.label} className={styles[`tooltip_${line.tone ?? 'neutral'}`]}>
+          <li
+            key={line.label}
+            className={`${styles[`tooltip_${line.tone ?? 'neutral'}`]}${line.variant === 'detail' ? ` ${styles.tooltipDetail}` : ''}`}
+          >
             <span className={styles.tooltipLabel}>{line.label}</span>
             <span className={styles.tooltipValue}>{line.value}</span>
           </li>
