@@ -24,6 +24,8 @@
     "setup:access-preview": "node scripts/setup-access-preview.mjs",
     "migrate:dev": "node scripts/migrate-dev.mjs",
     "seed:dev": "node scripts/seed-dev.mjs",
+    "seed:dev-from-prod": "node scripts/seed-dev.mjs",
+    "seed:demo-staging": "node scripts/seed-demo-staging.mjs",
     "seed:scenarios": "npx tsx scripts/seed-scenarios.ts",
     "deploy:backup-cron": "node scripts/deploy-backup-cron.mjs",
     "bootstrap:allowed-users": "node scripts/bootstrap-allowed-users.mjs",

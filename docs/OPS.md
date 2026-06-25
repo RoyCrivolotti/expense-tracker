@@ -87,11 +87,29 @@ Settings → Import includes a **Download template** with the header and one exa
 | `scripts/setup-access-apps.mjs` | `setup:access-apps` | Sync prod + staging Access apps |
 | `scripts/setup-access-migrate.mjs` | `setup:access-migrate` | Strip staging hostnames from `roy-admin` |
 | `scripts/setup-dev-bindings.mjs` | `setup:dev-bindings` | Re-apply D1 bindings on `roy-expenses-stg` |
-| `scripts/seed-dev.mjs` | `seed:dev` | Prod D1 export → dev (`.tmp/` gitignored) |
+| `scripts/seed-dev.mjs` | `seed:dev` / `seed:dev-from-prod` | Prod D1 export → dev (`.tmp/` gitignored); private QA only |
+| `scripts/seed-demo-staging.mjs` | `seed:demo-staging` | Synthetic demo tenant on `roy-expenses-dev` (public fixtures) |
 | `scripts/migrate-dev.mjs` | `migrate:dev` | Apply new migrations to dev (post-seed only) |
 | `scripts/deploy-dev.sh` | `deploy:dev` | Deploy to `roy-expenses-stg` |
 
 PRs on expense-tracker run `.github/workflows/deploy-dev.yml`.
+
+## Staging demo account (portfolio try-it)
+
+Shared Google account for reviewers (`expenses.tracker.demo@gmail.com` by default). Data lives in `fixtures/demo-staging-expenses.csv` (Jan–Jun ledger) and `fixtures/demo-staging-goal-scenarios.json` (four saved scenarios).
+
+**One-time / reset:**
+
+```bash
+unset CLOUDFLARE_API_TOKEN
+npm run seed:demo-staging
+```
+
+This allowlists the demo email on `roy-expenses-dev`, grants the `expenses` group, and loads synthetic data for that owner only. Other staging users are untouched.
+
+**Share with visitors:** link to https://stg-expenses.crivolotti.com and the demo Google credentials (store in 1Password; never commit passwords).
+
+To use a different demo email: `DEMO_EMAIL=you@example.com npm run seed:demo-staging`.
 
 ## Gitignored local paths
 

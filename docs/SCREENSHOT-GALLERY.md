@@ -10,7 +10,7 @@ npm run capture:screenshots
 
 Output: [`screenshots/gallery/`](./screenshots/gallery/).
 
-Goals shots use three demo scenarios from [`fixtures/demo-goal-scenarios.json`](../fixtures/demo-goal-scenarios.json). See [AUDIT-2026-06-GOALS.md](./AUDIT-2026-06-GOALS.md) for the post-Goals audit.
+Goals shots use three demo scenarios from [`fixtures/demo-goal-scenarios.json`](../fixtures/demo-goal-scenarios.json). The capture script sets `DOCS_CAPTURE=1` to seed those paths automatically.
 
 ## Dashboard
 
