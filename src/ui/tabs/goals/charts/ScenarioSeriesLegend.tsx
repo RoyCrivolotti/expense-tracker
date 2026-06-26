@@ -43,7 +43,7 @@ function DashedSwatch({ color }: { color: string }) {
         strokeLinecap="round"
       />
       <path
-        d={`M ${o} ${12 - o - r} A ${r} ${r} 0 0 1 ${o + r} ${12 - o}`}
+        d={`M ${o} ${12 - o - r} A ${r} ${r} 0 0 0 ${o + r} ${12 - o}`}
         fill="none"
         stroke={color}
         strokeWidth={stroke}
