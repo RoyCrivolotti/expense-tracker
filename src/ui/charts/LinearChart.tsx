@@ -1,4 +1,4 @@
-import { useMemo, useRef, type RefObject } from 'react'
+import { useEffect, useMemo, useRef, type RefObject } from 'react'
 import { ChartTooltip, type TooltipLine } from './ChartTooltip'
 import { ChartGrid, ChartXLabels } from './linearChartParts'
 import { useChartFocus } from './useChartFocus'
@@ -34,6 +34,8 @@ interface Props {
   ariaLabel: string
   tooltip: (index: number) => { title: string; lines: TooltipLine[] }
   refLines?: number[]
+  tooltipMode?: 'full' | 'hidden'
+  onActiveIndexChange?: (index: number | null) => void
 }
 
 function pointsOf(values: number[], x: (i: number) => number, y: (v: number) => number): Pt[] {
@@ -69,6 +71,8 @@ export function LinearChart({
   ariaLabel,
   tooltip,
   refLines = [],
+  tooltipMode = 'full',
+  onActiveIndexChange,
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   const geo = useGeometry(series, height, refLines)
@@ -77,6 +81,10 @@ export function LinearChart({
   const anchor = useSvgAnchor(svgRef, active != null ? focusX : null, active != null ? PAD.top : null)
   const tip = active != null ? tooltip(active) : null
   const lines = series.filter((s) => s.kind !== 'area')
+
+  useEffect(() => {
+    onActiveIndexChange?.(active)
+  }, [active, onActiveIndexChange])
 
   return (
     <div ref={containerRef as RefObject<HTMLDivElement | null>} className={styles.chartWrap}>
@@ -154,7 +162,9 @@ export function LinearChart({
           </>
         )}
       </svg>
-      {tip && <ChartTooltip anchor={anchor} title={tip.title} lines={tip.lines} />}
+      {tip && tooltipMode === 'full' ? (
+        <ChartTooltip anchor={anchor} title={tip.title} lines={tip.lines} />
+      ) : null}
     </div>
   )
 }

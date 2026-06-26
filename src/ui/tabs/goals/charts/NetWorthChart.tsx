@@ -1,4 +1,4 @@
-import { memo, useMemo, type ReactNode } from 'react'
+import { memo, useCallback, useMemo, useState, type ReactNode } from 'react'
 import type { GoalScenario } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import { MILESTONE_CENTS, projectNetWorth, purchaseYearBreakdown, scenarioToParams } from '../../../../engine'
@@ -8,7 +8,7 @@ import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
 import { sparseLabels } from '../../../charts/linearScale'
 import { formatEuroShort } from '../chartTheme'
-import { purchaseBreakdownTooltipLines } from '../purchaseTooltip'
+import { ScenarioSeriesLegend, type ScenarioLegendItem } from './ScenarioSeriesLegend'
 import styles from '../goals.module.css'
 
 interface RawLine {
@@ -25,9 +25,6 @@ function rawLines(
   activeId: number | null,
   dirty: boolean,
 ): RawLine[] {
-  // The active scenario is normally represented by the live "(editing)" line, so
-  // drop its saved copy to avoid drawing the same plan twice. Keep it while the
-  // edit is dirty so the saved baseline stays visible to compare against.
   const lines: RawLine[] = saved
     .filter((s) => s.id !== activeId || dirty)
     .map((s) => ({
@@ -70,6 +67,31 @@ function buildSeries(
   return { years, series, names: lines.map((l) => l.name) }
 }
 
+function PortfolioLegend({
+  isHero,
+  staticLegend,
+  legendItems,
+  activeYear,
+  purchaseBreakdown,
+}: {
+  isHero: boolean
+  staticLegend: LegendItem[]
+  legendItems: ScenarioLegendItem[]
+  activeYear: number | null
+  purchaseBreakdown: ReturnType<typeof purchaseYearBreakdown>
+}) {
+  if (isHero) {
+    return (
+      <ScenarioSeriesLegend
+        items={legendItems}
+        activeYear={activeYear}
+        purchaseBreakdown={purchaseBreakdown}
+      />
+    )
+  }
+  return <ChartLegend items={staticLegend} variant="stack" />
+}
+
 function NetWorthChartImpl({
   scenarios,
   draft,
@@ -85,17 +107,42 @@ function NetWorthChartImpl({
   variant?: 'default' | 'hero'
   footer?: ReactNode
 }) {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null)
+  const onActiveIndexChange = useCallback((index: number | null) => {
+    setActiveIndex(index)
+  }, [])
+
   const { years, series, names } = useMemo(
     () => buildSeries(scenarios, draft, activeId, dirty),
     [scenarios, draft, activeId, dirty],
   )
   const refLines = useMemo(() => MILESTONE_CENTS.filter((m) => m <= 100_000_000), [])
   const labels = useMemo(() => sparseLabels(years, 5), [years])
-  const legend: LegendItem[] = series.map((s, idx) => ({
-    label: names[idx] ?? s.id,
-    color: s.color,
-  }))
   const isHero = variant === 'hero'
+  const staticLegend: LegendItem[] = useMemo(
+    () =>
+      series.map((s, idx) => ({
+        label: names[idx] ?? s.id,
+        color: s.color,
+      })),
+    [series, names],
+  )
+
+  const activeYear = activeIndex != null ? years[activeIndex] ?? null : null
+  const legendItems: ScenarioLegendItem[] = useMemo(
+    () =>
+      series.map((s, idx) => ({
+        label: names[idx] ?? s.id,
+        color: s.color,
+        ...(s.dashed ? { dashed: true as const } : {}),
+        valueCents: activeIndex != null ? s.values[activeIndex] ?? 0 : null,
+      })),
+    [series, names, activeIndex],
+  )
+  const purchaseBreakdown = useMemo(() => {
+    if (activeYear == null) return null
+    return purchaseYearBreakdown(scenarioToParams({ ...draft, id: 0 }), activeYear)
+  }, [activeYear, draft])
 
   const tooltip = (i: number): { title: string; lines: TooltipLine[] } => {
     const year = years[i] ?? i
@@ -104,8 +151,6 @@ function NetWorthChartImpl({
       value: formatEuroShort(s.values[i] ?? 0),
       tone: 'neutral',
     }))
-    const breakdown = purchaseYearBreakdown(scenarioToParams({ ...draft, id: 0 }), year)
-    if (breakdown) lines.push(...purchaseBreakdownTooltipLines(breakdown))
     return { title: `Year ${year}`, lines }
   }
 
@@ -121,7 +166,7 @@ function NetWorthChartImpl({
       ) : (
         <p className={styles.chartHint}>
           At a purchase year, return and contributions apply before the down payment is
-          withdrawn — hover that year for the breakdown.
+          withdrawn — select a year on the chart for values and the purchase breakdown.
         </p>
       )}
       <LinearChart
@@ -132,8 +177,16 @@ function NetWorthChartImpl({
         formatValue={formatEuroShort}
         ariaLabel="Invested portfolio projection by year"
         tooltip={tooltip}
+        tooltipMode={isHero ? 'hidden' : 'full'}
+        {...(isHero ? { onActiveIndexChange } : {})}
       />
-      <ChartLegend items={legend} variant="stack" />
+      <PortfolioLegend
+        isHero={isHero}
+        staticLegend={staticLegend}
+        legendItems={legendItems}
+        activeYear={activeYear}
+        purchaseBreakdown={purchaseBreakdown}
+      />
       {footer != null ? <div className={styles.chartFooter}>{footer}</div> : null}
     </Card>
   )
