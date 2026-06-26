@@ -16,17 +16,38 @@ interface ScenarioSeriesLegendProps {
 }
 
 function DashedSwatch({ color }: { color: string }) {
+  const stroke = 2
+  const r = 2.4
+  const o = 2
   return (
-    <svg className={styles.dashedSwatch} viewBox="0 0 14 12" aria-hidden>
-      <line
-        x1="1"
-        y1="6"
-        x2="13"
-        y2="6"
+    <svg className={styles.dashedSwatch} viewBox="0 0 12 12" aria-hidden>
+      <path
+        d={`M ${o + r} ${o} A ${r} ${r} 0 0 0 ${o} ${o + r}`}
+        fill="none"
         stroke={color}
-        strokeWidth="2"
+        strokeWidth={stroke}
         strokeLinecap="round"
-        strokeDasharray="1.8 1.1"
+      />
+      <path
+        d={`M ${12 - o - r} ${o} A ${r} ${r} 0 0 1 ${12 - o} ${o + r}`}
+        fill="none"
+        stroke={color}
+        strokeWidth={stroke}
+        strokeLinecap="round"
+      />
+      <path
+        d={`M ${12 - o} ${12 - o - r} A ${r} ${r} 0 0 1 ${12 - o - r} ${12 - o}`}
+        fill="none"
+        stroke={color}
+        strokeWidth={stroke}
+        strokeLinecap="round"
+      />
+      <path
+        d={`M ${o} ${12 - o - r} A ${r} ${r} 0 0 1 ${o + r} ${12 - o}`}
+        fill="none"
+        stroke={color}
+        strokeWidth={stroke}
+        strokeLinecap="round"
       />
     </svg>
   )
