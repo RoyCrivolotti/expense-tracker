@@ -84,40 +84,8 @@
     min-width: 0;
   }
 
-  .areaScenarios,
-  .scenarioCard {
+  .areaScenarios {
     min-width: 0;
-  }
-
-  .scenarioChipRow {
-    flex-direction: column;
-    align-items: stretch;
-    min-width: 0;
-    width: 100%;
-  }
-
-  .scenarioChipRow .chip,
-  .scenarioChipRow .chipGroup {
-    flex: 0 0 auto;
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
-    white-space: normal;
-    border-radius: 8px;
-  }
-
-  .scenarioChipRow .chipGroup {
-    display: flex;
-  }
-
-  .scenarioChipRow .chipSelect {
-    flex: 1;
-    min-width: 0;
-    text-align: left;
-    white-space: normal;
-    overflow-wrap: anywhere;
-    align-items: flex-start;
   }
 }
 
@@ -263,11 +231,42 @@
   display: none;
 }
 
+.scenarioCard {
+  min-width: 0;
+}
+
 .scenarioChipRow {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: stretch;
   gap: 0.45rem;
   margin-bottom: 0.5rem;
+  min-width: 0;
+  width: 100%;
+}
+
+.scenarioChipRow .chip,
+.scenarioChipRow .chipGroup {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  white-space: normal;
+  border-radius: 8px;
+}
+
+.scenarioChipRow .chipGroup {
+  display: flex;
+}
+
+.scenarioChipRow .chipSelect {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  align-items: flex-start;
 }
 
 .chip {
