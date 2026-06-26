@@ -29,7 +29,7 @@ export function ScenarioManager(props: ScenarioManagerProps) {
   const activeScenario = scenarios.find((s) => s.id === activeId) ?? null
 
   return (
-    <Card>
+    <Card className={styles.scenarioCard}>
       <h3 className={styles.sectionTitle}>Scenarios</h3>
       <p className={styles.chartHint}>
         Each colored line on the projection is a saved scenario. Tap one to load it into the editor
