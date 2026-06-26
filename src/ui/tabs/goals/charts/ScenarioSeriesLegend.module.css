@@ -69,12 +69,48 @@
   border-top: 1px solid var(--color-border);
 }
 
+.breakdownStack {
+  margin-top: 0.55rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.breakdownStack .breakdown {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.breakdownStack .breakdown + .breakdown {
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.breakdownHeader {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
 .breakdownTitle {
-  margin: 0 0 0.35rem;
+  margin: 0;
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.yearZeroHint {
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
   color: var(--color-text-muted);
 }
 

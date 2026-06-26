@@ -1,6 +1,7 @@
 import { memo, useCallback, useMemo, useState, type ReactNode } from 'react'
 import type { GoalScenario } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
+import type { ProjectionParams } from '../../../../engine'
 import { MILESTONE_CENTS, projectNetWorth, purchaseYearBreakdown, scenarioToParams } from '../../../../engine'
 import { Card } from '../../../components/primitives'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
@@ -8,63 +9,78 @@ import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
 import { sparseLabels } from '../../../charts/linearScale'
 import { formatEuroShort } from '../chartTheme'
-import { ScenarioSeriesLegend, type ScenarioLegendItem } from './ScenarioSeriesLegend'
+import {
+  ScenarioSeriesLegend,
+  type ScenarioLegendBreakdown,
+  type ScenarioLegendItem,
+} from './ScenarioSeriesLegend'
 import styles from '../goals.module.css'
 
-interface RawLine {
+interface ScenarioLine {
   id: string
   name: string
   color: string
   dashed: boolean
-  points: { year: number; investedCents: number }[]
+  params: ProjectionParams
 }
 
-function rawLines(
+function scenarioLines(
   saved: GoalScenario[],
   draft: NewGoalScenario,
   activeId: number | null,
   dirty: boolean,
-): RawLine[] {
-  const lines: RawLine[] = saved
+): ScenarioLine[] {
+  const lines: ScenarioLine[] = saved
     .filter((s) => s.id !== activeId || dirty)
     .map((s) => ({
       id: `saved-${s.id}`,
       name: s.name,
       color: s.color,
       dashed: false,
-      points: projectNetWorth(scenarioToParams(s)),
+      params: scenarioToParams(s),
     }))
   lines.push({
     id: 'draft',
     name: `${draft.name} (editing)`,
     color: draft.color,
     dashed: true,
-    points: projectNetWorth(scenarioToParams({ ...draft, id: 0 })),
+    params: scenarioToParams({ ...draft, id: 0 }),
   })
   return lines
 }
 
 function buildSeries(
-  saved: GoalScenario[],
-  draft: NewGoalScenario,
-  activeId: number | null,
-  dirty: boolean,
+  lines: ScenarioLine[],
 ): { years: number[]; series: ChartSeries[]; names: string[] } {
-  const lines = rawLines(saved, draft, activeId, dirty)
+  const projected = lines.map((line) => ({
+    line,
+    points: projectNetWorth(line.params),
+  }))
   const yearSet = new Set<number>()
-  lines.forEach((l) => l.points.forEach((p) => yearSet.add(p.year)))
+  projected.forEach(({ points }) => points.forEach((p) => yearSet.add(p.year)))
   const years = [...yearSet].sort((a, b) => a - b)
-  const series: ChartSeries[] = lines.map((l) => {
-    const byYear = new Map(l.points.map((p) => [p.year, p.investedCents]))
+  const series: ChartSeries[] = projected.map(({ line, points }) => {
+    const byYear = new Map(points.map((p) => [p.year, p.investedCents]))
     return {
-      id: l.id,
-      color: l.color,
+      id: line.id,
+      color: line.color,
       values: years.map((y) => byYear.get(y) ?? 0),
-      dashed: l.dashed,
-      ...(l.id === 'draft' ? { width: 2.5 } : {}),
+      dashed: line.dashed,
+      ...(line.id === 'draft' ? { width: 2.5 } : {}),
     }
   })
   return { years, series, names: lines.map((l) => l.name) }
+}
+
+function purchaseMarkerIndices(lines: ScenarioLine[], years: number[]): { yearIndex: number }[] {
+  const indices = new Set<number>()
+  for (const line of lines) {
+    const purchaseYear = line.params.housePurchaseYear
+    if (purchaseYear == null) continue
+    const idx = years.indexOf(purchaseYear)
+    if (idx >= 0) indices.add(idx)
+  }
+  return [...indices].sort((a, b) => a - b).map((yearIndex) => ({ yearIndex }))
 }
 
 function PortfolioLegend({
@@ -72,24 +88,68 @@ function PortfolioLegend({
   staticLegend,
   legendItems,
   activeYear,
-  purchaseBreakdown,
+  breakdowns,
+  yearZeroHint,
 }: {
   isHero: boolean
   staticLegend: LegendItem[]
   legendItems: ScenarioLegendItem[]
   activeYear: number | null
-  purchaseBreakdown: ReturnType<typeof purchaseYearBreakdown>
+  breakdowns: ScenarioLegendBreakdown[]
+  yearZeroHint: boolean
 }) {
   if (isHero) {
     return (
       <ScenarioSeriesLegend
         items={legendItems}
         activeYear={activeYear}
-        purchaseBreakdown={purchaseBreakdown}
+        breakdowns={breakdowns}
+        yearZeroHint={yearZeroHint}
       />
     )
   }
   return <ChartLegend items={staticLegend} variant="stack" />
+}
+
+function useChartLegendState(
+  lines: ScenarioLine[],
+  series: ChartSeries[],
+  names: string[],
+  years: number[],
+  activeIndex: number | null,
+) {
+  const activeYear = activeIndex != null ? years[activeIndex] ?? null : null
+  const legendItems: ScenarioLegendItem[] = useMemo(
+    () =>
+      series.map((s, idx) => ({
+        label: names[idx] ?? s.id,
+        color: s.color,
+        ...(s.dashed ? { dashed: true as const } : {}),
+        valueCents: activeIndex != null ? s.values[activeIndex] ?? 0 : null,
+      })),
+    [series, names, activeIndex],
+  )
+  const breakdowns: ScenarioLegendBreakdown[] = useMemo(() => {
+    if (activeYear == null) return []
+    return lines.flatMap((line) => {
+      const breakdown = purchaseYearBreakdown(line.params, activeYear)
+      if (!breakdown) return []
+      return [
+        {
+          label: line.name,
+          color: line.color,
+          ...(line.dashed ? { dashed: true as const } : {}),
+          breakdown,
+        },
+      ]
+    })
+  }, [activeYear, lines])
+  const yearZeroHint = useMemo(() => {
+    if (activeYear !== 0 || breakdowns.length > 0) return false
+    return lines.some((line) => line.params.housePurchaseYear === 0)
+  }, [activeYear, breakdowns.length, lines])
+
+  return { activeYear, legendItems, breakdowns, yearZeroHint }
 }
 
 function NetWorthChartImpl({
@@ -112,10 +172,12 @@ function NetWorthChartImpl({
     setActiveIndex(index)
   }, [])
 
-  const { years, series, names } = useMemo(
-    () => buildSeries(scenarios, draft, activeId, dirty),
+  const lines = useMemo(
+    () => scenarioLines(scenarios, draft, activeId, dirty),
     [scenarios, draft, activeId, dirty],
   )
+  const { years, series, names } = useMemo(() => buildSeries(lines), [lines])
+  const markerYears = useMemo(() => purchaseMarkerIndices(lines, years), [lines, years])
   const refLines = useMemo(() => MILESTONE_CENTS.filter((m) => m <= 100_000_000), [])
   const labels = useMemo(() => sparseLabels(years, 5), [years])
   const isHero = variant === 'hero'
@@ -127,22 +189,13 @@ function NetWorthChartImpl({
       })),
     [series, names],
   )
-
-  const activeYear = activeIndex != null ? years[activeIndex] ?? null : null
-  const legendItems: ScenarioLegendItem[] = useMemo(
-    () =>
-      series.map((s, idx) => ({
-        label: names[idx] ?? s.id,
-        color: s.color,
-        ...(s.dashed ? { dashed: true as const } : {}),
-        valueCents: activeIndex != null ? s.values[activeIndex] ?? 0 : null,
-      })),
-    [series, names, activeIndex],
+  const { activeYear, legendItems, breakdowns, yearZeroHint } = useChartLegendState(
+    lines,
+    series,
+    names,
+    years,
+    activeIndex,
   )
-  const purchaseBreakdown = useMemo(() => {
-    if (activeYear == null) return null
-    return purchaseYearBreakdown(scenarioToParams({ ...draft, id: 0 }), activeYear)
-  }, [activeYear, draft])
 
   const tooltip = (i: number): { title: string; lines: TooltipLine[] } => {
     const year = years[i] ?? i
@@ -167,6 +220,7 @@ function NetWorthChartImpl({
         <p className={styles.chartHint}>
           At a purchase year, return and contributions apply before the down payment is
           withdrawn — select a year on the chart for values and the purchase breakdown.
+          Dashed vertical marks show purchase years.
         </p>
       )}
       <LinearChart
@@ -174,6 +228,7 @@ function NetWorthChartImpl({
         series={series}
         xLabels={labels}
         refLines={refLines}
+        markerYears={isHero ? markerYears : []}
         formatValue={formatEuroShort}
         ariaLabel="Invested portfolio projection by year"
         tooltip={tooltip}
@@ -185,7 +240,8 @@ function NetWorthChartImpl({
         staticLegend={staticLegend}
         legendItems={legendItems}
         activeYear={activeYear}
-        purchaseBreakdown={purchaseBreakdown}
+        breakdowns={breakdowns}
+        yearZeroHint={yearZeroHint}
       />
       {footer != null ? <div className={styles.chartFooter}>{footer}</div> : null}
     </Card>
