@@ -95,7 +95,7 @@ Apply through `0008_goal_scenarios.sql` on production. Personal goal scenarios: 
 
 ## Public repo?
 
-See [PUBLIC_READINESS.md](./PUBLIC_READINESS.md) before changing repository visibility.
+Repository visibility and git history hygiene checklist is kept locally (not in this repo).
 
 ## Scheduled backups (R2)
 
