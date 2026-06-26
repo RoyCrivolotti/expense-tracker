@@ -96,8 +96,8 @@
     width: 100%;
   }
 
-  .chip,
-  .chipGroup {
+  .scenarioChipRow .chip,
+  .scenarioChipRow .chipGroup {
     flex: 0 0 auto;
     width: 100%;
     max-width: 100%;
@@ -107,11 +107,11 @@
     border-radius: 8px;
   }
 
-  .chipGroup {
+  .scenarioChipRow .chipGroup {
     display: flex;
   }
 
-  .chipSelect {
+  .scenarioChipRow .chipSelect {
     flex: 1;
     min-width: 0;
     text-align: left;
