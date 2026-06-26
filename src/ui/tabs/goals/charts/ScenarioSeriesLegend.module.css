@@ -1,0 +1,115 @@
+.wrap {
+  margin-top: 0.6rem;
+  min-width: 0;
+}
+
+.hint {
+  margin: 0 0 0.45rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+}
+
+.yearHeader {
+  margin: 0 0 0.45rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  gap: 0.375rem 0.65rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+  min-width: 0;
+}
+
+.swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.swatchDashed {
+  background: var(--color-bg) !important;
+  border: 2px dashed;
+  box-sizing: border-box;
+}
+
+.label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.value {
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--color-text);
+}
+
+.breakdown {
+  margin-top: 0.55rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.breakdownTitle {
+  margin: 0 0 0.35rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.breakdownList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.breakdownRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.2rem;
+  font-size: 0.75rem;
+}
+
+.breakdownLabel {
+  color: var(--color-text-muted);
+}
+
+.breakdownValue,
+.tone_neutral {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--color-text);
+}
+
+.tone_income {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--exp-income);
+}
+
+.tone_expense {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--exp-expense);
+}

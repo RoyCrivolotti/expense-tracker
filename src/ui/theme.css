@@ -74,6 +74,10 @@ html[data-exp-theme='dark'] {
   --exp-track: #2a2f38;
 }
 
+html {
+  touch-action: manipulation;
+}
+
 html,
 body {
   overflow-x: clip;
@@ -94,6 +98,14 @@ body {
   overflow-x: clip;
   max-width: 100%;
   min-width: 0;
+}
+
+@media (max-width: 719px) {
+  input,
+  select,
+  textarea {
+    font-size: max(1rem, 16px);
+  }
 }
 
 /* Shared tactile press feedback for buttons/controls. Native apps give a

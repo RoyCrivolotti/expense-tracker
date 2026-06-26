@@ -1,15 +1,15 @@
-import { useState } from 'react'
 import type { GoalScenario } from '../../../types'
+import type { NewGoalScenario } from '../../../data/dataSource'
 import type { ExpenseActions } from '../../actions'
 import { Card } from '../../components/primitives'
+import { ActiveScenarioHeader } from './ActiveScenarioHeader'
 import { ScenarioChips } from './ScenarioChips'
-import { ScenarioToolbar } from './ScenarioToolbar'
 import styles from './goals.module.css'
 
 interface ScenarioManagerProps {
   scenarios: GoalScenario[]
   activeId: number | null
-  draftName: string
+  draft: NewGoalScenario
   hiddenIds: ReadonlySet<number>
   canWrite: boolean
   actions?: ExpenseActions | undefined
@@ -17,101 +17,15 @@ interface ScenarioManagerProps {
   onSelect: (scenario: GoalScenario) => void
   onSelectEditing: () => void
   onToggleVisible: (id: number) => void
+  onPatch: (patch: Partial<NewGoalScenario>) => void
   onSaveDraft: (name: string) => void
   onSaveChanges: () => void
   onDiscard: () => void
   onScenarioCreated: (scenario: GoalScenario) => void
 }
 
-function SaveControls({
-  activeScenario,
-  dirty,
-  canWrite,
-  draftName,
-  onSaveDraft,
-  onSaveChanges,
-  onDiscard,
-}: {
-  activeScenario: GoalScenario | null
-  dirty: boolean
-  canWrite: boolean
-  draftName: string
-  onSaveDraft: (name: string) => void
-  onSaveChanges: () => void
-  onDiscard: () => void
-}) {
-  // Default the save field to the draft name, following it as the draft changes
-  // (React's "store previous prop" pattern — no effect, no cascading render).
-  const [saveName, setSaveName] = useState(draftName)
-  const [seenDraftName, setSeenDraftName] = useState(draftName)
-  if (draftName !== seenDraftName) {
-    setSeenDraftName(draftName)
-    setSaveName(draftName)
-  }
-
-  if (!canWrite) {
-    return <p className={styles.chartHint}>Read-only session — scenarios cannot be saved.</p>
-  }
-
-  return (
-    <>
-      {activeScenario ? (
-        <div className={styles.editNotice}>
-          <p className={styles.chartHint}>
-            {dirty ? (
-              <>
-                Unsaved changes to <strong>{activeScenario.name}</strong>.
-              </>
-            ) : (
-              <>
-                Editing <strong>{activeScenario.name}</strong> — no unsaved changes.
-              </>
-            )}
-          </p>
-          <div className={styles.btnRow}>
-            <button
-              type="button"
-              className={`${styles.btn} ${styles.btnPrimary}`}
-              disabled={!dirty}
-              onClick={onSaveChanges}
-            >
-              Save changes
-            </button>
-            <button type="button" className={styles.btn} disabled={!dirty} onClick={onDiscard}>
-              Discard
-            </button>
-          </div>
-        </div>
-      ) : null}
-      {!activeScenario ? (
-        <p className={styles.chartHint}>
-          Editing an unsaved draft — changes update the charts live but are not stored until you
-          save.
-        </p>
-      ) : null}
-      <div className={styles.saveRow}>
-        <input
-          className={styles.renameInput}
-          value={saveName}
-          aria-label="Name for new scenario"
-          placeholder="Scenario name"
-          onChange={(e) => setSaveName(e.target.value)}
-        />
-        <button
-          type="button"
-          className={activeScenario ? styles.btn : `${styles.btn} ${styles.btnPrimary}`}
-          disabled={saveName.trim().length === 0}
-          onClick={() => onSaveDraft(saveName.trim())}
-        >
-          {activeScenario ? 'Save as new' : 'Save as scenario'}
-        </button>
-      </div>
-    </>
-  )
-}
-
 export function ScenarioManager(props: ScenarioManagerProps) {
-  const { scenarios, activeId, hiddenIds, canWrite, actions } = props
+  const { scenarios, activeId, hiddenIds, canWrite, actions, draft, dirty } = props
   const activeScenario = scenarios.find((s) => s.id === activeId) ?? null
 
   return (
@@ -135,24 +49,19 @@ export function ScenarioManager(props: ScenarioManagerProps) {
           comparing.
         </p>
       ) : null}
-      {activeScenario && canWrite && actions ? (
-        <ScenarioToolbar
-          key={activeScenario.id}
-          scenario={activeScenario}
-          scenarioCount={scenarios.length}
-          usedColors={scenarios.map((s) => s.color)}
-          actions={actions}
-          onScenarioCreated={props.onScenarioCreated}
-        />
-      ) : null}
-      <SaveControls
+      <ActiveScenarioHeader
+        draft={draft}
         activeScenario={activeScenario}
-        dirty={props.dirty}
+        scenarioCount={scenarios.length}
+        usedColors={scenarios.map((s) => s.color)}
+        dirty={dirty}
         canWrite={canWrite}
-        draftName={props.draftName}
-        onSaveDraft={props.onSaveDraft}
+        actions={actions}
+        onPatch={props.onPatch}
         onSaveChanges={props.onSaveChanges}
         onDiscard={props.onDiscard}
+        onSaveDraft={props.onSaveDraft}
+        onScenarioCreated={props.onScenarioCreated}
       />
     </Card>
   )

@@ -3,7 +3,7 @@ import type { ExpenseModel } from '../../useExpenseData'
 import type { ExpenseActions } from '../../actions'
 import type { GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
-import { averageMonthlySaving, computeMonthlyTotals, pickScenarioColor } from '../../../engine'
+import { averageMonthlySaving, computeMonthlyTotals } from '../../../engine'
 import { Card, SectionTitle } from '../../components/primitives'
 import { GoalControls } from './GoalControls'
 import { ScenarioManager } from './ScenarioManager'
@@ -92,6 +92,7 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
 
   const dirty = useMemo(() => {
     if (!activeScenario) return false
+    if (draft.name !== activeScenario.name) return true
     return EDIT_KEYS.some((k) => draft[k] !== activeScenario[k])
   }, [activeScenario, draft])
 
@@ -131,7 +132,6 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
       const scenario = await actions.createScenario({
         ...draft,
         name,
-        color: pickScenarioColor(dataset.goalScenarios.map((s) => s.color)),
         sortOrder: dataset.goalScenarios.length,
       })
       selectScenario(scenario)
@@ -166,7 +166,7 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
             <ScenarioManager
               scenarios={dataset.goalScenarios}
               activeId={activeId}
-              draftName={draft.name}
+              draft={draft}
               hiddenIds={hiddenIds}
               canWrite={actions != null}
               actions={actions}
@@ -174,6 +174,7 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
               onSelect={onSelectScenario}
               onSelectEditing={onSelectEditing}
               onToggleVisible={onToggleVisible}
+              onPatch={patchDraft}
               onSaveDraft={handleSaveDraft}
               onSaveChanges={onSaveChanges}
               onDiscard={onDiscard}

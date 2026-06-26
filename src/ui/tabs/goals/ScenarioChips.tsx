@@ -1,11 +1,6 @@
 import type { GoalScenario } from '../../../types'
 import styles from './goals.module.css'
 
-function shortName(name: string): string {
-  const colon = name.indexOf(':')
-  return colon >= 0 ? name.slice(0, colon).trim() : name
-}
-
 interface ScenarioChipsProps {
   scenarios: GoalScenario[]
   activeId: number | null
@@ -24,7 +19,7 @@ export function ScenarioChips({
   onToggleVisible,
 }: ScenarioChipsProps) {
   return (
-    <div className={styles.chipRow} role="group" aria-label="Scenarios">
+    <div className={styles.scenarioChipRow} role="group" aria-label="Scenarios">
       <button
         type="button"
         aria-pressed={activeId === null}
@@ -35,7 +30,7 @@ export function ScenarioChips({
       </button>
       {scenarios.map((s) => {
         const hidden = hiddenIds.has(s.id)
-        const label = shortName(s.name)
+        const label = s.name
         return (
           <span
             key={s.id}
