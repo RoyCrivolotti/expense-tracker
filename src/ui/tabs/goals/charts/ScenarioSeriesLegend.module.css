@@ -39,10 +39,11 @@
   flex-shrink: 0;
 }
 
-.swatchDashed {
-  background: var(--color-bg) !important;
-  border: 2px dashed;
-  box-sizing: border-box;
+.dashedSwatch {
+  width: 14px;
+  height: 12px;
+  flex-shrink: 0;
+  display: block;
 }
 
 .label {

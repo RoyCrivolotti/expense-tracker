@@ -94,6 +94,7 @@ export function LinearChart({
         className={styles.svg}
         role="img"
         aria-label={ariaLabel}
+        onContextMenu={(e) => e.preventDefault()}
         {...handlers}
       >
         <ChartGrid

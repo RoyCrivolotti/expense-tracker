@@ -15,6 +15,23 @@ interface ScenarioSeriesLegendProps {
   purchaseBreakdown: PurchaseYearBreakdown | null
 }
 
+function DashedSwatch({ color }: { color: string }) {
+  return (
+    <svg className={styles.dashedSwatch} viewBox="0 0 14 12" aria-hidden>
+      <line
+        x1="1"
+        y1="6"
+        x2="13"
+        y2="6"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeDasharray="1.8 1.1"
+      />
+    </svg>
+  )
+}
+
 function BreakdownRows({ breakdown }: { breakdown: PurchaseYearBreakdown }) {
   const rows: { label: string; value: string; tone?: 'income' | 'expense' | 'neutral' }[] = [
     { label: 'Start of year', value: formatEuroShort(breakdown.startInvestedCents) },
@@ -75,11 +92,11 @@ export function ScenarioSeriesLegend({
       <ul className={styles.list}>
         {items.map((item) => (
           <li key={item.label} className={styles.row}>
-            <span
-              className={`${styles.swatch}${item.dashed ? ` ${styles.swatchDashed}` : ''}`}
-              style={item.dashed ? { borderColor: item.color } : { background: item.color }}
-              aria-hidden
-            />
+            {item.dashed ? (
+              <DashedSwatch color={item.color} />
+            ) : (
+              <span className={styles.swatch} style={{ background: item.color }} aria-hidden />
+            )}
             <span className={styles.label}>{item.label}</span>
             <span className={styles.value}>
               {item.valueCents != null ? formatEuroShort(item.valueCents) : ''}

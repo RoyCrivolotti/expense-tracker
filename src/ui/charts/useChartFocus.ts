@@ -40,6 +40,7 @@ export function useChartFocus(length: number, xForIndex: (i: number) => number) 
   }
 
   const onPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (e.pointerType !== 'mouse') e.preventDefault()
     pick(e.clientX, e.currentTarget)
     e.currentTarget.setPointerCapture(e.pointerId)
   }
