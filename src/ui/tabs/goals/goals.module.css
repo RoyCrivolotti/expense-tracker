@@ -313,7 +313,7 @@
 }
 
 .renameInput {
-  flex: 1;
+  width: 100%;
   min-width: 0;
   padding: 0.35rem 0.5rem;
   border: 1px solid var(--color-border);
@@ -333,7 +333,8 @@
 
 .activeHeaderTop {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 0.5rem;
   min-width: 0;
 }
@@ -863,5 +864,12 @@
   .iconBtn:active,
   .btn:active {
     transform: none;
+  }
+}
+
+@media (max-width: 719px) {
+  .renameInput,
+  .valueInput {
+    font-size: 16px;
   }
 }
