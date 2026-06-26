@@ -9,10 +9,18 @@ export interface ScenarioLegendItem {
   valueCents: number | null
 }
 
+export interface ScenarioLegendBreakdown {
+  label: string
+  color: string
+  dashed?: boolean
+  breakdown: PurchaseYearBreakdown
+}
+
 interface ScenarioSeriesLegendProps {
   items: ScenarioLegendItem[]
   activeYear: number | null
-  purchaseBreakdown: PurchaseYearBreakdown | null
+  breakdowns: ScenarioLegendBreakdown[]
+  yearZeroHint?: boolean
 }
 
 function DashedSwatch({ color }: { color: string }) {
@@ -53,7 +61,23 @@ function DashedSwatch({ color }: { color: string }) {
   )
 }
 
-function BreakdownRows({ breakdown }: { breakdown: PurchaseYearBreakdown }) {
+function SeriesSwatch({
+  color,
+  dashed = false,
+}: {
+  color: string
+  dashed?: boolean
+}) {
+  if (dashed) return <DashedSwatch color={color} />
+  return <span className={styles.swatch} style={{ background: color }} aria-hidden />
+}
+
+function BreakdownRows({
+  label,
+  color,
+  dashed,
+  breakdown,
+}: ScenarioLegendBreakdown) {
   const rows: { label: string; value: string; tone?: 'income' | 'expense' | 'neutral' }[] = [
     { label: 'Start of year', value: formatEuroShort(breakdown.startInvestedCents) },
     {
@@ -81,7 +105,10 @@ function BreakdownRows({ breakdown }: { breakdown: PurchaseYearBreakdown }) {
 
   return (
     <div className={styles.breakdown}>
-      <p className={styles.breakdownTitle}>Purchase breakdown</p>
+      <div className={styles.breakdownHeader}>
+        <SeriesSwatch color={color} {...(dashed ? { dashed: true } : {})} />
+        <p className={styles.breakdownTitle}>{label}</p>
+      </div>
       <ul className={styles.breakdownList}>
         {rows.map((row) => (
           <li key={row.label} className={styles.breakdownRow}>
@@ -99,7 +126,8 @@ function BreakdownRows({ breakdown }: { breakdown: PurchaseYearBreakdown }) {
 export function ScenarioSeriesLegend({
   items,
   activeYear,
-  purchaseBreakdown,
+  breakdowns,
+  yearZeroHint = false,
 }: ScenarioSeriesLegendProps) {
   if (items.length === 0) return null
 
@@ -113,11 +141,7 @@ export function ScenarioSeriesLegend({
       <ul className={styles.list}>
         {items.map((item) => (
           <li key={item.label} className={styles.row}>
-            {item.dashed ? (
-              <DashedSwatch color={item.color} />
-            ) : (
-              <span className={styles.swatch} style={{ background: item.color }} aria-hidden />
-            )}
+            <SeriesSwatch color={item.color} {...(item.dashed ? { dashed: true } : {})} />
             <span className={styles.label}>{item.label}</span>
             <span className={styles.value}>
               {item.valueCents != null ? formatEuroShort(item.valueCents) : ''}
@@ -125,7 +149,18 @@ export function ScenarioSeriesLegend({
           </li>
         ))}
       </ul>
-      {purchaseBreakdown ? <BreakdownRows breakdown={purchaseBreakdown} /> : null}
+      {breakdowns.length > 0 ? (
+        <div className={styles.breakdownStack}>
+          {breakdowns.map((entry) => (
+            <BreakdownRows key={entry.label} {...entry} />
+          ))}
+        </div>
+      ) : null}
+      {yearZeroHint ? (
+        <p className={styles.yearZeroHint}>
+          Purchase at year 0 — down payment is reflected in start invested.
+        </p>
+      ) : null}
     </div>
   )
 }

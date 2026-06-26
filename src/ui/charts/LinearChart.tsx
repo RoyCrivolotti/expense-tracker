@@ -34,6 +34,7 @@ interface Props {
   ariaLabel: string
   tooltip: (index: number) => { title: string; lines: TooltipLine[] }
   refLines?: number[]
+  markerYears?: { yearIndex: number }[]
   tooltipMode?: 'full' | 'hidden'
   onActiveIndexChange?: (index: number | null) => void
 }
@@ -71,6 +72,7 @@ export function LinearChart({
   ariaLabel,
   tooltip,
   refLines = [],
+  markerYears = [],
   tooltipMode = 'full',
   onActiveIndexChange,
 }: Props) {
@@ -141,6 +143,28 @@ export function LinearChart({
           />
         ))}
         <ChartXLabels labels={xLabels} xForIndex={geo.xForIndex} y={height - 8} />
+        {markerYears.map(({ yearIndex }) => {
+          const x = geo.xForIndex(yearIndex)
+          const yBottom = PAD.top + geo.innerH
+          return (
+            <g key={yearIndex} aria-hidden>
+              <line
+                x1={x}
+                x2={x}
+                y1={PAD.top}
+                y2={yBottom}
+                className={styles.eventMarker}
+              />
+              <line
+                x1={x}
+                x2={x}
+                y1={yBottom}
+                y2={yBottom + 4}
+                className={styles.eventMarkerTick}
+              />
+            </g>
+          )
+        })}
         {active != null && (
           <>
             <line
