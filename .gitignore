@@ -12,3 +12,7 @@ config/backup-alerts.json
 config/dev.json
 .tmp/
 .DS_Store
+
+# Local-only portfolio / audit notes (not in repo)
+docs/AUDIT*.md
+docs/PUBLIC_READINESS.md

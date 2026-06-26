@@ -92,7 +92,6 @@ Full DNS, Access, D1, and CI setup: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 - [docs/GOALS-MODEL.md](docs/GOALS-MODEL.md) — wealth projection assumptions
 - [docs/OPS.md](docs/OPS.md) — staging, backups, ops scripts
 - [docs/TESTING.md](docs/TESTING.md) — unit and API integration tests
-- [docs/PUBLIC_READINESS.md](docs/PUBLIC_READINESS.md) — secrets, data boundaries, history hygiene
 
 ## License
 

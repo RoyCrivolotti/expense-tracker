@@ -67,4 +67,4 @@ Net worth = invested + house equity − mortgage balance.
 Copy [`config/goal-scenarios.seed.example.json`](../config/goal-scenarios.seed.example.json)
 to gitignored `config/goal-scenarios.seed.json`, or maintain
 `config/goal-scenarios.seed.json` in `finance-review`, then run
-`scripts/seed-scenarios.ts`. See [`PUBLIC_READINESS.md`](./PUBLIC_READINESS.md).
+`scripts/seed-scenarios.ts`. Keep seed JSON gitignored; review history hygiene before open-sourcing.
