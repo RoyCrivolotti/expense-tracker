@@ -137,3 +137,23 @@ export function computeYtdBudgetHealth(
     }
   })
 }
+
+/** Sum budget-health rows (e.g. mobile Analytics total footer). */
+export function sumBudgetHealth(rows: BudgetHealth[], name = 'Total'): BudgetHealth {
+  let actualCents = 0
+  let budgetCents = 0
+  for (const row of rows) {
+    actualCents += row.actualCents
+    budgetCents += row.budgetCents
+  }
+  const hasBudget = budgetCents > 0
+  const ratio = hasBudget ? actualCents / budgetCents : 0
+  return {
+    categoryId: 0,
+    name,
+    budgetCents,
+    actualCents,
+    ratio,
+    status: healthStatus(ratio, hasBudget),
+  }
+}
