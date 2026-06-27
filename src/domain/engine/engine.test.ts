@@ -5,7 +5,7 @@ import { budgetMonthFromName, defaultBudgetMonth, parseHumanDate } from './dates
 import { fv, nper, pmt } from './finance'
 import { deriveStatus, deriveTransactions } from './status'
 import { computeMonthlyTotals } from './monthlyTotals'
-import { computeBudgetHealth } from './categoryBudget'
+import { computeBudgetHealth, computeYtdBudgetHealth } from './categoryBudget'
 import { netSpendCents } from './transactions'
 
 describe('money', () => {
@@ -231,6 +231,106 @@ describe('budget health', () => {
     const without = computeBudgetHealth(txns, categories, '2026-07')
     expect(without[0]!.actualCents).toBe(0)
     const withForecast = computeBudgetHealth(txns, categories, '2026-07', { includeForecast: true })
+    expect(withForecast[0]!.actualCents).toBe(4500)
+  })
+
+  it('sums YTD actuals within calendar year through selected month', () => {
+    const categories = [
+      { id: 1, name: 'Food', monthlyBudgetCents: 10000, sortOrder: 0, active: true },
+    ]
+    const txns: Transaction[] = [
+      {
+        id: 1,
+        date: '2026-01-05',
+        budgetMonth: '2026-01',
+        description: '',
+        accountId: 1,
+        categoryId: 1,
+        type: 'expense',
+        amountCents: 3000,
+        cancelled: false,
+        status: 'posted',
+      },
+      {
+        id: 2,
+        date: '2026-02-05',
+        budgetMonth: '2026-02',
+        description: '',
+        accountId: 1,
+        categoryId: 1,
+        type: 'expense',
+        amountCents: 4000,
+        cancelled: false,
+        status: 'posted',
+      },
+      {
+        id: 3,
+        date: '2025-12-05',
+        budgetMonth: '2025-12',
+        description: '',
+        accountId: 1,
+        categoryId: 1,
+        type: 'expense',
+        amountCents: 99999,
+        cancelled: false,
+        status: 'posted',
+      },
+    ]
+    const [food] = computeYtdBudgetHealth(txns, categories, '2026-02')
+    expect(food!.actualCents).toBe(7000)
+    expect(food!.budgetCents).toBe(20000)
+  })
+
+  it('flags YTD over and warning by cumulative ratio', () => {
+    const categories = [
+      { id: 1, name: 'Home', monthlyBudgetCents: 100000, sortOrder: 0, active: true },
+    ]
+    const txns: Transaction[] = [
+      {
+        id: 1,
+        date: '2026-01-05',
+        budgetMonth: '2026-01',
+        description: '',
+        accountId: 1,
+        categoryId: 1,
+        type: 'expense',
+        amountCents: 550000,
+        cancelled: false,
+        status: 'posted',
+      },
+    ]
+    const [warn] = computeYtdBudgetHealth(txns, categories, '2026-06')
+    expect(warn!.budgetCents).toBe(600000)
+    expect(warn!.status).toBe('warning')
+
+    txns[0]!.amountCents = 650000
+    const [over] = computeYtdBudgetHealth(txns, categories, '2026-06')
+    expect(over!.status).toBe('over')
+  })
+
+  it('includes forecast charges in YTD when includeForecast is set', () => {
+    const categories = [
+      { id: 1, name: 'Groceries', monthlyBudgetCents: 50000, sortOrder: 0, active: true },
+    ]
+    const txns: Transaction[] = [
+      {
+        id: 1,
+        date: '2026-03-05',
+        budgetMonth: '2026-03',
+        description: 'Mercadona',
+        accountId: 2,
+        categoryId: 1,
+        type: 'expense',
+        amountCents: 4500,
+        cancelled: false,
+        status: 'forecast',
+      },
+    ]
+    const without = computeYtdBudgetHealth(txns, categories, '2026-03')
+    expect(without[0]!.actualCents).toBe(0)
+    const withForecast = computeYtdBudgetHealth(txns, categories, '2026-03', {
+      includeForecast: true,
+    })
     expect(withForecast[0]!.actualCents).toBe(4500)
   })
 })

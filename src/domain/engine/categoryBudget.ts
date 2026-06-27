@@ -96,3 +96,44 @@ export function computeBudgetHealth(
     }
   })
 }
+
+function sumYearToDateActual(
+  byMonth: Map<string, number>,
+  year: string,
+  throughMonth: string,
+): number {
+  let total = 0
+  for (const [m, cents] of byMonth) {
+    if (m.startsWith(`${year}-`) && m <= throughMonth) total += cents
+  }
+  return total
+}
+
+function ytdBudgetCents(monthlyBudgetCents: number, month: string): number {
+  return monthlyBudgetCents * parseInt(month.slice(5, 7), 10)
+}
+
+/** Per-category cumulative health Jan through the selected budget month. */
+export function computeYtdBudgetHealth(
+  transactions: Transaction[],
+  categories: Category[],
+  month: string,
+  opts: CategoryActualsOptions = {},
+): BudgetHealth[] {
+  const year = month.slice(0, 4)
+  const actuals = computeCategoryActuals(transactions, categories, opts)
+  return actuals.map((entry) => {
+    const actualCents = sumYearToDateActual(entry.byMonth, year, month)
+    const budgetCents = ytdBudgetCents(entry.monthlyBudgetCents, month)
+    const hasBudget = budgetCents > 0
+    const ratio = hasBudget ? actualCents / budgetCents : 0
+    return {
+      categoryId: entry.categoryId,
+      name: entry.name,
+      budgetCents,
+      actualCents,
+      ratio,
+      status: healthStatus(ratio, hasBudget),
+    }
+  })
+}
