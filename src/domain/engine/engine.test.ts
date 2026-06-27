@@ -4,7 +4,7 @@ import { formatCents, formatEuroInput, formatPercent, parseEuroToCents, parsePer
 import { budgetMonthFromName, defaultBudgetMonth, parseHumanDate } from './dates'
 import { fv, nper, pmt } from './finance'
 import { deriveStatus, deriveTransactions } from './status'
-import { computeMonthlyTotals } from './monthlyTotals'
+import { computeMonthlyTotals, investedYtdCents } from './monthlyTotals'
 import { computeBudgetHealth, computeYtdBudgetHealth, sumBudgetHealth } from './categoryBudget'
 import { netSpendCents } from './transactions'
 
@@ -171,6 +171,50 @@ describe('monthly totals', () => {
     expect(jan.netSavingCents).toBe(450000 - 140000)
     // Feb card charge is unpaid -> forecast -> excluded from posted totals.
     expect(totals.get('2026-02')).toBeUndefined()
+  })
+})
+
+describe('investedYtdCents', () => {
+  it('sums investments within calendar year through selected month', () => {
+    const totals = computeMonthlyTotals([
+      {
+        id: 1,
+        date: '2026-01-10',
+        budgetMonth: '2026-01',
+        description: '',
+        accountId: 1,
+        categoryId: 1,
+        type: 'investment',
+        amountCents: 100000,
+        cancelled: false,
+        status: 'posted',
+      },
+      {
+        id: 2,
+        date: '2026-02-10',
+        budgetMonth: '2026-02',
+        description: '',
+        accountId: 1,
+        categoryId: 1,
+        type: 'investment',
+        amountCents: 50000,
+        cancelled: false,
+        status: 'posted',
+      },
+      {
+        id: 3,
+        date: '2025-12-10',
+        budgetMonth: '2025-12',
+        description: '',
+        accountId: 1,
+        categoryId: 1,
+        type: 'investment',
+        amountCents: 99999,
+        cancelled: false,
+        status: 'posted',
+      },
+    ])
+    expect(investedYtdCents(totals, '2026-02')).toBe(150000)
   })
 })
 

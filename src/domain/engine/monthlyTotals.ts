@@ -77,3 +77,16 @@ export function computeMonthlyTotals(
   }
   return byMonth
 }
+
+/** Sum investments Jan through `throughMonth` within the same calendar year. */
+export function investedYtdCents(
+  totals: Map<string, MonthlyTotals>,
+  throughMonth: string,
+): number {
+  const year = throughMonth.slice(0, 4)
+  let sum = 0
+  for (const [m, row] of totals) {
+    if (m.startsWith(`${year}-`) && m <= throughMonth) sum += row.investmentsCents
+  }
+  return sum
+}
