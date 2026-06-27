@@ -1,10 +1,19 @@
 import { useMemo } from 'react'
 import type { ExpenseModel } from '../../useExpenseData'
 import type { BudgetHealth } from '../../../engine'
-import { computeBudgetHealth, computeYtdBudgetHealth, fullMonthLabel, sumBudgetHealth } from '../../../engine'
+import {
+  computeBudgetHealth,
+  computeMonthlyTotals,
+  computeYtdBudgetHealth,
+  fullMonthLabel,
+  investedYtdCents,
+  shortMonthLabel,
+  sumBudgetHealth,
+} from '../../../engine'
 import { MonthPicker } from '../../components/MonthPicker'
 import { BudgetBar } from '../../components/BudgetBar'
-import { Card, SectionTitle } from '../../components/primitives'
+import { Card, Kpi, SectionTitle } from '../../components/primitives'
+import tabStyles from '../../tabs/tabs.module.css'
 import styles from './mobile.module.css'
 
 interface Props {
@@ -55,6 +64,14 @@ export function MonthlySummaryMobile({ model, month, onMonthChange }: Props) {
   const { dataset, months, lookup } = model
   const year = month.slice(0, 4)
 
+  const monthlyTotals = useMemo(
+    () => computeMonthlyTotals(dataset.transactions, { includeForecast: true }),
+    [dataset],
+  )
+
+  const monthInvestedCents = monthlyTotals.get(month)?.investmentsCents ?? 0
+  const ytdInvestedCents = investedYtdCents(monthlyTotals, month)
+
   const budgets = useMemo(() => {
     return budgetedBySize(
       computeBudgetHealth(dataset.transactions, dataset.categories, month, {
@@ -74,6 +91,15 @@ export function MonthlySummaryMobile({ model, month, onMonthChange }: Props) {
   return (
     <div className={styles.section}>
       <SectionTitle>Budget vs actual</SectionTitle>
+      <Card className={tabStyles.kpiGrid}>
+        <Kpi
+          label={`Invested (${shortMonthLabel(month)})`}
+          cents={monthInvestedCents}
+          type="investment"
+        />
+        <Kpi label={`Invested YTD (${year})`} cents={ytdInvestedCents} type="investment" />
+      </Card>
+      <p className={styles.hint}>Net saving may differ if cash wasn&apos;t invested yet.</p>
       <MonthPicker months={months} value={month} onChange={onMonthChange} layout="bar" />
       <p className={styles.hint}>Includes forecast (unpaid card) charges.</p>
       <BudgetBarsCard budgets={budgets} lookup={lookup} />
