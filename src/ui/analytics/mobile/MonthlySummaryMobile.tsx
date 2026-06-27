@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import type { ExpenseModel } from '../../useExpenseData'
 import type { BudgetHealth } from '../../../engine'
-import { computeBudgetHealth, computeYtdBudgetHealth, fullMonthLabel } from '../../../engine'
+import { computeBudgetHealth, computeYtdBudgetHealth, fullMonthLabel, sumBudgetHealth } from '../../../engine'
 import { MonthPicker } from '../../components/MonthPicker'
 import { BudgetBar } from '../../components/BudgetBar'
 import { Card, SectionTitle } from '../../components/primitives'
@@ -24,6 +24,8 @@ function BudgetBarsCard({
   budgets: BudgetHealth[]
   lookup: ExpenseModel['lookup']
 }) {
+  if (budgets.length === 0) return null
+  const total = sumBudgetHealth(budgets)
   return (
     <Card>
       {budgets.map((b) => (
@@ -37,6 +39,14 @@ function BudgetBarsCard({
           status={b.status}
         />
       ))}
+      <BudgetBar
+        name={total.name}
+        actualCents={total.actualCents}
+        budgetCents={total.budgetCents}
+        ratio={total.ratio}
+        status={total.status}
+        total
+      />
     </Card>
   )
 }

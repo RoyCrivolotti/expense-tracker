@@ -17,6 +17,7 @@ interface BudgetBarProps {
   budgetCents: number
   ratio: number
   status: BudgetStatus
+  total?: boolean | undefined
 }
 
 export function BudgetBar({
@@ -26,13 +27,14 @@ export function BudgetBar({
   budgetCents,
   ratio,
   status,
+  total,
 }: BudgetBarProps) {
   const pct = Math.min(100, Math.round(ratio * 100))
   return (
-    <div className={styles.row}>
+    <div className={`${styles.row}${total ? ` ${styles.totalRow}` : ''}`}>
       <div className={styles.head}>
         <span className={styles.name}>
-          <CategoryIcon icon={icon} name={name} /> {name}
+          {!total && <CategoryIcon icon={icon} name={name} />} {name}
         </span>
         <span className={styles.values}>
           <Money cents={actualCents} />{' '}

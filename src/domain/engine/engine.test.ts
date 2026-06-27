@@ -5,7 +5,7 @@ import { budgetMonthFromName, defaultBudgetMonth, parseHumanDate } from './dates
 import { fv, nper, pmt } from './finance'
 import { deriveStatus, deriveTransactions } from './status'
 import { computeMonthlyTotals } from './monthlyTotals'
-import { computeBudgetHealth, computeYtdBudgetHealth } from './categoryBudget'
+import { computeBudgetHealth, computeYtdBudgetHealth, sumBudgetHealth } from './categoryBudget'
 import { netSpendCents } from './transactions'
 
 describe('money', () => {
@@ -332,5 +332,32 @@ describe('budget health', () => {
       includeForecast: true,
     })
     expect(withForecast[0]!.actualCents).toBe(4500)
+  })
+
+  it('sums budget health rows for a total footer', () => {
+    const rows = [
+      {
+        categoryId: 1,
+        name: 'A',
+        budgetCents: 10000,
+        actualCents: 9000,
+        ratio: 0.9,
+        status: 'warning' as const,
+      },
+      {
+        categoryId: 2,
+        name: 'B',
+        budgetCents: 20000,
+        actualCents: 10000,
+        ratio: 0.5,
+        status: 'under' as const,
+      },
+    ]
+    const total = sumBudgetHealth(rows)
+    expect(total.name).toBe('Total')
+    expect(total.actualCents).toBe(19000)
+    expect(total.budgetCents).toBe(30000)
+    expect(total.status).toBe('under')
+    expect(total.ratio).toBeCloseTo(19000 / 30000, 4)
   })
 })
