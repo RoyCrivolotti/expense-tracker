@@ -9,6 +9,8 @@ import styles from './TransactionList.module.css'
 interface TransactionListProps {
   transactions: Transaction[]
   lookup: Lookup
+  flat?: boolean | undefined
+  showDate?: boolean | undefined
   onSelect?: (txn: Transaction) => void
   onDelete?: (id: number) => Promise<void>
   selectMode?: boolean
@@ -22,6 +24,8 @@ interface TransactionListProps {
 export function TransactionList({
   transactions,
   lookup,
+  flat = false,
+  showDate = false,
   onSelect,
   onDelete,
   selectMode = false,
@@ -43,6 +47,27 @@ export function TransactionList({
   }
 
   const groups = groupByDay(transactions)
+  if (flat) {
+    return (
+      <div className={styles.list}>
+        {transactions.map((txn) => (
+          <TransactionRow
+            key={txn.id}
+            txn={txn}
+            lookup={lookup}
+            showDate={showDate}
+            selectMode={selectMode}
+            selected={selectedIds?.has(txn.id) ?? false}
+            swipeDelete={swipeDelete}
+            {...(onSelect ? { onSelect } : {})}
+            {...(onDelete ? { onDelete } : {})}
+            {...(onToggleSelect ? { onToggleSelect } : {})}
+          />
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className={styles.list}>
       {groups.map((group) => {

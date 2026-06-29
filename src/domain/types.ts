@@ -53,6 +53,8 @@ export interface StoredTransaction {
   amountCents: number
   cancelled: boolean
   notes?: string
+  /** ISO datetime when the row was first saved (D1 only; absent in CSV import). */
+  createdAt?: string
 }
 
 /** A transaction with its derived status, as consumed by the compute engine. */

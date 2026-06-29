@@ -1,14 +1,27 @@
 import type { Transaction } from '../../types'
 import { useSwipeReveal } from '../hooks/useSwipeReveal'
-import { STATUS_LABEL, type Lookup } from '../format'
+import { STATUS_LABEL, formatDayLabel, type Lookup } from '../format'
 import { Money } from './Money'
 import { Pill } from './primitives'
 import { confirmDeleteOne } from './confirmDelete'
 import { CategoryIcon } from './CategoryIcon'
 import styles from './TransactionList.module.css'
 
-function RowBody({ txn, lookup }: { txn: Transaction; lookup: Lookup }) {
+function RowBody({
+  txn,
+  lookup,
+  showDate = false,
+}: {
+  txn: Transaction
+  lookup: Lookup
+  showDate?: boolean
+}) {
   const cat = lookup.category(txn.categoryId)
+  const metaParts = [
+    ...(showDate ? [formatDayLabel(txn.date)] : []),
+    lookup.categoryName(txn.categoryId),
+    lookup.accountName(txn.accountId),
+  ]
   return (
     <>
       <CategoryIcon icon={cat?.icon} name={cat?.name ?? '?'} className={styles.catIcon} />
@@ -17,7 +30,7 @@ function RowBody({ txn, lookup }: { txn: Transaction; lookup: Lookup }) {
           {txn.description || lookup.categoryName(txn.categoryId)}
         </span>
         <span className={styles.meta}>
-          {lookup.categoryName(txn.categoryId)} · {lookup.accountName(txn.accountId)}
+          {metaParts.join(' · ')}
           {txn.status === 'forecast' && <Pill tone="warning">{STATUS_LABEL.forecast}</Pill>}
           {txn.status === 'cancelled' && <Pill>{STATUS_LABEL.cancelled}</Pill>}
         </span>
@@ -30,6 +43,7 @@ function RowBody({ txn, lookup }: { txn: Transaction; lookup: Lookup }) {
 interface TransactionRowProps {
   txn: Transaction
   lookup: Lookup
+  showDate?: boolean | undefined
   onSelect?: (txn: Transaction) => void
   onDelete?: (id: number) => Promise<void>
   selectMode: boolean
@@ -41,6 +55,7 @@ interface TransactionRowProps {
 export function TransactionRow({
   txn,
   lookup,
+  showDate,
   onSelect,
   onDelete,
   selectMode,
@@ -66,7 +81,7 @@ export function TransactionRow({
           onChange={() => onToggleSelect?.(txn.id)}
         />
         <span className={styles.rowInner}>
-          <RowBody txn={txn} lookup={lookup} />
+          <RowBody txn={txn} lookup={lookup} showDate={Boolean(showDate)} />
         </span>
       </label>
     )
@@ -78,7 +93,7 @@ export function TransactionRow({
       className={styles.row}
       onClick={onSelect ? () => onSelect(txn) : undefined}
     >
-      <RowBody txn={txn} lookup={lookup} />
+      <RowBody txn={txn} lookup={lookup} showDate={Boolean(showDate)} />
     </button>
   )
 
