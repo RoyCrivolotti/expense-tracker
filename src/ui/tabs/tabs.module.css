@@ -34,6 +34,13 @@
   margin-right: auto;
 }
 
+.activityHint {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+  margin: -0.35rem 0 0;
+}
+
 .kpiGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

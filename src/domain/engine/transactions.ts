@@ -49,6 +49,29 @@ export function filterTransactions(transactions: Transaction[], filter: TxnFilte
     .sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)
 }
 
+const LIMIT = 8
+
+function byDateDesc(a: Transaction, b: Transaction): number {
+  return b.date.localeCompare(a.date) || b.id - a.id
+}
+
+function byCreatedDesc(a: Transaction, b: Transaction): number {
+  const ca = a.createdAt ?? ''
+  const cb = b.createdAt ?? ''
+  if (ca !== cb) return cb.localeCompare(ca)
+  return b.id - a.id
+}
+
+/** Last N transactions by calendar date (global, all budget months). */
+export function latestTransactions(transactions: Transaction[], limit = LIMIT): Transaction[] {
+  return [...transactions].sort(byDateDesc).slice(0, limit)
+}
+
+/** Last N transactions by when they were first saved (global). */
+export function recentlyAdded(transactions: Transaction[], limit = LIMIT): Transaction[] {
+  return [...transactions].sort(byCreatedDesc).slice(0, limit)
+}
+
 export interface DayGroup {
   date: string
   transactions: Transaction[]

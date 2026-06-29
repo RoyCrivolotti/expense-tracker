@@ -5,14 +5,13 @@ import type { BudgetHealth } from '../../engine'
 import {
   computeBudgetHealth,
   computeMonthlyTotals,
-  filterTransactions,
 } from '../../engine'
 import { Card, EmptyState, Kpi, SectionTitle } from '../components/primitives'
 import { SegmentedControl } from '../components/SegmentedControl'
 import { BudgetBar } from '../components/BudgetBar'
 import { GoalsCard } from '../components/GoalsCard'
 import { CardStatementsCard } from '../components/CardStatementsCard'
-import { TransactionList } from '../components/TransactionList'
+import { DashboardRecentActivity } from './DashboardRecentActivity'
 import styles from './tabs.module.css'
 
 import type { TabId } from '../nav/navItems'
@@ -94,7 +93,7 @@ function BudgetsSection({
 }
 
 export function DashboardTab({ model, month, actions, onNavigate }: DashboardTabProps) {
-  const { dataset, lookup } = model
+  const { dataset } = model
   const [budgetSort, setBudgetSort] = useState<BudgetSort>('size')
 
   const totals = useMemo(
@@ -112,10 +111,6 @@ export function DashboardTab({ model, month, actions, onNavigate }: DashboardTab
   const categoryIcons = useMemo(
     () => new Map(dataset.categories.map((c) => [c.id, c.icon])),
     [dataset.categories],
-  )
-  const recent = useMemo(
-    () => filterTransactions(dataset.transactions, { month }).slice(0, 8),
-    [dataset, month],
   )
 
   return (
@@ -139,14 +134,7 @@ export function DashboardTab({ model, month, actions, onNavigate }: DashboardTab
 
       <GoalsCard dataset={dataset} onOpenGoals={() => onNavigate?.('goals')} />
 
-      <SectionTitle>Recent activity</SectionTitle>
-      <Card>
-        <TransactionList
-          transactions={recent}
-          lookup={lookup}
-          {...(actions ? { onSelect: actions.onEdit } : {})}
-        />
-      </Card>
+      <DashboardRecentActivity model={model} actions={actions} />
     </div>
   )
 }

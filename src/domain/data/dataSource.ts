@@ -16,7 +16,7 @@ import type {
   Transaction,
 } from '../types'
 
-export type NewTransaction = Omit<StoredTransaction, 'id'>
+export type NewTransaction = Omit<StoredTransaction, 'id' | 'createdAt'>
 export type NewCategory = Omit<Category, 'id'>
 export type NewAccount = Omit<Account, 'id'>
 export type NewGoalScenario = Omit<GoalScenario, 'id'>

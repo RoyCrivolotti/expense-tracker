@@ -39,6 +39,7 @@ export interface TxnRow {
   amount_cents: number
   cancelled: number
   notes: string | null
+  created_at: string | null
 }
 
 export interface StatementRow {
@@ -76,6 +77,7 @@ export function toStoredTxn(r: TxnRow): StoredTransaction {
     amountCents: r.amount_cents,
     cancelled: r.cancelled === 1,
     ...(r.notes ? { notes: r.notes } : {}),
+    ...(r.created_at ? { createdAt: r.created_at } : {}),
   }
 }
 
