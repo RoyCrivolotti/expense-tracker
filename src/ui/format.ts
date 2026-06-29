@@ -24,10 +24,22 @@ const DAY_FMT = new Intl.DateTimeFormat('en-GB', {
   month: 'short',
 })
 
+const SHORT_DAY_FMT = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'short',
+})
+
 export function formatDayLabel(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number)
   if (!y || !m || !d) return iso
   return DAY_FMT.format(new Date(Date.UTC(y, m - 1, d)))
+}
+
+/** Compact date for dense rows (e.g. "22 Jun"). */
+export function shortDayLabel(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  if (!y || !m || !d) return iso
+  return SHORT_DAY_FMT.format(new Date(Date.UTC(y, m - 1, d)))
 }
 
 export const STATUS_LABEL: Record<TxnStatus, string> = {
