@@ -3,8 +3,8 @@ import type { ExpenseDataSource } from '../../data/dataSource'
 import { fetchAccessStatus, type AccessStatusResponse } from '../../data/accessApi'
 import { OwnerAccessAdminScreen } from './OwnerAccessAdminScreen'
 import { AllowedAccessView, DeniedAccessView } from './AccessGateViews'
+import { AccessConnectionError } from './AccessConnectionError'
 import { AppLoadingSkeleton } from '../components/AppLoadingSkeleton'
-import styles from '../ExpensesApp.module.css'
 
 function isAdminPath(): boolean {
   return window.location.pathname.startsWith('/access/admin')
@@ -13,6 +13,7 @@ function isAdminPath(): boolean {
 export function AccessGate({ source }: { source: ExpenseDataSource }) {
   const [access, setAccess] = useState<AccessStatusResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     if (isAdminPath()) return
@@ -27,10 +28,20 @@ export function AccessGate({ source }: { source: ExpenseDataSource }) {
     return () => {
       active = false
     }
-  }, [])
+  }, [attempt])
 
   if (isAdminPath()) return <OwnerAccessAdminScreen />
-  if (error) return <div className={styles.center}>Couldn&apos;t check access: {error}</div>
+  if (error) {
+    return (
+      <AccessConnectionError
+        error={error}
+        onRetry={() => {
+          setError(null)
+          setAttempt((n) => n + 1)
+        }}
+      />
+    )
+  }
   if (!access) return <AppLoadingSkeleton label="Checking access" />
   if (access.status === 'allowed') return <AllowedAccessView access={access} source={source} />
   return <DeniedAccessView access={access} />
