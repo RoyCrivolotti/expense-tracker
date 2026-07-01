@@ -1,6 +1,7 @@
 import type { Account, Category, TxnType } from '../../types'
 import { CloseIcon } from '../icons'
 import type { StatusFilter } from './TxnFilters'
+import type { TxnDateScope } from './txnDateScope'
 import styles from './tabs.module.css'
 
 export function SearchRow({
@@ -139,52 +140,58 @@ export function StatusTypeRow({
   )
 }
 
-export function DateRangeRow({
-  useDateRange,
-  dateFrom,
-  dateTo,
+export function DateScopeRow({
+  dateScope,
+  customDateFrom,
+  customDateTo,
   selectMode,
-  onUseDateRange,
-  onDateFrom,
-  onDateTo,
+  onDateScope,
+  onCustomDateFrom,
+  onCustomDateTo,
 }: {
-  useDateRange: boolean
-  dateFrom: string
-  dateTo: string
+  dateScope: TxnDateScope
+  customDateFrom: string
+  customDateTo: string
   selectMode: boolean
-  onUseDateRange: (value: boolean) => void
-  onDateFrom: (value: string) => void
-  onDateTo: (value: string) => void
+  onDateScope: (value: TxnDateScope) => void
+  onCustomDateFrom: (value: string) => void
+  onCustomDateTo: (value: string) => void
 }) {
   return (
-    <>
-      <label className={styles.dateRangeToggle}>
-        <input
-          type="checkbox"
-          checked={useDateRange}
-          onChange={(e) => onUseDateRange(e.target.checked)}
-          disabled={selectMode}
-        />
-        Filter by calendar date range
+    <div className={styles.dateScopeBlock}>
+      <label className={styles.dateScopeLabel} htmlFor="txn-date-scope">
+        Date scope
       </label>
-      {useDateRange && (
+      <select
+        id="txn-date-scope"
+        className={dateScope !== 'budgetMonth' ? styles.activeSelect : undefined}
+        value={dateScope}
+        onChange={(e) => onDateScope(e.target.value as TxnDateScope)}
+        disabled={selectMode}
+      >
+        <option value="budgetMonth">Budget month</option>
+        <option value="last3Months">Last 3 months</option>
+        <option value="allDates">All dates</option>
+        <option value="custom">Custom range</option>
+      </select>
+      {dateScope === 'custom' ? (
         <div className={styles.selectRow}>
           <input
             type="date"
-            value={dateFrom}
-            onChange={(e) => onDateFrom(e.target.value)}
+            value={customDateFrom}
+            onChange={(e) => onCustomDateFrom(e.target.value)}
             disabled={selectMode}
             aria-label="From date"
           />
           <input
             type="date"
-            value={dateTo}
-            onChange={(e) => onDateTo(e.target.value)}
+            value={customDateTo}
+            onChange={(e) => onCustomDateTo(e.target.value)}
             disabled={selectMode}
             aria-label="To date"
           />
         </div>
-      )}
-    </>
+      ) : null}
+    </div>
   )
 }
