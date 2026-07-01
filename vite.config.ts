@@ -4,9 +4,16 @@ import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { docsCaptureMocks } from './vite.docsCapture'
 
+function resolveBuildId(): string {
+  const sha = process.env.GITHUB_SHA ?? process.env.CF_PAGES_COMMIT_SHA
+  if (sha) return sha.slice(0, 7)
+  return 'local'
+}
+
 export default defineConfig({
   define: {
     'import.meta.env.VITE_DOCS_CAPTURE': JSON.stringify(process.env.DOCS_CAPTURE === '1'),
+    'import.meta.env.VITE_BUILD_ID': JSON.stringify(resolveBuildId()),
   },
   plugins: [
     react(),

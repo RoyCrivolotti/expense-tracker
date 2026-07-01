@@ -1,4 +1,5 @@
 import { classifyAccessError, isStandaloneDisplay } from './accessErrorKind'
+import { AccessDiagnosticsPanel } from './AccessDiagnosticsPanel'
 import styles from './AccessScreen.module.css'
 
 interface Props {
@@ -37,6 +38,7 @@ export function AccessConnectionError({ error, onRetry }: Props) {
           Try again
         </button>
       </div>
+      <AccessDiagnosticsPanel error={error} />
       {kind === 'other' ? <p className={styles.error}>{error}</p> : null}
     </div>
   )

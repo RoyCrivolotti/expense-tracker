@@ -69,6 +69,40 @@
   color: var(--color-danger, #c0392b);
 }
 
+.diagnostics {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  width: 100%;
+}
+
+.detailsToggle {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--font-size-sm, 0.875rem);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
+.detailsPre {
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-elevated, rgba(0, 0, 0, 0.2));
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  line-height: 1.4;
+  text-align: left;
+  overflow-x: auto;
+  max-height: 12rem;
+}
+
 .adminPage {
   min-height: 100dvh;
   max-width: 36rem;
