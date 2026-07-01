@@ -17,17 +17,21 @@ export default defineConfig({
       manifest: false,
       injectRegister: 'auto',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest,woff2}'],
-        // SPA: serve the cached shell for client-routed navigations...
+        // Shell assets only — not index.html. Auth-gated app must hit the network
+        // on launch so Cloudflare Access can set cookies in the PWA context (iOS
+        // does not share Safari's session with the installed app).
+        globPatterns: ['**/*.{js,css,svg,png,ico,webmanifest,woff2}'],
         navigateFallback: '/index.html',
-        // ...but never for the D1-backed API (those must hit the network).
-        navigateFallbackDenylist: [/^\/api\//],
+        navigateFallbackDenylist: [/^\/api\//, /^\/cdn-cgi\//],
         runtimeCaching: [
           {
-            // Financial data is never written to Cache Storage. Offline = clean
-            // network error, not stale balances on a shared device.
-            urlPattern: ({ url }: { url: URL }) => url.pathname.startsWith('/api/'),
-            handler: 'NetworkOnly',
+            urlPattern: ({ request }: { request: Request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'app-shell',
+              networkTimeoutSeconds: 5,
+              expiration: { maxEntries: 1, maxAgeSeconds: 60 * 60 },
+            },
           },
         ],
       },
