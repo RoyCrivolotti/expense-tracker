@@ -124,6 +124,19 @@ export function regularityScore(gaps: number[]): number {
   return inRange / gaps.length
 }
 
+/** Median day-of-month from historical dates (tolerates weekend drift). */
+export function canonicalDayOfMonth(sortedDates: string[]): number {
+  return Math.round(median(sortedDates.map(dayOfMonth)))
+}
+
+/** Place a monthly recurrence on its typical day within `yearMonth` (YYYY-MM). */
+export function predictDateInBudgetMonth(yearMonth: string, sortedDates: string[]): string {
+  const [y, m] = yearMonth.split('-').map(Number) as [number, number]
+  const maxDay = new Date(y, m, 0).getDate()
+  const day = Math.min(canonicalDayOfMonth(sortedDates), maxDay)
+  return `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+
 /** Predict the next occurrence date based on frequency and historical days. */
 export function predictNextDate(
   frequency: RecurringFrequency,
@@ -136,14 +149,13 @@ export function predictNextDate(
     return addDaysIso(last, 7)
   }
   if (frequency === 'monthly') {
-    const canonicalDay = Math.round(median(sortedDates.map(dayOfMonth)))
-    return nextMonthOnDay(last, canonicalDay)
+    return nextMonthOnDay(last, canonicalDayOfMonth(sortedDates))
   }
   if (frequency === 'quarterly') {
-    return addMonthsOnDay(last, 3, Math.round(median(sortedDates.map(dayOfMonth))))
+    return addMonthsOnDay(last, 3, canonicalDayOfMonth(sortedDates))
   }
   // yearly
-  return addMonthsOnDay(last, 12, Math.round(median(sortedDates.map(dayOfMonth))))
+  return addMonthsOnDay(last, 12, canonicalDayOfMonth(sortedDates))
 }
 
 function addDaysIso(iso: string, days: number): string {
@@ -198,6 +210,7 @@ function buildSuggestion(
   frequency: RecurringFrequency,
   confidence: number,
   predictedDate: string,
+  predictedBudgetMonth: string,
 ): RecurringSuggestion {
   return {
     description: group.label,
@@ -206,7 +219,7 @@ function buildSuggestion(
     categoryId: group.categoryId,
     amountCents: group.amountCents,
     predictedDate,
-    predictedBudgetMonth: defaultBudgetMonth(predictedDate),
+    predictedBudgetMonth,
     frequency,
     confidence,
     occurrences: group.dates.length,
@@ -214,6 +227,21 @@ function buildSuggestion(
 }
 
 const MIN_REGULARITY = 0.6
+
+function resolvePrediction(
+  sorted: string[],
+  frequency: RecurringFrequency,
+  forMonth: string | undefined,
+): { predictedDate: string; predictedBM: string } | null {
+  if (forMonth && frequency === 'monthly') {
+    return { predictedDate: predictDateInBudgetMonth(forMonth, sorted), predictedBM: forMonth }
+  }
+  const predictedDate = predictNextDate(frequency, sorted)
+  if (!predictedDate) return null
+  const predictedBM = defaultBudgetMonth(predictedDate)
+  if (forMonth && predictedBM !== forMonth) return null
+  return { predictedDate, predictedBM }
+}
 
 function trySuggestGroup(
   group: OccurrenceGroup,
@@ -234,14 +262,17 @@ function trySuggestGroup(
   const regularity = regularityScore(gaps)
   if (regularity < MIN_REGULARITY) return null
 
-  const predictedDate = predictNextDate(frequency, sorted)
-  if (!predictedDate) return null
+  const prediction = resolvePrediction(sorted, frequency, forMonth)
+  if (!prediction) return null
+  if (isAlreadyEntered(group.key, prediction.predictedBM, transactions)) return null
 
-  const predictedBM = defaultBudgetMonth(predictedDate)
-  if (forMonth && predictedBM !== forMonth) return null
-  if (isAlreadyEntered(group.key, predictedBM, transactions)) return null
-
-  return buildSuggestion(group, frequency, Math.min(regularity, 1), predictedDate)
+  return buildSuggestion(
+    group,
+    frequency,
+    Math.min(regularity, 1),
+    prediction.predictedDate,
+    prediction.predictedBM,
+  )
 }
 
 /**
