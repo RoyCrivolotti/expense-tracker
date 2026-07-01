@@ -211,6 +211,22 @@ describe('detectRecurring', () => {
     expect(july.every((s) => s.predictedBudgetMonth === '2026-07')).toBe(true)
     expect(august.every((s) => s.predictedBudgetMonth === '2026-08')).toBe(true)
   })
+
+  it('suggests July when prior BM is June but last calendar date is late May', () => {
+    const txns = [
+      ...monthlyDates(2026, 1, 1, 4).map((date) =>
+        makeTxn({ date, description: 'Carbon diet app', budgetMonth: date.slice(0, 7) }),
+      ),
+      makeTxn({ date: '2026-05-01', description: 'Carbon diet app', budgetMonth: '2026-05' }),
+      makeTxn({ date: '2026-05-31', description: 'Carbon diet app', budgetMonth: '2026-06' }),
+    ]
+    const july = detectRecurring(txns, { forBudgetMonth: '2026-07' })
+    expect(july).toHaveLength(1)
+    expect(july[0]!.description).toBe('Carbon diet app')
+    expect(july[0]!.predictedDate).toBe('2026-07-01')
+    expect(july[0]!.predictedBudgetMonth).toBe('2026-07')
+    expect(detectRecurring(txns, { forBudgetMonth: '2026-06' })).toHaveLength(0)
+  })
 })
 
 describe('priorBudgetMonth', () => {
