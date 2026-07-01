@@ -6,6 +6,12 @@ import { filterTransactions, netSpendCents } from '../../engine'
 import { useIsMobile } from '../hooks/useIsMobile'
 import type { StatusFilter } from './TxnFilters'
 import { useTransactionSelection } from './useTransactionSelection'
+import {
+  buildPeriodFilter,
+  defaultCustomDateRange,
+  isSecondaryDateScope,
+  type TxnDateScope,
+} from './txnDateScope'
 
 function useTxnListFilters(month: string) {
   const [categoryId, setCategoryId] = useState<number | 'all'>('all')
@@ -13,21 +19,28 @@ function useTxnListFilters(month: string) {
   const [txnType, setTxnType] = useState<TxnType | 'all'>('all')
   const [status, setStatus] = useState<StatusFilter>('all')
   const [query, setQuery] = useState('')
-  const [useDateRange, setUseDateRange] = useState(false)
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
+  const [dateScope, setDateScope] = useState<TxnDateScope>('budgetMonth')
+  const [customDateFrom, setCustomDateFrom] = useState('')
+  const [customDateTo, setCustomDateTo] = useState('')
+
+  const setDateScopeWithDefaults = (scope: TxnDateScope) => {
+    if (scope === 'custom') {
+      setCustomDateFrom((from) => from || defaultCustomDateRange(month).dateFrom)
+      setCustomDateTo((to) => to || defaultCustomDateRange(month).dateTo)
+    }
+    setDateScope(scope)
+  }
+
   const filter = useMemo(
     () => ({
-      ...(useDateRange
-        ? { ...(dateFrom ? { dateFrom } : {}), ...(dateTo ? { dateTo } : {}) }
-        : { month }),
+      ...buildPeriodFilter(dateScope, month, customDateFrom, customDateTo),
       status,
       ...(categoryId !== 'all' ? { categoryId } : {}),
       ...(accountId !== 'all' ? { accountId } : {}),
       ...(txnType !== 'all' ? { type: txnType } : {}),
       ...(query.trim() ? { query: query.trim() } : {}),
     }),
-    [useDateRange, dateFrom, dateTo, month, status, categoryId, accountId, txnType, query],
+    [dateScope, customDateFrom, customDateTo, month, status, categoryId, accountId, txnType, query],
   )
   const hasActiveFilters = useMemo(
     () =>
@@ -36,8 +49,8 @@ function useTxnListFilters(month: string) {
       accountId !== 'all' ||
       txnType !== 'all' ||
       status !== 'all' ||
-      useDateRange,
-    [query, categoryId, accountId, txnType, status, useDateRange],
+      isSecondaryDateScope(dateScope),
+    [query, categoryId, accountId, txnType, status, dateScope],
   )
   const secondaryFilterCount = useMemo(
     () =>
@@ -45,8 +58,8 @@ function useTxnListFilters(month: string) {
       (accountId !== 'all' ? 1 : 0) +
       (txnType !== 'all' ? 1 : 0) +
       (status !== 'all' ? 1 : 0) +
-      (useDateRange ? 1 : 0),
-    [categoryId, accountId, txnType, status, useDateRange],
+      (isSecondaryDateScope(dateScope) ? 1 : 0),
+    [categoryId, accountId, txnType, status, dateScope],
   )
   const clearFilters = () => {
     setQuery('')
@@ -54,9 +67,9 @@ function useTxnListFilters(month: string) {
     setAccountId('all')
     setTxnType('all')
     setStatus('all')
-    setUseDateRange(false)
-    setDateFrom('')
-    setDateTo('')
+    setDateScope('budgetMonth')
+    setCustomDateFrom('')
+    setCustomDateTo('')
   }
   return {
     categoryId,
@@ -69,12 +82,12 @@ function useTxnListFilters(month: string) {
     setStatus,
     query,
     setQuery,
-    useDateRange,
-    setUseDateRange,
-    dateFrom,
-    setDateFrom,
-    dateTo,
-    setDateTo,
+    dateScope,
+    setDateScope: setDateScopeWithDefaults,
+    customDateFrom,
+    setCustomDateFrom,
+    customDateTo,
+    setCustomDateTo,
     filter,
     hasActiveFilters,
     secondaryFilterCount,

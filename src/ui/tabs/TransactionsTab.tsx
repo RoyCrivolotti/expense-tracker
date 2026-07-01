@@ -37,9 +37,9 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
         categoryId={state.categoryId}
         accountId={state.accountId}
         txnType={state.txnType}
-        useDateRange={state.useDateRange}
-        dateFrom={state.dateFrom}
-        dateTo={state.dateTo}
+        dateScope={state.dateScope}
+        customDateFrom={state.customDateFrom}
+        customDateTo={state.customDateTo}
         selectMode={state.selectMode}
         canSelect={state.canDelete}
         secondaryFilterCount={state.secondaryFilterCount}
@@ -48,9 +48,9 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
         onAccount={state.setAccountId}
         onStatus={state.setStatus}
         onTxnType={state.setTxnType}
-        onUseDateRange={state.setUseDateRange}
-        onDateFrom={state.setDateFrom}
-        onDateTo={state.setDateTo}
+        onDateScope={state.setDateScope}
+        onCustomDateFrom={state.setCustomDateFrom}
+        onCustomDateTo={state.setCustomDateTo}
         onToggleSelectMode={state.toggleSelectMode}
       />
 

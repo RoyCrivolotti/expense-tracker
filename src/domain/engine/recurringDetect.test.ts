@@ -1,96 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import type { Transaction } from '../types'
-import { priorBudgetMonth } from './dates'
-import {
-  classifyFrequency,
-  detectRecurring,
-  groupTransactions,
-  predictNextDate,
-  regularityScore,
-} from './recurring'
-
-function makeTxn(overrides: Partial<Transaction> & { date: string; description: string }): Transaction {
-  const base: Transaction = {
-    id: Math.random() * 10000,
-    date: overrides.date,
-    budgetMonth: overrides.budgetMonth ?? overrides.date.slice(0, 7),
-    description: overrides.description,
-    accountId: overrides.accountId ?? 1,
-    categoryId: overrides.categoryId ?? 1,
-    type: overrides.type ?? 'expense',
-    amountCents: overrides.amountCents ?? 1500,
-    cancelled: overrides.cancelled ?? false,
-    status: overrides.status ?? 'posted',
-  }
-  if (overrides.notes != null) base.notes = overrides.notes
-  return base
-}
-
-function monthlyDates(startYear: number, startMonth: number, day: number, count: number): string[] {
-  const dates: string[] = []
-  let y = startYear
-  let m = startMonth
-  for (let i = 0; i < count; i++) {
-    dates.push(`${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`)
-    m++
-    if (m > 12) { m = 1; y++ }
-  }
-  return dates
-}
-
-describe('classifyFrequency', () => {
-  it('detects weekly', () => expect(classifyFrequency(7)).toBe('weekly'))
-  it('detects monthly', () => expect(classifyFrequency(30)).toBe('monthly'))
-  it('detects quarterly', () => expect(classifyFrequency(91)).toBe('quarterly'))
-  it('detects yearly', () => expect(classifyFrequency(365)).toBe('yearly'))
-  it('returns null for irregular gaps', () => expect(classifyFrequency(15)).toBeNull())
-  it('handles edge of monthly range', () => {
-    expect(classifyFrequency(25)).toBe('monthly')
-    expect(classifyFrequency(37)).toBe('monthly')
-  })
-})
-
-describe('regularityScore', () => {
-  it('returns 1 for perfectly regular gaps', () => {
-    expect(regularityScore([30, 30, 30, 30])).toBe(1)
-  })
-  it('returns high score when most gaps within tolerance', () => {
-    const score = regularityScore([30, 31, 29, 30, 32])
-    expect(score).toBeGreaterThanOrEqual(0.8)
-  })
-  it('returns low score for irregular gaps', () => {
-    const score = regularityScore([10, 45, 30, 60, 5])
-    expect(score).toBeLessThan(0.6)
-  })
-  it('returns 0 for empty array', () => {
-    expect(regularityScore([])).toBe(0)
-  })
-})
-
-describe('predictNextDate', () => {
-  it('predicts monthly using median day-of-month', () => {
-    const dates = ['2026-01-05', '2026-02-05', '2026-03-05', '2026-04-07']
-    const result = predictNextDate('monthly', dates)
-    expect(result).toBe('2026-05-05')
-  })
-  it('clamps to month end for short months', () => {
-    const dates = ['2025-11-30', '2025-12-30', '2026-01-30']
-    const result = predictNextDate('monthly', dates)
-    expect(result).toBe('2026-02-28')
-  })
-  it('predicts weekly by adding 7 days', () => {
-    const dates = ['2026-06-01', '2026-06-08', '2026-06-15']
-    expect(predictNextDate('weekly', dates)).toBe('2026-06-22')
-  })
-  it('predicts quarterly by adding 3 months', () => {
-    const dates = ['2026-01-15', '2026-04-15', '2026-07-15']
-    expect(predictNextDate('quarterly', dates)).toBe('2026-10-15')
-  })
-  it('predicts yearly by adding 12 months', () => {
-    const dates = ['2024-03-10', '2025-03-10', '2026-03-10']
-    expect(predictNextDate('yearly', dates)).toBe('2027-03-10')
-  })
-})
+import { describe, expect, it } from 'vitest'
+import { detectRecurring, groupTransactions } from './recurringDetect'
+import { makeTxn, monthlyDates } from './recurringTestHelpers'
 
 describe('groupTransactions', () => {
   it('groups by normalized description, account, and type', () => {
@@ -148,14 +58,10 @@ describe('detectRecurring', () => {
   })
 
   it('suppresses when predicted budget month already has a matching entry', () => {
-    // 5 entries on the 5th → prediction is Jun 5 (BM: 2026-06).
-    // We add a transaction whose budgetMonth = "2026-06" (the predicted BM) to test
-    // suppression. We place it in the past so it doesn't shift the group's last date.
     const dates = monthlyDates(2025, 12, 5, 5)
     const txns = dates.map((date) =>
       makeTxn({ date, description: 'Netflix', budgetMonth: date.slice(0, 7) }),
     )
-    // This entry is dated before the group but assigned to the predicted budget month.
     txns.push(makeTxn({ date: '2025-11-01', description: 'Netflix', budgetMonth: '2026-05' }))
     const suggestions = detectRecurring(txns)
     const netflixSuggestion = suggestions.find((s) => s.description === 'Netflix')
@@ -226,15 +132,5 @@ describe('detectRecurring', () => {
     expect(july[0]!.predictedDate).toBe('2026-07-01')
     expect(july[0]!.predictedBudgetMonth).toBe('2026-07')
     expect(detectRecurring(txns, { forBudgetMonth: '2026-06' })).toHaveLength(0)
-  })
-})
-
-describe('priorBudgetMonth', () => {
-  it('steps back within the same year', () => {
-    expect(priorBudgetMonth('2026-07')).toBe('2026-06')
-  })
-
-  it('wraps across year boundary', () => {
-    expect(priorBudgetMonth('2026-01')).toBe('2025-12')
   })
 })

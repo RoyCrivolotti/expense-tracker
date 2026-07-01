@@ -104,3 +104,42 @@ export function priorBudgetMonth(yearMonth: string): string {
   }
   return `${py}-${String(pm).padStart(2, '0')}`
 }
+
+/** ISO date of the last calendar day in a budget month (YYYY-MM). */
+export function lastDayOfBudgetMonth(yearMonth: string): string {
+  const [y, m] = yearMonth.split('-').map(Number) as [number, number]
+  const maxDay = new Date(y, m, 0).getDate()
+  return `${y}-${String(m).padStart(2, '0')}-${String(maxDay).padStart(2, '0')}`
+}
+
+function firstDayOfBudgetMonth(yearMonth: string): string {
+  const [y, m] = yearMonth.split('-').map(Number) as [number, number]
+  return `${y}-${String(m).padStart(2, '0')}-01`
+}
+
+function shiftBudgetMonth(yearMonth: string, delta: number): string {
+  const [y, m] = yearMonth.split('-').map(Number) as [number, number]
+  let month = m + delta
+  let year = y
+  while (month > 12) {
+    month -= 12
+    year += 1
+  }
+  while (month < 1) {
+    month += 12
+    year -= 1
+  }
+  return `${year}-${String(month).padStart(2, '0')}`
+}
+
+/** Inclusive calendar range covering the last `count` budget months ending at `yearMonth`. */
+export function calendarRangeLastMonths(
+  yearMonth: string,
+  count: number,
+): { dateFrom: string; dateTo: string } {
+  const startMonth = shiftBudgetMonth(yearMonth, -(count - 1))
+  return {
+    dateFrom: firstDayOfBudgetMonth(startMonth),
+    dateTo: lastDayOfBudgetMonth(yearMonth),
+  }
+}

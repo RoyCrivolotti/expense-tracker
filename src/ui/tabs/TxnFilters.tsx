@@ -5,10 +5,12 @@ import { ActiveFilterChips } from './ActiveFilterChips'
 import { buildActiveFilterChips } from './txnFilterChips'
 import {
   CategoryAccountRow,
-  DateRangeRow,
+  DateScopeRow,
   SearchRow,
   StatusTypeRow,
 } from './TxnFilterRows'
+
+import type { TxnDateScope } from './txnDateScope'
 
 export type StatusFilter = TxnStatus | 'all'
 
@@ -20,9 +22,9 @@ export interface TxnFiltersProps {
   categoryId: number | 'all'
   accountId: number | 'all'
   txnType: TxnType | 'all'
-  useDateRange: boolean
-  dateFrom: string
-  dateTo: string
+  dateScope: TxnDateScope
+  customDateFrom: string
+  customDateTo: string
   selectMode: boolean
   canSelect: boolean
   secondaryFilterCount: number
@@ -31,9 +33,9 @@ export interface TxnFiltersProps {
   onAccount: (value: number | 'all') => void
   onStatus: (value: StatusFilter) => void
   onTxnType: (value: TxnType | 'all') => void
-  onUseDateRange: (value: boolean) => void
-  onDateFrom: (value: string) => void
-  onDateTo: (value: string) => void
+  onDateScope: (value: TxnDateScope) => void
+  onCustomDateFrom: (value: string) => void
+  onCustomDateTo: (value: string) => void
   onToggleSelectMode: () => void
 }
 
@@ -86,14 +88,14 @@ export function TxnFilters(props: TxnFiltersProps) {
             onStatus={props.onStatus}
             onTxnType={props.onTxnType}
           />
-          <DateRangeRow
-            useDateRange={props.useDateRange}
-            dateFrom={props.dateFrom}
-            dateTo={props.dateTo}
+          <DateScopeRow
+            dateScope={props.dateScope}
+            customDateFrom={props.customDateFrom}
+            customDateTo={props.customDateTo}
             selectMode={props.selectMode}
-            onUseDateRange={props.onUseDateRange}
-            onDateFrom={props.onDateFrom}
-            onDateTo={props.onDateTo}
+            onDateScope={props.onDateScope}
+            onCustomDateFrom={props.onCustomDateFrom}
+            onCustomDateTo={props.onCustomDateTo}
           />
         </div>
       ) : null}

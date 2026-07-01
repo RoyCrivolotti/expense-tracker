@@ -1,5 +1,6 @@
 import type { Account, Category, TxnType } from '../../types'
 import type { StatusFilter } from './TxnFilters'
+import { isSecondaryDateScope, scopeChipLabel, type TxnDateScope } from './txnDateScope'
 
 export interface ActiveFilterChip {
   key: string
@@ -14,16 +15,16 @@ interface ChipInput {
   accountId: number | 'all'
   txnType: TxnType | 'all'
   status: StatusFilter
-  useDateRange: boolean
-  dateFrom: string
-  dateTo: string
+  dateScope: TxnDateScope
+  customDateFrom: string
+  customDateTo: string
   onCategory: (value: number | 'all') => void
   onAccount: (value: number | 'all') => void
   onTxnType: (value: TxnType | 'all') => void
   onStatus: (value: StatusFilter) => void
-  onUseDateRange: (value: boolean) => void
-  onDateFrom: (value: string) => void
-  onDateTo: (value: string) => void
+  onDateScope: (value: TxnDateScope) => void
+  onCustomDateFrom: (value: string) => void
+  onCustomDateTo: (value: string) => void
 }
 
 export function buildActiveFilterChips(input: ChipInput): ActiveFilterChip[] {
@@ -58,18 +59,19 @@ export function buildActiveFilterChips(input: ChipInput): ActiveFilterChip[] {
       onClear: () => input.onStatus('all'),
     })
   }
-  if (input.useDateRange) {
-    const from = input.dateFrom || '…'
-    const to = input.dateTo || '…'
-    chips.push({
-      key: 'date',
-      label: `Dates: ${from} – ${to}`,
-      onClear: () => {
-        input.onUseDateRange(false)
-        input.onDateFrom('')
-        input.onDateTo('')
-      },
-    })
+  if (isSecondaryDateScope(input.dateScope)) {
+    const label = scopeChipLabel(input.dateScope, input.customDateFrom, input.customDateTo)
+    if (label) {
+      chips.push({
+        key: 'date',
+        label,
+        onClear: () => {
+          input.onDateScope('budgetMonth')
+          input.onCustomDateFrom('')
+          input.onCustomDateTo('')
+        },
+      })
+    }
   }
   return chips
 }
