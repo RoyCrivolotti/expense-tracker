@@ -5,6 +5,7 @@ import 'folio-shell/theme/tokens.css'
 import './ui/theme.css'
 import { initExpenseTheme } from './ui/hooks/expenseThemeInit'
 import { ToastProvider } from './ui/hooks/ToastProvider'
+import { PwaUpdatePrompt } from './ui/hooks/PwaUpdatePrompt'
 import { resolveSource } from './data/resolveSource'
 import { ExpensesApp } from './ui/ExpensesApp'
 import { AccessGate } from './ui/access/AccessGate'
@@ -22,7 +23,10 @@ function renderApp(node: ReactNode) {
   root.render(
     <StrictMode>
       <StagingFrame productionUrl={stagingProductionUrl}>
-        <ToastProvider>{node}</ToastProvider>
+        <ToastProvider>
+          <PwaUpdatePrompt />
+          {node}
+        </ToastProvider>
       </StagingFrame>
     </StrictMode>,
   )
