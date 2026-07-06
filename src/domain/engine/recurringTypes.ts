@@ -18,6 +18,7 @@ export interface RecurringSuggestion {
 export interface GroupKey {
   normalizedDesc: string
   accountId: number
+  categoryId: number
   type: TxnType
 }
 

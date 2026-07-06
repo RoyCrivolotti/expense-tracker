@@ -8,6 +8,7 @@ import {
 } from './recurringPredict'
 import type {
   DetectRecurringOptions,
+  GroupKey,
   OccurrenceGroup,
   RecurringFrequency,
   RecurringSuggestion,
@@ -36,7 +37,7 @@ function median(nums: number[]): number {
 }
 
 function groupKey(txn: Transaction): string {
-  return `${normalizeDesc(txn.description)}|${txn.accountId}|${txn.type}`
+  return `${normalizeDesc(txn.description)}|${txn.accountId}|${txn.categoryId}|${txn.type}`
 }
 
 export function groupTransactions(transactions: Transaction[]): OccurrenceGroup[] {
@@ -59,6 +60,7 @@ export function groupTransactions(transactions: Transaction[]): OccurrenceGroup[
         key: {
           normalizedDesc: normalizeDesc(txn.description),
           accountId: txn.accountId,
+          categoryId: txn.categoryId,
           type: txn.type,
         },
         label: txn.description,
@@ -73,7 +75,7 @@ export function groupTransactions(transactions: Transaction[]): OccurrenceGroup[
 }
 
 function isAlreadyEntered(
-  suggestion: { normalizedDesc: string; accountId: number; type: Transaction['type'] },
+  key: GroupKey,
   predictedBudgetMonth: string,
   transactions: Transaction[],
 ): boolean {
@@ -81,9 +83,10 @@ function isAlreadyEntered(
     (txn) =>
       !txn.cancelled &&
       txn.budgetMonth === predictedBudgetMonth &&
-      txn.accountId === suggestion.accountId &&
-      txn.type === suggestion.type &&
-      normalizeDesc(txn.description) === suggestion.normalizedDesc,
+      txn.accountId === key.accountId &&
+      txn.categoryId === key.categoryId &&
+      txn.type === key.type &&
+      normalizeDesc(txn.description) === key.normalizedDesc,
   )
 }
 
