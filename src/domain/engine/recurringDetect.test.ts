@@ -3,7 +3,7 @@ import { detectRecurring, groupTransactions } from './recurringDetect'
 import { makeTxn, monthlyDates } from './recurringTestHelpers'
 
 describe('groupTransactions', () => {
-  it('groups by normalized description, account, and type', () => {
+  it('groups by normalized description, account, category, and type', () => {
     const txns = monthlyDates(2026, 1, 5, 4).map((date) =>
       makeTxn({ date, description: 'Netflix', accountId: 2 }),
     )
@@ -31,6 +31,18 @@ describe('groupTransactions', () => {
     const txns = [
       ...monthlyDates(2026, 1, 5, 3).map((d) => makeTxn({ date: d, description: 'X', accountId: 1 })),
       ...monthlyDates(2026, 1, 5, 3).map((d) => makeTxn({ date: d, description: 'X', accountId: 2 })),
+    ]
+    expect(groupTransactions(txns)).toHaveLength(2)
+  })
+
+  it('separates different categories', () => {
+    const txns = [
+      ...monthlyDates(2026, 1, 5, 3).map((d) =>
+        makeTxn({ date: d, description: 'Glovo', categoryId: 7, amountCents: 799 }),
+      ),
+      ...monthlyDates(2026, 2, 10, 3).map((d) =>
+        makeTxn({ date: d, description: 'Glovo', categoryId: 3, amountCents: 1500 }),
+      ),
     ]
     expect(groupTransactions(txns)).toHaveLength(2)
   })
@@ -75,19 +87,19 @@ describe('detectRecurring', () => {
     expect(suggestions).toHaveLength(0)
   })
 
-  it('uses most recent amount and category', () => {
+  it('uses most recent amount within a group', () => {
     const dates = monthlyDates(2026, 1, 10, 4)
     const txns = dates.map((date, i) =>
       makeTxn({
         date,
         description: 'Gym',
         amountCents: i < 3 ? 3000 : 3500,
-        categoryId: i < 3 ? 5 : 8,
+        categoryId: 5,
       }),
     )
     const suggestions = detectRecurring(txns)
     expect(suggestions[0]!.amountCents).toBe(3500)
-    expect(suggestions[0]!.categoryId).toBe(8)
+    expect(suggestions[0]!.categoryId).toBe(5)
   })
 
   it('excludes groups missing from the prior budget month', () => {
@@ -132,5 +144,48 @@ describe('detectRecurring', () => {
     expect(july[0]!.predictedDate).toBe('2026-07-01')
     expect(july[0]!.predictedBudgetMonth).toBe('2026-07')
     expect(detectRecurring(txns, { forBudgetMonth: '2026-06' })).toHaveLength(0)
+  })
+
+  it('suggests Glovo Plus when food orders share the description', () => {
+    const subRows = [
+      ['2026-01-05', '2026-01'],
+      ['2026-02-05', '2026-02'],
+      ['2026-03-05', '2026-03'],
+      ['2026-04-05', '2026-04'],
+      ['2026-05-05', '2026-05'],
+      ['2026-06-05', '2026-06'],
+    ] as const
+    const txns = [
+      ...subRows.map(([date, bm]) =>
+        makeTxn({ date, budgetMonth: bm, description: 'Glovo', categoryId: 7, amountCents: 799 }),
+      ),
+      makeTxn({ date: '2026-02-21', budgetMonth: '2026-03', description: 'Glovo', categoryId: 3, amountCents: 1381 }),
+      makeTxn({ date: '2026-03-08', budgetMonth: '2026-03', description: 'Glovo', categoryId: 3, amountCents: 2018 }),
+    ]
+    const july = detectRecurring(txns, { forBudgetMonth: '2026-07' })
+    expect(july).toHaveLength(1)
+    expect(july[0]!.description).toBe('Glovo')
+    expect(july[0]!.categoryId).toBe(7)
+    expect(july[0]!.amountCents).toBe(799)
+    expect(july[0]!.predictedDate).toBe('2026-07-05')
+  })
+
+  it('does not suppress subscription when only a food order exists in target month', () => {
+    const subRows = [
+      ['2026-01-05', '2026-01'],
+      ['2026-02-05', '2026-02'],
+      ['2026-03-05', '2026-03'],
+      ['2026-04-05', '2026-04'],
+      ['2026-05-05', '2026-05'],
+      ['2026-06-05', '2026-06'],
+    ] as const
+    const txns = [
+      ...subRows.map(([date, bm]) =>
+        makeTxn({ date, budgetMonth: bm, description: 'Glovo', categoryId: 7, amountCents: 799 }),
+      ),
+      makeTxn({ date: '2026-07-10', budgetMonth: '2026-07', description: 'Glovo', categoryId: 3, amountCents: 1589 }),
+    ]
+    const july = detectRecurring(txns, { forBudgetMonth: '2026-07' })
+    expect(july.find((s) => s.categoryId === 7)).toBeDefined()
   })
 })
