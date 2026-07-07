@@ -1,5 +1,5 @@
 import { useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react'
-import { resolveSwipeSnap } from './swipeSnap'
+import { exceedsSwipeDragThreshold, resolveSwipeSnap } from './swipeSnap'
 
 const ACTION_WIDTH_REM = 4.5
 
@@ -25,6 +25,7 @@ export function useSwipeReveal(enabled: boolean, actionCount = 1) {
   const [offset, setOffset] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const offsetRef = useRef(0)
+  const didSwipeRef = useRef(false)
   const startX = useRef(0)
   const startOffset = useRef(0)
   const startTime = useRef(0)
@@ -33,12 +34,20 @@ export function useSwipeReveal(enabled: boolean, actionCount = 1) {
 
   const reset = () => {
     setIsDragging(false)
+    didSwipeRef.current = false
     applyOffset(setOffset, offsetRef, 0)
+  }
+
+  const consumeSuppressedClick = (): boolean => {
+    if (!didSwipeRef.current) return false
+    didSwipeRef.current = false
+    return true
   }
 
   const onTouchStart = (clientX: number) => {
     if (!enabled) return
     const now = performance.now()
+    didSwipeRef.current = false
     startX.current = clientX
     lastX.current = clientX
     startTime.current = now
@@ -52,6 +61,7 @@ export function useSwipeReveal(enabled: boolean, actionCount = 1) {
     lastX.current = clientX
     lastTime.current = performance.now()
     const dx = clientX - startX.current
+    if (exceedsSwipeDragThreshold(dx)) didSwipeRef.current = true
     const next = Math.max(-revealPx, Math.min(0, startOffset.current + dx))
     applyOffset(setOffset, offsetRef, next)
   }
@@ -66,5 +76,24 @@ export function useSwipeReveal(enabled: boolean, actionCount = 1) {
     )
   }
 
-  return { offset, isDragging, reset, onTouchStart, onTouchMove, onTouchEnd, revealPx }
+  const onTouchCancel = () => {
+    if (!enabled) return
+    setIsDragging(false)
+    didSwipeRef.current = false
+    applyOffset(setOffset, offsetRef, (current) =>
+      resolveSwipeSnap(current, revealPx, 0),
+    )
+  }
+
+  return {
+    offset,
+    isDragging,
+    reset,
+    consumeSuppressedClick,
+    onTouchStart,
+    onTouchMove,
+    onTouchEnd,
+    onTouchCancel,
+    revealPx,
+  }
 }

@@ -109,11 +109,13 @@ function SwipeTransactionRow({
           onTouchStart={(e) => swipe.onTouchStart(e.touches[0]?.clientX ?? 0)}
           onTouchMove={(e) => swipe.onTouchMove(e.touches[0]?.clientX ?? 0)}
           onTouchEnd={swipe.onTouchEnd}
+          onTouchCancel={swipe.onTouchCancel}
         >
           <button
             type="button"
             className={styles.row}
             onClick={() => {
+              if (swipe.consumeSuppressedClick()) return
               if (swipe.offset < 0) {
                 swipe.reset()
                 return
