@@ -53,7 +53,7 @@
   height: 0.9rem;
 }
 
-.swipeWrap {
+.dayHeaderSelect {
   position: sticky;
   top: 3.5rem;
   z-index: 5;
@@ -136,7 +136,10 @@
 .swipeSlide {
   position: relative;
   z-index: 1;
+  width: 100%;
+  background: var(--color-bg);
   touch-action: pan-y;
+  box-shadow: 1px 0 0 var(--color-bg);
 }
 .swipeActions {
   position: absolute;
