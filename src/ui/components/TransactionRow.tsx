@@ -1,10 +1,10 @@
+import { useState } from 'react'
 import type { Transaction } from '../../types'
 import { useSwipeReveal } from '../hooks/useSwipeReveal'
-import { CopyIcon } from '../icons'
 import { STATUS_LABEL, shortDayLabel, type Lookup } from '../format'
 import { Money } from './Money'
 import { Pill } from './primitives'
-import { confirmDeleteOne } from './confirmDelete'
+import { ConfirmSheet } from './ConfirmSheet'
 import { CategoryIcon } from './CategoryIcon'
 import styles from './TransactionList.module.css'
 
@@ -46,19 +46,86 @@ function RowBody({
   )
 }
 
-function DuplicateButton({ onDuplicate }: { onDuplicate: () => void }) {
+function deleteConfirmMessage(txn: Transaction, lookup: Lookup): string {
+  const label = txn.description || lookup.categoryName(txn.categoryId)
+  return `“${label}” will be removed permanently.`
+}
+
+interface SwipeRowProps {
+  txn: Transaction
+  lookup: Lookup
+  showDate: boolean
+  onSelect?: (txn: Transaction) => void
+  onDuplicate?: (txn: Transaction) => void
+  onDelete?: (id: number) => Promise<void>
+}
+
+function SwipeTransactionRow({
+  txn,
+  lookup,
+  showDate,
+  onSelect,
+  onDuplicate,
+  onDelete,
+}: SwipeRowProps) {
+  const actionCount = (onDuplicate ? 1 : 0) + (onDelete ? 1 : 0)
+  const swipe = useSwipeReveal(actionCount > 0, actionCount)
+  const [pendingDelete, setPendingDelete] = useState(false)
+
+  const handleCopy = () => {
+    onDuplicate?.(txn)
+    swipe.reset()
+  }
+
+  const confirmDelete = async () => {
+    if (!onDelete) return
+    setPendingDelete(false)
+    swipe.reset()
+    await onDelete(txn.id)
+  }
+
   return (
-    <button
-      type="button"
-      className={`${styles.duplicateBtn} tapActive`}
-      onClick={(e) => {
-        e.stopPropagation()
-        onDuplicate()
-      }}
-      aria-label="Duplicate transaction"
-    >
-      <CopyIcon />
-    </button>
+    <>
+      <div className={styles.swipeWrap}>
+        <div className={styles.swipeActions}>
+          {onDuplicate ? (
+            <button type="button" className={styles.copyAction} onClick={handleCopy}>
+              Copy
+            </button>
+          ) : null}
+          {onDelete ? (
+            <button type="button" className={styles.deleteAction} onClick={() => setPendingDelete(true)}>
+              Delete
+            </button>
+          ) : null}
+        </div>
+        <div
+          className={styles.swipeSlide}
+          style={{ transform: `translateX(${swipe.offset}px)` }}
+          onTouchStart={(e) => swipe.onTouchStart(e.touches[0]?.clientX ?? 0)}
+          onTouchMove={(e) => swipe.onTouchMove(e.touches[0]?.clientX ?? 0)}
+          onTouchEnd={swipe.onTouchEnd}
+        >
+          <button
+            type="button"
+            className={styles.row}
+            onClick={onSelect ? () => onSelect(txn) : undefined}
+          >
+            <RowBody txn={txn} lookup={lookup} showDate={showDate} />
+          </button>
+        </div>
+      </div>
+      {pendingDelete ? (
+        <ConfirmSheet
+          title="Delete transaction?"
+          message={deleteConfirmMessage(txn, lookup)}
+          confirmLabel="Delete"
+          destructive
+          onConfirm={() => void confirmDelete()}
+          onCancel={() => setPendingDelete(false)}
+        />
+      ) : null}
+    </>
   )
 }
 
@@ -87,14 +154,6 @@ export function TransactionRow({
   onToggleSelect,
   swipeDelete,
 }: TransactionRowProps) {
-  const swipe = useSwipeReveal(Boolean(swipeDelete && onDelete && !selectMode))
-
-  const handleDelete = async () => {
-    if (!onDelete || !confirmDeleteOne()) return
-    swipe.reset()
-    await onDelete(txn.id)
-  }
-
   if (selectMode) {
     return (
       <label className={styles.selectRow}>
@@ -111,35 +170,27 @@ export function TransactionRow({
     )
   }
 
-  const rowInner = (
-    <div className={styles.rowWrap}>
-      <button
-        type="button"
-        className={styles.row}
-        onClick={onSelect ? () => onSelect(txn) : undefined}
-      >
-        <RowBody txn={txn} lookup={lookup} showDate={Boolean(showDate)} />
-      </button>
-      {onDuplicate ? <DuplicateButton onDuplicate={() => onDuplicate(txn)} /> : null}
-    </div>
-  )
-
-  if (!swipeDelete || !onDelete) return rowInner
+  const swipeEnabled = swipeDelete && !selectMode && Boolean(onDelete || onDuplicate)
+  if (swipeEnabled) {
+    return (
+      <SwipeTransactionRow
+        txn={txn}
+        lookup={lookup}
+        showDate={Boolean(showDate)}
+        {...(onSelect ? { onSelect } : {})}
+        {...(onDuplicate ? { onDuplicate } : {})}
+        {...(onDelete ? { onDelete } : {})}
+      />
+    )
+  }
 
   return (
-    <div className={styles.swipeWrap}>
-      <button type="button" className={styles.deleteAction} onClick={() => void handleDelete()}>
-        Delete
-      </button>
-      <div
-        className={styles.swipeSlide}
-        style={{ transform: `translateX(${swipe.offset}px)` }}
-        onTouchStart={(e) => swipe.onTouchStart(e.touches[0]?.clientX ?? 0)}
-        onTouchMove={(e) => swipe.onTouchMove(e.touches[0]?.clientX ?? 0)}
-        onTouchEnd={swipe.onTouchEnd}
-      >
-        {rowInner}
-      </div>
-    </div>
+    <button
+      type="button"
+      className={styles.row}
+      onClick={onSelect ? () => onSelect(txn) : undefined}
+    >
+      <RowBody txn={txn} lookup={lookup} showDate={Boolean(showDate)} />
+    </button>
   )
 }

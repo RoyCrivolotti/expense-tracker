@@ -8,7 +8,7 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 
 - **Date scope dropdown** replaces the old “filter by calendar date range” checkbox: budget month (default), last 3 months, all dates, or custom range anchored to the viewed month.
 - **Per-day +** on date headers opens the add form with that calendar date pre-filled (FAB still adds for today).
-- **Duplicate** on each row (copy icon) and in the edit modal opens a new transaction with copied fields and a “Copied from …” hint — change type to refund and save.
+- **Duplicate** — swipe left on a row (mobile) for **Copy**, or use **Duplicate** in the edit modal (desktop). Opens a new transaction with copied fields and a “Copied from …” hint.
 - **Upcoming** recurring suggestions anchor monthly items to the viewed budget month (fixes missed suggestions when the prior charge landed in an earlier BM).
 - **Upcoming** groups recurring patterns by category so subscription “Glovo” is not mixed with food orders sharing the same description.
 

@@ -28,7 +28,7 @@ Goals shots use three demo scenarios from [`fixtures/demo-goal-scenarios.json`](
 | --- | --- |
 | ![Transactions desktop](./screenshots/gallery/transactions-desktop.png) | ![Transactions mobile](./screenshots/gallery/transactions-mobile.png) |
 
-Mobile detail: collapsible filters with **date scope** dropdown, recurring **Upcoming** suggestions, **+** on each day header, row **duplicate** control, active-filter badge with **Clear filters**, and **»** jump to latest budget month when viewing a past month.
+Mobile detail: collapsible filters with **date scope** dropdown, recurring **Upcoming** suggestions, **+** on each day header, swipe-left **Copy** / **Delete** on rows, active-filter badge with **Clear filters**, and **»** jump to latest budget month when viewing a past month.
 
 | Filters expanded | Active filters + clear |
 | --- | --- |
