@@ -4,9 +4,9 @@ import type { ExpenseActions } from '../actions'
 import { detectRecurring, defaultBudgetMonth } from '../../engine'
 import { Money } from '../components/Money'
 import { TransactionList } from '../components/TransactionList'
-import { BatchBar } from './BatchBar'
 import { TxnFilters } from './TxnFilters'
 import { UpcomingCard } from './UpcomingCard'
+import { TransactionsSelectFooter } from './TransactionsSelectFooter'
 import { useTransactionsTabState } from './useTransactionsTabState'
 import styles from './tabs.module.css'
 
@@ -89,13 +89,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
           : {})}
       />
 
-      {state.selectMode && actions && (
-        <BatchBar
-          count={state.selected.size}
-          busy={state.busy}
-          onDelete={() => void state.deleteSelected()}
-        />
-      )}
+      <TransactionsSelectFooter actionsEnabled={Boolean(actions)} selection={state} />
     </div>
   )
 }
