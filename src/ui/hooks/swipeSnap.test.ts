@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { swipeRevealPx } from './useSwipeReveal'
-import { resolveSwipeSnap, SWIPE_FLING_PX_MS, SWIPE_OPEN_RATIO } from './swipeSnap'
+import { resolveSwipeSnap, SWIPE_FLING_PX_MS, SWIPE_OPEN_RATIO, exceedsSwipeDragThreshold } from './swipeSnap'
 
 describe('resolveSwipeSnap', () => {
   const revealPx = swipeRevealPx(2)
@@ -22,5 +22,17 @@ describe('resolveSwipeSnap', () => {
   it('snaps fully open from 51% without velocity', () => {
     const at51 = -revealPx * 0.51
     expect(resolveSwipeSnap(at51, revealPx, 0)).toBe(-revealPx)
+  })
+})
+
+describe('exceedsSwipeDragThreshold', () => {
+  it('ignores small jitter', () => {
+    expect(exceedsSwipeDragThreshold(8)).toBe(false)
+    expect(exceedsSwipeDragThreshold(-8)).toBe(false)
+  })
+
+  it('detects intentional horizontal drag', () => {
+    expect(exceedsSwipeDragThreshold(9)).toBe(true)
+    expect(exceedsSwipeDragThreshold(-12)).toBe(true)
   })
 })
