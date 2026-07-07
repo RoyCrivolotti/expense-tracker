@@ -104,7 +104,7 @@ function SwipeTransactionRow({
           ) : null}
         </div>
         <div
-          className={styles.swipeSlide}
+          className={`${styles.swipeSlide}${swipe.isDragging ? ` ${styles.swipeSlideDragging}` : ''}`}
           style={{ transform: `translate3d(${swipe.offset}px, 0, 0)` }}
           onTouchStart={(e) => swipe.onTouchStart(e.touches[0]?.clientX ?? 0)}
           onTouchMove={(e) => swipe.onTouchMove(e.touches[0]?.clientX ?? 0)}
@@ -113,7 +113,13 @@ function SwipeTransactionRow({
           <button
             type="button"
             className={styles.row}
-            onClick={onSelect ? () => onSelect(txn) : undefined}
+            onClick={() => {
+              if (swipe.offset < 0) {
+                swipe.reset()
+                return
+              }
+              onSelect?.(txn)
+            }}
           >
             <RowBody txn={txn} lookup={lookup} showDate={showDate} />
           </button>
