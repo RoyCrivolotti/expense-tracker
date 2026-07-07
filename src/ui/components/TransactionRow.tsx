@@ -87,7 +87,11 @@ function SwipeTransactionRow({
   return (
     <>
       <div className={styles.swipeWrap}>
-        <div className={styles.swipeActions}>
+        <div
+          className={styles.swipeActions}
+          style={{ visibility: swipe.offset < 0 ? 'visible' : 'hidden' }}
+          aria-hidden={swipe.offset >= 0}
+        >
           {onDuplicate ? (
             <button type="button" className={styles.copyAction} onClick={handleCopy}>
               Copy
@@ -101,7 +105,7 @@ function SwipeTransactionRow({
         </div>
         <div
           className={styles.swipeSlide}
-          style={{ transform: `translateX(${swipe.offset}px)` }}
+          style={{ transform: `translate3d(${swipe.offset}px, 0, 0)` }}
           onTouchStart={(e) => swipe.onTouchStart(e.touches[0]?.clientX ?? 0)}
           onTouchMove={(e) => swipe.onTouchMove(e.touches[0]?.clientX ?? 0)}
           onTouchEnd={swipe.onTouchEnd}
