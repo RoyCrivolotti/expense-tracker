@@ -140,6 +140,10 @@
   background: var(--color-bg);
   touch-action: pan-y;
   box-shadow: 1px 0 0 var(--color-bg);
+  transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.swipeSlideDragging {
+  transition: none;
 }
 .swipeActions {
   position: absolute;
