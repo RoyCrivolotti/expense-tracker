@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import type { ExpenseDataset } from '../types'
 import type { ExpenseDataSource, NewTransaction } from '../data/dataSource'
 import type { ExpenseActions, ExpenseModalState } from './actions'
-import { openAddModal } from './transactionSeed'
+import { duplicateHint, openAddModal, transactionToSeed } from './transactionSeed'
 import {
   patchAfterAccount,
   patchAfterBulkCreate,
@@ -33,6 +33,8 @@ export function useExpenseActions(
     if (!source.canWrite) return undefined
     return {
       onAdd: (seed) => openAddModal(openModal, seed),
+      onDuplicate: (txn) =>
+        openModal({ mode: 'add', seed: transactionToSeed(txn), hint: duplicateHint(txn) }),
       onEdit: (txn) => openModal({ mode: 'edit', txn }),
       createTransaction: async (input: NewTransaction) => {
         const txn = await source.createTransaction!(input)

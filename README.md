@@ -12,9 +12,9 @@ Shared UI: [`folio-shell`](https://github.com/RoyCrivolotti/folio-shell) on [npm
 
 | Area | Highlights |
 | --- | --- |
-| **Dashboard** | Monthly KPIs, budget health, card statements, Goals teaser |
-| **Transactions** | Filters, batch delete, recurring **Upcoming** suggestions |
-| **Analytics** | Budget vs actual, mobile segments + desktop tables |
+| **Dashboard** | Monthly KPIs, budget health, card statements, Goals teaser, **Latest / Recently added** toggle |
+| **Transactions** | **Date scope** (budget month, last 3 months, all dates, custom), filters, batch delete, recurring **Upcoming**, **per-day +** and **duplicate** for quick entry |
+| **Analytics** | Budget vs actual, YTD on mobile, desktop tables |
 | **Goals** | Multi-scenario net-worth projections, FIRE/housing controls, comparison charts |
 | **Settings** | Categories, accounts, import/export, access admin (owner) |
 | **Engine** | Derived transaction status (never stored), cash recon gap, deferred card settlement |
@@ -89,6 +89,7 @@ Full DNS, Access, D1, and CI setup: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — hosting, access control, migrations through `0008`
 - [docs/SCREENSHOT-GALLERY.md](docs/SCREENSHOT-GALLERY.md) — full UI screenshot reference
+- [docs/CHANGELOG.md](docs/CHANGELOG.md) — recent product changes (July 2026)
 - [docs/GOALS-MODEL.md](docs/GOALS-MODEL.md) — wealth projection assumptions
 - [docs/OPS.md](docs/OPS.md) — staging, backups, ops scripts
 - [docs/TESTING.md](docs/TESTING.md) — unit and API integration tests

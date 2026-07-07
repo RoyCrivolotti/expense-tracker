@@ -1,5 +1,6 @@
 import type { Transaction } from '../../types'
 import { useSwipeReveal } from '../hooks/useSwipeReveal'
+import { CopyIcon } from '../icons'
 import { STATUS_LABEL, shortDayLabel, type Lookup } from '../format'
 import { Money } from './Money'
 import { Pill } from './primitives'
@@ -45,11 +46,28 @@ function RowBody({
   )
 }
 
+function DuplicateButton({ onDuplicate }: { onDuplicate: () => void }) {
+  return (
+    <button
+      type="button"
+      className={`${styles.duplicateBtn} tapActive`}
+      onClick={(e) => {
+        e.stopPropagation()
+        onDuplicate()
+      }}
+      aria-label="Duplicate transaction"
+    >
+      <CopyIcon />
+    </button>
+  )
+}
+
 interface TransactionRowProps {
   txn: Transaction
   lookup: Lookup
   showDate?: boolean | undefined
   onSelect?: (txn: Transaction) => void
+  onDuplicate?: (txn: Transaction) => void
   onDelete?: (id: number) => Promise<void>
   selectMode: boolean
   selected: boolean
@@ -62,6 +80,7 @@ export function TransactionRow({
   lookup,
   showDate,
   onSelect,
+  onDuplicate,
   onDelete,
   selectMode,
   selected,
@@ -92,17 +111,20 @@ export function TransactionRow({
     )
   }
 
-  const row = (
-    <button
-      type="button"
-      className={styles.row}
-      onClick={onSelect ? () => onSelect(txn) : undefined}
-    >
-      <RowBody txn={txn} lookup={lookup} showDate={Boolean(showDate)} />
-    </button>
+  const rowInner = (
+    <div className={styles.rowWrap}>
+      <button
+        type="button"
+        className={styles.row}
+        onClick={onSelect ? () => onSelect(txn) : undefined}
+      >
+        <RowBody txn={txn} lookup={lookup} showDate={Boolean(showDate)} />
+      </button>
+      {onDuplicate ? <DuplicateButton onDuplicate={() => onDuplicate(txn)} /> : null}
+    </div>
   )
 
-  if (!swipeDelete || !onDelete) return row
+  if (!swipeDelete || !onDelete) return rowInner
 
   return (
     <div className={styles.swipeWrap}>
@@ -116,7 +138,7 @@ export function TransactionRow({
         onTouchMove={(e) => swipe.onTouchMove(e.touches[0]?.clientX ?? 0)}
         onTouchEnd={swipe.onTouchEnd}
       >
-        {row}
+        {rowInner}
       </div>
     </div>
   )

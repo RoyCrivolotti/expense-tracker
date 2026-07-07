@@ -82,6 +82,18 @@ describe('initialFields', () => {
     })
   })
 
+  it('merges a partial seed over defaults', () => {
+    const fields = initialFields(null, minimalModel(), {
+      date: '2026-06-12',
+      budgetMonth: '2026-06',
+    })
+    expect(fields.date).toBe('2026-06-12')
+    expect(fields.budgetMonth).toBe('2026-06')
+    expect(fields.type).toBe('expense')
+    expect(fields.amount).toBe('')
+    expect(fields.description).toBe('')
+  })
+
   it.each([110, 1010, 145660])('round-trips edit amount %i cents through parseEuroToCents', (cents) => {
     const fields = initialFields(editingTxn(cents), minimalModel())
     expect(parseEuroToCents(fields.amount)).toBe(cents)

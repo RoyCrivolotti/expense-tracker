@@ -26,13 +26,22 @@
 
 .header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 0.75rem;
   margin-bottom: 0.75rem;
+}
+.titleBlock {
+  min-width: 0;
 }
 .header h2 {
   font-size: 1.05rem;
   margin: 0;
+}
+.subtitle {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
 }
 .close {
   width: 1.7rem;

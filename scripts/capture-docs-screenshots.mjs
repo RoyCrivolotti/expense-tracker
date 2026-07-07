@@ -137,10 +137,10 @@ async function captureTransactionsMobile(m) {
 async function goToGoals(page) {
   await page.goto(`${BASE}/`)
   await page.waitForSelector('text=Recent activity', { timeout: 15000 })
-  await page.getByRole('button', { name: 'Goals' }).click()
+  await page.getByRole('button', { name: 'Goals', exact: true }).click()
   await page.waitForSelector('text=Invested portfolio projection', { timeout: 15000 })
   await page.waitForSelector('text=Scenarios', { timeout: 15000 })
-  await page.getByRole('button', { name: 'Path A', exact: true }).waitFor({ timeout: 15000 })
+  await page.getByRole('button', { name: 'Path A: Invest only', exact: true }).waitFor({ timeout: 15000 })
   await page.waitForTimeout(500)
 }
 
@@ -179,7 +179,7 @@ async function captureGoalsMobile(page) {
   await page.screenshot({ path: join(OUT, 'goals-mobile-explainer.png') })
   await page.getByText('What do these terms mean?').click()
 
-  await page.getByRole('button', { name: 'Path B', exact: true }).scrollIntoViewIfNeeded()
+  await page.getByRole('button', { name: 'Path B: House now', exact: true }).scrollIntoViewIfNeeded()
   await page.waitForTimeout(350)
   await page.screenshot({ path: join(OUT, 'goals-mobile-scenarios.png') })
 

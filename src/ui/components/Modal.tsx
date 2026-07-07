@@ -6,11 +6,12 @@ import styles from './Modal.module.css'
 
 interface ModalProps {
   title: string
+  subtitle?: string
   onClose: () => void
   children: ReactNode
 }
 
-export function Modal({ title, onClose, children }: ModalProps) {
+export function Modal({ title, subtitle, onClose, children }: ModalProps) {
   useBodyScrollLock(true)
   const sheetRef = useRef<HTMLDivElement>(null)
   useFocusTrap(sheetRef, onClose)
@@ -26,7 +27,10 @@ export function Modal({ title, onClose, children }: ModalProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <header className={styles.header}>
-          <h2>{title}</h2>
+          <div className={styles.titleBlock}>
+            <h2>{title}</h2>
+            {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
+          </div>
           <button type="button" onClick={onClose} aria-label="Close" className={`${styles.close} tapActive`}>
             <CloseIcon />
           </button>
