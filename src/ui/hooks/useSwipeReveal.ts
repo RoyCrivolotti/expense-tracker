@@ -1,9 +1,14 @@
 import { useRef, useState } from 'react'
 
-const REVEAL_PX = 4.5 * 16 // matches delete action width in CSS (4.5rem)
+const ACTION_WIDTH_REM = 4.5
 
-/** Horizontal swipe-to-reveal for a trailing action (e.g. delete). */
-export function useSwipeReveal(enabled: boolean) {
+export function swipeRevealPx(actionCount: number): number {
+  return actionCount * ACTION_WIDTH_REM * 16
+}
+
+/** Horizontal swipe-to-reveal for trailing row actions (e.g. copy, delete). */
+export function useSwipeReveal(enabled: boolean, actionCount = 1) {
+  const revealPx = swipeRevealPx(actionCount)
   const [offset, setOffset] = useState(0)
   const startX = useRef(0)
   const startOffset = useRef(0)
@@ -19,14 +24,14 @@ export function useSwipeReveal(enabled: boolean) {
   const onTouchMove = (clientX: number) => {
     if (!enabled) return
     const dx = clientX - startX.current
-    const next = Math.max(-REVEAL_PX, Math.min(0, startOffset.current + dx))
+    const next = Math.max(-revealPx, Math.min(0, startOffset.current + dx))
     setOffset(next)
   }
 
   const onTouchEnd = () => {
     if (!enabled) return
-    setOffset(offset < -REVEAL_PX / 2 ? -REVEAL_PX : 0)
+    setOffset((current) => (current < -revealPx / 2 ? -revealPx : 0))
   }
 
-  return { offset, reset, onTouchStart, onTouchMove, onTouchEnd, revealPx: REVEAL_PX }
+  return { offset, reset, onTouchStart, onTouchMove, onTouchEnd, revealPx }
 }

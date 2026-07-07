@@ -1,0 +1,95 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: fade 0.15s ease;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+.sheet {
+  width: 100%;
+  max-width: 22rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 1.25rem 1.25rem 0 0;
+  padding: 1.1rem 1.1rem calc(1.1rem + env(safe-area-inset-bottom, 0));
+  animation: slide-up 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.title {
+  font-size: 1.05rem;
+  font-weight: 650;
+  margin: 0 0 0.45rem;
+}
+
+.message {
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+  margin: 0 0 1rem;
+  line-height: 1.45;
+}
+
+.actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.cancel,
+.confirm {
+  flex: 1;
+  padding: 0.75rem;
+  border-radius: 0.7rem;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.cancel {
+  border: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text);
+}
+
+.confirm {
+  border: 0;
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.confirmDestructive {
+  background: var(--exp-danger, #e5484d);
+}
+
+@media (min-width: 560px) {
+  .overlay {
+    align-items: center;
+  }
+  .sheet {
+    border-radius: 1.25rem;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes slide-up {
+  from {
+    transform: translateY(2rem);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
