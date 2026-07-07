@@ -1,15 +1,15 @@
 import type { ExpenseSettings, GoalInputs, GoalScenario, Transaction, TxnType } from '../types'
 import type { NewAccount, NewCategory, NewGoalScenario, NewTransaction } from '../data/dataSource'
 
-/** Pre-filled fields passed to the add modal from a recurring suggestion. */
+/** Pre-filled fields for the add modal (partial overlay on defaults). */
 export interface TransactionSeed {
-  description: string
-  type: TxnType
-  accountId: number
-  categoryId: number
-  amountCents: number
-  date: string
-  budgetMonth: string
+  description?: string
+  type?: TxnType
+  accountId?: number
+  categoryId?: number
+  amountCents?: number
+  date?: string
+  budgetMonth?: string
 }
 
 /**
@@ -21,6 +21,7 @@ export interface TransactionSeed {
 export interface ExpenseActions {
   onEdit: (txn: Transaction) => void
   onAdd: (seed?: TransactionSeed) => void
+  onDuplicate: (txn: Transaction) => void
   createTransaction: (input: NewTransaction) => Promise<void>
   createTransactions: (inputs: NewTransaction[]) => Promise<void>
   updateTransaction: (id: number, patch: Partial<NewTransaction>) => Promise<void>
@@ -40,6 +41,6 @@ export interface ExpenseActions {
 }
 
 export type ExpenseModalState =
-  | { mode: 'add'; seed?: TransactionSeed }
+  | { mode: 'add'; seed?: TransactionSeed; hint?: string }
   | { mode: 'edit'; txn: Transaction }
   | null

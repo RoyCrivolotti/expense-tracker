@@ -17,10 +17,74 @@
   letter-spacing: 0.05em;
   color: var(--color-text-muted);
   padding: 0.35rem 0.25rem;
-  /* Solid bg (no backdrop-filter): sticky header over a scrolling list, blur
-     here costs a full-frame recomposite on iOS and makes the list feel laggy. */
   background: var(--color-bg);
   z-index: 5;
+}
+
+.dayHeaderRow {
+  position: sticky;
+  top: 3.5rem;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--color-bg);
+}
+.dayHeaderRow .dayHeader {
+  position: static;
+  flex: 1;
+  min-width: 0;
+}
+.dayAddBtn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-right: 0.15rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.55rem;
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.dayAddBtn svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.rowWrap {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--color-border);
+}
+.rowWrap .row {
+  flex: 1;
+  min-width: 0;
+  border-bottom: 0;
+}
+.duplicateBtn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  border: 0;
+  border-left: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.duplicateBtn:hover {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+.duplicateBtn svg {
+  width: 1rem;
+  height: 1rem;
+}
+.swipeWrap .rowWrap {
+  border-bottom: 0;
+  background: var(--color-bg);
 }
 
 .dayHeaderSelect {

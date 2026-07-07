@@ -11,10 +11,11 @@ interface Props {
   actions: ExpenseActions
   editing: Transaction | null
   seed?: TransactionSeed | undefined
+  hint?: string | undefined
   onClose: () => void
 }
 
-export function TransactionModal({ model, actions, editing, seed, onClose }: Props) {
+export function TransactionModal({ model, actions, editing, seed, hint, onClose }: Props) {
   const { showToast } = useToast()
 
   const submit = async (input: NewTransaction, id?: number) => {
@@ -33,13 +34,18 @@ export function TransactionModal({ model, actions, editing, seed, onClose }: Pro
   }
 
   return (
-    <Modal title={editing ? 'Edit transaction' : 'New transaction'} onClose={onClose}>
+    <Modal
+      title={editing ? 'Edit transaction' : 'New transaction'}
+      {...(hint ? { subtitle: hint } : {})}
+      onClose={onClose}
+    >
       <TransactionForm
         model={model}
         editing={editing}
         seed={seed}
         onSubmit={submit}
         onDelete={remove}
+        onDuplicate={actions.onDuplicate}
         onClose={onClose}
       />
     </Modal>

@@ -12,6 +12,8 @@ interface TransactionListProps {
   flat?: boolean | undefined
   showDate?: boolean | undefined
   onSelect?: (txn: Transaction) => void
+  onDuplicate?: (txn: Transaction) => void
+  onAddForDate?: (date: string) => void
   onDelete?: (id: number) => Promise<void>
   selectMode?: boolean
   selectedIds?: ReadonlySet<number>
@@ -27,6 +29,8 @@ export function TransactionList({
   flat = false,
   showDate = false,
   onSelect,
+  onDuplicate,
+  onAddForDate,
   onDelete,
   selectMode = false,
   selectedIds,
@@ -60,6 +64,7 @@ export function TransactionList({
             selected={selectedIds?.has(txn.id) ?? false}
             swipeDelete={swipeDelete}
             {...(onSelect ? { onSelect } : {})}
+            {...(onDuplicate ? { onDuplicate } : {})}
             {...(onDelete ? { onDelete } : {})}
             {...(onToggleSelect ? { onToggleSelect } : {})}
           />
@@ -80,6 +85,7 @@ export function TransactionList({
               selectMode={selectMode}
               selectedIds={selectedIds ?? new Set()}
               {...(onToggleDate ? { onToggleDate } : {})}
+              {...(onAddForDate && !selectMode ? { onAdd: onAddForDate } : {})}
             />
             {group.transactions.map((txn) => (
               <TransactionRow
@@ -90,6 +96,7 @@ export function TransactionList({
                 selected={selectedIds?.has(txn.id) ?? false}
                 swipeDelete={swipeDelete}
                 {...(onSelect ? { onSelect } : {})}
+                {...(onDuplicate ? { onDuplicate } : {})}
                 {...(onDelete ? { onDelete } : {})}
                 {...(onToggleSelect ? { onToggleSelect } : {})}
               />

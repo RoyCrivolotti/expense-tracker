@@ -20,13 +20,41 @@ export type Setter = <K extends keyof FormFields>(key: K, value: FormFields[K]) 
 
 const todayIso = () => new Date().toISOString().slice(0, 10)
 
+function defaultFields(model: ExpenseModel): FormFields {
+  const { categories, accounts } = model.dataset
+  const today = todayIso()
+  return {
+    type: 'expense',
+    amount: '',
+    description: '',
+    categoryId: categories[0]?.id ?? 0,
+    accountId: resolveDefaultAccountId(accounts, model.dataset.settings),
+    date: today,
+    budgetMonth: defaultBudgetMonth(today),
+    notes: '',
+  }
+}
+
+function applySeed(defaults: FormFields, seed: TransactionSeed): FormFields {
+  return {
+    ...defaults,
+    ...(seed.type != null ? { type: seed.type } : {}),
+    ...(seed.amountCents != null ? { amount: formatEuroInput(seed.amountCents) } : {}),
+    ...(seed.description != null ? { description: seed.description } : {}),
+    ...(seed.categoryId != null ? { categoryId: seed.categoryId } : {}),
+    ...(seed.accountId != null ? { accountId: seed.accountId } : {}),
+    ...(seed.date != null ? { date: seed.date } : {}),
+    ...(seed.budgetMonth != null ? { budgetMonth: seed.budgetMonth } : {}),
+    notes: '',
+  }
+}
+
 /** Seed the form from an existing transaction, a recurring suggestion, or sensible defaults. */
 export function initialFields(
   editing: Transaction | null,
   model: ExpenseModel,
   seed?: TransactionSeed,
 ): FormFields {
-  const { categories, accounts } = model.dataset
   if (editing) {
     return {
       type: editing.type,
@@ -39,27 +67,6 @@ export function initialFields(
       notes: editing.notes ?? '',
     }
   }
-  if (seed) {
-    return {
-      type: seed.type,
-      amount: formatEuroInput(seed.amountCents),
-      description: seed.description,
-      categoryId: seed.categoryId,
-      accountId: seed.accountId,
-      date: seed.date,
-      budgetMonth: seed.budgetMonth,
-      notes: '',
-    }
-  }
-  const today = todayIso()
-  return {
-    type: 'expense',
-    amount: '',
-    description: '',
-    categoryId: categories[0]?.id ?? 0,
-    accountId: resolveDefaultAccountId(accounts, model.dataset.settings),
-    date: today,
-    budgetMonth: defaultBudgetMonth(today),
-    notes: '',
-  }
+  const defaults = defaultFields(model)
+  return seed ? applySeed(defaults, seed) : defaults
 }

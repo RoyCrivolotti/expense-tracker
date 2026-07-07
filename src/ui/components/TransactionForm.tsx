@@ -15,6 +15,7 @@ interface FormProps {
   seed?: TransactionSeed | undefined
   onSubmit: (input: NewTransaction, id?: number) => Promise<void>
   onDelete?: ((id: number) => Promise<void>) | undefined
+  onDuplicate?: ((txn: Transaction) => void) | undefined
   onClose: () => void
 }
 
@@ -32,7 +33,15 @@ function toInput(form: FormFields, cents: number, editing: Transaction | null): 
   }
 }
 
-export function TransactionForm({ model, editing, seed, onSubmit, onDelete, onClose }: FormProps) {
+export function TransactionForm({
+  model,
+  editing,
+  seed,
+  onSubmit,
+  onDelete,
+  onDuplicate,
+  onClose,
+}: FormProps) {
   const [form, setForm] = useState<FormFields>(() => initialFields(editing, model, seed))
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
@@ -80,6 +89,16 @@ export function TransactionForm({ model, editing, seed, onSubmit, onDelete, onCl
             onClick={() => void onDelete(editing.id).then(onClose)}
           >
             Delete
+          </button>
+        )}
+        {editing && onDuplicate && (
+          <button
+            type="button"
+            className={styles.secondary}
+            disabled={busy}
+            onClick={() => onDuplicate(editing)}
+          >
+            Duplicate
           </button>
         )}
         <button type="submit" className={`${styles.save} tapActive`} disabled={busy}>

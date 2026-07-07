@@ -232,6 +232,7 @@ function ActiveTransactionModal({
       actions={actions}
       editing={modal.mode === 'edit' ? modal.txn : null}
       seed={modal.mode === 'add' ? modal.seed : undefined}
+      hint={modal.mode === 'add' ? modal.hint : undefined}
       onClose={onClose}
     />
   )

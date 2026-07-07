@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
-import { detectRecurring } from '../../engine'
+import { detectRecurring, defaultBudgetMonth } from '../../engine'
 import { Money } from '../components/Money'
 import { TransactionList } from '../components/TransactionList'
 import { BatchBar } from './BatchBar'
@@ -77,9 +77,11 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
         selectedIds={state.selected}
         swipeDelete={state.isMobile && state.canDelete && !state.selectMode}
         {...(state.hasActiveFilters ? { onClearFilters: state.clearFilters } : {})}
-        {...(actions ? { onSelect: actions.onEdit } : {})}
+        {...(actions ? { onSelect: actions.onEdit, onDuplicate: actions.onDuplicate } : {})}
         {...(actions
           ? {
+              onAddForDate: (date) =>
+                actions.onAdd({ date, budgetMonth: defaultBudgetMonth(date) }),
               onDelete: actions.deleteTransaction,
               onToggleSelect: state.toggleSelected,
               onToggleDate: state.toggleDate,
