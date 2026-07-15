@@ -2,6 +2,23 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## July 2026 (reconciliation UX)
+
+### Cash reconciliation
+
+- **Gap split** on desktop and mobile: **Carryover**, **This month**, and **Total gap** columns replace a single opaque gap.
+- Analytics copy explains how carryover vs this-month drift maps to reconciliation.
+
+### Transactions
+
+- **Statement payment rows** appear in the list when a deferred card statement is marked paid (derived from statement status + cash recon, not stored as transactions).
+- **Header refresh** on every tab; pull-to-refresh on mobile. Toast on success or failure.
+
+### Offline / PWA
+
+- **IndexedDB snapshot** of the last successful load for read-only viewing when offline or when refresh fails.
+- **Offline banner** distinguishes true offline vs online with stale cache; editing disabled until reconnect or refresh.
+
 ## July 2026
 
 ### Transactions

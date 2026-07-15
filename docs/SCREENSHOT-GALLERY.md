@@ -18,15 +18,19 @@ Goals shots use three demo scenarios from [`fixtures/demo-goal-scenarios.json`](
 | --- | --- |
 | ![Dashboard desktop](./screenshots/gallery/dashboard-desktop.png) | ![Dashboard mobile](./screenshots/gallery/dashboard-mobile.png) |
 
+Header **Refresh** appears on every tab (not shown in cropped dashboard shots).
+
 | Desktop (light) |
 | --- |
 | ![Dashboard desktop light](./screenshots/gallery/dashboard-desktop-light.png) |
 
 ## Transactions
 
-| Desktop | Mobile |
+| Desktop (May — statement payments) | Mobile |
 | --- | --- |
 | ![Transactions desktop](./screenshots/gallery/transactions-desktop.png) | ![Transactions mobile](./screenshots/gallery/transactions-mobile.png) |
+
+May budget month shows a derived **Travel Card statement** payment row when the card statement is marked paid.
 
 Mobile detail: collapsible filters with **date scope** dropdown, recurring **Upcoming** suggestions, **+** on each day header, swipe-left **Copy** / **Delete** (animated snap, tap row to close when open), active-filter badge with **Clear filters**, and **»** jump to latest budget month when viewing a past month.
 
@@ -40,9 +44,15 @@ Mobile detail: collapsible filters with **date scope** dropdown, recurring **Upc
 
 ## Analytics
 
-| Desktop | Mobile |
+| Desktop overview | Cash reconciliation (desktop) |
 | --- | --- |
-| ![Analytics desktop](./screenshots/gallery/analytics-desktop.png) | ![Analytics mobile](./screenshots/gallery/analytics-mobile.png) |
+| ![Analytics desktop](./screenshots/gallery/analytics-desktop.png) | ![Analytics cash desktop](./screenshots/gallery/analytics-cash-desktop.png) |
+
+| Mobile overview | Cash reconciliation (mobile) |
+| --- | --- |
+| ![Analytics mobile](./screenshots/gallery/analytics-mobile.png) | ![Analytics cash mobile](./screenshots/gallery/analytics-cash-mobile.png) |
+
+Cash recon shows **Carryover**, **This month**, and **Total gap** columns (desktop) or accordion detail (mobile).
 
 ## Goals
 

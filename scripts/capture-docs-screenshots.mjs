@@ -95,8 +95,9 @@ async function setFiltersExpanded(page, open) {
 
 async function setMonthLabel(page, monthName) {
   const pattern = new RegExp(`${monthName} 2026`)
+  const headerMonth = page.getByRole('banner').getByText(pattern)
   for (let i = 0; i < 12; i++) {
-    if (await page.getByText(pattern).isVisible()) return
+    if (await headerMonth.isVisible()) return
     await page.getByRole('button', { name: 'Previous month' }).click()
     await page.waitForTimeout(150)
   }
@@ -108,9 +109,20 @@ async function captureTransactionsDefault(page, filename) {
   await page.waitForSelector('text=Recent activity', { timeout: 15000 })
   await goToTransactions(page)
   await page.waitForSelector('text=Upcoming', { timeout: 15000 })
+  await setMonthLabel(page, 'May')
   await setFiltersExpanded(page, false)
   await page.waitForTimeout(300)
   await page.screenshot({ path: join(OUT, filename) })
+}
+
+async function captureAnalyticsDesktop(page) {
+  await page.getByRole('button', { name: 'Analytics' }).click()
+  await page.waitForSelector('text=Monthly summary', { timeout: 15000 })
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: join(OUT, 'analytics-desktop.png') })
+  await page.locator('text=Cash reconciliation').scrollIntoViewIfNeeded()
+  await page.waitForTimeout(350)
+  await page.screenshot({ path: join(OUT, 'analytics-cash-desktop.png') })
 }
 
 async function captureTransactionsMobile(m) {
@@ -220,10 +232,7 @@ async function capture() {
 
   await captureTransactionsDefault(d, 'transactions-desktop.png')
 
-  await d.getByRole('button', { name: 'Analytics' }).click()
-  await d.waitForSelector('text=Monthly summary', { timeout: 15000 })
-  await d.waitForTimeout(400)
-  await d.screenshot({ path: join(OUT, 'analytics-desktop.png') })
+  await captureAnalyticsDesktop(d)
 
   await captureGoalsDesktop(d)
 
@@ -254,6 +263,10 @@ async function capture() {
   await m.waitForSelector('text=Budget vs actual', { timeout: 15000 })
   await m.waitForTimeout(300)
   await m.screenshot({ path: join(OUT, 'analytics-mobile.png') })
+  await m.getByRole('radio', { name: 'Cash' }).click()
+  await m.waitForSelector('text=Carryover', { timeout: 15000 })
+  await m.waitForTimeout(350)
+  await m.screenshot({ path: join(OUT, 'analytics-cash-mobile.png') })
 
   await captureGoalsMobile(m)
 
