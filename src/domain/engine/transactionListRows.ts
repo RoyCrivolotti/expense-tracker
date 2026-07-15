@@ -48,11 +48,20 @@ function matchesStatementPayment(row: StatementPaymentRow, filter: TxnFilter): b
   return true
 }
 
-function rowSortKey(row: TransactionListRow): string {
+/** Day bucket for list headers when paidOn falls outside the budget month being viewed. */
+export function effectiveStatementListDate(row: StatementPaymentRow, filter: TxnFilter): string {
+  if (!filter.month) return row.date
+  if (row.budgetMonth !== filter.month) return row.date
+  if (row.date.startsWith(`${filter.month}-`)) return row.date
+  return `${filter.month}-01`
+}
+
+function rowSortKey(row: TransactionListRow, filter: TxnFilter): string {
   if (row.kind === 'transaction') {
     return `${row.txn.date}:1:${String(row.txn.id).padStart(10, '0')}`
   }
-  return `${row.date}:0:${row.key}`
+  const date = effectiveStatementListDate(row, filter)
+  return `${date}:0:${row.key}`
 }
 
 export function buildTransactionListRows(
@@ -75,11 +84,14 @@ export function buildTransactionListRows(
     .filter((row) => matchesStatementPayment(row, filter))
     .map((row) => row as TransactionListRow)
 
-  return [...txns, ...payments].sort((a, b) => rowSortKey(b).localeCompare(rowSortKey(a)))
+  return [...txns, ...payments].sort((a, b) =>
+    rowSortKey(b, filter).localeCompare(rowSortKey(a, filter)),
+  )
 }
 
-export function listRowDate(row: TransactionListRow): string {
-  return row.kind === 'transaction' ? row.txn.date : row.date
+export function listRowDate(row: TransactionListRow, filter: TxnFilter = {}): string {
+  if (row.kind === 'transaction') return row.txn.date
+  return effectiveStatementListDate(row, filter)
 }
 
 export function listRowKey(row: TransactionListRow): string {
@@ -91,10 +103,13 @@ export interface ListDayGroup {
   rows: TransactionListRow[]
 }
 
-export function groupListRowsByDay(rows: TransactionListRow[]): ListDayGroup[] {
+export function groupListRowsByDay(
+  rows: TransactionListRow[],
+  filter: TxnFilter = {},
+): ListDayGroup[] {
   const groups: ListDayGroup[] = []
   for (const row of rows) {
-    const date = listRowDate(row)
+    const date = listRowDate(row, filter)
     const last = groups[groups.length - 1]
     if (last && last.date === date) last.rows.push(row)
     else groups.push({ date, rows: [row] })

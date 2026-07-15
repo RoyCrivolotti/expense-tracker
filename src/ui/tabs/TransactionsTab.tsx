@@ -73,6 +73,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
       <TransactionList
         rows={state.listRows}
         lookup={model.lookup}
+        listFilter={state.filter}
         selectMode={state.selectMode}
         selectedIds={state.selected}
         swipeDelete={state.isMobile && state.canDelete && !state.selectMode}
