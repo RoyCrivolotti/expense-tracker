@@ -96,3 +96,33 @@ export function CloseIcon(props: IconProps) {
     </svg>
   )
 }
+
+export function RefreshIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4 12a8 8 0 0 1 13.4-5.9" />
+      <path d="M20 4v5h-5" />
+      <path d="M20 12a8 8 0 0 1-13.4 5.9" />
+      <path d="M4 20v-5h5" />
+    </svg>
+  )
+}
+
+export function OfflineCloudIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M6 18h9a4 4 0 0 0 .5-8 5.5 5.5 0 0 0-10.6 1.5A3.5 3.5 0 0 0 6 18z" />
+      <path d="M3 3l18 18" />
+    </svg>
+  )
+}
+
+export function CardPaymentIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="3" y="6" width="18" height="12" rx="2" />
+      <path d="M3 10h18" />
+      <path d="M7 15h4" />
+    </svg>
+  )
+}

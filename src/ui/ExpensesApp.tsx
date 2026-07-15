@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react'
+import { useRef, useState, lazy, Suspense } from 'react'
 import type { ExpenseDataSource } from '../data/dataSource'
 import { useExpenseData, type ExpenseModel } from './useExpenseData'
 import { useExpenseActions } from './useExpenseActions'
@@ -8,15 +8,21 @@ import { needsOnboarding } from '../domain/onboarding/needsOnboarding'
 import { type GroupGrants } from '../domain/accessGroups'
 import { AppShell } from './nav/AppShell'
 import type { TabId } from './nav/navItems'
-import { MonthPicker } from './components/MonthPicker'
+import { OfflineBanner } from './components/OfflineBanner'
+import { AppHeaderActions } from './components/AppHeaderActions'
+import { ExpensesOnboarding } from './components/ExpensesOnboarding'
 import { AppLoadingSkeleton } from './components/AppLoadingSkeleton'
 import { TransactionModal } from './components/TransactionModal'
 import { DashboardTab } from './tabs/DashboardTab'
 import { TransactionsTab } from './tabs/TransactionsTab'
 import { AnalyticsTab } from './tabs/AnalyticsTab'
 import { SettingsTab } from './tabs/SettingsTab'
-import { OnboardingWizard } from './onboarding/OnboardingWizard'
-import { isOnboardingSkipped, skipOnboarding } from './onboarding/onboardingStorage'
+import { isOnboardingSkipped } from './onboarding/onboardingStorage'
+import { ConnectivityProvider } from './hooks/ConnectivityProvider'
+import { useConnectivityState } from './hooks/useConnectivityState'
+import { useConnectivity } from './hooks/useConnectivity'
+import { usePullToRefresh } from './hooks/usePullToRefresh'
+import { useRefreshToast } from './hooks/useRefreshToast'
 import styles from './ExpensesApp.module.css'
 
 const GoalsTab = lazy(() => import('./tabs/goals/GoalsTab'))
@@ -119,6 +125,11 @@ export function ExpensesApp({
       source={source}
       model={data.model}
       applyPatch={data.applyPatch}
+      reload={data.reload}
+      refreshing={data.refreshing}
+      refreshOutcome={data.refreshOutcome}
+      fromCache={data.fromCache ?? false}
+      {...(data.snapshotAt ? { snapshotAt: data.snapshotAt } : {})}
       hubGrants={hubGrants}
       {...(ownerAccess ? { ownerAccess } : {})}
       {...(accountEmail ? { accountEmail } : {})}
@@ -130,6 +141,11 @@ function ExpensesAppLoaded({
   source,
   model,
   applyPatch,
+  reload,
+  refreshing,
+  refreshOutcome,
+  fromCache,
+  snapshotAt,
   ownerAccess,
   accountEmail,
   hubGrants,
@@ -137,18 +153,67 @@ function ExpensesAppLoaded({
   source: ExpenseDataSource
   model: ExpenseModel
   applyPatch: ReturnType<typeof useExpenseData>['applyPatch']
+  reload: () => void
+  refreshing: boolean
+  refreshOutcome: ReturnType<typeof useExpenseData>['refreshOutcome']
+  fromCache: boolean
+  snapshotAt?: string
   ownerAccess?: { pendingCount: number }
   accountEmail?: string
   hubGrants: GroupGrants
 }) {
+  return (
+    <ConnectivityProvider fromCache={fromCache} {...(snapshotAt ? { snapshotAt } : {})}>
+      <ExpensesAppReady
+        source={source}
+        model={model}
+        applyPatch={applyPatch}
+        reload={reload}
+        refreshing={refreshing}
+        refreshOutcome={refreshOutcome}
+        hubGrants={hubGrants}
+        {...(ownerAccess ? { ownerAccess } : {})}
+        {...(accountEmail ? { accountEmail } : {})}
+      />
+    </ConnectivityProvider>
+  )
+}
+
+function ExpensesAppReady({
+  source,
+  model,
+  applyPatch,
+  reload,
+  refreshing,
+  refreshOutcome,
+  ownerAccess,
+  accountEmail,
+  hubGrants,
+}: {
+  source: ExpenseDataSource
+  model: ExpenseModel
+  applyPatch: ReturnType<typeof useExpenseData>['applyPatch']
+  reload: () => void
+  refreshing: boolean
+  refreshOutcome: ReturnType<typeof useExpenseData>['refreshOutcome']
+  ownerAccess?: { pendingCount: number }
+  accountEmail?: string
+  hubGrants: GroupGrants
+}) {
+  const online = useConnectivity()
+  const { readOnly, snapshotAt } = useConnectivityState()
+  const contentRef = useRef<HTMLElement>(null)
+  usePullToRefresh(contentRef, { onRefresh: reload, enabled: online })
+  useRefreshToast(refreshing, refreshOutcome)
+
   const [theme, setTheme] = useExpenseTheme()
   const [tab, setTab] = useState<TabId>('dashboard')
   const [month, setMonth] = useState<string | null>(null)
   const [modal, setModal] = useState<ExpenseModalState>(null)
   const [onboardingOpen, setOnboardingOpen] = useState(
-    () => source.canWrite && needsOnboarding(model.dataset) && !isOnboardingSkipped(),
+    () => source.canWrite && !readOnly && needsOnboarding(model.dataset) && !isOnboardingSkipped(),
   )
-  const actions = useExpenseActions(source, applyPatch, setModal)
+  const actions = useExpenseActions(source, applyPatch, setModal, readOnly)
 
   const activeMonth = month ?? model.months[model.months.length - 1] ?? ''
   const showPicker =
@@ -157,20 +222,13 @@ function ExpensesAppLoaded({
 
   return (
     <>
-      {onboardingOpen ? (
-        <OnboardingWizard
-          source={source}
-          applyPatch={applyPatch}
-          onDone={() => {
-            setOnboardingOpen(false)
-            actions?.onAdd()
-          }}
-          onSkip={() => {
-            skipOnboarding()
-            setOnboardingOpen(false)
-          }}
-        />
-      ) : null}
+      <ExpensesOnboarding
+        open={onboardingOpen}
+        source={source}
+        applyPatch={applyPatch}
+        onAdd={() => actions?.onAdd()}
+        onClose={() => setOnboardingOpen(false)}
+      />
       <AppShell
         activeId={tab}
         onSelect={setTab}
@@ -179,14 +237,20 @@ function ExpensesAppLoaded({
         hubGrants={hubGrants}
         compactFooter={COMPACT_FOOTER_TABS.has(tab)}
         goalsWide={tab === 'goals'}
+        contentRef={contentRef}
+        banner={readOnly ? <OfflineBanner {...(snapshotAt ? { snapshotAt } : {})} /> : null}
         {...(actions ? { onAdd: actions.onAdd } : {})}
-        {...(showPicker
-          ? {
-              headerRight: (
-                <MonthPicker months={model.months} value={activeMonth} onChange={setMonth} />
-              ),
-            }
-          : {})}
+        headerRight={
+          <AppHeaderActions
+            months={model.months}
+            activeMonth={activeMonth}
+            onMonthChange={setMonth}
+            showPicker={showPicker}
+            online={online}
+            refreshing={refreshing}
+            onRefresh={reload}
+          />
+        }
       >
         <div key={tab} className={styles.tabPane}>
           <TabView

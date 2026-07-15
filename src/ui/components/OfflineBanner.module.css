@@ -1,0 +1,48 @@
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin: 0 0 0.85rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--exp-radius, 0.75rem);
+  border: 1px solid color-mix(in srgb, var(--exp-warning) 35%, var(--color-border));
+  background: color-mix(in srgb, var(--exp-warning) 12%, var(--color-bg));
+  color: var(--color-text);
+  animation: slideIn 0.2s ease;
+}
+.iconWrap {
+  flex: none;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin-top: 0.05rem;
+  color: var(--exp-warning);
+}
+.text {
+  min-width: 0;
+}
+.title {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+.sub {
+  margin: 0.15rem 0 0;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  line-height: 1.35;
+}
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .banner {
+    animation: none;
+  }
+}

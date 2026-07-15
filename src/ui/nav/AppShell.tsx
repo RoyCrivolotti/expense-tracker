@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ReactNode, RefObject } from 'react'
 import { HubMenuRoot, HubMenuTrigger } from 'folio-shell'
 import type { GroupGrants } from '../../domain/accessGroups'
 import { getExpenseHubNavItems } from '../../hubNavItems'
@@ -18,6 +18,8 @@ interface AppShellProps {
   compactFooter?: boolean
   /** Widen the content column on Goals desktop so chart tables fit without scrolling. */
   goalsWide?: boolean
+  contentRef?: RefObject<HTMLElement | null>
+  banner?: ReactNode
   children: ReactNode
 }
 
@@ -70,6 +72,8 @@ export function AppShell({
   hubGrants,
   compactFooter = false,
   goalsWide = false,
+  contentRef,
+  banner,
   children,
 }: AppShellProps) {
   return (
@@ -90,8 +94,10 @@ export function AppShell({
             <div className={styles.headerRight}>{headerRight}</div>
           </header>
           <main
+            ref={contentRef}
             className={`${styles.content} ${compactFooter ? styles.contentCompact : ''} ${goalsWide ? styles.contentGoals : ''}`}
           >
+            {banner}
             {children}
           </main>
         </div>

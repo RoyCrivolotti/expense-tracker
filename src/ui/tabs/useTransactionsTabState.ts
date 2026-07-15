@@ -2,7 +2,12 @@ import { useMemo, useState } from 'react'
 import type { TxnType } from '../../types'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
-import { filterTransactions, netSpendCents } from '../../engine'
+import {
+  buildTransactionListRows,
+  computeCashReconciliation,
+  filterTransactions,
+  netSpendCents,
+} from '../../engine'
 import { useIsMobile } from '../hooks/useIsMobile'
 import type { StatusFilter } from './TxnFilters'
 import { useTransactionSelection } from './useTransactionSelection'
@@ -109,12 +114,30 @@ export function useTransactionsTabState(
     [model.dataset, filters.filter],
   )
 
+  const listRows = useMemo(() => {
+    const cashRows = computeCashReconciliation(
+      model.dataset.transactions,
+      model.dataset.accounts,
+      model.dataset.settings,
+      model.dataset.cashActuals,
+    )
+    return buildTransactionListRows(
+      model.dataset.transactions,
+      filters.filter,
+      model.dataset.accountStatements,
+      cashRows,
+      model.dataset.accounts,
+      model.dataset.settings,
+    )
+  }, [model.dataset, filters.filter])
+
   const totalCents = useMemo(() => netSpendCents(results), [results])
 
   return {
     ...filters,
     isMobile,
     results,
+    listRows,
     totalCents,
     canDelete: Boolean(actions?.deleteTransaction),
     ...selection,
