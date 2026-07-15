@@ -11,7 +11,6 @@ import styles from './TransactionList.module.css'
 interface TransactionListProps {
   rows: TransactionListRow[]
   lookup: Lookup
-  listFilter?: { month?: string } | undefined
   flat?: boolean | undefined
   showDate?: boolean | undefined
   onSelect?: (txn: Transaction) => void
@@ -63,7 +62,7 @@ export function TransactionList({ rows, lookup, ...props }: TransactionListProps
     )
   }
 
-  const groups = groupListRowsByDay(rows, props.listFilter ?? {})
+  const groups = groupListRowsByDay(rows)
   if (props.flat) {
     return (
       <div className={styles.list}>

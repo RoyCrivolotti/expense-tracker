@@ -130,26 +130,36 @@ describe('buildTransactionListRows', () => {
       { defaultAccountId: 1 },
     )
     expect(rows).toHaveLength(2)
-    const groups = groupListRowsByDay(rows, { month: '2026-06' })
+    const groups = groupListRowsByDay(rows)
     expect(groups).toHaveLength(1)
     expect(groups[0]?.date).toBe('2026-06-15')
     expect(groups[0]?.rows.map((r) => r.kind)).toEqual(['transaction', 'statement-payment'])
   })
 
-  it('anchors budget-month settlements paid later to month start in budget view', () => {
+  it('hides budget-month settlement until paidOn falls in the filtered month', () => {
     const statements: AccountStatement[] = [
       { accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-07-15' },
     ]
-    const rows = buildTransactionListRows(
-      [txn({ budgetMonth: '2026-06', id: 10, date: '2026-06-15' })],
+    const juneRows = buildTransactionListRows(
+      [],
       { month: '2026-06' },
       statements,
       cashRows,
       accounts,
       { defaultAccountId: 1 },
     )
-    const groups = groupListRowsByDay(rows, { month: '2026-06' })
-    expect(groups.map((g) => g.date)).toEqual(['2026-06-15', '2026-06-01'])
-    expect(groups[1]?.rows[0]?.kind).toBe('statement-payment')
+    expect(juneRows).toHaveLength(0)
+
+    const julyRows = buildTransactionListRows(
+      [],
+      { month: '2026-07' },
+      statements,
+      cashRows,
+      accounts,
+      { defaultAccountId: 1 },
+    )
+    expect(julyRows).toHaveLength(1)
+    expect(julyRows[0]?.kind).toBe('statement-payment')
+    expect(groupListRowsByDay(julyRows)[0]?.date).toBe('2026-07-15')
   })
 })
