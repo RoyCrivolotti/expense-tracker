@@ -1,13 +1,15 @@
+import type { ReactNode } from 'react'
 import type { Transaction } from '../../types'
-import { groupByDay } from '../../engine/transactions'
+import { groupListRowsByDay, type TransactionListRow } from '../../engine'
 import { type Lookup } from '../format'
 import { EmptyState } from './primitives'
 import { DayGroupHeader } from './DayGroupHeader'
+import { StatementPaymentRow } from './StatementPaymentRow'
 import { TransactionRow } from './TransactionRow'
 import styles from './TransactionList.module.css'
 
 interface TransactionListProps {
-  transactions: Transaction[]
+  rows: TransactionListRow[]
   lookup: Lookup
   flat?: boolean | undefined
   showDate?: boolean | undefined
@@ -23,52 +25,48 @@ interface TransactionListProps {
   onClearFilters?: () => void
 }
 
-export function TransactionList({
-  transactions,
-  lookup,
-  flat = false,
-  showDate = false,
-  onSelect,
-  onDuplicate,
-  onAddForDate,
-  onDelete,
-  selectMode = false,
-  selectedIds,
-  onToggleSelect,
-  onToggleDate,
-  swipeDelete = false,
-  onClearFilters,
-}: TransactionListProps) {
-  if (transactions.length === 0) {
+function renderRow(
+  row: TransactionListRow,
+  lookup: Lookup,
+  props: Omit<TransactionListProps, 'rows' | 'lookup'>,
+): ReactNode {
+  if (row.kind === 'statement-payment') {
+    return <StatementPaymentRow key={row.key} row={row} showDate={props.showDate ?? false} />
+  }
+  return (
+    <TransactionRow
+      key={row.txn.id}
+      txn={row.txn}
+      lookup={lookup}
+      showDate={Boolean(props.showDate)}
+      selectMode={props.selectMode ?? false}
+      selected={props.selectedIds?.has(row.txn.id) ?? false}
+      swipeDelete={props.swipeDelete ?? false}
+      {...(props.onSelect ? { onSelect: props.onSelect } : {})}
+      {...(props.onDuplicate ? { onDuplicate: props.onDuplicate } : {})}
+      {...(props.onDelete ? { onDelete: props.onDelete } : {})}
+      {...(props.onToggleSelect ? { onToggleSelect: props.onToggleSelect } : {})}
+    />
+  )
+}
+
+export function TransactionList({ rows, lookup, ...props }: TransactionListProps) {
+  if (rows.length === 0) {
     return (
       <EmptyState
-        actionLabel={onClearFilters ? 'Clear filters' : undefined}
-        onAction={onClearFilters}
+        actionLabel={props.onClearFilters ? 'Clear filters' : undefined}
+        onAction={props.onClearFilters}
       >
         No transactions match these filters.
       </EmptyState>
     )
   }
 
-  const groups = groupByDay(transactions)
-  if (flat) {
+  const groups = groupListRowsByDay(rows)
+  if (props.flat) {
     return (
       <div className={styles.list}>
-        {transactions.map((txn) => (
-          <TransactionRow
-            key={txn.id}
-            txn={txn}
-            lookup={lookup}
-            showDate={showDate}
-            selectMode={selectMode}
-            selected={selectedIds?.has(txn.id) ?? false}
-            swipeDelete={swipeDelete}
-            {...(onSelect ? { onSelect } : {})}
-            {...(onDuplicate ? { onDuplicate } : {})}
-            {...(onDelete ? { onDelete } : {})}
-            {...(onToggleSelect ? { onToggleSelect } : {})}
-          />
-        ))}
+        {rows.map((row) => renderRow(row, lookup, props))}
       </div>
     )
   }
@@ -76,31 +74,20 @@ export function TransactionList({
   return (
     <div className={styles.list}>
       {groups.map((group) => {
-        const ids = group.transactions.map((t) => t.id)
+        const ids = group.rows.flatMap((row) =>
+          row.kind === 'transaction' ? [row.txn.id] : [],
+        )
         return (
           <div key={group.date} className={styles.group}>
             <DayGroupHeader
               date={group.date}
               ids={ids}
-              selectMode={selectMode}
-              selectedIds={selectedIds ?? new Set()}
-              {...(onToggleDate ? { onToggleDate } : {})}
-              {...(onAddForDate && !selectMode ? { onAdd: onAddForDate } : {})}
+              selectMode={props.selectMode ?? false}
+              selectedIds={props.selectedIds ?? new Set()}
+              {...(props.onToggleDate ? { onToggleDate: props.onToggleDate } : {})}
+              {...(props.onAddForDate && !props.selectMode ? { onAdd: props.onAddForDate } : {})}
             />
-            {group.transactions.map((txn) => (
-              <TransactionRow
-                key={txn.id}
-                txn={txn}
-                lookup={lookup}
-                selectMode={selectMode}
-                selected={selectedIds?.has(txn.id) ?? false}
-                swipeDelete={swipeDelete}
-                {...(onSelect ? { onSelect } : {})}
-                {...(onDuplicate ? { onDuplicate } : {})}
-                {...(onDelete ? { onDelete } : {})}
-                {...(onToggleSelect ? { onToggleSelect } : {})}
-              />
-            ))}
+            {group.rows.map((row) => renderRow(row, lookup, props))}
           </div>
         )
       })}

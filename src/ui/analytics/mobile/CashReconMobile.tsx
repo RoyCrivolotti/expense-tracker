@@ -62,8 +62,29 @@ function CashCard({
             />
           </div>
           <Row label="Unpaid liability" cents={row.unpaidLiabilityCents} muted />
+          <GapRow label="Carryover" cents={row.carryoverGapCents} />
+          <GapRow label="This month" cents={row.monthGapCents} />
+          <GapRow label="Total gap" cents={row.gapCents} />
         </div>
       )}
+    </div>
+  )
+}
+
+function GapRow({ label, cents }: { label: string; cents: number | null }) {
+  if (cents === null) {
+    return (
+      <div className={styles.row}>
+        <span className={styles.rowLabel}>{label}</span>
+        <span className={`${styles.badge} ${styles.badgeMuted}`}>—</span>
+      </div>
+    )
+  }
+  const cls = cents === 0 ? styles.badgeMuted : cents > 0 ? styles.badgeSuccess : styles.badgeDanger
+  return (
+    <div className={styles.row}>
+      <span className={styles.rowLabel}>{label}</span>
+      <span className={`${styles.badge} ${cls}`}>{formatCents(cents, false)}</span>
     </div>
   )
 }

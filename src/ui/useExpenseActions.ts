@@ -28,9 +28,10 @@ export function useExpenseActions(
   source: ExpenseDataSource,
   applyPatch: ApplyPatch,
   openModal: OpenModal,
+  readOnly = false,
 ): ExpenseActions | undefined {
   return useMemo(() => {
-    if (!source.canWrite) return undefined
+    if (!source.canWrite || readOnly) return undefined
     return {
       onAdd: (seed) => openAddModal(openModal, seed),
       onDuplicate: (txn) =>
@@ -102,5 +103,5 @@ export function useExpenseActions(
         applyPatch((d) => patchAfterScenarioDelete(d, id))
       },
     }
-  }, [source, applyPatch, openModal])
+  }, [source, applyPatch, openModal, readOnly])
 }

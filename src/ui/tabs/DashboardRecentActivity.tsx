@@ -50,7 +50,7 @@ export function DashboardRecentActivity({ model, actions }: Props) {
       <p className={styles.activityHint}>{ACTIVITY_HINTS[mode]}</p>
       <Card>
         <TransactionList
-          transactions={activity}
+          rows={activity.map((txn) => ({ kind: 'transaction' as const, txn }))}
           lookup={lookup}
           flat
           showDate

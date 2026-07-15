@@ -35,6 +35,10 @@ export interface CashRow {
   actualCashCents: number | null
   /** actual − expected, or null when no actual is recorded. */
   gapCents: number | null
+  /** Prior month's gapCents, or null for the first row. */
+  carryoverGapCents: number | null
+  /** gapCents − carryoverGapCents when both are defined. */
+  monthGapCents: number | null
   unpaidLiabilityCents: number
 }
 
@@ -92,6 +96,7 @@ export function computeCashReconciliation(
   const months = sortedMonths([...byMonth.keys(), ...actualByMonth.keys()])
 
   let cash = settings.openingCashCents
+  let priorGap: number | null = null
   const rows: CashRow[] = []
   for (const month of months) {
     const agg = byMonth.get(month) ?? emptyAgg()
@@ -105,6 +110,11 @@ export function computeCashReconciliation(
       agg.incomeCents - agg.debitExpenseCents - paidStatements - agg.investmentsCents
     cash += cashMovement
     const actual = actualByMonth.get(month) ?? null
+    const gapCents = actual === null ? null : actual - cash
+    const carryoverGapCents = priorGap
+    const monthGapCents =
+      gapCents !== null && carryoverGapCents !== null ? gapCents - carryoverGapCents : null
+    if (gapCents !== null) priorGap = gapCents
     rows.push({
       month,
       incomeCents: agg.incomeCents,
@@ -114,7 +124,9 @@ export function computeCashReconciliation(
       cashMovementCents: cashMovement,
       expectedCashCents: cash,
       actualCashCents: actual,
-      gapCents: actual === null ? null : actual - cash,
+      gapCents,
+      carryoverGapCents,
+      monthGapCents,
       unpaidLiabilityCents: unpaid,
     })
   }

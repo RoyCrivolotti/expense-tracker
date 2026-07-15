@@ -63,7 +63,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
           <span />
         )}
         <span className={styles.resultStats}>
-          <span>{state.results.length} transactions</span>
+          <span>{state.listRows.length} items</span>
           <span>
             Net spend <Money cents={state.totalCents} />
           </span>
@@ -71,7 +71,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
       </div>
 
       <TransactionList
-        transactions={state.results}
+        rows={state.listRows}
         lookup={model.lookup}
         selectMode={state.selectMode}
         selectedIds={state.selected}

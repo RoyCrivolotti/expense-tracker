@@ -2,16 +2,12 @@ import type { ExpenseModel } from '../useExpenseData'
 import type { CashRow } from '../../engine'
 import { computeCashReconciliation, fullMonthLabel } from '../../engine'
 import { ActualCashCell } from './ActualCashCell'
-import { money, moneyAlways, sum } from './cells'
+import { gapCellClass, money, moneyAlways, sum } from './cells'
 import styles from './analytics.module.css'
 
 interface Props {
   model: ExpenseModel
   onSetCashActual?: (yearMonth: string, actualCashCents: number | null) => Promise<void>
-}
-
-function gapClass(gap: number | null): string | undefined {
-  return gap === null || gap === 0 ? undefined : styles.over
 }
 
 function shortAccountLabel(name: string): string {
@@ -53,7 +49,13 @@ function CashReconRow({
           onSave={onSetCashActual}
         />
       </td>
-      <td className={gapClass(row.gapCents)}>
+      <td className={gapCellClass(row.carryoverGapCents, styles.over)}>
+        {row.carryoverGapCents === null ? '—' : moneyAlways(row.carryoverGapCents)}
+      </td>
+      <td className={gapCellClass(row.monthGapCents, styles.over)}>
+        {row.monthGapCents === null ? '—' : moneyAlways(row.monthGapCents)}
+      </td>
+      <td className={gapCellClass(row.gapCents, styles.over)}>
         {row.gapCents === null ? '—' : moneyAlways(row.gapCents)}
       </td>
       <td className={row.unpaidLiabilityCents !== 0 ? styles.warn : undefined}>
@@ -74,6 +76,8 @@ function TotalsRow({ rows, cardIds }: { rows: CashRow[]; cardIds: number[] }) {
       ))}
       <td>{money(sum(rows, (r) => r.investmentsCents))}</td>
       <td>{moneyAlways(sum(rows, (r) => r.cashMovementCents))}</td>
+      <td />
+      <td />
       <td />
       <td />
       <td />
@@ -111,7 +115,9 @@ export function CashReconciliationTable({ model, onSetCashActual }: Props) {
             <th>Cash Δ</th>
             <th>Expected</th>
             <th>Actual</th>
-            <th>Gap</th>
+            <th>Carryover</th>
+            <th>This month</th>
+            <th>Total gap</th>
             <th>Unpaid</th>
           </tr>
         </thead>
