@@ -11,6 +11,7 @@ import { onRequestPut as putSettings } from './settings/index'
 import { onRequestPut as putGoals } from './goals/index'
 import { onRequestPost as createScenario } from './scenarios/index'
 import { onRequestPatch as patchScenario, onRequestDelete as deleteScenario } from './scenarios/[id]'
+import { onRequestPut as putStatement } from './statements/index'
 
 const OWNER = 'owner@example.com'
 const GUEST = 'guest@example.com'
@@ -222,5 +223,47 @@ describe('expenses API (middleware + handlers + in-memory repo)', () => {
     expect(deleted.status).toBe(200)
     const dataset = await repo.loadDataset(OWNER)
     expect(dataset.goalScenarios).toHaveLength(0)
+  })
+
+  it('persists statement paidOn and rejects paid without a date', async () => {
+    const store = createInMemoryAccessDb()
+    store.seedActiveUser(OWNER, { groups: ['expenses'] })
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    const card = await invokeExpenseApiRoute({
+      handler: createAccount,
+      repo,
+      env: expenseEnv(store),
+      url: 'https://expenses.test/api/expenses/accounts',
+      method: 'POST',
+      body: { name: 'Iberia Icon', kind: 'credit', settlement: 'deferred', active: true },
+      email: OWNER,
+    })
+    const account = await readJson<{ id: number }>(card)
+
+    const saved = await invokeExpenseApiRoute({
+      handler: putStatement,
+      repo,
+      env: expenseEnv(store),
+      method: 'PUT',
+      url: 'https://expenses.test/api/expenses/statements',
+      body: { accountId: account.id, yearMonth: '2026-06', paid: true, paidOn: '2026-07-15' },
+      email: OWNER,
+    })
+    expect(saved.status).toBe(200)
+    expect(await readJson<{ paid: boolean; paidOn?: string }>(saved)).toMatchObject({
+      paid: true,
+      paidOn: '2026-07-15',
+    })
+
+    const missingDate = await invokeExpenseApiRoute({
+      handler: putStatement,
+      repo,
+      env: expenseEnv(store),
+      method: 'PUT',
+      url: 'https://expenses.test/api/expenses/statements',
+      body: { accountId: account.id, yearMonth: '2026-07', paid: true },
+      email: OWNER,
+    })
+    expect(missingDate.status).toBe(400)
   })
 })

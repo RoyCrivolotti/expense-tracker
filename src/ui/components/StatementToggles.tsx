@@ -1,13 +1,29 @@
 import { useState } from 'react'
 import { fullMonthLabel } from '../../engine/dates'
 import { isStatementPaid } from '../../engine/status'
+import { todayLocalIso } from '../dates'
 import type { ExpenseModel } from '../useExpenseData'
-import { StatementPaidToggle } from './StatementPaidToggle'
+import { StatementPaidDate } from './StatementPaidDate'
 import styles from './StatementToggles.module.css'
 
 interface Props {
   model: ExpenseModel
-  onToggle: (accountId: number, yearMonth: string, paid: boolean) => Promise<void>
+  onToggle: (
+    accountId: number,
+    yearMonth: string,
+    paid: boolean,
+    paidOn?: string,
+  ) => Promise<void>
+}
+
+function findPaidOn(
+  model: ExpenseModel,
+  accountId: number,
+  yearMonth: string,
+): string | undefined {
+  return model.dataset.accountStatements.find(
+    (s) => s.accountId === accountId && s.yearMonth === yearMonth,
+  )?.paidOn
 }
 
 export function StatementToggles({ model, onToggle }: Props) {
@@ -15,11 +31,16 @@ export function StatementToggles({ model, onToggle }: Props) {
   const deferred = model.dataset.accounts.filter((a) => a.settlement === 'deferred')
   const months = [...model.months].reverse()
 
-  const toggle = async (accountId: number, yearMonth: string, next: boolean) => {
+  const save = async (
+    accountId: number,
+    yearMonth: string,
+    paid: boolean,
+    paidOn?: string,
+  ) => {
     const key = `${accountId}:${yearMonth}`
     setPending(key)
     try {
-      await onToggle(accountId, yearMonth, next)
+      await onToggle(accountId, yearMonth, paid, paid ? (paidOn ?? todayLocalIso()) : undefined)
     } finally {
       setPending(null)
     }
@@ -35,16 +56,18 @@ export function StatementToggles({ model, onToggle }: Props) {
               const paid = isStatementPaid(model.dataset.accountStatements, account.id, m)
               const key = `${account.id}:${m}`
               return (
-                <button
-                  key={m}
-                  type="button"
-                  className={`${styles.chip} ${paid ? styles.paid : ''}`}
-                  disabled={pending === key}
-                  onClick={() => void toggle(account.id, m, !paid)}
-                >
-                  {fullMonthLabel(m)}
-                  <StatementPaidToggle paid={paid} />
-                </button>
+                <div key={m} className={styles.monthRow}>
+                  <span className={styles.monthLabel}>{fullMonthLabel(m)}</span>
+                  <StatementPaidDate
+                    paid={paid}
+                    paidOn={findPaidOn(model, account.id, m)}
+                    disabled={pending === key}
+                    readOnly={paid}
+                    onMarkPaid={(paidOn) => void save(account.id, m, true, paidOn)}
+                    onEditDate={(paidOn) => void save(account.id, m, true, paidOn)}
+                    onMarkDue={() => void save(account.id, m, false)}
+                  />
+                </div>
               )
             })}
           </div>

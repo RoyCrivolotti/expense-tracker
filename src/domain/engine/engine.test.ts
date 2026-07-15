@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Account, AccountStatement, Transaction } from '../types'
 import { formatCents, formatEuroInput, formatPercent, parseEuroToCents, parsePercentToFraction } from './money'
-import { budgetMonthFromName, defaultBudgetMonth, parseHumanDate } from './dates'
+import { budgetMonthFromName, defaultBudgetMonth, parseHumanDate, parseIsoDate } from './dates'
 import { fv, nper, pmt } from './finance'
 import { deriveStatus, deriveTransactions } from './status'
 import { computeMonthlyTotals, investedYtdCents } from './monthlyTotals'
@@ -53,6 +53,11 @@ describe('dates', () => {
     expect(defaultBudgetMonth('2026-01-05')).toBe('2026-01')
     expect(defaultBudgetMonth('2026-01-13')).toBe('2026-02')
     expect(defaultBudgetMonth('2026-12-20')).toBe('2027-01')
+  })
+  it('validates ISO calendar dates', () => {
+    expect(parseIsoDate('2026-06-15')).toBe('2026-06-15')
+    expect(parseIsoDate('2026-06-31')).toBeNull()
+    expect(parseIsoDate('06-15-2026')).toBeNull()
   })
 })
 

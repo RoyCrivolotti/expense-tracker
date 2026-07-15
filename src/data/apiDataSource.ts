@@ -48,11 +48,11 @@ export const apiDataSource: ExpenseDataSource = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ ids }),
     }),
-  setStatementPaid: (accountId: number, yearMonth: string, paid: boolean) =>
+  setStatementPaid: (accountId: number, yearMonth: string, paid: boolean, paidOn?: string) =>
     req<AccountStatement>(`${BASE}/statements`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ accountId, yearMonth, paid }),
+      body: JSON.stringify({ accountId, yearMonth, paid, ...(paidOn ? { paidOn } : {}) }),
     }),
   setCashActual: (yearMonth: string, actualCashCents: number | null) =>
     req<CashActual | null>(`${BASE}/cash-actuals`, {

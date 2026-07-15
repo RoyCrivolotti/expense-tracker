@@ -111,6 +111,26 @@ This allowlists the demo email on `roy-expenses-dev`, grants the `expenses` grou
 
 To use a different demo email: `DEMO_EMAIL=you@example.com npm run seed:demo-staging`.
 
+## Statement `paid_on` backfill (one-time)
+
+Legacy rows may have `paid = 1` with `paid_on IS NULL`. After deploying user-authored `paidOn`, backfill before relying on Transactions statement rows:
+
+```bash
+cd expense-tracker
+unset CLOUDFLARE_API_TOKEN
+
+# Dry-run (prints 12-row plan + writes scripts/.backfill-statement-paid-on.sql)
+npx tsx scripts/backfill-statement-paid-on.ts
+
+# Dev rehearsal
+npx tsx scripts/backfill-statement-paid-on.ts --apply
+
+# Prod — deploy app first, then same session:
+CONFIRM_PROD_APPLY=1 npx tsx scripts/backfill-statement-paid-on.ts --apply --prod
+```
+
+Verify: `paid_null_on = 0` for deferred paid statements. Edit dates on Dashboard if inference differs from your bank.
+
 ## Gitignored local paths
 
 | Path | Purpose |
@@ -118,4 +138,5 @@ To use a different demo email: `DEMO_EMAIL=you@example.com npm run seed:demo-sta
 | `samples/` | Personal bank statement samples |
 | `reports/` | D1 exports and reconciliation CSVs |
 | `.tmp/` | Prod→dev D1 dumps |
+| `scripts/.backfill-statement-paid-on.sql` | Generated SQL from backfill dry-run |
 | `config/dev.json` | Dev D1 database id |

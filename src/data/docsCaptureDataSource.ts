@@ -80,8 +80,13 @@ export const docsCaptureDataSource: ExpenseDataSource = {
   deleteTransactions(ids) {
     return Promise.resolve({ deleted: ids.length, requested: ids.length })
   },
-  setStatementPaid(accountId, yearMonth, paid) {
-    const row: AccountStatement = { accountId, yearMonth, paid }
+  setStatementPaid(accountId, yearMonth, paid, paidOn) {
+    const row: AccountStatement = {
+      accountId,
+      yearMonth,
+      paid,
+      ...(paid && paidOn ? { paidOn } : {}),
+    }
     return Promise.resolve(row)
   },
   setCashActual(yearMonth, actualCashCents) {

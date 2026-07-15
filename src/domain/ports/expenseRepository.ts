@@ -28,6 +28,7 @@ export interface ExpenseRepository {
     accountId: number,
     yearMonth: string,
     paid: boolean,
+    paidOn?: string,
   ): Promise<AccountStatement>
   setCashActual(owner: string, yearMonth: string, actualCashCents: number): Promise<CashActual>
   clearCashActual(owner: string, yearMonth: string): Promise<void>
