@@ -18,7 +18,7 @@ Goals shots use three demo scenarios from [`fixtures/demo-goal-scenarios.json`](
 | --- | --- |
 | ![Dashboard desktop](./screenshots/gallery/dashboard-desktop.png) | ![Dashboard mobile](./screenshots/gallery/dashboard-mobile.png) |
 
-Header **Refresh** appears on every tab (not shown in cropped dashboard shots).
+Header **Refresh** appears on every tab (not shown in cropped dashboard shots). **Card statements** on Dashboard include a paid-date picker for deferred cards.
 
 | Desktop (light) |
 | --- |
@@ -26,11 +26,11 @@ Header **Refresh** appears on every tab (not shown in cropped dashboard shots).
 
 ## Transactions
 
-| Desktop (May — statement payments) | Mobile |
+| Desktop (May — April statement paid 14 May) | Mobile |
 | --- | --- |
 | ![Transactions desktop](./screenshots/gallery/transactions-desktop.png) | ![Transactions mobile](./screenshots/gallery/transactions-mobile.png) |
 
-May budget month shows a derived **Travel Card statement** payment row when the card statement is marked paid.
+May budget month shows **Travel Card statement** for April on the paid date (14 May). Tap a statement row to edit the paid date. May's own statement settles in June and appears in the June tab.
 
 Mobile detail: collapsible filters with **date scope** dropdown, recurring **Upcoming** suggestions, **+** on each day header, swipe-left **Copy** / **Delete** (animated snap, tap row to close when open), active-filter badge with **Clear filters**, and **»** jump to latest budget month when viewing a past month.
 
@@ -87,6 +87,8 @@ Multi-scenario wealth planner: three saved paths plus an unsaved draft, FI progr
 | Desktop | Mobile |
 | --- | --- |
 | ![Settings desktop](./screenshots/gallery/settings-desktop.png) | ![Settings mobile](./screenshots/gallery/settings-mobile.png) |
+
+**Card statements** section: paid toggle and editable paid date per month (same control as Dashboard).
 
 ## Access admin
 

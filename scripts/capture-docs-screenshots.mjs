@@ -111,6 +111,7 @@ async function captureTransactionsDefault(page, filename) {
   await page.waitForSelector('text=Upcoming', { timeout: 15000 })
   await setMonthLabel(page, 'May')
   await setFiltersExpanded(page, false)
+  await page.waitForSelector('text=Travel Card statement', { timeout: 15000 })
   await page.waitForTimeout(300)
   await page.screenshot({ path: join(OUT, filename) })
 }

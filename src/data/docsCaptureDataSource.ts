@@ -26,16 +26,19 @@ import { docsCaptureGoalScenarios } from './docsCaptureGoalScenarios'
 
 /** Demo paid card statements + payment dates for gallery screenshots. */
 function enrichDocsCaptureDataset(dataset: ExpenseDataset): ExpenseDataset {
-  const card = dataset.accounts.find((a) => a.settlement === 'deferred')
-  if (!card) return dataset
+  const cards = dataset.accounts.filter((a) => a.settlement === 'deferred' && a.active)
+  if (cards.length === 0) return dataset
 
-  const paidMonths = ['2026-03', '2026-04', '2026-05']
-  const accountStatements = paidMonths.map((yearMonth) => ({
-    accountId: card.id,
-    yearMonth,
-    paid: true,
-    paidOn: `${yearMonth}-14`,
-  }))
+  const accountStatements: AccountStatement[] = []
+  for (const card of cards) {
+    accountStatements.push(
+      { accountId: card.id, yearMonth: '2026-03', paid: true, paidOn: '2026-04-14' },
+      // April budget settles mid-May — visible in May Transactions on paid date.
+      { accountId: card.id, yearMonth: '2026-04', paid: true, paidOn: '2026-05-14' },
+      // May budget settles mid-June — appears in June Transactions, not May.
+      { accountId: card.id, yearMonth: '2026-05', paid: true, paidOn: '2026-06-14' },
+    )
+  }
   return {
     ...dataset,
     accountStatements,
