@@ -88,6 +88,20 @@ export function defaultBudgetMonth(isoDate: string): string {
   return `${y}-${String(m).padStart(2, '0')}`
 }
 
+/** Validate YYYY-MM-DD and return it when the calendar date exists. */
+export function parseIsoDate(raw: string): string | null {
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return null
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const date = new Date(year, month - 1, day)
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+    return null
+  }
+  return raw
+}
+
 /** Ascending list of distinct budget months present in a set of YYYY-MM values. */
 export function sortedMonths(months: Iterable<string>): string[] {
   return Array.from(new Set(months)).sort((a, b) => a.localeCompare(b))

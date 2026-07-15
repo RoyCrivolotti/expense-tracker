@@ -57,8 +57,8 @@ export function useExpenseActions(
         await source.deleteTransactions!(ids)
         applyPatch((d) => patchAfterBulkDelete(d, ids))
       },
-      setStatementPaid: async (accountId, yearMonth, paid) => {
-        const stmt = await source.setStatementPaid!(accountId, yearMonth, paid)
+      setStatementPaid: async (accountId, yearMonth, paid, paidOn) => {
+        const stmt = await source.setStatementPaid!(accountId, yearMonth, paid, paidOn)
         applyPatch((d) => patchAfterStatementPaid(d, stmt))
       },
       setCashActual: async (yearMonth, actualCashCents) => {

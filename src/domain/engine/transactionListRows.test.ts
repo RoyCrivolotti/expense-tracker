@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Account, AccountStatement, Transaction } from '../types'
 import type { CashRow } from './cashReconciliation'
-import { buildTransactionListRows } from './transactionListRows'
+import { buildTransactionListRows, groupListRowsByDay } from './transactionListRows'
 
 const accounts: Account[] = [
   { id: 1, name: 'Debit', kind: 'debit', settlement: 'immediate', active: true },
@@ -115,5 +115,24 @@ describe('buildTransactionListRows', () => {
     )
     expect(rows).toHaveLength(1)
     expect(rows[0]?.kind).toBe('statement-payment')
+  })
+
+  it('groups statement payments with same-day transactions', () => {
+    const statements: AccountStatement[] = [
+      { accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-06-15' },
+    ]
+    const rows = buildTransactionListRows(
+      [txn({ budgetMonth: '2026-06', id: 10, date: '2026-06-15' })],
+      { month: '2026-06' },
+      statements,
+      cashRows,
+      accounts,
+      { defaultAccountId: 1 },
+    )
+    expect(rows).toHaveLength(2)
+    const groups = groupListRowsByDay(rows)
+    expect(groups).toHaveLength(1)
+    expect(groups[0]?.date).toBe('2026-06-15')
+    expect(groups[0]?.rows.map((r) => r.kind)).toEqual(['transaction', 'statement-payment'])
   })
 })

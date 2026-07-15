@@ -11,6 +11,7 @@ workers/**/.wrangler/
 config/backup-alerts.json
 config/dev.json
 .tmp/
+scripts/.backfill-statement-paid-on.sql
 .DS_Store
 
 # Local-only portfolio / audit notes (not in repo)

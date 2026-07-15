@@ -32,8 +32,8 @@ export function createD1ExpenseRepository(env: Env): ExpenseRepository {
     updateTransaction: (owner, id, patch) => updateTransaction(env, owner, id, patch),
     deleteTransaction: (owner, id) => deleteTransaction(env, owner, id),
     deleteTransactions: (owner, ids) => deleteTransactions(env, owner, ids),
-    setStatementPaid: (owner, accountId, yearMonth, paid) =>
-      setStatementPaid(env, owner, accountId, yearMonth, paid),
+    setStatementPaid: (owner, accountId, yearMonth, paid, paidOn) =>
+      setStatementPaid(env, owner, accountId, yearMonth, paid, paidOn),
     setCashActual: (owner, yearMonth, cents) => setCashActual(env, owner, yearMonth, cents),
     clearCashActual: (owner, yearMonth) => clearCashActual(env, owner, yearMonth),
     createCategory: (owner, input) => createCategory(env, owner, input),

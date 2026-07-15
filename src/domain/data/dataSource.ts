@@ -30,7 +30,7 @@ export interface ExpenseDataSource {
   updateTransaction?(id: number, patch: Partial<NewTransaction>): Promise<Transaction>
   deleteTransaction?(id: number): Promise<void>
   deleteTransactions?(ids: number[]): Promise<{ deleted: number; requested: number }>
-  setStatementPaid?(accountId: number, yearMonth: string, paid: boolean): Promise<AccountStatement>
+  setStatementPaid?(accountId: number, yearMonth: string, paid: boolean, paidOn?: string): Promise<AccountStatement>
   /** Record actual cash for a month, or pass null to clear (empty Actual field). */
   setCashActual?(yearMonth: string, actualCashCents: number | null): Promise<CashActual | null>
   // Definitions — categories, accounts, opening balances, goal inputs.

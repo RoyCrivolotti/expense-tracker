@@ -49,8 +49,10 @@ function matchesStatementPayment(row: StatementPaymentRow, filter: TxnFilter): b
 }
 
 function rowSortKey(row: TransactionListRow): string {
-  if (row.kind === 'transaction') return `1:${row.txn.date}:${row.txn.id}`
-  return `0:${row.date}:${row.key}`
+  if (row.kind === 'transaction') {
+    return `${row.txn.date}:1:${String(row.txn.id).padStart(10, '0')}`
+  }
+  return `${row.date}:0:${row.key}`
 }
 
 export function buildTransactionListRows(

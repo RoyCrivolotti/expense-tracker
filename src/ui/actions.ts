@@ -27,7 +27,12 @@ export interface ExpenseActions {
   updateTransaction: (id: number, patch: Partial<NewTransaction>) => Promise<void>
   deleteTransaction: (id: number) => Promise<void>
   deleteTransactions: (ids: number[]) => Promise<void>
-  setStatementPaid: (accountId: number, yearMonth: string, paid: boolean) => Promise<void>
+  setStatementPaid: (
+    accountId: number,
+    yearMonth: string,
+    paid: boolean,
+    paidOn?: string,
+  ) => Promise<void>
   setCashActual: (yearMonth: string, actualCashCents: number | null) => Promise<void>
   createCategory: (input: NewCategory) => Promise<void>
   updateCategory: (id: number, patch: Partial<NewCategory>) => Promise<void>

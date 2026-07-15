@@ -182,16 +182,18 @@ export function inMemoryExpenseRepository(
       return Promise.resolve(before - store.transactions.length)
     },
 
-    setStatementPaid: (owner, accountId, yearMonth, paid) => {
+    setStatementPaid: (owner, accountId, yearMonth, paid, paidOn) => {
       const store = storeFor(owner)
       assertOwnedAccount(store, accountId)
+      if (paid && !paidOn) {
+        return Promise.reject(new Error('paidOn is required when paid is true'))
+      }
       const existing = store.statements.find(
         (s) => s.accountId === accountId && s.yearMonth === yearMonth,
       )
-      const paidOn = paid ? new Date().toISOString().slice(0, 10) : undefined
       if (existing) {
         existing.paid = paid
-        if (paidOn) existing.paidOn = paidOn
+        if (paid && paidOn) existing.paidOn = paidOn
         else delete existing.paidOn
         return Promise.resolve({ ...existing })
       }
@@ -199,7 +201,7 @@ export function inMemoryExpenseRepository(
         accountId,
         yearMonth,
         paid,
-        ...(paidOn ? { paidOn } : {}),
+        ...(paid && paidOn ? { paidOn } : {}),
       }
       store.statements.push(statement)
       return Promise.resolve({ ...statement })
