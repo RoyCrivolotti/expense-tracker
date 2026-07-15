@@ -26,7 +26,8 @@ function matchesQuery(row: StatementPaymentRow, query: string): boolean {
 }
 
 function matchesAccount(row: StatementPaymentRow, filter: TxnFilter): boolean {
-  return filter.accountId == null || row.debitAccountId === filter.accountId
+  if (filter.accountId == null) return true
+  return row.debitAccountId === filter.accountId || row.cardAccountId === filter.accountId
 }
 
 function matchesType(filter: TxnFilter): boolean {

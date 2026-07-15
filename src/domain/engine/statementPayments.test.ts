@@ -42,7 +42,16 @@ describe('buildStatementPayments', () => {
     })
   })
 
-  it('omits unpaid or missing paidOn statements', () => {
+  it('uses mid-month fallback when paid is true but paidOn is missing', () => {
+    const statements: AccountStatement[] = [
+      { accountId: 2, yearMonth: '2026-06', paid: true },
+    ]
+    const rows = buildStatementPayments(statements, cashRows, accounts, 1)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.date).toBe('2026-06-15')
+  })
+
+  it('omits unpaid statements and months with no card charges', () => {
     const statements: AccountStatement[] = [
       { accountId: 2, yearMonth: '2026-06', paid: false },
       { accountId: 2, yearMonth: '2026-07', paid: true },

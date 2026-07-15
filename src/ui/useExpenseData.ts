@@ -35,14 +35,18 @@ function isOnline(): boolean {
   return typeof navigator === 'undefined' ? true : navigator.onLine
 }
 
+const MIN_REFRESH_MS = 700
+
 export function useExpenseData(source: ExpenseDataSource): ExpenseData {
   const [state, setState] = useState<LoadState>({ status: 'loading' })
   const [version, setVersion] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
   const [refreshOutcome, setRefreshOutcome] = useState<RefreshOutcome>(null)
   const modelRef = useRef<ExpenseModel | undefined>(undefined)
+  const refreshStartedAt = useRef(0)
 
   const reload = useCallback(() => {
+    refreshStartedAt.current = Date.now()
     setRefreshing(true)
     setRefreshOutcome(null)
     setVersion((v) => v + 1)
@@ -61,11 +65,15 @@ export function useExpenseData(source: ExpenseDataSource): ExpenseData {
   useEffect(() => {
     let active = true
 
-    const finish = (outcome: RefreshOutcome) => {
-      if (active) {
-        setRefreshing(false)
-        if (version > 0) setRefreshOutcome(outcome)
+    const finish = async (outcome: RefreshOutcome) => {
+      const isUserRefresh = version > 0
+      if (isUserRefresh && refreshStartedAt.current > 0) {
+        const wait = MIN_REFRESH_MS - (Date.now() - refreshStartedAt.current)
+        if (wait > 0) await new Promise((r) => setTimeout(r, wait))
       }
+      if (!active) return
+      setRefreshing(false)
+      if (isUserRefresh) setRefreshOutcome(outcome)
     }
 
     const load = async () => {
@@ -81,13 +89,13 @@ export function useExpenseData(source: ExpenseDataSource): ExpenseData {
             fromCache: true,
             snapshotAt: cached.savedAt,
           })
-          finish(version === 0 ? null : 'fail')
+          void finish(version === 0 ? null : 'fail')
         } else {
           setState({
             status: 'error',
             error: 'You are offline and no saved data is available.',
           })
-          finish('fail')
+          void finish('fail')
         }
         return
       }
@@ -99,11 +107,11 @@ export function useExpenseData(source: ExpenseDataSource): ExpenseData {
         const model = buildExpenseModel(dataset)
         modelRef.current = model
         setState({ status: 'ready', model, fromCache: false })
-        finish(version === 0 ? null : 'ok')
+        void finish(version === 0 ? null : 'ok')
       } catch (err: unknown) {
         if (!active) return
         if (modelRef.current) {
-          finish('fail')
+          void finish('fail')
           return
         }
         const cached = await loadOfflineSnapshot()
@@ -116,12 +124,12 @@ export function useExpenseData(source: ExpenseDataSource): ExpenseData {
             fromCache: true,
             snapshotAt: cached.savedAt,
           })
-          finish('fail')
+          void finish('fail')
           return
         }
         const message = err instanceof Error ? err.message : String(err)
         setState({ status: 'error', error: message })
-        finish('fail')
+        void finish('fail')
       }
     }
 
