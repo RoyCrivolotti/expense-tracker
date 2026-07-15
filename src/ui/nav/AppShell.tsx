@@ -18,6 +18,7 @@ interface AppShellProps {
   compactFooter?: boolean
   /** Widen the content column on Goals desktop so chart tables fit without scrolling. */
   goalsWide?: boolean
+  pullIndicator?: ReactNode
   contentRef?: RefObject<HTMLElement | null>
   banner?: ReactNode
   children: ReactNode
@@ -73,6 +74,7 @@ export function AppShell({
   compactFooter = false,
   goalsWide = false,
   contentRef,
+  pullIndicator,
   banner,
   children,
 }: AppShellProps) {
@@ -97,6 +99,7 @@ export function AppShell({
             ref={contentRef}
             className={`${styles.content} ${compactFooter ? styles.contentCompact : ''} ${goalsWide ? styles.contentGoals : ''}`}
           >
+            {pullIndicator}
             {banner}
             {children}
           </main>

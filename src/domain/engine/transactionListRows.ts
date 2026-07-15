@@ -13,7 +13,10 @@ function matchesPeriod(row: StatementPaymentRow, filter: TxnFilter): boolean {
     if (filter.dateTo && row.date > filter.dateTo) return false
     return true
   }
-  if (filter.month && row.budgetMonth !== filter.month) return false
+  if (filter.month) {
+    if (row.budgetMonth === filter.month) return true
+    return row.date.startsWith(`${filter.month}-`)
+  }
   return true
 }
 

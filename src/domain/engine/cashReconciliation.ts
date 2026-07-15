@@ -113,7 +113,11 @@ export function computeCashReconciliation(
     const gapCents = actual === null ? null : actual - cash
     const carryoverGapCents = priorGap
     const monthGapCents =
-      gapCents !== null && carryoverGapCents !== null ? gapCents - carryoverGapCents : null
+      gapCents !== null
+        ? carryoverGapCents !== null
+          ? gapCents - carryoverGapCents
+          : gapCents
+        : null
     if (gapCents !== null) priorGap = gapCents
     rows.push({
       month,
