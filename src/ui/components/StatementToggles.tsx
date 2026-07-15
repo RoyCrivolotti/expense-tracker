@@ -62,7 +62,6 @@ export function StatementToggles({ model, onToggle }: Props) {
                     paid={paid}
                     paidOn={findPaidOn(model, account.id, m)}
                     disabled={pending === key}
-                    readOnly={paid}
                     onMarkPaid={(paidOn) => void save(account.id, m, true, paidOn)}
                     onEditDate={(paidOn) => void save(account.id, m, true, paidOn)}
                     onMarkDue={() => void save(account.id, m, false)}
