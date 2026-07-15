@@ -106,7 +106,7 @@ describe('computeCashReconciliation', () => {
     expect(rows[0]!.month).toBe('2026-02')
     expect(rows[0]!.gapCents).toBe(50000)
     expect(rows[0]!.carryoverGapCents).toBeNull()
-    expect(rows[0]!.monthGapCents).toBeNull()
+    expect(rows[0]!.monthGapCents).toBe(50000)
   })
 
   it('splits gap into carryover and this-month drift', () => {
@@ -122,7 +122,7 @@ describe('computeCashReconciliation', () => {
     expect(rows).toHaveLength(2)
     expect(rows[0]!.gapCents).toBe(-10000)
     expect(rows[0]!.carryoverGapCents).toBeNull()
-    expect(rows[0]!.monthGapCents).toBeNull()
+    expect(rows[0]!.monthGapCents).toBe(-10000)
     expect(rows[1]!.carryoverGapCents).toBe(-10000)
     expect(rows[1]!.monthGapCents).toBe(-5000)
     expect(rows[1]!.gapCents).toBe(-15000)

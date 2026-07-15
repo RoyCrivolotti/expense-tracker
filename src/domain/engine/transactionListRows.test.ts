@@ -68,4 +68,36 @@ describe('buildTransactionListRows', () => {
     )
     expect(rows).toHaveLength(0)
   })
+
+  it('shows payment in paidOn calendar month even when budget month differs', () => {
+    const mayCashRows: CashRow[] = [
+      {
+        month: '2026-05',
+        incomeCents: 0,
+        debitExpenseCents: 500,
+        cardCharges: new Map([[2, { chargeCents: 30000, paid: true }]]),
+        investmentsCents: 0,
+        cashMovementCents: -30500,
+        expectedCashCents: 0,
+        actualCashCents: null,
+        gapCents: null,
+        carryoverGapCents: null,
+        monthGapCents: null,
+        unpaidLiabilityCents: 0,
+      },
+    ]
+    const statements: AccountStatement[] = [
+      { accountId: 2, yearMonth: '2026-05', paid: true, paidOn: '2026-07-15' },
+    ]
+    const rows = buildTransactionListRows(
+      [],
+      { month: '2026-07' },
+      statements,
+      mayCashRows,
+      accounts,
+      { defaultAccountId: 1 },
+    )
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.kind).toBe('statement-payment')
+  })
 })

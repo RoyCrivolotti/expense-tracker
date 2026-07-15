@@ -8,7 +8,8 @@ import { needsOnboarding } from '../domain/onboarding/needsOnboarding'
 import { type GroupGrants } from '../domain/accessGroups'
 import { AppShell } from './nav/AppShell'
 import type { TabId } from './nav/navItems'
-import { OfflineBanner } from './components/OfflineBanner'
+import { PullToRefreshIndicator } from './components/PullToRefreshIndicator'
+import { ExpensesOfflineBanner } from './components/ExpensesOfflineBanner'
 import { AppHeaderActions } from './components/AppHeaderActions'
 import { ExpensesOnboarding } from './components/ExpensesOnboarding'
 import { AppLoadingSkeleton } from './components/AppLoadingSkeleton'
@@ -203,7 +204,11 @@ function ExpensesAppReady({
   const online = useConnectivity()
   const { readOnly, snapshotAt } = useConnectivityState()
   const contentRef = useRef<HTMLElement>(null)
-  usePullToRefresh(contentRef, { onRefresh: reload, enabled: online })
+  const { pullPx, isPulling } = usePullToRefresh({
+    onRefresh: reload,
+    enabled: online && !refreshing,
+    refreshing,
+  })
   useRefreshToast(refreshing, refreshOutcome)
 
   const [theme, setTheme] = useExpenseTheme()
@@ -238,10 +243,15 @@ function ExpensesAppReady({
         compactFooter={COMPACT_FOOTER_TABS.has(tab)}
         goalsWide={tab === 'goals'}
         contentRef={contentRef}
+        pullIndicator={
+          <PullToRefreshIndicator
+            pullPx={pullPx}
+            isPulling={isPulling}
+            refreshing={refreshing}
+          />
+        }
         banner={
-          readOnly ? (
-            <OfflineBanner online={online} {...(snapshotAt ? { snapshotAt } : {})} />
-          ) : null
+          <ExpensesOfflineBanner readOnly={readOnly} online={online} {...(snapshotAt ? { snapshotAt } : {})} />
         }
         {...(actions ? { onAdd: actions.onAdd } : {})}
         headerRight={
