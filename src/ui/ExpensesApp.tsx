@@ -238,7 +238,11 @@ function ExpensesAppReady({
         compactFooter={COMPACT_FOOTER_TABS.has(tab)}
         goalsWide={tab === 'goals'}
         contentRef={contentRef}
-        banner={readOnly ? <OfflineBanner {...(snapshotAt ? { snapshotAt } : {})} /> : null}
+        banner={
+          readOnly ? (
+            <OfflineBanner online={online} {...(snapshotAt ? { snapshotAt } : {})} />
+          ) : null
+        }
         {...(actions ? { onAdd: actions.onAdd } : {})}
         headerRight={
           <AppHeaderActions

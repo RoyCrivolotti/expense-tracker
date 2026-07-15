@@ -40,8 +40,9 @@ export function AnalyticsTabDesktop({
         <p className={tableStyles.note}>
           Cash Δ = income − debit spend − paid card statements − investments. Expected cash is the
           running balance from your opening balance; enter the real cash you count after paying the
-          cards (~12th–15th) and the Gap (actual − expected) flags any missed or mistaken entry.
-          Unpaid liability is what still sits on not-yet-paid card statements.
+          cards (~12th–15th). Total gap is actual − expected; carryover is last month&apos;s gap and
+          this month is the new drift since then. Unpaid liability is what still sits on
+          not-yet-paid card statements.
         </p>
         <CashReconciliationTable
           model={model}

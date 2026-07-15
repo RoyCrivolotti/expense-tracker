@@ -20,8 +20,28 @@ import type {
   NewGoalScenario,
   NewTransaction,
 } from './dataSource'
+import { deriveTransactions } from '../domain/engine/status'
 import { csvDataSource } from './csvDataSource'
 import { docsCaptureGoalScenarios } from './docsCaptureGoalScenarios'
+
+/** Demo paid card statements + payment dates for gallery screenshots. */
+function enrichDocsCaptureDataset(dataset: ExpenseDataset): ExpenseDataset {
+  const card = dataset.accounts.find((a) => a.settlement === 'deferred')
+  if (!card) return dataset
+
+  const paidMonths = ['2026-03', '2026-04', '2026-05']
+  const accountStatements = paidMonths.map((yearMonth) => ({
+    accountId: card.id,
+    yearMonth,
+    paid: true,
+    paidOn: `${yearMonth}-14`,
+  }))
+  return {
+    ...dataset,
+    accountStatements,
+    transactions: deriveTransactions(dataset.transactions, dataset.accounts, accountStatements),
+  }
+}
 
 let nextId = 900_000
 
@@ -38,10 +58,12 @@ function stubTxn(input: NewTransaction): Transaction {
 export const docsCaptureDataSource: ExpenseDataSource = {
   canWrite: true,
   load(): Promise<ExpenseDataset> {
-    return csvDataSource.load().then((dataset) => ({
-      ...dataset,
-      goalScenarios: docsCaptureGoalScenarios(),
-    }))
+    return csvDataSource.load().then((dataset) =>
+      enrichDocsCaptureDataset({
+        ...dataset,
+        goalScenarios: docsCaptureGoalScenarios(),
+      }),
+    )
   },
   createTransaction(input) {
     return Promise.resolve(stubTxn(input))
