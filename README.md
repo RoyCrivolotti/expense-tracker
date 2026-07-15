@@ -12,8 +12,8 @@ Shared UI: [`folio-shell`](https://github.com/RoyCrivolotti/folio-shell) on [npm
 
 | Area | Highlights |
 | --- | --- |
-| **Dashboard** | Monthly KPIs, budget health, card statements, Goals teaser, **Latest / Recently added** toggle |
-| **Transactions** | **Date scope** (budget month, last 3 months, all dates, custom), filters, batch delete, recurring **Upcoming**, **per-day +** and **duplicate**, **statement payment rows** (derived), **header refresh** |
+| **Dashboard** | Monthly KPIs, budget health, **card statements with paid-date picker**, Goals teaser, **Latest / Recently added** toggle |
+| **Transactions** | **Date scope** (budget month, last 3 months, all dates, custom), filters, batch delete, recurring **Upcoming**, **per-day +** and **duplicate**, **statement payment rows** on `paidOn` (tap to edit date), **header refresh** |
 | **Analytics** | Budget vs actual, YTD on mobile, desktop tables, **cash recon gap split** (carryover / this month / total) |
 | **Goals** | Multi-scenario net-worth projections, FIRE/housing controls, comparison charts |
 | **Settings** | Categories, accounts, import/export, access admin (owner) |
