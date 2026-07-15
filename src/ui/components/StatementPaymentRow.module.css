@@ -8,6 +8,14 @@
   border-radius: var(--exp-radius, 0.75rem);
   background: color-mix(in srgb, var(--color-accent) 8%, var(--color-bg));
   text-align: left;
+  font: inherit;
+  color: inherit;
+}
+.rowButton {
+  cursor: pointer;
+}
+.rowButton:hover {
+  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-bg));
 }
 .iconWrap {
   flex: none;

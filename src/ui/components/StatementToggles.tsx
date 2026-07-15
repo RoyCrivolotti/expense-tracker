@@ -28,7 +28,7 @@ function findPaidOn(
 
 export function StatementToggles({ model, onToggle }: Props) {
   const [pending, setPending] = useState<string | null>(null)
-  const deferred = model.dataset.accounts.filter((a) => a.settlement === 'deferred')
+  const deferred = model.dataset.accounts.filter((a) => a.settlement === 'deferred' && a.active)
   const months = [...model.months].reverse()
 
   const save = async (

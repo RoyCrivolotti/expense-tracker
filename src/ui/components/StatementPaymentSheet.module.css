@@ -1,0 +1,10 @@
+.amountRow {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+.hint {
+  margin: 1rem 0 0;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}

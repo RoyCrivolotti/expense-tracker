@@ -8,12 +8,19 @@ import styles from './StatementPaymentRow.module.css'
 interface Props {
   row: StatementPaymentRowData
   showDate?: boolean
+  onPress?: () => void
 }
 
-export function StatementPaymentRow({ row, showDate = false }: Props) {
+export function StatementPaymentRow({ row, showDate = false, onPress }: Props) {
   const paidLabel = shortDayLabel(row.date)
+  const Tag = onPress ? 'button' : 'div'
   return (
-    <div className={styles.row} aria-label={`${row.cardName} statement payment`}>
+    <Tag
+      type={onPress ? 'button' : undefined}
+      className={`${styles.row}${onPress ? ` ${styles.rowButton}` : ''}`}
+      aria-label={`${row.cardName} statement payment`}
+      {...(onPress ? { onClick: onPress } : {})}
+    >
       <span className={styles.iconWrap} aria-hidden>
         <span className={styles.icon}>
           <CardPaymentIcon />
@@ -27,6 +34,6 @@ export function StatementPaymentRow({ row, showDate = false }: Props) {
         </p>
       </div>
       <Money cents={row.amountCents} type="expense" signed className={styles.amount} />
-    </div>
+    </Tag>
   )
 }

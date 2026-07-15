@@ -6,6 +6,8 @@
   border-radius: 999px;
   padding: 0.2rem 0.3rem;
   background: var(--color-bg);
+  max-width: 100%;
+  min-width: 0;
 }
 .picker button {
   width: 1.7rem;
@@ -28,7 +30,11 @@
 .label {
   font-size: 0.85rem;
   font-weight: 600;
-  min-width: 7.5rem;
+  min-width: 0;
+  max-width: 7.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   text-align: center;
 }
 

@@ -1,9 +1,10 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
-import { detectRecurring, defaultBudgetMonth } from '../../engine'
+import { detectRecurring, defaultBudgetMonth, type StatementPaymentRow } from '../../engine'
 import { Money } from '../components/Money'
 import { TransactionList } from '../components/TransactionList'
+import { StatementPaymentSheet } from '../components/StatementPaymentSheet'
 import { TxnFilters } from './TxnFilters'
 import { UpcomingCard } from './UpcomingCard'
 import { TransactionsSelectFooter } from './TransactionsSelectFooter'
@@ -18,6 +19,8 @@ interface TransactionsTabProps {
 
 export function TransactionsTab({ model, month, actions }: TransactionsTabProps) {
   const state = useTransactionsTabState(model, month, actions)
+  const [editingStatement, setEditingStatement] = useState<StatementPaymentRow | null>(null)
+  const [statementPending, setStatementPending] = useState(false)
   const upcoming = useMemo(
     () => detectRecurring(model.dataset.transactions, { forBudgetMonth: month }),
     [model.dataset, month],
@@ -85,9 +88,26 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
               onDelete: actions.deleteTransaction,
               onToggleSelect: state.toggleSelected,
               onToggleDate: state.toggleDate,
+              onEditStatementPayment: setEditingStatement,
             }
           : {})}
       />
+
+      {editingStatement && actions ? (
+        <StatementPaymentSheet
+          row={editingStatement}
+          disabled={statementPending}
+          onClose={() => setEditingStatement(null)}
+          onSave={async (accountId, yearMonth, paid, paidOn) => {
+            setStatementPending(true)
+            try {
+              await actions.setStatementPaid(accountId, yearMonth, paid, paidOn)
+            } finally {
+              setStatementPending(false)
+            }
+          }}
+        />
+      ) : null}
 
       <TransactionsSelectFooter actionsEnabled={Boolean(actions)} selection={state} />
     </div>
