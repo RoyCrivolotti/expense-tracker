@@ -23,6 +23,7 @@ interface TransactionListProps {
   onToggleDate?: (ids: number[]) => void
   swipeDelete?: boolean
   onClearFilters?: () => void
+  onEditStatementPayment?: (row: Extract<TransactionListRow, { kind: 'statement-payment' }>) => void
 }
 
 function renderRow(
@@ -31,7 +32,14 @@ function renderRow(
   props: Omit<TransactionListProps, 'rows' | 'lookup'>,
 ): ReactNode {
   if (row.kind === 'statement-payment') {
-    return <StatementPaymentRow key={row.key} row={row} showDate={props.showDate ?? false} />
+    return (
+      <StatementPaymentRow
+        key={row.key}
+        row={row}
+        showDate={props.showDate ?? false}
+        {...(props.onEditStatementPayment ? { onPress: () => props.onEditStatementPayment?.(row) } : {})}
+      />
+    )
   }
   return (
     <TransactionRow

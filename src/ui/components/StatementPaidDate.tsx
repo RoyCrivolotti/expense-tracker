@@ -32,7 +32,11 @@ export function StatementPaidDate({
   }
 
   const commitDate = (raw: string) => {
-    if (raw && raw !== paidOn) onEditDate(raw)
+    if (!raw) {
+      onMarkDue()
+      return
+    }
+    if (raw !== paidOn) onEditDate(raw)
   }
 
   return (
