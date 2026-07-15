@@ -1,4 +1,3 @@
-import type { StatementPaymentRow as StatementPaymentRowData } from '../../engine'
 import { fullMonthLabel } from '../../engine'
 import { Modal } from './Modal'
 import { Money } from './Money'
@@ -6,43 +5,45 @@ import { StatementPaidDate } from './StatementPaidDate'
 import styles from './StatementPaymentSheet.module.css'
 
 interface Props {
-  row: StatementPaymentRowData
+  cardName: string
+  yearMonth: string
+  amountCents: number
+  paid: boolean
+  paidOn?: string | undefined
   disabled?: boolean
-  onSave: (
-    accountId: number,
-    yearMonth: string,
-    paid: boolean,
-    paidOn?: string,
-  ) => Promise<void>
+  onSave: (paid: boolean, paidOn?: string) => Promise<void>
   onClose: () => void
 }
 
-export function StatementPaymentSheet({ row, disabled = false, onSave, onClose }: Props) {
-  const persist = async (paid: boolean, paidOn?: string) => {
-    await onSave(row.cardAccountId, row.budgetMonth, paid, paidOn)
-    if (!paid) onClose()
+export function StatementPaymentSheet({
+  cardName,
+  yearMonth,
+  amountCents,
+  paid,
+  paidOn,
+  disabled = false,
+  onSave,
+  onClose,
+}: Props) {
+  const persist = async (nextPaid: boolean, nextPaidOn?: string) => {
+    await onSave(nextPaid, nextPaidOn)
+    if (!nextPaid) onClose()
   }
 
   return (
-    <Modal
-      title={`${row.cardName} statement`}
-      subtitle={fullMonthLabel(row.budgetMonth)}
-      onClose={onClose}
-    >
+    <Modal title={`${cardName} statement`} subtitle={fullMonthLabel(yearMonth)} onClose={onClose}>
       <p className={styles.amountRow}>
-        Charge <Money cents={row.amountCents} type="expense" signed />
+        Charge <Money cents={amountCents} type="expense" signed />
       </p>
       <StatementPaidDate
-        paid
-        paidOn={row.date}
+        paid={paid}
+        paidOn={paidOn}
         disabled={disabled}
-        onMarkPaid={(paidOn) => void persist(true, paidOn)}
-        onEditDate={(paidOn) => void persist(true, paidOn)}
+        onMarkPaid={(next) => void persist(true, next)}
+        onEditDate={(next) => void persist(true, next)}
         onMarkDue={() => void persist(false)}
       />
-      <p className={styles.hint}>
-        Paid date controls where this debit appears in Transactions.
-      </p>
+      <p className={styles.hint}>Paid date controls where this debit appears in Transactions.</p>
     </Modal>
   )
 }

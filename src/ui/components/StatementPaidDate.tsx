@@ -6,7 +6,6 @@ interface Props {
   paid: boolean
   paidOn?: string | undefined
   disabled?: boolean
-  readOnly?: boolean
   onMarkPaid: (paidOn: string) => void
   onEditDate: (paidOn: string) => void
   onMarkDue: () => void
@@ -16,7 +15,6 @@ export function StatementPaidDate({
   paid,
   paidOn,
   disabled = false,
-  readOnly = false,
   onMarkPaid,
   onEditDate,
   onMarkDue,
@@ -42,22 +40,18 @@ export function StatementPaidDate({
   return (
     <div className={styles.paidRow}>
       <StatementPaidToggle paid disabled={disabled} onToggle={onMarkDue} />
-      {readOnly ? (
-        <span className={styles.dateReadonly}>{paidOn ?? '—'}</span>
-      ) : (
-        <input
-          type="date"
-          className={styles.dateInput}
-          defaultValue={paidOn ?? ''}
-          key={paidOn ?? 'empty'}
-          disabled={disabled}
-          aria-label="Statement paid on"
-          onBlur={(e) => commitDate(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') e.currentTarget.blur()
-          }}
-        />
-      )}
+      <input
+        type="date"
+        className={styles.dateInput}
+        defaultValue={paidOn ?? ''}
+        key={paidOn ?? 'empty'}
+        disabled={disabled}
+        aria-label="Statement paid on"
+        onBlur={(e) => commitDate(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') e.currentTarget.blur()
+        }}
+      />
     </div>
   )
 }

@@ -18,7 +18,7 @@ Goals shots use three demo scenarios from [`fixtures/demo-goal-scenarios.json`](
 | --- | --- |
 | ![Dashboard desktop](./screenshots/gallery/dashboard-desktop.png) | ![Dashboard mobile](./screenshots/gallery/dashboard-mobile.png) |
 
-Header **Refresh** appears on every tab (not shown in cropped dashboard shots). **Card statements** on Dashboard include a paid-date picker for deferred cards.
+Header **Refresh** appears on every tab (not shown in cropped dashboard shots). **Card statements** on Dashboard show one row per deferred card with its status (Due / Paid · date / Nothing to settle) and amount; tap a row to open the same paid/due editor used on Settings and Transactions.
 
 | Desktop (light) |
 | --- |
@@ -88,7 +88,7 @@ Multi-scenario wealth planner: three saved paths plus an unsaved draft, FI progr
 | --- | --- |
 | ![Settings desktop](./screenshots/gallery/settings-desktop.png) | ![Settings mobile](./screenshots/gallery/settings-mobile.png) |
 
-**Card statements** section: paid toggle and editable paid date per month (same control as Dashboard).
+**Card statements** section: one tap-to-edit row per account per month, each showing its charge amount — same row and editor used on Dashboard and Transactions.
 
 ## Access admin
 

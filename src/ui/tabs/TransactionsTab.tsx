@@ -95,13 +95,22 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
 
       {editingStatement && actions ? (
         <StatementPaymentSheet
-          row={editingStatement}
+          cardName={editingStatement.cardName}
+          yearMonth={editingStatement.budgetMonth}
+          amountCents={editingStatement.amountCents}
+          paid
+          paidOn={editingStatement.date}
           disabled={statementPending}
           onClose={() => setEditingStatement(null)}
-          onSave={async (accountId, yearMonth, paid, paidOn) => {
+          onSave={async (paid, paidOn) => {
             setStatementPending(true)
             try {
-              await actions.setStatementPaid(accountId, yearMonth, paid, paidOn)
+              await actions.setStatementPaid(
+                editingStatement.cardAccountId,
+                editingStatement.budgetMonth,
+                paid,
+                paidOn,
+              )
             } finally {
               setStatementPending(false)
             }

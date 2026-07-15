@@ -15,8 +15,3 @@
 .dateInput:disabled {
   opacity: 0.55;
 }
-.dateReadonly {
-  font-size: 0.82rem;
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
-}

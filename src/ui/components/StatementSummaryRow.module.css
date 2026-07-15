@@ -14,8 +14,12 @@
 .rowButton {
   cursor: pointer;
 }
-.rowButton:hover {
+.rowButton:hover:not(:disabled) {
   background: color-mix(in srgb, var(--color-accent) 12%, var(--color-bg));
+}
+.rowButton:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 .iconWrap {
   flex: none;
@@ -51,4 +55,8 @@
   font-weight: 650;
   color: var(--exp-expense);
   font-variant-numeric: tabular-nums;
+}
+.amountMuted {
+  color: var(--color-text-muted);
+  font-weight: 550;
 }

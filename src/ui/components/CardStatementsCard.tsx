@@ -1,13 +1,12 @@
 import { useMemo, useState } from 'react'
 import type { ExpenseDataset } from '../../types'
 import type { ExpenseActions } from '../actions'
-import { computeCashReconciliation, formatCents } from '../../engine'
+import { computeCashReconciliation } from '../../engine'
 import { isStatementPaid } from '../../engine/status'
 import { todayLocalIso } from '../dates'
-import { Money } from './Money'
-import { StatementPaidDate } from './StatementPaidDate'
+import { StatementPaymentSheet } from './StatementPaymentSheet'
+import { StatementSummaryRow } from './StatementSummaryRow'
 import { Card, SectionTitle } from './primitives'
-import styles from './CardStatementsCard.module.css'
 
 interface CardStatementsCardProps {
   dataset: ExpenseDataset
@@ -32,7 +31,8 @@ function findPaidOn(
 }
 
 export function CardStatementsCard({ dataset, month, actions }: CardStatementsCardProps) {
-  const [pending, setPending] = useState<string | null>(null)
+  const [pending, setPending] = useState<number | null>(null)
+  const [editingId, setEditingId] = useState<number | null>(null)
 
   const statements = useMemo<StatementRow[]>(() => {
     const deferred = dataset.accounts.filter((a) => a.settlement === 'deferred' && a.active)
@@ -57,14 +57,9 @@ export function CardStatementsCard({ dataset, month, actions }: CardStatementsCa
 
   if (statements.length === 0) return null
 
-  const unpaidTotal = statements
-    .filter((s) => !s.paid)
-    .reduce((sum, s) => sum + s.chargeCents, 0)
-
-  const savePaid = actions?.setStatementPaid
+  const save = actions?.setStatementPaid
     ? async (accountId: number, paid: boolean, paidOn?: string) => {
-        const key = `${accountId}:${month}`
-        setPending(key)
+        setPending(accountId)
         try {
           await actions.setStatementPaid(
             accountId,
@@ -78,39 +73,36 @@ export function CardStatementsCard({ dataset, month, actions }: CardStatementsCa
       }
     : undefined
 
+  const editing = statements.find((s) => s.id === editingId) ?? null
+
   return (
     <>
       <SectionTitle>Card statements</SectionTitle>
       <Card>
-        {statements.map((s) => {
-          const key = `${s.id}:${month}`
-          return (
-            <div key={s.id} className={styles.row}>
-              <div className={styles.summary}>
-                <span className={styles.name}>{s.name}</span>
-                <Money cents={s.chargeCents} />
-              </div>
-              {savePaid && (
-                <StatementPaidDate
-                  paid={s.paid}
-                  paidOn={s.paidOn}
-                  disabled={pending === key}
-                  onMarkPaid={(paidOn) => void savePaid(s.id, true, paidOn)}
-                  onEditDate={(paidOn) => void savePaid(s.id, true, paidOn)}
-                  onMarkDue={() => void savePaid(s.id, false)}
-                />
-              )}
-            </div>
-          )
-        })}
-        <p className={styles.caption}>
-          Deferred cards settle around the 12th–15th. Set the paid date to place the debit
-          in Transactions on that calendar day.{' '}
-          {unpaidTotal !== 0
-            ? `${formatCents(unpaidTotal)} still due this month.`
-            : 'All settled this month.'}
-        </p>
+        {statements.map((s) => (
+          <StatementSummaryRow
+            key={s.id}
+            name={s.name}
+            amountCents={s.chargeCents}
+            paid={s.paid}
+            paidOn={s.paidOn}
+            disabled={pending === s.id}
+            {...(save && s.chargeCents !== 0 ? { onPress: () => setEditingId(s.id) } : {})}
+          />
+        ))}
       </Card>
+      {editing && save ? (
+        <StatementPaymentSheet
+          cardName={editing.name}
+          yearMonth={month}
+          amountCents={editing.chargeCents}
+          paid={editing.paid}
+          paidOn={editing.paidOn}
+          disabled={pending === editing.id}
+          onClose={() => setEditingId(null)}
+          onSave={(paid, paidOn) => save(editing.id, paid, paidOn)}
+        />
+      ) : null}
     </>
   )
 }
