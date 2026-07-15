@@ -111,25 +111,13 @@ This allowlists the demo email on `roy-expenses-dev`, grants the `expenses` grou
 
 To use a different demo email: `DEMO_EMAIL=you@example.com npm run seed:demo-staging`.
 
-## Statement `paid_on` backfill (one-time)
+## Statement `paid_on` history (backfill removed, July 2026)
 
-Legacy rows may have `paid = 1` with `paid_on IS NULL`. After deploying user-authored `paidOn`, backfill before relying on Transactions statement rows:
+Legacy rows could have `paid = 1` with `paid_on IS NULL`. A one-time `backfill-statement-paid-on.ts` script filled those in by *guessing* a date per account (e.g. "day 15 of the month after the budget month" for Iberia). That inference logic has since been deleted — `paid_on` is now always user-authored: flipping a statement to paid sets it to today's date (or whatever the user picks), full stop. No code in this repo infers a bank's payment date.
 
-```bash
-cd expense-tracker
-unset CLOUDFLARE_API_TOKEN
+The Iberia guess itself was wrong: `inferIberiaPaidOn` used `nextBudgetMonth(budgetMonth)` instead of the budget month itself, so all 6 backfilled Iberia Icon rows (Jan–Jun 2026) landed one calendar month late (e.g. the April statement showed `paid_on = 2026-05-15` instead of `2026-04-15`). This surfaced as duplicate-looking Iberia rows in Transactions. Corrected via a narrow one-off script (`correct-iberia-paid-on.ts`, deleted after use) that asserted each row's current value matched the exact known-bad pattern before overwriting it — nothing else was touched.
 
-# Dry-run (prints 12-row plan + writes scripts/.backfill-statement-paid-on.sql)
-npx tsx scripts/backfill-statement-paid-on.ts
-
-# Dev rehearsal
-npx tsx scripts/backfill-statement-paid-on.ts --apply
-
-# Prod — deploy app first, then same session:
-CONFIRM_PROD_APPLY=1 npx tsx scripts/backfill-statement-paid-on.ts --apply --prod
-```
-
-Verify: `paid_null_on = 0` for deferred paid statements. Edit dates on Dashboard if inference differs from your bank.
+If a future migration ever needs a similar one-time backfill, don't resurrect date-guessing: default new `paid=1` rows to `todayLocalIso()` and let the user correct the date manually, same as the live UI does.
 
 ## Gitignored local paths
 
@@ -138,5 +126,4 @@ Verify: `paid_null_on = 0` for deferred paid statements. Edit dates on Dashboard
 | `samples/` | Personal bank statement samples |
 | `reports/` | D1 exports and reconciliation CSVs |
 | `.tmp/` | Prod→dev D1 dumps |
-| `scripts/.backfill-statement-paid-on.sql` | Generated SQL from backfill dry-run |
 | `config/dev.json` | Dev D1 database id |
