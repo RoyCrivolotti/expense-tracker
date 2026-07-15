@@ -21,6 +21,13 @@ function resolveDebitAccountId(accounts: Account[], defaultAccountId: number | n
   return debit?.id ?? null
 }
 
+function resolvePaidOn(stmt: AccountStatement): string | null {
+  if (!stmt.paid) return null
+  if (stmt.paidOn) return stmt.paidOn
+  // Legacy rows marked paid before paid_on was stored — approximate settlement date.
+  return `${stmt.yearMonth}-15`
+}
+
 /** Synthetic debit rows for paid deferred-card statements. */
 export function buildStatementPayments(
   statements: AccountStatement[],
@@ -37,7 +44,8 @@ export function buildStatementPayments(
   const rows: StatementPaymentRow[] = []
 
   for (const stmt of statements) {
-    if (!stmt.paid || !stmt.paidOn) continue
+    const paidOn = resolvePaidOn(stmt)
+    if (!paidOn) continue
     const cash = cashByMonth.get(stmt.yearMonth)
     const charge = cash?.cardCharges.get(stmt.accountId)?.chargeCents ?? 0
     if (charge <= 0) continue
@@ -46,7 +54,7 @@ export function buildStatementPayments(
     rows.push({
       kind: 'statement-payment',
       key: `${stmt.accountId}:${stmt.yearMonth}`,
-      date: stmt.paidOn,
+      date: paidOn,
       budgetMonth: stmt.yearMonth,
       cardAccountId: stmt.accountId,
       debitAccountId,

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
-const THRESHOLD_PX = 72
-const MAX_PULL_PX = 96
+const THRESHOLD_PX = 112
+const MAX_PULL_PX = 140
 const SCROLL_TOP_EPS = 2
 
 interface Options {

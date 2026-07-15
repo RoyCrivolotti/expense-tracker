@@ -88,7 +88,8 @@ export function CardStatementsCard({ dataset, month, actions }: CardStatementsCa
           )
         })}
         <p className={styles.caption}>
-          Deferred cards settle around the 12th–15th.{' '}
+          Deferred cards settle around the 12th–15th. Mark Paid to show the debit
+          payment in Transactions.{' '}
           {unpaidTotal !== 0
             ? `${formatCents(unpaidTotal)} still due this month.`
             : 'All settled this month.'}

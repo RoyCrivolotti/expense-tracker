@@ -100,4 +100,20 @@ describe('buildTransactionListRows', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0]?.kind).toBe('statement-payment')
   })
+
+  it('shows payment when filtering by deferred card account', () => {
+    const statements: AccountStatement[] = [
+      { accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-06-15' },
+    ]
+    const rows = buildTransactionListRows(
+      [],
+      { month: '2026-06', accountId: 2 },
+      statements,
+      cashRows,
+      accounts,
+      { defaultAccountId: 1 },
+    )
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.kind).toBe('statement-payment')
+  })
 })
