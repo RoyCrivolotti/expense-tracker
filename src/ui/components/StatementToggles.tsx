@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { fullMonthLabel } from '../../engine/dates'
+import { useMemo, useState } from 'react'
+import { computeCashReconciliation, fullMonthLabel } from '../../engine'
 import { isStatementPaid } from '../../engine/status'
 import { todayLocalIso } from '../dates'
 import type { ExpenseModel } from '../useExpenseData'
-import { StatementPaidDate } from './StatementPaidDate'
+import { StatementPaymentSheet } from './StatementPaymentSheet'
+import { StatementSummaryRow } from './StatementSummaryRow'
 import styles from './StatementToggles.module.css'
 
 interface Props {
@@ -14,6 +15,11 @@ interface Props {
     paid: boolean,
     paidOn?: string,
   ) => Promise<void>
+}
+
+interface EditingKey {
+  accountId: number
+  yearMonth: string
 }
 
 function findPaidOn(
@@ -28,8 +34,23 @@ function findPaidOn(
 
 export function StatementToggles({ model, onToggle }: Props) {
   const [pending, setPending] = useState<string | null>(null)
+  const [editing, setEditing] = useState<EditingKey | null>(null)
   const deferred = model.dataset.accounts.filter((a) => a.settlement === 'deferred' && a.active)
   const months = [...model.months].reverse()
+
+  const reconciliation = useMemo(
+    () =>
+      computeCashReconciliation(
+        model.dataset.transactions,
+        model.dataset.accounts,
+        model.dataset.settings,
+        model.dataset.cashActuals,
+      ),
+    [model.dataset],
+  )
+
+  const chargeCents = (accountId: number, yearMonth: string): number =>
+    reconciliation.find((r) => r.month === yearMonth)?.cardCharges.get(accountId)?.chargeCents ?? 0
 
   const save = async (
     accountId: number,
@@ -46,6 +67,10 @@ export function StatementToggles({ model, onToggle }: Props) {
     }
   }
 
+  const editingAccount = editing
+    ? deferred.find((a) => a.id === editing.accountId) ?? null
+    : null
+
   return (
     <div className={styles.wrap}>
       {deferred.map((account) => (
@@ -54,24 +79,38 @@ export function StatementToggles({ model, onToggle }: Props) {
           <div className={styles.months}>
             {months.map((m) => {
               const paid = isStatementPaid(model.dataset.accountStatements, account.id, m)
+              const amountCents = chargeCents(account.id, m)
               const key = `${account.id}:${m}`
               return (
-                <div key={m} className={styles.monthRow}>
-                  <span className={styles.monthLabel}>{fullMonthLabel(m)}</span>
-                  <StatementPaidDate
-                    paid={paid}
-                    paidOn={findPaidOn(model, account.id, m)}
-                    disabled={pending === key}
-                    onMarkPaid={(paidOn) => void save(account.id, m, true, paidOn)}
-                    onEditDate={(paidOn) => void save(account.id, m, true, paidOn)}
-                    onMarkDue={() => void save(account.id, m, false)}
-                  />
-                </div>
+                <StatementSummaryRow
+                  key={m}
+                  name={fullMonthLabel(m)}
+                  amountCents={amountCents}
+                  paid={paid}
+                  paidOn={findPaidOn(model, account.id, m)}
+                  disabled={pending === key}
+                  {...(amountCents !== 0
+                    ? { onPress: () => setEditing({ accountId: account.id, yearMonth: m }) }
+                    : {})}
+                />
               )
             })}
           </div>
         </div>
       ))}
+
+      {editing && editingAccount ? (
+        <StatementPaymentSheet
+          cardName={editingAccount.name}
+          yearMonth={editing.yearMonth}
+          amountCents={chargeCents(editing.accountId, editing.yearMonth)}
+          paid={isStatementPaid(model.dataset.accountStatements, editing.accountId, editing.yearMonth)}
+          paidOn={findPaidOn(model, editing.accountId, editing.yearMonth)}
+          disabled={pending === `${editing.accountId}:${editing.yearMonth}`}
+          onClose={() => setEditing(null)}
+          onSave={(paid, paidOn) => save(editing.accountId, editing.yearMonth, paid, paidOn)}
+        />
+      ) : null}
     </div>
   )
 }

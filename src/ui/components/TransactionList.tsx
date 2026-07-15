@@ -36,7 +36,6 @@ function renderRow(
       <StatementPaymentRow
         key={row.key}
         row={row}
-        showDate={props.showDate ?? false}
         {...(props.onEditStatementPayment ? { onPress: () => props.onEditStatementPayment?.(row) } : {})}
       />
     )
