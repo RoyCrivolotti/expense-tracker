@@ -46,6 +46,13 @@ describe('groupTransactions', () => {
     ]
     expect(groupTransactions(txns)).toHaveLength(2)
   })
+
+  it('excludes installment-plan payments (they are a declared schedule)', () => {
+    const txns = monthlyDates(2026, 1, 5, 4).map((date) =>
+      makeTxn({ date, description: 'Iphone, Cetelam', planId: 9 }),
+    )
+    expect(groupTransactions(txns)).toHaveLength(0)
+  })
 })
 
 describe('detectRecurring', () => {

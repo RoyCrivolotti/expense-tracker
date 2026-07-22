@@ -1,0 +1,56 @@
+.planRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.planRow:last-of-type {
+  border-bottom: 0;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+.name {
+  font-size: 0.95rem;
+  font-weight: 650;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+.inactive .name {
+  color: var(--color-text-muted);
+}
+
+.buttons {
+  display: flex;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.track {
+  height: 0.4rem;
+  border-radius: 999px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+.fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-text-muted);
+}
+
+.stats {
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+}
+
+.danger:hover {
+  border-color: var(--exp-expense, #e5484d) !important;
+  color: var(--exp-expense, #e5484d) !important;
+}

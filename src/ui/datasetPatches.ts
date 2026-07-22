@@ -8,6 +8,7 @@ import type {
   ExpenseSettings,
   GoalInputs,
   GoalScenario,
+  InstallmentPlan,
   Transaction,
 } from '../types'
 
@@ -163,5 +164,32 @@ export function patchAfterScenarioDelete(
 ): ExpenseDataset {
   const d = cloneDataset(dataset)
   d.goalScenarios = d.goalScenarios.filter((s) => s.id !== id)
+  return d
+}
+
+export function patchAfterInstallmentPlanCreate(
+  dataset: ExpenseDataset,
+  plan: InstallmentPlan,
+): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  d.installmentPlans = [...d.installmentPlans, plan]
+  return d
+}
+
+export function patchAfterInstallmentPlanUpdate(
+  dataset: ExpenseDataset,
+  plan: InstallmentPlan,
+): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  upsertById(d.installmentPlans, plan)
+  return d
+}
+
+export function patchAfterInstallmentPlanDelete(
+  dataset: ExpenseDataset,
+  id: number,
+): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  d.installmentPlans = d.installmentPlans.filter((p) => p.id !== id)
   return d
 }

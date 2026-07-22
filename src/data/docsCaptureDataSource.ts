@@ -11,6 +11,8 @@ import type {
   ExpenseSettings,
   GoalInputs,
   GoalScenario,
+  InstallmentPlan,
+  StoredTransaction,
   Transaction,
 } from '../types'
 import type {
@@ -18,16 +20,53 @@ import type {
   NewAccount,
   NewCategory,
   NewGoalScenario,
+  NewInstallmentPlan,
   NewTransaction,
 } from './dataSource'
 import { deriveTransactions } from '../domain/engine/status'
 import { csvDataSource } from './csvDataSource'
 import { docsCaptureGoalScenarios } from './docsCaptureGoalScenarios'
 
+/** A demo installment plan (part-paid) for the gallery, if a category exists. */
+function demoInstallments(dataset: ExpenseDataset): {
+  plans: InstallmentPlan[]
+  transactions: StoredTransaction[]
+} {
+  const account = dataset.accounts.find((a) => a.active)
+  const category = dataset.categories[0]
+  if (!account || !category) return { plans: [], transactions: [] }
+  const plan: InstallmentPlan = {
+    id: 980_001,
+    description: 'iPhone 16 Pro',
+    totalCount: 12,
+    amountCents: 8900,
+    accountId: account.id,
+    categoryId: category.id,
+    type: 'expense',
+    anchorBudgetMonth: '2026-01',
+    startInstallmentIndex: 1,
+    active: true,
+  }
+  const transactions: StoredTransaction[] = [1, 2, 3].map((i) => ({
+    id: 980_000 + i,
+    date: `2026-0${i}-10`,
+    budgetMonth: `2026-0${i}`,
+    description: plan.description,
+    accountId: account.id,
+    categoryId: category.id,
+    type: 'expense',
+    amountCents: plan.amountCents,
+    cancelled: false,
+    planId: plan.id,
+    installmentIndex: i,
+  }))
+  return { plans: [plan], transactions }
+}
+
 /** Demo paid card statements + payment dates for gallery screenshots. */
 function enrichDocsCaptureDataset(dataset: ExpenseDataset): ExpenseDataset {
+  const { plans, transactions: planTxns } = demoInstallments(dataset)
   const cards = dataset.accounts.filter((a) => a.settlement === 'deferred' && a.active)
-  if (cards.length === 0) return dataset
 
   const accountStatements: AccountStatement[] = []
   for (const card of cards) {
@@ -39,10 +78,12 @@ function enrichDocsCaptureDataset(dataset: ExpenseDataset): ExpenseDataset {
       { accountId: card.id, yearMonth: '2026-05', paid: true, paidOn: '2026-06-14' },
     )
   }
+  const stored = [...dataset.transactions, ...planTxns]
   return {
     ...dataset,
-    accountStatements,
-    transactions: deriveTransactions(dataset.transactions, dataset.accounts, accountStatements),
+    accountStatements: cards.length > 0 ? accountStatements : dataset.accountStatements,
+    installmentPlans: plans,
+    transactions: deriveTransactions(stored, dataset.accounts, accountStatements),
   }
 }
 
@@ -166,6 +207,29 @@ export const docsCaptureDataSource: ExpenseDataSource = {
     return Promise.resolve(scenario)
   },
   deleteScenario() {
+    return Promise.resolve()
+  },
+  createInstallmentPlan(input: NewInstallmentPlan) {
+    nextId += 1
+    const plan: InstallmentPlan = { ...input, id: nextId }
+    return Promise.resolve(plan)
+  },
+  updateInstallmentPlan(id: number, patch: Partial<NewInstallmentPlan>) {
+    const plan: InstallmentPlan = {
+      id,
+      description: patch.description ?? 'Plan',
+      totalCount: patch.totalCount ?? 12,
+      amountCents: patch.amountCents ?? 0,
+      accountId: patch.accountId ?? 0,
+      categoryId: patch.categoryId ?? 0,
+      type: patch.type ?? 'expense',
+      anchorBudgetMonth: patch.anchorBudgetMonth ?? '2026-01',
+      startInstallmentIndex: patch.startInstallmentIndex ?? 1,
+      active: patch.active ?? true,
+    }
+    return Promise.resolve(plan)
+  },
+  deleteInstallmentPlan() {
     return Promise.resolve()
   },
 }

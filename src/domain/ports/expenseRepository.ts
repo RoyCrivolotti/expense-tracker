@@ -7,9 +7,16 @@ import type {
   ExpenseSettings,
   GoalInputs,
   GoalScenario,
+  InstallmentPlan,
   Transaction,
 } from '../types'
-import type { NewAccount, NewCategory, NewGoalScenario, NewTransaction } from '../data/dataSource'
+import type {
+  NewAccount,
+  NewCategory,
+  NewGoalScenario,
+  NewInstallmentPlan,
+  NewTransaction,
+} from '../data/dataSource'
 
 /** Persistence port — UI/API depend on this shape, not on D1 or any vendor SDK. */
 export interface ExpenseRepository {
@@ -46,4 +53,11 @@ export interface ExpenseRepository {
   ): Promise<GoalScenario>
   deleteScenario(owner: string, id: number): Promise<void>
   bulkInsertTransactions(owner: string, inputs: NewTransaction[]): Promise<Transaction[]>
+  createInstallmentPlan(owner: string, input: NewInstallmentPlan): Promise<InstallmentPlan>
+  updateInstallmentPlan(
+    owner: string,
+    id: number,
+    patch: Partial<NewInstallmentPlan>,
+  ): Promise<InstallmentPlan>
+  deleteInstallmentPlan(owner: string, id: number): Promise<void>
 }

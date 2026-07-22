@@ -16,6 +16,8 @@ export function makeTxn(
     status: overrides.status ?? 'posted',
   }
   if (overrides.notes != null) base.notes = overrides.notes
+  if (overrides.planId != null) base.planId = overrides.planId
+  if (overrides.installmentIndex != null) base.installmentIndex = overrides.installmentIndex
   return base
 }
 

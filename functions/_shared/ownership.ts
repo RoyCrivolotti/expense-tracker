@@ -22,3 +22,10 @@ export async function assertOwnedCategory(
     .first<{ ok: number }>()
   if (!row) throw new HttpError(400, 'Invalid categoryId')
 }
+
+export async function assertOwnedPlan(env: Env, owner: string, planId: number): Promise<void> {
+  const row = await env.DB.prepare('SELECT 1 AS ok FROM installment_plans WHERE id = ? AND owner = ?')
+    .bind(planId, owner)
+    .first<{ ok: number }>()
+  if (!row) throw new HttpError(400, 'Invalid planId')
+}

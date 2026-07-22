@@ -20,6 +20,7 @@ const emptyDataset: ExpenseDataset = {
     expectedRealReturn: 0,
   },
   goalScenarios: [],
+  installmentPlans: [],
   settings: {
     openingCashCents: 0,
     openingInvestmentCents: 0,

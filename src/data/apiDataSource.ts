@@ -11,9 +11,17 @@ import type {
   ExpenseSettings,
   GoalInputs,
   GoalScenario,
+  InstallmentPlan,
   Transaction,
 } from '../types'
-import type { ExpenseDataSource, NewAccount, NewCategory, NewGoalScenario, NewTransaction } from './dataSource'
+import type {
+  ExpenseDataSource,
+  NewAccount,
+  NewCategory,
+  NewGoalScenario,
+  NewInstallmentPlan,
+  NewTransaction,
+} from './dataSource'
 import { req } from './apiClient'
 
 const BASE = '/api/expenses'
@@ -110,5 +118,20 @@ export const apiDataSource: ExpenseDataSource = {
     }),
   deleteScenario: async (id: number) => {
     await req(`${BASE}/scenarios/${id}`, { method: 'DELETE' })
+  },
+  createInstallmentPlan: (input: NewInstallmentPlan) =>
+    req<InstallmentPlan>(`${BASE}/installment-plans`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    }),
+  updateInstallmentPlan: (id: number, patch: Partial<NewInstallmentPlan>) =>
+    req<InstallmentPlan>(`${BASE}/installment-plans/${id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(patch),
+    }),
+  deleteInstallmentPlan: async (id: number) => {
+    await req(`${BASE}/installment-plans/${id}`, { method: 'DELETE' })
   },
 }

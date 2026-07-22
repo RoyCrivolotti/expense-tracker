@@ -112,6 +112,7 @@ export function parseWorkbookCsv(text: string): ExpenseDataset {
     transactions: deriveTransactions(stored, accounts, accountStatements),
     accountStatements,
     cashActuals: parseCashActuals(rows),
+    installmentPlans: [],
     goalInputs: parseGoalInputs(rows),
     goalScenarios: [],
     settings: parseSettings(rows),

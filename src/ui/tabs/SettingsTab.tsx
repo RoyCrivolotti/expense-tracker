@@ -6,6 +6,7 @@ import { Money } from '../components/Money'
 import { Card, EmptyState, Pill, SectionTitle } from '../components/primitives'
 import { StatementToggles } from '../components/StatementToggles'
 import { DefinitionsEditor } from '../definitions/DefinitionsEditor'
+import { InstallmentPlansManager } from '../definitions/InstallmentPlansManager'
 import { AppearanceSetting } from '../settings/AppearanceSetting'
 import { DefaultAccountSetting } from '../settings/DefaultAccountSetting'
 import { ExportDataSection } from '../settings/ExportDataSection'
@@ -142,6 +143,8 @@ export function SettingsTab({
           </Card>
         </>
       )}
+
+      {actions && <InstallmentPlansManager model={model} actions={actions} />}
 
       {actions ? (
         <DefinitionsEditor model={model} actions={actions} />

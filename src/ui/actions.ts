@@ -1,5 +1,18 @@
-import type { ExpenseSettings, GoalInputs, GoalScenario, Transaction, TxnType } from '../types'
-import type { NewAccount, NewCategory, NewGoalScenario, NewTransaction } from '../data/dataSource'
+import type {
+  ExpenseSettings,
+  GoalInputs,
+  GoalScenario,
+  InstallmentPlan,
+  Transaction,
+  TxnType,
+} from '../types'
+import type {
+  NewAccount,
+  NewCategory,
+  NewGoalScenario,
+  NewInstallmentPlan,
+  NewTransaction,
+} from '../data/dataSource'
 
 /** Pre-filled fields for the add modal (partial overlay on defaults). */
 export interface TransactionSeed {
@@ -10,6 +23,10 @@ export interface TransactionSeed {
   amountCents?: number
   date?: string
   budgetMonth?: string
+  /** When set, the created transaction settles this installment plan. */
+  planId?: number
+  /** Installment number this payment represents (for the modal hint only). */
+  installmentIndex?: number
 }
 
 /**
@@ -43,6 +60,9 @@ export interface ExpenseActions {
   createScenario: (input: NewGoalScenario) => Promise<GoalScenario>
   updateScenario: (id: number, patch: Partial<NewGoalScenario>) => Promise<void>
   deleteScenario: (id: number) => Promise<void>
+  createInstallmentPlan: (input: NewInstallmentPlan) => Promise<InstallmentPlan>
+  updateInstallmentPlan: (id: number, patch: Partial<NewInstallmentPlan>) => Promise<void>
+  deleteInstallmentPlan: (id: number) => Promise<void>
 }
 
 export type ExpenseModalState =

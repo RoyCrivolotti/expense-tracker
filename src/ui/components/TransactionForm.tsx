@@ -19,7 +19,12 @@ interface FormProps {
   onClose: () => void
 }
 
-function toInput(form: FormFields, cents: number, editing: Transaction | null): NewTransaction {
+function toInput(
+  form: FormFields,
+  cents: number,
+  editing: Transaction | null,
+  seed: TransactionSeed | undefined,
+): NewTransaction {
   return {
     date: form.date,
     budgetMonth: form.budgetMonth,
@@ -30,6 +35,8 @@ function toInput(form: FormFields, cents: number, editing: Transaction | null): 
     amountCents: cents,
     cancelled: editing?.cancelled ?? false,
     ...(form.notes.trim() ? { notes: form.notes.trim() } : {}),
+    // Plan link only applies to fresh installment payments, never edits or duplicates.
+    ...(!editing && seed?.planId != null ? { planId: seed.planId } : {}),
   }
 }
 
@@ -56,7 +63,7 @@ export function TransactionForm({
     setBusy(true)
     setErr(null)
     try {
-      await onSubmit(toInput(form, cents, editing), editing?.id)
+      await onSubmit(toInput(form, cents, editing, seed), editing?.id)
       onClose()
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not save')

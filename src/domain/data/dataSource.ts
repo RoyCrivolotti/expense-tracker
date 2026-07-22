@@ -12,6 +12,7 @@ import type {
   ExpenseSettings,
   GoalInputs,
   GoalScenario,
+  InstallmentPlan,
   StoredTransaction,
   Transaction,
 } from '../types'
@@ -20,6 +21,7 @@ export type NewTransaction = Omit<StoredTransaction, 'id' | 'createdAt'>
 export type NewCategory = Omit<Category, 'id'>
 export type NewAccount = Omit<Account, 'id'>
 export type NewGoalScenario = Omit<GoalScenario, 'id'>
+export type NewInstallmentPlan = Omit<InstallmentPlan, 'id'>
 
 export interface ExpenseDataSource {
   /** Whether mutations are supported; the UI hides add/edit when false. */
@@ -43,4 +45,7 @@ export interface ExpenseDataSource {
   createScenario?(input: NewGoalScenario): Promise<GoalScenario>
   updateScenario?(id: number, patch: Partial<NewGoalScenario>): Promise<GoalScenario>
   deleteScenario?(id: number): Promise<void>
+  createInstallmentPlan?(input: NewInstallmentPlan): Promise<InstallmentPlan>
+  updateInstallmentPlan?(id: number, patch: Partial<NewInstallmentPlan>): Promise<InstallmentPlan>
+  deleteInstallmentPlan?(id: number): Promise<void>
 }

@@ -2,9 +2,19 @@ import type { Transaction } from '../../types'
 import type { NewTransaction } from '../../data/dataSource'
 import type { ExpenseActions, TransactionSeed } from '../actions'
 import type { ExpenseModel } from '../useExpenseData'
+import { finalBudgetMonth } from '../../engine'
+import { fullMonthLabel } from '../../engine/dates'
 import { useToast } from '../hooks/useToast'
 import { Modal } from './Modal'
 import { TransactionForm } from './TransactionForm'
+
+/** "Installment 21 of 24 · Final payment November 2026" for a plan-linked edit. */
+function installmentNote(editing: Transaction | null, model: ExpenseModel): string | undefined {
+  if (!editing || editing.planId == null || editing.installmentIndex == null) return undefined
+  const plan = model.lookup.installmentPlan(editing.planId)
+  if (!plan) return undefined
+  return `Installment ${editing.installmentIndex} of ${plan.totalCount} · Final payment ${fullMonthLabel(finalBudgetMonth(plan))}`
+}
 
 interface Props {
   model: ExpenseModel
@@ -33,10 +43,12 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
     showToast('Transaction deleted', 'success')
   }
 
+  const subtitle = hint ?? installmentNote(editing, model)
+
   return (
     <Modal
       title={editing ? 'Edit transaction' : 'New transaction'}
-      {...(hint ? { subtitle: hint } : {})}
+      {...(subtitle ? { subtitle } : {})}
       onClose={onClose}
     >
       <TransactionForm
