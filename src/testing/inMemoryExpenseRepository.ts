@@ -1,4 +1,10 @@
-import type { NewAccount, NewCategory, NewGoalScenario, NewTransaction } from '../domain/data/dataSource'
+import type {
+  NewAccount,
+  NewCategory,
+  NewGoalScenario,
+  NewInstallmentPlan,
+  NewTransaction,
+} from '../domain/data/dataSource'
 import type { ExpenseRepository } from '../domain/ports/expenseRepository'
 import { deriveStatus, deriveTransactions } from '../domain/engine/status'
 import type {
@@ -10,6 +16,7 @@ import type {
   ExpenseSettings,
   GoalInputs,
   GoalScenario,
+  InstallmentPlan,
   StoredTransaction,
   Transaction,
 } from '../domain/types'
@@ -26,6 +33,7 @@ interface OwnerStore {
   settings: ExpenseSettings
   goalInputs: GoalInputs
   goalScenarios: GoalScenario[]
+  installmentPlans: InstallmentPlan[]
 }
 
 const DEFAULT_SETTINGS: ExpenseSettings = {
@@ -73,6 +81,7 @@ function emptyStore(seed: ExpenseRepositorySeed = {}): OwnerStore {
     settings: { ...DEFAULT_SETTINGS, ...seed.settings },
     goalInputs: { ...DEFAULT_GOALS, ...seed.goalInputs },
     goalScenarios: [...(seed.goalScenarios ?? [])],
+    installmentPlans: [...(seed.installmentPlans ?? [])],
   }
 }
 
@@ -105,6 +114,30 @@ export function inMemoryExpenseRepository(
     return category
   }
 
+  function assertOwnedPlan(store: OwnerStore, planId: number): InstallmentPlan {
+    const plan = store.installmentPlans.find((p) => p.id === planId)
+    if (!plan) throw new RepoHttpError(400, 'Invalid planId')
+    return plan
+  }
+
+  /** Resolve and validate the installment index for a plan-linked insert. */
+  function resolvePlanLink(
+    store: OwnerStore,
+    input: NewTransaction,
+  ): { planId: number; installmentIndex: number } | null {
+    if (input.planId == null) return null
+    const plan = assertOwnedPlan(store, input.planId)
+    const existing = store.transactions
+      .filter((t) => t.planId === plan.id && typeof t.installmentIndex === 'number')
+      .map((t) => t.installmentIndex as number)
+    const nextIndex = existing.length > 0 ? Math.max(...existing) + 1 : plan.startInstallmentIndex
+    const installmentIndex = input.installmentIndex ?? nextIndex
+    if (existing.includes(installmentIndex)) {
+      throw new RepoHttpError(400, 'Installment already recorded for this index')
+    }
+    return { planId: plan.id, installmentIndex }
+  }
+
   function findStored(store: OwnerStore, id: number): StoredTransaction {
     const txn = store.transactions.find((row) => row.id === id)
     if (!txn) throw new RepoHttpError(404, 'Transaction not found')
@@ -115,6 +148,7 @@ export function inMemoryExpenseRepository(
     const store = storeFor(owner)
     assertOwnedAccount(store, input.accountId)
     assertOwnedCategory(store, input.categoryId)
+    const planLink = resolvePlanLink(store, input)
     const stored: StoredTransaction = {
       id: nextId(store.transactions),
       date: input.date,
@@ -126,6 +160,7 @@ export function inMemoryExpenseRepository(
       amountCents: input.amountCents,
       cancelled: input.cancelled,
       ...(input.notes !== undefined ? { notes: input.notes } : {}),
+      ...(planLink ?? {}),
     }
     store.transactions.push(stored)
     return deriveOne(stored, store.accounts, store.statements)
@@ -143,6 +178,7 @@ export function inMemoryExpenseRepository(
         settings: { ...store.settings },
         goalInputs: { ...store.goalInputs },
         goalScenarios: [...store.goalScenarios],
+        installmentPlans: [...store.installmentPlans],
       })
     },
 
@@ -320,6 +356,36 @@ export function inMemoryExpenseRepository(
       const index = store.goalScenarios.findIndex((s) => s.id === id)
       if (index < 0) throw new RepoHttpError(404, 'Scenario not found')
       store.goalScenarios.splice(index, 1)
+      return Promise.resolve()
+    },
+
+    createInstallmentPlan: (owner, input) => {
+      const store = storeFor(owner)
+      assertOwnedAccount(store, input.accountId)
+      assertOwnedCategory(store, input.categoryId)
+      const plan: InstallmentPlan = { id: nextId(store.installmentPlans), ...input }
+      store.installmentPlans.push(plan)
+      return Promise.resolve({ ...plan })
+    },
+
+    updateInstallmentPlan: (owner, id, patch) => {
+      const store = storeFor(owner)
+      const index = store.installmentPlans.findIndex((p) => p.id === id)
+      if (index < 0) throw new RepoHttpError(404, 'Installment plan not found')
+      const keys = Object.keys(patch) as (keyof NewInstallmentPlan)[]
+      if (keys.length === 0) throw new RepoHttpError(400, 'Empty patch')
+      if (patch.accountId != null) assertOwnedAccount(store, patch.accountId)
+      if (patch.categoryId != null) assertOwnedCategory(store, patch.categoryId)
+      const updated = { ...store.installmentPlans[index]!, ...patch, id }
+      store.installmentPlans[index] = updated
+      return Promise.resolve({ ...updated })
+    },
+
+    deleteInstallmentPlan: (owner, id) => {
+      const store = storeFor(owner)
+      const index = store.installmentPlans.findIndex((p) => p.id === id)
+      if (index < 0) throw new RepoHttpError(404, 'Installment plan not found')
+      store.installmentPlans.splice(index, 1)
       return Promise.resolve()
     },
   }

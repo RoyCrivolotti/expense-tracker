@@ -131,7 +131,8 @@ function firstDayOfBudgetMonth(yearMonth: string): string {
   return `${y}-${String(m).padStart(2, '0')}-01`
 }
 
-function shiftBudgetMonth(yearMonth: string, delta: number): string {
+/** Budget month `delta` months away from `yearMonth` (negative shifts back). */
+export function shiftBudgetMonth(yearMonth: string, delta: number): string {
   const [y, m] = yearMonth.split('-').map(Number) as [number, number]
   let month = m + delta
   let year = y
@@ -144,6 +145,13 @@ function shiftBudgetMonth(yearMonth: string, delta: number): string {
     year -= 1
   }
   return `${year}-${String(month).padStart(2, '0')}`
+}
+
+/** Whole-month distance from `a` to `b` (b - a), e.g. 2026-01 → 2026-03 = 2. */
+export function monthsBetweenBudget(a: string, b: string): number {
+  const [ay, am] = a.split('-').map(Number) as [number, number]
+  const [by, bm] = b.split('-').map(Number) as [number, number]
+  return (by - ay) * 12 + (bm - am)
 }
 
 /** Inclusive calendar range covering the last `count` budget months ending at `yearMonth`. */

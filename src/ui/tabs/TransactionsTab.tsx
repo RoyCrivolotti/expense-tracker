@@ -7,6 +7,7 @@ import { TransactionList } from '../components/TransactionList'
 import { StatementPaymentSheet } from '../components/StatementPaymentSheet'
 import { TxnFilters } from './TxnFilters'
 import { UpcomingCard } from './UpcomingCard'
+import { InstallmentsCard } from './InstallmentsCard'
 import { TransactionsSelectFooter } from './TransactionsSelectFooter'
 import { useTransactionsTabState } from './useTransactionsTabState'
 import styles from './tabs.module.css'
@@ -28,8 +29,19 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
 
   return (
     <div className={styles.stack}>
-      {actions && upcoming.length > 0 && (
-        <UpcomingCard suggestions={upcoming} lookup={model.lookup} onAdd={actions.onAdd} />
+      {actions && (
+        <>
+          <InstallmentsCard
+            plans={model.dataset.installmentPlans}
+            transactions={model.dataset.transactions}
+            lookup={model.lookup}
+            month={month}
+            onAdd={actions.onAdd}
+          />
+          {upcoming.length > 0 && (
+            <UpcomingCard suggestions={upcoming} lookup={model.lookup} onAdd={actions.onAdd} />
+          )}
+        </>
       )}
 
       <TxnFilters

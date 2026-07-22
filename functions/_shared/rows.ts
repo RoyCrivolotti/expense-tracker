@@ -6,6 +6,7 @@ import type {
   ExpenseSettings,
   GoalInputs,
   GoalScenario,
+  InstallmentPlan,
   StoredTransaction,
   TxnType,
 } from '../domain/types'
@@ -40,6 +41,8 @@ export interface TxnRow {
   cancelled: number
   notes: string | null
   created_at: string | null
+  plan_id: number | null
+  installment_index: number | null
 }
 
 export interface StatementRow {
@@ -78,6 +81,8 @@ export function toStoredTxn(r: TxnRow): StoredTransaction {
     cancelled: r.cancelled === 1,
     ...(r.notes ? { notes: r.notes } : {}),
     ...(r.created_at ? { createdAt: r.created_at } : {}),
+    ...(r.plan_id != null ? { planId: r.plan_id } : {}),
+    ...(r.installment_index != null ? { installmentIndex: r.installment_index } : {}),
   }
 }
 
@@ -180,5 +185,33 @@ export function toGoalScenario(r: GoalScenarioRow): GoalScenario {
     rentMonthlyCents: r.rent_monthly_cents,
     annualSpendCents: r.annual_spend_cents,
     safeWithdrawalRate: r.safe_withdrawal_rate,
+  }
+}
+
+export interface InstallmentPlanRow {
+  id: number
+  description: string
+  total_count: number
+  amount_cents: number
+  account_id: number
+  category_id: number
+  type: TxnType
+  anchor_budget_month: string
+  start_installment_index: number
+  active: number
+}
+
+export function toInstallmentPlan(r: InstallmentPlanRow): InstallmentPlan {
+  return {
+    id: r.id,
+    description: r.description,
+    totalCount: r.total_count,
+    amountCents: r.amount_cents,
+    accountId: r.account_id,
+    categoryId: r.category_id,
+    type: r.type,
+    anchorBudgetMonth: r.anchor_budget_month,
+    startInstallmentIndex: r.start_installment_index,
+    active: r.active === 1,
   }
 }

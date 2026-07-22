@@ -7,6 +7,7 @@ import {
   toCategory,
   toGoalInputs,
   toGoalScenario,
+  toInstallmentPlan,
   toSettings,
   toStatement,
   toStoredTxn,
@@ -15,6 +16,7 @@ import {
   type CategoryRow,
   type GoalRow,
   type GoalScenarioRow,
+  type InstallmentPlanRow,
   type SettingsRow,
   type StatementRow,
   type TxnRow,
@@ -27,8 +29,17 @@ async function rows<T>(db: D1Database, sql: string, owner: string): Promise<T[]>
 
 /** Read every table for one owner and assemble a dataset with derived statuses. */
 export async function loadDataset(env: Env, owner: string): Promise<ExpenseDataset> {
-  const [categories, accounts, txns, statements, cashActuals, settingsRow, goalRow, scenarioRows] =
-    await Promise.all([
+  const [
+    categories,
+    accounts,
+    txns,
+    statements,
+    cashActuals,
+    settingsRow,
+    goalRow,
+    scenarioRows,
+    planRows,
+  ] = await Promise.all([
       rows<CategoryRow>(
         env.DB,
         'SELECT * FROM categories WHERE owner = ? ORDER BY sort_order, id',
@@ -49,6 +60,11 @@ export async function loadDataset(env: Env, owner: string): Promise<ExpenseDatas
         'SELECT * FROM goal_scenarios WHERE owner = ? ORDER BY sort_order, id',
         owner,
       ),
+      rows<InstallmentPlanRow>(
+        env.DB,
+        'SELECT * FROM installment_plans WHERE owner = ? ORDER BY id',
+        owner,
+      ),
     ])
 
   const mappedAccounts = accounts.map(toAccount)
@@ -61,6 +77,7 @@ export async function loadDataset(env: Env, owner: string): Promise<ExpenseDatas
     transactions: deriveTransactions(stored, mappedAccounts, mappedStatements),
     accountStatements: mappedStatements,
     cashActuals: cashActuals.map(toCashActual),
+    installmentPlans: planRows.map(toInstallmentPlan),
     settings: settingsRow
       ? toSettings(settingsRow)
       : {

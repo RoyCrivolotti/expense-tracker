@@ -55,6 +55,10 @@ export interface StoredTransaction {
   notes?: string
   /** ISO datetime when the row was first saved (D1 only; absent in CSV import). */
   createdAt?: string
+  /** Installment plan this row settles, when it is one plan's monthly payment. */
+  planId?: number
+  /** Which payment in the plan schedule this row is (1-based), when plan-linked. */
+  installmentIndex?: number
 }
 
 /** A transaction with its derived status, as consumed by the compute engine. */
@@ -73,6 +77,30 @@ export interface AccountStatement {
   paid: boolean
   /** ISO date the statement was paid, when known. */
   paidOn?: string
+}
+
+/**
+ * A purchase split into a fixed number of equal monthly payments (e.g. a phone
+ * financed over 24 months). Unlike recurring detection, a plan is a declared,
+ * bounded commitment. `anchorBudgetMonth` is the budget month in which
+ * `startInstallmentIndex` falls due, which anchors the whole schedule; every
+ * other installment's budget month is derived by offset.
+ */
+export interface InstallmentPlan {
+  id: number
+  description: string
+  /** Total number of installments in the plan (e.g. 24). */
+  totalCount: number
+  /** Per-installment amount, always positive, integer cents. */
+  amountCents: number
+  accountId: number
+  categoryId: number
+  type: TxnType
+  /** YYYY-MM budget month for the `startInstallmentIndex` payment. */
+  anchorBudgetMonth: string
+  /** First installment number tracked here (1 for fresh plans). */
+  startInstallmentIndex: number
+  active: boolean
 }
 
 /** Goal inputs, all in plain units (euros, percent as fraction, years). */
@@ -140,6 +168,7 @@ export interface ExpenseDataset {
   transactions: Transaction[]
   accountStatements: AccountStatement[]
   cashActuals: CashActual[]
+  installmentPlans: InstallmentPlan[]
   goalInputs: GoalInputs
   goalScenarios: GoalScenario[]
   settings: ExpenseSettings

@@ -1,20 +1,23 @@
-import type { Account, Category, ExpenseDataset, TxnStatus } from '../types'
+import type { Account, Category, ExpenseDataset, InstallmentPlan, TxnStatus } from '../types'
 
 export interface Lookup {
   category: (id: number) => Category | undefined
   account: (id: number) => Account | undefined
   categoryName: (id: number) => string
   accountName: (id: number) => string
+  installmentPlan: (id: number) => InstallmentPlan | undefined
 }
 
 export function buildLookup(dataset: ExpenseDataset): Lookup {
   const cats = new Map(dataset.categories.map((c) => [c.id, c]))
   const accs = new Map(dataset.accounts.map((a) => [a.id, a]))
+  const plans = new Map(dataset.installmentPlans.map((p) => [p.id, p]))
   return {
     category: (id) => cats.get(id),
     account: (id) => accs.get(id),
     categoryName: (id) => cats.get(id)?.name ?? 'Uncategorised',
     accountName: (id) => accs.get(id)?.name ?? 'Unknown',
+    installmentPlan: (id) => plans.get(id),
   }
 }
 

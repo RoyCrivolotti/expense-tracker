@@ -25,6 +25,7 @@ function minimalModel(): ExpenseModel {
         expectedRealReturn: 0,
       },
       goalScenarios: [],
+      installmentPlans: [],
       settings: {
         openingCashCents: 0,
         openingInvestmentCents: 0,
@@ -37,6 +38,7 @@ function minimalModel(): ExpenseModel {
       account: () => undefined,
       categoryName: () => 'Health',
       accountName: () => 'Debit',
+      installmentPlan: () => undefined,
     },
     descriptionIndex: { search: () => [], resolve: () => undefined },
     months: ['2026-07'],

@@ -46,6 +46,8 @@ export function groupTransactions(transactions: Transaction[]): OccurrenceGroup[
   for (const txn of transactions) {
     if (txn.cancelled) continue
     if (!txn.description.trim()) continue
+    // Installment-plan payments are a declared schedule, not a detected pattern.
+    if (txn.planId != null) continue
 
     const key = groupKey(txn)
     const existing = map.get(key)

@@ -30,6 +30,7 @@ const dataset: ExpenseDataset = {
     expectedRealReturn: 0,
   },
   goalScenarios: [],
+  installmentPlans: [],
 }
 
 describe('resolveDescriptionTemplate', () => {

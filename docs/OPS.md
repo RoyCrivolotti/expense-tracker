@@ -119,6 +119,16 @@ The Iberia guess itself was wrong: `inferIberiaPaidOn` used `nextBudgetMonth(bud
 
 If a future migration ever needs a similar one-time backfill, don't resurrect date-guessing: default new `paid=1` rows to `todayLocalIso()` and let the user correct the date manually, same as the live UI does.
 
+## Installment plans
+
+An installment plan models one bounded purchase split into a fixed number of equal monthly payments (e.g. a phone financed over 24 months), distinct from recurring detection which infers patterns. A plan lives in `installment_plans` (owner-scoped, migration `0009`); each recorded payment is a normal transaction carrying `plan_id` + `installment_index`. The index is assigned server-side from recorded progress on insert, and a partial unique index (`owner, plan_id, installment_index`) blocks duplicates. Plan-linked transactions are excluded from recurring suggestions.
+
+Schedule anchoring: `anchor_budget_month` is the budget month of `start_installment_index`; every other installment's budget month is that anchor shifted by the index offset. `start_installment_index` is 1 for a fresh plan, higher when importing a plan already in flight.
+
+Manage plans in Settings → Installment plans (create/edit, complete/reactivate, delete). The Transactions tab surfaces the next due installment for the viewed month above Upcoming; tapping it opens the add-transaction modal pre-seeded from the plan.
+
+Linking pre-existing rows (one-off): apply `0009` first, then generate SQL with `scripts/link-iphone-installments.ts` (needs `EXPENSE_OWNER`, `PLAN_ACCOUNT_ID`, `PLAN_CATEGORY_ID`). The generated SQL only touches unlinked rows matching the exact description and amount, and assigns indices by chronological budget month, so a re-run cannot corrupt other data. Dry-run the SELECT, apply, verify, then delete the script.
+
 ## Gitignored local paths
 
 | Path | Purpose |

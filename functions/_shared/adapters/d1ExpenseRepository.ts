@@ -22,6 +22,11 @@ import {
   updateScenario,
   updateSettings,
 } from '../dbConfig'
+import {
+  createInstallmentPlan,
+  deleteInstallmentPlan,
+  updateInstallmentPlan,
+} from '../dbInstallments'
 
 /** Cloudflare D1 adapter for {@link ExpenseRepository}. */
 export function createD1ExpenseRepository(env: Env): ExpenseRepository {
@@ -46,5 +51,8 @@ export function createD1ExpenseRepository(env: Env): ExpenseRepository {
     updateScenario: (owner, id, patch) => updateScenario(env, owner, id, patch),
     deleteScenario: (owner, id) => deleteScenario(env, owner, id),
     bulkInsertTransactions: (owner, inputs) => bulkInsertTransactions(env, owner, inputs),
+    createInstallmentPlan: (owner, input) => createInstallmentPlan(env, owner, input),
+    updateInstallmentPlan: (owner, id, patch) => updateInstallmentPlan(env, owner, id, patch),
+    deleteInstallmentPlan: (owner, id) => deleteInstallmentPlan(env, owner, id),
   }
 }

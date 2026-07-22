@@ -87,7 +87,9 @@ If Workers Scripts Edit is missing, CI deploy of the backup cron worker fails un
 npx wrangler d1 execute roy-expenses --remote --file=migrations/NNNN_name.sql
 ```
 
-Apply through `0008_goal_scenarios.sql` on production. Personal goal scenarios: `npm run seed:scenarios` (reads gitignored seed config or `FINANCIAL_REVIEW_DIR`).
+Apply through `0009_installment_plans.sql` on production. Personal goal scenarios: `npm run seed:scenarios` (reads gitignored seed config or `FINANCIAL_REVIEW_DIR`).
+
+`0009_installment_plans.sql` adds the `installment_plans` table plus `plan_id` / `installment_index` columns on `transactions`. Apply it before (or with) the code deploy that reads those columns.
 
 ## Old URL
 

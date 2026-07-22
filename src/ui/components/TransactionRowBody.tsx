@@ -5,6 +5,12 @@ import { Pill } from './primitives'
 import { CategoryIcon } from './CategoryIcon'
 import styles from './TransactionList.module.css'
 
+function installmentMeta(txn: Transaction, lookup: Lookup): string | null {
+  if (txn.planId == null || txn.installmentIndex == null) return null
+  const plan = lookup.installmentPlan(txn.planId)
+  return plan ? `Payment ${txn.installmentIndex}/${plan.totalCount}` : null
+}
+
 export function TransactionRowBody({
   txn,
   lookup,
@@ -15,8 +21,10 @@ export function TransactionRowBody({
   showDate?: boolean
 }) {
   const cat = lookup.category(txn.categoryId)
+  const installmentLabel = installmentMeta(txn, lookup)
   const metaParts = [
     ...(showDate ? [shortDayLabel(txn.date)] : []),
+    ...(installmentLabel ? [installmentLabel] : []),
     lookup.categoryName(txn.categoryId),
     lookup.accountName(txn.accountId),
   ]

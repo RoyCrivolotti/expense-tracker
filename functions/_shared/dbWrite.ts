@@ -14,7 +14,7 @@ import {
   type TxnRow,
 } from './rows'
 import { HttpError } from './http'
-import { assertOwnedAccount, assertOwnedCategory } from './ownership'
+import { assertOwnedAccount, assertOwnedCategory, assertOwnedPlan } from './ownership'
 
 async function deriveOne(env: Env, owner: string, stored: StoredTransaction): Promise<Transaction> {
   const acc = await env.DB.prepare('SELECT * FROM accounts WHERE id = ? AND owner = ?')
@@ -31,6 +31,40 @@ async function deriveOne(env: Env, owner: string, stored: StoredTransaction): Pr
   return { ...stored, status }
 }
 
+/**
+ * Resolve the installment link for a plan-bound insert. The index is
+ * server-assigned from recorded progress unless one is supplied explicitly
+ * (the one-off linking script); duplicates are rejected before the write so a
+ * clear 400 is returned instead of a unique-index failure.
+ */
+async function resolvePlanLink(
+  env: Env,
+  owner: string,
+  input: NewTransaction,
+): Promise<{ planId: number; installmentIndex: number } | null> {
+  if (input.planId == null) return null
+  await assertOwnedPlan(env, owner, input.planId)
+  const start = await env.DB.prepare(
+    'SELECT start_installment_index AS s FROM installment_plans WHERE id = ? AND owner = ?',
+  )
+    .bind(input.planId, owner)
+    .first<{ s: number }>()
+  const max = await env.DB.prepare(
+    'SELECT MAX(installment_index) AS m FROM transactions WHERE owner = ? AND plan_id = ?',
+  )
+    .bind(owner, input.planId)
+    .first<{ m: number | null }>()
+  const nextIndex = max?.m != null ? max.m + 1 : (start?.s ?? 1)
+  const installmentIndex = input.installmentIndex ?? nextIndex
+  const dup = await env.DB.prepare(
+    'SELECT 1 AS ok FROM transactions WHERE owner = ? AND plan_id = ? AND installment_index = ?',
+  )
+    .bind(owner, input.planId, installmentIndex)
+    .first<{ ok: number }>()
+  if (dup) throw new HttpError(400, 'Installment already recorded for this index')
+  return { planId: input.planId, installmentIndex }
+}
+
 export async function insertTransaction(
   env: Env,
   owner: string,
@@ -38,10 +72,11 @@ export async function insertTransaction(
 ): Promise<Transaction> {
   await assertOwnedAccount(env, owner, input.accountId)
   await assertOwnedCategory(env, owner, input.categoryId)
+  const planLink = await resolvePlanLink(env, owner, input)
   const row = await env.DB.prepare(
     `INSERT INTO transactions
-       (owner, date, budget_month, description, account_id, category_id, type, amount_cents, cancelled, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
+       (owner, date, budget_month, description, account_id, category_id, type, amount_cents, cancelled, notes, plan_id, installment_index)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
   )
     .bind(
       owner,
@@ -54,13 +89,19 @@ export async function insertTransaction(
       input.amountCents,
       input.cancelled ? 1 : 0,
       input.notes ?? null,
+      planLink?.planId ?? null,
+      planLink?.installmentIndex ?? null,
     )
     .first<TxnRow>()
   if (!row) throw new HttpError(500, 'Insert failed')
   return deriveOne(env, owner, toStoredTxn(row))
 }
 
-const COLUMN: Record<keyof NewTransaction, string> = {
+// Plan link columns are assigned only on insert; they are intentionally not
+// patchable, so the schedule/index invariants stay owned by insertTransaction.
+type PatchableTxnKey = Exclude<keyof NewTransaction, 'planId' | 'installmentIndex'>
+
+const COLUMN: Record<PatchableTxnKey, string> = {
   date: 'date',
   budgetMonth: 'budget_month',
   description: 'description',
@@ -72,7 +113,7 @@ const COLUMN: Record<keyof NewTransaction, string> = {
   notes: 'notes',
 }
 
-function patchValue(key: keyof NewTransaction, value: unknown): unknown {
+function patchValue(key: PatchableTxnKey, value: unknown): unknown {
   if (key === 'cancelled') return value ? 1 : 0
   return value ?? null
 }
@@ -83,7 +124,7 @@ export async function updateTransaction(
   id: number,
   patch: Partial<NewTransaction>,
 ): Promise<Transaction> {
-  const keys = (Object.keys(patch) as (keyof NewTransaction)[]).filter((k) => k in COLUMN)
+  const keys = (Object.keys(patch) as PatchableTxnKey[]).filter((k) => k in COLUMN)
   if (keys.length === 0) throw new HttpError(400, 'Empty patch')
   if (patch.accountId != null) await assertOwnedAccount(env, owner, patch.accountId)
   if (patch.categoryId != null) await assertOwnedCategory(env, owner, patch.categoryId)
