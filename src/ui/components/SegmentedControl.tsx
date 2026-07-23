@@ -12,6 +12,7 @@ interface SegmentedControlProps<T extends string> {
   ariaLabel: string
   /** compact: inline pill. bar: full-width equal segments. scroll: horizontal chip row. */
   layout?: 'compact' | 'bar' | 'scroll'
+  disabled?: boolean
 }
 
 /** Compact pill-style toggle for small sets of mutually exclusive options. */
@@ -21,6 +22,7 @@ export function SegmentedControl<T extends string>({
   onChange,
   ariaLabel,
   layout = 'compact',
+  disabled = false,
 }: SegmentedControlProps<T>) {
   const groupClass =
     layout === 'bar'
@@ -39,6 +41,7 @@ export function SegmentedControl<T extends string>({
           className={
             opt.value === value ? `${styles.seg} tapActive ${styles.active}` : `${styles.seg} tapActive`
           }
+          disabled={disabled}
           onClick={() => onChange(opt.value)}
         >
           {opt.label}

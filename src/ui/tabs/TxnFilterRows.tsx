@@ -1,8 +1,16 @@
 import type { Account, Category, TxnType } from '../../types'
 import { CloseIcon } from '../icons'
+import { SegmentedControl } from '../components/SegmentedControl'
 import type { StatusFilter } from './TxnFilters'
 import type { TxnDateScope } from './txnDateScope'
 import styles from './tabs.module.css'
+
+const DATE_SCOPE_OPTIONS: { value: TxnDateScope; label: string }[] = [
+  { value: 'budgetMonth', label: 'Month' },
+  { value: 'last3Months', label: '3 months' },
+  { value: 'allDates', label: 'All' },
+  { value: 'custom', label: 'Custom' },
+]
 
 export function SearchRow({
   query,
@@ -159,21 +167,17 @@ export function DateScopeRow({
 }) {
   return (
     <div className={styles.dateScopeBlock}>
-      <label className={styles.dateScopeLabel} htmlFor="txn-date-scope">
+      <span className={styles.dateScopeLabel} id="txn-date-scope-label">
         Date scope
-      </label>
-      <select
-        id="txn-date-scope"
-        className={dateScope !== 'budgetMonth' ? styles.activeSelect : undefined}
+      </span>
+      <SegmentedControl
+        options={DATE_SCOPE_OPTIONS}
         value={dateScope}
-        onChange={(e) => onDateScope(e.target.value as TxnDateScope)}
+        onChange={onDateScope}
+        ariaLabel="Date scope"
+        layout="bar"
         disabled={selectMode}
-      >
-        <option value="budgetMonth">Budget month</option>
-        <option value="last3Months">Last 3 months</option>
-        <option value="allDates">All dates</option>
-        <option value="custom">Custom range</option>
-      </select>
+      />
       {dateScope === 'custom' ? (
         <div className={styles.selectRow}>
           <input

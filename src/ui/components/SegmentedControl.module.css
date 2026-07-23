@@ -25,6 +25,11 @@
 .seg:hover {
   color: var(--color-text);
 }
+.seg:disabled {
+  opacity: 0.5;
+  cursor: default;
+  pointer-events: none;
+}
 
 .active {
   background: var(--color-bg);
