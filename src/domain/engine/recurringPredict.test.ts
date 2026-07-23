@@ -44,14 +44,19 @@ describe('canonicalDayOfMonth', () => {
 })
 
 describe('predictDateInBudgetMonth', () => {
-  it('places subscription on canonical day in the viewed month', () => {
+  it('keeps a pre-rollover canonical day in the budget month itself', () => {
     const dates = ['2026-01-01', '2026-02-02', '2026-03-03', '2026-04-02', '2026-05-01']
     expect(predictDateInBudgetMonth('2026-07', dates)).toBe('2026-07-02')
   })
 
-  it('clamps day 31 to the last day of February', () => {
-    const dates = ['2026-01-31', '2026-02-28', '2026-03-31']
-    expect(predictDateInBudgetMonth('2026-02', dates)).toBe('2026-02-28')
+  it('shifts a post-rollover canonical day into the prior calendar month', () => {
+    const dates = ['2026-05-20', '2026-06-20', '2026-07-20']
+    expect(predictDateInBudgetMonth('2026-08', dates)).toBe('2026-07-20')
+  })
+
+  it('clamps a post-rollover day to the prior calendar month length', () => {
+    const dates = ['2026-01-31', '2026-03-31', '2026-05-31']
+    expect(predictDateInBudgetMonth('2026-03', dates)).toBe('2026-02-28')
   })
 })
 
