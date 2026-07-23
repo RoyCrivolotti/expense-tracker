@@ -137,6 +137,21 @@ describe('detectRecurring', () => {
     expect(august.every((s) => s.predictedBudgetMonth === '2026-08')).toBe(true)
   })
 
+  it('dates a post-rollover monthly on its real prior-month date (Prime on the 20th)', () => {
+    const txns = [
+      { d: '2026-03-20', bm: '2026-04' },
+      { d: '2026-04-20', bm: '2026-05' },
+      { d: '2026-05-20', bm: '2026-06' },
+      { d: '2026-06-20', bm: '2026-07' },
+    ].map(({ d, bm }) => makeTxn({ date: d, description: 'Prime', budgetMonth: bm }))
+    const august = detectRecurring(txns, { forBudgetMonth: '2026-08' })
+    expect(august).toHaveLength(1)
+    expect(august[0]!.description).toBe('Prime')
+    expect(august[0]!.predictedBudgetMonth).toBe('2026-08')
+    // Real recurrence date is 20 Jul (which rolls into the August budget), not 20 Aug.
+    expect(august[0]!.predictedDate).toBe('2026-07-20')
+  })
+
   it('suggests July when prior BM is June but last calendar date is late May', () => {
     const txns = [
       ...monthlyDates(2026, 1, 1, 4).map((date) =>
