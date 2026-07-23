@@ -29,8 +29,8 @@ export default defineConfig([
       },
     },
     rules: {
-      // Keep files and functions small and readable - enforce the hygiene
-      // documented in docs/conventions and .cursor/rules.
+      // Keep files and functions small and readable - see docs/ARCHITECTURE.md
+      // for why these thresholds exist.
       'max-lines': ['error', { max: 200, skipBlankLines: true, skipComments: true }],
       'max-lines-per-function': [
         'error',
