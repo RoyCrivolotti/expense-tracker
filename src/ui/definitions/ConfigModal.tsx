@@ -4,6 +4,7 @@ import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import { Modal } from '../components/Modal'
 import { RecordForm } from './RecordForm'
+import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import type { FieldSpec, FieldValue } from './recordFields'
 
 export type EditTarget =
@@ -12,10 +13,10 @@ export type EditTarget =
   | { kind: 'settings' }
   | { kind: 'goals' }
 
-const CATEGORY_FIELDS: FieldSpec[] = [
+const categoryFields = (cur: string): FieldSpec[] => [
   { key: 'name', label: 'Name', kind: 'text' },
   { key: 'icon', label: 'Icon (emoji)', kind: 'text' },
-  { key: 'monthlyBudgetCents', label: 'Monthly budget (€)', kind: 'money' },
+  { key: 'monthlyBudgetCents', label: `Monthly budget (${cur})`, kind: 'money' },
   { key: 'sortOrder', label: 'Sort order', kind: 'number' },
   { key: 'active', label: 'Active', kind: 'toggle' },
 ]
@@ -41,17 +42,17 @@ const ACCOUNT_FIELDS: FieldSpec[] = [
   },
   { key: 'active', label: 'Active', kind: 'toggle' },
 ]
-const SETTINGS_FIELDS: FieldSpec[] = [
-  { key: 'openingCashCents', label: 'Opening cash (€)', kind: 'money' },
-  { key: 'openingInvestmentCents', label: 'Opening investments (€)', kind: 'money' },
-  { key: 'liquidNetWorthCents', label: 'Liquid net worth (€)', kind: 'money' },
+const settingsFields = (cur: string): FieldSpec[] => [
+  { key: 'openingCashCents', label: `Opening cash (${cur})`, kind: 'money' },
+  { key: 'openingInvestmentCents', label: `Opening investments (${cur})`, kind: 'money' },
+  { key: 'liquidNetWorthCents', label: `Liquid net worth (${cur})`, kind: 'money' },
 ]
-const GOAL_FIELDS: FieldSpec[] = [
-  { key: 'housePriceCents', label: 'House price (€)', kind: 'money' },
+const goalFields = (cur: string): FieldSpec[] => [
+  { key: 'housePriceCents', label: `House price (${cur})`, kind: 'money' },
   { key: 'downPaymentFraction', label: 'Down payment (%)', kind: 'percent' },
   { key: 'mortgageTermYears', label: 'Mortgage term (years)', kind: 'number' },
   { key: 'mortgageRateAnnual', label: 'Mortgage rate (%)', kind: 'percent' },
-  { key: 'longTermTargetCents', label: 'Long-term target (€)', kind: 'money' },
+  { key: 'longTermTargetCents', label: `Long-term target (${cur})`, kind: 'money' },
   { key: 'horizonYears', label: 'Horizon (years)', kind: 'number' },
   { key: 'expectedRealReturn', label: 'Expected real return (%)', kind: 'percent' },
 ]
@@ -68,13 +69,14 @@ function categoryConfig(
   target: Extract<EditTarget, { kind: 'category' }>,
   model: ExpenseModel,
   actions: ExpenseActions,
+  cur: string,
 ): Config {
   const nextOrder = Math.max(0, ...model.dataset.categories.map((c) => c.sortOrder)) + 1
   const record = target.record
   return {
     title: record ? `Edit ${record.name}` : 'New category',
     submitLabel: record ? 'Save category' : 'Add category',
-    fields: CATEGORY_FIELDS,
+    fields: categoryFields(cur),
     initial: record ?? { active: true, sortOrder: nextOrder, monthlyBudgetCents: 0 },
     onSubmit: (patch) =>
       record
@@ -100,14 +102,19 @@ function accountConfig(
   }
 }
 
-function buildConfig(target: EditTarget, model: ExpenseModel, actions: ExpenseActions): Config {
-  if (target.kind === 'category') return categoryConfig(target, model, actions)
+function buildConfig(
+  target: EditTarget,
+  model: ExpenseModel,
+  actions: ExpenseActions,
+  cur: string,
+): Config {
+  if (target.kind === 'category') return categoryConfig(target, model, actions, cur)
   if (target.kind === 'account') return accountConfig(target, actions)
   if (target.kind === 'settings') {
     return {
       title: 'Opening balances',
       submitLabel: 'Save balances',
-      fields: SETTINGS_FIELDS,
+      fields: settingsFields(cur),
       initial: model.dataset.settings,
       onSubmit: (patch) => actions.updateSettings(patch),
     }
@@ -115,7 +122,7 @@ function buildConfig(target: EditTarget, model: ExpenseModel, actions: ExpenseAc
   return {
     title: 'Goal inputs',
     submitLabel: 'Save goals',
-    fields: GOAL_FIELDS,
+    fields: goalFields(cur),
     initial: model.dataset.goalInputs,
     onSubmit: (patch) => actions.updateGoals(patch),
   }
@@ -129,7 +136,8 @@ interface ConfigModalProps {
 }
 
 export function ConfigModal({ target, model, actions, onClose }: ConfigModalProps) {
-  const cfg = buildConfig(target, model, actions)
+  const { symbol } = useMoneyFormat()
+  const cfg = buildConfig(target, model, actions, symbol)
   return (
     <Modal title={cfg.title} onClose={onClose}>
       <RecordForm

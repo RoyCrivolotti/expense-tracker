@@ -119,6 +119,16 @@ The Iberia guess itself was wrong: `inferIberiaPaidOn` used `nextBudgetMonth(bud
 
 If a future migration ever needs a similar one-time backfill, don't resurrect date-guessing: default new `paid=1` rows to `todayLocalIso()` and let the user correct the date manually, same as the live UI does.
 
+## Currency, number format & budget months
+
+Three per-owner `settings` columns (nullable, migration `0011`) generalise the tracker beyond one owner's euros-and-13th conventions: `currency_code`, `number_locale`, and `budget_rollover_day`. `NULL` on any of them falls back to built-in defaults (EUR, `de-DE` grouping, rollover day 1). They are set during onboarding (the "Money & months" step) and editable under Settings → Money & months.
+
+Display is driven by a resolved `MoneyFormat` (`resolveMoneyFormat(currencyCode, numberLocale)`) provided app-wide via `MoneyFormatProvider`; components read it with `useMoneyFormat()` while pure helpers (`formatCents`, `formatMoneyInput`, `parseMoneyToCents`) take a `MoneyFormat` argument. Money inputs are free-text with `inputMode="decimal"` so a comma-decimal locale is not rejected by a numeric field.
+
+`budget_rollover_day` (1–28) sets the day a new transaction starts counting toward the next budget month. `defaultBudgetMonth(isoDate, rolloverDay)` applies it; day 1 means plain calendar months. It threads through the transaction form defaults, the date field, statement-add seeds, and the non-monthly fallback in `detectRecurring` (monthly recurring patterns still use each group's learned offset). The primary owner keeps the historical day-13 rollover via the migration's final `UPDATE` (replace the placeholder email with the real Access email before applying).
+
+The cash reconciliation table derives a never-stored `reconciled` flag per month (`actualCashCents !== null && unpaidLiabilityCents === 0`) and shows a ✓ badge; it does not block editing.
+
 ## Installment plans
 
 An installment plan models one bounded purchase split into a fixed number of equal monthly payments (e.g. a phone financed over 24 months), distinct from recurring detection which infers patterns. A plan lives in `installment_plans` (owner-scoped, migration `0009`); each recorded payment is a normal transaction carrying `plan_id` + `installment_index`. The index is assigned server-side from recorded progress on write (insert, or link/move on update); the duplicate check excludes the row being saved so a linked row can be re-saved at its own index. A partial unique index (`owner, plan_id, installment_index`) blocks duplicates. Plan-linked transactions are excluded from recurring suggestions.

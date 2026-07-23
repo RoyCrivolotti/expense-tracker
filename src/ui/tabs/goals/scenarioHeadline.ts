@@ -1,10 +1,12 @@
 import type { GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import {
+  EU_MONEY_FORMAT,
   formatCents,
   projectNetWorth,
   scenarioToParams,
   yearsToFi,
+  type MoneyFormat,
 } from '../../../engine'
 
 type ScenarioLike = GoalScenario | NewGoalScenario
@@ -23,6 +25,7 @@ function shortName(name: string): string {
 export function scenarioHeadline(
   scenario: ScenarioLike,
   actualMonthlySavingCents?: number,
+  format: MoneyFormat = EU_MONEY_FORMAT,
 ): ScenarioHeadline {
   const params = scenarioToParams('id' in scenario ? scenario : { ...scenario, id: 0 })
   const series = projectNetWorth(params)
@@ -34,14 +37,14 @@ export function scenarioHeadline(
   const primary = primaryParts.join(' · ')
 
   const secondaryParts = [
-    `${formatCents(end?.netWorthCents ?? 0)} net worth @ ${scenario.horizonYears}y`,
-    `plan ${formatCents(scenario.monthlyContributionCents)}/mo`,
+    `${formatCents(end?.netWorthCents ?? 0, format)} net worth @ ${scenario.horizonYears}y`,
+    `plan ${formatCents(scenario.monthlyContributionCents, format)}/mo`,
   ]
   if (
     actualMonthlySavingCents != null &&
     actualMonthlySavingCents !== scenario.monthlyContributionCents
   ) {
-    secondaryParts.push(`actual avg ${formatCents(actualMonthlySavingCents)}/mo`)
+    secondaryParts.push(`actual avg ${formatCents(actualMonthlySavingCents, format)}/mo`)
   }
 
   return { primary, secondary: secondaryParts.join(' · ') }

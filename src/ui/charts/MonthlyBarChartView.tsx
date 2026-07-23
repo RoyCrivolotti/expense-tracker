@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { formatCents } from '../../engine/money'
+import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { ChartTooltip } from './ChartTooltip'
 import { ChartYAxis } from './ChartYAxis'
 import { CHART_H, CHART_W, PAD, monthLabel, yAt } from './chartLayout'
@@ -33,6 +34,7 @@ export function MonthlyBarChartView({
   xForIndex,
   pointerHandlers,
 }: Props) {
+  const format = useMoneyFormat()
   const svgRef = useRef<SVGSVGElement>(null)
   const focus = active != null ? rows[active] : null
   const anchor = useSvgAnchor(svgRef, focus ? focusX : null, focus ? PAD.top : null)
@@ -72,8 +74,8 @@ export function MonthlyBarChartView({
           anchor={anchor}
           title={monthLabel(focus.month)}
           lines={[
-            { label: 'Income', value: formatCents(focus.income), tone: 'income' },
-            { label: 'Expenses', value: formatCents(focus.expenses), tone: 'expense' },
+            { label: 'Income', value: formatCents(focus.income, format), tone: 'income' },
+            { label: 'Expenses', value: formatCents(focus.expenses, format), tone: 'expense' },
           ]}
         />
       )}

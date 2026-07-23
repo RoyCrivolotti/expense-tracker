@@ -39,4 +39,11 @@ export interface DetectRecurringOptions {
    * Monthly patterns predict on the canonical day within this budget month.
    */
   forBudgetMonth?: string
+  /**
+   * Owner's budget-month rollover day, used only when a non-monthly prediction
+   * has to derive its budget month from a predicted calendar date. Monthly
+   * patterns use each group's learned offset instead. Defaults to calendar
+   * months (day 1).
+   */
+  rolloverDay?: number
 }

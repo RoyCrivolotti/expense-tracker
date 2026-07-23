@@ -6,8 +6,9 @@ import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
 import { sparseLabels } from '../../../charts/linearScale'
-import { formatEuroShort } from '../chartTheme'
+import { formatMoneyShort } from '../chartTheme'
 import { purchaseBreakdownTooltipLines } from '../purchaseTooltip'
+import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import styles from '../goals.module.css'
 
 const COMPOSITION_LEGEND: LegendItem[] = [
@@ -29,6 +30,7 @@ function CompositionChartImpl({
     () => projectNetWorth(scenarioToParams({ ...draft, id: 0 })),
     [draft],
   )
+  const format = useMoneyFormat()
   const years = points.map((p) => p.year)
   const labels = useMemo(() => sparseLabels(years, 5), [years])
 
@@ -57,17 +59,17 @@ function CompositionChartImpl({
     const p = points[i]
     const year = years[i] ?? i
     const lines: TooltipLine[] = [
-      { label: 'Invested', value: formatEuroShort(p?.investedCents ?? 0), tone: 'neutral' },
-      { label: 'House equity', value: formatEuroShort(p?.houseEquityCents ?? 0), tone: 'neutral' },
-      { label: 'Mortgage', value: formatEuroShort(p?.mortgageBalanceCents ?? 0), tone: 'neutral' },
+      { label: 'Invested', value: formatMoneyShort(p?.investedCents ?? 0, format), tone: 'neutral' },
+      { label: 'House equity', value: formatMoneyShort(p?.houseEquityCents ?? 0, format), tone: 'neutral' },
+      { label: 'Mortgage', value: formatMoneyShort(p?.mortgageBalanceCents ?? 0, format), tone: 'neutral' },
       {
         label: 'Net worth',
-        value: formatEuroShort(p?.netWorthCents ?? 0),
+        value: formatMoneyShort(p?.netWorthCents ?? 0, format),
         tone: 'neutral',
       },
     ]
     const breakdown = purchaseYearBreakdown(scenarioToParams({ ...draft, id: 0 }), year)
-    if (breakdown) lines.push(...purchaseBreakdownTooltipLines(breakdown))
+    if (breakdown) lines.push(...purchaseBreakdownTooltipLines(breakdown, format))
     return { title: `Year ${year}`, lines }
   }
 
@@ -81,7 +83,7 @@ function CompositionChartImpl({
         height={height}
         series={series}
         xLabels={labels}
-        formatValue={formatEuroShort}
+        formatValue={(c) => formatMoneyShort(c, format)}
         ariaLabel="Net worth composition by year"
         tooltip={tooltip}
       />

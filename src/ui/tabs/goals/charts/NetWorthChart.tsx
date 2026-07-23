@@ -8,7 +8,8 @@ import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
 import { sparseLabels } from '../../../charts/linearScale'
-import { formatEuroShort } from '../chartTheme'
+import { formatMoneyShort } from '../chartTheme'
+import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import {
   ScenarioSeriesLegend,
   type ScenarioLegendBreakdown,
@@ -167,6 +168,7 @@ function NetWorthChartImpl({
   variant?: 'default' | 'hero'
   footer?: ReactNode
 }) {
+  const format = useMoneyFormat()
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const onActiveIndexChange = useCallback((index: number | null) => {
     setActiveIndex(index)
@@ -201,7 +203,7 @@ function NetWorthChartImpl({
     const year = years[i] ?? i
     const lines: TooltipLine[] = series.map((s, idx) => ({
       label: names[idx] ?? s.id,
-      value: formatEuroShort(s.values[i] ?? 0),
+      value: formatMoneyShort(s.values[i] ?? 0, format),
       tone: 'neutral',
     }))
     return { title: `Year ${year}`, lines }
@@ -229,7 +231,7 @@ function NetWorthChartImpl({
         xLabels={labels}
         refLines={refLines}
         markerYears={isHero ? markerYears : []}
-        formatValue={formatEuroShort}
+        formatValue={(c) => formatMoneyShort(c, format)}
         ariaLabel="Invested portfolio projection by year"
         tooltip={tooltip}
         tooltipMode={isHero ? 'hidden' : 'full'}

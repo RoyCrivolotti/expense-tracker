@@ -87,11 +87,13 @@ If Workers Scripts Edit is missing, CI deploy of the backup cron worker fails un
 npx wrangler d1 execute roy-expenses --remote --file=migrations/NNNN_name.sql
 ```
 
-Apply through `0010_installment_due_day.sql` on production. Personal goal scenarios: `npm run seed:scenarios` (reads gitignored seed config or `FINANCIAL_REVIEW_DIR`).
+Apply through `0011_user_preferences.sql` on production. Personal goal scenarios: `npm run seed:scenarios` (reads gitignored seed config or `FINANCIAL_REVIEW_DIR`).
 
 `0009_installment_plans.sql` adds the `installment_plans` table plus `plan_id` / `installment_index` columns on `transactions`. Apply it before (or with) the code deploy that reads those columns.
 
 `0010_installment_due_day.sql` adds the nullable `due_day_of_month` column on `installment_plans` (existing rows stay `NULL`). Apply it before (or with) the code deploy that reads it for due-soon filtering on the Transactions cards.
+
+`0011_user_preferences.sql` adds three nullable `settings` columns — `currency_code`, `number_locale`, `budget_rollover_day` — so the tracker is not tied to one owner's euros-and-13th conventions. `NULL` falls back to the built-in defaults (EUR, `de-DE` grouping, rollover day 1 = plain calendar months). The migration's final `UPDATE` keeps the primary owner on the historical day-13 rollover: replace the placeholder `owner@example.com` with the real Access email before applying to production. Users change all three later under Settings → Money & months (also set during onboarding).
 
 ## Old URL
 

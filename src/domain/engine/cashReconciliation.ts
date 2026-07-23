@@ -40,6 +40,11 @@ export interface CashRow {
   /** gapCents − carryoverGapCents when both are defined. */
   monthGapCents: number | null
   unpaidLiabilityCents: number
+  /**
+   * Derived month-end marker (never stored): every deferred-card statement is
+   * paid and real cash has been entered, so the month is fully squared away.
+   */
+  reconciled: boolean
 }
 
 interface MonthAgg {
@@ -132,6 +137,7 @@ export function computeCashReconciliation(
       carryoverGapCents,
       monthGapCents,
       unpaidLiabilityCents: unpaid,
+      reconciled: actual !== null && unpaid === 0,
     })
   }
   return rows

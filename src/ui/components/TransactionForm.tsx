@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import type { Transaction } from '../../types'
 import type { NewTransaction } from '../../data/dataSource'
-import { parseEuroToCents } from '../../engine/money'
+import { parseMoneyToCents } from '../../engine/money'
+import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import type { ExpenseModel } from '../useExpenseData'
 import type { TransactionSeed } from '../actions'
 import { Fields } from './TransactionFields'
@@ -86,7 +87,8 @@ export function TransactionForm({
   onDuplicate,
   onClose,
 }: FormProps) {
-  const [form, setForm] = useState<FormFields>(() => initialFields(editing, model, seed))
+  const format = useMoneyFormat()
+  const [form, setForm] = useState<FormFields>(() => initialFields(editing, model, format, seed))
   const [draft, setDraft] = useState<InstallmentDraft>(() => initialDraft(editing, model, seed))
   const [view, setView] = useState<'fields' | 'installment'>('fields')
   const [busy, setBusy] = useState(false)
@@ -96,7 +98,7 @@ export function TransactionForm({
     (key, value) => setDraft((d) => ({ ...d, [key]: value }))
 
   const submit = async () => {
-    const cents = Math.abs(parseEuroToCents(form.amount))
+    const cents = Math.abs(parseMoneyToCents(form.amount, format))
     if (cents <= 0) {
       setErr('Enter an amount greater than zero')
       return

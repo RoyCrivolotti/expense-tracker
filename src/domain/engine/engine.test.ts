@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import type { Account, AccountStatement, Transaction } from '../types'
-import { formatCents, formatEuroInput, formatPercent, parseEuroToCents, parsePercentToFraction } from './money'
+import {
+  formatCents,
+  formatEuroInput,
+  formatMoneyInput,
+  formatPercent,
+  parseEuroToCents,
+  parseMoneyToCents,
+  parsePercentToFraction,
+  resolveMoneyFormat,
+} from './money'
 import { budgetMonthFromName, defaultBudgetMonth, parseHumanDate, parseIsoDate } from './dates'
 import { fv, nper, pmt } from './finance'
 import { deriveStatus, deriveTransactions } from './status'
@@ -40,6 +49,30 @@ describe('money', () => {
   })
 })
 
+describe('money — US format', () => {
+  const usd = resolveMoneyFormat('USD', 'en-US')
+
+  it('derives a prefix symbol and dot decimal separator', () => {
+    expect(usd.symbol).toBe('$')
+    expect(usd.symbolPosition).toBe('prefix')
+    expect(usd.decimalSeparator).toBe('.')
+  })
+  it('parses US currency strings to cents (dot is the decimal)', () => {
+    expect(parseMoneyToCents('$1,456.60', usd)).toBe(145660)
+    expect(parseMoneyToCents('1.10', usd)).toBe(110)
+    expect(parseMoneyToCents('250000', usd)).toBe(25000000)
+    expect(parseMoneyToCents('-639.06', usd)).toBe(-63906)
+  })
+  it('formats cents as US strings with a leading symbol', () => {
+    expect(formatCents(145660, usd)).toBe('$1,456.60')
+    expect(formatCents(-63906, usd)).toBe('-$639.06')
+    expect(formatMoneyInput(110, usd)).toBe('1.10')
+  })
+  it('formats percentages with the locale decimal separator', () => {
+    expect(formatPercent(0.05, usd)).toBe('5.0%')
+  })
+})
+
 describe('dates', () => {
   it('parses human dates to ISO', () => {
     expect(parseHumanDate('23 Oct 2025')).toBe('2025-10-23')
@@ -49,10 +82,15 @@ describe('dates', () => {
     expect(budgetMonthFromName('January', 2026)).toBe('2026-01')
     expect(budgetMonthFromName('June', 2026)).toBe('2026-06')
   })
-  it('defaults budget month with a 13th rollover', () => {
-    expect(defaultBudgetMonth('2026-01-05')).toBe('2026-01')
-    expect(defaultBudgetMonth('2026-01-13')).toBe('2026-02')
-    expect(defaultBudgetMonth('2026-12-20')).toBe('2027-01')
+  it('defaults budget month with a configurable rollover day', () => {
+    expect(defaultBudgetMonth('2026-01-05', 13)).toBe('2026-01')
+    expect(defaultBudgetMonth('2026-01-13', 13)).toBe('2026-02')
+    expect(defaultBudgetMonth('2026-12-20', 13)).toBe('2027-01')
+  })
+  it('treats rollover day 1 as plain calendar months', () => {
+    expect(defaultBudgetMonth('2026-01-05', 1)).toBe('2026-01')
+    expect(defaultBudgetMonth('2026-01-31', 1)).toBe('2026-01')
+    expect(defaultBudgetMonth('2026-12-20')).toBe('2026-12')
   })
   it('validates ISO calendar dates', () => {
     expect(parseIsoDate('2026-06-15')).toBe('2026-06-15')

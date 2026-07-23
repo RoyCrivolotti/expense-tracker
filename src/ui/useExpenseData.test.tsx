@@ -2,6 +2,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { ExpenseDataset } from '../types'
 import type { ExpenseDataSource } from '../data/dataSource'
+import { defaultExpenseSettings } from '../engine'
 import { useExpenseData } from './useExpenseData'
 
 const emptyDataset: ExpenseDataset = {
@@ -21,12 +22,7 @@ const emptyDataset: ExpenseDataset = {
   },
   goalScenarios: [],
   installmentPlans: [],
-  settings: {
-    openingCashCents: 0,
-    openingInvestmentCents: 0,
-    liquidNetWorthCents: 0,
-    defaultAccountId: null,
-  },
+  settings: defaultExpenseSettings(),
 }
 
 describe('useExpenseData', () => {

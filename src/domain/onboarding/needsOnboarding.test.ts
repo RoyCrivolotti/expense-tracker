@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ExpenseDataset } from '../types'
+import { defaultExpenseSettings } from '../engine'
 import { needsOnboarding } from './needsOnboarding'
 
 const empty: ExpenseDataset = {
@@ -19,12 +20,7 @@ const empty: ExpenseDataset = {
   },
   goalScenarios: [],
   installmentPlans: [],
-  settings: {
-    openingCashCents: 0,
-    openingInvestmentCents: 0,
-    liquidNetWorthCents: 0,
-    defaultAccountId: null,
-  },
+  settings: defaultExpenseSettings(),
 }
 
 describe('needsOnboarding', () => {

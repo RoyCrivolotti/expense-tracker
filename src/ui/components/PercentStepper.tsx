@@ -1,11 +1,12 @@
 import { useCallback } from 'react'
-import { formatPercent, parsePercentToFraction } from '../../engine'
+import { formatPercent, parsePercentToFraction, type MoneyFormat } from '../../engine'
+import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import styles from './PercentStepper.module.css'
 
 const STEP = 0.005
 
-function draftFromFraction(fraction: number): string {
-  return (fraction * 100).toFixed(1).replace('.', ',')
+function draftFromFraction(fraction: number, format: MoneyFormat): string {
+  return (fraction * 100).toFixed(1).replace('.', format.decimalSeparator)
 }
 
 interface PercentStepperProps {
@@ -23,6 +24,7 @@ export function PercentStepper({
   max = 0.2,
   disabled = false,
 }: PercentStepperProps) {
+  const format = useMoneyFormat()
   const readOnly = disabled || onChange == null
 
   const commit = useCallback(
@@ -34,7 +36,7 @@ export function PercentStepper({
   )
 
   if (readOnly) {
-    return <span className={styles.static}>{formatPercent(value)}</span>
+    return <span className={styles.static}>{formatPercent(value, format)}</span>
   }
 
   return (
@@ -53,10 +55,10 @@ export function PercentStepper({
         type="text"
         inputMode="decimal"
         aria-label="Annual return percentage"
-        defaultValue={draftFromFraction(value)}
-        onBlur={(e) => commit(parsePercentToFraction(e.target.value))}
+        defaultValue={draftFromFraction(value, format)}
+        onBlur={(e) => commit(parsePercentToFraction(e.target.value, format))}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') commit(parsePercentToFraction(e.currentTarget.value))
+          if (e.key === 'Enter') commit(parsePercentToFraction(e.currentTarget.value, format))
         }}
       />
       <button

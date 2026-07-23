@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Account, ExpenseSettings } from '../types'
+import { defaultExpenseSettings } from '../engine'
 import { resolveDefaultAccountId } from './defaultAccount'
 
 const accounts: Account[] = [
@@ -7,12 +8,7 @@ const accounts: Account[] = [
   { id: 2, name: 'Iberia', kind: 'credit', settlement: 'deferred', active: true },
 ]
 
-const settings: ExpenseSettings = {
-  openingCashCents: 0,
-  openingInvestmentCents: 0,
-  liquidNetWorthCents: 0,
-  defaultAccountId: null,
-}
+const settings: ExpenseSettings = defaultExpenseSettings()
 
 describe('resolveDefaultAccountId', () => {
   it('uses configured default when valid', () => {

@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { ExpenseModel } from '../../useExpenseData'
 import { computeMonthlyTotals, formatCents, fullMonthLabel } from '../../../engine'
+import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import styles from './mobile.module.css'
 
 function valueColor(cents: number, type: 'income' | 'expense' | 'signed' | 'neutral'): string {
@@ -41,7 +42,8 @@ export function MonthlyTotalsMobile({ model }: { model: ExpenseModel }) {
 }
 
 function Row({ label, cents, color }: { label: string; cents: number; color: string }) {
-  const display = cents === 0 ? '—' : formatCents(cents, false)
+  const format = useMoneyFormat()
+  const display = cents === 0 ? '—' : formatCents(cents, format, false)
   return (
     <div className={styles.row}>
       <span className={styles.rowLabel}>{label}</span>

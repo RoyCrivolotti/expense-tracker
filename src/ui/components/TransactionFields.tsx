@@ -3,6 +3,7 @@ import type { Transaction, TxnType } from '../../types'
 import type { DescriptionSuggestion } from '../../data/descriptionIndex'
 import { defaultBudgetMonth } from '../../engine/dates'
 import type { ExpenseModel } from '../useExpenseData'
+import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { DescriptionCombobox } from './DescriptionCombobox'
 import type { FormFields, Setter } from './transactionFormState'
 import styles from './TransactionForm.module.css'
@@ -109,14 +110,15 @@ interface FieldsProps {
 }
 
 export function Fields({ form, set, model, editing, onAcceptSuggestion }: FieldsProps) {
+  const format = useMoneyFormat()
   const onDate = (v: string) => {
     set('date', v)
-    if (!editing) set('budgetMonth', defaultBudgetMonth(v))
+    if (!editing) set('budgetMonth', defaultBudgetMonth(v, model.dataset.settings.budgetRolloverDay))
   }
   return (
     <>
       <TypeSelector value={form.type} onChange={(t) => set('type', t)} />
-      <Field label="Amount (€)">
+      <Field label={`Amount (${format.symbol})`}>
         <input
           className={styles.amount}
           type="text"

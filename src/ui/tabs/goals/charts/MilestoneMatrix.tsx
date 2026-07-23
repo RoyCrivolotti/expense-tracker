@@ -7,7 +7,8 @@ import {
   yearsToTargetFromProjection,
 } from '../../../../engine'
 import { ChartShell } from './ChartShell'
-import { formatEuroShort } from '../chartTheme'
+import { formatMoneyShort } from '../chartTheme'
+import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import styles from '../goals.module.css'
 
 function shortName(name: string): string {
@@ -61,6 +62,7 @@ function MilestoneMatrixImpl({
   draft: NewGoalScenario
   embedded?: boolean
 }) {
+  const format = useMoneyFormat()
   const rows = useMemo(() => buildRows(scenarios, draft), [scenarios, draft])
 
   return (
@@ -74,7 +76,7 @@ function MilestoneMatrixImpl({
               <th className={styles.milestoneScenarioHead}>Scenario</th>
               {MILESTONE_CENTS.map((m) => (
                 <th key={m} className={styles.milestoneHead}>
-                  {formatEuroShort(m)}
+                  {formatMoneyShort(m, format)}
                 </th>
               ))}
             </tr>

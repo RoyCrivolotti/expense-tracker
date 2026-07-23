@@ -5,7 +5,8 @@ import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
 import { sparseLabels } from '../../../charts/linearScale'
-import { formatEuroShort } from '../chartTheme'
+import { formatMoneyShort } from '../chartTheme'
+import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import styles from '../goals.module.css'
 
 export interface MonthlySaving {
@@ -34,6 +35,7 @@ function SavingsRateChartImpl({
   height?: number
   embedded?: boolean
 }) {
+  const format = useMoneyFormat()
   const recent = useMemo(() => monthly.slice(-18), [monthly])
   const labels = useMemo(() => {
     const step = Math.max(1, Math.ceil(recent.length / 6))
@@ -58,8 +60,8 @@ function SavingsRateChartImpl({
   const tooltip = (i: number): { title: string; lines: TooltipLine[] } => ({
     title: recent[i]?.month ?? '',
     lines: [
-      { label: 'Saved', value: formatEuroShort(recent[i]?.netSavingCents ?? 0), tone: 'neutral' },
-      { label: 'Plan', value: formatEuroShort(draft.monthlyContributionCents), tone: 'neutral' },
+      { label: 'Saved', value: formatMoneyShort(recent[i]?.netSavingCents ?? 0, format), tone: 'neutral' },
+      { label: 'Plan', value: formatMoneyShort(draft.monthlyContributionCents, format), tone: 'neutral' },
     ],
   })
 
@@ -68,14 +70,14 @@ function SavingsRateChartImpl({
       <h3 className={styles.chartTitle}>Actual saving vs plan</h3>
       <p className={styles.chartHint}>
         Monthly net saving from posted transactions vs the{' '}
-        {formatEuroShort(draft.monthlyContributionCents)}/mo this scenario assumes.
+        {formatMoneyShort(draft.monthlyContributionCents, format)}/mo this scenario assumes.
       </p>
       <LinearChart
         height={height}
         series={series}
         xLabels={labels}
         refLines={[draft.monthlyContributionCents]}
-        formatValue={formatEuroShort}
+        formatValue={(c) => formatMoneyShort(c, format)}
         ariaLabel="Monthly net saving versus planned contribution"
         tooltip={tooltip}
       />

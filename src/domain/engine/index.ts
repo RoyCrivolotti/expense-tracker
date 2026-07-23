@@ -1,6 +1,7 @@
 /** Barrel for the expense compute engine. */
 export * from './money'
 export * from './dates'
+export * from './defaults'
 export * from './finance'
 export * from './status'
 export * from './monthlyTotals'

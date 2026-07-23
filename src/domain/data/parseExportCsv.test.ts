@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { EXPORT_CSV_HEADER } from './exportCsvFormat'
 import { parseExportCsv } from './parseExportCsv'
 import type { ExpenseDataset } from '../types'
+import { defaultExpenseSettings } from '../engine'
 
 const DATASET: ExpenseDataset = {
   categories: [
@@ -24,12 +25,7 @@ const DATASET: ExpenseDataset = {
   },
   goalScenarios: [],
   installmentPlans: [],
-  settings: {
-    openingCashCents: 0,
-    openingInvestmentCents: 0,
-    liquidNetWorthCents: 0,
-    defaultAccountId: null,
-  },
+  settings: defaultExpenseSettings(),
 }
 
 const VALID_ROW =

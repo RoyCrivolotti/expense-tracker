@@ -130,6 +130,7 @@ function resolvePrediction(
   frequency: RecurringFrequency,
   forMonth: string | undefined,
   monthOffset: number,
+  rolloverDay: number | undefined,
 ): { predictedDate: string; predictedBM: string } | null {
   if (forMonth && frequency === 'monthly') {
     // Force viewed budget month; derive the calendar date from this group's own
@@ -142,7 +143,7 @@ function resolvePrediction(
   }
   const predictedDate = predictNextDate(frequency, sorted)
   if (!predictedDate) return null
-  const predictedBM = defaultBudgetMonth(predictedDate)
+  const predictedBM = defaultBudgetMonth(predictedDate, rolloverDay)
   if (forMonth && predictedBM !== forMonth) return null
   return { predictedDate, predictedBM }
 }
@@ -152,6 +153,7 @@ function trySuggestGroup(
   transactions: Transaction[],
   forMonth: string | undefined,
   priorMonth: string | null,
+  rolloverDay: number | undefined,
 ): RecurringSuggestion | null {
   if (priorMonth && !group.budgetMonths.has(priorMonth)) return null
 
@@ -167,7 +169,7 @@ function trySuggestGroup(
   if (regularity < MIN_REGULARITY) return null
 
   const monthOffset = canonicalMonthOffset(group.budgetOffsets)
-  const prediction = resolvePrediction(sorted, frequency, forMonth, monthOffset)
+  const prediction = resolvePrediction(sorted, frequency, forMonth, monthOffset, rolloverDay)
   if (!prediction) return null
   if (isAlreadyEntered(group.key, prediction.predictedBM, transactions)) return null
 
@@ -186,12 +188,13 @@ export function detectRecurring(
   options?: DetectRecurringOptions,
 ): RecurringSuggestion[] {
   const forMonth = options?.forBudgetMonth
+  const rolloverDay = options?.rolloverDay
   const priorMonth = forMonth ? priorBudgetMonth(forMonth) : null
   const groups = groupTransactions(transactions)
   const suggestions: RecurringSuggestion[] = []
 
   for (const group of groups) {
-    const suggestion = trySuggestGroup(group, transactions, forMonth, priorMonth)
+    const suggestion = trySuggestGroup(group, transactions, forMonth, priorMonth, rolloverDay)
     if (suggestion) suggestions.push(suggestion)
   }
 

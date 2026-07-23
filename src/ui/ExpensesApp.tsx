@@ -20,6 +20,7 @@ import { AnalyticsTab } from './tabs/AnalyticsTab'
 import { SettingsTab } from './tabs/SettingsTab'
 import { isOnboardingSkipped } from './onboarding/onboardingStorage'
 import { ConnectivityProvider } from './hooks/ConnectivityProvider'
+import { MoneyFormatProvider } from './hooks/MoneyFormatProvider'
 import { useConnectivityState } from './hooks/useConnectivityState'
 import { useConnectivity } from './hooks/useConnectivity'
 import { usePullToRefresh } from './hooks/usePullToRefresh'
@@ -42,6 +43,7 @@ function TabView({
   ownerAccess,
   accountEmail,
   onNavigate,
+  onRunSetup,
 }: {
   tab: TabId
   model: ExpenseModel
@@ -53,6 +55,7 @@ function TabView({
   ownerAccess?: { pendingCount: number } | undefined
   accountEmail?: string | undefined
   onNavigate: (tab: TabId) => void
+  onRunSetup: () => void
 }) {
   switch (tab) {
     case 'transactions':
@@ -82,6 +85,7 @@ function TabView({
           onThemeChange={onThemeChange}
           ownerAccess={ownerAccess}
           accountEmail={accountEmail}
+          onRunSetup={onRunSetup}
         />
       )
     default:
@@ -165,17 +169,22 @@ function ExpensesAppLoaded({
 }) {
   return (
     <ConnectivityProvider fromCache={fromCache} {...(snapshotAt ? { snapshotAt } : {})}>
-      <ExpensesAppReady
-        source={source}
-        model={model}
-        applyPatch={applyPatch}
-        reload={reload}
-        refreshing={refreshing}
-        refreshOutcome={refreshOutcome}
-        hubGrants={hubGrants}
-        {...(ownerAccess ? { ownerAccess } : {})}
-        {...(accountEmail ? { accountEmail } : {})}
-      />
+      <MoneyFormatProvider
+        currencyCode={model.dataset.settings.currencyCode}
+        numberLocale={model.dataset.settings.numberLocale}
+      >
+        <ExpensesAppReady
+          source={source}
+          model={model}
+          applyPatch={applyPatch}
+          reload={reload}
+          refreshing={refreshing}
+          refreshOutcome={refreshOutcome}
+          hubGrants={hubGrants}
+          {...(ownerAccess ? { ownerAccess } : {})}
+          {...(accountEmail ? { accountEmail } : {})}
+        />
+      </MoneyFormatProvider>
     </ConnectivityProvider>
   )
 }
@@ -278,6 +287,7 @@ function ExpensesAppReady({
             ownerAccess={ownerAccess}
             accountEmail={accountEmail}
             onNavigate={setTab}
+            onRunSetup={() => setOnboardingOpen(true)}
           />
         </div>
       </AppShell>

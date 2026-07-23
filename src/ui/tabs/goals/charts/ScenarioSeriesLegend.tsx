@@ -1,5 +1,6 @@
-import type { PurchaseYearBreakdown } from '../../../../engine'
-import { formatEuroShort, formatSignedEuroShort } from '../chartTheme'
+import type { MoneyFormat, PurchaseYearBreakdown } from '../../../../engine'
+import { formatMoneyShort, formatSignedMoneyShort } from '../chartTheme'
+import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import styles from './ScenarioSeriesLegend.module.css'
 
 export interface ScenarioLegendItem {
@@ -77,28 +78,29 @@ function BreakdownRows({
   color,
   dashed,
   breakdown,
-}: ScenarioLegendBreakdown) {
+  format,
+}: ScenarioLegendBreakdown & { format: MoneyFormat }) {
   const rows: { label: string; value: string; tone?: 'income' | 'expense' | 'neutral' }[] = [
-    { label: 'Start of year', value: formatEuroShort(breakdown.startInvestedCents) },
+    { label: 'Start of year', value: formatMoneyShort(breakdown.startInvestedCents, format) },
     {
       label: 'Return this year',
-      value: formatSignedEuroShort(breakdown.growthCents),
+      value: formatSignedMoneyShort(breakdown.growthCents, format),
       tone: breakdown.growthCents >= 0 ? 'income' : 'expense',
     },
     {
       label: 'Contributions',
-      value: formatSignedEuroShort(breakdown.contributionCents),
+      value: formatSignedMoneyShort(breakdown.contributionCents, format),
       tone: breakdown.contributionCents >= 0 ? 'income' : 'expense',
     },
     {
       label: 'Down payment + fees',
-      value: formatSignedEuroShort(-breakdown.totalWithdrawalCents),
+      value: formatSignedMoneyShort(-breakdown.totalWithdrawalCents, format),
       tone: 'expense',
     },
-    { label: 'End invested', value: formatEuroShort(breakdown.endInvestedCents) },
+    { label: 'End invested', value: formatMoneyShort(breakdown.endInvestedCents, format) },
     {
       label: 'Step vs prior year',
-      value: formatSignedEuroShort(breakdown.netChangeCents),
+      value: formatSignedMoneyShort(breakdown.netChangeCents, format),
       tone: breakdown.netChangeCents >= 0 ? 'income' : 'expense',
     },
   ]
@@ -129,6 +131,7 @@ export function ScenarioSeriesLegend({
   breakdowns,
   yearZeroHint = false,
 }: ScenarioSeriesLegendProps) {
+  const format = useMoneyFormat()
   if (items.length === 0) return null
 
   return (
@@ -144,7 +147,7 @@ export function ScenarioSeriesLegend({
             <SeriesSwatch color={item.color} {...(item.dashed ? { dashed: true } : {})} />
             <span className={styles.label}>{item.label}</span>
             <span className={styles.value}>
-              {item.valueCents != null ? formatEuroShort(item.valueCents) : ''}
+              {item.valueCents != null ? formatMoneyShort(item.valueCents, format) : ''}
             </span>
           </li>
         ))}
@@ -152,7 +155,7 @@ export function ScenarioSeriesLegend({
       {breakdowns.length > 0 ? (
         <div className={styles.breakdownStack}>
           {breakdowns.map((entry) => (
-            <BreakdownRows key={entry.label} {...entry} />
+            <BreakdownRows key={entry.label} {...entry} format={format} />
           ))}
         </div>
       ) : null}

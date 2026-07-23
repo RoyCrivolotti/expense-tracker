@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { formatCents } from '../../engine/money'
+import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { ChartTooltip } from './ChartTooltip'
 import { ChartYAxis } from './ChartYAxis'
 import { CHART_H, CHART_W, PAD, monthLabel } from './chartLayout'
@@ -33,6 +34,7 @@ export function YtdLineChartView({
   line,
   pointerHandlers,
 }: Props) {
+  const format = useMoneyFormat()
   const svgRef = useRef<SVGSVGElement>(null)
   const focus = active != null ? points[active] : null
   const anchor = useSvgAnchor(svgRef, focus ? focusX : null, focus ? PAD.top : null)
@@ -68,9 +70,9 @@ export function YtdLineChartView({
           anchor={anchor}
           title={monthLabel(focus.month)}
           lines={[
-            { label: 'Cumulative income', value: formatCents(focus.cumIncome), tone: 'income' },
-            { label: 'Cumulative expenses', value: formatCents(focus.cumExpense), tone: 'expense' },
-            { label: 'Net', value: formatCents(focus.cumIncome - focus.cumExpense), tone: 'neutral' },
+            { label: 'Cumulative income', value: formatCents(focus.cumIncome, format), tone: 'income' },
+            { label: 'Cumulative expenses', value: formatCents(focus.cumExpense, format), tone: 'expense' },
+            { label: 'Net', value: formatCents(focus.cumIncome - focus.cumExpense, format), tone: 'neutral' },
           ]}
         />
       )}

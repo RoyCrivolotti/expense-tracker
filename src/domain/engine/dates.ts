@@ -1,8 +1,9 @@
 /**
  * Date and budget-month helpers. The source data uses two notions of time:
  * a calendar date ("23 Oct 2025") and a manually-assigned budget month
- * ("January"). New entries default their budget month from the date with a
- * rollover on the 13th, but imported rows keep their explicit budget month.
+ * ("January"). New entries default their budget month from the date using the
+ * owner's configurable rollover day, but imported rows keep their explicit
+ * budget month.
  */
 
 const MONTHS = [
@@ -35,8 +36,11 @@ const MONTH_NAMES = [
   'December',
 ] as const
 
-/** Day-of-month on/after which a transaction rolls into the next budget month. */
-export const BUDGET_ROLLOVER_DAY = 13
+/**
+ * Rollover day used when a user has no explicit preference. 1 means budget
+ * months equal plain calendar months (no mid-month rollover).
+ */
+export const DEFAULT_BUDGET_ROLLOVER_DAY = 1
 
 /** Parse "23 Oct 2025" / "1 Jan 2026" into an ISO date string YYYY-MM-DD. */
 export function parseHumanDate(raw: string): string | null {
@@ -72,13 +76,17 @@ export function fullMonthLabel(yearMonth: string): string {
 
 /**
  * Default budget month for a new transaction dated `isoDate`. Spending on or
- * after the rollover day counts towards next month's budget.
+ * after `rolloverDay` counts towards next month's budget; a rollover day of 1
+ * keeps the budget month equal to the calendar month.
  */
-export function defaultBudgetMonth(isoDate: string): string {
+export function defaultBudgetMonth(
+  isoDate: string,
+  rolloverDay: number = DEFAULT_BUDGET_ROLLOVER_DAY,
+): string {
   const [year, month, day] = isoDate.split('-').map(Number)
   let y = year ?? 0
   let m = month ?? 1
-  if ((day ?? 1) >= BUDGET_ROLLOVER_DAY) {
+  if (rolloverDay > 1 && (day ?? 1) >= rolloverDay) {
     m += 1
     if (m > 12) {
       m = 1

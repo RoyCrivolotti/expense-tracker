@@ -1,12 +1,14 @@
 import type { ExpenseTheme } from '../hooks/useExpenseTheme'
 import type { ExpenseModel } from '../useExpenseData'
 import { resolveDefaultAccountId } from '../../data/defaultAccount'
+import { needsOnboarding } from '../../domain/onboarding/needsOnboarding'
 import type { ExpenseActions } from '../actions'
 import { Money } from '../components/Money'
 import { Card, EmptyState, Pill, SectionTitle } from '../components/primitives'
 import { StatementToggles } from '../components/StatementToggles'
 import { DefinitionsEditor } from '../definitions/DefinitionsEditor'
 import { AppearanceSetting } from '../settings/AppearanceSetting'
+import { PreferencesSetting } from '../settings/PreferencesSetting'
 import { DefaultAccountSetting } from '../settings/DefaultAccountSetting'
 import { ExportDataSection } from '../settings/ExportDataSection'
 import { ImportDataSection } from '../settings/ImportDataSection'
@@ -22,6 +24,7 @@ interface SettingsTabProps {
   onThemeChange: (next: ExpenseTheme) => void
   ownerAccess?: { pendingCount: number } | undefined
   accountEmail?: string | undefined
+  onRunSetup?: (() => void) | undefined
 }
 
 function Definitions({ model }: { model: ExpenseModel }) {
@@ -96,12 +99,33 @@ export function SettingsTab({
   onThemeChange,
   ownerAccess,
   accountEmail,
+  onRunSetup,
 }: SettingsTabProps) {
+  const showSetupEntry = Boolean(actions && onRunSetup && needsOnboarding(model.dataset))
   return (
     <div className={styles.stack}>
       {accountEmail ? <AccountSetting email={accountEmail} /> : null}
       {ownerAccess ? <AccessRequestsSetting pendingCount={ownerAccess.pendingCount} /> : null}
+
+      {showSetupEntry && (
+        <>
+          <SectionTitle>Get started</SectionTitle>
+          <Card>
+            <EmptyState actionLabel="Run setup wizard" onAction={() => onRunSetup?.()}>
+              Add your categories and accounts to start tracking spending.
+            </EmptyState>
+          </Card>
+        </>
+      )}
+
       <AppearanceSetting theme={theme} onChange={onThemeChange} />
+
+      {actions && (
+        <PreferencesSetting
+          settings={model.dataset.settings}
+          onChange={(patch) => void actions.updateSettings(patch)}
+        />
+      )}
 
       <SectionTitle>Export</SectionTitle>
       <Card>

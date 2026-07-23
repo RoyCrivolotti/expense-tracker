@@ -6,9 +6,11 @@ import styles from './OnboardingWizard.module.css'
 export function OnboardingCategoriesStep({
   drafts,
   onChange,
+  currencySymbol,
 }: {
   drafts: CategoryDraft[]
   onChange: (next: CategoryDraft[]) => void
+  currencySymbol: string
 }) {
   const selectedCount = drafts.filter((d) => d.selected).length
 
@@ -39,10 +41,9 @@ export function OnboardingCategoriesStep({
               <label className={styles.budgetField}>
                 <span className={styles.srOnly}>Monthly budget for {preset.name}</span>
                 <input
-                  type="number"
-                  min="0"
-                  step="10"
+                  type="text"
                   inputMode="decimal"
+                  autoComplete="off"
                   disabled={!draft.selected}
                   value={draft.budgetEuros}
                   onChange={(e) => {
@@ -50,9 +51,9 @@ export function OnboardingCategoriesStep({
                     next[index] = { ...draft, budgetEuros: e.target.value }
                     onChange(next)
                   }}
-                  aria-label={`${preset.name} monthly budget in euros`}
+                  aria-label={`${preset.name} monthly budget`}
                 />
-                <span className={styles.budgetSuffix}>€/mo</span>
+                <span className={styles.budgetSuffix}>{currencySymbol}/mo</span>
               </label>
             </li>
           )

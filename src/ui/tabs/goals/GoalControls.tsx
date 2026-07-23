@@ -1,21 +1,22 @@
 import type { ReactNode } from 'react'
 import type { NewGoalScenario } from '../../../data/dataSource'
-import { formatCents } from '../../../engine'
+import { formatCents, type MoneyFormat } from '../../../engine'
 import {
   MoneyField,
   NumberField,
   PercentField,
   PurchaseYearField,
 } from './goalControlFields'
+import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import styles from './goals.module.css'
 
-function purchaseSummary(draft: NewGoalScenario): string | null {
+function purchaseSummary(draft: NewGoalScenario, format: MoneyFormat): string | null {
   const purchaseYear = draft.housePurchaseYear
   if (purchaseYear === null || purchaseYear === 0) return null
   const down = Math.round(draft.housePriceCents * draft.downPaymentFraction)
   const fees = draft.transactionCostsCents
   const total = down + fees
-  return `Purchase cost from portfolio: ${formatCents(down)} down + ${formatCents(fees)} fees = ${formatCents(total)} (dip on the invested line in year ${purchaseYear}).`
+  return `Purchase cost from portfolio: ${formatCents(down, format)} down + ${formatCents(fees, format)} fees = ${formatCents(total, format)} (dip on the invested line in year ${purchaseYear}).`
 }
 
 interface GoalControlsProps {
@@ -41,7 +42,8 @@ function ControlSection({
 }
 
 export function GoalControls({ draft, onChange }: GoalControlsProps) {
-  const purchaseHint = purchaseSummary(draft)
+  const format = useMoneyFormat()
+  const purchaseHint = purchaseSummary(draft, format)
   return (
     <div className={styles.controlsStack}>
       <ControlSection title="Portfolio">

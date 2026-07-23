@@ -1,11 +1,8 @@
 import { useCallback } from 'react'
-import { parseEuroToCents } from '../../../engine'
+import { formatMoneyInput, parseMoneyToCents } from '../../../engine'
 import { PercentStepper } from '../../components/PercentStepper'
+import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import styles from './goals.module.css'
-
-function centsDraft(cents: number): string {
-  return (cents / 100).toFixed(2).replace('.', ',')
-}
 
 interface MoneyFieldProps {
   label: string
@@ -26,6 +23,7 @@ export function MoneyField({
   onChange,
   showSlider = true,
 }: MoneyFieldProps) {
+  const format = useMoneyFormat()
   const commit = useCallback(
     (next: number) => onChange(Math.min(max, Math.max(min, next))),
     [max, min, onChange],
@@ -41,10 +39,10 @@ export function MoneyField({
           type="text"
           inputMode="decimal"
           aria-label={label}
-          defaultValue={centsDraft(value)}
-          onBlur={(e) => commit(parseEuroToCents(e.target.value))}
+          defaultValue={formatMoneyInput(value, format)}
+          onBlur={(e) => commit(parseMoneyToCents(e.target.value, format))}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') commit(parseEuroToCents(e.currentTarget.value))
+            if (e.key === 'Enter') commit(parseMoneyToCents(e.currentTarget.value, format))
           }}
         />
       </div>

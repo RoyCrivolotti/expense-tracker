@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ExpenseDataset } from '../types'
+import { defaultExpenseSettings } from '../engine'
 import { resolveDescriptionTemplate } from './applyDescriptionSuggestion'
 
 const dataset: ExpenseDataset = {
@@ -14,12 +15,7 @@ const dataset: ExpenseDataset = {
   transactions: [],
   accountStatements: [],
   cashActuals: [],
-  settings: {
-    openingCashCents: 0,
-    openingInvestmentCents: 0,
-    liquidNetWorthCents: 0,
-    defaultAccountId: 10,
-  },
+  settings: { ...defaultExpenseSettings(), defaultAccountId: 10 },
   goalInputs: {
     housePriceCents: 0,
     downPaymentFraction: 0,

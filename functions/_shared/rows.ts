@@ -10,6 +10,8 @@ import type {
   StoredTransaction,
   TxnType,
 } from '../domain/types'
+import { DEFAULT_BUDGET_ROLLOVER_DAY } from '../domain/engine/dates'
+import { DEFAULT_CURRENCY_CODE, DEFAULT_NUMBER_LOCALE } from '../domain/engine/money'
 
 export interface CategoryRow {
   id: number
@@ -109,6 +111,9 @@ export interface SettingsRow {
   opening_investment_cents: number
   liquid_net_worth_cents: number
   default_account_id: number | null
+  currency_code: string | null
+  number_locale: string | null
+  budget_rollover_day: number | null
 }
 
 export interface GoalRow {
@@ -127,6 +132,9 @@ export function toSettings(r: SettingsRow): ExpenseSettings {
     openingInvestmentCents: r.opening_investment_cents,
     liquidNetWorthCents: r.liquid_net_worth_cents,
     defaultAccountId: r.default_account_id ?? null,
+    currencyCode: r.currency_code ?? DEFAULT_CURRENCY_CODE,
+    numberLocale: r.number_locale ?? DEFAULT_NUMBER_LOCALE,
+    budgetRolloverDay: r.budget_rollover_day ?? DEFAULT_BUDGET_ROLLOVER_DAY,
   }
 }
 

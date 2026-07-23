@@ -77,6 +77,11 @@
 .warn {
   color: var(--exp-warning);
 }
+.reconciled {
+  margin-left: 0.35rem;
+  color: var(--exp-income);
+  font-weight: 700;
+}
 .zero {
   color: var(--color-text-muted);
   opacity: 0.55;

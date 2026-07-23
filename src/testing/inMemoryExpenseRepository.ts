@@ -7,6 +7,7 @@ import type {
 } from '../domain/data/dataSource'
 import type { ExpenseRepository } from '../domain/ports/expenseRepository'
 import { deriveStatus, deriveTransactions } from '../domain/engine/status'
+import { defaultExpenseSettings, defaultGoalInputs } from '../domain/engine/defaults'
 import type {
   Account,
   AccountStatement,
@@ -36,22 +37,9 @@ interface OwnerStore {
   installmentPlans: InstallmentPlan[]
 }
 
-const DEFAULT_SETTINGS: ExpenseSettings = {
-  openingCashCents: 0,
-  openingInvestmentCents: 0,
-  liquidNetWorthCents: 0,
-  defaultAccountId: null,
-}
+const DEFAULT_SETTINGS: ExpenseSettings = defaultExpenseSettings()
 
-const DEFAULT_GOALS: GoalInputs = {
-  housePriceCents: 0,
-  downPaymentFraction: 0,
-  mortgageTermYears: 0,
-  mortgageRateAnnual: 0,
-  longTermTargetCents: 0,
-  horizonYears: 0,
-  expectedRealReturn: 0,
-}
+const DEFAULT_GOALS: GoalInputs = defaultGoalInputs()
 
 function nextId(items: { id: number }[]): number {
   return items.reduce((max, item) => Math.max(max, item.id), 0) + 1

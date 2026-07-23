@@ -3,7 +3,8 @@ import type { InstallmentPlan, TxnType } from '../../types'
 import type { NewInstallmentPlan } from '../../data/dataSource'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
-import { formatEuroInput, parseEuroToCents } from '../../engine/money'
+import { formatMoneyInput, parseMoneyToCents, type MoneyFormat } from '../../engine/money'
+import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import formStyles from '../components/TransactionForm.module.css'
 import stepStyles from '../components/InstallmentStep.module.css'
 import styles from './definitions.module.css'
@@ -23,10 +24,10 @@ interface Fields {
   active: boolean
 }
 
-function initialFields(plan: InstallmentPlan): Fields {
+function initialFields(plan: InstallmentPlan, format: MoneyFormat): Fields {
   return {
     description: plan.description,
-    amount: formatEuroInput(plan.amountCents),
+    amount: formatMoneyInput(plan.amountCents, format),
     totalCount: String(plan.totalCount),
     startInstallmentIndex: String(plan.startInstallmentIndex),
     anchorBudgetMonth: plan.anchorBudgetMonth,
@@ -38,10 +39,10 @@ function initialFields(plan: InstallmentPlan): Fields {
   }
 }
 
-function toPayload(f: Fields): NewInstallmentPlan {
+function toPayload(f: Fields, format: MoneyFormat): NewInstallmentPlan {
   return {
     description: f.description.trim(),
-    amountCents: Math.abs(parseEuroToCents(f.amount)),
+    amountCents: Math.abs(parseMoneyToCents(f.amount, format)),
     totalCount: Number(f.totalCount),
     startInstallmentIndex: Number(f.startInstallmentIndex),
     anchorBudgetMonth: f.anchorBudgetMonth,
@@ -61,7 +62,8 @@ interface Props {
 }
 
 export function InstallmentPlanForm({ plan, model, actions, onBack }: Props) {
-  const [f, setF] = useState<Fields>(() => initialFields(plan))
+  const format = useMoneyFormat()
+  const [f, setF] = useState<Fields>(() => initialFields(plan, format))
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const set = <K extends keyof Fields>(key: K, value: Fields[K]) =>
@@ -71,7 +73,7 @@ export function InstallmentPlanForm({ plan, model, actions, onBack }: Props) {
     setBusy(true)
     setErr(null)
     try {
-      await actions.updateInstallmentPlan(plan.id, toPayload(f))
+      await actions.updateInstallmentPlan(plan.id, toPayload(f, format))
       onBack()
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not save')
@@ -96,10 +98,11 @@ export function InstallmentPlanForm({ plan, model, actions, onBack }: Props) {
       </label>
       <div className={formStyles.row}>
         <label className={formStyles.field}>
-          <span className={formStyles.label}>Installment amount (€)</span>
+          <span className={formStyles.label}>Installment amount ({format.symbol})</span>
           <input
-            type="number"
-            step="0.01"
+            type="text"
+            inputMode="decimal"
+            autoComplete="off"
             value={f.amount}
             onChange={(e) => set('amount', e.target.value)}
           />

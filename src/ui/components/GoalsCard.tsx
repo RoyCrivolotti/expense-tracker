@@ -7,6 +7,7 @@ import {
 import { Card, EmptyState, SectionTitle } from './primitives'
 import { scenarioHeadline } from '../tabs/goals/scenarioHeadline'
 import { resolveDashboardScenario } from '../tabs/goals/scenarioSelection'
+import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import styles from './GoalsCard.module.css'
 
 interface GoalsCardProps {
@@ -15,6 +16,7 @@ interface GoalsCardProps {
 }
 
 export function GoalsCard({ dataset, onOpenGoals }: GoalsCardProps) {
+  const format = useMoneyFormat()
   const scenario = useMemo(
     () => resolveDashboardScenario(dataset.goalScenarios),
     [dataset.goalScenarios],
@@ -24,8 +26,8 @@ export function GoalsCard({ dataset, onOpenGoals }: GoalsCardProps) {
     return averageMonthlySaving(totals.map((t) => t.netSavingCents))
   }, [dataset.transactions])
   const headline = useMemo(
-    () => (scenario ? scenarioHeadline(scenario, avgSaving) : null),
-    [scenario, avgSaving],
+    () => (scenario ? scenarioHeadline(scenario, avgSaving, format) : null),
+    [scenario, avgSaving, format],
   )
 
   if (!scenario || !headline) {
