@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { detectRecurring, groupTransactions } from './recurringDetect'
+import { isDueSoon } from './dates'
 import { makeTxn, monthlyDates } from './recurringTestHelpers'
 
 describe('groupTransactions', () => {
@@ -137,7 +138,8 @@ describe('detectRecurring', () => {
     expect(august.every((s) => s.predictedBudgetMonth === '2026-08')).toBe(true)
   })
 
-  it('dates a post-rollover monthly on its real prior-month date (Prime on the 20th)', () => {
+  it('dates a +1 rollover monthly on its real prior-month date (Prime on the 20th)', () => {
+    // Paid the 20th → rolls into the next budget month, so budgetMonth = calendar + 1.
     const txns = [
       { d: '2026-03-20', bm: '2026-04' },
       { d: '2026-04-20', bm: '2026-05' },
@@ -150,6 +152,36 @@ describe('detectRecurring', () => {
     expect(august[0]!.predictedBudgetMonth).toBe('2026-08')
     // Real recurrence date is 20 Jul (which rolls into the August budget), not 20 Aug.
     expect(august[0]!.predictedDate).toBe('2026-07-20')
+    // On 23 Jul it is 3 days overdue, so the due-soon window should surface it.
+    expect(isDueSoon(august[0]!.predictedDate, '2026-07-23')).toBe(true)
+  })
+
+  // Real "Icon charge" data: billed ~13th and booked to the same calendar month
+  // (offset 0), unlike the 20th-of-month +1 rollover case.
+  const iconTxns = [
+    ['2026-01-13', '2026-01'],
+    ['2026-02-12', '2026-02'],
+    ['2026-03-12', '2026-03'],
+    ['2026-04-13', '2026-04'],
+    ['2026-05-13', '2026-05'],
+    ['2026-06-11', '2026-06'],
+    ['2026-07-13', '2026-07'],
+  ].map(([d, bm]) => makeTxn({ date: d!, description: 'Icon charge', budgetMonth: bm! }))
+
+  it('dates an offset-0 monthly inside the viewed budget month (Icon charge ~13th)', () => {
+    const august = detectRecurring(iconTxns, { forBudgetMonth: '2026-08' })
+    expect(august).toHaveLength(1)
+    expect(august[0]!.description).toBe('Icon charge')
+    expect(august[0]!.predictedBudgetMonth).toBe('2026-08')
+    // Stays in August (13 Aug), not shifted back to a already-paid 13 Jul.
+    expect(august[0]!.predictedDate).toBe('2026-08-13')
+    // 13 Aug is 21 days out on 23 Jul, so the due-soon window must NOT surface it yet.
+    expect(isDueSoon(august[0]!.predictedDate, '2026-07-23')).toBe(false)
+  })
+
+  it('does not re-suggest an offset-0 charge already entered in the viewed month', () => {
+    // July budget already has the 13 Jul charge, so no July suggestion.
+    expect(detectRecurring(iconTxns, { forBudgetMonth: '2026-07' })).toHaveLength(0)
   })
 
   it('suggests July when prior BM is June but last calendar date is late May', () => {

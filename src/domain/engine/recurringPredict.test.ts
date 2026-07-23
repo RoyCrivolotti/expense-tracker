@@ -44,19 +44,32 @@ describe('canonicalDayOfMonth', () => {
 })
 
 describe('predictDateInBudgetMonth', () => {
-  it('keeps a pre-rollover canonical day in the budget month itself', () => {
+  it('keeps the date in the budget month itself when offset is 0', () => {
     const dates = ['2026-01-01', '2026-02-02', '2026-03-03', '2026-04-02', '2026-05-01']
-    expect(predictDateInBudgetMonth('2026-07', dates)).toBe('2026-07-02')
+    expect(predictDateInBudgetMonth('2026-07', dates, 0)).toBe('2026-07-02')
   })
 
-  it('shifts a post-rollover canonical day into the prior calendar month', () => {
+  it('keeps a near-rollover day in-month when the group offset is 0 (deferred-card charge)', () => {
+    // Icon charge bills ~13th and is booked to the same calendar month (offset 0).
+    const dates = ['2026-05-13', '2026-06-11', '2026-07-13']
+    expect(predictDateInBudgetMonth('2026-08', dates, 0)).toBe('2026-08-13')
+  })
+
+  it('puts a +1 rollover charge in the prior calendar month (paid the 20th)', () => {
+    // Prime billed the 20th rolls into next budget month (offset +1).
     const dates = ['2026-05-20', '2026-06-20', '2026-07-20']
-    expect(predictDateInBudgetMonth('2026-08', dates)).toBe('2026-07-20')
+    expect(predictDateInBudgetMonth('2026-08', dates, 1)).toBe('2026-07-20')
   })
 
-  it('clamps a post-rollover day to the prior calendar month length', () => {
+  it('puts a -1 deferred charge in the following calendar month', () => {
+    // A June budget charge that settles the following month (15 Jul).
+    const dates = ['2026-04-15', '2026-05-15', '2026-06-15']
+    expect(predictDateInBudgetMonth('2026-06', dates, -1)).toBe('2026-07-15')
+  })
+
+  it('clamps the canonical day to the resolved calendar month length', () => {
     const dates = ['2026-01-31', '2026-03-31', '2026-05-31']
-    expect(predictDateInBudgetMonth('2026-03', dates)).toBe('2026-02-28')
+    expect(predictDateInBudgetMonth('2026-03', dates, 1)).toBe('2026-02-28')
   })
 })
 
