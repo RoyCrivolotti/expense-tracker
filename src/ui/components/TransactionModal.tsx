@@ -17,6 +17,12 @@ function installmentNote(editing: Transaction | null, model: ExpenseModel): stri
   return `Installment ${editing.installmentIndex} of ${plan.totalCount} · Final payment ${fullMonthLabel(finalBudgetMonth(plan))}`
 }
 
+/** Day-of-month (1-31) from an ISO date, or null when unparseable. */
+function dueDayFromDate(isoDate: string): number | null {
+  const day = Number(isoDate.split('-')[2])
+  return Number.isInteger(day) && day >= 1 && day <= 31 ? day : null
+}
+
 /** Build a new plan anchored to the transaction being saved. */
 function planFromInput(input: NewTransaction, totalCount: number, startIndex: number): NewInstallmentPlan {
   return {
@@ -28,6 +34,7 @@ function planFromInput(input: NewTransaction, totalCount: number, startIndex: nu
     type: input.type,
     anchorBudgetMonth: input.budgetMonth,
     startInstallmentIndex: startIndex,
+    dueDayOfMonth: dueDayFromDate(input.date),
     active: true,
   }
 }

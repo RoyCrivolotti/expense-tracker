@@ -16,6 +16,7 @@ const PLAN_COLUMNS: ColumnMap = {
   type: 'type',
   anchorBudgetMonth: 'anchor_budget_month',
   startInstallmentIndex: 'start_installment_index',
+  dueDayOfMonth: 'due_day_of_month',
   active: 'active',
 }
 
@@ -34,8 +35,8 @@ export async function createInstallmentPlan(
   const row = await env.DB.prepare(
     `INSERT INTO installment_plans
        (owner, description, total_count, amount_cents, account_id, category_id, type,
-        anchor_budget_month, start_installment_index, active)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
+        anchor_budget_month, start_installment_index, due_day_of_month, active)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
   )
     .bind(
       owner,
@@ -47,6 +48,7 @@ export async function createInstallmentPlan(
       input.type,
       input.anchorBudgetMonth,
       input.startInstallmentIndex,
+      input.dueDayOfMonth ?? null,
       input.active ? 1 : 0,
     )
     .first<InstallmentPlanRow>()

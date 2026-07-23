@@ -88,6 +88,23 @@ describe('nextInstallmentSuggestion', () => {
     expect(s?.predictedDate).toBe('2026-02-01')
   })
 
+  it('uses a month placeholder with dueDateKnown=false for legacy plans', () => {
+    const s = nextInstallmentSuggestion(plan, [linked(14)])
+    expect(s?.dueDateKnown).toBe(false)
+    expect(s?.predictedDate).toBe('2026-02-01')
+  })
+
+  it('uses the real due day with dueDateKnown=true when set', () => {
+    const s = nextInstallmentSuggestion({ ...plan, dueDayOfMonth: 8 }, [linked(14)])
+    expect(s?.dueDateKnown).toBe(true)
+    expect(s?.predictedDate).toBe('2026-02-08')
+  })
+
+  it('clamps the due day to the days in the budget month', () => {
+    const s = nextInstallmentSuggestion({ ...plan, dueDayOfMonth: 31 }, [linked(14)])
+    expect(s?.predictedDate).toBe('2026-02-28')
+  })
+
   it('returns null when complete or inactive', () => {
     expect(nextInstallmentSuggestion(plan, [linked(24)])).toBeNull()
     expect(nextInstallmentSuggestion({ ...plan, active: false }, [])).toBeNull()

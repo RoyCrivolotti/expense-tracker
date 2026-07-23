@@ -16,6 +16,7 @@ interface Fields {
   totalCount: string
   startInstallmentIndex: string
   anchorBudgetMonth: string
+  dueDay: string
   accountId: number
   categoryId: number
   type: TxnType
@@ -29,6 +30,7 @@ function initialFields(plan: InstallmentPlan): Fields {
     totalCount: String(plan.totalCount),
     startInstallmentIndex: String(plan.startInstallmentIndex),
     anchorBudgetMonth: plan.anchorBudgetMonth,
+    dueDay: plan.dueDayOfMonth != null ? String(plan.dueDayOfMonth) : '',
     accountId: plan.accountId,
     categoryId: plan.categoryId,
     type: plan.type,
@@ -43,6 +45,7 @@ function toPayload(f: Fields): NewInstallmentPlan {
     totalCount: Number(f.totalCount),
     startInstallmentIndex: Number(f.startInstallmentIndex),
     anchorBudgetMonth: f.anchorBudgetMonth,
+    dueDayOfMonth: f.dueDay.trim() === '' ? null : Number(f.dueDay),
     accountId: f.accountId,
     categoryId: f.categoryId,
     type: f.type,
@@ -130,6 +133,17 @@ export function InstallmentPlanForm({ plan, model, actions, onBack }: Props) {
           />
         </label>
       </div>
+      <label className={formStyles.field}>
+        <span className={formStyles.label}>Due day of month (1-31, optional)</span>
+        <input
+          type="number"
+          step="1"
+          min="1"
+          max="31"
+          value={f.dueDay}
+          onChange={(e) => set('dueDay', e.target.value)}
+        />
+      </label>
       <div className={formStyles.row}>
         <label className={formStyles.field}>
           <span className={formStyles.label}>Account</span>

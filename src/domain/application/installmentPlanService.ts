@@ -4,6 +4,12 @@ import type { InstallmentPlan } from '../types'
 
 const YEAR_MONTH = /^\d{4}-\d{2}$/
 
+function validateDueDay(dueDay: number | null | undefined): void {
+  if (dueDay != null && (!Number.isInteger(dueDay) || dueDay < 1 || dueDay > 31)) {
+    throw new Error('dueDayOfMonth must be between 1 and 31')
+  }
+}
+
 function validatePlanNumbers(input: NewInstallmentPlan): void {
   if (!Number.isInteger(input.totalCount) || input.totalCount < 1) {
     throw new Error('totalCount must be a positive integer')
@@ -18,6 +24,7 @@ function validatePlanNumbers(input: NewInstallmentPlan): void {
   if (!Number.isInteger(start) || start < 1 || start > input.totalCount) {
     throw new Error('startInstallmentIndex must be between 1 and totalCount')
   }
+  validateDueDay(input.dueDayOfMonth)
 }
 
 export function validatePlanInput(input: NewInstallmentPlan): NewInstallmentPlan {
@@ -45,6 +52,7 @@ export async function patchPlan(
   patch: Partial<NewInstallmentPlan>,
 ): Promise<InstallmentPlan> {
   if (Object.keys(patch).length === 0) throw new Error('Empty patch')
+  validateDueDay(patch.dueDayOfMonth)
   return repo.updateInstallmentPlan(owner, id, patch)
 }
 

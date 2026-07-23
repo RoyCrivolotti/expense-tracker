@@ -154,6 +154,19 @@ export function monthsBetweenBudget(a: string, b: string): number {
   return (by - ay) * 12 + (bm - am)
 }
 
+/** Whole-day distance from `a` to `b` (b - a), positive when `b` is later. */
+export function daysBetween(a: string, b: string): number {
+  const [ay, am, ad] = a.split('-').map(Number) as [number, number, number]
+  const [by, bm, bd] = b.split('-').map(Number) as [number, number, number]
+  const diffMs = new Date(by, bm - 1, bd).getTime() - new Date(ay, am - 1, ad).getTime()
+  return Math.round(diffMs / 86_400_000)
+}
+
+/** True when `dateIso` is overdue, today, or within `aheadDays` of `todayIso`. */
+export function isDueSoon(dateIso: string, todayIso: string, aheadDays = 1): boolean {
+  return daysBetween(todayIso, dateIso) <= aheadDays
+}
+
 /** Inclusive calendar range covering the last `count` budget months ending at `yearMonth`. */
 export function calendarRangeLastMonths(
   yearMonth: string,

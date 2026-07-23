@@ -47,7 +47,7 @@ function demoInstallments(dataset: ExpenseDataset): {
     startInstallmentIndex: 1,
     active: true,
   }
-  const transactions: StoredTransaction[] = [1, 2, 3].map((i) => ({
+  const transactions: StoredTransaction[] = [1, 2, 3, 4].map((i) => ({
     id: 980_000 + i,
     date: `2026-0${i}-10`,
     budgetMonth: `2026-0${i}`,
@@ -213,7 +213,12 @@ export const docsCaptureDataSource: ExpenseDataSource = {
   },
   createInstallmentPlan(input: NewInstallmentPlan) {
     nextId += 1
-    const plan: InstallmentPlan = { ...input, id: nextId }
+    const { dueDayOfMonth, ...rest } = input
+    const plan: InstallmentPlan = {
+      ...rest,
+      ...(dueDayOfMonth != null ? { dueDayOfMonth } : {}),
+      id: nextId,
+    }
     return Promise.resolve(plan)
   },
   updateInstallmentPlan(id: number, patch: Partial<NewInstallmentPlan>) {
