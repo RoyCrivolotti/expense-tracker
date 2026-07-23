@@ -88,6 +88,7 @@ Full DNS, Access, D1, and CI setup: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Docs
 
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — layers, ports/adapters, invariants
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — hosting, access control, migrations through `0011`
 - [docs/SCREENSHOT-GALLERY.md](docs/SCREENSHOT-GALLERY.md) — full UI screenshot reference
 - [docs/CHANGELOG.md](docs/CHANGELOG.md) — recent product changes (July 2026)

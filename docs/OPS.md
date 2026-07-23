@@ -43,7 +43,7 @@ From **expense-tracker** (registers domains in Pages + prints CNAME table):
 npm run setup:staging-domains
 ```
 
-Then add the four CNAME records in DreamHost (see [crivolotti-site README](../crivolotti-site/README.md) DNS table).
+Then add the printed CNAME records in DreamHost (one per staging hostname above).
 
 ### 3. Cloudflare Access (two apps)
 
