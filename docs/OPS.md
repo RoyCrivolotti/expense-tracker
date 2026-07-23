@@ -125,9 +125,13 @@ An installment plan models one bounded purchase split into a fixed number of equ
 
 Schedule anchoring: `anchor_budget_month` is the budget month of `start_installment_index`; every other installment's budget month is that anchor shifted by the index offset. `start_installment_index` is 1 for a fresh plan, higher when importing a plan already in flight.
 
+Due day: `due_day_of_month` (nullable, migration `0010`) records the day within the budget month a payment is due. A new plan captures it automatically from the day of the logging transaction; you can set or correct it on the plan edit form (leave blank to clear). It clamps to the month length (day 31 in a 30-day month becomes the 30th). Legacy plans with `NULL` are treated as "unknown day" and are always shown when their month matches.
+
 The Transactions tab is the single home for installments. Creating, attaching, moving, or unlinking a plan happens inside the transaction modal (add or edit): the "Installment plan" button swaps the modal body to an installment step where you pick None / New plan / Existing plan (plus Change plan / Remove on an already-linked row). A new plan is derived from the transaction's own fields, anchored to its budget month. Save applies the intent (create-plan-then-link, link, move, or unlink) via the standard create/update endpoints. Settings no longer hosts installments.
 
-Managing plans (progress, edit details, complete/reactivate, delete) lives behind the "Manage plans" button on the Installments card in the Transactions tab, which opens a modal listing every plan with a step-swap edit form. The card also surfaces the next due installment for the viewed month; tapping `+` opens the add-transaction modal pre-seeded from the plan.
+Managing plans (progress, edit details, complete/reactivate, delete) lives behind the "Manage plans" button on the Installments card in the Transactions tab, which opens a modal listing every plan with a step-swap edit form. The card surfaces the next due installment; tapping `+` opens the add-transaction modal pre-seeded from the plan.
+
+Due-soon windowing: both the Installments and Upcoming cards only render items that are overdue or due within roughly a day (today or tomorrow), rather than everything scheduled for the viewed month. An installment with a known `due_day_of_month` is filtered by its real date; one with an unknown day always shows for its month. Each card hides entirely when its filtered list is empty, so the Installments card (and with it the "Manage plans" entry point) disappears when nothing is due or overdue and reappears when the next payment comes into range.
 
 Linking pre-existing rows: open the row, use the installment step, and attach it to the plan (index defaults to the plan's next open slot, overridable). The original iPhone migration (`plan_id=1`) was a one-off SQL backfill, already applied to prod, and its helper script has since been removed.
 

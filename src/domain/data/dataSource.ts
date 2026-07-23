@@ -24,7 +24,10 @@ export type NewTransaction = Omit<StoredTransaction, 'id' | 'createdAt' | 'planI
 export type NewCategory = Omit<Category, 'id'>
 export type NewAccount = Omit<Account, 'id'>
 export type NewGoalScenario = Omit<GoalScenario, 'id'>
-export type NewInstallmentPlan = Omit<InstallmentPlan, 'id'>
+export type NewInstallmentPlan = Omit<InstallmentPlan, 'id' | 'dueDayOfMonth'> & {
+  /** A day (1-31) sets the due day, null clears it, absent leaves it unchanged. */
+  dueDayOfMonth?: number | null
+}
 
 export interface ExpenseDataSource {
   /** Whether mutations are supported; the UI hides add/edit when false. */

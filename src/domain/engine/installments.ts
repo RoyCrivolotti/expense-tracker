@@ -32,8 +32,18 @@ export interface InstallmentSuggestion {
   installmentIndex: number
   totalCount: number
   budgetMonth: string
-  /** Suggested calendar date to seed the transaction (first of budget month). */
+  /** Suggested calendar date to seed the transaction. */
   predictedDate: string
+  /** Whether `predictedDate` reflects a real due day (vs. a month placeholder). */
+  dueDateKnown: boolean
+}
+
+/** ISO date for `dueDayOfMonth` within `budgetMonth`, clamped to the month length. */
+function dueDateInMonth(budgetMonth: string, dueDayOfMonth: number): string {
+  const [y, m] = budgetMonth.split('-').map(Number) as [number, number]
+  const maxDay = new Date(y, m, 0).getDate()
+  const day = Math.min(Math.max(dueDayOfMonth, 1), maxDay)
+  return `${budgetMonth}-${String(day).padStart(2, '0')}`
 }
 
 /** Budget month a given installment index falls due. */
@@ -97,6 +107,10 @@ export function nextInstallmentSuggestion(
   if (installmentIndex > plan.totalCount) return null
   const budgetMonth = budgetMonthForIndex(plan, installmentIndex)
   if (forBudgetMonth && budgetMonth !== forBudgetMonth) return null
+  const dueDateKnown = plan.dueDayOfMonth != null
+  const predictedDate = dueDateKnown
+    ? dueDateInMonth(budgetMonth, plan.dueDayOfMonth as number)
+    : `${budgetMonth}-01`
   return {
     planId: plan.id,
     description: plan.description,
@@ -107,6 +121,7 @@ export function nextInstallmentSuggestion(
     installmentIndex,
     totalCount: plan.totalCount,
     budgetMonth,
-    predictedDate: `${budgetMonth}-01`,
+    predictedDate,
+    dueDateKnown,
   }
 }

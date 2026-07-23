@@ -1,10 +1,12 @@
 import { useCallback, useState } from 'react'
 import type { RecurringSuggestion } from '../../engine'
+import { isDueSoon } from '../../engine'
 import type { TransactionSeed } from '../actions'
 import type { Lookup } from '../format'
 import { formatDayLabel } from '../format'
 import { formatCents } from '../../engine/money'
-import { Card, EmptyState, SectionTitle } from '../components/primitives'
+import { Card, SectionTitle } from '../components/primitives'
+import { todayLocalIso } from '../dates'
 import styles from './UpcomingCard.module.css'
 
 interface Props {
@@ -91,7 +93,10 @@ function SuggestionRow({
 export function UpcomingCard({ suggestions, lookup, onAdd }: Props) {
   const [dismissed, setDismissed] = useState(loadDismissed)
 
-  const visible = suggestions.filter((s) => !dismissed.has(dismissKey(s)))
+  const today = todayLocalIso()
+  const visible = suggestions.filter(
+    (s) => !dismissed.has(dismissKey(s)) && isDueSoon(s.predictedDate, today),
+  )
 
   const handleDismiss = useCallback((s: RecurringSuggestion) => {
     setDismissed((prev) => {
@@ -108,19 +113,15 @@ export function UpcomingCard({ suggestions, lookup, onAdd }: Props) {
     <>
       <SectionTitle>Upcoming</SectionTitle>
       <Card>
-        {visible.length === 0 ? (
-          <EmptyState>No upcoming transactions detected.</EmptyState>
-        ) : (
-          visible.map((s) => (
-            <SuggestionRow
-              key={dismissKey(s)}
-              suggestion={s}
-              lookup={lookup}
-              onAdd={() => onAdd(toSeed(s))}
-              onDismiss={() => handleDismiss(s)}
-            />
-          ))
-        )}
+        {visible.map((s) => (
+          <SuggestionRow
+            key={dismissKey(s)}
+            suggestion={s}
+            lookup={lookup}
+            onAdd={() => onAdd(toSeed(s))}
+            onDismiss={() => handleDismiss(s)}
+          />
+        ))}
       </Card>
     </>
   )

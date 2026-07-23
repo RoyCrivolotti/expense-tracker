@@ -385,7 +385,12 @@ export function inMemoryExpenseRepository(
       const store = storeFor(owner)
       assertOwnedAccount(store, input.accountId)
       assertOwnedCategory(store, input.categoryId)
-      const plan: InstallmentPlan = { id: nextId(store.installmentPlans), ...input }
+      const { dueDayOfMonth, ...rest } = input
+      const plan: InstallmentPlan = {
+        id: nextId(store.installmentPlans),
+        ...rest,
+        ...(dueDayOfMonth != null ? { dueDayOfMonth } : {}),
+      }
       store.installmentPlans.push(plan)
       return Promise.resolve({ ...plan })
     },
@@ -398,7 +403,12 @@ export function inMemoryExpenseRepository(
       if (keys.length === 0) throw new RepoHttpError(400, 'Empty patch')
       if (patch.accountId != null) assertOwnedAccount(store, patch.accountId)
       if (patch.categoryId != null) assertOwnedCategory(store, patch.categoryId)
-      const updated = { ...store.installmentPlans[index]!, ...patch, id }
+      const { dueDayOfMonth, ...rest } = patch
+      const updated: InstallmentPlan = { ...store.installmentPlans[index]!, ...rest, id }
+      if ('dueDayOfMonth' in patch) {
+        if (dueDayOfMonth != null) updated.dueDayOfMonth = dueDayOfMonth
+        else delete updated.dueDayOfMonth
+      }
       store.installmentPlans[index] = updated
       return Promise.resolve({ ...updated })
     },

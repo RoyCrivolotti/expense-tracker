@@ -198,6 +198,7 @@ export interface InstallmentPlanRow {
   type: TxnType
   anchor_budget_month: string
   start_installment_index: number
+  due_day_of_month: number | null
   active: number
 }
 
@@ -212,6 +213,7 @@ export function toInstallmentPlan(r: InstallmentPlanRow): InstallmentPlan {
     type: r.type,
     anchorBudgetMonth: r.anchor_budget_month,
     startInstallmentIndex: r.start_installment_index,
+    ...(r.due_day_of_month != null ? { dueDayOfMonth: r.due_day_of_month } : {}),
     active: r.active === 1,
   }
 }

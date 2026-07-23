@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { calendarRangeLastMonths, lastDayOfBudgetMonth, priorBudgetMonth } from './dates'
+import {
+  calendarRangeLastMonths,
+  daysBetween,
+  isDueSoon,
+  lastDayOfBudgetMonth,
+  priorBudgetMonth,
+} from './dates'
 
 describe('lastDayOfBudgetMonth', () => {
   it('returns the last day of July', () => {
@@ -34,5 +40,43 @@ describe('priorBudgetMonth', () => {
 
   it('wraps across year boundary', () => {
     expect(priorBudgetMonth('2026-01')).toBe('2025-12')
+  })
+})
+
+describe('daysBetween', () => {
+  it('counts forward days', () => {
+    expect(daysBetween('2026-07-23', '2026-07-25')).toBe(2)
+  })
+
+  it('is negative when the second date is earlier', () => {
+    expect(daysBetween('2026-07-23', '2026-07-20')).toBe(-3)
+  })
+
+  it('crosses month boundaries', () => {
+    expect(daysBetween('2026-07-30', '2026-08-02')).toBe(3)
+  })
+})
+
+describe('isDueSoon', () => {
+  const today = '2026-07-23'
+
+  it('includes overdue dates', () => {
+    expect(isDueSoon('2026-07-20', today)).toBe(true)
+  })
+
+  it('includes today', () => {
+    expect(isDueSoon('2026-07-23', today)).toBe(true)
+  })
+
+  it('includes tomorrow', () => {
+    expect(isDueSoon('2026-07-24', today)).toBe(true)
+  })
+
+  it('excludes the day after tomorrow', () => {
+    expect(isDueSoon('2026-07-25', today)).toBe(false)
+  })
+
+  it('honours a wider aheadDays window', () => {
+    expect(isDueSoon('2026-07-25', today, 2)).toBe(true)
   })
 })

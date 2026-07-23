@@ -100,6 +100,8 @@ export interface InstallmentPlan {
   anchorBudgetMonth: string
   /** First installment number tracked here (1 for fresh plans). */
   startInstallmentIndex: number
+  /** Day of month (1-31) the payment is due; undefined for legacy/unknown. */
+  dueDayOfMonth?: number
   active: boolean
 }
 
