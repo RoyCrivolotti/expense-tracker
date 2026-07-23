@@ -4,7 +4,7 @@ import type { InstallmentPlan } from '../types'
 
 const YEAR_MONTH = /^\d{4}-\d{2}$/
 
-function validateDueDay(dueDay: number | null | undefined): void {
+export function validateDueDay(dueDay: number | null | undefined): void {
   if (dueDay != null && (!Number.isInteger(dueDay) || dueDay < 1 || dueDay > 31)) {
     throw new Error('dueDayOfMonth must be between 1 and 31')
   }

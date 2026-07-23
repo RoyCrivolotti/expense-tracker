@@ -1,5 +1,5 @@
 import type { Transaction } from '../../types'
-import type { NewInstallmentPlan, NewTransaction } from '../../data/dataSource'
+import type { NewTransaction } from '../../data/dataSource'
 import type { ExpenseActions, TransactionSeed } from '../actions'
 import type { ExpenseModel } from '../useExpenseData'
 import { finalBudgetMonth } from '../../engine'
@@ -8,6 +8,7 @@ import { useToast } from '../hooks/useToast'
 import { Modal } from './Modal'
 import { TransactionForm } from './TransactionForm'
 import type { InstallmentIntent } from './installmentIntent'
+import { createTransactionWithIntent, updateTransactionWithIntent } from './transactionSaveIntent'
 
 /** "Installment 21 of 24 · Final payment November 2026" for a plan-linked edit. */
 function installmentNote(editing: Transaction | null, model: ExpenseModel): string | undefined {
@@ -15,28 +16,6 @@ function installmentNote(editing: Transaction | null, model: ExpenseModel): stri
   const plan = model.lookup.installmentPlan(editing.planId)
   if (!plan) return undefined
   return `Installment ${editing.installmentIndex} of ${plan.totalCount} · Final payment ${fullMonthLabel(finalBudgetMonth(plan))}`
-}
-
-/** Day-of-month (1-31) from an ISO date, or null when unparseable. */
-function dueDayFromDate(isoDate: string): number | null {
-  const day = Number(isoDate.split('-')[2])
-  return Number.isInteger(day) && day >= 1 && day <= 31 ? day : null
-}
-
-/** Build a new plan anchored to the transaction being saved. */
-function planFromInput(input: NewTransaction, totalCount: number, startIndex: number): NewInstallmentPlan {
-  return {
-    description: input.description,
-    amountCents: Math.abs(input.amountCents),
-    totalCount,
-    accountId: input.accountId,
-    categoryId: input.categoryId,
-    type: input.type,
-    anchorBudgetMonth: input.budgetMonth,
-    startInstallmentIndex: startIndex,
-    dueDayOfMonth: dueDayFromDate(input.date),
-    active: true,
-  }
 }
 
 interface Props {
@@ -51,62 +30,12 @@ interface Props {
 export function TransactionModal({ model, actions, editing, seed, hint, onClose }: Props) {
   const { showToast } = useToast()
 
-  const create = async (input: NewTransaction, intent?: InstallmentIntent) => {
-    if (intent?.kind === 'new') {
-      const plan = await actions.createInstallmentPlan(
-        planFromInput(input, intent.totalCount, intent.installmentIndex),
-      )
-      await actions.createTransaction({
-        ...input,
-        planId: plan.id,
-        installmentIndex: intent.installmentIndex,
-      })
-      return
-    }
-    if (intent?.kind === 'link') {
-      await actions.createTransaction({
-        ...input,
-        planId: intent.planId,
-        installmentIndex: intent.installmentIndex,
-      })
-      return
-    }
-    await actions.createTransaction(input)
-  }
-
-  const edit = async (id: number, input: NewTransaction, intent?: InstallmentIntent) => {
-    if (intent?.kind === 'new') {
-      const plan = await actions.createInstallmentPlan(
-        planFromInput(input, intent.totalCount, intent.installmentIndex),
-      )
-      await actions.updateTransaction(id, {
-        ...input,
-        planId: plan.id,
-        installmentIndex: intent.installmentIndex,
-      })
-      return
-    }
-    if (intent?.kind === 'link') {
-      await actions.updateTransaction(id, {
-        ...input,
-        planId: intent.planId,
-        installmentIndex: intent.installmentIndex,
-      })
-      return
-    }
-    if (intent?.kind === 'unlink') {
-      await actions.updateTransaction(id, { ...input, planId: null })
-      return
-    }
-    await actions.updateTransaction(id, input)
-  }
-
   const submit = async (input: NewTransaction, id?: number, intent?: InstallmentIntent) => {
     if (id != null) {
-      await edit(id, input, intent)
+      await updateTransactionWithIntent(actions, id, input, intent)
       showToast('Transaction updated', 'success')
     } else {
-      await create(input, intent)
+      await createTransactionWithIntent(actions, input, intent)
       showToast('Transaction added', 'success')
     }
   }

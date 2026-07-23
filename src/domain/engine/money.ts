@@ -120,6 +120,15 @@ export function formatPercent(
   })}%`
 }
 
+/** Localized string for editable percent inputs (no '%' sign), e.g. 0.05 -> "5,0". */
+export function formatPercentInput(
+  fraction: number,
+  format: MoneyFormat = EU_MONEY_FORMAT,
+  decimals = 1,
+): string {
+  return (fraction * 100).toFixed(decimals).replace('.', format.decimalSeparator)
+}
+
 function applySymbol(body: string, format: MoneyFormat): string {
   return format.symbolPosition === 'prefix' ? `${format.symbol}${body}` : `${body} ${format.symbol}`
 }

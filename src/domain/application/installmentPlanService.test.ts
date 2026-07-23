@@ -72,6 +72,30 @@ describe('installment plan lifecycle', () => {
     await expect(patchPlan(repo, 'owner@example.com', plan.id, {})).rejects.toThrow('Empty patch')
   })
 
+  it('unlinks transactions instead of leaving a dangling plan_id when a plan is deleted', async () => {
+    const repo = repoWithDefs()
+    const plan = await createPlan(repo, 'owner@example.com', validPlan)
+    const linked = await repo.insertTransaction('owner@example.com', {
+      date: '2026-01-15',
+      budgetMonth: '2026-01',
+      description: plan.description,
+      accountId: 1,
+      categoryId: 2,
+      type: 'expense',
+      amountCents: 5783,
+      cancelled: false,
+      planId: plan.id,
+    })
+
+    await removePlan(repo, 'owner@example.com', plan.id)
+
+    const dataset = await repo.loadDataset('owner@example.com')
+    const survivor = dataset.transactions.find((t) => t.id === linked.id)
+    expect(survivor).toBeDefined()
+    expect(survivor?.planId).toBeUndefined()
+    expect(survivor?.installmentIndex).toBeUndefined()
+  })
+
   it('server-assigns installment index and blocks duplicates on insert', async () => {
     const repo = repoWithDefs()
     const plan = await createPlan(repo, 'owner@example.com', validPlan)

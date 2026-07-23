@@ -15,3 +15,12 @@ export function skipOnboarding(): void {
     /* ignore private browsing */
   }
 }
+
+/** Un-skip onboarding, e.g. when the user explicitly re-opens the setup wizard. */
+export function clearOnboardingSkip(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY)
+  } catch {
+    /* ignore private browsing */
+  }
+}

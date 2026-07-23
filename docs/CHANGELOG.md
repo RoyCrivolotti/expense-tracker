@@ -2,6 +2,22 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## July 2026 (installments, currency, onboarding)
+
+### Installments
+
+- **Installment plans**: log a purchase once as a bounded N-payment schedule (e.g. a phone financed over 24 months) instead of re-entering it every month. Create a plan inline from the transaction form, or manage existing plans from the Transactions tab.
+- **Due-soon reminders**: the Installments card surfaces payments due today or tomorrow (or with no known due day) for the viewed month; **Manage plans** stays reachable even when nothing is due right now.
+
+### Currency and budget months
+
+- **Settings → Money & months**: currency, number-format locale (comma vs dot decimals), and the day of the month the budget period rolls over are now per-tenant configuration instead of hardcoded EUR/`de-DE`/day-13 assumptions.
+- The **setup wizard** collects these during first-run and can be re-opened any time from Settings to revisit them (also fixes categories/accounts started outside the wizard).
+
+### Cash reconciliation
+
+- **Reconciled badge** (✓) on a month's row once cash is entered and every card statement for that month is paid.
+
 ## July 2026 (reconciliation UX)
 
 ### Cash reconciliation

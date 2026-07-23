@@ -6,6 +6,7 @@ import type {
   NewTransaction,
 } from '../domain/data/dataSource'
 import type { ExpenseRepository } from '../domain/ports/expenseRepository'
+import { validateDueDay, validatePlanInput } from '../domain/application/installmentPlanService'
 import { deriveStatus, deriveTransactions } from '../domain/engine/status'
 import { defaultExpenseSettings, defaultGoalInputs } from '../domain/engine/defaults'
 import type {
@@ -326,6 +327,14 @@ export function inMemoryExpenseRepository(
       const keys = Object.keys(patch) as (keyof ExpenseSettings)[]
       if (keys.length === 0) throw new RepoHttpError(400, 'Empty patch')
       if (patch.defaultAccountId != null) assertOwnedAccount(store, patch.defaultAccountId)
+      if (
+        patch.budgetRolloverDay != null &&
+        (!Number.isInteger(patch.budgetRolloverDay) ||
+          patch.budgetRolloverDay < 1 ||
+          patch.budgetRolloverDay > 28)
+      ) {
+        throw new RepoHttpError(400, 'budgetRolloverDay must be between 1 and 28')
+      }
       store.settings = { ...store.settings, ...patch }
       return Promise.resolve({ ...store.settings })
     },
@@ -371,9 +380,10 @@ export function inMemoryExpenseRepository(
 
     createInstallmentPlan: (owner, input) => {
       const store = storeFor(owner)
-      assertOwnedAccount(store, input.accountId)
-      assertOwnedCategory(store, input.categoryId)
-      const { dueDayOfMonth, ...rest } = input
+      const validated = validatePlanInput(input)
+      assertOwnedAccount(store, validated.accountId)
+      assertOwnedCategory(store, validated.categoryId)
+      const { dueDayOfMonth, ...rest } = validated
       const plan: InstallmentPlan = {
         id: nextId(store.installmentPlans),
         ...rest,
@@ -389,6 +399,7 @@ export function inMemoryExpenseRepository(
       if (index < 0) throw new RepoHttpError(404, 'Installment plan not found')
       const keys = Object.keys(patch) as (keyof NewInstallmentPlan)[]
       if (keys.length === 0) throw new RepoHttpError(400, 'Empty patch')
+      validateDueDay(patch.dueDayOfMonth)
       if (patch.accountId != null) assertOwnedAccount(store, patch.accountId)
       if (patch.categoryId != null) assertOwnedCategory(store, patch.categoryId)
       const { dueDayOfMonth, ...rest } = patch
@@ -406,6 +417,15 @@ export function inMemoryExpenseRepository(
       const index = store.installmentPlans.findIndex((p) => p.id === id)
       if (index < 0) throw new RepoHttpError(404, 'Installment plan not found')
       store.installmentPlans.splice(index, 1)
+      // Mirror the D1 adapter: no FK on plan_id, so unlink transactions instead
+      // of leaving them pointing at a deleted plan.
+      store.transactions = store.transactions.map((t) => {
+        if (t.planId !== id) return t
+        const copy: StoredTransaction = { ...t }
+        delete copy.planId
+        delete copy.installmentIndex
+        return copy
+      })
       return Promise.resolve()
     },
   }
