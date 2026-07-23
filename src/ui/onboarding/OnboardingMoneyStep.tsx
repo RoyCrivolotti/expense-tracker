@@ -57,6 +57,10 @@ export function OnboardingMoneyStep({
         <span>Preview</span>
         <strong>{preview}</strong>
       </div>
+      <p className={styles.hint}>
+        Display only — changes the symbol and decimal separator, not the amounts themselves. There
+        is no currency conversion, so pick the one currency you track everything in.
+      </p>
 
       <label className={styles.field}>
         <span className={styles.fieldLabel}>Budget month starts on day</span>
