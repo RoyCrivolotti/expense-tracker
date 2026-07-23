@@ -1,6 +1,6 @@
 import styles from './OnboardingWizard.module.css'
 
-const STEP_LABELS = ['Welcome', 'Categories', 'Accounts'] as const
+const STEP_LABELS = ['Welcome', 'Money', 'Categories', 'Accounts'] as const
 
 export function OnboardingProgress({ step }: { step: number }) {
   return (

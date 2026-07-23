@@ -11,6 +11,11 @@ export interface OnboardingSetupInput {
   categories: CategoryPreset[]
   debitName: string
   creditName: string | null
+  money: {
+    currencyCode: string
+    numberLocale: string
+    budgetRolloverDay: number
+  }
 }
 
 export async function runOnboardingSetup(
@@ -48,6 +53,11 @@ export async function runOnboardingSetup(
     applyPatch((d) => patchAfterAccount(d, credit))
   }
 
-  const settings = await source.updateSettings!({ defaultAccountId: debit.id })
+  const settings = await source.updateSettings!({
+    defaultAccountId: debit.id,
+    currencyCode: input.money.currencyCode,
+    numberLocale: input.money.numberLocale,
+    budgetRolloverDay: input.money.budgetRolloverDay,
+  })
   applyPatch((d) => patchAfterSettings(d, settings))
 }

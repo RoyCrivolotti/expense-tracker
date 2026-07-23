@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { formatCents } from '../../engine/money'
+import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { ChartTooltip } from './ChartTooltip'
 import { useSvgAnchor } from './useSvgAnchor'
 import styles from './charts.module.css'
@@ -45,6 +46,7 @@ function PiePaths({
 }
 
 export function CategoryPieChartView({ paths, active, onShow, onHide }: Props) {
+  const format = useMoneyFormat()
   const svgRef = useRef<SVGSVGElement>(null)
   const total = paths[0]?.total ?? 1
   const focus = active != null ? paths[active] : null
@@ -71,7 +73,7 @@ export function CategoryPieChartView({ paths, active, onShow, onHide }: Props) {
             anchor={anchor}
             title={focus.name}
             lines={[
-              { label: 'Amount', value: formatCents(focus.cents), tone: 'expense' },
+              { label: 'Amount', value: formatCents(focus.cents, format), tone: 'expense' },
               { label: 'Share', value: `${Math.round((focus.cents / total) * 100)}%`, tone: 'neutral' },
             ]}
           />
@@ -87,7 +89,7 @@ export function CategoryPieChartView({ paths, active, onShow, onHide }: Props) {
           >
             <span className={styles.swatch} style={{ background: p.color }} aria-hidden />
             <span className={styles.pieLegendName}>{p.name}</span>
-            <span className={styles.pieLegendAmount}>{formatCents(p.cents)}</span>
+            <span className={styles.pieLegendAmount}>{formatCents(p.cents, format)}</span>
             <span className={styles.pieLegendPct}>{Math.round((p.cents / total) * 100)}%</span>
           </li>
         ))}

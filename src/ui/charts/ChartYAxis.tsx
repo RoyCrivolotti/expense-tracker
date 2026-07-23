@@ -1,4 +1,5 @@
 import { formatCentsCompact } from '../../engine/money'
+import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { CHART_W, PAD, yAt, yTickValues } from './chartLayout'
 import styles from './charts.module.css'
 
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export function ChartYAxis({ maxVal, innerH }: Props) {
+  const format = useMoneyFormat()
   const ticks = yTickValues(maxVal)
   const x0 = PAD.left
   const x1 = CHART_W - PAD.right
@@ -22,7 +24,7 @@ export function ChartYAxis({ maxVal, innerH }: Props) {
           <g key={t}>
             <line x1={x0} x2={x1} y1={y} y2={y} className={styles.gridLine} />
             <text x={x0 - 8} y={y} textAnchor="end" dominantBaseline="middle" className={styles.yLabel}>
-              {formatCentsCompact(t)}
+              {formatCentsCompact(t, format)}
             </text>
           </g>
         )

@@ -125,9 +125,18 @@ const SETTINGS_COLUMNS: ColumnMap<ExpenseSettings> = {
   openingInvestmentCents: 'opening_investment_cents',
   liquidNetWorthCents: 'liquid_net_worth_cents',
   defaultAccountId: 'default_account_id',
+  currencyCode: 'currency_code',
+  numberLocale: 'number_locale',
+  budgetRolloverDay: 'budget_rollover_day',
 }
+const NULLABLE_SETTINGS = new Set<keyof ExpenseSettings>([
+  'defaultAccountId',
+  'currencyCode',
+  'numberLocale',
+  'budgetRolloverDay',
+])
 const coerceSettings: Coerce<ExpenseSettings> = (key, value) =>
-  key === 'defaultAccountId' ? (value ?? null) : (value ?? 0)
+  NULLABLE_SETTINGS.has(key) ? (value ?? null) : (value ?? 0)
 
 export async function updateSettings(
   env: Env,
@@ -136,6 +145,14 @@ export async function updateSettings(
 ): Promise<ExpenseSettings> {
   if (patch.defaultAccountId != null) {
     await assertOwnedAccount(env, owner, patch.defaultAccountId)
+  }
+  if (
+    patch.budgetRolloverDay != null &&
+    (!Number.isInteger(patch.budgetRolloverDay) ||
+      patch.budgetRolloverDay < 1 ||
+      patch.budgetRolloverDay > 28)
+  ) {
+    throw new HttpError(400, 'budgetRolloverDay must be between 1 and 28')
   }
   const { sets, values } = buildUpdate(SETTINGS_COLUMNS, patch, coerceSettings)
   await env.DB.prepare('INSERT OR IGNORE INTO settings (owner) VALUES (?)').bind(owner).run()

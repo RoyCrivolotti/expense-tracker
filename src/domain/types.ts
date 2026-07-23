@@ -150,6 +150,15 @@ export interface ExpenseSettings {
   liquidNetWorthCents: number
   /** Pre-selected account when creating a new transaction; null = first active account. */
   defaultAccountId: number | null
+  /** ISO 4217 code driving the currency symbol, e.g. 'EUR', 'USD'. */
+  currencyCode: string
+  /** BCP-47 locale driving digit grouping and decimal separator, e.g. 'de-DE', 'en-US'. */
+  numberLocale: string
+  /**
+   * Day of month (1-31) on/after which a transaction rolls into the next budget
+   * month. 1 = plain calendar months (budget month equals calendar month).
+   */
+  budgetRolloverDay: number
 }
 
 /**

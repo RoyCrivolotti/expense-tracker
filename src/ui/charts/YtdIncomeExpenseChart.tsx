@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
 import { computeMonthlyTotals } from '../../engine'
 import { formatCents } from '../../engine/money'
+import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { chartMax, innerSize, PAD, yAt } from './chartLayout'
 import { YtdLineChartView } from './YtdLineChartView'
 import { useChartFocus } from './useChartFocus'
@@ -30,6 +31,7 @@ interface Props {
 
 /** Cumulative income and expenses from January through the selected budget month. */
 export function YtdIncomeExpenseChart({ model, month }: Props) {
+  const format = useMoneyFormat()
   const year = month.slice(0, 4)
   const months = model.months.filter((m) => m.startsWith(`${year}-`) && m <= month)
   const points = useMemo(() => cumulativeYtdPoints(model, months), [model, months])
@@ -62,7 +64,7 @@ export function YtdIncomeExpenseChart({ model, month }: Props) {
     <figure ref={containerRef} className={styles.figure}>
       <figcaption className={styles.captionSplit}>
         <span className={styles.captionHeading}>YTD savings ({year})</span>
-        <span className={styles.captionValue}>{formatCents(gap)}</span>
+        <span className={styles.captionValue}>{formatCents(gap, format)}</span>
       </figcaption>
       <YtdLineChartView
         points={points}

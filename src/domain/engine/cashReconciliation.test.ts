@@ -1,13 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { Account, ExpenseSettings, Transaction } from '../types'
 import { computeCashReconciliation } from './cashReconciliation'
+import { defaultExpenseSettings } from './defaults'
 
-const settings: ExpenseSettings = {
-  openingCashCents: 100000,
-  openingInvestmentCents: 0,
-  liquidNetWorthCents: 0,
-  defaultAccountId: null,
-}
+const settings: ExpenseSettings = { ...defaultExpenseSettings(), openingCashCents: 100000 }
 
 const accounts: Account[] = [
   { id: 1, name: 'Debit', kind: 'debit', settlement: 'immediate', active: true },
@@ -107,6 +103,35 @@ describe('computeCashReconciliation', () => {
     expect(rows[0]!.gapCents).toBe(50000)
     expect(rows[0]!.carryoverGapCents).toBeNull()
     expect(rows[0]!.monthGapCents).toBe(50000)
+  })
+
+  it('marks a month reconciled only when cash is entered and no card is unpaid', () => {
+    const paidCard = txn({
+      budgetMonth: '2026-01',
+      type: 'expense',
+      amountCents: 30000,
+      accountId: 2,
+      status: 'posted',
+    })
+    const unpaidCard = txn({
+      budgetMonth: '2026-01',
+      type: 'expense',
+      amountCents: 30000,
+      accountId: 2,
+      status: 'forecast',
+    })
+    const actual = [{ yearMonth: '2026-01', actualCashCents: 70000 }]
+
+    // Cash entered + statement paid -> reconciled.
+    expect(computeCashReconciliation([paidCard], accounts, settings, actual)[0]!.reconciled).toBe(
+      true,
+    )
+    // Statement still unpaid -> not reconciled even with cash entered.
+    expect(
+      computeCashReconciliation([unpaidCard], accounts, settings, actual)[0]!.reconciled,
+    ).toBe(false)
+    // No actual cash entered -> not reconciled.
+    expect(computeCashReconciliation([paidCard], accounts, settings, [])[0]!.reconciled).toBe(false)
   })
 
   it('splits gap into carryover and this-month drift', () => {

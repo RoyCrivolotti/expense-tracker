@@ -13,6 +13,7 @@ import type {
   GoalInputs,
 } from '../types'
 import { parseEuroToCents, parsePercentToFraction } from '../engine/money'
+import { defaultExpenseSettings } from '../engine/defaults'
 
 /** The source workbook tracks a single calendar year. */
 export const WORKBOOK_YEAR = 2026
@@ -52,6 +53,7 @@ function parseNumber(raw: string | null): number {
 
 export function parseSettings(rows: string[][]): ExpenseSettings {
   return {
+    ...defaultExpenseSettings(),
     openingCashCents: parseEuroToCents(findValue(rows, 'Opening cash balance (1 Jan)') ?? '0'),
     openingInvestmentCents: parseEuroToCents(
       findValue(rows, 'Opening investment balance (1 Jan)') ?? '0',

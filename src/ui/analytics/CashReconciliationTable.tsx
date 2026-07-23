@@ -2,7 +2,7 @@ import type { ExpenseModel } from '../useExpenseData'
 import type { CashRow } from '../../engine'
 import { computeCashReconciliation, fullMonthLabel } from '../../engine'
 import { ActualCashCell } from './ActualCashCell'
-import { gapCellClass, money, moneyAlways, sum } from './cells'
+import { gapCellClass, sum, useMoneyCells } from './cells'
 import styles from './analytics.module.css'
 
 interface Props {
@@ -24,9 +24,20 @@ function CashReconRow({
   cardIds: number[]
   onSetCashActual: Props['onSetCashActual']
 }) {
+  const { money, moneyAlways } = useMoneyCells()
   return (
     <tr>
-      <td>{fullMonthLabel(row.month)}</td>
+      <td>
+        {fullMonthLabel(row.month)}
+        {row.reconciled ? (
+          <span
+            className={styles.reconciled}
+            title="Reconciled: all card statements paid and cash entered"
+          >
+            ✓
+          </span>
+        ) : null}
+      </td>
       <td className={styles.pos}>{money(row.incomeCents)}</td>
       <td>{money(row.debitExpenseCents)}</td>
       {cardIds.map((id) => {
@@ -66,6 +77,7 @@ function CashReconRow({
 }
 
 function TotalsRow({ rows, cardIds }: { rows: CashRow[]; cardIds: number[] }) {
+  const { money, moneyAlways } = useMoneyCells()
   return (
     <tr className={styles.totalRow}>
       <td>Total</td>

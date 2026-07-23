@@ -1,44 +1,47 @@
-import type { PurchaseYearBreakdown } from '../../../engine'
+import type { MoneyFormat, PurchaseYearBreakdown } from '../../../engine'
 import type { TooltipLine } from '../../charts/ChartTooltip'
-import { formatEuroShort, formatSignedEuroShort } from './chartTheme'
+import { formatMoneyShort, formatSignedMoneyShort } from './chartTheme'
 
 /** Tooltip lines explaining growth → contribution → purchase withdrawal at one year. */
-export function purchaseBreakdownTooltipLines(breakdown: PurchaseYearBreakdown): TooltipLine[] {
+export function purchaseBreakdownTooltipLines(
+  breakdown: PurchaseYearBreakdown,
+  format: MoneyFormat,
+): TooltipLine[] {
   return [
     { label: 'Purchase breakdown', value: '', variant: 'detail', tone: 'neutral' },
     {
       label: 'Start of year',
-      value: formatEuroShort(breakdown.startInvestedCents),
+      value: formatMoneyShort(breakdown.startInvestedCents, format),
       variant: 'detail',
       tone: 'neutral',
     },
     {
       label: 'Return this year',
-      value: formatSignedEuroShort(breakdown.growthCents),
+      value: formatSignedMoneyShort(breakdown.growthCents, format),
       variant: 'detail',
       tone: breakdown.growthCents >= 0 ? 'income' : 'expense',
     },
     {
       label: 'Contributions',
-      value: formatSignedEuroShort(breakdown.contributionCents),
+      value: formatSignedMoneyShort(breakdown.contributionCents, format),
       variant: 'detail',
       tone: breakdown.contributionCents >= 0 ? 'income' : 'expense',
     },
     {
       label: 'Down payment + fees',
-      value: formatSignedEuroShort(-breakdown.totalWithdrawalCents),
+      value: formatSignedMoneyShort(-breakdown.totalWithdrawalCents, format),
       variant: 'detail',
       tone: 'expense',
     },
     {
       label: 'End invested',
-      value: formatEuroShort(breakdown.endInvestedCents),
+      value: formatMoneyShort(breakdown.endInvestedCents, format),
       variant: 'detail',
       tone: 'neutral',
     },
     {
       label: 'Step vs prior year',
-      value: formatSignedEuroShort(breakdown.netChangeCents),
+      value: formatSignedMoneyShort(breakdown.netChangeCents, format),
       variant: 'detail',
       tone: breakdown.netChangeCents >= 0 ? 'income' : 'expense',
     },

@@ -1,5 +1,6 @@
 import type { ExpenseDataset } from '../domain/types'
 import { deriveTransactions } from '../domain/engine/status'
+import { defaultExpenseSettings, defaultGoalInputs } from '../domain/engine/defaults'
 import type { Env } from './env'
 import {
   toAccount,
@@ -78,25 +79,8 @@ export async function loadDataset(env: Env, owner: string): Promise<ExpenseDatas
     accountStatements: mappedStatements,
     cashActuals: cashActuals.map(toCashActual),
     installmentPlans: planRows.map(toInstallmentPlan),
-    settings: settingsRow
-      ? toSettings(settingsRow)
-      : {
-          openingCashCents: 0,
-          openingInvestmentCents: 0,
-          liquidNetWorthCents: 0,
-          defaultAccountId: null,
-        },
-    goalInputs: goalRow
-      ? toGoalInputs(goalRow)
-      : {
-          housePriceCents: 0,
-          downPaymentFraction: 0,
-          mortgageTermYears: 0,
-          mortgageRateAnnual: 0,
-          longTermTargetCents: 0,
-          horizonYears: 0,
-          expectedRealReturn: 0,
-        },
+    settings: settingsRow ? toSettings(settingsRow) : defaultExpenseSettings(),
+    goalInputs: goalRow ? toGoalInputs(goalRow) : defaultGoalInputs(),
     goalScenarios: scenarioRows.map(toGoalScenario),
   }
 }

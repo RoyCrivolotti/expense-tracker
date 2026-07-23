@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { ExpenseModel } from '../../useExpenseData'
 import { computeYearlyOverview, formatCents, fullMonthLabel } from '../../../engine'
+import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import styles from './mobile.module.css'
 
 export function YearlyOverviewMobile({ model }: { model: ExpenseModel }) {
@@ -45,7 +46,8 @@ function Row({
   alwaysShow?: boolean
   bold?: boolean
 }) {
-  const display = cents === 0 && !alwaysShow ? '—' : formatCents(cents, false)
+  const format = useMoneyFormat()
+  const display = cents === 0 && !alwaysShow ? '—' : formatCents(cents, format, false)
   return (
     <div className={styles.row}>
       <span className={styles.rowLabel}>{label}</span>

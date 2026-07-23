@@ -9,6 +9,8 @@ import {
   yearsToTargetFromProjection,
 } from '../../../engine'
 import { Card } from '../../components/primitives'
+import { useMoneyFormat } from '../../hooks/moneyFormatContext'
+import { formatMoneyShort } from './chartTheme'
 import styles from './goals.module.css'
 
 interface GoalsNarrativeProps {
@@ -33,10 +35,16 @@ interface PlanStat {
 }
 
 function CompactNarrative({ draft }: { draft: NewGoalScenario }) {
+  const format = useMoneyFormat()
   const { end, y500, fiYear } = getNarrativeStats(draft)
   const stats: PlanStat[] = [
-    { label: `Net worth in ${draft.horizonYears} yrs`, value: formatCents(end?.netWorthCents ?? 0) },
-    y500 != null ? { label: '€500k invested', value: `Year ${y500}` } : null,
+    {
+      label: `Net worth in ${draft.horizonYears} yrs`,
+      value: formatCents(end?.netWorthCents ?? 0, format),
+    },
+    y500 != null
+      ? { label: `${formatMoneyShort(50_000_000, format)} invested`, value: `Year ${y500}` }
+      : null,
     fiYear != null ? { label: 'Financial independence', value: `Year ${fiYear}` } : null,
   ].filter((s): s is PlanStat => s != null)
   return (
@@ -55,20 +63,26 @@ function CompactNarrative({ draft }: { draft: NewGoalScenario }) {
 }
 
 function FullNarrative({ draft }: { draft: NewGoalScenario }) {
+  const format = useMoneyFormat()
   const { end, y500, y1m, fiYear, fiTarget } = getNarrativeStats(draft)
+  const label500k = formatMoneyShort(50_000_000, format)
+  const label1m = formatMoneyShort(100_000_000, format)
   return (
     <Card>
       <h3 className={styles.chartTitle}>What this means</h3>
       <p className={styles.narrative}>
-        At {formatPercent(draft.expectedRealReturn)} real return and{' '}
-        {formatCents(draft.monthlyContributionCents)}/mo invested, your portfolio reaches{' '}
-        {formatCents(end?.investedCents ?? 0)} invested and{' '}
-        {formatCents(end?.netWorthCents ?? 0)} net worth in {draft.horizonYears} years.
-        {y500 != null ? ` €500k invested lands around year ${y500}.` : ' €500k is not reached in the horizon.'}
-        {y1m != null ? ` €1M around year ${y1m}.` : ''}
+        At {formatPercent(draft.expectedRealReturn, format)} real return and{' '}
+        {formatCents(draft.monthlyContributionCents, format)}/mo invested, your portfolio reaches{' '}
+        {formatCents(end?.investedCents ?? 0, format)} invested and{' '}
+        {formatCents(end?.netWorthCents ?? 0, format)} net worth in {draft.horizonYears} years.
+        {y500 != null
+          ? ` ${label500k} invested lands around year ${y500}.`
+          : ` ${label500k} is not reached in the horizon.`}
+        {y1m != null ? ` ${label1m} around year ${y1m}.` : ''}
       </p>
       <p className={`${styles.narrative} ${styles.narrativeMuted}`}>
-        FI target ({formatPercent(draft.safeWithdrawalRate)} SWR) is {formatCents(fiTarget)}
+        FI target ({formatPercent(draft.safeWithdrawalRate, format)} SWR) is{' '}
+        {formatCents(fiTarget, format)}
         {fiYear != null ? `, reachable around year ${fiYear}.` : ', not reached in the horizon.'}
       </p>
     </Card>

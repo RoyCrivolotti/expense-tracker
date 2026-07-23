@@ -1,13 +1,14 @@
+import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import styles from './goals.module.css'
 
-const TERMS: { term: string; body: string }[] = [
+const buildTerms = (cur: string): { term: string; body: string }[] => [
   {
     term: 'House purchase year',
     body: 'When you buy: null = never; 0 = already own (capital allocated); N > 0 = buy after year N. In that year the model grows your portfolio first, then withdraws down payment plus purchase fees. Equity appears in the composition chart — the invested line dip is not your total net worth falling by that amount.',
   },
   {
     term: 'Purchase fees',
-    body: 'Notary, agency, and closing costs (default €500 in demo). Withdrawn from the invested portfolio together with the down payment in the purchase year.',
+    body: `Notary, agency, and closing costs (default ${cur}500 in demo). Withdrawn from the invested portfolio together with the down payment in the purchase year.`,
   },
   {
     term: 'Scenario',
@@ -37,12 +38,14 @@ const TERMS: { term: string; body: string }[] = [
 
 /** Collapsible glossary so the Goals jargon is explained in place, on demand. */
 export function GoalsExplainer() {
+  const { symbol } = useMoneyFormat()
+  const terms = buildTerms(symbol)
   return (
     <details className={styles.controlSection}>
       <summary className={styles.controlSummary}>What do these terms mean?</summary>
       <div className={styles.controlBody}>
         <dl className={styles.glossary}>
-          {TERMS.map((t) => (
+          {terms.map((t) => (
             <div key={t.term} className={styles.glossaryItem}>
               <dt className={styles.glossaryTerm}>{t.term}</dt>
               <dd className={styles.glossaryBody}>{t.body}</dd>

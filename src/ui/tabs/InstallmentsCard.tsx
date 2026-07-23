@@ -13,6 +13,7 @@ import { fullMonthLabel } from '../../engine/dates'
 import { Card, SectionTitle } from '../components/primitives'
 import { CategoryIcon } from '../components/CategoryIcon'
 import { InstallmentPlansModal } from '../definitions/InstallmentPlansModal'
+import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { todayLocalIso } from '../dates'
 import styles from './UpcomingCard.module.css'
 
@@ -39,6 +40,7 @@ function toSeed(s: InstallmentSuggestion): TransactionSeed {
 type DueEntry = { plan: InstallmentPlan; suggestion: InstallmentSuggestion }
 
 export function InstallmentsCard({ model, actions, month }: Props) {
+  const format = useMoneyFormat()
   const [managing, setManaging] = useState(false)
   const plans = model.dataset.installmentPlans
   if (plans.length === 0) return null
@@ -72,7 +74,7 @@ export function InstallmentsCard({ model, actions, month }: Props) {
                 </span>
                 <span className={styles.meta}>
                   Payment {suggestion.installmentIndex}/{suggestion.totalCount} ·{' '}
-                  {formatCents(suggestion.amountCents)} · Final{' '}
+                  {formatCents(suggestion.amountCents, format)} · Final{' '}
                   {fullMonthLabel(finalBudgetMonth(plan))}
                 </span>
               </div>

@@ -2,11 +2,8 @@ import { useMemo } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
 import type { CategoryActuals } from '../../engine'
 import { computeCategoryActuals, formatCents, shortMonthLabel } from '../../engine'
+import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import styles from './analytics.module.css'
-
-function cell(cents: number): string {
-  return cents === 0 ? '—' : formatCents(cents, false)
-}
 
 /** Colour an actual against its monthly budget (only when a budget is set). */
 function cellClass(actual: number, budget: number): string | undefined {
@@ -44,9 +41,11 @@ function buildTotals(rows: CategoryActuals[], months: string[]) {
  * a budget column, a YTD column, and a totals row. Wide — scrolls on mobile.
  */
 export function MonthlySummaryGrid({ model }: { model: ExpenseModel }) {
+  const format = useMoneyFormat()
   const { months } = model
   const rows = useMemo(() => buildRows(model), [model])
   const totals = useMemo(() => buildTotals(rows, months), [rows, months])
+  const cell = (cents: number): string => (cents === 0 ? '—' : formatCents(cents, format, false))
 
   if (rows.length === 0) return null
 

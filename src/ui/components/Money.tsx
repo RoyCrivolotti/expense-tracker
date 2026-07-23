@@ -1,5 +1,6 @@
 import { formatCents } from '../../engine/money'
 import type { TxnType } from '../../types'
+import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import styles from './Money.module.css'
 
 const COLOR_BY_TYPE: Record<TxnType, string> = {
@@ -28,8 +29,9 @@ function signFor(cents: number, type?: TxnType, signed?: boolean): string {
 }
 
 export function Money({ cents, type, signed, className }: MoneyProps) {
+  const format = useMoneyFormat()
   const color = type ? COLOR_BY_TYPE[type] : undefined
-  const magnitude = formatCents(Math.abs(cents))
+  const magnitude = formatCents(Math.abs(cents), format)
   return (
     <span className={`${styles.money} ${className ?? ''}`} style={color ? { color } : undefined}>
       {signFor(cents, type, signed)}

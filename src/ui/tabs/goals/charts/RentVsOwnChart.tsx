@@ -6,7 +6,8 @@ import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
 import { sparseLabels } from '../../../charts/linearScale'
-import { formatEuroShort } from '../chartTheme'
+import { formatMoneyShort } from '../chartTheme'
+import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import styles from '../goals.module.css'
 
 const LEGEND: LegendItem[] = [
@@ -31,6 +32,7 @@ function RentVsOwnChartImpl({
       }),
     [draft],
   )
+  const format = useMoneyFormat()
   const years = points.map((p) => p.year)
   const labels = useMemo(() => sparseLabels(years, 5), [years])
 
@@ -42,8 +44,8 @@ function RentVsOwnChartImpl({
   const tooltip = (i: number): { title: string; lines: TooltipLine[] } => ({
     title: `Year ${years[i] ?? i}`,
     lines: [
-      { label: 'Rent & invest', value: formatEuroShort(points[i]?.rentNetWorthCents ?? 0), tone: 'neutral' },
-      { label: 'Buy now', value: formatEuroShort(points[i]?.buyNetWorthCents ?? 0), tone: 'neutral' },
+      { label: 'Rent & invest', value: formatMoneyShort(points[i]?.rentNetWorthCents ?? 0, format), tone: 'neutral' },
+      { label: 'Buy now', value: formatMoneyShort(points[i]?.buyNetWorthCents ?? 0, format), tone: 'neutral' },
     ],
   })
 
@@ -70,7 +72,7 @@ function RentVsOwnChartImpl({
         height={height}
         series={series}
         xLabels={labels}
-        formatValue={formatEuroShort}
+        formatValue={(c) => formatMoneyShort(c, format)}
         ariaLabel="Net worth from renting versus buying by year"
         tooltip={tooltip}
       />

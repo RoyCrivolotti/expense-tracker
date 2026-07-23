@@ -22,6 +22,7 @@ const cashRows: CashRow[] = [
     carryoverGapCents: null,
     monthGapCents: null,
     unpaidLiabilityCents: 0,
+    reconciled: false,
   },
 ]
 

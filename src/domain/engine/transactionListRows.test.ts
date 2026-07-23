@@ -37,6 +37,7 @@ const cashRows: CashRow[] = [
     carryoverGapCents: null,
     monthGapCents: null,
     unpaidLiabilityCents: 0,
+    reconciled: false,
   },
 ]
 
@@ -84,6 +85,7 @@ describe('buildTransactionListRows', () => {
         carryoverGapCents: null,
         monthGapCents: null,
         unpaidLiabilityCents: 0,
+        reconciled: false,
       },
     ]
     const statements: AccountStatement[] = [

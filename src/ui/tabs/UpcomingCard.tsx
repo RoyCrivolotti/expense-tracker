@@ -6,6 +6,7 @@ import type { Lookup } from '../format'
 import { formatDayLabel } from '../format'
 import { formatCents } from '../../engine/money'
 import { Card, SectionTitle } from '../components/primitives'
+import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { todayLocalIso } from '../dates'
 import styles from './UpcomingCard.module.css'
 
@@ -67,13 +68,14 @@ function SuggestionRow({
   onAdd: () => void
   onDismiss: () => void
 }) {
+  const format = useMoneyFormat()
   const categoryName = lookup.categoryName(suggestion.categoryId)
   return (
     <div className={styles.row}>
       <div className={styles.info}>
         <span className={styles.desc}>{suggestion.description}</span>
         <span className={styles.meta}>
-          {categoryName} · {formatCents(suggestion.amountCents)} ·{' '}
+          {categoryName} · {formatCents(suggestion.amountCents, format)} ·{' '}
           {formatDayLabel(suggestion.predictedDate)} ·{' '}
           <FrequencyLabel frequency={suggestion.frequency} />
         </span>

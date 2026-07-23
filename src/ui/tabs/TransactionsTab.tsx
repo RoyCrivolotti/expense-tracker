@@ -22,9 +22,10 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
   const state = useTransactionsTabState(model, month, actions)
   const [editingStatement, setEditingStatement] = useState<StatementPaymentRow | null>(null)
   const [statementPending, setStatementPending] = useState(false)
+  const rolloverDay = model.dataset.settings.budgetRolloverDay
   const upcoming = useMemo(
-    () => detectRecurring(model.dataset.transactions, { forBudgetMonth: month }),
-    [model.dataset, month],
+    () => detectRecurring(model.dataset.transactions, { forBudgetMonth: month, rolloverDay }),
+    [model.dataset, month, rolloverDay],
   )
 
   return (
@@ -90,7 +91,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
         {...(actions
           ? {
               onAddForDate: (date) =>
-                actions.onAdd({ date, budgetMonth: defaultBudgetMonth(date) }),
+                actions.onAdd({ date, budgetMonth: defaultBudgetMonth(date, rolloverDay) }),
               onDelete: actions.deleteTransaction,
               onToggleSelect: state.toggleSelected,
               onToggleDate: state.toggleDate,

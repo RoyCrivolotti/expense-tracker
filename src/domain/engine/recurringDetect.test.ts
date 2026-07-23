@@ -224,6 +224,27 @@ describe('detectRecurring', () => {
     expect(july[0]!.predictedDate).toBe('2026-07-05')
   })
 
+  it('applies the rollover day when a non-monthly prediction derives its budget month', () => {
+    const txns = ['2023-06-20', '2024-06-20', '2025-06-20'].map((date) =>
+      makeTxn({
+        date,
+        description: 'Domain renewal',
+        budgetMonth: date.slice(0, 7),
+        amountCents: 4999,
+      }),
+    )
+    const calendar = detectRecurring(txns)
+    expect(calendar).toHaveLength(1)
+    expect(calendar[0]!.frequency).toBe('yearly')
+    expect(calendar[0]!.predictedDate).toBe('2026-06-20')
+    expect(calendar[0]!.predictedBudgetMonth).toBe('2026-06')
+
+    // With a 13th rollover, the 20 Jun prediction counts toward the July budget.
+    const rolled = detectRecurring(txns, { rolloverDay: 13 })
+    expect(rolled[0]!.predictedDate).toBe('2026-06-20')
+    expect(rolled[0]!.predictedBudgetMonth).toBe('2026-07')
+  })
+
   it('does not suppress subscription when only a food order exists in target month', () => {
     const subRows = [
       ['2026-01-05', '2026-01'],

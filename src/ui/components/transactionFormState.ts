@@ -1,7 +1,7 @@
 import type { Transaction, TxnType } from '../../types'
 import { resolveDefaultAccountId } from '../../data/defaultAccount'
 import { defaultBudgetMonth } from '../../engine/dates'
-import { formatEuroInput } from '../../engine/money'
+import { formatMoneyInput, type MoneyFormat } from '../../engine/money'
 import type { ExpenseModel } from '../useExpenseData'
 import type { TransactionSeed } from '../actions'
 
@@ -30,16 +30,16 @@ function defaultFields(model: ExpenseModel): FormFields {
     categoryId: categories[0]?.id ?? 0,
     accountId: resolveDefaultAccountId(accounts, model.dataset.settings),
     date: today,
-    budgetMonth: defaultBudgetMonth(today),
+    budgetMonth: defaultBudgetMonth(today, model.dataset.settings.budgetRolloverDay),
     notes: '',
   }
 }
 
-function applySeed(defaults: FormFields, seed: TransactionSeed): FormFields {
+function applySeed(defaults: FormFields, seed: TransactionSeed, format: MoneyFormat): FormFields {
   return {
     ...defaults,
     ...(seed.type != null ? { type: seed.type } : {}),
-    ...(seed.amountCents != null ? { amount: formatEuroInput(seed.amountCents) } : {}),
+    ...(seed.amountCents != null ? { amount: formatMoneyInput(seed.amountCents, format) } : {}),
     ...(seed.description != null ? { description: seed.description } : {}),
     ...(seed.categoryId != null ? { categoryId: seed.categoryId } : {}),
     ...(seed.accountId != null ? { accountId: seed.accountId } : {}),
@@ -53,12 +53,13 @@ function applySeed(defaults: FormFields, seed: TransactionSeed): FormFields {
 export function initialFields(
   editing: Transaction | null,
   model: ExpenseModel,
+  format: MoneyFormat,
   seed?: TransactionSeed,
 ): FormFields {
   if (editing) {
     return {
       type: editing.type,
-      amount: formatEuroInput(editing.amountCents),
+      amount: formatMoneyInput(editing.amountCents, format),
       description: editing.description,
       categoryId: editing.categoryId,
       accountId: editing.accountId,
@@ -68,5 +69,5 @@ export function initialFields(
     }
   }
   const defaults = defaultFields(model)
-  return seed ? applySeed(defaults, seed) : defaults
+  return seed ? applySeed(defaults, seed, format) : defaults
 }

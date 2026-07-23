@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import type { ExpenseModel } from '../../useExpenseData'
-import type { CashRow } from '../../../engine'
+import type { CashRow, MoneyFormat } from '../../../engine'
 import { computeCashReconciliation, formatCents, fullMonthLabel } from '../../../engine'
+import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { ActualCashCell } from '../ActualCashCell'
 import styles from './mobile.module.css'
 
@@ -10,10 +11,10 @@ interface Props {
   onSetCashActual?: (yearMonth: string, actualCashCents: number | null) => Promise<void>
 }
 
-function gapBadge(gap: number | null) {
+function gapBadge(gap: number | null, format: MoneyFormat) {
   if (gap === null) return <span className={`${styles.badge} ${styles.badgeMuted}`}>—</span>
   const cls = gap === 0 ? styles.badgeMuted : gap > 0 ? styles.badgeSuccess : styles.badgeDanger
-  return <span className={`${styles.badge} ${cls}`}>{formatCents(gap, false)}</span>
+  return <span className={`${styles.badge} ${cls}`}>{formatCents(gap, format, false)}</span>
 }
 
 function CashCard({
@@ -29,11 +30,22 @@ function CashCard({
   onToggle: () => void
   onSetCashActual: Props['onSetCashActual']
 }) {
+  const format = useMoneyFormat()
   return (
     <div className={styles.accordion}>
       <button type="button" className={styles.accordionHeader} onClick={onToggle}>
-        <span>{fullMonthLabel(row.month)}</span>
-        {gapBadge(row.gapCents)}
+        <span>
+          {fullMonthLabel(row.month)}
+          {row.reconciled ? (
+            <span
+              title="Reconciled: all card statements paid and cash entered"
+              style={{ marginLeft: '0.35rem', color: 'var(--exp-income)', fontWeight: 700 }}
+            >
+              ✓
+            </span>
+          ) : null}
+        </span>
+        {gapBadge(row.gapCents, format)}
       </button>
       {expanded && (
         <div className={styles.accordionBody}>
@@ -72,6 +84,7 @@ function CashCard({
 }
 
 function GapRow({ label, cents }: { label: string; cents: number | null }) {
+  const format = useMoneyFormat()
   if (cents === null) {
     return (
       <div className={styles.row}>
@@ -84,7 +97,7 @@ function GapRow({ label, cents }: { label: string; cents: number | null }) {
   return (
     <div className={styles.row}>
       <span className={styles.rowLabel}>{label}</span>
-      <span className={`${styles.badge} ${cls}`}>{formatCents(cents, false)}</span>
+      <span className={`${styles.badge} ${cls}`}>{formatCents(cents, format, false)}</span>
     </div>
   )
 }
@@ -104,6 +117,7 @@ function Row({
   muted?: boolean
   alwaysShow?: boolean
 }) {
+  const format = useMoneyFormat()
   if (cents === 0 && !alwaysShow) {
     return (
       <div className={styles.row}>
@@ -124,7 +138,7 @@ function Row({
     <div className={styles.row}>
       <span className={styles.rowLabel}>{label}</span>
       <span className={styles.rowValue} style={c ? { color: c } : undefined}>
-        {formatCents(cents, false)}
+        {formatCents(cents, format, false)}
       </span>
     </div>
   )

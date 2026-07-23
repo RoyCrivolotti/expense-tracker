@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest'
 import type { Transaction } from '../../types'
 import type { ExpenseModel } from '../useExpenseData'
 import type { TransactionSeed } from '../actions'
-import { parseEuroToCents } from '../../engine/money'
+import { EU_MONEY_FORMAT, parseMoneyToCents } from '../../engine/money'
+import { defaultExpenseSettings } from '../../engine'
 import { initialFields } from './transactionFormState'
 
 function minimalModel(): ExpenseModel {
@@ -26,12 +27,7 @@ function minimalModel(): ExpenseModel {
       },
       goalScenarios: [],
       installmentPlans: [],
-      settings: {
-        openingCashCents: 0,
-        openingInvestmentCents: 0,
-        liquidNetWorthCents: 0,
-        defaultAccountId: null,
-      },
+      settings: defaultExpenseSettings(),
     },
     lookup: {
       category: () => undefined,
@@ -71,7 +67,7 @@ describe('initialFields', () => {
       date: '2026-07-05',
       budgetMonth: '2026-07',
     }
-    const fields = initialFields(null, minimalModel(), seed)
+    const fields = initialFields(null, minimalModel(), EU_MONEY_FORMAT, seed)
     expect(fields).toEqual({
       type: 'expense',
       amount: '1.456,60',
@@ -85,7 +81,7 @@ describe('initialFields', () => {
   })
 
   it('merges a partial seed over defaults', () => {
-    const fields = initialFields(null, minimalModel(), {
+    const fields = initialFields(null, minimalModel(), EU_MONEY_FORMAT, {
       date: '2026-06-12',
       budgetMonth: '2026-06',
     })
@@ -96,8 +92,8 @@ describe('initialFields', () => {
     expect(fields.description).toBe('')
   })
 
-  it.each([110, 1010, 145660])('round-trips edit amount %i cents through parseEuroToCents', (cents) => {
-    const fields = initialFields(editingTxn(cents), minimalModel())
-    expect(parseEuroToCents(fields.amount)).toBe(cents)
+  it.each([110, 1010, 145660])('round-trips edit amount %i cents through parseMoneyToCents', (cents) => {
+    const fields = initialFields(editingTxn(cents), minimalModel(), EU_MONEY_FORMAT)
+    expect(parseMoneyToCents(fields.amount, EU_MONEY_FORMAT)).toBe(cents)
   })
 })

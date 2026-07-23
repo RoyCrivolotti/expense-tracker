@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { formatCents } from '../../engine'
+import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import type { ExpenseSettings, GoalInputs } from '../../types'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
@@ -60,6 +61,7 @@ function ScalarCard({
 }
 
 function CategoryList({ model, onEdit }: { model: ExpenseModel; onEdit: OnEdit }) {
+  const format = useMoneyFormat()
   const cats = model.dataset.categories
   const total = cats.reduce((s, c) => s + c.monthlyBudgetCents, 0)
   return (
@@ -70,7 +72,7 @@ function CategoryList({ model, onEdit }: { model: ExpenseModel; onEdit: OnEdit }
           name={c.name}
           icon={c.icon}
           active={c.active}
-          meta={`${formatCents(c.monthlyBudgetCents)} · order ${c.sortOrder}`}
+          meta={`${formatCents(c.monthlyBudgetCents, format)} · order ${c.sortOrder}`}
           onEdit={() => onEdit({ kind: 'category', record: c })}
         />
       ))}

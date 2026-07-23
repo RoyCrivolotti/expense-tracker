@@ -12,7 +12,8 @@ import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
 import { sparseLabels } from '../../../charts/linearScale'
-import { formatEuroShort } from '../chartTheme'
+import { formatMoneyShort } from '../chartTheme'
+import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import styles from '../goals.module.css'
 
 const FIRE_LEGEND: LegendItem[] = [
@@ -44,19 +45,20 @@ function FireChartImpl({
     return { fiTarget: target, fiYear: year, balances: drawdown }
   }, [draft])
 
+  const format = useMoneyFormat()
   const labels = useMemo(() => sparseLabels(balances.map((_, y) => y), 5), [balances])
   const series: ChartSeries[] = [{ id: 'balance', color: '#8b5cf6', values: balances, width: 2 }]
 
   const tooltip = (i: number): { title: string; lines: TooltipLine[] } => ({
     title: `Year ${i}`,
-    lines: [{ label: 'Portfolio', value: formatEuroShort(balances[i] ?? 0), tone: 'neutral' }],
+    lines: [{ label: 'Portfolio', value: formatMoneyShort(balances[i] ?? 0, format), tone: 'neutral' }],
   })
 
   return (
     <ChartShell embedded={embedded}>
       <h3 className={styles.chartTitle}>FIRE drawdown</h3>
       <p className={styles.chartHint}>
-        FI target {formatEuroShort(fiTarget)}
+        FI target {formatMoneyShort(fiTarget, format)}
         {fiYear != null ? ` · reached year ${fiYear}` : ' · not reached in horizon'}. Post-FI
         only: year 0 on this chart is the FI year, not today. Constant real withdrawal after that.
       </p>
@@ -65,7 +67,7 @@ function FireChartImpl({
         series={series}
         xLabels={labels}
         refLines={[fiTarget]}
-        formatValue={formatEuroShort}
+        formatValue={(c) => formatMoneyShort(c, format)}
         ariaLabel="FIRE drawdown projection by year"
         tooltip={tooltip}
       />
