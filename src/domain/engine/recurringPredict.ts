@@ -1,4 +1,4 @@
-import { BUDGET_ROLLOVER_DAY } from './dates'
+import { shiftBudgetMonth } from './dates'
 import type { RecurringFrequency } from './recurringTypes'
 
 const DAY_TOLERANCE = 2
@@ -38,27 +38,24 @@ export function canonicalDayOfMonth(sortedDates: string[]): number {
 
 /**
  * Calendar date a monthly recurrence falls on for budget month `yearMonth`.
- * Spending on/after the rollover day counts toward the next budget month, so a
- * canonical day at/after the rollover actually lands in the prior calendar
- * month (e.g. the 20th billed for the August budget is really July 20). Keeping
- * the date budget-consistent means its own `defaultBudgetMonth` equals
- * `yearMonth`, which the due-soon window relies on.
+ * `monthOffset` is the group's typical distance from the payment's calendar
+ * month to its budget month (learned from history): 0 when the budget month
+ * equals the calendar month (most charges, incl. deferred-card charges dated
+ * near the rollover), +1 when a late-month payment rolls into the next budget
+ * month (e.g. the 20th billed for the August budget is really July 20). The
+ * resulting date's own budget month therefore equals `yearMonth`, which the
+ * due-soon window relies on.
  */
-export function predictDateInBudgetMonth(yearMonth: string, sortedDates: string[]): string {
-  const [y, m] = yearMonth.split('-').map(Number) as [number, number]
-  const day = canonicalDayOfMonth(sortedDates)
-  let cy = y
-  let cm = m
-  if (day >= BUDGET_ROLLOVER_DAY) {
-    cm -= 1
-    if (cm < 1) {
-      cm = 12
-      cy -= 1
-    }
-  }
-  const maxDay = new Date(cy, cm, 0).getDate()
-  const clampedDay = Math.min(day, maxDay)
-  return `${cy}-${String(cm).padStart(2, '0')}-${String(clampedDay).padStart(2, '0')}`
+export function predictDateInBudgetMonth(
+  yearMonth: string,
+  sortedDates: string[],
+  monthOffset: number,
+): string {
+  const dateMonth = shiftBudgetMonth(yearMonth, -monthOffset)
+  const [y, m] = dateMonth.split('-').map(Number) as [number, number]
+  const maxDay = new Date(y, m, 0).getDate()
+  const clampedDay = Math.min(canonicalDayOfMonth(sortedDates), maxDay)
+  return `${dateMonth}-${String(clampedDay).padStart(2, '0')}`
 }
 
 /** Predict the next occurrence date based on frequency and historical days. */

@@ -29,6 +29,8 @@ export interface OccurrenceGroup {
   amountCents: number
   dates: string[]
   budgetMonths: Set<string>
+  /** Per-occurrence months from the date's calendar month to its budget month. */
+  budgetOffsets: number[]
 }
 
 export interface DetectRecurringOptions {

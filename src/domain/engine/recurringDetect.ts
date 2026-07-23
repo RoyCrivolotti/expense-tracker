@@ -1,5 +1,5 @@
 import type { Transaction } from '../types'
-import { defaultBudgetMonth, priorBudgetMonth } from './dates'
+import { defaultBudgetMonth, monthsBetweenBudget, priorBudgetMonth } from './dates'
 import {
   classifyFrequency,
   predictDateInBudgetMonth,
@@ -40,6 +40,11 @@ function groupKey(txn: Transaction): string {
   return `${normalizeDesc(txn.description)}|${txn.accountId}|${txn.categoryId}|${txn.type}`
 }
 
+/** Months from a transaction's calendar month to its assigned budget month. */
+function budgetOffset(txn: Transaction): number {
+  return monthsBetweenBudget(txn.date.slice(0, 7), txn.budgetMonth)
+}
+
 export function groupTransactions(transactions: Transaction[]): OccurrenceGroup[] {
   const map = new Map<string, OccurrenceGroup>()
 
@@ -54,6 +59,7 @@ export function groupTransactions(transactions: Transaction[]): OccurrenceGroup[
     if (existing) {
       existing.dates.push(txn.date)
       existing.budgetMonths.add(txn.budgetMonth)
+      existing.budgetOffsets.push(budgetOffset(txn))
       existing.categoryId = txn.categoryId
       existing.amountCents = txn.amountCents
       existing.label = txn.description
@@ -70,6 +76,7 @@ export function groupTransactions(transactions: Transaction[]): OccurrenceGroup[
         amountCents: txn.amountCents,
         dates: [txn.date],
         budgetMonths: new Set([txn.budgetMonth]),
+        budgetOffsets: [budgetOffset(txn)],
       })
     }
   }
@@ -113,14 +120,25 @@ function buildSuggestion(
   }
 }
 
+/** Typical months from calendar month to budget month for a group (rounded median). */
+function canonicalMonthOffset(offsets: number[]): number {
+  return offsets.length === 0 ? 0 : Math.round(median(offsets))
+}
+
 function resolvePrediction(
   sorted: string[],
   frequency: RecurringFrequency,
   forMonth: string | undefined,
+  monthOffset: number,
 ): { predictedDate: string; predictedBM: string } | null {
   if (forMonth && frequency === 'monthly') {
-    // Force viewed budget month — avoids rollover shifting BM away from forMonth.
-    return { predictedDate: predictDateInBudgetMonth(forMonth, sorted), predictedBM: forMonth }
+    // Force viewed budget month; derive the calendar date from this group's own
+    // date→budget-month offset so deferred-card charges (budget month equals the
+    // calendar month) and normal rollover charges each land on their real day.
+    return {
+      predictedDate: predictDateInBudgetMonth(forMonth, sorted, monthOffset),
+      predictedBM: forMonth,
+    }
   }
   const predictedDate = predictNextDate(frequency, sorted)
   if (!predictedDate) return null
@@ -148,7 +166,8 @@ function trySuggestGroup(
   const regularity = regularityScore(gaps)
   if (regularity < MIN_REGULARITY) return null
 
-  const prediction = resolvePrediction(sorted, frequency, forMonth)
+  const monthOffset = canonicalMonthOffset(group.budgetOffsets)
+  const prediction = resolvePrediction(sorted, frequency, forMonth, monthOffset)
   if (!prediction) return null
   if (isAlreadyEntered(group.key, prediction.predictedBM, transactions)) return null
 
