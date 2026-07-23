@@ -29,7 +29,7 @@ const baseDataset: ExpenseDataset = {
   },
 }
 
-const newTxn: NewTransaction = {
+const newTxn = {
   date: '2026-01-15',
   budgetMonth: '2026-01',
   description: 'Coffee',
@@ -38,7 +38,7 @@ const newTxn: NewTransaction = {
   type: 'expense',
   amountCents: 350,
   cancelled: false,
-}
+} satisfies NewTransaction
 
 const savedTxn: Transaction = { ...newTxn, id: 42, status: 'posted' }
 

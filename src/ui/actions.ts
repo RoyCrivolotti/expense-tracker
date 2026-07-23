@@ -14,6 +14,8 @@ import type {
   NewTransaction,
 } from '../data/dataSource'
 
+export type { InstallmentIntent } from './components/installmentIntent'
+
 /** Pre-filled fields for the add modal (partial overlay on defaults). */
 export interface TransactionSeed {
   description?: string

@@ -17,7 +17,10 @@ import type {
   Transaction,
 } from '../types'
 
-export type NewTransaction = Omit<StoredTransaction, 'id' | 'createdAt'>
+export type NewTransaction = Omit<StoredTransaction, 'id' | 'createdAt' | 'planId'> & {
+  /** Plan link: a plan id links/moves the row, null unlinks it, absent leaves it unchanged. */
+  planId?: number | null
+}
 export type NewCategory = Omit<Category, 'id'>
 export type NewAccount = Omit<Account, 'id'>
 export type NewGoalScenario = Omit<GoalScenario, 'id'>

@@ -4,13 +4,12 @@ import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import { planProgress } from '../../engine'
 import { fullMonthLabel } from '../../engine/dates'
-import { Card, EmptyState, SectionTitle } from '../components/primitives'
+import { EmptyState } from '../components/primitives'
 import { CategoryIcon } from '../components/CategoryIcon'
-import { InstallmentPlanModal } from './InstallmentPlanModal'
+import { Modal } from '../components/Modal'
+import { InstallmentPlanForm } from './InstallmentPlanForm'
 import defStyles from './definitions.module.css'
 import styles from './InstallmentPlansManager.module.css'
-
-type Editing = { plan: InstallmentPlan | null } | null
 
 function PlanRow({
   plan,
@@ -67,49 +66,41 @@ function PlanRow({
   )
 }
 
-export function InstallmentPlansManager({
-  model,
-  actions,
-}: {
+interface Props {
   model: ExpenseModel
   actions: ExpenseActions
-}) {
-  const [editing, setEditing] = useState<Editing>(null)
+  onClose: () => void
+}
+
+export function InstallmentPlansModal({ model, actions, onClose }: Props) {
+  const [editing, setEditing] = useState<InstallmentPlan | null>(null)
   const plans = model.dataset.installmentPlans
 
   return (
-    <>
-      <SectionTitle>Installment plans</SectionTitle>
-      <Card>
-        {plans.length === 0 ? (
-          <EmptyState>No installment plans yet.</EmptyState>
-        ) : (
-          plans.map((plan) => (
-            <PlanRow
-              key={plan.id}
-              plan={plan}
-              model={model}
-              actions={actions}
-              onEdit={() => setEditing({ plan })}
-            />
-          ))
-        )}
-        <button
-          type="button"
-          className={defStyles.addBtn}
-          onClick={() => setEditing({ plan: null })}
-        >
-          + Add installment plan
-        </button>
-      </Card>
-      {editing && (
-        <InstallmentPlanModal
-          plan={editing.plan}
+    <Modal
+      title={editing ? `Edit ${editing.description}` : 'Installment plans'}
+      onClose={onClose}
+    >
+      {editing ? (
+        <InstallmentPlanForm
+          plan={editing}
           model={model}
           actions={actions}
-          onClose={() => setEditing(null)}
+          onBack={() => setEditing(null)}
         />
+      ) : plans.length === 0 ? (
+        <EmptyState>No installment plans yet.</EmptyState>
+      ) : (
+        plans.map((plan) => (
+          <PlanRow
+            key={plan.id}
+            plan={plan}
+            model={model}
+            actions={actions}
+            onEdit={() => setEditing(plan)}
+          />
+        ))
       )}
-    </>
+    </Modal>
   )
 }

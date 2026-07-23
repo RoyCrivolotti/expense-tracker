@@ -31,16 +31,23 @@ async function deriveOne(env: Env, owner: string, stored: StoredTransaction): Pr
   return { ...stored, status }
 }
 
+interface PlanLinkInput {
+  planId?: number | null
+  installmentIndex?: number
+}
+
 /**
- * Resolve the installment link for a plan-bound insert. The index is
- * server-assigned from recorded progress unless one is supplied explicitly
- * (the one-off linking script); duplicates are rejected before the write so a
- * clear 400 is returned instead of a unique-index failure.
+ * Resolve the installment link for a plan-bound write. The index is
+ * server-assigned from recorded progress unless one is supplied explicitly;
+ * duplicates are rejected before the write so a clear 400 is returned instead
+ * of a unique-index failure. On update, `excludeId` skips the row being saved
+ * so re-saving it at its own index (or moving plans) is allowed.
  */
 async function resolvePlanLink(
   env: Env,
   owner: string,
-  input: NewTransaction,
+  input: PlanLinkInput,
+  excludeId?: number,
 ): Promise<{ planId: number; installmentIndex: number } | null> {
   if (input.planId == null) return null
   await assertOwnedPlan(env, owner, input.planId)
@@ -49,17 +56,23 @@ async function resolvePlanLink(
   )
     .bind(input.planId, owner)
     .first<{ s: number }>()
+  const guard = excludeId != null ? ' AND id != ?' : ''
+  const maxArgs = excludeId != null ? [owner, input.planId, excludeId] : [owner, input.planId]
   const max = await env.DB.prepare(
-    'SELECT MAX(installment_index) AS m FROM transactions WHERE owner = ? AND plan_id = ?',
+    `SELECT MAX(installment_index) AS m FROM transactions WHERE owner = ? AND plan_id = ?${guard}`,
   )
-    .bind(owner, input.planId)
+    .bind(...maxArgs)
     .first<{ m: number | null }>()
   const nextIndex = max?.m != null ? max.m + 1 : (start?.s ?? 1)
   const installmentIndex = input.installmentIndex ?? nextIndex
+  const dupArgs =
+    excludeId != null
+      ? [owner, input.planId, installmentIndex, excludeId]
+      : [owner, input.planId, installmentIndex]
   const dup = await env.DB.prepare(
-    'SELECT 1 AS ok FROM transactions WHERE owner = ? AND plan_id = ? AND installment_index = ?',
+    `SELECT 1 AS ok FROM transactions WHERE owner = ? AND plan_id = ? AND installment_index = ?${guard}`,
   )
-    .bind(owner, input.planId, installmentIndex)
+    .bind(...dupArgs)
     .first<{ ok: number }>()
   if (dup) throw new HttpError(400, 'Installment already recorded for this index')
   return { planId: input.planId, installmentIndex }
@@ -97,8 +110,9 @@ export async function insertTransaction(
   return deriveOne(env, owner, toStoredTxn(row))
 }
 
-// Plan link columns are assigned only on insert; they are intentionally not
-// patchable, so the schedule/index invariants stay owned by insertTransaction.
+// Plan link columns are patched through a dedicated path (planLinkColumns), not
+// the generic COLUMN map, so the schedule/index invariants stay centralised in
+// resolvePlanLink for both insert and update.
 type PatchableTxnKey = Exclude<keyof NewTransaction, 'planId' | 'installmentIndex'>
 
 const COLUMN: Record<PatchableTxnKey, string> = {
@@ -118,6 +132,31 @@ function patchValue(key: PatchableTxnKey, value: unknown): unknown {
   return value ?? null
 }
 
+/**
+ * Column assignments for an update's plan link. Absent `planId` means no change;
+ * an explicit `null` unlinks; a plan id links/moves (index resolved, self-excluded).
+ */
+async function planLinkColumns(
+  env: Env,
+  owner: string,
+  id: number,
+  patch: Partial<NewTransaction>,
+): Promise<{ sets: string[]; values: unknown[] }> {
+  if (!('planId' in patch)) return { sets: [], values: [] }
+  const cols = ['plan_id = ?', 'installment_index = ?']
+  if (patch.planId == null) return { sets: cols, values: [null, null] }
+  const link = await resolvePlanLink(
+    env,
+    owner,
+    {
+      planId: patch.planId,
+      ...(patch.installmentIndex != null ? { installmentIndex: patch.installmentIndex } : {}),
+    },
+    id,
+  )
+  return { sets: cols, values: [link!.planId, link!.installmentIndex] }
+}
+
 export async function updateTransaction(
   env: Env,
   owner: string,
@@ -125,11 +164,14 @@ export async function updateTransaction(
   patch: Partial<NewTransaction>,
 ): Promise<Transaction> {
   const keys = (Object.keys(patch) as PatchableTxnKey[]).filter((k) => k in COLUMN)
-  if (keys.length === 0) throw new HttpError(400, 'Empty patch')
+  const link = await planLinkColumns(env, owner, id, patch)
+  if (keys.length === 0 && link.sets.length === 0) throw new HttpError(400, 'Empty patch')
   if (patch.accountId != null) await assertOwnedAccount(env, owner, patch.accountId)
   if (patch.categoryId != null) await assertOwnedCategory(env, owner, patch.categoryId)
-  const sets = keys.map((k) => `${COLUMN[k]} = ?`).concat("updated_at = datetime('now')")
-  const values = keys.map((k) => patchValue(k, patch[k]))
+  const sets = keys
+    .map((k) => `${COLUMN[k]} = ?`)
+    .concat(link.sets, "updated_at = datetime('now')")
+  const values = keys.map((k) => patchValue(k, patch[k])).concat(link.values)
   const row = await env.DB.prepare(
     `UPDATE transactions SET ${sets.join(', ')} WHERE id = ? AND owner = ? RETURNING *`,
   )

@@ -116,3 +116,16 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+.linkButton {
+  width: 100%;
+  text-align: left;
+  padding: 0.7rem 0.9rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 0.7rem;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}

@@ -31,13 +31,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
     <div className={styles.stack}>
       {actions && (
         <>
-          <InstallmentsCard
-            plans={model.dataset.installmentPlans}
-            transactions={model.dataset.transactions}
-            lookup={model.lookup}
-            month={month}
-            onAdd={actions.onAdd}
-          />
+          <InstallmentsCard model={model} actions={actions} month={month} />
           {upcoming.length > 0 && (
             <UpcomingCard suggestions={upcoming} lookup={model.lookup} onAdd={actions.onAdd} />
           )}
