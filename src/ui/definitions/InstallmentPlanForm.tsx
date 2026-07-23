@@ -4,16 +4,11 @@ import type { NewInstallmentPlan } from '../../data/dataSource'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import { formatEuroInput, parseEuroToCents } from '../../engine/money'
-import { Modal } from '../components/Modal'
 import formStyles from '../components/TransactionForm.module.css'
+import stepStyles from '../components/InstallmentStep.module.css'
 import styles from './definitions.module.css'
 
-interface Props {
-  plan: InstallmentPlan | null
-  model: ExpenseModel
-  actions: ExpenseActions
-  onClose: () => void
-}
+const TXN_TYPES: TxnType[] = ['expense', 'income', 'investment', 'refund']
 
 interface Fields {
   description: string
@@ -27,33 +22,17 @@ interface Fields {
   active: boolean
 }
 
-const TXN_TYPES: TxnType[] = ['expense', 'income', 'investment', 'refund']
-
-function initialFields(plan: InstallmentPlan | null, model: ExpenseModel): Fields {
-  const { accounts, categories } = model.dataset
-  if (plan) {
-    return {
-      description: plan.description,
-      amount: formatEuroInput(plan.amountCents),
-      totalCount: String(plan.totalCount),
-      startInstallmentIndex: String(plan.startInstallmentIndex),
-      anchorBudgetMonth: plan.anchorBudgetMonth,
-      accountId: plan.accountId,
-      categoryId: plan.categoryId,
-      type: plan.type,
-      active: plan.active,
-    }
-  }
+function initialFields(plan: InstallmentPlan): Fields {
   return {
-    description: '',
-    amount: '',
-    totalCount: '',
-    startInstallmentIndex: '1',
-    anchorBudgetMonth: model.months[model.months.length - 1] ?? '',
-    accountId: accounts[0]?.id ?? 0,
-    categoryId: categories[0]?.id ?? 0,
-    type: 'expense',
-    active: true,
+    description: plan.description,
+    amount: formatEuroInput(plan.amountCents),
+    totalCount: String(plan.totalCount),
+    startInstallmentIndex: String(plan.startInstallmentIndex),
+    anchorBudgetMonth: plan.anchorBudgetMonth,
+    accountId: plan.accountId,
+    categoryId: plan.categoryId,
+    type: plan.type,
+    active: plan.active,
   }
 }
 
@@ -71,8 +50,15 @@ function toPayload(f: Fields): NewInstallmentPlan {
   }
 }
 
-export function InstallmentPlanModal({ plan, model, actions, onClose }: Props) {
-  const [f, setF] = useState<Fields>(() => initialFields(plan, model))
+interface Props {
+  plan: InstallmentPlan
+  model: ExpenseModel
+  actions: ExpenseActions
+  onBack: () => void
+}
+
+export function InstallmentPlanForm({ plan, model, actions, onBack }: Props) {
+  const [f, setF] = useState<Fields>(() => initialFields(plan))
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const set = <K extends keyof Fields>(key: K, value: Fields[K]) =>
@@ -82,10 +68,8 @@ export function InstallmentPlanModal({ plan, model, actions, onClose }: Props) {
     setBusy(true)
     setErr(null)
     try {
-      const payload = toPayload(f)
-      if (plan) await actions.updateInstallmentPlan(plan.id, payload)
-      else await actions.createInstallmentPlan(payload)
-      onClose()
+      await actions.updateInstallmentPlan(plan.id, toPayload(f))
+      onBack()
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not save')
       setBusy(false)
@@ -93,18 +77,21 @@ export function InstallmentPlanModal({ plan, model, actions, onClose }: Props) {
   }
 
   return (
-    <Modal title={plan ? `Edit ${plan.description}` : 'New installment plan'} onClose={onClose}>
-      <form
-        className={formStyles.form}
-        onSubmit={(e) => {
-          e.preventDefault()
-          void submit()
-        }}
-      >
-        <label className={formStyles.field}>
-          <span className={formStyles.label}>Description</span>
-          <input value={f.description} onChange={(e) => set('description', e.target.value)} />
-        </label>
+    <form
+      className={formStyles.form}
+      onSubmit={(e) => {
+        e.preventDefault()
+        void submit()
+      }}
+    >
+      <button type="button" className={stepStyles.back} onClick={onBack}>
+        &larr; Back to plans
+      </button>
+      <label className={formStyles.field}>
+        <span className={formStyles.label}>Description</span>
+        <input value={f.description} onChange={(e) => set('description', e.target.value)} />
+      </label>
+      <div className={formStyles.row}>
         <label className={formStyles.field}>
           <span className={formStyles.label}>Installment amount (€)</span>
           <input
@@ -123,6 +110,8 @@ export function InstallmentPlanModal({ plan, model, actions, onClose }: Props) {
             onChange={(e) => set('totalCount', e.target.value)}
           />
         </label>
+      </div>
+      <div className={formStyles.row}>
         <label className={formStyles.field}>
           <span className={formStyles.label}>First tracked installment</span>
           <input
@@ -140,12 +129,11 @@ export function InstallmentPlanModal({ plan, model, actions, onClose }: Props) {
             onChange={(e) => set('anchorBudgetMonth', e.target.value)}
           />
         </label>
+      </div>
+      <div className={formStyles.row}>
         <label className={formStyles.field}>
           <span className={formStyles.label}>Account</span>
-          <select
-            value={String(f.accountId)}
-            onChange={(e) => set('accountId', Number(e.target.value))}
-          >
+          <select value={String(f.accountId)} onChange={(e) => set('accountId', Number(e.target.value))}>
             {model.dataset.accounts.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
@@ -155,10 +143,7 @@ export function InstallmentPlanModal({ plan, model, actions, onClose }: Props) {
         </label>
         <label className={formStyles.field}>
           <span className={formStyles.label}>Category</span>
-          <select
-            value={String(f.categoryId)}
-            onChange={(e) => set('categoryId', Number(e.target.value))}
-          >
+          <select value={String(f.categoryId)} onChange={(e) => set('categoryId', Number(e.target.value))}>
             {model.dataset.categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
@@ -166,31 +151,27 @@ export function InstallmentPlanModal({ plan, model, actions, onClose }: Props) {
             ))}
           </select>
         </label>
-        <label className={formStyles.field}>
-          <span className={formStyles.label}>Type</span>
-          <select value={f.type} onChange={(e) => set('type', e.target.value as TxnType)}>
-            {TXN_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t[0]!.toUpperCase() + t.slice(1)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className={styles.toggle}>
-          <input
-            type="checkbox"
-            checked={f.active}
-            onChange={(e) => set('active', e.target.checked)}
-          />
-          <span>Active</span>
-        </label>
-        {err && <p className={formStyles.error}>{err}</p>}
-        <div className={formStyles.actions}>
-          <button type="submit" className={`${formStyles.save} tapActive`} disabled={busy}>
-            {busy ? 'Saving…' : plan ? 'Save plan' : 'Add plan'}
-          </button>
-        </div>
-      </form>
-    </Modal>
+      </div>
+      <label className={formStyles.field}>
+        <span className={formStyles.label}>Type</span>
+        <select value={f.type} onChange={(e) => set('type', e.target.value as TxnType)}>
+          {TXN_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {t[0]!.toUpperCase() + t.slice(1)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className={styles.toggle}>
+        <input type="checkbox" checked={f.active} onChange={(e) => set('active', e.target.checked)} />
+        <span>Active</span>
+      </label>
+      {err && <p className={formStyles.error}>{err}</p>}
+      <div className={formStyles.actions}>
+        <button type="submit" className={`${formStyles.save} tapActive`} disabled={busy}>
+          {busy ? 'Saving…' : 'Save plan'}
+        </button>
+      </div>
+    </form>
   )
 }

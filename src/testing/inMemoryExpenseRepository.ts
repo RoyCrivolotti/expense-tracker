@@ -120,15 +120,23 @@ export function inMemoryExpenseRepository(
     return plan
   }
 
-  /** Resolve and validate the installment index for a plan-linked insert. */
+  /**
+   * Resolve and validate the installment index for a plan-linked write. On
+   * update, `excludeId` skips the row being saved so re-saving it at its own
+   * index (or moving plans) is allowed.
+   */
   function resolvePlanLink(
     store: OwnerStore,
-    input: NewTransaction,
+    input: { planId?: number | null; installmentIndex?: number },
+    excludeId?: number,
   ): { planId: number; installmentIndex: number } | null {
     if (input.planId == null) return null
     const plan = assertOwnedPlan(store, input.planId)
     const existing = store.transactions
-      .filter((t) => t.planId === plan.id && typeof t.installmentIndex === 'number')
+      .filter(
+        (t) =>
+          t.planId === plan.id && typeof t.installmentIndex === 'number' && t.id !== excludeId,
+      )
       .map((t) => t.installmentIndex as number)
     const nextIndex = existing.length > 0 ? Math.max(...existing) + 1 : plan.startInstallmentIndex
     const installmentIndex = input.installmentIndex ?? nextIndex
@@ -196,7 +204,21 @@ export function inMemoryExpenseRepository(
       if (patch.categoryId != null) assertOwnedCategory(store, patch.categoryId)
       const keys = Object.keys(patch) as (keyof NewTransaction)[]
       if (keys.length === 0) throw new RepoHttpError(400, 'Empty patch')
-      const updated: StoredTransaction = { ...existing, ...patch, id: existing.id }
+      const { planId: nextPlanId, installmentIndex: nextIndex, ...rest } = patch
+      let updated: StoredTransaction = { ...existing, ...rest, id: existing.id }
+      if ('planId' in patch) {
+        if (nextPlanId == null) {
+          delete updated.planId
+          delete updated.installmentIndex
+        } else {
+          const link = resolvePlanLink(
+            store,
+            { planId: nextPlanId, ...(nextIndex != null ? { installmentIndex: nextIndex } : {}) },
+            id,
+          )!
+          updated = { ...updated, planId: link.planId, installmentIndex: link.installmentIndex }
+        }
+      }
       const index = store.transactions.findIndex((row) => row.id === id)
       store.transactions[index] = updated
       return Promise.resolve(deriveOne(updated, store.accounts, store.statements))

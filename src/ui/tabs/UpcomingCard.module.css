@@ -39,6 +39,22 @@
   gap: 0.4rem;
   flex-shrink: 0;
 }
+
+.manageBtn {
+  width: 100%;
+  margin-top: 0.6rem;
+  padding: 0.55rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 0.7rem;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.manageBtn:hover {
+  border-color: var(--color-accent);
+}
 .addBtn,
 .dismissBtn {
   width: 2rem;

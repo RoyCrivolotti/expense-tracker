@@ -1,6 +1,7 @@
-import type { InstallmentPlan, Transaction } from '../../types'
-import type { TransactionSeed } from '../actions'
-import type { Lookup } from '../format'
+import { useState } from 'react'
+import type { InstallmentPlan } from '../../types'
+import type { ExpenseActions, TransactionSeed } from '../actions'
+import type { ExpenseModel } from '../useExpenseData'
 import {
   finalBudgetMonth,
   nextInstallmentSuggestion,
@@ -10,14 +11,13 @@ import { formatCents } from '../../engine/money'
 import { fullMonthLabel } from '../../engine/dates'
 import { Card, SectionTitle } from '../components/primitives'
 import { CategoryIcon } from '../components/CategoryIcon'
+import { InstallmentPlansModal } from '../definitions/InstallmentPlansModal'
 import styles from './UpcomingCard.module.css'
 
 interface Props {
-  plans: InstallmentPlan[]
-  transactions: Transaction[]
-  lookup: Lookup
+  model: ExpenseModel
+  actions: ExpenseActions
   month: string
-  onAdd: (seed: TransactionSeed) => void
 }
 
 function toSeed(s: InstallmentSuggestion): TransactionSeed {
@@ -34,48 +34,70 @@ function toSeed(s: InstallmentSuggestion): TransactionSeed {
   }
 }
 
-export function InstallmentsCard({ plans, transactions, lookup, month, onAdd }: Props) {
-  const due = plans
-    .map((plan) => ({ plan, suggestion: nextInstallmentSuggestion(plan, transactions, month) }))
-    .filter((entry): entry is { plan: InstallmentPlan; suggestion: InstallmentSuggestion } =>
-      entry.suggestion !== null,
-    )
+type DueEntry = { plan: InstallmentPlan; suggestion: InstallmentSuggestion }
 
-  if (due.length === 0) return null
+export function InstallmentsCard({ model, actions, month }: Props) {
+  const [managing, setManaging] = useState(false)
+  const plans = model.dataset.installmentPlans
+  if (plans.length === 0) return null
+
+  const due = plans
+    .map((plan) => ({
+      plan,
+      suggestion: nextInstallmentSuggestion(plan, model.dataset.transactions, month),
+    }))
+    .filter((entry): entry is DueEntry => entry.suggestion !== null)
 
   return (
     <>
       <SectionTitle>Installments</SectionTitle>
       <Card>
-        <p className={styles.meta}>Scheduled plan payments due this month, not predictions.</p>
-        {due.map(({ plan, suggestion }) => {
-          const cat = lookup.category(suggestion.categoryId)
-          return (
-            <div key={suggestion.planId} className={styles.row}>
-              <div className={styles.info}>
-                <span className={styles.desc}>
-                  <CategoryIcon icon={cat?.icon} name={cat?.name ?? suggestion.description} />{' '}
-                  {suggestion.description}
-                </span>
-                <span className={styles.meta}>
-                  Payment {suggestion.installmentIndex}/{suggestion.totalCount} ·{' '}
-                  {formatCents(suggestion.amountCents)} · Final {fullMonthLabel(finalBudgetMonth(plan))}
-                </span>
-              </div>
-              <div className={styles.actions}>
-                <button
-                  type="button"
-                  className={styles.addBtn}
-                  onClick={() => onAdd(toSeed(suggestion))}
-                  aria-label="Log installment payment"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          )
-        })}
+        {due.length === 0 ? (
+          <p className={styles.meta}>No installments due this month.</p>
+        ) : (
+          <>
+            <p className={styles.meta}>Scheduled plan payments due this month, not predictions.</p>
+            {due.map(({ plan, suggestion }) => {
+              const cat = model.lookup.category(suggestion.categoryId)
+              return (
+                <div key={suggestion.planId} className={styles.row}>
+                  <div className={styles.info}>
+                    <span className={styles.desc}>
+                      <CategoryIcon icon={cat?.icon} name={cat?.name ?? suggestion.description} />{' '}
+                      {suggestion.description}
+                    </span>
+                    <span className={styles.meta}>
+                      Payment {suggestion.installmentIndex}/{suggestion.totalCount} ·{' '}
+                      {formatCents(suggestion.amountCents)} · Final{' '}
+                      {fullMonthLabel(finalBudgetMonth(plan))}
+                    </span>
+                  </div>
+                  <div className={styles.actions}>
+                    <button
+                      type="button"
+                      className={styles.addBtn}
+                      onClick={() => actions.onAdd(toSeed(suggestion))}
+                      aria-label="Log installment payment"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </>
+        )}
+        <button type="button" className={styles.manageBtn} onClick={() => setManaging(true)}>
+          Manage plans
+        </button>
       </Card>
+      {managing ? (
+        <InstallmentPlansModal
+          model={model}
+          actions={actions}
+          onClose={() => setManaging(false)}
+        />
+      ) : null}
     </>
   )
 }
