@@ -18,7 +18,7 @@ import { DashboardTab } from './tabs/DashboardTab'
 import { TransactionsTab } from './tabs/TransactionsTab'
 import { AnalyticsTab } from './tabs/AnalyticsTab'
 import { SettingsTab } from './tabs/SettingsTab'
-import { isOnboardingSkipped } from './onboarding/onboardingStorage'
+import { clearOnboardingSkip, isOnboardingSkipped } from './onboarding/onboardingStorage'
 import { ConnectivityProvider } from './hooks/ConnectivityProvider'
 import { MoneyFormatProvider } from './hooks/MoneyFormatProvider'
 import { useConnectivityState } from './hooks/useConnectivityState'
@@ -287,7 +287,10 @@ function ExpensesAppReady({
             ownerAccess={ownerAccess}
             accountEmail={accountEmail}
             onNavigate={setTab}
-            onRunSetup={() => setOnboardingOpen(true)}
+            onRunSetup={() => {
+              clearOnboardingSkip()
+              setOnboardingOpen(true)
+            }}
           />
         </div>
       </AppShell>

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
 import type { Transaction } from '../../types'
 import type { ExpenseModel } from '../useExpenseData'
 import type { TransactionSeed } from '../actions'
@@ -95,5 +95,29 @@ describe('initialFields', () => {
   it.each([110, 1010, 145660])('round-trips edit amount %i cents through parseMoneyToCents', (cents) => {
     const fields = initialFields(editingTxn(cents), minimalModel(), EU_MONEY_FORMAT)
     expect(parseMoneyToCents(fields.amount, EU_MONEY_FORMAT)).toBe(cents)
+  })
+
+  describe('default budget month with a non-default rollover day', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-07-20T12:00:00Z'))
+    })
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('rolls into next month once the rollover day has passed (rollover=13)', () => {
+      const model = minimalModel()
+      model.dataset.settings.budgetRolloverDay = 13
+      const fields = initialFields(null, model, EU_MONEY_FORMAT)
+      expect(fields.budgetMonth).toBe('2026-08')
+    })
+
+    it('stays in the calendar month with rollover=1', () => {
+      const model = minimalModel()
+      model.dataset.settings.budgetRolloverDay = 1
+      const fields = initialFields(null, model, EU_MONEY_FORMAT)
+      expect(fields.budgetMonth).toBe('2026-07')
+    })
   })
 })

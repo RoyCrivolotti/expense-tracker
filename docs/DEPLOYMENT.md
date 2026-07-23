@@ -38,7 +38,7 @@ The allowlist lives in D1 (`allowed_users`). New users request access in the app
 
 **Setup:**
 
-1. Run migrations through `migrations/0008_goal_scenarios.sql` (includes `0005_access_control.sql`, `0006_user_group_grants.sql`, `0007_oncall_group.sql`).
+1. Run all migrations in order (see [Migrations](#migrations) below for the current last one). Access control specifically needs `0005_access_control.sql`, `0006_user_group_grants.sql`, and `0007_oncall_group.sql`.
 2. Copy `config/access.example.json` → `config/access.json` (owner email only).
 3. Sync Pages env: `npm run sync:access-env` (local: `config/access.json`; CI: `OWNER_EMAIL` secret).
 4. Bootstrap D1 from existing list (one-time / when adding emails): `npm run bootstrap:allowed-users`.

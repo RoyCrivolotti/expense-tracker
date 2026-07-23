@@ -56,13 +56,15 @@ export function InstallmentsCard({ model, actions, month }: Props) {
       ({ suggestion }) => !suggestion.dueDateKnown || isDueSoon(suggestion.predictedDate, today),
     )
 
-  if (due.length === 0) return null
-
   return (
     <>
       <SectionTitle>Installments</SectionTitle>
       <Card>
-        <p className={styles.meta}>Scheduled plan payments due now, not predictions.</p>
+        <p className={styles.meta}>
+          {due.length > 0
+            ? 'Scheduled plan payments due now, not predictions.'
+            : 'Nothing due right now.'}
+        </p>
         {due.map(({ plan, suggestion }) => {
           const cat = model.lookup.category(suggestion.categoryId)
           return (

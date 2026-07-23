@@ -19,3 +19,22 @@ describe('recordFields money', () => {
     expect(toInput('money', 145660, resolveMoneyFormat('USD', 'en-US'))).toBe('1,456.60')
   })
 })
+
+describe('recordFields percent', () => {
+  it('round-trips a fraction through the EU comma-decimal format', () => {
+    const input = toInput('percent', 0.235, EU_MONEY_FORMAT)
+    expect(input).toBe('23,5')
+    expect(fromInput('percent', input, EU_MONEY_FORMAT)).toBeCloseTo(0.235, 5)
+  })
+
+  it('round-trips a fraction through the US dot-decimal format', () => {
+    const usd = resolveMoneyFormat('USD', 'en-US')
+    const input = toInput('percent', 0.235, usd)
+    expect(input).toBe('23.5')
+    expect(fromInput('percent', input, usd)).toBeCloseTo(0.235, 5)
+  })
+
+  it('parses a comma-decimal percent typed by hand', () => {
+    expect(fromInput('percent', '3,5', EU_MONEY_FORMAT)).toBeCloseTo(0.035, 5)
+  })
+})

@@ -1,4 +1,10 @@
-import { formatMoneyInput, parseMoneyToCents, type MoneyFormat } from '../../engine/money'
+import {
+  formatMoneyInput,
+  formatPercentInput,
+  parseMoneyToCents,
+  parsePercentToFraction,
+  type MoneyFormat,
+} from '../../engine/money'
 
 /**
  * Declarative field specs for the small definition forms (categories, accounts,
@@ -23,7 +29,7 @@ export function toInput(kind: FieldKind, raw: unknown, format: MoneyFormat): Inp
   if (kind === 'toggle') return Boolean(raw)
   if (raw == null) return ''
   if (kind === 'money') return formatMoneyInput(Number(raw), format)
-  if (kind === 'percent') return String(Number(raw) * 100)
+  if (kind === 'percent') return formatPercentInput(Number(raw), format)
   if (kind === 'number') return String(Number(raw))
   return typeof raw === 'string' ? raw : ''
 }
@@ -32,7 +38,7 @@ export function toInput(kind: FieldKind, raw: unknown, format: MoneyFormat): Inp
 export function fromInput(kind: FieldKind, value: InputValue, format: MoneyFormat): FieldValue {
   if (kind === 'toggle') return Boolean(value)
   if (kind === 'money') return parseMoneyToCents(String(value), format)
-  if (kind === 'percent') return Number(value) / 100
+  if (kind === 'percent') return parsePercentToFraction(String(value), format)
   if (kind === 'number') return Number(value)
   return String(value)
 }

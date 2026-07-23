@@ -13,10 +13,10 @@ Shared UI: [`folio-shell`](https://github.com/RoyCrivolotti/folio-shell) on [npm
 | Area | Highlights |
 | --- | --- |
 | **Dashboard** | Monthly KPIs, budget health, **card statements** (tap a row to mark paid/due or edit the date), Goals teaser, **Latest / Recently added** toggle |
-| **Transactions** | **Date scope** (budget month, last 3 months, all dates, custom), filters, batch delete, recurring **Upcoming**, **per-day +** and **duplicate**, **statement payment rows** on `paidOn` (same tap-to-edit sheet as Dashboard/Settings), **header refresh** |
-| **Analytics** | Budget vs actual, YTD on mobile, desktop tables, **cash recon gap split** (carryover / this month / total) |
+| **Transactions** | **Date scope** (budget month, last 3 months, all dates, custom), filters, batch delete, recurring **Upcoming**, **installment plans** (bounded payment schedules with due-soon reminders), **per-day +** and **duplicate**, **statement payment rows** on `paidOn` (same tap-to-edit sheet as Dashboard/Settings), **header refresh** |
+| **Analytics** | Budget vs actual, YTD on mobile, desktop tables, **cash recon gap split** (carryover / this month / total), **reconciled** badge once a month's cash is entered and card statements are paid |
 | **Goals** | Multi-scenario net-worth projections, FIRE/housing controls, comparison charts |
-| **Settings** | Categories, accounts, import/export, access admin (owner) |
+| **Settings** | Categories, accounts, **currency, number format, and budget-month rollover day**, import/export, access admin (owner), re-runnable **setup wizard** |
 | **Engine** | Derived transaction status (never stored), cash recon gap, deferred card settlement |
 | **Offline** | IndexedDB snapshot, read-only banner, global refresh |
 
@@ -88,7 +88,7 @@ Full DNS, Access, D1, and CI setup: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Docs
 
-- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — hosting, access control, migrations through `0008`
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — hosting, access control, migrations through `0011`
 - [docs/SCREENSHOT-GALLERY.md](docs/SCREENSHOT-GALLERY.md) — full UI screenshot reference
 - [docs/CHANGELOG.md](docs/CHANGELOG.md) — recent product changes (July 2026)
 - [docs/GOALS-MODEL.md](docs/GOALS-MODEL.md) — wealth projection assumptions

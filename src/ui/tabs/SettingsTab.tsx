@@ -91,6 +91,27 @@ function Definitions({ model }: { model: ExpenseModel }) {
   )
 }
 
+/**
+ * Permanent re-entry point for the setup wizard (currency/budget-month/category
+ * setup can all be revisited), not just a first-run gate — a tenant that has
+ * added a category but not an account (or vice versa) still needs a way back
+ * in even though `needsOnboarding` is already false for them.
+ */
+function SetupWizardEntry({ firstRun, onRunSetup }: { firstRun: boolean; onRunSetup: () => void }) {
+  return (
+    <>
+      <SectionTitle>{firstRun ? 'Get started' : 'Setup wizard'}</SectionTitle>
+      <Card>
+        <EmptyState actionLabel="Run setup wizard" onAction={onRunSetup}>
+          {firstRun
+            ? 'Add your categories and accounts to start tracking spending.'
+            : 'Revisit currency, budget-month start, categories, and accounts.'}
+        </EmptyState>
+      </Card>
+    </>
+  )
+}
+
 export function SettingsTab({
   model,
   month,
@@ -101,21 +122,13 @@ export function SettingsTab({
   accountEmail,
   onRunSetup,
 }: SettingsTabProps) {
-  const showSetupEntry = Boolean(actions && onRunSetup && needsOnboarding(model.dataset))
   return (
     <div className={styles.stack}>
       {accountEmail ? <AccountSetting email={accountEmail} /> : null}
       {ownerAccess ? <AccessRequestsSetting pendingCount={ownerAccess.pendingCount} /> : null}
 
-      {showSetupEntry && (
-        <>
-          <SectionTitle>Get started</SectionTitle>
-          <Card>
-            <EmptyState actionLabel="Run setup wizard" onAction={() => onRunSetup?.()}>
-              Add your categories and accounts to start tracking spending.
-            </EmptyState>
-          </Card>
-        </>
+      {actions && onRunSetup && (
+        <SetupWizardEntry firstRun={needsOnboarding(model.dataset)} onRunSetup={onRunSetup} />
       )}
 
       <AppearanceSetting theme={theme} onChange={onThemeChange} />

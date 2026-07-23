@@ -78,6 +78,13 @@ export async function updateInstallmentPlan(
 }
 
 export async function deleteInstallmentPlan(env: Env, owner: string, id: number): Promise<void> {
+  // No FK on transactions.plan_id (see migration 0009), so unlink first to avoid
+  // leaving transactions pointing at a deleted plan.
+  await env.DB.prepare(
+    'UPDATE transactions SET plan_id = NULL, installment_index = NULL WHERE plan_id = ? AND owner = ?',
+  )
+    .bind(id, owner)
+    .run()
   const result = await env.DB.prepare('DELETE FROM installment_plans WHERE id = ? AND owner = ?')
     .bind(id, owner)
     .run()

@@ -7,13 +7,12 @@ import styles from './definitions.module.css'
 
 function inputType(kind: FieldSpec['kind']): string {
   if (kind === 'text') return 'text'
-  // Money is typed in the user's locale (comma or dot decimals), so it needs a
-  // free-text field; a number input would reject a comma decimal.
-  if (kind === 'money') return 'text'
+  // Money and percent are typed in the user's locale (comma or dot decimals), so
+  // they need a free-text field; a number input rejects a comma decimal outright.
+  if (kind === 'money' || kind === 'percent') return 'text'
   return 'number'
 }
 function stepFor(kind: FieldSpec['kind']): string | undefined {
-  if (kind === 'percent') return '0.1'
   if (kind === 'number') return '1'
   return undefined
 }
@@ -54,7 +53,9 @@ function FieldInput({
         <input
           type={inputType(field.kind)}
           step={stepFor(field.kind)}
-          {...(field.kind === 'money' ? { inputMode: 'decimal' as const } : {})}
+          {...(field.kind === 'money' || field.kind === 'percent'
+            ? { inputMode: 'decimal' as const }
+            : {})}
           value={String(value)}
           onChange={(e) => onChange(e.target.value)}
         />
