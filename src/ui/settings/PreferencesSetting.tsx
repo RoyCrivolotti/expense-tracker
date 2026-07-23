@@ -52,6 +52,11 @@ export function PreferencesSetting({ settings, onChange }: Props) {
           <span>Preview</span>
           <span>{preview}</span>
         </div>
+        <p className={styles.settingHint}>
+          Display only: changes the symbol and decimal separator shown for every transaction, past
+          and future. Amounts are not converted or recalculated — there is no currency exchange, so
+          only pick a currency you actually track everything in.
+        </p>
 
         <label className={styles.defaultAccountField}>
           <span className={styles.defaultAccountLabel}>Budget month starts on day</span>

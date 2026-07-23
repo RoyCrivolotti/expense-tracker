@@ -3,6 +3,12 @@
  * point drift; parsing/formatting bridges to human strings in the user's chosen
  * currency and number format. The default is the original EU convention
  * ("1.456,60 €") so callers that pass no format keep the historical behavior.
+ *
+ * `currencyCode`/`numberLocale` are purely a display format: they change the
+ * symbol and decimal separator shown for every transaction (past and future),
+ * not the underlying integer-cent value. There is no currency conversion —
+ * this is a single-currency tracker, so changing currency does not convert
+ * amounts entered under a different one.
  */
 
 /** ISO 4217 currency code used when a user has no explicit preference. */
