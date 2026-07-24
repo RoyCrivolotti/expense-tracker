@@ -235,6 +235,10 @@
   color: var(--color-text);
   font: inherit;
   font-size: 0.9rem;
+  /* Long option labels (e.g. number-format samples) would otherwise get cut
+     off right against the native dropdown arrow on narrow viewports. */
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .resultSummary {
@@ -292,7 +296,21 @@
 .settingHint {
   font-size: 0.85rem;
   color: var(--color-text-muted);
-  margin: 0.6rem 0 0;
+  margin: 0;
+}
+
+/* Groups related fields (e.g. currency + number format + preview) with even
+   spacing; a border between consecutive groups makes it unambiguous which
+   group a trailing hint paragraph belongs to. */
+.settingGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.settingGroupDivider {
+  margin-top: 1.15rem;
+  padding-top: 1.15rem;
+  border-top: 1px solid var(--color-border);
 }
 
 .dataHint {
