@@ -49,7 +49,7 @@ The allowlist lives in D1 (`allowed_users`). New users request access in the app
 
 **Owner admin (`/access/admin`):** approve or reject pending requests; toggle **group access** per user (Expense Tracker, Financial documents, Legacy site, On-call pay); **Revoke all** removes the user and deletes expense data (including `goal_scenarios`). New approvals grant **Expense Tracker only** by default — enable finance/legacy/oncall manually. Settings shows a badge when requests are pending.
 
-**Group access (hide-only MVP):** D1 table `user_group_grants` stores which resource groups each user may see. Hub cards and navigation filter client-side. Expense API requires the `expenses` group. Direct URLs to admin-hub HTML still work for anyone on Cloudflare Access (server enforcement deferred). See workspace `ARCHITECTURE.md`.
+**Group access (hide-only MVP):** D1 table `user_group_grants` stores which resource groups each user may see. Hub cards and navigation filter client-side. Expense API requires the `expenses` group. Direct URLs to admin-hub HTML still work for anyone on Cloudflare Access (server enforcement deferred).
 
 **R2 backups:** daily snapshots under `{email}/` in `roy-expenses-backups` are not deleted on revoke (manual cleanup if needed).
 
