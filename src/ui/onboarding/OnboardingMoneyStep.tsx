@@ -1,5 +1,5 @@
 import { formatCents, resolveMoneyFormat } from '../../engine'
-import { CURRENCIES, NUMBER_STYLES } from '../settings/moneyOptions'
+import { CURRENCIES, CURRENCY_DISPLAY_ONLY_HINT, NUMBER_STYLES } from '../settings/moneyOptions'
 import styles from './OnboardingWizard.module.css'
 
 export interface MoneyDraft {
@@ -57,12 +57,9 @@ export function OnboardingMoneyStep({
         <span>Preview</span>
         <strong>{preview}</strong>
       </div>
-      <p className={styles.hint}>
-        Display only — changes the symbol and decimal separator, not the amounts themselves. There
-        is no currency conversion, so pick the one currency you track everything in.
-      </p>
+      <p className={styles.hint}>{CURRENCY_DISPLAY_ONLY_HINT}</p>
 
-      <label className={styles.field}>
+      <label className={`${styles.field} ${styles.fieldGroupDivider}`}>
         <span className={styles.fieldLabel}>Budget month starts on day</span>
         <input
           type="number"

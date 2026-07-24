@@ -1,5 +1,11 @@
 /** Shared option lists for the currency + number-format pickers. */
 
+/** Shown under the currency/number-format preview in both Settings and onboarding. */
+export const CURRENCY_DISPLAY_ONLY_HINT =
+  "Display only — changes the symbol and decimal separator for every transaction, past and " +
+  "future. There's no currency conversion, so pick the one currency you actually track " +
+  'everything in.'
+
 /** ISO 4217 codes offered in the picker; symbol is derived at format time. */
 export const CURRENCIES: { code: string; label: string }[] = [
   { code: 'EUR', label: 'Euro (€)' },

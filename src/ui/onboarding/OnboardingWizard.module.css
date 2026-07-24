@@ -117,6 +117,14 @@
   gap: 0.35rem;
 }
 
+/* Marks the start of a new field group when several fields share one step
+   (e.g. budget-month rollover after currency/number-format) so a preceding
+   hint paragraph doesn't read as belonging to the wrong field. */
+.fieldGroupDivider {
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--color-border);
+}
+
 .fieldLabel {
   font-size: 0.8rem;
   font-weight: 600;
