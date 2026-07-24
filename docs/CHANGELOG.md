@@ -62,4 +62,3 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 ## June 2026 (Goals milestone)
 
 - Goals tab: multi-scenario projections, FIRE/housing/rent-vs-buy charts, scenario show/hide, glossary.
-- See [AUDIT-2026-06-GOALS.md](./AUDIT-2026-06-GOALS.md) for the full Goals review.

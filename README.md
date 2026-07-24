@@ -6,7 +6,7 @@ Personal budget and transaction tracker with cash reconciliation, card settlemen
 - **D1 allowlist + in-app admin** — who can use the app (`/access/admin`)
 - **Row-level tenancy** — each user's data is scoped by email in D1
 
-Shared UI: [`folio-shell`](https://github.com/RoyCrivolotti/folio-shell) on [npm](https://www.npmjs.com/package/folio-shell) (`folio-shell@^1.0.4`).
+Shared UI: [`folio-shell`](https://github.com/RoyCrivolotti/folio-shell) on [npm](https://www.npmjs.com/package/folio-shell) (`folio-shell@^1.4.0`).
 
 ## Features
 
