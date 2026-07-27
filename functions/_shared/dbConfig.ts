@@ -160,22 +160,40 @@ export async function deleteCategory(
     createInput,
   )
 
-  // Move referencing rows and delete the source category as one D1 batch (implicit
-  // transaction) so a mid-batch failure never leaves rows reassigned without the
-  // source actually being deleted, or vice versa.
-  const results = await env.DB.batch([
-    env.DB.prepare(
-      'UPDATE transactions SET category_id = ? WHERE category_id = ? AND owner = ?',
-    ).bind(targetId, id, owner),
-    env.DB.prepare(
-      'UPDATE installment_plans SET category_id = ? WHERE category_id = ? AND owner = ?',
-    ).bind(targetId, id, owner),
-    env.DB.prepare('DELETE FROM categories WHERE id = ? AND owner = ?').bind(id, owner),
-  ])
-  const deleteResult = results[results.length - 1]
-  if ((deleteResult?.meta.changes ?? 0) === 0) throw new HttpError(404, 'Category not found')
+  try {
+    // Move referencing rows and delete the source category as one D1 batch (implicit
+    // transaction) so a mid-batch failure never leaves rows reassigned without the
+    // source actually being deleted, or vice versa.
+    const results = await env.DB.batch([
+      env.DB.prepare(
+        'UPDATE transactions SET category_id = ? WHERE category_id = ? AND owner = ?',
+      ).bind(targetId, id, owner),
+      env.DB.prepare(
+        'UPDATE installment_plans SET category_id = ? WHERE category_id = ? AND owner = ?',
+      ).bind(targetId, id, owner),
+      env.DB.prepare('DELETE FROM categories WHERE id = ? AND owner = ?').bind(id, owner),
+    ])
+    const deleteResult = results[results.length - 1]
+    if ((deleteResult?.meta.changes ?? 0) === 0) throw new HttpError(404, 'Category not found')
 
-  return { reassignedToId: targetId, ...(createdCategory ? { createdCategory } : {}) }
+    return { reassignedToId: targetId, ...(createdCategory ? { createdCategory } : {}) }
+  } catch (err) {
+    // Inline-create can't join the batch above — the new category's id isn't known
+    // until its own INSERT completes, and D1 batch() statements can't reference an
+    // earlier statement's result. So a failure here (batch error, or the source
+    // already gone) leaves a just-created, unused category behind; clean it up on a
+    // best-effort basis rather than silently leaking it.
+    if (createdCategory) await deleteOrphanedCategory(env, owner, createdCategory.id)
+    throw err
+  }
+}
+
+async function deleteOrphanedCategory(env: Env, owner: string, id: number): Promise<void> {
+  try {
+    await env.DB.prepare('DELETE FROM categories WHERE id = ? AND owner = ?').bind(id, owner).run()
+  } catch {
+    /* best-effort cleanup; the original error is what the caller should see */
+  }
 }
 
 const ACCOUNT_COLUMNS: ColumnMap<NewAccount> = {
@@ -239,10 +257,16 @@ async function deletePlainAccount(
 ): Promise<DeleteAccountResult> {
   const usage = await countAccountUsage(env, owner, id)
   if (usage > 0) throw new HttpError(409, `Account is in use by ${usage} record(s)`)
-  const result = await env.DB.prepare('DELETE FROM accounts WHERE id = ? AND owner = ?')
-    .bind(id, owner)
-    .run()
-  if ((result.meta.changes ?? 0) === 0) throw new HttpError(404, 'Account not found')
+  // An unused account can still be settings.defaultAccountId (e.g. set as default, then
+  // never actually used) — clear it in the same batch so the delete can't leave it dangling.
+  const results = await env.DB.batch([
+    env.DB.prepare(
+      'UPDATE settings SET default_account_id = NULL WHERE owner = ? AND default_account_id = ?',
+    ).bind(owner, id),
+    env.DB.prepare('DELETE FROM accounts WHERE id = ? AND owner = ?').bind(id, owner),
+  ])
+  const deleteResult = results[results.length - 1]
+  if ((deleteResult?.meta.changes ?? 0) === 0) throw new HttpError(404, 'Account not found')
   return { reassignedToId: null }
 }
 
@@ -285,34 +309,54 @@ export async function deleteAccount(
     createInput,
   )
 
-  // account_statements has a composite key of (owner, account_id, year_month); if the
-  // target already has a statement for a month the source also has, moving the source's
-  // row would collide with it. Drop the source's row for those overlapping months first
-  // (the target's existing paid state wins), then move whatever is left, then the rest
-  // of the reassignment + delete — all as one D1 batch so it's all-or-nothing.
-  const results = await env.DB.batch([
-    env.DB.prepare(
-      'UPDATE transactions SET account_id = ? WHERE account_id = ? AND owner = ?',
-    ).bind(targetId, id, owner),
-    env.DB.prepare(
-      'UPDATE installment_plans SET account_id = ? WHERE account_id = ? AND owner = ?',
-    ).bind(targetId, id, owner),
-    env.DB.prepare(
-      `DELETE FROM account_statements
-       WHERE owner = ? AND account_id = ?
-         AND year_month IN (
-           SELECT year_month FROM account_statements WHERE owner = ? AND account_id = ?
-         )`,
-    ).bind(owner, id, owner, targetId),
-    env.DB.prepare(
-      'UPDATE account_statements SET account_id = ? WHERE account_id = ? AND owner = ?',
-    ).bind(targetId, id, owner),
-    env.DB.prepare('DELETE FROM accounts WHERE id = ? AND owner = ?').bind(id, owner),
-  ])
-  const deleteResult = results[results.length - 1]
-  if ((deleteResult?.meta.changes ?? 0) === 0) throw new HttpError(404, 'Account not found')
+  try {
+    // account_statements has a composite key of (owner, account_id, year_month); if the
+    // target already has a statement for a month the source also has, moving the source's
+    // row would collide with it. Drop the source's row for those overlapping months first
+    // (the target's existing paid state wins), then move whatever is left, then the rest
+    // of the reassignment + delete — all as one D1 batch so it's all-or-nothing.
+    const results = await env.DB.batch([
+      env.DB.prepare(
+        'UPDATE transactions SET account_id = ? WHERE account_id = ? AND owner = ?',
+      ).bind(targetId, id, owner),
+      env.DB.prepare(
+        'UPDATE installment_plans SET account_id = ? WHERE account_id = ? AND owner = ?',
+      ).bind(targetId, id, owner),
+      env.DB.prepare(
+        `DELETE FROM account_statements
+         WHERE owner = ? AND account_id = ?
+           AND year_month IN (
+             SELECT year_month FROM account_statements WHERE owner = ? AND account_id = ?
+           )`,
+      ).bind(owner, id, owner, targetId),
+      env.DB.prepare(
+        'UPDATE account_statements SET account_id = ? WHERE account_id = ? AND owner = ?',
+      ).bind(targetId, id, owner),
+      // If the deleted account was the configured default, move the default along with
+      // everything else — otherwise settings keeps pointing at a row that no longer exists.
+      env.DB.prepare(
+        'UPDATE settings SET default_account_id = ? WHERE owner = ? AND default_account_id = ?',
+      ).bind(targetId, owner, id),
+      env.DB.prepare('DELETE FROM accounts WHERE id = ? AND owner = ?').bind(id, owner),
+    ])
+    const deleteResult = results[results.length - 1]
+    if ((deleteResult?.meta.changes ?? 0) === 0) throw new HttpError(404, 'Account not found')
 
-  return { reassignedToId: targetId, ...(createdAccount ? { createdAccount } : {}) }
+    return { reassignedToId: targetId, ...(createdAccount ? { createdAccount } : {}) }
+  } catch (err) {
+    // See the matching comment in deleteCategory: inline-create can't join this batch,
+    // so a failure here leaves a just-created, unused account behind. Best-effort cleanup.
+    if (createdAccount) await deleteOrphanedAccount(env, owner, createdAccount.id)
+    throw err
+  }
+}
+
+async function deleteOrphanedAccount(env: Env, owner: string, id: number): Promise<void> {
+  try {
+    await env.DB.prepare('DELETE FROM accounts WHERE id = ? AND owner = ?').bind(id, owner).run()
+  } catch {
+    /* best-effort cleanup; the original error is what the caller should see */
+  }
 }
 
 const SETTINGS_COLUMNS: ColumnMap<ExpenseSettings> = {

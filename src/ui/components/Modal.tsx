@@ -9,12 +9,14 @@ interface ModalProps {
   subtitle?: string
   onClose: () => void
   children: ReactNode
+  /** True while a nested dialog (e.g. a `ConfirmSheet`) is open on top of this modal — see `useFocusTrap`. */
+  trapPaused?: boolean
 }
 
-export function Modal({ title, subtitle, onClose, children }: ModalProps) {
+export function Modal({ title, subtitle, onClose, children, trapPaused = false }: ModalProps) {
   useBodyScrollLock(true)
   const sheetRef = useRef<HTMLDivElement>(null)
-  useFocusTrap(sheetRef, onClose)
+  useFocusTrap(sheetRef, onClose, trapPaused)
 
   return (
     <div className={styles.overlay} onClick={onClose} role="presentation">

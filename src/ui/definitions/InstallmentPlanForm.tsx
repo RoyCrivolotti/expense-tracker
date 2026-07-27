@@ -5,7 +5,7 @@ import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import { formatMoneyInput, parseMoneyToCents, type MoneyFormat } from '../../engine/money'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
-import { selectableOptions } from '../components/pickerOptions'
+import { optionLabel, selectableOptions } from '../components/pickerOptions'
 import formStyles from '../components/TransactionForm.module.css'
 import stepStyles from '../components/InstallmentStep.module.css'
 import styles from './definitions.module.css'
@@ -156,7 +156,7 @@ export function InstallmentPlanForm({ plan, model, actions, onBack }: Props) {
           <select value={String(f.accountId)} onChange={(e) => set('accountId', Number(e.target.value))}>
             {accounts.map((a) => (
               <option key={a.id} value={a.id}>
-                {a.name}
+                {optionLabel(a)}
               </option>
             ))}
           </select>
@@ -166,7 +166,7 @@ export function InstallmentPlanForm({ plan, model, actions, onBack }: Props) {
           <select value={String(f.categoryId)} onChange={(e) => set('categoryId', Number(e.target.value))}>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name}
+                {optionLabel(c)}
               </option>
             ))}
           </select>

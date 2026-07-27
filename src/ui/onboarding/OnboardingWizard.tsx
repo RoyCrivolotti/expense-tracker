@@ -37,10 +37,30 @@ function initialMoneyDraft(settings: ExpenseSettings): MoneyDraft {
 /**
  * Re-entry with existing accounts and the opt-in debit checkbox off never
  * needs a name; every other case (first run, or opted-in re-entry) does.
+ * Checking "add a credit card" likewise requires a name — otherwise Finish
+ * silently drops it (`runOnboardingSetup` skips creation when the name is
+ * blank), with no feedback that nothing happened.
  */
-function canFinishAccountsStep(hasExistingAccounts: boolean, addDebit: boolean, debitName: string): boolean {
+function canFinishAccountsStep(
+  hasExistingAccounts: boolean,
+  addDebit: boolean,
+  debitName: string,
+  addCredit: boolean,
+  creditName: string,
+): boolean {
+  if (addCredit && creditName.trim().length === 0) return false
   if (hasExistingAccounts && !addDebit) return true
   return debitName.trim().length > 0
+}
+
+/**
+ * `accounts.addDebit` only tracks the opt-in checkbox, which is hidden once the tenant
+ * has accounts. If accounts get deleted elsewhere while this wizard is open (another
+ * tab, or via Settings), `hasExistingAccounts` goes stale — but a debit is still
+ * mandatory whenever there are zero accounts, regardless of that checkbox's last value.
+ */
+function effectiveAddDebit(hasExistingAccounts: boolean, addDebit: boolean): boolean {
+  return hasExistingAccounts ? addDebit : true
 }
 
 /** While the confirm popup is open, dismissing the wizard chrome (Escape / backdrop) should close just the popup, not skip the whole wizard. */
@@ -89,7 +109,14 @@ export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }
 
   const selectedPresets = buildSelectedPresets(drafts, format)
   const canNextCategories = selectedPresets.length > 0
-  const canFinish = canFinishAccountsStep(hasExistingAccounts, accounts.addDebit, accounts.debitName)
+  const addDebit = effectiveAddDebit(hasExistingAccounts, accounts.addDebit)
+  const canFinish = canFinishAccountsStep(
+    hasExistingAccounts,
+    addDebit,
+    accounts.debitName,
+    accounts.addCredit,
+    accounts.creditName,
+  )
 
   async function finish() {
     if (busy) return
@@ -98,11 +125,12 @@ export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }
     try {
       await runOnboardingSetup(source, applyPatch, {
         categories: selectedPresets,
-        addDebit: accounts.addDebit,
+        addDebit,
         debitName: accounts.debitName,
         creditName: accounts.addCredit ? accounts.creditName : null,
         money,
         currentSettings: dataset.settings,
+        existingCategories: dataset.categories,
       })
       onDone()
     } catch (err: unknown) {
@@ -131,6 +159,7 @@ export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }
     <Modal
       title={TITLES[step] ?? 'Setup'}
       onClose={dismissHandler(showConfirm, () => setShowConfirm(false), onSkip)}
+      trapPaused={showConfirm}
     >
       <OnboardingProgress step={step} />
       {step === 0 ? (
@@ -188,7 +217,7 @@ export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }
           title="Apply these changes?"
           message={buildOnboardingConfirmSummary({
             categories: selectedPresets,
-            addDebit: accounts.addDebit,
+            addDebit,
             debitName: accounts.debitName,
             addCredit: accounts.addCredit,
             creditName: accounts.creditName,

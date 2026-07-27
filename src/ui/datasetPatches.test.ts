@@ -218,4 +218,46 @@ describe('patchAfterAccountDelete', () => {
 
     expect(patched.accounts.map((a) => a.id)).toEqual([2])
   })
+
+  it('clears settings.defaultAccountId when the deleted (unused) account was the default', () => {
+    const ds = dataset({
+      accounts: [
+        { id: 1, name: 'Checking', kind: 'debit', settlement: 'immediate', active: true },
+        { id: 2, name: 'Savings', kind: 'debit', settlement: 'immediate', active: true },
+      ],
+      settings: { ...defaultExpenseSettings(), defaultAccountId: 1 },
+    })
+
+    const patched = patchAfterAccountDelete(ds, 1, { reassignedToId: null })
+
+    expect(patched.settings.defaultAccountId).toBeNull()
+  })
+
+  it('moves settings.defaultAccountId to the reassign target when the deleted account was the default', () => {
+    const ds = dataset({
+      accounts: [
+        { id: 1, name: 'Checking', kind: 'debit', settlement: 'immediate', active: true },
+        { id: 2, name: 'Savings', kind: 'debit', settlement: 'immediate', active: true },
+      ],
+      settings: { ...defaultExpenseSettings(), defaultAccountId: 1 },
+    })
+
+    const patched = patchAfterAccountDelete(ds, 1, { reassignedToId: 2 })
+
+    expect(patched.settings.defaultAccountId).toBe(2)
+  })
+
+  it('leaves settings.defaultAccountId untouched when a different account is deleted', () => {
+    const ds = dataset({
+      accounts: [
+        { id: 1, name: 'Checking', kind: 'debit', settlement: 'immediate', active: true },
+        { id: 2, name: 'Savings', kind: 'debit', settlement: 'immediate', active: true },
+      ],
+      settings: { ...defaultExpenseSettings(), defaultAccountId: 2 },
+    })
+
+    const patched = patchAfterAccountDelete(ds, 1, { reassignedToId: null })
+
+    expect(patched.settings.defaultAccountId).toBe(2)
+  })
 })

@@ -193,6 +193,12 @@ export function inMemoryExpenseRepository(
     return { reassignedToId: targetId, ...(createdCategory ? { createdCategory } : {}) }
   }
 
+  /** Mirrors the D1 adapter: move (or clear) settings.defaultAccountId if it pointed at the deleted account. */
+  function syncDefaultAccountId(store: OwnerStore, deletedId: number, newTargetId: number | null): void {
+    if (store.settings.defaultAccountId !== deletedId) return
+    store.settings = { ...store.settings, defaultAccountId: newTargetId }
+  }
+
   function deleteAccountInStore(
     store: OwnerStore,
     id: number,
@@ -209,6 +215,7 @@ export function inMemoryExpenseRepository(
       const index = store.accounts.findIndex((a) => a.id === id)
       if (index < 0) throw new RepoHttpError(404, 'Account not found')
       store.accounts.splice(index, 1)
+      syncDefaultAccountId(store, id, null)
       return { reassignedToId: null }
     }
 
@@ -239,6 +246,7 @@ export function inMemoryExpenseRepository(
     store.statements = store.statements
       .filter((s) => !(s.accountId === id && targetMonths.has(s.yearMonth)))
       .map((s) => (s.accountId === id ? { ...s, accountId: targetId } : s))
+    syncDefaultAccountId(store, id, targetId)
     return { reassignedToId: targetId, ...(createdAccount ? { createdAccount } : {}) }
   }
 

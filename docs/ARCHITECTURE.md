@@ -40,10 +40,22 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
 - **Categories and accounts with references are deleted only via reassign, never orphaning a
   record.** An unused category/account deletes outright; one still referenced by a transaction,
   installment plan, or (for accounts) an account statement requires a `reassignToId` or an inline
-  `createCategory`/`createAccount` payload, and the move + delete run as a single `env.DB.batch(...)` so a mid-batch
-  failure can't leave rows pointing at a deleted id. See `deleteCategory`/`deleteAccount` in
-  `functions/_shared/dbConfig.ts`. Archiving (`active: false`) is unrelated and never blocked by
-  usage — it only affects which categories/accounts new/edited transactions can pick, not deletion.
+  `createCategory`/`createAccount` payload. The reassign (move referencing rows) + delete run as a
+  single `env.DB.batch(...)`, so a mid-batch failure can't leave rows pointing at a deleted id. An
+  inline create is **not** part of that batch — D1 can't reference a statement's own result (the
+  new row's id) from a later statement in the same `batch()` call, so the create runs first as its
+  own statement, then the batch. If the batch then fails, the newly-created category/account is
+  cleaned up on a best-effort basis (not itself atomic with the failure) rather than left behind
+  unused. See `deleteCategory`/`deleteAccount` in `functions/_shared/dbConfig.ts`. Archiving
+  (`active: false`) is unrelated and never blocked by usage — it only affects which
+  categories/accounts new/edited transactions can pick, not deletion.
+- **Reassign targets (existing records to move to) must be active.** Both the reassign-target
+  dropdown and the pickers in `TransactionFields`/`InstallmentPlanForm` exclude inactive
+  categories/accounts — same "active = archive" rule in both directions: don't offer linking new
+  data to something archived. The one standing exception is a form's own current value: an
+  already-linked (possibly inactive, or in rare legacy-data cases fully deleted) category/account
+  stays selectable so editing an unrelated field never breaks the form. See
+  `src/ui/components/pickerOptions.ts`.
 - **Public GitHub source.** Real emails (beyond a clearly-named demo account), financial figures,
   and other personal identifiers must never land in a tracked file. Follow the placeholder +
   comment pattern already used in `migrations/0003_multi_user.sql` and

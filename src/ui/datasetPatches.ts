@@ -153,6 +153,11 @@ export function patchAfterAccountDelete(
   d.accounts = d.accounts.filter((a) => a.id !== id)
   if (result.createdAccount) d.accounts.push(result.createdAccount)
   const targetId = result.reassignedToId
+  // Mirror the D1/in-memory adapters: an unused account can still be the configured
+  // default, and a reassigned-away default should follow its transactions/plans/statements.
+  if (d.settings.defaultAccountId === id) {
+    d.settings = { ...d.settings, defaultAccountId: targetId }
+  }
   if (targetId != null) {
     d.transactions = d.transactions.map((t) =>
       t.accountId === id ? { ...t, accountId: targetId } : t,

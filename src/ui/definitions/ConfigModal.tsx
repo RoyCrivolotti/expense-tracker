@@ -100,8 +100,12 @@ function categoryDeleteConfig(
     label: record.name,
     noun: 'category',
     usageCount: categoryUsageCount(model.dataset, record.id),
+    // Active = archive: reassigning should never link records to an already-inactive
+    // category, same rule as the transaction/installment pickers (PR3). If every other
+    // category is inactive, the list is empty and ReassignDeleteSheet falls back to
+    // create-new, which is fine.
     otherOptions: model.dataset.categories
-      .filter((c) => c.id !== record.id)
+      .filter((c) => c.id !== record.id && c.active)
       .map((c) => ({ id: c.id, name: c.name })),
     isLast: model.dataset.categories.length <= 1,
     onPlainDelete: async () => {
@@ -126,8 +130,9 @@ function accountDeleteConfig(
     label: record.name,
     noun: 'account',
     usageCount: accountUsageCount(model.dataset, record.id),
+    // See the matching comment in categoryDeleteConfig: reassign targets stay active-only.
     otherOptions: model.dataset.accounts
-      .filter((a) => a.id !== record.id)
+      .filter((a) => a.id !== record.id && a.active)
       .map((a) => ({ id: a.id, name: a.name })),
     isLast: model.dataset.accounts.length <= 1,
     onPlainDelete: async () => {
@@ -209,6 +214,13 @@ function buildConfig(
   }
 }
 
+/** Structural check so this stays agnostic of which `ExpenseDataSource` threw (see `ApiError`). */
+function hasHttpStatus(error: unknown): error is Error & { status: number } {
+  return (
+    error instanceof Error && 'status' in error && typeof (error as { status: unknown }).status === 'number'
+  )
+}
+
 type DeleteMode = 'idle' | 'confirm' | 'reassign'
 
 function DeleteControl({
@@ -240,8 +252,16 @@ function DeleteControl({
       await config.onPlainDelete()
       onDeleted()
     } catch (e) {
-      onModeChange('idle')
-      setErr(e instanceof Error ? e.message : 'Could not delete')
+      // The client's cached usageCount (checked before showing this confirm) can be
+      // stale — another tab or a duplicate submission may have linked a record to this
+      // one since. A 409 here means the server now disagrees; escalate straight to the
+      // reassign flow instead of leaving the user to retry the same failing delete.
+      if (hasHttpStatus(e) && e.status === 409) {
+        onModeChange('reassign')
+      } else {
+        onModeChange('idle')
+        setErr(e instanceof Error ? e.message : 'Could not delete')
+      }
     } finally {
       setDeleting(false)
     }
@@ -273,7 +293,14 @@ function DeleteControl({
       {mode === 'reassign' ? (
         <ReassignDeleteSheet
           title={`Delete ${config.label}?`}
-          message={`This ${config.noun} is used by ${config.usageCount} record${config.usageCount === 1 ? '' : 's'}. Move them to another ${config.noun} first, or create a new one.`}
+          // usageCount === 0 here means we escalated from a stale-count 409 (see
+          // runPlainDelete), not the normal usageCount > 0 path — the exact count isn't
+          // trustworthy in that case, so use a generic message instead of "0 records".
+          message={
+            config.usageCount > 0
+              ? `This ${config.noun} is used by ${config.usageCount} record${config.usageCount === 1 ? '' : 's'}. Move them to another ${config.noun} first, or create a new one.`
+              : `This ${config.noun} turned out to still be in use elsewhere. Move its records to another ${config.noun} first, or create a new one.`
+          }
           options={config.otherOptions}
           createLabel={config.noun}
           onConfirm={(target) => config.onReassignDelete(target).then(onDeleted)}
@@ -300,7 +327,7 @@ export function ConfigModal({ target, model, actions, onClose }: ConfigModalProp
   // independent document-level listeners), closing the whole editor out from under it.
   const dismiss = deleteMode !== 'idle' ? () => setDeleteMode('idle') : onClose
   return (
-    <Modal title={cfg.title} onClose={dismiss}>
+    <Modal title={cfg.title} onClose={dismiss} trapPaused={deleteMode !== 'idle'}>
       <RecordForm
         fields={cfg.fields}
         initial={cfg.initial}

@@ -504,4 +504,64 @@ describe('expenses API (middleware + handlers + in-memory repo)', () => {
     )
     expect(dataset.accountStatements).toHaveLength(2)
   })
+
+  it('moves settings.defaultAccountId along when the default account is deleted-with-reassign', async () => {
+    const store = createInMemoryAccessDb()
+    store.seedActiveUser(OWNER, { groups: ['expenses'] })
+    const repo = inMemoryExpenseRepository(
+      {
+        accounts: [
+          { id: 1, name: 'Checking', kind: 'debit', settlement: 'immediate', active: true },
+          { id: 2, name: 'Savings', kind: 'debit', settlement: 'immediate', active: true },
+        ],
+        settings: { defaultAccountId: 1 },
+      },
+      OWNER,
+    )
+
+    const reassigned = await invokeExpenseApiRoute({
+      handler: deleteAccount,
+      repo,
+      env: expenseEnv(store),
+      method: 'DELETE',
+      url: 'https://expenses.test/api/expenses/accounts/1',
+      params: { id: '1' },
+      body: { reassignToId: 2 },
+      email: OWNER,
+    })
+    expect(reassigned.status).toBe(200)
+
+    const dataset = await repo.loadDataset(OWNER)
+    expect(dataset.settings.defaultAccountId).toBe(2)
+  })
+
+  it('clears settings.defaultAccountId when the (unused) default account is plain-deleted', async () => {
+    const store = createInMemoryAccessDb()
+    store.seedActiveUser(OWNER, { groups: ['expenses'] })
+    const repo = inMemoryExpenseRepository(
+      {
+        accounts: [
+          { id: 1, name: 'Checking', kind: 'debit', settlement: 'immediate', active: true },
+          { id: 2, name: 'Savings', kind: 'debit', settlement: 'immediate', active: true },
+        ],
+        settings: { defaultAccountId: 1 },
+      },
+      OWNER,
+    )
+
+    const deleted = await invokeExpenseApiRoute({
+      handler: deleteAccount,
+      repo,
+      env: expenseEnv(store),
+      method: 'DELETE',
+      url: 'https://expenses.test/api/expenses/accounts/1',
+      params: { id: '1' },
+      body: {},
+      email: OWNER,
+    })
+    expect(deleted.status).toBe(200)
+
+    const dataset = await repo.loadDataset(OWNER)
+    expect(dataset.settings.defaultAccountId).toBeNull()
+  })
 })
