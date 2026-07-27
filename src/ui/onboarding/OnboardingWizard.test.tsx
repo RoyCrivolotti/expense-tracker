@@ -87,6 +87,68 @@ describe('OnboardingWizard', () => {
     expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Choose categories' }))
   })
 
+  describe('categories step on re-entry (tenant already has categories)', () => {
+    it('starts every preset unchecked, and allows Continue with zero selected', () => {
+      const dataset = datasetWith({
+        categories: [{ id: 1, name: 'Existing', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
+      })
+      render(
+        <OnboardingWizard
+          source={noopSource()}
+          dataset={dataset}
+          applyPatch={vi.fn()}
+          onDone={vi.fn()}
+          onSkip={vi.fn()}
+        />,
+      )
+      goToStep(2)
+      for (const checkbox of screen.getAllByRole('checkbox')) {
+        expect(checkbox).not.toBeChecked()
+      }
+      expect(screen.getByText('No new categories will be added — Continue to accounts and settings.')).toBeTruthy()
+      expect(screen.getByText('Continue')).not.toBeDisabled()
+    })
+
+    it('checking a preset on re-entry still works normally', () => {
+      const dataset = datasetWith({
+        categories: [{ id: 1, name: 'Existing', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
+      })
+      render(
+        <OnboardingWizard
+          source={noopSource()}
+          dataset={dataset}
+          applyPatch={vi.fn()}
+          onDone={vi.fn()}
+          onSkip={vi.fn()}
+        />,
+      )
+      goToStep(2)
+      fireEvent.click(screen.getAllByRole('checkbox')[0]!)
+      expect(screen.queryByText('No new categories will be added — Continue to accounts and settings.')).toBeNull()
+      expect(screen.getByText('Continue')).not.toBeDisabled()
+    })
+  })
+
+  it('first run: Continue stays disabled if every preset category gets unchecked', () => {
+    const dataset = datasetWith()
+    render(
+      <OnboardingWizard
+        source={noopSource()}
+        dataset={dataset}
+        applyPatch={vi.fn()}
+        onDone={vi.fn()}
+        onSkip={vi.fn()}
+      />,
+    )
+    goToStep(2)
+    expect(screen.getByText('Continue')).not.toBeDisabled()
+    for (const checkbox of screen.getAllByRole('checkbox')) {
+      fireEvent.click(checkbox)
+    }
+    expect(screen.getByText('Select at least one category, or skip setup.')).toBeTruthy()
+    expect(screen.getByText('Continue')).toBeDisabled()
+  })
+
   describe('re-entry (tenant already has accounts)', () => {
     const existingAccount: Account = { id: 1, name: 'Existing', kind: 'debit', settlement: 'immediate', active: true }
 

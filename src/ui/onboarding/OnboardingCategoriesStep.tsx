@@ -7,10 +7,12 @@ export function OnboardingCategoriesStep({
   drafts,
   onChange,
   currencySymbol,
+  hasExistingCategories,
 }: {
   drafts: CategoryDraft[]
   onChange: (next: CategoryDraft[]) => void
   currencySymbol: string
+  hasExistingCategories: boolean
 }) {
   const selectedCount = drafts.filter((d) => d.selected).length
 
@@ -60,7 +62,11 @@ export function OnboardingCategoriesStep({
         })}
       </ul>
       {selectedCount === 0 ? (
-        <p className={styles.hintWarn}>Select at least one category, or skip setup.</p>
+        hasExistingCategories ? (
+          <p className={styles.hint}>No new categories will be added — Continue to accounts and settings.</p>
+        ) : (
+          <p className={styles.hintWarn}>Select at least one category, or skip setup.</p>
+        )
       ) : null}
     </div>
   )

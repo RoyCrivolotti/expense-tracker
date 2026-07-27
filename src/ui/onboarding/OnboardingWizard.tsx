@@ -54,6 +54,14 @@ function canFinishAccountsStep(
 }
 
 /**
+ * First run must produce at least one category; re-entry may legitimately pass
+ * through with none selected (e.g. just revisiting currency or accounts).
+ */
+function canNextCategoriesStep(selectedCount: number, hasExistingCategories: boolean): boolean {
+  return selectedCount > 0 || hasExistingCategories
+}
+
+/**
  * `accounts.addDebit` only tracks the opt-in checkbox, which is hidden once the tenant
  * has accounts. If accounts get deleted elsewhere while this wizard is open (another
  * tab, or via Settings), `hasExistingAccounts` goes stale — but a debit is still
@@ -86,7 +94,8 @@ export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }
     () => resolveMoneyFormat(money.currencyCode, money.numberLocale),
     [money.currencyCode, money.numberLocale],
   )
-  const [drafts, setDrafts] = useCategoryDrafts(format)
+  const hasExistingCategories = dataset.categories.length > 0
+  const [drafts, setDrafts] = useCategoryDrafts(format, hasExistingCategories)
   const hasExistingAccounts = dataset.accounts.length > 0
   const accounts = useAccountsDraft(hasExistingAccounts)
 
@@ -108,7 +117,7 @@ export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }
   }, [format, setDrafts])
 
   const selectedPresets = buildSelectedPresets(drafts, format)
-  const canNextCategories = selectedPresets.length > 0
+  const canNextCategories = canNextCategoriesStep(selectedPresets.length, hasExistingCategories)
   const addDebit = effectiveAddDebit(hasExistingAccounts, accounts.addDebit)
   const canFinish = canFinishAccountsStep(
     hasExistingAccounts,
@@ -179,7 +188,12 @@ export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }
         <OnboardingMoneyStep money={money} onChange={(patch) => setMoney((m) => ({ ...m, ...patch }))} />
       ) : null}
       {step === 2 ? (
-        <OnboardingCategoriesStep drafts={drafts} onChange={setDrafts} currencySymbol={format.symbol} />
+        <OnboardingCategoriesStep
+          drafts={drafts}
+          onChange={setDrafts}
+          currencySymbol={format.symbol}
+          hasExistingCategories={hasExistingCategories}
+        />
       ) : null}
       {step === 3 ? (
         <OnboardingAccountsStep
