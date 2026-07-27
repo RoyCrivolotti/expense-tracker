@@ -239,6 +239,7 @@ function ExpensesAppReady({
       <ExpensesOnboarding
         open={onboardingOpen}
         source={source}
+        dataset={model.dataset}
         applyPatch={applyPatch}
         onAdd={() => actions?.onAdd()}
         onClose={() => setOnboardingOpen(false)}
