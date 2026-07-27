@@ -5,6 +5,7 @@ import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import { formatMoneyInput, parseMoneyToCents, type MoneyFormat } from '../../engine/money'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
+import { selectableOptions } from '../components/pickerOptions'
 import formStyles from '../components/TransactionForm.module.css'
 import stepStyles from '../components/InstallmentStep.module.css'
 import styles from './definitions.module.css'
@@ -68,6 +69,8 @@ export function InstallmentPlanForm({ plan, model, actions, onBack }: Props) {
   const [err, setErr] = useState<string | null>(null)
   const set = <K extends keyof Fields>(key: K, value: Fields[K]) =>
     setF((prev) => ({ ...prev, [key]: value }))
+  const accounts = selectableOptions(model.dataset.accounts, f.accountId)
+  const categories = selectableOptions(model.dataset.categories, f.categoryId)
 
   const submit = async () => {
     setBusy(true)
@@ -151,7 +154,7 @@ export function InstallmentPlanForm({ plan, model, actions, onBack }: Props) {
         <label className={formStyles.field}>
           <span className={formStyles.label}>Account</span>
           <select value={String(f.accountId)} onChange={(e) => set('accountId', Number(e.target.value))}>
-            {model.dataset.accounts.map((a) => (
+            {accounts.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
               </option>
@@ -161,7 +164,7 @@ export function InstallmentPlanForm({ plan, model, actions, onBack }: Props) {
         <label className={formStyles.field}>
           <span className={formStyles.label}>Category</span>
           <select value={String(f.categoryId)} onChange={(e) => set('categoryId', Number(e.target.value))}>
-            {model.dataset.categories.map((c) => (
+            {categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>
