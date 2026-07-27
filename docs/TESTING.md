@@ -37,6 +37,13 @@ Example flows in `access.integration.test.ts`:
 
 When adding a new protected route or group rule, extend that file first.
 
+### Testing D1 batch atomicity
+
+`functions/_shared/dbConfig.deleteWithReassign.test.ts` stubs `env.DB.batch()` to assert both the
+exact statements sent (so reassignment SQL stays owner-scoped) and that a rejected batch surfaces
+as an error with zero partial writes. Reuse that `stubEnv()` helper for any future D1 adapter
+change that must be all-or-nothing.
+
 ## Local parity tests
 
 `src/domain/data/parseWorkbookCsv.parity.test.ts` runs only when `PARITY_TESTS=1` **and** `FINANCIAL_REVIEW_DIR` (or `content/expenses_v3.csv`) is present. CI does not set either, so parity is optional locally.

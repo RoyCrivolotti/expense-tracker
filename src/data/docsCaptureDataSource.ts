@@ -157,6 +157,9 @@ export const docsCaptureDataSource: ExpenseDataSource = {
     }
     return Promise.resolve(row)
   },
+  deleteCategory() {
+    return Promise.resolve({ reassignedToId: null })
+  },
   createAccount(input: NewAccount) {
     nextId += 1
     const row: Account = { ...input, id: nextId, active: input.active ?? true }
@@ -171,6 +174,9 @@ export const docsCaptureDataSource: ExpenseDataSource = {
       active: patch.active ?? true,
     }
     return Promise.resolve(row)
+  },
+  deleteAccount() {
+    return Promise.resolve({ reassignedToId: null })
   },
   updateSettings(patch: Partial<ExpenseSettings>) {
     return Promise.resolve(patch as ExpenseSettings)

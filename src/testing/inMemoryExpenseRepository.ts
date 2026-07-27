@@ -1,4 +1,8 @@
 import type {
+  DeleteAccountOptions,
+  DeleteAccountResult,
+  DeleteCategoryOptions,
+  DeleteCategoryResult,
   NewAccount,
   NewCategory,
   NewGoalScenario,
@@ -107,6 +111,135 @@ export function inMemoryExpenseRepository(
     const plan = store.installmentPlans.find((p) => p.id === planId)
     if (!plan) throw new RepoHttpError(400, 'Invalid planId')
     return plan
+  }
+
+  function createCategoryInStore(store: OwnerStore, input: NewCategory): Category {
+    const category: Category = {
+      id: nextId(store.categories),
+      name: input.name,
+      monthlyBudgetCents: input.monthlyBudgetCents,
+      sortOrder: input.sortOrder,
+      active: input.active,
+      ...(input.icon !== undefined ? { icon: input.icon } : {}),
+      ...(input.color !== undefined ? { color: input.color } : {}),
+    }
+    store.categories.push(category)
+    return category
+  }
+
+  function createAccountInStore(store: OwnerStore, input: NewAccount): Account {
+    const account: Account = {
+      id: nextId(store.accounts),
+      name: input.name,
+      kind: input.kind,
+      settlement: input.settlement,
+      active: input.active,
+    }
+    store.accounts.push(account)
+    return account
+  }
+
+  function countCategoryUsage(store: OwnerStore, id: number): number {
+    const txns = store.transactions.filter((t) => t.categoryId === id).length
+    const plans = store.installmentPlans.filter((p) => p.categoryId === id).length
+    return txns + plans
+  }
+
+  function countAccountUsage(store: OwnerStore, id: number): number {
+    const txns = store.transactions.filter((t) => t.accountId === id).length
+    const plans = store.installmentPlans.filter((p) => p.accountId === id).length
+    const statements = store.statements.filter((s) => s.accountId === id).length
+    return txns + plans + statements
+  }
+
+  function deleteCategoryInStore(
+    store: OwnerStore,
+    id: number,
+    options?: DeleteCategoryOptions,
+  ): DeleteCategoryResult {
+    const { reassignToId, createCategory: createInput } = options ?? {}
+    if (reassignToId != null && createInput) {
+      throw new RepoHttpError(400, 'Specify either reassignToId or createCategory, not both')
+    }
+
+    if (reassignToId == null && !createInput) {
+      const usage = countCategoryUsage(store, id)
+      if (usage > 0) throw new RepoHttpError(409, `Category is in use by ${usage} record(s)`)
+      const index = store.categories.findIndex((c) => c.id === id)
+      if (index < 0) throw new RepoHttpError(404, 'Category not found')
+      store.categories.splice(index, 1)
+      return { reassignedToId: null }
+    }
+
+    let targetId: number
+    let createdCategory: Category | undefined
+    if (createInput) {
+      createdCategory = createCategoryInStore(store, createInput)
+      targetId = createdCategory.id
+    } else {
+      if (reassignToId === id) throw new RepoHttpError(400, 'Cannot reassign a category to itself')
+      targetId = assertOwnedCategory(store, reassignToId!).id
+    }
+
+    const index = store.categories.findIndex((c) => c.id === id)
+    if (index < 0) throw new RepoHttpError(404, 'Category not found')
+    store.categories.splice(index, 1)
+    store.transactions = store.transactions.map((t) =>
+      t.categoryId === id ? { ...t, categoryId: targetId } : t,
+    )
+    store.installmentPlans = store.installmentPlans.map((p) =>
+      p.categoryId === id ? { ...p, categoryId: targetId } : p,
+    )
+    return { reassignedToId: targetId, ...(createdCategory ? { createdCategory } : {}) }
+  }
+
+  function deleteAccountInStore(
+    store: OwnerStore,
+    id: number,
+    options?: DeleteAccountOptions,
+  ): DeleteAccountResult {
+    const { reassignToId, createAccount: createInput } = options ?? {}
+    if (reassignToId != null && createInput) {
+      throw new RepoHttpError(400, 'Specify either reassignToId or createAccount, not both')
+    }
+
+    if (reassignToId == null && !createInput) {
+      const usage = countAccountUsage(store, id)
+      if (usage > 0) throw new RepoHttpError(409, `Account is in use by ${usage} record(s)`)
+      const index = store.accounts.findIndex((a) => a.id === id)
+      if (index < 0) throw new RepoHttpError(404, 'Account not found')
+      store.accounts.splice(index, 1)
+      return { reassignedToId: null }
+    }
+
+    let targetId: number
+    let createdAccount: Account | undefined
+    if (createInput) {
+      createdAccount = createAccountInStore(store, createInput)
+      targetId = createdAccount.id
+    } else {
+      if (reassignToId === id) throw new RepoHttpError(400, 'Cannot reassign an account to itself')
+      targetId = assertOwnedAccount(store, reassignToId!).id
+    }
+
+    const index = store.accounts.findIndex((a) => a.id === id)
+    if (index < 0) throw new RepoHttpError(404, 'Account not found')
+    store.accounts.splice(index, 1)
+    store.transactions = store.transactions.map((t) =>
+      t.accountId === id ? { ...t, accountId: targetId } : t,
+    )
+    store.installmentPlans = store.installmentPlans.map((p) =>
+      p.accountId === id ? { ...p, accountId: targetId } : p,
+    )
+    // Mirror the D1 adapter: drop the source's statement for any month the target
+    // already has one for (composite key can't hold both), then move the rest.
+    const targetMonths = new Set(
+      store.statements.filter((s) => s.accountId === targetId).map((s) => s.yearMonth),
+    )
+    store.statements = store.statements
+      .filter((s) => !(s.accountId === id && targetMonths.has(s.yearMonth)))
+      .map((s) => (s.accountId === id ? { ...s, accountId: targetId } : s))
+    return { reassignedToId: targetId, ...(createdAccount ? { createdAccount } : {}) }
   }
 
   /**
@@ -274,17 +407,7 @@ export function inMemoryExpenseRepository(
 
     createCategory: (owner, input) => {
       const store = storeFor(owner)
-      const category: Category = {
-        id: nextId(store.categories),
-        name: input.name,
-        monthlyBudgetCents: input.monthlyBudgetCents,
-        sortOrder: input.sortOrder,
-        active: input.active,
-        ...(input.icon !== undefined ? { icon: input.icon } : {}),
-        ...(input.color !== undefined ? { color: input.color } : {}),
-      }
-      store.categories.push(category)
-      return Promise.resolve({ ...category })
+      return Promise.resolve({ ...createCategoryInStore(store, input) })
     },
 
     updateCategory: (owner, id, patch) => {
@@ -298,17 +421,14 @@ export function inMemoryExpenseRepository(
       return Promise.resolve({ ...updated })
     },
 
+    deleteCategory: (owner, id, options) => {
+      const store = storeFor(owner)
+      return Promise.resolve(deleteCategoryInStore(store, id, options))
+    },
+
     createAccount: (owner, input) => {
       const store = storeFor(owner)
-      const account: Account = {
-        id: nextId(store.accounts),
-        name: input.name,
-        kind: input.kind,
-        settlement: input.settlement,
-        active: input.active,
-      }
-      store.accounts.push(account)
-      return Promise.resolve({ ...account })
+      return Promise.resolve({ ...createAccountInStore(store, input) })
     },
 
     updateAccount: (owner, id, patch) => {
@@ -320,6 +440,11 @@ export function inMemoryExpenseRepository(
       const updated = { ...store.accounts[index]!, ...patch, id }
       store.accounts[index] = updated
       return Promise.resolve({ ...updated })
+    },
+
+    deleteAccount: (owner, id, options) => {
+      const store = storeFor(owner)
+      return Promise.resolve(deleteAccountInStore(store, id, options))
     },
 
     updateSettings: (owner, patch) => {
