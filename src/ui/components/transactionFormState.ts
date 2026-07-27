@@ -27,7 +27,9 @@ function defaultFields(model: ExpenseModel): FormFields {
     type: 'expense',
     amount: '',
     description: '',
-    categoryId: categories[0]?.id ?? 0,
+    // Prefer an active category so a brand-new transaction never opens already
+    // pointed at an archived one; fall back to any category if none are active.
+    categoryId: categories.find((c) => c.active)?.id ?? categories[0]?.id ?? 0,
     accountId: resolveDefaultAccountId(accounts, model.dataset.settings),
     date: today,
     budgetMonth: defaultBudgetMonth(today, model.dataset.settings.budgetRolloverDay),
