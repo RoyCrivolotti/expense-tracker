@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ExpenseDataSource } from '../../data/dataSource'
-import type { ExpenseDataset } from '../../types'
-import { defaultExpenseSettings } from '../../engine'
+import type { ExpenseDataset, ExpenseSettings } from '../../types'
 import { formatMoneyInput, parseMoneyToCents, resolveMoneyFormat } from '../../engine/money'
 import { Modal } from '../components/Modal'
 import { OnboardingNav, OnboardingProgress } from './OnboardingSteps'
@@ -25,33 +24,43 @@ const TITLES = [
 
 const LAST_STEP = TITLES.length - 1
 
-function initialMoneyDraft(): MoneyDraft {
-  const s = defaultExpenseSettings()
+function initialMoneyDraft(settings: ExpenseSettings): MoneyDraft {
   return {
-    currencyCode: s.currencyCode,
-    numberLocale: s.numberLocale,
-    budgetRolloverDay: s.budgetRolloverDay,
+    currencyCode: settings.currencyCode,
+    numberLocale: settings.numberLocale,
+    budgetRolloverDay: settings.budgetRolloverDay,
   }
+}
+
+/**
+ * Re-entry with existing accounts and the opt-in debit checkbox off never
+ * needs a name; every other case (first run, or opted-in re-entry) does.
+ */
+function canFinishAccountsStep(hasExistingAccounts: boolean, addDebit: boolean, debitName: string): boolean {
+  if (hasExistingAccounts && !addDebit) return true
+  return debitName.trim().length > 0
 }
 
 interface OnboardingWizardProps {
   source: ExpenseDataSource
+  dataset: ExpenseDataset
   applyPatch: (patch: (dataset: ExpenseDataset) => ExpenseDataset) => void
   onDone: () => void
   onSkip: () => void
 }
 
-export function OnboardingWizard({ source, applyPatch, onDone, onSkip }: OnboardingWizardProps) {
+export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }: OnboardingWizardProps) {
   const [step, setStep] = useState(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [money, setMoney] = useState<MoneyDraft>(initialMoneyDraft)
+  const [money, setMoney] = useState<MoneyDraft>(() => initialMoneyDraft(dataset.settings))
   const format = useMemo(
     () => resolveMoneyFormat(money.currencyCode, money.numberLocale),
     [money.currencyCode, money.numberLocale],
   )
   const [drafts, setDrafts] = useCategoryDrafts(format)
-  const accounts = useAccountsDraft()
+  const hasExistingAccounts = dataset.accounts.length > 0
+  const accounts = useAccountsDraft(hasExistingAccounts)
 
   // Category budgets are stored as display strings, so when the chosen format
   // changes we re-render each amount from the value it held under the old
@@ -72,7 +81,7 @@ export function OnboardingWizard({ source, applyPatch, onDone, onSkip }: Onboard
 
   const selectedPresets = buildSelectedPresets(drafts, format)
   const canNextCategories = selectedPresets.length > 0
-  const canFinish = accounts.debitName.trim().length > 0
+  const canFinish = canFinishAccountsStep(hasExistingAccounts, accounts.addDebit, accounts.debitName)
 
   async function finish() {
     setBusy(true)
@@ -80,9 +89,11 @@ export function OnboardingWizard({ source, applyPatch, onDone, onSkip }: Onboard
     try {
       await runOnboardingSetup(source, applyPatch, {
         categories: selectedPresets,
+        addDebit: accounts.addDebit,
         debitName: accounts.debitName,
         creditName: accounts.addCredit ? accounts.creditName : null,
         money,
+        currentSettings: dataset.settings,
       })
       onDone()
     } catch (err: unknown) {
@@ -126,9 +137,12 @@ export function OnboardingWizard({ source, applyPatch, onDone, onSkip }: Onboard
       ) : null}
       {step === 3 ? (
         <OnboardingAccountsStep
+          hasExistingAccounts={hasExistingAccounts}
+          addDebit={accounts.addDebit}
           debitName={accounts.debitName}
           creditName={accounts.creditName}
           addCredit={accounts.addCredit}
+          onAddDebit={accounts.setAddDebit}
           onDebitName={accounts.setDebitName}
           onCreditName={accounts.setCreditName}
           onAddCredit={accounts.setAddCredit}

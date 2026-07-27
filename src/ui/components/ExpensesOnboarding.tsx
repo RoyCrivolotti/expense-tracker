@@ -6,6 +6,7 @@ import { skipOnboarding } from '../onboarding/onboardingStorage'
 interface Props {
   open: boolean
   source: ExpenseDataSource
+  dataset: ExpenseDataset
   onAdd: () => void
   onClose: () => void
   applyPatch: (patch: (dataset: ExpenseDataset) => ExpenseDataset) => void
@@ -14,6 +15,7 @@ interface Props {
 export function ExpensesOnboarding({
   open,
   source,
+  dataset,
   applyPatch,
   onAdd,
   onClose,
@@ -22,6 +24,7 @@ export function ExpensesOnboarding({
   return (
     <OnboardingWizard
       source={source}
+      dataset={dataset}
       applyPatch={applyPatch}
       onDone={() => {
         onClose()

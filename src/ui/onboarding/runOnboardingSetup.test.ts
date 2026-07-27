@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { ExpenseDataset } from '../../types'
 import type { ExpenseDataSource } from '../../data/dataSource'
 import { defaultExpenseSettings } from '../../engine'
-import { runOnboardingSetup } from './runOnboardingSetup'
+import { buildOnboardingSettingsPatch, runOnboardingSetup } from './runOnboardingSetup'
 
 const emptyDataset: ExpenseDataset = {
   categories: [],
@@ -23,6 +23,82 @@ const emptyDataset: ExpenseDataset = {
   installmentPlans: [],
   settings: defaultExpenseSettings(),
 }
+
+describe('buildOnboardingSettingsPatch', () => {
+  const currentSettings = {
+    ...defaultExpenseSettings(),
+    currencyCode: 'EUR',
+    numberLocale: 'de-DE',
+    budgetRolloverDay: 1,
+    defaultAccountId: 5,
+  }
+
+  it('omits every field when nothing changed and no new debit was created', () => {
+    const patch = buildOnboardingSettingsPatch(
+      {
+        money: { currencyCode: 'EUR', numberLocale: 'de-DE', budgetRolloverDay: 1 },
+        currentSettings,
+      },
+      null,
+    )
+    expect(patch).toEqual({})
+  })
+
+  it('includes only the fields that changed', () => {
+    const patch = buildOnboardingSettingsPatch(
+      {
+        money: { currencyCode: 'USD', numberLocale: 'de-DE', budgetRolloverDay: 1 },
+        currentSettings,
+      },
+      null,
+    )
+    expect(patch).toEqual({ currencyCode: 'USD' })
+  })
+
+  it('includes all three money fields when all changed', () => {
+    const patch = buildOnboardingSettingsPatch(
+      {
+        money: { currencyCode: 'USD', numberLocale: 'en-US', budgetRolloverDay: 13 },
+        currentSettings,
+      },
+      null,
+    )
+    expect(patch).toEqual({ currencyCode: 'USD', numberLocale: 'en-US', budgetRolloverDay: 13 })
+  })
+
+  it('does not touch defaultAccountId when no new debit account was created', () => {
+    const patch = buildOnboardingSettingsPatch(
+      {
+        money: { currencyCode: 'USD', numberLocale: 'de-DE', budgetRolloverDay: 1 },
+        currentSettings,
+      },
+      null,
+    )
+    expect(patch).not.toHaveProperty('defaultAccountId')
+  })
+
+  it('sets defaultAccountId to the newly-created debit account when one was created', () => {
+    const patch = buildOnboardingSettingsPatch(
+      {
+        money: { currencyCode: 'EUR', numberLocale: 'de-DE', budgetRolloverDay: 1 },
+        currentSettings,
+      },
+      42,
+    )
+    expect(patch).toEqual({ defaultAccountId: 42 })
+  })
+
+  it('combines a changed money field with a newly-created debit account in one patch', () => {
+    const patch = buildOnboardingSettingsPatch(
+      {
+        money: { currencyCode: 'USD', numberLocale: 'de-DE', budgetRolloverDay: 1 },
+        currentSettings,
+      },
+      42,
+    )
+    expect(patch).toEqual({ currencyCode: 'USD', defaultAccountId: 42 })
+  })
+})
 
 describe('runOnboardingSetup', () => {
   it('persists the chosen currency, number locale, and budget rollover day', async () => {
@@ -57,9 +133,11 @@ describe('runOnboardingSetup', () => {
 
     await runOnboardingSetup(source, applyPatch, {
       categories: [{ name: 'Groceries', icon: '🛒', defaultBudgetCents: 30000 }],
+      addDebit: true,
       debitName: 'Debit',
       creditName: null,
       money: { currencyCode: 'USD', numberLocale: 'en-US', budgetRolloverDay: 13 },
+      currentSettings: emptyDataset.settings,
     })
 
     expect(updateSettings).toHaveBeenCalledWith(
@@ -67,6 +145,7 @@ describe('runOnboardingSetup', () => {
         currencyCode: 'USD',
         numberLocale: 'en-US',
         budgetRolloverDay: 13,
+        defaultAccountId: 2,
       }),
     )
     expect(dataset.settings.currencyCode).toBe('USD')
@@ -92,13 +171,136 @@ describe('runOnboardingSetup', () => {
 
     await runOnboardingSetup(source, applyPatch, {
       categories: [],
+      addDebit: true,
       debitName: 'Debit',
       creditName: '  ',
       money: { currencyCode: 'EUR', numberLocale: 'de-DE', budgetRolloverDay: 1 },
+      currentSettings: emptyDataset.settings,
     })
 
     expect(createAccount).toHaveBeenCalledTimes(1)
     expect(dataset.accounts).toHaveLength(1)
     expect(dataset.accounts[0]?.kind).toBe('debit')
+  })
+
+  it('re-entry: skips createAccount entirely and updateSettings when nothing is opted in or changed', async () => {
+    const existingSettings = {
+      ...defaultExpenseSettings(),
+      currencyCode: 'EUR',
+      numberLocale: 'de-DE',
+      budgetRolloverDay: 1,
+      defaultAccountId: 7,
+    }
+    let dataset: ExpenseDataset = { ...emptyDataset, settings: existingSettings }
+    const applyPatch = vi.fn((patch: (d: ExpenseDataset) => ExpenseDataset) => {
+      dataset = patch(dataset)
+    })
+    const createAccount = vi.fn()
+    const updateSettings = vi.fn()
+    const source: ExpenseDataSource = {
+      canWrite: true,
+      load: vi.fn(),
+      createCategory: vi.fn(),
+      createAccount,
+      updateSettings,
+    }
+
+    await runOnboardingSetup(source, applyPatch, {
+      categories: [],
+      addDebit: false,
+      debitName: 'Main debit',
+      creditName: null,
+      money: {
+        currencyCode: existingSettings.currencyCode,
+        numberLocale: existingSettings.numberLocale,
+        budgetRolloverDay: existingSettings.budgetRolloverDay,
+      },
+      currentSettings: existingSettings,
+    })
+
+    expect(createAccount).not.toHaveBeenCalled()
+    expect(updateSettings).not.toHaveBeenCalled()
+    expect(dataset.settings.defaultAccountId).toBe(7)
+  })
+
+  it('re-entry: a currency change alone does not touch defaultAccountId', async () => {
+    const existingSettings = {
+      ...defaultExpenseSettings(),
+      currencyCode: 'EUR',
+      numberLocale: 'de-DE',
+      budgetRolloverDay: 1,
+      defaultAccountId: 7,
+    }
+    let dataset: ExpenseDataset = { ...emptyDataset, settings: existingSettings }
+    const applyPatch = vi.fn((patch: (d: ExpenseDataset) => ExpenseDataset) => {
+      dataset = patch(dataset)
+    })
+    const updateSettings = vi.fn().mockResolvedValue({ ...existingSettings, currencyCode: 'USD' })
+    const source: ExpenseDataSource = {
+      canWrite: true,
+      load: vi.fn(),
+      createCategory: vi.fn(),
+      createAccount: vi.fn(),
+      updateSettings,
+    }
+
+    await runOnboardingSetup(source, applyPatch, {
+      categories: [],
+      addDebit: false,
+      debitName: 'Main debit',
+      creditName: null,
+      money: {
+        currencyCode: 'USD',
+        numberLocale: existingSettings.numberLocale,
+        budgetRolloverDay: existingSettings.budgetRolloverDay,
+      },
+      currentSettings: existingSettings,
+    })
+
+    expect(updateSettings).toHaveBeenCalledWith({ currencyCode: 'USD' })
+    expect(dataset.settings.defaultAccountId).toBe(7)
+  })
+
+  it('re-entry: opting in to a new debit account creates it and moves defaultAccountId to it', async () => {
+    const existingSettings = {
+      ...defaultExpenseSettings(),
+      currencyCode: 'EUR',
+      numberLocale: 'de-DE',
+      budgetRolloverDay: 1,
+      defaultAccountId: 7,
+    }
+    let dataset: ExpenseDataset = { ...emptyDataset, settings: existingSettings }
+    const applyPatch = vi.fn((patch: (d: ExpenseDataset) => ExpenseDataset) => {
+      dataset = patch(dataset)
+    })
+    const createAccount = vi
+      .fn()
+      .mockResolvedValue({ id: 9, name: 'Second debit', kind: 'debit', settlement: 'immediate', active: true })
+    const updateSettings = vi.fn().mockResolvedValue({ ...existingSettings, defaultAccountId: 9 })
+    const source: ExpenseDataSource = {
+      canWrite: true,
+      load: vi.fn(),
+      createCategory: vi.fn(),
+      createAccount,
+      updateSettings,
+    }
+
+    await runOnboardingSetup(source, applyPatch, {
+      categories: [],
+      addDebit: true,
+      debitName: 'Second debit',
+      creditName: null,
+      money: {
+        currencyCode: existingSettings.currencyCode,
+        numberLocale: existingSettings.numberLocale,
+        budgetRolloverDay: existingSettings.budgetRolloverDay,
+      },
+      currentSettings: existingSettings,
+    })
+
+    expect(createAccount).toHaveBeenCalledTimes(1)
+    expect(updateSettings).toHaveBeenCalledWith({ defaultAccountId: 9 })
+    expect(dataset.accounts).toHaveLength(1)
+    expect(dataset.settings.defaultAccountId).toBe(9)
   })
 })
