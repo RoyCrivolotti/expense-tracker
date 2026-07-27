@@ -213,5 +213,66 @@ describe('OnboardingWizard', () => {
       expect(createAccount).toHaveBeenCalledTimes(1)
       expect(updateSettings).toHaveBeenCalled()
     })
+
+    it('Escape while the popup is open closes only the popup, not the whole wizard', () => {
+      const { source } = sourceWithAccountAndSettings()
+      const onSkip = vi.fn()
+      render(
+        <OnboardingWizard
+          source={source}
+          dataset={datasetWith()}
+          applyPatch={vi.fn()}
+          onDone={vi.fn()}
+          onSkip={onSkip}
+        />,
+      )
+      goToStep(3)
+      fireEvent.click(screen.getByText('Finish setup'))
+      fireEvent.keyDown(document, { key: 'Escape' })
+      expect(screen.queryByText('Apply these changes?')).toBeNull()
+      expect(onSkip).not.toHaveBeenCalled()
+      // Wizard itself is still open.
+      expect(screen.getByText('Finish setup')).toBeTruthy()
+    })
+
+    it('Back while the popup is open closes it and returns to the previous step', () => {
+      const { source } = sourceWithAccountAndSettings()
+      render(
+        <OnboardingWizard
+          source={source}
+          dataset={datasetWith()}
+          applyPatch={vi.fn()}
+          onDone={vi.fn()}
+          onSkip={vi.fn()}
+        />,
+      )
+      goToStep(3)
+      fireEvent.click(screen.getByText('Finish setup'))
+      fireEvent.click(screen.getByText('Back'))
+      expect(screen.queryByText('Apply these changes?')).toBeNull()
+      // Back from Accounts (step 3) lands on Categories (step 2).
+      expect(screen.getByText('Choose categories')).toBeTruthy()
+    })
+
+    it('clicking Apply twice in a row only runs setup once', async () => {
+      const { source, createAccount } = sourceWithAccountAndSettings()
+      const onDone = vi.fn()
+      render(
+        <OnboardingWizard
+          source={source}
+          dataset={datasetWith()}
+          applyPatch={vi.fn()}
+          onDone={onDone}
+          onSkip={vi.fn()}
+        />,
+      )
+      goToStep(3)
+      fireEvent.click(screen.getByText('Finish setup'))
+      const apply = screen.getByText('Apply')
+      fireEvent.click(apply)
+      fireEvent.click(apply)
+      await waitFor(() => expect(onDone).toHaveBeenCalled())
+      expect(createAccount).toHaveBeenCalledTimes(1)
+    })
   })
 })

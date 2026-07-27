@@ -43,6 +43,11 @@ function canFinishAccountsStep(hasExistingAccounts: boolean, addDebit: boolean, 
   return debitName.trim().length > 0
 }
 
+/** While the confirm popup is open, dismissing the wizard chrome (Escape / backdrop) should close just the popup, not skip the whole wizard. */
+function dismissHandler(showConfirm: boolean, closeConfirm: () => void, onSkip: () => void): () => void {
+  return showConfirm ? closeConfirm : onSkip
+}
+
 interface OnboardingWizardProps {
   source: ExpenseDataSource
   dataset: ExpenseDataset
@@ -87,6 +92,7 @@ export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }
   const canFinish = canFinishAccountsStep(hasExistingAccounts, accounts.addDebit, accounts.debitName)
 
   async function finish() {
+    if (busy) return
     setBusy(true)
     setError(null)
     try {
@@ -122,7 +128,10 @@ export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }
   const nextDisabled = step === 2 ? !canNextCategories : step === LAST_STEP ? !canFinish : false
 
   return (
-    <Modal title={TITLES[step] ?? 'Setup'} onClose={onSkip}>
+    <Modal
+      title={TITLES[step] ?? 'Setup'}
+      onClose={dismissHandler(showConfirm, () => setShowConfirm(false), onSkip)}
+    >
       <OnboardingProgress step={step} />
       {step === 0 ? (
         <div className={styles.stepBody}>
@@ -158,7 +167,14 @@ export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }
       ) : null}
       {error ? <p className={styles.error}>{error}</p> : null}
       <OnboardingNav
-        {...(step > 0 ? { onBack: () => setStep((s) => s - 1) } : {})}
+        {...(step > 0
+          ? {
+              onBack: () => {
+                setShowConfirm(false)
+                setStep((s) => s - 1)
+              },
+            }
+          : {})}
         onNext={handleNext}
         nextLabel={step === LAST_STEP ? 'Finish setup' : 'Continue'}
         nextDisabled={nextDisabled}
