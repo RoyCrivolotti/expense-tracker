@@ -209,15 +209,21 @@ function buildConfig(
   }
 }
 
+type DeleteMode = 'idle' | 'confirm' | 'reassign'
+
 function DeleteControl({
   config,
   onDeleted,
+  mode,
+  onModeChange,
 }: {
   config: DeleteConfig
   onDeleted: () => void
+  mode: DeleteMode
+  onModeChange: (mode: DeleteMode) => void
 }) {
-  const [mode, setMode] = useState<'idle' | 'confirm' | 'reassign'>('idle')
   const [err, setErr] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   if (config.isLast) {
     return (
@@ -228,12 +234,16 @@ function DeleteControl({
   }
 
   const runPlainDelete = async () => {
+    if (deleting) return
+    setDeleting(true)
     try {
       await config.onPlainDelete()
       onDeleted()
     } catch (e) {
-      setMode('idle')
+      onModeChange('idle')
       setErr(e instanceof Error ? e.message : 'Could not delete')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -244,7 +254,7 @@ function DeleteControl({
         className={`${styles.editBtn} ${styles.deleteBtn}`}
         onClick={() => {
           setErr(null)
-          setMode(config.usageCount > 0 ? 'reassign' : 'confirm')
+          onModeChange(config.usageCount > 0 ? 'reassign' : 'confirm')
         }}
       >
         Delete {config.noun}
@@ -257,7 +267,7 @@ function DeleteControl({
           confirmLabel="Delete"
           destructive
           onConfirm={() => void runPlainDelete()}
-          onCancel={() => setMode('idle')}
+          onCancel={() => onModeChange('idle')}
         />
       ) : null}
       {mode === 'reassign' ? (
@@ -267,7 +277,7 @@ function DeleteControl({
           options={config.otherOptions}
           createLabel={config.noun}
           onConfirm={(target) => config.onReassignDelete(target).then(onDeleted)}
-          onCancel={() => setMode('idle')}
+          onCancel={() => onModeChange('idle')}
         />
       ) : null}
     </>
@@ -284,8 +294,13 @@ interface ConfigModalProps {
 export function ConfigModal({ target, model, actions, onClose }: ConfigModalProps) {
   const { symbol } = useMoneyFormat()
   const cfg = buildConfig(target, model, actions, symbol)
+  const [deleteMode, setDeleteMode] = useState<DeleteMode>('idle')
+  // While a delete confirm/reassign sheet is open, Escape/backdrop should close just that
+  // sheet — otherwise the sheet's own Escape handler and this Modal's both fire (they're
+  // independent document-level listeners), closing the whole editor out from under it.
+  const dismiss = deleteMode !== 'idle' ? () => setDeleteMode('idle') : onClose
   return (
-    <Modal title={cfg.title} onClose={onClose}>
+    <Modal title={cfg.title} onClose={dismiss}>
       <RecordForm
         fields={cfg.fields}
         initial={cfg.initial}
@@ -293,7 +308,9 @@ export function ConfigModal({ target, model, actions, onClose }: ConfigModalProp
         onSubmit={cfg.onSubmit}
         onClose={onClose}
       />
-      {cfg.delete ? <DeleteControl config={cfg.delete} onDeleted={onClose} /> : null}
+      {cfg.delete ? (
+        <DeleteControl config={cfg.delete} onDeleted={onClose} mode={deleteMode} onModeChange={setDeleteMode} />
+      ) : null}
     </Modal>
   )
 }

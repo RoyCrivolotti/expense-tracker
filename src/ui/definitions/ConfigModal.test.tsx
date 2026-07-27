@@ -289,4 +289,83 @@ describe('ConfigModal delete control', () => {
     const optionLabels = Array.from(select.options).map((o) => o.textContent)
     expect(optionLabels).toEqual([NEW_CARD.name, `+ Create new account`])
   })
+
+  it('Escape while the plain-delete confirm is open closes only the confirm, not the whole editor', () => {
+    const onClose = vi.fn()
+    render(
+      <ConfigModal
+        target={{ kind: 'category', record: GROCERIES }}
+        model={buildExpenseModel(dataset())}
+        actions={noopActions()}
+        onClose={onClose}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete category' }))
+    expect(screen.getByText("This can't be undone.")).toBeTruthy()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(screen.queryByText("This can't be undone.")).toBeNull()
+    expect(onClose).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Delete category' })).toBeTruthy()
+  })
+
+  it('Escape while the reassign sheet is open closes only the sheet, not the whole editor', () => {
+    const onClose = vi.fn()
+    const ds = dataset({
+      transactions: [
+        {
+          id: 1,
+          date: '2026-01-01',
+          budgetMonth: '2026-01',
+          description: 'Lunch',
+          accountId: CHECKING.id,
+          categoryId: DINING.id,
+          type: 'expense',
+          amountCents: -1200,
+          cancelled: false,
+          status: 'posted',
+        },
+      ],
+    })
+    render(
+      <ConfigModal
+        target={{ kind: 'category', record: DINING }}
+        model={buildExpenseModel(ds)}
+        actions={noopActions()}
+        onClose={onClose}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete category' }))
+    expect(screen.getByLabelText('Move to')).toBeTruthy()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(screen.queryByLabelText('Move to')).toBeNull()
+    expect(onClose).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Delete category' })).toBeTruthy()
+  })
+
+  it('clicking Delete twice on the plain-delete confirm only deletes once', async () => {
+    const actions = noopActions()
+    const onClose = vi.fn()
+    render(
+      <ConfigModal
+        target={{ kind: 'category', record: GROCERIES }}
+        model={buildExpenseModel(dataset())}
+        actions={actions}
+        onClose={onClose}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete category' }))
+    const deleteBtn = screen.getByRole('button', { name: 'Delete' })
+    fireEvent.click(deleteBtn)
+    fireEvent.click(deleteBtn)
+
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalled())
+    expect(actions.deleteCategory).toHaveBeenCalledTimes(1)
+  })
 })
