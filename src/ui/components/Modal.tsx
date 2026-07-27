@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { CloseIcon } from '../icons'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useFocusTrap } from '../hooks/useFocusTrap'
@@ -18,6 +18,21 @@ export function Modal({ title, subtitle, onClose, children, trapPaused = false }
   const sheetRef = useRef<HTMLDivElement>(null)
   useFocusTrap(sheetRef, onClose, trapPaused)
 
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  // Skip the first run: useFocusTrap already sends initial focus to the first
+  // focusable control on open, which is a better landing spot than the heading.
+  // A later `title` change (e.g. a multi-step wizard advancing) has no other
+  // focus-moving mechanism though, so screen reader users get no indication a
+  // new step/screen loaded — move focus to the (now-updated) heading then.
+  const skipNextTitleFocus = useRef(true)
+  useEffect(() => {
+    if (skipNextTitleFocus.current) {
+      skipNextTitleFocus.current = false
+      return
+    }
+    headingRef.current?.focus()
+  }, [title])
+
   return (
     <div className={styles.overlay} onClick={onClose} role="presentation">
       <div
@@ -30,7 +45,9 @@ export function Modal({ title, subtitle, onClose, children, trapPaused = false }
       >
         <header className={styles.header}>
           <div className={styles.titleBlock}>
-            <h2>{title}</h2>
+            <h2 ref={headingRef} tabIndex={-1}>
+              {title}
+            </h2>
             {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className={`${styles.close} tapActive`}>
