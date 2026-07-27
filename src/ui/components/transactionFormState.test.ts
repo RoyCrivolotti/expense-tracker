@@ -57,6 +57,23 @@ function editingTxn(amountCents: number): Transaction {
 }
 
 describe('initialFields', () => {
+  it('defaults a new transaction to the first active category, skipping a leading inactive one', () => {
+    const model = minimalModel()
+    model.dataset.categories = [
+      { id: 1, name: 'Archived', monthlyBudgetCents: 0, sortOrder: 0, active: false },
+      { id: 3, name: 'Health', monthlyBudgetCents: 0, sortOrder: 1, active: true },
+    ]
+    const fields = initialFields(null, model, EU_MONEY_FORMAT)
+    expect(fields.categoryId).toBe(3)
+  })
+
+  it('falls back to the first category when none are active, rather than defaulting to 0', () => {
+    const model = minimalModel()
+    model.dataset.categories = [{ id: 1, name: 'Archived', monthlyBudgetCents: 0, sortOrder: 0, active: false }]
+    const fields = initialFields(null, model, EU_MONEY_FORMAT)
+    expect(fields.categoryId).toBe(1)
+  })
+
   it('maps a recurring seed into EU-formatted amount', () => {
     const seed: TransactionSeed = {
       description: 'Rent',
