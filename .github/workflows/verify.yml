@@ -9,6 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # `npm run coverage:diff` needs the merge-base with the PR's base
+          # branch, which a shallow clone doesn't have.
+          fetch-depth: 0
 
       - name: Use HTTPS for git-based npm dependencies
         run: |
@@ -22,3 +26,6 @@ jobs:
 
       - run: npm ci
       - run: npm run verify
+
+      - name: Diff coverage (this PR's changed lines)
+        run: npm run coverage:diff -- --base ${{ github.event.pull_request.base.sha }}
