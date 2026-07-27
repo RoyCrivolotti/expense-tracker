@@ -3,6 +3,7 @@ import type { ExpenseDataSource } from '../../data/dataSource'
 import type { ExpenseDataset, ExpenseSettings } from '../../types'
 import { formatMoneyInput, parseMoneyToCents, resolveMoneyFormat } from '../../engine/money'
 import { Modal } from '../components/Modal'
+import { ConfirmSheet } from '../components/ConfirmSheet'
 import { OnboardingNav, OnboardingProgress } from './OnboardingSteps'
 import { OnboardingMoneyStep, type MoneyDraft } from './OnboardingMoneyStep'
 import { OnboardingCategoriesStep } from './OnboardingCategoriesStep'
@@ -13,6 +14,7 @@ import {
   useCategoryDrafts,
 } from './onboardingDrafts'
 import { runOnboardingSetup } from './runOnboardingSetup'
+import { buildOnboardingConfirmSummary, ONBOARDING_CONFIRM_FOOTNOTE } from './onboardingConfirmSummary'
 import styles from './OnboardingWizard.module.css'
 
 const TITLES = [
@@ -41,6 +43,11 @@ function canFinishAccountsStep(hasExistingAccounts: boolean, addDebit: boolean, 
   return debitName.trim().length > 0
 }
 
+/** While the confirm popup is open, dismissing the wizard chrome (Escape / backdrop) should close just the popup, not skip the whole wizard. */
+function dismissHandler(showConfirm: boolean, closeConfirm: () => void, onSkip: () => void): () => void {
+  return showConfirm ? closeConfirm : onSkip
+}
+
 interface OnboardingWizardProps {
   source: ExpenseDataSource
   dataset: ExpenseDataset
@@ -53,6 +60,7 @@ export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }
   const [step, setStep] = useState(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [money, setMoney] = useState<MoneyDraft>(() => initialMoneyDraft(dataset.settings))
   const format = useMemo(
     () => resolveMoneyFormat(money.currencyCode, money.numberLocale),
@@ -84,6 +92,7 @@ export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }
   const canFinish = canFinishAccountsStep(hasExistingAccounts, accounts.addDebit, accounts.debitName)
 
   async function finish() {
+    if (busy) return
     setBusy(true)
     setError(null)
     try {
@@ -108,13 +117,21 @@ export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }
       setStep((s) => s + 1)
       return
     }
+    setShowConfirm(true)
+  }
+
+  function handleConfirm() {
+    setShowConfirm(false)
     void finish()
   }
 
   const nextDisabled = step === 2 ? !canNextCategories : step === LAST_STEP ? !canFinish : false
 
   return (
-    <Modal title={TITLES[step] ?? 'Setup'} onClose={onSkip}>
+    <Modal
+      title={TITLES[step] ?? 'Setup'}
+      onClose={dismissHandler(showConfirm, () => setShowConfirm(false), onSkip)}
+    >
       <OnboardingProgress step={step} />
       {step === 0 ? (
         <div className={styles.stepBody}>
@@ -150,7 +167,14 @@ export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }
       ) : null}
       {error ? <p className={styles.error}>{error}</p> : null}
       <OnboardingNav
-        {...(step > 0 ? { onBack: () => setStep((s) => s - 1) } : {})}
+        {...(step > 0
+          ? {
+              onBack: () => {
+                setShowConfirm(false)
+                setStep((s) => s - 1)
+              },
+            }
+          : {})}
         onNext={handleNext}
         nextLabel={step === LAST_STEP ? 'Finish setup' : 'Continue'}
         nextDisabled={nextDisabled}
@@ -159,6 +183,24 @@ export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }
       <button type="button" className={styles.skipLink} onClick={onSkip} disabled={busy}>
         Skip for now
       </button>
+      {showConfirm ? (
+        <ConfirmSheet
+          title="Apply these changes?"
+          message={buildOnboardingConfirmSummary({
+            categories: selectedPresets,
+            addDebit: accounts.addDebit,
+            debitName: accounts.debitName,
+            addCredit: accounts.addCredit,
+            creditName: accounts.creditName,
+            money,
+            format,
+          })}
+          footnote={ONBOARDING_CONFIRM_FOOTNOTE}
+          confirmLabel="Apply"
+          onConfirm={handleConfirm}
+          onCancel={() => setShowConfirm(false)}
+        />
+      ) : null}
     </Modal>
   )
 }

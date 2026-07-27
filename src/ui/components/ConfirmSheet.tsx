@@ -5,7 +5,10 @@ import styles from './ConfirmSheet.module.css'
 
 interface ConfirmSheetProps {
   title: string
-  message: string
+  /** A single sentence, or a short list of lines rendered as bullet points. */
+  message: string | string[]
+  /** Small muted note shown below the message, e.g. a caveat that applies regardless of content. */
+  footnote?: string
   confirmLabel: string
   destructive?: boolean
   onConfirm: () => void
@@ -15,6 +18,7 @@ interface ConfirmSheetProps {
 export function ConfirmSheet({
   title,
   message,
+  footnote,
   confirmLabel,
   destructive = false,
   onConfirm,
@@ -32,15 +36,29 @@ export function ConfirmSheet({
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-title"
-        aria-describedby="confirm-message"
+        aria-describedby={footnote ? 'confirm-message confirm-footnote' : 'confirm-message'}
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="confirm-title" className={styles.title}>
           {title}
         </h2>
-        <p id="confirm-message" className={styles.message}>
-          {message}
-        </p>
+        {Array.isArray(message) ? (
+          <ul id="confirm-message" className={styles.messageList}>
+            {message.map((line, index) => (
+              // Index key: lines can repeat verbatim, and the list order never changes.
+              <li key={index}>{line}</li>
+            ))}
+          </ul>
+        ) : (
+          <p id="confirm-message" className={styles.message}>
+            {message}
+          </p>
+        )}
+        {footnote ? (
+          <p id="confirm-footnote" className={styles.footnote}>
+            {footnote}
+          </p>
+        ) : null}
         <div className={styles.actions}>
           <button type="button" className={styles.cancel} onClick={onCancel}>
             Cancel
