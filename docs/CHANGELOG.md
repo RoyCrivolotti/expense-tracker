@@ -2,6 +2,23 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## July 2026 (onboarding wizard re-entry fixes)
+
+### Setup wizard
+
+- **Finishing re-entry no longer reopens "add a transaction."** That only happens on a genuine first
+  run now; re-opening the wizard from Settings to tweak currency or accounts just closes it.
+- **Opting into an extra debit account on re-entry no longer silently changes your default account.**
+  `settings.defaultAccountId` is only seeded by the wizard when nothing was configured yet.
+- **Categories step no longer blocks re-entry at zero selections.** Presets default unchecked when
+  you already have categories, and Continue no longer requires picking one — a plain note explains
+  no new categories will be added instead of a "select at least one" warning. First run is unchanged.
+- **Screen readers now announce each step change** — focus moves to the new step's heading instead of
+  staying wherever it was.
+- **A failed "Finish setup" no longer leaves orphaned categories/accounts behind.** If a later step
+  fails (e.g. the account create call), whatever categories/accounts this run already created get
+  cleaned up automatically instead of sticking around unused.
+
 ## July 2026 (onboarding wizard fixes, category/account delete)
 
 ### Setup wizard
