@@ -227,6 +227,11 @@ function ExpensesAppReady({
   const [onboardingOpen, setOnboardingOpen] = useState(
     () => source.canWrite && !readOnly && needsOnboarding(model.dataset) && !isOnboardingSkipped(),
   )
+  // Captured once per wizard run rather than re-derived from `model.dataset`, since the
+  // wizard's own setup adds categories/accounts as it goes — re-checking `needsOnboarding`
+  // after it starts would flip this mid-run. Re-entry via "Run setup" in Settings always
+  // sets this false; the initial auto-open (tenant had nothing yet) starts it true.
+  const [onboardingFirstRun, setOnboardingFirstRun] = useState(() => needsOnboarding(model.dataset))
   const actions = useExpenseActions(source, applyPatch, setModal, readOnly)
 
   const activeMonth = month ?? model.months[model.months.length - 1] ?? ''
@@ -240,6 +245,7 @@ function ExpensesAppReady({
         open={onboardingOpen}
         source={source}
         dataset={model.dataset}
+        firstRun={onboardingFirstRun}
         applyPatch={applyPatch}
         onAdd={() => actions?.onAdd()}
         onClose={() => setOnboardingOpen(false)}
@@ -290,6 +296,7 @@ function ExpensesAppReady({
             onNavigate={setTab}
             onRunSetup={() => {
               clearOnboardingSkip()
+              setOnboardingFirstRun(false)
               setOnboardingOpen(true)
             }}
           />
