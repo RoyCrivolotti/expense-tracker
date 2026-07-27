@@ -37,6 +37,13 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
   validation or a cascade/unlink behavior to the D1 adapter, add the same behavior here or tests
   will pass against the double while the real backend rejects (or worse, silently corrupts) the
   same input.
+- **Categories and accounts with references are deleted only via reassign, never orphaning a
+  record.** An unused category/account deletes outright; one still referenced by a transaction,
+  installment plan, or (for accounts) an account statement requires a `reassignToId` or an inline
+  `createCategory`/`createAccount` payload, and the move + delete run as a single `env.DB.batch(...)` so a mid-batch
+  failure can't leave rows pointing at a deleted id. See `deleteCategory`/`deleteAccount` in
+  `functions/_shared/dbConfig.ts`. Archiving (`active: false`) is unrelated and never blocked by
+  usage — it only affects which categories/accounts new/edited transactions can pick, not deletion.
 - **Public GitHub source.** Real emails (beyond a clearly-named demo account), financial figures,
   and other personal identifiers must never land in a tracked file. Follow the placeholder +
   comment pattern already used in `migrations/0003_multi_user.sql` and

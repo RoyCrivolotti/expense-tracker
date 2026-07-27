@@ -7,6 +7,10 @@ import type {
   TxnType,
 } from '../types'
 import type {
+  DeleteAccountOptions,
+  DeleteAccountResult,
+  DeleteCategoryOptions,
+  DeleteCategoryResult,
   NewAccount,
   NewCategory,
   NewGoalScenario,
@@ -55,8 +59,10 @@ export interface ExpenseActions {
   setCashActual: (yearMonth: string, actualCashCents: number | null) => Promise<void>
   createCategory: (input: NewCategory) => Promise<void>
   updateCategory: (id: number, patch: Partial<NewCategory>) => Promise<void>
+  deleteCategory: (id: number, options?: DeleteCategoryOptions) => Promise<DeleteCategoryResult>
   createAccount: (input: NewAccount) => Promise<void>
   updateAccount: (id: number, patch: Partial<NewAccount>) => Promise<void>
+  deleteAccount: (id: number, options?: DeleteAccountOptions) => Promise<DeleteAccountResult>
   updateSettings: (patch: Partial<ExpenseSettings>) => Promise<void>
   updateGoals: (patch: Partial<GoalInputs>) => Promise<void>
   createScenario: (input: NewGoalScenario) => Promise<GoalScenario>

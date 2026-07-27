@@ -11,6 +11,10 @@ import type {
   Transaction,
 } from '../types'
 import type {
+  DeleteAccountOptions,
+  DeleteAccountResult,
+  DeleteCategoryOptions,
+  DeleteCategoryResult,
   NewAccount,
   NewCategory,
   NewGoalScenario,
@@ -41,8 +45,18 @@ export interface ExpenseRepository {
   clearCashActual(owner: string, yearMonth: string): Promise<void>
   createCategory(owner: string, input: NewCategory): Promise<Category>
   updateCategory(owner: string, id: number, patch: Partial<NewCategory>): Promise<Category>
+  deleteCategory(
+    owner: string,
+    id: number,
+    options?: DeleteCategoryOptions,
+  ): Promise<DeleteCategoryResult>
   createAccount(owner: string, input: NewAccount): Promise<Account>
   updateAccount(owner: string, id: number, patch: Partial<NewAccount>): Promise<Account>
+  deleteAccount(
+    owner: string,
+    id: number,
+    options?: DeleteAccountOptions,
+  ): Promise<DeleteAccountResult>
   updateSettings(owner: string, patch: Partial<ExpenseSettings>): Promise<ExpenseSettings>
   updateGoals(owner: string, patch: Partial<GoalInputs>): Promise<GoalInputs>
   createScenario(owner: string, input: NewGoalScenario): Promise<GoalScenario>

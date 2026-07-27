@@ -74,3 +74,31 @@
 .addBtn:hover {
   border-color: var(--color-accent);
 }
+
+.deleteBtn {
+  width: 100%;
+  margin-top: 0.85rem;
+  justify-content: center;
+  text-align: center;
+  border-color: var(--exp-danger, #e5484d);
+  color: var(--exp-danger, #e5484d);
+}
+.deleteBtn:hover {
+  border-color: var(--exp-danger, #e5484d);
+  color: var(--exp-danger, #e5484d);
+  opacity: 0.85;
+}
+
+.deleteNote {
+  margin: 0.85rem 0 0;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.deleteError {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  color: var(--exp-danger, #e5484d);
+  text-align: center;
+}

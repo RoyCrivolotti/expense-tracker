@@ -23,6 +23,31 @@ export type NewTransaction = Omit<StoredTransaction, 'id' | 'createdAt' | 'planI
 }
 export type NewCategory = Omit<Category, 'id'>
 export type NewAccount = Omit<Account, 'id'>
+
+/**
+ * Exactly one of `reassignToId` / `createCategory` should be set when the
+ * category being deleted is in use; omit both to delete an unused category.
+ */
+export interface DeleteCategoryOptions {
+  reassignToId?: number
+  createCategory?: NewCategory
+}
+export interface DeleteCategoryResult {
+  /** The id transactions/plans were moved to, or null when nothing needed reassigning. */
+  reassignedToId: number | null
+  /** Present when `createCategory` was used to make the reassign target. */
+  createdCategory?: Category
+}
+
+/** Same contract as {@link DeleteCategoryOptions}, for accounts. */
+export interface DeleteAccountOptions {
+  reassignToId?: number
+  createAccount?: NewAccount
+}
+export interface DeleteAccountResult {
+  reassignedToId: number | null
+  createdAccount?: Account
+}
 export type NewGoalScenario = Omit<GoalScenario, 'id'>
 export type NewInstallmentPlan = Omit<InstallmentPlan, 'id' | 'dueDayOfMonth'> & {
   /** A day (1-31) sets the due day, null clears it, absent leaves it unchanged. */
@@ -44,8 +69,10 @@ export interface ExpenseDataSource {
   // Definitions — categories, accounts, opening balances, goal inputs.
   createCategory?(input: NewCategory): Promise<Category>
   updateCategory?(id: number, patch: Partial<NewCategory>): Promise<Category>
+  deleteCategory?(id: number, options?: DeleteCategoryOptions): Promise<DeleteCategoryResult>
   createAccount?(input: NewAccount): Promise<Account>
   updateAccount?(id: number, patch: Partial<NewAccount>): Promise<Account>
+  deleteAccount?(id: number, options?: DeleteAccountOptions): Promise<DeleteAccountResult>
   updateSettings?(patch: Partial<ExpenseSettings>): Promise<ExpenseSettings>
   updateGoals?(patch: Partial<GoalInputs>): Promise<GoalInputs>
   createScenario?(input: NewGoalScenario): Promise<GoalScenario>

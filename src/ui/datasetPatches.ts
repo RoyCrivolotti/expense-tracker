@@ -11,6 +11,7 @@ import type {
   InstallmentPlan,
   Transaction,
 } from '../types'
+import type { DeleteAccountResult, DeleteCategoryResult } from '../data/dataSource'
 
 function cloneDataset(dataset: ExpenseDataset): ExpenseDataset {
   return structuredClone(dataset)
@@ -118,6 +119,56 @@ export function patchAfterCategory(
 export function patchAfterAccount(dataset: ExpenseDataset, account: Account): ExpenseDataset {
   const d = cloneDataset(dataset)
   upsertById(d.accounts, account)
+  redriveTransactions(d)
+  return d
+}
+
+export function patchAfterCategoryDelete(
+  dataset: ExpenseDataset,
+  id: number,
+  result: DeleteCategoryResult,
+): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  d.categories = d.categories.filter((c) => c.id !== id)
+  if (result.createdCategory) d.categories.push(result.createdCategory)
+  d.categories.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+  const targetId = result.reassignedToId
+  if (targetId != null) {
+    d.transactions = d.transactions.map((t) =>
+      t.categoryId === id ? { ...t, categoryId: targetId } : t,
+    )
+    d.installmentPlans = d.installmentPlans.map((p) =>
+      p.categoryId === id ? { ...p, categoryId: targetId } : p,
+    )
+  }
+  return d
+}
+
+export function patchAfterAccountDelete(
+  dataset: ExpenseDataset,
+  id: number,
+  result: DeleteAccountResult,
+): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  d.accounts = d.accounts.filter((a) => a.id !== id)
+  if (result.createdAccount) d.accounts.push(result.createdAccount)
+  const targetId = result.reassignedToId
+  if (targetId != null) {
+    d.transactions = d.transactions.map((t) =>
+      t.accountId === id ? { ...t, accountId: targetId } : t,
+    )
+    d.installmentPlans = d.installmentPlans.map((p) =>
+      p.accountId === id ? { ...p, accountId: targetId } : p,
+    )
+    // Mirror the D1/in-memory adapters: drop the source's statement for any month
+    // the target already has one for, then move the rest.
+    const targetMonths = new Set(
+      d.accountStatements.filter((s) => s.accountId === targetId).map((s) => s.yearMonth),
+    )
+    d.accountStatements = d.accountStatements
+      .filter((s) => !(s.accountId === id && targetMonths.has(s.yearMonth)))
+      .map((s) => (s.accountId === id ? { ...s, accountId: targetId } : s))
+  }
   redriveTransactions(d)
   return d
 }

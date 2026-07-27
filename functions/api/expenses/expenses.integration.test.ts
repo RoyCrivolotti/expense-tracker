@@ -4,9 +4,12 @@ import { createInMemoryAccessDb } from '../../_shared/testing/inMemoryAccessDb'
 import { invokeExpenseApiRoute } from '../../_shared/testing/invokeExpenseApiRoute'
 import { inMemoryExpenseRepository } from '../../../src/testing/inMemoryExpenseRepository'
 import { onRequestPost as createAccount } from './accounts/index'
-import { onRequestPatch as patchAccount } from './accounts/[id]'
+import { onRequestPatch as patchAccount, onRequestDelete as deleteAccount } from './accounts/[id]'
 import { onRequestPost as createCategory } from './categories/index'
-import { onRequestPatch as patchCategory } from './categories/[id]'
+import {
+  onRequestPatch as patchCategory,
+  onRequestDelete as deleteCategory,
+} from './categories/[id]'
 import { onRequestPut as putSettings } from './settings/index'
 import { onRequestPut as putGoals } from './goals/index'
 import { onRequestPost as createScenario } from './scenarios/index'
@@ -265,5 +268,240 @@ describe('expenses API (middleware + handlers + in-memory repo)', () => {
       email: OWNER,
     })
     expect(missingDate.status).toBe(400)
+  })
+
+  it('deletes an unused category outright', async () => {
+    const store = createInMemoryAccessDb()
+    store.seedActiveUser(OWNER, { groups: ['expenses'] })
+    const repo = inMemoryExpenseRepository(
+      {
+        categories: [{ id: 1, name: 'Unused', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
+      },
+      OWNER,
+    )
+
+    const deleted = await invokeExpenseApiRoute({
+      handler: deleteCategory,
+      repo,
+      env: expenseEnv(store),
+      method: 'DELETE',
+      url: 'https://expenses.test/api/expenses/categories/1',
+      params: { id: '1' },
+      body: {},
+      email: OWNER,
+    })
+    expect(deleted.status).toBe(200)
+    expect(await readJson(deleted)).toEqual({ reassignedToId: null })
+    expect((await repo.loadDataset(OWNER)).categories).toHaveLength(0)
+  })
+
+  it('blocks deleting a category in use, then reassigns its transactions and deletes it', async () => {
+    const store = createInMemoryAccessDb()
+    store.seedActiveUser(OWNER, { groups: ['expenses'] })
+    const repo = inMemoryExpenseRepository(
+      {
+        categories: [
+          { id: 1, name: 'Dining out', monthlyBudgetCents: 0, sortOrder: 0, active: true },
+          { id: 2, name: 'Eating out', monthlyBudgetCents: 0, sortOrder: 1, active: true },
+        ],
+        accounts: [{ id: 1, name: 'Checking', kind: 'debit', settlement: 'immediate', active: true }],
+        transactions: [
+          {
+            id: 1,
+            date: '2026-01-01',
+            budgetMonth: '2026-01',
+            description: 'Lunch',
+            accountId: 1,
+            categoryId: 1,
+            type: 'expense',
+            amountCents: -1200,
+            cancelled: false,
+            status: 'posted',
+          },
+        ],
+      },
+      OWNER,
+    )
+
+    const blocked = await invokeExpenseApiRoute({
+      handler: deleteCategory,
+      repo,
+      env: expenseEnv(store),
+      method: 'DELETE',
+      url: 'https://expenses.test/api/expenses/categories/1',
+      params: { id: '1' },
+      body: {},
+      email: OWNER,
+    })
+    expect(blocked.status).toBe(409)
+
+    const reassigned = await invokeExpenseApiRoute({
+      handler: deleteCategory,
+      repo,
+      env: expenseEnv(store),
+      method: 'DELETE',
+      url: 'https://expenses.test/api/expenses/categories/1',
+      params: { id: '1' },
+      body: { reassignToId: 2 },
+      email: OWNER,
+    })
+    expect(reassigned.status).toBe(200)
+    expect(await readJson(reassigned)).toEqual({ reassignedToId: 2 })
+
+    const dataset = await repo.loadDataset(OWNER)
+    expect(dataset.categories.map((c) => c.id)).toEqual([2])
+    expect(dataset.transactions[0]?.categoryId).toBe(2)
+  })
+
+  it('deletes a category in use by creating a new target inline', async () => {
+    const store = createInMemoryAccessDb()
+    store.seedActiveUser(OWNER, { groups: ['expenses'] })
+    const repo = inMemoryExpenseRepository(
+      {
+        categories: [{ id: 1, name: 'Dinig out', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
+        accounts: [{ id: 1, name: 'Checking', kind: 'debit', settlement: 'immediate', active: true }],
+        transactions: [
+          {
+            id: 1,
+            date: '2026-01-01',
+            budgetMonth: '2026-01',
+            description: 'Lunch',
+            accountId: 1,
+            categoryId: 1,
+            type: 'expense',
+            amountCents: -1200,
+            cancelled: false,
+            status: 'posted',
+          },
+        ],
+      },
+      OWNER,
+    )
+
+    const response = await invokeExpenseApiRoute({
+      handler: deleteCategory,
+      repo,
+      env: expenseEnv(store),
+      method: 'DELETE',
+      url: 'https://expenses.test/api/expenses/categories/1',
+      params: { id: '1' },
+      body: {
+        createCategory: { name: 'Dining out', monthlyBudgetCents: 0, sortOrder: 0, active: true },
+      },
+      email: OWNER,
+    })
+    expect(response.status).toBe(200)
+    const body = await readJson<{ reassignedToId: number; createdCategory: { name: string } }>(
+      response,
+    )
+    expect(body.createdCategory.name).toBe('Dining out')
+
+    const dataset = await repo.loadDataset(OWNER)
+    expect(dataset.categories).toHaveLength(1)
+    expect(dataset.categories[0]?.id).toBe(body.reassignedToId)
+    expect(dataset.transactions[0]?.categoryId).toBe(body.reassignedToId)
+  })
+
+  it('blocks deleting an account in use, then reassigns its transactions and statements and deletes it', async () => {
+    const store = createInMemoryAccessDb()
+    store.seedActiveUser(OWNER, { groups: ['expenses'] })
+    const repo = inMemoryExpenseRepository(
+      {
+        accounts: [
+          { id: 1, name: 'Old card', kind: 'credit', settlement: 'deferred', active: true },
+          { id: 2, name: 'New card', kind: 'credit', settlement: 'deferred', active: true },
+        ],
+        categories: [{ id: 1, name: 'Dining out', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
+        transactions: [
+          {
+            id: 1,
+            date: '2026-01-01',
+            budgetMonth: '2026-01',
+            description: 'Lunch',
+            accountId: 1,
+            categoryId: 1,
+            type: 'expense',
+            amountCents: -1200,
+            cancelled: false,
+            status: 'posted',
+          },
+        ],
+        accountStatements: [{ accountId: 1, yearMonth: '2026-01', paid: false }],
+      },
+      OWNER,
+    )
+
+    const blocked = await invokeExpenseApiRoute({
+      handler: deleteAccount,
+      repo,
+      env: expenseEnv(store),
+      method: 'DELETE',
+      url: 'https://expenses.test/api/expenses/accounts/1',
+      params: { id: '1' },
+      body: {},
+      email: OWNER,
+    })
+    expect(blocked.status).toBe(409)
+
+    const reassigned = await invokeExpenseApiRoute({
+      handler: deleteAccount,
+      repo,
+      env: expenseEnv(store),
+      method: 'DELETE',
+      url: 'https://expenses.test/api/expenses/accounts/1',
+      params: { id: '1' },
+      body: { reassignToId: 2 },
+      email: OWNER,
+    })
+    expect(reassigned.status).toBe(200)
+    expect(await readJson(reassigned)).toEqual({ reassignedToId: 2 })
+
+    const dataset = await repo.loadDataset(OWNER)
+    expect(dataset.accounts.map((a) => a.id)).toEqual([2])
+    expect(dataset.transactions[0]?.accountId).toBe(2)
+    expect(dataset.accountStatements).toEqual([{ accountId: 2, yearMonth: '2026-01', paid: false }])
+  })
+
+  it('drops the source statement for a month the target already has, keeping the target as-is', async () => {
+    const store = createInMemoryAccessDb()
+    store.seedActiveUser(OWNER, { groups: ['expenses'] })
+    const repo = inMemoryExpenseRepository(
+      {
+        accounts: [
+          { id: 1, name: 'Old card', kind: 'credit', settlement: 'deferred', active: true },
+          { id: 2, name: 'New card', kind: 'credit', settlement: 'deferred', active: true },
+        ],
+        accountStatements: [
+          // Both accounts have a January statement; the source's is unpaid, the
+          // target's is already paid. The target's row must win the collision.
+          { accountId: 1, yearMonth: '2026-01', paid: false },
+          { accountId: 2, yearMonth: '2026-01', paid: true, paidOn: '2026-02-01' },
+          // February only exists on the source, so it should move over untouched.
+          { accountId: 1, yearMonth: '2026-02', paid: false },
+        ],
+      },
+      OWNER,
+    )
+
+    const reassigned = await invokeExpenseApiRoute({
+      handler: deleteAccount,
+      repo,
+      env: expenseEnv(store),
+      method: 'DELETE',
+      url: 'https://expenses.test/api/expenses/accounts/1',
+      params: { id: '1' },
+      body: { reassignToId: 2 },
+      email: OWNER,
+    })
+    expect(reassigned.status).toBe(200)
+
+    const dataset = await repo.loadDataset(OWNER)
+    expect(dataset.accountStatements).toEqual(
+      expect.arrayContaining([
+        { accountId: 2, yearMonth: '2026-01', paid: true, paidOn: '2026-02-01' },
+        { accountId: 2, yearMonth: '2026-02', paid: false },
+      ]),
+    )
+    expect(dataset.accountStatements).toHaveLength(2)
   })
 })
