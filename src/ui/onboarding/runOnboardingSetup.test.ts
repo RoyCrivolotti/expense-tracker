@@ -196,6 +196,42 @@ describe('runOnboardingSetup', () => {
     expect(dataset.accounts[0]?.kind).toBe('debit')
   })
 
+  it('creates both a debit and a credit account when both names are given', async () => {
+    let dataset = emptyDataset
+    const applyPatch = vi.fn((patch: (d: ExpenseDataset) => ExpenseDataset) => {
+      dataset = patch(dataset)
+    })
+    const createAccount = vi
+      .fn()
+      .mockResolvedValueOnce({ id: 2, name: 'Debit', kind: 'debit', settlement: 'immediate', active: true })
+      .mockResolvedValueOnce({ id: 3, name: 'Visa', kind: 'credit', settlement: 'deferred', active: true })
+    const source: ExpenseDataSource = {
+      canWrite: true,
+      load: vi.fn(),
+      createCategory: vi.fn(),
+      createAccount,
+      updateSettings: vi.fn().mockResolvedValue(defaultExpenseSettings()),
+    }
+
+    await runOnboardingSetup(source, applyPatch, {
+      categories: [],
+      addDebit: true,
+      debitName: 'Debit',
+      creditName: 'Visa',
+      money: {
+        currencyCode: emptyDataset.settings.currencyCode,
+        numberLocale: emptyDataset.settings.numberLocale,
+        budgetRolloverDay: emptyDataset.settings.budgetRolloverDay,
+      },
+      currentSettings: emptyDataset.settings,
+      existingCategories: [],
+    })
+
+    expect(createAccount).toHaveBeenCalledTimes(2)
+    expect(dataset.accounts).toHaveLength(2)
+    expect(dataset.accounts.map((a) => a.kind).sort()).toEqual(['credit', 'debit'])
+  })
+
   it('re-entry: skips createAccount entirely and updateSettings when nothing is opted in or changed', async () => {
     const existingSettings = {
       ...defaultExpenseSettings(),
@@ -367,6 +403,131 @@ describe('runOnboardingSetup', () => {
 
     expect(updateSettings).toHaveBeenCalledWith({ defaultAccountId: 9 })
     expect(dataset.settings.defaultAccountId).toBe(9)
+  })
+
+  it('rolls back categories already created this run if a later account create fails', async () => {
+    let dataset = emptyDataset
+    const applyPatch = vi.fn((patch: (d: ExpenseDataset) => ExpenseDataset) => {
+      dataset = patch(dataset)
+    })
+    const createCategory = vi
+      .fn()
+      .mockResolvedValueOnce({ id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true })
+      .mockResolvedValueOnce({ id: 2, name: 'Dining out', monthlyBudgetCents: 0, sortOrder: 1, active: true })
+    const deleteCategory = vi.fn().mockResolvedValue({ reassignedToId: null })
+    const createAccount = vi.fn().mockRejectedValue(new Error('network error'))
+    const source: ExpenseDataSource = {
+      canWrite: true,
+      load: vi.fn(),
+      createCategory,
+      deleteCategory,
+      createAccount,
+      updateSettings: vi.fn(),
+    }
+
+    await expect(
+      runOnboardingSetup(source, applyPatch, {
+        categories: [
+          { name: 'Groceries', icon: '🛒', defaultBudgetCents: 0 },
+          { name: 'Dining out', icon: '🍽', defaultBudgetCents: 0 },
+        ],
+        addDebit: true,
+        debitName: 'Main debit',
+        creditName: null,
+        money: {
+          currencyCode: emptyDataset.settings.currencyCode,
+          numberLocale: emptyDataset.settings.numberLocale,
+          budgetRolloverDay: emptyDataset.settings.budgetRolloverDay,
+        },
+        currentSettings: emptyDataset.settings,
+        existingCategories: [],
+      }),
+    ).rejects.toThrow('network error')
+
+    expect(deleteCategory).toHaveBeenCalledTimes(2)
+    expect(deleteCategory).toHaveBeenCalledWith(1)
+    expect(deleteCategory).toHaveBeenCalledWith(2)
+    // The optimistic patches were applied then rolled back — the dataset ends up
+    // with nothing from this failed run.
+    expect(dataset.categories).toHaveLength(0)
+  })
+
+  it('rolls back an already-created debit account if the credit account create then fails', async () => {
+    let dataset = emptyDataset
+    const applyPatch = vi.fn((patch: (d: ExpenseDataset) => ExpenseDataset) => {
+      dataset = patch(dataset)
+    })
+    const createAccount = vi
+      .fn()
+      .mockResolvedValueOnce({ id: 2, name: 'Main debit', kind: 'debit', settlement: 'immediate', active: true })
+      .mockRejectedValueOnce(new Error('credit create failed'))
+    const deleteAccount = vi.fn().mockResolvedValue({ reassignedToId: null })
+    const source: ExpenseDataSource = {
+      canWrite: true,
+      load: vi.fn(),
+      createCategory: vi.fn(),
+      createAccount,
+      deleteAccount,
+      updateSettings: vi.fn(),
+    }
+
+    await expect(
+      runOnboardingSetup(source, applyPatch, {
+        categories: [],
+        addDebit: true,
+        debitName: 'Main debit',
+        creditName: 'Visa',
+        money: {
+          currencyCode: emptyDataset.settings.currencyCode,
+          numberLocale: emptyDataset.settings.numberLocale,
+          budgetRolloverDay: emptyDataset.settings.budgetRolloverDay,
+        },
+        currentSettings: emptyDataset.settings,
+        existingCategories: [],
+      }),
+    ).rejects.toThrow('credit create failed')
+
+    expect(deleteAccount).toHaveBeenCalledExactlyOnceWith(2)
+    expect(dataset.accounts).toHaveLength(0)
+  })
+
+  it('swallows a rollback failure and still surfaces the original setup error', async () => {
+    let dataset = emptyDataset
+    const applyPatch = vi.fn((patch: (d: ExpenseDataset) => ExpenseDataset) => {
+      dataset = patch(dataset)
+    })
+    const createCategory = vi
+      .fn()
+      .mockResolvedValueOnce({ id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true })
+    const deleteCategory = vi.fn().mockRejectedValue(new Error('cleanup also failed'))
+    const createAccount = vi.fn().mockRejectedValue(new Error('original setup error'))
+    const source: ExpenseDataSource = {
+      canWrite: true,
+      load: vi.fn(),
+      createCategory,
+      deleteCategory,
+      createAccount,
+      updateSettings: vi.fn(),
+    }
+
+    await expect(
+      runOnboardingSetup(source, applyPatch, {
+        categories: [{ name: 'Groceries', icon: '🛒', defaultBudgetCents: 0 }],
+        addDebit: true,
+        debitName: 'Main debit',
+        creditName: null,
+        money: {
+          currencyCode: emptyDataset.settings.currencyCode,
+          numberLocale: emptyDataset.settings.numberLocale,
+          budgetRolloverDay: emptyDataset.settings.budgetRolloverDay,
+        },
+        currentSettings: emptyDataset.settings,
+        existingCategories: [],
+      }),
+      // The original error, not "cleanup also failed", is what the caller sees.
+    ).rejects.toThrow('original setup error')
+
+    expect(deleteCategory).toHaveBeenCalledExactlyOnceWith(1)
   })
 
   it('re-entry: seeds new categories\' sortOrder after existing ones instead of restarting at 0', async () => {

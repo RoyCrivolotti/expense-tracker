@@ -3,7 +3,9 @@ import type { ExpenseDataSource } from '../../data/dataSource'
 import type { CategoryPreset } from '../../domain/onboarding/presets'
 import {
   patchAfterAccount,
+  patchAfterAccountDelete,
   patchAfterCategory,
+  patchAfterCategoryDelete,
   patchAfterSettings,
 } from '../datasetPatches'
 
@@ -53,48 +55,91 @@ export function buildOnboardingSettingsPatch(
   return patch
 }
 
+/**
+ * Best-effort undo for whatever `runOnboardingSetup` already created before a
+ * later step failed — there's no single backend endpoint spanning categories,
+ * accounts, and settings, so this can't be a real transaction. Each created
+ * record is fresh and unused (the setup loop that made it hasn't finished),
+ * so a plain delete is always safe here — no reassign target needed. Errors
+ * during cleanup are swallowed: the error that matters to the caller is the
+ * original setup failure, not a secondary cleanup failure.
+ */
+async function rollbackOnboardingSetup(
+  source: ExpenseDataSource,
+  applyPatch: (patch: (dataset: ExpenseDataset) => ExpenseDataset) => void,
+  createdCategoryIds: number[],
+  createdAccountIds: number[],
+): Promise<void> {
+  for (const id of createdCategoryIds) {
+    try {
+      await source.deleteCategory!(id)
+      applyPatch((d) => patchAfterCategoryDelete(d, id, { reassignedToId: null }))
+    } catch {
+      /* best-effort; the original setup error is what the caller should see */
+    }
+  }
+  for (const id of createdAccountIds) {
+    try {
+      await source.deleteAccount!(id)
+      applyPatch((d) => patchAfterAccountDelete(d, id, { reassignedToId: null }))
+    } catch {
+      /* best-effort; the original setup error is what the caller should see */
+    }
+  }
+}
+
 export async function runOnboardingSetup(
   source: ExpenseDataSource,
   applyPatch: (patch: (dataset: ExpenseDataset) => ExpenseDataset) => void,
   input: OnboardingSetupInput,
 ): Promise<void> {
-  let sortOrder = input.existingCategories.reduce((max, c) => Math.max(max, c.sortOrder + 1), 0)
-  for (const preset of input.categories) {
-    const category = await source.createCategory!({
-      name: preset.name,
-      icon: preset.icon,
-      monthlyBudgetCents: preset.defaultBudgetCents,
-      sortOrder: sortOrder++,
-      active: true,
-    })
-    applyPatch((d) => patchAfterCategory(d, category))
-  }
+  const createdCategoryIds: number[] = []
+  const createdAccountIds: number[] = []
+  try {
+    let sortOrder = input.existingCategories.reduce((max, c) => Math.max(max, c.sortOrder + 1), 0)
+    for (const preset of input.categories) {
+      const category = await source.createCategory!({
+        name: preset.name,
+        icon: preset.icon,
+        monthlyBudgetCents: preset.defaultBudgetCents,
+        sortOrder: sortOrder++,
+        active: true,
+      })
+      createdCategoryIds.push(category.id)
+      applyPatch((d) => patchAfterCategory(d, category))
+    }
 
-  let newDebitId: number | null = null
-  if (input.addDebit) {
-    const debit = await source.createAccount!({
-      name: input.debitName.trim(),
-      kind: 'debit',
-      settlement: 'immediate',
-      active: true,
-    })
-    applyPatch((d) => patchAfterAccount(d, debit))
-    newDebitId = debit.id
-  }
+    let newDebitId: number | null = null
+    if (input.addDebit) {
+      const debit = await source.createAccount!({
+        name: input.debitName.trim(),
+        kind: 'debit',
+        settlement: 'immediate',
+        active: true,
+      })
+      createdAccountIds.push(debit.id)
+      applyPatch((d) => patchAfterAccount(d, debit))
+      newDebitId = debit.id
+    }
 
-  if (input.creditName?.trim()) {
-    const credit = await source.createAccount!({
-      name: input.creditName.trim(),
-      kind: 'credit',
-      settlement: 'deferred',
-      active: true,
-    })
-    applyPatch((d) => patchAfterAccount(d, credit))
-  }
+    if (input.creditName?.trim()) {
+      const credit = await source.createAccount!({
+        name: input.creditName.trim(),
+        kind: 'credit',
+        settlement: 'deferred',
+        active: true,
+      })
+      createdAccountIds.push(credit.id)
+      applyPatch((d) => patchAfterAccount(d, credit))
+    }
 
-  const settingsPatch = buildOnboardingSettingsPatch(input, newDebitId)
-  if (Object.keys(settingsPatch).length > 0) {
-    const settings = await source.updateSettings!(settingsPatch)
-    applyPatch((d) => patchAfterSettings(d, settings))
+    const settingsPatch = buildOnboardingSettingsPatch(input, newDebitId)
+    if (Object.keys(settingsPatch).length > 0) {
+      const settings = await source.updateSettings!(settingsPatch)
+      applyPatch((d) => patchAfterSettings(d, settings))
+    }
+  } catch (err) {
+    await rollbackOnboardingSetup(source, applyPatch, createdCategoryIds, createdAccountIds)
+    throw err
   }
 }
