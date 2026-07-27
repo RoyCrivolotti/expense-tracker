@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { ExpenseDataSource } from '../../data/dataSource'
 import type { Account, ExpenseDataset } from '../../types'
@@ -124,5 +124,94 @@ describe('OnboardingWizard', () => {
     const nameInput = screen.getByLabelText('Main debit account')
     fireEvent.change(nameInput, { target: { value: '' } })
     expect(screen.getByText('Finish setup')).toBeDisabled()
+  })
+
+  describe('confirmation popup on Finish setup', () => {
+    function sourceWithAccountAndSettings() {
+      const createCategory = vi
+        .fn()
+        .mockResolvedValue({ id: 1, name: 'Groceries', monthlyBudgetCents: 30000, sortOrder: 0, active: true })
+      const createAccount = vi
+        .fn()
+        .mockResolvedValue({ id: 2, name: 'Main debit', kind: 'debit', settlement: 'immediate', active: true })
+      const updateSettings = vi.fn().mockResolvedValue(defaultExpenseSettings())
+      const source: ExpenseDataSource = {
+        canWrite: true,
+        load: vi.fn(),
+        createCategory,
+        createAccount,
+        updateSettings,
+      }
+      return { source, createCategory, createAccount, updateSettings }
+    }
+
+    it('clicking Finish setup shows a confirmation popup listing what will be created, instead of finishing immediately', () => {
+      const { source, createAccount } = sourceWithAccountAndSettings()
+      render(
+        <OnboardingWizard
+          source={source}
+          dataset={datasetWith()}
+          applyPatch={vi.fn()}
+          onDone={vi.fn()}
+          onSkip={vi.fn()}
+        />,
+      )
+      goToStep(3)
+      fireEvent.click(screen.getByText('Finish setup'))
+      expect(screen.getByText('Apply these changes?')).toBeTruthy()
+      // All default presets are selected, and the default debit account is named.
+      expect(screen.getByText(/new categories:/)).toBeTruthy()
+      expect(screen.getByText('1 new account: Main debit')).toBeTruthy()
+      expect(
+        screen.getByText("This adds to what you already have — it doesn't check for or merge duplicate categories or accounts."),
+      ).toBeTruthy()
+      expect(createAccount).not.toHaveBeenCalled()
+    })
+
+    it('Cancel closes the popup without applying anything or losing wizard state', () => {
+      const { source, createCategory, createAccount } = sourceWithAccountAndSettings()
+      const onDone = vi.fn()
+      render(
+        <OnboardingWizard
+          source={source}
+          dataset={datasetWith()}
+          applyPatch={vi.fn()}
+          onDone={onDone}
+          onSkip={vi.fn()}
+        />,
+      )
+      goToStep(3)
+      fireEvent.click(screen.getByText('Finish setup'))
+      fireEvent.click(screen.getByText('Cancel'))
+      expect(screen.queryByText('Apply these changes?')).toBeNull()
+      expect(createCategory).not.toHaveBeenCalled()
+      expect(createAccount).not.toHaveBeenCalled()
+      expect(onDone).not.toHaveBeenCalled()
+      // Wizard state survived: still on the Accounts step (nav back to it still works)
+      // with its default debit name intact — Cancel didn't reset the draft.
+      expect(screen.getByLabelText('Main debit account')).toHaveValue('Main debit')
+      expect(screen.getByText('Back')).toBeTruthy()
+    })
+
+    it('confirming applies the setup and calls onDone', async () => {
+      const { source, createCategory, createAccount, updateSettings } = sourceWithAccountAndSettings()
+      const onDone = vi.fn()
+      render(
+        <OnboardingWizard
+          source={source}
+          dataset={datasetWith()}
+          applyPatch={vi.fn()}
+          onDone={onDone}
+          onSkip={vi.fn()}
+        />,
+      )
+      goToStep(3)
+      fireEvent.click(screen.getByText('Finish setup'))
+      fireEvent.click(screen.getByText('Apply'))
+      await waitFor(() => expect(onDone).toHaveBeenCalled())
+      expect(createCategory).toHaveBeenCalled()
+      expect(createAccount).toHaveBeenCalledTimes(1)
+      expect(updateSettings).toHaveBeenCalled()
+    })
   })
 })

@@ -3,6 +3,7 @@ import type { ExpenseDataSource } from '../../data/dataSource'
 import type { ExpenseDataset, ExpenseSettings } from '../../types'
 import { formatMoneyInput, parseMoneyToCents, resolveMoneyFormat } from '../../engine/money'
 import { Modal } from '../components/Modal'
+import { ConfirmSheet } from '../components/ConfirmSheet'
 import { OnboardingNav, OnboardingProgress } from './OnboardingSteps'
 import { OnboardingMoneyStep, type MoneyDraft } from './OnboardingMoneyStep'
 import { OnboardingCategoriesStep } from './OnboardingCategoriesStep'
@@ -13,6 +14,7 @@ import {
   useCategoryDrafts,
 } from './onboardingDrafts'
 import { runOnboardingSetup } from './runOnboardingSetup'
+import { buildOnboardingConfirmSummary, ONBOARDING_CONFIRM_FOOTNOTE } from './onboardingConfirmSummary'
 import styles from './OnboardingWizard.module.css'
 
 const TITLES = [
@@ -53,6 +55,7 @@ export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }
   const [step, setStep] = useState(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [money, setMoney] = useState<MoneyDraft>(() => initialMoneyDraft(dataset.settings))
   const format = useMemo(
     () => resolveMoneyFormat(money.currencyCode, money.numberLocale),
@@ -108,6 +111,11 @@ export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }
       setStep((s) => s + 1)
       return
     }
+    setShowConfirm(true)
+  }
+
+  function handleConfirm() {
+    setShowConfirm(false)
     void finish()
   }
 
@@ -159,6 +167,24 @@ export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }
       <button type="button" className={styles.skipLink} onClick={onSkip} disabled={busy}>
         Skip for now
       </button>
+      {showConfirm ? (
+        <ConfirmSheet
+          title="Apply these changes?"
+          message={buildOnboardingConfirmSummary({
+            categories: selectedPresets,
+            addDebit: accounts.addDebit,
+            debitName: accounts.debitName,
+            addCredit: accounts.addCredit,
+            creditName: accounts.creditName,
+            money,
+            format,
+          })}
+          footnote={ONBOARDING_CONFIRM_FOOTNOTE}
+          confirmLabel="Apply"
+          onConfirm={handleConfirm}
+          onCancel={() => setShowConfirm(false)}
+        />
+      ) : null}
     </Modal>
   )
 }
