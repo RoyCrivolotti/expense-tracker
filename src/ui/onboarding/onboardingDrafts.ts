@@ -35,9 +35,15 @@ export function buildSelectedPresets(
   })
 }
 
-export function useAccountsDraft() {
+/**
+ * `addDebit` defaults to true when the tenant has no accounts yet (first run
+ * must end up with at least one account) and false otherwise (re-entry,
+ * opt-in) — symmetric with `addCredit`.
+ */
+export function useAccountsDraft(hasExistingAccounts: boolean) {
   const [debitName, setDebitName] = useState('Main debit')
   const [creditName, setCreditName] = useState('Credit card')
   const [addCredit, setAddCredit] = useState(false)
-  return { debitName, creditName, addCredit, setDebitName, setCreditName, setAddCredit }
+  const [addDebit, setAddDebit] = useState(!hasExistingAccounts)
+  return { debitName, creditName, addCredit, addDebit, setDebitName, setCreditName, setAddCredit, setAddDebit }
 }
