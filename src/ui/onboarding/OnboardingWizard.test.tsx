@@ -69,6 +69,24 @@ describe('OnboardingWizard', () => {
     expect(screen.getByLabelText('Budget month starts on day')).toHaveValue(13)
   })
 
+  it('moves focus to the new step heading on Continue, so screen readers announce the step change', () => {
+    const dataset = datasetWith()
+    render(
+      <OnboardingWizard
+        source={noopSource()}
+        dataset={dataset}
+        applyPatch={vi.fn()}
+        onDone={vi.fn()}
+        onSkip={vi.fn()}
+      />,
+    )
+    fireEvent.click(screen.getByText('Continue'))
+    expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Money & months' }))
+
+    fireEvent.click(screen.getByText('Continue'))
+    expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Choose categories' }))
+  })
+
   describe('re-entry (tenant already has accounts)', () => {
     const existingAccount: Account = { id: 1, name: 'Existing', kind: 'debit', settlement: 'immediate', active: true }
 
