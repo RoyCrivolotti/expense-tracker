@@ -12,11 +12,19 @@ function presetId(name: string): string {
   return name
 }
 
-export function useCategoryDrafts(format: MoneyFormat = EU_MONEY_FORMAT) {
+/**
+ * On a genuine first run every preset starts checked, since the tenant has
+ * nothing yet and picking at least one is required. On re-entry, defaulting
+ * to all-checked would mean "Continue" re-adds every preset category (this
+ * wizard has no dedup) unless the user manually unchecks each one — so
+ * re-entry starts every preset unchecked instead, and the wizard's own
+ * "Continue" gate must allow zero selections in that case.
+ */
+export function useCategoryDrafts(format: MoneyFormat = EU_MONEY_FORMAT, hasExistingCategories = false) {
   return useState<CategoryDraft[]>(() =>
     CATEGORY_PRESETS.map((p) => ({
       presetId: presetId(p.name),
-      selected: true,
+      selected: !hasExistingCategories,
       budgetEuros: formatMoneyInput(p.defaultBudgetCents, format),
     })),
   )
