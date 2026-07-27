@@ -77,26 +77,37 @@ describe('buildOnboardingSettingsPatch', () => {
     expect(patch).not.toHaveProperty('defaultAccountId')
   })
 
-  it('sets defaultAccountId to the newly-created debit account when one was created', () => {
+  it('sets defaultAccountId to the newly-created debit account when the tenant had no default yet', () => {
     const patch = buildOnboardingSettingsPatch(
       {
         money: { currencyCode: 'EUR', numberLocale: 'de-DE', budgetRolloverDay: 1 },
-        currentSettings,
+        currentSettings: { ...currentSettings, defaultAccountId: null },
       },
       42,
     )
     expect(patch).toEqual({ defaultAccountId: 42 })
   })
 
-  it('combines a changed money field with a newly-created debit account in one patch', () => {
+  it('combines a changed money field with a newly-created debit account in one patch, when there was no default yet', () => {
     const patch = buildOnboardingSettingsPatch(
       {
         money: { currencyCode: 'USD', numberLocale: 'de-DE', budgetRolloverDay: 1 },
-        currentSettings,
+        currentSettings: { ...currentSettings, defaultAccountId: null },
       },
       42,
     )
     expect(patch).toEqual({ currencyCode: 'USD', defaultAccountId: 42 })
+  })
+
+  it('does not overwrite an already-configured defaultAccountId, even when a new debit account is created', () => {
+    const patch = buildOnboardingSettingsPatch(
+      {
+        money: { currencyCode: 'EUR', numberLocale: 'de-DE', budgetRolloverDay: 1 },
+        currentSettings, // defaultAccountId: 5 already set
+      },
+      42,
+    )
+    expect(patch).not.toHaveProperty('defaultAccountId')
   })
 })
 
@@ -265,7 +276,7 @@ describe('runOnboardingSetup', () => {
     expect(dataset.settings.defaultAccountId).toBe(7)
   })
 
-  it('re-entry: opting in to a new debit account creates it and moves defaultAccountId to it', async () => {
+  it('re-entry: opting in to a new debit account creates it without moving the existing defaultAccountId', async () => {
     const existingSettings = {
       ...defaultExpenseSettings(),
       currencyCode: 'EUR',
@@ -274,6 +285,57 @@ describe('runOnboardingSetup', () => {
       defaultAccountId: 7,
     }
     let dataset: ExpenseDataset = { ...emptyDataset, settings: existingSettings }
+    const applyPatch = vi.fn((patch: (d: ExpenseDataset) => ExpenseDataset) => {
+      dataset = patch(dataset)
+    })
+    const createAccount = vi
+      .fn()
+      .mockResolvedValue({ id: 9, name: 'Second debit', kind: 'debit', settlement: 'immediate', active: true })
+    const updateSettings = vi.fn()
+    const source: ExpenseDataSource = {
+      canWrite: true,
+      load: vi.fn(),
+      createCategory: vi.fn(),
+      createAccount,
+      updateSettings,
+    }
+
+    await runOnboardingSetup(source, applyPatch, {
+      categories: [],
+      addDebit: true,
+      debitName: 'Second debit',
+      creditName: null,
+      money: {
+        currencyCode: existingSettings.currencyCode,
+        numberLocale: existingSettings.numberLocale,
+        budgetRolloverDay: existingSettings.budgetRolloverDay,
+      },
+      currentSettings: existingSettings,
+      existingCategories: [],
+    })
+
+    expect(createAccount).toHaveBeenCalledTimes(1)
+    // Nothing else changed and defaultAccountId was already set, so the settings patch
+    // ends up empty — updateSettings shouldn't even be called.
+    expect(updateSettings).not.toHaveBeenCalled()
+    expect(dataset.accounts).toHaveLength(1)
+    expect(dataset.settings.defaultAccountId).toBe(7)
+  })
+
+  it('re-entry: opting in to a new debit account does set defaultAccountId when the tenant had none configured', async () => {
+    const existingSettings = {
+      ...defaultExpenseSettings(),
+      currencyCode: 'EUR',
+      numberLocale: 'de-DE',
+      budgetRolloverDay: 1,
+      defaultAccountId: null,
+    }
+    let dataset: ExpenseDataset = {
+      ...emptyDataset,
+      // Re-entry with an existing (but not-configured-as-default) account, opting into a second one.
+      accounts: [{ id: 3, name: 'Existing', kind: 'debit', settlement: 'immediate', active: true }],
+      settings: existingSettings,
+    }
     const applyPatch = vi.fn((patch: (d: ExpenseDataset) => ExpenseDataset) => {
       dataset = patch(dataset)
     })
@@ -303,9 +365,7 @@ describe('runOnboardingSetup', () => {
       existingCategories: [],
     })
 
-    expect(createAccount).toHaveBeenCalledTimes(1)
     expect(updateSettings).toHaveBeenCalledWith({ defaultAccountId: 9 })
-    expect(dataset.accounts).toHaveLength(1)
     expect(dataset.settings.defaultAccountId).toBe(9)
   })
 

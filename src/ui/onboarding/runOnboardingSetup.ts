@@ -31,7 +31,9 @@ export interface OnboardingSetupInput {
 /**
  * Builds the settings patch to send: only fields the wizard actually changed
  * from `currentSettings`, plus `defaultAccountId` when a new debit account was
- * created this run (there is nothing else it would make sense to default to).
+ * created this run *and* the tenant didn't already have a default configured.
+ * Re-entry opting into an extra debit account must not silently steal
+ * "default" away from whichever account the tenant already relies on.
  * An empty result means the caller should skip the update entirely.
  */
 export function buildOnboardingSettingsPatch(
@@ -45,7 +47,9 @@ export function buildOnboardingSettingsPatch(
   if (money.budgetRolloverDay !== currentSettings.budgetRolloverDay) {
     patch.budgetRolloverDay = money.budgetRolloverDay
   }
-  if (newDebitId != null) patch.defaultAccountId = newDebitId
+  if (newDebitId != null && currentSettings.defaultAccountId == null) {
+    patch.defaultAccountId = newDebitId
+  }
   return patch
 }
 
