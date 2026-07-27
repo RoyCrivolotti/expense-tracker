@@ -138,6 +138,7 @@ describe('runOnboardingSetup', () => {
       creditName: null,
       money: { currencyCode: 'USD', numberLocale: 'en-US', budgetRolloverDay: 13 },
       currentSettings: emptyDataset.settings,
+      existingCategories: [],
     })
 
     expect(updateSettings).toHaveBeenCalledWith(
@@ -176,6 +177,7 @@ describe('runOnboardingSetup', () => {
       creditName: '  ',
       money: { currencyCode: 'EUR', numberLocale: 'de-DE', budgetRolloverDay: 1 },
       currentSettings: emptyDataset.settings,
+      existingCategories: [],
     })
 
     expect(createAccount).toHaveBeenCalledTimes(1)
@@ -216,6 +218,7 @@ describe('runOnboardingSetup', () => {
         budgetRolloverDay: existingSettings.budgetRolloverDay,
       },
       currentSettings: existingSettings,
+      existingCategories: [],
     })
 
     expect(createAccount).not.toHaveBeenCalled()
@@ -255,6 +258,7 @@ describe('runOnboardingSetup', () => {
         budgetRolloverDay: existingSettings.budgetRolloverDay,
       },
       currentSettings: existingSettings,
+      existingCategories: [],
     })
 
     expect(updateSettings).toHaveBeenCalledWith({ currencyCode: 'USD' })
@@ -296,11 +300,57 @@ describe('runOnboardingSetup', () => {
         budgetRolloverDay: existingSettings.budgetRolloverDay,
       },
       currentSettings: existingSettings,
+      existingCategories: [],
     })
 
     expect(createAccount).toHaveBeenCalledTimes(1)
     expect(updateSettings).toHaveBeenCalledWith({ defaultAccountId: 9 })
     expect(dataset.accounts).toHaveLength(1)
     expect(dataset.settings.defaultAccountId).toBe(9)
+  })
+
+  it('re-entry: seeds new categories\' sortOrder after existing ones instead of restarting at 0', async () => {
+    let dataset = emptyDataset
+    const applyPatch = vi.fn((patch: (d: ExpenseDataset) => ExpenseDataset) => {
+      dataset = patch(dataset)
+    })
+    const createCategory = vi
+      .fn()
+      .mockResolvedValueOnce({ id: 10, name: 'Travel', monthlyBudgetCents: 0, sortOrder: 5, active: true })
+      .mockResolvedValueOnce({ id: 11, name: 'Hobbies', monthlyBudgetCents: 0, sortOrder: 6, active: true })
+    const source: ExpenseDataSource = {
+      canWrite: true,
+      load: vi.fn(),
+      createCategory,
+      createAccount: vi.fn(),
+      updateSettings: vi.fn(),
+    }
+
+    await runOnboardingSetup(source, applyPatch, {
+      categories: [
+        { name: 'Travel', icon: '✈️', defaultBudgetCents: 0 },
+        { name: 'Hobbies', icon: '🎨', defaultBudgetCents: 0 },
+      ],
+      addDebit: false,
+      debitName: 'Main debit',
+      creditName: null,
+      money: {
+        currencyCode: emptyDataset.settings.currencyCode,
+        numberLocale: emptyDataset.settings.numberLocale,
+        budgetRolloverDay: emptyDataset.settings.budgetRolloverDay,
+      },
+      currentSettings: emptyDataset.settings,
+      // Existing categories already occupy sortOrder 0..4 (five of them).
+      existingCategories: [0, 1, 2, 3, 4].map((sortOrder) => ({
+        id: sortOrder + 1,
+        name: `Existing ${sortOrder}`,
+        monthlyBudgetCents: 0,
+        sortOrder,
+        active: true,
+      })),
+    })
+
+    expect(createCategory).toHaveBeenNthCalledWith(1, expect.objectContaining({ sortOrder: 5 }))
+    expect(createCategory).toHaveBeenNthCalledWith(2, expect.objectContaining({ sortOrder: 6 }))
   })
 })

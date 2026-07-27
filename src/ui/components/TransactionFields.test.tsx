@@ -99,10 +99,33 @@ describe('Fields category/account pickers', () => {
     renderFields(baseForm({ categoryId: 2, accountId: 2 }), modelWith(), editing)
     const categorySelect = screen.getByLabelText<HTMLSelectElement>('Category')
     const accountSelect = screen.getByLabelText<HTMLSelectElement>('Account')
-    expect(within(categorySelect).getByText('Old category')).toBeTruthy()
-    expect(within(accountSelect).getByText('Closed card')).toBeTruthy()
+    expect(within(categorySelect).getByText('Old category (archived)')).toBeTruthy()
+    expect(within(accountSelect).getByText('Closed card (archived)')).toBeTruthy()
     expect(categorySelect.value).toBe('2')
     expect(accountSelect.value).toBe('2')
+  })
+
+  it('keeps a fully-deleted (not just inactive) categoryId/accountId selectable via a placeholder, instead of silently dropping it', () => {
+    const editing: Transaction = {
+      id: 5,
+      date: '2026-07-05',
+      budgetMonth: '2026-07',
+      description: 'Legacy purchase',
+      accountId: 99,
+      categoryId: 99,
+      type: 'expense',
+      amountCents: 1000,
+      status: 'posted',
+      cancelled: false,
+    }
+    renderFields(baseForm({ categoryId: 99, accountId: 99 }), modelWith(), editing)
+    const categorySelect = screen.getByLabelText<HTMLSelectElement>('Category')
+    const accountSelect = screen.getByLabelText<HTMLSelectElement>('Account')
+    // Without this, the browser would silently display the first real option (e.g.
+    // "Groceries") while form state still held 99 — submitting any unrelated field
+    // edit would then send the stale, nonexistent id and the backend would reject it.
+    expect(categorySelect.value).toBe('99')
+    expect(accountSelect.value).toBe('99')
   })
 
   it('does not offer an inactive category/account that is not the currently selected one, even while editing', () => {

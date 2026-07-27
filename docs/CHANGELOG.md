@@ -8,7 +8,8 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 
 - **Re-entry no longer silently resets settings.** Re-opening the wizard from Settings used to seed
   the Money step from hardcoded defaults, quietly reverting currency, number format, and budget
-  rollover day back to EUR/`de-DE`/day-13 even if you'd already changed them. It now seeds from
+  rollover day back to EUR/`de-DE`/day-13 (the wizard's own old hardcoded fallback — unrelated to
+  the app's actual built-in default of day 1) even if you'd already changed them. It now seeds from
   your actual saved settings.
 - **Adding a new debit account is opt-in on re-entry.** First run still always creates one debit
   account (you need at least one to use the app); re-opening the wizard later shows an "Add another
@@ -19,6 +20,12 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
   written — before anything is applied. Includes a plain note that it doesn't check for duplicate
   categories, so re-running the wizard's Categories step will add to what you already have, not
   replace it.
+- **Checking "Add a credit card" now requires a name to finish setup**, matching the debit account
+  field — previously it silently skipped creating the card if the name was left blank.
+- **Keyboard focus stays inside the confirmation popup** while it's open, instead of Tab being able
+  to reach Back/Continue/Skip behind it.
+- **New categories added on re-entry now sort after your existing ones** instead of restarting at
+  the top of the list.
 
 ### Categories & accounts
 
@@ -33,6 +40,16 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
   always shows its own current category/account even if it's since been archived, so editing any
   other field on that transaction never forces a reassignment. Every other view (filters, analytics,
   budget totals, CSV export) is unaffected and keeps showing archived categories/accounts as before.
+- **Reassign targets are active categories/accounts only**, for the same reason — you can still
+  create a brand-new one inline instead.
+- **Deleting your default account no longer leaves Settings pointing at a deleted one.** It now
+  moves to whatever the account's data was reassigned to (or clears to "none" if the account had no
+  data and was just deleted outright).
+- **Deleting a category/account that turns out to still be in use** (e.g. another tab added a
+  transaction to it moments earlier) now offers the reassign flow directly instead of showing an
+  error and leaving you to retry the same delete.
+- **Archived categories/accounts are labeled "(archived)"** wherever a transaction or installment
+  plan's own current value keeps one selectable in a picker.
 
 ## July 2026 (installments, currency, onboarding)
 

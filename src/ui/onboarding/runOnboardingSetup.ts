@@ -1,4 +1,4 @@
-import type { ExpenseDataset, ExpenseSettings } from '../../types'
+import type { Category, ExpenseDataset, ExpenseSettings } from '../../types'
 import type { ExpenseDataSource } from '../../data/dataSource'
 import type { CategoryPreset } from '../../domain/onboarding/presets'
 import {
@@ -20,6 +20,12 @@ export interface OnboardingSetupInput {
   }
   /** Tenant's settings before this run, used to send only fields that actually changed. */
   currentSettings: ExpenseSettings
+  /**
+   * Tenant's categories before this run, used only to seed new categories'
+   * `sortOrder` after whatever already exists — on re-entry these would
+   * otherwise start back at 0 and interleave with (or precede) existing ones.
+   */
+  existingCategories: Category[]
 }
 
 /**
@@ -48,7 +54,7 @@ export async function runOnboardingSetup(
   applyPatch: (patch: (dataset: ExpenseDataset) => ExpenseDataset) => void,
   input: OnboardingSetupInput,
 ): Promise<void> {
-  let sortOrder = 0
+  let sortOrder = input.existingCategories.reduce((max, c) => Math.max(max, c.sortOrder + 1), 0)
   for (const preset of input.categories) {
     const category = await source.createCategory!({
       name: preset.name,

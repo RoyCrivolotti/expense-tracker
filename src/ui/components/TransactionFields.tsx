@@ -5,7 +5,7 @@ import { defaultBudgetMonth } from '../../engine/dates'
 import type { ExpenseModel } from '../useExpenseData'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { DescriptionCombobox } from './DescriptionCombobox'
-import { selectableOptions } from './pickerOptions'
+import { optionLabel, selectableOptions } from './pickerOptions'
 import type { FormFields, Setter } from './transactionFormState'
 import styles from './TransactionForm.module.css'
 
@@ -60,7 +60,7 @@ function CategoryAccountRow({
         <select value={form.categoryId} onChange={(e) => set('categoryId', Number(e.target.value))}>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.name}
+              {optionLabel(c)}
             </option>
           ))}
         </select>
@@ -69,7 +69,7 @@ function CategoryAccountRow({
         <select value={form.accountId} onChange={(e) => set('accountId', Number(e.target.value))}>
           {accounts.map((a) => (
             <option key={a.id} value={a.id}>
-              {a.name}
+              {optionLabel(a)}
             </option>
           ))}
         </select>

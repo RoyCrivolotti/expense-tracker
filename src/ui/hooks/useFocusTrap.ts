@@ -7,8 +7,20 @@ function focusableWithin(root: HTMLElement): HTMLElement[] {
   return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE))
 }
 
-/** Modal focus trap: initial focus, restore on unmount, Escape, Tab cycle. */
-export function useFocusTrap(ref: RefObject<HTMLElement | null>, onEscape: () => void): void {
+/**
+ * Modal focus trap: initial focus, restore on unmount, Escape, Tab cycle.
+ *
+ * `paused` stands this trap down (no Tab cycling, no Escape) without unmounting it —
+ * for when a nested dialog (e.g. a `ConfirmSheet`) renders inside this container and
+ * owns its own trap. Without this, both traps' document-level keydown listeners fire
+ * on every Tab press; this trap's "whole container" focusable list includes the nested
+ * dialog's buttons too, so Tab can wrap focus out to controls behind the nested dialog.
+ */
+export function useFocusTrap(
+  ref: RefObject<HTMLElement | null>,
+  onEscape: () => void,
+  paused = false,
+): void {
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null
     const container = ref.current
@@ -19,6 +31,7 @@ export function useFocusTrap(ref: RefObject<HTMLElement | null>, onEscape: () =>
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      if (paused) return
       if (event.key === 'Escape') {
         onEscape()
         return
@@ -45,5 +58,5 @@ export function useFocusTrap(ref: RefObject<HTMLElement | null>, onEscape: () =>
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [ref, onEscape])
+  }, [ref, onEscape, paused])
 }

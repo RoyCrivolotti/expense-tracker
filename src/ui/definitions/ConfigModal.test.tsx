@@ -93,6 +93,35 @@ describe('ConfigModal delete control', () => {
     await vi.waitFor(() => expect(onClose).toHaveBeenCalled())
   })
 
+  it('escalates to the reassign sheet when a plain delete 409s (stale client usage count)', async () => {
+    const conflict = Object.assign(new Error('Category is in use by 1 record(s)'), { status: 409 })
+    const actions = noopActions({
+      deleteCategory: vi.fn().mockRejectedValue(conflict),
+    })
+    const onClose = vi.fn()
+    render(
+      <ConfigModal
+        target={{ kind: 'category', record: GROCERIES }}
+        model={buildExpenseModel(dataset())}
+        actions={actions}
+        onClose={onClose}
+      />,
+    )
+
+    // Client-side usageCount says 0 (unused), so this opens the plain-delete confirm...
+    fireEvent.click(screen.getByRole('button', { name: 'Delete category' }))
+    expect(screen.getByText("This can't be undone.")).toBeTruthy()
+
+    // ...but the server disagrees (409). Escalate straight to reassign instead of
+    // leaving the user stuck retrying the same failing delete.
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    await vi.waitFor(() => expect(screen.getByLabelText('Move to')).toBeTruthy())
+    expect(
+      screen.getByText(`This category turned out to still be in use elsewhere. Move its records to another category first, or create a new one.`),
+    ).toBeTruthy()
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
   it('offers a reassign sheet for a category in use, defaulting to the other category', async () => {
     const actions = noopActions({
       deleteCategory: vi.fn().mockResolvedValue({ reassignedToId: GROCERIES.id }),
@@ -130,6 +159,42 @@ describe('ConfigModal delete control', () => {
 
     expect(actions.deleteCategory).toHaveBeenCalledWith(DINING.id, { reassignToId: GROCERIES.id })
     await vi.waitFor(() => expect(onClose).toHaveBeenCalled())
+  })
+
+  it('excludes inactive categories from the reassign-target dropdown', () => {
+    const ARCHIVED: Category = { id: 3, name: 'Old category', monthlyBudgetCents: 0, sortOrder: 2, active: false }
+    const actions = noopActions()
+    const ds = dataset({
+      categories: [DINING, GROCERIES, ARCHIVED],
+      transactions: [
+        {
+          id: 1,
+          date: '2026-01-01',
+          budgetMonth: '2026-01',
+          description: 'Lunch',
+          accountId: CHECKING.id,
+          categoryId: DINING.id,
+          type: 'expense',
+          amountCents: -1200,
+          cancelled: false,
+          status: 'posted',
+        },
+      ],
+    })
+    render(
+      <ConfigModal
+        target={{ kind: 'category', record: DINING }}
+        model={buildExpenseModel(ds)}
+        actions={actions}
+        onClose={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete category' }))
+    const select = screen.getByLabelText<HTMLSelectElement>('Move to')
+    const optionLabels = Array.from(select.options).map((o) => o.textContent)
+    expect(optionLabels).toContain('Groceries')
+    expect(optionLabels).not.toContain('Old category')
   })
 
   it('creates a new category inline when "create new" is chosen in the reassign sheet', () => {
@@ -208,6 +273,41 @@ describe('ConfigModal delete control', () => {
       screen.getByText("You need at least one account, so this one can't be deleted."),
     ).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Delete account' })).toBeNull()
+  })
+
+  it('excludes inactive accounts from the reassign-target dropdown', () => {
+    const ARCHIVED_ACCOUNT: Account = { id: 13, name: 'Old checking', kind: 'debit', settlement: 'immediate', active: false }
+    const ds = dataset({
+      accounts: [CHECKING, OLD_CARD, ARCHIVED_ACCOUNT],
+      transactions: [
+        {
+          id: 1,
+          date: '2026-01-01',
+          budgetMonth: '2026-01',
+          description: 'Statement charge',
+          accountId: OLD_CARD.id,
+          categoryId: DINING.id,
+          type: 'expense',
+          amountCents: -500,
+          cancelled: false,
+          status: 'posted',
+        },
+      ],
+    })
+    render(
+      <ConfigModal
+        target={{ kind: 'account', record: OLD_CARD }}
+        model={buildExpenseModel(ds)}
+        actions={noopActions()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete account' }))
+    const select = screen.getByLabelText<HTMLSelectElement>('Move to')
+    const optionLabels = Array.from(select.options).map((o) => o.textContent)
+    expect(optionLabels).toContain('Checking')
+    expect(optionLabels).not.toContain('Old checking')
   })
 
   it('inline-creates a reassign account inheriting kind/settlement from the account being deleted', () => {

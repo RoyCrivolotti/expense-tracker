@@ -152,6 +152,71 @@ describe('deleteCategory', () => {
     expect(stmts[0]!.args).toEqual([99, 5, OWNER])
   })
 
+  it('best-effort deletes the just-created category if the reassign+delete batch then fails', async () => {
+    const runCalls: { sql: string; args: unknown[] }[] = []
+    const { env } = stubEnv({
+      first: (sql) =>
+        sql.includes('INSERT INTO categories')
+          ? {
+              id: 99,
+              name: 'Misspelled fix',
+              monthly_budget_cents: 0,
+              sort_order: 0,
+              icon: null,
+              color: null,
+              active: 1,
+            }
+          : null,
+      run: (sql, args) => {
+        runCalls.push({ sql, args })
+        return { meta: { changes: 1 } }
+      },
+      batch: () => {
+        throw new Error('D1_ERROR: batch failed')
+      },
+    })
+
+    await expect(
+      deleteCategory(env, OWNER, 5, {
+        createCategory: { name: 'Misspelled fix', monthlyBudgetCents: 0, sortOrder: 0, active: true },
+      }),
+    ).rejects.toThrow('D1_ERROR: batch failed')
+
+    expect(runCalls).toContainEqual({
+      sql: 'DELETE FROM categories WHERE id = ? AND owner = ?',
+      args: [99, OWNER],
+    })
+  })
+
+  it('still surfaces the original batch error even if the best-effort cleanup delete itself fails', async () => {
+    const { env } = stubEnv({
+      first: (sql) =>
+        sql.includes('INSERT INTO categories')
+          ? {
+              id: 99,
+              name: 'Misspelled fix',
+              monthly_budget_cents: 0,
+              sort_order: 0,
+              icon: null,
+              color: null,
+              active: 1,
+            }
+          : null,
+      run: () => {
+        throw new Error('cleanup delete failed too')
+      },
+      batch: () => {
+        throw new Error('D1_ERROR: batch failed')
+      },
+    })
+
+    await expect(
+      deleteCategory(env, OWNER, 5, {
+        createCategory: { name: 'Misspelled fix', monthlyBudgetCents: 0, sortOrder: 0, active: true },
+      }),
+    ).rejects.toThrow('D1_ERROR: batch failed')
+  })
+
   it('surfaces 404 when the source category is already gone by delete time', async () => {
     const { env } = stubEnv({
       first: (sql) => (sql.includes('SELECT 1 AS ok FROM categories') ? { ok: 1 } : null),
@@ -180,7 +245,7 @@ describe('deleteCategory', () => {
 })
 
 describe('deleteAccount', () => {
-  it('deletes an unused account outright, without touching batch', async () => {
+  it('deletes an unused account outright, clearing settings.defaultAccountId if it pointed here', async () => {
     const { env, batch } = stubEnv({
       first: (sql) => (sql.includes('COUNT(*)') ? { n: 0 } : null),
     })
@@ -188,7 +253,13 @@ describe('deleteAccount', () => {
     const result = await deleteAccount(env, OWNER, 3)
 
     expect(result).toEqual({ reassignedToId: null })
-    expect(batch).not.toHaveBeenCalled()
+    expect(batch).toHaveBeenCalledOnce()
+    const stmts = batch.mock.calls[0]![0] as StatementStub[]
+    expect(stmts.map((s) => s.sql)).toEqual([
+      'UPDATE settings SET default_account_id = NULL WHERE owner = ? AND default_account_id = ?',
+      'DELETE FROM accounts WHERE id = ? AND owner = ?',
+    ])
+    expect(stmts[0]!.args).toEqual([OWNER, 3])
   })
 
   it('blocks deleting an account still in use, counting transactions, plans, and statements', async () => {
@@ -257,12 +328,29 @@ describe('deleteAccount', () => {
       'UPDATE installment_plans SET account_id = ? WHERE account_id = ? AND owner = ?',
       expect.stringContaining('DELETE FROM account_statements'),
       'UPDATE account_statements SET account_id = ? WHERE account_id = ? AND owner = ?',
+      'UPDATE settings SET default_account_id = ? WHERE owner = ? AND default_account_id = ?',
       'DELETE FROM accounts WHERE id = ? AND owner = ?',
     ])
     expect(stmts[0]!.args).toEqual([8, 3, OWNER])
     expect(stmts[2]!.args).toEqual([OWNER, 3, OWNER, 8])
     expect(stmts[3]!.args).toEqual([8, 3, OWNER])
-    expect(stmts[4]!.args).toEqual([3, OWNER])
+    expect(stmts[4]!.args).toEqual([8, OWNER, 3])
+    expect(stmts[5]!.args).toEqual([3, OWNER])
+  })
+
+  it("moves settings.defaultAccountId to the reassign target when it pointed at the deleted account", async () => {
+    const { env, batch } = stubEnv({
+      first: (sql) => (sql.includes('SELECT 1 AS ok FROM accounts') ? { ok: 1 } : null),
+    })
+
+    await deleteAccount(env, OWNER, 3, { reassignToId: 8 })
+
+    const stmts = batch.mock.calls[0]![0] as StatementStub[]
+    const settingsStmt = stmts.find((s) => s.sql.startsWith('UPDATE settings'))
+    expect(settingsStmt).toBeDefined()
+    // The statement is unconditional (WHERE default_account_id = ?), so it's a no-op
+    // when the deleted account wasn't the default — no need to check first.
+    expect(settingsStmt!.args).toEqual([8, OWNER, 3])
   })
 
   it('drops the source statement first for months that collide with the target (target wins)', async () => {
@@ -299,6 +387,34 @@ describe('deleteAccount', () => {
     })
     const stmts = batch.mock.calls[0]![0] as StatementStub[]
     expect(stmts[0]!.args).toEqual([42, 3, OWNER])
+  })
+
+  it('best-effort deletes the just-created account if the reassign+delete batch then fails', async () => {
+    const runCalls: { sql: string; args: unknown[] }[] = []
+    const { env } = stubEnv({
+      first: (sql) =>
+        sql.includes('INSERT INTO accounts')
+          ? { id: 42, name: 'Fixed name', kind: 'credit', settlement: 'deferred', active: 1 }
+          : null,
+      run: (sql, args) => {
+        runCalls.push({ sql, args })
+        return { meta: { changes: 1 } }
+      },
+      batch: () => {
+        throw new Error('D1_ERROR: batch failed')
+      },
+    })
+
+    await expect(
+      deleteAccount(env, OWNER, 3, {
+        createAccount: { name: 'Fixed name', kind: 'credit', settlement: 'deferred', active: true },
+      }),
+    ).rejects.toThrow('D1_ERROR: batch failed')
+
+    expect(runCalls).toContainEqual({
+      sql: 'DELETE FROM accounts WHERE id = ? AND owner = ?',
+      args: [42, OWNER],
+    })
   })
 
   it('surfaces 404 when the source account is already gone by delete time', async () => {

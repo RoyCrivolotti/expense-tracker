@@ -1,3 +1,14 @@
+/** Thrown by `req` on a non-2xx response; `status` lets callers branch on e.g. 409 vs 404. */
+export class ApiError extends Error {
+  readonly status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
+
 /** Shared JSON fetch wrapper for expense + access API clients. */
 export async function req<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -13,7 +24,7 @@ export async function req<T>(url: string, init?: RequestInit): Promise<T> {
     } catch {
       /* ignore */
     }
-    throw new Error(message)
+    throw new ApiError(message, res.status)
   }
   return res.json() as Promise<T>
 }

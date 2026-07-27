@@ -109,6 +109,74 @@ describe('OnboardingWizard', () => {
     })
   })
 
+  it('requires a credit card name once "Add a credit card" is checked, so Finish never silently drops it', () => {
+    const dataset = datasetWith({ accounts: [{ id: 1, name: 'Existing', kind: 'debit', settlement: 'immediate', active: true }] })
+    render(
+      <OnboardingWizard
+        source={noopSource()}
+        dataset={dataset}
+        applyPatch={vi.fn()}
+        onDone={vi.fn()}
+        onSkip={vi.fn()}
+      />,
+    )
+    goToStep(3)
+    fireEvent.click(screen.getByLabelText('Add a credit card (deferred settlement)'))
+    const nameInput = screen.getByLabelText('Credit card name')
+    fireEvent.change(nameInput, { target: { value: '' } })
+    expect(screen.getByText('Finish setup')).toBeDisabled()
+    fireEvent.change(nameInput, { target: { value: 'Visa' } })
+    expect(screen.getByText('Finish setup')).not.toBeDisabled()
+  })
+
+  it('re-entry: a debit name becomes required again if every account gets deleted elsewhere mid-wizard', async () => {
+    const existingAccount: Account = { id: 1, name: 'Existing', kind: 'debit', settlement: 'immediate', active: true }
+    const createAccount = vi
+      .fn()
+      .mockResolvedValue({ id: 2, name: 'Main debit', kind: 'debit', settlement: 'immediate', active: true })
+    const source: ExpenseDataSource = {
+      canWrite: true,
+      load: vi.fn(),
+      createCategory: vi.fn().mockResolvedValue({ id: 1, name: 'x', monthlyBudgetCents: 0, sortOrder: 0, active: true }),
+      createAccount,
+      updateSettings: vi.fn().mockResolvedValue(defaultExpenseSettings()),
+    }
+    const { rerender } = render(
+      <OnboardingWizard
+        source={source}
+        dataset={datasetWith({ accounts: [existingAccount] })}
+        applyPatch={vi.fn()}
+        onDone={vi.fn()}
+        onSkip={vi.fn()}
+      />,
+    )
+    goToStep(3)
+    // Re-entry with an existing account: opt-in checkbox off, no name required.
+    expect(screen.queryByLabelText('Main debit account')).toBeNull()
+    expect(screen.getByText('Finish setup')).not.toBeDisabled()
+
+    // The account gets deleted elsewhere (another tab, or via Settings) while this
+    // wizard is still open — `dataset` is a live prop, so this simulates that.
+    rerender(
+      <OnboardingWizard
+        source={source}
+        dataset={datasetWith({ accounts: [] })}
+        applyPatch={vi.fn()}
+        onDone={vi.fn()}
+        onSkip={vi.fn()}
+      />,
+    )
+
+    // A debit is mandatory again now that there are zero accounts, regardless of the
+    // (now-hidden) opt-in checkbox's last value.
+    expect(screen.getByLabelText('Main debit account')).toHaveValue('Main debit')
+    expect(screen.getByText('Finish setup')).not.toBeDisabled()
+
+    fireEvent.click(screen.getByText('Finish setup'))
+    fireEvent.click(screen.getByText('Apply'))
+    await waitFor(() => expect(createAccount).toHaveBeenCalledTimes(1))
+  })
+
   it('first run (no accounts yet) requires a debit name to finish', () => {
     const dataset = datasetWith()
     render(
@@ -233,6 +301,31 @@ describe('OnboardingWizard', () => {
       expect(onSkip).not.toHaveBeenCalled()
       // Wizard itself is still open.
       expect(screen.getByText('Finish setup')).toBeTruthy()
+    })
+
+    it('Tab from the last button in the popup cycles within the popup, not out to wizard controls behind it', () => {
+      const { source } = sourceWithAccountAndSettings()
+      render(
+        <OnboardingWizard
+          source={source}
+          dataset={datasetWith()}
+          applyPatch={vi.fn()}
+          onDone={vi.fn()}
+          onSkip={vi.fn()}
+        />,
+      )
+      goToStep(3)
+      fireEvent.click(screen.getByText('Finish setup'))
+      const applyBtn = screen.getByText('Apply')
+      const cancelBtn = screen.getByText('Cancel')
+      applyBtn.focus()
+      expect(document.activeElement).toBe(applyBtn)
+
+      fireEvent.keyDown(document, { key: 'Tab' })
+
+      // Wraps to the popup's own first control (Cancel) — not the wizard's Close button,
+      // Back, Continue, or Skip, which sit earlier in the underlying document order.
+      expect(document.activeElement).toBe(cancelBtn)
     })
 
     it('Back while the popup is open closes it and returns to the previous step', () => {
