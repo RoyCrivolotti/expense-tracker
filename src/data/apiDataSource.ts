@@ -15,6 +15,10 @@ import type {
   Transaction,
 } from '../types'
 import type {
+  DeleteAccountOptions,
+  DeleteAccountResult,
+  DeleteCategoryOptions,
+  DeleteCategoryResult,
   ExpenseDataSource,
   NewAccount,
   NewCategory,
@@ -80,6 +84,12 @@ export const apiDataSource: ExpenseDataSource = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(patch),
     }),
+  deleteCategory: (id: number, options?: DeleteCategoryOptions) =>
+    req<DeleteCategoryResult>(`${BASE}/categories/${id}`, {
+      method: 'DELETE',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(options ?? {}),
+    }),
   createAccount: (input: NewAccount) =>
     req<Account>(`${BASE}/accounts`, {
       method: 'POST',
@@ -91,6 +101,12 @@ export const apiDataSource: ExpenseDataSource = {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(patch),
+    }),
+  deleteAccount: (id: number, options?: DeleteAccountOptions) =>
+    req<DeleteAccountResult>(`${BASE}/accounts/${id}`, {
+      method: 'DELETE',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(options ?? {}),
     }),
   updateSettings: (patch: Partial<ExpenseSettings>) =>
     req<ExpenseSettings>(`${BASE}/settings`, {

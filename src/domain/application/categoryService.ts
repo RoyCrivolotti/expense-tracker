@@ -1,4 +1,4 @@
-import type { NewCategory } from '../data/dataSource'
+import type { DeleteCategoryOptions, NewCategory } from '../data/dataSource'
 import type { ExpenseRepository } from '../ports/expenseRepository'
 
 export function validateCategoryName(name: string | undefined): string {
@@ -24,4 +24,20 @@ export async function patchCategory(
   const next = { ...patch }
   if (patch.name !== undefined) next.name = validateCategoryName(patch.name)
   return repo.updateCategory(owner, id, next)
+}
+
+export async function removeCategory(
+  repo: ExpenseRepository,
+  owner: string,
+  id: number,
+  options?: DeleteCategoryOptions,
+) {
+  if (!options?.createCategory) return repo.deleteCategory(owner, id, options)
+  return repo.deleteCategory(owner, id, {
+    ...options,
+    createCategory: {
+      ...options.createCategory,
+      name: validateCategoryName(options.createCategory.name),
+    },
+  })
 }

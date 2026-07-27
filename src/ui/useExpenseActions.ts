@@ -5,10 +5,12 @@ import type { ExpenseActions, ExpenseModalState } from './actions'
 import { duplicateHint, openAddModal, transactionToSeed } from './transactionSeed'
 import {
   patchAfterAccount,
+  patchAfterAccountDelete,
   patchAfterBulkCreate,
   patchAfterBulkDelete,
   patchAfterCashActual,
   patchAfterCategory,
+  patchAfterCategoryDelete,
   patchAfterGoals,
   patchAfterInstallmentPlanCreate,
   patchAfterInstallmentPlanDelete,
@@ -76,6 +78,11 @@ export function useExpenseActions(
         const category = await source.updateCategory!(id, patch)
         applyPatch((d) => patchAfterCategory(d, category))
       },
+      deleteCategory: async (id, options) => {
+        const result = await source.deleteCategory!(id, options)
+        applyPatch((d) => patchAfterCategoryDelete(d, id, result))
+        return result
+      },
       createAccount: async (input) => {
         const account = await source.createAccount!(input)
         applyPatch((d) => patchAfterAccount(d, account))
@@ -83,6 +90,11 @@ export function useExpenseActions(
       updateAccount: async (id, patch) => {
         const account = await source.updateAccount!(id, patch)
         applyPatch((d) => patchAfterAccount(d, account))
+      },
+      deleteAccount: async (id, options) => {
+        const result = await source.deleteAccount!(id, options)
+        applyPatch((d) => patchAfterAccountDelete(d, id, result))
+        return result
       },
       updateSettings: async (patch) => {
         const settings = await source.updateSettings!(patch)

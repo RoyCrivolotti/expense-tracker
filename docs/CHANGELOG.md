@@ -2,6 +2,38 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## July 2026 (onboarding wizard fixes, category/account delete)
+
+### Setup wizard
+
+- **Re-entry no longer silently resets settings.** Re-opening the wizard from Settings used to seed
+  the Money step from hardcoded defaults, quietly reverting currency, number format, and budget
+  rollover day back to EUR/`de-DE`/day-13 even if you'd already changed them. It now seeds from
+  your actual saved settings.
+- **Adding a new debit account is opt-in on re-entry.** First run still always creates one debit
+  account (you need at least one to use the app); re-opening the wizard later shows an "Add another
+  debit account" checkbox instead of silently creating a duplicate.
+- **Confirmation popup before "Finish setup"** lists what will be created (categories, accounts)
+  and shows the currency, number format, and budget rollover day from the Money step — always shown
+  even if unchanged, since only the fields that actually differ from your saved settings get
+  written — before anything is applied. Includes a plain note that it doesn't check for duplicate
+  categories, so re-running the wizard's Categories step will add to what you already have, not
+  replace it.
+
+### Categories & accounts
+
+- **Delete a category or account**, from its edit screen. An unused one deletes outright; one still
+  referenced by transactions, installment plans, or (for accounts) card statements offers a
+  reassign-then-delete flow: move everything to another existing category/account, or create a new
+  one inline (e.g. to fix a typo without leaving the delete flow) — the move and the delete happen
+  together, so nothing is left half-reassigned. You can't delete your only remaining category or
+  account.
+- **New/edited transactions can no longer pick an inactive (archived) category or account** — the
+  "Active" toggle now actually behaves like an archive for new entries. Editing a transaction still
+  always shows its own current category/account even if it's since been archived, so editing any
+  other field on that transaction never forces a reassignment. Every other view (filters, analytics,
+  budget totals, CSV export) is unaffected and keeps showing archived categories/accounts as before.
+
 ## July 2026 (installments, currency, onboarding)
 
 ### Installments
