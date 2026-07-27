@@ -6,7 +6,9 @@ Stack: **Vitest** + **React Testing Library** (hooks) + in-memory D1 (Pages Func
 
 ```bash
 npm test              # all unit + integration tests
-npm run verify        # symlinks, lint, typecheck, test, build
+npm run test:coverage # same, plus a coverage report + global threshold check
+npm run coverage:diff -- --base <sha>  # % of THIS diff's changed lines that are covered
+npm run verify         # symlinks, lint, typecheck, test:coverage, build
 PARITY_TESTS=1 npm test   # optional workbook parity (private CSV)
 ```
 
@@ -43,6 +45,32 @@ When adding a new protected route or group rule, extend that file first.
 exact statements sent (so reassignment SQL stays owner-scoped) and that a rejected batch surfaces
 as an error with zero partial writes. Reuse that `stubEnv()` helper for any future D1 adapter
 change that must be all-or-nothing.
+
+## Coverage gate
+
+Two separate checks, both run in CI (`.github/workflows/verify.yml`) on every PR:
+
+1. **Global floor** — `vitest.config.ts`'s `coverage.thresholds` (statements 43 /
+   branches 36 / functions 36 / lines 45, measured with `coverage.include`
+   covering every `src/**` and `functions/**` file, tested or not — an
+   untested file counts as 0%, it doesn't just vanish from the denominator).
+   These numbers are the actual current baseline, not an aspiration: most of
+   the UI (charts, settings tabs, dashboard) predates any coverage
+   requirement and isn't covered. This check only catches the *overall*
+   number regressing; it fails `npm run verify` locally too, since `verify`
+   runs `test:coverage`.
+2. **Diff coverage** — `scripts/check-diff-coverage.mjs` parses `coverage/lcov.info`
+   plus `git diff --unified=0 <base>...HEAD` to compute what % of *this PR's
+   added/changed* `.ts`/`.tsx` lines are covered, and fails below 90%
+   (`DIFF_COVERAGE_THRESHOLD` env var to override). This is the real
+   enforcement: it holds new code to a strict bar without demanding a
+   back-fill of the entire pre-existing UI. CI passes `--base
+   ${{ github.event.pull_request.base.sha }}`; run it locally with `--base
+   main` (or any ref) after `npm run test:coverage`.
+
+Raising the global floor is welcome as coverage genuinely improves — bump the
+numbers in `vitest.config.ts` to match, don't lower them to make a red build
+green.
 
 ## Local parity tests
 
