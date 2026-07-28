@@ -16,6 +16,7 @@ import {
   type ScenarioLegendItem,
 } from './ScenarioSeriesLegend'
 import styles from '../goals.module.css'
+import { applyNominalTransform } from './nominalTransform'
 
 interface ScenarioLine {
   id: string
@@ -190,22 +191,10 @@ function NetWorthChartImpl({
   const labels = useMemo(() => sparseLabels(years, 5), [years])
 
   // Apply nominal inflation transform (≈2 % ECB target) for nominal display mode.
-  const NOMINAL_INFLATION = 0.02
-  const displaySeries = useMemo<ChartSeries[]>(() => {
-    if (!nominalMode) return series
-    return series.map((s) => ({
-      ...s,
-      values: s.values.map((v, i) => Math.round(v * Math.pow(1 + NOMINAL_INFLATION, years[i] ?? i))),
-      ...(s.band
-        ? {
-            band: {
-              lo: s.band.lo.map((v, i) => Math.round(v * Math.pow(1 + NOMINAL_INFLATION, years[i] ?? i))),
-              hi: s.band.hi.map((v, i) => Math.round(v * Math.pow(1 + NOMINAL_INFLATION, years[i] ?? i))),
-            },
-          }
-        : {}),
-    }))
-  }, [series, nominalMode, years])
+  const displaySeries = useMemo<ChartSeries[]>(
+    () => (nominalMode ? applyNominalTransform(series, years) : series),
+    [series, nominalMode, years],
+  )
 
   // FI target as a landmark ref line on the hero chart.
   const fiTargetCents = useMemo(() => {
