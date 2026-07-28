@@ -5,17 +5,27 @@ import type { GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import { averageMonthlySaving, computeMonthlyTotals } from '../../../engine'
 import { Card, SectionTitle } from '../../components/primitives'
+import { SegmentedControl } from '../../components/SegmentedControl'
 import { GoalControls } from './GoalControls'
 import { ScenarioManager } from './ScenarioManager'
 import { GoalsExplainer } from './GoalsExplainer'
 import { GoalsNarrative } from './GoalsNarrative'
 import { SecondaryCharts } from './SecondaryCharts'
+import { ProgressView } from './ProgressView'
 import { draftFromDataset } from './goalsDefaults'
 import { lastAddedScenario, writePinnedScenarioId } from './scenarioSelection'
 import { NetWorthChart } from './charts/NetWorthChart'
 import { NetWorthNowCard } from './charts/NetWorthNowCard'
 import type { MonthlySaving } from './charts/SavingsRateChart'
 import styles from './goals.module.css'
+import progressStyles from './progress.module.css'
+
+type TabView = 'plan' | 'progress'
+
+const VIEW_OPTIONS: { value: TabView; label: string }[] = [
+  { value: 'plan', label: 'Plan' },
+  { value: 'progress', label: 'Progress' },
+]
 
 interface GoalsTabProps {
   model: ExpenseModel
@@ -57,6 +67,7 @@ function bootstrapEditor(
 
 export function GoalsTab({ model, actions }: GoalsTabProps) {
   const { dataset } = model
+  const [view, setView] = useState<TabView>('plan')
   const monthly = useMemo<MonthlySaving[]>(() => {
     const entries = [...computeMonthlyTotals(dataset.transactions).entries()].sort(([a], [b]) =>
       a.localeCompare(b),
@@ -154,13 +165,34 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
   return (
     <div className={styles.stack}>
       <SectionTitle>Goals</SectionTitle>
-      <p className={styles.intro}>
-        Project your net worth and financial independence under different assumptions. Horizon sets
-        how far the projection runs and where FI is searched. Adjust the controls, save a scenario,
-        then compare scenarios on the charts.
-      </p>
-      <GoalsExplainer />
-      <div className={styles.layout}>
+
+      <div className={progressStyles.viewSwitcherRow}>
+        <SegmentedControl
+          options={VIEW_OPTIONS}
+          value={view}
+          onChange={setView}
+          ariaLabel="Goals view"
+          layout="compact"
+        />
+      </div>
+
+      {view === 'progress' ? (
+        <ProgressView
+          accounts={dataset.wealthAccounts}
+          checkins={dataset.wealthCheckins}
+          activeScenario={activeScenario}
+          actions={actions!}
+          canWrite={actions != null}
+        />
+      ) : (
+        <>
+          <p className={styles.intro}>
+            Project your net worth and financial independence under different assumptions. Horizon
+            sets how far the projection runs and where FI is searched. Adjust the controls, save a
+            scenario, then compare scenarios on the charts.
+          </p>
+          <GoalsExplainer />
+          <div className={styles.layout}>
         <div className={styles.areaSidebar}>
           <div className={styles.areaScenarios}>
             <ScenarioManager
@@ -210,6 +242,8 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
           </div>
         </div>
       </div>
+        </>
+      )}
     </div>
   )
 }
