@@ -15,7 +15,7 @@ function makeCheckin(
   entries: { accountId: number; valueCents: number }[],
   note?: string,
 ): WealthCheckin {
-  return { id, checkinDate: date, entries, note }
+  return { id, checkinDate: date, createdAt: `${date}T00:00:00.000Z`, entries, ...(note ? { note } : {}) }
 }
 
 function makeActions(): ExpenseActions {

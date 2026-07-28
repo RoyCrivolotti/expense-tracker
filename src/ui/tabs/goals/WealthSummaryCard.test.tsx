@@ -13,7 +13,7 @@ function makeCheckin(
   date: string,
   entries: { accountId: number; valueCents: number }[],
 ): WealthCheckin {
-  return { id, checkinDate: date, entries, note: undefined }
+  return { id, checkinDate: date, createdAt: `${date}T00:00:00.000Z`, entries }
 }
 
 describe('WealthSummaryCard', () => {

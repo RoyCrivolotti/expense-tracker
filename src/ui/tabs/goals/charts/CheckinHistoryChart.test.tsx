@@ -9,7 +9,7 @@ function makeAccount(id: number): WealthAccount {
 }
 
 function makeCheckin(id: number, date: string, valueCents: number, accountId = 1): WealthCheckin {
-  return { id, checkinDate: date, entries: [{ accountId, valueCents }], note: undefined }
+  return { id, checkinDate: date, createdAt: `${date}T00:00:00.000Z`, entries: [{ accountId, valueCents }] }
 }
 
 describe('CheckinHistoryChart', () => {
