@@ -26,6 +26,42 @@
 .cta:hover {
   border-color: var(--color-accent);
 }
+.trackBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-sm, 4px);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.trackBadgeAhead {
+  background: color-mix(in srgb, var(--exp-success) 10%, transparent);
+  color: var(--exp-success);
+}
+
+.trackBadgeBehind {
+  background: color-mix(in srgb, var(--exp-danger) 10%, transparent);
+  color: var(--exp-danger);
+}
+
+.trackDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.trackDotAhead {
+  background: var(--exp-success);
+}
+
+.trackDotBehind {
+  background: var(--exp-danger);
+}
+
 .openLink {
   font: inherit;
   font-size: 0.75rem;
