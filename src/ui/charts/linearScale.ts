@@ -3,6 +3,13 @@ export interface Pt {
   y: number
 }
 
+/** A sparse point at a fractional x-axis position (for check-in actual overlays). */
+export interface ScatterPoint {
+  /** Fractional year index — can be between integer indices. */
+  xIndex: number
+  value: number
+}
+
 /** Value-space vertical band for a stacked area (lo <= hi). */
 export interface Band {
   lo: number[]

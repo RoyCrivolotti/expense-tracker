@@ -1,3 +1,4 @@
+import { areaPath, type ScatterPoint } from './linearScale'
 import styles from './charts.module.css'
 
 /** Horizontal grid lines + Y tick labels, with the zero line drawn solid. */
@@ -40,6 +41,85 @@ export function ChartGrid({
         )
       })}
     </>
+  )
+}
+
+/** Filled band between paired lo/hi value arrays (not stacked). */
+export function ChartBandLayer({
+  color,
+  lo,
+  hi,
+  xForIndex,
+  scaleY,
+  fillOpacity = 0.18,
+}: {
+  color: string
+  lo: number[]
+  hi: number[]
+  xForIndex: (i: number) => number
+  scaleY: (v: number) => number
+  fillOpacity?: number
+}) {
+  const top = hi.map((v, i) => ({ x: xForIndex(i), y: scaleY(v) }))
+  const bottom = lo.map((v, i) => ({ x: xForIndex(i), y: scaleY(v) }))
+  return (
+    <path
+      d={areaPath(top, bottom)}
+      style={{ fill: color, stroke: color }}
+      fillOpacity={fillOpacity}
+      strokeOpacity={0.5}
+      strokeWidth={1}
+      aria-hidden
+    />
+  )
+}
+
+/** Scatter dots for sparse check-in actuals at fractional x positions. */
+export function ChartScatterLayer({
+  color,
+  points,
+  xForIndex,
+  scaleY,
+}: {
+  color: string
+  points: ScatterPoint[]
+  xForIndex: (i: number) => number
+  scaleY: (v: number) => number
+}) {
+  return (
+    <>
+      {points.map((p, i) => (
+        <circle
+          key={i}
+          cx={xForIndex(p.xIndex)}
+          cy={scaleY(p.value)}
+          r={4.5}
+          style={{ fill: color, stroke: 'var(--color-bg)' }}
+          strokeWidth={2}
+          className={styles.scatterDot}
+        />
+      ))}
+    </>
+  )
+}
+
+/** Solid vertical "today" marker line. */
+export function ChartTodayMarker({
+  x,
+  yTop,
+  yBottom,
+}: {
+  x: number
+  yTop: number
+  yBottom: number
+}) {
+  return (
+    <line
+      x1={x} x2={x}
+      y1={yTop} y2={yBottom}
+      className={styles.todayMarker}
+      aria-hidden
+    />
   )
 }
 
