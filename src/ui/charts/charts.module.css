@@ -164,6 +164,16 @@
   pointer-events: none;
 }
 
+.todayMarker {
+  stroke: color-mix(in srgb, var(--color-text) 30%, transparent);
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+
+.scatterDot {
+  pointer-events: none;
+}
+
 .dotIncome {
   fill: var(--exp-success);
   stroke: var(--color-bg);
