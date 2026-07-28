@@ -1,0 +1,337 @@
+/* ─── Progress view layout ─────────────────────────────────────────────── */
+
+.progressStack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ─── View switcher ──────────────────────────────────────────────────────── */
+
+.viewSwitcherRow {
+  display: flex;
+  justify-content: center;
+  padding: 0.25rem 0 0.5rem;
+}
+
+/* ─── Summary card ───────────────────────────────────────────────────────── */
+
+.summaryCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.summaryStatus {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.statusDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.statusDotAhead {
+  background: var(--exp-success);
+}
+
+.statusDotBehind {
+  background: var(--exp-danger);
+}
+
+.statusDotNeutral {
+  background: var(--color-text-muted);
+}
+
+.summaryRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.summaryValue {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.summaryDelta {
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.summaryDeltaAhead {
+  color: var(--exp-success);
+}
+
+.summaryDeltaBehind {
+  color: var(--exp-danger);
+}
+
+.emptyHint {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+/* ─── Wealth accounts ────────────────────────────────────────────────────── */
+
+.accountsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-bottom: 0.75rem;
+}
+
+.accountRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.accountRow:last-child {
+  border-bottom: none;
+}
+
+.accountName {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.875rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accountKindBadge {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  color: var(--color-text-muted);
+}
+
+.accountKindInvestment {
+  background: color-mix(in srgb, var(--exp-success) 12%, transparent);
+  color: var(--exp-success);
+}
+
+.accountKindCash {
+  background: color-mix(in srgb, #3b82f6 12%, transparent);
+  color: #3b82f6;
+}
+
+.accountKindDebt {
+  background: color-mix(in srgb, var(--exp-danger) 12%, transparent);
+  color: var(--exp-danger);
+}
+
+.addAccountForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 0 0;
+  border-top: 1px solid var(--color-border);
+  margin-top: 0.5rem;
+}
+
+.addAccountFields {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+/* ─── Check-in form ──────────────────────────────────────────────────────── */
+
+.checkinForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.formLabel {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.formInput {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  background: color-mix(in srgb, var(--color-text) 4%, var(--color-bg));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 6px);
+  color: var(--color-text);
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.formInput:focus {
+  outline: 2px solid var(--color-brand, #6366f1);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+.formInputNarrow {
+  max-width: 10rem;
+}
+
+.accountValueRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.accountValueLabel {
+  font-size: 0.875rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.formActions {
+  display: flex;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+}
+
+/* ─── Check-in list ──────────────────────────────────────────────────────── */
+
+.checkinTimeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.checkinItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.625rem 0.75rem;
+  background: color-mix(in srgb, var(--color-text) 3%, var(--color-bg));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 6px);
+}
+
+.checkinHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.checkinDate {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.checkinTotal {
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.checkinDelta {
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  padding: 0.0625rem 0.375rem;
+  border-radius: 4px;
+}
+
+.checkinDeltaAhead {
+  background: color-mix(in srgb, var(--exp-success) 10%, transparent);
+  color: var(--exp-success);
+}
+
+.checkinDeltaBehind {
+  background: color-mix(in srgb, var(--exp-danger) 10%, transparent);
+  color: var(--exp-danger);
+}
+
+.checkinEntries {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-top: 0.375rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.checkinEntry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.checkinEntryValue {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.checkinActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.375rem;
+  padding-top: 0.25rem;
+}
+
+/* ─── Shared input/button reuse ──────────────────────────────────────────── */
+
+.textInput {
+  padding: 0.4375rem 0.75rem;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  background: color-mix(in srgb, var(--color-text) 4%, var(--color-bg));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 6px);
+  color: var(--color-text);
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.textInput:focus {
+  outline: 2px solid var(--color-brand, #6366f1);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+.selectInput {
+  composes: textInput;
+  cursor: pointer;
+}
+
+@media (max-width: 719px) {
+  .formInput,
+  .textInput {
+    font-size: 16px;
+  }
+}
