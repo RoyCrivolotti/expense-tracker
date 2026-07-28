@@ -27,6 +27,8 @@ function minimalModel(): ExpenseModel {
       },
       goalScenarios: [],
       installmentPlans: [],
+      wealthAccounts: [],
+      wealthCheckins: [],
       settings: defaultExpenseSettings(),
     },
     lookup: {

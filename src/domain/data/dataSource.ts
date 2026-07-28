@@ -15,6 +15,9 @@ import type {
   InstallmentPlan,
   StoredTransaction,
   Transaction,
+  WealthAccount,
+  WealthCheckin,
+  WealthCheckinEntry,
 } from '../types'
 
 export type NewTransaction = Omit<StoredTransaction, 'id' | 'createdAt' | 'planId'> & {
@@ -49,6 +52,12 @@ export interface DeleteAccountResult {
   createdAccount?: Account
 }
 export type NewGoalScenario = Omit<GoalScenario, 'id'>
+export type NewWealthAccount = Omit<WealthAccount, 'id'>
+export type NewWealthCheckin = {
+  checkinDate: string
+  note?: string
+  entries: WealthCheckinEntry[]
+}
 export type NewInstallmentPlan = Omit<InstallmentPlan, 'id' | 'dueDayOfMonth'> & {
   /** A day (1-31) sets the due day, null clears it, absent leaves it unchanged. */
   dueDayOfMonth?: number | null
@@ -81,4 +90,10 @@ export interface ExpenseDataSource {
   createInstallmentPlan?(input: NewInstallmentPlan): Promise<InstallmentPlan>
   updateInstallmentPlan?(id: number, patch: Partial<NewInstallmentPlan>): Promise<InstallmentPlan>
   deleteInstallmentPlan?(id: number): Promise<void>
+  createWealthAccount?(input: NewWealthAccount): Promise<WealthAccount>
+  updateWealthAccount?(id: number, patch: Partial<NewWealthAccount>): Promise<WealthAccount>
+  deleteWealthAccount?(id: number): Promise<void>
+  createWealthCheckin?(input: NewWealthCheckin): Promise<WealthCheckin>
+  updateWealthCheckin?(id: number, patch: Partial<NewWealthCheckin>): Promise<WealthCheckin>
+  deleteWealthCheckin?(id: number): Promise<void>
 }

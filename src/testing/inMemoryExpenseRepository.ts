@@ -25,6 +25,8 @@ import type {
   InstallmentPlan,
   StoredTransaction,
   Transaction,
+  WealthAccount,
+  WealthCheckin,
 } from '../domain/types'
 import { RepoHttpError } from './repoHttpError'
 
@@ -40,6 +42,8 @@ interface OwnerStore {
   goalInputs: GoalInputs
   goalScenarios: GoalScenario[]
   installmentPlans: InstallmentPlan[]
+  wealthAccounts: WealthAccount[]
+  wealthCheckins: WealthCheckin[]
 }
 
 const DEFAULT_SETTINGS: ExpenseSettings = defaultExpenseSettings()
@@ -75,6 +79,8 @@ function emptyStore(seed: ExpenseRepositorySeed = {}): OwnerStore {
     goalInputs: { ...DEFAULT_GOALS, ...seed.goalInputs },
     goalScenarios: [...(seed.goalScenarios ?? [])],
     installmentPlans: [...(seed.installmentPlans ?? [])],
+    wealthAccounts: [...(seed.wealthAccounts ?? [])],
+    wealthCheckins: [...(seed.wealthCheckins ?? [])],
   }
 }
 
@@ -317,6 +323,8 @@ export function inMemoryExpenseRepository(
         goalInputs: { ...store.goalInputs },
         goalScenarios: [...store.goalScenarios],
         installmentPlans: [...store.installmentPlans],
+        wealthAccounts: [...store.wealthAccounts],
+        wealthCheckins: store.wealthCheckins.map((c) => ({ ...c, entries: [...c.entries] })),
       })
     },
 
@@ -559,6 +567,89 @@ export function inMemoryExpenseRepository(
         delete copy.installmentIndex
         return copy
       })
+      return Promise.resolve()
+    },
+
+    createWealthAccount: (owner, input) => {
+      const store = storeFor(owner)
+      const name = input.name?.trim()
+      if (!name) throw new RepoHttpError(400, 'Account name is required')
+      const account: WealthAccount = {
+        id: nextId(store.wealthAccounts),
+        name,
+        kind: input.kind,
+        sortOrder: input.sortOrder,
+        archived: input.archived,
+      }
+      store.wealthAccounts.push(account)
+      return Promise.resolve({ ...account })
+    },
+
+    updateWealthAccount: (owner, id, patch) => {
+      const store = storeFor(owner)
+      const index = store.wealthAccounts.findIndex((a) => a.id === id)
+      if (index < 0) throw new RepoHttpError(404, 'Wealth account not found')
+      if (Object.keys(patch).length === 0) throw new RepoHttpError(400, 'Empty patch')
+      const updated = { ...store.wealthAccounts[index]!, ...patch, id }
+      store.wealthAccounts[index] = updated
+      return Promise.resolve({ ...updated })
+    },
+
+    deleteWealthAccount: (owner, id) => {
+      const store = storeFor(owner)
+      const hasEntries = store.wealthCheckins.some((c) =>
+        c.entries.some((e) => e.accountId === id),
+      )
+      if (hasEntries) {
+        const index = store.wealthAccounts.findIndex((a) => a.id === id)
+        if (index < 0) throw new RepoHttpError(404, 'Wealth account not found')
+        store.wealthAccounts[index] = { ...store.wealthAccounts[index]!, archived: true }
+        return Promise.resolve()
+      }
+      const index = store.wealthAccounts.findIndex((a) => a.id === id)
+      if (index < 0) throw new RepoHttpError(404, 'Wealth account not found')
+      store.wealthAccounts.splice(index, 1)
+      return Promise.resolve()
+    },
+
+    createWealthCheckin: (owner, input) => {
+      const store = storeFor(owner)
+      if (!input.checkinDate?.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        throw new RepoHttpError(400, 'checkinDate must be YYYY-MM-DD')
+      }
+      const checkin: WealthCheckin = {
+        id: nextId(store.wealthCheckins),
+        checkinDate: input.checkinDate,
+        ...(input.note ? { note: input.note } : {}),
+        createdAt: new Date().toISOString(),
+        entries: input.entries.map((e) => ({ ...e })),
+      }
+      store.wealthCheckins.push(checkin)
+      return Promise.resolve({ ...checkin, entries: [...checkin.entries] })
+    },
+
+    updateWealthCheckin: (owner, id, patch) => {
+      const store = storeFor(owner)
+      const index = store.wealthCheckins.findIndex((c) => c.id === id)
+      if (index < 0) throw new RepoHttpError(404, 'Wealth check-in not found')
+      if (Object.keys(patch).length === 0) throw new RepoHttpError(400, 'Empty patch')
+      const existing = store.wealthCheckins[index]!
+      const updated: WealthCheckin = {
+        ...existing,
+        ...(patch.checkinDate !== undefined ? { checkinDate: patch.checkinDate } : {}),
+        ...(patch.note !== undefined ? (patch.note ? { note: patch.note } : {}) : {}),
+        ...(patch.entries !== undefined ? { entries: patch.entries.map((e) => ({ ...e })) } : {}),
+        id,
+      }
+      store.wealthCheckins[index] = updated
+      return Promise.resolve({ ...updated, entries: [...updated.entries] })
+    },
+
+    deleteWealthCheckin: (owner, id) => {
+      const store = storeFor(owner)
+      const index = store.wealthCheckins.findIndex((c) => c.id === id)
+      if (index < 0) throw new RepoHttpError(404, 'Wealth check-in not found')
+      store.wealthCheckins.splice(index, 1)
       return Promise.resolve()
     },
   }
