@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import { formatCents, type MoneyFormat } from '../../../engine'
 import {
+  DateField,
   MoneyField,
   NumberField,
   PercentField,
@@ -61,6 +62,12 @@ export function GoalControls({ draft, onChange }: GoalControlsProps) {
           onChange={(v) => onChange({ monthlyContributionCents: v })}
         />
         <PercentField
+          label="Contribution growth (%/yr)"
+          value={draft.annualContributionGrowth}
+          max={0.1}
+          onChange={(v) => onChange({ annualContributionGrowth: v })}
+        />
+        <PercentField
           label="Real return"
           value={draft.expectedRealReturn}
           max={0.15}
@@ -100,6 +107,26 @@ export function GoalControls({ draft, onChange }: GoalControlsProps) {
           Notary, agency, and closing costs withdrawn with the down payment in the purchase
           year.
         </p>
+        <PercentField
+          label="Mortgage rate (%/yr)"
+          value={draft.mortgageRateAnnual}
+          max={0.1}
+          onChange={(v) => onChange({ mortgageRateAnnual: v })}
+        />
+        <NumberField
+          label="Mortgage term (years)"
+          value={draft.mortgageTermYears}
+          min={5}
+          max={40}
+          format={String}
+          onChange={(v) => onChange({ mortgageTermYears: v })}
+        />
+        <PercentField
+          label="House appreciation (%/yr)"
+          value={draft.houseAppreciationRate}
+          max={0.1}
+          onChange={(v) => onChange({ houseAppreciationRate: v })}
+        />
         <PurchaseYearField
           value={draft.housePurchaseYear}
           maxYear={draft.horizonYears}
@@ -140,6 +167,14 @@ export function GoalControls({ draft, onChange }: GoalControlsProps) {
           Share of the portfolio you would spend each year once FI (4% is the usual rule of thumb).
           Lower rate = spend less = higher FI target. FI target = annual spend ÷ this rate.
         </p>
+      </ControlSection>
+      <ControlSection title="Plan tracking" defaultOpen={false}>
+        <DateField
+          label="Plan start date"
+          value={draft.planStartDate ?? null}
+          hint="Anchors the projection to a calendar date so wealth check-ins can show whether you are ahead or behind."
+          onChange={(v) => onChange({ planStartDate: v })}
+        />
       </ControlSection>
     </div>
   )

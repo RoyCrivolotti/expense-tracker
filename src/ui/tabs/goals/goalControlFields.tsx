@@ -164,6 +164,34 @@ export function PercentField({
   )
 }
 
+interface DateFieldProps {
+  label: string
+  value: string | null
+  hint?: string
+  onChange: (v: string | null) => void
+}
+
+export function DateField({ label, value, hint, onChange }: DateFieldProps) {
+  return (
+    <label className={styles.field}>
+      <div className={styles.fieldRow}>
+        <span className={styles.fieldLabel}>{label}</span>
+        <input
+          className={styles.valueInput}
+          type="date"
+          aria-label={label}
+          value={value ?? ''}
+          onChange={(e) => {
+            const v = e.target.value
+            onChange(v || null)
+          }}
+        />
+      </div>
+      {hint ? <p className={styles.fieldHint}>{hint}</p> : null}
+    </label>
+  )
+}
+
 interface PurchaseYearFieldProps {
   value: number | null
   maxYear: number

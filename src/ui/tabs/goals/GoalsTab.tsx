@@ -48,15 +48,20 @@ function scenarioToDraft(s: GoalScenario): NewGoalScenario {
 const EDIT_KEYS = [
   'startInvestedCents',
   'monthlyContributionCents',
+  'annualContributionGrowth',
   'expectedRealReturn',
   'horizonYears',
   'housePriceCents',
   'downPaymentFraction',
   'housePurchaseYear',
   'transactionCostsCents',
+  'mortgageTermYears',
+  'mortgageRateAnnual',
+  'houseAppreciationRate',
   'rentMonthlyCents',
   'annualSpendCents',
   'safeWithdrawalRate',
+  'planStartDate',
 ] as const satisfies readonly (keyof NewGoalScenario)[]
 
 function bootstrapEditor(
