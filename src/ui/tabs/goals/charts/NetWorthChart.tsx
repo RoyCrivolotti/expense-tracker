@@ -160,6 +160,8 @@ function NetWorthChartImpl({
   dirty = false,
   variant = 'default',
   footer,
+  extraSeries = [],
+  todayIndex,
 }: {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
@@ -167,6 +169,8 @@ function NetWorthChartImpl({
   dirty?: boolean
   variant?: 'default' | 'hero'
   footer?: ReactNode
+  extraSeries?: ChartSeries[]
+  todayIndex?: number
 }) {
   const format = useMoneyFormat()
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
@@ -199,43 +203,40 @@ function NetWorthChartImpl({
     activeIndex,
   )
 
-  const tooltip = (i: number): { title: string; lines: TooltipLine[] } => {
-    const year = years[i] ?? i
-    const lines: TooltipLine[] = series.map((s, idx) => ({
-      label: names[idx] ?? s.id,
-      value: formatMoneyShort(s.values[i] ?? 0, format),
-      tone: 'neutral',
-    }))
-    return { title: `Year ${year}`, lines }
-  }
+  const tooltip = useCallback(
+    (i: number): { title: string; lines: TooltipLine[] } => {
+      const year = years[i] ?? i
+      const tooltipLines: TooltipLine[] = series.map((s, idx) => ({
+        label: names[idx] ?? s.id,
+        value: formatMoneyShort(s.values[i] ?? 0, format),
+        tone: 'neutral',
+      }))
+      return { title: `Year ${year}`, lines: tooltipLines }
+    },
+    [years, series, names, format],
+  )
+
+  const chartHint = isHero
+    ? 'At a purchase year, return and contributions apply before the down payment is withdrawn — select a year on the chart for values and the purchase breakdown. Dashed vertical marks show purchase years.'
+    : 'Compare saved scenarios plus your live edits. At a purchase year, return and contributions apply before the down payment is withdrawn — hover that year for the breakdown.'
+
+  const heroVariantProps = isHero
+    ? { height: 230, markerYears, tooltipMode: 'hidden' as const, onActiveIndexChange }
+    : { height: 210, markerYears: [], tooltipMode: 'full' as const }
 
   return (
     <Card className={isHero ? `${styles.chartCard} ${styles.heroChart}` : styles.chartCard}>
       <h3 className={styles.chartTitle}>Invested portfolio projection</h3>
-      {!isHero ? (
-        <p className={styles.chartHint}>
-          Compare saved scenarios plus your live edits. At a purchase year, return and
-          contributions apply before the down payment is withdrawn — hover that year for
-          the breakdown.
-        </p>
-      ) : (
-        <p className={styles.chartHint}>
-          At a purchase year, return and contributions apply before the down payment is
-          withdrawn — select a year on the chart for values and the purchase breakdown.
-          Dashed vertical marks show purchase years.
-        </p>
-      )}
+      <p className={styles.chartHint}>{chartHint}</p>
       <LinearChart
-        height={isHero ? 230 : 210}
-        series={series}
+        {...heroVariantProps}
+        series={[...series, ...extraSeries]}
         xLabels={labels}
         refLines={refLines}
-        markerYears={isHero ? markerYears : []}
+        {...(todayIndex !== undefined ? { todayIndex } : {})}
         formatValue={(c) => formatMoneyShort(c, format)}
         ariaLabel="Invested portfolio projection by year"
         tooltip={tooltip}
-        tooltipMode={isHero ? 'hidden' : 'full'}
-        {...(isHero ? { onActiveIndexChange } : {})}
       />
       <PortfolioLegend
         isHero={isHero}
