@@ -71,6 +71,7 @@ export function makeScenario(overrides: Partial<GoalScenario> = {}): GoalScenari
     annualSpendCents: 0,
     safeWithdrawalRate: 0.04,
     planStartDate: null,
+    lifeEvents: [],
     ...overrides,
   }
 }

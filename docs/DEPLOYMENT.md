@@ -97,6 +97,8 @@ Apply through `0011_user_preferences.sql` on production. Personal goal scenarios
 
 `0012_wealth_checkins.sql` adds three new tables (`wealth_accounts`, `wealth_checkins`, `wealth_checkin_entries`) and a `plan_start_date` column on `goal_scenarios`. The new tables start empty (accounts are created through the Goals UI). The `plan_start_date` backfill is owner-agnostic — no placeholder substitution needed.
 
+`0013_life_events.sql` adds a `life_events TEXT NOT NULL DEFAULT '[]'` column to `goal_scenarios`. Stores a JSON array of one-off cash events per scenario. Existing rows automatically get the empty-array default — no data migration needed.
+
 ## Old URL
 
 `https://roy-admin.crivolotti.com/expenses` redirects here (301 in admin-hub `_redirects`).

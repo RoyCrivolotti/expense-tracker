@@ -7,6 +7,7 @@ import type {
   GoalInputs,
   GoalScenario,
   InstallmentPlan,
+  LifeEvent,
   StoredTransaction,
   TxnType,
   WealthAccount,
@@ -175,9 +176,16 @@ export interface GoalScenarioRow {
   annual_spend_cents: number
   safe_withdrawal_rate: number
   plan_start_date: string | null
+  life_events: string
 }
 
 export function toGoalScenario(r: GoalScenarioRow): GoalScenario {
+  let lifeEvents: LifeEvent[] = []
+  try {
+    lifeEvents = JSON.parse(r.life_events) as LifeEvent[]
+  } catch {
+    // malformed JSON falls back to empty
+  }
   return {
     id: r.id,
     name: r.name,
@@ -199,6 +207,7 @@ export function toGoalScenario(r: GoalScenarioRow): GoalScenario {
     annualSpendCents: r.annual_spend_cents,
     safeWithdrawalRate: r.safe_withdrawal_rate,
     planStartDate: r.plan_start_date ?? null,
+    lifeEvents,
   }
 }
 

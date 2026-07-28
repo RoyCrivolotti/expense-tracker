@@ -96,4 +96,68 @@ describe('GoalControls', () => {
     fireEvent.change(dateInput, { target: { value: '2024-06-01' } })
     expect(onChange).toHaveBeenCalledWith({ planStartDate: '2024-06-01' })
   })
+
+  it('renders the Life events section', () => {
+    render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
+    expect(screen.getByText('Life events')).toBeInTheDocument()
+  })
+
+  it('shows an add button in Life events section', () => {
+    render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
+    expect(screen.getByText('+ Add life event')).toBeInTheDocument()
+  })
+
+  it('opens the add form when clicking Add life event', async () => {
+    const user = userEvent.setup()
+    render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
+    await user.click(screen.getByText('+ Add life event'))
+    expect(screen.getByLabelText('Life event label')).toBeInTheDocument()
+  })
+
+  it('calls onChange with new event when adding', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<GoalControls draft={makeDraft()} onChange={onChange} />)
+    await user.click(screen.getByText('+ Add life event'))
+    const labelInput = screen.getByLabelText('Life event label')
+    await user.type(labelInput, 'Inheritance')
+    await user.click(screen.getByRole('button', { name: /^Add$/ }))
+    const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1] as [
+      { lifeEvents: { label: string }[] },
+    ]
+    expect(lastCall[0].lifeEvents).toEqual(
+      expect.arrayContaining([expect.objectContaining({ label: 'Inheritance' })]),
+    )
+  })
+
+  it('displays existing life events in the list', () => {
+    const draft = {
+      ...makeDraft(),
+      lifeEvents: [{ year: 3, amountCents: 10_000_000, label: 'Bonus' }],
+    }
+    render(<GoalControls draft={draft} onChange={vi.fn()} />)
+    expect(screen.getByText('Bonus')).toBeInTheDocument()
+  })
+
+  it('calls onChange without event when removing', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const draft = {
+      ...makeDraft(),
+      lifeEvents: [{ year: 3, amountCents: 10_000_000, label: 'Bonus' }],
+    }
+    render(<GoalControls draft={draft} onChange={onChange} />)
+    await user.click(screen.getByRole('button', { name: 'Remove Bonus' }))
+    expect(onChange).toHaveBeenCalledWith({ lifeEvents: [] })
+  })
+
+  it('cancels the add form without calling onChange', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<GoalControls draft={makeDraft()} onChange={onChange} />)
+    await user.click(screen.getByText('+ Add life event'))
+    await user.click(screen.getByRole('button', { name: /Cancel/ }))
+    expect(onChange).not.toHaveBeenCalled()
+    expect(screen.queryByLabelText('Life event label')).not.toBeInTheDocument()
+  })
 })
