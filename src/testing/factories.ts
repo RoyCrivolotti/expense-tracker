@@ -4,7 +4,7 @@
  * new required fields to a type only requires updating the factory, not every
  * test file.
  */
-import type { ExpenseDataset, GoalScenario } from '../domain/types'
+import type { ExpenseDataset, GoalScenario, WealthAccount, WealthCheckin } from '../domain/types'
 import { defaultExpenseSettings, defaultGoalInputs } from '../domain/engine/defaults'
 
 /** Build a minimal valid ExpenseDataset, merging any provided overrides. */
@@ -21,6 +21,29 @@ export function makeDataset(overrides: Partial<ExpenseDataset> = {}): ExpenseDat
     settings: defaultExpenseSettings(),
     wealthAccounts: [],
     wealthCheckins: [],
+    ...overrides,
+  }
+}
+
+/** Build a minimal valid WealthAccount for tests. */
+export function makeWealthAccount(overrides: Partial<WealthAccount> = {}): WealthAccount {
+  return {
+    id: 1,
+    name: 'Broker',
+    kind: 'investment',
+    sortOrder: 0,
+    archived: false,
+    ...overrides,
+  }
+}
+
+/** Build a minimal valid WealthCheckin for tests. */
+export function makeWealthCheckin(overrides: Partial<WealthCheckin> = {}): WealthCheckin {
+  return {
+    id: 1,
+    checkinDate: '2025-01-01',
+    entries: [],
+    createdAt: '2025-01-01T00:00:00.000Z',
     ...overrides,
   }
 }

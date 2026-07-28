@@ -3,7 +3,13 @@ import type { ExpenseModel } from '../../useExpenseData'
 import type { ExpenseActions } from '../../actions'
 import type { GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
-import { averageMonthlySaving, computeMonthlyTotals } from '../../../engine'
+import {
+  averageMonthlySaving,
+  computeMonthlyTotals,
+  yearOffsetFromDate,
+  checkinInvestedCents,
+} from '../../../engine'
+import type { ChartSeries } from '../../charts/LinearChart'
 import { Card, SectionTitle } from '../../components/primitives'
 import { SegmentedControl } from '../../components/SegmentedControl'
 import { GoalControls } from './GoalControls'
@@ -162,6 +168,28 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
     [dataset.goalScenarios, hiddenIds],
   )
 
+  // Scatter points: actual invested values from check-ins plotted on the hero chart.
+  const checkinExtraSeries = useMemo<ChartSeries | null>(() => {
+    if (!activeScenario?.planStartDate) return null
+    const points = dataset.wealthCheckins
+      .map((c) => {
+        const offset = yearOffsetFromDate(activeScenario.planStartDate!, c.checkinDate)
+        if (offset === null) return null
+        const value = checkinInvestedCents(c, dataset.wealthAccounts)
+        return { xIndex: offset, value }
+      })
+      .filter((p): p is NonNullable<typeof p> => p !== null)
+    if (points.length === 0) return null
+    return { id: 'actuals-overlay', color: '#f59e0b', values: [], kind: 'scatter', points }
+  }, [activeScenario, dataset.wealthCheckins, dataset.wealthAccounts])
+
+  const heroTodayIndex = useMemo(() => {
+    if (!activeScenario?.planStartDate) return undefined
+    const today = new Date().toISOString().slice(0, 10)
+    const offset = yearOffsetFromDate(activeScenario.planStartDate, today)
+    return offset !== null && offset >= 0 ? offset : undefined
+  }, [activeScenario])
+
   return (
     <div className={styles.stack}>
       <SectionTitle>Goals</SectionTitle>
@@ -231,6 +259,8 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
               dirty={dirty}
               variant="hero"
               footer={<GoalsNarrative draft={deferredDraft} compact />}
+              extraSeries={checkinExtraSeries ? [checkinExtraSeries] : []}
+              {...(heroTodayIndex !== undefined ? { todayIndex: heroTodayIndex } : {})}
             />
           </div>
           <div className={styles.areaSecondary}>
