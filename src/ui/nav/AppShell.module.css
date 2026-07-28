@@ -191,7 +191,9 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
   cursor: pointer;
   z-index: 35;
-  transition: transform 0.12s ease;
+  transition:
+    transform 0.12s ease,
+    opacity 0.15s ease;
 }
 .fab:active {
   transform: scale(0.93);
@@ -199,6 +201,14 @@
 .fab svg {
   width: 1.6rem;
   height: 1.6rem;
+}
+
+/* Fade out while scrolling on mobile, where the fixed FAB otherwise sits on
+   top of list rows passing underneath it. Not needed on desktop — the fab
+   there floats in the sidebar's margin, past the content column's edge. */
+.fabHidden {
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* ---- Desktop sidebar ---- */
@@ -263,6 +273,10 @@
   .fab {
     bottom: 2rem;
     right: 2rem;
+  }
+  .fabHidden {
+    opacity: 1;
+    pointer-events: auto;
   }
 }
 

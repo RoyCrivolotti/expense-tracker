@@ -4,6 +4,7 @@ import type { GroupGrants } from '../../domain/accessGroups'
 import { getExpenseHubNavItems } from '../../hubNavItems'
 import { navItems, type TabId } from './navItems'
 import { PlusIcon } from '../icons'
+import { useAutoHideFab } from '../hooks/useAutoHideFab'
 import styles from './AppShell.module.css'
 
 interface AppShellProps {
@@ -78,6 +79,7 @@ export function AppShell({
   banner,
   children,
 }: AppShellProps) {
+  const fabVisible = useAutoHideFab(Boolean(onAdd))
   return (
     <HubMenuRoot anchor="inline" navItems={getExpenseHubNavItems(hubGrants)}>
       <div className={styles.shell}>
@@ -108,7 +110,7 @@ export function AppShell({
         {onAdd && (
           <button
             type="button"
-            className={styles.fab}
+            className={`${styles.fab} ${fabVisible ? '' : styles.fabHidden}`}
             onClick={() => onAdd()}
             aria-label="Add transaction"
           >
