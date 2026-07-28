@@ -162,6 +162,7 @@ function NetWorthChartImpl({
   footer,
   extraSeries = [],
   todayIndex,
+  nominalMode = false,
 }: {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
@@ -171,6 +172,7 @@ function NetWorthChartImpl({
   footer?: ReactNode
   extraSeries?: ChartSeries[]
   todayIndex?: number
+  nominalMode?: boolean
 }) {
   const format = useMoneyFormat()
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
@@ -184,9 +186,40 @@ function NetWorthChartImpl({
   )
   const { years, series, names } = useMemo(() => buildSeries(lines), [lines])
   const markerYears = useMemo(() => purchaseMarkerIndices(lines, years), [lines, years])
-  const refLines = useMemo(() => MILESTONE_CENTS.filter((m) => m <= 100_000_000), [])
-  const labels = useMemo(() => sparseLabels(years, 5), [years])
   const isHero = variant === 'hero'
+  const labels = useMemo(() => sparseLabels(years, 5), [years])
+
+  // Apply nominal inflation transform (≈2 % ECB target) for nominal display mode.
+  const NOMINAL_INFLATION = 0.02
+  const displaySeries = useMemo<ChartSeries[]>(() => {
+    if (!nominalMode) return series
+    return series.map((s) => ({
+      ...s,
+      values: s.values.map((v, i) => Math.round(v * Math.pow(1 + NOMINAL_INFLATION, years[i] ?? i))),
+      ...(s.band
+        ? {
+            band: {
+              lo: s.band.lo.map((v, i) => Math.round(v * Math.pow(1 + NOMINAL_INFLATION, years[i] ?? i))),
+              hi: s.band.hi.map((v, i) => Math.round(v * Math.pow(1 + NOMINAL_INFLATION, years[i] ?? i))),
+            },
+          }
+        : {}),
+    }))
+  }, [series, nominalMode, years])
+
+  // FI target as a landmark ref line on the hero chart.
+  const fiTargetCents = useMemo(() => {
+    if (!isHero || draft.annualSpendCents <= 0 || draft.safeWithdrawalRate <= 0) return null
+    return Math.round(draft.annualSpendCents / draft.safeWithdrawalRate)
+  }, [isHero, draft.annualSpendCents, draft.safeWithdrawalRate])
+
+  const refLines = useMemo(() => {
+    const base = MILESTONE_CENTS.filter((m) => m <= 100_000_000)
+    const baseIncludes = (v: number) => (base as readonly number[]).includes(v)
+    return fiTargetCents !== null && !baseIncludes(fiTargetCents)
+      ? [...base, fiTargetCents].sort((a, b) => a - b)
+      : base
+  }, [fiTargetCents])
   const staticLegend: LegendItem[] = useMemo(
     () =>
       series.map((s, idx) => ({
@@ -197,7 +230,7 @@ function NetWorthChartImpl({
   )
   const { activeYear, legendItems, breakdowns, yearZeroHint } = useChartLegendState(
     lines,
-    series,
+    displaySeries,
     names,
     years,
     activeIndex,
@@ -206,14 +239,14 @@ function NetWorthChartImpl({
   const tooltip = useCallback(
     (i: number): { title: string; lines: TooltipLine[] } => {
       const year = years[i] ?? i
-      const tooltipLines: TooltipLine[] = series.map((s, idx) => ({
+      const tooltipLines: TooltipLine[] = displaySeries.map((s, idx) => ({
         label: names[idx] ?? s.id,
         value: formatMoneyShort(s.values[i] ?? 0, format),
         tone: 'neutral',
       }))
       return { title: `Year ${year}`, lines: tooltipLines }
     },
-    [years, series, names, format],
+    [years, displaySeries, names, format],
   )
 
   const chartHint = isHero
@@ -230,7 +263,7 @@ function NetWorthChartImpl({
       <p className={styles.chartHint}>{chartHint}</p>
       <LinearChart
         {...heroVariantProps}
-        series={[...series, ...extraSeries]}
+        series={[...displaySeries, ...extraSeries]}
         xLabels={labels}
         refLines={refLines}
         {...(todayIndex !== undefined ? { todayIndex } : {})}

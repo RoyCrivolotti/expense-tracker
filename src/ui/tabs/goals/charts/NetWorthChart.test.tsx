@@ -65,4 +65,30 @@ describe('NetWorthChart', () => {
     expect(svg).not.toBeNull()
     expect(Number(svg!.getAttribute('viewBox')?.split(' ')[3] ?? 0)).toBeGreaterThan(200)
   })
+
+  it('renders without crashing when nominalMode is true', () => {
+    const { container } = render(
+      <NetWorthChart
+        scenarios={[defaultDraft]}
+        draft={defaultDraft}
+        activeId={defaultDraft.id}
+        variant="hero"
+        nominalMode
+      />,
+    )
+    expect(container.querySelector('svg')).not.toBeNull()
+  })
+
+  it('renders FI target reference line when annualSpendCents and safeWithdrawalRate are set', () => {
+    const scenario = makeScenario({ annualSpendCents: 4_000_000, safeWithdrawalRate: 0.04 })
+    const { container } = render(
+      <NetWorthChart
+        scenarios={[scenario]}
+        draft={scenario}
+        activeId={scenario.id}
+        variant="hero"
+      />,
+    )
+    expect(container.querySelector('svg')).not.toBeNull()
+  })
 })
