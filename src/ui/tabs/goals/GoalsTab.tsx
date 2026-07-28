@@ -122,6 +122,7 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
   const dirty = useMemo(() => {
     if (!activeScenario) return false
     if (draft.name !== activeScenario.name) return true
+    if (JSON.stringify(draft.lifeEvents) !== JSON.stringify(activeScenario.lifeEvents)) return true
     return EDIT_KEYS.some((k) => draft[k] !== activeScenario[k])
   }, [activeScenario, draft])
 

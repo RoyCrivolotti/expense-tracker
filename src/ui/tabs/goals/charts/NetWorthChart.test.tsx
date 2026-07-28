@@ -142,6 +142,25 @@ describe('NetWorthChart', () => {
     expect(container.querySelector('svg')).not.toBeNull()
   })
 
+  it('renders life event diamond markers on hero chart', () => {
+    const scenario = makeScenario({
+      lifeEvents: [
+        { year: 3, amountCents: 10_000_000, label: 'Bonus' },
+        { year: 7, amountCents: -5_000_000, label: 'Car' },
+      ],
+    })
+    const { container } = render(
+      <NetWorthChart
+        scenarios={[scenario]}
+        draft={scenario}
+        activeId={scenario.id}
+        variant="hero"
+      />,
+    )
+    const polygons = container.querySelectorAll('polygon')
+    expect(polygons.length).toBeGreaterThanOrEqual(2)
+  })
+
   it('does not add FI reference line when FI target matches an existing milestone', () => {
     // 4_000_000 / 0.04 = 100_000_000 — already in MILESTONE_CENTS, so no extra line added
     const scenario = makeScenario({ annualSpendCents: 4_000_000, safeWithdrawalRate: 0.04 })

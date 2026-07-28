@@ -24,6 +24,7 @@ function scenario(id: number, sortOrder: number): GoalScenario {
     annualSpendCents: 50_000_00,
     safeWithdrawalRate: 0.04,
     planStartDate: null,
+    lifeEvents: [],
   }
 }
 

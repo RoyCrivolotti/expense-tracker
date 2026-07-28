@@ -23,6 +23,7 @@ const base: GoalScenario = {
   annualSpendCents: 50_000_00,
   safeWithdrawalRate: 0.04,
   planStartDate: null,
+  lifeEvents: [],
 }
 
 describe('scenarioHeadline', () => {

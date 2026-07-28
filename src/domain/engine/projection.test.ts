@@ -170,3 +170,55 @@ describe.skipIf(!hasFrParity)('finance-review milestone parity (local only)', ()
     }
   })
 })
+
+describe('life events', () => {
+  it('adds a one-off inflow to the invested balance at the specified year', () => {
+    const without = projectNetWorth(baseParams()).map((p) => p.investedCents)
+    const withEvent = projectNetWorth(
+      baseParams({ lifeEvents: [{ year: 5, amountCents: 10_000_000, label: 'Bonus' }] }),
+    ).map((p) => p.investedCents)
+    // Before year 5 the balances should be equal.
+    expect(withEvent[4]).toBe(without[4])
+    // At year 5 and beyond, withEvent should be higher by roughly the inflow * compounding.
+    expect(withEvent[5]!).toBeGreaterThan(without[5]!)
+    expect(withEvent[10]!).toBeGreaterThan(without[10]!)
+  })
+
+  it('subtracts a one-off outflow from the invested balance at the specified year', () => {
+    const without = projectNetWorth(baseParams()).map((p) => p.investedCents)
+    const withEvent = projectNetWorth(
+      baseParams({ lifeEvents: [{ year: 5, amountCents: -5_000_000, label: 'Car' }] }),
+    ).map((p) => p.investedCents)
+    expect(withEvent[4]).toBe(without[4])
+    expect(withEvent[5]!).toBeLessThan(without[5]!)
+  })
+
+  it('applies multiple life events in the same year correctly', () => {
+    const withEvents = projectNetWorth(
+      baseParams({
+        lifeEvents: [
+          { year: 3, amountCents: 10_000_000, label: 'Bonus' },
+          { year: 3, amountCents: -3_000_000, label: 'Vacation' },
+        ],
+      }),
+    ).map((p) => p.investedCents)
+    const withNet = projectNetWorth(
+      baseParams({ lifeEvents: [{ year: 3, amountCents: 7_000_000, label: 'Net' }] }),
+    ).map((p) => p.investedCents)
+    expect(withEvents[3]).toBe(withNet[3])
+  })
+
+  it('year 0 events are not applied (year 0 is the initial balance)', () => {
+    const without = projectNetWorth(baseParams()).map((p) => p.investedCents)
+    const withEvent = projectNetWorth(
+      baseParams({ lifeEvents: [{ year: 0, amountCents: 99_000_000, label: 'Ignored' }] }),
+    ).map((p) => p.investedCents)
+    expect(withEvent[0]).toBe(without[0])
+  })
+
+  it('no-events case is unchanged from baseline', () => {
+    const base = projectNetWorth(baseParams()).map((p) => p.investedCents)
+    const empty = projectNetWorth(baseParams({ lifeEvents: [] })).map((p) => p.investedCents)
+    expect(empty).toEqual(base)
+  })
+})

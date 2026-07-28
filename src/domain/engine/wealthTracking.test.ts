@@ -34,6 +34,7 @@ function makeScenario(overrides: Partial<GoalScenario> = {}): GoalScenario {
     annualSpendCents: 0,
     safeWithdrawalRate: 0.04,
     planStartDate: '2024-01-01',
+    lifeEvents: [],
     ...overrides,
   }
 }

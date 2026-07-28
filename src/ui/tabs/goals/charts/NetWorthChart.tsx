@@ -238,12 +238,22 @@ function NetWorthChartImpl({
     [years, displaySeries, names, format],
   )
 
+  const lifeEventMarkers = useMemo(
+    () =>
+      isHero
+        ? (draft.lifeEvents ?? [])
+            .filter((ev) => ev.year >= 0 && ev.year <= draft.horizonYears)
+            .map((ev) => ({ yearIndex: ev.year, label: ev.label, amountCents: ev.amountCents }))
+        : [],
+    [isHero, draft.lifeEvents, draft.horizonYears],
+  )
+
   const chartHint = isHero
     ? 'At a purchase year, return and contributions apply before the down payment is withdrawn — select a year on the chart for values and the purchase breakdown. Dashed vertical marks show purchase years.'
     : 'Compare saved scenarios plus your live edits. At a purchase year, return and contributions apply before the down payment is withdrawn — hover that year for the breakdown.'
 
   const heroVariantProps = isHero
-    ? { height: 230, markerYears, tooltipMode: 'hidden' as const, onActiveIndexChange }
+    ? { height: 230, markerYears, lifeEventMarkers, tooltipMode: 'hidden' as const, onActiveIndexChange }
     : { height: 210, markerYears: [], tooltipMode: 'full' as const }
 
   return (

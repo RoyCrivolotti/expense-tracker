@@ -3,6 +3,7 @@
  * All money in integer cents; rates as fractions (0.07 = 7% real).
  */
 import { pmt } from './finance'
+import type { LifeEvent } from '../types'
 
 export interface YearPoint {
   year: number
@@ -29,6 +30,8 @@ export interface ProjectionParams {
   mortgageTermYears: number
   mortgageRateAnnual: number
   houseAppreciationRate: number
+  /** One-off cash flows applied at specific projection years. Default: none. */
+  lifeEvents?: LifeEvent[]
 }
 
 function annualContribution(
@@ -72,6 +75,14 @@ function mortgageBalanceAtYear(
   const growth = Math.pow(1 + monthlyRate, monthsElapsed)
   const balance = loanCents * growth - payment * ((growth - 1) / monthlyRate)
   return Math.max(0, Math.round(balance))
+}
+
+function lifeEventImpact(events: LifeEvent[], year: number): number {
+  let total = 0
+  for (const ev of events) {
+    if (ev.year === year) total += ev.amountCents
+  }
+  return total
 }
 
 function purchaseWithdrawalCents(params: ProjectionParams): number {
@@ -158,6 +169,9 @@ export function projectNetWorth(params: ProjectionParams): YearPoint[] {
         year === params.housePurchaseYear
       ) {
         invested -= purchaseWithdrawalCents(params)
+      }
+      if (params.lifeEvents) {
+        invested += lifeEventImpact(params.lifeEvents, year)
       }
     }
 

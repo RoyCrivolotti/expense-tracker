@@ -19,5 +19,6 @@ export function scenarioToParams(scenario: ScenarioInput): ProjectionParams {
     mortgageTermYears: scenario.mortgageTermYears,
     mortgageRateAnnual: scenario.mortgageRateAnnual,
     houseAppreciationRate: scenario.houseAppreciationRate,
+    ...(scenario.lifeEvents?.length ? { lifeEvents: scenario.lifeEvents } : {}),
   }
 }
