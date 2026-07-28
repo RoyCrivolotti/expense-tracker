@@ -30,6 +30,8 @@ function datasetWith(overrides: Partial<ExpenseDataset> = {}): ExpenseDataset {
     },
     goalScenarios: [],
     installmentPlans: [],
+    wealthAccounts: [],
+    wealthCheckins: [],
     settings: defaultExpenseSettings(),
     ...overrides,
   }
@@ -76,6 +78,12 @@ function noopActions(): ExpenseActions {
     createInstallmentPlan: vi.fn(),
     updateInstallmentPlan: vi.fn(),
     deleteInstallmentPlan: vi.fn(),
+    createWealthAccount: vi.fn(),
+    updateWealthAccount: vi.fn(),
+    deleteWealthAccount: vi.fn(),
+    createWealthCheckin: vi.fn(),
+    updateWealthCheckin: vi.fn(),
+    deleteWealthCheckin: vi.fn(),
   }
 }
 

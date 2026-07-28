@@ -9,6 +9,8 @@ import type {
   GoalScenario,
   InstallmentPlan,
   Transaction,
+  WealthAccount,
+  WealthCheckin,
 } from '../types'
 import type {
   DeleteAccountOptions,
@@ -20,6 +22,8 @@ import type {
   NewGoalScenario,
   NewInstallmentPlan,
   NewTransaction,
+  NewWealthAccount,
+  NewWealthCheckin,
 } from '../data/dataSource'
 
 /** Persistence port — UI/API depend on this shape, not on D1 or any vendor SDK. */
@@ -74,4 +78,10 @@ export interface ExpenseRepository {
     patch: Partial<NewInstallmentPlan>,
   ): Promise<InstallmentPlan>
   deleteInstallmentPlan(owner: string, id: number): Promise<void>
+  createWealthAccount(owner: string, input: NewWealthAccount): Promise<WealthAccount>
+  updateWealthAccount(owner: string, id: number, patch: Partial<NewWealthAccount>): Promise<WealthAccount>
+  deleteWealthAccount(owner: string, id: number): Promise<void>
+  createWealthCheckin(owner: string, input: NewWealthCheckin): Promise<WealthCheckin>
+  updateWealthCheckin(owner: string, id: number, patch: Partial<NewWealthCheckin>): Promise<WealthCheckin>
+  deleteWealthCheckin(owner: string, id: number): Promise<void>
 }

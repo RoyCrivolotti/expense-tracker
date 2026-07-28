@@ -22,6 +22,7 @@ const base: GoalScenario = {
   rentMonthlyCents: 150_000,
   annualSpendCents: 50_000_00,
   safeWithdrawalRate: 0.04,
+  planStartDate: null,
 }
 
 describe('scenarioHeadline', () => {

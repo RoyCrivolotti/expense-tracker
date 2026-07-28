@@ -21,6 +21,8 @@ function dataset(overrides: Partial<ExpenseDataset> = {}): ExpenseDataset {
     },
     goalScenarios: [],
     installmentPlans: [],
+    wealthAccounts: [],
+    wealthCheckins: [],
     settings: defaultExpenseSettings(),
     ...overrides,
   }

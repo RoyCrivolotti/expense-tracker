@@ -10,6 +10,8 @@ import type {
   GoalScenario,
   InstallmentPlan,
   Transaction,
+  WealthAccount,
+  WealthCheckin,
 } from '../types'
 import type { DeleteAccountResult, DeleteCategoryResult } from '../data/dataSource'
 
@@ -247,5 +249,71 @@ export function patchAfterInstallmentPlanDelete(
 ): ExpenseDataset {
   const d = cloneDataset(dataset)
   d.installmentPlans = d.installmentPlans.filter((p) => p.id !== id)
+  return d
+}
+
+export function patchAfterWealthAccountCreate(
+  dataset: ExpenseDataset,
+  account: WealthAccount,
+): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  d.wealthAccounts = [...d.wealthAccounts, account].sort(
+    (a, b) => a.sortOrder - b.sortOrder || a.id - b.id,
+  )
+  return d
+}
+
+export function patchAfterWealthAccountUpdate(
+  dataset: ExpenseDataset,
+  account: WealthAccount,
+): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  upsertById(d.wealthAccounts, account)
+  d.wealthAccounts.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+  return d
+}
+
+export function patchAfterWealthAccountDelete(
+  dataset: ExpenseDataset,
+  id: number,
+  archived: boolean,
+): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  if (archived) {
+    // Server soft-deleted (archived) because the account has check-in history.
+    d.wealthAccounts = d.wealthAccounts.map((a) => (a.id === id ? { ...a, archived: true } : a))
+  } else {
+    d.wealthAccounts = d.wealthAccounts.filter((a) => a.id !== id)
+  }
+  return d
+}
+
+export function patchAfterWealthCheckinCreate(
+  dataset: ExpenseDataset,
+  checkin: WealthCheckin,
+): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  d.wealthCheckins = [checkin, ...d.wealthCheckins].sort(
+    (a, b) => b.checkinDate.localeCompare(a.checkinDate) || b.id - a.id,
+  )
+  return d
+}
+
+export function patchAfterWealthCheckinUpdate(
+  dataset: ExpenseDataset,
+  checkin: WealthCheckin,
+): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  upsertById(d.wealthCheckins, checkin)
+  d.wealthCheckins.sort((a, b) => b.checkinDate.localeCompare(a.checkinDate) || b.id - a.id)
+  return d
+}
+
+export function patchAfterWealthCheckinDelete(
+  dataset: ExpenseDataset,
+  id: number,
+): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  d.wealthCheckins = d.wealthCheckins.filter((c) => c.id !== id)
   return d
 }
