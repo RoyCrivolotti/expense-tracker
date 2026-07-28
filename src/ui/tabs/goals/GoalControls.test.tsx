@@ -160,4 +160,21 @@ describe('GoalControls', () => {
     expect(onChange).not.toHaveBeenCalled()
     expect(screen.queryByLabelText('Life event label')).not.toBeInTheDocument()
   })
+
+  it('adds an outflow event when the outflow radio is selected', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<GoalControls draft={makeDraft()} onChange={onChange} />)
+    await user.click(screen.getByText('+ Add life event'))
+    const labelInput = screen.getByLabelText('Life event label')
+    await user.type(labelInput, 'Car')
+    const radios = screen.getAllByRole('radio')
+    // Second radio is "Outflow"
+    await user.click(radios[1]!)
+    await user.click(screen.getByRole('button', { name: /^Add$/ }))
+    const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1] as [
+      { lifeEvents: { amountCents: number }[] },
+    ]
+    expect(lastCall[0].lifeEvents[0]!.amountCents).toBeLessThan(0)
+  })
 })
