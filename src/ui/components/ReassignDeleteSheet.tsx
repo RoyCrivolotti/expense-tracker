@@ -77,31 +77,33 @@ export function ReassignDeleteSheet({
         <p id="reassign-message" className={styles.message}>
           {message}
         </p>
-        <label className={formStyles.field}>
-          <span className={formStyles.label}>Move to</span>
-          <select value={selection} onChange={(e) => setSelection(e.target.value)}>
-            {options.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-            <option value={CREATE_NEW}>+ Create new {createLabel}</option>
-          </select>
-        </label>
-        {creatingNew ? (
+        <div className={styles.fields}>
           <label className={formStyles.field}>
-            <span className={formStyles.label}>New {createLabel} name</span>
-            <input
-              type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder={`e.g. Corrected ${createLabel} name`}
-              autoComplete="off"
-              autoFocus
-            />
+            <span className={formStyles.label}>Move to</span>
+            <select value={selection} onChange={(e) => setSelection(e.target.value)}>
+              {options.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+              <option value={CREATE_NEW}>+ Create new {createLabel}</option>
+            </select>
           </label>
-        ) : null}
-        {err && <p className={formStyles.error}>{err}</p>}
+          {creatingNew ? (
+            <label className={formStyles.field}>
+              <span className={formStyles.label}>New {createLabel} name</span>
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder={`e.g. Corrected ${createLabel} name`}
+                autoComplete="off"
+                autoFocus
+              />
+            </label>
+          ) : null}
+          {err && <p className={formStyles.error}>{err}</p>}
+        </div>
         <div className={styles.actions}>
           <button type="button" className={styles.cancel} onClick={onCancel} disabled={busy}>
             Cancel
