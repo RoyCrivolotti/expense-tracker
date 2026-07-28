@@ -13,6 +13,8 @@ import type {
   GoalScenario,
   InstallmentPlan,
   Transaction,
+  WealthAccount,
+  WealthCheckin,
 } from '../types'
 import type {
   DeleteAccountOptions,
@@ -25,6 +27,8 @@ import type {
   NewGoalScenario,
   NewInstallmentPlan,
   NewTransaction,
+  NewWealthAccount,
+  NewWealthCheckin,
 } from './dataSource'
 import { req } from './apiClient'
 
@@ -149,5 +153,35 @@ export const apiDataSource: ExpenseDataSource = {
     }),
   deleteInstallmentPlan: async (id: number) => {
     await req(`${BASE}/installment-plans/${id}`, { method: 'DELETE' })
+  },
+  createWealthAccount: (input: NewWealthAccount) =>
+    req<WealthAccount>(`${BASE}/wealth-accounts`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    }),
+  updateWealthAccount: (id: number, patch: Partial<NewWealthAccount>) =>
+    req<WealthAccount>(`${BASE}/wealth-accounts/${id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(patch),
+    }),
+  deleteWealthAccount: async (id: number) => {
+    await req(`${BASE}/wealth-accounts/${id}`, { method: 'DELETE' })
+  },
+  createWealthCheckin: (input: NewWealthCheckin) =>
+    req<WealthCheckin>(`${BASE}/wealth-checkins`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    }),
+  updateWealthCheckin: (id: number, patch: Partial<NewWealthCheckin>) =>
+    req<WealthCheckin>(`${BASE}/wealth-checkins/${id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(patch),
+    }),
+  deleteWealthCheckin: async (id: number) => {
+    await req(`${BASE}/wealth-checkins/${id}`, { method: 'DELETE' })
   },
 }

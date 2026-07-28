@@ -40,6 +40,12 @@ function makeActions(overrides: Partial<ExpenseActions> = {}): ExpenseActions {
     createInstallmentPlan: vi.fn(),
     updateInstallmentPlan: vi.fn().mockResolvedValue(undefined),
     deleteInstallmentPlan: vi.fn().mockResolvedValue(undefined),
+    createWealthAccount: vi.fn(),
+    updateWealthAccount: vi.fn(),
+    deleteWealthAccount: vi.fn(),
+    createWealthCheckin: vi.fn(),
+    updateWealthCheckin: vi.fn(),
+    deleteWealthCheckin: vi.fn(),
     ...overrides,
   }
 }

@@ -9,6 +9,10 @@ import type {
   InstallmentPlan,
   StoredTransaction,
   TxnType,
+  WealthAccount,
+  WealthAccountKind,
+  WealthCheckin,
+  WealthCheckinEntry,
 } from '../domain/types'
 import { DEFAULT_BUDGET_ROLLOVER_DAY } from '../domain/engine/dates'
 import { DEFAULT_CURRENCY_CODE, DEFAULT_NUMBER_LOCALE } from '../domain/engine/money'
@@ -170,6 +174,7 @@ export interface GoalScenarioRow {
   rent_monthly_cents: number
   annual_spend_cents: number
   safe_withdrawal_rate: number
+  plan_start_date: string | null
 }
 
 export function toGoalScenario(r: GoalScenarioRow): GoalScenario {
@@ -193,7 +198,52 @@ export function toGoalScenario(r: GoalScenarioRow): GoalScenario {
     rentMonthlyCents: r.rent_monthly_cents,
     annualSpendCents: r.annual_spend_cents,
     safeWithdrawalRate: r.safe_withdrawal_rate,
+    planStartDate: r.plan_start_date ?? null,
   }
+}
+
+export interface WealthAccountRow {
+  id: number
+  name: string
+  kind: WealthAccountKind
+  sort_order: number
+  archived: number
+}
+
+export function toWealthAccount(r: WealthAccountRow): WealthAccount {
+  return {
+    id: r.id,
+    name: r.name,
+    kind: r.kind,
+    sortOrder: r.sort_order,
+    archived: r.archived === 1,
+  }
+}
+
+export interface WealthCheckinRow {
+  id: number
+  checkin_date: string
+  note: string | null
+  created_at: string
+}
+
+export interface WealthCheckinEntryRow {
+  account_id: number
+  value_cents: number
+}
+
+export function toWealthCheckin(r: WealthCheckinRow, entries: WealthCheckinEntry[]): WealthCheckin {
+  return {
+    id: r.id,
+    checkinDate: r.checkin_date,
+    ...(r.note ? { note: r.note } : {}),
+    createdAt: r.created_at,
+    entries,
+  }
+}
+
+export function toWealthCheckinEntry(r: WealthCheckinEntryRow): WealthCheckinEntry {
+  return { accountId: r.account_id, valueCents: r.value_cents }
 }
 
 export interface InstallmentPlanRow {

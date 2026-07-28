@@ -27,6 +27,8 @@ const dataset: ExpenseDataset = {
   },
   goalScenarios: [],
   installmentPlans: [],
+  wealthAccounts: [],
+  wealthCheckins: [],
 }
 
 describe('resolveDescriptionTemplate', () => {
