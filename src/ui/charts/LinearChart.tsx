@@ -6,6 +6,10 @@ import {
   ChartBandLayer,
   ChartScatterLayer,
   ChartTodayMarker,
+  ChartPurchaseMarkers,
+  ChartLifeEventMarkers,
+  ChartFocusIndicator,
+  type LifeEventMarker,
 } from './linearChartParts'
 import { useChartFocus } from './useChartFocus'
 import { useSvgAnchor } from './useSvgAnchor'
@@ -48,6 +52,8 @@ interface Props {
   tooltip: (index: number) => { title: string; lines: TooltipLine[] }
   refLines?: number[]
   markerYears?: { yearIndex: number }[]
+  /** Life event markers: fractional x-axis indices with labels (e.g. year 3 → yearIndex 3). */
+  lifeEventMarkers?: LifeEventMarker[]
   /** Index of the current year in the x-axis for a "today" vertical marker. */
   todayIndex?: number
   tooltipMode?: 'full' | 'hidden'
@@ -100,6 +106,7 @@ export function LinearChart({
   tooltip,
   refLines = [],
   markerYears = [],
+  lifeEventMarkers = [],
   todayIndex,
   tooltipMode = 'full',
   onActiveIndexChange,
@@ -199,35 +206,25 @@ export function LinearChart({
           />
         )}
         <ChartXLabels labels={xLabels} xForIndex={geo.xForIndex} y={height - 8} />
-        {markerYears.map(({ yearIndex }) => {
-          const x = geo.xForIndex(yearIndex)
-          const yBottom = PAD.top + geo.innerH
-          return (
-            <g key={yearIndex} aria-hidden>
-              <line x1={x} x2={x} y1={PAD.top} y2={yBottom} className={styles.eventMarker} />
-              <line x1={x} x2={x} y1={yBottom} y2={yBottom + 4} className={styles.eventMarkerTick} />
-            </g>
-          )
-        })}
-        {active != null && (
-          <>
-            <line
-              x1={focusX} x2={focusX}
-              y1={PAD.top} y2={PAD.top + geo.innerH}
-              className={styles.crosshair}
-            />
-            {lineSeries.map((s) => (
-              <circle
-                key={s.id}
-                cx={focusX}
-                cy={geo.scaleY(s.values[active] ?? 0)}
-                r={3.5}
-                style={{ fill: s.color, stroke: 'var(--color-bg)' }}
-                strokeWidth={1.5}
-              />
-            ))}
-          </>
-        )}
+        <ChartPurchaseMarkers
+          markerYears={markerYears}
+          xForIndex={geo.xForIndex}
+          yTop={PAD.top}
+          innerH={geo.innerH}
+        />
+        <ChartLifeEventMarkers
+          markers={lifeEventMarkers}
+          xForIndex={geo.xForIndex}
+          yTop={PAD.top}
+        />
+        <ChartFocusIndicator
+          active={active}
+          focusX={focusX}
+          yTop={PAD.top}
+          innerH={geo.innerH}
+          scaleY={geo.scaleY}
+          lineSeries={lineSeries}
+        />
       </svg>
       {tip && tooltipMode === 'full' ? (
         <ChartTooltip anchor={anchor} title={tip.title} lines={tip.lines} />

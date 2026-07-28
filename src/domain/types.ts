@@ -149,6 +149,15 @@ export interface GoalInputs {
  * A saved comparison scenario for the Goals projection view.
  * Money in integer cents; rates as fractions.
  */
+export interface LifeEvent {
+  /** Year offset from projection start (0 = year 0, 1 = year 1, …). */
+  year: number
+  /** Net cash impact on the invested portfolio (positive = inflow, negative = outflow). */
+  amountCents: number
+  /** Short description, e.g. "Inheritance", "Car purchase". */
+  label: string
+}
+
 export interface GoalScenario {
   id: number
   name: string
@@ -176,6 +185,8 @@ export interface GoalScenario {
    * null for legacy scenarios that pre-date the migration.
    */
   planStartDate: string | null
+  /** One-off cash events applied to the invested portfolio in the projection. */
+  lifeEvents: LifeEvent[]
 }
 
 /** Opening balances and other scalar settings used by running-balance views. */

@@ -8,6 +8,7 @@ export function docsCaptureGoalScenarios(): GoalScenario[] {
     id: index + 1,
     color: SCENARIO_COLORS[index % SCENARIO_COLORS.length] ?? '#6366f1',
     planStartDate: null,
+    lifeEvents: [],
     ...row,
   }))
 }

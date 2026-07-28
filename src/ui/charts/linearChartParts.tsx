@@ -1,6 +1,105 @@
 import { areaPath, type ScatterPoint } from './linearScale'
 import styles from './charts.module.css'
 
+export interface LifeEventMarker {
+  yearIndex: number
+  label: string
+  amountCents: number
+}
+
+export function ChartFocusIndicator({
+  active,
+  focusX,
+  yTop,
+  innerH,
+  scaleY,
+  lineSeries,
+}: {
+  active: number | null
+  focusX: number
+  yTop: number
+  innerH: number
+  scaleY: (v: number) => number
+  lineSeries: { id: string; color: string; values: number[] }[]
+}) {
+  if (active == null) return null
+  return (
+    <>
+      <line
+        x1={focusX} x2={focusX}
+        y1={yTop} y2={yTop + innerH}
+        className={styles.crosshair}
+      />
+      {lineSeries.map((s) => (
+        <circle
+          key={s.id}
+          cx={focusX}
+          cy={scaleY(s.values[active] ?? 0)}
+          r={3.5}
+          style={{ fill: s.color, stroke: 'var(--color-bg)' }}
+          strokeWidth={1.5}
+        />
+      ))}
+    </>
+  )
+}
+
+export function ChartPurchaseMarkers({
+  markerYears,
+  xForIndex,
+  yTop,
+  innerH,
+}: {
+  markerYears: { yearIndex: number }[]
+  xForIndex: (i: number) => number
+  yTop: number
+  innerH: number
+}) {
+  return (
+    <>
+      {markerYears.map(({ yearIndex }) => {
+        const x = xForIndex(yearIndex)
+        const yBottom = yTop + innerH
+        return (
+          <g key={yearIndex} aria-hidden>
+            <line x1={x} x2={x} y1={yTop} y2={yBottom} className={styles.eventMarker} />
+            <line x1={x} x2={x} y1={yBottom} y2={yBottom + 4} className={styles.eventMarkerTick} />
+          </g>
+        )
+      })}
+    </>
+  )
+}
+
+export function ChartLifeEventMarkers({
+  markers,
+  xForIndex,
+  yTop,
+}: {
+  markers: LifeEventMarker[]
+  xForIndex: (i: number) => number
+  yTop: number
+}) {
+  return (
+    <>
+      {markers.map(({ yearIndex, label, amountCents }) => {
+        const x = xForIndex(yearIndex)
+        const cy = yTop + 8
+        const inflow = amountCents >= 0
+        return (
+          <g key={`le-${yearIndex}-${label}`} aria-label={label}>
+            <title>{`${label} (year ${yearIndex})`}</title>
+            <polygon
+              points={`${x},${cy - 6} ${x + 5},${cy} ${x},${cy + 6} ${x - 5},${cy}`}
+              className={inflow ? styles.lifeEventInflow : styles.lifeEventOutflow}
+            />
+          </g>
+        )
+      })}
+    </>
+  )
+}
+
 /** Horizontal grid lines + Y tick labels, with the zero line drawn solid. */
 export function ChartGrid({
   ticks,

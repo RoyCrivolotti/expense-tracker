@@ -215,6 +215,7 @@ export const docsCaptureDataSource: ExpenseDataSource = {
       annualSpendCents: 0,
       safeWithdrawalRate: 0.04,
       planStartDate: null,
+      lifeEvents: [],
       ...patch,
     }
     return Promise.resolve(scenario)

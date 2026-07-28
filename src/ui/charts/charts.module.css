@@ -174,6 +174,22 @@
   pointer-events: none;
 }
 
+.lifeEventInflow {
+  fill: var(--exp-success);
+  stroke: var(--color-bg);
+  stroke-width: 1.5;
+  opacity: 0.9;
+  cursor: default;
+}
+
+.lifeEventOutflow {
+  fill: var(--exp-danger);
+  stroke: var(--color-bg);
+  stroke-width: 1.5;
+  opacity: 0.9;
+  cursor: default;
+}
+
 .dotIncome {
   fill: var(--exp-success);
   stroke: var(--color-bg);
