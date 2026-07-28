@@ -27,10 +27,16 @@ import styles from './goals.module.css'
 import progressStyles from './progress.module.css'
 
 type TabView = 'plan' | 'progress'
+type DisplayMode = 'real' | 'nominal'
 
 const VIEW_OPTIONS: { value: TabView; label: string }[] = [
   { value: 'plan', label: 'Plan' },
   { value: 'progress', label: 'Progress' },
+]
+
+const DISPLAY_MODE_OPTIONS: { value: DisplayMode; label: string }[] = [
+  { value: 'real', label: 'Real' },
+  { value: 'nominal', label: 'Nominal' },
 ]
 
 interface GoalsTabProps {
@@ -79,6 +85,7 @@ function bootstrapEditor(
 export function GoalsTab({ model, actions }: GoalsTabProps) {
   const { dataset } = model
   const [view, setView] = useState<TabView>('plan')
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('real')
   const monthly = useMemo<MonthlySaving[]>(() => {
     const entries = [...computeMonthlyTotals(dataset.transactions).entries()].sort(([a], [b]) =>
       a.localeCompare(b),
@@ -263,8 +270,22 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
               activeId={activeId}
               dirty={dirty}
               variant="hero"
-              footer={<GoalsNarrative draft={deferredDraft} compact />}
+              footer={
+                <>
+                  <GoalsNarrative draft={deferredDraft} compact />
+                  <div className={progressStyles.displayModeRow}>
+                    <SegmentedControl
+                      options={DISPLAY_MODE_OPTIONS}
+                      value={displayMode}
+                      onChange={setDisplayMode}
+                      ariaLabel="Value display mode"
+                      layout="compact"
+                    />
+                  </div>
+                </>
+              }
               extraSeries={checkinExtraSeries ? [checkinExtraSeries] : []}
+              nominalMode={displayMode === 'nominal'}
               {...(heroTodayIndex !== undefined ? { todayIndex: heroTodayIndex } : {})}
             />
           </div>
