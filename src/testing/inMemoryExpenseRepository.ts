@@ -573,7 +573,7 @@ export function inMemoryExpenseRepository(
     createWealthAccount: (owner, input) => {
       const store = storeFor(owner)
       const name = input.name?.trim()
-      if (!name) throw new RepoHttpError(400, 'Account name is required')
+      if (!name) return Promise.reject(new RepoHttpError(400, 'Account name is required'))
       const account: WealthAccount = {
         id: nextId(store.wealthAccounts),
         name,
@@ -588,8 +588,9 @@ export function inMemoryExpenseRepository(
     updateWealthAccount: (owner, id, patch) => {
       const store = storeFor(owner)
       const index = store.wealthAccounts.findIndex((a) => a.id === id)
-      if (index < 0) throw new RepoHttpError(404, 'Wealth account not found')
-      if (Object.keys(patch).length === 0) throw new RepoHttpError(400, 'Empty patch')
+      if (index < 0) return Promise.reject(new RepoHttpError(404, 'Wealth account not found'))
+      if (Object.keys(patch).length === 0)
+        return Promise.reject(new RepoHttpError(400, 'Empty patch'))
       const updated = { ...store.wealthAccounts[index]!, ...patch, id }
       store.wealthAccounts[index] = updated
       return Promise.resolve({ ...updated })
@@ -602,12 +603,12 @@ export function inMemoryExpenseRepository(
       )
       if (hasEntries) {
         const index = store.wealthAccounts.findIndex((a) => a.id === id)
-        if (index < 0) throw new RepoHttpError(404, 'Wealth account not found')
+        if (index < 0) return Promise.reject(new RepoHttpError(404, 'Wealth account not found'))
         store.wealthAccounts[index] = { ...store.wealthAccounts[index]!, archived: true }
         return Promise.resolve()
       }
       const index = store.wealthAccounts.findIndex((a) => a.id === id)
-      if (index < 0) throw new RepoHttpError(404, 'Wealth account not found')
+      if (index < 0) return Promise.reject(new RepoHttpError(404, 'Wealth account not found'))
       store.wealthAccounts.splice(index, 1)
       return Promise.resolve()
     },
@@ -615,7 +616,7 @@ export function inMemoryExpenseRepository(
     createWealthCheckin: (owner, input) => {
       const store = storeFor(owner)
       if (!input.checkinDate?.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        throw new RepoHttpError(400, 'checkinDate must be YYYY-MM-DD')
+        return Promise.reject(new RepoHttpError(400, 'checkinDate must be YYYY-MM-DD'))
       }
       const checkin: WealthCheckin = {
         id: nextId(store.wealthCheckins),
@@ -631,8 +632,9 @@ export function inMemoryExpenseRepository(
     updateWealthCheckin: (owner, id, patch) => {
       const store = storeFor(owner)
       const index = store.wealthCheckins.findIndex((c) => c.id === id)
-      if (index < 0) throw new RepoHttpError(404, 'Wealth check-in not found')
-      if (Object.keys(patch).length === 0) throw new RepoHttpError(400, 'Empty patch')
+      if (index < 0) return Promise.reject(new RepoHttpError(404, 'Wealth check-in not found'))
+      if (Object.keys(patch).length === 0)
+        return Promise.reject(new RepoHttpError(400, 'Empty patch'))
       const existing = store.wealthCheckins[index]!
       const updated: WealthCheckin = {
         ...existing,
@@ -648,7 +650,7 @@ export function inMemoryExpenseRepository(
     deleteWealthCheckin: (owner, id) => {
       const store = storeFor(owner)
       const index = store.wealthCheckins.findIndex((c) => c.id === id)
-      if (index < 0) throw new RepoHttpError(404, 'Wealth check-in not found')
+      if (index < 0) return Promise.reject(new RepoHttpError(404, 'Wealth check-in not found'))
       store.wealthCheckins.splice(index, 1)
       return Promise.resolve()
     },
