@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { collectDomain, linePath, makeScale, niceScale, stackAreas } from './linearScale'
+import { collectDomain, linePath, makeScale, niceScale, sparseLabels, stackAreas } from './linearScale'
 
 describe('makeScale', () => {
   it('maps domain endpoints to range endpoints', () => {
@@ -51,5 +51,16 @@ describe('stackAreas', () => {
 describe('linePath', () => {
   it('builds an SVG path starting with a move command', () => {
     expect(linePath([{ x: 0, y: 0 }, { x: 10, y: 5 }])).toBe('M0.0,0.0 L10.0,5.0')
+  })
+})
+
+describe('sparseLabels', () => {
+  it('keeps every step-th label and the last', () => {
+    const labels = sparseLabels([2020, 2021, 2022, 2023, 2024], 2)
+    expect(labels[0]).toBe('2020')
+    expect(labels[1]).toBe('')
+    expect(labels[2]).toBe('2022')
+    expect(labels[3]).toBe('')
+    expect(labels[4]).toBe('2024')
   })
 })
