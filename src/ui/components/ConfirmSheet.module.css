@@ -51,6 +51,15 @@
   line-height: 1.4;
 }
 
+/* Wraps the reassign-target select/input (and any error) in ReassignDeleteSheet,
+   so they don't sit flush against the action buttons below. */
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+
 .actions {
   display: flex;
   gap: 0.6rem;
