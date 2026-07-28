@@ -21,6 +21,8 @@ describe('purgeOwnerExpenseData', () => {
       'DELETE FROM goal_inputs WHERE owner = ?',
       'DELETE FROM goal_scenarios WHERE owner = ?',
       'DELETE FROM installment_plans WHERE owner = ?',
+      'DELETE FROM wealth_checkins WHERE owner = ?',
+      'DELETE FROM wealth_accounts WHERE owner = ?',
       'DELETE FROM access_requests WHERE email = ?',
     ])
   })

@@ -14,6 +14,8 @@ import type {
   InstallmentPlan,
   StoredTransaction,
   Transaction,
+  WealthAccount,
+  WealthCheckin,
 } from '../types'
 import type {
   ExpenseDataSource,
@@ -22,6 +24,8 @@ import type {
   NewGoalScenario,
   NewInstallmentPlan,
   NewTransaction,
+  NewWealthAccount,
+  NewWealthCheckin,
 } from './dataSource'
 import { deriveTransactions } from '../domain/engine/status'
 import { csvDataSource } from './csvDataSource'
@@ -210,6 +214,7 @@ export const docsCaptureDataSource: ExpenseDataSource = {
       rentMonthlyCents: 0,
       annualSpendCents: 0,
       safeWithdrawalRate: 0.04,
+      planStartDate: null,
       ...patch,
     }
     return Promise.resolve(scenario)
@@ -243,6 +248,47 @@ export const docsCaptureDataSource: ExpenseDataSource = {
     return Promise.resolve(plan)
   },
   deleteInstallmentPlan() {
+    return Promise.resolve()
+  },
+  createWealthAccount(input: NewWealthAccount) {
+    nextId += 1
+    const account: WealthAccount = { ...input, id: nextId }
+    return Promise.resolve(account)
+  },
+  updateWealthAccount(id: number, patch: Partial<NewWealthAccount>) {
+    const account: WealthAccount = {
+      id,
+      name: patch.name ?? 'Account',
+      kind: patch.kind ?? 'investment',
+      sortOrder: patch.sortOrder ?? 0,
+      archived: patch.archived ?? false,
+    }
+    return Promise.resolve(account)
+  },
+  deleteWealthAccount() {
+    return Promise.resolve()
+  },
+  createWealthCheckin(input: NewWealthCheckin) {
+    nextId += 1
+    const checkin: WealthCheckin = {
+      id: nextId,
+      checkinDate: input.checkinDate,
+      ...(input.note ? { note: input.note } : {}),
+      createdAt: new Date().toISOString(),
+      entries: input.entries.map((e) => ({ ...e })),
+    }
+    return Promise.resolve(checkin)
+  },
+  updateWealthCheckin(id: number, patch: Partial<NewWealthCheckin>) {
+    const checkin: WealthCheckin = {
+      id,
+      checkinDate: patch.checkinDate ?? new Date().toISOString().slice(0, 10),
+      createdAt: new Date().toISOString(),
+      entries: (patch.entries ?? []).map((e) => ({ ...e })),
+    }
+    return Promise.resolve(checkin)
+  },
+  deleteWealthCheckin() {
     return Promise.resolve()
   },
 }

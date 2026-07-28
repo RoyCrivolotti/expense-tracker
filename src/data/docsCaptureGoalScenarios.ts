@@ -7,6 +7,7 @@ export function docsCaptureGoalScenarios(): GoalScenario[] {
   return seed.scenarios.map((row, index) => ({
     id: index + 1,
     color: SCENARIO_COLORS[index % SCENARIO_COLORS.length] ?? '#6366f1',
+    planStartDate: null,
     ...row,
   }))
 }

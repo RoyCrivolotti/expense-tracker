@@ -31,6 +31,8 @@ function modelWith(overrides: Partial<ExpenseModel['dataset']> = {}): ExpenseMod
       },
       goalScenarios: [],
       installmentPlans: [],
+      wealthAccounts: [],
+      wealthCheckins: [],
       settings: defaultExpenseSettings(),
       ...overrides,
     },

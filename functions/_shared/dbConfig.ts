@@ -445,6 +445,7 @@ const SCENARIO_COLUMNS: ColumnMap<NewGoalScenario> = {
   rentMonthlyCents: 'rent_monthly_cents',
   annualSpendCents: 'annual_spend_cents',
   safeWithdrawalRate: 'safe_withdrawal_rate',
+  planStartDate: 'plan_start_date',
 }
 
 const coerceScenario: Coerce<NewGoalScenario> = (_k, v) => v ?? null

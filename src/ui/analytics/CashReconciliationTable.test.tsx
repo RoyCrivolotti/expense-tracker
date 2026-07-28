@@ -45,6 +45,8 @@ function modelWith(transactions: Transaction[], cashActuals: ExpenseDataset['cas
       },
       goalScenarios: [],
       installmentPlans: [],
+      wealthAccounts: [],
+      wealthCheckins: [],
       settings,
     },
     lookup: {

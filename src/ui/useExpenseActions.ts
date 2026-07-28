@@ -23,6 +23,12 @@ import {
   patchAfterTransactionCreate,
   patchAfterTransactionDelete,
   patchAfterTransactionUpdate,
+  patchAfterWealthAccountCreate,
+  patchAfterWealthAccountDelete,
+  patchAfterWealthAccountUpdate,
+  patchAfterWealthCheckinCreate,
+  patchAfterWealthCheckinDelete,
+  patchAfterWealthCheckinUpdate,
 } from './datasetPatches'
 
 type OpenModal = (state: Exclude<ExpenseModalState, null>) => void
@@ -129,6 +135,34 @@ export function useExpenseActions(
       deleteInstallmentPlan: async (id) => {
         await source.deleteInstallmentPlan!(id)
         applyPatch((d) => patchAfterInstallmentPlanDelete(d, id))
+      },
+      createWealthAccount: async (input) => {
+        const account = await source.createWealthAccount!(input)
+        applyPatch((d) => patchAfterWealthAccountCreate(d, account))
+        return account
+      },
+      updateWealthAccount: async (id, patch) => {
+        const account = await source.updateWealthAccount!(id, patch)
+        applyPatch((d) => patchAfterWealthAccountUpdate(d, account))
+      },
+      deleteWealthAccount: async (id) => {
+        await source.deleteWealthAccount!(id)
+        // The server may soft-delete (archive) if the account has check-in history.
+        // Re-fetch is cheapest; optimistic assumes archived=true (conservative).
+        applyPatch((d) => patchAfterWealthAccountDelete(d, id, true))
+      },
+      createWealthCheckin: async (input) => {
+        const checkin = await source.createWealthCheckin!(input)
+        applyPatch((d) => patchAfterWealthCheckinCreate(d, checkin))
+        return checkin
+      },
+      updateWealthCheckin: async (id, patch) => {
+        const checkin = await source.updateWealthCheckin!(id, patch)
+        applyPatch((d) => patchAfterWealthCheckinUpdate(d, checkin))
+      },
+      deleteWealthCheckin: async (id) => {
+        await source.deleteWealthCheckin!(id)
+        applyPatch((d) => patchAfterWealthCheckinDelete(d, id))
       },
     }
   }, [source, applyPatch, openModal, readOnly])

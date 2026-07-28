@@ -3,6 +3,7 @@ export async function purgeOwnerExpenseData(db: D1Database, ownerEmail: string):
   const owner = ownerEmail.trim().toLowerCase()
   if (!owner) return
 
+  // wealth_checkin_entries is deleted via ON DELETE CASCADE from wealth_checkins.
   await db.batch([
     db.prepare('DELETE FROM transactions WHERE owner = ?').bind(owner),
     db.prepare('DELETE FROM account_statements WHERE owner = ?').bind(owner),
@@ -13,6 +14,8 @@ export async function purgeOwnerExpenseData(db: D1Database, ownerEmail: string):
     db.prepare('DELETE FROM goal_inputs WHERE owner = ?').bind(owner),
     db.prepare('DELETE FROM goal_scenarios WHERE owner = ?').bind(owner),
     db.prepare('DELETE FROM installment_plans WHERE owner = ?').bind(owner),
+    db.prepare('DELETE FROM wealth_checkins WHERE owner = ?').bind(owner),
+    db.prepare('DELETE FROM wealth_accounts WHERE owner = ?').bind(owner),
     db.prepare('DELETE FROM access_requests WHERE email = ?').bind(owner),
   ])
 }

@@ -29,6 +29,14 @@ import {
   deleteInstallmentPlan,
   updateInstallmentPlan,
 } from '../dbInstallments'
+import {
+  createWealthAccount,
+  createWealthCheckin,
+  deleteWealthAccount,
+  deleteWealthCheckin,
+  updateWealthAccount,
+  updateWealthCheckin,
+} from '../dbWealth'
 
 /** Cloudflare D1 adapter for {@link ExpenseRepository}. */
 export function createD1ExpenseRepository(env: Env): ExpenseRepository {
@@ -58,5 +66,11 @@ export function createD1ExpenseRepository(env: Env): ExpenseRepository {
     createInstallmentPlan: (owner, input) => createInstallmentPlan(env, owner, input),
     updateInstallmentPlan: (owner, id, patch) => updateInstallmentPlan(env, owner, id, patch),
     deleteInstallmentPlan: (owner, id) => deleteInstallmentPlan(env, owner, id),
+    createWealthAccount: (owner, input) => createWealthAccount(env, owner, input),
+    updateWealthAccount: (owner, id, patch) => updateWealthAccount(env, owner, id, patch),
+    deleteWealthAccount: (owner, id) => deleteWealthAccount(env, owner, id),
+    createWealthCheckin: (owner, input) => createWealthCheckin(env, owner, input),
+    updateWealthCheckin: (owner, id, patch) => updateWealthCheckin(env, owner, id, patch),
+    deleteWealthCheckin: (owner, id) => deleteWealthCheckin(env, owner, id),
   }
 }

@@ -21,6 +21,8 @@ const emptyDataset: ExpenseDataset = {
   },
   goalScenarios: [],
   installmentPlans: [],
+  wealthAccounts: [],
+  wealthCheckins: [],
   settings: defaultExpenseSettings(),
 }
 

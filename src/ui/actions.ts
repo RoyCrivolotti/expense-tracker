@@ -5,6 +5,8 @@ import type {
   InstallmentPlan,
   Transaction,
   TxnType,
+  WealthAccount,
+  WealthCheckin,
 } from '../types'
 import type {
   DeleteAccountOptions,
@@ -16,6 +18,8 @@ import type {
   NewGoalScenario,
   NewInstallmentPlan,
   NewTransaction,
+  NewWealthAccount,
+  NewWealthCheckin,
 } from '../data/dataSource'
 
 export type { InstallmentIntent } from './components/installmentIntent'
@@ -71,6 +75,12 @@ export interface ExpenseActions {
   createInstallmentPlan: (input: NewInstallmentPlan) => Promise<InstallmentPlan>
   updateInstallmentPlan: (id: number, patch: Partial<NewInstallmentPlan>) => Promise<void>
   deleteInstallmentPlan: (id: number) => Promise<void>
+  createWealthAccount: (input: NewWealthAccount) => Promise<WealthAccount>
+  updateWealthAccount: (id: number, patch: Partial<NewWealthAccount>) => Promise<void>
+  deleteWealthAccount: (id: number) => Promise<void>
+  createWealthCheckin: (input: NewWealthCheckin) => Promise<WealthCheckin>
+  updateWealthCheckin: (id: number, patch: Partial<NewWealthCheckin>) => Promise<void>
+  deleteWealthCheckin: (id: number) => Promise<void>
 }
 
 export type ExpenseModalState =

@@ -43,5 +43,6 @@ export function draftFromDataset(
         ? Math.round(goalInputs.longTermTargetCents * DEFAULT_SWR)
         : DEFAULT_ANNUAL_SPEND_CENTS,
     safeWithdrawalRate: DEFAULT_SWR,
+    planStartDate: new Date().toISOString().slice(0, 10),
   }
 }

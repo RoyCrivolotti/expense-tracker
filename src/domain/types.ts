@@ -105,6 +105,35 @@ export interface InstallmentPlan {
   active: boolean
 }
 
+export type WealthAccountKind = 'investment' | 'cash' | 'other_asset' | 'debt'
+
+/** A named wealth component tracked by market value (e.g. "Broker", "Wise savings"). */
+export interface WealthAccount {
+  id: number
+  name: string
+  kind: WealthAccountKind
+  sortOrder: number
+  archived: boolean
+}
+
+/** A per-account market-value entry within a check-in. */
+export interface WealthCheckinEntry {
+  accountId: number
+  valueCents: number
+}
+
+/**
+ * A point-in-time snapshot of wealth across named accounts.
+ * `entries` is always present and ordered by account sort_order.
+ */
+export interface WealthCheckin {
+  id: number
+  checkinDate: string
+  note?: string
+  createdAt: string
+  entries: WealthCheckinEntry[]
+}
+
 /** Goal inputs, all in plain units (euros, percent as fraction, years). */
 export interface GoalInputs {
   housePriceCents: number
@@ -141,6 +170,12 @@ export interface GoalScenario {
   rentMonthlyCents: number
   annualSpendCents: number
   safeWithdrawalRate: number
+  /**
+   * ISO date (YYYY-MM-DD) when this scenario's projection starts.
+   * Used to compute plan-vs-actual deltas at any calendar date.
+   * null for legacy scenarios that pre-date the migration.
+   */
+  planStartDate: string | null
 }
 
 /** Opening balances and other scalar settings used by running-balance views. */
@@ -183,4 +218,6 @@ export interface ExpenseDataset {
   goalInputs: GoalInputs
   goalScenarios: GoalScenario[]
   settings: ExpenseSettings
+  wealthAccounts: WealthAccount[]
+  wealthCheckins: WealthCheckin[]
 }

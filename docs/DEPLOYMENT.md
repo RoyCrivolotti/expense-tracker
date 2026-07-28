@@ -95,6 +95,8 @@ Apply through `0011_user_preferences.sql` on production. Personal goal scenarios
 
 `0011_user_preferences.sql` adds three nullable `settings` columns — `currency_code`, `number_locale`, `budget_rollover_day` — so the tracker is not tied to one owner's euros-and-13th conventions. `NULL` falls back to the built-in defaults (EUR, `de-DE` grouping, rollover day 1 = plain calendar months). The migration's final `UPDATE` keeps the primary owner on the historical day-13 rollover: replace the placeholder `owner@example.com` with the real Access email before applying to production. Users change all three later under Settings → Money & months (also set during onboarding).
 
+`0012_wealth_checkins.sql` adds three new tables (`wealth_accounts`, `wealth_checkins`, `wealth_checkin_entries`) and a `plan_start_date` column on `goal_scenarios`. The new tables start empty (accounts are created through the Goals UI). The `plan_start_date` backfill is owner-agnostic — no placeholder substitution needed.
+
 ## Old URL
 
 `https://roy-admin.crivolotti.com/expenses` redirects here (301 in admin-hub `_redirects`).

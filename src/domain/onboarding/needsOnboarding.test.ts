@@ -20,6 +20,8 @@ const empty: ExpenseDataset = {
   },
   goalScenarios: [],
   installmentPlans: [],
+  wealthAccounts: [],
+  wealthCheckins: [],
   settings: defaultExpenseSettings(),
 }
 

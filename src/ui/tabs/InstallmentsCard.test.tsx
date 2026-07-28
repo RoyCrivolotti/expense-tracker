@@ -37,6 +37,8 @@ function datasetWithPlans(plans: InstallmentPlan[]): ExpenseDataset {
     },
     goalScenarios: [],
     installmentPlans: plans,
+    wealthAccounts: [],
+    wealthCheckins: [],
     settings: defaultExpenseSettings(),
   }
 }
@@ -82,6 +84,12 @@ function noopActions(): ExpenseActions {
     createInstallmentPlan: vi.fn(),
     updateInstallmentPlan: vi.fn(),
     deleteInstallmentPlan: vi.fn(),
+    createWealthAccount: vi.fn(),
+    updateWealthAccount: vi.fn(),
+    deleteWealthAccount: vi.fn(),
+    createWealthCheckin: vi.fn(),
+    updateWealthCheckin: vi.fn(),
+    deleteWealthCheckin: vi.fn(),
   }
 }
 
