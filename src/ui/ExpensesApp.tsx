@@ -31,6 +31,7 @@ const GoalsTab = lazy(() => import('./tabs/goals/GoalsTab'))
 
 // Tabs without a month picker / FAB-heavy footer: trim the large bottom dead zone.
 const COMPACT_FOOTER_TABS: ReadonlySet<TabId> = new Set(['goals', 'analytics', 'settings'])
+const NO_PICKER_TABS: ReadonlySet<TabId> = new Set(['settings', 'goals'])
 
 function TabView({
   tab,
@@ -235,8 +236,7 @@ function ExpensesAppReady({
   const actions = useExpenseActions(source, applyPatch, setModal, readOnly)
 
   const activeMonth = month ?? model.months[model.months.length - 1] ?? ''
-  const showPicker =
-    tab !== 'settings' && tab !== 'goals' && model.months.length > 0
+  const showPicker = !NO_PICKER_TABS.has(tab) && model.months.length > 0
   const settingsBadge = ownerAccess?.pendingCount ?? 0
 
   return (
@@ -269,7 +269,7 @@ function ExpensesAppReady({
         banner={
           <ExpensesOfflineBanner readOnly={readOnly} online={online} {...(snapshotAt ? { snapshotAt } : {})} />
         }
-        {...(actions ? { onAdd: actions.onAdd } : {})}
+        {...(actions && tab !== 'goals' ? { onAdd: actions.onAdd } : {})}
         headerRight={
           <AppHeaderActions
             months={model.months}
