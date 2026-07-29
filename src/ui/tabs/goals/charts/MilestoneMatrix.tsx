@@ -57,24 +57,50 @@ function buildRows(
   }))
 }
 
+function MilestoneHead({
+  milestone,
+  reachedOn,
+}: {
+  milestone: Milestone
+  reachedOn: string | undefined
+}) {
+  const format = useMoneyFormat()
+  const name = milestoneLabel(milestone, (c) => formatMoneyShort(c, format))
+  if (reachedOn === undefined) {
+    return <th className={styles.milestoneHead}>{name}</th>
+  }
+  return (
+    <th className={`${styles.milestoneHead} ${styles.milestoneHeadReached}`}>
+      <span aria-hidden="true">✓ </span>
+      {name}
+      {/* "by", not "on": the crossing happened somewhere between two check-ins. */}
+      <span className={styles.milestoneReachedOn}>reached by {reachedOn}</span>
+    </th>
+  )
+}
+
 function MilestoneMatrixImpl({
   scenarios,
   draft,
   milestones,
+  reached,
   embedded = false,
 }: {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
   milestones: Milestone[]
+  /** amountCents -> date first observed at or above, from check-in history. */
+  reached: Map<number, string>
   embedded?: boolean
 }) {
-  const format = useMoneyFormat()
   const rows = useMemo(() => buildRows(scenarios, draft, milestones), [scenarios, draft, milestones])
 
   return (
     <ChartShell embedded={embedded}>
       <h3 className={styles.chartTitle}>Years to milestone</h3>
-      <p className={styles.chartHint}>Invested portfolio only — same matrix as finance-review chart 20.</p>
+      <p className={styles.chartHint}>
+        Invested portfolio only. Edit the list under Settings → Milestones.
+      </p>
       {milestones.length === 0 ? (
         <p className={styles.chartHint}>No milestones set.</p>
       ) : (
@@ -84,9 +110,11 @@ function MilestoneMatrixImpl({
             <tr>
               <th className={styles.milestoneScenarioHead}>Scenario</th>
               {milestones.map((m) => (
-                <th key={m.amountCents} className={styles.milestoneHead}>
-                  {milestoneLabel(m, (c) => formatMoneyShort(c, format))}
-                </th>
+                <MilestoneHead
+                  key={m.amountCents}
+                  milestone={m}
+                  reachedOn={reached.get(m.amountCents)}
+                />
               ))}
             </tr>
           </thead>
