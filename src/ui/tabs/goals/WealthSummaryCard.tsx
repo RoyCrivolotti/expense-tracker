@@ -94,22 +94,24 @@ export function WealthSummaryCard({ checkins, accounts, activeScenario }: Props)
   return (
     <Card>
       <h3 className={goalStyles.sectionTitle}>Progress snapshot</h3>
-      <StatusRow status={status} format={format} />
-      <div className={styles.summaryRow}>
-        <span>Net worth</span>
-        <span className={styles.summaryValue}>{formatMoneyShort(netWorth, format)}</span>
-        <span>Investments</span>
-        <span className={styles.summaryValue}>{formatMoneyShort(invested, format)}</span>
-        {status ? (
-          <>
-            <span>Plan projection</span>
-            <span className={styles.summaryValue}>
-              {formatMoneyShort(status.projectedInvestedCents, format)}
-            </span>
-          </>
-        ) : null}
+      <div className={styles.summaryCardContent}>
+        <StatusRow status={status} format={format} />
+        <div className={styles.summaryRow}>
+          <span>Net worth</span>
+          <span className={styles.summaryValue}>{formatMoneyShort(netWorth, format)}</span>
+          <span>Investments</span>
+          <span className={styles.summaryValue}>{formatMoneyShort(invested, format)}</span>
+          {status ? (
+            <>
+              <span>Plan projection</span>
+              <span className={styles.summaryValue}>
+                {formatMoneyShort(status.projectedInvestedCents, format)}
+              </span>
+            </>
+          ) : null}
+        </div>
+        {status && status.deltaMonths !== 0 ? <MonthsHint status={status} /> : null}
       </div>
-      {status && status.deltaMonths !== 0 ? <MonthsHint status={status} /> : null}
     </Card>
   )
 }

@@ -1,8 +1,9 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import type { GoalScenario, WealthAccount, WealthCheckin } from '../../../../types'
 import { Card } from '../../../components/primitives'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import type { ScatterPoint } from '../../../charts/linearScale'
+import { ChartLegend } from '../../../charts/ChartLegend'
 import {
   projectNetWorth,
   scenarioToParams,
@@ -12,6 +13,7 @@ import {
 import { sparseLabels } from '../../../charts/linearScale'
 import { formatMoneyShort } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
+import { buildCheckinTooltip } from './checkinChartUtils'
 import goalStyles from '../goals.module.css'
 
 interface Props {
@@ -20,17 +22,19 @@ interface Props {
   activeScenario: GoalScenario | null
 }
 
+const ACTUAL_COLOR = '#10b981'
+
 export function CheckinHistoryChart({ checkins, accounts, activeScenario }: Props) {
   const format = useMoneyFormat()
 
-  const { series, labels, todayIndex } = useMemo(() => {
+  const { series, labels, todayIndex, years, scatterPoints } = useMemo(() => {
     if (!activeScenario?.planStartDate) {
-      return { series: [], labels: [], todayIndex: undefined }
+      return { series: [], labels: [], todayIndex: undefined, years: [] as number[], scatterPoints: [] as ScatterPoint[] }
     }
 
     const params = scenarioToParams(activeScenario)
     const points = projectNetWorth(params)
-    const years = points.map((p) => p.year)
+    const yrs = points.map((p) => p.year)
 
     const projSeries: ChartSeries = {
       id: 'plan',
@@ -39,7 +43,7 @@ export function CheckinHistoryChart({ checkins, accounts, activeScenario }: Prop
       dashed: false,
     }
 
-    const scatterPoints: ScatterPoint[] = checkins
+    const scatter: ScatterPoint[] = checkins
       .map((c) => {
         const offset = yearOffsetFromDate(activeScenario.planStartDate!, c.checkinDate)
         if (offset === null) return null
@@ -50,10 +54,10 @@ export function CheckinHistoryChart({ checkins, accounts, activeScenario }: Prop
 
     const actualSeries: ChartSeries = {
       id: 'actuals',
-      color: '#10b981',
+      color: ACTUAL_COLOR,
       values: [],
       kind: 'scatter',
-      points: scatterPoints,
+      points: scatter,
     }
 
     const todayOffset = yearOffsetFromDate(
@@ -63,14 +67,26 @@ export function CheckinHistoryChart({ checkins, accounts, activeScenario }: Prop
 
     return {
       series: [projSeries, actualSeries],
-      labels: sparseLabels(years, 6).map((l) => (l === null ? '' : String(l))),
+      labels: sparseLabels(yrs, 6).map((l) => (l === null ? '' : String(l))),
       todayIndex: todayOffset ?? undefined,
+      years: yrs,
+      scatterPoints: scatter,
     }
   }, [activeScenario, checkins, accounts])
+
+  const tooltip = useCallback(
+    (i: number) => buildCheckinTooltip(i, years, series[0]?.values ?? [], scatterPoints, format),
+    [years, series, scatterPoints, format],
+  )
 
   if (!activeScenario?.planStartDate) {
     return null
   }
+
+  const legendItems = [
+    { label: 'Plan', color: activeScenario.color },
+    { label: 'Actual', color: ACTUAL_COLOR },
+  ]
 
   return (
     <Card>
@@ -84,9 +100,9 @@ export function CheckinHistoryChart({ checkins, accounts, activeScenario }: Prop
         {...(todayIndex !== undefined ? { todayIndex } : {})}
         formatValue={(c) => formatMoneyShort(c, format)}
         ariaLabel="Actual wealth vs plan projection"
-        tooltip={() => ({ title: '', lines: [] })}
-        tooltipMode="hidden"
+        tooltip={tooltip}
       />
+      <ChartLegend items={legendItems} />
     </Card>
   )
 }
