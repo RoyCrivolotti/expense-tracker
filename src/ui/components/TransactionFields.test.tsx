@@ -130,6 +130,16 @@ describe('Fields category/account pickers', () => {
     expect(accountSelect.value).toBe('99')
   })
 
+  it('shows an inactive-category warning when the selected category is not active', () => {
+    renderFields(baseForm({ categoryId: 2 }), modelWith())
+    expect(screen.getByText('This category is inactive')).toBeTruthy()
+  })
+
+  it('does not show an inactive-category warning when the selected category is active', () => {
+    renderFields(baseForm({ categoryId: 1 }), modelWith())
+    expect(screen.queryByText('This category is inactive')).toBeNull()
+  })
+
   it('does not offer an inactive category/account that is not the currently selected one, even while editing', () => {
     const editing: Transaction = {
       id: 5,
