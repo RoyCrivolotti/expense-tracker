@@ -88,23 +88,23 @@ describe('GoalsTab', () => {
     expect(container.querySelector('[data-mobile-view="chart"]')).toBeNull()
   })
 
-  it('shows the inflation stepper only when Nominal display mode is active', async () => {
+  it('shows the inflation stepper only when Purchasing power mode is active', async () => {
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} />)
 
     expect(screen.queryByLabelText('Inflation rate percentage')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('radio', { name: 'Nominal' }))
+    await user.click(screen.getByRole('radio', { name: 'Purchasing power' }))
 
     expect(screen.getByText('Inflation assumed')).toBeInTheDocument()
     expect(screen.getByLabelText('Inflation rate percentage')).toBeInTheDocument()
   })
 
-  it('adjusts the inflation rate via the stepper in Nominal mode', async () => {
+  it('adjusts the inflation rate via the stepper in Purchasing power mode', async () => {
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} />)
 
-    await user.click(screen.getByRole('radio', { name: 'Nominal' }))
+    await user.click(screen.getByRole('radio', { name: 'Purchasing power' }))
     const input = screen.getByLabelText('Inflation rate percentage')
     expect(input).toHaveValue('2,0')
 

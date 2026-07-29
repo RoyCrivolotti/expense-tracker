@@ -22,14 +22,16 @@ export function buildCheckinTooltip(
   planValues: number[],
   scatterPoints: ScatterPoint[],
   format: MoneyFormat,
+  planColor?: string,
+  actualColor?: string,
 ): { title: string; lines: TooltipLine[] } {
   const year = years[i] ?? i
   const lines: TooltipLine[] = [
-    { label: 'Plan', value: formatMoneyShort(planValues[i] ?? 0, format) },
+    { label: 'Plan', value: formatMoneyShort(planValues[i] ?? 0, format), color: planColor },
   ]
   const actual = nearestScatterValue(scatterPoints, i)
   if (actual !== null) {
-    lines.push({ label: 'Actual', value: formatMoneyShort(actual, format) })
+    lines.push({ label: 'Actual', value: formatMoneyShort(actual, format), color: actualColor })
   }
   return { title: `Year ${year}`, lines }
 }
