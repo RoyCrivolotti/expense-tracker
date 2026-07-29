@@ -1065,9 +1065,9 @@
   }
 }
 
-/* Bottom sheet dialog */
+/* Bottom sheet dialog — do NOT set display on the base rule; the browser's
+   dialog:not([open]) { display: none } must stay in effect until opened. */
 .mobileSheet {
-  /* Reset browser dialog defaults */
   border: none;
   padding: 0;
   background: transparent;
@@ -1075,11 +1075,8 @@
   max-height: 100dvh;
   width: 100%;
   margin: 0;
-
-  /* Align to bottom */
   position: fixed;
   inset: 0;
-  display: flex;
   align-items: flex-end;
 }
 
