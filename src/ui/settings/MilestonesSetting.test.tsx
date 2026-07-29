@@ -101,4 +101,74 @@ describe('MilestonesSetting', () => {
     fireEvent.click(screen.getByText('Reset to defaults'))
     expect(onChange).toHaveBeenCalledWith({ milestones: defaultMilestones() })
   })
+
+  describe('overlapping saves', () => {
+    const twoMilestones = [
+      { amountCents: 10_000_000, label: 'A' },
+      { amountCents: 20_000_000, label: 'B' },
+    ]
+
+    it('builds a second rename on the first while it is still in flight', () => {
+      const onChange = vi.fn(() => new Promise<void>(() => {}))
+      render(<MilestonesSetting settings={settingsWith(twoMilestones)} onChange={onChange} />)
+      const names = screen.getAllByLabelText('Milestone name')
+
+      fireEvent.change(names[0]!, { target: { value: 'Alpha' } })
+      fireEvent.blur(names[0]!)
+      fireEvent.change(names[1]!, { target: { value: 'Beta' } })
+      fireEvent.blur(names[1]!)
+
+      expect(onChange).toHaveBeenNthCalledWith(2, {
+        milestones: [
+          { amountCents: 10_000_000, label: 'Alpha' },
+          { amountCents: 20_000_000, label: 'Beta' },
+        ],
+      })
+    })
+
+    it('keeps an in-flight rename when another row is removed before it lands', () => {
+      const onChange = vi.fn(() => new Promise<void>(() => {}))
+      render(<MilestonesSetting settings={settingsWith(twoMilestones)} onChange={onChange} />)
+      const names = screen.getAllByLabelText('Milestone name')
+
+      fireEvent.change(names[1]!, { target: { value: 'Beta' } })
+      fireEvent.blur(names[1]!)
+      fireEvent.click(screen.getByLabelText('Remove milestone A'))
+
+      expect(onChange).toHaveBeenNthCalledWith(2, {
+        milestones: [{ amountCents: 20_000_000, label: 'Beta' }],
+      })
+    })
+
+    it('reverts an amount that collides with another milestone', () => {
+      const onChange = vi.fn()
+      render(<MilestonesSetting settings={settingsWith(twoMilestones)} onChange={onChange} />)
+      const amounts = screen.getAllByLabelText(/Milestone amount/)
+
+      fireEvent.change(amounts[0]!, { target: { value: '200000' } })
+      fireEvent.blur(amounts[0]!)
+
+      expect(onChange).toHaveBeenCalledWith({ milestones: twoMilestones })
+    })
+
+    it('rolls the working list back when a save fails', async () => {
+      const onChange = vi.fn().mockRejectedValueOnce(new Error('offline'))
+      render(<MilestonesSetting settings={settingsWith(twoMilestones)} onChange={onChange} />)
+      const names = screen.getAllByLabelText('Milestone name')
+
+      fireEvent.change(names[0]!, { target: { value: 'Alpha' } })
+      fireEvent.blur(names[0]!)
+      await Promise.resolve()
+
+      fireEvent.change(names[1]!, { target: { value: 'Beta' } })
+      fireEvent.blur(names[1]!)
+
+      expect(onChange).toHaveBeenNthCalledWith(2, {
+        milestones: [
+          { amountCents: 10_000_000, label: 'A' },
+          { amountCents: 20_000_000, label: 'Beta' },
+        ],
+      })
+    })
+  })
 })

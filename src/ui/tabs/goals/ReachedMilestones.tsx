@@ -10,7 +10,7 @@ interface Props {
   reached: Map<number, string>
 }
 
-/** Milestones your check-ins show you have already passed, newest last. */
+/** Milestones your check-ins show you have already passed, ascending by amount. */
 export function ReachedMilestones({ milestones, reached }: Props) {
   const format = useMoneyFormat()
   const hit = milestones.filter((m) => reached.has(m.amountCents))

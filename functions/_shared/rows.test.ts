@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { toGoalScenario, type GoalScenarioRow } from './rows'
+import { toGoalScenario, toSettings, type GoalScenarioRow, type SettingsRow } from './rows'
+import { defaultMilestones } from '../../src/domain/engine'
 
 function baseRow(overrides: Partial<GoalScenarioRow> = {}): GoalScenarioRow {
   return {
@@ -56,5 +57,42 @@ describe('toGoalScenario', () => {
   it('maps a non-null plan_start_date', () => {
     const result = toGoalScenario(baseRow({ plan_start_date: '2024-01-01' }))
     expect(result.planStartDate).toBe('2024-01-01')
+  })
+})
+
+function settingsRow(overrides: Partial<SettingsRow> = {}): SettingsRow {
+  return {
+    opening_cash_cents: 0,
+    opening_investment_cents: 0,
+    liquid_net_worth_cents: 0,
+    default_account_id: null,
+    currency_code: null,
+    number_locale: null,
+    budget_rollover_day: null,
+    milestones: null,
+    ...overrides,
+  }
+}
+
+describe('toSettings milestones', () => {
+  it('falls back to the built-in ladder when the column is NULL', () => {
+    expect(toSettings(settingsRow()).milestones).toEqual(defaultMilestones())
+  })
+
+  it('reads a stored ladder', () => {
+    const stored = [{ amountCents: 5_000_000, label: 'Emergency fund' }]
+    expect(toSettings(settingsRow({ milestones: JSON.stringify(stored) })).milestones).toEqual(
+      stored,
+    )
+  })
+
+  it('preserves a deliberately empty ladder', () => {
+    expect(toSettings(settingsRow({ milestones: '[]' })).milestones).toEqual([])
+  })
+
+  it('reads defaults when the column is absent, so code can deploy before migration 0014', () => {
+    const preMigration = settingsRow()
+    delete (preMigration as Partial<SettingsRow>).milestones
+    expect(toSettings(preMigration).milestones).toEqual(defaultMilestones())
   })
 })
