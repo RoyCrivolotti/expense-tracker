@@ -66,7 +66,7 @@ function pointsOf(values: number[], x: (i: number) => number, y: (v: number) => 
 
 function useGeometry(series: ChartSeries[], height: number, refLines: number[]) {
   return useMemo(() => {
-    const n = series.find((s) => s.kind !== 'scatter')?.values.length ?? 0
+    const n = series.find((s) => s.kind !== 'scatter' && s.kind !== 'band')?.values.length ?? 0
     const innerH = height - PAD.top - PAD.bottom
     const innerW = W - PAD.left - PAD.right
     const areaSeries = series.filter((s) => s.kind === 'area')
