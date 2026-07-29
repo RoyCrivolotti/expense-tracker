@@ -6,7 +6,7 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 
 ### Goals tab — Plan view
 
-- **Scenario editor now exposes all engine controls.** Contribution growth, mortgage rate, mortgage term, house appreciation, and home carry rate are available as sliders and inputs in GoalControls (previously engine-only constants).
+- **Scenario editor now exposes previously hidden engine controls.** Contribution growth, mortgage rate, mortgage term, and house appreciation are available as sliders and inputs in GoalControls (previously engine-only constants). Home carry rate remains an engine default for now.
 - **Uncertainty band on the hero chart.** A shaded band around each scenario's projection shows the ±2 pp return spread, making "good year vs bad year" visible without Monte Carlo.
 - **Life events.** Add one-off cash flows (inheritances, car purchases, etc.) to any scenario with a year, amount, and label. Events appear as diamond markers on the chart and are stored per-scenario in the DB.
 - **Nominal vs real display toggle.** Switch the hero chart between inflation-adjusted (real, default) and nominal values. Uses a 2% ECB-target inflation rate; check-in actuals are also scaled so they stay aligned with the projection.

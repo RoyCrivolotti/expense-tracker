@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, within, fireEvent } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Transaction } from '../../types'
 import type { ExpenseModel } from '../useExpenseData'
@@ -128,6 +128,31 @@ describe('Fields category/account pickers', () => {
     // edit would then send the stale, nonexistent id and the backend would reject it.
     expect(categorySelect.value).toBe('99')
     expect(accountSelect.value).toBe('99')
+  })
+
+  it('shows an inactive-category warning when the selected category is not active', () => {
+    renderFields(baseForm({ categoryId: 2 }), modelWith())
+    expect(screen.getByText('This category is inactive')).toBeTruthy()
+  })
+
+  it('does not show an inactive-category warning when the selected category is active', () => {
+    renderFields(baseForm({ categoryId: 1 }), modelWith())
+    expect(screen.queryByText('This category is inactive')).toBeNull()
+  })
+
+  it('calls set when the category select changes', () => {
+    const set = vi.fn()
+    render(
+      <Fields
+        form={baseForm({ categoryId: 2 })}
+        set={set}
+        model={modelWith()}
+        editing={null}
+        onAcceptSuggestion={vi.fn()}
+      />,
+    )
+    fireEvent.change(screen.getByLabelText('Category'), { target: { value: '1' } })
+    expect(set).toHaveBeenCalledWith('categoryId', 1)
   })
 
   it('does not offer an inactive category/account that is not the currently selected one, even while editing', () => {

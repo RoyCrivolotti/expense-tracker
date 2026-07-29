@@ -247,7 +247,7 @@ function NetWorthChartImpl({
     () =>
       isHero
         ? (draft.lifeEvents ?? [])
-            .filter((ev) => ev.year >= 0 && ev.year <= draft.horizonYears)
+            .filter((ev) => ev.year >= 1 && ev.year <= draft.horizonYears)
             .map((ev) => ({ yearIndex: ev.year, label: ev.label, amountCents: ev.amountCents }))
         : [],
     [isHero, draft.lifeEvents, draft.horizonYears],

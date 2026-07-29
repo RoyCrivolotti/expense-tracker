@@ -75,6 +75,18 @@
   font-size: 0.82rem;
   margin: 0;
 }
+.inactiveWarning {
+  font-size: 0.78rem;
+  color: var(--exp-warning, #b45309);
+  margin: 0;
+}
+/* Wrapper that keeps Field + warning stacked while remaining a flex child in .row */
+.fieldStack {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
 
 .actions {
   display: flex;

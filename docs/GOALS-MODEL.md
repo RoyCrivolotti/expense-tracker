@@ -31,7 +31,7 @@ The Goals tab has two views:
 | House appreciation | 2.5% / year |
 | Mortgage | 3% × 30 years |
 | Rent (when not owning) | €1,200 / month |
-| Home carry (rent vs buy) | 1.5% / year of home value (maintenance + tax + insurance; adjustable per scenario in GoalControls) |
+| Home carry (rent vs buy) | 1.5% / year of home value (maintenance + tax + insurance; engine default, not yet a UI control) |
 
 `housePurchaseYear`: `null` = never buy; `0` = owned from day one (capital already
 allocated); `N > 0` = buy after year N (withdraw down payment + costs that year).
@@ -65,7 +65,7 @@ interface LifeEvent {
 }
 ```
 
-Stored as a JSON column (`life_events`) on `goal_scenarios`. Applied in the yearly loop after growth and contributions, before house purchase withdrawal. Year 0 events are not applied (year 0 is the initial balance). Rendered as diamond markers on the hero chart (green for inflows, amber for outflows).
+Stored as a JSON column (`life_events`) on `goal_scenarios`. Applied in the yearly loop after growth and contributions, before house purchase withdrawal. Year 0 is the initial balance — events at year 0 are not applied by the engine and not accepted by the UI (minimum year is 1). Rendered as diamond markers on the hero chart (green for inflows, amber for outflows).
 
 ## Uncertainty bands
 
