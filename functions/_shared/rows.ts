@@ -182,7 +182,8 @@ export interface GoalScenarioRow {
 export function toGoalScenario(r: GoalScenarioRow): GoalScenario {
   let lifeEvents: LifeEvent[] = []
   try {
-    lifeEvents = JSON.parse(r.life_events) as LifeEvent[]
+    const parsed: unknown = JSON.parse(r.life_events)
+    if (Array.isArray(parsed)) lifeEvents = parsed as LifeEvent[]
   } catch {
     // malformed JSON falls back to empty
   }

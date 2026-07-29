@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { CheckinList } from './CheckinList'
 import { makeScenario } from '../../../testing/factories'
@@ -31,6 +31,7 @@ describe('CheckinList', () => {
         checkins={[]}
         accounts={[]}
         activeScenario={null}
+        canWrite={true}
         actions={makeActions()}
       />,
     )
@@ -48,6 +49,7 @@ describe('CheckinList', () => {
         checkins={checkins}
         accounts={accounts}
         activeScenario={null}
+        canWrite={true}
         actions={makeActions()}
       />,
     )
@@ -63,6 +65,7 @@ describe('CheckinList', () => {
         checkins={checkins}
         accounts={accounts}
         activeScenario={null}
+        canWrite={true}
         actions={makeActions()}
       />,
     )
@@ -81,9 +84,43 @@ describe('CheckinList', () => {
         checkins={checkins}
         accounts={accounts}
         activeScenario={scenario}
+        canWrite={true}
         actions={makeActions()}
       />,
     )
     expect(screen.getByText(/history/i)).toBeInTheDocument()
+  })
+
+  it('hides delete button when canWrite is false', () => {
+    const accounts = [makeAccount(1)]
+    const checkins = [makeCheckin(1, '2025-06-01', [{ accountId: 1, valueCents: 100_000_00 }])]
+    render(
+      <CheckinList
+        checkins={checkins}
+        accounts={accounts}
+        activeScenario={null}
+        canWrite={false}
+        actions={undefined}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: /delete check-in/i })).not.toBeInTheDocument()
+  })
+
+  it('calls deleteWealthCheckin when delete button is clicked', () => {
+    const actions = makeActions()
+    const accounts = [makeAccount(1)]
+    const checkins = [makeCheckin(1, '2025-06-01', [{ accountId: 1, valueCents: 100_000_00 }])]
+    render(
+      <CheckinList
+        checkins={checkins}
+        accounts={accounts}
+        activeScenario={null}
+        canWrite={true}
+        actions={actions}
+      />,
+    )
+    const btn = screen.getByRole('button', { name: /delete check-in/i })
+    fireEvent.click(btn)
+    expect(actions.deleteWealthCheckin).toHaveBeenCalledWith(1)
   })
 })

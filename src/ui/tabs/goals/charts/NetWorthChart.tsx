@@ -191,9 +191,14 @@ function NetWorthChartImpl({
   const labels = useMemo(() => sparseLabels(years, 5), [years])
 
   // Apply nominal inflation transform (≈2 % ECB target) for nominal display mode.
+  // extraSeries scatter points are also transformed so actuals align with the nominal projection.
   const displaySeries = useMemo<ChartSeries[]>(
     () => (nominalMode ? applyNominalTransform(series, years) : series),
     [series, nominalMode, years],
+  )
+  const displayExtraSeries = useMemo<ChartSeries[]>(
+    () => (nominalMode ? applyNominalTransform(extraSeries, years) : extraSeries),
+    [extraSeries, nominalMode, years],
   )
 
   // FI target as a landmark ref line on the hero chart.
@@ -262,7 +267,7 @@ function NetWorthChartImpl({
       <p className={styles.chartHint}>{chartHint}</p>
       <LinearChart
         {...heroVariantProps}
-        series={[...displaySeries, ...extraSeries]}
+        series={[...displaySeries, ...displayExtraSeries]}
         xLabels={labels}
         refLines={refLines}
         {...(todayIndex !== undefined ? { todayIndex } : {})}

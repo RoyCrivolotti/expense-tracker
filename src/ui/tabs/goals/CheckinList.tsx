@@ -14,7 +14,8 @@ interface Props {
   checkins: WealthCheckin[]
   accounts: WealthAccount[]
   activeScenario: GoalScenario | null
-  actions: ExpenseActions
+  canWrite: boolean
+  actions: ExpenseActions | undefined
 }
 
 function fmtDate(d: string) {
@@ -27,7 +28,7 @@ function accountName(id: number, accounts: WealthAccount[]) {
   return accounts.find((a) => a.id === id)?.name ?? `Account ${id}`
 }
 
-export function CheckinList({ checkins, accounts, activeScenario, actions }: Props) {
+export function CheckinList({ checkins, accounts, activeScenario, canWrite, actions }: Props) {
   const format = useMoneyFormat()
 
   const sorted = [...checkins].sort((a, b) => (b.checkinDate > a.checkinDate ? 1 : -1))
@@ -86,15 +87,17 @@ export function CheckinList({ checkins, accounts, activeScenario, actions }: Pro
                   </div>
                 ) : null}
 
-                <div className={styles.checkinActions}>
-                  <button
-                    className={goalStyles.iconBtn}
-                    aria-label="Delete check-in"
-                    onClick={() => { void actions.deleteWealthCheckin(c.id) }}
-                  >
-                    ✕
-                  </button>
-                </div>
+                {canWrite && actions ? (
+                  <div className={styles.checkinActions}>
+                    <button
+                      className={goalStyles.iconBtn}
+                      aria-label="Delete check-in"
+                      onClick={() => { void actions.deleteWealthCheckin(c.id) }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : null}
               </div>
             )
           })}

@@ -7,7 +7,7 @@ import {
   projectNetWorth,
   scenarioToParams,
   yearOffsetFromDate,
-  checkinNetWorthCents,
+  checkinInvestedCents,
 } from '../../../../engine'
 import { sparseLabels } from '../../../charts/linearScale'
 import { formatMoneyShort } from '../chartTheme'
@@ -43,7 +43,7 @@ export function CheckinHistoryChart({ checkins, accounts, activeScenario }: Prop
       .map((c) => {
         const offset = yearOffsetFromDate(activeScenario.planStartDate!, c.checkinDate)
         if (offset === null) return null
-        const value = checkinNetWorthCents(c, accounts)
+        const value = checkinInvestedCents(c, accounts)
         return { xIndex: offset, value }
       })
       .filter((p): p is ScatterPoint => p !== null)

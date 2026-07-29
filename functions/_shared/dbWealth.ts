@@ -124,6 +124,21 @@ async function loadCheckinWithEntries(
   return toWealthCheckin(checkinRow, entryRows.map(toWealthCheckinEntry))
 }
 
+async function assertOwnedAccountIds(
+  env: Env,
+  owner: string,
+  accountIds: number[],
+): Promise<void> {
+  for (const accountId of accountIds) {
+    const row = await env.DB.prepare(
+      'SELECT id FROM wealth_accounts WHERE id = ? AND owner = ?',
+    )
+      .bind(accountId, owner)
+      .first<{ id: number }>()
+    if (!row) throw new HttpError(400, `Wealth account ${accountId} not found or not owned`)
+  }
+}
+
 export async function createWealthCheckin(
   env: Env,
   owner: string,
@@ -133,7 +148,17 @@ export async function createWealthCheckin(
     throw new HttpError(400, 'checkinDate must be YYYY-MM-DD')
   }
 
-  // Insert the checkin header, then upsert entries in a batch.
+  // Validate all entry account IDs belong to this owner before inserting anything.
+  if (input.entries.length > 0) {
+    await assertOwnedAccountIds(
+      env,
+      owner,
+      input.entries.map((e) => e.accountId),
+    )
+  }
+
+  // Insert the checkin header, then entries in a batch. On entry failure, compensate by
+  // deleting the orphaned header so the DB stays consistent.
   const checkinRow = await env.DB.prepare(
     `INSERT INTO wealth_checkins (owner, checkin_date, note) VALUES (?, ?, ?) RETURNING *`,
   )
@@ -142,14 +167,20 @@ export async function createWealthCheckin(
   if (!checkinRow) throw new HttpError(500, 'Wealth check-in insert failed')
 
   if (input.entries.length > 0) {
-    await env.DB.batch(
-      input.entries.map((e) =>
-        env.DB.prepare(
-          `INSERT INTO wealth_checkin_entries (checkin_id, account_id, value_cents)
-           VALUES (?, ?, ?)`,
-        ).bind(checkinRow.id, e.accountId, e.valueCents),
-      ),
-    )
+    try {
+      await env.DB.batch(
+        input.entries.map((e) =>
+          env.DB.prepare(
+            `INSERT INTO wealth_checkin_entries (checkin_id, account_id, value_cents)
+             VALUES (?, ?, ?)`,
+          ).bind(checkinRow.id, e.accountId, e.valueCents),
+        ),
+      )
+    } catch (err) {
+      // Compensate: remove the orphaned header so no partial check-in is left.
+      await env.DB.prepare('DELETE FROM wealth_checkins WHERE id = ?').bind(checkinRow.id).run()
+      throw err
+    }
   }
 
   return loadCheckinWithEntries(env, checkinRow.id)
@@ -192,21 +223,25 @@ export async function updateWealthCheckin(
     }
   }
 
-  // Replace entries when provided — delete existing and re-insert.
+  // Replace entries when provided — delete existing and re-insert atomically in one batch.
   if (patch.entries !== undefined) {
-    await env.DB.prepare('DELETE FROM wealth_checkin_entries WHERE checkin_id = ?')
-      .bind(id)
-      .run()
     if (patch.entries.length > 0) {
-      await env.DB.batch(
-        patch.entries.map((e) =>
-          env.DB.prepare(
-            `INSERT INTO wealth_checkin_entries (checkin_id, account_id, value_cents)
-             VALUES (?, ?, ?)`,
-          ).bind(id, e.accountId, e.valueCents),
-        ),
+      await assertOwnedAccountIds(
+        env,
+        owner,
+        patch.entries.map((e) => e.accountId),
       )
     }
+    // Single batch is atomic: DELETE + INSERTs either all succeed or all roll back.
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM wealth_checkin_entries WHERE checkin_id = ?').bind(id),
+      ...patch.entries.map((e) =>
+        env.DB.prepare(
+          `INSERT INTO wealth_checkin_entries (checkin_id, account_id, value_cents)
+           VALUES (?, ?, ?)`,
+        ).bind(id, e.accountId, e.valueCents),
+      ),
+    ])
   }
 
   return loadCheckinWithEntries(env, id)

@@ -222,7 +222,7 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
           accounts={dataset.wealthAccounts}
           checkins={dataset.wealthCheckins}
           activeScenario={activeScenario}
-          actions={actions!}
+          actions={actions}
           canWrite={actions != null}
         />
       ) : (
