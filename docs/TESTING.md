@@ -72,13 +72,11 @@ Raising the global floor is welcome as coverage genuinely improves — bump the
 numbers in `vitest.config.ts` to match, don't lower them to make a red build
 green.
 
-## Workflow: non-trivial changes go through a PR
+## Workflow: all changes go through a PR
 
-Diff coverage only runs on `pull_request` (see `.github/workflows/verify.yml`) — a direct push to
-`main` skips it. Running `coverage:diff` locally afterward is a manual best-effort check, not the
-same guarantee CI gives a PR. So: branch, push, open a PR, let `verify` + diff coverage go green,
-then merge. Docs-only changes (changelog, README) with no `.ts`/`.tsx` diff are the exception and
-can still go straight to `main`.
+`main` is branch-protected — direct pushes are blocked. Every change (code, docs, config) must go
+through a pull request with the `verify` check passing. See `AGENTS.md` in the repo root for the
+full PR workflow.
 
 ## Local parity tests
 
