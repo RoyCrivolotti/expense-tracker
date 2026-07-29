@@ -84,8 +84,11 @@ export function CategoryPieChartView({ paths, active, onShow, onHide }: Props) {
           <li
             key={p.name}
             className={active === i ? styles.legendActive : undefined}
-            onMouseEnter={() => onShow(i)}
-            onMouseLeave={onHide}
+            onPointerEnter={() => onShow(i)}
+            onPointerLeave={(e) => {
+              if (e.pointerType === 'mouse') onHide()
+            }}
+            onPointerDown={() => onShow(i)}
           >
             <span className={styles.swatch} style={{ background: p.color }} aria-hidden />
             <span className={styles.pieLegendName}>{p.name}</span>
