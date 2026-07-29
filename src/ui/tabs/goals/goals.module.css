@@ -864,6 +864,42 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Already-reached columns are history, not forecast: de-emphasise them so the
+   eye lands on the milestones still ahead. */
+.milestoneHeadReached {
+  color: var(--color-text-muted);
+}
+.milestoneReachedOn {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* Reached-milestone chips on the Progress tab. */
+.reachedChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.reachedChip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  background: var(--color-surface-2, rgba(16, 185, 129, 0.12));
+  color: var(--color-text);
+  font-size: 0.78rem;
+}
+.reachedChipDate {
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+}
+
 .secondaryStack {
   display: flex;
   flex-direction: column;

@@ -47,7 +47,13 @@ Breakeven = first year buyer net worth ≥ renter net worth. Simplifications: co
 
 ## Milestones
 
-€100k, €200k, €300k, €400k, €500k, €750k, €1M (invested portfolio only).
+Per-owner list of named net-worth targets, measured against the **invested portfolio only**. Edited under Settings → Milestones and stored as JSON in `settings.milestones`; up to 12 entries, each with an optional name that falls back to the formatted amount.
+
+Owners who have never customised the list get the built-in ladder: €100k, €200k, €300k, €400k, €500k, €750k, €1M. That is a fallback for a `NULL` column, not a floor — an empty list is a valid choice and leaves the matrix and chart reference lines empty.
+
+A milestone counts as **reached** once any wealth check-in recorded an invested value at or above it. The date shown is that check-in's date, so it is "reached by", not "reached on" — the actual crossing happened somewhere between two check-ins. Reached milestones stay reached even if the portfolio later falls back below them.
+
+Chart reference lines are capped relative to the projection's own ceiling. A milestone far above what the plan reaches is left off the chart rather than compressing the projection into a sliver at the bottom; it still appears in the matrix.
 
 ## FIRE / withdrawal
 

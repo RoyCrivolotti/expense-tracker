@@ -241,6 +241,86 @@
   text-overflow: ellipsis;
 }
 
+.milestoneList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+/* Name stretches, amount stays a fixed width so the formatted previews and
+   remove buttons line up down the column. */
+.milestoneRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 7rem auto auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+.milestoneLabelInput,
+.milestoneAmountInput {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.6rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.9rem;
+  min-width: 0;
+}
+.milestoneFormatted {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.milestoneRemove {
+  border: 1px solid var(--color-border);
+  border-radius: 0.6rem;
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.35rem 0.55rem;
+  cursor: pointer;
+}
+.milestoneRemove:hover {
+  color: var(--color-text);
+}
+.milestoneActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.milestoneAddBtn,
+.milestoneResetBtn {
+  border: 1px solid var(--color-border);
+  border-radius: 0.6rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.45rem 0.75rem;
+  cursor: pointer;
+}
+.milestoneAddBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.milestoneResetBtn {
+  color: var(--color-text-muted);
+}
+
+/* The formatted preview is the first thing to go when the row runs out of
+   room; the editable fields matter more than the echo of what was typed. */
+@media (max-width: 560px) {
+  .milestoneRow {
+    grid-template-columns: minmax(0, 1fr) 6rem auto;
+  }
+  .milestoneFormatted {
+    display: none;
+  }
+}
+
 .resultSummary {
   display: flex;
   justify-content: space-between;
