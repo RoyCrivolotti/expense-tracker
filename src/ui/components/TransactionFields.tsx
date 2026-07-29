@@ -54,17 +54,24 @@ function CategoryAccountRow({
 }) {
   const categories = selectableOptions(model.dataset.categories, form.categoryId)
   const accounts = selectableOptions(model.dataset.accounts, form.accountId)
+  const selectedCategory = model.dataset.categories.find((c) => c.id === form.categoryId)
+  const categoryInactive = selectedCategory != null && !selectedCategory.active
   return (
     <div className={styles.row}>
-      <Field label="Category">
-        <select value={form.categoryId} onChange={(e) => set('categoryId', Number(e.target.value))}>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {optionLabel(c)}
-            </option>
-          ))}
-        </select>
-      </Field>
+      <div className={styles.fieldStack}>
+        <Field label="Category">
+          <select value={form.categoryId} onChange={(e) => set('categoryId', Number(e.target.value))}>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {optionLabel(c)}
+              </option>
+            ))}
+          </select>
+        </Field>
+        {categoryInactive ? (
+          <p className={styles.inactiveWarning}>This category is inactive</p>
+        ) : null}
+      </div>
       <Field label="Account">
         <select value={form.accountId} onChange={(e) => set('accountId', Number(e.target.value))}>
           {accounts.map((a) => (
