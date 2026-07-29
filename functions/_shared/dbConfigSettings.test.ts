@@ -23,7 +23,10 @@ function makeRow(overrides: Partial<SettingsRow> = {}): SettingsRow {
 function stubEnv(returnRow: SettingsRow) {
   const first = vi.fn().mockResolvedValue(returnRow)
   const run = vi.fn().mockResolvedValue(undefined)
-  const bind = vi.fn((..._args: unknown[]) => ({ first, run }))
+  const bind = vi.fn<(...args: unknown[]) => { first: typeof first; run: typeof run }>(() => ({
+    first,
+    run,
+  }))
   const prepare = vi.fn(() => ({ bind }))
   return { env: { DB: { prepare } } as unknown as Env, bind, first }
 }
