@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ExpenseSettings, Milestone } from '../../types'
 import {
   defaultMilestones,
@@ -13,7 +13,8 @@ import styles from '../tabs/tabs.module.css'
 
 interface Props {
   settings: ExpenseSettings
-  onChange: (patch: Partial<ExpenseSettings>) => void
+  /** Returning the save promise lets the editor keep overlapping edits from clobbering each other. */
+  onChange: (patch: Partial<ExpenseSettings>) => void | Promise<void>
 }
 
 /** Amount to prefill a new row with: a step above the current top of the ladder. */
@@ -26,25 +27,31 @@ function MilestoneRow({
   milestone,
   currencySymbol,
   formatted,
+  isAmountTaken,
   onCommit,
   onRemove,
 }: {
   milestone: Milestone
   currencySymbol: string
   formatted: string
+  isAmountTaken: (amountCents: number) => boolean
   onCommit: (next: Milestone) => void
   onRemove: () => void
 }) {
   const [label, setLabel] = useState(milestone.label)
   const [amount, setAmount] = useState(String(milestone.amountCents / 100))
 
-  function commit() {
+  function resolveAmountCents(): number {
     const units = Number(amount)
-    // An unparseable or out-of-range amount reverts rather than saving junk.
-    const amountCents =
-      Number.isFinite(units) && units > 0
-        ? Math.min(MILESTONE_MAX_CENTS, Math.round(units * 100))
-        : milestone.amountCents
+    if (!Number.isFinite(units) || units <= 0) return milestone.amountCents
+    const next = Math.min(MILESTONE_MAX_CENTS, Math.round(units * 100))
+    // Saving a duplicate would let the server's de-duplication drop this row and
+    // its label without the edit ever being visible, so collisions revert.
+    return isAmountTaken(next) ? milestone.amountCents : next
+  }
+
+  function commit() {
+    const amountCents = resolveAmountCents()
     setAmount(String(amountCents / 100))
     onCommit({ amountCents, label })
   }
@@ -89,9 +96,35 @@ export function MilestonesSetting({ settings, onChange }: Props) {
   const format = resolveMoneyFormat(settings.currencyCode, settings.numberLocale)
   const milestones = settings.milestones
 
-  const save = (next: Milestone[]) => onChange({ milestones: next })
-  const replaceAt = (index: number, next: Milestone) =>
-    save(milestones.map((m, i) => (i === index ? next : m)))
+  // Each save sends the whole list, so building one from the last render would
+  // let a second edit overwrite a first that is still in flight. This holds the
+  // working list and updates synchronously, ahead of the server round-trip.
+  const workingRef = useRef(milestones)
+  const inFlight = useRef(0)
+
+  useEffect(() => {
+    if (inFlight.current === 0) workingRef.current = milestones
+  }, [milestones])
+
+  const save = async (next: Milestone[]) => {
+    const previous = workingRef.current
+    workingRef.current = next
+    inFlight.current += 1
+    try {
+      await onChange({ milestones: next })
+    } catch {
+      workingRef.current = previous
+    } finally {
+      inFlight.current -= 1
+    }
+  }
+
+  // Addressed by amount rather than index: the working list can already differ
+  // from the rendered one while a save is in flight.
+  const replaceAmount = (amountCents: number, next: Milestone) =>
+    void save(workingRef.current.map((m) => (m.amountCents === amountCents ? next : m)))
+  const removeAmount = (amountCents: number) =>
+    void save(workingRef.current.filter((m) => m.amountCents !== amountCents))
 
   return (
     <>
@@ -106,14 +139,18 @@ export function MilestonesSetting({ settings, onChange }: Props) {
 
           {milestones.length > 0 ? (
             <ul className={styles.milestoneList}>
-              {milestones.map((m, i) => (
+              {milestones.map((m) => (
                 <MilestoneRow
                   key={m.amountCents}
                   milestone={m}
                   currencySymbol={format.symbol}
                   formatted={formatCents(m.amountCents, format)}
-                  onCommit={(next) => replaceAt(i, next)}
-                  onRemove={() => save(milestones.filter((_, j) => j !== i))}
+                  isAmountTaken={(cents) =>
+                    cents !== m.amountCents &&
+                    workingRef.current.some((other) => other.amountCents === cents)
+                  }
+                  onCommit={(next) => replaceAmount(m.amountCents, next)}
+                  onRemove={() => removeAmount(m.amountCents)}
                 />
               ))}
             </ul>
@@ -130,7 +167,10 @@ export function MilestonesSetting({ settings, onChange }: Props) {
               className={styles.milestoneAddBtn}
               disabled={milestones.length >= MILESTONE_MAX_COUNT}
               onClick={() =>
-                save([...milestones, { amountCents: suggestedAmountCents(milestones), label: '' }])
+                void save([
+                  ...workingRef.current,
+                  { amountCents: suggestedAmountCents(workingRef.current), label: '' },
+                ])
               }
             >
               + Add milestone
@@ -138,7 +178,7 @@ export function MilestonesSetting({ settings, onChange }: Props) {
             <button
               type="button"
               className={styles.milestoneResetBtn}
-              onClick={() => save(defaultMilestones())}
+              onClick={() => void save(defaultMilestones())}
             >
               Reset to defaults
             </button>

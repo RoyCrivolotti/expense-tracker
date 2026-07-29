@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { GoalsTab } from './GoalsTab'
 import { buildExpenseModel } from '../../buildExpenseModel'
 import { makeDataset, makeScenario, makeWealthAccount, makeWealthCheckin } from '../../../testing/factories'
+import { defaultExpenseSettings } from '../../../engine'
 
 beforeAll(() => {
   Object.defineProperty(window, 'matchMedia', {
@@ -44,6 +45,20 @@ describe('GoalsTab', () => {
   it('shows Plan view content when Plan tab is active', () => {
     render(<GoalsTab model={makeModel()} />)
     expect(screen.getByText(/Invested portfolio projection/i)).toBeInTheDocument()
+  })
+
+  it('narrates the milestones configured in settings, not the built-in ladder', () => {
+    const model = buildExpenseModel(
+      makeDataset({
+        settings: {
+          ...defaultExpenseSettings(),
+          milestones: [{ amountCents: 12_300_000, label: 'Freedom fund' }],
+        },
+      }),
+    )
+    render(<GoalsTab model={model} />)
+    expect(screen.getAllByText(/Freedom fund/).length).toBeGreaterThan(0)
+    expect(screen.queryByText(/€1M/)).not.toBeInTheDocument()
   })
 
   it('renders hero chart without crash when check-ins exist for active scenario', () => {

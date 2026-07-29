@@ -144,7 +144,7 @@ export function SettingsTab({
       {actions && (
         <MilestonesSetting
           settings={model.dataset.settings}
-          onChange={(patch) => void actions.updateSettings(patch)}
+          onChange={(patch) => actions.updateSettings(patch)}
         />
       )}
 
