@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import type { GoalScenario } from '../../../types'
+import type { GoalScenario, Milestone } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import { SegmentedControl } from '../../components/SegmentedControl'
 import { Card } from '../../components/primitives'
@@ -74,6 +74,7 @@ interface SecondaryChartsProps {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
   monthly: MonthlySaving[]
+  milestones: Milestone[]
 }
 
 function SecondaryViewChart({
@@ -81,6 +82,7 @@ function SecondaryViewChart({
   scenarios,
   draft,
   monthly,
+  milestones,
   chartHeight,
   embedded = false,
 }: {
@@ -88,6 +90,7 @@ function SecondaryViewChart({
   scenarios: GoalScenario[]
   draft: NewGoalScenario
   monthly: MonthlySaving[]
+  milestones: Milestone[]
   chartHeight?: number | undefined
   embedded?: boolean
 }) {
@@ -100,7 +103,14 @@ function SecondaryViewChart({
         <CompositionChart draft={draft} embedded={embedded} />
       )
     case 'milestones':
-      return <MilestoneMatrix scenarios={scenarios} draft={draft} embedded={embedded} />
+      return (
+        <MilestoneMatrix
+          scenarios={scenarios}
+          draft={draft}
+          milestones={milestones}
+          embedded={embedded}
+        />
+      )
     case 'fire':
       return h != null ? (
         <FireChart draft={draft} height={h} embedded={embedded} />
@@ -200,15 +210,17 @@ function SecondaryChartStack({
   scenarios,
   draft,
   monthly,
+  milestones,
 }: {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
   monthly: MonthlySaving[]
+  milestones: Milestone[]
 }) {
   return (
     <div className={styles.secondaryStack}>
       <CompositionChart draft={draft} height={STACK_CHART_HEIGHT} />
-      <MilestoneMatrix scenarios={scenarios} draft={draft} />
+      <MilestoneMatrix scenarios={scenarios} draft={draft} milestones={milestones} />
       <FireChart draft={draft} height={STACK_CHART_HEIGHT} />
       <RentVsOwnChart draft={draft} height={STACK_CHART_HEIGHT} />
       <SavingsRateChart draft={draft} monthly={monthly} height={STACK_CHART_HEIGHT} />
@@ -216,7 +228,12 @@ function SecondaryChartStack({
   )
 }
 
-export function SecondaryCharts({ scenarios, draft, monthly }: SecondaryChartsProps) {
+export function SecondaryCharts({
+  scenarios,
+  draft,
+  monthly,
+  milestones,
+}: SecondaryChartsProps) {
   const narrow = useGoalsNarrow()
   const [view, setView] = useState<SecondaryView>('composition')
   const [desktopLayout, setDesktopLayout] = useState<DesktopLayout>('stack')
@@ -229,6 +246,7 @@ export function SecondaryCharts({ scenarios, draft, monthly }: SecondaryChartsPr
           scenarios={scenarios}
           draft={draft}
           monthly={monthly}
+          milestones={milestones}
           embedded
         />
       </TabbedChart>
@@ -248,7 +266,12 @@ export function SecondaryCharts({ scenarios, draft, monthly }: SecondaryChartsPr
         />
       </div>
       {desktopLayout === 'stack' ? (
-        <SecondaryChartStack scenarios={scenarios} draft={draft} monthly={monthly} />
+        <SecondaryChartStack
+          scenarios={scenarios}
+          draft={draft}
+          monthly={monthly}
+          milestones={milestones}
+        />
       ) : (
         <TabbedChart view={view} onViewChange={setView}>
           <SecondaryViewChart
@@ -256,6 +279,7 @@ export function SecondaryCharts({ scenarios, draft, monthly }: SecondaryChartsPr
             scenarios={scenarios}
             draft={draft}
             monthly={monthly}
+            milestones={milestones}
             chartHeight={STACK_CHART_HEIGHT}
             embedded
           />

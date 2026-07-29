@@ -1,8 +1,8 @@
 import { memo, useMemo } from 'react'
-import type { GoalScenario } from '../../../../types'
+import type { GoalScenario, Milestone } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import {
-  MILESTONE_CENTS,
+  milestoneLabel,
   scenarioToParams,
   yearsToTargetFromProjection,
 } from '../../../../engine'
@@ -37,7 +37,11 @@ interface Row {
   cells: (number | null)[]
 }
 
-function buildRows(scenarios: GoalScenario[], draft: NewGoalScenario): Row[] {
+function buildRows(
+  scenarios: GoalScenario[],
+  draft: NewGoalScenario,
+  milestones: Milestone[],
+): Row[] {
   const all = [
     ...scenarios.map((s) => ({ name: shortName(s.name), color: s.color, params: scenarioToParams(s) })),
     {
@@ -49,34 +53,39 @@ function buildRows(scenarios: GoalScenario[], draft: NewGoalScenario): Row[] {
   return all.map(({ name, color, params }) => ({
     name,
     color,
-    cells: MILESTONE_CENTS.map((m) => yearsToTargetFromProjection(params, m, false)),
+    cells: milestones.map((m) => yearsToTargetFromProjection(params, m.amountCents, false)),
   }))
 }
 
 function MilestoneMatrixImpl({
   scenarios,
   draft,
+  milestones,
   embedded = false,
 }: {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
+  milestones: Milestone[]
   embedded?: boolean
 }) {
   const format = useMoneyFormat()
-  const rows = useMemo(() => buildRows(scenarios, draft), [scenarios, draft])
+  const rows = useMemo(() => buildRows(scenarios, draft, milestones), [scenarios, draft, milestones])
 
   return (
     <ChartShell embedded={embedded}>
       <h3 className={styles.chartTitle}>Years to milestone</h3>
       <p className={styles.chartHint}>Invested portfolio only — same matrix as finance-review chart 20.</p>
+      {milestones.length === 0 ? (
+        <p className={styles.chartHint}>No milestones set.</p>
+      ) : (
       <div className={styles.milestoneScroll}>
         <table className={styles.milestoneTable}>
           <thead>
             <tr>
               <th className={styles.milestoneScenarioHead}>Scenario</th>
-              {MILESTONE_CENTS.map((m) => (
-                <th key={m} className={styles.milestoneHead}>
-                  {formatMoneyShort(m, format)}
+              {milestones.map((m) => (
+                <th key={m.amountCents} className={styles.milestoneHead}>
+                  {milestoneLabel(m, (c) => formatMoneyShort(c, format))}
                 </th>
               ))}
             </tr>
@@ -93,7 +102,7 @@ function MilestoneMatrixImpl({
                 </td>
                 {row.cells.map((years, i) => (
                   <td
-                    key={MILESTONE_CENTS[i]}
+                    key={milestones[i]?.amountCents ?? i}
                     className={styles.milestoneCell}
                     style={{
                       background: cellColor(years),
@@ -108,6 +117,7 @@ function MilestoneMatrixImpl({
           </tbody>
         </table>
       </div>
+      )}
     </ChartShell>
   )
 }

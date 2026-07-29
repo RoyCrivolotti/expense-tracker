@@ -1,8 +1,10 @@
 import type { NewGoalScenario } from '../../../data/dataSource'
+import type { Milestone } from '../../../types'
 import {
   fireNumber,
   formatCents,
   formatPercent,
+  milestoneLabel,
   projectNetWorth,
   scenarioToParams,
   yearsToFi,
@@ -15,18 +17,54 @@ import styles from './goals.module.css'
 
 interface GoalsNarrativeProps {
   draft: NewGoalScenario
+  milestones: Milestone[]
   compact?: boolean
 }
 
-function getNarrativeStats(draft: NewGoalScenario) {
+interface MilestoneStat {
+  milestone: Milestone
+  year: number | null
+}
+
+/**
+ * The two milestones worth narrating: the next one the plan should cross, and
+ * the top of the ladder. Collapses to one when the next milestone is the top.
+ */
+function narrativeMilestones(draft: NewGoalScenario, milestones: Milestone[]) {
+  const params = scenarioToParams({ ...draft, id: 0 })
+  const toStat = (milestone: Milestone): MilestoneStat => ({
+    milestone,
+    year: yearsToTargetFromProjection(params, milestone.amountCents, false),
+  })
+  const next = milestones.find((m) => m.amountCents > draft.startInvestedCents) ?? null
+  const last = milestones[milestones.length - 1] ?? null
+  const top = last && last.amountCents !== next?.amountCents ? last : null
+  return { next: next ? toStat(next) : null, top: top ? toStat(top) : null }
+}
+
+/** Prose for the narrated milestones, with a leading space, or '' when there are none. */
+function milestoneSentences(
+  stats: (MilestoneStat | null)[],
+  short: (cents: number) => string,
+): string {
+  const parts = stats
+    .filter((s): s is MilestoneStat => s != null)
+    .map((s) => {
+      const label = milestoneLabel(s.milestone, short)
+      return s.year != null
+        ? `${label} invested lands around year ${s.year}.`
+        : `${label} is not reached in the horizon.`
+    })
+  return parts.length > 0 ? ` ${parts.join(' ')}` : ''
+}
+
+function getNarrativeStats(draft: NewGoalScenario, milestones: Milestone[]) {
   const params = scenarioToParams({ ...draft, id: 0 })
   const series = projectNetWorth(params)
   const end = series[series.length - 1]
-  const y500 = yearsToTargetFromProjection(params, 50_000_000, false)
-  const y1m = yearsToTargetFromProjection(params, 100_000_000, false)
   const fiYear = yearsToFi(params, draft.annualSpendCents, draft.safeWithdrawalRate)
   const fiTarget = fireNumber(draft.annualSpendCents, draft.safeWithdrawalRate)
-  return { end, y500, y1m, fiYear, fiTarget }
+  return { end, fiYear, fiTarget, ...narrativeMilestones(draft, milestones) }
 }
 
 interface PlanStat {
@@ -34,16 +72,25 @@ interface PlanStat {
   value: string
 }
 
-function CompactNarrative({ draft }: { draft: NewGoalScenario }) {
+function CompactNarrative({
+  draft,
+  milestones,
+}: {
+  draft: NewGoalScenario
+  milestones: Milestone[]
+}) {
   const format = useMoneyFormat()
-  const { end, y500, fiYear } = getNarrativeStats(draft)
+  const { end, next, fiYear } = getNarrativeStats(draft, milestones)
   const stats: PlanStat[] = [
     {
       label: `Net worth in ${draft.horizonYears} yrs`,
       value: formatCents(end?.netWorthCents ?? 0, format),
     },
-    y500 != null
-      ? { label: `${formatMoneyShort(50_000_000, format)} invested`, value: `Year ${y500}` }
+    next?.year != null
+      ? {
+          label: `${milestoneLabel(next.milestone, (c) => formatMoneyShort(c, format))} invested`,
+          value: `Year ${next.year}`,
+        }
       : null,
     fiYear != null ? { label: 'Financial independence', value: `Year ${fiYear}` } : null,
   ].filter((s): s is PlanStat => s != null)
@@ -62,11 +109,16 @@ function CompactNarrative({ draft }: { draft: NewGoalScenario }) {
   )
 }
 
-function FullNarrative({ draft }: { draft: NewGoalScenario }) {
+function FullNarrative({
+  draft,
+  milestones,
+}: {
+  draft: NewGoalScenario
+  milestones: Milestone[]
+}) {
   const format = useMoneyFormat()
-  const { end, y500, y1m, fiYear, fiTarget } = getNarrativeStats(draft)
-  const label500k = formatMoneyShort(50_000_000, format)
-  const label1m = formatMoneyShort(100_000_000, format)
+  const { end, next, top, fiYear, fiTarget } = getNarrativeStats(draft, milestones)
+  const short = (c: number) => formatMoneyShort(c, format)
   return (
     <Card>
       <h3 className={styles.chartTitle}>What this means</h3>
@@ -75,10 +127,7 @@ function FullNarrative({ draft }: { draft: NewGoalScenario }) {
         {formatCents(draft.monthlyContributionCents, format)}/mo invested, your portfolio reaches{' '}
         {formatCents(end?.investedCents ?? 0, format)} invested and{' '}
         {formatCents(end?.netWorthCents ?? 0, format)} net worth in {draft.horizonYears} years.
-        {y500 != null
-          ? ` ${label500k} invested lands around year ${y500}.`
-          : ` ${label500k} is not reached in the horizon.`}
-        {y1m != null ? ` ${label1m} around year ${y1m}.` : ''}
+        {milestoneSentences([next, top], short)}
       </p>
       <p className={`${styles.narrative} ${styles.narrativeMuted}`}>
         FI target ({formatPercent(draft.safeWithdrawalRate, format)} SWR) is{' '}
@@ -89,6 +138,10 @@ function FullNarrative({ draft }: { draft: NewGoalScenario }) {
   )
 }
 
-export function GoalsNarrative({ draft, compact = false }: GoalsNarrativeProps) {
-  return compact ? <CompactNarrative draft={draft} /> : <FullNarrative draft={draft} />
+export function GoalsNarrative({ draft, milestones, compact = false }: GoalsNarrativeProps) {
+  return compact ? (
+    <CompactNarrative draft={draft} milestones={milestones} />
+  ) : (
+    <FullNarrative draft={draft} milestones={milestones} />
+  )
 }

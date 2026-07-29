@@ -189,6 +189,17 @@ export interface GoalScenario {
   lifeEvents: LifeEvent[]
 }
 
+/**
+ * A net-worth target the owner tracks progress against, measured on the
+ * invested portfolio only (matching the years-to-milestone matrix).
+ */
+export interface Milestone {
+  /** Target value in integer cents. */
+  amountCents: number
+  /** Short optional name, e.g. "House deposit". Empty renders as the amount. */
+  label: string
+}
+
 /** Opening balances and other scalar settings used by running-balance views. */
 export interface ExpenseSettings {
   openingCashCents: number
@@ -205,6 +216,12 @@ export interface ExpenseSettings {
    * month. 1 = plain calendar months (budget month equals calendar month).
    */
   budgetRolloverDay: number
+  /**
+   * Net-worth milestones, ascending by amount. Resolved from the built-in
+   * defaults when the owner has never customised them; an empty array is a
+   * deliberate "no milestones" choice, not a missing value.
+   */
+  milestones: Milestone[]
 }
 
 /**

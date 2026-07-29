@@ -139,6 +139,51 @@ describe('expenses API (middleware + handlers + in-memory repo)', () => {
     expect(settings.defaultAccountId).toBe(1)
   })
 
+  it('stores custom milestones sorted ascending', async () => {
+    const store = createInMemoryAccessDb()
+    store.seedActiveUser(OWNER, { groups: ['expenses'] })
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    const response = await invokeExpenseApiRoute({
+      handler: putSettings,
+      repo,
+      env: expenseEnv(store),
+      method: 'PUT',
+      url: 'https://expenses.test/api/expenses/settings',
+      body: {
+        milestones: [
+          { amountCents: 20_000_000, label: 'Second' },
+          { amountCents: 10_000_000, label: ' First ' },
+        ],
+      },
+      email: OWNER,
+    })
+    expect(response.status).toBe(200)
+    const settings = await readJson<{ milestones: { amountCents: number; label: string }[] }>(
+      response,
+    )
+    expect(settings.milestones).toEqual([
+      { amountCents: 10_000_000, label: 'First' },
+      { amountCents: 20_000_000, label: 'Second' },
+    ])
+  })
+
+  it('accepts an empty milestone list as a deliberate choice', async () => {
+    const store = createInMemoryAccessDb()
+    store.seedActiveUser(OWNER, { groups: ['expenses'] })
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    const response = await invokeExpenseApiRoute({
+      handler: putSettings,
+      repo,
+      env: expenseEnv(store),
+      method: 'PUT',
+      url: 'https://expenses.test/api/expenses/settings',
+      body: { milestones: [] },
+      email: OWNER,
+    })
+    expect(response.status).toBe(200)
+    expect((await readJson<{ milestones: unknown[] }>(response)).milestones).toEqual([])
+  })
+
   it('updates goal inputs', async () => {
     const store = createInMemoryAccessDb()
     store.seedActiveUser(OWNER, { groups: ['expenses'] })

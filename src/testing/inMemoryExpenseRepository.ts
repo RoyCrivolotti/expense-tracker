@@ -13,6 +13,7 @@ import type { ExpenseRepository } from '../domain/ports/expenseRepository'
 import { validateDueDay, validatePlanInput } from '../domain/application/installmentPlanService'
 import { deriveStatus, deriveTransactions } from '../domain/engine/status'
 import { defaultExpenseSettings, defaultGoalInputs } from '../domain/engine/defaults'
+import { normalizeMilestones, validateMilestones } from '../domain/engine/milestones'
 import type {
   Account,
   AccountStatement,
@@ -475,6 +476,11 @@ export function inMemoryExpenseRepository(
           patch.budgetRolloverDay > 28)
       ) {
         throw new RepoHttpError(400, 'budgetRolloverDay must be between 1 and 28')
+      }
+      if (patch.milestones !== undefined) {
+        const error = validateMilestones(patch.milestones)
+        if (error) throw new RepoHttpError(400, error)
+        patch = { ...patch, milestones: normalizeMilestones(patch.milestones) }
       }
       store.settings = { ...store.settings, ...patch }
       return Promise.resolve({ ...store.settings })

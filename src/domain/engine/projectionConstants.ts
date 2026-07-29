@@ -5,9 +5,17 @@ export const DEFAULT_HOUSE_APPRECIATION = 0.025
 export const DEFAULT_NET_RETENTION = 0.65
 export const DEFAULT_ON_CALL_MONTHLY_CENTS = 50_000
 
-export const MILESTONE_CENTS = [
+/** Fallback milestone ladder for owners who have not customised theirs. */
+export const DEFAULT_MILESTONE_CENTS = [
   10_000_000, 20_000_000, 30_000_000, 40_000_000, 50_000_000, 75_000_000, 100_000_000,
 ] as const
+
+/** Largest milestone amount accepted from the editor (€100M). */
+export const MILESTONE_MAX_CENTS = 10_000_000_000
+/** Cap on how many milestones fit legibly in the years-to-milestone matrix. */
+export const MILESTONE_MAX_COUNT = 12
+/** Cap on milestone label length, so matrix headers stay readable. */
+export const MILESTONE_LABEL_MAX_LENGTH = 40
 
 export const DEFAULT_HOUSE_PRICE_CENTS = 400_000_000
 export const DEFAULT_DOWN_PAYMENT_FRACTION = 0.2

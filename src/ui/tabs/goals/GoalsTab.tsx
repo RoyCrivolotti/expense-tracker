@@ -99,6 +99,7 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
   // Mobile-only: swaps the chart block for the controls form in place, in lieu
   // of a separate route. Ignored on desktop, where both are always visible.
   const [mobilePlanView, setMobilePlanView] = useState<MobilePlanView>('chart')
+  const milestones = dataset.settings.milestones
   const monthly = useMemo<MonthlySaving[]>(() => {
     const entries = [...computeMonthlyTotals(dataset.transactions).entries()].sort(([a], [b]) =>
       a.localeCompare(b),
@@ -284,18 +285,19 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
         </div>
         <div className={styles.areaOutputs}>
           <div className={styles.areaNow}>
-            <NetWorthNowCard draft={deferredDraft} />
+            <NetWorthNowCard draft={deferredDraft} milestones={milestones} />
           </div>
           <div className={`${styles.heroBlock} ${styles.areaHero}`}>
             <NetWorthChart
               scenarios={visibleScenarios}
               draft={deferredDraft}
+              milestones={milestones}
               activeId={activeId}
               dirty={dirty}
               variant="hero"
               footer={
                 <>
-                  <GoalsNarrative draft={deferredDraft} compact />
+                  <GoalsNarrative draft={deferredDraft} milestones={milestones} compact />
                   <div className={progressStyles.displayModeRow}>
                     <SegmentedControl
                       options={DISPLAY_MODE_OPTIONS}
@@ -330,6 +332,7 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
               scenarios={dataset.goalScenarios}
               draft={deferredDraft}
               monthly={monthly}
+              milestones={milestones}
             />
           </div>
         </div>
