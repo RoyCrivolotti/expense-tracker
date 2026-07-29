@@ -13,7 +13,7 @@ interface Props {
   accounts: WealthAccount[]
   checkins: WealthCheckin[]
   activeScenario: GoalScenario | null
-  actions: ExpenseActions
+  actions: ExpenseActions | undefined
   canWrite: boolean
 }
 
@@ -34,7 +34,7 @@ export function ProgressView({ accounts, checkins, activeScenario, actions, canW
         activeScenario={activeScenario}
       />
 
-      {canWrite ? (
+      {canWrite && actions ? (
         showCheckinForm ? (
           <CheckinFormSheet
             accounts={accounts}
@@ -56,10 +56,11 @@ export function ProgressView({ accounts, checkins, activeScenario, actions, canW
         checkins={checkins}
         accounts={accounts}
         activeScenario={activeScenario}
+        canWrite={canWrite}
         actions={actions}
       />
 
-      {canWrite ? (
+      {canWrite && actions ? (
         <WealthAccountsManager accounts={accounts} actions={actions} />
       ) : null}
     </div>
