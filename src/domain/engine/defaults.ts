@@ -5,6 +5,7 @@
  */
 import type { ExpenseSettings, GoalInputs } from '../types'
 import { DEFAULT_BUDGET_ROLLOVER_DAY } from './dates'
+import { defaultMilestones } from './milestones'
 import { DEFAULT_CURRENCY_CODE, DEFAULT_NUMBER_LOCALE } from './money'
 
 export function defaultExpenseSettings(): ExpenseSettings {
@@ -16,6 +17,7 @@ export function defaultExpenseSettings(): ExpenseSettings {
     currencyCode: DEFAULT_CURRENCY_CODE,
     numberLocale: DEFAULT_NUMBER_LOCALE,
     budgetRolloverDay: DEFAULT_BUDGET_ROLLOVER_DAY,
+    milestones: defaultMilestones(),
   }
 }
 

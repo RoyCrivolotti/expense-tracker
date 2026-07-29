@@ -16,6 +16,7 @@ import type {
   WealthCheckinEntry,
 } from '../domain/types'
 import { DEFAULT_BUDGET_ROLLOVER_DAY } from '../domain/engine/dates'
+import { parseMilestones } from '../domain/engine/milestones'
 import { DEFAULT_CURRENCY_CODE, DEFAULT_NUMBER_LOCALE } from '../domain/engine/money'
 
 export interface CategoryRow {
@@ -119,6 +120,7 @@ export interface SettingsRow {
   currency_code: string | null
   number_locale: string | null
   budget_rollover_day: number | null
+  milestones: string | null
 }
 
 export interface GoalRow {
@@ -140,6 +142,7 @@ export function toSettings(r: SettingsRow): ExpenseSettings {
     currencyCode: r.currency_code ?? DEFAULT_CURRENCY_CODE,
     numberLocale: r.number_locale ?? DEFAULT_NUMBER_LOCALE,
     budgetRolloverDay: r.budget_rollover_day ?? DEFAULT_BUDGET_ROLLOVER_DAY,
+    milestones: parseMilestones(r.milestones ?? null),
   }
 }
 

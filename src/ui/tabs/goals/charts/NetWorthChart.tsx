@@ -1,8 +1,8 @@
 import { memo, useCallback, useMemo, useState, type ReactNode } from 'react'
-import type { GoalScenario } from '../../../../types'
+import type { GoalScenario, Milestone } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import type { ProjectionParams } from '../../../../engine'
-import { MILESTONE_CENTS, projectNetWorth, projectNetWorthBand, purchaseYearBreakdown, scenarioToParams } from '../../../../engine'
+import { projectNetWorth, projectNetWorthBand, purchaseYearBreakdown, scenarioToParams } from '../../../../engine'
 import { Card } from '../../../components/primitives'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
@@ -183,6 +183,7 @@ function NetWorthChartImpl({
   todayIndex,
   realMode = false,
   inflationRate,
+  milestones,
 }: {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
@@ -194,6 +195,7 @@ function NetWorthChartImpl({
   todayIndex?: number
   realMode?: boolean
   inflationRate?: number
+  milestones: Milestone[]
 }) {
   const format = useMoneyFormat()
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
@@ -233,12 +235,14 @@ function NetWorthChartImpl({
   }, [isHero, draft.annualSpendCents, draft.safeWithdrawalRate])
 
   const refLines = useMemo(() => {
-    const base = MILESTONE_CENTS.filter((m) => m <= 100_000_000)
-    const baseIncludes = (v: number) => (base as readonly number[]).includes(v)
-    return fiTargetCents !== null && !baseIncludes(fiTargetCents)
+    // A milestone far above the plan's own ceiling would squash the projection
+    // flat against the axis, so only draw the ones it gets within reach of.
+    const ceiling = yDomainMax != null && yDomainMax > 0 ? yDomainMax * 1.15 : Infinity
+    const base = milestones.map((m) => m.amountCents).filter((m) => m <= ceiling)
+    return fiTargetCents !== null && !base.includes(fiTargetCents)
       ? [...base, fiTargetCents].sort((a, b) => a - b)
       : base
-  }, [fiTargetCents])
+  }, [milestones, yDomainMax, fiTargetCents])
   const staticLegend: LegendItem[] = useMemo(
     () =>
       series.map((s, idx) => ({

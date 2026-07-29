@@ -4,7 +4,9 @@ import type {
   ExpenseSettings,
   GoalInputs,
   GoalScenario,
+  Milestone,
 } from '../domain/types'
+import { normalizeMilestones, validateMilestones } from '../domain/engine/milestones'
 import type {
   DeleteAccountOptions,
   DeleteAccountResult,
@@ -367,15 +369,21 @@ const SETTINGS_COLUMNS: ColumnMap<ExpenseSettings> = {
   currencyCode: 'currency_code',
   numberLocale: 'number_locale',
   budgetRolloverDay: 'budget_rollover_day',
+  milestones: 'milestones',
 }
 const NULLABLE_SETTINGS = new Set<keyof ExpenseSettings>([
   'defaultAccountId',
   'currencyCode',
   'numberLocale',
   'budgetRolloverDay',
+  'milestones',
 ])
-const coerceSettings: Coerce<ExpenseSettings> = (key, value) =>
-  NULLABLE_SETTINGS.has(key) ? (value ?? null) : (value ?? 0)
+const coerceSettings: Coerce<ExpenseSettings> = (key, value) => {
+  if (key === 'milestones') {
+    return value === undefined ? null : JSON.stringify(normalizeMilestones(value as Milestone[]))
+  }
+  return NULLABLE_SETTINGS.has(key) ? (value ?? null) : (value ?? 0)
+}
 
 export async function updateSettings(
   env: Env,
@@ -392,6 +400,10 @@ export async function updateSettings(
       patch.budgetRolloverDay > 28)
   ) {
     throw new HttpError(400, 'budgetRolloverDay must be between 1 and 28')
+  }
+  if (patch.milestones !== undefined) {
+    const error = validateMilestones(patch.milestones)
+    if (error) throw new HttpError(400, error)
   }
   const { sets, values } = buildUpdate(SETTINGS_COLUMNS, patch, coerceSettings)
   await env.DB.prepare('INSERT OR IGNORE INTO settings (owner) VALUES (?)').bind(owner).run()
