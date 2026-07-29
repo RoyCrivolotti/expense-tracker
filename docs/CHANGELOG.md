@@ -11,6 +11,7 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 - **Life events.** Add one-off cash flows (inheritances, car purchases, etc.) to any scenario with a year, amount, and label. Events appear as diamond markers on the chart and are stored per-scenario in the DB.
 - **Nominal vs real display toggle.** Switch the hero chart between inflation-adjusted (real, default) and nominal values. Uses a 2% ECB-target inflation rate; check-in actuals are also scaled so they stay aligned with the projection.
 - **FI target reference line.** When annual spend and a safe withdrawal rate are set, the FI number (annual spend ÷ SWR) appears as a reference line on the hero chart automatically.
+- **Custom milestones.** The €100k–€1M ladder is no longer hardcoded. Edit your own list under Settings → Milestones with optional names ("House deposit", "Coast FI") in place of bare amounts, up to 12 entries. Existing setups keep the old ladder until changed. Milestones your check-ins have already passed are marked as reached in the matrix and listed on the Progress view with the date they were first observed. Chart reference lines now scale to the projection, so an aspirational milestone far above the plan no longer flattens the chart.
 
 ### Goals tab — Progress view (new)
 

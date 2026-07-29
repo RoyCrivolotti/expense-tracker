@@ -4,6 +4,7 @@ import {
   checkinInvestedCents,
   checkinNetWorthCents,
   latestCheckin,
+  milestonesReached,
   planValueAtDate,
   planValueAtOffset,
   trackStatus,
@@ -240,5 +241,82 @@ describe('latestCheckin', () => {
       makeCheckin('2024-12-31', [], 3),
     ]
     expect(latestCheckin(checkins)!.id).toBe(2)
+  })
+})
+
+// ─── milestonesReached ────────────────────────────────────────────────────────
+
+describe('milestonesReached', () => {
+  const accounts = [makeAccount(1, 'investment', 'Broker'), makeAccount(2, 'cash', 'Wise')]
+  const milestones = [
+    { amountCents: 10_000_000, label: 'First' },
+    { amountCents: 50_000_000, label: 'Second' },
+  ]
+  const invested = (date: string, cents: number, id: number) =>
+    makeCheckin(date, [{ accountId: 1, valueCents: cents }], id)
+
+  it('returns an empty map when there are no milestones', () => {
+    expect(milestonesReached([], [invested('2024-06-01', 90_000_000, 1)], accounts).size).toBe(0)
+  })
+
+  it('returns an empty map when there are no check-ins', () => {
+    expect(milestonesReached(milestones, [], accounts).size).toBe(0)
+  })
+
+  it('records the earliest check-in at or above each milestone', () => {
+    const checkins = [
+      invested('2024-01-01', 5_000_000, 1),
+      invested('2024-06-01', 20_000_000, 2),
+      invested('2025-01-01', 60_000_000, 3),
+    ]
+    const reached = milestonesReached(milestones, checkins, accounts)
+    expect(reached.get(10_000_000)).toBe('2024-06-01')
+    expect(reached.get(50_000_000)).toBe('2025-01-01')
+  })
+
+  it('treats a value exactly on the milestone as reached', () => {
+    const reached = milestonesReached(milestones, [invested('2024-06-01', 10_000_000, 1)], accounts)
+    expect(reached.get(10_000_000)).toBe('2024-06-01')
+  })
+
+  it('omits milestones no check-in ever reached', () => {
+    const reached = milestonesReached(milestones, [invested('2024-06-01', 20_000_000, 1)], accounts)
+    expect(reached.has(50_000_000)).toBe(false)
+  })
+
+  it('keeps the first date even when a later check-in also clears the milestone', () => {
+    const checkins = [
+      invested('2024-06-01', 20_000_000, 1),
+      invested('2025-01-01', 30_000_000, 2),
+    ]
+    expect(milestonesReached(milestones, checkins, accounts).get(10_000_000)).toBe('2024-06-01')
+  })
+
+  it('keeps a milestone reached even if a later check-in falls back below it', () => {
+    const checkins = [
+      invested('2024-06-01', 20_000_000, 1),
+      invested('2025-01-01', 5_000_000, 2),
+    ]
+    expect(milestonesReached(milestones, checkins, accounts).get(10_000_000)).toBe('2024-06-01')
+  })
+
+  it('reads dates in chronological order regardless of input order', () => {
+    const checkins = [
+      invested('2025-01-01', 60_000_000, 2),
+      invested('2024-06-01', 20_000_000, 1),
+    ]
+    expect(milestonesReached(milestones, checkins, accounts).get(10_000_000)).toBe('2024-06-01')
+  })
+
+  it('measures the invested portfolio only, ignoring cash', () => {
+    const checkin = makeCheckin(
+      '2024-06-01',
+      [
+        { accountId: 1, valueCents: 5_000_000 },
+        { accountId: 2, valueCents: 90_000_000 },
+      ],
+      1,
+    )
+    expect(milestonesReached(milestones, [checkin], accounts).size).toBe(0)
   })
 })

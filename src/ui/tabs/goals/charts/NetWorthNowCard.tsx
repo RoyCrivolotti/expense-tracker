@@ -10,9 +10,12 @@ import styles from '../goals.module.css'
 function NetWorthNowCardImpl({
   draft,
   milestones,
+  reached,
 }: {
   draft: NewGoalScenario
   milestones: Milestone[]
+  /** amountCents -> date first observed at or above, from check-in history. */
+  reached: Map<number, string>
 }) {
   const format = useMoneyFormat()
   const current = draft.startInvestedCents
@@ -21,7 +24,10 @@ function NetWorthNowCardImpl({
     fiTarget > 0 && draft.annualSpendCents > 0
       ? Math.min(100, Math.max(0, (current / fiTarget) * 100))
       : null
-  const next = milestones.find((m) => m.amountCents > current) ?? null
+  // Skip anything a check-in already recorded as reached, so a dip in the
+  // portfolio does not re-suggest a milestone that was actually hit.
+  const next =
+    milestones.find((m) => m.amountCents > current && !reached.has(m.amountCents)) ?? null
   const nextMilestone = next ? milestoneLabel(next, (c) => formatCents(c, format)) : null
 
   return (

@@ -7,7 +7,7 @@
  */
 import { projectNetWorth } from './projection'
 import { scenarioToParams } from './scenarioProjection'
-import type { GoalScenario, WealthAccount, WealthCheckin } from '../types'
+import type { GoalScenario, Milestone, WealthAccount, WealthCheckin } from '../types'
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -149,6 +149,34 @@ export function trackStatus(
     deltaCents,
     deltaMonths,
   }
+}
+
+/**
+ * Date each milestone was first observed as reached, keyed by amount in cents.
+ * Milestones never seen at or above their amount are absent from the map.
+ *
+ * The date is the earliest check-in that recorded a value at or above the
+ * milestone, not the true crossing date — the portfolio may well have crossed
+ * between two check-ins. Word the UI as "reached by" rather than "reached on".
+ */
+export function milestonesReached(
+  milestones: Milestone[],
+  checkins: WealthCheckin[],
+  accounts: WealthAccount[],
+): Map<number, string> {
+  const reached = new Map<number, string>()
+  if (milestones.length === 0 || checkins.length === 0) return reached
+
+  const byDate = [...checkins].sort((a, b) => a.checkinDate.localeCompare(b.checkinDate))
+  for (const checkin of byDate) {
+    const invested = checkinInvestedCents(checkin, accounts)
+    for (const m of milestones) {
+      if (invested >= m.amountCents && !reached.has(m.amountCents)) {
+        reached.set(m.amountCents, checkin.checkinDate)
+      }
+    }
+  }
+  return reached
 }
 
 /**

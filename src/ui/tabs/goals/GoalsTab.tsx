@@ -8,6 +8,7 @@ import {
   computeMonthlyTotals,
   yearOffsetFromDate,
   checkinInvestedCents,
+  milestonesReached,
 } from '../../../engine'
 import type { ChartSeries } from '../../charts/LinearChart'
 import { Card, SectionTitle } from '../../components/primitives'
@@ -100,6 +101,10 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
   // of a separate route. Ignored on desktop, where both are always visible.
   const [mobilePlanView, setMobilePlanView] = useState<MobilePlanView>('chart')
   const milestones = dataset.settings.milestones
+  const reachedMilestones = useMemo(
+    () => milestonesReached(milestones, dataset.wealthCheckins, dataset.wealthAccounts),
+    [milestones, dataset.wealthCheckins, dataset.wealthAccounts],
+  )
   const monthly = useMemo<MonthlySaving[]>(() => {
     const entries = [...computeMonthlyTotals(dataset.transactions).entries()].sort(([a], [b]) =>
       a.localeCompare(b),
@@ -235,6 +240,8 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
         <ProgressView
           accounts={dataset.wealthAccounts}
           checkins={dataset.wealthCheckins}
+          milestones={milestones}
+          reached={reachedMilestones}
           activeScenario={activeScenario}
           actions={actions}
           canWrite={actions != null}
@@ -285,7 +292,11 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
         </div>
         <div className={styles.areaOutputs}>
           <div className={styles.areaNow}>
-            <NetWorthNowCard draft={deferredDraft} milestones={milestones} />
+            <NetWorthNowCard
+              draft={deferredDraft}
+              milestones={milestones}
+              reached={reachedMilestones}
+            />
           </div>
           <div className={`${styles.heroBlock} ${styles.areaHero}`}>
             <NetWorthChart
@@ -333,6 +344,7 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
               draft={deferredDraft}
               monthly={monthly}
               milestones={milestones}
+              reached={reachedMilestones}
             />
           </div>
         </div>

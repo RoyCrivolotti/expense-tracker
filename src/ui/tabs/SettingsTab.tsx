@@ -9,6 +9,7 @@ import { StatementToggles } from '../components/StatementToggles'
 import { DefinitionsEditor } from '../definitions/DefinitionsEditor'
 import { AppearanceSetting } from '../settings/AppearanceSetting'
 import { PreferencesSetting } from '../settings/PreferencesSetting'
+import { MilestonesSetting } from '../settings/MilestonesSetting'
 import { DefaultAccountSetting } from '../settings/DefaultAccountSetting'
 import { ExportDataSection } from '../settings/ExportDataSection'
 import { ImportDataSection } from '../settings/ImportDataSection'
@@ -135,6 +136,13 @@ export function SettingsTab({
 
       {actions && (
         <PreferencesSetting
+          settings={model.dataset.settings}
+          onChange={(patch) => void actions.updateSettings(patch)}
+        />
+      )}
+
+      {actions && (
+        <MilestonesSetting
           settings={model.dataset.settings}
           onChange={(patch) => void actions.updateSettings(patch)}
         />
