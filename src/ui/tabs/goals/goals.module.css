@@ -16,7 +16,8 @@
   min-width: 0;
 }
 
-/* Mobile: flat column via flex order (sliders last). Wrappers use display:contents. */
+/* Mobile: flat column via flex order. Wrappers use display:contents.
+   Controls are hidden here — they live in the bottom sheet (MobileControlsSheet). */
 @media (max-width: 899px) {
   .heroBlock {
     margin: 0 -0.15rem;
@@ -45,7 +46,7 @@
   }
 
   .areaControls {
-    order: 5;
+    display: none;
   }
 }
 
@@ -1037,20 +1038,15 @@
 }
 
 @media (max-width: 899px) {
-  /* Hide the inline sidebar controls — they live in the bottom sheet on mobile */
-  .areaControls {
-    display: none;
-  }
-
   .mobileAdjustTrigger {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.375rem;
     position: fixed;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+    bottom: calc(var(--exp-bottom-bar) + env(safe-area-inset-bottom, 0px) + 1rem);
     right: 1rem;
-    z-index: 100;
+    z-index: 35;
     background: var(--color-accent);
     color: #fff;
     border: none;
