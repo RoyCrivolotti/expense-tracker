@@ -12,7 +12,7 @@
   line-height: 1.4;
 }
 .cta {
-  margin-top: 0.65rem;
+  margin-top: 0.85rem;
   font: inherit;
   font-size: 0.82rem;
   font-weight: 500;
@@ -27,14 +27,15 @@
   border-color: var(--color-accent);
 }
 .trackBadge {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 0.375rem;
-  margin-top: 0.5rem;
+  margin-top: 0.6rem;
   padding: 0.2rem 0.55rem;
   border-radius: var(--radius-sm, 4px);
   font-size: 0.78rem;
   font-weight: 600;
+  width: fit-content;
 }
 
 .trackBadgeAhead {

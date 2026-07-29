@@ -33,8 +33,8 @@ function TrackBadge({ deltaCents, deltaMonths, format }: TrackBadgeProps) {
         ? 'On track'
         : `${formatMoneyShort(Math.abs(deltaCents), format)} behind`
       : deltaMonths > 0
-        ? `${deltaMonths} mo ahead`
-        : `${Math.abs(deltaMonths)} mo behind`
+        ? `${deltaMonths} months ahead`
+        : `${Math.abs(deltaMonths)} months behind`
   return (
     <div className={`${styles.trackBadge} ${ahead ? styles.trackBadgeAhead : styles.trackBadgeBehind}`}>
       <span className={dotClass} />
