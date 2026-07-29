@@ -1087,6 +1087,7 @@
 
 .mobileSheet[open] {
   display: flex;
+  align-items: flex-end;
 }
 
 .mobileSheetInner {
