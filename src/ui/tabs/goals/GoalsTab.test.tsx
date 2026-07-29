@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { GoalsTab } from './GoalsTab'
@@ -98,5 +98,31 @@ describe('GoalsTab', () => {
 
     const dialog = container.querySelector('dialog[aria-label="Adjust projection controls"]')
     expect(dialog).not.toBeNull()
+  })
+
+  it('shows the inflation stepper only when Nominal display mode is active', async () => {
+    const user = userEvent.setup()
+    render(<GoalsTab model={makeModel()} />)
+
+    expect(screen.queryByLabelText('Inflation rate percentage')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('radio', { name: 'Nominal' }))
+
+    expect(screen.getByText('Inflation assumed')).toBeInTheDocument()
+    expect(screen.getByLabelText('Inflation rate percentage')).toBeInTheDocument()
+  })
+
+  it('adjusts the inflation rate via the stepper in Nominal mode', async () => {
+    const user = userEvent.setup()
+    render(<GoalsTab model={makeModel()} />)
+
+    await user.click(screen.getByRole('radio', { name: 'Nominal' }))
+    const input = screen.getByLabelText('Inflation rate percentage')
+    expect(input).toHaveValue('2,0')
+
+    fireEvent.change(input, { target: { value: '3' } })
+    fireEvent.blur(input)
+
+    expect(screen.getByLabelText('Inflation rate percentage')).toHaveValue('3,0')
   })
 })

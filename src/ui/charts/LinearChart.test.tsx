@@ -114,6 +114,39 @@ describe('LinearChart', () => {
     expect(cb).toHaveBeenCalledWith(null)
   })
 
+  it('raises the y-axis scale when yDomainMax exceeds the natural domain', () => {
+    const { container } = render(
+      <LinearChart {...defaultProps} series={[makeLine('line', [10, 20, 30])]} yDomainMax={1000} />,
+    )
+    const gridLabels = [...container.querySelectorAll('text[text-anchor="end"]')].map((t) =>
+      Number(t.textContent),
+    )
+    expect(Math.max(...gridLabels)).toBeGreaterThanOrEqual(1000)
+  })
+
+  it('does not shrink the y-axis below data that already exceeds yDomainMax', () => {
+    const { container } = render(
+      <LinearChart
+        {...defaultProps}
+        series={[
+          makeLine('line', [10, 20, 30]),
+          {
+            id: 'actuals',
+            color: '#22c55e',
+            values: [],
+            kind: 'scatter',
+            points: [{ xIndex: 1, value: 500 }],
+          },
+        ]}
+        yDomainMax={50}
+      />,
+    )
+    const gridLabels = [...container.querySelectorAll('text[text-anchor="end"]')].map((t) =>
+      Number(t.textContent),
+    )
+    expect(Math.max(...gridLabels)).toBeGreaterThanOrEqual(500)
+  })
+
   it('renders without todayIndex without error', () => {
     expect(() =>
       render(
