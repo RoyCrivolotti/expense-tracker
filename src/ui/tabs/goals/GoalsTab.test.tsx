@@ -68,36 +68,24 @@ describe('GoalsTab', () => {
     expect(screen.getByText(/Invested portfolio projection/i)).toBeInTheDocument()
   })
 
-  it('renders the mobile Adjust trigger button in the DOM (hidden on desktop via CSS)', () => {
+  it('defaults the mobile Chart/Adjust toggle to Chart', () => {
     const model = buildExpenseModel(makeDataset())
     const { container } = render(<GoalsTab model={model} />)
-    // The button is display:none on desktop; query directly via CSS selector
-    const btn = container.querySelector<HTMLButtonElement>(
-      'button[aria-label="Open projection controls"]',
-    )
-    expect(btn).not.toBeNull()
-    expect(btn?.textContent).toMatch(/adjust/i)
+
+    expect(screen.getByRole('radio', { name: 'Chart' })).toBeChecked()
+    expect(container.querySelector('[data-mobile-view="chart"]')).not.toBeNull()
   })
 
-  it('opens the mobile sheet when the Adjust button is clicked', () => {
-    HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
-      this.setAttribute('open', '')
-    })
-    HTMLDialogElement.prototype.close = vi.fn(function (this: HTMLDialogElement) {
-      this.removeAttribute('open')
-      this.dispatchEvent(new Event('close'))
-    })
-
+  it('switches to the Adjust panel via the mobile Chart/Adjust toggle', async () => {
+    const user = userEvent.setup()
     const model = buildExpenseModel(makeDataset())
     const { container } = render(<GoalsTab model={model} />)
 
-    const trigger = container.querySelector<HTMLButtonElement>(
-      'button[aria-label="Open projection controls"]',
-    )!
-    trigger.click()
+    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
 
-    const dialog = container.querySelector('dialog[aria-label="Adjust projection controls"]')
-    expect(dialog).not.toBeNull()
+    expect(screen.getByRole('radio', { name: 'Adjust' })).toBeChecked()
+    expect(container.querySelector('[data-mobile-view="adjust"]')).not.toBeNull()
+    expect(container.querySelector('[data-mobile-view="chart"]')).toBeNull()
   })
 
   it('shows the inflation stepper only when Nominal display mode is active', async () => {

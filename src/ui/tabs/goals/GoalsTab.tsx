@@ -19,7 +19,6 @@ import { GoalsExplainer } from './GoalsExplainer'
 import { GoalsNarrative } from './GoalsNarrative'
 import { SecondaryCharts } from './SecondaryCharts'
 import { ProgressView } from './ProgressView'
-import { MobileControlsSheet } from './MobileControlsSheet'
 import { draftFromDataset } from './goalsDefaults'
 import { lastAddedScenario, writePinnedScenarioId } from './scenarioSelection'
 import { NetWorthChart } from './charts/NetWorthChart'
@@ -30,10 +29,16 @@ import progressStyles from './progress.module.css'
 
 type TabView = 'plan' | 'progress'
 type DisplayMode = 'real' | 'nominal'
+type MobilePlanView = 'chart' | 'adjust'
 
 const VIEW_OPTIONS: { value: TabView; label: string }[] = [
   { value: 'plan', label: 'Plan' },
   { value: 'progress', label: 'Progress' },
+]
+
+const MOBILE_PLAN_VIEW_OPTIONS: { value: MobilePlanView; label: string }[] = [
+  { value: 'chart', label: 'Chart' },
+  { value: 'adjust', label: 'Adjust' },
 ]
 
 const DISPLAY_MODE_OPTIONS: { value: DisplayMode; label: string }[] = [
@@ -91,7 +96,9 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
   // Single configurable rate rather than year-by-year inputs — a reasonable
   // simplification for a multi-decade projection. Resets on reload; display-only.
   const [nominalInflation, setNominalInflation] = useState(0.02)
-  const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
+  // Mobile-only: swaps the chart block for the controls form in place, in lieu
+  // of a separate route. Ignored on desktop, where both are always visible.
+  const [mobilePlanView, setMobilePlanView] = useState<MobilePlanView>('chart')
   const monthly = useMemo<MonthlySaving[]>(() => {
     const entries = [...computeMonthlyTotals(dataset.transactions).entries()].sort(([a], [b]) =>
       a.localeCompare(b),
@@ -239,7 +246,16 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
             scenario, then compare scenarios on the charts.
           </p>
           <GoalsExplainer />
-          <div className={styles.layout}>
+          <div className={styles.mobilePlanToggleRow}>
+            <SegmentedControl
+              options={MOBILE_PLAN_VIEW_OPTIONS}
+              value={mobilePlanView}
+              onChange={setMobilePlanView}
+              ariaLabel="Plan mobile view"
+              layout="compact"
+            />
+          </div>
+          <div className={styles.layout} data-mobile-view={mobilePlanView}>
         <div className={styles.areaSidebar}>
           <div className={styles.areaScenarios}>
             <ScenarioManager
@@ -318,20 +334,6 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
           </div>
         </div>
       </div>
-          <button
-            type="button"
-            className={styles.mobileAdjustTrigger}
-            aria-label="Open projection controls"
-            onClick={() => setMobileSheetOpen(true)}
-          >
-            ⚙ Adjust
-          </button>
-          <MobileControlsSheet
-            draft={draft}
-            onChange={patchDraft}
-            open={mobileSheetOpen}
-            onClose={() => setMobileSheetOpen(false)}
-          />
         </>
       )}
     </div>
