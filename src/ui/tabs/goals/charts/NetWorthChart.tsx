@@ -2,7 +2,7 @@ import { memo, useCallback, useMemo, useState, type ReactNode } from 'react'
 import type { GoalScenario } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import type { ProjectionParams } from '../../../../engine'
-import { MILESTONE_CENTS, projectNetWorth, purchaseYearBreakdown, scenarioToParams } from '../../../../engine'
+import { MILESTONE_CENTS, projectNetWorth, projectNetWorthBand, purchaseYearBreakdown, scenarioToParams } from '../../../../engine'
 import { Card } from '../../../components/primitives'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
@@ -190,8 +190,13 @@ function NetWorthChartImpl({
   const isHero = variant === 'hero'
   const labels = useMemo(() => sparseLabels(years, 5), [years])
 
-  // Apply nominal inflation transform (≈2 % ECB target) for nominal display mode.
-  // extraSeries scatter points are also transformed so actuals align with the nominal projection.
+  const bandSeries = useMemo<ChartSeries | null>(() => {
+    if (!isHero) return null
+    const params = scenarioToParams(draft)
+    const { lo, hi } = projectNetWorthBand(params)
+    return { id: 'uncertainty-band', color: draft.color, values: [], kind: 'band', band: { lo, hi } }
+  }, [isHero, draft])
+
   const displaySeries = useMemo<ChartSeries[]>(
     () => (nominalMode ? applyNominalTransform(series, years) : series),
     [series, nominalMode, years],
@@ -201,7 +206,6 @@ function NetWorthChartImpl({
     [extraSeries, nominalMode, years],
   )
 
-  // FI target as a landmark ref line on the hero chart.
   const fiTargetCents = useMemo(() => {
     if (!isHero || draft.annualSpendCents <= 0 || draft.safeWithdrawalRate <= 0) return null
     return Math.round(draft.annualSpendCents / draft.safeWithdrawalRate)
@@ -267,7 +271,7 @@ function NetWorthChartImpl({
       <p className={styles.chartHint}>{chartHint}</p>
       <LinearChart
         {...heroVariantProps}
-        series={[...displaySeries, ...displayExtraSeries]}
+        series={[...(bandSeries ? [bandSeries] : []), ...displaySeries, ...displayExtraSeries]}
         xLabels={labels}
         refLines={refLines}
         {...(todayIndex !== undefined ? { todayIndex } : {})}
