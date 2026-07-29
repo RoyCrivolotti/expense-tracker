@@ -219,6 +219,7 @@ describe('createWealthCheckin', () => {
   it('inserts and returns a check-in with entries', async () => {
     const env = stubEnv({
       firstMap: {
+        'SELECT id FROM wealth_accounts': { id: 1 }, // owner-validation stub
         'INSERT INTO wealth_checkins': CHECKIN_ROW,
         'SELECT * FROM wealth_checkins WHERE id': CHECKIN_ROW,
       },
@@ -230,6 +231,40 @@ describe('createWealthCheckin', () => {
     })
     expect(result.checkinDate).toBe('2024-06-01')
     expect(result.entries[0]!.valueCents).toBe(50_000)
+  })
+
+  it('throws 400 when entry accountId is not owned', async () => {
+    const env = stubEnv({
+      firstMap: { 'SELECT id FROM wealth_accounts': null }, // simulate foreign account
+    })
+    await expect(
+      createWealthCheckin(env, OWNER, {
+        checkinDate: '2024-06-01',
+        entries: [{ accountId: 99, valueCents: 1_000 }],
+      }),
+    ).rejects.toMatchObject({ status: 400 })
+  })
+
+  it('deletes orphaned header when entry batch throws', async () => {
+    const batchError = new Error('D1 batch failed')
+    const env = stubEnv({
+      firstMap: {
+        'SELECT id FROM wealth_accounts': { id: 1 },
+        'INSERT INTO wealth_checkins': CHECKIN_ROW,
+      },
+      batch: vi.fn().mockRejectedValueOnce(batchError),
+    })
+    await expect(
+      createWealthCheckin(env, OWNER, {
+        checkinDate: '2024-06-01',
+        entries: [{ accountId: 1, valueCents: 50_000 }],
+      }),
+    ).rejects.toThrow('D1 batch failed')
+    // The compensating DELETE should have been called
+    const deleteCalls = (env.DB.prepare as ReturnType<typeof vi.fn>).mock.calls.filter(
+      ([sql]: [string]) => sql.startsWith('DELETE FROM wealth_checkins WHERE id'),
+    )
+    expect(deleteCalls.length).toBe(1)
   })
 
   it('throws 400 for invalid date', async () => {
@@ -303,6 +338,7 @@ describe('updateWealthCheckin', () => {
     const env = stubEnv({
       firstMap: {
         'SELECT id FROM wealth_checkins': { id: 10 },
+        'SELECT id FROM wealth_accounts': { id: 2 }, // owner-validation stub
         'SELECT * FROM wealth_checkins WHERE id': CHECKIN_ROW,
       },
       allMap: { 'SELECT * FROM wealth_checkin_entries': [ENTRY_ROW] },
@@ -311,6 +347,18 @@ describe('updateWealthCheckin', () => {
       entries: [{ accountId: 2, valueCents: 99_000 }],
     })
     expect(result.entries[0]!.valueCents).toBe(50_000) // from allMap
+  })
+
+  it('throws 400 when entry accountId is not owned', async () => {
+    const env = stubEnv({
+      firstMap: {
+        'SELECT id FROM wealth_checkins': { id: 10 },
+        'SELECT id FROM wealth_accounts': null, // simulate foreign account
+      },
+    })
+    await expect(
+      updateWealthCheckin(env, OWNER, 10, { entries: [{ accountId: 99, valueCents: 1_000 }] }),
+    ).rejects.toMatchObject({ status: 400 })
   })
 })
 

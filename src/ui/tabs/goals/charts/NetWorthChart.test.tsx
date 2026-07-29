@@ -39,6 +39,26 @@ describe('applyNominalTransform', () => {
     const result = applyNominalTransform(series, [0])
     expect(result[0]!.band).toBeUndefined()
   })
+
+  it('scales scatter point values by their fractional xIndex', () => {
+    const series: ChartSeries[] = [
+      {
+        id: 'actuals',
+        color: '#10b981',
+        values: [],
+        kind: 'scatter',
+        points: [
+          { xIndex: 0, value: 100_000_000 },
+          { xIndex: 2.5, value: 200_000_000 },
+        ],
+      },
+    ]
+    const result = applyNominalTransform(series, [])
+    expect(result[0]!.points?.[0]?.value).toBe(100_000_000) // year 0 — no scaling
+    expect(result[0]!.points?.[1]?.value).toBe(
+      Math.round(200_000_000 * Math.pow(1.02, 2.5)),
+    )
+  })
 })
 
 describe('NetWorthChart', () => {
