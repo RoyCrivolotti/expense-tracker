@@ -74,9 +74,10 @@ export function CheckinHistoryChart({ checkins, accounts, activeScenario }: Prop
     }
   }, [activeScenario, checkins, accounts])
 
+  const planColor = activeScenario?.color
   const tooltip = useCallback(
-    (i: number) => buildCheckinTooltip(i, years, series[0]?.values ?? [], scatterPoints, format),
-    [years, series, scatterPoints, format],
+    (i: number) => buildCheckinTooltip(i, years, series[0]?.values ?? [], scatterPoints, format, planColor, ACTUAL_COLOR),
+    [years, series, scatterPoints, format, planColor],
   )
 
   if (!activeScenario?.planStartDate) {

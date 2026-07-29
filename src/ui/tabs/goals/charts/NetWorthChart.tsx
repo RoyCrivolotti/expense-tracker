@@ -16,7 +16,7 @@ import {
   type ScenarioLegendItem,
 } from './ScenarioSeriesLegend'
 import styles from '../goals.module.css'
-import { applyNominalTransform } from './nominalTransform'
+import { applyRealTransform } from './nominalTransform'
 
 interface ScenarioLine {
   id: string
@@ -76,18 +76,18 @@ function buildSeries(
 
 const DEFAULT_INFLATION_RATE = 0.02
 
-/** Real/nominal series pick, plus a Y-axis floor covering both — kept out of
- * NetWorthChartImpl to stay under the component's complexity budget. */
+/** Nominal (default) vs real-purchasing-power series, plus a Y-axis floor
+ *  covering both so toggling doesn't rescale the chart. */
 function computeChartDisplayData(
   series: ChartSeries[],
   years: number[],
-  nominalMode: boolean,
+  realMode: boolean,
   inflationRate: number = DEFAULT_INFLATION_RATE,
 ): { displaySeries: ChartSeries[]; yDomainMax: number | undefined } {
-  const nominalSeries = applyNominalTransform(series, years, inflationRate)
-  const values = [...series, ...nominalSeries].flatMap((s) => s.values)
+  const realSeries = applyRealTransform(series, years, inflationRate)
+  const values = [...series, ...realSeries].flatMap((s) => s.values)
   return {
-    displaySeries: nominalMode ? nominalSeries : series,
+    displaySeries: realMode ? realSeries : series,
     yDomainMax: values.length > 0 ? Math.max(...values) : undefined,
   }
 }
@@ -181,7 +181,7 @@ function NetWorthChartImpl({
   footer,
   extraSeries = [],
   todayIndex,
-  nominalMode = false,
+  realMode = false,
   inflationRate,
 }: {
   scenarios: GoalScenario[]
@@ -192,7 +192,7 @@ function NetWorthChartImpl({
   footer?: ReactNode
   extraSeries?: ChartSeries[]
   todayIndex?: number
-  nominalMode?: boolean
+  realMode?: boolean
   inflationRate?: number
 }) {
   const format = useMoneyFormat()
@@ -220,8 +220,8 @@ function NetWorthChartImpl({
   // Locks the Y-axis to the larger of the real/nominal maxima so toggling display
   // mode moves the lines on a fixed scale instead of rescaling the whole chart.
   const { displaySeries, yDomainMax } = useMemo(
-    () => computeChartDisplayData(series, years, nominalMode, inflationRate),
-    [series, years, nominalMode, inflationRate],
+    () => computeChartDisplayData(series, years, realMode, inflationRate),
+    [series, years, realMode, inflationRate],
   )
   // Check-in actuals are already nominal (real broker-statement values) — the
   // inflation transform never touches scatter points, so this never varies by mode.

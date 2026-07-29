@@ -28,7 +28,7 @@ import styles from './goals.module.css'
 import progressStyles from './progress.module.css'
 
 type TabView = 'plan' | 'progress'
-type DisplayMode = 'real' | 'nominal'
+type DisplayMode = 'nominal' | 'purchasing-power'
 type MobilePlanView = 'chart' | 'adjust'
 
 const VIEW_OPTIONS: { value: TabView; label: string }[] = [
@@ -42,8 +42,8 @@ const MOBILE_PLAN_VIEW_OPTIONS: { value: MobilePlanView; label: string }[] = [
 ]
 
 const DISPLAY_MODE_OPTIONS: { value: DisplayMode; label: string }[] = [
-  { value: 'real', label: 'Real' },
   { value: 'nominal', label: 'Nominal' },
+  { value: 'purchasing-power', label: 'Purchasing power' },
 ]
 
 interface GoalsTabProps {
@@ -92,7 +92,7 @@ function bootstrapEditor(
 export function GoalsTab({ model, actions }: GoalsTabProps) {
   const { dataset } = model
   const [view, setView] = useState<TabView>('plan')
-  const [displayMode, setDisplayMode] = useState<DisplayMode>('real')
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('nominal')
   // Single configurable rate rather than year-by-year inputs — a reasonable
   // simplification for a multi-decade projection. Resets on reload; display-only.
   const [nominalInflation, setNominalInflation] = useState(0.02)
@@ -305,7 +305,7 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
                       layout="compact"
                     />
                   </div>
-                  {displayMode === 'nominal' ? (
+                  {displayMode === 'purchasing-power' ? (
                     <div className={progressStyles.inflationRow}>
                       <span className={progressStyles.inflationLabel}>Inflation assumed</span>
                       <PercentStepper
@@ -320,7 +320,7 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
                 </>
               }
               extraSeries={checkinExtraSeries ? [checkinExtraSeries] : []}
-              nominalMode={displayMode === 'nominal'}
+              realMode={displayMode === 'purchasing-power'}
               inflationRate={nominalInflation}
               {...(heroTodayIndex !== undefined ? { todayIndex: heroTodayIndex } : {})}
             />

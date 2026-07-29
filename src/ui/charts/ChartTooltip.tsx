@@ -6,6 +6,7 @@ import { useTooltipPosition } from './useTooltipPosition'
 export interface TooltipLine {
   label: string
   value: string
+  color?: string | undefined
   tone?: 'income' | 'expense' | 'neutral'
   variant?: 'default' | 'detail'
 }
@@ -31,7 +32,12 @@ function TooltipBody({ title, lines }: Pick<Props, 'title' | 'lines'>) {
             key={line.label}
             className={`${styles[`tooltip_${line.tone ?? 'neutral'}`]}${line.variant === 'detail' ? ` ${styles.tooltipDetail}` : ''}`}
           >
-            <span className={styles.tooltipLabel}>{line.label}</span>
+            <span className={styles.tooltipLabel}>
+              {line.color ? (
+                <span className={styles.tooltipSwatch} style={{ background: line.color }} />
+              ) : null}
+              {line.label}
+            </span>
             <span className={styles.tooltipValue}>{line.value}</span>
           </li>
         ))}
