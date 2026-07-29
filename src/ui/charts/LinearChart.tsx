@@ -58,13 +58,20 @@ interface Props {
   todayIndex?: number
   tooltipMode?: 'full' | 'hidden'
   onActiveIndexChange?: (index: number | null) => void
+  /** Floor for the auto-computed Y-axis max — keeps the scale stable across re-renders that change value magnitude (e.g. a real/nominal display toggle). */
+  yDomainMax?: number | undefined
 }
 
 function pointsOf(values: number[], x: (i: number) => number, y: (v: number) => number): Pt[] {
   return values.map((v, i) => ({ x: x(i), y: y(v) }))
 }
 
-function useGeometry(series: ChartSeries[], height: number, refLines: number[]) {
+function useGeometry(
+  series: ChartSeries[],
+  height: number,
+  refLines: number[],
+  yDomainMax: number | undefined,
+) {
   return useMemo(() => {
     const n = series.find((s) => s.kind !== 'scatter' && s.kind !== 'band')?.values.length ?? 0
     const innerH = height - PAD.top - PAD.bottom
@@ -85,12 +92,16 @@ function useGeometry(series: ChartSeries[], height: number, refLines: number[]) 
       [lineValues, stackedValues, envelopeValues, scatterValues],
       refLines,
     )
-    const nice = niceScale(...domainTuple(domain))
+    // yDomainMax raises the floor rather than overriding outright, so a caller
+    // locking the scale (e.g. real/nominal toggle) can never clip band/scatter
+    // data that legitimately extends past it.
+    const effectiveMax = yDomainMax !== undefined ? Math.max(domain.max, yDomainMax) : domain.max
+    const nice = niceScale(...domainTuple({ min: domain.min, max: effectiveMax }))
     const scaleY = makeScale(nice.min, nice.max, PAD.top + innerH, PAD.top)
     const xForIndex = (i: number) =>
       n <= 1 ? PAD.left + innerW / 2 : PAD.left + (i / (n - 1)) * innerW
     return { n, innerH, stackedBands, areaSeries, ticks: nice.ticks, scaleY, xForIndex }
-  }, [series, height, refLines])
+  }, [series, height, refLines, yDomainMax])
 }
 
 function domainTuple(d: { min: number; max: number }): [number, number] {
@@ -110,9 +121,10 @@ export function LinearChart({
   todayIndex,
   tooltipMode = 'full',
   onActiveIndexChange,
+  yDomainMax,
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
-  const geo = useGeometry(series, height, refLines)
+  const geo = useGeometry(series, height, refLines, yDomainMax)
   const { active, containerRef, ...handlers } = useChartFocus(geo.n, geo.xForIndex)
   const focusX = active != null ? geo.xForIndex(active) : 0
   const anchor = useSvgAnchor(svgRef, active != null ? focusX : null, active != null ? PAD.top : null)

@@ -1,29 +1,24 @@
 import type { ChartSeries } from '../../../charts/LinearChart'
 
-export const NOMINAL_INFLATION = 0.02
-
-function nominalFactor(yearOffset: number): number {
-  return Math.pow(1 + NOMINAL_INFLATION, yearOffset)
+function nominalFactor(yearOffset: number, inflationRate: number): number {
+  return Math.pow(1 + inflationRate, yearOffset)
 }
 
-export function applyNominalTransform(series: ChartSeries[], years: number[]): ChartSeries[] {
+export function applyNominalTransform(
+  series: ChartSeries[],
+  years: number[],
+  inflationRate: number,
+): ChartSeries[] {
   return series.map((s) => ({
     ...s,
-    values: s.values.map((v, i) => Math.round(v * nominalFactor(years[i] ?? i))),
-    // Scatter points carry a fractional xIndex (years from plan start) — compound by that offset.
-    ...(s.points
-      ? {
-          points: s.points.map((p) => ({
-            ...p,
-            value: Math.round(p.value * nominalFactor(p.xIndex)),
-          })),
-        }
-      : {}),
+    values: s.values.map((v, i) => Math.round(v * nominalFactor(years[i] ?? i, inflationRate))),
+    // Scatter points are check-in actuals — already nominal (real broker-statement
+    // values), so they are passed through untouched rather than inflated again.
     ...(s.band
       ? {
           band: {
-            lo: s.band.lo.map((v, i) => Math.round(v * nominalFactor(years[i] ?? i))),
-            hi: s.band.hi.map((v, i) => Math.round(v * nominalFactor(years[i] ?? i))),
+            lo: s.band.lo.map((v, i) => Math.round(v * nominalFactor(years[i] ?? i, inflationRate))),
+            hi: s.band.hi.map((v, i) => Math.round(v * nominalFactor(years[i] ?? i, inflationRate))),
           },
         }
       : {}),

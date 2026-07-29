@@ -11,6 +11,7 @@ interface PercentStepperProps {
   min?: number
   max?: number
   disabled?: boolean
+  ariaLabel?: string
 }
 
 export function PercentStepper({
@@ -19,6 +20,7 @@ export function PercentStepper({
   min = 0,
   max = 0.2,
   disabled = false,
+  ariaLabel = 'Annual return percentage',
 }: PercentStepperProps) {
   const format = useMoneyFormat()
   const readOnly = disabled || onChange == null
@@ -50,7 +52,7 @@ export function PercentStepper({
         className={styles.input}
         type="text"
         inputMode="decimal"
-        aria-label="Annual return percentage"
+        aria-label={ariaLabel}
         defaultValue={formatPercentInput(value, format)}
         onBlur={(e) => commit(parsePercentToFraction(e.target.value, format))}
         onKeyDown={(e) => {

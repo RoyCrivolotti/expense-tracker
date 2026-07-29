@@ -74,6 +74,24 @@ function buildSeries(
   return { years, series, names: lines.map((l) => l.name) }
 }
 
+const DEFAULT_INFLATION_RATE = 0.02
+
+/** Real/nominal series pick, plus a Y-axis floor covering both — kept out of
+ * NetWorthChartImpl to stay under the component's complexity budget. */
+function computeChartDisplayData(
+  series: ChartSeries[],
+  years: number[],
+  nominalMode: boolean,
+  inflationRate: number = DEFAULT_INFLATION_RATE,
+): { displaySeries: ChartSeries[]; yDomainMax: number | undefined } {
+  const nominalSeries = applyNominalTransform(series, years, inflationRate)
+  const values = [...series, ...nominalSeries].flatMap((s) => s.values)
+  return {
+    displaySeries: nominalMode ? nominalSeries : series,
+    yDomainMax: values.length > 0 ? Math.max(...values) : undefined,
+  }
+}
+
 function purchaseMarkerIndices(lines: ScenarioLine[], years: number[]): { yearIndex: number }[] {
   const indices = new Set<number>()
   for (const line of lines) {
@@ -164,6 +182,7 @@ function NetWorthChartImpl({
   extraSeries = [],
   todayIndex,
   nominalMode = false,
+  inflationRate,
 }: {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
@@ -174,6 +193,7 @@ function NetWorthChartImpl({
   extraSeries?: ChartSeries[]
   todayIndex?: number
   nominalMode?: boolean
+  inflationRate?: number
 }) {
   const format = useMoneyFormat()
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
@@ -197,14 +217,15 @@ function NetWorthChartImpl({
     return { id: 'uncertainty-band', color: draft.color, values: [], kind: 'band', band: { lo, hi } }
   }, [isHero, draft])
 
-  const displaySeries = useMemo<ChartSeries[]>(
-    () => (nominalMode ? applyNominalTransform(series, years) : series),
-    [series, nominalMode, years],
+  // Locks the Y-axis to the larger of the real/nominal maxima so toggling display
+  // mode moves the lines on a fixed scale instead of rescaling the whole chart.
+  const { displaySeries, yDomainMax } = useMemo(
+    () => computeChartDisplayData(series, years, nominalMode, inflationRate),
+    [series, years, nominalMode, inflationRate],
   )
-  const displayExtraSeries = useMemo<ChartSeries[]>(
-    () => (nominalMode ? applyNominalTransform(extraSeries, years) : extraSeries),
-    [extraSeries, nominalMode, years],
-  )
+  // Check-in actuals are already nominal (real broker-statement values) — the
+  // inflation transform never touches scatter points, so this never varies by mode.
+  const displayExtraSeries = extraSeries
 
   const fiTargetCents = useMemo(() => {
     if (!isHero || draft.annualSpendCents <= 0 || draft.safeWithdrawalRate <= 0) return null
@@ -275,6 +296,7 @@ function NetWorthChartImpl({
         xLabels={labels}
         refLines={refLines}
         {...(todayIndex !== undefined ? { todayIndex } : {})}
+        yDomainMax={yDomainMax}
         formatValue={(c) => formatMoneyShort(c, format)}
         ariaLabel="Invested portfolio projection by year"
         tooltip={tooltip}
