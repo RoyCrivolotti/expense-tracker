@@ -2,6 +2,33 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## July 2026 (Goals & Wealth Management overhaul)
+
+### Goals tab — Plan view
+
+- **Scenario editor now exposes all engine controls.** Contribution growth, mortgage rate, mortgage term, house appreciation, and home carry rate are available as sliders and inputs in GoalControls (previously engine-only constants).
+- **Uncertainty band on the hero chart.** A shaded band around each scenario's projection shows the ±2 pp return spread, making "good year vs bad year" visible without Monte Carlo.
+- **Life events.** Add one-off cash flows (inheritances, car purchases, etc.) to any scenario with a year, amount, and label. Events appear as diamond markers on the chart and are stored per-scenario in the DB.
+- **Nominal vs real display toggle.** Switch the hero chart between inflation-adjusted (real, default) and nominal values. Uses a 2% ECB-target inflation rate; check-in actuals are also scaled so they stay aligned with the projection.
+- **FI target reference line.** When annual spend and a safe withdrawal rate are set, the FI number (annual spend ÷ SWR) appears as a reference line on the hero chart automatically.
+
+### Goals tab — Progress view (new)
+
+- **Plan / Progress segmented view.** The Goals tab now has two views. Plan is the existing projection lab; Progress is new.
+- **Wealth accounts.** Create named accounts (investment, cash, other asset, debt) in the Progress view to track net-worth components by market value separately from expense categories.
+- **Wealth check-ins.** Log a dated snapshot of each account's market value. Check-ins are stored per-account and per-date; the full history is visible as a timeline.
+- **On/off-track status.** After setting a plan start date on a scenario, each check-in compares actual invested balance to the scenario projection at that date and shows how many months ahead or behind plan you are.
+- **Actuals overlay on the hero chart.** Check-ins appear as scatter points on the Plan-view hero chart so projected vs actual is visible in one place.
+- **Dashboard badge.** The GoalsCard on the dashboard shows the on/off-track status from the latest check-in.
+
+### Goals tab — Mobile (new)
+
+- **Sticky "Adjust" button on mobile.** On narrow viewports the GoalControls panel is replaced by a sticky button at the bottom of the Plan view that opens a bottom-sheet overlay, keeping the chart in view while adjusting sliders.
+
+### Transaction form
+
+- **Inactive category warning.** An amber "This category is inactive" label now appears below the Category picker when the selected category is no longer active — easier to spot than the "(archived)" suffix in the dropdown.
+
 ## July 2026 (onboarding wizard re-entry fixes)
 
 ### Setup wizard
