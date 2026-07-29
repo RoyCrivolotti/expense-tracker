@@ -1,30 +1,30 @@
 import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { NetWorthChart } from './NetWorthChart'
-import { applyNominalTransform } from './nominalTransform'
+import { applyRealTransform } from './nominalTransform'
 import { makeScenario } from '../../../../testing/factories'
 import type { ChartSeries } from '../../../charts/LinearChart'
 
 const defaultDraft = makeScenario()
 
-describe('applyNominalTransform', () => {
-  it('scales values by compounding the given rate per year offset', () => {
+describe('applyRealTransform', () => {
+  it('deflates values by the given rate per year offset', () => {
     const series: ChartSeries[] = [
       { id: 's1', color: '#000', values: [0, 100_000_000], kind: 'line' },
     ]
     const years = [0, 1]
-    const result = applyNominalTransform(series, years, 0.02)
+    const result = applyRealTransform(series, years, 0.02)
     expect(result[0]!.values[0]).toBe(0)
-    expect(result[0]!.values[1]).toBe(Math.round(100_000_000 * 1.02))
+    expect(result[0]!.values[1]).toBe(Math.round(100_000_000 / 1.02))
   })
 
-  it('uses the passed inflation rate rather than a fixed constant', () => {
+  it('uses the passed inflation rate for deflation', () => {
     const series: ChartSeries[] = [{ id: 's1', color: '#000', values: [100_000_000], kind: 'line' }]
-    const result = applyNominalTransform(series, [1], 0.05)
-    expect(result[0]!.values[0]).toBe(Math.round(100_000_000 * 1.05))
+    const result = applyRealTransform(series, [1], 0.05)
+    expect(result[0]!.values[0]).toBe(Math.round(100_000_000 / 1.05))
   })
 
-  it('scales band lo and hi when band is present', () => {
+  it('deflates band lo and hi when band is present', () => {
     const series: ChartSeries[] = [
       {
         id: 'b1',
@@ -35,18 +35,18 @@ describe('applyNominalTransform', () => {
       },
     ]
     const years = [0, 1]
-    const result = applyNominalTransform(series, years, 0.02)
-    expect(result[0]!.band?.lo[1]).toBe(Math.round(80_000_000 * 1.02))
-    expect(result[0]!.band?.hi[1]).toBe(Math.round(120_000_000 * 1.02))
+    const result = applyRealTransform(series, years, 0.02)
+    expect(result[0]!.band?.lo[1]).toBe(Math.round(80_000_000 / 1.02))
+    expect(result[0]!.band?.hi[1]).toBe(Math.round(120_000_000 / 1.02))
   })
 
   it('omits band property when original series has no band', () => {
     const series: ChartSeries[] = [{ id: 's2', color: '#000', values: [0], kind: 'line' }]
-    const result = applyNominalTransform(series, [0], 0.02)
+    const result = applyRealTransform(series, [0], 0.02)
     expect(result[0]!.band).toBeUndefined()
   })
 
-  it('leaves scatter point values untouched — actuals are already nominal', () => {
+  it('leaves scatter point values untouched', () => {
     const series: ChartSeries[] = [
       {
         id: 'actuals',
@@ -59,7 +59,7 @@ describe('applyNominalTransform', () => {
         ],
       },
     ]
-    const result = applyNominalTransform(series, [], 0.02)
+    const result = applyRealTransform(series, [], 0.02)
     expect(result[0]!.points?.[0]?.value).toBe(100_000_000)
     expect(result[0]!.points?.[1]?.value).toBe(200_000_000)
   })
@@ -125,27 +125,27 @@ describe('NetWorthChart', () => {
     expect(Number(svg!.getAttribute('viewBox')?.split(' ')[3] ?? 0)).toBeGreaterThan(200)
   })
 
-  it('renders without crashing when nominalMode is true', () => {
+  it('renders without crashing when realMode is true', () => {
     const { container } = render(
       <NetWorthChart
         scenarios={[defaultDraft]}
         draft={defaultDraft}
         activeId={defaultDraft.id}
         variant="hero"
-        nominalMode
+        realMode
       />,
     )
     expect(container.querySelector('svg')).not.toBeNull()
   })
 
-  it('renders without crashing with a custom inflationRate in nominalMode', () => {
+  it('renders without crashing with a custom inflationRate in realMode', () => {
     const { container } = render(
       <NetWorthChart
         scenarios={[defaultDraft]}
         draft={defaultDraft}
         activeId={defaultDraft.id}
         variant="hero"
-        nominalMode
+        realMode
         inflationRate={0.05}
       />,
     )
