@@ -67,4 +67,36 @@ describe('GoalsTab', () => {
     render(<GoalsTab model={model} />)
     expect(screen.getByText(/Invested portfolio projection/i)).toBeInTheDocument()
   })
+
+  it('renders the mobile Adjust trigger button in the DOM (hidden on desktop via CSS)', () => {
+    const model = buildExpenseModel(makeDataset())
+    const { container } = render(<GoalsTab model={model} />)
+    // The button is display:none on desktop; query directly via CSS selector
+    const btn = container.querySelector<HTMLButtonElement>(
+      'button[aria-label="Open projection controls"]',
+    )
+    expect(btn).not.toBeNull()
+    expect(btn?.textContent).toMatch(/adjust/i)
+  })
+
+  it('opens the mobile sheet when the Adjust button is clicked', () => {
+    HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
+      this.setAttribute('open', '')
+    })
+    HTMLDialogElement.prototype.close = vi.fn(function (this: HTMLDialogElement) {
+      this.removeAttribute('open')
+      this.dispatchEvent(new Event('close'))
+    })
+
+    const model = buildExpenseModel(makeDataset())
+    const { container } = render(<GoalsTab model={model} />)
+
+    const trigger = container.querySelector<HTMLButtonElement>(
+      'button[aria-label="Open projection controls"]',
+    )!
+    trigger.click()
+
+    const dialog = container.querySelector('dialog[aria-label="Adjust projection controls"]')
+    expect(dialog).not.toBeNull()
+  })
 })

@@ -18,6 +18,7 @@ import { GoalsExplainer } from './GoalsExplainer'
 import { GoalsNarrative } from './GoalsNarrative'
 import { SecondaryCharts } from './SecondaryCharts'
 import { ProgressView } from './ProgressView'
+import { MobileControlsSheet } from './MobileControlsSheet'
 import { draftFromDataset } from './goalsDefaults'
 import { lastAddedScenario, writePinnedScenarioId } from './scenarioSelection'
 import { NetWorthChart } from './charts/NetWorthChart'
@@ -86,6 +87,7 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
   const { dataset } = model
   const [view, setView] = useState<TabView>('plan')
   const [displayMode, setDisplayMode] = useState<DisplayMode>('real')
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
   const monthly = useMemo<MonthlySaving[]>(() => {
     const entries = [...computeMonthlyTotals(dataset.transactions).entries()].sort(([a], [b]) =>
       a.localeCompare(b),
@@ -299,6 +301,20 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
           </div>
         </div>
       </div>
+          <button
+            type="button"
+            className={styles.mobileAdjustTrigger}
+            aria-label="Open projection controls"
+            onClick={() => setMobileSheetOpen(true)}
+          >
+            ⚙ Adjust
+          </button>
+          <MobileControlsSheet
+            draft={draft}
+            onChange={patchDraft}
+            open={mobileSheetOpen}
+            onClose={() => setMobileSheetOpen(false)}
+          />
         </>
       )}
     </div>
