@@ -3,9 +3,12 @@ import { describe, expect, it } from 'vitest'
 import { NetWorthChart } from './NetWorthChart'
 import { applyRealTransform } from './nominalTransform'
 import { makeScenario } from '../../../../testing/factories'
+import { defaultMilestones } from '../../../../engine'
 import type { ChartSeries } from '../../../charts/LinearChart'
+import chartStyles from '../../../charts/charts.module.css'
 
 const defaultDraft = makeScenario()
+const milestones = defaultMilestones()
 
 describe('applyRealTransform', () => {
   it('deflates values by the given rate per year offset', () => {
@@ -69,6 +72,7 @@ describe('NetWorthChart', () => {
   it('renders without crashing with default props', () => {
     const { container } = render(
       <NetWorthChart
+        milestones={milestones}
         scenarios={[defaultDraft]}
         draft={defaultDraft}
         activeId={defaultDraft.id}
@@ -88,6 +92,7 @@ describe('NetWorthChart', () => {
     }
     const { container } = render(
       <NetWorthChart
+        milestones={milestones}
         scenarios={[defaultDraft]}
         draft={defaultDraft}
         activeId={defaultDraft.id}
@@ -101,6 +106,7 @@ describe('NetWorthChart', () => {
   it('renders today marker when todayIndex is provided', () => {
     const { container } = render(
       <NetWorthChart
+        milestones={milestones}
         scenarios={[defaultDraft]}
         draft={defaultDraft}
         activeId={defaultDraft.id}
@@ -114,6 +120,7 @@ describe('NetWorthChart', () => {
   it('renders hero variant with taller height', () => {
     const { container } = render(
       <NetWorthChart
+        milestones={milestones}
         scenarios={[defaultDraft]}
         draft={defaultDraft}
         activeId={defaultDraft.id}
@@ -128,6 +135,7 @@ describe('NetWorthChart', () => {
   it('renders without crashing when realMode is true', () => {
     const { container } = render(
       <NetWorthChart
+        milestones={milestones}
         scenarios={[defaultDraft]}
         draft={defaultDraft}
         activeId={defaultDraft.id}
@@ -141,6 +149,7 @@ describe('NetWorthChart', () => {
   it('renders without crashing with a custom inflationRate in realMode', () => {
     const { container } = render(
       <NetWorthChart
+        milestones={milestones}
         scenarios={[defaultDraft]}
         draft={defaultDraft}
         activeId={defaultDraft.id}
@@ -155,6 +164,7 @@ describe('NetWorthChart', () => {
   it('renders uncertainty band path on hero variant', () => {
     const { container } = render(
       <NetWorthChart
+        milestones={milestones}
         scenarios={[defaultDraft]}
         draft={defaultDraft}
         activeId={defaultDraft.id}
@@ -167,10 +177,20 @@ describe('NetWorthChart', () => {
 
   it('does not render uncertainty band on default variant', () => {
     const { container: hero } = render(
-      <NetWorthChart scenarios={[defaultDraft]} draft={defaultDraft} variant="hero" />,
+      <NetWorthChart
+        scenarios={[defaultDraft]}
+        draft={defaultDraft}
+        milestones={milestones}
+        variant="hero"
+      />,
     )
     const { container: def } = render(
-      <NetWorthChart scenarios={[defaultDraft]} draft={defaultDraft} variant="default" />,
+      <NetWorthChart
+        scenarios={[defaultDraft]}
+        draft={defaultDraft}
+        milestones={milestones}
+        variant="default"
+      />,
     )
     expect(hero.querySelectorAll('path').length).toBeGreaterThan(
       def.querySelectorAll('path').length,
@@ -181,6 +201,7 @@ describe('NetWorthChart', () => {
     const scenario = makeScenario({ annualSpendCents: 2_400_000, safeWithdrawalRate: 0.04 })
     const { container } = render(
       <NetWorthChart
+        milestones={milestones}
         scenarios={[scenario]}
         draft={scenario}
         activeId={scenario.id}
@@ -194,6 +215,7 @@ describe('NetWorthChart', () => {
     const scenario = makeScenario({ annualSpendCents: 0, safeWithdrawalRate: 0.04 })
     const { container } = render(
       <NetWorthChart
+        milestones={milestones}
         scenarios={[scenario]}
         draft={scenario}
         activeId={scenario.id}
@@ -212,6 +234,7 @@ describe('NetWorthChart', () => {
     })
     const { container } = render(
       <NetWorthChart
+        milestones={milestones}
         scenarios={[scenario]}
         draft={scenario}
         activeId={scenario.id}
@@ -222,10 +245,37 @@ describe('NetWorthChart', () => {
     expect(polygons.length).toBeGreaterThanOrEqual(2)
   })
 
+  it('draws a reference line for a milestone the projection gets near', () => {
+    const { container } = render(
+      <NetWorthChart
+        scenarios={[defaultDraft]}
+        draft={defaultDraft}
+        milestones={[{ amountCents: 10_000_000, label: '' }]}
+        activeId={defaultDraft.id}
+        variant="hero"
+      />,
+    )
+    expect(container.querySelectorAll(`.${chartStyles.refLine}`)).toHaveLength(1)
+  })
+
+  it('drops a milestone far above the projection so it cannot flatten the chart', () => {
+    const { container } = render(
+      <NetWorthChart
+        scenarios={[defaultDraft]}
+        draft={defaultDraft}
+        milestones={[{ amountCents: 5_000_000_000, label: 'Moonshot' }]}
+        activeId={defaultDraft.id}
+        variant="hero"
+      />,
+    )
+    expect(container.querySelectorAll(`.${chartStyles.refLine}`)).toHaveLength(0)
+  })
+
   it('does not add FI reference line when FI target matches an existing milestone', () => {
     const scenario = makeScenario({ annualSpendCents: 4_000_000, safeWithdrawalRate: 0.04 })
     const { container } = render(
       <NetWorthChart
+        milestones={milestones}
         scenarios={[scenario]}
         draft={scenario}
         activeId={scenario.id}

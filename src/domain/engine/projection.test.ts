@@ -6,8 +6,8 @@ import {
   DEFAULT_MORTGAGE_RATE,
   DEFAULT_MORTGAGE_TERM_YEARS,
   DEFAULT_REAL_RETURN,
+  DEFAULT_MILESTONE_CENTS,
   DEFAULT_TRANSACTION_COSTS_CENTS,
-  MILESTONE_CENTS,
 } from './projectionConstants'
 import {
   projectInvested,
@@ -90,7 +90,7 @@ describe('projection invested milestones', () => {
   it('maps milestone cents to year indices monotonically', () => {
     const series = projectInvested(baseParams())
     let prev = -1
-    for (const m of MILESTONE_CENTS) {
+    for (const m of DEFAULT_MILESTONE_CENTS) {
       const yr = yearsToTarget(series, m)
       if (yr === null) break
       expect(yr).toBeGreaterThan(prev)

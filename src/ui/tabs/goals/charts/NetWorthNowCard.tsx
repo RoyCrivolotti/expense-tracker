@@ -1,12 +1,19 @@
 import { memo } from 'react'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { fireNumber, formatCents, MILESTONE_CENTS } from '../../../../engine'
+import type { Milestone } from '../../../../types'
+import { fireNumber, formatCents, milestoneLabel } from '../../../../engine'
 import { Card } from '../../../components/primitives'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import styles from '../goals.module.css'
 
 /** "You are here" snapshot: invested today vs the FI target and next milestone. */
-function NetWorthNowCardImpl({ draft }: { draft: NewGoalScenario }) {
+function NetWorthNowCardImpl({
+  draft,
+  milestones,
+}: {
+  draft: NewGoalScenario
+  milestones: Milestone[]
+}) {
   const format = useMoneyFormat()
   const current = draft.startInvestedCents
   const fiTarget = fireNumber(draft.annualSpendCents, draft.safeWithdrawalRate)
@@ -14,7 +21,8 @@ function NetWorthNowCardImpl({ draft }: { draft: NewGoalScenario }) {
     fiTarget > 0 && draft.annualSpendCents > 0
       ? Math.min(100, Math.max(0, (current / fiTarget) * 100))
       : null
-  const nextMilestone = MILESTONE_CENTS.find((m) => m > current) ?? null
+  const next = milestones.find((m) => m.amountCents > current) ?? null
+  const nextMilestone = next ? milestoneLabel(next, (c) => formatCents(c, format)) : null
 
   return (
     <Card className={styles.chartCard}>
@@ -33,7 +41,7 @@ function NetWorthNowCardImpl({ draft }: { draft: NewGoalScenario }) {
             </li>
             {nextMilestone != null ? (
               <li>
-                Next milestone: <strong>{formatCents(nextMilestone, format)}</strong>
+                Next milestone: <strong>{nextMilestone}</strong>
               </li>
             ) : null}
           </ul>
@@ -48,8 +56,8 @@ function NetWorthNowCardImpl({ draft }: { draft: NewGoalScenario }) {
       ) : (
         <p className={styles.chartHint}>
           {formatCents(current, format)} invested
-          {nextMilestone != null ? ` · next milestone ${formatCents(nextMilestone, format)}` : ''}. Set
-          annual spend at FI above to see progress toward a financial independence target.
+          {nextMilestone != null ? ` · next milestone ${nextMilestone}` : ''}. Set annual spend at FI
+          above to see progress toward a financial independence target.
         </p>
       )}
     </Card>
