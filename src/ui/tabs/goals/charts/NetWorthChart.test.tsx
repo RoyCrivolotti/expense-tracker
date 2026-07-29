@@ -134,9 +134,32 @@ describe('NetWorthChart', () => {
     expect(container.querySelector('svg')).not.toBeNull()
   })
 
+  it('renders uncertainty band path on hero variant', () => {
+    const { container } = render(
+      <NetWorthChart
+        scenarios={[defaultDraft]}
+        draft={defaultDraft}
+        activeId={defaultDraft.id}
+        variant="hero"
+      />,
+    )
+    const paths = container.querySelectorAll('path')
+    expect(paths.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('does not render uncertainty band on default variant', () => {
+    const { container: hero } = render(
+      <NetWorthChart scenarios={[defaultDraft]} draft={defaultDraft} variant="hero" />,
+    )
+    const { container: def } = render(
+      <NetWorthChart scenarios={[defaultDraft]} draft={defaultDraft} variant="default" />,
+    )
+    expect(hero.querySelectorAll('path').length).toBeGreaterThan(
+      def.querySelectorAll('path').length,
+    )
+  })
 
   it('renders FI target reference line when FI target is not an existing milestone', () => {
-    // 2_400_000 / 0.04 = 60_000_000 — not in MILESTONE_CENTS (10M,20M,30M,40M,50M,75M,100M)
     const scenario = makeScenario({ annualSpendCents: 2_400_000, safeWithdrawalRate: 0.04 })
     const { container } = render(
       <NetWorthChart
@@ -182,7 +205,6 @@ describe('NetWorthChart', () => {
   })
 
   it('does not add FI reference line when FI target matches an existing milestone', () => {
-    // 4_000_000 / 0.04 = 100_000_000 — already in MILESTONE_CENTS, so no extra line added
     const scenario = makeScenario({ annualSpendCents: 4_000_000, safeWithdrawalRate: 0.04 })
     const { container } = render(
       <NetWorthChart
