@@ -18,30 +18,14 @@ function StatusPill({ status }: { status: Transaction['status'] }) {
   return null
 }
 
-/**
- * Budget month, shown when the list mixes months or when this row is charged to
- * a month other than the one its date falls in (a late-month rollover).
- */
-function BudgetMonthPill({ txn, force }: { txn: Transaction; force: boolean }) {
-  if (!force && txn.budgetMonth === txn.date.slice(0, 7)) return null
-  return (
-    <Pill title={`Budget month: ${fullMonthLabel(txn.budgetMonth)}`}>
-      {shortMonthYearLabel(txn.budgetMonth)}
-    </Pill>
-  )
-}
-
 export function TransactionRowBody({
   txn,
   lookup,
   showDate = false,
-  showBudgetMonth = false,
 }: {
   txn: Transaction
   lookup: Lookup
   showDate?: boolean
-  /** Set when the surrounding list spans several budget months, so the pill disambiguates. */
-  showBudgetMonth?: boolean
 }) {
   const cat = lookup.category(txn.categoryId)
   const installmentLabel = installmentMeta(txn, lookup)
@@ -60,7 +44,9 @@ export function TransactionRowBody({
         </span>
         <span className={styles.metaRow}>
           <span className={styles.meta}>{metaParts.join(' · ')}</span>
-          <BudgetMonthPill txn={txn} force={showBudgetMonth} />
+          <Pill title={`Budget month: ${fullMonthLabel(txn.budgetMonth)}`}>
+            {shortMonthYearLabel(txn.budgetMonth)}
+          </Pill>
           <StatusPill status={txn.status} />
         </span>
       </span>
