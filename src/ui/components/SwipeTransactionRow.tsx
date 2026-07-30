@@ -15,7 +15,6 @@ interface SwipeRowProps {
   txn: Transaction
   lookup: Lookup
   showDate: boolean
-  showBudgetMonth: boolean
   onSelect?: (txn: Transaction) => void
   onDuplicate?: (txn: Transaction) => void
   onDelete?: (id: number) => Promise<void>
@@ -25,7 +24,6 @@ export function SwipeTransactionRow({
   txn,
   lookup,
   showDate,
-  showBudgetMonth,
   onSelect,
   onDuplicate,
   onDelete,
@@ -85,12 +83,7 @@ export function SwipeTransactionRow({
               onSelect?.(txn)
             }}
           >
-            <TransactionRowBody
-              txn={txn}
-              lookup={lookup}
-              showDate={showDate}
-              showBudgetMonth={showBudgetMonth}
-            />
+            <TransactionRowBody txn={txn} lookup={lookup} showDate={showDate} />
           </button>
         </div>
       </div>

@@ -254,3 +254,16 @@
   margin-left: auto;
   flex-shrink: 0;
 }
+
+@media (max-width: 767px) {
+  /* .meta shrinks to nothing before flexbox will wrap, so it truncates instead.
+     A floor plus no grow lets the pills wrap only when the text needs the room. */
+  .metaRow {
+    flex-wrap: wrap;
+    row-gap: 0.15rem;
+  }
+  .meta {
+    flex: 0 1 auto;
+    min-width: 9rem;
+  }
+}
