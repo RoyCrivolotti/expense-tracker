@@ -4,6 +4,8 @@ import {
   daysBetween,
   isDueSoon,
   lastDayOfBudgetMonth,
+  monthPillLabel,
+  monthsSpanMultipleYears,
   priorBudgetMonth,
 } from './dates'
 
@@ -78,5 +80,29 @@ describe('isDueSoon', () => {
 
   it('honours a wider aheadDays window', () => {
     expect(isDueSoon('2026-07-25', today, 2)).toBe(true)
+  })
+})
+
+describe('monthsSpanMultipleYears', () => {
+  it('is false when every month falls in the same year', () => {
+    expect(monthsSpanMultipleYears(['2026-01', '2026-06', '2026-12'])).toBe(false)
+  })
+
+  it('is true once a second calendar year appears', () => {
+    expect(monthsSpanMultipleYears(['2025-11', '2026-01'])).toBe(true)
+  })
+
+  it('is false for an empty list', () => {
+    expect(monthsSpanMultipleYears([])).toBe(false)
+  })
+})
+
+describe('monthPillLabel', () => {
+  it('omits the year when not needed', () => {
+    expect(monthPillLabel('2026-06', false)).toBe('Jun')
+  })
+
+  it('appends a two-digit year when disambiguation is needed', () => {
+    expect(monthPillLabel('2025-06', true)).toBe("Jun '25")
   })
 })

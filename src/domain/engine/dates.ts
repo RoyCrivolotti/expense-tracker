@@ -74,6 +74,17 @@ export function fullMonthLabel(yearMonth: string): string {
   return name ? `${name} ${year}` : yearMonth
 }
 
+/** True once `months` covers more than one calendar year ("Jun" alone would be ambiguous). */
+export function monthsSpanMultipleYears(months: string[]): boolean {
+  return new Set(months.map((m) => m.split('-')[0])).size > 1
+}
+
+/** "Jun", or "Jun '25" when `showYear` (multi-year datasets need the year to disambiguate). */
+export function monthPillLabel(yearMonth: string, showYear: boolean): string {
+  if (!showYear) return shortMonthLabel(yearMonth)
+  return `${shortMonthLabel(yearMonth)} '${yearMonth.slice(2, 4)}`
+}
+
 /**
  * Default budget month for a new transaction dated `isoDate`. Spending on or
  * after `rolloverDay` counts towards next month's budget; a rollover day of 1

@@ -15,10 +15,11 @@ import styles from './tabs.module.css'
 interface TransactionsTabProps {
   model: ExpenseModel
   month: string
+  onMonthChange: (month: string) => void
   actions?: ExpenseActions | undefined
 }
 
-export function TransactionsTab({ model, month, actions }: TransactionsTabProps) {
+export function TransactionsTab({ model, month, onMonthChange, actions }: TransactionsTabProps) {
   const state = useTransactionsTabState(model, month, actions)
   const [editingStatement, setEditingStatement] = useState<StatementPaymentRow | null>(null)
   const [statementPending, setStatementPending] = useState(false)
@@ -50,6 +51,8 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
         dateScope={state.dateScope}
         customDateFrom={state.customDateFrom}
         customDateTo={state.customDateTo}
+        months={model.months}
+        activeMonth={month}
         selectMode={state.selectMode}
         canSelect={state.canDelete}
         secondaryFilterCount={state.secondaryFilterCount}
@@ -61,6 +64,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
         onDateScope={state.setDateScope}
         onCustomDateFrom={state.setCustomDateFrom}
         onCustomDateTo={state.setCustomDateTo}
+        onMonthChange={onMonthChange}
         onToggleSelectMode={state.toggleSelectMode}
       />
 
