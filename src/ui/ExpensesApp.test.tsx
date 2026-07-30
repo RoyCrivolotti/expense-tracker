@@ -115,6 +115,7 @@ describe('ExpensesApp tab wiring', () => {
           type: 'expense',
           amountCents: 4200,
           cancelled: false,
+          status: 'posted',
         },
       ],
     })
