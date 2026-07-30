@@ -43,11 +43,17 @@ export function Kpi({ label, cents, type, signed, hint }: KpiProps) {
 export function Pill({
   children,
   tone = 'neutral',
+  title,
 }: {
   children: ReactNode
   tone?: 'neutral' | 'success' | 'warning' | 'danger'
+  title?: string | undefined
 }) {
-  return <span className={`${styles.pill} ${styles[tone]}`}>{children}</span>
+  return (
+    <span className={`${styles.pill} ${styles[tone]}`} title={title}>
+      {children}
+    </span>
+  )
 }
 
 export function EmptyState({

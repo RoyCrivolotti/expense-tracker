@@ -8,6 +8,7 @@ interface TransactionRowProps {
   txn: Transaction
   lookup: Lookup
   showDate?: boolean | undefined
+  showBudgetMonth?: boolean | undefined
   onSelect?: (txn: Transaction) => void
   onDuplicate?: (txn: Transaction) => void
   onDelete?: (id: number) => Promise<void>
@@ -21,6 +22,7 @@ export function TransactionRow({
   txn,
   lookup,
   showDate,
+  showBudgetMonth,
   onSelect,
   onDuplicate,
   onDelete,
@@ -39,7 +41,12 @@ export function TransactionRow({
           onChange={() => onToggleSelect?.(txn.id)}
         />
         <span className={styles.rowInner}>
-          <TransactionRowBody txn={txn} lookup={lookup} showDate={Boolean(showDate)} />
+          <TransactionRowBody
+            txn={txn}
+            lookup={lookup}
+            showDate={Boolean(showDate)}
+            showBudgetMonth={Boolean(showBudgetMonth)}
+          />
         </span>
       </label>
     )
@@ -52,6 +59,7 @@ export function TransactionRow({
         txn={txn}
         lookup={lookup}
         showDate={Boolean(showDate)}
+        showBudgetMonth={Boolean(showBudgetMonth)}
         {...(onSelect ? { onSelect } : {})}
         {...(onDuplicate ? { onDuplicate } : {})}
         {...(onDelete ? { onDelete } : {})}
@@ -65,7 +73,12 @@ export function TransactionRow({
       className={styles.row}
       onClick={onSelect ? () => onSelect(txn) : undefined}
     >
-      <TransactionRowBody txn={txn} lookup={lookup} showDate={Boolean(showDate)} />
+      <TransactionRowBody
+        txn={txn}
+        lookup={lookup}
+        showDate={Boolean(showDate)}
+        showBudgetMonth={Boolean(showBudgetMonth)}
+      />
     </button>
   )
 }

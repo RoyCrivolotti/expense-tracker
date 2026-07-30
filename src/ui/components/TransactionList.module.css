@@ -234,6 +234,10 @@
   gap: 0.4rem;
   min-width: 0;
 }
+/* Only the meta text gives way; the pills keep their full width. */
+.metaRow > *:not(.meta) {
+  flex-shrink: 0;
+}
 .meta {
   display: block;
   font-size: 0.76rem;
