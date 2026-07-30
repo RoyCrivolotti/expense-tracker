@@ -1,4 +1,6 @@
+import { useMemo } from 'react'
 import type { Account, Category, TxnType } from '../../types'
+import { monthPillLabel, monthsSpanMultipleYears } from '../../engine'
 import { CloseIcon } from '../icons'
 import { SegmentedControl } from '../components/SegmentedControl'
 import type { StatusFilter } from './TxnFilters'
@@ -152,19 +154,30 @@ export function DateScopeRow({
   dateScope,
   customDateFrom,
   customDateTo,
+  months,
+  activeMonth,
   selectMode,
   onDateScope,
   onCustomDateFrom,
   onCustomDateTo,
+  onMonthChange,
 }: {
   dateScope: TxnDateScope
   customDateFrom: string
   customDateTo: string
+  months: string[]
+  activeMonth: string
   selectMode: boolean
   onDateScope: (value: TxnDateScope) => void
   onCustomDateFrom: (value: string) => void
   onCustomDateTo: (value: string) => void
+  onMonthChange: (month: string) => void
 }) {
+  const monthOptions = useMemo(() => {
+    const showYear = monthsSpanMultipleYears(months)
+    return months.map((m) => ({ value: m, label: monthPillLabel(m, showYear) }))
+  }, [months])
+
   return (
     <div className={styles.dateScopeBlock}>
       <span className={styles.dateScopeLabel} id="txn-date-scope-label">
@@ -178,6 +191,16 @@ export function DateScopeRow({
         layout="bar"
         disabled={selectMode}
       />
+      {dateScope === 'budgetMonth' && monthOptions.length > 0 ? (
+        <SegmentedControl
+          options={monthOptions}
+          value={activeMonth}
+          onChange={onMonthChange}
+          ariaLabel="Budget month"
+          layout="scroll"
+          disabled={selectMode}
+        />
+      ) : null}
       {dateScope === 'custom' ? (
         <div className={styles.selectRow}>
           <input

@@ -25,6 +25,8 @@ export interface TxnFiltersProps {
   dateScope: TxnDateScope
   customDateFrom: string
   customDateTo: string
+  months: string[]
+  activeMonth: string
   selectMode: boolean
   canSelect: boolean
   secondaryFilterCount: number
@@ -36,6 +38,7 @@ export interface TxnFiltersProps {
   onDateScope: (value: TxnDateScope) => void
   onCustomDateFrom: (value: string) => void
   onCustomDateTo: (value: string) => void
+  onMonthChange: (month: string) => void
   onToggleSelectMode: () => void
 }
 
@@ -92,10 +95,13 @@ export function TxnFilters(props: TxnFiltersProps) {
             dateScope={props.dateScope}
             customDateFrom={props.customDateFrom}
             customDateTo={props.customDateTo}
+            months={props.months}
+            activeMonth={props.activeMonth}
             selectMode={props.selectMode}
             onDateScope={props.onDateScope}
             onCustomDateFrom={props.onCustomDateFrom}
             onCustomDateTo={props.onCustomDateTo}
+            onMonthChange={props.onMonthChange}
           />
         </div>
       ) : null}
