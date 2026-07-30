@@ -65,6 +65,14 @@ describe('TransactionList budget month pill', () => {
     expect(screen.getByText("Jun '26")).toBeTruthy()
   })
 
+  it('keeps the amount and both badges in the right rail, off the meta line', () => {
+    render(<TransactionList rows={rows(txn({ status: 'forecast' }))} lookup={lookup} />)
+    const rail = screen.getByText("Jul '26").closest<HTMLElement>('[class*="amountRail"]')
+    expect(rail).toContainElement(screen.getByText(/2\.500,00/))
+    expect(rail).toContainElement(screen.getByText('Forecast'))
+    expect(rail).not.toContainElement(screen.getByText('Investments · Santander Debit'))
+  })
+
   it('names the budget month, not the calendar month the date falls in', () => {
     render(
       <TransactionList
