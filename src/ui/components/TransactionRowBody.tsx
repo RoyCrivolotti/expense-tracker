@@ -42,15 +42,17 @@ export function TransactionRowBody({
         <span className={styles.desc}>
           {txn.description || lookup.categoryName(txn.categoryId)}
         </span>
-        <span className={styles.metaRow}>
-          <span className={styles.meta}>{metaParts.join(' · ')}</span>
+        <span className={styles.meta}>{metaParts.join(' · ')}</span>
+      </span>
+      <span className={styles.amountRail}>
+        <Money cents={txn.amountCents} type={txn.type} className={styles.amount} />
+        <span className={styles.railMeta}>
+          <StatusPill status={txn.status} />
           <Pill title={`Budget month: ${fullMonthLabel(txn.budgetMonth)}`}>
             {shortMonthYearLabel(txn.budgetMonth)}
           </Pill>
-          <StatusPill status={txn.status} />
         </span>
       </span>
-      <Money cents={txn.amountCents} type={txn.type} className={styles.amount} />
     </>
   )
 }

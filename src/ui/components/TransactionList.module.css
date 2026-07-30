@@ -228,16 +228,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.metaRow {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  min-width: 0;
-}
-/* Only the meta text gives way; the pills keep their full width. */
-.metaRow > *:not(.meta) {
-  flex-shrink: 0;
-}
 .meta {
   display: block;
   font-size: 0.76rem;
@@ -246,24 +236,23 @@
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
-  flex: 1;
+}
+/* Amount over its badges, mirroring .body's two lines so every row is the same
+   height and the budget month lines up in a column down the right edge. */
+.amountRail {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.railMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 .amount {
   font-size: 0.95rem;
   font-weight: 600;
-  margin-left: auto;
-  flex-shrink: 0;
-}
-
-@media (max-width: 767px) {
-  /* .meta shrinks to nothing before flexbox will wrap, so it truncates instead.
-     A floor plus no grow lets the pills wrap only when the text needs the room. */
-  .metaRow {
-    flex-wrap: wrap;
-    row-gap: 0.15rem;
-  }
-  .meta {
-    flex: 0 1 auto;
-    min-width: 9rem;
-  }
 }
