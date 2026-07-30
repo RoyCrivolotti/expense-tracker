@@ -12,11 +12,12 @@ describe('NetWorthNowCard', () => {
   it('names the first milestone above the current invested value', () => {
     const draft = makeScenario({ annualSpendCents: 4_000_000 })
     render(<NetWorthNowCard draft={draft} milestones={[passed, upcoming]} reached={noneReached} />)
-    expect(screen.getByText('Coast FI')).toBeTruthy()
-    expect(screen.queryByText('House deposit')).toBeNull()
+    // Named milestones carry their amount too, so the target is never ambiguous.
+    expect(screen.getByText(/Coast FI \(.*\)/)).toBeTruthy()
+    expect(screen.queryByText(/House deposit/)).toBeNull()
   })
 
-  it('falls back to the formatted amount for an unnamed next milestone', () => {
+  it('shows the amount alone for an unnamed next milestone', () => {
     const draft = makeScenario({ annualSpendCents: 4_000_000 })
     render(
       <NetWorthNowCard
@@ -50,8 +51,8 @@ describe('NetWorthNowCard', () => {
         reached={new Map([[upcoming.amountCents, '2026-03-14']])}
       />,
     )
-    expect(screen.getByText('Coast FI x2')).toBeTruthy()
-    expect(screen.queryByText('Coast FI')).toBeNull()
+    expect(screen.getByText(/Coast FI x2 \(.*\)/)).toBeTruthy()
+    expect(screen.queryByText(/Coast FI \(/)).toBeNull()
   })
 
   it('mentions the next milestone in the no-FI-target branch', () => {

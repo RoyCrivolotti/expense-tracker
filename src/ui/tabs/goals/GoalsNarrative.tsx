@@ -4,7 +4,7 @@ import {
   fireNumber,
   formatCents,
   formatPercent,
-  milestoneLabel,
+  milestoneLabelWithAmount,
   projectNetWorth,
   scenarioToParams,
   yearsToFi,
@@ -50,7 +50,7 @@ function milestoneSentences(
   const parts = stats
     .filter((s): s is MilestoneStat => s != null)
     .map((s) => {
-      const label = milestoneLabel(s.milestone, short)
+      const label = milestoneLabelWithAmount(s.milestone, short)
       return s.year != null
         ? `${label} invested lands around year ${s.year}.`
         : `${label} is not reached in the horizon.`
@@ -88,7 +88,7 @@ function CompactNarrative({
     },
     next?.year != null
       ? {
-          label: `${milestoneLabel(next.milestone, (c) => formatMoneyShort(c, format))} invested`,
+          label: `${milestoneLabelWithAmount(next.milestone, (c) => formatMoneyShort(c, format))} invested`,
           value: `Year ${next.year}`,
         }
       : null,

@@ -1,5 +1,5 @@
 import type { Milestone } from '../../../types'
-import { formatCents, milestoneLabel } from '../../../engine'
+import { formatCents, milestoneLabelWithAmount } from '../../../engine'
 import { Card } from '../../components/primitives'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import styles from './goals.module.css'
@@ -23,7 +23,7 @@ export function ReachedMilestones({ milestones, reached }: Props) {
         {hit.map((m) => (
           <li key={m.amountCents} className={styles.reachedChip}>
             <span aria-hidden="true">✓</span>
-            <span>{milestoneLabel(m, (c) => formatCents(c, format))}</span>
+            <span>{milestoneLabelWithAmount(m, (c) => formatCents(c, format))}</span>
             <span className={styles.reachedChipDate}>by {reached.get(m.amountCents)}</span>
           </li>
         ))}
