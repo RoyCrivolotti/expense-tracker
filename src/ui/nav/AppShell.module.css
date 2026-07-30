@@ -35,6 +35,13 @@
   background: var(--color-bg);
   border-top: 1px solid var(--color-border);
   z-index: 30;
+  /* iOS 26.0 WKWebView (standalone home-screen apps) recomputes
+     safe-area-inset-bottom mid-scroll as its new bottom toolbar animates,
+     visibly shifting this bar's height. Promoting it to its own GPU layer
+     stops the browser from re-laying it out on the main thread every scroll
+     frame. Fixed upstream in iOS 26.1; keep this until that's the floor. */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 .barList {
