@@ -4,9 +4,8 @@ import {
   daysBetween,
   isDueSoon,
   lastDayOfBudgetMonth,
-  monthPillLabel,
-  monthsSpanMultipleYears,
   priorBudgetMonth,
+  shortMonthYearLabel,
 } from './dates'
 
 describe('lastDayOfBudgetMonth', () => {
@@ -83,26 +82,16 @@ describe('isDueSoon', () => {
   })
 })
 
-describe('monthsSpanMultipleYears', () => {
-  it('is false when every month falls in the same year', () => {
-    expect(monthsSpanMultipleYears(['2026-01', '2026-06', '2026-12'])).toBe(false)
+describe('shortMonthYearLabel', () => {
+  it('abbreviates the month and shortens the year', () => {
+    expect(shortMonthYearLabel('2025-06')).toBe("Jun '25")
   })
 
-  it('is true once a second calendar year appears', () => {
-    expect(monthsSpanMultipleYears(['2025-11', '2026-01'])).toBe(true)
+  it('keeps the leading zero month readable', () => {
+    expect(shortMonthYearLabel('2026-01')).toBe("Jan '26")
   })
 
-  it('is false for an empty list', () => {
-    expect(monthsSpanMultipleYears([])).toBe(false)
-  })
-})
-
-describe('monthPillLabel', () => {
-  it('omits the year when not needed', () => {
-    expect(monthPillLabel('2026-06', false)).toBe('Jun')
-  })
-
-  it('appends a two-digit year when disambiguation is needed', () => {
-    expect(monthPillLabel('2025-06', true)).toBe("Jun '25")
+  it('reads the month from a full ISO date too', () => {
+    expect(shortMonthYearLabel('2026-12-31')).toBe("Dec '26")
   })
 })
