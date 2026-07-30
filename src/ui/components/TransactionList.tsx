@@ -26,20 +26,10 @@ interface TransactionListProps {
   onEditStatementPayment?: (row: Extract<TransactionListRow, { kind: 'statement-payment' }>) => void
 }
 
-function rowBudgetMonth(row: TransactionListRow): string {
-  return row.kind === 'transaction' ? row.txn.budgetMonth : row.budgetMonth
-}
-
-/** Whether the rows on screen mix budget months, which is when per-row pills earn their space. */
-function spansBudgetMonths(rows: TransactionListRow[]): boolean {
-  return new Set(rows.map(rowBudgetMonth)).size > 1
-}
-
 function renderRow(
   row: TransactionListRow,
   lookup: Lookup,
   props: Omit<TransactionListProps, 'rows' | 'lookup'>,
-  showBudgetMonth: boolean,
 ): ReactNode {
   if (row.kind === 'statement-payment') {
     return (
@@ -56,7 +46,6 @@ function renderRow(
       txn={row.txn}
       lookup={lookup}
       showDate={Boolean(props.showDate)}
-      showBudgetMonth={showBudgetMonth}
       selectMode={props.selectMode ?? false}
       selected={props.selectedIds?.has(row.txn.id) ?? false}
       swipeDelete={props.swipeDelete ?? false}
@@ -80,14 +69,9 @@ export function TransactionList({ rows, lookup, ...props }: TransactionListProps
     )
   }
 
-  const mixedMonths = spansBudgetMonths(rows)
   const groups = groupListRowsByDay(rows)
   if (props.flat) {
-    return (
-      <div className={styles.list}>
-        {rows.map((row) => renderRow(row, lookup, props, mixedMonths))}
-      </div>
-    )
+    return <div className={styles.list}>{rows.map((row) => renderRow(row, lookup, props))}</div>
   }
 
   return (
@@ -106,7 +90,7 @@ export function TransactionList({ rows, lookup, ...props }: TransactionListProps
               {...(props.onToggleDate ? { onToggleDate: props.onToggleDate } : {})}
               {...(props.onAddForDate && !props.selectMode ? { onAdd: props.onAddForDate } : {})}
             />
-            {group.rows.map((row) => renderRow(row, lookup, props, mixedMonths))}
+            {group.rows.map((row) => renderRow(row, lookup, props))}
           </div>
         )
       })}

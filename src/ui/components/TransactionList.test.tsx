@@ -38,6 +38,19 @@ function rows(...transactions: Transaction[]): TransactionListRow[] {
 }
 
 describe('TransactionList budget month pill', () => {
+  it('labels every row of a single-month list, even where the dates agree with it', () => {
+    render(
+      <TransactionList
+        rows={rows(
+          txn({ id: 1, date: '2026-07-15', budgetMonth: '2026-07' }),
+          txn({ id: 2, date: '2026-07-20', budgetMonth: '2026-07' }),
+        )}
+        lookup={lookup}
+      />,
+    )
+    expect(screen.getAllByText("Jul '26")).toHaveLength(2)
+  })
+
   it('labels every row once the list mixes budget months', () => {
     render(
       <TransactionList
@@ -52,34 +65,7 @@ describe('TransactionList budget month pill', () => {
     expect(screen.getByText("Jun '26")).toBeTruthy()
   })
 
-  it('stays quiet when one month is on screen and the dates agree with it', () => {
-    render(
-      <TransactionList
-        rows={rows(
-          txn({ id: 1, date: '2026-07-15', budgetMonth: '2026-07' }),
-          txn({ id: 2, date: '2026-07-20', budgetMonth: '2026-07' }),
-        )}
-        lookup={lookup}
-      />,
-    )
-    expect(screen.queryByText("Jul '26")).toBeNull()
-  })
-
-  it('flags a row charged to a month other than the one its date falls in', () => {
-    render(
-      <TransactionList
-        rows={rows(
-          txn({ id: 1, date: '2026-08-05', budgetMonth: '2026-08' }),
-          txn({ id: 2, date: '2026-07-31', budgetMonth: '2026-08' }),
-        )}
-        lookup={lookup}
-      />,
-    )
-    // One budget month on screen, so only the row that rolled over earns a pill.
-    expect(screen.getAllByText("Aug '26")).toHaveLength(1)
-  })
-
-  it('spells the budget month out in full on hover', () => {
+  it('names the budget month, not the calendar month the date falls in', () => {
     render(
       <TransactionList
         rows={rows(txn({ date: '2026-07-31', budgetMonth: '2026-08' }))}
@@ -87,6 +73,7 @@ describe('TransactionList budget month pill', () => {
       />,
     )
     expect(screen.getByText("Aug '26")).toHaveAttribute('title', 'Budget month: August 2026')
+    expect(screen.queryByText("Jul '26")).toBeNull()
   })
 
   it('labels rows in the flat layout too, as the dashboard recent-activity list uses', () => {
@@ -105,7 +92,7 @@ describe('TransactionList budget month pill', () => {
     expect(screen.getByText("Jun '26")).toBeTruthy()
   })
 
-  it('counts statement-payment rows towards the month span', () => {
+  it('leaves statement-payment rows alone, since they spell their month out already', () => {
     render(
       <TransactionList
         rows={[
@@ -124,6 +111,8 @@ describe('TransactionList budget month pill', () => {
         lookup={lookup}
       />,
     )
-    expect(screen.getByText("Jul '26")).toBeTruthy()
+    expect(screen.getAllByText("Jul '26")).toHaveLength(1)
+    expect(screen.queryByText("Jun '26")).toBeNull()
+    expect(screen.getByText(/June 2026/)).toBeTruthy()
   })
 })
