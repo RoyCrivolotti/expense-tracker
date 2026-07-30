@@ -834,34 +834,78 @@
 .milestoneScroll {
   overflow-x: auto;
   min-width: 0;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
 }
 
+/* Auto layout, not `fixed`: with a dozen milestones a fixed table divides the
+   container into equal slivers that the labels then overflow. Letting columns
+   size to content and scrolling the wrapper keeps every column legible. */
 .milestoneTable {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.75rem;
-  table-layout: fixed;
 }
 
 .milestoneScenarioHead,
 .milestoneScenarioCell {
   text-align: left;
-  padding: 0.3rem 0.35rem 0.3rem 0;
-  width: 5.5rem;
+  padding: 0.3rem 0.5rem 0.3rem 0;
+  min-width: 5.5rem;
+  max-width: 8rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+/* Scenario names stay readable while the milestone columns scroll under them.
+   The background must match `.card`, since the matrix always sits inside one. */
+.milestoneTable th:first-child,
+.milestoneTable td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--color-bg-subtle, color-mix(in srgb, var(--color-text) 4%, var(--color-bg)));
+}
+
 .milestoneHead,
 .milestoneCell {
-  padding: 0.3rem 0.15rem;
+  padding: 0.3rem 0.4rem;
   text-align: center;
+  white-space: nowrap;
+}
+
+/* Amounts line up across headers of differing height (named vs unnamed). */
+.milestoneHead {
+  vertical-align: bottom;
 }
 
 .milestoneCell {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+/* Names can run to MILESTONE_LABEL_MAX_LENGTH, far wider than a column. Clamp to
+   two lines and leave the full text to the header's title. */
+.milestoneHeadName {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  max-width: 7rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.milestoneHeadAmount {
+  display: block;
+}
+/* Demoted when a name sits above it, so the name reads as the column's identity. */
+.milestoneHeadAmountSub {
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
 }
 
 /* Already-reached columns are history, not forecast: de-emphasise them so the

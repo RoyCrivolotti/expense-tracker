@@ -2,8 +2,9 @@ import { memo, useMemo } from 'react'
 import type { GoalScenario, Milestone } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import {
-  milestoneLabel,
+  milestoneName,
   scenarioToParams,
+  shortMonthYearLabel,
   yearsToTargetFromProjection,
 } from '../../../../engine'
 import { ChartShell } from './ChartShell'
@@ -57,6 +58,11 @@ function buildRows(
   }))
 }
 
+/**
+ * One stacked column header: optional name, then the amount, then a short
+ * reached tick. Columns are narrow, so the long forms ("3rd goal (phase 1)",
+ * "reached by 2026-07-29") live in the tooltip instead of on screen.
+ */
 function MilestoneHead({
   milestone,
   reachedOn,
@@ -65,16 +71,37 @@ function MilestoneHead({
   reachedOn: string | undefined
 }) {
   const format = useMoneyFormat()
-  const name = milestoneLabel(milestone, (c) => formatMoneyShort(c, format))
-  if (reachedOn === undefined) {
-    return <th className={styles.milestoneHead}>{name}</th>
-  }
+  const amount = formatMoneyShort(milestone.amountCents, format)
+  const name = milestoneName(milestone)
+  // "by", not "on": the crossing happened somewhere between two check-ins.
+  const tooltip = [name, amount, reachedOn ? `reached by ${reachedOn}` : null]
+    .filter((part) => part !== null)
+    .join(' · ')
+
   return (
-    <th className={`${styles.milestoneHead} ${styles.milestoneHeadReached}`}>
-      <span aria-hidden="true">✓ </span>
-      {name}
-      {/* "by", not "on": the crossing happened somewhere between two check-ins. */}
-      <span className={styles.milestoneReachedOn}>reached by {reachedOn}</span>
+    <th
+      className={
+        reachedOn === undefined
+          ? styles.milestoneHead
+          : `${styles.milestoneHead} ${styles.milestoneHeadReached}`
+      }
+      scope="col"
+      title={tooltip}
+    >
+      {name ? <span className={styles.milestoneHeadName}>{name}</span> : null}
+      <span
+        className={
+          name ? `${styles.milestoneHeadAmount} ${styles.milestoneHeadAmountSub}` : styles.milestoneHeadAmount
+        }
+      >
+        {amount}
+      </span>
+      {reachedOn ? (
+        <span className={styles.milestoneReachedOn}>
+          <span aria-hidden="true">✓ </span>
+          {shortMonthYearLabel(reachedOn)}
+        </span>
+      ) : null}
     </th>
   )
 }

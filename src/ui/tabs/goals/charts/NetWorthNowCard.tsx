@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import type { Milestone } from '../../../../types'
-import { fireNumber, formatCents, milestoneLabel } from '../../../../engine'
+import { fireNumber, formatCents, milestoneLabelWithAmount } from '../../../../engine'
 import { Card } from '../../../components/primitives'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import styles from '../goals.module.css'
@@ -28,7 +28,7 @@ function NetWorthNowCardImpl({
   // portfolio does not re-suggest a milestone that was actually hit.
   const next =
     milestones.find((m) => m.amountCents > current && !reached.has(m.amountCents)) ?? null
-  const nextMilestone = next ? milestoneLabel(next, (c) => formatCents(c, format)) : null
+  const nextMilestone = next ? milestoneLabelWithAmount(next, (c) => formatCents(c, format)) : null
 
   return (
     <Card className={styles.chartCard}>

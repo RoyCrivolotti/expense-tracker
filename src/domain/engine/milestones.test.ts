@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   defaultMilestones,
-  milestoneLabel,
+  milestoneLabelWithAmount,
+  milestoneName,
   normalizeMilestones,
   parseMilestones,
   validateMilestones,
@@ -150,18 +151,40 @@ describe('parseMilestones', () => {
   })
 })
 
-describe('milestoneLabel', () => {
-  it('uses the name when there is one', () => {
-    expect(milestoneLabel({ amountCents: 8_000_000, label: 'Deposit' }, () => '€80k')).toBe(
-      'Deposit',
-    )
+describe('milestoneName', () => {
+  it('trims the stored name', () => {
+    expect(milestoneName({ amountCents: 8_000_000, label: '  Deposit ' })).toBe('Deposit')
   })
 
-  it('falls back to the formatted amount when unnamed', () => {
-    expect(milestoneLabel({ amountCents: 8_000_000, label: '' }, () => '€80k')).toBe('€80k')
+  it('is null when unnamed', () => {
+    expect(milestoneName({ amountCents: 8_000_000, label: '' })).toBeNull()
   })
 
   it('treats a whitespace-only name as unnamed', () => {
-    expect(milestoneLabel({ amountCents: 8_000_000, label: '   ' }, () => '€80k')).toBe('€80k')
+    expect(milestoneName({ amountCents: 8_000_000, label: '   ' })).toBeNull()
+  })
+})
+
+describe('milestoneLabelWithAmount', () => {
+  it('shows the name and the amount when named', () => {
+    expect(milestoneLabelWithAmount({ amountCents: 8_000_000, label: 'Deposit' }, () => '€80k')).toBe(
+      'Deposit (€80k)',
+    )
+  })
+
+  it('shows the amount alone when unnamed', () => {
+    expect(milestoneLabelWithAmount({ amountCents: 8_000_000, label: '' }, () => '€80k')).toBe('€80k')
+  })
+
+  it('does not leave empty parentheses for a whitespace-only name', () => {
+    expect(milestoneLabelWithAmount({ amountCents: 8_000_000, label: '  ' }, () => '€80k')).toBe(
+      '€80k',
+    )
+  })
+
+  it('uses the formatter it is given, so callers pick full or short money', () => {
+    expect(
+      milestoneLabelWithAmount({ amountCents: 8_000_000, label: 'Deposit' }, () => '80.000,00 €'),
+    ).toBe('Deposit (80.000,00 €)')
   })
 })

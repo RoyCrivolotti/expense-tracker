@@ -35,12 +35,23 @@ export function normalizeMilestones(input: Milestone[]): Milestone[] {
     }))
 }
 
+/** A milestone's trimmed name, or null when it is unnamed. */
+export function milestoneName(m: Milestone): string | null {
+  return m.label.trim() || null
+}
+
 /**
- * What to show for a milestone: its name, or the formatted amount when unnamed.
- * Takes the formatter so callers can pick full or abbreviated money rendering.
+ * "House deposit (100k €)" when named, else just "100k €". For prose and single
+ * lines; the matrix headers stack the two parts instead. Takes the formatter so
+ * callers can pick full or abbreviated money rendering.
  */
-export function milestoneLabel(m: Milestone, formatAmount: (cents: number) => string): string {
-  return m.label.trim() || formatAmount(m.amountCents)
+export function milestoneLabelWithAmount(
+  m: Milestone,
+  formatAmount: (cents: number) => string,
+): string {
+  const amount = formatAmount(m.amountCents)
+  const name = milestoneName(m)
+  return name ? `${name} (${amount})` : amount
 }
 
 /** Error message when the value cannot be stored as a milestone list, else null. */
