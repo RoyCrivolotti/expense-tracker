@@ -60,7 +60,9 @@ function TabView({
 }) {
   switch (tab) {
     case 'transactions':
-      return <TransactionsTab model={model} month={month} actions={actions} />
+      return (
+        <TransactionsTab model={model} month={month} onMonthChange={onMonthChange} actions={actions} />
+      )
     case 'analytics':
       return (
         <AnalyticsTab

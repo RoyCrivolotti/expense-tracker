@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import styles from './SegmentedControl.module.css'
 
 interface Option<T extends string> {
@@ -24,6 +25,15 @@ export function SegmentedControl<T extends string>({
   layout = 'compact',
   disabled = false,
 }: SegmentedControlProps<T>) {
+  const activeRef = useRef<HTMLButtonElement>(null)
+
+  // Scroll rows can hold more options than fit on screen — bring the active
+  // one into view rather than leaving it hidden off to one side.
+  useEffect(() => {
+    if (layout !== 'scroll') return
+    activeRef.current?.scrollIntoView?.({ inline: 'center', block: 'nearest' })
+  }, [layout, value])
+
   const groupClass =
     layout === 'bar'
       ? `${styles.group} ${styles.groupBar}`
@@ -36,6 +46,7 @@ export function SegmentedControl<T extends string>({
         <button
           key={opt.value}
           type="button"
+          ref={opt.value === value ? activeRef : undefined}
           role="radio"
           aria-checked={opt.value === value}
           className={
