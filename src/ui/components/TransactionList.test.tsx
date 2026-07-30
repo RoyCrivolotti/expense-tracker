@@ -89,6 +89,22 @@ describe('TransactionList budget month pill', () => {
     expect(screen.getByText("Aug '26")).toHaveAttribute('title', 'Budget month: August 2026')
   })
 
+  it('labels rows in the flat layout too, as the dashboard recent-activity list uses', () => {
+    render(
+      <TransactionList
+        rows={rows(
+          txn({ id: 1, date: '2026-07-15', budgetMonth: '2026-07' }),
+          txn({ id: 2, date: '2026-06-10', budgetMonth: '2026-06' }),
+        )}
+        lookup={lookup}
+        flat
+        showDate
+      />,
+    )
+    expect(screen.getByText("Jul '26")).toBeTruthy()
+    expect(screen.getByText("Jun '26")).toBeTruthy()
+  })
+
   it('counts statement-payment rows towards the month span', () => {
     render(
       <TransactionList

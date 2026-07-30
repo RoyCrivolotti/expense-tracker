@@ -1,10 +1,24 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 import type { ExpenseDataSource } from '../data/dataSource'
 import type { ExpenseDataset } from '../types'
 import { defaultExpenseSettings } from '../engine'
 import { allGroupsGranted } from '../domain/accessGroups'
 import { ExpensesApp } from './ExpensesApp'
+
+beforeAll(() => {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  })
+})
 
 function datasetWith(overrides: Partial<ExpenseDataset> = {}): ExpenseDataset {
   return {
@@ -82,5 +96,32 @@ describe('ExpensesApp onboarding wiring', () => {
     await finishWizard()
 
     expect(screen.queryByText('New transaction')).toBeNull()
+  })
+})
+
+describe('ExpensesApp tab wiring', () => {
+  it('opens the transactions tab with the dataset it was given', async () => {
+    const dataset = datasetWith({
+      categories: [{ id: 1, name: 'Groceries', monthlyBudgetCents: 30000, sortOrder: 0, active: true }],
+      accounts: [{ id: 1, name: 'Main debit', kind: 'debit', settlement: 'immediate', active: true }],
+      transactions: [
+        {
+          id: 1,
+          date: '2026-07-15',
+          budgetMonth: '2026-07',
+          description: 'Mercadona',
+          accountId: 1,
+          categoryId: 1,
+          type: 'expense',
+          amountCents: 4200,
+          cancelled: false,
+        },
+      ],
+    })
+    render(<ExpensesApp source={sourceThatSucceeds(dataset)} hubGrants={allGroupsGranted()} />)
+
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Transactions' }))[0]!)
+
+    expect(await screen.findByText('Mercadona')).toBeTruthy()
   })
 })
