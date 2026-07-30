@@ -21,7 +21,7 @@ describe('MilestoneMatrix', () => {
     expect(screen.getAllByRole('columnheader')).toHaveLength(defaultMilestones().length + 1)
   })
 
-  it('shows the milestone name when one is set', () => {
+  it('stacks the name above the amount when a milestone is named', () => {
     render(
       <MilestoneMatrix
         scenarios={[draft]}
@@ -30,7 +30,24 @@ describe('MilestoneMatrix', () => {
         reached={noneReached}
       />,
     )
-    expect(screen.getByRole('columnheader', { name: 'House deposit' })).toBeTruthy()
+    const header = screen.getByRole('columnheader', { name: /House deposit/ })
+    expect(header.textContent).toContain('House deposit')
+    // The amount is always shown too, not only when the milestone is unnamed.
+    expect(header.textContent).toMatch(/80k/)
+  })
+
+  it('spells the column out in the header tooltip, where width is not a constraint', () => {
+    render(
+      <MilestoneMatrix
+        scenarios={[draft]}
+        draft={draft}
+        milestones={[{ amountCents: 8_000_000, label: 'House deposit' }]}
+        reached={new Map([[8_000_000, '2026-03-14']])}
+      />,
+    )
+    const title = screen.getByRole('columnheader', { name: /House deposit/ }).getAttribute('title')
+    expect(title).toContain('House deposit')
+    expect(title).toContain('reached by 2026-03-14')
   })
 
   it('falls back to the formatted amount for an unnamed milestone', () => {
@@ -70,7 +87,7 @@ describe('MilestoneMatrix', () => {
     expect(screen.getAllByRole('row')).toHaveLength(4)
   })
 
-  it('marks a reached milestone with the date it was first observed', () => {
+  it('marks a reached milestone with the month it was first observed', () => {
     render(
       <MilestoneMatrix
         scenarios={[draft]}
@@ -79,7 +96,8 @@ describe('MilestoneMatrix', () => {
         reached={new Map([[8_000_000, '2026-03-14']])}
       />,
     )
-    expect(screen.getByText('reached by 2026-03-14')).toBeTruthy()
+    // Short form on screen; the full date stays in the header's title.
+    expect(screen.getByText("Mar '26")).toBeTruthy()
   })
 
   it('leaves unreached milestones unmarked', () => {
@@ -94,7 +112,10 @@ describe('MilestoneMatrix', () => {
         reached={new Map([[8_000_000, '2026-03-14']])}
       />,
     )
-    expect(screen.getAllByText(/reached by/)).toHaveLength(1)
+    expect(screen.getAllByText(/'26/)).toHaveLength(1)
+    expect(
+      screen.getByRole('columnheader', { name: /Future one/ }).getAttribute('title'),
+    ).not.toContain('reached')
   })
 
   it('points at where the list is edited', () => {

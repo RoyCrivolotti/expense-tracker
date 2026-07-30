@@ -133,8 +133,8 @@ export function MilestonesSetting({ settings, onChange }: Props) {
         <div className={styles.settingGroup}>
           <p className={styles.settingHint}>
             Net-worth targets shown on the Goals charts and the years-to-milestone matrix, measured
-            against your invested portfolio. Names are optional — an unnamed milestone shows its
-            amount instead.
+            against your invested portfolio. Names are optional, and a named milestone is shown with
+            its amount alongside; an unnamed one shows the amount on its own.
           </p>
 
           {milestones.length > 0 ? (

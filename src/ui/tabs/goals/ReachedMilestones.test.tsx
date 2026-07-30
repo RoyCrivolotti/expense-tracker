@@ -20,19 +20,19 @@ describe('ReachedMilestones', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('lists only the reached milestones with their dates', () => {
+  it('lists only the reached milestones, naming each with its amount and date', () => {
     render(
       <ReachedMilestones
         milestones={milestones}
         reached={new Map([[10_000_000, '2026-03-14']])}
       />,
     )
-    expect(screen.getByText('House deposit')).toBeTruthy()
+    expect(screen.getByText(/House deposit \(.*\)/)).toBeTruthy()
     expect(screen.getByText('by 2026-03-14')).toBeTruthy()
-    expect(screen.queryByText('Coast FI')).toBeNull()
+    expect(screen.queryByText(/Coast FI/)).toBeNull()
   })
 
-  it('falls back to the formatted amount for an unnamed milestone', () => {
+  it('shows the amount alone for an unnamed milestone', () => {
     render(
       <ReachedMilestones
         milestones={[{ amountCents: 10_000_000, label: '' }]}
