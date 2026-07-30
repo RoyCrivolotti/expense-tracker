@@ -4,7 +4,7 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 
 ## July 2026 (follow-ups)
 
-- **Budget month on transaction rows.** Every row now carries the budget month it is charged to, so filtering across months (investments over a year, say) no longer loses track of which month each row belongs to, and the "31 Jul charged to the Aug budget" rollover reads straight off the row. On narrow screens the pills drop to a second line when the category and account names need the width, instead of truncating them.
+- **Budget month on transaction rows.** Every row now carries the budget month it is charged to, so filtering across months (investments over a year, say) no longer loses track of which month each row belongs to, and the "31 Jul charged to the Aug budget" rollover reads straight off the row. The month sits under the amount, alongside the `Forecast` badge, which gives the category and account names the full width of the row and lines the months up in a column down the right edge. Every row is the same height at every screen width.
 - **Readable milestone matrix.** With named milestones the years-to-milestone table used to squeeze every column into an equal sliver and let long labels overlap their neighbours. Columns now size to their content and the table scrolls sideways with the scenario names pinned. Headers stack the name over the amount, with the full name and reached date on hover.
 - **Named milestones show their amount too.** Previously a name replaced the amount, so "Coast FI" gave no sense of the target. Named milestones now read "Coast FI (150k €)" throughout the Goals tab.
 
