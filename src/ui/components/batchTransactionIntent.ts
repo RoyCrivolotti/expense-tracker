@@ -30,7 +30,7 @@ export type BuildBatchResult =
   // rowId -> message; empty when nothing was entered anywhere (nothing to save).
   | { ok: false; errors: Record<string, string> }
 
-function isRowEmpty(row: BatchRowDraft): boolean {
+export function isRowEmpty(row: BatchRowDraft): boolean {
   return row.description.trim() === '' && row.amount.trim() === ''
 }
 

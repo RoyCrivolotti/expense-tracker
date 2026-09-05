@@ -33,7 +33,10 @@ interface Props {
 export function TransactionModal({ model, actions, editing, seed, hint, onClose }: Props) {
   const { showToast } = useToast()
   const [mode, setMode] = useState<'single' | 'batch'>('single')
-  const canBatch = editing == null
+  // Batch mode only makes sense for a from-scratch add: a seed (duplicate,
+  // "add expense in this category" shortcut, etc.) is a request to prefill one
+  // specific transaction, which BatchTransactionForm has no way to honor.
+  const canBatch = editing == null && seed == null
 
   const submit = async (input: NewTransaction, id?: number, intent?: InstallmentIntent) => {
     if (id != null) {

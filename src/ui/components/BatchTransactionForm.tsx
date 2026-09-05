@@ -1,18 +1,26 @@
-import { useId, useRef, useState } from 'react'
+import { useState } from 'react'
 import type { DescriptionSuggestion } from '../../data/descriptionIndex'
 import { applyDescriptionSuggestion } from '../../data/applyDescriptionSuggestion'
 import { resolveDefaultAccountId } from '../../data/defaultAccount'
+import { addDaysIso } from '../../engine/dates'
 import { parseMoneyToCents } from '../../engine/money'
+import type { TxnType } from '../../types'
 import { CloseIcon, PlusIcon } from '../icons'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { useToast } from '../hooks/useToast'
 import type { ExpenseActions } from '../actions'
 import type { ExpenseModel } from '../useExpenseData'
-import { buildBatchTransactions, type BatchRowDraft, type DateBatchDraft } from './batchTransactionIntent'
+import {
+  buildBatchTransactions,
+  isRowEmpty,
+  type BatchRowDraft,
+  type DateBatchDraft,
+} from './batchTransactionIntent'
 import { DescriptionCombobox } from './DescriptionCombobox'
 import { Money } from './Money'
 import { optionLabel, selectableOptions } from './pickerOptions'
 import { Field, TypeSelector } from './TransactionFields'
+import { todayIso } from './transactionFormState'
 import formStyles from './TransactionForm.module.css'
 import styles from './BatchTransactionForm.module.css'
 
@@ -22,67 +30,42 @@ interface BatchTransactionFormProps {
   onClose: () => void
 }
 
-const todayIso = () => new Date().toISOString().slice(0, 10)
-
-/** The calendar day before `iso`, e.g. 2026-03-01 -> 2026-02-28. */
-function dayBefore(iso: string): string {
-  const [y, m, d] = iso.split('-').map(Number) as [number, number, number]
-  const date = new Date(y, m - 1, d)
-  date.setDate(date.getDate() - 1)
-  const yy = date.getFullYear()
-  const mm = String(date.getMonth() + 1).padStart(2, '0')
-  const dd = String(date.getDate()).padStart(2, '0')
-  return `${yy}-${mm}-${dd}`
-}
-
-function isRowEmpty(row: BatchRowDraft): boolean {
-  return row.description.trim() === '' && row.amount.trim() === ''
-}
+/** DOM id for a row's wrapper, so a failed save can scroll the first bad row into view. */
+const rowElementId = (rowId: string) => `batch-row-${rowId}`
 
 export function BatchTransactionForm({ model, actions, onClose }: BatchTransactionFormProps) {
   const format = useMoneyFormat()
   const { showToast } = useToast()
-  const nextId = useRef(0)
-  const genId = (prefix: string) => `${prefix}-${++nextId.current}`
 
   const defaultCategoryId = () =>
     model.dataset.categories.find((c) => c.active)?.id ?? model.dataset.categories[0]?.id ?? 0
   const defaultAccountId = () => resolveDefaultAccountId(model.dataset.accounts, model.dataset.settings)
 
-  const makeRow = (categoryId: number): BatchRowDraft => ({
-    id: genId('row'),
-    type: 'expense',
+  // crypto.randomUUID() is a plain pure call (unlike a ref-backed counter), so
+  // it's safe to use here in the lazy useState initializer below as well as
+  // in later event handlers — no useId/useRef split needed.
+  const makeRow = (categoryId: number, type: TxnType = 'expense'): BatchRowDraft => ({
+    id: crypto.randomUUID(),
+    type,
     amount: '',
     description: '',
     categoryId,
   })
   const makeBatch = (date: string, accountId: number): DateBatchDraft => ({
-    id: genId('batch'),
+    id: crypto.randomUUID(),
     date,
     accountId,
     rows: [makeRow(defaultCategoryId())],
   })
 
-  // Stable ids for the initial render, from useId rather than `genId`: `genId`
-  // reads a ref, which lazy useState initializers must not touch during render
-  // (only in effects/handlers).
-  const initialBatchId = useId()
-  const initialRowId = useId()
-  const [batches, setBatches] = useState<DateBatchDraft[]>(() => [
-    {
-      id: initialBatchId,
-      date: todayIso(),
-      accountId: defaultAccountId(),
-      rows: [{ id: initialRowId, type: 'expense', amount: '', description: '', categoryId: defaultCategoryId() }],
-    },
-  ])
+  const [batches, setBatches] = useState<DateBatchDraft[]>(() => [makeBatch(todayIso(), defaultAccountId())])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState(false)
 
   const updateBatch = (batchId: string, patch: Partial<DateBatchDraft>) =>
     setBatches((bs) => bs.map((b) => (b.id === batchId ? { ...b, ...patch } : b)))
 
-  const updateRow = (batchId: string, rowId: string, patch: Partial<BatchRowDraft>) =>
+  const updateRow = (batchId: string, rowId: string, patch: Partial<BatchRowDraft>) => {
     setBatches((bs) =>
       bs.map((b) =>
         b.id !== batchId
@@ -90,13 +73,23 @@ export function BatchTransactionForm({ model, actions, onClose }: BatchTransacti
           : { ...b, rows: b.rows.map((r) => (r.id === rowId ? { ...r, ...patch } : r)) },
       ),
     )
+    // Editing a flagged row clears its stale error immediately rather than
+    // leaving last save attempt's message showing after the value's fixed;
+    // save() re-validates and re-flags it if it's still bad.
+    setErrors((e) => {
+      if (!(rowId in e)) return e
+      const next = { ...e }
+      delete next[rowId]
+      return next
+    })
+  }
 
   const addRow = (batchId: string) =>
     setBatches((bs) =>
       bs.map((b) => {
         if (b.id !== batchId) return b
-        const lastCategory = b.rows[b.rows.length - 1]?.categoryId ?? defaultCategoryId()
-        return { ...b, rows: [...b.rows, makeRow(lastCategory)] }
+        const last = b.rows[b.rows.length - 1]
+        return { ...b, rows: [...b.rows, makeRow(last?.categoryId ?? defaultCategoryId(), last?.type ?? 'expense')] }
       }),
     )
 
@@ -109,7 +102,7 @@ export function BatchTransactionForm({ model, actions, onClose }: BatchTransacti
     setBatches((bs) => {
       const earliest = bs.reduce((min, b) => (b.date < min ? b.date : min), bs[0]?.date ?? todayIso())
       const accountId = bs[bs.length - 1]?.accountId ?? defaultAccountId()
-      return [...bs, makeBatch(dayBefore(earliest), accountId)]
+      return [...bs, makeBatch(addDaysIso(earliest, -1), accountId)]
     })
 
   const removeBatch = (batchId: string) =>
@@ -123,6 +116,10 @@ export function BatchTransactionForm({ model, actions, onClose }: BatchTransacti
           ...b,
           rows: b.rows.map((r) => {
             if (r.id !== rowId) return r
+            // applyDescriptionSuggestion also resolves an accountId, but account
+            // lives at the batch level here (shared by every row), so a
+            // suggestion's remembered account can't be applied per row — only
+            // description/category/type carry over.
             const patch = applyDescriptionSuggestion(suggestion, model.dataset, {
               categoryId: r.categoryId,
               accountId: b.accountId,
@@ -133,15 +130,28 @@ export function BatchTransactionForm({ model, actions, onClose }: BatchTransacti
       }),
     )
 
-  const nonEmptyRows = batches.flatMap((b) => b.rows.filter((r) => !isRowEmpty(r)))
-  const totalCents = nonEmptyRows.reduce((sum, r) => sum + Math.abs(parseMoneyToCents(r.amount, format)), 0)
-  const count = nonEmptyRows.length
+  // Same "counts toward saving" rule buildBatchTransactions uses (non-empty
+  // AND a positive amount), so this summary never promises more than save()
+  // will actually persist.
+  const saveableRows = batches.flatMap((b) =>
+    b.rows.filter((r) => !isRowEmpty(r) && Math.abs(parseMoneyToCents(r.amount, format)) > 0),
+  )
+  const totalCents = saveableRows.reduce((sum, r) => sum + Math.abs(parseMoneyToCents(r.amount, format)), 0)
+  const count = saveableRows.length
 
   const save = async () => {
     const result = buildBatchTransactions(batches, format, model.dataset.settings.budgetRolloverDay)
     if (!result.ok) {
       setErrors(result.errors)
-      if (Object.keys(result.errors).length === 0) {
+      const firstErrorRowId = Object.keys(result.errors)[0]
+      if (firstErrorRowId) {
+        // `behavior: 'smooth'` is a silent no-op for an element inside this
+        // modal's nested `overflow-y: auto` container in at least one real
+        // browser engine (verified manually) — 'auto' actually moves it.
+        document
+          .getElementById(rowElementId(firstErrorRowId))
+          ?.scrollIntoView({ behavior: 'auto', block: 'center' })
+      } else {
         showToast('Add at least one transaction', 'error')
       }
       return
@@ -197,7 +207,7 @@ export function BatchTransactionForm({ model, actions, onClose }: BatchTransacti
           </div>
 
           {batch.rows.map((row) => (
-            <div key={row.id} className={styles.row}>
+            <div key={row.id} id={rowElementId(row.id)} className={styles.row}>
               <TypeSelector value={row.type} onChange={(t) => updateRow(batch.id, row.id, { type: t })} />
               <div className={styles.rowFields}>
                 <input

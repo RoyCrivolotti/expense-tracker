@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  addDaysIso,
   calendarRangeLastMonths,
   daysBetween,
   isDueSoon,
@@ -55,6 +56,28 @@ describe('daysBetween', () => {
 
   it('crosses month boundaries', () => {
     expect(daysBetween('2026-07-30', '2026-08-02')).toBe(3)
+  })
+})
+
+describe('addDaysIso', () => {
+  it('steps back one day', () => {
+    expect(addDaysIso('2026-03-10', -1)).toBe('2026-03-09')
+  })
+
+  it('steps forward one day', () => {
+    expect(addDaysIso('2026-03-09', 1)).toBe('2026-03-10')
+  })
+
+  it('rolls back across a month boundary', () => {
+    expect(addDaysIso('2026-03-01', -1)).toBe('2026-02-28')
+  })
+
+  it('rolls forward across a year boundary', () => {
+    expect(addDaysIso('2025-12-31', 1)).toBe('2026-01-01')
+  })
+
+  it('is a no-op for a zero-day shift', () => {
+    expect(addDaysIso('2026-06-15', 0)).toBe('2026-06-15')
   })
 })
 

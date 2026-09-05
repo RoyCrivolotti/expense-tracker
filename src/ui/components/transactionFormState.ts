@@ -18,7 +18,7 @@ export interface FormFields {
 
 export type Setter = <K extends keyof FormFields>(key: K, value: FormFields[K]) => void
 
-const todayIso = () => new Date().toISOString().slice(0, 10)
+export const todayIso = () => new Date().toISOString().slice(0, 10)
 
 function defaultFields(model: ExpenseModel): FormFields {
   const { categories, accounts } = model.dataset
