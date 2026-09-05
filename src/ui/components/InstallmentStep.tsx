@@ -3,6 +3,8 @@ import type { ExpenseModel } from '../useExpenseData'
 import type { InstallmentDraft, InstallmentMode } from './installmentIntent'
 import { finalBudgetMonth, planProgress } from '../../engine'
 import { fullMonthLabel } from '../../engine/dates'
+import { formatCents } from '../../engine/money'
+import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import formStyles from './TransactionForm.module.css'
 import styles from './InstallmentStep.module.css'
 
@@ -15,6 +17,8 @@ interface Props {
   set: SetDraft
   onBack: () => void
   error?: string | null | undefined
+  /** The amount currently entered on the Details step (always positive). */
+  amountCents: number
 }
 
 interface ModeOption {
@@ -62,7 +66,18 @@ function NumberField({
   )
 }
 
-function NewFields({ draft, set }: { draft: InstallmentDraft; set: SetDraft }) {
+function NewFields({
+  draft,
+  set,
+  amountCents,
+}: {
+  draft: InstallmentDraft
+  set: SetDraft
+  amountCents: number
+}) {
+  const format = useMoneyFormat()
+  const totalCount = Number(draft.totalCount)
+  const canSplit = Number.isInteger(totalCount) && totalCount >= 1
   return (
     <>
       <div className={formStyles.row}>
@@ -77,6 +92,19 @@ function NewFields({ draft, set }: { draft: InstallmentDraft; set: SetDraft }) {
           onChange={(v) => set('installmentIndex', v)}
         />
       </div>
+      <label className={styles.splitToggle}>
+        <input
+          type="checkbox"
+          checked={draft.splitTotal ?? false}
+          onChange={(e) => set('splitTotal', e.target.checked)}
+        />
+        <span>This is the total price — split evenly across installments</span>
+      </label>
+      {draft.splitTotal && canSplit ? (
+        <p className={styles.summary}>
+          ≈ {formatCents(Math.round(amountCents / totalCount), format)} × {totalCount}
+        </p>
+      ) : null}
       <p className={styles.summary}>The plan is anchored to this transaction&apos;s budget month.</p>
     </>
   )
@@ -121,7 +149,7 @@ function ExistingFields({
   )
 }
 
-export function InstallmentStep({ model, editing, draft, set, onBack, error }: Props) {
+export function InstallmentStep({ model, editing, draft, set, onBack, error, amountCents }: Props) {
   const plans = model.dataset.installmentPlans
   const linked = editing?.planId != null
 
@@ -163,7 +191,9 @@ export function InstallmentStep({ model, editing, draft, set, onBack, error }: P
           </button>
         ))}
       </div>
-      {draft.mode === 'new' ? <NewFields draft={draft} set={set} /> : null}
+      {draft.mode === 'new' ? (
+        <NewFields draft={draft} set={set} amountCents={amountCents} />
+      ) : null}
       {draft.mode === 'existing' ? (
         <ExistingFields model={model} draft={draft} set={set} onSelectPlan={selectPlan} />
       ) : null}

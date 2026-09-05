@@ -103,6 +103,53 @@ describe('createTransactionWithIntent', () => {
     consoleError.mockRestore()
   })
 
+  it('splits an evenly-divisible total across installments for both the plan and the transaction', async () => {
+    const createInstallmentPlan = vi.fn().mockResolvedValue({ id: 9 })
+    const createTransaction = vi.fn().mockResolvedValue(undefined)
+    const actions = makeActions({ createInstallmentPlan, createTransaction })
+
+    await createTransactionWithIntent(
+      actions,
+      { ...input, amountCents: -54370 },
+      { kind: 'new', totalCount: 3, installmentIndex: 1, splitTotal: true },
+    )
+
+    expect(createInstallmentPlan).toHaveBeenCalledWith(expect.objectContaining({ amountCents: 18123 }))
+    expect(createTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({ amountCents: -18123, planId: 9, installmentIndex: 1 }),
+    )
+  })
+
+  it('rounds an unevenly-divisible total when splitting', async () => {
+    const createInstallmentPlan = vi.fn().mockResolvedValue({ id: 9 })
+    const createTransaction = vi.fn().mockResolvedValue(undefined)
+    const actions = makeActions({ createInstallmentPlan, createTransaction })
+
+    await createTransactionWithIntent(
+      actions,
+      { ...input, amountCents: 1000 },
+      { kind: 'new', totalCount: 3, installmentIndex: 1, splitTotal: true },
+    )
+
+    expect(createInstallmentPlan).toHaveBeenCalledWith(expect.objectContaining({ amountCents: 333 }))
+    expect(createTransaction).toHaveBeenCalledWith(expect.objectContaining({ amountCents: 333 }))
+  })
+
+  it('keeps the full amount per installment when splitTotal is not set', async () => {
+    const createInstallmentPlan = vi.fn().mockResolvedValue({ id: 9 })
+    const createTransaction = vi.fn().mockResolvedValue(undefined)
+    const actions = makeActions({ createInstallmentPlan, createTransaction })
+
+    await createTransactionWithIntent(actions, input, {
+      kind: 'new',
+      totalCount: 24,
+      installmentIndex: 14,
+    })
+
+    expect(createInstallmentPlan).toHaveBeenCalledWith(expect.objectContaining({ amountCents: 5783 }))
+    expect(createTransaction).toHaveBeenCalledWith(expect.objectContaining({ amountCents: -5783 }))
+  })
+
   it('links to an existing plan without creating a new one', async () => {
     const createInstallmentPlan = vi.fn()
     const createTransaction = vi.fn().mockResolvedValue(undefined)

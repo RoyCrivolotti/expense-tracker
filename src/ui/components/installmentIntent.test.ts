@@ -24,7 +24,20 @@ describe('buildInstallmentIntent', () => {
     const result = buildInstallmentIntent(
       draft({ mode: 'new', totalCount: '24', installmentIndex: '8' }),
     )
-    expect(result).toEqual({ ok: true, intent: { kind: 'new', totalCount: 24, installmentIndex: 8 } })
+    expect(result).toEqual({
+      ok: true,
+      intent: { kind: 'new', totalCount: 24, installmentIndex: 8, splitTotal: undefined },
+    })
+  })
+
+  it('carries splitTotal through into a new-plan intent', () => {
+    const result = buildInstallmentIntent(
+      draft({ mode: 'new', totalCount: '3', installmentIndex: '1', splitTotal: true }),
+    )
+    expect(result).toEqual({
+      ok: true,
+      intent: { kind: 'new', totalCount: 3, installmentIndex: 1, splitTotal: true },
+    })
   })
 
   it('builds a link intent for an existing plan', () => {

@@ -54,7 +54,7 @@ function initialDraft(
       installmentIndex: seed.installmentIndex != null ? String(seed.installmentIndex) : '',
     }
   }
-  return { mode: 'none', totalCount: '', installmentIndex: '', planId: null }
+  return { mode: 'none', totalCount: '', installmentIndex: '', planId: null, splitTotal: false }
 }
 
 /** Label for the installment toggle reflecting the pending draft, then current link. */
@@ -136,6 +136,7 @@ export function TransactionForm({
           set={setDraftField}
           onBack={() => setView('fields')}
           error={err}
+          amountCents={Math.abs(parseMoneyToCents(form.amount, format) || 0)}
         />
       ) : (
         <>

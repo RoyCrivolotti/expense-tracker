@@ -8,23 +8,34 @@ function dueDayFromDate(isoDate: string): number | null {
   return Number.isInteger(day) && day >= 1 && day <= 31 ? day : null
 }
 
-/** Build a new plan anchored to the transaction being saved. */
+/**
+ * Build a new plan anchored to the transaction being saved, and the (sign-
+ * preserving) amount the linked transaction itself should carry: the entered
+ * amount as-is, or its share of the total when `splitTotal` is set.
+ */
 function planFromInput(
   input: NewTransaction,
   totalCount: number,
   startIndex: number,
-): NewInstallmentPlan {
+  splitTotal: boolean,
+): { plan: NewInstallmentPlan; amountCents: number } {
+  const magnitude = Math.abs(input.amountCents)
+  const perInstallmentCents = splitTotal ? Math.round(magnitude / totalCount) : magnitude
+  const sign = input.amountCents < 0 ? -1 : 1
   return {
-    description: input.description,
-    amountCents: Math.abs(input.amountCents),
-    totalCount,
-    accountId: input.accountId,
-    categoryId: input.categoryId,
-    type: input.type,
-    anchorBudgetMonth: input.budgetMonth,
-    startInstallmentIndex: startIndex,
-    dueDayOfMonth: dueDayFromDate(input.date),
-    active: true,
+    plan: {
+      description: input.description,
+      amountCents: perInstallmentCents,
+      totalCount,
+      accountId: input.accountId,
+      categoryId: input.categoryId,
+      type: input.type,
+      anchorBudgetMonth: input.budgetMonth,
+      startInstallmentIndex: startIndex,
+      dueDayOfMonth: dueDayFromDate(input.date),
+      active: true,
+    },
+    amountCents: perInstallmentCents * sign,
   }
 }
 
@@ -38,16 +49,20 @@ async function createPlanAndLink(
   actions: ExpenseActions,
   input: NewTransaction,
   intent: Extract<InstallmentIntent, { kind: 'new' }>,
-  link: (planId: number) => Promise<void>,
+  link: (planId: number, amountCents: number) => Promise<void>,
 ): Promise<void> {
-  const plan = await actions.createInstallmentPlan(
-    planFromInput(input, intent.totalCount, intent.installmentIndex),
+  const { plan, amountCents } = planFromInput(
+    input,
+    intent.totalCount,
+    intent.installmentIndex,
+    intent.splitTotal ?? false,
   )
+  const created = await actions.createInstallmentPlan(plan)
   try {
-    await link(plan.id)
+    await link(created.id, amountCents)
   } catch (error) {
     try {
-      await actions.deleteInstallmentPlan(plan.id)
+      await actions.deleteInstallmentPlan(created.id)
     } catch (cleanupError) {
       console.error('Failed to roll back orphaned installment plan', cleanupError)
     }
@@ -62,8 +77,13 @@ export async function createTransactionWithIntent(
   intent?: InstallmentIntent,
 ): Promise<void> {
   if (intent?.kind === 'new') {
-    await createPlanAndLink(actions, input, intent, (planId) =>
-      actions.createTransaction({ ...input, planId, installmentIndex: intent.installmentIndex }),
+    await createPlanAndLink(actions, input, intent, (planId, amountCents) =>
+      actions.createTransaction({
+        ...input,
+        amountCents,
+        planId,
+        installmentIndex: intent.installmentIndex,
+      }),
     )
     return
   }
@@ -86,8 +106,13 @@ export async function updateTransactionWithIntent(
   intent?: InstallmentIntent,
 ): Promise<void> {
   if (intent?.kind === 'new') {
-    await createPlanAndLink(actions, input, intent, (planId) =>
-      actions.updateTransaction(id, { ...input, planId, installmentIndex: intent.installmentIndex }),
+    await createPlanAndLink(actions, input, intent, (planId, amountCents) =>
+      actions.updateTransaction(id, {
+        ...input,
+        amountCents,
+        planId,
+        installmentIndex: intent.installmentIndex,
+      }),
     )
     return
   }
