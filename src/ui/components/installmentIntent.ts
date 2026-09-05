@@ -5,7 +5,7 @@
 
 export type InstallmentIntent =
   | { kind: 'none' }
-  | { kind: 'new'; totalCount: number; installmentIndex: number }
+  | { kind: 'new'; totalCount: number; installmentIndex: number; splitTotal?: boolean }
   // `link` also covers moving a row to a different plan (a new planId).
   | { kind: 'link'; planId: number; installmentIndex: number }
   | { kind: 'unlink' }
@@ -19,6 +19,8 @@ export interface InstallmentDraft {
   installmentIndex: string
   /** Selected plan for 'existing'. */
   planId: number | null
+  /** 'new' only: the entered amount is the item's total price, to be split evenly. */
+  splitTotal?: boolean
 }
 
 export type IntentResult = { ok: true; intent: InstallmentIntent } | { ok: false; error: string }
@@ -44,7 +46,10 @@ export function buildInstallmentIntent(draft: InstallmentDraft): IntentResult {
   if (index == null) return { ok: false, error: `Installment number must be between 1 and ${total}` }
 
   if (draft.mode === 'new') {
-    return { ok: true, intent: { kind: 'new', totalCount: total, installmentIndex: index } }
+    return {
+      ok: true,
+      intent: { kind: 'new', totalCount: total, installmentIndex: index, splitTotal: draft.splitTotal },
+    }
   }
   if (draft.planId == null) return { ok: false, error: 'Choose an installment plan' }
   return { ok: true, intent: { kind: 'link', planId: draft.planId, installmentIndex: index } }
