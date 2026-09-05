@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import type { DescriptionSuggestion } from '../../data/descriptionIndex'
 import { applyDescriptionSuggestion } from '../../data/applyDescriptionSuggestion'
 import { resolveDefaultAccountId } from '../../data/defaultAccount'
@@ -63,14 +63,17 @@ export function BatchTransactionForm({ model, actions, onClose }: BatchTransacti
     rows: [makeRow(defaultCategoryId())],
   })
 
-  // Fixed ids for the initial render: `genId` reads a ref, which lazy useState
-  // initializers must not touch during render (only in effects/handlers).
+  // Stable ids for the initial render, from useId rather than `genId`: `genId`
+  // reads a ref, which lazy useState initializers must not touch during render
+  // (only in effects/handlers).
+  const initialBatchId = useId()
+  const initialRowId = useId()
   const [batches, setBatches] = useState<DateBatchDraft[]>(() => [
     {
-      id: 'batch-0',
+      id: initialBatchId,
       date: todayIso(),
       accountId: defaultAccountId(),
-      rows: [{ id: 'row-0', type: 'expense', amount: '', description: '', categoryId: defaultCategoryId() }],
+      rows: [{ id: initialRowId, type: 'expense', amount: '', description: '', categoryId: defaultCategoryId() }],
     },
   ])
   const [errors, setErrors] = useState<Record<string, string>>({})
