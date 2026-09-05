@@ -3,11 +3,19 @@ import { EU_MONEY_FORMAT } from '../../engine/money'
 import { buildBatchTransactions, type DateBatchDraft } from './batchTransactionIntent'
 
 function row(overrides: Partial<DateBatchDraft['rows'][number]> = {}) {
-  return { id: 'r1', type: 'expense' as const, amount: '', description: '', categoryId: 1, ...overrides }
+  return {
+    id: 'r1',
+    type: 'expense' as const,
+    amount: '',
+    description: '',
+    categoryId: 1,
+    accountId: 1,
+    ...overrides,
+  }
 }
 
 function batch(overrides: Partial<DateBatchDraft> = {}): DateBatchDraft {
-  return { id: 'b1', date: '2026-03-10', accountId: 1, rows: [row()], ...overrides }
+  return { id: 'b1', date: '2026-03-10', rows: [row()], ...overrides }
 }
 
 describe('buildBatchTransactions', () => {
@@ -25,8 +33,9 @@ describe('buildBatchTransactions', () => {
       [
         batch({
           date: '2026-03-10',
-          accountId: 4,
-          rows: [row({ id: 'r1', description: 'Mercadona', amount: '12,50', categoryId: 2 })],
+          rows: [
+            row({ id: 'r1', description: 'Mercadona', amount: '12,50', categoryId: 2, accountId: 4 }),
+          ],
         }),
       ],
       EU_MONEY_FORMAT,
@@ -80,20 +89,36 @@ describe('buildBatchTransactions', () => {
     expect(result).toEqual({ ok: false, errors: { bad: 'Enter an amount greater than zero' } })
   })
 
-  it('flattens multiple batches into one array, preserving per-batch date/account and per-row fields', () => {
+  it('flattens multiple batches into one array, preserving per-batch date and per-row fields (including account)', () => {
     const result = buildBatchTransactions(
       [
         batch({
           id: 'b1',
           date: '2026-03-01',
-          accountId: 1,
-          rows: [row({ id: 'r1', description: 'Groceries', amount: '20', categoryId: 5, type: 'expense' })],
+          rows: [
+            row({
+              id: 'r1',
+              description: 'Groceries',
+              amount: '20',
+              categoryId: 5,
+              accountId: 1,
+              type: 'expense',
+            }),
+          ],
         }),
         batch({
           id: 'b2',
           date: '2026-03-02',
-          accountId: 2,
-          rows: [row({ id: 'r2', description: 'Refund', amount: '10', categoryId: 6, type: 'refund' })],
+          rows: [
+            row({
+              id: 'r2',
+              description: 'Refund',
+              amount: '10',
+              categoryId: 6,
+              accountId: 2,
+              type: 'refund',
+            }),
+          ],
         }),
       ],
       EU_MONEY_FORMAT,
@@ -122,6 +147,23 @@ describe('buildBatchTransactions', () => {
         cancelled: false,
       },
     ])
+  })
+
+  it('lets two rows in the same batch carry different accounts', () => {
+    const result = buildBatchTransactions(
+      [
+        batch({
+          rows: [
+            row({ id: 'cash', description: 'Snack', amount: '3', accountId: 1 }),
+            row({ id: 'card', description: 'Fuel', amount: '40', accountId: 2 }),
+          ],
+        }),
+      ],
+      EU_MONEY_FORMAT,
+      1,
+    )
+    expect(result.ok).toBe(true)
+    expect(result.ok && result.transactions.map((t) => t.accountId)).toEqual([1, 2])
   })
 
   it('derives budgetMonth using the configured rollover day', () => {

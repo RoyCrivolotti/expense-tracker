@@ -18,8 +18,7 @@
   align-items: flex-end;
   gap: 0.6rem;
 }
-.batchHeader > *:first-child,
-.batchHeader > *:nth-child(2) {
+.batchHeader > *:first-child {
   flex: 1;
 }
 

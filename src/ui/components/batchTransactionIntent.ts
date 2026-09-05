@@ -16,12 +16,12 @@ export interface BatchRowDraft {
   amount: string
   description: string
   categoryId: number
+  accountId: number
 }
 
 export interface DateBatchDraft {
   id: string
   date: string
-  accountId: number
   rows: BatchRowDraft[]
 }
 
@@ -56,7 +56,7 @@ export function buildBatchTransactions(
         date: batch.date,
         budgetMonth,
         description: row.description.trim(),
-        accountId: batch.accountId,
+        accountId: row.accountId,
         categoryId: row.categoryId,
         type: row.type,
         amountCents: cents,

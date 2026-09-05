@@ -7,7 +7,13 @@ export function validateNewTransaction(input: NewTransaction): NewTransaction {
   if (!input.date || !input.budgetMonth || !input.accountId || !input.categoryId) {
     throw new Error('date, budgetMonth, accountId and categoryId are required')
   }
-  if (!Number.isFinite(input.amountCents)) throw new Error('amountCents must be a number')
+  // Matches installmentPlanService.ts's amountCents check: the UI forms already
+  // enforce this for instant feedback, but this is the real source of truth —
+  // any other caller (a future import path, a retry, a script) must be stopped
+  // here too, not just trust the client.
+  if (!Number.isFinite(input.amountCents) || input.amountCents <= 0) {
+    throw new Error('amountCents must be greater than zero')
+  }
   return input
 }
 

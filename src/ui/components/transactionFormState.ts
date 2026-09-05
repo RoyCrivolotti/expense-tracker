@@ -18,7 +18,15 @@ export interface FormFields {
 
 export type Setter = <K extends keyof FormFields>(key: K, value: FormFields[K]) => void
 
-export const todayIso = () => new Date().toISOString().slice(0, 10)
+/** Today's date in the user's local calendar (not UTC — `toISOString` can read
+ * as yesterday for part of the day in a positive-UTC-offset timezone). */
+export function todayIso(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 
 function defaultFields(model: ExpenseModel): FormFields {
   const { categories, accounts } = model.dataset

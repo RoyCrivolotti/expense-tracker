@@ -44,21 +44,23 @@ export function BatchTransactionForm({ model, actions, onClose }: BatchTransacti
   // crypto.randomUUID() is a plain pure call (unlike a ref-backed counter), so
   // it's safe to use here in the lazy useState initializer below as well as
   // in later event handlers — no useId/useRef split needed.
-  const makeRow = (categoryId: number, type: TxnType = 'expense'): BatchRowDraft => ({
+  const makeRow = (categoryId: number, accountId: number, type: TxnType = 'expense'): BatchRowDraft => ({
     id: crypto.randomUUID(),
     type,
     amount: '',
     description: '',
     categoryId,
+    accountId,
   })
-  const makeBatch = (date: string, accountId: number): DateBatchDraft => ({
+  const makeBatch = (date: string, seedRow: BatchRowDraft): DateBatchDraft => ({
     id: crypto.randomUUID(),
     date,
-    accountId,
-    rows: [makeRow(defaultCategoryId())],
+    rows: [seedRow],
   })
 
-  const [batches, setBatches] = useState<DateBatchDraft[]>(() => [makeBatch(todayIso(), defaultAccountId())])
+  const [batches, setBatches] = useState<DateBatchDraft[]>(() => [
+    makeBatch(todayIso(), makeRow(defaultCategoryId(), defaultAccountId())),
+  ])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState(false)
 
@@ -89,7 +91,17 @@ export function BatchTransactionForm({ model, actions, onClose }: BatchTransacti
       bs.map((b) => {
         if (b.id !== batchId) return b
         const last = b.rows[b.rows.length - 1]
-        return { ...b, rows: [...b.rows, makeRow(last?.categoryId ?? defaultCategoryId(), last?.type ?? 'expense')] }
+        return {
+          ...b,
+          rows: [
+            ...b.rows,
+            makeRow(
+              last?.categoryId ?? defaultCategoryId(),
+              last?.accountId ?? defaultAccountId(),
+              last?.type ?? 'expense',
+            ),
+          ],
+        }
       }),
     )
 
@@ -101,8 +113,14 @@ export function BatchTransactionForm({ model, actions, onClose }: BatchTransacti
   const addBatch = () =>
     setBatches((bs) => {
       const earliest = bs.reduce((min, b) => (b.date < min ? b.date : min), bs[0]?.date ?? todayIso())
-      const accountId = bs[bs.length - 1]?.accountId ?? defaultAccountId()
-      return [...bs, makeBatch(addDaysIso(earliest, -1), accountId)]
+      const lastBatchRows = bs[bs.length - 1]?.rows ?? []
+      const last = lastBatchRows[lastBatchRows.length - 1]
+      const seedRow = makeRow(
+        last?.categoryId ?? defaultCategoryId(),
+        last?.accountId ?? defaultAccountId(),
+        last?.type ?? 'expense',
+      )
+      return [...bs, makeBatch(addDaysIso(earliest, -1), seedRow)]
     })
 
   const removeBatch = (batchId: string) =>
@@ -116,15 +134,13 @@ export function BatchTransactionForm({ model, actions, onClose }: BatchTransacti
           ...b,
           rows: b.rows.map((r) => {
             if (r.id !== rowId) return r
-            // applyDescriptionSuggestion also resolves an accountId, but account
-            // lives at the batch level here (shared by every row), so a
-            // suggestion's remembered account can't be applied per row — only
-            // description/category/type carry over.
+            // Account is a per-row field (like the single-transaction form), so
+            // the suggestion's remembered account applies here, same as there.
             const patch = applyDescriptionSuggestion(suggestion, model.dataset, {
               categoryId: r.categoryId,
-              accountId: b.accountId,
+              accountId: r.accountId,
             })
-            return { ...r, description: patch.description, categoryId: patch.categoryId, type: patch.type }
+            return { ...r, ...patch }
           }),
         }
       }),
@@ -182,18 +198,6 @@ export function BatchTransactionForm({ model, actions, onClose }: BatchTransacti
                 required
               />
             </Field>
-            <Field label="Account">
-              <select
-                value={batch.accountId}
-                onChange={(e) => updateBatch(batch.id, { accountId: Number(e.target.value) })}
-              >
-                {selectableOptions(model.dataset.accounts, batch.accountId).map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {optionLabel(a)}
-                  </option>
-                ))}
-              </select>
-            </Field>
             {batches.length > 1 && (
               <button
                 type="button"
@@ -236,6 +240,16 @@ export function BatchTransactionForm({ model, actions, onClose }: BatchTransacti
                     </option>
                   ))}
                 </select>
+                <select
+                  value={row.accountId}
+                  onChange={(e) => updateRow(batch.id, row.id, { accountId: Number(e.target.value) })}
+                >
+                  {selectableOptions(model.dataset.accounts, row.accountId).map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {optionLabel(a)}
+                    </option>
+                  ))}
+                </select>
               </div>
               <button
                 type="button"
@@ -259,7 +273,7 @@ export function BatchTransactionForm({ model, actions, onClose }: BatchTransacti
         <PlusIcon /> Add another date
       </button>
 
-      <p className={styles.summary}>
+      <p className={styles.summary} data-testid="batch-summary">
         {count} transaction{count === 1 ? '' : 's'} · <Money cents={totalCents} />
       </p>
 
