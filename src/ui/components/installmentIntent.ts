@@ -48,7 +48,12 @@ export function buildInstallmentIntent(draft: InstallmentDraft): IntentResult {
   if (draft.mode === 'new') {
     return {
       ok: true,
-      intent: { kind: 'new', totalCount: total, installmentIndex: index, splitTotal: draft.splitTotal },
+      intent: {
+        kind: 'new',
+        totalCount: total,
+        installmentIndex: index,
+        ...(draft.splitTotal !== undefined ? { splitTotal: draft.splitTotal } : {}),
+      },
     }
   }
   if (draft.planId == null) return { ok: false, error: 'Choose an installment plan' }
