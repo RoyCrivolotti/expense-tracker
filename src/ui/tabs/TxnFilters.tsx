@@ -28,6 +28,8 @@ export interface TxnFiltersProps {
   selectMode: boolean
   canSelect: boolean
   secondaryFilterCount: number
+  hasActiveFilters: boolean
+  onClearFilters: () => void
   onQuery: (value: string) => void
   onCategory: (value: number | 'all') => void
   onAccount: (value: number | 'all') => void
@@ -53,22 +55,29 @@ export function TxnFilters(props: TxnFiltersProps) {
         onQuery={props.onQuery}
         onToggleSelectMode={props.onToggleSelectMode}
       />
-      <button
-        type="button"
-        className={`${styles.filterToggle}${
-          props.secondaryFilterCount > 0 ? ` ${styles.filterToggleActive}` : ''
-        }`}
-        onClick={() => setExpanded((open) => !open)}
-        disabled={props.selectMode}
-        aria-expanded={expanded}
-      >
-        <span>{chevron} Filters</span>
-        {props.secondaryFilterCount > 0 ? (
-          <span className={styles.filterToggleBadge} aria-label={`${props.secondaryFilterCount} active filters`}>
-            {props.secondaryFilterCount}
-          </span>
+      <div className={styles.filterToggleRow}>
+        <button
+          type="button"
+          className={`${styles.filterToggle}${
+            props.secondaryFilterCount > 0 ? ` ${styles.filterToggleActive}` : ''
+          }`}
+          onClick={() => setExpanded((open) => !open)}
+          disabled={props.selectMode}
+          aria-expanded={expanded}
+        >
+          <span>{chevron} Filters</span>
+          {props.secondaryFilterCount > 0 ? (
+            <span className={styles.filterToggleBadge} aria-label={`${props.secondaryFilterCount} active filters`}>
+              {props.secondaryFilterCount}
+            </span>
+          ) : null}
+        </button>
+        {props.hasActiveFilters && !props.selectMode ? (
+          <button type="button" className={styles.filterClear} onClick={props.onClearFilters}>
+            Clear filters
+          </button>
         ) : null}
-      </button>
+      </div>
       {!expanded ? <ActiveFilterChips chips={activeChips} /> : null}
       {expanded ? (
         <div className={styles.filterSecondary}>

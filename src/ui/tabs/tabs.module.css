@@ -59,14 +59,21 @@
   margin-bottom: 0.5rem;
 }
 
+.filterToggleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 .filterToggle {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  align-self: flex-start;
   border: 0;
-  padding: 0.15rem 0;
-  background: none;
+  padding: 0.35rem 0.7rem;
+  border-radius: 0.6rem;
+  background: var(--color-surface-muted);
   color: var(--color-text-muted);
   font: inherit;
   font-size: 0.85rem;
@@ -85,6 +92,7 @@
 
 .filterToggleActive,
 .filterToggleActive:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-accent) 16%, var(--color-surface-muted));
   color: var(--color-accent);
 }
 
@@ -362,18 +370,19 @@
 .filterClear {
   flex-shrink: 0;
   border: 0;
-  padding: 0;
+  padding: 0.35rem 0;
   background: none;
-  color: var(--color-text-muted);
+  color: var(--color-accent);
   font: inherit;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
 .filterClear:hover {
-  color: var(--color-text);
+  opacity: 0.75;
 }
 
 .defRow {
