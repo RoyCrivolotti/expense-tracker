@@ -214,42 +214,50 @@ export function BatchTransactionForm({ model, actions, onClose }: BatchTransacti
             <div key={row.id} id={rowElementId(row.id)} className={styles.row}>
               <TypeSelector value={row.type} onChange={(t) => updateRow(batch.id, row.id, { type: t })} />
               <div className={styles.rowFields}>
-                <input
-                  className={styles.rowAmount}
-                  type="text"
-                  inputMode="decimal"
-                  autoComplete="off"
-                  placeholder={`0${format.decimalSeparator}00`}
-                  value={row.amount}
-                  onChange={(e) => updateRow(batch.id, row.id, { amount: e.target.value })}
-                />
-                <DescriptionCombobox
-                  value={row.description}
-                  index={model.descriptionIndex}
-                  placeholder="e.g. Mercadona"
-                  onChange={(v) => updateRow(batch.id, row.id, { description: v })}
-                  onAccept={(s) => onAcceptSuggestion(batch.id, row.id, s)}
-                />
-                <select
-                  value={row.categoryId}
-                  onChange={(e) => updateRow(batch.id, row.id, { categoryId: Number(e.target.value) })}
-                >
-                  {selectableOptions(model.dataset.categories, row.categoryId).map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {optionLabel(c)}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={row.accountId}
-                  onChange={(e) => updateRow(batch.id, row.id, { accountId: Number(e.target.value) })}
-                >
-                  {selectableOptions(model.dataset.accounts, row.accountId).map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {optionLabel(a)}
-                    </option>
-                  ))}
-                </select>
+                <Field label="Amount">
+                  <input
+                    className={styles.rowAmount}
+                    type="text"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    placeholder={`0${format.decimalSeparator}00`}
+                    value={row.amount}
+                    onChange={(e) => updateRow(batch.id, row.id, { amount: e.target.value })}
+                  />
+                </Field>
+                <Field label="Description">
+                  <DescriptionCombobox
+                    value={row.description}
+                    index={model.descriptionIndex}
+                    placeholder="e.g. Mercadona"
+                    onChange={(v) => updateRow(batch.id, row.id, { description: v })}
+                    onAccept={(s) => onAcceptSuggestion(batch.id, row.id, s)}
+                  />
+                </Field>
+                <Field label="Category">
+                  <select
+                    value={row.categoryId}
+                    onChange={(e) => updateRow(batch.id, row.id, { categoryId: Number(e.target.value) })}
+                  >
+                    {selectableOptions(model.dataset.categories, row.categoryId).map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {optionLabel(c)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Account">
+                  <select
+                    value={row.accountId}
+                    onChange={(e) => updateRow(batch.id, row.id, { accountId: Number(e.target.value) })}
+                  >
+                    {selectableOptions(model.dataset.accounts, row.accountId).map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {optionLabel(a)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
               </div>
               <button
                 type="button"
