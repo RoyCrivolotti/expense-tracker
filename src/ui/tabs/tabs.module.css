@@ -134,12 +134,16 @@
 .search {
   width: 100%;
   padding: 0.6rem 2.25rem 0.6rem 0.75rem;
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: 0.7rem;
-  background: var(--color-bg);
+  background: var(--color-surface-muted);
   color: var(--color-text);
   font: inherit;
   font-size: 0.9rem;
+}
+.search:focus {
+  border-color: var(--color-accent);
+  outline: none;
 }
 .searchClear {
   position: absolute;
@@ -166,12 +170,17 @@
 .selectRow input[type='date'] {
   width: 100%;
   padding: 0.6rem 0.75rem;
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: 0.7rem;
-  background: var(--color-bg);
+  background: var(--color-surface-muted);
   color: var(--color-text);
   font: inherit;
   font-size: 0.9rem;
+}
+.selectRow select:focus,
+.selectRow input[type='date']:focus {
+  border-color: var(--color-accent);
+  outline: none;
 }
 .dateScopeBlock {
   display: flex;
@@ -229,9 +238,9 @@
 .defaultAccountSelect {
   width: 100%;
   padding: 0.6rem 0.75rem;
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: 0.7rem;
-  background: var(--color-bg);
+  background: var(--color-surface-muted);
   color: var(--color-text);
   font: inherit;
   font-size: 0.9rem;
@@ -239,6 +248,10 @@
      off right against the native dropdown arrow on narrow viewports. */
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.defaultAccountSelect:focus {
+  border-color: var(--color-accent);
+  outline: none;
 }
 
 .milestoneList {
@@ -260,13 +273,18 @@
 .milestoneLabelInput,
 .milestoneAmountInput {
   padding: 0.5rem 0.6rem;
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: 0.6rem;
-  background: var(--color-bg);
+  background: var(--color-surface-muted);
   color: var(--color-text);
   font: inherit;
   font-size: 0.9rem;
   min-width: 0;
+}
+.milestoneLabelInput:focus,
+.milestoneAmountInput:focus {
+  border-color: var(--color-accent);
+  outline: none;
 }
 .milestoneFormatted {
   font-size: 0.82rem;

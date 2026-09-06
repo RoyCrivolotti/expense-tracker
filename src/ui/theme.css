@@ -18,6 +18,13 @@
   --exp-rail-collapsed: 4.5rem;
   --exp-bottom-bar: 4rem;
   --exp-max: 56rem;
+
+  /* Was referenced as `var(--radius-sm, Npx)` in several goals/charts CSS
+     files without ever being defined here — every one of those was silently
+     falling back to its own literal (6px in most, 4px in a few). Defining it
+     for real makes them agree; 6px matches the majority of the existing
+     fallbacks. */
+  --radius-sm: 6px;
 }
 
 @media (prefers-color-scheme: dark) {

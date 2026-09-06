@@ -95,11 +95,15 @@
   width: 4.25rem;
   text-align: right;
   padding: 0.3rem 0.45rem;
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: 0.45rem;
-  background: var(--color-bg);
+  background: var(--color-surface-muted);
   color: var(--color-text);
   font: inherit;
+}
+.budgetField input:focus {
+  border-color: var(--color-accent);
+  outline: none;
 }
 
 .budgetField input:disabled {
@@ -134,11 +138,16 @@
 .field input,
 .field select {
   padding: 0.55rem 0.65rem;
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: 0.65rem;
-  background: var(--color-bg);
+  background: var(--color-surface-muted);
   color: var(--color-text);
   font: inherit;
+}
+.field input:focus,
+.field select:focus {
+  border-color: var(--color-accent);
+  outline: none;
 }
 
 .preview {
