@@ -103,6 +103,12 @@ function singleForm(container: HTMLElement) {
   return within(container.querySelector('form')!)
 }
 
+/** The "Add multiple" side reuses the single form's own field labels (e.g. both
+ * say "Amount (€)"), so scope to it explicitly rather than risk an ambiguous match. */
+function batchForm(container: HTMLElement) {
+  return within(container.querySelector('[data-testid="focused-transaction-form"]')!)
+}
+
 describe('TransactionModal — batch mode toggle', () => {
   it('shows the Add one / Add multiple toggle for a from-scratch add', () => {
     renderModal()
@@ -155,12 +161,12 @@ describe('TransactionModal — batch mode toggle', () => {
   })
 
   it('keeps what was typed in the batch form when switching to single and back', () => {
-    renderModal()
+    const { container } = renderModal()
     fireEvent.click(screen.getByRole('tab', { name: 'Add multiple' }))
-    fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '12' } })
+    fireEvent.change(batchForm(container).getByLabelText('Amount (€)'), { target: { value: '12' } })
     fireEvent.click(screen.getByRole('tab', { name: 'Add one' }))
     fireEvent.click(screen.getByRole('tab', { name: 'Add multiple' }))
-    expect(screen.getByLabelText('Amount')).toHaveValue('12')
+    expect(batchForm(container).getByLabelText('Amount (€)')).toHaveValue('12')
   })
 })
 
@@ -201,9 +207,9 @@ describe('TransactionModal — closing with unsaved input', () => {
 
   it('also asks to confirm when the batch form (not the visible one) has unsaved input', () => {
     const onClose = vi.fn()
-    renderModal({ onClose })
+    const { container } = renderModal({ onClose })
     fireEvent.click(screen.getByRole('tab', { name: 'Add multiple' }))
-    fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '12' } })
+    fireEvent.change(batchForm(container).getByLabelText('Amount (€)'), { target: { value: '12' } })
     // Switch back to the (empty) single tab — the batch tab's draft is hidden, not gone.
     fireEvent.click(screen.getByRole('tab', { name: 'Add one' }))
     fireEvent.keyDown(document, { key: 'Escape' })

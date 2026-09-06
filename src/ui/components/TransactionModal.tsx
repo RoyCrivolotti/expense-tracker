@@ -6,8 +6,8 @@ import type { ExpenseModel } from '../useExpenseData'
 import { finalBudgetMonth } from '../../engine'
 import { fullMonthLabel } from '../../engine/dates'
 import { useToast } from '../hooks/useToast'
-import { BatchTransactionForm } from './BatchTransactionForm'
 import { ConfirmSheet } from './ConfirmSheet'
+import { FocusedTransactionForm } from './FocusedTransactionForm'
 import { Modal } from './Modal'
 import { TransactionForm } from './TransactionForm'
 import type { InstallmentIntent } from './installmentIntent'
@@ -120,7 +120,7 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
     >
       {canBatch && <ModeToggle mode={mode} onChange={setMode} />}
       {canBatch && (
-        <BatchTransactionForm
+        <FocusedTransactionForm
           model={model}
           actions={actions}
           onClose={onClose}
