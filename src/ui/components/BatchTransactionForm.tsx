@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { DescriptionSuggestion } from '../../data/descriptionIndex'
 import { applyDescriptionSuggestion } from '../../data/applyDescriptionSuggestion'
 import { resolveDefaultAccountId } from '../../data/defaultAccount'
@@ -28,12 +28,24 @@ interface BatchTransactionFormProps {
   model: ExpenseModel
   actions: ExpenseActions
   onClose: () => void
+  /** Kept mounted but visually hidden (e.g. while the single-transaction tab is
+   * active), so its own state survives switching back rather than losing typed rows. */
+  hidden?: boolean
+  /** Reports whether any row has content, so a caller can warn before discarding
+   * it (e.g. closing the modal without saving). */
+  onDirtyChange?: (dirty: boolean) => void
 }
 
 /** DOM id for a row's wrapper, so a failed save can scroll the first bad row into view. */
 const rowElementId = (rowId: string) => `batch-row-${rowId}`
 
-export function BatchTransactionForm({ model, actions, onClose }: BatchTransactionFormProps) {
+export function BatchTransactionForm({
+  model,
+  actions,
+  onClose,
+  hidden,
+  onDirtyChange,
+}: BatchTransactionFormProps) {
   const format = useMoneyFormat()
   const { showToast } = useToast()
 
@@ -63,6 +75,13 @@ export function BatchTransactionForm({ model, actions, onClose }: BatchTransacti
   ])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    onDirtyChange?.(batches.some((b) => b.rows.some((r) => !isRowEmpty(r))))
+    // onDirtyChange intentionally omitted: callers pass a state setter inline, which
+    // would otherwise re-run this on every parent render regardless of `batches`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [batches])
 
   const updateBatch = (batchId: string, patch: Partial<DateBatchDraft>) =>
     setBatches((bs) => bs.map((b) => (b.id === batchId ? { ...b, ...patch } : b)))
@@ -186,7 +205,7 @@ export function BatchTransactionForm({ model, actions, onClose }: BatchTransacti
   }
 
   return (
-    <div className={styles.root}>
+    <div className={styles.root} hidden={hidden}>
       {batches.map((batch) => (
         <div key={batch.id} className={styles.batch}>
           <div className={styles.batchHeader}>

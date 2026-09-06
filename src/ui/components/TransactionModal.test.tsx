@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { ExpenseDataset, Transaction } from '../../types'
 import { defaultExpenseSettings } from '../../engine'
@@ -81,18 +81,26 @@ function makeActions(): ExpenseActions {
   }
 }
 
-function renderModal(props: { editing?: Transaction | null; seed?: TransactionSeed } = {}) {
-  render(
+function renderModal(
+  props: { editing?: Transaction | null; seed?: TransactionSeed; onClose?: () => void } = {},
+) {
+  return render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
       <TransactionModal
         model={model()}
         actions={makeActions()}
         editing={props.editing ?? null}
         seed={props.seed}
-        onClose={vi.fn()}
+        onClose={props.onClose ?? vi.fn()}
       />
     </MoneyFormatProvider>,
   )
+}
+
+/** The single-transaction form is the only literal `<form>` element, so this
+ * reliably scopes queries to it even while both forms are mounted (one hidden). */
+function singleForm(container: HTMLElement) {
+  return within(container.querySelector('form')!)
 }
 
 describe('TransactionModal — batch mode toggle', () => {
@@ -134,5 +142,72 @@ describe('TransactionModal — batch mode toggle', () => {
   it('hides the toggle when a seed is present (duplicate / shortcut prefill)', () => {
     renderModal({ seed: { description: 'Copied txn', amountCents: 500 } })
     expect(screen.queryByRole('tab', { name: 'Add multiple' })).not.toBeInTheDocument()
+  })
+
+  it('keeps what was typed in the single form when switching to batch and back', () => {
+    const { container } = renderModal()
+    fireEvent.change(singleForm(container).getByLabelText('Description'), {
+      target: { value: 'Coffee' },
+    })
+    fireEvent.click(screen.getByRole('tab', { name: 'Add multiple' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Add one' }))
+    expect(singleForm(container).getByLabelText('Description')).toHaveValue('Coffee')
+  })
+
+  it('keeps what was typed in the batch form when switching to single and back', () => {
+    renderModal()
+    fireEvent.click(screen.getByRole('tab', { name: 'Add multiple' }))
+    fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '12' } })
+    fireEvent.click(screen.getByRole('tab', { name: 'Add one' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Add multiple' }))
+    expect(screen.getByLabelText('Amount')).toHaveValue('12')
+  })
+})
+
+describe('TransactionModal — closing with unsaved input', () => {
+  it('closes immediately, no confirm, when nothing has been entered', () => {
+    const onClose = vi.fn()
+    renderModal({ onClose })
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument()
+  })
+
+  it('asks to confirm before closing when the single form has unsaved input', () => {
+    const onClose = vi.fn()
+    const { container } = renderModal({ onClose })
+    fireEvent.change(singleForm(container).getByLabelText('Description'), {
+      target: { value: 'Coffee' },
+    })
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Discard' }))
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('cancelling the discard confirm keeps the modal open with the input intact', () => {
+    const onClose = vi.fn()
+    const { container } = renderModal({ onClose })
+    fireEvent.change(singleForm(container).getByLabelText('Description'), {
+      target: { value: 'Coffee' },
+    })
+    fireEvent.keyDown(document, { key: 'Escape' })
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(onClose).not.toHaveBeenCalled()
+    expect(singleForm(container).getByLabelText('Description')).toHaveValue('Coffee')
+  })
+
+  it('also asks to confirm when the batch form (not the visible one) has unsaved input', () => {
+    const onClose = vi.fn()
+    renderModal({ onClose })
+    fireEvent.click(screen.getByRole('tab', { name: 'Add multiple' }))
+    fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '12' } })
+    // Switch back to the (empty) single tab — the batch tab's draft is hidden, not gone.
+    fireEvent.click(screen.getByRole('tab', { name: 'Add one' }))
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
   })
 })
