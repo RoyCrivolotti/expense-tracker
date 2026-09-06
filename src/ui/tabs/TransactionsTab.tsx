@@ -53,6 +53,8 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
         selectMode={state.selectMode}
         canSelect={state.canDelete}
         secondaryFilterCount={state.secondaryFilterCount}
+        hasActiveFilters={state.hasActiveFilters}
+        onClearFilters={state.clearFilters}
         onQuery={state.setQuery}
         onCategory={state.setCategoryId}
         onAccount={state.setAccountId}
@@ -65,13 +67,6 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
       />
 
       <div className={styles.resultSummary}>
-        {state.hasActiveFilters && !state.selectMode ? (
-          <button type="button" className={styles.filterClear} onClick={state.clearFilters}>
-            Clear filters
-          </button>
-        ) : (
-          <span />
-        )}
         <span className={styles.resultStats}>
           <span>{state.listRows.length} items</span>
           <span>
