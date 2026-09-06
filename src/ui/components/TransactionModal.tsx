@@ -7,6 +7,7 @@ import { finalBudgetMonth } from '../../engine'
 import { fullMonthLabel } from '../../engine/dates'
 import { useToast } from '../hooks/useToast'
 import { BatchTransactionForm } from './BatchTransactionForm'
+import { ConfirmSheet } from './ConfirmSheet'
 import { Modal } from './Modal'
 import { TransactionForm } from './TransactionForm'
 import type { InstallmentIntent } from './installmentIntent'
@@ -19,6 +20,51 @@ function installmentNote(editing: Transaction | null, model: ExpenseModel): stri
   const plan = model.lookup.installmentPlan(editing.planId)
   if (!plan) return undefined
   return `Installment ${editing.installmentIndex} of ${plan.totalCount} · Final payment ${fullMonthLabel(finalBudgetMonth(plan))}`
+}
+
+function titleFor(editing: Transaction | null, mode: 'single' | 'batch'): string {
+  if (editing) return 'Edit transaction'
+  return mode === 'batch' ? 'Add multiple transactions' : 'New transaction'
+}
+
+function ModeToggle({ mode, onChange }: { mode: 'single' | 'batch'; onChange: (mode: 'single' | 'batch') => void }) {
+  return (
+    <div className={styles.modeToggle} role="tablist">
+      <button
+        type="button"
+        role="tab"
+        aria-selected={mode === 'single'}
+        className={`${styles.modeBtn} ${mode === 'single' ? styles.modeActive : ''}`}
+        onClick={() => onChange('single')}
+      >
+        Add one
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={mode === 'batch'}
+        className={`${styles.modeBtn} ${mode === 'batch' ? styles.modeActive : ''}`}
+        onClick={() => onChange('batch')}
+      >
+        Add multiple
+      </button>
+    </div>
+  )
+}
+
+/** Guards a modal's close against silently discarding unsaved input: closing
+ * while `isDirty` shows a confirm sheet instead of closing immediately. */
+function useCloseGuard(isDirty: boolean, onClose: () => void) {
+  const [confirming, setConfirming] = useState(false)
+  const requestClose = () => {
+    if (isDirty) {
+      setConfirming(true)
+      return
+    }
+    onClose()
+  }
+  const cancel = () => setConfirming(false)
+  return { confirming, requestClose, cancel, modalOnClose: confirming ? cancel : requestClose }
 }
 
 interface Props {
@@ -38,6 +84,16 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
   // specific transaction, which BatchTransactionForm has no way to honor.
   const canBatch = editing == null && seed == null
 
+  // Both forms stay mounted (see the `hidden` props below) so switching the
+  // "Add one" / "Add multiple" tab back and forth never loses what's already
+  // typed on either side — each keeps its own state alive while hidden.
+  const [singleDirty, setSingleDirty] = useState(false)
+  const [batchDirty, setBatchDirty] = useState(false)
+  // Either side counts, not just the currently visible one: closing from an
+  // empty batch tab would otherwise silently drop a still-hidden, filled-in
+  // single-transaction draft (and vice versa).
+  const { confirming, cancel, modalOnClose } = useCloseGuard(singleDirty || batchDirty, onClose)
+
   const submit = async (input: NewTransaction, id?: number, intent?: InstallmentIntent) => {
     if (id != null) {
       await updateTransactionWithIntent(actions, id, input, intent)
@@ -54,45 +110,45 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
   }
 
   const subtitle = hint ?? installmentNote(editing, model)
-  const title = editing ? 'Edit transaction' : mode === 'batch' ? 'Add multiple transactions' : 'New transaction'
 
   return (
-    <Modal title={title} {...(subtitle ? { subtitle } : {})} onClose={onClose}>
+    <Modal
+      title={titleFor(editing, mode)}
+      {...(subtitle ? { subtitle } : {})}
+      onClose={modalOnClose}
+      trapPaused={confirming}
+    >
+      {canBatch && <ModeToggle mode={mode} onChange={setMode} />}
       {canBatch && (
-        <div className={styles.modeToggle} role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'single'}
-            className={`${styles.modeBtn} ${mode === 'single' ? styles.modeActive : ''}`}
-            onClick={() => setMode('single')}
-          >
-            Add one
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'batch'}
-            className={`${styles.modeBtn} ${mode === 'batch' ? styles.modeActive : ''}`}
-            onClick={() => setMode('batch')}
-          >
-            Add multiple
-          </button>
-        </div>
-      )}
-      {canBatch && mode === 'batch' ? (
-        <BatchTransactionForm model={model} actions={actions} onClose={onClose} />
-      ) : (
-        <TransactionForm
+        <BatchTransactionForm
           model={model}
-          editing={editing}
-          seed={seed}
-          onSubmit={submit}
-          onDelete={remove}
-          onDuplicate={actions.onDuplicate}
+          actions={actions}
           onClose={onClose}
+          hidden={mode !== 'batch'}
+          onDirtyChange={setBatchDirty}
         />
       )}
+      <TransactionForm
+        model={model}
+        editing={editing}
+        seed={seed}
+        onSubmit={submit}
+        onDelete={remove}
+        onDuplicate={actions.onDuplicate}
+        onClose={onClose}
+        hidden={canBatch && mode === 'batch'}
+        onDirtyChange={setSingleDirty}
+      />
+      {confirming ? (
+        <ConfirmSheet
+          title="Discard unsaved changes?"
+          message="Closing now will lose what you've entered."
+          confirmLabel="Discard"
+          destructive
+          onConfirm={onClose}
+          onCancel={cancel}
+        />
+      ) : null}
     </Modal>
   )
 }

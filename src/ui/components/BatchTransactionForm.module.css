@@ -4,6 +4,13 @@
   gap: 1rem;
 }
 
+/* Author-origin `display: flex` above otherwise beats the UA `[hidden]` rule
+   regardless of specificity — this form stays mounted (not unmounted) while the
+   single-transaction tab is active, so it needs an explicit rule to actually disappear. */
+.root[hidden] {
+  display: none;
+}
+
 .batch {
   display: flex;
   flex-direction: column;
