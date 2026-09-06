@@ -4,6 +4,13 @@
   gap: 0.85rem;
 }
 
+/* Author-origin `display: flex` above otherwise beats the UA `[hidden]` rule
+   regardless of specificity — this form stays mounted (not unmounted) while the
+   batch-entry tab is active, so it needs an explicit rule to actually disappear. */
+.form[hidden] {
+  display: none;
+}
+
 .types {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

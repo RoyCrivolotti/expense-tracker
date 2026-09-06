@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Transaction } from '../../types'
 import type { NewTransaction } from '../../data/dataSource'
 import { parseMoneyToCents } from '../../engine/money'
@@ -24,6 +24,12 @@ interface FormProps {
   onDelete?: ((id: number) => Promise<void>) | undefined
   onDuplicate?: ((txn: Transaction) => void) | undefined
   onClose: () => void
+  /** Kept mounted but visually hidden (e.g. while the batch-entry tab is active),
+   * so its own state survives switching back rather than losing what was typed. */
+  hidden?: boolean
+  /** Reports whether the form has diverged from its opening state, so a caller
+   * can warn before discarding it (e.g. closing the modal without saving). */
+  onDirtyChange?: (dirty: boolean) => void
 }
 
 function toInput(form: FormFields, cents: number, editing: Transaction | null): NewTransaction {
@@ -86,6 +92,8 @@ export function TransactionForm({
   onDelete,
   onDuplicate,
   onClose,
+  hidden,
+  onDirtyChange,
 }: FormProps) {
   const format = useMoneyFormat()
   const [form, setForm] = useState<FormFields>(() => initialFields(editing, model, format, seed))
@@ -93,6 +101,18 @@ export function TransactionForm({
   const [view, setView] = useState<'fields' | 'installment'>('fields')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  // Ref, not state: only ever needs its first-render value, and re-rendering to
+  // update it would be pointless — nothing should ever change what "opening state" means.
+  const initialSnapshot = useRef({ form, draft })
+  useEffect(() => {
+    const dirty =
+      JSON.stringify(form) !== JSON.stringify(initialSnapshot.current.form) ||
+      JSON.stringify(draft) !== JSON.stringify(initialSnapshot.current.draft)
+    onDirtyChange?.(dirty)
+    // onDirtyChange intentionally omitted: callers pass a state setter inline, which
+    // would otherwise re-run this on every parent render regardless of form/draft.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, draft])
   const set: Setter = (key, value) => setForm((f) => ({ ...f, [key]: value }))
   const setDraftField: <K extends keyof InstallmentDraft>(key: K, value: InstallmentDraft[K]) => void =
     (key, value) => setDraft((d) => ({ ...d, [key]: value }))
@@ -123,6 +143,7 @@ export function TransactionForm({
   return (
     <form
       className={styles.form}
+      hidden={hidden}
       onSubmit={(e) => {
         e.preventDefault()
         void submit()
