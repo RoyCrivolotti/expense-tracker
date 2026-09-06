@@ -16,7 +16,7 @@ const validTxn = {
   accountId: 1,
   categoryId: 2,
   type: 'expense' as const,
-  amountCents: -1000,
+  amountCents: 1000,
   cancelled: false,
 }
 
@@ -27,11 +27,26 @@ describe('transactionService validation', () => {
     )
   })
 
+  it('rejects a non-finite amountCents', () => {
+    expect(() => validateNewTransaction({ ...validTxn, amountCents: NaN })).toThrow(
+      'amountCents must be greater than zero',
+    )
+  })
+
+  it('rejects a zero or negative amountCents', () => {
+    expect(() => validateNewTransaction({ ...validTxn, amountCents: 0 })).toThrow(
+      'amountCents must be greater than zero',
+    )
+    expect(() => validateNewTransaction({ ...validTxn, amountCents: -1000 })).toThrow(
+      'amountCents must be greater than zero',
+    )
+  })
+
   it('validates bulk payloads with the same rules', () => {
     expect(validateBulkTransactions([validTxn])).toHaveLength(1)
     expect(() => validateBulkTransactions('nope')).toThrow('transactions array is required')
     expect(() => validateBulkTransactions([{ ...validTxn, amountCents: NaN }])).toThrow(
-      'amountCents must be a number',
+      'amountCents must be greater than zero',
     )
   })
 

@@ -167,6 +167,23 @@ export function monthsBetweenBudget(a: string, b: string): number {
   return (by - ay) * 12 + (bm - am)
 }
 
+/**
+ * ISO date `days` calendar days after `iso` (negative shifts back), e.g.
+ * addDaysIso('2026-03-01', -1) -> '2026-02-28'. Constructs and reads the
+ * `Date` entirely in local time (matching `daysBetween` below) rather than
+ * parsing as UTC and reformatting with `toISOString`, which drifts a day
+ * across a DST boundary in some timezones.
+ */
+export function addDaysIso(iso: string, days: number): string {
+  const [y, m, d] = iso.split('-').map(Number) as [number, number, number]
+  const date = new Date(y, m - 1, d)
+  date.setDate(date.getDate() + days)
+  const yy = date.getFullYear()
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const dd = String(date.getDate()).padStart(2, '0')
+  return `${yy}-${mm}-${dd}`
+}
+
 /** Whole-day distance from `a` to `b` (b - a), positive when `b` is later. */
 export function daysBetween(a: string, b: string): number {
   const [ay, am, ad] = a.split('-').map(Number) as [number, number, number]

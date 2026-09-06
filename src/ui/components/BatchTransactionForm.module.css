@@ -1,0 +1,102 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.batch {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.85rem;
+}
+
+.batchHeader {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+.batchHeader > *:first-child {
+  flex: 1;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem 2.2rem 0.85rem 0;
+  position: relative;
+}
+/* One hairline between rows — not a box around each one — since the batch
+   card's own border already frames the group. */
+.row + .row {
+  border-top: 1px solid var(--color-border);
+}
+
+.rowFields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+/* Base input/select styling comes from TransactionForm.module.css's shared
+   .field rule (each field below is wrapped in that same <Field> component) —
+   this only holds the amount field's own deltas from that shared base. */
+.rowAmount {
+  font-size: 1.1rem;
+  font-weight: 680;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.removeRow,
+.removeBatch {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.removeBatch {
+  position: static;
+  flex: 0 0 auto;
+  margin-bottom: 0.6rem;
+}
+
+.addRow,
+.addBatch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.6rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 0.6rem;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+.addRow svg,
+.addBatch svg {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+}
+.addBatch {
+  border-style: solid;
+}
+
+.summary {
+  text-align: center;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}

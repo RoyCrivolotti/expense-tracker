@@ -38,7 +38,7 @@ const validTxn = {
   accountId: 1,
   categoryId: 2,
   type: 'expense' as const,
-  amountCents: -1000,
+  amountCents: 1000,
   cancelled: false,
 }
 

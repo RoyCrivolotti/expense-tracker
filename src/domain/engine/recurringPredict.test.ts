@@ -96,4 +96,18 @@ describe('predictNextDate', () => {
     const dates = ['2024-03-10', '2025-03-10', '2026-03-10']
     expect(predictNextDate('yearly', dates)).toBe('2027-03-10')
   })
+
+  it('predicts weekly correctly across a US DST spring-forward boundary', () => {
+    // A UTC-parse + local-mutate + UTC-format implementation of "add 7 days"
+    // silently loses a day here (regression test for that bug — see dates.ts's
+    // addDaysIso, which this now delegates to).
+    const originalTz = process.env.TZ
+    process.env.TZ = 'America/Los_Angeles'
+    try {
+      const dates = ['2026-02-16', '2026-02-23', '2026-03-02']
+      expect(predictNextDate('weekly', dates)).toBe('2026-03-09')
+    } finally {
+      process.env.TZ = originalTz
+    }
+  })
 })

@@ -1,4 +1,4 @@
-import { shiftBudgetMonth } from './dates'
+import { addDaysIso, shiftBudgetMonth } from './dates'
 import type { RecurringFrequency } from './recurringTypes'
 
 const DAY_TOLERANCE = 2
@@ -76,12 +76,6 @@ export function predictNextDate(
     return addMonthsOnDay(last, 3, canonicalDayOfMonth(sortedDates))
   }
   return addMonthsOnDay(last, 12, canonicalDayOfMonth(sortedDates))
-}
-
-function addDaysIso(iso: string, days: number): string {
-  const d = new Date(iso)
-  d.setDate(d.getDate() + days)
-  return d.toISOString().slice(0, 10)
 }
 
 function nextMonthOnDay(lastIso: string, day: number): string {

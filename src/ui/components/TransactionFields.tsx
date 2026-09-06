@@ -16,7 +16,7 @@ const TYPES: { value: TxnType; label: string }[] = [
   { value: 'refund', label: 'Refund' },
 ]
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className={styles.field}>
       <span className={styles.label}>{label}</span>
@@ -25,7 +25,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-function TypeSelector({ value, onChange }: { value: TxnType; onChange: (t: TxnType) => void }) {
+export function TypeSelector({ value, onChange }: { value: TxnType; onChange: (t: TxnType) => void }) {
   return (
     <div className={styles.types}>
       {TYPES.map((t) => (
