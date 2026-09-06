@@ -51,13 +51,18 @@
 .field input,
 .field select {
   width: 100%;
-  padding: 0.6rem 0.7rem;
-  border: 1px solid var(--color-border);
-  border-radius: 0.6rem;
-  background: var(--color-bg);
+  padding: 0.65rem 0.75rem;
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  background: var(--color-surface-muted);
   color: var(--color-text);
   font: inherit;
   font-size: 0.95rem;
+}
+.field input:focus,
+.field select:focus {
+  border-color: var(--color-accent);
+  outline: none;
 }
 .amount {
   font-size: 1.4rem !important;
