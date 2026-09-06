@@ -24,6 +24,14 @@
   animation: slide-up 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+/* Experimental: room for the grid-rows batch-entry trial to show its columns
+   without scrolling on anything wider than a phone — the standard 30rem sheet
+   is sized for the stacked-card layout and would otherwise undercut the whole
+   point of a wide-format grid. */
+.sheetWide {
+  max-width: 46rem;
+}
+
 .header {
   display: flex;
   align-items: flex-start;

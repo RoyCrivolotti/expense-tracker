@@ -117,6 +117,7 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
       {...(subtitle ? { subtitle } : {})}
       onClose={modalOnClose}
       trapPaused={confirming}
+      wide={canBatch && mode === 'batch'}
     >
       {canBatch && <ModeToggle mode={mode} onChange={setMode} />}
       {canBatch && (

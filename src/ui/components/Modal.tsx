@@ -11,9 +11,12 @@ interface ModalProps {
   children: ReactNode
   /** True while a nested dialog (e.g. a `ConfirmSheet`) is open on top of this modal — see `useFocusTrap`. */
   trapPaused?: boolean
+  /** Experimental: widens the sheet for content that needs more horizontal
+   * room than the standard stacked-card layout (e.g. the grid-rows trial). */
+  wide?: boolean
 }
 
-export function Modal({ title, subtitle, onClose, children, trapPaused = false }: ModalProps) {
+export function Modal({ title, subtitle, onClose, children, trapPaused = false, wide = false }: ModalProps) {
   useBodyScrollLock(true)
   const sheetRef = useRef<HTMLDivElement>(null)
   useFocusTrap(sheetRef, onClose, trapPaused)
@@ -37,7 +40,7 @@ export function Modal({ title, subtitle, onClose, children, trapPaused = false }
     <div className={styles.overlay} onClick={onClose} role="presentation">
       <div
         ref={sheetRef}
-        className={styles.sheet}
+        className={`${styles.sheet}${wide ? ` ${styles.sheetWide}` : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}

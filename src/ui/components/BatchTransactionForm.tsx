@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import type { DescriptionSuggestion } from '../../data/descriptionIndex'
 import { applyDescriptionSuggestion } from '../../data/applyDescriptionSuggestion'
 import { resolveDefaultAccountId } from '../../data/defaultAccount'
@@ -19,7 +19,7 @@ import {
 import { DescriptionCombobox } from './DescriptionCombobox'
 import { Money } from './Money'
 import { optionLabel, selectableOptions } from './pickerOptions'
-import { Field, TypeSelector } from './TransactionFields'
+import { Field } from './TransactionFields'
 import { todayIso } from './transactionFormState'
 import formStyles from './TransactionForm.module.css'
 import styles from './BatchTransactionForm.module.css'
@@ -229,66 +229,118 @@ export function BatchTransactionForm({
             )}
           </div>
 
-          {batch.rows.map((row) => (
-            <div key={row.id} id={rowElementId(row.id)} className={styles.row}>
-              <TypeSelector value={row.type} onChange={(t) => updateRow(batch.id, row.id, { type: t })} />
-              <div className={styles.rowFields}>
-                <Field label="Amount">
-                  <input
-                    className={styles.rowAmount}
-                    type="text"
-                    inputMode="decimal"
-                    autoComplete="off"
-                    placeholder={`0${format.decimalSeparator}00`}
-                    value={row.amount}
-                    onChange={(e) => updateRow(batch.id, row.id, { amount: e.target.value })}
-                  />
-                </Field>
-                <Field label="Description">
-                  <DescriptionCombobox
-                    value={row.description}
-                    index={model.descriptionIndex}
-                    placeholder="e.g. Mercadona"
-                    onChange={(v) => updateRow(batch.id, row.id, { description: v })}
-                    onAccept={(s) => onAcceptSuggestion(batch.id, row.id, s)}
-                  />
-                </Field>
-                <Field label="Category">
-                  <select
-                    value={row.categoryId}
-                    onChange={(e) => updateRow(batch.id, row.id, { categoryId: Number(e.target.value) })}
-                  >
-                    {selectableOptions(model.dataset.categories, row.categoryId).map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {optionLabel(c)}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="Account">
-                  <select
-                    value={row.accountId}
-                    onChange={(e) => updateRow(batch.id, row.id, { accountId: Number(e.target.value) })}
-                  >
-                    {selectableOptions(model.dataset.accounts, row.accountId).map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {optionLabel(a)}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              </div>
-              <button
-                type="button"
-                className={styles.removeRow}
-                aria-label="Remove this transaction"
-                onClick={() => removeRow(batch.id, row.id)}
-              >
-                <CloseIcon />
-              </button>
-              {errors[row.id] && <p className={formStyles.error}>{errors[row.id]}</p>}
-            </div>
-          ))}
+          <div className={styles.gridWrap}>
+            <table className={styles.grid}>
+              <thead>
+                <tr>
+                  <th scope="col" className={styles.gridTypeCol}>
+                    Type
+                  </th>
+                  <th scope="col">Description</th>
+                  <th scope="col">Category</th>
+                  <th scope="col">Account</th>
+                  <th scope="col" className={styles.gridAmountCol}>
+                    Amount
+                  </th>
+                  <th scope="col" className={styles.gridRemoveCol}>
+                    <span className={styles.visuallyHidden}>Remove</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {batch.rows.map((row) => (
+                  <Fragment key={row.id}>
+                    <tr id={rowElementId(row.id)}>
+                      <td>
+                        <select
+                          aria-label="Type"
+                          className={`${styles.gridTypeSelect} ${styles[`gridType_${row.type}`]}`}
+                          value={row.type}
+                          onChange={(e) =>
+                            updateRow(batch.id, row.id, { type: e.target.value as TxnType })
+                          }
+                        >
+                          <option value="expense">Expense</option>
+                          <option value="income">Income</option>
+                          <option value="investment">Invest</option>
+                          <option value="refund">Refund</option>
+                        </select>
+                      </td>
+                      <td>
+                        <DescriptionCombobox
+                          value={row.description}
+                          index={model.descriptionIndex}
+                          placeholder="e.g. Mercadona"
+                          ariaLabel="Description"
+                          onChange={(v) => updateRow(batch.id, row.id, { description: v })}
+                          onAccept={(s) => onAcceptSuggestion(batch.id, row.id, s)}
+                        />
+                      </td>
+                      <td>
+                        <select
+                          aria-label="Category"
+                          value={row.categoryId}
+                          onChange={(e) =>
+                            updateRow(batch.id, row.id, { categoryId: Number(e.target.value) })
+                          }
+                        >
+                          {selectableOptions(model.dataset.categories, row.categoryId).map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {optionLabel(c)}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
+                        <select
+                          aria-label="Account"
+                          value={row.accountId}
+                          onChange={(e) =>
+                            updateRow(batch.id, row.id, { accountId: Number(e.target.value) })
+                          }
+                        >
+                          {selectableOptions(model.dataset.accounts, row.accountId).map((a) => (
+                            <option key={a.id} value={a.id}>
+                              {optionLabel(a)}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
+                        <input
+                          className={styles.gridAmount}
+                          aria-label="Amount"
+                          type="text"
+                          inputMode="decimal"
+                          autoComplete="off"
+                          placeholder={`0${format.decimalSeparator}00`}
+                          value={row.amount}
+                          onChange={(e) => updateRow(batch.id, row.id, { amount: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className={styles.removeRow}
+                          aria-label="Remove this transaction"
+                          onClick={() => removeRow(batch.id, row.id)}
+                        >
+                          <CloseIcon />
+                        </button>
+                      </td>
+                    </tr>
+                    {errors[row.id] && (
+                      <tr>
+                        <td colSpan={6} className={styles.gridErrorCell}>
+                          {errors[row.id]}
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           <button type="button" className={styles.addRow} onClick={() => addRow(batch.id)}>
             <PlusIcon /> Add transaction

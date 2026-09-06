@@ -8,6 +8,9 @@ interface DescriptionComboboxProps {
   value: string
   index: DescriptionIndex
   placeholder?: string
+  /** Accessible name — needed when this isn't wrapped in a real <label> (e.g. a
+   * table cell), since the input has no visible label of its own otherwise. */
+  ariaLabel?: string
   onChange: (value: string) => void
   onAccept: (suggestion: DescriptionSuggestion) => void
 }
@@ -16,6 +19,7 @@ export function DescriptionCombobox({
   value,
   index,
   placeholder,
+  ariaLabel,
   onChange,
   onAccept,
 }: DescriptionComboboxProps) {
@@ -41,6 +45,7 @@ export function DescriptionCombobox({
         rootRef={rootRef}
         value={value}
         {...(placeholder !== undefined ? { placeholder } : {})}
+        {...(ariaLabel !== undefined ? { ariaLabel } : {})}
         open={open}
         highlight={highlight}
         suggestions={suggestions}

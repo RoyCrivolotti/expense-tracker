@@ -8,6 +8,7 @@ interface ComboboxInputProps {
   rootRef: RefObject<HTMLDivElement | null>
   value: string
   placeholder?: string
+  ariaLabel?: string
   open: boolean
   highlight: number
   suggestions: DescriptionSuggestion[]
@@ -24,6 +25,7 @@ export function ComboboxInput({
   rootRef,
   value,
   placeholder,
+  ariaLabel,
   open,
   highlight,
   suggestions,
@@ -42,6 +44,7 @@ export function ComboboxInput({
       aria-controls={open ? listId : undefined}
       aria-activedescendant={highlight >= 0 ? `${listId}-opt-${highlight}` : undefined}
       aria-autocomplete="list"
+      {...(ariaLabel !== undefined ? { 'aria-label': ariaLabel } : {})}
       value={value}
       placeholder={placeholder}
       onChange={(e) => {

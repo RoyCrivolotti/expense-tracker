@@ -29,50 +29,140 @@
   flex: 1;
 }
 
-.row {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.85rem 2.2rem 0.85rem 0;
-  position: relative;
-}
-/* One hairline between rows — not a box around each one — since the batch
-   card's own border already frames the group. */
-.row + .row {
-  border-top: 1px solid var(--color-border);
+/* ─── Grid rows (experimental) ───────────────────────────────────────────
+   One table per date-batch: a single header row replaces the label repeated
+   on every row in the shipped card layout, and every row is visible at once
+   without scrolling past each one's own stacked fields. Wrapped in its own
+   horizontal scroller since six columns is genuinely tight below ~600px —
+   the shipped layout's real advantage on narrow screens, traded away here. */
+.gridWrap {
+  overflow-x: auto;
 }
 
-.rowFields {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+.grid {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-size: 0.88rem;
 }
-/* Base input/select styling comes from TransactionForm.module.css's shared
-   .field rule (each field below is wrapped in that same <Field> component) —
-   this only holds the amount field's own deltas from that shared base. */
-.rowAmount {
-  font-size: 1.1rem;
-  font-weight: 680;
-  font-variant-numeric: tabular-nums;
+
+.grid th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  padding: 0 0.5rem 0.4rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.grid td {
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.grid tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* Cell controls sit flush in the row (no per-cell box) until hovered or
+   focused — the "spreadsheet" feel this layout is meant to test. */
+.grid input,
+.grid select {
+  width: 100%;
+  padding: 0.4rem 0.4rem;
+  border: 1px solid transparent;
+  border-radius: 0.4rem;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: inherit;
+}
+.grid tr:hover input,
+.grid tr:hover select {
+  background: var(--color-surface-muted);
+}
+.grid input:focus,
+.grid select:focus {
+  background: var(--color-surface-muted);
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+.gridTypeCol {
+  width: 5.5rem;
+}
+.gridAmountCol,
+.gridRemoveCol {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.gridAmount {
   text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* The always-visible 4-button type selector the shipped layout uses has no
+   good home in a dense table cell (shrinking it further loses the color
+   coding, a popover loses "always visible") — this compact colored <select>
+   is the deliberate compromise being trialed here, not a solved problem. */
+.gridTypeSelect {
+  font-weight: 600;
+  cursor: pointer;
+}
+.gridType_expense {
+  color: var(--exp-expense);
+}
+.gridType_income {
+  color: var(--exp-income);
+}
+.gridType_investment {
+  color: var(--exp-investment);
+}
+.gridType_refund {
+  color: var(--exp-refund);
+}
+
+.gridErrorCell {
+  padding: 0 0.5rem 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--exp-expense);
+  font-size: 0.8rem;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .removeRow,
 .removeBatch {
-  position: absolute;
-  top: 0.4rem;
-  right: 0.4rem;
-  width: 1.6rem;
-  height: 1.6rem;
   border: 0;
   background: none;
   color: var(--color-text-muted);
   cursor: pointer;
 }
+.removeRow {
+  width: 1.6rem;
+  height: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 .removeBatch {
-  position: static;
   flex: 0 0 auto;
   margin-bottom: 0.6rem;
+  width: 1.6rem;
+  height: 1.6rem;
 }
 
 .addRow,
