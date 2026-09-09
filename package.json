@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "npm run prep:data && vite",
+    "dev:local": "node scripts/dev-local.mjs",
     "build": "npm run generate-icons && npm run prep:data && vite build",
     "prep:data": "node scripts/prep-expenses-data.mjs",
     "generate-icons": "node scripts/generate-icons.mjs",
@@ -72,6 +73,6 @@
     "vite": "^8.0.12",
     "vite-plugin-pwa": "^1.3.0",
     "vitest": "^4.1.9",
-    "wrangler": "^4.101.0"
+    "wrangler": "^4.129.0"
   }
 }
