@@ -155,7 +155,16 @@ npx wrangler d1 execute roy-expenses-dev --remote --file=migrations/0012_wealth_
 
 Local dev uses the project-local wrangler (`node_modules/.bin/wrangler`). Always run wrangler commands from inside the project directory so `npx` picks up the local version rather than trying to download one.
 
-Current version: **4.129.0** (upgraded 2026-09-04 from 4.103.0 to support compatibility dates ≥ 2026-06-24).
+Version pinned by `package-lock.json`: **4.103.0**. `package.json` declares `^4.101.0`.
+
+**A local upgrade to 4.129.0 is pending and has not landed.** It was installed locally on 2026-09-04 to
+support compatibility dates ≥ 2026-06-24, but `package.json` was bumped without regenerating the lockfile,
+so `npm ci` fails on a clean checkout. The blocker is real rather than cosmetic: every wrangler ≥ 4.129
+declares `peerOptional @cloudflare/workers-types@^5`, while this project is on `@cloudflare/workers-types@^4`.
+
+Landing it means bumping both together and re-running `npm run typecheck` against the v5 types — its own
+PR, not a drive-by. Until then, a machine whose `node_modules` still has 4.129.0 installed is ahead of the
+repo; `npm ci` will bring it back to 4.103.0.
 
 ## Deploy
 
