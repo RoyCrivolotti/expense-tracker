@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { Transaction, TxnType } from '../../types'
 import type { DescriptionSuggestion } from '../../data/descriptionIndex'
-import { defaultBudgetMonth } from '../../engine/dates'
+import { defaultBudgetMonth, shortMonthLabel, shortMonthYearLabel } from '../../engine/dates'
 import type { ExpenseModel } from '../useExpenseData'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { DescriptionCombobox } from './DescriptionCombobox'
@@ -22,6 +22,51 @@ export function Field({ label, children }: { label: string; children: ReactNode 
       <span className={styles.label}>{label}</span>
       {children}
     </label>
+  )
+}
+
+/** "10 Sep 2026" from a YYYY-MM-DD string. */
+function shortDateLabel(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-')
+  return `${Number(day)} ${shortMonthLabel(`${year}-${month}`)} ${year}`
+}
+
+/**
+ * iOS Safari renders input[type=date]/[type=month] using the device locale's
+ * own long-form text ("September 2026") plus a native picker glyph, which can
+ * be wider than the space a two-column row gives the field — and that text
+ * isn't something CSS or the `value` attribute can shorten; the browser owns
+ * it. Chromium and desktop WebKit don't have this problem (both render a
+ * compact numeric format), which is why this only surfaces on a real device.
+ *
+ * Keeps the real input for its native picker UI, keyboard and accessible
+ * value, but makes it invisible and overlays our own compact label (which we
+ * fully control) on top — same trick as a custom-styled file input.
+ */
+function NativeDateOverlay({
+  type,
+  value,
+  label,
+  onChange,
+}: {
+  type: 'date' | 'month'
+  value: string
+  label: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <span className={styles.nativeOverlayWrap}>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required
+        className={styles.nativeOverlayInput}
+      />
+      <span className={styles.nativeOverlayLabel} aria-hidden="true">
+        {label}
+      </span>
+    </span>
   )
 }
 
@@ -95,16 +140,16 @@ function DateBudgetRow({
   onDate: (value: string) => void
 }) {
   return (
-    <div className={`${styles.row} ${styles.dateRow}`}>
+    <div className={styles.row}>
       <Field label="Date">
-        <input type="date" value={form.date} onChange={(e) => onDate(e.target.value)} required />
+        <NativeDateOverlay type="date" value={form.date} label={shortDateLabel(form.date)} onChange={onDate} />
       </Field>
       <Field label="Budget month">
-        <input
+        <NativeDateOverlay
           type="month"
           value={form.budgetMonth}
-          onChange={(e) => set('budgetMonth', e.target.value)}
-          required
+          label={shortMonthYearLabel(form.budgetMonth)}
+          onChange={(value) => set('budgetMonth', value)}
         />
       </Field>
     </div>
