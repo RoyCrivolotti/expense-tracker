@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "npm run prep:data && vite",
+    "dev:local": "node scripts/dev-local.mjs",
     "build": "npm run generate-icons && npm run prep:data && vite build",
     "prep:data": "node scripts/prep-expenses-data.mjs",
     "generate-icons": "node scripts/generate-icons.mjs",

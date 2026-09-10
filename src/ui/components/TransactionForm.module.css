@@ -49,6 +49,11 @@
   flex-direction: column;
   gap: 0.3rem;
   flex: 1;
+  /* A flex item defaults to min-width: auto, so it refuses to shrink below its own
+     min-content width. Inside .row that let a native input[type=month] — "September
+     2026" plus its picker glyph — push past the right edge of the sheet at 375px,
+     clipping the glyph off-screen. Applies to .fieldStack below for the same reason. */
+  min-width: 0;
 }
 .label {
   font-size: 0.75rem;
@@ -82,6 +87,17 @@
   gap: 0.7rem;
 }
 
+/* iOS Safari renders input[type=date]/[type=month] values as locale-formatted
+   long-form text ("10 Sep 2026", "September 2026") plus a native picker glyph —
+   wider than the ~170px a two-column .row gives each field on a phone, and wider
+   than the numeric format Chromium/desktop WebKit render (which is why headless
+   testing didn't catch this). Stack instead of relying on the text ever fitting. */
+@media (max-width: 480px) {
+  .dateRow {
+    flex-direction: column;
+  }
+}
+
 .error {
   color: var(--exp-danger);
   font-size: 0.82rem;
@@ -98,6 +114,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  /* Same min-width: auto trap as .field above — this one wraps the Category select. */
+  min-width: 0;
 }
 
 .actions {
