@@ -76,6 +76,44 @@
   border-color: var(--color-accent);
   outline: none;
 }
+
+/* See NativeDateOverlay in TransactionFields.tsx: the real input stays for its
+   native picker/keyboard/accessible value, but is invisible and full-size so
+   it can't render wider than this box regardless of the device's own locale
+   text — the label below is our own text, fully within CSS's normal width
+   rules, and is what's actually visible. */
+.nativeOverlayWrap {
+  position: relative;
+  display: block;
+}
+.nativeOverlayInput {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  opacity: 0;
+}
+.nativeOverlayLabel {
+  display: block;
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+.nativeOverlayInput:focus + .nativeOverlayLabel {
+  border-color: var(--color-accent);
+}
 .amount {
   font-size: 1.4rem !important;
   font-weight: 680;
@@ -85,17 +123,6 @@
 .row {
   display: flex;
   gap: 0.7rem;
-}
-
-/* iOS Safari renders input[type=date]/[type=month] values as locale-formatted
-   long-form text ("10 Sep 2026", "September 2026") plus a native picker glyph —
-   wider than the ~170px a two-column .row gives each field on a phone, and wider
-   than the numeric format Chromium/desktop WebKit render (which is why headless
-   testing didn't catch this). Stack instead of relying on the text ever fitting. */
-@media (max-width: 480px) {
-  .dateRow {
-    flex-direction: column;
-  }
 }
 
 .error {
