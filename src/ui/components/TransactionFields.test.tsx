@@ -175,3 +175,48 @@ describe('Fields category/account pickers', () => {
     expect(within(accountSelect).queryByText('Closed card')).toBeNull()
   })
 })
+
+describe('Date/Budget month native-input overlay', () => {
+  // See NativeDateOverlay in TransactionFields.tsx: the real input is kept for
+  // its native picker/keyboard/accessible value but made invisible, and a
+  // compact label we fully control is overlaid on top instead — because the
+  // real input's own rendered text is the device locale's choice, not ours,
+  // and on iOS Safari that text can be wider than a two-column row allows.
+
+  it('shows a compact overlay label instead of the raw ISO value', () => {
+    renderFields(baseForm({ date: '2026-07-05', budgetMonth: '2026-07' }), modelWith())
+    expect(screen.getByText('5 Jul 2026')).toBeTruthy()
+    expect(screen.getByText("Jul '26")).toBeTruthy()
+  })
+
+  it('still resolves the Date/Budget month inputs by their real value (label text-content match breaks once a visible sibling is added — see below)', () => {
+    renderFields(baseForm({ date: '2026-07-05', budgetMonth: '2026-07' }), modelWith())
+    // testing-library's getByLabelText matches a wrapping <label>'s full textContent,
+    // which isn't aria-hidden-aware the way a real browser's accessible-name computation
+    // is (confirmed separately via Playwright's getByLabel, which does exclude it) — so
+    // it sees "Date10 Sep 2026" here, not "Date". Querying by the input's own value
+    // sidesteps that jsdom/testing-library gap and is arguably more precise anyway.
+    expect(screen.getByDisplayValue<HTMLInputElement>('2026-07-05').type).toBe('date')
+    expect(screen.getByDisplayValue<HTMLInputElement>('2026-07').type).toBe('month')
+  })
+
+  it('updates date (and the derived budget month, for a new transaction) when the Date input changes', () => {
+    const set = vi.fn()
+    render(
+      <Fields form={baseForm()} set={set} model={modelWith()} editing={null} onAcceptSuggestion={vi.fn()} />,
+    )
+    fireEvent.change(screen.getByDisplayValue('2026-07-05'), { target: { value: '2026-09-10' } })
+    expect(set).toHaveBeenCalledWith('date', '2026-09-10')
+    expect(set).toHaveBeenCalledWith('budgetMonth', '2026-09')
+  })
+
+  it('updates only budgetMonth when the Budget month input changes', () => {
+    const set = vi.fn()
+    render(
+      <Fields form={baseForm()} set={set} model={modelWith()} editing={null} onAcceptSuggestion={vi.fn()} />,
+    )
+    fireEvent.change(screen.getByDisplayValue('2026-07'), { target: { value: '2026-11' } })
+    expect(set).toHaveBeenCalledWith('budgetMonth', '2026-11')
+    expect(set).not.toHaveBeenCalledWith('date', expect.anything())
+  })
+})
