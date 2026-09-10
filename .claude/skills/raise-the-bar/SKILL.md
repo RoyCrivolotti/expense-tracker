@@ -135,9 +135,18 @@ Skip this lens entirely for a backend/domain-only diff — there's nothing to
 review.
 
 This one needs real judgment, not a checklist. Prompt it to:
-- Actually look at the change from a user's point of view: read the changed
-  UI components, and if the PR has screenshots (check PR comments/body),
-  read those too.
+- Check the PR body for screenshot evidence first (CI enforces this via
+  `check:pr-screenshots` for any UI-facing diff, so its absence on an open
+  PR means the check is failing or hasn't run yet — flag that directly
+  rather than reviewing blind). Actually look at the change from a user's
+  point of view: read the changed UI components, and read the screenshots
+  themselves, not just their captions — a caption can describe the intent
+  while the image shows something else.
+- If the screenshots are a headless-browser capture of a native form
+  control (`<input type="date">`/`type="month"`/etc.), treat that as
+  necessary but not sufficient — flag explicitly whether the PR body
+  acknowledges the real-device gap (see CLAUDE.md's Pull request
+  conventions) rather than treating the desktop capture as proof.
 - Ask whether this makes a real task easier, or just adds an option without
   reducing friction anywhere.
 - Check consistency with the rest of the app's design language (spacing,

@@ -185,4 +185,16 @@ Runs: symlink check → migration doc check → PII check → lint → typecheck
 
 ## Pull request conventions
 
-PRs that change anything under `src/ui/` or any `.module.css` file must include screenshots (or a short screen recording) showing the affected feature before and after. Attach them in the PR description body. For responsive changes, include a mobile (375px) capture alongside the desktop one.
+PRs that change anything under `src/ui/` or any `.module.css` file must include screenshots showing the affected feature before and after, embedded in the PR description body. **CI enforces this** (`npm run check:pr-screenshots`, wired into `verify.yml`) — it fails the PR if a UI-facing file changed but the description has no markdown image link. For responsive changes, include a mobile (375px) capture alongside the desktop one.
+
+GitHub has no API for uploading an image into a PR body directly (the normal drag-and-drop path needs an authenticated browser session `gh`/the REST API don't have). The convention that works without one:
+
+1. Capture the screenshot(s) to a file.
+2. Commit them on the PR branch under `docs/pr-screenshots/<pr-number-or-slug>/`, e.g. `docs/pr-screenshots/55-date-budget-stack/before.png`.
+3. Reference them in the PR body with `![alt text](https://raw.githubusercontent.com/RoyCrivolotti/expense-tracker/<branch>/docs/pr-screenshots/<slug>/before.png)` — this renders inline immediately, no upload step, and the CI check accepts any markdown image link.
+
+These stay in the repo permanently once merged (small PNGs — a personal project, and a visual history of UI changes is worth the few hundred KB). Crop to the relevant area rather than capturing full-page where a smaller image tells the same story.
+
+If a screenshot can't show something meaningful (a change with no rendered difference in the states you can reach, or something environment-specific — see the note on native form controls below), say so explicitly in the PR body rather than omitting evidence silently; that satisfies the spirit of the rule even though the CI check itself just looks for *an* image link, not that it's the right one.
+
+**Headless browsers do not reproduce native form-control rendering** (`<input type="date">`, `type="month"`, etc.) — Chromium and Playwright's WebKit build both render these as compact numeric text on desktop, while real iOS Safari renders locale-formatted long-form text plus a picker glyph. A screenshot showing a fix for one of these controls at the right viewport width is necessary evidence but is not proof it works on a real device — say so in the PR if that's the situation, and verify on-device or via the PR's own staging preview before treating it as confirmed.
