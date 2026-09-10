@@ -18,3 +18,7 @@ config/dev.json
 # Local-only portfolio / audit notes (not in repo)
 docs/AUDIT*.md
 docs/PUBLIC_READINESS.md
+
+# Claude Code local settings — can accumulate secrets in permission-allowlist
+# strings (API tokens pasted inline into commands). Never commit; this repo is public.
+.claude/settings.local.json
