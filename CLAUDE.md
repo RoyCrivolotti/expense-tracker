@@ -182,3 +182,7 @@ npm run verify
 ```
 
 Runs: symlink check → migration doc check → PII check → lint → typecheck → test coverage → build → bundle budget check.
+
+## Pull request conventions
+
+PRs that change anything under `src/ui/` or any `.module.css` file must include screenshots (or a short screen recording) showing the affected feature before and after. Attach them in the PR description body. For responsive changes, include a mobile (375px) capture alongside the desktop one.
