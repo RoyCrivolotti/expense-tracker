@@ -87,6 +87,17 @@
   gap: 0.7rem;
 }
 
+/* iOS Safari renders input[type=date]/[type=month] values as locale-formatted
+   long-form text ("10 Sep 2026", "September 2026") plus a native picker glyph —
+   wider than the ~170px a two-column .row gives each field on a phone, and wider
+   than the numeric format Chromium/desktop WebKit render (which is why headless
+   testing didn't catch this). Stack instead of relying on the text ever fitting. */
+@media (max-width: 480px) {
+  .dateRow {
+    flex-direction: column;
+  }
+}
+
 .error {
   color: var(--exp-danger);
   font-size: 0.82rem;
