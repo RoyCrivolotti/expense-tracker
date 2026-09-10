@@ -29,3 +29,8 @@ jobs:
 
       - name: Diff coverage (this PR's changed lines)
         run: npm run coverage:diff -- --base ${{ github.event.pull_request.base.sha }}
+
+      - name: Require screenshots on UI-facing PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run check:pr-screenshots -- --base ${{ github.event.pull_request.base.sha }} --pr ${{ github.event.pull_request.number }}
