@@ -1,0 +1,364 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+/* Author-origin `display: flex` above otherwise beats the UA `[hidden]` rule
+   regardless of specificity — this form stays mounted (not unmounted) while the
+   single-transaction tab is active, so it needs an explicit rule to disappear. */
+.root[hidden] {
+  display: none;
+}
+
+/* ─── One date + category group ───────────────────────────────────────────── */
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.85rem;
+}
+
+.groupHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Stacked on a phone; the two controls pair up once there is room. Every child
+   needs min-width: 0 or a native date/month input refuses to shrink and pushes
+   the card past the sheet — the bug this design family has hit twice. */
+.groupHeaderRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+.groupHeaderRow > * {
+  min-width: 0;
+}
+
+.removeGroup {
+  align-self: flex-end;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0.6rem;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.removeGroup:hover {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.groupMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.budgetPill {
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.defaultsSummary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+
+.changeDefaults {
+  margin-left: auto;
+  min-height: 2.75rem;
+  padding: 0 0.6rem;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.defaultsPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.2rem;
+}
+
+/* ─── Committed lines ─────────────────────────────────────────────────────── */
+
+.lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.line {
+  border-top: 1px solid var(--color-border);
+}
+.line:first-child {
+  border-top: 0;
+}
+
+.lineToggle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.15rem;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.lineToggle:hover {
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
+/* Same treatment the transaction list uses for a type marker. */
+.dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  flex: none;
+  background: var(--color-text-muted);
+}
+.dot[data-type='income'] {
+  background: var(--exp-income);
+}
+.dot[data-type='expense'] {
+  background: var(--exp-expense);
+}
+.dot[data-type='refund'] {
+  background: var(--exp-refund);
+}
+.dot[data-type='investment'] {
+  background: var(--exp-investment);
+}
+
+.lineBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.lineDesc {
+  font-size: 0.92rem;
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lineMeta {
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lineAmount {
+  flex: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Inline editor for one committed line ────────────────────────────────── */
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.7rem 0.15rem 0.9rem;
+}
+
+.editorRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.editorRow > * {
+  min-width: 0;
+}
+
+.editorActions {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.remove,
+.done {
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border-radius: 0.6rem;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.remove {
+  border: 1px solid var(--exp-danger);
+  background: none;
+  color: var(--exp-danger);
+}
+.remove:hover {
+  background: color-mix(in srgb, var(--exp-danger) 10%, transparent);
+}
+
+.done {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+}
+
+/* ─── The entry strip ─────────────────────────────────────────────────────── */
+
+/* Amount is fixed-width and Description takes the rest. `min-width: 0` on the
+   description cell is load-bearing: a flex item defaults to min-width: auto and
+   refuses to shrink below its content, which is exactly how the grid-rows trial
+   clipped at 375px with no scroll affordance. Budget at a 340px content box:
+   104 + 6 + 44 + gaps leaves ~179px for the description. */
+.strip {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.4rem;
+}
+
+.stripAmount {
+  flex: 0 0 6.5rem;
+  min-width: 0;
+}
+
+.stripDescription {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.commit {
+  flex: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-accent);
+  border-radius: 0.6rem;
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  cursor: pointer;
+}
+
+.activate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  padding: 0.6rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 0.6rem;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.activate:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* ─── Footer ──────────────────────────────────────────────────────────────── */
+
+.addGroup {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  padding: 0.7rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 0.6rem;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.addGroup:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.summary {
+  text-align: center;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+/* These icons carry no intrinsic size, so a flex parent stretches them to fill
+   the row unless they are pinned — same rule the shipped batch form applies. */
+.addGroup svg,
+.activate svg,
+.removeGroup svg {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+}
+.commit svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: none;
+}
+
+/* The sheet stops growing at 30rem (Modal.module.css), and 560px is where it
+   switches to centred — so that, not a viewport-wide breakpoint, is the only
+   width at which this component has meaningfully more room to work with. */
+@media (min-width: 560px) {
+  .groupHeaderRow {
+    flex-direction: row;
+    align-items: flex-end;
+  }
+  .editorRow {
+    flex-direction: row;
+  }
+  .stripAmount {
+    flex: 0 0 8rem;
+  }
+  .removeGroup {
+    align-self: flex-end;
+  }
+}

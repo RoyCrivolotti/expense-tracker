@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState } from 'react'
+import { useId, useMemo, useRef, useState, type RefObject } from 'react'
 import type { DescriptionIndex, DescriptionSuggestion } from '../../data/descriptionIndex'
 import { ComboboxInput } from './ComboboxInput'
 import styles from './DescriptionCombobox.module.css'
@@ -10,6 +10,11 @@ interface DescriptionComboboxProps {
   placeholder?: string
   onChange: (value: string) => void
   onAccept: (suggestion: DescriptionSuggestion) => void
+  /** Fires when Enter should submit rather than pick — see `KeyHandlerOpts.onEnter`. */
+  onEnter?: (() => void) | undefined
+  inputRef?: RefObject<HTMLInputElement | null> | undefined
+  ariaLabel?: string | undefined
+  enterKeyHint?: 'enter' | 'done' | 'go' | 'next' | 'previous' | 'search' | 'send' | undefined
 }
 
 export function DescriptionCombobox({
@@ -18,6 +23,10 @@ export function DescriptionCombobox({
   placeholder,
   onChange,
   onAccept,
+  onEnter,
+  inputRef,
+  ariaLabel,
+  enterKeyHint,
 }: DescriptionComboboxProps) {
   const listId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
@@ -50,6 +59,10 @@ export function DescriptionCombobox({
         setHighlight={setHighlight}
         setFocused={setFocused}
         onPick={pick}
+        onEnter={onEnter}
+        inputRef={inputRef}
+        ariaLabel={ariaLabel}
+        enterKeyHint={enterKeyHint}
       />
       {open && (
         <DescriptionSuggestionList

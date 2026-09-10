@@ -6,8 +6,8 @@ import type { ExpenseModel } from '../useExpenseData'
 import { finalBudgetMonth } from '../../engine'
 import { fullMonthLabel } from '../../engine/dates'
 import { useToast } from '../hooks/useToast'
-import { BatchTransactionForm } from './BatchTransactionForm'
 import { ConfirmSheet } from './ConfirmSheet'
+import { GroupedTransactionForm } from './GroupedTransactionForm'
 import { Modal } from './Modal'
 import { TransactionForm } from './TransactionForm'
 import type { InstallmentIntent } from './installmentIntent'
@@ -81,7 +81,7 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
   const [mode, setMode] = useState<'single' | 'batch'>('single')
   // Batch mode only makes sense for a from-scratch add: a seed (duplicate,
   // "add expense in this category" shortcut, etc.) is a request to prefill one
-  // specific transaction, which BatchTransactionForm has no way to honor.
+  // specific transaction, which batch mode has no way to honor.
   const canBatch = editing == null && seed == null
 
   // Both forms stay mounted (see the `hidden` props below) so switching the
@@ -120,7 +120,7 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
     >
       {canBatch && <ModeToggle mode={mode} onChange={setMode} />}
       {canBatch && (
-        <BatchTransactionForm
+        <GroupedTransactionForm
           model={model}
           actions={actions}
           onClose={onClose}
