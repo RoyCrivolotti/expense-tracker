@@ -49,6 +49,11 @@
   flex-direction: column;
   gap: 0.3rem;
   flex: 1;
+  /* A flex item defaults to min-width: auto, so it refuses to shrink below its own
+     min-content width. Inside .row that let a native input[type=month] — "September
+     2026" plus its picker glyph — push past the right edge of the sheet at 375px,
+     clipping the glyph off-screen. Applies to .fieldStack below for the same reason. */
+  min-width: 0;
 }
 .label {
   font-size: 0.75rem;
@@ -98,6 +103,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  /* Same min-width: auto trap as .field above — this one wraps the Category select. */
+  min-width: 0;
 }
 
 .actions {
