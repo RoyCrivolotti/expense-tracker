@@ -94,9 +94,9 @@ These must exist locally. None are committed. Copy from the `.example.json` coun
 |---|---|---|
 | `.env` | Vite cross-link URLs | Copy `.env.example` as-is — values are public prod URLs |
 | `config/dev.json` | Dev D1 database ID | `npx wrangler d1 list` → find `roy-expenses-dev` |
-| `config/access.json` | `ownerEmail` | Your Google email |
-| `config/allowed-emails.json` | Array of emails allowed to sign in | Your Google email |
-| `config/backup-alerts.json` | Backup alert recipients | Your email + the existing `fromAddress` |
+| `config/access.json` | `ownerEmail` | `roycrivolotti@gmail.com` |
+| `config/allowed-emails.json` | Array of emails allowed to sign in | `["roycrivolotti@gmail.com"]` |
+| `config/backup-alerts.json` | Backup alert recipients | `roycrivolotti@gmail.com` + the existing `fromAddress` |
 | `config/goal-scenarios.seed.json` | Goal scenario seed data | Copy example as-is |
 
 ## Cloudflare tokens
