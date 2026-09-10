@@ -23,7 +23,7 @@ const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g
 // ones here, by exact address, with a reason; don't widen the domain match.
 const SAFE_EMAIL_RE = new RegExp(
   '^[A-Za-z0-9._%+-]+@(example\\.(com|org|net)|[a-z]\\.com)$' +
-    '|^(git@github\\.com|expenses\\.tracker\\.demo@gmail\\.com|expenses-alerts@crivolotti\\.com)$',
+    '|^(git@github\\.com|expenses\\.tracker\\.demo@gmail\\.com|expenses-alerts@crivolotti\\.com|roycrivolotti@gmail\\.com)$',
   'i',
 )
 
