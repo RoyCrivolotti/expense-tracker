@@ -286,6 +286,20 @@ describe('GroupedTransactionForm — committed lines', () => {
     expect(summaryText()).toContain('20,00')
   })
 
+  it('edits every field of a line in place, including type and account', () => {
+    renderForm()
+    enterLine('12,50', 'Mercadona')
+    fireEvent.click(screen.getByRole('button', { name: /Mercadona/ }))
+
+    fireEvent.click(editor().getByRole('button', { name: 'Refund' }))
+    fireEvent.change(editor().getByLabelText('Account'), { target: { value: '2' } })
+    fireEvent.change(editor().getByPlaceholderText('e.g. Mercadona'), {
+      target: { value: 'Mercadona refund' },
+    })
+
+    expect(screen.getByRole('button', { name: /Mercadona refund.*Refund.*Card/ })).toBeInTheDocument()
+  })
+
   it('removes a line from its editor', () => {
     renderForm()
     enterLine('12,50', 'Mercadona')
@@ -351,6 +365,43 @@ describe('GroupedTransactionForm — groups', () => {
 
     enterLine('4,00', 'Tapas')
     expect(screen.queryByRole('button', { name: /^Remove Dining out on/ })).not.toBeInTheDocument()
+  })
+
+  it('removes an empty group and moves the strip back to the one before it', () => {
+    renderForm()
+    enterLine('12,50', 'Mercadona')
+    fireEvent.click(screen.getByRole('button', { name: /add another group/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Remove Dining out on/ }))
+
+    expect(screen.queryByRole('button', { name: 'Add line to Dining out' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add line to Groceries' })).toBeInTheDocument()
+  })
+
+  it('changes the group date, which re-derives the budget month for its lines', async () => {
+    const createTransactions = vi.fn().mockResolvedValue(undefined)
+    renderForm(makeActions({ createTransactions }))
+    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-03-10' } })
+    enterLine('12,50', 'Mercadona')
+
+    fireEvent.click(screen.getByRole('button', { name: /add 1 transaction/i }))
+
+    await waitFor(() => expect(createTransactions).toHaveBeenCalledTimes(1))
+    const saved = createTransactions.mock.calls[0]![0] as Array<Record<string, unknown>>
+    expect(saved[0]).toMatchObject({ date: '2026-03-10', budgetMonth: '2026-03' })
+  })
+
+  it('changes the group account and type behind the Change disclosure', () => {
+    renderForm()
+    enterLine('12,50', 'Mercadona')
+    fireEvent.click(screen.getByRole('button', { name: 'Change' }))
+
+    fireEvent.change(screen.getByLabelText('Account'), { target: { value: '2' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Income' }))
+
+    // Both carry into the line that had not overridden them.
+    expect(screen.getByRole('button', { name: /Mercadona.*Income.*Card/ })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    expect(screen.queryByLabelText('Account')).not.toBeInTheDocument()
   })
 })
 
