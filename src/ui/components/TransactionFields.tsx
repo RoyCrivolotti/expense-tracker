@@ -95,7 +95,7 @@ function DateBudgetRow({
   onDate: (value: string) => void
 }) {
   return (
-    <div className={styles.row}>
+    <div className={`${styles.row} ${styles.dateRow}`}>
       <Field label="Date">
         <input type="date" value={form.date} onChange={(e) => onDate(e.target.value)} required />
       </Field>
