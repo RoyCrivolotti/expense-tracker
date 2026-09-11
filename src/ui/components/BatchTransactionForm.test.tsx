@@ -156,7 +156,7 @@ describe('BatchTransactionForm — rows and dates', () => {
     // Switch the first row away from every default before adding a second row.
     fireEvent.change(screen.getByDisplayValue('Groceries'), { target: { value: '2' } })
     fireEvent.change(screen.getByDisplayValue('Cash'), { target: { value: '2' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Income' }))
+    fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'income' } })
     fireEvent.click(screen.getByRole('button', { name: /add transaction/i }))
 
     expect(screen.getAllByDisplayValue('Dining out')).toHaveLength(2)
