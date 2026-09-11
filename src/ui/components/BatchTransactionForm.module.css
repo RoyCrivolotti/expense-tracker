@@ -4,9 +4,6 @@
   gap: 1rem;
 }
 
-/* Author-origin `display: flex` above otherwise beats the UA `[hidden]` rule
-   regardless of specificity — this form stays mounted (not unmounted) while the
-   single-transaction tab is active, so it needs an explicit rule to actually disappear. */
 .root[hidden] {
   display: none;
 }
@@ -29,51 +26,160 @@
   flex: 1;
 }
 
+/* ─── Compact row ─────────────────────────────────────────────────────────── */
+
 .row {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.85rem 2.2rem 0.85rem 0;
-  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.35rem;
+  padding: 0.75rem 0;
+  border-left: 3px solid var(--color-text-muted);
+  padding-left: 0.6rem;
 }
-/* One hairline between rows — not a box around each one — since the batch
-   card's own border already frames the group. */
+.row[data-type='expense'] {
+  border-left-color: var(--exp-expense);
+}
+.row[data-type='income'] {
+  border-left-color: var(--exp-income);
+}
+.row[data-type='investment'] {
+  border-left-color: var(--exp-investment);
+}
+.row[data-type='refund'] {
+  border-left-color: var(--exp-refund);
+}
 .row + .row {
   border-top: 1px solid var(--color-border);
 }
 
-.rowFields {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+.compactType {
+  min-width: 0;
+  padding: 0.4rem 0.3rem;
+  border: 1px solid transparent;
+  border-radius: 0.6rem;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.82rem;
 }
-/* Base input/select styling comes from TransactionForm.module.css's shared
-   .field rule (each field below is wrapped in that same <Field> component) —
-   this only holds the amount field's own deltas from that shared base. */
-.rowAmount {
-  font-size: 1.1rem;
-  font-weight: 680;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
+.compactType:focus {
+  border-color: var(--color-accent);
+  outline: none;
 }
 
-.removeRow,
-.removeBatch {
-  position: absolute;
-  top: 0.4rem;
-  right: 0.4rem;
+.compactAmount {
+  min-width: 0;
+  padding: 0.4rem 0.3rem;
+  border: 1px solid transparent;
+  border-radius: 0.6rem;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.compactAmount:focus {
+  border-color: var(--color-accent);
+  outline: none;
+}
+.compactAmount::placeholder {
+  font-weight: 400;
+}
+
+.compactSelect {
+  min-width: 0;
+  padding: 0.4rem 0.3rem;
+  border: 1px solid transparent;
+  border-radius: 0.6rem;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.82rem;
+}
+.compactSelect:focus {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+.compactCategory {
+  grid-column: 1;
+}
+
+.descriptionRow {
+  grid-column: 2 / 4;
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.compactDescription {
+  flex: 1;
+  min-width: 0;
+}
+.compactDescription input {
+  padding: 0.5rem 0.6rem !important;
+  font-size: 0.88rem !important;
+}
+
+.removeRow {
+  flex: none;
   width: 1.6rem;
   height: 1.6rem;
   border: 0;
   background: none;
   color: var(--color-text-muted);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
+.removeRow svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
 .removeBatch {
-  position: static;
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
   flex: 0 0 auto;
   margin-bottom: 0.6rem;
 }
+
+/* ─── Column headers ──────────────────────────────────────────────────────── */
+
+.columnHeaders {
+  display: none;
+}
+.columnHeaders span {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.colHeaderType {
+  width: 5.5rem;
+  flex: none;
+}
+.colHeaderAmount {
+  width: 6rem;
+  flex: none;
+}
+.colHeaderCat {
+  flex: 1 1 5rem;
+  min-width: 0;
+}
+.colHeaderAcct {
+  flex: 1 1 5rem;
+  min-width: 0;
+}
+
+/* ─── Buttons ─────────────────────────────────────────────────────────────── */
 
 .addRow,
 .addBatch {
@@ -106,4 +212,57 @@
   margin: 0;
   color: var(--color-text-muted);
   font-size: 0.85rem;
+}
+
+/* ─── Responsive ──────────────────────────────────────────────────────────── */
+
+@media (min-width: 560px) {
+  .columnHeaders {
+    display: flex;
+    gap: 0.35rem;
+    padding: 0 0 0.15rem calc(3px + 0.6rem);
+    align-items: center;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    align-items: center;
+  }
+
+  .compactType {
+    order: 1;
+    width: 5.5rem;
+    flex: none;
+    padding: 0.5rem 0.4rem;
+  }
+
+  .compactAmount {
+    order: 2;
+    width: 6rem;
+    flex: none;
+    text-align: right;
+    padding: 0.5rem 0.5rem;
+  }
+
+  .compactCategory {
+    order: 3;
+    grid-column: unset;
+  }
+
+  .compactAccount {
+    order: 4;
+  }
+
+  .compactSelect {
+    flex: 1 1 5rem;
+    padding: 0.5rem 0.4rem;
+  }
+
+  .descriptionRow {
+    order: 5;
+    grid-column: unset;
+    flex-basis: 100%;
+  }
 }
