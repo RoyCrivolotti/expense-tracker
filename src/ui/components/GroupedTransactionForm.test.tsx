@@ -390,18 +390,14 @@ describe('GroupedTransactionForm — groups', () => {
     expect(saved[0]).toMatchObject({ date: '2026-03-10', budgetMonth: '2026-03' })
   })
 
-  it('changes the group account and type behind the Change disclosure', () => {
+  it('changes the group account and type via the always-visible controls', () => {
     renderForm()
     enterLine('12,50', 'Mercadona')
-    fireEvent.click(screen.getByRole('button', { name: 'Change' }))
 
     fireEvent.change(screen.getByLabelText('Account'), { target: { value: '2' } })
     fireEvent.click(screen.getByRole('button', { name: 'Income' }))
 
-    // Both carry into the line that had not overridden them.
     expect(screen.getByRole('button', { name: /Mercadona.*Income.*Card/ })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
-    expect(screen.queryByLabelText('Account')).not.toBeInTheDocument()
   })
 })
 
