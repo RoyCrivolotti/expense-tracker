@@ -5,6 +5,7 @@ import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import { formatMoneyInput, parseMoneyToCents, type MoneyFormat } from '../../engine/money'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
+import { MonthInput } from '../components/MonthInput'
 import { optionLabel, selectableOptions } from '../components/pickerOptions'
 import formStyles from '../components/TransactionForm.module.css'
 import stepStyles from '../components/InstallmentStep.module.css'
@@ -130,14 +131,14 @@ export function InstallmentPlanForm({ plan, model, actions, onBack }: Props) {
             onChange={(e) => set('startInstallmentIndex', e.target.value)}
           />
         </label>
-        <label className={formStyles.field}>
+        <div className={formStyles.field}>
           <span className={formStyles.label}>Anchor budget month</span>
-          <input
-            type="month"
+          <MonthInput
             value={f.anchorBudgetMonth}
-            onChange={(e) => set('anchorBudgetMonth', e.target.value)}
+            ariaLabel="Anchor budget month"
+            onChange={(v) => set('anchorBudgetMonth', v)}
           />
-        </label>
+        </div>
       </div>
       <label className={formStyles.field}>
         <span className={formStyles.label}>Due day of month (1-31, optional)</span>

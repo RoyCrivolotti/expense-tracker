@@ -1,6 +1,8 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+
+vi.mock('../../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: () => true }))
 import { GoalControls } from './GoalControls'
 import { makeScenario } from '../../../testing/factories'
 

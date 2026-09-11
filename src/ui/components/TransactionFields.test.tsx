@@ -1,5 +1,7 @@
 import { render, screen, within, fireEvent } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+
+vi.mock('../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: () => true }))
 import type { Transaction } from '../../types'
 import type { ExpenseModel } from '../useExpenseData'
 import type { FormFields } from './transactionFormState'
