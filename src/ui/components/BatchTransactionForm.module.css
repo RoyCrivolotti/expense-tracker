@@ -4,9 +4,6 @@
   gap: 1rem;
 }
 
-/* Author-origin `display: flex` above otherwise beats the UA `[hidden]` rule
-   regardless of specificity — this form stays mounted (not unmounted) while the
-   single-transaction tab is active, so it needs an explicit rule to actually disappear. */
 .root[hidden] {
   display: none;
 }
@@ -33,17 +30,21 @@
 
 .row {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 0.35rem;
   padding: 0.6rem 0;
-  position: relative;
-  align-items: center;
 }
 .row + .row {
   border-top: 1px solid var(--color-border);
 }
 
-/* Colored left accent showing the transaction type at a glance. */
+.rowMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
 .typeDot {
   width: 0.5rem;
   height: 0.5rem;
@@ -64,7 +65,6 @@
   background: var(--exp-refund);
 }
 
-/* No label wrapping — these are bare inputs/selects inside the compact row. */
 .compactType {
   width: 5.5rem;
   flex: none;
@@ -82,7 +82,7 @@
 }
 
 .compactAmount {
-  width: 5.5rem;
+  width: 5rem;
   flex: none;
   padding: 0.5rem 0.5rem;
   border: 1px solid transparent;
@@ -104,19 +104,15 @@
 }
 
 .compactDescription {
-  flex: 1 1 8rem;
   min-width: 0;
 }
-/* DescriptionCombobox renders its own <input> inside a wrapper, so target the
-   actual input to match the compact row's sizing. */
 .compactDescription input {
   padding: 0.5rem 0.6rem !important;
   font-size: 0.88rem !important;
 }
 
-/* Category and Account sit on the second line (mobile) or continue inline (desktop). */
 .compactSelect {
-  flex: 1 1 6rem;
+  flex: 1 1 5rem;
   min-width: 0;
   padding: 0.5rem 0.4rem;
   border: 1px solid transparent;
@@ -162,11 +158,7 @@
 /* ─── Column headers ──────────────────────────────────────────────────────── */
 
 .columnHeaders {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  padding: 0 0 0.15rem;
-  align-items: center;
+  display: none;
 }
 .columnHeaders span {
   font-size: 0.7rem;
@@ -175,7 +167,6 @@
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
-/* Mirror the field widths so headers align with inputs. */
 .colHeaderDot {
   width: 0.5rem;
   flex: none;
@@ -185,19 +176,15 @@
   flex: none;
 }
 .colHeaderAmount {
-  width: 5.5rem;
+  width: 6rem;
   flex: none;
 }
-.colHeaderDesc {
-  flex: 1 1 8rem;
-  min-width: 0;
-}
 .colHeaderCat {
-  flex: 1 1 6rem;
+  flex: 1 1 5rem;
   min-width: 0;
 }
 .colHeaderAcct {
-  flex: 1 1 6rem;
+  flex: 1 1 5rem;
   min-width: 0;
 }
 .colHeaderRemove {
@@ -242,21 +229,20 @@
 
 /* ─── Responsive ──────────────────────────────────────────────────────────── */
 
-/* Hide column headers on mobile — the wrapping layout makes them misleading. */
-.columnHeaders {
-  display: none;
-}
-
 @media (min-width: 560px) {
   .columnHeaders {
     display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    padding: 0 0 0.15rem;
+    align-items: center;
+  }
+
+  .rowMeta {
+    flex-wrap: nowrap;
   }
 
   .compactAmount {
-    width: 6rem;
-  }
-
-  .colHeaderAmount {
     width: 6rem;
   }
 }
