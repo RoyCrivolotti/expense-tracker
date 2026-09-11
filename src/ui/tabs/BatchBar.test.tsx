@@ -8,14 +8,14 @@ describe('BatchBar', () => {
       <BatchBar count={2} busy={true} editOpen={false} onEdit={vi.fn()} onDelete={vi.fn()} />,
     )
     expect(screen.getByText('Deleting…')).toBeInTheDocument()
-    expect(screen.queryByText('Delete selected')).not.toBeInTheDocument()
+    expect(screen.queryByText('Delete')).not.toBeInTheDocument()
   })
 
-  it('shows "Delete selected" when busy but edit is open', () => {
+  it('shows "Delete" when busy but edit is open', () => {
     render(
       <BatchBar count={2} busy={true} editOpen={true} onEdit={vi.fn()} onDelete={vi.fn()} />,
     )
-    expect(screen.getByText('Delete selected')).toBeInTheDocument()
+    expect(screen.getByText('Delete')).toBeInTheDocument()
     expect(screen.queryByText('Deleting…')).not.toBeInTheDocument()
   })
 })
