@@ -19,6 +19,7 @@ config/dev.json
 docs/AUDIT*.md
 docs/PUBLIC_READINESS.md
 
-# Claude Code local settings — can accumulate secrets in permission-allowlist
-# strings (API tokens pasted inline into commands). Never commit; this repo is public.
+# Claude Code local files — settings can accumulate secrets in permission-allowlist
+# strings; deploy-context has account-specific IDs and token names.
 .claude/settings.local.json
+.claude/deploy-context.md
