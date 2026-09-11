@@ -77,43 +77,6 @@
   outline: none;
 }
 
-/* See NativeDateOverlay in TransactionFields.tsx: the real input stays for its
-   native picker/keyboard/accessible value, but is invisible and full-size so
-   it can't render wider than this box regardless of the device's own locale
-   text — the label below is our own text, fully within CSS's normal width
-   rules, and is what's actually visible. */
-.nativeOverlayWrap {
-  position: relative;
-  display: block;
-}
-.nativeOverlayInput {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  padding: 0;
-  border: 0;
-  background: none;
-  opacity: 0;
-}
-.nativeOverlayLabel {
-  display: block;
-  width: 100%;
-  padding: 0.65rem 0.75rem;
-  border: 1px solid transparent;
-  border-radius: 0.75rem;
-  background: var(--color-surface-muted);
-  color: var(--color-text);
-  font: inherit;
-  font-size: 0.95rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  pointer-events: none;
-}
-.nativeOverlayInput:focus + .nativeOverlayLabel {
-  border-color: var(--color-accent);
-}
 .amount {
   font-size: 1.4rem !important;
   font-weight: 680;
