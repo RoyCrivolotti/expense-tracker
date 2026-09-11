@@ -19,15 +19,12 @@ export function FlagsModal({
   model,
   actions,
   onClose,
-  /** Open straight into the "new flag" form, e.g. from the picker's New flag… */
-  startCreating = false,
 }: {
   model: ExpenseModel
   actions: ExpenseActions
   onClose: () => void
-  startCreating?: boolean
 }) {
-  const [editing, setEditing] = useState<Editing>(startCreating ? { flag: null } : null)
+  const [editing, setEditing] = useState<Editing>(null)
   const [confirming, setConfirming] = useState(false)
   const flags = model.dataset.flags
 

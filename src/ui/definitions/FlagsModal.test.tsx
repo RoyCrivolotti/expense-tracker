@@ -31,7 +31,7 @@ function modelFor(dataset: ExpenseDataset): ExpenseModel {
   return { dataset, lookup: buildLookup(dataset), descriptionIndex: {}, months: [] } as unknown as ExpenseModel
 }
 
-function renderModal(dataset: ExpenseDataset, overrides: Partial<ExpenseActions> = {}, startCreating = false) {
+function renderModal(dataset: ExpenseDataset, overrides: Partial<ExpenseActions> = {}) {
   const actions = {
     createFlag: vi.fn().mockResolvedValue(work),
     updateFlag: vi.fn().mockResolvedValue(undefined),
@@ -41,12 +41,7 @@ function renderModal(dataset: ExpenseDataset, overrides: Partial<ExpenseActions>
   const onClose = vi.fn()
   render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
-      <FlagsModal
-        model={modelFor(dataset)}
-        actions={actions}
-        onClose={onClose}
-        startCreating={startCreating}
-      />
+      <FlagsModal model={modelFor(dataset)} actions={actions} onClose={onClose} />
     </MoneyFormatProvider>,
   )
   return { actions, onClose }
@@ -75,12 +70,6 @@ describe('FlagsModal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Add flag' }))
 
     expect(createFlag).toHaveBeenCalledWith(expect.objectContaining({ name: 'Client travel' }))
-  })
-
-  it('opens straight into the form when asked to', () => {
-    renderModal(makeDataset(), {}, true)
-
-    expect(screen.getByPlaceholderText('Work travel')).toBeInTheDocument()
   })
 
   it('edits an existing flag', async () => {
@@ -146,8 +135,10 @@ describe('FlagsModal', () => {
     expect(updateFlag).toHaveBeenCalledWith(1, expect.objectContaining({ color: '#10b981' }))
   })
 
-  it('does not offer archiving for a flag that does not exist yet', () => {
-    renderModal(makeDataset(), {}, true)
+  it('does not offer archiving for a flag that does not exist yet', async () => {
+    renderModal(makeDataset())
+
+    await userEvent.click(screen.getByRole('button', { name: /Add flag/ }))
 
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
   })

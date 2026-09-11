@@ -1,6 +1,10 @@
 import type { Transaction } from '../../types'
 import type { ExpenseModel } from '../useExpenseData'
-import { groupTransactionsByFlag, type FlagGroup } from '../../domain/engine/flagGroups'
+import {
+  groupTransactionsByFlag,
+  summarizeFlagGroups,
+  type FlagGroup,
+} from '../../domain/engine/flagGroups'
 import { Card, SectionTitle } from '../components/primitives'
 import { Money } from '../components/Money'
 import { TransactionList } from '../components/TransactionList'
@@ -33,7 +37,7 @@ function FlagGroupSection({
   return (
     <details className={styles.group}>
       <summary className={styles.summary}>
-        <FlagGlyph flag={group.flag} className={styles.summaryGlyph} />
+        <FlagGlyph flag={group.flag} className={styles.summaryGlyph} decorative />
         <span className={styles.summaryBody}>
           <span className={styles.summaryName}>{group.flag.name}</span>
           {group.flag.description ? (
@@ -79,28 +83,46 @@ function FlagGroupSection({
 export function FlaggedCard({ model, onFilterByFlag, onManage, onSelect }: Props) {
   const groups = groupTransactionsByFlag(model.dataset.transactions, model.dataset.flags)
   if (groups.length === 0) return null
+  const total = summarizeFlagGroups(groups)
 
   return (
     <>
-      <SectionTitle
-        action={
-          <button type="button" className={styles.manageBtn} onClick={onManage}>
-            Manage
-          </button>
-        }
-      >
-        Flagged
-      </SectionTitle>
+      <SectionTitle>Flagged</SectionTitle>
       <Card className={styles.card}>
-        {groups.map((group) => (
-          <FlagGroupSection
-            key={group.flag.id}
-            group={group}
-            model={model}
-            onFilterByFlag={onFilterByFlag}
-            {...(onSelect ? { onSelect } : {})}
-          />
-        ))}
+        {/*
+          Collapsed by default: this card sits above the month's transactions on
+          a tab that already carries Installments and Upcoming, and expanded it
+          pushed the first transaction off a 375px screen entirely. Collapsed it
+          costs one row and still answers the question the feature exists for.
+        */}
+        <details className={styles.card__root}>
+          <summary className={styles.rollup}>
+            <span className={styles.rollupBody}>
+              <span className={styles.rollupCount}>
+                {total.count} item{total.count === 1 ? '' : 's'} across {groups.length} flag
+                {groups.length === 1 ? '' : 's'}
+              </span>
+              {/* Every sibling card on this screen is month-scoped; this one is
+                  not, and nothing else on it would say so. */}
+              <span className={styles.rollupScope}>All months, not just this one</span>
+            </span>
+            <Money cents={total.totalCents} className={styles.rollupTotal} />
+          </summary>
+          <div className={styles.groups}>
+            {groups.map((group) => (
+              <FlagGroupSection
+                key={group.flag.id}
+                group={group}
+                model={model}
+                onFilterByFlag={onFilterByFlag}
+                {...(onSelect ? { onSelect } : {})}
+              />
+            ))}
+            <button type="button" className={styles.manageBtn} onClick={onManage}>
+              Manage flags
+            </button>
+          </div>
+        </details>
       </Card>
     </>
   )
