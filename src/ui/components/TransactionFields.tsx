@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react'
 import type { Transaction, TxnType } from '../../types'
 import type { DescriptionSuggestion } from '../../data/descriptionIndex'
-import { defaultBudgetMonth, shortDateLabel, shortMonthYearLabel } from '../../engine/dates'
+import { defaultBudgetMonth } from '../../engine/dates'
 import type { ExpenseModel } from '../useExpenseData'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
+import { DateInput } from './DateInput'
 import { DescriptionCombobox } from './DescriptionCombobox'
-import { NativeDateOverlay } from './NativeDateOverlay'
+import { MonthInput } from './MonthInput'
 import { optionLabel, selectableOptions } from './pickerOptions'
 import type { FormFields, Setter } from './transactionFormState'
 import styles from './TransactionForm.module.css'
@@ -116,19 +117,11 @@ function DateBudgetRow({
   return (
     <div className={styles.row}>
       <Field label="Date" as="div">
-        <NativeDateOverlay
-          type="date"
-          value={form.date}
-          label={shortDateLabel(form.date)}
-          ariaLabel="Date"
-          onChange={onDate}
-        />
+        <DateInput value={form.date} ariaLabel="Date" onChange={onDate} />
       </Field>
       <Field label="Budget month" as="div">
-        <NativeDateOverlay
-          type="month"
+        <MonthInput
           value={form.budgetMonth}
-          label={shortMonthYearLabel(form.budgetMonth)}
           ariaLabel="Budget month"
           onChange={(value) => set('budgetMonth', value)}
         />

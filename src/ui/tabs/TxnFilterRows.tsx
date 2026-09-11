@@ -1,5 +1,6 @@
 import type { Account, Category, TxnType } from '../../types'
 import { CloseIcon } from '../icons'
+import { DateInput } from '../components/DateInput'
 import { SegmentedControl } from '../components/SegmentedControl'
 import type { StatusFilter } from './TxnFilters'
 import type { TxnDateScope } from './txnDateScope'
@@ -180,19 +181,17 @@ export function DateScopeRow({
       />
       {dateScope === 'custom' ? (
         <div className={styles.selectRow}>
-          <input
-            type="date"
+          <DateInput
             value={customDateFrom}
-            onChange={(e) => onCustomDateFrom(e.target.value)}
+            onChange={onCustomDateFrom}
             disabled={selectMode}
-            aria-label="From date"
+            ariaLabel="From date"
           />
-          <input
-            type="date"
+          <DateInput
             value={customDateTo}
-            onChange={(e) => onCustomDateTo(e.target.value)}
+            onChange={onCustomDateTo}
             disabled={selectMode}
-            aria-label="To date"
+            ariaLabel="To date"
           />
         </div>
       ) : null}
