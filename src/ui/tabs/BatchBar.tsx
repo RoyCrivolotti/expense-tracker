@@ -20,7 +20,7 @@ export function BatchBar({ count, busy, editOpen, onEdit, onDelete }: BatchBarPr
           disabled={count === 0 || busy}
           onClick={onEdit}
         >
-          Edit selected
+          Edit
         </button>
         <button
           type="button"
@@ -28,7 +28,7 @@ export function BatchBar({ count, busy, editOpen, onEdit, onDelete }: BatchBarPr
           disabled={count === 0 || busy}
           onClick={onDelete}
         >
-          {deleting ? 'Deleting…' : 'Delete selected'}
+          {deleting ? 'Deleting…' : 'Delete'}
         </button>
       </div>
     </div>
