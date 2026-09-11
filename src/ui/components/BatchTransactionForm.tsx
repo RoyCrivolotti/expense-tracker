@@ -196,11 +196,12 @@ export function BatchTransactionForm({
       {batches.map((batch) => (
         <div key={batch.id} className={styles.batch}>
           <div className={styles.batchHeader}>
-            <Field label="Date">
+            <Field label="Date" as="div">
               <NativeDateOverlay
                 type="date"
                 value={batch.date}
                 label={shortDateLabel(batch.date)}
+                ariaLabel="Date"
                 onChange={(value) => updateBatch(batch.id, { date: value })}
               />
             </Field>

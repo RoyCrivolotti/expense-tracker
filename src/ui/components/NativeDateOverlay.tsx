@@ -21,16 +21,23 @@ import styles from './NativeDateOverlay.module.css'
  * mobile. Feature-detected (older Firefox lacks showPicker()): where it's
  * unsupported, this is a silent no-op and today's existing focus/arrow-key
  * behavior is unchanged.
+ *
+ * `ariaLabel` gives the input its accessible name directly, since callers
+ * render this outside a <label> (see Field's `as="div"`) — a <label> would
+ * forward a caption click into a showPicker() call, widening "click the
+ * pill" into "click anywhere near it".
  */
 export function NativeDateOverlay({
   type,
   value,
   label,
+  ariaLabel,
   onChange,
 }: {
   type: 'date' | 'month'
   value: string
   label: string
+  ariaLabel: string
   onChange: (value: string) => void
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -53,6 +60,7 @@ export function NativeDateOverlay({
         ref={inputRef}
         type={type}
         value={value}
+        aria-label={ariaLabel}
         onChange={(e) => onChange(e.target.value)}
         onClick={openPicker}
         onKeyDown={(e) => {

@@ -17,12 +17,30 @@ const TYPES: { value: TxnType; label: string }[] = [
   { value: 'refund', label: 'Refund' },
 ]
 
-export function Field({ label, children }: { label: string; children: ReactNode }) {
+export function Field({
+  label,
+  children,
+  as = 'label',
+}: {
+  label: string
+  children: ReactNode
+  /**
+   * A <label> forwards a click anywhere in it — including the caption text —
+   * to its wrapped control (that's how "click a checkbox's label" works).
+   * NativeDateOverlay opens the native picker on click, so wrapping it in a
+   * <label> means clicking the "Date"/"Budget month" caption also opens the
+   * picker, not just the pill. Use 'div' there — it drops the implicit
+   * label/control association (compensate with NativeDateOverlay's own
+   * `ariaLabel`), scoping the click-to-open surface to the pill itself.
+   */
+  as?: 'label' | 'div'
+}) {
+  const Tag = as
   return (
-    <label className={styles.field}>
+    <Tag className={styles.field}>
       <span className={styles.label}>{label}</span>
       {children}
-    </label>
+    </Tag>
   )
 }
 
@@ -97,14 +115,21 @@ function DateBudgetRow({
 }) {
   return (
     <div className={styles.row}>
-      <Field label="Date">
-        <NativeDateOverlay type="date" value={form.date} label={shortDateLabel(form.date)} onChange={onDate} />
+      <Field label="Date" as="div">
+        <NativeDateOverlay
+          type="date"
+          value={form.date}
+          label={shortDateLabel(form.date)}
+          ariaLabel="Date"
+          onChange={onDate}
+        />
       </Field>
-      <Field label="Budget month">
+      <Field label="Budget month" as="div">
         <NativeDateOverlay
           type="month"
           value={form.budgetMonth}
           label={shortMonthYearLabel(form.budgetMonth)}
+          ariaLabel="Budget month"
           onChange={(value) => set('budgetMonth', value)}
         />
       </Field>
