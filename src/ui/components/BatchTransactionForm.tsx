@@ -224,48 +224,46 @@ export function BatchTransactionForm({
 
           {batch.rows.map((row) => (
             <div key={row.id} id={rowElementId(row.id)} className={styles.row} data-type={row.type}>
-              <div className={styles.rowMeta}>
-                <select
-                  className={styles.compactType}
-                  value={row.type}
-                  aria-label="Type"
-                  onChange={(e) => updateRow(batch.id, row.id, { type: e.target.value as TxnType })}
-                >
-                  {TYPE_OPTIONS.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
-                <input
-                  className={styles.compactAmount}
-                  type="text"
-                  inputMode="decimal"
-                  autoComplete="off"
-                  aria-label="Amount"
-                  placeholder={`0${format.decimalSeparator}00`}
-                  value={row.amount}
-                  onChange={(e) => updateRow(batch.id, row.id, { amount: e.target.value })}
-                />
-                <select
-                  className={styles.compactSelect}
-                  value={row.categoryId}
-                  aria-label="Category"
-                  onChange={(e) => updateRow(batch.id, row.id, { categoryId: Number(e.target.value) })}
-                >
-                  {selectableOptions(model.dataset.categories, row.categoryId).map((c) => (
-                    <option key={c.id} value={c.id}>{optionLabel(c)}</option>
-                  ))}
-                </select>
-                <select
-                  className={styles.compactSelect}
-                  value={row.accountId}
-                  aria-label="Account"
-                  onChange={(e) => updateRow(batch.id, row.id, { accountId: Number(e.target.value) })}
-                >
-                  {selectableOptions(model.dataset.accounts, row.accountId).map((a) => (
-                    <option key={a.id} value={a.id}>{optionLabel(a)}</option>
-                  ))}
-                </select>
-              </div>
+              <input
+                className={styles.compactAmount}
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                aria-label="Amount"
+                placeholder={`0${format.decimalSeparator}00`}
+                value={row.amount}
+                onChange={(e) => updateRow(batch.id, row.id, { amount: e.target.value })}
+              />
+              <select
+                className={styles.compactType}
+                value={row.type}
+                aria-label="Type"
+                onChange={(e) => updateRow(batch.id, row.id, { type: e.target.value as TxnType })}
+              >
+                {TYPE_OPTIONS.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+              <select
+                className={`${styles.compactSelect} ${styles.compactAccount}`}
+                value={row.accountId}
+                aria-label="Account"
+                onChange={(e) => updateRow(batch.id, row.id, { accountId: Number(e.target.value) })}
+              >
+                {selectableOptions(model.dataset.accounts, row.accountId).map((a) => (
+                  <option key={a.id} value={a.id}>{optionLabel(a)}</option>
+                ))}
+              </select>
+              <select
+                className={`${styles.compactSelect} ${styles.compactCategory}`}
+                value={row.categoryId}
+                aria-label="Category"
+                onChange={(e) => updateRow(batch.id, row.id, { categoryId: Number(e.target.value) })}
+              >
+                {selectableOptions(model.dataset.categories, row.categoryId).map((c) => (
+                  <option key={c.id} value={c.id}>{optionLabel(c)}</option>
+                ))}
+              </select>
               <div className={styles.descriptionRow}>
                 <div className={styles.compactDescription}>
                   <DescriptionCombobox

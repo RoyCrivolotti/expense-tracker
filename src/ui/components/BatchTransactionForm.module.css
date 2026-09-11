@@ -29,8 +29,8 @@
 /* ─── Compact row ─────────────────────────────────────────────────────────── */
 
 .row {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 0.35rem;
   padding: 0.75rem 0;
   border-left: 3px solid var(--color-text-muted);
@@ -52,17 +52,9 @@
   border-top: 1px solid var(--color-border);
 }
 
-.rowMeta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  align-items: center;
-}
-
 .compactType {
-  width: 5.5rem;
-  flex: none;
-  padding: 0.5rem 0.4rem;
+  min-width: 0;
+  padding: 0.4rem 0.3rem;
   border: 1px solid transparent;
   border-radius: 0.6rem;
   background: var(--color-surface-muted);
@@ -76,9 +68,8 @@
 }
 
 .compactAmount {
-  width: 5rem;
-  flex: none;
-  padding: 0.5rem 0.5rem;
+  min-width: 0;
+  padding: 0.4rem 0.3rem;
   border: 1px solid transparent;
   border-radius: 0.6rem;
   background: var(--color-surface-muted);
@@ -87,7 +78,6 @@
   font-size: 0.88rem;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
-  text-align: right;
 }
 .compactAmount:focus {
   border-color: var(--color-accent);
@@ -97,7 +87,27 @@
   font-weight: 400;
 }
 
+.compactSelect {
+  min-width: 0;
+  padding: 0.4rem 0.3rem;
+  border: 1px solid transparent;
+  border-radius: 0.6rem;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.82rem;
+}
+.compactSelect:focus {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+.compactCategory {
+  grid-column: 1;
+}
+
 .descriptionRow {
+  grid-column: 2 / 4;
   display: flex;
   gap: 0.35rem;
   align-items: center;
@@ -110,22 +120,6 @@
 .compactDescription input {
   padding: 0.5rem 0.6rem !important;
   font-size: 0.88rem !important;
-}
-
-.compactSelect {
-  flex: 1 1 5rem;
-  min-width: 0;
-  padding: 0.5rem 0.4rem;
-  border: 1px solid transparent;
-  border-radius: 0.6rem;
-  background: var(--color-surface-muted);
-  color: var(--color-text);
-  font: inherit;
-  font-size: 0.82rem;
-}
-.compactSelect:focus {
-  border-color: var(--color-accent);
-  outline: none;
 }
 
 .removeRow {
@@ -230,11 +224,45 @@
     align-items: center;
   }
 
-  .rowMeta {
-    flex-wrap: nowrap;
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    align-items: center;
+  }
+
+  .compactType {
+    order: 1;
+    width: 5.5rem;
+    flex: none;
+    padding: 0.5rem 0.4rem;
   }
 
   .compactAmount {
+    order: 2;
     width: 6rem;
+    flex: none;
+    text-align: right;
+    padding: 0.5rem 0.5rem;
+  }
+
+  .compactCategory {
+    order: 3;
+    grid-column: unset;
+  }
+
+  .compactAccount {
+    order: 4;
+  }
+
+  .compactSelect {
+    flex: 1 1 5rem;
+    padding: 0.5rem 0.4rem;
+  }
+
+  .descriptionRow {
+    order: 5;
+    grid-column: unset;
+    flex-basis: 100%;
   }
 }
