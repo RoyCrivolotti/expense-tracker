@@ -10,6 +10,7 @@ import type {
   Category,
   ExpenseDataset,
   ExpenseSettings,
+  Flag,
   GoalInputs,
   GoalScenario,
   InstallmentPlan,
@@ -20,9 +21,11 @@ import type {
   WealthCheckinEntry,
 } from '../types'
 
-export type NewTransaction = Omit<StoredTransaction, 'id' | 'createdAt' | 'planId'> & {
+export type NewTransaction = Omit<StoredTransaction, 'id' | 'createdAt' | 'planId' | 'flagId'> & {
   /** Plan link: a plan id links/moves the row, null unlinks it, absent leaves it unchanged. */
   planId?: number | null
+  /** Flag link: an id flags the row, null clears it, absent leaves it unchanged. */
+  flagId?: number | null
 }
 export type BulkTransactionPatch = Partial<
   Pick<NewTransaction, 'categoryId' | 'accountId' | 'type' | 'date' | 'budgetMonth'>
@@ -30,6 +33,7 @@ export type BulkTransactionPatch = Partial<
 
 export type NewCategory = Omit<Category, 'id'>
 export type NewAccount = Omit<Account, 'id'>
+export type NewFlag = Omit<Flag, 'id'>
 
 /**
  * Exactly one of `reassignToId` / `createCategory` should be set when the
@@ -90,6 +94,12 @@ export interface ExpenseDataSource {
   createAccount?(input: NewAccount): Promise<Account>
   updateAccount?(id: number, patch: Partial<NewAccount>): Promise<Account>
   deleteAccount?(id: number, options?: DeleteAccountOptions): Promise<DeleteAccountResult>
+  createFlag?(input: NewFlag): Promise<Flag>
+  updateFlag?(id: number, patch: Partial<NewFlag>): Promise<Flag>
+  /** Deleting a flag clears it from its transactions; the result says how many. */
+  deleteFlag?(id: number): Promise<{ unflagged: number }>
+  /** Apply (or clear, with null) one flag across many transactions at once. */
+  setTransactionsFlag?(ids: number[], flagId: number | null): Promise<Transaction[]>
   updateSettings?(patch: Partial<ExpenseSettings>): Promise<ExpenseSettings>
   updateGoals?(patch: Partial<GoalInputs>): Promise<GoalInputs>
   createScenario?(input: NewGoalScenario): Promise<GoalScenario>

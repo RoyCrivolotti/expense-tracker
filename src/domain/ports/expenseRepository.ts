@@ -5,6 +5,7 @@ import type {
   Category,
   ExpenseDataset,
   ExpenseSettings,
+  Flag,
   GoalInputs,
   GoalScenario,
   InstallmentPlan,
@@ -20,6 +21,7 @@ import type {
   DeleteCategoryResult,
   NewAccount,
   NewCategory,
+  NewFlag,
   NewGoalScenario,
   NewInstallmentPlan,
   NewTransaction,
@@ -67,6 +69,11 @@ export interface ExpenseRepository {
     id: number,
     options?: DeleteAccountOptions,
   ): Promise<DeleteAccountResult>
+  createFlag(owner: string, input: NewFlag): Promise<Flag>
+  updateFlag(owner: string, id: number, patch: Partial<NewFlag>): Promise<Flag>
+  /** Deletes the flag and clears it from its transactions in one batch. */
+  deleteFlag(owner: string, id: number): Promise<{ unflagged: number }>
+  setTransactionsFlag(owner: string, ids: number[], flagId: number | null): Promise<Transaction[]>
   updateSettings(owner: string, patch: Partial<ExpenseSettings>): Promise<ExpenseSettings>
   updateGoals(owner: string, patch: Partial<GoalInputs>): Promise<GoalInputs>
   createScenario(owner: string, input: NewGoalScenario): Promise<GoalScenario>

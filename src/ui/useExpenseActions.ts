@@ -10,8 +10,11 @@ import {
   patchAfterBulkDelete,
   patchAfterBulkUpdate,
   patchAfterCashActual,
+  patchAfterBulkFlag,
   patchAfterCategory,
   patchAfterCategoryDelete,
+  patchAfterFlag,
+  patchAfterFlagDelete,
   patchAfterGoals,
   patchAfterInstallmentPlanCreate,
   patchAfterInstallmentPlanDelete,
@@ -80,6 +83,24 @@ export function useExpenseActions(
       setCashActual: async (yearMonth, actualCashCents) => {
         const row = await source.setCashActual!(yearMonth, actualCashCents)
         applyPatch((d) => patchAfterCashActual(d, row, yearMonth))
+      },
+      createFlag: async (input) => {
+        const flag = await source.createFlag!(input)
+        applyPatch((d) => patchAfterFlag(d, flag))
+        return flag
+      },
+      updateFlag: async (id, patch) => {
+        const flag = await source.updateFlag!(id, patch)
+        applyPatch((d) => patchAfterFlag(d, flag))
+      },
+      deleteFlag: async (id) => {
+        const result = await source.deleteFlag!(id)
+        applyPatch((d) => patchAfterFlagDelete(d, id))
+        return result
+      },
+      setTransactionsFlag: async (ids, flagId) => {
+        const txns = await source.setTransactionsFlag!(ids, flagId)
+        applyPatch((d) => patchAfterBulkFlag(d, txns))
       },
       createCategory: async (input) => {
         const category = await source.createCategory!(input)

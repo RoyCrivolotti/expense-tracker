@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import type { ExpenseDataset } from '../types'
+import type { ExpenseDataset, Transaction } from '../types'
 import { defaultExpenseSettings } from '../engine'
 import {
   patchAfterAccountDelete,
+  patchAfterBulkFlag,
   patchAfterBulkUpdate,
   patchAfterCategoryDelete,
+  patchAfterFlag,
+  patchAfterFlagDelete,
 } from './datasetPatches'
 
 function dataset(overrides: Partial<ExpenseDataset> = {}): ExpenseDataset {
   return {
+    flags: [],
     categories: [],
     accounts: [],
     transactions: [],
@@ -311,5 +315,77 @@ describe('patchAfterAccountDelete', () => {
     const patched = patchAfterAccountDelete(ds, 1, { reassignedToId: null })
 
     expect(patched.settings.defaultAccountId).toBe(2)
+  })
+})
+
+describe('flag patches', () => {
+  const work = { id: 1, name: 'Work travel', color: '#6366f1', sortOrder: 1, active: true }
+  const tax = { id: 2, name: 'Tax', color: '#10b981', sortOrder: 0, active: true }
+
+  function txn(id: number, flagId?: number): Transaction {
+    return {
+      id,
+      date: '2026-05-01',
+      budgetMonth: '2026-05',
+      description: 'Hotel',
+      accountId: 1,
+      categoryId: 1,
+      type: 'expense',
+      amountCents: 1_000,
+      cancelled: false,
+      status: 'posted',
+      ...(flagId != null ? { flagId } : {}),
+    }
+  }
+
+  it('inserts a new flag in sort order', () => {
+    const next = patchAfterFlag(dataset({ flags: [work] }), tax)
+
+    expect(next.flags.map((f) => f.id)).toEqual([2, 1])
+  })
+
+  it('replaces an existing flag rather than duplicating it', () => {
+    const next = patchAfterFlag(dataset({ flags: [work] }), { ...work, name: 'Client travel' })
+
+    expect(next.flags).toHaveLength(1)
+    expect(next.flags[0]?.name).toBe('Client travel')
+  })
+
+  it('does not mutate the dataset it was given', () => {
+    const before = dataset({ flags: [work] })
+    patchAfterFlag(before, tax)
+
+    expect(before.flags).toHaveLength(1)
+  })
+
+  it('clears the flag from its transactions when it is deleted', () => {
+    const before = dataset({ flags: [work, tax], transactions: [txn(1, 1), txn(2, 2)] })
+    const next = patchAfterFlagDelete(before, 1)
+
+    expect(next.flags.map((f) => f.id)).toEqual([2])
+    expect(next.transactions[0]).not.toHaveProperty('flagId')
+    expect(next.transactions[1]?.flagId).toBe(2)
+  })
+
+  it('omits the flagId key rather than setting it undefined', () => {
+    // exactOptionalPropertyTypes means an explicit `undefined` is not the same
+    // as absent, and JSON round-trips would disagree with the server.
+    const next = patchAfterFlagDelete(dataset({ flags: [work], transactions: [txn(1, 1)] }), 1)
+
+    expect(Object.keys(next.transactions[0] ?? {})).not.toContain('flagId')
+  })
+
+  it('splices bulk-flagged rows back in by id', () => {
+    const before = dataset({ flags: [work], transactions: [txn(1), txn(2)] })
+    const next = patchAfterBulkFlag(before, [txn(2, 1)])
+
+    expect(next.transactions[0]).not.toHaveProperty('flagId')
+    expect(next.transactions[1]?.flagId).toBe(1)
+  })
+
+  it('returns the same dataset when the bulk call changed nothing', () => {
+    const before = dataset({ transactions: [txn(1)] })
+
+    expect(patchAfterBulkFlag(before, [])).toBe(before)
   })
 })

@@ -9,6 +9,7 @@ import type {
   Category,
   ExpenseDataset,
   ExpenseSettings,
+  Flag,
   GoalInputs,
   GoalScenario,
   InstallmentPlan,
@@ -25,6 +26,7 @@ import type {
   ExpenseDataSource,
   NewAccount,
   NewCategory,
+  NewFlag,
   NewGoalScenario,
   NewInstallmentPlan,
   NewTransaction,
@@ -82,6 +84,26 @@ export const apiDataSource: ExpenseDataSource = {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ yearMonth, actualCashCents }),
+    }),
+  createFlag: (input: NewFlag) =>
+    req<Flag>(`${BASE}/flags`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    }),
+  updateFlag: (id: number, patch: Partial<NewFlag>) =>
+    req<Flag>(`${BASE}/flags/${id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(patch),
+    }),
+  deleteFlag: (id: number) =>
+    req<{ unflagged: number }>(`${BASE}/flags/${id}`, { method: 'DELETE' }),
+  setTransactionsFlag: (ids: number[], flagId: number | null) =>
+    req<Transaction[]>(`${BASE}/transactions/bulk`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ids, flagId }),
     }),
   createCategory: (input: NewCategory) =>
     req<Category>(`${BASE}/categories`, {

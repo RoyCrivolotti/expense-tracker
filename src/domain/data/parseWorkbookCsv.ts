@@ -109,6 +109,8 @@ export function parseWorkbookCsv(text: string): ExpenseDataset {
   return {
     categories: lookups.categories,
     accounts,
+    // The workbook CSV has no flag column; flags are a D1-only concept.
+    flags: [],
     transactions: deriveTransactions(stored, accounts, accountStatements),
     accountStatements,
     cashActuals: parseCashActuals(rows),

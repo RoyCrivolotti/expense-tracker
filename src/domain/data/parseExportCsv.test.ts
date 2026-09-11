@@ -5,6 +5,7 @@ import type { ExpenseDataset } from '../types'
 import { defaultExpenseSettings } from '../engine'
 
 const DATASET: ExpenseDataset = {
+  flags: [],
   categories: [
     { id: 1, name: 'Groceries', monthlyBudgetCents: 50000, sortOrder: 0, active: true },
   ],

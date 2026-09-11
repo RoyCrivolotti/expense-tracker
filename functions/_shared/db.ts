@@ -6,6 +6,7 @@ import {
   toAccount,
   toCashActual,
   toCategory,
+  toFlag,
   toGoalInputs,
   toGoalScenario,
   toInstallmentPlan,
@@ -18,6 +19,7 @@ import {
   type AccountRow,
   type CashActualRow,
   type CategoryRow,
+  type FlagRow,
   type GoalRow,
   type GoalScenarioRow,
   type InstallmentPlanRow,
@@ -39,6 +41,7 @@ export async function loadDataset(env: Env, owner: string): Promise<ExpenseDatas
   const [
     categories,
     accounts,
+    flagRows,
     txns,
     statements,
     cashActuals,
@@ -56,6 +59,7 @@ export async function loadDataset(env: Env, owner: string): Promise<ExpenseDatas
       owner,
     ),
     rows<AccountRow>(env.DB, 'SELECT * FROM accounts WHERE owner = ? ORDER BY id', owner),
+    rows<FlagRow>(env.DB, 'SELECT * FROM flags WHERE owner = ? ORDER BY sort_order, id', owner),
     rows<TxnRow>(
       env.DB,
       'SELECT * FROM transactions WHERE owner = ? ORDER BY date DESC, id DESC',
@@ -115,6 +119,7 @@ export async function loadDataset(env: Env, owner: string): Promise<ExpenseDatas
   return {
     categories: categories.map(toCategory),
     accounts: mappedAccounts,
+    flags: flagRows.map(toFlag),
     transactions: deriveTransactions(stored, mappedAccounts, mappedStatements),
     accountStatements: mappedStatements,
     cashActuals: cashActuals.map(toCashActual),

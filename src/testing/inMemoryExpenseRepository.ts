@@ -13,6 +13,7 @@ import type {
 import type { ExpenseRepository } from '../domain/ports/expenseRepository'
 import { validateDueDay, validatePlanInput } from '../domain/application/installmentPlanService'
 import { deriveStatus, deriveTransactions } from '../domain/engine/status'
+import { withoutFlag } from '../domain/engine/flagGroups'
 import { defaultExpenseSettings, defaultGoalInputs } from '../domain/engine/defaults'
 import { normalizeMilestones, validateMilestones } from '../domain/engine/milestones'
 import type {
@@ -22,6 +23,7 @@ import type {
   Category,
   ExpenseDataset,
   ExpenseSettings,
+  Flag,
   GoalInputs,
   GoalScenario,
   InstallmentPlan,
@@ -37,6 +39,7 @@ export type ExpenseRepositorySeed = Partial<ExpenseDataset>
 interface OwnerStore {
   categories: Category[]
   accounts: Account[]
+  flags: Flag[]
   transactions: StoredTransaction[]
   statements: AccountStatement[]
   cashActuals: CashActual[]
@@ -74,6 +77,7 @@ function emptyStore(seed: ExpenseRepositorySeed = {}): OwnerStore {
   return {
     categories: [...(seed.categories ?? [])],
     accounts: [...(seed.accounts ?? [])],
+    flags: [...(seed.flags ?? [])],
     transactions: (seed.transactions ?? []).map(({ status: _status, ...stored }) => stored),
     statements: [...(seed.accountStatements ?? [])],
     cashActuals: [...(seed.cashActuals ?? [])],
@@ -113,6 +117,12 @@ export function inMemoryExpenseRepository(
     const category = store.categories.find((c) => c.id === categoryId)
     if (!category) throw new RepoHttpError(400, 'Invalid categoryId')
     return category
+  }
+
+  function assertOwnedFlag(store: OwnerStore, flagId: number): Flag {
+    const flag = store.flags.find((f) => f.id === flagId)
+    if (!flag) throw new RepoHttpError(400, 'Invalid flagId')
+    return flag
   }
 
   function assertOwnedPlan(store: OwnerStore, planId: number): InstallmentPlan {
@@ -294,6 +304,7 @@ export function inMemoryExpenseRepository(
     const store = storeFor(owner)
     assertOwnedAccount(store, input.accountId)
     assertOwnedCategory(store, input.categoryId)
+    if (input.flagId != null) assertOwnedFlag(store, input.flagId)
     const planLink = resolvePlanLink(store, input)
     const stored: StoredTransaction = {
       id: nextId(store.transactions),
@@ -306,6 +317,7 @@ export function inMemoryExpenseRepository(
       amountCents: input.amountCents,
       cancelled: input.cancelled,
       ...(input.notes !== undefined ? { notes: input.notes } : {}),
+      ...(input.flagId != null ? { flagId: input.flagId } : {}),
       ...(planLink ?? {}),
     }
     store.transactions.push(stored)
@@ -318,6 +330,7 @@ export function inMemoryExpenseRepository(
       return Promise.resolve({
         categories: [...store.categories],
         accounts: [...store.accounts],
+        flags: [...store.flags],
         transactions: deriveTransactions(store.transactions, store.accounts, store.statements),
         accountStatements: [...store.statements],
         cashActuals: [...store.cashActuals],
@@ -344,8 +357,14 @@ export function inMemoryExpenseRepository(
       if (patch.categoryId != null) assertOwnedCategory(store, patch.categoryId)
       const keys = Object.keys(patch) as (keyof NewTransaction)[]
       if (keys.length === 0) throw new RepoHttpError(400, 'Empty patch')
-      const { planId: nextPlanId, installmentIndex: nextIndex, ...rest } = patch
+      const { planId: nextPlanId, installmentIndex: nextIndex, flagId: nextFlagId, ...rest } = patch
       let updated: StoredTransaction = { ...existing, ...rest, id: existing.id }
+      if ('flagId' in patch) {
+        // Mirrors the D1 adapter: null clears the flag, an id sets it after an
+        // ownership check, absent leaves it alone.
+        if (nextFlagId == null) delete updated.flagId
+        else updated = { ...updated, flagId: assertOwnedFlag(store, nextFlagId).id }
+      }
       if ('planId' in patch) {
         if (nextPlanId == null) {
           delete updated.planId
@@ -435,6 +454,61 @@ export function inMemoryExpenseRepository(
       const store = storeFor(owner)
       store.cashActuals = store.cashActuals.filter((c) => c.yearMonth !== yearMonth)
       return Promise.resolve()
+    },
+
+    createFlag: (owner, input) => {
+      const store = storeFor(owner)
+      const flag: Flag = { ...input, id: nextId(store.flags) }
+      store.flags.push(flag)
+      store.flags.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+      return Promise.resolve({ ...flag })
+    },
+
+    updateFlag: (owner, id, patch) => {
+      const store = storeFor(owner)
+      const index = store.flags.findIndex((f) => f.id === id)
+      if (index < 0) throw new RepoHttpError(404, 'Flag not found')
+      if (Object.keys(patch).length === 0) throw new RepoHttpError(400, 'Empty patch')
+      const current = store.flags[index] as Flag
+      const { description, ...rest } = patch
+      const next: Flag = { ...current, ...rest, id }
+      // '' is how the editor clears a description; drop the key rather than
+      // storing an empty string (exactOptionalPropertyTypes forbids undefined).
+      if (description !== undefined) {
+        if (description === '') delete next.description
+        else next.description = description
+      }
+      store.flags[index] = next
+      store.flags.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+      return Promise.resolve({ ...next })
+    },
+
+    deleteFlag: (owner, id) => {
+      const store = storeFor(owner)
+      assertOwnedFlag(store, id)
+      let unflagged = 0
+      store.transactions = store.transactions.map((t) => {
+        if (t.flagId !== id) return t
+        unflagged += 1
+        return withoutFlag(t)
+      })
+      store.flags = store.flags.filter((f) => f.id !== id)
+      return Promise.resolve({ unflagged })
+    },
+
+    setTransactionsFlag: (owner, ids, flagId) => {
+      const store = storeFor(owner)
+      if (flagId != null) assertOwnedFlag(store, flagId)
+      const wanted = new Set(ids)
+      const touched: StoredTransaction[] = []
+      store.transactions = store.transactions.map((t) => {
+        if (!wanted.has(t.id)) return t
+        const bare = withoutFlag(t)
+        const next: StoredTransaction = flagId == null ? bare : { ...bare, flagId }
+        touched.push(next)
+        return next
+      })
+      return Promise.resolve(deriveTransactions(touched, store.accounts, store.statements))
     },
 
     createCategory: (owner, input) => {

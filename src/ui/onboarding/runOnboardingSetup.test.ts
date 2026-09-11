@@ -5,6 +5,7 @@ import { defaultExpenseSettings } from '../../engine'
 import { buildOnboardingSettingsPatch, runOnboardingSetup } from './runOnboardingSetup'
 
 const emptyDataset: ExpenseDataset = {
+  flags: [],
   categories: [],
   accounts: [],
   transactions: [],

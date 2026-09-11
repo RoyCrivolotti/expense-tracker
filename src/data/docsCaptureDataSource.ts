@@ -95,10 +95,11 @@ let nextId = 900_000
 
 function stubTxn(input: NewTransaction): Transaction {
   nextId += 1
-  const { planId, ...rest } = input
+  const { planId, flagId, ...rest } = input
   return {
     ...rest,
     ...(planId != null ? { planId } : {}),
+    ...(flagId != null ? { flagId } : {}),
     id: nextId,
     cancelled: false,
     status: 'posted',
