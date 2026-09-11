@@ -1,4 +1,5 @@
 import type {
+  BulkTransactionPatch,
   DeleteAccountOptions,
   DeleteAccountResult,
   DeleteCategoryOptions,
@@ -377,6 +378,20 @@ export function inMemoryExpenseRepository(
       const before = store.transactions.length
       store.transactions = store.transactions.filter((row) => !idSet.has(row.id))
       return Promise.resolve(before - store.transactions.length)
+    },
+
+    bulkUpdateTransactions: (owner, ids, patch: BulkTransactionPatch) => {
+      const store = storeFor(owner)
+      if (patch.accountId != null) assertOwnedAccount(store, patch.accountId)
+      if (patch.categoryId != null) assertOwnedCategory(store, patch.categoryId)
+      const idSet = new Set(ids)
+      const updated: Transaction[] = []
+      for (const stored of store.transactions) {
+        if (!idSet.has(stored.id)) continue
+        Object.assign(stored, patch)
+        updated.push(deriveOne(stored, store.accounts, store.statements))
+      }
+      return Promise.resolve(updated)
     },
 
     setStatementPaid: (owner, accountId, yearMonth, paid, paidOn) => {

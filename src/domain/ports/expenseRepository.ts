@@ -13,6 +13,7 @@ import type {
   WealthCheckin,
 } from '../types'
 import type {
+  BulkTransactionPatch,
   DeleteAccountOptions,
   DeleteAccountResult,
   DeleteCategoryOptions,
@@ -38,6 +39,11 @@ export interface ExpenseRepository {
   ): Promise<Transaction>
   deleteTransaction(owner: string, id: number): Promise<void>
   deleteTransactions(owner: string, ids: number[]): Promise<number>
+  bulkUpdateTransactions(
+    owner: string,
+    ids: number[],
+    patch: BulkTransactionPatch,
+  ): Promise<Transaction[]>
   setStatementPaid(
     owner: string,
     accountId: number,

@@ -9,6 +9,7 @@ import type {
   WealthCheckin,
 } from '../types'
 import type {
+  BulkTransactionPatch,
   DeleteAccountOptions,
   DeleteAccountResult,
   DeleteCategoryOptions,
@@ -54,6 +55,7 @@ export interface ExpenseActions {
   updateTransaction: (id: number, patch: Partial<NewTransaction>) => Promise<void>
   deleteTransaction: (id: number) => Promise<void>
   deleteTransactions: (ids: number[]) => Promise<void>
+  updateTransactions: (ids: number[], patch: BulkTransactionPatch) => Promise<void>
   setStatementPaid: (
     accountId: number,
     yearMonth: string,

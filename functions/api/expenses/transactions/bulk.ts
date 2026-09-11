@@ -2,6 +2,7 @@ import type { Env, ExpensesData } from '../../../_shared/env'
 import {
   bulkCreateTransactions,
   bulkDeleteTransactions,
+  bulkUpdateTransactions,
 } from '../../../domain/application/transactionService'
 import { mapAppError } from '../../../_shared/mapAppError'
 import { json, readJson } from '../../../_shared/http'
@@ -29,6 +30,21 @@ export const onRequestDelete: PagesFunction<Env, string, ExpensesData> = async (
   const { repo, owner } = context.data
   try {
     return json(await bulkDeleteTransactions(repo, owner, body.ids))
+  } catch (error) {
+    mapAppError(error)
+  }
+}
+
+interface BulkUpdateBody {
+  ids: unknown
+  patch: unknown
+}
+
+export const onRequestPatch: PagesFunction<Env, string, ExpensesData> = async (context) => {
+  const body = await readJson<BulkUpdateBody>(context.request)
+  const { repo, owner } = context.data
+  try {
+    return json(await bulkUpdateTransactions(repo, owner, body.ids, body.patch))
   } catch (error) {
     mapAppError(error)
   }

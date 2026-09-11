@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   bulkCreateTransactions,
   bulkDeleteTransactions,
+  bulkUpdateTransactions,
   patchTransaction,
   validateBulkTransactions,
+  validateBulkUpdatePatch,
   validateNewTransaction,
 } from './transactionService'
 import { inMemoryExpenseRepository } from '../../testing/inMemoryExpenseRepository'
@@ -66,6 +68,82 @@ describe('transactionService validation', () => {
     expect(id).toBeDefined()
     const deleted = await bulkDeleteTransactions(repo, 'owner@example.com', [id])
     expect(deleted).toEqual({ deleted: 1, requested: 1 })
+  })
+})
+
+describe('validateBulkUpdatePatch', () => {
+  it('accepts a valid patch with one field', () => {
+    expect(validateBulkUpdatePatch({ categoryId: 5 })).toEqual({ categoryId: 5 })
+  })
+
+  it('accepts a patch with all five fields', () => {
+    const patch = {
+      categoryId: 1,
+      accountId: 2,
+      type: 'income',
+      date: '2026-03-15',
+      budgetMonth: '2026-03',
+    }
+    expect(validateBulkUpdatePatch(patch)).toEqual(patch)
+  })
+
+  it('rejects null / non-object', () => {
+    expect(() => validateBulkUpdatePatch(null)).toThrow('patch is required')
+    expect(() => validateBulkUpdatePatch('nope')).toThrow('patch is required')
+  })
+
+  it('rejects an empty object', () => {
+    expect(() => validateBulkUpdatePatch({})).toThrow('At least one field must be set')
+  })
+
+  it('rejects disallowed fields', () => {
+    expect(() => validateBulkUpdatePatch({ description: 'x' })).toThrow('not bulk-editable')
+    expect(() => validateBulkUpdatePatch({ amountCents: 100 })).toThrow('not bulk-editable')
+    expect(() => validateBulkUpdatePatch({ notes: 'x' })).toThrow('not bulk-editable')
+    expect(() => validateBulkUpdatePatch({ planId: 1 })).toThrow('not bulk-editable')
+  })
+
+  it('rejects invalid categoryId / accountId', () => {
+    expect(() => validateBulkUpdatePatch({ categoryId: 0 })).toThrow('Invalid categoryId')
+    expect(() => validateBulkUpdatePatch({ categoryId: -1 })).toThrow('Invalid categoryId')
+    expect(() => validateBulkUpdatePatch({ categoryId: 1.5 })).toThrow('Invalid categoryId')
+    expect(() => validateBulkUpdatePatch({ accountId: 0 })).toThrow('Invalid accountId')
+  })
+
+  it('rejects invalid type values', () => {
+    expect(() => validateBulkUpdatePatch({ type: 'bogus' })).toThrow('Invalid transaction type')
+  })
+
+  it('rejects malformed date / budgetMonth', () => {
+    expect(() => validateBulkUpdatePatch({ date: '2026-1-1' })).toThrow('date must be YYYY-MM-DD')
+    expect(() => validateBulkUpdatePatch({ budgetMonth: '2026-1' })).toThrow(
+      'budgetMonth must be YYYY-MM',
+    )
+  })
+})
+
+describe('bulkUpdateTransactions service', () => {
+  it('updates multiple transactions via the repository', async () => {
+    const repo = inMemoryExpenseRepository(
+      {
+        accounts: [{ id: 1, name: 'Cash', kind: 'debit', settlement: 'immediate', active: true }],
+        categories: [
+          { id: 2, name: 'Food', monthlyBudgetCents: 0, sortOrder: 0, active: true },
+          { id: 3, name: 'Transport', monthlyBudgetCents: 0, sortOrder: 1, active: true },
+        ],
+      },
+      'owner@example.com',
+    )
+    const t1 = await repo.insertTransaction('owner@example.com', validTxn)
+    const t2 = await repo.insertTransaction('owner@example.com', {
+      ...validTxn,
+      description: 'Second',
+    })
+    const result = await bulkUpdateTransactions(repo, 'owner@example.com', [t1.id, t2.id], {
+      categoryId: 3,
+    })
+    expect(result.updated).toBe(2)
+    expect(result.transactions.every((t) => t.categoryId === 3)).toBe(true)
   })
 })
 

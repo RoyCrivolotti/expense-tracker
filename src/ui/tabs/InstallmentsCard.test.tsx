@@ -68,6 +68,7 @@ function noopActions(): ExpenseActions {
     updateTransaction: vi.fn(),
     deleteTransaction: vi.fn(),
     deleteTransactions: vi.fn(),
+    updateTransactions: vi.fn(),
     setStatementPaid: vi.fn(),
     setCashActual: vi.fn(),
     createCategory: vi.fn(),

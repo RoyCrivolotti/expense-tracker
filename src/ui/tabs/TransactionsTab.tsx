@@ -120,7 +120,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
         />
       ) : null}
 
-      <TransactionsSelectFooter actionsEnabled={Boolean(actions)} selection={state} />
+      <TransactionsSelectFooter actionsEnabled={Boolean(actions)} selection={state} model={model} />
     </div>
   )
 }

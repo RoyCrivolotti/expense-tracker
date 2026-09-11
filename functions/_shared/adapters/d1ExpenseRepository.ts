@@ -3,6 +3,7 @@ import type { Env } from '../env'
 import { loadDataset, listOwners } from '../db'
 import {
   bulkInsertTransactions,
+  bulkUpdateTransactions,
   clearCashActual,
   deleteTransaction,
   deleteTransactions,
@@ -47,6 +48,8 @@ export function createD1ExpenseRepository(env: Env): ExpenseRepository {
     updateTransaction: (owner, id, patch) => updateTransaction(env, owner, id, patch),
     deleteTransaction: (owner, id) => deleteTransaction(env, owner, id),
     deleteTransactions: (owner, ids) => deleteTransactions(env, owner, ids),
+    bulkUpdateTransactions: (owner, ids, patch) =>
+      bulkUpdateTransactions(env, owner, ids, patch),
     setStatementPaid: (owner, accountId, yearMonth, paid, paidOn) =>
       setStatementPaid(env, owner, accountId, yearMonth, paid, paidOn),
     setCashActual: (owner, yearMonth, cents) => setCashActual(env, owner, yearMonth, cents),
