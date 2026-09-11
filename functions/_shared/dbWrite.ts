@@ -1,5 +1,5 @@
 import type { StoredTransaction, Transaction } from '../domain/types'
-import type { NewTransaction } from '../domain/data/dataSource'
+import type { BulkTransactionPatch, NewTransaction } from '../domain/data/dataSource'
 import { deriveStatus } from '../domain/engine/status'
 import { parseIsoDate } from '../domain/engine/dates'
 import type { Env } from './env'
@@ -211,6 +211,38 @@ export async function deleteTransactions(env: Env, owner: string, ids: number[])
     .bind(owner, ...ids)
     .run()
   return result.meta.changes ?? 0
+}
+
+export async function bulkUpdateTransactions(
+  env: Env,
+  owner: string,
+  ids: number[],
+  patch: BulkTransactionPatch,
+): Promise<Transaction[]> {
+  if (ids.length === 0) return []
+  if (patch.accountId != null) await assertOwnedAccount(env, owner, patch.accountId)
+  if (patch.categoryId != null) await assertOwnedCategory(env, owner, patch.categoryId)
+  const keys = (Object.keys(patch) as PatchableTxnKey[]).filter((k) => k in COLUMN)
+  if (keys.length === 0) throw new HttpError(400, 'Empty patch')
+  const sets = keys.map((k) => `${COLUMN[k]} = ?`).concat("updated_at = datetime('now')")
+  const patchRec = patch as Record<string, unknown>
+  const values = keys.map((k) => patchValue(k, patchRec[k]))
+  const placeholders = ids.map(() => '?').join(', ')
+  await env.DB.prepare(
+    `UPDATE transactions SET ${sets.join(', ')} WHERE owner = ? AND id IN (${placeholders})`,
+  )
+    .bind(...values, owner, ...ids)
+    .run()
+  const { results } = await env.DB.prepare(
+    `SELECT * FROM transactions WHERE owner = ? AND id IN (${placeholders})`,
+  )
+    .bind(owner, ...ids)
+    .all<TxnRow>()
+  const transactions: Transaction[] = []
+  for (const row of results) {
+    transactions.push(await deriveOne(env, owner, toStoredTxn(row)))
+  }
+  return transactions
 }
 
 export async function setStatementPaid(

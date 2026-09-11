@@ -87,6 +87,17 @@ export function patchAfterBulkDelete(
   return d
 }
 
+export function patchAfterBulkUpdate(
+  dataset: ExpenseDataset,
+  updated: Transaction[],
+): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  const map = new Map(updated.map((t) => [t.id, t]))
+  d.transactions = d.transactions.map((t) => map.get(t.id) ?? t)
+  d.transactions.sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)
+  return d
+}
+
 export function patchAfterStatementPaid(
   dataset: ExpenseDataset,
   stmt: AccountStatement,

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { BulkTransactionPatch } from '../../data/dataSource'
 import type { ExpenseActions } from '../actions'
 import { useToast } from '../hooks/useToast'
 import { toggleDateSelection } from './selectionUtils'
@@ -14,11 +15,13 @@ export function useTransactionSelection(actions?: ExpenseActions) {
   const [selected, setSelected] = useState<Set<number>>(() => new Set())
   const [busy, setBusy] = useState(false)
   const [pendingBatchDelete, setPendingBatchDelete] = useState(false)
+  const [pendingBulkEdit, setPendingBulkEdit] = useState(false)
 
   const exitSelect = () => {
     setSelectMode(false)
     setSelected(new Set())
     setPendingBatchDelete(false)
+    setPendingBulkEdit(false)
   }
 
   const toggleSelectMode = () => {
@@ -62,16 +65,42 @@ export function useTransactionSelection(actions?: ExpenseActions) {
     }
   }
 
+  const requestBulkEdit = () => {
+    if (!actions || selected.size === 0) return
+    setPendingBulkEdit(true)
+  }
+
+  const cancelBulkEdit = () => setPendingBulkEdit(false)
+
+  const confirmBulkEdit = async (patch: BulkTransactionPatch) => {
+    if (!actions || selected.size === 0) return
+    const count = selected.size
+    setBusy(true)
+    try {
+      await actions.updateTransactions([...selected], patch)
+      exitSelect()
+      showToast(`Updated ${count} transaction${count === 1 ? '' : 's'}`, 'success')
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not update', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return {
     selectMode,
     selected,
     busy,
     pendingBatchDelete,
+    pendingBulkEdit,
     toggleSelectMode,
     toggleSelected,
     toggleDate,
     requestBatchDelete,
     cancelBatchDelete,
     confirmBatchDelete,
+    requestBulkEdit,
+    cancelBulkEdit,
+    confirmBulkEdit,
   }
 }

@@ -1,0 +1,89 @@
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.fieldCard {
+  border: 1px solid var(--color-border);
+  border-radius: 0.7rem;
+  padding: 0.65rem 0.75rem;
+  transition: border-color 0.15s;
+}
+.fieldCardActive {
+  border-color: var(--color-accent);
+}
+
+.fieldHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+.fieldHeader input[type='checkbox'] {
+  accent-color: var(--color-accent);
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+}
+.fieldLabel {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.fieldInput {
+  margin-top: 0.5rem;
+}
+.fieldInput select,
+.fieldInput input[type='date'],
+.fieldInput input[type='month'] {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid transparent;
+  border-radius: 0.6rem;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.9rem;
+}
+.fieldInput select:focus,
+.fieldInput input[type='date']:focus,
+.fieldInput input[type='month']:focus {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+.actions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: flex-end;
+}
+.cancelBtn {
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.7rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cancelBtn:hover {
+  background: var(--color-surface-muted);
+}
+.applyBtn {
+  padding: 0.6rem 1rem;
+  border: 0;
+  border-radius: 0.7rem;
+  background: var(--color-accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.applyBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
