@@ -79,6 +79,12 @@ export function shortMonthYearLabel(yearMonth: string): string {
   return `${shortMonthLabel(yearMonth)} '${yearMonth.slice(2, 4)}`
 }
 
+/** "5 Jul 2026" — compact day label from a YYYY-MM-DD string. */
+export function shortDateLabel(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-')
+  return `${Number(day)} ${shortMonthLabel(`${year}-${month}`)} ${year}`
+}
+
 /**
  * Default budget month for a new transaction dated `isoDate`. Spending on or
  * after `rolloverDay` counts towards next month's budget; a rollover day of 1
