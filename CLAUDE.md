@@ -93,33 +93,36 @@ These must exist locally. None are committed. Copy from the `.example.json` coun
 | File | What goes in it | How to get the value |
 |---|---|---|
 | `.env` | Vite cross-link URLs | Copy `.env.example` as-is — values are public prod URLs |
-| `config/dev.json` | Dev D1 database ID | `npx wrangler d1 list` → find `roy-expenses-dev` |
-| `config/access.json` | `ownerEmail` | `roycrivolotti@gmail.com` |
-| `config/allowed-emails.json` | Array of emails allowed to sign in | `["roycrivolotti@gmail.com"]` |
-| `config/backup-alerts.json` | Backup alert recipients | `roycrivolotti@gmail.com` + the existing `fromAddress` |
+| `config/dev.json` | Dev D1 database ID | `npx wrangler d1 list` → find your dev database |
+| `config/access.json` | `ownerEmail` | Your Google account email |
+| `config/allowed-emails.json` | Array of emails allowed to sign in | `["your-email@example.com"]` |
+| `config/backup-alerts.json` | Backup alert recipients | Your email + the existing `fromAddress` |
 | `config/goal-scenarios.seed.json` | Goal scenario seed data | Copy example as-is |
 
 ## Cloudflare tokens
 
-Two tokens exist. Only `roy-site-agent` has write access.
+Two tokens are used. Only the write token has deployment access.
 
-| Token name | Scope | Use |
+| Token | Scope | Use |
 |---|---|---|
-| `roy-site-agent` | D1 Write, Pages Write, Workers Scripts Write, R2 Write, Access Write | Local dev + GitHub CI (`CLOUDFLARE_API_TOKEN` secret) |
-| `Cloudflare Agent Token - 2026-06-19` | Read-only across all zones/account | Observer/monitoring only |
+| Write token | D1 Write, Pages Write, Workers Scripts Write, R2 Write, Access Write | Local dev + GitHub CI (`CLOUDFLARE_API_TOKEN` secret) |
+| Read-only token | Read-only across all zones/account | Observer/monitoring only |
 
-`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are set in `~/.zshrc`.
+`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` must be set in your shell profile (e.g. `~/.zshrc`).
 
-If `roy-site-agent` is ever rolled, update the `CLOUDFLARE_API_TOKEN` GitHub Actions secret immediately — CI deploys will fail until it's updated.
+If the write token is ever rolled, update the `CLOUDFLARE_API_TOKEN` GitHub Actions secret immediately — CI deploys will fail until it's updated.
+
+> **Deployment-specific values** (token names, database IDs, project names, account ID) live in
+> `.claude/deploy-context.md` — a gitignored local file. See that file or create it from the
+> template comment at the bottom of `.gitignore`.
 
 ## GitHub Actions secrets
 
 | Secret | Value source | Notes |
 |---|---|---|
-| `CLOUDFLARE_API_TOKEN` | `roy-site-agent` token | Must be updated when token is rolled |
-| `OWNER_EMAIL` | Owner's Google account address — read the live value from the GitHub secret or local `config/access.json`, not from here | Static — only changes if owner email changes |
+| `CLOUDFLARE_API_TOKEN` | The write token above | Must be updated when token is rolled |
+| `OWNER_EMAIL` | Owner's Google account — read from the GitHub secret or local `config/access.json` | Static — only changes if owner email changes |
 | `ALLOWED_EMAILS` | Comma-separated allowed emails | Static |
-| `FINANCIAL_REVIEW_PAT` | Legacy — not referenced in any workflow | Can be ignored |
 
 ## Database commands
 
@@ -134,21 +137,20 @@ npm run bootstrap:allowed-users
 npm run seed:dev
 
 # Query dev DB directly
-npx wrangler d1 execute roy-expenses-dev --remote --command="SELECT ..."
+npx wrangler d1 execute <dev-db-name> --remote --command="SELECT ..."
 
 # List all D1 databases
 npx wrangler d1 list
 ```
 
-The dev DB is `roy-expenses-dev` (ID: `7e58a8e1-a656-4e99-8cc6-273d692b608d`).
-The prod DB is `roy-expenses` (ID: `3dcefc85-e172-4fd0-a623-f2f15120c9d9`).
+Database names and IDs are in `config/dev.json` (dev) and the Cloudflare dashboard (prod). See `.claude/deploy-context.md` for the current values.
 
 ## Migrations
 
 14 migration files (`0001`–`0014`) in `migrations/`. They are plain SQL — no migration tracking table. `npm run migrate:dev` runs all of them in order; if the DB already has some applied, run only the missing ones manually:
 
 ```bash
-npx wrangler d1 execute roy-expenses-dev --remote --file=migrations/0012_wealth_checkins.sql
+npx wrangler d1 execute <dev-db-name> --remote --file=migrations/0012_wealth_checkins.sql
 ```
 
 ## Wrangler
@@ -169,8 +171,8 @@ repo; `npm ci` will bring it back to 4.103.0.
 ## Deploy
 
 ```bash
-npm run deploy        # production (expense-tracker Pages project)
-npm run deploy:dev    # staging (roy-expenses-stg Pages project)
+npm run deploy        # production Pages project
+npm run deploy:dev    # staging Pages project
 ```
 
 CI deploys automatically on push to `main` via `.github/workflows/deploy.yml`.
