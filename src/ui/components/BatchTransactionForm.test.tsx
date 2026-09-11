@@ -166,12 +166,34 @@ describe('BatchTransactionForm — rows and dates', () => {
 
   it('adding another date defaults to one day before the earliest batch present', () => {
     renderForm()
-    const dateInput = screen.getByLabelText('Date')
+    // NativeDateOverlay overlays a visible compact-label <span> alongside the
+    // real (invisible) input inside the same <label> — that sibling's text
+    // becomes part of the label's computed textContent in jsdom, so
+    // getByLabelText('Date') no longer matches exactly "Date". Query the real
+    // input directly instead (there's only one date field on the page here).
+    const dateInput = document.querySelector<HTMLInputElement>('input[type="date"]')!
     fireEvent.change(dateInput, { target: { value: '2026-03-10' } })
     fireEvent.click(screen.getByRole('button', { name: /add another date/i }))
-    const dateInputs = screen.getAllByLabelText<HTMLInputElement>('Date')
+    const dateInputs = Array.from(document.querySelectorAll<HTMLInputElement>('input[type="date"]'))
     expect(dateInputs.map((i) => i.value)).toEqual(['2026-03-10', '2026-03-09'])
     expect(screen.getAllByLabelText('Remove this date')).toHaveLength(2)
+  })
+
+  it('opens the native picker when the Date field is clicked anywhere (desktop click-anywhere parity with mobile)', () => {
+    const showPicker = vi.fn()
+    Object.defineProperty(HTMLInputElement.prototype, 'showPicker', { value: showPicker, configurable: true })
+    try {
+      renderForm()
+      fireEvent.click(document.querySelector('input[type="date"]')!)
+      expect(showPicker).toHaveBeenCalledTimes(1)
+    } finally {
+      delete (HTMLInputElement.prototype as { showPicker?: () => void }).showPicker
+    }
+  })
+
+  it('has no Budget month field (batch entry is Date-only; guards against the shared date-overlay component pulling one in)', () => {
+    renderForm()
+    expect(document.querySelector('input[type="month"]')).toBeNull()
   })
 
   it('removes a row', () => {
@@ -185,9 +207,9 @@ describe('BatchTransactionForm — rows and dates', () => {
   it('removes a date batch, but never the last one', () => {
     renderForm()
     fireEvent.click(screen.getByRole('button', { name: /add another date/i }))
-    expect(screen.getAllByLabelText('Date')).toHaveLength(2)
+    expect(document.querySelectorAll('input[type="date"]')).toHaveLength(2)
     fireEvent.click(screen.getAllByLabelText('Remove this date')[0]!)
-    expect(screen.getAllByLabelText('Date')).toHaveLength(1)
+    expect(document.querySelectorAll('input[type="date"]')).toHaveLength(1)
     expect(screen.queryByLabelText('Remove this date')).not.toBeInTheDocument()
   })
 })

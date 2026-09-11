@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { DescriptionSuggestion } from '../../data/descriptionIndex'
 import { applyDescriptionSuggestion } from '../../data/applyDescriptionSuggestion'
 import { resolveDefaultAccountId } from '../../data/defaultAccount'
-import { addDaysIso } from '../../engine/dates'
+import { addDaysIso, shortDateLabel } from '../../engine/dates'
 import { parseMoneyToCents } from '../../engine/money'
 import type { TxnType } from '../../types'
 import { CloseIcon, PlusIcon } from '../icons'
@@ -18,6 +18,7 @@ import {
 } from './batchTransactionIntent'
 import { DescriptionCombobox } from './DescriptionCombobox'
 import { Money } from './Money'
+import { NativeDateOverlay } from './NativeDateOverlay'
 import { optionLabel, selectableOptions } from './pickerOptions'
 import { Field } from './TransactionFields'
 import { todayIso } from './transactionFormState'
@@ -196,11 +197,11 @@ export function BatchTransactionForm({
         <div key={batch.id} className={styles.batch}>
           <div className={styles.batchHeader}>
             <Field label="Date">
-              <input
+              <NativeDateOverlay
                 type="date"
                 value={batch.date}
-                onChange={(e) => updateBatch(batch.id, { date: e.target.value })}
-                required
+                label={shortDateLabel(batch.date)}
+                onChange={(value) => updateBatch(batch.id, { date: value })}
               />
             </Field>
             {batches.length > 1 && (
