@@ -231,6 +231,7 @@ export async function bulkUpdateTransactions(
   if (ids.length === 0) return []
   if (patch.accountId != null) await assertOwnedAccount(env, owner, patch.accountId)
   if (patch.categoryId != null) await assertOwnedCategory(env, owner, patch.categoryId)
+  if (patch.flagId != null) await assertOwnedFlag(env, owner, patch.flagId)
   const keys = (Object.keys(patch) as PatchableTxnKey[]).filter((k) => k in COLUMN)
   if (keys.length === 0) throw new HttpError(400, 'Empty patch')
   const sets = keys.map((k) => `${COLUMN[k]} = ?`).concat("updated_at = datetime('now')")

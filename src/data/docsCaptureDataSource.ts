@@ -183,9 +183,6 @@ export const docsCaptureDataSource: ExpenseDataSource = {
   deleteFlag() {
     return Promise.resolve({ unflagged: 0 })
   },
-  setTransactionsFlag() {
-    return Promise.resolve([])
-  },
   setStatementPaid(accountId, yearMonth, paid, paidOn) {
     const row: AccountStatement = {
       accountId,

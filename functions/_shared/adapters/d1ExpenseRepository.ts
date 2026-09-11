@@ -30,12 +30,7 @@ import {
   deleteInstallmentPlan,
   updateInstallmentPlan,
 } from '../dbInstallments'
-import {
-  createFlag,
-  deleteFlag,
-  setTransactionsFlag,
-  updateFlag,
-} from '../dbFlags'
+import { createFlag, deleteFlag, updateFlag } from '../dbFlags'
 import {
   createWealthAccount,
   createWealthCheckin,
@@ -63,7 +58,6 @@ export function createD1ExpenseRepository(env: Env): ExpenseRepository {
     createFlag: (owner, input) => createFlag(env, owner, input),
     updateFlag: (owner, id, patch) => updateFlag(env, owner, id, patch),
     deleteFlag: (owner, id) => deleteFlag(env, owner, id),
-    setTransactionsFlag: (owner, ids, flagId) => setTransactionsFlag(env, owner, ids, flagId),
     createCategory: (owner, input) => createCategory(env, owner, input),
     updateCategory: (owner, id, patch) => updateCategory(env, owner, id, patch),
     deleteCategory: (owner, id, options) => deleteCategory(env, owner, id, options),

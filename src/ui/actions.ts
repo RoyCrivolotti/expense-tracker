@@ -69,7 +69,6 @@ export interface ExpenseActions {
   updateFlag: (id: number, patch: Partial<NewFlag>) => Promise<void>
   /** Resolves with how many transactions were unflagged, for the toast. */
   deleteFlag: (id: number) => Promise<{ unflagged: number }>
-  setTransactionsFlag: (ids: number[], flagId: number | null) => Promise<void>
   createCategory: (input: NewCategory) => Promise<void>
   updateCategory: (id: number, patch: Partial<NewCategory>) => Promise<void>
   deleteCategory: (id: number, options?: DeleteCategoryOptions) => Promise<DeleteCategoryResult>

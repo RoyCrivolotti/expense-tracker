@@ -6,7 +6,7 @@ import { invokeExpenseApiRoute } from '../../_shared/testing/invokeExpenseApiRou
 import { inMemoryExpenseRepository } from '../../../src/testing/inMemoryExpenseRepository'
 import { onRequestPost as createFlag } from './flags/index'
 import { onRequestPatch as patchFlag, onRequestDelete as deleteFlag } from './flags/[id]'
-import { onRequestPatch as bulkFlag } from './transactions/bulk'
+import { onRequestPatch as bulkUpdate } from './transactions/bulk'
 import { onRequestPatch as patchTransaction } from './transactions/[id]'
 
 const OWNER = 'owner@example.com'
@@ -172,36 +172,6 @@ describe('flags API (middleware + handlers + in-memory repo)', () => {
     expect(response.status).toBe(400)
   })
 
-  it('rejects a bulk flagId that is not a positive integer or null', async () => {
-    const { store, repo } = seeded()
-    const response = await invokeExpenseApiRoute({
-      handler: bulkFlag,
-      repo,
-      env: ownerEnv(store),
-      url: `${BASE}/transactions/bulk`,
-      method: 'PATCH',
-      body: { ids: [1], flagId: 0 },
-    })
-
-    expect(response.status).toBe(400)
-    expect((await body<{ error: string }>(response)).error).toMatch(/positive integer or null/)
-  })
-
-  it('rejects bulk ids that are not positive integers', async () => {
-    const { store, repo } = seeded()
-    const response = await invokeExpenseApiRoute({
-      handler: bulkFlag,
-      repo,
-      env: ownerEnv(store),
-      url: `${BASE}/transactions/bulk`,
-      method: 'PATCH',
-      body: { ids: [1, -2], flagId: null },
-    })
-
-    expect(response.status).toBe(400)
-    expect((await body<{ error: string }>(response)).error).toMatch(/positive integers/)
-  })
-
   it('applies a flag through the transaction PATCH, not just silently accepting it', async () => {
     // The COLUMN allowlist in dbWrite is easy to forget; a missing entry returns
     // 200 with the flag unchanged, so assert the returned row, not the status.
@@ -223,7 +193,7 @@ describe('flags API (middleware + handlers + in-memory repo)', () => {
   it('clears a flag when the patch sends null', async () => {
     const { store, repo } = seeded()
     const flag = await makeFlag(store, repo)
-    await repo.setTransactionsFlag(OWNER, [1], flag.id)
+    await repo.bulkUpdateTransactions(OWNER, [1], { flagId: flag.id })
     const response = await invokeExpenseApiRoute({
       handler: patchTransaction,
       repo,
@@ -253,42 +223,75 @@ describe('flags API (middleware + handlers + in-memory repo)', () => {
     expect(await body<{ error: string }>(response)).toEqual({ error: 'Invalid flagId' })
   })
 
-  it('flags many transactions in one bulk call', async () => {
+  it('flags many transactions through the shared bulk-update endpoint', async () => {
     const { store, repo } = seeded()
     const flag = await makeFlag(store, repo)
     const response = await invokeExpenseApiRoute({
-      handler: bulkFlag,
+      handler: bulkUpdate,
       repo,
       env: ownerEnv(store),
       url: `${BASE}/transactions/bulk`,
       method: 'PATCH',
-      body: { ids: [1, 2], flagId: flag.id },
+      body: { ids: [1, 2], patch: { flagId: flag.id } },
     })
 
     expect(response.status).toBe(200)
-    const rows = await body<Transaction[]>(response)
-    expect(rows.map((t) => t.flagId)).toEqual([flag.id, flag.id])
+    const { transactions } = await body<{ transactions: Transaction[] }>(response)
+    expect(transactions.map((t) => t.flagId)).toEqual([flag.id, flag.id])
   })
 
-  it('rejects a bulk call with no ids', async () => {
+  it('unflags a selection when the bulk patch sends null', async () => {
     const { store, repo } = seeded()
+    const flag = await makeFlag(store, repo)
+    await repo.bulkUpdateTransactions(OWNER, [1, 2], { flagId: flag.id })
+
     const response = await invokeExpenseApiRoute({
-      handler: bulkFlag,
+      handler: bulkUpdate,
       repo,
       env: ownerEnv(store),
       url: `${BASE}/transactions/bulk`,
       method: 'PATCH',
-      body: { ids: [], flagId: null },
+      body: { ids: [1, 2], patch: { flagId: null } },
+    })
+
+    const { transactions } = await body<{ transactions: Transaction[] }>(response)
+    expect(transactions.every((t) => t.flagId === undefined)).toBe(true)
+  })
+
+  it('rejects a bulk flagId that is not a positive integer or null', async () => {
+    const { store, repo } = seeded()
+    const response = await invokeExpenseApiRoute({
+      handler: bulkUpdate,
+      repo,
+      env: ownerEnv(store),
+      url: `${BASE}/transactions/bulk`,
+      method: 'PATCH',
+      body: { ids: [1], patch: { flagId: 0 } },
     })
 
     expect(response.status).toBe(400)
-    expect((await body<{ error: string }>(response)).error).toMatch(/non-empty array/)
+    expect((await body<{ error: string }>(response)).error).toMatch(/Invalid flagId/)
+  })
+
+  it('rejects a bulk flagId the owner does not have', async () => {
+    const { store, repo } = seeded()
+    const response = await invokeExpenseApiRoute({
+      handler: bulkUpdate,
+      repo,
+      env: ownerEnv(store),
+      url: `${BASE}/transactions/bulk`,
+      method: 'PATCH',
+      body: { ids: [1], patch: { flagId: 999 } },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await body<{ error: string }>(response)).toEqual({ error: 'Invalid flagId' })
   })
 
   it('deleting a flag clears it from its transactions instead of orphaning them', async () => {
     const { store, repo } = seeded()
     const flag = await makeFlag(store, repo)
-    await repo.setTransactionsFlag(OWNER, [1, 2], flag.id)
+    await repo.bulkUpdateTransactions(OWNER, [1, 2], { flagId: flag.id })
 
     const response = await invokeExpenseApiRoute({
       handler: deleteFlag,

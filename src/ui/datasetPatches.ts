@@ -151,18 +151,6 @@ export function patchAfterFlagDelete(dataset: ExpenseDataset, id: number): Expen
   return d
 }
 
-/** Splice the rows the bulk flag endpoint returned back into the dataset. */
-export function patchAfterBulkFlag(
-  dataset: ExpenseDataset,
-  txns: Transaction[],
-): ExpenseDataset {
-  if (txns.length === 0) return dataset
-  const byId = new Map(txns.map((t) => [t.id, t]))
-  const d = cloneDataset(dataset)
-  d.transactions = d.transactions.map((t) => byId.get(t.id) ?? t)
-  return d
-}
-
 export function patchAfterAccount(dataset: ExpenseDataset, account: Account): ExpenseDataset {
   const d = cloneDataset(dataset)
   upsertById(d.accounts, account)

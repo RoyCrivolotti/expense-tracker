@@ -3,7 +3,6 @@ import type { ExpenseDataset, Transaction } from '../types'
 import { defaultExpenseSettings } from '../engine'
 import {
   patchAfterAccountDelete,
-  patchAfterBulkFlag,
   patchAfterBulkUpdate,
   patchAfterCategoryDelete,
   patchAfterFlag,
@@ -375,17 +374,4 @@ describe('flag patches', () => {
     expect(Object.keys(next.transactions[0] ?? {})).not.toContain('flagId')
   })
 
-  it('splices bulk-flagged rows back in by id', () => {
-    const before = dataset({ flags: [work], transactions: [txn(1), txn(2)] })
-    const next = patchAfterBulkFlag(before, [txn(2, 1)])
-
-    expect(next.transactions[0]).not.toHaveProperty('flagId')
-    expect(next.transactions[1]?.flagId).toBe(1)
-  })
-
-  it('returns the same dataset when the bulk call changed nothing', () => {
-    const before = dataset({ transactions: [txn(1)] })
-
-    expect(patchAfterBulkFlag(before, [])).toBe(before)
-  })
 })

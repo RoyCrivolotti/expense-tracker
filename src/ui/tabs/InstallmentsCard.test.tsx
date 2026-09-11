@@ -76,7 +76,6 @@ function noopActions(): ExpenseActions {
     createFlag: vi.fn(),
     updateFlag: vi.fn(),
     deleteFlag: vi.fn(),
-    setTransactionsFlag: vi.fn(),
     createCategory: vi.fn(),
     updateCategory: vi.fn(),
     deleteCategory: vi.fn(),

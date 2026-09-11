@@ -7,6 +7,7 @@ import type { ExpenseModel } from '../useExpenseData'
 function makeModel(): ExpenseModel {
   return {
     dataset: {
+      flags: [],
       categories: [
         { id: 1, name: 'Groceries', active: true, displayOrder: 0, isDefault: false },
         { id: 2, name: 'Dining out', active: true, displayOrder: 1, isDefault: false },
@@ -191,5 +192,34 @@ describe('BulkEditSheet', () => {
     await user.click(screen.getByRole('button', { name: 'Income' }))
     await user.click(screen.getByRole('button', { name: 'Apply changes' }))
     expect(onApply).toHaveBeenCalledWith({ type: 'income' })
+  })
+
+  it('offers the flag field once the owner has flags, and can clear one', async () => {
+    const model = makeModel()
+    model.dataset.flags = [{ id: 7, name: 'Work travel', color: '#6366f1', sortOrder: 0, active: true }]
+    const onApply = vi.fn()
+    render(
+      <BulkEditSheet count={2} model={model} busy={false} onApply={onApply} onCancel={vi.fn()} />,
+    )
+
+    await userEvent.click(screen.getByLabelText('Flag'))
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Flag' }), 'none')
+    await userEvent.click(screen.getByRole('button', { name: /Apply changes/ }))
+
+    expect(onApply).toHaveBeenCalledWith({ flagId: null })
+  })
+
+  it('hides the flag field when the owner has no flags', () => {
+    render(
+      <BulkEditSheet
+        count={2}
+        model={makeModel()}
+        busy={false}
+        onApply={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByLabelText('Flag')).not.toBeInTheDocument()
   })
 })

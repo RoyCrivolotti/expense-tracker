@@ -120,4 +120,35 @@ describe('FlagsModal', () => {
     expect(screen.getByText('Enter a name')).toBeInTheDocument()
     expect(createFlag).not.toHaveBeenCalled()
   })
+
+  it('archives a flag, explaining that its transactions keep it', async () => {
+    const updateFlag = vi.fn().mockResolvedValue(undefined)
+    renderModal(makeDataset({ flags: [work], transactions: [txn(1)] }), { updateFlag })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
+
+    expect(screen.getByText(/keeps the 1 transaction already flagged with it/)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('checkbox'))
+    await userEvent.click(screen.getByRole('button', { name: 'Save flag' }))
+
+    expect(updateFlag).toHaveBeenCalledWith(1, expect.objectContaining({ active: false }))
+  })
+
+  it('saves a colour picked from the shared palette', async () => {
+    const updateFlag = vi.fn().mockResolvedValue(undefined)
+    renderModal(makeDataset({ flags: [work] }), { updateFlag })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Use color #10b981' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save flag' }))
+
+    expect(updateFlag).toHaveBeenCalledWith(1, expect.objectContaining({ color: '#10b981' }))
+  })
+
+  it('does not offer archiving for a flag that does not exist yet', () => {
+    renderModal(makeDataset(), {}, true)
+
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+  })
 })
