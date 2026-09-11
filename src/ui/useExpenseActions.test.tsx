@@ -71,4 +71,27 @@ describe('useExpenseActions', () => {
     expect(dataset.transactions).toHaveLength(1)
     expect(dataset.transactions[0]?.id).toBe(42)
   })
+
+  it('updateTransactions calls source and applyPatch', async () => {
+    const updatedTxn: Transaction = { ...savedTxn, categoryId: 9 }
+    const updateTransactions = vi.fn().mockResolvedValue({ updated: 1, transactions: [updatedTxn] })
+    const source: ExpenseDataSource = {
+      canWrite: true,
+      load: vi.fn(),
+      updateTransactions,
+    }
+    let dataset = { ...baseDataset, transactions: [savedTxn] }
+    const applyPatch = vi.fn((patch: (d: ExpenseDataset) => ExpenseDataset) => {
+      dataset = patch(dataset)
+    })
+    const { result } = renderHook(() =>
+      useExpenseActions(source, applyPatch, vi.fn()),
+    )
+    await act(async () => {
+      await result.current!.updateTransactions([42], { categoryId: 9 })
+    })
+    expect(updateTransactions).toHaveBeenCalledWith([42], { categoryId: 9 })
+    expect(applyPatch).toHaveBeenCalled()
+    expect(dataset.transactions[0]?.categoryId).toBe(9)
+  })
 })
