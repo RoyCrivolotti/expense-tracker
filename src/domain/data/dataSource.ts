@@ -24,6 +24,10 @@ export type NewTransaction = Omit<StoredTransaction, 'id' | 'createdAt' | 'planI
   /** Plan link: a plan id links/moves the row, null unlinks it, absent leaves it unchanged. */
   planId?: number | null
 }
+export type BulkTransactionPatch = Partial<
+  Pick<NewTransaction, 'categoryId' | 'accountId' | 'type' | 'date' | 'budgetMonth'>
+>
+
 export type NewCategory = Omit<Category, 'id'>
 export type NewAccount = Omit<Account, 'id'>
 
@@ -72,6 +76,10 @@ export interface ExpenseDataSource {
   updateTransaction?(id: number, patch: Partial<NewTransaction>): Promise<Transaction>
   deleteTransaction?(id: number): Promise<void>
   deleteTransactions?(ids: number[]): Promise<{ deleted: number; requested: number }>
+  updateTransactions?(
+    ids: number[],
+    patch: BulkTransactionPatch,
+  ): Promise<{ updated: number; transactions: Transaction[] }>
   setStatementPaid?(accountId: number, yearMonth: string, paid: boolean, paidOn?: string): Promise<AccountStatement>
   /** Record actual cash for a month, or pass null to clear (empty Actual field). */
   setCashActual?(yearMonth: string, actualCashCents: number | null): Promise<CashActual | null>

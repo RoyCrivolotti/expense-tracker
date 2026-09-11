@@ -459,6 +459,24 @@
   border-top: 1px solid var(--color-border);
   font-size: 0.88rem;
 }
+.batchActions {
+  display: flex;
+  gap: 0.5rem;
+}
+.batchEdit {
+  padding: 0.55rem 0.9rem;
+  border: 0;
+  border-radius: 0.6rem;
+  background: var(--color-accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.batchEdit:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
 .batchDelete {
   padding: 0.55rem 0.9rem;
   border: 0;

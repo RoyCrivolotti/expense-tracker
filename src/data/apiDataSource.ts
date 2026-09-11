@@ -17,6 +17,7 @@ import type {
   WealthCheckin,
 } from '../types'
 import type {
+  BulkTransactionPatch,
   DeleteAccountOptions,
   DeleteAccountResult,
   DeleteCategoryOptions,
@@ -63,6 +64,12 @@ export const apiDataSource: ExpenseDataSource = {
       method: 'DELETE',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ ids }),
+    }),
+  updateTransactions: (ids: number[], patch: BulkTransactionPatch) =>
+    req<{ updated: number; transactions: Transaction[] }>(`${BASE}/transactions/bulk`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ids, patch }),
     }),
   setStatementPaid: (accountId: number, yearMonth: string, paid: boolean, paidOn?: string) =>
     req<AccountStatement>(`${BASE}/statements`, {

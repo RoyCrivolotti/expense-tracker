@@ -56,6 +56,7 @@ function makeActions(): ExpenseActions {
     updateTransaction: vi.fn().mockResolvedValue(undefined),
     deleteTransaction: vi.fn().mockResolvedValue(undefined),
     deleteTransactions: vi.fn().mockResolvedValue(undefined),
+    updateTransactions: vi.fn().mockResolvedValue(undefined),
     setStatementPaid: vi.fn().mockResolvedValue(undefined),
     setCashActual: vi.fn().mockResolvedValue(undefined),
     createCategory: vi.fn().mockResolvedValue(undefined),
