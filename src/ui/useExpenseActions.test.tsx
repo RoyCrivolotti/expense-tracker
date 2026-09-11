@@ -161,20 +161,4 @@ describe('useExpenseActions — flags', () => {
     expect(read().flags).toEqual([])
   })
 
-  it('setTransactionsFlag splices the server rows back in', async () => {
-    const flagged: Transaction = { ...savedTxn, flagId: flag.id }
-    const setTransactionsFlag = vi.fn().mockResolvedValue([flagged])
-    const { actions, read } = harness({
-      createTransaction: vi.fn().mockResolvedValue(savedTxn),
-      setTransactionsFlag,
-    })
-
-    await act(async () => {
-      await actions.createTransaction(newTxn)
-      await actions.setTransactionsFlag([savedTxn.id], flag.id)
-    })
-
-    expect(setTransactionsFlag).toHaveBeenCalledWith([savedTxn.id], flag.id)
-    expect(read().transactions[0]?.flagId).toBe(flag.id)
-  })
 })

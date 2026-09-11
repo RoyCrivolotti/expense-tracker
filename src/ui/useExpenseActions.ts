@@ -10,7 +10,6 @@ import {
   patchAfterBulkDelete,
   patchAfterBulkUpdate,
   patchAfterCashActual,
-  patchAfterBulkFlag,
   patchAfterCategory,
   patchAfterCategoryDelete,
   patchAfterFlag,
@@ -97,10 +96,6 @@ export function useExpenseActions(
         const result = await source.deleteFlag!(id)
         applyPatch((d) => patchAfterFlagDelete(d, id))
         return result
-      },
-      setTransactionsFlag: async (ids, flagId) => {
-        const txns = await source.setTransactionsFlag!(ids, flagId)
-        applyPatch((d) => patchAfterBulkFlag(d, txns))
       },
       createCategory: async (input) => {
         const category = await source.createCategory!(input)

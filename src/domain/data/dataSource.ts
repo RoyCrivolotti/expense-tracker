@@ -28,7 +28,7 @@ export type NewTransaction = Omit<StoredTransaction, 'id' | 'createdAt' | 'planI
   flagId?: number | null
 }
 export type BulkTransactionPatch = Partial<
-  Pick<NewTransaction, 'categoryId' | 'accountId' | 'type' | 'date' | 'budgetMonth'>
+  Pick<NewTransaction, 'categoryId' | 'accountId' | 'type' | 'date' | 'budgetMonth' | 'flagId'>
 >
 
 export type NewCategory = Omit<Category, 'id'>
@@ -98,8 +98,6 @@ export interface ExpenseDataSource {
   updateFlag?(id: number, patch: Partial<NewFlag>): Promise<Flag>
   /** Deleting a flag clears it from its transactions; the result says how many. */
   deleteFlag?(id: number): Promise<{ unflagged: number }>
-  /** Apply (or clear, with null) one flag across many transactions at once. */
-  setTransactionsFlag?(ids: number[], flagId: number | null): Promise<Transaction[]>
   updateSettings?(patch: Partial<ExpenseSettings>): Promise<ExpenseSettings>
   updateGoals?(patch: Partial<GoalInputs>): Promise<GoalInputs>
   createScenario?(input: NewGoalScenario): Promise<GoalScenario>

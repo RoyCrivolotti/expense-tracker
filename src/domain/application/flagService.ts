@@ -71,29 +71,3 @@ export async function patchFlag(
 export async function removeFlag(repo: ExpenseRepository, owner: string, id: number) {
   return repo.deleteFlag(owner, id)
 }
-
-/** Shared by the single-row PATCH and the bulk route, so both reject the same input. */
-export function validateTransactionIds(ids: unknown): number[] {
-  if (!Array.isArray(ids) || ids.length === 0) throw new Error('ids must be a non-empty array')
-  return ids.map((id) => {
-    if (!Number.isInteger(id) || (id as number) <= 0) throw new Error('ids must be positive integers')
-    return id as number
-  })
-}
-
-export function validateFlagId(flagId: unknown): number | null {
-  if (flagId === null) return null
-  if (!Number.isInteger(flagId) || (flagId as number) <= 0) {
-    throw new Error('flagId must be a positive integer or null')
-  }
-  return flagId as number
-}
-
-export async function setTransactionsFlag(
-  repo: ExpenseRepository,
-  owner: string,
-  ids: unknown,
-  flagId: unknown,
-) {
-  return repo.setTransactionsFlag(owner, validateTransactionIds(ids), validateFlagId(flagId))
-}

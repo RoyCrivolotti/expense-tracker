@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createFlag, deleteFlag, setTransactionsFlag, updateFlag } from './dbFlags'
+import { createFlag, deleteFlag, updateFlag } from './dbFlags'
 import type { Env } from './env'
 
 interface StatementStub {
@@ -14,11 +14,9 @@ interface StatementStub {
  */
 function stubEnv(opts: {
   first?: (sql: string, args: unknown[]) => unknown
-  all?: (sql: string, args: unknown[]) => { results: unknown[] }
   batch?: (stmts: StatementStub[]) => unknown[]
 }) {
   const first = opts.first ?? (() => null)
-  const all = opts.all ?? (() => ({ results: [] }))
   const batch = vi.fn(
     opts.batch ?? ((stmts: StatementStub[]) => stmts.map(() => ({ meta: { changes: 0 } }))),
   )
@@ -27,7 +25,6 @@ function stubEnv(opts: {
       sql,
       args,
       first: vi.fn().mockImplementation(async () => first(sql, args)),
-      all: vi.fn().mockImplementation(async () => all(sql, args)),
     }),
   }))
   return { env: { DB: { prepare, batch } } as unknown as Env, prepare, batch }
@@ -202,95 +199,5 @@ describe('updateFlag', () => {
       status: 404,
       message: 'Flag not found',
     })
-  })
-})
-
-describe('setTransactionsFlag', () => {
-  it('binds one placeholder per id, owner-scoped', async () => {
-    let seen: StatementStub | null = null
-    const { env } = stubEnv({
-      first: () => OK,
-      all: (sql, args) => {
-        if (sql.includes('UPDATE transactions')) seen = { sql, args }
-        return { results: [] }
-      },
-    })
-
-    await setTransactionsFlag(env, OWNER, [4, 5, 6], 2)
-
-    expect(seen!.sql).toContain('IN (?, ?, ?)')
-    expect(seen!.args).toEqual([2, OWNER, 4, 5, 6])
-  })
-
-  it('accepts null to clear the flag, skipping the ownership check', async () => {
-    const { env, prepare } = stubEnv({ all: () => ({ results: [] }) })
-
-    await setTransactionsFlag(env, OWNER, [1], null)
-
-    const sqls = prepare.mock.calls.map((c) => c[0])
-    expect(sqls.some((sql) => sql.includes('FROM flags'))).toBe(false)
-  })
-
-  it('rejects a flag the owner does not have', async () => {
-    const { env } = stubEnv({ first: () => null })
-
-    await expect(setTransactionsFlag(env, OWNER, [1], 9)).rejects.toMatchObject({
-      status: 400,
-      message: 'Invalid flagId',
-    })
-  })
-
-  it('re-derives status on the rows it returns, so the client can splice them in', async () => {
-    const { env } = stubEnv({
-      first: () => OK,
-      all: (sql) => {
-        if (sql.includes('UPDATE transactions')) {
-          return {
-            results: [
-              {
-                id: 4,
-                date: '2026-05-01',
-                budget_month: '2026-05',
-                description: 'Hotel',
-                account_id: 1,
-                category_id: 1,
-                type: 'expense',
-                amount_cents: 1_000,
-                cancelled: 0,
-                notes: null,
-                created_at: null,
-                plan_id: null,
-                installment_index: null,
-                flag_id: 2,
-              },
-            ],
-          }
-        }
-        if (sql.includes('FROM accounts')) {
-          return {
-            results: [
-              { id: 1, name: 'Card', kind: 'credit', settlement: 'deferred', active: 1 },
-            ],
-          }
-        }
-        return { results: [] }
-      },
-    })
-
-    const rows = await setTransactionsFlag(env, OWNER, [4], 2)
-
-    expect(rows).toHaveLength(1)
-    expect(rows[0]).toMatchObject({ id: 4, flagId: 2 })
-    // Deferred account with no paid statement ⇒ forecast, not a hardcoded default.
-    expect(rows[0]?.status).toBe('forecast')
-  })
-
-  it('skips the accounts/statements fetch when nothing matched', async () => {
-    const { env, prepare } = stubEnv({ first: () => OK, all: () => ({ results: [] }) })
-
-    await expect(setTransactionsFlag(env, OWNER, [1], 2)).resolves.toEqual([])
-
-    const sqls = prepare.mock.calls.map((c) => c[0])
-    expect(sqls.some((sql) => sql.includes('FROM accounts'))).toBe(false)
   })
 })

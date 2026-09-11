@@ -403,13 +403,20 @@ export function inMemoryExpenseRepository(
       const store = storeFor(owner)
       if (patch.accountId != null) assertOwnedAccount(store, patch.accountId)
       if (patch.categoryId != null) assertOwnedCategory(store, patch.categoryId)
+      if (patch.flagId != null) assertOwnedFlag(store, patch.flagId)
       const idSet = new Set(ids)
+      const { flagId, ...rest } = patch
       const updated: Transaction[] = []
-      for (const stored of store.transactions) {
-        if (!idSet.has(stored.id)) continue
-        Object.assign(stored, patch)
-        updated.push(deriveOne(stored, store.accounts, store.statements))
-      }
+      store.transactions = store.transactions.map((stored) => {
+        if (!idSet.has(stored.id)) return stored
+        // flagId is handled separately: null clears it, and clearing must omit
+        // the key rather than assign undefined (exactOptionalPropertyTypes).
+        const base = 'flagId' in patch ? withoutFlag(stored) : stored
+        const next: StoredTransaction =
+          flagId != null ? { ...base, ...rest, flagId } : { ...base, ...rest }
+        updated.push(deriveOne(next, store.accounts, store.statements))
+        return next
+      })
       return Promise.resolve(updated)
     },
 
@@ -494,21 +501,6 @@ export function inMemoryExpenseRepository(
       })
       store.flags = store.flags.filter((f) => f.id !== id)
       return Promise.resolve({ unflagged })
-    },
-
-    setTransactionsFlag: (owner, ids, flagId) => {
-      const store = storeFor(owner)
-      if (flagId != null) assertOwnedFlag(store, flagId)
-      const wanted = new Set(ids)
-      const touched: StoredTransaction[] = []
-      store.transactions = store.transactions.map((t) => {
-        if (!wanted.has(t.id)) return t
-        const bare = withoutFlag(t)
-        const next: StoredTransaction = flagId == null ? bare : { ...bare, flagId }
-        touched.push(next)
-        return next
-      })
-      return Promise.resolve(deriveTransactions(touched, store.accounts, store.statements))
     },
 
     createCategory: (owner, input) => {

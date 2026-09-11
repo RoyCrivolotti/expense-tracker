@@ -99,12 +99,6 @@ export const apiDataSource: ExpenseDataSource = {
     }),
   deleteFlag: (id: number) =>
     req<{ unflagged: number }>(`${BASE}/flags/${id}`, { method: 'DELETE' }),
-  setTransactionsFlag: (ids: number[], flagId: number | null) =>
-    req<Transaction[]>(`${BASE}/transactions/bulk`, {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ ids, flagId }),
-    }),
   createCategory: (input: NewCategory) =>
     req<Category>(`${BASE}/categories`, {
       method: 'POST',

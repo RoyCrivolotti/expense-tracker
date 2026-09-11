@@ -73,7 +73,6 @@ export interface ExpenseRepository {
   updateFlag(owner: string, id: number, patch: Partial<NewFlag>): Promise<Flag>
   /** Deletes the flag and clears it from its transactions in one batch. */
   deleteFlag(owner: string, id: number): Promise<{ unflagged: number }>
-  setTransactionsFlag(owner: string, ids: number[], flagId: number | null): Promise<Transaction[]>
   updateSettings(owner: string, patch: Partial<ExpenseSettings>): Promise<ExpenseSettings>
   updateGoals(owner: string, patch: Partial<GoalInputs>): Promise<GoalInputs>
   createScenario(owner: string, input: NewGoalScenario): Promise<GoalScenario>

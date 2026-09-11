@@ -1,10 +1,15 @@
 import { useState } from 'react'
-import type { TxnType } from '../../types'
 import type { BulkTransactionPatch } from '../../data/dataSource'
 import type { ExpenseModel } from '../useExpenseData'
 import { selectableOptions, optionLabel } from '../components/pickerOptions'
+import { selectableFlags } from '../components/flagPickerOptions'
 import { TypeSelector } from '../components/TransactionFields'
 import { Modal } from '../components/Modal'
+import {
+  anyFieldEnabled,
+  buildBulkPatch,
+  type BulkEditFieldState,
+} from './bulkEditFields'
 import styles from './BulkEditSheet.module.css'
 
 interface BulkEditSheetProps {
@@ -13,19 +18,6 @@ interface BulkEditSheetProps {
   busy: boolean
   onApply: (patch: BulkTransactionPatch) => void
   onCancel: () => void
-}
-
-interface FieldState {
-  categoryEnabled: boolean
-  categoryId: number
-  accountEnabled: boolean
-  accountId: number
-  typeEnabled: boolean
-  type: TxnType
-  dateEnabled: boolean
-  date: string
-  budgetMonthEnabled: boolean
-  budgetMonth: string
 }
 
 function localDate(): string {
@@ -39,7 +31,7 @@ function localMonth(): string {
 }
 
 export function BulkEditSheet({ count, model, busy, onApply, onCancel }: BulkEditSheetProps) {
-  const [fields, setFields] = useState<FieldState>({
+  const [fields, setFields] = useState<BulkEditFieldState>({
     categoryEnabled: false,
     categoryId: model.dataset.categories[0]?.id ?? 0,
     accountEnabled: false,
@@ -50,28 +42,18 @@ export function BulkEditSheet({ count, model, busy, onApply, onCancel }: BulkEdi
     date: localDate(),
     budgetMonthEnabled: false,
     budgetMonth: localMonth(),
+    flagEnabled: false,
+    flagId: model.dataset.flags.find((f) => f.active)?.id ?? null,
   })
 
-  const set = <K extends keyof FieldState>(key: K, value: FieldState[K]) =>
+  const set = <K extends keyof BulkEditFieldState>(key: K, value: BulkEditFieldState[K]) =>
     setFields((prev) => ({ ...prev, [key]: value }))
 
-  const anyEnabled =
-    fields.categoryEnabled ||
-    fields.accountEnabled ||
-    fields.typeEnabled ||
-    fields.dateEnabled ||
-    fields.budgetMonthEnabled
+  const anyEnabled = anyFieldEnabled(fields)
 
-  const handleApply = () => {
-    const patch: BulkTransactionPatch = {}
-    if (fields.categoryEnabled) patch.categoryId = fields.categoryId
-    if (fields.accountEnabled) patch.accountId = fields.accountId
-    if (fields.typeEnabled) patch.type = fields.type
-    if (fields.dateEnabled) patch.date = fields.date
-    if (fields.budgetMonthEnabled) patch.budgetMonth = fields.budgetMonth
-    onApply(patch)
-  }
+  const handleApply = () => onApply(buildBulkPatch(fields))
 
+  const flags = selectableFlags(model.dataset.flags, fields.flagId)
   const categories = selectableOptions(model.dataset.categories, 0)
   const accounts = selectableOptions(model.dataset.accounts, 0)
   const noun = count === 1 ? 'transaction' : 'transactions'
@@ -144,6 +126,28 @@ export function BulkEditSheet({ count, model, busy, onApply, onCancel }: BulkEdi
             onChange={(e) => set('budgetMonth', e.target.value)}
           />
         </ToggleField>
+        {model.dataset.flags.length > 0 ? (
+          <ToggleField
+            label="Flag"
+            enabled={fields.flagEnabled}
+            onToggle={(v) => set('flagEnabled', v)}
+          >
+            <select
+              value={fields.flagId ?? 'none'}
+              aria-label="Flag"
+              onChange={(e) =>
+                set('flagId', e.target.value === 'none' ? null : Number(e.target.value))
+              }
+            >
+              <option value="none">No flag</option>
+              {flags.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
+          </ToggleField>
+        ) : null}
       </div>
 
       <div className={styles.actions}>

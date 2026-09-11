@@ -79,7 +79,6 @@ function makeActions(overrides: Partial<ExpenseActions> = {}): ExpenseActions {
     createFlag: vi.fn().mockResolvedValue(undefined),
     updateFlag: vi.fn().mockResolvedValue(undefined),
     deleteFlag: vi.fn().mockResolvedValue(undefined),
-    setTransactionsFlag: vi.fn().mockResolvedValue(undefined),
     createCategory: vi.fn().mockResolvedValue(undefined),
     updateCategory: vi.fn().mockResolvedValue(undefined),
     deleteCategory: vi.fn().mockResolvedValue({ reassignedToId: null }),
