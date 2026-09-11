@@ -9,6 +9,7 @@ import { TransactionModal } from './TransactionModal'
 
 function dataset(): ExpenseDataset {
   return {
+    flags: [],
     categories: [{ id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
     accounts: [{ id: 1, name: 'Cash', kind: 'debit', settlement: 'immediate', active: true }],
     transactions: [],
@@ -39,6 +40,7 @@ function model(): ExpenseModel {
       account: () => undefined,
       categoryName: () => '',
       accountName: () => '',
+      flag: () => undefined,
       installmentPlan: () => undefined,
     },
     descriptionIndex: { search: () => [], resolve: () => undefined },
@@ -59,6 +61,10 @@ function makeActions(): ExpenseActions {
     updateTransactions: vi.fn().mockResolvedValue(undefined),
     setStatementPaid: vi.fn().mockResolvedValue(undefined),
     setCashActual: vi.fn().mockResolvedValue(undefined),
+    createFlag: vi.fn().mockResolvedValue(undefined),
+    updateFlag: vi.fn().mockResolvedValue(undefined),
+    deleteFlag: vi.fn().mockResolvedValue(undefined),
+    setTransactionsFlag: vi.fn().mockResolvedValue(undefined),
     createCategory: vi.fn().mockResolvedValue(undefined),
     updateCategory: vi.fn().mockResolvedValue(undefined),
     deleteCategory: vi.fn().mockResolvedValue({ reassignedToId: null }),

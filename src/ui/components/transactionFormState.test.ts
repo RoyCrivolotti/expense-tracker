@@ -9,6 +9,7 @@ import { initialFields } from './transactionFormState'
 function minimalModel(): ExpenseModel {
   return {
     dataset: {
+      flags: [],
       categories: [{ id: 3, name: 'Health', monthlyBudgetCents: 0, sortOrder: 1, active: true }],
       accounts: [
         { id: 2, name: 'Debit', kind: 'debit', settlement: 'immediate', active: true },
@@ -36,6 +37,7 @@ function minimalModel(): ExpenseModel {
       account: () => undefined,
       categoryName: () => 'Health',
       accountName: () => 'Debit',
+      flag: () => undefined,
       installmentPlan: () => undefined,
     },
     descriptionIndex: { search: () => [], resolve: () => undefined },

@@ -4,6 +4,7 @@ import type {
   CashActual,
   Category,
   ExpenseSettings,
+  Flag,
   GoalInputs,
   GoalScenario,
   InstallmentPlan,
@@ -37,6 +38,15 @@ export interface AccountRow {
   active: number
 }
 
+export interface FlagRow {
+  id: number
+  name: string
+  color: string
+  description: string | null
+  sort_order: number
+  active: number
+}
+
 export interface TxnRow {
   id: number
   date: string
@@ -51,6 +61,7 @@ export interface TxnRow {
   created_at: string | null
   plan_id: number | null
   installment_index: number | null
+  flag_id: number | null
 }
 
 export interface StatementRow {
@@ -76,6 +87,17 @@ export function toAccount(r: AccountRow): Account {
   return { id: r.id, name: r.name, kind: r.kind, settlement: r.settlement, active: r.active === 1 }
 }
 
+export function toFlag(r: FlagRow): Flag {
+  return {
+    id: r.id,
+    name: r.name,
+    color: r.color,
+    sortOrder: r.sort_order,
+    active: r.active === 1,
+    ...(r.description ? { description: r.description } : {}),
+  }
+}
+
 export function toStoredTxn(r: TxnRow): StoredTransaction {
   return {
     id: r.id,
@@ -91,6 +113,7 @@ export function toStoredTxn(r: TxnRow): StoredTransaction {
     ...(r.created_at ? { createdAt: r.created_at } : {}),
     ...(r.plan_id != null ? { planId: r.plan_id } : {}),
     ...(r.installment_index != null ? { installmentIndex: r.installment_index } : {}),
+    ...(r.flag_id != null ? { flagId: r.flag_id } : {}),
   }
 }
 

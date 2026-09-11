@@ -4,10 +4,26 @@ const DB_NAME = 'expense-tracker-offline'
 const STORE = 'snapshots'
 const SNAPSHOT_KEY = 'latest'
 
+/**
+ * Bump whenever `ExpenseDataset` gains a required field. A snapshot written by
+ * an older build is missing that field, and the code reading it back — e.g.
+ * `buildLookup`, which maps over every collection — would throw on `undefined`
+ * and white-screen the app on the first load after a deploy. Discarding a
+ * stale snapshot costs one network fetch; not discarding it costs the session.
+ */
+const SNAPSHOT_VERSION = 2
+
 interface SnapshotRecord {
   key: string
+  /** Absent on records written before versioning existed — treated as stale. */
+  version?: number
   dataset: ExpenseDataset
   savedAt: string
+}
+
+/** Pure so it can be tested without an IndexedDB implementation. */
+export function isCompatibleSnapshot(record: { version?: number } | undefined): boolean {
+  return record?.version === SNAPSHOT_VERSION
 }
 
 function openDb(): Promise<IDBDatabase> {
@@ -55,6 +71,7 @@ export async function saveOfflineSnapshot(dataset: ExpenseDataset): Promise<void
   if (typeof indexedDB === 'undefined') return
   const record: SnapshotRecord = {
     key: SNAPSHOT_KEY,
+    version: SNAPSHOT_VERSION,
     dataset,
     savedAt: new Date().toISOString(),
   }
@@ -64,6 +81,6 @@ export async function saveOfflineSnapshot(dataset: ExpenseDataset): Promise<void
 export async function loadOfflineSnapshot(): Promise<{ dataset: ExpenseDataset; savedAt: string } | null> {
   if (typeof indexedDB === 'undefined') return null
   const record = await withStore('readonly', (store) => readSnapshot(store))
-  if (!record) return null
+  if (!record || !isCompatibleSnapshot(record)) return null
   return { dataset: record.dataset, savedAt: record.savedAt }
 }

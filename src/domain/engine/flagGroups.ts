@@ -1,0 +1,82 @@
+import type { Flag, Transaction } from '../types'
+import { netSpendCents } from './transactions'
+
+/**
+ * Return the transaction without its flag.
+ *
+ * `exactOptionalPropertyTypes` is on, so "unflagged" has to mean *the key is
+ * absent*, not `flagId: undefined` — the latter round-trips through JSON as a
+ * different shape than the server ever sends. Destructuring in the parameter
+ * position also keeps the discarded binding inside ESLint's `argsIgnorePattern`.
+ */
+export function withoutFlag<T extends { flagId?: number }>({
+  flagId: _flagId,
+  ...rest
+}: T): Omit<T, 'flagId'> {
+  return rest
+}
+
+export interface FlagGroup {
+  flag: Flag
+  transactions: Transaction[]
+  count: number
+  /**
+   * Net spend for the group, signed the same way the Transactions tab's own
+   * "Net spend" line is — refunds subtract. For the reimbursement case this is
+   * the number that matters: what you are actually out of pocket.
+   */
+  totalCents: number
+}
+
+/**
+ * Bucket transactions by the flag they carry.
+ *
+ * Deliberate behaviours, each covered by a test:
+ * - Groups follow `flags` order (the user's sort), never transaction order.
+ * - A flag with no matching transactions is omitted: the Flagged card is a work
+ *   list, not a legend.
+ * - A `flagId` pointing at a flag that isn't in `flags` is dropped rather than
+ *   bucketed under "Unknown". That happens legitimately — a stale client, or a
+ *   flag deleted in another tab — and it must not throw.
+ * - Cancelled transactions are excluded entirely: you are not claiming back
+ *   something that never happened.
+ */
+export function groupTransactionsByFlag(
+  transactions: Transaction[],
+  flags: Flag[],
+): FlagGroup[] {
+  const byFlag = new Map<number, Transaction[]>()
+  for (const txn of transactions) {
+    if (txn.flagId == null || txn.status === 'cancelled') continue
+    const bucket = byFlag.get(txn.flagId)
+    if (bucket) bucket.push(txn)
+    else byFlag.set(txn.flagId, [txn])
+  }
+
+  const groups: FlagGroup[] = []
+  for (const flag of flags) {
+    const rows = byFlag.get(flag.id)
+    if (!rows || rows.length === 0) continue
+    groups.push({
+      flag,
+      transactions: rows,
+      count: rows.length,
+      totalCents: netSpendCents(rows),
+    })
+  }
+  return groups
+}
+
+/** Rolled-up figures for the collapsed Flagged header. */
+export function summarizeFlagGroups(groups: FlagGroup[]): {
+  count: number
+  totalCents: number
+} {
+  return groups.reduce(
+    (acc, group) => ({
+      count: acc.count + group.count,
+      totalCents: acc.totalCents + group.totalCents,
+    }),
+    { count: 0, totalCents: 0 },
+  )
+}

@@ -11,6 +11,7 @@ import { BatchTransactionForm } from './BatchTransactionForm'
 
 function dataset(): ExpenseDataset {
   return {
+    flags: [],
     categories: [
       { id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true },
       { id: 2, name: 'Dining out', monthlyBudgetCents: 0, sortOrder: 1, active: true },
@@ -48,6 +49,7 @@ function model(): ExpenseModel {
       account: () => undefined,
       categoryName: () => '',
       accountName: () => '',
+      flag: () => undefined,
       installmentPlan: () => undefined,
     },
     descriptionIndex: {
@@ -74,6 +76,10 @@ function makeActions(overrides: Partial<ExpenseActions> = {}): ExpenseActions {
     updateTransactions: vi.fn().mockResolvedValue(undefined),
     setStatementPaid: vi.fn().mockResolvedValue(undefined),
     setCashActual: vi.fn().mockResolvedValue(undefined),
+    createFlag: vi.fn().mockResolvedValue(undefined),
+    updateFlag: vi.fn().mockResolvedValue(undefined),
+    deleteFlag: vi.fn().mockResolvedValue(undefined),
+    setTransactionsFlag: vi.fn().mockResolvedValue(undefined),
     createCategory: vi.fn().mockResolvedValue(undefined),
     updateCategory: vi.fn().mockResolvedValue(undefined),
     deleteCategory: vi.fn().mockResolvedValue({ reassignedToId: null }),

@@ -29,6 +29,7 @@ function txn(partial: Partial<Transaction> & Pick<Transaction, 'budgetMonth' | '
 function modelWith(transactions: Transaction[], cashActuals: ExpenseDataset['cashActuals']): ExpenseModel {
   return {
     dataset: {
+      flags: [],
       categories: [{ id: 1, name: 'Misc', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
       accounts,
       transactions,
@@ -54,6 +55,7 @@ function modelWith(transactions: Transaction[], cashActuals: ExpenseDataset['cas
       account: (id) => accounts.find((a) => a.id === id),
       categoryName: () => 'Misc',
       accountName: (id) => accounts.find((a) => a.id === id)?.name ?? '',
+      flag: () => undefined,
       installmentPlan: () => undefined,
     },
     descriptionIndex: { search: () => [], resolve: () => undefined },
