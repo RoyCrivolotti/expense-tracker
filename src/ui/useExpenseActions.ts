@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import type { ExpenseDataset } from '../types'
-import type { ExpenseDataSource, NewTransaction } from '../data/dataSource'
+import type { BulkTransactionPatch, ExpenseDataSource, NewTransaction } from '../data/dataSource'
 import type { ExpenseActions, ExpenseModalState } from './actions'
 import { duplicateHint, openAddModal, transactionToSeed } from './transactionSeed'
 import {
@@ -8,6 +8,7 @@ import {
   patchAfterAccountDelete,
   patchAfterBulkCreate,
   patchAfterBulkDelete,
+  patchAfterBulkUpdate,
   patchAfterCashActual,
   patchAfterCategory,
   patchAfterCategoryDelete,
@@ -67,6 +68,10 @@ export function useExpenseActions(
       deleteTransactions: async (ids) => {
         await source.deleteTransactions!(ids)
         applyPatch((d) => patchAfterBulkDelete(d, ids))
+      },
+      updateTransactions: async (ids: number[], patch: BulkTransactionPatch) => {
+        const result = await source.updateTransactions!(ids, patch)
+        applyPatch((d) => patchAfterBulkUpdate(d, result.transactions))
       },
       setStatementPaid: async (accountId, yearMonth, paid, paidOn) => {
         const stmt = await source.setStatementPaid!(accountId, yearMonth, paid, paidOn)
