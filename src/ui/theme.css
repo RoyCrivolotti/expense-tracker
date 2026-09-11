@@ -29,6 +29,11 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-exp-theme='light']) {
+    /* Without this, a user whose dark mode comes from the OS preference alone
+       (never touched Settings → Appearance) gets native form controls —
+       including the Date/Budget-month picker popups — rendered light, since
+       only the manual html[data-exp-theme='dark'] override below sets this. */
+    color-scheme: dark;
     --exp-income: #4ade80;
     --exp-expense: #f87171;
     --exp-refund: #60a5fa;

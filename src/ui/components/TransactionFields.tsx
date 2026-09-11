@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react'
 import type { Transaction, TxnType } from '../../types'
 import type { DescriptionSuggestion } from '../../data/descriptionIndex'
-import { defaultBudgetMonth, shortMonthLabel, shortMonthYearLabel } from '../../engine/dates'
+import { defaultBudgetMonth, shortDateLabel, shortMonthYearLabel } from '../../engine/dates'
 import type { ExpenseModel } from '../useExpenseData'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { DescriptionCombobox } from './DescriptionCombobox'
+import { NativeDateOverlay } from './NativeDateOverlay'
 import { optionLabel, selectableOptions } from './pickerOptions'
 import type { FormFields, Setter } from './transactionFormState'
 import styles from './TransactionForm.module.css'
@@ -16,57 +17,30 @@ const TYPES: { value: TxnType; label: string }[] = [
   { value: 'refund', label: 'Refund' },
 ]
 
-export function Field({ label, children }: { label: string; children: ReactNode }) {
+export function Field({
+  label,
+  children,
+  as = 'label',
+}: {
+  label: string
+  children: ReactNode
+  /**
+   * A <label> forwards a click anywhere in it — including the caption text —
+   * to its wrapped control (that's how "click a checkbox's label" works).
+   * NativeDateOverlay opens the native picker on click, so wrapping it in a
+   * <label> means clicking the "Date"/"Budget month" caption also opens the
+   * picker, not just the pill. Use 'div' there — it drops the implicit
+   * label/control association (compensate with NativeDateOverlay's own
+   * `ariaLabel`), scoping the click-to-open surface to the pill itself.
+   */
+  as?: 'label' | 'div'
+}) {
+  const Tag = as
   return (
-    <label className={styles.field}>
+    <Tag className={styles.field}>
       <span className={styles.label}>{label}</span>
       {children}
-    </label>
-  )
-}
-
-/** "10 Sep 2026" from a YYYY-MM-DD string. */
-function shortDateLabel(isoDate: string): string {
-  const [year, month, day] = isoDate.split('-')
-  return `${Number(day)} ${shortMonthLabel(`${year}-${month}`)} ${year}`
-}
-
-/**
- * iOS Safari renders input[type=date]/[type=month] using the device locale's
- * own long-form text ("September 2026") plus a native picker glyph, which can
- * be wider than the space a two-column row gives the field — and that text
- * isn't something CSS or the `value` attribute can shorten; the browser owns
- * it. Chromium and desktop WebKit don't have this problem (both render a
- * compact numeric format), which is why this only surfaces on a real device.
- *
- * Keeps the real input for its native picker UI, keyboard and accessible
- * value, but makes it invisible and overlays our own compact label (which we
- * fully control) on top — same trick as a custom-styled file input.
- */
-function NativeDateOverlay({
-  type,
-  value,
-  label,
-  onChange,
-}: {
-  type: 'date' | 'month'
-  value: string
-  label: string
-  onChange: (value: string) => void
-}) {
-  return (
-    <span className={styles.nativeOverlayWrap}>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required
-        className={styles.nativeOverlayInput}
-      />
-      <span className={styles.nativeOverlayLabel} aria-hidden="true">
-        {label}
-      </span>
-    </span>
+    </Tag>
   )
 }
 
@@ -141,14 +115,21 @@ function DateBudgetRow({
 }) {
   return (
     <div className={styles.row}>
-      <Field label="Date">
-        <NativeDateOverlay type="date" value={form.date} label={shortDateLabel(form.date)} onChange={onDate} />
+      <Field label="Date" as="div">
+        <NativeDateOverlay
+          type="date"
+          value={form.date}
+          label={shortDateLabel(form.date)}
+          ariaLabel="Date"
+          onChange={onDate}
+        />
       </Field>
-      <Field label="Budget month">
+      <Field label="Budget month" as="div">
         <NativeDateOverlay
           type="month"
           value={form.budgetMonth}
           label={shortMonthYearLabel(form.budgetMonth)}
+          ariaLabel="Budget month"
           onChange={(value) => set('budgetMonth', value)}
         />
       </Field>
