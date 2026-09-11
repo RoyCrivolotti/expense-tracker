@@ -24,6 +24,20 @@ export function validateFlagColor(color: string | undefined): string {
  * string and "no description" mean the same thing to a reader, and collapsing
  * them here keeps the column NULL instead of storing ''.
  */
+export function validateFlagSortOrder(sortOrder: unknown): number {
+  // SQLite has type affinity, not type enforcement: a non-numeric value is
+  // stored as TEXT in an INTEGER column and silently breaks every sort that
+  // reads it back. An explicit null fails the NOT NULL constraint and leaks the
+  // raw D1 message through mapAppError. Reject both here instead.
+  if (!Number.isInteger(sortOrder)) throw new Error('Flag sort order must be a whole number')
+  return sortOrder as number
+}
+
+export function validateFlagActive(active: unknown): boolean {
+  if (typeof active !== 'boolean') throw new Error('Flag active must be true or false')
+  return active
+}
+
 export function validateFlagDescription(description: string | undefined): string | undefined {
   const trimmed = description?.trim()
   if (!trimmed) return undefined
@@ -43,6 +57,8 @@ function normalizeNewFlag(input: NewFlag): NewFlag {
     ...rest,
     name: validateFlagName(input.name),
     color: validateFlagColor(input.color),
+    sortOrder: validateFlagSortOrder(input.sortOrder),
+    active: validateFlagActive(input.active),
     ...(description ? { description } : {}),
   }
 }
@@ -60,6 +76,8 @@ export async function patchFlag(
   const next = { ...patch }
   if (patch.name !== undefined) next.name = validateFlagName(patch.name)
   if (patch.color !== undefined) next.color = validateFlagColor(patch.color)
+  if (patch.sortOrder !== undefined) next.sortOrder = validateFlagSortOrder(patch.sortOrder)
+  if (patch.active !== undefined) next.active = validateFlagActive(patch.active)
   if (patch.description !== undefined) {
     // Explicit '' is how the editor clears a description, so map it to '' (not
     // undefined) — dropping the key would leave the old text in place.

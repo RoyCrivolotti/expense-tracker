@@ -30,14 +30,14 @@
 
 .summary::after {
   flex: none;
-  font-size: 1rem;
+  font-size: 0.8rem;
   line-height: 1;
   color: var(--color-text-muted);
-  content: '+';
+  content: '▸';
 }
 
 .group[open] > .summary::after {
-  content: '−';
+  content: '▾';
 }
 
 .summaryGlyph {
@@ -111,19 +111,88 @@
   background: color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
 
+/* Full-width inside the Card, matching "Manage plans" on InstallmentsCard,
+   rather than a ~20px pill in the section title that no other card uses. */
 .manageBtn {
-  padding: 0.2rem 0.55rem;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
+  width: 100%;
+  margin-top: 0.2rem;
+  padding: 0.55rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 0.6rem;
   background: none;
-  color: var(--color-text-muted);
-  font-size: 0.75rem;
+  color: var(--color-accent);
+  font: inherit;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
 }
 
 .manageBtn:hover {
-  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.rollup {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.2rem;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.rollup::-webkit-details-marker {
+  display: none;
+}
+
+.rollup::marker {
+  content: none;
+}
+
+.rollup::after {
+  flex: none;
+  font-size: 0.8rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  content: '▸';
+}
+
+.card__root[open] > .rollup::after {
+  content: '▾';
+}
+
+.rollupBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.rollupCount {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.rollupScope {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.rollupTotal {
+  font-size: 1rem;
+  font-weight: 700;
+  flex: none;
+  margin-right: 0.35rem;
+}
+
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-border);
 }
 
 /* The summary is a flex row; on a narrow screen let the name wrap out rather

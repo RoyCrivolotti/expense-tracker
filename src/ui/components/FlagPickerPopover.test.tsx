@@ -107,19 +107,4 @@ describe('FlagPickerPopover', () => {
     expect(screen.getByText(/Settings/)).toBeInTheDocument()
   })
 
-  it('offers a create shortcut only when the caller provides one', async () => {
-    const onCreate = vi.fn()
-    const { onClose } = renderPicker({ onCreate })
-
-    await userEvent.click(screen.getByRole('button', { name: /New flag/ }))
-
-    expect(onClose).toHaveBeenCalled()
-    expect(onCreate).toHaveBeenCalled()
-  })
-
-  it('omits the create shortcut when it is not wired up', () => {
-    renderPicker()
-
-    expect(screen.queryByRole('button', { name: /New flag/ })).not.toBeInTheDocument()
-  })
 })

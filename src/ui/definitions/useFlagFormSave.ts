@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { Flag } from '../../types'
 import type { ExpenseActions } from '../actions'
+import { useToast } from '../hooks/useToast'
+import { transactionCountLabel } from '../components/flagPickerOptions'
 
 export interface FlagDraft {
   name: string
@@ -31,6 +33,7 @@ export function useFlagFormSave(
 ) {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const { showToast } = useToast()
 
   const run = async (work: () => Promise<unknown>) => {
     setBusy(true)
@@ -65,7 +68,17 @@ export function useFlagFormSave(
 
   const remove = () => {
     if (!flag) return
-    void run(() => actions.deleteFlag(flag.id))
+    void run(async () => {
+      const { unflagged } = await actions.deleteFlag(flag.id)
+      // Deleting a flag silently changes rows the user is not looking at; say
+      // how many, which is exactly what deleteFlag returns the count for.
+      showToast(
+        unflagged === 0
+          ? `Deleted ${flag.name}`
+          : `Deleted ${flag.name} — unflagged ${transactionCountLabel(unflagged)}`,
+        'success',
+      )
+    })
   }
 
   return { busy, err, save, remove }

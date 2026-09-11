@@ -15,11 +15,9 @@ interface Props {
   triggerRef: React.RefObject<HTMLElement | null>
   onSelect: (flagId: number | null) => void
   onClose: () => void
-  /** Opens the flag editor; omitted where creating a flag isn't reachable. */
-  onCreate?: (() => void) | undefined
 }
 
-export function FlagPickerPopover({ value, flags, triggerRef, onSelect, onClose, onCreate }: Props) {
+export function FlagPickerPopover({ value, flags, triggerRef, onSelect, onClose }: Props) {
   const popoverRef = useRef<HTMLDivElement>(null)
   const pos = usePopoverPosition(triggerRef, popoverRef)
   const options = selectableFlags(flags, value)
@@ -88,18 +86,6 @@ export function FlagPickerPopover({ value, flags, triggerRef, onSelect, onClose,
         <p className={styles.empty}>
           No flags to choose from. Add one under Settings &rarr; Flags.
         </p>
-      ) : null}
-      {onCreate ? (
-        <button
-          type="button"
-          className={styles.createBtn}
-          onClick={() => {
-            onClose()
-            onCreate()
-          }}
-        >
-          + New flag…
-        </button>
       ) : null}
     </div>,
     document.body,

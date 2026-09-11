@@ -40,6 +40,10 @@ export interface FlagGroup {
  *   flag deleted in another tab — and it must not throw.
  * - Cancelled transactions are excluded entirely: you are not claiming back
  *   something that never happened.
+ * - An archived flag drops out, per the contract on `Flag` in types.ts. This is
+ *   the feature's only "done": you flag a trip, claim it, get paid, archive the
+ *   flag, and the card stops nagging — without destroying which transactions
+ *   were in the claim, the way unflagging or deleting them would.
  */
 export function groupTransactionsByFlag(
   transactions: Transaction[],
@@ -55,6 +59,7 @@ export function groupTransactionsByFlag(
 
   const groups: FlagGroup[] = []
   for (const flag of flags) {
+    if (!flag.active) continue
     const rows = byFlag.get(flag.id)
     if (!rows || rows.length === 0) continue
     groups.push({

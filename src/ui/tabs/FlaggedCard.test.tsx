@@ -78,9 +78,41 @@ describe('FlaggedCard', () => {
     expect(screen.getByText('1 item')).toBeInTheDocument()
   })
 
+  it('starts collapsed, so it costs one row above the month\u2019s transactions', () => {
+    renderCard(makeDataset({ flags: [work], transactions: [txn({ flagId: 1 })] }))
+
+    expect(screen.getByText('Work travel')).not.toBeVisible()
+  })
+
+  it('rolls every flag up into one line while collapsed', () => {
+    renderCard(
+      makeDataset({
+        flags: [work, tax],
+        transactions: [
+          txn({ flagId: 1, amountCents: 10_000 }),
+          txn({ flagId: 2, amountCents: 5_000 }),
+        ],
+      }),
+    )
+
+    // The question the feature exists for is the cross-flag total; before this
+    // the user had to add the per-flag figures themselves.
+    expect(screen.getByText('2 items across 2 flags')).toBeVisible()
+    expect(screen.getByText('150,00 €')).toBeVisible()
+  })
+
+  it('says it is not scoped to the selected month', () => {
+    // Every sibling card on this tab is month-scoped and the header above reads
+    // a single month, so the card has to declare that it is not.
+    renderCard(makeDataset({ flags: [work], transactions: [txn({ flagId: 1 })] }))
+
+    expect(screen.getByText(/All months, not just this one/)).toBeVisible()
+  })
+
   it('keeps a group collapsed until it is opened', async () => {
     renderCard(makeDataset({ flags: [work], transactions: [txn({ flagId: 1, description: 'Madrid hotel' })] }))
 
+    await userEvent.click(screen.getByText(/across 1 flag/))
     expect(screen.queryByText('Madrid hotel')).not.toBeVisible()
 
     await userEvent.click(screen.getByText('Work travel'))
@@ -88,11 +120,26 @@ describe('FlaggedCard', () => {
     expect(screen.getByText('Madrid hotel')).toBeVisible()
   })
 
+  it('leaves an archived flag out, which is how a settled claim stops nagging', () => {
+    const { container } = render(
+      <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
+        <FlaggedCard
+          model={modelFor(makeDataset({ flags: [{ ...work, active: false }], transactions: [txn({ flagId: 1 })] }))}
+          onFilterByFlag={vi.fn()}
+          onManage={vi.fn()}
+        />
+      </MoneyFormatProvider>,
+    )
+
+    expect(container).toBeEmptyDOMElement()
+  })
+
   it('asks to filter the list to a flag', async () => {
     const { onFilterByFlag } = renderCard(
       makeDataset({ flags: [work], transactions: [txn({ flagId: 1 })] }),
     )
 
+    await userEvent.click(screen.getByText(/across 1 flag/))
     await userEvent.click(screen.getByText('Work travel'))
     await userEvent.click(screen.getByRole('button', { name: /Show these in the list/ }))
 
@@ -103,6 +150,7 @@ describe('FlaggedCard', () => {
     const many = Array.from({ length: 8 }, () => txn({ flagId: 1 }))
     renderCard(makeDataset({ flags: [work], transactions: many }))
 
+    await userEvent.click(screen.getByText(/across 1 flag/))
     await userEvent.click(screen.getByText('Work travel'))
 
     expect(screen.getByRole('button', { name: /See all 8 in the list/ })).toBeInTheDocument()
@@ -113,7 +161,8 @@ describe('FlaggedCard', () => {
       makeDataset({ flags: [work], transactions: [txn({ flagId: 1 })] }),
     )
 
-    await userEvent.click(screen.getByRole('button', { name: 'Manage' }))
+    await userEvent.click(screen.getByText(/across 1 flag/))
+    await userEvent.click(screen.getByRole('button', { name: 'Manage flags' }))
 
     expect(onManage).toHaveBeenCalled()
   })

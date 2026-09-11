@@ -35,12 +35,14 @@ describe('FlagField', () => {
     expect(screen.getByRole('button', { name: /Work travel/ })).toBeInTheDocument()
   })
 
-  it('takes no space when the owner has no flags and none is applied', () => {
-    const { container } = render(
-      <FlagField flags={[]} value={null} onChange={vi.fn()} />,
-    )
+  it('is present before any flag exists, so the feature is discoverable', async () => {
+    // The Flagged card hides itself when nothing is flagged, so if this hid too
+    // there would be no trace of flags anywhere in the Transactions tab.
+    render(<FlagField flags={[]} value={null} onChange={vi.fn()} />)
 
-    expect(container).toBeEmptyDOMElement()
+    await userEvent.click(screen.getByRole('button', { name: /No flag/ }))
+
+    expect(screen.getByText(/Settings/)).toBeInTheDocument()
   })
 
   it('opens the picker and reports a choice', async () => {

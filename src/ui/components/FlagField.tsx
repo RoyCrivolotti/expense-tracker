@@ -18,12 +18,15 @@ interface Props {
   onTrapPausedChange?: ((paused: boolean) => void) | undefined
 }
 
+/**
+ * Always rendered, including before any flag exists. Hiding it until the owner
+ * had a flag meant the only trace of the feature in the Transactions tab was a
+ * card that also hides itself when empty — so nothing pointed at it, and the
+ * picker's own "add one under Settings → Flags" copy was unreachable.
+ */
 export function FlagField({ flags, value, onChange, onTrapPausedChange }: Props) {
   const triggerRef = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(false)
-
-  // Nothing to pick and nothing picked: don't spend a row on it.
-  if (flags.length === 0 && value == null) return null
 
   const selected = selectableFlags(flags, value).find((f) => f.id === value)
 

@@ -100,17 +100,18 @@ describe('groupTransactionsByFlag', () => {
     expect(new Set(ids).size).toBe(ids.length)
   })
 
-  it('includes an archived flag that still has transactions on it', () => {
-    // Archiving hides a flag from the pickers; it must not silently drop the
-    // money still tagged with it.
+  it('drops an archived flag from the card, which is how a claim is settled', () => {
+    // types.ts promises archiving removes a flag from the Flagged summary while
+    // keeping its links. That is the feature's only "done" — the transactions
+    // keep their flagId and stay findable through the "archived" filter option.
     const groups = groupTransactionsByFlag([txn({ flagId: 1 })], [flag({ id: 1, active: false })])
 
-    expect(groups).toHaveLength(1)
+    expect(groups).toEqual([])
   })
 })
 
 describe('summarizeFlagGroups', () => {
-  it('rolls counts and totals up for the collapsed header', () => {
+  it('rolls every group up for the collapsed header', () => {
     const groups = groupTransactionsByFlag(
       [txn({ flagId: 1, amountCents: 2_500 }), txn({ flagId: 2, amountCents: 1_500 })],
       [flag({ id: 1 }), flag({ id: 2 })],
