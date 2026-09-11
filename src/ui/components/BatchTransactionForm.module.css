@@ -32,7 +32,21 @@
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  padding: 0.6rem 0;
+  padding: 0.75rem 0;
+  border-left: 3px solid var(--color-text-muted);
+  padding-left: 0.6rem;
+}
+.row[data-type='expense'] {
+  border-left-color: var(--exp-expense);
+}
+.row[data-type='income'] {
+  border-left-color: var(--exp-income);
+}
+.row[data-type='investment'] {
+  border-left-color: var(--exp-investment);
+}
+.row[data-type='refund'] {
+  border-left-color: var(--exp-refund);
 }
 .row + .row {
   border-top: 1px solid var(--color-border);
@@ -43,26 +57,6 @@
   flex-wrap: wrap;
   gap: 0.35rem;
   align-items: center;
-}
-
-.typeDot {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
-  flex: none;
-  background: var(--color-text-muted);
-}
-.typeDot[data-type='expense'] {
-  background: var(--exp-expense);
-}
-.typeDot[data-type='income'] {
-  background: var(--exp-income);
-}
-.typeDot[data-type='investment'] {
-  background: var(--exp-investment);
-}
-.typeDot[data-type='refund'] {
-  background: var(--exp-refund);
 }
 
 .compactType {
@@ -103,7 +97,14 @@
   font-weight: 400;
 }
 
+.descriptionRow {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
 .compactDescription {
+  flex: 1;
   min-width: 0;
 }
 .compactDescription input {
@@ -167,10 +168,6 @@
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
-.colHeaderDot {
-  width: 0.5rem;
-  flex: none;
-}
 .colHeaderType {
   width: 5.5rem;
   flex: none;
@@ -186,10 +183,6 @@
 .colHeaderAcct {
   flex: 1 1 5rem;
   min-width: 0;
-}
-.colHeaderRemove {
-  width: 1.6rem;
-  flex: none;
 }
 
 /* ─── Buttons ─────────────────────────────────────────────────────────────── */
@@ -232,9 +225,8 @@
 @media (min-width: 560px) {
   .columnHeaders {
     display: flex;
-    flex-wrap: wrap;
     gap: 0.35rem;
-    padding: 0 0 0.15rem;
+    padding: 0 0 0.15rem calc(3px + 0.6rem);
     align-items: center;
   }
 

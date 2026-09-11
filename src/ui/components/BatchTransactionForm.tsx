@@ -216,18 +216,15 @@ export function BatchTransactionForm({
           </div>
 
           <div className={styles.columnHeaders} aria-hidden="true">
-            <span className={styles.colHeaderDot} />
             <span className={styles.colHeaderType}>Type</span>
             <span className={styles.colHeaderAmount}>Amount</span>
             <span className={styles.colHeaderCat}>Category</span>
             <span className={styles.colHeaderAcct}>Account</span>
-            <span className={styles.colHeaderRemove} />
           </div>
 
           {batch.rows.map((row) => (
-            <div key={row.id} id={rowElementId(row.id)} className={styles.row}>
+            <div key={row.id} id={rowElementId(row.id)} className={styles.row} data-type={row.type}>
               <div className={styles.rowMeta}>
-                <span className={styles.typeDot} data-type={row.type} aria-hidden="true" />
                 <select
                   className={styles.compactType}
                   value={row.type}
@@ -268,6 +265,17 @@ export function BatchTransactionForm({
                     <option key={a.id} value={a.id}>{optionLabel(a)}</option>
                   ))}
                 </select>
+              </div>
+              <div className={styles.descriptionRow}>
+                <div className={styles.compactDescription}>
+                  <DescriptionCombobox
+                    value={row.description}
+                    index={model.descriptionIndex}
+                    placeholder="e.g. Mercadona"
+                    onChange={(v) => updateRow(batch.id, row.id, { description: v })}
+                    onAccept={(s) => onAcceptSuggestion(batch.id, row.id, s)}
+                  />
+                </div>
                 <button
                   type="button"
                   className={styles.removeRow}
@@ -276,15 +284,6 @@ export function BatchTransactionForm({
                 >
                   <CloseIcon />
                 </button>
-              </div>
-              <div className={styles.compactDescription}>
-                <DescriptionCombobox
-                  value={row.description}
-                  index={model.descriptionIndex}
-                  placeholder="e.g. Mercadona"
-                  onChange={(v) => updateRow(batch.id, row.id, { description: v })}
-                  onAccept={(s) => onAcceptSuggestion(batch.id, row.id, s)}
-                />
               </div>
               {errors[row.id] && <p className={formStyles.error}>{errors[row.id]}</p>}
             </div>
