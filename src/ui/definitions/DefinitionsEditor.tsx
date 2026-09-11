@@ -7,6 +7,7 @@ import type { ExpenseActions } from '../actions'
 import { Card, SectionTitle } from '../components/primitives'
 import { Money } from '../components/Money'
 import { ConfigModal, type EditTarget } from './ConfigModal'
+import { FlagList } from './FlagList'
 import { CategoryIcon } from '../components/CategoryIcon'
 import styles from './definitions.module.css'
 import tabStyles from '../tabs/tabs.module.css'
@@ -163,6 +164,7 @@ export function DefinitionsEditor({
       <CategoryList model={model} onEdit={setTarget} />
       <SectionTitle>Accounts</SectionTitle>
       <AccountList model={model} onEdit={setTarget} />
+      <FlagList model={model} actions={actions} />
       <SectionTitle>Opening balances</SectionTitle>
       <ScalarCard
         rows={<BalanceRows s={model.dataset.settings} />}

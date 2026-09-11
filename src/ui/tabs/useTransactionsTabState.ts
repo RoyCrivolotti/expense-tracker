@@ -21,6 +21,7 @@ import {
 function useTxnListFilters(month: string) {
   const [categoryId, setCategoryId] = useState<number | 'all'>('all')
   const [accountId, setAccountId] = useState<number | 'all'>('all')
+  const [flagId, setFlagId] = useState<number | 'all' | 'none'>('all')
   const [txnType, setTxnType] = useState<TxnType | 'all'>('all')
   const [status, setStatus] = useState<StatusFilter>('all')
   const [query, setQuery] = useState('')
@@ -42,34 +43,49 @@ function useTxnListFilters(month: string) {
       status,
       ...(categoryId !== 'all' ? { categoryId } : {}),
       ...(accountId !== 'all' ? { accountId } : {}),
+      ...(flagId !== 'all' ? { flagId } : {}),
       ...(txnType !== 'all' ? { type: txnType } : {}),
       ...(query.trim() ? { query: query.trim() } : {}),
     }),
-    [dateScope, customDateFrom, customDateTo, month, status, categoryId, accountId, txnType, query],
+    [
+      dateScope,
+      customDateFrom,
+      customDateTo,
+      month,
+      status,
+      categoryId,
+      accountId,
+      flagId,
+      txnType,
+      query,
+    ],
   )
   const hasActiveFilters = useMemo(
     () =>
       query.trim() !== '' ||
       categoryId !== 'all' ||
       accountId !== 'all' ||
+      flagId !== 'all' ||
       txnType !== 'all' ||
       status !== 'all' ||
       isSecondaryDateScope(dateScope),
-    [query, categoryId, accountId, txnType, status, dateScope],
+    [query, categoryId, accountId, flagId, txnType, status, dateScope],
   )
   const secondaryFilterCount = useMemo(
     () =>
       (categoryId !== 'all' ? 1 : 0) +
       (accountId !== 'all' ? 1 : 0) +
+      (flagId !== 'all' ? 1 : 0) +
       (txnType !== 'all' ? 1 : 0) +
       (status !== 'all' ? 1 : 0) +
       (isSecondaryDateScope(dateScope) ? 1 : 0),
-    [categoryId, accountId, txnType, status, dateScope],
+    [categoryId, accountId, flagId, txnType, status, dateScope],
   )
   const clearFilters = () => {
     setQuery('')
     setCategoryId('all')
     setAccountId('all')
+    setFlagId('all')
     setTxnType('all')
     setStatus('all')
     setDateScope('budgetMonth')
@@ -81,6 +97,8 @@ function useTxnListFilters(month: string) {
     setCategoryId,
     accountId,
     setAccountId,
+    flagId,
+    setFlagId,
     txnType,
     setTxnType,
     status,

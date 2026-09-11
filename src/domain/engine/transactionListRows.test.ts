@@ -165,3 +165,44 @@ describe('buildTransactionListRows', () => {
     expect(groupListRowsByDay(julyRows)[0]?.date).toBe('2026-07-15')
   })
 })
+
+describe('buildTransactionListRows — flag filter', () => {
+  const statements: AccountStatement[] = [
+    { accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-06-15' },
+  ]
+  const settings = { defaultAccountId: 1 }
+
+  function rowsFor(filter: Parameters<typeof buildTransactionListRows>[1]) {
+    return buildTransactionListRows(
+      [
+        txn({ budgetMonth: '2026-06', id: 10, flagId: 7 }),
+        txn({ budgetMonth: '2026-06', id: 11 }),
+      ],
+      filter,
+      statements,
+      cashRows,
+      accounts,
+      settings,
+    )
+  }
+
+  it('keeps the synthetic card-payment row when no flag filter is set', () => {
+    expect(rowsFor({ month: '2026-06' }).some((r) => r.kind === 'statement-payment')).toBe(true)
+  })
+
+  it('excludes card payments when narrowing to a specific flag', () => {
+    // They are synthetic rows and can never carry a flag, so showing them under
+    // "Work travel" would be plainly wrong.
+    const rows = rowsFor({ month: '2026-06', flagId: 7 })
+
+    expect(rows.some((r) => r.kind === 'statement-payment')).toBe(false)
+    expect(rows).toHaveLength(1)
+  })
+
+  it('keeps card payments when narrowing to unflagged transactions', () => {
+    const rows = rowsFor({ month: '2026-06', flagId: 'none' })
+
+    expect(rows.some((r) => r.kind === 'statement-payment')).toBe(true)
+    expect(rows.filter((r) => r.kind === 'transaction')).toHaveLength(1)
+  })
+})

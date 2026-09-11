@@ -8,6 +8,7 @@ import { DateInput } from './DateInput'
 import { DescriptionCombobox } from './DescriptionCombobox'
 import { MonthInput } from './MonthInput'
 import { optionLabel, selectableOptions } from './pickerOptions'
+import { FlagField } from './FlagField'
 import type { FormFields, Setter } from './transactionFormState'
 import styles from './TransactionForm.module.css'
 
@@ -136,9 +137,18 @@ interface FieldsProps {
   model: ExpenseModel
   editing: Transaction | null
   onAcceptSuggestion: (suggestion: DescriptionSuggestion) => void
+  /** Lets an enclosing Modal pause its focus trap while a popover is open. */
+  onTrapPausedChange?: ((paused: boolean) => void) | undefined
 }
 
-export function Fields({ form, set, model, editing, onAcceptSuggestion }: FieldsProps) {
+export function Fields({
+  form,
+  set,
+  model,
+  editing,
+  onAcceptSuggestion,
+  onTrapPausedChange,
+}: FieldsProps) {
   const format = useMoneyFormat()
   const onDate = (v: string) => {
     set('date', v)
@@ -181,6 +191,12 @@ export function Fields({ form, set, model, editing, onAcceptSuggestion }: Fields
       <Field label="Notes">
         <input value={form.notes} onChange={(e) => set('notes', e.target.value)} />
       </Field>
+      <FlagField
+        flags={model.dataset.flags}
+        value={form.flagId}
+        onChange={(flagId) => set('flagId', flagId)}
+        onTrapPausedChange={onTrapPausedChange}
+      />
     </>
   )
 }
