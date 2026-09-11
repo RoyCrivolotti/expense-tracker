@@ -1,0 +1,185 @@
+/* Shared trigger style used by DateInput / MonthInput */
+.trigger {
+  display: block;
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.95rem;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.trigger:focus-visible {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+/* Popover container */
+.popover {
+  position: absolute;
+  z-index: 1000;
+  min-width: 280px;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+/* Header row: month/year title + nav arrows */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+.headerTitle {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--color-text);
+  cursor: default;
+}
+.headerNav {
+  display: flex;
+  gap: 0.25rem;
+}
+.navBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-accent);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+.navBtn:hover {
+  background: var(--color-border);
+}
+
+/* Day-of-week header row */
+.weekRow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* Calendar grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.dayBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+  padding: 0;
+}
+.dayBtn:hover {
+  background: var(--color-border);
+}
+.dayOutside {
+  color: var(--color-text-muted);
+  opacity: 0.4;
+}
+.dayToday {
+  font-weight: 700;
+  color: var(--color-accent);
+}
+.dayBtn.daySelected {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  font-weight: 700;
+}
+
+/* Footer: Reset / Confirm */
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+.resetBtn {
+  padding: 0.45rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 2rem;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.resetBtn:hover {
+  background: var(--color-border);
+}
+.confirmBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+.confirmBtn:hover {
+  opacity: 0.85;
+}
+
+/* Month grid (4×3) */
+.monthGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.4rem;
+}
+.monthBtn {
+  padding: 0.55rem 0.25rem;
+  border: 0;
+  border-radius: 0.6rem;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+  text-align: center;
+}
+.monthBtn:hover {
+  background: var(--color-border);
+}
+.monthCurrent {
+  font-weight: 700;
+  color: var(--color-accent);
+}
+.monthBtn.monthSelected {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  font-weight: 700;
+}

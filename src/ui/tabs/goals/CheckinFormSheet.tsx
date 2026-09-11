@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { WealthAccount } from '../../../types'
 import type { ExpenseActions } from '../../actions'
 import { Card } from '../../components/primitives'
+import { DateInput } from '../../components/DateInput'
 import { formatMoneyInput, parseMoneyToCents } from '../../../engine'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import styles from './progress.module.css'
@@ -67,16 +68,11 @@ export function CheckinFormSheet({ accounts, actions, onDone }: Props) {
       <h3 className={goalStyles.sectionTitle}>New check-in</h3>
       <div className={styles.checkinForm}>
         <div className={styles.formField}>
-          <label className={styles.formLabel} htmlFor="checkin-date">
-            Date
-          </label>
-          <input
-            id="checkin-date"
-            className={[styles.formInput, styles.formInputNarrow].join(' ')}
-            type="date"
+          <span className={styles.formLabel}>Date</span>
+          <DateInput
             value={date}
-            max={today}
-            onChange={(e) => setDate(e.target.value)}
+            ariaLabel="Date"
+            onChange={setDate}
           />
         </div>
 

@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { formatMoneyInput, parseMoneyToCents } from '../../../engine'
+import { DateInput } from '../../components/DateInput'
 import { PercentStepper } from '../../components/PercentStepper'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import styles from './goals.module.css'
@@ -173,22 +174,17 @@ interface DateFieldProps {
 
 export function DateField({ label, value, hint, onChange }: DateFieldProps) {
   return (
-    <label className={styles.field}>
+    <div className={styles.field}>
       <div className={styles.fieldRow}>
         <span className={styles.fieldLabel}>{label}</span>
-        <input
-          className={styles.valueInput}
-          type="date"
-          aria-label={label}
+        <DateInput
           value={value ?? ''}
-          onChange={(e) => {
-            const v = e.target.value
-            onChange(v || null)
-          }}
+          ariaLabel={label}
+          onChange={(v) => onChange(v || null)}
         />
       </div>
       {hint ? <p className={styles.fieldHint}>{hint}</p> : null}
-    </label>
+    </div>
   )
 }
 

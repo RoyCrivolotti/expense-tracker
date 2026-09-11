@@ -1,4 +1,5 @@
 import { todayLocalIso } from '../dates'
+import { DateInput } from './DateInput'
 import { StatementPaidToggle } from './StatementPaidToggle'
 import styles from './StatementPaidDate.module.css'
 
@@ -29,27 +30,16 @@ export function StatementPaidDate({
     )
   }
 
-  const commitDate = (raw: string) => {
-    if (!raw) {
-      onMarkDue()
-      return
-    }
-    if (raw !== paidOn) onEditDate(raw)
-  }
-
   return (
     <div className={styles.paidRow}>
       <StatementPaidToggle paid disabled={disabled} onToggle={onMarkDue} />
-      <input
-        type="date"
-        className={styles.dateInput}
-        defaultValue={paidOn ?? ''}
-        key={paidOn ?? 'empty'}
+      <DateInput
+        value={paidOn ?? ''}
+        ariaLabel="Statement paid on"
         disabled={disabled}
-        aria-label="Statement paid on"
-        onBlur={(e) => commitDate(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') e.currentTarget.blur()
+        onChange={(v) => {
+          if (!v) { onMarkDue(); return }
+          if (v !== paidOn) onEditDate(v)
         }}
       />
     </div>
