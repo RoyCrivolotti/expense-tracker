@@ -1,4 +1,4 @@
-import { useRef, useState, type RefObject } from 'react'
+import { useRef, type RefObject } from 'react'
 import { defaultBudgetMonth, fullMonthLabel, shortMonthYearLabel } from '../../engine/dates'
 import { formatDayLabel } from '../format'
 import { CloseIcon, PlusIcon } from '../icons'
@@ -49,13 +49,10 @@ export function EntryGroupCard({
   onRemoveGroup,
 }: EntryGroupCardProps) {
   const format = useMoneyFormat()
-  const [showDefaults, setShowDefaults] = useState(false)
-  // Enter in Amount hands off to Description, so the whole line is keyboard-only.
   const descriptionRef = useRef<HTMLInputElement>(null)
 
   const categoryName =
     model.dataset.categories.find((c) => c.id === group.categoryId)?.name ?? 'Category'
-  const accountName = model.dataset.accounts.find((a) => a.id === group.accountId)?.name ?? 'Account'
   const budgetMonth = defaultBudgetMonth(group.date, model.dataset.settings.budgetRolloverDay)
   const dayLabel = formatDayLabel(group.date)
   const draftError = errors[group.draft.id]
@@ -109,40 +106,27 @@ export function EntryGroupCard({
           )}
         </div>
 
+        <div className={styles.defaultsRow}>
+          <TypeSelector value={group.type} onChange={(t) => onDefaultsChange({ type: t })} />
+          <Field label="Account">
+            <select
+              value={group.accountId}
+              onChange={(e) => onDefaultsChange({ accountId: Number(e.target.value) })}
+            >
+              {selectableOptions(model.dataset.accounts, group.accountId).map((a) => (
+                <option key={a.id} value={a.id}>
+                  {optionLabel(a)}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+
         <div className={styles.groupMeta}>
           <span className={styles.budgetPill} title={fullMonthLabel(budgetMonth)}>
             {shortMonthYearLabel(budgetMonth)}
           </span>
-          <span className={styles.defaultsSummary}>
-            {accountName} · {group.type}
-          </span>
-          <button
-            type="button"
-            className={styles.changeDefaults}
-            aria-expanded={showDefaults}
-            onClick={() => setShowDefaults((s) => !s)}
-          >
-            {showDefaults ? 'Done' : 'Change'}
-          </button>
         </div>
-
-        {showDefaults && (
-          <div className={styles.defaultsPanel}>
-            <TypeSelector value={group.type} onChange={(t) => onDefaultsChange({ type: t })} />
-            <Field label="Account">
-              <select
-                value={group.accountId}
-                onChange={(e) => onDefaultsChange({ accountId: Number(e.target.value) })}
-              >
-                {selectableOptions(model.dataset.accounts, group.accountId).map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {optionLabel(a)}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </div>
-        )}
       </div>
 
       {group.lines.length > 0 && (

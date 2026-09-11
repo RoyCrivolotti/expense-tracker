@@ -77,31 +77,14 @@
   white-space: nowrap;
 }
 
-.defaultsSummary {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-transform: capitalize;
-}
-
-.changeDefaults {
-  margin-left: auto;
-  min-height: 2.75rem;
-  padding: 0 0.6rem;
-  border: 0;
-  background: none;
-  color: var(--color-accent);
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.defaultsPanel {
+.defaultsRow {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  padding-top: 0.2rem;
+  align-items: stretch;
+}
+.defaultsRow > * {
+  min-width: 0;
 }
 
 /* ─── Committed lines ─────────────────────────────────────────────────────── */
@@ -357,6 +340,10 @@
   }
   .stripAmount {
     flex: 0 0 8rem;
+  }
+  .defaultsRow {
+    flex-direction: row;
+    align-items: flex-end;
   }
   .removeGroup {
     align-self: flex-end;
