@@ -12,7 +12,7 @@ describe('NativeDateOverlay', () => {
   it('opens the native picker when clicked anywhere in the field (desktop click-anywhere parity with mobile)', () => {
     const showPicker = vi.fn()
     Object.defineProperty(HTMLInputElement.prototype, 'showPicker', { value: showPicker, configurable: true })
-    render(<NativeDateOverlay type="date" value="2026-07-05" label="5 Jul 2026" onChange={vi.fn()} />)
+    render(<NativeDateOverlay type="date" value="2026-07-05" label="5 Jul 2026" ariaLabel="Date" onChange={vi.fn()} />)
 
     fireEvent.click(screen.getByDisplayValue('2026-07-05'))
 
@@ -22,7 +22,7 @@ describe('NativeDateOverlay', () => {
   it('opens the picker on Space (keyboard parity) but leaves Enter alone (form submit)', () => {
     const showPicker = vi.fn()
     Object.defineProperty(HTMLInputElement.prototype, 'showPicker', { value: showPicker, configurable: true })
-    render(<NativeDateOverlay type="date" value="2026-07-05" label="5 Jul 2026" onChange={vi.fn()} />)
+    render(<NativeDateOverlay type="date" value="2026-07-05" label="5 Jul 2026" ariaLabel="Date" onChange={vi.fn()} />)
     const input = screen.getByDisplayValue('2026-07-05')
 
     fireEvent.keyDown(input, { key: ' ' })
@@ -33,7 +33,7 @@ describe('NativeDateOverlay', () => {
   })
 
   it('does not throw when showPicker is unsupported (older Firefox)', () => {
-    render(<NativeDateOverlay type="date" value="2026-07-05" label="5 Jul 2026" onChange={vi.fn()} />)
+    render(<NativeDateOverlay type="date" value="2026-07-05" label="5 Jul 2026" ariaLabel="Date" onChange={vi.fn()} />)
     expect(() => fireEvent.click(screen.getByDisplayValue('2026-07-05'))).not.toThrow()
   })
 
@@ -44,14 +44,19 @@ describe('NativeDateOverlay', () => {
       },
       configurable: true,
     })
-    render(<NativeDateOverlay type="date" value="2026-07-05" label="5 Jul 2026" onChange={vi.fn()} />)
+    render(<NativeDateOverlay type="date" value="2026-07-05" label="5 Jul 2026" ariaLabel="Date" onChange={vi.fn()} />)
     expect(() => fireEvent.click(screen.getByDisplayValue('2026-07-05'))).not.toThrow()
   })
 
   it('still calls onChange when the underlying value changes', () => {
     const onChange = vi.fn()
-    render(<NativeDateOverlay type="date" value="2026-07-05" label="5 Jul 2026" onChange={onChange} />)
+    render(<NativeDateOverlay type="date" value="2026-07-05" label="5 Jul 2026" ariaLabel="Date" onChange={onChange} />)
     fireEvent.change(screen.getByDisplayValue('2026-07-05'), { target: { value: '2026-09-10' } })
     expect(onChange).toHaveBeenCalledWith('2026-09-10')
+  })
+
+  it('exposes ariaLabel as the input\'s accessible name', () => {
+    render(<NativeDateOverlay type="date" value="2026-07-05" label="5 Jul 2026" ariaLabel="Date" onChange={vi.fn()} />)
+    expect(screen.getByLabelText('Date')).toHaveValue('2026-07-05')
   })
 })

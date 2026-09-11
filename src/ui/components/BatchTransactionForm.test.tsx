@@ -191,6 +191,18 @@ describe('BatchTransactionForm — rows and dates', () => {
     }
   })
 
+  it('does not open the picker when the "Date" caption is clicked — only the pill itself should', () => {
+    const showPicker = vi.fn()
+    Object.defineProperty(HTMLInputElement.prototype, 'showPicker', { value: showPicker, configurable: true })
+    try {
+      renderForm()
+      fireEvent.click(screen.getByText('Date'))
+      expect(showPicker).not.toHaveBeenCalled()
+    } finally {
+      delete (HTMLInputElement.prototype as { showPicker?: () => void }).showPicker
+    }
+  })
+
   it('has no Budget month field (batch entry is Date-only; guards against the shared date-overlay component pulling one in)', () => {
     renderForm()
     expect(document.querySelector('input[type="month"]')).toBeNull()

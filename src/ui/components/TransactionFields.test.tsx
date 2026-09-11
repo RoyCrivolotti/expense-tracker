@@ -189,15 +189,37 @@ describe('Date/Budget month native-input overlay', () => {
     expect(screen.getByText("Jul '26")).toBeTruthy()
   })
 
-  it('still resolves the Date/Budget month inputs by their real value (label text-content match breaks once a visible sibling is added — see below)', () => {
+  it('still resolves the Date/Budget month inputs by their real value', () => {
     renderFields(baseForm({ date: '2026-07-05', budgetMonth: '2026-07' }), modelWith())
-    // testing-library's getByLabelText matches a wrapping <label>'s full textContent,
-    // which isn't aria-hidden-aware the way a real browser's accessible-name computation
-    // is (confirmed separately via Playwright's getByLabel, which does exclude it) — so
-    // it sees "Date10 Sep 2026" here, not "Date". Querying by the input's own value
-    // sidesteps that jsdom/testing-library gap and is arguably more precise anyway.
     expect(screen.getByDisplayValue<HTMLInputElement>('2026-07-05').type).toBe('date')
     expect(screen.getByDisplayValue<HTMLInputElement>('2026-07').type).toBe('month')
+  })
+
+  it('resolves cleanly by accessible name too, via NativeDateOverlay\'s own aria-label', () => {
+    // Field renders these as `as="div"`, not a <label> — so there's no wrapping-label
+    // textContent to pollute the accessible name the way there was before the caption
+    // was pulled out of the click-to-open surface (see the next test).
+    renderFields(baseForm({ date: '2026-07-05', budgetMonth: '2026-07' }), modelWith())
+    expect(screen.getByLabelText<HTMLInputElement>('Date').value).toBe('2026-07-05')
+    expect(screen.getByLabelText<HTMLInputElement>('Budget month').value).toBe('2026-07')
+  })
+
+  it('does not open the picker when the "Date"/"Budget month" caption is clicked — only the pill itself should', () => {
+    // A <label> forwards a click anywhere in it (including caption text) to its
+    // wrapped control — that's how "click a checkbox's label" works natively, and it
+    // would otherwise turn "click the pill" into "click anywhere near the pill,
+    // including the word above it". Field renders these two as `as="div"` specifically
+    // to keep that forwarding from happening.
+    const showPicker = vi.fn()
+    Object.defineProperty(HTMLInputElement.prototype, 'showPicker', { value: showPicker, configurable: true })
+    try {
+      renderFields(baseForm({ date: '2026-07-05', budgetMonth: '2026-07' }), modelWith())
+      fireEvent.click(screen.getByText('Date'))
+      fireEvent.click(screen.getByText('Budget month'))
+      expect(showPicker).not.toHaveBeenCalled()
+    } finally {
+      delete (HTMLInputElement.prototype as { showPicker?: () => void }).showPicker
+    }
   })
 
   it('updates date (and the derived budget month, for a new transaction) when the Date input changes', () => {
