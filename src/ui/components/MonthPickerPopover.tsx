@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useFocusTrap } from '../hooks/useFocusTrap'
+import { useDismissOnOutsidePointer } from '../charts/useDismissOnOutsidePointer'
 import { usePopoverPosition } from '../hooks/usePopoverPosition'
 import styles from './DatePicker.module.css'
 
@@ -42,11 +44,11 @@ export function MonthPickerPopover({ value, triggerRef, onSelect, onClose }: Pro
     setSelectedMonth(m)
   }
 
-  const confirm = () => {
+  const confirm = useCallback(() => {
     const ym = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`
     onSelect(ym)
     onClose()
-  }
+  }, [selectedYear, selectedMonth, onSelect, onClose])
 
   const reset = () => {
     setViewYear(thisY)
@@ -54,32 +56,16 @@ export function MonthPickerPopover({ value, triggerRef, onSelect, onClose }: Pro
     setSelectedMonth(thisM)
   }
 
-  // Click outside
-  useEffect(() => {
-    const onPointerDown = (e: PointerEvent) => {
-      if (
-        popoverRef.current &&
-        !popoverRef.current.contains(e.target as Node) &&
-        triggerRef.current &&
-        !triggerRef.current.contains(e.target as Node)
-      ) {
-        onClose()
-      }
-    }
-    document.addEventListener('pointerdown', onPointerDown, true)
-    return () => document.removeEventListener('pointerdown', onPointerDown, true)
-  }, [onClose, triggerRef])
+  useFocusTrap(popoverRef, onClose)
+  useDismissOnOutsidePointer(popoverRef, true, onClose, triggerRef)
 
-  // Keyboard
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { onClose(); return }
-      if (e.key === 'Enter') { e.preventDefault(); confirm(); return }
+      if (e.key === 'Enter') { e.preventDefault(); confirm() }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedYear, selectedMonth])
+  }, [confirm])
 
   return createPortal(
     <div

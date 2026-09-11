@@ -1,17 +1,20 @@
 import { useEffect, type RefObject } from 'react'
 
-/** Clear pinned chart focus when the user taps/clicks outside the chart container. */
 export function useDismissOnOutsidePointer(
   containerRef: RefObject<HTMLElement | null>,
   active: boolean,
   onDismiss: () => void,
+  excludeRef?: RefObject<HTMLElement | null>,
 ) {
   useEffect(() => {
     if (!active) return
     const onPointerDown = (e: PointerEvent) => {
-      if (!containerRef.current?.contains(e.target as Node)) onDismiss()
+      const target = e.target as Node
+      if (containerRef.current?.contains(target)) return
+      if (excludeRef?.current?.contains(target)) return
+      onDismiss()
     }
     document.addEventListener('pointerdown', onPointerDown, true)
     return () => document.removeEventListener('pointerdown', onPointerDown, true)
-  }, [active, containerRef, onDismiss])
+  }, [active, containerRef, onDismiss, excludeRef])
 }

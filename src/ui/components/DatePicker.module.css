@@ -110,9 +110,9 @@
   font-weight: 700;
   color: var(--color-accent);
 }
-.daySelected {
-  background: var(--color-accent) !important;
-  color: var(--color-accent-contrast) !important;
+.dayBtn.daySelected {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
   font-weight: 700;
 }
 
@@ -178,8 +178,8 @@
   font-weight: 700;
   color: var(--color-accent);
 }
-.monthSelected {
-  background: var(--color-accent) !important;
-  color: var(--color-accent-contrast) !important;
+.monthBtn.monthSelected {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
   font-weight: 700;
 }

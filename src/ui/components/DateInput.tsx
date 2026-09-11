@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { shortDateLabel } from '../../engine/dates'
-import { useIsNativeDatePicker } from '../hooks/useIsNativeDatePicker'
+import { isNativeDatePicker } from '../hooks/isNativeDatePicker'
 import { NativeDateOverlay } from './NativeDateOverlay'
 import { DatePickerPopover } from './DatePickerPopover'
 import styles from './DatePicker.module.css'
@@ -13,7 +13,7 @@ interface Props {
 }
 
 export function DateInput({ value, ariaLabel = 'Date', disabled, onChange }: Props) {
-  const native = useIsNativeDatePicker()
+  const native = isNativeDatePicker()
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
 
