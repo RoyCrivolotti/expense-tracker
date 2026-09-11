@@ -19,24 +19,26 @@ import {
 import { DescriptionCombobox } from './DescriptionCombobox'
 import { Money } from './Money'
 import { optionLabel, selectableOptions } from './pickerOptions'
-import { Field, TypeSelector } from './TransactionFields'
+import { Field } from './TransactionFields'
 import { todayIso } from './transactionFormState'
 import formStyles from './TransactionForm.module.css'
 import styles from './BatchTransactionForm.module.css'
+
+const TYPE_OPTIONS: { value: TxnType; label: string }[] = [
+  { value: 'expense', label: 'Expense' },
+  { value: 'income', label: 'Income' },
+  { value: 'investment', label: 'Invest' },
+  { value: 'refund', label: 'Refund' },
+]
 
 interface BatchTransactionFormProps {
   model: ExpenseModel
   actions: ExpenseActions
   onClose: () => void
-  /** Kept mounted but visually hidden (e.g. while the single-transaction tab is
-   * active), so its own state survives switching back rather than losing typed rows. */
   hidden?: boolean
-  /** Reports whether any row has content, so a caller can warn before discarding
-   * it (e.g. closing the modal without saving). */
   onDirtyChange?: (dirty: boolean) => void
 }
 
-/** DOM id for a row's wrapper, so a failed save can scroll the first bad row into view. */
 const rowElementId = (rowId: string) => `batch-row-${rowId}`
 
 export function BatchTransactionForm({
@@ -53,9 +55,6 @@ export function BatchTransactionForm({
     model.dataset.categories.find((c) => c.active)?.id ?? model.dataset.categories[0]?.id ?? 0
   const defaultAccountId = () => resolveDefaultAccountId(model.dataset.accounts, model.dataset.settings)
 
-  // crypto.randomUUID() is a plain pure call (unlike a ref-backed counter), so
-  // it's safe to use here in the lazy useState initializer below as well as
-  // in later event handlers — no useId/useRef split needed.
   const makeRow = (categoryId: number, accountId: number, type: TxnType = 'expense'): BatchRowDraft => ({
     id: crypto.randomUUID(),
     type,
@@ -78,8 +77,6 @@ export function BatchTransactionForm({
 
   useEffect(() => {
     onDirtyChange?.(batches.some((b) => b.rows.some((r) => !isRowEmpty(r))))
-    // onDirtyChange intentionally omitted: callers pass a state setter inline, which
-    // would otherwise re-run this on every parent render regardless of `batches`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [batches])
 
@@ -94,9 +91,6 @@ export function BatchTransactionForm({
           : { ...b, rows: b.rows.map((r) => (r.id === rowId ? { ...r, ...patch } : r)) },
       ),
     )
-    // Editing a flagged row clears its stale error immediately rather than
-    // leaving last save attempt's message showing after the value's fixed;
-    // save() re-validates and re-flags it if it's still bad.
     setErrors((e) => {
       if (!(rowId in e)) return e
       const next = { ...e }
@@ -153,8 +147,6 @@ export function BatchTransactionForm({
           ...b,
           rows: b.rows.map((r) => {
             if (r.id !== rowId) return r
-            // Account is a per-row field (like the single-transaction form), so
-            // the suggestion's remembered account applies here, same as there.
             const patch = applyDescriptionSuggestion(suggestion, model.dataset, {
               categoryId: r.categoryId,
               accountId: r.accountId,
@@ -165,9 +157,6 @@ export function BatchTransactionForm({
       }),
     )
 
-  // Same "counts toward saving" rule buildBatchTransactions uses (non-empty
-  // AND a positive amount), so this summary never promises more than save()
-  // will actually persist.
   const saveableRows = batches.flatMap((b) =>
     b.rows.filter((r) => !isRowEmpty(r) && Math.abs(parseMoneyToCents(r.amount, format)) > 0),
   )
@@ -180,9 +169,6 @@ export function BatchTransactionForm({
       setErrors(result.errors)
       const firstErrorRowId = Object.keys(result.errors)[0]
       if (firstErrorRowId) {
-        // `behavior: 'smooth'` is a silent no-op for an element inside this
-        // modal's nested `overflow-y: auto` container in at least one real
-        // browser engine (verified manually) — 'auto' actually moves it.
         document
           .getElementById(rowElementId(firstErrorRowId))
           ?.scrollIntoView({ behavior: 'auto', block: 'center' })
@@ -229,22 +215,57 @@ export function BatchTransactionForm({
             )}
           </div>
 
+          <div className={styles.columnHeaders} aria-hidden="true">
+            <span className={styles.colHeaderType}>Type</span>
+            <span className={styles.colHeaderAmount}>Amount</span>
+            <span className={styles.colHeaderCat}>Category</span>
+            <span className={styles.colHeaderAcct}>Account</span>
+          </div>
+
           {batch.rows.map((row) => (
-            <div key={row.id} id={rowElementId(row.id)} className={styles.row}>
-              <TypeSelector value={row.type} onChange={(t) => updateRow(batch.id, row.id, { type: t })} />
-              <div className={styles.rowFields}>
-                <Field label="Amount">
-                  <input
-                    className={styles.rowAmount}
-                    type="text"
-                    inputMode="decimal"
-                    autoComplete="off"
-                    placeholder={`0${format.decimalSeparator}00`}
-                    value={row.amount}
-                    onChange={(e) => updateRow(batch.id, row.id, { amount: e.target.value })}
-                  />
-                </Field>
-                <Field label="Description">
+            <div key={row.id} id={rowElementId(row.id)} className={styles.row} data-type={row.type}>
+              <input
+                className={styles.compactAmount}
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                aria-label="Amount"
+                placeholder={`0${format.decimalSeparator}00`}
+                value={row.amount}
+                onChange={(e) => updateRow(batch.id, row.id, { amount: e.target.value })}
+              />
+              <select
+                className={styles.compactType}
+                value={row.type}
+                aria-label="Type"
+                onChange={(e) => updateRow(batch.id, row.id, { type: e.target.value as TxnType })}
+              >
+                {TYPE_OPTIONS.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+              <select
+                className={`${styles.compactSelect} ${styles.compactAccount}`}
+                value={row.accountId}
+                aria-label="Account"
+                onChange={(e) => updateRow(batch.id, row.id, { accountId: Number(e.target.value) })}
+              >
+                {selectableOptions(model.dataset.accounts, row.accountId).map((a) => (
+                  <option key={a.id} value={a.id}>{optionLabel(a)}</option>
+                ))}
+              </select>
+              <select
+                className={`${styles.compactSelect} ${styles.compactCategory}`}
+                value={row.categoryId}
+                aria-label="Category"
+                onChange={(e) => updateRow(batch.id, row.id, { categoryId: Number(e.target.value) })}
+              >
+                {selectableOptions(model.dataset.categories, row.categoryId).map((c) => (
+                  <option key={c.id} value={c.id}>{optionLabel(c)}</option>
+                ))}
+              </select>
+              <div className={styles.descriptionRow}>
+                <div className={styles.compactDescription}>
                   <DescriptionCombobox
                     value={row.description}
                     index={model.descriptionIndex}
@@ -252,40 +273,16 @@ export function BatchTransactionForm({
                     onChange={(v) => updateRow(batch.id, row.id, { description: v })}
                     onAccept={(s) => onAcceptSuggestion(batch.id, row.id, s)}
                   />
-                </Field>
-                <Field label="Category">
-                  <select
-                    value={row.categoryId}
-                    onChange={(e) => updateRow(batch.id, row.id, { categoryId: Number(e.target.value) })}
-                  >
-                    {selectableOptions(model.dataset.categories, row.categoryId).map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {optionLabel(c)}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="Account">
-                  <select
-                    value={row.accountId}
-                    onChange={(e) => updateRow(batch.id, row.id, { accountId: Number(e.target.value) })}
-                  >
-                    {selectableOptions(model.dataset.accounts, row.accountId).map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {optionLabel(a)}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
+                </div>
+                <button
+                  type="button"
+                  className={styles.removeRow}
+                  aria-label="Remove this transaction"
+                  onClick={() => removeRow(batch.id, row.id)}
+                >
+                  <CloseIcon />
+                </button>
               </div>
-              <button
-                type="button"
-                className={styles.removeRow}
-                aria-label="Remove this transaction"
-                onClick={() => removeRow(batch.id, row.id)}
-              >
-                <CloseIcon />
-              </button>
               {errors[row.id] && <p className={formStyles.error}>{errors[row.id]}</p>}
             </div>
           ))}
