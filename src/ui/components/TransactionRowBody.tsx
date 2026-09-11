@@ -4,6 +4,7 @@ import { STATUS_LABEL, shortDayLabel, type Lookup } from '../format'
 import { Money } from './Money'
 import { Pill } from './primitives'
 import { CategoryIcon } from './CategoryIcon'
+import { FlagGlyph } from './FlagGlyph'
 import styles from './TransactionList.module.css'
 
 function installmentMeta(txn: Transaction, lookup: Lookup): string | null {
@@ -28,6 +29,9 @@ export function TransactionRowBody({
   showDate?: boolean
 }) {
   const cat = lookup.category(txn.categoryId)
+  // Undefined when the flag was deleted in another tab, or when this row came
+  // from a stale offline snapshot — render nothing rather than a broken chip.
+  const flag = txn.flagId != null ? lookup.flag(txn.flagId) : undefined
   const installmentLabel = installmentMeta(txn, lookup)
   const metaParts = [
     ...(showDate ? [shortDayLabel(txn.date)] : []),
@@ -40,6 +44,7 @@ export function TransactionRowBody({
       <CategoryIcon icon={cat?.icon} name={cat?.name ?? '?'} className={styles.catIcon} />
       <span className={styles.body}>
         <span className={styles.desc}>
+          {flag ? <FlagGlyph flag={flag} /> : null}
           {txn.description || lookup.categoryName(txn.categoryId)}
         </span>
         <span className={styles.meta}>{metaParts.join(' · ')}</span>

@@ -3,7 +3,7 @@ import type { GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import type { ExpenseActions } from '../../actions'
 import { duplicateScenario } from '../../../engine'
-import { ScenarioColorPicker } from './ScenarioColorPicker'
+import { ColorSwatchPicker } from '../../components/ColorSwatchPicker'
 import styles from './goals.module.css'
 
 interface ActiveScenarioHeaderProps {
@@ -57,7 +57,7 @@ export function ActiveScenarioHeader({
   return (
     <div className={styles.activeHeader}>
       <div className={styles.activeHeaderTop}>
-        <ScenarioColorPicker color={draft.color} onChange={onColorChange} />
+        <ColorSwatchPicker color={draft.color} onChange={onColorChange} label="Scenario color" />
         <input
           className={styles.renameInput}
           value={draft.name}

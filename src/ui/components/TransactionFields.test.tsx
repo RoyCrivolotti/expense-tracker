@@ -62,6 +62,7 @@ function baseForm(overrides: Partial<FormFields> = {}): FormFields {
     date: '2026-07-05',
     budgetMonth: '2026-07',
     notes: '',
+    flagId: null,
     ...overrides,
   }
 }

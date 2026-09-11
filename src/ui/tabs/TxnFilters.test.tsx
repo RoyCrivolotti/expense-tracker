@@ -6,6 +6,7 @@ import { TxnFilters, type TxnFiltersProps } from './TxnFilters'
 function baseProps(overrides: Partial<TxnFiltersProps> = {}): TxnFiltersProps {
   return {
     categories: [],
+    flags: [],
     accounts: [],
     query: '',
     status: 'all',
@@ -22,6 +23,8 @@ function baseProps(overrides: Partial<TxnFiltersProps> = {}): TxnFiltersProps {
     onClearFilters: vi.fn(),
     onQuery: vi.fn(),
     onCategory: vi.fn(),
+    flagId: 'all',
+    onFlag: vi.fn(),
     onAccount: vi.fn(),
     onStatus: vi.fn(),
     onTxnType: vi.fn(),

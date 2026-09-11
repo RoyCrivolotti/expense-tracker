@@ -1,0 +1,135 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.group {
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  background: var(--color-surface);
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.summary::-webkit-details-marker {
+  display: none;
+}
+
+.summary::marker {
+  content: none;
+}
+
+.summary::after {
+  flex: none;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  content: '+';
+}
+
+.group[open] > .summary::after {
+  content: '−';
+}
+
+.summaryGlyph {
+  width: 0.9rem;
+  height: 0.9rem;
+  margin-right: 0;
+}
+
+.summaryBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.summaryName {
+  font-size: 0.92rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summaryDesc {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summaryStats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.05rem;
+  flex: none;
+  margin-right: 0.35rem;
+}
+
+.count {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.total {
+  font-size: 0.92rem;
+  font-weight: 650;
+}
+
+.body {
+  border-top: 1px solid var(--color-border);
+  padding: 0.25rem 0.35rem 0.5rem;
+}
+
+.filterBtn {
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.45rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 0.6rem;
+  background: none;
+  color: var(--color-accent);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.filterBtn:hover {
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.manageBtn {
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.manageBtn:hover {
+  color: var(--color-text);
+}
+
+/* The summary is a flex row; on a narrow screen let the name wrap out rather
+   than squeezing the figures, which are the reason the card exists. */
+@media (max-width: 419px) {
+  .summaryDesc {
+    display: none;
+  }
+}
