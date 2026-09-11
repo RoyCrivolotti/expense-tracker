@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useFocusTrap } from '../hooks/useFocusTrap'
+import { useDismissOnOutsidePointer } from '../charts/useDismissOnOutsidePointer'
 import { usePopoverPosition } from '../hooks/usePopoverPosition'
 import { buildCalendarGrid, dayCellToIso, type DayCell } from './datePickerGrid'
 import styles from './DatePicker.module.css'
@@ -57,10 +59,10 @@ export function DatePickerPopover({ value, triggerRef, onSelect, onClose }: Prop
     }
   }
 
-  const confirm = () => {
+  const confirm = useCallback(() => {
     if (selected) onSelect(selected)
     onClose()
-  }
+  }, [selected, onSelect, onClose])
 
   const reset = () => {
     const t = todayIso()
@@ -70,32 +72,34 @@ export function DatePickerPopover({ value, triggerRef, onSelect, onClose }: Prop
     setViewMonth(rm)
   }
 
-  // Click outside
-  useEffect(() => {
-    const onPointerDown = (e: PointerEvent) => {
-      if (
-        popoverRef.current &&
-        !popoverRef.current.contains(e.target as Node) &&
-        triggerRef.current &&
-        !triggerRef.current.contains(e.target as Node)
-      ) {
-        onClose()
-      }
-    }
-    document.addEventListener('pointerdown', onPointerDown, true)
-    return () => document.removeEventListener('pointerdown', onPointerDown, true)
-  }, [onClose, triggerRef])
+  useFocusTrap(popoverRef, onClose)
+  useDismissOnOutsidePointer(popoverRef, true, onClose, triggerRef)
 
-  // Keyboard
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { onClose(); return }
       if (e.key === 'Enter') { e.preventDefault(); confirm(); return }
+
+      if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return
+      const container = popoverRef.current
+      if (!container) return
+      const buttons = Array.from(container.querySelectorAll<HTMLElement>('[role="grid"] button'))
+      const idx = buttons.indexOf(document.activeElement as HTMLElement)
+      if (idx === -1) return
+
+      let next = idx
+      if (e.key === 'ArrowRight') next = idx + 1
+      else if (e.key === 'ArrowLeft') next = idx - 1
+      else if (e.key === 'ArrowDown') next = idx + 7
+      else if (e.key === 'ArrowUp') next = idx - 7
+
+      if (next >= 0 && next < buttons.length) {
+        e.preventDefault()
+        buttons[next]!.focus()
+      }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected])
+  }, [confirm])
 
   return createPortal(
     <div

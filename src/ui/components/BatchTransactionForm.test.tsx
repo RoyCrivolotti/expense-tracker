@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
-vi.mock('../hooks/useIsNativeDatePicker', () => ({ useIsNativeDatePicker: () => true }))
+vi.mock('../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: () => true }))
 import type { ExpenseDataset } from '../../types'
 import { defaultExpenseSettings } from '../../engine'
 import type { ExpenseActions } from '../actions'
