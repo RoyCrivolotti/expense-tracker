@@ -52,7 +52,8 @@ export interface TransactionSeed {
  */
 export interface ExpenseActions {
   onEdit: (txn: Transaction) => void
-  onAdd: (seed?: TransactionSeed) => void
+  /** `hint` becomes the modal subtitle, explaining where a prefill came from. */
+  onAdd: (seed?: TransactionSeed, hint?: string) => void
   onDuplicate: (txn: Transaction) => void
   /** Resolves with the stored row, so a caller can attach receipts to its id. */
   createTransaction: (input: NewTransaction) => Promise<Transaction>

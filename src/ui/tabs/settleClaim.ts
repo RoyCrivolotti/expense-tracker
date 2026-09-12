@@ -18,7 +18,7 @@ import type { TransactionSeed } from '../actions'
 export function settleClaim(
   group: FlagGroup,
   dataset: ExpenseDataset,
-  onAdd: (seed?: TransactionSeed) => void,
+  onAdd: (seed?: TransactionSeed, hint?: string) => void,
 ): void {
   const seed = buildSettlementSeed(
     group,
@@ -26,5 +26,9 @@ export function settleClaim(
     resolveDefaultAccountId(dataset.accounts, dataset.settings),
   )
   if (!seed) return
-  onAdd({ ...seed, type: 'refund', flagId: group.flag.id })
+  // Both prefilled choices are surprising without a word: the credit is booked
+  // against the claim's largest category rather than split across all of them,
+  // and it falls in the month it is paid, not the month the spending happened.
+  const hint = `Prefilled with what ${group.flag.name} still owes you. Credited to its largest category, in this month's budget — change either if you'd rather book it elsewhere.`
+  onAdd({ ...seed, type: 'refund', flagId: group.flag.id }, hint)
 }
