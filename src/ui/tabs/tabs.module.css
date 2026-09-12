@@ -348,6 +348,10 @@
 }
 
 .resultSummary {
+  /* The Flagged card's drill-in scrolls here. AppShell's header is sticky
+     (~3.5rem plus the safe-area inset), so without this the summary lands
+     underneath it. */
+  scroll-margin-top: calc(4rem + env(safe-area-inset-top, 0px));
   display: flex;
   justify-content: space-between;
   align-items: center;

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import type { TxnType } from '../../types'
+import type { Flag, TxnType } from '../../types'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import {
@@ -18,15 +18,28 @@ import {
   type TxnDateScope,
 } from './txnDateScope'
 
-function useTxnListFilters(month: string) {
+function useTxnListFilters(month: string, flags: Flag[]) {
   const [categoryId, setCategoryId] = useState<number | 'all'>('all')
   const [accountId, setAccountId] = useState<number | 'all'>('all')
+  const [rawFlagId, setFlagId] = useState<number | 'all' | 'none'>('all')
   const [txnType, setTxnType] = useState<TxnType | 'all'>('all')
   const [status, setStatus] = useState<StatusFilter>('all')
   const [query, setQuery] = useState('')
   const [dateScope, setDateScope] = useState<TxnDateScope>('budgetMonth')
   const [customDateFrom, setCustomDateFrom] = useState('')
   const [customDateTo, setCustomDateTo] = useState('')
+
+  /**
+   * A flag can be deleted while its filter is still applied (from the Flagged
+   * card's own Manage modal, or another tab). Resolving here rather than
+   * storing means the list, the chip and the <select> all agree — a stored dead
+   * id leaves the select showing "All flags" while the list renders nothing.
+   */
+  const flagId = useMemo(
+    () =>
+      typeof rawFlagId === 'number' && !flags.some((f) => f.id === rawFlagId) ? 'all' : rawFlagId,
+    [rawFlagId, flags],
+  )
 
   const setDateScopeWithDefaults = (scope: TxnDateScope) => {
     if (scope === 'custom') {
@@ -42,34 +55,49 @@ function useTxnListFilters(month: string) {
       status,
       ...(categoryId !== 'all' ? { categoryId } : {}),
       ...(accountId !== 'all' ? { accountId } : {}),
+      ...(flagId !== 'all' ? { flagId } : {}),
       ...(txnType !== 'all' ? { type: txnType } : {}),
       ...(query.trim() ? { query: query.trim() } : {}),
     }),
-    [dateScope, customDateFrom, customDateTo, month, status, categoryId, accountId, txnType, query],
+    [
+      dateScope,
+      customDateFrom,
+      customDateTo,
+      month,
+      status,
+      categoryId,
+      accountId,
+      flagId,
+      txnType,
+      query,
+    ],
   )
   const hasActiveFilters = useMemo(
     () =>
       query.trim() !== '' ||
       categoryId !== 'all' ||
       accountId !== 'all' ||
+      flagId !== 'all' ||
       txnType !== 'all' ||
       status !== 'all' ||
       isSecondaryDateScope(dateScope),
-    [query, categoryId, accountId, txnType, status, dateScope],
+    [query, categoryId, accountId, flagId, txnType, status, dateScope],
   )
   const secondaryFilterCount = useMemo(
     () =>
       (categoryId !== 'all' ? 1 : 0) +
       (accountId !== 'all' ? 1 : 0) +
+      (flagId !== 'all' ? 1 : 0) +
       (txnType !== 'all' ? 1 : 0) +
       (status !== 'all' ? 1 : 0) +
       (isSecondaryDateScope(dateScope) ? 1 : 0),
-    [categoryId, accountId, txnType, status, dateScope],
+    [categoryId, accountId, flagId, txnType, status, dateScope],
   )
   const clearFilters = () => {
     setQuery('')
     setCategoryId('all')
     setAccountId('all')
+    setFlagId('all')
     setTxnType('all')
     setStatus('all')
     setDateScope('budgetMonth')
@@ -81,6 +109,8 @@ function useTxnListFilters(month: string) {
     setCategoryId,
     accountId,
     setAccountId,
+    flagId,
+    setFlagId,
     txnType,
     setTxnType,
     status,
@@ -105,7 +135,7 @@ export function useTransactionsTabState(
   month: string,
   actions?: ExpenseActions,
 ) {
-  const filters = useTxnListFilters(month)
+  const filters = useTxnListFilters(month, model.dataset.flags)
   const selection = useTransactionSelection(actions)
   const isMobile = useIsMobile()
 

@@ -20,6 +20,7 @@ const NEW_CARD: Account = { id: 12, name: 'New card', kind: 'debit', settlement:
 
 function dataset(overrides: Partial<ExpenseDataset> = {}): ExpenseDataset {
   return {
+    flags: [],
     categories: [DINING, GROCERIES],
     accounts: [CHECKING, OLD_CARD],
     transactions: [],
@@ -56,6 +57,9 @@ function noopActions(overrides: Partial<ExpenseActions> = {}): ExpenseActions {
     updateTransactions: vi.fn(),
     setStatementPaid: vi.fn(),
     setCashActual: vi.fn(),
+    createFlag: vi.fn(),
+    updateFlag: vi.fn(),
+    deleteFlag: vi.fn(),
     createCategory: vi.fn(),
     updateCategory: vi.fn(),
     deleteCategory: vi.fn().mockResolvedValue({ reassignedToId: null }),

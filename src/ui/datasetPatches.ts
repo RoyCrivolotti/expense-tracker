@@ -1,4 +1,5 @@
 import { deriveTransactions } from '../engine/status'
+import { withoutFlag } from '../domain/engine/flagGroups'
 import type {
   Account,
   AccountStatement,
@@ -6,6 +7,7 @@ import type {
   Category,
   ExpenseDataset,
   ExpenseSettings,
+  Flag,
   GoalInputs,
   GoalScenario,
   InstallmentPlan,
@@ -126,6 +128,26 @@ export function patchAfterCategory(
   const d = cloneDataset(dataset)
   upsertById(d.categories, category)
   d.categories.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+  return d
+}
+
+export function patchAfterFlag(dataset: ExpenseDataset, flag: Flag): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  upsertById(d.flags, flag)
+  d.flags.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+  return d
+}
+
+/**
+ * Deleting a flag clears it from its transactions rather than reassigning them
+ * — the mirror of what `dbFlags.deleteFlag` does in one D1 batch. Note the
+ * destructure: `exactOptionalPropertyTypes` forbids assigning `undefined` to an
+ * optional field, so the key has to be omitted.
+ */
+export function patchAfterFlagDelete(dataset: ExpenseDataset, id: number): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  d.flags = d.flags.filter((f) => f.id !== id)
+  d.transactions = d.transactions.map((t) => (t.flagId === id ? withoutFlag(t) : t))
   return d
 }
 

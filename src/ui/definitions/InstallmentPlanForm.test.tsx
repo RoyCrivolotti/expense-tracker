@@ -8,6 +8,7 @@ import { InstallmentPlanForm } from './InstallmentPlanForm'
 
 function datasetWith(overrides: Partial<ExpenseDataset> = {}): ExpenseDataset {
   return {
+    flags: [],
     categories: [
       { id: 1, name: 'Tech', monthlyBudgetCents: 0, sortOrder: 0, active: true },
       { id: 2, name: 'Old category', monthlyBudgetCents: 0, sortOrder: 1, active: false },
@@ -45,6 +46,7 @@ function modelWith(dataset: ExpenseDataset): ExpenseModel {
       account: () => undefined,
       categoryName: () => '',
       accountName: () => '',
+      flag: () => undefined,
       installmentPlan: () => undefined,
     },
     descriptionIndex: { search: () => [], resolve: () => undefined },
@@ -65,6 +67,9 @@ function noopActions(): ExpenseActions {
     updateTransactions: vi.fn(),
     setStatementPaid: vi.fn(),
     setCashActual: vi.fn(),
+    createFlag: vi.fn(),
+    updateFlag: vi.fn(),
+    deleteFlag: vi.fn(),
     createCategory: vi.fn(),
     updateCategory: vi.fn(),
     deleteCategory: vi.fn(),

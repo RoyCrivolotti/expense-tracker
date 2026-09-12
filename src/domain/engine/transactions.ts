@@ -11,6 +11,8 @@ export interface TxnFilter {
   dateTo?: string
   /** Case-insensitive substring match against the description and notes. */
   query?: string
+  /** A flag id narrows to that flag; 'none' narrows to unflagged transactions. */
+  flagId?: number | 'none'
 }
 
 function matchesQuery(txn: Transaction, query: string): boolean {
@@ -34,9 +36,16 @@ function matchesTypeAndStatus(txn: Transaction, filter: TxnFilter): boolean {
   return true
 }
 
+function matchesFlag(txn: Transaction, filter: TxnFilter): boolean {
+  if (filter.flagId == null) return true
+  if (filter.flagId === 'none') return txn.flagId == null
+  return txn.flagId === filter.flagId
+}
+
 function matchesDimensions(txn: Transaction, filter: TxnFilter): boolean {
   if (filter.categoryId != null && txn.categoryId !== filter.categoryId) return false
   if (filter.accountId != null && txn.accountId !== filter.accountId) return false
+  if (!matchesFlag(txn, filter)) return false
   if (!matchesTypeAndStatus(txn, filter)) return false
   if (filter.query && !matchesQuery(txn, filter.query)) return false
   return true

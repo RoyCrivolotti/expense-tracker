@@ -1,5 +1,6 @@
 import type {
   ExpenseSettings,
+  Flag,
   GoalInputs,
   GoalScenario,
   InstallmentPlan,
@@ -16,6 +17,7 @@ import type {
   DeleteCategoryResult,
   NewAccount,
   NewCategory,
+  NewFlag,
   NewGoalScenario,
   NewInstallmentPlan,
   NewTransaction,
@@ -63,6 +65,10 @@ export interface ExpenseActions {
     paidOn?: string,
   ) => Promise<void>
   setCashActual: (yearMonth: string, actualCashCents: number | null) => Promise<void>
+  createFlag: (input: NewFlag) => Promise<Flag>
+  updateFlag: (id: number, patch: Partial<NewFlag>) => Promise<void>
+  /** Resolves with how many transactions were unflagged, for the toast. */
+  deleteFlag: (id: number) => Promise<{ unflagged: number }>
   createCategory: (input: NewCategory) => Promise<void>
   updateCategory: (id: number, patch: Partial<NewCategory>) => Promise<void>
   deleteCategory: (id: number, options?: DeleteCategoryOptions) => Promise<DeleteCategoryResult>

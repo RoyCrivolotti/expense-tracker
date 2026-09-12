@@ -14,7 +14,12 @@ import {
   type TxnRow,
 } from './rows'
 import { HttpError } from './http'
-import { assertOwnedAccount, assertOwnedCategory, assertOwnedPlan } from './ownership'
+import {
+  assertOwnedAccount,
+  assertOwnedCategory,
+  assertOwnedFlag,
+  assertOwnedPlan,
+} from './ownership'
 
 async function deriveOne(env: Env, owner: string, stored: StoredTransaction): Promise<Transaction> {
   const acc = await env.DB.prepare('SELECT * FROM accounts WHERE id = ? AND owner = ?')
@@ -85,11 +90,12 @@ export async function insertTransaction(
 ): Promise<Transaction> {
   await assertOwnedAccount(env, owner, input.accountId)
   await assertOwnedCategory(env, owner, input.categoryId)
+  if (input.flagId != null) await assertOwnedFlag(env, owner, input.flagId)
   const planLink = await resolvePlanLink(env, owner, input)
   const row = await env.DB.prepare(
     `INSERT INTO transactions
-       (owner, date, budget_month, description, account_id, category_id, type, amount_cents, cancelled, notes, plan_id, installment_index)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
+       (owner, date, budget_month, description, account_id, category_id, type, amount_cents, cancelled, notes, plan_id, installment_index, flag_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
   )
     .bind(
       owner,
@@ -104,6 +110,7 @@ export async function insertTransaction(
       input.notes ?? null,
       planLink?.planId ?? null,
       planLink?.installmentIndex ?? null,
+      input.flagId ?? null,
     )
     .first<TxnRow>()
   if (!row) throw new HttpError(500, 'Insert failed')
@@ -125,6 +132,7 @@ const COLUMN: Record<PatchableTxnKey, string> = {
   amountCents: 'amount_cents',
   cancelled: 'cancelled',
   notes: 'notes',
+  flagId: 'flag_id',
 }
 
 function patchValue(key: PatchableTxnKey, value: unknown): unknown {
@@ -168,6 +176,7 @@ export async function updateTransaction(
   if (keys.length === 0 && link.sets.length === 0) throw new HttpError(400, 'Empty patch')
   if (patch.accountId != null) await assertOwnedAccount(env, owner, patch.accountId)
   if (patch.categoryId != null) await assertOwnedCategory(env, owner, patch.categoryId)
+  if (patch.flagId != null) await assertOwnedFlag(env, owner, patch.flagId)
   const sets = keys
     .map((k) => `${COLUMN[k]} = ?`)
     .concat(link.sets, "updated_at = datetime('now')")
@@ -222,6 +231,7 @@ export async function bulkUpdateTransactions(
   if (ids.length === 0) return []
   if (patch.accountId != null) await assertOwnedAccount(env, owner, patch.accountId)
   if (patch.categoryId != null) await assertOwnedCategory(env, owner, patch.categoryId)
+  if (patch.flagId != null) await assertOwnedFlag(env, owner, patch.flagId)
   const keys = (Object.keys(patch) as PatchableTxnKey[]).filter((k) => k in COLUMN)
   if (keys.length === 0) throw new HttpError(400, 'Empty patch')
   const sets = keys.map((k) => `${COLUMN[k]} = ?`).concat("updated_at = datetime('now')")

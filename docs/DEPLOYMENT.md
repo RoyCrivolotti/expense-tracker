@@ -87,7 +87,7 @@ If Workers Scripts Edit is missing, CI deploy of the backup cron worker fails un
 npx wrangler d1 execute roy-expenses --remote --file=migrations/NNNN_name.sql
 ```
 
-Apply through `0014_custom_milestones.sql` on production. Personal goal scenarios: `npm run seed:scenarios` (reads gitignored seed config or `FINANCIAL_REVIEW_DIR`).
+Apply through `0015_transaction_flags.sql` on production. Personal goal scenarios: `npm run seed:scenarios` (reads gitignored seed config or `FINANCIAL_REVIEW_DIR`).
 
 `0009_installment_plans.sql` adds the `installment_plans` table plus `plan_id` / `installment_index` columns on `transactions`. Apply it before (or with) the code deploy that reads those columns.
 
@@ -100,6 +100,8 @@ Apply through `0014_custom_milestones.sql` on production. Personal goal scenario
 `0013_life_events.sql` adds a `life_events TEXT NOT NULL DEFAULT '[]'` column to `goal_scenarios`. Stores a JSON array of one-off cash events per scenario. Existing rows automatically get the empty-array default — no data migration needed.
 
 `0014_custom_milestones.sql` adds a nullable `milestones TEXT` column to `settings`. Stores a JSON array of `{label, amountCents}` net-worth milestones per owner. `NULL` falls back to the built-in €100k–€1M defaults, so existing owners see no change until they edit the list under Settings → Milestones; an empty array is a deliberate "no milestones" choice. Owner-agnostic — no placeholder substitution needed. Apply it before (or with) the code deploy that reads the column.
+
+`0015_transaction_flags.sql` adds the `flags` table plus a nullable `flag_id` column on `transactions`. Flags are reusable named markers (name + colour + optional description) for tracking work that outlives a budget month — the motivating case is "expenses I still have to claim back from an employer". The table starts empty; no defaults are seeded, and flags are created through Settings → Flags or the picker in the transaction editor. `flag_id` stays `NULL` on every existing row, so there is no backfill and no placeholder substitution. Deleting a flag clears `flag_id` on its transactions rather than reassigning them (the column is nullable, unlike `category_id`). Apply it before (or with) the code deploy that reads the column.
 
 ## Old URL
 

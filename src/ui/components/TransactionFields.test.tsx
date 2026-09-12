@@ -11,6 +11,7 @@ import { Fields } from './TransactionFields'
 function modelWith(overrides: Partial<ExpenseModel['dataset']> = {}): ExpenseModel {
   return {
     dataset: {
+      flags: [],
       categories: [
         { id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true },
         { id: 2, name: 'Old category', monthlyBudgetCents: 0, sortOrder: 1, active: false },
@@ -43,6 +44,7 @@ function modelWith(overrides: Partial<ExpenseModel['dataset']> = {}): ExpenseMod
       account: () => undefined,
       categoryName: () => '',
       accountName: () => '',
+      flag: () => undefined,
       installmentPlan: () => undefined,
     },
     descriptionIndex: { search: () => [], resolve: () => undefined },
@@ -60,6 +62,7 @@ function baseForm(overrides: Partial<FormFields> = {}): FormFields {
     date: '2026-07-05',
     budgetMonth: '2026-07',
     notes: '',
+    flagId: null,
     ...overrides,
   }
 }

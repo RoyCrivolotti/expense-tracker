@@ -4,6 +4,7 @@ import { defaultExpenseSettings } from '../engine'
 import { needsOnboarding } from './needsOnboarding'
 
 const empty: ExpenseDataset = {
+  flags: [],
   categories: [],
   accounts: [],
   transactions: [],

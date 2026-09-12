@@ -83,3 +83,23 @@ describe('recentlyAdded', () => {
     expect(recentlyAdded(rows).map((t) => t.id)).toEqual([2, 1])
   })
 })
+
+describe('filterTransactions — flagId', () => {
+  const rows = [
+    { ...txn(1, '2026-06-01'), flagId: 7 },
+    { ...txn(2, '2026-06-02'), flagId: 8 },
+    txn(3, '2026-06-03'),
+  ]
+
+  it('narrows to one flag', () => {
+    expect(filterTransactions(rows, { flagId: 7 }).map((t) => t.id)).toEqual([1])
+  })
+
+  it("'none' narrows to unflagged transactions", () => {
+    expect(filterTransactions(rows, { flagId: 'none' }).map((t) => t.id)).toEqual([3])
+  })
+
+  it('returns everything when no flag filter is set', () => {
+    expect(filterTransactions(rows, {})).toHaveLength(3)
+  })
+})

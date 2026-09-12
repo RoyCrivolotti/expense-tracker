@@ -22,7 +22,9 @@
 
 /* Popover container */
 .popover {
-  position: absolute;
+  /* fixed, not absolute: usePopoverPosition returns viewport coordinates so the
+     popover survives the body being pinned by a Modal's scroll lock. */
+  position: fixed;
   z-index: 1000;
   min-width: 280px;
   padding: 1rem;

@@ -34,6 +34,12 @@
   "files": [
     "functions/api/expenses/transactions/[id].ts",
     "functions/api/expenses/categories/[id].ts",
-    "functions/api/expenses/accounts/[id].ts"
+    "functions/api/expenses/accounts/[id].ts",
+    "functions/api/expenses/flags/[id].ts",
+    "functions/api/expenses/installment-plans/[id].ts",
+    "functions/api/expenses/scenarios/[id].ts",
+    "functions/api/expenses/wealth-accounts/[id].ts",
+    "functions/api/expenses/wealth-checkins/[id].ts",
+    "functions/api/access/admin/users/[email]/grants.ts"
   ]
 }

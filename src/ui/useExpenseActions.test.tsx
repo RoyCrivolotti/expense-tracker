@@ -6,6 +6,7 @@ import { defaultExpenseSettings } from '../engine'
 import { useExpenseActions } from './useExpenseActions'
 
 const baseDataset: ExpenseDataset = {
+  flags: [],
   categories: [{ id: 1, name: 'Food', monthlyBudgetCents: 10000, sortOrder: 1, active: true }],
   accounts: [{ id: 2, name: 'Debit', kind: 'debit', settlement: 'immediate', active: true }],
   transactions: [],
@@ -94,4 +95,70 @@ describe('useExpenseActions', () => {
     expect(applyPatch).toHaveBeenCalled()
     expect(dataset.transactions[0]?.categoryId).toBe(9)
   })
+})
+
+describe('useExpenseActions — flags', () => {
+  const flag = { id: 7, name: 'Work travel', color: '#6366f1', sortOrder: 0, active: true }
+
+  function harness(source: Partial<ExpenseDataSource>) {
+    let dataset = baseDataset
+    const applyPatch = vi.fn((patch: (d: ExpenseDataset) => ExpenseDataset) => {
+      dataset = patch(dataset)
+    })
+    const { result } = renderHook(() =>
+      useExpenseActions({ canWrite: true, load: vi.fn(), ...source }, applyPatch, vi.fn()),
+    )
+    return { actions: result.current!, applyPatch, read: () => dataset }
+  }
+
+  it('createFlag returns the saved flag and puts it in the dataset', async () => {
+    const createFlag = vi.fn().mockResolvedValue(flag)
+    const { actions, read } = harness({ createFlag })
+
+    let created
+    await act(async () => {
+      created = await actions.createFlag({
+        name: 'Work travel',
+        color: '#6366f1',
+        sortOrder: 0,
+        active: true,
+      })
+    })
+
+    expect(createFlag).toHaveBeenCalled()
+    expect(created).toEqual(flag)
+    expect(read().flags).toEqual([flag])
+  })
+
+  it('updateFlag replaces the flag in the dataset', async () => {
+    const renamed = { ...flag, name: 'Client travel' }
+    const { actions, read } = harness({
+      createFlag: vi.fn().mockResolvedValue(flag),
+      updateFlag: vi.fn().mockResolvedValue(renamed),
+    })
+
+    await act(async () => {
+      await actions.createFlag({ name: 'Work travel', color: '#6366f1', sortOrder: 0, active: true })
+      await actions.updateFlag(flag.id, { name: 'Client travel' })
+    })
+
+    expect(read().flags).toEqual([renamed])
+  })
+
+  it('deleteFlag drops the flag and reports how many rows were unflagged', async () => {
+    const { actions, read } = harness({
+      createFlag: vi.fn().mockResolvedValue(flag),
+      deleteFlag: vi.fn().mockResolvedValue({ unflagged: 3 }),
+    })
+
+    let result
+    await act(async () => {
+      await actions.createFlag({ name: 'Work travel', color: '#6366f1', sortOrder: 0, active: true })
+      result = await actions.deleteFlag(flag.id)
+    })
+
+    expect(result).toEqual({ unflagged: 3 })
+    expect(read().flags).toEqual([])
+  })
+
 })
