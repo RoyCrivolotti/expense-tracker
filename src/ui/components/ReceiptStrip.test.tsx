@@ -108,12 +108,17 @@ describe('ReceiptStrip', () => {
     expect(onTrapPausedChange).toHaveBeenLastCalledWith(true)
   })
 
-  it('offers the camera and only the types the server accepts', () => {
-    // Listing concrete types keeps HEIC out of the iOS picker; being rejected
-    // after choosing is worse than not being offered it.
+  it('offers the whole picker, not just the camera, and only the types the server accepts', () => {
     const { fileInput: input } = renderStrip([])
 
-    expect(input).toHaveAttribute('capture', 'environment')
+    // `capture` reads as a harmless hint but on iOS Safari and Chrome Android it
+    // opens the camera directly and makes `multiple` inert — so the emailed PDF
+    // invoice and last week's photo, the two things this feature exists to
+    // collect, become unreachable on a phone.
+    expect(input).not.toHaveAttribute('capture')
+    expect(input).toHaveAttribute('multiple')
+    // Listing concrete types keeps HEIC out of the iOS picker; being rejected
+    // after choosing is worse than not being offered it.
     expect(input.getAttribute('accept')).toBe('image/jpeg,image/png,image/webp,application/pdf')
   })
 
@@ -215,7 +220,7 @@ describe('ReceiptStrip — before the transaction exists', () => {
     const staged = stageReceipts([file('a.jpg'), file('b.jpg'), file('c.jpg'), file('d.jpg')])
     renderPending(staged)
 
-    expect(screen.getByRole('button', { name: /4 of 4/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Receipt limit reached' })).toBeDisabled()
   })
 
   it('counts stored and staged receipts together against the cap', () => {
@@ -230,7 +235,7 @@ describe('ReceiptStrip — before the transaction exists', () => {
       />,
     )
 
-    expect(screen.getByRole('button', { name: /4 of 4/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Receipt limit reached' })).toBeDisabled()
   })
 
   it('takes only what fits when more files are chosen than there is room for', async () => {
@@ -243,7 +248,9 @@ describe('ReceiptStrip — before the transaction exists', () => {
 
     const left = onPendingChange.mock.calls[0]![0] as PendingReceipt[]
     expect(left.map((s) => s.file.name)).toEqual(['a.jpg', 'b.jpg', 'c.jpg', 'd.jpg'])
-    expect(screen.getByRole('alert')).toHaveTextContent('A transaction can hold 4 receipts')
+    // Says what was dropped, not just the policy: keeping four of six and
+    // quoting the limit reads as though everything was accepted.
+    expect(screen.getByRole('alert')).toHaveTextContent('Only 4 receipts fit — 1 was not added.')
   })
 
   it('announces an upload failure through an alert, not a toast', async () => {

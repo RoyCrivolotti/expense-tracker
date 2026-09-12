@@ -192,19 +192,28 @@ describe('TransactionModal — closing with unsaved input', () => {
   })
 })
 
-describe('TransactionModal — receipts staged on the add form', () => {
-  const receipt = (name = 'flight.jpg') =>
-    new File([new Uint8Array([1, 2, 3])], name, { type: 'image/jpeg' })
+const receipt = (name = 'flight.jpg') =>
+  new File([new Uint8Array([1, 2, 3])], name, { type: 'image/jpeg' })
 
-  /** Fill the minimum a create needs, and stage one receipt against it. */
-  async function fillAndStage(container: HTMLElement, file = receipt()) {
+/**
+ * The batch tab's own fields. It renders *before* the single form in the DOM,
+ * so indexing from the end of a screen-wide query silently types into the wrong
+ * one — which is exactly how the first draft of these tests failed.
+ */
+function batchRegion(container: HTMLElement) {
+  return within(container.querySelector('[data-testid="batch-summary"]')!.parentElement!)
+}
+
+/** Fill the minimum a create needs, and stage one receipt against it. */
+async function fillAndStage(container: HTMLElement, file = receipt()) {
     const form = singleForm(container)
     fireEvent.change(form.getByLabelText(/amount/i), { target: { value: '198,40' } })
     fireEvent.change(form.getByLabelText(/description/i), { target: { value: 'Flight' } })
-    const input = container.querySelector('input[type=file]') as HTMLInputElement
-    await userEvent.upload(input, file)
-  }
+  const input = container.querySelector('input[type=file]') as HTMLInputElement
+  await userEvent.upload(input, file)
+}
 
+describe('TransactionModal — receipts staged on the add form', () => {
   it('uploads a staged receipt against the id the create returned', async () => {
     const created = makeTransaction({ id: 42 })
     const { container, actions, onClose } = renderModal({
@@ -236,27 +245,77 @@ describe('TransactionModal — receipts staged on the add form', () => {
     )
     expect(onClose).not.toHaveBeenCalled()
     expect(
-      singleForm(container).getByRole('button', { name: 'Retry receipts' }),
+      singleForm(container).getByRole('button', { name: 'Save and retry' }),
     ).toBeInTheDocument()
   })
 
-  it('retries only the upload, never creating a second transaction', async () => {
+  it('retries the upload as an update, never creating a second transaction', async () => {
     const createTransaction = vi.fn().mockResolvedValue(makeTransaction({ id: 42 }))
+    const updateTransaction = vi.fn().mockResolvedValue(undefined)
     const uploadAttachment = vi
       .fn()
       .mockRejectedValueOnce(new Error('network down'))
       .mockResolvedValue(undefined)
-    const { container, onClose } = renderModal({ actions: { createTransaction, uploadAttachment } })
+    const { container, onClose } = renderModal({
+      actions: { createTransaction, updateTransaction, uploadAttachment },
+    })
 
     await fillAndStage(container)
     fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
-    const retry = await singleForm(container).findByRole('button', { name: 'Retry receipts' })
+    const retry = await singleForm(container).findByRole('button', { name: 'Save and retry' })
 
     fireEvent.click(retry)
 
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
     expect(createTransaction).toHaveBeenCalledTimes(1)
     expect(uploadAttachment).toHaveBeenCalledTimes(2)
+    // Routed as an update against the row that already exists, so a field the
+    // user corrected while the banner was up is not silently thrown away.
+    expect(updateTransaction).toHaveBeenCalledWith(42, expect.anything())
+  })
+
+  it('sends a field corrected after a partial save, instead of discarding it', async () => {
+    const updateTransaction = vi.fn().mockResolvedValue(undefined)
+    const { container } = renderModal({
+      actions: {
+        createTransaction: vi.fn().mockResolvedValue(makeTransaction({ id: 42 })),
+        updateTransaction,
+        uploadAttachment: vi
+          .fn()
+          .mockRejectedValueOnce(new Error('storage full'))
+          .mockResolvedValue(undefined),
+      },
+    })
+
+    await fillAndStage(container)
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+    const retry = await singleForm(container).findByRole('button', { name: 'Save and retry' })
+
+    fireEvent.change(singleForm(container).getByLabelText(/amount/i), {
+      target: { value: '189,40' },
+    })
+    fireEvent.click(retry)
+
+    await waitFor(() => expect(updateTransaction).toHaveBeenCalledTimes(1))
+    expect(updateTransaction).toHaveBeenCalledWith(42, expect.objectContaining({ amountCents: 18940 }))
+  })
+
+  it('carries the server’s reason into the failure message', async () => {
+    // "Receipt storage is full" and a dropped connection were the same sentence;
+    // only one of them is worth pressing Retry for.
+    const { container } = renderModal({
+      actions: {
+        createTransaction: vi.fn().mockResolvedValue(makeTransaction({ id: 42 })),
+        uploadAttachment: vi.fn().mockRejectedValue(new Error('Receipt storage is full (2.0 GB)')),
+      },
+    })
+
+    await fillAndStage(container)
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+
+    expect(await singleForm(container).findByRole('alert')).toHaveTextContent(
+      'Receipt storage is full (2.0 GB)',
+    )
   })
 
   it('treats a staged receipt as unsaved input when closing', async () => {
@@ -269,5 +328,62 @@ describe('TransactionModal — receipts staged on the add form', () => {
     // Without this the photos are dropped silently: nothing else on the form changed.
     expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument()
     expect(onClose).not.toHaveBeenCalled()
+  })
+})
+
+describe('TransactionModal — the other tab’s draft', () => {
+  it('warns before a batch save discards a single-tab draft', async () => {
+    // The single form stays mounted behind the batch tab and keeps its draft,
+    // staged receipts included. The batch success path bypassed the close guard.
+    const { container, onClose } = renderModal({
+      actions: { createTransactions: vi.fn().mockResolvedValue(undefined) },
+    })
+    const form = singleForm(container)
+    fireEvent.change(form.getByLabelText(/amount/i), { target: { value: '50' } })
+    fireEvent.change(form.getByLabelText(/description/i), { target: { value: 'Taxi' } })
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Add multiple' }))
+    const batch = batchRegion(container)
+    fireEvent.change(batch.getByLabelText('Amount'), { target: { value: '12' } })
+    fireEvent.change(batch.getByPlaceholderText('e.g. Mercadona'), { target: { value: 'Coffee' } })
+    fireEvent.click(batch.getByRole('button', { name: /add 1 transaction/i }))
+
+    expect(await screen.findByText('Discard the other draft?')).toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('closes straight away when the other tab has nothing in it', async () => {
+    const createTransactions = vi.fn().mockResolvedValue(undefined)
+    const { container, onClose } = renderModal({ actions: { createTransactions } })
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Add multiple' }))
+    const batch = batchRegion(container)
+    fireEvent.change(batch.getByLabelText('Amount'), { target: { value: '12' } })
+    fireEvent.change(batch.getByPlaceholderText('e.g. Mercadona'), { target: { value: 'Coffee' } })
+    fireEvent.click(batch.getByRole('button', { name: /add 1 transaction/i }))
+
+    await waitFor(() => expect(createTransactions).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+    expect(screen.queryByText('Discard the other draft?')).not.toBeInTheDocument()
+  })
+
+  it('says the transaction is safe when only its receipts are stranded', async () => {
+    const { container } = renderModal({
+      actions: {
+        createTransaction: vi.fn().mockResolvedValue(makeTransaction({ id: 42 })),
+        uploadAttachment: vi.fn().mockRejectedValue(new Error('storage full')),
+      },
+    })
+
+    await fillAndStage(container)
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+    await singleForm(container).findByRole('button', { name: 'Save and retry' })
+
+    fireEvent.click(screen.getByRole('button', { name: /close/i }))
+
+    // "You'll lose what you've entered" is both wrong and frightening about the
+    // wrong thing once the row is saved.
+    expect(await screen.findByText('Leave without the receipts?')).toBeInTheDocument()
+    expect(screen.getByText(/The transaction is saved/)).toBeInTheDocument()
   })
 })

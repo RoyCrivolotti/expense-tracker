@@ -67,6 +67,39 @@ function useCloseGuard(isDirty: boolean, onClose: () => void) {
   return { confirming, requestClose, cancel, modalOnClose: confirming ? cancel : requestClose }
 }
 
+/**
+ * Closing with work at risk. Which work depends on whether the row saved: past a
+ * partial save the transaction is safe and only its receipts are stranded, so
+ * "you'll lose what you've entered" is both wrong and frightening about the
+ * wrong thing.
+ */
+function CloseConfirm({
+  stranded,
+  onConfirm,
+  onCancel,
+}: {
+  stranded: number
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  const saved = stranded > 0
+  const noun = stranded === 1 ? 'receipt' : 'receipts'
+  return (
+    <ConfirmSheet
+      title={saved ? 'Leave without the receipts?' : 'Discard unsaved changes?'}
+      message={
+        saved
+          ? `The transaction is saved. The ${stranded} ${noun} that failed to upload will be discarded — you can attach them later from the transaction.`
+          : "Closing now will lose what you've entered."
+      }
+      confirmLabel={saved ? 'Leave' : 'Discard'}
+      destructive
+      onConfirm={onConfirm}
+      onCancel={onCancel}
+    />
+  )
+}
+
 interface Props {
   model: ExpenseModel
   actions: ExpenseActions
@@ -92,6 +125,10 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
   // typed on either side — each keeps its own state alive while hidden.
   const [singleDirty, setSingleDirty] = useState(false)
   const [batchDirty, setBatchDirty] = useState(false)
+  // The batch tab saved while the single tab still holds an unsaved draft.
+  const [discardingOther, setDiscardingOther] = useState(false)
+  // Receipts stranded on a row that did save. Not "unsaved changes".
+  const [stranded, setStranded] = useState(0)
   // Either side counts, not just the currently visible one: closing from an
   // empty batch tab would otherwise silently drop a still-hidden, filled-in
   // single-transaction draft (and vice versa).
@@ -126,14 +163,17 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
       title={titleFor(editing, mode)}
       {...(subtitle ? { subtitle } : {})}
       onClose={modalOnClose}
-      trapPaused={confirming || popoverOpen}
+      trapPaused={confirming || discardingOther || popoverOpen}
     >
       {canBatch && <ModeToggle mode={mode} onChange={setMode} />}
       {canBatch && (
         <BatchTransactionForm
           model={model}
           actions={actions}
-          onClose={onClose}
+          // Guarded, not raw: the single form stays mounted behind this tab and
+          // keeps its draft — staged receipts included. A successful batch save
+          // used to close the modal and take that draft with it silently.
+          onClose={() => (singleDirty ? setDiscardingOther(true) : onClose())}
           hidden={mode !== 'batch'}
           onDirtyChange={setBatchDirty}
           onTrapPausedChange={setPopoverOpen}
@@ -149,17 +189,24 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
         onClose={onClose}
         hidden={canBatch && mode === 'batch'}
         onDirtyChange={setSingleDirty}
+        onPartialSaveChange={setStranded}
         onTrapPausedChange={setPopoverOpen}
         actions={actions}
       />
       {confirming ? (
+        <CloseConfirm stranded={stranded} onConfirm={onClose} onCancel={cancel} />
+      ) : null}
+      {discardingOther ? (
         <ConfirmSheet
-          title="Discard unsaved changes?"
-          message="Closing now will lose what you've entered."
-          confirmLabel="Discard"
+          title="Discard the other draft?"
+          message="Your transactions were added. The single transaction you started on the other tab has not been saved."
+          confirmLabel="Discard it"
           destructive
           onConfirm={onClose}
-          onCancel={cancel}
+          onCancel={() => {
+            setDiscardingOther(false)
+            setMode('single')
+          }}
         />
       ) : null}
     </Modal>
