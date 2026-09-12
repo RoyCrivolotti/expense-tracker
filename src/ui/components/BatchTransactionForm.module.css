@@ -207,6 +207,13 @@
   border-style: solid;
 }
 
+/* Separated from the dated batches above it so it reads as a property of the
+   whole form rather than of the last date. */
+.flagField {
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--color-border);
+}
+
 .summary {
   text-align: center;
   margin: 0;

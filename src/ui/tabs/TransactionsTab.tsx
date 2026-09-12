@@ -12,6 +12,7 @@ import { FlaggedCard } from './FlaggedCard'
 import { FlagsModal } from '../definitions/FlagsModal'
 import { TransactionsSelectFooter } from './TransactionsSelectFooter'
 import { useTransactionsTabState } from './useTransactionsTabState'
+import { RESULTS_ANCHOR_ID, scrollToResults } from './scrollToResults'
 import styles from './tabs.module.css'
 
 interface TransactionsTabProps {
@@ -43,6 +44,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
               // through mostly vanish.
               state.setFlagId(flagId)
               state.setDateScope('allDates')
+              scrollToResults()
             }}
             onManage={() => setManagingFlags(true)}
             onSelect={actions.onEdit}
@@ -84,7 +86,9 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
         onToggleSelectMode={state.toggleSelectMode}
       />
 
-      <div className={styles.resultSummary}>
+      {/* role=status, so applying a filter announces the new result count
+          instead of changing the list silently. */}
+      <div id={RESULTS_ANCHOR_ID} className={styles.resultSummary} role="status">
         <span className={styles.resultStats}>
           <span>{state.listRows.length} items</span>
           <span>
