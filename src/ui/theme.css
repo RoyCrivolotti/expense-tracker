@@ -137,3 +137,22 @@ body {
     transform: none;
   }
 }
+
+/*
+ * The reimbursement pack prints itself and nothing else. It portals out of
+ * #root and sets data-pack-open on <body>, so hiding #root here leaves exactly
+ * the claim on the page — without this the PDF carries the nav, the FAB and the
+ * month's transactions behind the overlay.
+ */
+@media print {
+  body[data-pack-open] #root {
+    display: none;
+  }
+
+  /* The pack sits in normal flow when printed, so the page below it is bare
+     <body> — which in either theme carries a tinted background. Force white so
+     a reader with "print background graphics" on does not get a grey page. */
+  body[data-pack-open] {
+    background: #fff;
+  }
+}

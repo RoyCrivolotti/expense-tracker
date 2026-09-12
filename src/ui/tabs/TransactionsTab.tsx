@@ -9,7 +9,7 @@ import { TxnFilters } from './TxnFilters'
 import { UpcomingCard } from './UpcomingCard'
 import { InstallmentsCard } from './InstallmentsCard'
 import { FlaggedCard } from './FlaggedCard'
-import { FlagsModal } from '../definitions/FlagsModal'
+import { TransactionsFlagOverlays } from './TransactionsFlagOverlays'
 import { TransactionsSelectFooter } from './TransactionsSelectFooter'
 import { useTransactionsTabState } from './useTransactionsTabState'
 import { RESULTS_ANCHOR_ID, scrollToResults } from './scrollToResults'
@@ -26,6 +26,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
   const [editingStatement, setEditingStatement] = useState<StatementPaymentRow | null>(null)
   const [statementPending, setStatementPending] = useState(false)
   const [managingFlags, setManagingFlags] = useState(false)
+  const [packFlagId, setPackFlagId] = useState<number | null>(null)
   const rolloverDay = model.dataset.settings.budgetRolloverDay
   const upcoming = useMemo(
     () => detectRecurring(model.dataset.transactions, { forBudgetMonth: month, rolloverDay }),
@@ -46,6 +47,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
               state.setDateScope('allDates')
               scrollToResults()
             }}
+            onOpenPack={setPackFlagId}
             onManage={() => setManagingFlags(true)}
             onSelect={actions.onEdit}
           />
@@ -142,9 +144,14 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
         />
       ) : null}
 
-      {managingFlags && actions ? (
-        <FlagsModal model={model} actions={actions} onClose={() => setManagingFlags(false)} />
-      ) : null}
+      <TransactionsFlagOverlays
+        model={model}
+        actions={actions}
+        packFlagId={packFlagId}
+        onClosePack={() => setPackFlagId(null)}
+        managingFlags={managingFlags}
+        onCloseManage={() => setManagingFlags(false)}
+      />
 
       <TransactionsSelectFooter actionsEnabled={Boolean(actions)} selection={state} model={model} />
     </div>

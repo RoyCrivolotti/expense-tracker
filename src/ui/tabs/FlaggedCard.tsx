@@ -17,6 +17,7 @@ const PREVIEW_LIMIT = 5
 interface Props {
   model: ExpenseModel
   onFilterByFlag: (flagId: number) => void
+  onOpenPack: (flagId: number) => void
   onManage: () => void
   onSelect?: ((txn: Transaction) => void) | undefined
 }
@@ -25,11 +26,13 @@ function FlagGroupSection({
   group,
   model,
   onFilterByFlag,
+  onOpenPack,
   onSelect,
 }: {
   group: FlagGroup
   model: ExpenseModel
   onFilterByFlag: (flagId: number) => void
+  onOpenPack: (flagId: number) => void
   onSelect?: ((txn: Transaction) => void) | undefined
 }) {
   const preview = group.transactions.slice(0, PREVIEW_LIMIT)
@@ -59,13 +62,22 @@ function FlagGroupSection({
           showDate
           {...(onSelect ? { onSelect } : {})}
         />
-        <button
-          type="button"
-          className={styles.filterBtn}
-          onClick={() => onFilterByFlag(group.flag.id)}
-        >
-          {hidden > 0 ? `See all ${group.count} in the list` : 'Show these in the list'}
-        </button>
+        <div className={styles.groupActions}>
+          <button
+            type="button"
+            className={styles.filterBtn}
+            onClick={() => onFilterByFlag(group.flag.id)}
+          >
+            {hidden > 0 ? `See all ${group.count} in the list` : 'Show these in the list'}
+          </button>
+          <button
+            type="button"
+            className={styles.packBtn}
+            onClick={() => onOpenPack(group.flag.id)}
+          >
+            Claim pack
+          </button>
+        </div>
       </div>
     </details>
   )
@@ -80,7 +92,7 @@ function FlagGroupSection({
  * below stays month-scoped as before, and flagged rows still appear there —
  * this is a summary, not a second home for them.
  */
-export function FlaggedCard({ model, onFilterByFlag, onManage, onSelect }: Props) {
+export function FlaggedCard({ model, onFilterByFlag, onOpenPack, onManage, onSelect }: Props) {
   const groups = groupTransactionsByFlag(model.dataset.transactions, model.dataset.flags)
   if (groups.length === 0) return null
   const total = summarizeFlagGroups(groups)
@@ -115,6 +127,7 @@ export function FlaggedCard({ model, onFilterByFlag, onManage, onSelect }: Props
                 group={group}
                 model={model}
                 onFilterByFlag={onFilterByFlag}
+                onOpenPack={onOpenPack}
                 {...(onSelect ? { onSelect } : {})}
               />
             ))}

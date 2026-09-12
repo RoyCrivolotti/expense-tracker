@@ -41,12 +41,18 @@ function modelFor(dataset: ExpenseDataset): ExpenseModel {
 function renderCard(dataset: ExpenseDataset) {
   const onFilterByFlag = vi.fn()
   const onManage = vi.fn()
+  const onOpenPack = vi.fn()
   render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
-      <FlaggedCard model={modelFor(dataset)} onFilterByFlag={onFilterByFlag} onManage={onManage} />
+      <FlaggedCard
+        model={modelFor(dataset)}
+        onFilterByFlag={onFilterByFlag}
+        onOpenPack={onOpenPack}
+        onManage={onManage}
+      />
     </MoneyFormatProvider>,
   )
-  return { onFilterByFlag, onManage }
+  return { onFilterByFlag, onManage, onOpenPack }
 }
 
 describe('FlaggedCard', () => {
@@ -56,6 +62,7 @@ describe('FlaggedCard', () => {
         <FlaggedCard
           model={modelFor(makeDataset({ flags: [work] }))}
           onFilterByFlag={vi.fn()}
+          onOpenPack={vi.fn()}
           onManage={vi.fn()}
         />
       </MoneyFormatProvider>,
@@ -126,6 +133,7 @@ describe('FlaggedCard', () => {
         <FlaggedCard
           model={modelFor(makeDataset({ flags: [{ ...work, active: false }], transactions: [txn({ flagId: 1 })] }))}
           onFilterByFlag={vi.fn()}
+          onOpenPack={vi.fn()}
           onManage={vi.fn()}
         />
       </MoneyFormatProvider>,
@@ -173,6 +181,7 @@ describe('FlaggedCard', () => {
         <FlaggedCard
           model={modelFor(makeDataset({ flags: [], transactions: [txn({ flagId: 99 })] }))}
           onFilterByFlag={vi.fn()}
+          onOpenPack={vi.fn()}
           onManage={vi.fn()}
         />
       </MoneyFormatProvider>,

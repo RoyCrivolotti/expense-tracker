@@ -94,8 +94,13 @@
   padding: 0.25rem 0.35rem 0.5rem;
 }
 
+.groupActions {
+  display: flex;
+  gap: 0.4rem;
+}
+
 .filterBtn {
-  width: 100%;
+  flex: 1;
   margin-top: 0.35rem;
   padding: 0.45rem;
   border: 1px dashed var(--color-border);
@@ -107,8 +112,23 @@
   cursor: pointer;
 }
 
-.filterBtn:hover {
+.filterBtn:hover,
+.packBtn:hover {
   background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.packBtn {
+  flex: none;
+  margin-top: 0.35rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 0.6rem;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 /* Full-width inside the Card, matching "Manage plans" on InstallmentsCard,
