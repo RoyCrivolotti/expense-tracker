@@ -64,6 +64,7 @@ describe('settleClaim', () => {
         amountCents: 10_000,
         description: 'Reimbursement — Work travel',
       }),
+      expect.any(String),
     )
   })
 
@@ -73,6 +74,19 @@ describe('settleClaim', () => {
     settleClaim(group([txn(1, { accountId: 2 })]), makeDataset({ accounts: [DEBIT, CARD] }), onAdd)
 
     expect(onAdd.mock.calls[0]![0]).toMatchObject({ accountId: 1 })
+  })
+
+  it('explains both surprising prefills in the modal subtitle', () => {
+    const onAdd = vi.fn()
+
+    settleClaim(group([txn(1)]), makeDataset({ accounts: [DEBIT, CARD] }), onAdd)
+
+    // The credit lands in one category rather than split across the claim's,
+    // and in the month it is paid rather than the month of the spending.
+    const hint = onAdd.mock.calls[0]![1] as string
+    expect(hint).toContain('Work travel')
+    expect(hint).toContain('largest category')
+    expect(hint).toContain("this month's budget")
   })
 
   it('does nothing when there is nothing left outstanding', () => {

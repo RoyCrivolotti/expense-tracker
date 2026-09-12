@@ -45,7 +45,11 @@ export function duplicateHint(txn: Transaction): string {
 export function openAddModal(
   openModal: (state: { mode: 'add'; seed?: TransactionSeed; hint?: string }) => void,
   maybeSeed?: unknown,
+  hint?: string,
 ): void {
-  if (isTransactionSeed(maybeSeed)) openModal({ mode: 'add', seed: maybeSeed })
-  else openModal({ mode: 'add' })
+  if (!isTransactionSeed(maybeSeed)) {
+    openModal({ mode: 'add' })
+    return
+  }
+  openModal({ mode: 'add', seed: maybeSeed, ...(hint ? { hint } : {}) })
 }
