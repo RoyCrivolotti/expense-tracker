@@ -14,6 +14,7 @@ import { TransactionsSelectFooter } from './TransactionsSelectFooter'
 import { useTransactionsTabState } from './useTransactionsTabState'
 import { RESULTS_ANCHOR_ID, scrollToResults } from './scrollToResults'
 import { useDebouncedAnnouncement } from '../hooks/useDebouncedAnnouncement'
+import { settleClaim } from './settleClaim'
 import styles from './tabs.module.css'
 
 interface TransactionsTabProps {
@@ -51,7 +52,8 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
               state.setDateScope('allDates')
               scrollToResults()
             }}
-            onOpenReport={setPackFlagId}
+            onOpenReport={setReportFlagId}
+            onSettle={(group) => settleClaim(group, model.dataset, actions.onAdd)}
             onManage={() => setManagingFlags(true)}
             onSelect={actions.onEdit}
           />

@@ -42,17 +42,19 @@ function renderCard(dataset: ExpenseDataset) {
   const onFilterByFlag = vi.fn()
   const onManage = vi.fn()
   const onOpenReport = vi.fn()
+  const onSettle = vi.fn()
   render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
       <FlaggedCard
         model={modelFor(dataset)}
         onFilterByFlag={onFilterByFlag}
         onOpenReport={onOpenReport}
+        onSettle={onSettle}
         onManage={onManage}
       />
     </MoneyFormatProvider>,
   )
-  return { onFilterByFlag, onManage, onOpenReport }
+  return { onFilterByFlag, onManage, onOpenReport, onSettle }
 }
 
 describe('FlaggedCard', () => {
@@ -63,6 +65,7 @@ describe('FlaggedCard', () => {
           model={modelFor(makeDataset({ flags: [work] }))}
           onFilterByFlag={vi.fn()}
           onOpenReport={vi.fn()}
+          onSettle={vi.fn()}
           onManage={vi.fn()}
         />
       </MoneyFormatProvider>,
@@ -134,6 +137,7 @@ describe('FlaggedCard', () => {
           model={modelFor(makeDataset({ flags: [{ ...work, active: false }], transactions: [txn({ flagId: 1 })] }))}
           onFilterByFlag={vi.fn()}
           onOpenReport={vi.fn()}
+          onSettle={vi.fn()}
           onManage={vi.fn()}
         />
       </MoneyFormatProvider>,
@@ -182,6 +186,7 @@ describe('FlaggedCard', () => {
           model={modelFor(makeDataset({ flags: [], transactions: [txn({ flagId: 99 })] }))}
           onFilterByFlag={vi.fn()}
           onOpenReport={vi.fn()}
+          onSettle={vi.fn()}
           onManage={vi.fn()}
         />
       </MoneyFormatProvider>,
@@ -200,5 +205,37 @@ describe('FlaggedCard', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Expense report' }))
 
     expect(onOpenReport).toHaveBeenCalledWith(1)
+  })
+})
+
+describe('FlaggedCard — recording a reimbursement', () => {
+  it('offers to settle a claim that still has something outstanding', async () => {
+    const { onSettle } = renderCard(
+      makeDataset({ flags: [work], transactions: [txn({ flagId: 1, amountCents: 10_000 })] }),
+    )
+
+    await userEvent.click(screen.getByText('Work travel'))
+    await userEvent.click(screen.getByRole('button', { name: 'Record reimbursement' }))
+
+    expect(onSettle).toHaveBeenCalledWith(expect.objectContaining({ totalCents: 10_000 }))
+  })
+
+  it('offers nothing to settle once the claim is square', async () => {
+    // The amount would prefill 0,00 €, which the form rejects for being zero —
+    // so the button could only ever fail.
+    const { onSettle } = renderCard(
+      makeDataset({
+        flags: [work],
+        transactions: [
+          txn({ flagId: 1, amountCents: 10_000 }),
+          txn({ flagId: 1, amountCents: 10_000, type: 'refund' }),
+        ],
+      }),
+    )
+
+    await userEvent.click(screen.getByText('Work travel'))
+
+    expect(screen.queryByRole('button', { name: 'Record reimbursement' })).not.toBeInTheDocument()
+    expect(onSettle).not.toHaveBeenCalled()
   })
 })
