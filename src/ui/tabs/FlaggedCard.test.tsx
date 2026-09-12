@@ -197,7 +197,7 @@ describe('FlaggedCard', () => {
 
     await userEvent.click(screen.getByText(/across 1 flag/))
     await userEvent.click(screen.getByText('Work travel'))
-    await userEvent.click(screen.getByRole('button', { name: 'Claim pack' }))
+    await userEvent.click(screen.getByRole('button', { name: 'View claim' }))
 
     expect(onOpenPack).toHaveBeenCalledWith(1)
   })

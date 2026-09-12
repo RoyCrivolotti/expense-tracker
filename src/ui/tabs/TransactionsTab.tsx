@@ -13,6 +13,7 @@ import { TransactionsFlagOverlays } from './TransactionsFlagOverlays'
 import { TransactionsSelectFooter } from './TransactionsSelectFooter'
 import { useTransactionsTabState } from './useTransactionsTabState'
 import { RESULTS_ANCHOR_ID, scrollToResults } from './scrollToResults'
+import { useDebouncedAnnouncement } from '../hooks/useDebouncedAnnouncement'
 import styles from './tabs.module.css'
 
 interface TransactionsTabProps {
@@ -28,6 +29,9 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
   const [managingFlags, setManagingFlags] = useState(false)
   const [packFlagId, setPackFlagId] = useState<number | null>(null)
   const rolloverDay = model.dataset.settings.budgetRolloverDay
+  const announcement = useDebouncedAnnouncement(
+    `${state.listRows.length} transactions match`,
+  )
   const upcoming = useMemo(
     () => detectRecurring(model.dataset.transactions, { forBudgetMonth: month, rolloverDay }),
     [model.dataset, month, rolloverDay],
@@ -88,9 +92,15 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
         onToggleSelectMode={state.toggleSelectMode}
       />
 
-      {/* role=status, so applying a filter announces the new result count
-          instead of changing the list silently. */}
-      <div id={RESULTS_ANCHOR_ID} className={styles.resultSummary} role="status">
+      {/*
+        The announcement is a separate, debounced node rather than role=status on
+        the visible summary: that fired on every keystroke in the search box, so
+        a screen reader read a new total for each letter typed.
+      */}
+      <p className={styles.visuallyHidden} role="status">
+        {announcement}
+      </p>
+      <div id={RESULTS_ANCHOR_ID} className={styles.resultSummary}>
         <span className={styles.resultStats}>
           <span>{state.listRows.length} items</span>
           <span>

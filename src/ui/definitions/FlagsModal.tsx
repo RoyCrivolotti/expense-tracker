@@ -17,7 +17,7 @@ function usageCount(model: ExpenseModel, flagId: number): number {
 }
 
 /**
- * Whether a claim pack would actually build. A raw usage count is not the same
+ * Whether a claim would actually build. A raw usage count is not the same
  * question: it counts cancelled rows and mis-typed income that `buildFlagGroup`
  * drops, so a flag carrying only those offered a button that opened nothing.
  */
@@ -35,7 +35,7 @@ export function FlagsModal({
   actions: ExpenseActions
   onClose: () => void
   /**
-   * Opens a flag's claim pack. The only route to an *archived* flag's pack:
+   * Opens a flag's claim. The only route to an *archived* flag's claim:
    * archiving is how a claim is marked done, it drops out of the Flagged card
    * by design, and a done claim is exactly the one an employer asks to see
    * again. Closes this modal first — the two render as siblings, so leaving
@@ -101,7 +101,7 @@ export function FlagsModal({
                       onOpenPack(flag.id)
                     }}
                   >
-                    Claim pack
+                    View claim
                   </button>
                 ) : null}
                 <button

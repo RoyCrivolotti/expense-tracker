@@ -70,7 +70,7 @@ export function groupTransactionsByFlag(
  * One flag's group, **including an archived flag**.
  *
  * Separate from `groupTransactionsByFlag` because archiving is how a claim is
- * marked done, and the claim pack still has to be printable afterwards — an
+ * marked done, and the claim still has to be printable afterwards — an
  * employer asking for it again a month later should not require un-archiving.
  * Every other rule (cancelled rows out, non-spend types out, unknown flag ids
  * ignored) lives in the shared helpers below, so the two cannot drift.

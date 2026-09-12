@@ -5,7 +5,15 @@
 .overlay {
   position: fixed;
   inset: 0;
-  z-index: 1200;
+  /*
+   * Above the app shell (35) and the batch bar (40), below Modal (50).
+   *
+   * It sat at 1200, which covered the transaction editor too — so the
+   * "attach the missing receipt" links opened an editor *underneath* an opaque
+   * page and read as doing nothing at all. Modal renders inside #root rather
+   * than portalling, so the only thing that decides which wins is this number.
+   */
+  z-index: 45;
   overflow-y: auto;
   background: var(--color-bg);
 }

@@ -91,7 +91,7 @@ function demoFlags(stored: StoredTransaction[]): {
   const recent = [...stored].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
   const flagged = new Map<number, number>()
   recent.forEach((txn, i) => flagged.set(txn.id, i % 3 === 2 ? 970_002 : 970_001))
-  // A business purpose on some rows, so the claim pack shows what it does with
+  // A business purpose on some rows, so the claim shows what it does with
   // the notes field rather than a column of blanks.
   const purposes = ['Kick-off with Acme', 'Client workshop, day 2', 'Airport transfer']
   const withFlags = stored.map((txn, i) => {
@@ -143,7 +143,7 @@ function enrichDocsCaptureDataset(dataset: ExpenseDataset): ExpenseDataset {
   return {
     ...dataset,
     flags,
-    // A claimant, so the claim pack's header renders as a real document rather
+    // A claimant, so the claim's header renders as a real document rather
     // than an anonymous table.
     settings: { ...dataset.settings, claimantName: 'Alex Moreno' },
     accountStatements: cards.length > 0 ? accountStatements : dataset.accountStatements,
