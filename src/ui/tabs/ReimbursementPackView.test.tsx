@@ -170,4 +170,24 @@ describe('ReimbursementPackView', () => {
 
     expect(onClose).toHaveBeenCalled()
   })
+
+  it('downloads the claim as a CSV', async () => {
+    renderPack(datasetWith([txn(1, '2026-05-02')]))
+
+    // Spied after render: React calls document.createElement too, and a
+    // mockReturnValueOnce set up earlier is consumed by the first <div> it makes.
+    const createObjectURL = vi.fn(() => 'blob:x')
+    vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL: vi.fn() })
+    const anchor = document.createElement('a')
+    vi.spyOn(anchor, 'click').mockImplementation(() => {})
+    vi.spyOn(document, 'createElement').mockReturnValueOnce(anchor)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Download CSV' }))
+
+    expect(createObjectURL).toHaveBeenCalled()
+    expect(anchor.download).toBe('work-travel.csv')
+
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
 })
