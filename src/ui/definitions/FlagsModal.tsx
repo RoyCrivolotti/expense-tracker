@@ -19,10 +19,19 @@ export function FlagsModal({
   model,
   actions,
   onClose,
+  onOpenPack,
 }: {
   model: ExpenseModel
   actions: ExpenseActions
   onClose: () => void
+  /**
+   * Opens a flag's claim pack. The only route to an *archived* flag's pack:
+   * archiving is how a claim is marked done, it drops out of the Flagged card
+   * by design, and a done claim is exactly the one an employer asks to see
+   * again. Closes this modal first — the two render as siblings, so leaving
+   * both mounted would leave this one's focus trap live under the sheet.
+   */
+  onOpenPack?: ((flagId: number) => void) | undefined
 }) {
   const [editing, setEditing] = useState<Editing>(null)
   const [confirming, setConfirming] = useState(false)
@@ -73,6 +82,18 @@ export function FlagsModal({
                     {usageCount(model, flag.id) === 1 ? '' : 's'}
                   </span>
                 </div>
+                {onOpenPack && usageCount(model, flag.id) > 0 ? (
+                  <button
+                    type="button"
+                    className={defStyles.editBtn}
+                    onClick={() => {
+                      onClose()
+                      onOpenPack(flag.id)
+                    }}
+                  >
+                    Claim pack
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className={defStyles.editBtn}

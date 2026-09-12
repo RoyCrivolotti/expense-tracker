@@ -26,7 +26,11 @@ function txn(id: number, date: string, overrides: Partial<Transaction> = {}): Tr
   }
 }
 
-function renderPack(dataset: ExpenseDataset, flagId = 1) {
+function renderPack(
+  dataset: ExpenseDataset,
+  flagId = 1,
+  extra: { onOpenTransaction?: (txn: Transaction) => void } = {},
+) {
   const onClose = vi.fn()
   render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
@@ -35,6 +39,8 @@ function renderPack(dataset: ExpenseDataset, flagId = 1) {
         lookup={buildLookup(dataset)}
         flagId={flagId}
         onClose={onClose}
+        issuedOn="2026-09-12"
+        {...extra}
       />
     </MoneyFormatProvider>,
   )
@@ -46,12 +52,13 @@ function datasetWith(transactions: Transaction[], attachments: unknown[] = []): 
 }
 
 describe('ReimbursementPackView', () => {
-  it('heads the claim with the flag, its note and the date range', () => {
+  it('heads the claim with the flag, its note and the claimed period', () => {
     renderPack(datasetWith([txn(1, '2026-05-02'), txn(2, '2026-05-09')]))
 
     expect(screen.getByRole('heading', { name: 'Work travel' })).toBeInTheDocument()
     expect(screen.getByText('Reimbursable — submit monthly')).toBeInTheDocument()
-    expect(screen.getByText(/2 May.*9 May.*2 items/)).toBeInTheDocument()
+    expect(screen.getByText('Expense claim')).toBeInTheDocument()
+    expect(screen.getByText(/2 May.*9 May/)).toBeInTheDocument()
   })
 
   it('lists one row per transaction, oldest first', () => {
@@ -111,10 +118,24 @@ describe('ReimbursementPackView', () => {
     expect(screen.getByText('invoice.pdf')).toBeInTheDocument()
   })
 
-  it('writes a refund as a negative, so it does not read as another expense', () => {
-    renderPack(datasetWith([txn(1, '2026-05-02', { type: 'refund', amountCents: 4_000 })]))
+  it('shows a recorded reimbursement as a credit under the claim, not a claimed line', () => {
+    renderPack(
+      datasetWith([
+        txn(1, '2026-05-02', { amountCents: 10_000 }),
+        txn(2, '2026-06-14', { type: 'refund', amountCents: 4_000 }),
+      ]),
+    )
 
-    // The row and the total, since a refund is the only line here.
+    // Claimed stays gross — a claim you submit must not net itself down by a
+    // payment you are still waiting for.
+    expect(screen.getByText('Already reimbursed')).toBeInTheDocument()
+    // The row and the claimed total both read 100,00 €; the outstanding figure
+    // is the one that has to differ.
+    expect(screen.getAllByText('100,00 €')).toHaveLength(2)
+    expect(screen.getByText('Total claimed')).toBeInTheDocument()
+    expect(screen.getByText('Outstanding')).toBeInTheDocument()
+    expect(screen.getByText('60,00 €')).toBeInTheDocument()
+    // Likewise the credit row and the "Less reimbursed" line.
     expect(screen.getAllByText('-40,00 €')).toHaveLength(2)
   })
 
@@ -189,5 +210,71 @@ describe('ReimbursementPackView', () => {
 
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
+  })
+})
+
+describe('ReimbursementPackView — the document', () => {
+  it('prints the claimant, reference, issue date and currency', () => {
+    const dataset = makeDataset({
+      flags: [work],
+      transactions: [txn(1, '2026-05-02')],
+      settings: { ...makeDataset().settings, claimantName: 'Alex Moreno', currencyCode: 'EUR' },
+    })
+    renderPack(dataset)
+
+    expect(screen.getByText('Alex Moreno')).toBeInTheDocument()
+    // Derived from the flag and the first claimed month, so a reprint matches.
+    expect(screen.getByText('WT-202605')).toBeInTheDocument()
+    expect(screen.getByText(/12 Sep/)).toBeInTheDocument()
+    expect(screen.getByText(/EUR/)).toBeInTheDocument()
+  })
+
+  it('omits the claimant line rather than printing a blank one', () => {
+    renderPack(datasetWith([txn(1, '2026-05-02')]))
+
+    expect(screen.queryByText('Claimant')).not.toBeInTheDocument()
+  })
+
+  it('prints the transaction notes as the line’s business purpose', () => {
+    renderPack(datasetWith([txn(1, '2026-05-02', { notes: 'Kick-off with Acme' })]))
+
+    expect(screen.getByText('Kick-off with Acme')).toBeInTheDocument()
+  })
+
+  it('cross-references each receipt so a row can be tied to its figure', () => {
+    renderPack(
+      datasetWith(
+        [txn(1, '2026-05-02'), txn(2, '2026-05-04')],
+        [
+          makeAttachment({ id: 1, transactionId: 1 }),
+          makeAttachment({ id: 2, transactionId: 1 }),
+          makeAttachment({ id: 3, transactionId: 2 }),
+        ],
+      ),
+    )
+
+    // The row carries the refs; each figure below repeats its own.
+    expect(screen.getByText('R1 R2')).toBeInTheDocument()
+    expect(screen.getAllByText('R3')).toHaveLength(2)
+  })
+
+  it('lets a line with no receipt be opened from the warning', async () => {
+    const onOpenTransaction = vi.fn()
+    renderPack(datasetWith([txn(1, '2026-05-02', { description: 'Hotel Lisboa' })]), 1, {
+      onOpenTransaction,
+    })
+
+    // This is the route for rows entered through bulk-add, which has no per-row
+    // receipt affordance of its own.
+    await userEvent.click(screen.getByRole('button', { name: /Hotel Lisboa/ }))
+
+    expect(onOpenTransaction).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }))
+  })
+
+  it('still renders for an archived flag, so a settled claim can be reprinted', () => {
+    const archived = makeFlag({ id: 1, name: 'Work travel', active: false })
+    renderPack(makeDataset({ flags: [archived], transactions: [txn(1, '2026-05-02')] }))
+
+    expect(screen.getByRole('heading', { name: 'Work travel' })).toBeInTheDocument()
   })
 })

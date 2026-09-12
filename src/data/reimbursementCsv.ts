@@ -1,5 +1,5 @@
 import type { ExpenseDataset } from '../types'
-import { buildReimbursementPack } from '../domain/engine/reimbursementPack'
+import { buildReimbursementPack, type PackLine } from '../domain/engine/reimbursementPack'
 import { formatCents, type MoneyFormat } from '../engine/money'
 
 /**
@@ -11,7 +11,7 @@ import { formatCents, type MoneyFormat } from '../engine/money'
  * feature nobody asked to import. This is a different document with a different
  * audience — human-readable amounts, a receipts column, a total row.
  */
-const HEADER = ['Date', 'Description', 'Category', 'Account', 'Amount', 'Receipts'] as const
+const HEADER = ['Date', 'Description', 'Purpose', 'Category', 'Account', 'Amount', 'Receipts'] as const
 
 function esc(value: string): string {
   if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`
@@ -37,26 +37,36 @@ export function reimbursementCsv(
   )
   if (!pack) return null
 
-  const rows = pack.lines.map((line) =>
+  const row = (line: PackLine, signed: boolean) =>
     [
       line.transaction.date,
       line.transaction.description || options.categoryName(line.transaction.categoryId),
+      // The transaction's own notes: an approver asks what a dinner was *for*,
+      // and that is exactly what the notes field already holds.
+      line.transaction.notes ?? '',
       options.categoryName(line.transaction.categoryId),
       options.accountName(line.transaction.accountId),
-      // A refund reduces the claim, so it is written negative rather than as a
-      // bare figure that would read as another expense.
-      formatCents(
-        line.transaction.type === 'refund' ? -line.transaction.amountCents : line.transaction.amountCents,
-        options.format,
-      ),
-      String(line.receipts.length),
+      // A credit is written negative so the Amount column still sums to the
+      // outstanding figure when someone totals it in a spreadsheet.
+      formatCents(signed ? -line.transaction.amountCents : line.transaction.amountCents, options.format),
+      // Cross-references rather than a count, matching the figures in the
+      // printed sheet, so a row can actually be tied to an image.
+      line.receiptRefs.map((ref) => `R${ref}`).join(' '),
     ]
       .map(esc)
-      .join(','),
-  )
+      .join(',')
 
-  const total = ['', 'Total', '', '', formatCents(pack.totalCents, options.format), ''].map(esc).join(',')
-  return [HEADER.join(','), ...rows, total].join('\n')
+  const rows = pack.lines.map((line) => row(line, false))
+  const credits = pack.credits.map((line) => row(line, true))
+  const blank = (label: string, cents: number) =>
+    ['', label, '', '', '', formatCents(cents, options.format), ''].map(esc).join(',')
+
+  const totals = [blank('Total claimed', pack.totalClaimedCents)]
+  if (pack.credits.length > 0) {
+    totals.push(blank('Less reimbursed', -pack.creditedCents))
+    totals.push(blank('Outstanding', pack.outstandingCents))
+  }
+  return [HEADER.join(','), ...rows, ...credits, ...totals].join('\n')
 }
 
 export function downloadReimbursementCsv(

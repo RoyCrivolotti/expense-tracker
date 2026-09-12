@@ -172,6 +172,7 @@ export interface SettingsRow {
   number_locale: string | null
   budget_rollover_day: number | null
   milestones: string | null
+  claimant_name: string | null
 }
 
 export interface GoalRow {
@@ -192,6 +193,7 @@ export function toSettings(r: SettingsRow): ExpenseSettings {
     defaultAccountId: r.default_account_id ?? null,
     currencyCode: r.currency_code ?? DEFAULT_CURRENCY_CODE,
     numberLocale: r.number_locale ?? DEFAULT_NUMBER_LOCALE,
+    claimantName: r.claimant_name ?? '',
     budgetRolloverDay: r.budget_rollover_day ?? DEFAULT_BUDGET_ROLLOVER_DAY,
     milestones: parseMilestones(r.milestones ?? null),
   }

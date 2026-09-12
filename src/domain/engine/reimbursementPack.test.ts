@@ -83,19 +83,83 @@ describe('buildReimbursementPack', () => {
     expect(pack?.missingReceipts).toBe(1)
   })
 
-  it('totals the same figure the Flagged card shows', () => {
+  it('splits refunds out of the claim and into credits', () => {
     const pack = buildReimbursementPack(
       1,
       [
         txn(1, '2026-05-02', { flagId: 1, amountCents: 10_000 }),
-        txn(2, '2026-05-04', { flagId: 1, amountCents: 4_000, type: 'refund' }),
+        txn(2, '2026-06-14', { flagId: 1, amountCents: 4_000, type: 'refund' }),
       ],
       [WORK],
       [],
     )
 
-    // Refunds subtract, matching netSpendCents and the card.
-    expect(pack?.totalCents).toBe(6_000)
+    // A settlement carries the same flag. Left among the claimed rows it put a
+    // negative line in the document you submit.
+    expect(pack?.lines).toHaveLength(1)
+    expect(pack?.credits).toHaveLength(1)
+    expect(pack?.totalClaimedCents).toBe(10_000)
+    expect(pack?.creditedCents).toBe(4_000)
+    // Outstanding still matches netSpendCents and the card.
+    expect(pack?.outstandingCents).toBe(6_000)
+  })
+
+  it('keeps the header period to the claimed dates, not the settlement date', () => {
+    const pack = buildReimbursementPack(
+      1,
+      [
+        txn(1, '2026-05-02', { flagId: 1 }),
+        txn(2, '2026-05-09', { flagId: 1 }),
+        txn(3, '2026-06-14', { flagId: 1, amountCents: 20_000, type: 'refund' }),
+      ],
+      [WORK],
+      [],
+    )
+
+    expect(pack?.from).toBe('2026-05-02')
+    expect(pack?.to).toBe('2026-05-09')
+    expect(pack?.lines).toHaveLength(2)
+  })
+
+  it('does not count a credit as an item missing its receipt', () => {
+    const pack = buildReimbursementPack(
+      1,
+      [
+        txn(1, '2026-05-02', { flagId: 1 }),
+        txn(2, '2026-06-14', { flagId: 1, amountCents: 10_000, type: 'refund' }),
+      ],
+      [WORK],
+      [attachment(1, 1)],
+    )
+
+    // Otherwise every settled claim warns that one item has no receipt.
+    expect(pack?.missingReceipts).toBe(0)
+  })
+
+  it('numbers receipts across the claim so a row can be tied to a figure', () => {
+    const pack = buildReimbursementPack(
+      1,
+      [txn(1, '2026-05-02', { flagId: 1 }), txn(2, '2026-05-04', { flagId: 1 })],
+      [WORK],
+      [attachment(1, 1), attachment(2, 1), attachment(3, 2)],
+    )
+
+    expect(pack?.lines[0]?.receiptRefs).toEqual([1, 2])
+    expect(pack?.lines[1]?.receiptRefs).toEqual([3])
+    expect(packReceipts(pack!).map((r) => r.ref)).toEqual([1, 2, 3])
+  })
+
+  it('still builds for an archived flag, so a settled claim can be reprinted', () => {
+    const pack = buildReimbursementPack(
+      1,
+      [txn(1, '2026-05-02', { flagId: 1 })],
+      [flag({ id: 1, active: false })],
+      [],
+    )
+
+    // Archiving is how a claim is marked done, and a done claim is exactly the
+    // one an employer asks to see again.
+    expect(pack?.lines).toHaveLength(1)
   })
 
   it('excludes cancelled transactions, inheriting the card’s rule', () => {
@@ -110,12 +174,6 @@ describe('buildReimbursementPack', () => {
     )
 
     expect(pack?.lines).toHaveLength(1)
-  })
-
-  it('is null for an archived flag, which is how a settled claim disappears', () => {
-    expect(
-      buildReimbursementPack(1, [txn(1, '2026-05-02', { flagId: 1 })], [flag({ id: 1, active: false })], []),
-    ).toBeNull()
   })
 
   it('is null for a flag with nothing on it', () => {
