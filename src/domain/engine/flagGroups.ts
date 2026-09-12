@@ -55,6 +55,37 @@ export function groupTransactionsByFlag(
   transactions: Transaction[],
   flags: Flag[],
 ): FlagGroup[] {
+  const byFlag = bucketByFlag(transactions)
+
+  const groups: FlagGroup[] = []
+  for (const flag of flags) {
+    if (!flag.active) continue
+    const group = toGroup(flag, byFlag.get(flag.id))
+    if (group) groups.push(group)
+  }
+  return groups
+}
+
+/**
+ * One flag's group, **including an archived flag**.
+ *
+ * Separate from `groupTransactionsByFlag` because archiving is how a claim is
+ * marked done, and the claim pack still has to be printable afterwards — an
+ * employer asking for it again a month later should not require un-archiving.
+ * Every other rule (cancelled rows out, non-spend types out, unknown flag ids
+ * ignored) lives in the shared helpers below, so the two cannot drift.
+ */
+export function buildFlagGroup(
+  flagId: number,
+  transactions: Transaction[],
+  flags: Flag[],
+): FlagGroup | null {
+  const flag = flags.find((f) => f.id === flagId)
+  if (!flag) return null
+  return toGroup(flag, bucketByFlag(transactions).get(flagId))
+}
+
+function bucketByFlag(transactions: Transaction[]): Map<number, Transaction[]> {
   const byFlag = new Map<number, Transaction[]>()
   for (const txn of transactions) {
     if (txn.flagId == null || txn.status === 'cancelled') continue
@@ -63,20 +94,17 @@ export function groupTransactionsByFlag(
     if (bucket) bucket.push(txn)
     else byFlag.set(txn.flagId, [txn])
   }
+  return byFlag
+}
 
-  const groups: FlagGroup[] = []
-  for (const flag of flags) {
-    if (!flag.active) continue
-    const rows = byFlag.get(flag.id)
-    if (!rows || rows.length === 0) continue
-    groups.push({
-      flag,
-      transactions: rows,
-      count: rows.length,
-      totalCents: netSpendCents(rows),
-    })
+function toGroup(flag: Flag, rows: Transaction[] | undefined): FlagGroup | null {
+  if (!rows || rows.length === 0) return null
+  return {
+    flag,
+    transactions: rows,
+    count: rows.length,
+    totalCents: netSpendCents(rows),
   }
-  return groups
 }
 
 /** Rolled-up figures for the collapsed Flagged header. */

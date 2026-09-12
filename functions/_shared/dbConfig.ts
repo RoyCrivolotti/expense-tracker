@@ -362,6 +362,7 @@ async function deleteOrphanedAccount(env: Env, owner: string, id: number): Promi
 }
 
 const SETTINGS_COLUMNS: ColumnMap<ExpenseSettings> = {
+  claimantName: 'claimant_name',
   openingCashCents: 'opening_cash_cents',
   openingInvestmentCents: 'opening_investment_cents',
   liquidNetWorthCents: 'liquid_net_worth_cents',
@@ -372,6 +373,7 @@ const SETTINGS_COLUMNS: ColumnMap<ExpenseSettings> = {
   milestones: 'milestones',
 }
 const NULLABLE_SETTINGS = new Set<keyof ExpenseSettings>([
+  'claimantName',
   'defaultAccountId',
   'currencyCode',
   'numberLocale',

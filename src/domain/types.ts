@@ -233,6 +233,11 @@ export interface ExpenseSettings {
   /** BCP-47 locale driving digit grouping and decimal separator, e.g. 'de-DE', 'en-US'. */
   numberLocale: string
   /**
+   * Name printed on a reimbursement claim. Empty means "not set" — the claim
+   * sheet then omits the claimant line rather than printing a blank one.
+   */
+  claimantName: string
+  /**
    * Day of month (1-31) on/after which a transaction rolls into the next budget
    * month. 1 = plain calendar months (budget month equals calendar month).
    */

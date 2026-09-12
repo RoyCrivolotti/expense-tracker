@@ -1,11 +1,12 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import type { ExpenseDataset } from '../../types'
-import { buildReimbursementPack, packReceipts } from '../../domain/engine/reimbursementPack'
+import type { ExpenseDataset, Transaction } from '../../types'
+import { buildReimbursementPack } from '../../domain/engine/reimbursementPack'
+import { ClaimSheet } from './ClaimSheet'
+import { todayIso } from '../components/transactionFormState'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { downloadReimbursementCsv } from '../../data/reimbursementCsv'
-import { formatCents } from '../../engine/money'
-import { formatDayLabel, type Lookup } from '../format'
+import type { Lookup } from '../format'
 import styles from './ReimbursementPackView.module.css'
 
 interface Props {
@@ -13,6 +14,10 @@ interface Props {
   lookup: Lookup
   flagId: number
   onClose: () => void
+  /** Opens a line's editor, so a missing receipt can be attached from here. */
+  onOpenTransaction?: ((txn: Transaction) => void) | undefined
+  /** Overridable so the printed issue date is testable. */
+  issuedOn?: string
 }
 
 /**
@@ -23,7 +28,14 @@ interface Props {
  * the page is the document: `@media print` drops the app chrome and the two
  * buttons, and the on-screen view is just the same document with a toolbar.
  */
-export function ReimbursementPackView({ dataset, lookup, flagId, onClose }: Props) {
+export function ReimbursementPackView({
+  dataset,
+  lookup,
+  flagId,
+  onClose,
+  onOpenTransaction,
+  issuedOn,
+}: Props) {
   const format = useMoneyFormat()
 
   /*
@@ -41,7 +53,6 @@ export function ReimbursementPackView({ dataset, lookup, flagId, onClose }: Prop
 
   const pack = buildReimbursementPack(flagId, dataset.transactions, dataset.flags, dataset.attachments)
   if (!pack) return null
-  const receipts = packReceipts(pack)
 
   return createPortal(
     <div className={styles.overlay}>
@@ -69,97 +80,15 @@ export function ReimbursementPackView({ dataset, lookup, flagId, onClose }: Prop
         </div>
       </div>
 
-      <article className={styles.sheet}>
-        <header className={styles.header}>
-          <h1 className={styles.title}>{pack.flag.name}</h1>
-          {pack.flag.description ? (
-            <p className={styles.subtitle}>{pack.flag.description}</p>
-          ) : null}
-          <p className={styles.range}>
-            {formatDayLabel(pack.from)} – {formatDayLabel(pack.to)} · {pack.lines.length} item
-            {pack.lines.length === 1 ? '' : 's'}
-          </p>
-        </header>
-
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th scope="col">Date</th>
-              <th scope="col">Description</th>
-              <th scope="col">Category</th>
-              <th scope="col" className={styles.numeric}>
-                Amount
-              </th>
-              <th scope="col" className={styles.numeric}>
-                Receipt
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {pack.lines.map(({ transaction, receipts: lineReceipts }) => (
-              <tr key={transaction.id}>
-                <td>{formatDayLabel(transaction.date)}</td>
-                <td>{transaction.description || lookup.categoryName(transaction.categoryId)}</td>
-                <td>{lookup.categoryName(transaction.categoryId)}</td>
-                <td className={styles.numeric}>
-                  {formatCents(
-                    transaction.type === 'refund' ? -transaction.amountCents : transaction.amountCents,
-                    format,
-                  )}
-                </td>
-                <td className={styles.numeric}>
-                  {lineReceipts.length > 0 ? lineReceipts.length : '—'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr>
-              <th scope="row" colSpan={3}>
-                Total claimed
-              </th>
-              <td className={`${styles.numeric} ${styles.total}`}>
-                {formatCents(pack.totalCents, format)}
-              </td>
-              <td />
-            </tr>
-          </tfoot>
-        </table>
-
-        {pack.missingReceipts > 0 ? (
-          <p className={styles.warning}>
-            {pack.missingReceipts} item{pack.missingReceipts === 1 ? ' has' : 's have'} no receipt
-            attached. Most employers will send the claim back for those.
-          </p>
-        ) : null}
-
-        {receipts.length > 0 ? (
-          <section className={styles.receipts}>
-            <h2 className={styles.receiptsTitle}>Receipts</h2>
-            {receipts.map(({ attachment, transaction }) => (
-              <figure key={attachment.id} className={styles.figure}>
-                {attachment.contentType === 'application/pdf' ? (
-                  <p className={styles.pdfNote}>
-                    PDF receipt — attach <strong>{attachment.originalName ?? 'the file'}</strong>{' '}
-                    separately; a PDF cannot be printed into this page.
-                  </p>
-                ) : (
-                  <img
-                    src={`/api/expenses/attachments/${attachment.id}`}
-                    alt={`Receipt for ${transaction.description}`}
-                    className={styles.receiptImage}
-                  />
-                )}
-                <figcaption className={styles.caption}>
-                  {formatDayLabel(transaction.date)} ·{' '}
-                  {transaction.description || lookup.categoryName(transaction.categoryId)} ·{' '}
-                  {formatCents(transaction.amountCents, format)}
-                </figcaption>
-              </figure>
-            ))}
-          </section>
-        ) : null}
-      </article>
+      <ClaimSheet
+        pack={pack}
+        lookup={lookup}
+        format={format}
+        claimantName={dataset.settings.claimantName}
+        currencyCode={dataset.settings.currencyCode}
+        issuedOn={issuedOn ?? todayIso()}
+        onOpenTransaction={onOpenTransaction}
+      />
     </div>,
     document.body,
   )

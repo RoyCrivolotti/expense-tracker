@@ -53,14 +53,41 @@
 }
 
 .sheet {
+  /* Framed as a page. On screen this floated on the app background with no edge,
+     so it read as a table in a tab rather than a document you are about to
+     hand someone. Print strips the frame again — paper supplies its own. */
   max-width: 48rem;
-  margin: 0 auto;
-  padding: 2rem 1.25rem 4rem;
+  margin: 1.25rem auto 4rem;
+  padding: 2rem 1.75rem 3rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  background: var(--color-surface);
   color: var(--color-text);
 }
 
 .header {
-  margin-bottom: 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--color-text);
+}
+
+.headerMain {
+  min-width: 0;
+  flex: 1 1 14rem;
+}
+
+.docType {
+  margin: 0 0 0.15rem;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
 }
 
 .title {
@@ -73,9 +100,81 @@
   color: var(--color-text-muted);
 }
 
+/* Definition list rather than a paragraph: an approver scans for the reference
+   and the period, and labelled pairs survive being read out of order. */
+.meta {
+  margin: 0;
+  flex: 0 1 auto;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.metaRow {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.metaRow dt {
+  color: var(--color-text-muted);
+}
+
+.metaRow dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 .range {
   margin: 0.5rem 0 0;
   font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+/* A five-column table cannot shrink below its content on a phone; let it scroll
+   in its own box rather than pushing the page sideways. */
+.tableWrap {
+  overflow-x: auto;
+}
+
+.purpose {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.sectionRow {
+  padding-top: 1rem !important;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  text-align: left !important;
+}
+
+.refBadge {
+  display: inline-block;
+  padding: 0.05rem 0.35rem;
+  border-radius: 0.3rem;
+  background: var(--color-surface-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.signature {
+  margin-top: 3rem;
+  max-width: 18rem;
+}
+
+.signatureLine {
+  height: 2.5rem;
+  border-bottom: 1px solid var(--color-text);
+}
+
+.signatureLabel {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
   color: var(--color-text-muted);
 }
 
@@ -123,6 +222,30 @@
   color: var(--color-text);
   font-size: 0.85rem;
   line-height: 1.45;
+}
+
+.warningText {
+  margin: 0;
+}
+
+.warningList {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.warningBtn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .receipts {
@@ -190,7 +313,34 @@
 
   .sheet {
     max-width: none;
+    margin: 0;
     padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+  }
+
+  /* Paper supplies the frame; the screen's card edge would print as a box. */
+  .header {
+    border-bottom-color: #111;
+  }
+
+  .tableWrap {
+    overflow: visible;
+  }
+
+  .refBadge {
+    background: none;
+    padding: 0;
+  }
+
+  .signatureLine {
+    border-bottom-color: #111;
+  }
+
+  /* The list only helps on screen — on paper it is a dead link. */
+  .warningList {
+    display: none;
   }
 
   .table th,

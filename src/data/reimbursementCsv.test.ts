@@ -39,12 +39,42 @@ describe('reimbursementCsv', () => {
     )
 
     const lines = csv!.split('\n')
-    expect(lines[0]).toBe('Date,Description,Category,Account,Amount,Receipts')
+    expect(lines[0]).toBe('Date,Description,Purpose,Category,Account,Amount,Receipts')
     expect(lines).toHaveLength(4)
-    expect(lines[3]).toContain('Total')
+    expect(lines[3]).toContain('Total claimed')
   })
 
-  it('counts receipts per row', () => {
+  it('carries the transaction notes through as the business purpose', () => {
+    // An approver asks what a dinner was *for*; notes already holds exactly that.
+    const csv = reimbursementCsv(
+      datasetWith([txn(1, '2026-05-02', { flagId: 1, notes: 'Kick-off with Acme' })]),
+      1,
+      options,
+    )
+
+    expect(csv!.split('\n')[1]).toContain('Kick-off with Acme')
+  })
+
+  it('breaks the totals out once a reimbursement has been recorded', () => {
+    const csv = reimbursementCsv(
+      datasetWith([
+        txn(1, '2026-05-02', { flagId: 1, amountCents: 10_000 }),
+        txn(2, '2026-06-14', { flagId: 1, amountCents: 4_000, type: 'refund' }),
+      ]),
+      1,
+      options,
+    )
+
+    const lines = csv!.split('\n')
+    // Claimed stays gross; the credit is negative so the Amount column still
+    // sums to the outstanding figure if someone totals it in a spreadsheet.
+    expect(lines.at(-3)).toContain('Total claimed')
+    expect(lines.at(-2)).toContain('Less reimbursed')
+    expect(lines.at(-1)).toContain('Outstanding')
+    expect(lines.at(-1)).toContain('60,00')
+  })
+
+  it('cross-references receipts per row, so a line ties to a figure', () => {
     const csv = reimbursementCsv(
       datasetWith([txn(1, '2026-05-02', { flagId: 1 })], [
         makeAttachment({ id: 1, transactionId: 1 }),
@@ -54,10 +84,10 @@ describe('reimbursementCsv', () => {
       options,
     )
 
-    expect(csv!.split('\n')[1]).toMatch(/,2$/)
+    expect(csv!.split('\n')[1]).toMatch(/,R1 R2$/)
   })
 
-  it('writes a refund negative, so it does not read as another expense', () => {
+  it('writes a credit negative, so it does not read as another expense', () => {
     const csv = reimbursementCsv(
       datasetWith([txn(1, '2026-05-02', { flagId: 1, type: 'refund', amountCents: 4_000 })]),
       1,
@@ -94,7 +124,7 @@ describe('reimbursementCsv', () => {
       options,
     )
 
-    expect(csv!.split('\n')[1]).toContain('Travel,Travel')
+    expect(csv!.split('\n')[1]).toContain('Travel,,Travel')
   })
 
   it('is null for a flag with nothing to claim', () => {

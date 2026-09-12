@@ -14,6 +14,7 @@ export function TransactionsFlagOverlays({
   actions,
   packFlagId,
   onClosePack,
+  onOpenPack,
   managingFlags,
   onCloseManage,
 }: {
@@ -21,6 +22,7 @@ export function TransactionsFlagOverlays({
   actions: ExpenseActions | undefined
   packFlagId: number | null
   onClosePack: () => void
+  onOpenPack: (flagId: number) => void
   managingFlags: boolean
   onCloseManage: () => void
 }) {
@@ -32,11 +34,17 @@ export function TransactionsFlagOverlays({
           lookup={model.lookup}
           flagId={packFlagId}
           onClose={onClosePack}
+          {...(actions ? { onOpenTransaction: actions.onEdit } : {})}
         />
       ) : null}
 
       {managingFlags && actions ? (
-        <FlagsModal model={model} actions={actions} onClose={onCloseManage} />
+        <FlagsModal
+          model={model}
+          actions={actions}
+          onClose={onCloseManage}
+          onOpenPack={onOpenPack}
+        />
       ) : null}
     </>
   )

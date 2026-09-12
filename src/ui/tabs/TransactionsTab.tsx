@@ -149,6 +149,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
         actions={actions}
         packFlagId={packFlagId}
         onClosePack={() => setPackFlagId(null)}
+        onOpenPack={setPackFlagId}
         managingFlags={managingFlags}
         onCloseManage={() => setManagingFlags(false)}
       />
