@@ -115,4 +115,48 @@ describe('ReceiptStrip', () => {
     expect(input).toHaveAttribute('capture', 'environment')
     expect(input.getAttribute('accept')).toBe('image/jpeg,image/png,image/webp,application/pdf')
   })
+
+  it('surfaces a failed removal instead of leaving the thumbnail there silently', async () => {
+    const deleteAttachment = vi.fn().mockRejectedValue(new Error('Receipt storage is not configured'))
+    renderStrip([makeAttachment({ id: 7, originalName: 'a.jpg' })], { deleteAttachment })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove a.jpg' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Remove' }))
+
+    expect(await screen.findByText('Receipt storage is not configured')).toBeInTheDocument()
+  })
+
+  it('keeps the receipt when the removal is cancelled', async () => {
+    const deleteAttachment = vi.fn()
+    const { onTrapPausedChange } = renderStrip([makeAttachment({ id: 7, originalName: 'a.jpg' })], {
+      deleteAttachment,
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove a.jpg' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(deleteAttachment).not.toHaveBeenCalled()
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(onTrapPausedChange).toHaveBeenLastCalledWith(false)
+  })
+
+  it('opens the file picker from the add button', async () => {
+    const { fileInput } = renderStrip([])
+    const click = vi.spyOn(fileInput, 'click').mockImplementation(() => {})
+
+    await userEvent.click(screen.getByRole('button', { name: /Add receipt/ }))
+
+    expect(click).toHaveBeenCalled()
+  })
+
+  it('shows the viewer for a receipt, and closes it', async () => {
+    const { onTrapPausedChange } = renderStrip([makeAttachment({ id: 7, originalName: 'a.jpg' })])
+
+    await userEvent.click(screen.getByRole('button', { name: 'View a.jpg' }))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /close/i }))
+
+    expect(onTrapPausedChange).toHaveBeenLastCalledWith(false)
+  })
 })
