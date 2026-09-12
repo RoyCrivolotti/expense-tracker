@@ -36,6 +36,8 @@ export interface TransactionSeed {
   amountCents?: number
   date?: string
   budgetMonth?: string
+  /** Flag to apply to the created transaction, e.g. when settling a claim. */
+  flagId?: number
   /** When set, the created transaction settles this installment plan. */
   planId?: number
   /** Installment number this payment represents (for the modal hint only). */
