@@ -16,6 +16,10 @@ export interface InvokeExpenseApiOptions {
   method?: string
   body?: unknown
   params?: Record<string, string>
+  /** Bypasses the JSON path, for the upload route's multipart body. */
+  rawBody?: BodyInit
+  /** Extra request headers, e.g. if-none-match for a conditional GET. */
+  extraHeaders?: Record<string, string>
   /** Omit header when false; defaults to owner@example.com. */
   email?: string | false
 }
@@ -48,8 +52,12 @@ export async function invokeExpenseApiRoute(
   if (options.email !== false) {
     headers.set('Cf-Access-Authenticated-User-Email', options.email ?? 'owner@example.com')
   }
+  for (const [key, value] of Object.entries(options.extraHeaders ?? {})) headers.set(key, value)
   const init: RequestInit = { method: options.method ?? 'GET', headers }
-  if (options.body !== undefined) {
+  if (options.rawBody !== undefined) {
+    // No content-type: FormData sets its own multipart boundary.
+    init.body = options.rawBody
+  } else if (options.body !== undefined) {
     headers.set('content-type', 'application/json')
     init.body = JSON.stringify(options.body)
   }

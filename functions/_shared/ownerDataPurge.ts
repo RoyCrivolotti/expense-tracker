@@ -4,10 +4,15 @@ export async function purgeOwnerExpenseData(db: D1Database, ownerEmail: string):
   if (!owner) return
 
   // wealth_checkin_entries is deleted via ON DELETE CASCADE from wealth_checkins.
+  //
+  // This clears attachment *metadata*. The bytes in R2 are swept separately —
+  // see purgeOwnerReceipts, which the caller runs after this, since an R2 delete
+  // cannot join a D1 batch.
   await db.batch([
     db.prepare('DELETE FROM transactions WHERE owner = ?').bind(owner),
     db.prepare('DELETE FROM account_statements WHERE owner = ?').bind(owner),
     db.prepare('DELETE FROM cash_actuals WHERE owner = ?').bind(owner),
+    db.prepare('DELETE FROM transaction_attachments WHERE owner = ?').bind(owner),
     db.prepare('DELETE FROM flags WHERE owner = ?').bind(owner),
     db.prepare('DELETE FROM categories WHERE owner = ?').bind(owner),
     db.prepare('DELETE FROM accounts WHERE owner = ?').bind(owner),

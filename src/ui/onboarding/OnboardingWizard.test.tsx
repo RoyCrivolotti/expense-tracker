@@ -8,6 +8,7 @@ import { OnboardingWizard } from './OnboardingWizard'
 function datasetWith(overrides: Partial<ExpenseDataset> = {}): ExpenseDataset {
   return {
     flags: [],
+    attachments: [],
     categories: [],
     accounts: [],
     transactions: [],

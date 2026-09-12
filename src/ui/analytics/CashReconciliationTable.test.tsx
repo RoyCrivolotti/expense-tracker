@@ -30,6 +30,7 @@ function modelWith(transactions: Transaction[], cashActuals: ExpenseDataset['cas
   return {
     dataset: {
       flags: [],
+      attachments: [],
       categories: [{ id: 1, name: 'Misc', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
       accounts,
       transactions,

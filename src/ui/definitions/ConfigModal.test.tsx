@@ -21,6 +21,7 @@ const NEW_CARD: Account = { id: 12, name: 'New card', kind: 'debit', settlement:
 function dataset(overrides: Partial<ExpenseDataset> = {}): ExpenseDataset {
   return {
     flags: [],
+    attachments: [],
     categories: [DINING, GROCERIES],
     accounts: [CHECKING, OLD_CARD],
     transactions: [],

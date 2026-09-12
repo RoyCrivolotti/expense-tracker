@@ -10,6 +10,7 @@ import { TransactionModal } from './TransactionModal'
 function dataset(): ExpenseDataset {
   return {
     flags: [],
+    attachments: [],
     categories: [{ id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
     accounts: [{ id: 1, name: 'Cash', kind: 'debit', settlement: 'immediate', active: true }],
     transactions: [],

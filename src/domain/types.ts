@@ -256,10 +256,32 @@ export interface CashActual {
 }
 
 /** A fully denormalized dataset, as produced by the CSV importer or the API. */
+/**
+ * A receipt pinned to a transaction. Metadata only — the bytes live in R2 and
+ * are fetched by URL (`/api/expenses/attachments/:id`), never carried in the
+ * dataset: `datasetPatches.cloneDataset` structuredClones the whole dataset on
+ * every mutation, and `offlineCache` writes it to IndexedDB.
+ */
+export interface TransactionAttachment {
+  id: number
+  transactionId: number
+  /** Sniffed server-side from the bytes, never the client's declared type. */
+  contentType: string
+  byteSize: number
+  width?: number
+  height?: number
+  /** Shown in the viewer and used for the download filename. */
+  originalName?: string
+  createdAt: string
+  /** Whether a downscaled preview exists; PDFs have none. */
+  hasThumb: boolean
+}
+
 export interface ExpenseDataset {
   categories: Category[]
   accounts: Account[]
   flags: Flag[]
+  attachments: TransactionAttachment[]
   /** Transactions with derived status already applied. */
   transactions: Transaction[]
   accountStatements: AccountStatement[]
