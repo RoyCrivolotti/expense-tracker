@@ -59,10 +59,9 @@ function applySeed(defaults: FormFields, seed: TransactionSeed, format: MoneyFor
     ...(seed.date != null ? { date: seed.date } : {}),
     ...(seed.budgetMonth != null ? { budgetMonth: seed.budgetMonth } : {}),
     notes: '',
-    // Cleared unless the seed asks for one. Duplicate passes no flagId and so
-    // still drops it, which is the behaviour this line was added for — a copy
-    // of a claimed expense is not itself claimed.
-    flagId: seed.flagId ?? null,
+    // A seeded transaction never inherits a flag. Duplicate is the main caller,
+    // and a copy of a claimed expense is not itself claimed.
+    flagId: null,
   }
 }
 

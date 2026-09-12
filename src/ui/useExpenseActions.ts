@@ -49,7 +49,7 @@ export function useExpenseActions(
   return useMemo(() => {
     if (!source.canWrite || readOnly) return undefined
     return {
-      onAdd: (seed, hint) => openAddModal(openModal, seed, hint),
+      onAdd: (seed) => openAddModal(openModal, seed),
       onDuplicate: (txn) =>
         openModal({ mode: 'add', seed: transactionToSeed(txn), hint: duplicateHint(txn) }),
       onEdit: (txn) => openModal({ mode: 'edit', txn }),
