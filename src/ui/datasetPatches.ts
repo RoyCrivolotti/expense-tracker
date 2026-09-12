@@ -66,6 +66,9 @@ export function patchAfterTransactionDelete(
 ): ExpenseDataset {
   const d = cloneDataset(dataset)
   d.transactions = d.transactions.filter((t) => t.id !== id)
+  // Mirrors the server's cascade. Without it lookup.attachments() keeps
+  // returning receipts for a transaction that no longer exists.
+  d.attachments = d.attachments.filter((a) => a.transactionId !== id)
   return d
 }
 
@@ -87,6 +90,7 @@ export function patchAfterBulkDelete(
   const drop = new Set(ids)
   const d = cloneDataset(dataset)
   d.transactions = d.transactions.filter((t) => !drop.has(t.id))
+  d.attachments = d.attachments.filter((a) => !drop.has(a.transactionId))
   return d
 }
 

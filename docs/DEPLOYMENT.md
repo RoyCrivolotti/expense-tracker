@@ -120,7 +120,7 @@ Receipt photos and PDFs attached to a transaction. Bytes live in R2; only metada
 **Cost:** R2's free tier is 10 GB-month storage, 1M Class A ops and 10M Class B, with no egress charge. `config/receipt-policy.json` caps one owner at **2 GB** (~20% of the tier, roughly 10,000 downscaled receipts) alongside the backups bucket's 512 MB. An upload costs 2 Class A ops (file + thumbnail) and a view 1–2 Class B, which `immutable` caching turns into 304s on repeat. The quota check is a single D1 aggregate, not an R2 list, so it burns no Class A ops.
 
 1. Enable R2 on the account (dashboard) — already done if backups are running.
-2. Run `npm run setup:receipts` — creates bucket `roy-expenses-receipts` and binds `RECEIPTS` on production **and** preview.
+2. Run `npm run setup:receipts` — creates bucket `receipts` and binds `RECEIPTS` on production **and** preview.
 3. Redeploy (`npm run deploy`) so the binding reaches the running Functions.
 
 Objects are stored at `{owner-email}/{transaction-id}/{sha256}.{ext}`, plus `…_thumb.jpg` for raster images. Keys are server-generated and contain no user-supplied string.

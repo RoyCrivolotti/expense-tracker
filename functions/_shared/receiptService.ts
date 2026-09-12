@@ -87,3 +87,27 @@ export async function removeReceipt(
   // receipt the user sees and cannot open.
   await store.deleteMany(thumbKey ? [objectKey, thumbKey] : [objectKey])
 }
+
+/**
+ * Delete the R2 bytes belonging to transactions that are about to be removed.
+ *
+ * Call this *before* the transactions go, while the rows naming the keys still
+ * exist. Byte deletion is best-effort and deliberately never fails the caller:
+ * an orphaned object costs a few hundred KB until the next sweep, whereas
+ * failing the delete would leave the user unable to remove a transaction
+ * because of a storage hiccup.
+ */
+export async function removeReceiptsForTransactions(
+  repo: ExpenseRepository,
+  store: ReceiptStore | null,
+  owner: string,
+  transactionIds: number[],
+): Promise<void> {
+  if (!store || transactionIds.length === 0) return
+  try {
+    const keys = await repo.attachmentKeysForTransactions(owner, transactionIds)
+    await store.deleteMany(keys)
+  } catch {
+    /* best-effort: the D1 rows still cascade, so nothing is left dangling */
+  }
+}

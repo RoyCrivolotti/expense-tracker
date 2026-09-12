@@ -4,10 +4,12 @@ import {
   createAttachment,
   deleteAttachment,
   findAttachmentSource,
+  attachmentKeysForTransactions,
   listAttachments,
   ownerAttachmentKeys,
   transactionExists,
 } from './dbAttachments'
+import { deleteTransaction, deleteTransactions } from './dbWrite'
 import type { Env } from './env'
 
 /**
@@ -17,20 +19,26 @@ import type { Env } from './env'
 function stubEnv(opts: {
   first?: (sql: string, args: unknown[]) => unknown
   all?: (sql: string, args: unknown[]) => { results: unknown[] }
+  batch?: (stmts: { sql: string; args: unknown[] }[]) => unknown[]
 }) {
   const first = opts.first ?? (() => null)
   const all = opts.all ?? (() => ({ results: [] }))
   const calls: { sql: string; args: unknown[] }[] = []
+  const batch = vi.fn(
+    opts.batch ?? ((stmts: { sql: string; args: unknown[] }[]) => stmts.map(() => ({ meta: { changes: 1 } }))),
+  )
   const prepare = vi.fn((sql: string) => ({
     bind: (...args: unknown[]) => {
       calls.push({ sql, args })
       return {
+        sql,
+        args,
         first: vi.fn().mockImplementation(async () => first(sql, args)),
         all: vi.fn().mockImplementation(async () => all(sql, args)),
       }
     },
   }))
-  return { env: { DB: { prepare } } as unknown as Env, calls }
+  return { env: { DB: { prepare, batch } } as unknown as Env, calls, batch }
 }
 
 const OWNER = 'owner@example.com'
@@ -196,5 +204,59 @@ describe('ownerAttachmentKeys', () => {
     })
 
     await expect(ownerAttachmentKeys(env, OWNER)).resolves.toEqual(['a', 'a_t', 'b'])
+  })
+})
+
+describe('deleting a transaction takes its attachments with it', () => {
+  it('removes attachment rows and the transaction in one batch', async () => {
+    // Not atomic, and a failed delete leaves metadata whose byte_size keeps
+    // consuming the owner's quota, reachable from no UI, forever.
+    const { env, batch } = stubEnv({})
+
+    await deleteTransaction(env, OWNER, 7)
+
+    expect(batch).toHaveBeenCalledTimes(1)
+    const statements = batch.mock.calls[0]?.[0] as { sql: string; args: unknown[] }[]
+    expect(statements[0]?.sql).toContain('DELETE FROM transaction_attachments')
+    expect(statements[1]?.sql).toContain('DELETE FROM transactions')
+    for (const statement of statements) expect(statement.args).toContain(OWNER)
+  })
+
+  it('still 404s when the transaction was not this owner’s', async () => {
+    const { env } = stubEnv({
+      batch: () => [{ meta: { changes: 0 } }, { meta: { changes: 0 } }],
+    })
+
+    await expect(deleteTransaction(env, OWNER, 7)).rejects.toMatchObject({ status: 404 })
+  })
+
+  it('cascades for a bulk delete too', async () => {
+    const { env, batch } = stubEnv({
+      batch: () => [{ meta: { changes: 2 } }, { meta: { changes: 2 } }],
+    })
+
+    await expect(deleteTransactions(env, OWNER, [4, 5])).resolves.toBe(2)
+
+    const statements = batch.mock.calls[0]?.[0] as { sql: string; args: unknown[] }[]
+    expect(statements[0]?.sql).toContain('DELETE FROM transaction_attachments')
+    expect(statements[0]?.args).toEqual([OWNER, 4, 5])
+  })
+})
+
+describe('attachmentKeysForTransactions', () => {
+  it('returns both keys per attachment, owner-scoped', async () => {
+    const { env, calls } = stubEnv({
+      all: () => ({ results: [{ object_key: 'a', thumb_key: 'a_t' }, { object_key: 'b', thumb_key: null }] }),
+    })
+
+    await expect(attachmentKeysForTransactions(env, OWNER, [7, 8])).resolves.toEqual(['a', 'a_t', 'b'])
+    expect(calls[0]?.args).toEqual([OWNER, 7, 8])
+  })
+
+  it('does not query at all for an empty list', async () => {
+    const { env, calls } = stubEnv({})
+
+    await expect(attachmentKeysForTransactions(env, OWNER, [])).resolves.toEqual([])
+    expect(calls).toEqual([])
   })
 })

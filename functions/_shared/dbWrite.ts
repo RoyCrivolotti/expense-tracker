@@ -190,11 +190,24 @@ export async function updateTransaction(
   return deriveOne(env, owner, toStoredTxn(row))
 }
 
+/**
+ * Attachment rows go with their transaction, in the same batch.
+ *
+ * D1 cannot express this as an enforced cascade (ALTER cannot add a foreign
+ * key), so it is done explicitly — and it must be atomic: a transaction deleted
+ * without its attachment rows leaves metadata whose byte_size keeps counting
+ * against the owner's storage quota, reachable from no UI, forever. Deleting the
+ * R2 bytes is the caller's job afterwards (see removeReceiptsForTransactions);
+ * an R2 delete cannot join a D1 batch.
+ */
 export async function deleteTransaction(env: Env, owner: string, id: number): Promise<void> {
-  const result = await env.DB.prepare('DELETE FROM transactions WHERE id = ? AND owner = ?')
-    .bind(id, owner)
-    .run()
-  if ((result.meta.changes ?? 0) === 0) throw new HttpError(404, 'Transaction not found')
+  const [, deleted] = await env.DB.batch([
+    env.DB
+      .prepare('DELETE FROM transaction_attachments WHERE transaction_id = ? AND owner = ?')
+      .bind(id, owner),
+    env.DB.prepare('DELETE FROM transactions WHERE id = ? AND owner = ?').bind(id, owner),
+  ])
+  if ((deleted?.meta?.changes ?? 0) === 0) throw new HttpError(404, 'Transaction not found')
 }
 
 /** Insert many transactions; each row is validated and status-derived like insertTransaction. */
@@ -214,12 +227,18 @@ export async function bulkInsertTransactions(
 export async function deleteTransactions(env: Env, owner: string, ids: number[]): Promise<number> {
   if (ids.length === 0) return 0
   const placeholders = ids.map(() => '?').join(', ')
-  const result = await env.DB.prepare(
-    `DELETE FROM transactions WHERE owner = ? AND id IN (${placeholders})`,
-  )
-    .bind(owner, ...ids)
-    .run()
-  return result.meta.changes ?? 0
+  // Same cascade as the single delete, same reason.
+  const [, deleted] = await env.DB.batch([
+    env.DB
+      .prepare(
+        `DELETE FROM transaction_attachments WHERE owner = ? AND transaction_id IN (${placeholders})`,
+      )
+      .bind(owner, ...ids),
+    env.DB
+      .prepare(`DELETE FROM transactions WHERE owner = ? AND id IN (${placeholders})`)
+      .bind(owner, ...ids),
+  ])
+  return deleted?.meta?.changes ?? 0
 }
 
 export async function bulkUpdateTransactions(
