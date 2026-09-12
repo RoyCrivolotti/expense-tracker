@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Flag, Transaction, TransactionAttachment } from '../types'
-import { buildExpenseReport, reportReceipts } from './expenseReport'
+import { buildExpenseReport, reportReceipts, reportReference } from './expenseReport'
 
 function flag(overrides: Partial<Flag> & { id: number }): Flag {
   return { name: 'Work travel', color: '#6366f1', sortOrder: 0, active: true, ...overrides }
@@ -147,6 +147,43 @@ describe('buildExpenseReport', () => {
     expect(report?.lines[0]?.receiptRefs).toEqual([1, 2])
     expect(report?.lines[1]?.receiptRefs).toEqual([3])
     expect(reportReceipts(report!).map((r) => r.ref)).toEqual([1, 2, 3])
+  })
+
+  it('leaves already-reimbursed rows out, so the next claim is only the new spend', () => {
+    // This is what lets one flag be durable. Without it a second claim on
+    // "Work travel" re-lists June alongside July under one reference, with
+    // June's payment netted at the bottom — which finance would bounce.
+    const pack = buildExpenseReport(
+      1,
+      [
+        txn(1, '2026-05-02', { flagId: 1, settledBy: 99 }),
+        txn(2, '2026-05-09', { flagId: 1, settledBy: 99 }),
+        txn(3, '2026-07-03', { flagId: 1, amountCents: 5_000 }),
+      ],
+      [WORK],
+      [],
+    )
+
+    expect(pack?.lines).toHaveLength(1)
+    expect(pack?.from).toBe('2026-07-03')
+    expect(pack?.totalClaimedCents).toBe(5_000)
+  })
+
+  it('gives the next claim its own reference, since the period moved', () => {
+    const june = buildExpenseReport(
+      1,
+      [txn(1, '2026-05-02', { flagId: 1 })],
+      [WORK],
+      [],
+    )
+    const july = buildExpenseReport(
+      1,
+      [txn(1, '2026-05-02', { flagId: 1, settledBy: 99 }), txn(2, '2026-07-03', { flagId: 1 })],
+      [WORK],
+      [],
+    )
+
+    expect(reportReference(june!)).not.toBe(reportReference(july!))
   })
 
   it('still builds for an archived flag, so a settled claim can be reprinted', () => {

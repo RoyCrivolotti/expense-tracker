@@ -148,23 +148,10 @@ describe('initialFields', () => {
   })
 })
 
-describe('initialFields — a seed carrying a flag', () => {
-  it('applies the seed’s flag, so a settlement lands on the claim it settles', () => {
-    const fields = initialFields(null, minimalModel(), EU_MONEY_FORMAT, {
-      flagId: 7,
-      type: 'refund',
-      amountCents: 6_000,
-      description: 'Reimbursement — Work travel',
-    })
-
-    expect(fields.flagId).toBe(7)
-    expect(fields.type).toBe('refund')
-  })
-
-  it('still clears the flag for a seed that does not ask for one', () => {
-    // Duplicate seeds from an existing transaction and passes no flagId. A copy
-    // of a claimed expense is not itself claimed, and that is what this line
-    // was originally added for.
+describe('initialFields — a seeded transaction', () => {
+  it('never inherits a flag', () => {
+    // Duplicate is the main caller, and a copy of a claimed expense is not
+    // itself claimed.
     const fields = initialFields(null, minimalModel(), EU_MONEY_FORMAT, {
       description: 'Hotel',
       amountCents: 10_000,

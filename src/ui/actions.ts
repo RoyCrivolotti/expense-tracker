@@ -36,8 +36,6 @@ export interface TransactionSeed {
   amountCents?: number
   date?: string
   budgetMonth?: string
-  /** Flag to apply to the created transaction, e.g. when settling a claim. */
-  flagId?: number
   /** When set, the created transaction settles this installment plan. */
   planId?: number
   /** Installment number this payment represents (for the modal hint only). */
@@ -52,8 +50,7 @@ export interface TransactionSeed {
  */
 export interface ExpenseActions {
   onEdit: (txn: Transaction) => void
-  /** `hint` becomes the modal subtitle, explaining where a prefill came from. */
-  onAdd: (seed?: TransactionSeed, hint?: string) => void
+  onAdd: (seed?: TransactionSeed) => void
   onDuplicate: (txn: Transaction) => void
   /** Resolves with the stored row, so a caller can attach receipts to its id. */
   createTransaction: (input: NewTransaction) => Promise<Transaction>
