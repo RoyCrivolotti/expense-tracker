@@ -1,0 +1,226 @@
+/*
+ * The deliverable is a printed PDF, so the print rules are the point and the
+ * screen rules are the preview.
+ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  overflow-y: auto;
+  background: var(--color-bg);
+}
+
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.toolbarActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.closeBtn,
+.secondaryBtn {
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.6rem;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.printBtn {
+  padding: 0.5rem 0.9rem;
+  border: none;
+  border-radius: 0.6rem;
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.sheet {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+  color: var(--color-text);
+}
+
+.header {
+  margin-bottom: 1.5rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-muted);
+}
+
+.range {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.table th,
+.table td {
+  padding: 0.5rem 0.4rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table thead th {
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.total {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.table tfoot th {
+  text-align: right;
+  font-weight: 650;
+}
+
+.warning {
+  margin: 1rem 0 0;
+  padding: 0.65rem 0.8rem;
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--exp-warning) 14%, transparent);
+  color: var(--color-text);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.receipts {
+  margin-top: 2.5rem;
+}
+
+.receiptsTitle {
+  font-size: 1.1rem;
+  margin: 0 0 1rem;
+}
+
+.figure {
+  margin: 0 0 1.5rem;
+  /* A receipt split across a page boundary is unreadable and looks like an
+     error to whoever approves the claim. */
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.receiptImage {
+  display: block;
+  width: 100%;
+  max-width: 30rem;
+  height: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+}
+
+.caption {
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.pdfNote {
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+@media print {
+  /*
+   * Force light. The app defaults to a dark theme and printing it produces
+   * pages of solid ink that most printers render as grey mush — and this
+   * document exists to be handed to somebody.
+   */
+  .overlay {
+    position: static;
+    overflow: visible;
+    background: #fff;
+    color-scheme: light;
+  }
+
+  .overlay,
+  .sheet {
+    color: #111;
+  }
+
+  .toolbar {
+    display: none;
+  }
+
+  .sheet {
+    max-width: none;
+    padding: 0;
+  }
+
+  .table th,
+  .table td,
+  .receiptImage,
+  .pdfNote {
+    border-color: #bbb;
+  }
+
+  .table thead th,
+  .subtitle,
+  .range,
+  .caption {
+    color: #555;
+  }
+
+  .warning {
+    background: none;
+    border: 1px solid #bbb;
+  }
+
+  .table thead {
+    display: table-header-group;
+  }
+
+  .table tr {
+    break-inside: avoid;
+  }
+
+  .receipts {
+    break-before: page;
+  }
+}
