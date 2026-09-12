@@ -91,12 +91,36 @@ function demoFlags(stored: StoredTransaction[]): {
   const recent = [...stored].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
   const flagged = new Map<number, number>()
   recent.forEach((txn, i) => flagged.set(txn.id, i % 3 === 2 ? 970_002 : 970_001))
+  // A business purpose on some rows, so the claim pack shows what it does with
+  // the notes field rather than a column of blanks.
+  const purposes = ['Kick-off with Acme', 'Client workshop, day 2', 'Airport transfer']
+  const withFlags = stored.map((txn, i) => {
+    const flagId = flagged.get(txn.id)
+    if (flagId == null) return txn
+    const purpose = purposes[i % purposes.length]
+    return { ...txn, flagId, ...(purpose ? { notes: purpose } : {}) }
+  })
+  // One claim partly settled, so the pack's claimed / reimbursed / outstanding
+  // breakdown has something to show.
+  const claimed = recent[0]
+  if (!claimed) return { flags, transactions: withFlags }
   return {
     flags,
-    transactions: stored.map((txn) => {
-      const flagId = flagged.get(txn.id)
-      return flagId != null ? { ...txn, flagId } : txn
-    }),
+    transactions: [
+      ...withFlags,
+      {
+        id: 970_500,
+        date: claimed.date,
+        budgetMonth: claimed.budgetMonth,
+        description: 'Reimbursement — Work travel',
+        accountId: claimed.accountId,
+        categoryId: claimed.categoryId,
+        type: 'refund' as const,
+        amountCents: 12_000,
+        cancelled: false,
+        flagId: 970_001,
+      },
+    ],
   }
 }
 
@@ -119,6 +143,9 @@ function enrichDocsCaptureDataset(dataset: ExpenseDataset): ExpenseDataset {
   return {
     ...dataset,
     flags,
+    // A claimant, so the claim pack's header renders as a real document rather
+    // than an anonymous table.
+    settings: { ...dataset.settings, claimantName: 'Alex Moreno' },
     accountStatements: cards.length > 0 ? accountStatements : dataset.accountStatements,
     installmentPlans: plans,
     transactions: deriveTransactions(stored, dataset.accounts, accountStatements),
