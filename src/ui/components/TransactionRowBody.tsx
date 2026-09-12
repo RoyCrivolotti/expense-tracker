@@ -5,6 +5,7 @@ import { Money } from './Money'
 import { Pill } from './primitives'
 import { CategoryIcon } from './CategoryIcon'
 import { FlagGlyph } from './FlagGlyph'
+import { PaperclipIcon } from '../icons'
 import styles from './TransactionList.module.css'
 
 function installmentMeta(txn: Transaction, lookup: Lookup): string | null {
@@ -17,6 +18,16 @@ function StatusPill({ status }: { status: Transaction['status'] }) {
   if (status === 'forecast') return <Pill tone="warning">{STATUS_LABEL.forecast}</Pill>
   if (status === 'cancelled') return <Pill>{STATUS_LABEL.cancelled}</Pill>
   return null
+}
+
+function ReceiptMark({ count }: { count: number }) {
+  if (count === 0) return null
+  const label = `${count} receipt${count === 1 ? '' : 's'}`
+  return (
+    <span className={styles.receiptMark} role="img" aria-label={label} title={label}>
+      <PaperclipIcon />
+    </span>
+  )
 }
 
 export function TransactionRowBody({
@@ -46,6 +57,7 @@ export function TransactionRowBody({
         <span className={styles.desc}>
           {flag ? <FlagGlyph flag={flag} /> : null}
           {txn.description || lookup.categoryName(txn.categoryId)}
+          <ReceiptMark count={lookup.attachments(txn.id).length} />
         </span>
         <span className={styles.meta}>{metaParts.join(' · ')}</span>
       </span>

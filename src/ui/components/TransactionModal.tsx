@@ -143,6 +143,7 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
         hidden={canBatch && mode === 'batch'}
         onDirtyChange={setSingleDirty}
         onTrapPausedChange={setPopoverOpen}
+        actions={actions}
       />
       {confirming ? (
         <ConfirmSheet

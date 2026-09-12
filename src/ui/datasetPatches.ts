@@ -12,6 +12,7 @@ import type {
   GoalScenario,
   InstallmentPlan,
   Transaction,
+  TransactionAttachment,
   WealthAccount,
   WealthCheckin,
 } from '../types'
@@ -128,6 +129,24 @@ export function patchAfterCategory(
   const d = cloneDataset(dataset)
   upsertById(d.categories, category)
   d.categories.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+  return d
+}
+
+export function patchAfterAttachmentAdd(
+  dataset: ExpenseDataset,
+  attachment: TransactionAttachment,
+): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  upsertById(d.attachments, attachment)
+  return d
+}
+
+export function patchAfterAttachmentDelete(
+  dataset: ExpenseDataset,
+  id: number,
+): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  d.attachments = d.attachments.filter((a) => a.id !== id)
   return d
 }
 

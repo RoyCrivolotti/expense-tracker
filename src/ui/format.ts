@@ -4,6 +4,7 @@ import type {
   ExpenseDataset,
   Flag,
   InstallmentPlan,
+  TransactionAttachment,
   TxnStatus,
 } from '../types'
 
@@ -11,6 +12,7 @@ export interface Lookup {
   category: (id: number) => Category | undefined
   account: (id: number) => Account | undefined
   flag: (id: number) => Flag | undefined
+  attachments: (transactionId: number) => TransactionAttachment[]
   categoryName: (id: number) => string
   accountName: (id: number) => string
   installmentPlan: (id: number) => InstallmentPlan | undefined
@@ -21,10 +23,19 @@ export function buildLookup(dataset: ExpenseDataset): Lookup {
   const accs = new Map(dataset.accounts.map((a) => [a.id, a]))
   const plans = new Map(dataset.installmentPlans.map((p) => [p.id, p]))
   const flags = new Map(dataset.flags.map((f) => [f.id, f]))
+  // Grouped once per dataset rather than filtered per row: the transactions
+  // list re-renders often and this would otherwise be quadratic.
+  const attachmentsByTxn = new Map<number, TransactionAttachment[]>()
+  for (const attachment of dataset.attachments) {
+    const bucket = attachmentsByTxn.get(attachment.transactionId)
+    if (bucket) bucket.push(attachment)
+    else attachmentsByTxn.set(attachment.transactionId, [attachment])
+  }
   return {
     category: (id) => cats.get(id),
     account: (id) => accs.get(id),
     flag: (id) => flags.get(id),
+    attachments: (transactionId) => attachmentsByTxn.get(transactionId) ?? [],
     categoryName: (id) => cats.get(id)?.name ?? 'Uncategorised',
     accountName: (id) => accs.get(id)?.name ?? 'Unknown',
     installmentPlan: (id) => plans.get(id),

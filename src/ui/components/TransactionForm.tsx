@@ -4,6 +4,7 @@ import type { NewTransaction } from '../../data/dataSource'
 import { parseMoneyToCents } from '../../engine/money'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import type { ExpenseModel } from '../useExpenseData'
+import type { ExpenseActions } from '../actions'
 import type { TransactionSeed } from '../actions'
 import { Fields } from './TransactionFields'
 import { initialFields, type FormFields, type Setter } from './transactionFormState'
@@ -32,6 +33,8 @@ interface FormProps {
   onDirtyChange?: (dirty: boolean) => void
   /** Raised while a portalled popover owns focus, so the Modal pauses its trap. */
   onTrapPausedChange?: ((paused: boolean) => void) | undefined
+  /** Passed through to the receipts strip; absent in read-only sessions. */
+  actions?: ExpenseActions | undefined
 }
 
 function toInput(form: FormFields, cents: number, editing: Transaction | null): NewTransaction {
@@ -100,6 +103,7 @@ export function TransactionForm({
   hidden,
   onDirtyChange,
   onTrapPausedChange,
+  actions,
 }: FormProps) {
   const format = useMoneyFormat()
   const [form, setForm] = useState<FormFields>(() => initialFields(editing, model, format, seed))
@@ -174,6 +178,7 @@ export function TransactionForm({
             editing={editing}
             onAcceptSuggestion={(s) => acceptDescriptionSuggestion(s, model, setForm)}
             onTrapPausedChange={onTrapPausedChange}
+            actions={actions}
           />
           <button
             type="button"

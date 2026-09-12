@@ -127,6 +127,7 @@ function enrichDocsCaptureDataset(dataset: ExpenseDataset): ExpenseDataset {
 
 let nextId = 900_000
 let nextFlagId = 970_100
+let nextAttachmentId = 960_100
 
 function stubTxn(input: NewTransaction): Transaction {
   nextId += 1
@@ -165,6 +166,20 @@ export const docsCaptureDataSource: ExpenseDataSource = {
   },
   deleteTransactions(ids) {
     return Promise.resolve({ deleted: ids.length, requested: ids.length })
+  },
+  uploadAttachment(transactionId) {
+    nextAttachmentId += 1
+    return Promise.resolve({
+      id: nextAttachmentId,
+      transactionId,
+      contentType: 'image/jpeg',
+      byteSize: 180_000,
+      createdAt: '2026-05-01T09:00:00Z',
+      hasThumb: true,
+    })
+  },
+  deleteAttachment() {
+    return Promise.resolve()
   },
   createFlag(input) {
     nextFlagId += 1

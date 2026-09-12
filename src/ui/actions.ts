@@ -65,6 +65,8 @@ export interface ExpenseActions {
     paidOn?: string,
   ) => Promise<void>
   setCashActual: (yearMonth: string, actualCashCents: number | null) => Promise<void>
+  uploadAttachment: (transactionId: number, file: File) => Promise<void>
+  deleteAttachment: (id: number) => Promise<void>
   createFlag: (input: NewFlag) => Promise<Flag>
   updateFlag: (id: number, patch: Partial<NewFlag>) => Promise<void>
   /** Resolves with how many transactions were unflagged, for the toast. */

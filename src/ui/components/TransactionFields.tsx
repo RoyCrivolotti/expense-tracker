@@ -3,12 +3,14 @@ import type { Transaction, TxnType } from '../../types'
 import type { DescriptionSuggestion } from '../../data/descriptionIndex'
 import { defaultBudgetMonth } from '../../engine/dates'
 import type { ExpenseModel } from '../useExpenseData'
+import type { ExpenseActions } from '../actions'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { DateInput } from './DateInput'
 import { DescriptionCombobox } from './DescriptionCombobox'
 import { MonthInput } from './MonthInput'
 import { optionLabel, selectableOptions } from './pickerOptions'
 import { FlagField } from './FlagField'
+import { ReceiptStrip } from './ReceiptStrip'
 import type { FormFields, Setter } from './transactionFormState'
 import styles from './TransactionForm.module.css'
 
@@ -139,6 +141,8 @@ interface FieldsProps {
   onAcceptSuggestion: (suggestion: DescriptionSuggestion) => void
   /** Lets an enclosing Modal pause its focus trap while a popover is open. */
   onTrapPausedChange?: ((paused: boolean) => void) | undefined
+  /** Absent in read-only sessions, which is also when receipts are hidden. */
+  actions?: ExpenseActions | undefined
 }
 
 export function Fields({
@@ -148,6 +152,7 @@ export function Fields({
   editing,
   onAcceptSuggestion,
   onTrapPausedChange,
+  actions,
 }: FieldsProps) {
   const format = useMoneyFormat()
   const onDate = (v: string) => {
@@ -197,6 +202,19 @@ export function Fields({
         onChange={(flagId) => set('flagId', flagId)}
         onTrapPausedChange={onTrapPausedChange}
       />
+      {/*
+        Only when editing: an attachment needs a transaction id to hang off, and
+        a "receipts" box on a form that has not been saved yet would either have
+        to buffer files or silently drop them.
+      */}
+      {editing && actions ? (
+        <ReceiptStrip
+          transactionId={editing.id}
+          attachments={model.lookup.attachments(editing.id)}
+          actions={actions}
+          onTrapPausedChange={onTrapPausedChange}
+        />
+      ) : null}
     </>
   )
 }

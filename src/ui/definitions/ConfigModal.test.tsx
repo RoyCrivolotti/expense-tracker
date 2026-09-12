@@ -58,6 +58,8 @@ function noopActions(overrides: Partial<ExpenseActions> = {}): ExpenseActions {
     updateTransactions: vi.fn(),
     setStatementPaid: vi.fn(),
     setCashActual: vi.fn(),
+    uploadAttachment: vi.fn(),
+    deleteAttachment: vi.fn(),
     createFlag: vi.fn(),
     updateFlag: vi.fn(),
     deleteFlag: vi.fn(),

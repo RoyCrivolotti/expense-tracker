@@ -46,6 +46,7 @@ function modelWith(overrides: Partial<ExpenseModel['dataset']> = {}): ExpenseMod
       categoryName: () => '',
       accountName: () => '',
       flag: () => undefined,
+      attachments: () => [],
       installmentPlan: () => undefined,
     },
     descriptionIndex: { search: () => [], resolve: () => undefined },

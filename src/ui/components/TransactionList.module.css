@@ -256,3 +256,14 @@
   font-size: 0.95rem;
   font-weight: 600;
 }
+
+/* Trails the description rather than joining the amount rail, which already
+   carries the status and budget-month pills. */
+.receiptMark {
+  display: inline-flex;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-left: 0.3rem;
+  vertical-align: -0.02em;
+  color: var(--color-text-muted);
+}

@@ -113,6 +113,26 @@ Apply through `0016_transaction_attachments.sql` on production. Personal goal sc
 
 Repository visibility and git history hygiene checklist is kept locally (not in this repo).
 
+## Receipt storage (R2)
+
+Receipt photos and PDFs attached to a transaction. Bytes live in R2; only metadata lives in D1.
+
+**Cost:** R2's free tier is 10 GB-month storage, 1M Class A ops and 10M Class B, with no egress charge. `config/receipt-policy.json` caps one owner at **2 GB** (~20% of the tier, roughly 10,000 downscaled receipts) alongside the backups bucket's 512 MB. An upload costs 2 Class A ops (file + thumbnail) and a view 1–2 Class B, which `immutable` caching turns into 304s on repeat. The quota check is a single D1 aggregate, not an R2 list, so it burns no Class A ops.
+
+1. Enable R2 on the account (dashboard) — already done if backups are running.
+2. Run `npm run setup:receipts` — creates bucket `roy-expenses-receipts` and binds `RECEIPTS` on production **and** preview.
+3. Redeploy (`npm run deploy`) so the binding reaches the running Functions.
+
+Objects are stored at `{owner-email}/{transaction-id}/{sha256}.{ext}`, plus `…_thumb.jpg` for raster images. Keys are server-generated and contain no user-supplied string.
+
+**Without the binding the app still works**: the upload and serve routes return a clean 503 and nothing else is affected. That is the same degradation `BACKUPS` uses, and it is why the binding is optional in `functions/_shared/env.ts`.
+
+Optional Pages env vars override the policy JSON: `RECEIPT_MAX_FILE_BYTES`, `RECEIPT_MAX_PER_TRANSACTION`, `RECEIPT_MAX_OWNER_BYTES`.
+
+> **Receipts are not covered by the daily backup.** The D1 snapshot carries attachment *metadata*, so a restore knows which receipts existed — but the bytes are not copied. Base64 in the JSON snapshot would add ~33% and immediately trip the 5 MiB snapshot alert, and R2→R2 copying would multiply Class A ops for no protection against the risk the backup exists for (D1 corruption or a bad migration). The real receipt-loss risk is an accidental bucket delete, which R2 object versioning addresses properly. Enable it on the bucket if the receipts matter.
+
+**Revoking a user** deletes their attachment rows via `purgeOwnerExpenseData`. The R2 objects under their `{owner-email}/` prefix are *not* removed by that batch — an R2 delete cannot join a D1 batch. Sweep them separately with `npx wrangler r2 object delete` against that prefix.
+
 ## Scheduled backups (R2)
 
 Daily cron exports each owner's full dataset to R2 as JSON. **Pages does not support cron triggers**, so scheduling runs on a standalone Worker (`expense-backup-cron` in `workers/backup-cron/`).

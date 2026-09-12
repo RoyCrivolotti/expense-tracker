@@ -39,6 +39,7 @@ function minimalModel(): ExpenseModel {
       categoryName: () => 'Health',
       accountName: () => 'Debit',
       flag: () => undefined,
+      attachments: () => [],
       installmentPlan: () => undefined,
     },
     descriptionIndex: { search: () => [], resolve: () => undefined },
