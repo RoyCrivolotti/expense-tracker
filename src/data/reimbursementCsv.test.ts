@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ExpenseDataset, Transaction } from '../types'
 import { EU_MONEY_FORMAT } from '../engine/money'
 import { makeAttachment, makeDataset, makeFlag } from '../testing/factories'
-import { reimbursementCsv } from './reimbursementCsv'
+import { downloadReimbursementCsv, reimbursementCsv } from './reimbursementCsv'
 
 const options = {
   format: EU_MONEY_FORMAT,
@@ -112,5 +112,71 @@ describe('reimbursementCsv', () => {
     )
 
     expect(csv!.split('\n').at(-1)).toContain('60,00')
+  })
+})
+
+describe('downloadReimbursementCsv', () => {
+  function captureDownload(dataset: ExpenseDataset, flagId: number) {
+    const created: string[] = []
+    const revoked: string[] = []
+    vi.stubGlobal('URL', {
+      ...URL,
+      createObjectURL: vi.fn(() => {
+        created.push('blob:x')
+        return 'blob:x'
+      }),
+      revokeObjectURL: vi.fn((u: string) => revoked.push(u)),
+    })
+    const anchor = document.createElement('a')
+    const click = vi.spyOn(anchor, 'click').mockImplementation(() => {})
+    vi.spyOn(document, 'createElement').mockReturnValueOnce(anchor)
+
+    downloadReimbursementCsv(dataset, flagId, options)
+
+    return { anchor, click, created, revoked }
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
+  it('names the file after the flag, slugified', () => {
+    const dataset = makeDataset({
+      flags: [makeFlag({ id: 1, name: 'Work travel — Q2 2026!' })],
+      transactions: [txn(1, '2026-05-02', { flagId: 1 })],
+    })
+    const { anchor, click } = captureDownload(dataset, 1)
+
+    expect(anchor.download).toBe('work-travel-q2-2026.csv')
+    expect(click).toHaveBeenCalled()
+  })
+
+  it('falls back to a usable name when the flag name has no usable characters', () => {
+    const dataset = makeDataset({
+      flags: [makeFlag({ id: 1, name: '—' })],
+      transactions: [txn(1, '2026-05-02', { flagId: 1 })],
+    })
+    const { anchor } = captureDownload(dataset, 1)
+
+    expect(anchor.download).toBe('claim.csv')
+  })
+
+  it('releases the object URL rather than leaking it', () => {
+    const dataset = makeDataset({
+      flags: [makeFlag({ id: 1, name: 'Work travel' })],
+      transactions: [txn(1, '2026-05-02', { flagId: 1 })],
+    })
+    const { revoked } = captureDownload(dataset, 1)
+
+    expect(revoked).toEqual(['blob:x'])
+  })
+
+  it('does nothing at all when there is nothing to claim', () => {
+    const dataset = makeDataset({ flags: [makeFlag({ id: 1 })] })
+    const { click, created } = captureDownload(dataset, 1)
+
+    expect(click).not.toHaveBeenCalled()
+    expect(created).toEqual([])
   })
 })

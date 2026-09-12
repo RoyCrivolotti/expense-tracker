@@ -189,4 +189,16 @@ describe('FlaggedCard', () => {
 
     expect(container).toBeEmptyDOMElement()
   })
+
+  it('opens the claim pack for a flag', async () => {
+    const { onOpenPack } = renderCard(
+      makeDataset({ flags: [work], transactions: [txn({ flagId: 1 })] }),
+    )
+
+    await userEvent.click(screen.getByText(/across 1 flag/))
+    await userEvent.click(screen.getByText('Work travel'))
+    await userEvent.click(screen.getByRole('button', { name: 'Claim pack' }))
+
+    expect(onOpenPack).toHaveBeenCalledWith(1)
+  })
 })
