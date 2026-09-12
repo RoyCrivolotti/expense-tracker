@@ -31,7 +31,11 @@ function modelFor(dataset: ExpenseDataset): ExpenseModel {
   return { dataset, lookup: buildLookup(dataset), descriptionIndex: {}, months: [] } as unknown as ExpenseModel
 }
 
-function renderModal(dataset: ExpenseDataset, overrides: Partial<ExpenseActions> = {}) {
+function renderModal(
+  dataset: ExpenseDataset,
+  overrides: Partial<ExpenseActions> = {},
+  extra: { onOpenPack?: (flagId: number) => void } = {},
+) {
   const actions = {
     createFlag: vi.fn().mockResolvedValue(work),
     updateFlag: vi.fn().mockResolvedValue(undefined),
@@ -41,7 +45,12 @@ function renderModal(dataset: ExpenseDataset, overrides: Partial<ExpenseActions>
   const onClose = vi.fn()
   render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
-      <FlagsModal model={modelFor(dataset)} actions={actions} onClose={onClose} />
+      <FlagsModal
+        model={modelFor(dataset)}
+        actions={actions}
+        onClose={onClose}
+        {...extra}
+      />
     </MoneyFormatProvider>,
   )
   return { actions, onClose }
@@ -141,5 +150,33 @@ describe('FlagsModal', () => {
     await userEvent.click(screen.getByRole('button', { name: /Add flag/ }))
 
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+  })
+})
+
+describe('FlagsModal — reaching an archived claim', () => {
+  it('opens the claim pack for an archived flag, closing itself first', async () => {
+    // Archiving is how a claim is marked done, so it drops out of the Flagged
+    // card — and a done claim is exactly the one an employer asks to see again.
+    // This is the only route back to it.
+    const archived = makeFlag({ id: 1, name: 'Work travel', active: false })
+    const onOpenPack = vi.fn()
+    const { onClose } = renderModal(
+      makeDataset({ flags: [archived], transactions: [txn(1)] }),
+      {},
+      { onOpenPack },
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Claim pack' }))
+
+    // Closing first matters: the two render as siblings, so leaving both
+    // mounted strands this modal's focus trap under the claim sheet.
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(onOpenPack).toHaveBeenCalledWith(1)
+  })
+
+  it('offers no claim pack for a flag with nothing on it', () => {
+    renderModal(makeDataset({ flags: [work], transactions: [] }), {}, { onOpenPack: vi.fn() })
+
+    expect(screen.queryByRole('button', { name: 'Claim pack' })).not.toBeInTheDocument()
   })
 })
