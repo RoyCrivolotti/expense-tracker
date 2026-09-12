@@ -80,7 +80,7 @@ describe('buildReimbursementPack', () => {
       [attachment(10, 1)],
     )
 
-    expect(pack?.missingReceipts).toBe(1)
+    expect(pack?.missingReceipts).toHaveLength(1)
   })
 
   it('splits refunds out of the claim and into credits', () => {
@@ -133,7 +133,7 @@ describe('buildReimbursementPack', () => {
     )
 
     // Otherwise every settled claim warns that one item has no receipt.
-    expect(pack?.missingReceipts).toBe(0)
+    expect(pack?.missingReceipts).toHaveLength(0)
   })
 
   it('numbers receipts across the claim so a row can be tied to a figure', () => {

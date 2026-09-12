@@ -127,7 +127,13 @@ function OwnerSettings({
   onChange,
 }: {
   settings: ExpenseSettings
-  onChange: (patch: Partial<ExpenseSettings>) => void
+  /**
+   * Returns the save promise, and callers must not swallow it.
+   * `MilestonesSetting` awaits it to keep overlapping edits from clobbering
+   * each other and to roll back a rejected save — typing it `=> void` silently
+   * turned both into no-ops.
+   */
+  onChange: (patch: Partial<ExpenseSettings>) => void | Promise<void>
 }) {
   return (
     <>
@@ -162,7 +168,7 @@ export function SettingsTab({
       {actions && (
         <OwnerSettings
           settings={model.dataset.settings}
-          onChange={(patch) => void actions.updateSettings(patch)}
+          onChange={(patch) => actions.updateSettings(patch)}
         />
       )}
 

@@ -206,7 +206,7 @@ describe('ReimbursementPackView', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Download CSV' }))
 
     expect(createObjectURL).toHaveBeenCalled()
-    expect(anchor.download).toBe('work-travel.csv')
+    expect(anchor.download).toBe('work-travel-2026-05.csv')
 
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
