@@ -107,9 +107,18 @@ export function inMemoryExpenseRepository(
   seedOwner = 'owner@example.com',
 ): ExpenseRepository {
   const stores = new Map<string, OwnerStore>()
-  // R2 keys are not part of the domain type, but the adapter returns them on
-  // delete, so the double has to remember them to mirror that contract.
-  const keysById = new Map<number, { objectKey: string; thumbKey?: string }>()
+  /**
+   * R2 keys are not part of the domain type, but the adapter returns them on
+   * delete, so the double has to remember them to mirror that contract.
+   *
+   * Keyed by owner *and* id: attachment ids are generated per owner here, so two
+   * owners' first attachment are both id 1, and a map keyed on id alone let the
+   * second overwrite the first — the double would then hand owner A's row with
+   * owner B's keys. Real D1 cannot do that (AUTOINCREMENT is global), but a
+   * double that breaks tenancy is not mirroring the thing it exists to mirror.
+   */
+  const keysById = new Map<string, { objectKey: string; thumbKey?: string }>()
+  const keyOf = (owner: string, id: number) => `${owner}#${id}`
   stores.set(ownerKey(seedOwner), emptyStore(seed))
 
   function storeFor(owner: string): OwnerStore {
@@ -310,10 +319,10 @@ export function inMemoryExpenseRepository(
   }
 
   /** Attachment rows die with their transaction, as they do in D1. */
-  function dropAttachmentsFor(store: OwnerStore, transactionIds: number[]): void {
+  function dropAttachmentsFor(owner: string, store: OwnerStore, transactionIds: number[]): void {
     const wanted = new Set(transactionIds)
     for (const attachment of store.attachments) {
-      if (wanted.has(attachment.transactionId)) keysById.delete(attachment.id)
+      if (wanted.has(attachment.transactionId)) keysById.delete(keyOf(owner, attachment.id))
     }
     store.attachments = store.attachments.filter((a) => !wanted.has(a.transactionId))
   }
@@ -415,7 +424,7 @@ export function inMemoryExpenseRepository(
       store.transactions.splice(index, 1)
       // Mirrors the D1 cascade; without it the double would let a transaction
       // go while leaving attachment rows the real backend removes.
-      dropAttachmentsFor(store, [id])
+      dropAttachmentsFor(owner, store, [id])
       return Promise.resolve()
     },
 
@@ -424,7 +433,7 @@ export function inMemoryExpenseRepository(
       const idSet = new Set(ids)
       const before = store.transactions.length
       store.transactions = store.transactions.filter((row) => !idSet.has(row.id))
-      dropAttachmentsFor(store, ids)
+      dropAttachmentsFor(owner, store, ids)
       return Promise.resolve(before - store.transactions.length)
     },
 
@@ -505,7 +514,7 @@ export function inMemoryExpenseRepository(
     findAttachmentSource: (owner, id) => {
       const store = storeFor(owner)
       const attachment = store.attachments.find((a) => a.id === id)
-      const keys = keysById.get(id)
+      const keys = keysById.get(keyOf(owner, id))
       if (!attachment || !keys) return Promise.resolve(null)
       return Promise.resolve({
         objectKey: keys.objectKey,
@@ -530,7 +539,7 @@ export function inMemoryExpenseRepository(
       }
       // The double lets the service assert the keys it wrote, which is the part
       // that has to match the D1 adapter.
-      keysById.set(attachment.id, {
+      keysById.set(keyOf(owner, attachment.id), {
         objectKey: input.objectKey,
         ...(input.thumbKey ? { thumbKey: input.thumbKey } : {}),
       })
@@ -541,11 +550,12 @@ export function inMemoryExpenseRepository(
     deleteAttachment: (owner, id) => {
       const store = storeFor(owner)
       const index = store.attachments.findIndex((a) => a.id === id)
-      if (index < 0) throw new RepoHttpError(404, 'Attachment not found')
+      const keys = keysById.get(keyOf(owner, id))
+      // Check before mutating, so a miss cannot leave the row deleted and the
+      // caller told it was never there.
+      if (index < 0 || !keys) throw new RepoHttpError(404, 'Attachment not found')
       store.attachments.splice(index, 1)
-      const keys = keysById.get(id)
-      if (!keys) throw new RepoHttpError(404, 'Attachment not found')
-      keysById.delete(id)
+      keysById.delete(keyOf(owner, id))
       return Promise.resolve(keys)
     },
 
@@ -556,7 +566,7 @@ export function inMemoryExpenseRepository(
         store.attachments
           .filter((a) => wanted.has(a.transactionId))
           .flatMap((a) => {
-            const keys = keysById.get(a.id)
+            const keys = keysById.get(keyOf(owner, a.id))
             if (!keys) return []
             return keys.thumbKey ? [keys.objectKey, keys.thumbKey] : [keys.objectKey]
           }),

@@ -1,11 +1,14 @@
 import type { TransactionAttachment } from '../domain/types'
+import type { NewAttachment } from '../domain/data/dataSource'
 import type { ExpenseRepository } from '../domain/ports/expenseRepository'
 import type { ReceiptStore } from '../domain/ports/receiptStore'
 import {
+  checkThumb,
   checkUpload,
   extensionFor,
   rejectionMessage,
   supportsThumbnail,
+  type ReceiptContentType,
   type ReceiptLimits,
 } from '../domain/data/receiptRules'
 import { receiptKey, receiptThumbKey, sha256Hex } from './receiptKeys'
@@ -30,6 +33,27 @@ export interface UploadRequest {
  * pointing at bytes that do not exist, which renders as a broken receipt the
  * user cannot fix.
  */
+/**
+ * The thumbnail is client-supplied like the file, so it gets the same
+ * treatment: unchecked, a raw API call could store an arbitrarily large,
+ * unsniffed object that never counted against the quota.
+ */
+function validatedThumb(
+  thumb: ArrayBuffer | undefined,
+  fileBytes: number,
+  ownerBytesUsed: number,
+  limits: ReceiptLimits,
+): Uint8Array | null {
+  if (!thumb) return null
+  const thumbBytes = new Uint8Array(thumb)
+  const check = checkThumb(thumbBytes, limits)
+  if (!check.ok) throw new HttpError(400, rejectionMessage(check.reason))
+  if (ownerBytesUsed + fileBytes + thumbBytes.length > limits.maxOwnerBytes) {
+    throw new HttpError(400, rejectionMessage({ kind: 'owner-quota', limit: limits.maxOwnerBytes }))
+  }
+  return thumbBytes
+}
+
 export async function storeReceipt(
   repo: ExpenseRepository,
   store: ReceiptStore,
@@ -54,26 +78,44 @@ export async function storeReceipt(
   })
   if (!check.ok) throw new HttpError(400, rejectionMessage(check.reason))
 
+  const thumbBytes = validatedThumb(request.thumb, bytes.length, ownerBytesUsed, limits)
+
   const hash = await sha256Hex(request.file)
   const objectKey = receiptKey(owner, transactionId, hash, extensionFor(check.contentType))
   const thumbKey =
-    request.thumb && supportsThumbnail(check.contentType)
+    thumbBytes && supportsThumbnail(check.contentType)
       ? receiptThumbKey(owner, transactionId, hash)
       : undefined
 
   await store.put(objectKey, request.file, check.contentType)
   if (thumbKey && request.thumb) await store.put(thumbKey, request.thumb, 'image/jpeg')
 
-  return repo.createAttachment(owner, {
-    transactionId,
+  return repo.createAttachment(
+    owner,
+    attachmentRecord(request, objectKey, check.contentType, bytes.length, thumbKey, thumbBytes),
+  )
+}
+
+/** Assembled separately so storeReceipt stays under the complexity budget. */
+function attachmentRecord(
+  request: UploadRequest,
+  objectKey: string,
+  contentType: ReceiptContentType,
+  fileBytes: number,
+  thumbKey: string | undefined,
+  thumbBytes: Uint8Array | null,
+): NewAttachment {
+  return {
+    transactionId: request.transactionId,
     objectKey,
-    contentType: check.contentType,
-    byteSize: bytes.length,
+    contentType,
+    // Everything this attachment occupies, so the quota reflects real storage.
+    byteSize: fileBytes + (thumbKey && thumbBytes ? thumbBytes.length : 0),
     ...(thumbKey ? { thumbKey } : {}),
     ...(request.originalName ? { originalName: request.originalName } : {}),
     ...(request.width != null ? { width: request.width } : {}),
     ...(request.height != null ? { height: request.height } : {}),
-  })
+  }
 }
 
 export async function removeReceipt(

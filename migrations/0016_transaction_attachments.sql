@@ -12,7 +12,8 @@
 -- D1/SQLite ALTER cannot add enforced foreign keys, and a plain CREATE TABLE
 -- reference to transactions(id) would not cascade on delete anyway under D1's
 -- default PRAGMA, so transaction_id is a plain column and integrity is enforced
--- in app code (assertOwnedTransaction in functions/_shared/ownership.ts). Same
+-- in app code: ExpenseRepository.transactionExists, checked in
+-- functions/_shared/receiptService.ts before any upload is stored. Same
 -- shape as plan_id (0009) and flag_id (0015).
 --
 -- Run as one batch:
