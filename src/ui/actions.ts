@@ -52,7 +52,8 @@ export interface ExpenseActions {
   onEdit: (txn: Transaction) => void
   onAdd: (seed?: TransactionSeed) => void
   onDuplicate: (txn: Transaction) => void
-  createTransaction: (input: NewTransaction) => Promise<void>
+  /** Resolves with the stored row, so a caller can attach receipts to its id. */
+  createTransaction: (input: NewTransaction) => Promise<Transaction>
   createTransactions: (inputs: NewTransaction[]) => Promise<void>
   updateTransaction: (id: number, patch: Partial<NewTransaction>) => Promise<void>
   deleteTransaction: (id: number) => Promise<void>

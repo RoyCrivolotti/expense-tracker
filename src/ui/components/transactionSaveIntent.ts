@@ -1,4 +1,5 @@
 import type { NewInstallmentPlan, NewTransaction } from '../../data/dataSource'
+import type { Transaction } from '../../types'
 import type { ExpenseActions } from '../actions'
 import type { InstallmentIntent } from './installmentIntent'
 
@@ -45,12 +46,12 @@ function planFromInput(
  * no payments (best-effort: a cleanup failure is logged, not thrown, so the
  * caller still surfaces the original error).
  */
-async function createPlanAndLink(
+async function createPlanAndLink<T>(
   actions: ExpenseActions,
   input: NewTransaction,
   intent: Extract<InstallmentIntent, { kind: 'new' }>,
-  link: (planId: number, amountCents: number) => Promise<void>,
-): Promise<void> {
+  link: (planId: number, amountCents: number) => Promise<T>,
+): Promise<T> {
   const { plan, amountCents } = planFromInput(
     input,
     intent.totalCount,
@@ -59,7 +60,9 @@ async function createPlanAndLink(
   )
   const created = await actions.createInstallmentPlan(plan)
   try {
-    await link(created.id, amountCents)
+    // `return await`, deliberately: a bare `return link(...)` settles outside
+    // this try, so a rejected link would skip the rollback below entirely.
+    return await link(created.id, amountCents)
   } catch (error) {
     try {
       await actions.deleteInstallmentPlan(created.id)
@@ -70,14 +73,19 @@ async function createPlanAndLink(
   }
 }
 
-/** Create a transaction, applying whatever installment intent the form collected. */
+/**
+ * Create a transaction, applying whatever installment intent the form collected.
+ *
+ * Resolves with the stored row rather than void: the add form stages receipts
+ * before the transaction exists, and needs the new id to upload them against.
+ */
 export async function createTransactionWithIntent(
   actions: ExpenseActions,
   input: NewTransaction,
   intent?: InstallmentIntent,
-): Promise<void> {
+): Promise<Transaction> {
   if (intent?.kind === 'new') {
-    await createPlanAndLink(actions, input, intent, (planId, amountCents) =>
+    return createPlanAndLink(actions, input, intent, (planId, amountCents) =>
       actions.createTransaction({
         ...input,
         amountCents,
@@ -85,17 +93,15 @@ export async function createTransactionWithIntent(
         installmentIndex: intent.installmentIndex,
       }),
     )
-    return
   }
   if (intent?.kind === 'link') {
-    await actions.createTransaction({
+    return actions.createTransaction({
       ...input,
       planId: intent.planId,
       installmentIndex: intent.installmentIndex,
     })
-    return
   }
-  await actions.createTransaction(input)
+  return actions.createTransaction(input)
 }
 
 /** Update a transaction, applying whatever installment intent the form collected. */

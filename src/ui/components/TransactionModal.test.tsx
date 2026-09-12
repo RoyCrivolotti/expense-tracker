@@ -1,8 +1,11 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { ExpenseDataset, Transaction } from '../../types'
 import { defaultExpenseSettings } from '../../engine'
 import type { ExpenseActions, TransactionSeed } from '../actions'
+import { makeActions } from '../../testing/makeActions'
+import { makeTransaction } from '../../testing/factories'
 import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
 import type { ExpenseModel } from '../useExpenseData'
 import { TransactionModal } from './TransactionModal'
@@ -50,61 +53,28 @@ function model(): ExpenseModel {
   }
 }
 
-function makeActions(): ExpenseActions {
-  return {
-    onEdit: vi.fn(),
-    onAdd: vi.fn(),
-    onDuplicate: vi.fn(),
-    createTransaction: vi.fn().mockResolvedValue(undefined),
-    createTransactions: vi.fn().mockResolvedValue(undefined),
-    updateTransaction: vi.fn().mockResolvedValue(undefined),
-    deleteTransaction: vi.fn().mockResolvedValue(undefined),
-    deleteTransactions: vi.fn().mockResolvedValue(undefined),
-    updateTransactions: vi.fn().mockResolvedValue(undefined),
-    setStatementPaid: vi.fn().mockResolvedValue(undefined),
-    setCashActual: vi.fn().mockResolvedValue(undefined),
-    uploadAttachment: vi.fn().mockResolvedValue(undefined),
-    deleteAttachment: vi.fn().mockResolvedValue(undefined),
-    createFlag: vi.fn().mockResolvedValue(undefined),
-    updateFlag: vi.fn().mockResolvedValue(undefined),
-    deleteFlag: vi.fn().mockResolvedValue(undefined),
-    createCategory: vi.fn().mockResolvedValue(undefined),
-    updateCategory: vi.fn().mockResolvedValue(undefined),
-    deleteCategory: vi.fn().mockResolvedValue({ reassignedToId: null }),
-    createAccount: vi.fn().mockResolvedValue(undefined),
-    updateAccount: vi.fn().mockResolvedValue(undefined),
-    deleteAccount: vi.fn().mockResolvedValue({ reassignedToId: null }),
-    updateSettings: vi.fn().mockResolvedValue(undefined),
-    updateGoals: vi.fn().mockResolvedValue(undefined),
-    createScenario: vi.fn(),
-    updateScenario: vi.fn().mockResolvedValue(undefined),
-    deleteScenario: vi.fn().mockResolvedValue(undefined),
-    createInstallmentPlan: vi.fn(),
-    updateInstallmentPlan: vi.fn().mockResolvedValue(undefined),
-    deleteInstallmentPlan: vi.fn().mockResolvedValue(undefined),
-    createWealthAccount: vi.fn(),
-    updateWealthAccount: vi.fn(),
-    deleteWealthAccount: vi.fn(),
-    createWealthCheckin: vi.fn(),
-    updateWealthCheckin: vi.fn(),
-    deleteWealthCheckin: vi.fn(),
-  }
-}
-
 function renderModal(
-  props: { editing?: Transaction | null; seed?: TransactionSeed; onClose?: () => void } = {},
+  props: {
+    editing?: Transaction | null
+    seed?: TransactionSeed
+    onClose?: () => void
+    actions?: Partial<ExpenseActions>
+  } = {},
 ) {
-  return render(
+  const actions = makeActions(props.actions ?? {})
+  const onClose = props.onClose ?? vi.fn()
+  const view = render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
       <TransactionModal
         model={model()}
-        actions={makeActions()}
+        actions={actions}
         editing={props.editing ?? null}
         seed={props.seed}
-        onClose={props.onClose ?? vi.fn()}
+        onClose={onClose}
       />
     </MoneyFormatProvider>,
   )
+  return Object.assign(view, { actions, onClose })
 }
 
 /** The single-transaction form is the only literal `<form>` element, so this
@@ -217,6 +187,86 @@ describe('TransactionModal — closing with unsaved input', () => {
     // Switch back to the (empty) single tab — the batch tab's draft is hidden, not gone.
     fireEvent.click(screen.getByRole('tab', { name: 'Add one' }))
     fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
+  })
+})
+
+describe('TransactionModal — receipts staged on the add form', () => {
+  const receipt = (name = 'flight.jpg') =>
+    new File([new Uint8Array([1, 2, 3])], name, { type: 'image/jpeg' })
+
+  /** Fill the minimum a create needs, and stage one receipt against it. */
+  async function fillAndStage(container: HTMLElement, file = receipt()) {
+    const form = singleForm(container)
+    fireEvent.change(form.getByLabelText(/amount/i), { target: { value: '198,40' } })
+    fireEvent.change(form.getByLabelText(/description/i), { target: { value: 'Flight' } })
+    const input = container.querySelector('input[type=file]') as HTMLInputElement
+    await userEvent.upload(input, file)
+  }
+
+  it('uploads a staged receipt against the id the create returned', async () => {
+    const created = makeTransaction({ id: 42 })
+    const { container, actions, onClose } = renderModal({
+      actions: { createTransaction: vi.fn().mockResolvedValue(created) },
+    })
+
+    await fillAndStage(container)
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+
+    await waitFor(() => expect(actions.uploadAttachment).toHaveBeenCalledTimes(1))
+    expect(actions.uploadAttachment).toHaveBeenCalledWith(42, expect.any(File))
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+  })
+
+  it('keeps the modal open when the row saves but a receipt does not', async () => {
+    const { container, onClose } = renderModal({
+      actions: {
+        createTransaction: vi.fn().mockResolvedValue(makeTransaction({ id: 42 })),
+        uploadAttachment: vi.fn().mockRejectedValue(new Error('Receipt storage is full')),
+      },
+    })
+
+    await fillAndStage(container)
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+
+    // Saved, so closing would strand the receipt with no way back to it.
+    await waitFor(() =>
+      expect(singleForm(container).getByText(/could not be uploaded/i)).toBeInTheDocument(),
+    )
+    expect(onClose).not.toHaveBeenCalled()
+    expect(
+      singleForm(container).getByRole('button', { name: 'Retry receipts' }),
+    ).toBeInTheDocument()
+  })
+
+  it('retries only the upload, never creating a second transaction', async () => {
+    const createTransaction = vi.fn().mockResolvedValue(makeTransaction({ id: 42 }))
+    const uploadAttachment = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('network down'))
+      .mockResolvedValue(undefined)
+    const { container, onClose } = renderModal({ actions: { createTransaction, uploadAttachment } })
+
+    await fillAndStage(container)
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+    const retry = await singleForm(container).findByRole('button', { name: 'Retry receipts' })
+
+    fireEvent.click(retry)
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+    expect(createTransaction).toHaveBeenCalledTimes(1)
+    expect(uploadAttachment).toHaveBeenCalledTimes(2)
+  })
+
+  it('treats a staged receipt as unsaved input when closing', async () => {
+    const { container, onClose } = renderModal()
+    const input = container.querySelector('input[type=file]') as HTMLInputElement
+
+    await userEvent.upload(input, receipt())
+    fireEvent.click(screen.getByRole('button', { name: /close/i }))
+
+    // Without this the photos are dropped silently: nothing else on the form changed.
     expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument()
     expect(onClose).not.toHaveBeenCalled()
   })

@@ -1,5 +1,11 @@
 import { useRef, useState } from 'react'
 import type { TransactionAttachment } from '../../types'
+import { RECEIPT_CLIENT_POLICY } from '../../data/receiptClientPolicy'
+import {
+  removeStaged,
+  stageReceipts,
+  type PendingReceipt,
+} from '../../data/pendingReceipts'
 import type { ExpenseActions } from '../actions'
 import { CameraIcon, TrashIcon } from '../icons'
 import { ConfirmSheet } from './ConfirmSheet'
@@ -13,10 +19,20 @@ import styles from './ReceiptStrip.module.css'
  */
 const ACCEPT = 'image/jpeg,image/png,image/webp,application/pdf'
 
+const NO_PENDING: PendingReceipt[] = []
+
 interface Props {
-  transactionId: number
+  /** Absent on the add form: the transaction does not exist yet. */
+  transactionId?: number | undefined
   attachments: TransactionAttachment[]
   actions: ExpenseActions
+  /**
+   * Files chosen before the transaction exists. Held by the enclosing form, not
+   * here, because the id they will be uploaded against is only known in its
+   * submit handler — two levels above this component, with no channel back up.
+   */
+  pendingFiles?: PendingReceipt[]
+  onPendingChange?: ((files: PendingReceipt[]) => void) | undefined
   /** Lets an enclosing Modal pause its focus trap while the viewer is open. */
   onTrapPausedChange?: ((paused: boolean) => void) | undefined
 }
@@ -25,6 +41,8 @@ export function ReceiptStrip({
   transactionId,
   attachments,
   actions,
+  pendingFiles = NO_PENDING,
+  onPendingChange,
   onTrapPausedChange,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -32,6 +50,8 @@ export function ReceiptStrip({
   const [err, setErr] = useState<string | null>(null)
   const [viewing, setViewing] = useState<TransactionAttachment | null>(null)
   const [removing, setRemoving] = useState<TransactionAttachment | null>(null)
+  const total = attachments.length + pendingFiles.length
+  const atCap = total >= RECEIPT_CLIENT_POLICY.maxPerTransaction
 
   const setOverlay = (next: TransactionAttachment | null, kind: 'view' | 'remove') => {
     if (kind === 'view') setViewing(next)
@@ -39,27 +59,46 @@ export function ReceiptStrip({
     onTrapPausedChange?.(next !== null)
   }
 
+  /** Reject at the cap here too: the server would, but only after the upload. */
+  const withinCap = (chosen: File[]): File[] => {
+    const room = RECEIPT_CLIENT_POLICY.maxPerTransaction - total
+    if (chosen.length <= room) return chosen
+    setErr(`A transaction can hold ${RECEIPT_CLIENT_POLICY.maxPerTransaction} receipts`)
+    return chosen.slice(0, Math.max(0, room))
+  }
+
   const add = async (files: FileList | null) => {
     if (!files || files.length === 0) return
-    setBusy(true)
     setErr(null)
+    const chosen = withinCap(Array.from(files))
+    if (inputRef.current) inputRef.current.value = ''
+    if (chosen.length === 0) return
+
+    // No transaction yet: stage the files and let the form upload them once it
+    // has an id. Uploading eagerly would need a row to hang them off.
+    if (transactionId == null) {
+      onPendingChange?.([...pendingFiles, ...stageReceipts(chosen)])
+      return
+    }
+
+    setBusy(true)
     try {
       // Sequential on purpose: the server checks the per-transaction cap and the
       // storage quota per request, and parallel uploads would race past both.
-      for (const file of Array.from(files)) {
+      for (const file of chosen) {
         await actions.uploadAttachment(transactionId, file)
       }
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not add the receipt')
     } finally {
       setBusy(false)
-      if (inputRef.current) inputRef.current.value = ''
     }
   }
 
   const remove = async (attachment: TransactionAttachment) => {
     setOverlay(null, 'remove')
     setBusy(true)
+    setErr(null)
     try {
       await actions.deleteAttachment(attachment.id)
     } catch (e) {
@@ -67,6 +106,11 @@ export function ReceiptStrip({
     } finally {
       setBusy(false)
     }
+  }
+
+  const unstage = (index: number) => {
+    setErr(null)
+    onPendingChange?.(removeStaged(pendingFiles, index))
   }
 
   return (
@@ -103,16 +147,37 @@ export function ReceiptStrip({
           </div>
         ))}
 
+        {pendingFiles.map(({ file, url }, index) => (
+          <div key={url || `${file.name}-${index}`} className={`${styles.item} ${styles.pending}`}>
+            <span className={styles.thumb}>
+              {file.type === 'application/pdf' || !url ? (
+                <span className={styles.doc}>{file.type === 'application/pdf' ? 'PDF' : 'IMG'}</span>
+              ) : (
+                <img src={url} alt="" />
+              )}
+            </span>
+            <button
+              type="button"
+              className={styles.removeBtn}
+              disabled={busy}
+              onClick={() => unstage(index)}
+              aria-label={`Remove ${file.name}`}
+            >
+              <TrashIcon />
+            </button>
+          </div>
+        ))}
+
         <button
           type="button"
           className={styles.addBtn}
-          disabled={busy}
+          disabled={busy || atCap}
           onClick={() => inputRef.current?.click()}
         >
           <span className={styles.addIcon} aria-hidden>
             <CameraIcon />
           </span>
-          {busy ? 'Adding…' : 'Add receipt'}
+          {busy ? 'Adding…' : atCap ? `${total} of ${RECEIPT_CLIENT_POLICY.maxPerTransaction}` : 'Add receipt'}
         </button>
         <input
           ref={inputRef}
@@ -125,7 +190,20 @@ export function ReceiptStrip({
         />
       </div>
 
-      {err ? <p className={styles.error}>{err}</p> : null}
+      {/*
+        role=alert, not a toast: the toast slot holds one message for 2.5s and a
+        later one replaces it, so "Transaction added" would swallow this. An
+        alert inserted together with its text is the one live-region shape
+        screen readers announce reliably.
+      */}
+      {err ? (
+        <p className={styles.error} role="alert">
+          {err}
+        </p>
+      ) : null}
+      {transactionId == null && pendingFiles.length > 0 ? (
+        <p className={styles.hint}>Uploaded when you save.</p>
+      ) : null}
 
       {viewing ? (
         <ReceiptViewer attachment={viewing} onClose={() => setOverlay(null, 'view')} />

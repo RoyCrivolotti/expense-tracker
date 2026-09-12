@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { NewTransaction } from '../../data/dataSource'
-import type { ExpenseActions } from '../actions'
+import { makeActions } from '../../testing/makeActions'
+import { makeTransaction } from '../../testing/factories'
 import { createTransactionWithIntent, updateTransactionWithIntent } from './transactionSaveIntent'
 
 const input: NewTransaction = {
@@ -12,48 +13,6 @@ const input: NewTransaction = {
   type: 'expense',
   amountCents: -5783,
   cancelled: false,
-}
-
-function makeActions(overrides: Partial<ExpenseActions> = {}): ExpenseActions {
-  return {
-    onEdit: vi.fn(),
-    onAdd: vi.fn(),
-    onDuplicate: vi.fn(),
-    createTransaction: vi.fn().mockResolvedValue(undefined),
-    createTransactions: vi.fn().mockResolvedValue(undefined),
-    updateTransaction: vi.fn().mockResolvedValue(undefined),
-    deleteTransaction: vi.fn().mockResolvedValue(undefined),
-    deleteTransactions: vi.fn().mockResolvedValue(undefined),
-    updateTransactions: vi.fn().mockResolvedValue(undefined),
-    setStatementPaid: vi.fn().mockResolvedValue(undefined),
-    setCashActual: vi.fn().mockResolvedValue(undefined),
-    uploadAttachment: vi.fn().mockResolvedValue(undefined),
-    deleteAttachment: vi.fn().mockResolvedValue(undefined),
-    createFlag: vi.fn().mockResolvedValue(undefined),
-    updateFlag: vi.fn().mockResolvedValue(undefined),
-    deleteFlag: vi.fn().mockResolvedValue(undefined),
-    createCategory: vi.fn().mockResolvedValue(undefined),
-    updateCategory: vi.fn().mockResolvedValue(undefined),
-    deleteCategory: vi.fn().mockResolvedValue({ reassignedToId: null }),
-    createAccount: vi.fn().mockResolvedValue(undefined),
-    updateAccount: vi.fn().mockResolvedValue(undefined),
-    deleteAccount: vi.fn().mockResolvedValue({ reassignedToId: null }),
-    updateSettings: vi.fn().mockResolvedValue(undefined),
-    updateGoals: vi.fn().mockResolvedValue(undefined),
-    createScenario: vi.fn(),
-    updateScenario: vi.fn().mockResolvedValue(undefined),
-    deleteScenario: vi.fn().mockResolvedValue(undefined),
-    createInstallmentPlan: vi.fn(),
-    updateInstallmentPlan: vi.fn().mockResolvedValue(undefined),
-    deleteInstallmentPlan: vi.fn().mockResolvedValue(undefined),
-    createWealthAccount: vi.fn(),
-    updateWealthAccount: vi.fn(),
-    deleteWealthAccount: vi.fn(),
-    createWealthCheckin: vi.fn(),
-    updateWealthCheckin: vi.fn(),
-    deleteWealthCheckin: vi.fn(),
-    ...overrides,
-  }
 }
 
 describe('createTransactionWithIntent', () => {
@@ -204,5 +163,66 @@ describe('updateTransactionWithIntent', () => {
     await updateTransactionWithIntent(actions, 42, input, { kind: 'unlink' })
 
     expect(updateTransaction).toHaveBeenCalledWith(42, expect.objectContaining({ planId: null }))
+  })
+})
+
+describe('createTransactionWithIntent — the created row', () => {
+  it('resolves with the stored transaction, so receipts can target its id', async () => {
+    const created = makeTransaction({ id: 42 })
+    const actions = makeActions({ createTransaction: vi.fn().mockResolvedValue(created) })
+
+    await expect(createTransactionWithIntent(actions, input)).resolves.toBe(created)
+  })
+
+  it('resolves with the stored transaction on the link-to-existing-plan path', async () => {
+    const created = makeTransaction({ id: 43 })
+    const actions = makeActions({ createTransaction: vi.fn().mockResolvedValue(created) })
+
+    await expect(
+      createTransactionWithIntent(actions, input, {
+        kind: 'link',
+        planId: 3,
+        installmentIndex: 2,
+      }),
+    ).resolves.toBe(created)
+  })
+
+  it('resolves with the stored transaction on the new-plan path', async () => {
+    const created = makeTransaction({ id: 44 })
+    const actions = makeActions({
+      createInstallmentPlan: vi.fn().mockResolvedValue({ id: 9 }),
+      createTransaction: vi.fn().mockResolvedValue(created),
+    })
+
+    await expect(
+      createTransactionWithIntent(actions, input, {
+        kind: 'new',
+        totalCount: 12,
+        installmentIndex: 1,
+        splitTotal: false,
+      }),
+    ).resolves.toBe(created)
+  })
+
+  it('still rolls the orphaned plan back when linking fails', async () => {
+    // Guards the `return await` in createPlanAndLink: returning the promise
+    // unawaited settles it outside the try, so this cleanup would never run and
+    // a failed link would leave a plan with no payments behind it.
+    const deleteInstallmentPlan = vi.fn().mockResolvedValue(undefined)
+    const actions = makeActions({
+      createInstallmentPlan: vi.fn().mockResolvedValue({ id: 9 }),
+      createTransaction: vi.fn().mockRejectedValue(new Error('link failed')),
+      deleteInstallmentPlan,
+    })
+
+    await expect(
+      createTransactionWithIntent(actions, input, {
+        kind: 'new',
+        totalCount: 12,
+        installmentIndex: 1,
+        splitTotal: false,
+      }),
+    ).rejects.toThrow('link failed')
+    expect(deleteInstallmentPlan).toHaveBeenCalledWith(9)
   })
 })
