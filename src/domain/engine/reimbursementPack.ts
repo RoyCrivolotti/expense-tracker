@@ -31,8 +31,12 @@ export interface ReimbursementPack {
   /** Earliest and latest *claimed* date, for the header. */
   from: string
   to: string
-  /** Claimed lines with no receipt attached — what gets a claim sent back. */
-  missingReceipts: number
+  /**
+   * Claimed lines with no receipt attached — what gets a claim sent back.
+   * The lines themselves, not a count: the view lists them so each can be
+   * opened, and deriving the same rule twice is how the two drift apart.
+   */
+  missingReceipts: PackLine[]
 }
 
 /**
@@ -65,6 +69,10 @@ export function buildReimbursementPack(
 ): ReimbursementPack | null {
   const group = buildFlagGroup(flagId, transactions, flags)
   if (!group) return null
+  // Every remaining row is a credit (the expenses were cancelled or deleted
+  // after settling). There is no claim to print: the reference would render as
+  // "WT-------", the period as a bare dash, and the total as a negative.
+  if (!group.transactions.some((t) => t.type !== 'refund')) return null
 
   const byTransaction = new Map<number, TransactionAttachment[]>()
   for (const attachment of attachments) {
@@ -102,7 +110,7 @@ export function buildReimbursementPack(
     outstandingCents: totalClaimedCents - creditedCents,
     from: lines[0]?.transaction.date ?? '',
     to: lines[lines.length - 1]?.transaction.date ?? '',
-    missingReceipts: lines.filter((line) => line.receipts.length === 0).length,
+    missingReceipts: lines.filter((line) => line.receipts.length === 0),
   }
 }
 
@@ -110,15 +118,19 @@ export function buildReimbursementPack(
  * A short reference for the claim, stable across reprints.
  *
  * Derived from the flag and the first claimed month rather than the issue date,
- * so printing the same claim twice gives the same reference — otherwise it could
+ * so reprinting an unchanged claim gives the same reference — otherwise it could
  * not be quoted in an email. It is the claimant's own handle on the claim; an
  * employer will assign their own.
+ *
+ * Not immutable: adding a receipt dated earlier than the current first line
+ * moves the period, and with it the reference. Anchoring on something that
+ * cannot move would mean storing it, which this deliberately does not do.
  */
 export function claimReference(pack: ReimbursementPack): string {
   const initials = pack.flag.name
     .split(/\s+/)
     .filter(Boolean)
-    .map((word) => word[0]?.toUpperCase() ?? '')
+    .map((word) => [...word][0]?.toUpperCase() ?? '')
     .join('')
     .slice(0, 3)
   const period = pack.from ? pack.from.slice(0, 7).replace('-', '') : '------'

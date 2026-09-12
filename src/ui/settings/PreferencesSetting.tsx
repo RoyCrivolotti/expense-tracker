@@ -6,7 +6,7 @@ import styles from '../tabs/tabs.module.css'
 
 interface Props {
   settings: ExpenseSettings
-  onChange: (patch: Partial<ExpenseSettings>) => void
+  onChange: (patch: Partial<ExpenseSettings>) => void | Promise<void>
 }
 
 /** Owner-wide currency, number format, and budget-month start day. */
@@ -24,7 +24,7 @@ export function PreferencesSetting({ settings, onChange }: Props) {
             <select
               className={styles.defaultAccountSelect}
               value={settings.currencyCode}
-              onChange={(e) => onChange({ currencyCode: e.target.value })}
+              onChange={(e) => void onChange({ currencyCode: e.target.value })}
             >
               {CURRENCIES.map((c) => (
                 <option key={c.code} value={c.code}>
@@ -39,7 +39,7 @@ export function PreferencesSetting({ settings, onChange }: Props) {
             <select
               className={styles.defaultAccountSelect}
               value={settings.numberLocale}
-              onChange={(e) => onChange({ numberLocale: e.target.value })}
+              onChange={(e) => void onChange({ numberLocale: e.target.value })}
             >
               {NUMBER_STYLES.map((n) => (
                 <option key={n.locale} value={n.locale}>
@@ -67,7 +67,7 @@ export function PreferencesSetting({ settings, onChange }: Props) {
               value={settings.budgetRolloverDay}
               onChange={(e) => {
                 const day = Number(e.target.value)
-                if (Number.isInteger(day) && day >= 1 && day <= 28) onChange({ budgetRolloverDay: day })
+                if (Number.isInteger(day) && day >= 1 && day <= 28) void onChange({ budgetRolloverDay: day })
               }}
             />
           </label>

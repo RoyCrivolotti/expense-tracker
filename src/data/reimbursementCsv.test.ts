@@ -30,6 +30,21 @@ function datasetWith(transactions: Transaction[], attachments = []): ExpenseData
   return makeDataset({ flags: [makeFlag({ id: 1, name: 'Work travel' })], transactions, attachments })
 }
 
+/**
+ * The data rows, found rather than counted from the top: the claim carries a
+ * claimant/reference preamble whose height depends on whether a claimant is set,
+ * so a fixed index silently reads the wrong line.
+ */
+function body(csv: string): string[] {
+  const lines = csv.split('\n')
+  const header = lines.findIndex((l) => l.startsWith('Date,'))
+  return lines.slice(header + 1)
+}
+
+function headerLine(csv: string): string {
+  return csv.split('\n').find((l) => l.startsWith('Date,'))!
+}
+
 describe('reimbursementCsv', () => {
   it('writes a header, one row per transaction, and a total', () => {
     const csv = reimbursementCsv(
@@ -38,10 +53,10 @@ describe('reimbursementCsv', () => {
       options,
     )
 
-    const lines = csv!.split('\n')
-    expect(lines[0]).toBe('Date,Description,Purpose,Category,Account,Amount,Receipts')
-    expect(lines).toHaveLength(4)
-    expect(lines[3]).toContain('Total claimed')
+    expect(headerLine(csv!)).toBe('Date,Description,Purpose,Category,Account,Amount,Receipts')
+    const rows = body(csv!)
+    expect(rows).toHaveLength(3)
+    expect(rows[2]).toContain('Total claimed')
   })
 
   it('carries the transaction notes through as the business purpose', () => {
@@ -52,7 +67,7 @@ describe('reimbursementCsv', () => {
       options,
     )
 
-    expect(csv!.split('\n')[1]).toContain('Kick-off with Acme')
+    expect(body(csv!)[0]).toContain('Kick-off with Acme')
   })
 
   it('breaks the totals out once a reimbursement has been recorded', () => {
@@ -84,17 +99,33 @@ describe('reimbursementCsv', () => {
       options,
     )
 
-    expect(csv!.split('\n')[1]).toMatch(/,R1 R2$/)
+    expect(body(csv!)[0]).toMatch(/,R1 R2$/)
   })
 
   it('writes a credit negative, so it does not read as another expense', () => {
+    const csv = reimbursementCsv(
+      datasetWith([
+        txn(1, '2026-05-02', { flagId: 1, amountCents: 10_000 }),
+        txn(2, '2026-06-14', { flagId: 1, type: 'refund', amountCents: 4_000 }),
+      ]),
+      1,
+      options,
+    )
+
+    // The credit follows the claimed lines, so it is row 2.
+    expect(body(csv!)[1]).toContain('-40,00')
+  })
+
+  it('produces nothing for a flag whose only rows are credits', () => {
+    // Expenses cancelled after settling: there is no claim left to print, and
+    // the document would carry a dash for a period and a negative total.
     const csv = reimbursementCsv(
       datasetWith([txn(1, '2026-05-02', { flagId: 1, type: 'refund', amountCents: 4_000 })]),
       1,
       options,
     )
 
-    expect(csv!.split('\n')[1]).toContain('-40,00')
+    expect(csv).toBeNull()
   })
 
   it('quotes a description containing a comma', () => {
@@ -104,7 +135,7 @@ describe('reimbursementCsv', () => {
       options,
     )
 
-    expect(csv!.split('\n')[1]).toContain('"Hotel, Madrid"')
+    expect(body(csv!)[0]).toContain('"Hotel, Madrid"')
   })
 
   it('escapes an embedded quote by doubling it', () => {
@@ -114,7 +145,7 @@ describe('reimbursementCsv', () => {
       options,
     )
 
-    expect(csv!.split('\n')[1]).toContain('"The ""Grand"" Hotel"')
+    expect(body(csv!)[0]).toContain('"The ""Grand"" Hotel"')
   })
 
   it('falls back to the category when a transaction has no description', () => {
@@ -124,7 +155,7 @@ describe('reimbursementCsv', () => {
       options,
     )
 
-    expect(csv!.split('\n')[1]).toContain('Travel,,Travel')
+    expect(body(csv!)[0]).toContain('Travel,,Travel')
   })
 
   it('is null for a flag with nothing to claim', () => {
@@ -178,7 +209,9 @@ describe('downloadReimbursementCsv', () => {
     })
     const { anchor, click } = captureDownload(dataset, 1)
 
-    expect(anchor.download).toBe('work-travel-q2-2026.csv')
+    // Period suffix: without it a second claim on the same flag overwrites the
+    // first in Downloads, or lands beside it as work-travel(1).csv.
+    expect(anchor.download).toBe('work-travel-q2-2026-2026-05.csv')
     expect(click).toHaveBeenCalled()
   })
 
@@ -189,7 +222,7 @@ describe('downloadReimbursementCsv', () => {
     })
     const { anchor } = captureDownload(dataset, 1)
 
-    expect(anchor.download).toBe('claim.csv')
+    expect(anchor.download).toBe('claim-2026-05.csv')
   })
 
   it('releases the object URL rather than leaking it', () => {

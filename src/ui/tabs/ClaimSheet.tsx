@@ -154,7 +154,7 @@ function ClaimRow({
             and that is exactly what this field already holds. */}
         {transaction.notes ? <span className={styles.purpose}>{transaction.notes}</span> : null}
       </td>
-      <td>{lookup.categoryName(transaction.categoryId)}</td>
+      <td className={styles.hideNarrow}>{lookup.categoryName(transaction.categoryId)}</td>
       <td className={styles.numeric}>
         {formatCents(signed ? -transaction.amountCents : transaction.amountCents, format)}
       </td>
@@ -182,7 +182,9 @@ function ClaimTable({
           <tr>
             <th scope="col">Date</th>
             <th scope="col">Description</th>
-            <th scope="col">Category</th>
+            <th scope="col" className={styles.hideNarrow}>
+              Category
+            </th>
             <th scope="col" className={styles.numeric}>
               Amount
             </th>
@@ -215,38 +217,59 @@ function ClaimTable({
           </tbody>
         ) : null}
         <tfoot>
-          <tr>
-            <th scope="row" colSpan={3}>
-              Total claimed
-            </th>
-            <td className={`${styles.numeric} ${settled ? '' : styles.total}`}>
-              {formatCents(pack.totalClaimedCents, format)}
-            </td>
-            <td />
-          </tr>
+          <TotalRow
+            label="Total claimed"
+            cents={pack.totalClaimedCents}
+            format={format}
+            emphasis={!settled}
+          />
           {settled ? (
             <>
-              <tr>
-                <th scope="row" colSpan={3}>
-                  Less reimbursed
-                </th>
-                <td className={styles.numeric}>{formatCents(-pack.creditedCents, format)}</td>
-                <td />
-              </tr>
-              <tr>
-                <th scope="row" colSpan={3}>
-                  Outstanding
-                </th>
-                <td className={`${styles.numeric} ${styles.total}`}>
-                  {formatCents(pack.outstandingCents, format)}
-                </td>
-                <td />
-              </tr>
+              <TotalRow label="Less reimbursed" cents={-pack.creditedCents} format={format} />
+              <TotalRow
+                label="Outstanding"
+                cents={pack.outstandingCents}
+                format={format}
+                emphasis
+              />
             </>
           ) : null}
         </tfoot>
       </table>
     </div>
+  )
+}
+
+/**
+ * A totals row.
+ *
+ * The label spans only Date and Description, with a separate placeholder for
+ * Category — a single `colSpan={3}` would keep claiming three columns after the
+ * Category column is hidden on a narrow screen, pushing the figure one cell
+ * right and out from under its own heading.
+ */
+function TotalRow({
+  label,
+  cents,
+  format,
+  emphasis,
+}: {
+  label: string
+  cents: number
+  format: MoneyFormat
+  emphasis?: boolean
+}) {
+  return (
+    <tr>
+      <th scope="row" colSpan={2}>
+        {label}
+      </th>
+      <td className={styles.hideNarrow} />
+      <td className={`${styles.numeric} ${emphasis ? styles.total : ''}`}>
+        {formatCents(cents, format)}
+      </td>
+      <td />
+    </tr>
   )
 }
 
@@ -266,7 +289,7 @@ function MissingReceipts({
   lookup: Lookup
   onOpenTransaction?: ((txn: Transaction) => void) | undefined
 }) {
-  const bare = pack.lines.filter((line) => line.receipts.length === 0)
+  const bare = pack.missingReceipts
   if (bare.length === 0) return null
 
   return (

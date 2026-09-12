@@ -140,18 +140,44 @@
   -webkit-overflow-scrolling: touch;
 }
 
-/* Just wide enough that the date and the amount never wrap, letting the
-   description and category take the squeeze instead. Wider and the amount —
-   the column that matters most — starts off-screen at 375px; narrower and
-   "-120,00 €" breaks across two lines. */
+/* Wide enough that the date and the amount never wrap, letting the description
+   take the squeeze instead. */
 .tableWrap .table {
   min-width: 24rem;
+}
+
+/*
+ * Below this the five columns cannot all fit: 375px leaves ~319px of sheet, and
+ * a 24rem table still pushed Amount to the edge and the receipt refs off-screen
+ * entirely — so the figures you are about to send were the part you could not
+ * see. Category is the one column an approver reads on paper rather than on your
+ * phone, so it is the one that goes; print restores it.
+ */
+@media (max-width: 479px) {
+  .sheet {
+    padding: 1.25rem 1rem 2rem;
+  }
+
+  .hideNarrow {
+    display: none;
+  }
+
+  .tableWrap .table {
+    min-width: 0;
+  }
 }
 
 .purpose {
   display: block;
   font-size: 0.78rem;
   color: var(--color-text-muted);
+}
+
+/* Sets the credits apart from what is being claimed. Referenced as
+   styles.creditsBody from ClaimSheet; CSS modules are typed as a loose record,
+   so a missing rule here fails silently as className={undefined}. */
+.creditsBody {
+  background: color-mix(in srgb, var(--color-text-muted) 6%, transparent);
 }
 
 .sectionRow {
@@ -360,8 +386,13 @@
     border-bottom-color: #111;
   }
 
-  /* The list only helps on screen — on paper it is a dead link. */
-  .warningList {
+  /*
+   * The whole warning is addressed to the *user* — "Most employers will send the
+   * claim back for those" — so printing it puts a pre-emptive confession, and an
+   * instruction to reject, on the document handed to finance. Loud on screen,
+   * absent on paper.
+   */
+  .warning {
     display: none;
   }
 

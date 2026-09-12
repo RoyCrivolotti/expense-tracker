@@ -44,14 +44,23 @@ export function ReimbursementPackView({
    * well would put the nav, the FAB and the month's transactions into the PDF
    * the user is about to hand to somebody.
    */
+  const pack = buildReimbursementPack(flagId, dataset.transactions, dataset.flags, dataset.attachments)
+
+  /*
+   * Guarded on `pack`, and declared before the early return so the hook order
+   * is stable. Setting the flag unconditionally meant an empty pack rendered
+   * nothing while leaving `<body data-pack-open>` set for the rest of the
+   * session — and theme.css hides #root under that attribute when printing, so
+   * Cmd+P anywhere in the app produced a blank page until reload.
+   */
   useEffect(() => {
+    if (!pack) return
     document.body.dataset.packOpen = 'true'
     return () => {
       delete document.body.dataset.packOpen
     }
-  }, [])
+  }, [pack])
 
-  const pack = buildReimbursementPack(flagId, dataset.transactions, dataset.flags, dataset.attachments)
   if (!pack) return null
 
   return createPortal(

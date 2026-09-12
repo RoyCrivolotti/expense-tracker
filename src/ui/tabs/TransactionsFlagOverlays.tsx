@@ -1,3 +1,4 @@
+import { buildFlagGroup } from '../../domain/engine/flagGroups'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import { FlagsModal } from '../definitions/FlagsModal'
@@ -28,7 +29,7 @@ export function TransactionsFlagOverlays({
 }) {
   return (
     <>
-      {packFlagId != null ? (
+      {packFlagId != null && buildFlagGroup(packFlagId, model.dataset.transactions, model.dataset.flags) ? (
         <ReimbursementPackView
           dataset={model.dataset}
           lookup={model.lookup}

@@ -1,5 +1,9 @@
 import type { ExpenseDataset } from '../types'
-import { buildReimbursementPack, type PackLine } from '../domain/engine/reimbursementPack'
+import {
+  buildReimbursementPack,
+  claimReference,
+  type PackLine,
+} from '../domain/engine/reimbursementPack'
 import { formatCents, type MoneyFormat } from '../engine/money'
 
 /**
@@ -56,6 +60,16 @@ export function reimbursementCsv(
       .map(esc)
       .join(',')
 
+  // The spreadsheet copy of the claim carried neither claimant nor reference,
+  // so a second submission was indistinguishable from the first.
+  const preamble = [
+    ['Claim', pack.flag.name].map(esc).join(','),
+    ['Reference', claimReference(pack)].map(esc).join(','),
+    ...(dataset.settings.claimantName
+      ? [['Claimant', dataset.settings.claimantName].map(esc).join(',')]
+      : []),
+    '',
+  ]
   const rows = pack.lines.map((line) => row(line, false))
   const credits = pack.credits.map((line) => row(line, true))
   const blank = (label: string, cents: number) =>
@@ -66,7 +80,7 @@ export function reimbursementCsv(
     totals.push(blank('Less reimbursed', -pack.creditedCents))
     totals.push(blank('Outstanding', pack.outstandingCents))
   }
-  return [HEADER.join(','), ...rows, ...credits, ...totals].join('\n')
+  return [...preamble, HEADER.join(','), ...rows, ...credits, ...totals].join('\n')
 }
 
 export function downloadReimbursementCsv(
@@ -76,13 +90,17 @@ export function downloadReimbursementCsv(
 ): void {
   const csv = reimbursementCsv(dataset, flagId, options)
   if (!csv) return
+  const pack = buildReimbursementPack(flagId, dataset.transactions, dataset.flags, dataset.attachments)
   const flag = dataset.flags.find((f) => f.id === flagId)
+  // Period in the filename: without it a second claim on the same flag lands in
+  // Downloads as work-travel(1).csv, or overwrites the first.
+  const period = pack?.from ? `-${pack.from.slice(0, 7)}` : ''
   const slug = (flag?.name ?? 'claim').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `${slug || 'claim'}.csv`
+  a.download = `${slug || 'claim'}${period}.csv`
   a.click()
   URL.revokeObjectURL(url)
 }
