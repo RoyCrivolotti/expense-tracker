@@ -13,9 +13,15 @@ import { ReceiptViewer } from './ReceiptViewer'
 import styles from './ReceiptStrip.module.css'
 
 /**
- * Browsers offer the camera directly for `capture`, and listing the concrete
- * types rather than `image/*` keeps HEIC out of the picker on iOS — the server
- * rejects it anyway, and being told after choosing is worse than not seeing it.
+ * Listing concrete types rather than `image/*` keeps HEIC out of the picker on
+ * iOS — the server rejects it anyway, and being told after choosing is worse
+ * than not seeing it.
+ *
+ * Deliberately no `capture` attribute. It reads as a harmless hint, but on iOS
+ * Safari and Chrome Android it opens the camera *directly* and makes `multiple`
+ * inert — so the emailed PDF invoice and the photo you took last week, both of
+ * which this feature exists to collect, become unreachable on a phone. Without
+ * it the OS sheet offers Camera, Photo Library and Files, which is a superset.
  */
 const ACCEPT = 'image/jpeg,image/png,image/webp,application/pdf'
 
@@ -61,10 +67,17 @@ export function ReceiptStrip({
 
   /** Reject at the cap here too: the server would, but only after the upload. */
   const withinCap = (chosen: File[]): File[] => {
-    const room = RECEIPT_CLIENT_POLICY.maxPerTransaction - total
+    const room = Math.max(0, RECEIPT_CLIENT_POLICY.maxPerTransaction - total)
     if (chosen.length <= room) return chosen
-    setErr(`A transaction can hold ${RECEIPT_CLIENT_POLICY.maxPerTransaction} receipts`)
-    return chosen.slice(0, Math.max(0, room))
+    // Naming the number dropped, not just the policy: silently keeping four of
+    // six and reporting the limit reads as though everything was accepted.
+    const dropped = chosen.length - room
+    setErr(
+      `Only ${RECEIPT_CLIENT_POLICY.maxPerTransaction} receipts fit — ${dropped} ${
+        dropped === 1 ? 'was' : 'were'
+      } not added.`,
+    )
+    return chosen.slice(0, room)
   }
 
   const add = async (files: FileList | null) => {
@@ -149,13 +162,21 @@ export function ReceiptStrip({
 
         {pendingFiles.map(({ file, url }, index) => (
           <div key={url || `${file.name}-${index}`} className={`${styles.item} ${styles.pending}`}>
-            <span className={styles.thumb}>
+            {/* A button, like a stored receipt: you attach a photo precisely to
+                check you shot the right receipt, and a span cannot be opened. */}
+            <a
+              className={styles.thumb}
+              href={url || undefined}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`Open ${file.name}`}
+            >
               {file.type === 'application/pdf' || !url ? (
                 <span className={styles.doc}>{file.type === 'application/pdf' ? 'PDF' : 'IMG'}</span>
               ) : (
                 <img src={url} alt="" />
               )}
-            </span>
+            </a>
             <button
               type="button"
               className={styles.removeBtn}
@@ -177,14 +198,13 @@ export function ReceiptStrip({
           <span className={styles.addIcon} aria-hidden>
             <CameraIcon />
           </span>
-          {busy ? 'Adding…' : atCap ? `${total} of ${RECEIPT_CLIENT_POLICY.maxPerTransaction}` : 'Add receipt'}
+          {busy ? 'Adding…' : atCap ? 'Receipt limit reached' : 'Add receipt'}
         </button>
         <input
           ref={inputRef}
           type="file"
           className={styles.fileInput}
           accept={ACCEPT}
-          capture="environment"
           multiple
           onChange={(e) => void add(e.target.files)}
         />

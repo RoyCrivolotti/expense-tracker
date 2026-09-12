@@ -41,6 +41,13 @@ interface FormProps {
   /** Reports whether the form has diverged from its opening state, so a caller
    * can warn before discarding it (e.g. closing the modal without saving). */
   onDirtyChange?: (dirty: boolean) => void
+  /**
+   * How many receipts are stranded on an already-saved row (0 when none).
+   * Lets the close guard say what is actually at risk: after a partial save the
+   * transaction is safe, so "you'll lose what you've entered" is both wrong and
+   * frightening in the wrong direction.
+   */
+  onPartialSaveChange?: (strandedReceipts: number) => void
   /** Raised while a portalled popover owns focus, so the Modal pauses its trap. */
   onTrapPausedChange?: ((paused: boolean) => void) | undefined
   /** Passed through to the receipts strip; absent in read-only sessions. */
@@ -119,14 +126,27 @@ function saveLabel({
   retrying: boolean
 }): string {
   if (uploading) return `Uploading receipt ${uploading.done + 1} of ${uploading.total}…`
-  if (retrying) return busy ? 'Retrying…' : 'Retry receipts'
+  // "Save and retry", not "Retry receipts": the press also sends any field the
+  // user corrected while the banner was up.
+  if (retrying) return busy ? 'Retrying…' : 'Save and retry'
   if (busy) return 'Saving…'
   return editing ? 'Save changes' : 'Add transaction'
 }
 
-function uploadFailureMessage(count: number): string {
+/**
+ * A retry is neither an add nor an edit — the row landed on the first press and
+ * this one finished its receipts, so "Transaction added" would be a second,
+ * confusing claim about a row already in the list.
+ */
+function savedOrEditing(editing: Transaction | null, savedId: number | null): string {
+  if (savedId != null) return 'Receipts uploaded'
+  return editing ? 'Transaction updated' : 'Transaction added'
+}
+
+function uploadFailureMessage(count: number, reason: string | null): string {
   const noun = count === 1 ? 'receipt' : 'receipts'
-  return `The transaction was saved, but ${count} ${noun} could not be uploaded. Try again, or remove them and attach later.`
+  const why = reason ? ` ${reason.replace(/\.$/, '')}.` : ''
+  return `The transaction was saved, but ${count} ${noun} could not be uploaded.${why} Try again, or remove them and attach later.`
 }
 
 export function TransactionForm({
@@ -139,6 +159,7 @@ export function TransactionForm({
   onClose,
   hidden,
   onDirtyChange,
+  onPartialSaveChange,
   onTrapPausedChange,
   actions,
 }: FormProps) {
@@ -167,10 +188,13 @@ export function TransactionForm({
     // photos and changing nothing else left `dirty` false, so closing skipped
     // the confirm sheet and dropped them silently.
     onDirtyChange?.(dirty || pendingFiles.length > 0)
+    // Distinct from dirty: past a partial save the transaction is safe and only
+    // the receipts are at risk, which needs different words on the way out.
+    onPartialSaveChange?.(savedId != null ? pendingFiles.length : 0)
     // onDirtyChange intentionally omitted: callers pass a state setter inline, which
     // would otherwise re-run this on every parent render regardless of form/draft.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, draft, pendingFiles])
+  }, [form, draft, pendingFiles, savedId])
   // Mirrored into a ref so the unmount cleanup can release the staged blobs
   // without listing `pendingFiles` as a dependency — which would revoke them on
   // every change instead of once at the end. Assigned in an effect, not render.
@@ -195,36 +219,26 @@ export function TransactionForm({
   const flushPending = async (
     id: number,
     staged: PendingReceipt[],
-  ): Promise<PendingReceipt[]> => {
-    if (!actions || staged.length === 0) return []
+  ): Promise<{ failed: PendingReceipt[]; reason: string | null }> => {
+    if (!actions || staged.length === 0) return { failed: [], reason: null }
     const failed: PendingReceipt[] = []
+    let reason: string | null = null
     for (const [index, item] of staged.entries()) {
       setUploading({ done: index, total: staged.length })
       try {
         await actions.uploadAttachment(id, item.file)
         // Uploaded: its blob is no longer previewing anything.
         revokeStaged([item])
-      } catch {
+      } catch (e) {
         failed.push(item)
+        // Keep the first reason. "Receipt storage is full" and a dropped
+        // connection are the same sentence without it, and only one is worth
+        // pressing Retry for.
+        reason ??= e instanceof Error ? e.message : null
       }
     }
     setUploading(null)
-    return failed
-  }
-
-  /** A failed flush leaves the row saved; only the receipts still need retrying. */
-  const retryReceipts = async (id: number) => {
-    setBusy(true)
-    setErr(null)
-    const failed = await flushPending(id, pendingFiles)
-    setPendingFiles(failed)
-    if (failed.length > 0) {
-      setErr(uploadFailureMessage(failed.length))
-      setBusy(false)
-      return
-    }
-    showToast('Receipts uploaded', 'success')
-    onClose()
+    return { failed, reason }
   }
 
   /** Validate, or surface the first problem and say which view owns it. */
@@ -245,10 +259,11 @@ export function TransactionForm({
 
   /** Everything after the row itself is stored. Never re-creates the row. */
   const afterSave = async (id: number | null) => {
-    const failed = id == null ? pendingFiles : await flushPending(id, pendingFiles)
+    const { failed, reason } =
+      id == null ? { failed: pendingFiles, reason: null } : await flushPending(id, pendingFiles)
     setPendingFiles(failed)
     if (failed.length === 0) {
-      showToast(editing ? 'Transaction updated' : 'Transaction added', 'success')
+      showToast(savedOrEditing(editing, savedId), 'success')
       onClose()
       return
     }
@@ -257,24 +272,26 @@ export function TransactionForm({
     // hunting for the row — and a toast could not carry this, since the one
     // toast slot holds a message for 2.5s and the next replaces it.
     if (id != null) setSavedId(id)
-    setErr(uploadFailureMessage(failed.length))
+    setErr(uploadFailureMessage(failed.length, reason))
     setBusy(false)
   }
 
   const submit = async () => {
-    // The row already exists: this press is retrying its receipts, and going
-    // through onSubmit again would create a second transaction.
-    if (savedId != null) {
-      await retryReceipts(savedId)
-      return
-    }
     const valid = validate()
     if (!valid) return
     setBusy(true)
     setErr(null)
     try {
-      const saved = await onSubmit(toInput(form, valid.cents, editing), editing?.id, valid.intent)
-      await afterSave(saved?.id ?? editing?.id ?? null)
+      // `savedId` means a previous press created the row and only its receipts
+      // failed. Send that id so this becomes an update: going through the create
+      // path again would make a second transaction, and skipping onSubmit
+      // entirely would silently discard any field the user corrected meanwhile.
+      const targetId = savedId ?? editing?.id
+      // The plan intent was already applied on the first press; re-sending it
+      // would create a second installment plan alongside the first.
+      const intent = savedId != null ? undefined : valid.intent
+      const saved = await onSubmit(toInput(form, valid.cents, editing), targetId, intent)
+      await afterSave(saved?.id ?? targetId ?? null)
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not save')
       setBusy(false)
@@ -321,7 +338,11 @@ export function TransactionForm({
           >
             Installment plan: {linkLabel(draft, editing, model)}
           </button>
-          {err && <p className={styles.error}>{err}</p>}
+          {err && (
+            <p className={styles.error} role="alert">
+              {err}
+            </p>
+          )}
         </>
       )}
       <div className={styles.actions}>
