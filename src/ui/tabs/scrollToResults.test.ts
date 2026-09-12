@@ -7,6 +7,23 @@ afterEach(() => {
 })
 
 describe('scrollToResults', () => {
+  it('jumps without animation when the viewer asked for reduced motion', () => {
+    const anchor = document.createElement('div')
+    anchor.id = RESULTS_ANCHOR_ID
+    const scrollIntoView = vi.fn()
+    anchor.scrollIntoView = scrollIntoView
+    document.body.append(anchor)
+    vi.stubGlobal('matchMedia', () => ({ matches: true }))
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+      cb(0)
+      return 0
+    })
+
+    scrollToResults()
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' })
+  })
+
   it('scrolls the results anchor into view on the next frame', () => {
     const anchor = document.createElement('div')
     anchor.id = RESULTS_ANCHOR_ID
