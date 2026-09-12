@@ -169,15 +169,28 @@ function stubTxn(input: NewTransaction): Transaction {
   }
 }
 
+/**
+ * The rows handed out by the last `load`.
+ *
+ * Every other mutation here can answer from its input alone, but a *patch*
+ * cannot: returning a stub built from the patch replaces the real row with one
+ * that has lost its flag, its amount and everything else the patch did not
+ * mention. Recording a reimbursement against the capture source looked like it
+ * had done nothing for exactly that reason.
+ */
+let loaded: Transaction[] = []
+
 export const docsCaptureDataSource: ExpenseDataSource = {
   canWrite: true,
   load(): Promise<ExpenseDataset> {
-    return csvDataSource.load().then((dataset) =>
-      enrichDocsCaptureDataset({
+    return csvDataSource.load().then((dataset) => {
+      const enriched = enrichDocsCaptureDataset({
         ...dataset,
         goalScenarios: docsCaptureGoalScenarios(),
-      }),
-    )
+      })
+      loaded = enriched.transactions
+      return enriched
+    })
   },
   createTransaction(input) {
     return Promise.resolve(stubTxn(input))
@@ -187,6 +200,23 @@ export const docsCaptureDataSource: ExpenseDataSource = {
   },
   updateTransaction(id, patch) {
     return Promise.resolve(stubTxn({ ...patch, id } as NewTransaction & { id: number }))
+  },
+  // Was missing entirely, so anything routed through the bulk path — the
+  // bulk-edit sheet, and recording a reimbursement — threw
+  // "not a function" against the capture source.
+  updateTransactions(ids, patch) {
+    const byId = new Map(loaded.map((t) => [t.id, t]))
+    const transactions = ids.map((id) => {
+      const existing = byId.get(id)
+      // Merged onto the real row, not rebuilt from the patch: the caller
+      // replaces its copy with what comes back, so a rebuilt row would drop
+      // every field the patch did not mention.
+      return existing
+        ? ({ ...existing, ...patch } as Transaction)
+        : stubTxn({ ...patch, id } as NewTransaction & { id: number })
+    })
+    loaded = loaded.map((t) => transactions.find((u) => u.id === t.id) ?? t)
+    return Promise.resolve({ updated: transactions.length, transactions })
   },
   deleteTransaction() {
     return Promise.resolve()

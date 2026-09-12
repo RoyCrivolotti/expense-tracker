@@ -14,6 +14,7 @@ import type {
   WealthCheckin,
 } from '../domain/types'
 import { defaultExpenseSettings, defaultGoalInputs } from '../domain/engine/defaults'
+import type { Lookup } from '../ui/format'
 
 /** Build a minimal valid ExpenseDataset, merging any provided overrides. */
 export function makeDataset(overrides: Partial<ExpenseDataset> = {}): ExpenseDataset {
@@ -126,6 +127,29 @@ export function makeScenario(overrides: Partial<GoalScenario> = {}): GoalScenari
     safeWithdrawalRate: 0.04,
     planStartDate: null,
     lifeEvents: [],
+    ...overrides,
+  }
+}
+
+/**
+ * A `Lookup` of empty answers, for tests that render something needing one but
+ * do not care what it returns.
+ *
+ * Exists for the same reason `makeActions` does: eight test files hand-rolled
+ * this object, so every field added to `Lookup` broke all eight at once and the
+ * fix was eight identical edits.
+ */
+export function makeLookup(overrides: Partial<Lookup> = {}): Lookup {
+  return {
+    category: () => undefined,
+    account: () => undefined,
+    flag: () => undefined,
+    attachments: () => [],
+    categoryName: () => '',
+    accountName: () => '',
+    installmentPlan: () => undefined,
+    settlementFor: () => undefined,
+    settledBy: () => [],
     ...overrides,
   }
 }

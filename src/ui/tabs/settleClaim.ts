@@ -1,34 +1,34 @@
-import type { ExpenseDataset } from '../../types'
-import { buildSettlementSeed } from '../../domain/engine/claimSettlement'
-import type { FlagGroup } from '../../domain/engine/flagGroups'
-import { resolveDefaultAccountId } from '../../data/defaultAccount'
-import type { TransactionSeed } from '../actions'
+import type { NewTransaction } from '../../data/dataSource'
+import type { ExpenseActions } from '../actions'
 
 /**
- * Open the add form prefilled to settle a claim.
+ * Record a reimbursement and mark what it covered.
  *
- * A named function rather than an inline callback so the shape it hands to
- * `onAdd` is testable: the type has to be `refund` for the money to net against
- * the spending rather than read as income, and the flag has to travel with it
- * or the settlement lands outside the group it settles.
+ * Two calls rather than one endpoint, because both already exist and are
+ * owner-scoped: create the `refund`, then stamp the rows it settles. If the
+ * stamp fails the refund is deleted again, so a half-finished settlement never
+ * survives — the same compensating-delete shape `createPlanAndLink` uses for a
+ * plan whose transaction fails to link.
  *
- * No-ops when nothing is outstanding. The button is hidden in that case, so
- * this only fires if a second tab settled the claim first.
+ * The refund itself carries **no flag**. The rows it settles leave the Flagged
+ * card on their own, and a flagged refund would then subtract a second time —
+ * the claim would read as over-paid by its own settlement.
  */
-export function settleClaim(
-  group: FlagGroup,
-  dataset: ExpenseDataset,
-  onAdd: (seed?: TransactionSeed, hint?: string) => void,
-): void {
-  const seed = buildSettlementSeed(
-    group,
-    dataset.accounts,
-    resolveDefaultAccountId(dataset.accounts, dataset.settings),
-  )
-  if (!seed) return
-  // Both prefilled choices are surprising without a word: the credit is booked
-  // against the claim's largest category rather than split across all of them,
-  // and it falls in the month it is paid, not the month the spending happened.
-  const hint = `Prefilled with what ${group.flag.name} still owes you. Credited to its largest category, in this month's budget — change either if you'd rather book it elsewhere.`
-  onAdd({ ...seed, type: 'refund', flagId: group.flag.id }, hint)
+export async function recordReimbursement(
+  actions: ExpenseActions,
+  input: NewTransaction,
+  transactionIds: number[],
+): Promise<void> {
+  const created = await actions.createTransaction(input)
+  if (transactionIds.length === 0) return
+  try {
+    await actions.updateTransactions(transactionIds, { settledBy: created.id })
+  } catch (error) {
+    try {
+      await actions.deleteTransaction(created.id)
+    } catch (cleanupError) {
+      console.error('Failed to roll back an unlinked reimbursement', cleanupError)
+    }
+    throw error
+  }
 }

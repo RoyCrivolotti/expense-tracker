@@ -120,7 +120,11 @@ export async function insertTransaction(
 // Plan link columns are patched through a dedicated path (planLinkColumns), not
 // the generic COLUMN map, so the schedule/index invariants stay centralised in
 // resolvePlanLink for both insert and update.
-type PatchableTxnKey = Exclude<keyof NewTransaction, 'planId' | 'installmentIndex'>
+type PatchableTxnKey =
+  | Exclude<keyof NewTransaction, 'planId' | 'installmentIndex'>
+  // Not on NewTransaction — a row is never created already reimbursed; the link
+  // is only ever set afterwards, by recording the reimbursement.
+  | 'settledBy'
 
 const COLUMN: Record<PatchableTxnKey, string> = {
   date: 'date',
@@ -133,6 +137,7 @@ const COLUMN: Record<PatchableTxnKey, string> = {
   cancelled: 'cancelled',
   notes: 'notes',
   flagId: 'flag_id',
+  settledBy: 'settled_by',
 }
 
 function patchValue(key: PatchableTxnKey, value: unknown): unknown {
@@ -165,11 +170,14 @@ async function planLinkColumns(
   return { sets: cols, values: [link!.planId, link!.installmentIndex] }
 }
 
+/** The patchable shape: NewTransaction's fields plus the settlement link. */
+type TxnPatch = Partial<NewTransaction> & { settledBy?: number | null }
+
 export async function updateTransaction(
   env: Env,
   owner: string,
   id: number,
-  patch: Partial<NewTransaction>,
+  patch: TxnPatch,
 ): Promise<Transaction> {
   const keys = (Object.keys(patch) as PatchableTxnKey[]).filter((k) => k in COLUMN)
   const link = await planLinkColumns(env, owner, id, patch)
@@ -201,9 +209,15 @@ export async function updateTransaction(
  * an R2 delete cannot join a D1 batch.
  */
 export async function deleteTransaction(env: Env, owner: string, id: number): Promise<void> {
-  const [, deleted] = await env.DB.batch([
+  const [, , deleted] = await env.DB.batch([
     env.DB
       .prepare('DELETE FROM transaction_attachments WHERE transaction_id = ? AND owner = ?')
+      .bind(id, owner),
+    // Releasing what this row reimbursed, if it was a reimbursement. Without it
+    // the rows it covered keep pointing at a transaction that no longer exists
+    // and stay out of the Flagged card — silently un-owed.
+    env.DB
+      .prepare('UPDATE transactions SET settled_by = NULL WHERE settled_by = ? AND owner = ?')
       .bind(id, owner),
     env.DB.prepare('DELETE FROM transactions WHERE id = ? AND owner = ?').bind(id, owner),
   ])
@@ -227,11 +241,16 @@ export async function bulkInsertTransactions(
 export async function deleteTransactions(env: Env, owner: string, ids: number[]): Promise<number> {
   if (ids.length === 0) return 0
   const placeholders = ids.map(() => '?').join(', ')
-  // Same cascade as the single delete, same reason.
-  const [, deleted] = await env.DB.batch([
+  // Same cascade as the single delete, same reasons.
+  const [, , deleted] = await env.DB.batch([
     env.DB
       .prepare(
         `DELETE FROM transaction_attachments WHERE owner = ? AND transaction_id IN (${placeholders})`,
+      )
+      .bind(owner, ...ids),
+    env.DB
+      .prepare(
+        `UPDATE transactions SET settled_by = NULL WHERE owner = ? AND settled_by IN (${placeholders})`,
       )
       .bind(owner, ...ids),
     env.DB

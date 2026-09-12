@@ -1,100 +1,72 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { Account, Transaction } from '../../types'
-import { makeDataset, makeFlag } from '../../testing/factories'
-import type { FlagGroup } from '../../domain/engine/flagGroups'
-import { netSpendCents } from '../../domain/engine/transactions'
-import { settleClaim } from './settleClaim'
+import type { NewTransaction } from '../../data/dataSource'
+import { makeActions } from '../../testing/makeActions'
+import { makeTransaction } from '../../testing/factories'
+import { recordReimbursement } from './settleClaim'
 
-const WORK = makeFlag({ id: 4, name: 'Work travel' })
-
-const DEBIT: Account = {
-  id: 1,
-  name: 'Main Debit',
-  kind: 'debit',
-  settlement: 'immediate',
-  active: true,
-}
-const CARD: Account = {
-  id: 2,
-  name: 'Travel Card',
-  kind: 'credit',
-  settlement: 'deferred',
-  active: true,
+const payment: NewTransaction = {
+  date: '2026-06-14',
+  budgetMonth: '2026-06',
+  description: 'Reimbursement — Work travel',
+  accountId: 1,
+  categoryId: 3,
+  type: 'refund',
+  amountCents: 12_000,
+  cancelled: false,
 }
 
-function txn(id: number, overrides: Partial<Transaction> = {}): Transaction {
-  return {
-    id,
-    date: '2026-05-02',
-    budgetMonth: '2026-05',
-    description: 'Hotel',
-    accountId: 2,
-    categoryId: 3,
-    type: 'expense',
-    amountCents: 10_000,
-    cancelled: false,
-    status: 'posted',
-    flagId: 4,
-    ...overrides,
-  }
-}
+describe('recordReimbursement', () => {
+  it('stamps the rows it covered with the payment that cleared them', async () => {
+    const created = makeTransaction({ id: 99, type: 'refund' })
+    const actions = makeActions({ createTransaction: vi.fn().mockResolvedValue(created) })
 
-function group(transactions: Transaction[]): FlagGroup {
-  return {
-    flag: WORK,
-    transactions,
-    count: transactions.length,
-    totalCents: netSpendCents(transactions),
-  }
-}
+    await recordReimbursement(actions, payment, [1, 2])
 
-describe('settleClaim', () => {
-  it('opens the add form as a refund carrying the claim’s flag', () => {
-    const onAdd = vi.fn()
-
-    settleClaim(group([txn(1)]), makeDataset({ accounts: [DEBIT, CARD] }), onAdd)
-
-    // `refund`, not `income`: the money has to net against the spending rather
-    // than read as earnings. And the flag has to travel with it, or the
-    // settlement lands outside the group it settles.
-    expect(onAdd).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: 'refund',
-        flagId: 4,
-        amountCents: 10_000,
-        description: 'Reimbursement — Work travel',
-      }),
-      expect.any(String),
-    )
+    expect(actions.createTransaction).toHaveBeenCalledWith(payment)
+    expect(actions.updateTransactions).toHaveBeenCalledWith([1, 2], { settledBy: 99 })
   })
 
-  it('routes the money to a debit account even when the claim was paid on a card', () => {
-    const onAdd = vi.fn()
-
-    settleClaim(group([txn(1, { accountId: 2 })]), makeDataset({ accounts: [DEBIT, CARD] }), onAdd)
-
-    expect(onAdd.mock.calls[0]![0]).toMatchObject({ accountId: 1 })
+  it('creates the payment without a flag, so it cannot subtract twice', () => {
+    // The rows it settles leave the Flagged card on their own. A flagged refund
+    // would then net against what is left, reading as over-paid by its own
+    // settlement.
+    expect(payment).not.toHaveProperty('flagId')
   })
 
-  it('explains both surprising prefills in the modal subtitle', () => {
-    const onAdd = vi.fn()
+  it('deletes the payment again when the rows cannot be stamped', async () => {
+    // Otherwise a failed link leaves money in the books that reimburses nothing,
+    // and the claim still showing as fully owed.
+    const deleteTransaction = vi.fn().mockResolvedValue(undefined)
+    const actions = makeActions({
+      createTransaction: vi.fn().mockResolvedValue(makeTransaction({ id: 99 })),
+      updateTransactions: vi.fn().mockRejectedValue(new Error('network down')),
+      deleteTransaction,
+    })
 
-    settleClaim(group([txn(1)]), makeDataset({ accounts: [DEBIT, CARD] }), onAdd)
-
-    // The credit lands in one category rather than split across the claim's,
-    // and in the month it is paid rather than the month of the spending.
-    const hint = onAdd.mock.calls[0]![1] as string
-    expect(hint).toContain('Work travel')
-    expect(hint).toContain('largest category')
-    expect(hint).toContain("this month's budget")
+    await expect(recordReimbursement(actions, payment, [1, 2])).rejects.toThrow('network down')
+    expect(deleteTransaction).toHaveBeenCalledWith(99)
   })
 
-  it('does nothing when there is nothing left outstanding', () => {
-    const onAdd = vi.fn()
-    const settled = group([txn(1), txn(2, { type: 'refund' })])
+  it('surfaces the original failure even when the rollback also fails', async () => {
+    const actions = makeActions({
+      createTransaction: vi.fn().mockResolvedValue(makeTransaction({ id: 99 })),
+      updateTransactions: vi.fn().mockRejectedValue(new Error('network down')),
+      deleteTransaction: vi.fn().mockRejectedValue(new Error('also down')),
+    })
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-    settleClaim(settled, makeDataset({ accounts: [DEBIT] }), onAdd)
+    await expect(recordReimbursement(actions, payment, [1, 2])).rejects.toThrow('network down')
 
-    expect(onAdd).not.toHaveBeenCalled()
+    logged.mockRestore()
+  })
+
+  it('records a payment covering nothing without touching any row', async () => {
+    const actions = makeActions({
+      createTransaction: vi.fn().mockResolvedValue(makeTransaction({ id: 99 })),
+    })
+
+    await recordReimbursement(actions, payment, [])
+
+    expect(actions.updateTransactions).not.toHaveBeenCalled()
   })
 })

@@ -4,9 +4,11 @@ import type {
   ExpenseDataset,
   Flag,
   InstallmentPlan,
+  Transaction,
   TransactionAttachment,
   TxnStatus,
 } from '../types'
+import { buildReimbursementLinks } from '../domain/engine/reimbursementLinks'
 
 export interface Lookup {
   category: (id: number) => Category | undefined
@@ -16,6 +18,10 @@ export interface Lookup {
   categoryName: (id: number) => string
   accountName: (id: number) => string
   installmentPlan: (id: number) => InstallmentPlan | undefined
+  /** The reimbursement that settled this transaction, if one has. */
+  settlementFor: (transactionId: number) => Transaction | undefined
+  /** The transactions this reimbursement settled, oldest first. */
+  settledBy: (reimbursementId: number) => Transaction[]
 }
 
 export function buildLookup(dataset: ExpenseDataset): Lookup {
@@ -31,6 +37,8 @@ export function buildLookup(dataset: ExpenseDataset): Lookup {
     if (bucket) bucket.push(attachment)
     else attachmentsByTxn.set(attachment.transactionId, [attachment])
   }
+  const links = buildReimbursementLinks(dataset.transactions)
+
   return {
     category: (id) => cats.get(id),
     account: (id) => accs.get(id),
@@ -39,6 +47,8 @@ export function buildLookup(dataset: ExpenseDataset): Lookup {
     categoryName: (id) => cats.get(id)?.name ?? 'Uncategorised',
     accountName: (id) => accs.get(id)?.name ?? 'Unknown',
     installmentPlan: (id) => plans.get(id),
+    settlementFor: links.settlementFor,
+    settledBy: links.settledBy,
   }
 }
 
