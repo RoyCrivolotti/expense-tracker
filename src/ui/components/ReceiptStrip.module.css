@@ -125,6 +125,20 @@
   color: var(--exp-danger);
 }
 
+/* Staged, not stored: a dashed edge distinguishes "will be uploaded when you
+   save" from a receipt that is already safely in R2. */
+.pending .thumb {
+  border-style: dashed;
+  border-color: var(--color-accent);
+  opacity: 0.85;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
 .full {
   display: block;
   width: 100%;

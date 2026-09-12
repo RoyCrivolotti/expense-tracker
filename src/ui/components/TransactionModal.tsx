@@ -97,14 +97,21 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
   // single-transaction draft (and vice versa).
   const { confirming, cancel, modalOnClose } = useCloseGuard(singleDirty || batchDirty, onClose)
 
+  /**
+   * Resolves with the stored row on create so the form can upload the receipts
+   * staged against it, and null on update where the id was already known.
+   *
+   * Deliberately does not toast: receipts upload *after* this resolves, and a
+   * premature "Transaction added" would be replaced by any failure message —
+   * ToastProvider holds one message at a time. TransactionForm toasts once
+   * everything has landed, the way BatchTransactionForm already does.
+   */
   const submit = async (input: NewTransaction, id?: number, intent?: InstallmentIntent) => {
     if (id != null) {
       await updateTransactionWithIntent(actions, id, input, intent)
-      showToast('Transaction updated', 'success')
-    } else {
-      await createTransactionWithIntent(actions, input, intent)
-      showToast('Transaction added', 'success')
+      return null
     }
+    return createTransactionWithIntent(actions, input, intent)
   }
 
   const remove = async (id: number) => {

@@ -56,6 +56,7 @@ export function useExpenseActions(
       createTransaction: async (input: NewTransaction) => {
         const txn = await source.createTransaction!(input)
         applyPatch((d) => patchAfterTransactionCreate(d, txn))
+        return txn
       },
       createTransactions: async (inputs: NewTransaction[]) => {
         const txns = await source.createTransactions!(inputs)

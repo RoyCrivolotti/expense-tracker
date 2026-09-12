@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { ExpenseActions } from '../actions'
 import { makeAttachment } from '../../testing/factories'
+import { stageReceipts, type PendingReceipt } from '../../data/pendingReceipts'
 import { ReceiptStrip } from './ReceiptStrip'
 
 function renderStrip(
@@ -158,5 +159,107 @@ describe('ReceiptStrip', () => {
     await userEvent.click(screen.getByRole('button', { name: /close/i }))
 
     expect(onTrapPausedChange).toHaveBeenLastCalledWith(false)
+  })
+})
+
+describe('ReceiptStrip — before the transaction exists', () => {
+  /** The add-form shape: no id yet, staged files owned by the enclosing form. */
+  function renderPending(initial: PendingReceipt[] = []) {
+    const actions = {
+      uploadAttachment: vi.fn().mockResolvedValue(undefined),
+      deleteAttachment: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ExpenseActions
+    const onPendingChange = vi.fn()
+    const view = render(
+      <ReceiptStrip
+        attachments={[]}
+        actions={actions}
+        pendingFiles={initial}
+        onPendingChange={onPendingChange}
+      />,
+    )
+    const fileInput = view.container.querySelector('input[type=file]') as HTMLInputElement
+    return { actions, onPendingChange, fileInput, view }
+  }
+
+  it('stages a chosen file instead of uploading it', async () => {
+    const { actions, onPendingChange, fileInput } = renderPending()
+
+    await userEvent.upload(fileInput, file('flight.jpg'))
+
+    expect(actions.uploadAttachment).not.toHaveBeenCalled()
+    expect(onPendingChange).toHaveBeenCalledTimes(1)
+    const staged = onPendingChange.mock.calls[0]![0] as PendingReceipt[]
+    expect(staged.map((s) => s.file.name)).toEqual(['flight.jpg'])
+  })
+
+  it('says the staged files go up on save', () => {
+    renderPending(stageReceipts([file('flight.jpg')]))
+
+    expect(screen.getByText('Uploaded when you save.')).toBeInTheDocument()
+  })
+
+  it('removes a staged file by its own identity, not its name', async () => {
+    // Two camera shots are both image.jpg; removing by name would be ambiguous.
+    const staged = stageReceipts([file('image.jpg'), file('image.jpg')])
+    const { onPendingChange } = renderPending(staged)
+
+    await userEvent.click(screen.getAllByRole('button', { name: 'Remove image.jpg' })[0]!)
+
+    const left = onPendingChange.mock.calls[0]![0] as PendingReceipt[]
+    expect(left).toHaveLength(1)
+    expect(left[0]).toBe(staged[1])
+  })
+
+  it('stops accepting files at the per-transaction cap', () => {
+    const staged = stageReceipts([file('a.jpg'), file('b.jpg'), file('c.jpg'), file('d.jpg')])
+    renderPending(staged)
+
+    expect(screen.getByRole('button', { name: /4 of 4/ })).toBeDisabled()
+  })
+
+  it('counts stored and staged receipts together against the cap', () => {
+    const actions = { uploadAttachment: vi.fn(), deleteAttachment: vi.fn() } as unknown as ExpenseActions
+    render(
+      <ReceiptStrip
+        transactionId={1}
+        attachments={[makeAttachment({ id: 1 }), makeAttachment({ id: 2 })]}
+        actions={actions}
+        pendingFiles={stageReceipts([file('c.jpg'), file('d.jpg')])}
+        onPendingChange={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: /4 of 4/ })).toBeDisabled()
+  })
+
+  it('takes only what fits when more files are chosen than there is room for', async () => {
+    // Three already staged, one slot left, two picked: keep one and say why,
+    // rather than uploading both and letting the server reject the second.
+    const staged = stageReceipts([file('a.jpg'), file('b.jpg'), file('c.jpg')])
+    const { onPendingChange, fileInput } = renderPending(staged)
+
+    await userEvent.upload(fileInput, [file('d.jpg'), file('e.jpg')])
+
+    const left = onPendingChange.mock.calls[0]![0] as PendingReceipt[]
+    expect(left.map((s) => s.file.name)).toEqual(['a.jpg', 'b.jpg', 'c.jpg', 'd.jpg'])
+    expect(screen.getByRole('alert')).toHaveTextContent('A transaction can hold 4 receipts')
+  })
+
+  it('announces an upload failure through an alert, not a toast', async () => {
+    const actions = {
+      uploadAttachment: vi.fn().mockRejectedValue(new Error('Receipt storage is full')),
+      deleteAttachment: vi.fn(),
+    } as unknown as ExpenseActions
+    const view = render(
+      <ReceiptStrip transactionId={1} attachments={[]} actions={actions} />,
+    )
+    const fileInput = view.container.querySelector('input[type=file]') as HTMLInputElement
+
+    await userEvent.upload(fileInput, file('flight.jpg'))
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent('Receipt storage is full'),
+    )
   })
 })

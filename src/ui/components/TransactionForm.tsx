@@ -2,6 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import type { Transaction } from '../../types'
 import type { NewTransaction } from '../../data/dataSource'
 import { parseMoneyToCents } from '../../engine/money'
+import {
+  revokeStaged,
+  type PendingReceipt,
+} from '../../data/pendingReceipts'
+import { useToast } from '../hooks/useToast'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
@@ -21,7 +26,12 @@ interface FormProps {
   model: ExpenseModel
   editing: Transaction | null
   seed?: TransactionSeed | undefined
-  onSubmit: (input: NewTransaction, id?: number, intent?: InstallmentIntent) => Promise<void>
+  /** Resolves with the stored row on create, null on update (the id was known). */
+  onSubmit: (
+    input: NewTransaction,
+    id?: number,
+    intent?: InstallmentIntent,
+  ) => Promise<Transaction | null>
   onDelete?: ((id: number) => Promise<void>) | undefined
   onDuplicate?: ((txn: Transaction) => void) | undefined
   onClose: () => void
@@ -92,6 +102,33 @@ function linkLabel(draft: InstallmentDraft, editing: Transaction | null, model: 
   return 'Not part of a plan'
 }
 
+/**
+ * The button carries the upload progress because the uploads happen *after* the
+ * save: three phone photos is several seconds of a modal that would otherwise
+ * sit on "Saving…" with nothing moving.
+ */
+function saveLabel({
+  busy,
+  uploading,
+  editing,
+  retrying,
+}: {
+  busy: boolean
+  uploading: { done: number; total: number } | null
+  editing: Transaction | null
+  retrying: boolean
+}): string {
+  if (uploading) return `Uploading receipt ${uploading.done + 1} of ${uploading.total}…`
+  if (retrying) return busy ? 'Retrying…' : 'Retry receipts'
+  if (busy) return 'Saving…'
+  return editing ? 'Save changes' : 'Add transaction'
+}
+
+function uploadFailureMessage(count: number): string {
+  const noun = count === 1 ? 'receipt' : 'receipts'
+  return `The transaction was saved, but ${count} ${noun} could not be uploaded. Try again, or remove them and attach later.`
+}
+
 export function TransactionForm({
   model,
   editing,
@@ -106,10 +143,18 @@ export function TransactionForm({
   actions,
 }: FormProps) {
   const format = useMoneyFormat()
+  const { showToast } = useToast()
   const [form, setForm] = useState<FormFields>(() => initialFields(editing, model, format, seed))
   const [draft, setDraft] = useState<InstallmentDraft>(() => initialDraft(editing, model, seed))
   const [view, setView] = useState<'fields' | 'installment'>('fields')
   const [busy, setBusy] = useState(false)
+  // Owned here, not in ReceiptStrip: the id these upload against is only known
+  // in `submit` below, and there is no channel back up from the strip.
+  const [pendingFiles, setPendingFiles] = useState<PendingReceipt[]>([])
+  // Set once a create succeeds but its uploads did not, so the strip can switch
+  // to live mode and the user retries in place instead of hunting for the row.
+  const [savedId, setSavedId] = useState<number | null>(null)
+  const [uploading, setUploading] = useState<{ done: number; total: number } | null>(null)
   const [err, setErr] = useState<string | null>(null)
   // Ref, not state: only ever needs its first-render value, and re-rendering to
   // update it would be pointless — nothing should ever change what "opening state" means.
@@ -118,32 +163,118 @@ export function TransactionForm({
     const dirty =
       JSON.stringify(form) !== JSON.stringify(initialSnapshot.current.form) ||
       JSON.stringify(draft) !== JSON.stringify(initialSnapshot.current.draft)
-    onDirtyChange?.(dirty)
+    // Staged receipts count as unsaved input. Without them, attaching three
+    // photos and changing nothing else left `dirty` false, so closing skipped
+    // the confirm sheet and dropped them silently.
+    onDirtyChange?.(dirty || pendingFiles.length > 0)
     // onDirtyChange intentionally omitted: callers pass a state setter inline, which
     // would otherwise re-run this on every parent render regardless of form/draft.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, draft])
+  }, [form, draft, pendingFiles])
+  // Mirrored into a ref so the unmount cleanup can release the staged blobs
+  // without listing `pendingFiles` as a dependency — which would revoke them on
+  // every change instead of once at the end. Assigned in an effect, not render.
+  const stagedRef = useRef<PendingReceipt[]>([])
+  useEffect(() => {
+    stagedRef.current = pendingFiles
+  }, [pendingFiles])
+  useEffect(() => {
+    return () => revokeStaged(stagedRef.current)
+  }, [])
+
   const set: Setter = (key, value) => setForm((f) => ({ ...f, [key]: value }))
   const setDraftField: <K extends keyof InstallmentDraft>(key: K, value: InstallmentDraft[K]) => void =
     (key, value) => setDraft((d) => ({ ...d, [key]: value }))
 
-  const submit = async () => {
+  /**
+   * Upload the staged receipts against a now-existing row, one at a time — the
+   * server checks the per-transaction cap and the storage quota per request, so
+   * parallel uploads would race past both. Returns the files that did not make
+   * it, so they stay staged for a retry rather than vanishing.
+   */
+  const flushPending = async (
+    id: number,
+    staged: PendingReceipt[],
+  ): Promise<PendingReceipt[]> => {
+    if (!actions || staged.length === 0) return []
+    const failed: PendingReceipt[] = []
+    for (const [index, item] of staged.entries()) {
+      setUploading({ done: index, total: staged.length })
+      try {
+        await actions.uploadAttachment(id, item.file)
+        // Uploaded: its blob is no longer previewing anything.
+        revokeStaged([item])
+      } catch {
+        failed.push(item)
+      }
+    }
+    setUploading(null)
+    return failed
+  }
+
+  /** A failed flush leaves the row saved; only the receipts still need retrying. */
+  const retryReceipts = async (id: number) => {
+    setBusy(true)
+    setErr(null)
+    const failed = await flushPending(id, pendingFiles)
+    setPendingFiles(failed)
+    if (failed.length > 0) {
+      setErr(uploadFailureMessage(failed.length))
+      setBusy(false)
+      return
+    }
+    showToast('Receipts uploaded', 'success')
+    onClose()
+  }
+
+  /** Validate, or surface the first problem and say which view owns it. */
+  const validate = (): { cents: number; intent: InstallmentIntent | undefined } | null => {
     const cents = Math.abs(parseMoneyToCents(form.amount, format))
     if (cents <= 0) {
       setErr('Enter an amount greater than zero')
-      return
+      return null
     }
     const intent = buildInstallmentIntent(draft)
     if (!intent.ok) {
       setErr(intent.error)
       setView('installment')
+      return null
+    }
+    return { cents, intent: intent.intent }
+  }
+
+  /** Everything after the row itself is stored. Never re-creates the row. */
+  const afterSave = async (id: number | null) => {
+    const failed = id == null ? pendingFiles : await flushPending(id, pendingFiles)
+    setPendingFiles(failed)
+    if (failed.length === 0) {
+      showToast(editing ? 'Transaction updated' : 'Transaction added', 'success')
+      onClose()
       return
     }
+    // The transaction is saved; only its receipts are not. Staying open with the
+    // strip pointed at the new id lets the user retry in place rather than
+    // hunting for the row — and a toast could not carry this, since the one
+    // toast slot holds a message for 2.5s and the next replaces it.
+    if (id != null) setSavedId(id)
+    setErr(uploadFailureMessage(failed.length))
+    setBusy(false)
+  }
+
+  const submit = async () => {
+    // The row already exists: this press is retrying its receipts, and going
+    // through onSubmit again would create a second transaction.
+    if (savedId != null) {
+      await retryReceipts(savedId)
+      return
+    }
+    const valid = validate()
+    if (!valid) return
     setBusy(true)
     setErr(null)
     try {
-      await onSubmit(toInput(form, cents, editing), editing?.id, intent.intent)
-      onClose()
+      const saved = await onSubmit(toInput(form, valid.cents, editing), editing?.id, valid.intent)
+      await afterSave(saved?.id ?? editing?.id ?? null)
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not save')
       setBusy(false)
@@ -179,6 +310,9 @@ export function TransactionForm({
             onAcceptSuggestion={(s) => acceptDescriptionSuggestion(s, model, setForm)}
             onTrapPausedChange={onTrapPausedChange}
             actions={actions}
+            receiptTargetId={editing?.id ?? savedId}
+            pendingFiles={pendingFiles}
+            onPendingChange={setPendingFiles}
           />
           <button
             type="button"
@@ -212,7 +346,7 @@ export function TransactionForm({
           </button>
         )}
         <button type="submit" className={`${styles.save} tapActive`} disabled={busy}>
-          {busy ? 'Saving…' : editing ? 'Save changes' : 'Add transaction'}
+          {saveLabel({ busy, uploading, editing, retrying: savedId != null })}
         </button>
       </div>
     </form>
