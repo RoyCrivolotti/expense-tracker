@@ -40,6 +40,12 @@ export interface FlagGroup {
  *   flag deleted in another tab — and it must not throw.
  * - Cancelled transactions are excluded entirely: you are not claiming back
  *   something that never happened.
+ * - Only `expense` and `refund` rows are admitted. An income or investment row
+ *   carrying a flag is a mis-typed transaction, and letting one in made `count`
+ *   and `totalCents` describe different sets — `netSpendCents` skips those two
+ *   types, so a flag holding one income row read "3 items - 40,00 EUR" with
+ *   nothing on screen to explain the gap. Excluding them keeps `transactions`,
+ *   `count` and `totalCents` talking about the same rows.
  * - An archived flag drops out, per the contract on `Flag` in types.ts. This is
  *   the feature's only "done": you flag a trip, claim it, get paid, archive the
  *   flag, and the card stops nagging — without destroying which transactions
@@ -52,6 +58,7 @@ export function groupTransactionsByFlag(
   const byFlag = new Map<number, Transaction[]>()
   for (const txn of transactions) {
     if (txn.flagId == null || txn.status === 'cancelled') continue
+    if (txn.type !== 'expense' && txn.type !== 'refund') continue
     const bucket = byFlag.get(txn.flagId)
     if (bucket) bucket.push(txn)
     else byFlag.set(txn.flagId, [txn])

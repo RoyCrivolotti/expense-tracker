@@ -26,6 +26,17 @@
   flex: none;
 }
 
+/* A long flag name would otherwise push the trigger wider than the form and
+   wrap onto a second line. The sibling date trigger already ellipses
+   (DatePicker.module.css); this matches it. min-width:0 is what lets a flex
+   child shrink below its content width at all. */
+.name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .placeholder {
   color: var(--color-text-muted);
 }

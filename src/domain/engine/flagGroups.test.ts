@@ -80,14 +80,28 @@ describe('groupTransactionsByFlag', () => {
     expect(groups[0]?.totalCents).toBe(6_000)
   })
 
-  it('keeps income and investment out of the total but still counts them', () => {
+  it('excludes income and investment rows entirely, so count and total agree', () => {
     const groups = groupTransactionsByFlag(
-      [txn({ flagId: 1, type: 'income', amountCents: 50_000 }), txn({ flagId: 1, amountCents: 1_000 })],
+      [
+        txn({ flagId: 1, type: 'income', amountCents: 50_000 }),
+        txn({ flagId: 1, type: 'investment', amountCents: 20_000 }),
+        txn({ flagId: 1, amountCents: 1_000 }),
+      ],
       [flag({ id: 1 })],
     )
 
-    expect(groups[0]?.count).toBe(2)
+    expect(groups[0]?.count).toBe(1)
+    expect(groups[0]?.transactions).toHaveLength(1)
     expect(groups[0]?.totalCents).toBe(1_000)
+  })
+
+  it('omits a group whose only rows are income or investment', () => {
+    const groups = groupTransactionsByFlag(
+      [txn({ flagId: 1, type: 'income', amountCents: 50_000 })],
+      [flag({ id: 1 })],
+    )
+
+    expect(groups).toHaveLength(0)
   })
 
   it('never puts one transaction in two groups', () => {

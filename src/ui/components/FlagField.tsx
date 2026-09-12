@@ -10,6 +10,8 @@ interface Props {
   flags: Flag[]
   value: number | null
   onChange: (flagId: number | null) => void
+  /** Caption above the trigger. The batch form says what the flag applies to. */
+  label?: string
   /**
    * The popover portals out of the Modal and runs its own focus trap, so the
    * Modal's trap has to stand down while it is open — otherwise Escape closes
@@ -24,7 +26,7 @@ interface Props {
  * card that also hides itself when empty — so nothing pointed at it, and the
  * picker's own "add one under Settings → Flags" copy was unreachable.
  */
-export function FlagField({ flags, value, onChange, onTrapPausedChange }: Props) {
+export function FlagField({ flags, value, onChange, label = 'Flag', onTrapPausedChange }: Props) {
   const triggerRef = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(false)
 
@@ -36,7 +38,7 @@ export function FlagField({ flags, value, onChange, onTrapPausedChange }: Props)
   }
 
   return (
-    <Field label="Flag" as="div">
+    <Field label={label} as="div">
       <button
         type="button"
         ref={triggerRef}
@@ -50,7 +52,7 @@ export function FlagField({ flags, value, onChange, onTrapPausedChange }: Props)
             <span className={styles.swatch} style={{ color: selected.color }} aria-hidden>
               <FlagIcon fill="currentColor" strokeWidth={1.5} />
             </span>
-            {selected.name}
+            <span className={styles.name}>{selected.name}</span>
           </>
         ) : (
           <span className={styles.placeholder}>No flag</span>

@@ -58,6 +58,44 @@ describe('buildBatchTransactions', () => {
     })
   })
 
+  it('applies the form-level flag to every row across every batch', () => {
+    const result = buildBatchTransactions(
+      [
+        batch({ id: 'b1', rows: [row({ id: 'r1', description: 'Flight', amount: '198,40' })] }),
+        batch({ id: 'b2', rows: [row({ id: 'r2', description: 'Hotel', amount: '412' })] }),
+      ],
+      EU_MONEY_FORMAT,
+      1,
+      7,
+    )
+
+    expect(result.ok).toBe(true)
+    expect(result.ok && result.transactions.map((t) => t.flagId)).toEqual([7, 7])
+  })
+
+  it('omits flagId entirely when no flag is chosen, rather than sending null', () => {
+    const result = buildBatchTransactions(
+      [batch({ rows: [row({ description: 'Coffee', amount: '3' })] })],
+      EU_MONEY_FORMAT,
+      1,
+      null,
+    )
+
+    // null means "clear the flag" on the wire, which is meaningless for a row
+    // that does not exist yet — absence is the only way to say "leave it alone".
+    expect(result.ok && 'flagId' in result.transactions[0]!).toBe(false)
+  })
+
+  it('defaults to unflagged when the argument is omitted', () => {
+    const result = buildBatchTransactions(
+      [batch({ rows: [row({ description: 'Coffee', amount: '3' })] })],
+      EU_MONEY_FORMAT,
+      1,
+    )
+
+    expect(result.ok && 'flagId' in result.transactions[0]!).toBe(false)
+  })
+
   it('trims whitespace from the description', () => {
     const result = buildBatchTransactions(
       [batch({ rows: [row({ description: '  Mercadona  ', amount: '5' })] })],

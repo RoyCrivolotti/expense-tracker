@@ -34,11 +34,21 @@ export function isRowEmpty(row: BatchRowDraft): boolean {
   return row.description.trim() === '' && row.amount.trim() === ''
 }
 
-/** Validate every non-empty row across all batches and flatten to NewTransaction[]. */
+/**
+ * Validate every non-empty row across all batches and flatten to NewTransaction[].
+ *
+ * `flagId` is form-level rather than per-row: the case it exists for is "flag
+ * this whole trip", and at 375px a batch row is already a full 3x2 grid with no
+ * cell to spare. When it is null the key is *omitted* rather than sent as null —
+ * `NewTransaction.flagId` uses null to mean "clear it", which is meaningless on
+ * a row that does not exist yet, and under `exactOptionalPropertyTypes` absence
+ * is the only way to say "leave it alone" (see `withoutFlag` in flagGroups.ts).
+ */
 export function buildBatchTransactions(
   batches: DateBatchDraft[],
   format: MoneyFormat,
   budgetRolloverDay: number,
+  flagId: number | null = null,
 ): BuildBatchResult {
   const transactions: NewTransaction[] = []
   const errors: Record<string, string> = {}
@@ -61,6 +71,7 @@ export function buildBatchTransactions(
         type: row.type,
         amountCents: cents,
         cancelled: false,
+        ...(flagId != null ? { flagId } : {}),
       })
     }
   }

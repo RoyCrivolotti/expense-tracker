@@ -8,6 +8,7 @@ import type {
   ExpenseDataset,
   Flag,
   GoalScenario,
+  Transaction,
   WealthAccount,
   WealthCheckin,
 } from '../domain/types'
@@ -28,6 +29,23 @@ export function makeDataset(overrides: Partial<ExpenseDataset> = {}): ExpenseDat
     settings: defaultExpenseSettings(),
     wealthAccounts: [],
     wealthCheckins: [],
+    ...overrides,
+  }
+}
+
+/** Build a minimal valid Transaction (a StoredTransaction plus derived status). */
+export function makeTransaction(overrides: Partial<Transaction> = {}): Transaction {
+  return {
+    id: 1,
+    date: '2025-01-15',
+    budgetMonth: '2025-01',
+    description: 'Flight BCN-LIS',
+    accountId: 1,
+    categoryId: 1,
+    type: 'expense',
+    amountCents: 19_840,
+    cancelled: false,
+    status: 'posted',
     ...overrides,
   }
 }

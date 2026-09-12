@@ -129,6 +129,7 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
           onClose={onClose}
           hidden={mode !== 'batch'}
           onDirtyChange={setBatchDirty}
+          onTrapPausedChange={setPopoverOpen}
         />
       )}
       <TransactionForm
