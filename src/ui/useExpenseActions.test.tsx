@@ -163,3 +163,51 @@ describe('useExpenseActions — flags', () => {
   })
 
 })
+
+describe('useExpenseActions — attachments', () => {
+  const attachment = {
+    id: 5,
+    transactionId: 42,
+    contentType: 'image/jpeg',
+    byteSize: 1_000,
+    createdAt: '2026-05-01T00:00:00Z',
+    hasThumb: true,
+  }
+
+  function harness(source: Partial<ExpenseDataSource>) {
+    let dataset = baseDataset
+    const applyPatch = vi.fn((patch: (d: ExpenseDataset) => ExpenseDataset) => {
+      dataset = patch(dataset)
+    })
+    const { result } = renderHook(() =>
+      useExpenseActions({ canWrite: true, load: vi.fn(), ...source }, applyPatch, vi.fn()),
+    )
+    return { actions: result.current!, read: () => dataset }
+  }
+
+  it('puts an uploaded receipt into the dataset', async () => {
+    const uploadAttachment = vi.fn().mockResolvedValue(attachment)
+    const { actions, read } = harness({ uploadAttachment })
+
+    await act(async () => {
+      await actions.uploadAttachment(42, new File([], 'a.jpg'))
+    })
+
+    expect(uploadAttachment).toHaveBeenCalledWith(42, expect.any(File))
+    expect(read().attachments).toEqual([attachment])
+  })
+
+  it('removes a deleted receipt from the dataset', async () => {
+    const { actions, read } = harness({
+      uploadAttachment: vi.fn().mockResolvedValue(attachment),
+      deleteAttachment: vi.fn().mockResolvedValue(undefined),
+    })
+
+    await act(async () => {
+      await actions.uploadAttachment(42, new File([], 'a.jpg'))
+      await actions.deleteAttachment(5)
+    })
+
+    expect(read().attachments).toEqual([])
+  })
+})
