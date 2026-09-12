@@ -1,0 +1,151 @@
+.strip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.items {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.item {
+  position: relative;
+}
+
+.thumb {
+  display: block;
+  width: 3.5rem;
+  height: 3.5rem;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 0.6rem;
+  background: var(--color-surface-muted);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.thumb:focus-visible {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.doc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+/* Sits on the thumbnail's corner: the strip is dense and a row of separate
+   delete buttons would double its height. */
+.removeBtn {
+  position: absolute;
+  top: -0.35rem;
+  right: -0.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  padding: 0.22rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--exp-danger);
+  cursor: pointer;
+}
+
+.removeBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.addBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 3.5rem;
+  padding: 0 0.85rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 0.6rem;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.addBtn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.addBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.addIcon {
+  display: inline-flex;
+  width: 1rem;
+  height: 1rem;
+}
+
+.fileInput {
+  display: none;
+}
+
+.error {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--exp-danger);
+}
+
+.full {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 0.6rem;
+}
+
+.pdfNote {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.pdfLink {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.pdfHint {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+}

@@ -10,6 +10,8 @@ import {
   patchAfterBulkDelete,
   patchAfterBulkUpdate,
   patchAfterCashActual,
+  patchAfterAttachmentAdd,
+  patchAfterAttachmentDelete,
   patchAfterCategory,
   patchAfterCategoryDelete,
   patchAfterFlag,
@@ -82,6 +84,14 @@ export function useExpenseActions(
       setCashActual: async (yearMonth, actualCashCents) => {
         const row = await source.setCashActual!(yearMonth, actualCashCents)
         applyPatch((d) => patchAfterCashActual(d, row, yearMonth))
+      },
+      uploadAttachment: async (transactionId, file) => {
+        const attachment = await source.uploadAttachment!(transactionId, file)
+        applyPatch((d) => patchAfterAttachmentAdd(d, attachment))
+      },
+      deleteAttachment: async (id) => {
+        await source.deleteAttachment!(id)
+        applyPatch((d) => patchAfterAttachmentDelete(d, id))
       },
       createFlag: async (input) => {
         const flag = await source.createFlag!(input)

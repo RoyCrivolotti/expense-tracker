@@ -40,6 +40,7 @@ const model = {
     categoryName: () => '',
     accountName: () => '',
     flag: () => undefined,
+    attachments: () => [],
     installmentPlan: () => undefined,
   },
   descriptionIndex: { search: () => [], resolve: () => undefined },

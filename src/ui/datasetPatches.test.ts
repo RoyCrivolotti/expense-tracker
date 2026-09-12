@@ -3,6 +3,8 @@ import type { ExpenseDataset, Transaction } from '../types'
 import { defaultExpenseSettings } from '../engine'
 import {
   patchAfterAccountDelete,
+  patchAfterAttachmentAdd,
+  patchAfterAttachmentDelete,
   patchAfterBulkUpdate,
   patchAfterCategoryDelete,
   patchAfterFlag,
@@ -375,4 +377,42 @@ describe('flag patches', () => {
     expect(Object.keys(next.transactions[0] ?? {})).not.toContain('flagId')
   })
 
+})
+
+describe('attachment patches', () => {
+  const attachment = {
+    id: 5,
+    transactionId: 1,
+    contentType: 'image/jpeg',
+    byteSize: 1_000,
+    createdAt: '2026-05-01T00:00:00Z',
+    hasThumb: true,
+  }
+
+  it('adds an attachment to the dataset', () => {
+    const next = patchAfterAttachmentAdd(dataset(), attachment)
+
+    expect(next.attachments).toEqual([attachment])
+  })
+
+  it('replaces one that is already there rather than duplicating it', () => {
+    const before = dataset({ attachments: [attachment] })
+    const next = patchAfterAttachmentAdd(before, { ...attachment, byteSize: 2_000 })
+
+    expect(next.attachments).toHaveLength(1)
+    expect(next.attachments[0]?.byteSize).toBe(2_000)
+  })
+
+  it('removes an attachment by id', () => {
+    const before = dataset({ attachments: [attachment, { ...attachment, id: 6 }] })
+
+    expect(patchAfterAttachmentDelete(before, 5).attachments.map((a) => a.id)).toEqual([6])
+  })
+
+  it('does not mutate the dataset it was given', () => {
+    const before = dataset({ attachments: [attachment] })
+    patchAfterAttachmentDelete(before, 5)
+
+    expect(before.attachments).toHaveLength(1)
+  })
 })

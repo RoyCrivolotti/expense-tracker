@@ -51,6 +51,7 @@ function model(): ExpenseModel {
       categoryName: () => '',
       accountName: () => '',
       flag: () => undefined,
+      attachments: () => [],
       installmentPlan: () => undefined,
     },
     descriptionIndex: {
