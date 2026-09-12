@@ -12,7 +12,7 @@ interface Props {
 }
 
 /**
- * The name printed on a claim pack.
+ * The name printed on a claim.
  *
  * Its own section rather than a line in "Money & months", which is about
  * formatting. Deliberately not derived from the Cloudflare Access email: that
@@ -43,7 +43,7 @@ export function ClaimantSetting({ settings, onChange }: Props) {
 
   return (
     <>
-      <SectionTitle>Reimbursement claims</SectionTitle>
+      <SectionTitle>Claims</SectionTitle>
       <Card>
         <div className={styles.settingGroup}>
           <label className={styles.defaultAccountField}>
@@ -60,7 +60,7 @@ export function ClaimantSetting({ settings, onChange }: Props) {
             />
           </label>
           <p className={styles.settingHint}>
-            Printed at the top of a claim pack. Leave it empty and the pack omits the claimant line.
+            Printed at the top of a claim. Leave it empty and the claim omits the claimant line.
           </p>
         </div>
       </Card>

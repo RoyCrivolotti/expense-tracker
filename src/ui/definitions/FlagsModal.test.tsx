@@ -166,7 +166,7 @@ describe('FlagsModal — reaching an archived claim', () => {
       { onOpenPack },
     )
 
-    await userEvent.click(screen.getByRole('button', { name: 'Claim pack' }))
+    await userEvent.click(screen.getByRole('button', { name: 'View claim' }))
 
     // Closing first matters: the two render as siblings, so leaving both
     // mounted strands this modal's focus trap under the claim sheet.
@@ -177,6 +177,6 @@ describe('FlagsModal — reaching an archived claim', () => {
   it('offers no claim pack for a flag with nothing on it', () => {
     renderModal(makeDataset({ flags: [work], transactions: [] }), {}, { onOpenPack: vi.fn() })
 
-    expect(screen.queryByRole('button', { name: 'Claim pack' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'View claim' })).not.toBeInTheDocument()
   })
 })

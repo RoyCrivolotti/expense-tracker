@@ -75,7 +75,7 @@ function FlagGroupSection({
             className={styles.packBtn}
             onClick={() => onOpenPack(group.flag.id)}
           >
-            Claim pack
+            View claim
           </button>
         </div>
       </div>
