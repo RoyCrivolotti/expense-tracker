@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { Account, Transaction } from '../types'
 import { makeFlag } from '../../testing/factories'
-import { buildSettlementSeed } from './claimSettlement'
+import {
+  buildSettlementDraft,
+  dominantCategoryId,
+  selectedTotalCents,
+  settlementAccountId,
+} from './claimSettlement'
 import type { FlagGroup } from './flagGroups'
 import { netSpendCents } from './transactions'
 
@@ -10,6 +15,7 @@ const WORK = makeFlag({ id: 1, name: 'Work travel' })
 function account(id: number, overrides: Partial<Account> = {}): Account {
   return { id, name: `Account ${id}`, kind: 'debit', settlement: 'immediate', active: true, ...overrides }
 }
+const CARD = account(9, { kind: 'credit', settlement: 'deferred' })
 
 function txn(id: number, overrides: Partial<Transaction> = {}): Transaction {
   return {
@@ -37,109 +43,133 @@ function group(transactions: Transaction[]): FlagGroup {
   }
 }
 
-const CARD = account(9, { kind: 'credit', settlement: 'deferred' })
+describe('buildSettlementDraft', () => {
+  it('offers every outstanding row, ticked, oldest first', () => {
+    const draft = buildSettlementDraft(
+      group([txn(2, { date: '2026-05-09' }), txn(1, { date: '2026-05-02' })]),
+      [account(1)],
+      1,
+    )
 
-describe('buildSettlementSeed', () => {
-  it('prefills what is still outstanding, not what was originally claimed', () => {
-    const seed = buildSettlementSeed(
+    // Oldest first matches the claim document, which is what you read down
+    // while deciding what the employer actually paid.
+    expect(draft?.candidates.map((t) => t.id)).toEqual([1, 2])
+    expect(draft?.selectedIds).toEqual([1, 2])
+  })
+
+  it('opens on the full claim, since covering all of it is the common case', () => {
+    const draft = buildSettlementDraft(group([txn(1), txn(2)]), [account(1)], 1)
+
+    expect(draft?.amountCents).toBe(20_000)
+  })
+
+  it('names the claim it settles', () => {
+    expect(buildSettlementDraft(group([txn(1)]), [account(1)], 1)?.description).toBe(
+      'Reimbursement — Work travel',
+    )
+  })
+
+  it('refuses a claim with nothing outstanding', () => {
+    // The total is already net of anything reimbursed, so this would open on
+    // 0,00 € — which the sheet then refuses to record.
+    const settled = group([txn(1), txn(2, { type: 'refund' })])
+
+    expect(buildSettlementDraft(settled, [account(1)], 1)).toBeNull()
+  })
+})
+
+describe('buildSettlementDraft — what can be selected', () => {
+  it('offers expenses only, never a refund', () => {
+    // A vendor refund already reduces what is owed and is not a line an
+    // employer reimburses. Offering it let the selected total go negative, at
+    // which point the sheet proposed recording a payment of minus six euros.
+    const draft = buildSettlementDraft(
       group([txn(1, { amountCents: 10_000 }), txn(2, { amountCents: 4_000, type: 'refund' })]),
       [account(1)],
       1,
     )
 
-    expect(seed?.amountCents).toBe(6_000)
+    expect(draft?.candidates.map((t) => t.id)).toEqual([1])
+    expect(draft?.amountCents).toBe(10_000)
   })
 
-  it('names the claim it settles', () => {
-    const seed = buildSettlementSeed(group([txn(1)]), [account(1)], 1)
+  it('refuses a claim whose only rows are refunds', () => {
+    const draft = buildSettlementDraft(
+      group([txn(1, { amountCents: 4_000, type: 'refund' }), txn(2, { amountCents: 10_000 })]),
+      [account(1)],
+      1,
+    )
 
-    expect(seed?.description).toBe('Reimbursement — Work travel')
+    expect(draft?.candidates).toHaveLength(1)
+  })
+})
+
+describe('selectedTotalCents', () => {
+  it('totals only the ticked rows', () => {
+    const rows = [txn(1, { amountCents: 10_000 }), txn(2, { amountCents: 4_000 })]
+
+    expect(selectedTotalCents(rows, [1])).toBe(10_000)
   })
 
-  it('refuses to prefill a claim with nothing outstanding', () => {
-    // totalCents is already net of anything reimbursed, so a settled claim would
-    // prefill 0,00 € — which the form then rejects for being zero.
-    const settled = group([txn(1, { amountCents: 10_000 }), txn(2, { amountCents: 10_000, type: 'refund' })])
+  it('subtracts a ticked refund', () => {
+    const rows = [txn(1, { amountCents: 10_000 }), txn(2, { amountCents: 4_000, type: 'refund' })]
 
-    expect(buildSettlementSeed(settled, [account(1)], 1)).toBeNull()
+    expect(selectedTotalCents(rows, [1, 2])).toBe(6_000)
   })
 
-  describe('the account the money lands in', () => {
-    it('never picks a deferred card, even when it is the default', () => {
-      // On a deferred account the refund derives as `forecast`, and from there
-      // cashReconciliation books it as negative unpaid card liability rather
-      // than cash in — leaving the actual-cash gap this exists to close open.
-      const seed = buildSettlementSeed(group([txn(1)]), [CARD, account(2)], 9)
+  it('is zero when nothing is ticked', () => {
+    expect(selectedTotalCents([txn(1)], [])).toBe(0)
+  })
+})
 
-      expect(seed?.accountId).toBe(2)
-    })
-
-    it('honours the default account when it settles immediately', () => {
-      const seed = buildSettlementSeed(group([txn(1)]), [account(1), account(2)], 2)
-
-      expect(seed?.accountId).toBe(2)
-    })
-
-    it('skips archived accounts', () => {
-      const seed = buildSettlementSeed(
-        group([txn(1)]),
-        [account(1, { active: false }), account(2)],
-        1,
-      )
-
-      expect(seed?.accountId).toBe(2)
-    })
-
-    it('falls back to any active account when none settle immediately', () => {
-      // Degraded rather than zero: the user can still fix it in the modal.
-      const seed = buildSettlementSeed(group([txn(1)]), [CARD], 9)
-
-      expect(seed?.accountId).toBe(9)
-    })
+describe('settlementAccountId', () => {
+  it('never picks a deferred card, even when it is the default', () => {
+    // On a deferred account the refund derives as `forecast`, and
+    // cashReconciliation then books it as negative unpaid card liability rather
+    // than cash in — leaving the gap this exists to close open.
+    expect(settlementAccountId([CARD, account(2)], 9)).toBe(2)
   })
 
-  describe('the category it is booked against', () => {
-    it('picks the category the claim spent most in', () => {
-      const seed = buildSettlementSeed(
-        group([
-          txn(1, { categoryId: 3, amountCents: 5_000 }),
-          txn(2, { categoryId: 7, amountCents: 40_000 }),
-          txn(3, { categoryId: 3, amountCents: 5_000 }),
-        ]),
-        [account(1)],
-        1,
-      )
+  it('honours the default account when it settles immediately', () => {
+    expect(settlementAccountId([account(1), account(2)], 2)).toBe(2)
+  })
 
-      expect(seed?.categoryId).toBe(7)
-    })
+  it('skips archived accounts', () => {
+    expect(settlementAccountId([account(1, { active: false }), account(2)], 1)).toBe(2)
+  })
 
-    it('breaks a tie on the lowest id, so the same claim prefills the same way twice', () => {
-      const seed = buildSettlementSeed(
-        group([
-          txn(1, { categoryId: 7, amountCents: 10_000 }),
-          txn(2, { categoryId: 3, amountCents: 10_000 }),
-        ]),
-        [account(1)],
-        1,
-      )
+  it('falls back to any active account when none settle immediately', () => {
+    // Degraded rather than zero: the sheet still lets you fix it.
+    expect(settlementAccountId([CARD], 9)).toBe(9)
+  })
+})
 
-      expect(seed?.categoryId).toBe(3)
-    })
+describe('dominantCategoryId', () => {
+  it('picks the category the selection spent most in', () => {
+    const rows = [
+      txn(1, { categoryId: 3, amountCents: 5_000 }),
+      txn(2, { categoryId: 7, amountCents: 40_000 }),
+    ]
 
-    it('ignores refunds when weighing categories', () => {
-      // A credit booked against one category should not make that category look
-      // like where the spending happened.
-      const seed = buildSettlementSeed(
-        group([
-          txn(1, { categoryId: 3, amountCents: 30_000 }),
-          txn(2, { categoryId: 7, amountCents: 20_000, type: 'refund' }),
-          txn(3, { categoryId: 7, amountCents: 1_000 }),
-        ]),
-        [account(1)],
-        1,
-      )
+    expect(dominantCategoryId(rows)).toBe(7)
+  })
 
-      expect(seed?.categoryId).toBe(3)
-    })
+  it('breaks a tie on the lowest id, so the same selection prefills the same way twice', () => {
+    const rows = [
+      txn(1, { categoryId: 7, amountCents: 10_000 }),
+      txn(2, { categoryId: 3, amountCents: 10_000 }),
+    ]
+
+    expect(dominantCategoryId(rows)).toBe(3)
+  })
+
+  it('ignores refunds when weighing categories', () => {
+    const rows = [
+      txn(1, { categoryId: 3, amountCents: 30_000 }),
+      txn(2, { categoryId: 7, amountCents: 20_000, type: 'refund' }),
+      txn(3, { categoryId: 7, amountCents: 1_000 }),
+    ]
+
+    expect(dominantCategoryId(rows)).toBe(3)
   })
 })

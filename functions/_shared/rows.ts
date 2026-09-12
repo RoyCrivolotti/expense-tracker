@@ -76,6 +76,7 @@ export interface TxnRow {
   plan_id: number | null
   installment_index: number | null
   flag_id: number | null
+  settled_by: number | null
 }
 
 export interface StatementRow {
@@ -142,6 +143,7 @@ export function toStoredTxn(r: TxnRow): StoredTransaction {
     ...(r.plan_id != null ? { planId: r.plan_id } : {}),
     ...(r.installment_index != null ? { installmentIndex: r.installment_index } : {}),
     ...(r.flag_id != null ? { flagId: r.flag_id } : {}),
+    ...(r.settled_by != null ? { settledBy: r.settled_by } : {}),
   }
 }
 

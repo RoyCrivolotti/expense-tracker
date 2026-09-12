@@ -42,6 +42,8 @@ const model = {
     flag: () => undefined,
     attachments: () => [],
     installmentPlan: () => undefined,
+    settlementFor: () => undefined,
+    settledBy: () => [],
   },
   descriptionIndex: { search: () => [], resolve: () => undefined },
   months: [] as string[],

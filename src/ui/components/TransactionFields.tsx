@@ -12,6 +12,7 @@ import { optionLabel, selectableOptions } from './pickerOptions'
 import { FlagField } from './FlagField'
 import type { PendingReceipt } from '../../data/pendingReceipts'
 import { ReceiptStrip } from './ReceiptStrip'
+import { ReimbursementLink } from './ReimbursementLink'
 import type { FormFields, Setter } from './transactionFormState'
 import styles from './TransactionForm.module.css'
 
@@ -224,6 +225,9 @@ export function Fields({
         transaction, and hiding the strip until afterwards meant the app refused
         it precisely then.
       */}
+      {editing && actions ? (
+        <ReimbursementLink editing={editing} lookup={model.lookup} onOpen={actions.onEdit} />
+      ) : null}
       {actions ? (
         <ReceiptStrip
           {...(receiptTargetId != null ? { transactionId: receiptTargetId } : {})}

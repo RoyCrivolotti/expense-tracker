@@ -14,7 +14,8 @@ import { TransactionsSelectFooter } from './TransactionsSelectFooter'
 import { useTransactionsTabState } from './useTransactionsTabState'
 import { RESULTS_ANCHOR_ID, scrollToResults } from './scrollToResults'
 import { useDebouncedAnnouncement } from '../hooks/useDebouncedAnnouncement'
-import { settleClaim } from './settleClaim'
+import { useClaimSettlement } from './useClaimSettlement'
+import { SettleClaimSheet } from './SettleClaimSheet'
 import styles from './tabs.module.css'
 
 interface TransactionsTabProps {
@@ -28,7 +29,8 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
   const [editingStatement, setEditingStatement] = useState<StatementPaymentRow | null>(null)
   const [statementPending, setStatementPending] = useState(false)
   const [managingFlags, setManagingFlags] = useState(false)
-  const [reportFlagId, setPackFlagId] = useState<number | null>(null)
+  const settlement = useClaimSettlement(actions)
+  const [reportFlagId, setReportFlagId] = useState<number | null>(null)
   const rolloverDay = model.dataset.settings.budgetRolloverDay
   const announcement = useDebouncedAnnouncement(
     `${state.listRows.length} transactions match`,
@@ -53,7 +55,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
               scrollToResults()
             }}
             onOpenReport={setReportFlagId}
-            onSettle={(group) => settleClaim(group, model.dataset, actions.onAdd)}
+            onSettle={settlement.open}
             onManage={() => setManagingFlags(true)}
             onSelect={actions.onEdit}
           />
@@ -153,6 +155,17 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
               setStatementPending(false)
             }
           }}
+        />
+      ) : null}
+
+      {settlement.group && actions ? (
+        <SettleClaimSheet
+          group={settlement.group}
+          model={model}
+          busy={settlement.busy}
+          error={settlement.error}
+          onCancel={settlement.cancel}
+          onRecord={settlement.record}
         />
       ) : null}
 

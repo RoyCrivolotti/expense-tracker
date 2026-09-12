@@ -80,6 +80,15 @@ export interface StoredTransaction {
   installmentIndex?: number
   /** Flag applied to this row, when any. At most one (see migrations/0015). */
   flagId?: number
+  /**
+   * The `refund` transaction that reimbursed this row, when one has. Set by
+   * recording a reimbursement, cleared if that reimbursement is deleted.
+   *
+   * A settled row keeps its flag but drops out of the Flagged card, so the card
+   * stays a list of what is still owed while the history of which rows were in
+   * which claim survives.
+   */
+  settledBy?: number
 }
 
 /** A transaction with its derived status, as consumed by the compute engine. */

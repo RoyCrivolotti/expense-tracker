@@ -104,6 +104,28 @@ describe('groupTransactionsByFlag', () => {
     expect(groups).toHaveLength(0)
   })
 
+  it('drops a reimbursed row, which is how a claim ends', () => {
+    const groups = groupTransactionsByFlag(
+      [txn({ flagId: 1, amountCents: 10_000 }), txn({ flagId: 1, amountCents: 4_000, settledBy: 99 })],
+      [flag({ id: 1 })],
+    )
+
+    // The card answers "what am I still owed"; a row that has been paid back is
+    // not that. It keeps its flag, so deleting the payment brings it straight
+    // back and "what was in the June claim" stays answerable.
+    expect(groups[0]?.count).toBe(1)
+    expect(groups[0]?.totalCents).toBe(10_000)
+  })
+
+  it('omits a group once everything in it has been reimbursed', () => {
+    const groups = groupTransactionsByFlag(
+      [txn({ flagId: 1, settledBy: 99 })],
+      [flag({ id: 1 })],
+    )
+
+    expect(groups).toHaveLength(0)
+  })
+
   it('never puts one transaction in two groups', () => {
     const groups = groupTransactionsByFlag(
       [txn({ flagId: 1 }), txn({ flagId: 2 })],

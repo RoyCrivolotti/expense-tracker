@@ -50,6 +50,8 @@ function modelWith(dataset: ExpenseDataset): ExpenseModel {
       flag: () => undefined,
       attachments: () => [],
       installmentPlan: () => undefined,
+      settlementFor: () => undefined,
+      settledBy: () => [],
     },
     descriptionIndex: { search: () => [], resolve: () => undefined },
     months: ['2026-07'],

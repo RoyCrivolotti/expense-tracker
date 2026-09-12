@@ -100,6 +100,40 @@ function CloseConfirm({
   )
 }
 
+/** The two ways out of this modal that need confirming, kept together. */
+function ModalGuards({
+  confirming,
+  discardingOther,
+  stranded,
+  onClose,
+  onCancelClose,
+  onKeepOtherDraft,
+}: {
+  confirming: boolean
+  discardingOther: boolean
+  stranded: number
+  onClose: () => void
+  onCancelClose: () => void
+  onKeepOtherDraft: () => void
+}) {
+  if (confirming) {
+    return <CloseConfirm stranded={stranded} onConfirm={onClose} onCancel={onCancelClose} />
+  }
+  if (discardingOther) {
+    return (
+      <ConfirmSheet
+        title="Discard the other draft?"
+        message="Your transactions were added. The single transaction you started on the other tab has not been saved."
+        confirmLabel="Discard it"
+        destructive
+        onConfirm={onClose}
+        onCancel={onKeepOtherDraft}
+      />
+    )
+  }
+  return null
+}
+
 interface Props {
   model: ExpenseModel
   actions: ExpenseActions
@@ -151,6 +185,15 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
     return createTransactionWithIntent(actions, input, intent)
   }
 
+  /**
+   * The batch tab finished. The single form stays mounted behind it and keeps
+   * its own draft — staged receipts included — so this cannot just close.
+   */
+  const closeFromBatch = () => {
+    if (singleDirty) setDiscardingOther(true)
+    else onClose()
+  }
+
   const remove = async (id: number) => {
     await actions.deleteTransaction(id)
     showToast('Transaction deleted', 'success')
@@ -173,13 +216,21 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
           // Guarded, not raw: the single form stays mounted behind this tab and
           // keeps its draft — staged receipts included. A successful batch save
           // used to close the modal and take that draft with it silently.
-          onClose={() => (singleDirty ? setDiscardingOther(true) : onClose())}
+          onClose={closeFromBatch}
           hidden={mode !== 'batch'}
           onDirtyChange={setBatchDirty}
           onTrapPausedChange={setPopoverOpen}
         />
       )}
       <TransactionForm
+        /*
+         * Keyed on the row being edited, so following a link from inside the
+         * editor to another transaction rebuilds the form. `initialFields` runs
+         * in a `useState` initialiser, so without this the fields kept showing
+         * the transaction you came *from* while the header and links described
+         * the one you had just opened.
+         */
+        key={editing?.id ?? 'new'}
         model={model}
         editing={editing}
         seed={seed}
@@ -193,22 +244,17 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
         onTrapPausedChange={setPopoverOpen}
         actions={actions}
       />
-      {confirming ? (
-        <CloseConfirm stranded={stranded} onConfirm={onClose} onCancel={cancel} />
-      ) : null}
-      {discardingOther ? (
-        <ConfirmSheet
-          title="Discard the other draft?"
-          message="Your transactions were added. The single transaction you started on the other tab has not been saved."
-          confirmLabel="Discard it"
-          destructive
-          onConfirm={onClose}
-          onCancel={() => {
-            setDiscardingOther(false)
-            setMode('single')
-          }}
-        />
-      ) : null}
+      <ModalGuards
+        confirming={confirming}
+        discardingOther={discardingOther}
+        stranded={stranded}
+        onClose={onClose}
+        onCancelClose={cancel}
+        onKeepOtherDraft={() => {
+          setDiscardingOther(false)
+          setMode('single')
+        }}
+      />
     </Modal>
   )
 }
