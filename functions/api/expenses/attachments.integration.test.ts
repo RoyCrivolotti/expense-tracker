@@ -14,6 +14,8 @@ import { invokeExpenseApiRoute } from '../../_shared/testing/invokeExpenseApiRou
 import { inMemoryExpenseRepository } from '../../../src/testing/inMemoryExpenseRepository'
 import { onRequestPost as uploadAttachment } from './attachments/index'
 import { onRequestGet as getAttachment, onRequestDelete as deleteAttachment } from './attachments/[id]'
+import { onRequestDelete as deleteTransactionRoute } from './transactions/[id]'
+import { onRequestDelete as bulkDeleteRoute } from './transactions/bulk'
 
 const OWNER = 'owner@example.com'
 const BASE = 'https://expenses.test/api/expenses'
@@ -357,5 +359,74 @@ describe('attachments API', () => {
     })
 
     expect(response.status).toBe(401)
+  })
+
+  it('deleting a transaction takes its receipts — rows and bytes — with it', async () => {
+    // Otherwise the bytes keep consuming the 2 GB quota with no UI left to
+    // reach them: the only delete affordance lives on the transaction.
+    const { repo, bucket, env } = seeded()
+    await invokeExpenseApiRoute({
+      handler: uploadAttachment,
+      repo,
+      env,
+      url: `${BASE}/attachments`,
+      method: 'POST',
+      rawBody: upload(jpegBytes(), { thumb: jpegBytes(32) }),
+    })
+    expect(bucket.objects.size).toBe(2)
+
+    const response = await invokeExpenseApiRoute({
+      handler: deleteTransactionRoute,
+      repo,
+      env,
+      url: `${BASE}/transactions/1`,
+      method: 'DELETE',
+      params: { id: '1' },
+    })
+
+    expect(response.status).toBe(200)
+    expect(bucket.objects.size).toBe(0)
+    expect(await repo.listAttachments(OWNER, 1)).toEqual([])
+    expect(await repo.attachmentBytesUsed(OWNER)).toBe(0)
+  })
+
+  it('does the same for a bulk delete', async () => {
+    const { repo, bucket, env } = seeded()
+    await invokeExpenseApiRoute({
+      handler: uploadAttachment,
+      repo,
+      env,
+      url: `${BASE}/attachments`,
+      method: 'POST',
+      rawBody: upload(jpegBytes()),
+    })
+    expect(bucket.objects.size).toBe(1)
+
+    await invokeExpenseApiRoute({
+      handler: bulkDeleteRoute,
+      repo,
+      env,
+      url: `${BASE}/transactions/bulk`,
+      method: 'DELETE',
+      body: { ids: [1] },
+    })
+
+    expect(bucket.objects.size).toBe(0)
+    expect(await repo.attachmentBytesUsed(OWNER)).toBe(0)
+  })
+
+  it('still deletes the transaction when the receipts bucket is unbound', async () => {
+    // The rows cascade inside D1 regardless; only the byte sweep is skipped.
+    const { repo, env } = seeded(false)
+    const response = await invokeExpenseApiRoute({
+      handler: deleteTransactionRoute,
+      repo,
+      env,
+      url: `${BASE}/transactions/1`,
+      method: 'DELETE',
+      params: { id: '1' },
+    })
+
+    expect(response.status).toBe(200)
   })
 })

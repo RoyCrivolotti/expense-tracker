@@ -89,6 +89,11 @@ export interface ExpenseRepository {
   createAttachment(owner: string, input: NewAttachment): Promise<TransactionAttachment>
   /** Returns the R2 keys to delete, so the caller can clean up the bytes. */
   deleteAttachment(owner: string, id: number): Promise<{ objectKey: string; thumbKey?: string }>
+  /**
+   * R2 keys held by these transactions. Read before deleting them — the rows
+   * carrying the keys go with the transaction.
+   */
+  attachmentKeysForTransactions(owner: string, transactionIds: number[]): Promise<string[]>
   /** Total bytes this owner is storing, for the quota check. */
   attachmentBytesUsed(owner: string): Promise<number>
   createFlag(owner: string, input: NewFlag): Promise<Flag>

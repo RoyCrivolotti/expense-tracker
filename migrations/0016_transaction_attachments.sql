@@ -1,6 +1,6 @@
 -- Receipt attachments: photos and PDFs pinned to a transaction, for the case a
 -- flag starts — you claim expenses back weeks later and the employer wants the
--- receipt. Bytes live in R2 (bucket `roy-expenses-receipts`, binding RECEIPTS);
+-- receipt. Bytes live in R2 (bucket `receipts`, binding RECEIPTS);
 -- only metadata lives here, so this table stays small and the daily D1 backup
 -- keeps covering it.
 --

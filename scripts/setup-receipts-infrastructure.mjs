@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * One-time / idempotent setup for receipt storage:
- * 1. Create R2 bucket roy-expenses-receipts (wrangler)
+ * 1. Create R2 bucket receipts (wrangler)
  * 2. Bind RECEIPTS on the expense-tracker Pages project
  *
  * A sibling of setup-backup-infrastructure.mjs rather than an edit to it: that
@@ -23,7 +23,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID ?? '800abdfb2ec1687266f66fd349c41d6a'
 const TOKEN = resolveCloudflareToken()
 const PAGES_PROJECT = 'expense-tracker'
-const BUCKET = 'roy-expenses-receipts'
+const BUCKET = 'receipts'
 
 async function cf(path, init = {}) {
   const res = await fetch(`https://api.cloudflare.com/client/v4${path}`, {

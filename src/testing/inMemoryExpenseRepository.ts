@@ -309,6 +309,15 @@ export function inMemoryExpenseRepository(
     return { planId: plan.id, installmentIndex }
   }
 
+  /** Attachment rows die with their transaction, as they do in D1. */
+  function dropAttachmentsFor(store: OwnerStore, transactionIds: number[]): void {
+    const wanted = new Set(transactionIds)
+    for (const attachment of store.attachments) {
+      if (wanted.has(attachment.transactionId)) keysById.delete(attachment.id)
+    }
+    store.attachments = store.attachments.filter((a) => !wanted.has(a.transactionId))
+  }
+
   function findStored(store: OwnerStore, id: number): StoredTransaction {
     const txn = store.transactions.find((row) => row.id === id)
     if (!txn) throw new RepoHttpError(404, 'Transaction not found')
@@ -404,6 +413,9 @@ export function inMemoryExpenseRepository(
       const index = store.transactions.findIndex((row) => row.id === id)
       if (index < 0) throw new RepoHttpError(404, 'Transaction not found')
       store.transactions.splice(index, 1)
+      // Mirrors the D1 cascade; without it the double would let a transaction
+      // go while leaving attachment rows the real backend removes.
+      dropAttachmentsFor(store, [id])
       return Promise.resolve()
     },
 
@@ -412,6 +424,7 @@ export function inMemoryExpenseRepository(
       const idSet = new Set(ids)
       const before = store.transactions.length
       store.transactions = store.transactions.filter((row) => !idSet.has(row.id))
+      dropAttachmentsFor(store, ids)
       return Promise.resolve(before - store.transactions.length)
     },
 
@@ -534,6 +547,20 @@ export function inMemoryExpenseRepository(
       if (!keys) throw new RepoHttpError(404, 'Attachment not found')
       keysById.delete(id)
       return Promise.resolve(keys)
+    },
+
+    attachmentKeysForTransactions: (owner, transactionIds) => {
+      const store = storeFor(owner)
+      const wanted = new Set(transactionIds)
+      return Promise.resolve(
+        store.attachments
+          .filter((a) => wanted.has(a.transactionId))
+          .flatMap((a) => {
+            const keys = keysById.get(a.id)
+            if (!keys) return []
+            return keys.thumbKey ? [keys.objectKey, keys.thumbKey] : [keys.objectKey]
+          }),
+      )
     },
 
     attachmentBytesUsed: (owner) => {

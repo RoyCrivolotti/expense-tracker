@@ -33,6 +33,7 @@ import {
 import { createFlag, deleteFlag, updateFlag } from '../dbFlags'
 import {
   attachmentBytesUsed,
+  attachmentKeysForTransactions,
   createAttachment,
   deleteAttachment,
   findAttachmentSource,
@@ -69,6 +70,7 @@ export function createD1ExpenseRepository(env: Env): ExpenseRepository {
     createAttachment: (owner, input) => createAttachment(env, owner, input),
     deleteAttachment: (owner, id) => deleteAttachment(env, owner, id),
     attachmentBytesUsed: (owner) => attachmentBytesUsed(env, owner),
+    attachmentKeysForTransactions: (owner, ids) => attachmentKeysForTransactions(env, owner, ids),
     createFlag: (owner, input) => createFlag(env, owner, input),
     updateFlag: (owner, id, patch) => updateFlag(env, owner, id, patch),
     deleteFlag: (owner, id) => deleteFlag(env, owner, id),

@@ -106,6 +106,26 @@ export async function attachmentBytesUsed(env: Env, owner: string): Promise<numb
   return row?.total ?? 0
 }
 
+/**
+ * R2 keys held by these transactions. Read *before* deleting them, since the
+ * rows carrying the keys go with the transaction.
+ */
+export async function attachmentKeysForTransactions(
+  env: Env,
+  owner: string,
+  transactionIds: number[],
+): Promise<string[]> {
+  if (transactionIds.length === 0) return []
+  const placeholders = transactionIds.map(() => '?').join(', ')
+  const { results } = await env.DB.prepare(
+    `SELECT object_key, thumb_key FROM transaction_attachments
+     WHERE owner = ? AND transaction_id IN (${placeholders})`,
+  )
+    .bind(owner, ...transactionIds)
+    .all<{ object_key: string; thumb_key: string | null }>()
+  return (results ?? []).flatMap((r) => (r.thumb_key ? [r.object_key, r.thumb_key] : [r.object_key]))
+}
+
 /** Every stored key for one owner, for revoke cleanup. */
 export async function ownerAttachmentKeys(env: Env, owner: string): Promise<string[]> {
   const { results } = await env.DB.prepare(
