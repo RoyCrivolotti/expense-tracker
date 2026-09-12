@@ -7,6 +7,7 @@ import { useExpenseActions } from './useExpenseActions'
 
 const baseDataset: ExpenseDataset = {
   flags: [],
+  attachments: [],
   categories: [{ id: 1, name: 'Food', monthlyBudgetCents: 10000, sortOrder: 1, active: true }],
   accounts: [{ id: 2, name: 'Debit', kind: 'debit', settlement: 'immediate', active: true }],
   transactions: [],

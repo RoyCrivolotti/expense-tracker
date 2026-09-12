@@ -9,6 +9,7 @@ import { InstallmentStep } from './InstallmentStep'
 function emptyDataset(): ExpenseDataset {
   return {
     flags: [],
+    attachments: [],
     categories: [],
     accounts: [],
     transactions: [],

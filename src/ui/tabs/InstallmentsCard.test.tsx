@@ -22,6 +22,7 @@ const basePlan: InstallmentPlan = {
 function datasetWithPlans(plans: InstallmentPlan[]): ExpenseDataset {
   return {
     flags: [],
+    attachments: [],
     categories: [{ id: 3, name: 'Tech', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
     accounts: [{ id: 2, name: 'Cetelam', kind: 'credit', settlement: 'deferred', active: true }],
     transactions: [],

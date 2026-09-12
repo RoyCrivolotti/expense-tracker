@@ -9,6 +9,7 @@ import { InstallmentPlanForm } from './InstallmentPlanForm'
 function datasetWith(overrides: Partial<ExpenseDataset> = {}): ExpenseDataset {
   return {
     flags: [],
+    attachments: [],
     categories: [
       { id: 1, name: 'Tech', monthlyBudgetCents: 0, sortOrder: 0, active: true },
       { id: 2, name: 'Old category', monthlyBudgetCents: 0, sortOrder: 1, active: false },

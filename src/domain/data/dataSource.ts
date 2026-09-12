@@ -12,6 +12,7 @@ import type {
   ExpenseSettings,
   Flag,
   GoalInputs,
+  TransactionAttachment,
   GoalScenario,
   InstallmentPlan,
   StoredTransaction,
@@ -34,6 +35,26 @@ export type BulkTransactionPatch = Partial<
 export type NewCategory = Omit<Category, 'id'>
 export type NewAccount = Omit<Account, 'id'>
 export type NewFlag = Omit<Flag, 'id'>
+
+/** The storage-facing half of an attachment, kept off the domain type. */
+export interface AttachmentSource {
+  objectKey: string
+  thumbKey?: string
+  contentType: string
+  originalName?: string
+}
+
+/** Everything the server records about an upload once the bytes are stored. */
+export interface NewAttachment {
+  transactionId: number
+  objectKey: string
+  thumbKey?: string
+  contentType: string
+  byteSize: number
+  width?: number
+  height?: number
+  originalName?: string
+}
 
 /**
  * Exactly one of `reassignToId` / `createCategory` should be set when the
@@ -94,6 +115,9 @@ export interface ExpenseDataSource {
   createAccount?(input: NewAccount): Promise<Account>
   updateAccount?(id: number, patch: Partial<NewAccount>): Promise<Account>
   deleteAccount?(id: number, options?: DeleteAccountOptions): Promise<DeleteAccountResult>
+  /** Multipart upload; resolves with the stored metadata. */
+  uploadAttachment?(transactionId: number, file: File): Promise<TransactionAttachment>
+  deleteAttachment?(id: number): Promise<void>
   createFlag?(input: NewFlag): Promise<Flag>
   updateFlag?(id: number, patch: Partial<NewFlag>): Promise<Flag>
   /** Deleting a flag clears it from its transactions; the result says how many. */

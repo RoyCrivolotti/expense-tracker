@@ -10,6 +10,7 @@ import type {
   InstallmentPlan,
   LifeEvent,
   StoredTransaction,
+  TransactionAttachment,
   TxnType,
   WealthAccount,
   WealthAccountKind,
@@ -45,6 +46,19 @@ export interface FlagRow {
   description: string | null
   sort_order: number
   active: number
+}
+
+export interface AttachmentRow {
+  id: number
+  transaction_id: number
+  object_key: string
+  thumb_key: string | null
+  content_type: string
+  byte_size: number
+  width: number | null
+  height: number | null
+  original_name: string | null
+  created_at: string
 }
 
 export interface TxnRow {
@@ -95,6 +109,20 @@ export function toFlag(r: FlagRow): Flag {
     sortOrder: r.sort_order,
     active: r.active === 1,
     ...(r.description ? { description: r.description } : {}),
+  }
+}
+
+export function toAttachment(r: AttachmentRow): TransactionAttachment {
+  return {
+    id: r.id,
+    transactionId: r.transaction_id,
+    contentType: r.content_type,
+    byteSize: r.byte_size,
+    createdAt: r.created_at,
+    hasThumb: r.thumb_key != null,
+    ...(r.width != null ? { width: r.width } : {}),
+    ...(r.height != null ? { height: r.height } : {}),
+    ...(r.original_name ? { originalName: r.original_name } : {}),
   }
 }
 
