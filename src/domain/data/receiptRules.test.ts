@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  checkThumb,
   checkUpload,
   extensionFor,
   rejectionMessage,
@@ -180,5 +181,38 @@ describe('type helpers', () => {
     expect(extensionFor('image/png')).toBe('png')
     expect(extensionFor('image/webp')).toBe('webp')
     expect(extensionFor('application/pdf')).toBe('pdf')
+  })
+})
+
+describe('checkThumb', () => {
+  it('accepts a raster preview', () => {
+    expect(checkThumb(JPEG, limits)).toEqual({ ok: true })
+  })
+
+  it('rejects a preview that is not a raster image', () => {
+    // A thumbnail is something we rendered from a canvas; a PDF here means the
+    // caller is not the app.
+    expect(checkThumb(PDF, limits)).toEqual({ ok: false, reason: { kind: 'unsupported-type' } })
+  })
+
+  it('rejects an unsniffable preview', () => {
+    expect(checkThumb(bytes(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12), limits)).toEqual({
+      ok: false,
+      reason: { kind: 'unsupported-type' },
+    })
+  })
+
+  it('caps the preview size, so a raw API call cannot store an unbounded "thumb"', () => {
+    const big = new Uint8Array(limits.maxFileBytes + 1)
+    big.set([0xff, 0xd8, 0xff])
+
+    expect(checkThumb(big, limits)).toEqual({
+      ok: false,
+      reason: { kind: 'too-large', limit: limits.maxFileBytes },
+    })
+  })
+
+  it('rejects an empty preview', () => {
+    expect(checkThumb(new Uint8Array(0), limits)).toEqual({ ok: false, reason: { kind: 'empty' } })
   })
 })

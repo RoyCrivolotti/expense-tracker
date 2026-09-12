@@ -90,6 +90,24 @@ function formatMb(bytes: number): string {
   return mb >= 1000 ? `${(mb / 1000).toFixed(1)} GB` : `${Math.round(mb)} MB`
 }
 
+/**
+ * A client-generated preview is still client-supplied bytes, so it gets the same
+ * treatment as the file: sniffed, capped, and counted. Only raster types are
+ * allowed — a thumbnail is something we rendered from a canvas, never a PDF.
+ */
+export function checkThumb(
+  bytes: Uint8Array,
+  limits: Pick<ReceiptLimits, 'maxFileBytes'>,
+): { ok: true } | { ok: false; reason: RejectionReason } {
+  if (bytes.length === 0) return { ok: false, reason: { kind: 'empty' } }
+  if (bytes.length > limits.maxFileBytes) {
+    return { ok: false, reason: { kind: 'too-large', limit: limits.maxFileBytes } }
+  }
+  const type = sniffContentType(bytes)
+  if (!type || !supportsThumbnail(type)) return { ok: false, reason: { kind: 'unsupported-type' } }
+  return { ok: true }
+}
+
 export interface UploadCheck {
   bytes: Uint8Array
   existingCount: number

@@ -78,8 +78,13 @@ export async function createAttachment(
  * Deletes the row and hands back the R2 keys. The bytes are deleted afterwards,
  * best-effort: an R2 delete cannot join a D1 batch, and the failure mode we care
  * about is the reverse order — bytes gone while the row still points at them,
- * which would render a broken receipt. An orphaned object costs a few hundred KB
- * until the backup cron's sweep picks it up.
+ * which would render a broken receipt.
+ *
+ * If that best-effort delete fails, the object is orphaned permanently: there is
+ * no reconciliation sweep for this bucket (the backup cron prunes only dated
+ * snapshots in the backups bucket). It costs a few hundred KB and no longer
+ * counts against the quota, since that is summed from the rows. A sweep would be
+ * worth adding if this ever happens in practice.
  */
 export async function deleteAttachment(
   env: Env,

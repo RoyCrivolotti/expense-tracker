@@ -121,7 +121,9 @@ describe('attachments API', () => {
     expect(attachment).toMatchObject({
       transactionId: 1,
       contentType: 'image/jpeg',
-      byteSize: 64,
+      // File plus thumbnail: byteSize is what this attachment occupies, so the
+      // quota reflects real storage rather than only the part we sniffed first.
+      byteSize: 96,
       originalName: 'hotel.jpg',
       hasThumb: true,
     })
@@ -428,5 +430,49 @@ describe('attachments API', () => {
     })
 
     expect(response.status).toBe(200)
+  })
+
+  it('sniffs the thumbnail too, and counts its bytes against the quota', async () => {
+    // The thumb is client-supplied like the file. Unchecked, a raw API call
+    // could store an arbitrarily large unsniffed object for free.
+    const { repo, env } = seeded()
+    const form = new FormData()
+    form.set('transactionId', '1')
+    form.set('file', new Blob([jpegBytes(64)], { type: 'image/jpeg' }), 'hotel.jpg')
+    form.set('thumb', new Blob([jpegBytes(16)], { type: 'image/jpeg' }), 'thumb.jpg')
+
+    const created = await body<TransactionAttachment>(
+      await invokeExpenseApiRoute({
+        handler: uploadAttachment,
+        repo,
+        env,
+        url: `${BASE}/attachments`,
+        method: 'POST',
+        rawBody: form,
+      }),
+    )
+
+    expect(created.byteSize).toBe(80)
+    expect(await repo.attachmentBytesUsed(OWNER)).toBe(80)
+  })
+
+  it('refuses a thumbnail that is not a raster image', async () => {
+    const { repo, env, bucket } = seeded()
+    const form = new FormData()
+    form.set('transactionId', '1')
+    form.set('file', new Blob([jpegBytes()], { type: 'image/jpeg' }), 'hotel.jpg')
+    form.set('thumb', new Blob([new TextEncoder().encode('<svg/>')], { type: 'image/jpeg' }), 't.jpg')
+
+    const response = await invokeExpenseApiRoute({
+      handler: uploadAttachment,
+      repo,
+      env,
+      url: `${BASE}/attachments`,
+      method: 'POST',
+      rawBody: form,
+    })
+
+    expect(response.status).toBe(400)
+    expect(bucket.put).not.toHaveBeenCalled()
   })
 })
