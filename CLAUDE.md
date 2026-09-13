@@ -174,16 +174,18 @@ npx wrangler d1 execute <dev-db-name> --remote --file=migrations/0012_wealth_che
 
 Local dev uses the project-local wrangler (`node_modules/.bin/wrangler`). Always run wrangler commands from inside the project directory so `npx` picks up the local version rather than trying to download one.
 
-Version pinned by `package-lock.json`: **4.103.0**. `package.json` declares `^4.101.0`.
+Version pinned by `package-lock.json`: **4.131.1**, paired with `@cloudflare/workers-types@^5`.
 
-**A local upgrade to 4.129.0 is pending and has not landed.** It was installed locally on 2026-09-04 to
-support compatibility dates ≥ 2026-06-24, but `package.json` was bumped without regenerating the lockfile,
-so `npm ci` fails on a clean checkout. The blocker is real rather than cosmetic: every wrangler ≥ 4.129
-declares `peerOptional @cloudflare/workers-types@^5`, while this project is on `@cloudflare/workers-types@^4`.
+Those two move **together**. Every wrangler >= 4.129 declares `peerOptional
+@cloudflare/workers-types@^5`, so bumping wrangler alone leaves a mismatched peer, and bumping
+`package.json` without regenerating the lockfile breaks `npm ci` on a clean checkout — which is what
+happened on 2026-09-04 and left this section claiming the upgrade was blocked. It was not: raising
+both in one `npm i -D` and committing the regenerated lockfile needed **no source changes at all**
+(`tsc -b` clean, full `verify` green).
 
-Landing it means bumping both together and re-running `npm run typecheck` against the v5 types — its own
-PR, not a drive-by. Until then, a machine whose `node_modules` still has 4.129.0 installed is ahead of the
-repo; `npm ci` will bring it back to 4.103.0.
+Note the upgrade pulls **miniflare 5.x alpha**, which is what `npm run dev:local` runs on. That is
+what Cloudflare ships as wrangler 4.13x's own dependency, not a choice made here. It boots and serves
+correctly — if local dev ever breaks in a way production does not, suspect this first.
 
 ## Deploy
 
