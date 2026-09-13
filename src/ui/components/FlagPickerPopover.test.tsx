@@ -109,3 +109,86 @@ describe('FlagPickerPopover', () => {
   })
 
 })
+
+describe('FlagPickerPopover — creating a flag in place', () => {
+  it('offers no create affordance without onCreate, and still points at Settings', () => {
+    render(<Harness flags={[]} />)
+    expect(screen.queryByRole('button', { name: '+ New flag' })).not.toBeInTheDocument()
+    expect(screen.getByText(/Add one under Settings/)).toBeInTheDocument()
+  })
+
+  it('creates the flag and applies it to the transaction in one go', async () => {
+    const user = userEvent.setup()
+    const onCreate = vi.fn().mockResolvedValue(9)
+    const { onSelect, onClose } = renderPicker({ onCreate })
+
+    await user.click(screen.getByRole('button', { name: '+ New flag' }))
+    await user.type(screen.getByRole('textbox', { name: 'New flag name' }), 'Madrid trip')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+
+    expect(onCreate).toHaveBeenCalledWith('Madrid trip')
+    // Selecting it is the point — creating a flag you then have to pick again
+    // is barely better than walking to Settings.
+    expect(onSelect).toHaveBeenCalledWith(9)
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('submits on Enter, so the whole thing is type-and-go', async () => {
+    const user = userEvent.setup()
+    const onCreate = vi.fn().mockResolvedValue(9)
+    const { onSelect } = renderPicker({ onCreate })
+
+    await user.click(screen.getByRole('button', { name: '+ New flag' }))
+    await user.type(screen.getByRole('textbox', { name: 'New flag name' }), 'Madrid trip{Enter}')
+
+    expect(onSelect).toHaveBeenCalledWith(9)
+  })
+
+  it('refuses a duplicate name instead of creating a second Work travel', async () => {
+    const user = userEvent.setup()
+    const onCreate = vi.fn()
+    renderPicker({ onCreate })
+
+    await user.click(screen.getByRole('button', { name: '+ New flag' }))
+    await user.type(screen.getByRole('textbox', { name: 'New flag name' }), 'work travel{Enter}')
+
+    expect(screen.getByRole('alert')).toHaveTextContent('already a flag with that name')
+    expect(onCreate).not.toHaveBeenCalled()
+  })
+
+  it('asks for a name rather than creating an unnamed flag', async () => {
+    const user = userEvent.setup()
+    const onCreate = vi.fn()
+    renderPicker({ onCreate })
+
+    await user.click(screen.getByRole('button', { name: '+ New flag' }))
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter a name')
+    expect(onCreate).not.toHaveBeenCalled()
+  })
+
+  it('surfaces a failed create on the picker instead of rejecting silently', async () => {
+    const user = userEvent.setup()
+    const onCreate = vi.fn().mockRejectedValue(new Error('Network is down'))
+    const { onSelect } = renderPicker({ onCreate })
+
+    await user.click(screen.getByRole('button', { name: '+ New flag' }))
+    await user.type(screen.getByRole('textbox', { name: 'New flag name' }), 'Madrid trip{Enter}')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Network is down')
+    expect(onSelect).not.toHaveBeenCalled()
+  })
+
+  it('backs out to the list on Escape without closing the whole picker', async () => {
+    const user = userEvent.setup()
+    const { onClose } = renderPicker({ onCreate: vi.fn() })
+
+    await user.click(screen.getByRole('button', { name: '+ New flag' }))
+    await user.type(screen.getByRole('textbox', { name: 'New flag name' }), 'Madrid{Escape}')
+
+    // Escape here means "not this after all", not "abandon the transaction".
+    expect(screen.getByRole('button', { name: '+ New flag' })).toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
+  })
+})
