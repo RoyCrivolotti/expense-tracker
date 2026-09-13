@@ -126,3 +126,16 @@ export function CardPaymentIcon(props: IconProps) {
     </svg>
   )
 }
+
+/**
+ * Outlined so a dark flag colour still reads as a shape on a dark surface —
+ * consumers fill it via `fill` when they want the solid "flagged" state.
+ */
+export function FlagIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M5 21V4.5" />
+      <path d="M5 4.5h11.5l-2 3.75 2 3.75H5" />
+    </svg>
+  )
+}

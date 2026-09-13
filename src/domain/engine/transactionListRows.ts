@@ -36,11 +36,22 @@ function matchesCategoryAndStatus(filter: TxnFilter): boolean {
   return !filter.status || filter.status === 'all' || filter.status === 'posted'
 }
 
+/**
+ * Statement payments are synthetic rows, so they can't carry a flag. Narrowing
+ * to a specific flag must exclude them — otherwise filtering by "Work travel"
+ * lists unrelated card payments. Narrowing to 'none' keeps them: they genuinely
+ * are unflagged, and that filter means "everything I haven't marked".
+ */
+function matchesFlagFilter(filter: TxnFilter): boolean {
+  return typeof filter.flagId !== 'number'
+}
+
 function matchesStatementPayment(row: StatementPaymentRow, filter: TxnFilter): boolean {
   if (!matchesPeriod(row, filter)) return false
   if (!matchesAccount(row, filter)) return false
   if (!matchesType(filter)) return false
   if (!matchesCategoryAndStatus(filter)) return false
+  if (!matchesFlagFilter(filter)) return false
   if (filter.query && !matchesQuery(row, filter.query)) return false
   return true
 }

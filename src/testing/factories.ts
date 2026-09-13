@@ -4,7 +4,14 @@
  * new required fields to a type only requires updating the factory, not every
  * test file.
  */
-import type { ExpenseDataset, GoalScenario, WealthAccount, WealthCheckin } from '../domain/types'
+import type {
+  ExpenseDataset,
+  Flag,
+  GoalScenario,
+  Transaction,
+  WealthAccount,
+  WealthCheckin,
+} from '../domain/types'
 import { defaultExpenseSettings, defaultGoalInputs } from '../domain/engine/defaults'
 
 /** Build a minimal valid ExpenseDataset, merging any provided overrides. */
@@ -12,6 +19,7 @@ export function makeDataset(overrides: Partial<ExpenseDataset> = {}): ExpenseDat
   return {
     categories: [],
     accounts: [],
+    flags: [],
     transactions: [],
     accountStatements: [],
     cashActuals: [],
@@ -21,6 +29,35 @@ export function makeDataset(overrides: Partial<ExpenseDataset> = {}): ExpenseDat
     settings: defaultExpenseSettings(),
     wealthAccounts: [],
     wealthCheckins: [],
+    ...overrides,
+  }
+}
+
+/** Build a minimal valid Transaction (a StoredTransaction plus derived status). */
+export function makeTransaction(overrides: Partial<Transaction> = {}): Transaction {
+  return {
+    id: 1,
+    date: '2025-01-15',
+    budgetMonth: '2025-01',
+    description: 'Flight BCN-LIS',
+    accountId: 1,
+    categoryId: 1,
+    type: 'expense',
+    amountCents: 19_840,
+    cancelled: false,
+    status: 'posted',
+    ...overrides,
+  }
+}
+
+/** Build a minimal valid Flag for tests. */
+export function makeFlag(overrides: Partial<Flag> = {}): Flag {
+  return {
+    id: 1,
+    name: 'Work travel',
+    color: '#6366f1',
+    sortOrder: 0,
+    active: true,
     ...overrides,
   }
 }

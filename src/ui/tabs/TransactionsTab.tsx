@@ -8,8 +8,11 @@ import { StatementPaymentSheet } from '../components/StatementPaymentSheet'
 import { TxnFilters } from './TxnFilters'
 import { UpcomingCard } from './UpcomingCard'
 import { InstallmentsCard } from './InstallmentsCard'
+import { FlaggedCard } from './FlaggedCard'
+import { FlagsModal } from '../definitions/FlagsModal'
 import { TransactionsSelectFooter } from './TransactionsSelectFooter'
 import { useTransactionsTabState } from './useTransactionsTabState'
+import { RESULTS_ANCHOR_ID, scrollToResults } from './scrollToResults'
 import styles from './tabs.module.css'
 
 interface TransactionsTabProps {
@@ -22,6 +25,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
   const state = useTransactionsTabState(model, month, actions)
   const [editingStatement, setEditingStatement] = useState<StatementPaymentRow | null>(null)
   const [statementPending, setStatementPending] = useState(false)
+  const [managingFlags, setManagingFlags] = useState(false)
   const rolloverDay = model.dataset.settings.budgetRolloverDay
   const upcoming = useMemo(
     () => detectRecurring(model.dataset.transactions, { forBudgetMonth: month, rolloverDay }),
@@ -32,6 +36,19 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
     <div className={styles.stack}>
       {actions && (
         <>
+          <FlaggedCard
+            model={model}
+            onFilterByFlag={(flagId) => {
+              // Jumping from the (all-time) card into the (month-scoped) list
+              // has to widen the date scope too, or the rows you just clicked
+              // through mostly vanish.
+              state.setFlagId(flagId)
+              state.setDateScope('allDates')
+              scrollToResults()
+            }}
+            onManage={() => setManagingFlags(true)}
+            onSelect={actions.onEdit}
+          />
           <InstallmentsCard model={model} actions={actions} month={month} />
           {upcoming.length > 0 && (
             <UpcomingCard suggestions={upcoming} lookup={model.lookup} onAdd={actions.onAdd} />
@@ -42,10 +59,12 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
       <TxnFilters
         categories={model.dataset.categories}
         accounts={model.dataset.accounts}
+        flags={model.dataset.flags}
         query={state.query}
         status={state.status}
         categoryId={state.categoryId}
         accountId={state.accountId}
+        flagId={state.flagId}
         txnType={state.txnType}
         dateScope={state.dateScope}
         customDateFrom={state.customDateFrom}
@@ -58,6 +77,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
         onQuery={state.setQuery}
         onCategory={state.setCategoryId}
         onAccount={state.setAccountId}
+        onFlag={state.setFlagId}
         onStatus={state.setStatus}
         onTxnType={state.setTxnType}
         onDateScope={state.setDateScope}
@@ -66,7 +86,9 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
         onToggleSelectMode={state.toggleSelectMode}
       />
 
-      <div className={styles.resultSummary}>
+      {/* role=status, so applying a filter announces the new result count
+          instead of changing the list silently. */}
+      <div id={RESULTS_ANCHOR_ID} className={styles.resultSummary} role="status">
         <span className={styles.resultStats}>
           <span>{state.listRows.length} items</span>
           <span>
@@ -118,6 +140,10 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
             }
           }}
         />
+      ) : null}
+
+      {managingFlags && actions ? (
+        <FlagsModal model={model} actions={actions} onClose={() => setManagingFlags(false)} />
       ) : null}
 
       <TransactionsSelectFooter actionsEnabled={Boolean(actions)} selection={state} model={model} />

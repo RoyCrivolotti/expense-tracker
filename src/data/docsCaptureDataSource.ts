@@ -8,6 +8,7 @@ import type {
   CashActual,
   Category,
   ExpenseDataset,
+  Flag,
   ExpenseSettings,
   GoalInputs,
   GoalScenario,
@@ -67,6 +68,38 @@ function demoInstallments(dataset: ExpenseDataset): {
   return { plans: [plan], transactions }
 }
 
+/**
+ * Two demo flags with a few transactions on each, so the Flagged card and the
+ * row markers are actually visible in the gallery and in DOCS_CAPTURE dev.
+ */
+function demoFlags(stored: StoredTransaction[]): {
+  flags: Flag[]
+  transactions: StoredTransaction[]
+} {
+  const flags: Flag[] = [
+    {
+      id: 970_001,
+      name: 'Work travel',
+      color: '#6366f1',
+      description: 'Reimbursable — submit monthly',
+      sortOrder: 0,
+      active: true,
+    },
+    { id: 970_002, name: 'Tax deductible', color: '#10b981', sortOrder: 1, active: true },
+  ]
+  // Spread across the most recent rows so the card has something to total.
+  const recent = [...stored].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
+  const flagged = new Map<number, number>()
+  recent.forEach((txn, i) => flagged.set(txn.id, i % 3 === 2 ? 970_002 : 970_001))
+  return {
+    flags,
+    transactions: stored.map((txn) => {
+      const flagId = flagged.get(txn.id)
+      return flagId != null ? { ...txn, flagId } : txn
+    }),
+  }
+}
+
 /** Demo paid card statements + payment dates for gallery screenshots. */
 function enrichDocsCaptureDataset(dataset: ExpenseDataset): ExpenseDataset {
   const { plans, transactions: planTxns } = demoInstallments(dataset)
@@ -82,9 +115,10 @@ function enrichDocsCaptureDataset(dataset: ExpenseDataset): ExpenseDataset {
       { accountId: card.id, yearMonth: '2026-05', paid: true, paidOn: '2026-06-14' },
     )
   }
-  const stored = [...dataset.transactions, ...planTxns]
+  const { flags, transactions: stored } = demoFlags([...dataset.transactions, ...planTxns])
   return {
     ...dataset,
+    flags,
     accountStatements: cards.length > 0 ? accountStatements : dataset.accountStatements,
     installmentPlans: plans,
     transactions: deriveTransactions(stored, dataset.accounts, accountStatements),
@@ -92,13 +126,15 @@ function enrichDocsCaptureDataset(dataset: ExpenseDataset): ExpenseDataset {
 }
 
 let nextId = 900_000
+let nextFlagId = 970_100
 
 function stubTxn(input: NewTransaction): Transaction {
   nextId += 1
-  const { planId, ...rest } = input
+  const { planId, flagId, ...rest } = input
   return {
     ...rest,
     ...(planId != null ? { planId } : {}),
+    ...(flagId != null ? { flagId } : {}),
     id: nextId,
     cancelled: false,
     status: 'posted',
@@ -129,6 +165,23 @@ export const docsCaptureDataSource: ExpenseDataSource = {
   },
   deleteTransactions(ids) {
     return Promise.resolve({ deleted: ids.length, requested: ids.length })
+  },
+  createFlag(input) {
+    nextFlagId += 1
+    return Promise.resolve({ ...input, id: nextFlagId })
+  },
+  updateFlag(id, patch) {
+    return Promise.resolve({
+      id,
+      name: patch.name ?? 'Flag',
+      color: patch.color ?? '#6366f1',
+      sortOrder: patch.sortOrder ?? 0,
+      active: patch.active ?? true,
+      ...(patch.description ? { description: patch.description } : {}),
+    })
+  },
+  deleteFlag() {
+    return Promise.resolve({ unflagged: 0 })
   },
   setStatementPaid(accountId, yearMonth, paid, paidOn) {
     const row: AccountStatement = {

@@ -1,4 +1,4 @@
-import type { Account, Category, TxnType } from '../../types'
+import type { Account, Category, Flag, TxnType } from '../../types'
 import { CloseIcon } from '../icons'
 import { DateInput } from '../components/DateInput'
 import { SegmentedControl } from '../components/SegmentedControl'
@@ -100,6 +100,45 @@ export function CategoryAccountRow({
         {accounts.map((a) => (
           <option key={a.id} value={a.id}>
             {a.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
+export function FlagRow({
+  flags,
+  flagId,
+  selectMode,
+  onFlag,
+}: {
+  flags: Flag[]
+  flagId: number | 'all' | 'none'
+  selectMode: boolean
+  onFlag: (value: number | 'all' | 'none') => void
+}) {
+  // An archived flag stays listed while something is still filtered to it, so
+  // the current selection never silently vanishes from its own control.
+  const options = flags.filter((f) => f.active || f.id === flagId)
+  return (
+    <div className={styles.selectRow}>
+      <select
+        className={flagId !== 'all' ? styles.activeSelect : undefined}
+        value={flagId}
+        onChange={(e) => {
+          const raw = e.target.value
+          onFlag(raw === 'all' || raw === 'none' ? raw : Number(raw))
+        }}
+        disabled={selectMode}
+        aria-label="Filter by flag"
+      >
+        <option value="all">All flags</option>
+        <option value="none">Unflagged</option>
+        {options.map((f) => (
+          <option key={f.id} value={f.id}>
+            {f.name}
+            {f.active ? '' : ' (archived)'}
           </option>
         ))}
       </select>

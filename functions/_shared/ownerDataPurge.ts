@@ -8,6 +8,7 @@ export async function purgeOwnerExpenseData(db: D1Database, ownerEmail: string):
     db.prepare('DELETE FROM transactions WHERE owner = ?').bind(owner),
     db.prepare('DELETE FROM account_statements WHERE owner = ?').bind(owner),
     db.prepare('DELETE FROM cash_actuals WHERE owner = ?').bind(owner),
+    db.prepare('DELETE FROM flags WHERE owner = ?').bind(owner),
     db.prepare('DELETE FROM categories WHERE owner = ?').bind(owner),
     db.prepare('DELETE FROM accounts WHERE owner = ?').bind(owner),
     db.prepare('DELETE FROM settings WHERE owner = ?').bind(owner),

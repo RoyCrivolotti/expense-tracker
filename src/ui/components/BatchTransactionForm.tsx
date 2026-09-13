@@ -17,6 +17,7 @@ import {
   type DateBatchDraft,
 } from './batchTransactionIntent'
 import { DescriptionCombobox } from './DescriptionCombobox'
+import { FlagField } from './FlagField'
 import { Money } from './Money'
 import { DateInput } from './DateInput'
 import { optionLabel, selectableOptions } from './pickerOptions'
@@ -38,6 +39,8 @@ interface BatchTransactionFormProps {
   onClose: () => void
   hidden?: boolean
   onDirtyChange?: (dirty: boolean) => void
+  /** Raised while the flag popover owns focus, so the Modal pauses its trap. */
+  onTrapPausedChange?: ((paused: boolean) => void) | undefined
 }
 
 const rowElementId = (rowId: string) => `batch-row-${rowId}`
@@ -48,6 +51,7 @@ export function BatchTransactionForm({
   onClose,
   hidden,
   onDirtyChange,
+  onTrapPausedChange,
 }: BatchTransactionFormProps) {
   const format = useMoneyFormat()
   const { showToast } = useToast()
@@ -75,11 +79,13 @@ export function BatchTransactionForm({
   ])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState(false)
+  // Form-level, not per-row: the case this exists for is "flag this whole trip".
+  const [flagId, setFlagId] = useState<number | null>(null)
 
   useEffect(() => {
-    onDirtyChange?.(batches.some((b) => b.rows.some((r) => !isRowEmpty(r))))
+    onDirtyChange?.(batches.some((b) => b.rows.some((r) => !isRowEmpty(r))) || flagId != null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [batches])
+  }, [batches, flagId])
 
   const updateBatch = (batchId: string, patch: Partial<DateBatchDraft>) =>
     setBatches((bs) => bs.map((b) => (b.id === batchId ? { ...b, ...patch } : b)))
@@ -165,7 +171,12 @@ export function BatchTransactionForm({
   const count = saveableRows.length
 
   const save = async () => {
-    const result = buildBatchTransactions(batches, format, model.dataset.settings.budgetRolloverDay)
+    const result = buildBatchTransactions(
+      batches,
+      format,
+      model.dataset.settings.budgetRolloverDay,
+      flagId,
+    )
     if (!result.ok) {
       setErrors(result.errors)
       const firstErrorRowId = Object.keys(result.errors)[0]
@@ -296,6 +307,16 @@ export function BatchTransactionForm({
       <button type="button" className={styles.addBatch} onClick={addBatch}>
         <PlusIcon /> Add another date
       </button>
+
+      <div className={styles.flagField}>
+        <FlagField
+          flags={model.dataset.flags}
+          value={flagId}
+          onChange={setFlagId}
+          label="Flag all of these"
+          onTrapPausedChange={onTrapPausedChange}
+        />
+      </div>
 
       <p className={styles.summary} data-testid="batch-summary">
         {count} transaction{count === 1 ? '' : 's'} · <Money cents={totalCents} />

@@ -1,0 +1,43 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.inactive {
+  opacity: 0.55;
+}
+
+.rowGlyph {
+  width: 0.95rem;
+  height: 0.95rem;
+  margin-right: 0;
+}
+
+.rowBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.rowName {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.archived {
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+.rowMeta {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

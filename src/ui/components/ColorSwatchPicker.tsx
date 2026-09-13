@@ -1,6 +1,6 @@
 import { useRef } from 'react'
-import { SCENARIO_COLORS } from '../../../engine'
-import styles from './goals.module.css'
+import { SCENARIO_COLORS } from '../../engine'
+import styles from './ColorSwatchPicker.module.css'
 
 function normalizeHex(color: string): string {
   return color.toLowerCase()
@@ -11,19 +11,26 @@ function hexForNativeInput(color: string): string {
   return '#6366f1'
 }
 
-interface ScenarioColorPickerProps {
+interface ColorSwatchPickerProps {
   color: string
   onChange: (color: string) => void
   disabled?: boolean
+  /** Names the group for assistive tech, e.g. "Scenario color", "Flag colour". */
+  label: string
 }
 
-export function ScenarioColorPicker({ color, onChange, disabled }: ScenarioColorPickerProps) {
+/**
+ * Preset swatches from the shared palette plus a native colour input as an
+ * escape hatch. The presets are chosen to stay legible on both themes, so
+ * prefer them; a custom value is allowed but is the user's own risk.
+ */
+export function ColorSwatchPicker({ color, onChange, disabled, label }: ColorSwatchPickerProps) {
   const colorInputRef = useRef<HTMLInputElement>(null)
   const current = normalizeHex(color)
   const isPreset = SCENARIO_COLORS.some((c) => normalizeHex(c) === current)
 
   return (
-    <div className={styles.colorPicker} role="group" aria-label="Scenario color">
+    <div className={styles.colorPicker} role="group" aria-label={label}>
       {SCENARIO_COLORS.map((preset) => (
         <button
           key={preset}
