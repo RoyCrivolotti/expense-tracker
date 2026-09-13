@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Transaction } from '../../types'
+import { useLongPress } from '../hooks/useLongPress'
 import { useSwipeReveal } from '../hooks/useSwipeReveal'
 import type { Lookup } from '../format'
 import { ConfirmSheet } from './ConfirmSheet'
@@ -8,7 +9,7 @@ import styles from './TransactionList.module.css'
 
 function deleteConfirmMessage(txn: Transaction, lookup: Lookup): string {
   const label = txn.description || lookup.categoryName(txn.categoryId)
-  return `“${label}” will be removed permanently.`
+  return `"${label}" will be removed permanently.`
 }
 
 interface SwipeRowProps {
@@ -18,6 +19,7 @@ interface SwipeRowProps {
   onSelect?: (txn: Transaction) => void
   onDuplicate?: (txn: Transaction) => void
   onDelete?: (id: number) => Promise<void>
+  onLongPressSelect?: (id: number) => void
 }
 
 export function SwipeTransactionRow({
@@ -27,9 +29,13 @@ export function SwipeTransactionRow({
   onSelect,
   onDuplicate,
   onDelete,
+  onLongPressSelect,
 }: SwipeRowProps) {
   const actionCount = (onDuplicate ? 1 : 0) + (onDelete ? 1 : 0)
   const swipe = useSwipeReveal(actionCount > 0, actionCount)
+  const longPress = useLongPress({
+    onLongPress: () => onLongPressSelect?.(txn.id),
+  })
   const [pendingDelete, setPendingDelete] = useState(false)
 
   const handleCopy = () => {
@@ -66,10 +72,22 @@ export function SwipeTransactionRow({
         <div
           className={`${styles.swipeSlide}${swipe.isDragging ? ` ${styles.swipeSlideDragging}` : ''}`}
           style={{ transform: `translate3d(${swipe.offset}px, 0, 0)` }}
-          onTouchStart={(e) => swipe.onTouchStart(e.touches[0]?.clientX ?? 0)}
-          onTouchMove={(e) => swipe.onTouchMove(e.touches[0]?.clientX ?? 0)}
-          onTouchEnd={swipe.onTouchEnd}
-          onTouchCancel={swipe.onTouchCancel}
+          onTouchStart={(e) => {
+            swipe.onTouchStart(e.touches[0]?.clientX ?? 0)
+            longPress.onTouchStart(e)
+          }}
+          onTouchMove={(e) => {
+            swipe.onTouchMove(e.touches[0]?.clientX ?? 0)
+            longPress.onTouchMove(e)
+          }}
+          onTouchEnd={(e) => {
+            swipe.onTouchEnd()
+            longPress.onTouchEnd(e)
+          }}
+          onTouchCancel={() => {
+            swipe.onTouchCancel()
+            longPress.onTouchCancel()
+          }}
         >
           <button
             type="button"

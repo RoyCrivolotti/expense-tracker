@@ -131,6 +131,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
               onDelete: actions.deleteTransaction,
               onToggleSelect: state.toggleSelected,
               onToggleDate: state.toggleDate,
+              onLongPressSelect: state.enterAndSelect,
               onEditStatementPayment: setEditingStatement,
             }
           : {})}
@@ -187,7 +188,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
         onOpenPastReport={past.openReport}
       />
 
-      <TransactionsSelectFooter actionsEnabled={Boolean(actions)} selection={state} model={model} />
+      <TransactionsSelectFooter actionsEnabled={Boolean(actions)} selection={state} visibleIds={state.visibleIds} model={model} />
     </div>
   )
 }

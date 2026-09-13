@@ -16,13 +16,25 @@ All changes — code, docs, config — must go through a pull request with the
 2. **Implement** the change. Run `npm run verify` locally before pushing — it runs
    lint, typecheck, tests with coverage, and a production build.
 3. **Diff coverage** — for code changes (`.ts`/`.tsx`), run
-   `node scripts/check-diff-coverage.mjs --base main` after `npm run verify`.
+   `node scripts/check-diff-coverage.mjs --base origin/main` after `npm run verify`
+   (use the branch this PR is actually stacked on instead of `origin/main` if it's
+   stacked on another open PR, not yet merged). Use `origin/main`, not local `main`
+   — every worktree here branches straight off `origin/main` and nothing ever checks
+   `main` itself out, so it silently goes stale and `--base main` reports other
+   already-merged PRs as false "uncovered" diffs (`git fetch` first if unsure).
    CI requires 90% of changed lines to be covered. Write tests before pushing if
-   coverage is short.
+   coverage is short — this is the single most common cause of a locally-green
+   `verify` turning into a red PR, since the global coverage floor `verify` checks
+   is a lenient floor calibrated to the untested legacy codebase, not a bar new
+   code has to clear.
 4. **Push and open a draft PR** (`gh pr create --draft`). Never create a
    ready-for-review PR directly.
 5. **Wait for CI** — both `verify` and `verify-and-deploy` must pass. If `verify`
-   fails, fix locally and push again.
+   fails, fix locally and push again. An open PR with a failing or not-yet-checked
+   CI run is not finished work — don't stop until you've confirmed the actual run
+   is green. `verify-and-deploy` also deploys a staging preview and posts its URL
+   into the PR description automatically once it succeeds — no manual step needed,
+   don't hand-add a second one.
 6. **Mark ready and merge** — `gh pr ready <n> && gh pr merge <n> --squash --delete-branch`.
    Squash merge is the default; the repo's history is linear.
 7. **Return to main** — `git checkout main && git pull` to pick up the merged commit
@@ -30,7 +42,7 @@ All changes — code, docs, config — must go through a pull request with the
 
 ## Verify
 
-`npm run verify` is the single gate. It runs, in order:
+`npm run verify` is the baseline local gate. It runs, in order:
 
 - Symlink checks, migration doc checks, PII scan
 - ESLint
@@ -38,7 +50,9 @@ All changes — code, docs, config — must go through a pull request with the
 - Vitest with coverage (global thresholds enforced)
 - Production build + bundle budget check
 
-If verify passes locally, CI will pass. If it doesn't, fix before pushing.
+If it fails, fix before pushing — but passing it locally is necessary, not sufficient: CI separately
+enforces diff coverage (see below) and, for UI-facing PRs, a screenshot check (see CLAUDE.md's Pull
+request conventions). Neither runs as part of `npm run verify`.
 
 ## Coverage
 
