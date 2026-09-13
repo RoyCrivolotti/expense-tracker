@@ -134,6 +134,7 @@ describe('InstallmentsCard', () => {
     ).toBeTruthy()
     expect(screen.getByText(/Payment 1\/24/)).toBeTruthy()
     expect(screen.getByText(/Due this month/)).toBeTruthy()
+    expect(screen.getByText('Due')).toBeTruthy()
   })
 
   describe('payments with a known due date (near or far)', () => {
@@ -191,7 +192,9 @@ describe('InstallmentsCard', () => {
         />,
       )
       expect(screen.getByText(/Paid 5 Jul/)).toBeTruthy()
+      expect(screen.getByText('Paid')).toBeTruthy()
       expect(screen.queryByText(/Due /)).toBeNull()
+      expect(screen.queryByText('Due')).toBeNull()
       expect(screen.queryByLabelText('Log installment payment')).toBeNull()
     })
 
@@ -218,7 +221,9 @@ describe('InstallmentsCard', () => {
         />,
       )
       expect(screen.queryByText(/Paid /)).toBeNull()
+      expect(screen.queryByText('Paid')).toBeNull()
       expect(screen.getByText(/Due this month/)).toBeTruthy()
+      expect(screen.getByText('Due')).toBeTruthy()
     })
   })
 })
