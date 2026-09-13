@@ -95,6 +95,13 @@ body {
   overflow-x: clip;
   max-width: 100%;
   overscroll-behavior-x: none;
+  /*
+   * Stops the *browser's* own pull-to-refresh, which in a Safari/Chrome tab used to
+   * fire alongside the app's `usePullToRefresh` on the same drag. `contain` rather
+   * than `none`: it blocks the chain-out without also killing the rubber-band bounce
+   * the app leans on elsewhere.
+   */
+  overscroll-behavior-y: contain;
 }
 
 .expRoot {
