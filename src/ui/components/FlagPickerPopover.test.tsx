@@ -199,7 +199,7 @@ describe('FlagPickerPopover — choosing whether a flag expects money back', () 
     renderPicker({ onCreate: vi.fn() })
 
     await user.click(screen.getByRole('button', { name: '+ New flag' }))
-    expect(screen.getByRole('checkbox', { name: /expect this money back/i })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: /to be reimbursed/i })).toBeChecked()
   })
 
   it('creates a non-reimbursable flag when the box is cleared', async () => {
@@ -208,7 +208,7 @@ describe('FlagPickerPopover — choosing whether a flag expects money back', () 
     renderPicker({ onCreate })
 
     await user.click(screen.getByRole('button', { name: '+ New flag' }))
-    await user.click(screen.getByRole('checkbox', { name: /expect this money back/i }))
+    await user.click(screen.getByRole('checkbox', { name: /to be reimbursed/i }))
     await user.type(screen.getByRole('textbox', { name: 'New flag name' }), 'Charity donations{Enter}')
 
     // A flag nobody is going to pay must not offer an expense report — that is
