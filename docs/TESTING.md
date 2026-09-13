@@ -66,7 +66,10 @@ Two separate checks, both run in CI (`.github/workflows/verify.yml`) on every PR
    enforcement: it holds new code to a strict bar without demanding a
    back-fill of the entire pre-existing UI. CI passes `--base
    ${{ github.event.pull_request.base.sha }}`; run it locally with `--base
-   main` (or any ref) after `npm run test:coverage`.
+   origin/main` (or any ref) after `npm run test:coverage` — use `origin/main`, not
+   local `main`: every worktree in this repo branches straight off `origin/main` and
+   never checks `main` itself out, so the local branch silently goes stale and
+   `--base main` picks up other already-merged PRs as false "uncovered" diffs.
 
 Raising the global floor is welcome as coverage genuinely improves — bump the
 numbers in `vitest.config.ts` to match, don't lower them to make a red build
