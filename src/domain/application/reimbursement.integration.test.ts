@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { inMemoryExpenseRepository } from '../../testing/inMemoryExpenseRepository'
 import { groupTransactionsByFlag } from '../engine/flagGroups'
+import { buildReimbursementDraft } from '../engine/reimbursementDraft'
+import { EU_MONEY_FORMAT } from '../engine/money'
+import { buildSettledReport, reportReference } from '../engine/expenseReport'
+import { listPastReports } from '../engine/pastReports'
+import { buildBatchTransactions } from '../../ui/components/batchTransactionIntent'
 import { buildReimbursementLinks } from '../engine/reimbursementLinks'
 import { bulkUpdateTransactions } from './transactionService'
 
@@ -107,5 +112,181 @@ describe('recording a reimbursement, end to end', () => {
 
     expect(settled?.flagId).toBe(4)
     expect(settled?.settledBy).toBe(payment.id)
+  })
+})
+
+/**
+ * Paid in instalments.
+ *
+ * The case the row-based model is built for and the one most likely to be got
+ * wrong: an employer approves half a claim in June and the rest in July. Each
+ * payment has to settle only its own rows, leave the remainder owed, and end up
+ * as its own entry in Past reports.
+ */
+describe('a claim settled by two payments', () => {
+  async function claimOfThree() {
+    const repo = repoWithClaim()
+    const flight = await repo.insertTransaction(OWNER, line('Flight', 10_000))
+    const hotel = await repo.insertTransaction(OWNER, line('Hotel', 4_000))
+    const dinner = await repo.insertTransaction(OWNER, line('Dinner', 2_000))
+    return { repo, flight, hotel, dinner }
+  }
+
+  it('offers only the unpaid rows the second time round', async () => {
+    const { repo, flight, hotel, dinner } = await claimOfThree()
+    const first = await repo.insertTransaction(OWNER, reimbursement(10_000))
+    await bulkUpdateTransactions(repo, OWNER, [flight.id], { settledBy: first.id })
+
+    const dataset = await repo.loadDataset(OWNER)
+    const [group] = groupTransactionsByFlag(dataset.transactions, dataset.flags)
+    const draft = buildReimbursementDraft(group!, dataset.accounts, 1)
+
+    // The paid row must not be offered again, and the prefilled figure must be
+    // the remainder rather than the original claim.
+    expect(draft?.candidates.map((t) => t.id)).toEqual([hotel.id, dinner.id])
+    expect(draft?.amountCents).toBe(6_000)
+  })
+
+  it('empties the card only once the last row is paid', async () => {
+    const { repo, flight, hotel, dinner } = await claimOfThree()
+    const first = await repo.insertTransaction(OWNER, reimbursement(10_000))
+    await bulkUpdateTransactions(repo, OWNER, [flight.id], { settledBy: first.id })
+    const second = await repo.insertTransaction(OWNER, reimbursement(6_000))
+    await bulkUpdateTransactions(repo, OWNER, [hotel.id, dinner.id], { settledBy: second.id })
+
+    const dataset = await repo.loadDataset(OWNER)
+    expect(groupTransactionsByFlag(dataset.transactions, dataset.flags)).toEqual([])
+  })
+
+  it('keeps the two payments as separate reports, each covering its own rows', async () => {
+    const { repo, flight, hotel, dinner } = await claimOfThree()
+    const first = await repo.insertTransaction(OWNER, reimbursement(10_000))
+    await bulkUpdateTransactions(repo, OWNER, [flight.id], { settledBy: first.id })
+    const second = await repo.insertTransaction(OWNER, {
+      ...reimbursement(6_000),
+      date: '2026-07-14',
+      budgetMonth: '2026-07',
+    })
+    await bulkUpdateTransactions(repo, OWNER, [hotel.id, dinner.id], { settledBy: second.id })
+
+    const dataset = await repo.loadDataset(OWNER)
+    const past = listPastReports(dataset.transactions, dataset.flags)
+
+    // Newest first, like the rest of the app: July's payment leads.
+    expect(past).toHaveLength(2)
+    expect(past.map((r) => r.count)).toEqual([2, 1])
+    expect(past.map((r) => r.coveredCents)).toEqual([6_000, 10_000])
+
+    const reprint = buildSettledReport(second.id, dataset.transactions, dataset.flags, [])
+    expect(reprint?.lines.map((l) => l.transaction.id)).toEqual([hotel.id, dinner.id])
+    expect(reprint?.totalClaimedCents).toBe(6_000)
+  })
+
+  it('undoing the first payment leaves the second one intact', async () => {
+    // Deleting a reimbursement clears settled_by for the rows it covered. That
+    // must be scoped to *its* rows: a blanket clear would silently reopen a
+    // claim that was already paid.
+    const { repo, flight, hotel, dinner } = await claimOfThree()
+    const first = await repo.insertTransaction(OWNER, reimbursement(10_000))
+    await bulkUpdateTransactions(repo, OWNER, [flight.id], { settledBy: first.id })
+    const second = await repo.insertTransaction(OWNER, reimbursement(6_000))
+    await bulkUpdateTransactions(repo, OWNER, [hotel.id, dinner.id], { settledBy: second.id })
+
+    await repo.deleteTransaction(OWNER, first.id)
+
+    const dataset = await repo.loadDataset(OWNER)
+    const [group] = groupTransactionsByFlag(dataset.transactions, dataset.flags)
+    expect(group?.transactions.map((t) => t.id)).toEqual([flight.id])
+    expect(listPastReports(dataset.transactions, dataset.flags)).toHaveLength(1)
+  })
+})
+
+/**
+ * The bulk-add path, which is how a trip is actually entered: twelve rows in one
+ * go with one flag on the form, then claimed and settled like anything else.
+ */
+describe('a claim entered through bulk add', () => {
+  it('flags every row, then claims and settles them as one', async () => {
+    const repo = repoWithClaim()
+    const row = (id: string, amount: string, description: string) => ({
+      id,
+      type: 'expense' as const,
+      amount,
+      description,
+      categoryId: 2,
+      accountId: 1,
+    })
+    const built = buildBatchTransactions(
+      [{ id: 'a', date: '2026-05-02', rows: [row('r1', '100', 'Flight'), row('r2', '40', 'Hotel')] }],
+      EU_MONEY_FORMAT,
+      1,
+      // The form-level flag: "flag this whole trip".
+      4,
+    )
+    expect(built.ok).toBe(true)
+    if (!built.ok) return
+
+    const saved = []
+    for (const input of built.transactions) saved.push(await repo.insertTransaction(OWNER, input))
+
+    const dataset = await repo.loadDataset(OWNER)
+    const [group] = groupTransactionsByFlag(dataset.transactions, dataset.flags)
+
+    expect(group?.count).toBe(2)
+    expect(group?.totalCents).toBe(14_000)
+
+    const payment = await repo.insertTransaction(OWNER, reimbursement(14_000))
+    await bulkUpdateTransactions(repo, OWNER, saved.map((t) => t.id), { settledBy: payment.id })
+
+    const after = await repo.loadDataset(OWNER)
+    expect(groupTransactionsByFlag(after.transactions, after.flags)).toEqual([])
+    expect(listPastReports(after.transactions, after.flags)[0]?.count).toBe(2)
+  })
+})
+
+/**
+ * Deleting the flag afterwards.
+ *
+ * `deleteFlag` clears `flag_id` from every row it owns, settled ones included,
+ * so a past report loses the only thing that used to give it a header. The row
+ * stays in Past reports either way — that list is built from `settledBy` — so
+ * the report behind it has to still open.
+ */
+describe('a past report whose flag has been deleted', () => {
+  it('still rebuilds, headed by the name the payment was given', async () => {
+    const repo = repoWithClaim()
+    const flight = await repo.insertTransaction(OWNER, line('Flight', 10_000))
+    const payment = await repo.insertTransaction(OWNER, {
+      ...reimbursement(10_000),
+      description: 'Madrid trip, May',
+    })
+    await bulkUpdateTransactions(repo, OWNER, [flight.id], { settledBy: payment.id })
+    await repo.deleteFlag(OWNER, 4)
+
+    const dataset = await repo.loadDataset(OWNER)
+    const report = buildSettledReport(payment.id, dataset.transactions, dataset.flags, [])
+
+    expect(report).not.toBeNull()
+    expect(report?.flag.name).toBe('Madrid trip, May')
+    expect(report?.lines.map((l) => l.transaction.id)).toEqual([flight.id])
+    expect(report?.totalClaimedCents).toBe(10_000)
+    // The reference is the one casualty: its initials come from the flag's name,
+    // which is gone. Documented on standInFlag rather than silently different.
+    expect(reportReference(report!)).toBe('MTM-202605')
+  })
+
+  it('leaves the row listed in Past reports, so the button has something to open', async () => {
+    const repo = repoWithClaim()
+    const flight = await repo.insertTransaction(OWNER, line('Flight', 10_000))
+    const payment = await repo.insertTransaction(OWNER, reimbursement(10_000))
+    await bulkUpdateTransactions(repo, OWNER, [flight.id], { settledBy: payment.id })
+    await repo.deleteFlag(OWNER, 4)
+
+    const dataset = await repo.loadDataset(OWNER)
+    const past = listPastReports(dataset.transactions, dataset.flags)
+
+    expect(past).toHaveLength(1)
+    expect(past[0]?.flag).toBeUndefined()
+    expect(past[0]?.count).toBe(1)
   })
 })
