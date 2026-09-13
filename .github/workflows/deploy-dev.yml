@@ -19,6 +19,13 @@ env:
 jobs:
   verify-and-deploy:
     runs-on: ubuntu-latest
+    # Repo default is read-only GITHUB_TOKEN permissions (Settings > Actions). The
+    # "Post staging URL" step below needs to call `gh pr edit`, which read access
+    # doesn't cover — declaring `permissions:` at all zeroes out every scope not
+    # listed here, so `contents: read` has to be restated for actions/checkout.
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
