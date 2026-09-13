@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ExpenseDataset, InstallmentPlan } from '../../types'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
+import type { ExpenseDataset, InstallmentPlan, Transaction } from '../../types'
 import type { ExpenseActions } from '../actions'
 import type { ExpenseModel } from '../useExpenseData'
 import { defaultExpenseSettings } from '../../engine'
@@ -19,13 +20,13 @@ const basePlan: InstallmentPlan = {
   active: true,
 }
 
-function datasetWithPlans(plans: InstallmentPlan[]): ExpenseDataset {
+function datasetWithPlans(plans: InstallmentPlan[], transactions: Transaction[] = []): ExpenseDataset {
   return {
     flags: [],
     attachments: [],
     categories: [{ id: 3, name: 'Tech', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
     accounts: [{ id: 2, name: 'Cetelam', kind: 'credit', settlement: 'deferred', active: true }],
-    transactions: [],
+    transactions,
     accountStatements: [],
     cashActuals: [],
     goalInputs: {
@@ -45,9 +46,9 @@ function datasetWithPlans(plans: InstallmentPlan[]): ExpenseDataset {
   }
 }
 
-function modelWithPlans(plans: InstallmentPlan[]): ExpenseModel {
+function modelWithPlans(plans: InstallmentPlan[], transactions: Transaction[] = []): ExpenseModel {
   return {
-    dataset: datasetWithPlans(plans),
+    dataset: datasetWithPlans(plans, transactions),
     lookup: {
       category: (id) => (id === 3 ? { id: 3, name: 'Tech', monthlyBudgetCents: 0, sortOrder: 0, active: true } : undefined),
       account: () => undefined,
@@ -113,34 +114,31 @@ describe('InstallmentsCard', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('still shows the "Manage plans" entry when nothing is due this month', () => {
-    // Anchored to a far-future month, so nothing is due for the viewed month.
+  it('still shows the "Manage plans" entry when nothing is scheduled this month', () => {
+    // Anchored to a far-future month, so nothing is scheduled for the viewed month.
     render(
       <InstallmentsCard model={modelWithPlans([basePlan])} actions={noopActions()} month="2026-07" />,
     )
     expect(screen.getByText('Manage plans')).toBeTruthy()
-    expect(screen.getByText('Nothing due right now.')).toBeTruthy()
+    expect(screen.getByText('Nothing scheduled this month.')).toBeTruthy()
   })
 
-  it('shows due payments when the plan has an installment for the viewed month', () => {
+  it('shows due payments when the plan has an installment for the viewed month, with no due day set', () => {
     const duePlan: InstallmentPlan = { ...basePlan, anchorBudgetMonth: '2026-07' }
     render(
       <InstallmentsCard model={modelWithPlans([duePlan])} actions={noopActions()} month="2026-07" />,
     )
     expect(screen.getByText('Manage plans')).toBeTruthy()
+    expect(
+      screen.getByText('Scheduled plan payments for this month, not predictions.'),
+    ).toBeTruthy()
     expect(screen.getByText(/Payment 1\/24/)).toBeTruthy()
+    expect(screen.getByText(/Due this month/)).toBeTruthy()
+    expect(screen.getByText('Due')).toBeTruthy()
   })
 
-  describe('due-soon filtering for a known due date', () => {
-    beforeEach(() => {
-      vi.useFakeTimers()
-      vi.setSystemTime(new Date('2026-07-01T12:00:00Z'))
-    })
-    afterEach(() => {
-      vi.useRealTimers()
-    })
-
-    it('hides a plan-linked payment due later this month (not due-soon yet)', () => {
+  describe('payments with a known due date (near or far)', () => {
+    it('shows a plan-linked payment due later this month, with its exact due date', () => {
       const laterPlan: InstallmentPlan = {
         ...basePlan,
         anchorBudgetMonth: '2026-07',
@@ -150,8 +148,8 @@ describe('InstallmentsCard', () => {
         <InstallmentsCard model={modelWithPlans([laterPlan])} actions={noopActions()} month="2026-07" />,
       )
       expect(screen.getByText('Manage plans')).toBeTruthy()
-      expect(screen.getByText('Nothing due right now.')).toBeTruthy()
-      expect(screen.queryByText(/Payment 1\/24/)).toBeNull()
+      expect(screen.getByText(/Payment 1\/24/)).toBeTruthy()
+      expect(screen.getByText(/Due 28 Jul/)).toBeTruthy()
     })
 
     it('shows a plan-linked payment due tomorrow', () => {
@@ -164,6 +162,68 @@ describe('InstallmentsCard', () => {
         <InstallmentsCard model={modelWithPlans([soonPlan])} actions={noopActions()} month="2026-07" />,
       )
       expect(screen.getByText(/Payment 1\/24/)).toBeTruthy()
+      expect(screen.getByText(/Due 2 Jul/)).toBeTruthy()
+    })
+  })
+
+  describe('an installment already paid this month', () => {
+    const paidPlan: InstallmentPlan = { ...basePlan, anchorBudgetMonth: '2026-07' }
+    const paidTxn: Transaction = {
+      id: 501,
+      date: '2026-07-05',
+      budgetMonth: '2026-07',
+      description: 'Iphone, Cetelam',
+      accountId: 2,
+      categoryId: 3,
+      type: 'expense',
+      amountCents: 5783,
+      cancelled: false,
+      planId: 1,
+      installmentIndex: 1,
+      status: 'posted',
+    }
+
+    it('shows a paid indicator with the real payment date instead of the due row', () => {
+      render(
+        <InstallmentsCard
+          model={modelWithPlans([paidPlan], [paidTxn])}
+          actions={noopActions()}
+          month="2026-07"
+        />,
+      )
+      expect(screen.getByText(/Paid 5 Jul/)).toBeTruthy()
+      expect(screen.getByText('Paid')).toBeTruthy()
+      expect(screen.queryByText(/Due /)).toBeNull()
+      expect(screen.queryByText('Due')).toBeNull()
+      expect(screen.queryByLabelText('Log installment payment')).toBeNull()
+    })
+
+    it('opens the underlying transaction when the paid row is clicked', async () => {
+      const actions = noopActions()
+      render(
+        <InstallmentsCard
+          model={modelWithPlans([paidPlan], [paidTxn])}
+          actions={actions}
+          month="2026-07"
+        />,
+      )
+      await userEvent.click(screen.getByRole('button', { name: /Paid 5 Jul/ }))
+      expect(actions.onEdit).toHaveBeenCalledWith(paidTxn)
+    })
+
+    it('does not treat a cancelled linked transaction as paid', () => {
+      const cancelledTxn: Transaction = { ...paidTxn, cancelled: true }
+      render(
+        <InstallmentsCard
+          model={modelWithPlans([paidPlan], [cancelledTxn])}
+          actions={noopActions()}
+          month="2026-07"
+        />,
+      )
+      expect(screen.queryByText(/Paid /)).toBeNull()
+      expect(screen.queryByText('Paid')).toBeNull()
+      expect(screen.getByText(/Due this month/)).toBeTruthy()
+      expect(screen.getByText('Due')).toBeTruthy()
     })
   })
 })
