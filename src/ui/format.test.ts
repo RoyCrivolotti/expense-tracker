@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { makeDataset, makeFlag } from '../testing/factories'
+import { makeAttachment, makeDataset, makeFlag } from '../testing/factories'
 import { buildLookup } from './format'
 
 describe('buildLookup — flags', () => {
@@ -20,5 +20,29 @@ describe('buildLookup — flags', () => {
 
   it('returns undefined when the owner has no flags at all', () => {
     expect(buildLookup(makeDataset()).flag(1)).toBeUndefined()
+  })
+})
+
+describe('buildLookup — attachments', () => {
+  it('groups receipts by transaction', () => {
+    const dataset = makeDataset({
+      attachments: [
+        makeAttachment({ id: 1, transactionId: 10 }),
+        makeAttachment({ id: 2, transactionId: 10 }),
+        makeAttachment({ id: 3, transactionId: 11 }),
+      ],
+    })
+
+    expect(buildLookup(dataset).attachments(10).map((a) => a.id)).toEqual([1, 2])
+  })
+
+  it('is empty for a transaction with none', () => {
+    expect(buildLookup(makeDataset()).attachments(10)).toEqual([])
+  })
+
+  it('returns the same empty result for an unknown transaction', () => {
+    const dataset = makeDataset({ attachments: [makeAttachment({ id: 1, transactionId: 10 })] })
+
+    expect(buildLookup(dataset).attachments(999)).toEqual([])
   })
 })

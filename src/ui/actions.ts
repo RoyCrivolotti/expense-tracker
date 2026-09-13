@@ -52,7 +52,8 @@ export interface ExpenseActions {
   onEdit: (txn: Transaction) => void
   onAdd: (seed?: TransactionSeed) => void
   onDuplicate: (txn: Transaction) => void
-  createTransaction: (input: NewTransaction) => Promise<void>
+  /** Resolves with the stored row, so a caller can attach receipts to its id. */
+  createTransaction: (input: NewTransaction) => Promise<Transaction>
   createTransactions: (inputs: NewTransaction[]) => Promise<void>
   updateTransaction: (id: number, patch: Partial<NewTransaction>) => Promise<void>
   deleteTransaction: (id: number) => Promise<void>
@@ -65,6 +66,8 @@ export interface ExpenseActions {
     paidOn?: string,
   ) => Promise<void>
   setCashActual: (yearMonth: string, actualCashCents: number | null) => Promise<void>
+  uploadAttachment: (transactionId: number, file: File) => Promise<void>
+  deleteAttachment: (id: number) => Promise<void>
   createFlag: (input: NewFlag) => Promise<Flag>
   updateFlag: (id: number, patch: Partial<NewFlag>) => Promise<void>
   /** Resolves with how many transactions were unflagged, for the toast. */

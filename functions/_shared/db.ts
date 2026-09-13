@@ -5,6 +5,7 @@ import type { Env } from './env'
 import {
   toAccount,
   toCashActual,
+  toAttachment,
   toCategory,
   toFlag,
   toGoalInputs,
@@ -18,6 +19,7 @@ import {
   toWealthCheckinEntry,
   type AccountRow,
   type CashActualRow,
+  type AttachmentRow,
   type CategoryRow,
   type FlagRow,
   type GoalRow,
@@ -42,6 +44,7 @@ export async function loadDataset(env: Env, owner: string): Promise<ExpenseDatas
     categories,
     accounts,
     flagRows,
+    attachmentRows,
     txns,
     statements,
     cashActuals,
@@ -60,6 +63,12 @@ export async function loadDataset(env: Env, owner: string): Promise<ExpenseDatas
     ),
     rows<AccountRow>(env.DB, 'SELECT * FROM accounts WHERE owner = ? ORDER BY id', owner),
     rows<FlagRow>(env.DB, 'SELECT * FROM flags WHERE owner = ? ORDER BY sort_order, id', owner),
+    // Metadata only — the bytes are fetched by URL from /api/expenses/attachments/:id.
+    rows<AttachmentRow>(
+      env.DB,
+      'SELECT * FROM transaction_attachments WHERE owner = ? ORDER BY transaction_id, id',
+      owner,
+    ),
     rows<TxnRow>(
       env.DB,
       'SELECT * FROM transactions WHERE owner = ? ORDER BY date DESC, id DESC',
@@ -120,6 +129,7 @@ export async function loadDataset(env: Env, owner: string): Promise<ExpenseDatas
     categories: categories.map(toCategory),
     accounts: mappedAccounts,
     flags: flagRows.map(toFlag),
+    attachments: attachmentRows.map(toAttachment),
     transactions: deriveTransactions(stored, mappedAccounts, mappedStatements),
     accountStatements: mappedStatements,
     cashActuals: cashActuals.map(toCashActual),

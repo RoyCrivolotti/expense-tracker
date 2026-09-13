@@ -87,7 +87,7 @@ If Workers Scripts Edit is missing, CI deploy of the backup cron worker fails un
 npx wrangler d1 execute roy-expenses --remote --file=migrations/NNNN_name.sql
 ```
 
-Apply through `0015_transaction_flags.sql` on production. Personal goal scenarios: `npm run seed:scenarios` (reads gitignored seed config or `FINANCIAL_REVIEW_DIR`).
+Apply through `0016_transaction_attachments.sql` on production. Personal goal scenarios: `npm run seed:scenarios` (reads gitignored seed config or `FINANCIAL_REVIEW_DIR`).
 
 `0009_installment_plans.sql` adds the `installment_plans` table plus `plan_id` / `installment_index` columns on `transactions`. Apply it before (or with) the code deploy that reads those columns.
 
@@ -103,6 +103,8 @@ Apply through `0015_transaction_flags.sql` on production. Personal goal scenario
 
 `0015_transaction_flags.sql` adds the `flags` table plus a nullable `flag_id` column on `transactions`. Flags are reusable named markers (name + colour + optional description) for tracking work that outlives a budget month — the motivating case is "expenses I still have to claim back from an employer". The table starts empty; no defaults are seeded, and flags are created through Settings → Flags or the picker in the transaction editor. `flag_id` stays `NULL` on every existing row, so there is no backfill and no placeholder substitution. Deleting a flag clears `flag_id` on its transactions rather than reassigning them (the column is nullable, unlike `category_id`). Apply it before (or with) the code deploy that reads the column.
 
+`0016_transaction_attachments.sql` adds the `transaction_attachments` table — metadata only, for receipt photos and PDFs whose bytes live in R2. It starts empty and nothing reads it until an attachment is uploaded, so it is safe to apply ahead of the code deploy. It needs the `RECEIPTS` R2 binding to be useful: run `npm run setup:receipts` first (see **Receipt storage (R2)** below). Without the binding the upload route returns a clean 503 and the rest of the app is unaffected. Owner-agnostic — no placeholder substitution needed.
+
 ## Old URL
 
 `https://roy-admin.crivolotti.com/expenses` redirects here (301 in admin-hub `_redirects`).
@@ -110,6 +112,26 @@ Apply through `0015_transaction_flags.sql` on production. Personal goal scenario
 ## Public repo?
 
 Repository visibility and git history hygiene checklist is kept locally (not in this repo).
+
+## Receipt storage (R2)
+
+Receipt photos and PDFs attached to a transaction. Bytes live in R2; only metadata lives in D1.
+
+**Cost:** R2's free tier is 10 GB-month storage, 1M Class A ops and 10M Class B, with no egress charge. `config/receipt-policy.json` caps one owner at **2 GB** (~20% of the tier, roughly 10,000 downscaled receipts) alongside the backups bucket's 512 MB. An upload costs 2 Class A ops (file + thumbnail) and a view 1–2 Class B, which `immutable` caching turns into 304s on repeat. The quota check is a single D1 aggregate, not an R2 list, so it burns no Class A ops.
+
+1. Enable R2 on the account (dashboard) — already done if backups are running.
+2. Run `npm run setup:receipts` — creates bucket `receipts` and binds `RECEIPTS` on production **and** preview.
+3. Redeploy (`npm run deploy`) so the binding reaches the running Functions.
+
+Objects are stored at `{owner-email}/{transaction-id}/{sha256}.{ext}`, plus `…_thumb.jpg` for raster images. Keys are server-generated and contain no user-supplied string.
+
+**Without the binding the app still works**: the upload and serve routes return a clean 503 and nothing else is affected. That is the same degradation `BACKUPS` uses, and it is why the binding is optional in `functions/_shared/env.ts`.
+
+Optional Pages env vars override the policy JSON: `RECEIPT_MAX_FILE_BYTES`, `RECEIPT_MAX_PER_TRANSACTION`, `RECEIPT_MAX_OWNER_BYTES`.
+
+> **Receipts are not covered by the daily backup.** The D1 snapshot carries attachment *metadata*, so a restore knows which receipts existed — but the bytes are not copied. Base64 in the JSON snapshot would add ~33% and immediately trip the 5 MiB snapshot alert, and R2→R2 copying would multiply Class A ops for no protection against the risk the backup exists for (D1 corruption or a bad migration). The real receipt-loss risk is an accidental bucket delete, which R2 object versioning addresses properly. Enable it on the bucket if the receipts matter.
+
+**Revoking a user** deletes their attachment rows via `purgeOwnerExpenseData`. The R2 objects under their `{owner-email}/` prefix are *not* removed by that batch — an R2 delete cannot join a D1 batch. Sweep them separately with `npx wrangler r2 object delete` against that prefix.
 
 ## Scheduled backups (R2)
 

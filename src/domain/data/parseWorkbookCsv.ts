@@ -111,6 +111,8 @@ export function parseWorkbookCsv(text: string): ExpenseDataset {
     accounts,
     // The workbook CSV has no flag column; flags are a D1-only concept.
     flags: [],
+    // Likewise receipts: they exist only where there is R2 to hold the bytes.
+    attachments: [],
     transactions: deriveTransactions(stored, accounts, accountStatements),
     accountStatements,
     cashActuals: parseCashActuals(rows),
