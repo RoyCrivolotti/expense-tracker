@@ -9,7 +9,7 @@ import { netSpendCents } from '../../domain/engine/transactions'
 import type { FlagGroup } from '../../domain/engine/flagGroups'
 import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
 import type { ExpenseModel } from '../useExpenseData'
-import { RecordReimbursementSheet } from './RecordReimbursementSheet'
+import { RecordReimbursementSheet, type RecordInput } from './RecordReimbursementSheet'
 
 const WORK = makeFlag({ id: 1, name: 'Work travel' })
 
@@ -35,7 +35,7 @@ function model(): ExpenseModel {
 }
 
 function renderSheet(g: FlagGroup) {
-  const onRecord = vi.fn()
+  const onRecord = vi.fn<(input: RecordInput, transactionIds: number[]) => void>()
   const onCancel = vi.fn()
   render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
@@ -137,5 +137,48 @@ describe('RecordReimbursementSheet', () => {
     renderSheet(group([txn(1)]))
 
     expect(within(screen.getByRole('dialog')).getByText('Work travel')).toBeInTheDocument()
+  })
+})
+
+describe('RecordReimbursementSheet — naming the report', () => {
+  it('seeds the name from the flag and records what was typed instead', async () => {
+    const user = userEvent.setup()
+    const { onRecord } = renderSheet(group([txn(1, { description: 'Flight' })]))
+
+    const name = screen.getByRole('textbox', { name: 'Report name' })
+    expect(name).toHaveValue('Reimbursement — Work travel')
+
+    await user.clear(name)
+    await user.type(name, 'Alicante trip, September')
+    await user.click(screen.getByRole('button', { name: /^Record/ }))
+
+    // The payment's description *is* the report's name — PastReport reads it
+    // straight back off the transaction, so nothing else has to store it.
+    expect(onRecord.mock.calls[0]![0].description).toBe('Alicante trip, September')
+  })
+
+  it('falls back to the generated name when the field is emptied', async () => {
+    const user = userEvent.setup()
+    const { onRecord } = renderSheet(group([txn(1, { description: 'Flight' })]))
+
+    const name = screen.getByRole('textbox', { name: 'Report name' })
+    await user.clear(name)
+    await user.click(screen.getByRole('button', { name: /^Record/ }))
+
+    // Blank must not reach the transaction: an unnamed row in the ledger is
+    // worse than a dull generated one, and this is not worth blocking a save.
+    expect(onRecord.mock.calls[0]![0].description).toBe('Reimbursement — Work travel')
+  })
+
+  it('treats whitespace as empty', async () => {
+    const user = userEvent.setup()
+    const { onRecord } = renderSheet(group([txn(1, { description: 'Flight' })]))
+
+    const name = screen.getByRole('textbox', { name: 'Report name' })
+    await user.clear(name)
+    await user.type(name, '   ')
+    await user.click(screen.getByRole('button', { name: /^Record/ }))
+
+    expect(onRecord.mock.calls[0]![0].description).toBe('Reimbursement — Work travel')
   })
 })
