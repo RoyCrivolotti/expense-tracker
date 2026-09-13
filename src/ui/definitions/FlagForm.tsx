@@ -120,7 +120,7 @@ export function FlagForm({
           onChange={(e) => patch({ reimbursable: e.target.checked })}
         />
         <span>
-          I expect this money back
+          To be reimbursed
           <span className={styles.checkHint}>
             Adds an expense report and a Record reimbursement action to this flag. Leave it off for
             a flag you only use to find things later, like tax-deductible spending.

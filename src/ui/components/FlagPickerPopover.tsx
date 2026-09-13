@@ -21,7 +21,7 @@ interface Props {
    * hand down, and a picker without it simply falls back to pointing at
    * Settings, exactly as before.
    */
-  onCreate?: ((name: string) => Promise<number>) | undefined
+  onCreate?: ((name: string, reimbursable: boolean) => Promise<number>) | undefined
 }
 
 /**
@@ -38,11 +38,15 @@ function QuickCreate({
   onCancel,
 }: {
   flags: Flag[]
-  onCreate: (name: string) => Promise<number>
+  onCreate: (name: string, reimbursable: boolean) => Promise<number>
   onCreated: (flagId: number) => void
   onCancel: () => void
 }) {
   const [name, setName] = useState('')
+  // Ticked by default, matching the full editor. Asked rather than assumed: it
+  // decides whether the flag offers an expense report and a Record
+  // reimbursement action at all.
+  const [reimbursable, setReimbursable] = useState(true)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
@@ -59,7 +63,7 @@ function QuickCreate({
     setBusy(true)
     setErr(null)
     try {
-      onCreated(await onCreate(name))
+      onCreated(await onCreate(name, reimbursable))
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not create the flag')
       setBusy(false)
@@ -97,6 +101,15 @@ function QuickCreate({
       <button type="button" className={styles.createAdd} disabled={busy} onClick={() => void submit()}>
         {busy ? 'Adding…' : 'Add'}
       </button>
+      <label className={styles.createCheck}>
+        <input
+          type="checkbox"
+          checked={reimbursable}
+          disabled={busy}
+          onChange={(e) => setReimbursable(e.target.checked)}
+        />
+        <span>To be reimbursed</span>
+      </label>
       {err ? (
         <p className={styles.createError} role="alert">
           {err}
