@@ -390,6 +390,40 @@ describe('TransactionModal — the other tab’s draft', () => {
   })
 })
 
+describe('TransactionModal — installment sub-navigation', () => {
+  it('switches to the installment view when clicking the installment link', () => {
+    renderModal()
+    fireEvent.click(screen.getByText(/Installment plan:/))
+    expect(screen.getByText('Installment plan')).toBeInTheDocument()
+  })
+
+  it('returns to the fields view when clicking the back button', () => {
+    renderModal()
+    fireEvent.click(screen.getByText(/Installment plan:/))
+    expect(screen.getByText('Installment plan')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+    expect(screen.getByText('New transaction')).toBeInTheDocument()
+  })
+
+  it('redirects to the installment view when validation catches an installment error', () => {
+    const { container } = renderModal()
+    // Navigate to installment step and configure an invalid plan
+    fireEvent.click(screen.getByText(/Installment plan:/))
+    fireEvent.click(screen.getByRole('button', { name: 'New plan' }))
+    fireEvent.change(screen.getByLabelText('Total installments'), { target: { value: '0' } })
+
+    // Go back to fields and fill in a valid amount
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+    fireEvent.change(singleForm(container).getByLabelText(/amount/i), { target: { value: '10' } })
+
+    // Submit — validation should redirect back to the installment view
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+    expect(screen.getByText('Installment plan')).toBeInTheDocument()
+    expect(screen.getByText(/whole number/)).toBeInTheDocument()
+  })
+})
+
 describe('TransactionModal — following a link to another transaction', () => {
   it('rebuilds the form for the row it switches to', () => {
     // `initialFields` runs in a useState initialiser, so without remounting the
