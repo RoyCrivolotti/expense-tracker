@@ -1,10 +1,14 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 import { BackIcon, CloseIcon } from '../icons'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useVisualViewportRect } from '../hooks/useVisualViewportRect'
 import { useFocusTrap } from '../hooks/useFocusTrap'
+import { useSheetExit, type SheetExit } from '../hooks/useSheetExit'
 import { sheetGrabProps, useSwipeDismiss } from '../hooks/useSwipeDismiss'
 import styles from './Modal.module.css'
+
+/** The scrim at rest. Thins towards nothing as the sheet is dragged away. */
+const SCRIM_ALPHA = 0.5
 
 interface ModalProps {
   title: string
@@ -14,20 +18,50 @@ interface ModalProps {
   children: ReactNode
   /** True while a nested dialog (e.g. a `ConfirmSheet`) is open on top of this modal — see `useFocusTrap`. */
   trapPaused?: boolean
+  /**
+   * True when this modal's `onClose` may raise a confirm instead of actually
+   * closing — an unsaved draft, say. The sheet then stays put and lets that happen,
+   * rather than animating away from a close that is about to be refused. See
+   * `useSheetExit`.
+   */
+  closeMayPrompt?: boolean
 }
 
-export function Modal({ title, subtitle, onClose, onBack, children, trapPaused = false }: ModalProps) {
+function overlayVars(viewport: { top: number; height: number } | null, progress: number, exit: SheetExit | null) {
+  return {
+    ...(viewport ? { top: viewport.top, height: viewport.height } : {}),
+    // Thins out as the sheet is pulled away, so the gesture reads as reversible
+    // progress rather than an on/off switch whose edge you cannot see.
+    '--scrim': String(SCRIM_ALPHA * (1 - progress)),
+    ...(exit
+      ? {
+          '--sheet-exit-ms': `${exit.ms}ms`,
+          '--sheet-from': `${exit.fromPx}px`,
+          '--sheet-exit-ease': exit.ease,
+        }
+      : {}),
+  } as CSSProperties
+}
+
+export function Modal({
+  title,
+  subtitle,
+  onClose,
+  onBack,
+  children,
+  trapPaused = false,
+  closeMayPrompt = false,
+}: ModalProps) {
   useBodyScrollLock(true)
   // Follows the visible slice rather than the layout viewport, so an iOS
   // keyboard panning the screen cannot slide the sheet under the status bar.
   const viewport = useVisualViewportRect()
   const sheetRef = useRef<HTMLDivElement>(null)
-  useFocusTrap(sheetRef, onClose, trapPaused)
-  // Same exit as tapping the backdrop, so consumers that guard their close (see
-  // TransactionModal's unsaved-draft confirm) guard this too. Stood down while a
-  // nested dialog is up: that sheet renders inside this one, and a drag meant for it
-  // would otherwise dismiss what it is sitting on.
-  const { offset, isDragging } = useSwipeDismiss(sheetRef, onClose, !trapPaused)
+
+  const { exit, requestClose } = useSheetExit(sheetRef, onClose, closeMayPrompt)
+  const leaving = exit != null
+  useFocusTrap(sheetRef, requestClose, trapPaused || leaving)
+  const { offset, isDragging, progress } = useSwipeDismiss(sheetRef, requestClose, !trapPaused && !leaving)
 
   const headingRef = useRef<HTMLHeadingElement>(null)
   // Skip the first run: useFocusTrap already sends initial focus to the first
@@ -44,17 +78,21 @@ export function Modal({ title, subtitle, onClose, onBack, children, trapPaused =
     headingRef.current?.focus()
   }, [title])
 
+  const sheetClasses = [styles.sheet, isDragging && styles.sheetDragging, leaving && styles.sheetClosing]
+    .filter(Boolean)
+    .join(' ')
+
   return (
     <div
-      className={styles.overlay}
-      style={viewport ? { top: viewport.top, height: viewport.height } : undefined}
-      onClick={onClose}
+      className={leaving ? `${styles.overlay} ${styles.overlayClosing}` : styles.overlay}
+      style={overlayVars(viewport, progress, exit)}
+      onClick={() => requestClose()}
       role="presentation"
     >
       <div
         ref={sheetRef}
-        className={`${styles.sheet}${isDragging ? ` ${styles.sheetDragging}` : ''}`}
-        style={offset > 0 ? { transform: `translateY(${offset}px)` } : undefined}
+        className={sheetClasses}
+        style={!leaving && offset > 0 ? { transform: `translateY(${offset}px)` } : undefined}
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -76,7 +114,12 @@ export function Modal({ title, subtitle, onClose, onBack, children, trapPaused =
             </h2>
             {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className={`${styles.close} tapActive`}>
+          <button
+            type="button"
+            onClick={() => requestClose()}
+            aria-label="Close"
+            className={`${styles.close} tapActive`}
+          >
             <CloseIcon />
           </button>
         </header>

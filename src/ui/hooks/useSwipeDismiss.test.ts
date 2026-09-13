@@ -37,6 +37,22 @@ function setup({ scrollTop = 0, enabled = true } = {}) {
  */
 const DELIBERATE_MS = 1000
 
+/** Press at y=0, move through each waypoint `ms` apart, lift at the last one. */
+function dragVia(from: Element, waypoints: number[], ms = DELIBERATE_MS) {
+  act(() => {
+    from.dispatchEvent(touch('touchstart', 0))
+  })
+  for (const y of waypoints) {
+    act(() => {
+      now += ms
+      from.dispatchEvent(touch('touchmove', y))
+    })
+  }
+  act(() => {
+    from.dispatchEvent(touch('touchend', waypoints[waypoints.length - 1] ?? 0))
+  })
+}
+
 /** Press at y=0 on `from`, move to `distance`, lift. `ms` sets the drag's velocity. */
 function drag(from: Element, distance: number, ms = DELIBERATE_MS) {
   act(() => {
@@ -124,6 +140,50 @@ describe('useSwipeDismiss', () => {
       body.dispatchEvent(touch('touchmove', -80))
     })
     expect(view.result.current.offset).toBe(0)
+  })
+
+  it('cancels the dismissal when the finger pulls back up before lifting', () => {
+    // Reported from the device: drag well past the threshold, think better of it,
+    // come back up, lift below the threshold — and it still closed.
+    const { body, onDismiss, view } = setup()
+
+    dragVia(body, [THRESHOLD + 120, 50], 60)
+
+    expect(onDismiss).not.toHaveBeenCalled()
+    expect(view.result.current.offset).toBe(0)
+  })
+
+  it('hands the release offset to the caller so the exit can carry on from there', () => {
+    const { body, onDismiss } = setup()
+
+    drag(body, THRESHOLD + 60)
+
+    expect(onDismiss).toHaveBeenCalledWith(THRESHOLD + 60)
+  })
+
+  it('leaves the sheet where the finger dropped it, for the exit to take over', () => {
+    const { body, view } = setup()
+
+    drag(body, THRESHOLD + 60)
+
+    // Not reset to 0: snapping home and unmounting in the same frame is what read
+    // as abrupt.
+    expect(view.result.current.offset).toBe(THRESHOLD + 60)
+    expect(view.result.current.isDragging).toBe(false)
+  })
+
+  it('reports progress against the sheet height, for fading the scrim', () => {
+    const { body, view } = setup()
+
+    act(() => {
+      body.dispatchEvent(touch('touchstart', 0))
+    })
+    act(() => {
+      now += 100
+      body.dispatchEvent(touch('touchmove', SHEET_HEIGHT / 2))
+    })
+
+    expect(view.result.current.progress).toBeCloseTo(0.5, 5)
   })
 
   it('does nothing at all while disabled', () => {

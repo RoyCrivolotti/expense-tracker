@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
-import { resolveDismissSnap } from './sheetDismissSnap'
+import { recentVelocity, resolveDismissSnap, type DragSample } from './sheetDismissSnap'
 
 /**
  * Marks a region of the sheet that always starts a dismissal — the grab handle and
@@ -10,6 +10,18 @@ export const SHEET_GRAB_ATTR = 'data-sheet-grab'
 
 /** Spread onto whichever parts of a sheet should always start a dismissal. */
 export const sheetGrabProps = { [SHEET_GRAB_ATTR]: '' } as const
+
+/** Enough recent positions to cover the velocity window at any sane frame rate. */
+const MAX_SAMPLES = 12
+
+export interface SwipeDismissState {
+  /** How far the sheet has been dragged down, in px. */
+  offset: number
+  /** True while a finger is down, so the caller can drop its transition. */
+  isDragging: boolean
+  /** `offset` as a fraction of the sheet's height, for fading the scrim behind it. */
+  progress: number
+}
 
 /**
  * Swipe a bottom sheet down to dismiss it.
@@ -23,22 +35,23 @@ export const sheetGrabProps = { [SHEET_GRAB_ATTR]: '' } as const
  *                                       scrolled to its top;
  *  - otherwise                        → a scroll, and this hook stays out of it.
  *
- * Returns the live offset so the caller can translate the sheet, and `isDragging` so
- * it can drop its transition while the finger is down.
+ * `onDismiss` is handed the offset the sheet was released at, so the caller can carry
+ * the motion on from where the finger left it rather than restarting from rest.
  */
 export function useSwipeDismiss(
   sheetRef: RefObject<HTMLElement | null>,
-  onDismiss: () => void,
+  onDismiss: (fromOffsetPx: number) => void,
   enabled = true,
-): { offset: number; isDragging: boolean } {
+): SwipeDismissState {
   const [offset, setOffset] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
+  const [progress, setProgress] = useState(0)
 
   const armed = useRef(false)
   const startY = useRef(0)
-  const lastY = useRef(0)
-  const startTime = useRef(0)
-  const lastTime = useRef(0)
+  const peak = useRef(0)
+  const height = useRef(0)
+  const samples = useRef<DragSample[]>([])
   const offsetRef = useRef(0)
 
   // Kept in a ref so the listeners below can stay attached across renders: callers
@@ -55,6 +68,7 @@ export function useSwipeDismiss(
     const apply = (next: number) => {
       offsetRef.current = next
       setOffset(next)
+      setProgress(height.current > 0 ? Math.min(1, next / height.current) : 0)
     }
 
     const stop = () => {
@@ -71,9 +85,11 @@ export function useSwipeDismiss(
       armed.current = onGrab || sheet.scrollTop <= 0
       if (!armed.current) return
       startY.current = touch.clientY
-      lastY.current = touch.clientY
-      startTime.current = performance.now()
-      lastTime.current = startTime.current
+      peak.current = 0
+      // Measured once per gesture: the sheet's height cannot change mid-drag, and
+      // reading it on every move would mean a layout flush per frame.
+      height.current = sheet.offsetHeight
+      samples.current = [{ y: touch.clientY, t: performance.now() }]
       setIsDragging(true)
     }
 
@@ -81,8 +97,9 @@ export function useSwipeDismiss(
       if (!armed.current) return
       const touch = e.touches[0]
       if (!touch) return
-      lastY.current = touch.clientY
-      lastTime.current = performance.now()
+      samples.current.push({ y: touch.clientY, t: performance.now() })
+      if (samples.current.length > MAX_SAMPLES) samples.current.shift()
+
       const dy = touch.clientY - startY.current
       // Downward only. An upward drag is left to the browser so the body keeps
       // scrolling normally, which is also why this cannot be a passive listener:
@@ -93,20 +110,28 @@ export function useSwipeDismiss(
         return
       }
       e.preventDefault()
+      peak.current = Math.max(peak.current, dy)
       apply(dy)
     }
 
     const onTouchEnd = () => {
       if (!armed.current) return
-      const elapsed = lastTime.current - startTime.current
-      const velocityY = elapsed > 0 ? (lastY.current - startY.current) / elapsed : 0
-      const verdict = resolveDismissSnap(offsetRef.current, sheet.offsetHeight, velocityY)
-      stop()
-      // Settles back *before* dismissing rather than animating out: the close may be
-      // refused (TransactionModal confirms an unsaved draft first), and a sheet that
-      // had animated away would be left off-screen behind that confirm. When the
-      // close does go through, the sheet unmounts and the spring-back is never seen.
-      if (verdict === 'dismiss') dismissRef.current()
+      const verdict = resolveDismissSnap({
+        offsetY: offsetRef.current,
+        peakOffsetY: peak.current,
+        sheetHeight: height.current,
+        velocityY: recentVelocity(samples.current),
+      })
+      if (verdict === 'settle') {
+        stop()
+        return
+      }
+      // Deliberately *not* reset to 0 first. The sheet stays where the finger left
+      // it so the caller's exit animation can continue that same movement; snapping
+      // home and vanishing in one frame is what made this feel abrupt.
+      armed.current = false
+      setIsDragging(false)
+      dismissRef.current(offsetRef.current)
     }
 
     sheet.addEventListener('touchstart', onTouchStart, { passive: true })
@@ -121,5 +146,5 @@ export function useSwipeDismiss(
     }
   }, [enabled, sheetRef])
 
-  return { offset, isDragging }
+  return { offset, isDragging, progress }
 }

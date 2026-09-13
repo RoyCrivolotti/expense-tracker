@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { Modal } from './Modal'
 
@@ -119,10 +119,69 @@ describe('Modal — swipe down to dismiss', () => {
     clock.mockRestore()
   }
 
-  it('closes on a drag past the threshold, the same exit as tapping the backdrop', () => {
+  it('closes on a drag past the threshold, the same exit as tapping the backdrop', async () => {
     const onClose = vi.fn()
     drag(openSheet(onClose), 200)
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+  })
+
+  it('animates the sheet out from where the finger left it, then unmounts', async () => {
+    const onClose = vi.fn()
+    const sheet = openSheet(onClose)
+    drag(sheet, 200)
+
+    // Still on screen, leaving under its own steam — the abrupt version reset the
+    // sheet to rest and unmounted it in the same frame the finger lifted.
+    expect(sheet.className).toContain('sheetClosing')
+    expect(onClose).not.toHaveBeenCalled()
+
+    const overlay = sheet.parentElement
+    expect(overlay?.className).toContain('overlayClosing')
+    // Carries on from the release point rather than restarting from the top.
+    expect(overlay?.style.getPropertyValue('--sheet-from')).toBe('200px')
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+  })
+
+  it('skips the exit entirely for a viewer who asked for less movement', () => {
+    // The animation gates the unmount, so under reduced motion it has to be skipped
+    // rather than merely stilled — a zero-length animation would still have to be
+    // waited out, and a suppressed one would never finish at all.
+    // jsdom ships no matchMedia at all, which is also why every other test here
+    // takes the animated path.
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query.includes('prefers-reduced-motion'),
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }))
+    const onClose = vi.fn()
+    const sheet = openSheet(onClose)
+
+    drag(sheet, 200)
+
     expect(onClose).toHaveBeenCalledTimes(1)
+    expect(sheet.className).not.toContain('sheetClosing')
+    vi.unstubAllGlobals()
+  })
+
+  it('hands straight over without animating when the close may be refused', () => {
+    // TransactionModal raises a discard confirm instead of closing; a sheet that had
+    // animated away would be stranded off-screen behind it.
+    const onClose = vi.fn()
+    render(
+      <Modal title="New transaction" onClose={onClose} closeMayPrompt>
+        <p>body</p>
+      </Modal>,
+    )
+    const sheet = screen.getByRole('dialog')
+    Object.defineProperty(sheet, 'offsetHeight', { value: 400, configurable: true })
+    Object.defineProperty(sheet, 'scrollTop', { value: 0, writable: true })
+
+    drag(sheet, 200)
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(sheet.className).not.toContain('sheetClosing')
   })
 
   it('stays open when the drag stops short', () => {
