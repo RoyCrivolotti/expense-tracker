@@ -134,9 +134,61 @@ function OwnerPreferences({
   )
 }
 
-function SystemView({ model, actions }: { model: ExpenseModel; actions: ExpenseActions | undefined }) {
+function SystemView({
+  model,
+  actions,
+  theme,
+  onThemeChange,
+}: {
+  model: ExpenseModel
+  actions: ExpenseActions | undefined
+  theme: ExpenseTheme
+  onThemeChange: (next: ExpenseTheme) => void
+}) {
   return (
     <>
+      <AppearanceSetting theme={theme} onChange={onThemeChange} />
+
+      {actions && (
+        <OwnerPreferences
+          settings={model.dataset.settings}
+          onChange={(patch) => actions.updateSettings(patch)}
+        />
+      )}
+
+      {actions && (
+        <DefaultAccountSetting
+          accounts={model.dataset.accounts}
+          settings={model.dataset.settings}
+          onChange={(accountId) => void actions.updateSettings({ defaultAccountId: accountId })}
+        />
+      )}
+    </>
+  )
+}
+
+function AccountView({
+  model,
+  actions,
+  ownerAccess,
+  accountEmail,
+  onRunSetup,
+}: {
+  model: ExpenseModel
+  actions: ExpenseActions | undefined
+  ownerAccess: { pendingCount: number } | undefined
+  accountEmail: string | undefined
+  onRunSetup: (() => void) | undefined
+}) {
+  return (
+    <>
+      {accountEmail ? <AccountSetting email={accountEmail} /> : null}
+      {ownerAccess ? <AccessRequestsSetting pendingCount={ownerAccess.pendingCount} /> : null}
+
+      {actions && onRunSetup && (
+        <SetupWizardEntry firstRun={needsOnboarding(model.dataset)} onRunSetup={onRunSetup} />
+      )}
+
       {actions ? (
         <DefinitionsEditor model={model} actions={actions} />
       ) : (
@@ -156,52 +208,6 @@ function SystemView({ model, actions }: { model: ExpenseModel; actions: ExpenseA
             )}
           </Card>
         </>
-      )}
-    </>
-  )
-}
-
-function AccountView({
-  model,
-  actions,
-  theme,
-  onThemeChange,
-  ownerAccess,
-  accountEmail,
-  onRunSetup,
-}: {
-  model: ExpenseModel
-  actions: ExpenseActions | undefined
-  theme: ExpenseTheme
-  onThemeChange: (next: ExpenseTheme) => void
-  ownerAccess: { pendingCount: number } | undefined
-  accountEmail: string | undefined
-  onRunSetup: (() => void) | undefined
-}) {
-  return (
-    <>
-      {accountEmail ? <AccountSetting email={accountEmail} /> : null}
-      {ownerAccess ? <AccessRequestsSetting pendingCount={ownerAccess.pendingCount} /> : null}
-
-      {actions && onRunSetup && (
-        <SetupWizardEntry firstRun={needsOnboarding(model.dataset)} onRunSetup={onRunSetup} />
-      )}
-
-      <AppearanceSetting theme={theme} onChange={onThemeChange} />
-
-      {actions && (
-        <OwnerPreferences
-          settings={model.dataset.settings}
-          onChange={(patch) => actions.updateSettings(patch)}
-        />
-      )}
-
-      {actions && (
-        <DefaultAccountSetting
-          accounts={model.dataset.accounts}
-          settings={model.dataset.settings}
-          onChange={(accountId) => void actions.updateSettings({ defaultAccountId: accountId })}
-        />
       )}
     </>
   )
@@ -261,14 +267,14 @@ export function SettingsTab({
         />
       </div>
 
-      {view === 'system' && <SystemView model={model} actions={actions} />}
+      {view === 'system' && (
+        <SystemView model={model} actions={actions} theme={theme} onThemeChange={onThemeChange} />
+      )}
 
       {view === 'account' && (
         <AccountView
           model={model}
           actions={actions}
-          theme={theme}
-          onThemeChange={onThemeChange}
           ownerAccess={ownerAccess}
           accountEmail={accountEmail}
           onRunSetup={onRunSetup}
