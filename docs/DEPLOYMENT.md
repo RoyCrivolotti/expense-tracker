@@ -87,7 +87,7 @@ If Workers Scripts Edit is missing, CI deploy of the backup cron worker fails un
 npx wrangler d1 execute roy-expenses --remote --file=migrations/NNNN_name.sql
 ```
 
-Apply through `0018_reimbursement_links.sql` on production. Personal goal scenarios: `npm run seed:scenarios` (reads gitignored seed config or `FINANCIAL_REVIEW_DIR`).
+Apply through `0019_reimbursable_flags.sql` on production. Personal goal scenarios: `npm run seed:scenarios` (reads gitignored seed config or `FINANCIAL_REVIEW_DIR`).
 
 `0009_installment_plans.sql` adds the `installment_plans` table plus `plan_id` / `installment_index` columns on `transactions`. Apply it before (or with) the code deploy that reads those columns.
 
@@ -108,6 +108,8 @@ Apply through `0018_reimbursement_links.sql` on production. Personal goal scenar
 `0017_claimant_name.sql` adds a nullable `claimant_name` column on `settings` — the name printed at the top of an expense report, so the document identifies who is submitting it. `NULL` reads as `''` and the report simply omits the name line, so existing owners see no change until they fill it in under Settings → Expense reports. Deliberately not derived from the Cloudflare Access email: that identifies the account, not the person, and an address on an expense form reads as a mistake. Owner-agnostic — no placeholder substitution needed.
 
 `0018_reimbursement_links.sql` adds a nullable `settled_by` column on `transactions`, holding the id of the `refund` transaction that reimbursed that row, plus a partial index. It is set when a reimbursement is recorded and cleared if that reimbursement is deleted, so the link is reversible. Deliberately *not* a clearing of `flag_id`: unflagging on settlement would empty the Flagged card just as well, but it throws away which transactions were in which claim — the thing this column exists to record — and cannot be undone, since nothing would remember the flag. `groupTransactionsByFlag` skips settled rows instead, so the card empties and the history survives. Every existing row stays `NULL`, so there is no backfill and no placeholder substitution.
+
+`0019_reimbursable_flags.sql` adds a `reimbursable INTEGER NOT NULL DEFAULT 1` column on `flags`. Flags are generic markers: "Work travel" is money an employer will repay, "Tax deductible" is a note for an accountant that nobody is going to pay. Only a reimbursable flag offers an expense report and a Record reimbursement action — on the others they produce a document headed EXPENSE REPORT with a signature line, addressed to nobody. It defaults to `1` rather than `0` on purpose: the flags that already exist were created when flagging *was* reimbursement, so every one of them is reimbursable, and defaulting to `0` would silently take the buttons away from a feature already in use. Owner-agnostic — no placeholder substitution needed.
 
 ## Old URL
 

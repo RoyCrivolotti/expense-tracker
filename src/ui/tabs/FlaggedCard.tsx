@@ -20,6 +20,8 @@ interface Props {
   onOpenReport: (flagId: number) => void
   onSettle: (group: FlagGroup) => void
   onManage: () => void
+  /** Absent until at least one reimbursement has been recorded. */
+  onViewPast?: (() => void) | undefined
   onSelect?: ((txn: Transaction) => void) | undefined
 }
 
@@ -73,18 +75,23 @@ function FlagGroupSection({
           >
             {hidden > 0 ? `See all ${group.count} in the list` : 'Show these in the list'}
           </button>
-          <button
-            type="button"
-            className={styles.packBtn}
-            onClick={() => onOpenReport(group.flag.id)}
-          >
-            Expense report
-          </button>
+          {/* Only where somebody owes the money back. On a flag you keep just
+              to find things later, an expense report is a document addressed to
+              nobody for money that is not coming. */}
+          {group.flag.reimbursable ? (
+            <button
+              type="button"
+              className={styles.packBtn}
+              onClick={() => onOpenReport(group.flag.id)}
+            >
+              Expense report
+            </button>
+          ) : null}
           {/*
             Hidden once nothing is outstanding: the amount would prefill 0,00 €
             and the form rejects that, so the button would only ever fail.
           */}
-          {group.totalCents > 0 ? (
+          {group.flag.reimbursable && group.totalCents > 0 ? (
             <button
               type="button"
               className={styles.settleBtn}
@@ -114,6 +121,7 @@ export function FlaggedCard({
   onOpenReport,
   onSettle,
   onManage,
+  onViewPast,
   onSelect,
 }: Props) {
   const groups = groupTransactionsByFlag(model.dataset.transactions, model.dataset.flags)
@@ -155,9 +163,16 @@ export function FlaggedCard({
                 {...(onSelect ? { onSelect } : {})}
               />
             ))}
-            <button type="button" className={styles.manageBtn} onClick={onManage}>
-              Manage flags
-            </button>
+            <div className={styles.cardActions}>
+              <button type="button" className={styles.manageBtn} onClick={onManage}>
+                Manage flags
+              </button>
+              {onViewPast ? (
+                <button type="button" className={styles.manageBtn} onClick={onViewPast}>
+                  Past reports
+                </button>
+              ) : null}
+            </div>
           </div>
         </details>
       </Card>

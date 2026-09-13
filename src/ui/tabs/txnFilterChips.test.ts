@@ -5,7 +5,7 @@ function input(overrides: Partial<Parameters<typeof buildActiveFilterChips>[0]> 
   return {
     categories: [{ id: 1, name: 'Travel', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
     accounts: [{ id: 2, name: 'Debit', kind: 'debit' as const, settlement: 'immediate' as const, active: true }],
-    flags: [{ id: 3, name: 'Work travel', color: '#6366f1', sortOrder: 0, active: true }],
+    flags: [{ id: 3, name: 'Work travel', color: '#6366f1', reimbursable: true, sortOrder: 0, active: true }],
     categoryId: 'all' as const,
     accountId: 'all' as const,
     flagId: 'all' as const,

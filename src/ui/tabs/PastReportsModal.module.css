@@ -1,0 +1,79 @@
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.row:last-child {
+  border-bottom: 0;
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.name {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.glyph {
+  flex: none;
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.meta {
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+}
+
+/* Wraps below the name on a narrow screen rather than squeezing it. */
+.actions {
+  flex: none;
+  display: flex;
+  gap: 0.35rem;
+}
+
+.action {
+  padding: 0.35rem 0.65rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 0.6rem;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 419px) {
+  .row {
+    flex-wrap: wrap;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .action {
+    flex: 1;
+  }
+}

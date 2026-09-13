@@ -3,7 +3,14 @@ import type { Flag, Transaction } from '../types'
 import { groupTransactionsByFlag, summarizeFlagGroups } from './flagGroups'
 
 function flag(overrides: Partial<Flag> & { id: number }): Flag {
-  return { name: `Flag ${overrides.id}`, color: '#6366f1', sortOrder: 0, active: true, ...overrides }
+  return {
+    name: `Flag ${overrides.id}`,
+    color: '#6366f1',
+    reimbursable: true,
+    sortOrder: 0,
+    active: true,
+    ...overrides,
+  }
 }
 
 let seq = 0

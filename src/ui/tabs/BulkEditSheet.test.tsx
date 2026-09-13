@@ -196,7 +196,7 @@ describe('BulkEditSheet', () => {
 
   it('offers the flag field once the owner has flags, and can clear one', async () => {
     const model = makeModel()
-    model.dataset.flags = [{ id: 7, name: 'Work travel', color: '#6366f1', sortOrder: 0, active: true }]
+    model.dataset.flags = [{ id: 7, name: 'Work travel', color: '#6366f1', reimbursable: true, sortOrder: 0, active: true }]
     const onApply = vi.fn()
     render(
       <BulkEditSheet count={2} model={model} busy={false} onApply={onApply} onCancel={vi.fn()} />,

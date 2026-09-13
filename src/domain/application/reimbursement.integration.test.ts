@@ -11,7 +11,7 @@ function repoWithClaim() {
     {
       accounts: [{ id: 1, name: 'Cash', kind: 'debit', settlement: 'immediate', active: true }],
       categories: [{ id: 2, name: 'Travel', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
-      flags: [{ id: 4, name: 'Work travel', color: '#6366f1', sortOrder: 0, active: true }],
+      flags: [{ id: 4, name: 'Work travel', color: '#6366f1', reimbursable: true, sortOrder: 0, active: true }],
     },
     OWNER,
   )

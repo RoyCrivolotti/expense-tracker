@@ -3,6 +3,12 @@ import type { ExpenseDataset, Transaction } from '../types'
 import { EU_MONEY_FORMAT } from '../engine/money'
 import { makeAttachment, makeDataset, makeFlag } from '../testing/factories'
 import { downloadExpenseReportCsv, expenseReportCsv } from './expenseReportCsv'
+import { buildExpenseReport } from '../domain/engine/expenseReport'
+
+/** The tests speak in datasets; the CSV now takes the assembled report. */
+function reportFor(dataset: ExpenseDataset, flagId = 1) {
+  return buildExpenseReport(flagId, dataset.transactions, dataset.flags, dataset.attachments)
+}
 
 const options = {
   format: EU_MONEY_FORMAT,
@@ -47,11 +53,7 @@ function headerLine(csv: string): string {
 
 describe('expenseReportCsv', () => {
   it('writes a header, one row per transaction, and a total', () => {
-    const csv = expenseReportCsv(
-      datasetWith([txn(1, '2026-05-02', { flagId: 1 }), txn(2, '2026-05-04', { flagId: 1 })]),
-      1,
-      options,
-    )
+    const csv = expenseReportCsv(reportFor(datasetWith([txn(1, '2026-05-02', { flagId: 1 }), txn(2, '2026-05-04', { flagId: 1 })])), options)
 
     expect(headerLine(csv!)).toBe('Date,Description,Purpose,Category,Account,Amount,Receipts')
     const rows = body(csv!)
@@ -61,24 +63,16 @@ describe('expenseReportCsv', () => {
 
   it('carries the transaction notes through as the business purpose', () => {
     // An approver asks what a dinner was *for*; notes already holds exactly that.
-    const csv = expenseReportCsv(
-      datasetWith([txn(1, '2026-05-02', { flagId: 1, notes: 'Kick-off with Acme' })]),
-      1,
-      options,
-    )
+    const csv = expenseReportCsv(reportFor(datasetWith([txn(1, '2026-05-02', { flagId: 1, notes: 'Kick-off with Acme' })])), options)
 
     expect(body(csv!)[0]).toContain('Kick-off with Acme')
   })
 
   it('breaks the totals out once a reimbursement has been recorded', () => {
-    const csv = expenseReportCsv(
-      datasetWith([
+    const csv = expenseReportCsv(reportFor(datasetWith([
         txn(1, '2026-05-02', { flagId: 1, amountCents: 10_000 }),
         txn(2, '2026-06-14', { flagId: 1, amountCents: 4_000, type: 'refund' }),
-      ]),
-      1,
-      options,
-    )
+      ])), options)
 
     const lines = csv!.split('\n')
     // Claimed stays gross; the credit is negative so the Amount column still
@@ -90,27 +84,19 @@ describe('expenseReportCsv', () => {
   })
 
   it('cross-references receipts per row, so a line ties to a figure', () => {
-    const csv = expenseReportCsv(
-      datasetWith([txn(1, '2026-05-02', { flagId: 1 })], [
+    const csv = expenseReportCsv(reportFor(datasetWith([txn(1, '2026-05-02', { flagId: 1 })], [
         makeAttachment({ id: 1, transactionId: 1 }),
         makeAttachment({ id: 2, transactionId: 1 }),
-      ] as never),
-      1,
-      options,
-    )
+      ] as never)), options)
 
     expect(body(csv!)[0]).toMatch(/,R1 R2$/)
   })
 
   it('writes a credit negative, so it does not read as another expense', () => {
-    const csv = expenseReportCsv(
-      datasetWith([
+    const csv = expenseReportCsv(reportFor(datasetWith([
         txn(1, '2026-05-02', { flagId: 1, amountCents: 10_000 }),
         txn(2, '2026-06-14', { flagId: 1, type: 'refund', amountCents: 4_000 }),
-      ]),
-      1,
-      options,
-    )
+      ])), options)
 
     // The credit follows the claimed lines, so it is row 2.
     expect(body(csv!)[1]).toContain('-40,00')
@@ -119,56 +105,41 @@ describe('expenseReportCsv', () => {
   it('produces nothing for a flag whose only rows are credits', () => {
     // Expenses cancelled after settling: there is no claim left to print, and
     // the document would carry a dash for a period and a negative total.
-    const csv = expenseReportCsv(
-      datasetWith([txn(1, '2026-05-02', { flagId: 1, type: 'refund', amountCents: 4_000 })]),
-      1,
-      options,
-    )
+    const csv = expenseReportCsv(reportFor(datasetWith([txn(1, '2026-05-02', { flagId: 1, type: 'refund', amountCents: 4_000 })])), options)
 
     expect(csv).toBeNull()
   })
 
   it('quotes a description containing a comma', () => {
-    const csv = expenseReportCsv(
-      datasetWith([txn(1, '2026-05-02', { flagId: 1, description: 'Hotel, Madrid' })]),
-      1,
-      options,
-    )
+    const csv = expenseReportCsv(reportFor(datasetWith([txn(1, '2026-05-02', { flagId: 1, description: 'Hotel, Madrid' })])), options)
 
     expect(body(csv!)[0]).toContain('"Hotel, Madrid"')
   })
 
   it('escapes an embedded quote by doubling it', () => {
-    const csv = expenseReportCsv(
-      datasetWith([txn(1, '2026-05-02', { flagId: 1, description: 'The "Grand" Hotel' })]),
-      1,
-      options,
-    )
+    const csv = expenseReportCsv(reportFor(datasetWith([txn(1, '2026-05-02', { flagId: 1, description: 'The "Grand" Hotel' })])), options)
 
     expect(body(csv!)[0]).toContain('"The ""Grand"" Hotel"')
   })
 
   it('falls back to the category when a transaction has no description', () => {
-    const csv = expenseReportCsv(
-      datasetWith([txn(1, '2026-05-02', { flagId: 1, description: '' })]),
-      1,
-      options,
-    )
+    const csv = expenseReportCsv(reportFor(datasetWith([txn(1, '2026-05-02', { flagId: 1, description: '' })])), options)
 
     expect(body(csv!)[0]).toContain('Travel,,Travel')
   })
 
   it('is null for a flag with nothing to claim', () => {
-    expect(expenseReportCsv(datasetWith([]), 1, options)).toBeNull()
+    expect(expenseReportCsv(reportFor(datasetWith([])), options)).toBeNull()
   })
 
   it('totals the same figure as the report', () => {
     const csv = expenseReportCsv(
-      datasetWith([
-        txn(1, '2026-05-02', { flagId: 1, amountCents: 10_000 }),
-        txn(2, '2026-05-04', { flagId: 1, amountCents: 4_000, type: 'refund' }),
-      ]),
-      1,
+      reportFor(
+        datasetWith([
+          txn(1, '2026-05-02', { flagId: 1, amountCents: 10_000 }),
+          txn(2, '2026-05-04', { flagId: 1, amountCents: 4_000, type: 'refund' }),
+        ]),
+      ),
       options,
     )
 
@@ -192,7 +163,7 @@ describe('downloadExpenseReportCsv', () => {
     const click = vi.spyOn(anchor, 'click').mockImplementation(() => {})
     vi.spyOn(document, 'createElement').mockReturnValueOnce(anchor)
 
-    downloadExpenseReportCsv(dataset, flagId, options)
+    downloadExpenseReportCsv(reportFor(dataset, flagId), options)
 
     return { anchor, click, created, revoked }
   }
@@ -222,7 +193,7 @@ describe('downloadExpenseReportCsv', () => {
     })
     const { anchor } = captureDownload(dataset, 1)
 
-    expect(anchor.download).toBe('claim-2026-05.csv')
+    expect(anchor.download).toBe('expense-report-2026-05.csv')
   })
 
   it('releases the object URL rather than leaking it', () => {

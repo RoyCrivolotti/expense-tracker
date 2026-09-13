@@ -11,12 +11,13 @@ const FLAG_COLUMNS: ColumnMap = {
   name: 'name',
   color: 'color',
   description: 'description',
+  reimbursable: 'reimbursable',
   sortOrder: 'sort_order',
   active: 'active',
 }
 
 function coerce(key: keyof NewFlag, value: unknown): unknown {
-  if (key === 'active') return value ? 1 : 0
+  if (key === 'active' || key === 'reimbursable') return value ? 1 : 0
   // An explicit '' from the editor means "no description"; store NULL for it.
   if (key === 'description') return value === '' ? null : (value ?? null)
   return value ?? null
@@ -24,14 +25,15 @@ function coerce(key: keyof NewFlag, value: unknown): unknown {
 
 export async function createFlag(env: Env, owner: string, input: NewFlag): Promise<Flag> {
   const row = await env.DB.prepare(
-    `INSERT INTO flags (owner, name, color, description, sort_order, active)
-     VALUES (?, ?, ?, ?, ?, ?) RETURNING *`,
+    `INSERT INTO flags (owner, name, color, description, reimbursable, sort_order, active)
+     VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *`,
   )
     .bind(
       owner,
       input.name,
       input.color,
       input.description ?? null,
+      input.reimbursable ? 1 : 0,
       input.sortOrder,
       input.active ? 1 : 0,
     )

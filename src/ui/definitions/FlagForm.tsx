@@ -113,6 +113,21 @@ export function FlagForm({
         />
       </div>
 
+      <label className={styles.check}>
+        <input
+          type="checkbox"
+          checked={draft.reimbursable}
+          onChange={(e) => patch({ reimbursable: e.target.checked })}
+        />
+        <span>
+          Someone owes me this money
+          <span className={styles.checkHint}>
+            Adds an expense report and a Record reimbursement action to this flag. Leave it off for
+            a flag you only use to find things later, like tax-deductible spending.
+          </span>
+        </span>
+      </label>
+
       {flag ? (
         <ActiveToggle
           active={draft.active}
