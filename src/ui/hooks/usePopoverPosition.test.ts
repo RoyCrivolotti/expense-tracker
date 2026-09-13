@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
-import { describe, expect, it, beforeEach } from 'vitest'
+import { describe, expect, it, beforeEach, vi } from 'vitest'
 import { resizeObservers } from '../../test/setup'
 import { usePopoverPosition } from './usePopoverPosition'
 
@@ -7,6 +7,26 @@ function elementWithRect(rect: Partial<DOMRect>): HTMLElement {
   const el = document.createElement('div')
   el.getBoundingClientRect = () => ({ top: 0, left: 0, width: 0, height: 0, ...rect }) as DOMRect
   return el
+}
+
+/**
+ * Gives the next <div> the hook creates — its safe-area probe — a real height,
+ * which is the only thing the hook reads the inset from.
+ */
+function withSafeAreaInset(inset: number, run: () => void) {
+  const realCreate = document.createElement.bind(document)
+  const spy = vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+    const el = realCreate(tag)
+    if (tag === 'div') {
+      el.getBoundingClientRect = () => ({ top: 0, left: 0, width: 0, height: inset }) as DOMRect
+    }
+    return el
+  })
+  try {
+    run()
+  } finally {
+    spy.mockRestore()
+  }
 }
 
 function positionFor(trigger: Partial<DOMRect>, popover: Partial<DOMRect>) {
@@ -127,16 +147,41 @@ describe('usePopoverPosition — repositioning after it opens', () => {
   })
 
   it('keeps a popover that fits neither way below the notch', () => {
-    document.documentElement.style.setProperty('--exp-safe-top', '47px')
-    try {
-      // Trigger near the bottom and a popover taller than the band: it cannot
-      // open downwards and cannot fit above, so it pins to the visible band —
-      // which must start below the clock, not at a bare 8px.
+    // jsdom resolves no env(), so the inset is injected by stubbing the probe
+    // element the hook measures.
+    withSafeAreaInset(47, () => {
       const pos = positionFor({ top: 700, bottom: 730, left: 20 }, { width: 200, height: 900 })
       expect(pos?.top).toBe(55)
-    } finally {
-      document.documentElement.style.removeProperty('--exp-safe-top')
-    }
+    })
+  })
+
+  it('measures the inset from a probe element, not from a custom property', () => {
+    // The app's own chrome clears the status bar, but a portalled fixed popover
+    // is placed in raw viewport coordinates and will render under the clock
+    // unless it is told not to. Reading a custom property holding env() is not
+    // a reliable way to learn that: it yields a token stream, and WebKit does
+    // not always resolve env() there. A hidden element whose *height* is the
+    // inset can only ever report a used value.
+    withSafeAreaInset(59, () => {
+      const pos = positionFor({ top: 10, bottom: 20, left: 20 }, { width: 200, height: 2000 })
+      // 8px edge + 59px inset: below the Dynamic Island, not merely on screen.
+      expect(pos?.top).toBe(67)
+    })
+  })
+
+  it('removes the probe when the popover closes', () => {
+    const triggerRef = { current: elementWithRect({ top: 100, bottom: 130, left: 20 }) }
+    const popoverRef = { current: elementWithRect({ width: 200, height: 100 }) }
+    const probes = () =>
+      document.body.querySelectorAll('[data-safe-area-probe]').length
+
+    const { unmount } = renderHook(() => usePopoverPosition(triggerRef, popoverRef))
+    expect(probes()).toBe(1)
+    unmount()
+
+    // A probe per opened popover, left behind, would accumulate for the life of
+    // the page.
+    expect(probes()).toBe(0)
   })
 
   it('caps a tall popover to the visible band rather than letting it overflow', () => {
@@ -198,15 +243,20 @@ describe('usePopoverPosition — when the keyboard hides the trigger', () => {
     }
   }
 
-  it('pins inside the visible band rather than following a trigger under the keyboard', () => {
-    // The real failure: a Flag field low in a long form sits *below* the
-    // keyboard, so anchoring to it puts the popover under the keyboard too —
-    // which is how it appeared to vanish entirely.
+  it('sits as near a keyboard-hidden trigger as the band allows, not at the top', () => {
+    // A Flag field low in a long form sits *below* the keyboard, so anchoring to
+    // it would put the popover under the keyboard too — but pinning to the top
+    // of the screen instead leaves it stranded a long way from the field, which
+    // is what the previous attempt did for every input: its expression,
+    // `max(minTop, min(bandBottom - height, minTop))`, collapses to minTop.
     withViewport(424, 0, () => {
       const pos = positionFor({ top: 717, bottom: 752, left: 20 }, { width: 200, height: 210 })
-      expect(pos?.top).toBe(8)
-      // And low enough to be wholly inside the band, not merely starting in it.
-      expect(pos!.top + 210).toBeLessThanOrEqual(424)
+
+      expect(pos?.top).toBe(206)
+      // Bottom flush with the band, i.e. as close to the hidden trigger below
+      // as it can get — and emphatically not parked at minTop.
+      expect(pos!.top + 210).toBe(416)
+      expect(pos?.top).not.toBe(8)
     })
   })
 

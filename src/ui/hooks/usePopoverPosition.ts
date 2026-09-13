@@ -16,20 +16,13 @@ const GAP = 4
 const EDGE = 8
 const MIN_HEIGHT = 140
 
+
 /**
- * Top edge a flipped popover may not cross.
+ * Below the trigger when it fits, otherwise directly above it, then clamped
+ * into the visible band.
  *
- * `env()` is not readable from JS, so theme.css publishes it as
- * `--exp-safe-top` and this reads that back. Without it a flipped popover
- * clamps to 8px, which on a notched phone is underneath the clock.
- */
-/**
- * Below the trigger, else above it, else pinned to the bottom of the visible
- * band — where the end of the list is, which is where the "new flag" row lives.
- *
- * Pure, so the placement rules are testable without a layout engine. Every
- * figure is in client coordinates: `viewBottom` is `offsetTop + height`, not a
- * bare visual-viewport height.
+ * Pure, so the placement rules are testable without a layout engine — which
+ * matters, because no environment available here has a software keyboard.
  */
 export function verticalPlacement(
   triggerTop: number,
@@ -39,24 +32,21 @@ export function verticalPlacement(
   viewBottom: number,
 ): number {
   const bandBottom = viewBottom - EDGE
-  /*
-   * A trigger outside the visible band cannot be anchored to meaningfully.
-   *
-   * This is the keyboard case, and it is not an edge case: iOS shrinks the
-   * visual viewport from the bottom, so a field low in a long form ends up
-   * *underneath* the keyboard. Following it puts the popover under the keyboard
-   * too — which is exactly the popover that appeared to vanish. Pin it inside
-   * the band instead; being visible beats being adjacent to something that is
-   * not.
-   */
-  if (triggerBottom > bandBottom || triggerTop < minTop) {
-    return Math.max(minTop, Math.min(bandBottom - height, minTop))
-  }
   const below = triggerBottom + GAP
-  if (below + height <= bandBottom) return below
   const above = triggerTop - GAP - height
-  if (above >= minTop) return above
-  return Math.max(minTop, bandBottom - height)
+  const preferred = below + height <= bandBottom ? below : above
+  /*
+   * Clamping is the whole of the keyboard handling: no special case for a
+   * trigger the keyboard has pushed out of view, because this already lands the
+   * popover as close to it as the band allows.
+   *
+   * The special case this replaces read
+   * `Math.max(minTop, Math.min(bandBottom - height, minTop))`, which collapses
+   * to `minTop` for every input — so a keyboard-obscured trigger pinned the
+   * popover to the very top of the screen, far from the field it belongs to.
+   */
+  const lowest = Math.max(minTop, bandBottom - height)
+  return Math.min(Math.max(preferred, minTop), lowest)
 }
 
 /** Left-aligned to the trigger, pulled inside whichever edge it would cross. */
@@ -70,11 +60,6 @@ export function horizontalPlacement(
   const leftLimit = viewLeft + EDGE
   if (triggerLeft + width > rightLimit) return Math.max(leftLimit, rightLimit - width)
   return Math.max(leftLimit, triggerLeft)
-}
-
-function safeTop(): number {
-  const raw = getComputedStyle(document.documentElement).getPropertyValue('--exp-safe-top')
-  return EDGE + (Number.parseFloat(raw) || 0)
 }
 
 /**
@@ -109,6 +94,32 @@ export function usePopoverPosition(
     const popover = popoverRef.current
     if (!trigger || !popover) return
 
+    /*
+     * Measures env(safe-area-inset-top) as a *used* value.
+     *
+     * The app's own chrome keeps clear of the status bar, but a portalled
+     * `position: fixed` popover is placed in raw viewport coordinates and will
+     * happily render under the clock and the battery — which is what made this
+     * look broken on a phone.
+     *
+     * Reading a custom property that holds `env(...)` is not a reliable way to
+     * learn the inset: it hands back a token stream, and WebKit has a long
+     * history of not resolving env() in that position. A hidden element whose
+     * height *is* the inset sidesteps the question — it can only report a used
+     * value, and it is measured fresh on every update so a rotation is picked
+     * up without a listener of its own.
+     */
+    const probe = document.createElement('div')
+    probe.setAttribute('aria-hidden', 'true')
+    // Marked so it is identifiable in the DOM, and assertable in a test — jsdom
+    // drops the env() declaration as unparseable, so the style attribute cannot
+    // be matched on.
+    probe.dataset.safeAreaProbe = ''
+    probe.style.cssText =
+      'position:fixed;top:0;left:0;width:0;height:env(safe-area-inset-top,0px);' +
+      'visibility:hidden;pointer-events:none'
+    document.body.appendChild(probe)
+
     const update = () => {
       const t = triggerRef.current
       const p = popoverRef.current
@@ -134,7 +145,7 @@ export function usePopoverPosition(
       const vw = vv?.width ?? window.innerWidth
       const viewBottom = viewTop + (vv?.height ?? window.innerHeight)
 
-      const minTop = viewTop + safeTop()
+      const minTop = viewTop + EDGE + probe.getBoundingClientRect().height
       // Never collapse to nothing: a sliver of popover is worse than one that
       // overflows slightly and can be scrolled.
       const maxHeight = Math.max(MIN_HEIGHT, viewBottom - EDGE - minTop)
@@ -164,6 +175,7 @@ export function usePopoverPosition(
     window.visualViewport?.addEventListener('resize', update)
     window.visualViewport?.addEventListener('scroll', update)
     return () => {
+      probe.remove()
       observer.disconnect()
       window.removeEventListener('resize', update)
       window.removeEventListener('scroll', update, true)
