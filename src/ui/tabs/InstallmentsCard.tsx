@@ -10,7 +10,7 @@ import {
 } from '../../engine'
 import { formatCents } from '../../engine/money'
 import { fullMonthLabel } from '../../engine/dates'
-import { Card, SectionTitle } from '../components/primitives'
+import { Card, Pill, SectionTitle } from '../components/primitives'
 import { CategoryIcon } from '../components/CategoryIcon'
 import { InstallmentPlansModal } from '../definitions/InstallmentPlansModal'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
@@ -87,6 +87,9 @@ export function InstallmentsCard({ model, actions, month }: Props) {
                     {fullMonthLabel(finalBudgetMonth(plan))}
                   </span>
                 </div>
+                <div className={styles.actions}>
+                  <Pill tone="success">Paid</Pill>
+                </div>
               </button>
             )
           }
@@ -107,6 +110,7 @@ export function InstallmentsCard({ model, actions, month }: Props) {
                 </span>
               </div>
               <div className={styles.actions}>
+                <Pill tone="warning">Due</Pill>
                 <button
                   type="button"
                   className={styles.addBtn}
