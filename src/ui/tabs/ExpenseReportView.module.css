@@ -182,7 +182,7 @@
 }
 
 /* Sets the credits apart from what is being claimed. Referenced as
-   styles.creditsBody from ClaimSheet; CSS modules are typed as a loose record,
+   styles.creditsBody from ExpenseReportSheet; CSS modules are typed as a loose record,
    so a missing rule here fails silently as className={undefined}. */
 .creditsBody {
   background: color-mix(in srgb, var(--color-text-muted) 6%, transparent);

@@ -34,7 +34,7 @@ function modelFor(dataset: ExpenseDataset): ExpenseModel {
 function renderModal(
   dataset: ExpenseDataset,
   overrides: Partial<ExpenseActions> = {},
-  extra: { onOpenPack?: (flagId: number) => void } = {},
+  extra: { onOpenReport?: (flagId: number) => void } = {},
 ) {
   const actions = {
     createFlag: vi.fn().mockResolvedValue(work),
@@ -154,29 +154,29 @@ describe('FlagsModal', () => {
 })
 
 describe('FlagsModal — reaching an archived claim', () => {
-  it('opens the claim pack for an archived flag, closing itself first', async () => {
+  it('opens the expense report for an archived flag, closing itself first', async () => {
     // Archiving is how a claim is marked done, so it drops out of the Flagged
     // card — and a done claim is exactly the one an employer asks to see again.
     // This is the only route back to it.
     const archived = makeFlag({ id: 1, name: 'Work travel', active: false })
-    const onOpenPack = vi.fn()
+    const onOpenReport = vi.fn()
     const { onClose } = renderModal(
       makeDataset({ flags: [archived], transactions: [txn(1)] }),
       {},
-      { onOpenPack },
+      { onOpenReport },
     )
 
-    await userEvent.click(screen.getByRole('button', { name: 'View claim' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Expense report' }))
 
     // Closing first matters: the two render as siblings, so leaving both
     // mounted strands this modal's focus trap under the claim sheet.
     expect(onClose).toHaveBeenCalledTimes(1)
-    expect(onOpenPack).toHaveBeenCalledWith(1)
+    expect(onOpenReport).toHaveBeenCalledWith(1)
   })
 
-  it('offers no claim pack for a flag with nothing on it', () => {
-    renderModal(makeDataset({ flags: [work], transactions: [] }), {}, { onOpenPack: vi.fn() })
+  it('offers no claim report for a flag with nothing on it', () => {
+    renderModal(makeDataset({ flags: [work], transactions: [] }), {}, { onOpenReport: vi.fn() })
 
-    expect(screen.queryByRole('button', { name: 'View claim' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Expense report' })).not.toBeInTheDocument()
   })
 })

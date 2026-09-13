@@ -1,16 +1,16 @@
 import type { Transaction } from '../../types'
 import {
-  claimReference,
-  packReceipts,
-  type PackLine,
-  type ReimbursementPack,
-} from '../../domain/engine/reimbursementPack'
+  reportReference,
+  reportReceipts,
+  type ReportLine,
+  type ExpenseReport,
+} from '../../domain/engine/expenseReport'
 import { formatCents, type MoneyFormat } from '../../engine/money'
 import { formatDayLabel, type Lookup } from '../format'
-import styles from './ReimbursementPackView.module.css'
+import styles from './ExpenseReportView.module.css'
 
 interface SheetProps {
-  pack: ReimbursementPack
+  report: ExpenseReport
   lookup: Lookup
   format: MoneyFormat
   claimantName: string
@@ -22,8 +22,8 @@ interface SheetProps {
 }
 
 /** The document itself: everything that appears on paper, and nothing else. */
-export function ClaimSheet({
-  pack,
+export function ExpenseReportSheet({
+  report,
   lookup,
   format,
   claimantName,
@@ -31,18 +31,18 @@ export function ClaimSheet({
   issuedOn,
   onOpenTransaction,
 }: SheetProps) {
-  const receipts = packReceipts(pack)
+  const receipts = reportReceipts(report)
 
   return (
     <article className={styles.sheet}>
-      <ClaimHeader
-        pack={pack}
+      <ReportHeader
+        report={report}
         claimantName={claimantName}
         currencyCode={currencyCode}
         issuedOn={issuedOn}
       />
-      <ClaimTable pack={pack} lookup={lookup} format={format} />
-      <MissingReceipts pack={pack} lookup={lookup} onOpenTransaction={onOpenTransaction} />
+      <ReportTable report={report} lookup={lookup} format={format} />
+      <MissingReceipts report={report} lookup={lookup} onOpenTransaction={onOpenTransaction} />
 
       {receipts.length > 0 ? (
         <section className={styles.receipts}>
@@ -83,13 +83,13 @@ export function ClaimSheet({
   )
 }
 
-function ClaimHeader({
-  pack,
+function ReportHeader({
+  report,
   claimantName,
   currencyCode,
   issuedOn,
 }: {
-  pack: ReimbursementPack
+  report: ExpenseReport
   claimantName: string
   currencyCode: string
   issuedOn: string
@@ -97,25 +97,25 @@ function ClaimHeader({
   return (
     <header className={styles.header}>
       <div className={styles.headerMain}>
-        <p className={styles.docType}>Expense claim</p>
-        <h1 className={styles.title}>{pack.flag.name}</h1>
-        {pack.flag.description ? <p className={styles.subtitle}>{pack.flag.description}</p> : null}
+        <p className={styles.docType}>Expense report</p>
+        <h1 className={styles.title}>{report.flag.name}</h1>
+        {report.flag.description ? <p className={styles.subtitle}>{report.flag.description}</p> : null}
       </div>
       <dl className={styles.meta}>
         {claimantName ? (
           <div className={styles.metaRow}>
-            <dt>Claimant</dt>
+            <dt>Submitted by</dt>
             <dd>{claimantName}</dd>
           </div>
         ) : null}
         <div className={styles.metaRow}>
           <dt>Reference</dt>
-          <dd>{claimReference(pack)}</dd>
+          <dd>{reportReference(report)}</dd>
         </div>
         <div className={styles.metaRow}>
           <dt>Period</dt>
           <dd>
-            {formatDayLabel(pack.from)} – {formatDayLabel(pack.to)}
+            {formatDayLabel(report.from)} – {formatDayLabel(report.to)}
           </dd>
         </div>
         <div className={styles.metaRow}>
@@ -125,7 +125,7 @@ function ClaimHeader({
         <div className={styles.metaRow}>
           <dt>Items</dt>
           <dd>
-            {pack.lines.length} · {currencyCode}
+            {report.lines.length} · {currencyCode}
           </dd>
         </div>
       </dl>
@@ -133,13 +133,13 @@ function ClaimHeader({
   )
 }
 
-function ClaimRow({
+function ReportRow({
   line,
   lookup,
   format,
   signed = false,
 }: {
-  line: PackLine
+  line: ReportLine
   lookup: Lookup
   format: MoneyFormat
   signed?: boolean
@@ -165,16 +165,16 @@ function ClaimRow({
   )
 }
 
-function ClaimTable({
-  pack,
+function ReportTable({
+  report,
   lookup,
   format,
 }: {
-  pack: ReimbursementPack
+  report: ExpenseReport
   lookup: Lookup
   format: MoneyFormat
 }) {
-  const settled = pack.credits.length > 0
+  const settled = report.credits.length > 0
   return (
     <div className={styles.tableWrap}>
       <table className={styles.table}>
@@ -194,8 +194,8 @@ function ClaimTable({
           </tr>
         </thead>
         <tbody>
-          {pack.lines.map((line) => (
-            <ClaimRow key={line.transaction.id} line={line} lookup={lookup} format={format} />
+          {report.lines.map((line) => (
+            <ReportRow key={line.transaction.id} line={line} lookup={lookup} format={format} />
           ))}
         </tbody>
         {settled ? (
@@ -205,8 +205,8 @@ function ClaimTable({
                 Already reimbursed
               </th>
             </tr>
-            {pack.credits.map((line) => (
-              <ClaimRow
+            {report.credits.map((line) => (
+              <ReportRow
                 key={line.transaction.id}
                 line={line}
                 lookup={lookup}
@@ -219,16 +219,16 @@ function ClaimTable({
         <tfoot>
           <TotalRow
             label="Total claimed"
-            cents={pack.totalClaimedCents}
+            cents={report.totalClaimedCents}
             format={format}
             emphasis={!settled}
           />
           {settled ? (
             <>
-              <TotalRow label="Less reimbursed" cents={-pack.creditedCents} format={format} />
+              <TotalRow label="Less reimbursed" cents={-report.creditedCents} format={format} />
               <TotalRow
                 label="Outstanding"
-                cents={pack.outstandingCents}
+                cents={report.outstandingCents}
                 format={format}
                 emphasis
               />
@@ -281,15 +281,15 @@ function TotalRow({
  * for rows entered through bulk-add, which has no per-row receipt affordance.
  */
 function MissingReceipts({
-  pack,
+  report,
   lookup,
   onOpenTransaction,
 }: {
-  pack: ReimbursementPack
+  report: ExpenseReport
   lookup: Lookup
   onOpenTransaction?: ((txn: Transaction) => void) | undefined
 }) {
-  const bare = pack.missingReceipts
+  const bare = report.missingReceipts
   if (bare.length === 0) return null
 
   return (

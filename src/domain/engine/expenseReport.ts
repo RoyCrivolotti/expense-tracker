@@ -1,7 +1,7 @@
 import type { Flag, Transaction, TransactionAttachment } from '../types'
 import { buildFlagGroup } from './flagGroups'
 
-export interface PackLine {
+export interface ReportLine {
   transaction: Transaction
   receipts: TransactionAttachment[]
   /**
@@ -12,16 +12,16 @@ export interface PackLine {
   receiptRefs: number[]
 }
 
-export interface ReimbursementPack {
+export interface ExpenseReport {
   flag: Flag
   /** What is being claimed: expense rows only. */
-  lines: PackLine[]
+  lines: ReportLine[]
   /**
    * Refunds carrying the same flag — a reimbursement already received, or a
    * ticket handed back mid-trip. Either way they reduce what can be claimed, and
    * either way they are not part of what is being claimed.
    */
-  credits: PackLine[]
+  credits: ReportLine[]
   /** Gross: the sum of `lines`, before anything already came back. */
   totalClaimedCents: number
   /** What the credits add up to, as a positive figure. */
@@ -36,7 +36,7 @@ export interface ReimbursementPack {
    * The lines themselves, not a count: the view lists them so each can be
    * opened, and deriving the same rule twice is how the two drift apart.
    */
-  missingReceipts: PackLine[]
+  missingReceipts: ReportLine[]
 }
 
 /**
@@ -55,18 +55,18 @@ export interface ReimbursementPack {
  * claim document both reduce what can be claimed.
  *
  * Everything else is inherited from `buildFlagGroup` rather than re-derived, so
- * the pack can never disagree with the Flagged card that launched it: cancelled
+ * the report can never disagree with the Flagged card that launched it: cancelled
  * rows are out, non-spend types are out, and `outstandingCents` is the same
  * net-spend figure the card shows. Unlike the card, an archived flag still
  * builds — archiving is how a claim is marked done, and a done claim is exactly
  * the one an employer asks to see again.
  */
-export function buildReimbursementPack(
+export function buildExpenseReport(
   flagId: number,
   transactions: Transaction[],
   flags: Flag[],
   attachments: TransactionAttachment[],
-): ReimbursementPack | null {
+): ExpenseReport | null {
   const group = buildFlagGroup(flagId, transactions, flags)
   if (!group) return null
   // Every remaining row is a credit (the expenses were cancelled or deleted
@@ -87,7 +87,7 @@ export function buildReimbursementPack(
   // Numbering runs across the claimed lines only, and in print order, so R3 on
   // a row is the third figure down the Receipts section.
   let nextRef = 0
-  const toLine = (transaction: Transaction, numbered: boolean): PackLine => {
+  const toLine = (transaction: Transaction, numbered: boolean): ReportLine => {
     const receipts = byTransaction.get(transaction.id) ?? []
     return {
       transaction,
@@ -126,14 +126,14 @@ export function buildReimbursementPack(
  * moves the period, and with it the reference. Anchoring on something that
  * cannot move would mean storing it, which this deliberately does not do.
  */
-export function claimReference(pack: ReimbursementPack): string {
-  const initials = pack.flag.name
+export function reportReference(report: ExpenseReport): string {
+  const initials = report.flag.name
     .split(/\s+/)
     .filter(Boolean)
     .map((word) => [...word][0]?.toUpperCase() ?? '')
     .join('')
     .slice(0, 3)
-  const period = pack.from ? pack.from.slice(0, 7).replace('-', '') : '------'
+  const period = report.from ? report.from.slice(0, 7).replace('-', '') : '------'
   return `${initials || 'CLM'}-${period}`
 }
 
@@ -144,12 +144,12 @@ export function claimReference(pack: ReimbursementPack): string {
  * back to the row that claims it. Credits are excluded: they are not part of
  * what is being claimed, so they are not numbered.
  */
-export function packReceipts(pack: ReimbursementPack): {
+export function reportReceipts(report: ExpenseReport): {
   attachment: TransactionAttachment
   transaction: Transaction
   ref: number
 }[] {
-  return pack.lines.flatMap((line) =>
+  return report.lines.flatMap((line) =>
     line.receipts.map((attachment, index) => ({
       attachment,
       transaction: line.transaction,

@@ -1,13 +1,13 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import type { ExpenseDataset, Transaction } from '../../types'
-import { buildReimbursementPack } from '../../domain/engine/reimbursementPack'
-import { ClaimSheet } from './ClaimSheet'
+import { buildExpenseReport } from '../../domain/engine/expenseReport'
+import { ExpenseReportSheet } from './ExpenseReportSheet'
 import { todayIso } from '../components/transactionFormState'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
-import { downloadReimbursementCsv } from '../../data/reimbursementCsv'
+import { downloadExpenseReportCsv } from '../../data/expenseReportCsv'
 import type { Lookup } from '../format'
-import styles from './ReimbursementPackView.module.css'
+import styles from './ExpenseReportView.module.css'
 
 interface Props {
   dataset: ExpenseDataset
@@ -28,7 +28,7 @@ interface Props {
  * the page is the document: `@media print` drops the app chrome and the two
  * buttons, and the on-screen view is just the same document with a toolbar.
  */
-export function ReimbursementPackView({
+export function ExpenseReportView({
   dataset,
   lookup,
   flagId,
@@ -44,24 +44,24 @@ export function ReimbursementPackView({
    * well would put the nav, the FAB and the month's transactions into the PDF
    * the user is about to hand to somebody.
    */
-  const pack = buildReimbursementPack(flagId, dataset.transactions, dataset.flags, dataset.attachments)
+  const report = buildExpenseReport(flagId, dataset.transactions, dataset.flags, dataset.attachments)
 
   /*
-   * Guarded on `pack`, and declared before the early return so the hook order
-   * is stable. Setting the flag unconditionally meant an empty pack rendered
-   * nothing while leaving `<body data-pack-open>` set for the rest of the
+   * Guarded on `report`, and declared before the early return so the hook order
+   * is stable. Setting the flag unconditionally meant an empty report rendered
+   * nothing while leaving `<body data-report-open>` set for the rest of the
    * session — and theme.css hides #root under that attribute when printing, so
    * Cmd+P anywhere in the app produced a blank page until reload.
    */
   useEffect(() => {
-    if (!pack) return
-    document.body.dataset.packOpen = 'true'
+    if (!report) return
+    document.body.dataset.reportOpen = 'true'
     return () => {
-      delete document.body.dataset.packOpen
+      delete document.body.dataset.reportOpen
     }
-  }, [pack])
+  }, [report])
 
-  if (!pack) return null
+  if (!report) return null
 
   return createPortal(
     <div className={styles.overlay}>
@@ -74,7 +74,7 @@ export function ReimbursementPackView({
             type="button"
             className={styles.secondaryBtn}
             onClick={() =>
-              downloadReimbursementCsv(dataset, flagId, {
+              downloadExpenseReportCsv(dataset, flagId, {
                 format,
                 categoryName: lookup.categoryName,
                 accountName: lookup.accountName,
@@ -89,8 +89,8 @@ export function ReimbursementPackView({
         </div>
       </div>
 
-      <ClaimSheet
-        pack={pack}
+      <ExpenseReportSheet
+        report={report}
         lookup={lookup}
         format={format}
         claimantName={dataset.settings.claimantName}
