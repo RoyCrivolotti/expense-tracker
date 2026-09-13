@@ -18,6 +18,7 @@ export function defaultExpenseSettings(): ExpenseSettings {
     numberLocale: DEFAULT_NUMBER_LOCALE,
     budgetRolloverDay: DEFAULT_BUDGET_ROLLOVER_DAY,
     milestones: defaultMilestones(),
+    claimantName: '',
   }
 }
 

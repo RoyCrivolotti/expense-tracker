@@ -1,0 +1,457 @@
+/*
+ * The deliverable is a printed PDF, so the print rules are the point and the
+ * screen rules are the preview.
+ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  /*
+   * Above the app shell (35) and the batch bar (40), below Modal (50).
+   *
+   * It sat at 1200, which covered the transaction editor too — so the
+   * "attach the missing receipt" links opened an editor *underneath* an opaque
+   * page and read as doing nothing at all. Modal renders inside #root rather
+   * than portalling, so the only thing that decides which wins is this number.
+   */
+  z-index: 45;
+  overflow-y: auto;
+  background: var(--color-bg);
+}
+
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.toolbarActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.closeBtn,
+.secondaryBtn {
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.6rem;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.printBtn {
+  padding: 0.5rem 0.9rem;
+  border: none;
+  border-radius: 0.6rem;
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.sheet {
+  /* Framed as a page. On screen this floated on the app background with no edge,
+     so it read as a table in a tab rather than a document you are about to
+     hand someone. Print strips the frame again — paper supplies its own. */
+  max-width: 48rem;
+  margin: 1.25rem auto 4rem;
+  padding: 2rem 1.75rem 3rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--color-text);
+}
+
+.headerMain {
+  min-width: 0;
+  flex: 1 1 14rem;
+}
+
+.docType {
+  margin: 0 0 0.15rem;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.title {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-muted);
+}
+
+/* Definition list rather than a paragraph: an approver scans for the reference
+   and the period, and labelled pairs survive being read out of order. */
+.meta {
+  margin: 0;
+  flex: 0 1 auto;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.metaRow {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.metaRow dt {
+  color: var(--color-text-muted);
+}
+
+.metaRow dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.range {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+/* A five-column table cannot shrink below its content on a phone; let it scroll
+   in its own box rather than pushing the page sideways. Without the min-width
+   the table squeezed instead of overflowing, wrapping "Sun 7 Jun" onto three
+   lines and "-120,00 €" onto two. */
+.tableWrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Wide enough that the date and the amount never wrap, letting the description
+   take the squeeze instead. */
+.tableWrap .table {
+  min-width: 24rem;
+}
+
+/*
+ * Below this the five columns cannot all fit: 375px leaves ~319px of sheet, and
+ * a 24rem table still pushed Amount to the edge and the receipt refs off-screen
+ * entirely — so the figures you are about to send were the part you could not
+ * see. Category is the one column an approver reads on paper rather than on your
+ * phone, so it is the one that goes; print restores it.
+ */
+@media (max-width: 479px) {
+  .sheet {
+    padding: 1.25rem 1rem 2rem;
+  }
+
+  .hideNarrow {
+    display: none;
+  }
+
+  .tableWrap .table {
+    min-width: 0;
+  }
+}
+
+.purpose {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+/* Sets the credits apart from what is being claimed. Referenced as
+   styles.creditsBody from ExpenseReportSheet; CSS modules are typed as a loose record,
+   so a missing rule here fails silently as className={undefined}. */
+.creditsBody {
+  background: color-mix(in srgb, var(--color-text-muted) 6%, transparent);
+}
+
+.sectionRow {
+  padding-top: 1rem !important;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  text-align: left !important;
+}
+
+.refBadge {
+  display: inline-block;
+  padding: 0.05rem 0.35rem;
+  border-radius: 0.3rem;
+  background: var(--color-surface-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.signature {
+  margin-top: 3rem;
+  max-width: 18rem;
+}
+
+.signatureLine {
+  height: 2.5rem;
+  border-bottom: 1px solid var(--color-text);
+}
+
+.signatureLabel {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.table th,
+.table td {
+  padding: 0.5rem 0.4rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table thead th {
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* A date is never worth wrapping — it is three short tokens or none. */
+.table tbody td:first-child,
+.table thead th:first-child {
+  white-space: nowrap;
+}
+
+.total {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.table tfoot th {
+  text-align: right;
+  font-weight: 650;
+}
+
+.warning {
+  margin: 1rem 0 0;
+  padding: 0.65rem 0.8rem;
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--exp-warning) 14%, transparent);
+  color: var(--color-text);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.warningText {
+  margin: 0;
+}
+
+.warningList {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.warningBtn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.receipts {
+  margin-top: 2.5rem;
+}
+
+.receiptsTitle {
+  font-size: 1.1rem;
+  margin: 0 0 1rem;
+}
+
+.figure {
+  margin: 0 0 1.5rem;
+  /* A receipt split across a page boundary is unreadable and looks like an
+     error to whoever approves the claim. */
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.receiptImage {
+  display: block;
+  width: 100%;
+  max-width: 30rem;
+  height: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+}
+
+.caption {
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.pdfNote {
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+@media print {
+  /*
+   * Force light. The app defaults to a dark theme and printing it produces
+   * pages of solid ink that most printers render as grey mush — and this
+   * document exists to be handed to somebody.
+   */
+  .overlay {
+    position: static;
+    overflow: visible;
+    background: #fff;
+    color-scheme: light;
+  }
+
+  .overlay,
+  .sheet {
+    color: #111;
+  }
+
+  .toolbar {
+    display: none;
+  }
+
+  .sheet {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+  }
+
+  /* Paper supplies the frame; the screen's card edge would print as a box. */
+  .header {
+    border-bottom-color: #111;
+  }
+
+  .tableWrap {
+    overflow: visible;
+  }
+
+  .tableWrap .table {
+    min-width: 0;
+  }
+
+  .refBadge {
+    background: none;
+    padding: 0;
+  }
+
+  .signatureLine {
+    border-bottom-color: #111;
+  }
+
+  /*
+   * The whole warning is addressed to the *user* — "Most employers will send the
+   * claim back for those" — so printing it puts a pre-emptive confession, and an
+   * instruction to reject, on the document handed to finance. Loud on screen,
+   * absent on paper.
+   */
+  .warning {
+    display: none;
+  }
+
+  .table th,
+  .table td,
+  .receiptImage,
+  .pdfNote {
+    border-color: #bbb;
+  }
+
+  /*
+   * Every element that sets its own themed colour has to be listed. `color-scheme`
+   * does not re-resolve the custom properties — those come from `data-theme` —
+   * so an unlisted `var(--color-text)` keeps the dark theme's near-white and
+   * prints as nothing at all on white paper. The warning box did exactly that.
+   */
+  .table thead th,
+  .subtitle,
+  .range,
+  .caption,
+  .docType,
+  .purpose,
+  .sectionRow,
+  .signatureLabel,
+  .metaRow dt {
+    color: #555;
+  }
+
+  .warning,
+  .warningText,
+  .metaRow dd,
+  .refBadge,
+  .receiptsTitle,
+  .pdfNote {
+    color: #111;
+  }
+
+  .warning {
+    background: none;
+    border: 1px solid #bbb;
+  }
+
+  .table thead {
+    display: table-header-group;
+  }
+
+  .table tr {
+    break-inside: avoid;
+  }
+
+  .receipts {
+    break-before: page;
+  }
+}

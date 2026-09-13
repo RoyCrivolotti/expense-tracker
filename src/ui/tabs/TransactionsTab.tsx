@@ -9,10 +9,11 @@ import { TxnFilters } from './TxnFilters'
 import { UpcomingCard } from './UpcomingCard'
 import { InstallmentsCard } from './InstallmentsCard'
 import { FlaggedCard } from './FlaggedCard'
-import { FlagsModal } from '../definitions/FlagsModal'
+import { TransactionsFlagOverlays } from './TransactionsFlagOverlays'
 import { TransactionsSelectFooter } from './TransactionsSelectFooter'
 import { useTransactionsTabState } from './useTransactionsTabState'
 import { RESULTS_ANCHOR_ID, scrollToResults } from './scrollToResults'
+import { useDebouncedAnnouncement } from '../hooks/useDebouncedAnnouncement'
 import styles from './tabs.module.css'
 
 interface TransactionsTabProps {
@@ -26,7 +27,11 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
   const [editingStatement, setEditingStatement] = useState<StatementPaymentRow | null>(null)
   const [statementPending, setStatementPending] = useState(false)
   const [managingFlags, setManagingFlags] = useState(false)
+  const [reportFlagId, setPackFlagId] = useState<number | null>(null)
   const rolloverDay = model.dataset.settings.budgetRolloverDay
+  const announcement = useDebouncedAnnouncement(
+    `${state.listRows.length} transactions match`,
+  )
   const upcoming = useMemo(
     () => detectRecurring(model.dataset.transactions, { forBudgetMonth: month, rolloverDay }),
     [model.dataset, month, rolloverDay],
@@ -46,6 +51,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
               state.setDateScope('allDates')
               scrollToResults()
             }}
+            onOpenReport={setPackFlagId}
             onManage={() => setManagingFlags(true)}
             onSelect={actions.onEdit}
           />
@@ -86,9 +92,15 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
         onToggleSelectMode={state.toggleSelectMode}
       />
 
-      {/* role=status, so applying a filter announces the new result count
-          instead of changing the list silently. */}
-      <div id={RESULTS_ANCHOR_ID} className={styles.resultSummary} role="status">
+      {/*
+        The announcement is a separate, debounced node rather than role=status on
+        the visible summary: that fired on every keystroke in the search box, so
+        a screen reader read a new total for each letter typed.
+      */}
+      <p className={styles.visuallyHidden} role="status">
+        {announcement}
+      </p>
+      <div id={RESULTS_ANCHOR_ID} className={styles.resultSummary}>
         <span className={styles.resultStats}>
           <span>{state.listRows.length} items</span>
           <span>
@@ -142,9 +154,15 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
         />
       ) : null}
 
-      {managingFlags && actions ? (
-        <FlagsModal model={model} actions={actions} onClose={() => setManagingFlags(false)} />
-      ) : null}
+      <TransactionsFlagOverlays
+        model={model}
+        actions={actions}
+        reportFlagId={reportFlagId}
+        onCloseReport={() => setPackFlagId(null)}
+        onOpenReport={setPackFlagId}
+        managingFlags={managingFlags}
+        onCloseManage={() => setManagingFlags(false)}
+      />
 
       <TransactionsSelectFooter actionsEnabled={Boolean(actions)} selection={state} model={model} />
     </div>

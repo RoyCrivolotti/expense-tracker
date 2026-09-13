@@ -88,6 +88,24 @@
   cursor: pointer;
 }
 
+/*
+ * The visible badge is 1.35rem — under a thumb, and it deletes. This grows the
+ * *hit* area without changing what is drawn.
+ *
+ * 32px rather than the usual 44px on purpose: the tile beneath it is only 56px
+ * and opens the receipt, so a 44px target centred on this corner would swallow
+ * most of it — making the destructive action easier to hit than the safe one.
+ */
+.removeBtn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 32px;
+  height: 32px;
+  transform: translate(-50%, -50%);
+}
+
 .removeBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
