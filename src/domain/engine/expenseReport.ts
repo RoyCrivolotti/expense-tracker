@@ -89,9 +89,42 @@ export function buildSettledReport(
   const covered = transactions.filter((t) => t.settledBy === reimbursementId)
   if (covered.length === 0) return null
   const flagId = covered.find((t) => t.flagId != null)?.flagId
-  const flag = flags.find((f) => f.id === flagId)
-  if (!flag) return null
+  const flag =
+    flags.find((f) => f.id === flagId) ??
+    standInFlag(transactions.find((t) => t.id === reimbursementId))
   return assembleReport(flag, covered, attachments)
+}
+
+/**
+ * A header for a past report whose flag is gone.
+ *
+ * This used to return null, which made the **Report** button in Past reports do
+ * nothing at all — no overlay, no error, no explanation. The row stayed in the
+ * list, because that list is built from `settledBy` and never needed the flag.
+ *
+ * It is reachable by more than one route, which is why the fix belongs here
+ * rather than in any one of them: `deleteFlag` clears `flag_id` from *every*
+ * row it owns, settled ones included, and a bulk edit that clears the flag on
+ * the covered rows does the same thing.
+ *
+ * A past report's identity was never really the flag — it is the payment, which
+ * still carries the name typed when it was recorded. The one thing that cannot
+ * be recovered is the reference: `reportReference` derives its initials from
+ * the flag's name, so a reprint after the flag is gone will not match what was
+ * originally submitted. A reference that changed beats a document that will not
+ * open.
+ */
+function standInFlag(payment: Transaction | undefined): Flag {
+  return {
+    id: payment?.id ?? 0,
+    name: payment?.description || 'Reimbursement',
+    color: '#6b7280',
+    reimbursable: true,
+    sortOrder: 0,
+    // Archived, not active: this flag does not exist any more, and nothing
+    // should offer it as somewhere to file new spending.
+    active: false,
+  }
 }
 
 function assembleReport(

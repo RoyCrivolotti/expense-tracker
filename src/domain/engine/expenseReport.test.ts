@@ -215,6 +215,27 @@ describe('buildExpenseReport', () => {
     expect(buildSettledReport(99, [txn(1, '2026-05-02', { flagId: 1 })], [WORK], [])).toBeNull()
   })
 
+  it('keeps a row cancelled after settlement, because the report was already sent', () => {
+    // The live path drops cancelled rows, inheriting the card's rule. A past
+    // report deliberately does not: it reconstructs a document that has already
+    // been submitted, and quietly dropping a line from a reprint would make it
+    // disagree with the copy the employer is holding. Divergence by choice, not
+    // by accident — assembleReport is reached directly here, not via
+    // buildFlagGroup.
+    const report = buildSettledReport(
+      99,
+      [
+        txn(1, '2026-05-02', { flagId: 1, settledBy: 99 }),
+        txn(2, '2026-05-04', { flagId: 1, settledBy: 99, cancelled: true, status: 'cancelled' }),
+        txn(99, '2026-06-14', { type: 'refund', amountCents: 20_000 }),
+      ],
+      [WORK],
+      [],
+    )
+
+    expect(report?.lines).toHaveLength(2)
+  })
+
   it('still builds for an archived flag, so a settled report can be reprinted', () => {
     const report = buildExpenseReport(
       1,

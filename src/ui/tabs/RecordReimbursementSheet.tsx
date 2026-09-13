@@ -5,7 +5,12 @@ import {
   selectedTotalCents,
   type ReimbursementDraft,
 } from '../../domain/engine/reimbursementDraft'
-import { formatCents, formatMoneyInput, parseMoneyToCents } from '../../engine/money'
+import {
+  formatCents,
+  formatMoneyInput,
+  parseMoneyToCents,
+  type MoneyFormat,
+} from '../../engine/money'
 import { resolveDefaultAccountId } from '../../data/defaultAccount'
 import { todayIso } from '../components/transactionFormState'
 import { defaultBudgetMonth } from '../../engine/dates'
@@ -54,6 +59,40 @@ export interface RecordInput {
  */
 function reportName(typed: string, fallback: string): string {
   return typed.trim() || fallback
+}
+
+/**
+ * Says so when the figure typed does not match the rows ticked.
+ *
+ * Ticking is what settles a row — the amount is recorded but never reconciled
+ * against it — so typing 900 while 1.000 of lines are ticked marks all of them
+ * paid and quietly stops tracking the missing 100. Nothing said so before: the
+ * sheet computed both numbers and never compared them.
+ *
+ * Its own component so the parent keeps its branches; that component sits on
+ * the complexity ceiling of 12.
+ */
+function AmountNote({
+  cents,
+  selectedCents,
+  format,
+}: {
+  cents: number
+  selectedCents: number
+  format: MoneyFormat
+}) {
+  const difference = cents - selectedCents
+  if (difference === 0 || selectedCents === 0) return null
+  // One interpolated string rather than interleaved nodes: React splits the
+  // latter into separate text nodes, which puts the figures beyond any matcher
+  // reading the sentence as a whole — screen readers included.
+  const lead = difference < 0 ? 'Short of' : 'More than'
+  const gap = `${lead} the ${formatCents(selectedCents, format)} ticked, by ${formatCents(Math.abs(difference), format)}.`
+  return (
+    <p className={styles.mismatch} role="status">
+      {`${gap} Ticked lines are settled either way — untick anything this payment did not cover.`}
+    </p>
+  )
 }
 
 /** Seeded from the draft; '' only while there is no draft to seed from. */
@@ -178,6 +217,8 @@ export function RecordReimbursementSheet({ group, model, busy, error, onCancel, 
           }}
         />
       </Field>
+
+      <AmountNote cents={cents} selectedCents={selectedCents} format={format} />
 
       <Field label="Report name" as="div">
         <input
