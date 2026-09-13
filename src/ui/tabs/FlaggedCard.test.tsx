@@ -239,3 +239,28 @@ describe('FlaggedCard — recording a reimbursement', () => {
     expect(onSettle).not.toHaveBeenCalled()
   })
 })
+
+describe('FlaggedCard — flags that are not about being paid back', () => {
+  const notes = makeFlag({ id: 2, name: 'Tax deductible', reimbursable: false, sortOrder: 1 })
+
+  it('offers no expense report for a flag nobody owes you on', async () => {
+    // Otherwise it produces a document headed EXPENSE REPORT with a signature
+    // line, addressed to nobody, for money that is not coming.
+    renderCard(makeDataset({ flags: [notes], transactions: [txn({ flagId: 2 })] }))
+
+    await userEvent.click(screen.getByText('Tax deductible'))
+
+    expect(screen.queryByRole('button', { name: 'Expense report' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Record reimbursement' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('still shows the group, since it is still something you flagged', async () => {
+    renderCard(makeDataset({ flags: [notes], transactions: [txn({ flagId: 2 })] }))
+
+    expect(screen.getByText('Tax deductible')).toBeInTheDocument()
+    await userEvent.click(screen.getByText('Tax deductible'))
+    expect(screen.getByRole('button', { name: /in the list/i })).toBeInTheDocument()
+  })
+})

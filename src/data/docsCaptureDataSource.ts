@@ -82,10 +82,12 @@ function demoFlags(stored: StoredTransaction[]): {
       name: 'Work travel',
       color: '#6366f1',
       description: 'Reimbursable — submit monthly',
+      reimbursable: true,
       sortOrder: 0,
       active: true,
     },
-    { id: 970_002, name: 'Tax deductible', color: '#10b981', sortOrder: 1, active: true },
+    // Not reimbursable: a note for the accountant, not money anyone owes back.
+    { id: 970_002, name: 'Tax deductible', color: '#10b981', reimbursable: false, sortOrder: 1, active: true },
   ]
   // Spread across the most recent rows so the card has something to total.
   const recent = [...stored].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
@@ -247,6 +249,7 @@ export const docsCaptureDataSource: ExpenseDataSource = {
       id,
       name: patch.name ?? 'Flag',
       color: patch.color ?? '#6366f1',
+      reimbursable: patch.reimbursable ?? true,
       sortOrder: patch.sortOrder ?? 0,
       active: patch.active ?? true,
       ...(patch.description ? { description: patch.description } : {}),

@@ -99,7 +99,7 @@ describe('useExpenseActions', () => {
 })
 
 describe('useExpenseActions — flags', () => {
-  const flag = { id: 7, name: 'Work travel', color: '#6366f1', sortOrder: 0, active: true }
+  const flag = { id: 7, name: 'Work travel', color: '#6366f1', reimbursable: true, sortOrder: 0, active: true }
 
   function harness(source: Partial<ExpenseDataSource>) {
     let dataset = baseDataset
@@ -121,6 +121,7 @@ describe('useExpenseActions — flags', () => {
       created = await actions.createFlag({
         name: 'Work travel',
         color: '#6366f1',
+        reimbursable: true,
         sortOrder: 0,
         active: true,
       })
@@ -139,7 +140,7 @@ describe('useExpenseActions — flags', () => {
     })
 
     await act(async () => {
-      await actions.createFlag({ name: 'Work travel', color: '#6366f1', sortOrder: 0, active: true })
+      await actions.createFlag({ name: 'Work travel', color: '#6366f1', reimbursable: true, sortOrder: 0, active: true })
       await actions.updateFlag(flag.id, { name: 'Client travel' })
     })
 
@@ -154,7 +155,7 @@ describe('useExpenseActions — flags', () => {
 
     let result
     await act(async () => {
-      await actions.createFlag({ name: 'Work travel', color: '#6366f1', sortOrder: 0, active: true })
+      await actions.createFlag({ name: 'Work travel', color: '#6366f1', reimbursable: true, sortOrder: 0, active: true })
       result = await actions.deleteFlag(flag.id)
     })
 
