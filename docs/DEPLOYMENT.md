@@ -87,7 +87,20 @@ If Workers Scripts Edit is missing, CI deploy of the backup cron worker fails un
 npx wrangler d1 execute roy-expenses --remote --file=migrations/NNNN_name.sql
 ```
 
-Apply through `0019_reimbursable_flags.sql` on production. Personal goal scenarios: `npm run seed:scenarios` (reads gitignored seed config or `FINANCIAL_REVIEW_DIR`).
+Apply through `0019_reimbursable_flags.sql` on production.
+
+> **If `--file` fails with `fetch failed`, use `--command` instead.** Applying `0015`–`0019` to
+> production hit a repeatable `TypeError: fetch failed` on `POST /d1/database/<id>/import`, ~13s in,
+> straight after "Uploading complete". It was specific to the *import* path: `--command` queries
+> against the same database in the same shell succeeded in under a millisecond, the same files
+> imported cleanly into `roy-expenses-dev` minutes earlier, and upgrading to wrangler 4.131.1 changed
+> nothing. There is no migration-tracking table here, so running a file's statements individually
+> through `--command` reaches exactly the same end state — strip the `--` comments, split on `;`, and
+> run them in order. That is how production took `0015`–`0019`.
+>
+> The trade is atomicity: `--file` leaves the database untouched if the import fails partway, whereas
+> statement-by-statement can stop half-applied. Verify after, comparing the resolved schema (via
+> `pragma_table_info`) against dev rather than trusting the statements were transcribed correctly. Personal goal scenarios: `npm run seed:scenarios` (reads gitignored seed config or `FINANCIAL_REVIEW_DIR`).
 
 `0009_installment_plans.sql` adds the `installment_plans` table plus `plan_id` / `installment_index` columns on `transactions`. Apply it before (or with) the code deploy that reads those columns.
 
