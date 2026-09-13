@@ -45,42 +45,44 @@ export function Modal({ title, subtitle, onClose, onBack, children, trapPaused =
   }, [title])
 
   return (
-    <div
-      className={styles.overlay}
-      style={viewport ? { top: viewport.top, height: viewport.height } : undefined}
-      onClick={onClose}
-      role="presentation"
-    >
+    <div className={styles.overlay} onClick={onClose} role="presentation">
+      {/* The scrim covers the whole screen; only this band tracks the visible
+          slice, so nothing behind the modal can show through above the sheet. */}
       <div
-        ref={sheetRef}
-        className={`${styles.sheet}${isDragging ? ` ${styles.sheetDragging}` : ''}`}
-        style={offset > 0 ? { transform: `translateY(${offset}px)` } : undefined}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        onClick={(e) => e.stopPropagation()}
+        className={styles.band}
+        style={viewport ? { top: viewport.top, height: viewport.height } : undefined}
       >
-        {/* Still `aria-hidden`: it is a drag target, but dragging is not something a
-            screen reader can do, and an unlabelled div announces nothing useful. The
-            Close button below is the equivalent that is actually reachable. */}
-        <div className={styles.handle} aria-hidden {...sheetGrabProps} />
-        <header className={styles.header} {...sheetGrabProps}>
-          {onBack && (
-            <button type="button" onClick={onBack} aria-label="Back" className={`${styles.back} tapActive`}>
-              <BackIcon />
+        <div
+          ref={sheetRef}
+          className={`${styles.sheet}${isDragging ? ` ${styles.sheetDragging}` : ''}`}
+          style={offset > 0 ? { transform: `translateY(${offset}px)` } : undefined}
+          role="dialog"
+          aria-modal="true"
+          aria-label={title}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Still `aria-hidden`: it is a drag target, but dragging is not something a
+              screen reader can do, and an unlabelled div announces nothing useful. The
+              Close button below is the equivalent that is actually reachable. */}
+          <div className={styles.handle} aria-hidden {...sheetGrabProps} />
+          <header className={styles.header} {...sheetGrabProps}>
+            {onBack && (
+              <button type="button" onClick={onBack} aria-label="Back" className={`${styles.back} tapActive`}>
+                <BackIcon />
+              </button>
+            )}
+            <div className={styles.titleBlock}>
+              <h2 ref={headingRef} tabIndex={-1}>
+                {title}
+              </h2>
+              {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
+            </div>
+            <button type="button" onClick={onClose} aria-label="Close" className={`${styles.close} tapActive`}>
+              <CloseIcon />
             </button>
-          )}
-          <div className={styles.titleBlock}>
-            <h2 ref={headingRef} tabIndex={-1}>
-              {title}
-            </h2>
-            {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
-          </div>
-          <button type="button" onClick={onClose} aria-label="Close" className={`${styles.close} tapActive`}>
-            <CloseIcon />
-          </button>
-        </header>
-        <div className={styles.body}>{children}</div>
+          </header>
+          <div className={styles.body}>{children}</div>
+        </div>
       </div>
     </div>
   )
