@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { ExpenseDataset, Transaction } from '../../types'
@@ -192,7 +192,61 @@ describe('TransactionModal — closing with unsaved input', () => {
     expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument()
     expect(onClose).not.toHaveBeenCalled()
   })
+
+  it('closes on a swipe down when nothing has been entered', () => {
+    const onClose = vi.fn()
+    renderModal({ onClose })
+    swipeSheetDown()
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument()
+  })
+
+  it('routes a swipe down through the same guard as the close button', () => {
+    // A swipe is a close, not a refresh — which is what it used to be, silently,
+    // via pull-to-refresh firing inside the scroll-locked sheet.
+    const onClose = vi.fn()
+    const { container } = renderModal({ onClose })
+    fireEvent.change(singleForm(container).getByLabelText('Description'), {
+      target: { value: 'Coffee' },
+    })
+
+    swipeSheetDown()
+
+    expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(singleForm(container).getByLabelText('Description')).toHaveValue('Coffee')
+  })
 })
+
+/** jsdom has no TouchEvent constructor; the gesture only reads `touches[0]`. */
+function touchEvent(type: string, clientY: number): Event {
+  const event = new Event(type, { bubbles: true, cancelable: true })
+  Object.defineProperty(event, 'touches', { value: [{ clientY }] })
+  return event
+}
+
+/** Drags the sheet far enough down to dismiss it, slowly enough that the distance
+ *  decides rather than the fling escape in `resolveDismissSnap`. */
+function swipeSheetDown(distance = 200) {
+  const sheet = screen.getByRole('dialog')
+  Object.defineProperty(sheet, 'offsetHeight', { value: 400, configurable: true })
+  Object.defineProperty(sheet, 'scrollTop', { value: 0, writable: true })
+  let now = 0
+  const clock = vi.spyOn(performance, 'now').mockImplementation(() => now)
+  act(() => {
+    sheet.dispatchEvent(touchEvent('touchstart', 0))
+  })
+  act(() => {
+    now += 1000
+    sheet.dispatchEvent(touchEvent('touchmove', distance))
+  })
+  act(() => {
+    sheet.dispatchEvent(touchEvent('touchend', distance))
+  })
+  clock.mockRestore()
+}
 
 const receipt = (name = 'flight.jpg') =>
   new File([new Uint8Array([1, 2, 3])], name, { type: 'image/jpeg' })

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { Modal } from './Modal'
 
@@ -80,5 +80,72 @@ describe('Modal — staying inside the visible area', () => {
     const overlay = container.querySelector<HTMLElement>('[role="presentation"]')
     expect(overlay?.style.top).toBe('')
     expect(overlay?.style.height).toBe('')
+  })
+})
+
+describe('Modal — swipe down to dismiss', () => {
+  /** jsdom has no TouchEvent constructor; the hook only reads `touches[0]`. */
+  function touch(type: string, clientY: number): Event {
+    const event = new Event(type, { bubbles: true, cancelable: true })
+    Object.defineProperty(event, 'touches', { value: [{ clientY }] })
+    return event
+  }
+
+  function openSheet(onClose: () => void) {
+    render(
+      <Modal title="New transaction" onClose={onClose}>
+        <p>body</p>
+      </Modal>,
+    )
+    const sheet = screen.getByRole('dialog')
+    Object.defineProperty(sheet, 'offsetHeight', { value: 400, configurable: true })
+    Object.defineProperty(sheet, 'scrollTop', { value: 0, writable: true })
+    return sheet
+  }
+
+  function drag(sheet: HTMLElement, distance: number) {
+    let now = 0
+    const clock = vi.spyOn(performance, 'now').mockImplementation(() => now)
+    act(() => {
+      sheet.dispatchEvent(touch('touchstart', 0))
+    })
+    act(() => {
+      now += 1000 // slow, so distance decides rather than the fling escape
+      sheet.dispatchEvent(touch('touchmove', distance))
+    })
+    act(() => {
+      sheet.dispatchEvent(touch('touchend', distance))
+    })
+    clock.mockRestore()
+  }
+
+  it('closes on a drag past the threshold, the same exit as tapping the backdrop', () => {
+    const onClose = vi.fn()
+    drag(openSheet(onClose), 200)
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('stays open when the drag stops short', () => {
+    const onClose = vi.fn()
+    drag(openSheet(onClose), 20)
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('ignores the gesture while a nested dialog is up', () => {
+    // The nested sheet renders inside this one, so a drag meant for it would
+    // otherwise dismiss what it is sitting on.
+    const onClose = vi.fn()
+    render(
+      <Modal title="New transaction" onClose={onClose} trapPaused>
+        <p>body</p>
+      </Modal>,
+    )
+    const sheet = screen.getByRole('dialog')
+    Object.defineProperty(sheet, 'offsetHeight', { value: 400, configurable: true })
+    Object.defineProperty(sheet, 'scrollTop', { value: 0, writable: true })
+
+    drag(sheet, 200)
+
+    expect(onClose).not.toHaveBeenCalled()
   })
 })
