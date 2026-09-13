@@ -77,6 +77,9 @@ interface Props {
 }
 
 export function TransactionModal({ model, actions, editing, seed, hint, onClose }: Props) {
+  // The flag picker portals out of this Modal and runs its own focus trap, so
+  // this Modal's trap must stand down while it is open.
+  const [popoverOpen, setPopoverOpen] = useState(false)
   const { showToast } = useToast()
   const [mode, setMode] = useState<'single' | 'batch'>('single')
   // Batch mode only makes sense for a from-scratch add: a seed (duplicate,
@@ -116,7 +119,7 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
       title={titleFor(editing, mode)}
       {...(subtitle ? { subtitle } : {})}
       onClose={modalOnClose}
-      trapPaused={confirming}
+      trapPaused={confirming || popoverOpen}
     >
       {canBatch && <ModeToggle mode={mode} onChange={setMode} />}
       {canBatch && (
@@ -126,6 +129,7 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
           onClose={onClose}
           hidden={mode !== 'batch'}
           onDirtyChange={setBatchDirty}
+          onTrapPausedChange={setPopoverOpen}
         />
       )}
       <TransactionForm
@@ -138,6 +142,7 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
         onClose={onClose}
         hidden={canBatch && mode === 'batch'}
         onDirtyChange={setSingleDirty}
+        onTrapPausedChange={setPopoverOpen}
       />
       {confirming ? (
         <ConfirmSheet

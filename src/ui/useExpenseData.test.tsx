@@ -6,6 +6,7 @@ import { defaultExpenseSettings } from '../engine'
 import { useExpenseData } from './useExpenseData'
 
 const emptyDataset: ExpenseDataset = {
+  flags: [],
   categories: [],
   accounts: [],
   transactions: [],

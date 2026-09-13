@@ -7,6 +7,7 @@ import { ExpensesOnboarding } from './ExpensesOnboarding'
 
 function datasetWith(overrides: Partial<ExpenseDataset> = {}): ExpenseDataset {
   return {
+    flags: [],
     categories: [],
     accounts: [],
     transactions: [],

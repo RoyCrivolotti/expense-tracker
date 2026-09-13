@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
-import type { Account, Category, TxnStatus, TxnType } from '../../types'
+import type { Account, Category, Flag, TxnStatus, TxnType } from '../../types'
 import styles from './tabs.module.css'
 import { ActiveFilterChips } from './ActiveFilterChips'
 import { buildActiveFilterChips } from './txnFilterChips'
 import {
   CategoryAccountRow,
   DateScopeRow,
+  FlagRow,
   SearchRow,
   StatusTypeRow,
 } from './TxnFilterRows'
@@ -17,10 +18,12 @@ export type StatusFilter = TxnStatus | 'all'
 export interface TxnFiltersProps {
   categories: Category[]
   accounts: Account[]
+  flags: Flag[]
   query: string
   status: StatusFilter
   categoryId: number | 'all'
   accountId: number | 'all'
+  flagId: number | 'all' | 'none'
   txnType: TxnType | 'all'
   dateScope: TxnDateScope
   customDateFrom: string
@@ -33,6 +36,7 @@ export interface TxnFiltersProps {
   onQuery: (value: string) => void
   onCategory: (value: number | 'all') => void
   onAccount: (value: number | 'all') => void
+  onFlag: (value: number | 'all' | 'none') => void
   onStatus: (value: StatusFilter) => void
   onTxnType: (value: TxnType | 'all') => void
   onDateScope: (value: TxnDateScope) => void
@@ -90,6 +94,14 @@ export function TxnFilters(props: TxnFiltersProps) {
             onCategory={props.onCategory}
             onAccount={props.onAccount}
           />
+          {props.flags.length > 0 ? (
+            <FlagRow
+              flags={props.flags}
+              flagId={props.flagId}
+              selectMode={props.selectMode}
+              onFlag={props.onFlag}
+            />
+          ) : null}
           <StatusTypeRow
             status={props.status}
             txnType={props.txnType}

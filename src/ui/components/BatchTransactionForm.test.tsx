@@ -4,13 +4,14 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 vi.mock('../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: () => true }))
 import type { ExpenseDataset } from '../../types'
 import { defaultExpenseSettings } from '../../engine'
-import type { ExpenseActions } from '../actions'
+import { makeActions } from '../../testing/makeActions'
 import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
 import type { ExpenseModel } from '../useExpenseData'
 import { BatchTransactionForm } from './BatchTransactionForm'
 
 function dataset(): ExpenseDataset {
   return {
+    flags: [{ id: 7, name: 'Work travel', color: '#6366f1', sortOrder: 0, active: true }],
     categories: [
       { id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true },
       { id: 2, name: 'Dining out', monthlyBudgetCents: 0, sortOrder: 1, active: true },
@@ -48,6 +49,7 @@ function model(): ExpenseModel {
       account: () => undefined,
       categoryName: () => '',
       accountName: () => '',
+      flag: () => undefined,
       installmentPlan: () => undefined,
     },
     descriptionIndex: {
@@ -58,43 +60,6 @@ function model(): ExpenseModel {
       resolve: () => undefined,
     },
     months: [],
-  }
-}
-
-function makeActions(overrides: Partial<ExpenseActions> = {}): ExpenseActions {
-  return {
-    onEdit: vi.fn(),
-    onAdd: vi.fn(),
-    onDuplicate: vi.fn(),
-    createTransaction: vi.fn().mockResolvedValue(undefined),
-    createTransactions: vi.fn().mockResolvedValue(undefined),
-    updateTransaction: vi.fn().mockResolvedValue(undefined),
-    deleteTransaction: vi.fn().mockResolvedValue(undefined),
-    deleteTransactions: vi.fn().mockResolvedValue(undefined),
-    updateTransactions: vi.fn().mockResolvedValue(undefined),
-    setStatementPaid: vi.fn().mockResolvedValue(undefined),
-    setCashActual: vi.fn().mockResolvedValue(undefined),
-    createCategory: vi.fn().mockResolvedValue(undefined),
-    updateCategory: vi.fn().mockResolvedValue(undefined),
-    deleteCategory: vi.fn().mockResolvedValue({ reassignedToId: null }),
-    createAccount: vi.fn().mockResolvedValue(undefined),
-    updateAccount: vi.fn().mockResolvedValue(undefined),
-    deleteAccount: vi.fn().mockResolvedValue({ reassignedToId: null }),
-    updateSettings: vi.fn().mockResolvedValue(undefined),
-    updateGoals: vi.fn().mockResolvedValue(undefined),
-    createScenario: vi.fn(),
-    updateScenario: vi.fn().mockResolvedValue(undefined),
-    deleteScenario: vi.fn().mockResolvedValue(undefined),
-    createInstallmentPlan: vi.fn(),
-    updateInstallmentPlan: vi.fn().mockResolvedValue(undefined),
-    deleteInstallmentPlan: vi.fn().mockResolvedValue(undefined),
-    createWealthAccount: vi.fn(),
-    updateWealthAccount: vi.fn(),
-    deleteWealthAccount: vi.fn(),
-    createWealthCheckin: vi.fn(),
-    updateWealthCheckin: vi.fn(),
-    deleteWealthCheckin: vi.fn(),
-    ...overrides,
   }
 }
 
@@ -287,6 +252,58 @@ describe('BatchTransactionForm — save', () => {
     expect(saved[0]).toMatchObject({ description: 'Mercadona', amountCents: 1250, accountId: 1, categoryId: 1 })
     expect(saved[1]).toMatchObject({ description: 'Coffee', amountCents: 800, accountId: 1, categoryId: 1 })
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('applies the form-level flag to every saved row', async () => {
+    const createTransactions = vi.fn().mockResolvedValue(undefined)
+    renderForm(makeActions({ createTransactions }))
+    fireEvent.change(amountInputs()[0]!, { target: { value: '198,40' } })
+    fireEvent.change(descriptionInputs()[0]!, { target: { value: 'Flight' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /add another date/i }))
+    fireEvent.change(amountInputs()[1]!, { target: { value: '412' } })
+    fireEvent.change(descriptionInputs()[1]!, { target: { value: 'Hotel' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /no flag/i }))
+    fireEvent.click(await screen.findByRole('button', { name: /work travel/i }))
+
+    fireEvent.click(screen.getByRole('button', { name: /add 2 transactions/i }))
+
+    await waitFor(() => expect(createTransactions).toHaveBeenCalledTimes(1))
+    const saved = createTransactions.mock.calls[0]![0] as { flagId?: number }[]
+    expect(saved.map((t) => t.flagId)).toEqual([7, 7])
+  })
+
+  it('leaves rows unflagged when no flag is chosen', async () => {
+    const createTransactions = vi.fn().mockResolvedValue(undefined)
+    renderForm(makeActions({ createTransactions }))
+    fireEvent.change(amountInputs()[0]!, { target: { value: '5' } })
+    fireEvent.change(descriptionInputs()[0]!, { target: { value: 'Snack' } })
+    fireEvent.click(screen.getByRole('button', { name: /add 1 transaction/i }))
+
+    await waitFor(() => expect(createTransactions).toHaveBeenCalledTimes(1))
+    const saved = createTransactions.mock.calls[0]![0] as Record<string, unknown>[]
+    expect(saved[0]).not.toHaveProperty('flagId')
+  })
+
+  it('counts a chosen flag as unsaved input, so closing warns even with no rows typed', () => {
+    const onDirtyChange = vi.fn()
+    render(
+      <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
+        <BatchTransactionForm
+          model={model()}
+          actions={makeActions()}
+          onClose={vi.fn()}
+          onDirtyChange={onDirtyChange}
+        />
+      </MoneyFormatProvider>,
+    )
+    expect(onDirtyChange).toHaveBeenLastCalledWith(false)
+
+    fireEvent.click(screen.getByRole('button', { name: /no flag/i }))
+    fireEvent.click(screen.getByRole('button', { name: /work travel/i }))
+
+    expect(onDirtyChange).toHaveBeenLastCalledWith(true)
   })
 
   it('surfaces a rejected save as a toast and does not close the modal', async () => {

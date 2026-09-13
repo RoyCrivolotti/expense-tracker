@@ -30,6 +30,8 @@ interface FormProps {
   /** Reports whether the form has diverged from its opening state, so a caller
    * can warn before discarding it (e.g. closing the modal without saving). */
   onDirtyChange?: (dirty: boolean) => void
+  /** Raised while a portalled popover owns focus, so the Modal pauses its trap. */
+  onTrapPausedChange?: ((paused: boolean) => void) | undefined
 }
 
 function toInput(form: FormFields, cents: number, editing: Transaction | null): NewTransaction {
@@ -43,6 +45,9 @@ function toInput(form: FormFields, cents: number, editing: Transaction | null): 
     amountCents: cents,
     cancelled: editing?.cancelled ?? false,
     ...(form.notes.trim() ? { notes: form.notes.trim() } : {}),
+    // Always sent, including as null — on edit that is how the flag is cleared,
+    // and an absent key would leave the old one in place.
+    flagId: form.flagId,
   }
 }
 
@@ -94,6 +99,7 @@ export function TransactionForm({
   onClose,
   hidden,
   onDirtyChange,
+  onTrapPausedChange,
 }: FormProps) {
   const format = useMoneyFormat()
   const [form, setForm] = useState<FormFields>(() => initialFields(editing, model, format, seed))
@@ -167,6 +173,7 @@ export function TransactionForm({
             model={model}
             editing={editing}
             onAcceptSuggestion={(s) => acceptDescriptionSuggestion(s, model, setForm)}
+            onTrapPausedChange={onTrapPausedChange}
           />
           <button
             type="button"

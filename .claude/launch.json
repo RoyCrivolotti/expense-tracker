@@ -4,13 +4,46 @@
     {
       "name": "dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 5173
     },
     {
       "name": "dev-docs",
       "runtimeExecutable": "sh",
-      "runtimeArgs": ["-c", "DOCS_CAPTURE=1 npm run dev"],
+      "runtimeArgs": [
+        "-c",
+        "DOCS_CAPTURE=1 npm run dev"
+      ],
+      "port": 5173
+    },
+    {
+      "name": "dev-docs-receipts",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd ../expense-tracker-receipts && DOCS_CAPTURE=1 npm run dev"
+      ],
+      "port": 5173
+    },
+    {
+      "name": "dev-docs-pack",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd ../expense-tracker-pack && DOCS_CAPTURE=1 npm run dev"
+      ],
+      "port": 5173
+    },
+    {
+      "name": "dev-docs-settlement",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd ../expense-tracker-settlement && DOCS_CAPTURE=1 npm run dev"
+      ],
       "port": 5173
     }
   ]

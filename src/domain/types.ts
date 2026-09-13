@@ -35,6 +35,25 @@ export interface Account {
 }
 
 /**
+ * A reusable marker a user applies to transactions to track something that
+ * outlives a budget month — "Work travel — reimburse", "Tax deductible". A
+ * category says what the money was for; a flag says what still has to happen
+ * about it. Setting `active: false` archives a flag: it drops out of the
+ * pickers and the Flagged summary but keeps its existing links, so a settled
+ * claim stays readable in history.
+ */
+export interface Flag {
+  id: number
+  name: string
+  /** Hex, `#rrggbb`. Presets come from SCENARIO_COLORS; custom values allowed. */
+  color: string
+  /** Optional note explaining what the flag is for, shown under its name. */
+  description?: string
+  sortOrder: number
+  active: boolean
+}
+
+/**
  * A stored transaction. `status` is NOT stored — only `cancelled` is. The
  * effective status is derived from the account's settlement and the matching
  * statement's paid flag (see engine/status.ts).
@@ -59,6 +78,8 @@ export interface StoredTransaction {
   planId?: number
   /** Which payment in the plan schedule this row is (1-based), when plan-linked. */
   installmentIndex?: number
+  /** Flag applied to this row, when any. At most one (see migrations/0015). */
+  flagId?: number
 }
 
 /** A transaction with its derived status, as consumed by the compute engine. */
@@ -238,6 +259,7 @@ export interface CashActual {
 export interface ExpenseDataset {
   categories: Category[]
   accounts: Account[]
+  flags: Flag[]
   /** Transactions with derived status already applied. */
   transactions: Transaction[]
   accountStatements: AccountStatement[]

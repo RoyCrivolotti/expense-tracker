@@ -14,6 +14,8 @@ export interface FormFields {
   date: string
   budgetMonth: string
   notes: string
+  /** null = no flag. Kept out of the string-y fields since it is an id. */
+  flagId: number | null
 }
 
 export type Setter = <K extends keyof FormFields>(key: K, value: FormFields[K]) => void
@@ -42,6 +44,7 @@ function defaultFields(model: ExpenseModel): FormFields {
     date: today,
     budgetMonth: defaultBudgetMonth(today, model.dataset.settings.budgetRolloverDay),
     notes: '',
+    flagId: null,
   }
 }
 
@@ -56,6 +59,7 @@ function applySeed(defaults: FormFields, seed: TransactionSeed, format: MoneyFor
     ...(seed.date != null ? { date: seed.date } : {}),
     ...(seed.budgetMonth != null ? { budgetMonth: seed.budgetMonth } : {}),
     notes: '',
+    flagId: null,
   }
 }
 
@@ -76,6 +80,7 @@ export function initialFields(
       date: editing.date,
       budgetMonth: editing.budgetMonth,
       notes: editing.notes ?? '',
+      flagId: editing.flagId ?? null,
     }
   }
   const defaults = defaultFields(model)

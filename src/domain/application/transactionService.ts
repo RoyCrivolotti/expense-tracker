@@ -9,6 +9,7 @@ const BULK_PATCH_KEYS = new Set<string>([
   'type',
   'date',
   'budgetMonth',
+  'flagId',
 ])
 
 const VALID_TXN_TYPES = new Set<string>(['expense', 'income', 'investment', 'refund'])
@@ -32,6 +33,8 @@ const FIELD_VALIDATORS: Record<string, (v: unknown, p: BulkTransactionPatch) => 
   },
   date: (v, p) => { p.date = requirePattern(v, /^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD') },
   budgetMonth: (v, p) => { p.budgetMonth = requirePattern(v, /^\d{4}-\d{2}$/, 'budgetMonth must be YYYY-MM') },
+  // null is meaningful here: it is how a selection is unflagged.
+  flagId: (v, p) => { p.flagId = v === null ? null : requirePositiveInt(v, 'flagId') },
 }
 
 export function validateBulkUpdatePatch(raw: unknown): BulkTransactionPatch {
