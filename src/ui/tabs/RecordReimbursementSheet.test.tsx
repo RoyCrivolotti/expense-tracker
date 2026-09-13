@@ -9,7 +9,7 @@ import { netSpendCents } from '../../domain/engine/transactions'
 import type { FlagGroup } from '../../domain/engine/flagGroups'
 import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
 import type { ExpenseModel } from '../useExpenseData'
-import { SettleClaimSheet } from './SettleClaimSheet'
+import { RecordReimbursementSheet } from './RecordReimbursementSheet'
 
 const WORK = makeFlag({ id: 1, name: 'Work travel' })
 
@@ -39,7 +39,7 @@ function renderSheet(g: FlagGroup) {
   const onCancel = vi.fn()
   render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
-      <SettleClaimSheet group={g} model={model()} busy={false} onCancel={onCancel} onRecord={onRecord} />
+      <RecordReimbursementSheet group={g} model={model()} busy={false} onCancel={onCancel} onRecord={onRecord} />
     </MoneyFormatProvider>,
   )
   return { onRecord, onCancel }
@@ -49,7 +49,7 @@ function lines() {
   return screen.getAllByRole('checkbox')
 }
 
-describe('SettleClaimSheet', () => {
+describe('RecordReimbursementSheet', () => {
   it('offers every outstanding line, ticked', () => {
     renderSheet(group([txn(1, { description: 'Flight' }), txn(2, { description: 'Hotel' })]))
 
@@ -120,7 +120,7 @@ describe('SettleClaimSheet', () => {
     const settled = group([txn(1), txn(2, { type: 'refund' })])
     const { container } = render(
       <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
-        <SettleClaimSheet
+        <RecordReimbursementSheet
           group={settled}
           model={model()}
           busy={false}

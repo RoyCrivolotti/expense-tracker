@@ -5,7 +5,7 @@ import { makeActions } from '../../testing/makeActions'
 import { makeFlag, makeTransaction } from '../../testing/factories'
 import { netSpendCents } from '../../domain/engine/transactions'
 import type { FlagGroup } from '../../domain/engine/flagGroups'
-import { useClaimSettlement } from './useClaimSettlement'
+import { useReimbursement } from './useReimbursement'
 
 const rows = [makeTransaction({ id: 1, flagId: 4, amountCents: 10_000 })]
 const group: FlagGroup = {
@@ -24,10 +24,10 @@ const payment = {
   amountCents: 10_000,
 }
 
-describe('useClaimSettlement', () => {
+describe('useReimbursement', () => {
   it('closes the sheet once the payment is recorded', async () => {
     const actions = makeActions()
-    const { result } = renderHook(() => useClaimSettlement(actions))
+    const { result } = renderHook(() => useReimbursement(actions))
 
     act(() => result.current.open(group))
     expect(result.current.group).toBe(group)
@@ -40,7 +40,7 @@ describe('useClaimSettlement', () => {
 
   it('records it as a refund, which is what nets it against the spending', () => {
     const actions = makeActions()
-    const { result } = renderHook(() => useClaimSettlement(actions))
+    const { result } = renderHook(() => useReimbursement(actions))
 
     act(() => result.current.record(payment, [1]))
 
@@ -56,7 +56,7 @@ describe('useClaimSettlement', () => {
       createTransaction: vi.fn().mockResolvedValue(makeTransaction({ id: 99 })),
       updateTransactions: vi.fn().mockRejectedValue(new Error('Receipt storage is full')),
     })
-    const { result } = renderHook(() => useClaimSettlement(actions))
+    const { result } = renderHook(() => useReimbursement(actions))
 
     act(() => result.current.open(group))
     act(() => result.current.record(payment, [1]))
@@ -71,7 +71,7 @@ describe('useClaimSettlement', () => {
     const actions = makeActions({
       updateTransactions: vi.fn().mockRejectedValue(new Error('network down')),
     })
-    const { result } = renderHook(() => useClaimSettlement(actions))
+    const { result } = renderHook(() => useReimbursement(actions))
 
     act(() => result.current.open(group))
     act(() => result.current.record(payment, [1]))
@@ -84,7 +84,7 @@ describe('useClaimSettlement', () => {
   })
 
   it('does nothing at all in a read-only session', () => {
-    const { result } = renderHook(() => useClaimSettlement(undefined))
+    const { result } = renderHook(() => useReimbursement(undefined))
 
     act(() => result.current.record(payment, [1]))
 

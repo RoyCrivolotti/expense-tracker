@@ -77,7 +77,7 @@ describe('ExpenseReportView', () => {
   it('shows the total the claim adds up to', () => {
     renderPack(datasetWith([txn(1, '2026-05-02'), txn(2, '2026-05-09')]))
 
-    expect(screen.getByText('Total claimed')).toBeInTheDocument()
+    expect(screen.getByText('Total expenses')).toBeInTheDocument()
     expect(screen.getByText('200,00 €')).toBeInTheDocument()
   })
 
@@ -132,7 +132,7 @@ describe('ExpenseReportView', () => {
     // The row and the claimed total both read 100,00 €; the outstanding figure
     // is the one that has to differ.
     expect(screen.getAllByText('100,00 €')).toHaveLength(2)
-    expect(screen.getByText('Total claimed')).toBeInTheDocument()
+    expect(screen.getByText('Total expenses')).toBeInTheDocument()
     expect(screen.getByText('Outstanding')).toBeInTheDocument()
     expect(screen.getByText('60,00 €')).toBeInTheDocument()
     // Likewise the credit row and the "Less reimbursed" line.

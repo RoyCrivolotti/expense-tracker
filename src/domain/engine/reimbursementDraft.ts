@@ -9,7 +9,7 @@ import type { FlagGroup } from './flagGroups'
  * employer may approve some lines and reject others. A rejected line is simply
  * left unselected — it stays flagged and still counts as owed.
  */
-export interface SettlementDraft {
+export interface ReimbursementDraft {
   /** Rows offered for selection, oldest first. */
   candidates: Transaction[]
   /** Selected by default: covering the whole claim is the common case. */
@@ -31,7 +31,7 @@ export interface SettlementDraft {
  * until the card statement is marked paid. Nothing errors; the figures are
  * simply wrong.
  */
-export function settlementAccountId(accounts: Account[], preferredId: number): number {
+export function reimbursementAccountId(accounts: Account[], preferredId: number): number {
   const immediate = accounts.filter((a) => a.active && a.settlement === 'immediate')
   const preferred = immediate.find((a) => a.id === preferredId)
   return preferred?.id ?? immediate[0]?.id ?? accounts.find((a) => a.active)?.id ?? 0
@@ -80,11 +80,11 @@ export function selectedTotalCents(rows: Transaction[], selectedIds: Iterable<nu
  * settled claim would otherwise open on 0,00 € — which the form then rejects for
  * being zero. Better not to offer the action at all.
  */
-export function buildSettlementDraft(
+export function buildReimbursementDraft(
   group: FlagGroup,
   accounts: Account[],
   preferredAccountId: number,
-): SettlementDraft | null {
+): ReimbursementDraft | null {
   if (group.totalCents <= 0) return null
   // Expenses only. A refund on the flag — a ticket handed back to the vendor —
   // already reduces what is owed; it is not a line an employer reimburses, and
@@ -102,7 +102,7 @@ export function buildSettlementDraft(
     candidates,
     selectedIds,
     amountCents: selectedTotalCents(candidates, selectedIds),
-    accountId: settlementAccountId(accounts, preferredAccountId),
+    accountId: reimbursementAccountId(accounts, preferredAccountId),
     categoryId: dominantCategoryId(candidates),
     description: `Reimbursement — ${group.flag.name}`,
   }
