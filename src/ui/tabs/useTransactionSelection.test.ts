@@ -138,3 +138,24 @@ describe('useTransactionSelection — enterAndSelect', () => {
     expect(result.current.selected).toEqual(new Set([99]))
   })
 })
+
+describe('useTransactionSelection — Escape key', () => {
+  it('exits select mode when Escape is pressed', () => {
+    const { result } = renderHook(() => useTransactionSelection(mockActions()))
+    act(() => result.current.toggleSelectMode())
+    expect(result.current.selectMode).toBe(true)
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    })
+    expect(result.current.selectMode).toBe(false)
+  })
+
+  it('ignores other keys', () => {
+    const { result } = renderHook(() => useTransactionSelection(mockActions()))
+    act(() => result.current.toggleSelectMode())
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }))
+    })
+    expect(result.current.selectMode).toBe(true)
+  })
+})
