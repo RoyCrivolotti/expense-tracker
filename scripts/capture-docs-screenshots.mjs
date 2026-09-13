@@ -11,7 +11,10 @@ import { assertGoalsSecondaryTabsNoOverlap } from './verify-goals-mobile-tabs.mj
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = join(ROOT, 'docs/screenshots/gallery')
-const BASE = 'http://127.0.0.1:5173'
+// Overridable because parallel worktrees each want their own dev server, and
+// 5173 is routinely taken by whichever one started first.
+const PORT = process.env.CAPTURE_PORT ?? '5173'
+const BASE = `http://127.0.0.1:${PORT}`
 
 async function applyTheme(page, theme) {
   await page.addInitScript((selected) => {
@@ -36,7 +39,7 @@ async function waitForServer(ms = 30000) {
 }
 
 function startDev() {
-  return spawn('npm', ['run', 'dev', '--', '--host', '127.0.0.1', '--port', '5173'], {
+  return spawn('npm', ['run', 'dev', '--', '--host', '127.0.0.1', '--port', PORT], {
     cwd: ROOT,
     env: { ...process.env, DOCS_CAPTURE: '1' },
     stdio: 'ignore',
@@ -114,6 +117,62 @@ async function captureTransactionsDefault(page, filename) {
   await page.waitForSelector('text=Travel Card statement', { timeout: 15000 })
   await page.waitForTimeout(300)
   await page.screenshot({ path: join(OUT, filename) })
+}
+
+/**
+ * Expand every <details> on the page.
+ *
+ * The Flagged card and each flag group inside it are collapsed <details>.
+ * Chrome hides a closed one's content with content-visibility, so its buttons
+ * fail Playwright's visibility check *and* drop out of the accessibility tree —
+ * getByRole matches nothing even though getBoundingClientRect reports a real box.
+ */
+async function expandDetails(page) {
+  await page.evaluate(() => {
+    for (const d of document.querySelectorAll('details')) d.open = true
+  })
+  await page.waitForTimeout(250)
+}
+
+/** The report view's dismiss reads "Back"; Modal's reads "Close". */
+async function closeOverlay(page) {
+  for (const name of ['Back', 'Close']) {
+    const button = page.getByRole('button', { name, exact: true }).first()
+    if (await button.isVisible().catch(() => false)) {
+      await button.click()
+      await page.waitForTimeout(350)
+      return
+    }
+  }
+  throw new Error('No Back/Close control found on the open overlay')
+}
+
+async function captureFlagsAndReports(page, suffix) {
+  await goToTransactions(page)
+  await page.waitForSelector('text=Flagged', { timeout: 15000 })
+  await expandDetails(page)
+  await page.locator('text=Manage flags').scrollIntoViewIfNeeded()
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: join(OUT, `flagged-card-${suffix}.png`) })
+
+  await page.getByRole('button', { name: 'Expense report' }).first().click()
+  await page.waitForSelector('text=EXPENSE REPORT', { timeout: 15000 })
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: join(OUT, `expense-report-${suffix}.png`) })
+  await closeOverlay(page)
+
+  await expandDetails(page)
+  await page.getByRole('button', { name: 'Record reimbursement' }).first().click()
+  await page.waitForSelector('text=Tick what this payment covers', { timeout: 15000 })
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: join(OUT, `record-reimbursement-${suffix}.png`) })
+  await closeOverlay(page)
+
+  await expandDetails(page)
+  await page.getByRole('button', { name: 'Past reports' }).first().click()
+  await page.waitForTimeout(500)
+  await page.screenshot({ path: join(OUT, `past-reports-${suffix}.png`) })
+  await closeOverlay(page)
 }
 
 async function captureAnalyticsDesktop(page) {
@@ -233,6 +292,8 @@ async function capture() {
 
   await captureTransactionsDefault(d, 'transactions-desktop.png')
 
+  await captureFlagsAndReports(d, 'desktop')
+
   await captureAnalyticsDesktop(d)
 
   await captureGoalsDesktop(d)
@@ -268,6 +329,8 @@ async function capture() {
   await m.waitForSelector('text=Carryover', { timeout: 15000 })
   await m.waitForTimeout(350)
   await m.screenshot({ path: join(OUT, 'analytics-cash-mobile.png') })
+
+  await captureFlagsAndReports(m, 'mobile')
 
   await captureGoalsMobile(m)
 

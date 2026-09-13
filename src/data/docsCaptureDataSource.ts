@@ -103,25 +103,39 @@ function demoFlags(stored: StoredTransaction[]): {
     const purpose = purposes[i % purposes.length]
     return { ...txn, flagId, ...(purpose ? { notes: purpose } : {}) }
   })
-  // One claim partly settled, so the report's claimed / reimbursed / outstanding
-  // breakdown has something to show.
+  // One settled claim, modelled the way the app actually records one.
+  //
+  // The payment carries **no flag**. `recordReimbursement` deliberately creates
+  // it unflagged — a flagged settlement would sit inside the very report it
+  // settles, as a credit that makes the claim read as over-paid by its own
+  // payment. The demo data used to flag it, which both contradicted the shipped
+  // behaviour and drove the Work travel group's outstanding total negative,
+  // hiding the Record reimbursement action it exists to demonstrate.
+  //
+  // The link is `settledBy` on the row it covers. That is also what makes Past
+  // reports reachable at all: its trigger hides itself until a settlement
+  // exists (`usePastReports.entry`).
+  const workTravel = withFlags.filter((t) => t.flagId === 970_001 && t.type === 'expense')
   const claimed = recent[0]
-  if (!claimed) return { flags, transactions: withFlags }
+  // Settle the cheapest row, so the group keeps a clearly positive outstanding
+  // balance and still offers to settle the rest.
+  const settled = [...workTravel].sort((a, b) => a.amountCents - b.amountCents)[0]
+  if (!claimed || !settled) return { flags, transactions: withFlags }
   return {
     flags,
     transactions: [
-      ...withFlags,
+      ...withFlags.map((t) => (t.id === settled.id ? { ...t, settledBy: 970_500 } : t)),
       {
         id: 970_500,
         date: claimed.date,
         budgetMonth: claimed.budgetMonth,
-        description: 'Reimbursement — Work travel',
+        description: 'Alicante trip, June',
         accountId: claimed.accountId,
         categoryId: claimed.categoryId,
         type: 'refund' as const,
-        amountCents: 12_000,
+        // Matches what it settles, so the Past reports row reconciles.
+        amountCents: settled.amountCents,
         cancelled: false,
-        flagId: 970_001,
       },
     ],
   }
