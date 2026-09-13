@@ -163,7 +163,9 @@ describe('ReceiptStrip', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /close/i }))
 
-    expect(onTrapPausedChange).toHaveBeenLastCalledWith(false)
+    // The viewer's Modal animates out before it unmounts, so the trap is released a
+    // beat after the click rather than during it.
+    await waitFor(() => expect(onTrapPausedChange).toHaveBeenLastCalledWith(false))
   })
 })
 

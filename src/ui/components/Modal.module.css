@@ -10,7 +10,9 @@
   right: 0;
   height: 100dvh;
   z-index: 50;
-  background: rgba(0, 0, 0, 0.5);
+  /* Driven inline while the sheet is being dragged — see Modal.tsx. The fallback is
+     the resting value, used whenever nothing is mid-gesture. */
+  background: rgba(0, 0, 0, var(--scrim, 0.5));
   backdrop-filter: blur(2px);
   display: flex;
   align-items: flex-end;
@@ -52,6 +54,44 @@
 
 .sheetDragging {
   transition: none;
+  /* Also cancels a still-running `slide-up`: animations outrank inline styles, so
+     grabbing the sheet within its entry animation would otherwise fight the finger. */
+  animation: none;
+}
+
+/*
+ * Leaving. Declared after `.sheet` and `.overlay` so these animations replace the
+ * entry ones, and written as animations rather than transitions because a class
+ * added in the same commit that re-enables a transition is not reliably animated.
+ * `--sheet-from` is where the finger let go, so the sheet carries on from there
+ * instead of jumping back to rest first.
+ */
+.sheetClosing {
+  /* The curve is chosen per close — thrown by a finger, or started from rest. See
+     `useSheetExit`. */
+  animation: sheet-out var(--sheet-exit-ms, 300ms) var(--sheet-exit-ease, cubic-bezier(0.4, 0, 1, 1))
+    forwards;
+}
+
+.overlayClosing {
+  animation: overlay-out var(--sheet-exit-ms, 300ms) ease forwards;
+  /* The sheet is on its way out; another touch should not start a second gesture. */
+  pointer-events: none;
+}
+
+@keyframes sheet-out {
+  from {
+    transform: translateY(var(--sheet-from, 0px));
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes overlay-out {
+  to {
+    opacity: 0;
+  }
 }
 
 .handle {
@@ -137,11 +177,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sheet {
+  .sheet,
+  .sheetClosing {
     animation: none;
     transition: none;
   }
-  .overlay {
+  .overlay,
+  .overlayClosing {
     animation: none;
   }
 }

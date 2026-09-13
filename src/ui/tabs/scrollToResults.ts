@@ -1,3 +1,5 @@
+import { prefersReducedMotion } from '../hooks/prefersReducedMotion'
+
 /** The results summary doubles as the scroll anchor and the list's live region. */
 export const RESULTS_ANCHOR_ID = 'txn-results'
 
@@ -13,10 +15,8 @@ export function scrollToResults(): void {
   const run = () => {
     // The rest of the app honours prefers-reduced-motion in theme.css; a
     // smooth-scrolled jump is exactly the kind of movement that setting is for.
-    const reduced =
-      typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
     document.getElementById(RESULTS_ANCHOR_ID)?.scrollIntoView({
-      behavior: reduced ? 'auto' : 'smooth',
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
       block: 'start',
     })
   }

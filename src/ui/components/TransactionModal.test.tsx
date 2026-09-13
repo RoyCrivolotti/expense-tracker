@@ -147,11 +147,12 @@ describe('TransactionModal — batch mode toggle', () => {
 })
 
 describe('TransactionModal — closing with unsaved input', () => {
-  it('closes immediately, no confirm, when nothing has been entered', () => {
+  it('closes without a confirm when nothing has been entered', async () => {
     const onClose = vi.fn()
     renderModal({ onClose })
     fireEvent.keyDown(document, { key: 'Escape' })
-    expect(onClose).toHaveBeenCalledTimes(1)
+    // Awaited, not immediate: with no draft to protect the sheet animates out first.
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
     expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument()
   })
 
@@ -193,11 +194,11 @@ describe('TransactionModal — closing with unsaved input', () => {
     expect(onClose).not.toHaveBeenCalled()
   })
 
-  it('closes on a swipe down when nothing has been entered', () => {
+  it('closes on a swipe down when nothing has been entered', async () => {
     const onClose = vi.fn()
     renderModal({ onClose })
     swipeSheetDown()
-    expect(onClose).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
     expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument()
   })
 

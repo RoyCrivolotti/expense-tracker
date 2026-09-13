@@ -210,6 +210,9 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
       onClose={modalOnClose}
       onBack={formView === 'installment' ? () => setFormView('fields') : undefined}
       trapPaused={confirming || discardingOther || popoverOpen}
+      // With a draft in hand `modalOnClose` raises the discard confirm instead of
+      // closing, so the sheet must stay put and let it. Clean, it animates away.
+      closeMayPrompt={singleDirty || batchDirty}
     >
       {canBatch && (
         <>
