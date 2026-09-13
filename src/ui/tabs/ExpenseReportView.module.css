@@ -26,9 +26,33 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.75rem 1rem;
+  /*
+   * The overlay is `position: fixed; inset: 0`, so on a notched phone it covers
+   * the status bar — and this toolbar is the first thing in it. Without the
+   * inset the buttons render *under* the clock and the battery icon. index.html
+   * sets `viewport-fit=cover`, so env() resolves to a real value here.
+   * Left/right matter in landscape, where the notch eats one edge.
+   */
+  padding: calc(0.75rem + env(safe-area-inset-top, 0px)) calc(1rem + env(safe-area-inset-right, 0px))
+    0.75rem calc(1rem + env(safe-area-inset-left, 0px));
   background: var(--color-bg);
   border-bottom: 1px solid var(--color-border);
+}
+
+/* One of the pair is always hidden; the wide one wins from 421px up. */
+.labelShort {
+  display: inline;
+}
+.labelLong {
+  display: none;
+}
+@media (min-width: 421px) {
+  .labelShort {
+    display: none;
+  }
+  .labelLong {
+    display: inline;
+  }
 }
 
 .toolbarActions {

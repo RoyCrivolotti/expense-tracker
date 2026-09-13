@@ -98,11 +98,23 @@ export function ExpenseReportView({
                 claimantName: dataset.settings.claimantName,
               })
             }
+            aria-label="Download CSV"
           >
-            Download CSV
+            {/* Two labels rather than one that wraps: at 390px "Print or save as
+                PDF" breaks onto a second line and pushes the toolbar to twice
+                the height, on the one screen where vertical space is scarcest.
+                aria-label carries the full wording either way. */}
+            <span className={styles.labelLong}>Download CSV</span>
+            <span className={styles.labelShort}>CSV</span>
           </button>
-          <button type="button" className={styles.printBtn} onClick={() => window.print()}>
-            Print or save as PDF
+          <button
+            type="button"
+            className={styles.printBtn}
+            onClick={() => window.print()}
+            aria-label="Print or save as PDF"
+          >
+            <span className={styles.labelLong}>Print or save as PDF</span>
+            <span className={styles.labelShort}>Print</span>
           </button>
         </div>
       </div>
