@@ -4,7 +4,7 @@
  * `startInstallmentIndex` payment); every other installment's budget month is
  * that anchor shifted by the index offset.
  */
-import type { InstallmentPlan, StoredTransaction, TxnType } from '../types'
+import type { InstallmentPlan, StoredTransaction, Transaction, TxnType } from '../types'
 import { monthsBetweenBudget, shiftBudgetMonth } from './dates'
 
 export interface PlanProgress {
@@ -89,6 +89,31 @@ export function planProgress(
     complete: lastIndex >= plan.totalCount,
     finalBudgetMonth: finalBudgetMonth(plan),
   }
+}
+
+export interface PaidInstallment {
+  transaction: Transaction
+  installmentIndex: number
+}
+
+/**
+ * The transaction that settled `plan`'s installment for `budgetMonth`, if
+ * that installment has already been logged. Returns null when nothing is
+ * scheduled that month (before the plan starts / after it ends), the plan is
+ * inactive, or the scheduled installment hasn't been paid yet.
+ */
+export function paidInstallmentInMonth(
+  plan: InstallmentPlan,
+  transactions: Transaction[],
+  budgetMonth: string,
+): PaidInstallment | null {
+  if (!plan.active) return null
+  const installmentIndex = expectedIndexForMonth(plan, budgetMonth)
+  if (installmentIndex < plan.startInstallmentIndex || installmentIndex > plan.totalCount) return null
+  const transaction = transactions.find(
+    (t) => t.planId === plan.id && !t.cancelled && t.installmentIndex === installmentIndex,
+  )
+  return transaction ? { transaction, installmentIndex } : null
 }
 
 /**
