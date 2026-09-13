@@ -1,8 +1,23 @@
 name: Verify
 
 on:
+  # No `branches:` filter on purpose. That filter matches the PR's *base*, so
+  # `branches: [main]` silently gave zero CI to every stacked PR — B on top of A
+  # ran nothing until A merged, which is exactly when review is too late to help.
+  # Every check below is already base-agnostic: both scripts take the PR's own
+  # base.sha, so they measure the PR's own diff whatever it is stacked on.
+  #
+  # `edited` fires on a base change (retargeting a stacked PR to main, where the
+  # diff coverage baseline really does move) and on a description edit, which is
+  # the channel check:pr-screenshots reads — adding the screenshot re-runs the
+  # check instead of needing a close/reopen.
   pull_request:
-    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+
+# A burst of description edits should not queue N three-minute runs.
+concurrency:
+  group: expense-tracker-verify-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   verify:
