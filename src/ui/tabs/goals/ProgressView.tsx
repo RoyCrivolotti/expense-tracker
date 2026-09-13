@@ -1,8 +1,15 @@
 import { useState } from 'react'
-import type { GoalScenario, Milestone, WealthAccount, WealthCheckin } from '../../../types'
+import type {
+  ExpenseSettings,
+  GoalScenario,
+  Milestone,
+  WealthAccount,
+  WealthCheckin,
+} from '../../../types'
 import type { ExpenseActions } from '../../actions'
 import { WealthSummaryCard } from './WealthSummaryCard'
 import { ReachedMilestones } from './ReachedMilestones'
+import { MilestonesSetting } from '../../settings/MilestonesSetting'
 import { CheckinFormSheet } from './CheckinFormSheet'
 import { CheckinList } from './CheckinList'
 import { CheckinHistoryChart } from './charts/CheckinHistoryChart'
@@ -19,6 +26,8 @@ interface Props {
   activeScenario: GoalScenario | null
   actions: ExpenseActions | undefined
   canWrite: boolean
+  settings?: ExpenseSettings | undefined
+  onSettingsChange?: ((patch: Partial<ExpenseSettings>) => void | Promise<void>) | undefined
 }
 
 export function ProgressView({
@@ -29,6 +38,8 @@ export function ProgressView({
   activeScenario,
   actions,
   canWrite,
+  settings,
+  onSettingsChange,
 }: Props) {
   const [showCheckinForm, setShowCheckinForm] = useState(false)
 
@@ -41,6 +52,10 @@ export function ProgressView({
       />
 
       <ReachedMilestones milestones={milestones} reached={reached} />
+
+      {canWrite && settings && onSettingsChange ? (
+        <MilestonesSetting settings={settings} onChange={onSettingsChange} />
+      ) : null}
 
       <CheckinHistoryChart
         checkins={checkins}

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { ExpenseTheme } from '../hooks/useExpenseTheme'
 import type { ExpenseModel } from '../useExpenseData'
 import { resolveDefaultAccountId } from '../../data/defaultAccount'
@@ -6,19 +7,27 @@ import type { ExpenseActions } from '../actions'
 import { Money } from '../components/Money'
 import type { ExpenseSettings } from '../../types'
 import { Card, EmptyState, Pill, SectionTitle } from '../components/primitives'
+import { SegmentedControl } from '../components/SegmentedControl'
 import { StatementToggles } from '../components/StatementToggles'
 import { DefinitionsEditor } from '../definitions/DefinitionsEditor'
 import { AppearanceSetting } from '../settings/AppearanceSetting'
 import { PreferencesSetting } from '../settings/PreferencesSetting'
 import { ReportNameSetting } from '../settings/ReportNameSetting'
 import { ReceiptStorageSetting } from '../settings/ReceiptStorageSetting'
-import { MilestonesSetting } from '../settings/MilestonesSetting'
 import { DefaultAccountSetting } from '../settings/DefaultAccountSetting'
 import { ExportDataSection } from '../settings/ExportDataSection'
 import { ImportDataSection } from '../settings/ImportDataSection'
 import { AccountSetting } from '../settings/AccountSetting'
 import { AccessRequestsSetting } from '../settings/AccessRequestsSetting'
 import styles from './tabs.module.css'
+
+type SettingsView = 'system' | 'account' | 'data'
+
+const VIEW_OPTIONS: { value: SettingsView; label: string }[] = [
+  { value: 'system', label: 'System' },
+  { value: 'account', label: 'Account preferences' },
+  { value: 'data', label: 'Data' },
+]
 
 interface SettingsTabProps {
   model: ExpenseModel
@@ -95,12 +104,6 @@ function Definitions({ model }: { model: ExpenseModel }) {
   )
 }
 
-/**
- * Permanent re-entry point for the setup wizard (currency/budget-month/category
- * setup can all be revisited), not just a first-run gate — a tenant that has
- * added a category but not an account (or vice versa) still needs a way back
- * in even though `needsOnboarding` is already false for them.
- */
 function SetupWizardEntry({ firstRun, onRunSetup }: { firstRun: boolean; onRunSetup: () => void }) {
   return (
     <>
@@ -116,47 +119,67 @@ function SetupWizardEntry({ firstRun, onRunSetup }: { firstRun: boolean; onRunSe
   )
 }
 
-/**
- * The settings that write through `updateSettings`, behind one guard.
- *
- * Grouped rather than three sibling `{actions && ...}` blocks: they share a
- * single condition, and repeating it pushed SettingsTab over the complexity
- * ceiling for no benefit.
- */
-function OwnerSettings({
+function OwnerPreferences({
   settings,
   onChange,
 }: {
   settings: ExpenseSettings
-  /**
-   * Returns the save promise, and callers must not swallow it.
-   * `MilestonesSetting` awaits it to keep overlapping edits from clobbering
-   * each other and to roll back a rejected save — typing it `=> void` silently
-   * turned both into no-ops.
-   */
   onChange: (patch: Partial<ExpenseSettings>) => void | Promise<void>
 }) {
   return (
     <>
       <PreferencesSetting settings={settings} onChange={onChange} />
       <ReportNameSetting settings={settings} onChange={onChange} />
-      <MilestonesSetting settings={settings} onChange={onChange} />
     </>
   )
 }
 
-export function SettingsTab({
+function SystemView({ model, actions }: { model: ExpenseModel; actions: ExpenseActions | undefined }) {
+  return (
+    <>
+      {actions ? (
+        <DefinitionsEditor model={model} actions={actions} />
+      ) : (
+        <Definitions model={model} />
+      )}
+
+      {actions && (
+        <>
+          <SectionTitle>Card statements</SectionTitle>
+          <Card>
+            {model.months.length === 0 ? (
+              <EmptyState actionLabel="Add transaction" onAction={actions.onAdd}>
+                No data yet — add transactions to get started.
+              </EmptyState>
+            ) : (
+              <StatementToggles model={model} onToggle={actions.setStatementPaid} />
+            )}
+          </Card>
+        </>
+      )}
+    </>
+  )
+}
+
+function AccountView({
   model,
-  month,
   actions,
   theme,
   onThemeChange,
   ownerAccess,
   accountEmail,
   onRunSetup,
-}: SettingsTabProps) {
+}: {
+  model: ExpenseModel
+  actions: ExpenseActions | undefined
+  theme: ExpenseTheme
+  onThemeChange: (next: ExpenseTheme) => void
+  ownerAccess: { pendingCount: number } | undefined
+  accountEmail: string | undefined
+  onRunSetup: (() => void) | undefined
+}) {
   return (
-    <div className={styles.stack}>
+    <>
       {accountEmail ? <AccountSetting email={accountEmail} /> : null}
       {ownerAccess ? <AccessRequestsSetting pendingCount={ownerAccess.pendingCount} /> : null}
 
@@ -167,16 +190,34 @@ export function SettingsTab({
       <AppearanceSetting theme={theme} onChange={onThemeChange} />
 
       {actions && (
-        <OwnerSettings
+        <OwnerPreferences
           settings={model.dataset.settings}
           onChange={(patch) => actions.updateSettings(patch)}
         />
       )}
 
-      {/* Outside OwnerSettings: that group is settings you write through
-          updateSettings, and this one is read-only, derived, and writes nothing. */}
-      <ReceiptStorageSetting attachments={model.dataset.attachments} />
+      {actions && (
+        <DefaultAccountSetting
+          accounts={model.dataset.accounts}
+          settings={model.dataset.settings}
+          onChange={(accountId) => void actions.updateSettings({ defaultAccountId: accountId })}
+        />
+      )}
+    </>
+  )
+}
 
+function DataView({
+  model,
+  month,
+  actions,
+}: {
+  model: ExpenseModel
+  month: string
+  actions: ExpenseActions | undefined
+}) {
+  return (
+    <>
       <SectionTitle>Export</SectionTitle>
       <Card>
         <ExportDataSection model={model} month={month} />
@@ -191,37 +232,50 @@ export function SettingsTab({
         </>
       )}
 
-      {actions && (
-        <DefaultAccountSetting
-          accounts={model.dataset.accounts}
-          settings={model.dataset.settings}
-          onChange={(accountId) => void actions.updateSettings({ defaultAccountId: accountId })}
+      <ReceiptStorageSetting attachments={model.dataset.attachments} />
+    </>
+  )
+}
+
+export function SettingsTab({
+  model,
+  month,
+  actions,
+  theme,
+  onThemeChange,
+  ownerAccess,
+  accountEmail,
+  onRunSetup,
+}: SettingsTabProps) {
+  const [view, setView] = useState<SettingsView>('system')
+
+  return (
+    <div className={styles.stack}>
+      <div className={styles.settingsTabBar}>
+        <SegmentedControl
+          options={VIEW_OPTIONS}
+          value={view}
+          onChange={setView}
+          ariaLabel="Settings section"
+          layout="bar"
+        />
+      </div>
+
+      {view === 'system' && <SystemView model={model} actions={actions} />}
+
+      {view === 'account' && (
+        <AccountView
+          model={model}
+          actions={actions}
+          theme={theme}
+          onThemeChange={onThemeChange}
+          ownerAccess={ownerAccess}
+          accountEmail={accountEmail}
+          onRunSetup={onRunSetup}
         />
       )}
 
-      {actions && (
-        <>
-          <SectionTitle>Card statements</SectionTitle>
-          <Card>
-            {model.months.length === 0 ? (
-              <EmptyState
-                actionLabel="Add transaction"
-                onAction={actions.onAdd}
-              >
-                No data yet — add transactions to get started.
-              </EmptyState>
-            ) : (
-              <StatementToggles model={model} onToggle={actions.setStatementPaid} />
-            )}
-          </Card>
-        </>
-      )}
-
-      {actions ? (
-        <DefinitionsEditor model={model} actions={actions} />
-      ) : (
-        <Definitions model={model} />
-      )}
+      {view === 'data' && <DataView model={model} month={month} actions={actions} />}
     </div>
   )
 }
