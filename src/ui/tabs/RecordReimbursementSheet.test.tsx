@@ -182,3 +182,57 @@ describe('RecordReimbursementSheet — naming the report', () => {
     expect(onRecord.mock.calls[0]![0].description).toBe('Reimbursement — Work travel')
   })
 })
+
+describe('RecordReimbursementSheet — payment vs what was ticked', () => {
+  it('says nothing while the figure matches the ticked rows', () => {
+    renderSheet(group([txn(1, { description: 'Flight' })]))
+    expect(screen.queryByText(/Short of|More than/)).not.toBeInTheDocument()
+  })
+
+  it('flags a shortfall, because ticked rows settle regardless of the amount', async () => {
+    const user = userEvent.setup()
+    renderSheet(group([txn(1, { amountCents: 10_000 }), txn(2, { amountCents: 4_000 })]))
+
+    const amount = screen.getByRole('textbox', { name: 'Amount received' })
+    await user.clear(amount)
+    await user.type(amount, '90')
+
+    // 90,00 against 140,00 ticked. Nothing reconciles the two, so without this
+    // the missing 50,00 stops being owed with no indication it ever existed.
+    expect(screen.getByText(/Short of the 140,00/)).toBeInTheDocument()
+    expect(screen.getByText(/by 50,00/)).toBeInTheDocument()
+  })
+
+  it('flags an overpayment too', async () => {
+    const user = userEvent.setup()
+    renderSheet(group([txn(1, { amountCents: 10_000 })]))
+
+    const amount = screen.getByRole('textbox', { name: 'Amount received' })
+    await user.clear(amount)
+    await user.type(amount, '120')
+
+    expect(screen.getByText(/More than the 100,00/)).toBeInTheDocument()
+  })
+
+  it('goes quiet again once the ticks are adjusted to match', async () => {
+    const user = userEvent.setup()
+    renderSheet(group([txn(1, { amountCents: 10_000 }), txn(2, { amountCents: 4_000 })]))
+
+    const amount = screen.getByRole('textbox', { name: 'Amount received' })
+    await user.clear(amount)
+    await user.type(amount, '100')
+    expect(screen.getByText(/Short of/)).toBeInTheDocument()
+
+    // Unticking the 40,00 line is the fix the message asks for.
+    await user.click(lines()[1]!)
+    expect(screen.queryByText(/Short of|More than/)).not.toBeInTheDocument()
+  })
+
+  it('stays quiet when nothing is ticked, since there is nothing to compare against', async () => {
+    const user = userEvent.setup()
+    renderSheet(group([txn(1, { amountCents: 10_000 })]))
+
+    await user.click(lines()[0]!)
+    expect(screen.queryByText(/Short of|More than/)).not.toBeInTheDocument()
+  })
+})
