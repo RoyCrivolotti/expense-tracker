@@ -24,13 +24,13 @@ describe('usePopoverPosition', () => {
   it('places the popover just below the trigger when there is room', () => {
     const pos = positionFor({ top: 100, bottom: 130, left: 20 }, { width: 200, height: 150 })
 
-    expect(pos).toEqual({ top: 134, left: 20 })
+    expect(pos).toMatchObject({ top: 134, left: 20 })
   })
 
   it('flips above the trigger when there is not enough room below', () => {
     const pos = positionFor({ top: 700, bottom: 730, left: 20 }, { width: 200, height: 150 })
 
-    expect(pos).toEqual({ top: 546, left: 20 })
+    expect(pos).toMatchObject({ top: 546, left: 20 })
   })
 
   it('clamps a flipped popover to the top of the viewport', () => {
@@ -60,7 +60,7 @@ describe('usePopoverPosition', () => {
     Object.defineProperty(window, 'scrollY', { value: 700, configurable: true })
     const pos = positionFor({ top: 100, bottom: 130, left: 20 }, { width: 200, height: 150 })
 
-    expect(pos).toEqual({ top: 134, left: 20 })
+    expect(pos).toMatchObject({ top: 134, left: 20 })
   })
 })
 
@@ -81,14 +81,14 @@ describe('usePopoverPosition — repositioning after it opens', () => {
 
     const { result } = renderHook(() => usePopoverPosition(triggerRef, popoverRef))
     // 50px tall fits in the 70px below the trigger.
-    expect(result.current).toEqual({ top: 734, left: 20 })
+    expect(result.current).toMatchObject({ top: 734, left: 20 })
 
     popover.getBoundingClientRect = () =>
       ({ top: 0, left: 0, width: 200, height: 300 }) as DOMRect
     act(() => resizeObservers.at(-1)?.trigger())
 
     // 300px does not, so it flips above instead of hanging off the bottom.
-    expect(result.current).toEqual({ top: 396, left: 20 })
+    expect(result.current).toMatchObject({ top: 396, left: 20 })
   })
 
   it('observes the popover itself, which is the element that changes size', () => {
@@ -120,20 +120,108 @@ describe('usePopoverPosition — repositioning after it opens', () => {
     try {
       const pos = positionFor({ top: 340, bottom: 370, left: 20 }, { width: 200, height: 150 })
       // 400 - 370 - 4 = 26px below, so it flips rather than opening under the keyboard.
-      expect(pos).toEqual({ top: 186, left: 20 })
+      expect(pos).toMatchObject({ top: 186, left: 20 })
     } finally {
       Object.defineProperty(window, 'visualViewport', { configurable: true, value: undefined })
     }
   })
 
-  it('keeps a flipped popover below the notch, not merely on screen', () => {
+  it('keeps a popover that fits neither way below the notch', () => {
     document.documentElement.style.setProperty('--exp-safe-top', '47px')
     try {
-      const pos = positionFor({ top: 20, bottom: 50, left: 20 }, { width: 200, height: 900 })
-      // 8px would put it under the clock on a notched phone.
+      // Trigger near the bottom and a popover taller than the band: it cannot
+      // open downwards and cannot fit above, so it pins to the visible band —
+      // which must start below the clock, not at a bare 8px.
+      const pos = positionFor({ top: 700, bottom: 730, left: 20 }, { width: 200, height: 900 })
       expect(pos?.top).toBe(55)
     } finally {
       document.documentElement.style.removeProperty('--exp-safe-top')
     }
+  })
+
+  it('caps a tall popover to the visible band rather than letting it overflow', () => {
+    // 800 tall viewport, 8px edge, 8px minTop → 784 of usable band.
+    const pos = positionFor({ top: 20, bottom: 50, left: 20 }, { width: 200, height: 2000 })
+    expect(pos?.maxHeight).toBe(784)
+    // 784 still does not fit below a trigger at y=50 in an 800 viewport, and
+    // cannot fit above it either, so it pins to the top of the band and scrolls
+    // inside itself — rather than running 1200px off the bottom of the screen.
+    expect(pos?.top).toBe(8)
+  })
+
+  it('never caps the popover below a usable minimum', () => {
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: { width: 400, height: 60, offsetTop: 0, offsetLeft: 0, addEventListener: () => {}, removeEventListener: () => {} },
+    })
+    try {
+      // A sliver of popover is worse than one that overflows and can scroll.
+      const pos = positionFor({ top: 20, bottom: 50, left: 20 }, { width: 200, height: 300 })
+      expect(pos?.maxHeight).toBe(140)
+    } finally {
+      Object.defineProperty(window, 'visualViewport', { configurable: true, value: undefined })
+    }
+  })
+
+  it('measures the band from offsetTop, not from a bare viewport height', () => {
+    // The bug behind the vanishing popover: iOS scrolls the focused field into
+    // view when the keyboard opens, so the visual viewport sits *inside* the
+    // layout viewport at an offset. getBoundingClientRect reports layout
+    // coordinates, so the band has to be expressed in the same ones.
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: { width: 400, height: 400, offsetTop: 300, offsetLeft: 0, addEventListener: () => {}, removeEventListener: () => {} },
+    })
+    try {
+      const pos = positionFor({ top: 620, bottom: 650, left: 20 }, { width: 200, height: 150 })
+      // Band is 300..700. Below would be 654 and 654+150 overflows it, so it
+      // flips above to 620-4-150 = 466 — inside the band, where it can actually
+      // be seen. Measuring against a bare height of 400 would have compared it
+      // to a band of 0..400 and placed it somewhere nobody can see.
+      expect(pos?.top).toBe(466)
+    } finally {
+      Object.defineProperty(window, 'visualViewport', { configurable: true, value: undefined })
+    }
+  })
+})
+
+describe('usePopoverPosition — when the keyboard hides the trigger', () => {
+  function withViewport(height: number, offsetTop: number, run: () => void) {
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: { width: 400, height, offsetTop, offsetLeft: 0, addEventListener: () => {}, removeEventListener: () => {} },
+    })
+    try {
+      run()
+    } finally {
+      Object.defineProperty(window, 'visualViewport', { configurable: true, value: undefined })
+    }
+  }
+
+  it('pins inside the visible band rather than following a trigger under the keyboard', () => {
+    // The real failure: a Flag field low in a long form sits *below* the
+    // keyboard, so anchoring to it puts the popover under the keyboard too —
+    // which is how it appeared to vanish entirely.
+    withViewport(424, 0, () => {
+      const pos = positionFor({ top: 717, bottom: 752, left: 20 }, { width: 200, height: 210 })
+      expect(pos?.top).toBe(8)
+      // And low enough to be wholly inside the band, not merely starting in it.
+      expect(pos!.top + 210).toBeLessThanOrEqual(424)
+    })
+  })
+
+  it('still anchors normally once the trigger is inside the band', () => {
+    withViewport(424, 0, () => {
+      const pos = positionFor({ top: 100, bottom: 130, left: 20 }, { width: 200, height: 150 })
+      expect(pos?.top).toBe(134)
+    })
+  })
+
+  it('treats a trigger scrolled above the band the same way', () => {
+    withViewport(400, 300, () => {
+      // Band is 300..700; the trigger is at 40, off the top.
+      const pos = positionFor({ top: 40, bottom: 70, left: 20 }, { width: 200, height: 150 })
+      expect(pos?.top).toBe(308)
+    })
   })
 })
