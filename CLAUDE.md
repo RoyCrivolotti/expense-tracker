@@ -62,14 +62,41 @@ pkill -f "wrangler pages dev"; pkill -f vite
 
 ## Worktrees
 
-Default to a worktree per stream of work, so parallel sessions never fight over one checkout.
+Every session works from its own worktree, never the shared main checkout. `Edit`/`Write` calls
+against the original checkout are hard-blocked by a `PreToolUse` hook
+(`.claude/hooks/enforce-worktree.sh`) — those tools take an absolute file path directly, so there's
+nowhere to hide. The same hook also blocks a fixed list of git-mutating `Bash` calls (`commit`, `push`,
+`add`, `mv`, `rm`, `rebase`, `merge`, `stash`, `clean`, `apply`, `branch -D`, `checkout -- <path>`, …,
+including one right after a leading `cd <dir> &&` / `cd <dir>;`) whenever the target resolves to the
+original checkout — detected by `.git` being a real directory there, versus the file every worktree
+has. Read-only forms (`stash list`/`show`, `clean -n`, `apply --check`) and `git worktree add` itself
+are unaffected.
+
+The `Bash` half is **best-effort, not a sandbox**: it's pattern-matching on command text, so a
+sufficiently indirect command (nested subshells, a variable holding the path, `pushd`) can still get
+through, and non-git mutations (`rm`, `sed -i`, a shell redirect) aren't inspected at all. `Edit`/`Write`
+staying unconditionally blocked is what actually carries the guarantee. Deliberate one-off override:
+run with `CLAUDE_ALLOW_MAIN_CHECKOUT=1` in the environment. The hook only protects a worktree whose
+branch has merged this commit — one created off an older `main` won't have it until it rebases or
+merges.
+
+It also doesn't touch the git stash stack, which is shared across *every* worktree of this repo (they
+share one `.git`) — a `stash`/`stash pop` from any worktree can still collide with another session's
+work. If you need to stash, tag it (`git stash push -u -m "<unique-tag>"`) and restore with
+`stash apply <sha>` — never a bare `pop` — regardless of which worktree you're in.
 
 ```bash
-git worktree add ../expense-tracker-<name> -b <branch>
-cd ../expense-tracker-<name>
-npm ci                       # required — node_modules is NOT shared between worktrees
-cp ../expense-tracker/.env . # or: cp .env.example .env (public URLs, no secrets)
+git worktree add ../expense-tracker-<name> -b <branch> origin/main
+npm ci --prefix ../expense-tracker-<name>     # required — node_modules is NOT shared between worktrees
+cp .env ../expense-tracker-<name>/            # or: cp .env.example ../expense-tracker-<name>/.env
 ```
+
+Then call the **`EnterWorktree`** tool with `path` set to that directory before touching any files.
+This isn't optional: a bare `cd ../expense-tracker-<name>` doesn't reliably persist — the harness can
+reset a `cd` that leaves the session's registered directory, so a later command silently runs back
+where it started instead of erroring. `EnterWorktree` is what actually relocates the whole session
+(Bash cwd, relative paths, and project settings together), and ending a session while still inside one
+is what prompts to keep or remove it — the manual `git` commands alone never trigger that prompt.
 
 That is enough for `npm run dev`, `npm test` and `npm run verify`. Specifically:
 
@@ -83,14 +110,21 @@ That is enough for `npm run dev`, `npm test` and `npm run verify`. Specifically:
 Only if the worktree needs the full local stack (`npm run dev:local`):
 
 ```bash
-cp ../expense-tracker/config/dev.json config/
+cp config/dev.json ../expense-tracker-<name>/config/
 ```
 
 `.claude/settings.local.json` is deliberately **not** copied — it is gitignored, machine-local, and has
 previously accumulated API tokens from commands run with the secret inline. Let each worktree build its
 own permission grants.
 
-Clean up when the branch is done: `git worktree remove ../expense-tracker-<name>`.
+Cleanup is normally automatic: the keep-or-remove prompt above. If you need to leave a worktree
+mid-session without ending the session, call `ExitWorktree` yourself (`action: "keep"` or `"remove"`),
+only when asked to. It's a no-op outside a session that entered via `EnterWorktree` — it can't clean up
+a worktree it never knew about, which is exactly how one was lost: `EnterWorktree` called with no
+`name` produced the opaque `.claude/worktrees/nervous-easley-c5d4d6`, and it sat with a correct,
+uncommitted ESLint fix for two days before being noticed and rescued in #84. Always pass `path` (as
+above), or, if creating fresh with `EnterWorktree` directly, a `name` — an unnamed worktree is easy to
+forget because nothing about it says what it's for.
 
 ## Credential files (all gitignored)
 
