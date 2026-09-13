@@ -217,14 +217,18 @@ describe('deleting a transaction takes its attachments with it', () => {
 
     expect(batch).toHaveBeenCalledTimes(1)
     const statements = batch.mock.calls[0]?.[0] as { sql: string; args: unknown[] }[]
-    expect(statements[0]?.sql).toContain('DELETE FROM transaction_attachments')
-    expect(statements[1]?.sql).toContain('DELETE FROM transactions')
+    // Asserted as a set rather than by index: the batch has grown once already
+    // (releasing what this row reimbursed) and position assertions broke on a
+    // change that was not about attachments at all.
+    const sql = statements.map((s) => s.sql)
+    expect(sql.some((q) => q.includes('DELETE FROM transaction_attachments'))).toBe(true)
+    expect(sql.some((q) => q.includes('DELETE FROM transactions'))).toBe(true)
     for (const statement of statements) expect(statement.args).toContain(OWNER)
   })
 
   it('still 404s when the transaction was not this owner’s', async () => {
     const { env } = stubEnv({
-      batch: () => [{ meta: { changes: 0 } }, { meta: { changes: 0 } }],
+      batch: () => [{ meta: { changes: 0 } }, { meta: { changes: 0 } }, { meta: { changes: 0 } }],
     })
 
     await expect(deleteTransaction(env, OWNER, 7)).rejects.toMatchObject({ status: 404 })
@@ -232,14 +236,14 @@ describe('deleting a transaction takes its attachments with it', () => {
 
   it('cascades for a bulk delete too', async () => {
     const { env, batch } = stubEnv({
-      batch: () => [{ meta: { changes: 2 } }, { meta: { changes: 2 } }],
+      batch: () => [{ meta: { changes: 2 } }, { meta: { changes: 2 } }, { meta: { changes: 2 } }],
     })
 
     await expect(deleteTransactions(env, OWNER, [4, 5])).resolves.toBe(2)
 
     const statements = batch.mock.calls[0]?.[0] as { sql: string; args: unknown[] }[]
-    expect(statements[0]?.sql).toContain('DELETE FROM transaction_attachments')
-    expect(statements[0]?.args).toEqual([OWNER, 4, 5])
+    const attachments = statements.find((q) => q.sql.includes('DELETE FROM transaction_attachments'))
+    expect(attachments?.args).toEqual([OWNER, 4, 5])
   })
 })
 
@@ -258,5 +262,32 @@ describe('attachmentKeysForTransactions', () => {
 
     await expect(attachmentKeysForTransactions(env, OWNER, [])).resolves.toEqual([])
     expect(calls).toEqual([])
+  })
+})
+
+describe('deleting a reimbursement releases what it settled', () => {
+  it('clears settled_by in the same batch as the delete', async () => {
+    // Otherwise the rows it covered keep pointing at a transaction that no
+    // longer exists, and stay out of the Flagged card — silently un-owed.
+    const { env, batch } = stubEnv({})
+
+    await deleteTransaction(env, OWNER, 7)
+
+    const statements = batch.mock.calls[0]?.[0] as { sql: string; args: unknown[] }[]
+    const release = statements.find((q) => q.sql.includes('SET settled_by = NULL'))
+    expect(release).toBeDefined()
+    expect(release?.args).toEqual([7, OWNER])
+  })
+
+  it('releases for a bulk delete too', async () => {
+    const { env, batch } = stubEnv({
+      batch: () => [{ meta: { changes: 2 } }, { meta: { changes: 2 } }, { meta: { changes: 2 } }],
+    })
+
+    await deleteTransactions(env, OWNER, [4, 5])
+
+    const statements = batch.mock.calls[0]?.[0] as { sql: string; args: unknown[] }[]
+    const release = statements.find((q) => q.sql.includes('SET settled_by = NULL'))
+    expect(release?.args).toEqual([OWNER, 4, 5])
   })
 })

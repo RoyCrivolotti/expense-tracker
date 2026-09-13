@@ -14,6 +14,8 @@ import { TransactionsSelectFooter } from './TransactionsSelectFooter'
 import { useTransactionsTabState } from './useTransactionsTabState'
 import { RESULTS_ANCHOR_ID, scrollToResults } from './scrollToResults'
 import { useDebouncedAnnouncement } from '../hooks/useDebouncedAnnouncement'
+import { useReimbursement } from './useReimbursement'
+import { RecordReimbursementSheet } from './RecordReimbursementSheet'
 import styles from './tabs.module.css'
 
 interface TransactionsTabProps {
@@ -27,7 +29,8 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
   const [editingStatement, setEditingStatement] = useState<StatementPaymentRow | null>(null)
   const [statementPending, setStatementPending] = useState(false)
   const [managingFlags, setManagingFlags] = useState(false)
-  const [reportFlagId, setPackFlagId] = useState<number | null>(null)
+  const reimbursement = useReimbursement(actions)
+  const [reportFlagId, setReportFlagId] = useState<number | null>(null)
   const rolloverDay = model.dataset.settings.budgetRolloverDay
   const announcement = useDebouncedAnnouncement(
     `${state.listRows.length} transactions match`,
@@ -51,7 +54,8 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
               state.setDateScope('allDates')
               scrollToResults()
             }}
-            onOpenReport={setPackFlagId}
+            onOpenReport={setReportFlagId}
+            onSettle={reimbursement.open}
             onManage={() => setManagingFlags(true)}
             onSelect={actions.onEdit}
           />
@@ -154,12 +158,23 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
         />
       ) : null}
 
+      {reimbursement.group && actions ? (
+        <RecordReimbursementSheet
+          group={reimbursement.group}
+          model={model}
+          busy={reimbursement.busy}
+          error={reimbursement.error}
+          onCancel={reimbursement.cancel}
+          onRecord={reimbursement.record}
+        />
+      ) : null}
+
       <TransactionsFlagOverlays
         model={model}
         actions={actions}
         reportFlagId={reportFlagId}
-        onCloseReport={() => setPackFlagId(null)}
-        onOpenReport={setPackFlagId}
+        onCloseReport={() => setReportFlagId(null)}
+        onOpenReport={setReportFlagId}
         managingFlags={managingFlags}
         onCloseManage={() => setManagingFlags(false)}
       />

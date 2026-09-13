@@ -94,8 +94,11 @@
   padding: 0.25rem 0.35rem 0.5rem;
 }
 
+/* Wraps: three actions do not fit one 375px row, and squeezing them makes
+   every label truncate to something unreadable. */
 .groupActions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.4rem;
 }
 
@@ -115,6 +118,22 @@
 .filterBtn:hover,
 .packBtn:hover {
   background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+/* Solid, unlike the dashed secondary actions beside it: this is the one that
+   closes the claim out, and it is what you came to the card to do. */
+.settleBtn {
+  flex: none;
+  margin-top: 0.35rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid transparent;
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  color: var(--color-accent);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .packBtn {

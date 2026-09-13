@@ -75,7 +75,7 @@ export function expenseReportCsv(
   const blank = (label: string, cents: number) =>
     ['', label, '', '', '', formatCents(cents, options.format), ''].map(esc).join(',')
 
-  const totals = [blank('Total claimed', report.totalClaimedCents)]
+  const totals = [blank('Total expenses', report.totalClaimedCents)]
   if (report.credits.length > 0) {
     totals.push(blank('Less reimbursed', -report.creditedCents))
     totals.push(blank('Outstanding', report.outstandingCents))

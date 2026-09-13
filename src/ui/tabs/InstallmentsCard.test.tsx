@@ -56,6 +56,8 @@ function modelWithPlans(plans: InstallmentPlan[]): ExpenseModel {
       categoryName: () => 'Tech',
       accountName: () => 'Cetelam',
       installmentPlan: (id) => plans.find((p) => p.id === id),
+      settlementFor: () => undefined,
+      settledBy: () => [],
     },
     descriptionIndex: { search: () => [], resolve: () => undefined },
     months: ['2026-07'],

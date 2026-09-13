@@ -218,7 +218,7 @@ function ReportTable({
         ) : null}
         <tfoot>
           <TotalRow
-            label="Total claimed"
+            label="Total expenses"
             cents={report.totalClaimedCents}
             format={format}
             emphasis={!settled}
@@ -296,7 +296,7 @@ function MissingReceipts({
     <div className={styles.warning}>
       <p className={styles.warningText}>
         {bare.length} item{bare.length === 1 ? ' has' : 's have'} no receipt attached. Most
-        employers will send the claim back for those.
+        employers will send the report back for those.
       </p>
       {onOpenTransaction ? (
         <ul className={styles.warningList}>
