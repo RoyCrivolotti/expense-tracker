@@ -9,8 +9,11 @@ import { pickScenarioColor } from '../../domain/engine/projectionPresets'
  * Only a name is asked for. Everything else takes the same defaults the full
  * editor opens on, so the two cannot drift:
  *
- * - **reimbursable: true** — matching `initialFlagDraft`, and migration 0019's
- *   column default. Chasing money back is the case flags were built for.
+ * - **reimbursable** is asked for, not assumed. It decides whether the flag
+ *   offers an expense report and a Record reimbursement action at all, so
+ *   guessing it wrong means either a missing feature or a document addressed to
+ *   nobody. It defaults to ticked, matching `initialFlagDraft` and migration
+ *   0019's column default.
  * - **colour** picked distinct from the ones already in use, reusing the goal
  *   scenarios' palette walker rather than defaulting every quick flag to the
  *   first swatch and making them indistinguishable at a glance.
@@ -23,13 +26,17 @@ import { pickScenarioColor } from '../../domain/engine/projectionPresets'
  * Returns null for a blank name so the caller can stay quiet rather than raising
  * an error for an empty box somebody opened and thought better of.
  */
-export function quickFlagDraft(name: string, existing: Flag[]): NewFlag | null {
+export function quickFlagDraft(
+  name: string,
+  existing: Flag[],
+  reimbursable = true,
+): NewFlag | null {
   const trimmed = name.trim()
   if (!trimmed) return null
   return {
     name: trimmed,
     color: pickScenarioColor(existing.map((f) => f.color)),
-    reimbursable: true,
+    reimbursable,
     active: true,
     sortOrder: Math.max(-1, ...existing.map((f) => f.sortOrder)) + 1,
   }
@@ -52,9 +59,9 @@ export function duplicateFlagName(name: string, existing: Flag[]): boolean {
 export function createFlagInPlace(
   actions: ExpenseActions,
   flags: Flag[],
-): (name: string) => Promise<number> {
-  return async (name) => {
-    const draft = quickFlagDraft(name, flags)
+): (name: string, reimbursable: boolean) => Promise<number> {
+  return async (name, reimbursable) => {
+    const draft = quickFlagDraft(name, flags, reimbursable)
     if (!draft) throw new Error('Enter a name')
     const created = await actions.createFlag(draft)
     return created.id

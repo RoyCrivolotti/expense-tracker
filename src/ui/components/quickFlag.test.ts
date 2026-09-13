@@ -4,6 +4,17 @@ import type { ExpenseActions } from '../actions'
 import { createFlagInPlace, duplicateFlagName, quickFlagDraft } from './quickFlag'
 
 describe('quickFlagDraft', () => {
+  it('carries the reimbursable choice through rather than forcing it', () => {
+    // A "Tax deductible" flag is a note to self, not money anyone will repay —
+    // offering it an expense report produces a document addressed to nobody.
+    expect(quickFlagDraft('Tax deductible', [], false)?.reimbursable).toBe(false)
+    expect(quickFlagDraft('Work travel', [], true)?.reimbursable).toBe(true)
+  })
+
+  it('defaults to reimbursable when nothing is said, like the full editor', () => {
+    expect(quickFlagDraft('Madrid trip', [])?.reimbursable).toBe(true)
+  })
+
   it('takes the same defaults the full editor opens on', () => {
     // Drifting from initialFlagDraft would mean a flag made here behaves
     // differently from one made in Settings, with nothing on screen to say so.
@@ -58,7 +69,7 @@ describe('createFlagInPlace', () => {
     const createFlag = vi.fn().mockResolvedValue(makeFlag({ id: 77, name: 'Madrid trip' }))
     const actions = { createFlag } as unknown as ExpenseActions
 
-    await expect(createFlagInPlace(actions, [])('Madrid trip')).resolves.toBe(77)
+    await expect(createFlagInPlace(actions, [])('Madrid trip', true)).resolves.toBe(77)
     expect(createFlag).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'Madrid trip', reimbursable: true }),
     )
@@ -68,7 +79,7 @@ describe('createFlagInPlace', () => {
     const createFlag = vi.fn()
     const actions = { createFlag } as unknown as ExpenseActions
 
-    await expect(createFlagInPlace(actions, [])('   ')).rejects.toThrow('Enter a name')
+    await expect(createFlagInPlace(actions, [])('   ', true)).rejects.toThrow('Enter a name')
     expect(createFlag).not.toHaveBeenCalled()
   })
 })

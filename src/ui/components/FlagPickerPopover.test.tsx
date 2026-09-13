@@ -126,7 +126,7 @@ describe('FlagPickerPopover — creating a flag in place', () => {
     await user.type(screen.getByRole('textbox', { name: 'New flag name' }), 'Madrid trip')
     await user.click(screen.getByRole('button', { name: 'Add' }))
 
-    expect(onCreate).toHaveBeenCalledWith('Madrid trip')
+    expect(onCreate).toHaveBeenCalledWith('Madrid trip', true)
     // Selecting it is the point — creating a flag you then have to pick again
     // is barely better than walking to Settings.
     expect(onSelect).toHaveBeenCalledWith(9)
@@ -190,5 +190,29 @@ describe('FlagPickerPopover — creating a flag in place', () => {
     // Escape here means "not this after all", not "abandon the transaction".
     expect(screen.getByRole('button', { name: '+ New flag' })).toBeInTheDocument()
     expect(onClose).not.toHaveBeenCalled()
+  })
+})
+
+describe('FlagPickerPopover — choosing whether a flag expects money back', () => {
+  it('offers the choice before the flag exists, ticked by default', async () => {
+    const user = userEvent.setup()
+    renderPicker({ onCreate: vi.fn() })
+
+    await user.click(screen.getByRole('button', { name: '+ New flag' }))
+    expect(screen.getByRole('checkbox', { name: /expect this money back/i })).toBeChecked()
+  })
+
+  it('creates a non-reimbursable flag when the box is cleared', async () => {
+    const user = userEvent.setup()
+    const onCreate = vi.fn().mockResolvedValue(9)
+    renderPicker({ onCreate })
+
+    await user.click(screen.getByRole('button', { name: '+ New flag' }))
+    await user.click(screen.getByRole('checkbox', { name: /expect this money back/i }))
+    await user.type(screen.getByRole('textbox', { name: 'New flag name' }), 'Charity donations{Enter}')
+
+    // A flag nobody is going to pay must not offer an expense report — that is
+    // a document addressed to nobody, for money that is not coming.
+    expect(onCreate).toHaveBeenCalledWith('Charity donations', false)
   })
 })
