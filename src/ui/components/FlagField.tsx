@@ -18,6 +18,8 @@ interface Props {
    * the whole editor and focus is yanked back out of the popover.
    */
   onTrapPausedChange?: ((paused: boolean) => void) | undefined
+  /** Passed straight through; see FlagPickerPopover. */
+  onCreate?: ((name: string) => Promise<number>) | undefined
 }
 
 /**
@@ -26,7 +28,14 @@ interface Props {
  * card that also hides itself when empty — so nothing pointed at it, and the
  * picker's own "add one under Settings → Flags" copy was unreachable.
  */
-export function FlagField({ flags, value, onChange, label = 'Flag', onTrapPausedChange }: Props) {
+export function FlagField({
+  flags,
+  value,
+  onChange,
+  label = 'Flag',
+  onTrapPausedChange,
+  onCreate,
+}: Props) {
   const triggerRef = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(false)
 
@@ -65,6 +74,7 @@ export function FlagField({ flags, value, onChange, label = 'Flag', onTrapPaused
           triggerRef={triggerRef}
           onSelect={onChange}
           onClose={() => setOpenState(false)}
+          {...(onCreate ? { onCreate } : {})}
         />
       ) : null}
     </Field>

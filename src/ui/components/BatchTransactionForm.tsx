@@ -18,6 +18,7 @@ import {
 } from './batchTransactionIntent'
 import { DescriptionCombobox } from './DescriptionCombobox'
 import { FlagField } from './FlagField'
+import { createFlagInPlace } from './quickFlag'
 import { Money } from './Money'
 import { DateInput } from './DateInput'
 import { optionLabel, selectableOptions } from './pickerOptions'
@@ -315,6 +316,7 @@ export function BatchTransactionForm({
           onChange={setFlagId}
           label="Flag all of these"
           onTrapPausedChange={onTrapPausedChange}
+          onCreate={createFlagInPlace(actions, model.dataset.flags)}
         />
       </div>
 
