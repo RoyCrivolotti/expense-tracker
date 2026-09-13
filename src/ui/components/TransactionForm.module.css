@@ -116,8 +116,10 @@
 }
 
 .chip {
+  flex: 1;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.35rem;
   padding: 0.4rem 0.65rem;
   border: 1px dashed var(--color-border);
