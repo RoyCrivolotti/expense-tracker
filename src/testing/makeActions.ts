@@ -28,6 +28,8 @@ export function makeActions(overrides: Partial<ExpenseActions> = {}): ExpenseAct
     updateTransactions: vi.fn().mockResolvedValue(undefined),
     setStatementPaid: vi.fn().mockResolvedValue(undefined),
     setCashActual: vi.fn().mockResolvedValue(undefined),
+    uploadAttachment: vi.fn().mockResolvedValue(undefined),
+    deleteAttachment: vi.fn().mockResolvedValue(undefined),
     createFlag: vi.fn().mockResolvedValue(makeFlag()),
     updateFlag: vi.fn().mockResolvedValue(undefined),
     deleteFlag: vi.fn().mockResolvedValue({ unflagged: 0 }),

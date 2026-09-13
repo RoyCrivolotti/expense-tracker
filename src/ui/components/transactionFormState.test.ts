@@ -10,6 +10,7 @@ function minimalModel(): ExpenseModel {
   return {
     dataset: {
       flags: [],
+      attachments: [],
       categories: [{ id: 3, name: 'Health', monthlyBudgetCents: 0, sortOrder: 1, active: true }],
       accounts: [
         { id: 2, name: 'Debit', kind: 'debit', settlement: 'immediate', active: true },
@@ -38,6 +39,7 @@ function minimalModel(): ExpenseModel {
       categoryName: () => 'Health',
       accountName: () => 'Debit',
       flag: () => undefined,
+      attachments: () => [],
       installmentPlan: () => undefined,
     },
     descriptionIndex: { search: () => [], resolve: () => undefined },

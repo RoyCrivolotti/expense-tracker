@@ -12,6 +12,7 @@ import { BatchTransactionForm } from './BatchTransactionForm'
 function dataset(): ExpenseDataset {
   return {
     flags: [{ id: 7, name: 'Work travel', color: '#6366f1', sortOrder: 0, active: true }],
+    attachments: [],
     categories: [
       { id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true },
       { id: 2, name: 'Dining out', monthlyBudgetCents: 0, sortOrder: 1, active: true },
@@ -50,6 +51,7 @@ function model(): ExpenseModel {
       categoryName: () => '',
       accountName: () => '',
       flag: () => undefined,
+      attachments: () => [],
       installmentPlan: () => undefined,
     },
     descriptionIndex: {

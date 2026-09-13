@@ -4,6 +4,8 @@ import type { AccessRepository } from '../domain/ports/accessRepository'
 export interface Env {
   DB: D1Database
   BACKUPS?: R2Bucket
+  /** Receipt bytes. Optional: unbound means the upload route 503s and nothing else changes. */
+  RECEIPTS?: R2Bucket
   /** Cloudflare Email Sending binding (optional; backup alerts only). */
   EMAIL?: SendEmail
   /** Bootstrap fallback when allowed_users is empty (comma-separated). Requires ALLOW_BOOTSTRAP=1. */
@@ -21,6 +23,9 @@ export interface Env {
   /** Verified sender address on your domain (must match Email Sending setup). */
   BACKUP_ALERT_FROM?: string
   BACKUP_ALERT_FROM_NAME?: string
+  RECEIPT_MAX_FILE_BYTES?: string
+  RECEIPT_MAX_PER_TRANSACTION?: string
+  RECEIPT_MAX_OWNER_BYTES?: string
 }
 
 /**

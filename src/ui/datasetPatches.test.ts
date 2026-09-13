@@ -3,6 +3,10 @@ import type { ExpenseDataset, Transaction } from '../types'
 import { defaultExpenseSettings } from '../engine'
 import {
   patchAfterAccountDelete,
+  patchAfterAttachmentAdd,
+  patchAfterAttachmentDelete,
+  patchAfterBulkDelete,
+  patchAfterTransactionDelete,
   patchAfterBulkUpdate,
   patchAfterCategoryDelete,
   patchAfterFlag,
@@ -12,6 +16,7 @@ import {
 function dataset(overrides: Partial<ExpenseDataset> = {}): ExpenseDataset {
   return {
     flags: [],
+    attachments: [],
     categories: [],
     accounts: [],
     transactions: [],
@@ -374,4 +379,83 @@ describe('flag patches', () => {
     expect(Object.keys(next.transactions[0] ?? {})).not.toContain('flagId')
   })
 
+})
+
+describe('attachment patches', () => {
+  const attachment = {
+    id: 5,
+    transactionId: 1,
+    contentType: 'image/jpeg',
+    byteSize: 1_000,
+    createdAt: '2026-05-01T00:00:00Z',
+    hasThumb: true,
+  }
+
+  it('adds an attachment to the dataset', () => {
+    const next = patchAfterAttachmentAdd(dataset(), attachment)
+
+    expect(next.attachments).toEqual([attachment])
+  })
+
+  it('replaces one that is already there rather than duplicating it', () => {
+    const before = dataset({ attachments: [attachment] })
+    const next = patchAfterAttachmentAdd(before, { ...attachment, byteSize: 2_000 })
+
+    expect(next.attachments).toHaveLength(1)
+    expect(next.attachments[0]?.byteSize).toBe(2_000)
+  })
+
+  it('removes an attachment by id', () => {
+    const before = dataset({ attachments: [attachment, { ...attachment, id: 6 }] })
+
+    expect(patchAfterAttachmentDelete(before, 5).attachments.map((a) => a.id)).toEqual([6])
+  })
+
+  it('does not mutate the dataset it was given', () => {
+    const before = dataset({ attachments: [attachment] })
+    patchAfterAttachmentDelete(before, 5)
+
+    expect(before.attachments).toHaveLength(1)
+  })
+})
+
+describe('deleting a transaction drops its receipts from the dataset', () => {
+  const attachment = {
+    id: 5,
+    transactionId: 1,
+    contentType: 'image/jpeg',
+    byteSize: 1_000,
+    createdAt: '2026-05-01T00:00:00Z',
+    hasThumb: true,
+  }
+  const other = { ...attachment, id: 6, transactionId: 2 }
+
+  function txn(id: number): Transaction {
+    return {
+      id,
+      date: '2026-05-01',
+      budgetMonth: '2026-05',
+      description: 'Hotel',
+      accountId: 1,
+      categoryId: 1,
+      type: 'expense',
+      amountCents: 1_000,
+      cancelled: false,
+      status: 'posted',
+    }
+  }
+
+  it('removes only that transaction’s attachments', () => {
+    const before = dataset({ transactions: [txn(1), txn(2)], attachments: [attachment, other] })
+
+    const next = patchAfterTransactionDelete(before, 1)
+
+    expect(next.attachments.map((a) => a.id)).toEqual([6])
+  })
+
+  it('does the same for a bulk delete', () => {
+    const before = dataset({ transactions: [txn(1), txn(2)], attachments: [attachment, other] })
+
+    expect(patchAfterBulkDelete(before, [1, 2]).attachments).toEqual([])
+  })
 })

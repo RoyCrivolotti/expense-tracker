@@ -6,6 +6,7 @@ import { accountUsageCount, categoryUsageCount } from './recordUsage'
 function dataset(overrides: Partial<ExpenseDataset> = {}): ExpenseDataset {
   return {
     flags: [],
+    attachments: [],
     categories: [],
     accounts: [],
     transactions: [],

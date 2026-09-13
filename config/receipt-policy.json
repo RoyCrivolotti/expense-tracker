@@ -1,0 +1,8 @@
+{
+  "maxFileBytes": 5242880,
+  "maxPerTransaction": 4,
+  "maxOwnerBytes": 2147483648,
+  "maxImageEdgePx": 1600,
+  "jpegQuality": 0.82,
+  "thumbEdgePx": 320
+}

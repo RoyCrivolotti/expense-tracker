@@ -9,6 +9,7 @@ import { InstallmentStep } from './InstallmentStep'
 function emptyDataset(): ExpenseDataset {
   return {
     flags: [],
+    attachments: [],
     categories: [],
     accounts: [],
     transactions: [],
@@ -39,6 +40,7 @@ const model = {
     categoryName: () => '',
     accountName: () => '',
     flag: () => undefined,
+    attachments: () => [],
     installmentPlan: () => undefined,
   },
   descriptionIndex: { search: () => [], resolve: () => undefined },

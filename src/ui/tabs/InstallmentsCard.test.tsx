@@ -22,6 +22,7 @@ const basePlan: InstallmentPlan = {
 function datasetWithPlans(plans: InstallmentPlan[]): ExpenseDataset {
   return {
     flags: [],
+    attachments: [],
     categories: [{ id: 3, name: 'Tech', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
     accounts: [{ id: 2, name: 'Cetelam', kind: 'credit', settlement: 'deferred', active: true }],
     transactions: [],
@@ -51,6 +52,7 @@ function modelWithPlans(plans: InstallmentPlan[]): ExpenseModel {
       category: (id) => (id === 3 ? { id: 3, name: 'Tech', monthlyBudgetCents: 0, sortOrder: 0, active: true } : undefined),
       account: () => undefined,
       flag: () => undefined,
+      attachments: () => [],
       categoryName: () => 'Tech',
       accountName: () => 'Cetelam',
       installmentPlan: (id) => plans.find((p) => p.id === id),
@@ -73,6 +75,8 @@ function noopActions(): ExpenseActions {
     updateTransactions: vi.fn(),
     setStatementPaid: vi.fn(),
     setCashActual: vi.fn(),
+    uploadAttachment: vi.fn(),
+    deleteAttachment: vi.fn(),
     createFlag: vi.fn(),
     updateFlag: vi.fn(),
     deleteFlag: vi.fn(),

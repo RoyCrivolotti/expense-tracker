@@ -18,6 +18,15 @@ export class HttpError extends Error {
   }
 }
 
+/** Mirrors readJson for the one route whose request body is binary. */
+export async function readFormData(request: Request): Promise<FormData> {
+  try {
+    return await request.formData()
+  } catch {
+    throw new HttpError(400, 'Invalid form body')
+  }
+}
+
 export async function readJson<T>(request: Request): Promise<T> {
   try {
     return await request.json<T>()

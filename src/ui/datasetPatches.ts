@@ -12,6 +12,7 @@ import type {
   GoalScenario,
   InstallmentPlan,
   Transaction,
+  TransactionAttachment,
   WealthAccount,
   WealthCheckin,
 } from '../types'
@@ -65,6 +66,9 @@ export function patchAfterTransactionDelete(
 ): ExpenseDataset {
   const d = cloneDataset(dataset)
   d.transactions = d.transactions.filter((t) => t.id !== id)
+  // Mirrors the server's cascade. Without it lookup.attachments() keeps
+  // returning receipts for a transaction that no longer exists.
+  d.attachments = d.attachments.filter((a) => a.transactionId !== id)
   return d
 }
 
@@ -86,6 +90,7 @@ export function patchAfterBulkDelete(
   const drop = new Set(ids)
   const d = cloneDataset(dataset)
   d.transactions = d.transactions.filter((t) => !drop.has(t.id))
+  d.attachments = d.attachments.filter((a) => !drop.has(a.transactionId))
   return d
 }
 
@@ -128,6 +133,24 @@ export function patchAfterCategory(
   const d = cloneDataset(dataset)
   upsertById(d.categories, category)
   d.categories.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+  return d
+}
+
+export function patchAfterAttachmentAdd(
+  dataset: ExpenseDataset,
+  attachment: TransactionAttachment,
+): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  upsertById(d.attachments, attachment)
+  return d
+}
+
+export function patchAfterAttachmentDelete(
+  dataset: ExpenseDataset,
+  id: number,
+): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  d.attachments = d.attachments.filter((a) => a.id !== id)
   return d
 }
 

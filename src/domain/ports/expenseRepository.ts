@@ -7,6 +7,7 @@ import type {
   ExpenseSettings,
   Flag,
   GoalInputs,
+  TransactionAttachment,
   GoalScenario,
   InstallmentPlan,
   Transaction,
@@ -14,6 +15,7 @@ import type {
   WealthCheckin,
 } from '../types'
 import type {
+  AttachmentSource,
   BulkTransactionPatch,
   DeleteAccountOptions,
   DeleteAccountResult,
@@ -21,6 +23,7 @@ import type {
   DeleteCategoryResult,
   NewAccount,
   NewCategory,
+  NewAttachment,
   NewFlag,
   NewGoalScenario,
   NewInstallmentPlan,
@@ -69,6 +72,30 @@ export interface ExpenseRepository {
     id: number,
     options?: DeleteAccountOptions,
   ): Promise<DeleteAccountResult>
+  /**
+   * Attachment metadata only. The bytes are the ReceiptStore port's job — the
+   * two are deliberately separate so a missing R2 binding degrades to "no
+   * receipts" instead of breaking every dataset read.
+   */
+  /** Ownership gate for attachment writes; the handler holds no SQL. */
+  transactionExists(owner: string, id: number): Promise<boolean>
+  listAttachments(owner: string, transactionId: number): Promise<TransactionAttachment[]>
+  /**
+   * What the serve route needs to stream one attachment. Returns null rather
+   * than throwing so a miss and a foreign id are indistinguishable to the
+   * caller — an attachment you do not own must look like one that is not there.
+   */
+  findAttachmentSource(owner: string, id: number): Promise<AttachmentSource | null>
+  createAttachment(owner: string, input: NewAttachment): Promise<TransactionAttachment>
+  /** Returns the R2 keys to delete, so the caller can clean up the bytes. */
+  deleteAttachment(owner: string, id: number): Promise<{ objectKey: string; thumbKey?: string }>
+  /**
+   * R2 keys held by these transactions. Read before deleting them — the rows
+   * carrying the keys go with the transaction.
+   */
+  attachmentKeysForTransactions(owner: string, transactionIds: number[]): Promise<string[]>
+  /** Total bytes this owner is storing, for the quota check. */
+  attachmentBytesUsed(owner: string): Promise<number>
   createFlag(owner: string, input: NewFlag): Promise<Flag>
   updateFlag(owner: string, id: number, patch: Partial<NewFlag>): Promise<Flag>
   /** Deletes the flag and clears it from its transactions in one batch. */
