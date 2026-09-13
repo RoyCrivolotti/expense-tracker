@@ -153,11 +153,22 @@ Database names and IDs are in `config/dev.json` (dev) and the Cloudflare dashboa
 
 ## Migrations
 
-14 migration files (`0001`–`0014`) in `migrations/`. They are plain SQL — no migration tracking table. `npm run migrate:dev` runs all of them in order; if the DB already has some applied, run only the missing ones manually:
+Sequentially numbered plain-SQL files in `migrations/` — **no migration tracking table**, so nothing
+records what a database has already had. Run `ls migrations/` for the current set rather than trusting
+a count written down here; this line has gone stale before.
+
+`npm run migrate:dev` runs all of them in order. If the DB already has some applied, run only the
+missing ones manually:
 
 ```bash
 npx wrangler d1 execute <dev-db-name> --remote --file=migrations/0012_wealth_checkins.sql
 ```
+
+> **If `--file` fails with a bare `TypeError: fetch failed`** — roughly 13s in, after "Uploading
+> complete" — the upload endpoint rejected it, not the network. A `d1 execute --command` in the same
+> shell still works, and that is how production took `0015`–`0019`. Node 24 is the prime suspect
+> (see **Node version** above). `docs/DEPLOYMENT.md` carries the detail and the transcription rule:
+> paste the statements verbatim, one file at a time, in order.
 
 ## Wrangler
 
@@ -182,6 +193,23 @@ npm run deploy:dev    # staging Pages project
 ```
 
 CI deploys automatically on push to `main` via `.github/workflows/deploy.yml`.
+
+Opening a PR also auto-deploys a staging preview via `.github/workflows/deploy-dev.yml` (or trigger
+it manually for a branch with no PR yet: `gh workflow run deploy-dev.yml --ref <branch>`). That
+workflow runs on GitHub's runners using the `CLOUDFLARE_API_TOKEN` **repository secret** — entirely
+independent of whatever token is in your local `~/.zshrc`. If `npm run deploy:dev` fails locally with
+"Invalid access token", the local token is stale (roll it — see Cloudflare tokens above); the
+CI-triggered preview still works off the separately-maintained GitHub secret regardless. Each branch
+gets its own stable alias URL, `https://<sanitized-branch>.roy-expenses-stg.pages.dev` (see the
+truncation rule in `.claude/deploy-context.md`) — find it in the workflow run's "Deploy preview" step
+output if you don't already know it.
+
+**Both PR workflows run on every PR, whatever its base.** They used to filter on `branches: [main]`,
+which matches the *base* branch — so a stacked PR (B based on A) got no CI at all until A merged, and
+retargeting B to `main` afterwards did not start it either, because a base change is an `edited`
+event that the default trigger list ignores. That cost a close/reopen on every PR in the flags stack.
+`verify.yml` now also listens for `edited`, so retargeting *and* pasting a screenshot into the
+description both re-run the checks.
 
 ## Verify (runs in CI and locally before deploy)
 

@@ -1,8 +1,12 @@
 name: Deploy dev preview
 
 on:
+  # Unfiltered by base, so a stacked PR gets a preview too — see verify.yml for
+  # why the `branches:` filter had to go. Safe to widen: deploy-dev.sh aliases
+  # each deploy by GITHUB_HEAD_REF, so PRs get their own URL rather than fighting
+  # over one. Deliberately *not* subscribed to `edited` — retitling a PR is not a
+  # reason to rebuild and redeploy it.
   pull_request:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:
