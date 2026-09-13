@@ -1,0 +1,36 @@
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+.used {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.muted {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+.track {
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--exp-track);
+  overflow: hidden;
+}
+.fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+/* Class names match the Pill tones they are chosen alongside in toneFor. */
+.neutral {
+  background: var(--exp-success);
+}
+.warning {
+  background: var(--exp-warning);
+}
+.danger {
+  background: var(--exp-danger);
+}

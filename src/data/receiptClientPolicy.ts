@@ -17,4 +17,11 @@ export const RECEIPT_CLIENT_POLICY = {
   skipUnderBytes: 300_000,
   thumbEdge: 320,
   maxPerTransaction: 4,
+  /**
+   * Shown in Settings as the ceiling on the storage bar. Enforcement is entirely
+   * server-side and `RECEIPT_MAX_OWNER_BYTES` can override it there, so treat
+   * this as the default rather than the truth — a drift shows up as a bar drawn
+   * against the wrong ceiling, never as an unenforced limit.
+   */
+  maxOwnerBytes: 2_147_483_648,
 } as const

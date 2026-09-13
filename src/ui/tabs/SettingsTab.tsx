@@ -11,6 +11,7 @@ import { DefinitionsEditor } from '../definitions/DefinitionsEditor'
 import { AppearanceSetting } from '../settings/AppearanceSetting'
 import { PreferencesSetting } from '../settings/PreferencesSetting'
 import { ReportNameSetting } from '../settings/ReportNameSetting'
+import { ReceiptStorageSetting } from '../settings/ReceiptStorageSetting'
 import { MilestonesSetting } from '../settings/MilestonesSetting'
 import { DefaultAccountSetting } from '../settings/DefaultAccountSetting'
 import { ExportDataSection } from '../settings/ExportDataSection'
@@ -171,6 +172,10 @@ export function SettingsTab({
           onChange={(patch) => actions.updateSettings(patch)}
         />
       )}
+
+      {/* Outside OwnerSettings: that group is settings you write through
+          updateSettings, and this one is read-only, derived, and writes nothing. */}
+      <ReceiptStorageSetting attachments={model.dataset.attachments} />
 
       <SectionTitle>Export</SectionTitle>
       <Card>
