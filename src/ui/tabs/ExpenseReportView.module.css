@@ -56,6 +56,7 @@
 }
 
 .toolbarActions {
+  position: relative;
   display: flex;
   gap: 0.5rem;
 }
@@ -506,4 +507,15 @@
   .receipts {
     break-before: page;
   }
+}
+
+/* A failed send, next to the button that failed. Absolute so appearing does not
+   reflow the toolbar and shove the buttons out from under a finger. */
+.toolbarError {
+  position: absolute;
+  top: 100%;
+  right: 1rem;
+  margin: 0.25rem 0 0;
+  font-size: 0.78rem;
+  color: var(--exp-danger);
 }
