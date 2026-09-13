@@ -339,6 +339,28 @@
   border-radius: 0.5rem;
   font-size: 0.85rem;
   line-height: 1.45;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.pdfNoteText {
+  margin: 0;
+  flex: 1 1 16rem;
+}
+.pdfLink {
+  flex: 0 0 auto;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.4rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+.pdfLink:hover {
+  border-color: var(--color-accent);
 }
 
 @media print {
@@ -436,6 +458,12 @@
   .receiptsTitle,
   .pdfNote {
     color: #111;
+  }
+
+  /* A link prints as an underline pointing nowhere; the filename in the
+     sentence is what the reader needs off paper. */
+  .pdfLink {
+    display: none;
   }
 
   .warning {

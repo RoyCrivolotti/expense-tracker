@@ -50,10 +50,23 @@ export function ExpenseReportSheet({
           {receipts.map(({ attachment, transaction, ref }) => (
             <figure key={attachment.id} className={styles.figure}>
               {attachment.contentType === 'application/pdf' ? (
-                <p className={styles.pdfNote}>
-                  PDF receipt — attach <strong>{attachment.originalName ?? 'the file'}</strong>{' '}
-                  separately; a PDF cannot be printed into this page.
-                </p>
+                <div className={styles.pdfNote}>
+                  <p className={styles.pdfNoteText}>
+                    <strong>R{ref}</strong> is a PDF, so it cannot be drawn into this page. Send{' '}
+                    <strong>{attachment.originalName ?? 'the file'}</strong> with the report — the
+                    line above is numbered so an approver can still match the two up.
+                  </p>
+                  {/* Screen only: on paper a link is a dead underline, and the
+                      filename in the sentence is what the reader actually needs. */}
+                  <a
+                    className={styles.pdfLink}
+                    href={`/api/expenses/attachments/${attachment.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Open R{ref}
+                  </a>
+                </div>
               ) : (
                 <img
                   src={`/api/expenses/attachments/${attachment.id}`}

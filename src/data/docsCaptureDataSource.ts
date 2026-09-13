@@ -15,6 +15,7 @@ import type {
   InstallmentPlan,
   StoredTransaction,
   Transaction,
+  TransactionAttachment,
   WealthAccount,
   WealthCheckin,
 } from '../types'
@@ -142,9 +143,28 @@ function enrichDocsCaptureDataset(dataset: ExpenseDataset): ExpenseDataset {
     )
   }
   const { flags, transactions: stored } = demoFlags([...dataset.transactions, ...planTxns])
+  // One PDF receipt on a claimed row, so the expense report's Receipts section
+  // renders at all in DOCS_CAPTURE. Deliberately a PDF and not a photo: the PDF
+  // branch is the one that needs no bytes behind it, so it shows correctly with
+  // no API, where an <img> would capture as a broken icon.
+  const claimedRow = stored.find((t) => t.flagId === 970_001)
+  const attachments: TransactionAttachment[] = claimedRow
+    ? [
+        {
+          id: 970_900,
+          transactionId: claimedRow.id,
+          contentType: 'application/pdf',
+          byteSize: 184_320,
+          originalName: 'acme-invoice-4471.pdf',
+          createdAt: `${claimedRow.date}T09:12:00.000Z`,
+          hasThumb: false,
+        },
+      ]
+    : []
   return {
     ...dataset,
     flags,
+    attachments,
     // A claimant, so the claim's header renders as a real document rather
     // than an anonymous table.
     settings: { ...dataset.settings, claimantName: 'Alex Moreno' },
