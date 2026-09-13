@@ -43,12 +43,7 @@
   display: inline-block;
   font-size: 0.7rem;
   font-weight: 600;
-  /* Asymmetric on purpose: this text has no descenders, so a mathematically
-     centered box (equal top/bottom padding) reads as sitting too high — the
-     eye anchors on the baseline, not the ink's bounding-box center. More
-     padding above than below nudges the glyphs down to look centered while
-     keeping the total box height (top + bottom sum) unchanged. */
-  padding: 0.16rem 0.5rem 0.08rem;
+  padding: 0.12rem 0.5rem;
   border-radius: 999px;
   border: 1px solid transparent;
 }
