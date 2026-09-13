@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { CloseIcon } from '../icons'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
+import { useVisualViewportRect } from '../hooks/useVisualViewportRect'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import styles from './Modal.module.css'
 
@@ -15,6 +16,9 @@ interface ModalProps {
 
 export function Modal({ title, subtitle, onClose, children, trapPaused = false }: ModalProps) {
   useBodyScrollLock(true)
+  // Follows the visible slice rather than the layout viewport, so an iOS
+  // keyboard panning the screen cannot slide the sheet under the status bar.
+  const viewport = useVisualViewportRect()
   const sheetRef = useRef<HTMLDivElement>(null)
   useFocusTrap(sheetRef, onClose, trapPaused)
 
@@ -34,7 +38,12 @@ export function Modal({ title, subtitle, onClose, children, trapPaused = false }
   }, [title])
 
   return (
-    <div className={styles.overlay} onClick={onClose} role="presentation">
+    <div
+      className={styles.overlay}
+      style={viewport ? { top: viewport.top, height: viewport.height } : undefined}
+      onClick={onClose}
+      role="presentation"
+    >
       <div
         ref={sheetRef}
         className={styles.sheet}

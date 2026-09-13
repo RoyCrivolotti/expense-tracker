@@ -1,6 +1,14 @@
 .overlay {
   position: fixed;
-  inset: 0;
+  /*
+   * Not `inset: 0`: top and height are overridden inline to track the visual
+   * viewport (see useVisualViewportRect). These are the fallback for a browser
+   * without it, and are what the inline values equal when nothing has panned.
+   */
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100dvh;
   z-index: 50;
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(2px);
@@ -15,7 +23,10 @@
 .sheet {
   width: 100%;
   max-width: 30rem;
-  max-height: 85dvh;
+  /* Percentages of the overlay, which tracks the *visible* area — so with a
+     keyboard up the sheet stays inside what you can actually see, rather than
+     sizing against a viewport that extends behind it. */
+  max-height: 85%;
   overflow-y: auto;
   overflow-x: hidden;
   background: var(--color-bg);
@@ -70,7 +81,7 @@
     align-items: center;
   }
   .sheet {
-    max-height: 92dvh;
+    max-height: 92%;
     border-radius: 1.25rem;
   }
   .handle {
