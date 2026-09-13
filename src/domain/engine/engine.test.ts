@@ -297,6 +297,56 @@ describe('budget health', () => {
     expect(home!.ratio).toBeCloseTo(1.1, 2)
   })
 
+  it('reports a net-negative category as credit, not a green under-budget', () => {
+    // A reimbursement booked against Travel repays more than the month spent.
+    // The ratio goes negative, which used to slip past both thresholds and land
+    // on `under` — a green "under budget" pill reading "-45%".
+    const categories = [
+      { id: 1, name: 'Travel', monthlyBudgetCents: 100000, sortOrder: 0, active: true },
+    ]
+    const base = {
+      date: '2026-03-04',
+      budgetMonth: '2026-03',
+      description: '',
+      accountId: 1,
+      categoryId: 1,
+      cancelled: false,
+      status: 'posted' as const,
+    }
+    const txns: Transaction[] = [
+      { ...base, id: 1, type: 'expense', amountCents: 20000 },
+      { ...base, id: 2, type: 'refund', amountCents: 65000 },
+    ]
+    const [travel] = computeBudgetHealth(txns, categories, '2026-03')
+    expect(travel!.actualCents).toBe(-45000)
+    expect(travel!.ratio).toBeCloseTo(-0.45, 2)
+    expect(travel!.status).toBe('credit')
+  })
+
+  it('keeps an exactly-zero category under, not credit', () => {
+    // The boundary matters: a refund that exactly cancels the spend is "nothing
+    // spent", not "money back". Only a ratio below zero is a credit.
+    const categories = [
+      { id: 1, name: 'Travel', monthlyBudgetCents: 100000, sortOrder: 0, active: true },
+    ]
+    const base = {
+      date: '2026-03-04',
+      budgetMonth: '2026-03',
+      description: '',
+      accountId: 1,
+      categoryId: 1,
+      cancelled: false,
+      status: 'posted' as const,
+    }
+    const txns: Transaction[] = [
+      { ...base, id: 1, type: 'expense', amountCents: 20000 },
+      { ...base, id: 2, type: 'refund', amountCents: 20000 },
+    ]
+    const [travel] = computeBudgetHealth(txns, categories, '2026-03')
+    expect(travel!.actualCents).toBe(0)
+    expect(travel!.status).toBe('under')
+  })
+
   it('includes forecast charges when includeForecast is set', () => {
     const categories = [
       { id: 1, name: 'Groceries', monthlyBudgetCents: 50000, sortOrder: 0, active: true },

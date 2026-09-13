@@ -41,6 +41,11 @@
   border-radius: 999px;
   transition: width 0.4s ease;
 }
+/* Zero-width in practice — present so `styles[status]` always resolves, and so
+   a future non-zero credit bar has somewhere to take its colour from. */
+.credit {
+  background: var(--color-text-muted);
+}
 .under {
   background: var(--exp-success);
 }
