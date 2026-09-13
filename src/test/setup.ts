@@ -14,6 +14,33 @@ if (!URL.revokeObjectURL) {
   URL.revokeObjectURL = vi.fn()
 }
 
+/**
+ * jsdom has no ResizeObserver, and anything that repositions itself when its
+ * content changes (popovers) constructs one. The stub records every instance so
+ * a test can drive a resize — `resizeObservers.at(-1)?.trigger()` — rather than
+ * only proving the hook does not crash.
+ */
+export const resizeObservers: { target: Element | null; trigger: () => void }[] = []
+
+if (!('ResizeObserver' in globalThis)) {
+  ;(globalThis as { ResizeObserver?: unknown }).ResizeObserver = class {
+    private readonly entry: { target: Element | null; trigger: () => void }
+    constructor(callback: () => void) {
+      this.entry = { target: null, trigger: callback }
+      resizeObservers.push(this.entry)
+    }
+    observe(target: Element) {
+      this.entry.target = target
+    }
+    unobserve() {}
+    disconnect() {
+      const i = resizeObservers.indexOf(this.entry)
+      if (i !== -1) resizeObservers.splice(i, 1)
+    }
+  }
+}
+
 afterEach(() => {
   cleanup()
+  resizeObservers.length = 0
 })

@@ -168,3 +168,19 @@
   font-size: 0.78rem;
   color: var(--exp-danger);
 }
+
+/* Full-width under the name and Add button, so the choice is visible before the
+   flag exists rather than something to discover in Settings afterwards. */
+.createCheck {
+  flex: 1 1 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.createCheck input {
+  flex: 0 0 auto;
+  margin: 0;
+}
