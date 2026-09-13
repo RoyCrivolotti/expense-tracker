@@ -3,6 +3,7 @@ import { BackIcon, CloseIcon } from '../icons'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useVisualViewportRect } from '../hooks/useVisualViewportRect'
 import { useFocusTrap } from '../hooks/useFocusTrap'
+import { sheetGrabProps, useSwipeDismiss } from '../hooks/useSwipeDismiss'
 import styles from './Modal.module.css'
 
 interface ModalProps {
@@ -22,6 +23,11 @@ export function Modal({ title, subtitle, onClose, onBack, children, trapPaused =
   const viewport = useVisualViewportRect()
   const sheetRef = useRef<HTMLDivElement>(null)
   useFocusTrap(sheetRef, onClose, trapPaused)
+  // Same exit as tapping the backdrop, so consumers that guard their close (see
+  // TransactionModal's unsaved-draft confirm) guard this too. Stood down while a
+  // nested dialog is up: that sheet renders inside this one, and a drag meant for it
+  // would otherwise dismiss what it is sitting on.
+  const { offset, isDragging } = useSwipeDismiss(sheetRef, onClose, !trapPaused)
 
   const headingRef = useRef<HTMLHeadingElement>(null)
   // Skip the first run: useFocusTrap already sends initial focus to the first
@@ -47,14 +53,18 @@ export function Modal({ title, subtitle, onClose, onBack, children, trapPaused =
     >
       <div
         ref={sheetRef}
-        className={styles.sheet}
+        className={`${styles.sheet}${isDragging ? ` ${styles.sheetDragging}` : ''}`}
+        style={offset > 0 ? { transform: `translateY(${offset}px)` } : undefined}
         role="dialog"
         aria-modal="true"
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className={styles.handle} aria-hidden />
-        <header className={styles.header}>
+        {/* Still `aria-hidden`: it is a drag target, but dragging is not something a
+            screen reader can do, and an unlabelled div announces nothing useful. The
+            Close button below is the equivalent that is actually reachable. */}
+        <div className={styles.handle} aria-hidden {...sheetGrabProps} />
+        <header className={styles.header} {...sheetGrabProps}>
           {onBack && (
             <button type="button" onClick={onBack} aria-label="Back" className={`${styles.back} tapActive`}>
               <BackIcon />

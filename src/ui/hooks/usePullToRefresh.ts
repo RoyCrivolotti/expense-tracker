@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { isBodyScrollLocked } from './useBodyScrollLock'
 
 const THRESHOLD_PX = 112
 const MAX_PULL_PX = 140
@@ -10,6 +11,10 @@ interface Options {
   refreshing?: boolean
 }
 
+/**
+ * Whether the page sits at the top — but only meaningful when the page can scroll at
+ * all, which is why every caller below pairs it with `isBodyScrollLocked()`.
+ */
 function scrollTop(): number {
   if (typeof window === 'undefined') return 0
   return window.scrollY || document.documentElement.scrollTop || 0
@@ -38,7 +43,14 @@ export function usePullToRefresh({
     }
 
     const onTouchStart = (e: TouchEvent) => {
-      if (scrollTop() > SCROLL_TOP_EPS) return
+      // Without the lock check the at-top gate is permanently satisfied while a sheet
+      // is open — `useBodyScrollLock` pins `body`, so `scrollY` reads 0 wherever the
+      // page really is — and every touch inside the sheet arms a pull. Scrolling the
+      // transaction form refreshed the whole app. `touch-action` on the overlay is no
+      // help: it suppresses the browser's own panning, not delivery of touches to
+      // these listeners. There is nothing to refresh either way, since the page behind
+      // a sheet is pinned and out of reach.
+      if (isBodyScrollLocked() || scrollTop() > SCROLL_TOP_EPS) return
       const touch = e.touches[0]
       if (!touch) return
       startY.current = touch.clientY
@@ -69,6 +81,9 @@ export function usePullToRefresh({
       if (!pulling.current) return
       const distance = pullDistance.current
       reset()
+      // Re-checked rather than trusted from touchstart: a sheet can open mid-drag (a
+      // row action, a confirm), and releasing then must not land a refresh.
+      if (isBodyScrollLocked()) return
       if (distance >= THRESHOLD_PX && scrollTop() <= SCROLL_TOP_EPS) onRefresh()
     }
 

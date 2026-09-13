@@ -17,7 +17,13 @@
   justify-content: center;
   animation: fade 0.15s ease;
   overscroll-behavior: none;
-  touch-action: none;
+  /*
+   * Not `none`. The effective touch-action is the intersection down the ancestor
+   * chain, so `none` here caps the sheet inside too — its own `pan-y` could never
+   * win, leaving the sheet unable to scroll or be dragged. The page behind is
+   * already pinned by `useBodyScrollLock`, so nothing needs blocking at this level.
+   */
+  touch-action: pan-y;
 }
 
 .sheet {
@@ -34,6 +40,18 @@
   border-radius: 1.25rem 1.25rem 0 0;
   padding: 1rem 1.1rem calc(1.1rem + env(safe-area-inset-bottom, 0));
   animation: slide-up 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Vertical panning only: the sheet scrolls, and useSwipeDismiss reads the same
+     axis to drag it away once that scroll is already at the top. */
+  touch-action: pan-y;
+  /* Keeps an over-scroll inside the sheet instead of chaining out to the overlay. */
+  overscroll-behavior: contain;
+  /* Settles back after a drag that did not dismiss; suppressed while the finger is
+     down so the sheet tracks it exactly. */
+  transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.sheetDragging {
+  transition: none;
 }
 
 .handle {
@@ -115,5 +133,15 @@
   to {
     transform: translateY(0);
     opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet {
+    animation: none;
+    transition: none;
+  }
+  .overlay {
+    animation: none;
   }
 }
