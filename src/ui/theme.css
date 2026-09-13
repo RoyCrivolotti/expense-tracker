@@ -5,10 +5,6 @@
  * Settings → Appearance (sets html[data-exp-theme]).
  */
 :root {
-  /* Published so JS can read it: env() is not reachable from script, and
-     usePopoverPosition needs it to keep a flipped popover clear of the notch. */
-  --exp-safe-top: env(safe-area-inset-top, 0px);
-
   --exp-income: #16a34a;
   --exp-expense: #dc2626;
   --exp-refund: #2563eb;
