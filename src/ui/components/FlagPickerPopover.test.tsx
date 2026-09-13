@@ -10,10 +10,11 @@ const work: Flag = {
   name: 'Work travel',
   color: '#6366f1',
   description: 'Reimbursable — submit monthly',
+  reimbursable: true,
   sortOrder: 0,
   active: true,
 }
-const tax: Flag = { id: 2, name: 'Tax deductible', color: '#10b981', sortOrder: 1, active: true }
+const tax: Flag = { id: 2, name: 'Tax deductible', color: '#10b981', reimbursable: true, sortOrder: 1, active: true }
 
 /**
  * The popover positions itself against a real trigger; without one the hook

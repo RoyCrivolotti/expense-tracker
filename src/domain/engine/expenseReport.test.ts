@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { Flag, Transaction, TransactionAttachment } from '../types'
-import { buildExpenseReport, reportReceipts, reportReference } from './expenseReport'
+import {
+  buildExpenseReport,
+  buildSettledReport,
+  reportReceipts,
+  reportReference,
+} from './expenseReport'
 
 function flag(overrides: Partial<Flag> & { id: number }): Flag {
-  return { name: 'Work travel', color: '#6366f1', sortOrder: 0, active: true, ...overrides }
+  return { name: 'Work travel', color: '#6366f1', reimbursable: true, sortOrder: 0, active: true, ...overrides }
 }
 
 function txn(id: number, date: string, overrides: Partial<Transaction> = {}): Transaction {
@@ -186,7 +191,31 @@ describe('buildExpenseReport', () => {
     expect(reportReference(june!)).not.toBe(reportReference(july!))
   })
 
-  it('still builds for an archived flag, so a settled claim can be reprinted', () => {
+  it('rebuilds a past report from the payment that settled it', () => {
+    // The flag has moved on to new spending; this is the only way to answer
+    // "send me the June one again" months later.
+    const report = buildSettledReport(
+      99,
+      [
+        txn(1, '2026-05-02', { flagId: 1, settledBy: 99, amountCents: 10_000 }),
+        txn(2, '2026-05-09', { flagId: 1, settledBy: 99, amountCents: 4_000 }),
+        txn(3, '2026-07-03', { flagId: 1, amountCents: 5_000 }),
+      ],
+      [WORK],
+      [],
+    )
+
+    expect(report?.lines.map((l) => l.transaction.id)).toEqual([1, 2])
+    expect(report?.totalClaimedCents).toBe(14_000)
+    expect(report?.from).toBe('2026-05-02')
+    expect(report?.flag.id).toBe(1)
+  })
+
+  it('is null for a payment that settled nothing', () => {
+    expect(buildSettledReport(99, [txn(1, '2026-05-02', { flagId: 1 })], [WORK], [])).toBeNull()
+  })
+
+  it('still builds for an archived flag, so a settled report can be reprinted', () => {
     const report = buildExpenseReport(
       1,
       [txn(1, '2026-05-02', { flagId: 1 })],

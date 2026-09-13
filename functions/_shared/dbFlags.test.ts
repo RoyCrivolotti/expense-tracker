@@ -38,6 +38,7 @@ const FLAG_ROW = {
   name: 'Work travel',
   color: '#6366f1',
   description: null,
+  reimbursable: 1,
   sort_order: 0,
   active: 1,
 }
@@ -57,6 +58,7 @@ describe('createFlag', () => {
         name: 'Work travel',
         color: '#6366f1',
         description: 'Reimbursable',
+        reimbursable: true,
         sortOrder: 0,
         active: true,
       }),
@@ -65,12 +67,13 @@ describe('createFlag', () => {
         id: 1,
         name: 'Work travel',
         color: '#6366f1',
+        reimbursable: true,
         description: 'Reimbursable',
         sortOrder: 0,
         active: true,
       })
       .then(() => {
-        expect(bound).toEqual([OWNER, 'Work travel', '#6366f1', 'Reimbursable', 0, 1])
+        expect(bound).toEqual([OWNER, 'Work travel', '#6366f1', 'Reimbursable', 1, 0, 1])
       })
   })
 
@@ -86,12 +89,19 @@ describe('createFlag', () => {
     const flag = await createFlag(env, OWNER, {
       name: 'Work travel',
       color: '#6366f1',
+      reimbursable: false,
       sortOrder: 0,
       active: false,
     })
 
-    expect(bound[3]).toBeNull()
-    expect(bound[5]).toBe(0)
+    // Indexed by name rather than position: the column list grew by one when
+    // `reimbursable` landed, and bound[5] silently went from active to
+    // sort_order — both 0 here, so the assertion kept passing on the wrong cell.
+    const [, , , description, reimbursable, sortOrder, active] = bound
+    expect(description).toBeNull()
+    expect(reimbursable).toBe(0)
+    expect(sortOrder).toBe(0)
+    expect(active).toBe(0)
     expect(flag.active).toBe(false)
     expect(flag.description).toBeUndefined()
   })

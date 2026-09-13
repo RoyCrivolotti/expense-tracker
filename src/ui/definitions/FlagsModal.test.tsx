@@ -127,7 +127,7 @@ describe('FlagsModal', () => {
 
     expect(screen.getByText(/keeps the 1 transaction already flagged with it/)).toBeInTheDocument()
 
-    await userEvent.click(screen.getByRole('checkbox'))
+    await userEvent.click(screen.getByRole('checkbox', { name: /active/i }))
     await userEvent.click(screen.getByRole('button', { name: 'Save flag' }))
 
     expect(updateFlag).toHaveBeenCalledWith(1, expect.objectContaining({ active: false }))
@@ -149,7 +149,7 @@ describe('FlagsModal', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /Add flag/ }))
 
-    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+    expect(screen.queryByRole('checkbox', { name: /active/i })).not.toBeInTheDocument()
   })
 })
 

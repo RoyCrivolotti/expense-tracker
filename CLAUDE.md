@@ -11,13 +11,19 @@
 
 ## Node version
 
-Requires **Node ≥ 22.12.0**. The repo uses v22.23.2 via nvm.
+Requires **Node ≥ 22.12.0**. CI runs Node 22 in all three workflows, and `.nvmrc` pins
+**22.23.2** so `nvm use` picks it up automatically in any worktree.
 
 ```bash
-nvm use v22.23.2   # switch in an existing terminal
+nvm install   # first time in a worktree; reads .nvmrc
+nvm use       # switch in an existing terminal
 ```
 
-The nvm default is pinned to v22.23.2 in `~/.nvm/alias/default`.
+Do not assume the shell is already on the right version. This drifted once — the nvm default was
+`24` while this file claimed it was pinned to 22.23.2, and v22.23.2 was not installed at all. Node 24
+is the prime suspect for the D1 `--file` import failures recorded in `docs/DEPLOYMENT.md`: queries
+worked, imports died with a bare `TypeError: fetch failed`, and the newest wrangler behaved
+identically.
 
 ## npm cache
 

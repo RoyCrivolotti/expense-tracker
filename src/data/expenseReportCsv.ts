@@ -1,13 +1,12 @@
-import type { ExpenseDataset } from '../types'
 import {
-  buildExpenseReport,
   reportReference,
+  type ExpenseReport,
   type ReportLine,
 } from '../domain/engine/expenseReport'
 import { formatCents, type MoneyFormat } from '../engine/money'
 
 /**
- * A claim as a spreadsheet, for an employer who wants one.
+ * An expense report as a spreadsheet, for an employer who wants one.
  *
  * Deliberately *not* an option on `exportTransactionsCsv`: that emits a fixed,
  * workbook-compatible `EXPORT_CSV_HEADER` which `parseExportCsv` round-trips, so
@@ -28,17 +27,15 @@ export interface ExpenseReportCsvOptions {
   accountName: (id: number) => string
 }
 
+/**
+ * Takes an assembled report rather than a flag id: the same document can come
+ * from an open flag or from a payment that settled it months ago, and the CSV
+ * has no business knowing which.
+ */
 export function expenseReportCsv(
-  dataset: ExpenseDataset,
-  flagId: number,
-  options: ExpenseReportCsvOptions,
+  report: ExpenseReport | null,
+  options: ExpenseReportCsvOptions & { claimantName?: string },
 ): string | null {
-  const report = buildExpenseReport(
-    flagId,
-    dataset.transactions,
-    dataset.flags,
-    dataset.attachments,
-  )
   if (!report) return null
 
   const row = (line: ReportLine, signed: boolean) =>
@@ -65,8 +62,8 @@ export function expenseReportCsv(
   const preamble = [
     ['Claim', report.flag.name].map(esc).join(','),
     ['Reference', reportReference(report)].map(esc).join(','),
-    ...(dataset.settings.claimantName
-      ? [['Claimant', dataset.settings.claimantName].map(esc).join(',')]
+    ...(options.claimantName
+      ? [['Submitted by', options.claimantName].map(esc).join(',')]
       : []),
     '',
   ]
@@ -84,23 +81,20 @@ export function expenseReportCsv(
 }
 
 export function downloadExpenseReportCsv(
-  dataset: ExpenseDataset,
-  flagId: number,
-  options: ExpenseReportCsvOptions,
+  report: ExpenseReport | null,
+  options: ExpenseReportCsvOptions & { claimantName?: string },
 ): void {
-  const csv = expenseReportCsv(dataset, flagId, options)
-  if (!csv) return
-  const report = buildExpenseReport(flagId, dataset.transactions, dataset.flags, dataset.attachments)
-  const flag = dataset.flags.find((f) => f.id === flagId)
-  // Period in the filename: without it a second claim on the same flag lands in
+  const csv = expenseReportCsv(report, options)
+  if (!csv || !report) return
+  // Period in the filename: without it a second report on the same flag lands in
   // Downloads as work-travel(1).csv, or overwrites the first.
-  const period = report?.from ? `-${report.from.slice(0, 7)}` : ''
-  const slug = (flag?.name ?? 'claim').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  const period = report.from ? `-${report.from.slice(0, 7)}` : ''
+  const slug = report.flag.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `${slug || 'claim'}${period}.csv`
+  a.download = `${slug || 'expense-report'}${period}.csv`
   a.click()
   URL.revokeObjectURL(url)
 }

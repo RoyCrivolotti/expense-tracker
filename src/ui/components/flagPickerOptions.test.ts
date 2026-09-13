@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { flagDeleteMessage, selectableFlags, transactionCountLabel } from './flagPickerOptions'
 
-const active = { id: 1, name: 'Work travel', color: '#6366f1', sortOrder: 0, active: true }
-const archived = { id: 2, name: 'Old claim', color: '#10b981', sortOrder: 1, active: false }
+const active = { id: 1, name: 'Work travel', color: '#6366f1', reimbursable: true, sortOrder: 0, active: true }
+const archived = { id: 2, name: 'Old claim', color: '#10b981', reimbursable: true, sortOrder: 1, active: false }
 
 describe('selectableFlags', () => {
   it('offers active flags', () => {
