@@ -16,13 +16,19 @@ All changes — code, docs, config — must go through a pull request with the
 2. **Implement** the change. Run `npm run verify` locally before pushing — it runs
    lint, typecheck, tests with coverage, and a production build.
 3. **Diff coverage** — for code changes (`.ts`/`.tsx`), run
-   `node scripts/check-diff-coverage.mjs --base main` after `npm run verify`.
-   CI requires 90% of changed lines to be covered. Write tests before pushing if
-   coverage is short.
+   `node scripts/check-diff-coverage.mjs --base main` after `npm run verify`
+   (use the branch this PR is actually stacked on instead of `main` if it's
+   stacked on another open PR, not yet merged). CI requires 90% of changed
+   lines to be covered. Write tests before pushing if coverage is short — this
+   is the single most common cause of a locally-green `verify` turning into a
+   red PR, since the global coverage floor `verify` checks is a lenient floor
+   calibrated to the untested legacy codebase, not a bar new code has to clear.
 4. **Push and open a draft PR** (`gh pr create --draft`). Never create a
    ready-for-review PR directly.
 5. **Wait for CI** — both `verify` and `verify-and-deploy` must pass. If `verify`
-   fails, fix locally and push again.
+   fails, fix locally and push again. An open PR with a failing or not-yet-checked
+   CI run is not finished work — don't stop until you've confirmed the actual run
+   is green.
 6. **Mark ready and merge** — `gh pr ready <n> && gh pr merge <n> --squash --delete-branch`.
    Squash merge is the default; the repo's history is linear.
 7. **Return to main** — `git checkout main && git pull` to pick up the merged commit

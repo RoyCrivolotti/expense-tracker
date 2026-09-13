@@ -255,6 +255,26 @@ npm run verify
 
 Runs: symlink check → migration doc check → PII check → lint → typecheck → test coverage → build → bundle budget check.
 
+**A green `npm run verify` does not mean the PR's CI will be green.** `verify.yml` runs `npm run
+verify` and then two more required steps it says nothing about:
+
+- **Diff coverage** — `scripts/check-diff-coverage.mjs` requires 90% of *this PR's added/changed*
+  `.ts`/`.tsx` lines to be covered. This is separate from, and much stricter than, the global
+  floor `test:coverage` checks (that floor is calibrated to the untested legacy baseline, so a
+  brand-new component or hook with zero tests sails through `npm run verify` and then fails this).
+  Run it yourself before pushing, using the PR's real base (`main`, or the branch it's stacked on
+  — see the stacked-PR note above):
+  ```bash
+  npm run coverage:diff -- --base main
+  ```
+  If it lists uncovered lines, write the missing tests before pushing — don't push and let CI find
+  it. Full detail in `docs/TESTING.md`.
+- **PR screenshots** — see Pull request conventions below.
+
+`AGENTS.md` has the complete PR workflow end to end. The task isn't done when the PR is open — it's
+done when that PR's actual CI run is green; check the real run (`gh pr checks`, or this session's PR
+status tooling) before treating the work as finished.
+
 ## Safe areas on a phone
 
 `index.html` sets `viewport-fit=cover`, so the page extends **under** the status bar and the home
