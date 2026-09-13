@@ -108,7 +108,7 @@ function QuickCreate({
           disabled={busy}
           onChange={(e) => setReimbursable(e.target.checked)}
         />
-        <span>I expect this money back</span>
+        <span>To be reimbursed</span>
       </label>
       {err ? (
         <p className={styles.createError} role="alert">
