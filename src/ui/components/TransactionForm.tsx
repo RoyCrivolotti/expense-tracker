@@ -52,6 +52,8 @@ interface FormProps {
   onTrapPausedChange?: ((paused: boolean) => void) | undefined
   /** Passed through to the receipts strip; absent in read-only sessions. */
   actions?: ExpenseActions | undefined
+  view: 'fields' | 'installment'
+  onViewChange: (view: 'fields' | 'installment') => void
 }
 
 function toInput(form: FormFields, cents: number, editing: Transaction | null): NewTransaction {
@@ -162,12 +164,13 @@ export function TransactionForm({
   onPartialSaveChange,
   onTrapPausedChange,
   actions,
+  view,
+  onViewChange,
 }: FormProps) {
   const format = useMoneyFormat()
   const { showToast } = useToast()
   const [form, setForm] = useState<FormFields>(() => initialFields(editing, model, format, seed))
   const [draft, setDraft] = useState<InstallmentDraft>(() => initialDraft(editing, model, seed))
-  const [view, setView] = useState<'fields' | 'installment'>('fields')
   const [busy, setBusy] = useState(false)
   // Owned here, not in ReceiptStrip: the id these upload against is only known
   // in `submit` below, and there is no channel back up from the strip.
@@ -251,7 +254,7 @@ export function TransactionForm({
     const intent = buildInstallmentIntent(draft)
     if (!intent.ok) {
       setErr(intent.error)
-      setView('installment')
+      onViewChange('installment')
       return null
     }
     return { cents, intent: intent.intent }
@@ -313,7 +316,6 @@ export function TransactionForm({
           editing={editing}
           draft={draft}
           set={setDraftField}
-          onBack={() => setView('fields')}
           error={err}
           amountCents={Math.abs(parseMoneyToCents(form.amount, format) || 0)}
         />
@@ -334,7 +336,7 @@ export function TransactionForm({
           <button
             type="button"
             className={styles.linkButton}
-            onClick={() => setView('installment')}
+            onClick={() => onViewChange('installment')}
           >
             Installment plan: {linkLabel(draft, editing, model)}
           </button>
