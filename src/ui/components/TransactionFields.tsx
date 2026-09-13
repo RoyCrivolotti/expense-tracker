@@ -1,10 +1,12 @@
-import type { ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import type { Transaction, TxnType } from '../../types'
 import type { DescriptionSuggestion } from '../../data/descriptionIndex'
 import { defaultBudgetMonth } from '../../engine/dates'
+import { RECEIPT_CLIENT_POLICY } from '../../data/receiptClientPolicy'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
+import { CameraIcon, PlusIcon } from '../icons'
 import { DateInput } from './DateInput'
 import { DescriptionCombobox } from './DescriptionCombobox'
 import { MonthInput } from './MonthInput'
@@ -172,10 +174,19 @@ export function Fields({
   receiptTargetId = null,
 }: FieldsProps) {
   const format = useMoneyFormat()
+  const [noteExpanded, setNoteExpanded] = useState(form.notes !== '')
+  const receiptInputRef = useRef<HTMLInputElement>(null)
+
   const onDate = (v: string) => {
     set('date', v)
     if (!editing) set('budgetMonth', defaultBudgetMonth(v, model.dataset.settings.budgetRolloverDay))
   }
+
+  const showNoteInput = noteExpanded || form.notes !== ''
+  const attachments = receiptTargetId != null ? model.lookup.attachments(receiptTargetId) : []
+  const receiptAtCap =
+    attachments.length + pendingFiles.length >= RECEIPT_CLIENT_POLICY.maxPerTransaction
+
   return (
     <>
       <TypeSelector value={form.type} onChange={(t) => set('type', t)} />
@@ -210,36 +221,81 @@ export function Fields({
       </Field>
       <CategoryAccountRow form={form} set={set} model={model} />
       <DateBudgetRow form={form} set={set} onDate={onDate} />
-      <Field label="Notes">
-        <input value={form.notes} onChange={(e) => set('notes', e.target.value)} />
-      </Field>
-      <FlagField
-        flags={model.dataset.flags}
-        value={form.flagId}
-        onChange={(flagId) => set('flagId', flagId)}
-        onTrapPausedChange={onTrapPausedChange}
-        {...(actions ? { onCreate: createFlagInPlace(actions, model.dataset.flags) } : {})}
-      />
-      {/*
-        Shown on the add form too, where there is no id yet: files are staged in
-        the enclosing form and uploaded once the row exists. The moment you are
-        holding the receipt is exactly the moment you are creating the
-        transaction, and hiding the strip until afterwards meant the app refused
-        it precisely then.
-      */}
-      {editing && actions ? (
-        <ReimbursementLink editing={editing} lookup={model.lookup} onOpen={actions.onEdit} />
-      ) : null}
+
       {actions ? (
-        <ReceiptStrip
-          {...(receiptTargetId != null ? { transactionId: receiptTargetId } : {})}
-          attachments={receiptTargetId != null ? model.lookup.attachments(receiptTargetId) : []}
-          actions={actions}
-          pendingFiles={pendingFiles}
-          onPendingChange={onPendingChange}
-          onTrapPausedChange={onTrapPausedChange}
-        />
-      ) : null}
+        <>
+          <div className={styles.chipRow}>
+            <button
+              type="button"
+              className={styles.chip}
+              disabled={receiptAtCap}
+              onClick={() => receiptInputRef.current?.click()}
+            >
+              <span className={styles.chipIcon} aria-hidden>
+                <CameraIcon />
+              </span>
+              {receiptAtCap ? 'Limit reached' : 'Add receipt'}
+            </button>
+            {!showNoteInput && (
+              <button
+                type="button"
+                className={styles.chip}
+                onClick={() => setNoteExpanded(true)}
+              >
+                <span className={styles.chipIcon} aria-hidden>
+                  <PlusIcon />
+                </span>
+                Add note
+              </button>
+            )}
+            <FlagField
+              compact
+              flags={model.dataset.flags}
+              value={form.flagId}
+              onChange={(flagId) => set('flagId', flagId)}
+              onTrapPausedChange={onTrapPausedChange}
+              onCreate={createFlagInPlace(actions, model.dataset.flags)}
+            />
+          </div>
+          {showNoteInput && (
+            <Field label="Notes">
+              <input
+                value={form.notes}
+                onChange={(e) => set('notes', e.target.value)}
+                autoFocus={form.notes === ''}
+                onBlur={() => {
+                  if (form.notes === '') setNoteExpanded(false)
+                }}
+              />
+            </Field>
+          )}
+          {editing ? (
+            <ReimbursementLink editing={editing} lookup={model.lookup} onOpen={actions.onEdit} />
+          ) : null}
+          <ReceiptStrip
+            {...(receiptTargetId != null ? { transactionId: receiptTargetId } : {})}
+            attachments={attachments}
+            actions={actions}
+            pendingFiles={pendingFiles}
+            onPendingChange={onPendingChange}
+            onTrapPausedChange={onTrapPausedChange}
+            externalInputRef={receiptInputRef}
+            hideControls
+          />
+        </>
+      ) : (
+        <>
+          <Field label="Notes">
+            <input value={form.notes} onChange={(e) => set('notes', e.target.value)} />
+          </Field>
+          <FlagField
+            flags={model.dataset.flags}
+            value={form.flagId}
+            onChange={(flagId) => set('flagId', flagId)}
+            onTrapPausedChange={onTrapPausedChange}
+          />
+        </>
+      )}
     </>
   )
 }
