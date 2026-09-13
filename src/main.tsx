@@ -12,6 +12,8 @@ import { AccessGate } from './ui/access/AccessGate'
 import { OwnerAccessAdminScreen } from './ui/access/OwnerAccessAdminScreen'
 import { allGroupsGranted } from './domain/accessGroups'
 import { stagingProductionUrl } from './config/staging'
+import { ViewportDebug } from './ui/debug/ViewportDebug'
+import { viewportDebugRequested } from './ui/debug/viewportProbe'
 
 const container = document.getElementById('root')
 if (!container) throw new Error('Root element #root not found')
@@ -26,6 +28,10 @@ function renderApp(node: ReactNode) {
         <ToastProvider>
           <PwaUpdatePrompt />
           {node}
+          {/* Opt-in geometry readout for diagnosing overlay placement on a real
+              phone — see src/ui/debug/viewportProbe.ts. Renders nothing without
+              `?viewportDebug=1`. */}
+          {viewportDebugRequested() ? <ViewportDebug /> : null}
         </ToastProvider>
       </StagingFrame>
     </StrictMode>,
