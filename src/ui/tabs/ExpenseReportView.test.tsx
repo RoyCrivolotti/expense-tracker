@@ -121,6 +121,18 @@ describe('ExpenseReportView', () => {
     expect(screen.queryByRole('img', { name: /Receipt for/ })).not.toBeInTheDocument()
   })
 
+  it('points at the screenshot route, which needs no PDF engine to work', () => {
+    renderPack(
+      datasetWith([txn(1, '2026-05-02')], [
+        makeAttachment({ id: 5, transactionId: 1, contentType: 'application/pdf', hasThumb: false, originalName: 'invoice.pdf' }),
+      ]),
+    )
+
+    // Receipts already accept image/png, so this is a route that exists today
+    // rather than a promise about a future feature.
+    expect(screen.getByText(/screenshot of it, attached as an image/)).toBeInTheDocument()
+  })
+
   it('offers a PDF receipt as a link, since the page cannot show it', () => {
     renderPack(
       datasetWith([txn(1, '2026-05-02')], [

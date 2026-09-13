@@ -54,7 +54,13 @@ export function ExpenseReportSheet({
                   <p className={styles.pdfNoteText}>
                     <strong>R{ref}</strong> is a PDF, so it cannot be drawn into this page. Send{' '}
                     <strong>{attachment.originalName ?? 'the file'}</strong> with the report — the
-                    line above is numbered so an approver can still match the two up.
+                    line above is numbered so an approver can still match the two up.{' '}
+                    {/* Rendering a PDF here would mean shipping a PDF engine: pdf.js
+                        is ~505 KB gzip against a 162 KB app, and it is the only
+                        honest option — turning a PDF into pixels *is* the heavy
+                        part. A screenshot costs nothing and already works, because
+                        receipts accept image/png. Saying so beats a dead end. */}
+                    A screenshot of it, attached as an image, would print here instead.
                   </p>
                   {/* Screen only: on paper a link is a dead underline, and the
                       filename in the sentence is what the reader actually needs. */}
