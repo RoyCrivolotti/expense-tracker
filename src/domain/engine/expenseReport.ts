@@ -207,11 +207,14 @@ export function reportReference(report: ExpenseReport): string {
  * back to the row that claims it. Credits are excluded: they are not part of
  * what is being claimed, so they are not numbered.
  */
-export function reportReceipts(report: ExpenseReport): {
+/** One numbered receipt, and the line that claims it. */
+export interface ReceiptFigure {
   attachment: TransactionAttachment
   transaction: Transaction
   ref: number
-}[] {
+}
+
+export function reportReceipts(report: ExpenseReport): ReceiptFigure[] {
   return report.lines.flatMap((line) =>
     line.receipts.map((attachment, index) => ({
       attachment,

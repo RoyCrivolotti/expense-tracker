@@ -45,6 +45,7 @@
     "verify:goals-tabs": "node scripts/verify-goals-mobile-tabs.mjs"
   },
   "dependencies": {
+    "fflate": "^0.8.3",
     "folio-shell": "^1.4.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
