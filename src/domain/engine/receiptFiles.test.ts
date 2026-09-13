@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { EU_MONEY_FORMAT } from './money'
-import { receiptExtension, receiptFileName, receiptPackName } from './receiptFiles'
+import { namedReceipts, receiptExtension, receiptFileName, receiptPackName } from './receiptFiles'
+import { makeAttachment, makeTransaction } from '../../testing/factories'
 
 describe('receiptExtension', () => {
   it('maps every type the server will ever store', () => {
@@ -55,5 +56,34 @@ describe('receiptPackName', () => {
   it('falls back without doubling the word when the name sanitises to nothing', () => {
     expect(receiptPackName('///', '')).toBe('Receipts')
     expect(receiptPackName('///', '2026-08-19')).toBe('Receipts 2026-08')
+  })
+})
+
+describe('namedReceipts', () => {
+  it('names every figure, keeping its attachment id for fetching', () => {
+    const figures = [
+      {
+        attachment: makeAttachment({ id: 5, contentType: 'image/jpeg' }),
+        transaction: makeTransaction({ id: 1, date: '2026-08-19', amountCents: 17_526, description: 'Tren' }),
+        ref: 1,
+      },
+      {
+        attachment: makeAttachment({ id: 6, contentType: 'application/pdf' }),
+        transaction: makeTransaction({ id: 2, date: '2026-09-06', amountCents: 3_235, description: '' }),
+        ref: 2,
+      },
+    ]
+
+    // The label is passed in rather than re-derived, because the report already
+    // falls back to the category name for a blank description and the files
+    // must say the same thing the table does.
+    expect(namedReceipts(figures, EU_MONEY_FORMAT, (f) => f.transaction.description || 'Dining out')).toEqual([
+      { attachmentId: 5, filename: 'R1 - 2026-08-19 - Tren - 175,26 €.jpg' },
+      { attachmentId: 6, filename: 'R2 - 2026-09-06 - Dining out - 32,35 €.pdf' },
+    ])
+  })
+
+  it('is empty for a report with no receipts', () => {
+    expect(namedReceipts([], EU_MONEY_FORMAT, () => 'x')).toEqual([])
   })
 })

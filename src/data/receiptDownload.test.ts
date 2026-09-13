@@ -1,6 +1,10 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { NamedReceipt } from '../domain/engine/receiptFiles'
-import { deliverReceipts, type ReceiptDeliveryDeps } from './receiptDownload'
+import {
+  browserReceiptDelivery,
+  deliverReceipts,
+  type ReceiptDeliveryDeps,
+} from './receiptDownload'
 
 const receipts: NamedReceipt[] = [
   { attachmentId: 5, filename: 'R1 - 2026-08-19 - Tren - 175,26 €.jpg' },
@@ -92,5 +96,75 @@ describe('deliverReceipts', () => {
     await expect(deliverReceipts(receipts, 'pack', deps)).rejects.toThrow('Could not load receipt 6')
     expect(saveBlob).not.toHaveBeenCalled()
     expect(shareFiles).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * The real browser implementations. jsdom has none of these for real, but each
+ * is thin enough that stubbing the global and asserting the call is worth more
+ * than leaving the default path untested — a typo in the fetch URL or a missing
+ * `download` attribute would otherwise only show up on a device.
+ */
+describe('browserReceiptDelivery', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
+  it('fetches a receipt from the serve route by id', async () => {
+    const blob = new Blob(['bytes'])
+    const fetchMock = vi.fn(() => Promise.resolve({ ok: true, blob: () => Promise.resolve(blob) }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(browserReceiptDelivery.fetchReceipt(42)).resolves.toBe(blob)
+    expect(fetchMock).toHaveBeenCalledWith('/api/expenses/attachments/42')
+  })
+
+  it('throws on a non-ok response rather than zipping an error page', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ ok: false, status: 404 })))
+    await expect(browserReceiptDelivery.fetchReceipt(42)).rejects.toThrow('Could not load receipt 42')
+  })
+
+  it('reports no sharing when the browser has no canShare at all', () => {
+    vi.stubGlobal('navigator', {})
+    expect(browserReceiptDelivery.canShareFiles([])).toBe(false)
+  })
+
+  it('asks canShare about the actual files, not just for the API', () => {
+    const files = [new File(['x'], 'R1.jpg')]
+    const canShare = vi.fn(() => true)
+    vi.stubGlobal('navigator', { canShare })
+
+    expect(browserReceiptDelivery.canShareFiles(files)).toBe(true)
+    expect(canShare).toHaveBeenCalledWith({ files })
+  })
+
+  it('passes the files and a title to the share sheet', async () => {
+    const share = vi.fn(() => Promise.resolve())
+    vi.stubGlobal('navigator', { share })
+    const files = [new File(['x'], 'R1.jpg')]
+
+    await browserReceiptDelivery.shareFiles(files, 'Work travel receipts')
+    expect(share).toHaveBeenCalledWith({ files, title: 'Work travel receipts' })
+  })
+
+  it('saves a blob through an anchor, and releases the object URL', () => {
+    const revoked: string[] = []
+    vi.stubGlobal('URL', {
+      ...URL,
+      createObjectURL: vi.fn(() => 'blob:x'),
+      revokeObjectURL: vi.fn((u: string) => revoked.push(u)),
+    })
+    const anchor = document.createElement('a')
+    const click = vi.spyOn(anchor, 'click').mockImplementation(() => {})
+    vi.spyOn(document, 'createElement').mockReturnValueOnce(anchor)
+
+    browserReceiptDelivery.saveBlob(new Blob(['z']), 'pack.zip')
+
+    expect(anchor.download).toBe('pack.zip')
+    expect(anchor.href).toBe('blob:x')
+    expect(click).toHaveBeenCalled()
+    // Leaking it pins the whole archive in memory for the life of the document.
+    expect(revoked).toEqual(['blob:x'])
   })
 })
