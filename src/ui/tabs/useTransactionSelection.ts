@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { BulkTransactionPatch } from '../../data/dataSource'
 import type { ExpenseActions } from '../actions'
 import { useToast } from '../hooks/useToast'
@@ -40,6 +40,19 @@ export function useTransactionSelection(actions?: ExpenseActions) {
 
   const toggleDate = (ids: number[]) => {
     setSelected((prev) => toggleDateSelection(prev, ids))
+  }
+
+  const selectAll = (ids: number[]) => {
+    setSelected(new Set(ids))
+  }
+
+  const deselectAll = () => {
+    setSelected(new Set())
+  }
+
+  const enterAndSelect = (id: number) => {
+    setSelectMode(true)
+    setSelected(new Set([id]))
   }
 
   const requestBatchDelete = () => {
@@ -87,6 +100,15 @@ export function useTransactionSelection(actions?: ExpenseActions) {
     }
   }
 
+  useEffect(() => {
+    if (!selectMode) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') exitSelect()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [selectMode])
+
   return {
     selectMode,
     selected,
@@ -96,6 +118,9 @@ export function useTransactionSelection(actions?: ExpenseActions) {
     toggleSelectMode,
     toggleSelected,
     toggleDate,
+    selectAll,
+    deselectAll,
+    enterAndSelect,
     requestBatchDelete,
     cancelBatchDelete,
     confirmBatchDelete,

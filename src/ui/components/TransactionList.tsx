@@ -21,6 +21,7 @@ interface TransactionListProps {
   selectedIds?: ReadonlySet<number>
   onToggleSelect?: (id: number) => void
   onToggleDate?: (ids: number[]) => void
+  onLongPressSelect?: (id: number) => void
   swipeDelete?: boolean
   onClearFilters?: () => void
   onEditStatementPayment?: (row: Extract<TransactionListRow, { kind: 'statement-payment' }>) => void
@@ -53,6 +54,7 @@ function renderRow(
       {...(props.onDuplicate ? { onDuplicate: props.onDuplicate } : {})}
       {...(props.onDelete ? { onDelete: props.onDelete } : {})}
       {...(props.onToggleSelect ? { onToggleSelect: props.onToggleSelect } : {})}
+      {...(props.onLongPressSelect ? { onLongPressSelect: props.onLongPressSelect } : {})}
     />
   )
 }

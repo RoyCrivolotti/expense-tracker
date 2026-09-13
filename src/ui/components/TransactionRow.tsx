@@ -1,5 +1,6 @@
 import type { Transaction } from '../../types'
 import type { Lookup } from '../format'
+import { useLongPress } from '../hooks/useLongPress'
 import { SwipeTransactionRow } from './SwipeTransactionRow'
 import { TransactionRowBody } from './TransactionRowBody'
 import styles from './TransactionList.module.css'
@@ -14,6 +15,7 @@ interface TransactionRowProps {
   selectMode: boolean
   selected: boolean
   onToggleSelect?: (id: number) => void
+  onLongPressSelect?: (id: number) => void
   swipeDelete: boolean
 }
 
@@ -27,8 +29,13 @@ export function TransactionRow({
   selectMode,
   selected,
   onToggleSelect,
+  onLongPressSelect,
   swipeDelete,
 }: TransactionRowProps) {
+  const longPress = useLongPress({
+    onLongPress: () => onLongPressSelect?.(txn.id),
+  })
+
   if (selectMode) {
     return (
       <label className={styles.selectRow}>
@@ -55,15 +62,21 @@ export function TransactionRow({
         {...(onSelect ? { onSelect } : {})}
         {...(onDuplicate ? { onDuplicate } : {})}
         {...(onDelete ? { onDelete } : {})}
+        {...(onLongPressSelect ? { onLongPressSelect } : {})}
       />
     )
   }
+
+  const touchProps = onLongPressSelect
+    ? { onTouchStart: longPress.onTouchStart, onTouchMove: longPress.onTouchMove, onTouchEnd: longPress.onTouchEnd, onTouchCancel: longPress.onTouchCancel }
+    : {}
 
   return (
     <button
       type="button"
       className={styles.row}
       onClick={onSelect ? () => onSelect(txn) : undefined}
+      {...touchProps}
     >
       <TransactionRowBody txn={txn} lookup={lookup} showDate={Boolean(showDate)} />
     </button>
