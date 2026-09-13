@@ -12,6 +12,8 @@ interface Props {
   onChange: (flagId: number | null) => void
   /** Caption above the trigger. The batch form says what the flag applies to. */
   label?: string
+  /** Render as a compact chip instead of a full-width field. */
+  compact?: boolean
   /**
    * The popover portals out of the Modal and runs its own focus trap, so the
    * Modal's trap has to stand down while it is open — otherwise Escape closes
@@ -33,6 +35,7 @@ export function FlagField({
   value,
   onChange,
   label = 'Flag',
+  compact = false,
   onTrapPausedChange,
   onCreate,
 }: Props) {
@@ -46,37 +49,57 @@ export function FlagField({
     onTrapPausedChange?.(next)
   }
 
+  const trigger = (
+    <button
+      type="button"
+      ref={triggerRef}
+      className={compact ? styles.triggerCompact : styles.trigger}
+      aria-haspopup="dialog"
+      aria-expanded={open}
+      onClick={() => setOpenState(!open)}
+    >
+      {selected ? (
+        <>
+          <span className={styles.swatch} style={{ color: selected.color }} aria-hidden>
+            <FlagIcon fill="currentColor" strokeWidth={1.5} />
+          </span>
+          <span className={styles.name}>{selected.name}</span>
+        </>
+      ) : (
+        <>
+          <span className={styles.swatch} aria-hidden>
+            <FlagIcon />
+          </span>
+          <span className={compact ? styles.name : styles.placeholder}>No flag</span>
+        </>
+      )}
+    </button>
+  )
+
+  const popover = open ? (
+    <FlagPickerPopover
+      value={value}
+      flags={flags}
+      triggerRef={triggerRef}
+      onSelect={onChange}
+      onClose={() => setOpenState(false)}
+      {...(onCreate ? { onCreate } : {})}
+    />
+  ) : null
+
+  if (compact) {
+    return (
+      <>
+        {trigger}
+        {popover}
+      </>
+    )
+  }
+
   return (
     <Field label={label} as="div">
-      <button
-        type="button"
-        ref={triggerRef}
-        className={styles.trigger}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        onClick={() => setOpenState(!open)}
-      >
-        {selected ? (
-          <>
-            <span className={styles.swatch} style={{ color: selected.color }} aria-hidden>
-              <FlagIcon fill="currentColor" strokeWidth={1.5} />
-            </span>
-            <span className={styles.name}>{selected.name}</span>
-          </>
-        ) : (
-          <span className={styles.placeholder}>No flag</span>
-        )}
-      </button>
-      {open ? (
-        <FlagPickerPopover
-          value={value}
-          flags={flags}
-          triggerRef={triggerRef}
-          onSelect={onChange}
-          onClose={() => setOpenState(false)}
-          {...(onCreate ? { onCreate } : {})}
-        />
-      ) : null}
+      {trigger}
+      {popover}
     </Field>
   )
 }
