@@ -7,6 +7,7 @@ import { useExpenseData } from './useExpenseData'
 
 const emptyDataset: ExpenseDataset = {
   flags: [],
+  attachments: [],
   categories: [],
   accounts: [],
   transactions: [],

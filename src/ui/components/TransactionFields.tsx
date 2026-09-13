@@ -3,12 +3,15 @@ import type { Transaction, TxnType } from '../../types'
 import type { DescriptionSuggestion } from '../../data/descriptionIndex'
 import { defaultBudgetMonth } from '../../engine/dates'
 import type { ExpenseModel } from '../useExpenseData'
+import type { ExpenseActions } from '../actions'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { DateInput } from './DateInput'
 import { DescriptionCombobox } from './DescriptionCombobox'
 import { MonthInput } from './MonthInput'
 import { optionLabel, selectableOptions } from './pickerOptions'
 import { FlagField } from './FlagField'
+import type { PendingReceipt } from '../../data/pendingReceipts'
+import { ReceiptStrip } from './ReceiptStrip'
 import type { FormFields, Setter } from './transactionFormState'
 import styles from './TransactionForm.module.css'
 
@@ -139,7 +142,20 @@ interface FieldsProps {
   onAcceptSuggestion: (suggestion: DescriptionSuggestion) => void
   /** Lets an enclosing Modal pause its focus trap while a popover is open. */
   onTrapPausedChange?: ((paused: boolean) => void) | undefined
+  /** Receipts chosen before the row exists; owned by TransactionForm. */
+  pendingFiles?: PendingReceipt[]
+  onPendingChange?: ((files: PendingReceipt[]) => void) | undefined
+  /**
+   * Which row receipts hang off. The edited row normally, but on the add form
+   * it becomes the id of the row just created when its uploads failed — so the
+   * strip flips to live mode and the retry lands on the right transaction.
+   */
+  receiptTargetId?: number | null
+  /** Absent in read-only sessions, which is also when receipts are hidden. */
+  actions?: ExpenseActions | undefined
 }
+
+const NO_PENDING: PendingReceipt[] = []
 
 export function Fields({
   form,
@@ -148,6 +164,10 @@ export function Fields({
   editing,
   onAcceptSuggestion,
   onTrapPausedChange,
+  actions,
+  pendingFiles = NO_PENDING,
+  onPendingChange,
+  receiptTargetId = null,
 }: FieldsProps) {
   const format = useMoneyFormat()
   const onDate = (v: string) => {
@@ -197,6 +217,23 @@ export function Fields({
         onChange={(flagId) => set('flagId', flagId)}
         onTrapPausedChange={onTrapPausedChange}
       />
+      {/*
+        Shown on the add form too, where there is no id yet: files are staged in
+        the enclosing form and uploaded once the row exists. The moment you are
+        holding the receipt is exactly the moment you are creating the
+        transaction, and hiding the strip until afterwards meant the app refused
+        it precisely then.
+      */}
+      {actions ? (
+        <ReceiptStrip
+          {...(receiptTargetId != null ? { transactionId: receiptTargetId } : {})}
+          attachments={receiptTargetId != null ? model.lookup.attachments(receiptTargetId) : []}
+          actions={actions}
+          pendingFiles={pendingFiles}
+          onPendingChange={onPendingChange}
+          onTrapPausedChange={onTrapPausedChange}
+        />
+      ) : null}
     </>
   )
 }

@@ -24,6 +24,7 @@ import type {
   ExpenseDataset,
   ExpenseSettings,
   Flag,
+  TransactionAttachment,
   GoalInputs,
   GoalScenario,
   InstallmentPlan,
@@ -40,6 +41,7 @@ interface OwnerStore {
   categories: Category[]
   accounts: Account[]
   flags: Flag[]
+  attachments: TransactionAttachment[]
   transactions: StoredTransaction[]
   statements: AccountStatement[]
   cashActuals: CashActual[]
@@ -73,20 +75,30 @@ function deriveOne(
   return { ...stored, status }
 }
 
+/**
+ * Copy a seeded collection, or start empty. Extracted so emptyStore reads as the
+ * straight mapping it is — inline `?? []` on every field counted as a dozen
+ * branches against the complexity budget for no real decision-making.
+ */
+function list<T>(seeded: readonly T[] | undefined): T[] {
+  return [...(seeded ?? [])]
+}
+
 function emptyStore(seed: ExpenseRepositorySeed = {}): OwnerStore {
   return {
-    categories: [...(seed.categories ?? [])],
-    accounts: [...(seed.accounts ?? [])],
-    flags: [...(seed.flags ?? [])],
+    categories: list(seed.categories),
+    accounts: list(seed.accounts),
+    flags: list(seed.flags),
+    attachments: list(seed.attachments),
     transactions: (seed.transactions ?? []).map(({ status: _status, ...stored }) => stored),
-    statements: [...(seed.accountStatements ?? [])],
-    cashActuals: [...(seed.cashActuals ?? [])],
+    statements: list(seed.accountStatements),
+    cashActuals: list(seed.cashActuals),
     settings: { ...DEFAULT_SETTINGS, ...seed.settings },
     goalInputs: { ...DEFAULT_GOALS, ...seed.goalInputs },
-    goalScenarios: [...(seed.goalScenarios ?? [])],
-    installmentPlans: [...(seed.installmentPlans ?? [])],
-    wealthAccounts: [...(seed.wealthAccounts ?? [])],
-    wealthCheckins: [...(seed.wealthCheckins ?? [])],
+    goalScenarios: list(seed.goalScenarios),
+    installmentPlans: list(seed.installmentPlans),
+    wealthAccounts: list(seed.wealthAccounts),
+    wealthCheckins: list(seed.wealthCheckins),
   }
 }
 
@@ -95,6 +107,18 @@ export function inMemoryExpenseRepository(
   seedOwner = 'owner@example.com',
 ): ExpenseRepository {
   const stores = new Map<string, OwnerStore>()
+  /**
+   * R2 keys are not part of the domain type, but the adapter returns them on
+   * delete, so the double has to remember them to mirror that contract.
+   *
+   * Keyed by owner *and* id: attachment ids are generated per owner here, so two
+   * owners' first attachment are both id 1, and a map keyed on id alone let the
+   * second overwrite the first — the double would then hand owner A's row with
+   * owner B's keys. Real D1 cannot do that (AUTOINCREMENT is global), but a
+   * double that breaks tenancy is not mirroring the thing it exists to mirror.
+   */
+  const keysById = new Map<string, { objectKey: string; thumbKey?: string }>()
+  const keyOf = (owner: string, id: number) => `${owner}#${id}`
   stores.set(ownerKey(seedOwner), emptyStore(seed))
 
   function storeFor(owner: string): OwnerStore {
@@ -294,6 +318,15 @@ export function inMemoryExpenseRepository(
     return { planId: plan.id, installmentIndex }
   }
 
+  /** Attachment rows die with their transaction, as they do in D1. */
+  function dropAttachmentsFor(owner: string, store: OwnerStore, transactionIds: number[]): void {
+    const wanted = new Set(transactionIds)
+    for (const attachment of store.attachments) {
+      if (wanted.has(attachment.transactionId)) keysById.delete(keyOf(owner, attachment.id))
+    }
+    store.attachments = store.attachments.filter((a) => !wanted.has(a.transactionId))
+  }
+
   function findStored(store: OwnerStore, id: number): StoredTransaction {
     const txn = store.transactions.find((row) => row.id === id)
     if (!txn) throw new RepoHttpError(404, 'Transaction not found')
@@ -331,6 +364,7 @@ export function inMemoryExpenseRepository(
         categories: [...store.categories],
         accounts: [...store.accounts],
         flags: [...store.flags],
+        attachments: [...store.attachments],
         transactions: deriveTransactions(store.transactions, store.accounts, store.statements),
         accountStatements: [...store.statements],
         cashActuals: [...store.cashActuals],
@@ -388,6 +422,9 @@ export function inMemoryExpenseRepository(
       const index = store.transactions.findIndex((row) => row.id === id)
       if (index < 0) throw new RepoHttpError(404, 'Transaction not found')
       store.transactions.splice(index, 1)
+      // Mirrors the D1 cascade; without it the double would let a transaction
+      // go while leaving attachment rows the real backend removes.
+      dropAttachmentsFor(owner, store, [id])
       return Promise.resolve()
     },
 
@@ -396,6 +433,7 @@ export function inMemoryExpenseRepository(
       const idSet = new Set(ids)
       const before = store.transactions.length
       store.transactions = store.transactions.filter((row) => !idSet.has(row.id))
+      dropAttachmentsFor(owner, store, ids)
       return Promise.resolve(before - store.transactions.length)
     },
 
@@ -461,6 +499,83 @@ export function inMemoryExpenseRepository(
       const store = storeFor(owner)
       store.cashActuals = store.cashActuals.filter((c) => c.yearMonth !== yearMonth)
       return Promise.resolve()
+    },
+
+    transactionExists: (owner, id) => {
+      const store = storeFor(owner)
+      return Promise.resolve(store.transactions.some((t) => t.id === id))
+    },
+
+    listAttachments: (owner, transactionId) => {
+      const store = storeFor(owner)
+      return Promise.resolve(store.attachments.filter((a) => a.transactionId === transactionId))
+    },
+
+    findAttachmentSource: (owner, id) => {
+      const store = storeFor(owner)
+      const attachment = store.attachments.find((a) => a.id === id)
+      const keys = keysById.get(keyOf(owner, id))
+      if (!attachment || !keys) return Promise.resolve(null)
+      return Promise.resolve({
+        objectKey: keys.objectKey,
+        contentType: attachment.contentType,
+        ...(keys.thumbKey ? { thumbKey: keys.thumbKey } : {}),
+        ...(attachment.originalName ? { originalName: attachment.originalName } : {}),
+      })
+    },
+
+    createAttachment: (owner, input) => {
+      const store = storeFor(owner)
+      const attachment: TransactionAttachment = {
+        id: nextId(store.attachments),
+        transactionId: input.transactionId,
+        contentType: input.contentType,
+        byteSize: input.byteSize,
+        createdAt: '2026-01-01T00:00:00Z',
+        hasThumb: input.thumbKey != null,
+        ...(input.width != null ? { width: input.width } : {}),
+        ...(input.height != null ? { height: input.height } : {}),
+        ...(input.originalName ? { originalName: input.originalName } : {}),
+      }
+      // The double lets the service assert the keys it wrote, which is the part
+      // that has to match the D1 adapter.
+      keysById.set(keyOf(owner, attachment.id), {
+        objectKey: input.objectKey,
+        ...(input.thumbKey ? { thumbKey: input.thumbKey } : {}),
+      })
+      store.attachments.push(attachment)
+      return Promise.resolve({ ...attachment })
+    },
+
+    deleteAttachment: (owner, id) => {
+      const store = storeFor(owner)
+      const index = store.attachments.findIndex((a) => a.id === id)
+      const keys = keysById.get(keyOf(owner, id))
+      // Check before mutating, so a miss cannot leave the row deleted and the
+      // caller told it was never there.
+      if (index < 0 || !keys) throw new RepoHttpError(404, 'Attachment not found')
+      store.attachments.splice(index, 1)
+      keysById.delete(keyOf(owner, id))
+      return Promise.resolve(keys)
+    },
+
+    attachmentKeysForTransactions: (owner, transactionIds) => {
+      const store = storeFor(owner)
+      const wanted = new Set(transactionIds)
+      return Promise.resolve(
+        store.attachments
+          .filter((a) => wanted.has(a.transactionId))
+          .flatMap((a) => {
+            const keys = keysById.get(keyOf(owner, a.id))
+            if (!keys) return []
+            return keys.thumbKey ? [keys.objectKey, keys.thumbKey] : [keys.objectKey]
+          }),
+      )
+    },
+
+    attachmentBytesUsed: (owner) => {
+      const store = storeFor(owner)
+      return Promise.resolve(store.attachments.reduce((sum, a) => sum + a.byteSize, 0))
     },
 
     createFlag: (owner, input) => {

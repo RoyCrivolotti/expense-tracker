@@ -32,6 +32,15 @@ import {
 } from '../dbInstallments'
 import { createFlag, deleteFlag, updateFlag } from '../dbFlags'
 import {
+  attachmentBytesUsed,
+  attachmentKeysForTransactions,
+  createAttachment,
+  deleteAttachment,
+  findAttachmentSource,
+  listAttachments,
+  transactionExists,
+} from '../dbAttachments'
+import {
   createWealthAccount,
   createWealthCheckin,
   deleteWealthAccount,
@@ -55,6 +64,13 @@ export function createD1ExpenseRepository(env: Env): ExpenseRepository {
       setStatementPaid(env, owner, accountId, yearMonth, paid, paidOn),
     setCashActual: (owner, yearMonth, cents) => setCashActual(env, owner, yearMonth, cents),
     clearCashActual: (owner, yearMonth) => clearCashActual(env, owner, yearMonth),
+    transactionExists: (owner, id) => transactionExists(env, owner, id),
+    listAttachments: (owner, transactionId) => listAttachments(env, owner, transactionId),
+    findAttachmentSource: (owner, id) => findAttachmentSource(env, owner, id),
+    createAttachment: (owner, input) => createAttachment(env, owner, input),
+    deleteAttachment: (owner, id) => deleteAttachment(env, owner, id),
+    attachmentBytesUsed: (owner) => attachmentBytesUsed(env, owner),
+    attachmentKeysForTransactions: (owner, ids) => attachmentKeysForTransactions(env, owner, ids),
     createFlag: (owner, input) => createFlag(env, owner, input),
     updateFlag: (owner, id, patch) => updateFlag(env, owner, id, patch),
     deleteFlag: (owner, id) => deleteFlag(env, owner, id),

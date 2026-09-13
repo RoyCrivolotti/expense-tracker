@@ -21,6 +21,7 @@ const NEW_CARD: Account = { id: 12, name: 'New card', kind: 'debit', settlement:
 function dataset(overrides: Partial<ExpenseDataset> = {}): ExpenseDataset {
   return {
     flags: [],
+    attachments: [],
     categories: [DINING, GROCERIES],
     accounts: [CHECKING, OLD_CARD],
     transactions: [],
@@ -57,6 +58,8 @@ function noopActions(overrides: Partial<ExpenseActions> = {}): ExpenseActions {
     updateTransactions: vi.fn(),
     setStatementPaid: vi.fn(),
     setCashActual: vi.fn(),
+    uploadAttachment: vi.fn(),
+    deleteAttachment: vi.fn(),
     createFlag: vi.fn(),
     updateFlag: vi.fn(),
     deleteFlag: vi.fn(),

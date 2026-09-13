@@ -9,6 +9,7 @@ import type {
   Flag,
   GoalScenario,
   Transaction,
+  TransactionAttachment,
   WealthAccount,
   WealthCheckin,
 } from '../domain/types'
@@ -20,6 +21,7 @@ export function makeDataset(overrides: Partial<ExpenseDataset> = {}): ExpenseDat
     categories: [],
     accounts: [],
     flags: [],
+    attachments: [],
     transactions: [],
     accountStatements: [],
     cashActuals: [],
@@ -46,6 +48,21 @@ export function makeTransaction(overrides: Partial<Transaction> = {}): Transacti
     amountCents: 19_840,
     cancelled: false,
     status: 'posted',
+    ...overrides,
+  }
+}
+
+/** Build a minimal valid TransactionAttachment for tests. */
+export function makeAttachment(
+  overrides: Partial<TransactionAttachment> = {},
+): TransactionAttachment {
+  return {
+    id: 1,
+    transactionId: 1,
+    contentType: 'image/jpeg',
+    byteSize: 120_000,
+    createdAt: '2026-05-01T09:00:00Z',
+    hasThumb: true,
     ...overrides,
   }
 }

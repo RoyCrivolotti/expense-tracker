@@ -14,6 +14,7 @@ import type {
   GoalScenario,
   InstallmentPlan,
   Transaction,
+  TransactionAttachment,
   WealthAccount,
   WealthCheckin,
 } from '../types'
@@ -33,10 +34,17 @@ import type {
   NewWealthAccount,
   NewWealthCheckin,
 } from './dataSource'
-import { req } from './apiClient'
+import { RECEIPT_CLIENT_POLICY } from './receiptClientPolicy'
+import { downscaleImage, renderThumbnail } from './imageDownscale'
+import { req, reqMultipart } from './apiClient'
 
 const BASE = '/api/expenses'
 
+/**
+ * Mirrors config/receipt-policy.json. The server enforces the real limits; these
+ * only decide how hard the browser tries before uploading, so a small drift
+ * costs a rejected upload rather than a wrong one.
+ */
 export const apiDataSource: ExpenseDataSource = {
   canWrite: true,
   load: () => req<ExpenseDataset>(BASE),
@@ -85,6 +93,25 @@ export const apiDataSource: ExpenseDataSource = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ yearMonth, actualCashCents }),
     }),
+  uploadAttachment: async (transactionId: number, file: File) => {
+    const form = new FormData()
+    form.set('transactionId', String(transactionId))
+    const shrunk = await downscaleImage(file, {
+      maxEdge: RECEIPT_CLIENT_POLICY.maxEdge,
+      maxBytes: RECEIPT_CLIENT_POLICY.maxBytes,
+      skipUnderBytes: RECEIPT_CLIENT_POLICY.skipUnderBytes,
+    })
+    form.set('file', shrunk?.blob ?? file, file.name)
+    if (shrunk) {
+      form.set('width', String(shrunk.width))
+      form.set('height', String(shrunk.height))
+    }
+    const thumb = await renderThumbnail(shrunk?.blob ?? file, RECEIPT_CLIENT_POLICY.thumbEdge)
+    if (thumb) form.set('thumb', thumb, 'thumb.jpg')
+    return reqMultipart<TransactionAttachment>(`${BASE}/attachments`, form)
+  },
+  deleteAttachment: (id: number) =>
+    req<{ deleted: number }>(`${BASE}/attachments/${id}`, { method: 'DELETE' }).then(() => undefined),
   createFlag: (input: NewFlag) =>
     req<Flag>(`${BASE}/flags`, {
       method: 'POST',
