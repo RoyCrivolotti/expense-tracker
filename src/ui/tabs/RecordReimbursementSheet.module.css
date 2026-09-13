@@ -67,7 +67,10 @@
 /* The payment does not match the rows ticked. Not an error — recording a
    different figure is legitimate — so it states the gap rather than blocking. */
 .mismatch {
-  margin: -0.35rem 0 0.6rem;
+  /* Positive top margin, unlike .hint's -0.35rem: this sits directly under an
+     input that is usually focused when the message appears, and the focus ring
+     extends past the border — the negative pull put the text across it. */
+  margin: 0.3rem 0 0.7rem;
   font-size: 0.78rem;
   line-height: 1.4;
   color: var(--exp-warning);
