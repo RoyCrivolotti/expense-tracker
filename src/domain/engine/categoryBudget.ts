@@ -55,7 +55,13 @@ export function computeCategoryActuals(
   return [...byCategory.values()].sort((a, b) => a.categoryId - b.categoryId)
 }
 
-export type BudgetStatus = 'under' | 'warning' | 'over'
+/**
+ * `credit` means the category took in more than it spent this month — a
+ * reimbursement or a refund landed in it. It is deliberately not `under`:
+ * "under budget" is a statement about restraint, and painting a negative
+ * actual green claims an achievement that never happened.
+ */
+export type BudgetStatus = 'credit' | 'under' | 'warning' | 'over'
 
 export interface BudgetHealth {
   categoryId: number
@@ -69,6 +75,10 @@ export interface BudgetHealth {
 
 function healthStatus(ratio: number, hasBudget: boolean): BudgetStatus {
   if (!hasBudget) return 'under'
+  // Checked before the thresholds, which all assume a non-negative ratio: a
+  // ratio of -0.45 is neither over nor >= 0.8, so it used to fall through to
+  // `under` and render as a green "under budget" pill reading "-45%".
+  if (ratio < 0) return 'credit'
   if (ratio > 1) return 'over'
   if (ratio >= 0.8) return 'warning'
   return 'under'
