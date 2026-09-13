@@ -17,7 +17,7 @@ const PREVIEW_LIMIT = 5
 interface Props {
   model: ExpenseModel
   onFilterByFlag: (flagId: number) => void
-  onOpenPack: (flagId: number) => void
+  onOpenReport: (flagId: number) => void
   onManage: () => void
   onSelect?: ((txn: Transaction) => void) | undefined
 }
@@ -26,13 +26,13 @@ function FlagGroupSection({
   group,
   model,
   onFilterByFlag,
-  onOpenPack,
+  onOpenReport,
   onSelect,
 }: {
   group: FlagGroup
   model: ExpenseModel
   onFilterByFlag: (flagId: number) => void
-  onOpenPack: (flagId: number) => void
+  onOpenReport: (flagId: number) => void
   onSelect?: ((txn: Transaction) => void) | undefined
 }) {
   const preview = group.transactions.slice(0, PREVIEW_LIMIT)
@@ -73,9 +73,9 @@ function FlagGroupSection({
           <button
             type="button"
             className={styles.packBtn}
-            onClick={() => onOpenPack(group.flag.id)}
+            onClick={() => onOpenReport(group.flag.id)}
           >
-            View claim
+            Expense report
           </button>
         </div>
       </div>
@@ -92,7 +92,7 @@ function FlagGroupSection({
  * below stays month-scoped as before, and flagged rows still appear there —
  * this is a summary, not a second home for them.
  */
-export function FlaggedCard({ model, onFilterByFlag, onOpenPack, onManage, onSelect }: Props) {
+export function FlaggedCard({ model, onFilterByFlag, onOpenReport, onManage, onSelect }: Props) {
   const groups = groupTransactionsByFlag(model.dataset.transactions, model.dataset.flags)
   if (groups.length === 0) return null
   const total = summarizeFlagGroups(groups)
@@ -127,7 +127,7 @@ export function FlaggedCard({ model, onFilterByFlag, onOpenPack, onManage, onSel
                 group={group}
                 model={model}
                 onFilterByFlag={onFilterByFlag}
-                onOpenPack={onOpenPack}
+                onOpenReport={onOpenReport}
                 {...(onSelect ? { onSelect } : {})}
               />
             ))}

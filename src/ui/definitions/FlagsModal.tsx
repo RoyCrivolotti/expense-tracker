@@ -17,7 +17,7 @@ function usageCount(model: ExpenseModel, flagId: number): number {
 }
 
 /**
- * Whether a claim would actually build. A raw usage count is not the same
+ * Whether a report would actually build. A raw usage count is not the same
  * question: it counts cancelled rows and mis-typed income that `buildFlagGroup`
  * drops, so a flag carrying only those offered a button that opened nothing.
  */
@@ -29,19 +29,19 @@ export function FlagsModal({
   model,
   actions,
   onClose,
-  onOpenPack,
+  onOpenReport,
 }: {
   model: ExpenseModel
   actions: ExpenseActions
   onClose: () => void
   /**
-   * Opens a flag's claim. The only route to an *archived* flag's claim:
+   * Opens a flag's expense report. The only route to an archived flag's:
    * archiving is how a claim is marked done, it drops out of the Flagged card
    * by design, and a done claim is exactly the one an employer asks to see
    * again. Closes this modal first — the two render as siblings, so leaving
    * both mounted would leave this one's focus trap live under the sheet.
    */
-  onOpenPack?: ((flagId: number) => void) | undefined
+  onOpenReport?: ((flagId: number) => void) | undefined
 }) {
   const [editing, setEditing] = useState<Editing>(null)
   const [confirming, setConfirming] = useState(false)
@@ -92,16 +92,16 @@ export function FlagsModal({
                     {usageCount(model, flag.id) === 1 ? '' : 's'}
                   </span>
                 </div>
-                {onOpenPack && hasClaim(model, flag.id) ? (
+                {onOpenReport && hasClaim(model, flag.id) ? (
                   <button
                     type="button"
                     className={defStyles.editBtn}
                     onClick={() => {
                       onClose()
-                      onOpenPack(flag.id)
+                      onOpenReport(flag.id)
                     }}
                   >
-                    View claim
+                    Expense report
                   </button>
                 ) : null}
                 <button

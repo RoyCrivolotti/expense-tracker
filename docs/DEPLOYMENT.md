@@ -105,7 +105,7 @@ Apply through `0017_claimant_name.sql` on production. Personal goal scenarios: `
 
 `0016_transaction_attachments.sql` adds the `transaction_attachments` table — metadata only, for receipt photos and PDFs whose bytes live in R2. It starts empty and nothing reads it until an attachment is uploaded, so it is safe to apply ahead of the code deploy. It needs the `RECEIPTS` R2 binding to be useful: run `npm run setup:receipts` first (see **Receipt storage (R2)** below). Without the binding the upload route returns a clean 503 and the rest of the app is unaffected. Owner-agnostic — no placeholder substitution needed.
 
-`0017_claimant_name.sql` adds a nullable `claimant_name` column on `settings` — the name printed at the top of a reimbursement claim pack, so the document identifies who is claiming. `NULL` reads as `''` and the pack simply omits the claimant line, so existing owners see no change until they fill it in under Settings → Reimbursement claims. Deliberately not derived from the Cloudflare Access email: that identifies the account, not the person, and an address on an expense form reads as a mistake. Owner-agnostic — no placeholder substitution needed.
+`0017_claimant_name.sql` adds a nullable `claimant_name` column on `settings` — the name printed at the top of an expense report, so the document identifies who is submitting it. `NULL` reads as `''` and the report simply omits the name line, so existing owners see no change until they fill it in under Settings → Expense reports. Deliberately not derived from the Cloudflare Access email: that identifies the account, not the person, and an address on an expense form reads as a mistake. Owner-agnostic — no placeholder substitution needed.
 
 ## Old URL
 

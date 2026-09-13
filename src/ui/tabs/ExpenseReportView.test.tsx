@@ -5,7 +5,7 @@ import type { ExpenseDataset, Transaction } from '../../types'
 import { makeAttachment, makeDataset, makeFlag } from '../../testing/factories'
 import { buildLookup } from '../format'
 import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
-import { ReimbursementPackView } from './ReimbursementPackView'
+import { ExpenseReportView } from './ExpenseReportView'
 
 const work = makeFlag({ id: 1, name: 'Work travel', description: 'Reimbursable — submit monthly' })
 
@@ -34,7 +34,7 @@ function renderPack(
   const onClose = vi.fn()
   render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
-      <ReimbursementPackView
+      <ExpenseReportView
         dataset={dataset}
         lookup={buildLookup(dataset)}
         flagId={flagId}
@@ -51,13 +51,13 @@ function datasetWith(transactions: Transaction[], attachments: unknown[] = []): 
   return makeDataset({ flags: [work], transactions, attachments: attachments as never })
 }
 
-describe('ReimbursementPackView', () => {
-  it('heads the claim with the flag, its note and the claimed period', () => {
+describe('ExpenseReportView', () => {
+  it('heads the report with the flag, its note and the claimed period', () => {
     renderPack(datasetWith([txn(1, '2026-05-02'), txn(2, '2026-05-09')]))
 
     expect(screen.getByRole('heading', { name: 'Work travel' })).toBeInTheDocument()
     expect(screen.getByText('Reimbursable — submit monthly')).toBeInTheDocument()
-    expect(screen.getByText('Expense claim')).toBeInTheDocument()
+    expect(screen.getByText('Expense report')).toBeInTheDocument()
     expect(screen.getByText(/2 May.*9 May/)).toBeInTheDocument()
   })
 
@@ -142,7 +142,7 @@ describe('ReimbursementPackView', () => {
   it('renders nothing for a flag with nothing to claim', () => {
     const { container } = render(
       <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
-        <ReimbursementPackView
+        <ExpenseReportView
           dataset={makeDataset({ flags: [work] })}
           lookup={buildLookup(makeDataset({ flags: [work] }))}
           flagId={1}
@@ -157,7 +157,7 @@ describe('ReimbursementPackView', () => {
   it('flags the body while open so the print rule can hide the app behind it', () => {
     const { unmount } = render(
       <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
-        <ReimbursementPackView
+        <ExpenseReportView
           dataset={datasetWith([txn(1, '2026-05-02')])}
           lookup={buildLookup(datasetWith([txn(1, '2026-05-02')]))}
           flagId={1}
@@ -166,11 +166,11 @@ describe('ReimbursementPackView', () => {
       </MoneyFormatProvider>,
     )
 
-    expect(document.body.dataset.packOpen).toBe('true')
+    expect(document.body.dataset.reportOpen).toBe('true')
 
     unmount()
 
-    expect(document.body.dataset.packOpen).toBeUndefined()
+    expect(document.body.dataset.reportOpen).toBeUndefined()
   })
 
   it('prints on request', async () => {
@@ -213,7 +213,7 @@ describe('ReimbursementPackView', () => {
   })
 })
 
-describe('ReimbursementPackView — the document', () => {
+describe('ExpenseReportView — the document', () => {
   it('prints the claimant, reference, issue date and currency', () => {
     const dataset = makeDataset({
       flags: [work],

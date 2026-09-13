@@ -12,14 +12,14 @@ interface Props {
 }
 
 /**
- * The name printed on a claim.
+ * The name printed on an expense report.
  *
  * Its own section rather than a line in "Money & months", which is about
  * formatting. Deliberately not derived from the Cloudflare Access email: that
  * identifies the account, not the person, and an address on an expense form
  * reads as a mistake to whoever approves it.
  */
-export function ClaimantSetting({ settings, onChange }: Props) {
+export function ReportNameSetting({ settings, onChange }: Props) {
   // Local state committed on blur, the same shape MilestonesSetting uses.
   // Bound straight to server state it fired a PUT per keystroke: typing
   // "Alex Moreno" issued eleven, each resolving into a full settings replace,
@@ -43,11 +43,11 @@ export function ClaimantSetting({ settings, onChange }: Props) {
 
   return (
     <>
-      <SectionTitle>Claims</SectionTitle>
+      <SectionTitle>Expense reports</SectionTitle>
       <Card>
         <div className={styles.settingGroup}>
           <label className={styles.defaultAccountField}>
-            <span className={styles.defaultAccountLabel}>Claimant name</span>
+            <span className={styles.defaultAccountLabel}>Your name</span>
             <input
               className={styles.defaultAccountSelect}
               type="text"
@@ -60,7 +60,7 @@ export function ClaimantSetting({ settings, onChange }: Props) {
             />
           </label>
           <p className={styles.settingHint}>
-            Printed at the top of a claim. Leave it empty and the claim omits the claimant line.
+            Printed at the top of an expense report. Leave it empty and the report omits the line.
           </p>
         </div>
       </Card>

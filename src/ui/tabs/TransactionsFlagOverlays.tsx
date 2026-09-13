@@ -2,7 +2,7 @@ import { buildFlagGroup } from '../../domain/engine/flagGroups'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import { FlagsModal } from '../definitions/FlagsModal'
-import { ReimbursementPackView } from './ReimbursementPackView'
+import { ExpenseReportView } from './ExpenseReportView'
 
 /**
  * The two full-screen surfaces the Flagged card can open. Extracted so
@@ -13,28 +13,28 @@ import { ReimbursementPackView } from './ReimbursementPackView'
 export function TransactionsFlagOverlays({
   model,
   actions,
-  packFlagId,
-  onClosePack,
-  onOpenPack,
+  reportFlagId,
+  onCloseReport,
+  onOpenReport,
   managingFlags,
   onCloseManage,
 }: {
   model: ExpenseModel
   actions: ExpenseActions | undefined
-  packFlagId: number | null
-  onClosePack: () => void
-  onOpenPack: (flagId: number) => void
+  reportFlagId: number | null
+  onCloseReport: () => void
+  onOpenReport: (flagId: number) => void
   managingFlags: boolean
   onCloseManage: () => void
 }) {
   return (
     <>
-      {packFlagId != null && buildFlagGroup(packFlagId, model.dataset.transactions, model.dataset.flags) ? (
-        <ReimbursementPackView
+      {reportFlagId != null && buildFlagGroup(reportFlagId, model.dataset.transactions, model.dataset.flags) ? (
+        <ExpenseReportView
           dataset={model.dataset}
           lookup={model.lookup}
-          flagId={packFlagId}
-          onClose={onClosePack}
+          flagId={reportFlagId}
+          onClose={onCloseReport}
           {...(actions ? { onOpenTransaction: actions.onEdit } : {})}
         />
       ) : null}
@@ -44,7 +44,7 @@ export function TransactionsFlagOverlays({
           model={model}
           actions={actions}
           onClose={onCloseManage}
-          onOpenPack={onOpenPack}
+          onOpenReport={onOpenReport}
         />
       ) : null}
     </>

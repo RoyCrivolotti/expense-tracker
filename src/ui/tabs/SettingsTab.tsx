@@ -10,7 +10,7 @@ import { StatementToggles } from '../components/StatementToggles'
 import { DefinitionsEditor } from '../definitions/DefinitionsEditor'
 import { AppearanceSetting } from '../settings/AppearanceSetting'
 import { PreferencesSetting } from '../settings/PreferencesSetting'
-import { ClaimantSetting } from '../settings/ClaimantSetting'
+import { ReportNameSetting } from '../settings/ReportNameSetting'
 import { MilestonesSetting } from '../settings/MilestonesSetting'
 import { DefaultAccountSetting } from '../settings/DefaultAccountSetting'
 import { ExportDataSection } from '../settings/ExportDataSection'
@@ -138,7 +138,7 @@ function OwnerSettings({
   return (
     <>
       <PreferencesSetting settings={settings} onChange={onChange} />
-      <ClaimantSetting settings={settings} onChange={onChange} />
+      <ReportNameSetting settings={settings} onChange={onChange} />
       <MilestonesSetting settings={settings} onChange={onChange} />
     </>
   )

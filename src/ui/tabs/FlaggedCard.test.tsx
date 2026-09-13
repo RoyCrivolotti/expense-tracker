@@ -41,18 +41,18 @@ function modelFor(dataset: ExpenseDataset): ExpenseModel {
 function renderCard(dataset: ExpenseDataset) {
   const onFilterByFlag = vi.fn()
   const onManage = vi.fn()
-  const onOpenPack = vi.fn()
+  const onOpenReport = vi.fn()
   render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
       <FlaggedCard
         model={modelFor(dataset)}
         onFilterByFlag={onFilterByFlag}
-        onOpenPack={onOpenPack}
+        onOpenReport={onOpenReport}
         onManage={onManage}
       />
     </MoneyFormatProvider>,
   )
-  return { onFilterByFlag, onManage, onOpenPack }
+  return { onFilterByFlag, onManage, onOpenReport }
 }
 
 describe('FlaggedCard', () => {
@@ -62,7 +62,7 @@ describe('FlaggedCard', () => {
         <FlaggedCard
           model={modelFor(makeDataset({ flags: [work] }))}
           onFilterByFlag={vi.fn()}
-          onOpenPack={vi.fn()}
+          onOpenReport={vi.fn()}
           onManage={vi.fn()}
         />
       </MoneyFormatProvider>,
@@ -133,7 +133,7 @@ describe('FlaggedCard', () => {
         <FlaggedCard
           model={modelFor(makeDataset({ flags: [{ ...work, active: false }], transactions: [txn({ flagId: 1 })] }))}
           onFilterByFlag={vi.fn()}
-          onOpenPack={vi.fn()}
+          onOpenReport={vi.fn()}
           onManage={vi.fn()}
         />
       </MoneyFormatProvider>,
@@ -181,7 +181,7 @@ describe('FlaggedCard', () => {
         <FlaggedCard
           model={modelFor(makeDataset({ flags: [], transactions: [txn({ flagId: 99 })] }))}
           onFilterByFlag={vi.fn()}
-          onOpenPack={vi.fn()}
+          onOpenReport={vi.fn()}
           onManage={vi.fn()}
         />
       </MoneyFormatProvider>,
@@ -190,15 +190,15 @@ describe('FlaggedCard', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('opens the claim pack for a flag', async () => {
-    const { onOpenPack } = renderCard(
+  it('opens the expense report for a flag', async () => {
+    const { onOpenReport } = renderCard(
       makeDataset({ flags: [work], transactions: [txn({ flagId: 1 })] }),
     )
 
     await userEvent.click(screen.getByText(/across 1 flag/))
     await userEvent.click(screen.getByText('Work travel'))
-    await userEvent.click(screen.getByRole('button', { name: 'View claim' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Expense report' }))
 
-    expect(onOpenPack).toHaveBeenCalledWith(1)
+    expect(onOpenReport).toHaveBeenCalledWith(1)
   })
 })

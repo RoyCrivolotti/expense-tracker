@@ -100,7 +100,7 @@ function demoFlags(stored: StoredTransaction[]): {
     const purpose = purposes[i % purposes.length]
     return { ...txn, flagId, ...(purpose ? { notes: purpose } : {}) }
   })
-  // One claim partly settled, so the pack's claimed / reimbursed / outstanding
+  // One claim partly settled, so the report's claimed / reimbursed / outstanding
   // breakdown has something to show.
   const claimed = recent[0]
   if (!claimed) return { flags, transactions: withFlags }

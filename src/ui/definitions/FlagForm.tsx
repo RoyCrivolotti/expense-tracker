@@ -100,9 +100,9 @@ export function FlagForm({
         placeholder="Reimbursable — submit monthly"
         onChange={(description) => patch({ description })}
       />
-      {/* This field is printed on the claim, which is handed to an
+      {/* This field is printed on the expense report, which is handed to an
           employer. Nothing said so, and people write private notes here. */}
-      <p className={styles.hint}>Shown on the claim, under the flag name.</p>
+      <p className={styles.hint}>Shown on the expense report, under the flag name.</p>
 
       <div className={styles.field}>
         <span className={styles.label}>Colour</span>

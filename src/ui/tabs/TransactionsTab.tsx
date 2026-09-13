@@ -27,7 +27,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
   const [editingStatement, setEditingStatement] = useState<StatementPaymentRow | null>(null)
   const [statementPending, setStatementPending] = useState(false)
   const [managingFlags, setManagingFlags] = useState(false)
-  const [packFlagId, setPackFlagId] = useState<number | null>(null)
+  const [reportFlagId, setPackFlagId] = useState<number | null>(null)
   const rolloverDay = model.dataset.settings.budgetRolloverDay
   const announcement = useDebouncedAnnouncement(
     `${state.listRows.length} transactions match`,
@@ -51,7 +51,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
               state.setDateScope('allDates')
               scrollToResults()
             }}
-            onOpenPack={setPackFlagId}
+            onOpenReport={setPackFlagId}
             onManage={() => setManagingFlags(true)}
             onSelect={actions.onEdit}
           />
@@ -157,9 +157,9 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
       <TransactionsFlagOverlays
         model={model}
         actions={actions}
-        packFlagId={packFlagId}
-        onClosePack={() => setPackFlagId(null)}
-        onOpenPack={setPackFlagId}
+        reportFlagId={reportFlagId}
+        onCloseReport={() => setPackFlagId(null)}
+        onOpenReport={setPackFlagId}
         managingFlags={managingFlags}
         onCloseManage={() => setManagingFlags(false)}
       />

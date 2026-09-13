@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ExpenseDataset, Transaction } from '../types'
 import { EU_MONEY_FORMAT } from '../engine/money'
 import { makeAttachment, makeDataset, makeFlag } from '../testing/factories'
-import { downloadReimbursementCsv, reimbursementCsv } from './reimbursementCsv'
+import { downloadExpenseReportCsv, expenseReportCsv } from './expenseReportCsv'
 
 const options = {
   format: EU_MONEY_FORMAT,
@@ -45,9 +45,9 @@ function headerLine(csv: string): string {
   return csv.split('\n').find((l) => l.startsWith('Date,'))!
 }
 
-describe('reimbursementCsv', () => {
+describe('expenseReportCsv', () => {
   it('writes a header, one row per transaction, and a total', () => {
-    const csv = reimbursementCsv(
+    const csv = expenseReportCsv(
       datasetWith([txn(1, '2026-05-02', { flagId: 1 }), txn(2, '2026-05-04', { flagId: 1 })]),
       1,
       options,
@@ -61,7 +61,7 @@ describe('reimbursementCsv', () => {
 
   it('carries the transaction notes through as the business purpose', () => {
     // An approver asks what a dinner was *for*; notes already holds exactly that.
-    const csv = reimbursementCsv(
+    const csv = expenseReportCsv(
       datasetWith([txn(1, '2026-05-02', { flagId: 1, notes: 'Kick-off with Acme' })]),
       1,
       options,
@@ -71,7 +71,7 @@ describe('reimbursementCsv', () => {
   })
 
   it('breaks the totals out once a reimbursement has been recorded', () => {
-    const csv = reimbursementCsv(
+    const csv = expenseReportCsv(
       datasetWith([
         txn(1, '2026-05-02', { flagId: 1, amountCents: 10_000 }),
         txn(2, '2026-06-14', { flagId: 1, amountCents: 4_000, type: 'refund' }),
@@ -90,7 +90,7 @@ describe('reimbursementCsv', () => {
   })
 
   it('cross-references receipts per row, so a line ties to a figure', () => {
-    const csv = reimbursementCsv(
+    const csv = expenseReportCsv(
       datasetWith([txn(1, '2026-05-02', { flagId: 1 })], [
         makeAttachment({ id: 1, transactionId: 1 }),
         makeAttachment({ id: 2, transactionId: 1 }),
@@ -103,7 +103,7 @@ describe('reimbursementCsv', () => {
   })
 
   it('writes a credit negative, so it does not read as another expense', () => {
-    const csv = reimbursementCsv(
+    const csv = expenseReportCsv(
       datasetWith([
         txn(1, '2026-05-02', { flagId: 1, amountCents: 10_000 }),
         txn(2, '2026-06-14', { flagId: 1, type: 'refund', amountCents: 4_000 }),
@@ -119,7 +119,7 @@ describe('reimbursementCsv', () => {
   it('produces nothing for a flag whose only rows are credits', () => {
     // Expenses cancelled after settling: there is no claim left to print, and
     // the document would carry a dash for a period and a negative total.
-    const csv = reimbursementCsv(
+    const csv = expenseReportCsv(
       datasetWith([txn(1, '2026-05-02', { flagId: 1, type: 'refund', amountCents: 4_000 })]),
       1,
       options,
@@ -129,7 +129,7 @@ describe('reimbursementCsv', () => {
   })
 
   it('quotes a description containing a comma', () => {
-    const csv = reimbursementCsv(
+    const csv = expenseReportCsv(
       datasetWith([txn(1, '2026-05-02', { flagId: 1, description: 'Hotel, Madrid' })]),
       1,
       options,
@@ -139,7 +139,7 @@ describe('reimbursementCsv', () => {
   })
 
   it('escapes an embedded quote by doubling it', () => {
-    const csv = reimbursementCsv(
+    const csv = expenseReportCsv(
       datasetWith([txn(1, '2026-05-02', { flagId: 1, description: 'The "Grand" Hotel' })]),
       1,
       options,
@@ -149,7 +149,7 @@ describe('reimbursementCsv', () => {
   })
 
   it('falls back to the category when a transaction has no description', () => {
-    const csv = reimbursementCsv(
+    const csv = expenseReportCsv(
       datasetWith([txn(1, '2026-05-02', { flagId: 1, description: '' })]),
       1,
       options,
@@ -159,11 +159,11 @@ describe('reimbursementCsv', () => {
   })
 
   it('is null for a flag with nothing to claim', () => {
-    expect(reimbursementCsv(datasetWith([]), 1, options)).toBeNull()
+    expect(expenseReportCsv(datasetWith([]), 1, options)).toBeNull()
   })
 
-  it('totals the same figure as the pack', () => {
-    const csv = reimbursementCsv(
+  it('totals the same figure as the report', () => {
+    const csv = expenseReportCsv(
       datasetWith([
         txn(1, '2026-05-02', { flagId: 1, amountCents: 10_000 }),
         txn(2, '2026-05-04', { flagId: 1, amountCents: 4_000, type: 'refund' }),
@@ -176,7 +176,7 @@ describe('reimbursementCsv', () => {
   })
 })
 
-describe('downloadReimbursementCsv', () => {
+describe('downloadExpenseReportCsv', () => {
   function captureDownload(dataset: ExpenseDataset, flagId: number) {
     const created: string[] = []
     const revoked: string[] = []
@@ -192,7 +192,7 @@ describe('downloadReimbursementCsv', () => {
     const click = vi.spyOn(anchor, 'click').mockImplementation(() => {})
     vi.spyOn(document, 'createElement').mockReturnValueOnce(anchor)
 
-    downloadReimbursementCsv(dataset, flagId, options)
+    downloadExpenseReportCsv(dataset, flagId, options)
 
     return { anchor, click, created, revoked }
   }
