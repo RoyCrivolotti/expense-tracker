@@ -36,8 +36,21 @@
 
 .actions {
   display: flex;
+  align-items: center;
   gap: 0.4rem;
   flex-shrink: 0;
+}
+
+.rowButton {
+  width: 100%;
+  border: none;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rowButton:hover {
+  background: color-mix(in srgb, var(--color-accent) 6%, var(--color-bg));
 }
 
 .manageBtn {
