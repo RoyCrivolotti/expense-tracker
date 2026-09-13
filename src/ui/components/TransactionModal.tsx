@@ -22,9 +22,10 @@ function installmentNote(editing: Transaction | null, model: ExpenseModel): stri
   return `Installment ${editing.installmentIndex} of ${plan.totalCount} · Final payment ${fullMonthLabel(finalBudgetMonth(plan))}`
 }
 
-function titleFor(editing: Transaction | null, mode: 'single' | 'batch'): string {
-  if (editing) return 'Edit transaction'
-  return mode === 'batch' ? 'Add multiple transactions' : 'New transaction'
+function titleFor(editing: Transaction | null, mode: 'single' | 'batch', formView: 'fields' | 'installment'): string {
+  if (mode === 'batch') return 'Add multiple transactions'
+  if (formView === 'installment') return 'Installment plan'
+  return editing ? 'Edit transaction' : 'New transaction'
 }
 
 function ModeToggle({ mode, onChange }: { mode: 'single' | 'batch'; onChange: (mode: 'single' | 'batch') => void }) {
@@ -149,6 +150,7 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
   const [popoverOpen, setPopoverOpen] = useState(false)
   const { showToast } = useToast()
   const [mode, setMode] = useState<'single' | 'batch'>('single')
+  const [formView, setFormView] = useState<'fields' | 'installment'>('fields')
   // Batch mode only makes sense for a from-scratch add: a seed (duplicate,
   // "add expense in this category" shortcut, etc.) is a request to prefill one
   // specific transaction, which BatchTransactionForm has no way to honor.
@@ -203,24 +205,24 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
 
   return (
     <Modal
-      title={titleFor(editing, mode)}
-      {...(subtitle ? { subtitle } : {})}
+      title={titleFor(editing, mode, formView)}
+      subtitle={subtitle}
       onClose={modalOnClose}
+      onBack={formView === 'installment' ? () => setFormView('fields') : undefined}
       trapPaused={confirming || discardingOther || popoverOpen}
     >
-      {canBatch && <ModeToggle mode={mode} onChange={setMode} />}
       {canBatch && (
-        <BatchTransactionForm
-          model={model}
-          actions={actions}
-          // Guarded, not raw: the single form stays mounted behind this tab and
-          // keeps its draft — staged receipts included. A successful batch save
-          // used to close the modal and take that draft with it silently.
-          onClose={closeFromBatch}
-          hidden={mode !== 'batch'}
-          onDirtyChange={setBatchDirty}
-          onTrapPausedChange={setPopoverOpen}
-        />
+        <>
+          <ModeToggle mode={mode} onChange={(m) => { setMode(m); setFormView('fields') }} />
+          <BatchTransactionForm
+            model={model}
+            actions={actions}
+            onClose={closeFromBatch}
+            hidden={mode !== 'batch'}
+            onDirtyChange={setBatchDirty}
+            onTrapPausedChange={setPopoverOpen}
+          />
+        </>
       )}
       <TransactionForm
         /*
@@ -243,6 +245,8 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
         onPartialSaveChange={setStranded}
         onTrapPausedChange={setPopoverOpen}
         actions={actions}
+        view={formView}
+        onViewChange={setFormView}
       />
       <ModalGuards
         confirming={confirming}

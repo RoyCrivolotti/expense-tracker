@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
-import { CloseIcon } from '../icons'
+import { BackIcon, CloseIcon } from '../icons'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useVisualViewportRect } from '../hooks/useVisualViewportRect'
 import { useFocusTrap } from '../hooks/useFocusTrap'
@@ -7,14 +7,15 @@ import styles from './Modal.module.css'
 
 interface ModalProps {
   title: string
-  subtitle?: string
+  subtitle?: string | undefined
   onClose: () => void
+  onBack?: (() => void) | undefined
   children: ReactNode
   /** True while a nested dialog (e.g. a `ConfirmSheet`) is open on top of this modal — see `useFocusTrap`. */
   trapPaused?: boolean
 }
 
-export function Modal({ title, subtitle, onClose, children, trapPaused = false }: ModalProps) {
+export function Modal({ title, subtitle, onClose, onBack, children, trapPaused = false }: ModalProps) {
   useBodyScrollLock(true)
   // Follows the visible slice rather than the layout viewport, so an iOS
   // keyboard panning the screen cannot slide the sheet under the status bar.
@@ -54,6 +55,11 @@ export function Modal({ title, subtitle, onClose, children, trapPaused = false }
       >
         <div className={styles.handle} aria-hidden />
         <header className={styles.header}>
+          {onBack && (
+            <button type="button" onClick={onBack} aria-label="Back" className={`${styles.back} tapActive`}>
+              <BackIcon />
+            </button>
+          )}
           <div className={styles.titleBlock}>
             <h2 ref={headingRef} tabIndex={-1}>
               {title}
