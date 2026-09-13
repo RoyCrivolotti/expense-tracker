@@ -108,6 +108,11 @@ export function DatePickerPopover({ value, triggerRef, onSelect, onClose }: Prop
       style={{
         top: pos?.top ?? -9999,
         left: pos?.left ?? -9999,
+        // Capped to the visible band and scrollable, so a popover taller than
+        // the space left by an open keyboard stays reachable instead of running
+        // off the screen.
+        maxHeight: pos?.maxHeight,
+        overflowY: 'auto',
         visibility: pos ? 'visible' : 'hidden',
       }}
       role="dialog"
