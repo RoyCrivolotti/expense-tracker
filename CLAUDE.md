@@ -255,6 +255,35 @@ npm run verify
 
 Runs: symlink check → migration doc check → PII check → lint → typecheck → test coverage → build → bundle budget check.
 
+## Safe areas on a phone
+
+`index.html` sets `viewport-fit=cover`, so the page extends **under** the status bar and the home
+indicator. The app shell pays for that with `env(safe-area-inset-*)` padding, which is why ordinary
+scrolling content never collides with the clock.
+
+Anything positioned or sized against the **viewport** sits outside that padding and has to subtract
+the insets itself:
+
+- `position: fixed` surfaces — overlays, sheets, toasts, popovers.
+- Anything sized in `dvh` / `dvw`, which **include** the inset regions. `max-height: 85dvh` on a
+  bottom sheet reaches into the status bar on a tall phone.
+- Anything placed by script from `getBoundingClientRect` coordinates.
+
+Two traps that have each cost a round trip:
+
+- **`env()` read back from a custom property is unreliable.** `getPropertyValue('--x')` returns a
+  token stream, and WebKit does not always resolve `env()` there. Measure a hidden probe element
+  whose *height* is the inset instead — a used value is always a number. `usePopoverPosition` does
+  this.
+- **`visualViewport.height` is not a position.** It describes a smaller window sitting at
+  `offsetTop` inside the layout viewport, while `getBoundingClientRect` reports layout coordinates.
+  Mixing them places things against a band that is not where the code thinks it is. The visible band
+  in client coordinates is `offsetTop .. offsetTop + height`.
+
+None of this goes away inside a native wrapper: a full-screen `WKWebView` reports the same insets and
+needs the same CSS. A wrapper can avoid it by constraining the web view to the safe-area layout
+guide, but that gives up edge-to-edge rendering, and the installed-PWA path needs the CSS regardless.
+
 ## Pull request conventions
 
 PRs that change anything under `src/ui/` or any `.module.css` file must include screenshots showing the affected feature before and after, embedded in the PR description body. **CI enforces this** (`npm run check:pr-screenshots`, wired into `verify.yml`) — it fails the PR if a UI-facing file changed but the description has no markdown image link. For responsive changes, include a mobile (375px) capture alongside the desktop one.
