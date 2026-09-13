@@ -42,6 +42,40 @@ Mobile detail: collapsible filters with **date scope** dropdown, recurring **Upc
 | --- |
 | ![Transactions past month](./screenshots/gallery/transactions-mobile-past.png) |
 
+## Flags, expense reports and settlement
+
+Flag a transaction as reimbursable — a work trip, say — and the **Flagged** card groups what is
+still owed to you, across every month rather than just the one on screen.
+
+| Flagged card (desktop) | Flagged card (mobile) |
+| --- | --- |
+| ![Flagged card desktop](./screenshots/gallery/flagged-card-desktop.png) | ![Flagged card mobile](./screenshots/gallery/flagged-card-mobile.png) |
+
+**Expense report** turns a flag into a document to hand to an employer: claimant, reference, period,
+per-line business purpose, and `R1`/`R2` cross-references tying each row to a numbered receipt. Rows
+with no receipt are listed and each one opens its editor, so the gap is fixable from here rather than
+being a warning you have to go and act on somewhere else. A PDF receipt cannot be drawn into the page
+— it is named and numbered instead, to be sent alongside.
+
+| Expense report (desktop) | Expense report (mobile) |
+| --- | --- |
+| ![Expense report desktop](./screenshots/gallery/expense-report-desktop.png) | ![Expense report mobile](./screenshots/gallery/expense-report-mobile.png) |
+
+**Record reimbursement** settles a claim line by line. Tick what the payment actually covered —
+employers rarely pay a claim exactly — and anything left unticked stays owed. Naming the report is
+what you will recognise it by later.
+
+| Record reimbursement (desktop) | Record reimbursement (mobile) |
+| --- | --- |
+| ![Record reimbursement desktop](./screenshots/gallery/record-reimbursement-desktop.png) | ![Record reimbursement mobile](./screenshots/gallery/record-reimbursement-mobile.png) |
+
+Settled rows leave the Flagged card but keep a two-way link to the payment, so **Past reports** can
+rebuild any report you have already submitted.
+
+| Past reports (desktop) | Past reports (mobile) |
+| --- | --- |
+| ![Past reports desktop](./screenshots/gallery/past-reports-desktop.png) | ![Past reports mobile](./screenshots/gallery/past-reports-mobile.png) |
+
 ## Analytics
 
 | Desktop overview | Cash reconciliation (desktop) |
