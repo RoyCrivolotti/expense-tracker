@@ -323,8 +323,8 @@ describe('patchAfterAccountDelete', () => {
 })
 
 describe('flag patches', () => {
-  const work = { id: 1, name: 'Work travel', color: '#6366f1', sortOrder: 1, active: true }
-  const tax = { id: 2, name: 'Tax', color: '#10b981', sortOrder: 0, active: true }
+  const work = { id: 1, name: 'Work travel', color: '#6366f1', reimbursable: true, sortOrder: 1, active: true }
+  const tax = { id: 2, name: 'Tax', color: '#10b981', reimbursable: true, sortOrder: 0, active: true }
 
   function txn(id: number, flagId?: number): Transaction {
     return {

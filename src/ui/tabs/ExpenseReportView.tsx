@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import type { ExpenseDataset, Transaction } from '../../types'
-import { buildExpenseReport } from '../../domain/engine/expenseReport'
+import { buildExpenseReport, buildSettledReport } from '../../domain/engine/expenseReport'
 import { ExpenseReportSheet } from './ExpenseReportSheet'
 import { todayIso } from '../components/transactionFormState'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
@@ -12,7 +12,13 @@ import styles from './ExpenseReportView.module.css'
 interface Props {
   dataset: ExpenseDataset
   lookup: Lookup
-  flagId: number
+  /** The open report for this flag: what is still owed on it. */
+  flagId?: number
+  /**
+   * A past report, as it was when this payment settled it. Rebuilt from the
+   * rows the payment covered rather than from anything stored.
+   */
+  settledByPaymentId?: number
   onClose: () => void
   /** Opens a line's editor, so a missing receipt can be attached from here. */
   onOpenTransaction?: ((txn: Transaction) => void) | undefined
@@ -32,6 +38,7 @@ export function ExpenseReportView({
   dataset,
   lookup,
   flagId,
+  settledByPaymentId,
   onClose,
   onOpenTransaction,
   issuedOn,
@@ -44,7 +51,17 @@ export function ExpenseReportView({
    * well would put the nav, the FAB and the month's transactions into the PDF
    * the user is about to hand to somebody.
    */
-  const report = buildExpenseReport(flagId, dataset.transactions, dataset.flags, dataset.attachments)
+  const report =
+    settledByPaymentId != null
+      ? buildSettledReport(
+          settledByPaymentId,
+          dataset.transactions,
+          dataset.flags,
+          dataset.attachments,
+        )
+      : flagId != null
+        ? buildExpenseReport(flagId, dataset.transactions, dataset.flags, dataset.attachments)
+        : null
 
   /*
    * Guarded on `report`, and declared before the early return so the hook order
@@ -74,10 +91,11 @@ export function ExpenseReportView({
             type="button"
             className={styles.secondaryBtn}
             onClick={() =>
-              downloadExpenseReportCsv(dataset, flagId, {
+              downloadExpenseReportCsv(report, {
                 format,
                 categoryName: lookup.categoryName,
                 accountName: lookup.accountName,
+                claimantName: dataset.settings.claimantName,
               })
             }
           >
