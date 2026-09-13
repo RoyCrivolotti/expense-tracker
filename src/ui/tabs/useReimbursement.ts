@@ -2,9 +2,9 @@ import { useState } from 'react'
 import type { ExpenseActions } from '../actions'
 import type { FlagGroup } from '../../domain/engine/flagGroups'
 import type { NewTransaction } from '../../data/dataSource'
-import { recordReimbursement } from './settleClaim'
+import { recordReimbursement } from './recordReimbursement'
 
-export interface ClaimSettlement {
+export interface Reimbursement {
   /** The claim being settled, or null when the sheet is closed. */
   group: FlagGroup | null
   busy: boolean
@@ -22,7 +22,7 @@ export interface ClaimSettlement {
  * this was eighteen lines of orchestration inside its JSX, where the only way
  * to exercise the rollback message was to mount the whole screen.
  */
-export function useClaimSettlement(actions: ExpenseActions | undefined): ClaimSettlement {
+export function useReimbursement(actions: ExpenseActions | undefined): Reimbursement {
   const [group, setGroup] = useState<FlagGroup | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -32,7 +32,7 @@ export function useClaimSettlement(actions: ExpenseActions | undefined): ClaimSe
     setError(null)
   }
 
-  const record: ClaimSettlement['record'] = (input, transactionIds) => {
+  const record: Reimbursement['record'] = (input, transactionIds) => {
     if (!actions) return
     setBusy(true)
     setError(null)

@@ -56,7 +56,7 @@ describe('expenseReportCsv', () => {
     expect(headerLine(csv!)).toBe('Date,Description,Purpose,Category,Account,Amount,Receipts')
     const rows = body(csv!)
     expect(rows).toHaveLength(3)
-    expect(rows[2]).toContain('Total claimed')
+    expect(rows[2]).toContain('Total expenses')
   })
 
   it('carries the transaction notes through as the business purpose', () => {
@@ -83,7 +83,7 @@ describe('expenseReportCsv', () => {
     const lines = csv!.split('\n')
     // Claimed stays gross; the credit is negative so the Amount column still
     // sums to the outstanding figure if someone totals it in a spreadsheet.
-    expect(lines.at(-3)).toContain('Total claimed')
+    expect(lines.at(-3)).toContain('Total expenses')
     expect(lines.at(-2)).toContain('Less reimbursed')
     expect(lines.at(-1)).toContain('Outstanding')
     expect(lines.at(-1)).toContain('60,00')

@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import type { FlagGroup } from '../../domain/engine/flagGroups'
 import {
-  buildSettlementDraft,
+  buildReimbursementDraft,
   selectedTotalCents,
-} from '../../domain/engine/claimSettlement'
+} from '../../domain/engine/reimbursementDraft'
 import { formatCents, formatMoneyInput, parseMoneyToCents } from '../../engine/money'
 import { resolveDefaultAccountId } from '../../data/defaultAccount'
 import { todayIso } from '../components/transactionFormState'
@@ -16,7 +16,7 @@ import { Field } from '../components/TransactionFields'
 import { optionLabel, selectableOptions } from '../components/pickerOptions'
 import { formatDayLabel } from '../format'
 import formStyles from '../components/TransactionForm.module.css'
-import styles from './SettleClaimSheet.module.css'
+import styles from './RecordReimbursementSheet.module.css'
 
 interface Props {
   group: FlagGroup
@@ -45,9 +45,9 @@ export interface RecordInput {
  * editor has nowhere to put that. Everything else — amount, date, account,
  * category — stays editable, because a payment is rarely exactly the claim.
  */
-export function SettleClaimSheet({ group, model, busy, error, onCancel, onRecord }: Props) {
+export function RecordReimbursementSheet({ group, model, busy, error, onCancel, onRecord }: Props) {
   const format = useMoneyFormat()
-  const draft = buildSettlementDraft(
+  const draft = buildReimbursementDraft(
     group,
     model.dataset.accounts,
     resolveDefaultAccountId(model.dataset.accounts, model.dataset.settings),

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { NewTransaction } from '../../data/dataSource'
 import { makeActions } from '../../testing/makeActions'
 import { makeTransaction } from '../../testing/factories'
-import { recordReimbursement } from './settleClaim'
+import { recordReimbursement } from './recordReimbursement'
 
 const payment: NewTransaction = {
   date: '2026-06-14',
