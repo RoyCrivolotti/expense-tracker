@@ -163,12 +163,18 @@ export function useTransactionsTabState(
 
   const totalCents = useMemo(() => netSpendCents(results), [results])
 
+  const visibleIds = useMemo(
+    () => listRows.flatMap((r) => (r.kind === 'transaction' ? [r.txn.id] : [])),
+    [listRows],
+  )
+
   return {
     ...filters,
     isMobile,
     results,
     listRows,
     totalCents,
+    visibleIds,
     canDelete: Boolean(actions?.deleteTransaction),
     ...selection,
   }
