@@ -34,6 +34,14 @@ Fixture data (`fixtures/demo-expenses.csv`). A **full gallery** (Goals deep dive
 | --- | --- |
 | ![Transactions desktop](./docs/screenshots/gallery/transactions-desktop.png) | ![Transactions mobile](./docs/screenshots/gallery/transactions-mobile.png) |
 
+| Flags &amp; expense reports (desktop) | Flags &amp; expense reports (mobile) |
+| --- | --- |
+| ![Flagged card desktop](./docs/screenshots/gallery/flagged-card-desktop.png) | ![Flagged card mobile](./docs/screenshots/gallery/flagged-card-mobile.png) |
+
+| Expense report (desktop) | Expense report (mobile) |
+| --- | --- |
+| ![Expense report desktop](./docs/screenshots/gallery/expense-report-desktop.png) | ![Expense report mobile](./docs/screenshots/gallery/expense-report-mobile.png) |
+
 | Analytics (desktop) | Analytics (mobile) |
 | --- | --- |
 | ![Analytics desktop](./docs/screenshots/gallery/analytics-desktop.png) | ![Analytics mobile](./docs/screenshots/gallery/analytics-mobile.png) |
