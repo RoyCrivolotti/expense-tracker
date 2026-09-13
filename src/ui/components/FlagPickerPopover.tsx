@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Flag } from '../../types'
 import { useFocusTrap } from '../hooks/useFocusTrap'
@@ -6,6 +6,7 @@ import { useDismissOnOutsidePointer } from '../charts/useDismissOnOutsidePointer
 import { usePopoverPosition } from '../hooks/usePopoverPosition'
 import { FlagIcon } from '../icons'
 import { selectableFlags } from './flagPickerOptions'
+import { duplicateFlagName, quickFlagDraft } from './quickFlag'
 import styles from './FlagPicker.module.css'
 
 interface Props {
@@ -15,12 +16,108 @@ interface Props {
   triggerRef: React.RefObject<HTMLElement | null>
   onSelect: (flagId: number | null) => void
   onClose: () => void
+  /**
+   * Create a flag from here. Optional: the bulk-edit sheet has no `actions` to
+   * hand down, and a picker without it simply falls back to pointing at
+   * Settings, exactly as before.
+   */
+  onCreate?: ((name: string) => Promise<number>) | undefined
 }
 
-export function FlagPickerPopover({ value, flags, triggerRef, onSelect, onClose }: Props) {
+/**
+ * Name-only flag creation, inline in the picker.
+ *
+ * Its own component so the popover keeps its branch count, and so the busy and
+ * error states live next to the input they describe rather than in the parent.
+ * Everything but the name takes the full editor's defaults — see quickFlag.ts.
+ */
+function QuickCreate({
+  flags,
+  onCreate,
+  onCreated,
+  onCancel,
+}: {
+  flags: Flag[]
+  onCreate: (name: string) => Promise<number>
+  onCreated: (flagId: number) => void
+  onCancel: () => void
+}) {
+  const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const submit = async () => {
+    if (busy) return
+    if (!quickFlagDraft(name, flags)) {
+      setErr('Enter a name')
+      return
+    }
+    if (duplicateFlagName(name, flags)) {
+      setErr('There is already a flag with that name')
+      return
+    }
+    setBusy(true)
+    setErr(null)
+    try {
+      onCreated(await onCreate(name))
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not create the flag')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className={styles.create}>
+      <input
+        className={styles.createInput}
+        type="text"
+        autoFocus
+        aria-label="New flag name"
+        placeholder="e.g. Madrid trip"
+        value={name}
+        disabled={busy}
+        onChange={(e) => {
+          setName(e.target.value)
+          setErr(null)
+        }}
+        onKeyDown={(e) => {
+          // Enter submits and Escape backs out to the list — the popover's own
+          // Escape handler would otherwise close the whole picker, losing what
+          // was typed and the transaction's place in the form.
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            void submit()
+          } else if (e.key === 'Escape') {
+            e.preventDefault()
+            e.stopPropagation()
+            onCancel()
+          }
+        }}
+      />
+      <button type="button" className={styles.createAdd} disabled={busy} onClick={() => void submit()}>
+        {busy ? 'Adding…' : 'Add'}
+      </button>
+      {err ? (
+        <p className={styles.createError} role="alert">
+          {err}
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
+export function FlagPickerPopover({
+  value,
+  flags,
+  triggerRef,
+  onSelect,
+  onClose,
+  onCreate,
+}: Props) {
   const popoverRef = useRef<HTMLDivElement>(null)
   const pos = usePopoverPosition(triggerRef, popoverRef)
   const options = selectableFlags(flags, value)
+  const [creating, setCreating] = useState(false)
 
   useFocusTrap(popoverRef, onClose)
   useDismissOnOutsidePointer(popoverRef, true, onClose, triggerRef)
@@ -82,7 +179,20 @@ export function FlagPickerPopover({ value, flags, triggerRef, onSelect, onClose 
           </li>
         ))}
       </ul>
-      {options.length === 0 ? (
+      {onCreate ? (
+        creating ? (
+          <QuickCreate
+            flags={flags}
+            onCreate={onCreate}
+            onCreated={choose}
+            onCancel={() => setCreating(false)}
+          />
+        ) : (
+          <button type="button" className={styles.newFlag} onClick={() => setCreating(true)}>
+            + New flag
+          </button>
+        )
+      ) : options.length === 0 ? (
         <p className={styles.empty}>
           No flags to choose from. Add one under Settings &rarr; Flags.
         </p>

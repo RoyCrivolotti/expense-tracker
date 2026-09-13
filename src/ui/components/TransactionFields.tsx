@@ -10,6 +10,7 @@ import { DescriptionCombobox } from './DescriptionCombobox'
 import { MonthInput } from './MonthInput'
 import { optionLabel, selectableOptions } from './pickerOptions'
 import { FlagField } from './FlagField'
+import { createFlagInPlace } from './quickFlag'
 import type { PendingReceipt } from '../../data/pendingReceipts'
 import { ReceiptStrip } from './ReceiptStrip'
 import { ReimbursementLink } from './ReimbursementLink'
@@ -217,6 +218,7 @@ export function Fields({
         value={form.flagId}
         onChange={(flagId) => set('flagId', flagId)}
         onTrapPausedChange={onTrapPausedChange}
+        {...(actions ? { onCreate: createFlagInPlace(actions, model.dataset.flags) } : {})}
       />
       {/*
         Shown on the add form too, where there is no id yet: files are staged in
