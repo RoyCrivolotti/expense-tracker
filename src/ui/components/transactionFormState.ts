@@ -59,6 +59,8 @@ function applySeed(defaults: FormFields, seed: TransactionSeed, format: MoneyFor
     ...(seed.date != null ? { date: seed.date } : {}),
     ...(seed.budgetMonth != null ? { budgetMonth: seed.budgetMonth } : {}),
     notes: '',
+    // A seeded transaction never inherits a flag. Duplicate is the main caller,
+    // and a copy of a claimed expense is not itself claimed.
     flagId: null,
   }
 }

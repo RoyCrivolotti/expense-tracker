@@ -59,6 +59,8 @@ function modelWith(transactions: Transaction[], cashActuals: ExpenseDataset['cas
       flag: () => undefined,
       attachments: () => [],
       installmentPlan: () => undefined,
+      settlementFor: () => undefined,
+      settledBy: () => [],
     },
     descriptionIndex: { search: () => [], resolve: () => undefined },
     months: ['2026-01'],

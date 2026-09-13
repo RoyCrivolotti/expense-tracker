@@ -22,7 +22,10 @@ import type {
   WealthCheckinEntry,
 } from '../types'
 
-export type NewTransaction = Omit<StoredTransaction, 'id' | 'createdAt' | 'planId' | 'flagId'> & {
+export type NewTransaction = Omit<
+  StoredTransaction,
+  'id' | 'createdAt' | 'planId' | 'flagId' | 'settledBy'
+> & {
   /** Plan link: a plan id links/moves the row, null unlinks it, absent leaves it unchanged. */
   planId?: number | null
   /** Flag link: an id flags the row, null clears it, absent leaves it unchanged. */
@@ -30,7 +33,10 @@ export type NewTransaction = Omit<StoredTransaction, 'id' | 'createdAt' | 'planI
 }
 export type BulkTransactionPatch = Partial<
   Pick<NewTransaction, 'categoryId' | 'accountId' | 'type' | 'date' | 'budgetMonth' | 'flagId'>
->
+> & {
+  /** Reimbursement link: an id settles the rows, null un-settles them. */
+  settledBy?: number | null
+}
 
 export type NewCategory = Omit<Category, 'id'>
 export type NewAccount = Omit<Account, 'id'>

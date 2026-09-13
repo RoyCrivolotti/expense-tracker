@@ -13,7 +13,7 @@ import type {
 import type { ExpenseRepository } from '../domain/ports/expenseRepository'
 import { validateDueDay, validatePlanInput } from '../domain/application/installmentPlanService'
 import { deriveStatus, deriveTransactions } from '../domain/engine/status'
-import { withoutFlag } from '../domain/engine/flagGroups'
+import { withoutFlag, withoutSettlement } from '../domain/engine/flagGroups'
 import { defaultExpenseSettings, defaultGoalInputs } from '../domain/engine/defaults'
 import { normalizeMilestones, validateMilestones } from '../domain/engine/milestones'
 import type {
@@ -131,7 +131,21 @@ export function inMemoryExpenseRepository(
     return store
   }
 
-  function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
+  /**
+ * Release rows that pointed at a deleted reimbursement, as the D1 cascade does.
+ *
+ * Without it the double lets a payment go while the rows it covered keep
+ * pointing at it — so they stay out of the Flagged card, neither owed nor
+ * reimbursed, and every test of the undo passes against the wrong behaviour.
+ */
+function releaseSettledBy(store: OwnerStore, deletedIds: number[]): void {
+  const gone = new Set(deletedIds)
+  store.transactions = store.transactions.map((row) =>
+    row.settledBy != null && gone.has(row.settledBy) ? withoutSettlement(row) : row,
+  )
+}
+
+function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
     const account = store.accounts.find((a) => a.id === accountId)
     if (!account) throw new RepoHttpError(400, 'Invalid accountId')
     return account
@@ -425,6 +439,7 @@ export function inMemoryExpenseRepository(
       // Mirrors the D1 cascade; without it the double would let a transaction
       // go while leaving attachment rows the real backend removes.
       dropAttachmentsFor(owner, store, [id])
+      releaseSettledBy(store, [id])
       return Promise.resolve()
     },
 
@@ -434,6 +449,7 @@ export function inMemoryExpenseRepository(
       const before = store.transactions.length
       store.transactions = store.transactions.filter((row) => !idSet.has(row.id))
       dropAttachmentsFor(owner, store, ids)
+      releaseSettledBy(store, ids)
       return Promise.resolve(before - store.transactions.length)
     },
 
@@ -443,15 +459,19 @@ export function inMemoryExpenseRepository(
       if (patch.categoryId != null) assertOwnedCategory(store, patch.categoryId)
       if (patch.flagId != null) assertOwnedFlag(store, patch.flagId)
       const idSet = new Set(ids)
-      const { flagId, ...rest } = patch
+      const { flagId, settledBy, ...rest } = patch
       const updated: Transaction[] = []
       store.transactions = store.transactions.map((stored) => {
         if (!idSet.has(stored.id)) return stored
-        // flagId is handled separately: null clears it, and clearing must omit
-        // the key rather than assign undefined (exactOptionalPropertyTypes).
-        const base = 'flagId' in patch ? withoutFlag(stored) : stored
-        const next: StoredTransaction =
+        // flagId and settledBy are handled separately: null clears them, and
+        // clearing must omit the key rather than assign undefined
+        // (exactOptionalPropertyTypes).
+        const unflagged = 'flagId' in patch ? withoutFlag(stored) : stored
+        const base = 'settledBy' in patch ? withoutSettlement(unflagged) : unflagged
+        const withFlag: StoredTransaction =
           flagId != null ? { ...base, ...rest, flagId } : { ...base, ...rest }
+        const next: StoredTransaction =
+          settledBy != null ? { ...withFlag, settledBy } : withFlag
         updated.push(deriveOne(next, store.accounts, store.statements))
         return next
       })

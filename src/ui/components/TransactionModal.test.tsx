@@ -47,6 +47,8 @@ function model(): ExpenseModel {
       flag: () => undefined,
       attachments: () => [],
       installmentPlan: () => undefined,
+      settlementFor: () => undefined,
+      settledBy: () => [],
     },
     descriptionIndex: { search: () => [], resolve: () => undefined },
     months: [],
@@ -385,5 +387,31 @@ describe('TransactionModal — the other tab’s draft', () => {
     // wrong thing once the row is saved.
     expect(await screen.findByText('Leave without the receipts?')).toBeInTheDocument()
     expect(screen.getByText(/The transaction is saved/)).toBeInTheDocument()
+  })
+})
+
+describe('TransactionModal — following a link to another transaction', () => {
+  it('rebuilds the form for the row it switches to', () => {
+    // `initialFields` runs in a useState initialiser, so without remounting the
+    // fields keep showing the transaction you came *from* while the header and
+    // the links describe the one you just opened.
+    const first = makeTransaction({ id: 1, description: 'Flight', amountCents: 19_840 })
+    const second = makeTransaction({ id: 2, description: 'Reimbursement', amountCents: 120_00 })
+    const { container, rerender } = renderModal({ editing: first })
+
+    expect(singleForm(container).getByLabelText(/description/i)).toHaveValue('Flight')
+
+    rerender(
+      <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
+        <TransactionModal
+          model={model()}
+          actions={makeActions()}
+          editing={second}
+          onClose={vi.fn()}
+        />
+      </MoneyFormatProvider>,
+    )
+
+    expect(singleForm(container).getByLabelText(/description/i)).toHaveValue('Reimbursement')
   })
 })
