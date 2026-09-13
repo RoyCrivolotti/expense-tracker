@@ -100,3 +100,41 @@ describe('useTransactionSelection — bulk edit', () => {
     expect(result.current.selectMode).toBe(false)
   })
 })
+
+describe('useTransactionSelection — selectAll / deselectAll', () => {
+  it('selectAll replaces selection with all given ids', () => {
+    const { result } = renderHook(() => useTransactionSelection(mockActions()))
+    act(() => result.current.toggleSelectMode())
+    act(() => result.current.toggleSelected(1))
+    act(() => result.current.selectAll([1, 2, 3, 4]))
+    expect(result.current.selected).toEqual(new Set([1, 2, 3, 4]))
+  })
+
+  it('deselectAll clears selection without leaving select mode', () => {
+    const { result } = renderHook(() => useTransactionSelection(mockActions()))
+    act(() => result.current.toggleSelectMode())
+    act(() => result.current.selectAll([1, 2, 3]))
+    act(() => result.current.deselectAll())
+    expect(result.current.selected.size).toBe(0)
+    expect(result.current.selectMode).toBe(true)
+  })
+})
+
+describe('useTransactionSelection — enterAndSelect', () => {
+  it('enters select mode and selects the given id', () => {
+    const { result } = renderHook(() => useTransactionSelection(mockActions()))
+    expect(result.current.selectMode).toBe(false)
+    act(() => result.current.enterAndSelect(42))
+    expect(result.current.selectMode).toBe(true)
+    expect(result.current.selected).toEqual(new Set([42]))
+  })
+
+  it('replaces any prior selection when called again', () => {
+    const { result } = renderHook(() => useTransactionSelection(mockActions()))
+    act(() => result.current.toggleSelectMode())
+    act(() => result.current.toggleSelected(1))
+    act(() => result.current.toggleSelected(2))
+    act(() => result.current.enterAndSelect(99))
+    expect(result.current.selected).toEqual(new Set([99]))
+  })
+})
