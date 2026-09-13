@@ -62,14 +62,28 @@ pkill -f "wrangler pages dev"; pkill -f vite
 
 ## Worktrees
 
-Every session works from its own worktree, never the shared main checkout. A `PreToolUse` hook
-(`.claude/hooks/enforce-worktree.sh`) enforces this: it blocks `Edit`/`Write` and git-mutating `Bash`
-calls (`commit`, `push`, `add`, `rebase`, `merge`, `stash`, `clean`, `branch -D`, `checkout --`, …)
-whenever the target resolves to the original checkout rather than a linked worktree — detected by
-`.git` being a real directory there, versus the file every worktree has. Read-only commands and
-`git worktree add` itself are unaffected. Deliberate one-off override: run with
-`CLAUDE_ALLOW_MAIN_CHECKOUT=1` in the environment. The hook only protects a worktree whose branch has
-merged this commit — one created off an older `main` won't have it until it rebases or merges.
+Every session works from its own worktree, never the shared main checkout. `Edit`/`Write` calls
+against the original checkout are hard-blocked by a `PreToolUse` hook
+(`.claude/hooks/enforce-worktree.sh`) — those tools take an absolute file path directly, so there's
+nowhere to hide. The same hook also blocks a fixed list of git-mutating `Bash` calls (`commit`, `push`,
+`add`, `mv`, `rm`, `rebase`, `merge`, `stash`, `clean`, `apply`, `branch -D`, `checkout -- <path>`, …,
+including one right after a leading `cd <dir> &&` / `cd <dir>;`) whenever the target resolves to the
+original checkout — detected by `.git` being a real directory there, versus the file every worktree
+has. Read-only forms (`stash list`/`show`, `clean -n`, `apply --check`) and `git worktree add` itself
+are unaffected.
+
+The `Bash` half is **best-effort, not a sandbox**: it's pattern-matching on command text, so a
+sufficiently indirect command (nested subshells, a variable holding the path, `pushd`) can still get
+through, and non-git mutations (`rm`, `sed -i`, a shell redirect) aren't inspected at all. `Edit`/`Write`
+staying unconditionally blocked is what actually carries the guarantee. Deliberate one-off override:
+run with `CLAUDE_ALLOW_MAIN_CHECKOUT=1` in the environment. The hook only protects a worktree whose
+branch has merged this commit — one created off an older `main` won't have it until it rebases or
+merges.
+
+It also doesn't touch the git stash stack, which is shared across *every* worktree of this repo (they
+share one `.git`) — a `stash`/`stash pop` from any worktree can still collide with another session's
+work. If you need to stash, tag it (`git stash push -u -m "<unique-tag>"`) and restore with
+`stash apply <sha>` — never a bare `pop` — regardless of which worktree you're in.
 
 ```bash
 git worktree add ../expense-tracker-<name> -b <branch> origin/main
