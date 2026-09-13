@@ -43,6 +43,7 @@ export function Modal({ title, subtitle, onClose, children, trapPaused = false }
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
       >
+        <div className={styles.handle} aria-hidden />
         <header className={styles.header}>
           <div className={styles.titleBlock}>
             <h2 ref={headingRef} tabIndex={-1}>

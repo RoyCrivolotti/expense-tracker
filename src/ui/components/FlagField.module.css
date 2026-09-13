@@ -19,6 +19,27 @@
   outline: none;
 }
 
+.triggerCompact {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 0.6rem;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.triggerCompact:focus-visible {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
 .swatch {
   display: inline-flex;
   width: 0.85rem;
