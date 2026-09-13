@@ -74,6 +74,7 @@ export function makeFlag(overrides: Partial<Flag> = {}): Flag {
     id: 1,
     name: 'Work travel',
     color: '#6366f1',
+    reimbursable: true,
     sortOrder: 0,
     active: true,
     ...overrides,

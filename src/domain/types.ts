@@ -49,6 +49,15 @@ export interface Flag {
   color: string
   /** Optional note explaining what the flag is for, shown under its name. */
   description?: string
+  /**
+   * Whether somebody owes this money back.
+   *
+   * "Work travel" is repaid by an employer; "Tax deductible" is a note to self
+   * that nobody is going to pay. Only a reimbursable flag offers an expense
+   * report and a Record reimbursement action — on the others they produce a
+   * document addressed to nobody, for money that is not coming.
+   */
+  reimbursable: boolean
   sortOrder: number
   active: boolean
 }

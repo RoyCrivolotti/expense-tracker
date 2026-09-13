@@ -7,7 +7,7 @@ const repo = {
   updateFlag: vi.fn().mockResolvedValue({}),
 } as unknown as ExpenseRepository
 
-const valid = { name: 'Work travel', color: '#6366f1', sortOrder: 0, active: true }
+const valid = { name: 'Work travel', color: '#6366f1', reimbursable: true, sortOrder: 0, active: true }
 
 describe('flagService — sortOrder and active', () => {
   it('rejects a non-numeric sort order instead of letting SQLite store it as text', async () => {

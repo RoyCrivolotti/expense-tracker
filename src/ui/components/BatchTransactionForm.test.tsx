@@ -11,7 +11,9 @@ import { BatchTransactionForm } from './BatchTransactionForm'
 
 function dataset(): ExpenseDataset {
   return {
-    flags: [{ id: 7, name: 'Work travel', color: '#6366f1', sortOrder: 0, active: true }],
+    flags: [
+      { id: 7, name: 'Work travel', color: '#6366f1', reimbursable: true, sortOrder: 0, active: true },
+    ],
     attachments: [],
     categories: [
       { id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true },

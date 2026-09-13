@@ -8,6 +8,7 @@ export interface FlagDraft {
   name: string
   description: string
   color: string
+  reimbursable: boolean
   active: boolean
 }
 
@@ -17,6 +18,9 @@ export function initialFlagDraft(flag: Flag | null, defaultColor: string): FlagD
     name: flag?.name ?? '',
     description: flag?.description ?? '',
     color: flag?.color ?? defaultColor,
+    // New flags default to reimbursable: chasing money back is the case flags
+    // were built for, and it is the one with something to do about it.
+    reimbursable: flag?.reimbursable ?? true,
     active: flag?.active ?? true,
   }
 }

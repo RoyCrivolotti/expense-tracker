@@ -241,3 +241,15 @@
     display: none;
   }
 }
+
+/* Side by side on a wide card, stacked when they will not fit. */
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.cardActions .manageBtn {
+  flex: 1;
+  min-width: 9rem;
+}

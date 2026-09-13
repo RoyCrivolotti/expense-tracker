@@ -15,6 +15,7 @@ import { useTransactionsTabState } from './useTransactionsTabState'
 import { RESULTS_ANCHOR_ID, scrollToResults } from './scrollToResults'
 import { useDebouncedAnnouncement } from '../hooks/useDebouncedAnnouncement'
 import { useReimbursement } from './useReimbursement'
+import { usePastReports } from './usePastReports'
 import { RecordReimbursementSheet } from './RecordReimbursementSheet'
 import styles from './tabs.module.css'
 
@@ -31,6 +32,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
   const [managingFlags, setManagingFlags] = useState(false)
   const reimbursement = useReimbursement(actions)
   const [reportFlagId, setReportFlagId] = useState<number | null>(null)
+  const past = usePastReports(model.dataset.transactions)
   const rolloverDay = model.dataset.settings.budgetRolloverDay
   const announcement = useDebouncedAnnouncement(
     `${state.listRows.length} transactions match`,
@@ -57,6 +59,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
             onOpenReport={setReportFlagId}
             onSettle={reimbursement.open}
             onManage={() => setManagingFlags(true)}
+            onViewPast={past.entry}
             onSelect={actions.onEdit}
           />
           <InstallmentsCard model={model} actions={actions} month={month} />
@@ -175,8 +178,13 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
         reportFlagId={reportFlagId}
         onCloseReport={() => setReportFlagId(null)}
         onOpenReport={setReportFlagId}
+        pastPaymentId={past.paymentId}
+        onClosePast={past.closeReport}
         managingFlags={managingFlags}
         onCloseManage={() => setManagingFlags(false)}
+        viewingPast={past.listing}
+        onCloseViewPast={past.closeList}
+        onOpenPastReport={past.openReport}
       />
 
       <TransactionsSelectFooter actionsEnabled={Boolean(actions)} selection={state} model={model} />

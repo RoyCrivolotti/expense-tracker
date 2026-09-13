@@ -9,6 +9,7 @@ const flag: Flag = {
   name: 'Work travel',
   color: '#6366f1',
   description: 'Reimbursable',
+  reimbursable: true,
   sortOrder: 2,
   active: true,
 }
@@ -22,7 +23,7 @@ function actionsWith(overrides: Partial<ExpenseActions>): ExpenseActions {
   } as unknown as ExpenseActions
 }
 
-const draft = { name: 'Work travel', description: '', color: '#6366f1', active: true }
+const draft = { name: 'Work travel', description: '', color: '#6366f1', reimbursable: true, active: true }
 
 describe('initialFlagDraft', () => {
   it('opens empty for a new flag, with the default colour', () => {
@@ -30,6 +31,7 @@ describe('initialFlagDraft', () => {
       name: '',
       description: '',
       color: '#abcdef',
+      reimbursable: true,
       active: true,
     })
   })
@@ -39,6 +41,7 @@ describe('initialFlagDraft', () => {
       name: 'Work travel',
       description: 'Reimbursable',
       color: '#6366f1',
+      reimbursable: true,
       active: true,
     })
   })

@@ -69,10 +69,40 @@ export function buildExpenseReport(
 ): ExpenseReport | null {
   const group = buildFlagGroup(flagId, transactions, flags)
   if (!group) return null
+  return assembleReport(group.flag, group.transactions, attachments)
+}
+
+/**
+ * The report as it was when a payment settled it.
+ *
+ * A past report needs nothing stored: the rows a payment covered still say so,
+ * and the payment's own description is the name you gave it. Reassembling from
+ * those two is why "send me the June one again" is answerable at all — the flag
+ * itself has moved on to whatever you have spent since.
+ */
+export function buildSettledReport(
+  reimbursementId: number,
+  transactions: Transaction[],
+  flags: Flag[],
+  attachments: TransactionAttachment[],
+): ExpenseReport | null {
+  const covered = transactions.filter((t) => t.settledBy === reimbursementId)
+  if (covered.length === 0) return null
+  const flagId = covered.find((t) => t.flagId != null)?.flagId
+  const flag = flags.find((f) => f.id === flagId)
+  if (!flag) return null
+  return assembleReport(flag, covered, attachments)
+}
+
+function assembleReport(
+  flag: Flag,
+  rows: Transaction[],
+  attachments: TransactionAttachment[],
+): ExpenseReport | null {
   // Every remaining row is a credit (the expenses were cancelled or deleted
-  // after settling). There is no claim to print: the reference would render as
+  // after settling). There is no report to print: the reference would render as
   // "WT-------", the period as a bare dash, and the total as a negative.
-  if (!group.transactions.some((t) => t.type !== 'refund')) return null
+  if (!rows.some((t) => t.type !== 'refund')) return null
 
   const byTransaction = new Map<number, TransactionAttachment[]>()
   for (const attachment of attachments) {
@@ -81,7 +111,7 @@ export function buildExpenseReport(
     else byTransaction.set(attachment.transactionId, [attachment])
   }
 
-  const chronological = [...group.transactions].sort(
+  const chronological = [...rows].sort(
     (a, b) => a.date.localeCompare(b.date) || a.id - b.id,
   )
   // Numbering runs across the claimed lines only, and in print order, so R3 on
@@ -102,7 +132,7 @@ export function buildExpenseReport(
   const creditedCents = credits.reduce((sum, line) => sum + line.transaction.amountCents, 0)
 
   return {
-    flag: group.flag,
+    flag,
     lines,
     credits,
     totalClaimedCents,

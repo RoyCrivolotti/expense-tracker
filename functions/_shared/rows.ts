@@ -44,6 +44,7 @@ export interface FlagRow {
   name: string
   color: string
   description: string | null
+  reimbursable: number
   sort_order: number
   active: number
 }
@@ -109,6 +110,7 @@ export function toFlag(r: FlagRow): Flag {
     color: r.color,
     sortOrder: r.sort_order,
     active: r.active === 1,
+    reimbursable: r.reimbursable === 1,
     ...(r.description ? { description: r.description } : {}),
   }
 }
