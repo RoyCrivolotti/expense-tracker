@@ -53,6 +53,8 @@ function model(): ExpenseModel {
       flag: () => undefined,
       attachments: () => [],
       installmentPlan: () => undefined,
+      settlementFor: () => undefined,
+      settledBy: () => [],
     },
     descriptionIndex: {
       search: (prefix: string) =>

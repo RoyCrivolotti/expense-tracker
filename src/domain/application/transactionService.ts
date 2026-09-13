@@ -10,6 +10,7 @@ const BULK_PATCH_KEYS = new Set<string>([
   'date',
   'budgetMonth',
   'flagId',
+  'settledBy',
 ])
 
 const VALID_TXN_TYPES = new Set<string>(['expense', 'income', 'investment', 'refund'])
@@ -35,6 +36,8 @@ const FIELD_VALIDATORS: Record<string, (v: unknown, p: BulkTransactionPatch) => 
   budgetMonth: (v, p) => { p.budgetMonth = requirePattern(v, /^\d{4}-\d{2}$/, 'budgetMonth must be YYYY-MM') },
   // null is meaningful here: it is how a selection is unflagged.
   flagId: (v, p) => { p.flagId = v === null ? null : requirePositiveInt(v, 'flagId') },
+  // Likewise: null is how deleting a reimbursement releases the rows it covered.
+  settledBy: (v, p) => { p.settledBy = v === null ? null : requirePositiveInt(v, 'settledBy') },
 }
 
 export function validateBulkUpdatePatch(raw: unknown): BulkTransactionPatch {

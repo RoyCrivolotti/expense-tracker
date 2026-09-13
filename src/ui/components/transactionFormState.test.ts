@@ -41,6 +41,8 @@ function minimalModel(): ExpenseModel {
       flag: () => undefined,
       attachments: () => [],
       installmentPlan: () => undefined,
+      settlementFor: () => undefined,
+      settledBy: () => [],
     },
     descriptionIndex: { search: () => [], resolve: () => undefined },
     months: ['2026-07'],
@@ -143,5 +145,18 @@ describe('initialFields', () => {
       const fields = initialFields(null, model, EU_MONEY_FORMAT)
       expect(fields.budgetMonth).toBe('2026-07')
     })
+  })
+})
+
+describe('initialFields — a seeded transaction', () => {
+  it('never inherits a flag', () => {
+    // Duplicate is the main caller, and a copy of a claimed expense is not
+    // itself claimed.
+    const fields = initialFields(null, minimalModel(), EU_MONEY_FORMAT, {
+      description: 'Hotel',
+      amountCents: 10_000,
+    })
+
+    expect(fields.flagId).toBeNull()
   })
 })

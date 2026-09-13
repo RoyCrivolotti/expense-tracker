@@ -87,7 +87,7 @@ If Workers Scripts Edit is missing, CI deploy of the backup cron worker fails un
 npx wrangler d1 execute roy-expenses --remote --file=migrations/NNNN_name.sql
 ```
 
-Apply through `0017_claimant_name.sql` on production. Personal goal scenarios: `npm run seed:scenarios` (reads gitignored seed config or `FINANCIAL_REVIEW_DIR`).
+Apply through `0018_reimbursement_links.sql` on production. Personal goal scenarios: `npm run seed:scenarios` (reads gitignored seed config or `FINANCIAL_REVIEW_DIR`).
 
 `0009_installment_plans.sql` adds the `installment_plans` table plus `plan_id` / `installment_index` columns on `transactions`. Apply it before (or with) the code deploy that reads those columns.
 
@@ -106,6 +106,8 @@ Apply through `0017_claimant_name.sql` on production. Personal goal scenarios: `
 `0016_transaction_attachments.sql` adds the `transaction_attachments` table — metadata only, for receipt photos and PDFs whose bytes live in R2. It starts empty and nothing reads it until an attachment is uploaded, so it is safe to apply ahead of the code deploy. It needs the `RECEIPTS` R2 binding to be useful: run `npm run setup:receipts` first (see **Receipt storage (R2)** below). Without the binding the upload route returns a clean 503 and the rest of the app is unaffected. Owner-agnostic — no placeholder substitution needed.
 
 `0017_claimant_name.sql` adds a nullable `claimant_name` column on `settings` — the name printed at the top of an expense report, so the document identifies who is submitting it. `NULL` reads as `''` and the report simply omits the name line, so existing owners see no change until they fill it in under Settings → Expense reports. Deliberately not derived from the Cloudflare Access email: that identifies the account, not the person, and an address on an expense form reads as a mistake. Owner-agnostic — no placeholder substitution needed.
+
+`0018_reimbursement_links.sql` adds a nullable `settled_by` column on `transactions`, holding the id of the `refund` transaction that reimbursed that row, plus a partial index. It is set when a reimbursement is recorded and cleared if that reimbursement is deleted, so the link is reversible. Deliberately *not* a clearing of `flag_id`: unflagging on settlement would empty the Flagged card just as well, but it throws away which transactions were in which claim — the thing this column exists to record — and cannot be undone, since nothing would remember the flag. `groupTransactionsByFlag` skips settled rows instead, so the card empties and the history survives. Every existing row stays `NULL`, so there is no backfill and no placeholder substitution.
 
 ## Old URL
 

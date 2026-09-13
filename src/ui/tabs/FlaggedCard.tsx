@@ -18,6 +18,7 @@ interface Props {
   model: ExpenseModel
   onFilterByFlag: (flagId: number) => void
   onOpenReport: (flagId: number) => void
+  onSettle: (group: FlagGroup) => void
   onManage: () => void
   onSelect?: ((txn: Transaction) => void) | undefined
 }
@@ -27,12 +28,14 @@ function FlagGroupSection({
   model,
   onFilterByFlag,
   onOpenReport,
+  onSettle,
   onSelect,
 }: {
   group: FlagGroup
   model: ExpenseModel
   onFilterByFlag: (flagId: number) => void
   onOpenReport: (flagId: number) => void
+  onSettle: (group: FlagGroup) => void
   onSelect?: ((txn: Transaction) => void) | undefined
 }) {
   const preview = group.transactions.slice(0, PREVIEW_LIMIT)
@@ -77,6 +80,19 @@ function FlagGroupSection({
           >
             Expense report
           </button>
+          {/*
+            Hidden once nothing is outstanding: the amount would prefill 0,00 €
+            and the form rejects that, so the button would only ever fail.
+          */}
+          {group.totalCents > 0 ? (
+            <button
+              type="button"
+              className={styles.settleBtn}
+              onClick={() => onSettle(group)}
+            >
+              Record reimbursement
+            </button>
+          ) : null}
         </div>
       </div>
     </details>
@@ -92,7 +108,14 @@ function FlagGroupSection({
  * below stays month-scoped as before, and flagged rows still appear there —
  * this is a summary, not a second home for them.
  */
-export function FlaggedCard({ model, onFilterByFlag, onOpenReport, onManage, onSelect }: Props) {
+export function FlaggedCard({
+  model,
+  onFilterByFlag,
+  onOpenReport,
+  onSettle,
+  onManage,
+  onSelect,
+}: Props) {
   const groups = groupTransactionsByFlag(model.dataset.transactions, model.dataset.flags)
   if (groups.length === 0) return null
   const total = summarizeFlagGroups(groups)
@@ -128,6 +151,7 @@ export function FlaggedCard({ model, onFilterByFlag, onOpenReport, onManage, onS
                 model={model}
                 onFilterByFlag={onFilterByFlag}
                 onOpenReport={onOpenReport}
+                onSettle={onSettle}
                 {...(onSelect ? { onSelect } : {})}
               />
             ))}
