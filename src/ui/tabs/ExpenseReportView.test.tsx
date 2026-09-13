@@ -5,7 +5,10 @@ import type { ExpenseDataset, Transaction } from '../../types'
 import { makeAttachment, makeDataset, makeFlag } from '../../testing/factories'
 import { buildLookup } from '../format'
 import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
+import { deliverReceipts } from '../../data/receiptDownload'
 import { ExpenseReportView } from './ExpenseReportView'
+
+vi.mock('../../data/receiptDownload', () => ({ deliverReceipts: vi.fn() }))
 
 const work = makeFlag({ id: 1, name: 'Work travel', description: 'Reimbursable — submit monthly' })
 
@@ -306,5 +309,73 @@ describe('ExpenseReportView — the document', () => {
     renderPack(makeDataset({ flags: [archived], transactions: [txn(1, '2026-05-02')] }))
 
     expect(screen.getByRole('heading', { name: 'Work travel' })).toBeInTheDocument()
+  })
+})
+
+describe('ExpenseReportView — sending the receipts on their own', () => {
+  it('hands every receipt over, named and in a folder for the claim', async () => {
+    const user = userEvent.setup()
+    vi.mocked(deliverReceipts).mockResolvedValue('shared')
+    renderPack(
+      datasetWith(
+        [txn(1, '2026-08-19', { description: 'Tren por trabajo', amountCents: 17_526 })],
+        [makeAttachment({ id: 5, transactionId: 1, contentType: 'image/jpeg' })],
+      ),
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Send receipts' }))
+
+    expect(deliverReceipts).toHaveBeenCalledWith(
+      [{ attachmentId: 5, filename: 'R1 - 2026-08-19 - Tren por trabajo - 175,26 €.jpg' }],
+      'Work travel 2026-08 receipts',
+    )
+  })
+
+  it('falls back to the category name when a line has no description', async () => {
+    const user = userEvent.setup()
+    vi.mocked(deliverReceipts).mockResolvedValue('zipped')
+    renderPack(
+      datasetWith(
+        [txn(1, '2026-08-19', { description: '', amountCents: 17_526 })],
+        [makeAttachment({ id: 5, transactionId: 1, contentType: 'image/jpeg' })],
+      ),
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Send receipts' }))
+    // Whatever the table prints for that row is what the file is called.
+    const [named] = vi.mocked(deliverReceipts).mock.calls.at(-1)!
+    expect(named[0]!.filename).not.toContain(' -  - ')
+  })
+
+  it('disables itself, with a reason, when nothing is attached', () => {
+    renderPack(datasetWith([txn(1, '2026-08-19')], []))
+    const button = screen.getByRole('button', { name: 'No receipts attached to this report' })
+    expect(button).toBeDisabled()
+  })
+
+  it('surfaces a failure instead of appearing to do nothing', async () => {
+    const user = userEvent.setup()
+    vi.mocked(deliverReceipts).mockRejectedValue(new Error('Could not load receipt 5'))
+    renderPack(
+      datasetWith([txn(1, '2026-08-19')], [makeAttachment({ id: 5, transactionId: 1 })]),
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Send receipts' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load receipt 5')
+  })
+
+  it('stays quiet when the share sheet is dismissed', async () => {
+    const user = userEvent.setup()
+    // AbortError is what the share sheet raises on cancel. Reporting it as a
+    // failure would tell the user something broke when they simply backed out.
+    const abort = new Error('share cancelled')
+    abort.name = 'AbortError'
+    vi.mocked(deliverReceipts).mockRejectedValue(abort)
+    renderPack(
+      datasetWith([txn(1, '2026-08-19')], [makeAttachment({ id: 5, transactionId: 1 })]),
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Send receipts' }))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })
