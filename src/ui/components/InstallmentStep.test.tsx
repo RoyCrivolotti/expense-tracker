@@ -61,7 +61,6 @@ function renderStep(d: InstallmentDraft, set = vi.fn(), amountCents = 54370) {
         editing={null}
         draft={d}
         set={set}
-        onBack={vi.fn()}
         amountCents={amountCents}
       />
     </MoneyFormatProvider>,

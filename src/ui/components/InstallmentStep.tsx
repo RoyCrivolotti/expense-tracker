@@ -15,7 +15,6 @@ interface Props {
   editing: Transaction | null
   draft: InstallmentDraft
   set: SetDraft
-  onBack: () => void
   error?: string | null | undefined
   /** The amount currently entered on the Details step (always positive). */
   amountCents: number
@@ -149,7 +148,7 @@ function ExistingFields({
   )
 }
 
-export function InstallmentStep({ model, editing, draft, set, onBack, error, amountCents }: Props) {
+export function InstallmentStep({ model, editing, draft, set, error, amountCents }: Props) {
   const plans = model.dataset.installmentPlans
   const linked = editing?.planId != null
 
@@ -176,9 +175,6 @@ export function InstallmentStep({ model, editing, draft, set, onBack, error, amo
 
   return (
     <div className={styles.step}>
-      <button type="button" className={styles.back} onClick={onBack}>
-        &larr; Back to details
-      </button>
       <div className={styles.modes}>
         {modeOptions(linked, plans.length > 0).map((o) => (
           <button
