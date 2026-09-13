@@ -245,6 +245,8 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
           activeScenario={activeScenario}
           actions={actions}
           canWrite={actions != null}
+          settings={dataset.settings}
+          onSettingsChange={actions ? (patch) => actions.updateSettings(patch) : undefined}
         />
       ) : (
         <>
