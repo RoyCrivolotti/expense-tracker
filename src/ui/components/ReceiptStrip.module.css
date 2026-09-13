@@ -43,8 +43,17 @@
   display: block;
 }
 
+/*
+ * A visible ring, not the 1px border swap the rest of the app uses for focus.
+ *
+ * That convention works on inputs and selects, which show a caret or a chrome
+ * highlight as well. This is a 56px photo: the border is the *only* feedback,
+ * and against a busy receipt image a one-pixel colour change is invisible.
+ * Offset so the ring sits outside the picture rather than on top of it.
+ */
 .thumb:focus-visible {
-  outline: none;
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
   border-color: var(--color-accent);
 }
 
