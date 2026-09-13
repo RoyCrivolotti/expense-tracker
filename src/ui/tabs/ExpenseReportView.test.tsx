@@ -107,15 +107,33 @@ describe('ExpenseReportView', () => {
     expect(screen.getByText(/2 May.*Hotel.*100,00/)).toBeInTheDocument()
   })
 
-  it('tells the user to attach a PDF separately rather than pretending to print it', () => {
+  it('names the PDF and ties it to the numbered line rather than pretending to print it', () => {
     renderPack(
       datasetWith([txn(1, '2026-05-02')], [
         makeAttachment({ id: 5, transactionId: 1, contentType: 'application/pdf', hasThumb: false, originalName: 'invoice.pdf' }),
       ]),
     )
 
-    expect(screen.getByText(/attach/)).toBeInTheDocument()
+    // The filename is what an approver matches against the separately-sent file,
+    // and the R-number is what ties it back to a row in the table.
     expect(screen.getByText('invoice.pdf')).toBeInTheDocument()
+    expect(screen.getByText(/cannot be drawn into this page/)).toBeInTheDocument()
+    expect(screen.queryByRole('img', { name: /Receipt for/ })).not.toBeInTheDocument()
+  })
+
+  it('offers a PDF receipt as a link, since the page cannot show it', () => {
+    renderPack(
+      datasetWith([txn(1, '2026-05-02')], [
+        makeAttachment({ id: 5, transactionId: 1, contentType: 'application/pdf', hasThumb: false, originalName: 'invoice.pdf' }),
+      ]),
+    )
+
+    const link = screen.getByRole('link', { name: 'Open R1' })
+    expect(link).toHaveAttribute('href', '/api/expenses/attachments/5')
+    // Opened out of the report rather than navigating away from it — the sheet
+    // holds unsaved nothing, but it is mid-task and printing is the next step.
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'))
   })
 
   it('shows a recorded reimbursement as a credit under the claim, not a claimed line', () => {

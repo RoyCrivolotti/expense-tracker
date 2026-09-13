@@ -3,6 +3,7 @@ import type { FlagGroup } from '../../domain/engine/flagGroups'
 import {
   buildReimbursementDraft,
   selectedTotalCents,
+  type ReimbursementDraft,
 } from '../../domain/engine/reimbursementDraft'
 import { formatCents, formatMoneyInput, parseMoneyToCents } from '../../engine/money'
 import { resolveDefaultAccountId } from '../../data/defaultAccount'
@@ -45,6 +46,21 @@ export interface RecordInput {
  * editor has nowhere to put that. Everything else — amount, date, account,
  * category — stays editable, because a payment is rarely exactly the claim.
  */
+/**
+ * Blank falls back rather than blocking the save: an unnamed report still needs
+ * a description on the transaction it creates, and a generated one beats an
+ * empty row in the ledger. Lifted out of the component to keep it under the
+ * complexity ceiling.
+ */
+function reportName(typed: string, fallback: string): string {
+  return typed.trim() || fallback
+}
+
+/** Seeded from the draft; '' only while there is no draft to seed from. */
+function initialName(draft: ReimbursementDraft | null): string {
+  return draft?.description ?? ''
+}
+
 export function RecordReimbursementSheet({ group, model, busy, error, onCancel, onRecord }: Props) {
   const format = useMoneyFormat()
   const draft = buildReimbursementDraft(
@@ -63,6 +79,11 @@ export function RecordReimbursementSheet({ group, model, busy, error, onCancel, 
   // stops moving on its own — an employer's payment is often not the claim total,
   // and silently rewriting what was typed would be worse than a stale default.
   const [amountEdited, setAmountEdited] = useState(false)
+  // The payment's description *is* the report's name — PastReport reads it back
+  // off the transaction, so there is nothing extra to store. Seeded from the
+  // draft and editable, because "Reimbursement — Work travel" tells you nothing
+  // once there are four of them.
+  const [name, setName] = useState(() => initialName(draft))
   const [date, setDate] = useState(todayIso())
   const [accountId, setAccountId] = useState(draft?.accountId ?? 0)
   const [categoryId, setCategoryId] = useState(draft?.categoryId ?? 0)
@@ -92,7 +113,7 @@ export function RecordReimbursementSheet({ group, model, busy, error, onCancel, 
       {
         date,
         budgetMonth: defaultBudgetMonth(date, model.dataset.settings.budgetRolloverDay),
-        description: draft.description,
+        description: reportName(name, draft.description),
         accountId,
         categoryId,
         amountCents: cents,
@@ -157,6 +178,22 @@ export function RecordReimbursementSheet({ group, model, busy, error, onCancel, 
           }}
         />
       </Field>
+
+      <Field label="Report name" as="div">
+        <input
+          className={formStyles.input}
+          type="text"
+          autoComplete="off"
+          aria-label="Report name"
+          value={name}
+          placeholder={draft.description}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </Field>
+      <p className={styles.hint}>
+        What this settlement is called in Past reports, and the description on the transaction it
+        creates.
+      </p>
 
       <div className={formStyles.row}>
         <Field label="Date" as="div">
