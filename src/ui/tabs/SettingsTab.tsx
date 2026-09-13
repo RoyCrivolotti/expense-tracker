@@ -4,11 +4,13 @@ import { resolveDefaultAccountId } from '../../data/defaultAccount'
 import { needsOnboarding } from '../../domain/onboarding/needsOnboarding'
 import type { ExpenseActions } from '../actions'
 import { Money } from '../components/Money'
+import type { ExpenseSettings } from '../../types'
 import { Card, EmptyState, Pill, SectionTitle } from '../components/primitives'
 import { StatementToggles } from '../components/StatementToggles'
 import { DefinitionsEditor } from '../definitions/DefinitionsEditor'
 import { AppearanceSetting } from '../settings/AppearanceSetting'
 import { PreferencesSetting } from '../settings/PreferencesSetting'
+import { ReportNameSetting } from '../settings/ReportNameSetting'
 import { MilestonesSetting } from '../settings/MilestonesSetting'
 import { DefaultAccountSetting } from '../settings/DefaultAccountSetting'
 import { ExportDataSection } from '../settings/ExportDataSection'
@@ -113,6 +115,35 @@ function SetupWizardEntry({ firstRun, onRunSetup }: { firstRun: boolean; onRunSe
   )
 }
 
+/**
+ * The settings that write through `updateSettings`, behind one guard.
+ *
+ * Grouped rather than three sibling `{actions && ...}` blocks: they share a
+ * single condition, and repeating it pushed SettingsTab over the complexity
+ * ceiling for no benefit.
+ */
+function OwnerSettings({
+  settings,
+  onChange,
+}: {
+  settings: ExpenseSettings
+  /**
+   * Returns the save promise, and callers must not swallow it.
+   * `MilestonesSetting` awaits it to keep overlapping edits from clobbering
+   * each other and to roll back a rejected save — typing it `=> void` silently
+   * turned both into no-ops.
+   */
+  onChange: (patch: Partial<ExpenseSettings>) => void | Promise<void>
+}) {
+  return (
+    <>
+      <PreferencesSetting settings={settings} onChange={onChange} />
+      <ReportNameSetting settings={settings} onChange={onChange} />
+      <MilestonesSetting settings={settings} onChange={onChange} />
+    </>
+  )
+}
+
 export function SettingsTab({
   model,
   month,
@@ -135,14 +166,7 @@ export function SettingsTab({
       <AppearanceSetting theme={theme} onChange={onThemeChange} />
 
       {actions && (
-        <PreferencesSetting
-          settings={model.dataset.settings}
-          onChange={(patch) => void actions.updateSettings(patch)}
-        />
-      )}
-
-      {actions && (
-        <MilestonesSetting
+        <OwnerSettings
           settings={model.dataset.settings}
           onChange={(patch) => actions.updateSettings(patch)}
         />
