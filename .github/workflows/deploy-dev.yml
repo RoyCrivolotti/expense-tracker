@@ -19,6 +19,13 @@ env:
 jobs:
   verify-and-deploy:
     runs-on: ubuntu-latest
+    # Repo default is read-only GITHUB_TOKEN permissions (Settings > Actions). The
+    # "Post staging URL" step below needs to call `gh pr edit`, which read access
+    # doesn't cover — declaring `permissions:` at all zeroes out every scope not
+    # listed here, so `contents: read` has to be restated for actions/checkout.
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
@@ -38,4 +45,23 @@ jobs:
       - name: Deploy preview (branch dev)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: npm run deploy:dev
+        # `pipefail` matters here: without it, a failed `deploy:dev` piped into `tee`
+        # still exits 0 (tee's own status), so the step would report success on a
+        # broken deploy.
+        run: |
+          set -o pipefail
+          npm run deploy:dev | tee deploy.log
+
+      - name: Post staging URL to the PR description
+        # Only meaningful on a pull_request run — workflow_dispatch (CLAUDE.md's
+        # documented way to preview a branch with no PR yet) has no PR to edit.
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          url=$(grep -oP 'Deployment alias URL: \K\S+' deploy.log || true)
+          if [ -z "$url" ]; then
+            echo "::warning::Could not find the deployment alias URL in wrangler's output; skipping PR description update."
+            exit 0
+          fi
+          npm run update:pr-staging-url -- --pr ${{ github.event.pull_request.number }} --url "$url"

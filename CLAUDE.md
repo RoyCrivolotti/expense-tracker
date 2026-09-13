@@ -237,8 +237,16 @@ independent of whatever token is in your local `~/.zshrc`. If `npm run deploy:de
 "Invalid access token", the local token is stale (roll it — see Cloudflare tokens above); the
 CI-triggered preview still works off the separately-maintained GitHub secret regardless. Each branch
 gets its own stable alias URL, `https://<sanitized-branch>.roy-expenses-stg.pages.dev` (see the
-truncation rule in `.claude/deploy-context.md`) — find it in the workflow run's "Deploy preview" step
-output if you don't already know it.
+truncation rule in `.claude/deploy-context.md`).
+
+**`deploy-dev.yml` posts that URL into the PR description automatically** — a marked block near the
+bottom, upserted by `scripts/update-pr-staging-url.mjs` right after each successful deploy, parsed
+straight from wrangler's own `Deployment alias URL:` output rather than reconstructed (the truncation
+rule makes reconstructing it from the branch name unreliable). Don't hand-add a second one in the PR
+body; it's redundant and can go stale where the automated block can't. This step is best-effort and
+won't fail the deploy if it can't update the description (a `workflow_dispatch` run with no open PR
+skips it entirely) — if it's ever missing, the workflow run's own "Deploy preview" step output has the
+URL too.
 
 **Both PR workflows run on every PR, whatever its base.** They used to filter on `branches: [main]`,
 which matches the *base* branch — so a stacked PR (B based on A) got no CI at all until A merged, and
@@ -262,10 +270,12 @@ verify` and then two more required steps it says nothing about:
   `.ts`/`.tsx` lines to be covered. This is separate from, and much stricter than, the global
   floor `test:coverage` checks (that floor is calibrated to the untested legacy baseline, so a
   brand-new component or hook with zero tests sails through `npm run verify` and then fails this).
-  Run it yourself before pushing, using the PR's real base (`main`, or the branch it's stacked on
-  — see the stacked-PR note above):
+  Run it yourself before pushing, using the PR's real base (`origin/main`, or the branch it's
+  stacked on — see the stacked-PR note above). Use `origin/main`, not local `main` — every worktree
+  here branches straight off `origin/main` and nothing ever checks `main` itself out, so it silently
+  goes stale and `--base main` reports other already-merged PRs as false "uncovered" diffs:
   ```bash
-  npm run coverage:diff -- --base main
+  npm run coverage:diff -- --base origin/main
   ```
   If it lists uncovered lines, write the missing tests before pushing — don't push and let CI find
   it. Full detail in `docs/TESTING.md`.
