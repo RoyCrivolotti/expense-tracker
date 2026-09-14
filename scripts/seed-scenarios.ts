@@ -2,7 +2,7 @@
  * Seed goal scenarios for one owner from private config (never committed).
  *
  *   EXPENSE_OWNER=you@example.com \
- *   FINANCIAL_REVIEW_DIR=~/Repos/personal/finance-review \
+ *   FINANCIAL_REVIEW_DIR=/path/to/workbook-export \
  *     npx tsx scripts/seed-scenarios.ts /tmp/seed-scenarios.sql
  *   npx wrangler d1 execute roy-expenses --remote --file=/tmp/seed-scenarios.sql
  */

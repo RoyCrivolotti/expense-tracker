@@ -2,7 +2,7 @@
  * Generate a D1 seed SQL file from the Numbers CSV export. Lets us seed/re-seed
  * the remote D1 headlessly (no browser / Access round-trip):
  *
- *   FINANCIAL_REVIEW_DIR=~/Repos/personal/finance-review \
+ *   FINANCIAL_REVIEW_DIR=/path/to/workbook-export \
  *     npx tsx scripts/gen-seed-sql.ts /tmp/seed.sql
  *   npx wrangler d1 execute roy-expenses --remote --file=/tmp/seed.sql
  *
@@ -21,7 +21,7 @@ if (!OWNER) {
 }
 
 const dir = process.env.FINANCIAL_REVIEW_DIR
-if (!dir) throw new Error('Set FINANCIAL_REVIEW_DIR to the finance-review checkout')
+if (!dir) throw new Error('Set FINANCIAL_REVIEW_DIR to the workbook export directory')
 
 const csv = readFileSync(`${dir}/data/expenses_v3.csv`, 'utf8')
 const d = parseWorkbookCsv(csv)

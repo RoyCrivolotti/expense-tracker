@@ -316,10 +316,15 @@ guide, but that gives up edge-to-edge rendering, and the installed-PWA path need
 
 ## Real data never reaches the repo
 
-The source is public. The workbook export in `~/Repos/personal/finance-review` is real
-financial data, and it has leaked once already — roughly 48 screenshots rendered against
-it were committed and public for months before an audit caught them. The history was
-rewritten to purge them. Read this section before taking any screenshot.
+The source is public. The workbook export that `FINANCIAL_REVIEW_DIR` points at lives in
+a private repo and is real financial data. It has leaked once already — roughly 48
+screenshots rendered against it were committed and public for months before an audit
+caught them. The history was rewritten to purge them. Read this section before taking
+any screenshot.
+
+Nothing in this repo should hardcode that location, name the private repo, or default to
+it when the variable is unset. Two places used to do exactly that and have been changed;
+if you add a third, the fallback is what will bite, not the variable.
 
 **The rule: the app only ever runs on `fixtures/demo-expenses.csv`.**
 

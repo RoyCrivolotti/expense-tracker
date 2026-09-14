@@ -18,17 +18,19 @@
  */
 import { execFileSync, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
-import { homedir, tmpdir } from 'node:os'
+import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const WATCHED = /^(docs\/|\.github\/screenshots\/).*\.(png|jpe?g|gif|webp)$/i
 
-const realCsvPath = join(
-  process.env.FINANCIAL_REVIEW_DIR ?? join(homedir(), 'Repos', 'personal', 'finance-review'),
-  'data/expenses_v3.csv',
-)
+// No default path. A tool that reaches into a private location without being asked is
+// the shape of the mistake this whole file exists to catch, and hardcoding one would
+// also put someone's directory layout in a public repo. Unset means "nothing to
+// compare against", and the audit says so rather than guessing.
+const workbookDir = process.env.FINANCIAL_REVIEW_DIR?.trim()
+const realCsvPath = workbookDir ? join(workbookDir, 'data/expenses_v3.csv') : null
 
 function git(args) {
   return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).split('\n').filter(Boolean)
@@ -70,8 +72,11 @@ if (!ocr) {
   process.exit(0)
 }
 
-if (!existsSync(realCsvPath)) {
-  console.log(`audit:screenshots — no real export at ${realCsvPath}, nothing to compare against. Skipped.`)
+if (!realCsvPath || !existsSync(realCsvPath)) {
+  console.log(
+    'audit:screenshots — set FINANCIAL_REVIEW_DIR to a directory holding data/expenses_v3.csv\n' +
+      'to compare against. Nothing to check without it. Skipped.',
+  )
   process.exit(0)
 }
 

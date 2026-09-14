@@ -38,7 +38,16 @@ const SAFE_EMAIL_RE = new RegExp(
 // Literals that have leaked into this public repo's source before (see a past
 // internal audit — not linked here since that record is private). Extend this
 // list rather than re-litigating what "personal" means each time.
-const BANNED_LITERALS = [/Beckham/i, /\bPATH_PRESETS\b/]
+const BANNED_LITERALS = [
+  /Beckham/i,
+  /\bPATH_PRESETS\b/,
+  // The private workbook repo's name, and the local directory layout it sits in.
+  // Both were scattered through scripts, tests and docs — including as `??` fallbacks
+  // that made tools read a private path when FINANCIAL_REVIEW_DIR was unset. Refer to
+  // the variable, never to where it happens to point.
+  /finance-review/i,
+  /Repos\/personal/i,
+]
 
 function trackedFiles() {
   return execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' })

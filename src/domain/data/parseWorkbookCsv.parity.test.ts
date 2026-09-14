@@ -4,11 +4,10 @@
  * (manual-status) model agree — Jan–Apr 2026, where every card statement is
  * paid and there are no manually-flagged forecast rows.
  *
- * The source CSV lives in the private finance-review repo and is never committed
- * here, so this test self-skips when the file is absent (e.g. in CI).
+ * The source CSV lives in a private workbook repo and is never committed here, so
+ * this test self-skips unless FINANCIAL_REVIEW_DIR points at it (e.g. in CI).
  */
 import { existsSync, readFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { parseEuroToCents } from '../engine/money'
@@ -19,12 +18,11 @@ import { computeGoals } from '../engine/goals'
 import { parseWorkbookCsv } from './parseWorkbookCsv'
 import { splitLine } from './csvSections'
 
-const csvPath = join(
-  process.env.FINANCIAL_REVIEW_DIR || join(homedir(), 'Repos', 'personal', 'finance-review'),
-  'data',
-  'expenses_v3.csv',
-)
-const hasData = existsSync(csvPath)
+// No default path: nothing here should reach into a private location unasked, and a
+// hardcoded one would publish somebody's directory layout.
+const workbookDir = process.env.FINANCIAL_REVIEW_DIR?.trim()
+const csvPath = workbookDir ? join(workbookDir, 'data', 'expenses_v3.csv') : null
+const hasData = csvPath != null && existsSync(csvPath)
 const MONTHS = ['2026-01', '2026-02', '2026-03', '2026-04'] as const
 const TOL = 2 // cents
 
@@ -64,7 +62,7 @@ function expectedRecon(rows: string[][]): Map<string, { expected: number; gap: n
 }
 
 describe.skipIf(!hasData || process.env.PARITY_TESTS !== '1')('workbook parity (Jan–Apr 2026)', () => {
-  const text = hasData ? readFileSync(csvPath, 'utf8') : ''
+  const text = hasData && csvPath ? readFileSync(csvPath, 'utf8') : ''
   const rows = text.split(/\r?\n/).map(splitLine)
   const dataset = parseWorkbookCsv(text)
   const totals = computeMonthlyTotals(dataset.transactions)

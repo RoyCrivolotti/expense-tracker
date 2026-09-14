@@ -3,7 +3,7 @@
  * Put the demo fixture in gitignored content/ for local CSV dev mode.
  *
  * **This script has no way to write real data, and that is the point.** It used to
- * prefer the real finance-review export and fall back to the fixture, which meant any
+ * prefer the real workbook export and fall back to the fixture, which meant any
  * run without DOCS_CAPTURE pulled real financial data into the working tree. `npm run
  * verify` calls `build`, which called this — so verify quietly replaced content/ with
  * real data underneath an already-running DOCS_CAPTURE dev server. Screenshots taken
