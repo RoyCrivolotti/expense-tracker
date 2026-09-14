@@ -121,7 +121,7 @@ const hasFrParity =
   existsSync(join(frDir, 'data/milestone_matrix.csv')) &&
   existsSync(join(frDir, 'config/goal-scenarios.seed.json'))
 
-describe.skipIf(!hasFrParity)('finance-review milestone parity (local only)', () => {
+describe.skipIf(!hasFrParity)('workbook milestone parity (local only)', () => {
   it('matches milestone_matrix.csv for seeded paths', () => {
     const seed = JSON.parse(
       readFileSync(join(frDir!, 'config/goal-scenarios.seed.json'), 'utf8'),

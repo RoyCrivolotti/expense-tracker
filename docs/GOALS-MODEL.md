@@ -1,7 +1,7 @@
 # Goals projection model
 
 Year-by-year wealth projection for the Goals tab. Canonical personal assumptions
-live in the private `finance-review` repo; the public app reads saved scenarios
+live in a private workbook repo; the public app reads saved scenarios
 from D1 only.
 
 ## Overview
@@ -161,5 +161,5 @@ Displayed in `WealthSummaryCard` (Progress view) and `GoalsCard` (dashboard badg
 
 Copy [`config/goal-scenarios.seed.example.json`](../config/goal-scenarios.seed.example.json)
 to gitignored `config/goal-scenarios.seed.json`, or maintain
-`config/goal-scenarios.seed.json` in `finance-review`, then run
+`config/goal-scenarios.seed.json` in that private repo, then run
 `scripts/seed-scenarios.ts`. Keep seed JSON gitignored; review history hygiene before open-sourcing.

@@ -1,5 +1,5 @@
 /**
- * Year-by-year wealth projection engine — reproduces finance-review path models.
+ * Year-by-year wealth projection engine — reproduces the private workbook’s path models.
  * All money in integer cents; rates as fractions (0.07 = 7% real).
  */
 import { pmt } from './finance'
@@ -202,7 +202,7 @@ export function projectNetWorth(params: ProjectionParams): YearPoint[] {
   return points
 }
 
-/** Invested-portfolio trajectory only (matches finance-review milestone matrix). */
+/** Invested-portfolio trajectory only (matches the workbook’s milestone matrix). */
 export function projectInvested(params: ProjectionParams): number[] {
   return projectNetWorth(params).map((p) => p.investedCents)
 }
