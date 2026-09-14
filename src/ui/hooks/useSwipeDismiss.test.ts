@@ -193,4 +193,54 @@ describe('useSwipeDismiss', () => {
 
     expect(onDismiss).not.toHaveBeenCalled()
   })
+
+  it('ignores a tap with sub-threshold finger wobble', () => {
+    const { body, onDismiss, view } = setup()
+
+    act(() => {
+      body.dispatchEvent(touch('touchstart', 0))
+    })
+    act(() => {
+      now += 50
+      body.dispatchEvent(touch('touchmove', 5))
+    })
+    expect(view.result.current.isDragging).toBe(false)
+    expect(view.result.current.offset).toBe(0)
+
+    act(() => {
+      body.dispatchEvent(touch('touchend', 5))
+    })
+    expect(onDismiss).not.toHaveBeenCalled()
+    expect(view.result.current.isDragging).toBe(false)
+  })
+
+  it('does not preventDefault during the dead zone, so taps reach form fields', () => {
+    const { body } = setup()
+
+    act(() => {
+      body.dispatchEvent(touch('touchstart', 0))
+    })
+    const moveEvent = touch('touchmove', 5)
+    act(() => {
+      now += 50
+      body.dispatchEvent(moveEvent)
+    })
+    expect(moveEvent.defaultPrevented).toBe(false)
+  })
+
+  it('commits to the drag once past the dead zone threshold', () => {
+    const { body, view } = setup()
+
+    act(() => {
+      body.dispatchEvent(touch('touchstart', 0))
+    })
+    expect(view.result.current.isDragging).toBe(false)
+
+    act(() => {
+      now += 50
+      body.dispatchEvent(touch('touchmove', 12))
+    })
+    expect(view.result.current.isDragging).toBe(true)
+    expect(view.result.current.offset).toBe(12)
+  })
 })
