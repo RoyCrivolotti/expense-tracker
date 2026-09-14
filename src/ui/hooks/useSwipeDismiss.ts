@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { recentVelocity, resolveDismissSnap, type DragSample } from './sheetDismissSnap'
+import { SWIPE_DRAG_THRESHOLD_PX } from './swipeSnap'
 
 /**
  * Marks a region of the sheet that always starts a dismissal — the grab handle and
@@ -48,6 +49,7 @@ export function useSwipeDismiss(
   const [progress, setProgress] = useState(0)
 
   const armed = useRef(false)
+  const committed = useRef(false)
   const startY = useRef(0)
   const peak = useRef(0)
   const height = useRef(0)
@@ -73,6 +75,7 @@ export function useSwipeDismiss(
 
     const stop = () => {
       armed.current = false
+      committed.current = false
       setIsDragging(false)
       apply(0)
     }
@@ -84,13 +87,13 @@ export function useSwipeDismiss(
       const onGrab = target?.closest(`[${SHEET_GRAB_ATTR}]`) != null
       armed.current = onGrab || sheet.scrollTop <= 0
       if (!armed.current) return
+      committed.current = false
       startY.current = touch.clientY
       peak.current = 0
       // Measured once per gesture: the sheet's height cannot change mid-drag, and
       // reading it on every move would mean a layout flush per frame.
       height.current = sheet.offsetHeight
       samples.current = [{ y: touch.clientY, t: performance.now() }]
-      setIsDragging(true)
     }
 
     const onTouchMove = (e: TouchEvent) => {
@@ -109,6 +112,15 @@ export function useSwipeDismiss(
         if (offsetRef.current !== 0) apply(0)
         return
       }
+      // Dead zone: a tap with a few pixels of finger wobble must not start the
+      // gesture. Only commit once the drag clearly exceeds the threshold — until
+      // then, no preventDefault (so the browser can still scroll or handle the
+      // tap), no offset, no isDragging.
+      if (!committed.current) {
+        if (dy <= SWIPE_DRAG_THRESHOLD_PX) return
+        committed.current = true
+        setIsDragging(true)
+      }
       e.preventDefault()
       peak.current = Math.max(peak.current, dy)
       apply(dy)
@@ -116,6 +128,10 @@ export function useSwipeDismiss(
 
     const onTouchEnd = () => {
       if (!armed.current) return
+      if (!committed.current) {
+        stop()
+        return
+      }
       const verdict = resolveDismissSnap({
         offsetY: offsetRef.current,
         peakOffsetY: peak.current,
@@ -130,6 +146,7 @@ export function useSwipeDismiss(
       // it so the caller's exit animation can continue that same movement; snapping
       // home and vanishing in one frame is what made this feel abrupt.
       armed.current = false
+      committed.current = false
       setIsDragging(false)
       dismissRef.current(offsetRef.current)
     }

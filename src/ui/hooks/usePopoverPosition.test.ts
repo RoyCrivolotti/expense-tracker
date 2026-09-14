@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
-import { describe, expect, it, beforeEach, vi } from 'vitest'
+import { describe, expect, it, beforeEach } from 'vitest'
 import { resizeObservers } from '../../test/setup'
-import { usePopoverPosition } from './usePopoverPosition'
+import { getSafeAreaProbe, usePopoverPosition } from './usePopoverPosition'
 
 function elementWithRect(rect: Partial<DOMRect>): HTMLElement {
   const el = document.createElement('div')
@@ -14,18 +14,13 @@ function elementWithRect(rect: Partial<DOMRect>): HTMLElement {
  * which is the only thing the hook reads the inset from.
  */
 function withSafeAreaInset(inset: number, run: () => void) {
-  const realCreate = document.createElement.bind(document)
-  const spy = vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
-    const el = realCreate(tag)
-    if (tag === 'div') {
-      el.getBoundingClientRect = () => ({ top: 0, left: 0, width: 0, height: inset }) as DOMRect
-    }
-    return el
-  })
+  const probe = getSafeAreaProbe()
+  const original = probe.getBoundingClientRect.bind(probe)
+  probe.getBoundingClientRect = () => ({ top: 0, left: 0, width: 0, height: inset, right: 0, bottom: inset, x: 0, y: 0, toJSON: () => {} })
   try {
     run()
   } finally {
-    spy.mockRestore()
+    probe.getBoundingClientRect = original
   }
 }
 
@@ -169,7 +164,7 @@ describe('usePopoverPosition — repositioning after it opens', () => {
     })
   })
 
-  it('removes the probe when the popover closes', () => {
+  it('reuses a single probe element across mounts', () => {
     const triggerRef = { current: elementWithRect({ top: 100, bottom: 130, left: 20 }) }
     const popoverRef = { current: elementWithRect({ width: 200, height: 100 }) }
     const probes = () =>
@@ -179,9 +174,12 @@ describe('usePopoverPosition — repositioning after it opens', () => {
     expect(probes()).toBe(1)
     unmount()
 
-    // A probe per opened popover, left behind, would accumulate for the life of
-    // the page.
-    expect(probes()).toBe(0)
+    // The singleton stays — no per-mount creation/destruction churn.
+    expect(probes()).toBe(1)
+
+    renderHook(() => usePopoverPosition(triggerRef, popoverRef))
+    // Still just one, not two.
+    expect(probes()).toBe(1)
   })
 
   it('caps a tall popover to the visible band rather than letting it overflow', () => {
