@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Blocks committing documentation screenshots while content/ holds real data.
+# Enabled by `npm run setup:hooks` (run automatically by `npm install`), which points
+# core.hooksPath here so the hook is version-controlled rather than sitting in
+# .git/hooks where every worktree and clone would need it installed separately.
+set -euo pipefail
+
+exec node "$(git rev-parse --show-toplevel)/scripts/check-screenshot-safety.mjs" --staged

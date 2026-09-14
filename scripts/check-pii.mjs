@@ -12,6 +12,14 @@ const root = join(import.meta.dirname, '..')
 
 // Binary/generated/vendored files that would only produce noise or false positives.
 // This script itself is excluded because it necessarily contains the patterns it checks for.
+//
+// NOTE the images in this list. Text is all this script has ever inspected, and for a
+// long time that felt like enough — until ~48 screenshots of real financial data
+// reached this public repo through the one file type it skips. Images are covered
+// instead by `check-screenshot-safety.mjs` (the pre-commit gate, which refuses to
+// commit them while real data is in content/) and `npm run audit:screenshots` (an OCR
+// sweep of everything already committed). Do not read "PII check OK" as meaning the
+// screenshots were looked at.
 const SKIP_FILE = [/^package-lock\.json$/, /\.(png|jpg|jpeg|ico|woff2?|ttf)$/i, /^scripts\/check-pii\.mjs$/]
 
 const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g

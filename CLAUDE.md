@@ -314,6 +314,49 @@ None of this goes away inside a native wrapper: a full-screen `WKWebView` report
 needs the same CSS. A wrapper can avoid it by constraining the web view to the safe-area layout
 guide, but that gives up edge-to-edge rendering, and the installed-PWA path needs the CSS regardless.
 
+## Real data never reaches the repo
+
+The source is public. The workbook export in `~/Repos/personal/finance-review` is real
+financial data, and it has leaked once already — roughly 48 screenshots rendered against
+it were committed and public for months before an audit caught them. The history was
+rewritten to purge them. Read this section before taking any screenshot.
+
+**The rule: the app only ever runs on `fixtures/demo-expenses.csv`.**
+
+- `scripts/prep-expenses-data.mjs` **has no code path that writes real data**. It copies
+  the demo fixture into gitignored `content/` and does nothing else. That is the whole
+  defence — there is nothing to detect, because real data cannot get in.
+- **`build` does not call it.** `csvDataSource` imports the CSV with `?raw`, but
+  `resolveSource` only loads that module under `import.meta.env.DEV`, so a production
+  build eliminates the import before resolving it. `npm run build` and
+  `npm run build:staging` both succeed with no `content/` directory at all — verified.
+  Only `npm run dev` needs the file, and `capture:screenshots` gets it via its own dev
+  server.
+- The real export is still read by `scripts/gen-seed-sql.ts` for seeding D1. That needs
+  `FINANCIAL_REVIEW_DIR` set explicitly and writes its SQL to `/tmp`, outside the repo.
+  Do not add a second reader without the same care.
+- **A pre-commit hook refuses** to commit anything matching `docs/**` or
+  `.github/screenshots/**` with an image extension while `content/expenses_v3.csv`
+  differs from the demo fixture. It is enabled by `core.hooksPath=.githooks`, set by
+  `npm run setup:hooks` and by `postinstall`, so it covers every worktree sharing this
+  `.git`. Same check runs inside `npm run verify`.
+- `npm run capture:screenshots` starts its own dev server, so the fixture is in place
+  whatever was there before.
+- `npm run audit:screenshots` OCRs every committed documentation image and compares what
+  is legible against the real export, reporting file names and match counts only. macOS
+  Vision, or `tesseract` if installed. Run it after any bulk screenshot change.
+
+**How the leak actually happened**, because the shape matters more than the rule: the
+dev server was started with `DOCS_CAPTURE=1` (correct), then `npm run verify` ran — and
+`verify` calls `build`, which called `prep:data`, which at the time preferred the real
+export. That rewrote `content/` *underneath the running server*. Screenshots taken
+afterwards looked completely normal and were real. Nothing in the workflow was visibly
+wrong at any point, which is why the fix is to delete the capability rather than to
+watch for its misuse.
+
+`scripts/check-pii.mjs` does **not** cover this. It skips images by design, so
+"PII check OK" says nothing about screenshots.
+
 ## Pull request conventions
 
 PRs that change anything under `src/ui/` or any `.module.css` file must include screenshots showing the affected feature before and after, embedded in the PR description body. **CI enforces this** (`npm run check:pr-screenshots`, wired into `verify.yml`) — it fails the PR if a UI-facing file changed but the description has no markdown image link. For responsive changes, include a mobile (375px) capture alongside the desktop one.
