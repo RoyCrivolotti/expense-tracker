@@ -53,33 +53,41 @@ describe('Modal — staying inside the visible area', () => {
 
   afterEach(() => setViewport(undefined))
 
-  it('offsets the overlay to the visible slice when a keyboard pans the screen', () => {
-    // position: fixed pins to the *layout* viewport, which iOS does not move for
-    // a keyboard — it pans a smaller visual one inside it. Without following
-    // that, the sheet's header slides underneath the status bar.
-    setViewport({ offsetTop: 120, height: 400, addEventListener: () => {}, removeEventListener: () => {} })
+  function renderModal() {
     const { container } = render(
       <Modal title="New transaction" onClose={vi.fn()}>
         <p>body</p>
       </Modal>,
     )
+    const scrim = container.querySelector<HTMLElement>('[role="presentation"]')!
+    return { scrim, band: scrim.firstElementChild as HTMLElement }
+  }
 
-    const overlay = container.querySelector<HTMLElement>('[role="presentation"]')
-    expect(overlay?.style.top).toBe('120px')
-    expect(overlay?.style.height).toBe('400px')
+  it('never lets the screen behind show through, even while the viewport is panned', () => {
+    setViewport({ offsetTop: 120, height: 400, addEventListener: () => {}, removeEventListener: () => {} })
+    const { scrim } = renderModal()
+
+    expect(scrim.style.top).toBe('')
+    expect(scrim.style.height).toBe('')
+    expect(getComputedStyle(scrim).position).toBe('fixed')
+  })
+
+  it('confines the sheet to the visible slice, which is a different box', () => {
+    setViewport({ offsetTop: 120, height: 400, addEventListener: () => {}, removeEventListener: () => {} })
+    const { band } = renderModal()
+
+    expect(band.style.top).toBe('120px')
+    expect(band.style.height).toBe('400px')
+    expect(band.querySelector('[role="dialog"]')).not.toBeNull()
   })
 
   it('leaves the CSS fallback alone where the API is unavailable', () => {
     setViewport(undefined)
-    const { container } = render(
-      <Modal title="New transaction" onClose={vi.fn()}>
-        <p>body</p>
-      </Modal>,
-    )
+    const { scrim, band } = renderModal()
 
-    const overlay = container.querySelector<HTMLElement>('[role="presentation"]')
-    expect(overlay?.style.top).toBe('')
-    expect(overlay?.style.height).toBe('')
+    expect(scrim.style.top).toBe('')
+    expect(band.style.top).toBe('')
+    expect(band.style.height).toBe('')
   })
 })
 
@@ -110,7 +118,7 @@ describe('Modal — swipe down to dismiss', () => {
       sheet.dispatchEvent(touch('touchstart', 0))
     })
     act(() => {
-      now += 1000 // slow, so distance decides rather than the fling escape
+      now += 1000
       sheet.dispatchEvent(touch('touchmove', distance))
     })
     act(() => {
@@ -130,25 +138,18 @@ describe('Modal — swipe down to dismiss', () => {
     const sheet = openSheet(onClose)
     drag(sheet, 200)
 
-    // Still on screen, leaving under its own steam — the abrupt version reset the
-    // sheet to rest and unmounted it in the same frame the finger lifted.
     expect(sheet.className).toContain('sheetClosing')
     expect(onClose).not.toHaveBeenCalled()
 
-    const overlay = sheet.parentElement
+    const band = sheet.parentElement
+    const overlay = band?.parentElement
     expect(overlay?.className).toContain('overlayClosing')
-    // Carries on from the release point rather than restarting from the top.
     expect(overlay?.style.getPropertyValue('--sheet-from')).toBe('200px')
 
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
   })
 
   it('skips the exit entirely for a viewer who asked for less movement', () => {
-    // The animation gates the unmount, so under reduced motion it has to be skipped
-    // rather than merely stilled — a zero-length animation would still have to be
-    // waited out, and a suppressed one would never finish at all.
-    // jsdom ships no matchMedia at all, which is also why every other test here
-    // takes the animated path.
     vi.stubGlobal('matchMedia', (query: string) => ({
       matches: query.includes('prefers-reduced-motion'),
       media: query,
@@ -166,8 +167,6 @@ describe('Modal — swipe down to dismiss', () => {
   })
 
   it('hands straight over without animating when the close may be refused', () => {
-    // TransactionModal raises a discard confirm instead of closing; a sheet that had
-    // animated away would be stranded off-screen behind it.
     const onClose = vi.fn()
     render(
       <Modal title="New transaction" onClose={onClose} closeMayPrompt>
@@ -191,8 +190,6 @@ describe('Modal — swipe down to dismiss', () => {
   })
 
   it('ignores the gesture while a nested dialog is up', () => {
-    // The nested sheet renders inside this one, so a drag meant for it would
-    // otherwise dismiss what it is sitting on.
     const onClose = vi.fn()
     render(
       <Modal title="New transaction" onClose={onClose} trapPaused>

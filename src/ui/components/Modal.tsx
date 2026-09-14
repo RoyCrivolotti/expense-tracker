@@ -27,11 +27,8 @@ interface ModalProps {
   closeMayPrompt?: boolean
 }
 
-function overlayVars(viewport: { top: number; height: number } | null, progress: number, exit: SheetExit | null) {
+function scrimVars(progress: number, exit: SheetExit | null): CSSProperties {
   return {
-    ...(viewport ? { top: viewport.top, height: viewport.height } : {}),
-    // Thins out as the sheet is pulled away, so the gesture reads as reversible
-    // progress rather than an on/off switch whose edge you cannot see.
     '--scrim': String(SCRIM_ALPHA * (1 - progress)),
     ...(exit
       ? {
@@ -41,6 +38,10 @@ function overlayVars(viewport: { top: number; height: number } | null, progress:
         }
       : {}),
   } as CSSProperties
+}
+
+function bandPosition(viewport: { top: number; height: number } | null): CSSProperties | undefined {
+  return viewport ? { top: viewport.top, height: viewport.height } : undefined
 }
 
 export function Modal({
@@ -85,45 +86,49 @@ export function Modal({
   return (
     <div
       className={leaving ? `${styles.overlay} ${styles.overlayClosing}` : styles.overlay}
-      style={overlayVars(viewport, progress, exit)}
+      style={scrimVars(progress, exit)}
       onClick={() => requestClose()}
       role="presentation"
     >
+      {/* The scrim covers the whole screen; only this band tracks the visible
+          slice, so nothing behind the modal can show through above the sheet. */}
       <div
-        ref={sheetRef}
-        className={sheetClasses}
-        style={!leaving && offset > 0 ? { transform: `translateY(${offset}px)` } : undefined}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        onClick={(e) => e.stopPropagation()}
+        className={styles.band}
+        style={bandPosition(viewport)}
       >
-        {/* Still `aria-hidden`: it is a drag target, but dragging is not something a
-            screen reader can do, and an unlabelled div announces nothing useful. The
-            Close button below is the equivalent that is actually reachable. */}
-        <div className={styles.handle} aria-hidden {...sheetGrabProps} />
-        <header className={styles.header} {...sheetGrabProps}>
-          {onBack && (
-            <button type="button" onClick={onBack} aria-label="Back" className={`${styles.back} tapActive`}>
-              <BackIcon />
+        <div
+          ref={sheetRef}
+          className={sheetClasses}
+          style={!leaving && offset > 0 ? { transform: `translateY(${offset}px)` } : undefined}
+          role="dialog"
+          aria-modal="true"
+          aria-label={title}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className={styles.handle} aria-hidden {...sheetGrabProps} />
+          <header className={styles.header} {...sheetGrabProps}>
+            {onBack && (
+              <button type="button" onClick={onBack} aria-label="Back" className={`${styles.back} tapActive`}>
+                <BackIcon />
+              </button>
+            )}
+            <div className={styles.titleBlock}>
+              <h2 ref={headingRef} tabIndex={-1}>
+                {title}
+              </h2>
+              {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
+            </div>
+            <button
+              type="button"
+              onClick={() => requestClose()}
+              aria-label="Close"
+              className={`${styles.close} tapActive`}
+            >
+              <CloseIcon />
             </button>
-          )}
-          <div className={styles.titleBlock}>
-            <h2 ref={headingRef} tabIndex={-1}>
-              {title}
-            </h2>
-            {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
-          </div>
-          <button
-            type="button"
-            onClick={() => requestClose()}
-            aria-label="Close"
-            className={`${styles.close} tapActive`}
-          >
-            <CloseIcon />
-          </button>
-        </header>
-        <div className={styles.body}>{children}</div>
+          </header>
+          <div className={styles.body}>{children}</div>
+        </div>
       </div>
     </div>
   )

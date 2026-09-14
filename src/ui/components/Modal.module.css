@@ -1,22 +1,22 @@
 .overlay {
   position: fixed;
   /*
-   * Not `inset: 0`: top and height are overridden inline to track the visual
-   * viewport (see useVisualViewportRect). These are the fallback for a browser
-   * without it, and are what the inline values equal when nothing has panned.
+   * Full screen, deliberately — including behind the status bar and behind the
+   * keyboard.
+   *
+   * The scrim's job is that *nothing* behind the modal is visible. Sizing it to
+   * the visible band instead left the page showing through above the sheet, and
+   * since `useBodyScrollLock` pins the page while fixed app chrome is displaced
+   * by the keyboard pan, what showed through was dashboard content sitting
+   * under the clock. Covering the whole screen makes that impossible regardless
+   * of where anything behind ends up.
    */
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 100dvh;
+  inset: 0;
   z-index: 50;
   /* Driven inline while the sheet is being dragged — see Modal.tsx. The fallback is
      the resting value, used whenever nothing is mid-gesture. */
   background: rgba(0, 0, 0, var(--scrim, 0.5));
   backdrop-filter: blur(2px);
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
   animation: fade 0.15s ease;
   overscroll-behavior: none;
   /*
@@ -26,6 +26,36 @@
    * already pinned by `useBodyScrollLock`, so nothing needs blocking at this level.
    */
   touch-action: pan-y;
+}
+
+/*
+ * Where the sheet is allowed to live: the slice of screen actually visible.
+ *
+ * Separate from the scrim because the two want opposite things — the scrim must
+ * cover everything, this must cover only what can be seen. `top` and `height`
+ * are overridden inline to track the visual viewport (see useVisualViewportRect);
+ * the declarations here are the fallback where that API is missing, and are what
+ * the inline values equal when nothing has panned.
+ *
+ * The safe-area padding is what keeps the sheet out of the status bar. Relying on
+ * the sheet's own percentage instead left roughly 11px of clearance on a 466px
+ * band — measured, not estimated.
+ */
+.band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 100dvh;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+}
+.band > * {
+  pointer-events: auto;
 }
 
 .sheet {
