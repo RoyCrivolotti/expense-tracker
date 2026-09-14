@@ -60,6 +60,17 @@ function stopDev(dev) {
   }
 }
 
+/**
+ * Settings opens on the System sub-tab, so "Manage access" is not on screen until the
+ * Account preferences tab is selected. Before #85 split Settings into sub-tabs it was
+ * on the one page, which is why this used to be a bare waitForSelector.
+ */
+async function openAccountSettings(page) {
+  await page.getByRole('button', { name: 'Settings' }).click()
+  await page.getByRole('radio', { name: 'Account preferences' }).click()
+  await page.waitForSelector('text=Manage access', { timeout: 15000 })
+}
+
 async function waitForAccessAdmin(page) {
   await page.waitForSelector('text=Access management', { timeout: 15000 })
   await page.waitForSelector('text=Revoke all', { timeout: 15000 })
@@ -298,8 +309,7 @@ async function capture() {
 
   await captureGoalsDesktop(d)
 
-  await d.getByRole('button', { name: 'Settings' }).click()
-  await d.waitForSelector('text=Manage access', { timeout: 15000 })
+  await openAccountSettings(d)
   await d.waitForTimeout(300)
   await d.screenshot({ path: join(OUT, 'settings-desktop.png') })
 
@@ -334,8 +344,7 @@ async function capture() {
 
   await captureGoalsMobile(m)
 
-  await m.getByRole('button', { name: 'Settings' }).click()
-  await m.waitForSelector('text=Manage access', { timeout: 15000 })
+  await openAccountSettings(m)
   await m.screenshot({ path: join(OUT, 'settings-mobile.png') })
 
   await m.goto(`${BASE}/access/admin`)
