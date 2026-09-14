@@ -100,6 +100,17 @@ describe('ExpensesApp onboarding wiring', () => {
 
     expect(screen.queryByText('New transaction')).toBeNull()
   })
+
+  it('Settings > Account tab shows the signed-in email', async () => {
+    const source = sourceThatSucceeds(datasetWith())
+    render(<ExpensesApp source={source} hubGrants={allGroupsGranted()} accountEmail="test@example.com" />)
+
+    await waitFor(() => expect(screen.queryByText('Welcome to Expenses')).toBeNull())
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Settings' })[0]!)
+    fireEvent.click(await screen.findByRole('radio', { name: 'Account' }))
+    await screen.findByText('test@example.com')
+  })
 })
 
 describe('ExpensesApp tab wiring', () => {
