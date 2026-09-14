@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { Transaction } from '../../types'
 import type { ExpenseModel } from '../useExpenseData'
 import type { InstallmentDraft, InstallmentMode } from './installmentIntent'
@@ -33,10 +34,14 @@ function modeOptions(linked: boolean, hasPlans: boolean): ModeOption[] {
         { mode: 'new', label: 'New plan' },
         { mode: 'unlink', label: 'Remove' },
       ]
-    : [
-        { mode: 'none', label: 'None' },
+    : // Likely intent first. On an unlinked transaction 'none' is the state the
+      // previous screen already reported ("Not part of a plan"), so it is the way
+      // back out of a choice in progress rather than a destination of its own —
+      // last in the row, and phrased as a choice.
+      [
         { mode: 'new', label: 'New plan' },
         { mode: 'existing', label: 'Existing plan' },
+        { mode: 'none', label: 'No plan' },
       ]
   return base.filter((o) => o.mode !== 'existing' || hasPlans)
 }
@@ -68,10 +73,13 @@ function NumberField({
 function NewFields({
   draft,
   set,
+  promote,
   amountCents,
 }: {
   draft: InstallmentDraft
   set: SetDraft
+  /** Turns the highlighted-but-uncommitted 'new' selection into a real draft. */
+  promote: () => void
   amountCents: number
 }) {
   const format = useMoneyFormat()
@@ -83,19 +91,28 @@ function NewFields({
         <NumberField
           label="Total installments"
           value={draft.totalCount}
-          onChange={(v) => set('totalCount', v)}
+          onChange={(v) => {
+            promote()
+            set('totalCount', v)
+          }}
         />
         <NumberField
           label="This installment #"
           value={draft.installmentIndex}
-          onChange={(v) => set('installmentIndex', v)}
+          onChange={(v) => {
+            promote()
+            set('installmentIndex', v)
+          }}
         />
       </div>
       <label className={styles.splitToggle}>
         <input
           type="checkbox"
           checked={draft.splitTotal ?? false}
-          onChange={(e) => set('splitTotal', e.target.checked)}
+          onChange={(e) => {
+            promote()
+            set('splitTotal', e.target.checked)
+          }}
         />
         <span>This is the total price — split evenly across installments</span>
       </label>
@@ -151,6 +168,16 @@ function ExistingFields({
 export function InstallmentStep({ model, editing, draft, set, error, amountCents }: Props) {
   const plans = model.dataset.installmentPlans
   const linked = editing?.planId != null
+  /*
+   * Which chip is highlighted, deliberately separate from what the draft says.
+   * An unlinked transaction opens on "New plan" — that is why anyone taps into
+   * this step — but the draft stays 'none' until something is actually entered
+   * (see `promote`), so a look-around costs nothing. This component unmounts on
+   * Back, so the initial value re-derives from the draft on every entry.
+   */
+  const [selected, setSelected] = useState<InstallmentMode>(
+    linked || draft.mode !== 'none' ? draft.mode : 'new',
+  )
 
   const selectPlan = (planId: number) => {
     set('planId', planId)
@@ -164,7 +191,21 @@ export function InstallmentStep({ model, editing, draft, set, error, amountCents
     set('installmentIndex', String(nextIndex))
   }
 
+  /*
+   * Writing 'new' into the draft on entry instead would cost two things: the
+   * dirty check is a diff against the draft the form opened with, so merely
+   * looking at this step would raise the discard confirm on close; and the empty
+   * plan left behind fails `buildInstallmentIntent`, bouncing the user back here
+   * on submit. Both disappear if the mode only lands once a field is touched.
+   */
+  const promote = () => {
+    if (draft.mode !== 'none') return
+    set('mode', 'new')
+    if (!draft.installmentIndex) set('installmentIndex', '1')
+  }
+
   const chooseMode = (mode: InstallmentMode) => {
+    setSelected(mode)
     set('mode', mode)
     if (mode === 'new' && !draft.installmentIndex) set('installmentIndex', '1')
     if (mode === 'existing' && draft.planId == null) {
@@ -180,20 +221,32 @@ export function InstallmentStep({ model, editing, draft, set, error, amountCents
           <button
             key={o.mode}
             type="button"
-            className={`${styles.modeBtn} ${draft.mode === o.mode ? styles.modeActive : ''}`}
+            aria-pressed={selected === o.mode}
+            className={`${styles.modeBtn} ${selected === o.mode ? styles.modeActive : ''}`}
             onClick={() => chooseMode(o.mode)}
           >
             {o.label}
           </button>
         ))}
       </div>
-      {draft.mode === 'new' ? (
-        <NewFields draft={draft} set={set} amountCents={amountCents} />
+      {selected === 'new' ? (
+        <NewFields
+          /*
+           * While the selection is still uncommitted the index shows the 1 that
+           * `promote` is about to write, rather than sitting empty: the field is
+           * prefilled from the user's point of view either way, and this keeps
+           * the two from disagreeing for one keystroke.
+           */
+          draft={draft.mode === 'none' ? { ...draft, installmentIndex: '1' } : draft}
+          set={set}
+          promote={promote}
+          amountCents={amountCents}
+        />
       ) : null}
-      {draft.mode === 'existing' ? (
+      {selected === 'existing' ? (
         <ExistingFields model={model} draft={draft} set={set} onSelectPlan={selectPlan} />
       ) : null}
-      {draft.mode === 'unlink' ? (
+      {selected === 'unlink' ? (
         <p className={styles.summary}>This payment will be removed from its plan.</p>
       ) : null}
       {error ? <p className={formStyles.error}>{error}</p> : null}
