@@ -6,7 +6,6 @@ import { buildActiveFilterChips } from './txnFilterChips'
 import {
   CategoryAccountRow,
   DateScopeRow,
-  FlagRow,
   SearchRow,
   StatusTypeRow,
 } from './TxnFilterRows'
@@ -94,15 +93,10 @@ export function TxnFilters(props: TxnFiltersProps) {
             onCategory={props.onCategory}
             onAccount={props.onAccount}
           />
-          {props.flags.length > 0 ? (
-            <FlagRow
-              flags={props.flags}
-              flagId={props.flagId}
-              selectMode={props.selectMode}
-              onFlag={props.onFlag}
-            />
-          ) : null}
           <StatusTypeRow
+            flags={props.flags}
+            flagId={props.flagId}
+            onFlag={props.onFlag}
             status={props.status}
             txnType={props.txnType}
             selectMode={props.selectMode}
