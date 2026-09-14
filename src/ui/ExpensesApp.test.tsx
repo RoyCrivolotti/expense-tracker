@@ -93,7 +93,7 @@ describe('ExpensesApp onboarding wiring', () => {
     await waitFor(() => expect(screen.queryByText('Welcome to Expenses')).toBeNull())
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Settings' })[0]!)
-    fireEvent.click(await screen.findByRole('radio', { name: 'Account preferences' }))
+    fireEvent.click(await screen.findByRole('radio', { name: 'Setup' }))
     fireEvent.click(await screen.findByText('Run setup wizard'))
     await screen.findByText('Welcome to Expenses')
     await finishWizard()
