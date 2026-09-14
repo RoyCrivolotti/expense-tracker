@@ -168,7 +168,8 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
   // Either side counts, not just the currently visible one: closing from an
   // empty batch tab would otherwise silently drop a still-hidden, filled-in
   // single-transaction draft (and vice versa).
-  const { confirming, cancel, modalOnClose } = useCloseGuard(singleDirty || batchDirty, onClose)
+  const anyDirty = singleDirty || batchDirty
+  const { confirming, cancel, modalOnClose } = useCloseGuard(anyDirty, onClose)
 
   /**
    * Resolves with the stored row on create so the form can upload the receipts
@@ -212,11 +213,19 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
       trapPaused={confirming || discardingOther || popoverOpen}
       // With a draft in hand `modalOnClose` raises the discard confirm instead of
       // closing, so the sheet must stay put and let it. Clean, it animates away.
-      closeMayPrompt={singleDirty || batchDirty}
+      closeMayPrompt={anyDirty}
     >
       {canBatch && (
         <>
-          <ModeToggle mode={mode} onChange={(m) => { setMode(m); setFormView('fields') }} />
+          {/*
+           * Not shown on the installment step: that is a sub-page of the single
+           * form — the header is already carrying its own title and a back arrow
+           * — and these tabs belong to the sheet above it. Pressing one there
+           * used to throw the sub-navigation away without saying so.
+           * BatchTransactionForm below stays mounted regardless, so hiding only
+           * the toggle costs no draft.
+           */}
+          {formView === 'fields' && <ModeToggle mode={mode} onChange={setMode} />}
           <BatchTransactionForm
             model={model}
             actions={actions}

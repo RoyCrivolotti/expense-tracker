@@ -461,6 +461,33 @@ describe('TransactionModal — installment sub-navigation', () => {
     expect(screen.getByText('New transaction')).toBeInTheDocument()
   })
 
+  it('hides the Add one / Add multiple tabs on the installment step, and brings them back', () => {
+    renderModal()
+    fireEvent.click(screen.getByText(/Installment plan:/))
+    // They switch the whole sheet; the installment step is a page inside it.
+    expect(screen.queryByRole('tab', { name: 'Add multiple' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+    expect(screen.getByRole('tab', { name: 'Add multiple' })).toBeInTheDocument()
+  })
+
+  it('saves with no plan after a look at the installment step that changed nothing', async () => {
+    const { container, actions } = renderModal()
+    fireEvent.click(screen.getByText(/Installment plan:/))
+    expect(screen.getByRole('button', { name: 'New plan', pressed: true })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+    // The preselected New plan was never filled in, so it must not have linked
+    // anything — nor left an empty plan behind to fail validation here.
+    expect(screen.getByText(/Installment plan: Not part of a plan/)).toBeInTheDocument()
+
+    fireEvent.change(singleForm(container).getByLabelText(/amount/i), { target: { value: '10' } })
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+
+    await waitFor(() => expect(actions.createTransaction).toHaveBeenCalled())
+    expect(actions.createInstallmentPlan).not.toHaveBeenCalled()
+    expect(vi.mocked(actions.createTransaction).mock.calls[0]?.[0].planId).toBeUndefined()
+  })
+
   it('redirects to the installment view when validation catches an installment error', () => {
     const { container } = renderModal()
     // Navigate to installment step and configure an invalid plan
