@@ -27,11 +27,8 @@ interface ModalProps {
   closeMayPrompt?: boolean
 }
 
-function overlayVars(viewport: { top: number; height: number } | null, progress: number, exit: SheetExit | null) {
+function scrimVars(progress: number, exit: SheetExit | null): CSSProperties {
   return {
-    ...(viewport ? { top: viewport.top, height: viewport.height } : {}),
-    // Thins out as the sheet is pulled away, so the gesture reads as reversible
-    // progress rather than an on/off switch whose edge you cannot see.
     '--scrim': String(SCRIM_ALPHA * (1 - progress)),
     ...(exit
       ? {
@@ -41,6 +38,10 @@ function overlayVars(viewport: { top: number; height: number } | null, progress:
         }
       : {}),
   } as CSSProperties
+}
+
+function bandPosition(viewport: { top: number; height: number } | null): CSSProperties | undefined {
+  return viewport ? { top: viewport.top, height: viewport.height } : undefined
 }
 
 export function Modal({
@@ -83,39 +84,27 @@ export function Modal({
     .join(' ')
 
   return (
-    <div className={styles.overlay} onClick={onClose} role="presentation">
+    <div
+      className={leaving ? `${styles.overlay} ${styles.overlayClosing}` : styles.overlay}
+      style={scrimVars(progress, exit)}
+      onClick={() => requestClose()}
+      role="presentation"
+    >
       {/* The scrim covers the whole screen; only this band tracks the visible
           slice, so nothing behind the modal can show through above the sheet. */}
       <div
         className={styles.band}
-        style={viewport ? { top: viewport.top, height: viewport.height } : undefined}
-    <div
-      className={leaving ? `${styles.overlay} ${styles.overlayClosing}` : styles.overlay}
-      style={overlayVars(viewport, progress, exit)}
-      onClick={() => requestClose()}
-      role="presentation"
-    >
-      <div
-        ref={sheetRef}
-        className={sheetClasses}
-        style={!leaving && offset > 0 ? { transform: `translateY(${offset}px)` } : undefined}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        onClick={(e) => e.stopPropagation()}
+        style={bandPosition(viewport)}
       >
         <div
           ref={sheetRef}
-          className={`${styles.sheet}${isDragging ? ` ${styles.sheetDragging}` : ''}`}
-          style={offset > 0 ? { transform: `translateY(${offset}px)` } : undefined}
+          className={sheetClasses}
+          style={!leaving && offset > 0 ? { transform: `translateY(${offset}px)` } : undefined}
           role="dialog"
           aria-modal="true"
           aria-label={title}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Still `aria-hidden`: it is a drag target, but dragging is not something a
-              screen reader can do, and an unlabelled div announces nothing useful. The
-              Close button below is the equivalent that is actually reachable. */}
           <div className={styles.handle} aria-hidden {...sheetGrabProps} />
           <header className={styles.header} {...sheetGrabProps}>
             {onBack && (
@@ -129,29 +118,17 @@ export function Modal({
               </h2>
               {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
             </div>
-            <button type="button" onClick={onClose} aria-label="Close" className={`${styles.close} tapActive`}>
+            <button
+              type="button"
+              onClick={() => requestClose()}
+              aria-label="Close"
+              className={`${styles.close} tapActive`}
+            >
               <CloseIcon />
             </button>
           </header>
           <div className={styles.body}>{children}</div>
         </div>
-          )}
-          <div className={styles.titleBlock}>
-            <h2 ref={headingRef} tabIndex={-1}>
-              {title}
-            </h2>
-            {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
-          </div>
-          <button
-            type="button"
-            onClick={() => requestClose()}
-            aria-label="Close"
-            className={`${styles.close} tapActive`}
-          >
-            <CloseIcon />
-          </button>
-        </header>
-        <div className={styles.body}>{children}</div>
       </div>
     </div>
   )
