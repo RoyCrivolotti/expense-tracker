@@ -16,6 +16,28 @@ const GAP = 4
 const EDGE = 8
 const MIN_HEIGHT = 140
 
+/*
+ * Measures env(safe-area-inset-top) as a *used* value.
+ *
+ * A hidden element whose height *is* the inset can only report a used value,
+ * sidestepping WebKit's unreliable env() resolution in custom properties. Created
+ * once and left in the DOM for the page's lifetime — measuring it fresh on every
+ * update still picks up rotations.
+ */
+let safeAreaProbe: HTMLDivElement | null = null
+
+export function getSafeAreaProbe(): HTMLDivElement {
+  if (safeAreaProbe && safeAreaProbe.isConnected) return safeAreaProbe
+  safeAreaProbe = document.createElement('div')
+  safeAreaProbe.setAttribute('aria-hidden', 'true')
+  safeAreaProbe.dataset.safeAreaProbe = ''
+  safeAreaProbe.style.cssText =
+    'position:fixed;top:0;left:0;width:0;height:env(safe-area-inset-top,0px);' +
+    'visibility:hidden;pointer-events:none'
+  document.body.appendChild(safeAreaProbe)
+  return safeAreaProbe
+}
+
 
 /**
  * Below the trigger when it fits, otherwise directly above it, then clamped
@@ -94,31 +116,7 @@ export function usePopoverPosition(
     const popover = popoverRef.current
     if (!trigger || !popover) return
 
-    /*
-     * Measures env(safe-area-inset-top) as a *used* value.
-     *
-     * The app's own chrome keeps clear of the status bar, but a portalled
-     * `position: fixed` popover is placed in raw viewport coordinates and will
-     * happily render under the clock and the battery — which is what made this
-     * look broken on a phone.
-     *
-     * Reading a custom property that holds `env(...)` is not a reliable way to
-     * learn the inset: it hands back a token stream, and WebKit has a long
-     * history of not resolving env() in that position. A hidden element whose
-     * height *is* the inset sidesteps the question — it can only report a used
-     * value, and it is measured fresh on every update so a rotation is picked
-     * up without a listener of its own.
-     */
-    const probe = document.createElement('div')
-    probe.setAttribute('aria-hidden', 'true')
-    // Marked so it is identifiable in the DOM, and assertable in a test — jsdom
-    // drops the env() declaration as unparseable, so the style attribute cannot
-    // be matched on.
-    probe.dataset.safeAreaProbe = ''
-    probe.style.cssText =
-      'position:fixed;top:0;left:0;width:0;height:env(safe-area-inset-top,0px);' +
-      'visibility:hidden;pointer-events:none'
-    document.body.appendChild(probe)
+    const probe = getSafeAreaProbe()
 
     const update = () => {
       const t = triggerRef.current
@@ -175,7 +173,6 @@ export function usePopoverPosition(
     window.visualViewport?.addEventListener('resize', update)
     window.visualViewport?.addEventListener('scroll', update)
     return () => {
-      probe.remove()
       observer.disconnect()
       window.removeEventListener('resize', update)
       window.removeEventListener('scroll', update, true)
