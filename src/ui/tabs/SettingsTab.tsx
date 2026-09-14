@@ -21,11 +21,12 @@ import { AccountSetting } from '../settings/AccountSetting'
 import { AccessRequestsSetting } from '../settings/AccessRequestsSetting'
 import styles from './tabs.module.css'
 
-type SettingsView = 'system' | 'account' | 'data'
+type SettingsView = 'preferences' | 'setup' | 'account' | 'data'
 
 const VIEW_OPTIONS: { value: SettingsView; label: string }[] = [
-  { value: 'system', label: 'System' },
-  { value: 'account', label: 'Account preferences' },
+  { value: 'preferences', label: 'Preferences' },
+  { value: 'setup', label: 'Setup' },
+  { value: 'account', label: 'Account' },
   { value: 'data', label: 'Data' },
 ]
 
@@ -134,7 +135,7 @@ function OwnerPreferences({
   )
 }
 
-function SystemView({
+function PreferencesView({
   model,
   actions,
   theme,
@@ -167,24 +168,17 @@ function SystemView({
   )
 }
 
-function AccountView({
+function SetupView({
   model,
   actions,
-  ownerAccess,
-  accountEmail,
   onRunSetup,
 }: {
   model: ExpenseModel
   actions: ExpenseActions | undefined
-  ownerAccess: { pendingCount: number } | undefined
-  accountEmail: string | undefined
   onRunSetup: (() => void) | undefined
 }) {
   return (
     <>
-      {accountEmail ? <AccountSetting email={accountEmail} /> : null}
-      {ownerAccess ? <AccessRequestsSetting pendingCount={ownerAccess.pendingCount} /> : null}
-
       {actions && onRunSetup && (
         <SetupWizardEntry firstRun={needsOnboarding(model.dataset)} onRunSetup={onRunSetup} />
       )}
@@ -209,6 +203,21 @@ function AccountView({
           </Card>
         </>
       )}
+    </>
+  )
+}
+
+function AccountView({
+  ownerAccess,
+  accountEmail,
+}: {
+  ownerAccess: { pendingCount: number } | undefined
+  accountEmail: string | undefined
+}) {
+  return (
+    <>
+      {accountEmail ? <AccountSetting email={accountEmail} /> : null}
+      {ownerAccess ? <AccessRequestsSetting pendingCount={ownerAccess.pendingCount} /> : null}
     </>
   )
 }
@@ -253,7 +262,7 @@ export function SettingsTab({
   accountEmail,
   onRunSetup,
 }: SettingsTabProps) {
-  const [view, setView] = useState<SettingsView>('system')
+  const [view, setView] = useState<SettingsView>('preferences')
 
   return (
     <div className={styles.stack}>
@@ -267,18 +276,16 @@ export function SettingsTab({
         />
       </div>
 
-      {view === 'system' && (
-        <SystemView model={model} actions={actions} theme={theme} onThemeChange={onThemeChange} />
+      {view === 'preferences' && (
+        <PreferencesView model={model} actions={actions} theme={theme} onThemeChange={onThemeChange} />
+      )}
+
+      {view === 'setup' && (
+        <SetupView model={model} actions={actions} onRunSetup={onRunSetup} />
       )}
 
       {view === 'account' && (
-        <AccountView
-          model={model}
-          actions={actions}
-          ownerAccess={ownerAccess}
-          accountEmail={accountEmail}
-          onRunSetup={onRunSetup}
-        />
+        <AccountView ownerAccess={ownerAccess} accountEmail={accountEmail} />
       )}
 
       {view === 'data' && <DataView model={model} month={month} actions={actions} />}
