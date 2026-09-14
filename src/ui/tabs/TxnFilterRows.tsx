@@ -107,60 +107,49 @@ export function CategoryAccountRow({
   )
 }
 
-export function FlagRow({
+export function StatusTypeRow({
   flags,
   flagId,
-  selectMode,
   onFlag,
-}: {
-  flags: Flag[]
-  flagId: number | 'all' | 'none'
-  selectMode: boolean
-  onFlag: (value: number | 'all' | 'none') => void
-}) {
-  // An archived flag stays listed while something is still filtered to it, so
-  // the current selection never silently vanishes from its own control.
-  const options = flags.filter((f) => f.active || f.id === flagId)
-  return (
-    <div className={styles.selectRow}>
-      <select
-        className={flagId !== 'all' ? styles.activeSelect : undefined}
-        value={flagId}
-        onChange={(e) => {
-          const raw = e.target.value
-          onFlag(raw === 'all' || raw === 'none' ? raw : Number(raw))
-        }}
-        disabled={selectMode}
-        aria-label="Filter by flag"
-      >
-        <option value="all">All flags</option>
-        <option value="none">Unflagged</option>
-        {options.map((f) => (
-          <option key={f.id} value={f.id}>
-            {f.name}
-            {f.active ? '' : ' (archived)'}
-          </option>
-        ))}
-      </select>
-    </div>
-  )
-}
-
-export function StatusTypeRow({
   status,
   txnType,
   selectMode,
   onStatus,
   onTxnType,
 }: {
+  flags?: Flag[]
+  flagId?: number | 'all' | 'none'
+  onFlag?: (value: number | 'all' | 'none') => void
   status: StatusFilter
   txnType: TxnType | 'all'
   selectMode: boolean
   onStatus: (value: StatusFilter) => void
   onTxnType: (value: TxnType | 'all') => void
 }) {
+  const flagOptions = flags?.filter((f) => f.active || f.id === flagId)
   return (
     <div className={styles.selectRow}>
+      {flagOptions && flagOptions.length > 0 && flagId !== undefined && onFlag ? (
+        <select
+          className={flagId !== 'all' ? styles.activeSelect : undefined}
+          value={flagId}
+          onChange={(e) => {
+            const raw = e.target.value
+            onFlag(raw === 'all' || raw === 'none' ? raw : Number(raw))
+          }}
+          disabled={selectMode}
+          aria-label="Filter by flag"
+        >
+          <option value="all">All flags</option>
+          <option value="none">Unflagged</option>
+          {flagOptions.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.name}
+              {f.active ? '' : ' (archived)'}
+            </option>
+          ))}
+        </select>
+      ) : null}
       <select
         className={status !== 'all' ? styles.activeSelect : undefined}
         value={status}

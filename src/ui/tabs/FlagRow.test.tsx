@@ -1,21 +1,32 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import type { Flag } from '../../types'
 import { makeFlag } from '../../testing/factories'
-import { FlagRow } from './TxnFilterRows'
+import { StatusTypeRow } from './TxnFilterRows'
 
 const work = makeFlag({ id: 1, name: 'Work travel' })
 const archived = makeFlag({ id: 2, name: 'Old claim', active: false })
 
-function renderRow(props: Partial<Parameters<typeof FlagRow>[0]> = {}) {
+function renderRow(overrides: { flags?: Flag[]; flagId?: number | 'all' | 'none'; selectMode?: boolean } = {}) {
   const onFlag = vi.fn()
+  const { flags = [work], flagId = 'all' as const, selectMode = false } = overrides
   render(
-    <FlagRow flags={[work]} flagId="all" selectMode={false} onFlag={onFlag} {...props} />,
+    <StatusTypeRow
+      flags={flags}
+      flagId={flagId}
+      onFlag={onFlag}
+      status="all"
+      txnType="all"
+      selectMode={selectMode}
+      onStatus={vi.fn()}
+      onTxnType={vi.fn()}
+    />,
   )
   return { onFlag }
 }
 
-describe('FlagRow', () => {
+describe('StatusTypeRow flag select', () => {
   it('offers all flags, unflagged, and each active flag', () => {
     renderRow()
     const select = screen.getByRole('combobox', { name: 'Filter by flag' })
@@ -59,5 +70,12 @@ describe('FlagRow', () => {
     renderRow({ selectMode: true })
 
     expect(screen.getByRole('combobox', { name: 'Filter by flag' })).toBeDisabled()
+  })
+
+  it('omits the flag select when flags array is empty', () => {
+    renderRow({ flags: [] })
+
+    expect(screen.queryByRole('combobox', { name: 'Filter by flag' })).not.toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'All statuses' })).toBeInTheDocument()
   })
 })
