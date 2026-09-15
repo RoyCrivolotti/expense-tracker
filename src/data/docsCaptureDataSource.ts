@@ -136,6 +136,11 @@ function demoFlags(stored: StoredTransaction[]): {
         // Matches what it settles, so the Past reports row reconciles.
         amountCents: settled.amountCents,
         cancelled: false,
+        // The stamp the settle writes (migration 0021). Set to what the one covered
+        // row actually comes to, so the demo report shows as unchanged rather than
+        // as one recorded before snapshots existed.
+        reportCount: 1,
+        reportCoveredCents: settled.amountCents,
       },
     ],
   }
