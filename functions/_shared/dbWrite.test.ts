@@ -17,8 +17,11 @@ function envWith(first: unknown): Env {
 function envForBulkUpdate(opts: {
   ownedAccount?: boolean
   ownedCategory?: boolean
+  ownedSettledBy?: boolean
+  /** What the UPDATE's `.run()` reports as `meta.changes`. */
+  changes?: number
 }): Env {
-  const { ownedAccount = true, ownedCategory = true } = opts
+  const { ownedAccount = true, ownedCategory = true, ownedSettledBy = true, changes = 1 } = opts
   const txnRow = {
     id: 1,
     owner: 'a@b.com',
@@ -46,8 +49,13 @@ function envForBulkUpdate(opts: {
           if (sql.includes('categories') && sql.includes('SELECT 1')) {
             return { first: vi.fn().mockResolvedValue(ownedCategory ? { ok: 1 } : null) }
           }
+          // assertOwnedTransaction's check for a settledBy foreign key — same
+          // shape as the accounts/categories checks above, against `transactions`.
+          if (sql.includes('transactions') && sql.includes('SELECT 1')) {
+            return { first: vi.fn().mockResolvedValue(ownedSettledBy ? { ok: 1 } : null) }
+          }
           if (sql.includes('UPDATE transactions')) {
-            return { run: vi.fn().mockResolvedValue({ meta: { changes: 1 } }) }
+            return { run: vi.fn().mockResolvedValue({ meta: { changes } }) }
           }
           if (sql.includes('SELECT * FROM transactions')) {
             return { all: vi.fn().mockResolvedValue({ results: [txnRow] }) }
@@ -60,6 +68,56 @@ function envForBulkUpdate(opts: {
           }
           return { first: vi.fn().mockResolvedValue(null) }
         },
+      }),
+    },
+  } as unknown as Env
+}
+
+/**
+ * The ownership check and the post-failure existence check issue identical SQL, so
+ * this mock tells them apart by the bound id rather than by the statement text.
+ */
+function envForSettleGuard(opts: {
+  targetId: number
+  settledById: number
+  updateMatches: boolean
+  targetExists?: boolean
+}): Env {
+  const { targetId, settledById, updateMatches, targetExists = false } = opts
+  const txnRow = {
+    id: targetId,
+    owner: 'a@b.com',
+    date: '2026-01-01',
+    budget_month: '2026-01',
+    description: 'Test',
+    account_id: 1,
+    category_id: 2,
+    type: 'expense',
+    amount_cents: -1000,
+    cancelled: 0,
+    notes: null,
+    plan_id: null,
+    installment_index: null,
+    settled_by: settledById,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  }
+  return {
+    DB: {
+      prepare: (sql: string) => ({
+        bind: (...args: unknown[]) => ({
+          first: vi.fn().mockImplementation(async () => {
+            if (sql.startsWith('UPDATE transactions')) {
+              return updateMatches ? txnRow : null
+            }
+            if (sql === 'SELECT 1 AS ok FROM transactions WHERE id = ? AND owner = ?') {
+              const [checkedId] = args
+              if (checkedId === settledById) return { ok: 1 }
+              return targetExists ? { ok: 1 } : null
+            }
+            return null
+          }),
+        }),
       }),
     },
   } as unknown as Env
@@ -139,5 +197,73 @@ describe('bulkUpdateTransactions', () => {
     expect(result).toHaveLength(1)
     expect(result[0]!.id).toBe(1)
     expect(result[0]!.status).toBe('posted')
+  })
+})
+
+describe('updateTransaction settledBy guard', () => {
+  it('rejects a settledBy that is not owned', async () => {
+    await expect(
+      updateTransaction(envWith(null), 'a@b.com', 5, { settledBy: 99 }),
+    ).rejects.toMatchObject({ status: 400, message: 'Invalid settledBy' })
+  })
+
+  it('throws 409 when the guard blocks the update but the row does exist', async () => {
+    const env = envForSettleGuard({
+      targetId: 5,
+      settledById: 50,
+      updateMatches: false,
+      targetExists: true,
+    })
+    await expect(
+      updateTransaction(env, 'a@b.com', 5, { settledBy: 50 }),
+    ).rejects.toMatchObject({
+      status: 409,
+      message: 'Transaction is already settled by another reimbursement',
+    })
+  })
+
+  it('throws 404 when the row genuinely does not exist — distinct from the 409 guard case', async () => {
+    const env = envForSettleGuard({
+      targetId: 5,
+      settledById: 50,
+      updateMatches: false,
+      targetExists: false,
+    })
+    await expect(
+      updateTransaction(env, 'a@b.com', 5, { settledBy: 50 }),
+    ).rejects.toMatchObject({ status: 404, message: 'Transaction not found' })
+  })
+})
+
+describe('bulkUpdateTransactions settledBy guard', () => {
+  it('rejects a settledBy that is not owned', async () => {
+    await expect(
+      bulkUpdateTransactions(envForBulkUpdate({ ownedSettledBy: false }), 'a@b.com', [1], {
+        settledBy: 99,
+      }),
+    ).rejects.toMatchObject({ status: 400, message: 'Invalid settledBy' })
+  })
+
+  it('throws 409 when fewer rows matched than requested while setting settledBy', async () => {
+    // Two ids requested, but the UPDATE (guarded by settled_by IS NULL OR = ?)
+    // only matched one — this must be caught by the row-count check, not papered
+    // over by the SELECT that follows, which re-fetches by id regardless.
+    await expect(
+      bulkUpdateTransactions(envForBulkUpdate({ changes: 1 }), 'a@b.com', [1, 2], {
+        settledBy: 50,
+      }),
+    ).rejects.toMatchObject({
+      status: 409,
+      message: 'Some of those transactions are already settled by another reimbursement',
+    })
+  })
+
+  it('does not apply the row-count check to an ordinary bulk edit without settledBy', async () => {
+    // Same partial match (1 changed of 2 requested), but with no settledBy in
+    // the patch — this must still resolve, as it did before the fix.
+    const result = await bulkUpdateTransactions(envForBulkUpdate({ changes: 1 }), 'a@b.com', [1, 2], {
+      categoryId: 2,
+    })
+    expect(result).toHaveLength(1)
   })
 })

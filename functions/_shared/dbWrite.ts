@@ -19,6 +19,7 @@ import {
   assertOwnedCategory,
   assertOwnedFlag,
   assertOwnedPlan,
+  assertOwnedTransaction,
 } from './ownership'
 
 async function deriveOne(env: Env, owner: string, stored: StoredTransaction): Promise<Transaction> {
@@ -173,6 +174,27 @@ async function planLinkColumns(
 /** The patchable shape: NewTransaction's fields plus the settlement link. */
 type TxnPatch = Partial<NewTransaction> & { settledBy?: number | null }
 
+/**
+ * The re-settle guard, shared by both update paths.
+ *
+ * Only applied when *setting* a settlement. Written as a conditional clause rather
+ * than `settled_by IS NULL OR ? IS NULL OR settled_by = ?` because binding NULL into
+ * an `=` comparison yields NULL, not true — SQL's three-valued logic would make a
+ * legitimate clear-the-link patch block itself.
+ */
+function settleGuard(settledBy: number | null | undefined): { clause: string; values: number[] } {
+  if (settledBy == null) return { clause: '', values: [] }
+  return { clause: ' AND (settled_by IS NULL OR settled_by = ?)', values: [settledBy] }
+}
+
+/** Every foreign key a transaction patch can carry must belong to the same owner. */
+async function assertPatchOwnership(env: Env, owner: string, patch: TxnPatch): Promise<void> {
+  if (patch.accountId != null) await assertOwnedAccount(env, owner, patch.accountId)
+  if (patch.categoryId != null) await assertOwnedCategory(env, owner, patch.categoryId)
+  if (patch.flagId != null) await assertOwnedFlag(env, owner, patch.flagId)
+  if (patch.settledBy != null) await assertOwnedTransaction(env, owner, patch.settledBy)
+}
+
 export async function updateTransaction(
   env: Env,
   owner: string,
@@ -182,19 +204,29 @@ export async function updateTransaction(
   const keys = (Object.keys(patch) as PatchableTxnKey[]).filter((k) => k in COLUMN)
   const link = await planLinkColumns(env, owner, id, patch)
   if (keys.length === 0 && link.sets.length === 0) throw new HttpError(400, 'Empty patch')
-  if (patch.accountId != null) await assertOwnedAccount(env, owner, patch.accountId)
-  if (patch.categoryId != null) await assertOwnedCategory(env, owner, patch.categoryId)
-  if (patch.flagId != null) await assertOwnedFlag(env, owner, patch.flagId)
+  await assertPatchOwnership(env, owner, patch)
   const sets = keys
     .map((k) => `${COLUMN[k]} = ?`)
     .concat(link.sets, "updated_at = datetime('now')")
   const values = keys.map((k) => patchValue(k, patch[k])).concat(link.values)
+  const guard = settleGuard(patch.settledBy)
   const row = await env.DB.prepare(
-    `UPDATE transactions SET ${sets.join(', ')} WHERE id = ? AND owner = ? RETURNING *`,
+    `UPDATE transactions SET ${sets.join(', ')} WHERE id = ? AND owner = ?${guard.clause} RETURNING *`,
   )
-    .bind(...values, id, owner)
+    .bind(...values, id, owner, ...guard.values)
     .first<TxnRow>()
-  if (!row) throw new HttpError(404, 'Transaction not found')
+  if (!row) {
+    // The guard and a genuinely missing row both return zero rows. Tell them apart
+    // rather than reporting "not found" for a row the caller can see.
+    if (patch.settledBy != null) {
+      const exists = await env.DB
+        .prepare('SELECT 1 AS ok FROM transactions WHERE id = ? AND owner = ?')
+        .bind(id, owner)
+        .first<{ ok: number }>()
+      if (exists) throw new HttpError(409, 'Transaction is already settled by another reimbursement')
+    }
+    throw new HttpError(404, 'Transaction not found')
+  }
   return deriveOne(env, owner, toStoredTxn(row))
 }
 
@@ -267,20 +299,24 @@ export async function bulkUpdateTransactions(
   patch: BulkTransactionPatch,
 ): Promise<Transaction[]> {
   if (ids.length === 0) return []
-  if (patch.accountId != null) await assertOwnedAccount(env, owner, patch.accountId)
-  if (patch.categoryId != null) await assertOwnedCategory(env, owner, patch.categoryId)
-  if (patch.flagId != null) await assertOwnedFlag(env, owner, patch.flagId)
+  await assertPatchOwnership(env, owner, patch)
   const keys = (Object.keys(patch) as PatchableTxnKey[]).filter((k) => k in COLUMN)
   if (keys.length === 0) throw new HttpError(400, 'Empty patch')
   const sets = keys.map((k) => `${COLUMN[k]} = ?`).concat("updated_at = datetime('now')")
   const patchRec = patch as Record<string, unknown>
   const values = keys.map((k) => patchValue(k, patchRec[k]))
   const placeholders = ids.map(() => '?').join(', ')
-  await env.DB.prepare(
-    `UPDATE transactions SET ${sets.join(', ')} WHERE owner = ? AND id IN (${placeholders})`,
+  const guard = settleGuard(patch.settledBy)
+  const updated = await env.DB.prepare(
+    `UPDATE transactions SET ${sets.join(', ')} WHERE owner = ? AND id IN (${placeholders})${guard.clause}`,
   )
-    .bind(...values, owner, ...ids)
+    .bind(...values, owner, ...ids, ...guard.values)
     .run()
+  // The SELECT below re-fetches by id whether or not the UPDATE matched, so a blocked
+  // row returns with its old settled_by and reads as success. Check the count instead.
+  if (patch.settledBy != null && (updated?.meta?.changes ?? 0) < ids.length) {
+    throw new HttpError(409, 'Some of those transactions are already settled by another reimbursement')
+  }
   const { results } = await env.DB.prepare(
     `SELECT * FROM transactions WHERE owner = ? AND id IN (${placeholders})`,
   )

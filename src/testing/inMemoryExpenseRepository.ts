@@ -169,6 +169,25 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
     return plan
   }
 
+  /** Mirrors assertOwnedTransaction in functions/_shared/ownership.ts. */
+  function assertOwnedTransactionId(store: OwnerStore, transactionId: number): void {
+    if (!store.transactions.some((t) => t.id === transactionId)) {
+      throw new RepoHttpError(400, 'Invalid settledBy')
+    }
+  }
+
+  /**
+   * Mirrors the `settled_by IS NULL OR settled_by = ?` guard the D1 adapter puts on
+   * its UPDATE. Without it this double accepts a second payment silently overwriting
+   * the first, and the reimbursement integration suite — which runs only against this
+   * double — would pass while production rejects the same input.
+   */
+  function assertNotSettledElsewhere(stored: StoredTransaction, settledBy: number): void {
+    if (stored.settledBy != null && stored.settledBy !== settledBy) {
+      throw new RepoHttpError(409, 'Transaction is already settled by another reimbursement')
+    }
+  }
+
   function createCategoryInStore(store: OwnerStore, input: NewCategory): Category {
     const category: Category = {
       id: nextId(store.categories),
@@ -459,6 +478,14 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       if (patch.categoryId != null) assertOwnedCategory(store, patch.categoryId)
       if (patch.flagId != null) assertOwnedFlag(store, patch.flagId)
       const idSet = new Set(ids)
+      if (patch.settledBy != null) {
+        assertOwnedTransactionId(store, patch.settledBy)
+        // Check every target before mutating any, so a conflict cannot leave half
+        // the selection settled — the D1 path gets this from a single UPDATE.
+        for (const stored of store.transactions) {
+          if (idSet.has(stored.id)) assertNotSettledElsewhere(stored, patch.settledBy)
+        }
+      }
       const { flagId, settledBy, ...rest } = patch
       const updated: Transaction[] = []
       store.transactions = store.transactions.map((stored) => {

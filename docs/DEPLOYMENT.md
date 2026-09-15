@@ -150,7 +150,9 @@ Optional Pages env vars override the policy JSON: `RECEIPT_MAX_FILE_BYTES`, `REC
 
 > **Receipts are not covered by the daily backup.** The D1 snapshot carries attachment *metadata*, so a restore knows which receipts existed — but the bytes are not copied. Base64 in the JSON snapshot would add ~33% and immediately trip the 5 MiB snapshot alert, and R2→R2 copying would multiply Class A ops for no protection against the risk the backup exists for (D1 corruption or a bad migration). The real receipt-loss risk is an accidental bucket delete, which R2 object versioning addresses properly. Enable it on the bucket if the receipts matter.
 
-**Revoking a user** deletes their attachment rows via `purgeOwnerExpenseData`. The R2 objects under their `{owner-email}/` prefix are *not* removed by that batch — an R2 delete cannot join a D1 batch. Sweep them separately with `npx wrangler r2 object delete` against that prefix.
+**Revoking a user** deletes their receipt bytes from R2 *and* their rows from D1, via `purgeOwnerData` — in that order, because the `transaction_attachments` rows are the only record of which objects are theirs, and the D1 batch deletes those rows. The R2 half is best-effort: if it fails the revoke still completes (leaving the rows and their access in place would be worse) and logs `revoke: receipt bytes for <email> were not deleted`.
+
+Sweep manually with `npx wrangler r2 object delete` against the `{owner-email}/` prefix only if you see that warning, or to catch objects no row ever named (an upload whose row insert failed).
 
 ## Scheduled backups (R2)
 

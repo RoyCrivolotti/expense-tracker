@@ -7,6 +7,7 @@ import {
   validateBulkTransactions,
   validateBulkUpdatePatch,
   validateNewTransaction,
+  validateTransactionPatch,
 } from './transactionService'
 import { inMemoryExpenseRepository } from '../../testing/inMemoryExpenseRepository'
 import type { ExpenseRepositorySeed } from '../../testing/inMemoryExpenseRepository'
@@ -183,6 +184,33 @@ async function seedTxn(repo: ReturnType<typeof planRepo>, budgetMonth: string) {
     cancelled: false,
   })
 }
+
+describe('validateTransactionPatch', () => {
+  it('accepts every field the edit form really sends', () => {
+    const patch = {
+      description: 'Updated description',
+      amountCents: 2500,
+      cancelled: true,
+      notes: 'a note',
+      flagId: 3,
+    }
+    expect(validateTransactionPatch(patch)).toEqual(patch)
+  })
+
+  it('accepts planId and installmentIndex together', () => {
+    const patch = { planId: 7, installmentIndex: 3 }
+    expect(validateTransactionPatch(patch)).toEqual(patch)
+  })
+
+  it('rejects settledBy specifically — excluded outright, not merely ownership-checked', () => {
+    expect(() => validateTransactionPatch({ settledBy: 5 })).toThrow(/not patchable/)
+    expect(() => validateTransactionPatch({ settledBy: 5 })).toThrow('Field "settledBy" is not patchable')
+  })
+
+  it('rejects an arbitrary unknown key', () => {
+    expect(() => validateTransactionPatch({ bogus: 'x' })).toThrow('Field "bogus" is not patchable')
+  })
+})
 
 describe('transactionService plan linking on update', () => {
   it('links an existing transaction, assigning the start index', async () => {

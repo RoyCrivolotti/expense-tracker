@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { assertOwnedAccount, assertOwnedCategory } from './ownership'
+import { assertOwnedAccount, assertOwnedCategory, assertOwnedTransaction } from './ownership'
 import { HttpError } from './http'
 import type { Env } from './env'
 
@@ -28,5 +28,18 @@ describe('ownership guards', () => {
     await expect(assertOwnedCategory(envWith(undefined), 'a@b.com', 9)).rejects.toBeInstanceOf(
       HttpError,
     )
+  })
+
+  it('assertOwnedTransaction passes when row exists', async () => {
+    await expect(
+      assertOwnedTransaction(envWith({ ok: 1 }), 'a@b.com', 7),
+    ).resolves.toBeUndefined()
+  })
+
+  it('assertOwnedTransaction rejects a foreign or missing id', async () => {
+    await expect(assertOwnedTransaction(envWith(null), 'a@b.com', 7)).rejects.toMatchObject({
+      status: 400,
+      message: 'Invalid settledBy',
+    })
   })
 })

@@ -252,6 +252,52 @@ describe('a claim entered through bulk add', () => {
  * stays in Past reports either way — that list is built from `settledBy` — so
  * the report behind it has to still open.
  */
+/**
+ * The ownership and conflict guards on settledBy, exercised against the
+ * in-memory double directly (this is the only suite that runs against it).
+ * Mirrors the D1 adapter's assertOwnedTransaction + settled-elsewhere checks
+ * in functions/_shared/dbWrite.ts.
+ */
+describe('settledBy ownership and conflict guards', () => {
+  it('rejects a settledBy that does not belong to this owner', async () => {
+    const repo = repoWithClaim()
+    const flight = await repo.insertTransaction(OWNER, line('Flight', 10_000))
+
+    await expect(
+      bulkUpdateTransactions(repo, OWNER, [flight.id], { settledBy: 9999 }),
+    ).rejects.toMatchObject({ status: 400, message: 'Invalid settledBy' })
+  })
+
+  it('rejects settling a row already settled by a different payment, leaving the whole selection untouched', async () => {
+    const repo = repoWithClaim()
+    const flight = await repo.insertTransaction(OWNER, line('Flight', 10_000))
+    const hotel = await repo.insertTransaction(OWNER, line('Hotel', 4_000))
+    const firstPayment = await repo.insertTransaction(OWNER, reimbursement(10_000))
+    await bulkUpdateTransactions(repo, OWNER, [flight.id], { settledBy: firstPayment.id })
+
+    const secondPayment = await repo.insertTransaction(OWNER, reimbursement(4_000))
+    // hotel is free, but flight is already settled by the first payment — the
+    // whole batch must be rejected, not half-applied.
+    await expect(
+      bulkUpdateTransactions(repo, OWNER, [flight.id, hotel.id], {
+        settledBy: secondPayment.id,
+      }),
+    ).rejects.toMatchObject({
+      status: 409,
+      message: 'Transaction is already settled by another reimbursement',
+    })
+
+    const dataset = await repo.loadDataset(OWNER)
+    const flightAfter = dataset.transactions.find((t) => t.id === flight.id)
+    const hotelAfter = dataset.transactions.find((t) => t.id === hotel.id)
+    // Neither row in the selection was mutated: flight is still settled by the
+    // first payment, and hotel — which on its own would have been free to
+    // settle — was not settled by the second either.
+    expect(flightAfter?.settledBy).toBe(firstPayment.id)
+    expect(hotelAfter?.settledBy).toBeUndefined()
+  })
+})
+
 describe('a past report whose flag has been deleted', () => {
   it('still rebuilds, headed by the name the payment was given', async () => {
     const repo = repoWithClaim()
