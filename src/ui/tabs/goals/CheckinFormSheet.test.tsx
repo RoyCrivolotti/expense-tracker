@@ -1,10 +1,11 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 vi.mock('../../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: () => true }))
 
 import { CheckinFormSheet } from './CheckinFormSheet'
+import { todayIso } from '../../components/transactionFormState'
 import type { ExpenseActions } from '../../actions'
 import type { WealthAccount } from '../../../types'
 
@@ -41,7 +42,7 @@ describe('CheckinFormSheet', () => {
   it('caps the date field at today so a check-in cannot be future-dated', () => {
     render(<CheckinFormSheet accounts={[makeAccount(1)]} actions={makeActions()} />)
     const dateInput = screen.getByLabelText<HTMLInputElement>(/date/i)
-    expect(dateInput.max).toBe(new Date().toISOString().slice(0, 10))
+    expect(dateInput.max).toBe(todayIso())
   })
 
   it('calls createWealthCheckin when form is submitted', async () => {
@@ -72,5 +73,30 @@ describe('CheckinFormSheet', () => {
   it('renders note field', () => {
     render(<CheckinFormSheet accounts={[makeAccount(1)]} actions={makeActions()} />)
     expect(screen.getByPlaceholderText(/market correction/i)).toBeInTheDocument()
+  })
+})
+
+describe('CheckinFormSheet east of UTC', () => {
+  // 08:00 on the 16th in Auckland is still the 15th in UTC. A UTC-based "today" caps the
+  // field a day short there, so the user cannot log the day they are actually living in.
+  const original = process.env.TZ
+
+  beforeAll(() => {
+    process.env.TZ = 'Pacific/Auckland'
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-09-15T20:00:00Z'))
+  })
+
+  afterAll(() => {
+    vi.useRealTimers()
+    process.env.TZ = original
+  })
+
+  it('defaults to and caps at the local date, not the UTC one', () => {
+    render(<CheckinFormSheet accounts={[makeAccount(1)]} actions={makeActions()} />)
+    const dateInput = screen.getByLabelText<HTMLInputElement>(/date/i)
+
+    expect(dateInput.value).toBe('2026-09-16')
+    expect(dateInput.max).toBe('2026-09-16')
   })
 })
