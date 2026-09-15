@@ -11,7 +11,15 @@
  */
 import { execFileSync } from 'node:child_process'
 
-const VISUAL_FILE_RE = /^src\/ui\/.*|\.module\.css$/
+const VISUAL_FILE_RE = /^(?:src\/ui\/.*|.*\.module\.css)$/
+
+/**
+ * A test renders nothing anyone ships, so a before/after of it is a picture of
+ * nothing. Requiring one anyway teaches people to attach whatever image is to hand,
+ * which costs more than the check gains: a screenshot nobody chose is a screenshot
+ * nobody reads. Adding a test under src/ui is what surfaced this.
+ */
+const TEST_FILE_RE = /\.test\.tsx?$/
 
 function usageError(message) {
   console.error(`check-pr-screenshots: ${message}`)
@@ -30,7 +38,7 @@ const changedFiles = execFileSync('git', ['diff', '--name-only', `${base}...HEAD
   .split('\n')
   .filter(Boolean)
 
-const visualFiles = changedFiles.filter((f) => VISUAL_FILE_RE.test(f))
+const visualFiles = changedFiles.filter((f) => VISUAL_FILE_RE.test(f) && !TEST_FILE_RE.test(f))
 if (visualFiles.length === 0) {
   console.log('check-pr-screenshots: no UI-facing files changed, nothing to require.')
   process.exit(0)
