@@ -1,8 +1,10 @@
 /**
- * Read-only dev data source: parses the workbook CSV bundled at build time
- * (copied into gitignored content/ by scripts/prep-expenses-data.mjs).
+ * Read-only dev data source, parsed from the committed demo fixture.
+ *
+ * Import the fixture directly. Copying it to a writable location first would make
+ * "local dev serving real data" representable again.
  */
-import csvText from '../../content/expenses_v3.csv?raw'
+import csvText from '../../fixtures/demo-expenses.csv?raw'
 import type { ExpenseDataset } from '../types'
 import { parseWorkbookCsv } from './parseWorkbookCsv'
 import type { ExpenseDataSource } from './dataSource'

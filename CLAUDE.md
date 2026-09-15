@@ -102,8 +102,8 @@ That is enough for `npm run dev`, `npm test` and `npm run verify`. Specifically:
 
 - **`npm run verify` needs none of the gitignored config files.** CI proves it — `verify.yml` is just
   checkout → `npm ci` → `npm run verify`, with no secret injection.
-- **`content/` regenerates itself.** `prep:data` runs inside both `dev` and `build` and falls back to the
-  committed `fixtures/demo-expenses.csv`.
+- **Dev data needs no setup.** `src/data/csvDataSource.ts` imports the committed
+  `fixtures/demo-expenses.csv` directly — there is nothing to generate or copy.
 - **The `functions/domain` and `functions/config` symlinks are tracked** (mode `120000`, relative), so
   `git worktree add` recreates them correctly.
 
@@ -316,51 +316,39 @@ guide, but that gives up edge-to-edge rendering, and the installed-PWA path need
 
 ## Real data never reaches the repo
 
-The source is public. The workbook export that `FINANCIAL_REVIEW_DIR` points at lives in
-a private repo and is real financial data. It has leaked once already — roughly 48
-screenshots rendered against it were committed and public for months before an audit
-caught them. The history was rewritten to purge them. Read this section before taking
-any screenshot.
+The source is public. The workbook export that `FINANCIAL_REVIEW_DIR` points at is real
+financial data, and it has leaked once — roughly 48 screenshots rendered against it were
+committed and public for months before an audit caught them.
 
-Nothing in this repo should hardcode that location, name the private repo, or default to
-it when the variable is unset. Two places used to do exactly that and have been changed;
-if you add a third, the fallback is what will bite, not the variable.
+**The rule: the app has no code path to anything but `fixtures/demo-expenses.csv`.**
 
-**The rule: the app only ever runs on `fixtures/demo-expenses.csv`.**
+`src/data/csvDataSource.ts` imports that fixture directly. Production uses the D1-backed
+API (`resolveSource` only loads the CSV module under `import.meta.env.DEV`, so a
+production build eliminates the import). There is no third option, and no file on disk
+that could hold something else.
 
-- `scripts/prep-expenses-data.mjs` **has no code path that writes real data**. It copies
-  the demo fixture into gitignored `content/` and does nothing else. That is the whole
-  defence — there is nothing to detect, because real data cannot get in.
-- **`build` does not call it.** `csvDataSource` imports the CSV with `?raw`, but
-  `resolveSource` only loads that module under `import.meta.env.DEV`, so a production
-  build eliminates the import before resolving it. `npm run build` and
-  `npm run build:staging` both succeed with no `content/` directory at all — verified.
-  Only `npm run dev` needs the file, and `capture:screenshots` gets it via its own dev
-  server.
-- The real export is still read by `scripts/gen-seed-sql.ts` for seeding D1. That needs
-  `FINANCIAL_REVIEW_DIR` set explicitly and writes its SQL to `/tmp`, outside the repo.
-  Do not add a second reader without the same care.
-- **A pre-commit hook refuses** to commit anything matching `docs/**` or
-  `.github/screenshots/**` with an image extension while `content/expenses_v3.csv`
-  differs from the demo fixture. It is enabled by `core.hooksPath=.githooks`, set by
-  `npm run setup:hooks` and by `postinstall`, so it covers every worktree sharing this
-  `.git`. Same check runs inside `npm run verify`.
-- `npm run capture:screenshots` starts its own dev server, so the fixture is in place
-  whatever was there before.
-- `npm run audit:screenshots` OCRs every committed documentation image and compares what
-  is legible against the real export, reporting file names and match counts only. macOS
-  Vision, or `tesseract` if installed. Run it after any bulk screenshot change.
+That last part is the whole fix, and it is worth understanding why. Local dev used to
+read a gitignored `content/expenses_v3.csv` that a build step copied the fixture into.
+That copy was the only reason a "real data on disk" state could exist — and the leak
+happened when `npm run verify` ran `build`, which rewrote `content/` from the real
+export *underneath an already-running dev server*. Screenshots taken afterwards looked
+completely normal and were real. Nothing in the workflow was visibly wrong at any point.
 
-**How the leak actually happened**, because the shape matters more than the rule: the
-dev server was started with `DOCS_CAPTURE=1` (correct), then `npm run verify` ran — and
-`verify` calls `build`, which called `prep:data`, which at the time preferred the real
-export. That rewrote `content/` *underneath the running server*. Screenshots taken
-afterwards looked completely normal and were real. Nothing in the workflow was visibly
-wrong at any point, which is why the fix is to delete the capability rather than to
-watch for its misuse.
+A pre-commit hook, a hash manifest and an OCR sweep were all built to detect that state.
+They are gone, along with `content/` and the copy step, because the state they watched
+for can no longer occur. **If you are tempted to add a checker here, check first whether
+the thing it would detect is still representable.**
 
-`scripts/check-pii.mjs` does **not** cover this. It skips images by design, so
-"PII check OK" says nothing about screenshots.
+The real export keeps exactly one reader: `scripts/gen-seed-sql.ts`, for seeding D1. It
+requires `FINANCIAL_REVIEW_DIR` explicitly and writes its SQL to `/tmp`, outside the
+repo. Do not add a second reader, hardcode that location, name the private repo, or
+default to it when the variable is unset — `scripts/check-pii.mjs` fails the build on
+the last three.
+
+**What is still not guarded:** a screenshot taken of the *deployed* app, on a phone or a
+logged-in browser, and dropped into `docs/`. No tooling here catches that, and the
+previous tooling did not either. `check-pii.mjs` reads text and skips images by design,
+so "PII check OK" says nothing about what an image contains.
 
 ## Pull request conventions
 

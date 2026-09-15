@@ -83,4 +83,4 @@ full PR workflow.
 
 ## Local parity tests
 
-`src/domain/data/parseWorkbookCsv.parity.test.ts` runs only when `PARITY_TESTS=1` **and** `FINANCIAL_REVIEW_DIR` (or `content/expenses_v3.csv`) is present. CI does not set either, so parity is optional locally.
+`src/domain/data/parseWorkbookCsv.parity.test.ts` runs only when `PARITY_TESTS=1` **and** `FINANCIAL_REVIEW_DIR` points at the private workbook export. CI sets neither, so parity is optional and local-only.

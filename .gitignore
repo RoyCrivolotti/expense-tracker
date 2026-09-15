@@ -2,6 +2,9 @@ node_modules/
 dist/
 coverage/
 .env
+# Nothing writes this any more (dev reads fixtures/ directly). Kept so a leftover
+# copy in an existing worktree stays un-committable rather than showing up as
+# untracked — it may still hold real data from before that change.
 content/
 samples/
 reports/

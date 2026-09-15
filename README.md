@@ -65,7 +65,7 @@ npm install
 npm run dev
 ```
 
-Opens at `http://localhost:5173` with **read-only CSV data** from `fixtures/demo-expenses.csv` (copied to gitignored `content/` on start). Production uses the D1-backed API.
+Opens at `http://localhost:5173` with **read-only CSV data** imported straight from `fixtures/demo-expenses.csv`. There is no path to real data in local dev. Production uses the D1-backed API.
 
 To point dev at your own workbook export, set `FINANCIAL_REVIEW_DIR` to a directory containing `data/expenses_v3.csv` before `npm run dev`.
 
