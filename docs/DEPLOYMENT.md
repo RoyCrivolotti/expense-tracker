@@ -107,9 +107,20 @@ individually, so it walks straight past the very error that was doing the protec
 it at `0003` or `0012`.**
 
 SQLite has no `ADD COLUMN IF NOT EXISTS`, so idempotent SQL cannot fix this on its own — 12 of the 20
-files carry an `ADD COLUMN`. Not running the file at all is the fix. (`IF NOT EXISTS` was added to
-every bare `CREATE TABLE`/`CREATE INDEX` anyway, so a retry between "applied" and "recorded" is a
-no-op rather than an error.)
+files carry an `ADD COLUMN`. Not running the file at all is the fix.
+
+Two things make that safer rather than replacing it:
+
+- `IF NOT EXISTS` on every bare `CREATE TABLE`/`CREATE INDEX`, so a retry between "applied" and
+  "recorded" is a no-op rather than an error.
+- **Backfills are scoped to the rows they mean.** `0003` and `0012` said `UPDATE … SET owner = …`
+  and `SET plan_start_date = …` with no `WHERE`, which is not just non-idempotent but wrong on its
+  own terms: each means "the rows that do not have one yet". Both now carry
+  `WHERE owner = ''` / `WHERE plan_start_date IS NULL` — identical on a first run, since the `ALTER`
+  immediately above sets that state, and a no-op instead of a tenancy wipe on a re-run.
+
+**Write new backfills scoped.** Table rebuilds (`DROP TABLE` + rename) cannot be made safe this way,
+which is why the tracking table, not idempotency, carries the guarantee.
 
 **One-time seeding, for the two databases that are already fully migrated.** Deliberately not a
 migration — a brand-new database must genuinely execute `0001`–`0019`. Apply `0020` first, then, once
