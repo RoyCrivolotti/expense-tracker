@@ -87,7 +87,17 @@ If Workers Scripts Edit is missing, CI deploy of the backup cron worker fails un
 npx wrangler d1 execute roy-expenses --remote --file=migrations/NNNN_name.sql
 ```
 
-Apply through `0020_migrations_table.sql` on production.
+Apply through `0021_report_snapshot.sql` on production.
+
+**Check what a database actually has before trusting this line.** It has been wrong: on
+2026-09-15 production turned out to have no `_migrations` table at all, `0020` never having
+been applied there, while this section read as though it had. The record is the thing to
+query, and the schema is the thing that settles it:
+
+```bash
+npx wrangler d1 execute <db> --remote --command="SELECT name FROM _migrations ORDER BY name"
+npx wrangler d1 execute <db> --remote --command="SELECT name FROM pragma_table_info('transactions') WHERE name IN ('settled_by','report_count')"
+```
 
 ### Migration tracking (read before re-running anything)
 
@@ -107,9 +117,20 @@ individually, so it walks straight past the very error that was doing the protec
 it at `0003` or `0012`.**
 
 SQLite has no `ADD COLUMN IF NOT EXISTS`, so idempotent SQL cannot fix this on its own — 12 of the 20
-files carry an `ADD COLUMN`. Not running the file at all is the fix. (`IF NOT EXISTS` was added to
-every bare `CREATE TABLE`/`CREATE INDEX` anyway, so a retry between "applied" and "recorded" is a
-no-op rather than an error.)
+files carry an `ADD COLUMN`. Not running the file at all is the fix.
+
+Two things make that safer rather than replacing it:
+
+- `IF NOT EXISTS` on every bare `CREATE TABLE`/`CREATE INDEX`, so a retry between "applied" and
+  "recorded" is a no-op rather than an error.
+- **Backfills are scoped to the rows they mean.** `0003` and `0012` said `UPDATE … SET owner = …`
+  and `SET plan_start_date = …` with no `WHERE`, which is not just non-idempotent but wrong on its
+  own terms: each means "the rows that do not have one yet". Both now carry
+  `WHERE owner = ''` / `WHERE plan_start_date IS NULL` — identical on a first run, since the `ALTER`
+  immediately above sets that state, and a no-op instead of a tenancy wipe on a re-run.
+
+**Write new backfills scoped.** Table rebuilds (`DROP TABLE` + rename) cannot be made safe this way,
+which is why the tracking table, not idempotency, carries the guarantee.
 
 **One-time seeding, for the two databases that are already fully migrated.** Deliberately not a
 migration — a brand-new database must genuinely execute `0001`–`0019`. Apply `0020` first, then, once
@@ -126,8 +147,18 @@ npx wrangler d1 execute <db> --remote --command="INSERT OR IGNORE INTO _migratio
 ```
 
 `INSERT OR IGNORE` on a `PRIMARY KEY`, so running it twice is harmless. Until you do this,
-`migrate:dev` sees an empty table, treats every file as pending, and warns loudly rather than
-proceeding silently.
+`migrate:dev` refuses to run: an unseeded record makes every file look pending, and applying
+`0001` onward to a populated database means handing it `0003`'s four `DROP TABLE`s.
+
+It refuses on either of two signals, because the table being *empty* is not the only way the
+record can be wrong. `roy-expenses-dev` reached a state where `_migrations` held exactly
+`0020_migrations_table` and nothing else, having had `0020` applied but never the seed above.
+Every earlier file then looked pending, and `migrate:dev` started re-applying `0001`. It failed
+on `INSERT INTO settings (id)` — the `settings` table has had no `id` column since `0003`
+rebuilt it — and that failure, not any guard, is what stopped the run two files short of `0003`.
+So the check is now: any pending file numbered *below* the highest recorded one means the
+record is incomplete, since a database cannot have reached `0020` without them; and an empty
+record on a database that already has a `transactions` table means the same thing.
 
 > **If `--file` fails with `fetch failed`, use `--command` instead.** Applying `0015`–`0019` to
 > production hit a repeatable `TypeError: fetch failed` on `POST /d1/database/<id>/import`, ~13s in,
@@ -166,6 +197,8 @@ proceeding silently.
 `0018_reimbursement_links.sql` adds a nullable `settled_by` column on `transactions`, holding the id of the `refund` transaction that reimbursed that row, plus a partial index. It is set when a reimbursement is recorded and cleared if that reimbursement is deleted, so the link is reversible. Deliberately *not* a clearing of `flag_id`: unflagging on settlement would empty the Flagged card just as well, but it throws away which transactions were in which claim — the thing this column exists to record — and cannot be undone, since nothing would remember the flag. `groupTransactionsByFlag` skips settled rows instead, so the card empties and the history survives. Every existing row stays `NULL`, so there is no backfill and no placeholder substitution.
 
 `0019_reimbursable_flags.sql` adds a `reimbursable INTEGER NOT NULL DEFAULT 1` column on `flags`. Flags are generic markers: "Work travel" is money an employer will repay, "Tax deductible" is a note for an accountant that nobody is going to pay. Only a reimbursable flag offers an expense report and a Record reimbursement action — on the others they produce a document headed EXPENSE REPORT with a signature line, addressed to nobody. It defaults to `1` rather than `0` on purpose: the flags that already exist were created when flagging *was* reimbursement, so every one of them is reimbursable, and defaulting to `0` would silently take the buttons away from a feature already in use. Owner-agnostic — no placeholder substitution needed.
+
+`0021_report_snapshot.sql` adds two nullable columns on `transactions`, `report_count` and `report_covered_cents`. They hold what a reimbursement covered at the moment it was recorded. Past expense reports are otherwise rebuilt entirely from the rows still pointing at the payment, so editing or deleting one of those rows afterwards rewrites the record of what was submitted; with the snapshot the app shows the recorded figures and says when the live rows no longer match. Written by the settle itself, so no backfill: payments recorded before this migration stay `NULL` and are shown without a match check. Owner-agnostic — no placeholder substitution needed. **Apply it before (or with) the code deploy** — the settle writes these columns and will fail against a database that lacks them.
 
 ## Old URL
 

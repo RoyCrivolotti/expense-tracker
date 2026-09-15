@@ -3,6 +3,7 @@ import type { WealthAccount } from '../../../types'
 import type { ExpenseActions } from '../../actions'
 import { Card } from '../../components/primitives'
 import { DateInput } from '../../components/DateInput'
+import { todayIso } from '../../components/transactionFormState'
 import { formatMoneyInput, parseMoneyToCents } from '../../../engine'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import styles from './progress.module.css'
@@ -18,7 +19,11 @@ type EntryDraft = { accountId: number; valueCents: number }
 
 export function CheckinFormSheet({ accounts, actions, onDone }: Props) {
   const format = useMoneyFormat()
-  const today = new Date().toISOString().slice(0, 10)
+  // Local date, not UTC. East of UTC these differ for part of every day, and a UTC
+  // "today" would default the field to yesterday and cap it there — leaving the user's
+  // actual today unselectable while the grid still marks it as today. The server's one
+  // day of slack exists to accept exactly this.
+  const today = todayIso()
   const [date, setDate] = useState(today)
   const [note, setNote] = useState('')
   const active = accounts.filter((a) => !a.archived)
@@ -72,6 +77,7 @@ export function CheckinFormSheet({ accounts, actions, onDone }: Props) {
           <DateInput
             value={date}
             ariaLabel="Date"
+            max={today}
             onChange={setDate}
           />
         </div>

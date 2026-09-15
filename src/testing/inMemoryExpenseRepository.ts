@@ -13,6 +13,7 @@ import type {
 import type { ExpenseRepository } from '../domain/ports/expenseRepository'
 import { validateDueDay, validatePlanInput } from '../domain/application/installmentPlanService'
 import { deriveStatus, deriveTransactions } from '../domain/engine/status'
+import { addDaysIso } from '../domain/engine/dates'
 import { withoutFlag, withoutSettlement } from '../domain/engine/flagGroups'
 import { defaultExpenseSettings, defaultGoalInputs } from '../domain/engine/defaults'
 import { normalizeMilestones, validateMilestones } from '../domain/engine/milestones'
@@ -167,6 +168,68 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
     const plan = store.installmentPlans.find((p) => p.id === planId)
     if (!plan) throw new RepoHttpError(400, 'Invalid planId')
     return plan
+  }
+
+  /**
+   * Mirrors the kind whitelist dbWealth.ts enforces on create and update.
+   *
+   * Returns the error rather than throwing: the D1 adapter is async, so it *rejects*.
+   * A guard that threw synchronously here would not be caught by a caller's `.catch`,
+   * which is the same class of divergence these mirrors exist to prevent.
+   */
+  function invalidWealthKind(kind: unknown): RepoHttpError | undefined {
+    return ['investment', 'cash', 'other_asset', 'debt'].includes(kind as string)
+      ? undefined
+      : new RepoHttpError(400, 'Invalid account kind')
+  }
+
+  /**
+   * Mirrors recordReportSnapshot in dbWrite.ts: a settle stamps the payment with what
+   * it covered. Without it a test would show a past report that can never drift, and
+   * the drift warning would be provably untested.
+   */
+  function stampReportSnapshot(store: OwnerStore, paymentId: number): void {
+    const covered = store.transactions.filter((t) => t.settledBy === paymentId)
+    store.transactions = store.transactions.map((t) =>
+      t.id === paymentId
+        ? {
+            ...t,
+            reportCount: covered.length,
+            reportCoveredCents: covered.reduce(
+              (sum, c) => sum + (c.type === 'refund' ? -c.amountCents : c.amountCents),
+              0,
+            ),
+          }
+        : t,
+    )
+  }
+
+  /** Mirrors assertCheckinDate in dbWealth.ts, including its one day of UTC slack. */
+  function invalidCheckinDate(date: string | undefined): RepoHttpError | undefined {
+    if (!date?.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return new RepoHttpError(400, 'checkinDate must be YYYY-MM-DD')
+    }
+    if (date > addDaysIso(new Date().toISOString().slice(0, 10), 1)) {
+      return new RepoHttpError(400, 'checkinDate cannot be in the future')
+    }
+    return undefined
+  }
+
+  /**
+   * Mirrors assertOwnedAccountIds in dbWealth.ts — a real cross-tenant guard. Without
+   * it a test asserting that a foreign account id is rejected passes against this
+   * double while exercising nothing.
+   */
+  function unownedWealthAccount(
+    store: OwnerStore,
+    entries: { accountId: number }[],
+  ): RepoHttpError | undefined {
+    for (const { accountId } of entries) {
+      if (!store.wealthAccounts.some((a) => a.id === accountId)) {
+        return new RepoHttpError(400, `Wealth account ${accountId} not found or not owned`)
+      }
+    }
+    return undefined
   }
 
   /** Mirrors assertOwnedTransaction in functions/_shared/ownership.ts. */
@@ -502,6 +565,7 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
         updated.push(deriveOne(next, store.accounts, store.statements))
         return next
       })
+      if (patch.settledBy != null) stampReportSnapshot(store, patch.settledBy)
       return Promise.resolve(updated)
     },
 
@@ -823,6 +887,8 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       const store = storeFor(owner)
       const name = input.name?.trim()
       if (!name) return Promise.reject(new RepoHttpError(400, 'Account name is required'))
+      const badKind = invalidWealthKind(input.kind)
+      if (badKind) return Promise.reject(badKind)
       const account: WealthAccount = {
         id: nextId(store.wealthAccounts),
         name,
@@ -840,6 +906,8 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       if (index < 0) return Promise.reject(new RepoHttpError(404, 'Wealth account not found'))
       if (Object.keys(patch).length === 0)
         return Promise.reject(new RepoHttpError(400, 'Empty patch'))
+      const badKind = patch.kind !== undefined ? invalidWealthKind(patch.kind) : undefined
+      if (badKind) return Promise.reject(badKind)
       const updated = { ...store.wealthAccounts[index]!, ...patch, id }
       store.wealthAccounts[index] = updated
       return Promise.resolve({ ...updated })
@@ -864,9 +932,10 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
 
     createWealthCheckin: (owner, input) => {
       const store = storeFor(owner)
-      if (!input.checkinDate?.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        return Promise.reject(new RepoHttpError(400, 'checkinDate must be YYYY-MM-DD'))
-      }
+      const badDate = invalidCheckinDate(input.checkinDate)
+      if (badDate) return Promise.reject(badDate)
+      const unowned = unownedWealthAccount(store, input.entries)
+      if (unowned) return Promise.reject(unowned)
       const checkin: WealthCheckin = {
         id: nextId(store.wealthCheckins),
         checkinDate: input.checkinDate,
@@ -884,6 +953,10 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       if (index < 0) return Promise.reject(new RepoHttpError(404, 'Wealth check-in not found'))
       if (Object.keys(patch).length === 0)
         return Promise.reject(new RepoHttpError(400, 'Empty patch'))
+      const badDate = patch.checkinDate !== undefined ? invalidCheckinDate(patch.checkinDate) : undefined
+      if (badDate) return Promise.reject(badDate)
+      const unowned = patch.entries !== undefined ? unownedWealthAccount(store, patch.entries) : undefined
+      if (unowned) return Promise.reject(unowned)
       const existing = store.wealthCheckins[index]!
       const updated: WealthCheckin = {
         ...existing,

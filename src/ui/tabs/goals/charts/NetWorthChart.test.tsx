@@ -49,7 +49,7 @@ describe('applyRealTransform', () => {
     expect(result[0]!.band).toBeUndefined()
   })
 
-  it('leaves scatter point values untouched', () => {
+  it('deflates scatter points by their own fractional xIndex', () => {
     const series: ChartSeries[] = [
       {
         id: 'actuals',
@@ -62,9 +62,34 @@ describe('applyRealTransform', () => {
         ],
       },
     ]
+    // `years` is empty on purpose: a scatter series carries no aligned values, so the
+    // deflation has to come from each point's own xIndex, not an array position.
     const result = applyRealTransform(series, [], 0.02)
     expect(result[0]!.points?.[0]?.value).toBe(100_000_000)
-    expect(result[0]!.points?.[1]?.value).toBe(200_000_000)
+    expect(result[0]!.points?.[1]?.value).toBe(Math.round(200_000_000 / Math.pow(1.02, 2.5)))
+  })
+
+  it('omits points when the series has none', () => {
+    const series: ChartSeries[] = [{ id: 's3', color: '#000', values: [0], kind: 'line' }]
+    expect(applyRealTransform(series, [0], 0.02)[0]!.points).toBeUndefined()
+  })
+
+  it('keeps a check-in that matches the plan level with the plan line', () => {
+    // The bug this guards: a portfolio exactly on plan read as far ahead of it, because
+    // only the line moved when the purchasing-power toggle flipped.
+    const onPlanCents = 100_000_000
+    const series: ChartSeries[] = [
+      { id: 'plan', color: '#000', values: [0, onPlanCents], kind: 'line' },
+      {
+        id: 'actuals',
+        color: '#10b981',
+        values: [],
+        kind: 'scatter',
+        points: [{ xIndex: 1, value: onPlanCents }],
+      },
+    ]
+    const result = applyRealTransform(series, [0, 1], 0.02)
+    expect(result[1]!.points?.[0]?.value).toBe(result[0]!.values[1])
   })
 })
 
@@ -144,6 +169,32 @@ describe('NetWorthChart', () => {
       />,
     )
     expect(container.querySelector('svg')).not.toBeNull()
+  })
+
+  it('draws a check-in dot lower in real mode than in nominal mode', () => {
+    const extra: ChartSeries = {
+      id: 'actuals',
+      color: '#10b981',
+      values: [],
+      kind: 'scatter',
+      points: [{ xIndex: 10, value: 50_000_000 }],
+    }
+    const cy = (realMode: boolean) => {
+      const { container } = render(
+        <NetWorthChart
+          milestones={milestones}
+          scenarios={[defaultDraft]}
+          draft={defaultDraft}
+          activeId={defaultDraft.id}
+          extraSeries={[extra]}
+          realMode={realMode}
+        />,
+      )
+      const circle = container.querySelector('circle')
+      return Number(circle!.getAttribute('cy'))
+    }
+    // The Y axis is locked across both modes, and SVG y grows downward.
+    expect(cy(true)).toBeGreaterThan(cy(false))
   })
 
   it('renders without crashing with a custom inflationRate in realMode', () => {

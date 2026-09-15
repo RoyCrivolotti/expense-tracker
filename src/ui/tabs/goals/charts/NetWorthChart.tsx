@@ -80,14 +80,24 @@ const DEFAULT_INFLATION_RATE = 0.02
  *  covering both so toggling doesn't rescale the chart. */
 function computeChartDisplayData(
   series: ChartSeries[],
+  extraSeries: ChartSeries[],
   years: number[],
   realMode: boolean,
   inflationRate: number = DEFAULT_INFLATION_RATE,
-): { displaySeries: ChartSeries[]; yDomainMax: number | undefined } {
+): {
+  displaySeries: ChartSeries[]
+  displayExtraSeries: ChartSeries[]
+  yDomainMax: number | undefined
+} {
   const realSeries = applyRealTransform(series, years, inflationRate)
   const values = [...series, ...realSeries].flatMap((s) => s.values)
   return {
     displaySeries: realMode ? realSeries : series,
+    // Check-in actuals are nominal, so real mode has to deflate them alongside the plan
+    // lines; otherwise the dots stay put while the projection drops beneath them.
+    displayExtraSeries: realMode
+      ? applyRealTransform(extraSeries, years, inflationRate)
+      : extraSeries,
     yDomainMax: values.length > 0 ? Math.max(...values) : undefined,
   }
 }
@@ -221,13 +231,10 @@ function NetWorthChartImpl({
 
   // Locks the Y-axis to the larger of the real/nominal maxima so toggling display
   // mode moves the lines on a fixed scale instead of rescaling the whole chart.
-  const { displaySeries, yDomainMax } = useMemo(
-    () => computeChartDisplayData(series, years, realMode, inflationRate),
-    [series, years, realMode, inflationRate],
+  const { displaySeries, displayExtraSeries, yDomainMax } = useMemo(
+    () => computeChartDisplayData(series, extraSeries, years, realMode, inflationRate),
+    [series, extraSeries, years, realMode, inflationRate],
   )
-  // Check-in actuals are already nominal (real broker-statement values) — the
-  // inflation transform never touches scatter points, so this never varies by mode.
-  const displayExtraSeries = extraSeries
 
   const fiTargetCents = useMemo(() => {
     if (!isHero || draft.annualSpendCents <= 0 || draft.safeWithdrawalRate <= 0) return null

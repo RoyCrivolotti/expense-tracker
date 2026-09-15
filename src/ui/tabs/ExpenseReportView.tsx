@@ -7,6 +7,7 @@ import {
   reportReceipts,
   type ExpenseReport,
 } from '../../domain/engine/expenseReport'
+import { pastReportDrifted } from '../../domain/engine/pastReports'
 import { ExpenseReportSheet } from './ExpenseReportSheet'
 import { todayIso } from '../components/transactionFormState'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
@@ -148,6 +149,11 @@ export function ExpenseReportView({
 
   if (!report) return null
 
+  // Only a reopened report can have drifted: an open claim has nothing submitted
+  // to differ from yet.
+  const drifted =
+    settledByPaymentId != null && pastReportDrifted(settledByPaymentId, dataset.transactions)
+
   return createPortal(
     <div className={styles.overlay}>
       <div className={styles.toolbar}>
@@ -187,6 +193,13 @@ export function ExpenseReportView({
           </button>
         </div>
       </div>
+
+      {drifted ? (
+        <p className={styles.driftNotice}>
+          Some covered transactions have changed since this report was sent. Reprinting it
+          will not reproduce the document you submitted.
+        </p>
+      ) : null}
 
       <ExpenseReportSheet
         report={report}

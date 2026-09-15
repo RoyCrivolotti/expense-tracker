@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import type { BulkTransactionPatch } from '../../data/dataSource'
+import { defaultBudgetMonth } from '../../domain/engine/dates'
+import { todayIso } from '../components/transactionFormState'
 import type { ExpenseModel } from '../useExpenseData'
 import { selectableOptions, optionLabel } from '../components/pickerOptions'
 import { selectableFlags } from '../components/flagPickerOptions'
@@ -20,16 +22,6 @@ interface BulkEditSheetProps {
   onCancel: () => void
 }
 
-function localDate(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-function localMonth(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-}
-
 export function BulkEditSheet({ count, model, busy, onApply, onCancel }: BulkEditSheetProps) {
   const [fields, setFields] = useState<BulkEditFieldState>({
     categoryEnabled: false,
@@ -39,9 +31,11 @@ export function BulkEditSheet({ count, model, busy, onApply, onCancel }: BulkEdi
     typeEnabled: false,
     type: 'expense',
     dateEnabled: false,
-    date: localDate(),
+    date: todayIso(),
     budgetMonthEnabled: false,
-    budgetMonth: localMonth(),
+    // Not the calendar month: an owner whose budget rolls over mid-month would be
+    // handed a month a single edit would never produce.
+    budgetMonth: defaultBudgetMonth(todayIso(), model.dataset.settings.budgetRolloverDay),
     flagEnabled: false,
     flagId: model.dataset.flags.find((f) => f.active)?.id ?? null,
   })

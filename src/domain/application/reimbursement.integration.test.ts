@@ -123,6 +123,83 @@ describe('recording a reimbursement, end to end', () => {
  * payment has to settle only its own rows, leave the remainder owed, and end up
  * as its own entry in Past reports.
  */
+/**
+ * The record of what was submitted, through the same repository the API routes use.
+ *
+ * Every other test here reads a report whose snapshot and live rows agree, and those
+ * two are indistinguishable on screen: `listPastReports` falls back to the live rows
+ * when there is no snapshot, so a matching pair proves only that one of the two paths
+ * ran. Making them disagree is the only thing that shows which.
+ */
+describe('a past report after its rows are edited', () => {
+  async function settledClaim() {
+    const repo = repoWithClaim()
+    const flight = await repo.insertTransaction(OWNER, line('Flight', 10_000))
+    const hotel = await repo.insertTransaction(OWNER, line('Hotel', 4_000))
+    const payment = await repo.insertTransaction(OWNER, reimbursement(14_000))
+    await bulkUpdateTransactions(repo, OWNER, [flight.id, hotel.id], { settledBy: payment.id })
+    return { repo, flight, hotel, payment }
+  }
+
+  const reportsOf = async (repo: ReturnType<typeof repoWithClaim>) => {
+    const dataset = await repo.loadDataset(OWNER)
+    return listPastReports(dataset.transactions, dataset.flags)
+  }
+
+  it('records what it covered when the settle lands', async () => {
+    const { repo } = await settledClaim()
+
+    const [report] = await reportsOf(repo)
+    expect(report?.count).toBe(2)
+    expect(report?.coveredCents).toBe(14_000)
+    expect(report?.drifted).toBe(false)
+  })
+
+  it('keeps the submitted figures when a covered row is edited afterwards', async () => {
+    const { repo, flight } = await settledClaim()
+
+    await repo.updateTransaction(OWNER, flight.id, { amountCents: 100 })
+
+    const [report] = await reportsOf(repo)
+    expect(report?.coveredCents).toBe(14_000)
+    expect(report?.count).toBe(2)
+    expect(report?.drifted).toBe(true)
+  })
+
+  it('keeps them when a covered row is deleted afterwards', async () => {
+    const { repo, hotel } = await settledClaim()
+
+    await repo.deleteTransaction(OWNER, hotel.id)
+
+    const [report] = await reportsOf(repo)
+    expect(report?.count).toBe(2)
+    expect(report?.coveredCents).toBe(14_000)
+    expect(report?.remaining).toBe(1)
+    expect(report?.drifted).toBe(true)
+  })
+
+  it('survives every covered row being deleted, with nothing left to rebuild from', async () => {
+    const { repo, flight, hotel } = await settledClaim()
+
+    await repo.deleteTransaction(OWNER, flight.id)
+    await repo.deleteTransaction(OWNER, hotel.id)
+
+    const [report] = await reportsOf(repo)
+    expect(report?.count).toBe(2)
+    expect(report?.coveredCents).toBe(14_000)
+    expect(report?.remaining).toBe(0)
+    expect(report?.drifted).toBe(true)
+  })
+
+  it('goes with the payment, so undoing the reimbursement undoes the record too', async () => {
+    const { repo, payment } = await settledClaim()
+
+    await repo.deleteTransaction(OWNER, payment.id)
+
+    expect(await reportsOf(repo)).toEqual([])
+  })
+})
+
 describe('a claim settled by two payments', () => {
   async function claimOfThree() {
     const repo = repoWithClaim()

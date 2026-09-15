@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildCalendarGrid, dayCellToIso } from './datePickerGrid'
+import { buildCalendarGrid, dayCellToIso, isDateOutOfRange } from './datePickerGrid'
 
 describe('buildCalendarGrid', () => {
   it('returns exactly 6 rows of 7 columns', () => {
@@ -75,5 +75,29 @@ describe('dayCellToIso', () => {
 
   it('formats a normal date', () => {
     expect(dayCellToIso({ year: 2026, month: 9, day: 11, outside: false })).toBe('2026-09-11')
+  })
+})
+
+describe('isDateOutOfRange', () => {
+  it('accepts any date when neither bound is given', () => {
+    expect(isDateOutOfRange('2026-09-11')).toBe(false)
+  })
+
+  it('treats both bounds as inclusive', () => {
+    expect(isDateOutOfRange('2026-09-01', '2026-09-01', '2026-09-30')).toBe(false)
+    expect(isDateOutOfRange('2026-09-30', '2026-09-01', '2026-09-30')).toBe(false)
+  })
+
+  it('rejects a date before min', () => {
+    expect(isDateOutOfRange('2026-08-31', '2026-09-01')).toBe(true)
+  })
+
+  it('rejects a date after max', () => {
+    expect(isDateOutOfRange('2026-10-01', undefined, '2026-09-30')).toBe(true)
+  })
+
+  it('compares across year boundaries, not just within a month', () => {
+    expect(isDateOutOfRange('2027-01-01', undefined, '2026-12-31')).toBe(true)
+    expect(isDateOutOfRange('2025-12-31', '2026-01-01')).toBe(true)
   })
 })

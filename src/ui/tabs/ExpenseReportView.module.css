@@ -39,6 +39,16 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+/* Under the toolbar rather than over it: the toolbar is sticky and carries the
+   status-bar inset, and a banner above it would pay that inset twice. Screen only
+   — the printed document goes to someone who has no use for it. */
+.driftNotice {
+  margin: 0;
+  padding: 0.6rem 1rem;
+  color: var(--exp-warning);
+  font-size: 0.8rem;
+}
+
 /* One of the pair is always hidden; the wide one wins from 421px up. */
 .labelShort {
   display: inline;
@@ -406,7 +416,8 @@
     color: #111;
   }
 
-  .toolbar {
+  .toolbar,
+  .driftNotice {
     display: none;
   }
 

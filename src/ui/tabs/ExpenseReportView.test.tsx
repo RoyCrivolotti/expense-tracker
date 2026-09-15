@@ -379,3 +379,53 @@ describe('ExpenseReportView — sending the receipts on their own', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })
+
+describe('ExpenseReportView — reopening a past report', () => {
+  const payment = (overrides: Partial<Transaction> = {}) =>
+    txn(99, '2026-06-14', {
+      type: 'refund',
+      amountCents: 20_000,
+      description: 'Alicante expenses',
+      ...overrides,
+    })
+
+  function renderPast(transactions: Transaction[]) {
+    const dataset = datasetWith(transactions)
+    render(
+      <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
+        <ExpenseReportView
+          dataset={dataset}
+          lookup={buildLookup(dataset)}
+          settledByPaymentId={99}
+          onClose={vi.fn()}
+          issuedOn="2026-09-12"
+        />
+      </MoneyFormatProvider>,
+    )
+  }
+
+  it('warns that a reprint will not match what was submitted', () => {
+    // Recorded as 2 rows totalling 20,000; one was deleted afterwards.
+    renderPast([
+      txn(1, '2026-05-02', { settledBy: 99 }),
+      payment({ reportCount: 2, reportCoveredCents: 20_000 }),
+    ])
+
+    expect(screen.getByText(/have changed since this report was sent/i)).toBeInTheDocument()
+  })
+
+  it('stays quiet when the covered rows still match', () => {
+    renderPast([
+      txn(1, '2026-05-02', { settledBy: 99 }),
+      payment({ reportCount: 1, reportCoveredCents: 10_000 }),
+    ])
+
+    expect(screen.queryByText(/have changed since this report was sent/i)).not.toBeInTheDocument()
+  })
+
+  it('stays quiet on an open claim, which has nothing submitted to differ from', () => {
+    renderPack(datasetWith([txn(1, '2026-05-02')]))
+
+    expect(screen.queryByText(/have changed since this report was sent/i)).not.toBeInTheDocument()
+  })
+})

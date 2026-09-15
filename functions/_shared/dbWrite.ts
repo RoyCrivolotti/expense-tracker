@@ -187,12 +187,66 @@ function settleGuard(settledBy: number | null | undefined): { clause: string; va
   return { clause: ' AND (settled_by IS NULL OR settled_by = ?)', values: [settledBy] }
 }
 
+const SETTLED_ELSEWHERE = 'Some of those transactions are already settled by another reimbursement'
+
+/**
+ * Refuse the whole batch if any target is already settled by a different payment.
+ *
+ * Mirrors the in-memory repository, which checks every target before mutating any —
+ * the two must agree, or the integration suite passes against a stricter fake than
+ * production. A batch cannot express this: every statement in one runs regardless of
+ * what the others found, so check-then-mutate needs the two round trips.
+ */
+async function assertNoneSettledElsewhere(
+  env: Env,
+  owner: string,
+  ids: number[],
+  placeholders: string,
+  settledBy: number | null | undefined,
+): Promise<void> {
+  if (settledBy == null) return
+  const { results } = await env.DB.prepare(
+    `SELECT id FROM transactions
+     WHERE owner = ? AND id IN (${placeholders}) AND settled_by IS NOT NULL AND settled_by != ?`,
+  )
+    .bind(owner, ...ids, settledBy)
+    .all<{ id: number }>()
+  if ((results ?? []).length > 0) throw new HttpError(409, SETTLED_ELSEWHERE)
+}
+
 /** Every foreign key a transaction patch can carry must belong to the same owner. */
 async function assertPatchOwnership(env: Env, owner: string, patch: TxnPatch): Promise<void> {
   if (patch.accountId != null) await assertOwnedAccount(env, owner, patch.accountId)
   if (patch.categoryId != null) await assertOwnedCategory(env, owner, patch.categoryId)
   if (patch.flagId != null) await assertOwnedFlag(env, owner, patch.flagId)
   if (patch.settledBy != null) await assertOwnedTransaction(env, owner, patch.settledBy)
+}
+
+/**
+ * Stamp a reimbursement payment with what it covers.
+ *
+ * Returns the statement rather than running it, so callers can put it in the same
+ * batch as the settle. D1 runs a batch as one transaction, sequentially, so this sees
+ * the `settled_by` the statement before it wrote, and a failure here rolls that settle
+ * back. A settle that committed without its record is the exact inconsistency these
+ * columns exist to prevent.
+ *
+ * Computed from the rows rather than passed in by the client: it is a record of what
+ * the database actually held, not of what a caller claimed. Re-run on every settle, so
+ * adding rows to an existing payment keeps it true.
+ */
+export const REPORT_SNAPSHOT_SQL = `UPDATE transactions
+     SET report_count = (
+           SELECT COUNT(*) FROM transactions WHERE owner = ?1 AND settled_by = ?2
+         ),
+         report_covered_cents = (
+           SELECT COALESCE(SUM(CASE WHEN type = 'refund' THEN -amount_cents ELSE amount_cents END), 0)
+           FROM transactions WHERE owner = ?1 AND settled_by = ?2
+         )
+     WHERE id = ?2 AND owner = ?1`
+
+function reportSnapshotStatement(env: Env, owner: string, paymentId: number) {
+  return env.DB.prepare(REPORT_SNAPSHOT_SQL).bind(owner, paymentId)
 }
 
 export async function updateTransaction(
@@ -227,6 +281,7 @@ export async function updateTransaction(
     }
     throw new HttpError(404, 'Transaction not found')
   }
+  if (patch.settledBy != null) await reportSnapshotStatement(env, owner, patch.settledBy).run()
   return deriveOne(env, owner, toStoredTxn(row))
 }
 
@@ -302,20 +357,28 @@ export async function bulkUpdateTransactions(
   await assertPatchOwnership(env, owner, patch)
   const keys = (Object.keys(patch) as PatchableTxnKey[]).filter((k) => k in COLUMN)
   if (keys.length === 0) throw new HttpError(400, 'Empty patch')
+  const placeholders = ids.map(() => '?').join(', ')
+  // Rejected before any row is touched. The UPDATE's guard clause silently *excludes* a
+  // row settled elsewhere rather than failing, so deciding from its changed-row count
+  // afterwards has already committed the rows that did qualify.
+  await assertNoneSettledElsewhere(env, owner, ids, placeholders, patch.settledBy)
   const sets = keys.map((k) => `${COLUMN[k]} = ?`).concat("updated_at = datetime('now')")
   const patchRec = patch as Record<string, unknown>
   const values = keys.map((k) => patchValue(k, patchRec[k]))
-  const placeholders = ids.map(() => '?').join(', ')
   const guard = settleGuard(patch.settledBy)
-  const updated = await env.DB.prepare(
+  const write = env.DB.prepare(
     `UPDATE transactions SET ${sets.join(', ')} WHERE owner = ? AND id IN (${placeholders})${guard.clause}`,
+  ).bind(...values, owner, ...ids, ...guard.values)
+  const [updated] = await env.DB.batch(
+    patch.settledBy != null
+      ? [write, reportSnapshotStatement(env, owner, patch.settledBy)]
+      : [write],
   )
-    .bind(...values, owner, ...ids, ...guard.values)
-    .run()
-  // The SELECT below re-fetches by id whether or not the UPDATE matched, so a blocked
-  // row returns with its old settled_by and reads as success. Check the count instead.
+  // Backstop for the window between that check and this UPDATE: a concurrent request
+  // could settle one of these rows in between. The guard clause still refuses to
+  // double-settle it; this surfaces that as a conflict instead of a short result set.
   if (patch.settledBy != null && (updated?.meta?.changes ?? 0) < ids.length) {
-    throw new HttpError(409, 'Some of those transactions are already settled by another reimbursement')
+    throw new HttpError(409, SETTLED_ELSEWHERE)
   }
   const { results } = await env.DB.prepare(
     `SELECT * FROM transactions WHERE owner = ? AND id IN (${placeholders})`,

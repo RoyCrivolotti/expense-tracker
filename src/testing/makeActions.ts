@@ -24,8 +24,10 @@ export function makeActions(overrides: Partial<ExpenseActions> = {}): ExpenseAct
     createTransactions: vi.fn().mockResolvedValue(undefined),
     updateTransaction: vi.fn().mockResolvedValue(undefined),
     deleteTransaction: vi.fn().mockResolvedValue(undefined),
-    deleteTransactions: vi.fn().mockResolvedValue(undefined),
-    updateTransactions: vi.fn().mockResolvedValue(undefined),
+    // Echo the requested count: the happy path, and the only value that keeps a
+    // toast asserting "Deleted 3 transactions" honest.
+    deleteTransactions: vi.fn((ids: number[]) => Promise.resolve(ids.length)),
+    updateTransactions: vi.fn((ids: number[]) => Promise.resolve(ids.length)),
     setStatementPaid: vi.fn().mockResolvedValue(undefined),
     setCashActual: vi.fn().mockResolvedValue(undefined),
     uploadAttachment: vi.fn().mockResolvedValue(undefined),

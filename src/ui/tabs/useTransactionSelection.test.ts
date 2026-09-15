@@ -1,15 +1,17 @@
 import { renderHook, act } from '@testing-library/react'
+import { createElement, type ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { batchDeleteMessage, useTransactionSelection } from './useTransactionSelection'
+import { batchDeleteMessage, bulkOutcomeCopy, useTransactionSelection } from './useTransactionSelection'
 import type { ExpenseActions } from '../actions'
+import { ToastContext } from '../hooks/useToast'
 
 function mockActions(overrides: Partial<ExpenseActions> = {}): ExpenseActions {
   return {
     createTransaction: vi.fn(),
     updateTransaction: vi.fn(),
     deleteTransaction: vi.fn(),
-    deleteTransactions: vi.fn().mockResolvedValue(undefined),
-    updateTransactions: vi.fn().mockResolvedValue(undefined),
+    deleteTransactions: vi.fn((ids: number[]) => Promise.resolve(ids.length)),
+    updateTransactions: vi.fn((ids: number[]) => Promise.resolve(ids.length)),
     createCategory: vi.fn(),
     updateCategory: vi.fn(),
     deleteCategory: vi.fn(),
@@ -34,6 +36,50 @@ describe('batchDeleteMessage', () => {
 
   it('uses plural copy for multiple rows', () => {
     expect(batchDeleteMessage(3)).toBe('3 transactions will be removed permanently.')
+  })
+})
+
+/** Renders the hook inside a ToastContext so the toast message can be asserted. */
+function renderWithToast(actions: ExpenseActions) {
+  const showToast = vi.fn()
+  const wrapper = ({ children }: { children: ReactNode }) =>
+    createElement(ToastContext.Provider, { value: { showToast } }, children)
+  const { result } = renderHook(() => useTransactionSelection(actions), { wrapper })
+  return { result, showToast }
+}
+
+describe('useTransactionSelection — toasts report the server count', () => {
+  it('names both numbers when a selected row was already gone', async () => {
+    const actions = mockActions({ deleteTransactions: vi.fn().mockResolvedValue(2) })
+    const { result, showToast } = renderWithToast(actions)
+    act(() => result.current.selectAll([1, 2, 3]))
+    act(() => result.current.requestBatchDelete())
+    await act(async () => {
+      await result.current.confirmBatchDelete()
+    })
+    expect(showToast).toHaveBeenCalledWith('Deleted 2 of 3 transactions', 'success')
+  })
+
+  it('reports the plain count when the server touched everything', async () => {
+    const actions = mockActions({ updateTransactions: vi.fn().mockResolvedValue(2) })
+    const { result, showToast } = renderWithToast(actions)
+    act(() => result.current.selectAll([1, 2]))
+    await act(async () => {
+      await result.current.confirmBulkEdit({ categoryId: 1 })
+    })
+    expect(showToast).toHaveBeenCalledWith('Updated 2 transactions', 'success')
+  })
+})
+
+describe('bulkOutcomeCopy', () => {
+  it('reports the plain count when everything requested was touched', () => {
+    expect(bulkOutcomeCopy('Deleted', 3, 3)).toBe('Deleted 3 transactions')
+    expect(bulkOutcomeCopy('Updated', 1, 1)).toBe('Updated 1 transaction')
+  })
+
+  it('names both numbers when the server touched fewer than requested', () => {
+    expect(bulkOutcomeCopy('Deleted', 2, 3)).toBe('Deleted 2 of 3 transactions')
+    expect(bulkOutcomeCopy('Updated', 0, 2)).toBe('Updated 0 of 2 transactions')
   })
 })
 
@@ -63,7 +109,7 @@ describe('useTransactionSelection — bulk edit', () => {
   })
 
   it('confirmBulkEdit calls updateTransactions and exits select mode on success', async () => {
-    const updateTransactions = vi.fn().mockResolvedValue(undefined)
+    const updateTransactions = vi.fn((ids: number[]) => Promise.resolve(ids.length))
     const actions = mockActions({ updateTransactions })
     const { result } = renderHook(() => useTransactionSelection(actions))
     act(() => result.current.toggleSelectMode())

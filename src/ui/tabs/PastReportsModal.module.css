@@ -45,6 +45,14 @@
   color: var(--color-text-muted);
 }
 
+/* The covered rows no longer add up to what was recorded. Stated rather than
+   corrected: the figures shown are the submitted ones, and which of them moved is
+   something only the person who edited the row knows. */
+.drift {
+  font-size: 0.76rem;
+  color: var(--exp-warning);
+}
+
 /* Wraps below the name on a narrow screen rather than squeezing it. */
 .actions {
   flex: none;

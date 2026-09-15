@@ -24,6 +24,10 @@ interface Props {
  * useful — but it also means a finished report disappears from the app the
  * moment it is settled. This is where it goes, and the only way to answer
  * "send me the June one again" months later.
+ *
+ * The counts and totals here are what was recorded at settle time, not a fresh
+ * derivation — a report you have already sent should not change because a covered
+ * row was edited afterwards. When it no longer matches, the row says so.
  */
 export function PastReportsModal({ model, onClose, onOpenReport, onOpenPayment }: Props) {
   const format = useMoneyFormat()
@@ -56,15 +60,26 @@ export function PastReportsModal({ model, onClose, onOpenReport, onOpenPayment }
                   {formatDayLabel(report.payment.date)} · {report.count} transaction
                   {report.count === 1 ? '' : 's'} · {formatCents(report.coveredCents, format)}
                 </span>
+                {report.drifted ? (
+                  <span className={styles.drift}>
+                    {report.remaining === 0
+                      ? 'None of the transactions this covered are still here. The figures above are the ones you submitted.'
+                      : 'Covered transactions have changed since you sent this. The figures above are the ones you submitted.'}
+                  </span>
+                ) : null}
               </div>
               <div className={styles.actions}>
-                <button
-                  type="button"
-                  className={styles.action}
-                  onClick={() => onOpenReport(report.payment.id)}
-                >
-                  Report
-                </button>
+                {/* Nothing left to rebuild the document from, so the button would open
+                    an empty overlay. The payment, and the figures above, still stand. */}
+                {report.remaining > 0 ? (
+                  <button
+                    type="button"
+                    className={styles.action}
+                    onClick={() => onOpenReport(report.payment.id)}
+                  >
+                    Report
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className={styles.action}

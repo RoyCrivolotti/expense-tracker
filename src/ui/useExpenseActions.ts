@@ -71,12 +71,16 @@ export function useExpenseActions(
         applyPatch((d) => patchAfterTransactionDelete(d, id))
       },
       deleteTransactions: async (ids) => {
-        await source.deleteTransactions!(ids)
+        const { deleted } = await source.deleteTransactions!(ids)
+        // Still drop every requested id locally: one the server did not delete is one
+        // that was already gone, so the local copy is the stale side either way.
         applyPatch((d) => patchAfterBulkDelete(d, ids))
+        return deleted
       },
       updateTransactions: async (ids: number[], patch: BulkTransactionPatch) => {
         const result = await source.updateTransactions!(ids, patch)
         applyPatch((d) => patchAfterBulkUpdate(d, result.transactions))
+        return result.updated
       },
       setStatementPaid: async (accountId, yearMonth, paid, paidOn) => {
         const stmt = await source.setStatementPaid!(accountId, yearMonth, paid, paidOn)

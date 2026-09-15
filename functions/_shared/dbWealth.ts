@@ -2,6 +2,7 @@ import type { WealthAccount, WealthCheckin } from '../domain/types'
 import type { NewWealthAccount, NewWealthCheckin } from '../domain/data/dataSource'
 import type { Env } from './env'
 import { HttpError } from './http'
+import { addDaysIso } from '../domain/engine/dates'
 import {
   toWealthAccount,
   toWealthCheckin,
@@ -139,14 +140,31 @@ async function assertOwnedAccountIds(
   }
 }
 
+/**
+ * A check-in records what the accounts were worth on a day that has happened; a future
+ * date has nothing to record, and lands in the on/off-track comparison as a measurement
+ * that was never taken.
+ *
+ * One day of slack rather than a strict `> today`: the server clock is UTC and the
+ * furthest-ahead zone anyone lives in is UTC+14, so a genuine local "today" is never
+ * more than one calendar day past the server's.
+ */
+function assertCheckinDate(date: string | undefined): void {
+  if (!date?.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    throw new HttpError(400, 'checkinDate must be YYYY-MM-DD')
+  }
+  const latest = addDaysIso(new Date().toISOString().slice(0, 10), 1)
+  if (date > latest) {
+    throw new HttpError(400, 'checkinDate cannot be in the future')
+  }
+}
+
 export async function createWealthCheckin(
   env: Env,
   owner: string,
   input: NewWealthCheckin,
 ): Promise<WealthCheckin> {
-  if (!input.checkinDate?.match(/^\d{4}-\d{2}-\d{2}$/)) {
-    throw new HttpError(400, 'checkinDate must be YYYY-MM-DD')
-  }
+  assertCheckinDate(input.checkinDate)
 
   // Validate all entry account IDs belong to this owner before inserting anything.
   if (input.entries.length > 0) {
@@ -204,9 +222,7 @@ export async function updateWealthCheckin(
     const fields: string[] = []
     const values: unknown[] = []
     if (patch.checkinDate !== undefined) {
-      if (!patch.checkinDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        throw new HttpError(400, 'checkinDate must be YYYY-MM-DD')
-      }
+      assertCheckinDate(patch.checkinDate)
       fields.push('checkin_date = ?')
       values.push(patch.checkinDate)
     }

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { useDismissOnOutsidePointer } from '../charts/useDismissOnOutsidePointer'
 import { usePopoverPosition } from '../hooks/usePopoverPosition'
-import { buildCalendarGrid, dayCellToIso, type DayCell } from './datePickerGrid'
+import { buildCalendarGrid, dayCellToIso, isDateOutOfRange, type DayCell } from './datePickerGrid'
 import styles from './DatePicker.module.css'
 
 const WEEKDAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] as const
@@ -20,11 +20,14 @@ function todayIso(): string {
 interface Props {
   value: string
   triggerRef: React.RefObject<HTMLElement | null>
+  /** Inclusive ISO bounds. Days outside are rendered disabled, not merely dimmed. */
+  min?: string | undefined
+  max?: string | undefined
   onSelect: (iso: string) => void
   onClose: () => void
 }
 
-export function DatePickerPopover({ value, triggerRef, onSelect, onClose }: Props) {
+export function DatePickerPopover({ value, triggerRef, min, max, onSelect, onClose }: Props) {
   const [y, m] = value ? value.split('-').map(Number) as [number, number] : [new Date().getFullYear(), new Date().getMonth() + 1]
   const [viewYear, setViewYear] = useState(y)
   const [viewMonth, setViewMonth] = useState(m)
@@ -52,6 +55,9 @@ export function DatePickerPopover({ value, triggerRef, onSelect, onClose }: Prop
 
   const selectDay = (cell: DayCell) => {
     const iso = dayCellToIso(cell)
+    // Guarded here too: the disabled attribute stops a click, not a keyboard path
+    // that reaches this directly.
+    if (isDateOutOfRange(iso, min, max)) return
     setSelected(iso)
     if (cell.outside) {
       setViewYear(cell.year)
@@ -142,17 +148,20 @@ export function DatePickerPopover({ value, triggerRef, onSelect, onClose }: Prop
             const iso = dayCellToIso(cell)
             const isSelected = iso === selected
             const isToday = iso === today
+            const outOfRange = isDateOutOfRange(iso, min, max)
             const cls = [
               styles.dayBtn,
               cell.outside ? styles.dayOutside : '',
               isToday ? styles.dayToday : '',
               isSelected ? styles.daySelected : '',
+              outOfRange ? styles.dayDisabled : '',
             ].filter(Boolean).join(' ')
             return (
               <button
                 key={`${ri}-${cell.day}-${cell.month}`}
                 type="button"
                 className={cls}
+                disabled={outOfRange}
                 onClick={() => selectDay(cell)}
                 aria-label={`${cell.day} ${MONTH_NAMES[cell.month - 1]} ${cell.year}`}
                 aria-pressed={isSelected}

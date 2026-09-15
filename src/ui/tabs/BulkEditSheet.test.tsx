@@ -3,10 +3,12 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BulkEditSheet } from './BulkEditSheet'
 import type { ExpenseModel } from '../useExpenseData'
+import { defaultExpenseSettings } from '../../engine'
 
-function makeModel(): ExpenseModel {
+function makeModel(budgetRolloverDay = 1): ExpenseModel {
   return {
     dataset: {
+      settings: { ...defaultExpenseSettings(), budgetRolloverDay },
       flags: [],
       categories: [
         { id: 1, name: 'Groceries', active: true, displayOrder: 0, isDefault: false },
@@ -221,5 +223,42 @@ describe('BulkEditSheet', () => {
     )
 
     expect(screen.queryByLabelText('Flag')).not.toBeInTheDocument()
+  })
+})
+
+describe('BulkEditSheet — budget month respects the rollover day', () => {
+  /** Reads the patch the sheet emits when only Budget month is toggled on. */
+  async function budgetMonthFor(rolloverDay: number): Promise<string | undefined> {
+    const user = userEvent.setup()
+    const onApply = vi.fn()
+    render(
+      <BulkEditSheet
+        count={2}
+        model={makeModel(rolloverDay)}
+        busy={false}
+        onApply={onApply}
+        onCancel={vi.fn()}
+      />,
+    )
+    await user.click(screen.getByLabelText('Budget month'))
+    await user.click(screen.getByRole('button', { name: 'Apply changes' }))
+    return (onApply.mock.calls[0]?.[0] as { budgetMonth?: string } | undefined)?.budgetMonth
+  }
+
+  it('uses the calendar month when the budget rolls over on the 1st', async () => {
+    const today = new Date()
+    const expected = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
+
+    expect(await budgetMonthFor(1)).toBe(expected)
+  })
+
+  it('rolls to the next month once past the owner rollover day', async () => {
+    // Rollover on the 1st means every day is "past" it, so this pins that the sheet
+    // reads the setting at all rather than defaulting to the calendar month.
+    const today = new Date()
+    const next = new Date(today.getFullYear(), today.getMonth() + 1, 1)
+    const expected = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`
+
+    expect(await budgetMonthFor(today.getDate())).toBe(expected)
   })
 })

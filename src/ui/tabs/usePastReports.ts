@@ -30,7 +30,11 @@ export function usePastReports(transactions: Transaction[]): PastReportsState {
   return {
     listing,
     paymentId,
-    entry: transactions.some((t) => t.settledBy != null) ? () => setListing(true) : undefined,
+    // A stamped payment counts even with nothing still pointing at it: its covered rows
+    // may all have been deleted since, and that report is precisely the one worth reaching.
+    entry: transactions.some((t) => t.settledBy != null || (t.reportCount ?? 0) > 0)
+      ? () => setListing(true)
+      : undefined,
     closeList: () => setListing(false),
     openReport: (id) => {
       // Closing the list first: the report is a full-screen page, and the modal

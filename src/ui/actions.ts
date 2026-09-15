@@ -57,8 +57,10 @@ export interface ExpenseActions {
   createTransactions: (inputs: NewTransaction[]) => Promise<void>
   updateTransaction: (id: number, patch: Partial<NewTransaction>) => Promise<void>
   deleteTransaction: (id: number) => Promise<void>
-  deleteTransactions: (ids: number[]) => Promise<void>
-  updateTransactions: (ids: number[], patch: BulkTransactionPatch) => Promise<void>
+  /** Resolves with the number of rows the server actually touched, which can be
+   *  fewer than requested if some vanished elsewhere first. */
+  deleteTransactions: (ids: number[]) => Promise<number>
+  updateTransactions: (ids: number[], patch: BulkTransactionPatch) => Promise<number>
   setStatementPaid: (
     accountId: number,
     yearMonth: string,
