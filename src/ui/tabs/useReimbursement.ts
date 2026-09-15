@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { ExpenseActions } from '../actions'
 import type { FlagGroup } from '../../domain/engine/flagGroups'
 import type { NewTransaction } from '../../data/dataSource'
-import { recordReimbursement } from './recordReimbursement'
+import { recordReimbursement, reimbursementFailureCopy } from './recordReimbursement'
 
 export interface Reimbursement {
   /** The claim being settled, or null when the sheet is closed. */
@@ -39,10 +39,7 @@ export function useReimbursement(actions: ExpenseActions | undefined): Reimburse
     void recordReimbursement(actions, { ...input, type: 'refund', cancelled: false }, transactionIds)
       .then(() => setGroup(null))
       .catch((e: unknown) => {
-        // The payment is rolled back on failure, so nothing was recorded —
-        // saying so beats a sheet that simply sits there.
-        const why = e instanceof Error ? e.message : 'Could not record the reimbursement'
-        setError(`${why}. Nothing was recorded — try again.`)
+        setError(reimbursementFailureCopy(e))
       })
       .finally(() => setBusy(false))
   }
