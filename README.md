@@ -6,16 +6,18 @@ Personal budget and transaction tracker with cash reconciliation, card settlemen
 - **D1 allowlist + in-app admin** — who can use the app (`/access/admin`)
 - **Row-level tenancy** — each user's data is scoped by email in D1
 
-Shared UI: [`folio-shell`](https://github.com/RoyCrivolotti/folio-shell) on [npm](https://www.npmjs.com/package/folio-shell) (`folio-shell@^1.4.0`).
+Shared UI: [`folio-shell`](https://github.com/RoyCrivolotti/folio-shell) on [npm](https://www.npmjs.com/package/folio-shell) (see `package.json` for the pinned version).
 
 ## Features
 
 | Area | Highlights |
 | --- | --- |
 | **Dashboard** | Monthly KPIs, budget health, **card statements** (tap a row to mark paid/due or edit the date), Goals teaser, **Latest / Recently added** toggle |
-| **Transactions** | **Date scope** (budget month, last 3 months, all dates, custom), filters, batch delete, recurring **Upcoming**, **installment plans** (bounded payment schedules with due-soon reminders), **per-day +** and **duplicate**, **statement payment rows** on `paidOn` (same tap-to-edit sheet as Dashboard/Settings), **header refresh** |
+| **Transactions** | **Date scope** (budget month, last 3 months, all dates, custom), filters, batch delete, recurring **Upcoming**, **installment plans** (bounded payment schedules with due-soon reminders), **multi-select** (long-press or Select) with bulk edit and delete, **per-day +** and **duplicate**, **statement payment rows** on `paidOn` (same tap-to-edit sheet as Dashboard/Settings), **header refresh** |
+| **Flags & reimbursements** | Named markers on transactions, **printable expense reports** with receipt cross-references, **line-by-line settlement** linking a payment to what it covered, CSV for an employer, past reports |
+| **Receipts** | Photo or PDF attachments per transaction (R2), client-side downscaling, storage usage in Settings |
 | **Analytics** | Budget vs actual, YTD on mobile, desktop tables, **cash recon gap split** (carryover / this month / total), **reconciled** badge once a month's cash is entered and card statements are paid |
-| **Goals** | Multi-scenario net-worth projections, FIRE/housing controls, comparison charts |
+| **Goals** | Multi-scenario net-worth projections, FIRE/housing controls, life events, custom milestones, **wealth accounts and dated check-ins** with on/off-track status |
 | **Settings** | Categories, accounts, **currency, number format, and budget-month rollover day**, import/export, access admin (owner), re-runnable **setup wizard** |
 | **Engine** | Derived transaction status (never stored), cash recon gap, deferred card settlement |
 | **Offline** | IndexedDB snapshot, read-only banner, global refresh |
@@ -65,7 +67,7 @@ npm install
 npm run dev
 ```
 
-Opens at `http://localhost:5173` with **read-only CSV data** from `fixtures/demo-expenses.csv` (copied to gitignored `content/` on start). Production uses the D1-backed API.
+Opens at `http://localhost:5173` with **read-only CSV data** imported straight from `fixtures/demo-expenses.csv`. There is no path to real data in local dev. Production uses the D1-backed API.
 
 To point dev at your own workbook export, set `FINANCIAL_REVIEW_DIR` to a directory containing `data/expenses_v3.csv` before `npm run dev`.
 
@@ -97,7 +99,7 @@ Full DNS, Access, D1, and CI setup: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 ## Docs
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — layers, ports/adapters, invariants
-- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — hosting, access control, migrations through `0011`
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — hosting, access control, migrations
 - [docs/SCREENSHOT-GALLERY.md](docs/SCREENSHOT-GALLERY.md) — full UI screenshot reference
 - [docs/CHANGELOG.md](docs/CHANGELOG.md) — recent product changes (July 2026)
 - [docs/GOALS-MODEL.md](docs/GOALS-MODEL.md) — wealth projection assumptions

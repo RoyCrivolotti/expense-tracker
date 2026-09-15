@@ -10,16 +10,8 @@ import { join } from 'node:path'
 
 const root = join(import.meta.dirname, '..')
 
-// Binary/generated/vendored files that would only produce noise or false positives.
-// This script itself is excluded because it necessarily contains the patterns it checks for.
-//
-// NOTE the images in this list. Text is all this script has ever inspected, and for a
-// long time that felt like enough — until ~48 screenshots of real financial data
-// reached this public repo through the one file type it skips. Images are covered
-// instead by `check-screenshot-safety.mjs` (the pre-commit gate, which refuses to
-// commit them while real data is in content/) and `npm run audit:screenshots` (an OCR
-// sweep of everything already committed). Do not read "PII check OK" as meaning the
-// screenshots were looked at.
+// Binaries produce noise, and this file necessarily contains the patterns it looks for.
+// Images are skipped because this scans text: "PII check OK" says nothing about them.
 const SKIP_FILE = [/^package-lock\.json$/, /\.(png|jpg|jpeg|ico|woff2?|ttf)$/i, /^scripts\/check-pii\.mjs$/]
 
 const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g
@@ -40,7 +32,10 @@ const SAFE_EMAIL_RE = new RegExp(
 // list rather than re-litigating what "personal" means each time.
 const BANNED_LITERALS = [
   /Beckham/i,
-  /\bPATH_PRESETS\b/,
+  // No leading \b. A word boundary cannot fire between `_` and `P`, so `\bPATH_PRESETS\b`
+  // matched the bare identifier but NOT `REMOVED_PATH_PRESETS` — the exact name the
+  // constant was leaked under, and the one thing this literal was added to catch.
+  /PATH_PRESETS/,
   // The private workbook repo's name, and the local directory layout it sits in.
   // Both were scattered through scripts, tests and docs — including as `??` fallbacks
   // that made tools read a private path when FINANCIAL_REVIEW_DIR was unset. Refer to

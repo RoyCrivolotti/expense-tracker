@@ -35,8 +35,7 @@ All changes — code, docs, config — must go through a pull request with the
    is green. `verify-and-deploy` also deploys a staging preview and posts its URL
    into the PR description automatically once it succeeds — no manual step needed,
    don't hand-add a second one.
-6. **Mark ready and merge** — `gh pr ready <n> && gh pr merge <n> --squash --delete-branch`.
-   Squash merge is the default; the repo's history is linear.
+6. **Mark ready and merge** — `gh pr ready <n> && gh pr merge <n> --delete-branch`.
 7. **Return to main** — `git checkout main && git pull` to pick up the merged commit
    before starting the next piece of work. Don't stack branches off a stale `main`.
 
@@ -65,7 +64,10 @@ Two checks, both enforced in CI on every PR:
 
 ## Code style
 
-- No narrating comments ("// Import the module"). Comments explain *why*, not *what*.
+- No narrating comments ("// Import the module"). A comment explains why the code is the
+  way it is — not how it came to be. Incident history, PR rationale and "this used to be
+  X" belong in git and the PR, not in the source. The test: does it stop the next reader
+  breaking something?
 - Follow existing patterns — check nearby files before inventing new abstractions.
 - Prefer editing existing files over creating new ones.
 - See `docs/ARCHITECTURE.md` for the layering rules (ports-and-adapters / hexagonal).

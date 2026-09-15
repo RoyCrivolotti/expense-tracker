@@ -15,6 +15,9 @@ Private staging surfaces use the **roy-admin-staging** Cloudflare Access app (Go
 
 ### 1. Pages projects + D1 bindings
 
+Each heading below names the repo the commands are run **from**. Only the
+**expense-tracker** ones exist in this repo; the rest live in their own.
+
 **expense-tracker**
 
 1. `wrangler d1 create roy-expenses-dev` → copy id to `config/dev.json`
@@ -74,9 +77,9 @@ Transaction import expects the same header as export (see `src/domain/data/expor
 - **type**: `expense`, `income`, `investment`, or `refund`.
 - **amount_cents**: integer cents, always positive.
 - **date** / **budget_month**: ISO `YYYY-MM-DD` and `YYYY-MM`.
-- Easiest path: Settings → Export, edit the CSV, then Import.
+- Easiest path: Settings → Data → Export, edit the CSV, then Import.
 
-Settings → Import includes a **Download template** with the header and one example row.
+Settings → Data → Import includes a **Download template** with the header and one example row.
 
 ## Scripts (expense-tracker)
 
