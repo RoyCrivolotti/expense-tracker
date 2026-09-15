@@ -104,6 +104,11 @@
 .dayBtn:hover {
   background: var(--color-border);
 }
+.dayDisabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 .dayOutside {
   color: var(--color-text-muted);
   opacity: 0.4;

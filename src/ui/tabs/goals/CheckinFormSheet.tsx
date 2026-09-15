@@ -72,6 +72,7 @@ export function CheckinFormSheet({ accounts, actions, onDone }: Props) {
           <DateInput
             value={date}
             ariaLabel="Date"
+            max={today}
             onChange={setDate}
           />
         </div>

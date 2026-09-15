@@ -11,6 +11,15 @@ import type { Env } from './env'
 
 const OWNER = 'owner@example.com'
 
+const todayUtc = () => new Date().toISOString().slice(0, 10)
+
+/** `days` calendar days from today, UTC. */
+function utcDaysFromToday(days: number): string {
+  const d = new Date()
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
 type Row = Record<string, unknown>
 
 /**
@@ -281,6 +290,41 @@ describe('createWealthCheckin', () => {
     ).rejects.toMatchObject({ status: 500 })
   })
 
+  it('throws 400 for a date beyond the timezone slack', async () => {
+    const env = stubEnv()
+    await expect(
+      createWealthCheckin(env, OWNER, { checkinDate: utcDaysFromToday(2), entries: [] }),
+    ).rejects.toMatchObject({ status: 400 })
+  })
+
+  it('accepts a date one day ahead of UTC, which is a real local today', async () => {
+    const tomorrow = utcDaysFromToday(1)
+    const row = { ...CHECKIN_ROW, checkin_date: tomorrow }
+    const env = stubEnv({
+      firstMap: {
+        'INSERT INTO wealth_checkins': row,
+        'SELECT * FROM wealth_checkins WHERE id': row,
+      },
+      allMap: { 'SELECT * FROM wealth_checkin_entries': [] },
+    })
+    const result = await createWealthCheckin(env, OWNER, { checkinDate: tomorrow, entries: [] })
+    expect(result.checkinDate).toBe(tomorrow)
+  })
+
+  it('accepts today', async () => {
+    const today = todayUtc()
+    const row = { ...CHECKIN_ROW, checkin_date: today }
+    const env = stubEnv({
+      firstMap: {
+        'INSERT INTO wealth_checkins': row,
+        'SELECT * FROM wealth_checkins WHERE id': row,
+      },
+      allMap: { 'SELECT * FROM wealth_checkin_entries': [] },
+    })
+    const result = await createWealthCheckin(env, OWNER, { checkinDate: today, entries: [] })
+    expect(result.checkinDate).toBe(today)
+  })
+
   it('skips batch when entries is empty', async () => {
     const env = stubEnv({
       firstMap: {
@@ -331,6 +375,15 @@ describe('updateWealthCheckin', () => {
     })
     await expect(
       updateWealthCheckin(env, OWNER, 10, { checkinDate: 'bad' }),
+    ).rejects.toMatchObject({ status: 400 })
+  })
+
+  it('throws 400 for a future date in patch', async () => {
+    const env = stubEnv({
+      firstMap: { 'SELECT id FROM wealth_checkins': { id: 10 } },
+    })
+    await expect(
+      updateWealthCheckin(env, OWNER, 10, { checkinDate: utcDaysFromToday(2) }),
     ).rejects.toMatchObject({ status: 400 })
   })
 

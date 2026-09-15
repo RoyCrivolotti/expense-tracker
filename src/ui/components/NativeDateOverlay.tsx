@@ -32,12 +32,16 @@ export function NativeDateOverlay({
   value,
   label,
   ariaLabel,
+  min,
+  max,
   onChange,
 }: {
   type: 'date' | 'month'
   value: string
   label: string
   ariaLabel: string
+  min?: string | undefined
+  max?: string | undefined
   onChange: (value: string) => void
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -60,6 +64,8 @@ export function NativeDateOverlay({
         ref={inputRef}
         type={type}
         value={value}
+        min={min}
+        max={max}
         aria-label={ariaLabel}
         onChange={(e) => onChange(e.target.value)}
         onClick={openPicker}

@@ -38,6 +38,12 @@ describe('CheckinFormSheet', () => {
     expect((dateInput as HTMLInputElement).type).toBe('date')
   })
 
+  it('caps the date field at today so a check-in cannot be future-dated', () => {
+    render(<CheckinFormSheet accounts={[makeAccount(1)]} actions={makeActions()} />)
+    const dateInput = screen.getByLabelText(/date/i)
+    expect(dateInput.max).toBe(new Date().toISOString().slice(0, 10))
+  })
+
   it('calls createWealthCheckin when form is submitted', async () => {
     const actions = makeActions()
     const user = userEvent.setup()

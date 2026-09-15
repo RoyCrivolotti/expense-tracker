@@ -9,10 +9,13 @@ interface Props {
   value: string
   ariaLabel?: string
   disabled?: boolean
+  /** Inclusive ISO bounds. Both pickers refuse a date outside them. */
+  min?: string | undefined
+  max?: string | undefined
   onChange: (iso: string) => void
 }
 
-export function DateInput({ value, ariaLabel = 'Date', disabled, onChange }: Props) {
+export function DateInput({ value, ariaLabel = 'Date', disabled, min, max, onChange }: Props) {
   const native = isNativeDatePicker()
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -24,6 +27,8 @@ export function DateInput({ value, ariaLabel = 'Date', disabled, onChange }: Pro
         value={value}
         label={shortDateLabel(value)}
         ariaLabel={ariaLabel}
+        min={min}
+        max={max}
         onChange={onChange}
       />
     )
@@ -47,6 +52,8 @@ export function DateInput({ value, ariaLabel = 'Date', disabled, onChange }: Pro
         <DatePickerPopover
           value={value}
           triggerRef={triggerRef}
+          min={min}
+          max={max}
           onSelect={onChange}
           onClose={() => setOpen(false)}
         />

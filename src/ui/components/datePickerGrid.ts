@@ -56,3 +56,15 @@ export function buildCalendarGrid(year: number, month: number): DayCell[][] {
 export function dayCellToIso(cell: DayCell): string {
   return `${cell.year}-${String(cell.month).padStart(2, '0')}-${String(cell.day).padStart(2, '0')}`
 }
+
+/**
+ * Outside an inclusive [min, max] range. Either bound may be absent.
+ *
+ * String comparison is valid because every caller passes zero-padded ISO dates, so
+ * lexicographic and chronological order agree.
+ */
+export function isDateOutOfRange(iso: string, min?: string, max?: string): boolean {
+  if (min && iso < min) return true
+  if (max && iso > max) return true
+  return false
+}

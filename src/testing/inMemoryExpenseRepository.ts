@@ -13,6 +13,7 @@ import type {
 import type { ExpenseRepository } from '../domain/ports/expenseRepository'
 import { validateDueDay, validatePlanInput } from '../domain/application/installmentPlanService'
 import { deriveStatus, deriveTransactions } from '../domain/engine/status'
+import { addDaysIso } from '../domain/engine/dates'
 import { withoutFlag, withoutSettlement } from '../domain/engine/flagGroups'
 import { defaultExpenseSettings, defaultGoalInputs } from '../domain/engine/defaults'
 import { normalizeMilestones, validateMilestones } from '../domain/engine/milestones'
@@ -180,6 +181,17 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
     return ['investment', 'cash', 'other_asset', 'debt'].includes(kind as string)
       ? undefined
       : new RepoHttpError(400, 'Invalid account kind')
+  }
+
+  /** Mirrors assertCheckinDate in dbWealth.ts, including its one day of UTC slack. */
+  function invalidCheckinDate(date: string | undefined): RepoHttpError | undefined {
+    if (!date?.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return new RepoHttpError(400, 'checkinDate must be YYYY-MM-DD')
+    }
+    if (date > addDaysIso(new Date().toISOString().slice(0, 10), 1)) {
+      return new RepoHttpError(400, 'checkinDate cannot be in the future')
+    }
+    return undefined
   }
 
   /**
@@ -898,9 +910,8 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
 
     createWealthCheckin: (owner, input) => {
       const store = storeFor(owner)
-      if (!input.checkinDate?.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        return Promise.reject(new RepoHttpError(400, 'checkinDate must be YYYY-MM-DD'))
-      }
+      const badDate = invalidCheckinDate(input.checkinDate)
+      if (badDate) return Promise.reject(badDate)
       const unowned = unownedWealthAccount(store, input.entries)
       if (unowned) return Promise.reject(unowned)
       const checkin: WealthCheckin = {
@@ -920,6 +931,8 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       if (index < 0) return Promise.reject(new RepoHttpError(404, 'Wealth check-in not found'))
       if (Object.keys(patch).length === 0)
         return Promise.reject(new RepoHttpError(400, 'Empty patch'))
+      const badDate = patch.checkinDate !== undefined ? invalidCheckinDate(patch.checkinDate) : undefined
+      if (badDate) return Promise.reject(badDate)
       const unowned = patch.entries !== undefined ? unownedWealthAccount(store, patch.entries) : undefined
       if (unowned) return Promise.reject(unowned)
       const existing = store.wealthCheckins[index]!
