@@ -29,7 +29,9 @@ export default defineConfig({
       // `include` alone makes every matching file count even if no test ever
       // imports it — untested files show as 0% instead of vanishing from the
       // denominator, which would otherwise inflate the %.
-      include: ['src/**/*.{ts,tsx}', 'functions/**/*.ts'],
+      // workers/ was absent, so a change touching only the backup cron escaped the
+      // diff-coverage gate entirely — the one piece of code nobody watches run.
+      include: ['src/**/*.{ts,tsx}', 'functions/**/*.ts', 'workers/**/*.ts'],
       exclude: [
         '**/*.test.{ts,tsx}',
         '**/*.d.ts',
