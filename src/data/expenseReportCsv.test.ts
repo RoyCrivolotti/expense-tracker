@@ -214,3 +214,72 @@ describe('downloadExpenseReportCsv', () => {
     expect(created).toEqual([])
   })
 })
+
+describe('formula injection', () => {
+  it('neutralises a description that would evaluate as a formula', () => {
+    const dataset = datasetWith([txn(1, '2026-05-02', { flagId: 1, description: '=HYPERLINK("http://x","y")' })])
+
+    const csv = expenseReportCsv(reportFor(dataset), options)!
+
+    expect(body(csv)[0]).toContain(`'=HYPERLINK`)
+  })
+
+  it.each(['=cmd', '+1+1', '-50% at Zara', '@SUM(A1)'])('guards a leading %s', (description) => {
+    const dataset = datasetWith([txn(1, '2026-05-02', { flagId: 1, description })])
+
+    const csv = expenseReportCsv(reportFor(dataset), options)!
+
+    expect(body(csv)[0]).toContain(`'${description}`)
+  })
+
+  it('leaves a negative amount alone, so the Amount column still sums', () => {
+    // The regression that matters: formatCents writes credits with a leading ASCII
+    // minus. Guarding the amount column would prefix every credit with an apostrophe
+    // and turn the one column an approver totals into text.
+    const dataset = datasetWith([
+      txn(1, '2026-05-02', { flagId: 1 }),
+      txn(2, '2026-05-03', { flagId: 1, type: 'refund', amountCents: 2_500 }),
+    ])
+
+    const csv = expenseReportCsv(reportFor(dataset), options)!
+
+    expect(csv).not.toContain(`'-`)
+    expect(csv).toMatch(/-25,00/)
+  })
+
+  it('guards the reference line when the flag name starts with a trigger', () => {
+    const dataset = makeDataset({
+      flags: [makeFlag({ id: 1, name: '=cmd travel' })],
+      transactions: [txn(1, '2026-05-02', { flagId: 1 })],
+      attachments: [],
+    })
+
+    const csv = expenseReportCsv(reportFor(dataset), options)!
+
+    expect(csv).toContain(`Reference,'=T-202605`)
+  })
+
+  it('quotes a bare carriage return so it cannot terminate the record', () => {
+    // Unquoted, Excel treats the CR as a row break and the next row would begin `=1+1`
+    // — past the guard, which only inspects the first character.
+    const dataset = datasetWith([txn(1, '2026-05-02', { flagId: 1, description: 'dinner\r=1+1' })])
+
+    const csv = expenseReportCsv(reportFor(dataset), options)!
+
+    expect(body(csv)[0]).toContain('"dinner\r=1+1"')
+  })
+
+  it('guards notes, category and account names too', () => {
+    const dataset = datasetWith([txn(1, '2026-05-02', { flagId: 1, notes: '=evil()' })])
+
+    const csv = expenseReportCsv(reportFor(dataset), {
+      ...options,
+      categoryName: () => '=cat',
+      accountName: () => '=acct',
+    })!
+
+    expect(body(csv)[0]).toContain(`'=evil()`)
+    expect(body(csv)[0]).toContain(`'=cat`)
+    expect(body(csv)[0]).toContain(`'=acct`)
+  })
+})

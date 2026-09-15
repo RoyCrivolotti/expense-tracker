@@ -21,7 +21,14 @@ function planFromInput(
   splitTotal: boolean,
 ): { plan: NewInstallmentPlan; amountCents: number } {
   const magnitude = Math.abs(input.amountCents)
-  const perInstallmentCents = splitTotal ? Math.round(magnitude / totalCount) : magnitude
+  // Split with the remainder on the installment being recorded now, not by rounding
+  // every installment to the same value. A plan stores one amountCents and
+  // installments.ts emits it for all of them, so `Math.round(total / count)` made the
+  // schedule collect the wrong total: 100.00 over 7 charged 100.03, over 3 collected
+  // 99.99. Flooring and giving this transaction the leftover cents makes the sum exact
+  // without needing the plan to remember the original total.
+  const perInstallmentCents = splitTotal ? Math.floor(magnitude / totalCount) : magnitude
+  const remainderCents = splitTotal ? magnitude - perInstallmentCents * totalCount : 0
   const sign = input.amountCents < 0 ? -1 : 1
   return {
     plan: {
@@ -36,7 +43,7 @@ function planFromInput(
       dueDayOfMonth: dueDayFromDate(input.date),
       active: true,
     },
-    amountCents: perInstallmentCents * sign,
+    amountCents: (perInstallmentCents + remainderCents) * sign,
   }
 }
 
