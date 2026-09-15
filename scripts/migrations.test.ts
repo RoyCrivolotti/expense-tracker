@@ -5,7 +5,11 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { describe, expect, it } from 'vitest'
-import { selectPendingMigrations, stemOf } from './migrate-dev.mjs'
+import {
+  backfillsBelowHighestApplied,
+  selectPendingMigrations,
+  stemOf,
+} from './migrate-dev.mjs'
 
 const MIGRATIONS = join(import.meta.dirname, '..', 'migrations')
 
@@ -48,6 +52,45 @@ describe('migration selection', () => {
     const picked = selectPendingMigrations(['0002_b.sql', 'README.md', '0001_a.sql'], [])
 
     expect(picked).toEqual(['0001_a.sql', '0002_b.sql'])
+  })
+})
+
+describe('an incomplete migration record', () => {
+  it('spots files below the highest recorded one', () => {
+    // The state that matters: 0020 applied and recorded, the seed for 0001-0019 never
+    // run. Those files are not pending, they are unrecorded, and re-applying them hands
+    // 0003's four DROP TABLEs to a populated database.
+    const files = migrationFiles()
+    const applied = ['0020_migrations_table']
+    const pending = selectPendingMigrations(files, applied)
+
+    const backfills = backfillsBelowHighestApplied(pending, applied)
+
+    expect(backfills[0]).toBe('0001_init.sql')
+    expect(backfills).toContain('0003_multi_user.sql')
+    expect(backfills.every((f) => Number(f.slice(0, 4)) < 20)).toBe(true)
+  })
+
+  it('leaves a genuinely newer file alone', () => {
+    const files = migrationFiles()
+    const applied = ['0020_migrations_table']
+
+    expect(backfillsBelowHighestApplied(selectPendingMigrations(files, applied), applied))
+      .not.toContain('0021_report_snapshot.sql')
+  })
+
+  it('finds nothing on a fresh database, where every file really is pending', () => {
+    const files = migrationFiles()
+
+    expect(backfillsBelowHighestApplied(selectPendingMigrations(files, []), [])).toEqual([])
+  })
+
+  it('finds nothing on a correctly seeded database', () => {
+    const files = migrationFiles()
+    const applied = files.slice(0, -1).map(stemOf)
+
+    expect(backfillsBelowHighestApplied(selectPendingMigrations(files, applied), applied))
+      .toEqual([])
   })
 })
 

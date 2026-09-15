@@ -137,8 +137,18 @@ npx wrangler d1 execute <db> --remote --command="INSERT OR IGNORE INTO _migratio
 ```
 
 `INSERT OR IGNORE` on a `PRIMARY KEY`, so running it twice is harmless. Until you do this,
-`migrate:dev` sees an empty table, treats every file as pending, and warns loudly rather than
-proceeding silently.
+`migrate:dev` refuses to run: an unseeded record makes every file look pending, and applying
+`0001` onward to a populated database means handing it `0003`'s four `DROP TABLE`s.
+
+It refuses on either of two signals, because the table being *empty* is not the only way the
+record can be wrong. `roy-expenses-dev` reached a state where `_migrations` held exactly
+`0020_migrations_table` and nothing else, having had `0020` applied but never the seed above.
+Every earlier file then looked pending, and `migrate:dev` started re-applying `0001`. It failed
+on `INSERT INTO settings (id)` — the `settings` table has had no `id` column since `0003`
+rebuilt it — and that failure, not any guard, is what stopped the run two files short of `0003`.
+So the check is now: any pending file numbered *below* the highest recorded one means the
+record is incomplete, since a database cannot have reached `0020` without them; and an empty
+record on a database that already has a `transactions` table means the same thing.
 
 > **If `--file` fails with `fetch failed`, use `--command` instead.** Applying `0015`–`0019` to
 > production hit a repeatable `TypeError: fetch failed` on `POST /d1/database/<id>/import`, ~13s in,
