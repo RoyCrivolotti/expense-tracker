@@ -20,8 +20,19 @@ function envForBulkUpdate(opts: {
   ownedSettledBy?: boolean
   /** What the UPDATE's `.run()` reports as `meta.changes`. */
   changes?: number
+  /** Ids the pre-check should report as already settled by a different payment. */
+  settledElsewhere?: number[]
+  /** Set true by the mock if the UPDATE statement is ever prepared. */
+  updateRan?: { value: boolean }
 }): Env {
-  const { ownedAccount = true, ownedCategory = true, ownedSettledBy = true, changes = 1 } = opts
+  const {
+    ownedAccount = true,
+    ownedCategory = true,
+    ownedSettledBy = true,
+    changes = 1,
+    settledElsewhere = [],
+    updateRan,
+  } = opts
   const txnRow = {
     id: 1,
     owner: 'a@b.com',
@@ -54,7 +65,15 @@ function envForBulkUpdate(opts: {
           if (sql.includes('transactions') && sql.includes('SELECT 1')) {
             return { first: vi.fn().mockResolvedValue(ownedSettledBy ? { ok: 1 } : null) }
           }
+          // The conflict pre-check, before any write. Distinguished from the
+          // post-update re-fetch by selecting `id` rather than `*`.
+          if (sql.includes('SELECT id FROM transactions')) {
+            return {
+              all: vi.fn().mockResolvedValue({ results: settledElsewhere.map((id) => ({ id })) }),
+            }
+          }
           if (sql.includes('UPDATE transactions')) {
+            if (updateRan) updateRan.value = true
             return { run: vi.fn().mockResolvedValue({ meta: { changes } }) }
           }
           if (sql.includes('SELECT * FROM transactions')) {
@@ -244,18 +263,39 @@ describe('bulkUpdateTransactions settledBy guard', () => {
     ).rejects.toMatchObject({ status: 400, message: 'Invalid settledBy' })
   })
 
-  it('throws 409 when fewer rows matched than requested while setting settledBy', async () => {
-    // Two ids requested, but the UPDATE (guarded by settled_by IS NULL OR = ?)
-    // only matched one — this must be caught by the row-count check, not papered
-    // over by the SELECT that follows, which re-fetches by id regardless.
+  it('rejects a conflicting batch before touching any row', async () => {
+    // The guard clause on the UPDATE excludes a conflicting row instead of failing, so
+    // deciding from the changed-row count afterwards would already have committed the
+    // rows that did qualify. Nothing may be written.
+    const updateRan = { value: false }
+    const env = envForBulkUpdate({ settledElsewhere: [2], updateRan })
+
     await expect(
-      bulkUpdateTransactions(envForBulkUpdate({ changes: 1 }), 'a@b.com', [1, 2], {
-        settledBy: 50,
-      }),
+      bulkUpdateTransactions(env, 'a@b.com', [1, 2], { settledBy: 50 }),
     ).rejects.toMatchObject({
       status: 409,
       message: 'Some of those transactions are already settled by another reimbursement',
     })
+    expect(updateRan.value).toBe(false)
+  })
+
+  it('still reports a conflict that appears between the check and the write', async () => {
+    // Nothing is settled elsewhere when the pre-check runs, but the UPDATE matches
+    // fewer rows than asked for — a concurrent settle. The count check is the backstop.
+    await expect(
+      bulkUpdateTransactions(envForBulkUpdate({ changes: 1 }), 'a@b.com', [1, 2], {
+        settledBy: 50,
+      }),
+    ).rejects.toMatchObject({ status: 409 })
+  })
+
+  it('writes when no target is settled elsewhere', async () => {
+    const updateRan = { value: false }
+    const env = envForBulkUpdate({ changes: 2, updateRan })
+
+    await bulkUpdateTransactions(env, 'a@b.com', [1, 2], { settledBy: 50 })
+
+    expect(updateRan.value).toBe(true)
   })
 
   it('does not apply the row-count check to an ordinary bulk edit without settledBy', async () => {
