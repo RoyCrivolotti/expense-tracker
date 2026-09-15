@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { buildCalendarGrid, dayCellToIso, isDateOutOfRange } from './datePickerGrid'
+import {
+  buildCalendarGrid,
+  clampDateToRange,
+  dayCellToIso,
+  isDateOutOfRange,
+} from './datePickerGrid'
 
 describe('buildCalendarGrid', () => {
   it('returns exactly 6 rows of 7 columns', () => {
@@ -99,5 +104,34 @@ describe('isDateOutOfRange', () => {
   it('compares across year boundaries, not just within a month', () => {
     expect(isDateOutOfRange('2027-01-01', undefined, '2026-12-31')).toBe(true)
     expect(isDateOutOfRange('2025-12-31', '2026-01-01')).toBe(true)
+  })
+})
+
+describe('clampDateToRange', () => {
+  it('pulls a date past max back to max', () => {
+    expect(clampDateToRange('2026-09-16', undefined, '2026-09-15')).toBe('2026-09-15')
+  })
+
+  it('pulls a date before min up to min', () => {
+    expect(clampDateToRange('2026-08-31', '2026-09-01')).toBe('2026-09-01')
+  })
+
+  it('leaves a date inside the range alone, bounds included', () => {
+    expect(clampDateToRange('2026-09-15', '2026-09-01', '2026-09-15')).toBe('2026-09-15')
+    expect(clampDateToRange('2026-09-01', '2026-09-01', '2026-09-15')).toBe('2026-09-01')
+  })
+
+  it('leaves anything alone when no bound is given', () => {
+    expect(clampDateToRange('2099-01-01')).toBe('2099-01-01')
+  })
+
+  it('passes an empty value through, since clearing a date is not out of range', () => {
+    // Guarded explicitly: '' sorts below every ISO date, so a min would otherwise
+    // turn "I cleared the field" into "I picked the earliest allowed day".
+    expect(clampDateToRange('', '2026-09-01', '2026-09-15')).toBe('')
+  })
+
+  it('works on YYYY-MM too, which the month overlay passes', () => {
+    expect(clampDateToRange('2026-10', undefined, '2026-09')).toBe('2026-09')
   })
 })
