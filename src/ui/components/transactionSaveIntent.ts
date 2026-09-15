@@ -1,6 +1,7 @@
 import type { NewInstallmentPlan, NewTransaction } from '../../data/dataSource'
 import type { Transaction } from '../../types'
 import type { ExpenseActions } from '../actions'
+import { splitInstallmentCents } from '../../domain/engine/installments'
 import type { InstallmentIntent } from './installmentIntent'
 
 /** Day-of-month (1-31) from an ISO date, or null when unparseable. */
@@ -21,7 +22,9 @@ function planFromInput(
   splitTotal: boolean,
 ): { plan: NewInstallmentPlan; amountCents: number } {
   const magnitude = Math.abs(input.amountCents)
-  const perInstallmentCents = splitTotal ? Math.round(magnitude / totalCount) : magnitude
+  const { perInstallmentCents, remainderCents } = splitTotal
+    ? splitInstallmentCents(magnitude, totalCount)
+    : { perInstallmentCents: magnitude, remainderCents: 0 }
   const sign = input.amountCents < 0 ? -1 : 1
   return {
     plan: {
@@ -36,7 +39,7 @@ function planFromInput(
       dueDayOfMonth: dueDayFromDate(input.date),
       active: true,
     },
-    amountCents: perInstallmentCents * sign,
+    amountCents: (perInstallmentCents + remainderCents) * sign,
   }
 }
 

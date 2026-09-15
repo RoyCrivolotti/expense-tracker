@@ -75,7 +75,7 @@ describe('createTransactionWithIntent', () => {
 
     await createTransactionWithIntent(
       actions,
-      { ...input, amountCents: -54370 },
+      { ...input, amountCents: -54369 },
       { kind: 'new', totalCount: 3, installmentIndex: 1, splitTotal: true },
     )
 
@@ -85,7 +85,42 @@ describe('createTransactionWithIntent', () => {
     )
   })
 
-  it('rounds an unevenly-divisible total when splitting', async () => {
+  /**
+   * A plan stores one amountCents and installments.ts emits it for every installment,
+   * so the only thing that matters is whether the whole schedule adds up to what was
+   * entered. It previously did not: Math.round made 100.00 over 7 collect 100.03.
+   */
+  it.each([
+    { totalCents: 1000, count: 3, firstCents: 334, restCents: 333 },
+    { totalCents: 10000, count: 7, firstCents: 1432, restCents: 1428 },
+    { totalCents: 5000, count: 6, firstCents: 835, restCents: 833 },
+    { totalCents: 9999, count: 3, firstCents: 3333, restCents: 3333 },
+  ])(
+    'splits $totalCents over $count installments without inventing or losing a cent',
+    async ({ totalCents, count, firstCents, restCents }) => {
+      const createInstallmentPlan = vi.fn().mockResolvedValue({ id: 9 })
+      const createTransaction = vi.fn().mockResolvedValue(undefined)
+      const actions = makeActions({ createInstallmentPlan, createTransaction })
+
+      await createTransactionWithIntent(
+        actions,
+        { ...input, amountCents: totalCents },
+        { kind: 'new', totalCount: count, installmentIndex: 1, splitTotal: true },
+      )
+
+      expect(createInstallmentPlan).toHaveBeenCalledWith(
+        expect.objectContaining({ amountCents: restCents }),
+      )
+      expect(createTransaction).toHaveBeenCalledWith(
+        expect.objectContaining({ amountCents: firstCents }),
+      )
+      // The property under test, stated directly: this installment plus the remaining
+      // (count - 1) at the plan's stored amount must equal the entered total.
+      expect(firstCents + restCents * (count - 1)).toBe(totalCents)
+    },
+  )
+
+  it('leaves the remainder cents on the installment being recorded now', async () => {
     const createInstallmentPlan = vi.fn().mockResolvedValue({ id: 9 })
     const createTransaction = vi.fn().mockResolvedValue(undefined)
     const actions = makeActions({ createInstallmentPlan, createTransaction })
@@ -96,8 +131,10 @@ describe('createTransactionWithIntent', () => {
       { kind: 'new', totalCount: 3, installmentIndex: 1, splitTotal: true },
     )
 
-    expect(createInstallmentPlan).toHaveBeenCalledWith(expect.objectContaining({ amountCents: 333 }))
-    expect(createTransaction).toHaveBeenCalledWith(expect.objectContaining({ amountCents: 333 }))
+    const planAmount = (createInstallmentPlan.mock.calls[0]?.[0] as { amountCents: number })
+      .amountCents
+    const txnAmount = (createTransaction.mock.calls[0]?.[0] as { amountCents: number }).amountCents
+    expect(txnAmount - planAmount).toBe(1)
   })
 
   it('keeps the full amount per installment when splitTotal is not set', async () => {

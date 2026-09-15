@@ -150,3 +150,27 @@ export function nextInstallmentSuggestion(
     dueDateKnown,
   }
 }
+
+export interface InstallmentSplit {
+  /** What the plan stores, and what every later installment charges. */
+  perInstallmentCents: number
+  /** Leftover cents, carried by the installment being recorded now. */
+  remainderCents: number
+}
+
+/**
+ * Divide a total across installments without inventing or losing a cent.
+ *
+ * A plan stores one `amountCents` that every installment reuses, so rounding makes the
+ * schedule collect the wrong total (100.00 over 7 charges 100.03). Floor, and give the
+ * remainder to the installment being created now — the only one that can carry it
+ * without the plan remembering the original total.
+ *
+ * Both the save path and the form preview must use this, or they disagree.
+ */
+export function splitInstallmentCents(totalCents: number, totalCount: number): InstallmentSplit {
+  const magnitude = Math.abs(totalCents)
+  if (totalCount <= 0) return { perInstallmentCents: magnitude, remainderCents: 0 }
+  const perInstallmentCents = Math.floor(magnitude / totalCount)
+  return { perInstallmentCents, remainderCents: magnitude - perInstallmentCents * totalCount }
+}

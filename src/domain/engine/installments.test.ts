@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  splitInstallmentCents,
   budgetMonthForIndex,
   expectedIndexForMonth,
   finalBudgetMonth,
@@ -113,5 +114,37 @@ describe('nextInstallmentSuggestion', () => {
   it('filters to the viewed budget month when requested', () => {
     expect(nextInstallmentSuggestion(plan, [linked(14)], '2026-03')).toBeNull()
     expect(nextInstallmentSuggestion(plan, [linked(14)], '2026-02')?.installmentIndex).toBe(15)
+  })
+})
+
+describe('splitInstallmentCents', () => {
+  it.each([
+    [10000, 7, 1428, 4],
+    [10000, 3, 3333, 1],
+    [5000, 6, 833, 2],
+    [9999, 3, 3333, 0],
+    [1000, 1, 1000, 0],
+  ])('splits %i over %i as %i with %i left over', (total, count, per, remainder) => {
+    expect(splitInstallmentCents(total, count)).toEqual({
+      perInstallmentCents: per,
+      remainderCents: remainder,
+    })
+  })
+
+  it('always reconstructs the entered total', () => {
+    for (let total = 1; total <= 400; total += 7) {
+      for (let count = 1; count <= 12; count++) {
+        const { perInstallmentCents, remainderCents } = splitInstallmentCents(total, count)
+        expect(perInstallmentCents * count + remainderCents).toBe(total)
+      }
+    }
+  })
+
+  it('treats a negative total as its magnitude', () => {
+    expect(splitInstallmentCents(-1000, 3)).toEqual({ perInstallmentCents: 333, remainderCents: 1 })
+  })
+
+  it('falls back to the whole amount for a non-positive count', () => {
+    expect(splitInstallmentCents(1000, 0)).toEqual({ perInstallmentCents: 1000, remainderCents: 0 })
   })
 })

@@ -94,9 +94,14 @@ describe('InstallmentStep — NewFields', () => {
 
   it('shows the per-installment preview when splitTotal is true and totalCount is valid', () => {
     renderStep(draft({ splitTotal: true, totalCount: '3' }))
-    // 54370 / 3 = 18123 cents = 181,23 €
-    expect(screen.getByText(/181/)).toBeInTheDocument()
-    expect(screen.getByText(/× 3/)).toBeInTheDocument()
+    // 54370 over 3 does not divide evenly: 181,24 € now, then 181,23 € × 2, which
+    // sums back to 543,70 €. The old preview said "≈ 181,23 € × 3" — i.e. 543,69 €.
+    expect(screen.getByText(/181,24 € now, then 181,23 € × 2/)).toBeInTheDocument()
+  })
+
+  it('drops the remainder wording when the split is exact', () => {
+    renderStep(draft({ splitTotal: true, totalCount: '5' }), vi.fn(), 50000)
+    expect(screen.getByText('100,00 € × 5')).toBeInTheDocument()
   })
 
   it('does not show the preview when splitTotal is false', () => {

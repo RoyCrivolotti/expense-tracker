@@ -17,8 +17,28 @@ import { formatCents, type MoneyFormat } from '../engine/money'
 const HEADER = ['Date', 'Description', 'Purpose', 'Category', 'Account', 'Amount', 'Receipts'] as const
 
 function esc(value: string): string {
-  if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`
+  // \r is quoted as well as \n: a bare CR *inside* a value is a record terminator in
+  // Excel, so `foo\r=1+1` would otherwise split into two rows and start the next one
+  // with a formula — surviving the guard below, which only inspects the first char.
+  if (/[",\n\r]/.test(value)) return `"${value.replace(/"/g, '""')}"`
   return value
+}
+
+/**
+ * Neutralise a leading formula trigger, so an imported description like
+ * `=HYPERLINK(...)` does not evaluate in the recipient's spreadsheet. The apostrophe
+ * is visible for ordinary values beginning `-`, `+` or `@` — the accepted trade-off.
+ *
+ * Not applied to the Amount column: `formatCents` writes credits with a leading `-`,
+ * so guarding it would turn the column an approver sums into text.
+ */
+function guard(value: string): string {
+  return /^[=+\-@\t\r]/.test(value) ? `'${value}` : value
+}
+
+/** Quote-escape a field that came from user or imported text. */
+function escText(value: string): string {
+  return esc(guard(value))
 }
 
 export interface ExpenseReportCsvOptions {
@@ -40,35 +60,35 @@ export function expenseReportCsv(
 
   const row = (line: ReportLine, signed: boolean) =>
     [
-      line.transaction.date,
-      line.transaction.description || options.categoryName(line.transaction.categoryId),
+      esc(line.transaction.date),
+      escText(line.transaction.description || options.categoryName(line.transaction.categoryId)),
       // The transaction's own notes: an approver asks what a dinner was *for*,
       // and that is exactly what the notes field already holds.
-      line.transaction.notes ?? '',
-      options.categoryName(line.transaction.categoryId),
-      options.accountName(line.transaction.accountId),
+      escText(line.transaction.notes ?? ''),
+      escText(options.categoryName(line.transaction.categoryId)),
+      escText(options.accountName(line.transaction.accountId)),
       // A credit is written negative so the Amount column still sums to the
-      // outstanding figure when someone totals it in a spreadsheet.
-      formatCents(signed ? -line.transaction.amountCents : line.transaction.amountCents, options.format),
+      // outstanding figure when someone totals it in a spreadsheet. Not guarded —
+      // see `guard`: that leading minus is load-bearing.
+      esc(formatCents(signed ? -line.transaction.amountCents : line.transaction.amountCents, options.format)),
       // Cross-references rather than a count, matching the figures in the
       // printed sheet, so a row can actually be tied to an image.
-      line.receiptRefs.map((ref) => `R${ref}`).join(' '),
-    ]
-      .map(esc)
-      .join(',')
+      esc(line.receiptRefs.map((ref) => `R${ref}`).join(' ')),
+    ].join(',')
 
   // The spreadsheet copy of the claim carried neither claimant nor reference,
   // so a second submission was indistinguishable from the first.
   const preamble = [
-    ['Claim', report.flag.name].map(esc).join(','),
-    ['Reference', reportReference(report)].map(esc).join(','),
-    ...(options.claimantName
-      ? [['Submitted by', options.claimantName].map(esc).join(',')]
-      : []),
+    ['Claim', escText(report.flag.name)].join(','),
+    // reportReference maps the first character of each word in the description, so a
+    // description beginning `=` produces a reference beginning `=` too.
+    ['Reference', escText(reportReference(report))].join(','),
+    ...(options.claimantName ? [['Submitted by', escText(options.claimantName)].join(',')] : []),
     '',
   ]
   const rows = report.lines.map((line) => row(line, false))
   const credits = report.credits.map((line) => row(line, true))
+  // Labels are literals and the amount must keep its sign, so neither needs guarding.
   const blank = (label: string, cents: number) =>
     ['', label, '', '', '', formatCents(cents, options.format), ''].map(esc).join(',')
 
