@@ -23,10 +23,3 @@ export function receiptLimits(env: Env): ReceiptLimits {
     maxOwnerBytes: parsePositiveInt(env.RECEIPT_MAX_OWNER_BYTES, policy.maxOwnerBytes),
   }
 }
-
-/** Client-side downscale targets, served to the UI so both agree on one source. */
-export const imagePolicy = {
-  maxImageEdgePx: policy.maxImageEdgePx,
-  jpegQuality: policy.jpegQuality,
-  thumbEdgePx: policy.thumbEdgePx,
-} as const

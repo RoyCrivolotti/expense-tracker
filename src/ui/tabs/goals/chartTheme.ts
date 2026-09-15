@@ -1,4 +1,3 @@
-import type { CSSProperties } from 'react'
 import { formatCents, type MoneyFormat } from '../../../engine'
 
 function withSymbol(body: string, format: MoneyFormat): string {
@@ -19,14 +18,4 @@ export function formatSignedMoneyShort(cents: number, format: MoneyFormat): stri
   return abs
 }
 
-export const GOAL_CHART_MARGIN = { top: 12, right: 16, left: 8, bottom: 8 }
 
-export function chartTooltipStyle(): CSSProperties {
-  return {
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 8,
-    fontSize: 12,
-    color: 'var(--color-text)',
-  }
-}

@@ -27,7 +27,3 @@ export function receiptThumbKey(
   return `${owner}/${transactionId}/${hash}_thumb.jpg`
 }
 
-/** Every object belonging to one owner, for revoke cleanup. */
-export function ownerReceiptPrefix(owner: string): string {
-  return `${owner}/`
-}
