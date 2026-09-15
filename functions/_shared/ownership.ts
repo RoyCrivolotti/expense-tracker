@@ -30,6 +30,23 @@ export async function assertOwnedFlag(env: Env, owner: string, flagId: number): 
   if (!row) throw new HttpError(400, 'Invalid flagId')
 }
 
+/**
+ * `settledBy` points at another transaction (the reimbursement payment), so it needs
+ * the same tenancy check as any other foreign key — without it a patch can aim a row's
+ * settlement at an id belonging to someone else, and the delete-time cleanup that would
+ * normally release it is scoped `AND owner = ?`, so nothing can ever reconcile it.
+ */
+export async function assertOwnedTransaction(
+  env: Env,
+  owner: string,
+  transactionId: number,
+): Promise<void> {
+  const row = await env.DB.prepare('SELECT 1 AS ok FROM transactions WHERE id = ? AND owner = ?')
+    .bind(transactionId, owner)
+    .first<{ ok: number }>()
+  if (!row) throw new HttpError(400, 'Invalid settledBy')
+}
+
 export async function assertOwnedPlan(env: Env, owner: string, planId: number): Promise<void> {
   const row = await env.DB.prepare('SELECT 1 AS ok FROM installment_plans WHERE id = ? AND owner = ?')
     .bind(planId, owner)

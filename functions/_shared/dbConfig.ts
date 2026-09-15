@@ -481,8 +481,9 @@ export async function createScenario(
        expected_real_return, horizon_years,
        house_price_cents, down_payment_fraction, house_purchase_year, transaction_costs_cents,
        mortgage_term_years, mortgage_rate_annual, house_appreciation_rate,
-       rent_monthly_cents, annual_spend_cents, safe_withdrawal_rate, life_events
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       rent_monthly_cents, annual_spend_cents, safe_withdrawal_rate, life_events,
+       plan_start_date
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      RETURNING *`,
   )
     .bind(
@@ -506,6 +507,9 @@ export async function createScenario(
       input.annualSpendCents,
       input.safeWithdrawalRate,
       JSON.stringify(input.lifeEvents ?? []),
+      // No DEFAULT on this column, and trackStatus() returns null without it — a
+      // scenario missing it silently loses its on/off-track badge and chart markers.
+      input.planStartDate ?? null,
     )
     .first<GoalScenarioRow>()
   if (!row) throw new HttpError(500, 'Scenario insert failed')

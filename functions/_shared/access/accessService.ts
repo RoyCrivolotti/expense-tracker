@@ -1,7 +1,7 @@
 import type { AccessRepository } from '../../domain/ports/accessRepository'
 import type { Env } from '../env'
 import { HttpError } from '../http'
-import { purgeOwnerExpenseData } from '../ownerDataPurge'
+import { purgeOwnerData } from '../ownerDataPurge'
 import {
   ACCESS_GROUP_IDS,
   DEFAULT_APPROVE_GROUPS,
@@ -198,7 +198,7 @@ export async function revokeAccessByEmail(
   const revoked = await deps.repo.revokeAccess(email)
   if (!revoked) throw new HttpError(404, 'Active user not found')
   await deps.repo.revokeAllGroups(email)
-  await purgeOwnerExpenseData(deps.env.DB, email)
+  await purgeOwnerData(deps.env, email)
   return { email, dataPurged: true }
 }
 
@@ -227,7 +227,7 @@ export async function updateUserGroupGrants(
     }
     const hadGrant = await deps.repo.revokeGroup(email, rawId)
     if (rawId === 'expenses' && hadGrant) {
-      await purgeOwnerExpenseData(deps.env.DB, email)
+      await purgeOwnerData(deps.env, email)
     }
   }
 

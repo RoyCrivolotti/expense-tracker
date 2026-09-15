@@ -113,13 +113,48 @@ export async function createTransaction(
   return repo.insertTransaction(owner, validateNewTransaction(input))
 }
 
+/**
+ * Every field the edit form actually sends. Deliberately *not* `BULK_PATCH_KEYS`:
+ * that set is a much narrower list of bulk-editable columns, and reusing it here
+ * would reject `description`, `amountCents`, `cancelled`, `notes` and the installment
+ * link — i.e. every ordinary edit.
+ *
+ * `settledBy` is absent on purpose. It is a foreign key to another transaction, and
+ * the only legitimate writer is the reimbursement flow via the bulk path, which
+ * ownership-checks it. Excluding it here removes the single-PATCH attack surface
+ * outright rather than policing it.
+ */
+const PATCH_KEYS = new Set<string>([
+  'date',
+  'budgetMonth',
+  'description',
+  'accountId',
+  'categoryId',
+  'type',
+  'amountCents',
+  'cancelled',
+  'notes',
+  'flagId',
+  'planId',
+  'installmentIndex',
+])
+
+export function validateTransactionPatch(raw: unknown): Partial<NewTransaction> {
+  if (raw == null || typeof raw !== 'object') throw new Error('patch is required')
+  const obj = raw as Record<string, unknown>
+  for (const key of Object.keys(obj)) {
+    if (!PATCH_KEYS.has(key)) throw new Error(`Field "${key}" is not patchable`)
+  }
+  return obj
+}
+
 export async function patchTransaction(
   repo: ExpenseRepository,
   owner: string,
   id: number,
   patch: Partial<NewTransaction>,
 ) {
-  return repo.updateTransaction(owner, id, patch)
+  return repo.updateTransaction(owner, id, validateTransactionPatch(patch))
 }
 
 export async function removeTransaction(repo: ExpenseRepository, owner: string, id: number) {
