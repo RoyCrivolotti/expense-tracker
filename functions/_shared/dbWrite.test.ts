@@ -24,6 +24,8 @@ function envForBulkUpdate(opts: {
   settledElsewhere?: number[]
   /** Set true by the mock if the UPDATE statement is ever prepared. */
   updateRan?: { value: boolean }
+  /** Every SQL string prepared, in order, when the caller wants to inspect them. */
+  prepared?: string[]
 }): Env {
   const {
     ownedAccount = true,
@@ -32,6 +34,7 @@ function envForBulkUpdate(opts: {
     changes = 1,
     settledElsewhere = [],
     updateRan,
+    prepared,
   } = opts
   const txnRow = {
     id: 1,
@@ -54,6 +57,7 @@ function envForBulkUpdate(opts: {
     DB: {
       prepare: (sql: string) => ({
         bind: () => {
+          prepared?.push(sql)
           if (sql.includes('accounts') && sql.includes('SELECT 1')) {
             return { first: vi.fn().mockResolvedValue(ownedAccount ? { ok: 1 } : null) }
           }
@@ -216,6 +220,18 @@ describe('bulkUpdateTransactions', () => {
     expect(result).toHaveLength(1)
     expect(result[0]!.id).toBe(1)
     expect(result[0]!.status).toBe('posted')
+  })
+
+  it('stamps the payment with what it covered once the settle lands', async () => {
+    const prepared: string[] = []
+    await bulkUpdateTransactions(envForBulkUpdate({ prepared }), 'a@b.com', [1], { settledBy: 7 })
+    expect(prepared.some((sql) => sql.includes('SET report_count'))).toBe(true)
+  })
+
+  it('leaves the stamp alone on a patch that settles nothing', async () => {
+    const prepared: string[] = []
+    await bulkUpdateTransactions(envForBulkUpdate({ prepared }), 'a@b.com', [1], { categoryId: 2 })
+    expect(prepared.some((sql) => sql.includes('SET report_count'))).toBe(false)
   })
 })
 

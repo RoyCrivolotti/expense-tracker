@@ -98,6 +98,18 @@ export interface StoredTransaction {
    * which claim survives.
    */
   settledBy?: number
+  /**
+   * On a reimbursement payment only: how many rows it covered, and what they came
+   * to, at the moment it was recorded.
+   *
+   * A past report is otherwise rebuilt from whatever still points at the payment,
+   * so editing a covered row afterwards rewrites the record of what was submitted.
+   * These are the fixed point that record is read from, and the live rows are
+   * checked against. Absent on payments recorded before migration 0021, which is
+   * why a report can honestly say it cannot be checked.
+   */
+  reportCount?: number
+  reportCoveredCents?: number
 }
 
 /** A transaction with its derived status, as consumed by the compute engine. */

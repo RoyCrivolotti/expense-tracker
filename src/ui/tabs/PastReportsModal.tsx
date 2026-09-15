@@ -24,6 +24,10 @@ interface Props {
  * useful — but it also means a finished report disappears from the app the
  * moment it is settled. This is where it goes, and the only way to answer
  * "send me the June one again" months later.
+ *
+ * The counts and totals here are what was recorded at settle time, not a fresh
+ * derivation — a report you have already sent should not change because a covered
+ * row was edited afterwards. When it no longer matches, the row says so.
  */
 export function PastReportsModal({ model, onClose, onOpenReport, onOpenPayment }: Props) {
   const format = useMoneyFormat()
@@ -56,6 +60,12 @@ export function PastReportsModal({ model, onClose, onOpenReport, onOpenPayment }
                   {formatDayLabel(report.payment.date)} · {report.count} transaction
                   {report.count === 1 ? '' : 's'} · {formatCents(report.coveredCents, format)}
                 </span>
+                {report.drifted ? (
+                  <span className={styles.drift}>
+                    Covered transactions have changed since you sent this — the figures
+                    above are the ones you submitted.
+                  </span>
+                ) : null}
               </div>
               <div className={styles.actions}>
                 <button

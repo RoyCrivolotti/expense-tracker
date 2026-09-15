@@ -222,6 +222,29 @@ async function assertPatchOwnership(env: Env, owner: string, patch: TxnPatch): P
   if (patch.settledBy != null) await assertOwnedTransaction(env, owner, patch.settledBy)
 }
 
+/**
+ * Stamp a reimbursement payment with what it covers, right after the settle.
+ *
+ * Computed here rather than passed in by the client: this runs against the rows as
+ * they actually stand once the settle has committed, which is the only figure worth
+ * calling a record. Re-run on every settle, so adding rows to a payment keeps it true.
+ */
+async function recordReportSnapshot(env: Env, owner: string, paymentId: number): Promise<void> {
+  await env.DB.prepare(
+    `UPDATE transactions
+     SET report_count = (
+           SELECT COUNT(*) FROM transactions WHERE owner = ?1 AND settled_by = ?2
+         ),
+         report_covered_cents = (
+           SELECT COALESCE(SUM(CASE WHEN type = 'refund' THEN -amount_cents ELSE amount_cents END), 0)
+           FROM transactions WHERE owner = ?1 AND settled_by = ?2
+         )
+     WHERE id = ?2 AND owner = ?1`,
+  )
+    .bind(owner, paymentId)
+    .run()
+}
+
 export async function updateTransaction(
   env: Env,
   owner: string,
@@ -254,6 +277,7 @@ export async function updateTransaction(
     }
     throw new HttpError(404, 'Transaction not found')
   }
+  if (patch.settledBy != null) await recordReportSnapshot(env, owner, patch.settledBy)
   return deriveOne(env, owner, toStoredTxn(row))
 }
 
@@ -349,6 +373,7 @@ export async function bulkUpdateTransactions(
   if (patch.settledBy != null && (updated?.meta?.changes ?? 0) < ids.length) {
     throw new HttpError(409, SETTLED_ELSEWHERE)
   }
+  if (patch.settledBy != null) await recordReportSnapshot(env, owner, patch.settledBy)
   const { results } = await env.DB.prepare(
     `SELECT * FROM transactions WHERE owner = ? AND id IN (${placeholders})`,
   )

@@ -77,3 +77,31 @@ describe('PastReportsModal', () => {
     expect(screen.getByText(/once you record the reimbursement/i)).toBeInTheDocument()
   })
 })
+
+describe('PastReportsModal — a report whose rows have changed', () => {
+  /** The same report, but the payment carries the figures the settle stamped on it. */
+  const stampedSettled = (count: number, coveredCents: number) =>
+    settled.map((t) =>
+      t.id === 99 ? { ...t, reportCount: count, reportCoveredCents: coveredCents } : t,
+    )
+
+  it('shows what was submitted and says the rows no longer match', () => {
+    // Recorded as 3 rows totalling 20,000; only two rows worth 14,000 remain.
+    renderModal(stampedSettled(3, 20_000))
+
+    expect(screen.getByText(/3 transactions/)).toBeInTheDocument()
+    expect(screen.getByText(/have changed since you sent this/i)).toBeInTheDocument()
+  })
+
+  it('says nothing when the rows still match', () => {
+    renderModal(stampedSettled(2, 14_000))
+
+    expect(screen.queryByText(/have changed since you sent this/i)).not.toBeInTheDocument()
+  })
+
+  it('says nothing for a payment recorded before snapshots existed', () => {
+    renderModal(settled)
+
+    expect(screen.queryByText(/have changed since you sent this/i)).not.toBeInTheDocument()
+  })
+})

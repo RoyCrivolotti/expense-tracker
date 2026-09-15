@@ -87,7 +87,7 @@ If Workers Scripts Edit is missing, CI deploy of the backup cron worker fails un
 npx wrangler d1 execute roy-expenses --remote --file=migrations/NNNN_name.sql
 ```
 
-Apply through `0020_migrations_table.sql` on production.
+Apply through `0021_report_snapshot.sql` on production.
 
 ### Migration tracking (read before re-running anything)
 
@@ -177,6 +177,8 @@ proceeding silently.
 `0018_reimbursement_links.sql` adds a nullable `settled_by` column on `transactions`, holding the id of the `refund` transaction that reimbursed that row, plus a partial index. It is set when a reimbursement is recorded and cleared if that reimbursement is deleted, so the link is reversible. Deliberately *not* a clearing of `flag_id`: unflagging on settlement would empty the Flagged card just as well, but it throws away which transactions were in which claim — the thing this column exists to record — and cannot be undone, since nothing would remember the flag. `groupTransactionsByFlag` skips settled rows instead, so the card empties and the history survives. Every existing row stays `NULL`, so there is no backfill and no placeholder substitution.
 
 `0019_reimbursable_flags.sql` adds a `reimbursable INTEGER NOT NULL DEFAULT 1` column on `flags`. Flags are generic markers: "Work travel" is money an employer will repay, "Tax deductible" is a note for an accountant that nobody is going to pay. Only a reimbursable flag offers an expense report and a Record reimbursement action — on the others they produce a document headed EXPENSE REPORT with a signature line, addressed to nobody. It defaults to `1` rather than `0` on purpose: the flags that already exist were created when flagging *was* reimbursement, so every one of them is reimbursable, and defaulting to `0` would silently take the buttons away from a feature already in use. Owner-agnostic — no placeholder substitution needed.
+
+`0021_report_snapshot.sql` adds two nullable columns on `transactions`, `report_count` and `report_covered_cents`. They hold what a reimbursement covered at the moment it was recorded. Past expense reports are otherwise rebuilt entirely from the rows still pointing at the payment, so editing or deleting one of those rows afterwards rewrites the record of what was submitted; with the snapshot the app shows the recorded figures and says when the live rows no longer match. Written by the settle itself, so no backfill: payments recorded before this migration stay `NULL` and are shown without a match check. Owner-agnostic — no placeholder substitution needed. **Apply it before (or with) the code deploy** — the settle writes these columns and will fail against a database that lacks them.
 
 ## Old URL
 

@@ -78,6 +78,8 @@ export interface TxnRow {
   installment_index: number | null
   flag_id: number | null
   settled_by: number | null
+  report_count: number | null
+  report_covered_cents: number | null
 }
 
 export interface StatementRow {
@@ -146,6 +148,10 @@ export function toStoredTxn(r: TxnRow): StoredTransaction {
     ...(r.installment_index != null ? { installmentIndex: r.installment_index } : {}),
     ...(r.flag_id != null ? { flagId: r.flag_id } : {}),
     ...(r.settled_by != null ? { settledBy: r.settled_by } : {}),
+    ...(r.report_count != null ? { reportCount: r.report_count } : {}),
+    ...(r.report_covered_cents != null
+      ? { reportCoveredCents: r.report_covered_cents }
+      : {}),
   }
 }
 

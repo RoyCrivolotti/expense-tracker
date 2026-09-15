@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { toGoalScenario, toSettings, type GoalScenarioRow, type SettingsRow } from './rows'
+import {
+  toGoalScenario,
+  toSettings,
+  toStoredTxn,
+  type GoalScenarioRow,
+  type SettingsRow,
+  type TxnRow,
+} from './rows'
 import { defaultMilestones } from '../../src/domain/engine'
 
 function baseRow(overrides: Partial<GoalScenarioRow> = {}): GoalScenarioRow {
@@ -94,5 +101,51 @@ describe('toSettings milestones', () => {
     const preMigration = settingsRow()
     delete (preMigration as Partial<SettingsRow>).milestones
     expect(toSettings(preMigration).milestones).toEqual(defaultMilestones())
+  })
+})
+
+function txnRow(overrides: Partial<TxnRow> = {}): TxnRow {
+  return {
+    id: 1,
+    date: '2026-06-14',
+    budget_month: '2026-06',
+    description: 'Alicante expenses',
+    account_id: 1,
+    category_id: 2,
+    type: 'refund',
+    amount_cents: 12_000,
+    cancelled: 0,
+    notes: null,
+    created_at: null,
+    plan_id: null,
+    installment_index: null,
+    flag_id: null,
+    settled_by: null,
+    report_count: null,
+    report_covered_cents: null,
+    ...overrides,
+  }
+}
+
+describe('toStoredTxn report snapshot', () => {
+  it('carries the recorded figures when the payment has them', () => {
+    const txn = toStoredTxn(txnRow({ report_count: 3, report_covered_cents: 45_000 }))
+
+    expect(txn.reportCount).toBe(3)
+    expect(txn.reportCoveredCents).toBe(45_000)
+  })
+
+  it('omits them entirely on a row with no snapshot', () => {
+    const txn = toStoredTxn(txnRow())
+
+    expect('reportCount' in txn).toBe(false)
+    expect('reportCoveredCents' in txn).toBe(false)
+  })
+
+  it('keeps a zero-cent snapshot, which is not the same as having none', () => {
+    const txn = toStoredTxn(txnRow({ report_count: 0, report_covered_cents: 0 }))
+
+    expect(txn.reportCount).toBe(0)
+    expect(txn.reportCoveredCents).toBe(0)
   })
 })

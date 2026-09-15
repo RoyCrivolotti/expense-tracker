@@ -121,6 +121,18 @@ describe('inMemoryExpenseRepository — wealth checkins', () => {
     ).rejects.toMatchObject({ status: 400 })
   })
 
+  it('rejects a future date, as D1 does', async () => {
+    const repo = inMemoryExpenseRepository()
+    const future = new Date()
+    future.setUTCDate(future.getUTCDate() + 2)
+    await expect(
+      repo.createWealthCheckin(OWNER, {
+        checkinDate: future.toISOString().slice(0, 10),
+        entries: [],
+      }),
+    ).rejects.toMatchObject({ status: 400 })
+  })
+
   it('updates a check-in date and entries', async () => {
     const repo = inMemoryExpenseRepository()
     const account = await repo.createWealthAccount(OWNER, {

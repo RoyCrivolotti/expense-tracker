@@ -24,7 +24,8 @@ import type {
 
 export type NewTransaction = Omit<
   StoredTransaction,
-  'id' | 'createdAt' | 'planId' | 'flagId' | 'settledBy'
+  // reportCount/reportCoveredCents are stamped by the settle, never submitted.
+  'id' | 'createdAt' | 'planId' | 'flagId' | 'settledBy' | 'reportCount' | 'reportCoveredCents'
 > & {
   /** Plan link: a plan id links/moves the row, null unlinks it, absent leaves it unchanged. */
   planId?: number | null

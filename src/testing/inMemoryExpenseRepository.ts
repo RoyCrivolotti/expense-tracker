@@ -183,6 +183,27 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       : new RepoHttpError(400, 'Invalid account kind')
   }
 
+  /**
+   * Mirrors recordReportSnapshot in dbWrite.ts: a settle stamps the payment with what
+   * it covered. Without it a test would show a past report that can never drift, and
+   * the drift warning would be provably untested.
+   */
+  function stampReportSnapshot(store: OwnerStore, paymentId: number): void {
+    const covered = store.transactions.filter((t) => t.settledBy === paymentId)
+    store.transactions = store.transactions.map((t) =>
+      t.id === paymentId
+        ? {
+            ...t,
+            reportCount: covered.length,
+            reportCoveredCents: covered.reduce(
+              (sum, c) => sum + (c.type === 'refund' ? -c.amountCents : c.amountCents),
+              0,
+            ),
+          }
+        : t,
+    )
+  }
+
   /** Mirrors assertCheckinDate in dbWealth.ts, including its one day of UTC slack. */
   function invalidCheckinDate(date: string | undefined): RepoHttpError | undefined {
     if (!date?.match(/^\d{4}-\d{2}-\d{2}$/)) {
@@ -544,6 +565,7 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
         updated.push(deriveOne(next, store.accounts, store.statements))
         return next
       })
+      if (patch.settledBy != null) stampReportSnapshot(store, patch.settledBy)
       return Promise.resolve(updated)
     },
 
