@@ -40,7 +40,7 @@ describe('CheckinFormSheet', () => {
 
   it('caps the date field at today so a check-in cannot be future-dated', () => {
     render(<CheckinFormSheet accounts={[makeAccount(1)]} actions={makeActions()} />)
-    const dateInput = screen.getByLabelText(/date/i)
+    const dateInput = screen.getByLabelText<HTMLInputElement>(/date/i)
     expect(dateInput.max).toBe(new Date().toISOString().slice(0, 10))
   })
 
