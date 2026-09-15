@@ -66,6 +66,46 @@ describe('installment plan lifecycle', () => {
     expect(dataset.installmentPlans).toHaveLength(0)
   })
 
+  it('holds an edit to the same numeric rules as a creation', async () => {
+    // Editing used to check only dueDayOfMonth, so a plan created with a positive
+    // amount over a whole number of installments could be edited to neither.
+    const repo = repoWithDefs()
+    const owner = 'owner@example.com'
+    const plan = await createPlan(repo, owner, validPlan)
+
+    await expect(patchPlan(repo, owner, plan.id, { totalCount: 0 })).rejects.toThrow(
+      'totalCount must be a positive integer',
+    )
+    await expect(patchPlan(repo, owner, plan.id, { totalCount: 2.5 })).rejects.toThrow(
+      'totalCount must be a positive integer',
+    )
+    await expect(patchPlan(repo, owner, plan.id, { amountCents: -500 })).rejects.toThrow(
+      'amountCents must be greater than zero',
+    )
+    await expect(patchPlan(repo, owner, plan.id, { startInstallmentIndex: 0 })).rejects.toThrow(
+      'startInstallmentIndex must be between 1 and totalCount',
+    )
+    await expect(
+      patchPlan(repo, owner, plan.id, { totalCount: 6, startInstallmentIndex: 9 }),
+    ).rejects.toThrow('startInstallmentIndex must be between 1 and totalCount')
+  })
+
+  it('still accepts a legitimate numeric edit', async () => {
+    const repo = repoWithDefs()
+    const owner = 'owner@example.com'
+    const plan = await createPlan(repo, owner, validPlan)
+
+    const updated = await patchPlan(repo, owner, plan.id, {
+      totalCount: 12,
+      startInstallmentIndex: 3,
+      amountCents: 9_900,
+    })
+
+    expect(updated.totalCount).toBe(12)
+    expect(updated.startInstallmentIndex).toBe(3)
+    expect(updated.amountCents).toBe(9_900)
+  })
+
   it('rejects an empty patch', async () => {
     const repo = repoWithDefs()
     const plan = await createPlan(repo, 'owner@example.com', validPlan)

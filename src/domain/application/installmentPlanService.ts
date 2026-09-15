@@ -10,21 +10,55 @@ export function validateDueDay(dueDay: number | null | undefined): void {
   }
 }
 
-function validatePlanNumbers(input: NewInstallmentPlan): void {
-  if (!Number.isInteger(input.totalCount) || input.totalCount < 1) {
+function validateTotalCount(totalCount: number): void {
+  if (!Number.isInteger(totalCount) || totalCount < 1) {
     throw new Error('totalCount must be a positive integer')
   }
-  if (!Number.isFinite(input.amountCents) || input.amountCents <= 0) {
+}
+
+function validateAmountCents(amountCents: number): void {
+  if (!Number.isFinite(amountCents) || amountCents <= 0) {
     throw new Error('amountCents must be greater than zero')
   }
+}
+
+/** `totalCount` is the upper bound when the caller supplies one. */
+function validateStartIndex(start: number, totalCount?: number): void {
+  if (!Number.isInteger(start) || start < 1) {
+    throw new Error('startInstallmentIndex must be between 1 and totalCount')
+  }
+  if (totalCount != null && start > totalCount) {
+    throw new Error('startInstallmentIndex must be between 1 and totalCount')
+  }
+}
+
+function validatePlanNumbers(input: NewInstallmentPlan): void {
+  validateTotalCount(input.totalCount)
+  validateAmountCents(input.amountCents)
   if (!input.accountId || !input.categoryId) {
     throw new Error('accountId and categoryId are required')
   }
-  const start = input.startInstallmentIndex
-  if (!Number.isInteger(start) || start < 1 || start > input.totalCount) {
-    throw new Error('startInstallmentIndex must be between 1 and totalCount')
-  }
+  validateStartIndex(input.startInstallmentIndex, input.totalCount)
   validateDueDay(input.dueDayOfMonth)
+}
+
+/**
+ * The same numeric rules creation enforces, applied to whichever fields a patch
+ * carries. Editing used to check only `dueDayOfMonth`, so a plan created with a
+ * positive amount over a whole number of installments could be edited to neither.
+ *
+ * The one rule this cannot fully reach is `startInstallmentIndex <= totalCount` when
+ * the patch moves the index without restating the count: the stored count is not in
+ * hand here and the port has no single-plan read. The edit form always sends both, so
+ * the gap is a hand-written patch, not a path the app takes.
+ */
+function validatePlanPatchNumbers(patch: Partial<NewInstallmentPlan>): void {
+  if (patch.totalCount !== undefined) validateTotalCount(patch.totalCount)
+  if (patch.amountCents !== undefined) validateAmountCents(patch.amountCents)
+  if (patch.startInstallmentIndex !== undefined) {
+    validateStartIndex(patch.startInstallmentIndex, patch.totalCount)
+  }
+  validateDueDay(patch.dueDayOfMonth)
 }
 
 export function validatePlanInput(input: NewInstallmentPlan): NewInstallmentPlan {
@@ -52,7 +86,7 @@ export async function patchPlan(
   patch: Partial<NewInstallmentPlan>,
 ): Promise<InstallmentPlan> {
   if (Object.keys(patch).length === 0) throw new Error('Empty patch')
-  validateDueDay(patch.dueDayOfMonth)
+  validatePlanPatchNumbers(patch)
   return repo.updateInstallmentPlan(owner, id, patch)
 }
 
