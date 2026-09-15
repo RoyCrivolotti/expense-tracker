@@ -68,3 +68,21 @@ export function isDateOutOfRange(iso: string, min?: string, max?: string): boole
   if (max && iso > max) return true
   return false
 }
+
+/**
+ * Pull a date back inside an inclusive [min, max] range.
+ *
+ * Clamps rather than rejects on purpose. The field it guards is controlled, so
+ * refusing a value leaves state unchanged, and React then has no reason to rewrite
+ * a DOM node whose rendered value it believes is already correct: the input keeps
+ * showing the rejected date while state holds the old one. Moving state to the bound
+ * always re-renders.
+ *
+ * An empty value passes through, since clearing a date is not out of range.
+ */
+export function clampDateToRange(iso: string, min?: string, max?: string): string {
+  if (!iso) return iso
+  if (min && iso < min) return min
+  if (max && iso > max) return max
+  return iso
+}

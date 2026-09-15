@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { clampDateToRange } from './datePickerGrid'
 import styles from './NativeDateOverlay.module.css'
 
 /**
@@ -32,6 +33,7 @@ export function NativeDateOverlay({
   value,
   label,
   ariaLabel,
+  disabled,
   min,
   max,
   onChange,
@@ -40,6 +42,9 @@ export function NativeDateOverlay({
   value: string
   label: string
   ariaLabel: string
+  /** The real input carries this: it is what the user actually touches, and the
+   *  label over it is inert. Callers disable the field while a save is in flight. */
+  disabled?: boolean | undefined
   min?: string | undefined
   max?: string | undefined
   onChange: (value: string) => void
@@ -64,10 +69,16 @@ export function NativeDateOverlay({
         ref={inputRef}
         type={type}
         value={value}
+        disabled={disabled}
         min={min}
         max={max}
         aria-label={ariaLabel}
-        onChange={(e) => onChange(e.target.value)}
+        // The attributes are a hint, not a guard: iOS Safari's picker offers every
+        // date regardless of them, so a field capped at today still hands back
+        // tomorrow. Clamping here is what actually enforces the range, and it has to,
+        // because the server allows a day of timezone slack and cannot tell a genuine
+        // local "today" from one of these.
+        onChange={(e) => onChange(clampDateToRange(e.target.value, min, max))}
         onClick={openPicker}
         onKeyDown={(e) => {
           // Space opens the picker for keyboard parity with a mobile tap.

@@ -150,6 +150,15 @@ export function formatCents(
   format: MoneyFormat = EU_MONEY_FORMAT,
   withSymbol = true,
 ): string {
+  // Math.floor and % turn a non-finite amount into "∞,NaN", which reached the Goals
+  // screen from a scenario whose withdrawal rate was zero: fireNumber returns Infinity
+  // for that on purpose. An infinite FI target is a true statement and worth showing as
+  // one; NaN describes nothing, so it gets the placeholder instead.
+  if (!Number.isFinite(cents)) {
+    if (Number.isNaN(cents)) return '—'
+    const infinity = cents > 0 ? '∞' : '-∞'
+    return withSymbol ? applySymbol(infinity, format) : infinity
+  }
   const negative = cents < 0
   const abs = Math.abs(cents)
   const whole = Math.floor(abs / 100)

@@ -44,3 +44,11 @@ describe('DateInput popover bounds', () => {
     expect(onChange).toHaveBeenCalledWith('2026-09-14')
   })
 })
+
+describe('DateInput disabled reaches both pickers', () => {
+  it('disables the popover trigger', () => {
+    render(<DateInput value="2026-09-10" disabled onChange={vi.fn()} />)
+
+    expect(screen.getByRole('button', { name: 'Date' })).toBeDisabled()
+  })
+})
