@@ -96,6 +96,39 @@ describe('useExpenseActions', () => {
     expect(applyPatch).toHaveBeenCalled()
     expect(dataset.transactions[0]?.categoryId).toBe(9)
   })
+
+  it('updateTransactions resolves with the count the server reports, not the count asked for', async () => {
+    const source: ExpenseDataSource = {
+      canWrite: true,
+      load: vi.fn(),
+      updateTransactions: vi.fn().mockResolvedValue({ updated: 1, transactions: [savedTxn] }),
+    }
+    const { result } = renderHook(() => useExpenseActions(source, vi.fn(), vi.fn()))
+    let updated: number | undefined
+    await act(async () => {
+      updated = await result.current!.updateTransactions([42, 43], { categoryId: 9 })
+    })
+    expect(updated).toBe(1)
+  })
+
+  it('deleteTransactions resolves with the server count but still drops every requested id', async () => {
+    const source: ExpenseDataSource = {
+      canWrite: true,
+      load: vi.fn(),
+      deleteTransactions: vi.fn().mockResolvedValue({ deleted: 1, requested: 2 }),
+    }
+    let dataset = { ...baseDataset, transactions: [savedTxn] }
+    const applyPatch = vi.fn((patch: (d: ExpenseDataset) => ExpenseDataset) => {
+      dataset = patch(dataset)
+    })
+    const { result } = renderHook(() => useExpenseActions(source, applyPatch, vi.fn()))
+    let deleted: number | undefined
+    await act(async () => {
+      deleted = await result.current!.deleteTransactions([42, 43])
+    })
+    expect(deleted).toBe(1)
+    expect(dataset.transactions).toHaveLength(0)
+  })
 })
 
 describe('useExpenseActions — flags', () => {

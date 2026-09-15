@@ -9,6 +9,20 @@ export function batchDeleteMessage(count: number): string {
   return `${count} ${noun} will be removed permanently.`
 }
 
+/**
+ * Rows can vanish between selecting them and confirming — another device, another tab,
+ * a cascade from a deleted plan. Reporting the count that was asked for rather than the
+ * one the server touched hides exactly that.
+ */
+export function bulkOutcomeCopy(
+  verb: 'Deleted' | 'Updated',
+  done: number,
+  requested: number,
+): string {
+  if (done < requested) return `${verb} ${done} of ${requested} transactions`
+  return `${verb} ${done} transaction${done === 1 ? '' : 's'}`
+}
+
 export function useTransactionSelection(actions?: ExpenseActions) {
   const { showToast } = useToast()
   const [selectMode, setSelectMode] = useState(false)
@@ -84,9 +98,9 @@ export function useTransactionSelection(actions?: ExpenseActions) {
     setPendingBatchDelete(false)
     setBusy(true)
     try {
-      await actions.deleteTransactions([...selected])
+      const deleted = await actions.deleteTransactions([...selected])
       exitSelect()
-      showToast(`Deleted ${count} transaction${count === 1 ? '' : 's'}`, 'success')
+      showToast(bulkOutcomeCopy('Deleted', deleted, count), 'success')
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Could not delete', 'error')
     } finally {
@@ -106,9 +120,9 @@ export function useTransactionSelection(actions?: ExpenseActions) {
     const count = selected.size
     setBusy(true)
     try {
-      await actions.updateTransactions([...selected], patch)
+      const updated = await actions.updateTransactions([...selected], patch)
       exitSelect()
-      showToast(`Updated ${count} transaction${count === 1 ? '' : 's'}`, 'success')
+      showToast(bulkOutcomeCopy('Updated', updated, count), 'success')
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Could not update', 'error')
     } finally {
