@@ -498,3 +498,25 @@ describe('budget health', () => {
     expect(total.ratio).toBeCloseTo(19000 / 30000, 4)
   })
 })
+
+describe('formatCents on an amount that is not a number', () => {
+  it('shows an infinite FI target as infinite rather than as "∞,NaN"', () => {
+    // fireNumber returns Infinity for a withdrawal rate of zero by design, and this is
+    // where it reached the screen: Math.floor(Infinity / 100) beside (Infinity % 100)
+    // rendered "∞undefinedNaN undefined" on the Goals card.
+    expect(formatCents(Infinity)).toBe('∞ €')
+    expect(formatCents(-Infinity)).toBe('-∞ €')
+  })
+
+  it('omits the symbol when asked, as it does for a real amount', () => {
+    expect(formatCents(Infinity, undefined, false)).toBe('∞')
+  })
+
+  it('shows a placeholder for NaN, which describes nothing worth printing', () => {
+    expect(formatCents(NaN)).toBe('—')
+  })
+
+  it('still formats a real amount', () => {
+    expect(formatCents(145_660)).toBe('1.456,60 €')
+  })
+})
