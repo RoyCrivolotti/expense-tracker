@@ -89,6 +89,16 @@ npx wrangler d1 execute roy-expenses --remote --file=migrations/NNNN_name.sql
 
 Apply through `0021_report_snapshot.sql` on production.
 
+**Check what a database actually has before trusting this line.** It has been wrong: on
+2026-09-15 production turned out to have no `_migrations` table at all, `0020` never having
+been applied there, while this section read as though it had. The record is the thing to
+query, and the schema is the thing that settles it:
+
+```bash
+npx wrangler d1 execute <db> --remote --command="SELECT name FROM _migrations ORDER BY name"
+npx wrangler d1 execute <db> --remote --command="SELECT name FROM pragma_table_info('transactions') WHERE name IN ('settled_by','report_count')"
+```
+
 ### Migration tracking (read before re-running anything)
 
 `0020_migrations_table.sql` adds `_migrations(name, applied_at)`. `npm run migrate:dev` now applies
