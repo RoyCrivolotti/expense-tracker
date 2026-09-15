@@ -39,6 +39,10 @@ export default defineConfig({
         'src/vite-env.d.ts',
         // Dev-only tooling for capturing docs screenshots, not app logic.
         'src/data/docsCapture*.ts',
+        // The vitest setup and its stubs: harness, not anything that ships. Counted
+        // as source until now, which made a stub whose only job is to make an import
+        // resolve look like untested application code.
+        'src/test/**',
         'functions/domain/**',
       ],
       reporter: ['text', 'lcov', 'json-summary'],
@@ -53,7 +57,7 @@ export default defineConfig({
         // baseline and left there while the real numbers reached 74/68/71/76, which is
         // a floor a third of the way below the building: coverage could have fallen by
         // half and this would have passed.
-        // Measured 2026-09-16: 74.3 / 67.7 / 70.5 / 76.5
+        // Measured 2026-09-16: 74.3 / 67.7 / 70.6 / 76.5
         statements: 72,
         branches: 65,
         functions: 68,
