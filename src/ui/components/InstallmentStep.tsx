@@ -4,6 +4,7 @@ import type { ExpenseModel } from '../useExpenseData'
 import type { InstallmentDraft, InstallmentMode } from './installmentIntent'
 import { finalBudgetMonth, planProgress } from '../../engine'
 import { fullMonthLabel } from '../../engine/dates'
+import { splitInstallmentCents } from '../../domain/engine/installments'
 import { formatCents } from '../../engine/money'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import formStyles from './TransactionForm.module.css'
@@ -85,6 +86,13 @@ function NewFields({
   const format = useMoneyFormat()
   const totalCount = Number(draft.totalCount)
   const canSplit = Number.isInteger(totalCount) && totalCount >= 1
+  /** What will actually be charged — same helper as the save path, deliberately. */
+  const splitSummary = () => {
+    const { perInstallmentCents, remainderCents } = splitInstallmentCents(amountCents, totalCount)
+    if (remainderCents === 0) return `${formatCents(perInstallmentCents, format)} × ${totalCount}`
+    return `${formatCents(perInstallmentCents + remainderCents, format)} now, then ${formatCents(perInstallmentCents, format)} × ${totalCount - 1}`
+  }
+
   return (
     <>
       <div className={formStyles.row}>
@@ -116,11 +124,7 @@ function NewFields({
         />
         <span>This is the total price — split evenly across installments</span>
       </label>
-      {draft.splitTotal && canSplit ? (
-        <p className={styles.summary}>
-          ≈ {formatCents(Math.round(amountCents / totalCount), format)} × {totalCount}
-        </p>
-      ) : null}
+      {draft.splitTotal && canSplit ? <p className={styles.summary}>{splitSummary()}</p> : null}
       <p className={styles.summary}>The plan is anchored to this transaction&apos;s budget month.</p>
     </>
   )

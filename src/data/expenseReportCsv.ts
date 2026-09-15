@@ -25,19 +25,12 @@ function esc(value: string): string {
 }
 
 /**
- * Neutralise a leading formula trigger. This document is built to be handed to an
- * employer's finance team (see the module docstring), so a description carried in
- * from a bank import — `-50% at Zara`, or a deliberate `=HYPERLINK(...)` — must not
- * evaluate when they open it.
+ * Neutralise a leading formula trigger, so an imported description like
+ * `=HYPERLINK(...)` does not evaluate in the recipient's spreadsheet. The apostrophe
+ * is visible for ordinary values beginning `-`, `+` or `@` — the accepted trade-off.
  *
- * The apostrophe is visible in the cell for ordinary values starting with `-`, `+`
- * or `@`. That is the accepted OWASP trade-off and it is worth naming: a stray
- * apostrophe on a handful of rows beats a spreadsheet that executes text a merchant
- * chose.
- *
- * Deliberately NOT applied to the Amount column: `formatCents` writes credits with a
- * leading ASCII `-`, so guarding it would prefix every negative amount and break the
- * one column an approver actually sums.
+ * Not applied to the Amount column: `formatCents` writes credits with a leading `-`,
+ * so guarding it would turn the column an approver sums into text.
  */
 function guard(value: string): string {
   return /^[=+\-@\t\r]/.test(value) ? `'${value}` : value

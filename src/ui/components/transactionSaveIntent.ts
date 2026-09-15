@@ -1,6 +1,7 @@
 import type { NewInstallmentPlan, NewTransaction } from '../../data/dataSource'
 import type { Transaction } from '../../types'
 import type { ExpenseActions } from '../actions'
+import { splitInstallmentCents } from '../../domain/engine/installments'
 import type { InstallmentIntent } from './installmentIntent'
 
 /** Day-of-month (1-31) from an ISO date, or null when unparseable. */
@@ -21,14 +22,9 @@ function planFromInput(
   splitTotal: boolean,
 ): { plan: NewInstallmentPlan; amountCents: number } {
   const magnitude = Math.abs(input.amountCents)
-  // Split with the remainder on the installment being recorded now, not by rounding
-  // every installment to the same value. A plan stores one amountCents and
-  // installments.ts emits it for all of them, so `Math.round(total / count)` made the
-  // schedule collect the wrong total: 100.00 over 7 charged 100.03, over 3 collected
-  // 99.99. Flooring and giving this transaction the leftover cents makes the sum exact
-  // without needing the plan to remember the original total.
-  const perInstallmentCents = splitTotal ? Math.floor(magnitude / totalCount) : magnitude
-  const remainderCents = splitTotal ? magnitude - perInstallmentCents * totalCount : 0
+  const { perInstallmentCents, remainderCents } = splitTotal
+    ? splitInstallmentCents(magnitude, totalCount)
+    : { perInstallmentCents: magnitude, remainderCents: 0 }
   const sign = input.amountCents < 0 ? -1 : 1
   return {
     plan: {
