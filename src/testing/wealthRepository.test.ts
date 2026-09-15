@@ -191,3 +191,67 @@ describe('inMemoryExpenseRepository — wealth checkins', () => {
     expect(dataset.wealthCheckins[0]!.entries).toHaveLength(1)
   })
 })
+
+/**
+ * These pin the double against `functions/_shared/dbWealth.ts`. ARCHITECTURE.md names
+ * this pairing as a drift risk: a double that is more permissive than the adapter lets
+ * a test assert a guard it never exercises.
+ */
+describe('inMemoryExpenseRepository — mirrors dbWealth validation', () => {
+  const account = { name: 'Broker', kind: 'investment' as const, sortOrder: 0, archived: false }
+
+  it('rejects an account kind outside the whitelist', async () => {
+    const repo = inMemoryExpenseRepository()
+
+    await expect(
+      repo.createWealthAccount(OWNER, { ...account, kind: 'crypto' as never }),
+    ).rejects.toMatchObject({ status: 400, message: 'Invalid account kind' })
+  })
+
+  it('rejects an invalid kind on update too', async () => {
+    const repo = inMemoryExpenseRepository()
+    const created = await repo.createWealthAccount(OWNER, account)
+
+    await expect(
+      repo.updateWealthAccount(OWNER, created.id, { kind: 'savings' as never }),
+    ).rejects.toMatchObject({ status: 400, message: 'Invalid account kind' })
+  })
+
+  it('refuses a check-in entry for an account the owner does not have', async () => {
+    const repo = inMemoryExpenseRepository()
+
+    await expect(
+      repo.createWealthCheckin(OWNER, {
+        checkinDate: '2026-06-30',
+        entries: [{ accountId: 999, valueCents: 100 }],
+      }),
+    ).rejects.toMatchObject({ status: 400 })
+  })
+
+  it('refuses a foreign account id when replacing entries', async () => {
+    const repo = inMemoryExpenseRepository()
+    const created = await repo.createWealthAccount(OWNER, account)
+    const checkin = await repo.createWealthCheckin(OWNER, {
+      checkinDate: '2026-06-30',
+      entries: [{ accountId: created.id, valueCents: 100 }],
+    })
+
+    await expect(
+      repo.updateWealthCheckin(OWNER, checkin.id, {
+        entries: [{ accountId: 999, valueCents: 200 }],
+      }),
+    ).rejects.toMatchObject({ status: 400 })
+  })
+
+  it('does not leak another owner account across the tenancy boundary', async () => {
+    const repo = inMemoryExpenseRepository()
+    const mine = await repo.createWealthAccount('other@example.com', account)
+
+    await expect(
+      repo.createWealthCheckin(OWNER, {
+        checkinDate: '2026-06-30',
+        entries: [{ accountId: mine.id, valueCents: 100 }],
+      }),
+    ).rejects.toMatchObject({ status: 400 })
+  })
+})
