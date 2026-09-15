@@ -7,7 +7,7 @@ import { NativeDateOverlay } from './NativeDateOverlay'
  * so a change event carrying an out-of-range date is a real thing this component sees
  * on the platform most of this app is used from. The attributes alone are not the guard.
  */
-function renderOverlay(max?: string) {
+function renderOverlay(max?: string, disabled?: boolean) {
   const onChange = vi.fn()
   render(
     <NativeDateOverlay
@@ -16,6 +16,7 @@ function renderOverlay(max?: string) {
       label="15 Sep 2026"
       ariaLabel="Date"
       max={max}
+      disabled={disabled}
       onChange={onChange}
     />,
   )
@@ -51,5 +52,19 @@ describe('NativeDateOverlay range enforcement', () => {
     fireEvent.change(input, { target: { value: '2099-01-01' } })
 
     expect(onChange).toHaveBeenCalledWith('2099-01-01')
+  })
+})
+
+describe('NativeDateOverlay disabled', () => {
+  it('disables the real input, which is the thing the user touches', () => {
+    // The visible label is inert (pointer-events: none) and sits under the input, so
+    // anything short of disabling the input itself leaves the field fully tappable.
+    const { input } = renderOverlay(undefined, true)
+
+    expect(input).toBeDisabled()
+  })
+
+  it('stays enabled when not asked to disable', () => {
+    expect(renderOverlay().input).toBeEnabled()
   })
 })

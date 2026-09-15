@@ -33,6 +33,7 @@ export function NativeDateOverlay({
   value,
   label,
   ariaLabel,
+  disabled,
   min,
   max,
   onChange,
@@ -41,6 +42,9 @@ export function NativeDateOverlay({
   value: string
   label: string
   ariaLabel: string
+  /** The real input carries this: it is what the user actually touches, and the
+   *  label over it is inert. Callers disable the field while a save is in flight. */
+  disabled?: boolean | undefined
   min?: string | undefined
   max?: string | undefined
   onChange: (value: string) => void
@@ -65,6 +69,7 @@ export function NativeDateOverlay({
         ref={inputRef}
         type={type}
         value={value}
+        disabled={disabled}
         min={min}
         max={max}
         aria-label={ariaLabel}

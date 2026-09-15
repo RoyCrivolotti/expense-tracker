@@ -27,6 +27,7 @@ export function DateInput({ value, ariaLabel = 'Date', disabled, min, max, onCha
         value={value}
         label={shortDateLabel(value)}
         ariaLabel={ariaLabel}
+        disabled={disabled}
         min={min}
         max={max}
         onChange={onChange}
