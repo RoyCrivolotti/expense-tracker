@@ -43,17 +43,21 @@ export default defineConfig({
       ],
       reporter: ['text', 'lcov', 'json-summary'],
       thresholds: {
-        // Floor, not a target — this only guards against the overall number
-        // regressing. Calibrated just below the actual baseline (44.3 / 37.1 /
-        // 37.6 / 46.0 measured with `all: true` across the whole src+functions
-        // tree) so it fails on any real drop without being flaky. New/changed
-        // code is held to a much higher bar via the diff-coverage check in CI
-        // (scripts/check-diff-coverage.mjs), not this global floor — see
-        // docs/TESTING.md.
-        statements: 43,
-        branches: 36,
-        functions: 36,
-        lines: 45,
+        // Floor, not a target: this only guards against the overall number regressing.
+        // New and changed code is held to a far higher bar by the diff-coverage check in
+        // CI (scripts/check-diff-coverage.mjs), not by this. See docs/TESTING.md.
+        //
+        // Set about two points under the measured figure, which leaves room for the
+        // run-to-run wobble without letting a real drop through. **Re-measure and raise
+        // these when coverage rises.** They were calibrated once against a 44/37/38/46
+        // baseline and left there while the real numbers reached 74/68/71/76, which is
+        // a floor a third of the way below the building: coverage could have fallen by
+        // half and this would have passed.
+        // Measured 2026-09-16: 74.3 / 67.7 / 70.5 / 76.5
+        statements: 72,
+        branches: 65,
+        functions: 68,
+        lines: 74,
       },
     },
   },
