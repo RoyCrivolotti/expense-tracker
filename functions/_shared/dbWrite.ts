@@ -235,9 +235,7 @@ async function assertPatchOwnership(env: Env, owner: string, patch: TxnPatch): P
  * the database actually held, not of what a caller claimed. Re-run on every settle, so
  * adding rows to an existing payment keeps it true.
  */
-function reportSnapshotStatement(env: Env, owner: string, paymentId: number) {
-  return env.DB.prepare(
-    `UPDATE transactions
+export const REPORT_SNAPSHOT_SQL = `UPDATE transactions
      SET report_count = (
            SELECT COUNT(*) FROM transactions WHERE owner = ?1 AND settled_by = ?2
          ),
@@ -245,8 +243,10 @@ function reportSnapshotStatement(env: Env, owner: string, paymentId: number) {
            SELECT COALESCE(SUM(CASE WHEN type = 'refund' THEN -amount_cents ELSE amount_cents END), 0)
            FROM transactions WHERE owner = ?1 AND settled_by = ?2
          )
-     WHERE id = ?2 AND owner = ?1`,
-  ).bind(owner, paymentId)
+     WHERE id = ?2 AND owner = ?1`
+
+function reportSnapshotStatement(env: Env, owner: string, paymentId: number) {
+  return env.DB.prepare(REPORT_SNAPSHOT_SQL).bind(owner, paymentId)
 }
 
 export async function updateTransaction(
