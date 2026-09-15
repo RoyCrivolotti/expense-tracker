@@ -3,7 +3,7 @@
 -- settlement type and the matching account_statements.paid flag. Only the
 -- explicit `cancelled` flag is persisted on a transaction.
 
-CREATE TABLE categories (
+CREATE TABLE IF NOT EXISTS categories (
   id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,
   monthly_budget_cents INTEGER NOT NULL DEFAULT 0,
@@ -13,7 +13,7 @@ CREATE TABLE categories (
   active INTEGER NOT NULL DEFAULT 1
 );
 
-CREATE TABLE accounts (
+CREATE TABLE IF NOT EXISTS accounts (
   id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,
   kind TEXT NOT NULL CHECK (kind IN ('debit', 'credit')),
@@ -23,7 +23,7 @@ CREATE TABLE accounts (
   active INTEGER NOT NULL DEFAULT 1
 );
 
-CREATE TABLE transactions (
+CREATE TABLE IF NOT EXISTS transactions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   date TEXT NOT NULL,
   budget_month TEXT NOT NULL,
@@ -37,11 +37,11 @@ CREATE TABLE transactions (
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
-CREATE INDEX idx_txn_budget_month ON transactions (budget_month);
-CREATE INDEX idx_txn_account ON transactions (account_id);
-CREATE INDEX idx_txn_category ON transactions (category_id);
+CREATE INDEX IF NOT EXISTS idx_txn_budget_month ON transactions (budget_month);
+CREATE INDEX IF NOT EXISTS idx_txn_account ON transactions (account_id);
+CREATE INDEX IF NOT EXISTS idx_txn_category ON transactions (category_id);
 
-CREATE TABLE account_statements (
+CREATE TABLE IF NOT EXISTS account_statements (
   account_id INTEGER NOT NULL REFERENCES accounts(id),
   year_month TEXT NOT NULL,
   paid INTEGER NOT NULL DEFAULT 0,
@@ -49,14 +49,14 @@ CREATE TABLE account_statements (
   PRIMARY KEY (account_id, year_month)
 );
 
-CREATE TABLE settings (
+CREATE TABLE IF NOT EXISTS settings (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   opening_cash_cents INTEGER NOT NULL DEFAULT 0,
   opening_investment_cents INTEGER NOT NULL DEFAULT 0,
   liquid_net_worth_cents INTEGER NOT NULL DEFAULT 0
 );
 
-CREATE TABLE goal_inputs (
+CREATE TABLE IF NOT EXISTS goal_inputs (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   house_price_cents INTEGER NOT NULL DEFAULT 0,
   down_payment_fraction REAL NOT NULL DEFAULT 0,

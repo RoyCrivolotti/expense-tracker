@@ -17,7 +17,7 @@
 -- Run as one batch:
 --   npx wrangler d1 execute roy-expenses --remote --file=migrations/0015_transaction_flags.sql
 
-CREATE TABLE flags (
+CREATE TABLE IF NOT EXISTS flags (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   owner TEXT NOT NULL,
   name TEXT NOT NULL,
@@ -28,10 +28,10 @@ CREATE TABLE flags (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX idx_flags_owner ON flags (owner);
+CREATE INDEX IF NOT EXISTS idx_flags_owner ON flags (owner);
 
 ALTER TABLE transactions ADD COLUMN flag_id INTEGER;
 
 -- Partial index: the overwhelming majority of transactions are unflagged, so
 -- only the flagged ones are worth indexing (mirrors idx_txn_plan in 0009).
-CREATE INDEX idx_txn_flag ON transactions (owner, flag_id) WHERE flag_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_txn_flag ON transactions (owner, flag_id) WHERE flag_id IS NOT NULL;

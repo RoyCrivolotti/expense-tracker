@@ -19,7 +19,7 @@
 -- Run as one batch:
 --   npx wrangler d1 execute roy-expenses --remote --file=migrations/0016_transaction_attachments.sql
 
-CREATE TABLE transaction_attachments (
+CREATE TABLE IF NOT EXISTS transaction_attachments (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   owner TEXT NOT NULL,
   transaction_id INTEGER NOT NULL,
@@ -34,10 +34,10 @@ CREATE TABLE transaction_attachments (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX idx_attachments_owner ON transaction_attachments (owner);
-CREATE INDEX idx_attachments_txn ON transaction_attachments (owner, transaction_id);
+CREATE INDEX IF NOT EXISTS idx_attachments_owner ON transaction_attachments (owner);
+CREATE INDEX IF NOT EXISTS idx_attachments_txn ON transaction_attachments (owner, transaction_id);
 
 -- Content-addressed keys make re-uploading the same photo idempotent; the
 -- unique index turns "already uploaded" into a constraint rather than a
 -- duplicate R2 object silently paying for itself twice.
-CREATE UNIQUE INDEX idx_attachments_object_key ON transaction_attachments (object_key);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_attachments_object_key ON transaction_attachments (object_key);
