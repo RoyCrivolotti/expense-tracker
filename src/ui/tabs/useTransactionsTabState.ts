@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Flag, TxnType } from '../../types'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
@@ -167,6 +167,13 @@ export function useTransactionsTabState(
     () => listRows.flatMap((r) => (r.kind === 'transaction' ? [r.txn.id] : [])),
     [listRows],
   )
+
+  // This tab does not remount on a filter or month change, so the selection has to be
+  // reconciled explicitly. Also covers a row deleted elsewhere.
+  const { retainOnly } = selection
+  useEffect(() => {
+    retainOnly(visibleIds)
+  }, [visibleIds, retainOnly])
 
   return {
     ...filters,

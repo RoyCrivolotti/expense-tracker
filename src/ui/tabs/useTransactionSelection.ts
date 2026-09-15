@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { BulkTransactionPatch } from '../../data/dataSource'
 import type { ExpenseActions } from '../actions'
 import { useToast } from '../hooks/useToast'
@@ -49,6 +49,22 @@ export function useTransactionSelection(actions?: ExpenseActions) {
   const deselectAll = () => {
     setSelected(new Set())
   }
+
+  /**
+   * Drop anything no longer on screen, so a bulk action cannot reach rows the user
+   * cannot see. Retains rather than clears, so refining a filter keeps the rest of the
+   * selection. `useCallback` because an effect depends on its identity.
+   */
+  const retainOnly = useCallback((ids: number[]) => {
+    setSelected((prev) => {
+      if (prev.size === 0) return prev
+      const visible = new Set(ids)
+      const next = new Set<number>()
+      for (const id of prev) if (visible.has(id)) next.add(id)
+      // Same contents: return the old Set so dependent effects do not re-run.
+      return next.size === prev.size ? prev : next
+    })
+  }, [])
 
   const enterAndSelect = (id: number) => {
     setSelectMode(true)
@@ -120,6 +136,7 @@ export function useTransactionSelection(actions?: ExpenseActions) {
     toggleDate,
     selectAll,
     deselectAll,
+    retainOnly,
     enterAndSelect,
     requestBatchDelete,
     cancelBatchDelete,
