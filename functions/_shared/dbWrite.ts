@@ -223,14 +223,20 @@ async function assertPatchOwnership(env: Env, owner: string, patch: TxnPatch): P
 }
 
 /**
- * Stamp a reimbursement payment with what it covers, right after the settle.
+ * Stamp a reimbursement payment with what it covers.
  *
- * Computed here rather than passed in by the client: this runs against the rows as
- * they actually stand once the settle has committed, which is the only figure worth
- * calling a record. Re-run on every settle, so adding rows to a payment keeps it true.
+ * Returns the statement rather than running it, so callers can put it in the same
+ * batch as the settle. D1 runs a batch as one transaction, sequentially, so this sees
+ * the `settled_by` the statement before it wrote, and a failure here rolls that settle
+ * back. A settle that committed without its record is the exact inconsistency these
+ * columns exist to prevent.
+ *
+ * Computed from the rows rather than passed in by the client: it is a record of what
+ * the database actually held, not of what a caller claimed. Re-run on every settle, so
+ * adding rows to an existing payment keeps it true.
  */
-async function recordReportSnapshot(env: Env, owner: string, paymentId: number): Promise<void> {
-  await env.DB.prepare(
+function reportSnapshotStatement(env: Env, owner: string, paymentId: number) {
+  return env.DB.prepare(
     `UPDATE transactions
      SET report_count = (
            SELECT COUNT(*) FROM transactions WHERE owner = ?1 AND settled_by = ?2
@@ -240,9 +246,7 @@ async function recordReportSnapshot(env: Env, owner: string, paymentId: number):
            FROM transactions WHERE owner = ?1 AND settled_by = ?2
          )
      WHERE id = ?2 AND owner = ?1`,
-  )
-    .bind(owner, paymentId)
-    .run()
+  ).bind(owner, paymentId)
 }
 
 export async function updateTransaction(
@@ -277,7 +281,7 @@ export async function updateTransaction(
     }
     throw new HttpError(404, 'Transaction not found')
   }
-  if (patch.settledBy != null) await recordReportSnapshot(env, owner, patch.settledBy)
+  if (patch.settledBy != null) await reportSnapshotStatement(env, owner, patch.settledBy).run()
   return deriveOne(env, owner, toStoredTxn(row))
 }
 
@@ -362,18 +366,20 @@ export async function bulkUpdateTransactions(
   const patchRec = patch as Record<string, unknown>
   const values = keys.map((k) => patchValue(k, patchRec[k]))
   const guard = settleGuard(patch.settledBy)
-  const updated = await env.DB.prepare(
+  const write = env.DB.prepare(
     `UPDATE transactions SET ${sets.join(', ')} WHERE owner = ? AND id IN (${placeholders})${guard.clause}`,
+  ).bind(...values, owner, ...ids, ...guard.values)
+  const [updated] = await env.DB.batch(
+    patch.settledBy != null
+      ? [write, reportSnapshotStatement(env, owner, patch.settledBy)]
+      : [write],
   )
-    .bind(...values, owner, ...ids, ...guard.values)
-    .run()
   // Backstop for the window between that check and this UPDATE: a concurrent request
   // could settle one of these rows in between. The guard clause still refuses to
   // double-settle it; this surfaces that as a conflict instead of a short result set.
   if (patch.settledBy != null && (updated?.meta?.changes ?? 0) < ids.length) {
     throw new HttpError(409, SETTLED_ELSEWHERE)
   }
-  if (patch.settledBy != null) await recordReportSnapshot(env, owner, patch.settledBy)
   const { results } = await env.DB.prepare(
     `SELECT * FROM transactions WHERE owner = ? AND id IN (${placeholders})`,
   )

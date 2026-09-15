@@ -55,6 +55,11 @@ function envForBulkUpdate(opts: {
   }
   return {
     DB: {
+      // D1 runs a batch as one transaction; the stub just echoes each statement's own
+      // meta, which is enough to tell the settle's changed-row count from the stamp's.
+      batch: vi.fn((stmts: { meta?: { changes: number } }[]) =>
+        Promise.resolve(stmts.map((s) => ({ meta: s.meta ?? { changes } }))),
+      ),
       prepare: (sql: string) => ({
         bind: () => {
           prepared?.push(sql)
@@ -78,7 +83,13 @@ function envForBulkUpdate(opts: {
           }
           if (sql.includes('UPDATE transactions')) {
             if (updateRan) updateRan.value = true
-            return { run: vi.fn().mockResolvedValue({ meta: { changes } }) }
+            // `changes` belongs to the settle itself; the snapshot statement that rides
+            // in the same batch reports its own single row.
+            const settleWrite = !sql.includes('SET report_count')
+            return {
+              run: vi.fn().mockResolvedValue({ meta: { changes } }),
+              meta: { changes: settleWrite ? changes : 1 },
+            }
           }
           if (sql.includes('SELECT * FROM transactions')) {
             return { all: vi.fn().mockResolvedValue({ results: [txnRow] }) }
@@ -228,10 +239,21 @@ describe('bulkUpdateTransactions', () => {
     expect(prepared.some((sql) => sql.includes('SET report_count'))).toBe(true)
   })
 
+  it('sends the stamp in the same batch as the settle, so neither lands alone', async () => {
+    const env = envForBulkUpdate({})
+    await bulkUpdateTransactions(env, 'a@b.com', [1], { settledBy: 7 })
+    const batch = env.DB.batch as unknown as ReturnType<typeof vi.fn>
+    expect(batch).toHaveBeenCalledOnce()
+    expect(batch.mock.calls[0]![0]).toHaveLength(2)
+  })
+
   it('leaves the stamp alone on a patch that settles nothing', async () => {
     const prepared: string[] = []
-    await bulkUpdateTransactions(envForBulkUpdate({ prepared }), 'a@b.com', [1], { categoryId: 2 })
+    const env = envForBulkUpdate({ prepared })
+    await bulkUpdateTransactions(env, 'a@b.com', [1], { categoryId: 2 })
     expect(prepared.some((sql) => sql.includes('SET report_count'))).toBe(false)
+    const batch = env.DB.batch as unknown as ReturnType<typeof vi.fn>
+    expect(batch.mock.calls[0]![0]).toHaveLength(1)
   })
 })
 
