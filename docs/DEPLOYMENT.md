@@ -87,16 +87,59 @@ If Workers Scripts Edit is missing, CI deploy of the backup cron worker fails un
 npx wrangler d1 execute roy-expenses --remote --file=migrations/NNNN_name.sql
 ```
 
-Apply through `0019_reimbursable_flags.sql` on production.
+Apply through `0020_migrations_table.sql` on production.
+
+### Migration tracking (read before re-running anything)
+
+`0020_migrations_table.sql` adds `_migrations(name, applied_at)`. `npm run migrate:dev` now applies
+only files not recorded there, and records each one after it applies.
+
+This exists because **re-running a migration was never merely noisy — it was destructive.**
+`0003_multi_user.sql` starts with `ALTER TABLE categories ADD COLUMN owner`, which fails "duplicate
+column" on an already-migrated database. That failure is the only thing that protected you. Past it
+the file continues into three *unscoped* `UPDATE … SET owner = 'owner@example.com'` statements and
+four `DROP TABLE` rebuilds — against today's multi-owner data that reassigns every row to the
+placeholder and drops four tables. `0012` likewise ends with an unscoped
+`UPDATE goal_scenarios SET plan_start_date = date(created_at)`, which overwrites a user-edited value.
+
+Which makes the `--command` fallback below the dangerous path, not the safe one: it runs statements
+individually, so it walks straight past the very error that was doing the protecting. **Never point
+it at `0003` or `0012`.**
+
+SQLite has no `ADD COLUMN IF NOT EXISTS`, so idempotent SQL cannot fix this on its own — 12 of the 20
+files carry an `ADD COLUMN`. Not running the file at all is the fix. (`IF NOT EXISTS` was added to
+every bare `CREATE TABLE`/`CREATE INDEX` anyway, so a retry between "applied" and "recorded" is a
+no-op rather than an error.)
+
+**One-time seeding, for the two databases that are already fully migrated.** Deliberately not a
+migration — a brand-new database must genuinely execute `0001`–`0019`. Apply `0020` first, then, once
+per existing database (`roy-expenses`, `roy-expenses-dev`):
+
+```bash
+npx wrangler d1 execute <db> --remote --command="INSERT OR IGNORE INTO _migrations (name) VALUES \
+ ('0001_init'),('0002_cash_actuals'),('0003_multi_user'),('0004_default_account'),\
+ ('0005_access_control'),('0006_user_group_grants'),('0007_oncall_group'),('0008_goal_scenarios'),\
+ ('0009_installment_plans'),('0010_installment_due_day'),('0011_user_preferences'),\
+ ('0012_wealth_checkins'),('0013_life_events'),('0014_custom_milestones'),\
+ ('0015_transaction_flags'),('0016_transaction_attachments'),('0017_claimant_name'),\
+ ('0018_reimbursement_links'),('0019_reimbursable_flags')"
+```
+
+`INSERT OR IGNORE` on a `PRIMARY KEY`, so running it twice is harmless. Until you do this,
+`migrate:dev` sees an empty table, treats every file as pending, and warns loudly rather than
+proceeding silently.
 
 > **If `--file` fails with `fetch failed`, use `--command` instead.** Applying `0015`–`0019` to
 > production hit a repeatable `TypeError: fetch failed` on `POST /d1/database/<id>/import`, ~13s in,
 > straight after "Uploading complete". It was specific to the *import* path: `--command` queries
 > against the same database in the same shell succeeded in under a millisecond, the same files
 > imported cleanly into `roy-expenses-dev` minutes earlier, and upgrading to wrangler 4.131.1 changed
-> nothing. There is no migration-tracking table here, so running a file's statements individually
-> through `--command` reaches exactly the same end state — strip the `--` comments, split on `;`, and
-> run them in order. That is how production took `0015`–`0019`.
+> nothing. For a file that has not been applied yet, running its statements individually through
+> `--command` reaches the same end state — strip the `--` comments, split on `;`, and run them in
+> order, then record it in `_migrations` yourself. That is how production took `0015`–`0019`.
+>
+> Only ever do this for a *pending* file. On an already-applied one it skips past the error that
+> would have stopped a `--file` run — see the warning about `0003` and `0012` above.
 >
 > The trade is atomicity: `--file` leaves the database untouched if the import fails partway, whereas
 > statement-by-statement can stop half-applied. Verify after, comparing the resolved schema (via

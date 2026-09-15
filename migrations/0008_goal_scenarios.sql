@@ -1,6 +1,6 @@
 -- Goal comparison scenarios (owner-scoped, persisted per user).
 
-CREATE TABLE goal_scenarios (
+CREATE TABLE IF NOT EXISTS goal_scenarios (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   owner TEXT NOT NULL,
   name TEXT NOT NULL,
@@ -25,4 +25,4 @@ CREATE TABLE goal_scenarios (
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX idx_goal_scenarios_owner ON goal_scenarios (owner);
+CREATE INDEX IF NOT EXISTS idx_goal_scenarios_owner ON goal_scenarios (owner);

@@ -16,10 +16,10 @@ UPDATE categories SET owner = 'owner@example.com';
 UPDATE accounts SET owner = 'owner@example.com';
 UPDATE transactions SET owner = 'owner@example.com';
 
-CREATE INDEX idx_txn_owner ON transactions (owner);
+CREATE INDEX IF NOT EXISTS idx_txn_owner ON transactions (owner);
 
 -- 2) account_statements: PK must include owner (rebuild).
-CREATE TABLE account_statements_new (
+CREATE TABLE IF NOT EXISTS account_statements_new (
   owner TEXT NOT NULL DEFAULT '',
   account_id INTEGER NOT NULL REFERENCES accounts(id),
   year_month TEXT NOT NULL,
@@ -34,7 +34,7 @@ DROP TABLE account_statements;
 ALTER TABLE account_statements_new RENAME TO account_statements;
 
 -- 3) cash_actuals: PK must include owner (rebuild).
-CREATE TABLE cash_actuals_new (
+CREATE TABLE IF NOT EXISTS cash_actuals_new (
   owner TEXT NOT NULL DEFAULT '',
   year_month TEXT NOT NULL,
   actual_cash_cents INTEGER NOT NULL DEFAULT 0,
@@ -48,7 +48,7 @@ DROP TABLE cash_actuals;
 ALTER TABLE cash_actuals_new RENAME TO cash_actuals;
 
 -- 4) settings: drop the id = 1 singleton; one row per owner.
-CREATE TABLE settings_new (
+CREATE TABLE IF NOT EXISTS settings_new (
   owner TEXT PRIMARY KEY,
   opening_cash_cents INTEGER NOT NULL DEFAULT 0,
   opening_investment_cents INTEGER NOT NULL DEFAULT 0,
@@ -61,7 +61,7 @@ DROP TABLE settings;
 ALTER TABLE settings_new RENAME TO settings;
 
 -- 5) goal_inputs: drop the id = 1 singleton; one row per owner.
-CREATE TABLE goal_inputs_new (
+CREATE TABLE IF NOT EXISTS goal_inputs_new (
   owner TEXT PRIMARY KEY,
   house_price_cents INTEGER NOT NULL DEFAULT 0,
   down_payment_fraction REAL NOT NULL DEFAULT 0,

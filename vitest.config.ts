@@ -14,7 +14,9 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.test.{ts,tsx}', 'functions/**/*.test.ts'],
+    // scripts/ is included so the migration-safety test can run. Those files stay out
+    // of `coverage.include` below — they are build/ops tooling, not shipped code.
+    include: ['src/**/*.test.{ts,tsx}', 'functions/**/*.test.ts', 'scripts/**/*.test.ts'],
     exclude: ['functions/domain/**'],
     css: true,
     coverage: {

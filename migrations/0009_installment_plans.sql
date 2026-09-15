@@ -10,7 +10,7 @@
 -- Run as one batch:
 --   npx wrangler d1 execute roy-expenses --remote --file=migrations/0009_installment_plans.sql
 
-CREATE TABLE installment_plans (
+CREATE TABLE IF NOT EXISTS installment_plans (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   owner TEXT NOT NULL,
   description TEXT NOT NULL,
@@ -29,13 +29,13 @@ CREATE TABLE installment_plans (
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX idx_installment_plans_owner ON installment_plans (owner);
+CREATE INDEX IF NOT EXISTS idx_installment_plans_owner ON installment_plans (owner);
 
 ALTER TABLE transactions ADD COLUMN plan_id INTEGER;
 ALTER TABLE transactions ADD COLUMN installment_index INTEGER;
 
-CREATE UNIQUE INDEX idx_txn_plan_installment
+CREATE UNIQUE INDEX IF NOT EXISTS idx_txn_plan_installment
   ON transactions (owner, plan_id, installment_index)
   WHERE plan_id IS NOT NULL AND installment_index IS NOT NULL;
 
-CREATE INDEX idx_txn_plan ON transactions (owner, plan_id) WHERE plan_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_txn_plan ON transactions (owner, plan_id) WHERE plan_id IS NOT NULL;

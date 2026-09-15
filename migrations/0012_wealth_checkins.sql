@@ -7,7 +7,7 @@
 -- Named wealth accounts (investment portfolio, cash savings, other assets, debts).
 -- Distinct from expense tracker accounts (debit/credit); these track net-worth
 -- components by market value, not cash flow.
-CREATE TABLE wealth_accounts (
+CREATE TABLE IF NOT EXISTS wealth_accounts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   owner TEXT NOT NULL,
   name TEXT NOT NULL,
@@ -17,11 +17,11 @@ CREATE TABLE wealth_accounts (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX idx_wealth_accounts_owner ON wealth_accounts (owner);
+CREATE INDEX IF NOT EXISTS idx_wealth_accounts_owner ON wealth_accounts (owner);
 
 -- A check-in represents a single point-in-time snapshot of wealth.
 -- Values per account are stored in wealth_checkin_entries.
-CREATE TABLE wealth_checkins (
+CREATE TABLE IF NOT EXISTS wealth_checkins (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   owner TEXT NOT NULL,
   checkin_date TEXT NOT NULL,
@@ -29,12 +29,12 @@ CREATE TABLE wealth_checkins (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX idx_wealth_checkins_owner ON wealth_checkins (owner);
-CREATE INDEX idx_wealth_checkins_owner_date ON wealth_checkins (owner, checkin_date);
+CREATE INDEX IF NOT EXISTS idx_wealth_checkins_owner ON wealth_checkins (owner);
+CREATE INDEX IF NOT EXISTS idx_wealth_checkins_owner_date ON wealth_checkins (owner, checkin_date);
 
 -- Per-account market value at the time of a check-in (positive for assets, positive
 -- for debts — the sign is determined by the account's kind when computing net worth).
-CREATE TABLE wealth_checkin_entries (
+CREATE TABLE IF NOT EXISTS wealth_checkin_entries (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   checkin_id INTEGER NOT NULL REFERENCES wealth_checkins (id) ON DELETE CASCADE,
   account_id INTEGER NOT NULL REFERENCES wealth_accounts (id) ON DELETE CASCADE,
@@ -42,8 +42,8 @@ CREATE TABLE wealth_checkin_entries (
   UNIQUE (checkin_id, account_id)
 );
 
-CREATE INDEX idx_wealth_checkin_entries_checkin ON wealth_checkin_entries (checkin_id);
-CREATE INDEX idx_wealth_checkin_entries_account ON wealth_checkin_entries (account_id);
+CREATE INDEX IF NOT EXISTS idx_wealth_checkin_entries_checkin ON wealth_checkin_entries (checkin_id);
+CREATE INDEX IF NOT EXISTS idx_wealth_checkin_entries_account ON wealth_checkin_entries (account_id);
 
 -- Calendar anchor for scenarios: enables computing "plan value at today's date"
 -- and therefore on/off-track deltas. Backfilled from created_at (best available

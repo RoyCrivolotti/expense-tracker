@@ -22,4 +22,4 @@
 --   npx wrangler d1 execute roy-expenses --remote --file=migrations/0018_reimbursement_links.sql
 
 ALTER TABLE transactions ADD COLUMN settled_by INTEGER;
-CREATE INDEX idx_txn_settled_by ON transactions (owner, settled_by) WHERE settled_by IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_txn_settled_by ON transactions (owner, settled_by) WHERE settled_by IS NOT NULL;
