@@ -51,17 +51,9 @@ export function useTransactionSelection(actions?: ExpenseActions) {
   }
 
   /**
-   * Drop anything no longer on screen.
-   *
-   * Selection used to outlive a filter or month change, so selecting five rows and
-   * then narrowing the filter left a bulk delete aimed at rows the user could no
-   * longer see. It also made `BatchBar`'s `count >= totalCount` read true while the
-   * visible rows were not the selected ones, flipping the button to "Deselect all"
-   * next to a "5 selected" label.
-   *
-   * Retaining the still-visible rows rather than clearing keeps a refinement of the
-   * filter from throwing the whole selection away, and nothing invisible survives
-   * either way. `useCallback` because an effect depends on its identity.
+   * Drop anything no longer on screen, so a bulk action cannot reach rows the user
+   * cannot see. Retains rather than clears, so refining a filter keeps the rest of the
+   * selection. `useCallback` because an effect depends on its identity.
    */
   const retainOnly = useCallback((ids: number[]) => {
     setSelected((prev) => {

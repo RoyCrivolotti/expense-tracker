@@ -168,9 +168,8 @@ export function useTransactionsTabState(
     [listRows],
   )
 
-  // Changing the filter or the month does not remount this tab, so without this the
-  // selection outlives what is on screen and a bulk action reaches rows the user can
-  // no longer see. Also covers a row disappearing because it was deleted elsewhere.
+  // This tab does not remount on a filter or month change, so the selection has to be
+  // reconciled explicitly. Also covers a row deleted elsewhere.
   const { retainOnly } = selection
   useEffect(() => {
     retainOnly(visibleIds)

@@ -55,11 +55,9 @@ export function useExpenseData(source: ExpenseDataSource): ExpenseData {
   }, [])
 
   const applyPatch = useCallback((patch: (dataset: ExpenseDataset) => ExpenseDataset) => {
-    // Bumped here rather than inside the updater below, and unconditionally. React
-    // only runs a useState updater eagerly when that hook's queue is empty, so a
-    // bump placed inside it is not guaranteed to have happened by the time this
-    // function returns — leaving a window where an in-flight load still reads the
-    // old count. A spurious bump costs at most one discarded refresh.
+    // Outside the updater, and unconditional: React only runs a useState updater
+    // eagerly when the queue is empty, so a bump inside it may not have happened when
+    // this returns. A spurious bump costs at most one discarded refresh.
     patchCount.current += 1
     setState((prev) => {
       if (prev.status !== 'ready' || !prev.model) return prev
@@ -72,16 +70,13 @@ export function useExpenseData(source: ExpenseDataSource): ExpenseData {
 
   useEffect(() => {
     let active = true
-    // Captured per load() call, not once at mount: a counter captured once would
-    // make the app stop refreshing permanently after the user's first edit, which
-    // is worse than the bug this guards against.
+    // Per load() call, not once at mount — captured once, the app would stop
+    // refreshing permanently after the first edit.
     const patchesAtStart = patchCount.current
     /**
-     * A mutation landed while this load was in flight, so its response describes
-     * server state from before that mutation. Replacing the model with it reverts
-     * the user's edit on screen with no error, even though the server has it.
-     * Checked after *every* await that precedes a setState — including the offline
-     * snapshot write, which is a real IndexedDB round trip, not a cheap one.
+     * A mutation landed mid-load, so this response predates it and would revert the
+     * user's edit on screen. Check after *every* await before a setState — including
+     * the offline snapshot write, which is a real IndexedDB round trip.
      */
     const isStale = () => patchCount.current !== patchesAtStart
 
@@ -97,9 +92,8 @@ export function useExpenseData(source: ExpenseDataSource): ExpenseData {
     }
 
     /**
-     * Show the offline snapshot. Shared by the offline path and the error fallback,
-     * which had the same six lines twice. Returns false only when there is no
-     * snapshot to show, so the caller can fall through to an error state.
+     * Show the offline snapshot. Returns false only when there is none, so the caller
+     * can fall through to an error state.
      */
     const applyCached = async (outcome: RefreshOutcome): Promise<boolean> => {
       const cached = await loadOfflineSnapshot()
@@ -126,9 +120,8 @@ export function useExpenseData(source: ExpenseDataSource): ExpenseData {
       const refreshOk: RefreshOutcome = version === 0 ? null : 'ok'
       const dataset = await source.load()
       if (!active) return
-      // Stale, not failed: the request succeeded, we are only dropping its payload
-      // because newer local state supersedes it. Still settle the refresh UI, or the
-      // spinner never stops.
+      // Stale, not failed — the request succeeded, its payload is just superseded.
+      // Still settle the refresh UI, or the spinner never stops.
       if (isStale()) return void finish(refreshOk)
       await saveOfflineSnapshot(dataset)
       if (!active) return
