@@ -135,7 +135,14 @@ export function formatPercentInput(
   return (fraction * 100).toFixed(decimals).replace('.', format.decimalSeparator)
 }
 
-function applySymbol(body: string, format: MoneyFormat): string {
+/**
+ * Place the currency symbol the way this format wants it.
+ *
+ * Exported because the chart's compact formatter needs the same rule and had grown its
+ * own verbatim copy. A currency whose symbol goes on the other side is then one change,
+ * not two, and the second is the one you forget.
+ */
+export function applySymbol(body: string, format: MoneyFormat): string {
   return format.symbolPosition === 'prefix' ? `${format.symbol}${body}` : `${body} ${format.symbol}`
 }
 

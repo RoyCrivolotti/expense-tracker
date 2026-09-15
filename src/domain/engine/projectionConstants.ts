@@ -2,8 +2,6 @@
 
 export const DEFAULT_REAL_RETURN = 0.07
 export const DEFAULT_HOUSE_APPRECIATION = 0.025
-export const DEFAULT_NET_RETENTION = 0.65
-export const DEFAULT_ON_CALL_MONTHLY_CENTS = 50_000
 
 /** Fallback milestone ladder for owners who have not customised theirs. */
 export const DEFAULT_MILESTONE_CENTS = [
@@ -17,7 +15,6 @@ export const MILESTONE_MAX_COUNT = 12
 /** Cap on milestone label length, so matrix headers stay readable. */
 export const MILESTONE_LABEL_MAX_LENGTH = 40
 
-export const DEFAULT_HOUSE_PRICE_CENTS = 400_000_000
 export const DEFAULT_DOWN_PAYMENT_FRACTION = 0.2
 export const DEFAULT_TRANSACTION_COSTS_CENTS = 50_000
 export const DEFAULT_MORTGAGE_TERM_YEARS = 30

@@ -96,13 +96,3 @@ export function netSpendCents(transactions: Transaction[]): number {
   return total
 }
 
-/** Group an already-sorted list into day buckets, preserving order. */
-export function groupByDay(transactions: Transaction[]): DayGroup[] {
-  const groups: DayGroup[] = []
-  for (const txn of transactions) {
-    const last = groups[groups.length - 1]
-    if (last && last.date === txn.date) last.transactions.push(txn)
-    else groups.push({ date: txn.date, transactions: [txn] })
-  }
-  return groups
-}

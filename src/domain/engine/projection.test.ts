@@ -9,6 +9,7 @@ import {
   DEFAULT_MILESTONE_CENTS,
   DEFAULT_TRANSACTION_COSTS_CENTS,
 } from './projectionConstants'
+import { projectNetWorthBand } from './scenarioProjection'
 import {
   projectInvested,
   projectNetWorth,
@@ -220,5 +221,49 @@ describe('life events', () => {
     const base = projectNetWorth(baseParams()).map((p) => p.investedCents)
     const empty = projectNetWorth(baseParams({ lifeEvents: [] })).map((p) => p.investedCents)
     expect(empty).toEqual(base)
+  })
+})
+
+describe('the two figures GOALS-MODEL.md states', () => {
+  /**
+   * Both of these were written down wrong and stayed wrong, because nothing failed when
+   * the doc and the code disagreed. These pin the code, so the next person to change
+   * either one has to decide deliberately rather than leave the page stale.
+   */
+  const flat = {
+    startInvestedCents: 0,
+    monthlyContributionCents: 100_000,
+    annualContributionGrowth: 0.1,
+    expectedRealReturn: 0,
+    horizonYears: 3,
+    housePriceCents: 0,
+    downPaymentFraction: 0,
+    housePurchaseYear: null,
+    transactionCostsCents: 0,
+    mortgageTermYears: 30,
+    mortgageRateAnnual: 0,
+    houseAppreciationRate: 0,
+  }
+
+  it('starts contribution growth in year 2, not year 1', () => {
+    // Zero return, so each year's invested total is just the contributions so far.
+    const points = projectNetWorth(flat)
+    const yearly = 100_000 * 12
+
+    // Year 1 is the amount entered, ungrown: (1 + g)^(y - 1), not (1 + g)^y.
+    expect(points[1]?.investedCents).toBe(yearly)
+    expect(points[2]?.investedCents).toBe(yearly + Math.round(yearly * 1.1))
+    expect(points[3]?.investedCents).toBe(
+      yearly + Math.round(yearly * 1.1) + Math.round(yearly * 1.1 * 1.1),
+    )
+  })
+
+  it('spreads the uncertainty band 3 points either side by default', () => {
+    const params = { ...flat, expectedRealReturn: 0.07, annualContributionGrowth: 0 }
+    const { lo, hi } = projectNetWorthBand(params)
+
+    expect(lo).toEqual(projectNetWorthBand(params, 0.03).lo)
+    expect(hi).toEqual(projectNetWorthBand(params, 0.03).hi)
+    expect(lo).not.toEqual(projectNetWorthBand(params, 0.02).lo)
   })
 })

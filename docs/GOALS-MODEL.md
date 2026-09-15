@@ -19,7 +19,7 @@ The Goals tab has two views:
 | Contribution growth | 0% / year (adjustable per scenario in Goals UI) |
 | Net retention (salary model) | 65% of gross — **engine helper only** (`annualSavingsFromCashflow`); charts use explicit `monthlyContributionCents` |
 
-`annualContributionGrowth`: each year's monthly contribution compounds by this rate, so `monthlyContribution[y] = monthlyContributionCents × (1 + growth)^y`. Exposed as a percentage slider in GoalControls.
+`annualContributionGrowth`: each year's monthly contribution compounds by this rate, so `monthlyContribution[y] = monthlyContributionCents × (1 + growth)^(y - 1)`. Year 1 contributes the amount you entered, and growth first applies in year 2. Exposed as a percentage slider in GoalControls.
 
 ## Housing
 
@@ -77,7 +77,7 @@ Stored as a JSON column (`life_events`) on `goal_scenarios`. Applied in the year
 
 ## Uncertainty bands
 
-The hero chart shows a shaded band for ±2 pp around the scenario's `expectedRealReturn`, computed by `projectNetWorthBand` in `scenarioProjection.ts`. The band uses the same contribution and housing logic as the main projection. Chart layer: `kind: 'band'` on `ChartSeries`, rendered by `ChartBandLayer` in `linearChartParts.tsx`.
+The hero chart shows a shaded band for ±3 pp around the scenario's `expectedRealReturn`, computed by `projectNetWorthBand` in `scenarioProjection.ts`. The band uses the same contribution and housing logic as the main projection. Chart layer: `kind: 'band'` on `ChartSeries`, rendered by `ChartBandLayer` in `linearChartParts.tsx`.
 
 ## Nominal vs real display
 
@@ -94,7 +94,7 @@ The 2% rate approximates the ECB target. Check-in scatter points are also scaled
 Each year `y = 1…N`:
 
 ```
-contribution[y] = monthlyContributionCents × 12 × (1 + contributionGrowth)^y
+contribution[y] = monthlyContributionCents × 12 × (1 + contributionGrowth)^(y - 1)
 invested[y] = invested[y-1] × (1 + realReturn) + contribution[y] + lifeEventImpact(y)
 ```
 

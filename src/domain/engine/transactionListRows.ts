@@ -90,10 +90,6 @@ export function listRowDate(row: TransactionListRow): string {
   return row.kind === 'transaction' ? row.txn.date : row.date
 }
 
-export function listRowKey(row: TransactionListRow): string {
-  return row.kind === 'transaction' ? `txn:${row.txn.id}` : row.key
-}
-
 export interface ListDayGroup {
   date: string
   rows: TransactionListRow[]
