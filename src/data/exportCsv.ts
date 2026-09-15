@@ -1,9 +1,17 @@
 import type { ExpenseDataset } from '../types'
 import { EXPORT_CSV_HEADER } from '../domain/data/exportCsvFormat'
+import { guardCsvValue } from '../domain/data/csvFormulaGuard'
 
 function esc(value: string): string {
-  if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`
+  // \r as well as \n: a bare carriage return mid-value is a record terminator in
+  // Excel, which would split the row and start the next one with the remainder.
+  if (/[",\n\r]/.test(value)) return `"${value.replace(/"/g, '""')}"`
   return value
+}
+
+/** Text columns only — never the id, amount or flags, which must stay numeric. */
+function escText(value: string): string {
+  return esc(guardCsvValue(value))
 }
 
 /** Serialize transactions to CSV (workbook-compatible columns). */
@@ -22,14 +30,14 @@ export function exportTransactionsCsv(
       t.id,
       t.date,
       t.budgetMonth,
-      esc(t.description),
-      esc(catNames.get(t.categoryId) ?? ''),
-      esc(accNames.get(t.accountId) ?? ''),
+      escText(t.description),
+      escText(catNames.get(t.categoryId) ?? ''),
+      escText(accNames.get(t.accountId) ?? ''),
       t.type,
       t.amountCents,
       t.status,
       t.cancelled ? 1 : 0,
-      esc(t.notes ?? ''),
+      escText(t.notes ?? ''),
     ].join(','),
   )
   return [header, ...rows].join('\n')

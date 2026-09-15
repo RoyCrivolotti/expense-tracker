@@ -4,6 +4,7 @@ import {
   type ReportLine,
 } from '../domain/engine/expenseReport'
 import { formatCents, type MoneyFormat } from '../engine/money'
+import { guardCsvValue } from '../domain/data/csvFormulaGuard'
 
 /**
  * An expense report as a spreadsheet, for an employer who wants one.
@@ -19,26 +20,14 @@ const HEADER = ['Date', 'Description', 'Purpose', 'Category', 'Account', 'Amount
 function esc(value: string): string {
   // \r is quoted as well as \n: a bare CR *inside* a value is a record terminator in
   // Excel, so `foo\r=1+1` would otherwise split into two rows and start the next one
-  // with a formula — surviving the guard below, which only inspects the first char.
+  // with a formula — surviving guardCsvValue, which only inspects the first char.
   if (/[",\n\r]/.test(value)) return `"${value.replace(/"/g, '""')}"`
   return value
 }
 
-/**
- * Neutralise a leading formula trigger, so an imported description like
- * `=HYPERLINK(...)` does not evaluate in the recipient's spreadsheet. The apostrophe
- * is visible for ordinary values beginning `-`, `+` or `@` — the accepted trade-off.
- *
- * Not applied to the Amount column: `formatCents` writes credits with a leading `-`,
- * so guarding it would turn the column an approver sums into text.
- */
-function guard(value: string): string {
-  return /^[=+\-@\t\r]/.test(value) ? `'${value}` : value
-}
-
 /** Quote-escape a field that came from user or imported text. */
 function escText(value: string): string {
-  return esc(guard(value))
+  return esc(guardCsvValue(value))
 }
 
 export interface ExpenseReportCsvOptions {
@@ -69,7 +58,7 @@ export function expenseReportCsv(
       escText(options.accountName(line.transaction.accountId)),
       // A credit is written negative so the Amount column still sums to the
       // outstanding figure when someone totals it in a spreadsheet. Not guarded —
-      // see `guard`: that leading minus is load-bearing.
+      // see guardCsvValue: that leading minus is load-bearing.
       esc(formatCents(signed ? -line.transaction.amountCents : line.transaction.amountCents, options.format)),
       // Cross-references rather than a count, matching the figures in the
       // printed sheet, so a row can actually be tied to an image.

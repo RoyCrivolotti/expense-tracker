@@ -2,6 +2,7 @@
  * Parse transaction CSV exported by exportTransactionsCsv (comma-separated,
  * quoted fields). Resolves category and account names against the live dataset.
  */
+import { unguardCsvValue } from './csvFormulaGuard'
 import type { ExpenseDataset, TxnType } from '../types'
 import type { NewTransaction } from './dataSource'
 import { EXPORT_CSV_HEADER, EXPORT_CSV_TYPES } from './exportCsvFormat'
@@ -81,12 +82,15 @@ function resolveRowRefs(
   line: number,
   dataset: ExpenseDataset,
 ): { categoryId: number; accountId: number; type: TxnType; amountCents: number } | ParseExportError {
-  const [, , , , categoryName, accountName, typeRaw, amountRaw] = fields
+  const [, , , , rawCategoryName, rawAccountName, typeRaw, amountRaw] = fields
+  // Exports guard a leading formula trigger; undo it so names still match the dataset.
+  const categoryName = unguardCsvValue(rawCategoryName ?? '')
+  const accountName = unguardCsvValue(rawAccountName ?? '')
   const amount = parseAmount(amountRaw, line)
   if (isParseError(amount)) return amount
-  const category = resolveName(dataset.categories, categoryName ?? '', 'category', line)
+  const category = resolveName(dataset.categories, categoryName, 'category', line)
   if ('message' in category) return category
-  const account = resolveName(dataset.accounts, accountName ?? '', 'account', line)
+  const account = resolveName(dataset.accounts, accountName, 'account', line)
   if ('message' in account) return account
   const type = parseType(typeRaw, line)
   if (isParseError(type)) return type
@@ -99,17 +103,19 @@ function parseRow(
   dataset: ExpenseDataset,
 ): ParsedExportRow | ParseExportError {
   if (fields.length < 11) return { line, message: 'Expected 11 columns' }
-  const [, date, budgetMonth, description] = fields
+  const [, date, budgetMonth, rawDescription] = fields
   const refs = resolveRowRefs(fields, line, dataset)
   if ('message' in refs) return refs
   if (!date || !budgetMonth) return { line, message: 'date and budget_month are required' }
-  const notes = fields[10] || undefined
+  const description = unguardCsvValue(rawDescription ?? '')
+  const rawNotes = fields[10] || undefined
+  const notes = rawNotes === undefined ? undefined : unguardCsvValue(rawNotes)
   return {
     line,
     input: {
       date,
       budgetMonth,
-      description: description ?? '',
+      description,
       categoryId: refs.categoryId,
       accountId: refs.accountId,
       type: refs.type,
