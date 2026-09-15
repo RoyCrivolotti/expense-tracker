@@ -49,4 +49,6 @@ CREATE INDEX IF NOT EXISTS idx_wealth_checkin_entries_account ON wealth_checkin_
 -- and therefore on/off-track deltas. Backfilled from created_at (best available
 -- proxy); users can edit this per-scenario via the Goals UI.
 ALTER TABLE goal_scenarios ADD COLUMN plan_start_date TEXT;
-UPDATE goal_scenarios SET plan_start_date = date(created_at);
+-- Scoped to the rows the ALTER above just added as NULL, so re-running cannot stomp a
+-- start date the user has since edited in the Goals UI.
+UPDATE goal_scenarios SET plan_start_date = date(created_at) WHERE plan_start_date IS NULL;

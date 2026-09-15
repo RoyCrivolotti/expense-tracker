@@ -11,10 +11,12 @@ ALTER TABLE categories ADD COLUMN owner TEXT NOT NULL DEFAULT '';
 ALTER TABLE accounts ADD COLUMN owner TEXT NOT NULL DEFAULT '';
 ALTER TABLE transactions ADD COLUMN owner TEXT NOT NULL DEFAULT '';
 
--- backfill placeholder; production used the real Access email at first deploy.
-UPDATE categories SET owner = 'owner@example.com';
-UPDATE accounts SET owner = 'owner@example.com';
-UPDATE transactions SET owner = 'owner@example.com';
+-- Backfill placeholder; production used the real Access email at first deploy.
+-- Scoped to the rows the ALTER above just defaulted to '': identical on a first run,
+-- and a no-op rather than a tenancy wipe if this ever runs against owned data.
+UPDATE categories SET owner = 'owner@example.com' WHERE owner = '';
+UPDATE accounts SET owner = 'owner@example.com' WHERE owner = '';
+UPDATE transactions SET owner = 'owner@example.com' WHERE owner = '';
 
 CREATE INDEX IF NOT EXISTS idx_txn_owner ON transactions (owner);
 
