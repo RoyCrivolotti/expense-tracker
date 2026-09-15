@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Flag, TxnType } from '../../types'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
@@ -167,6 +167,14 @@ export function useTransactionsTabState(
     () => listRows.flatMap((r) => (r.kind === 'transaction' ? [r.txn.id] : [])),
     [listRows],
   )
+
+  // Changing the filter or the month does not remount this tab, so without this the
+  // selection outlives what is on screen and a bulk action reaches rows the user can
+  // no longer see. Also covers a row disappearing because it was deleted elsewhere.
+  const { retainOnly } = selection
+  useEffect(() => {
+    retainOnly(visibleIds)
+  }, [visibleIds, retainOnly])
 
   return {
     ...filters,

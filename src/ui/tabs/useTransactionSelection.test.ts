@@ -159,3 +159,69 @@ describe('useTransactionSelection — Escape key', () => {
     expect(result.current.selectMode).toBe(true)
   })
 })
+
+describe('retainOnly', () => {
+  it('drops selected ids that are no longer visible', () => {
+    const { result } = renderHook(() => useTransactionSelection(mockActions()))
+    act(() => result.current.selectAll([1, 2, 3, 4, 5]))
+
+    act(() => result.current.retainOnly([2, 4]))
+
+    expect([...result.current.selected]).toEqual([2, 4])
+  })
+
+  it('drops everything when nothing visible was selected', () => {
+    const { result } = renderHook(() => useTransactionSelection(mockActions()))
+    act(() => result.current.selectAll([1, 2, 3]))
+
+    act(() => result.current.retainOnly([9, 10]))
+
+    expect(result.current.selected.size).toBe(0)
+  })
+
+  it('keeps the same Set instance when every selected id is still visible', () => {
+    // Identity matters: useTransactionsTabState calls this from an effect keyed on
+    // visibleIds, and a fresh Set on every render would loop.
+    const { result } = renderHook(() => useTransactionSelection(mockActions()))
+    act(() => result.current.selectAll([1, 2]))
+    const before = result.current.selected
+
+    act(() => result.current.retainOnly([1, 2, 3]))
+
+    expect(result.current.selected).toBe(before)
+  })
+
+  it('leaves an empty selection untouched', () => {
+    const { result } = renderHook(() => useTransactionSelection(mockActions()))
+    const before = result.current.selected
+
+    act(() => result.current.retainOnly([1, 2]))
+
+    expect(result.current.selected).toBe(before)
+  })
+
+  it('does not exit select mode, matching deselectAll', () => {
+    const { result } = renderHook(() => useTransactionSelection(mockActions()))
+    act(() => result.current.enterAndSelect(1))
+
+    act(() => result.current.retainOnly([]))
+
+    expect(result.current.selectMode).toBe(true)
+    expect(result.current.selected.size).toBe(0)
+  })
+
+  it('a bulk delete after a filter change only reaches still-visible rows', async () => {
+    const deleteTransactions = vi.fn().mockResolvedValue(undefined)
+    const { result } = renderHook(() => useTransactionSelection(mockActions({ deleteTransactions })))
+    act(() => result.current.selectAll([1, 2, 3, 4, 5]))
+
+    // The filter narrows to two rows; useTransactionsTabState calls retainOnly.
+    act(() => result.current.retainOnly([2, 4]))
+    act(() => result.current.requestBatchDelete())
+    await act(async () => {
+      await result.current.confirmBatchDelete()
+    })
+
+    expect(deleteTransactions).toHaveBeenCalledWith([2, 4])
+  })
+})
