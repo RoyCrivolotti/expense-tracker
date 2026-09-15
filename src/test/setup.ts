@@ -15,6 +15,18 @@ if (!URL.revokeObjectURL) {
 }
 
 /**
+ * jsdom defines window.scrollTo and then throws "Not implemented" out of it. The Modal
+ * and the report overlay both call it on open, so a clean run printed 150 lines of that,
+ * which reads as a broken test suite to anyone running `npm run verify` for the first
+ * time. Assigned rather than guarded on absence, unlike the two above: jsdom does provide
+ * the method, it just refuses to do anything with it. A spy rather than a bare no-op, so
+ * a test can still assert a scroll was asked for.
+ */
+if (typeof window !== 'undefined') {
+  window.scrollTo = vi.fn()
+}
+
+/**
  * jsdom has no ResizeObserver, and anything that repositions itself when its
  * content changes (popovers) constructs one. The stub records every instance so
  * a test can drive a resize — `resizeObservers.at(-1)?.trigger()` — rather than
