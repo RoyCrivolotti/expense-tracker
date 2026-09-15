@@ -101,7 +101,6 @@ describe('listPastReports — the recorded figures', () => {
     const reports = listPastReports([covered(1, 99), stamped(99, '2026-06-14', 1, 10_000)], [WORK])
 
     expect(reports[0]?.drifted).toBe(false)
-    expect(reports[0]?.checkable).toBe(true)
   })
 
   it('notices a covered row that was deleted or un-settled', () => {
@@ -116,9 +115,31 @@ describe('listPastReports — the recorded figures', () => {
 
     expect(reports[0]?.count).toBe(1)
     expect(reports[0]?.coveredCents).toBe(10_000)
-    expect(reports[0]?.checkable).toBe(false)
     // Nothing to compare against is not the same as a mismatch.
     expect(reports[0]?.drifted).toBe(false)
+  })
+})
+
+describe('listPastReports — every covered row gone', () => {
+  it('keeps the report, with the figures that were recorded', () => {
+    // The payment survives as a row in the ledger; the two things it covered do not.
+    const reports = listPastReports([stamped(99, '2026-06-14', 2, 20_000)], [WORK])
+
+    expect(reports).toHaveLength(1)
+    expect(reports[0]?.count).toBe(2)
+    expect(reports[0]?.coveredCents).toBe(20_000)
+    expect(reports[0]?.remaining).toBe(0)
+    expect(reports[0]?.drifted).toBe(true)
+  })
+
+  it('reports how many covered rows are still there', () => {
+    const reports = listPastReports([covered(1, 99), stamped(99, '2026-06-14', 2, 20_000)], [WORK])
+
+    expect(reports[0]?.remaining).toBe(1)
+  })
+
+  it('does not invent a report for a refund that never settled anything', () => {
+    expect(listPastReports([payment(99, '2026-06-14')], [WORK])).toHaveLength(0)
   })
 })
 

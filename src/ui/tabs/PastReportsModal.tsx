@@ -62,19 +62,24 @@ export function PastReportsModal({ model, onClose, onOpenReport, onOpenPayment }
                 </span>
                 {report.drifted ? (
                   <span className={styles.drift}>
-                    Covered transactions have changed since you sent this — the figures
-                    above are the ones you submitted.
+                    {report.remaining === 0
+                      ? 'None of the transactions this covered are still here. The figures above are the ones you submitted.'
+                      : 'Covered transactions have changed since you sent this. The figures above are the ones you submitted.'}
                   </span>
                 ) : null}
               </div>
               <div className={styles.actions}>
-                <button
-                  type="button"
-                  className={styles.action}
-                  onClick={() => onOpenReport(report.payment.id)}
-                >
-                  Report
-                </button>
+                {/* Nothing left to rebuild the document from, so the button would open
+                    an empty overlay. The payment, and the figures above, still stand. */}
+                {report.remaining > 0 ? (
+                  <button
+                    type="button"
+                    className={styles.action}
+                    onClick={() => onOpenReport(report.payment.id)}
+                  >
+                    Report
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className={styles.action}

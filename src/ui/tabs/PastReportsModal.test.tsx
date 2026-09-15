@@ -105,3 +105,29 @@ describe('PastReportsModal — a report whose rows have changed', () => {
     expect(screen.queryByText(/have changed since you sent this/i)).not.toBeInTheDocument()
   })
 })
+
+describe('PastReportsModal — nothing left of a report', () => {
+  const orphaned = [
+    {
+      ...settled[2]!,
+      reportCount: 2,
+      reportCoveredCents: 37_800,
+    },
+  ]
+
+  it('still lists it, with the figures that were submitted', () => {
+    renderModal(orphaned)
+
+    expect(screen.getByText('Alicante expenses, September 2026')).toBeInTheDocument()
+    expect(screen.getByText(/2 transactions/)).toBeInTheDocument()
+    expect(screen.getByText(/none of the transactions this covered are still here/i))
+      .toBeInTheDocument()
+  })
+
+  it('offers the payment but not a report there is nothing to rebuild', () => {
+    renderModal(orphaned)
+
+    expect(screen.getByRole('button', { name: 'Payment' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Report' })).not.toBeInTheDocument()
+  })
+})

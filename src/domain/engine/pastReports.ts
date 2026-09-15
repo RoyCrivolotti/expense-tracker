@@ -22,20 +22,27 @@ export interface PastReport {
    * The covered rows have changed since the payment was recorded.
    *
    * Amount edits, deletions and un-settles all move one of the two stamped figures.
-   * A pure description edit does not — the check is over totals, not line contents.
-   * Always false for a payment recorded before 0021, which carries no stamp to
-   * compare against; {@link checkable} says which of the two you are looking at.
+   * A pure description edit does not: the check is over totals, not line contents.
+   *
+   * Also false for a payment recorded before 0021, which carries no stamp to compare
+   * against. The two cases are deliberately not distinguished in the UI, because
+   * nothing ever claims a report *does* match; only a positive mismatch is stated, so
+   * silence asserts nothing either way.
    */
   drifted: boolean
-  /** Whether this report has a recorded snapshot at all. */
-  checkable: boolean
+  /**
+   * How many covered rows are still in the dataset. Zero when every one has been
+   * deleted or un-settled since, which is the only case where nothing can be
+   * rebuilt: the recorded figures survive, the document does not.
+   */
+  remaining: number
 }
 
 /** Covered-row totals as recorded, and whether the live rows still match them. */
 function againstSnapshot(
   payment: Transaction,
   rows: Transaction[],
-): Pick<PastReport, 'count' | 'coveredCents' | 'drifted' | 'checkable'> {
+): Pick<PastReport, 'count' | 'coveredCents' | 'drifted' | 'remaining'> {
   const liveCount = rows.length
   const liveCents = rows.reduce(
     (sum, t) => sum + (t.type === 'refund' ? -t.amountCents : t.amountCents),
@@ -47,7 +54,7 @@ function againstSnapshot(
     coveredCents: payment.reportCoveredCents ?? liveCents,
     drifted:
       checkable && (payment.reportCount !== liveCount || payment.reportCoveredCents !== liveCents),
-    checkable,
+    remaining: liveCount,
   }
 }
 
@@ -75,6 +82,14 @@ export function listPastReports(transactions: Transaction[], flags: Flag[]): Pas
     const bucket = covered.get(txn.settledBy)
     if (bucket) bucket.push(txn)
     else covered.set(txn.settledBy, [txn])
+  }
+
+  // A payment whose covered rows have *all* gone would otherwise never become a key
+  // above, so the report it recorded would vanish from this list entirely. That is the
+  // most complete form of the very thing the snapshot exists to prevent, so a stamped
+  // payment is indexed whether or not anything still points at it.
+  for (const txn of transactions) {
+    if ((txn.reportCount ?? 0) > 0 && !covered.has(txn.id)) covered.set(txn.id, [])
   }
 
   const byId = new Map(transactions.map((t) => [t.id, t]))
