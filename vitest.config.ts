@@ -8,6 +8,11 @@ export default defineConfig({
     alias: {
       '@domain': path.resolve(import.meta.dirname, 'src/domain'),
       '@config': path.resolve(import.meta.dirname, 'config'),
+      // VitePWA is not loaded here, so its virtual module has to come from somewhere.
+      'virtual:pwa-register/react': path.resolve(
+        import.meta.dirname,
+        'src/test/pwaRegisterStub.ts',
+      ),
     },
   },
   test: {
