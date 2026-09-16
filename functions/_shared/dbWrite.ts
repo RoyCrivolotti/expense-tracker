@@ -312,11 +312,40 @@ export async function deleteTransaction(env: Env, owner: string, id: number): Pr
 }
 
 /** Insert many transactions; each row is validated and status-derived like insertTransaction. */
+/**
+ * Every account, category and flag the batch refers to, checked once each rather
+ * than per row: the same ids repeat across an import, and the point is to know
+ * before the first write whether any of them is going to fail.
+ */
+async function assertBulkInsertOwnership(
+  env: Env,
+  owner: string,
+  inputs: NewTransaction[],
+): Promise<void> {
+  for (const id of new Set(inputs.map((i) => i.accountId))) {
+    await assertOwnedAccount(env, owner, id)
+  }
+  for (const id of new Set(inputs.map((i) => i.categoryId))) {
+    await assertOwnedCategory(env, owner, id)
+  }
+  for (const id of new Set(inputs.flatMap((i) => (i.flagId != null ? [i.flagId] : [])))) {
+    await assertOwnedFlag(env, owner, id)
+  }
+}
+
 export async function bulkInsertTransactions(
   env: Env,
   owner: string,
   inputs: NewTransaction[],
 ): Promise<Transaction[]> {
+  // Check everything before writing anything, the same shape the bulk update settled
+  // on. These inserts cannot be collapsed into one batch: resolvePlanLink reads
+  // MAX(installment_index), so a plan-linked row has to see the row before it. That
+  // left the loop free to commit half an import and then throw, telling the caller
+  // the whole thing failed while a retry of the same file duplicated what had landed
+  // (parseExportCsv does not read the id column back). An id belonging to someone
+  // else, or to nothing, is the failure that actually happens here.
+  await assertBulkInsertOwnership(env, owner, inputs)
   const saved: Transaction[] = []
   for (const input of inputs) {
     saved.push(await insertTransaction(env, owner, input))
