@@ -56,6 +56,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
               state.setDateScope('allDates')
               scrollToResults()
             }}
+            filterLocked={state.selectMode}
             onOpenReport={setReportFlagId}
             onSettle={reimbursement.open}
             onManage={() => setManagingFlags(true)}

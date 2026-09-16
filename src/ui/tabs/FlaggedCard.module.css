@@ -119,6 +119,13 @@
 .packBtn:hover {
   background: color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
+.filterBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.filterBtn:disabled:hover {
+  background: none;
+}
 
 /* Solid, unlike the dashed secondary actions beside it: this is the one that
    closes the claim out, and it is what you came to the card to do. */

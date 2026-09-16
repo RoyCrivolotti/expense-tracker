@@ -38,7 +38,7 @@ function modelFor(dataset: ExpenseDataset): ExpenseModel {
   }
 }
 
-function renderCard(dataset: ExpenseDataset) {
+function renderCard(dataset: ExpenseDataset, filterLocked = false) {
   const onFilterByFlag = vi.fn()
   const onManage = vi.fn()
   const onOpenReport = vi.fn()
@@ -48,6 +48,7 @@ function renderCard(dataset: ExpenseDataset) {
       <FlaggedCard
         model={modelFor(dataset)}
         onFilterByFlag={onFilterByFlag}
+        filterLocked={filterLocked}
         onOpenReport={onOpenReport}
         onSettle={onSettle}
         onManage={onManage}
@@ -262,5 +263,21 @@ describe('FlaggedCard — flags that are not about being paid back', () => {
     expect(screen.getByText('Tax deductible')).toBeInTheDocument()
     await userEvent.click(screen.getByText('Tax deductible'))
     expect(screen.getByRole('button', { name: /in the list/i })).toBeInTheDocument()
+  })
+})
+
+describe('FlaggedCard while rows are being selected', () => {
+  it('will not jump the list to a flag', async () => {
+    // Jumping rewrites the list's flag and date filters, which selection locks, and the
+    // locked filters would then have no way back until the selection was cancelled.
+    const { onFilterByFlag } = renderCard(
+      makeDataset({ flags: [work], transactions: [txn({ flagId: 1 })] }),
+      true,
+    )
+    const jump = screen.getByRole('button', { name: /Show these in the list/ })
+
+    expect(jump).toBeDisabled()
+    await userEvent.click(jump)
+    expect(onFilterByFlag).not.toHaveBeenCalled()
   })
 })

@@ -17,6 +17,11 @@ const PREVIEW_LIMIT = 5
 interface Props {
   model: ExpenseModel
   onFilterByFlag: (flagId: number) => void
+  /**
+   * True while rows are being selected. Jumping to a flag rewrites the list's filters,
+   * which selection otherwise locks, and leaves the user unable to put them back.
+   */
+  filterLocked?: boolean
   onOpenReport: (flagId: number) => void
   onSettle: (group: FlagGroup) => void
   onManage: () => void
@@ -29,6 +34,7 @@ function FlagGroupSection({
   group,
   model,
   onFilterByFlag,
+  filterLocked,
   onOpenReport,
   onSettle,
   onSelect,
@@ -36,6 +42,7 @@ function FlagGroupSection({
   group: FlagGroup
   model: ExpenseModel
   onFilterByFlag: (flagId: number) => void
+  filterLocked: boolean
   onOpenReport: (flagId: number) => void
   onSettle: (group: FlagGroup) => void
   onSelect?: ((txn: Transaction) => void) | undefined
@@ -72,6 +79,7 @@ function FlagGroupSection({
             type="button"
             className={styles.filterBtn}
             onClick={() => onFilterByFlag(group.flag.id)}
+            disabled={filterLocked}
           >
             {hidden > 0 ? `See all ${group.count} in the list` : 'Show these in the list'}
           </button>
@@ -118,6 +126,7 @@ function FlagGroupSection({
 export function FlaggedCard({
   model,
   onFilterByFlag,
+  filterLocked = false,
   onOpenReport,
   onSettle,
   onManage,
@@ -158,6 +167,7 @@ export function FlaggedCard({
                 group={group}
                 model={model}
                 onFilterByFlag={onFilterByFlag}
+                filterLocked={filterLocked}
                 onOpenReport={onOpenReport}
                 onSettle={onSettle}
                 {...(onSelect ? { onSelect } : {})}
