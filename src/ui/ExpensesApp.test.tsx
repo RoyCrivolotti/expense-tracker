@@ -202,4 +202,19 @@ describe('ExpensesApp month picker while selecting transactions', () => {
     expect(screen.getByRole('button', { name: 'Select' })).toBeInTheDocument()
     expect(previous()).toBeEnabled()
   })
+
+  it('shows the month you step to when the list was on all dates', async () => {
+    // Before, the header moved to June while the list stayed on every month.
+    await openTransactions()
+    fireEvent.click(screen.getByRole('button', { name: /Filters/ }))
+    fireEvent.click(screen.getByRole('radio', { name: 'All' }))
+    expect(screen.getByText('Row 1')).toBeInTheDocument()
+    expect(screen.getByText('Row 2')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Previous month' }))
+
+    await waitFor(() => expect(screen.queryByText('Row 2')).not.toBeInTheDocument())
+    expect(screen.getByText('Row 1')).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Month' })).toBeChecked()
+  })
 })

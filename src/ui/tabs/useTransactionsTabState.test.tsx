@@ -220,3 +220,92 @@ describe('useTransactionsTabState — acting on a selection that spans two month
     expect(result.current.hiddenCount).toBe(0)
   })
 })
+
+describe('useTransactionsTabState — the month arrows and the date scope', () => {
+  // Rows in April, May and June, charged to the month they are dated in.
+  function threeMonthModel(): ExpenseModel {
+    const dataset = makeDataset({
+      transactions: [
+        makeTransaction({ id: 1, budgetMonth: '2026-04', date: '2026-04-10' }),
+        makeTransaction({ id: 2, budgetMonth: '2026-05', date: '2026-05-10' }),
+        makeTransaction({ id: 3, budgetMonth: '2026-06', date: '2026-06-10' }),
+      ],
+    })
+    return {
+      dataset,
+      lookup: buildLookup(dataset),
+      descriptionIndex: { search: () => [], resolve: () => undefined },
+      months: [],
+    }
+  }
+
+  function renderAt(month: string, monthNavigation = 0) {
+    const model = threeMonthModel()
+    return renderHook(
+      ({ m, nav }) => useTransactionsTabState(model, m, undefined, { monthNavigation: nav }),
+      { initialProps: { m: month, nav: monthNavigation } },
+    )
+  }
+
+  const shown = (ids: number[]) => [...ids].sort((a, b) => a - b)
+
+  it('shows the month the user moves to, when the list was on all dates', () => {
+    const { result, rerender } = renderAt('2026-06')
+    act(() => result.current.setDateScope('allDates'))
+    expect(shown(result.current.visibleIds)).toEqual([1, 2, 3])
+
+    rerender({ m: '2026-05', nav: 1 })
+
+    expect(result.current.dateScope).toBe('budgetMonth')
+    expect(result.current.visibleIds).toEqual([2])
+  })
+
+  it('does the same from a custom range, and brings the range back when Custom is chosen again', () => {
+    const { result, rerender } = renderAt('2026-06')
+    act(() => result.current.setDateScope('custom'))
+    act(() => result.current.setCustomDateFrom('2026-04-01'))
+    act(() => result.current.setCustomDateTo('2026-05-31'))
+    expect(shown(result.current.visibleIds)).toEqual([1, 2])
+
+    rerender({ m: '2026-05', nav: 1 })
+    expect(result.current.dateScope).toBe('budgetMonth')
+    expect(result.current.visibleIds).toEqual([2])
+
+    act(() => result.current.setDateScope('custom'))
+    expect(result.current.dateScope).toBe('custom')
+    expect(shown(result.current.visibleIds)).toEqual([1, 2])
+  })
+
+  it('keeps sliding the last three months with the arrows, as it always has', () => {
+    const { result, rerender } = renderAt('2026-06')
+    act(() => result.current.setDateScope('last3Months'))
+
+    rerender({ m: '2026-05', nav: 1 })
+
+    expect(result.current.dateScope).toBe('last3Months')
+    expect(shown(result.current.visibleIds)).toEqual([1, 2])
+  })
+
+  it('leaves all dates alone when the month changes without the user moving it', () => {
+    // A refresh that brings in a newer month moves the active month on its own when none
+    // was picked. That is not a request to look at a month.
+    const { result, rerender } = renderAt('2026-05')
+    act(() => result.current.setDateScope('allDates'))
+
+    rerender({ m: '2026-06', nav: 0 })
+
+    expect(result.current.dateScope).toBe('allDates')
+    expect(shown(result.current.visibleIds)).toEqual([1, 2, 3])
+  })
+
+  it('keeps the all-dates jump from a flag until the user moves the month', () => {
+    // "Show these in the list" sets all dates after any number of earlier moves.
+    const { result, rerender } = renderAt('2026-06', 7)
+    act(() => result.current.setDateScope('allDates'))
+    rerender({ m: '2026-06', nav: 7 })
+    expect(result.current.dateScope).toBe('allDates')
+
+    rerender({ m: '2026-05', nav: 8 })
+    expect(result.current.dateScope).toBe('budgetMonth')
+  })
+})

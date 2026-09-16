@@ -51,6 +51,7 @@ function TabView({
   onNavigate,
   onRunSetup,
   onTxnSelectModeChange,
+  monthNavigation,
 }: {
   tab: TabId
   model: ExpenseModel
@@ -64,6 +65,7 @@ function TabView({
   onNavigate: (tab: TabId) => void
   onRunSetup: () => void
   onTxnSelectModeChange: (selecting: boolean) => void
+  monthNavigation: number
 }) {
   switch (tab) {
     case 'transactions':
@@ -73,6 +75,7 @@ function TabView({
           month={month}
           actions={actions}
           onSelectModeChange={onTxnSelectModeChange}
+          monthNavigation={monthNavigation}
         />
       )
     case 'analytics':
@@ -241,6 +244,14 @@ function ExpensesAppReady({
   // The header's month picker belongs to the shell, but on Transactions it drives the
   // list, and a selection there must not have the list changed under it.
   const [txnSelecting, setTxnSelecting] = useState(false)
+  // Counts the user's own month moves. The active month also changes on its own, when a
+  // refresh brings in a newer month and none was picked, and only a user's move should
+  // make Transactions show that month.
+  const [monthNavigation, setMonthNavigation] = useState(0)
+  const navigateMonth = (next: string) => {
+    setMonth(next)
+    setMonthNavigation((n) => n + 1)
+  }
   const [modal, setModal] = useState<ExpenseModalState>(null)
   const [onboardingOpen, setOnboardingOpen] = useState(
     () => source.canWrite && !readOnly && needsOnboarding(model.dataset) && !isOnboardingSkipped(),
@@ -291,7 +302,7 @@ function ExpensesAppReady({
           <AppHeaderActions
             months={model.months}
             activeMonth={activeMonth}
-            onMonthChange={setMonth}
+            onMonthChange={navigateMonth}
             showPicker={showPicker}
             pickerLocked={monthLockedFor(tab, txnSelecting)}
             online={online}
@@ -305,7 +316,7 @@ function ExpensesAppReady({
             tab={tab}
             model={model}
             month={activeMonth}
-            onMonthChange={setMonth}
+            onMonthChange={navigateMonth}
             actions={actions}
             theme={theme}
             onThemeChange={setTheme}
@@ -313,6 +324,7 @@ function ExpensesAppReady({
             accountEmail={accountEmail}
             onNavigate={setTab}
             onTxnSelectModeChange={setTxnSelecting}
+            monthNavigation={monthNavigation}
             onRunSetup={() => {
               clearOnboardingSkip()
               setOnboardingFirstRun(false)

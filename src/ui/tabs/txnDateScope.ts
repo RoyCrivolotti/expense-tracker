@@ -13,6 +13,25 @@ export function defaultCustomDateRange(budgetMonth: string): { dateFrom: string;
   return calendarRangeLastMonths(budgetMonth, DEFAULT_LAST_MONTHS)
 }
 
+/** A date scope as the user chose it, and how many month moves had happened by then. */
+export interface DateScopeChoice {
+  scope: TxnDateScope
+  atNavigation: number
+}
+
+/**
+ * The scope the list should use, given how many times the user has moved the month.
+ *
+ * All and Custom ignore the header month, so once the user moves it after choosing one of
+ * them, the header and the list disagree: the header on March, the list still on April to
+ * June. A month move means "show me this month", so from then on the list shows it. Month
+ * and the last three months follow the header already and are left as chosen.
+ */
+export function anchoredDateScope(choice: DateScopeChoice, navigation: number): TxnDateScope {
+  if (navigation === choice.atNavigation) return choice.scope
+  return choice.scope === 'allDates' || choice.scope === 'custom' ? 'budgetMonth' : choice.scope
+}
+
 export function buildPeriodFilter(
   scope: TxnDateScope,
   budgetMonth: string,
