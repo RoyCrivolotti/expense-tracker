@@ -193,8 +193,11 @@ wrapper.
 **PR screenshots.** Any PR touching `src/ui/**` or a `.module.css` must embed before/after
 images in its description; CI enforces it. Commit them under
 `docs/pr-screenshots/<slug>/` and reference them by `raw.githubusercontent.com` URL —
-GitHub has no API for uploading into a PR body. Include a 375px capture for responsive
-changes. Headless browsers do not reproduce native form controls (`<input type="date">`),
+GitHub has no API for uploading into a PR body. Pin that URL to a commit SHA, not the
+branch name: merged branches are deleted automatically, and an image pinned to its branch
+404s the moment the branch goes. Merges here are true merge commits, so a commit on the
+branch stays reachable afterwards; rebasing replaces it, so re-pin after a rebase.
+Include a 375px capture for responsive changes. Headless browsers do not reproduce native form controls (`<input type="date">`),
 so a desktop capture of one is necessary but not sufficient — say so and verify on-device.
 
 **Comments** explain why this code is the way it is, not how it came to be. History belongs
