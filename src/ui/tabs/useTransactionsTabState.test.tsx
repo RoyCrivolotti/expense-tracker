@@ -41,7 +41,7 @@ describe('useTransactionsTabState — flag filter', () => {
 
   it('falls back to "all" when the filtered flag no longer exists', () => {
     // Deleting a flag from the Flagged card's own Manage modal leaves the tab
-    // filtered to a dead id; a stored one would show "All flags" in the select
+    // filtered to a dead id; a stored one would show "Flag" in the select
     // while the list rendered nothing.
     const { result, rerender } = renderHook(({ model }) => useTransactionsTabState(model, '2026-05'), {
       initialProps: { model: modelWith() },

@@ -213,12 +213,14 @@
   gap: 0.6rem;
 }
 /*
- * The basis is what stops three selects sharing a 375px row and truncating every
- * label to "All statu". Below that width one wraps to its own line instead, which
- * is the readable way to lose the space.
+ * This row can hold three selects: flag, status and type. The basis is the narrowest a
+ * select can be while still showing its one-word default ("Status" needs 46px of text),
+ * so three fit side by side on any phone 330px or wider and only narrower screens wrap
+ * one to its own line. A chosen value longer than the default ("Investment") is clipped
+ * by the native control, as it always was; the active border says a filter is set.
  */
 .selectRow select {
-  flex: 1 1 8.5rem;
+  flex: 1 1 5.75rem;
   min-width: 0;
 }
 .selectRow select.activeSelect {
