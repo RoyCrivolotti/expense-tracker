@@ -35,32 +35,3 @@ describe('useFocusTrap — hidden descendants', () => {
     expect(document.activeElement).toHaveAttribute('aria-label', 'hidden field')
   })
 })
-
-describe('useFocusTrap — Escape', () => {
-  function EscapeHarness({ onEscape }: { onEscape: () => void }) {
-    const ref = useRef<HTMLDivElement>(null)
-    useFocusTrap(ref, onEscape)
-    return (
-      <div ref={ref}>
-        <button type="button">inside</button>
-      </div>
-    )
-  }
-
-  it('closes, and marks the key as used for whatever sits behind the dialog', () => {
-    const onEscape = vi.fn()
-    render(<EscapeHarness onEscape={onEscape} />)
-    let seenBehind: boolean | undefined
-    const behind = (e: KeyboardEvent) => {
-      seenBehind = e.defaultPrevented
-    }
-    window.addEventListener('keydown', behind)
-    try {
-      fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' })
-    } finally {
-      window.removeEventListener('keydown', behind)
-    }
-    expect(onEscape).toHaveBeenCalledTimes(1)
-    expect(seenBehind).toBe(true)
-  })
-})

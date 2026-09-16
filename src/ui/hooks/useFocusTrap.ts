@@ -39,10 +39,6 @@ export function useFocusTrap(
     const onKey = (event: KeyboardEvent) => {
       if (paused) return
       if (event.key === 'Escape') {
-        // Marked as used, so whatever sits behind the dialog leaves it alone: a list in
-        // select mode also exits on Escape, and closing a sheet must not clear the
-        // selection it was opened from.
-        event.preventDefault()
         onEscape()
         return
       }

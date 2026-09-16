@@ -251,6 +251,20 @@ describe('ExpensesApp while selecting transactions', () => {
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
   })
 
+  it('keeps the selection when Escape closes the navigation menu', async () => {
+    // The menu comes from folio-shell and does not mark the key as used.
+    await openTransactions()
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Select all' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open navigation' }))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' })
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByText('1 selected')).toBeInTheDocument()
+  })
+
   it('shows the month you step to when the list was on all dates', async () => {
     // Before, the header moved to June while the list stayed on every month.
     await openTransactions()

@@ -205,23 +205,56 @@ describe('useTransactionSelection — Escape key', () => {
     expect(result.current.selectMode).toBe(false)
   })
 
-  it('leaves the selection alone when something in front already used Escape', () => {
+  /** A dialog in the page that closes itself on Escape, as every dialog here does. */
+  function mountDialog({ hidden = false } = {}) {
+    const dialog = document.createElement('div')
+    dialog.setAttribute('role', 'dialog')
+    dialog.hidden = hidden
+    document.body.append(dialog)
+    // In a browser React removes a closed dialog between listeners, before the key has
+    // bubbled up to the window, so this one goes at the document.
+    const close = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !hidden) dialog.remove()
+    }
+    document.addEventListener('keydown', close)
+    return {
+      pressEscape: () =>
+        dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })),
+      unmount: () => {
+        document.removeEventListener('keydown', close)
+        dialog.remove()
+      },
+    }
+  }
+
+  it('leaves Escape to a dialog, even one gone before the key reaches the window', () => {
     const { result } = renderHook(() => useTransactionSelection(mockActions()))
     act(() => result.current.toggleSelectMode())
     act(() => result.current.toggleSelected(1))
-    const claim = (e: KeyboardEvent) => e.preventDefault()
-    document.addEventListener('keydown', claim)
+    const dialog = mountDialog()
     try {
       act(() => {
-        document.body.dispatchEvent(
-          new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
-        )
+        dialog.pressEscape()
       })
     } finally {
-      document.removeEventListener('keydown', claim)
+      dialog.unmount()
     }
     expect(result.current.selectMode).toBe(true)
     expect([...result.current.selected]).toEqual([1])
+  })
+
+  it('still exits when the only dialog in the page is hidden', () => {
+    const { result } = renderHook(() => useTransactionSelection(mockActions()))
+    act(() => result.current.toggleSelectMode())
+    const dialog = mountDialog({ hidden: true })
+    try {
+      act(() => {
+        dialog.pressEscape()
+      })
+    } finally {
+      dialog.unmount()
+    }
+    expect(result.current.selectMode).toBe(false)
   })
 
   it('ignores other keys', () => {

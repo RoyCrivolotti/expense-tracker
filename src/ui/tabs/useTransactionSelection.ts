@@ -15,6 +15,13 @@ export function offScreenNote(hiddenCount: number, outcome: 'deleted' | 'changed
   return `${hiddenCount} more you selected ${verb} shown and won't be ${outcome}.`
 }
 
+/** A dialog or popover on screen owns Escape; the list behind it does not. */
+function dialogIsOpen(): boolean {
+  return [...document.querySelectorAll('[role="dialog"], [role="alertdialog"]')].some(
+    (el) => el.closest('[hidden]') === null,
+  )
+}
+
 export function batchDeleteMessage(count: number, hiddenCount = 0): string {
   const noun = count === 1 ? 'transaction' : 'transactions'
   const note = offScreenNote(hiddenCount, 'deleted')
@@ -179,12 +186,14 @@ export function useTransactionSelection(
   const onEscape = useEffectEvent(() => exitSelect())
   useEffect(() => {
     if (!selectMode) return
+    // Capture phase, so this looks before anything acts on the key. By the bubble phase
+    // React has already closed and removed the dialog the Escape was for, and a layer from
+    // another package (the hub menu) does not mark the key as used.
     const handler = (e: KeyboardEvent) => {
-      // A dialog or suggestion list that used the key has already said so.
-      if (e.key === 'Escape' && !e.defaultPrevented) onEscape()
+      if (e.key === 'Escape' && !dialogIsOpen()) onEscape()
     }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
+    window.addEventListener('keydown', handler, true)
+    return () => window.removeEventListener('keydown', handler, true)
   }, [selectMode])
 
   return {
