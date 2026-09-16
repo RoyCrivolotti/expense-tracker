@@ -38,6 +38,11 @@ function monthLockedFor(tab: TabId, txnSelecting: boolean): boolean {
   return tab === 'transactions' && txnSelecting
 }
 
+/** The month the user picked, else the one a selection is holding, else the newest. */
+function shownMonth(picked: string | null, held: string | null, months: string[]): string {
+  return picked ?? held ?? months[months.length - 1] ?? ''
+}
+
 function TabView({
   tab,
   model,
@@ -242,8 +247,11 @@ function ExpensesAppReady({
   const [tab, setTab] = useState<TabId>('dashboard')
   const [month, setMonth] = useState<string | null>(null)
   // The header's month picker belongs to the shell, but on Transactions it drives the
-  // list, and a selection there must not have the list changed under it.
-  const [txnSelecting, setTxnSelecting] = useState(false)
+  // list, and a selection there must not have the list changed under it. This is the
+  // month the selection started in, held until it ends: with no month picked the header
+  // follows the newest one, so a refresh or a transaction added for next month would
+  // otherwise move the list to a month the locked arrows cannot leave.
+  const [selectionMonth, setSelectionMonth] = useState<string | null>(null)
   // Counts the user's own month moves. The active month also changes on its own, when a
   // refresh brings in a newer month and none was picked, and only a user's move should
   // make Transactions show that month.
@@ -263,7 +271,10 @@ function ExpensesAppReady({
   const [onboardingFirstRun, setOnboardingFirstRun] = useState(() => needsOnboarding(model.dataset))
   const actions = useExpenseActions(source, applyPatch, setModal, readOnly)
 
-  const activeMonth = month ?? model.months[model.months.length - 1] ?? ''
+  const activeMonth = shownMonth(month, selectionMonth, model.months)
+  const holdMonthForSelection = (selecting: boolean) => {
+    setSelectionMonth(selecting ? activeMonth : null)
+  }
   const showPicker = !NO_PICKER_TABS.has(tab) && model.months.length > 0
   const settingsBadge = ownerAccess?.pendingCount ?? 0
 
@@ -304,7 +315,7 @@ function ExpensesAppReady({
             activeMonth={activeMonth}
             onMonthChange={navigateMonth}
             showPicker={showPicker}
-            pickerLocked={monthLockedFor(tab, txnSelecting)}
+            pickerLocked={monthLockedFor(tab, selectionMonth !== null)}
             online={online}
             refreshing={refreshing}
             onRefresh={reload}
@@ -323,7 +334,7 @@ function ExpensesAppReady({
             ownerAccess={ownerAccess}
             accountEmail={accountEmail}
             onNavigate={setTab}
-            onTxnSelectModeChange={setTxnSelecting}
+            onTxnSelectModeChange={holdMonthForSelection}
             monthNavigation={monthNavigation}
             onRunSetup={() => {
               clearOnboardingSkip()

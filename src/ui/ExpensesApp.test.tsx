@@ -142,35 +142,43 @@ describe('ExpensesApp tab wiring', () => {
 })
 
 describe('ExpensesApp month picker while selecting transactions', () => {
-  // Two months of data, so "Previous month" is enabled on the latest one.
-  function twoMonths() {
-    const row = (id: number, month: string) => ({
-      id,
-      date: `${month}-10`,
-      budgetMonth: month,
-      description: `Row ${id}`,
-      accountId: 1,
-      categoryId: 1,
-      type: 'expense' as const,
-      amountCents: 1000,
-      cancelled: false,
-      status: 'posted' as const,
-    })
-    const dataset = datasetWith({
+  const row = (id: number, month: string) => ({
+    id,
+    date: `${month}-10`,
+    budgetMonth: month,
+    description: `Row ${id}`,
+    accountId: 1,
+    categoryId: 1,
+    type: 'expense' as const,
+    amountCents: 1000,
+    cancelled: false,
+    status: 'posted' as const,
+  })
+
+  const withRows = (transactions: ExpenseDataset['transactions']) =>
+    datasetWith({
       categories: [{ id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
       accounts: [{ id: 1, name: 'Main debit', kind: 'debit', settlement: 'immediate', active: true }],
-      transactions: [row(1, '2026-06'), row(2, '2026-07')],
+      transactions,
     })
+
+  // Two months of data, so "Previous month" is enabled on the latest one. `afterRefresh`
+  // is what the refresh button loads.
+  function twoMonths(afterRefresh?: ExpenseDataset['transactions']) {
+    const dataset = withRows([row(1, '2026-06'), row(2, '2026-07')])
+    const load = vi.fn().mockResolvedValueOnce(dataset)
+    load.mockResolvedValue(afterRefresh ? withRows(afterRefresh) : dataset)
     return {
       ...sourceThatSucceeds(dataset),
+      load,
       deleteTransaction: vi.fn().mockResolvedValue(undefined),
       deleteTransactions: vi.fn().mockResolvedValue(0),
       updateTransactions: vi.fn().mockResolvedValue(0),
     }
   }
 
-  async function openTransactions() {
-    render(<ExpensesApp source={twoMonths()} hubGrants={allGroupsGranted()} />)
+  async function openTransactions(source = twoMonths()) {
+    render(<ExpensesApp source={source} hubGrants={allGroupsGranted()} />)
     fireEvent.click((await screen.findAllByRole('button', { name: 'Transactions' }))[0]!)
     await screen.findByText('Row 2')
     return () => screen.getByRole('button', { name: 'Previous month' })
@@ -201,6 +209,30 @@ describe('ExpensesApp month picker while selecting transactions', () => {
 
     expect(screen.getByRole('button', { name: 'Select' })).toBeInTheDocument()
     expect(previous()).toBeEnabled()
+  })
+
+  it('keeps its month when a refresh brings in a newer one mid-selection', async () => {
+    // With no month picked the header follows the newest. Mid-selection that would swap
+    // July's list for August's, and the locked arrows could not bring July back.
+    const previous = await openTransactions(
+      twoMonths([row(1, '2026-06'), row(2, '2026-07'), row(3, '2026-08')]),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Select all' }))
+    expect(screen.getByText('1 selected')).toBeInTheDocument()
+
+    const refresh = screen.getByRole('button', { name: 'Refresh data' })
+    fireEvent.click(refresh)
+    await waitFor(() => expect(refresh).toBeEnabled(), { timeout: 3000 })
+
+    expect(previous().parentElement).toHaveTextContent('July 2026')
+    expect(screen.getByText('Row 2')).toBeInTheDocument()
+    expect(screen.getByText('1 selected')).toBeInTheDocument()
+
+    // Once the selection ends, the header follows the newest month again.
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(await screen.findByText('Row 3')).toBeInTheDocument()
+    expect(previous().parentElement).toHaveTextContent('August 2026')
   })
 
   it('shows the month you step to when the list was on all dates', async () => {
