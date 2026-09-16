@@ -86,17 +86,17 @@
   cursor: pointer;
 }
 
-.filterToggle:hover:not(:disabled) {
+.filterToggle:hover:not([aria-disabled='true']) {
   color: var(--color-text);
 }
 
-.filterToggle:disabled {
+.filterToggle[aria-disabled='true'] {
   opacity: 0.5;
-  cursor: default;
+  cursor: not-allowed;
 }
 
 .filterToggleActive,
-.filterToggleActive:hover:not(:disabled) {
+.filterToggleActive:hover:not([aria-disabled='true']) {
   background: color-mix(in srgb, var(--color-accent) 16%, var(--color-surface-muted));
   color: var(--color-accent);
 }
@@ -117,9 +117,25 @@
 }
 
 .filterSecondary {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
+}
+/* See LockShield. Fills its positioned parent: the search box or the filter panel. */
+.lockShield {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 0.7rem;
+  background: transparent;
+  cursor: not-allowed;
+}
+.lockShield:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 .filterTop {
   display: flex;
@@ -248,11 +264,11 @@
   font-weight: 600;
   cursor: pointer;
 }
-.filterChip:disabled {
+.filterChip[aria-disabled='true'] {
   opacity: 0.5;
   cursor: not-allowed;
 }
-.filterChip:hover:not(:disabled) {
+.filterChip:hover:not([aria-disabled='true']) {
   background: color-mix(in srgb, var(--color-accent) 20%, var(--color-bg));
 }
 

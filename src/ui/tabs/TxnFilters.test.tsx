@@ -37,6 +37,55 @@ function baseProps(overrides: Partial<TxnFiltersProps> = {}): TxnFiltersProps {
 }
 
 describe('TxnFilters', () => {
+  it('answers a press on anything the selection locks with the reason', async () => {
+    const user = userEvent.setup()
+    const onLockedPress = vi.fn()
+    const onQuery = vi.fn()
+    render(
+      <TxnFilters
+        {...baseProps({
+          selectMode: true,
+          dateScope: 'last3Months',
+          secondaryFilterCount: 1,
+          hasActiveFilters: true,
+          onLockedPress,
+          onQuery,
+        })}
+      />,
+    )
+
+    const toggle = screen.getByRole('button', { name: /Filters/ })
+    expect(toggle).toHaveAttribute('aria-disabled', 'true')
+    await user.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+
+    await user.click(screen.getByRole('button', { name: /Dates: last 3 months/ }))
+    await user.click(screen.getByRole('button', { name: 'Search is locked while rows are selected' }))
+
+    expect(onLockedPress).toHaveBeenCalledTimes(3)
+    expect(onQuery).not.toHaveBeenCalled()
+  })
+
+  it('covers the open filter panel while rows are selected', async () => {
+    // The selects and date fields are disabled, and a disabled field never hears the tap.
+    const user = userEvent.setup()
+    const onLockedPress = vi.fn()
+    const { rerender } = render(<TxnFilters {...baseProps({ onLockedPress })} />)
+    await user.click(screen.getByRole('button', { name: /Filters/ }))
+    expect(screen.queryByRole('button', { name: /Filters are locked/ })).not.toBeInTheDocument()
+
+    rerender(<TxnFilters {...baseProps({ onLockedPress, selectMode: true })} />)
+    await user.click(screen.getByRole('button', { name: 'Filters are locked while rows are selected' }))
+
+    expect(onLockedPress).toHaveBeenCalledTimes(1)
+  })
+
+  it('leaves search and filters alone when nothing is selected', () => {
+    render(<TxnFilters {...baseProps()} />)
+    expect(screen.queryByRole('button', { name: /locked while rows are selected/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Filters/ })).not.toHaveAttribute('aria-disabled')
+  })
+
   it('offers Cancel for a selection under way even without write access', () => {
     render(<TxnFilters {...baseProps({ selectMode: true, canSelect: false })} />)
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled()

@@ -22,6 +22,8 @@ interface Props {
    * which selection otherwise locks, and leaves the user unable to put them back.
    */
   filterLocked?: boolean
+  /** Pressing the locked jump: say why nothing happens. */
+  onLockedFilterPress?: (() => void) | undefined
   onOpenReport: (flagId: number) => void
   onSettle: (group: FlagGroup) => void
   onManage: () => void
@@ -35,6 +37,7 @@ function FlagGroupSection({
   model,
   onFilterByFlag,
   filterLocked,
+  onLockedFilterPress,
   onOpenReport,
   onSettle,
   onSelect,
@@ -43,6 +46,7 @@ function FlagGroupSection({
   model: ExpenseModel
   onFilterByFlag: (flagId: number) => void
   filterLocked: boolean
+  onLockedFilterPress?: (() => void) | undefined
   onOpenReport: (flagId: number) => void
   onSettle: (group: FlagGroup) => void
   onSelect?: ((txn: Transaction) => void) | undefined
@@ -78,8 +82,8 @@ function FlagGroupSection({
           <button
             type="button"
             className={styles.filterBtn}
-            onClick={() => onFilterByFlag(group.flag.id)}
-            disabled={filterLocked}
+            onClick={filterLocked ? onLockedFilterPress : () => onFilterByFlag(group.flag.id)}
+            {...(filterLocked ? { 'aria-disabled': true } : {})}
           >
             {hidden > 0 ? `See all ${group.count} in the list` : 'Show these in the list'}
           </button>
@@ -127,6 +131,7 @@ export function FlaggedCard({
   model,
   onFilterByFlag,
   filterLocked = false,
+  onLockedFilterPress,
   onOpenReport,
   onSettle,
   onManage,
@@ -168,6 +173,7 @@ export function FlaggedCard({
                 model={model}
                 onFilterByFlag={onFilterByFlag}
                 filterLocked={filterLocked}
+                onLockedFilterPress={onLockedFilterPress}
                 onOpenReport={onOpenReport}
                 onSettle={onSettle}
                 {...(onSelect ? { onSelect } : {})}

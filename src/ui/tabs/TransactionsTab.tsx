@@ -14,6 +14,8 @@ import { TransactionsSelectFooter } from './TransactionsSelectFooter'
 import { useTransactionsTabState } from './useTransactionsTabState'
 import { RESULTS_ANCHOR_ID, scrollToResults } from './scrollToResults'
 import { useDebouncedAnnouncement } from '../hooks/useDebouncedAnnouncement'
+import { useToast } from '../hooks/useToast'
+import { FILTERS_LOCKED_HINT } from './selectionLockHints'
 import { useReimbursement } from './useReimbursement'
 import { usePastReports } from './usePastReports'
 import { RecordReimbursementSheet } from './RecordReimbursementSheet'
@@ -54,6 +56,8 @@ export function TransactionsTab({
     () => detectRecurring(model.dataset.transactions, { forBudgetMonth: month, rolloverDay }),
     [model.dataset, month, rolloverDay],
   )
+  const { showToast } = useToast()
+  const explainFilterLock = () => showToast(FILTERS_LOCKED_HINT)
 
   return (
     <div className={styles.stack}>
@@ -70,6 +74,7 @@ export function TransactionsTab({
               scrollToResults()
             }}
             filterLocked={state.selectMode}
+            onLockedFilterPress={explainFilterLock}
             onOpenReport={setReportFlagId}
             onSettle={reimbursement.open}
             onManage={() => setManagingFlags(true)}
@@ -112,6 +117,7 @@ export function TransactionsTab({
         onCustomDateFrom={state.setCustomDateFrom}
         onCustomDateTo={state.setCustomDateTo}
         onToggleSelectMode={state.toggleSelectMode}
+        onLockedPress={explainFilterLock}
       />
 
       {/*

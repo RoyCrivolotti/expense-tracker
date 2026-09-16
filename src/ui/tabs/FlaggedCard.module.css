@@ -119,11 +119,11 @@
 .packBtn:hover {
   background: color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
-.filterBtn:disabled {
+.filterBtn[aria-disabled='true'] {
   opacity: 0.45;
   cursor: not-allowed;
 }
-.filterBtn:disabled:hover {
+.filterBtn[aria-disabled='true']:hover {
   background: none;
 }
 

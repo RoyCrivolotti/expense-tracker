@@ -13,6 +13,20 @@ const DATE_SCOPE_OPTIONS: { value: TxnDateScope; label: string }[] = [
   { value: 'custom', label: 'Custom' },
 ]
 
+/**
+ * Laid over a field that is locked while rows are selected, so a tap says why: a disabled
+ * input or select never receives the click. A real button, so it is labelled and reachable.
+ */
+export function LockShield({
+  label,
+  onPress,
+}: {
+  label: string
+  onPress?: (() => void) | undefined
+}) {
+  return <button type="button" className={styles.lockShield} onClick={onPress} aria-label={label} />
+}
+
 export function SearchRow({
   query,
   selectMode,
@@ -20,6 +34,7 @@ export function SearchRow({
   canSelect,
   onQuery,
   onToggleSelectMode,
+  onLockedPress,
 }: {
   query: string
   selectMode: boolean
@@ -28,6 +43,8 @@ export function SearchRow({
   canSelect: boolean
   onQuery: (value: string) => void
   onToggleSelectMode: () => void
+  /** Pressing the locked search box: say why nothing happens. */
+  onLockedPress?: (() => void) | undefined
 }) {
   return (
     <div className={styles.filterTop}>
@@ -51,6 +68,9 @@ export function SearchRow({
             <CloseIcon />
           </button>
         )}
+        {selectMode ? (
+          <LockShield label="Search is locked while rows are selected" onPress={onLockedPress} />
+        ) : null}
       </div>
       {/* A selection already under way can always be cancelled, even once the app has
           gone read-only and could not start a new one. */}
@@ -62,6 +82,49 @@ export function SearchRow({
           disabled={selectMode && selectBusy}
         >
           {selectMode ? 'Cancel' : 'Select'}
+        </button>
+      ) : null}
+    </div>
+  )
+}
+
+export function FilterToggleRow({
+  expanded,
+  onToggle,
+  secondaryFilterCount,
+  hasActiveFilters,
+  selectMode,
+  onClearFilters,
+  onLockedPress,
+}: {
+  expanded: boolean
+  onToggle: () => void
+  secondaryFilterCount: number
+  hasActiveFilters: boolean
+  selectMode: boolean
+  onClearFilters: () => void
+  onLockedPress?: (() => void) | undefined
+}) {
+  const active = secondaryFilterCount > 0
+  return (
+    <div className={styles.filterToggleRow}>
+      <button
+        type="button"
+        className={`${styles.filterToggle}${active ? ` ${styles.filterToggleActive}` : ''}`}
+        onClick={selectMode ? onLockedPress : onToggle}
+        {...(selectMode ? { 'aria-disabled': true } : {})}
+        aria-expanded={expanded}
+      >
+        <span>{expanded ? '▾' : '▸'} Filters</span>
+        {active ? (
+          <span className={styles.filterToggleBadge} aria-label={`${secondaryFilterCount} active filters`}>
+            {secondaryFilterCount}
+          </span>
+        ) : null}
+      </button>
+      {hasActiveFilters && !selectMode ? (
+        <button type="button" className={styles.filterClear} onClick={onClearFilters}>
+          Clear filters
         </button>
       ) : null}
     </div>

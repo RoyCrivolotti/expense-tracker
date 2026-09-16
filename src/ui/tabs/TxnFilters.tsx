@@ -6,6 +6,8 @@ import { buildActiveFilterChips } from './txnFilterChips'
 import {
   CategoryAccountRow,
   DateScopeRow,
+  FilterToggleRow,
+  LockShield,
   SearchRow,
   StatusTypeRow,
 } from './TxnFilterRows'
@@ -44,11 +46,12 @@ export interface TxnFiltersProps {
   onCustomDateFrom: (value: string) => void
   onCustomDateTo: (value: string) => void
   onToggleSelectMode: () => void
+  /** Pressing anything locked by the selection: say why nothing happens. */
+  onLockedPress?: (() => void) | undefined
 }
 
 export function TxnFilters(props: TxnFiltersProps) {
   const [expanded, setExpanded] = useState(false)
-  const chevron = expanded ? '▾' : '▸'
   const activeChips = useMemo(() => buildActiveFilterChips(props), [props])
 
   return (
@@ -60,31 +63,24 @@ export function TxnFilters(props: TxnFiltersProps) {
         canSelect={props.canSelect}
         onQuery={props.onQuery}
         onToggleSelectMode={props.onToggleSelectMode}
+        onLockedPress={props.onLockedPress}
       />
-      <div className={styles.filterToggleRow}>
-        <button
-          type="button"
-          className={`${styles.filterToggle}${
-            props.secondaryFilterCount > 0 ? ` ${styles.filterToggleActive}` : ''
-          }`}
-          onClick={() => setExpanded((open) => !open)}
-          disabled={props.selectMode}
-          aria-expanded={expanded}
-        >
-          <span>{chevron} Filters</span>
-          {props.secondaryFilterCount > 0 ? (
-            <span className={styles.filterToggleBadge} aria-label={`${props.secondaryFilterCount} active filters`}>
-              {props.secondaryFilterCount}
-            </span>
-          ) : null}
-        </button>
-        {props.hasActiveFilters && !props.selectMode ? (
-          <button type="button" className={styles.filterClear} onClick={props.onClearFilters}>
-            Clear filters
-          </button>
-        ) : null}
-      </div>
-      {!expanded ? <ActiveFilterChips chips={activeChips} disabled={props.selectMode} /> : null}
+      <FilterToggleRow
+        expanded={expanded}
+        onToggle={() => setExpanded((open) => !open)}
+        secondaryFilterCount={props.secondaryFilterCount}
+        hasActiveFilters={props.hasActiveFilters}
+        selectMode={props.selectMode}
+        onClearFilters={props.onClearFilters}
+        onLockedPress={props.onLockedPress}
+      />
+      {!expanded ? (
+        <ActiveFilterChips
+          chips={activeChips}
+          locked={props.selectMode}
+          onLockedPress={props.onLockedPress}
+        />
+      ) : null}
       {expanded ? (
         <div className={styles.filterSecondary}>
           <CategoryAccountRow
@@ -115,6 +111,9 @@ export function TxnFilters(props: TxnFiltersProps) {
             onCustomDateFrom={props.onCustomDateFrom}
             onCustomDateTo={props.onCustomDateTo}
           />
+          {props.selectMode ? (
+            <LockShield label="Filters are locked while rows are selected" onPress={props.onLockedPress} />
+          ) : null}
         </div>
       ) : null}
     </div>

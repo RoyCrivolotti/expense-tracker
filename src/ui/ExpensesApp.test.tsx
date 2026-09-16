@@ -228,6 +228,15 @@ describe('ExpensesApp while selecting transactions', () => {
     expect(locked(previous())).toBe(false)
   })
 
+  it('says why search does nothing while rows are selected', async () => {
+    await openTransactions()
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Search is locked while rows are selected' }))
+
+    expect(screen.getByText('Finish or cancel the selection to search or filter')).toBeInTheDocument()
+  })
+
   it('keeps its month when a refresh brings in a newer one mid-selection', async () => {
     // With no month picked the header follows the newest. Mid-selection that would swap
     // July's list for August's, and the locked arrows could not bring July back.
