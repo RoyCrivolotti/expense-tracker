@@ -69,6 +69,9 @@ describe('TransactionsTab — result summary', () => {
   })
 
   it('leaves a real net spend unsigned, as before', () => {
+    // Guards the regression the sign fix could tip into the other direction:
+    // `signed` unconditionally true would print "+343,05 €" for ordinary spend, the
+    // exact mistake BudgetBar's own comment warns against for the same component.
     render(
       <TransactionsTab
         model={modelFor([makeTransaction({ id: 1, type: 'expense', amountCents: 34_305 })])}
@@ -79,5 +82,23 @@ describe('TransactionsTab — result summary', () => {
     expect(summary().getByText('343,05 €')).toBeInTheDocument()
     expect(summary().queryByText('+343,05 €')).not.toBeInTheDocument()
     expect(summary().queryByText('−343,05 €')).not.toBeInTheDocument()
+  })
+
+  it('leaves an exact zero unsigned, expense and refund cancelling out', () => {
+    // Money short-circuits cents===0 before it ever looks at `signed`, so this sits
+    // right next to the boundary the new `state.totalCents < 0` check introduces.
+    render(
+      <TransactionsTab
+        model={modelFor([
+          makeTransaction({ id: 1, type: 'expense', amountCents: 10_000 }),
+          makeTransaction({ id: 2, type: 'refund', amountCents: 10_000 }),
+        ])}
+        month="2025-01"
+      />,
+    )
+
+    expect(summary().getByText('0,00 €')).toBeInTheDocument()
+    expect(summary().queryByText('+0,00 €')).not.toBeInTheDocument()
+    expect(summary().queryByText('−0,00 €')).not.toBeInTheDocument()
   })
 })
