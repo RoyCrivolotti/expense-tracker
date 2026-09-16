@@ -2,6 +2,19 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## September 2026 (correctness pass)
+
+Mostly fixes to things the app was getting quietly wrong rather than new ground.
+
+- **A sent expense report stops changing after you send it.** Reports were recomputed from live rows every time you opened one, so editing or deleting a covered transaction afterwards silently rewrote your record of what you had submitted. What a report covered is now stamped when it is settled, and a report whose rows have since moved says so instead of redrawing itself.
+- **Bulk actions report what happened, not what you asked for.** Deleting five rows where one had already gone elsewhere still said "Deleted 5". The count now comes from the server, and reads "Deleted 4 of 5" when they differ.
+- **Settling several transactions no longer half-succeeds.** If one of them had already been settled by a different reimbursement, the others were committed before the conflict was raised, so you were told the whole thing failed while part of it had gone through. Every row is checked before any is written.
+- **Reimbursement failures say something true.** The old message claimed nothing had been recorded even when a refund transaction existed, which invited you to create a second one. There are now three messages for the three things that actually happen.
+- **The purchasing-power toggle stops overstating your progress.** Switching to real terms deflated the projection line but left the check-in dots at nominal values, so a scenario you were exactly on track for could read as far ahead of plan.
+- **Future-dated wealth check-ins are refused**, on the phone as well. The date field had been trusting an HTML attribute that iOS Safari ignores outright.
+- **Bulk edit uses your budget rollover day** when it prefills the budget month, instead of the calendar month, so it no longer assigns a month a single edit never would.
+- **Exported CSVs cannot execute.** A description beginning with `=` or `+` is neutralised on the way out and restored on the way back in.
+
 ## July 2026 (follow-ups)
 
 - **Budget month on transaction rows.** Every row now carries the budget month it is charged to, so filtering across months (investments over a year, say) no longer loses track of which month each row belongs to, and the "31 Jul charged to the Aug budget" rollover reads straight off the row. The month sits under the amount, alongside the `Forecast` badge, which gives the category and account names the full width of the row and lines the months up in a column down the right edge. Every row is the same height at every screen width.
@@ -13,7 +26,7 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 ### Goals tab — Plan view
 
 - **Scenario editor now exposes previously hidden engine controls.** Contribution growth, mortgage rate, mortgage term, and house appreciation are available as sliders and inputs in GoalControls (previously engine-only constants). Home carry rate remains an engine default for now.
-- **Uncertainty band on the hero chart.** A shaded band around each scenario's projection shows the ±2 pp return spread, making "good year vs bad year" visible without Monte Carlo.
+- **Uncertainty band on the hero chart.** A shaded band around each scenario's projection shows the ±3 pp return spread, making "good year vs bad year" visible without Monte Carlo.
 - **Life events.** Add one-off cash flows (inheritances, car purchases, etc.) to any scenario with a year, amount, and label. Events appear as diamond markers on the chart and are stored per-scenario in the DB.
 - **Nominal vs real display toggle.** Switch the hero chart between inflation-adjusted (real, default) and nominal values. Uses a 2% ECB-target inflation rate; check-in actuals are also scaled so they stay aligned with the projection.
 - **FI target reference line.** When annual spend and a safe withdrawal rate are set, the FI number (annual spend ÷ SWR) appears as a reference line on the hero chart automatically.
