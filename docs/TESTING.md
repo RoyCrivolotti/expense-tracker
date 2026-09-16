@@ -50,15 +50,18 @@ change that must be all-or-nothing.
 
 Two separate checks, both run in CI (`.github/workflows/verify.yml`) on every PR:
 
-1. **Global floor** — `vitest.config.ts`'s `coverage.thresholds` (statements 43 /
-   branches 36 / functions 36 / lines 45, measured with `coverage.include`
-   covering every `src/**` and `functions/**` file, tested or not — an
-   untested file counts as 0%, it doesn't just vanish from the denominator).
-   These numbers are the actual current baseline, not an aspiration: most of
-   the UI (charts, settings tabs, dashboard) predates any coverage
-   requirement and isn't covered. This check only catches the *overall*
-   number regressing; it fails `npm run verify` locally too, since `verify`
-   runs `test:coverage`.
+1. **Global floor** — `vitest.config.ts`'s `coverage.thresholds` (statements 72 /
+   branches 65 / functions 68 / lines 74, measured with `coverage.include`
+   covering every `src/**`, `functions/**` and `workers/**` file, tested or not — an
+   untested file counts as 0%, it doesn't just vanish from the denominator. The
+   vitest harness under `src/test/` is excluded, being the thing that runs the
+   tests rather than anything that ships).
+   These are set about two points under the measured figure, so they catch a real
+   drop without tripping on run-to-run wobble. **Re-measure and raise them when
+   coverage rises**; they sat at 43/36/36/45 while the real numbers reached the
+   mid-seventies, which is a floor low enough that coverage could have halved
+   without failing. This check only catches the *overall* number regressing; it
+   fails `npm run verify` locally too, since `verify` runs `test:coverage`.
 2. **Diff coverage** — `scripts/check-diff-coverage.mjs` parses `coverage/lcov.info`
    plus `git diff --unified=0 <base>...HEAD` to compute what % of *this PR's
    added/changed* `.ts`/`.tsx` lines are covered, and fails below 90%
