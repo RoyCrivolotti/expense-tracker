@@ -194,7 +194,12 @@ async function seedTxn(repo: ReturnType<typeof planRepo>, budgetMonth: string) {
 describe('validateTransactionPatch', () => {
   it('accepts every field the edit form really sends', () => {
     const patch = {
+      date: '2026-03-04',
+      budgetMonth: '2026-03',
       description: 'Updated description',
+      accountId: 1,
+      categoryId: 2,
+      type: 'expense',
       amountCents: 2500,
       cancelled: true,
       notes: 'a note',
