@@ -310,6 +310,17 @@ describe('useTransactionSelection — rows a filter hides', () => {
     expect(result.current.selected.size).toBe(0)
   })
 
+  it('ticks a whole day, then unticks it, keeping rows chosen elsewhere', () => {
+    const { result } = renderWith([1, 2, 3, 4])
+    act(() => result.current.toggleSelected(4))
+
+    act(() => result.current.toggleDate([1, 2]))
+    expect(result.current.selected).toEqual(new Set([1, 2, 4]))
+
+    act(() => result.current.toggleDate([1, 2]))
+    expect(result.current.selected).toEqual(new Set([4]))
+  })
+
   it('keeps the same Set when nothing is hidden, so a re-render is not a change', () => {
     const { result, rerender } = renderWith([1, 2, 3])
     act(() => result.current.selectAll([1, 2]))
