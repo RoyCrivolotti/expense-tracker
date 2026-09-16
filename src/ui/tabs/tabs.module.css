@@ -209,10 +209,17 @@
 }
 .selectRow {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.6rem;
 }
+/*
+ * The basis is what stops three selects sharing a 375px row and truncating every
+ * label to "All statu". Below that width one wraps to its own line instead, which
+ * is the readable way to lose the space.
+ */
 .selectRow select {
-  flex: 1;
+  flex: 1 1 8.5rem;
+  min-width: 0;
 }
 .selectRow select.activeSelect {
   border-color: var(--color-accent);
