@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { Flag, TxnType } from '../../types'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
@@ -136,7 +136,6 @@ export function useTransactionsTabState(
   actions?: ExpenseActions,
 ) {
   const filters = useTxnListFilters(month, model.dataset.flags)
-  const selection = useTransactionSelection(actions)
   const isMobile = useIsMobile()
 
   const results = useMemo(
@@ -168,12 +167,14 @@ export function useTransactionsTabState(
     [listRows],
   )
 
-  // This tab does not remount on a filter or month change, so the selection has to be
-  // reconciled explicitly. Also covers a row deleted elsewhere.
-  const { retainOnly } = selection
-  useEffect(() => {
-    retainOnly(visibleIds)
-  }, [visibleIds, retainOnly])
+  const existingIds = useMemo(
+    () => model.dataset.transactions.map((t) => t.id),
+    [model.dataset.transactions],
+  )
+
+  // This tab does not remount on a filter or month change, so the selection is told what
+  // is on screen rather than rebuilt: it keeps rows a filter hides and acts only on the rest.
+  const selection = useTransactionSelection(actions, visibleIds, existingIds)
 
   return {
     ...filters,

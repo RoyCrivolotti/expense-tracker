@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { BulkTransactionPatch } from '../../data/dataSource'
 import type { ExpenseActions } from '../actions'
 import { useToast } from '../hooks/useToast'
@@ -23,17 +23,54 @@ export function bulkOutcomeCopy(
   return `${verb} ${done} transaction${done === 1 ? '' : 's'}`
 }
 
-export function useTransactionSelection(actions?: ExpenseActions) {
+/**
+ * The selection the user built, kept whole, and the part of it they can act on.
+ *
+ * `picked` survives a filter or month change, so narrowing a list and widening it again
+ * gives the selection back. `selected` is `picked` limited to the rows on screen, and it
+ * is what every count and every bulk action uses: a row hidden by a filter stays chosen
+ * but cannot be deleted or edited from where the user cannot see it.
+ *
+ * Pass `visibleIds` and `existingIds` from the list; without them every picked row counts
+ * as visible.
+ */
+export function useTransactionSelection(
+  actions?: ExpenseActions,
+  visibleIds?: readonly number[],
+  existingIds?: readonly number[],
+) {
   const { showToast } = useToast()
   const [selectMode, setSelectMode] = useState(false)
-  const [selected, setSelected] = useState<Set<number>>(() => new Set())
+  const [picked, setPicked] = useState<Set<number>>(() => new Set())
   const [busy, setBusy] = useState(false)
   const [pendingBatchDelete, setPendingBatchDelete] = useState(false)
   const [pendingBulkEdit, setPendingBulkEdit] = useState(false)
 
+  const selected = useMemo(() => {
+    if (!visibleIds || picked.size === 0) return picked
+    const visible = new Set(visibleIds)
+    const onScreen = new Set<number>()
+    for (const id of picked) if (visible.has(id)) onScreen.add(id)
+    // Nothing hidden: hand back the same Set, so a render with no filter change does
+    // not look like a selection change to anything memoised on it.
+    return onScreen.size === picked.size ? picked : onScreen
+  }, [picked, visibleIds])
+
+  // A row deleted elsewhere is never on screen, so it never reaches `selected` and is
+  // never acted on. It is only left out of this count, because no filter will bring it
+  // back and "not shown" would promise otherwise. Derived rather than pruned from state,
+  // which keeps every update driven by what the user did.
+  const hiddenCount = useMemo(() => {
+    if (!existingIds) return picked.size - selected.size
+    const exists = new Set(existingIds)
+    let stillThere = 0
+    for (const id of picked) if (exists.has(id)) stillThere++
+    return stillThere - selected.size
+  }, [picked, selected, existingIds])
+
   const exitSelect = () => {
     setSelectMode(false)
-    setSelected(new Set())
+    setPicked(new Set())
     setPendingBatchDelete(false)
     setPendingBulkEdit(false)
   }
@@ -44,7 +81,7 @@ export function useTransactionSelection(actions?: ExpenseActions) {
   }
 
   const toggleSelected = (id: number) => {
-    setSelected((prev) => {
+    setPicked((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
@@ -53,36 +90,22 @@ export function useTransactionSelection(actions?: ExpenseActions) {
   }
 
   const toggleDate = (ids: number[]) => {
-    setSelected((prev) => toggleDateSelection(prev, ids))
+    setPicked((prev) => toggleDateSelection(prev, ids))
   }
 
+  /** Adds every row on screen. A row already chosen behind a filter stays chosen. */
   const selectAll = (ids: number[]) => {
-    setSelected(new Set(ids))
+    setPicked((prev) => new Set([...prev, ...ids]))
   }
 
+  /** Clears the lot, hidden rows included: "all" means all, and clearing is never destructive. */
   const deselectAll = () => {
-    setSelected(new Set())
+    setPicked(new Set())
   }
-
-  /**
-   * Drop anything no longer on screen, so a bulk action cannot reach rows the user
-   * cannot see. Retains rather than clears, so refining a filter keeps the rest of the
-   * selection. `useCallback` because an effect depends on its identity.
-   */
-  const retainOnly = useCallback((ids: number[]) => {
-    setSelected((prev) => {
-      if (prev.size === 0) return prev
-      const visible = new Set(ids)
-      const next = new Set<number>()
-      for (const id of prev) if (visible.has(id)) next.add(id)
-      // Same contents: return the old Set so dependent effects do not re-run.
-      return next.size === prev.size ? prev : next
-    })
-  }, [])
 
   const enterAndSelect = (id: number) => {
     setSelectMode(true)
-    setSelected(new Set([id]))
+    setPicked(new Set([id]))
   }
 
   const requestBatchDelete = () => {
@@ -150,7 +173,7 @@ export function useTransactionSelection(actions?: ExpenseActions) {
     toggleDate,
     selectAll,
     deselectAll,
-    retainOnly,
+    hiddenCount,
     enterAndSelect,
     requestBatchDelete,
     cancelBatchDelete,

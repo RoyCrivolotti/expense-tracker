@@ -148,7 +148,7 @@ describe('useTransactionSelection — bulk edit', () => {
 })
 
 describe('useTransactionSelection — selectAll / deselectAll', () => {
-  it('selectAll replaces selection with all given ids', () => {
+  it('selectAll adds every given id to the selection', () => {
     const { result } = renderHook(() => useTransactionSelection(mockActions()))
     act(() => result.current.toggleSelectMode())
     act(() => result.current.toggleSelected(1))
@@ -206,68 +206,117 @@ describe('useTransactionSelection — Escape key', () => {
   })
 })
 
-describe('retainOnly', () => {
-  it('drops selected ids that are no longer visible', () => {
-    const { result } = renderHook(() => useTransactionSelection(mockActions()))
+describe('useTransactionSelection — rows a filter hides', () => {
+  /** Render with a visible list the test can change, as a filter would. */
+  function renderWith(visible: number[], existing = [1, 2, 3, 4, 5], actions = mockActions()) {
+    return renderHook(
+      ({ v, e }: { v: number[]; e: number[] }) => useTransactionSelection(actions, v, e),
+      { initialProps: { v: visible, e: existing } },
+    )
+  }
+
+  it('counts only the chosen rows that are on screen', () => {
+    const { result, rerender } = renderWith([1, 2, 3, 4, 5])
     act(() => result.current.selectAll([1, 2, 3, 4, 5]))
 
-    act(() => result.current.retainOnly([2, 4]))
+    rerender({ v: [2, 4], e: [1, 2, 3, 4, 5] })
 
     expect([...result.current.selected]).toEqual([2, 4])
+    expect(result.current.hiddenCount).toBe(3)
   })
 
-  it('drops everything when nothing visible was selected', () => {
-    const { result } = renderHook(() => useTransactionSelection(mockActions()))
-    act(() => result.current.selectAll([1, 2, 3]))
+  it('gives the hidden rows back when the filter widens', () => {
+    // The bug: narrowing dropped them for good, so widening again showed fewer
+    // selected than the user had chosen, with only the count to hint at it.
+    const { result, rerender } = renderWith([1, 2, 3, 4, 5])
+    act(() => result.current.selectAll([1, 2, 3, 4, 5]))
 
-    act(() => result.current.retainOnly([9, 10]))
+    rerender({ v: [2, 4], e: [1, 2, 3, 4, 5] })
+    rerender({ v: [1, 2, 3, 4, 5], e: [1, 2, 3, 4, 5] })
 
-    expect(result.current.selected.size).toBe(0)
-  })
-
-  it('keeps the same Set instance when every selected id is still visible', () => {
-    // Identity matters: useTransactionsTabState calls this from an effect keyed on
-    // visibleIds, and a fresh Set on every render would loop.
-    const { result } = renderHook(() => useTransactionSelection(mockActions()))
-    act(() => result.current.selectAll([1, 2]))
-    const before = result.current.selected
-
-    act(() => result.current.retainOnly([1, 2, 3]))
-
-    expect(result.current.selected).toBe(before)
-  })
-
-  it('leaves an empty selection untouched', () => {
-    const { result } = renderHook(() => useTransactionSelection(mockActions()))
-    const before = result.current.selected
-
-    act(() => result.current.retainOnly([1, 2]))
-
-    expect(result.current.selected).toBe(before)
-  })
-
-  it('does not exit select mode, matching deselectAll', () => {
-    const { result } = renderHook(() => useTransactionSelection(mockActions()))
-    act(() => result.current.enterAndSelect(1))
-
-    act(() => result.current.retainOnly([]))
-
-    expect(result.current.selectMode).toBe(true)
-    expect(result.current.selected.size).toBe(0)
+    expect(result.current.selected).toEqual(new Set([1, 2, 3, 4, 5]))
+    expect(result.current.hiddenCount).toBe(0)
   })
 
   it('a bulk delete after a filter change only reaches still-visible rows', async () => {
-    const deleteTransactions = vi.fn().mockResolvedValue(undefined)
-    const { result } = renderHook(() => useTransactionSelection(mockActions({ deleteTransactions })))
+    // The guarantee #110 added, which keeping hidden rows must not weaken.
+    const deleteTransactions = vi.fn((ids: number[]) => Promise.resolve(ids.length))
+    const { result, rerender } = renderWith([1, 2, 3, 4, 5], undefined, mockActions({ deleteTransactions }))
     act(() => result.current.selectAll([1, 2, 3, 4, 5]))
 
-    // The filter narrows to two rows; useTransactionsTabState calls retainOnly.
-    act(() => result.current.retainOnly([2, 4]))
+    rerender({ v: [2, 4], e: [1, 2, 3, 4, 5] })
     act(() => result.current.requestBatchDelete())
     await act(async () => {
       await result.current.confirmBatchDelete()
     })
 
     expect(deleteTransactions).toHaveBeenCalledWith([2, 4])
+  })
+
+  it('a bulk edit after a filter change only reaches still-visible rows', async () => {
+    const updateTransactions = vi.fn((ids: number[]) => Promise.resolve(ids.length))
+    const { result, rerender } = renderWith([1, 2, 3], [1, 2, 3], mockActions({ updateTransactions }))
+    act(() => result.current.selectAll([1, 2, 3]))
+
+    rerender({ v: [3], e: [1, 2, 3] })
+    await act(async () => {
+      await result.current.confirmBulkEdit({ categoryId: 9 })
+    })
+
+    expect(updateTransactions).toHaveBeenCalledWith([3], { categoryId: 9 })
+  })
+
+  it('offers nothing to act on when every chosen row is hidden', () => {
+    const { result, rerender } = renderWith([1, 2, 3])
+    act(() => result.current.selectAll([1, 2]))
+
+    rerender({ v: [3], e: [1, 2, 3] })
+    act(() => result.current.requestBatchDelete())
+
+    expect(result.current.selected.size).toBe(0)
+    expect(result.current.hiddenCount).toBe(2)
+    expect(result.current.pendingBatchDelete).toBe(false)
+  })
+
+  it('lets go of a row deleted elsewhere, which no filter will bring back', () => {
+    const { result, rerender } = renderWith([1, 2, 3], [1, 2, 3])
+    act(() => result.current.selectAll([1, 2, 3]))
+
+    rerender({ v: [1, 3], e: [1, 3] })
+
+    expect(result.current.selected).toEqual(new Set([1, 3]))
+    expect(result.current.hiddenCount).toBe(0)
+  })
+
+  it('select all adds the rows on screen and keeps the hidden choices', () => {
+    const { result, rerender } = renderWith([1, 2, 3, 4, 5])
+    act(() => result.current.selectAll([1, 2]))
+
+    rerender({ v: [3, 4], e: [1, 2, 3, 4, 5] })
+    act(() => result.current.selectAll([3, 4]))
+    rerender({ v: [1, 2, 3, 4, 5], e: [1, 2, 3, 4, 5] })
+
+    expect(result.current.selected).toEqual(new Set([1, 2, 3, 4]))
+  })
+
+  it('deselect all clears the hidden choices too', () => {
+    const { result, rerender } = renderWith([1, 2, 3])
+    act(() => result.current.selectAll([1, 2, 3]))
+
+    rerender({ v: [1], e: [1, 2, 3] })
+    act(() => result.current.deselectAll())
+    rerender({ v: [1, 2, 3], e: [1, 2, 3] })
+
+    expect(result.current.selected.size).toBe(0)
+  })
+
+  it('keeps the same Set when nothing is hidden, so a re-render is not a change', () => {
+    const { result, rerender } = renderWith([1, 2, 3])
+    act(() => result.current.selectAll([1, 2]))
+    const before = result.current.selected
+
+    rerender({ v: [1, 2, 3], e: [1, 2, 3] })
+
+    expect(result.current.selected).toBe(before)
   })
 })

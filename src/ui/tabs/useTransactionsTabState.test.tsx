@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
-import { makeDataset, makeFlag } from '../../testing/factories'
+import { makeDataset, makeFlag, makeTransaction } from '../../testing/factories'
 import { buildLookup } from '../format'
 import type { ExpenseModel } from '../useExpenseData'
 import { useTransactionsTabState } from './useTransactionsTabState'
@@ -63,5 +63,40 @@ describe('useTransactionsTabState — flag filter', () => {
     act(() => result.current.setFlagId('none'))
 
     expect(result.current.flagId).toBe('none')
+  })
+})
+
+describe('useTransactionsTabState — selection across a filter change', () => {
+  function modelWithRows(): ExpenseModel {
+    const dataset = makeDataset({
+      transactions: [
+        makeTransaction({ id: 1, type: 'expense' }),
+        makeTransaction({ id: 2, type: 'expense' }),
+        makeTransaction({ id: 3, type: 'income' }),
+      ],
+    })
+    return {
+      dataset,
+      lookup: buildLookup(dataset),
+      descriptionIndex: { search: () => [], resolve: () => undefined },
+      months: [],
+    }
+  }
+
+  it('gives a narrowed selection back when the filter widens again', () => {
+    // The tab reconciled the selection by deleting whatever a filter hid, so choosing
+    // three rows, filtering to expenses and clearing the filter left two chosen.
+    const model = modelWithRows()
+    const { result } = renderHook(() => useTransactionsTabState(model, '2025-01'))
+    act(() => result.current.selectAll(result.current.visibleIds))
+    expect(result.current.selected.size).toBe(3)
+
+    act(() => result.current.setTxnType('expense'))
+    expect(result.current.selected).toEqual(new Set([1, 2]))
+    expect(result.current.hiddenCount).toBe(1)
+
+    act(() => result.current.setTxnType('all'))
+    expect(result.current.selected).toEqual(new Set([1, 2, 3]))
+    expect(result.current.hiddenCount).toBe(0)
   })
 })
