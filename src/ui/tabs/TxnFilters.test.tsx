@@ -37,6 +37,14 @@ function baseProps(overrides: Partial<TxnFiltersProps> = {}): TxnFiltersProps {
 }
 
 describe('TxnFilters', () => {
+  it('offers Cancel while selecting, except while a bulk action is running', () => {
+    const { rerender } = render(<TxnFilters {...baseProps({ selectMode: true })} />)
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled()
+
+    rerender(<TxnFilters {...baseProps({ selectMode: true, selectBusy: true })} />)
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled()
+  })
+
   it('does not show a Clear filters button when nothing is filtered', () => {
     render(<TxnFilters {...baseProps()} />)
     expect(screen.queryByText('Clear filters')).not.toBeInTheDocument()

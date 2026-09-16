@@ -139,6 +139,10 @@
   cursor: pointer;
   white-space: nowrap;
 }
+.selectBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
 .searchWrap {
   position: relative;
   flex: 1;
@@ -500,6 +504,10 @@
   background: none;
   color: var(--color-text-secondary);
   cursor: pointer;
+}
+.batchClose:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 .batchClose svg {
   width: 1rem;

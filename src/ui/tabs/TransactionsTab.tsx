@@ -97,6 +97,7 @@ export function TransactionsTab({
         customDateFrom={state.customDateFrom}
         customDateTo={state.customDateTo}
         selectMode={state.selectMode}
+        selectBusy={state.busy}
         canSelect={state.canDelete}
         secondaryFilterCount={state.secondaryFilterCount}
         hasActiveFilters={state.hasActiveFilters}

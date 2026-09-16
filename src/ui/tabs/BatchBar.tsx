@@ -36,6 +36,7 @@ export function BatchBar({
           type="button"
           className={styles.batchClose}
           onClick={onCancel}
+          disabled={busy}
           aria-label="Exit selection mode"
         >
           <CloseIcon />

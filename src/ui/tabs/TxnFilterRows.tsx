@@ -16,12 +16,15 @@ const DATE_SCOPE_OPTIONS: { value: TxnDateScope; label: string }[] = [
 export function SearchRow({
   query,
   selectMode,
+  selectBusy = false,
   canSelect,
   onQuery,
   onToggleSelectMode,
 }: {
   query: string
   selectMode: boolean
+  /** A bulk action is running, and leaving select mode would not stop it. */
+  selectBusy?: boolean
   canSelect: boolean
   onQuery: (value: string) => void
   onToggleSelectMode: () => void
@@ -50,7 +53,12 @@ export function SearchRow({
         )}
       </div>
       {canSelect && (
-        <button type="button" className={styles.selectBtn} onClick={onToggleSelectMode}>
+        <button
+          type="button"
+          className={styles.selectBtn}
+          onClick={onToggleSelectMode}
+          disabled={selectMode && selectBusy}
+        >
           {selectMode ? 'Cancel' : 'Select'}
         </button>
       )}

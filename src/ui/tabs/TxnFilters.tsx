@@ -28,6 +28,8 @@ export interface TxnFiltersProps {
   customDateFrom: string
   customDateTo: string
   selectMode: boolean
+  /** A bulk action is running; see SearchRow. */
+  selectBusy?: boolean
   canSelect: boolean
   secondaryFilterCount: number
   hasActiveFilters: boolean
@@ -54,6 +56,7 @@ export function TxnFilters(props: TxnFiltersProps) {
       <SearchRow
         query={props.query}
         selectMode={props.selectMode}
+        selectBusy={props.selectBusy ?? false}
         canSelect={props.canSelect}
         onQuery={props.onQuery}
         onToggleSelectMode={props.onToggleSelectMode}

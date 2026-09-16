@@ -267,6 +267,43 @@ describe('useTransactionSelection — Escape key', () => {
   })
 })
 
+describe('useTransactionSelection — while a bulk action runs', () => {
+  it('stays in select mode until the action settles, whatever is pressed', async () => {
+    // The request can't be called back, so letting the user leave would only pretend it was.
+    let settle: (deleted: number) => void = () => {}
+    const actions = mockActions({
+      deleteTransactions: vi.fn(
+        () =>
+          new Promise<number>((resolve) => {
+            settle = resolve
+          }),
+      ),
+    })
+    const { result } = renderHook(() => useTransactionSelection(actions))
+    act(() => result.current.toggleSelectMode())
+    act(() => result.current.toggleSelected(1))
+    act(() => result.current.requestBatchDelete())
+    let request: Promise<void> = Promise.resolve()
+    act(() => {
+      request = result.current.confirmBatchDelete()
+    })
+    expect(result.current.busy).toBe(true)
+
+    act(() => result.current.toggleSelectMode())
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    })
+    expect(result.current.selectMode).toBe(true)
+    expect([...result.current.selected]).toEqual([1])
+
+    await act(async () => {
+      settle(1)
+      await request
+    })
+    expect(result.current.selectMode).toBe(false)
+  })
+})
+
 describe('useTransactionSelection — rows a filter hides', () => {
   /** Render with a visible list the test can change, as a filter would. */
   function renderWith(visible: number[], existing = [1, 2, 3, 4, 5], actions = mockActions()) {

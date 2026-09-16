@@ -24,6 +24,11 @@ describe('BatchBar', () => {
     expect(screen.queryByText(/not shown/)).not.toBeInTheDocument()
   })
 
+  it('cannot be closed while an action is running', () => {
+    render(<BatchBar count={2} busy={true} editOpen={false} {...baseProps} />)
+    expect(screen.getByLabelText('Exit selection mode')).toBeDisabled()
+  })
+
   it('shows "Deleting…" only when busy and edit is not open', () => {
     render(<BatchBar count={2} busy={true} editOpen={false} {...baseProps} />)
     expect(screen.getByText('Deleting…')).toBeInTheDocument()

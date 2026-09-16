@@ -106,6 +106,9 @@ export function useTransactionSelection(
   }
 
   const toggleSelectMode = () => {
+    // A bulk action can't be called back once sent, so leaving mid-request would only
+    // look like it had been.
+    if (busy) return
     if (selectMode) exitSelect()
     else setSelectMode(true)
   }
@@ -183,7 +186,9 @@ export function useTransactionSelection(
     }
   }
 
-  const onEscape = useEffectEvent(() => exitSelect())
+  const onEscape = useEffectEvent(() => {
+    if (!busy) exitSelect()
+  })
   useEffect(() => {
     if (!selectMode) return
     // Capture phase, so this looks before anything acts on the key. By the bubble phase
