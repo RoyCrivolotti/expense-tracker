@@ -132,7 +132,7 @@ export function TransactionsTab({
         <span className={styles.resultStats}>
           <span>{state.listRows.length} items</span>
           <span>
-            Net spend <Money cents={state.totalCents} />
+            Net spend <Money cents={state.totalCents} signed={state.totalCents < 0} />
           </span>
         </span>
       </div>
