@@ -7,9 +7,20 @@ interface MonthPickerProps {
   onChange: (month: string) => void
   /** compact: inline pill (header). bar: full-width strip for section toolbars. */
   layout?: 'compact' | 'bar'
+  /**
+   * Set while the current tab is selecting rows. Changing month would change the list
+   * under the selection, which every other control on that list already refuses to do.
+   */
+  disabled?: boolean
 }
 
-export function MonthPicker({ months, value, onChange, layout = 'compact' }: MonthPickerProps) {
+export function MonthPicker({
+  months,
+  value,
+  onChange,
+  layout = 'compact',
+  disabled = false,
+}: MonthPickerProps) {
   const index = months.indexOf(value)
   const latestMonth = months[months.length - 1]
   const showLatest = latestMonth !== undefined && value !== latestMonth
@@ -18,12 +29,13 @@ export function MonthPicker({ months, value, onChange, layout = 'compact' }: Mon
     if (next) onChange(next)
   }
   const rootClass = layout === 'bar' ? `${styles.picker} ${styles.pickerBar}` : styles.picker
+  const lockedHint = disabled ? 'Finish or cancel the selection to change month' : undefined
   return (
-    <div className={rootClass}>
+    <div className={rootClass} title={lockedHint}>
       <button
         type="button"
         onClick={() => go(-1)}
-        disabled={index <= 0}
+        disabled={disabled || index <= 0}
         aria-label="Previous month"
       >
         ‹
@@ -32,7 +44,7 @@ export function MonthPicker({ months, value, onChange, layout = 'compact' }: Mon
       <button
         type="button"
         onClick={() => go(1)}
-        disabled={index < 0 || index >= months.length - 1}
+        disabled={disabled || index < 0 || index >= months.length - 1}
         aria-label="Next month"
       >
         ›
@@ -41,6 +53,7 @@ export function MonthPicker({ months, value, onChange, layout = 'compact' }: Mon
         <button
           type="button"
           onClick={() => onChange(latestMonth)}
+          disabled={disabled}
           aria-label="Go to latest budget month"
         >
           »

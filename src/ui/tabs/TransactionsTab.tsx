@@ -23,10 +23,12 @@ interface TransactionsTabProps {
   model: ExpenseModel
   month: string
   actions?: ExpenseActions | undefined
+  /** Told when row selection starts and ends, so the shell can hold the month still. */
+  onSelectModeChange?: ((selecting: boolean) => void) | undefined
 }
 
-export function TransactionsTab({ model, month, actions }: TransactionsTabProps) {
-  const state = useTransactionsTabState(model, month, actions)
+export function TransactionsTab({ model, month, actions, onSelectModeChange }: TransactionsTabProps) {
+  const state = useTransactionsTabState(model, month, actions, onSelectModeChange)
   const [editingStatement, setEditingStatement] = useState<StatementPaymentRow | null>(null)
   const [statementPending, setStatementPending] = useState(false)
   const [managingFlags, setManagingFlags] = useState(false)

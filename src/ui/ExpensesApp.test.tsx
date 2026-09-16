@@ -140,3 +140,66 @@ describe('ExpensesApp tab wiring', () => {
     expect(await screen.findByText('Mercadona')).toBeTruthy()
   })
 })
+
+describe('ExpensesApp month picker while selecting transactions', () => {
+  // Two months of data, so "Previous month" is enabled on the latest one.
+  function twoMonths() {
+    const row = (id: number, month: string) => ({
+      id,
+      date: `${month}-10`,
+      budgetMonth: month,
+      description: `Row ${id}`,
+      accountId: 1,
+      categoryId: 1,
+      type: 'expense' as const,
+      amountCents: 1000,
+      cancelled: false,
+      status: 'posted' as const,
+    })
+    const dataset = datasetWith({
+      categories: [{ id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
+      accounts: [{ id: 1, name: 'Main debit', kind: 'debit', settlement: 'immediate', active: true }],
+      transactions: [row(1, '2026-06'), row(2, '2026-07')],
+    })
+    return {
+      ...sourceThatSucceeds(dataset),
+      deleteTransaction: vi.fn().mockResolvedValue(undefined),
+      deleteTransactions: vi.fn().mockResolvedValue(0),
+      updateTransactions: vi.fn().mockResolvedValue(0),
+    }
+  }
+
+  async function openTransactions() {
+    render(<ExpensesApp source={twoMonths()} hubGrants={allGroupsGranted()} />)
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Transactions' }))[0]!)
+    await screen.findByText('Row 2')
+    return () => screen.getByRole('button', { name: 'Previous month' })
+  }
+
+  it('holds the month still for as long as rows are being selected', async () => {
+    const previous = await openTransactions()
+    expect(previous()).toBeEnabled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+    expect(previous()).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(previous()).toBeEnabled()
+  })
+
+  it('lets go when the selection ends by leaving the tab and coming back', async () => {
+    // No handler runs when the tab unmounts. Transactions then comes back with nothing
+    // selected, and without the reset the shell would still hold its month locked.
+    const previous = await openTransactions()
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+    expect(previous()).toBeDisabled()
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Dashboard' })[0]!)
+    expect(previous()).toBeEnabled()
+    fireEvent.click(screen.getAllByRole('button', { name: 'Transactions' })[0]!)
+    await screen.findByText('Row 2')
+
+    expect(screen.getByRole('button', { name: 'Select' })).toBeInTheDocument()
+    expect(previous()).toBeEnabled()
+  })
+})

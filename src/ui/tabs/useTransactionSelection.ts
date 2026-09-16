@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useEffectEvent, useMemo, useState } from 'react'
 import type { BulkTransactionPatch } from '../../data/dataSource'
 import type { ExpenseActions } from '../actions'
 import { useToast } from '../hooks/useToast'
@@ -50,9 +50,20 @@ export function useTransactionSelection(
   actions?: ExpenseActions,
   visibleIds?: readonly number[],
   existingIds?: readonly number[],
+  onSelectModeChange?: (selecting: boolean) => void,
 ) {
   const { showToast } = useToast()
-  const [selectMode, setSelectMode] = useState(false)
+  const [selectMode, setSelectModeState] = useState(false)
+  // Reported from the handlers that change it rather than mirrored in an effect, so the
+  // shell hears about it in the same update.
+  const setSelectMode = (selecting: boolean) => {
+    setSelectModeState(selecting)
+    onSelectModeChange?.(selecting)
+  }
+  // Leaving the tab mid-selection unmounts it without any handler running. Without this
+  // the shell would keep the month locked on every other tab.
+  const reportLeft = useEffectEvent(() => onSelectModeChange?.(false))
+  useEffect(() => () => reportLeft(), [])
   const [picked, setPicked] = useState<Set<number>>(() => new Set())
   const [busy, setBusy] = useState(false)
   const [pendingBatchDelete, setPendingBatchDelete] = useState(false)
@@ -165,10 +176,11 @@ export function useTransactionSelection(
     }
   }
 
+  const onEscape = useEffectEvent(() => exitSelect())
   useEffect(() => {
     if (!selectMode) return
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') exitSelect()
+      if (e.key === 'Escape') onEscape()
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)

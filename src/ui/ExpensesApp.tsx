@@ -33,6 +33,11 @@ const GoalsTab = lazy(() => import('./tabs/goals/GoalsTab'))
 const COMPACT_FOOTER_TABS: ReadonlySet<TabId> = new Set(['goals', 'analytics', 'settings'])
 const NO_PICKER_TABS: ReadonlySet<TabId> = new Set(['settings', 'goals'])
 
+/** Only Transactions has a selection for the month to disturb. */
+function monthLockedFor(tab: TabId, txnSelecting: boolean): boolean {
+  return tab === 'transactions' && txnSelecting
+}
+
 function TabView({
   tab,
   model,
@@ -45,6 +50,7 @@ function TabView({
   accountEmail,
   onNavigate,
   onRunSetup,
+  onTxnSelectModeChange,
 }: {
   tab: TabId
   model: ExpenseModel
@@ -57,10 +63,18 @@ function TabView({
   accountEmail?: string | undefined
   onNavigate: (tab: TabId) => void
   onRunSetup: () => void
+  onTxnSelectModeChange: (selecting: boolean) => void
 }) {
   switch (tab) {
     case 'transactions':
-      return <TransactionsTab model={model} month={month} actions={actions} />
+      return (
+        <TransactionsTab
+          model={model}
+          month={month}
+          actions={actions}
+          onSelectModeChange={onTxnSelectModeChange}
+        />
+      )
     case 'analytics':
       return (
         <AnalyticsTab
@@ -224,6 +238,9 @@ function ExpensesAppReady({
   const [theme, setTheme] = useExpenseTheme()
   const [tab, setTab] = useState<TabId>('dashboard')
   const [month, setMonth] = useState<string | null>(null)
+  // The header's month picker belongs to the shell, but on Transactions it drives the
+  // list, and a selection there must not have the list changed under it.
+  const [txnSelecting, setTxnSelecting] = useState(false)
   const [modal, setModal] = useState<ExpenseModalState>(null)
   const [onboardingOpen, setOnboardingOpen] = useState(
     () => source.canWrite && !readOnly && needsOnboarding(model.dataset) && !isOnboardingSkipped(),
@@ -276,6 +293,7 @@ function ExpensesAppReady({
             activeMonth={activeMonth}
             onMonthChange={setMonth}
             showPicker={showPicker}
+            pickerLocked={monthLockedFor(tab, txnSelecting)}
             online={online}
             refreshing={refreshing}
             onRefresh={reload}
@@ -294,6 +312,7 @@ function ExpensesAppReady({
             ownerAccess={ownerAccess}
             accountEmail={accountEmail}
             onNavigate={setTab}
+            onTxnSelectModeChange={setTxnSelecting}
             onRunSetup={() => {
               clearOnboardingSkip()
               setOnboardingFirstRun(false)

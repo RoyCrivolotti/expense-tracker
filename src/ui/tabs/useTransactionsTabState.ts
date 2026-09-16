@@ -134,6 +134,7 @@ export function useTransactionsTabState(
   model: ExpenseModel,
   month: string,
   actions?: ExpenseActions,
+  onSelectModeChange?: (selecting: boolean) => void,
 ) {
   const filters = useTxnListFilters(month, model.dataset.flags)
   const isMobile = useIsMobile()
@@ -174,7 +175,7 @@ export function useTransactionsTabState(
 
   // This tab does not remount on a filter or month change, so the selection is told what
   // is on screen rather than rebuilt: it keeps rows a filter hides and acts only on the rest.
-  const selection = useTransactionSelection(actions, visibleIds, existingIds)
+  const selection = useTransactionSelection(actions, visibleIds, existingIds, onSelectModeChange)
 
   return {
     ...filters,

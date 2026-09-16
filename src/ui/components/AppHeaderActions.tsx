@@ -7,6 +7,8 @@ interface Props {
   activeMonth: string
   onMonthChange: (month: string) => void
   showPicker: boolean
+  /** The current tab is selecting rows, so the month must not change under it. */
+  pickerLocked?: boolean
   online: boolean
   refreshing: boolean
   onRefresh: () => void
@@ -17,6 +19,7 @@ export function AppHeaderActions({
   activeMonth,
   onMonthChange,
   showPicker,
+  pickerLocked = false,
   online,
   refreshing,
   onRefresh,
@@ -25,7 +28,12 @@ export function AppHeaderActions({
     <div className={styles.headerActions}>
       <RefreshButton onRefresh={onRefresh} refreshing={refreshing} disabled={!online} />
       {showPicker ? (
-        <MonthPicker months={months} value={activeMonth} onChange={onMonthChange} />
+        <MonthPicker
+          months={months}
+          value={activeMonth}
+          onChange={onMonthChange}
+          disabled={pickerLocked}
+        />
       ) : null}
     </div>
   )
