@@ -141,7 +141,7 @@ describe('ExpensesApp tab wiring', () => {
   })
 })
 
-describe('ExpensesApp month picker while selecting transactions', () => {
+describe('ExpensesApp while selecting transactions', () => {
   const row = (id: number, month: string) => ({
     id,
     date: `${month}-10`,
@@ -233,6 +233,22 @@ describe('ExpensesApp month picker while selecting transactions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(await screen.findByText('Row 3')).toBeInTheDocument()
     expect(previous().parentElement).toHaveTextContent('August 2026')
+  })
+
+  it('keeps the selection when Escape closes the edit sheet', async () => {
+    // The sheet and select mode both close on Escape. Backing out of an edit used to
+    // clear every chosen row as well.
+    await openTransactions()
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Select all' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    expect(screen.getByText('Edit selected')).toBeInTheDocument()
+
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' })
+
+    await waitFor(() => expect(screen.queryByText('Edit selected')).not.toBeInTheDocument())
+    expect(screen.getByText('1 selected')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
   })
 
   it('shows the month you step to when the list was on all dates', async () => {

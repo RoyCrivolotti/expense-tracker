@@ -180,7 +180,8 @@ export function useTransactionSelection(
   useEffect(() => {
     if (!selectMode) return
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onEscape()
+      // A dialog or suggestion list that used the key has already said so.
+      if (e.key === 'Escape' && !e.defaultPrevented) onEscape()
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)

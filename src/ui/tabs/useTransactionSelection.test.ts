@@ -205,6 +205,25 @@ describe('useTransactionSelection — Escape key', () => {
     expect(result.current.selectMode).toBe(false)
   })
 
+  it('leaves the selection alone when something in front already used Escape', () => {
+    const { result } = renderHook(() => useTransactionSelection(mockActions()))
+    act(() => result.current.toggleSelectMode())
+    act(() => result.current.toggleSelected(1))
+    const claim = (e: KeyboardEvent) => e.preventDefault()
+    document.addEventListener('keydown', claim)
+    try {
+      act(() => {
+        document.body.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
+        )
+      })
+    } finally {
+      document.removeEventListener('keydown', claim)
+    }
+    expect(result.current.selectMode).toBe(true)
+    expect([...result.current.selected]).toEqual([1])
+  })
+
   it('ignores other keys', () => {
     const { result } = renderHook(() => useTransactionSelection(mockActions()))
     act(() => result.current.toggleSelectMode())
