@@ -196,7 +196,7 @@ export function validateTransactionPatch(raw: unknown): Partial<NewTransaction> 
   for (const key of Object.keys(obj)) {
     if (obj[key] !== undefined) PATCH_FIELD_VALIDATORS[key]!(obj[key], patch)
   }
-  return patch as Partial<NewTransaction>
+  return patch
 }
 
 export async function patchTransaction(
