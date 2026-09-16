@@ -52,7 +52,9 @@ export function SearchRow({
           </button>
         )}
       </div>
-      {canSelect && (
+      {/* A selection already under way can always be cancelled, even once the app has
+          gone read-only and could not start a new one. */}
+      {canSelect || selectMode ? (
         <button
           type="button"
           className={styles.selectBtn}
@@ -61,7 +63,7 @@ export function SearchRow({
         >
           {selectMode ? 'Cancel' : 'Select'}
         </button>
-      )}
+      ) : null}
     </div>
   )
 }

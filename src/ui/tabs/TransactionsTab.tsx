@@ -139,13 +139,13 @@ export function TransactionsTab({
         swipeDelete={state.isMobile && state.canDelete && !state.selectMode}
         {...(state.hasActiveFilters ? { onClearFilters: state.clearFilters } : {})}
         {...(actions ? { onSelect: actions.onEdit, onDuplicate: actions.onDuplicate } : {})}
+        onToggleSelect={state.toggleSelected}
+        onToggleDate={state.toggleDate}
         {...(actions
           ? {
               onAddForDate: (date) =>
                 actions.onAdd({ date, budgetMonth: defaultBudgetMonth(date, rolloverDay) }),
               onDelete: actions.deleteTransaction,
-              onToggleSelect: state.toggleSelected,
-              onToggleDate: state.toggleDate,
               onLongPressSelect: state.enterAndSelect,
               onEditStatementPayment: setEditingStatement,
             }

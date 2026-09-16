@@ -7,6 +7,8 @@ interface BatchBarProps {
   /** Chosen rows the current filter hides. They stay chosen but are not acted on. */
   hiddenCount?: number
   busy: boolean
+  /** Offline or otherwise without write access: nothing can be edited or deleted. */
+  readOnly?: boolean
   editOpen: boolean
   onCancel: () => void
   onSelectAll: () => void
@@ -20,6 +22,7 @@ export function BatchBar({
   totalCount,
   hiddenCount = 0,
   busy,
+  readOnly = false,
   editOpen,
   onCancel,
   onSelectAll,
@@ -28,6 +31,7 @@ export function BatchBar({
   onDelete,
 }: BatchBarProps) {
   const deleting = busy && !editOpen
+  const canAct = count > 0 && !busy && !readOnly
   const allSelected = totalCount > 0 && count >= totalCount
   return (
     <div className={styles.batchBar}>
@@ -60,7 +64,7 @@ export function BatchBar({
         <button
           type="button"
           className={styles.batchEdit}
-          disabled={count === 0 || busy}
+          disabled={!canAct}
           onClick={onEdit}
         >
           Edit
@@ -68,7 +72,7 @@ export function BatchBar({
         <button
           type="button"
           className={styles.batchDelete}
-          disabled={count === 0 || busy}
+          disabled={!canAct}
           onClick={onDelete}
         >
           {deleting ? 'Deleting…' : 'Delete'}

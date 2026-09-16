@@ -24,6 +24,13 @@ describe('BatchBar', () => {
     expect(screen.queryByText(/not shown/)).not.toBeInTheDocument()
   })
 
+  it('still closes without write access, but offers nothing to act with', () => {
+    render(<BatchBar count={2} busy={false} readOnly editOpen={false} {...baseProps} />)
+    expect(screen.getByLabelText('Exit selection mode')).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeDisabled()
+  })
+
   it('cannot be closed while an action is running', () => {
     render(<BatchBar count={2} busy={true} editOpen={false} {...baseProps} />)
     expect(screen.getByLabelText('Exit selection mode')).toBeDisabled()

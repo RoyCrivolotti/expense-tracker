@@ -37,6 +37,16 @@ function baseProps(overrides: Partial<TxnFiltersProps> = {}): TxnFiltersProps {
 }
 
 describe('TxnFilters', () => {
+  it('offers Cancel for a selection under way even without write access', () => {
+    render(<TxnFilters {...baseProps({ selectMode: true, canSelect: false })} />)
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled()
+  })
+
+  it('offers no Select without write access', () => {
+    render(<TxnFilters {...baseProps({ canSelect: false })} />)
+    expect(screen.queryByRole('button', { name: 'Select' })).not.toBeInTheDocument()
+  })
+
   it('offers Cancel while selecting, except while a bulk action is running', () => {
     const { rerender } = render(<TxnFilters {...baseProps({ selectMode: true })} />)
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled()

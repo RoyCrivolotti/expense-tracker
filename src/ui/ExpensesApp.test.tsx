@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import type { ExpenseDataSource } from '../data/dataSource'
 import type { ExpenseDataset } from '../types'
@@ -263,6 +263,25 @@ describe('ExpensesApp while selecting transactions', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.getByText('1 selected')).toBeInTheDocument()
+  })
+
+  it('keeps a way out of select mode when the app goes offline', async () => {
+    // Offline is read-only, which used to take away the bar and Cancel while select mode,
+    // and the month and filter locks with it, stayed on.
+    const previous = await openTransactions()
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Select all' }))
+
+    act(() => {
+      window.dispatchEvent(new Event('offline'))
+    })
+
+    expect(screen.getByText('1 selected')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByText('1 selected')).not.toBeInTheDocument()
+    expect(previous()).toBeEnabled()
   })
 
   it('shows the month you step to when the list was on all dates', async () => {

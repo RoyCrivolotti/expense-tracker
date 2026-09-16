@@ -35,16 +35,17 @@ export function TransactionsSelectFooter({
   visibleIds,
   model,
 }: TransactionsSelectFooterProps) {
-  if (!actionsEnabled) return null
-
   return (
     <>
+      {/* Shown even without write access: going offline mid-selection must still leave a
+          way out, since select mode and its locks stay on. */}
       {selection.selectMode ? (
         <BatchBar
           count={selection.selected.size}
           totalCount={visibleIds.length}
           hiddenCount={selection.hiddenCount}
           busy={selection.busy}
+          readOnly={!actionsEnabled}
           editOpen={selection.pendingBulkEdit}
           onCancel={selection.toggleSelectMode}
           onSelectAll={() => selection.selectAll(visibleIds)}
@@ -53,7 +54,7 @@ export function TransactionsSelectFooter({
           onDelete={selection.requestBatchDelete}
         />
       ) : null}
-      {selection.pendingBatchDelete ? (
+      {actionsEnabled && selection.pendingBatchDelete ? (
         <BatchDeleteConfirm
           count={selection.selected.size}
           hiddenCount={selection.hiddenCount}
@@ -61,7 +62,7 @@ export function TransactionsSelectFooter({
           onCancel={selection.cancelBatchDelete}
         />
       ) : null}
-      {selection.pendingBulkEdit ? (
+      {actionsEnabled && selection.pendingBulkEdit ? (
         <BulkEditSheet
           count={selection.selected.size}
           hiddenCount={selection.hiddenCount}
