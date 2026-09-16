@@ -21,6 +21,12 @@ import { usePastReports } from './usePastReports'
 import { RecordReimbursementSheet } from './RecordReimbursementSheet'
 import styles from './tabs.module.css'
 
+/** "1 item", "0 items", "2 items" — pulled out only because this component is already
+ * at the complexity ceiling; every other spot in the app inlines this same ternary. */
+function itemCountLabel(count: number): string {
+  return `${count} item${count === 1 ? '' : 's'}`
+}
+
 interface TransactionsTabProps {
   model: ExpenseModel
   month: string
@@ -130,7 +136,7 @@ export function TransactionsTab({
       </p>
       <div id={RESULTS_ANCHOR_ID} className={styles.resultSummary}>
         <span className={styles.resultStats}>
-          <span>{state.listRows.length} items</span>
+          <span>{itemCountLabel(state.listRows.length)}</span>
           <span>
             Net spend <Money cents={state.totalCents} signed={state.totalCents < 0} />
           </span>

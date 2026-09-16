@@ -34,6 +34,26 @@ function summary() {
 }
 
 describe('TransactionsTab — result summary', () => {
+  it('says "1 item" for a single row, not "1 items"', () => {
+    render(<TransactionsTab model={modelFor([makeTransaction({ id: 1 })])} month="2025-01" />)
+
+    expect(summary().getByText('1 item')).toBeInTheDocument()
+    expect(summary().queryByText('1 items')).not.toBeInTheDocument()
+  })
+
+  it('keeps the plural for anything else, including none', () => {
+    const { rerender } = render(<TransactionsTab model={modelFor([])} month="2025-01" />)
+    expect(summary().getByText('0 items')).toBeInTheDocument()
+
+    rerender(
+      <TransactionsTab
+        model={modelFor([makeTransaction({ id: 1 }), makeTransaction({ id: 2 })])}
+        month="2025-01"
+      />,
+    )
+    expect(summary().getByText('2 items')).toBeInTheDocument()
+  })
+
   it('signs a net refund, so it does not read as spend', () => {
     // netSpendCents is expense minus refund; a lone refund goes negative, which used to
     // render as a plain positive amount — "166,44 €" — indistinguishable from having
