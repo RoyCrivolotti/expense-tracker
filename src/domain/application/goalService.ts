@@ -74,11 +74,14 @@ export function validateScenarioNumbers(patch: Partial<NewGoalScenario>): void {
 
   validateScenarioFractions(patch)
 
+  // Zero is a real answer here, not a missing one: the type says `0 = owned from day
+  // one`, rentVsBuy builds its "buy now" comparison with it, and the slider offers it
+  // as "Now". Only `null` means never buy, and that is already excluded above.
   if (patch.housePurchaseYear != null) {
     assertWholeAtLeast(
       patch.housePurchaseYear,
-      1,
-      'housePurchaseYear must be a whole year, at least 1',
+      0,
+      'housePurchaseYear must be a whole year, zero or more',
     )
   }
 }

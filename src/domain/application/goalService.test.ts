@@ -89,4 +89,13 @@ describe('the scenario write paths', () => {
     const patched = await patchScenario(repo, OWNER, saved.id, { horizonYears: 25 })
     expect(patched.horizonYears).toBe(25)
   })
+
+  it('saves the purchase year the slider calls "Now"', async () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    const saved = await createScenario(repo, OWNER, newScenario({ housePurchaseYear: 0 }))
+
+    expect(saved.housePurchaseYear).toBe(0)
+    const patched = await patchScenario(repo, OWNER, saved.id, { housePurchaseYear: 0 })
+    expect(patched.housePurchaseYear).toBe(0)
+  })
 })

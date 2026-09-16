@@ -200,7 +200,7 @@ export function LinearChart({
             scaleY={geo.scaleY}
           />
         ))}
-        {refLines.map((v) => (
+        {refLines.filter(Number.isFinite).map((v) => (
           <line
             key={v}
             x1={PAD.left}

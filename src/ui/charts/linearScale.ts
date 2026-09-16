@@ -58,7 +58,11 @@ export function collectDomain(valueArrays: number[][], refValues: number[] = [])
   min: number
   max: number
 } {
-  const all = [0, ...refValues, ...valueArrays.flat()]
+  // One non-finite value used to take the whole chart down, not just its own series:
+  // it made the domain infinite, niceScale returned NaN bounds, and the scale built
+  // from those mapped every point to NaN. An infinite FI target is reachable by
+  // design, so the scale has to survive one.
+  const all = [0, ...refValues, ...valueArrays.flat()].filter(Number.isFinite)
   return { min: Math.min(...all), max: Math.max(...all) }
 }
 

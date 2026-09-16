@@ -37,6 +37,25 @@ describe('collectDomain', () => {
     expect(min).toBe(-5)
     expect(max).toBe(50)
   })
+
+  it('ignores a non-finite reference line instead of losing the domain to it', () => {
+    const { min, max } = collectDomain([[10, 20]], [Infinity])
+    expect(min).toBe(0)
+    expect(max).toBe(20)
+
+    // The bound that mattered: a scale built from this domain has to map real points
+    // to real pixels. Before the filter these came back NaN, which blanked the chart.
+    const nice = niceScale(min, max)
+    expect(Number.isFinite(nice.min)).toBe(true)
+    expect(Number.isFinite(nice.max)).toBe(true)
+    expect(makeScale(nice.min, nice.max, 100, 0)(20)).toBeCloseTo(0)
+  })
+
+  it('survives a series that is entirely non-finite', () => {
+    const { min, max } = collectDomain([[Infinity, NaN]], [])
+    expect(min).toBe(0)
+    expect(max).toBe(0)
+  })
 })
 
 describe('stackAreas', () => {
