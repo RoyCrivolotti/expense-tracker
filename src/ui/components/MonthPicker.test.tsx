@@ -12,8 +12,9 @@ describe('MonthPicker', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Previous month' }))
     await userEvent.click(screen.getByRole('button', { name: 'Next month' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Go to latest budget month' }))
 
-    expect(onChange.mock.calls).toEqual([['2026-05'], ['2026-07']])
+    expect(onChange.mock.calls).toEqual([['2026-05'], ['2026-07'], ['2026-07']])
   })
 
   it('stops at either end of the range', () => {
