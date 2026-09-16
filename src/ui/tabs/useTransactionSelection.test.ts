@@ -37,6 +37,15 @@ describe('batchDeleteMessage', () => {
   it('uses plural copy for multiple rows', () => {
     expect(batchDeleteMessage(3)).toBe('3 transactions will be removed permanently.')
   })
+
+  it('says which chosen rows the delete leaves alone', () => {
+    // Someone who chose eleven rows and confirms "10 will be removed" should not have
+    // to work out for themselves that the eleventh is safe.
+    expect(batchDeleteMessage(10, 1)).toBe(
+      "10 transactions will be removed permanently. 1 more you selected isn't shown and won't be deleted.",
+    )
+    expect(batchDeleteMessage(2, 3)).toContain("3 more you selected aren't shown and won't be deleted.")
+  })
 })
 
 /** Renders the hook inside a ToastContext so the toast message can be asserted. */

@@ -4,9 +4,21 @@ import type { ExpenseActions } from '../actions'
 import { useToast } from '../hooks/useToast'
 import { toggleDateSelection } from './selectionUtils'
 
-export function batchDeleteMessage(count: number): string {
+/**
+ * The chosen rows an action will leave alone because they are not on screen, said at
+ * the moment of committing. The bar already counts them, but that is easy to miss, and
+ * someone who chose eleven rows should not believe all eleven were changed.
+ */
+export function offScreenNote(hiddenCount: number, outcome: 'deleted' | 'changed'): string {
+  if (hiddenCount <= 0) return ''
+  const verb = hiddenCount === 1 ? "isn't" : "aren't"
+  return `${hiddenCount} more you selected ${verb} shown and won't be ${outcome}.`
+}
+
+export function batchDeleteMessage(count: number, hiddenCount = 0): string {
   const noun = count === 1 ? 'transaction' : 'transactions'
-  return `${count} ${noun} will be removed permanently.`
+  const note = offScreenNote(hiddenCount, 'deleted')
+  return `${count} ${noun} will be removed permanently.${note ? ` ${note}` : ''}`
 }
 
 /**

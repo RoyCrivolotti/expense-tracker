@@ -262,3 +262,17 @@ describe('BulkEditSheet — budget month respects the rollover day', () => {
     expect(await budgetMonthFor(today.getDate())).toBe(expected)
   })
 })
+
+describe('BulkEditSheet with chosen rows off screen', () => {
+  it('says the edit leaves them alone', () => {
+    render(
+      <BulkEditSheet count={10} hiddenCount={1} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />,
+    )
+    expect(screen.getByRole('note')).toHaveTextContent("1 more you selected isn't shown and won't be changed.")
+  })
+
+  it('says nothing when every chosen row is on screen', () => {
+    render(<BulkEditSheet count={10} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />)
+    expect(screen.queryByRole('note')).not.toBeInTheDocument()
+  })
+})

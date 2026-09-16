@@ -56,6 +56,7 @@ export function TransactionsSelectFooter({
       {selection.pendingBatchDelete ? (
         <BatchDeleteConfirm
           count={selection.selected.size}
+          hiddenCount={selection.hiddenCount}
           onConfirm={() => void selection.confirmBatchDelete()}
           onCancel={selection.cancelBatchDelete}
         />
@@ -63,6 +64,7 @@ export function TransactionsSelectFooter({
       {selection.pendingBulkEdit ? (
         <BulkEditSheet
           count={selection.selected.size}
+          hiddenCount={selection.hiddenCount}
           model={model}
           busy={selection.busy}
           onApply={(patch) => void selection.confirmBulkEdit(patch)}
