@@ -33,7 +33,7 @@ function useTxnListFilters(month: string, flags: Flag[]) {
    * A flag can be deleted while its filter is still applied (from the Flagged
    * card's own Manage modal, or another tab). Resolving here rather than
    * storing means the list, the chip and the <select> all agree — a stored dead
-   * id leaves the select showing "All flags" while the list renders nothing.
+   * id leaves the select showing "Flag" while the list renders nothing.
    */
   const flagId = useMemo(
     () =>

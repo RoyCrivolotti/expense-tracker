@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { Flag } from '../../types'
 import { makeFlag } from '../../testing/factories'
-import { StatusTypeRow } from './TxnFilterRows'
+import { CategoryAccountRow, StatusTypeRow } from './TxnFilterRows'
 
 const work = makeFlag({ id: 1, name: 'Work travel' })
 const archived = makeFlag({ id: 2, name: 'Old claim', active: false })
@@ -32,7 +32,7 @@ describe('StatusTypeRow flag select', () => {
     const select = screen.getByRole('combobox', { name: 'Filter by flag' })
 
     expect([...select.querySelectorAll('option')].map((o) => o.textContent)).toEqual([
-      'All flags',
+      'Flag',
       'Unflagged',
       'Work travel',
     ])
@@ -76,6 +76,40 @@ describe('StatusTypeRow flag select', () => {
     renderRow({ flags: [] })
 
     expect(screen.queryByRole('combobox', { name: 'Filter by flag' })).not.toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'All statuses' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Status' })).toBeInTheDocument()
+  })
+})
+
+describe('filter selects keep their meaning without the "All" prefix', () => {
+  // The unfiltered option now reads "Status" rather than "All statuses", so once a value
+  // is chosen the visible text is just "Posted". The accessible name is what still says
+  // which filter this is.
+  it('names status and type by the filter they apply', () => {
+    renderRow()
+    expect(screen.getByRole('combobox', { name: 'Filter by status' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Filter by type' })).toBeInTheDocument()
+  })
+
+  it('names category and account the same way', () => {
+    render(
+      <CategoryAccountRow
+        categories={[]}
+        accounts={[]}
+        categoryId="all"
+        accountId="all"
+        selectMode={false}
+        onCategory={vi.fn()}
+        onAccount={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole('combobox', { name: 'Filter by category' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Filter by account' })).toBeInTheDocument()
+  })
+
+  it('shows the one-word default when nothing is chosen', () => {
+    renderRow()
+    expect(screen.getByRole('combobox', { name: 'Filter by status' })).toHaveDisplayValue('Status')
+    expect(screen.getByRole('combobox', { name: 'Filter by type' })).toHaveDisplayValue('Type')
+    expect(screen.getByRole('combobox', { name: 'Filter by flag' })).toHaveDisplayValue('Flag')
   })
 })

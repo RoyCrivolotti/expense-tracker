@@ -10,6 +10,7 @@ import { optionLabel, selectableOptions } from '../components/pickerOptions'
 import formStyles from '../components/TransactionForm.module.css'
 import stepStyles from '../components/InstallmentStep.module.css'
 import styles from './definitions.module.css'
+import { planErrorCopy } from './planErrorCopy'
 
 const TXN_TYPES: TxnType[] = ['expense', 'income', 'investment', 'refund']
 
@@ -80,7 +81,7 @@ export function InstallmentPlanForm({ plan, model, actions, onBack }: Props) {
       await actions.updateInstallmentPlan(plan.id, toPayload(f, format))
       onBack()
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Could not save')
+      setErr(planErrorCopy(e))
       setBusy(false)
     }
   }
@@ -116,6 +117,7 @@ export function InstallmentPlanForm({ plan, model, actions, onBack }: Props) {
           <input
             type="number"
             step="1"
+            min="1"
             value={f.totalCount}
             onChange={(e) => set('totalCount', e.target.value)}
           />

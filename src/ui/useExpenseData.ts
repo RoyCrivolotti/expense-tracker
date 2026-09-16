@@ -121,11 +121,13 @@ export function useExpenseData(source: ExpenseDataSource): ExpenseData {
       const dataset = await source.load()
       if (!active) return
       // Stale, not failed — the request succeeded, its payload is just superseded.
-      // Still settle the refresh UI, or the spinner never stops.
-      if (isStale()) return void finish(refreshOk)
+      // Still settle the refresh UI, or the spinner never stops. But report no
+      // outcome: nothing on screen changed, and "Updated" for a response we threw
+      // away is a plainer lie than the stale data this discarding exists to avoid.
+      if (isStale()) return void finish(null)
       await saveOfflineSnapshot(dataset)
       if (!active) return
-      if (isStale()) return void finish(refreshOk)
+      if (isStale()) return void finish(null)
       const model = buildExpenseModel(dataset)
       modelRef.current = model
       setState({ status: 'ready', model, fromCache: false })

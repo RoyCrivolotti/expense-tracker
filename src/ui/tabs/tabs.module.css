@@ -209,10 +209,19 @@
 }
 .selectRow {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.6rem;
 }
+/*
+ * This row can hold three selects: flag, status and type. The basis is the narrowest a
+ * select can be while still showing its one-word default ("Status" needs 46px of text),
+ * so three fit side by side on any phone 330px or wider and only narrower screens wrap
+ * one to its own line. A chosen value longer than the default ("Investment") is clipped
+ * by the native control, as it always was; the active border says a filter is set.
+ */
 .selectRow select {
-  flex: 1;
+  flex: 1 1 5.75rem;
+  min-width: 0;
 }
 .selectRow select.activeSelect {
   border-color: var(--color-accent);
