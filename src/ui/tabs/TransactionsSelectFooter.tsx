@@ -7,6 +7,7 @@ import { BulkEditSheet } from './BulkEditSheet'
 interface SelectionState {
   selectMode: boolean
   selected: ReadonlySet<number>
+  hiddenCount: number
   busy: boolean
   pendingBatchDelete: boolean
   pendingBulkEdit: boolean
@@ -42,6 +43,7 @@ export function TransactionsSelectFooter({
         <BatchBar
           count={selection.selected.size}
           totalCount={visibleIds.length}
+          hiddenCount={selection.hiddenCount}
           busy={selection.busy}
           editOpen={selection.pendingBulkEdit}
           onCancel={selection.toggleSelectMode}

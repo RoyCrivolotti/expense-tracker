@@ -12,6 +12,18 @@ const baseProps = {
 }
 
 describe('BatchBar', () => {
+  it('says how many chosen rows the filter is hiding', () => {
+    // Otherwise a narrowed list reads as a shrunken selection, which is the confusion
+    // that made the old behaviour look like data loss.
+    render(<BatchBar count={2} hiddenCount={3} busy={false} editOpen={false} {...baseProps} />)
+    expect(screen.getByText(/3 not shown/)).toBeInTheDocument()
+  })
+
+  it('says nothing about hidden rows when there are none', () => {
+    render(<BatchBar count={2} busy={false} editOpen={false} {...baseProps} />)
+    expect(screen.queryByText(/not shown/)).not.toBeInTheDocument()
+  })
+
   it('shows "Deleting…" only when busy and edit is not open', () => {
     render(<BatchBar count={2} busy={true} editOpen={false} {...baseProps} />)
     expect(screen.getByText('Deleting…')).toBeInTheDocument()

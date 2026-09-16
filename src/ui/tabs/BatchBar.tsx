@@ -4,6 +4,8 @@ import styles from './tabs.module.css'
 interface BatchBarProps {
   count: number
   totalCount: number
+  /** Chosen rows the current filter hides. They stay chosen but are not acted on. */
+  hiddenCount?: number
   busy: boolean
   editOpen: boolean
   onCancel: () => void
@@ -16,6 +18,7 @@ interface BatchBarProps {
 export function BatchBar({
   count,
   totalCount,
+  hiddenCount = 0,
   busy,
   editOpen,
   onCancel,
@@ -37,7 +40,12 @@ export function BatchBar({
         >
           <CloseIcon />
         </button>
-        <span>{count} selected</span>
+        <span>
+          {count} selected
+          {hiddenCount > 0 ? (
+            <span className={styles.batchHidden}> · {hiddenCount} not shown</span>
+          ) : null}
+        </span>
       </div>
       <div className={styles.batchActions}>
         <button

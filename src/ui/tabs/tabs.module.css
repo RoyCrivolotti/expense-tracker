@@ -497,6 +497,10 @@
   align-items: center;
   gap: 0.5rem;
 }
+.batchHidden {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
 .batchSelectAll {
   padding: 0.4rem 0.5rem;
   border: 0;
