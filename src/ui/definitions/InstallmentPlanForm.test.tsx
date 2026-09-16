@@ -1,10 +1,13 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { ExpenseDataset, InstallmentPlan } from '../../types'
+import type { NewInstallmentPlan } from '../../data/dataSource'
 import type { ExpenseActions } from '../actions'
 import type { ExpenseModel } from '../useExpenseData'
 import { defaultExpenseSettings } from '../../engine'
 import { InstallmentPlanForm } from './InstallmentPlanForm'
+import { planErrorCopy } from './planErrorCopy'
+import { validateDueDay, validatePlanInput } from '../../domain/application/installmentPlanService'
 
 function datasetWith(overrides: Partial<ExpenseDataset> = {}): ExpenseDataset {
   return {
@@ -172,5 +175,46 @@ describe('InstallmentPlanForm when a save is refused', () => {
       <InstallmentPlanForm plan={basePlan} model={modelWith(datasetWith())} actions={noopActions()} onBack={vi.fn()} />,
     )
     expect(screen.getByLabelText<HTMLInputElement>('Total installments').min).toBe('1')
+  })
+})
+
+describe('planErrorCopy against the messages the service really throws', () => {
+  // The copy is looked up by the service's exact text, which reaches the form unchanged
+  // through the API client. Nothing else ties the two together, so a reworded message
+  // would quietly bring the payload key back on screen. Each case runs the real validator.
+  const plan: NewInstallmentPlan = {
+    description: 'Laptop',
+    totalCount: 12,
+    amountCents: 10_000,
+    accountId: 1,
+    categoryId: 1,
+    type: 'expense',
+    anchorBudgetMonth: '2026-01',
+    startInstallmentIndex: 1,
+    active: true,
+  }
+
+  function thrownBy(run: () => void): Error {
+    try {
+      run()
+    } catch (e) {
+      return e as Error
+    }
+    throw new Error('expected the validator to refuse this')
+  }
+
+  it.each([
+    ['a zero total', () => validatePlanInput({ ...plan, totalCount: 0 })],
+    ['a zero amount', () => validatePlanInput({ ...plan, amountCents: 0 })],
+    ['a start past the total', () => validatePlanInput({ ...plan, startInstallmentIndex: 99 })],
+    ['a malformed month', () => validatePlanInput({ ...plan, anchorBudgetMonth: 'January' })],
+    ['a blank description', () => validatePlanInput({ ...plan, description: '  ' })],
+    ['a due day past the month', () => validateDueDay(32)],
+  ])('translates %s', (_, run) => {
+    const error = thrownBy(run)
+    const copy = planErrorCopy(error)
+
+    expect(copy).not.toBe(error.message)
+    expect(copy).not.toMatch(/totalCount|amountCents|startInstallmentIndex|anchorBudgetMonth|dueDayOfMonth/)
   })
 })
