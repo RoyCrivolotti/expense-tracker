@@ -2,7 +2,11 @@
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: calc(var(--exp-bottom-bar) + env(safe-area-inset-bottom, 0px) + 0.75rem);
+  /* --exp-selection-bar is the Transactions selection bar's height while it is up
+     (BatchBar), so a toast never covers its buttons, and a tap on them never lands on it. */
+  bottom: calc(
+    var(--exp-bottom-bar) + env(safe-area-inset-bottom, 0px) + var(--exp-selection-bar, 0px) + 0.75rem
+  );
   z-index: 60;
   width: max-content;
   max-width: min(28rem, calc(100vw - 2rem));
@@ -46,7 +50,7 @@
 
 @media (min-width: 768px) {
   .viewport {
-    bottom: 1.5rem;
+    bottom: calc(var(--exp-selection-bar, 0px) + 1.5rem);
   }
 }
 

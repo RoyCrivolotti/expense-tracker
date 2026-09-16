@@ -1,5 +1,10 @@
+import { useRef } from 'react'
 import { CloseIcon } from '../icons'
+import { usePublishHeight } from '../hooks/usePublishHeight'
 import styles from './tabs.module.css'
+
+/** Read by the toast and the update prompt, which sit above the bar while it is up. */
+const SELECTION_BAR_HEIGHT = '--exp-selection-bar'
 
 interface BatchBarProps {
   count: number
@@ -30,11 +35,13 @@ export function BatchBar({
   onEdit,
   onDelete,
 }: BatchBarProps) {
+  const barRef = useRef<HTMLDivElement>(null)
+  usePublishHeight(barRef, SELECTION_BAR_HEIGHT)
   const deleting = busy && !editOpen
   const canAct = count > 0 && !busy && !readOnly
   const allSelected = totalCount > 0 && count >= totalCount
   return (
-    <div className={styles.batchBar}>
+    <div ref={barRef} className={styles.batchBar}>
       <div className={styles.batchLeft}>
         <button
           type="button"
