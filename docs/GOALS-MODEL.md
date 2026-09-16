@@ -81,7 +81,7 @@ The hero chart shows a shaded band for ±3 pp around the scenario's `expectedRea
 
 ## Nominal vs real display
 
-The hero chart defaults to real (inflation-adjusted) values. A toggle in the chart footer switches to nominal:
+The hero chart defaults to nominal values. A toggle in the chart footer switches to purchasing power, which is the real (inflation-adjusted) view:
 
 ```
 nominalValue[y] = realValue[y] × (1 + 0.02)^y

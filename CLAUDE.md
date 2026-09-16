@@ -126,8 +126,19 @@ CI deploys `main` automatically. Every PR gets a staging preview at
 `https://<sanitized-branch>.roy-expenses-stg.pages.dev`, and `deploy-dev.yml` posts that
 URL into the PR description itself — don't add a second one by hand.
 
-Both PR workflows run on every PR regardless of base, and re-run on `edited`, so
-retargeting a stacked PR or editing its description restarts the checks.
+To preview a branch that has no PR yet, run the workflow by hand:
+
+```bash
+gh workflow run deploy-dev.yml --ref <branch>
+```
+
+It deploys to the same per-branch URL but has no PR description to post into, which is
+what the comment at the end of `deploy-dev.yml` is about.
+
+Both PR workflows run on every PR regardless of base, so a stacked PR gets checks and a
+preview without waiting for the one under it. Only `verify.yml` re-runs on `edited`, so
+retargeting a stacked PR or adding the screenshot restarts the checks; `deploy-dev.yml`
+deliberately stays out of that, since retitling a PR is no reason to redeploy it.
 
 ## Verify and CI gates
 
@@ -141,7 +152,8 @@ build → bundle budget.
 **A green `verify` does not mean CI will be green.** Two required checks run only in CI:
 
 - **Diff coverage** — 90% of the PR's changed `.ts`/`.tsx` lines. Much stricter than the
-  global floor, which is calibrated to the legacy baseline, so new untested code passes
+  global floor, which sits a couple of points under the whole repo's measured coverage
+  and so moves barely at all when one PR adds untested code. New untested code passes
   `verify` and fails here. Run it first:
   ```bash
   npm run coverage:diff -- --base origin/main
@@ -181,8 +193,11 @@ wrapper.
 **PR screenshots.** Any PR touching `src/ui/**` or a `.module.css` must embed before/after
 images in its description; CI enforces it. Commit them under
 `docs/pr-screenshots/<slug>/` and reference them by `raw.githubusercontent.com` URL —
-GitHub has no API for uploading into a PR body. Include a 375px capture for responsive
-changes. Headless browsers do not reproduce native form controls (`<input type="date">`),
+GitHub has no API for uploading into a PR body. Pin that URL to a commit SHA, not the
+branch name: merged branches are deleted automatically, and an image pinned to its branch
+404s the moment the branch goes. Merges here are true merge commits, so a commit on the
+branch stays reachable afterwards; rebasing replaces it, so re-pin after a rebase.
+Include a 375px capture for responsive changes. Headless browsers do not reproduce native form controls (`<input type="date">`),
 so a desktop capture of one is necessary but not sufficient — say so and verify on-device.
 
 **Comments** explain why this code is the way it is, not how it came to be. History belongs

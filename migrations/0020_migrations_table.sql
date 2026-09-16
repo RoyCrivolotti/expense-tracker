@@ -1,8 +1,10 @@
 -- Records which migrations a database has already had, so they are never re-applied.
 --
 -- Re-running is destructive, not just noisy: 0003 continues past its first failing
--- statement into unscoped `UPDATE ... SET owner` and four DROP TABLE rebuilds, and
--- 0012 overwrites a user-editable plan_start_date. SQLite has no
+-- statement into four DROP TABLE rebuilds. Its backfill and 0012's are scoped now
+-- (`WHERE owner = ''`, `WHERE plan_start_date IS NULL`), so those are a no-op on a
+-- second run rather than a tenancy wipe and an overwritten plan_start_date; the
+-- rebuilds are what remains dangerous and cannot be scoped away. SQLite has no
 -- `ADD COLUMN IF NOT EXISTS`, so the fix has to be not running the file at all.
 --
 -- Not seeded here: a new database must genuinely execute 0001-0019. Existing ones are
