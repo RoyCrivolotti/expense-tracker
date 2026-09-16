@@ -1,10 +1,11 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import type { ExpenseDataSource } from '../data/dataSource'
 import type { ExpenseDataset } from '../types'
 import { defaultExpenseSettings } from '../engine'
 import { allGroupsGranted } from '../domain/accessGroups'
 import { ExpensesApp } from './ExpensesApp'
+import { ToastProvider } from './hooks/ToastProvider'
 
 beforeAll(() => {
   Object.defineProperty(window, 'matchMedia', {
@@ -138,5 +139,189 @@ describe('ExpensesApp tab wiring', () => {
     fireEvent.click((await screen.findAllByRole('button', { name: 'Transactions' }))[0]!)
 
     expect(await screen.findByText('Mercadona')).toBeTruthy()
+  })
+})
+
+describe('ExpensesApp while selecting transactions', () => {
+  const row = (id: number, month: string) => ({
+    id,
+    date: `${month}-10`,
+    budgetMonth: month,
+    description: `Row ${id}`,
+    accountId: 1,
+    categoryId: 1,
+    type: 'expense' as const,
+    amountCents: 1000,
+    cancelled: false,
+    status: 'posted' as const,
+  })
+
+  const withRows = (transactions: ExpenseDataset['transactions']) =>
+    datasetWith({
+      categories: [{ id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
+      accounts: [{ id: 1, name: 'Main debit', kind: 'debit', settlement: 'immediate', active: true }],
+      transactions,
+    })
+
+  // Two months of data, so "Previous month" is enabled on the latest one. `afterRefresh`
+  // is what the refresh button loads.
+  function twoMonths(afterRefresh?: ExpenseDataset['transactions']) {
+    const dataset = withRows([row(1, '2026-06'), row(2, '2026-07')])
+    const load = vi.fn().mockResolvedValueOnce(dataset)
+    load.mockResolvedValue(afterRefresh ? withRows(afterRefresh) : dataset)
+    return {
+      ...sourceThatSucceeds(dataset),
+      load,
+      deleteTransaction: vi.fn().mockResolvedValue(undefined),
+      deleteTransactions: vi.fn().mockResolvedValue(0),
+      updateTransactions: vi.fn().mockResolvedValue(0),
+    }
+  }
+
+  async function openTransactions(source = twoMonths()) {
+    render(
+      <ToastProvider>
+        <ExpensesApp source={source} hubGrants={allGroupsGranted()} />
+      </ToastProvider>,
+    )
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Transactions' }))[0]!)
+    await screen.findByText('Row 2')
+    return () => screen.getByRole('button', { name: 'Previous month' })
+  }
+
+  const locked = (el: HTMLElement) => el.getAttribute('aria-disabled') === 'true'
+
+  it('holds the month still for as long as rows are being selected', async () => {
+    const previous = await openTransactions()
+    expect(locked(previous())).toBe(false)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+    expect(locked(previous())).toBe(true)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(locked(previous())).toBe(false)
+  })
+
+  it('says why the month does not change while rows are selected', async () => {
+    const previous = await openTransactions()
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+
+    fireEvent.click(previous())
+
+    expect(screen.getByText('Finish or cancel the selection to change the month')).toBeInTheDocument()
+    expect(previous().parentElement).toHaveTextContent('July 2026')
+  })
+
+  it('lets go when the selection ends by leaving the tab and coming back', async () => {
+    // No handler runs when the tab unmounts. Transactions then comes back with nothing
+    // selected, and without the reset the shell would still hold its month locked.
+    const previous = await openTransactions()
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+    expect(locked(previous())).toBe(true)
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Dashboard' })[0]!)
+    expect(locked(previous())).toBe(false)
+    fireEvent.click(screen.getAllByRole('button', { name: 'Transactions' })[0]!)
+    await screen.findByText('Row 2')
+
+    expect(screen.getByRole('button', { name: 'Select' })).toBeInTheDocument()
+    expect(locked(previous())).toBe(false)
+  })
+
+  it('says why search does nothing while rows are selected', async () => {
+    await openTransactions()
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Search is locked while rows are selected' }))
+
+    expect(screen.getByText('Finish or cancel the selection to search or filter')).toBeInTheDocument()
+  })
+
+  it('keeps its month when a refresh brings in a newer one mid-selection', async () => {
+    // With no month picked the header follows the newest. Mid-selection that would swap
+    // July's list for August's, and the locked arrows could not bring July back.
+    const previous = await openTransactions(
+      twoMonths([row(1, '2026-06'), row(2, '2026-07'), row(3, '2026-08')]),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Select all' }))
+    expect(screen.getByText('1 selected')).toBeInTheDocument()
+
+    const refresh = screen.getByRole('button', { name: 'Refresh data' })
+    fireEvent.click(refresh)
+    await waitFor(() => expect(refresh).toBeEnabled(), { timeout: 3000 })
+
+    expect(previous().parentElement).toHaveTextContent('July 2026')
+    expect(screen.getByText('Row 2')).toBeInTheDocument()
+    expect(screen.getByText('1 selected')).toBeInTheDocument()
+
+    // Once the selection ends, the header follows the newest month again.
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(await screen.findByText('Row 3')).toBeInTheDocument()
+    expect(previous().parentElement).toHaveTextContent('August 2026')
+  })
+
+  it('keeps the selection when Escape closes the edit sheet', async () => {
+    // The sheet and select mode both close on Escape. Backing out of an edit used to
+    // clear every chosen row as well.
+    await openTransactions()
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Select all' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    expect(screen.getByText('Edit selected')).toBeInTheDocument()
+
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' })
+
+    await waitFor(() => expect(screen.queryByText('Edit selected')).not.toBeInTheDocument())
+    expect(screen.getByText('1 selected')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
+  })
+
+  it('keeps the selection when Escape closes the navigation menu', async () => {
+    // The menu comes from folio-shell and does not mark the key as used.
+    await openTransactions()
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Select all' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open navigation' }))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' })
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByText('1 selected')).toBeInTheDocument()
+  })
+
+  it('keeps a way out of select mode when the app goes offline', async () => {
+    // Offline is read-only, which used to take away the bar and Cancel while select mode,
+    // and the month and filter locks with it, stayed on.
+    const previous = await openTransactions()
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Select all' }))
+
+    act(() => {
+      window.dispatchEvent(new Event('offline'))
+    })
+
+    expect(screen.getByText('1 selected')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByText('1 selected')).not.toBeInTheDocument()
+    expect(locked(previous())).toBe(false)
+  })
+
+  it('shows the month you step to when the list was on all dates', async () => {
+    // Before, the header moved to June while the list stayed on every month.
+    await openTransactions()
+    fireEvent.click(screen.getByRole('button', { name: /Filters/ }))
+    fireEvent.click(screen.getByRole('radio', { name: 'All' }))
+    expect(screen.getByText('Row 1')).toBeInTheDocument()
+    expect(screen.getByText('Row 2')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Previous month' }))
+
+    await waitFor(() => expect(screen.queryByText('Row 2')).not.toBeInTheDocument())
+    expect(screen.getByText('Row 1')).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Month' })).toBeChecked()
   })
 })

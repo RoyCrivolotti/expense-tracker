@@ -2,7 +2,11 @@
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: calc(var(--exp-bottom-bar, 0px) + env(safe-area-inset-bottom, 0px) + 0.75rem);
+  /* Above the selection bar while it is up, as the toast is (see Toast.module.css). */
+  bottom: calc(
+    var(--exp-bottom-bar, 0px) + env(safe-area-inset-bottom, 0px) + var(--exp-selection-bar, 0px) +
+      0.75rem
+  );
   z-index: 61;
   display: flex;
   align-items: center;
@@ -37,6 +41,6 @@
 
 @media (min-width: 768px) {
   .banner {
-    bottom: 1.5rem;
+    bottom: calc(var(--exp-selection-bar, 0px) + 1.5rem);
   }
 }

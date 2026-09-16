@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { buildPeriodFilter, defaultCustomDateRange, isSecondaryDateScope, scopeChipLabel } from './txnDateScope'
+import {
+  anchoredDateScope,
+  buildPeriodFilter,
+  defaultCustomDateRange,
+  isSecondaryDateScope,
+  scopeChipLabel,
+} from './txnDateScope'
 
 describe('buildPeriodFilter', () => {
   it('uses budget month by default', () => {
@@ -52,5 +58,24 @@ describe('isSecondaryDateScope', () => {
   it('treats non-default scopes as secondary filters', () => {
     expect(isSecondaryDateScope('budgetMonth')).toBe(false)
     expect(isSecondaryDateScope('last3Months')).toBe(true)
+  })
+})
+
+describe('anchoredDateScope', () => {
+  it('keeps the chosen scope until the user moves the month', () => {
+    expect(anchoredDateScope({ scope: 'allDates', atNavigation: 4 }, 4)).toBe('allDates')
+    expect(anchoredDateScope({ scope: 'custom', atNavigation: 4 }, 4)).toBe('custom')
+  })
+
+  it('shows the month once the user moves it away from All or Custom', () => {
+    // Those two ignore the header, so without this the header reads March while the
+    // list is still on whatever range was chosen.
+    expect(anchoredDateScope({ scope: 'allDates', atNavigation: 4 }, 5)).toBe('budgetMonth')
+    expect(anchoredDateScope({ scope: 'custom', atNavigation: 4 }, 5)).toBe('budgetMonth')
+  })
+
+  it('leaves the scopes that already follow the header alone', () => {
+    expect(anchoredDateScope({ scope: 'last3Months', atNavigation: 4 }, 9)).toBe('last3Months')
+    expect(anchoredDateScope({ scope: 'budgetMonth', atNavigation: 4 }, 9)).toBe('budgetMonth')
   })
 })

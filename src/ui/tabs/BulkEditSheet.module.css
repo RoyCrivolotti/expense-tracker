@@ -87,3 +87,12 @@
   opacity: 0.5;
   cursor: default;
 }
+
+.offScreen {
+  margin: 0 0 0.85rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--exp-warning) 12%, transparent);
+  color: var(--color-text);
+  font-size: 0.85rem;
+}

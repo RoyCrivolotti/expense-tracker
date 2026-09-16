@@ -14,6 +14,8 @@ import { TransactionsSelectFooter } from './TransactionsSelectFooter'
 import { useTransactionsTabState } from './useTransactionsTabState'
 import { RESULTS_ANCHOR_ID, scrollToResults } from './scrollToResults'
 import { useDebouncedAnnouncement } from '../hooks/useDebouncedAnnouncement'
+import { useToast } from '../hooks/useToast'
+import { FILTERS_LOCKED_HINT } from './selectionLockHints'
 import { useReimbursement } from './useReimbursement'
 import { usePastReports } from './usePastReports'
 import { RecordReimbursementSheet } from './RecordReimbursementSheet'
@@ -23,10 +25,23 @@ interface TransactionsTabProps {
   model: ExpenseModel
   month: string
   actions?: ExpenseActions | undefined
+  /** Told when row selection starts and ends, so the shell can hold the month still. */
+  onSelectModeChange?: ((selecting: boolean) => void) | undefined
+  /** How many times the user has moved the header month. */
+  monthNavigation?: number | undefined
 }
 
-export function TransactionsTab({ model, month, actions }: TransactionsTabProps) {
-  const state = useTransactionsTabState(model, month, actions)
+export function TransactionsTab({
+  model,
+  month,
+  actions,
+  onSelectModeChange,
+  monthNavigation,
+}: TransactionsTabProps) {
+  const state = useTransactionsTabState(model, month, actions, {
+    onSelectModeChange,
+    monthNavigation,
+  })
   const [editingStatement, setEditingStatement] = useState<StatementPaymentRow | null>(null)
   const [statementPending, setStatementPending] = useState(false)
   const [managingFlags, setManagingFlags] = useState(false)
@@ -41,6 +56,8 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
     () => detectRecurring(model.dataset.transactions, { forBudgetMonth: month, rolloverDay }),
     [model.dataset, month, rolloverDay],
   )
+  const { showToast } = useToast()
+  const explainFilterLock = () => showToast(FILTERS_LOCKED_HINT)
 
   return (
     <div className={styles.stack}>
@@ -56,6 +73,8 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
               state.setDateScope('allDates')
               scrollToResults()
             }}
+            filterLocked={state.selectMode}
+            onLockedFilterPress={explainFilterLock}
             onOpenReport={setReportFlagId}
             onSettle={reimbursement.open}
             onManage={() => setManagingFlags(true)}
@@ -83,6 +102,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
         customDateFrom={state.customDateFrom}
         customDateTo={state.customDateTo}
         selectMode={state.selectMode}
+        selectBusy={state.busy}
         canSelect={state.canDelete}
         secondaryFilterCount={state.secondaryFilterCount}
         hasActiveFilters={state.hasActiveFilters}
@@ -97,6 +117,7 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
         onCustomDateFrom={state.setCustomDateFrom}
         onCustomDateTo={state.setCustomDateTo}
         onToggleSelectMode={state.toggleSelectMode}
+        onLockedPress={explainFilterLock}
       />
 
       {/*
@@ -124,13 +145,13 @@ export function TransactionsTab({ model, month, actions }: TransactionsTabProps)
         swipeDelete={state.isMobile && state.canDelete && !state.selectMode}
         {...(state.hasActiveFilters ? { onClearFilters: state.clearFilters } : {})}
         {...(actions ? { onSelect: actions.onEdit, onDuplicate: actions.onDuplicate } : {})}
+        onToggleSelect={state.toggleSelected}
+        onToggleDate={state.toggleDate}
         {...(actions
           ? {
               onAddForDate: (date) =>
                 actions.onAdd({ date, budgetMonth: defaultBudgetMonth(date, rolloverDay) }),
               onDelete: actions.deleteTransaction,
-              onToggleSelect: state.toggleSelected,
-              onToggleDate: state.toggleDate,
               onLongPressSelect: state.enterAndSelect,
               onEditStatementPayment: setEditingStatement,
             }

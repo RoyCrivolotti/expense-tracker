@@ -5,6 +5,7 @@ import { todayIso } from '../components/transactionFormState'
 import type { ExpenseModel } from '../useExpenseData'
 import { selectableOptions, optionLabel } from '../components/pickerOptions'
 import { selectableFlags } from '../components/flagPickerOptions'
+import { offScreenNote } from './useTransactionSelection'
 import { TypeSelector } from '../components/TransactionFields'
 import { Modal } from '../components/Modal'
 import {
@@ -16,13 +17,29 @@ import styles from './BulkEditSheet.module.css'
 
 interface BulkEditSheetProps {
   count: number
+  /** Chosen rows that are not on screen, which the edit leaves alone. */
+  hiddenCount?: number
   model: ExpenseModel
   busy: boolean
   onApply: (patch: BulkTransactionPatch) => void
   onCancel: () => void
 }
 
-export function BulkEditSheet({ count, model, busy, onApply, onCancel }: BulkEditSheetProps) {
+/**
+ * Its own component so the sheet keeps its branches: the sheet sits on the complexity
+ * ceiling of 12.
+ */
+function OffScreenNote({ hiddenCount }: { hiddenCount: number | undefined }) {
+  const note = offScreenNote(hiddenCount ?? 0, 'changed')
+  if (!note) return null
+  return (
+    <p className={styles.offScreen} role="note">
+      {note}
+    </p>
+  )
+}
+
+export function BulkEditSheet({ count, hiddenCount, model, busy, onApply, onCancel }: BulkEditSheetProps) {
   const [fields, setFields] = useState<BulkEditFieldState>({
     categoryEnabled: false,
     categoryId: model.dataset.categories[0]?.id ?? 0,
@@ -54,6 +71,7 @@ export function BulkEditSheet({ count, model, busy, onApply, onCancel }: BulkEdi
 
   return (
     <Modal title="Edit selected" subtitle={`${count} ${noun}`} onClose={onCancel}>
+      <OffScreenNote hiddenCount={hiddenCount} />
       <div className={styles.fields}>
         <ToggleField
           label="Category"

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { Flag, TxnType } from '../../types'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
@@ -12,20 +12,25 @@ import { useIsMobile } from '../hooks/useIsMobile'
 import type { StatusFilter } from './TxnFilters'
 import { useTransactionSelection } from './useTransactionSelection'
 import {
+  anchoredDateScope,
   buildPeriodFilter,
   defaultCustomDateRange,
   isSecondaryDateScope,
+  type DateScopeChoice,
   type TxnDateScope,
 } from './txnDateScope'
 
-function useTxnListFilters(month: string, flags: Flag[]) {
+function useTxnListFilters(month: string, flags: Flag[], monthNavigation: number) {
   const [categoryId, setCategoryId] = useState<number | 'all'>('all')
   const [accountId, setAccountId] = useState<number | 'all'>('all')
   const [rawFlagId, setFlagId] = useState<number | 'all' | 'none'>('all')
   const [txnType, setTxnType] = useState<TxnType | 'all'>('all')
   const [status, setStatus] = useState<StatusFilter>('all')
   const [query, setQuery] = useState('')
-  const [dateScope, setDateScope] = useState<TxnDateScope>('budgetMonth')
+  const [scopeChoice, setScopeChoice] = useState<DateScopeChoice>(() => ({
+    scope: 'budgetMonth',
+    atNavigation: monthNavigation,
+  }))
   const [customDateFrom, setCustomDateFrom] = useState('')
   const [customDateTo, setCustomDateTo] = useState('')
 
@@ -40,6 +45,16 @@ function useTxnListFilters(month: string, flags: Flag[]) {
       typeof rawFlagId === 'number' && !flags.some((f) => f.id === rawFlagId) ? 'all' : rawFlagId,
     [rawFlagId, flags],
   )
+
+  /**
+   * Resolved rather than stored, for the same reason as `flagId`: moving the month after
+   * choosing All or Custom would otherwise leave the header and the list disagreeing. The
+   * custom range stays in state, so choosing Custom again brings it back.
+   */
+  const dateScope = anchoredDateScope(scopeChoice, monthNavigation)
+  const setDateScope = (scope: TxnDateScope) => {
+    setScopeChoice({ scope, atNavigation: monthNavigation })
+  }
 
   const setDateScopeWithDefaults = (scope: TxnDateScope) => {
     if (scope === 'custom') {
@@ -130,13 +145,21 @@ function useTxnListFilters(month: string, flags: Flag[]) {
   }
 }
 
+/** What the app shell tells the tab about things that happen outside it. */
+export interface TransactionsShell {
+  /** Told when row selection starts and ends, so the shell can hold the month still. */
+  onSelectModeChange?: ((selecting: boolean) => void) | undefined
+  /** How many times the user has moved the header month. */
+  monthNavigation?: number | undefined
+}
+
 export function useTransactionsTabState(
   model: ExpenseModel,
   month: string,
   actions?: ExpenseActions,
+  shell: TransactionsShell = {},
 ) {
-  const filters = useTxnListFilters(month, model.dataset.flags)
-  const selection = useTransactionSelection(actions)
+  const filters = useTxnListFilters(month, model.dataset.flags, shell.monthNavigation ?? 0)
   const isMobile = useIsMobile()
 
   const results = useMemo(
@@ -168,12 +191,14 @@ export function useTransactionsTabState(
     [listRows],
   )
 
-  // This tab does not remount on a filter or month change, so the selection has to be
-  // reconciled explicitly. Also covers a row deleted elsewhere.
-  const { retainOnly } = selection
-  useEffect(() => {
-    retainOnly(visibleIds)
-  }, [visibleIds, retainOnly])
+  const existingIds = useMemo(
+    () => model.dataset.transactions.map((t) => t.id),
+    [model.dataset.transactions],
+  )
+
+  // This tab does not remount on a filter or month change, so the selection is told what
+  // is on screen rather than rebuilt: it keeps rows a filter hides and acts only on the rest.
+  const selection = useTransactionSelection(actions, visibleIds, existingIds, shell.onSelectModeChange)
 
   return {
     ...filters,

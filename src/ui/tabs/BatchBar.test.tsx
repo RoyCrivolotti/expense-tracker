@@ -12,6 +12,30 @@ const baseProps = {
 }
 
 describe('BatchBar', () => {
+  it('says how many chosen rows the filter is hiding', () => {
+    // Otherwise a narrowed list reads as a shrunken selection, which is the confusion
+    // that made the old behaviour look like data loss.
+    render(<BatchBar count={2} hiddenCount={3} busy={false} editOpen={false} {...baseProps} />)
+    expect(screen.getByText(/3 not shown/)).toBeInTheDocument()
+  })
+
+  it('says nothing about hidden rows when there are none', () => {
+    render(<BatchBar count={2} busy={false} editOpen={false} {...baseProps} />)
+    expect(screen.queryByText(/not shown/)).not.toBeInTheDocument()
+  })
+
+  it('still closes without write access, but offers nothing to act with', () => {
+    render(<BatchBar count={2} busy={false} readOnly editOpen={false} {...baseProps} />)
+    expect(screen.getByLabelText('Exit selection mode')).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeDisabled()
+  })
+
+  it('cannot be closed while an action is running', () => {
+    render(<BatchBar count={2} busy={true} editOpen={false} {...baseProps} />)
+    expect(screen.getByLabelText('Exit selection mode')).toBeDisabled()
+  })
+
   it('shows "Deleting…" only when busy and edit is not open', () => {
     render(<BatchBar count={2} busy={true} editOpen={false} {...baseProps} />)
     expect(screen.getByText('Deleting…')).toBeInTheDocument()

@@ -25,6 +25,8 @@ import { useConnectivityState } from './hooks/useConnectivityState'
 import { useConnectivity } from './hooks/useConnectivity'
 import { usePullToRefresh } from './hooks/usePullToRefresh'
 import { useRefreshToast } from './hooks/useRefreshToast'
+import { useToast } from './hooks/useToast'
+import { MONTH_LOCKED_HINT } from './tabs/selectionLockHints'
 import styles from './ExpensesApp.module.css'
 
 const GoalsTab = lazy(() => import('./tabs/goals/GoalsTab'))
@@ -32,6 +34,16 @@ const GoalsTab = lazy(() => import('./tabs/goals/GoalsTab'))
 // Tabs without a month picker / FAB-heavy footer: trim the large bottom dead zone.
 const COMPACT_FOOTER_TABS: ReadonlySet<TabId> = new Set(['goals', 'analytics', 'settings'])
 const NO_PICKER_TABS: ReadonlySet<TabId> = new Set(['settings', 'goals'])
+
+/** Only Transactions has a selection for the month to disturb. */
+function monthLockedFor(tab: TabId, txnSelecting: boolean): boolean {
+  return tab === 'transactions' && txnSelecting
+}
+
+/** The month the user picked, else the one a selection is holding, else the newest. */
+function shownMonth(picked: string | null, held: string | null, months: string[]): string {
+  return picked ?? held ?? months[months.length - 1] ?? ''
+}
 
 function TabView({
   tab,
@@ -45,6 +57,8 @@ function TabView({
   accountEmail,
   onNavigate,
   onRunSetup,
+  onTxnSelectModeChange,
+  monthNavigation,
 }: {
   tab: TabId
   model: ExpenseModel
@@ -57,10 +71,20 @@ function TabView({
   accountEmail?: string | undefined
   onNavigate: (tab: TabId) => void
   onRunSetup: () => void
+  onTxnSelectModeChange: (selecting: boolean) => void
+  monthNavigation: number
 }) {
   switch (tab) {
     case 'transactions':
-      return <TransactionsTab model={model} month={month} actions={actions} />
+      return (
+        <TransactionsTab
+          model={model}
+          month={month}
+          actions={actions}
+          onSelectModeChange={onTxnSelectModeChange}
+          monthNavigation={monthNavigation}
+        />
+      )
     case 'analytics':
       return (
         <AnalyticsTab
@@ -220,10 +244,25 @@ function ExpensesAppReady({
     refreshing,
   })
   useRefreshToast(refreshing, refreshOutcome)
+  const { showToast } = useToast()
 
   const [theme, setTheme] = useExpenseTheme()
   const [tab, setTab] = useState<TabId>('dashboard')
   const [month, setMonth] = useState<string | null>(null)
+  // The header's month picker belongs to the shell, but on Transactions it drives the
+  // list, and a selection there must not have the list changed under it. This is the
+  // month the selection started in, held until it ends: with no month picked the header
+  // follows the newest one, so a refresh or a transaction added for next month would
+  // otherwise move the list to a month the locked arrows cannot leave.
+  const [selectionMonth, setSelectionMonth] = useState<string | null>(null)
+  // Counts the user's own month moves. The active month also changes on its own, when a
+  // refresh brings in a newer month and none was picked, and only a user's move should
+  // make Transactions show that month.
+  const [monthNavigation, setMonthNavigation] = useState(0)
+  const navigateMonth = (next: string) => {
+    setMonth(next)
+    setMonthNavigation((n) => n + 1)
+  }
   const [modal, setModal] = useState<ExpenseModalState>(null)
   const [onboardingOpen, setOnboardingOpen] = useState(
     () => source.canWrite && !readOnly && needsOnboarding(model.dataset) && !isOnboardingSkipped(),
@@ -235,7 +274,10 @@ function ExpensesAppReady({
   const [onboardingFirstRun, setOnboardingFirstRun] = useState(() => needsOnboarding(model.dataset))
   const actions = useExpenseActions(source, applyPatch, setModal, readOnly)
 
-  const activeMonth = month ?? model.months[model.months.length - 1] ?? ''
+  const activeMonth = shownMonth(month, selectionMonth, model.months)
+  const holdMonthForSelection = (selecting: boolean) => {
+    setSelectionMonth(selecting ? activeMonth : null)
+  }
   const showPicker = !NO_PICKER_TABS.has(tab) && model.months.length > 0
   const settingsBadge = ownerAccess?.pendingCount ?? 0
 
@@ -274,8 +316,10 @@ function ExpensesAppReady({
           <AppHeaderActions
             months={model.months}
             activeMonth={activeMonth}
-            onMonthChange={setMonth}
+            onMonthChange={navigateMonth}
             showPicker={showPicker}
+            pickerLocked={monthLockedFor(tab, selectionMonth !== null)}
+            onLockedPickerPress={() => showToast(MONTH_LOCKED_HINT)}
             online={online}
             refreshing={refreshing}
             onRefresh={reload}
@@ -287,13 +331,15 @@ function ExpensesAppReady({
             tab={tab}
             model={model}
             month={activeMonth}
-            onMonthChange={setMonth}
+            onMonthChange={navigateMonth}
             actions={actions}
             theme={theme}
             onThemeChange={setTheme}
             ownerAccess={ownerAccess}
             accountEmail={accountEmail}
             onNavigate={setTab}
+            onTxnSelectModeChange={holdMonthForSelection}
+            monthNavigation={monthNavigation}
             onRunSetup={() => {
               clearOnboardingSkip()
               setOnboardingFirstRun(false)
