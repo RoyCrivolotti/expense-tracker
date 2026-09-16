@@ -76,6 +76,40 @@ describe('CheckinFormSheet', () => {
   })
 })
 
+describe('CheckinFormSheet when the save fails', () => {
+  it('says so, instead of just re-enabling the button', async () => {
+    // The whole Goals tab had no catch anywhere, so a rejected save was an unhandled
+    // promise and the only feedback was the spinner stopping. The server refuses a
+    // future-dated check-in, which a clock past its slack is enough to reach.
+    const actions = {
+      createWealthCheckin: vi.fn().mockRejectedValue(new Error('checkinDate cannot be in the future')),
+    } as unknown as ExpenseActions
+    render(<CheckinFormSheet accounts={[makeAccount(1)]} actions={actions} />)
+
+    await userEvent.click(screen.getByRole('button', { name: /save check-in/i }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('checkinDate cannot be in the future')
+    expect(screen.getByRole('button', { name: /save check-in/i })).toBeEnabled()
+  })
+
+  it('does not leave a stale message on the next attempt', async () => {
+    const createWealthCheckin = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('checkinDate cannot be in the future'))
+      .mockResolvedValueOnce({ id: 1, checkinDate: '2026-01-01', entries: [] })
+    const actions = { createWealthCheckin } as unknown as ExpenseActions
+    const onDone = vi.fn()
+    render(<CheckinFormSheet accounts={[makeAccount(1)]} actions={actions} onDone={onDone} />)
+
+    await userEvent.click(screen.getByRole('button', { name: /save check-in/i }))
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /save check-in/i }))
+    await vi.waitFor(() => expect(onDone).toHaveBeenCalled())
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+})
+
 describe('CheckinFormSheet east of UTC', () => {
   // 08:00 on the 16th in Auckland is still the 15th in UTC. A UTC-based "today" caps the
   // field a day short there, so the user cannot log the day they are actually living in.

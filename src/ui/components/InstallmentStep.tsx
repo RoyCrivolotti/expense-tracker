@@ -90,7 +90,12 @@ function NewFields({
   const splitSummary = () => {
     const { perInstallmentCents, remainderCents } = splitInstallmentCents(amountCents, totalCount)
     if (remainderCents === 0) return `${formatCents(perInstallmentCents, format)} × ${totalCount}`
-    return `${formatCents(perInstallmentCents + remainderCents, format)} now, then ${formatCents(perInstallmentCents, format)} × ${totalCount - 1}`
+    const rest = formatCents(perInstallmentCents, format)
+    const first = formatCents(perInstallmentCents + remainderCents, format)
+    // Splitting over two is the common case, and "× 1" reads as a quantity the
+    // reader has to check rather than the single remaining charge it describes.
+    const remaining = totalCount - 1
+    return `${first} now, then ${rest}${remaining > 1 ? ` × ${remaining}` : ''}`
   }
 
   return (

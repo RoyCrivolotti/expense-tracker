@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { createPlan, patchPlan, removePlan, validatePlanInput } from './installmentPlanService'
+import { createPlan, patchPlan, removePlan, validateDueDay, validatePlanInput } from './installmentPlanService'
+import { ValidationError } from './validationError'
 import { inMemoryExpenseRepository } from '../../testing/inMemoryExpenseRepository'
 import type { NewInstallmentPlan } from '../data/dataSource'
 
@@ -160,5 +161,20 @@ describe('installment plan lifecycle', () => {
     expect(() =>
       repo.insertTransaction('owner@example.com', { ...base, installmentIndex: 14 }),
     ).toThrow('already recorded')
+  })
+})
+
+describe('installment plan validation, as a client error', () => {
+  it('refuses a due day outside the month', () => {
+    expect(() => validateDueDay(32)).toThrow(ValidationError)
+    expect(() => validateDueDay(0)).toThrow('dueDayOfMonth must be between 1 and 31')
+    expect(() => validateDueDay(null)).not.toThrow()
+  })
+
+  it('refuses a plan with no account or category', () => {
+    expect(() => validatePlanInput({ ...validPlan, accountId: 0 })).toThrow(ValidationError)
+    expect(() => validatePlanInput({ ...validPlan, categoryId: 0 })).toThrow(
+      'accountId and categoryId are required',
+    )
   })
 })

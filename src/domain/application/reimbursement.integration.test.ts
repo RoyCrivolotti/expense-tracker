@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { inMemoryExpenseRepository } from '../../testing/inMemoryExpenseRepository'
 import { groupTransactionsByFlag } from '../engine/flagGroups'
-import { buildReimbursementDraft } from '../engine/reimbursementDraft'
+import { buildReimbursementDraft, settleIdsFor } from '../engine/reimbursementDraft'
 import { EU_MONEY_FORMAT } from '../engine/money'
 import { buildSettledReport, reportReference } from '../engine/expenseReport'
 import { listPastReports } from '../engine/pastReports'
@@ -411,5 +411,68 @@ describe('a past report whose flag has been deleted', () => {
     expect(past).toHaveLength(1)
     expect(past[0]?.flag).toBeUndefined()
     expect(past[0]?.count).toBe(1)
+  })
+})
+
+describe('closing a claim that already has a refund on it, end to end', () => {
+  const vendorRefund = (amountCents: number) => ({ ...line('Ticket refund', amountCents), type: 'refund' as const })
+
+  async function closeClaim() {
+    const repo = repoWithClaim()
+    const train = await repo.insertTransaction(OWNER, line('Train', 6_000))
+    const hotel = await repo.insertTransaction(OWNER, line('Hotel', 4_800))
+    const refund = await repo.insertTransaction(OWNER, vendorRefund(2_000))
+
+    const before = await repo.loadDataset(OWNER)
+    const [group] = groupTransactionsByFlag(before.transactions, before.flags)
+    const draft = group && buildReimbursementDraft(group, before.accounts, 1)
+    if (!draft) throw new Error('expected a draft')
+
+    const payment = await repo.insertTransaction(OWNER, reimbursement(draft.amountCents))
+    const ids = settleIdsFor(draft, draft.selectedIds)
+    await bulkUpdateTransactions(repo, OWNER, ids, { settledBy: payment.id })
+
+    return { repo, payment, draft, rowIds: [train.id, hotel.id, refund.id] }
+  }
+
+  it('asks for the outstanding amount and clears the card', async () => {
+    const { repo, draft } = await closeClaim()
+    const dataset = await repo.loadDataset(OWNER)
+
+    expect(draft.amountCents).toBe(8_800)
+    expect(groupTransactionsByFlag(dataset.transactions, dataset.flags)).toEqual([])
+  })
+
+  it('records a report that covers what was paid, and is not drifted', async () => {
+    // The stored snapshot nets refunds, so it only agrees with the payment when the
+    // refund is settled too. Left behind, it recorded 108 € against an 88 € payment.
+    const { repo, payment } = await closeClaim()
+    const dataset = await repo.loadDataset(OWNER)
+    const [report] = listPastReports(dataset.transactions, dataset.flags)
+
+    expect(report?.count).toBe(3)
+    expect(report?.coveredCents).toBe(payment.amountCents)
+    expect(report?.drifted).toBe(false)
+  })
+
+  it('prints the settled claim with the refund as already reimbursed', async () => {
+    const { repo, payment } = await closeClaim()
+    const dataset = await repo.loadDataset(OWNER)
+    const printed = buildSettledReport(payment.id, dataset.transactions, dataset.flags, [])
+
+    expect(printed?.totalClaimedCents).toBe(10_800)
+    expect(printed?.creditedCents).toBe(2_000)
+    expect(printed?.outstandingCents).toBe(payment.amountCents)
+  })
+
+  it('puts the refund back with the lines when the payment is deleted', async () => {
+    const { repo, payment, rowIds } = await closeClaim()
+
+    await repo.deleteTransaction(OWNER, payment.id)
+
+    const dataset = await repo.loadDataset(OWNER)
+    const [group] = groupTransactionsByFlag(dataset.transactions, dataset.flags)
+    expect(group?.transactions.map((t) => t.id).sort()).toEqual([...rowIds].sort())
+    expect(group?.totalCents).toBe(8_800)
   })
 })

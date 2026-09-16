@@ -90,7 +90,9 @@ describe('buildReimbursementDraft — what can be selected', () => {
     )
 
     expect(draft?.candidates.map((t) => t.id)).toEqual([1])
-    expect(draft?.amountCents).toBe(10_000)
+    // Which is why the suggested payment is the line less the refund, as the comment
+    // above has always said. It used to be the gross, which asked for money back twice.
+    expect(draft?.amountCents).toBe(6_000)
   })
 
   it('refuses a claim whose only rows are refunds', () => {

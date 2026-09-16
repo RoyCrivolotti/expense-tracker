@@ -99,6 +99,14 @@ describe('InstallmentStep — NewFields', () => {
     expect(screen.getByText(/181,24 € now, then 181,23 € × 2/)).toBeInTheDocument()
   })
 
+  it('drops the redundant multiplier when only one charge follows', () => {
+    // Two installments is the common case, and "× 1" reads as a quantity to check
+    // rather than the single remaining charge it describes.
+    renderStep(draft({ splitTotal: true, totalCount: '2' }), vi.fn(), 3333)
+    expect(screen.getByText('16,67 € now, then 16,66 €')).toBeInTheDocument()
+    expect(screen.queryByText(/× 1\b/)).not.toBeInTheDocument()
+  })
+
   it('drops the remainder wording when the split is exact', () => {
     renderStep(draft({ splitTotal: true, totalCount: '5' }), vi.fn(), 50000)
     expect(screen.getByText('100,00 € × 5')).toBeInTheDocument()

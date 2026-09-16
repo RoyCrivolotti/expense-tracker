@@ -82,8 +82,9 @@ export function CategoryAccountRow({
         value={categoryId}
         onChange={(e) => onCategory(e.target.value === 'all' ? 'all' : Number(e.target.value))}
         disabled={selectMode}
+        aria-label="Filter by category"
       >
-        <option value="all">All categories</option>
+        <option value="all">Category</option>
         {categories.map((c) => (
           <option key={c.id} value={c.id}>
             {c.name}
@@ -95,8 +96,9 @@ export function CategoryAccountRow({
         value={accountId}
         onChange={(e) => onAccount(e.target.value === 'all' ? 'all' : Number(e.target.value))}
         disabled={selectMode}
+        aria-label="Filter by account"
       >
-        <option value="all">All accounts</option>
+        <option value="all">Account</option>
         {accounts.map((a) => (
           <option key={a.id} value={a.id}>
             {a.name}
@@ -140,7 +142,7 @@ export function StatusTypeRow({
           disabled={selectMode}
           aria-label="Filter by flag"
         >
-          <option value="all">All flags</option>
+          <option value="all">Flag</option>
           <option value="none">Unflagged</option>
           {flagOptions.map((f) => (
             <option key={f.id} value={f.id}>
@@ -155,8 +157,9 @@ export function StatusTypeRow({
         value={status}
         onChange={(e) => onStatus(e.target.value as StatusFilter)}
         disabled={selectMode}
+        aria-label="Filter by status"
       >
-        <option value="all">All statuses</option>
+        <option value="all">Status</option>
         <option value="posted">Posted</option>
         <option value="forecast">Forecast</option>
         <option value="cancelled">Cancelled</option>
@@ -166,8 +169,9 @@ export function StatusTypeRow({
         value={txnType}
         onChange={(e) => onTxnType(e.target.value as TxnType | 'all')}
         disabled={selectMode}
+        aria-label="Filter by type"
       >
-        <option value="all">All types</option>
+        <option value="all">Type</option>
         <option value="expense">Expense</option>
         <option value="income">Income</option>
         <option value="investment">Investment</option>

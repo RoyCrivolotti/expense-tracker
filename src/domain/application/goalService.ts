@@ -1,10 +1,11 @@
 import type { NewGoalScenario } from '../data/dataSource'
 import type { ExpenseRepository } from '../ports/expenseRepository'
 import type { GoalInputs } from '../types'
+import { ValidationError } from './validationError'
 
 export function validateScenarioName(name: string | undefined): string {
   const trimmed = name?.trim()
-  if (!trimmed) throw new Error('Scenario name is required')
+  if (!trimmed) throw new ValidationError('Scenario name is required')
   return trimmed
 }
 
@@ -44,11 +45,11 @@ const RATE_FIELDS = [
  * Every field here was previously written straight to SQLite with only the name checked.
  */
 function assertWholeAtLeast(value: unknown, min: number, message: string): void {
-  if (!Number.isInteger(value) || (value as number) < min) throw new Error(message)
+  if (!Number.isInteger(value) || (value as number) < min) throw new ValidationError(message)
 }
 
 function assertInClosedRange(value: number, lo: number, hi: number, message: string): void {
-  if (!Number.isFinite(value) || value < lo || value > hi) throw new Error(message)
+  if (!Number.isFinite(value) || value < lo || value > hi) throw new ValidationError(message)
 }
 
 export function validateScenarioNumbers(patch: Partial<NewGoalScenario>): void {
@@ -68,7 +69,7 @@ export function validateScenarioNumbers(patch: Partial<NewGoalScenario>): void {
 
   for (const key of RATE_FIELDS) {
     if (rec[key] !== undefined && !Number.isFinite(rec[key])) {
-      throw new Error(`${key} must be a number`)
+      throw new ValidationError(`${key} must be a number`)
     }
   }
 
@@ -92,7 +93,7 @@ function validateScenarioFractions(patch: Partial<NewGoalScenario>): void {
     // Open at the bottom, unlike downPaymentFraction: fireNumber divides by this.
     const swr = patch.safeWithdrawalRate
     if (!Number.isFinite(swr) || swr <= 0 || swr > 1) {
-      throw new Error('safeWithdrawalRate must be greater than 0 and at most 1')
+      throw new ValidationError('safeWithdrawalRate must be greater than 0 and at most 1')
     }
   }
 
@@ -129,7 +130,7 @@ export async function patchScenario(
   id: number,
   patch: Partial<NewGoalScenario>,
 ) {
-  if (Object.keys(patch).length === 0) throw new Error('Empty patch')
+  if (Object.keys(patch).length === 0) throw new ValidationError('Empty patch')
   validateScenarioNumbers(patch)
   return repo.updateScenario(owner, id, patch)
 }

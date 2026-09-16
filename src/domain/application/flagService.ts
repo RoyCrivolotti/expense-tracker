@@ -1,5 +1,6 @@
 import type { NewFlag } from '../data/dataSource'
 import type { ExpenseRepository } from '../ports/expenseRepository'
+import { ValidationError } from './validationError'
 
 /** Longer than this and the description stops being a hint and starts being a note. */
 const MAX_DESCRIPTION_LENGTH = 140
@@ -7,14 +8,14 @@ const HEX_COLOR = /^#[0-9a-f]{6}$/i
 
 export function validateFlagName(name: string | undefined): string {
   const trimmed = name?.trim()
-  if (!trimmed) throw new Error('Flag name is required')
+  if (!trimmed) throw new ValidationError('Flag name is required')
   return trimmed
 }
 
 export function validateFlagColor(color: string | undefined): string {
   const trimmed = color?.trim().toLowerCase()
   if (!trimmed || !HEX_COLOR.test(trimmed)) {
-    throw new Error('Flag colour must be a hex value like #6366f1')
+    throw new ValidationError('Flag colour must be a hex value like #6366f1')
   }
   return trimmed
 }
@@ -29,12 +30,12 @@ export function validateFlagSortOrder(sortOrder: unknown): number {
   // stored as TEXT in an INTEGER column and silently breaks every sort that
   // reads it back. An explicit null fails the NOT NULL constraint and leaks the
   // raw D1 message through mapAppError. Reject both here instead.
-  if (!Number.isInteger(sortOrder)) throw new Error('Flag sort order must be a whole number')
+  if (!Number.isInteger(sortOrder)) throw new ValidationError('Flag sort order must be a whole number')
   return sortOrder as number
 }
 
 export function validateFlagActive(active: unknown): boolean {
-  if (typeof active !== 'boolean') throw new Error('Flag active must be true or false')
+  if (typeof active !== 'boolean') throw new ValidationError('Flag active must be true or false')
   return active
 }
 
@@ -42,7 +43,7 @@ export function validateFlagDescription(description: string | undefined): string
   const trimmed = description?.trim()
   if (!trimmed) return undefined
   if (trimmed.length > MAX_DESCRIPTION_LENGTH) {
-    throw new Error(`Flag description must be ${MAX_DESCRIPTION_LENGTH} characters or fewer`)
+    throw new ValidationError(`Flag description must be ${MAX_DESCRIPTION_LENGTH} characters or fewer`)
   }
   return trimmed
 }

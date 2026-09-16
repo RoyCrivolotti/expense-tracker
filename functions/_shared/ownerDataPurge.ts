@@ -20,16 +20,24 @@ export async function purgeOwnerData(env: Env, ownerEmail: string): Promise<void
 
 /**
  * Best-effort: failing the revoke over an R2 error would leave the owner's rows, and
- * their access, in place. The warning names the owner because recovery is a manual
- * prefix sweep (docs/DEPLOYMENT.md).
+ * their access, in place. What makes that acceptable is that receipt keys start with
+ * the owner (see receiptKeys.ts), so the objects stay findable after the D1 rows that
+ * named them are gone. Recovery is the prefix sweep in docs/DEPLOYMENT.md, and this
+ * is the only thing that will ever ask for it, so it logs the prefix and the count
+ * rather than just the fact.
  */
 async function purgeOwnerReceipts(env: Env, owner: string): Promise<void> {
   const store = receiptStore(env)
   if (!store) return
+  const keys = await ownerAttachmentKeys(env, owner)
   try {
-    await store.deleteMany(await ownerAttachmentKeys(env, owner))
-  } catch {
-    console.warn(`revoke: receipt bytes for ${owner} were not deleted`)
+    await store.deleteMany(keys)
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error)
+    console.warn(
+      `revoke: ${keys.length} receipt object(s) for ${owner} were not deleted (${reason}). ` +
+        `Sweep the "${owner}/" prefix manually, see docs/DEPLOYMENT.md.`,
+    )
   }
 }
 

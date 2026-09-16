@@ -5,7 +5,8 @@ import { createAccessDeps } from '../_shared/access/createAccessDeps'
 import type { Env, ExpensesData } from '../_shared/env'
 import { createD1AccessRepository } from '../_shared/adapters/d1AccessRepository'
 import { createD1ExpenseRepository } from '../_shared/adapters/d1ExpenseRepository'
-import { HttpError, error } from '../_shared/http'
+import { error } from '../_shared/http'
+import { toHttpError } from '../_shared/mapAppError'
 
 function isAccessApiPath(pathname: string): boolean {
   return pathname.startsWith('/api/access')
@@ -33,7 +34,10 @@ export const onRequest: PagesFunction<Env, string, ExpensesData> = async (contex
     await touchLastSeenIfNeeded(deps, email)
     return await context.next()
   } catch (e) {
-    if (e instanceof HttpError) return error(e.status, e.message)
-    return error(500, e instanceof Error ? e.message : 'Server error')
+    // Routes that do not catch their own errors land here, and used to answer a
+    // validation failure with 500 while the routes that did catch answered 400. The
+    // same mapping in both places makes the status depend on the error, not the route.
+    const mapped = toHttpError(e)
+    return error(mapped.status, mapped.message)
   }
 }

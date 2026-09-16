@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ExpenseDataset } from '../types'
 import type { ExpenseDataSource } from '../data/dataSource'
@@ -205,6 +205,32 @@ describe('useExpenseData — offline and error paths', () => {
 
     await waitFor(() => expect(result.current.status).toBe('error'))
     expect(result.current.error).toBe('boom')
+  })
+
+  it('reports no outcome for a refresh it threw away', async () => {
+    // The response arrived fine, it was just superseded by an edit made while it was
+    // in flight, so nothing on screen changed. Reporting 'ok' here put an "Updated"
+    // toast on a screen that had not updated.
+    let release: (v: ExpenseDataset) => void = () => {}
+    const load = vi
+      .fn()
+      .mockResolvedValueOnce(emptyDataset)
+      .mockImplementationOnce(() => new Promise<ExpenseDataset>((r) => { release = r }))
+    const source: ExpenseDataSource = { canWrite: false, load }
+    const { result } = renderHook(() => useExpenseData(source))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+
+    act(() => { result.current.reload() })
+    await waitFor(() => expect(result.current.refreshing).toBe(true))
+    // The edit lands first; the in-flight response is stale from here on.
+    act(() => { result.current.applyPatch((d) => d) })
+    await act(async () => {
+      release(emptyDataset)
+      await Promise.resolve()
+    })
+
+    await waitFor(() => expect(result.current.refreshing).toBe(false))
+    expect(result.current.refreshOutcome).toBeNull()
   })
 
   it('keeps the model a failed refresh cannot replace', async () => {

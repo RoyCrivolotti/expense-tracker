@@ -1,34 +1,35 @@
 import type { NewInstallmentPlan } from '../data/dataSource'
 import type { ExpenseRepository } from '../ports/expenseRepository'
 import type { InstallmentPlan } from '../types'
+import { ValidationError } from './validationError'
 
 const YEAR_MONTH = /^\d{4}-\d{2}$/
 
 export function validateDueDay(dueDay: number | null | undefined): void {
   if (dueDay != null && (!Number.isInteger(dueDay) || dueDay < 1 || dueDay > 31)) {
-    throw new Error('dueDayOfMonth must be between 1 and 31')
+    throw new ValidationError('dueDayOfMonth must be between 1 and 31')
   }
 }
 
 function validateTotalCount(totalCount: number): void {
   if (!Number.isInteger(totalCount) || totalCount < 1) {
-    throw new Error('totalCount must be a positive integer')
+    throw new ValidationError('totalCount must be a positive integer')
   }
 }
 
 function validateAmountCents(amountCents: number): void {
   if (!Number.isFinite(amountCents) || amountCents <= 0) {
-    throw new Error('amountCents must be greater than zero')
+    throw new ValidationError('amountCents must be greater than zero')
   }
 }
 
 /** `totalCount` is the upper bound when the caller supplies one. */
 function validateStartIndex(start: number, totalCount?: number): void {
   if (!Number.isInteger(start) || start < 1) {
-    throw new Error('startInstallmentIndex must be between 1 and totalCount')
+    throw new ValidationError('startInstallmentIndex must be between 1 and totalCount')
   }
   if (totalCount != null && start > totalCount) {
-    throw new Error('startInstallmentIndex must be between 1 and totalCount')
+    throw new ValidationError('startInstallmentIndex must be between 1 and totalCount')
   }
 }
 
@@ -36,7 +37,7 @@ function validatePlanNumbers(input: NewInstallmentPlan): void {
   validateTotalCount(input.totalCount)
   validateAmountCents(input.amountCents)
   if (!input.accountId || !input.categoryId) {
-    throw new Error('accountId and categoryId are required')
+    throw new ValidationError('accountId and categoryId are required')
   }
   validateStartIndex(input.startInstallmentIndex, input.totalCount)
   validateDueDay(input.dueDayOfMonth)
@@ -63,9 +64,9 @@ function validatePlanPatchNumbers(patch: Partial<NewInstallmentPlan>): void {
 
 export function validatePlanInput(input: NewInstallmentPlan): NewInstallmentPlan {
   const description = input.description?.trim()
-  if (!description) throw new Error('Description is required')
+  if (!description) throw new ValidationError('Description is required')
   if (!YEAR_MONTH.test(input.anchorBudgetMonth)) {
-    throw new Error('anchorBudgetMonth must be YYYY-MM')
+    throw new ValidationError('anchorBudgetMonth must be YYYY-MM')
   }
   validatePlanNumbers(input)
   return { ...input, description }
@@ -85,7 +86,7 @@ export async function patchPlan(
   id: number,
   patch: Partial<NewInstallmentPlan>,
 ): Promise<InstallmentPlan> {
-  if (Object.keys(patch).length === 0) throw new Error('Empty patch')
+  if (Object.keys(patch).length === 0) throw new ValidationError('Empty patch')
   validatePlanPatchNumbers(patch)
   return repo.updateInstallmentPlan(owner, id, patch)
 }

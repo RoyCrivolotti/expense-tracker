@@ -32,6 +32,7 @@ export function CheckinFormSheet({ accounts, actions, onDone }: Props) {
     active.map((a) => ({ accountId: a.id, valueCents: 0 })),
   )
   const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const setEntry = (accountId: number, valueCents: number) => {
     setEntries((prev) =>
@@ -42,6 +43,7 @@ export function CheckinFormSheet({ accounts, actions, onDone }: Props) {
   const handleSubmit = async () => {
     if (!date) return
     setSubmitting(true)
+    setError(null)
     try {
       const trimmedNote = note.trim()
       await actions.createWealthCheckin({
@@ -50,6 +52,11 @@ export function CheckinFormSheet({ accounts, actions, onDone }: Props) {
         entries: entries.filter((e) => e.valueCents !== 0),
       })
       onDone?.()
+    } catch (e) {
+      // Without this the save fails in silence: the button simply re-enables and
+      // nothing on screen says why. The server refuses a future-dated check-in, and
+      // a clock a day ahead of the server's slack is enough to reach that.
+      setError(e instanceof Error ? e.message : 'Could not save the check-in')
     } finally {
       setSubmitting(false)
     }
@@ -123,6 +130,12 @@ export function CheckinFormSheet({ accounts, actions, onDone }: Props) {
             onChange={(e) => setNote(e.target.value)}
           />
         </div>
+
+        {error ? (
+          <p className={styles.formError} role="alert">
+            {error}
+          </p>
+        ) : null}
 
         <div className={styles.formActions}>
           <button

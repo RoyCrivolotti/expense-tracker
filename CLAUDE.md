@@ -199,6 +199,8 @@ branch name: merged branches are deleted automatically, and an image pinned to i
 branch stays reachable afterwards; rebasing replaces it, so re-pin after a rebase.
 Include a 375px capture for responsive changes. Headless browsers do not reproduce native form controls (`<input type="date">`),
 so a desktop capture of one is necessary but not sufficient — say so and verify on-device.
+The check does not count an image stored anywhere else in this repo, such as the docs
+gallery: it is not a picture of the change.
 
 **Comments** explain why this code is the way it is, not how it came to be. History belongs
 in git. A comment earns its place when it stops the next reader breaking something.
