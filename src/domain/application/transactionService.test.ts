@@ -32,16 +32,22 @@ describe('transactionService validation', () => {
 
   it('rejects a non-finite amountCents', () => {
     expect(() => validateNewTransaction({ ...validTxn, amountCents: NaN })).toThrow(
-      'amountCents must be greater than zero',
+      'amountCents must be a whole number of cents, greater than zero',
+    )
+  })
+
+  it('rejects a fractional amountCents, which is not a sum this ledger can hold', () => {
+    expect(() => validateNewTransaction({ ...validTxn, amountCents: 12.5 })).toThrow(
+      'amountCents must be a whole number of cents, greater than zero',
     )
   })
 
   it('rejects a zero or negative amountCents', () => {
     expect(() => validateNewTransaction({ ...validTxn, amountCents: 0 })).toThrow(
-      'amountCents must be greater than zero',
+      'amountCents must be a whole number of cents, greater than zero',
     )
     expect(() => validateNewTransaction({ ...validTxn, amountCents: -1000 })).toThrow(
-      'amountCents must be greater than zero',
+      'amountCents must be a whole number of cents, greater than zero',
     )
   })
 
@@ -49,7 +55,7 @@ describe('transactionService validation', () => {
     expect(validateBulkTransactions([validTxn])).toHaveLength(1)
     expect(() => validateBulkTransactions('nope')).toThrow('transactions array is required')
     expect(() => validateBulkTransactions([{ ...validTxn, amountCents: NaN }])).toThrow(
-      'amountCents must be greater than zero',
+      'amountCents must be a whole number of cents, greater than zero',
     )
   })
 
@@ -188,7 +194,12 @@ async function seedTxn(repo: ReturnType<typeof planRepo>, budgetMonth: string) {
 describe('validateTransactionPatch', () => {
   it('accepts every field the edit form really sends', () => {
     const patch = {
+      date: '2026-03-04',
+      budgetMonth: '2026-03',
       description: 'Updated description',
+      accountId: 1,
+      categoryId: 2,
+      type: 'expense',
       amountCents: 2500,
       cancelled: true,
       notes: 'a note',
@@ -200,6 +211,36 @@ describe('validateTransactionPatch', () => {
   it('accepts planId and installmentIndex together', () => {
     const patch = { planId: 7, installmentIndex: 3 }
     expect(validateTransactionPatch(patch)).toEqual(patch)
+  })
+
+  it('checks values, not only which fields were sent', () => {
+    // The names were policed here from the start; the values went to SQLite as
+    // given, which made this the one write path looser than create and bulk edit.
+    expect(() => validateTransactionPatch({ amountCents: 'lots' })).toThrow('amountCents')
+    expect(() => validateTransactionPatch({ amountCents: 0 })).toThrow('amountCents')
+    expect(() => validateTransactionPatch({ amountCents: -500 })).toThrow('amountCents')
+    expect(() => validateTransactionPatch({ amountCents: 12.5 })).toThrow('amountCents')
+    expect(() => validateTransactionPatch({ date: 'yesterday' })).toThrow('date must be YYYY-MM-DD')
+    expect(() => validateTransactionPatch({ budgetMonth: '2026-1' })).toThrow('budgetMonth')
+    expect(() => validateTransactionPatch({ type: 'transfer' })).toThrow('Invalid transaction type')
+    expect(() => validateTransactionPatch({ cancelled: 'yes' })).toThrow('cancelled')
+    expect(() => validateTransactionPatch({ categoryId: 0 })).toThrow('categoryId')
+    expect(() => validateTransactionPatch({ accountId: -3 })).toThrow('accountId')
+    expect(() => validateTransactionPatch({ description: 42 })).toThrow('description')
+  })
+
+  it('keeps null meaningful for the links that use it to clear', () => {
+    expect(validateTransactionPatch({ flagId: null, planId: null, notes: null })).toEqual({
+      flagId: null,
+      planId: null,
+      notes: null,
+    })
+  })
+
+  it('drops keys sent as undefined rather than writing them', () => {
+    expect(validateTransactionPatch({ description: 'kept', notes: undefined })).toEqual({
+      description: 'kept',
+    })
   })
 
   it('rejects settledBy specifically — excluded outright, not merely ownership-checked', () => {

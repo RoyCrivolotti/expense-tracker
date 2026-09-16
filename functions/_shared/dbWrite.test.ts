@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
-import { insertTransaction, updateTransaction, bulkUpdateTransactions } from './dbWrite'
+import {
+  insertTransaction,
+  updateTransaction,
+  bulkUpdateTransactions,
+  bulkInsertTransactions,
+} from './dbWrite'
 import type { Env } from './env'
 
 function envWith(first: unknown): Env {
@@ -343,5 +348,96 @@ describe('bulkUpdateTransactions settledBy guard', () => {
       categoryId: 2,
     })
     expect(result).toHaveLength(1)
+  })
+})
+
+/**
+ * Enough of D1 for the bulk insert: ownership answers come from `owned`, and every
+ * INSERT is recorded so a test can show none was attempted.
+ */
+function envForBulkInsert(opts: {
+  ownedAccounts?: number[]
+  ownedCategories?: number[]
+  inserted?: number[]
+}): Env {
+  const { ownedAccounts = [1], ownedCategories = [2], inserted } = opts
+  return {
+    DB: {
+      prepare: (sql: string) => ({
+        bind: (...args: unknown[]) => {
+          // These bind (id, owner), so the id is the first argument, not the second.
+          if (sql.includes('accounts') && sql.includes('SELECT 1')) {
+            const id = args[0] as number
+            return { first: vi.fn().mockResolvedValue(ownedAccounts.includes(id) ? { ok: 1 } : null) }
+          }
+          if (sql.includes('categories') && sql.includes('SELECT 1')) {
+            const id = args[0] as number
+            return {
+              first: vi.fn().mockResolvedValue(ownedCategories.includes(id) ? { ok: 1 } : null),
+            }
+          }
+          if (sql.includes('INSERT INTO transactions')) {
+            const accountId = args[4] as number
+            inserted?.push(accountId)
+            return {
+              first: vi.fn().mockResolvedValue({
+                id: inserted?.length ?? 1,
+                owner: 'a@b.com',
+                date: '2026-01-01',
+                budget_month: '2026-01',
+                description: 'Imported',
+                account_id: accountId,
+                category_id: 2,
+                type: 'expense',
+                amount_cents: 1000,
+                cancelled: 0,
+                notes: null,
+                plan_id: null,
+                installment_index: null,
+              }),
+            }
+          }
+          return { first: vi.fn().mockResolvedValue(null), all: vi.fn().mockResolvedValue({ results: [] }) }
+        },
+      }),
+    },
+  } as unknown as Env
+}
+
+describe('bulkInsertTransactions', () => {
+  const row = (accountId: number, categoryId: number) => ({
+    date: '2026-01-01',
+    budgetMonth: '2026-01',
+    description: 'Imported',
+    accountId,
+    categoryId,
+    type: 'expense' as const,
+    amountCents: 1000,
+    cancelled: false,
+  })
+
+  it('writes nothing when a later row names an account the owner does not have', async () => {
+    // The row that fails is the second one. Before the pre-check the first row was
+    // already committed by the time it threw, so the caller was told the whole
+    // import failed while half of it had landed.
+    const inserted: number[] = []
+    const env = envForBulkInsert({ ownedAccounts: [1], inserted })
+
+    await expect(
+      bulkInsertTransactions(env, 'a@b.com', [row(1, 2), row(99, 2)]),
+    ).rejects.toThrow()
+
+    expect(inserted).toEqual([])
+  })
+
+  it('writes nothing when a later row names a category the owner does not have', async () => {
+    const inserted: number[] = []
+    const env = envForBulkInsert({ ownedCategories: [2], inserted })
+
+    await expect(
+      bulkInsertTransactions(env, 'a@b.com', [row(1, 2), row(1, 77)]),
+    ).rejects.toThrow()
+
+    expect(inserted).toEqual([])
   })
 })
