@@ -67,7 +67,7 @@ function FlagGroupSection({
           <span className={styles.count}>
             {group.count} item{group.count === 1 ? '' : 's'}
           </span>
-          <Money cents={group.totalCents} className={styles.total} />
+          <Money cents={group.totalCents} signed={group.totalCents < 0} className={styles.total} />
         </span>
       </summary>
       <div className={styles.body}>
@@ -163,7 +163,7 @@ export function FlaggedCard({
                   not, and nothing else on it would say so. */}
               <span className={styles.rollupScope}>All months, not just this one</span>
             </span>
-            <Money cents={total.totalCents} className={styles.rollupTotal} />
+            <Money cents={total.totalCents} signed={total.totalCents < 0} className={styles.rollupTotal} />
           </summary>
           <div className={styles.groups}>
             {groups.map((group) => (

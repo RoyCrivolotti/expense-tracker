@@ -114,6 +114,37 @@ describe('FlaggedCard', () => {
     expect(screen.getByText('150,00 €')).toBeVisible()
   })
 
+  it('signs a group total when its refunds outweigh its expenses', async () => {
+    // totalCents is documented as "signed the same way the Transactions tab's own
+    // Net spend line is" (flagGroups.ts) — a lone refund goes negative, which used to
+    // render as a plain positive amount, indistinguishable from money still owed. With
+    // one flag the group total and the cross-flag rollup are the same figure, so both
+    // Money elements the fix touches show it.
+    renderCard(
+      makeDataset({
+        flags: [work],
+        transactions: [txn({ flagId: 1, type: 'refund', amountCents: 7_000 })],
+      }),
+    )
+
+    await userEvent.click(screen.getByText(/across 1 flag/))
+    expect(screen.getAllByText('−70,00 €')).toHaveLength(2)
+  })
+
+  it('signs the cross-flag rollup the same way', () => {
+    renderCard(
+      makeDataset({
+        flags: [work, tax],
+        transactions: [
+          txn({ flagId: 1, type: 'expense', amountCents: 3_000 }),
+          txn({ flagId: 2, type: 'refund', amountCents: 10_000 }),
+        ],
+      }),
+    )
+
+    expect(screen.getByText('−70,00 €')).toBeVisible()
+  })
+
   it('says it is not scoped to the selected month', () => {
     // Every sibling card on this tab is month-scoped and the header above reads
     // a single month, so the card has to declare that it is not.
