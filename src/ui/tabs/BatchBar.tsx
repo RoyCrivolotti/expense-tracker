@@ -43,7 +43,7 @@ export function BatchBar({
         <span>
           {count} selected
           {hiddenCount > 0 ? (
-            <span className={styles.batchHidden}> · {hiddenCount} not shown</span>
+            <span className={styles.batchHidden}>{hiddenCount} not shown</span>
           ) : null}
         </span>
       </div>
