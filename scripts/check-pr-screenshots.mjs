@@ -10,6 +10,7 @@
  * in Actions), and a base ref/sha with enough history to diff against.
  */
 import { execFileSync } from 'node:child_process'
+import { evidenceImages } from './prScreenshotEvidence.mjs'
 
 const VISUAL_FILE_RE = /^(?:src\/ui\/.*|.*\.module\.css)$/
 
@@ -46,18 +47,14 @@ if (visualFiles.length === 0) {
 
 const body = execFileSync('gh', ['pr', 'view', pr, '--json', 'body', '-q', '.body'], { encoding: 'utf8' })
 
-// Any markdown image syntax counts — committed docs/pr-screenshots/ evidence
-// linked via raw.githubusercontent.com is the documented convention, but a
-// pasted GitHub attachment or externally hosted image both satisfy this too.
-const HAS_IMAGE_RE = /!\[[^\]]*]\(https?:\/\/[^\s)]+\)/
-
-if (!HAS_IMAGE_RE.test(body)) {
+if (evidenceImages(body).length === 0) {
   console.error(
     `check-pr-screenshots: this PR changes ${visualFiles.length} UI-facing file(s) but its ` +
       'description has no image evidence:\n' +
       visualFiles.map((f) => `  - ${f}`).join('\n') +
       '\n\nAdd before/after screenshots — see CLAUDE.md > Pull request conventions for the ' +
-      'placement convention (docs/pr-screenshots/<slug>/, linked via raw.githubusercontent.com).',
+      'placement convention (docs/pr-screenshots/<slug>/, linked via raw.githubusercontent.com). ' +
+      'An image stored elsewhere in this repo, such as the docs gallery, does not count.',
   )
   process.exit(1)
 }
