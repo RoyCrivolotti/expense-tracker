@@ -9,6 +9,8 @@ interface Props {
   showPicker: boolean
   /** The current tab is selecting rows, so the month must not change under it. */
   pickerLocked?: boolean
+  /** Pressing the locked picker: say why nothing happens. */
+  onLockedPickerPress?: (() => void) | undefined
   online: boolean
   refreshing: boolean
   onRefresh: () => void
@@ -20,6 +22,7 @@ export function AppHeaderActions({
   onMonthChange,
   showPicker,
   pickerLocked = false,
+  onLockedPickerPress,
   online,
   refreshing,
   onRefresh,
@@ -32,7 +35,8 @@ export function AppHeaderActions({
           months={months}
           value={activeMonth}
           onChange={onMonthChange}
-          disabled={pickerLocked}
+          locked={pickerLocked}
+          onLockedPress={onLockedPickerPress}
         />
       ) : null}
     </div>

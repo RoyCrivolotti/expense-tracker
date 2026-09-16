@@ -25,6 +25,8 @@ import { useConnectivityState } from './hooks/useConnectivityState'
 import { useConnectivity } from './hooks/useConnectivity'
 import { usePullToRefresh } from './hooks/usePullToRefresh'
 import { useRefreshToast } from './hooks/useRefreshToast'
+import { useToast } from './hooks/useToast'
+import { MONTH_LOCKED_HINT } from './tabs/selectionLockHints'
 import styles from './ExpensesApp.module.css'
 
 const GoalsTab = lazy(() => import('./tabs/goals/GoalsTab'))
@@ -242,6 +244,7 @@ function ExpensesAppReady({
     refreshing,
   })
   useRefreshToast(refreshing, refreshOutcome)
+  const { showToast } = useToast()
 
   const [theme, setTheme] = useExpenseTheme()
   const [tab, setTab] = useState<TabId>('dashboard')
@@ -316,6 +319,7 @@ function ExpensesAppReady({
             onMonthChange={navigateMonth}
             showPicker={showPicker}
             pickerLocked={monthLockedFor(tab, selectionMonth !== null)}
+            onLockedPickerPress={() => showToast(MONTH_LOCKED_HINT)}
             online={online}
             refreshing={refreshing}
             onRefresh={reload}

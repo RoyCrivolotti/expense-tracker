@@ -5,6 +5,7 @@ import type { ExpenseDataset } from '../types'
 import { defaultExpenseSettings } from '../engine'
 import { allGroupsGranted } from '../domain/accessGroups'
 import { ExpensesApp } from './ExpensesApp'
+import { ToastProvider } from './hooks/ToastProvider'
 
 beforeAll(() => {
   Object.defineProperty(window, 'matchMedia', {
@@ -178,21 +179,37 @@ describe('ExpensesApp while selecting transactions', () => {
   }
 
   async function openTransactions(source = twoMonths()) {
-    render(<ExpensesApp source={source} hubGrants={allGroupsGranted()} />)
+    render(
+      <ToastProvider>
+        <ExpensesApp source={source} hubGrants={allGroupsGranted()} />
+      </ToastProvider>,
+    )
     fireEvent.click((await screen.findAllByRole('button', { name: 'Transactions' }))[0]!)
     await screen.findByText('Row 2')
     return () => screen.getByRole('button', { name: 'Previous month' })
   }
 
+  const locked = (el: HTMLElement) => el.getAttribute('aria-disabled') === 'true'
+
   it('holds the month still for as long as rows are being selected', async () => {
     const previous = await openTransactions()
-    expect(previous()).toBeEnabled()
+    expect(locked(previous())).toBe(false)
 
     fireEvent.click(screen.getByRole('button', { name: 'Select' }))
-    expect(previous()).toBeDisabled()
+    expect(locked(previous())).toBe(true)
 
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
-    expect(previous()).toBeEnabled()
+    expect(locked(previous())).toBe(false)
+  })
+
+  it('says why the month does not change while rows are selected', async () => {
+    const previous = await openTransactions()
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+
+    fireEvent.click(previous())
+
+    expect(screen.getByText('Finish or cancel the selection to change the month')).toBeInTheDocument()
+    expect(previous().parentElement).toHaveTextContent('July 2026')
   })
 
   it('lets go when the selection ends by leaving the tab and coming back', async () => {
@@ -200,15 +217,15 @@ describe('ExpensesApp while selecting transactions', () => {
     // selected, and without the reset the shell would still hold its month locked.
     const previous = await openTransactions()
     fireEvent.click(screen.getByRole('button', { name: 'Select' }))
-    expect(previous()).toBeDisabled()
+    expect(locked(previous())).toBe(true)
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Dashboard' })[0]!)
-    expect(previous()).toBeEnabled()
+    expect(locked(previous())).toBe(false)
     fireEvent.click(screen.getAllByRole('button', { name: 'Transactions' })[0]!)
     await screen.findByText('Row 2')
 
     expect(screen.getByRole('button', { name: 'Select' })).toBeInTheDocument()
-    expect(previous()).toBeEnabled()
+    expect(locked(previous())).toBe(false)
   })
 
   it('keeps its month when a refresh brings in a newer one mid-selection', async () => {
@@ -281,7 +298,7 @@ describe('ExpensesApp while selecting transactions', () => {
     expect(screen.getByRole('button', { name: 'Delete' })).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(screen.queryByText('1 selected')).not.toBeInTheDocument()
-    expect(previous()).toBeEnabled()
+    expect(locked(previous())).toBe(false)
   })
 
   it('shows the month you step to when the list was on all dates', async () => {
