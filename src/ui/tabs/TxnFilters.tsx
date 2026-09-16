@@ -81,7 +81,7 @@ export function TxnFilters(props: TxnFiltersProps) {
           </button>
         ) : null}
       </div>
-      {!expanded ? <ActiveFilterChips chips={activeChips} /> : null}
+      {!expanded ? <ActiveFilterChips chips={activeChips} disabled={props.selectMode} /> : null}
       {expanded ? (
         <div className={styles.filterSecondary}>
           <CategoryAccountRow

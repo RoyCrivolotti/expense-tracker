@@ -235,7 +235,11 @@
   font-weight: 600;
   cursor: pointer;
 }
-.filterChip:hover {
+.filterChip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.filterChip:hover:not(:disabled) {
   background: color-mix(in srgb, var(--color-accent) 20%, var(--color-bg));
 }
 
