@@ -236,3 +236,88 @@ describe('RecordReimbursementSheet — payment vs what was ticked', () => {
     expect(screen.queryByText(/Short of|More than/)).not.toBeInTheDocument()
   })
 })
+
+describe('RecordReimbursementSheet — a claim that already has money back', () => {
+  // The staging claim: 60 € and 48 € of expenses, and a 20 € refund on the same flag.
+  // The claim document and the Flagged card both call that 88 € outstanding.
+  const claim = () =>
+    group([
+      txn(1, { amountCents: 6_000, date: '2026-09-01' }),
+      txn(2, { amountCents: 4_800, date: '2026-09-02' }),
+      txn(3, { amountCents: 2_000, type: 'refund', date: '2026-09-03' }),
+    ])
+
+  it('suggests the outstanding amount, as the claim document states it', () => {
+    renderSheet(claim())
+
+    expect(screen.getByLabelText('Amount received')).toHaveValue('88,00')
+  })
+
+  it('says why the suggestion is less than the ticked lines', () => {
+    renderSheet(claim())
+
+    expect(screen.getByText(/20,00 € already back on this flag comes off what is owed/)).toBeInTheDocument()
+  })
+
+  it('settles the refund along with the lines when the payment closes the claim', async () => {
+    const { onRecord } = renderSheet(claim())
+
+    await userEvent.click(screen.getByRole('button', { name: /record/i }))
+
+    expect([...onRecord.mock.calls[0]![1]].sort()).toEqual([1, 2, 3])
+    expect(onRecord.mock.calls[0]![0].amountCents).toBe(8_800)
+  })
+
+  it('leaves the refund on the flag when only some lines are covered', async () => {
+    const { onRecord } = renderSheet(claim())
+
+    await userEvent.click(lines()[1]!)
+    await userEvent.click(screen.getByRole('button', { name: /record/i }))
+
+    expect(onRecord.mock.calls[0]![1]).toEqual([1])
+    expect(onRecord.mock.calls[0]![0].amountCents).toBe(6_000)
+  })
+
+  it('reports what the card will show once a part payment lands', async () => {
+    renderSheet(claim())
+
+    await userEvent.click(lines()[1]!)
+
+    // 48 € still open, less the 20 € already back.
+    expect(screen.getByText(/28,00 € left owed/)).toBeInTheDocument()
+  })
+
+  it('says nothing about money back when there is none', () => {
+    renderSheet(group([txn(1, { amountCents: 10_000 })]))
+
+    expect(screen.queryByText(/already back/)).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Amount received')).toHaveValue('100,00')
+  })
+})
+
+describe('RecordReimbursementSheet — the amount check once money is already back', () => {
+  const claim = () =>
+    group([
+      txn(1, { amountCents: 6_000, date: '2026-09-01' }),
+      txn(2, { amountCents: 4_800, date: '2026-09-02' }),
+      txn(3, { amountCents: 2_000, type: 'refund', date: '2026-09-03' }),
+    ])
+
+  it('does not call the suggested amount short', () => {
+    // It is 20 € under the ticked lines on purpose. Warning about that told the user
+    // to untick lines that had in fact been paid.
+    renderSheet(claim())
+
+    expect(screen.queryByText(/Short of|More than/)).not.toBeInTheDocument()
+  })
+
+  it('still flags a payment that asks for the refund back as well', async () => {
+    renderSheet(claim())
+    const amount = screen.getByLabelText('Amount received')
+
+    await userEvent.clear(amount)
+    await userEvent.type(amount, '108,00')
+
+    expect(screen.getByText(/More than the 88,00 € owed for the ticked lines, by 20,00 €/)).toBeInTheDocument()
+  })
+})

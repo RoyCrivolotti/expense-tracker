@@ -2,7 +2,11 @@ import { useState } from 'react'
 import type { FlagGroup } from '../../domain/engine/flagGroups'
 import {
   buildReimbursementDraft,
+  creditedCents,
+  leftOwedCents,
+  paymentForSelection,
   selectedTotalCents,
+  settleIdsFor,
   type ReimbursementDraft,
 } from '../../domain/engine/reimbursementDraft'
 import {
@@ -62,32 +66,37 @@ function reportName(typed: string, fallback: string): string {
 }
 
 /**
- * Says so when the figure typed does not match the rows ticked.
+ * Says so when the figure typed does not match what the ticked rows are owed.
  *
  * Ticking is what settles a row — the amount is recorded but never reconciled
  * against it — so typing 900 while 1.000 of lines are ticked marks all of them
  * paid and quietly stops tracking the missing 100. Nothing said so before: the
  * sheet computed both numbers and never compared them.
  *
+ * Measured against what is owed, not the gross of the lines: a payment that
+ * closes a claim is expected to fall short of the lines by whatever refund is
+ * already on the flag, and warning about that would tell the user to untick
+ * lines that were in fact paid.
+ *
  * Its own component so the parent keeps its branches; that component sits on
  * the complexity ceiling of 12.
  */
 function AmountNote({
   cents,
-  selectedCents,
+  owedCents,
   format,
 }: {
   cents: number
-  selectedCents: number
+  owedCents: number
   format: MoneyFormat
 }) {
-  const difference = cents - selectedCents
-  if (difference === 0 || selectedCents === 0) return null
+  const difference = cents - owedCents
+  if (difference === 0 || owedCents === 0) return null
   // One interpolated string rather than interleaved nodes: React splits the
   // latter into separate text nodes, which puts the figures beyond any matcher
   // reading the sentence as a whole — screen readers included.
   const lead = difference < 0 ? 'Short of' : 'More than'
-  const gap = `${lead} the ${formatCents(selectedCents, format)} ticked, by ${formatCents(Math.abs(difference), format)}.`
+  const gap = `${lead} the ${formatCents(owedCents, format)} owed for the ticked lines, by ${formatCents(Math.abs(difference), format)}.`
   return (
     <p className={styles.mismatch} role="status">
       {`${gap} Ticked lines are settled either way — untick anything this payment did not cover.`}
@@ -134,18 +143,15 @@ export function RecordReimbursementSheet({ group, model, busy, error, onCancel, 
     if (next.has(id)) next.delete(id)
     else next.add(id)
     setSelected(next)
-    if (!amountEdited) setAmount(formatMoneyInput(selectedTotalCents(draft.candidates, next), format))
+    if (!amountEdited) setAmount(formatMoneyInput(paymentForSelection(draft, next), format))
   }
 
   const cents = Math.abs(parseMoneyToCents(amount, format))
   const selectedCents = selectedTotalCents(draft.candidates, selected)
-  // What this payment leaves behind, measured against the lines on screen rather
-  // than the flag's net total — the flag's total already nets any vendor refund,
-  // which is not a line anyone is reimbursing.
-  const notCovered = selectedTotalCents(
-    draft.candidates,
-    draft.candidates.filter((t) => !selected.has(t.id)).map((t) => t.id),
-  )
+  // What the Flagged card will show once this lands, so the two screens agree: the
+  // unticked lines less any refund already on the flag.
+  const notCovered = leftOwedCents(draft, selected)
+  const alreadyBack = creditedCents(draft)
 
   const record = () => {
     onRecord(
@@ -157,7 +163,7 @@ export function RecordReimbursementSheet({ group, model, busy, error, onCancel, 
         categoryId,
         amountCents: cents,
       },
-      [...selected],
+      settleIdsFor(draft, selected),
     )
   }
 
@@ -202,6 +208,11 @@ export function RecordReimbursementSheet({ group, model, busy, error, onCancel, 
           </span>
         ) : null}
       </p>
+      {alreadyBack > 0 ? (
+        <p className={styles.credit}>
+          {formatCents(alreadyBack, format)} already back on this flag comes off what is owed.
+        </p>
+      ) : null}
 
       <Field label={`Amount received (${format.symbol})`} as="div">
         <input
@@ -218,7 +229,7 @@ export function RecordReimbursementSheet({ group, model, busy, error, onCancel, 
         />
       </Field>
 
-      <AmountNote cents={cents} selectedCents={selectedCents} format={format} />
+      <AmountNote cents={cents} owedCents={paymentForSelection(draft, selected)} format={format} />
 
       <Field label="Report name" as="div">
         <input
