@@ -1,9 +1,10 @@
 import type { DeleteCategoryOptions, NewCategory } from '../data/dataSource'
 import type { ExpenseRepository } from '../ports/expenseRepository'
+import { ValidationError } from './validationError'
 
 export function validateCategoryName(name: string | undefined): string {
   const trimmed = name?.trim()
-  if (!trimmed) throw new Error('Category name is required')
+  if (!trimmed) throw new ValidationError('Category name is required')
   return trimmed
 }
 

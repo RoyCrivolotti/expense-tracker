@@ -1,9 +1,10 @@
 import type { DeleteAccountOptions } from '../data/dataSource'
 import type { ExpenseRepository } from '../ports/expenseRepository'
+import { ValidationError } from './validationError'
 
 export function validateAccountName(name: string | undefined): string {
   const trimmed = name?.trim()
-  if (!trimmed) throw new Error('Account name is required')
+  if (!trimmed) throw new ValidationError('Account name is required')
   return trimmed
 }
 

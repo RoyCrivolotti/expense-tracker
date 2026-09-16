@@ -2,6 +2,7 @@ import type { BulkTransactionPatch, NewTransaction } from '../data/dataSource'
 import { parseDeleteTransactionIds } from '../data/transactionIds'
 import type { ExpenseRepository } from '../ports/expenseRepository'
 import type { ExpenseSettings, TxnType } from '../types'
+import { ValidationError } from './validationError'
 
 const BULK_PATCH_KEYS = new Set<string>([
   'categoryId',
@@ -16,17 +17,17 @@ const BULK_PATCH_KEYS = new Set<string>([
 const VALID_TXN_TYPES = new Set<string>(['expense', 'income', 'investment', 'refund'])
 
 function requirePositiveInt(value: unknown, label: string): number {
-  if (!Number.isInteger(value) || (value as number) <= 0) throw new Error(`Invalid ${label}`)
+  if (!Number.isInteger(value) || (value as number) <= 0) throw new ValidationError(`Invalid ${label}`)
   return value as number
 }
 
 function requirePattern(value: unknown, pattern: RegExp, label: string): string {
-  if (typeof value !== 'string' || !pattern.test(value)) throw new Error(label)
+  if (typeof value !== 'string' || !pattern.test(value)) throw new ValidationError(label)
   return value
 }
 
 function requireString(value: unknown, label: string): string {
-  if (typeof value !== 'string') throw new Error(`${label} must be text`)
+  if (typeof value !== 'string') throw new ValidationError(`${label} must be text`)
   return value
 }
 
@@ -37,7 +38,7 @@ function requireString(value: unknown, label: string): string {
  */
 function requireAmountCents(value: unknown): number {
   if (!Number.isInteger(value) || (value as number) <= 0) {
-    throw new Error('amountCents must be a whole number of cents, greater than zero')
+    throw new ValidationError('amountCents must be a whole number of cents, greater than zero')
   }
   return value as number
 }
@@ -46,7 +47,7 @@ const FIELD_VALIDATORS: Record<string, (v: unknown, p: BulkTransactionPatch) => 
   categoryId: (v, p) => { p.categoryId = requirePositiveInt(v, 'categoryId') },
   accountId: (v, p) => { p.accountId = requirePositiveInt(v, 'accountId') },
   type: (v, p) => {
-    if (!VALID_TXN_TYPES.has(v as string)) throw new Error('Invalid transaction type')
+    if (!VALID_TXN_TYPES.has(v as string)) throw new ValidationError('Invalid transaction type')
     p.type = v as TxnType
   },
   date: (v, p) => { p.date = requirePattern(v, /^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD') },
@@ -58,22 +59,22 @@ const FIELD_VALIDATORS: Record<string, (v: unknown, p: BulkTransactionPatch) => 
 }
 
 export function validateBulkUpdatePatch(raw: unknown): BulkTransactionPatch {
-  if (raw == null || typeof raw !== 'object') throw new Error('patch is required')
+  if (raw == null || typeof raw !== 'object') throw new ValidationError('patch is required')
   const obj = raw as Record<string, unknown>
   for (const key of Object.keys(obj)) {
-    if (!BULK_PATCH_KEYS.has(key)) throw new Error(`Field "${key}" is not bulk-editable`)
+    if (!BULK_PATCH_KEYS.has(key)) throw new ValidationError(`Field "${key}" is not bulk-editable`)
   }
   const patch: BulkTransactionPatch = {}
   for (const key of Object.keys(obj)) {
     if (obj[key] !== undefined) FIELD_VALIDATORS[key]!(obj[key], patch)
   }
-  if (Object.keys(patch).length === 0) throw new Error('At least one field must be set')
+  if (Object.keys(patch).length === 0) throw new ValidationError('At least one field must be set')
   return patch
 }
 
 export function validateNewTransaction(input: NewTransaction): NewTransaction {
   if (!input.date || !input.budgetMonth || !input.accountId || !input.categoryId) {
-    throw new Error('date, budgetMonth, accountId and categoryId are required')
+    throw new ValidationError('date, budgetMonth, accountId and categoryId are required')
   }
   // The UI forms already enforce this for instant feedback, but this is the real
   // source of truth: any other caller (a future import path, a retry, a script)
@@ -83,7 +84,7 @@ export function validateNewTransaction(input: NewTransaction): NewTransaction {
 }
 
 export function validateBulkTransactions(raw: unknown): NewTransaction[] {
-  if (!Array.isArray(raw)) throw new Error('transactions array is required')
+  if (!Array.isArray(raw)) throw new ValidationError('transactions array is required')
   return raw.map((item) => validateNewTransaction(item as NewTransaction))
 }
 
@@ -169,12 +170,12 @@ const PATCH_FIELD_VALIDATORS: Record<
   accountId: (v, p) => { p.accountId = requirePositiveInt(v, 'accountId') },
   categoryId: (v, p) => { p.categoryId = requirePositiveInt(v, 'categoryId') },
   type: (v, p) => {
-    if (!VALID_TXN_TYPES.has(v as string)) throw new Error('Invalid transaction type')
+    if (!VALID_TXN_TYPES.has(v as string)) throw new ValidationError('Invalid transaction type')
     p.type = v
   },
   amountCents: (v, p) => { p.amountCents = requireAmountCents(v) },
   cancelled: (v, p) => {
-    if (typeof v !== 'boolean') throw new Error('cancelled must be true or false')
+    if (typeof v !== 'boolean') throw new ValidationError('cancelled must be true or false')
     p.cancelled = v
   },
   // Absent leaves the note alone; null and '' both clear it.
@@ -187,10 +188,10 @@ const PATCH_FIELD_VALIDATORS: Record<
 }
 
 export function validateTransactionPatch(raw: unknown): Partial<NewTransaction> {
-  if (raw == null || typeof raw !== 'object') throw new Error('patch is required')
+  if (raw == null || typeof raw !== 'object') throw new ValidationError('patch is required')
   const obj = raw as Record<string, unknown>
   for (const key of Object.keys(obj)) {
-    if (!PATCH_KEYS.has(key)) throw new Error(`Field "${key}" is not patchable`)
+    if (!PATCH_KEYS.has(key)) throw new ValidationError(`Field "${key}" is not patchable`)
   }
   const patch: Record<string, unknown> = {}
   for (const key of Object.keys(obj)) {
