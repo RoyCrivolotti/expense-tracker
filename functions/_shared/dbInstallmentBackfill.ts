@@ -13,7 +13,7 @@
 import type { Env } from './env'
 import type { InstallmentPlan, StoredTransaction } from '../domain/types'
 import { nextInstallmentSuggestion, type InstallmentSuggestion } from '../domain/engine/installments'
-import { monthsBetweenBudget } from '../domain/engine/dates'
+import { defaultBudgetMonth, monthsBetweenBudget, DEFAULT_BUDGET_ROLLOVER_DAY } from '../domain/engine/dates'
 import { maybeCompletePlan } from './dbWrite'
 import { toInstallmentPlan, toStoredTxn, type InstallmentPlanRow, type TxnRow } from './rows'
 
@@ -108,11 +108,24 @@ export async function backfillInstallments(env: Env, owner: string): Promise<voi
     txnsByPlan.set(stored.planId, list)
   }
 
-  // Server clock (UTC), not the user's local one — right at a month boundary
+  // Budget month, not calendar month — an owner with a rollover day past the
+  // 1st (settings.budgetRolloverDay) can already be in next month's budget
+  // while the calendar still reads this month. Using the raw calendar month
+  // here would leave a plan's next installment stuck until the calendar
+  // catches up, days or weeks after the rest of the app (and a manual "+")
+  // would already treat it as due.
+  const settingsRow = await env.DB.prepare(
+    'SELECT budget_rollover_day FROM settings WHERE owner = ?',
+  )
+    .bind(owner)
+    .first<{ budget_rollover_day: number | null }>()
+  const rolloverDay = settingsRow?.budget_rollover_day ?? DEFAULT_BUDGET_ROLLOVER_DAY
+  // Server clock (UTC), not the user's local one — right at a day boundary
   // this can disagree with the user's calendar by up to a day. Matches existing
   // ad hoc `new Date()` usage elsewhere in functions/ (backupService.ts,
   // accessService.ts); not worth a shared clock for a personal expense tracker.
-  const currentBudgetMonth = new Date().toISOString().slice(0, 7)
+  const todayIso = new Date().toISOString().slice(0, 10)
+  const currentBudgetMonth = defaultBudgetMonth(todayIso, rolloverDay)
 
   for (const plan of plans) {
     try {

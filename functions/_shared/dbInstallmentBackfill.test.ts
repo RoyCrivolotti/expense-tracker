@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { backfillInstallments } from './dbInstallmentBackfill'
 import type { Env } from './env'
 import type { InstallmentPlanRow, TxnRow } from './rows'
-import { shiftBudgetMonth } from '../domain/engine/dates'
+import { defaultBudgetMonth, shiftBudgetMonth } from '../domain/engine/dates'
 
 function currentBudgetMonth(): string {
   return new Date().toISOString().slice(0, 7)
@@ -58,6 +58,8 @@ interface MockState {
   conflictOn?: { planId: number; installmentIndex: number }
   /** Simulate the insert throwing for this planId — anything, any installment. */
   throwForPlanId?: number
+  /** settings.budget_rollover_day for the owner; omitted simulates no settings row (falls back to 1). */
+  rolloverDay?: number
 }
 
 function envForBackfill(state: MockState): Env {
@@ -125,6 +127,12 @@ function envForBackfill(state: MockState): Env {
           if (sql.startsWith('UPDATE installment_plans')) {
             return { run: async () => ({ meta: { changes: 1 } }) }
           }
+          if (sql.includes('budget_rollover_day')) {
+            return {
+              first: async () =>
+                state.rolloverDay != null ? { budget_rollover_day: state.rolloverDay } : null,
+            }
+          }
           return { first: async () => null, all: async () => ({ results: [] }) }
         },
       }),
@@ -187,6 +195,35 @@ describe('backfillInstallments', () => {
       conflictOn: { planId: 1, installmentIndex: 1 },
     }
     await expect(backfillInstallments(envForBackfill(state), 'a@b.com')).resolves.toBeUndefined()
+    expect(state.insertedRows).toHaveLength(0)
+  })
+
+  it('uses the owner\'s rollover-day budget month, not the raw calendar month, to decide what is due', async () => {
+    // rolloverDay=2 shifts every day but the 1st of the month into next month's
+    // budget — so whenever today isn't the 1st, this constructs exactly the case
+    // the fix targets: a month the rollover-aware budget calendar has already
+    // reached but the raw calendar hasn't. Anchoring the plan there means the old,
+    // calendar-only cutoff would wrongly leave this installment un-created.
+    const rolloverDay = 2
+    const rolloverBudgetMonth = defaultBudgetMonth(new Date().toISOString().slice(0, 10), rolloverDay)
+    const plan = planRow({ id: 1, total_count: 3, anchor_budget_month: rolloverBudgetMonth })
+    const state: MockState = {
+      planRows: [plan],
+      txnRows: [],
+      insertedRows: [],
+      prepared: [],
+      nextId: 1000,
+      rolloverDay,
+    }
+    await backfillInstallments(envForBackfill(state), 'a@b.com')
+    expect(state.insertedRows).toHaveLength(1)
+    expect(state.insertedRows[0]!.budget_month).toBe(rolloverBudgetMonth)
+  })
+
+  it('falls back to the raw calendar month when the owner has no settings row', async () => {
+    const plan = planRow({ id: 1, total_count: 3, anchor_budget_month: shiftBudgetMonth(currentBudgetMonth(), 1) })
+    const state: MockState = { planRows: [plan], txnRows: [], insertedRows: [], prepared: [], nextId: 1000 }
+    await backfillInstallments(envForBackfill(state), 'a@b.com')
     expect(state.insertedRows).toHaveLength(0)
   })
 
