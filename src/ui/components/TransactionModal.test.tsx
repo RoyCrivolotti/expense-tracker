@@ -146,6 +146,28 @@ describe('TransactionModal — batch mode toggle', () => {
   })
 })
 
+describe('TransactionModal — dangling category/account reference', () => {
+  it('keeps a fully-deleted categoryId/accountId selectable via a placeholder, wired through the full modal', () => {
+    const editing: Transaction = {
+      id: 5,
+      date: '2026-07-05',
+      budgetMonth: '2026-07',
+      description: 'Legacy purchase',
+      accountId: 99,
+      categoryId: 99,
+      type: 'expense',
+      amountCents: 1000,
+      status: 'posted',
+      cancelled: false,
+    }
+    const { container } = renderModal({ editing })
+    const form = singleForm(container)
+    expect(form.getByLabelText<HTMLSelectElement>('Category').value).toBe('99')
+    expect(form.getByLabelText<HTMLSelectElement>('Account').value).toBe('99')
+    expect(form.getAllByText('Deleted (unavailable)')).toHaveLength(2)
+  })
+})
+
 describe('TransactionModal — closing with unsaved input', () => {
   it('closes without a confirm when nothing has been entered', async () => {
     const onClose = vi.fn()

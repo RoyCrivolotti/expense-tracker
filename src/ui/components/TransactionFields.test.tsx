@@ -149,6 +149,16 @@ describe('Fields category/account pickers', () => {
     expect(screen.queryByText('This category is inactive')).toBeNull()
   })
 
+  it('shows an inactive-account warning when the selected account is not active', () => {
+    renderFields(baseForm({ accountId: 2 }), modelWith())
+    expect(screen.getByText('This account is inactive')).toBeTruthy()
+  })
+
+  it('does not show an inactive-account warning when the selected account is active', () => {
+    renderFields(baseForm({ accountId: 1 }), modelWith())
+    expect(screen.queryByText('This account is inactive')).toBeNull()
+  })
+
   it('calls set when the category select changes', () => {
     const set = vi.fn()
     render(
@@ -162,6 +172,21 @@ describe('Fields category/account pickers', () => {
     )
     fireEvent.change(screen.getByLabelText('Category'), { target: { value: '1' } })
     expect(set).toHaveBeenCalledWith('categoryId', 1)
+  })
+
+  it('calls set when the account select changes', () => {
+    const set = vi.fn()
+    render(
+      <Fields
+        form={baseForm({ accountId: 2 })}
+        set={set}
+        model={modelWith()}
+        editing={null}
+        onAcceptSuggestion={vi.fn()}
+      />,
+    )
+    fireEvent.change(screen.getByLabelText('Account'), { target: { value: '1' } })
+    expect(set).toHaveBeenCalledWith('accountId', 1)
   })
 
   it('does not offer an inactive category/account that is not the currently selected one, even while editing', () => {

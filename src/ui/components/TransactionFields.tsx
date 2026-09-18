@@ -84,6 +84,8 @@ function CategoryAccountRow({
   const accounts = selectableOptions(model.dataset.accounts, form.accountId)
   const selectedCategory = model.dataset.categories.find((c) => c.id === form.categoryId)
   const categoryInactive = selectedCategory != null && !selectedCategory.active
+  const selectedAccount = model.dataset.accounts.find((a) => a.id === form.accountId)
+  const accountInactive = selectedAccount != null && !selectedAccount.active
   return (
     <div className={styles.row}>
       <div className={styles.fieldStack}>
@@ -100,15 +102,20 @@ function CategoryAccountRow({
           <p className={styles.inactiveWarning}>This category is inactive</p>
         ) : null}
       </div>
-      <Field label="Account">
-        <select value={form.accountId} onChange={(e) => set('accountId', Number(e.target.value))}>
-          {accounts.map((a) => (
-            <option key={a.id} value={a.id}>
-              {optionLabel(a)}
-            </option>
-          ))}
-        </select>
-      </Field>
+      <div className={styles.fieldStack}>
+        <Field label="Account">
+          <select value={form.accountId} onChange={(e) => set('accountId', Number(e.target.value))}>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {optionLabel(a)}
+              </option>
+            ))}
+          </select>
+        </Field>
+        {accountInactive ? (
+          <p className={styles.inactiveWarning}>This account is inactive</p>
+        ) : null}
+      </div>
     </div>
   )
 }

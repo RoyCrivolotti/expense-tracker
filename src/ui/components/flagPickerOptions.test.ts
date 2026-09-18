@@ -16,6 +16,11 @@ describe('selectableFlags', () => {
   it('keeps an archived flag that is the current value, so the control can show it', () => {
     expect(selectableFlags([active, archived], 2)).toEqual([active, archived])
   })
+
+  it('adds a placeholder for a value that matches no flag at all (fully deleted, not just archived)', () => {
+    const result = selectableFlags([active], 99)
+    expect(result[0]).toMatchObject({ id: 99, name: 'Deleted (unavailable)' })
+  })
 })
 
 describe('transactionCountLabel', () => {
