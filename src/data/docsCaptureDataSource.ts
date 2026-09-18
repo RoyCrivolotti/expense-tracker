@@ -239,8 +239,17 @@ export const docsCaptureDataSource: ExpenseDataSource = {
   createTransactions(inputs) {
     return Promise.resolve(inputs.map((input) => stubTxn(input)))
   },
+  // stubTxn always mints a fresh id, which is right for a create but wrong for a patch:
+  // the caller replaces the row whose id matches what comes back (see
+  // patchAfterTransactionUpdate), and a stub's new id matches nothing, so the edit
+  // silently no-ops on screen. Merged onto the real row instead, same as the bulk path.
   updateTransaction(id, patch) {
-    return Promise.resolve(stubTxn({ ...patch, id } as NewTransaction & { id: number }))
+    const existing = loaded.find((t) => t.id === id)
+    const merged = existing
+      ? ({ ...existing, ...patch } as Transaction)
+      : stubTxn({ ...patch, id } as NewTransaction & { id: number })
+    loaded = loaded.map((t) => (t.id === id ? merged : t))
+    return Promise.resolve(merged)
   },
   // Was missing entirely, so anything routed through the bulk path — the
   // bulk-edit sheet, and recording a reimbursement — threw
