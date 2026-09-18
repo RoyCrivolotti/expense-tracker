@@ -2,6 +2,7 @@ import type { ExpenseDataset, WealthCheckin } from '../domain/types'
 import { deriveTransactions } from '../domain/engine/status'
 import { defaultExpenseSettings, defaultGoalInputs } from '../domain/engine/defaults'
 import type { Env } from './env'
+import { backfillInstallments } from './dbInstallmentBackfill'
 import {
   toAccount,
   toCashActual,
@@ -40,6 +41,9 @@ async function rows<T>(db: D1Database, sql: string, owner: string): Promise<T[]>
 
 /** Read every table for one owner and assemble a dataset with derived statuses. */
 export async function loadDataset(env: Env, owner: string): Promise<ExpenseDataset> {
+  await backfillInstallments(env, owner).catch((err) => {
+    console.error('installment backfill failed', err)
+  })
   const [
     categories,
     accounts,

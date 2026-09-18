@@ -91,7 +91,7 @@ async function resolvePlanLink(
  * re-link, and an un-cancel alike (an update can flip `cancelled` back to false
  * with no `planId` in the patch at all).
  */
-async function maybeCompletePlan(env: Env, owner: string, planId: number | null): Promise<void> {
+export async function maybeCompletePlan(env: Env, owner: string, planId: number | null): Promise<void> {
   if (planId == null) return
   const plan = await env.DB.prepare(
     'SELECT total_count AS t, active AS a FROM installment_plans WHERE id = ? AND owner = ?',
