@@ -149,6 +149,16 @@ describe('Fields category/account pickers', () => {
     expect(screen.queryByText('This category is inactive')).toBeNull()
   })
 
+  it('shows an inactive-account warning when the selected account is not active', () => {
+    renderFields(baseForm({ accountId: 2 }), modelWith())
+    expect(screen.getByText('This account is inactive')).toBeTruthy()
+  })
+
+  it('does not show an inactive-account warning when the selected account is active', () => {
+    renderFields(baseForm({ accountId: 1 }), modelWith())
+    expect(screen.queryByText('This account is inactive')).toBeNull()
+  })
+
   it('calls set when the category select changes', () => {
     const set = vi.fn()
     render(
