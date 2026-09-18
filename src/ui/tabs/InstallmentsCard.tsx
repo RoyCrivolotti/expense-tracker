@@ -14,7 +14,7 @@ import { Card, Pill, SectionTitle } from '../components/primitives'
 import { CategoryIcon } from '../components/CategoryIcon'
 import { InstallmentPlansModal } from '../definitions/InstallmentPlansModal'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
-import { shortDayLabel } from '../format'
+import { shortDayLabel, STATUS_LABEL } from '../format'
 import styles from './UpcomingCard.module.css'
 
 interface Props {
@@ -89,6 +89,9 @@ export function InstallmentsCard({ model, actions, month }: Props) {
                 </div>
                 <div className={styles.actions}>
                   <Pill tone="success">Paid</Pill>
+                  {transaction.status === 'forecast' ? (
+                    <Pill tone="warning">{STATUS_LABEL.forecast}</Pill>
+                  ) : null}
                 </div>
               </button>
             )

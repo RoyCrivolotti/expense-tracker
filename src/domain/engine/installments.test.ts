@@ -4,10 +4,11 @@ import {
   budgetMonthForIndex,
   expectedIndexForMonth,
   finalBudgetMonth,
+  forecastPaidCount,
   nextInstallmentSuggestion,
   planProgress,
 } from './installments'
-import type { InstallmentPlan, StoredTransaction } from '../types'
+import type { InstallmentPlan, StoredTransaction, Transaction } from '../types'
 
 const plan: InstallmentPlan = {
   id: 1,
@@ -77,6 +78,30 @@ describe('planProgress', () => {
     const p = planProgress(plan, [linked(24)])
     expect(p.complete).toBe(true)
     expect(p.remaining).toBe(0)
+  })
+})
+
+function linkedTxn(
+  index: number,
+  status: Transaction['status'],
+  overrides: Partial<StoredTransaction> = {},
+): Transaction {
+  return { ...linked(index, overrides), status }
+}
+
+describe('forecastPaidCount', () => {
+  it('returns 0 when the plan has no linked transactions', () => {
+    expect(forecastPaidCount(plan, [])).toBe(0)
+  })
+
+  it('counts only linked, non-cancelled, forecast transactions', () => {
+    const txns = [
+      linkedTxn(14, 'forecast'),
+      linkedTxn(15, 'posted'),
+      linkedTxn(16, 'forecast', { cancelled: true }),
+      linkedTxn(17, 'forecast', { planId: 99 }),
+    ]
+    expect(forecastPaidCount(plan, txns)).toBe(1)
   })
 })
 

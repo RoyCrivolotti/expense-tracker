@@ -404,6 +404,150 @@ function envForBulkInsert(opts: {
   } as unknown as Env
 }
 
+/**
+ * Enough of D1 for maybeCompletePlan's own queries, layered on top of the
+ * ordinary account/category/plan-link plumbing every insert/update already
+ * exercises. Routed by SQL substring like the other mocks in this file;
+ * `completionMaxIndex` is maybeCompletePlan's own MAX(installment_index)
+ * (the one scoped `AND cancelled = 0`), distinct from resolvePlanLink's own
+ * next-index MAX query (`existingMaxIndex`).
+ */
+function envForPlanCompletion(opts: {
+  planActive?: boolean
+  planTotalCount?: number
+  existingMaxIndex?: number | null
+  completionMaxIndex?: number | null
+  returnedPlanId?: number | null
+  returnedInstallmentIndex?: number | null
+  prepared?: string[]
+}): Env {
+  const {
+    planActive = true,
+    planTotalCount = 3,
+    existingMaxIndex = null,
+    completionMaxIndex = null,
+    returnedPlanId = 1,
+    returnedInstallmentIndex = null,
+    prepared,
+  } = opts
+  const txnRow = {
+    id: 5,
+    owner: 'a@b.com',
+    date: '2026-01-01',
+    budget_month: '2026-01',
+    description: 'Test',
+    account_id: 1,
+    category_id: 2,
+    type: 'expense',
+    amount_cents: -1000,
+    cancelled: 0,
+    notes: null,
+    plan_id: returnedPlanId,
+    installment_index: returnedInstallmentIndex,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  }
+  return {
+    DB: {
+      prepare: (sql: string) => ({
+        bind: () => {
+          prepared?.push(sql)
+          if (sql.includes('accounts') && sql.includes('SELECT 1')) {
+            return { first: vi.fn().mockResolvedValue({ ok: 1 }) }
+          }
+          if (sql.includes('categories') && sql.includes('SELECT 1')) {
+            return { first: vi.fn().mockResolvedValue({ ok: 1 }) }
+          }
+          if (sql.includes('installment_plans') && sql.includes('SELECT 1')) {
+            return { first: vi.fn().mockResolvedValue({ ok: 1 }) } // assertOwnedPlan
+          }
+          if (sql.includes('start_installment_index')) {
+            return { first: vi.fn().mockResolvedValue({ s: 1 }) }
+          }
+          if (sql.includes('MAX(installment_index)') && sql.includes('cancelled = 0')) {
+            return { first: vi.fn().mockResolvedValue({ m: completionMaxIndex }) }
+          }
+          if (sql.includes('MAX(installment_index)')) {
+            return { first: vi.fn().mockResolvedValue({ m: existingMaxIndex }) }
+          }
+          if (sql.includes('FROM transactions') && sql.includes('installment_index = ?')) {
+            return { first: vi.fn().mockResolvedValue(null) } // no duplicate
+          }
+          if (sql.includes('total_count')) {
+            return {
+              first: vi.fn().mockResolvedValue({ t: planTotalCount, a: planActive ? 1 : 0 }),
+            }
+          }
+          if (sql.startsWith('INSERT INTO transactions') || sql.startsWith('UPDATE transactions')) {
+            return {
+              first: vi.fn().mockResolvedValue(txnRow),
+              run: vi.fn().mockResolvedValue({ meta: { changes: 1 } }),
+            }
+          }
+          if (sql.startsWith('UPDATE installment_plans')) {
+            return { run: vi.fn().mockResolvedValue({ meta: { changes: 1 } }) }
+          }
+          if (sql.includes('SELECT * FROM accounts') || sql.includes('account_statements')) {
+            return { first: vi.fn().mockResolvedValue(null) }
+          }
+          return { first: vi.fn().mockResolvedValue(null) }
+        },
+      }),
+    },
+  } as unknown as Env
+}
+
+describe('installment plan auto-completion', () => {
+  it('insertTransaction flips the plan inactive when the write reaches the final installment', async () => {
+    const prepared: string[] = []
+    const env = envForPlanCompletion({ planTotalCount: 3, completionMaxIndex: 3, prepared })
+    await insertTransaction(env, 'a@b.com', { ...baseTxn, planId: 1, installmentIndex: 3 })
+    expect(prepared.some((sql) => sql.startsWith('UPDATE installment_plans'))).toBe(true)
+  })
+
+  it('leaves the plan alone for a non-final installment', async () => {
+    const prepared: string[] = []
+    const env = envForPlanCompletion({ planTotalCount: 3, completionMaxIndex: 2, prepared })
+    await insertTransaction(env, 'a@b.com', { ...baseTxn, planId: 1, installmentIndex: 2 })
+    expect(prepared.some((sql) => sql.startsWith('UPDATE installment_plans'))).toBe(false)
+  })
+
+  it('skips the completion check entirely once the plan is already inactive', async () => {
+    const prepared: string[] = []
+    const env = envForPlanCompletion({ planTotalCount: 3, planActive: false, prepared })
+    await insertTransaction(env, 'a@b.com', { ...baseTxn, planId: 1, installmentIndex: 3 })
+    expect(
+      prepared.some((sql) => sql.includes('MAX(installment_index)') && sql.includes('cancelled = 0')),
+    ).toBe(false)
+    expect(prepared.some((sql) => sql.startsWith('UPDATE installment_plans'))).toBe(false)
+  })
+
+  it('updateTransaction flips the plan on an un-cancel that lands on the final installment', async () => {
+    const prepared: string[] = []
+    const env = envForPlanCompletion({
+      planTotalCount: 3,
+      completionMaxIndex: 3,
+      returnedPlanId: 1,
+      returnedInstallmentIndex: 3,
+      prepared,
+    })
+    await updateTransaction(env, 'a@b.com', 5, { cancelled: false })
+    expect(prepared.some((sql) => sql.startsWith('UPDATE installment_plans'))).toBe(true)
+  })
+
+  it('does not query installment_plans for a patch touching neither cancelled nor planId', async () => {
+    const prepared: string[] = []
+    const env = envForPlanCompletion({
+      planTotalCount: 3,
+      returnedPlanId: 1,
+      returnedInstallmentIndex: 3,
+      prepared,
+    })
+    await updateTransaction(env, 'a@b.com', 5, { description: 'Renamed' })
+    expect(prepared.some((sql) => sql.includes('installment_plans'))).toBe(false)
+  })
+})
+
 describe('bulkInsertTransactions', () => {
   const row = (accountId: number, categoryId: number) => ({
     date: '2026-01-01',
