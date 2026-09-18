@@ -31,7 +31,6 @@ export function DatePickerPopover({ value, triggerRef, min, max, onSelect, onClo
   const [y, m] = value ? value.split('-').map(Number) as [number, number] : [new Date().getFullYear(), new Date().getMonth() + 1]
   const [viewYear, setViewYear] = useState(y)
   const [viewMonth, setViewMonth] = useState(m)
-  const [selected, setSelected] = useState(value)
 
   const popoverRef = useRef<HTMLDivElement>(null)
   const pos = usePopoverPosition(triggerRef, popoverRef)
@@ -58,24 +57,13 @@ export function DatePickerPopover({ value, triggerRef, min, max, onSelect, onClo
     // Guarded here too: the disabled attribute stops a click, not a keyboard path
     // that reaches this directly.
     if (isDateOutOfRange(iso, min, max)) return
-    setSelected(iso)
-    if (cell.outside) {
-      setViewYear(cell.year)
-      setViewMonth(cell.month)
-    }
+    onSelect(iso)
+    onClose()
   }
 
-  const confirm = useCallback(() => {
-    if (selected) onSelect(selected)
-    onClose()
-  }, [selected, onSelect, onClose])
-
   const reset = () => {
-    const t = todayIso()
-    setSelected(t)
-    const [ry, rm] = t.split('-').map(Number) as [number, number]
-    setViewYear(ry)
-    setViewMonth(rm)
+    onSelect(todayIso())
+    onClose()
   }
 
   useFocusTrap(popoverRef, onClose)
@@ -83,8 +71,6 @@ export function DatePickerPopover({ value, triggerRef, min, max, onSelect, onClo
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Enter') { e.preventDefault(); confirm(); return }
-
       if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return
       const container = popoverRef.current
       if (!container) return
@@ -105,7 +91,7 @@ export function DatePickerPopover({ value, triggerRef, min, max, onSelect, onClo
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [confirm])
+  }, [])
 
   return createPortal(
     <div
@@ -146,7 +132,7 @@ export function DatePickerPopover({ value, triggerRef, min, max, onSelect, onClo
         {grid.map((row, ri) =>
           row.map((cell) => {
             const iso = dayCellToIso(cell)
-            const isSelected = iso === selected
+            const isSelected = iso === value
             const isToday = iso === today
             const outOfRange = isDateOutOfRange(iso, min, max)
             const cls = [
@@ -176,9 +162,6 @@ export function DatePickerPopover({ value, triggerRef, min, max, onSelect, onClo
       <div className={styles.footer}>
         <button type="button" className={styles.resetBtn} onClick={reset}>
           Reset
-        </button>
-        <button type="button" className={styles.confirmBtn} onClick={confirm} aria-label="Confirm date">
-          ✓
         </button>
       </div>
     </div>,
