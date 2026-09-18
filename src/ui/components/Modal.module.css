@@ -70,7 +70,10 @@
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: 1.25rem 1.25rem 0 0;
-  padding: 1rem 1.1rem calc(1.1rem + env(safe-area-inset-bottom, 0));
+  /* No padding-top here — the sticky header wrapper carries it so the gap
+     above the handle scrolls with the header as a unit rather than staying
+     at the scroll boundary and looking like dead space. */
+  padding: 0 1.1rem calc(1.1rem + env(safe-area-inset-bottom, 0));
   animation: slide-up 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
   /* Vertical panning only: the sheet scrolls, and useSwipeDismiss reads the same
      axis to drag it away once that scroll is already at the top. */
@@ -122,6 +125,21 @@
   to {
     opacity: 0;
   }
+}
+
+/*
+ * Keeps the drag handle and the title/close header visible even when the sheet
+ * body is long enough to scroll. z-index: 1 is scoped to the sheet's own
+ * stacking context (created by overflow-y: auto) so it never leaks outward.
+ * padding-top carries the gap that used to live on .sheet, so it stays with
+ * the header rather than staying fixed at the scroll boundary.
+ */
+.stickyTop {
+  position: sticky;
+  top: 0;
+  padding-top: 1rem;
+  background: var(--color-bg);
+  z-index: 1;
 }
 
 .handle {

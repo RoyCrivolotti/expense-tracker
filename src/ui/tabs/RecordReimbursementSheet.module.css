@@ -10,6 +10,9 @@
   list-style: none;
   max-height: 16rem;
   overflow-y: auto;
+  /* Prevents over-scroll from chaining up to the outer sheet scroll and
+     inadvertently hiding the sticky header. */
+  overscroll-behavior: contain;
   border: 1px solid var(--color-border);
   border-radius: 0.7rem;
 }

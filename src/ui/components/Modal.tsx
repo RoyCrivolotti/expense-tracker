@@ -105,28 +105,30 @@ export function Modal({
           aria-label={title}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className={styles.handle} aria-hidden {...sheetGrabProps} />
-          <header className={styles.header} {...sheetGrabProps}>
-            {onBack && (
-              <button type="button" onClick={onBack} aria-label="Back" className={`${styles.back} tapActive`}>
-                <BackIcon />
+          <div className={styles.stickyTop}>
+            <div className={styles.handle} aria-hidden {...sheetGrabProps} />
+            <header className={styles.header} {...sheetGrabProps}>
+              {onBack && (
+                <button type="button" onClick={onBack} aria-label="Back" className={`${styles.back} tapActive`}>
+                  <BackIcon />
+                </button>
+              )}
+              <div className={styles.titleBlock}>
+                <h2 ref={headingRef} tabIndex={-1}>
+                  {title}
+                </h2>
+                {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
+              </div>
+              <button
+                type="button"
+                onClick={() => requestClose()}
+                aria-label="Close"
+                className={`${styles.close} tapActive`}
+              >
+                <CloseIcon />
               </button>
-            )}
-            <div className={styles.titleBlock}>
-              <h2 ref={headingRef} tabIndex={-1}>
-                {title}
-              </h2>
-              {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
-            </div>
-            <button
-              type="button"
-              onClick={() => requestClose()}
-              aria-label="Close"
-              className={`${styles.close} tapActive`}
-            >
-              <CloseIcon />
-            </button>
-          </header>
+            </header>
+          </div>
           <div className={styles.body}>{children}</div>
         </div>
       </div>
