@@ -123,10 +123,10 @@
   font-weight: 700;
 }
 
-/* Footer: Reset / Confirm */
+/* Footer: Reset */
 .footer {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   margin-top: 0.75rem;
 }
@@ -143,22 +143,6 @@
 }
 .resetBtn:hover {
   background: var(--color-border);
-}
-.confirmBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  border: 0;
-  border-radius: 50%;
-  background: var(--color-accent);
-  color: var(--color-accent-contrast);
-  font-size: 1.2rem;
-  cursor: pointer;
-}
-.confirmBtn:hover {
-  opacity: 0.85;
 }
 
 /* Month grid (4×3) */

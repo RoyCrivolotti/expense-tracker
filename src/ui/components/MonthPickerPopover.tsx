@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { useDismissOnOutsidePointer } from '../charts/useDismissOnOutsidePointer'
@@ -28,8 +28,6 @@ export function MonthPickerPopover({ value, triggerRef, onSelect, onClose }: Pro
     : [new Date().getFullYear(), new Date().getMonth() + 1]
 
   const [viewYear, setViewYear] = useState(valYear)
-  const [selectedYear, setSelectedYear] = useState(valYear)
-  const [selectedMonth, setSelectedMonth] = useState(valMonth)
 
   const popoverRef = useRef<HTMLDivElement>(null)
   const pos = usePopoverPosition(triggerRef, popoverRef)
@@ -40,32 +38,17 @@ export function MonthPickerPopover({ value, triggerRef, onSelect, onClose }: Pro
   const nextYear = useCallback(() => setViewYear((y) => y + 1), [])
 
   const selectMonth = (m: number) => {
-    setSelectedYear(viewYear)
-    setSelectedMonth(m)
+    onSelect(`${viewYear}-${String(m).padStart(2, '0')}`)
+    onClose()
   }
 
-  const confirm = useCallback(() => {
-    const ym = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`
-    onSelect(ym)
-    onClose()
-  }, [selectedYear, selectedMonth, onSelect, onClose])
-
   const reset = () => {
-    setViewYear(thisY)
-    setSelectedYear(thisY)
-    setSelectedMonth(thisM)
+    onSelect(`${thisY}-${String(thisM).padStart(2, '0')}`)
+    onClose()
   }
 
   useFocusTrap(popoverRef, onClose)
   useDismissOnOutsidePointer(popoverRef, true, onClose, triggerRef)
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Enter') { e.preventDefault(); confirm() }
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [confirm])
 
   return createPortal(
     <div
@@ -99,7 +82,7 @@ export function MonthPickerPopover({ value, triggerRef, onSelect, onClose }: Pro
       <div className={styles.monthGrid}>
         {MONTHS.map((label, i) => {
           const m = i + 1
-          const isSelected = viewYear === selectedYear && m === selectedMonth
+          const isSelected = viewYear === valYear && m === valMonth
           const isCurrent = viewYear === thisY && m === thisM
           const cls = [
             styles.monthBtn,
@@ -124,9 +107,6 @@ export function MonthPickerPopover({ value, triggerRef, onSelect, onClose }: Pro
       <div className={styles.footer}>
         <button type="button" className={styles.resetBtn} onClick={reset}>
           Reset
-        </button>
-        <button type="button" className={styles.confirmBtn} onClick={confirm} aria-label="Confirm month">
-          ✓
         </button>
       </div>
     </div>,
