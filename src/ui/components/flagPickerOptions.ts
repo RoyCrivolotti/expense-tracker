@@ -7,9 +7,24 @@ import type { Flag } from '../../types'
  * the category/account pickers follow: archiving stops you *choosing* something
  * new, it never breaks the record you are already editing by making its own
  * value unselectable.
+ *
+ * If `value` matches no flag at all — not just archived, but fully gone (legacy
+ * data, or a race with another tab's delete) — a synthetic placeholder is added
+ * so the trigger and popover still have something to show instead of silently
+ * falling back to "No flag".
  */
 export function selectableFlags(flags: Flag[], value: number | null): Flag[] {
-  return flags.filter((f) => f.active || f.id === value)
+  const filtered = flags.filter((f) => f.active || f.id === value)
+  if (value == null || flags.some((f) => f.id === value)) return filtered
+  const placeholder: Flag = {
+    id: value,
+    name: 'Deleted (unavailable)',
+    color: '#9ca3af',
+    reimbursable: false,
+    sortOrder: -1,
+    active: true,
+  }
+  return [placeholder, ...filtered]
 }
 
 /** "3 transactions" / "1 transaction" — used in several flag messages. */
