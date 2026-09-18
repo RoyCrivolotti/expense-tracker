@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Transaction } from '../../types'
 import type { NewTransaction } from '../../data/dataSource'
 import { parseMoneyToCents } from '../../engine/money'
@@ -20,6 +20,7 @@ import {
   type InstallmentDraft,
   type InstallmentIntent,
 } from './installmentIntent'
+import { CardPaymentIcon } from '../icons'
 import styles from './TransactionForm.module.css'
 
 interface FormProps {
@@ -90,6 +91,18 @@ function initialDraft(
   return { mode: 'none', totalCount: '', installmentIndex: '', planId: null, splitTotal: false }
 }
 
+/**
+ * Whether the installment link has anything to say ("New plan - payment 2/12",
+ * "Kitchen renovation - payment 5/12") versus the default "Not part of a
+ * plan" — which needs no row of its own and lives as a chip next to "Add
+ * receipt" / "Add note" instead. A payment plan's own description can run
+ * long, so once there's real content it gets a full-width row to wrap in
+ * rather than clipping inside a chip.
+ */
+function hasInstallmentLink(draft: InstallmentDraft, editing: Transaction | null): boolean {
+  return draft.mode !== 'none' || editing?.planId != null
+}
+
 /** Label for the installment toggle reflecting the pending draft, then current link. */
 function linkLabel(draft: InstallmentDraft, editing: Transaction | null, model: ExpenseModel): string {
   if (draft.mode === 'new') {
@@ -109,6 +122,46 @@ function linkLabel(draft: InstallmentDraft, editing: Transaction | null, model: 
       : 'Part of a plan'
   }
   return 'Not part of a plan'
+}
+
+/**
+ * Splits the installment toggle into its two mutually-exclusive renderings —
+ * a compact chip for the chip row, or the full-width bar for when there's a
+ * label worth wrapping — so the branch on `hasInstallmentLink` lives here
+ * rather than adding another one to TransactionForm's own complexity.
+ */
+function installmentControl({
+  draft,
+  editing,
+  model,
+  onOpen,
+}: {
+  draft: InstallmentDraft
+  editing: Transaction | null
+  model: ExpenseModel
+  onOpen: () => void
+}): { chip: ReactNode; bar: ReactNode } {
+  if (!hasInstallmentLink(draft, editing)) {
+    return {
+      chip: (
+        <button type="button" className={styles.chip} onClick={onOpen}>
+          <span className={styles.chipIcon} aria-hidden>
+            <CardPaymentIcon />
+          </span>
+          No plan
+        </button>
+      ),
+      bar: undefined,
+    }
+  }
+  return {
+    chip: undefined,
+    bar: (
+      <button type="button" className={styles.linkButton} onClick={onOpen}>
+        Installment plan: {linkLabel(draft, editing, model)}
+      </button>
+    ),
+  }
 }
 
 /**
@@ -301,6 +354,8 @@ export function TransactionForm({
     }
   }
 
+  const installment = installmentControl({ draft, editing, model, onOpen: () => onViewChange('installment') })
+
   return (
     <form
       className={styles.form}
@@ -332,14 +387,9 @@ export function TransactionForm({
             receiptTargetId={editing?.id ?? savedId}
             pendingFiles={pendingFiles}
             onPendingChange={setPendingFiles}
+            installmentChip={installment.chip}
           />
-          <button
-            type="button"
-            className={styles.linkButton}
-            onClick={() => onViewChange('installment')}
-          >
-            Installment plan: {linkLabel(draft, editing, model)}
-          </button>
+          {installment.bar}
           {err && (
             <p className={styles.error} role="alert">
               {err}

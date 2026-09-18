@@ -116,12 +116,15 @@
 }
 
 .chip {
-  flex: 1;
+  /* Fixed, not flex: 1 — every chip is the same width so a second row lines
+     up under the first instead of a lone wrapped chip stretching to fill
+     it. Three per row: keep in sync with .chipRow's gap. */
+  flex: 0 0 calc((100% - 1rem) / 3 - 1px);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
-  padding: 0.4rem 0.65rem;
+  gap: 0.3rem;
+  padding: 0.4rem 0.5rem;
   border: 1px dashed var(--color-border);
   border-radius: 0.6rem;
   background: none;

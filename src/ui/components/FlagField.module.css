@@ -20,12 +20,15 @@
 }
 
 .triggerCompact {
-  flex: 1;
+  /* Matches TransactionForm.module.css's .chip: fixed width, three per row,
+     so this lines up with its row-mates instead of stretching to fill a
+     wrapped row on its own. Keep in sync with the chip row's 0.5rem gap. */
+  flex: 0 0 calc((100% - 1rem) / 3 - 1px);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
-  padding: 0.4rem 0.65rem;
+  gap: 0.3rem;
+  padding: 0.4rem 0.5rem;
   border: 1px dashed var(--color-border);
   border-radius: 0.6rem;
   background: none;
