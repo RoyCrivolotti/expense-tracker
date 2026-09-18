@@ -3,10 +3,12 @@ import type { BulkTransactionPatch } from '../../data/dataSource'
 import { defaultBudgetMonth } from '../../domain/engine/dates'
 import { todayIso } from '../components/transactionFormState'
 import type { ExpenseModel } from '../useExpenseData'
+import type { ExpenseActions } from '../actions'
 import { selectableOptions, optionLabel } from '../components/pickerOptions'
-import { selectableFlags } from '../components/flagPickerOptions'
 import { offScreenNote } from './useTransactionSelection'
 import { TypeSelector } from '../components/TransactionFields'
+import { FlagField } from '../components/FlagField'
+import { createFlagInPlace } from '../components/quickFlag'
 import { Modal } from '../components/Modal'
 import {
   anyFieldEnabled,
@@ -20,6 +22,7 @@ interface BulkEditSheetProps {
   /** Chosen rows that are not on screen, which the edit leaves alone. */
   hiddenCount?: number
   model: ExpenseModel
+  actions?: ExpenseActions | undefined
   busy: boolean
   onApply: (patch: BulkTransactionPatch) => void
   onCancel: () => void
@@ -39,7 +42,16 @@ function OffScreenNote({ hiddenCount }: { hiddenCount: number | undefined }) {
   )
 }
 
-export function BulkEditSheet({ count, hiddenCount, model, busy, onApply, onCancel }: BulkEditSheetProps) {
+export function BulkEditSheet({
+  count,
+  hiddenCount,
+  model,
+  actions,
+  busy,
+  onApply,
+  onCancel,
+}: BulkEditSheetProps) {
+  const [popoverOpen, setPopoverOpen] = useState(false)
   const [fields, setFields] = useState<BulkEditFieldState>({
     categoryEnabled: false,
     categoryId: model.dataset.categories[0]?.id ?? 0,
@@ -64,13 +76,17 @@ export function BulkEditSheet({ count, hiddenCount, model, busy, onApply, onCanc
 
   const handleApply = () => onApply(buildBulkPatch(fields))
 
-  const flags = selectableFlags(model.dataset.flags, fields.flagId)
   const categories = selectableOptions(model.dataset.categories, 0)
   const accounts = selectableOptions(model.dataset.accounts, 0)
   const noun = count === 1 ? 'transaction' : 'transactions'
 
   return (
-    <Modal title="Edit selected" subtitle={`${count} ${noun}`} onClose={onCancel}>
+    <Modal
+      title="Edit selected"
+      subtitle={`${count} ${noun}`}
+      onClose={onCancel}
+      trapPaused={popoverOpen}
+    >
       <OffScreenNote hiddenCount={hiddenCount} />
       <div className={styles.fields}>
         <ToggleField
@@ -138,28 +154,20 @@ export function BulkEditSheet({ count, hiddenCount, model, busy, onApply, onCanc
             onChange={(e) => set('budgetMonth', e.target.value)}
           />
         </ToggleField>
-        {model.dataset.flags.length > 0 ? (
-          <ToggleField
-            label="Flag"
-            enabled={fields.flagEnabled}
-            onToggle={(v) => set('flagEnabled', v)}
-          >
-            <select
-              value={fields.flagId ?? 'none'}
-              aria-label="Flag"
-              onChange={(e) =>
-                set('flagId', e.target.value === 'none' ? null : Number(e.target.value))
-              }
-            >
-              <option value="none">No flag</option>
-              {flags.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          </ToggleField>
-        ) : null}
+        <ToggleField
+          label="Flag"
+          enabled={fields.flagEnabled}
+          onToggle={(v) => set('flagEnabled', v)}
+        >
+          <FlagField
+            compact
+            flags={model.dataset.flags}
+            value={fields.flagId}
+            onChange={(flagId) => set('flagId', flagId)}
+            onTrapPausedChange={setPopoverOpen}
+            {...(actions ? { onCreate: createFlagInPlace(actions, model.dataset.flags) } : {})}
+          />
+        </ToggleField>
       </div>
 
       <div className={styles.actions}>

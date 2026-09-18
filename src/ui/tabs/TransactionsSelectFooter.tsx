@@ -1,5 +1,6 @@
 import type { BulkTransactionPatch } from '../../data/dataSource'
 import type { ExpenseModel } from '../useExpenseData'
+import type { ExpenseActions } from '../actions'
 import { BatchBar } from './BatchBar'
 import { BatchDeleteConfirm } from './BatchDeleteConfirm'
 import { BulkEditSheet } from './BulkEditSheet'
@@ -24,6 +25,7 @@ interface SelectionState {
 
 interface TransactionsSelectFooterProps {
   actionsEnabled: boolean
+  actions?: ExpenseActions | undefined
   selection: SelectionState
   visibleIds: number[]
   model: ExpenseModel
@@ -31,6 +33,7 @@ interface TransactionsSelectFooterProps {
 
 export function TransactionsSelectFooter({
   actionsEnabled,
+  actions,
   selection,
   visibleIds,
   model,
@@ -67,6 +70,7 @@ export function TransactionsSelectFooter({
           count={selection.selected.size}
           hiddenCount={selection.hiddenCount}
           model={model}
+          actions={actions}
           busy={selection.busy}
           onApply={(patch) => void selection.confirmBulkEdit(patch)}
           onCancel={selection.cancelBulkEdit}
