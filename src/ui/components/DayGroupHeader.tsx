@@ -26,27 +26,24 @@ export function DayGroupHeader({
   onAdd,
 }: DayGroupHeaderProps) {
   const label = formatDayLabel(date)
-  const collapseBtn = (
-    <button
-      type="button"
-      className={`${styles.dayCollapseBtn} tapActive`}
-      onClick={(e) => {
-        e.stopPropagation()
-        onToggleCollapse()
-      }}
-      aria-expanded={!collapsed}
-      aria-controls={dayGroupRowsId(date)}
-      aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${label}`}
-    >
-      {collapsed ? '▸' : '▾'}
-    </button>
-  )
 
   if (selectMode) {
     const state = dateSelectionState(selectedIds, ids)
     return (
       <div className={styles.dayHeaderSelect} data-state={state}>
-        {collapseBtn}
+        <button
+          type="button"
+          className={`${styles.dayCollapseBtn} tapActive`}
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleCollapse()
+          }}
+          aria-expanded={!collapsed}
+          aria-controls={dayGroupRowsId(date)}
+          aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${label}`}
+        >
+          {collapsed ? '▸' : '▾'}
+        </button>
         <button type="button" className={styles.daySelectBtn} onClick={() => onToggleDate?.(ids)}>
           <span className={styles.dayCheckbox} aria-hidden data-checked={state === 'all'} />
           <span>{label}</span>
@@ -58,8 +55,15 @@ export function DayGroupHeader({
 
   return (
     <div className={styles.dayHeaderRow}>
-      {collapseBtn}
-      <div className={styles.dayHeader}>{label}</div>
+      <button
+        type="button"
+        className={`${styles.dayToggleBtn} tapActive`}
+        onClick={onToggleCollapse}
+        aria-expanded={!collapsed}
+        aria-controls={dayGroupRowsId(date)}
+      >
+        {collapsed ? '▸' : '▾'} {label}
+      </button>
       {onAdd ? (
         <button
           type="button"

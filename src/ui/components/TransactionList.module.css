@@ -30,19 +30,6 @@
   cursor: pointer;
 }
 
-.dayHeader {
-  position: sticky;
-  top: 3.5rem;
-  font-size: 0.72rem;
-  font-weight: 650;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--color-text-muted);
-  padding: 0.35rem 0.25rem;
-  background: var(--color-bg);
-  z-index: 5;
-}
-
 .dayHeaderRow {
   position: sticky;
   top: 3.5rem;
@@ -52,10 +39,24 @@
   gap: 0.35rem;
   background: var(--color-bg);
 }
-.dayHeaderRow .dayHeader {
-  position: static;
+.dayToggleBtn {
   flex: 1;
   min-width: 0;
+  margin: 0;
+  padding: 0.35rem 0.25rem;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: left;
+  cursor: pointer;
+}
+.dayToggleBtn:hover {
+  color: var(--color-text);
 }
 .dayAddBtn {
   flex: none;

@@ -135,15 +135,15 @@ describe('TransactionList collapsible date groups', () => {
     render(<TransactionList rows={rows(txn({ id: 1, description: 'Degiro' }))} lookup={lookup} />)
     expect(screen.getByText('Degiro')).toBeVisible()
 
-    await userEvent.click(screen.getByRole('button', { name: /^Collapse/ }))
+    await userEvent.click(screen.getByRole('button', { expanded: true }))
     expect(screen.getByText('Degiro')).not.toBeVisible()
-    expect(screen.getByRole('button', { name: /^Expand/ })).toBeVisible()
+    expect(screen.getByRole('button', { expanded: false })).toBeVisible()
   })
 
   it('expands again on a second toggle', async () => {
     render(<TransactionList rows={rows(txn({ id: 1, description: 'Degiro' }))} lookup={lookup} />)
-    await userEvent.click(screen.getByRole('button', { name: /^Collapse/ }))
-    await userEvent.click(screen.getByRole('button', { name: /^Expand/ }))
+    await userEvent.click(screen.getByRole('button', { expanded: true }))
+    await userEvent.click(screen.getByRole('button', { expanded: false }))
     expect(screen.getByText('Degiro')).toBeVisible()
   })
 
@@ -157,12 +157,26 @@ describe('TransactionList collapsible date groups', () => {
         lookup={lookup}
       />,
     )
-    const toggles = screen.getAllByRole('button', { name: /^Collapse/ })
+    const toggles = screen.getAllByRole('button', { expanded: true })
     expect(toggles).toHaveLength(2)
 
     await userEvent.click(toggles[0]!)
     expect(screen.getByText('Later txn')).not.toBeVisible()
     expect(screen.getByText('Earlier txn')).toBeVisible()
+  })
+
+  it("lets the add button open its own flow without toggling collapse", async () => {
+    const onAddForDate = vi.fn()
+    render(
+      <TransactionList
+        rows={rows(txn({ id: 1, description: 'Degiro' }))}
+        lookup={lookup}
+        onAddForDate={onAddForDate}
+      />,
+    )
+    await userEvent.click(screen.getByRole('button', { name: /^Add transaction/ }))
+    expect(onAddForDate).toHaveBeenCalledWith('2026-07-15')
+    expect(screen.getByText('Degiro')).toBeVisible()
   })
 
   it("keeps the day select-all control and its indicator working while collapsed", async () => {
@@ -189,7 +203,7 @@ describe('TransactionList collapsible date groups', () => {
   it('remembers a collapsed day across remounts', async () => {
     const ui = <TransactionList rows={rows(txn({ id: 1, description: 'Degiro' }))} lookup={lookup} />
     const { unmount } = render(ui)
-    await userEvent.click(screen.getByRole('button', { name: /^Collapse/ }))
+    await userEvent.click(screen.getByRole('button', { expanded: true }))
     expect(screen.getByText('Degiro')).not.toBeVisible()
     unmount()
 
