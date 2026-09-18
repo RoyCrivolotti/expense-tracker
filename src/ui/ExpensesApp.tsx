@@ -311,7 +311,9 @@ function ExpensesAppReady({
         banner={
           <ExpensesOfflineBanner readOnly={readOnly} online={online} {...(snapshotAt ? { snapshotAt } : {})} />
         }
-        {...(actions && tab !== 'goals' ? { onAdd: actions.onAdd } : {})}
+        // Hidden while rows are selected: the selection bar sits in the same corner and
+        // there is nothing to add a transaction for mid-batch-action anyway.
+        {...(actions && tab !== 'goals' && selectionMonth === null ? { onAdd: actions.onAdd } : {})}
         headerRight={
           <AppHeaderActions
             months={model.months}

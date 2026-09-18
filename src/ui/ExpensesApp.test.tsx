@@ -202,6 +202,17 @@ describe('ExpensesApp while selecting transactions', () => {
     expect(locked(previous())).toBe(false)
   })
 
+  it('hides the add-transaction FAB while rows are selected, on the same corner as the selection bar', async () => {
+    await openTransactions()
+    expect(screen.getByRole('button', { name: 'Add transaction' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+    expect(screen.queryByRole('button', { name: 'Add transaction' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.getByRole('button', { name: 'Add transaction' })).toBeInTheDocument()
+  })
+
   it('says why the month does not change while rows are selected', async () => {
     const previous = await openTransactions()
     fireEvent.click(screen.getByRole('button', { name: 'Select' }))
