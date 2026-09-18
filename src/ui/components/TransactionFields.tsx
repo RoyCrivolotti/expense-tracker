@@ -157,6 +157,14 @@ interface FieldsProps {
   receiptTargetId?: number | null
   /** Absent in read-only sessions, which is also when receipts are hidden. */
   actions?: ExpenseActions | undefined
+  /**
+   * The installment-plan toggle, rendered as a chip alongside "Add receipt" /
+   * "Add note" when there's nothing to say about it yet ("Not part of a
+   * plan"). Owned by TransactionForm, which also decides when the link
+   * carries enough to say (a plan just attached, or already linked) that it
+   * needs a full-width row of its own instead — passed there, not here.
+   */
+  installmentChip?: ReactNode
 }
 
 const NO_PENDING: PendingReceipt[] = []
@@ -172,6 +180,7 @@ export function Fields({
   pendingFiles = NO_PENDING,
   onPendingChange,
   receiptTargetId = null,
+  installmentChip,
 }: FieldsProps) {
   const format = useMoneyFormat()
   const [noteExpanded, setNoteExpanded] = useState(form.notes !== '')
@@ -256,6 +265,7 @@ export function Fields({
               onTrapPausedChange={onTrapPausedChange}
               onCreate={createFlagInPlace(actions, model.dataset.flags)}
             />
+            {installmentChip}
           </div>
           {showNoteInput && (
             <Field label="Notes">

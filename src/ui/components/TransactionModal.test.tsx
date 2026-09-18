@@ -448,13 +448,13 @@ describe('TransactionModal — the other tab’s draft', () => {
 describe('TransactionModal — installment sub-navigation', () => {
   it('switches to the installment view when clicking the installment link', () => {
     renderModal()
-    fireEvent.click(screen.getByText(/Installment plan:/))
+    fireEvent.click(screen.getByRole('button', { name: /no plan/i }))
     expect(screen.getByText('Installment plan')).toBeInTheDocument()
   })
 
   it('returns to the fields view when clicking the back button', () => {
     renderModal()
-    fireEvent.click(screen.getByText(/Installment plan:/))
+    fireEvent.click(screen.getByRole('button', { name: /no plan/i }))
     expect(screen.getByText('Installment plan')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Back' }))
@@ -463,7 +463,7 @@ describe('TransactionModal — installment sub-navigation', () => {
 
   it('hides the Add one / Add multiple tabs on the installment step, and brings them back', () => {
     renderModal()
-    fireEvent.click(screen.getByText(/Installment plan:/))
+    fireEvent.click(screen.getByRole('button', { name: /no plan/i }))
     // They switch the whole sheet; the installment step is a page inside it.
     expect(screen.queryByRole('tab', { name: 'Add multiple' })).not.toBeInTheDocument()
 
@@ -473,12 +473,12 @@ describe('TransactionModal — installment sub-navigation', () => {
 
   it('saves with no plan after a look at the installment step that changed nothing', async () => {
     const { container, actions } = renderModal()
-    fireEvent.click(screen.getByText(/Installment plan:/))
+    fireEvent.click(screen.getByRole('button', { name: /no plan/i }))
     expect(screen.getByRole('button', { name: 'New plan', pressed: true })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Back' }))
     // The preselected New plan was never filled in, so it must not have linked
     // anything — nor left an empty plan behind to fail validation here.
-    expect(screen.getByText(/Installment plan: Not part of a plan/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /no plan/i })).toBeInTheDocument()
 
     fireEvent.change(singleForm(container).getByLabelText(/amount/i), { target: { value: '10' } })
     fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
@@ -491,7 +491,7 @@ describe('TransactionModal — installment sub-navigation', () => {
   it('redirects to the installment view when validation catches an installment error', () => {
     const { container } = renderModal()
     // Navigate to installment step and configure an invalid plan
-    fireEvent.click(screen.getByText(/Installment plan:/))
+    fireEvent.click(screen.getByRole('button', { name: /no plan/i }))
     fireEvent.click(screen.getByRole('button', { name: 'New plan' }))
     fireEvent.change(screen.getByLabelText('Total installments'), { target: { value: '0' } })
 
