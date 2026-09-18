@@ -215,7 +215,13 @@ export function TransactionsTab({
         onOpenPastReport={past.openReport}
       />
 
-      <TransactionsSelectFooter actionsEnabled={Boolean(actions)} selection={state} visibleIds={state.visibleIds} model={model} />
+      <TransactionsSelectFooter
+        actionsEnabled={Boolean(actions)}
+        actions={actions}
+        selection={state}
+        visibleIds={state.visibleIds}
+        model={model}
+      />
     </div>
   )
 }

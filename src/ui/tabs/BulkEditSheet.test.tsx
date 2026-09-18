@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BulkEditSheet } from './BulkEditSheet'
 import type { ExpenseModel } from '../useExpenseData'
+import type { ExpenseActions } from '../actions'
 import { defaultExpenseSettings } from '../../engine'
 
 function makeModel(budgetRolloverDay = 1): ExpenseModel {
@@ -200,18 +201,21 @@ describe('BulkEditSheet', () => {
     const model = makeModel()
     model.dataset.flags = [{ id: 7, name: 'Work travel', color: '#6366f1', reimbursable: true, sortOrder: 0, active: true }]
     const onApply = vi.fn()
+    const user = userEvent.setup()
     render(
       <BulkEditSheet count={2} model={model} busy={false} onApply={onApply} onCancel={vi.fn()} />,
     )
 
-    await userEvent.click(screen.getByLabelText('Flag'))
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Flag' }), 'none')
-    await userEvent.click(screen.getByRole('button', { name: /Apply changes/ }))
+    await user.click(screen.getByLabelText('Flag'))
+    await user.click(screen.getByRole('button', { name: 'Work travel' }))
+    await user.click(screen.getByRole('button', { name: /No flag/ }))
+    await user.click(screen.getByRole('button', { name: 'Apply changes' }))
 
     expect(onApply).toHaveBeenCalledWith({ flagId: null })
   })
 
-  it('hides the flag field when the owner has no flags', () => {
+  it('offers the flag field even before any flag exists, so it stays discoverable', async () => {
+    const user = userEvent.setup()
     render(
       <BulkEditSheet
         count={2}
@@ -222,7 +226,35 @@ describe('BulkEditSheet', () => {
       />,
     )
 
-    expect(screen.queryByLabelText('Flag')).not.toBeInTheDocument()
+    await user.click(screen.getByLabelText('Flag'))
+
+    expect(screen.getByRole('button', { name: /No flag/ })).toBeInTheDocument()
+  })
+
+  it('creates a flag in place from bulk edit and applies it', async () => {
+    const user = userEvent.setup()
+    const onApply = vi.fn()
+    const createFlag = vi.fn().mockResolvedValue({ id: 9 })
+    const actions = { createFlag } as unknown as ExpenseActions
+    render(
+      <BulkEditSheet
+        count={2}
+        model={makeModel()}
+        actions={actions}
+        busy={false}
+        onApply={onApply}
+        onCancel={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByLabelText('Flag'))
+    await user.click(screen.getByRole('button', { name: /No flag/ }))
+    await user.click(screen.getByRole('button', { name: '+ New flag' }))
+    await user.type(screen.getByRole('textbox', { name: 'New flag name' }), 'Madrid trip{Enter}')
+    await user.click(screen.getByRole('button', { name: 'Apply changes' }))
+
+    expect(createFlag).toHaveBeenCalledWith(expect.objectContaining({ name: 'Madrid trip' }))
+    expect(onApply).toHaveBeenCalledWith({ flagId: 9 })
   })
 })
 
