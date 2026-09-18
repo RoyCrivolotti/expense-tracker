@@ -175,7 +175,11 @@
 }
 
 @media (min-width: 560px) {
-  .overlay {
+  /* .band is what actually positions .sheet now (see .band's own comment) — .overlay
+     stopped being a flex container when .band was split out for keyboard-avoidance,
+     so this used to target dead weight and every modal stayed bottom-anchored on
+     desktop regardless of viewport width. */
+  .band {
     align-items: center;
   }
   .sheet {
