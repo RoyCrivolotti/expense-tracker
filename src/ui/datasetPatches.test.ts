@@ -5,6 +5,7 @@ import {
   patchAfterAccountDelete,
   patchAfterAttachmentAdd,
   patchAfterAttachmentDelete,
+  patchAfterBulkCreate,
   patchAfterBulkDelete,
   patchAfterTransactionCreate,
   patchAfterTransactionDelete,
@@ -102,6 +103,12 @@ describe('installment plan auto-completion via transaction patches', () => {
       transactions: [installment(1, 1), installment(2, 2), { ...installment(3, 3), cancelled: true }],
     })
     const result = patchAfterTransactionUpdate(d, installment(3, 3))
+    expect(result.installmentPlans[0]!.active).toBe(false)
+  })
+
+  it('patchAfterBulkCreate flips the plan when an imported batch completes it', () => {
+    const d = dataset({ installmentPlans: [plan], transactions: [installment(1, 1)] })
+    const result = patchAfterBulkCreate(d, [installment(2, 2), installment(3, 3)])
     expect(result.installmentPlans[0]!.active).toBe(false)
   })
 })
