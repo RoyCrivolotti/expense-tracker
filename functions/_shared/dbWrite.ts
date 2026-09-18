@@ -84,6 +84,34 @@ async function resolvePlanLink(
   return { planId: input.planId, installmentIndex }
 }
 
+/**
+ * Close out a plan once its final installment is recorded — the same end state
+ * as the manual "Complete" toggle in the plans modal. Checked from the row D1
+ * actually persisted rather than the write's input, so it catches a link, a
+ * re-link, and an un-cancel alike (an update can flip `cancelled` back to false
+ * with no `planId` in the patch at all).
+ */
+async function maybeCompletePlan(env: Env, owner: string, planId: number | null): Promise<void> {
+  if (planId == null) return
+  const plan = await env.DB.prepare(
+    'SELECT total_count AS t, active AS a FROM installment_plans WHERE id = ? AND owner = ?',
+  )
+    .bind(planId, owner)
+    .first<{ t: number; a: number }>()
+  if (!plan || !plan.a) return
+  const last = await env.DB.prepare(
+    'SELECT MAX(installment_index) AS m FROM transactions WHERE owner = ? AND plan_id = ? AND cancelled = 0',
+  )
+    .bind(owner, planId)
+    .first<{ m: number | null }>()
+  if (last?.m == null || last.m < plan.t) return
+  await env.DB.prepare(
+    "UPDATE installment_plans SET active = 0, updated_at = datetime('now') WHERE id = ? AND owner = ?",
+  )
+    .bind(planId, owner)
+    .run()
+}
+
 export async function insertTransaction(
   env: Env,
   owner: string,
@@ -115,6 +143,7 @@ export async function insertTransaction(
     )
     .first<TxnRow>()
   if (!row) throw new HttpError(500, 'Insert failed')
+  if (planLink) await maybeCompletePlan(env, owner, planLink.planId)
   return deriveOne(env, owner, toStoredTxn(row))
 }
 
@@ -282,6 +311,9 @@ export async function updateTransaction(
     throw new HttpError(404, 'Transaction not found')
   }
   if (patch.settledBy != null) await reportSnapshotStatement(env, owner, patch.settledBy).run()
+  // installmentIndex alone is a no-op in planLinkColumns (it requires planId in
+  // the same patch), so it doesn't need its own check here.
+  if ('cancelled' in patch || 'planId' in patch) await maybeCompletePlan(env, owner, row.plan_id)
   return deriveOne(env, owner, toStoredTxn(row))
 }
 

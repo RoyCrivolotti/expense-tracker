@@ -1,5 +1,6 @@
 import { deriveTransactions } from '../engine/status'
 import { withoutFlag } from '../domain/engine/flagGroups'
+import { planProgress } from '../domain/engine/installments'
 import type {
   Account,
   AccountStatement,
@@ -40,6 +41,19 @@ function upsertStatement(list: AccountStatement[], row: AccountStatement): void 
   else list.push(row)
 }
 
+/**
+ * Mirrors the server's own auto-completion (maybeCompletePlan in dbWrite.ts) for
+ * the local optimistic cache: any still-active plan whose linked transactions
+ * now cover every installment is flipped inactive, same end state as clicking
+ * "Complete" manually. The server write already committed the real flip; this
+ * just keeps the "Manage plans" modal from looking stale until the next reload.
+ */
+function reconcileInstallmentPlanCompletion(d: ExpenseDataset): void {
+  d.installmentPlans = d.installmentPlans.map((plan) =>
+    plan.active && planProgress(plan, d.transactions).complete ? { ...plan, active: false } : plan,
+  )
+}
+
 export function patchAfterTransactionCreate(
   dataset: ExpenseDataset,
   txn: Transaction,
@@ -48,6 +62,7 @@ export function patchAfterTransactionCreate(
   d.transactions = [...d.transactions, txn].sort(
     (a, b) => b.date.localeCompare(a.date) || b.id - a.id,
   )
+  reconcileInstallmentPlanCompletion(d)
   return d
 }
 
@@ -57,6 +72,7 @@ export function patchAfterTransactionUpdate(
 ): ExpenseDataset {
   const d = cloneDataset(dataset)
   d.transactions = d.transactions.map((t) => (t.id === txn.id ? txn : t))
+  reconcileInstallmentPlanCompletion(d)
   return d
 }
 
@@ -80,6 +96,7 @@ export function patchAfterBulkCreate(
   d.transactions = [...d.transactions, ...txns].sort(
     (a, b) => b.date.localeCompare(a.date) || b.id - a.id,
   )
+  reconcileInstallmentPlanCompletion(d)
   return d
 }
 

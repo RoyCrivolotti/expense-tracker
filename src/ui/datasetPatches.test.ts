@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import type { ExpenseDataset, Transaction } from '../types'
+import type { ExpenseDataset, InstallmentPlan, Transaction } from '../types'
 import { defaultExpenseSettings } from '../engine'
 import {
   patchAfterAccountDelete,
   patchAfterAttachmentAdd,
   patchAfterAttachmentDelete,
   patchAfterBulkDelete,
+  patchAfterTransactionCreate,
   patchAfterTransactionDelete,
+  patchAfterTransactionUpdate,
   patchAfterBulkUpdate,
   patchAfterCategoryDelete,
   patchAfterFlag,
@@ -39,6 +41,70 @@ function dataset(overrides: Partial<ExpenseDataset> = {}): ExpenseDataset {
     ...overrides,
   }
 }
+
+describe('installment plan auto-completion via transaction patches', () => {
+  const plan: InstallmentPlan = {
+    id: 9,
+    description: 'Laptop, Boursorama',
+    totalCount: 3,
+    amountCents: 10000,
+    accountId: 1,
+    categoryId: 1,
+    type: 'expense',
+    anchorBudgetMonth: '2026-01',
+    startInstallmentIndex: 1,
+    active: true,
+  }
+
+  const installment = (index: number, id: number): Transaction => ({
+    id,
+    date: '2026-01-01',
+    budgetMonth: '2026-01',
+    description: plan.description,
+    accountId: plan.accountId,
+    categoryId: plan.categoryId,
+    type: plan.type,
+    amountCents: plan.amountCents,
+    cancelled: false,
+    planId: plan.id,
+    installmentIndex: index,
+    status: 'posted',
+  })
+
+  it('patchAfterTransactionCreate flips the plan inactive once the final installment lands', () => {
+    const d = dataset({
+      installmentPlans: [plan],
+      transactions: [installment(1, 1), installment(2, 2)],
+    })
+    const result = patchAfterTransactionCreate(d, installment(3, 3))
+    expect(result.installmentPlans[0]!.active).toBe(false)
+  })
+
+  it('leaves the plan active for a non-final installment', () => {
+    const d = dataset({ installmentPlans: [plan], transactions: [installment(1, 1)] })
+    const result = patchAfterTransactionCreate(d, installment(2, 2))
+    expect(result.installmentPlans[0]!.active).toBe(true)
+  })
+
+  it('leaves an already-inactive plan untouched', () => {
+    const inactivePlan = { ...plan, active: false }
+    const d = dataset({
+      installmentPlans: [inactivePlan],
+      transactions: [installment(1, 1), installment(2, 2)],
+    })
+    const result = patchAfterTransactionCreate(d, installment(3, 3))
+    expect(result.installmentPlans[0]).toEqual(inactivePlan)
+  })
+
+  it('patchAfterTransactionUpdate flips the plan on an edit that completes the plan', () => {
+    const d = dataset({
+      installmentPlans: [plan],
+      transactions: [installment(1, 1), installment(2, 2), { ...installment(3, 3), cancelled: true }],
+    })
+    const result = patchAfterTransactionUpdate(d, installment(3, 3))
+    expect(result.installmentPlans[0]!.active).toBe(false)
+  })
+})
 
 describe('patchAfterBulkUpdate', () => {
   it('replaces matched transactions and re-sorts by date', () => {
