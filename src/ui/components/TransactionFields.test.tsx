@@ -174,6 +174,21 @@ describe('Fields category/account pickers', () => {
     expect(set).toHaveBeenCalledWith('categoryId', 1)
   })
 
+  it('calls set when the account select changes', () => {
+    const set = vi.fn()
+    render(
+      <Fields
+        form={baseForm({ accountId: 2 })}
+        set={set}
+        model={modelWith()}
+        editing={null}
+        onAcceptSuggestion={vi.fn()}
+      />,
+    )
+    fireEvent.change(screen.getByLabelText('Account'), { target: { value: '1' } })
+    expect(set).toHaveBeenCalledWith('accountId', 1)
+  })
+
   it('does not offer an inactive category/account that is not the currently selected one, even while editing', () => {
     const editing: Transaction = {
       id: 5,
