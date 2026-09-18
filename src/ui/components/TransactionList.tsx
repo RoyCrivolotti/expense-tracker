@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import type { Transaction } from '../../types'
 import { groupListRowsByDay, type TransactionListRow } from '../../engine'
 import { type Lookup } from '../format'
+import { useCollapsedDateGroups } from '../hooks/useCollapsedDateGroups'
+import { dayGroupRowsId } from './dayGroupId'
 import { EmptyState } from './primitives'
 import { DayGroupHeader } from './DayGroupHeader'
 import { StatementPaymentRow } from './StatementPaymentRow'
@@ -60,6 +62,8 @@ function renderRow(
 }
 
 export function TransactionList({ rows, lookup, ...props }: TransactionListProps) {
+  const [collapsedDates, toggleDateCollapsed] = useCollapsedDateGroups()
+
   if (rows.length === 0) {
     return (
       <EmptyState
@@ -82,6 +86,7 @@ export function TransactionList({ rows, lookup, ...props }: TransactionListProps
         const ids = group.rows.flatMap((row) =>
           row.kind === 'transaction' ? [row.txn.id] : [],
         )
+        const collapsed = collapsedDates.has(group.date)
         return (
           <div key={group.date} className={styles.group}>
             <DayGroupHeader
@@ -89,10 +94,14 @@ export function TransactionList({ rows, lookup, ...props }: TransactionListProps
               ids={ids}
               selectMode={props.selectMode ?? false}
               selectedIds={props.selectedIds ?? new Set()}
+              collapsed={collapsed}
+              onToggleCollapse={() => toggleDateCollapsed(group.date)}
               {...(props.onToggleDate ? { onToggleDate: props.onToggleDate } : {})}
               {...(props.onAddForDate && !props.selectMode ? { onAdd: props.onAddForDate } : {})}
             />
-            {group.rows.map((row) => renderRow(row, lookup, props))}
+            <div id={dayGroupRowsId(group.date)} className={styles.dayRows} hidden={collapsed}>
+              {group.rows.map((row) => renderRow(row, lookup, props))}
+            </div>
           </div>
         )
       })}

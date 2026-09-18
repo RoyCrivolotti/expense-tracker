@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Transaction } from '../../types'
 import type { TransactionListRow } from '../../engine'
 import { buildLookup } from '../format'
@@ -122,5 +123,91 @@ describe('TransactionList budget month pill', () => {
     expect(screen.getAllByText("Jul '26")).toHaveLength(1)
     expect(screen.queryByText("Jun '26")).toBeNull()
     expect(screen.getByText(/June 2026/)).toBeTruthy()
+  })
+})
+
+describe('TransactionList collapsible date groups', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  it("hides a day's rows on toggle but keeps its header", async () => {
+    render(<TransactionList rows={rows(txn({ id: 1, description: 'Degiro' }))} lookup={lookup} />)
+    expect(screen.getByText('Degiro')).toBeVisible()
+
+    await userEvent.click(screen.getByRole('button', { expanded: true }))
+    expect(screen.getByText('Degiro')).not.toBeVisible()
+    expect(screen.getByRole('button', { expanded: false })).toBeVisible()
+  })
+
+  it('expands again on a second toggle', async () => {
+    render(<TransactionList rows={rows(txn({ id: 1, description: 'Degiro' }))} lookup={lookup} />)
+    await userEvent.click(screen.getByRole('button', { expanded: true }))
+    await userEvent.click(screen.getByRole('button', { expanded: false }))
+    expect(screen.getByText('Degiro')).toBeVisible()
+  })
+
+  it('collapsing one day leaves a different day expanded', async () => {
+    render(
+      <TransactionList
+        rows={rows(
+          txn({ id: 1, date: '2026-07-16', description: 'Later txn' }),
+          txn({ id: 2, date: '2026-07-15', description: 'Earlier txn' }),
+        )}
+        lookup={lookup}
+      />,
+    )
+    const toggles = screen.getAllByRole('button', { expanded: true })
+    expect(toggles).toHaveLength(2)
+
+    await userEvent.click(toggles[0]!)
+    expect(screen.getByText('Later txn')).not.toBeVisible()
+    expect(screen.getByText('Earlier txn')).toBeVisible()
+  })
+
+  it("lets the add button open its own flow without toggling collapse", async () => {
+    const onAddForDate = vi.fn()
+    render(
+      <TransactionList
+        rows={rows(txn({ id: 1, description: 'Degiro' }))}
+        lookup={lookup}
+        onAddForDate={onAddForDate}
+      />,
+    )
+    await userEvent.click(screen.getByRole('button', { name: /^Add transaction/ }))
+    expect(onAddForDate).toHaveBeenCalledWith('2026-07-15')
+    expect(screen.getByText('Degiro')).toBeVisible()
+  })
+
+  it("keeps the day select-all control and its indicator working while collapsed", async () => {
+    const onToggleDate = vi.fn()
+    const { container } = render(
+      <TransactionList
+        rows={rows(txn({ id: 1 }))}
+        lookup={lookup}
+        selectMode
+        selectedIds={new Set([1])}
+        onToggleDate={onToggleDate}
+      />,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: /^Collapse/ }))
+    const dayHeader = container.querySelector('[data-state]')
+    expect(dayHeader).toHaveAttribute('data-state', 'all')
+
+    const daySelectBtn = container.querySelector<HTMLButtonElement>('[class*="daySelectBtn"]')
+    await userEvent.click(daySelectBtn!)
+    expect(onToggleDate).toHaveBeenCalledWith([1])
+  })
+
+  it('remembers a collapsed day across remounts', async () => {
+    const ui = <TransactionList rows={rows(txn({ id: 1, description: 'Degiro' }))} lookup={lookup} />
+    const { unmount } = render(ui)
+    await userEvent.click(screen.getByRole('button', { expanded: true }))
+    expect(screen.getByText('Degiro')).not.toBeVisible()
+    unmount()
+
+    render(ui)
+    expect(screen.getByText('Degiro')).not.toBeVisible()
   })
 })
