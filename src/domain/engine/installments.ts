@@ -96,6 +96,11 @@ export interface PaidInstallment {
   installmentIndex: number
 }
 
+/** Linked, non-cancelled installments logged but not yet settled (status 'forecast'). */
+export function forecastPaidCount(plan: InstallmentPlan, transactions: Transaction[]): number {
+  return transactions.filter((t) => t.planId === plan.id && !t.cancelled && t.status === 'forecast').length
+}
+
 /**
  * The transaction that settled `plan`'s installment for `budgetMonth`, if
  * that installment has already been logged. Returns null when nothing is

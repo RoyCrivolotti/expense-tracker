@@ -198,6 +198,30 @@ describe('InstallmentsCard', () => {
       expect(screen.queryByLabelText('Log installment payment')).toBeNull()
     })
 
+    it('does not show a Forecast pill once the underlying charge has posted', () => {
+      render(
+        <InstallmentsCard
+          model={modelWithPlans([paidPlan], [paidTxn])}
+          actions={noopActions()}
+          month="2026-07"
+        />,
+      )
+      expect(screen.queryByText('Forecast')).toBeNull()
+    })
+
+    it('shows Forecast alongside Paid when the card statement is not yet settled', () => {
+      const forecastTxn: Transaction = { ...paidTxn, status: 'forecast' }
+      render(
+        <InstallmentsCard
+          model={modelWithPlans([paidPlan], [forecastTxn])}
+          actions={noopActions()}
+          month="2026-07"
+        />,
+      )
+      expect(screen.getByText('Paid')).toBeTruthy()
+      expect(screen.getByText('Forecast')).toBeTruthy()
+    })
+
     it('opens the underlying transaction when the paid row is clicked', async () => {
       const actions = noopActions()
       render(
