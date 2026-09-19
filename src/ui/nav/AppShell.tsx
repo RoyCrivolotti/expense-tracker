@@ -1,10 +1,11 @@
-import type { ReactNode, RefObject } from 'react'
+import { useRef, type ReactNode, type RefObject } from 'react'
 import { HubMenuRoot, HubMenuTrigger } from 'folio-shell'
 import type { GroupGrants } from '../../domain/accessGroups'
 import { getExpenseHubNavItems } from '../../hubNavItems'
 import { navItems, type TabId } from './navItems'
 import { PlusIcon } from '../icons'
 import { useAutoHideFab } from '../hooks/useAutoHideFab'
+import { usePublishHeight } from '../hooks/usePublishHeight'
 import styles from './AppShell.module.css'
 
 interface AppShellProps {
@@ -64,6 +65,9 @@ function NavList({
   )
 }
 
+/** Read by the sticky day headers in TransactionList so they pin flush under this header. */
+const APP_HEADER_HEIGHT = '--exp-app-header'
+
 export function AppShell({
   activeId,
   onSelect,
@@ -80,6 +84,8 @@ export function AppShell({
   children,
 }: AppShellProps) {
   const fabVisible = useAutoHideFab(Boolean(onAdd))
+  const headerRef = useRef<HTMLElement>(null)
+  usePublishHeight(headerRef, APP_HEADER_HEIGHT)
   return (
     <HubMenuRoot anchor="inline" navItems={getExpenseHubNavItems(hubGrants)}>
       <div className={styles.shell}>
@@ -92,7 +98,7 @@ export function AppShell({
         </aside>
 
         <div className={styles.main}>
-          <header className={styles.header}>
+          <header ref={headerRef} className={styles.header}>
             <HubMenuTrigger className={styles.hubHeader} iconOnly />
             <h1 className={styles.title}>{title}</h1>
             <div className={styles.headerRight}>{headerRight}</div>

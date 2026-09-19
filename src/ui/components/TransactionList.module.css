@@ -32,7 +32,8 @@
 
 .dayHeaderRow {
   position: sticky;
-  top: 3.5rem;
+  /* Measured by AppShell: the header's height moves with the safe-area inset. */
+  top: var(--exp-app-header, calc(3.8125rem + env(safe-area-inset-top, 0px)));
   z-index: 5;
   display: flex;
   align-items: center;
@@ -78,7 +79,8 @@
 
 .dayHeaderSelect {
   position: sticky;
-  top: 3.5rem;
+  /* Measured by AppShell: the header's height moves with the safe-area inset. */
+  top: var(--exp-app-header, calc(3.8125rem + env(safe-area-inset-top, 0px)));
   z-index: 5;
   display: flex;
   align-items: center;

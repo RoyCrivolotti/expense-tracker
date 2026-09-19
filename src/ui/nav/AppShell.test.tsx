@@ -48,3 +48,16 @@ describe('AppShell fab', () => {
     }
   })
 })
+
+describe('AppShell header height', () => {
+  it('publishes the header height for the sticky day headers and clears it on unmount', () => {
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(61)
+    const { unmount } = render(<AppShell {...baseProps}>content</AppShell>)
+    const published = () => document.documentElement.style.getPropertyValue('--exp-app-header')
+    expect(published()).toBe('61px')
+
+    unmount()
+    expect(published()).toBe('')
+    vi.restoreAllMocks()
+  })
+})
