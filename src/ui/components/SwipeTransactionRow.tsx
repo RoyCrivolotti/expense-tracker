@@ -71,7 +71,13 @@ export function SwipeTransactionRow({
         </div>
         <div
           className={`${styles.swipeSlide}${swipe.isDragging ? ` ${styles.swipeSlideDragging}` : ''}`}
-          style={{ transform: `translate3d(${swipe.offset}px, 0, 0)` }}
+          style={
+            // At rest the row gets no transform, so a long list is not hundreds of
+            // compositor layers that iOS has to keep aligned with the sticky day headers.
+            swipe.offset !== 0 || swipe.isDragging
+              ? { transform: `translate3d(${swipe.offset}px, 0, 0)` }
+              : undefined
+          }
           onTouchStart={(e) => {
             swipe.onTouchStart(e.touches[0]?.clientX ?? 0)
             longPress.onTouchStart(e)
