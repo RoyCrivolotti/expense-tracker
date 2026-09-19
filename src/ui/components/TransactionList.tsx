@@ -3,6 +3,7 @@ import type { Transaction } from '../../types'
 import { groupListRowsByDay, type TransactionListRow } from '../../engine'
 import { type Lookup } from '../format'
 import { useCollapsedDateGroups } from '../hooks/useCollapsedDateGroups'
+import { useJx } from '../debug/jitterFlags'
 import { dayGroupRowsId } from './dayGroupId'
 import { EmptyState } from './primitives'
 import { DayGroupHeader } from './DayGroupHeader'
@@ -61,8 +62,20 @@ function renderRow(
   )
 }
 
-export function TransactionList({ rows, lookup, ...props }: TransactionListProps) {
+type RowProps = Omit<TransactionListProps, 'rows' | 'lookup'>
+
+/** Jitter lab: rows with no swipe wrapper and no touch handlers, like the desktop rows that never wobble. */
+function withoutTouch(props: RowProps): RowProps {
+  const { onLongPressSelect, swipeDelete, ...rest } = props
+  void onLongPressSelect
+  void swipeDelete
+  return rest
+}
+
+export function TransactionList({ rows, lookup, ...listProps }: TransactionListProps) {
   const [collapsedDates, toggleDateCollapsed] = useCollapsedDateGroups()
+  const plainRows = useJx('plainRows')
+  const props = plainRows ? withoutTouch(listProps) : listProps
 
   if (rows.length === 0) {
     return (

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { jxOn } from '../debug/jitterFlags'
 
 const HIDE_TIMEOUT_MS = 250
 
@@ -16,6 +17,7 @@ export function useAutoHideFab(enabled: boolean): boolean {
     if (!enabled) return
 
     const handleScroll = () => {
+      if (jxOn('fabOff')) return
       setVisible(false)
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
       timeoutRef.current = setTimeout(() => setVisible(true), HIDE_TIMEOUT_MS)

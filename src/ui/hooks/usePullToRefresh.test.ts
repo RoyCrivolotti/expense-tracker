@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { applyJx } from '../debug/jitterFlags'
 import { useBodyScrollLock } from './useBodyScrollLock'
 import { THRESHOLD_PX, usePullToRefresh } from './usePullToRefresh'
 
@@ -26,6 +27,7 @@ function pull(distance: number) {
 describe('usePullToRefresh', () => {
   afterEach(() => {
     setScrollY(0)
+    applyJx([])
   })
 
   it('refreshes after a pull past the threshold', () => {
@@ -99,6 +101,16 @@ describe('usePullToRefresh', () => {
 
     renderHook(() => usePullToRefresh({ onRefresh, refreshing: true }))
     pull(THRESHOLD_PX)
+    expect(onRefresh).not.toHaveBeenCalled()
+  })
+
+  it('does not arm while the jitter lab has the listeners switched off', () => {
+    applyJx(['pullOff'])
+    const onRefresh = vi.fn()
+    renderHook(() => usePullToRefresh({ onRefresh }))
+
+    pull(THRESHOLD_PX)
+
     expect(onRefresh).not.toHaveBeenCalled()
   })
 })

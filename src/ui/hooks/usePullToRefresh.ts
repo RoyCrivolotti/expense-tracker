@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { isBodyScrollLocked } from './useBodyScrollLock'
+import { jxOn } from '../debug/jitterFlags'
 
 const THRESHOLD_PX = 112
 const MAX_PULL_PX = 140
@@ -50,7 +51,7 @@ export function usePullToRefresh({
       // help: it suppresses the browser's own panning, not delivery of touches to
       // these listeners. There is nothing to refresh either way, since the page behind
       // a sheet is pinned and out of reach.
-      if (isBodyScrollLocked() || scrollTop() > SCROLL_TOP_EPS) return
+      if (jxOn('pullOff') || isBodyScrollLocked() || scrollTop() > SCROLL_TOP_EPS) return
       const touch = e.touches[0]
       if (!touch) return
       startY.current = touch.clientY

@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { applyJx } from '../debug/jitterFlags'
 import { useAutoHideFab } from './useAutoHideFab'
 
 function fireScroll() {
@@ -13,6 +14,7 @@ describe('useAutoHideFab', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+    applyJx([])
   })
 
   it('starts visible', () => {
@@ -61,5 +63,14 @@ describe('useAutoHideFab', () => {
     unmount()
 
     expect(removeSpy).toHaveBeenCalledWith('scroll', expect.any(Function))
+  })
+
+  it('ignores scroll events while the jitter lab has the listener switched off', () => {
+    applyJx(['fabOff'])
+    const { result } = renderHook(() => useAutoHideFab(true))
+
+    void act(() => fireScroll())
+
+    expect(result.current).toBe(true)
   })
 })

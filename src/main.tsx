@@ -13,6 +13,7 @@ import { OwnerAccessAdminScreen } from './ui/access/OwnerAccessAdminScreen'
 import { allGroupsGranted } from './domain/accessGroups'
 import { stagingProductionUrl } from './config/staging'
 import { LazyViewportDebug } from './ui/debug/LazyViewportDebug'
+import { LazyJitterLab } from './ui/debug/LazyJitterLab'
 
 const container = document.getElementById('root')
 if (!container) throw new Error('Root element #root not found')
@@ -28,6 +29,7 @@ function renderApp(node: ReactNode) {
           <PwaUpdatePrompt />
           {node}
           <LazyViewportDebug />
+          <LazyJitterLab />
         </ToastProvider>
       </StagingFrame>
     </StrictMode>,

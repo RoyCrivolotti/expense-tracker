@@ -1,10 +1,11 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Transaction } from '../../types'
 import type { TransactionListRow } from '../../engine'
 import { buildLookup } from '../format'
 import { makeDataset } from '../../testing/factories'
+import { applyJx } from '../debug/jitterFlags'
 import { TransactionList } from './TransactionList'
 
 const lookup = buildLookup(
@@ -209,5 +210,32 @@ describe('TransactionList collapsible date groups', () => {
 
     render(ui)
     expect(screen.getByText('Degiro')).not.toBeVisible()
+  })
+})
+
+describe('TransactionList jitter lab', () => {
+  afterEach(() => applyJx([]))
+
+  function swipeList() {
+    return (
+      <TransactionList
+        rows={rows(txn())}
+        lookup={lookup}
+        swipeDelete
+        onDelete={vi.fn()}
+        onLongPressSelect={vi.fn()}
+      />
+    )
+  }
+
+  it('wraps rows in the swipe container by default', () => {
+    const { container } = render(swipeList())
+    expect(container.querySelector('[class*="swipeSlide"]')).not.toBeNull()
+  })
+
+  it('renders plain rows with no swipe wrapper when the lab asks for them', () => {
+    applyJx(['plainRows'])
+    const { container } = render(swipeList())
+    expect(container.querySelector('[class*="swipeSlide"]')).toBeNull()
   })
 })
