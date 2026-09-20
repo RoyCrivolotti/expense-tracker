@@ -119,7 +119,9 @@
   max-width: var(--exp-max);
   margin: 0 auto;
   min-width: 0;
-  overflow-x: clip;
+  /* No `overflow-x: clip` here. On iOS WebKit a clipping ancestor makes the sticky day
+     headers inside wobble by a few pixels while the page coasts. The wrappers above
+     (.main, .shell, #root, body) still stop sideways overflow. */
   padding: 1rem 1rem calc(var(--exp-bottom-bar) + env(safe-area-inset-bottom, 0px) + 5.5rem);
 }
 
