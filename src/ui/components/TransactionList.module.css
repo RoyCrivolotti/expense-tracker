@@ -35,9 +35,30 @@
   overflow: hidden;
 }
 
+/* Deleting a row folds it away before the request is sent, so the rows below close up
+   instead of jumping when the list re-renders. Same technique as `.dayRows`. */
+.rowFold {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition:
+    grid-template-rows var(--motion-fold) var(--motion-ease-in),
+    opacity var(--motion-fold) var(--motion-ease-in);
+}
+.rowFolded {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+}
+.rowFoldInner {
+  min-height: 0;
+  overflow: hidden;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dayRows,
-  .dayRowsCollapsed {
+  .dayRowsCollapsed,
+  .rowFold {
     transition: none;
   }
 }

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { EXIT_MS, exitVars, motionEnabled, setMotionDisabledForTests } from './motion'
+import { EXIT_MS, exitVars, foldDone, motionEnabled, setMotionDisabledForTests } from './motion'
 
 /** A duration token from theme.css, in ms, so the script and the stylesheet cannot drift. */
 function token(name: string): number {
@@ -55,5 +55,36 @@ describe('EXIT_MS', () => {
     expect(EXIT_MS.fade).toBeLessThan(token('--motion-enter-fade'))
     expect(EXIT_MS.popover).toBeLessThan(token('--motion-enter-pop'))
     expect(EXIT_MS.bar).toBeLessThan(token('--motion-enter-sheet'))
+  })
+
+  it('folds for exactly as long as the stylesheet does, since the script waits on the CSS', () => {
+    expect(EXIT_MS.fold).toBe(token('--motion-fold'))
+  })
+})
+
+describe('foldDone', () => {
+  it('waits out the fold when motion is on, and does not wait when it is off', async () => {
+    vi.useFakeTimers()
+    try {
+      setMotionDisabledForTests(false)
+      let settled = false
+      void foldDone().then(() => {
+        settled = true
+      })
+      await vi.advanceTimersByTimeAsync(EXIT_MS.fold - 1)
+      expect(settled).toBe(false)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(settled).toBe(true)
+
+      setMotionDisabledForTests(true)
+      let immediate = false
+      void foldDone().then(() => {
+        immediate = true
+      })
+      await vi.advanceTimersByTimeAsync(0)
+      expect(immediate).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

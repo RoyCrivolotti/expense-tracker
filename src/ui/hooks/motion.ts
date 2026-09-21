@@ -18,7 +18,17 @@ export const EXIT_MS = {
   fade: 130,
   /** A docked bar sliding away. */
   bar: 150,
+  /**
+   * A row folding away, or a group of rows. Must equal `--motion-fold` in theme.css, which
+   * the CSS transition reads; `motion.test.ts` holds the two together.
+   */
+  fold: 180,
 } as const
+
+/** Resolves once a fold has had time to finish, or at once when nothing will be animated. */
+export function foldDone(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, motionEnabled() ? EXIT_MS.fold : 0))
+}
 
 /**
  * `--exit-ms` for an overlay that is leaving, or nothing while it is not. The CSS reads it
