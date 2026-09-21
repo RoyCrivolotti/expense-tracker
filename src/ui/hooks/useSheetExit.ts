@@ -43,8 +43,14 @@ export function exitDurationMs(sheetHeight: number, fromOffsetPx: number): numbe
 export function useSheetExit(
   sheetRef: RefObject<HTMLElement | null>,
   onClose: () => void,
+  leaving: boolean,
 ): { release: SheetRelease | null; requestClose: (fromOffsetPx?: number) => void } {
   const [release, setRelease] = useState<SheetRelease | null>(null)
+
+  // A release belongs to the exit it started, which begins in the same update. An owner
+  // may answer a swipe with a confirm instead, and the sheet then stays; left in place, the
+  // release would colour whichever close came next (Save, Discard) with a swipe long over.
+  if (release && !leaving) setRelease(null)
 
   const requestClose = useCallback(
     (fromOffsetPx = 0) => {

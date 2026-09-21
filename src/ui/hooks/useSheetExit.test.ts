@@ -34,9 +34,21 @@ describe('exitDurationMs', () => {
 describe('useSheetExit', () => {
   const sheetOf = (height: number) => ({ current: { offsetHeight: height } as HTMLElement })
 
+  /** The owner takes a swipe by starting the exit in the update the swipe made. */
+  function swipe(result: { current: ReturnType<typeof useSheetExit> }, rerender: (props: { leaving: boolean }) => void, from: number) {
+    act(() => {
+      result.current.requestClose(from)
+      rerender({ leaving: true })
+    })
+  }
+
+  const setup = (sheet: { current: HTMLElement | null }, onClose = vi.fn()) => ({
+    onClose,
+    ...renderHook(({ leaving }) => useSheetExit(sheet, onClose, leaving), { initialProps: { leaving: false } }),
+  })
+
   it('hands a close from rest straight to the owner and remembers no release point', () => {
-    const onClose = vi.fn()
-    const { result } = renderHook(() => useSheetExit(sheetOf(400), onClose))
+    const { result, onClose } = setup(sheetOf(400))
 
     act(() => result.current.requestClose())
 
@@ -45,20 +57,28 @@ describe('useSheetExit', () => {
   })
 
   it('remembers where a swipe let go, how long the rest of the trip takes, and how far along it was', () => {
-    const onClose = vi.fn()
-    const { result } = renderHook(() => useSheetExit(sheetOf(400), onClose))
+    const { result, rerender, onClose } = setup(sheetOf(400))
 
-    act(() => result.current.requestClose(200))
+    swipe(result, rerender, 200)
 
     expect(onClose).toHaveBeenCalledTimes(1)
     expect(result.current.release).toEqual({ fromPx: 200, ms: exitDurationMs(400, 200), progress: 0.5 })
   })
 
   it('reports no progress for a sheet that has not been measured', () => {
-    const { result } = renderHook(() => useSheetExit({ current: null }, vi.fn()))
+    const { result, rerender } = setup({ current: null })
 
-    act(() => result.current.requestClose(120))
+    swipe(result, rerender, 120)
 
     expect(result.current.release).toMatchObject({ fromPx: 120, progress: 0 })
+  })
+
+  it('forgets a swipe the owner did not take, because that sheet is not leaving', () => {
+    const { result, onClose } = setup(sheetOf(400))
+
+    act(() => result.current.requestClose(200))
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(result.current.release).toBeNull()
   })
 })

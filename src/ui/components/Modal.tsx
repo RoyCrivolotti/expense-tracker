@@ -59,7 +59,7 @@ export function Modal({
   // Told by the owner's `Presence` that it has let go, whichever way it did: the Close
   // button, a swipe, Save, or anything else that clears the state this modal hangs on.
   const { leaving, exitMs } = useExit()
-  const { release, requestClose } = useSheetExit(sheetRef, onClose)
+  const { release, requestClose } = useSheetExit(sheetRef, onClose, leaving)
   useFocusTrap(sheetRef, requestClose, trapPaused || leaving)
   const { offset, isDragging, progress } = useSwipeDismiss(sheetRef, requestClose, !trapPaused && !leaving)
 

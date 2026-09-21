@@ -264,6 +264,22 @@ describe('Modal leaving', () => {
     expect(overlayOf(sheet).hasAttribute('inert')).toBe(false)
   })
 
+  it('forgets a swipe its owner refused, so a later Save leaves from rest', () => {
+    render(<Owner onClose={vi.fn()} accept={false} />)
+    const sheet = screen.getByRole('dialog')
+    measure(sheet)
+    drag(sheet, 200)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    const overlay = overlayOf(sheet)
+    expect(sheet.className).toContain('sheetClosing')
+    expect(overlay.style.getPropertyValue('--sheet-from')).toBe('0px')
+    expect(overlay.style.getPropertyValue('--exit-ms')).toBe(`${EXIT_MS.sheet}ms`)
+    expect(overlay.style.getPropertyValue('--exit-ease')).toBe('')
+    expect(overlay.style.getPropertyValue('--scrim')).toBe('0.5')
+  })
+
   it('stops answering Escape while it is leaving', () => {
     const onClose = vi.fn()
     render(<Owner onClose={onClose} />)
