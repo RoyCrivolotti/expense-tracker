@@ -56,8 +56,9 @@ describe('InstallmentPlansModal', () => {
         onClose={() => {}}
       />,
     )
-    expect(screen.getByText(/2\/3 paid/)).toBeTruthy()
+    expect(screen.getByText(/2 of 3 paid/)).toBeTruthy()
     expect(screen.getByText(/1 remaining/)).toBeTruthy()
+    expect(screen.getByText(/Last payment Mar 2026/)).toBeTruthy()
   })
 
   it('does not append a forecast count when every logged installment has posted', () => {
@@ -71,7 +72,7 @@ describe('InstallmentPlansModal', () => {
     expect(screen.queryByText(/forecast/)).toBeNull()
   })
 
-  it('appends a forecast count when a logged installment has not settled yet', () => {
+  it('counts a logged installment that has not settled as forecast, not paid', () => {
     render(
       <InstallmentPlansModal
         model={modelWith([basePlan], [installment(1, { status: 'forecast' })])}
@@ -79,7 +80,7 @@ describe('InstallmentPlansModal', () => {
         onClose={() => {}}
       />,
     )
-    expect(screen.getByText(/1\/3 paid \(1 forecast\)/)).toBeTruthy()
+    expect(screen.getByText(/0 of 3 paid · 1 forecast · 2 remaining/)).toBeTruthy()
   })
 
   it('clicking Complete toggles the plan active flag off', async () => {

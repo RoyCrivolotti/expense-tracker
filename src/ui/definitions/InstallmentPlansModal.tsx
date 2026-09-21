@@ -3,7 +3,7 @@ import type { InstallmentPlan } from '../../types'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import { forecastPaidCount, planProgress } from '../../engine'
-import { fullMonthLabel } from '../../engine/dates'
+import { shortMonthFullYearLabel } from '../../engine/dates'
 import { EmptyState } from '../components/primitives'
 import { CategoryIcon } from '../components/CategoryIcon'
 import { Modal } from '../components/Modal'
@@ -60,9 +60,9 @@ function PlanRow({
         <div className={styles.fill} style={{ width: `${pct}%` }} />
       </div>
       <span className={styles.stats}>
-        {progress.paidCount}/{plan.totalCount} paid
-        {forecastCount > 0 ? ` (${forecastCount} forecast)` : ''} · {progress.remaining} remaining · Final{' '}
-        {fullMonthLabel(progress.finalBudgetMonth)}
+        {progress.paidCount - forecastCount} of {plan.totalCount} paid
+        {forecastCount > 0 ? ` · ${forecastCount} forecast` : ''} · {progress.remaining} remaining ·
+        Last payment {shortMonthFullYearLabel(progress.finalBudgetMonth)}
       </span>
     </div>
   )
