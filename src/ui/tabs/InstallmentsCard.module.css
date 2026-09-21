@@ -187,19 +187,24 @@
   .lineTwo {
     display: contents;
   }
+  /* Status on the left, in line with the name and the chip, and the plus on the right
+     under the amount. */
   .trail {
     grid-area: trail;
-    justify-self: end;
+    justify-self: stretch;
     flex-wrap: wrap;
-    justify-content: flex-end;
+    justify-content: space-between;
   }
   /* Room is short here, so let text wrap rather than cut a name or date off. */
   .desc {
     overflow-wrap: anywhere;
     white-space: normal;
   }
+  /* One width for both chips so the text after them lines up from row to row. */
   .chip {
+    min-width: 3.25rem;
     margin: 0 0.5rem 0 0;
+    text-align: center;
   }
   .last {
     margin: 0;
@@ -232,9 +237,9 @@
     padding-left: 0;
   }
   .trail {
+    flex: 1 1 100%;
     min-width: 0;
     max-width: 100%;
-    margin-left: auto;
   }
   .status {
     min-width: 0;
