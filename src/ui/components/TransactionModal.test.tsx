@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import type { ExpenseDataset, Transaction } from '../../types'
+import type { ExpenseDataset, InstallmentPlan, Transaction } from '../../types'
 import { defaultExpenseSettings } from '../../engine'
 import type { ExpenseActions, TransactionSeed } from '../actions'
 import { makeActions } from '../../testing/makeActions'
@@ -36,7 +36,7 @@ function dataset(): ExpenseDataset {
   }
 }
 
-function model(): ExpenseModel {
+function model(plan?: InstallmentPlan): ExpenseModel {
   return {
     dataset: dataset(),
     lookup: {
@@ -46,7 +46,7 @@ function model(): ExpenseModel {
       accountName: () => '',
       flag: () => undefined,
       attachments: () => [],
-      installmentPlan: () => undefined,
+      installmentPlan: (id) => (plan && plan.id === id ? plan : undefined),
       settlementFor: () => undefined,
       settledBy: () => [],
     },
@@ -61,6 +61,7 @@ function renderModal(
     seed?: TransactionSeed
     onClose?: () => void
     actions?: Partial<ExpenseActions>
+    plan?: InstallmentPlan
   } = {},
 ) {
   const actions = makeActions(props.actions ?? {})
@@ -68,7 +69,7 @@ function renderModal(
   const view = render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
       <TransactionModal
-        model={model()}
+        model={model(props.plan)}
         actions={actions}
         editing={props.editing ?? null}
         seed={props.seed}
@@ -468,6 +469,26 @@ describe('TransactionModal — the other tab’s draft', () => {
 })
 
 describe('TransactionModal — installment sub-navigation', () => {
+  it('says which payment a plan-linked row is and when the plan ends', () => {
+    const plan: InstallmentPlan = {
+      id: 7,
+      description: 'Sofa',
+      totalCount: 24,
+      amountCents: 5783,
+      accountId: 1,
+      categoryId: 1,
+      type: 'expense',
+      anchorBudgetMonth: '2026-01',
+      startInstallmentIndex: 1,
+      active: true,
+    }
+    renderModal({
+      editing: makeTransaction({ id: 5, planId: 7, installmentIndex: 21, budgetMonth: '2026-09' }),
+      plan,
+    })
+    expect(screen.getByText('Installment 21/24 · Last payment Dec 2027')).toBeInTheDocument()
+  })
+
   it('switches to the installment view when clicking the installment link', () => {
     renderModal()
     fireEvent.click(screen.getByRole('button', { name: /no plan/i }))

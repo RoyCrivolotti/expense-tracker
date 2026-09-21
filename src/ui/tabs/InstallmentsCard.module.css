@@ -1,0 +1,322 @@
+/* The card is a size container, so the layout follows its own width rather than the
+   viewport (the side rail eats into it on a tablet), and the rem thresholds grow with
+   the reader's text size. Each row is two wrappers, one per phone line:
+     phone      two flex lines: name, chip, amount / last payment, status, +
+     narrow     a three row grid: name and amount / chip and last payment / status
+     desktop    the wrappers dissolve and every item sits in one grid row under a header
+   Lines are separate flex boxes rather than shared grid tracks so a wide pill on the
+   second line cannot take room from the name on the first. */
+.card {
+  container-type: inline-size;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.6rem 0;
+}
+.row + .row {
+  border-top: 1px solid var(--color-border);
+}
+
+.lineOne,
+.lineTwo {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.trail {
+  display: flex;
+  flex: none;
+  align-items: center;
+}
+
+.plan {
+  grid-area: plan;
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+}
+.desc {
+  font-size: 0.92rem;
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.position {
+  flex: none;
+  margin-left: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.meta {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+.chip {
+  grid-area: chip;
+  flex: none;
+  margin-left: 0.5rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.amount {
+  grid-area: amount;
+  flex: none;
+  margin-left: auto;
+  padding-left: 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.last {
+  grid-area: last;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-right: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+/* A flex box, not a plain block: an inline-block pill inside a line box sits on the
+   text baseline and ends up a pixel or two off-centre against its neighbours. */
+.status {
+  grid-area: status;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.columns {
+  display: none;
+}
+
+/* Text a screen reader needs but the layout already conveys another way. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.rowButton {
+  width: 100%;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rowButton:hover {
+  background: color-mix(in srgb, var(--color-accent) 6%, var(--color-bg));
+}
+
+.manageBtn {
+  width: 100%;
+  margin-top: 0.6rem;
+  padding: 0.55rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 0.7rem;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.manageBtn:hover {
+  border-color: var(--color-accent);
+}
+.addBtn {
+  grid-area: action;
+  position: relative;
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-left: 0.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--color-text);
+  line-height: 1;
+}
+/* The circle stays small for the layout; the tap area grows to 44px tall. It stops at the
+   right edge so it never adds scrollable overflow to the row. */
+.addBtn::after {
+  content: '';
+  position: absolute;
+  inset: -0.5rem 0 -0.5rem -0.5rem;
+}
+.addBtn:hover {
+  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-bg));
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* Last, so these override the base rules above at equal specificity. */
+@container (max-width: 19rem) {
+  .row {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr) max-content;
+    grid-template-areas:
+      'plan plan amount'
+      'chip last last'
+      'trail trail trail';
+    align-items: center;
+  }
+  .lineOne,
+  .lineTwo {
+    display: contents;
+  }
+  /* Status on the left, in line with the name and the chip, and the plus on the right
+     under the amount. */
+  .trail {
+    grid-area: trail;
+    justify-self: stretch;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+  /* Room is short here, so let text wrap rather than cut a name or date off. */
+  .desc {
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+  /* One width for both chips so the text after them lines up from row to row. */
+  .chip {
+    min-width: 3.25rem;
+    margin: 0 0.5rem 0 0;
+    text-align: center;
+  }
+  .last {
+    margin: 0;
+    overflow: visible;
+    white-space: normal;
+  }
+}
+
+/* Under 15rem there is no fitting the grid: a phone at a large text size. Everything
+   wraps in normal flow instead, so nothing is clipped. */
+@container (max-width: 15rem) {
+  .row {
+    display: flex;
+    align-items: stretch;
+  }
+  .lineOne,
+  .lineTwo {
+    display: flex;
+    flex-wrap: wrap;
+    row-gap: 0.25rem;
+  }
+  .plan,
+  .last {
+    flex: 1 1 100%;
+  }
+  .chip {
+    margin: 0;
+  }
+  .amount {
+    padding-left: 0;
+  }
+  .trail {
+    flex: 1 1 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .status {
+    min-width: 0;
+    white-space: normal;
+  }
+}
+
+@container (min-width: 38rem) {
+  .columns,
+  .row {
+    grid-template-columns: minmax(0, 1fr) 3.6rem 6rem 6rem 7.4rem 2rem;
+    column-gap: 0.75rem;
+  }
+  .row {
+    display: grid;
+    grid-template-areas: 'plan chip last amount status action';
+    align-items: center;
+    gap: 0 0.75rem;
+    padding: 0.5rem 0;
+  }
+  .lineOne,
+  .lineTwo,
+  .trail {
+    display: contents;
+  }
+  .columns {
+    display: grid;
+    grid-template-areas: 'plan chip last amount status status';
+    align-items: center;
+    padding: 0.5rem 0 0.35rem;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 0.72rem;
+    color: var(--color-text-muted);
+  }
+  .colPlan {
+    grid-area: plan;
+  }
+  .colAccount {
+    grid-area: chip;
+  }
+  .colLast {
+    grid-area: last;
+  }
+  .colAmount {
+    grid-area: amount;
+    text-align: right;
+  }
+  .colStatus {
+    grid-area: status;
+  }
+  .chip,
+  .last,
+  .amount {
+    margin: 0;
+  }
+  .chip {
+    justify-self: start;
+  }
+  .amount {
+    justify-self: end;
+    padding: 0;
+  }
+  .status {
+    justify-self: start;
+  }
+  /* The header names the column, but a screen reader has no header to lean on. */
+  .lastLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .addBtn {
+    width: 2rem;
+    height: 2rem;
+    margin: 0;
+  }
+}

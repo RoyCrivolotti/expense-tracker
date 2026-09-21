@@ -3,7 +3,7 @@ import type { Transaction } from '../../types'
 import type { ExpenseModel } from '../useExpenseData'
 import type { InstallmentDraft, InstallmentMode } from './installmentIntent'
 import { finalBudgetMonth, planProgress } from '../../engine'
-import { fullMonthLabel } from '../../engine/dates'
+import { shortMonthFullYearLabel } from '../../engine/dates'
 import { splitInstallmentCents } from '../../domain/engine/installments'
 import { formatCents } from '../../engine/money'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
@@ -168,7 +168,7 @@ function ExistingFields({
         onChange={(v) => set('installmentIndex', v)}
       />
       {plan ? (
-        <p className={styles.summary}>Final payment {fullMonthLabel(finalBudgetMonth(plan))}</p>
+        <p className={styles.summary}>Last payment {shortMonthFullYearLabel(finalBudgetMonth(plan))}</p>
       ) : null}
     </>
   )

@@ -7,6 +7,7 @@ import {
   lastDayOfBudgetMonth,
   priorBudgetMonth,
   shortDateLabel,
+  shortMonthFullYearLabel,
   shortMonthYearLabel,
 } from './dates'
 
@@ -103,6 +104,16 @@ describe('isDueSoon', () => {
 
   it('honours a wider aheadDays window', () => {
     expect(isDueSoon('2026-07-25', today, 2)).toBe(true)
+  })
+})
+
+describe('shortMonthFullYearLabel', () => {
+  it('abbreviates the month and keeps the full year', () => {
+    expect(shortMonthFullYearLabel('2026-11')).toBe('Nov 2026')
+  })
+
+  it('reads the month from a full ISO date too', () => {
+    expect(shortMonthFullYearLabel('2027-01-15')).toBe('Jan 2027')
   })
 })
 

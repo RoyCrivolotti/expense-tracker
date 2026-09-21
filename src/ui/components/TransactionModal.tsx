@@ -4,7 +4,7 @@ import type { NewTransaction } from '../../data/dataSource'
 import type { ExpenseActions, TransactionSeed } from '../actions'
 import type { ExpenseModel } from '../useExpenseData'
 import { finalBudgetMonth } from '../../engine'
-import { fullMonthLabel } from '../../engine/dates'
+import { shortMonthFullYearLabel } from '../../engine/dates'
 import { useToast } from '../hooks/useToast'
 import { BatchTransactionForm } from './BatchTransactionForm'
 import { ConfirmSheet } from './ConfirmSheet'
@@ -14,12 +14,12 @@ import type { InstallmentIntent } from './installmentIntent'
 import { createTransactionWithIntent, updateTransactionWithIntent } from './transactionSaveIntent'
 import styles from './TransactionModal.module.css'
 
-/** "Installment 21 of 24 · Final payment November 2026" for a plan-linked edit. */
+/** "Installment 21/24 · Last payment Nov 2026" for a plan-linked edit. */
 function installmentNote(editing: Transaction | null, model: ExpenseModel): string | undefined {
   if (!editing || editing.planId == null || editing.installmentIndex == null) return undefined
   const plan = model.lookup.installmentPlan(editing.planId)
   if (!plan) return undefined
-  return `Installment ${editing.installmentIndex} of ${plan.totalCount} · Final payment ${fullMonthLabel(finalBudgetMonth(plan))}`
+  return `Installment ${editing.installmentIndex}/${plan.totalCount} · Last payment ${shortMonthFullYearLabel(finalBudgetMonth(plan))}`
 }
 
 function titleFor(editing: Transaction | null, mode: 'single' | 'batch', formView: 'fields' | 'installment'): string {

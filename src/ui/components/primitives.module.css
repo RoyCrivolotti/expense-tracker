@@ -53,15 +53,15 @@
 }
 .success {
   background: color-mix(in srgb, var(--exp-success) 16%, transparent);
-  color: var(--exp-success);
+  color: var(--exp-success-text);
 }
 .warning {
   background: color-mix(in srgb, var(--exp-warning) 18%, transparent);
-  color: var(--exp-warning);
+  color: var(--exp-warning-text);
 }
 .danger {
   background: color-mix(in srgb, var(--exp-danger) 16%, transparent);
-  color: var(--exp-danger);
+  color: var(--exp-danger-text);
 }
 
 .emptyWrap {
