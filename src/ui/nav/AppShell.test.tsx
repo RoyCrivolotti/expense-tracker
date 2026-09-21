@@ -73,7 +73,7 @@ describe('AppShell fab leaving', () => {
     setMotionDisabledForTests(true)
   })
 
-  it('scales away when the selection bar takes its corner, and still adds if pressed on the way out of the DOM', () => {
+  it('scales away when the selection bar takes its corner, and takes no press on the way out', () => {
     const onAdd = vi.fn()
     const { rerender } = render(
       <AppShell {...baseProps} onAdd={onAdd}>
