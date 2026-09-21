@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { useDismissOnOutsidePointer } from '../charts/useDismissOnOutsidePointer'
+import { usePopoverMotion } from '../hooks/usePopoverMotion'
 import { usePopoverPosition } from '../hooks/usePopoverPosition'
 import { buildCalendarGrid, dayCellToIso, isDateOutOfRange, type DayCell } from './datePickerGrid'
 import styles from './DatePicker.module.css'
@@ -34,6 +35,7 @@ export function DatePickerPopover({ value, triggerRef, min, max, onSelect, onClo
 
   const popoverRef = useRef<HTMLDivElement>(null)
   const pos = usePopoverPosition(triggerRef, popoverRef)
+  const motion = usePopoverMotion(pos)
   const today = todayIso()
 
   const grid = buildCalendarGrid(viewYear, viewMonth)
@@ -66,8 +68,8 @@ export function DatePickerPopover({ value, triggerRef, min, max, onSelect, onClo
     onClose()
   }
 
-  useFocusTrap(popoverRef, onClose)
-  useDismissOnOutsidePointer(popoverRef, true, onClose, triggerRef)
+  useFocusTrap(popoverRef, onClose, motion.leaving)
+  useDismissOnOutsidePointer(popoverRef, !motion.leaving, onClose, triggerRef)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -96,8 +98,10 @@ export function DatePickerPopover({ value, triggerRef, min, max, onSelect, onClo
   return createPortal(
     <div
       ref={popoverRef}
-      className={styles.popover}
+      className={motion.leaving ? `${styles.popover} ${styles.popoverLeaving}` : styles.popover}
+      {...motion.attrs}
       style={{
+        ...motion.exit,
         top: pos?.top ?? -9999,
         left: pos?.left ?? -9999,
         // Capped to the visible band and scrollable, so a popover taller than

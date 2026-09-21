@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { useDismissOnOutsidePointer } from '../charts/useDismissOnOutsidePointer'
+import { usePopoverMotion } from '../hooks/usePopoverMotion'
 import { usePopoverPosition } from '../hooks/usePopoverPosition'
 import styles from './DatePicker.module.css'
 
@@ -31,6 +32,7 @@ export function MonthPickerPopover({ value, triggerRef, onSelect, onClose }: Pro
 
   const popoverRef = useRef<HTMLDivElement>(null)
   const pos = usePopoverPosition(triggerRef, popoverRef)
+  const motion = usePopoverMotion(pos)
   const thisMonth = currentYearMonth()
   const [thisY, thisM] = thisMonth.split('-').map(Number) as [number, number]
 
@@ -47,14 +49,16 @@ export function MonthPickerPopover({ value, triggerRef, onSelect, onClose }: Pro
     onClose()
   }
 
-  useFocusTrap(popoverRef, onClose)
-  useDismissOnOutsidePointer(popoverRef, true, onClose, triggerRef)
+  useFocusTrap(popoverRef, onClose, motion.leaving)
+  useDismissOnOutsidePointer(popoverRef, !motion.leaving, onClose, triggerRef)
 
   return createPortal(
     <div
       ref={popoverRef}
-      className={styles.popover}
+      className={motion.leaving ? `${styles.popover} ${styles.popoverLeaving}` : styles.popover}
+      {...motion.attrs}
       style={{
+        ...motion.exit,
         top: pos?.top ?? -9999,
         left: pos?.left ?? -9999,
         // Capped to the visible band and scrollable, so a popover taller than
