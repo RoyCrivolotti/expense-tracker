@@ -204,6 +204,11 @@
 .row:hover {
   background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
+/* Drawn inside the row: a day's rows sit in a box that clips (see `.dayRowsInner`), and the
+   default ring, which sits outside the row, lost its sides there. */
+.row:focus-visible {
+  outline-offset: -2px;
+}
 
 .swipeWrap {
   position: relative;
