@@ -4,6 +4,7 @@ import type { Transaction } from '../../types'
 import { makeDataset } from '../../testing/factories'
 import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
 import { buildLookup } from '../format'
+import { ToastContext } from '../hooks/useToast'
 import { SwipeTransactionRow } from './SwipeTransactionRow'
 
 const lookup = buildLookup(
@@ -90,12 +91,14 @@ describe('SwipeTransactionRow deleting', () => {
     expect(onDelete).toHaveBeenCalledWith(7)
   })
 
-  it('unfolds again if the delete fails, because the row is still there', async () => {
+  it('unfolds again and says why if the delete fails, because the row is still there', async () => {
     const onDelete = vi.fn().mockRejectedValue(new Error('offline'))
-    const { container } = renderRow(onDelete)
-    // The rejection is left to surface as it always did; only the row is put back.
-    const unhandled = vi.fn()
-    process.on('unhandledRejection', unhandled)
+    const showToast = vi.fn()
+    const { container } = render(
+      <ToastContext.Provider value={{ showToast }}>
+        <SwipeTransactionRow txn={txn} lookup={lookup} showDate={false} onDelete={onDelete} />
+      </ToastContext.Provider>,
+    )
 
     confirmDelete()
     await elapse(EXIT_MS.fold)
@@ -103,7 +106,21 @@ describe('SwipeTransactionRow deleting', () => {
     expect(onDelete).toHaveBeenCalledTimes(1)
     expect(foldOf(container).className).not.toContain('rowFolded')
     expect(foldOf(container).hasAttribute('inert')).toBe(false)
-    process.off('unhandledRejection', unhandled)
+    expect(showToast).toHaveBeenCalledWith('offline', 'error')
+  })
+
+  it('uses a plain message when the failure carries none', async () => {
+    const showToast = vi.fn()
+    render(
+      <ToastContext.Provider value={{ showToast }}>
+        <SwipeTransactionRow txn={txn} lookup={lookup} showDate={false} onDelete={vi.fn().mockRejectedValue('nope')} />
+      </ToastContext.Provider>,
+    )
+
+    confirmDelete()
+    await elapse(EXIT_MS.fold)
+
+    expect(showToast).toHaveBeenCalledWith('Could not delete', 'error')
   })
 
   it('shows its confirm sheet leaving over its own exit when the delete is cancelled, then removes it', () => {

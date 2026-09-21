@@ -4,6 +4,7 @@ import { useLongPress } from '../hooks/useLongPress'
 import { useSwipeReveal } from '../hooks/useSwipeReveal'
 import type { Lookup } from '../format'
 import { EXIT_MS, foldDone } from '../hooks/motion'
+import { useToast } from '../hooks/useToast'
 import { ConfirmSheet } from './ConfirmSheet'
 import { Presence } from './Presence'
 import { TransactionRowBody } from './TransactionRowBody'
@@ -38,6 +39,7 @@ export function SwipeTransactionRow({
   const longPress = useLongPress({
     onLongPress: () => onLongPressSelect?.(txn.id),
   })
+  const { showToast } = useToast()
   const [pendingDelete, setPendingDelete] = useState(false)
   const [folding, setFolding] = useState(false)
 
@@ -52,14 +54,15 @@ export function SwipeTransactionRow({
     swipe.reset()
     // Folds away first and asks afterwards: sent at once, an answer that beat the fold (the
     // server is often quicker than 180ms) would have the list drop the row halfway down. If
-    // the delete fails the row is still there, so bring it back.
+    // the delete fails the row is still there, so bring it back and say why, as a batch
+    // delete does; a row that folded and then reappeared would otherwise look like a glitch.
     setFolding(true)
     try {
       await foldDone()
       await onDelete(txn.id)
     } catch (error) {
       setFolding(false)
-      throw error
+      showToast(error instanceof Error ? error.message : 'Could not delete', 'error')
     }
   }
 
