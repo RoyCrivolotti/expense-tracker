@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { EXIT_MS, exitVars, foldDone, motionEnabled, setMotionDisabledForTests } from './motion'
@@ -86,5 +86,38 @@ describe('foldDone', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+/** Every component stylesheet, found rather than listed so that a new one is checked too. */
+function stylesheets(dir = resolve(process.cwd(), 'src/ui')): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = resolve(dir, entry.name)
+    if (entry.isDirectory()) return stylesheets(path)
+    return entry.name.endsWith('.module.css') ? [path] : []
+  })
+}
+
+describe('exit animations in the stylesheets', () => {
+  it('take their time from --exit-ms, which the component sets from EXIT_MS, not from a number of their own', () => {
+    // A way out written with its own duration would run for that long whatever `Presence`
+    // holds the element in the DOM for, and be cut off or left hanging when the two differ.
+    const withOwnTime: string[] = []
+    for (const file of stylesheets()) {
+      for (const [declaration, name] of readFileSync(file, 'utf8').matchAll(/animation:\s*([\w-]+)[^;]*;/g)) {
+        if (/(?:-out|Out)$/.test(name ?? '') && !declaration.includes('var(--exit-ms')) {
+          withOwnTime.push(`${file.replace(process.cwd() + '/', '')}: ${declaration}`)
+        }
+      }
+    }
+    expect(withOwnTime).toEqual([])
+  })
+
+  it('finds the exits it is meant to check', () => {
+    // Guards the test above against passing because its pattern matched nothing.
+    const exits = stylesheets().flatMap((file) =>
+      [...readFileSync(file, 'utf8').matchAll(/animation:\s*([\w-]+(?:-out|Out))\b/g)].map((m) => m[1]),
+    )
+    expect(exits.length).toBeGreaterThanOrEqual(8)
   })
 })
