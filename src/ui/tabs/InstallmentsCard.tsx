@@ -15,7 +15,7 @@ import { CategoryIcon } from '../components/CategoryIcon'
 import { InstallmentPlansModal } from '../definitions/InstallmentPlansModal'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { shortDayLabel } from '../format'
-import styles from './UpcomingCard.module.css'
+import styles from './InstallmentsCard.module.css'
 
 interface Props {
   model: ExpenseModel
