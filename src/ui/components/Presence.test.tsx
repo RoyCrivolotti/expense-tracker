@@ -212,3 +212,14 @@ describe('PresenceValue', () => {
     expect(screen.getByTestId('row').textContent).toBe('two')
   })
 })
+
+describe('PresenceValue with a value that is never equal to itself', () => {
+  it('settles on NaN instead of re-rendering forever', () => {
+    render(
+      <PresenceValue value={Number.NaN} exitMs={100}>
+        {(n) => <p data-testid="nan">{String(n)}</p>}
+      </PresenceValue>,
+    )
+    expect(screen.getByTestId('nan').textContent).toBe('NaN')
+  })
+})

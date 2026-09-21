@@ -82,7 +82,7 @@ export function PresenceValue<T>({ value, exitMs, children }: PresenceValueProps
   // In a tuple because `useState` calls a function it is handed, as an initialiser or an
   // updater, and a held callback (the add button's handler) must be kept, not run.
   const [held, setHeld] = useState<[T | null | undefined]>([value])
-  if (value != null && held[0] !== value) setHeld([value])
+  if (value != null && !Object.is(held[0], value)) setHeld([value])
   const shown = value ?? held[0]
   return (
     <Presence show={value != null} exitMs={exitMs}>
