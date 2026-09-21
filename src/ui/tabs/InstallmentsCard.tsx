@@ -89,8 +89,10 @@ interface RowContentProps {
   trailing?: ReactNode
 }
 
-// Direct grid items of the row: the card's container queries place them, so
-// the same markup is a table row on desktop and a two or three line row on a phone.
+// One markup, three layouts: the card's container queries flex the two lines on a
+// phone, grid them on a narrow card, and dissolve the wrappers into a table row on a
+// wide one. Source order is the reading order: name, position, account, amount, then
+// last payment and status.
 function RowContent({
   name,
   icon,
@@ -104,21 +106,30 @@ function RowContent({
 }: RowContentProps) {
   return (
     <>
-      <span className={styles.plan}>
-        <span className={styles.desc}>
-          <CategoryIcon icon={icon} name={categoryName} /> {name}
+      <span className={styles.lineOne}>
+        <span className={styles.plan}>
+          <span className={styles.desc}>
+            <CategoryIcon icon={icon} name={categoryName} /> {name}
+          </span>
+          <span className={styles.position}>
+            <span className={styles.srOnly}>Payment </span>
+            {position}
+          </span>
         </span>
-        <span className={styles.position}>{position}</span>
+        {chip ? <span className={styles.chip}>{chip}</span> : null}
+        <span className={styles.amount}>{amount}</span>
       </span>
-      {chip ? <span className={styles.chip}>{chip}</span> : null}
-      <span className={styles.last}>
-        <span className={styles.lastLabel}>Last payment</span> {lastPayment}
+      <span className={styles.lineTwo}>
+        <span className={styles.last}>
+          <span className={styles.lastLabel}>Last payment</span> {lastPayment}
+        </span>
+        <span className={styles.trail}>
+          <span className={styles.status}>
+            <Pill tone={status.tone}>{status.label}</Pill>
+          </span>
+          {trailing}
+        </span>
       </span>
-      <span className={styles.amount}>{amount}</span>
-      <span className={styles.status}>
-        <Pill tone={status.tone}>{status.label}</Pill>
-      </span>
-      {trailing}
     </>
   )
 }
@@ -146,12 +157,12 @@ export function InstallmentsCard({ model, actions, month }: Props) {
             : 'Nothing scheduled this month.'}
         </p>
         {rows.length > 0 ? (
-          <div className={styles.head} aria-hidden="true">
-            <span className={styles.headPlan}>Plan</span>
-            <span className={styles.headChip}>Account</span>
-            <span className={styles.headLast}>Last payment</span>
-            <span className={styles.headAmount}>Amount</span>
-            <span className={styles.headStatus}>Status</span>
+          <div className={styles.columns} aria-hidden="true">
+            <span className={styles.colPlan}>Plan</span>
+            <span className={styles.colAccount}>Account</span>
+            <span className={styles.colLast}>Last payment</span>
+            <span className={styles.colAmount}>Amount</span>
+            <span className={styles.colStatus}>Status</span>
           </div>
         ) : null}
         {rows.map((row) => {
@@ -203,7 +214,7 @@ export function InstallmentsCard({ model, actions, month }: Props) {
                     type="button"
                     className={styles.addBtn}
                     onClick={() => actions.onAdd(toSeed(suggestion))}
-                    aria-label="Log installment payment"
+                    aria-label={`Log installment payment for ${suggestion.description}`}
                   >
                     +
                   </button>
