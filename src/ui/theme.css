@@ -13,11 +13,12 @@
   --exp-warning: #d97706;
   --exp-danger: #dc2626;
   --exp-track: #e7e7e2;
-  /* Text on a tinted pill. The bare tone is about 2.6:1 on its own tint in the light
-     theme; mixing in black brings it above 5:1. Dark tones already clear 4.9:1. */
-  --exp-success-text: color-mix(in srgb, var(--exp-success) 65%, black);
-  --exp-warning-text: color-mix(in srgb, var(--exp-warning) 65%, black);
-  --exp-danger-text: color-mix(in srgb, var(--exp-danger) 65%, black);
+  /* Text on a tinted pill, measured on the card surface. The bare tone is 2.3 to 3.3:1
+     against its own tint in the light theme; mixing in black brings it above 5:1. Dark
+     tones already clear 4.9:1. */
+  --exp-success-text: color-mix(in srgb, var(--exp-success) 60%, black);
+  --exp-warning-text: color-mix(in srgb, var(--exp-warning) 60%, black);
+  --exp-danger-text: color-mix(in srgb, var(--exp-danger) 60%, black);
 
   --exp-rail: 15rem;
   --exp-rail-collapsed: 4.5rem;
@@ -72,9 +73,9 @@ html[data-exp-theme='light'] {
   --exp-warning: #d97706;
   --exp-danger: #dc2626;
   --exp-track: #e7e7e2;
-  --exp-success-text: color-mix(in srgb, var(--exp-success) 65%, black);
-  --exp-warning-text: color-mix(in srgb, var(--exp-warning) 65%, black);
-  --exp-danger-text: color-mix(in srgb, var(--exp-danger) 65%, black);
+  --exp-success-text: color-mix(in srgb, var(--exp-success) 60%, black);
+  --exp-warning-text: color-mix(in srgb, var(--exp-warning) 60%, black);
+  --exp-danger-text: color-mix(in srgb, var(--exp-danger) 60%, black);
 }
 
 html[data-exp-theme='dark'] {
