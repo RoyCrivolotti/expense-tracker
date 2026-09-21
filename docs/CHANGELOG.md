@@ -14,6 +14,11 @@ Mostly fixes to things the app was getting quietly wrong rather than new ground.
 - **Future-dated wealth check-ins are refused**, on the phone as well. The date field had been trusting an HTML attribute that iOS Safari ignores outright.
 - **Bulk edit uses your budget rollover day** when it prefills the budget month, instead of the calendar month, so it no longer assigns a month a single edit never would.
 - **Exported CSVs cannot execute.** A description beginning with `=` or `+` is neutralised on the way out and restored on the way back in.
+- **Installments stay visible and say when one is paid.** The Installments card sat behind the same one-day "due soon" gate as the guessed recurring bills, so a declared plan vanished until its payment was nearly due, and again as soon as it was logged. It now shows every plan's payment for the viewed month as Due or Paid, with the real payment date.
+- **A finished plan closes itself.** A plan stayed active after its last payment until someone pressed Complete. It now completes when the final installment is recorded, and plans that had already finished were closed out in one pass.
+- **Paid no longer overstates a card charge.** An installment on a credit card read Paid the moment it was logged, even while its card statement was unpaid and the same charge read Forecast in the list. The Installments card and the plan progress line now say Forecast too.
+- **Credit-card installments create themselves.** Nothing tells the app a card charged this month's installment, and it is a certainty from the day the plan is made, so the first time you open the app after a month comes due, that month's installment is added for you. Missed months are all added at once, oldest first. Debit-card plans stay manual, because logging one is the only sign the money left the account. It counts a month as due by your budget rollover day, not the calendar.
+- **Installment dates follow the month the charge posts.** If you count a charge in the month its card bill is paid, a first installment dated in August and counted in September was followed by one dated and counted in October, a month late and in the future. The gap is now read from the plan's first installment, so the second is dated in September and counted in October.
 
 ## July 2026 (follow-ups)
 
@@ -120,7 +125,7 @@ Mostly fixes to things the app was getting quietly wrong rather than new ground.
 ### Installments
 
 - **Installment plans**: log a purchase once as a bounded N-payment schedule (e.g. a phone financed over 24 months) instead of re-entering it every month. Create a plan inline from the transaction form, or manage existing plans from the Transactions tab.
-- **Due-soon reminders**: the Installments card surfaces payments due today or tomorrow (or with no known due day) for the viewed month; **Manage plans** stays reachable even when nothing is due right now.
+- **Manage plans**: progress, edit, complete and delete for every plan, from a button on the Installments card in the Transactions tab.
 
 ### Currency and budget months
 

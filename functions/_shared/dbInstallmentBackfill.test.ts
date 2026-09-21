@@ -227,6 +227,59 @@ describe('backfillInstallments', () => {
     expect(state.insertedRows).toHaveLength(0)
   })
 
+  describe('the date given to a created installment', () => {
+    const cur = currentBudgetMonth()
+    const budgetMonthsAgo = (n: number) => shiftBudgetMonth(cur, -n)
+    // Installments 1..3 fall due two months ago, last month and this month.
+    const plan = () => planRow({ id: 1, total_count: 4, anchor_budget_month: budgetMonthsAgo(2), due_day_of_month: 6 })
+    const first = (date: string) => txnRow({ id: 1, plan_id: 1, installment_index: 1, date, budget_month: budgetMonthsAgo(2) })
+    const run = async (planRows: InstallmentPlanRow[], txnRows: TxnRow[]) => {
+      const state: MockState = { planRows, txnRows, insertedRows: [], prepared: [], nextId: 1000 }
+      await backfillInstallments(envForBackfill(state), 'a@b.com')
+      return state.insertedRows
+    }
+
+    it('trails its budget month by the same gap as the first installment', async () => {
+      const created = await run([plan()], [first(`${budgetMonthsAgo(3)}-06`)])
+      expect(created.map((r) => r.budget_month)).toEqual([budgetMonthsAgo(1), cur])
+      expect(created.map((r) => r.date)).toEqual([`${budgetMonthsAgo(2)}-06`, `${budgetMonthsAgo(1)}-06`])
+    })
+
+    it('stays in the budget month when the first installment was dated in it', async () => {
+      const created = await run([plan()], [first(`${budgetMonthsAgo(2)}-06`)])
+      expect(created.map((r) => r.date)).toEqual([`${budgetMonthsAgo(1)}-06`, `${cur}-06`])
+    })
+
+    it('stays in the budget month when nothing has been recorded to read a gap from', async () => {
+      const created = await run([plan()], [])
+      expect(created.map((r) => r.date)).toEqual([
+        `${budgetMonthsAgo(2)}-06`,
+        `${budgetMonthsAgo(1)}-06`,
+        `${cur}-06`,
+      ])
+    })
+
+    it('keeps the first of the budget month for a plan with no due day', async () => {
+      const created = await run(
+        [planRow({ id: 1, total_count: 4, anchor_budget_month: budgetMonthsAgo(2) })],
+        [first(`${budgetMonthsAgo(3)}-06`)],
+      )
+      expect(created.map((r) => r.date)).toEqual([`${budgetMonthsAgo(1)}-01`, `${cur}-01`])
+    })
+
+    it('is not thrown off by a later installment dated in its own budget month', async () => {
+      const later = txnRow({
+        id: 2,
+        plan_id: 1,
+        installment_index: 2,
+        date: `${budgetMonthsAgo(1)}-06`,
+        budget_month: budgetMonthsAgo(1),
+      })
+      const created = await run([plan()], [first(`${budgetMonthsAgo(3)}-06`), later])
+      expect(created.map((r) => r.date)).toEqual([`${budgetMonthsAgo(1)}-06`])
+    })
+  })
+
   it('isolates a failure in one plan from the rest', async () => {
     const failing = planRow({ id: 1, total_count: 3, anchor_budget_month: shiftBudgetMonth(currentBudgetMonth(), -2) })
     const healthy = planRow({ id: 2, total_count: 2, anchor_budget_month: shiftBudgetMonth(currentBudgetMonth(), -2) })
