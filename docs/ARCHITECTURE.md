@@ -23,7 +23,8 @@ keep working — the real implementation is always in `src/domain/`. Prefer impo
 ## Invariants worth knowing before you change them
 
 - **Transaction status is derived, never stored.** `src/domain/engine/status.ts` computes
-  overdue/due-soon/paid from dates and settings on every read. There is no `status` column — if you
+  posted/forecast/cancelled from the account's settlement and whether its statement for the
+  transaction's budget month is paid, on every read. There is no `status` column — if you
   find yourself wanting to persist one, that's a signal the derivation logic needs fixing instead.
 - **Row-level tenancy via `owner`.** Every table keyed by `owner` (the authenticated email); every
   D1 query in `functions/_shared/adapters/d1ExpenseRepository.ts` filters by it. New tables and
