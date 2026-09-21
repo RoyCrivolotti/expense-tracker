@@ -16,6 +16,32 @@
   z-index: 45;
   overflow-y: auto;
   background: var(--color-bg);
+  animation: reportIn var(--motion-enter-fade) var(--motion-ease-out);
+}
+
+/* Leaving is the arrival played backwards, over the time `Presence` keeps it mounted. */
+.overlayLeaving {
+  animation: reportOut var(--exit-ms, 130ms) var(--motion-ease-in) forwards;
+  pointer-events: none;
+}
+@keyframes reportIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes reportOut {
+  to {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce), print {
+  .overlay,
+  .overlayLeaving {
+    animation: none;
+  }
 }
 
 .toolbar {

@@ -10,7 +10,9 @@ import {
 import { pastReportDrifted } from '../../domain/engine/pastReports'
 import { ExpenseReportSheet } from './ExpenseReportSheet'
 import { todayIso } from '../components/transactionFormState'
+import { exitVars } from '../hooks/motion'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
+import { useExit } from '../hooks/usePresence'
 import { downloadExpenseReportCsv } from '../../data/expenseReportCsv'
 import { deliverReceipts } from '../../data/receiptDownload'
 import { namedReceipts, receiptPackName } from '../../domain/engine/receiptFiles'
@@ -113,6 +115,7 @@ export function ExpenseReportView({
   issuedOn,
 }: Props) {
   const format = useMoneyFormat()
+  const { leaving, exitMs } = useExit()
 
   /*
    * The overlay is portalled out of #root and flags the body while it is open,
@@ -155,7 +158,11 @@ export function ExpenseReportView({
     settledByPaymentId != null && pastReportDrifted(settledByPaymentId, dataset.transactions)
 
   return createPortal(
-    <div className={styles.overlay}>
+    <div
+      className={leaving ? `${styles.overlay} ${styles.overlayLeaving}` : styles.overlay}
+      style={exitVars(leaving, exitMs)}
+      inert={leaving}
+    >
       <div className={styles.toolbar}>
         <button type="button" className={styles.closeBtn} onClick={onClose}>
           Back

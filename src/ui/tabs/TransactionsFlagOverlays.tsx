@@ -43,25 +43,31 @@ export function TransactionsFlagOverlays({
 }) {
   return (
     <>
-      {reportFlagId != null && buildFlagGroup(reportFlagId, model.dataset.transactions, model.dataset.flags) ? (
-        <ExpenseReportView
-          dataset={model.dataset}
-          lookup={model.lookup}
-          flagId={reportFlagId}
-          onClose={onCloseReport}
-          {...(actions ? { onOpenTransaction: actions.onEdit } : {})}
-        />
-      ) : null}
+      <PresenceValue value={reportFlagId} exitMs={EXIT_MS.fade}>
+        {(flagId) =>
+          buildFlagGroup(flagId, model.dataset.transactions, model.dataset.flags) ? (
+            <ExpenseReportView
+              dataset={model.dataset}
+              lookup={model.lookup}
+              flagId={flagId}
+              onClose={onCloseReport}
+              {...(actions ? { onOpenTransaction: actions.onEdit } : {})}
+            />
+          ) : null
+        }
+      </PresenceValue>
 
-      {pastPaymentId != null ? (
-        <ExpenseReportView
-          dataset={model.dataset}
-          lookup={model.lookup}
-          settledByPaymentId={pastPaymentId}
-          onClose={onClosePast}
-          {...(actions ? { onOpenTransaction: actions.onEdit } : {})}
-        />
-      ) : null}
+      <PresenceValue value={pastPaymentId} exitMs={EXIT_MS.fade}>
+        {(paymentId) => (
+          <ExpenseReportView
+            dataset={model.dataset}
+            lookup={model.lookup}
+            settledByPaymentId={paymentId}
+            onClose={onClosePast}
+            {...(actions ? { onOpenTransaction: actions.onEdit } : {})}
+          />
+        )}
+      </PresenceValue>
 
       <PresenceValue value={viewingPast ? actions : null} exitMs={EXIT_MS.sheet}>
         {(shown) => (
