@@ -155,9 +155,8 @@ describe('InstallmentsCard', () => {
     expect(
       screen.getByText('Scheduled plan payments for this month, not predictions.'),
     ).toBeTruthy()
-    expect(screen.getByText(/1 of 24/)).toBeTruthy()
-    expect(screen.getByText(/Due this month/)).toBeTruthy()
-    expect(screen.getByText('Due')).toBeTruthy()
+    expect(screen.getByText('1/24')).toBeTruthy()
+    expect(screen.getByText('Due this month')).toBeTruthy()
   })
 
   describe('payments with a known due date (near or far)', () => {
@@ -171,7 +170,7 @@ describe('InstallmentsCard', () => {
         <InstallmentsCard model={modelWithPlans([laterPlan])} actions={noopActions()} month="2026-07" />,
       )
       expect(screen.getByText('Manage plans')).toBeTruthy()
-      expect(screen.getByText(/1 of 24/)).toBeTruthy()
+      expect(screen.getByText('1/24')).toBeTruthy()
       expect(screen.getByText(/Due 28 Jul/)).toBeTruthy()
     })
 
@@ -184,7 +183,7 @@ describe('InstallmentsCard', () => {
       render(
         <InstallmentsCard model={modelWithPlans([soonPlan])} actions={noopActions()} month="2026-07" />,
       )
-      expect(screen.getByText(/1 of 24/)).toBeTruthy()
+      expect(screen.getByText('1/24')).toBeTruthy()
       expect(screen.getByText(/Due 2 Jul/)).toBeTruthy()
     })
   })
@@ -214,7 +213,7 @@ describe('InstallmentsCard', () => {
           month="2026-08"
         />,
       )
-      expect(screen.getByText(/2 of 24/)).toBeTruthy()
+      expect(screen.getByText('2/24')).toBeTruthy()
       expect(screen.getByText(/Due 28 Jul/)).toBeTruthy()
     })
 
@@ -260,10 +259,8 @@ describe('InstallmentsCard', () => {
           month="2026-07"
         />,
       )
-      expect(screen.getByText(/Paid 5 Jul/)).toBeTruthy()
-      expect(screen.getByText('Paid')).toBeTruthy()
-      expect(screen.queryByText(/Due /)).toBeNull()
-      expect(screen.queryByText('Due')).toBeNull()
+      expect(screen.getByText('Paid 5 Jul')).toBeTruthy()
+      expect(screen.queryByText(/^Due/)).toBeNull()
       expect(screen.queryByLabelText('Log installment payment')).toBeNull()
     })
 
@@ -300,23 +297,46 @@ describe('InstallmentsCard', () => {
           month="2026-07"
         />,
       )
-      expect(screen.queryByText(/Paid /)).toBeNull()
-      expect(screen.queryByText('Paid')).toBeNull()
-      expect(screen.getByText(/Due this month/)).toBeTruthy()
-      expect(screen.getByText('Due')).toBeTruthy()
+      expect(screen.queryByText(/^Paid/)).toBeNull()
+      expect(screen.getByText('Due this month')).toBeTruthy()
     })
   })
 
   describe('the row layout', () => {
     const plan: InstallmentPlan = { ...basePlan, anchorBudgetMonth: '2026-07', dueDayOfMonth: 28 }
 
-    it('shows position, account type and the last payment month beside the status', () => {
+    it('shows position, account type, last payment month and one status pill', () => {
       render(
         <InstallmentsCard model={modelWithPlans([plan])} actions={noopActions()} month="2026-07" />,
       )
-      expect(screen.getByText('Due 28 Jul · 1 of 24')).toBeTruthy()
+      expect(screen.getByText('1/24')).toBeTruthy()
       expect(screen.getByText('Debit')).toBeTruthy()
-      expect(screen.getByText(/Last payment Jun 2028/)).toBeTruthy()
+      // Once in the desktop header, once in the row so a screen reader still hears it.
+      expect(screen.getAllByText('Last payment')).toHaveLength(2)
+      expect(screen.getByText('Jun 2028')).toBeTruthy()
+      expect(screen.getByText('Due 28 Jul')).toBeTruthy()
+    })
+
+    it('labels the desktop columns with a header that assistive tech skips', () => {
+      render(
+        <InstallmentsCard model={modelWithPlans([plan])} actions={noopActions()} month="2026-07" />,
+      )
+      const status = screen.getByText('Status')
+      expect(status.parentElement?.getAttribute('aria-hidden')).toBe('true')
+      expect(screen.getByText('Plan')).toBeTruthy()
+      expect(screen.getByText('Account')).toBeTruthy()
+      expect(screen.getByText('Amount')).toBeTruthy()
+    })
+
+    it('has no column header when nothing is scheduled', () => {
+      render(
+        <InstallmentsCard
+          model={modelWithPlans([{ ...plan, anchorBudgetMonth: '2027-01' }])}
+          actions={noopActions()}
+          month="2026-07"
+        />,
+      )
+      expect(screen.queryByText('Status')).toBeNull()
     })
 
     it('leaves the account chip off when the account is unknown', () => {
@@ -326,7 +346,7 @@ describe('InstallmentsCard', () => {
       )
       expect(screen.queryByText('Debit')).toBeNull()
       expect(screen.queryByText('Credit')).toBeNull()
-      expect(screen.getByText(/Last payment Jun 2028/)).toBeTruthy()
+      expect(screen.getByText('Jun 2028')).toBeTruthy()
     })
   })
 
@@ -360,10 +380,9 @@ describe('InstallmentsCard', () => {
           month="2026-07"
         />,
       )
-      expect(screen.getByText('Forecast for Jul · 1 of 24')).toBeTruthy()
-      expect(screen.getByText('Forecast')).toBeTruthy()
+      expect(screen.getByText('Forecast for Jul')).toBeTruthy()
       expect(screen.getByText('Credit')).toBeTruthy()
-      expect(screen.queryByText('Paid')).toBeNull()
+      expect(screen.queryByText(/^Paid/)).toBeNull()
       expect(screen.queryByLabelText('Log installment payment')).toBeNull()
     })
 
@@ -379,8 +398,7 @@ describe('InstallmentsCard', () => {
           month="2026-07"
         />,
       )
-      expect(screen.getByText('Paid 1 Aug · 1 of 24')).toBeTruthy()
-      expect(screen.getByText('Paid')).toBeTruthy()
+      expect(screen.getByText('Paid 1 Aug')).toBeTruthy()
       expect(screen.queryByText(/Paid 6 Jun/)).toBeNull()
     })
 
@@ -394,7 +412,7 @@ describe('InstallmentsCard', () => {
           month="2026-07"
         />,
       )
-      expect(screen.getByText('Paid · 1 of 24')).toBeTruthy()
+      expect(screen.getByText('Paid')).toBeTruthy()
     })
   })
 })

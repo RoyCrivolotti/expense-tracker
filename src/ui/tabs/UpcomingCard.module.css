@@ -1,19 +1,35 @@
+/* The card is a size container, so the layout follows its own width rather than the
+   viewport (the side rail eats into it on a tablet). Every row is one grid whose items
+   are placed by area:
+     phone      two lines: name, chip, amount / last payment, status, +
+     narrow     three lines: the chip and status drop to their own lines so the name fits
+     desktop    one line per plan, with a header row */
+.card {
+  container-type: inline-size;
+}
+
 .row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
+  display: grid;
+  grid-template-columns: minmax(0, max-content) max-content minmax(0, 1fr) max-content max-content;
+  grid-template-areas:
+    'plan chip . amount amount'
+    'last last last status action';
+  align-items: center;
+  row-gap: 0.25rem;
   padding: 0.6rem 0;
   border-bottom: 1px solid var(--color-border);
 }
 .row:last-child {
   border-bottom: 0;
 }
+.row > * {
+  min-width: 0;
+}
 
-.info {
+.plan {
+  grid-area: plan;
   display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
+  align-items: baseline;
   min-width: 0;
 }
 .desc {
@@ -22,6 +38,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.position {
+  flex: none;
+  margin-left: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
 }
 .meta {
   font-size: 0.78rem;
@@ -34,30 +57,47 @@
   font-size: 0.7rem;
 }
 .chip {
-  margin-right: 0.35rem;
+  grid-area: chip;
+  justify-self: start;
+  margin-left: 0.5rem;
   padding: 0.05rem 0.45rem;
   border-radius: 999px;
   background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  color: var(--color-text-muted);
   font-size: 0.7rem;
   font-weight: 600;
+  white-space: nowrap;
 }
-
-.rail {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.35rem;
-  flex-shrink: 0;
+.last {
+  grid-area: last;
+  margin-right: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
 }
 .amount {
+  grid-area: amount;
+  justify-self: end;
+  margin-left: 0.75rem;
   font-size: 0.95rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-.actions {
+/* A flex box, not a plain block: an inline-block pill inside a line box sits on the
+   text baseline and ends up a pixel or two off-centre against its neighbours. */
+.status {
+  grid-area: status;
+  justify-self: end;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.head {
+  display: none;
 }
 
 .rowButton {
@@ -90,8 +130,8 @@
 }
 .addBtn,
 .dismissBtn {
-  width: 2rem;
-  height: 2rem;
+  width: 1.75rem;
+  height: 1.75rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -104,6 +144,10 @@
   color: var(--color-text);
   line-height: 1;
 }
+.addBtn {
+  grid-area: action;
+  margin-left: 0.4rem;
+}
 .addBtn:hover {
   background: color-mix(in srgb, var(--color-accent) 12%, var(--color-bg));
   border-color: var(--color-accent);
@@ -113,4 +157,80 @@
   background: color-mix(in srgb, var(--exp-expense, #e5484d) 10%, var(--color-bg));
   border-color: var(--exp-expense, #e5484d);
   color: var(--exp-expense, #e5484d);
+}
+
+/* Last, so these override the base rules above at equal specificity. */
+@container (max-width: 19rem) {
+  .row {
+    grid-template-areas:
+      'plan plan plan amount amount'
+      'chip last last last last'
+      '. . . status action';
+  }
+  .chip {
+    margin-left: 0;
+  }
+  .last {
+    margin: 0 0 0 0.5rem;
+  }
+}
+
+@container (min-width: 38rem) {
+  .head,
+  .row {
+    grid-template-columns: minmax(0, 1fr) 3.6rem 6rem 5rem 7.4rem 2rem;
+    column-gap: 0.75rem;
+  }
+  .row {
+    grid-template-areas: 'plan chip last amount status action';
+    row-gap: 0;
+    padding: 0.5rem 0;
+  }
+  .head {
+    display: grid;
+    grid-template-areas: 'plan chip last amount status status';
+    align-items: center;
+    padding: 0.5rem 0 0.35rem;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 0.72rem;
+    color: var(--color-text-muted);
+  }
+  .headPlan {
+    grid-area: plan;
+  }
+  .headChip {
+    grid-area: chip;
+  }
+  .headLast {
+    grid-area: last;
+  }
+  .headAmount {
+    grid-area: amount;
+    text-align: right;
+  }
+  .headStatus {
+    grid-area: status;
+  }
+  .chip,
+  .last,
+  .amount {
+    margin: 0;
+  }
+  .status {
+    justify-self: start;
+  }
+  /* The header names the column, but a screen reader has no header to lean on. */
+  .lastLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .addBtn {
+    width: 2rem;
+    height: 2rem;
+    margin-left: 0;
+  }
 }

@@ -14,7 +14,7 @@ import { Card, Pill, SectionTitle } from '../components/primitives'
 import { CategoryIcon } from '../components/CategoryIcon'
 import { InstallmentPlansModal } from '../definitions/InstallmentPlansModal'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
-import { STATUS_LABEL, shortDayLabel } from '../format'
+import { shortDayLabel } from '../format'
 import styles from './UpcomingCard.module.css'
 
 interface Props {
@@ -42,15 +42,13 @@ type CardRow =
   | { kind: 'due'; plan: InstallmentPlan; suggestion: InstallmentSuggestion }
 
 interface RowStatus {
-  /** Left-hand wording, with the date the state refers to. */
-  text: string
-  /** The single pill on the right. */
+  /** The pill's wording, date included, so the row never says the state twice. */
   label: string
   tone: 'success' | 'warning'
 }
 
 // A card charge is dated when it hit the card, but it is paid when the statement is.
-function paidText(
+function paidLabel(
   transaction: Transaction,
   account: Account | undefined,
   statements: AccountStatement[],
@@ -68,13 +66,9 @@ function loggedStatus(
   statements: AccountStatement[],
 ): RowStatus {
   if (transaction.status === 'forecast') {
-    return {
-      text: `Forecast for ${shortMonthLabel(transaction.budgetMonth)}`,
-      label: STATUS_LABEL.forecast,
-      tone: 'warning',
-    }
+    return { label: `Forecast for ${shortMonthLabel(transaction.budgetMonth)}`, tone: 'warning' }
   }
-  return { text: paidText(transaction, account, statements), label: 'Paid', tone: 'success' }
+  return { label: paidLabel(transaction, account, statements), tone: 'success' }
 }
 
 function accountChip(account: Account | undefined): string | null {
@@ -95,6 +89,8 @@ interface RowContentProps {
   trailing?: ReactNode
 }
 
+// Direct grid items of the row: the card's container queries place them, so
+// the same markup is a table row on desktop and a two or three line row on a phone.
 function RowContent({
   name,
   icon,
@@ -108,25 +104,21 @@ function RowContent({
 }: RowContentProps) {
   return (
     <>
-      <div className={styles.info}>
+      <span className={styles.plan}>
         <span className={styles.desc}>
           <CategoryIcon icon={icon} name={categoryName} /> {name}
         </span>
-        <span className={styles.meta}>
-          {status.text} · {position}
-        </span>
-        <span className={styles.meta}>
-          {chip ? <span className={styles.chip}>{chip}</span> : null}
-          Last payment {lastPayment}
-        </span>
-      </div>
-      <div className={styles.rail}>
-        <span className={styles.amount}>{amount}</span>
-        <div className={styles.actions}>
-          <Pill tone={status.tone}>{status.label}</Pill>
-          {trailing}
-        </div>
-      </div>
+        <span className={styles.position}>{position}</span>
+      </span>
+      {chip ? <span className={styles.chip}>{chip}</span> : null}
+      <span className={styles.last}>
+        <span className={styles.lastLabel}>Last payment</span> {lastPayment}
+      </span>
+      <span className={styles.amount}>{amount}</span>
+      <span className={styles.status}>
+        <Pill tone={status.tone}>{status.label}</Pill>
+      </span>
+      {trailing}
     </>
   )
 }
@@ -147,12 +139,21 @@ export function InstallmentsCard({ model, actions, month }: Props) {
   return (
     <>
       <SectionTitle>Installments</SectionTitle>
-      <Card>
+      <Card className={styles.card}>
         <p className={styles.meta}>
           {rows.length > 0
             ? 'Scheduled plan payments for this month, not predictions.'
             : 'Nothing scheduled this month.'}
         </p>
+        {rows.length > 0 ? (
+          <div className={styles.head} aria-hidden="true">
+            <span className={styles.headPlan}>Plan</span>
+            <span className={styles.headChip}>Account</span>
+            <span className={styles.headLast}>Last payment</span>
+            <span className={styles.headAmount}>Amount</span>
+            <span className={styles.headStatus}>Status</span>
+          </div>
+        ) : null}
         {rows.map((row) => {
           const { plan } = row
           const cat = model.lookup.category(plan.categoryId)
@@ -174,7 +175,7 @@ export function InstallmentsCard({ model, actions, month }: Props) {
                   categoryName={cat?.name ?? plan.description}
                   amount={formatCents(transaction.amountCents, format)}
                   status={loggedStatus(transaction, account, model.dataset.accountStatements)}
-                  position={`${installmentIndex} of ${plan.totalCount}`}
+                  position={`${installmentIndex}/${plan.totalCount}`}
                   chip={accountChip(account)}
                   lastPayment={lastPayment}
                 />
@@ -191,11 +192,10 @@ export function InstallmentsCard({ model, actions, month }: Props) {
                 categoryName={cat?.name ?? suggestion.description}
                 amount={formatCents(suggestion.amountCents, format)}
                 status={{
-                  text: `Due ${suggestion.dueDateKnown ? shortDayLabel(suggestion.predictedDate) : 'this month'}`,
-                  label: 'Due',
+                  label: `Due ${suggestion.dueDateKnown ? shortDayLabel(suggestion.predictedDate) : 'this month'}`,
                   tone: 'warning',
                 }}
-                position={`${suggestion.installmentIndex} of ${suggestion.totalCount}`}
+                position={`${suggestion.installmentIndex}/${suggestion.totalCount}`}
                 chip={accountChip(model.lookup.account(suggestion.accountId))}
                 lastPayment={lastPayment}
                 trailing={
