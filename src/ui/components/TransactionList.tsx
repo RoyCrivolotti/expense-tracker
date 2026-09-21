@@ -99,8 +99,16 @@ export function TransactionList({ rows, lookup, ...props }: TransactionListProps
               {...(props.onToggleDate ? { onToggleDate: props.onToggleDate } : {})}
               {...(props.onAddForDate && !props.selectMode ? { onAdd: props.onAddForDate } : {})}
             />
-            <div id={dayGroupRowsId(group.date)} className={styles.dayRows} hidden={collapsed}>
-              {group.rows.map((row) => renderRow(row, lookup, props))}
+            <div
+              id={dayGroupRowsId(group.date)}
+              className={collapsed ? `${styles.dayRows} ${styles.dayRowsCollapsed}` : styles.dayRows}
+              // Kept in the DOM so it can fold; `inert` keeps touch, focus and screen
+              // readers out of rows that are out of sight.
+              inert={collapsed}
+            >
+              <div className={styles.dayRowsInner}>
+                {group.rows.map((row) => renderRow(row, lookup, props))}
+              </div>
             </div>
           </div>
         )

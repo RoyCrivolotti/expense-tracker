@@ -140,6 +140,25 @@ describe('TransactionList collapsible date groups', () => {
     expect(screen.getByRole('button', { expanded: false })).toBeVisible()
   })
 
+  it("keeps a collapsed day's rows in the page so they can fold, but out of reach", async () => {
+    render(<TransactionList rows={rows(txn({ id: 1, description: 'Degiro' }))} lookup={lookup} />)
+    const toggle = screen.getByRole('button', { expanded: true })
+    const rowsBox = document.getElementById(toggle.getAttribute('aria-controls')!)!
+    expect(rowsBox).not.toHaveAttribute('inert')
+
+    await userEvent.click(toggle)
+
+    // Not removed, which is what lets them fold; inert stands in for what `hidden` did for
+    // taps, focus and screen readers.
+    expect(screen.getByText('Degiro')).toBeInTheDocument()
+    expect(rowsBox).toHaveAttribute('inert')
+    expect(rowsBox.className).toContain('dayRowsCollapsed')
+
+    await userEvent.click(screen.getByRole('button', { expanded: false }))
+    expect(rowsBox).not.toHaveAttribute('inert')
+    expect(rowsBox.className).not.toContain('dayRowsCollapsed')
+  })
+
   it('expands again on a second toggle', async () => {
     render(<TransactionList rows={rows(txn({ id: 1, description: 'Degiro' }))} lookup={lookup} />)
     await userEvent.click(screen.getByRole('button', { expanded: true }))

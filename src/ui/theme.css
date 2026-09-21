@@ -37,6 +37,9 @@
   --motion-enter-sheet: 220ms;
   --motion-enter-fade: 150ms;
   --motion-enter-pop: 120ms;
+  /* Something folding to nothing, or unfolding: a group of rows, a deleted row, the
+     pull-to-refresh strip. Nothing is held in the DOM for this one, so it is only here. */
+  --motion-fold: 180ms;
 
   /* Was referenced as `var(--radius-sm, Npx)` in several goals/charts CSS
      files without ever being defined here — every one of those was silently
