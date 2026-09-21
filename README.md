@@ -13,7 +13,7 @@ Shared UI: [`folio-shell`](https://github.com/RoyCrivolotti/folio-shell) on [npm
 | Area | Highlights |
 | --- | --- |
 | **Dashboard** | Monthly KPIs, budget health, **card statements** (tap a row to mark paid/due or edit the date), Goals teaser, **Latest / Recently added** toggle |
-| **Transactions** | **Date scope** (budget month, last 3 months, all dates, custom), filters, batch delete, recurring **Upcoming**, **installment plans** (bounded payment schedules with due-soon reminders), **multi-select** (long-press or Select) with bulk edit and delete, **per-day +** and **duplicate**, **statement payment rows** on `paidOn` (same tap-to-edit sheet as Dashboard/Settings), **header refresh** |
+| **Transactions** | **Date scope** (budget month, last 3 months, all dates, custom), filters, batch delete, recurring **Upcoming**, **installment plans** (bounded payment schedules; credit-card installments are created for you as they come due), **multi-select** (long-press or Select) with bulk edit and delete, **per-day +** and **duplicate**, **statement payment rows** on `paidOn` (same tap-to-edit sheet as Dashboard/Settings), **header refresh** |
 | **Flags & reimbursements** | Named markers on transactions, **printable expense reports** with receipt cross-references, **line-by-line settlement** linking a payment to what it covered, CSV for an employer, past reports |
 | **Receipts** | Photo or PDF attachments per transaction (R2), client-side downscaling, storage usage in Settings |
 | **Analytics** | Budget vs actual, YTD on mobile, desktop tables, **cash recon gap split** (carryover / this month / total), **reconciled** badge once a month's cash is entered and card statements are paid |
