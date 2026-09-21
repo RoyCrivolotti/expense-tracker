@@ -251,7 +251,9 @@
     opacity: 1;
   }
   to {
-    transform: translateY(var(--sheet-travel));
+    /* A dialog swiped further down than it would drop on its own carries on down as it
+       fades, instead of rising back to the resting distance. */
+    transform: translateY(max(var(--sheet-from, 0px), var(--sheet-travel)));
     opacity: 0;
   }
 }
