@@ -24,7 +24,8 @@ function PlanRow({
 }) {
   const progress = planProgress(plan, model.dataset.transactions)
   const forecastCount = forecastPaidCount(plan, model.dataset.transactions)
-  const pct = Math.min(100, Math.round((progress.paidCount / plan.totalCount) * 100))
+  const paidCount = Math.max(0, progress.paidCount - forecastCount)
+  const pct = Math.min(100, Math.round((paidCount / plan.totalCount) * 100))
   const cat = model.lookup.category(plan.categoryId)
   return (
     <div className={plan.active ? styles.planRow : `${styles.planRow} ${styles.inactive}`}>
@@ -60,7 +61,7 @@ function PlanRow({
         <div className={styles.fill} style={{ width: `${pct}%` }} />
       </div>
       <span className={styles.stats}>
-        {progress.paidCount - forecastCount}/{plan.totalCount} paid
+        {paidCount}/{plan.totalCount} paid
         {forecastCount > 0 ? ` · ${forecastCount} forecast` : ''} · {progress.remaining} remaining ·
         Last payment {shortMonthFullYearLabel(progress.finalBudgetMonth)}
       </span>

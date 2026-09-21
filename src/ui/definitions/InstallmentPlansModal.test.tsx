@@ -83,6 +83,30 @@ describe('InstallmentPlansModal', () => {
     expect(screen.getByText(/0\/3 paid · 1 forecast · 2 remaining/)).toBeTruthy()
   })
 
+  it('fills the progress bar by paid installments only, not forecast ones', () => {
+    const { container } = render(
+      <InstallmentPlansModal
+        model={modelWith([basePlan], [installment(1, { status: 'posted' }), installment(2, { status: 'forecast' })])}
+        actions={makeActions()}
+        onClose={() => {}}
+      />,
+    )
+    expect(screen.getByText(/1\/3 paid · 1 forecast · 1 remaining/)).toBeTruthy()
+    const fill = container.querySelector(`.${styles.fill!}`) as HTMLElement
+    expect(fill.style.width).toBe('33%')
+  })
+
+  it('never shows a negative paid count when a forecast charge has no installment number', () => {
+    render(
+      <InstallmentPlansModal
+        model={modelWith([basePlan], [makeTransaction({ id: 1, budgetMonth: '2026-01', planId: basePlan.id, status: 'forecast' })])}
+        actions={makeActions()}
+        onClose={() => {}}
+      />,
+    )
+    expect(screen.getByText(/^0\/3 paid/)).toBeTruthy()
+  })
+
   it('clicking Complete toggles the plan active flag off', async () => {
     const actions = makeActions()
     render(
