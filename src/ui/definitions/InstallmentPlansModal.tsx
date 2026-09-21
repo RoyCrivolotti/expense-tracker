@@ -60,7 +60,7 @@ function PlanRow({
         <div className={styles.fill} style={{ width: `${pct}%` }} />
       </div>
       <span className={styles.stats}>
-        {progress.paidCount - forecastCount} of {plan.totalCount} paid
+        {progress.paidCount - forecastCount}/{plan.totalCount} paid
         {forecastCount > 0 ? ` · ${forecastCount} forecast` : ''} · {progress.remaining} remaining ·
         Last payment {shortMonthFullYearLabel(progress.finalBudgetMonth)}
       </span>

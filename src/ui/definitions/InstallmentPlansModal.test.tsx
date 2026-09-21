@@ -56,7 +56,7 @@ describe('InstallmentPlansModal', () => {
         onClose={() => {}}
       />,
     )
-    expect(screen.getByText(/2 of 3 paid/)).toBeTruthy()
+    expect(screen.getByText(/2\/3 paid/)).toBeTruthy()
     expect(screen.getByText(/1 remaining/)).toBeTruthy()
     expect(screen.getByText(/Last payment Mar 2026/)).toBeTruthy()
   })
@@ -80,7 +80,7 @@ describe('InstallmentPlansModal', () => {
         onClose={() => {}}
       />,
     )
-    expect(screen.getByText(/0 of 3 paid · 1 forecast · 2 remaining/)).toBeTruthy()
+    expect(screen.getByText(/0\/3 paid · 1 forecast · 2 remaining/)).toBeTruthy()
   })
 
   it('clicking Complete toggles the plan active flag off', async () => {
