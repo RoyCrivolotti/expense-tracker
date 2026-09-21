@@ -125,8 +125,10 @@
 .overlayClosing::before {
   animation: scrim-out var(--exit-ms, 170ms) ease-in forwards;
 }
-/* The sheet is on its way out; another touch should not start a second gesture. */
-.overlayClosing {
+/* The sheet is on its way out; another touch should not start a second gesture. The band's
+   children are switched back on above, so the sheet has to be switched off here by name. */
+.overlayClosing,
+.overlayClosing .band > * {
   pointer-events: none;
 }
 
