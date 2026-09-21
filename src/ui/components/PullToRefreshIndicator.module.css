@@ -3,8 +3,12 @@
   align-items: flex-end;
   justify-content: center;
   overflow: hidden;
-  transition: height 0.15s ease;
+  transition: height var(--motion-fold) var(--motion-ease-out);
   color: var(--color-text-muted);
+}
+/* The finger is down: no easing between where it is and where the strip is. */
+.wrap.tracking {
+  transition: none;
 }
 @media (min-width: 768px) {
   .wrap {
@@ -20,6 +24,10 @@
   width: 1.5rem;
   height: 1.5rem;
   margin-bottom: 0.35rem;
+  transition: opacity var(--motion-fold) var(--motion-ease-out);
+}
+.tracking .icon {
+  transition: none;
 }
 .icon svg {
   width: 1.25rem;
@@ -36,5 +44,9 @@
 @media (prefers-reduced-motion: reduce) {
   .spin {
     animation: none;
+  }
+  .wrap,
+  .icon {
+    transition: none;
   }
 }
