@@ -14,6 +14,7 @@ import { Presence } from '../components/Presence'
 import { ReassignDeleteSheet, type ReassignOption, type ReassignTarget } from '../components/ReassignDeleteSheet'
 import { RecordForm } from './RecordForm'
 import { EXIT_MS } from '../hooks/motion'
+import { useHeldWhileLeaving } from '../hooks/usePresence'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { accountUsageCount, categoryUsageCount } from './recordUsage'
 import type { FieldSpec, FieldValue } from './recordFields'
@@ -322,7 +323,11 @@ interface ConfigModalProps {
 
 export function ConfigModal({ target, model, actions, onClose }: ConfigModalProps) {
   const { symbol } = useMoneyFormat()
-  const cfg = buildConfig(target, model, actions, symbol)
+  // The delete or save that closed the editor has usually changed the model already. Built
+  // from that, the delete sheets would reword themselves, or give way to the "you need at
+  // least one" note, while they are still leaving.
+  const shownModel = useHeldWhileLeaving(model)
+  const cfg = buildConfig(target, shownModel, actions, symbol)
   const [deleteMode, setDeleteMode] = useState<DeleteMode>('idle')
   // While a delete confirm/reassign sheet is open, Escape/backdrop should close just that
   // sheet — otherwise the sheet's own Escape handler and this Modal's both fire (they're

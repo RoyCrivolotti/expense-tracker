@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { setMotionDisabledForTests } from '../hooks/motion'
-import { usePresence } from '../hooks/usePresence'
+import { useHeldWhileLeaving, usePresence } from '../hooks/usePresence'
 import { Presence, PresenceValue } from './Presence'
 
 function Probe({ label = 'probe' }: { label?: string }) {
@@ -221,5 +221,50 @@ describe('PresenceValue with a value that is never equal to itself', () => {
       </PresenceValue>,
     )
     expect(screen.getByTestId('nan').textContent).toBe('NaN')
+  })
+})
+
+describe('useHeldWhileLeaving', () => {
+  function Reads({ value }: { value: string }) {
+    const shown = useHeldWhileLeaving(value)
+    return <p data-testid="reads">{shown}</p>
+  }
+  const overlay = (show: boolean, value: string) => (
+    <Presence show={show} exitMs={100}>
+      <Reads value={value} />
+    </Presence>
+  )
+
+  it('follows the value while the overlay is shown', () => {
+    const { rerender } = render(overlay(true, 'one'))
+    rerender(overlay(true, 'two'))
+    expect(screen.getByTestId('reads').textContent).toBe('two')
+  })
+
+  it('keeps what it last read once the overlay starts to leave, whatever the value does next', () => {
+    const { rerender } = render(overlay(true, 'one'))
+    rerender(overlay(true, 'two'))
+
+    rerender(overlay(false, 'three'))
+    expect(screen.getByTestId('reads').textContent).toBe('two')
+
+    rerender(overlay(false, 'four'))
+    expect(screen.getByTestId('reads').textContent).toBe('two')
+  })
+
+  it('holds a function without calling it', () => {
+    const fn = vi.fn()
+    function Holds({ f }: { f: () => void }) {
+      const held = useHeldWhileLeaving(f)
+      return <button type="button" onClick={held}>call</button>
+    }
+    render(
+      <Presence show exitMs={100}>
+        <Holds f={fn} />
+      </Presence>,
+    )
+    expect(fn).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByText('call'))
+    expect(fn).toHaveBeenCalledTimes(1)
   })
 })
