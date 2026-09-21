@@ -11,6 +11,8 @@
   width: max-content;
   max-width: min(28rem, calc(100vw - 2rem));
   pointer-events: none;
+  /* Glides when the selection bar under it comes or goes, rather than hopping. */
+  transition: bottom var(--motion-enter-fade) var(--motion-ease-out);
 }
 
 .toast {
@@ -69,6 +71,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .viewport {
+    transition: none;
+  }
   .toast,
   .leaving {
     animation: none;

@@ -203,9 +203,37 @@
   transition:
     transform 0.12s ease,
     opacity 0.15s ease;
+  animation: fabIn var(--motion-enter-pop) var(--motion-ease-out);
 }
 .fab:active {
   transform: scale(0.93);
+}
+/* Leaving is the arrival played backwards, over the time `Presence` keeps it mounted. */
+.fabLeaving {
+  animation: fabOut var(--exit-ms, 130ms) var(--motion-ease-in) forwards;
+  pointer-events: none;
+}
+@keyframes fabIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fabOut {
+  to {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fab,
+  .fabLeaving {
+    animation: none;
+  }
 }
 .fab svg {
   width: 1.6rem;

@@ -1,5 +1,7 @@
-import { describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, render, screen } from '@testing-library/react'
+import { Presence } from '../components/Presence'
+import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
 import { BatchBar } from './BatchBar'
 
 const baseProps = {
@@ -61,5 +63,49 @@ describe('BatchBar', () => {
   it('renders close button with accessible label', () => {
     render(<BatchBar count={2} busy={false} editOpen={false} {...baseProps} />)
     expect(screen.getByLabelText('Exit selection mode')).toBeInTheDocument()
+  })
+})
+
+describe('BatchBar leaving', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    setMotionDisabledForTests(false)
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(64)
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.useRealTimers()
+    setMotionDisabledForTests(true)
+  })
+
+  const bar = (show: boolean) => (
+    <Presence show={show} exitMs={EXIT_MS.bar}>
+      <BatchBar count={2} busy={false} editOpen={false} {...baseProps} />
+    </Presence>
+  )
+  const published = () => document.documentElement.style.getPropertyValue('--exp-selection-bar')
+
+  it('slides away over the time it is held for, and takes no taps meanwhile', () => {
+    const { rerender, container } = render(bar(true))
+    const el = container.firstElementChild as HTMLElement
+    expect(el.className).not.toContain('batchBarLeaving')
+
+    rerender(bar(false))
+
+    expect(el.className).toContain('batchBarLeaving')
+    expect(el.hasAttribute('inert')).toBe(true)
+    expect(el.style.getPropertyValue('--exit-ms')).toBe(`${EXIT_MS.bar}ms`)
+
+    void act(() => vi.advanceTimersByTime(EXIT_MS.bar))
+    expect(container.firstElementChild).toBeNull()
+  })
+
+  it('stops holding up the toast as soon as it starts to leave, not when it finally unmounts', () => {
+    const { rerender } = render(bar(true))
+    expect(published()).toBe('64px')
+
+    rerender(bar(false))
+
+    expect(published()).toBe('')
   })
 })

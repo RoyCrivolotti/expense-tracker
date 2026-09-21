@@ -8,6 +8,8 @@
       0.75rem
   );
   z-index: 61;
+  /* Glides when the selection bar under it comes or goes, rather than hopping. */
+  transition: bottom var(--motion-enter-fade) var(--motion-ease-out);
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -42,5 +44,11 @@
 @media (min-width: 768px) {
   .banner {
     bottom: calc(var(--exp-selection-bar, 0px) + 1.5rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .banner {
+    transition: none;
   }
 }
