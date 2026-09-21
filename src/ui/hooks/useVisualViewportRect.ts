@@ -20,6 +20,16 @@ export interface ViewportRect {
  * `position: fixed`, iOS cannot scroll the page to compensate, so the pan is
  * the whole of the movement and nothing corrects it afterwards.
  *
+ * Only a visual viewport that is *smaller* than the layout one is followed. With
+ * the body pinned, a finger drag on a sheet that has nothing to scroll pans the
+ * page inside whatever slack the layout viewport leaves (about 62px in the
+ * installed app): `offsetTop` climbs to about 70 while `height` stays equal to
+ * `innerHeight`, and nothing fixed moves on screen. Following that number slid
+ * the sheet against the finger and back on release. A keyboard or a pinch zoom
+ * is what shrinks the visual viewport, and the only case where fixed content
+ * really is displaced. A shortfall under a pixel is rounding between the two,
+ * not a shrink.
+ *
  * Returns null where `visualViewport` is unavailable, so callers fall back to
  * plain CSS. Where it exists but nothing has panned — every desktop browser —
  * this reports `{ top: 0, height: innerHeight }`, which is what `inset: 0`
@@ -28,7 +38,9 @@ export interface ViewportRect {
 /** Null where the API is unavailable, so callers fall back to plain CSS. */
 function readRect(): ViewportRect | null {
   const vv = window.visualViewport
-  return vv ? { top: vv.offsetTop, height: vv.height } : null
+  if (!vv) return null
+  const shrunk = vv.height < window.innerHeight - 1
+  return { top: shrunk ? vv.offsetTop : 0, height: vv.height }
 }
 
 export function useVisualViewportRect(): ViewportRect | null {
@@ -40,7 +52,7 @@ export function useVisualViewportRect(): ViewportRect | null {
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
-    const update = () => setRect({ top: vv.offsetTop, height: vv.height })
+    const update = () => setRect(readRect())
     vv.addEventListener('resize', update)
     vv.addEventListener('scroll', update)
     return () => {

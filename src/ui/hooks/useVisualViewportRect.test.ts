@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { useVisualViewportRect } from './useVisualViewportRect'
 
 type Listener = () => void
@@ -22,8 +22,17 @@ function stubViewport(top: number, height: number) {
   }
 }
 
+const JSDOM_INNER_HEIGHT = window.innerHeight
+
+function setInnerHeight(value: number) {
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value })
+}
+
+beforeEach(() => setInnerHeight(JSDOM_INNER_HEIGHT))
+
 afterEach(() => {
   Object.defineProperty(window, 'visualViewport', { configurable: true, value: undefined })
+  setInnerHeight(JSDOM_INNER_HEIGHT)
 })
 
 describe('useVisualViewportRect', () => {
@@ -47,14 +56,67 @@ describe('useVisualViewportRect', () => {
     expect(result.current).toEqual({ top: 120, height: 400 })
   })
 
-  it('follows a scroll of the visual viewport too', () => {
-    const { vv, fire } = stubViewport(0, 800)
+  it('follows the scroll that lands after the keyboard has resized the viewport', () => {
+    // The keyboard arrives as a resize and then a scroll, so by the time the pan
+    // is reported the viewport is already smaller than the layout one.
+    const { vv, fire } = stubViewport(0, 400)
     const { result } = renderHook(() => useVisualViewportRect())
 
     vv.offsetTop = 60
     fire('scroll')
 
-    expect(result.current).toEqual({ top: 60, height: 800 })
+    expect(result.current).toEqual({ top: 60, height: 400 })
+  })
+
+  it('ignores a pan while the viewport is as tall as the layout one', () => {
+    // A pinned body leaves slack under the layout viewport, and a finger drag pans
+    // the page inside it. Nothing fixed moves on screen, so following the number
+    // slid the sheet against the finger.
+    setInnerHeight(812)
+    const { vv, fire } = stubViewport(0, 812)
+    const { result } = renderHook(() => useVisualViewportRect())
+
+    vv.offsetTop = 70
+    fire('scroll')
+
+    expect(result.current).toEqual({ top: 0, height: 812 })
+  })
+
+  it('lets go of the pan as soon as the keyboard is gone', () => {
+    setInnerHeight(812)
+    const { vv, fire } = stubViewport(131, 504)
+    const { result } = renderHook(() => useVisualViewportRect())
+    expect(result.current).toEqual({ top: 131, height: 504 })
+
+    // The height comes back before the offset settles, so a stale offset must not stick.
+    vv.height = 812
+    fire('resize')
+
+    expect(result.current).toEqual({ top: 0, height: 812 })
+  })
+
+  it('treats a shortfall under a pixel as rounding, not a shrink', () => {
+    setInnerHeight(812)
+    const { vv, fire } = stubViewport(0, 812)
+    const { result } = renderHook(() => useVisualViewportRect())
+
+    vv.height = 811.5
+    vv.offsetTop = 30
+    fire('scroll')
+
+    expect(result.current).toEqual({ top: 0, height: 811.5 })
+  })
+
+  it('follows a viewport that is a pixel or more shorter than the layout one', () => {
+    setInnerHeight(812)
+    const { vv, fire } = stubViewport(0, 812)
+    const { result } = renderHook(() => useVisualViewportRect())
+
+    vv.height = 810
+    vv.offsetTop = 30
+    fire('scroll')
+
+    expect(result.current).toEqual({ top: 30, height: 810 })
   })
 
   it('is null without the API, so the caller keeps its CSS fallback', () => {
