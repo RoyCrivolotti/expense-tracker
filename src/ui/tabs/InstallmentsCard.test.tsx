@@ -166,6 +166,52 @@ describe('InstallmentsCard', () => {
     })
   })
 
+  describe('a plan whose first installment was dated the month before its budget month', () => {
+    const plan: InstallmentPlan = { ...basePlan, anchorBudgetMonth: '2026-07', dueDayOfMonth: 28 }
+    const firstTxn: Transaction = {
+      id: 601,
+      date: '2026-06-28',
+      budgetMonth: '2026-07',
+      description: 'Iphone, Cetelam',
+      accountId: 2,
+      categoryId: 3,
+      type: 'expense',
+      amountCents: 5783,
+      cancelled: false,
+      planId: 1,
+      installmentIndex: 1,
+      status: 'posted',
+    }
+
+    it('shows the next payment on the calendar date it will actually post', () => {
+      render(
+        <InstallmentsCard
+          model={modelWithPlans([plan], [firstTxn])}
+          actions={noopActions()}
+          month="2026-08"
+        />,
+      )
+      expect(screen.getByText(/Payment 2\/24/)).toBeTruthy()
+      expect(screen.getByText(/Due 28 Jul/)).toBeTruthy()
+    })
+
+    it('seeds the transaction with that date and the installment\'s budget month', async () => {
+      const actions = noopActions()
+      render(
+        <InstallmentsCard model={modelWithPlans([plan], [firstTxn])} actions={actions} month="2026-08" />,
+      )
+      await userEvent.click(screen.getByLabelText('Log installment payment'))
+      expect(actions.onAdd).toHaveBeenCalledWith(
+        expect.objectContaining({
+          date: '2026-07-28',
+          budgetMonth: '2026-08',
+          planId: 1,
+          installmentIndex: 2,
+        }),
+      )
+    })
+  })
+
   describe('an installment already paid this month', () => {
     const paidPlan: InstallmentPlan = { ...basePlan, anchorBudgetMonth: '2026-07' }
     const paidTxn: Transaction = {
