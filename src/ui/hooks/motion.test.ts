@@ -1,0 +1,59 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { EXIT_MS, exitVars, motionEnabled, setMotionDisabledForTests } from './motion'
+
+/** A duration token from theme.css, in ms, so the script and the stylesheet cannot drift. */
+function token(name: string): number {
+  const css = readFileSync(resolve(process.cwd(), 'src/ui/theme.css'), 'utf8')
+  const match = new RegExp(`${name}:\\s*(\\d+)ms`).exec(css)
+  if (!match?.[1]) throw new Error(`${name} is not defined in theme.css`)
+  return Number(match[1])
+}
+
+afterEach(() => {
+  setMotionDisabledForTests(true)
+  vi.unstubAllGlobals()
+})
+
+describe('exitVars', () => {
+  it('passes the exit time to the CSS while an overlay is leaving', () => {
+    expect(exitVars(true, 170)).toEqual({ '--exit-ms': '170ms' })
+  })
+
+  it('says nothing while it is not, so the stylesheet keeps its own resting values', () => {
+    expect(exitVars(false, 170)).toBeUndefined()
+  })
+})
+
+describe('motionEnabled', () => {
+  it('is off while the suite has switched it off', () => {
+    setMotionDisabledForTests(true)
+    expect(motionEnabled()).toBe(false)
+  })
+
+  it('is on when nothing has asked for less', () => {
+    setMotionDisabledForTests(false)
+    expect(motionEnabled()).toBe(true)
+  })
+
+  it('is off for a viewer who asked for reduced motion, whatever the suite says', () => {
+    setMotionDisabledForTests(false)
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('prefers-reduced-motion') }))
+    expect(motionEnabled()).toBe(false)
+  })
+})
+
+describe('EXIT_MS', () => {
+  it('keeps every exit short, because these play dozens of times a day', () => {
+    for (const ms of Object.values(EXIT_MS)) expect(ms).toBeLessThanOrEqual(200)
+  })
+
+  it('has a popover leave faster than a sheet, and every exit shorter than the arrival it mirrors', () => {
+    expect(EXIT_MS.popover).toBeLessThan(EXIT_MS.sheet)
+    expect(EXIT_MS.sheet).toBeLessThan(token('--motion-enter-sheet'))
+    expect(EXIT_MS.fade).toBeLessThan(token('--motion-enter-fade'))
+    expect(EXIT_MS.popover).toBeLessThan(token('--motion-enter-pop'))
+    expect(EXIT_MS.bar).toBeLessThan(token('--motion-enter-sheet'))
+  })
+})

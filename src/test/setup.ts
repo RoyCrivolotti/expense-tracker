@@ -1,6 +1,11 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
 import { afterEach, vi } from 'vitest'
+import { setMotionDisabledForTests } from '../ui/hooks/motion'
+
+// An overlay that animates out stays mounted for the animation, which would turn every
+// "it closed" assertion into a wait. Tests that are about motion switch it back on.
+setMotionDisabledForTests(true)
 
 // jsdom implements neither, and anything that previews a File (the receipts
 // strip) or downloads a Blob (the CSV exports) reaches for them. Stubbing once
