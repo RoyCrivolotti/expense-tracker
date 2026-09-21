@@ -25,7 +25,14 @@
   text-align: center;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
   cursor: pointer;
-  animation: toastIn 0.18s ease;
+  animation: toastIn var(--motion-enter-fade) var(--motion-ease-out);
+}
+
+/* Leaving is the arrival played backwards, over the time `Presence` keeps it mounted. */
+.leaving {
+  animation: toastOut var(--exit-ms, 130ms) var(--motion-ease-in) forwards;
+  /* Already dismissed: a tap during the fade would only dismiss the next one. */
+  pointer-events: none;
 }
 
 .success {
@@ -48,6 +55,13 @@
   }
 }
 
+@keyframes toastOut {
+  to {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+}
+
 @media (min-width: 768px) {
   .viewport {
     bottom: calc(var(--exp-selection-bar, 0px) + 1.5rem);
@@ -55,7 +69,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .toast {
+  .toast,
+  .leaving {
     animation: none;
   }
 }
