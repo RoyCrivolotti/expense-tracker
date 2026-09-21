@@ -1,7 +1,13 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import type { ExpenseDataset, InstallmentPlan, Transaction } from '../../types'
+import type {
+  Account,
+  AccountStatement,
+  ExpenseDataset,
+  InstallmentPlan,
+  Transaction,
+} from '../../types'
 import type { ExpenseActions } from '../actions'
 import type { ExpenseModel } from '../useExpenseData'
 import { defaultExpenseSettings } from '../../engine'
@@ -20,14 +26,27 @@ const basePlan: InstallmentPlan = {
   active: true,
 }
 
-function datasetWithPlans(plans: InstallmentPlan[], transactions: Transaction[] = []): ExpenseDataset {
+const accounts: Account[] = [
+  { id: 2, name: 'Main Debit', kind: 'debit', settlement: 'immediate', active: true },
+  { id: 5, name: 'Travel Card', kind: 'credit', settlement: 'deferred', active: true },
+]
+
+interface Extras {
+  statements?: AccountStatement[]
+}
+
+function datasetWithPlans(
+  plans: InstallmentPlan[],
+  transactions: Transaction[] = [],
+  extras: Extras = {},
+): ExpenseDataset {
   return {
     flags: [],
     attachments: [],
     categories: [{ id: 3, name: 'Tech', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
-    accounts: [{ id: 2, name: 'Cetelam', kind: 'credit', settlement: 'deferred', active: true }],
+    accounts,
     transactions,
-    accountStatements: [],
+    accountStatements: extras.statements ?? [],
     cashActuals: [],
     goalInputs: {
       housePriceCents: 0,
@@ -46,16 +65,20 @@ function datasetWithPlans(plans: InstallmentPlan[], transactions: Transaction[] 
   }
 }
 
-function modelWithPlans(plans: InstallmentPlan[], transactions: Transaction[] = []): ExpenseModel {
+function modelWithPlans(
+  plans: InstallmentPlan[],
+  transactions: Transaction[] = [],
+  extras: Extras = {},
+): ExpenseModel {
   return {
-    dataset: datasetWithPlans(plans, transactions),
+    dataset: datasetWithPlans(plans, transactions, extras),
     lookup: {
       category: (id) => (id === 3 ? { id: 3, name: 'Tech', monthlyBudgetCents: 0, sortOrder: 0, active: true } : undefined),
-      account: () => undefined,
+      account: (id) => accounts.find((a) => a.id === id),
       flag: () => undefined,
       attachments: () => [],
       categoryName: () => 'Tech',
-      accountName: () => 'Cetelam',
+      accountName: (id) => accounts.find((a) => a.id === id)?.name ?? 'Unknown',
       installmentPlan: (id) => plans.find((p) => p.id === id),
       settlementFor: () => undefined,
       settledBy: () => [],
@@ -132,7 +155,7 @@ describe('InstallmentsCard', () => {
     expect(
       screen.getByText('Scheduled plan payments for this month, not predictions.'),
     ).toBeTruthy()
-    expect(screen.getByText(/Payment 1\/24/)).toBeTruthy()
+    expect(screen.getByText(/1 of 24/)).toBeTruthy()
     expect(screen.getByText(/Due this month/)).toBeTruthy()
     expect(screen.getByText('Due')).toBeTruthy()
   })
@@ -148,7 +171,7 @@ describe('InstallmentsCard', () => {
         <InstallmentsCard model={modelWithPlans([laterPlan])} actions={noopActions()} month="2026-07" />,
       )
       expect(screen.getByText('Manage plans')).toBeTruthy()
-      expect(screen.getByText(/Payment 1\/24/)).toBeTruthy()
+      expect(screen.getByText(/1 of 24/)).toBeTruthy()
       expect(screen.getByText(/Due 28 Jul/)).toBeTruthy()
     })
 
@@ -161,7 +184,7 @@ describe('InstallmentsCard', () => {
       render(
         <InstallmentsCard model={modelWithPlans([soonPlan])} actions={noopActions()} month="2026-07" />,
       )
-      expect(screen.getByText(/Payment 1\/24/)).toBeTruthy()
+      expect(screen.getByText(/1 of 24/)).toBeTruthy()
       expect(screen.getByText(/Due 2 Jul/)).toBeTruthy()
     })
   })
@@ -191,7 +214,7 @@ describe('InstallmentsCard', () => {
           month="2026-08"
         />,
       )
-      expect(screen.getByText(/Payment 2\/24/)).toBeTruthy()
+      expect(screen.getByText(/2 of 24/)).toBeTruthy()
       expect(screen.getByText(/Due 28 Jul/)).toBeTruthy()
     })
 
@@ -255,19 +278,6 @@ describe('InstallmentsCard', () => {
       expect(screen.queryByText('Forecast')).toBeNull()
     })
 
-    it('shows Forecast alongside Paid when the card statement is not yet settled', () => {
-      const forecastTxn: Transaction = { ...paidTxn, status: 'forecast' }
-      render(
-        <InstallmentsCard
-          model={modelWithPlans([paidPlan], [forecastTxn])}
-          actions={noopActions()}
-          month="2026-07"
-        />,
-      )
-      expect(screen.getByText('Paid')).toBeTruthy()
-      expect(screen.getByText('Forecast')).toBeTruthy()
-    })
-
     it('opens the underlying transaction when the paid row is clicked', async () => {
       const actions = noopActions()
       render(
@@ -294,6 +304,97 @@ describe('InstallmentsCard', () => {
       expect(screen.queryByText('Paid')).toBeNull()
       expect(screen.getByText(/Due this month/)).toBeTruthy()
       expect(screen.getByText('Due')).toBeTruthy()
+    })
+  })
+
+  describe('the row layout', () => {
+    const plan: InstallmentPlan = { ...basePlan, anchorBudgetMonth: '2026-07', dueDayOfMonth: 28 }
+
+    it('shows position, account type and the last payment month beside the status', () => {
+      render(
+        <InstallmentsCard model={modelWithPlans([plan])} actions={noopActions()} month="2026-07" />,
+      )
+      expect(screen.getByText('Due 28 Jul · 1 of 24')).toBeTruthy()
+      expect(screen.getByText('Debit')).toBeTruthy()
+      expect(screen.getByText(/Last payment Jun 2028/)).toBeTruthy()
+    })
+
+    it('leaves the account chip off when the account is unknown', () => {
+      const orphan: InstallmentPlan = { ...plan, accountId: 99 }
+      render(
+        <InstallmentsCard model={modelWithPlans([orphan])} actions={noopActions()} month="2026-07" />,
+      )
+      expect(screen.queryByText('Debit')).toBeNull()
+      expect(screen.queryByText('Credit')).toBeNull()
+      expect(screen.getByText(/Last payment Jun 2028/)).toBeTruthy()
+    })
+  })
+
+  describe('an installment on a credit card', () => {
+    const plan: InstallmentPlan = {
+      ...basePlan,
+      accountId: 5,
+      anchorBudgetMonth: '2026-07',
+      dueDayOfMonth: 6,
+    }
+    const charge: Transaction = {
+      id: 701,
+      date: '2026-06-06',
+      budgetMonth: '2026-07',
+      description: 'Iphone, Cetelam',
+      accountId: 5,
+      categoryId: 3,
+      type: 'expense',
+      amountCents: 5783,
+      cancelled: false,
+      planId: 1,
+      installmentIndex: 1,
+      status: 'forecast',
+    }
+
+    it('reads as a single Forecast for its budget month until the statement is paid', () => {
+      render(
+        <InstallmentsCard
+          model={modelWithPlans([plan], [charge])}
+          actions={noopActions()}
+          month="2026-07"
+        />,
+      )
+      expect(screen.getByText('Forecast for Jul · 1 of 24')).toBeTruthy()
+      expect(screen.getByText('Forecast')).toBeTruthy()
+      expect(screen.getByText('Credit')).toBeTruthy()
+      expect(screen.queryByText('Paid')).toBeNull()
+      expect(screen.queryByLabelText('Log installment payment')).toBeNull()
+    })
+
+    it('shows the day the statement was paid, not the day of the charge', () => {
+      const paidCharge: Transaction = { ...charge, status: 'posted' }
+      const statements: AccountStatement[] = [
+        { accountId: 5, yearMonth: '2026-07', paid: true, paidOn: '2026-08-01' },
+      ]
+      render(
+        <InstallmentsCard
+          model={modelWithPlans([plan], [paidCharge], { statements })}
+          actions={noopActions()}
+          month="2026-07"
+        />,
+      )
+      expect(screen.getByText('Paid 1 Aug · 1 of 24')).toBeTruthy()
+      expect(screen.getByText('Paid')).toBeTruthy()
+      expect(screen.queryByText(/Paid 6 Jun/)).toBeNull()
+    })
+
+    it('shows plain Paid when the statement has no recorded payment day', () => {
+      const paidCharge: Transaction = { ...charge, status: 'posted' }
+      const statements: AccountStatement[] = [{ accountId: 5, yearMonth: '2026-07', paid: true }]
+      render(
+        <InstallmentsCard
+          model={modelWithPlans([plan], [paidCharge], { statements })}
+          actions={noopActions()}
+          month="2026-07"
+        />,
+      )
+      expect(screen.getByText('Paid · 1 of 24')).toBeTruthy()
     })
   })
 })

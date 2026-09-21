@@ -74,6 +74,11 @@ export function fullMonthLabel(yearMonth: string): string {
   return name ? `${name} ${year}` : yearMonth
 }
 
+/** "Nov 2026" — abbreviated month with the full year, for a row's secondary line. */
+export function shortMonthFullYearLabel(yearMonth: string): string {
+  return `${shortMonthLabel(yearMonth)} ${yearMonth.slice(0, 4)}`
+}
+
 /** "Jun '25" — compact month label for row pills and dense table headers. */
 export function shortMonthYearLabel(yearMonth: string): string {
   return `${shortMonthLabel(yearMonth)} '${yearMonth.slice(2, 4)}`
