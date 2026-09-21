@@ -32,7 +32,14 @@ export function useFocusTrap(
     const container = ref.current
     const focusables = container ? focusableWithin(container) : []
     ;(focusables[0] ?? container)?.focus()
-    return () => previouslyFocused?.focus?.()
+    return () => {
+      // A sheet stays mounted for a moment after it closes, so focus may have moved on in
+      // that time (a confirm handing over to a sheet with a field in it). Take it back
+      // only if nothing else has claimed it, or the newcomer loses its keyboard.
+      const active = document.activeElement
+      if (active && active !== document.body && !container?.contains(active)) return
+      previouslyFocused?.focus?.()
+    }
   }, [ref])
 
   useEffect(() => {

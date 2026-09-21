@@ -35,3 +35,39 @@ describe('useFocusTrap — hidden descendants', () => {
     expect(document.activeElement).toHaveAttribute('aria-label', 'hidden field')
   })
 })
+
+function Pair({ trapped }: { trapped: boolean }) {
+  return (
+    <>
+      <button type="button">trigger</button>
+      <button type="button">elsewhere</button>
+      {trapped ? <TrapHarness hiddenFirst={false} /> : null}
+    </>
+  )
+}
+
+describe('useFocusTrap — giving focus back', () => {
+  it('returns focus to what had it before the trap opened', () => {
+    const { rerender, getByText } = render(<Pair trapped={false} />)
+    getByText('trigger').focus()
+
+    rerender(<Pair trapped />)
+    expect(document.activeElement).not.toBe(getByText('trigger'))
+
+    rerender(<Pair trapped={false} />)
+    expect(document.activeElement).toBe(getByText('trigger'))
+  })
+
+  it('leaves focus where it has gone since, when the trap is held past a hand-over', () => {
+    // A sheet now stays mounted for a moment after it is closed. If something else took
+    // focus in that moment, taking it back would drop a keyboard the person just raised.
+    const { rerender, getByText } = render(<Pair trapped={false} />)
+    getByText('trigger').focus()
+    rerender(<Pair trapped />)
+
+    getByText('elsewhere').focus()
+    rerender(<Pair trapped={false} />)
+
+    expect(document.activeElement).toBe(getByText('elsewhere'))
+  })
+})
