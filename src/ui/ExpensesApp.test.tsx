@@ -5,6 +5,7 @@ import type { ExpenseDataset } from '../types'
 import { defaultExpenseSettings } from '../engine'
 import { allGroupsGranted } from '../domain/accessGroups'
 import { ExpensesApp } from './ExpensesApp'
+import { setMotionDisabledForTests } from './hooks/motion'
 import { ToastProvider } from './hooks/ToastProvider'
 
 beforeAll(() => {
@@ -190,6 +191,33 @@ describe('ExpensesApp while selecting transactions', () => {
   }
 
   const locked = (el: HTMLElement) => el.getAttribute('aria-disabled') === 'true'
+
+  it('opens the add sheet from the button and closes it from the sheet', async () => {
+    await openTransactions()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add transaction' }))
+    expect(screen.getByRole('dialog', { name: 'New transaction' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+    expect(screen.queryByRole('dialog', { name: 'New transaction' })).not.toBeInTheDocument()
+  })
+
+  it('keeps the add sheet up for its exit after it is closed, then removes it', async () => {
+    setMotionDisabledForTests(false)
+    try {
+      await openTransactions()
+      fireEvent.click(screen.getByRole('button', { name: 'Add transaction' }))
+      const sheet = screen.getByRole('dialog', { name: 'New transaction' })
+
+      fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+
+      // Still mounted and leaving: the state that closed it is already clear.
+      expect(sheet.className).toContain('sheetClosing')
+      await waitFor(() => expect(sheet).not.toBeInTheDocument(), { timeout: 1000 })
+    } finally {
+      setMotionDisabledForTests(true)
+    }
+  })
 
   it('holds the month still for as long as rows are being selected', async () => {
     const previous = await openTransactions()

@@ -12,7 +12,9 @@ import { formatCents } from '../../engine/money'
 import { shortMonthFullYearLabel, shortMonthLabel } from '../../engine/dates'
 import { Card, Pill, SectionTitle } from '../components/primitives'
 import { CategoryIcon } from '../components/CategoryIcon'
+import { Presence } from '../components/Presence'
 import { InstallmentPlansModal } from '../definitions/InstallmentPlansModal'
+import { EXIT_MS } from '../hooks/motion'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { shortDayLabel } from '../format'
 import styles from './InstallmentsCard.module.css'
@@ -227,13 +229,13 @@ export function InstallmentsCard({ model, actions, month }: Props) {
           Manage plans
         </button>
       </Card>
-      {managing ? (
+      <Presence show={managing} exitMs={EXIT_MS.sheet}>
         <InstallmentPlansModal
           model={model}
           actions={actions}
           onClose={() => setManaging(false)}
         />
-      ) : null}
+      </Presence>
     </>
   )
 }

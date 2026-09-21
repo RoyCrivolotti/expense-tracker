@@ -3,7 +3,9 @@ import type { Transaction } from '../../types'
 import { useLongPress } from '../hooks/useLongPress'
 import { useSwipeReveal } from '../hooks/useSwipeReveal'
 import type { Lookup } from '../format'
+import { EXIT_MS } from '../hooks/motion'
 import { ConfirmSheet } from './ConfirmSheet'
+import { Presence } from './Presence'
 import { TransactionRowBody } from './TransactionRowBody'
 import styles from './TransactionList.module.css'
 
@@ -105,7 +107,7 @@ export function SwipeTransactionRow({
           </button>
         </div>
       </div>
-      {pendingDelete ? (
+      <Presence show={pendingDelete} exitMs={EXIT_MS.sheet}>
         <ConfirmSheet
           title="Delete transaction?"
           message={deleteConfirmMessage(txn, lookup)}
@@ -114,7 +116,7 @@ export function SwipeTransactionRow({
           onConfirm={() => void confirmDelete()}
           onCancel={() => setPendingDelete(false)}
         />
-      ) : null}
+      </Presence>
     </>
   )
 }

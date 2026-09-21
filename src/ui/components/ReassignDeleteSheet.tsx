@@ -1,6 +1,5 @@
-import { useRef, useState } from 'react'
-import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
-import { useFocusTrap } from '../hooks/useFocusTrap'
+import { useState } from 'react'
+import { ConfirmFrame } from './ConfirmSheet'
 import formStyles from './TransactionForm.module.css'
 import styles from './ConfirmSheet.module.css'
 
@@ -33,10 +32,6 @@ export function ReassignDeleteSheet({
   onCancel,
   onConfirm,
 }: ReassignDeleteSheetProps) {
-  useBodyScrollLock(true)
-  const sheetRef = useRef<HTMLDivElement>(null)
-  useFocusTrap(sheetRef, onCancel)
-
   const [selection, setSelection] = useState<string>(
     options[0] ? String(options[0].id) : CREATE_NEW,
   )
@@ -61,63 +56,53 @@ export function ReassignDeleteSheet({
   }
 
   return (
-    <div className={styles.overlay} onClick={onCancel} role="presentation">
-      <div
-        ref={sheetRef}
-        className={styles.sheet}
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="reassign-title"
-        aria-describedby="reassign-message"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 id="reassign-title" className={styles.title}>
-          {title}
-        </h2>
-        <p id="reassign-message" className={styles.message}>
-          {message}
-        </p>
-        <div className={styles.fields}>
+    <ConfirmFrame onCancel={onCancel} labelledBy="reassign-title" describedBy="reassign-message">
+      <h2 id="reassign-title" className={styles.title}>
+        {title}
+      </h2>
+      <p id="reassign-message" className={styles.message}>
+        {message}
+      </p>
+      <div className={styles.fields}>
+        <label className={formStyles.field}>
+          <span className={formStyles.label}>Move to</span>
+          <select value={selection} onChange={(e) => setSelection(e.target.value)}>
+            {options.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
+            ))}
+            <option value={CREATE_NEW}>+ Create new {createLabel}</option>
+          </select>
+        </label>
+        {creatingNew ? (
           <label className={formStyles.field}>
-            <span className={formStyles.label}>Move to</span>
-            <select value={selection} onChange={(e) => setSelection(e.target.value)}>
-              {options.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
-                </option>
-              ))}
-              <option value={CREATE_NEW}>+ Create new {createLabel}</option>
-            </select>
+            <span className={formStyles.label}>New {createLabel} name</span>
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder={`e.g. Corrected ${createLabel} name`}
+              autoComplete="off"
+              autoFocus
+            />
           </label>
-          {creatingNew ? (
-            <label className={formStyles.field}>
-              <span className={formStyles.label}>New {createLabel} name</span>
-              <input
-                type="text"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder={`e.g. Corrected ${createLabel} name`}
-                autoComplete="off"
-                autoFocus
-              />
-            </label>
-          ) : null}
-          {err && <p className={formStyles.error}>{err}</p>}
-        </div>
-        <div className={styles.actions}>
-          <button type="button" className={styles.cancel} onClick={onCancel} disabled={busy}>
-            Cancel
-          </button>
-          <button
-            type="button"
-            className={`${styles.confirm} ${styles.confirmDestructive}`}
-            onClick={() => void submit()}
-            disabled={busy || !canConfirm}
-          >
-            {busy ? 'Deleting…' : 'Delete'}
-          </button>
-        </div>
+        ) : null}
+        {err && <p className={formStyles.error}>{err}</p>}
       </div>
-    </div>
+      <div className={styles.actions}>
+        <button type="button" className={styles.cancel} onClick={onCancel} disabled={busy}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          className={`${styles.confirm} ${styles.confirmDestructive}`}
+          onClick={() => void submit()}
+          disabled={busy || !canConfirm}
+        >
+          {busy ? 'Deleting…' : 'Delete'}
+        </button>
+      </div>
+    </ConfirmFrame>
   )
 }

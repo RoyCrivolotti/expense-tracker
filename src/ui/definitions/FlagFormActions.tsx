@@ -1,6 +1,8 @@
 import type { Flag } from '../../types'
 import { ConfirmSheet } from '../components/ConfirmSheet'
 import { flagDeleteMessage } from '../components/flagPickerOptions'
+import { Presence } from '../components/Presence'
+import { EXIT_MS } from '../hooks/motion'
 import styles from './FlagForm.module.css'
 
 interface Props {
@@ -51,18 +53,20 @@ export function FlagFormActions({
         </button>
       ) : null}
 
-      {confirming && flag ? (
-        <ConfirmSheet
-          title={`Delete ${flag.name}?`}
-          message={flagDeleteMessage(usageCount)}
-          confirmLabel="Delete"
-          destructive
-          onConfirm={() => {
-            onConfirmingChange(false)
-            onDelete()
-          }}
-          onCancel={() => onConfirmingChange(false)}
-        />
+      {flag ? (
+        <Presence show={confirming} exitMs={EXIT_MS.sheet}>
+          <ConfirmSheet
+            title={`Delete ${flag.name}?`}
+            message={flagDeleteMessage(usageCount)}
+            confirmLabel="Delete"
+            destructive
+            onConfirm={() => {
+              onConfirmingChange(false)
+              onDelete()
+            }}
+            onCancel={() => onConfirmingChange(false)}
+          />
+        </Presence>
       ) : null}
     </>
   )

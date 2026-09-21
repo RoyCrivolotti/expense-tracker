@@ -161,14 +161,17 @@ describe('useSwipeDismiss', () => {
     expect(onDismiss).toHaveBeenCalledWith(THRESHOLD + 60)
   })
 
-  it('leaves the sheet where the finger dropped it, for the exit to take over', () => {
-    const { body, view } = setup()
+  it('lets the sheet go once it has said where, so a refused close settles instead of parking', () => {
+    const { body, onDismiss, view } = setup()
 
     drag(body, THRESHOLD + 60)
 
-    // Not reset to 0: snapping home and unmounting in the same frame is what read
-    // as abrupt.
-    expect(view.result.current.offset).toBe(THRESHOLD + 60)
+    // The caller has the release offset to continue from. The sheet itself is released:
+    // if the owner closes, its exit takes over the transform, and if it raises a confirm
+    // instead the sheet does not stay displaced under it.
+    expect(onDismiss).toHaveBeenCalledWith(THRESHOLD + 60)
+    expect(view.result.current.offset).toBe(0)
+    expect(view.result.current.progress).toBe(0)
     expect(view.result.current.isDragging).toBe(false)
   })
 

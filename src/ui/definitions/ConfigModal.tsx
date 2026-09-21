@@ -10,8 +10,10 @@ import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import { Modal } from '../components/Modal'
 import { ConfirmSheet } from '../components/ConfirmSheet'
+import { Presence } from '../components/Presence'
 import { ReassignDeleteSheet, type ReassignOption, type ReassignTarget } from '../components/ReassignDeleteSheet'
 import { RecordForm } from './RecordForm'
+import { EXIT_MS } from '../hooks/motion'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { accountUsageCount, categoryUsageCount } from './recordUsage'
 import type { FieldSpec, FieldValue } from './recordFields'
@@ -280,7 +282,7 @@ function DeleteControl({
         Delete {config.noun}
       </button>
       {err && <p className={styles.deleteError}>{err}</p>}
-      {mode === 'confirm' ? (
+      <Presence show={mode === 'confirm'} exitMs={EXIT_MS.sheet}>
         <ConfirmSheet
           title={`Delete ${config.label}?`}
           message="This can't be undone."
@@ -289,8 +291,8 @@ function DeleteControl({
           onConfirm={() => void runPlainDelete()}
           onCancel={() => onModeChange('idle')}
         />
-      ) : null}
-      {mode === 'reassign' ? (
+      </Presence>
+      <Presence show={mode === 'reassign'} exitMs={EXIT_MS.sheet}>
         <ReassignDeleteSheet
           title={`Delete ${config.label}?`}
           // usageCount === 0 here means we escalated from a stale-count 409 (see
@@ -306,7 +308,7 @@ function DeleteControl({
           onConfirm={(target) => config.onReassignDelete(target).then(onDeleted)}
           onCancel={() => onModeChange('idle')}
         />
-      ) : null}
+      </Presence>
     </>
   )
 }

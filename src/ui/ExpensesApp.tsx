@@ -13,7 +13,9 @@ import { ExpensesOfflineBanner } from './components/ExpensesOfflineBanner'
 import { AppHeaderActions } from './components/AppHeaderActions'
 import { ExpensesOnboarding } from './components/ExpensesOnboarding'
 import { AppLoadingSkeleton } from './components/AppLoadingSkeleton'
+import { PresenceValue } from './components/Presence'
 import { TransactionModal } from './components/TransactionModal'
+import { EXIT_MS } from './hooks/motion'
 import { DashboardTab } from './tabs/DashboardTab'
 import { TransactionsTab } from './tabs/TransactionsTab'
 import { AnalyticsTab } from './tabs/AnalyticsTab'
@@ -350,14 +352,18 @@ function ExpensesAppReady({
           />
         </div>
       </AppShell>
-      {modal && actions && (
-        <ActiveTransactionModal
-          modal={modal}
-          actions={actions}
-          model={model}
-          onClose={() => setModal(null)}
-        />
-      )}
+      <PresenceValue value={actions ? modal : null} exitMs={EXIT_MS.sheet}>
+        {(shown) =>
+          actions && (
+            <ActiveTransactionModal
+              modal={shown}
+              actions={actions}
+              model={model}
+              onClose={() => setModal(null)}
+            />
+          )
+        }
+      </PresenceValue>
     </>
   )
 }

@@ -1,7 +1,9 @@
 import { buildFlagGroup } from '../../domain/engine/flagGroups'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
+import { PresenceValue } from '../components/Presence'
 import { FlagsModal } from '../definitions/FlagsModal'
+import { EXIT_MS } from '../hooks/motion'
 import { ExpenseReportView } from './ExpenseReportView'
 import { PastReportsModal } from './PastReportsModal'
 
@@ -61,23 +63,27 @@ export function TransactionsFlagOverlays({
         />
       ) : null}
 
-      {viewingPast && actions ? (
-        <PastReportsModal
-          model={model}
-          onClose={onCloseViewPast}
-          onOpenReport={onOpenPastReport}
-          onOpenPayment={actions.onEdit}
-        />
-      ) : null}
+      <PresenceValue value={viewingPast ? actions : null} exitMs={EXIT_MS.sheet}>
+        {(shown) => (
+          <PastReportsModal
+            model={model}
+            onClose={onCloseViewPast}
+            onOpenReport={onOpenPastReport}
+            onOpenPayment={shown.onEdit}
+          />
+        )}
+      </PresenceValue>
 
-      {managingFlags && actions ? (
-        <FlagsModal
-          model={model}
-          actions={actions}
-          onClose={onCloseManage}
-          onOpenReport={onOpenReport}
-        />
-      ) : null}
+      <PresenceValue value={managingFlags ? actions : null} exitMs={EXIT_MS.sheet}>
+        {(shown) => (
+          <FlagsModal
+            model={model}
+            actions={shown}
+            onClose={onCloseManage}
+            onOpenReport={onOpenReport}
+          />
+        )}
+      </PresenceValue>
     </>
   )
 }

@@ -1,7 +1,9 @@
 import type { ExpenseDataSource } from '../../data/dataSource'
 import type { ExpenseDataset } from '../../types'
+import { EXIT_MS } from '../hooks/motion'
 import { OnboardingWizard } from '../onboarding/OnboardingWizard'
 import { skipOnboarding } from '../onboarding/onboardingStorage'
+import { Presence } from './Presence'
 
 interface Props {
   open: boolean
@@ -28,20 +30,21 @@ export function ExpensesOnboarding({
   onAdd,
   onClose,
 }: Props) {
-  if (!open) return null
   return (
-    <OnboardingWizard
-      source={source}
-      dataset={dataset}
-      applyPatch={applyPatch}
-      onDone={() => {
-        onClose()
-        if (firstRun) onAdd()
-      }}
-      onSkip={() => {
-        skipOnboarding()
-        onClose()
-      }}
-    />
+    <Presence show={open} exitMs={EXIT_MS.sheet}>
+      <OnboardingWizard
+        source={source}
+        dataset={dataset}
+        applyPatch={applyPatch}
+        onDone={() => {
+          onClose()
+          if (firstRun) onAdd()
+        }}
+        onSkip={() => {
+          skipOnboarding()
+          onClose()
+        }}
+      />
+    </Presence>
   )
 }

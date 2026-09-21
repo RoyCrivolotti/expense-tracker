@@ -4,6 +4,8 @@ import type { ExpenseDataset, ExpenseSettings } from '../../types'
 import { formatMoneyInput, parseMoneyToCents, resolveMoneyFormat } from '../../engine/money'
 import { Modal } from '../components/Modal'
 import { ConfirmSheet } from '../components/ConfirmSheet'
+import { Presence } from '../components/Presence'
+import { EXIT_MS } from '../hooks/motion'
 import { OnboardingNav, OnboardingProgress } from './OnboardingSteps'
 import { OnboardingMoneyStep, type MoneyDraft } from './OnboardingMoneyStep'
 import { OnboardingCategoriesStep } from './OnboardingCategoriesStep'
@@ -226,7 +228,7 @@ export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }
       <button type="button" className={styles.skipLink} onClick={onSkip} disabled={busy}>
         Skip for now
       </button>
-      {showConfirm ? (
+      <Presence show={showConfirm} exitMs={EXIT_MS.sheet}>
         <ConfirmSheet
           title="Apply these changes?"
           message={buildOnboardingConfirmSummary({
@@ -243,7 +245,7 @@ export function OnboardingWizard({ source, dataset, applyPatch, onDone, onSkip }
           onConfirm={handleConfirm}
           onCancel={() => setShowConfirm(false)}
         />
-      ) : null}
+      </Presence>
     </Modal>
   )
 }

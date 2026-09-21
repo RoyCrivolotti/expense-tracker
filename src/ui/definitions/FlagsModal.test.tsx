@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { ExpenseDataset, Transaction } from '../../types'
@@ -106,6 +106,25 @@ describe('FlagsModal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
 
     expect(deleteFlag).toHaveBeenCalledWith(1)
+  })
+
+  it('keeps the flag, and stays on its form, when the delete is cancelled', async () => {
+    const deleteFlag = vi.fn().mockResolvedValue({ unflagged: 1 })
+    const { onClose } = renderModal(makeDataset({ flags: [work], transactions: [txn(1)] }), {
+      deleteFlag,
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Delete flag' }))
+    // The form has a Cancel of its own, which would leave the form rather than the confirm.
+    await userEvent.click(
+      within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Cancel' }),
+    )
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save flag' })).toBeInTheDocument()
+    expect(deleteFlag).not.toHaveBeenCalled()
+    expect(onClose).not.toHaveBeenCalled()
   })
 
   it('refuses to save a flag with no name', async () => {

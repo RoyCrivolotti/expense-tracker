@@ -1,6 +1,10 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { act, fireEvent, render, screen } from '@testing-library/react'
+import { useState } from 'react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
 import { ConfirmSheet } from './ConfirmSheet'
+import { Modal } from './Modal'
+import { Presence } from './Presence'
 
 describe('ConfirmSheet', () => {
   it('renders a plain string message as a single paragraph', () => {
@@ -81,5 +85,109 @@ describe('ConfirmSheet', () => {
       'aria-describedby',
       'confirm-message confirm-footnote',
     )
+  })
+})
+
+describe('ConfirmSheet leaving', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    setMotionDisabledForTests(false)
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    setMotionDisabledForTests(true)
+  })
+
+  const sheet = (props: { onConfirm?: () => void; onCancel?: () => void } = {}) => (
+    <ConfirmSheet
+      title="Delete?"
+      message="Gone for good."
+      confirmLabel="Delete"
+      onConfirm={props.onConfirm ?? vi.fn()}
+      onCancel={props.onCancel ?? vi.fn()}
+    />
+  )
+
+  it('renders into the body, out of reach of a transformed parent that would re-contain it', () => {
+    const { container } = render(sheet())
+
+    expect(container.querySelector('[role="alertdialog"]')).toBeNull()
+    expect(screen.getByRole('alertdialog').closest('body')).toBe(document.body)
+  })
+
+  it('leaves over the time its owner holds it for, and takes no more taps meanwhile', () => {
+    const { rerender } = render(
+      <Presence show exitMs={EXIT_MS.sheet}>
+        {sheet()}
+      </Presence>,
+    )
+    const overlay = screen.getByRole('alertdialog').parentElement!
+    expect(overlay.hasAttribute('inert')).toBe(false)
+
+    rerender(
+      <Presence show={false} exitMs={EXIT_MS.sheet}>
+        {sheet()}
+      </Presence>,
+    )
+
+    expect(overlay.hasAttribute('inert')).toBe(true)
+    expect(overlay.className).toContain('overlayClosing')
+    expect(screen.getByRole('alertdialog').className).toContain('sheetClosing')
+    expect(overlay.style.getPropertyValue('--exit-ms')).toBe(`${EXIT_MS.sheet}ms`)
+
+    void act(() => vi.advanceTimersByTime(EXIT_MS.sheet))
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+  })
+
+  it('does not answer Escape while it is leaving', () => {
+    const onCancel = vi.fn()
+    const { rerender } = render(
+      <Presence show exitMs={EXIT_MS.sheet}>
+        {sheet({ onCancel })}
+      </Presence>,
+    )
+    rerender(
+      <Presence show={false} exitMs={EXIT_MS.sheet}>
+        {sheet({ onCancel })}
+      </Presence>,
+    )
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(onCancel).not.toHaveBeenCalled()
+  })
+
+  it('leaves together with the modal it sits on when that modal is closed by the answer', () => {
+    // Discard on a form's confirm: the answer closes the modal underneath, and the
+    // confirm has to go with it rather than hang there until it is unmounted mid-air.
+    function Owner() {
+      const [open, setOpen] = useState(true)
+      return (
+        <Presence show={open} exitMs={EXIT_MS.sheet}>
+          <Modal title="Edit" onClose={() => setOpen(false)}>
+            <Presence show exitMs={EXIT_MS.sheet}>
+              <ConfirmSheet
+                title="Discard changes?"
+                message="They will be lost."
+                confirmLabel="Discard"
+                onConfirm={() => setOpen(false)}
+                onCancel={vi.fn()}
+              />
+            </Presence>
+          </Modal>
+        </Presence>
+      )
+    }
+    render(<Owner />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Discard' }))
+
+    const confirm = screen.getByRole('alertdialog')
+    expect(confirm.className).toContain('sheetClosing')
+    expect(screen.getByRole('dialog').className).toContain('sheetClosing')
+
+    void act(() => vi.advanceTimersByTime(EXIT_MS.sheet))
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 })

@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
-import { EXIT_MAX_MS, EXIT_MIN_MS, exitDurationMs } from './useSheetExit'
+import { act, renderHook } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import { EXIT_MAX_MS, EXIT_MIN_MS, exitDurationMs, useSheetExit } from './useSheetExit'
 
 describe('exitDurationMs', () => {
   it('takes the full time when the sheet starts from rest', () => {
@@ -7,8 +8,8 @@ describe('exitDurationMs', () => {
   })
 
   it('shortens in proportion to the distance already covered', () => {
-    // Half dragged away, so half the journey is left.
-    expect(exitDurationMs(600, 300)).toBe(EXIT_MAX_MS / 2)
+    // A quarter of the way out, so three quarters of the journey is left.
+    expect(exitDurationMs(600, 150)).toBe(Math.round(EXIT_MAX_MS * 0.75))
   })
 
   it('keeps a floor, so a nearly-dismissed sheet animates rather than blinking out', () => {
@@ -22,5 +23,42 @@ describe('exitDurationMs', () => {
 
   it('falls back to the full time when the sheet has not been measured', () => {
     expect(exitDurationMs(0, 0)).toBe(EXIT_MAX_MS)
+  })
+
+  it('never takes longer than the time the sheet is held in the DOM', () => {
+    expect(EXIT_MAX_MS).toBeGreaterThan(EXIT_MIN_MS)
+    expect(exitDurationMs(600, 0)).toBeLessThanOrEqual(EXIT_MAX_MS)
+  })
+})
+
+describe('useSheetExit', () => {
+  const sheetOf = (height: number) => ({ current: { offsetHeight: height } as HTMLElement })
+
+  it('hands a close from rest straight to the owner and remembers no release point', () => {
+    const onClose = vi.fn()
+    const { result } = renderHook(() => useSheetExit(sheetOf(400), onClose))
+
+    act(() => result.current.requestClose())
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(result.current.release).toBeNull()
+  })
+
+  it('remembers where a swipe let go, how long the rest of the trip takes, and how far along it was', () => {
+    const onClose = vi.fn()
+    const { result } = renderHook(() => useSheetExit(sheetOf(400), onClose))
+
+    act(() => result.current.requestClose(200))
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(result.current.release).toEqual({ fromPx: 200, ms: exitDurationMs(400, 200), progress: 0.5 })
+  })
+
+  it('reports no progress for a sheet that has not been measured', () => {
+    const { result } = renderHook(() => useSheetExit({ current: null }, vi.fn()))
+
+    act(() => result.current.requestClose(120))
+
+    expect(result.current.release).toMatchObject({ fromPx: 120, progress: 0 })
   })
 })
