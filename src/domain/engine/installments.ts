@@ -32,18 +32,18 @@ export interface InstallmentSuggestion {
   installmentIndex: number
   totalCount: number
   budgetMonth: string
-  /** Suggested calendar date to seed the transaction. */
+  /** Calendar date the charge is expected to post, to seed the transaction. */
   predictedDate: string
   /** Whether `predictedDate` reflects a real due day (vs. a month placeholder). */
   dueDateKnown: boolean
 }
 
-/** ISO date for `dueDayOfMonth` within `budgetMonth`, clamped to the month length. */
-function dueDateInMonth(budgetMonth: string, dueDayOfMonth: number): string {
-  const [y, m] = budgetMonth.split('-').map(Number) as [number, number]
+/** ISO date for `dueDayOfMonth` within the calendar month `yearMonth`, clamped to its length. */
+function dueDateInMonth(yearMonth: string, dueDayOfMonth: number): string {
+  const [y, m] = yearMonth.split('-').map(Number) as [number, number]
   const maxDay = new Date(y, m, 0).getDate()
   const day = Math.min(Math.max(dueDayOfMonth, 1), maxDay)
-  return `${budgetMonth}-${String(day).padStart(2, '0')}`
+  return `${yearMonth}-${String(day).padStart(2, '0')}`
 }
 
 /** Budget month a given installment index falls due. */
@@ -61,15 +61,38 @@ export function finalBudgetMonth(plan: InstallmentPlan): string {
   return budgetMonthForIndex(plan, plan.totalCount)
 }
 
+function linkedTransactions(plan: InstallmentPlan, transactions: StoredTransaction[]): StoredTransaction[] {
+  return transactions.filter(
+    (t) => t.planId === plan.id && !t.cancelled && typeof t.installmentIndex === 'number',
+  )
+}
+
 function linkedIndices(plan: InstallmentPlan, transactions: StoredTransaction[]): number[] {
-  return transactions
-    .filter(
-      (t) =>
-        t.planId === plan.id &&
-        !t.cancelled &&
-        typeof t.installmentIndex === 'number',
-    )
-    .map((t) => t.installmentIndex as number)
+  return linkedTransactions(plan, transactions).map((t) => t.installmentIndex as number)
+}
+
+/** Past this, a reference row is more likely a typo or backdated entry than a real charge cycle. */
+const MAX_CALENDAR_OFFSET_MONTHS = 1
+
+/**
+ * How many months a charge's calendar month trails the budget month it counts in, read from
+ * the plan's own first recorded installment. Some owners count a charge in the month its card
+ * bill is paid, so the first installment can be dated August yet counted in September; every
+ * later installment follows the same pattern. Reading it from the data avoids asking anyone
+ * to declare how they bucket charges.
+ *
+ * The earliest installment is the reference because it is the row the plan's due day and
+ * anchor were captured from: a later row, including one created automatically, can't shift it.
+ */
+export function calendarOffsetMonths(plan: InstallmentPlan, transactions: StoredTransaction[]): number {
+  const linked = linkedTransactions(plan, transactions)
+  if (linked.length === 0) return 0
+  const first = linked.reduce((a, b) => ((b.installmentIndex as number) < (a.installmentIndex as number) ? b : a))
+  const offset = monthsBetweenBudget(
+    first.date.slice(0, 7),
+    budgetMonthForIndex(plan, first.installmentIndex as number),
+  )
+  return Math.abs(offset) <= MAX_CALENDAR_OFFSET_MONTHS ? offset : 0
 }
 
 export function planProgress(
@@ -139,7 +162,10 @@ export function nextInstallmentSuggestion(
   if (forBudgetMonth && budgetMonth !== forBudgetMonth) return null
   const dueDateKnown = plan.dueDayOfMonth != null
   const predictedDate = dueDateKnown
-    ? dueDateInMonth(budgetMonth, plan.dueDayOfMonth as number)
+    ? dueDateInMonth(
+        shiftBudgetMonth(budgetMonth, -calendarOffsetMonths(plan, transactions)),
+        plan.dueDayOfMonth as number,
+      )
     : `${budgetMonth}-01`
   return {
     planId: plan.id,
