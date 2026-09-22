@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { motionEnabled } from '../hooks/motion'
-import { PresenceContext, useExit } from '../hooks/usePresence'
+import { PresenceContext, useExit, useHeldWhen } from '../hooks/usePresence'
 
 type Phase = 'open' | 'closing' | 'closed'
 
@@ -79,11 +79,7 @@ interface PresenceValueProps<T> {
  * it was showing while it leaves, and every other prop is read fresh from the caller.
  */
 export function PresenceValue<T>({ value, exitMs, children }: PresenceValueProps<T>) {
-  // In a tuple because `useState` calls a function it is handed, as an initialiser or an
-  // updater, and a held callback (the add button's handler) must be kept, not run.
-  const [held, setHeld] = useState<[T | null | undefined]>([value])
-  if (value != null && !Object.is(held[0], value)) setHeld([value])
-  const shown = value ?? held[0]
+  const shown = useHeldWhen(value, value == null)
   return (
     <Presence show={value != null} exitMs={exitMs}>
       {shown != null ? children(shown) : null}
