@@ -27,6 +27,7 @@ import { optionLabel, selectableOptions } from '../components/pickerOptions'
 import { formatDayLabel } from '../format'
 import formStyles from '../components/TransactionForm.module.css'
 import styles from './RecordReimbursementSheet.module.css'
+import { usePopoverTrapPause } from '../hooks/usePopoverTrapPause'
 
 interface Props {
   group: FlagGroup
@@ -137,7 +138,7 @@ export function RecordReimbursementSheet({ group, model, busy, error, onCancel, 
   const [categoryId, setCategoryId] = useState(draft?.categoryId ?? 0)
   // Pauses this Modal's own trap while the date popover is open, the same way
   // TransactionModal does for its fields — otherwise Escape closes both at once.
-  const [datePopoverOpen, setDatePopoverOpen] = useState(false)
+  const [datePopoverOpen, setDatePopoverOpen] = usePopoverTrapPause()
 
   if (!draft) return null
 

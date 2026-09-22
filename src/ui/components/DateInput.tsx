@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { shortDateLabel } from '../../engine/dates'
 import { isNativeDatePicker } from '../hooks/isNativeDatePicker'
-import { EXIT_MS, afterExit } from '../hooks/motion'
+import { EXIT_MS } from '../hooks/motion'
 import { NativeDateOverlay } from './NativeDateOverlay'
 import { DatePickerPopover } from './DatePickerPopover'
 import { Presence } from './Presence'
@@ -35,25 +35,11 @@ export function DateInput({
   const native = isNativeDatePicker()
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
-  // Bumped on every close, so a stale close's delayed un-pause can tell it is no longer
-  // the latest one and skip itself — otherwise a fast reopen would have its own pause
-  // clobbered back to unpaused when the earlier close's timer finally runs.
-  const closeTokenRef = useRef(0)
-
+  // Reported synchronously; the owner (usePopoverTrapPause) defers the un-pause past
+  // the popover's exit, and holds it back entirely when another popover has opened.
   const setOpenState = (next: boolean) => {
     setOpen(next)
-    closeTokenRef.current += 1
-    if (next) {
-      onTrapPausedChange?.(true)
-      return
-    }
-    // The popover stays mounted, portalled outside the Modal, for its own exit — un-pause
-    // only once it has actually gone, or the Modal's trap reactivates while something
-    // outside its own container can still hold focus.
-    const token = closeTokenRef.current
-    void afterExit(EXIT_MS.popover).then(() => {
-      if (closeTokenRef.current === token) onTrapPausedChange?.(false)
-    })
+    onTrapPausedChange?.(next)
   }
 
   if (native) {

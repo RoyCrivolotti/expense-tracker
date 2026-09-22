@@ -16,6 +16,7 @@ import {
   type BulkEditFieldState,
 } from './bulkEditFields'
 import styles from './BulkEditSheet.module.css'
+import { usePopoverTrapPause } from '../hooks/usePopoverTrapPause'
 
 interface BulkEditSheetProps {
   count: number
@@ -51,7 +52,7 @@ export function BulkEditSheet({
   onApply,
   onCancel,
 }: BulkEditSheetProps) {
-  const [popoverOpen, setPopoverOpen] = useState(false)
+  const [popoverOpen, setPopoverOpen] = usePopoverTrapPause()
   const [fields, setFields] = useState<BulkEditFieldState>({
     categoryEnabled: false,
     categoryId: model.dataset.categories[0]?.id ?? 0,

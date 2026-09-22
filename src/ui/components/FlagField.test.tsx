@@ -1,8 +1,7 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { makeFlag } from '../../testing/factories'
-import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
 import { FlagField } from './FlagField'
 
 const work = makeFlag({ id: 1, name: 'Work travel' })
@@ -80,43 +79,16 @@ describe('FlagField', () => {
   })
 })
 
-describe('FlagField — un-pausing the modal trap', () => {
-  beforeEach(() => {
-    vi.useFakeTimers()
-    setMotionDisabledForTests(false)
-  })
-  afterEach(() => {
-    vi.useRealTimers()
-    setMotionDisabledForTests(true)
-  })
-
-  it('keeps the trap paused through the popover\'s own exit, not just until it is asked to close', async () => {
+describe('FlagField — reporting to the modal trap', () => {
+  it('reports open and close synchronously; the owner defers the un-pause', () => {
+    // The exit-length deferral lives in usePopoverTrapPause, at the single owner, so a
+    // late un-pause can never race another popover's pause — see that hook's tests.
     const { onTrapPausedChange } = renderField()
 
     fireEvent.click(screen.getByRole('button', { name: /No flag/ }))
+    expect(onTrapPausedChange).toHaveBeenLastCalledWith(true)
+
     fireEvent.click(screen.getByRole('button', { name: /Work travel/ }))
-
-    expect(onTrapPausedChange).toHaveBeenLastCalledWith(true)
-
-    await act(() => vi.advanceTimersByTimeAsync(EXIT_MS.popover - 1))
-    expect(onTrapPausedChange).toHaveBeenLastCalledWith(true)
-
-    await act(() => vi.advanceTimersByTimeAsync(1))
     expect(onTrapPausedChange).toHaveBeenLastCalledWith(false)
-  })
-
-  it('does not let a stale close un-pause the trap once the popover has reopened', async () => {
-    const { onTrapPausedChange } = renderField()
-
-    fireEvent.click(screen.getByRole('button', { name: /No flag/ }))
-    fireEvent.click(screen.getByRole('button', { name: /Work travel/ }))
-    // Reopen before the first close's delayed un-pause has had a chance to fire. `value`
-    // is a controlled prop this harness never updates, so the trigger still reads "No
-    // flag" — `expanded: false` picks the trigger out from the still-mounted, exiting
-    // popover's own same-named option.
-    fireEvent.click(screen.getByRole('button', { name: /No flag/, expanded: false }))
-
-    await act(() => vi.advanceTimersByTimeAsync(EXIT_MS.popover))
-    expect(onTrapPausedChange).toHaveBeenLastCalledWith(true)
   })
 })

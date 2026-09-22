@@ -1,9 +1,9 @@
-import { useState } from 'react'
 import { fullMonthLabel } from '../../engine'
 import { Modal } from './Modal'
 import { Money } from './Money'
 import { StatementPaidDate } from './StatementPaidDate'
 import styles from './StatementPaymentSheet.module.css'
+import { usePopoverTrapPause } from '../hooks/usePopoverTrapPause'
 
 interface Props {
   cardName: string
@@ -32,7 +32,7 @@ export function StatementPaymentSheet({
   }
   // Pauses this Modal's own trap while the date popover is open, the same way
   // TransactionModal does for its fields — otherwise Escape closes both at once.
-  const [datePopoverOpen, setDatePopoverOpen] = useState(false)
+  const [datePopoverOpen, setDatePopoverOpen] = usePopoverTrapPause()
 
   return (
     <Modal

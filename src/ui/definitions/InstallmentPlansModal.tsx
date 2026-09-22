@@ -10,6 +10,7 @@ import { Modal } from '../components/Modal'
 import { InstallmentPlanForm } from './InstallmentPlanForm'
 import defStyles from './definitions.module.css'
 import styles from './InstallmentPlansManager.module.css'
+import { usePopoverTrapPause } from '../hooks/usePopoverTrapPause'
 
 function PlanRow({
   plan,
@@ -79,7 +80,7 @@ export function InstallmentPlansModal({ model, actions, onClose }: Props) {
   const [editing, setEditing] = useState<InstallmentPlan | null>(null)
   // Pauses this Modal's own trap while the month popover is open, the same way
   // TransactionModal does for its fields — otherwise Escape closes both at once.
-  const [monthPopoverOpen, setMonthPopoverOpen] = useState(false)
+  const [monthPopoverOpen, setMonthPopoverOpen] = usePopoverTrapPause()
   const plans = model.dataset.installmentPlans
 
   return (

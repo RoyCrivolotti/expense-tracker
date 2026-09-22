@@ -1,11 +1,11 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // The fallback popover, not the native control — same reasoning as DateInput.test.tsx.
 vi.mock('../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: () => false }))
 
-import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
+import { setMotionDisabledForTests } from '../hooks/motion'
 import { MonthInput } from './MonthInput'
 
 async function openPicker(value: string) {
@@ -48,7 +48,9 @@ describe('MonthInput — pausing the enclosing modal trap', () => {
     setMotionDisabledForTests(true)
   })
 
-  it('keeps the trap paused through the popover\'s own exit, not just until it is asked to close', async () => {
+  it('reports open and close synchronously; the owner defers the un-pause', () => {
+    // The exit-length deferral lives in usePopoverTrapPause, at the single owner, so a
+    // late un-pause can never race another popover's pause — see that hook's tests.
     const onTrapPausedChange = vi.fn()
     render(<MonthInput value="2026-09" onChange={vi.fn()} onTrapPausedChange={onTrapPausedChange} />)
 
@@ -56,9 +58,6 @@ describe('MonthInput — pausing the enclosing modal trap', () => {
     expect(onTrapPausedChange).toHaveBeenLastCalledWith(true)
 
     fireEvent.click(screen.getByRole('button', { name: 'Nov 2026' }))
-    expect(onTrapPausedChange).toHaveBeenLastCalledWith(true)
-
-    await act(() => vi.advanceTimersByTimeAsync(EXIT_MS.popover))
     expect(onTrapPausedChange).toHaveBeenLastCalledWith(false)
   })
 })
