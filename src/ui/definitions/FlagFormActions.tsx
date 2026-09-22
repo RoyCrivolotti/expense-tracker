@@ -52,10 +52,17 @@ export function FlagFormActions({
   return (
     <>
       <div className={styles.actions}>
-        <button type="button" className={styles.saveBtn} disabled={busy} onClick={onSave}>
+        {/* Also off while a confirmed delete waits out its sheet's exit: a Save landing
+            in that window would update the flag and then still have it deleted. */}
+        <button type="button" className={styles.saveBtn} disabled={busy || awaitingDelete} onClick={onSave}>
           {saveLabel(busy, flag)}
         </button>
-        <button type="button" className={styles.cancelBtn} disabled={busy} onClick={onCancel}>
+        <button
+          type="button"
+          className={styles.cancelBtn}
+          disabled={busy || awaitingDelete}
+          onClick={onCancel}
+        >
           Cancel
         </button>
       </div>

@@ -244,4 +244,24 @@ describe('FlagsModal — deleting while the confirm sheet leaves', () => {
     await act(() => vi.advanceTimersByTimeAsync(EXIT_MS.sheet))
     expect(deleteFlag).toHaveBeenCalledTimes(1)
   })
+
+  it('takes no Save or Cancel while a confirmed delete waits out the sheet exit', async () => {
+    // A Save landing in that window would update the flag and then still have it
+    // deleted by the queued request; the whole actions row stands down together.
+    const deleteFlag = vi.fn().mockResolvedValue({ unflagged: 1 })
+    renderModal(makeDataset({ flags: [work], transactions: [txn(1)] }), { deleteFlag })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete flag' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    await act(async () => {})
+
+    // The leaving confirm sheet has a Cancel of its own; the form's is the one outside it.
+    const confirm = screen.getByRole('alertdialog')
+    const formCancel = screen
+      .getAllByRole('button', { name: 'Cancel' })
+      .find((button) => !confirm.contains(button))
+    expect(screen.getByRole('button', { name: /Save|Create/ })).toBeDisabled()
+    expect(formCancel).toBeDisabled()
+  })
 })
