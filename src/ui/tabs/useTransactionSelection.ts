@@ -15,10 +15,13 @@ export function offScreenNote(hiddenCount: number, outcome: 'deleted' | 'changed
   return `${hiddenCount} more you selected ${verb} shown and won't be ${outcome}.`
 }
 
-/** A dialog or popover on screen owns Escape; the list behind it does not. */
+/**
+ * A dialog or popover on screen owns Escape; the list behind it does not. One that is
+ * `inert` is on its way out and answers nothing, so it does not count.
+ */
 function dialogIsOpen(): boolean {
   return [...document.querySelectorAll('[role="dialog"], [role="alertdialog"]')].some(
-    (el) => el.closest('[hidden]') === null,
+    (el) => el.closest('[hidden], [inert]') === null,
   )
 }
 

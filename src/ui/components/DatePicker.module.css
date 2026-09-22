@@ -34,6 +34,48 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
 }
 
+/*
+ * Arrives and leaves by a few pixels, away from its trigger, and by opacity. Never a
+ * scale: usePopoverPosition measures the box to place it. `--pop-shift` is set per side
+ * so a popover under its trigger moves down and one over it moves up. Leaving is the
+ * arrival played backwards, over the time `Presence` keeps it mounted.
+ */
+.popover {
+  animation: pop-in var(--motion-enter-pop) var(--motion-ease-out);
+}
+.popover[data-side='below'] {
+  --pop-shift: -0.3rem;
+}
+.popover[data-side='above'] {
+  --pop-shift: 0.3rem;
+}
+.popoverLeaving {
+  animation: pop-out var(--exit-ms, 90ms) var(--motion-ease-in) forwards;
+  pointer-events: none;
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--pop-shift, 0px));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pop-out {
+  to {
+    opacity: 0;
+    transform: translateY(var(--pop-shift, 0px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .popover,
+  .popoverLeaving {
+    animation: none;
+  }
+}
+
 /* Header row: month/year title + nav arrows */
 .header {
   display: flex;

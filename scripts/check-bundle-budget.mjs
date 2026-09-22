@@ -11,15 +11,19 @@ import { join } from 'node:path'
 
 const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 
-// gzip bytes. Today: total ~159 KB, GoalsTab ~20 KB.
+// gzip bytes. Today: total ~180 KB, GoalsTab ~21 KB.
 //
 // Raised from 160 KB when flags, receipts and the claim pack landed: three
 // features' worth of UI took the total from ~146 KB to ~159 KB, leaving under
 // 1 KB of headroom — at which point the next one-line change fails the build and
 // somebody bumps this in a hurry without looking at why. The purpose is still to
 // catch a heavy chart or vendor lib sneaking back in (dropping Recharts took the
-// lazy Goals chunk from 108 KB to ~8 KB gzip), and 180 KB still catches that.
-const TOTAL_MAX_GZIP = 180_000
+// lazy Goals chunk from 108 KB to ~8 KB gzip), and this limit still catches that.
+//
+// Raised again, from 180 KB to 184 KB, when the motion layer landed (Presence, the sheet and
+// popover exits, the folds): about 1.7 KB gzip took the total from ~178.3 KB to 179,969
+// bytes, which left 31 bytes and would have failed the next unrelated change.
+const TOTAL_MAX_GZIP = 184_000
 const GOALS_MAX_GZIP = 40_000
 
 function gzipBytes(path) {

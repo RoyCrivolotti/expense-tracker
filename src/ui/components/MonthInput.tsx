@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react'
 import { shortMonthYearLabel } from '../../engine/dates'
 import { isNativeDatePicker } from '../hooks/isNativeDatePicker'
+import { EXIT_MS } from '../hooks/motion'
 import { NativeDateOverlay } from './NativeDateOverlay'
 import { MonthPickerPopover } from './MonthPickerPopover'
+import { Presence } from './Presence'
 import styles from './DatePicker.module.css'
 
 interface Props {
@@ -41,14 +43,14 @@ export function MonthInput({ value, ariaLabel = 'Budget month', onChange }: Prop
       >
         {value ? shortMonthYearLabel(value) : 'Select month'}
       </button>
-      {open && (
+      <Presence show={open} exitMs={EXIT_MS.popover}>
         <MonthPickerPopover
           value={value}
           triggerRef={triggerRef}
           onSelect={onChange}
           onClose={() => setOpen(false)}
         />
-      )}
+      </Presence>
     </>
   )
 }

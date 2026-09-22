@@ -4,9 +4,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { resizeObservers } from '../../test/setup'
 import { usePublishHeight } from './usePublishHeight'
 
-function Bar() {
+function Bar({ enabled = true }: { enabled?: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
-  usePublishHeight(ref, '--test-bar')
+  usePublishHeight(ref, '--test-bar', enabled)
   return <div ref={ref} />
 }
 
@@ -28,6 +28,16 @@ describe('usePublishHeight', () => {
     expect(published()).toBe('73px')
 
     unmount()
+    expect(published()).toBe('')
+  })
+
+  it('lets go of the height as soon as it is switched off, while the bar is still mounted', () => {
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(60)
+    const { rerender } = render(<Bar />)
+    expect(published()).toBe('60px')
+
+    // The bar is leaving: what sits above it should start coming down now.
+    rerender(<Bar enabled={false} />)
     expect(published()).toBe('')
   })
 })

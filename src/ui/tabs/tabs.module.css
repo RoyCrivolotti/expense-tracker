@@ -501,6 +501,34 @@
   border-top: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
   font-size: 0.88rem;
+  animation: batchBarIn var(--motion-enter-sheet) var(--motion-ease-out);
+}
+/* Leaving is the arrival played backwards, over the time `Presence` keeps it mounted. */
+.batchBarLeaving {
+  animation: batchBarOut var(--exit-ms, 150ms) var(--motion-ease-in) forwards;
+  pointer-events: none;
+}
+@keyframes batchBarIn {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes batchBarOut {
+  to {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .batchBar,
+  .batchBarLeaving {
+    animation: none;
+  }
 }
 .batchLeft {
   display: flex;

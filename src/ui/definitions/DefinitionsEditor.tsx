@@ -6,6 +6,8 @@ import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import { Card, SectionTitle } from '../components/primitives'
 import { Money } from '../components/Money'
+import { PresenceValue } from '../components/Presence'
+import { EXIT_MS } from '../hooks/motion'
 import { ConfigModal, type EditTarget } from './ConfigModal'
 import { FlagList } from './FlagList'
 import { CategoryIcon } from '../components/CategoryIcon'
@@ -177,14 +179,16 @@ export function DefinitionsEditor({
         label="Edit goals"
         onEdit={() => setTarget({ kind: 'goals' })}
       />
-      {target && (
-        <ConfigModal
-          target={target}
-          model={model}
-          actions={actions}
-          onClose={() => setTarget(null)}
-        />
-      )}
+      <PresenceValue value={target} exitMs={EXIT_MS.sheet}>
+        {(shown) => (
+          <ConfigModal
+            target={shown}
+            model={model}
+            actions={actions}
+            onClose={() => setTarget(null)}
+          />
+        )}
+      </PresenceValue>
     </>
   )
 }

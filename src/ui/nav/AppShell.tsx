@@ -3,8 +3,11 @@ import { HubMenuRoot, HubMenuTrigger } from 'folio-shell'
 import type { GroupGrants } from '../../domain/accessGroups'
 import { getExpenseHubNavItems } from '../../hubNavItems'
 import { navItems, type TabId } from './navItems'
+import { PresenceValue } from '../components/Presence'
 import { PlusIcon } from '../icons'
+import { EXIT_MS } from '../hooks/motion'
 import { useAutoHideFab } from '../hooks/useAutoHideFab'
+import { useExit } from '../hooks/usePresence'
 import styles from './AppShell.module.css'
 
 interface AppShellProps {
@@ -23,6 +26,26 @@ interface AppShellProps {
   contentRef?: RefObject<HTMLElement | null>
   banner?: ReactNode
   children: ReactNode
+}
+
+/**
+ * The round add button. It comes and goes with the selection bar that takes its corner, so
+ * it scales and fades rather than popping, and while it leaves it takes no more taps.
+ */
+function AddButton({ onAdd, scrolling }: { onAdd: () => void; scrolling: boolean }) {
+  const { leaving } = useExit()
+  const classes = [styles.fab, scrolling && styles.fabHidden, leaving && styles.fabLeaving]
+  return (
+    <button
+      type="button"
+      className={classes.filter(Boolean).join(' ')}
+      onClick={() => onAdd()}
+      aria-label="Add transaction"
+      inert={leaving}
+    >
+      <PlusIcon />
+    </button>
+  )
 }
 
 function NavList({
@@ -107,16 +130,9 @@ export function AppShell({
           </main>
         </div>
 
-        {onAdd && (
-          <button
-            type="button"
-            className={`${styles.fab} ${fabVisible ? '' : styles.fabHidden}`}
-            onClick={() => onAdd()}
-            aria-label="Add transaction"
-          >
-            <PlusIcon />
-          </button>
-        )}
+        <PresenceValue value={onAdd} exitMs={EXIT_MS.fade}>
+          {(add) => <AddButton onAdd={add} scrolling={!fabVisible} />}
+        </PresenceValue>
 
         <nav className={styles.bottomBar} aria-label="Sections">
           <NavList activeId={activeId} onSelect={onSelect} variant="bar" settingsBadge={settingsBadge} />

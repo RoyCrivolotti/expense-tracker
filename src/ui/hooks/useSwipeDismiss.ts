@@ -37,7 +37,10 @@ export interface SwipeDismissState {
  *  - otherwise                        → a scroll, and this hook stays out of it.
  *
  * `onDismiss` is handed the offset the sheet was released at, so the caller can carry
- * the motion on from where the finger left it rather than restarting from rest.
+ * the motion on from where the finger left it rather than restarting from rest. The
+ * sheet itself is let go at once either way: if the owner closes, its exit takes over
+ * from that offset, and if it raises a confirm instead (an unsaved draft) the sheet
+ * settles back under it rather than sitting displaced.
  */
 export function useSwipeDismiss(
   sheetRef: RefObject<HTMLElement | null>,
@@ -142,13 +145,13 @@ export function useSwipeDismiss(
         stop()
         return
       }
-      // Deliberately *not* reset to 0 first. The sheet stays where the finger left
-      // it so the caller's exit animation can continue that same movement; snapping
-      // home and vanishing in one frame is what made this feel abrupt.
-      armed.current = false
-      committed.current = false
-      setIsDragging(false)
-      dismissRef.current(offsetRef.current)
+      // The caller is told where the finger left the sheet before the offset is
+      // cleared, so its exit can continue from there. Both land in one render: if the
+      // owner closes, the exit animation takes over the transform at that same offset,
+      // and if it refuses, the sheet settles home instead of staying parked.
+      const from = offsetRef.current
+      dismissRef.current(from)
+      stop()
     }
 
     sheet.addEventListener('touchstart', onTouchStart, { passive: true })

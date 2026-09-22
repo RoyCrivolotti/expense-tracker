@@ -1,7 +1,9 @@
 import { buildFlagGroup } from '../../domain/engine/flagGroups'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
+import { PresenceValue } from '../components/Presence'
 import { FlagsModal } from '../definitions/FlagsModal'
+import { EXIT_MS } from '../hooks/motion'
 import { ExpenseReportView } from './ExpenseReportView'
 import { PastReportsModal } from './PastReportsModal'
 
@@ -41,43 +43,53 @@ export function TransactionsFlagOverlays({
 }) {
   return (
     <>
-      {reportFlagId != null && buildFlagGroup(reportFlagId, model.dataset.transactions, model.dataset.flags) ? (
-        <ExpenseReportView
-          dataset={model.dataset}
-          lookup={model.lookup}
-          flagId={reportFlagId}
-          onClose={onCloseReport}
-          {...(actions ? { onOpenTransaction: actions.onEdit } : {})}
-        />
-      ) : null}
+      <PresenceValue value={reportFlagId} exitMs={EXIT_MS.fade}>
+        {(flagId) =>
+          buildFlagGroup(flagId, model.dataset.transactions, model.dataset.flags) ? (
+            <ExpenseReportView
+              dataset={model.dataset}
+              lookup={model.lookup}
+              flagId={flagId}
+              onClose={onCloseReport}
+              {...(actions ? { onOpenTransaction: actions.onEdit } : {})}
+            />
+          ) : null
+        }
+      </PresenceValue>
 
-      {pastPaymentId != null ? (
-        <ExpenseReportView
-          dataset={model.dataset}
-          lookup={model.lookup}
-          settledByPaymentId={pastPaymentId}
-          onClose={onClosePast}
-          {...(actions ? { onOpenTransaction: actions.onEdit } : {})}
-        />
-      ) : null}
+      <PresenceValue value={pastPaymentId} exitMs={EXIT_MS.fade}>
+        {(paymentId) => (
+          <ExpenseReportView
+            dataset={model.dataset}
+            lookup={model.lookup}
+            settledByPaymentId={paymentId}
+            onClose={onClosePast}
+            {...(actions ? { onOpenTransaction: actions.onEdit } : {})}
+          />
+        )}
+      </PresenceValue>
 
-      {viewingPast && actions ? (
-        <PastReportsModal
-          model={model}
-          onClose={onCloseViewPast}
-          onOpenReport={onOpenPastReport}
-          onOpenPayment={actions.onEdit}
-        />
-      ) : null}
+      <PresenceValue value={viewingPast ? actions : null} exitMs={EXIT_MS.sheet}>
+        {(shown) => (
+          <PastReportsModal
+            model={model}
+            onClose={onCloseViewPast}
+            onOpenReport={onOpenPastReport}
+            onOpenPayment={shown.onEdit}
+          />
+        )}
+      </PresenceValue>
 
-      {managingFlags && actions ? (
-        <FlagsModal
-          model={model}
-          actions={actions}
-          onClose={onCloseManage}
-          onOpenReport={onOpenReport}
-        />
-      ) : null}
+      <PresenceValue value={managingFlags ? actions : null} exitMs={EXIT_MS.sheet}>
+        {(shown) => (
+          <FlagsModal
+            model={model}
+            actions={shown}
+            onClose={onCloseManage}
+            onOpenReport={onOpenReport}
+          />
+        )}
+      </PresenceValue>
     </>
   )
 }

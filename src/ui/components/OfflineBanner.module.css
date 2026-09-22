@@ -1,3 +1,21 @@
+/*
+ * The banner takes its own height in and out of the page, so the content under it eases down
+ * and back up rather than jumping. The same grid technique as a folding date group: a single
+ * row that goes between `0fr` and `1fr` animates to and from the content's natural height.
+ */
+.fold {
+  display: grid;
+  grid-template-rows: 1fr;
+  animation: bannerIn var(--motion-fold) var(--motion-ease-out);
+}
+.folding {
+  animation: bannerOut var(--exit-ms, 180ms) var(--motion-ease-in) forwards;
+}
+.foldInner {
+  min-height: 0;
+  overflow: hidden;
+}
+
 .banner {
   display: flex;
   align-items: flex-start;
@@ -8,7 +26,6 @@
   border: 1px solid color-mix(in srgb, var(--exp-warning) 35%, var(--color-border));
   background: color-mix(in srgb, var(--exp-warning) 12%, var(--color-bg));
   color: var(--color-text);
-  animation: slideIn 0.2s ease;
 }
 .iconWrap {
   flex: none;
@@ -31,18 +48,25 @@
   color: var(--color-text-muted);
   line-height: 1.35;
 }
-@keyframes slideIn {
+@keyframes bannerIn {
   from {
+    grid-template-rows: 0fr;
     opacity: 0;
-    transform: translateY(-4px);
   }
   to {
+    grid-template-rows: 1fr;
     opacity: 1;
-    transform: translateY(0);
+  }
+}
+@keyframes bannerOut {
+  to {
+    grid-template-rows: 0fr;
+    opacity: 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .banner {
+  .fold,
+  .folding {
     animation: none;
   }
 }

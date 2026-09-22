@@ -25,6 +25,22 @@
   --exp-bottom-bar: 4rem;
   --exp-max: 56rem;
 
+  /*
+   * Motion. Arriving takes a little longer than leaving: people watch the thing that
+   * appears, and are already looking at the next one while the old one goes. Both stay
+   * short because these play dozens of times a day. How long something *leaves* for is
+   * `EXIT_MS` in hooks/motion.ts, not here: the same number holds it in the DOM and
+   * drives its CSS, so it is passed down as `--exit-ms` instead of being written twice.
+   */
+  --motion-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --motion-enter-sheet: 220ms;
+  --motion-enter-fade: 150ms;
+  --motion-enter-pop: 120ms;
+  /* Something folding to nothing, or unfolding: a group of rows, a deleted row, the
+     pull-to-refresh strip. Nothing is held in the DOM for this one, so it is only here. */
+  --motion-fold: 180ms;
+
   /* Was referenced as `var(--radius-sm, Npx)` in several goals/charts CSS
      files without ever being defined here — every one of those was silently
      falling back to its own literal (6px in most, 4px in a few). Defining it

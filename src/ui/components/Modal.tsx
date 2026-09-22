@@ -3,7 +3,8 @@ import { BackIcon, CloseIcon } from '../icons'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 import { useVisualViewportRect } from '../hooks/useVisualViewportRect'
 import { useFocusTrap } from '../hooks/useFocusTrap'
-import { useSheetExit, type SheetExit } from '../hooks/useSheetExit'
+import { useExit } from '../hooks/usePresence'
+import { EASE_THROWN, useSheetExit, type SheetRelease } from '../hooks/useSheetExit'
 import { sheetGrabProps, useSwipeDismiss } from '../hooks/useSwipeDismiss'
 import styles from './Modal.module.css'
 
@@ -18,25 +19,22 @@ interface ModalProps {
   children: ReactNode
   /** True while a nested dialog (e.g. a `ConfirmSheet`) is open on top of this modal — see `useFocusTrap`. */
   trapPaused?: boolean
-  /**
-   * True when this modal's `onClose` may raise a confirm instead of actually
-   * closing — an unsaved draft, say. The sheet then stays put and lets that happen,
-   * rather than animating away from a close that is about to be refused. See
-   * `useSheetExit`.
-   */
-  closeMayPrompt?: boolean
 }
 
-function scrimVars(progress: number, exit: SheetExit | null): CSSProperties {
+/**
+ * The scrim and, once the sheet is leaving, how it leaves. `--exit-ms` is what `Presence`
+ * holds the sheet in the DOM for, so the CSS animation and the mount cannot disagree.
+ */
+function overlayVars(progress: number, exit: { release: SheetRelease | null; ms: number } | null): CSSProperties {
+  if (!exit) return { '--scrim': String(SCRIM_ALPHA * (1 - progress)) } as CSSProperties
+  const { release } = exit
   return {
-    '--scrim': String(SCRIM_ALPHA * (1 - progress)),
-    ...(exit
-      ? {
-          '--sheet-exit-ms': `${exit.ms}ms`,
-          '--sheet-from': `${exit.fromPx}px`,
-          '--sheet-exit-ease': exit.ease,
-        }
-      : {}),
+    // Frozen where the finger let go. By now `progress` is back at zero, and reading it
+    // would flash the scrim to full darkness for the first frame of the exit.
+    '--scrim': String(SCRIM_ALPHA * (1 - (release?.progress ?? 0))),
+    '--exit-ms': `${release?.ms ?? exit.ms}ms`,
+    '--sheet-from': `${release?.fromPx ?? 0}px`,
+    ...(release ? { '--exit-ease': EASE_THROWN } : {}),
   } as CSSProperties
 }
 
@@ -51,7 +49,6 @@ export function Modal({
   onBack,
   children,
   trapPaused = false,
-  closeMayPrompt = false,
 }: ModalProps) {
   useBodyScrollLock(true)
   // Follows the visible slice rather than the layout viewport, so an iOS
@@ -59,8 +56,10 @@ export function Modal({
   const viewport = useVisualViewportRect()
   const sheetRef = useRef<HTMLDivElement>(null)
 
-  const { exit, requestClose } = useSheetExit(sheetRef, onClose, closeMayPrompt)
-  const leaving = exit != null
+  // Told by the owner's `Presence` that it has let go, whichever way it did: the Close
+  // button, a swipe, Save, or anything else that clears the state this modal hangs on.
+  const { leaving, exitMs } = useExit()
+  const { release, requestClose } = useSheetExit(sheetRef, onClose, leaving)
   useFocusTrap(sheetRef, requestClose, trapPaused || leaving)
   const { offset, isDragging, progress } = useSwipeDismiss(sheetRef, requestClose, !trapPaused && !leaving)
 
@@ -86,7 +85,10 @@ export function Modal({
   return (
     <div
       className={leaving ? `${styles.overlay} ${styles.overlayClosing}` : styles.overlay}
-      style={scrimVars(progress, exit)}
+      style={overlayVars(progress, leaving ? { release, ms: exitMs } : null)}
+      // Nothing inside a sheet that is on its way out should still take a tap or a
+      // keystroke: a second Enter in a form that just saved would save it again.
+      inert={leaving}
       onClick={() => requestClose()}
       role="presentation"
     >

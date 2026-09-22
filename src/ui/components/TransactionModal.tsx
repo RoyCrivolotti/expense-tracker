@@ -5,10 +5,12 @@ import type { ExpenseActions, TransactionSeed } from '../actions'
 import type { ExpenseModel } from '../useExpenseData'
 import { finalBudgetMonth } from '../../engine'
 import { shortMonthFullYearLabel } from '../../engine/dates'
+import { EXIT_MS } from '../hooks/motion'
 import { useToast } from '../hooks/useToast'
 import { BatchTransactionForm } from './BatchTransactionForm'
 import { ConfirmSheet } from './ConfirmSheet'
 import { Modal } from './Modal'
+import { Presence } from './Presence'
 import { TransactionForm } from './TransactionForm'
 import type { InstallmentIntent } from './installmentIntent'
 import { createTransactionWithIntent, updateTransactionWithIntent } from './transactionSaveIntent'
@@ -117,22 +119,23 @@ function ModalGuards({
   onCancelClose: () => void
   onKeepOtherDraft: () => void
 }) {
-  if (confirming) {
-    return <CloseConfirm stranded={stranded} onConfirm={onClose} onCancel={onCancelClose} />
-  }
-  if (discardingOther) {
-    return (
-      <ConfirmSheet
-        title="Discard the other draft?"
-        message="Your transactions were added. The single transaction you started on the other tab has not been saved."
-        confirmLabel="Discard it"
-        destructive
-        onConfirm={onClose}
-        onCancel={onKeepOtherDraft}
-      />
-    )
-  }
-  return null
+  return (
+    <>
+      <Presence show={confirming} exitMs={EXIT_MS.sheet}>
+        <CloseConfirm stranded={stranded} onConfirm={onClose} onCancel={onCancelClose} />
+      </Presence>
+      <Presence show={discardingOther && !confirming} exitMs={EXIT_MS.sheet}>
+        <ConfirmSheet
+          title="Discard the other draft?"
+          message="Your transactions were added. The single transaction you started on the other tab has not been saved."
+          confirmLabel="Discard it"
+          destructive
+          onConfirm={onClose}
+          onCancel={onKeepOtherDraft}
+        />
+      </Presence>
+    </>
+  )
 }
 
 interface Props {
@@ -211,9 +214,6 @@ export function TransactionModal({ model, actions, editing, seed, hint, onClose 
       onClose={modalOnClose}
       onBack={formView === 'installment' ? () => setFormView('fields') : undefined}
       trapPaused={confirming || discardingOther || popoverOpen}
-      // With a draft in hand `modalOnClose` raises the discard confirm instead of
-      // closing, so the sheet must stay put and let it. Clean, it animates away.
-      closeMayPrompt={anyDirty}
     >
       {canBatch && (
         <>

@@ -4,6 +4,8 @@ import type { ExpenseActions } from '../actions'
 import { computeCashReconciliation } from '../../engine'
 import { isStatementPaid } from '../../engine/status'
 import { todayLocalIso } from '../dates'
+import { EXIT_MS } from '../hooks/motion'
+import { PresenceValue } from './Presence'
 import { StatementPaymentSheet } from './StatementPaymentSheet'
 import { StatementSummaryRow } from './StatementSummaryRow'
 import { Card, SectionTitle } from './primitives'
@@ -91,18 +93,22 @@ export function CardStatementsCard({ dataset, month, actions }: CardStatementsCa
           />
         ))}
       </Card>
-      {editing && save ? (
-        <StatementPaymentSheet
-          cardName={editing.name}
-          yearMonth={month}
-          amountCents={editing.chargeCents}
-          paid={editing.paid}
-          paidOn={editing.paidOn}
-          disabled={pending === editing.id}
-          onClose={() => setEditingId(null)}
-          onSave={(paid, paidOn) => save(editing.id, paid, paidOn)}
-        />
-      ) : null}
+      <PresenceValue value={save ? editing : null} exitMs={EXIT_MS.sheet}>
+        {(statement) =>
+          save && (
+            <StatementPaymentSheet
+              cardName={statement.name}
+              yearMonth={month}
+              amountCents={statement.chargeCents}
+              paid={statement.paid}
+              paidOn={statement.paidOn}
+              disabled={pending === statement.id}
+              onClose={() => setEditingId(null)}
+              onSave={(paid, paidOn) => save(statement.id, paid, paidOn)}
+            />
+          )
+        }
+      </PresenceValue>
     </>
   )
 }

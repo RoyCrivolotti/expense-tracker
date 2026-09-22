@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react'
 import { shortDateLabel } from '../../engine/dates'
 import { isNativeDatePicker } from '../hooks/isNativeDatePicker'
+import { EXIT_MS } from '../hooks/motion'
 import { NativeDateOverlay } from './NativeDateOverlay'
 import { DatePickerPopover } from './DatePickerPopover'
+import { Presence } from './Presence'
 import styles from './DatePicker.module.css'
 
 interface Props {
@@ -49,7 +51,7 @@ export function DateInput({ value, ariaLabel = 'Date', disabled, min, max, onCha
       >
         {value ? shortDateLabel(value) : 'Select date'}
       </button>
-      {open && (
+      <Presence show={open} exitMs={EXIT_MS.popover}>
         <DatePickerPopover
           value={value}
           triggerRef={triggerRef}
@@ -58,7 +60,7 @@ export function DateInput({ value, ariaLabel = 'Date', disabled, min, max, onCha
           onSelect={onChange}
           onClose={() => setOpen(false)}
         />
-      )}
+      </Presence>
     </>
   )
 }

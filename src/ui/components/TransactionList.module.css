@@ -7,12 +7,60 @@
   display: flex;
   flex-direction: column;
 }
+/*
+ * A date's rows fold into its header instead of blinking out. A grid whose one row goes
+ * from `1fr` to `0fr` animates to and from the content's natural height, which `height`
+ * cannot do while that height is `auto`. The transition is set on the state being
+ * entered, so unfolding can ease out and folding can ease in.
+ */
 .dayRows {
-  display: contents;
+  display: grid;
+  grid-template-rows: 1fr;
+  visibility: visible;
+  transition:
+    grid-template-rows var(--motion-fold) var(--motion-ease-out),
+    visibility 0s;
 }
-/* Author `display: contents` above otherwise beats the UA `[hidden]` rule. */
-.dayRows[hidden] {
-  display: none;
+.dayRowsCollapsed {
+  grid-template-rows: 0fr;
+  /* Only once it has folded, so it stays visible while it does. Keeps the rows out of
+     find-in-page and text selection as well as out of sight. */
+  visibility: hidden;
+  transition:
+    grid-template-rows var(--motion-fold) var(--motion-ease-in),
+    visibility 0s linear var(--motion-fold);
+}
+.dayRowsInner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Deleting a row folds it away before the request is sent, so the rows below close up
+   instead of jumping when the list re-renders. Same technique as `.dayRows`. */
+.rowFold {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition:
+    grid-template-rows var(--motion-fold) var(--motion-ease-in),
+    opacity var(--motion-fold) var(--motion-ease-in);
+}
+.rowFolded {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+}
+.rowFoldInner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dayRows,
+  .dayRowsCollapsed,
+  .rowFold {
+    transition: none;
+  }
 }
 
 .dayCollapseBtn {
@@ -155,6 +203,11 @@
 }
 .row:hover {
   background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+/* Drawn inside the row: a day's rows sit in a box that clips (see `.dayRowsInner`), and the
+   default ring, which sits outside the row, lost its sides there. */
+.row:focus-visible {
+  outline-offset: -2px;
 }
 
 .swipeWrap {

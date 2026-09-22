@@ -202,6 +202,19 @@ so a desktop capture of one is necessary but not sufficient — say so and verif
 The check does not count an image stored anywhere else in this repo, such as the docs
 gallery: it is not a picture of the change.
 
+**Motion.** Anything that appears also leaves, over the same path backwards, and neither
+takes long: about 220ms in and 170ms out for a sheet, less for smaller things (the tokens
+are in `theme.css`, the exit times in `hooks/motion.ts`). An overlay that unmounts in the
+same commit that closes it cannot animate out, so hold it with `<Presence show exitMs>`
+(or `PresenceValue` when its props come from state that is null while closed) and read
+`useExit()` to add the leaving class. The close then runs at once, from any route (Save,
+Discard, a swipe), and only the element outlives it. Exit CSS reads `--exit-ms` from
+`exitVars()` rather than a duration of its own, so the animation and the mount cannot
+disagree. A leaving overlay is `inert`, so a second tap or Enter cannot act twice. Use
+opacity and translate for popovers, never scale: `usePopoverPosition` measures the box.
+Tests run with motion off (`setMotionDisabledForTests`), and a test about motion switches
+it back on.
+
 **Comments** explain why this code is the way it is, not how it came to be. History belongs
 in git. A comment earns its place when it stops the next reader breaking something.
 

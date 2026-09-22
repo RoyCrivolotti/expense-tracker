@@ -1,8 +1,10 @@
 import { useLayoutEffect, useState, type RefObject } from 'react'
 
-interface Position {
+export interface Position {
   top: number
   left: number
+  /** Placed over its trigger rather than under it, so it can move away from the trigger it came from. */
+  above: boolean
   /**
    * Cap for the popover's own height, so one taller than the visible band
    * scrolls inside itself instead of running off the screen. Depends only on
@@ -157,7 +159,7 @@ export function usePopoverPosition(
       const top = verticalPlacement(tr.top, tr.bottom, height, minTop, viewBottom)
       const left = horizontalPlacement(tr.left, p.getBoundingClientRect().width, viewLeft, vw)
 
-      setPos({ top, left, maxHeight })
+      setPos({ top, left, maxHeight, above: top < tr.top })
     }
 
     update()

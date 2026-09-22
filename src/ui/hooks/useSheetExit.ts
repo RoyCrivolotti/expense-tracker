@@ -1,25 +1,25 @@
-import { useCallback, useEffect, useState, type RefObject } from 'react'
-import { prefersReducedMotion } from './prefersReducedMotion'
+import { useCallback, useState, type RefObject } from 'react'
+import { EXIT_MS } from './motion'
 
-/** Long enough to read as movement, short enough not to sit between you and the app. */
-export const EXIT_MAX_MS = 300
+/** The full trip, from rest. Also how long `Presence` holds a sheet in the DOM. */
+export const EXIT_MAX_MS = EXIT_MS.sheet
 /** Floor, so a sheet already dragged most of the way out animates rather than blinks. */
-export const EXIT_MIN_MS = 140
+export const EXIT_MIN_MS = 100
 
 /**
  * Thrown: the finger was already moving, so the sheet has to pick that speed up
- * immediately. An accelerating curve here reads as a stall — you fling the sheet, it
- * hesitates, and only then leaves.
+ * immediately. An accelerating curve here reads as a stall: you fling the sheet, it
+ * hesitates, and only then leaves. From rest (the Close button, the backdrop, Save) there
+ * is nothing to continue, so the sheet uses the shared accelerating curve instead.
  */
-const EASE_THROWN = 'cubic-bezier(0.22, 0.61, 0.36, 1)'
-/** From rest (the Close button, the backdrop): nothing to continue, so accelerate away. */
-const EASE_FROM_REST = 'cubic-bezier(0.4, 0, 1, 1)'
+export const EASE_THROWN = 'cubic-bezier(0.22, 0.61, 0.36, 1)'
 
-export interface SheetExit {
-  /** Where the sheet is leaving from, and how long it has to get there. */
+/** Where a swipe let go of the sheet, so the exit can carry on from there. */
+export interface SheetRelease {
   fromPx: number
   ms: number
-  ease: string
+  /** How far the sheet had been dragged, as a fraction of its height, for the scrim. */
+  progress: number
 }
 
 /** How long the sheet should take to cover the distance it has left to travel. */
@@ -31,49 +31,41 @@ export function exitDurationMs(sheetHeight: number, fromOffsetPx: number): numbe
 }
 
 /**
- * Let a sheet animate itself out before it unmounts.
+ * The way out of a sheet: hand the close to its owner, and remember where a swipe let go.
  *
- * Nothing in this app used to have an exit: modals went from on-screen to gone in a
- * single commit. With a button that reads as the button doing something, but after a
- * drag your hand is still moving and the sheet teleports out from under it.
+ * A sheet asks its owner to close at once, and the owner's `Presence` keeps it mounted long
+ * enough to play the exit. Save, Discard and every other route out therefore animate the
+ * same way as the Close button, and the action behind them is not held up by the animation.
  *
- * `requestClose` takes the offset the sheet was released at, so the animation picks
- * up the movement the finger was already making instead of restarting from rest.
- *
- * `closeMayPrompt` is the one case that must not animate: when the consumer answers a
- * close request by raising a confirm instead (an unsaved draft), a sheet that had
- * animated away would be stranded off-screen behind it.
+ * A swipe passes the offset it was released at. The sheet leaves from there rather than
+ * springing home first, and over a time in proportion to what is left to travel.
  */
 export function useSheetExit(
   sheetRef: RefObject<HTMLElement | null>,
   onClose: () => void,
-  closeMayPrompt: boolean,
-): { exit: SheetExit | null; requestClose: (fromOffsetPx?: number) => void } {
-  const [exit, setExit] = useState<SheetExit | null>(null)
+  leaving: boolean,
+): { release: SheetRelease | null; requestClose: (fromOffsetPx?: number) => void } {
+  const [release, setRelease] = useState<SheetRelease | null>(null)
+
+  // A release belongs to the exit it started, which begins in the same update. An owner
+  // may answer a swipe with a confirm instead, and the sheet then stays; left in place, the
+  // release would colour whichever close came next (Save, Discard) with a swipe long over.
+  if (release && !leaving) setRelease(null)
 
   const requestClose = useCallback(
     (fromOffsetPx = 0) => {
-      if (exit) return
-      if (closeMayPrompt || prefersReducedMotion()) {
-        onClose()
-        return
+      if (fromOffsetPx > 0) {
+        const height = sheetRef.current?.offsetHeight ?? 0
+        setRelease({
+          fromPx: fromOffsetPx,
+          ms: exitDurationMs(height, fromOffsetPx),
+          progress: height > 0 ? Math.min(1, fromOffsetPx / height) : 0,
+        })
       }
-      setExit({
-        fromPx: fromOffsetPx,
-        ms: exitDurationMs(sheetRef.current?.offsetHeight ?? 0, fromOffsetPx),
-        ease: fromOffsetPx > 0 ? EASE_THROWN : EASE_FROM_REST,
-      })
+      onClose()
     },
-    [closeMayPrompt, exit, onClose, sheetRef],
+    [onClose, sheetRef],
   )
 
-  // Timed rather than driven off `animationend`: the duration is ours, and a missed
-  // event would leave the sheet parked off-screen with the page still locked behind it.
-  useEffect(() => {
-    if (!exit) return
-    const timer = setTimeout(onClose, exit.ms)
-    return () => clearTimeout(timer)
-  }, [exit, onClose])
-
-  return { exit, requestClose }
+  return { release, requestClose }
 }

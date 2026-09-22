@@ -4,6 +4,7 @@ import type { ExpenseActions } from '../actions'
 import { detectRecurring, defaultBudgetMonth, type StatementPaymentRow } from '../../engine'
 import { Money } from '../components/Money'
 import { TransactionList } from '../components/TransactionList'
+import { PresenceValue } from '../components/Presence'
 import { StatementPaymentSheet } from '../components/StatementPaymentSheet'
 import { TxnFilters } from './TxnFilters'
 import { UpcomingCard } from './UpcomingCard'
@@ -14,6 +15,7 @@ import { TransactionsSelectFooter } from './TransactionsSelectFooter'
 import { useTransactionsTabState } from './useTransactionsTabState'
 import { RESULTS_ANCHOR_ID, scrollToResults } from './scrollToResults'
 import { useDebouncedAnnouncement } from '../hooks/useDebouncedAnnouncement'
+import { EXIT_MS } from '../hooks/motion'
 import { useToast } from '../hooks/useToast'
 import { FILTERS_LOCKED_HINT } from './selectionLockHints'
 import { useReimbursement } from './useReimbursement'
@@ -164,41 +166,47 @@ export function TransactionsTab({
           : {})}
       />
 
-      {editingStatement && actions ? (
-        <StatementPaymentSheet
-          cardName={editingStatement.cardName}
-          yearMonth={editingStatement.budgetMonth}
-          amountCents={editingStatement.amountCents}
-          paid
-          paidOn={editingStatement.date}
-          disabled={statementPending}
-          onClose={() => setEditingStatement(null)}
-          onSave={async (paid, paidOn) => {
-            setStatementPending(true)
-            try {
-              await actions.setStatementPaid(
-                editingStatement.cardAccountId,
-                editingStatement.budgetMonth,
-                paid,
-                paidOn,
-              )
-            } finally {
-              setStatementPending(false)
-            }
-          }}
-        />
-      ) : null}
+      <PresenceValue value={actions ? editingStatement : null} exitMs={EXIT_MS.sheet}>
+        {(statement) =>
+          actions && (
+            <StatementPaymentSheet
+              cardName={statement.cardName}
+              yearMonth={statement.budgetMonth}
+              amountCents={statement.amountCents}
+              paid
+              paidOn={statement.date}
+              disabled={statementPending}
+              onClose={() => setEditingStatement(null)}
+              onSave={async (paid, paidOn) => {
+                setStatementPending(true)
+                try {
+                  await actions.setStatementPaid(
+                    statement.cardAccountId,
+                    statement.budgetMonth,
+                    paid,
+                    paidOn,
+                  )
+                } finally {
+                  setStatementPending(false)
+                }
+              }}
+            />
+          )
+        }
+      </PresenceValue>
 
-      {reimbursement.group && actions ? (
-        <RecordReimbursementSheet
-          group={reimbursement.group}
-          model={model}
-          busy={reimbursement.busy}
-          error={reimbursement.error}
-          onCancel={reimbursement.cancel}
-          onRecord={reimbursement.record}
-        />
-      ) : null}
+      <PresenceValue value={actions ? reimbursement.group : null} exitMs={EXIT_MS.sheet}>
+        {(group) => (
+          <RecordReimbursementSheet
+            group={group}
+            model={model}
+            busy={reimbursement.busy}
+            error={reimbursement.error}
+            onCancel={reimbursement.cancel}
+            onRecord={reimbursement.record}
+          />
+        )}
+      </PresenceValue>
 
       <TransactionsFlagOverlays
         model={model}

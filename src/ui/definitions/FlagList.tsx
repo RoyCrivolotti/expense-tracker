@@ -3,6 +3,8 @@ import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import { Card, SectionTitle } from '../components/primitives'
 import { FlagGlyph } from '../components/FlagGlyph'
+import { Presence } from '../components/Presence'
+import { EXIT_MS } from '../hooks/motion'
 import { FlagsModal } from './FlagsModal'
 import styles from './definitions.module.css'
 import flagStyles from './FlagsModal.module.css'
@@ -47,9 +49,9 @@ export function FlagList({ model, actions }: { model: ExpenseModel; actions: Exp
           {flags.length === 0 ? '+ Add flag' : 'Manage flags'}
         </button>
       </Card>
-      {managing ? (
+      <Presence show={managing} exitMs={EXIT_MS.sheet}>
         <FlagsModal model={model} actions={actions} onClose={() => setManaging(false)} />
-      ) : null}
+      </Presence>
     </>
   )
 }

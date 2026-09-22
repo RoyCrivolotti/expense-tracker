@@ -1,10 +1,14 @@
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { act, fireEvent, render, screen } from '@testing-library/react'
+import { useState } from 'react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Account, Category, ExpenseDataset } from '../../types'
 import type { ExpenseActions } from '../actions'
 import { buildExpenseModel } from '../buildExpenseModel'
 import { defaultExpenseSettings } from '../../engine'
-import { ConfigModal } from './ConfigModal'
+import { PresenceValue } from '../components/Presence'
+import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
+import type { ExpenseModel } from '../useExpenseData'
+import { ConfigModal, type EditTarget } from './ConfigModal'
 
 const DINING: Category = { id: 1, name: 'Dining', monthlyBudgetCents: 0, sortOrder: 0, active: true }
 const GROCERIES: Category = {
@@ -483,5 +487,81 @@ describe('ConfigModal delete control', () => {
 
     await vi.waitFor(() => expect(onClose).toHaveBeenCalled())
     expect(actions.deleteCategory).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('ConfigModal while it leaves', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    setMotionDisabledForTests(false)
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    setMotionDisabledForTests(true)
+  })
+
+  /** Holds the editor the way its owner does, so that closing it plays the exit. */
+  function Editor({ model, actions, start }: { model: ExpenseModel; actions: ExpenseActions; start: EditTarget }) {
+    const [target, setTarget] = useState<EditTarget | null>(start)
+    return (
+      <PresenceValue value={target} exitMs={EXIT_MS.sheet}>
+        {(held) => <ConfigModal target={held} model={model} actions={actions} onClose={() => setTarget(null)} />}
+      </PresenceValue>
+    )
+  }
+
+  const lunch = (categoryId: number, id: number) => ({
+    id,
+    date: '2026-01-01',
+    budgetMonth: '2026-01',
+    description: 'Lunch',
+    accountId: CHECKING.id,
+    categoryId,
+    type: 'expense' as const,
+    amountCents: -1200,
+    cancelled: false,
+    status: 'posted' as const,
+  })
+
+  it('leaves the confirm sheet with the editor, though the delete has left one category behind', async () => {
+    const actions = noopActions()
+    const start: EditTarget = { kind: 'category', record: GROCERIES }
+    const { rerender } = render(<Editor model={buildExpenseModel(dataset())} actions={actions} start={start} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete category' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    await act(async () => {})
+    // The record is gone by the time the exit plays; with only one category left the editor
+    // would otherwise swap the sheet for its "you need at least one" note.
+    rerender(<Editor model={buildExpenseModel(dataset({ categories: [DINING] }))} actions={actions} start={start} />)
+
+    expect(screen.getByText("This can't be undone.")).toBeTruthy()
+    expect(screen.queryByText(/You need at least one category/)).toBeNull()
+
+    void act(() => vi.advanceTimersByTime(EXIT_MS.sheet))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+  })
+
+  it('keeps saying what the sheet said when the records it was about have moved', async () => {
+    const TRAVEL: Category = { id: 3, name: 'Travel', monthlyBudgetCents: 0, sortOrder: 2, active: true }
+    const actions = noopActions({ deleteCategory: vi.fn().mockResolvedValue({ reassignedToId: GROCERIES.id }) })
+    const start: EditTarget = { kind: 'category', record: DINING }
+    const used = buildExpenseModel(
+      dataset({ categories: [DINING, GROCERIES, TRAVEL], transactions: [lunch(DINING.id, 1), lunch(DINING.id, 2)] }),
+    )
+    const moved = buildExpenseModel(
+      dataset({ categories: [GROCERIES, TRAVEL], transactions: [lunch(GROCERIES.id, 1), lunch(GROCERIES.id, 2)] }),
+    )
+    const { rerender } = render(<Editor model={used} actions={actions} start={start} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete category' }))
+    expect(screen.getByText(/used by 2 records/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    await act(async () => {})
+    rerender(<Editor model={moved} actions={actions} start={start} />)
+
+    expect(screen.getByText(/used by 2 records/)).toBeTruthy()
+    expect(screen.queryByText(/turned out to still be in use/)).toBeNull()
   })
 })

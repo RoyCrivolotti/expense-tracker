@@ -1,6 +1,10 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { act, fireEvent, render, screen } from '@testing-library/react'
+import { useState } from 'react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
+import { EASE_THROWN, exitDurationMs } from '../hooks/useSheetExit'
 import { Modal } from './Modal'
+import { Presence } from './Presence'
 
 describe('Modal', () => {
   it('sends initial focus to the first focusable control (the header Close button), not the heading', () => {
@@ -91,14 +95,35 @@ describe('Modal — staying inside the visible area', () => {
   })
 })
 
-describe('Modal — swipe down to dismiss', () => {
-  /** jsdom has no TouchEvent constructor; the hook only reads `touches[0]`. */
-  function touch(type: string, clientY: number): Event {
-    const event = new Event(type, { bubbles: true, cancelable: true })
-    Object.defineProperty(event, 'touches', { value: [{ clientY }] })
-    return event
-  }
+/** jsdom has no TouchEvent constructor; the hook only reads `touches[0]`. */
+function touch(type: string, clientY: number): Event {
+  const event = new Event(type, { bubbles: true, cancelable: true })
+  Object.defineProperty(event, 'touches', { value: [{ clientY }] })
+  return event
+}
 
+function measure(sheet: HTMLElement) {
+  Object.defineProperty(sheet, 'offsetHeight', { value: 400, configurable: true })
+  Object.defineProperty(sheet, 'scrollTop', { value: 0, writable: true })
+}
+
+function drag(sheet: HTMLElement, distance: number) {
+  let now = 0
+  const clock = vi.spyOn(performance, 'now').mockImplementation(() => now)
+  act(() => {
+    sheet.dispatchEvent(touch('touchstart', 0))
+  })
+  act(() => {
+    now += 1000
+    sheet.dispatchEvent(touch('touchmove', distance))
+  })
+  act(() => {
+    sheet.dispatchEvent(touch('touchend', distance))
+  })
+  clock.mockRestore()
+}
+
+describe('Modal — swipe down to dismiss', () => {
   function openSheet(onClose: () => void) {
     render(
       <Modal title="New transaction" onClose={onClose}>
@@ -106,81 +131,14 @@ describe('Modal — swipe down to dismiss', () => {
       </Modal>,
     )
     const sheet = screen.getByRole('dialog')
-    Object.defineProperty(sheet, 'offsetHeight', { value: 400, configurable: true })
-    Object.defineProperty(sheet, 'scrollTop', { value: 0, writable: true })
+    measure(sheet)
     return sheet
   }
 
-  function drag(sheet: HTMLElement, distance: number) {
-    let now = 0
-    const clock = vi.spyOn(performance, 'now').mockImplementation(() => now)
-    act(() => {
-      sheet.dispatchEvent(touch('touchstart', 0))
-    })
-    act(() => {
-      now += 1000
-      sheet.dispatchEvent(touch('touchmove', distance))
-    })
-    act(() => {
-      sheet.dispatchEvent(touch('touchend', distance))
-    })
-    clock.mockRestore()
-  }
-
-  it('closes on a drag past the threshold, the same exit as tapping the backdrop', async () => {
+  it('asks its owner to close on a drag past the threshold, the same as tapping the backdrop', () => {
     const onClose = vi.fn()
     drag(openSheet(onClose), 200)
-    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
-  })
-
-  it('animates the sheet out from where the finger left it, then unmounts', async () => {
-    const onClose = vi.fn()
-    const sheet = openSheet(onClose)
-    drag(sheet, 200)
-
-    expect(sheet.className).toContain('sheetClosing')
-    expect(onClose).not.toHaveBeenCalled()
-
-    const band = sheet.parentElement
-    const overlay = band?.parentElement
-    expect(overlay?.className).toContain('overlayClosing')
-    expect(overlay?.style.getPropertyValue('--sheet-from')).toBe('200px')
-
-    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
-  })
-
-  it('skips the exit entirely for a viewer who asked for less movement', () => {
-    vi.stubGlobal('matchMedia', (query: string) => ({
-      matches: query.includes('prefers-reduced-motion'),
-      media: query,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    }))
-    const onClose = vi.fn()
-    const sheet = openSheet(onClose)
-
-    drag(sheet, 200)
-
     expect(onClose).toHaveBeenCalledTimes(1)
-    expect(sheet.className).not.toContain('sheetClosing')
-    vi.unstubAllGlobals()
-  })
-
-  it('hands straight over without animating when the close may be refused', () => {
-    const onClose = vi.fn()
-    render(
-      <Modal title="New transaction" onClose={onClose} closeMayPrompt>
-        <p>body</p>
-      </Modal>,
-    )
-    const sheet = screen.getByRole('dialog')
-    Object.defineProperty(sheet, 'offsetHeight', { value: 400, configurable: true })
-    Object.defineProperty(sheet, 'scrollTop', { value: 0, writable: true })
-
-    drag(sheet, 200)
-
-    expect(onClose).toHaveBeenCalledTimes(1)
-    expect(sheet.className).not.toContain('sheetClosing')
   })
 
   it('stays open when the drag stops short', () => {
@@ -197,11 +155,153 @@ describe('Modal — swipe down to dismiss', () => {
       </Modal>,
     )
     const sheet = screen.getByRole('dialog')
-    Object.defineProperty(sheet, 'offsetHeight', { value: 400, configurable: true })
-    Object.defineProperty(sheet, 'scrollTop', { value: 0, writable: true })
+    measure(sheet)
 
     drag(sheet, 200)
 
     expect(onClose).not.toHaveBeenCalled()
+  })
+})
+
+describe('Modal leaving', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    setMotionDisabledForTests(false)
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    setMotionDisabledForTests(true)
+  })
+
+  /** A stand-in for whatever owns a modal: closes it when asked, or refuses. */
+  function Owner({ onClose, accept = true }: { onClose: () => void; accept?: boolean }) {
+    const [open, setOpen] = useState(true)
+    return (
+      <Presence show={open} exitMs={EXIT_MS.sheet}>
+        <Modal
+          title="New transaction"
+          onClose={() => {
+            onClose()
+            if (accept) setOpen(false)
+          }}
+        >
+          <button type="button" onClick={() => setOpen(false)}>
+            Save
+          </button>
+        </Modal>
+      </Presence>
+    )
+  }
+
+  const overlayOf = (sheet: HTMLElement) => sheet.parentElement!.parentElement!
+
+  it('plays its exit when the owner lets go by a route of its own, such as Save', () => {
+    render(<Owner onClose={vi.fn()} />)
+    const sheet = screen.getByRole('dialog')
+    expect(sheet.className).not.toContain('sheetClosing')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(screen.getByRole('dialog').className).toContain('sheetClosing')
+    expect(overlayOf(sheet).className).toContain('overlayClosing')
+
+    void act(() => vi.advanceTimersByTime(EXIT_MS.sheet))
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('takes no more taps or keystrokes once it is leaving, so a second Enter cannot save twice', () => {
+    render(<Owner onClose={vi.fn()} />)
+    const sheet = screen.getByRole('dialog')
+    expect(overlayOf(sheet).hasAttribute('inert')).toBe(false)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(overlayOf(sheet).hasAttribute('inert')).toBe(true)
+  })
+
+  it('leaves over the time its owner keeps it mounted for, and from rest when nothing swiped it', () => {
+    render(<Owner onClose={vi.fn()} />)
+    const sheet = screen.getByRole('dialog')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+
+    const overlay = overlayOf(sheet)
+    expect(overlay.style.getPropertyValue('--exit-ms')).toBe(`${EXIT_MS.sheet}ms`)
+    expect(overlay.style.getPropertyValue('--sheet-from')).toBe('0px')
+    expect(overlay.style.getPropertyValue('--exit-ease')).toBe('')
+  })
+
+  it('carries a swipe on from where the finger let go, and keeps the scrim where it had got to', () => {
+    render(<Owner onClose={vi.fn()} />)
+    const sheet = screen.getByRole('dialog')
+    measure(sheet)
+
+    drag(sheet, 200)
+
+    const overlay = overlayOf(sheet)
+    expect(sheet.className).toContain('sheetClosing')
+    expect(overlay.style.getPropertyValue('--sheet-from')).toBe('200px')
+    expect(overlay.style.getPropertyValue('--exit-ms')).toBe(`${exitDurationMs(400, 200)}ms`)
+    expect(overlay.style.getPropertyValue('--exit-ease')).toBe(EASE_THROWN)
+    // Half way down a 0.5 scrim is at 0.25. Read from the finished drag, which is back at
+    // zero by now, it would flash to 0.5 for the first frame of the exit.
+    expect(overlay.style.getPropertyValue('--scrim')).toBe('0.25')
+    // The exit animation owns the transform from here.
+    expect(sheet.style.transform).toBe('')
+  })
+
+  it('settles back instead of parking when the owner answers the swipe with a confirm', () => {
+    const onClose = vi.fn()
+    render(<Owner onClose={onClose} accept={false} />)
+    const sheet = screen.getByRole('dialog')
+    measure(sheet)
+
+    drag(sheet, 200)
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(sheet.className).not.toContain('sheetClosing')
+    expect(sheet.style.transform).toBe('')
+    expect(overlayOf(sheet).hasAttribute('inert')).toBe(false)
+  })
+
+  it('forgets a swipe its owner refused, so a later Save leaves from rest', () => {
+    render(<Owner onClose={vi.fn()} accept={false} />)
+    const sheet = screen.getByRole('dialog')
+    measure(sheet)
+    drag(sheet, 200)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    const overlay = overlayOf(sheet)
+    expect(sheet.className).toContain('sheetClosing')
+    expect(overlay.style.getPropertyValue('--sheet-from')).toBe('0px')
+    expect(overlay.style.getPropertyValue('--exit-ms')).toBe(`${EXIT_MS.sheet}ms`)
+    expect(overlay.style.getPropertyValue('--exit-ease')).toBe('')
+    expect(overlay.style.getPropertyValue('--scrim')).toBe('0.5')
+  })
+
+  it('stops answering Escape while it is leaving', () => {
+    const onClose = vi.fn()
+    render(<Owner onClose={onClose} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('closes at once, without holding anything back, for a viewer who asked for less movement', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query.includes('prefers-reduced-motion'),
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }))
+    render(<Owner onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(screen.queryByRole('dialog')).toBeNull()
+    vi.unstubAllGlobals()
   })
 })

@@ -206,15 +206,17 @@ describe('useTransactionSelection — Escape key', () => {
   })
 
   /** A dialog in the page that closes itself on Escape, as every dialog here does. */
-  function mountDialog({ hidden = false } = {}) {
+  function mountDialog({ hidden = false, inert = false } = {}) {
     const dialog = document.createElement('div')
     dialog.setAttribute('role', 'dialog')
     dialog.hidden = hidden
+    if (inert) dialog.setAttribute('inert', '')
     document.body.append(dialog)
     // In a browser React removes a closed dialog between listeners, before the key has
-    // bubbled up to the window, so this one goes at the document.
+    // bubbled up to the window, so this one goes at the document. One that is inert is on its
+    // way out and answers nothing, so it stays.
     const close = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !hidden) dialog.remove()
+      if (e.key === 'Escape' && !hidden && !inert) dialog.remove()
     }
     document.addEventListener('keydown', close)
     return {
@@ -247,6 +249,20 @@ describe('useTransactionSelection — Escape key', () => {
     const { result } = renderHook(() => useTransactionSelection(mockActions()))
     act(() => result.current.toggleSelectMode())
     const dialog = mountDialog({ hidden: true })
+    try {
+      act(() => {
+        dialog.pressEscape()
+      })
+    } finally {
+      dialog.unmount()
+    }
+    expect(result.current.selectMode).toBe(false)
+  })
+
+  it('still exits when the only dialog in the page is on its way out', () => {
+    const { result } = renderHook(() => useTransactionSelection(mockActions()))
+    act(() => result.current.toggleSelectMode())
+    const dialog = mountDialog({ inert: true })
     try {
       act(() => {
         dialog.pressEscape()

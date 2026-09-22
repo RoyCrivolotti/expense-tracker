@@ -13,11 +13,6 @@
    */
   inset: 0;
   z-index: 50;
-  /* Driven inline while the sheet is being dragged — see Modal.tsx. The fallback is
-     the resting value, used whenever nothing is mid-gesture. */
-  background: rgba(0, 0, 0, var(--scrim, 0.5));
-  backdrop-filter: blur(2px);
-  animation: fade 0.15s ease;
   overscroll-behavior: none;
   /*
    * Not `none`. The effective touch-action is the intersection down the ancestor
@@ -26,6 +21,24 @@
    * already pinned by `useBodyScrollLock`, so nothing needs blocking at this level.
    */
   touch-action: pan-y;
+}
+
+/*
+ * The dim layer, on its own element so it can fade without dragging the sheet with it:
+ * an opacity on the overlay would apply to the sheet as well, and the page behind would
+ * show through it on the way out.
+ *
+ * `--scrim` is driven inline while the sheet is being dragged (see Modal.tsx); the
+ * fallback is the resting value, used whenever nothing is mid-gesture. A pseudo-element
+ * still hands clicks to the overlay, which is what closes the modal.
+ */
+.overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, var(--scrim, 0.5));
+  backdrop-filter: blur(2px);
+  animation: scrim-in var(--motion-enter-fade) ease-out;
 }
 
 /*
@@ -71,7 +84,14 @@
   border: 1px solid var(--color-border);
   border-radius: 1.25rem 1.25rem 0 0;
   padding: 1rem 1.1rem calc(1.1rem + env(safe-area-inset-bottom, 0));
-  animation: slide-up 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  /*
+   * How far it travels to be out of sight: its own height, plus a margin. In the
+   * installed app iOS shrinks the layout viewport by the status bar while a sheet holds
+   * the scroll lock, so the sheet's resting place ends about 62px above the bottom of the
+   * screen. Travelling only its own height would leave its top edge showing there.
+   */
+  --sheet-travel: calc(100% + 5rem);
+  animation: sheet-in var(--motion-enter-sheet) var(--motion-ease-out);
   /* Vertical panning only: the sheet scrolls, and useSwipeDismiss reads the same
      axis to drag it away once that scroll is already at the top. */
   touch-action: pan-y;
@@ -79,34 +99,46 @@
   overscroll-behavior: contain;
   /* Settles back after a drag that did not dismiss; suppressed while the finger is
      down so the sheet tracks it exactly. */
-  transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform var(--motion-enter-sheet) var(--motion-ease-out);
 }
 
 .sheetDragging {
   transition: none;
-  /* Also cancels a still-running `slide-up`: animations outrank inline styles, so
+  /* Also cancels a still-running `sheet-in`: animations outrank inline styles, so
      grabbing the sheet within its entry animation would otherwise fight the finger. */
   animation: none;
 }
 
 /*
- * Leaving. Declared after `.sheet` and `.overlay` so these animations replace the
- * entry ones, and written as animations rather than transitions because a class
+ * Leaving: the arrival played backwards. Declared after `.sheet` so these replace the
+ * entry animations, and written as animations rather than transitions because a class
  * added in the same commit that re-enables a transition is not reliably animated.
- * `--sheet-from` is where the finger let go, so the sheet carries on from there
- * instead of jumping back to rest first.
+ *
+ * `--exit-ms` is the time `Presence` keeps the sheet mounted for. `--sheet-from` is
+ * where a finger let go, so a swiped sheet carries on from there instead of jumping
+ * back to rest first; `--exit-ease` swaps in the curve for a sheet that was thrown.
  */
 .sheetClosing {
-  /* The curve is chosen per close — thrown by a finger, or started from rest. See
-     `useSheetExit`. */
-  animation: sheet-out var(--sheet-exit-ms, 300ms) var(--sheet-exit-ease, cubic-bezier(0.4, 0, 1, 1))
-    forwards;
+  animation: sheet-out var(--exit-ms, 170ms) var(--exit-ease, var(--motion-ease-in)) forwards;
 }
 
-.overlayClosing {
-  animation: overlay-out var(--sheet-exit-ms, 300ms) ease forwards;
-  /* The sheet is on its way out; another touch should not start a second gesture. */
+.overlayClosing::before {
+  animation: scrim-out var(--exit-ms, 170ms) ease-in forwards;
+}
+/* The sheet is on its way out; another touch should not start a second gesture. The band's
+   children are switched back on above, so the sheet has to be switched off here by name. */
+.overlayClosing,
+.overlayClosing .band > * {
   pointer-events: none;
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(var(--sheet-travel));
+  }
+  to {
+    transform: none;
+  }
 }
 
 @keyframes sheet-out {
@@ -114,13 +146,7 @@
     transform: translateY(var(--sheet-from, 0px));
   }
   to {
-    transform: translateY(100%);
-  }
-}
-
-@keyframes overlay-out {
-  to {
-    opacity: 0;
+    transform: translateY(var(--sheet-travel));
   }
 }
 
@@ -185,13 +211,20 @@
   .sheet {
     max-height: 92%;
     border-radius: 1.25rem;
+    /* A dialog in the middle of the screen has no edge to slide in from: it rises a
+       little and fades, and leaves the same way. */
+    --sheet-travel: 1.25rem;
+    animation-name: dialog-in;
+  }
+  .sheetClosing {
+    animation-name: dialog-out;
   }
   .handle {
     display: none;
   }
 }
 
-@keyframes fade {
+@keyframes scrim-in {
   from {
     opacity: 0;
   }
@@ -199,14 +232,31 @@
     opacity: 1;
   }
 }
-@keyframes slide-up {
+@keyframes scrim-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes dialog-in {
   from {
-    transform: translateY(2rem);
-    opacity: 0.6;
+    transform: translateY(var(--sheet-travel));
+    opacity: 0;
   }
   to {
-    transform: translateY(0);
+    transform: none;
     opacity: 1;
+  }
+}
+@keyframes dialog-out {
+  from {
+    transform: translateY(var(--sheet-from, 0px));
+    opacity: 1;
+  }
+  to {
+    /* A dialog swiped further down than it would drop on its own carries on down as it
+       fades, instead of rising back to the resting distance. */
+    transform: translateY(max(var(--sheet-from, 0px), var(--sheet-travel)));
+    opacity: 0;
   }
 }
 
@@ -216,8 +266,8 @@
     animation: none;
     transition: none;
   }
-  .overlay,
-  .overlayClosing {
+  .overlay::before,
+  .overlayClosing::before {
     animation: none;
   }
 }

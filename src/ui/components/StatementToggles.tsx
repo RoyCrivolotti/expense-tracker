@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react'
 import { computeCashReconciliation, fullMonthLabel } from '../../engine'
 import { isStatementPaid } from '../../engine/status'
 import { todayLocalIso } from '../dates'
+import { EXIT_MS } from '../hooks/motion'
 import type { ExpenseModel } from '../useExpenseData'
+import { PresenceValue } from './Presence'
 import { StatementPaymentSheet } from './StatementPaymentSheet'
 import { StatementSummaryRow } from './StatementSummaryRow'
 import styles from './StatementToggles.module.css'
@@ -70,6 +72,7 @@ export function StatementToggles({ model, onToggle }: Props) {
   const editingAccount = editing
     ? deferred.find((a) => a.id === editing.accountId) ?? null
     : null
+  const sheet = editing && editingAccount ? { key: editing, account: editingAccount } : null
 
   return (
     <div className={styles.wrap}>
@@ -99,18 +102,20 @@ export function StatementToggles({ model, onToggle }: Props) {
         </div>
       ))}
 
-      {editing && editingAccount ? (
-        <StatementPaymentSheet
-          cardName={editingAccount.name}
-          yearMonth={editing.yearMonth}
-          amountCents={chargeCents(editing.accountId, editing.yearMonth)}
-          paid={isStatementPaid(model.dataset.accountStatements, editing.accountId, editing.yearMonth)}
-          paidOn={findPaidOn(model, editing.accountId, editing.yearMonth)}
-          disabled={pending === `${editing.accountId}:${editing.yearMonth}`}
-          onClose={() => setEditing(null)}
-          onSave={(paid, paidOn) => save(editing.accountId, editing.yearMonth, paid, paidOn)}
-        />
-      ) : null}
+      <PresenceValue value={sheet} exitMs={EXIT_MS.sheet}>
+        {({ key, account }) => (
+          <StatementPaymentSheet
+            cardName={account.name}
+            yearMonth={key.yearMonth}
+            amountCents={chargeCents(key.accountId, key.yearMonth)}
+            paid={isStatementPaid(model.dataset.accountStatements, key.accountId, key.yearMonth)}
+            paidOn={findPaidOn(model, key.accountId, key.yearMonth)}
+            disabled={pending === `${key.accountId}:${key.yearMonth}`}
+            onClose={() => setEditing(null)}
+            onSave={(paid, paidOn) => save(key.accountId, key.yearMonth, paid, paidOn)}
+          />
+        )}
+      </PresenceValue>
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import type { Flag } from '../../types'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { useDismissOnOutsidePointer } from '../charts/useDismissOnOutsidePointer'
+import { usePopoverMotion } from '../hooks/usePopoverMotion'
 import { usePopoverPosition } from '../hooks/usePopoverPosition'
 import { FlagIcon } from '../icons'
 import { selectableFlags } from './flagPickerOptions'
@@ -129,11 +130,12 @@ export function FlagPickerPopover({
 }: Props) {
   const popoverRef = useRef<HTMLDivElement>(null)
   const pos = usePopoverPosition(triggerRef, popoverRef)
+  const motion = usePopoverMotion(pos)
   const options = selectableFlags(flags, value)
   const [creating, setCreating] = useState(false)
 
-  useFocusTrap(popoverRef, onClose)
-  useDismissOnOutsidePointer(popoverRef, true, onClose, triggerRef)
+  useFocusTrap(popoverRef, onClose, motion.leaving)
+  useDismissOnOutsidePointer(popoverRef, !motion.leaving, onClose, triggerRef)
 
   const choose = (flagId: number | null) => {
     onSelect(flagId)
@@ -143,8 +145,10 @@ export function FlagPickerPopover({
   return createPortal(
     <div
       ref={popoverRef}
-      className={styles.popover}
+      className={motion.leaving ? `${styles.popover} ${styles.popoverLeaving}` : styles.popover}
+      {...motion.attrs}
       style={{
+        ...motion.exit,
         top: pos?.top ?? -9999,
         left: pos?.left ?? -9999,
         // Capped to the visible band and scrollable, so a popover taller than

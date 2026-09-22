@@ -1,10 +1,25 @@
-import { useRef } from 'react'
+import { useRef, type RefObject } from 'react'
 import { CloseIcon } from '../icons'
+import { exitVars } from '../hooks/motion'
+import { useExit } from '../hooks/usePresence'
 import { usePublishHeight } from '../hooks/usePublishHeight'
 import styles from './tabs.module.css'
 
 /** Read by the toast and the update prompt, which sit above the bar while it is up. */
 const SELECTION_BAR_HEIGHT = '--exp-selection-bar'
+
+/** How the bar leaves: its class, its `--exit-ms`, and no taps once it is on its way. */
+function useBarExit(barRef: RefObject<HTMLElement | null>) {
+  const { leaving, exitMs } = useExit()
+  // Let go as soon as the bar starts to leave, so the toast that is sitting above it
+  // glides down with it instead of dropping in one step when it finally unmounts.
+  usePublishHeight(barRef, SELECTION_BAR_HEIGHT, !leaving)
+  return {
+    className: leaving ? `${styles.batchBar} ${styles.batchBarLeaving}` : styles.batchBar,
+    style: exitVars(leaving, exitMs),
+    inert: leaving,
+  }
+}
 
 interface BatchBarProps {
   count: number
@@ -36,12 +51,12 @@ export function BatchBar({
   onDelete,
 }: BatchBarProps) {
   const barRef = useRef<HTMLDivElement>(null)
-  usePublishHeight(barRef, SELECTION_BAR_HEIGHT)
+  const exit = useBarExit(barRef)
   const deleting = busy && !editOpen
   const canAct = count > 0 && !busy && !readOnly
   const allSelected = totalCount > 0 && count >= totalCount
   return (
-    <div ref={barRef} className={styles.batchBar}>
+    <div ref={barRef} {...exit}>
       <div className={styles.batchLeft}>
         <button
           type="button"

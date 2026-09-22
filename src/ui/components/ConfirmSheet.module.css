@@ -2,14 +2,22 @@
   position: fixed;
   inset: 0;
   z-index: 60;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(2px);
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  animation: fade 0.15s ease;
   overscroll-behavior: none;
   touch-action: none;
+}
+
+/* The dim layer, on its own element so fading it does not fade the sheet too. See
+   Modal.module.css. */
+.overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  animation: scrim-in var(--motion-enter-fade) ease-out;
 }
 
 .sheet {
@@ -19,7 +27,22 @@
   border: 1px solid var(--color-border);
   border-radius: 1.25rem 1.25rem 0 0;
   padding: 1.1rem 1.1rem calc(1.1rem + env(safe-area-inset-bottom, 0));
-  animation: slide-up 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Out of sight is its own height plus a margin: see .sheet in Modal.module.css. */
+  --sheet-travel: calc(100% + 5rem);
+  animation: sheet-in var(--motion-enter-sheet) var(--motion-ease-out);
+  /* Above the scrim, which is the overlay's first child. */
+  position: relative;
+}
+
+/* Leaving is the arrival played backwards, over the time `Presence` keeps it mounted. */
+.sheetClosing {
+  animation: sheet-out var(--exit-ms, 170ms) var(--motion-ease-in) forwards;
+}
+.overlayClosing {
+  pointer-events: none;
+}
+.overlayClosing::before {
+  animation: scrim-out var(--exit-ms, 170ms) ease-in forwards;
 }
 
 .title {
@@ -97,10 +120,15 @@
   }
   .sheet {
     border-radius: 1.25rem;
+    --sheet-travel: 1.25rem;
+    animation-name: dialog-in;
+  }
+  .sheetClosing {
+    animation-name: dialog-out;
   }
 }
 
-@keyframes fade {
+@keyframes scrim-in {
   from {
     opacity: 0;
   }
@@ -108,13 +136,53 @@
     opacity: 1;
   }
 }
-@keyframes slide-up {
+@keyframes scrim-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes sheet-in {
   from {
-    transform: translateY(2rem);
-    opacity: 0.6;
+    transform: translateY(var(--sheet-travel));
   }
   to {
-    transform: translateY(0);
+    transform: none;
+  }
+}
+@keyframes sheet-out {
+  from {
+    transform: none;
+  }
+  to {
+    transform: translateY(var(--sheet-travel));
+  }
+}
+@keyframes dialog-in {
+  from {
+    transform: translateY(var(--sheet-travel));
+    opacity: 0;
+  }
+  to {
+    transform: none;
     opacity: 1;
+  }
+}
+@keyframes dialog-out {
+  from {
+    transform: none;
+    opacity: 1;
+  }
+  to {
+    transform: translateY(var(--sheet-travel));
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet,
+  .sheetClosing,
+  .overlay::before,
+  .overlayClosing::before {
+    animation: none;
   }
 }

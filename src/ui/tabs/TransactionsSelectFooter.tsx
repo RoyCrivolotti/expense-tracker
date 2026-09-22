@@ -1,6 +1,9 @@
+import { useMemo } from 'react'
 import type { BulkTransactionPatch } from '../../data/dataSource'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
+import { PresenceValue } from '../components/Presence'
+import { EXIT_MS } from '../hooks/motion'
 import { BatchBar } from './BatchBar'
 import { BatchDeleteConfirm } from './BatchDeleteConfirm'
 import { BulkEditSheet } from './BulkEditSheet'
@@ -38,44 +41,67 @@ export function TransactionsSelectFooter({
   visibleIds,
   model,
 }: TransactionsSelectFooterProps) {
+  const { selectMode, pendingBatchDelete, pendingBulkEdit, hiddenCount } = selection
+  const count = selection.selected.size
+  const total = visibleIds.length
+  // What each surface shows is held while it leaves. Deleting clears the selection, and
+  // without this the words "3 selected" would change to "0 selected" as the bar slid away.
+  const bar = useMemo(
+    () => (selectMode ? { count, total, hiddenCount } : null),
+    [selectMode, count, total, hiddenCount],
+  )
+  const deleting = useMemo(
+    () => (actionsEnabled && pendingBatchDelete ? { count, hiddenCount } : null),
+    [actionsEnabled, pendingBatchDelete, count, hiddenCount],
+  )
+  const editing = useMemo(
+    () => (actionsEnabled && pendingBulkEdit ? { count, hiddenCount } : null),
+    [actionsEnabled, pendingBulkEdit, count, hiddenCount],
+  )
   return (
     <>
       {/* Shown even without write access: going offline mid-selection must still leave a
           way out, since select mode and its locks stay on. */}
-      {selection.selectMode ? (
-        <BatchBar
-          count={selection.selected.size}
-          totalCount={visibleIds.length}
-          hiddenCount={selection.hiddenCount}
-          busy={selection.busy}
-          readOnly={!actionsEnabled}
-          editOpen={selection.pendingBulkEdit}
-          onCancel={selection.toggleSelectMode}
-          onSelectAll={() => selection.selectAll(visibleIds)}
-          onDeselectAll={selection.deselectAll}
-          onEdit={selection.requestBulkEdit}
-          onDelete={selection.requestBatchDelete}
-        />
-      ) : null}
-      {actionsEnabled && selection.pendingBatchDelete ? (
-        <BatchDeleteConfirm
-          count={selection.selected.size}
-          hiddenCount={selection.hiddenCount}
-          onConfirm={() => void selection.confirmBatchDelete()}
-          onCancel={selection.cancelBatchDelete}
-        />
-      ) : null}
-      {actionsEnabled && selection.pendingBulkEdit ? (
-        <BulkEditSheet
-          count={selection.selected.size}
-          hiddenCount={selection.hiddenCount}
-          model={model}
-          actions={actions}
-          busy={selection.busy}
-          onApply={(patch) => void selection.confirmBulkEdit(patch)}
-          onCancel={selection.cancelBulkEdit}
-        />
-      ) : null}
+      <PresenceValue value={bar} exitMs={EXIT_MS.bar}>
+        {(shown) => (
+          <BatchBar
+            count={shown.count}
+            totalCount={shown.total}
+            hiddenCount={shown.hiddenCount}
+            busy={selection.busy}
+            readOnly={!actionsEnabled}
+            editOpen={pendingBulkEdit}
+            onCancel={selection.toggleSelectMode}
+            onSelectAll={() => selection.selectAll(visibleIds)}
+            onDeselectAll={selection.deselectAll}
+            onEdit={selection.requestBulkEdit}
+            onDelete={selection.requestBatchDelete}
+          />
+        )}
+      </PresenceValue>
+      <PresenceValue value={deleting} exitMs={EXIT_MS.sheet}>
+        {(shown) => (
+          <BatchDeleteConfirm
+            count={shown.count}
+            hiddenCount={shown.hiddenCount}
+            onConfirm={() => void selection.confirmBatchDelete()}
+            onCancel={selection.cancelBatchDelete}
+          />
+        )}
+      </PresenceValue>
+      <PresenceValue value={editing} exitMs={EXIT_MS.sheet}>
+        {(shown) => (
+          <BulkEditSheet
+            count={shown.count}
+            hiddenCount={shown.hiddenCount}
+            model={model}
+            actions={actions}
+            busy={selection.busy}
+            onApply={(patch) => void selection.confirmBulkEdit(patch)}
+            onCancel={selection.cancelBulkEdit}
+          />
+        )}
+      </PresenceValue>
     </>
   )
 }

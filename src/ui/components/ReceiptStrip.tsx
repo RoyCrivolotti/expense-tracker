@@ -8,7 +8,9 @@ import {
 } from '../../data/pendingReceipts'
 import type { ExpenseActions } from '../actions'
 import { CameraIcon, TrashIcon } from '../icons'
+import { EXIT_MS } from '../hooks/motion'
 import { ConfirmSheet } from './ConfirmSheet'
+import { Presence, PresenceValue } from './Presence'
 import { ReceiptViewer } from './ReceiptViewer'
 import styles from './ReceiptStrip.module.css'
 
@@ -164,8 +166,10 @@ function Overlays({
 }) {
   return (
     <>
-      {viewing ? <ReceiptViewer attachment={viewing} onClose={onCloseViewer} /> : null}
-      {removing ? (
+      <PresenceValue value={viewing} exitMs={EXIT_MS.sheet}>
+        {(attachment) => <ReceiptViewer attachment={attachment} onClose={onCloseViewer} />}
+      </PresenceValue>
+      <Presence show={removing != null} exitMs={EXIT_MS.sheet}>
         <ConfirmSheet
           title="Remove this receipt?"
           message="The file is deleted permanently. The transaction itself is unchanged."
@@ -174,7 +178,7 @@ function Overlays({
           onConfirm={onConfirmRemove}
           onCancel={onCancelRemove}
         />
-      ) : null}
+      </Presence>
     </>
   )
 }

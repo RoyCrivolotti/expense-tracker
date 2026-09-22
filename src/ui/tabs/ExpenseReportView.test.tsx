@@ -1,10 +1,12 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ExpenseDataset, Transaction } from '../../types'
 import { makeAttachment, makeDataset, makeFlag } from '../../testing/factories'
 import { buildLookup } from '../format'
+import { Presence } from '../components/Presence'
 import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
+import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
 import { deliverReceipts } from '../../data/receiptDownload'
 import { ExpenseReportView } from './ExpenseReportView'
 
@@ -427,5 +429,52 @@ describe('ExpenseReportView — reopening a past report', () => {
     renderPack(datasetWith([txn(1, '2026-05-02')]))
 
     expect(screen.queryByText(/have changed since this report was sent/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('ExpenseReportView leaving', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    setMotionDisabledForTests(false)
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    setMotionDisabledForTests(true)
+  })
+
+  const tree = (show: boolean) => {
+    const dataset = datasetWith([txn(1, '2026-05-02')])
+    return (
+      <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
+        <Presence show={show} exitMs={EXIT_MS.fade}>
+          <ExpenseReportView dataset={dataset} lookup={buildLookup(dataset)} flagId={1} onClose={vi.fn()} issuedOn="2026-09-12" />
+        </Presence>
+      </MoneyFormatProvider>
+    )
+  }
+
+  it('fades out over the time it is held for, taking no taps meanwhile, then goes', () => {
+    const { rerender } = render(tree(true))
+    const overlay = screen.getByRole('button', { name: 'Back' }).closest<HTMLElement>('[class*="overlay"]')!
+    expect(overlay.className).not.toContain('overlayLeaving')
+
+    rerender(tree(false))
+
+    expect(overlay.className).toContain('overlayLeaving')
+    expect(overlay.hasAttribute('inert')).toBe(true)
+    expect(overlay.style.getPropertyValue('--exit-ms')).toBe(`${EXIT_MS.fade}ms`)
+
+    void act(() => vi.advanceTimersByTime(EXIT_MS.fade))
+    expect(screen.queryByRole('button', { name: 'Back' })).toBeNull()
+  })
+
+  it('releases the print flag when it has gone, so the app prints again', () => {
+    const { rerender } = render(tree(true))
+    expect(document.body.dataset.reportOpen).toBe('true')
+
+    rerender(tree(false))
+    void act(() => vi.advanceTimersByTime(EXIT_MS.fade))
+
+    expect(document.body.dataset.reportOpen).toBeUndefined()
   })
 })

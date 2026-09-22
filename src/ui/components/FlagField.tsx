@@ -1,7 +1,9 @@
 import { useRef, useState } from 'react'
 import type { Flag } from '../../types'
+import { EXIT_MS } from '../hooks/motion'
 import { Field } from './TransactionFields'
 import { FlagPickerPopover } from './FlagPickerPopover'
+import { Presence } from './Presence'
 import { selectableFlags } from './flagPickerOptions'
 import { FlagIcon } from '../icons'
 import styles from './FlagField.module.css'
@@ -76,16 +78,18 @@ export function FlagField({
     </button>
   )
 
-  const popover = open ? (
-    <FlagPickerPopover
-      value={value}
-      flags={flags}
-      triggerRef={triggerRef}
-      onSelect={onChange}
-      onClose={() => setOpenState(false)}
-      {...(onCreate ? { onCreate } : {})}
-    />
-  ) : null
+  const popover = (
+    <Presence show={open} exitMs={EXIT_MS.popover}>
+      <FlagPickerPopover
+        value={value}
+        flags={flags}
+        triggerRef={triggerRef}
+        onSelect={onChange}
+        onClose={() => setOpenState(false)}
+        {...(onCreate ? { onCreate } : {})}
+      />
+    </Presence>
+  )
 
   if (compact) {
     return (
