@@ -49,7 +49,7 @@ export function usePullToRefresh({
       // transaction form refreshed the whole app. `touch-action` on the overlay is no
       // help: it suppresses the browser's own panning, not delivery of touches to
       // these listeners. There is nothing to refresh either way, since the page behind
-      // a sheet is pinned and out of reach.
+      // a sheet is locked and out of reach.
       if (isBodyScrollLocked() || scrollTop() > SCROLL_TOP_EPS) return
       const touch = e.touches[0]
       if (!touch) return

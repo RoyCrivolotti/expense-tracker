@@ -16,19 +16,17 @@ export interface ViewportRect {
  * header ends up underneath the clock: the overlay's `top: 0` is still layout
  * y=0, but layout y=0 is now above the top of what you can see.
  *
- * `useBodyScrollLock` makes this the *only* way out. With `body` pinned at
- * `position: fixed`, iOS cannot scroll the page to compensate, so the pan is
- * the whole of the movement and nothing corrects it afterwards.
+ * `useBodyScrollLock` makes this the *only* way out. With scrolling switched
+ * off, iOS cannot scroll the page to compensate, so the pan is the whole of
+ * the movement and nothing corrects it afterwards.
  *
- * Only a visual viewport that is *smaller* than the layout one is followed. With
- * the body pinned, a finger drag on a sheet that has nothing to scroll pans the
- * page inside whatever slack the layout viewport leaves (about 62px in the
- * installed app): `offsetTop` climbs to about 70 while `height` stays equal to
- * `innerHeight`, and nothing fixed moves on screen. Following that number slid
- * the sheet against the finger and back on release. A keyboard or a pinch zoom
- * is what shrinks the visual viewport, and the only case where fixed content
- * really is displaced. A shortfall under a pixel is rounding between the two,
- * not a shrink.
+ * Only a visual viewport that is *smaller* than the layout one is followed. A
+ * finger drag can pan the visual viewport without shrinking it — `offsetTop`
+ * climbs while `height` stays equal to `innerHeight`, and nothing fixed moves
+ * on screen. Following that number slid the sheet against the finger and back
+ * on release. A keyboard or a pinch zoom is what shrinks the visual viewport,
+ * and the only case where fixed content really is displaced. A shortfall under
+ * a pixel is rounding between the two, not a shrink.
  *
  * Returns null where `visualViewport` is unavailable, so callers fall back to
  * plain CSS. Where it exists but nothing has panned — every desktop browser —
@@ -45,11 +43,10 @@ function readRect(): ViewportRect | null {
 
 /**
  * `frozen` keeps the last rect and stops listening. A sheet on its way out is a
- * snapshot animating away, and its owner releases the scroll lock as the exit starts,
- * which in the installed app regrows the layout viewport by the status bar; a rect
- * still following that would drop the departing sheet 62px mid-animation. Freezing is
- * one-way in practice — a leaving overlay unmounts — so a rect is allowed to be stale
- * between unfreezing and the next viewport event.
+ * snapshot animating away, and a viewport change while it leaves (its owner releasing
+ * the scroll lock, the keyboard going) must not re-position it mid-animation. Freezing
+ * is one-way in practice — a leaving overlay unmounts — so a rect is allowed to be
+ * stale between unfreezing and the next viewport event.
  */
 export function useVisualViewportRect(frozen = false): ViewportRect | null {
   // Read during render rather than in the effect: setting state synchronously
