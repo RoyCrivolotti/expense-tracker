@@ -1,0 +1,40 @@
+/*
+ * Shared by every picker built on usePopoverPosition/usePopoverMotion (DatePicker,
+ * FlagPicker): the arrival and exit are identical across all of them, and only each
+ * picker's own size and content differ. Composed into each picker's own `.popover`/
+ * `.popoverLeaving`, not used directly.
+ *
+ * Arrives and leaves by a few pixels, away from its trigger, and by opacity. Never a
+ * scale: usePopoverPosition measures the box to place it. `--pop-shift` is set per side
+ * by the consuming file, so a popover under its trigger moves down and one over it moves
+ * up. Leaving is the arrival played backwards, over the time `Presence` keeps it mounted.
+ */
+.popoverEnter {
+  animation: pop-in var(--motion-enter-pop) var(--motion-ease-out);
+}
+.popoverLeaving {
+  animation: pop-out var(--exit-ms, 90ms) var(--motion-ease-in) forwards;
+  pointer-events: none;
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--pop-shift, 0px));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pop-out {
+  to {
+    opacity: 0;
+    transform: translateY(var(--pop-shift, 0px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .popoverEnter,
+  .popoverLeaving {
+    animation: none;
+  }
+}
