@@ -32,6 +32,20 @@ describe('CheckinFormSheet', () => {
     expect(screen.getByLabelText(/value for account 2/i)).toBeInTheDocument()
   })
 
+  it('starts each account from the previous check-in, and new accounts from zero', () => {
+    const accounts = [makeAccount(1), makeAccount(2, 'cash')]
+    const previous = {
+      id: 9,
+      checkinDate: '2026-08-05',
+      createdAt: '2026-08-05T00:00:00.000Z',
+      entries: [{ accountId: 1, valueCents: 11_000_000 }],
+    }
+    render(<CheckinFormSheet accounts={accounts} previous={previous} actions={makeActions()} />)
+
+    expect(screen.getByLabelText(/value for account 1/i)).toHaveValue('110.000,00')
+    expect(screen.getByLabelText(/value for account 2/i)).toHaveValue('0,00')
+  })
+
   it('renders date input defaulting to today', () => {
     render(<CheckinFormSheet accounts={[makeAccount(1)]} actions={makeActions()} />)
     const dateInput = screen.getByLabelText(/date/i)
