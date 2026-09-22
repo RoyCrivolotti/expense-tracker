@@ -287,18 +287,18 @@ describe('Modal leaving', () => {
     // was already revealing, and it dropped into place a beat after the sheet had gone.
     render(<Owner onClose={vi.fn()} />)
     expect(isBodyScrollLocked()).toBe(true)
-    expect(document.body.style.position).toBe('fixed')
+    expect(document.documentElement.style.overflow).toBe('hidden')
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     expect(screen.getByRole('dialog').className).toContain('sheetClosing')
     expect(isBodyScrollLocked()).toBe(false)
-    expect(document.body.style.position).toBe('')
+    expect(document.documentElement.style.overflow).toBe('')
   })
 
   it('keeps the departing sheet in the band it left from when the viewport changes mid-exit', () => {
-    // Releasing the lock regrows the layout viewport in the installed app. A band still
-    // tracking the viewport would move the sheet 62px partway through its exit.
+    // A viewport change mid-exit (the lock releasing, the keyboard going) must not
+    // move a sheet that is partway through its exit.
     const listeners: { resize: Array<() => void>; scroll: Array<() => void> } = { resize: [], scroll: [] }
     const vv = {
       offsetTop: 0,

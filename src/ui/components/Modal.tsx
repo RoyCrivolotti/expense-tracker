@@ -55,15 +55,12 @@ export function Modal({
   const { leaving, exitMs } = useExit()
   // Held only while the sheet is interactive. A leaving sheet is inert and the page
   // behind is being revealed, so it gets its scroll back at the first frame of the
-  // exit, while the scrim and sheet still cover it. Held to the unmount instead, the
-  // release lands after the reveal: in the installed app a pinned body shortens the
-  // layout viewport by the status bar, so the bottom bar sat 62px too high through
-  // the exit and visibly dropped into place at the end.
+  // exit rather than after the last one.
   useBodyScrollLock(!leaving)
   // Follows the visible slice rather than the layout viewport, so an iOS
   // keyboard panning the screen cannot slide the sheet under the status bar.
-  // Frozen once leaving: releasing the lock above regrows the layout viewport,
-  // and a band still tracking it would drop the departing sheet 62px mid-exit.
+  // Frozen once leaving: an exiting sheet is a snapshot animating away, and a
+  // viewport change (the keyboard going, say) must not re-position it mid-exit.
   const viewport = useVisualViewportRect(leaving)
   const sheetRef = useRef<HTMLDivElement>(null)
   const { release, requestClose } = useSheetExit(sheetRef, onClose, leaving)
