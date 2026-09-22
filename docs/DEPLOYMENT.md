@@ -87,7 +87,7 @@ If Workers Scripts Edit is missing, CI deploy of the backup cron worker fails un
 npx wrangler d1 execute roy-expenses --remote --file=migrations/NNNN_name.sql
 ```
 
-Apply through `0023_drop_goal_inputs.sql` on production.
+Apply through `0022_backfill_completed_installment_plans.sql` on production.
 
 **Check what a database actually has before trusting this line.** It has been wrong: on
 2026-09-15 production turned out to have no `_migrations` table at all, `0020` never having
@@ -201,8 +201,6 @@ record on a database that already has a `transactions` table means the same thin
 `0021_report_snapshot.sql` adds two nullable columns on `transactions`, `report_count` and `report_covered_cents`. They hold what a reimbursement covered at the moment it was recorded. Past expense reports are otherwise rebuilt entirely from the rows still pointing at the payment, so editing or deleting one of those rows afterwards rewrites the record of what was submitted; with the snapshot the app shows the recorded figures and says when the live rows no longer match. Written by the settle itself, so no backfill: payments recorded before this migration stay `NULL` and are shown without a match check. Owner-agnostic — no placeholder substitution needed. **Apply it before (or with) the code deploy** — the settle writes these columns and will fail against a database that lacks them.
 
 `0022_backfill_completed_installment_plans.sql` flips `active` to `0` on any installment plan whose linked, non-cancelled transactions already cover every installment. Recording a plan's final installment now does this automatically going forward (see `maybeCompletePlan` in `functions/_shared/dbWrite.ts`); this is the one-time catch-up for plans that finished before that code shipped. Idempotent — running it again against an already-caught-up database updates zero rows. Owner-agnostic — no placeholder substitution needed.
-
-`0023_drop_goal_inputs.sql` drops the `goal_inputs` table and the `liquid_net_worth_cents` column on `settings`. Both were workbook-import leftovers that only ever seeded the first unsaved Goals draft: every saved scenario carries its own house and return assumptions, and a new plan now starts from the latest wealth check-in. Owner-agnostic, no backfill, and the data is gone with it. **Apply it with or after the code deploy**, the other way round from `0021`: the previous release selects from `goal_inputs` on every dataset load and would 500 against a database that no longer has it.
 
 ## Old URL
 

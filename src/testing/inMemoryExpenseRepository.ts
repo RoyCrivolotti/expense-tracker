@@ -15,7 +15,7 @@ import { validateDueDay, validatePlanInput } from '../domain/application/install
 import { deriveStatus, deriveTransactions } from '../domain/engine/status'
 import { addDaysIso } from '../domain/engine/dates'
 import { withoutFlag, withoutSettlement } from '../domain/engine/flagGroups'
-import { defaultExpenseSettings } from '../domain/engine/defaults'
+import { defaultExpenseSettings, defaultGoalInputs } from '../domain/engine/defaults'
 import { normalizeMilestones, validateMilestones } from '../domain/engine/milestones'
 import type {
   Account,
@@ -26,6 +26,7 @@ import type {
   ExpenseSettings,
   Flag,
   TransactionAttachment,
+  GoalInputs,
   GoalScenario,
   InstallmentPlan,
   StoredTransaction,
@@ -46,6 +47,7 @@ interface OwnerStore {
   statements: AccountStatement[]
   cashActuals: CashActual[]
   settings: ExpenseSettings
+  goalInputs: GoalInputs
   goalScenarios: GoalScenario[]
   installmentPlans: InstallmentPlan[]
   wealthAccounts: WealthAccount[]
@@ -53,6 +55,8 @@ interface OwnerStore {
 }
 
 const DEFAULT_SETTINGS: ExpenseSettings = defaultExpenseSettings()
+
+const DEFAULT_GOALS: GoalInputs = defaultGoalInputs()
 
 function nextId(items: { id: number }[]): number {
   return items.reduce((max, item) => Math.max(max, item.id), 0) + 1
@@ -91,6 +95,7 @@ function emptyStore(seed: ExpenseRepositorySeed = {}): OwnerStore {
     statements: list(seed.accountStatements),
     cashActuals: list(seed.cashActuals),
     settings: { ...DEFAULT_SETTINGS, ...seed.settings },
+    goalInputs: { ...DEFAULT_GOALS, ...seed.goalInputs },
     goalScenarios: list(seed.goalScenarios),
     installmentPlans: list(seed.installmentPlans),
     wealthAccounts: list(seed.wealthAccounts),
@@ -460,6 +465,7 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
         accountStatements: [...store.statements],
         cashActuals: [...store.cashActuals],
         settings: { ...store.settings },
+        goalInputs: { ...store.goalInputs },
         goalScenarios: [...store.goalScenarios],
         installmentPlans: [...store.installmentPlans],
         wealthAccounts: [...store.wealthAccounts],
@@ -785,6 +791,14 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       }
       store.settings = { ...store.settings, ...patch }
       return Promise.resolve({ ...store.settings })
+    },
+
+    updateGoals: (owner, patch) => {
+      const store = storeFor(owner)
+      const keys = Object.keys(patch) as (keyof GoalInputs)[]
+      if (keys.length === 0) throw new RepoHttpError(400, 'Empty patch')
+      store.goalInputs = { ...store.goalInputs, ...patch }
+      return Promise.resolve({ ...store.goalInputs })
     },
 
     createScenario: (owner, input) => {

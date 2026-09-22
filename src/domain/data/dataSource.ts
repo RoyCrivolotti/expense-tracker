@@ -11,6 +11,7 @@ import type {
   ExpenseDataset,
   ExpenseSettings,
   Flag,
+  GoalInputs,
   TransactionAttachment,
   GoalScenario,
   InstallmentPlan,
@@ -114,7 +115,7 @@ export interface ExpenseDataSource {
   setStatementPaid?(accountId: number, yearMonth: string, paid: boolean, paidOn?: string): Promise<AccountStatement>
   /** Record actual cash for a month, or pass null to clear (empty Actual field). */
   setCashActual?(yearMonth: string, actualCashCents: number | null): Promise<CashActual | null>
-  // Definitions — categories, accounts, opening balances.
+  // Definitions — categories, accounts, opening balances, goal inputs.
   createCategory?(input: NewCategory): Promise<Category>
   updateCategory?(id: number, patch: Partial<NewCategory>): Promise<Category>
   deleteCategory?(id: number, options?: DeleteCategoryOptions): Promise<DeleteCategoryResult>
@@ -129,6 +130,7 @@ export interface ExpenseDataSource {
   /** Deleting a flag clears it from its transactions; the result says how many. */
   deleteFlag?(id: number): Promise<{ unflagged: number }>
   updateSettings?(patch: Partial<ExpenseSettings>): Promise<ExpenseSettings>
+  updateGoals?(patch: Partial<GoalInputs>): Promise<GoalInputs>
   createScenario?(input: NewGoalScenario): Promise<GoalScenario>
   updateScenario?(id: number, patch: Partial<NewGoalScenario>): Promise<GoalScenario>
   deleteScenario?(id: number): Promise<void>

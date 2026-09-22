@@ -97,8 +97,12 @@ for (const c of d.cashActuals) {
 }
 
 const settings = d.settings
+const goals = d.goalInputs
 lines.push(
-  `INSERT INTO settings (owner, opening_cash_cents, opening_investment_cents) VALUES (${owner}, ${num(settings.openingCashCents)}, ${num(settings.openingInvestmentCents)}) ON CONFLICT(owner) DO UPDATE SET opening_cash_cents = excluded.opening_cash_cents, opening_investment_cents = excluded.opening_investment_cents;`,
+  `INSERT INTO settings (owner, opening_cash_cents, opening_investment_cents, liquid_net_worth_cents) VALUES (${owner}, ${num(settings.openingCashCents)}, ${num(settings.openingInvestmentCents)}, ${num(settings.liquidNetWorthCents)}) ON CONFLICT(owner) DO UPDATE SET opening_cash_cents = excluded.opening_cash_cents, opening_investment_cents = excluded.opening_investment_cents, liquid_net_worth_cents = excluded.liquid_net_worth_cents;`,
+)
+lines.push(
+  `INSERT INTO goal_inputs (owner, house_price_cents, down_payment_fraction, mortgage_term_years, mortgage_rate_annual, long_term_target_cents, horizon_years, expected_real_return) VALUES (${owner}, ${num(goals.housePriceCents)}, ${goals.downPaymentFraction}, ${goals.mortgageTermYears}, ${goals.mortgageRateAnnual}, ${num(goals.longTermTargetCents)}, ${goals.horizonYears}, ${goals.expectedRealReturn}) ON CONFLICT(owner) DO UPDATE SET house_price_cents = excluded.house_price_cents, down_payment_fraction = excluded.down_payment_fraction, mortgage_term_years = excluded.mortgage_term_years, mortgage_rate_annual = excluded.mortgage_rate_annual, long_term_target_cents = excluded.long_term_target_cents, horizon_years = excluded.horizon_years, expected_real_return = excluded.expected_real_return;`,
 )
 
 const usedColors: string[] = []

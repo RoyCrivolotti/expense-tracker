@@ -1,6 +1,7 @@
 import type {
   ExpenseSettings,
   Flag,
+  GoalInputs,
   GoalScenario,
   InstallmentPlan,
   Transaction,
@@ -80,6 +81,7 @@ export interface ExpenseActions {
   updateAccount: (id: number, patch: Partial<NewAccount>) => Promise<void>
   deleteAccount: (id: number, options?: DeleteAccountOptions) => Promise<DeleteAccountResult>
   updateSettings: (patch: Partial<ExpenseSettings>) => Promise<void>
+  updateGoals: (patch: Partial<GoalInputs>) => Promise<void>
   createScenario: (input: NewGoalScenario) => Promise<GoalScenario>
   updateScenario: (id: number, patch: Partial<NewGoalScenario>) => Promise<void>
   deleteScenario: (id: number) => Promise<void>

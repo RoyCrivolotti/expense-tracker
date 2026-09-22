@@ -24,6 +24,7 @@ export type EditTarget =
   | { kind: 'category'; record: Category | null }
   | { kind: 'account'; record: Account | null }
   | { kind: 'settings' }
+  | { kind: 'goals' }
 
 const categoryFields = (cur: string): FieldSpec[] => [
   { key: 'name', label: 'Name', kind: 'text' },
@@ -57,6 +58,16 @@ const ACCOUNT_FIELDS: FieldSpec[] = [
 const settingsFields = (cur: string): FieldSpec[] => [
   { key: 'openingCashCents', label: `Opening cash (${cur})`, kind: 'money' },
   { key: 'openingInvestmentCents', label: `Opening investments (${cur})`, kind: 'money' },
+  { key: 'liquidNetWorthCents', label: `Liquid net worth (${cur})`, kind: 'money' },
+]
+const goalFields = (cur: string): FieldSpec[] => [
+  { key: 'housePriceCents', label: `House price (${cur})`, kind: 'money' },
+  { key: 'downPaymentFraction', label: 'Down payment (%)', kind: 'percent' },
+  { key: 'mortgageTermYears', label: 'Mortgage term (years)', kind: 'number' },
+  { key: 'mortgageRateAnnual', label: 'Mortgage rate (%)', kind: 'percent' },
+  { key: 'longTermTargetCents', label: `Long-term target (${cur})`, kind: 'money' },
+  { key: 'horizonYears', label: 'Horizon (years)', kind: 'number' },
+  { key: 'expectedRealReturn', label: 'Expected real return (%)', kind: 'percent' },
 ]
 
 interface DeleteConfig {
@@ -188,12 +199,21 @@ function buildConfig(
 ): Config {
   if (target.kind === 'category') return categoryConfig(target, model, actions, cur)
   if (target.kind === 'account') return accountConfig(target, model, actions)
+  if (target.kind === 'settings') {
+    return {
+      title: 'Opening balances',
+      submitLabel: 'Save balances',
+      fields: settingsFields(cur),
+      initial: model.dataset.settings,
+      onSubmit: (patch) => actions.updateSettings(patch),
+    }
+  }
   return {
-    title: 'Opening balances',
-    submitLabel: 'Save balances',
-    fields: settingsFields(cur),
-    initial: model.dataset.settings,
-    onSubmit: (patch) => actions.updateSettings(patch),
+    title: 'Goal inputs',
+    submitLabel: 'Save goals',
+    fields: goalFields(cur),
+    initial: model.dataset.goalInputs,
+    onSubmit: (patch) => actions.updateGoals(patch),
   }
 }
 

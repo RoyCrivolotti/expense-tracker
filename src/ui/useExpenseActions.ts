@@ -16,6 +16,7 @@ import {
   patchAfterCategoryDelete,
   patchAfterFlag,
   patchAfterFlagDelete,
+  patchAfterGoals,
   patchAfterInstallmentPlanCreate,
   patchAfterInstallmentPlanDelete,
   patchAfterInstallmentPlanUpdate,
@@ -140,6 +141,10 @@ export function useExpenseActions(
       updateSettings: async (patch) => {
         const settings = await source.updateSettings!(patch)
         applyPatch((d) => patchAfterSettings(d, settings))
+      },
+      updateGoals: async (patch) => {
+        const goals = await source.updateGoals!(patch)
+        applyPatch((d) => patchAfterGoals(d, goals))
       },
       createScenario: async (input) => {
         const scenario = await source.createScenario!(input)

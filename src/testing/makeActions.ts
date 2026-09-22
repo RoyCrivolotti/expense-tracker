@@ -42,6 +42,7 @@ export function makeActions(overrides: Partial<ExpenseActions> = {}): ExpenseAct
     updateAccount: vi.fn().mockResolvedValue(undefined),
     deleteAccount: vi.fn().mockResolvedValue({ reassigned: 0 }),
     updateSettings: vi.fn().mockResolvedValue(undefined),
+    updateGoals: vi.fn().mockResolvedValue(undefined),
     createScenario: vi.fn().mockResolvedValue(makeScenario()),
     updateScenario: vi.fn().mockResolvedValue(undefined),
     deleteScenario: vi.fn().mockResolvedValue(undefined),

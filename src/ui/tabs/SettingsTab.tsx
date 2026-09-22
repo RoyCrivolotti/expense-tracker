@@ -96,6 +96,10 @@ function Definitions({ model }: { model: ExpenseModel }) {
           <span>Investments (1 Jan)</span>
           <Money cents={dataset.settings.openingInvestmentCents} />
         </div>
+        <div className={styles.defRow}>
+          <span>Liquid net worth</span>
+          <Money cents={dataset.settings.liquidNetWorthCents} />
+        </div>
       </Card>
     </>
   )

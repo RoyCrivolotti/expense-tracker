@@ -13,7 +13,7 @@ import type {
   WealthAccount,
   WealthCheckin,
 } from '../domain/types'
-import { defaultExpenseSettings } from '../domain/engine/defaults'
+import { defaultExpenseSettings, defaultGoalInputs } from '../domain/engine/defaults'
 import type { Lookup } from '../ui/format'
 
 /** Build a minimal valid ExpenseDataset, merging any provided overrides. */
@@ -27,6 +27,7 @@ export function makeDataset(overrides: Partial<ExpenseDataset> = {}): ExpenseDat
     accountStatements: [],
     cashActuals: [],
     installmentPlans: [],
+    goalInputs: defaultGoalInputs(),
     goalScenarios: [],
     settings: defaultExpenseSettings(),
     wealthAccounts: [],

@@ -9,6 +9,7 @@ import type {
   ExpenseDataset,
   ExpenseSettings,
   Flag,
+  GoalInputs,
   GoalScenario,
   InstallmentPlan,
   Transaction,
@@ -258,6 +259,12 @@ export function patchAfterSettings(
 ): ExpenseDataset {
   const d = cloneDataset(dataset)
   d.settings = settings
+  return d
+}
+
+export function patchAfterGoals(dataset: ExpenseDataset, goals: GoalInputs): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  d.goalInputs = goals
   return d
 }
 

@@ -185,6 +185,17 @@ export interface WealthCheckin {
   entries: WealthCheckinEntry[]
 }
 
+/** Goal inputs, all in plain units (euros, percent as fraction, years). */
+export interface GoalInputs {
+  housePriceCents: number
+  downPaymentFraction: number
+  mortgageTermYears: number
+  mortgageRateAnnual: number
+  longTermTargetCents: number
+  horizonYears: number
+  expectedRealReturn: number
+}
+
 /**
  * A saved comparison scenario for the Goals projection view.
  * Money in integer cents; rates as fractions.
@@ -244,6 +255,7 @@ export interface Milestone {
 export interface ExpenseSettings {
   openingCashCents: number
   openingInvestmentCents: number
+  liquidNetWorthCents: number
   /** Pre-selected account when creating a new transaction; null = first active account. */
   defaultAccountId: number | null
   /** ISO 4217 code driving the currency symbol, e.g. 'EUR', 'USD'. */
@@ -310,6 +322,7 @@ export interface ExpenseDataset {
   accountStatements: AccountStatement[]
   cashActuals: CashActual[]
   installmentPlans: InstallmentPlan[]
+  goalInputs: GoalInputs
   goalScenarios: GoalScenario[]
   settings: ExpenseSettings
   wealthAccounts: WealthAccount[]

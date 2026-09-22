@@ -5,6 +5,7 @@ import type {
   Category,
   ExpenseSettings,
   Flag,
+  GoalInputs,
   GoalScenario,
   InstallmentPlan,
   LifeEvent,
@@ -175,6 +176,7 @@ export function toCashActual(r: CashActualRow): CashActual {
 export interface SettingsRow {
   opening_cash_cents: number
   opening_investment_cents: number
+  liquid_net_worth_cents: number
   default_account_id: number | null
   currency_code: string | null
   number_locale: string | null
@@ -183,16 +185,39 @@ export interface SettingsRow {
   claimant_name: string | null
 }
 
+export interface GoalRow {
+  house_price_cents: number
+  down_payment_fraction: number
+  mortgage_term_years: number
+  mortgage_rate_annual: number
+  long_term_target_cents: number
+  horizon_years: number
+  expected_real_return: number
+}
+
 export function toSettings(r: SettingsRow): ExpenseSettings {
   return {
     openingCashCents: r.opening_cash_cents,
     openingInvestmentCents: r.opening_investment_cents,
+    liquidNetWorthCents: r.liquid_net_worth_cents,
     defaultAccountId: r.default_account_id ?? null,
     currencyCode: r.currency_code ?? DEFAULT_CURRENCY_CODE,
     numberLocale: r.number_locale ?? DEFAULT_NUMBER_LOCALE,
     claimantName: r.claimant_name ?? '',
     budgetRolloverDay: r.budget_rollover_day ?? DEFAULT_BUDGET_ROLLOVER_DAY,
     milestones: parseMilestones(r.milestones ?? null),
+  }
+}
+
+export function toGoalInputs(r: GoalRow): GoalInputs {
+  return {
+    housePriceCents: r.house_price_cents,
+    downPaymentFraction: r.down_payment_fraction,
+    mortgageTermYears: r.mortgage_term_years,
+    mortgageRateAnnual: r.mortgage_rate_annual,
+    longTermTargetCents: r.long_term_target_cents,
+    horizonYears: r.horizon_years,
+    expectedRealReturn: r.expected_real_return,
   }
 }
 

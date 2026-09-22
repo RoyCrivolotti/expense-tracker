@@ -1,5 +1,6 @@
 import type { NewGoalScenario } from '../data/dataSource'
 import type { ExpenseRepository } from '../ports/expenseRepository'
+import type { GoalInputs } from '../types'
 import { ValidationError } from './validationError'
 
 export function validateScenarioName(name: string | undefined): string {
@@ -104,6 +105,14 @@ function validateScenarioFractions(patch: Partial<NewGoalScenario>): void {
       'downPaymentFraction must be between 0 and 1',
     )
   }
+}
+
+export async function saveGoals(
+  repo: ExpenseRepository,
+  owner: string,
+  patch: Partial<GoalInputs>,
+) {
+  return repo.updateGoals(owner, patch)
 }
 
 export async function createScenario(

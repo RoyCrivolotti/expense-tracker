@@ -1,6 +1,6 @@
 import type { ExpenseDataset, WealthCheckin } from '../domain/types'
 import { deriveTransactions } from '../domain/engine/status'
-import { defaultExpenseSettings } from '../domain/engine/defaults'
+import { defaultExpenseSettings, defaultGoalInputs } from '../domain/engine/defaults'
 import type { Env } from './env'
 import { backfillInstallments } from './dbInstallmentBackfill'
 import {
@@ -9,6 +9,7 @@ import {
   toAttachment,
   toCategory,
   toFlag,
+  toGoalInputs,
   toGoalScenario,
   toInstallmentPlan,
   toSettings,
@@ -22,6 +23,7 @@ import {
   type AttachmentRow,
   type CategoryRow,
   type FlagRow,
+  type GoalRow,
   type GoalScenarioRow,
   type InstallmentPlanRow,
   type SettingsRow,
@@ -51,6 +53,7 @@ export async function loadDataset(env: Env, owner: string): Promise<ExpenseDatas
     statements,
     cashActuals,
     settingsRow,
+    goalRow,
     scenarioRows,
     planRows,
     wealthAccountRows,
@@ -78,6 +81,7 @@ export async function loadDataset(env: Env, owner: string): Promise<ExpenseDatas
     rows<StatementRow>(env.DB, 'SELECT * FROM account_statements WHERE owner = ?', owner),
     rows<CashActualRow>(env.DB, 'SELECT * FROM cash_actuals WHERE owner = ?', owner),
     env.DB.prepare('SELECT * FROM settings WHERE owner = ?').bind(owner).first<SettingsRow>(),
+    env.DB.prepare('SELECT * FROM goal_inputs WHERE owner = ?').bind(owner).first<GoalRow>(),
     rows<GoalScenarioRow>(
       env.DB,
       'SELECT * FROM goal_scenarios WHERE owner = ? ORDER BY sort_order, id',
@@ -135,6 +139,7 @@ export async function loadDataset(env: Env, owner: string): Promise<ExpenseDatas
     cashActuals: cashActuals.map(toCashActual),
     installmentPlans: planRows.map(toInstallmentPlan),
     settings: settingsRow ? toSettings(settingsRow) : defaultExpenseSettings(),
+    goalInputs: goalRow ? toGoalInputs(goalRow) : defaultGoalInputs(),
     goalScenarios: scenarioRows.map(toGoalScenario),
     wealthAccounts: wealthAccountRows.map(toWealthAccount),
     wealthCheckins,

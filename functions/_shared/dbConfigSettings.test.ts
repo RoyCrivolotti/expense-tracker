@@ -10,6 +10,7 @@ function makeRow(overrides: Partial<SettingsRow> = {}): SettingsRow {
   return {
     opening_cash_cents: 0,
     opening_investment_cents: 0,
+    liquid_net_worth_cents: 0,
     default_account_id: null,
     currency_code: null,
     number_locale: null,

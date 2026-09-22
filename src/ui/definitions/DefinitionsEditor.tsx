@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { formatCents } from '../../engine'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
-import type { ExpenseSettings } from '../../types'
+import type { ExpenseSettings, GoalInputs } from '../../types'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import { Card, SectionTitle } from '../components/primitives'
@@ -128,6 +128,25 @@ function BalanceRows({ s }: { s: ExpenseSettings }) {
         <span>Investments (1 Jan)</span>
         <Money cents={s.openingInvestmentCents} />
       </div>
+      <div className={tabStyles.defRow}>
+        <span>Liquid net worth</span>
+        <Money cents={s.liquidNetWorthCents} />
+      </div>
+    </>
+  )
+}
+
+function GoalRows({ g }: { g: GoalInputs }) {
+  return (
+    <>
+      <div className={tabStyles.defRow}>
+        <span>House price</span>
+        <Money cents={g.housePriceCents} />
+      </div>
+      <div className={tabStyles.defRow}>
+        <span>Long-term target</span>
+        <Money cents={g.longTermTargetCents} />
+      </div>
     </>
   )
 }
@@ -153,6 +172,12 @@ export function DefinitionsEditor({
         rows={<BalanceRows s={model.dataset.settings} />}
         label="Edit balances"
         onEdit={() => setTarget({ kind: 'settings' })}
+      />
+      <SectionTitle>Goals</SectionTitle>
+      <ScalarCard
+        rows={<GoalRows g={model.dataset.goalInputs} />}
+        label="Edit goals"
+        onEdit={() => setTarget({ kind: 'goals' })}
       />
       <PresenceValue value={target} exitMs={EXIT_MS.sheet}>
         {(shown) => (
