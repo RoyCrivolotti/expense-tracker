@@ -11,39 +11,45 @@ import {
   DEFAULT_RENT_MONTHLY_CENTS,
   DEFAULT_SWR,
   DEFAULT_TRANSACTION_COSTS_CENTS,
+  checkinInvestedCents,
+  latestCheckin,
   pickScenarioColor,
 } from '../../../engine'
+import { todayIso } from '../../components/transactionFormState'
 
 export { duplicateScenario } from '../../../engine'
 
+/**
+ * A fresh draft starts where the owner actually is: the latest check-in's invested
+ * total, dated the day it was taken, so the plan's start value and start date agree.
+ * With no check-in yet it starts from zero today. The start balance is never taken
+ * from a typed setting — that is how a plan came to start from a balance nobody had.
+ */
 export function draftFromDataset(
   dataset: ExpenseDataset,
   avgMonthlySavingCents: number,
 ): NewGoalScenario {
-  const { goalInputs, settings } = dataset
+  const latest = latestCheckin(dataset.wealthCheckins)
   return {
-    name: 'Current plan',
+    name: 'New plan',
     color: pickScenarioColor(dataset.goalScenarios.map((s) => s.color)),
     sortOrder: 0,
-    startInvestedCents: settings.liquidNetWorthCents,
+    startInvestedCents: latest ? checkinInvestedCents(latest, dataset.wealthAccounts) : 0,
     monthlyContributionCents: avgMonthlySavingCents,
     annualContributionGrowth: 0,
-    expectedRealReturn: goalInputs.expectedRealReturn || DEFAULT_REAL_RETURN,
-    horizonYears: goalInputs.horizonYears || DEFAULT_HORIZON_YEARS,
-    housePriceCents: goalInputs.housePriceCents,
-    downPaymentFraction: goalInputs.downPaymentFraction || DEFAULT_DOWN_PAYMENT_FRACTION,
+    expectedRealReturn: DEFAULT_REAL_RETURN,
+    horizonYears: DEFAULT_HORIZON_YEARS,
+    housePriceCents: 0,
+    downPaymentFraction: DEFAULT_DOWN_PAYMENT_FRACTION,
     housePurchaseYear: null,
     transactionCostsCents: DEFAULT_TRANSACTION_COSTS_CENTS,
-    mortgageTermYears: goalInputs.mortgageTermYears || DEFAULT_MORTGAGE_TERM_YEARS,
-    mortgageRateAnnual: goalInputs.mortgageRateAnnual || DEFAULT_MORTGAGE_RATE,
+    mortgageTermYears: DEFAULT_MORTGAGE_TERM_YEARS,
+    mortgageRateAnnual: DEFAULT_MORTGAGE_RATE,
     houseAppreciationRate: DEFAULT_HOUSE_APPRECIATION,
     rentMonthlyCents: DEFAULT_RENT_MONTHLY_CENTS,
-    annualSpendCents:
-      goalInputs.longTermTargetCents > 0
-        ? Math.round(goalInputs.longTermTargetCents * DEFAULT_SWR)
-        : DEFAULT_ANNUAL_SPEND_CENTS,
+    annualSpendCents: DEFAULT_ANNUAL_SPEND_CENTS,
     safeWithdrawalRate: DEFAULT_SWR,
-    planStartDate: new Date().toISOString().slice(0, 10),
+    planStartDate: latest?.checkinDate ?? todayIso(),
     lifeEvents: [],
   }
 }

@@ -2,7 +2,6 @@ import type {
   Account,
   Category,
   ExpenseSettings,
-  GoalInputs,
   GoalScenario,
   Milestone,
 } from '../domain/types'
@@ -22,12 +21,10 @@ import { assertOwnedAccount, assertOwnedCategory } from './ownership'
 import {
   toAccount,
   toCategory,
-  toGoalInputs,
   toGoalScenario,
   toSettings,
   type AccountRow,
   type CategoryRow,
-  type GoalRow,
   type GoalScenarioRow,
   type SettingsRow,
 } from './rows'
@@ -365,7 +362,6 @@ const SETTINGS_COLUMNS: ColumnMap<ExpenseSettings> = {
   claimantName: 'claimant_name',
   openingCashCents: 'opening_cash_cents',
   openingInvestmentCents: 'opening_investment_cents',
-  liquidNetWorthCents: 'liquid_net_worth_cents',
   defaultAccountId: 'default_account_id',
   currencyCode: 'currency_code',
   numberLocale: 'number_locale',
@@ -414,30 +410,6 @@ export async function updateSettings(
     .first<SettingsRow>()
   if (!row) throw new HttpError(500, 'Settings update failed')
   return toSettings(row)
-}
-
-const GOAL_COLUMNS: ColumnMap<GoalInputs> = {
-  housePriceCents: 'house_price_cents',
-  downPaymentFraction: 'down_payment_fraction',
-  mortgageTermYears: 'mortgage_term_years',
-  mortgageRateAnnual: 'mortgage_rate_annual',
-  longTermTargetCents: 'long_term_target_cents',
-  horizonYears: 'horizon_years',
-  expectedRealReturn: 'expected_real_return',
-}
-
-export async function updateGoals(
-  env: Env,
-  owner: string,
-  patch: Partial<GoalInputs>,
-): Promise<GoalInputs> {
-  const { sets, values } = buildUpdate(GOAL_COLUMNS, patch, (_k, v) => v ?? 0)
-  await env.DB.prepare('INSERT OR IGNORE INTO goal_inputs (owner) VALUES (?)').bind(owner).run()
-  const row = await env.DB.prepare(`UPDATE goal_inputs SET ${sets} WHERE owner = ? RETURNING *`)
-    .bind(...values, owner)
-    .first<GoalRow>()
-  if (!row) throw new HttpError(500, 'Goals update failed')
-  return toGoalInputs(row)
 }
 
 const SCENARIO_COLUMNS: ColumnMap<NewGoalScenario> = {

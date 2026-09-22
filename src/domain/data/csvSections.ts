@@ -1,7 +1,7 @@
 /**
  * Section parsers for the Numbers CSV export. The file concatenates several
  * sheets; here we extract the settings-derived facts (categories, accounts,
- * opening balances, goal inputs) and the deferred-card statement paid flags.
+ * opening balances) and the deferred-card statement paid flags.
  * Transactions and final assembly live in parseWorkbookCsv.ts.
  */
 import type {
@@ -10,9 +10,8 @@ import type {
   CashActual,
   Category,
   ExpenseSettings,
-  GoalInputs,
 } from '../types'
-import { parseEuroToCents, parsePercentToFraction } from '../engine/money'
+import { parseEuroToCents } from '../engine/money'
 import { defaultExpenseSettings } from '../engine/defaults'
 
 /** The source workbook tracks a single calendar year. */
@@ -45,12 +44,6 @@ function findValue(rows: string[][], label: string): string | null {
   return null
 }
 
-function parseNumber(raw: string | null): number {
-  if (!raw) return 0
-  const value = Number(raw.replace(/%/g, '').replace(/\./g, '').replace(',', '.').trim())
-  return Number.isNaN(value) ? 0 : value
-}
-
 export function parseSettings(rows: string[][]): ExpenseSettings {
   return {
     ...defaultExpenseSettings(),
@@ -58,26 +51,7 @@ export function parseSettings(rows: string[][]): ExpenseSettings {
     openingInvestmentCents: parseEuroToCents(
       findValue(rows, 'Opening investment balance (1 Jan)') ?? '0',
     ),
-    liquidNetWorthCents: parseEuroToCents(
-      findValue(rows, 'Total liquid net worth EUR (calc)') ?? '0',
-    ),
     defaultAccountId: null,
-  }
-}
-
-export function parseGoalInputs(rows: string[][]): GoalInputs {
-  return {
-    housePriceCents: parseEuroToCents(findValue(rows, 'House target price (BCN)') ?? '0'),
-    downPaymentFraction: parsePercentToFraction(findValue(rows, 'Down payment %') ?? '0'),
-    mortgageTermYears: parseNumber(findValue(rows, 'Mortgage term (years)')),
-    mortgageRateAnnual: parsePercentToFraction(
-      findValue(rows, 'Mortgage rate (annual, est)') ?? '0',
-    ),
-    longTermTargetCents: parseEuroToCents(findValue(rows, 'Long-term savings target') ?? '0'),
-    horizonYears: parseNumber(findValue(rows, 'Time horizon (years)')),
-    expectedRealReturn: parsePercentToFraction(
-      findValue(rows, 'Expected real return on portfolio') ?? '0',
-    ),
   }
 }
 

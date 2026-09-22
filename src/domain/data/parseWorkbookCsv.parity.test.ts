@@ -14,7 +14,6 @@ import { parseEuroToCents } from '../engine/money'
 import { computeCategoryActuals } from '../engine/categoryBudget'
 import { computeMonthlyTotals } from '../engine/monthlyTotals'
 import { computeCashReconciliation } from '../engine/cashReconciliation'
-import { computeGoals } from '../engine/goals'
 import { parseWorkbookCsv } from './parseWorkbookCsv'
 import { splitLine } from './csvSections'
 
@@ -104,14 +103,5 @@ describe.skipIf(!hasData || process.env.PARITY_TESTS !== '1')('workbook parity (
       const sum = actuals.reduce((acc, c) => acc + (c.byMonth.get(month) ?? 0), 0)
       expect(Math.abs(sum - totals.get(month)!.expensesCents)).toBeLessThanOrEqual(TOL)
     }
-  })
-
-  it('goal math reproduces the live calculations', () => {
-    const goals = computeGoals(dataset.goalInputs, 200000, dataset.settings.liquidNetWorthCents)
-    expect(goals.downPaymentCents).toBe(160000000)
-    expect(goals.loanAmountCents).toBe(240000000)
-    expect(goals.monthlyMortgageCents).toBeCloseTo(887000, -2)
-    expect(goals.projectedPortfolioCents / 100).toBeCloseTo(1500000, -3)
-    expect(goals.yearsToLongTermGoal).toBeCloseTo(3.357, 2)
   })
 })

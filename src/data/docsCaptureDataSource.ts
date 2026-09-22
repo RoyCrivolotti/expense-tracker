@@ -10,7 +10,6 @@ import type {
   ExpenseDataset,
   Flag,
   ExpenseSettings,
-  GoalInputs,
   GoalScenario,
   InstallmentPlan,
   StoredTransaction,
@@ -360,9 +359,6 @@ export const docsCaptureDataSource: ExpenseDataSource = {
   },
   updateSettings(patch: Partial<ExpenseSettings>) {
     return Promise.resolve(patch as ExpenseSettings)
-  },
-  updateGoals(patch: Partial<GoalInputs>) {
-    return Promise.resolve(patch as GoalInputs)
   },
   createScenario(input: NewGoalScenario) {
     nextId += 1

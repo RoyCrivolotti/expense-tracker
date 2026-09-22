@@ -48,7 +48,6 @@ describe('DefinitionsEditor', () => {
     ['+ Add category', 'New category'],
     ['+ Add account', 'New account'],
     ['Edit balances', 'Opening balances'],
-    ['Edit goals', 'Goal inputs'],
   ])('opens the right editor from %s', async (button, title) => {
     renderEditor()
 

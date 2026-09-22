@@ -6,7 +6,6 @@ import type {
   ExpenseDataset,
   ExpenseSettings,
   Flag,
-  GoalInputs,
   TransactionAttachment,
   GoalScenario,
   InstallmentPlan,
@@ -101,7 +100,6 @@ export interface ExpenseRepository {
   /** Deletes the flag and clears it from its transactions in one batch. */
   deleteFlag(owner: string, id: number): Promise<{ unflagged: number }>
   updateSettings(owner: string, patch: Partial<ExpenseSettings>): Promise<ExpenseSettings>
-  updateGoals(owner: string, patch: Partial<GoalInputs>): Promise<GoalInputs>
   createScenario(owner: string, input: NewGoalScenario): Promise<GoalScenario>
   updateScenario(
     owner: string,

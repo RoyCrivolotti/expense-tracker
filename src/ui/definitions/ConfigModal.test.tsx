@@ -31,15 +31,6 @@ function dataset(overrides: Partial<ExpenseDataset> = {}): ExpenseDataset {
     transactions: [],
     accountStatements: [],
     cashActuals: [],
-    goalInputs: {
-      housePriceCents: 0,
-      downPaymentFraction: 0,
-      mortgageTermYears: 0,
-      mortgageRateAnnual: 0,
-      longTermTargetCents: 0,
-      horizonYears: 0,
-      expectedRealReturn: 0,
-    },
     goalScenarios: [],
     installmentPlans: [],
     wealthAccounts: [],
@@ -74,7 +65,6 @@ function noopActions(overrides: Partial<ExpenseActions> = {}): ExpenseActions {
     updateAccount: vi.fn(),
     deleteAccount: vi.fn().mockResolvedValue({ reassignedToId: null }),
     updateSettings: vi.fn(),
-    updateGoals: vi.fn(),
     createScenario: vi.fn(),
     updateScenario: vi.fn(),
     deleteScenario: vi.fn(),
@@ -638,5 +628,26 @@ describe('ConfigModal while it leaves', () => {
     await act(() => vi.advanceTimersByTimeAsync(EXIT_MS.sheet))
     expect(screen.queryByText("This can't be undone.")).toBeNull()
     expect(screen.getByLabelText('Move to')).toBeTruthy()
+  })
+})
+
+describe('ConfigModal opening balances', () => {
+  it('saves the balances through updateSettings', async () => {
+    const actions = noopActions({ updateSettings: vi.fn().mockResolvedValue(undefined) })
+    const onClose = vi.fn()
+    render(
+      <ConfigModal
+        target={{ kind: 'settings' }}
+        model={buildExpenseModel(dataset())}
+        actions={actions}
+        onClose={onClose}
+      />,
+    )
+
+    expect(screen.getByRole('dialog', { name: 'Opening balances' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Save balances' }))
+
+    await vi.waitFor(() => expect(actions.updateSettings).toHaveBeenCalled())
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalled())
   })
 })
