@@ -10,6 +10,7 @@ import {
   PurchaseYearField,
 } from './goalControlFields'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
+import { formatCheckinDate, type InvestedSnapshot } from './checkinDate'
 import styles from './goals.module.css'
 
 function purchaseSummary(draft: NewGoalScenario, format: MoneyFormat): string | null {
@@ -23,6 +24,8 @@ function purchaseSummary(draft: NewGoalScenario, format: MoneyFormat): string | 
 
 interface GoalControlsProps {
   draft: NewGoalScenario
+  /** The latest check-in, for re-baselining; null before the first one. */
+  latest?: InvestedSnapshot | null
   onChange: (patch: Partial<NewGoalScenario>) => void
 }
 
@@ -43,9 +46,12 @@ function ControlSection({
   )
 }
 
-export function GoalControls({ draft, onChange }: GoalControlsProps) {
+export function GoalControls({ draft, latest = null, onChange }: GoalControlsProps) {
   const format = useMoneyFormat()
   const purchaseHint = purchaseSummary(draft, format)
+  const rebaselineHint = latest
+    ? `Sets the starting balance to ${formatCents(latest.investedCents, format)} and the start date to ${formatCheckinDate(latest.date)}, your latest check-in. From then on ahead or behind measures only what you did after that date, which is the reset to reach for after a one-off inflow, or when the plan was made from a guess.`
+    : 'Log a wealth check-in first; re-baselining sets the starting balance and start date from it.'
   return (
     <div className={styles.controlsStack}>
       <ControlSection title="Portfolio">
@@ -176,6 +182,20 @@ export function GoalControls({ draft, onChange }: GoalControlsProps) {
           hint="Anchors the projection to a calendar date so wealth check-ins can show whether you are ahead or behind."
           onChange={(v) => onChange({ planStartDate: v })}
         />
+        <div className={styles.field}>
+          <button
+            type="button"
+            className={styles.btn}
+            disabled={!latest}
+            onClick={() => {
+              if (!latest) return
+              onChange({ startInvestedCents: latest.investedCents, planStartDate: latest.date })
+            }}
+          >
+            Re-baseline from latest check-in
+          </button>
+          <p className={styles.fieldHint}>{rebaselineHint}</p>
+        </div>
       </ControlSection>
       <ControlSection title="Life events" defaultOpen={false}>
         <p className={styles.fieldHint}>

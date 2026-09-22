@@ -56,6 +56,30 @@ describe('GoalControls', () => {
     expect(screen.getByLabelText('Plan start date')).toHaveValue('2024-03-15')
   })
 
+  it('re-baselines the start balance and date from the latest check-in', () => {
+    const onChange = vi.fn()
+    render(
+      <GoalControls
+        draft={makeDraft()}
+        latest={{ investedCents: 11_700_000, date: '2026-09-11' }}
+        onChange={onChange}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
+
+    expect(onChange).toHaveBeenCalledWith({
+      startInvestedCents: 11_700_000,
+      planStartDate: '2026-09-11',
+    })
+  })
+
+  it('cannot re-baseline before the first check-in, and says why', () => {
+    render(<GoalControls draft={makeDraft()} latest={null} onChange={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Re-baseline from latest check-in' })).toBeDisabled()
+    expect(screen.getByText(/Log a wealth check-in first/)).toBeInTheDocument()
+  })
+
   it('calls onChange with annualContributionGrowth when slider changes', () => {
     const onChange = vi.fn()
     render(<GoalControls draft={makeDraft()} onChange={onChange} />)
