@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from 'react'
+import { useEffect, useState, type RefObject } from 'react'
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
@@ -27,8 +27,13 @@ export function useFocusTrap(
   onEscape: () => void,
   paused = false,
 ): void {
+  // Captured during render, before this trap's own DOM commits. An effect would run
+  // after the browser has already applied any `autoFocus` inside the trap (the amount
+  // field on every transaction form), capturing that instead of the real trigger. The
+  // lazy initializer runs exactly once, at mount, before anything here can steal focus.
+  const [previouslyFocused] = useState(() => document.activeElement as HTMLElement | null)
+
   useEffect(() => {
-    const previouslyFocused = document.activeElement as HTMLElement | null
     const container = ref.current
     const focusables = container ? focusableWithin(container) : []
     ;(focusables[0] ?? container)?.focus()
@@ -40,7 +45,7 @@ export function useFocusTrap(
       if (active && active !== document.body && !container?.contains(active)) return
       previouslyFocused?.focus?.()
     }
-  }, [ref])
+  }, [ref, previouslyFocused])
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {

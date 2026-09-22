@@ -70,4 +70,40 @@ describe('useFocusTrap — giving focus back', () => {
 
     expect(document.activeElement).toBe(getByText('elsewhere'))
   })
+
+  function TrapWithAutoFocus() {
+    const ref = useRef<HTMLDivElement>(null)
+    useFocusTrap(ref, vi.fn())
+    return (
+      <div ref={ref}>
+        <button type="button">close</button>
+        {/* Every transaction form autofocuses its amount field. React applies this
+         * during commit, before any passive effect (including this trap's own) runs. */}
+        <input aria-label="amount" autoFocus />
+      </div>
+    )
+  }
+
+  function PairWithAutoFocus({ trapped }: { trapped: boolean }) {
+    return (
+      <>
+        <button type="button">trigger</button>
+        {trapped ? <TrapWithAutoFocus /> : null}
+      </>
+    )
+  }
+
+  it('returns focus to the real trigger even when something inside the trap autofocuses itself', () => {
+    const { rerender, getByText } = render(<PairWithAutoFocus trapped={false} />)
+    getByText('trigger').focus()
+
+    rerender(<PairWithAutoFocus trapped />)
+    // The trap's own initial-focus effect wins out over autoFocus and lands on the first
+    // focusable (close), not the input — confirms autoFocus is genuinely in the mix here,
+    // not that it silently no-opped in jsdom.
+    expect(document.activeElement).toHaveTextContent('close')
+
+    rerender(<PairWithAutoFocus trapped={false} />)
+    expect(document.activeElement).toBe(getByText('trigger'))
+  })
 })
