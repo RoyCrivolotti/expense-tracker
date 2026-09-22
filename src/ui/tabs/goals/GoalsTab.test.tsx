@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { GoalsTab } from './GoalsTab'
 import { buildExpenseModel } from '../../buildExpenseModel'
 import { makeDataset, makeScenario, makeWealthAccount, makeWealthCheckin } from '../../../testing/factories'
+import { makeActions } from '../../../testing/makeActions'
 import { defaultExpenseSettings } from '../../../engine'
 
 beforeAll(() => {
@@ -81,6 +82,61 @@ describe('GoalsTab', () => {
     )
     render(<GoalsTab model={model} />)
     expect(screen.getByText(/Invested portfolio projection/i)).toBeInTheDocument()
+  })
+
+  it('offers to make the loaded scenario the plan, and says so once it is', async () => {
+    const user = userEvent.setup()
+    const actions = makeActions()
+    const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })
+    const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })
+    const model = buildExpenseModel(makeDataset({ goalScenarios: [plan, other] }))
+    render(<GoalsTab model={model} actions={actions} />)
+
+    // Opens on the plan, which is labelled rather than offered.
+    expect(screen.getByText('Your plan')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Use as my plan' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Path B' }))
+    await user.click(screen.getByRole('button', { name: 'Use as my plan' }))
+
+    expect(actions.activateScenario).toHaveBeenCalledWith(2)
+  })
+
+  it('measures Progress against the plan, not the scenario loaded in the editor', async () => {
+    const user = userEvent.setup()
+    const account = makeWealthAccount({ id: 1, kind: 'investment' })
+    const plan = makeScenario({
+      id: 1,
+      name: 'Path A',
+      sortOrder: 0,
+      isActive: true,
+      planStartDate: '2024-01-01',
+      startInvestedCents: 100_000_000,
+      monthlyContributionCents: 100_000,
+    })
+    const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1, planStartDate: '2024-01-01' })
+    const checkin = makeWealthCheckin({
+      id: 1,
+      checkinDate: '2024-07-01',
+      entries: [{ accountId: 1, valueCents: 1_000 }],
+    })
+    const model = buildExpenseModel(
+      makeDataset({
+        goalScenarios: [plan, other],
+        wealthAccounts: [account],
+        wealthCheckins: [checkin],
+      }),
+    )
+    render(<GoalsTab model={model} actions={makeActions()} />)
+
+    // Load the other scenario into the editor, then look at Progress.
+    await user.click(screen.getByRole('button', { name: 'Path B' }))
+    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+
+    // Against Path A's 100M start the tiny check-in is far behind; against Path B's
+    // 10M start it would still be behind, but the delta names the plan's number.
+    expect(screen.getByText(/behind plan/i)).toBeInTheDocument()
+    expect(screen.getByText(/measured against Path A/i)).toBeInTheDocument()
   })
 
   it('defaults the mobile Chart/Adjust toggle to Chart', () => {

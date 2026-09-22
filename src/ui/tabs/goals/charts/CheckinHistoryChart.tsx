@@ -19,33 +19,33 @@ import goalStyles from '../goals.module.css'
 interface Props {
   checkins: WealthCheckin[]
   accounts: WealthAccount[]
-  activeScenario: GoalScenario | null
+  plan: GoalScenario | null
 }
 
 const ACTUAL_COLOR = '#10b981'
 
-export function CheckinHistoryChart({ checkins, accounts, activeScenario }: Props) {
+export function CheckinHistoryChart({ checkins, accounts, plan }: Props) {
   const format = useMoneyFormat()
 
   const { series, labels, todayIndex, years, scatterPoints } = useMemo(() => {
-    if (!activeScenario?.planStartDate) {
+    if (!plan?.planStartDate) {
       return { series: [], labels: [], todayIndex: undefined, years: [] as number[], scatterPoints: [] as ScatterPoint[] }
     }
 
-    const params = scenarioToParams(activeScenario)
+    const params = scenarioToParams(plan)
     const points = projectNetWorth(params)
     const yrs = points.map((p) => p.year)
 
     const projSeries: ChartSeries = {
       id: 'plan',
-      color: activeScenario.color,
+      color: plan.color,
       values: points.map((p) => p.investedCents),
       dashed: false,
     }
 
     const scatter: ScatterPoint[] = checkins
       .map((c) => {
-        const offset = yearOffsetFromDate(activeScenario.planStartDate!, c.checkinDate)
+        const offset = yearOffsetFromDate(plan.planStartDate!, c.checkinDate)
         if (offset === null) return null
         const value = checkinInvestedCents(c, accounts)
         return { xIndex: offset, value }
@@ -61,7 +61,7 @@ export function CheckinHistoryChart({ checkins, accounts, activeScenario }: Prop
     }
 
     const todayOffset = yearOffsetFromDate(
-      activeScenario.planStartDate,
+      plan.planStartDate,
       new Date().toISOString().slice(0, 10),
     )
 
@@ -72,20 +72,20 @@ export function CheckinHistoryChart({ checkins, accounts, activeScenario }: Prop
       years: yrs,
       scatterPoints: scatter,
     }
-  }, [activeScenario, checkins, accounts])
+  }, [plan, checkins, accounts])
 
-  const planColor = activeScenario?.color
+  const planColor = plan?.color
   const tooltip = useCallback(
     (i: number) => buildCheckinTooltip(i, years, series[0]?.values ?? [], scatterPoints, format, planColor, ACTUAL_COLOR),
     [years, series, scatterPoints, format, planColor],
   )
 
-  if (!activeScenario?.planStartDate) {
+  if (!plan?.planStartDate) {
     return null
   }
 
   const legendItems = [
-    { label: 'Plan', color: activeScenario.color },
+    { label: 'Plan', color: plan.color },
     { label: 'Actual', color: ACTUAL_COLOR },
   ]
 

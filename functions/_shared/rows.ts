@@ -218,6 +218,7 @@ export interface GoalScenarioRow {
   safe_withdrawal_rate: number
   plan_start_date: string | null
   life_events: string
+  is_active: number
 }
 
 export function toGoalScenario(r: GoalScenarioRow): GoalScenario {
@@ -250,6 +251,7 @@ export function toGoalScenario(r: GoalScenarioRow): GoalScenario {
     safeWithdrawalRate: r.safe_withdrawal_rate,
     planStartDate: r.plan_start_date ?? null,
     lifeEvents,
+    isActive: r.is_active === 1,
   }
 }
 

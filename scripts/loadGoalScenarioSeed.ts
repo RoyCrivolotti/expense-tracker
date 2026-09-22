@@ -20,6 +20,8 @@ export interface GoalScenarioSeedEntry {
   rentMonthlyCents: number
   annualSpendCents: number
   safeWithdrawalRate: number
+  /** The owner's plan. Omitted everywhere, the first entry becomes it. */
+  isActive?: boolean
 }
 
 export interface GoalScenarioSeedFile {
@@ -50,10 +52,15 @@ export function loadGoalScenarioSeed(): GoalScenarioSeedFile {
     throw new Error('goal-scenarios.seed.json must contain a non-empty "scenarios" array')
   }
 
+  const flagged = raw.scenarios.filter((s) => s.isActive === true)
+  if (flagged.length > 1) {
+    throw new Error('goal-scenarios.seed.json marks more than one scenario as isActive')
+  }
   return {
     scenarios: raw.scenarios.map((s, i) => ({
       ...s,
       color: s.color ?? DEFAULT_COLORS[i % DEFAULT_COLORS.length] ?? '#6366f1',
+      isActive: flagged.length === 0 ? i === 0 : s.isActive === true,
     })),
   }
 }

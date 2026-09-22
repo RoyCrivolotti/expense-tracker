@@ -454,8 +454,12 @@ export async function createScenario(
        house_price_cents, down_payment_fraction, house_purchase_year, transaction_costs_cents,
        mortgage_term_years, mortgage_rate_annual, house_appreciation_rate,
        rent_monthly_cents, annual_spend_cents, safe_withdrawal_rate, life_events,
-       plan_start_date
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       plan_start_date, is_active
+     ) VALUES (
+       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+       CASE WHEN EXISTS (SELECT 1 FROM goal_scenarios WHERE owner = ? AND is_active = 1)
+         THEN 0 ELSE 1 END
+     )
      RETURNING *`,
   )
     .bind(
@@ -482,9 +486,33 @@ export async function createScenario(
       // No DEFAULT on this column, and trackStatus() returns null without it — a
       // scenario missing it silently loses its on/off-track badge and chart markers.
       input.planStartDate ?? null,
+      // An owner's first scenario is their plan; nobody should have to find the
+      // button before Progress means anything.
+      owner,
     )
     .first<GoalScenarioRow>()
   if (!row) throw new HttpError(500, 'Scenario insert failed')
+  return toGoalScenario(row)
+}
+
+export async function activateScenario(
+  env: Env,
+  owner: string,
+  id: number,
+): Promise<GoalScenario> {
+  // Two statements, not one CASE: SQLite checks the partial unique index row by row,
+  // so a single UPDATE that sets the new plan before it clears the old one fails.
+  // batch() runs them as one transaction.
+  const [, result] = await env.DB.batch<GoalScenarioRow>([
+    env.DB.prepare('UPDATE goal_scenarios SET is_active = 0 WHERE owner = ? AND is_active = 1')
+      .bind(owner),
+    env.DB.prepare(
+      `UPDATE goal_scenarios SET is_active = 1, updated_at = datetime('now')
+       WHERE id = ? AND owner = ? RETURNING *`,
+    ).bind(id, owner),
+  ])
+  const row = result?.results?.[0]
+  if (!row) throw new HttpError(404, 'Scenario not found')
   return toGoalScenario(row)
 }
 

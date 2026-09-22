@@ -39,7 +39,7 @@ describe('GoalsNarrative', () => {
 
   it('omits the milestone stat from the compact strip when there are none', () => {
     render(<GoalsNarrative draft={makeScenario()} milestones={[]} compact />)
-    expect(screen.getByText('Current plan summary')).toBeTruthy()
+    expect(screen.getByText('Scenario summary')).toBeTruthy()
     expect(screen.queryByText(/invested$/)).toBeNull()
   })
 })

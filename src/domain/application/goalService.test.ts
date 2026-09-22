@@ -99,3 +99,41 @@ describe('the scenario write paths', () => {
     expect(patched.housePurchaseYear).toBe(0)
   })
 })
+
+describe('the plan', () => {
+  it('is the first scenario an owner saves, then whichever one they activate', async () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    const first = await createScenario(repo, OWNER, newScenario({ name: 'First' }))
+    const second = await createScenario(repo, OWNER, newScenario({ name: 'Second' }))
+    expect(first.isActive).toBe(true)
+    expect(second.isActive).toBe(false)
+
+    const activated = await patchScenario(repo, OWNER, second.id, { isActive: true })
+
+    expect(activated.isActive).toBe(true)
+    const { goalScenarios } = await repo.loadDataset(OWNER)
+    expect(goalScenarios.map((s) => [s.name, s.isActive])).toEqual([
+      ['First', false],
+      ['Second', true],
+    ])
+  })
+
+  it('cannot be unset or smuggled into a field patch', async () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    const saved = await createScenario(repo, OWNER, newScenario())
+
+    await expect(patchScenario(repo, OWNER, saved.id, { isActive: false })).rejects.toThrow(
+      'isActive can only be set to true',
+    )
+    await expect(
+      patchScenario(repo, OWNER, saved.id, { isActive: true, horizonYears: 20 }),
+    ).rejects.toThrow('only on its own')
+  })
+
+  it('is a 404 for a scenario the owner does not have', async () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    await expect(patchScenario(repo, OWNER, 999, { isActive: true })).rejects.toThrow(
+      'Scenario not found',
+    )
+  })
+})

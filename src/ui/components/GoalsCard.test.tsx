@@ -9,21 +9,27 @@ describe('GoalsCard', () => {
     expect(screen.getByText(/Model multi-scenario wealth projections/i)).toBeInTheDocument()
   })
 
+  it('asks for a plan to be chosen when scenarios exist but none is the plan', () => {
+    const scenario = makeScenario({ id: 1, isActive: false })
+    render(<GoalsCard dataset={makeDataset({ goalScenarios: [scenario] })} />)
+    expect(screen.getByText(/pick one of your scenarios as your plan/i)).toBeInTheDocument()
+  })
+
   it('renders scenario headline when a scenario is present', () => {
-    const scenario = makeScenario({ id: 1, name: 'Test Plan' })
+    const scenario = makeScenario({ id: 1, isActive: true, name: 'Test Plan' })
     render(<GoalsCard dataset={makeDataset({ goalScenarios: [scenario] })} />)
     expect(screen.getByRole('heading', { name: 'Goals', hidden: true })).toBeInTheDocument()
   })
 
   it('shows no track badge when there are no check-ins', () => {
-    const scenario = makeScenario({ id: 1, planStartDate: '2024-01-01' })
+    const scenario = makeScenario({ id: 1, isActive: true, planStartDate: '2024-01-01' })
     render(<GoalsCard dataset={makeDataset({ goalScenarios: [scenario] })} />)
     expect(screen.queryByText(/ahead|behind|on track/i)).not.toBeInTheDocument()
   })
 
   it('shows ahead badge when actual invested exceeds projection', () => {
     const account = makeWealthAccount({ id: 1, kind: 'investment' })
-    const scenario = makeScenario({
+    const scenario = makeScenario({ isActive: true,
       id: 1,
       planStartDate: '2024-01-01',
       startInvestedCents: 1_000_000,
@@ -50,7 +56,7 @@ describe('GoalsCard', () => {
 
   it('shows behind badge when actual invested is below projection', () => {
     const account = makeWealthAccount({ id: 1, kind: 'investment' })
-    const scenario = makeScenario({
+    const scenario = makeScenario({ isActive: true,
       id: 1,
       planStartDate: '2020-01-01',
       startInvestedCents: 100_000_000,
@@ -76,7 +82,7 @@ describe('GoalsCard', () => {
   })
 
   it('renders an "Open Goals" link when onOpenGoals is provided', () => {
-    const scenario = makeScenario({ id: 1 })
+    const scenario = makeScenario({ id: 1, isActive: true })
     render(
       <GoalsCard
         dataset={makeDataset({ goalScenarios: [scenario] })}

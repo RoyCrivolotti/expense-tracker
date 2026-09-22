@@ -21,7 +21,7 @@ import { GoalsNarrative } from './GoalsNarrative'
 import { SecondaryCharts } from './SecondaryCharts'
 import { ProgressView } from './ProgressView'
 import { draftFromDataset } from './goalsDefaults'
-import { lastAddedScenario, writePinnedScenarioId } from './scenarioSelection'
+import { activePlan, initialEditorScenario } from './scenarioSelection'
 import { NetWorthChart } from './charts/NetWorthChart'
 import { NetWorthNowCard } from './charts/NetWorthNowCard'
 import type { MonthlySaving } from './charts/SavingsRateChart'
@@ -53,8 +53,9 @@ interface GoalsTabProps {
 }
 
 function scenarioToDraft(s: GoalScenario): NewGoalScenario {
-  const { id, ...rest } = s
+  const { id, isActive, ...rest } = s
   void id
+  void isActive
   return rest
 }
 
@@ -82,11 +83,8 @@ function bootstrapEditor(
   dataset: ExpenseModel['dataset'],
   avgSaving: number,
 ): { activeId: number | null; draft: NewGoalScenario } {
-  const last = lastAddedScenario(dataset.goalScenarios)
-  if (last) {
-    writePinnedScenarioId(last.id)
-    return { activeId: last.id, draft: scenarioToDraft(last) }
-  }
+  const first = initialEditorScenario(dataset.goalScenarios)
+  if (first) return { activeId: first.id, draft: scenarioToDraft(first) }
   return { activeId: null, draft: draftFromDataset(dataset, avgSaving) }
 }
 
@@ -133,10 +131,14 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
     setDraft((prev) => ({ ...prev, ...patch }))
   }, [])
 
+  // Two different "current" scenarios: the one loaded in the editor (activeId), and the
+  // owner's plan, which Progress measures against. Exploring a path must not change
+  // what you are being measured against.
   const activeScenario = useMemo(
     () => dataset.goalScenarios.find((s) => s.id === activeId) ?? null,
     [dataset.goalScenarios, activeId],
   )
+  const plan = useMemo(() => activePlan(dataset.goalScenarios), [dataset.goalScenarios])
 
   const dirty = useMemo(() => {
     if (!activeScenario) return false
@@ -148,8 +150,12 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
   const selectScenario = useCallback((scenario: GoalScenario) => {
     setActiveId(scenario.id)
     setDraft(scenarioToDraft(scenario))
-    writePinnedScenarioId(scenario.id)
   }, [])
+
+  const onActivate = useCallback(() => {
+    if (!actions || activeId == null) return
+    void actions.activateScenario(activeId)
+  }, [actions, activeId])
 
   const onSelectScenario = selectScenario
 
@@ -242,7 +248,7 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
           checkins={dataset.wealthCheckins}
           milestones={milestones}
           reached={reachedMilestones}
-          activeScenario={activeScenario}
+          plan={plan}
           actions={actions}
           canWrite={actions != null}
           settings={dataset.settings}
@@ -283,6 +289,7 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
               onSaveDraft={handleSaveDraft}
               onSaveChanges={onSaveChanges}
               onDiscard={onDiscard}
+              onActivate={onActivate}
               onScenarioCreated={selectScenario}
             />
           </div>

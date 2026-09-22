@@ -105,6 +105,11 @@
   color: var(--exp-danger);
 }
 
+.summaryPlanName {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
 .emptyHint {
   font-size: 0.875rem;
   color: var(--color-text-muted);

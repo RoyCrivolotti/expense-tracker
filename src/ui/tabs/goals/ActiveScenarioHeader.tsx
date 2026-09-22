@@ -17,6 +17,7 @@ interface ActiveScenarioHeaderProps {
   onPatch: (patch: Partial<NewGoalScenario>) => void
   onSaveChanges: () => void
   onDiscard: () => void
+  onActivate: () => void
   onSaveDraft: (name: string) => void
   onScenarioCreated: (scenario: GoalScenario) => void
 }
@@ -32,6 +33,7 @@ export function ActiveScenarioHeader({
   onPatch,
   onSaveChanges,
   onDiscard,
+  onActivate,
   onSaveDraft,
   onScenarioCreated,
 }: ActiveScenarioHeaderProps) {
@@ -69,7 +71,16 @@ export function ActiveScenarioHeader({
 
       {activeScenario ? (
         <>
-          {dirty ? <span className={styles.dirtyPill}>Unsaved changes</span> : null}
+          <div className={styles.pillRow}>
+            {activeScenario.isActive ? (
+              <span className={styles.planPill}>Your plan</span>
+            ) : (
+              <button type="button" className={styles.btnText} onClick={onActivate}>
+                Use as my plan
+              </button>
+            )}
+            {dirty ? <span className={styles.dirtyPill}>Unsaved changes</span> : null}
+          </div>
           <div className={styles.btnRow}>
             <button
               type="button"

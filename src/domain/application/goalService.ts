@@ -1,4 +1,4 @@
-import type { NewGoalScenario } from '../data/dataSource'
+import type { NewGoalScenario, ScenarioPatch } from '../data/dataSource'
 import type { ExpenseRepository } from '../ports/expenseRepository'
 import { ValidationError } from './validationError'
 
@@ -119,9 +119,18 @@ export async function patchScenario(
   repo: ExpenseRepository,
   owner: string,
   id: number,
-  patch: Partial<NewGoalScenario>,
+  patch: ScenarioPatch,
 ) {
-  if (Object.keys(patch).length === 0) throw new ValidationError('Empty patch')
+  const keys = Object.keys(patch)
+  if (keys.length === 0) throw new ValidationError('Empty patch')
+  if ('isActive' in patch) {
+    // Activation moves the flag off another row, which a field patch must never do;
+    // and there is no "deactivate" — an owner either has a plan or picks another.
+    if (patch.isActive !== true || keys.length !== 1) {
+      throw new ValidationError('isActive can only be set to true, and only on its own')
+    }
+    return repo.activateScenario(owner, id)
+  }
   validateScenarioNumbers(patch)
   return repo.updateScenario(owner, id, patch)
 }

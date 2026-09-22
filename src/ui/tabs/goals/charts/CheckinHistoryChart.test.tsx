@@ -36,15 +36,15 @@ describe('CheckinHistoryChart', () => {
       <CheckinHistoryChart
         checkins={[]}
         accounts={[]}
-        activeScenario={makeScenario({ planStartDate: null })}
+        plan={makeScenario({ planStartDate: null })}
       />,
     )
     expect(container.firstChild).toBeNull()
   })
 
-  it('renders nothing when activeScenario is null', () => {
+  it('renders nothing when plan is null', () => {
     const { container } = render(
-      <CheckinHistoryChart checkins={[]} accounts={[]} activeScenario={null} />,
+      <CheckinHistoryChart checkins={[]} accounts={[]} plan={null} />,
     )
     expect(container.firstChild).toBeNull()
   })
@@ -52,7 +52,7 @@ describe('CheckinHistoryChart', () => {
   it('renders chart when scenario has planStartDate', () => {
     const scenario = makeScenario({ planStartDate: '2020-01-01' })
     const { container } = render(
-      <CheckinHistoryChart checkins={[]} accounts={[]} activeScenario={scenario} />,
+      <CheckinHistoryChart checkins={[]} accounts={[]} plan={scenario} />,
     )
     expect(container.querySelector('svg')).not.toBeNull()
   })
@@ -65,7 +65,7 @@ describe('CheckinHistoryChart', () => {
       makeCheckin(2, '2023-06-01', 80_000_000),
     ]
     const { container } = render(
-      <CheckinHistoryChart checkins={checkins} accounts={accounts} activeScenario={scenario} />,
+      <CheckinHistoryChart checkins={checkins} accounts={accounts} plan={scenario} />,
     )
     const circles = container.querySelectorAll('circle')
     expect(circles.length).toBeGreaterThanOrEqual(2)
@@ -74,7 +74,7 @@ describe('CheckinHistoryChart', () => {
   it('renders a today marker line', () => {
     const scenario = makeScenario({ planStartDate: '2020-01-01' })
     const { container } = render(
-      <CheckinHistoryChart checkins={[]} accounts={[]} activeScenario={scenario} />,
+      <CheckinHistoryChart checkins={[]} accounts={[]} plan={scenario} />,
     )
     expect(container.querySelector('svg')).not.toBeNull()
   })
@@ -84,7 +84,7 @@ describe('CheckinHistoryChart', () => {
     const accounts = [makeAccount(1)]
     const checkins = [makeCheckin(1, '2022-06-01', 50_000_000)]
     const { container } = render(
-      <CheckinHistoryChart checkins={checkins} accounts={accounts} activeScenario={scenario} />,
+      <CheckinHistoryChart checkins={checkins} accounts={accounts} plan={scenario} />,
     )
     const legendItems = container.querySelectorAll('ul li')
     const labels = [...legendItems].map((li) => li.textContent)

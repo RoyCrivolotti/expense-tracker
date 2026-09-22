@@ -19,6 +19,7 @@ import {
   patchAfterInstallmentPlanCreate,
   patchAfterInstallmentPlanDelete,
   patchAfterInstallmentPlanUpdate,
+  patchAfterScenarioActivate,
   patchAfterScenarioCreate,
   patchAfterScenarioDelete,
   patchAfterScenarioUpdate,
@@ -149,6 +150,10 @@ export function useExpenseActions(
       updateScenario: async (id, patch) => {
         const scenario = await source.updateScenario!(id, patch)
         applyPatch((d) => patchAfterScenarioUpdate(d, scenario))
+      },
+      activateScenario: async (id) => {
+        const scenario = await source.activateScenario!(id)
+        applyPatch((d) => patchAfterScenarioActivate(d, scenario))
       },
       deleteScenario: async (id) => {
         await source.deleteScenario!(id)

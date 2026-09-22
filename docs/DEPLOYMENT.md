@@ -87,7 +87,7 @@ If Workers Scripts Edit is missing, CI deploy of the backup cron worker fails un
 npx wrangler d1 execute roy-expenses --remote --file=migrations/NNNN_name.sql
 ```
 
-Apply through `0023_drop_goal_inputs.sql` on production.
+Apply through `0024_goal_scenario_active.sql` on production.
 
 **Check what a database actually has before trusting this line.** It has been wrong: on
 2026-09-15 production turned out to have no `_migrations` table at all, `0020` never having
@@ -203,6 +203,8 @@ record on a database that already has a `transactions` table means the same thin
 `0022_backfill_completed_installment_plans.sql` flips `active` to `0` on any installment plan whose linked, non-cancelled transactions already cover every installment. Recording a plan's final installment now does this automatically going forward (see `maybeCompletePlan` in `functions/_shared/dbWrite.ts`); this is the one-time catch-up for plans that finished before that code shipped. Idempotent — running it again against an already-caught-up database updates zero rows. Owner-agnostic — no placeholder substitution needed.
 
 `0023_drop_goal_inputs.sql` drops the `goal_inputs` table and the `liquid_net_worth_cents` column on `settings`. Both were workbook-import leftovers that only ever seeded the first unsaved Goals draft: every saved scenario carries its own house and return assumptions, and a new plan now starts from the latest wealth check-in. Owner-agnostic, no backfill, and the data is gone with it. **Apply it with or after the code deploy**, the other way round from `0021`: the previous release selects from `goal_inputs` on every dataset load and would 500 against a database that no longer has it.
+
+`0024_goal_scenario_active.sql` adds `is_active INTEGER NOT NULL DEFAULT 0` on `goal_scenarios`, backfills each owner's newest scenario as their plan (what the app was already comparing against, so nothing moves on deploy), and adds a partial unique index so an owner can never hold two. The backfill is scoped to owners with no plan yet. Owner-agnostic — no placeholder substitution needed. **Apply it before (or with) the code deploy** — creating and activating a scenario both write the column.
 
 ## Old URL
 

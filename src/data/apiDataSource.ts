@@ -179,6 +179,12 @@ export const apiDataSource: ExpenseDataSource = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(patch),
     }),
+  activateScenario: (id: number) =>
+    req<GoalScenario>(`${BASE}/scenarios/${id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ isActive: true }),
+    }),
   deleteScenario: async (id: number) => {
     await req(`${BASE}/scenarios/${id}`, { method: 'DELETE' })
   },

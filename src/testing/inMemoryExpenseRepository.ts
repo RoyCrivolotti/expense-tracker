@@ -794,9 +794,18 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
         id: nextId(store.goalScenarios),
         ...input,
         name: input.name.trim(),
+        isActive: !store.goalScenarios.some((s) => s.isActive),
       }
       store.goalScenarios.push(scenario)
       return Promise.resolve({ ...scenario })
+    },
+
+    activateScenario: (owner, id) => {
+      const store = storeFor(owner)
+      const target = store.goalScenarios.find((s) => s.id === id)
+      if (!target) throw new RepoHttpError(404, 'Scenario not found')
+      store.goalScenarios = store.goalScenarios.map((s) => ({ ...s, isActive: s.id === id }))
+      return Promise.resolve({ ...target, isActive: true })
     },
 
     updateScenario: (owner, id, patch) => {

@@ -14,7 +14,10 @@ import {
   patchAfterCategoryDelete,
   patchAfterFlag,
   patchAfterFlagDelete,
+  patchAfterScenarioActivate,
+  patchAfterScenarioCreate,
 } from './datasetPatches'
+import { makeScenario } from '../testing/factories'
 
 function dataset(overrides: Partial<ExpenseDataset> = {}): ExpenseDataset {
   return {
@@ -521,5 +524,45 @@ describe('deleting a transaction drops its receipts from the dataset', () => {
     const before = dataset({ transactions: [txn(1), txn(2)], attachments: [attachment, other] })
 
     expect(patchAfterBulkDelete(before, [1, 2]).attachments).toEqual([])
+  })
+})
+
+describe('the plan after scenario patches', () => {
+  it('moves to the activated scenario without a reload', () => {
+    const before = dataset({
+      goalScenarios: [
+        makeScenario({ id: 1, sortOrder: 0, isActive: true }),
+        makeScenario({ id: 2, sortOrder: 1 }),
+      ],
+    })
+
+    const next = patchAfterScenarioActivate(before, makeScenario({ id: 2, sortOrder: 1, isActive: true }))
+
+    expect(next.goalScenarios.map((s) => [s.id, s.isActive])).toEqual([
+      [1, false],
+      [2, true],
+    ])
+  })
+
+  it('treats a created scenario that came back as the plan the same way', () => {
+    const before = dataset({ goalScenarios: [makeScenario({ id: 1, isActive: true })] })
+
+    const next = patchAfterScenarioCreate(before, makeScenario({ id: 2, sortOrder: 1, isActive: true }))
+
+    expect(next.goalScenarios.map((s) => [s.id, s.isActive])).toEqual([
+      [1, false],
+      [2, true],
+    ])
+  })
+
+  it('leaves the plan alone when the created scenario is not it', () => {
+    const before = dataset({ goalScenarios: [makeScenario({ id: 1, isActive: true })] })
+
+    const next = patchAfterScenarioCreate(before, makeScenario({ id: 2, sortOrder: 1 }))
+
+    expect(next.goalScenarios.map((s) => [s.id, s.isActive])).toEqual([
+      [1, true],
+      [2, false],
+    ])
   })
 })

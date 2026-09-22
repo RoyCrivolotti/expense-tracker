@@ -26,14 +26,14 @@ for (const s of scenarios) {
        expected_real_return, horizon_years,
        house_price_cents, down_payment_fraction, house_purchase_year, transaction_costs_cents,
        mortgage_term_years, mortgage_rate_annual, house_appreciation_rate,
-       rent_monthly_cents, annual_spend_cents, safe_withdrawal_rate
+       rent_monthly_cents, annual_spend_cents, safe_withdrawal_rate, is_active
      ) VALUES (
        ${str(OWNER)}, ${str(s.name)}, ${str(s.color ?? '#6366f1')}, ${s.sortOrder},
        ${s.startInvestedCents}, ${s.monthlyContributionCents}, ${s.annualContributionGrowth},
        ${s.expectedRealReturn}, ${s.horizonYears},
        ${s.housePriceCents}, ${s.downPaymentFraction}, ${purchaseYear}, ${s.transactionCostsCents},
        ${s.mortgageTermYears}, ${s.mortgageRateAnnual}, ${s.houseAppreciationRate},
-       ${s.rentMonthlyCents}, ${s.annualSpendCents}, ${s.safeWithdrawalRate}
+       ${s.rentMonthlyCents}, ${s.annualSpendCents}, ${s.safeWithdrawalRate}, ${s.isActive ? 1 : 0}
      );`,
   )
 }

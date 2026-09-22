@@ -18,16 +18,16 @@ function makeCheckin(
 
 describe('WealthSummaryCard', () => {
   it('shows empty state when no check-ins', () => {
-    render(<WealthSummaryCard checkins={[]} accounts={[]} activeScenario={null} />)
+    render(<WealthSummaryCard checkins={[]} accounts={[]} plan={null} />)
     expect(screen.getByText(/log your first wealth check-in/i)).toBeInTheDocument()
   })
 
   it('shows net worth from latest check-in', () => {
     const accounts = [makeAccount(1, 'investment'), makeAccount(2, 'cash')]
     const checkins = [makeCheckin(1, '2025-06-01', [{ accountId: 1, valueCents: 100_000_00 }])]
-    render(<WealthSummaryCard checkins={checkins} accounts={accounts} activeScenario={null} />)
+    render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={null} />)
     expect(screen.getByText(/progress snapshot/i)).toBeInTheDocument()
-    expect(screen.getByText(/no active plan/i)).toBeInTheDocument()
+    expect(screen.getByText(/no plan chosen yet/i)).toBeInTheDocument()
   })
 
   it('shows on-track status when scenario has planStartDate', () => {
@@ -43,7 +43,7 @@ describe('WealthSummaryCard', () => {
       makeCheckin(2, '2025-06-01', [{ accountId: 1, valueCents: 999_999_99 }]),
     ]
     render(
-      <WealthSummaryCard checkins={checkins} accounts={accounts} activeScenario={scenario} />,
+      <WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />,
     )
     // Should show "Ahead of plan" or "Behind plan" status text
     expect(screen.getByText(/ahead of plan|behind plan/i)).toBeInTheDocument()
@@ -63,7 +63,7 @@ describe('WealthSummaryCard', () => {
       makeCheckin(1, '2025-06-01', [{ accountId: 1, valueCents: 100_000_000_00 }]),
     ]
     render(
-      <WealthSummaryCard checkins={checkins} accounts={accounts} activeScenario={scenario} />,
+      <WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />,
     )
     expect(screen.getByText(/month/i)).toBeInTheDocument()
   })
