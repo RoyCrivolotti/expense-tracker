@@ -477,4 +477,26 @@ describe('ExpenseReportView leaving', () => {
 
     expect(document.body.dataset.reportOpen).toBeUndefined()
   })
+
+  const withDataset = (show: boolean, dataset: ExpenseDataset) => (
+    <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
+      <Presence show={show} exitMs={EXIT_MS.fade}>
+        <ExpenseReportView dataset={dataset} lookup={buildLookup(dataset)} flagId={1} onClose={vi.fn()} issuedOn="2026-09-12" />
+      </Presence>
+    </MoneyFormatProvider>
+  )
+
+  it('keeps its content through the fade, even if the claim disappears from the dataset underneath it', () => {
+    const withClaim = datasetWith([txn(1, '2026-05-02')])
+    const { rerender } = render(withDataset(true, withClaim))
+    expect(screen.getByText('Txn 1')).toBeInTheDocument()
+
+    // The dataset now has nothing for this flag — read live, the report would return
+    // null here and vanish before its fade has even started.
+    rerender(withDataset(false, datasetWith([])))
+    expect(screen.getByText('Txn 1')).toBeInTheDocument()
+
+    void act(() => vi.advanceTimersByTime(EXIT_MS.fade))
+    expect(screen.queryByText('Txn 1')).toBeNull()
+  })
 })

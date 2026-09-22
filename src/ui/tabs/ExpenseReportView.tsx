@@ -12,7 +12,7 @@ import { ExpenseReportSheet } from './ExpenseReportSheet'
 import { todayIso } from '../components/transactionFormState'
 import { exitVars } from '../hooks/motion'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
-import { useExit } from '../hooks/usePresence'
+import { useExit, useHeldWhileLeaving } from '../hooks/usePresence'
 import { downloadExpenseReportCsv } from '../../data/expenseReportCsv'
 import { deliverReceipts } from '../../data/receiptDownload'
 import { namedReceipts, receiptPackName } from '../../domain/engine/receiptFiles'
@@ -106,7 +106,7 @@ function ReceiptsButton({ report, lookup }: { report: ExpenseReport; lookup: Loo
 }
 
 export function ExpenseReportView({
-  dataset,
+  dataset: liveDataset,
   lookup,
   flagId,
   settledByPaymentId,
@@ -116,6 +116,11 @@ export function ExpenseReportView({
 }: Props) {
   const format = useMoneyFormat()
   const { leaving, exitMs } = useExit()
+  // Frozen for the exit, the same way ConfigModal holds its model — otherwise a claim
+  // changing underneath a fading report (its last transaction edited or removed from a
+  // stacked editor, a sync landing) can reword it mid-fade or return null and cut the
+  // exit short, exactly what Presence exists to prevent.
+  const dataset = useHeldWhileLeaving(liveDataset)
 
   /*
    * The overlay is portalled out of #root and flags the body while it is open,

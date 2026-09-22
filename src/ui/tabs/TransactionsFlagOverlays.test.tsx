@@ -234,4 +234,16 @@ describe('TransactionsFlagOverlays leaving', () => {
     void act(() => vi.advanceTimersByTime(EXIT_MS.sheet))
     expect(screen.queryByRole('dialog', { name: 'Flags' })).not.toBeInTheDocument()
   })
+
+  it('keeps a report on screen while it fades, even if the claim disappears from the dataset', () => {
+    const { update } = renderOverlays(OPEN, { reportFlagId: 1 })
+
+    // Nothing left for this flag in the new dataset — read live, the report would
+    // drop out the instant this update lands instead of fading.
+    update({ reportFlagId: null, model: buildExpenseModel(makeDataset({ flags: [WORK] })) })
+    expect(screen.getByRole('heading', { name: 'Work travel' })).toBeInTheDocument()
+
+    void act(() => vi.advanceTimersByTime(EXIT_MS.fade))
+    expect(screen.queryByRole('heading', { name: 'Work travel' })).not.toBeInTheDocument()
+  })
 })

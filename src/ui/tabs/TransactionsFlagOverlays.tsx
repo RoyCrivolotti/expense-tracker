@@ -1,4 +1,3 @@
-import { buildFlagGroup } from '../../domain/engine/flagGroups'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import { PresenceValue } from '../components/Presence'
@@ -44,17 +43,18 @@ export function TransactionsFlagOverlays({
   return (
     <>
       <PresenceValue value={reportFlagId} exitMs={EXIT_MS.fade}>
-        {(flagId) =>
-          buildFlagGroup(flagId, model.dataset.transactions, model.dataset.flags) ? (
-            <ExpenseReportView
-              dataset={model.dataset}
-              lookup={model.lookup}
-              flagId={flagId}
-              onClose={onCloseReport}
-              {...(actions ? { onOpenTransaction: actions.onEdit } : {})}
-            />
-          ) : null
-        }
+        {(flagId) => (
+          // ExpenseReportView runs the identical buildFlagGroup check internally and
+          // returns null itself when there's nothing to claim — this gate would only
+          // ever agree with that one, and reads live data the leaf already holds.
+          <ExpenseReportView
+            dataset={model.dataset}
+            lookup={model.lookup}
+            flagId={flagId}
+            onClose={onCloseReport}
+            {...(actions ? { onOpenTransaction: actions.onEdit } : {})}
+          />
+        )}
       </PresenceValue>
 
       <PresenceValue value={pastPaymentId} exitMs={EXIT_MS.fade}>
