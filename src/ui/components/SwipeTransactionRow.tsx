@@ -6,7 +6,7 @@ import type { Lookup } from '../format'
 import { EXIT_MS, foldDone } from '../hooks/motion'
 import { useToast } from '../hooks/useToast'
 import { ConfirmSheet } from './ConfirmSheet'
-import { Presence } from './Presence'
+import { PresenceValue } from './Presence'
 import { TransactionRowBody } from './TransactionRowBody'
 import styles from './TransactionList.module.css'
 
@@ -125,16 +125,21 @@ export function SwipeTransactionRow({
           </div>
         </div>
       </div>
-      <Presence show={pendingDelete} exitMs={EXIT_MS.sheet}>
-        <ConfirmSheet
-          title="Delete transaction?"
-          message={deleteConfirmMessage(txn, lookup)}
-          confirmLabel="Delete"
-          destructive
-          onConfirm={() => void confirmDelete()}
-          onCancel={() => setPendingDelete(false)}
-        />
-      </Presence>
+      {/* A plain boolean Presence would run deleteConfirmMessage as eager JSX on every
+          render of every row in this unvirtualized list; PresenceValue's function-as-
+          children form only builds it once a delete is actually pending. */}
+      <PresenceValue value={pendingDelete ? txn : null} exitMs={EXIT_MS.sheet}>
+        {(heldTxn) => (
+          <ConfirmSheet
+            title="Delete transaction?"
+            message={deleteConfirmMessage(heldTxn, lookup)}
+            confirmLabel="Delete"
+            destructive
+            onConfirm={() => void confirmDelete()}
+            onCancel={() => setPendingDelete(false)}
+          />
+        )}
+      </PresenceValue>
     </>
   )
 }

@@ -4,6 +4,7 @@ import { isStatementPaid } from '../../engine/status'
 import { todayLocalIso } from '../dates'
 import { EXIT_MS } from '../hooks/motion'
 import type { ExpenseModel } from '../useExpenseData'
+import type { Account } from '../../types'
 import { PresenceValue } from './Presence'
 import { StatementPaymentSheet } from './StatementPaymentSheet'
 import { StatementSummaryRow } from './StatementSummaryRow'
@@ -24,6 +25,14 @@ interface EditingKey {
   yearMonth: string
 }
 
+interface EditingSheet {
+  key: EditingKey
+  account: Account
+  amountCents: number
+  paid: boolean
+  paidOn: string | undefined
+}
+
 function findPaidOn(
   model: ExpenseModel,
   accountId: number,
@@ -37,7 +46,10 @@ function findPaidOn(
 export function StatementToggles({ model, onToggle }: Props) {
   const [pending, setPending] = useState<string | null>(null)
   const [editing, setEditing] = useState<EditingKey | null>(null)
-  const deferred = model.dataset.accounts.filter((a) => a.settlement === 'deferred' && a.active)
+  const deferred = useMemo(
+    () => model.dataset.accounts.filter((a) => a.settlement === 'deferred' && a.active),
+    [model.dataset],
+  )
   const months = [...model.months].reverse()
 
   const reconciliation = useMemo(
@@ -69,10 +81,24 @@ export function StatementToggles({ model, onToggle }: Props) {
     }
   }
 
-  const editingAccount = editing
-    ? deferred.find((a) => a.id === editing.accountId) ?? null
-    : null
-  const sheet = editing && editingAccount ? { key: editing, account: editingAccount } : null
+  // The whole displayed record, not just the key — otherwise a live change to `model`
+  // during the sheet's exit would reword the closing sheet's amount or paid state, and a
+  // fresh object every render would make PresenceValue think the value had changed on
+  // every unrelated re-render while the sheet is open, forcing an extra render pass.
+  const sheet = useMemo<EditingSheet | null>(() => {
+    if (!editing) return null
+    const account = deferred.find((a) => a.id === editing.accountId)
+    if (!account) return null
+    return {
+      key: editing,
+      account,
+      amountCents: chargeCents(editing.accountId, editing.yearMonth),
+      paid: isStatementPaid(model.dataset.accountStatements, editing.accountId, editing.yearMonth),
+      paidOn: findPaidOn(model, editing.accountId, editing.yearMonth),
+    }
+    // chargeCents closes over reconciliation, already listed below; it needs no entry of its own.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing, deferred, model, reconciliation])
 
   return (
     <div className={styles.wrap}>
@@ -103,16 +129,16 @@ export function StatementToggles({ model, onToggle }: Props) {
       ))}
 
       <PresenceValue value={sheet} exitMs={EXIT_MS.sheet}>
-        {({ key, account }) => (
+        {({ key, account, amountCents, paid, paidOn }) => (
           <StatementPaymentSheet
             cardName={account.name}
             yearMonth={key.yearMonth}
-            amountCents={chargeCents(key.accountId, key.yearMonth)}
-            paid={isStatementPaid(model.dataset.accountStatements, key.accountId, key.yearMonth)}
-            paidOn={findPaidOn(model, key.accountId, key.yearMonth)}
+            amountCents={amountCents}
+            paid={paid}
+            paidOn={paidOn}
             disabled={pending === `${key.accountId}:${key.yearMonth}`}
             onClose={() => setEditing(null)}
-            onSave={(paid, paidOn) => save(key.accountId, key.yearMonth, paid, paidOn)}
+            onSave={(nextPaid, nextPaidOn) => save(key.accountId, key.yearMonth, nextPaid, nextPaidOn)}
           />
         )}
       </PresenceValue>

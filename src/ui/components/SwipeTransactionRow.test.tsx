@@ -134,6 +134,24 @@ describe('SwipeTransactionRow deleting', () => {
     void act(() => vi.advanceTimersByTime(EXIT_MS.sheet))
     expect(screen.queryByRole('alertdialog')).toBeNull()
   })
+
+  it('does not build the delete message on an unrelated re-render before any delete is pending', () => {
+    // The row's own body reads the category name twice on a blank description (the meta
+    // line and the description fallback) regardless of this fix. Opening confirm would
+    // trigger a re-render either way, so the meaningful check is a re-render that has
+    // nothing to do with pendingDelete: the eager form built the message on every one of
+    // those too, adding a third call the lazy form should not.
+    const blank: Transaction = { ...txn, description: '' }
+    const categoryName = vi.spyOn(lookup, 'categoryName')
+    const { rerender } = render(
+      <SwipeTransactionRow txn={blank} lookup={lookup} showDate={false} onDelete={vi.fn()} />,
+    )
+    categoryName.mockClear()
+
+    rerender(<SwipeTransactionRow txn={blank} lookup={lookup} showDate onDelete={vi.fn()} />)
+
+    expect(categoryName).toHaveBeenCalledTimes(2)
+  })
 })
 
 describe('SwipeTransactionRow gestures', () => {

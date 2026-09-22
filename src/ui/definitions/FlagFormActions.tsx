@@ -1,8 +1,9 @@
+import { useState } from 'react'
 import type { Flag } from '../../types'
 import { ConfirmSheet } from '../components/ConfirmSheet'
 import { flagDeleteMessage } from '../components/flagPickerOptions'
 import { Presence } from '../components/Presence'
-import { EXIT_MS } from '../hooks/motion'
+import { EXIT_MS, afterExit } from '../hooks/motion'
 import styles from './FlagForm.module.css'
 
 interface Props {
@@ -31,6 +32,23 @@ export function FlagFormActions({
   onConfirmingChange,
   onDelete,
 }: Props) {
+  // Confirming closes this sheet and asks the parent to delete in the same click; the
+  // parent's own reaction to a settled delete unmounts the whole form (see FlagsModal),
+  // which would otherwise cut this sheet's exit short whenever the request beats it.
+  // `busy` doesn't flip true until `onDelete` actually fires below, so this stands in
+  // for it during the wait and hands off to `busy` the moment the real request starts.
+  const [awaitingDelete, setAwaitingDelete] = useState(false)
+  // Adjusted during render rather than an effect, the same way Presence follows a prop
+  // without an extra commit: one-directional and guarded, so it cannot loop.
+  if (busy && awaitingDelete) setAwaitingDelete(false)
+
+  const confirmDelete = async () => {
+    setAwaitingDelete(true)
+    onConfirmingChange(false)
+    await afterExit(EXIT_MS.sheet)
+    onDelete()
+  }
+
   return (
     <>
       <div className={styles.actions}>
@@ -46,7 +64,7 @@ export function FlagFormActions({
         <button
           type="button"
           className={styles.deleteBtn}
-          disabled={busy}
+          disabled={busy || awaitingDelete}
           onClick={() => onConfirmingChange(true)}
         >
           Delete flag
@@ -60,10 +78,7 @@ export function FlagFormActions({
             message={flagDeleteMessage(usageCount)}
             confirmLabel="Delete"
             destructive
-            onConfirm={() => {
-              onConfirmingChange(false)
-              onDelete()
-            }}
+            onConfirm={() => void confirmDelete()}
             onCancel={() => onConfirmingChange(false)}
           />
         </Presence>

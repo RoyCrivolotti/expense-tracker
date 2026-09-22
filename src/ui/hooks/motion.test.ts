@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { EXIT_MS, exitVars, foldDone, motionEnabled, setMotionDisabledForTests } from './motion'
+import { EXIT_MS, afterExit, exitVars, foldDone, motionEnabled, setMotionDisabledForTests } from './motion'
 
 /** A duration token from theme.css, in ms, so the script and the stylesheet cannot drift. */
 function token(name: string): number {
@@ -59,6 +59,33 @@ describe('EXIT_MS', () => {
 
   it('folds for exactly as long as the stylesheet does, since the script waits on the CSS', () => {
     expect(EXIT_MS.fold).toBe(token('--motion-fold'))
+  })
+})
+
+describe('afterExit', () => {
+  it('waits out any given duration when motion is on, and does not wait when it is off', async () => {
+    vi.useFakeTimers()
+    try {
+      setMotionDisabledForTests(false)
+      let settled = false
+      void afterExit(90).then(() => {
+        settled = true
+      })
+      await vi.advanceTimersByTimeAsync(89)
+      expect(settled).toBe(false)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(settled).toBe(true)
+
+      setMotionDisabledForTests(true)
+      let immediate = false
+      void afterExit(90).then(() => {
+        immediate = true
+      })
+      await vi.advanceTimersByTimeAsync(0)
+      expect(immediate).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 

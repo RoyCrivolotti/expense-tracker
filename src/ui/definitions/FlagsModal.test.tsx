@@ -1,11 +1,12 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ExpenseDataset, Transaction } from '../../types'
 import type { ExpenseActions } from '../actions'
 import { makeDataset, makeFlag } from '../../testing/factories'
 import { buildLookup } from '../format'
 import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
+import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
 import type { ExpenseModel } from '../useExpenseData'
 import { FlagsModal } from './FlagsModal'
 
@@ -197,5 +198,50 @@ describe('FlagsModal — reaching an archived claim', () => {
     renderModal(makeDataset({ flags: [work], transactions: [] }), {}, { onOpenReport: vi.fn() })
 
     expect(screen.queryByRole('button', { name: 'Expense report' })).not.toBeInTheDocument()
+  })
+})
+
+describe('FlagsModal — deleting while the confirm sheet leaves', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    setMotionDisabledForTests(false)
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    setMotionDisabledForTests(true)
+  })
+
+  it('keeps the confirm sheet through its own exit, even though the delete settles first', async () => {
+    const deleteFlag = vi.fn().mockResolvedValue({ unflagged: 1 })
+    renderModal(makeDataset({ flags: [work], transactions: [txn(1)] }), { deleteFlag })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete flag' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+
+    // The request has had time to settle (a real one is often faster than 170ms), but the
+    // sheet's own exit has not — it must still be on screen, mid-fade, not yanked out.
+    await act(async () => {})
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument()
+    expect(deleteFlag).not.toHaveBeenCalled()
+
+    await act(() => vi.advanceTimersByTimeAsync(EXIT_MS.sheet))
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(deleteFlag).toHaveBeenCalledWith(1)
+  })
+
+  it('will not queue a second delete while the first is still leaving', async () => {
+    const deleteFlag = vi.fn().mockResolvedValue({ unflagged: 1 })
+    renderModal(makeDataset({ flags: [work], transactions: [txn(1)] }), { deleteFlag })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete flag' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    await act(async () => {})
+
+    expect(screen.getByRole('button', { name: 'Delete flag' })).toBeDisabled()
+
+    await act(() => vi.advanceTimersByTimeAsync(EXIT_MS.sheet))
+    expect(deleteFlag).toHaveBeenCalledTimes(1)
   })
 })

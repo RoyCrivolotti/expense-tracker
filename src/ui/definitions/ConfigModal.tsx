@@ -13,7 +13,7 @@ import { ConfirmSheet } from '../components/ConfirmSheet'
 import { Presence } from '../components/Presence'
 import { ReassignDeleteSheet, type ReassignOption, type ReassignTarget } from '../components/ReassignDeleteSheet'
 import { RecordForm } from './RecordForm'
-import { EXIT_MS } from '../hooks/motion'
+import { EXIT_MS, afterExit } from '../hooks/motion'
 import { useHeldWhileLeaving } from '../hooks/usePresence'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { accountUsageCount, categoryUsageCount } from './recordUsage'
@@ -259,7 +259,11 @@ function DeleteControl({
       // stale — another tab or a duplicate submission may have linked a record to this
       // one since. A 409 here means the server now disagrees; escalate straight to the
       // reassign flow instead of leaving the user to retry the same failing delete.
+      // Idle first and wait out this sheet's own exit, or the reassign sheet (a sibling
+      // Presence, also full-screen) would mount on top of it before it has left.
       if (hasHttpStatus(e) && e.status === 409) {
+        onModeChange('idle')
+        await afterExit(EXIT_MS.sheet)
         onModeChange('reassign')
       } else {
         onModeChange('idle')

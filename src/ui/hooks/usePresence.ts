@@ -25,6 +25,19 @@ export function useExit(): { leaving: boolean; exitMs: number } {
 }
 
 /**
+ * `value`, updated only while `hold` is false. In a tuple because `useState` runs a
+ * function it is handed rather than storing it, which a held callback must not do.
+ *
+ * Shared by `useHeldWhileLeaving` below and `PresenceValue` (Presence.tsx), which hold for
+ * opposite reasons — leaving versus absent — but need exactly the same mechanism to do it.
+ */
+export function useHeldWhen<T>(value: T, hold: boolean): T {
+  const [held, setHeld] = useState<[T]>([value])
+  if (!hold && !Object.is(held[0], value)) setHeld([value])
+  return hold ? held[0] : value
+}
+
+/**
  * `value` as it stood until this overlay began to leave, and that from then on.
  *
  * An exit plays for a moment after whatever closed the overlay has done its work, and that
@@ -34,8 +47,5 @@ export function useExit(): { leaving: boolean; exitMs: number } {
  */
 export function useHeldWhileLeaving<T>(value: T): T {
   const { leaving } = useExit()
-  // In a tuple, for the reason `PresenceValue` keeps one: `useState` runs a function it is given.
-  const [held, setHeld] = useState<[T]>([value])
-  if (!leaving && !Object.is(held[0], value)) setHeld([value])
-  return leaving ? held[0] : value
+  return useHeldWhen(value, leaving)
 }

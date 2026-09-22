@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import type { Flag } from '../../types'
-import { EXIT_MS } from '../hooks/motion'
+import { EXIT_MS, afterExit } from '../hooks/motion'
 import { Field } from './TransactionFields'
 import { FlagPickerPopover } from './FlagPickerPopover'
 import { Presence } from './Presence'
@@ -43,12 +43,27 @@ export function FlagField({
 }: Props) {
   const triggerRef = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(false)
+  // Bumped on every close, so a stale close's delayed un-pause can tell it is no longer
+  // the latest one and skip itself — otherwise a fast reopen would have its own pause
+  // clobbered back to unpaused when the earlier close's timer finally runs.
+  const closeTokenRef = useRef(0)
 
   const selected = selectableFlags(flags, value).find((f) => f.id === value)
 
   const setOpenState = (next: boolean) => {
     setOpen(next)
-    onTrapPausedChange?.(next)
+    closeTokenRef.current += 1
+    if (next) {
+      onTrapPausedChange?.(true)
+      return
+    }
+    // The popover stays mounted, portalled outside the Modal, for its own exit — un-pause
+    // only once it has actually gone, or the Modal's trap reactivates while something
+    // outside its own container can still hold focus.
+    const token = closeTokenRef.current
+    void afterExit(EXIT_MS.popover).then(() => {
+      if (closeTokenRef.current === token) onTrapPausedChange?.(false)
+    })
   }
 
   const trigger = (

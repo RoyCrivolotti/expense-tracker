@@ -1,9 +1,10 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Account, AccountStatement } from '../../types'
 import { makeDataset, makeTransaction } from '../../testing/factories'
 import { buildLookup } from '../format'
+import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
 import type { ExpenseModel } from '../useExpenseData'
 import { StatementToggles } from './StatementToggles'
 
@@ -120,5 +121,37 @@ describe('StatementToggles', () => {
 
     expect(screen.getByLabelText('May 2026 statement')).toHaveTextContent('Nothing to settle')
     expect(screen.queryByRole('button', { name: 'May 2026 statement' })).not.toBeInTheDocument()
+  })
+})
+
+describe('StatementToggles — the sheet while it leaves', () => {
+  beforeEach(() => {
+    vi.setSystemTime(new Date(2026, 5, 20, 12))
+    vi.useFakeTimers()
+    setMotionDisabledForTests(false)
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    setMotionDisabledForTests(true)
+  })
+
+  it('keeps showing what the sheet said when it closed, even if the statement changes underneath it', async () => {
+    const onToggle = vi.fn().mockResolvedValue(undefined)
+    const { rerender } = render(<StatementToggles model={modelWith([PAID_JUNE])} onToggle={onToggle} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'June 2026 statement' }))
+    let sheet = screen.getByRole('dialog', { name: 'Iberia Icon statement' })
+    expect(within(sheet).getByRole('button', { name: 'Paid' })).toBeInTheDocument()
+
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Close' }))
+
+    // An unrelated change (a background refresh, say) lands while the sheet is mid-exit.
+    // Read live, "Paid" would flip to "Due" here, mid-fade, instead of staying as it was.
+    rerender(<StatementToggles model={modelWith([])} onToggle={onToggle} />)
+    sheet = screen.getByRole('dialog', { name: 'Iberia Icon statement' })
+    expect(within(sheet).getByRole('button', { name: 'Paid' })).toBeInTheDocument()
+
+    await act(() => vi.advanceTimersByTimeAsync(EXIT_MS.sheet))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })

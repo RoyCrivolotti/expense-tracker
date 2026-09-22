@@ -25,9 +25,14 @@ export const EXIT_MS = {
   fold: 180,
 } as const
 
+/** Resolves after `ms`, or at once when nothing will be animated. */
+export function afterExit(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, motionEnabled() ? ms : 0))
+}
+
 /** Resolves once a fold has had time to finish, or at once when nothing will be animated. */
 export function foldDone(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, motionEnabled() ? EXIT_MS.fold : 0))
+  return afterExit(EXIT_MS.fold)
 }
 
 /**

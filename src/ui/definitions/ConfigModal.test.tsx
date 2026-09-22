@@ -564,4 +564,24 @@ describe('ConfigModal while it leaves', () => {
     expect(screen.getByText(/used by 2 records/)).toBeTruthy()
     expect(screen.queryByText(/turned out to still be in use/)).toBeNull()
   })
+
+  it('lets the confirm sheet leave before the reassign sheet arrives, on a 409', async () => {
+    const conflict = Object.assign(new Error('Category is in use by 1 record(s)'), { status: 409 })
+    const actions = noopActions({ deleteCategory: vi.fn().mockRejectedValue(conflict) })
+    const start: EditTarget = { kind: 'category', record: GROCERIES }
+    render(<Editor model={buildExpenseModel(dataset())} actions={actions} start={start} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete category' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    await act(async () => {})
+
+    // The 409 has come back, but the confirm sheet's own exit has not finished — the
+    // reassign sheet must not have arrived yet, or the two would be stacked together.
+    expect(screen.getByText("This can't be undone.")).toBeTruthy()
+    expect(screen.queryByLabelText('Move to')).toBeNull()
+
+    await act(() => vi.advanceTimersByTimeAsync(EXIT_MS.sheet))
+    expect(screen.queryByText("This can't be undone.")).toBeNull()
+    expect(screen.getByLabelText('Move to')).toBeTruthy()
+  })
 })
