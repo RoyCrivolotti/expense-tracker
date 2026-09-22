@@ -125,6 +125,38 @@ describe('useVisualViewportRect', () => {
     expect(result.current).toBeNull()
   })
 
+  it('holds the last rect and stops listening while frozen', () => {
+    // A leaving sheet is a snapshot animating away: releasing the scroll lock regrows
+    // the layout viewport, and following that would move the sheet mid-exit.
+    const { vv, fire, listenerCount } = stubViewport(0, 800)
+    const { result, rerender } = renderHook(({ frozen }: { frozen: boolean }) => useVisualViewportRect(frozen), {
+      initialProps: { frozen: false },
+    })
+    expect(result.current).toEqual({ top: 0, height: 800 })
+
+    rerender({ frozen: true })
+    expect(listenerCount()).toBe(0)
+
+    vv.height = 874
+    fire('resize')
+    expect(result.current).toEqual({ top: 0, height: 800 })
+  })
+
+  it('listens again once unfrozen', () => {
+    const { vv, fire, listenerCount } = stubViewport(0, 800)
+    const { result, rerender } = renderHook(({ frozen }: { frozen: boolean }) => useVisualViewportRect(frozen), {
+      initialProps: { frozen: true },
+    })
+
+    rerender({ frozen: false })
+    expect(listenerCount()).toBe(2)
+
+    vv.height = 640
+    vv.offsetTop = 50
+    fire('resize')
+    expect(result.current).toEqual({ top: 50, height: 640 })
+  })
+
   it('unsubscribes on unmount', () => {
     const { listenerCount } = stubViewport(0, 800)
     const { unmount } = renderHook(() => useVisualViewportRect())

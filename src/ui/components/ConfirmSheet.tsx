@@ -24,9 +24,11 @@ interface ConfirmFrameProps {
  * by it halfway through leaving.
  */
 export function ConfirmFrame({ onCancel, labelledBy, describedBy, children }: ConfirmFrameProps) {
-  useBodyScrollLock(true)
-  const sheetRef = useRef<HTMLDivElement>(null)
   const { leaving, exitMs } = useExit()
+  // Released as the exit starts, not at unmount — see the same call in Modal. The lock
+  // is reference-counted, so a confirm leaving over a modal that stays put changes nothing.
+  useBodyScrollLock(!leaving)
+  const sheetRef = useRef<HTMLDivElement>(null)
   useFocusTrap(sheetRef, onCancel, leaving)
 
   return createPortal(
