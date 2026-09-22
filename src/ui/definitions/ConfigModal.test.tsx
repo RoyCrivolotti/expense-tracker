@@ -142,6 +142,61 @@ describe('ConfigModal delete control', () => {
     expect(onClose).not.toHaveBeenCalled()
   })
 
+  it('surfaces a non-409 delete failure and returns to idle', async () => {
+    const actions = noopActions({
+      deleteCategory: vi.fn().mockRejectedValue(new Error('Server exploded')),
+    })
+    render(
+      <ConfigModal
+        target={{ kind: 'category', record: GROCERIES }}
+        model={buildExpenseModel(dataset())}
+        actions={actions}
+        onClose={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete category' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+
+    await vi.waitFor(() => expect(screen.getByText('Server exploded')).toBeTruthy())
+    expect(screen.queryByText("This can't be undone.")).toBeNull()
+    expect(screen.queryByLabelText('Move to')).toBeNull()
+  })
+
+  it('lets a confirm reopened during the 409 escalation wait stand, instead of hijacking it', async () => {
+    vi.useFakeTimers()
+    setMotionDisabledForTests(false)
+    try {
+      const conflict = Object.assign(new Error('Category is in use by 1 record(s)'), { status: 409 })
+      const actions = noopActions({
+        deleteCategory: vi.fn().mockRejectedValue(conflict),
+      })
+      render(
+        <ConfigModal
+          target={{ kind: 'category', record: GROCERIES }}
+          model={buildExpenseModel(dataset())}
+          actions={actions}
+          onClose={vi.fn()}
+        />,
+      )
+
+      fireEvent.click(screen.getByRole('button', { name: 'Delete category' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+      // The 409 has landed and the confirm is leaving; reopen it inside that window.
+      await act(async () => {})
+      fireEvent.click(screen.getByRole('button', { name: 'Delete category' }))
+
+      await act(() => vi.advanceTimersByTimeAsync(EXIT_MS.sheet * 2))
+
+      // The reopened confirm is still up; the stale escalation did not replace it.
+      expect(screen.getByText("This can't be undone.")).toBeTruthy()
+      expect(screen.queryByLabelText('Move to')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+      setMotionDisabledForTests(true)
+    }
+  })
+
   it('offers a reassign sheet for a category in use, defaulting to the other category', async () => {
     const actions = noopActions({
       deleteCategory: vi.fn().mockResolvedValue({ reassignedToId: GROCERIES.id }),
