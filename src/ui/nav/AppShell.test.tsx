@@ -87,6 +87,7 @@ describe('AppShell fab leaving', () => {
 
     expect(fab.className).toMatch(/fabLeaving/)
     expect(fab.hasAttribute('inert')).toBe(true)
+    expect(fab.style.getPropertyValue('--exit-ms')).toBe(`${EXIT_MS.fade}ms`)
 
     act(() => {
       vi.advanceTimersByTime(EXIT_MS.fade)

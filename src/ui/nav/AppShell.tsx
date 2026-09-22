@@ -5,7 +5,7 @@ import { getExpenseHubNavItems } from '../../hubNavItems'
 import { navItems, type TabId } from './navItems'
 import { PresenceValue } from '../components/Presence'
 import { PlusIcon } from '../icons'
-import { EXIT_MS } from '../hooks/motion'
+import { EXIT_MS, exitVars } from '../hooks/motion'
 import { useAutoHideFab } from '../hooks/useAutoHideFab'
 import { useExit } from '../hooks/usePresence'
 import styles from './AppShell.module.css'
@@ -33,12 +33,13 @@ interface AppShellProps {
  * it scales and fades rather than popping, and while it leaves it takes no more taps.
  */
 function AddButton({ onAdd, scrolling }: { onAdd: () => void; scrolling: boolean }) {
-  const { leaving } = useExit()
+  const { leaving, exitMs } = useExit()
   const classes = [styles.fab, scrolling && styles.fabHidden, leaving && styles.fabLeaving]
   return (
     <button
       type="button"
       className={classes.filter(Boolean).join(' ')}
+      style={exitVars(leaving, exitMs)}
       onClick={() => onAdd()}
       aria-label="Add transaction"
       inert={leaving}
