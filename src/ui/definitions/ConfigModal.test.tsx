@@ -630,3 +630,24 @@ describe('ConfigModal while it leaves', () => {
     expect(screen.getByLabelText('Move to')).toBeTruthy()
   })
 })
+
+describe('ConfigModal opening balances', () => {
+  it('saves the balances through updateSettings', async () => {
+    const actions = noopActions({ updateSettings: vi.fn().mockResolvedValue(undefined) })
+    const onClose = vi.fn()
+    render(
+      <ConfigModal
+        target={{ kind: 'settings' }}
+        model={buildExpenseModel(dataset())}
+        actions={actions}
+        onClose={onClose}
+      />,
+    )
+
+    expect(screen.getByRole('dialog', { name: 'Opening balances' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Save balances' }))
+
+    await vi.waitFor(() => expect(actions.updateSettings).toHaveBeenCalled())
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalled())
+  })
+})
