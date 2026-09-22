@@ -62,9 +62,11 @@ interface Props {
   model: ExpenseModel
   actions: ExpenseActions
   onBack: () => void
+  /** Lets the enclosing Modal pause its focus trap while the month popover is open. */
+  onTrapPausedChange?: ((paused: boolean) => void) | undefined
 }
 
-export function InstallmentPlanForm({ plan, model, actions, onBack }: Props) {
+export function InstallmentPlanForm({ plan, model, actions, onBack, onTrapPausedChange }: Props) {
   const format = useMoneyFormat()
   const [f, setF] = useState<Fields>(() => initialFields(plan, format))
   const [busy, setBusy] = useState(false)
@@ -139,6 +141,7 @@ export function InstallmentPlanForm({ plan, model, actions, onBack }: Props) {
             value={f.anchorBudgetMonth}
             ariaLabel="Anchor budget month"
             onChange={(v) => set('anchorBudgetMonth', v)}
+            onTrapPausedChange={onTrapPausedChange}
           />
         </div>
       </div>

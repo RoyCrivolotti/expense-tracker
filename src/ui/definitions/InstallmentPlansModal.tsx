@@ -77,12 +77,16 @@ interface Props {
 
 export function InstallmentPlansModal({ model, actions, onClose }: Props) {
   const [editing, setEditing] = useState<InstallmentPlan | null>(null)
+  // Pauses this Modal's own trap while the month popover is open, the same way
+  // TransactionModal does for its fields — otherwise Escape closes both at once.
+  const [monthPopoverOpen, setMonthPopoverOpen] = useState(false)
   const plans = model.dataset.installmentPlans
 
   return (
     <Modal
       title={editing ? `Edit ${editing.description}` : 'Installment plans'}
       onClose={onClose}
+      trapPaused={monthPopoverOpen}
     >
       {editing ? (
         <InstallmentPlanForm
@@ -90,6 +94,7 @@ export function InstallmentPlansModal({ model, actions, onClose }: Props) {
           model={model}
           actions={actions}
           onBack={() => setEditing(null)}
+          onTrapPausedChange={setMonthPopoverOpen}
         />
       ) : plans.length === 0 ? (
         <EmptyState>No installment plans yet.</EmptyState>
