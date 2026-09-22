@@ -10,6 +10,8 @@ interface Props {
   onMarkPaid: (paidOn: string) => void
   onEditDate: (paidOn: string) => void
   onMarkDue: () => void
+  /** Lets the enclosing Modal pause its focus trap while the date popover is open. */
+  onTrapPausedChange?: ((paused: boolean) => void) | undefined
 }
 
 export function StatementPaidDate({
@@ -19,6 +21,7 @@ export function StatementPaidDate({
   onMarkPaid,
   onEditDate,
   onMarkDue,
+  onTrapPausedChange,
 }: Props) {
   if (!paid) {
     return (
@@ -41,6 +44,7 @@ export function StatementPaidDate({
           if (!v) { onMarkDue(); return }
           if (v !== paidOn) onEditDate(v)
         }}
+        onTrapPausedChange={onTrapPausedChange}
       />
     </div>
   )

@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { InstallmentPlan, Transaction } from '../../domain/types'
 import type { ExpenseModel } from '../useExpenseData'
 import { makeActions } from '../../testing/makeActions'
@@ -145,5 +145,22 @@ describe('InstallmentPlansModal', () => {
     )
     const row = container.getElementsByClassName(styles.planRow!)[0]!
     expect(row.className).not.toContain(styles.inactive!)
+  })
+
+  it('closes just the anchor month popover on Escape, not the whole modal', async () => {
+    const onClose = vi.fn()
+    render(
+      <InstallmentPlansModal model={modelWith([basePlan])} actions={makeActions()} onClose={onClose} />,
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Anchor budget month' }))
+    expect(screen.getByRole('dialog', { name: 'Choose a month' })).toBeInTheDocument()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(screen.queryByRole('dialog', { name: 'Choose a month' })).not.toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
+    // Still on the edit form, not bounced back to the plan list either.
+    expect(screen.getByRole('button', { name: /Back to plans/ })).toBeInTheDocument()
   })
 })

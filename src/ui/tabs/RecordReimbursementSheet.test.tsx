@@ -1,8 +1,11 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: () => true }))
+// Native by default, like the rest of this file's tests — the one describe block
+// below that cares about the popover itself switches it off for its own scope.
+vi.mock('../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: vi.fn(() => true) }))
+import { isNativeDatePicker } from '../hooks/isNativeDatePicker'
 import type { Transaction } from '../../types'
 import { makeDataset, makeFlag, makeLookup, makeTransaction } from '../../testing/factories'
 import { netSpendCents } from '../../domain/engine/transactions'
@@ -319,5 +322,28 @@ describe('RecordReimbursementSheet — the amount check once money is already ba
     await userEvent.type(amount, '108,00')
 
     expect(screen.getByText(/More than the 88,00 € owed for the ticked lines, by 20,00 €/)).toBeInTheDocument()
+  })
+})
+
+describe('RecordReimbursementSheet — Escape while the date popover is open', () => {
+  // Only this block needs the popover fallback; every other test in this file
+  // renders the native control and never touches the date field at all.
+  beforeEach(() => {
+    vi.mocked(isNativeDatePicker).mockReturnValue(false)
+  })
+
+  afterEach(() => {
+    vi.mocked(isNativeDatePicker).mockReturnValue(true)
+  })
+
+  it('closes just the date popover, not the whole sheet', () => {
+    const { onCancel } = renderSheet(group([txn(1)]))
+    fireEvent.click(screen.getByRole('button', { name: 'Date' }))
+    expect(screen.getByRole('dialog', { name: 'Choose a date' })).toBeInTheDocument()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(screen.queryByRole('dialog', { name: 'Choose a date' })).not.toBeInTheDocument()
+    expect(onCancel).not.toHaveBeenCalled()
   })
 })

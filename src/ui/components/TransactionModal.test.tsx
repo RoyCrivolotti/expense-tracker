@@ -6,6 +6,7 @@ import { defaultExpenseSettings } from '../../engine'
 import type { ExpenseActions, TransactionSeed } from '../actions'
 import { makeActions } from '../../testing/makeActions'
 import { makeTransaction } from '../../testing/factories'
+import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
 import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
 import type { ExpenseModel } from '../useExpenseData'
 import { TransactionModal } from './TransactionModal'
@@ -241,6 +242,77 @@ describe('TransactionModal — closing with unsaved input', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(singleForm(container).getByLabelText('Description')).toHaveValue('Coffee')
+  })
+})
+
+describe('TransactionModal — Escape while a date or month popover is open', () => {
+  it('closes just the date popover, not the whole modal', () => {
+    const onClose = vi.fn()
+    const { container } = renderModal({ onClose })
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Date' }))
+    expect(screen.getByRole('dialog', { name: 'Choose a date' })).toBeInTheDocument()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(screen.queryByRole('dialog', { name: 'Choose a date' })).not.toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
+    expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument()
+  })
+
+  it('closes just the budget month popover, not the whole modal', () => {
+    const onClose = vi.fn()
+    const { container } = renderModal({ onClose })
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Budget month' }))
+    expect(screen.getByRole('dialog', { name: 'Choose a month' })).toBeInTheDocument()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(screen.queryByRole('dialog', { name: 'Choose a month' })).not.toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('closes just a batch row\'s date popover, not the whole modal', () => {
+    const onClose = vi.fn()
+    renderModal({ onClose })
+    fireEvent.click(screen.getByRole('tab', { name: 'Add multiple' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Date' }))
+    expect(screen.getByRole('dialog', { name: 'Choose a date' })).toBeInTheDocument()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(screen.queryByRole('dialog', { name: 'Choose a date' })).not.toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
+  })
+})
+
+describe('TransactionModal — a popover opened during another popover\'s exit', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    setMotionDisabledForTests(false)
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    setMotionDisabledForTests(true)
+  })
+
+  it('keeps the trap paused, so Escape still closes only the new popover', async () => {
+    // Close the date popover and open the month popover inside the date popover's 90ms
+    // exit window. When each field deferred its own un-pause, the date field's late
+    // timer un-paused the trap under the month popover and this Escape closed the whole
+    // editor; the owner-side token in usePopoverTrapPause makes the late timer stand down.
+    const onClose = vi.fn()
+    const { container } = renderModal({ onClose })
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Date' }))
+    fireEvent.keyDown(document, { key: 'Escape' })
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Budget month' }))
+
+    await act(() => vi.advanceTimersByTimeAsync(EXIT_MS.popover * 2))
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await act(() => vi.advanceTimersByTimeAsync(EXIT_MS.popover))
+
+    expect(screen.queryByRole('dialog', { name: 'Choose a month' })).not.toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
+    expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument()
   })
 })
 

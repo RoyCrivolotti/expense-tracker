@@ -15,12 +15,32 @@ interface Props {
   min?: string | undefined
   max?: string | undefined
   onChange: (iso: string) => void
+  /**
+   * The popover portals out of the Modal and runs its own focus trap, so the
+   * Modal's trap has to stand down while it is open — otherwise Escape closes
+   * the whole editor and focus is yanked back out of the popover.
+   */
+  onTrapPausedChange?: ((paused: boolean) => void) | undefined
 }
 
-export function DateInput({ value, ariaLabel = 'Date', disabled, min, max, onChange }: Props) {
+export function DateInput({
+  value,
+  ariaLabel = 'Date',
+  disabled,
+  min,
+  max,
+  onChange,
+  onTrapPausedChange,
+}: Props) {
   const native = isNativeDatePicker()
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
+  // Reported synchronously; the owner (usePopoverTrapPause) defers the un-pause past
+  // the popover's exit, and holds it back entirely when another popover has opened.
+  const setOpenState = (next: boolean) => {
+    setOpen(next)
+    onTrapPausedChange?.(next)
+  }
 
   if (native) {
     return (
@@ -43,7 +63,7 @@ export function DateInput({ value, ariaLabel = 'Date', disabled, min, max, onCha
         ref={triggerRef}
         type="button"
         className={styles.trigger}
-        onClick={() => { if (!disabled) setOpen((o) => !o) }}
+        onClick={() => { if (!disabled) setOpenState(!open) }}
         disabled={disabled}
         aria-label={ariaLabel}
         aria-haspopup="dialog"
@@ -58,7 +78,7 @@ export function DateInput({ value, ariaLabel = 'Date', disabled, min, max, onCha
           min={min}
           max={max}
           onSelect={onChange}
-          onClose={() => setOpen(false)}
+          onClose={() => setOpenState(false)}
         />
       </Presence>
     </>

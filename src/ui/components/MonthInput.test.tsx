@@ -1,10 +1,11 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // The fallback popover, not the native control — same reasoning as DateInput.test.tsx.
 vi.mock('../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: () => false }))
 
+import { setMotionDisabledForTests } from '../hooks/motion'
 import { MonthInput } from './MonthInput'
 
 async function openPicker(value: string) {
@@ -34,5 +35,29 @@ describe('MonthInput popover', () => {
     await user.click(screen.getByRole('button', { name: 'Reset' }))
     expect(onChange).toHaveBeenCalledWith(expect.stringMatching(/^\d{4}-\d{2}$/))
     expect(screen.queryByRole('dialog', { name: 'Choose a month' })).not.toBeInTheDocument()
+  })
+})
+
+describe('MonthInput — pausing the enclosing modal trap', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    setMotionDisabledForTests(false)
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    setMotionDisabledForTests(true)
+  })
+
+  it('reports open and close synchronously; the owner defers the un-pause', () => {
+    // The exit-length deferral lives in usePopoverTrapPause, at the single owner, so a
+    // late un-pause can never race another popover's pause — see that hook's tests.
+    const onTrapPausedChange = vi.fn()
+    render(<MonthInput value="2026-09" onChange={vi.fn()} onTrapPausedChange={onTrapPausedChange} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Budget month' }))
+    expect(onTrapPausedChange).toHaveBeenLastCalledWith(true)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Nov 2026' }))
+    expect(onTrapPausedChange).toHaveBeenLastCalledWith(false)
   })
 })

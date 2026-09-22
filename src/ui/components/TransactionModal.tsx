@@ -15,6 +15,7 @@ import { TransactionForm } from './TransactionForm'
 import type { InstallmentIntent } from './installmentIntent'
 import { createTransactionWithIntent, updateTransactionWithIntent } from './transactionSaveIntent'
 import styles from './TransactionModal.module.css'
+import { usePopoverTrapPause } from '../hooks/usePopoverTrapPause'
 
 /** "Installment 21/24 · Last payment Nov 2026" for a plan-linked edit. */
 function installmentNote(editing: Transaction | null, model: ExpenseModel): string | undefined {
@@ -148,9 +149,9 @@ interface Props {
 }
 
 export function TransactionModal({ model, actions, editing, seed, hint, onClose }: Props) {
-  // The flag picker portals out of this Modal and runs its own focus trap, so
-  // this Modal's trap must stand down while it is open.
-  const [popoverOpen, setPopoverOpen] = useState(false)
+  // The flag, date and month pickers portal out of this Modal and run their own
+  // focus traps, so this Modal's trap must stand down while any of them is open.
+  const [popoverOpen, setPopoverOpen] = usePopoverTrapPause()
   const { showToast } = useToast()
   const [mode, setMode] = useState<'single' | 'batch'>('single')
   const [formView, setFormView] = useState<'fields' | 'installment'>('fields')
