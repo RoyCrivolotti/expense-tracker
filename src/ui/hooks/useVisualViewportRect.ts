@@ -43,13 +43,22 @@ function readRect(): ViewportRect | null {
   return { top: shrunk ? vv.offsetTop : 0, height: vv.height }
 }
 
-export function useVisualViewportRect(): ViewportRect | null {
+/**
+ * `frozen` keeps the last rect and stops listening. A sheet on its way out is a
+ * snapshot animating away, and its owner releases the scroll lock as the exit starts,
+ * which in the installed app regrows the layout viewport by the status bar; a rect
+ * still following that would drop the departing sheet 62px mid-animation. Freezing is
+ * one-way in practice — a leaving overlay unmounts — so a rect is allowed to be stale
+ * between unfreezing and the next viewport event.
+ */
+export function useVisualViewportRect(frozen = false): ViewportRect | null {
   // Read during render rather than in the effect: setting state synchronously
   // inside one costs a second commit, and the repo's lint rules reject it.
   // Anything that changes afterwards arrives as an event.
   const [rect, setRect] = useState<ViewportRect | null>(readRect)
 
   useEffect(() => {
+    if (frozen) return
     const vv = window.visualViewport
     if (!vv) return
     const update = () => setRect(readRect())
@@ -59,7 +68,7 @@ export function useVisualViewportRect(): ViewportRect | null {
       vv.removeEventListener('resize', update)
       vv.removeEventListener('scroll', update)
     }
-  }, [])
+  }, [frozen])
 
   return rect
 }

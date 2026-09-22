@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
+import { isBodyScrollLocked } from '../hooks/useBodyScrollLock'
 import { EASE_THROWN, exitDurationMs } from '../hooks/useSheetExit'
 import { Modal } from './Modal'
 import { Presence } from './Presence'
@@ -278,6 +279,50 @@ describe('Modal leaving', () => {
     expect(overlay.style.getPropertyValue('--exit-ms')).toBe(`${EXIT_MS.sheet}ms`)
     expect(overlay.style.getPropertyValue('--exit-ease')).toBe('')
     expect(overlay.style.getPropertyValue('--scrim')).toBe('0.5')
+  })
+
+  it('lets the page go the moment the exit starts, not when the sheet unmounts', () => {
+    // In the installed app a pinned body shortens the layout viewport, so a lock held
+    // through the exit left the bottom bar 62px too high on a screen the fading scrim
+    // was already revealing, and it dropped into place a beat after the sheet had gone.
+    render(<Owner onClose={vi.fn()} />)
+    expect(isBodyScrollLocked()).toBe(true)
+    expect(document.body.style.position).toBe('fixed')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(screen.getByRole('dialog').className).toContain('sheetClosing')
+    expect(isBodyScrollLocked()).toBe(false)
+    expect(document.body.style.position).toBe('')
+  })
+
+  it('keeps the departing sheet in the band it left from when the viewport changes mid-exit', () => {
+    // Releasing the lock regrows the layout viewport in the installed app. A band still
+    // tracking the viewport would move the sheet 62px partway through its exit.
+    const listeners: { resize: Array<() => void>; scroll: Array<() => void> } = { resize: [], scroll: [] }
+    const vv = {
+      offsetTop: 0,
+      height: 812,
+      addEventListener: (type: 'resize' | 'scroll', fn: () => void) => listeners[type].push(fn),
+      removeEventListener: (type: 'resize' | 'scroll', fn: () => void) => {
+        listeners[type] = listeners[type].filter((l) => l !== fn)
+      },
+    }
+    Object.defineProperty(window, 'visualViewport', { configurable: true, value: vv })
+    try {
+      render(<Owner onClose={vi.fn()} />)
+      const sheet = screen.getByRole('dialog')
+      const band = overlayOf(sheet).firstElementChild as HTMLElement
+      expect(band.style.height).toBe('812px')
+
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+      vv.height = 874
+      void act(() => [...listeners.resize, ...listeners.scroll].forEach((l) => l()))
+
+      expect(band.style.height).toBe('812px')
+    } finally {
+      Object.defineProperty(window, 'visualViewport', { configurable: true, value: undefined })
+    }
   })
 
   it('stops answering Escape while it is leaving', () => {

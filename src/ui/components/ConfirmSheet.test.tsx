@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
+import { isBodyScrollLocked } from '../hooks/useBodyScrollLock'
 import { ConfirmSheet } from './ConfirmSheet'
 import { Modal } from './Modal'
 import { Presence } from './Presence'
@@ -189,5 +190,51 @@ describe('ConfirmSheet leaving', () => {
     void act(() => vi.advanceTimersByTime(EXIT_MS.sheet))
     expect(screen.queryByRole('alertdialog')).toBeNull()
     expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('lets the page go as soon as it leaves with the modal under it, while both still show', () => {
+    function Owner() {
+      const [open, setOpen] = useState(true)
+      return (
+        <Presence show={open} exitMs={EXIT_MS.sheet}>
+          <Modal title="Edit" onClose={() => setOpen(false)}>
+            <Presence show exitMs={EXIT_MS.sheet}>
+              <ConfirmSheet
+                title="Discard changes?"
+                message="They will be lost."
+                confirmLabel="Discard"
+                onConfirm={() => setOpen(false)}
+                onCancel={vi.fn()}
+              />
+            </Presence>
+          </Modal>
+        </Presence>
+      )
+    }
+    render(<Owner />)
+    expect(isBodyScrollLocked()).toBe(true)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Discard' }))
+
+    expect(screen.getByRole('alertdialog')).not.toBeNull()
+    expect(isBodyScrollLocked()).toBe(false)
+  })
+
+  it('keeps the page pinned when only the confirm leaves and the modal stays', () => {
+    const tree = (confirmOpen: boolean) => (
+      <Presence show exitMs={EXIT_MS.sheet}>
+        <Modal title="Edit" onClose={vi.fn()}>
+          <Presence show={confirmOpen} exitMs={EXIT_MS.sheet}>
+            {sheet()}
+          </Presence>
+        </Modal>
+      </Presence>
+    )
+    const { rerender } = render(tree(true))
+
+    rerender(tree(false))
+
+    expect(screen.getByRole('alertdialog').className).toContain('sheetClosing')
+    expect(isBodyScrollLocked()).toBe(true)
   })
 })
