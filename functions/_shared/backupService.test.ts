@@ -22,7 +22,6 @@ function mockRepo(overrides: Partial<ExpenseRepository> = {}): ExpenseRepository
     updateAccount: vi.fn(),
     deleteAccount: vi.fn(),
     updateSettings: vi.fn(),
-    updateGoals: vi.fn(),
     createScenario: vi.fn(),
     updateScenario: vi.fn(),
     deleteScenario: vi.fn(),

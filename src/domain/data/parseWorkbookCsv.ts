@@ -2,7 +2,7 @@
  * Parse the Numbers CSV export into a normalized ExpenseDataset. Summary sheets
  * (monthly totals, yearly overview, live goal calcs) are ignored — those are
  * recomputed by the engine. Only facts are read: settings, categories, accounts,
- * transactions, statement paid flags, and goal inputs.
+ * transactions and statement paid flags.
  */
 import type { Account, Category, ExpenseDataset, StoredTransaction, TxnType } from '../types'
 import { parseEuroToCents } from '../engine/money'
@@ -13,7 +13,6 @@ import {
   parseAccounts,
   parseCashActuals,
   parseCategories,
-  parseGoalInputs,
   parseSettings,
   parseStatements,
   splitLine,
@@ -117,7 +116,6 @@ export function parseWorkbookCsv(text: string): ExpenseDataset {
     accountStatements,
     cashActuals: parseCashActuals(rows),
     installmentPlans: [],
-    goalInputs: parseGoalInputs(rows),
     goalScenarios: [],
     settings: parseSettings(rows),
     wealthAccounts: [],

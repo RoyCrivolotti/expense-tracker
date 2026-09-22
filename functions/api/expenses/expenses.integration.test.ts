@@ -11,7 +11,6 @@ import {
   onRequestDelete as deleteCategory,
 } from './categories/[id]'
 import { onRequestPut as putSettings } from './settings/index'
-import { onRequestPut as putGoals } from './goals/index'
 import { onRequestPost as createScenario } from './scenarios/index'
 import { onRequestPatch as patchScenario, onRequestDelete as deleteScenario } from './scenarios/[id]'
 import { onRequestPut as putStatement } from './statements/index'
@@ -182,32 +181,6 @@ describe('expenses API (middleware + handlers + in-memory repo)', () => {
     })
     expect(response.status).toBe(200)
     expect((await readJson<{ milestones: unknown[] }>(response)).milestones).toEqual([])
-  })
-
-  it('updates goal inputs', async () => {
-    const store = createInMemoryAccessDb()
-    store.seedActiveUser(OWNER, { groups: ['expenses'] })
-    const repo = inMemoryExpenseRepository({}, OWNER)
-    const response = await invokeExpenseApiRoute({
-      handler: putGoals,
-      repo,
-      env: expenseEnv(store),
-      method: 'PUT',
-      url: 'https://expenses.test/api/expenses/goals',
-      body: {
-        housePriceCents: 400_000_000,
-        downPaymentFraction: 0.4,
-        mortgageTermYears: 30,
-        mortgageRateAnnual: 0.02,
-      },
-      email: OWNER,
-    })
-    expect(response.status).toBe(200)
-    const goals = await readJson<{ housePriceCents: number; downPaymentFraction: number }>(
-      response,
-    )
-    expect(goals.housePriceCents).toBe(400_000_000)
-    expect(goals.downPaymentFraction).toBe(0.4)
   })
 
   it('creates, updates, and deletes a goal scenario', async () => {

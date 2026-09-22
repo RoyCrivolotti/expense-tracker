@@ -10,7 +10,6 @@ import type {
   ExpenseDataset,
   ExpenseSettings,
   Flag,
-  GoalInputs,
   GoalScenario,
   InstallmentPlan,
   Transaction,
@@ -164,12 +163,6 @@ export const apiDataSource: ExpenseDataSource = {
     }),
   updateSettings: (patch: Partial<ExpenseSettings>) =>
     req<ExpenseSettings>(`${BASE}/settings`, {
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(patch),
-    }),
-  updateGoals: (patch: Partial<GoalInputs>) =>
-    req<GoalInputs>(`${BASE}/goals`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(patch),
