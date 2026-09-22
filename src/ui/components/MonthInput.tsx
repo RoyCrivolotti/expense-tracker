@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { shortMonthYearLabel } from '../../engine/dates'
 import { isNativeDatePicker } from '../hooks/isNativeDatePicker'
-import { EXIT_MS } from '../hooks/motion'
+import { EXIT_MS, afterExit } from '../hooks/motion'
 import { NativeDateOverlay } from './NativeDateOverlay'
 import { MonthPickerPopover } from './MonthPickerPopover'
 import { Presence } from './Presence'
@@ -11,12 +11,43 @@ interface Props {
   value: string
   ariaLabel?: string
   onChange: (yearMonth: string) => void
+  /**
+   * The popover portals out of the Modal and runs its own focus trap, so the
+   * Modal's trap has to stand down while it is open — otherwise Escape closes
+   * the whole editor and focus is yanked back out of the popover.
+   */
+  onTrapPausedChange?: ((paused: boolean) => void) | undefined
 }
 
-export function MonthInput({ value, ariaLabel = 'Budget month', onChange }: Props) {
+export function MonthInput({
+  value,
+  ariaLabel = 'Budget month',
+  onChange,
+  onTrapPausedChange,
+}: Props) {
   const native = isNativeDatePicker()
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
+  // Bumped on every close, so a stale close's delayed un-pause can tell it is no longer
+  // the latest one and skip itself — otherwise a fast reopen would have its own pause
+  // clobbered back to unpaused when the earlier close's timer finally runs.
+  const closeTokenRef = useRef(0)
+
+  const setOpenState = (next: boolean) => {
+    setOpen(next)
+    closeTokenRef.current += 1
+    if (next) {
+      onTrapPausedChange?.(true)
+      return
+    }
+    // The popover stays mounted, portalled outside the Modal, for its own exit — un-pause
+    // only once it has actually gone, or the Modal's trap reactivates while something
+    // outside its own container can still hold focus.
+    const token = closeTokenRef.current
+    void afterExit(EXIT_MS.popover).then(() => {
+      if (closeTokenRef.current === token) onTrapPausedChange?.(false)
+    })
+  }
 
   if (native) {
     return (
@@ -36,7 +67,7 @@ export function MonthInput({ value, ariaLabel = 'Budget month', onChange }: Prop
         ref={triggerRef}
         type="button"
         className={styles.trigger}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => setOpenState(!open)}
         aria-label={ariaLabel}
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -48,7 +79,7 @@ export function MonthInput({ value, ariaLabel = 'Budget month', onChange }: Prop
           value={value}
           triggerRef={triggerRef}
           onSelect={onChange}
-          onClose={() => setOpen(false)}
+          onClose={() => setOpenState(false)}
         />
       </Presence>
     </>

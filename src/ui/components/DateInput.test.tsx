@@ -1,11 +1,12 @@
-import { render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // The fallback popover, not the native control — that is the branch min/max has to
 // enforce itself.
 vi.mock('../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: () => false }))
 
+import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
 import { DateInput } from './DateInput'
 
 async function openPicker(value: string, max?: string) {
@@ -74,5 +75,30 @@ describe('DateInput disabled reaches both pickers', () => {
     render(<DateInput value="2026-09-10" disabled onChange={vi.fn()} />)
 
     expect(screen.getByRole('button', { name: 'Date' })).toBeDisabled()
+  })
+})
+
+describe('DateInput — pausing the enclosing modal trap', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    setMotionDisabledForTests(false)
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    setMotionDisabledForTests(true)
+  })
+
+  it('keeps the trap paused through the popover\'s own exit, not just until it is asked to close', async () => {
+    const onTrapPausedChange = vi.fn()
+    render(<DateInput value="2026-09-10" onChange={vi.fn()} onTrapPausedChange={onTrapPausedChange} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Date' }))
+    expect(onTrapPausedChange).toHaveBeenLastCalledWith(true)
+
+    fireEvent.click(screen.getByRole('button', { name: '14 September 2026' }))
+    expect(onTrapPausedChange).toHaveBeenLastCalledWith(true)
+
+    await act(() => vi.advanceTimersByTimeAsync(EXIT_MS.popover))
+    expect(onTrapPausedChange).toHaveBeenLastCalledWith(false)
   })
 })
