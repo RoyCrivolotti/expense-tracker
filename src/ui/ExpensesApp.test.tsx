@@ -326,7 +326,10 @@ describe('ExpensesApp while selecting transactions', () => {
 
     fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' })
 
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    // Since folio-shell 1.6.2 the menu fades out over 150ms rather than cutting,
+    // so it leaves inert first and unmounts a beat later.
+    expect(screen.getByRole('dialog')).toHaveAttribute('inert')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(screen.getByText('1 selected')).toBeInTheDocument()
   })
 
