@@ -269,6 +269,19 @@ describe('TransactionModal — Escape while a date or month popover is open', ()
     expect(screen.queryByRole('dialog', { name: 'Choose a month' })).not.toBeInTheDocument()
     expect(onClose).not.toHaveBeenCalled()
   })
+
+  it('closes just a batch row\'s date popover, not the whole modal', () => {
+    const onClose = vi.fn()
+    renderModal({ onClose })
+    fireEvent.click(screen.getByRole('tab', { name: 'Add multiple' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Date' }))
+    expect(screen.getByRole('dialog', { name: 'Choose a date' })).toBeInTheDocument()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(screen.queryByRole('dialog', { name: 'Choose a date' })).not.toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
+  })
 })
 
 /** jsdom has no TouchEvent constructor; the gesture only reads `touches[0]`. */

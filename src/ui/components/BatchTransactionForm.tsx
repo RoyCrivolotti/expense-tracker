@@ -213,6 +213,7 @@ export function BatchTransactionForm({
                 value={batch.date}
                 ariaLabel="Date"
                 onChange={(value) => updateBatch(batch.id, { date: value })}
+                onTrapPausedChange={onTrapPausedChange}
               />
             </Field>
             {batches.length > 1 && (
