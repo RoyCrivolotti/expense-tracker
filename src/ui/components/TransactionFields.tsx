@@ -124,21 +124,29 @@ function DateBudgetRow({
   form,
   set,
   onDate,
+  onTrapPausedChange,
 }: {
   form: FormFields
   set: Setter
   onDate: (value: string) => void
+  onTrapPausedChange?: ((paused: boolean) => void) | undefined
 }) {
   return (
     <div className={styles.row}>
       <Field label="Date" as="div">
-        <DateInput value={form.date} ariaLabel="Date" onChange={onDate} />
+        <DateInput
+          value={form.date}
+          ariaLabel="Date"
+          onChange={onDate}
+          onTrapPausedChange={onTrapPausedChange}
+        />
       </Field>
       <Field label="Budget month" as="div">
         <MonthInput
           value={form.budgetMonth}
           ariaLabel="Budget month"
           onChange={(value) => set('budgetMonth', value)}
+          onTrapPausedChange={onTrapPausedChange}
         />
       </Field>
     </div>
@@ -236,7 +244,7 @@ export function Fields({
         )}
       </Field>
       <CategoryAccountRow form={form} set={set} model={model} />
-      <DateBudgetRow form={form} set={set} onDate={onDate} />
+      <DateBudgetRow form={form} set={set} onDate={onDate} onTrapPausedChange={onTrapPausedChange} />
 
       {actions ? (
         <>

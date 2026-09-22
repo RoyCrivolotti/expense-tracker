@@ -244,6 +244,33 @@ describe('TransactionModal — closing with unsaved input', () => {
   })
 })
 
+describe('TransactionModal — Escape while a date or month popover is open', () => {
+  it('closes just the date popover, not the whole modal', () => {
+    const onClose = vi.fn()
+    const { container } = renderModal({ onClose })
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Date' }))
+    expect(screen.getByRole('dialog', { name: 'Choose a date' })).toBeInTheDocument()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(screen.queryByRole('dialog', { name: 'Choose a date' })).not.toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
+    expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument()
+  })
+
+  it('closes just the budget month popover, not the whole modal', () => {
+    const onClose = vi.fn()
+    const { container } = renderModal({ onClose })
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Budget month' }))
+    expect(screen.getByRole('dialog', { name: 'Choose a month' })).toBeInTheDocument()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(screen.queryByRole('dialog', { name: 'Choose a month' })).not.toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
+  })
+})
+
 /** jsdom has no TouchEvent constructor; the gesture only reads `touches[0]`. */
 function touchEvent(type: string, clientY: number): Event {
   const event = new Event(type, { bubbles: true, cancelable: true })
