@@ -1,8 +1,8 @@
 /* Popover container. The arrival/exit animation is shared — see popoverMotion.module.css. */
 .popover {
   composes: popoverEnter from './popoverMotion.module.css';
-  /* fixed, not absolute: usePopoverPosition returns viewport coordinates so the
-     popover survives the body being pinned by a Modal's scroll lock. */
+  /* fixed, not absolute: usePopoverPosition measures viewport coordinates, and
+     position: fixed is what stays pinned to those. */
   position: fixed;
   z-index: 1000;
   min-width: 17rem;
