@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { Account, Category } from '../../types'
 import type {
   DeleteAccountOptions,
@@ -239,6 +239,14 @@ function DeleteControl({
 }) {
   const [err, setErr] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  // Any user-driven mode change makes a pending 409 escalation stand down (see
+  // runPlainDelete). Without it, reopening the confirm inside the escalation's wait
+  // had the reassign sheet replace that confirm mid-open when the timer fired.
+  const escalation = useRef(0)
+  const changeMode = (next: DeleteMode) => {
+    escalation.current += 1
+    onModeChange(next)
+  }
 
   if (config.isLast) {
     return (
@@ -262,11 +270,12 @@ function DeleteControl({
       // Idle first and wait out this sheet's own exit, or the reassign sheet (a sibling
       // Presence, also full-screen) would mount on top of it before it has left.
       if (hasHttpStatus(e) && e.status === 409) {
-        onModeChange('idle')
+        changeMode('idle')
+        const mine = escalation.current
         await afterExit(EXIT_MS.sheet)
-        onModeChange('reassign')
+        if (escalation.current === mine) onModeChange('reassign')
       } else {
-        onModeChange('idle')
+        changeMode('idle')
         setErr(e instanceof Error ? e.message : 'Could not delete')
       }
     } finally {
@@ -281,7 +290,7 @@ function DeleteControl({
         className={`${styles.editBtn} ${styles.deleteBtn}`}
         onClick={() => {
           setErr(null)
-          onModeChange(config.usageCount > 0 ? 'reassign' : 'confirm')
+          changeMode(config.usageCount > 0 ? 'reassign' : 'confirm')
         }}
       >
         Delete {config.noun}
@@ -294,7 +303,7 @@ function DeleteControl({
           confirmLabel="Delete"
           destructive
           onConfirm={() => void runPlainDelete()}
-          onCancel={() => onModeChange('idle')}
+          onCancel={() => changeMode('idle')}
         />
       </Presence>
       <Presence show={mode === 'reassign'} exitMs={EXIT_MS.sheet}>
@@ -311,7 +320,7 @@ function DeleteControl({
           options={config.otherOptions}
           createLabel={config.noun}
           onConfirm={(target) => config.onReassignDelete(target).then(onDeleted)}
-          onCancel={() => onModeChange('idle')}
+          onCancel={() => changeMode('idle')}
         />
       </Presence>
     </>
