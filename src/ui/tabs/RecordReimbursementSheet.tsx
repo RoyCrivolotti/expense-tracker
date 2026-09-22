@@ -135,6 +135,9 @@ export function RecordReimbursementSheet({ group, model, busy, error, onCancel, 
   const [date, setDate] = useState(todayIso())
   const [accountId, setAccountId] = useState(draft?.accountId ?? 0)
   const [categoryId, setCategoryId] = useState(draft?.categoryId ?? 0)
+  // Pauses this Modal's own trap while the date popover is open, the same way
+  // TransactionModal does for its fields — otherwise Escape closes both at once.
+  const [datePopoverOpen, setDatePopoverOpen] = useState(false)
 
   if (!draft) return null
 
@@ -172,6 +175,7 @@ export function RecordReimbursementSheet({ group, model, busy, error, onCancel, 
       title="Record reimbursement"
       subtitle={group.flag.name}
       onClose={onCancel}
+      trapPaused={datePopoverOpen}
     >
       <p className={styles.lead}>Tick what this payment covers. Anything left unticked stays owed.</p>
 
@@ -249,7 +253,12 @@ export function RecordReimbursementSheet({ group, model, busy, error, onCancel, 
 
       <div className={formStyles.row}>
         <Field label="Date" as="div">
-          <DateInput value={date} ariaLabel="Date" onChange={setDate} />
+          <DateInput
+            value={date}
+            ariaLabel="Date"
+            onChange={setDate}
+            onTrapPausedChange={setDatePopoverOpen}
+          />
         </Field>
         <Field label="Into account">
           <select
