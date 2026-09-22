@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { fullMonthLabel } from '../../engine'
 import { Modal } from './Modal'
 import { Money } from './Money'
@@ -29,9 +30,17 @@ export function StatementPaymentSheet({
     await onSave(nextPaid, nextPaidOn)
     if (!nextPaid) onClose()
   }
+  // Pauses this Modal's own trap while the date popover is open, the same way
+  // TransactionModal does for its fields — otherwise Escape closes both at once.
+  const [datePopoverOpen, setDatePopoverOpen] = useState(false)
 
   return (
-    <Modal title={`${cardName} statement`} subtitle={fullMonthLabel(yearMonth)} onClose={onClose}>
+    <Modal
+      title={`${cardName} statement`}
+      subtitle={fullMonthLabel(yearMonth)}
+      onClose={onClose}
+      trapPaused={datePopoverOpen}
+    >
       <p className={styles.amountRow}>
         Charge <Money cents={amountCents} type="expense" signed />
       </p>
@@ -42,6 +51,7 @@ export function StatementPaymentSheet({
         onMarkPaid={(next) => void persist(true, next)}
         onEditDate={(next) => void persist(true, next)}
         onMarkDue={() => void persist(false)}
+        onTrapPausedChange={setDatePopoverOpen}
       />
       <p className={styles.hint}>Paid date controls where this debit appears in Transactions.</p>
     </Modal>
