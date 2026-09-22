@@ -84,13 +84,10 @@
   border: 1px solid var(--color-border);
   border-radius: 1.25rem 1.25rem 0 0;
   padding: 1rem 1.1rem calc(1.1rem + env(safe-area-inset-bottom, 0));
-  /*
-   * How far it travels to be out of sight: its own height, plus a margin. In the
-   * installed app iOS shrinks the layout viewport by the status bar while a sheet holds
-   * the scroll lock, so the sheet's resting place ends about 62px above the bottom of the
-   * screen. Travelling only its own height would leave its top edge showing there.
-   */
-  --sheet-travel: calc(100% + 5rem);
+  /* How far it travels to be out of sight: its own height. The sheet rests at the true
+     bottom of the screen (the scroll lock no longer shrinks the layout viewport), so
+     its own height is the whole journey. */
+  --sheet-travel: 100%;
   animation: sheet-in var(--motion-enter-sheet) var(--motion-ease-out);
   /* Vertical panning only: the sheet scrolls, and useSwipeDismiss reads the same
      axis to drag it away once that scroll is already at the top. */
