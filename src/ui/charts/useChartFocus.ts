@@ -1,10 +1,16 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useState, type RefObject } from 'react'
 import { useDismissOnOutsidePointer } from './useDismissOnOutsidePointer'
 
-/** Hover (desktop) or tap (touch) focus on the nearest chart index. */
-export function useChartFocus(length: number, xForIndex: (i: number) => number) {
+/**
+ * Hover (desktop), tap (touch) or arrow keys (keyboard) focus on the nearest chart index.
+ * `containerRef` is the chart's wrapper: a pointer down outside it clears the focus.
+ */
+export function useChartFocus(
+  length: number,
+  xForIndex: (i: number) => number,
+  containerRef: RefObject<HTMLElement | null>,
+) {
   const [active, setActive] = useState<number | null>(null)
-  const containerRef = useRef<HTMLElement>(null)
 
   const dismiss = useCallback(() => setActive(null), [])
 
@@ -19,6 +25,7 @@ export function useChartFocus(length: number, xForIndex: (i: number) => number) 
       pt.x = clientX
       pt.y = 0
       const { x } = pt.matrixTransform(ctm.inverse())
+      // 28 CSS pixels either side, whatever the viewBox is scaled to.
       const scale = svg.viewBox.baseVal.width / svg.clientWidth
       const snap = 28 * scale
       let best = 0
@@ -50,5 +57,36 @@ export function useChartFocus(length: number, xForIndex: (i: number) => number) 
     dismiss()
   }
 
-  return { active, containerRef, onPointerMove, onPointerDown, onPointerLeave }
+  const onKeyDown = (e: React.KeyboardEvent<SVGSVGElement>) => {
+    if (length === 0) return
+    const last = length - 1
+    const step = (next: number) => {
+      e.preventDefault()
+      setActive(Math.max(0, Math.min(last, next)))
+    }
+    switch (e.key) {
+      case 'ArrowRight':
+        step((active ?? -1) + 1)
+        break
+      case 'ArrowLeft':
+        step((active ?? length) - 1)
+        break
+      case 'Home':
+        step(0)
+        break
+      case 'End':
+        step(last)
+        break
+      case 'Escape':
+        dismiss()
+        break
+      default:
+        break
+    }
+  }
+
+  return { active, onPointerMove, onPointerDown, onPointerLeave, onKeyDown, onBlur: dismiss }
 }
+
+/** Everything the hook returns except `active`: spread onto the svg. */
+export type ChartFocusHandlers = Omit<ReturnType<typeof useChartFocus>, 'active'>

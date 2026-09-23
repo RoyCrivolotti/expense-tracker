@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, type RefObject } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { ChartTooltip, type TooltipLine } from './ChartTooltip'
+import { useElementWidth } from '../hooks/useElementWidth'
 import {
   ChartGrid,
   ChartXLabels,
@@ -24,7 +25,7 @@ import {
 } from './linearScale'
 import styles from './charts.module.css'
 
-const W = 360
+const FALLBACK_W = 360
 const PAD = { top: 16, right: 16, bottom: 28, left: 56 }
 
 export type { ScatterPoint }
@@ -72,6 +73,7 @@ function pointsOf(values: number[], x: (i: number) => number, y: (v: number) => 
 
 function useGeometry(
   series: ChartSeries[],
+  width: number,
   height: number,
   refLines: number[],
   yDomainMax: number | undefined,
@@ -80,7 +82,7 @@ function useGeometry(
   return useMemo(() => {
     const n = series.find((s) => s.kind !== 'scatter' && s.kind !== 'band')?.values.length ?? 0
     const innerH = height - PAD.top - PAD.bottom
-    const innerW = W - PAD.left - PAD.right
+    const innerW = width - PAD.left - PAD.right
     const areaSeries = series.filter((s) => s.kind === 'area')
     const stackedBands = stackAreas(areaSeries.map((a) => a.values))
     const stackedValues = stackedBands.flatMap((b) => [...b.lo, ...b.hi])
@@ -107,7 +109,7 @@ function useGeometry(
     const xForIndex = (i: number) =>
       n <= 1 ? PAD.left + innerW / 2 : PAD.left + (i / (n - 1)) * innerW
     return { n, innerH, stackedBands, areaSeries, ticks: nice.ticks, scaleY, xForIndex }
-  }, [series, height, refLines, yDomainMax, fitDomain])
+  }, [series, width, height, refLines, yDomainMax, fitDomain])
 }
 
 function domainTuple(d: { min: number; max: number }): [number, number] {
@@ -131,8 +133,12 @@ export function LinearChart({
   fitDomain,
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
-  const geo = useGeometry(series, height, refLines, yDomainMax, fitDomain)
-  const { active, containerRef, ...handlers } = useChartFocus(geo.n, geo.xForIndex)
+  const containerRef = useRef<HTMLDivElement>(null)
+  // The viewBox is the wrapper's width in CSS pixels, so text, strokes and hit areas
+  // render at their own size instead of being scaled up with the chart.
+  const width = useElementWidth(containerRef, FALLBACK_W)
+  const geo = useGeometry(series, width, height, refLines, yDomainMax, fitDomain)
+  const { active, ...handlers } = useChartFocus(geo.n, geo.xForIndex, containerRef)
   const focusX = active != null ? geo.xForIndex(active) : 0
   const anchor = useSvgAnchor(svgRef, active != null ? focusX : null, active != null ? PAD.top : null)
   const tip = active != null ? tooltip(active) : null
@@ -143,13 +149,14 @@ export function LinearChart({
   }, [active, onActiveIndexChange])
 
   return (
-    <div ref={containerRef as RefObject<HTMLDivElement | null>} className={styles.chartWrap}>
+    <div ref={containerRef} className={styles.chartWrap}>
       <svg
         ref={svgRef}
-        viewBox={`0 0 ${W} ${height}`}
+        viewBox={`0 0 ${width} ${height}`}
         className={styles.svg}
         role="img"
         aria-label={ariaLabel}
+        tabIndex={0}
         onContextMenu={(e) => e.preventDefault()}
         {...handlers}
       >
@@ -157,7 +164,7 @@ export function LinearChart({
           ticks={geo.ticks}
           scaleY={geo.scaleY}
           x0={PAD.left}
-          x1={W - PAD.right}
+          x1={width - PAD.right}
           formatValue={formatValue}
         />
         {geo.areaSeries.map((s, ai) => {
@@ -212,7 +219,7 @@ export function LinearChart({
           <line
             key={v}
             x1={PAD.left}
-            x2={W - PAD.right}
+            x2={width - PAD.right}
             y1={geo.scaleY(v)}
             y2={geo.scaleY(v)}
             className={styles.refLine}

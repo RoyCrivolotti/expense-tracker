@@ -10,6 +10,7 @@ import type { TooltipLine } from '../../../charts/ChartTooltip'
 import { sparseLabels } from '../../../charts/linearScale'
 import { formatMoneyShort } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
+import { useGoalsNarrow } from '../useGoalsNarrow'
 import {
   ScenarioSeriesLegend,
   type ScenarioLegendBreakdown,
@@ -182,6 +183,11 @@ function useChartLegendState(
   return { activeYear, legendItems, breakdowns, yearZeroHint }
 }
 
+/** Pixels: tall enough on a desktop to read thirty years, short enough on a phone to fit above the fold. */
+function heroHeight(narrow: boolean): number {
+  return narrow ? 210 : 300
+}
+
 function NetWorthChartImpl({
   scenarios,
   draft,
@@ -208,6 +214,7 @@ function NetWorthChartImpl({
   milestones: Milestone[]
 }) {
   const format = useMoneyFormat()
+  const narrow = useGoalsNarrow()
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const onActiveIndexChange = useCallback((index: number | null) => {
     setActiveIndex(index)
@@ -294,7 +301,13 @@ function NetWorthChartImpl({
     : 'Compare saved scenarios plus your live edits. At a purchase year, return and contributions apply before the down payment is withdrawn — hover that year for the breakdown.'
 
   const heroVariantProps = isHero
-    ? { height: 230, markerYears, lifeEventMarkers, tooltipMode: 'hidden' as const, onActiveIndexChange }
+    ? {
+        height: heroHeight(narrow),
+        markerYears,
+        lifeEventMarkers,
+        tooltipMode: 'hidden' as const,
+        onActiveIndexChange,
+      }
     : { height: 210, markerYears: [], tooltipMode: 'full' as const }
 
   return (

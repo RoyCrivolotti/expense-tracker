@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react'
+import { fireEvent, render } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { LinearChart, type ChartSeries } from './LinearChart'
 
@@ -15,6 +15,52 @@ const defaultProps = {
 }
 
 describe('LinearChart', () => {
+  it('steps the focus with the arrow keys and clears it with Escape', () => {
+    const onActiveIndexChange = vi.fn()
+    const { container } = render(
+      <LinearChart
+        {...defaultProps}
+        series={[makeLine('s1', [10, 20, 30])]}
+        onActiveIndexChange={onActiveIndexChange}
+        tooltipMode="hidden"
+      />,
+    )
+    const svg = container.querySelector('svg')!
+    expect(svg.getAttribute('tabindex')).toBe('0')
+
+    fireEvent.keyDown(svg, { key: 'ArrowRight' })
+    expect(onActiveIndexChange).toHaveBeenLastCalledWith(0)
+    fireEvent.keyDown(svg, { key: 'ArrowRight' })
+    expect(onActiveIndexChange).toHaveBeenLastCalledWith(1)
+    fireEvent.keyDown(svg, { key: 'End' })
+    expect(onActiveIndexChange).toHaveBeenLastCalledWith(2)
+    // Past the end stays put rather than wrapping or going out of range.
+    fireEvent.keyDown(svg, { key: 'ArrowRight' })
+    expect(onActiveIndexChange).toHaveBeenLastCalledWith(2)
+    fireEvent.keyDown(svg, { key: 'Home' })
+    expect(onActiveIndexChange).toHaveBeenLastCalledWith(0)
+    fireEvent.keyDown(svg, { key: 'ArrowLeft' })
+    expect(onActiveIndexChange).toHaveBeenLastCalledWith(0)
+    fireEvent.keyDown(svg, { key: 'Escape' })
+    expect(onActiveIndexChange).toHaveBeenLastCalledWith(null)
+    // ArrowLeft with nothing focused starts from the far end.
+    fireEvent.keyDown(svg, { key: 'ArrowLeft' })
+    expect(onActiveIndexChange).toHaveBeenLastCalledWith(2)
+    // Keys the chart does not use leave the focus alone.
+    fireEvent.keyDown(svg, { key: 'a' })
+    expect(onActiveIndexChange).toHaveBeenLastCalledWith(2)
+    fireEvent.blur(svg)
+    expect(onActiveIndexChange).toHaveBeenLastCalledWith(null)
+  })
+
+  it('draws in a viewBox as wide as its container, in CSS pixels', () => {
+    const { container } = render(
+      <LinearChart {...defaultProps} series={[makeLine('s1', [10, 20, 30])]} />,
+    )
+    // jsdom lays nothing out, so the fallback width applies until something measures.
+    expect(container.querySelector('svg')!.getAttribute('viewBox')).toBe('0 0 360 200')
+  })
+
   it('renders with a single line series', () => {
     const { container } = render(
       <LinearChart

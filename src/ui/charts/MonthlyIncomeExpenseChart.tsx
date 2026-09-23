@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useRef } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
 import { computeMonthlyTotals } from '../../engine'
 import { chartMax, innerSize, PAD } from './chartLayout'
@@ -31,7 +31,8 @@ export function MonthlyIncomeExpenseChart({ model }: Props) {
   const barW = Math.min(16, groupW / 3)
   const maxVal = chartMax(rows.flatMap((r) => [r.income, r.expenses]))
   const xForIndex = useCallback((i: number) => PAD.left + i * groupW + groupW / 2, [groupW])
-  const { active, containerRef, ...pointerHandlers } = useChartFocus(rows.length, xForIndex)
+  const containerRef = useRef<HTMLElement>(null)
+  const { active, ...pointerHandlers } = useChartFocus(rows.length, xForIndex, containerRef)
 
   if (rows.length === 0) return null
 

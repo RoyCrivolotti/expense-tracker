@@ -14,6 +14,7 @@ import {
 import { todayIso } from '../../../components/transactionFormState'
 import { formatMoneyAxis } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
+import { useGoalsNarrow } from '../useGoalsNarrow'
 import { buildCheckinTooltip } from './checkinChartUtils'
 import { WINDOW_OPTIONS, defaultWindow, stepMonthsFor, windowSeries, type WindowKey } from './checkinWindow'
 import goalStyles from '../goals.module.css'
@@ -29,6 +30,7 @@ const ACTUAL_COLOR = '#10b981'
 
 export function CheckinHistoryChart({ checkins, accounts, plan }: Props) {
   const format = useMoneyFormat()
+  const narrow = useGoalsNarrow()
   const planStartDate = plan?.planStartDate ?? null
   const elapsedYears = useMemo(
     () => (planStartDate ? (yearOffsetFromDate(planStartDate, todayIso()) ?? 0) : 0),
@@ -101,7 +103,7 @@ export function CheckinHistoryChart({ checkins, accounts, plan }: Props) {
         />
       </div>
       <LinearChart
-        height={180}
+        height={narrow ? 180 : 220}
         series={chartSeries}
         xLabels={model.series.labels}
         refLines={[]}

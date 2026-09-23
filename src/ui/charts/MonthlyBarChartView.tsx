@@ -1,3 +1,4 @@
+import type { ChartFocusHandlers } from './useChartFocus'
 import { useRef } from 'react'
 import { formatCents } from '../../engine/money'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
@@ -21,7 +22,7 @@ interface Props {
   active: number | null
   focusX: number
   xForIndex: (i: number) => number
-  pointerHandlers: Record<string, (e: React.PointerEvent<SVGSVGElement>) => void>
+  pointerHandlers: ChartFocusHandlers
 }
 
 export function MonthlyBarChartView({
@@ -45,6 +46,7 @@ export function MonthlyBarChartView({
         ref={svgRef}
         viewBox={`0 0 ${CHART_W} ${CHART_H}`}
         className={styles.svg}
+        tabIndex={0}
         role="img"
         aria-label="Bar chart of monthly income and expenses"
         {...pointerHandlers}
