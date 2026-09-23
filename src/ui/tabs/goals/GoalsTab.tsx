@@ -30,6 +30,7 @@ import { SetupView } from './SetupView'
 import { draftFromDataset } from './goalsDefaults'
 import { activePlan, initialEditorScenario } from './scenarioSelection'
 import { NetWorthChart } from './charts/NetWorthChart'
+import { NetWorthMiniChart } from './charts/NetWorthMiniChart'
 import { NetWorthNowCard } from './charts/NetWorthNowCard'
 import styles from './goals.module.css'
 import progressStyles from './progress.module.css'
@@ -350,6 +351,12 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
               ) : null}
             </Presence>
           </div>
+          {mobilePlanView === 'adjust' ? (
+            // Phone only: the toggle is hidden on desktop, so this never mounts there.
+            <div className={styles.areaMini}>
+              <NetWorthMiniChart draft={deferredDraft} />
+            </div>
+          ) : null}
           <div className={styles.areaControls}>
             <Card>
               <GoalControls draft={draft} latest={latestSnapshot} onChange={patchDraft} />

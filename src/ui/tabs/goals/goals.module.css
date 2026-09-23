@@ -57,8 +57,26 @@
 
   .layout[data-mobile-view='adjust'] .areaControls {
     display: block;
-    order: 3;
+    order: 4;
   }
+
+  /* The draft's line pinned under the app header while the controls scroll beneath it, so
+     a slider is tuned against the line it moves. The offset is the header's height; the
+     header carries the top safe-area inset, so this has to as well. */
+  .layout[data-mobile-view='adjust'] .areaMini {
+    display: block;
+    order: 3;
+    position: sticky;
+    top: calc(3.5rem + env(safe-area-inset-top, 0px));
+    z-index: 5;
+    padding: 0.5rem 0 0.25rem;
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-border);
+  }
+}
+
+.areaMini {
+  display: none;
 }
 
 .mobilePlanToggleRow {

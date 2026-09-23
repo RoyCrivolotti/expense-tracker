@@ -256,6 +256,21 @@ describe('GoalsTab', () => {
     expect(container.querySelector('[data-mobile-view="chart"]')).toBeNull()
   })
 
+  it('pins a compact chart of the draft above the controls in the Adjust panel only', async () => {
+    const user = userEvent.setup()
+    const { container } = render(<GoalsTab model={makeModel()} />)
+    // The block is display:none outside the phone breakpoint, which jsdom cannot match, so
+    // this asks the DOM rather than the accessibility tree.
+    const mini = () =>
+      container.querySelector('svg[aria-label="Projection of the scenario being edited"]')
+
+    expect(mini()).not.toBeInTheDocument()
+    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+    expect(mini()).toBeInTheDocument()
+    await user.click(screen.getByRole('radio', { name: 'Chart' }))
+    expect(mini()).not.toBeInTheDocument()
+  })
+
   it('shows the inflation stepper only when Purchasing power mode is active', async () => {
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} />)
