@@ -13,6 +13,7 @@ import { scenarioHeadline } from '../tabs/goals/scenarioHeadline'
 import { activePlan } from '../tabs/goals/scenarioSelection'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { formatMoneyShort } from '../tabs/goals/chartTheme'
+import { contributionGapLabel } from '../tabs/goals/contributionGap'
 import styles from './GoalsCard.module.css'
 
 interface GoalsCardProps {
@@ -34,9 +35,7 @@ function TrackBadge({ deltaCents, deltaMonths, format }: TrackBadgeProps) {
       ? ahead
         ? 'On track'
         : `${formatMoneyShort(Math.abs(deltaCents), format)} behind`
-      : deltaMonths > 0
-        ? `${deltaMonths} months ahead`
-        : `${Math.abs(deltaMonths)} months behind`
+      : contributionGapLabel(deltaMonths)
   return (
     <div className={`${styles.trackBadge} ${ahead ? styles.trackBadgeAhead : styles.trackBadgeBehind}`}>
       <span className={dotClass} />

@@ -10,6 +10,7 @@ import {
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import type { MoneyFormat } from '../../../engine/money'
 import { formatMoneyShort } from './chartTheme'
+import { contributionGapLabel } from './contributionGap'
 import styles from './progress.module.css'
 import goalStyles from './goals.module.css'
 
@@ -69,12 +70,11 @@ function StatusRow({
 
 function MonthsHint({ status }: { status: TrackStatus }) {
   const ahead = status.deltaCents >= 0
-  const abs = Math.abs(status.deltaMonths)
   return (
     <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', margin: 0 }}>
       Equivalent to being{' '}
       <strong style={{ color: ahead ? 'var(--exp-success)' : 'var(--exp-danger)' }}>
-        {abs} month{abs !== 1 ? 's' : ''} {ahead ? 'ahead' : 'behind'}
+        {contributionGapLabel(status.deltaMonths)}
       </strong>{' '}
       on contributions.
     </p>
