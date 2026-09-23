@@ -6,10 +6,11 @@ from D1 only.
 
 ## Overview
 
-The Goals tab has two views:
+The Goals tab has three views:
 
 - **Plan** — projection lab. Configure scenarios, compare alternatives, see the hero net-worth chart with uncertainty bands and life-event markers.
 - **Progress** — wealth tracking. Log actual balances per account, see on/off-track status against your plan, and compare actuals to the projection over time.
+- **Setup** — what Progress measures with: the milestone ladder and the wealth accounts each check-in records a balance for.
 
 ### The plan
 
@@ -53,7 +54,7 @@ Breakeven = first year buyer net worth ≥ renter net worth. Simplifications: co
 
 ## Milestones
 
-Per-owner list of named net-worth targets, measured against the **invested portfolio only**. Edited from the Goals tab's Progress view and stored as JSON in `settings.milestones`; up to 12 entries, each with an optional name.
+Per-owner list of named net-worth targets, measured against the **invested portfolio only**. Edited from the Goals tab's Setup view and stored as JSON in `settings.milestones`; up to 12 entries, each with an optional name.
 
 A named milestone is always shown with its amount, since the name alone does not say how far away the target is. In prose that reads "House deposit (100k €)" (`milestoneLabelWithAmount`); in the years-to-milestone matrix the two are stacked on separate header lines, with the full name and reached date in the header's tooltip because columns are narrow. An unnamed milestone shows only its amount.
 

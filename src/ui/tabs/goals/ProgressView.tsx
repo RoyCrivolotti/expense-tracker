@@ -1,20 +1,13 @@
 import { useState } from 'react'
-import type {
-  ExpenseSettings,
-  GoalScenario,
-  Milestone,
-  WealthAccount,
-  WealthCheckin,
-} from '../../../types'
+import type { GoalScenario, Milestone, WealthAccount, WealthCheckin } from '../../../types'
 import type { ExpenseActions } from '../../actions'
 import { latestCheckin } from '../../../engine'
+import { EmptyState } from '../../components/primitives'
 import { WealthSummaryCard } from './WealthSummaryCard'
 import { ReachedMilestones } from './ReachedMilestones'
-import { MilestonesSetting } from '../../settings/MilestonesSetting'
 import { CheckinFormSheet } from './CheckinFormSheet'
 import { CheckinList } from './CheckinList'
 import { CheckinHistoryChart } from './charts/CheckinHistoryChart'
-import { WealthAccountsManager } from './WealthAccountsManager'
 import styles from './progress.module.css'
 import goalStyles from './goals.module.css'
 
@@ -27,8 +20,8 @@ interface Props {
   plan: GoalScenario | null
   actions: ExpenseActions | undefined
   canWrite: boolean
-  settings?: ExpenseSettings | undefined
-  onSettingsChange?: ((patch: Partial<ExpenseSettings>) => void | Promise<void>) | undefined
+  /** Takes the user to the Setup view, where accounts are named. */
+  onOpenSetup?: (() => void) | undefined
 }
 
 export function ProgressView({
@@ -39,10 +32,11 @@ export function ProgressView({
   plan,
   actions,
   canWrite,
-  settings,
-  onSettingsChange,
+  onOpenSetup,
 }: Props) {
   const [showCheckinForm, setShowCheckinForm] = useState(false)
+  // A check-in records a balance per account, so with none there is nothing to log yet.
+  const hasAccounts = accounts.some((a) => !a.archived)
 
   return (
     <div className={styles.progressStack}>
@@ -54,17 +48,19 @@ export function ProgressView({
 
       <ReachedMilestones milestones={milestones} reached={reached} />
 
-      {canWrite && settings && onSettingsChange ? (
-        <MilestonesSetting settings={settings} onChange={onSettingsChange} />
-      ) : null}
-
       <CheckinHistoryChart
         checkins={checkins}
         accounts={accounts}
         plan={plan}
       />
 
-      {canWrite && actions ? (
+      {canWrite && actions && !hasAccounts ? (
+        <EmptyState actionLabel="Set up accounts" onAction={onOpenSetup}>
+          Name the accounts you track before logging a check-in.
+        </EmptyState>
+      ) : null}
+
+      {canWrite && actions && hasAccounts ? (
         showCheckinForm ? (
           <CheckinFormSheet
             accounts={accounts}
@@ -90,10 +86,6 @@ export function ProgressView({
         canWrite={canWrite}
         actions={actions}
       />
-
-      {canWrite && actions ? (
-        <WealthAccountsManager accounts={accounts} checkins={checkins} actions={actions} />
-      ) : null}
     </div>
   )
 }

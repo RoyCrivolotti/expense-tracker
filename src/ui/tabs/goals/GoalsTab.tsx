@@ -26,6 +26,7 @@ import { GoalsExplainer } from './GoalsExplainer'
 import { GoalsNarrative } from './GoalsNarrative'
 import { SecondaryCharts } from './SecondaryCharts'
 import { ProgressView } from './ProgressView'
+import { SetupView } from './SetupView'
 import { draftFromDataset } from './goalsDefaults'
 import { activePlan, initialEditorScenario } from './scenarioSelection'
 import { NetWorthChart } from './charts/NetWorthChart'
@@ -33,13 +34,14 @@ import { NetWorthNowCard } from './charts/NetWorthNowCard'
 import styles from './goals.module.css'
 import progressStyles from './progress.module.css'
 
-type TabView = 'plan' | 'progress'
+type TabView = 'plan' | 'progress' | 'setup'
 type DisplayMode = 'nominal' | 'purchasing-power'
 type MobilePlanView = 'chart' | 'adjust'
 
 const VIEW_OPTIONS: { value: TabView; label: string }[] = [
   { value: 'plan', label: 'Plan' },
   { value: 'progress', label: 'Progress' },
+  { value: 'setup', label: 'Setup' },
 ]
 
 const MOBILE_PLAN_VIEW_OPTIONS: { value: MobilePlanView; label: string }[] = [
@@ -276,6 +278,15 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
         />
       </div>
 
+      {view === 'setup' ? (
+        <SetupView
+          accounts={dataset.wealthAccounts}
+          checkins={dataset.wealthCheckins}
+          settings={dataset.settings}
+          actions={actions}
+          onSettingsChange={actions ? (patch) => actions.updateSettings(patch) : undefined}
+        />
+      ) : null}
       {view === 'progress' ? (
         <ProgressView
           accounts={dataset.wealthAccounts}
@@ -285,10 +296,10 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
           plan={plan}
           actions={actions}
           canWrite={actions != null}
-          settings={dataset.settings}
-          onSettingsChange={actions ? (patch) => actions.updateSettings(patch) : undefined}
+          onOpenSetup={() => setView('setup')}
         />
-      ) : (
+      ) : null}
+      {view === 'plan' ? (
         <>
           <p className={styles.intro}>
             Project your net worth and financial independence under different assumptions. Horizon
@@ -406,7 +417,7 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
         </div>
       </div>
         </>
-      )}
+      ) : null}
     </div>
   )
 }
