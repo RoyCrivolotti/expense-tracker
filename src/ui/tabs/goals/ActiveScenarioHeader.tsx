@@ -56,13 +56,6 @@ export function ActiveScenarioHeader({
     return <p className={styles.chartHint}>Read-only session — scenarios cannot be saved.</p>
   }
 
-  const onColorChange = (color: string) => {
-    onPatch({ color })
-    if (activeScenario && actions) {
-      void actions.updateScenario(activeScenario.id, { color })
-    }
-  }
-
   const openSaveAsNew = () => {
     setCopyName(`${draft.name} copy`)
     setSaveAsNewOpen(true)
@@ -71,7 +64,11 @@ export function ActiveScenarioHeader({
   return (
     <div className={styles.activeHeader}>
       <div className={styles.activeHeaderTop}>
-        <ColorSwatchPicker color={draft.color} onChange={onColorChange} label="Scenario color" />
+        <ColorSwatchPicker
+          color={draft.color}
+          onChange={(color) => onPatch({ color })}
+          label="Scenario color"
+        />
         <input
           className={styles.renameInput}
           value={draft.name}

@@ -128,6 +128,21 @@ describe('GoalsTab', () => {
     expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
   })
 
+  it('treats a colour change as an unsaved edit and saves it with the rest', async () => {
+    const user = userEvent.setup()
+    const actions = makeActions()
+    const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true, color: '#6366f1' })
+    const model = buildExpenseModel(makeDataset({ goalScenarios: [plan] }))
+    render(<GoalsTab model={model} actions={actions} />)
+
+    await user.click(screen.getByRole('button', { name: 'Use color #10b981' }))
+    expect(actions.updateScenario).not.toHaveBeenCalled()
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    expect(actions.updateScenario).toHaveBeenCalledWith(1, expect.objectContaining({ color: '#10b981' }))
+  })
+
   it('switches chips without asking when nothing is unsaved', async () => {
     const user = userEvent.setup()
     const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })

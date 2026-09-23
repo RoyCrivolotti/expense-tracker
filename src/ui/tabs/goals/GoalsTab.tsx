@@ -64,8 +64,9 @@ function scenarioToDraft(s: GoalScenario): NewGoalScenario {
   return rest
 }
 
-// Fields the controls can change; used to detect unsaved edits to a saved plan.
+// Fields the controls and the header can change; used to detect unsaved edits to a saved plan.
 const EDIT_KEYS = [
+  'color',
   'startInvestedCents',
   'monthlyContributionCents',
   'annualContributionGrowth',

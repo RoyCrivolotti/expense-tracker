@@ -58,4 +58,13 @@ describe('ActiveScenarioHeader', () => {
 
     expect(screen.getByText(/It is your current plan/)).toBeInTheDocument()
   })
+
+  it('changes colour through the draft rather than writing it straight away', () => {
+    const { actions, onPatch } = renderHeader(makeScenario({ id: 7, color: '#6366f1' }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use color #10b981' }))
+
+    expect(onPatch).toHaveBeenCalledWith({ color: '#10b981' })
+    expect(actions.updateScenario).not.toHaveBeenCalled()
+  })
 })
