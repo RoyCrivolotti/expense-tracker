@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { WealthAccountsManager } from './WealthAccountsManager'
 import type { ExpenseActions } from '../../actions'
-import type { WealthAccount } from '../../../types'
+import type { WealthAccount, WealthCheckin } from '../../../types'
 
 function makeAccount(id: number): WealthAccount {
   return { id, name: `Broker ${id}`, kind: 'investment', sortOrder: id, archived: false }
@@ -54,12 +54,44 @@ describe('WealthAccountsManager', () => {
     )
   })
 
-  it('calls deleteWealthAccount when delete button is clicked', async () => {
+  it('asks before deleting an account, and only deletes once confirmed', async () => {
     const actions = makeActions()
     const user = userEvent.setup()
     render(<WealthAccountsManager accounts={[makeAccount(1)]} actions={actions} />)
     await user.click(screen.getByRole('button', { name: /delete broker 1/i }))
+
+    expect(screen.getByText('Delete Broker 1?')).toBeInTheDocument()
+    expect(screen.getByText(/removed outright/)).toBeInTheDocument()
+    expect(actions.deleteWealthAccount).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: 'Delete' }))
     expect(actions.deleteWealthAccount).toHaveBeenCalledWith(1)
+  })
+
+  it('keeps the account when the confirm is cancelled', async () => {
+    const actions = makeActions()
+    const user = userEvent.setup()
+    render(<WealthAccountsManager accounts={[makeAccount(1)]} actions={actions} />)
+    await user.click(screen.getByRole('button', { name: /delete broker 1/i }))
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(actions.deleteWealthAccount).not.toHaveBeenCalled()
+  })
+
+  it('says an account with check-in history is archived, not deleted', async () => {
+    const user = userEvent.setup()
+    const checkins: WealthCheckin[] = [
+      {
+        id: 1,
+        checkinDate: '2026-06-01',
+        createdAt: '2026-06-01T00:00:00Z',
+        entries: [{ accountId: 1, valueCents: 100_000 }],
+      },
+    ]
+    render(<WealthAccountsManager accounts={[makeAccount(1)]} checkins={checkins} actions={makeActions()} />)
+    await user.click(screen.getByRole('button', { name: /delete broker 1/i }))
+
+    expect(screen.getByText(/archived rather than deleted/)).toBeInTheDocument()
   })
 
   it('kind badge shows correct label for investment accounts', () => {

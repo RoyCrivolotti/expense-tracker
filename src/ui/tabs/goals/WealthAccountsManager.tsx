@@ -1,9 +1,21 @@
 import { useState } from 'react'
-import type { WealthAccount, WealthAccountKind } from '../../../types'
+import type { WealthAccount, WealthAccountKind, WealthCheckin } from '../../../types'
 import type { ExpenseActions } from '../../actions'
 import { Card } from '../../components/primitives'
+import { ConfirmSheet } from '../../components/ConfirmSheet'
+import { Presence } from '../../components/Presence'
+import { EXIT_MS } from '../../hooks/motion'
 import styles from './progress.module.css'
 import goalStyles from './goals.module.css'
+
+// The server keeps an account that check-ins refer to, marking it archived instead, so the
+// question has to say which of the two is about to happen.
+function deleteMessage(account: WealthAccount, checkins: WealthCheckin[]): string {
+  const inHistory = checkins.some((c) => c.entries.some((e) => e.accountId === account.id))
+  return inHistory
+    ? 'It appears in past check-ins, so it is archived rather than deleted: those balances stay and it leaves this list.'
+    : 'No check-in mentions it yet, so it is removed outright.'
+}
 
 const KIND_LABELS: Record<WealthAccountKind, string> = {
   investment: 'Investment',
@@ -14,14 +26,17 @@ const KIND_LABELS: Record<WealthAccountKind, string> = {
 
 interface Props {
   accounts: WealthAccount[]
+  checkins?: WealthCheckin[]
   actions: ExpenseActions
 }
 
-export function WealthAccountsManager({ accounts, actions }: Props) {
+export function WealthAccountsManager({ accounts, checkins = [], actions }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [name, setName] = useState('')
   const [kind, setKind] = useState<WealthAccountKind>('investment')
   const [submitting, setSubmitting] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<WealthAccount | null>(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const handleAdd = async () => {
     if (!name.trim()) return
@@ -34,10 +49,6 @@ export function WealthAccountsManager({ accounts, actions }: Props) {
     } finally {
       setSubmitting(false)
     }
-  }
-
-  const handleDelete = async (id: number) => {
-    await actions.deleteWealthAccount(id)
   }
 
   const active = accounts.filter((a) => !a.archived)
@@ -68,7 +79,10 @@ export function WealthAccountsManager({ accounts, actions }: Props) {
               <button
                 className={goalStyles.iconBtn}
                 aria-label={`Delete ${acc.name}`}
-                onClick={() => { void handleDelete(acc.id) }}
+                onClick={() => {
+                  setPendingDelete(acc)
+                  setConfirmOpen(true)
+                }}
               >
                 ✕
               </button>
@@ -121,6 +135,22 @@ export function WealthAccountsManager({ accounts, actions }: Props) {
           + Add account
         </button>
       )}
+
+      <Presence show={confirmOpen} exitMs={EXIT_MS.sheet}>
+        {pendingDelete ? (
+          <ConfirmSheet
+            title={`Delete ${pendingDelete.name}?`}
+            message={deleteMessage(pendingDelete, checkins)}
+            confirmLabel="Delete"
+            destructive
+            onConfirm={() => {
+              setConfirmOpen(false)
+              void actions.deleteWealthAccount(pendingDelete.id)
+            }}
+            onCancel={() => setConfirmOpen(false)}
+          />
+        ) : null}
+      </Presence>
     </Card>
   )
 }

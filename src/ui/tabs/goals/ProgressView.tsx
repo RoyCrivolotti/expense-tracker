@@ -92,7 +92,7 @@ export function ProgressView({
       />
 
       {canWrite && actions ? (
-        <WealthAccountsManager accounts={accounts} actions={actions} />
+        <WealthAccountsManager accounts={accounts} checkins={checkins} actions={actions} />
       ) : null}
     </div>
   )

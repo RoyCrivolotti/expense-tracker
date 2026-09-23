@@ -4,7 +4,18 @@ import type { NewGoalScenario } from '../../../data/dataSource'
 import type { ExpenseActions } from '../../actions'
 import { duplicateScenario } from '../../../engine'
 import { ColorSwatchPicker } from '../../components/ColorSwatchPicker'
+import { ConfirmSheet } from '../../components/ConfirmSheet'
+import { Presence } from '../../components/Presence'
+import { EXIT_MS } from '../../hooks/motion'
 import styles from './goals.module.css'
+
+function deleteMessage(scenario: GoalScenario): string[] {
+  const lines = ['Its projection line goes with it. Check-ins and your other scenarios stay.']
+  if (scenario.isActive) {
+    lines.push('It is your current plan, so Progress has nothing to measure against until you pick another.')
+  }
+  return lines
+}
 
 interface ActiveScenarioHeaderProps {
   draft: NewGoalScenario
@@ -39,6 +50,7 @@ export function ActiveScenarioHeader({
 }: ActiveScenarioHeaderProps) {
   const [saveAsNewOpen, setSaveAsNewOpen] = useState(false)
   const [copyName, setCopyName] = useState(`${draft.name} copy`)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   if (!canWrite) {
     return <p className={styles.chartHint}>Read-only session — scenarios cannot be saved.</p>
@@ -106,13 +118,22 @@ export function ActiveScenarioHeader({
                 >
                   Duplicate
                 </button>
-                <button
-                  type="button"
-                  className={styles.btn}
-                  onClick={() => void actions.deleteScenario(activeScenario.id)}
-                >
+                <button type="button" className={styles.btn} onClick={() => setDeleteOpen(true)}>
                   Delete
                 </button>
+                <Presence show={deleteOpen} exitMs={EXIT_MS.sheet}>
+                  <ConfirmSheet
+                    title={`Delete ${activeScenario.name}?`}
+                    message={deleteMessage(activeScenario)}
+                    confirmLabel="Delete"
+                    destructive
+                    onConfirm={() => {
+                      setDeleteOpen(false)
+                      void actions.deleteScenario(activeScenario.id)
+                    }}
+                    onCancel={() => setDeleteOpen(false)}
+                  />
+                </Presence>
               </>
             ) : null}
           </div>
