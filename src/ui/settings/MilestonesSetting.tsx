@@ -86,6 +86,7 @@ function MilestoneRow({
       <span className={styles.milestoneTarget}>
         <DateInput
           value={targetDate}
+          placeholder="Target date"
           ariaLabel={`Target date for milestone ${milestone.label || formatted}`}
           onChange={(iso) => commit(iso)}
         />

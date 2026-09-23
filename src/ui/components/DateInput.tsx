@@ -10,6 +10,8 @@ import styles from './DatePicker.module.css'
 interface Props {
   value: string
   ariaLabel?: string
+  /** What the field says while empty. */
+  placeholder?: string
   disabled?: boolean
   /** Inclusive ISO bounds. Both pickers refuse a date outside them. */
   min?: string | undefined
@@ -26,6 +28,7 @@ interface Props {
 export function DateInput({
   value,
   ariaLabel = 'Date',
+  placeholder = 'Select date',
   disabled,
   min,
   max,
@@ -47,7 +50,7 @@ export function DateInput({
       <NativeDateOverlay
         type="date"
         value={value}
-        label={shortDateLabel(value)}
+        label={value ? shortDateLabel(value) : placeholder}
         ariaLabel={ariaLabel}
         disabled={disabled}
         min={min}
@@ -69,7 +72,7 @@ export function DateInput({
         aria-haspopup="dialog"
         aria-expanded={open}
       >
-        {value ? shortDateLabel(value) : 'Select date'}
+        {value ? shortDateLabel(value) : placeholder}
       </button>
       <Presence show={open} exitMs={EXIT_MS.popover}>
         <DatePickerPopover
