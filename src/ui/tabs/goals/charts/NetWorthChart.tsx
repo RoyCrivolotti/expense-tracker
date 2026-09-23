@@ -215,10 +215,13 @@ function heroHeight(narrow: boolean): number {
 
 /** The hero's window buttons: which years of the projection are drawn. */
 function useHeroWindow(isHero: boolean, horizonYears: number) {
-  const [heroWindow, setHeroWindow] = useState<HeroWindowKey>('all')
+  const [picked, setHeroWindow] = useState<HeroWindowKey>('all')
   const heroWindows = useMemo(() => heroWindowsFor(horizonYears), [horizonYears])
   const chosen = HERO_WINDOWS.find((w) => w.value === heroWindow)?.years ?? null
   return { heroWindow, setHeroWindow, heroWindows, windowYears: isHero ? chosen : null }
+  // A window the horizon has since shrunk under falls back to All rather than sitting
+  // selected-but-unlisted; picking it again once the horizon grows still works.
+  const heroWindow = heroWindows.some((w) => w.value === picked) ? picked : 'all'
 }
 
 /** The draft's uncertainty band, hero only. */
