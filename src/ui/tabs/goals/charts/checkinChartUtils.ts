@@ -18,14 +18,13 @@ export function nearestScatterValue(points: ScatterPoint[], index: number): numb
 
 export function buildCheckinTooltip(
   i: number,
-  years: number[],
+  titles: string[],
   planValues: number[],
   scatterPoints: ScatterPoint[],
   format: MoneyFormat,
   planColor?: string,
   actualColor?: string,
 ): { title: string; lines: TooltipLine[] } {
-  const year = years[i] ?? i
   const lines: TooltipLine[] = [
     { label: 'Plan', value: formatMoneyShort(planValues[i] ?? 0, format), color: planColor },
   ]
@@ -33,5 +32,5 @@ export function buildCheckinTooltip(
   if (actual !== null) {
     lines.push({ label: 'Actual', value: formatMoneyShort(actual, format), color: actualColor })
   }
-  return { title: `Year ${year}`, lines }
+  return { title: titles[i] ?? String(i), lines }
 }

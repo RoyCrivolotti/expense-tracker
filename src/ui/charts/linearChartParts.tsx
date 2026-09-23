@@ -240,7 +240,9 @@ export function ChartXLabels({
             key={`${label}-${i}`}
             x={xForIndex(i)}
             y={y}
-            textAnchor="middle"
+            // The end labels sit on the plot's edges; centred there, half of each
+            // would fall outside the SVG.
+            textAnchor={i === 0 ? 'start' : i === labels.length - 1 ? 'end' : 'middle'}
             className={styles.axisLabel}
           >
             {label}

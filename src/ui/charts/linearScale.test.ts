@@ -38,6 +38,13 @@ describe('collectDomain', () => {
     expect(max).toBe(50)
   })
 
+  it('fits the values in view when asked to leave zero out', () => {
+    const { min, max } = collectDomain([[1_000_000, 1_060_000]], [], false)
+    expect(min).toBe(1_000_000)
+    expect(max).toBe(1_060_000)
+    expect(collectDomain([[]], [], false)).toEqual({ min: 0, max: 0 })
+  })
+
   it('ignores a non-finite reference line instead of losing the domain to it', () => {
     const { min, max } = collectDomain([[10, 20]], [Infinity])
     expect(min).toBe(0)

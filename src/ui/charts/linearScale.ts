@@ -53,8 +53,17 @@ export function niceScale(
   return { min: niceMin, max: niceMax, ticks }
 }
 
-/** Domain across every series value and reference line, always including zero. */
-export function collectDomain(valueArrays: number[][], refValues: number[] = []): {
+/**
+ * Domain across every series value and reference line. Zero is included unless the
+ * caller opts out: a projection chart wants the axis anchored at nothing, but a
+ * window onto one stretch of it wants the axis fitted to what is in view, or a year
+ * of movement is a flat line under the ceiling.
+ */
+export function collectDomain(
+  valueArrays: number[][],
+  refValues: number[] = [],
+  includeZero = true,
+): {
   min: number
   max: number
 } {
@@ -62,7 +71,10 @@ export function collectDomain(valueArrays: number[][], refValues: number[] = [])
   // it made the domain infinite, niceScale returned NaN bounds, and the scale built
   // from those mapped every point to NaN. An infinite FI target is reachable by
   // design, so the scale has to survive one.
-  const all = [0, ...refValues, ...valueArrays.flat()].filter(Number.isFinite)
+  const all = [...(includeZero ? [0] : []), ...refValues, ...valueArrays.flat()].filter(
+    Number.isFinite,
+  )
+  if (all.length === 0) return { min: 0, max: 0 }
   return { min: Math.min(...all), max: Math.max(...all) }
 }
 
