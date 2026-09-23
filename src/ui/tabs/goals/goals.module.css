@@ -71,7 +71,19 @@
     z-index: 5;
     padding: 0.5rem 0 0.25rem;
     background: var(--color-bg);
-    border-bottom: 1px solid var(--color-border);
+  }
+
+  /* Controls fade out as they pass under the chart instead of being cut off along a line:
+     a short run of the page background below the block, so the edge reads as depth. */
+  .layout[data-mobile-view='adjust'] .areaMini::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    height: 1.25rem;
+    background: linear-gradient(to bottom, var(--color-bg), transparent);
+    pointer-events: none;
   }
 }
 
