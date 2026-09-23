@@ -30,6 +30,15 @@ describe('WealthSummaryCard', () => {
     expect(screen.getByText(/no plan chosen yet/i)).toBeInTheDocument()
   })
 
+  it('says the plan has no start date, rather than that none is chosen', () => {
+    const plan = makeScenario({ name: 'Path A', planStartDate: null, isActive: true })
+    const accounts = [makeAccount(1)]
+    const checkins = [makeCheckin(1, '2025-06-01', [{ accountId: 1, valueCents: 100_000_00 }])]
+    render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={plan} />)
+    expect(screen.getByText(/Path A has no start date yet/)).toBeInTheDocument()
+    expect(screen.queryByText(/no plan chosen/i)).not.toBeInTheDocument()
+  })
+
   it('shows on-track status when scenario has planStartDate', () => {
     const scenario = makeScenario({
       planStartDate: '2020-01-01',
