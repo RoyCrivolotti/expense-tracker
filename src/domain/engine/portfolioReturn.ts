@@ -46,6 +46,10 @@ export function portfolioReturn(
   let weightedCents = 0
   for (const t of transactions) {
     if (t.type !== 'investment' || t.status === 'cancelled' || t.status === 'forecast') continue
+    // A check-in is the balance at the end of its day, so a flow dated the first day is
+    // already inside the start balance and one dated the last day is inside the end balance
+    // (counted, with no time invested). Moving the first-day flow into the period instead
+    // would count it twice.
     if (t.date <= first.checkinDate || t.date > last.checkinDate) continue
     contributionsCents += t.amountCents
     weightedCents += t.amountCents * ((endMs - utcDateMs(t.date)) / DAY_MS / days)
