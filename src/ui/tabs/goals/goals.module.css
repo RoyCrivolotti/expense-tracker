@@ -957,6 +957,24 @@
   white-space: nowrap;
 }
 
+/* The side-by-side table shares the matrix's frame; its cells are words and money, not
+   colour-coded years, so they sit left and take their own width. */
+.compareHead,
+.compareCell {
+  padding: 0.3rem 0.6rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.compareHead {
+  font-weight: 600;
+  vertical-align: bottom;
+}
+
+.compareCell {
+  font-variant-numeric: tabular-nums;
+}
+
 /* Reached-milestone chips on the Progress tab. */
 .reachedChips {
   display: flex;
