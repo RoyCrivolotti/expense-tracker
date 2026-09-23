@@ -8,6 +8,7 @@ import { ReachedMilestones } from './ReachedMilestones'
 import { CheckinFormSheet } from './CheckinFormSheet'
 import { CheckinList } from './CheckinList'
 import { CheckinHistoryChart } from './charts/CheckinHistoryChart'
+import { NetWorthHistoryChart } from './charts/NetWorthHistoryChart'
 import styles from './progress.module.css'
 import goalStyles from './goals.module.css'
 
@@ -46,13 +47,15 @@ export function ProgressView({
         plan={plan}
       />
 
-      <ReachedMilestones milestones={milestones} reached={reached} />
+      <NetWorthHistoryChart checkins={checkins} accounts={accounts} />
 
       <CheckinHistoryChart
         checkins={checkins}
         accounts={accounts}
         plan={plan}
       />
+
+      <ReachedMilestones milestones={milestones} reached={reached} />
 
       {canWrite && actions && !hasAccounts ? (
         <EmptyState actionLabel="Set up accounts" onAction={onOpenSetup}>

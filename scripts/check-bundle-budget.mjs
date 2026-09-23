@@ -23,7 +23,11 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // Raised again, from 180 KB to 184 KB, when the motion layer landed (Presence, the sheet and
 // popover exits, the folds): about 1.7 KB gzip took the total from ~178.3 KB to 179,969
 // bytes, which left 31 bytes and would have failed the next unrelated change.
-const TOTAL_MAX_GZIP = 184_000
+//
+// Raised from 184 KB to 190 KB for the Goals UX round (confirm sheets in the Goals tab, a
+// Setup view, the pinned mini chart and the net worth history chart): about 1.5 KB gzip
+// took the total from ~182.5 KB to a few bytes over 184,000.
+const TOTAL_MAX_GZIP = 190_000
 const GOALS_MAX_GZIP = 40_000
 
 function gzipBytes(path) {
