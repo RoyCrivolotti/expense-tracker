@@ -67,7 +67,7 @@ function stopDev(dev) {
  */
 async function openAccountSettings(page) {
   await page.getByRole('button', { name: 'Settings' }).click()
-  await page.getByRole('radio', { name: 'Account preferences' }).click()
+  await page.getByRole('radio', { name: 'Account', exact: true }).click()
   await page.waitForSelector('text=Manage access', { timeout: 15000 })
 }
 
@@ -223,7 +223,8 @@ async function goToGoals(page) {
   await page.getByRole('button', { name: 'Goals', exact: true }).click()
   await page.waitForSelector('text=Invested portfolio projection', { timeout: 15000 })
   await page.waitForSelector('text=Scenarios', { timeout: 15000 })
-  await page.getByRole('button', { name: 'Path A: Invest only', exact: true }).waitFor({ timeout: 15000 })
+  // The plan's chip carries a "Current plan" tag in its name, so no exact match here.
+  await page.getByRole('button', { name: /Path A: Invest only/ }).first().waitFor({ timeout: 15000 })
   await page.waitForTimeout(500)
 }
 
@@ -242,6 +243,21 @@ async function captureGoalsDesktop(page) {
 
   await goToGoals(page)
   await page.screenshot({ path: join(OUT, 'goals-desktop-full.png'), fullPage: true })
+
+  await captureGoalsProgressAndSetup(page, 'desktop', true)
+}
+
+/** The Progress and Setup views; `fullPage` for desktop, the top of the view on a phone. */
+async function captureGoalsProgressAndSetup(page, suffix, fullPage) {
+  await page.getByRole('radio', { name: 'Progress', exact: true }).click()
+  await page.waitForSelector('text=Net worth over time', { timeout: 15000 })
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: join(OUT, `goals-${suffix}-progress.png`), fullPage })
+
+  await page.getByRole('radio', { name: 'Setup', exact: true }).click()
+  await page.waitForSelector('text=Wealth accounts', { timeout: 15000 })
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: join(OUT, `goals-${suffix}-setup.png`), fullPage })
 }
 
 const GOALS_MOBILE_VIEWS = [
@@ -271,6 +287,9 @@ async function captureGoalsMobile(page) {
     await page.waitForTimeout(450)
     await page.screenshot({ path: join(OUT, `goals-mobile-${view.file}.png`) })
   }
+
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await captureGoalsProgressAndSetup(page, 'mobile', false)
 }
 
 async function capture() {

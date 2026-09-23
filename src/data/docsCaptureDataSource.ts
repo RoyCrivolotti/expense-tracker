@@ -31,6 +31,7 @@ import type {
 import { deriveTransactions } from '../domain/engine/status'
 import { csvDataSource } from './csvDataSource'
 import { docsCaptureGoalScenarios } from './docsCaptureGoalScenarios'
+import { docsCaptureWealthAccounts, docsCaptureWealthCheckins } from './docsCaptureWealth'
 
 /** A demo installment plan (part-paid) for the gallery, if a category exists. */
 function demoInstallments(dataset: ExpenseDataset): {
@@ -227,6 +228,8 @@ export const docsCaptureDataSource: ExpenseDataSource = {
       const enriched = enrichDocsCaptureDataset({
         ...dataset,
         goalScenarios: docsCaptureGoalScenarios(),
+        wealthAccounts: docsCaptureWealthAccounts(),
+        wealthCheckins: docsCaptureWealthCheckins(),
       })
       loaded = enriched.transactions
       return enriched
