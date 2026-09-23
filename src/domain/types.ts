@@ -274,6 +274,11 @@ export interface ExpenseSettings {
    * deliberate "no milestones" choice, not a missing value.
    */
   milestones: Milestone[]
+  /**
+   * Months of spending to hold in cash accounts, the emergency-fund target Progress
+   * measures the cash balance against. Zero means no target.
+   */
+  cashReserveMonths: number
 }
 
 /**

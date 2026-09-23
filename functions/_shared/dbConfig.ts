@@ -367,6 +367,7 @@ const SETTINGS_COLUMNS: ColumnMap<ExpenseSettings> = {
   numberLocale: 'number_locale',
   budgetRolloverDay: 'budget_rollover_day',
   milestones: 'milestones',
+  cashReserveMonths: 'cash_reserve_months',
 }
 const NULLABLE_SETTINGS = new Set<keyof ExpenseSettings>([
   'claimantName',
@@ -375,7 +376,10 @@ const NULLABLE_SETTINGS = new Set<keyof ExpenseSettings>([
   'numberLocale',
   'budgetRolloverDay',
   'milestones',
+  'cashReserveMonths',
 ])
+/** Five years of spending in cash is already absurd; past it the number is a typo. */
+export const CASH_RESERVE_MAX_MONTHS = 60
 const coerceSettings: Coerce<ExpenseSettings> = (key, value) => {
   if (key === 'milestones') {
     return value === undefined ? null : JSON.stringify(normalizeMilestones(value as Milestone[]))
@@ -383,14 +387,8 @@ const coerceSettings: Coerce<ExpenseSettings> = (key, value) => {
   return NULLABLE_SETTINGS.has(key) ? (value ?? null) : (value ?? 0)
 }
 
-export async function updateSettings(
-  env: Env,
-  owner: string,
-  patch: Partial<ExpenseSettings>,
-): Promise<ExpenseSettings> {
-  if (patch.defaultAccountId != null) {
-    await assertOwnedAccount(env, owner, patch.defaultAccountId)
-  }
+/** The scalar checks that need no database; the account check stays with the query. */
+function assertSettingsPatch(patch: Partial<ExpenseSettings>): void {
   if (
     patch.budgetRolloverDay != null &&
     (!Number.isInteger(patch.budgetRolloverDay) ||
@@ -403,6 +401,25 @@ export async function updateSettings(
     const error = validateMilestones(patch.milestones)
     if (error) throw new HttpError(400, error)
   }
+  if (
+    patch.cashReserveMonths !== undefined &&
+    (!Number.isInteger(patch.cashReserveMonths) ||
+      patch.cashReserveMonths < 0 ||
+      patch.cashReserveMonths > CASH_RESERVE_MAX_MONTHS)
+  ) {
+    throw new HttpError(400, `cashReserveMonths must be an integer between 0 and ${CASH_RESERVE_MAX_MONTHS}`)
+  }
+}
+
+export async function updateSettings(
+  env: Env,
+  owner: string,
+  patch: Partial<ExpenseSettings>,
+): Promise<ExpenseSettings> {
+  if (patch.defaultAccountId != null) {
+    await assertOwnedAccount(env, owner, patch.defaultAccountId)
+  }
+  assertSettingsPatch(patch)
   const { sets, values } = buildUpdate(SETTINGS_COLUMNS, patch, coerceSettings)
   await env.DB.prepare('INSERT OR IGNORE INTO settings (owner) VALUES (?)').bind(owner).run()
   const row = await env.DB.prepare(`UPDATE settings SET ${sets} WHERE owner = ? RETURNING *`)

@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { WealthSummaryCard } from './WealthSummaryCard'
 import { planValueAtDate } from '../../../engine'
-import { makeScenario } from '../../../testing/factories'
+import { makeScenario, makeTransaction } from '../../../testing/factories'
 import type { WealthAccount, WealthCheckin } from '../../../types'
 
 function makeAccount(id: number, kind: WealthAccount['kind'] = 'investment'): WealthAccount {
@@ -121,6 +121,30 @@ describe('WealthSummaryCard', () => {
     render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} onRebaseline={vi.fn()} />)
 
     expect(screen.queryByText(/Every check-in since/)).not.toBeInTheDocument()
+  })
+
+  it('reads the cash reserve as months of spending, against the target when set', () => {
+    const accounts = [makeAccount(1, 'investment'), makeAccount(2, 'cash')]
+    const checkins = [
+      makeCheckin(1, '2026-07-01', [
+        { accountId: 1, valueCents: 100_000_00 },
+        { accountId: 2, valueCents: 9_000_00 },
+      ]),
+    ]
+    const spend = [
+      makeTransaction({ budgetMonth: '2026-06', date: '2026-06-10', type: 'expense', amountCents: 3_000_00 }),
+      makeTransaction({ budgetMonth: '2026-07', date: '2026-07-10', type: 'expense', amountCents: 3_000_00 }),
+    ]
+    const { rerender } = render(
+      <WealthSummaryCard checkins={checkins} accounts={accounts} plan={null} transactions={spend} cashReserveMonths={6} />,
+    )
+    expect(screen.getByText(/Cash reserve:/)).toHaveTextContent(/covers 3\.0 months of spending, against a target of 6/)
+
+    rerender(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={null} transactions={spend} />)
+    expect(screen.getByText(/Cash reserve:/)).toHaveTextContent(/about 3\.0 months of spending/)
+
+    rerender(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={null} />)
+    expect(screen.getByText(/Cash reserve:/)).toHaveTextContent(/^Cash reserve: 9k €\.$/)
   })
 
   it('compounds a year or more to a yearly rate and sets it against the plan', () => {
