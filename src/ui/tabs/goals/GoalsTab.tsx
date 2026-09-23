@@ -182,6 +182,14 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
   const selectScenario = useCallback((scenario: GoalScenario) => {
     setActiveId(scenario.id)
     setDraft(scenarioToDraft(scenario))
+    // The loaded scenario is always drawn as the editing line, so a hidden flag on it would
+    // only leave the chip and legend saying two things at once.
+    setHiddenIds((prev) => {
+      if (!prev.has(scenario.id)) return prev
+      const next = new Set(prev)
+      next.delete(scenario.id)
+      return next
+    })
   }, [])
 
   const onActivate = useCallback(() => {

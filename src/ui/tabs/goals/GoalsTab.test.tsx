@@ -98,6 +98,20 @@ describe('GoalsTab', () => {
     expect(screen.queryByRole('button', { name: 'Save check-in' })).not.toBeInTheDocument()
   })
 
+  it('shows a hidden scenario again when it is loaded for editing', async () => {
+    const user = userEvent.setup()
+    const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })
+    const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })
+    const model = buildExpenseModel(makeDataset({ goalScenarios: [plan, other] }))
+    render(<GoalsTab model={model} actions={makeActions()} />)
+
+    await user.click(screen.getAllByRole('button', { name: 'Hide Path B on chart' })[0]!)
+    expect(screen.getAllByRole('button', { name: 'Show Path B on chart' })).toHaveLength(2)
+
+    await user.click(screen.getByRole('button', { name: /^Path B$/ }))
+    expect(screen.queryByRole('button', { name: 'Show Path B on chart' })).not.toBeInTheDocument()
+  })
+
   it('hides a scenario from the hero legend and the chip agrees', async () => {
     const user = userEvent.setup()
     const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })
