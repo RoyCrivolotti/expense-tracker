@@ -90,11 +90,19 @@ Cash recon shows **Carryover**, **This month**, and **Total gap** columns (deskt
 
 ## Goals
 
-Multi-scenario wealth planner: three saved paths plus an unsaved draft, FI progress, FIRE drawdown, rent-vs-buy net worth, and actual saving vs plan. Desktop secondary charts default to a full-width stack with an optional single-chart tab mode; mobile uses a scrollable chart picker.
+Multi-scenario wealth planner in three views. Plan: three saved paths plus an unsaved draft, FI progress, FIRE drawdown, rent-vs-buy net worth, and actual saving vs plan. Progress: dated check-ins with on/off-track status, net worth over time, and actual vs plan. Setup: the milestone ladder and the wealth accounts. Desktop secondary charts default to a full-width stack with an optional single-chart tab mode; mobile uses a scrollable chart picker.
 
 | Desktop overview | Mobile overview |
 | --- | --- |
 | ![Goals desktop](./screenshots/gallery/goals-desktop.png) | ![Goals mobile](./screenshots/gallery/goals-mobile.png) |
+
+| Progress (desktop) | Progress (mobile) |
+| --- | --- |
+| ![Goals progress desktop](./screenshots/gallery/goals-desktop-progress.png) | ![Goals progress mobile](./screenshots/gallery/goals-mobile-progress.png) |
+
+| Setup (desktop) | Setup (mobile) |
+| --- | --- |
+| ![Goals setup desktop](./screenshots/gallery/goals-desktop-setup.png) | ![Goals setup mobile](./screenshots/gallery/goals-mobile-setup.png) |
 
 | Full page (desktop) | Secondary charts stack (desktop) |
 | --- | --- |
