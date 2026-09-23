@@ -91,11 +91,13 @@ function SteadyGapHint({
 
 const hintStyle = { fontSize: '0.8125rem', color: 'var(--color-text-muted)', margin: 0 } as const
 
+/** The inflation taken off a measured (nominal) return before it meets the plan's real one. */
+const ASSUMED_INFLATION = 0.02
+
 /**
  * Whether being behind is a saving problem or a market one. Under a full year the figure
  * is the period's return and reads "so far"; from a year on it is compounded to a yearly
- * rate and set against the plan's assumption, which is a real return, so a nominal figure
- * a little above it is roughly on par.
+ * rate, has the assumed inflation taken off, and is set against the plan's real return.
  */
 function ReturnHint({
   ret,
@@ -107,25 +109,29 @@ function ReturnHint({
   format: MoneyFormat
 }) {
   const since = formatCheckinDate(ret.startDate)
-  const assumed = plan
-    ? ` against the ${formatPercent(plan.expectedRealReturn, format)} a year, after inflation, that ${plan.name} assumes`
-    : ''
+  const planRate = plan ? `${formatPercent(plan.expectedRealReturn, format)} a year` : ''
   if (ret.annualised === null) {
     return (
       <p style={hintStyle}>
         Your portfolio has returned <strong>{formatPercent(ret.periodReturn, format)} so far</strong>{' '}
-        since {since}{assumed}.
+        since {since}
+        {plan ? ` against the ${planRate}, after inflation, that ${plan.name} assumes` : ''}.
       </p>
     )
   }
-  const onPar = !plan || ret.annualised >= plan.expectedRealReturn
+  // Balances are nominal and the plan's rate is real, so the two only meet after inflation
+  // comes off; the same 2% the hero chart's purchasing-power view assumes.
+  const real = (1 + ret.annualised) / (1 + ASSUMED_INFLATION) - 1
+  const onPar = !plan || real >= plan.expectedRealReturn
   return (
     <p style={hintStyle}>
       Your portfolio returned{' '}
       <strong style={{ color: onPar ? 'var(--exp-success)' : 'var(--exp-danger)' }}>
         {formatPercent(ret.annualised, format)} a year
       </strong>{' '}
-      since {since}{assumed}.
+      since {since}, about {formatPercent(real, format)} once{' '}
+      {formatPercent(ASSUMED_INFLATION, format)} inflation is taken off
+      {plan ? ` against the ${planRate} that ${plan.name} assumes` : ''}.
     </p>
   )
 }
