@@ -37,6 +37,16 @@ describe('averageMonthlySpendCents', () => {
     expect(averageMonthlySpendCents([])).toBeNull()
   })
 
+  it('leaves a month with only income or investing out of the average', () => {
+    const txns = [
+      spend('2026-06', 2_000_00),
+      makeTransaction({ budgetMonth: '2026-07', type: 'income', amountCents: 9_000_00 }),
+      makeTransaction({ budgetMonth: '2026-08', type: 'investment', amountCents: 1_000_00 }),
+    ]
+    expect(averageMonthlySpendCents(txns)).toBe(2_000_00)
+    expect(averageMonthlySpendCents([txns[1]!])).toBeNull()
+  })
+
   it('looks back twelve months at most', () => {
     const txns = Array.from({ length: 14 }, (_, i) =>
       spend(`2025-${String(i + 1).padStart(2, '0')}`.replace('2025-13', '2026-01').replace('2025-14', '2026-02'), i < 2 ? 100_000_00 : 1_000_00),
