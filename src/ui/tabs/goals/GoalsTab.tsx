@@ -8,8 +8,10 @@ import {
   computeMonthlyTotals,
   yearOffsetFromDate,
   checkinInvestedCents,
+  latestCheckin,
   milestonesReached,
 } from '../../../engine'
+import type { InvestedSnapshot } from './checkinDate'
 import type { ChartSeries } from '../../charts/LinearChart'
 import { Card, SectionTitle } from '../../components/primitives'
 import { SegmentedControl } from '../../components/SegmentedControl'
@@ -103,6 +105,14 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
     () => milestonesReached(milestones, dataset.wealthCheckins, dataset.wealthAccounts),
     [milestones, dataset.wealthCheckins, dataset.wealthAccounts],
   )
+  const latestSnapshot = useMemo<InvestedSnapshot | null>(() => {
+    const latest = latestCheckin(dataset.wealthCheckins)
+    if (!latest) return null
+    return {
+      investedCents: checkinInvestedCents(latest, dataset.wealthAccounts),
+      date: latest.checkinDate,
+    }
+  }, [dataset.wealthCheckins, dataset.wealthAccounts])
   const monthly = useMemo<MonthlySaving[]>(() => {
     const entries = [...computeMonthlyTotals(dataset.transactions).entries()].sort(([a], [b]) =>
       a.localeCompare(b),
@@ -295,7 +305,7 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
           </div>
           <div className={styles.areaControls}>
             <Card>
-              <GoalControls draft={draft} onChange={patchDraft} />
+              <GoalControls draft={draft} latest={latestSnapshot} onChange={patchDraft} />
             </Card>
           </div>
         </div>
@@ -303,6 +313,7 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
           <div className={styles.areaNow}>
             <NetWorthNowCard
               draft={deferredDraft}
+              latest={latestSnapshot}
               milestones={milestones}
               reached={reachedMilestones}
             />

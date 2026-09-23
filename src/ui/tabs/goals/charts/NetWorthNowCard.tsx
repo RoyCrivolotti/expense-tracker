@@ -4,21 +4,32 @@ import type { Milestone } from '../../../../types'
 import { fireNumber, formatCents, milestoneLabelWithAmount } from '../../../../engine'
 import { Card } from '../../../components/primitives'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
+import { formatCheckinDate, type InvestedSnapshot } from '../checkinDate'
 import styles from '../goals.module.css'
 
 /** "You are here" snapshot: invested today vs the FI target and next milestone. */
 function NetWorthNowCardImpl({
   draft,
+  latest = null,
   milestones,
   reached,
 }: {
   draft: NewGoalScenario
+  /**
+   * The latest check-in, or null before the first one. "Today" is measured, not
+   * assumed: the scenario's starting balance is where the plan began, which after a
+   * year of check-ins says nothing about where you are.
+   */
+  latest?: InvestedSnapshot | null
   milestones: Milestone[]
   /** amountCents -> date first observed at or above, from check-in history. */
   reached: Map<number, string>
 }) {
   const format = useMoneyFormat()
-  const current = draft.startInvestedCents
+  const current = latest ? latest.investedCents : draft.startInvestedCents
+  const measured = latest
+    ? `as of ${formatCheckinDate(latest.date)}`
+    : 'at plan start, no check-in yet'
   const fiTarget = fireNumber(draft.annualSpendCents, draft.safeWithdrawalRate)
   const pct =
     fiTarget > 0 && draft.annualSpendCents > 0
@@ -38,6 +49,7 @@ function NetWorthNowCardImpl({
           <ul className={styles.nowList}>
             <li>
               <strong>{formatCents(current, format)}</strong> invested
+              <span className={styles.nowListNote}>{measured}</span>
             </li>
             <li>
               <strong>{pct.toFixed(0)}%</strong> of your {formatCents(fiTarget, format)} FI target
@@ -61,7 +73,7 @@ function NetWorthNowCardImpl({
         </>
       ) : (
         <p className={styles.chartHint}>
-          {formatCents(current, format)} invested
+          {formatCents(current, format)} invested {measured}
           {nextMilestone != null ? ` · next milestone ${nextMilestone}` : ''}. Set annual spend at FI
           above to see progress toward a financial independence target.
         </p>

@@ -9,6 +9,29 @@ const upcoming = { amountCents: 15_000_000, label: 'Coast FI' }
 const noneReached = new Map<number, string>()
 
 describe('NetWorthNowCard', () => {
+  it('reads today from the latest check-in, dated, rather than the plan start', () => {
+    const draft = makeScenario({ annualSpendCents: 4_000_000 })
+    render(
+      <NetWorthNowCard
+        draft={draft}
+        latest={{ investedCents: 11_700_000, date: '2026-09-11' }}
+        milestones={[upcoming]}
+        reached={noneReached}
+      />,
+    )
+    expect(screen.getByText('117.000,00 €')).toBeTruthy()
+    expect(screen.getByText(/as of .*2026/)).toBeTruthy()
+    // 117k against a 100M FI target rounds to 0%; the point is that it is the check-in's.
+    expect(screen.queryByText('100.000,00 €')).toBeNull()
+  })
+
+  it('says it is showing the plan start when there is no check-in yet', () => {
+    const draft = makeScenario({ annualSpendCents: 4_000_000 })
+    render(<NetWorthNowCard draft={draft} latest={null} milestones={[]} reached={noneReached} />)
+    expect(screen.getByText('100.000,00 €')).toBeTruthy()
+    expect(screen.getByText(/no check-in yet/)).toBeTruthy()
+  })
+
   it('names the first milestone above the current invested value', () => {
     const draft = makeScenario({ annualSpendCents: 4_000_000 })
     render(<NetWorthNowCard draft={draft} milestones={[passed, upcoming]} reached={noneReached} />)

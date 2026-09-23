@@ -7,6 +7,7 @@ import type {
   WealthCheckin,
 } from '../../../types'
 import type { ExpenseActions } from '../../actions'
+import { latestCheckin } from '../../../engine'
 import { WealthSummaryCard } from './WealthSummaryCard'
 import { ReachedMilestones } from './ReachedMilestones'
 import { MilestonesSetting } from '../../settings/MilestonesSetting'
@@ -67,6 +68,7 @@ export function ProgressView({
         showCheckinForm ? (
           <CheckinFormSheet
             accounts={accounts}
+            previous={latestCheckin(checkins)}
             actions={actions}
             onDone={() => setShowCheckinForm(false)}
           />

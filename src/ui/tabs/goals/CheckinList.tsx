@@ -1,12 +1,17 @@
+import { useState } from 'react'
 import type { GoalScenario, WealthAccount, WealthCheckin } from '../../../types'
 import type { ExpenseActions } from '../../actions'
 import { Card } from '../../components/primitives'
+import { ConfirmSheet } from '../../components/ConfirmSheet'
+import { Presence } from '../../components/Presence'
+import { EXIT_MS } from '../../hooks/motion'
 import {
   checkinNetWorthCents,
   trackStatus,
 } from '../../../engine'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { formatMoneyShort } from './chartTheme'
+import { formatCheckinDate } from './checkinDate'
 import styles from './progress.module.css'
 import goalStyles from './goals.module.css'
 
@@ -18,18 +23,17 @@ interface Props {
   actions: ExpenseActions | undefined
 }
 
-function fmtDate(d: string) {
-  const [y, m, day] = d.split('-')
-  const date = new Date(Number(y), Number(m) - 1, Number(day))
-  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-}
-
 function accountName(id: number, accounts: WealthAccount[]) {
   return accounts.find((a) => a.id === id)?.name ?? `Account ${id}`
 }
 
 export function CheckinList({ checkins, accounts, plan, canWrite, actions }: Props) {
   const format = useMoneyFormat()
+  // A check-in is a month's worth of balances typed by hand and cannot be re-created
+  // once gone, so the one-tap delete asks first. The check-in stays in state while the
+  // sheet animates out, so it does not lose its title mid-exit.
+  const [pendingDelete, setPendingDelete] = useState<WealthCheckin | null>(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const sorted = [...checkins].sort((a, b) => (b.checkinDate > a.checkinDate ? 1 : -1))
 
@@ -49,7 +53,7 @@ export function CheckinList({ checkins, accounts, plan, canWrite, actions }: Pro
             return (
               <div key={c.id} className={styles.checkinItem}>
                 <div className={styles.checkinHeader}>
-                  <span className={styles.checkinDate}>{fmtDate(c.checkinDate)}</span>
+                  <span className={styles.checkinDate}>{formatCheckinDate(c.checkinDate)}</span>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'baseline' }}>
                     <span className={styles.checkinTotal}>
                       {formatMoneyShort(netWorth, format)}
@@ -92,7 +96,10 @@ export function CheckinList({ checkins, accounts, plan, canWrite, actions }: Pro
                     <button
                       className={goalStyles.iconBtn}
                       aria-label="Delete check-in"
-                      onClick={() => { void actions.deleteWealthCheckin(c.id) }}
+                      onClick={() => {
+                        setPendingDelete(c)
+                        setConfirmOpen(true)
+                      }}
                     >
                       ✕
                     </button>
@@ -103,6 +110,22 @@ export function CheckinList({ checkins, accounts, plan, canWrite, actions }: Pro
           })}
         </div>
       )}
+
+      <Presence show={confirmOpen} exitMs={EXIT_MS.sheet}>
+        {pendingDelete ? (
+          <ConfirmSheet
+            title={`Delete the ${formatCheckinDate(pendingDelete.checkinDate)} check-in?`}
+            message="Its balances go with it. The plan and your other check-ins stay."
+            confirmLabel="Delete"
+            destructive
+            onConfirm={() => {
+              setConfirmOpen(false)
+              void actions?.deleteWealthCheckin(pendingDelete.id)
+            }}
+            onCancel={() => setConfirmOpen(false)}
+          />
+        ) : null}
+      </Presence>
     </Card>
   )
 }

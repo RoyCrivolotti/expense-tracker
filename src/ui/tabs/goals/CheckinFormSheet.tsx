@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { WealthAccount } from '../../../types'
+import type { WealthAccount, WealthCheckin } from '../../../types'
 import type { ExpenseActions } from '../../actions'
 import { Card } from '../../components/primitives'
 import { DateInput } from '../../components/DateInput'
@@ -11,13 +11,19 @@ import goalStyles from './goals.module.css'
 
 interface Props {
   accounts: WealthAccount[]
+  /**
+   * The previous check-in, whose balances the form starts from. Most accounts move a
+   * little between check-ins, so editing last month's figure beats retyping every one
+   * from zero, and an account nothing changed in needs no touch at all.
+   */
+  previous?: WealthCheckin | null
   actions: ExpenseActions
   onDone?: () => void
 }
 
 type EntryDraft = { accountId: number; valueCents: number }
 
-export function CheckinFormSheet({ accounts, actions, onDone }: Props) {
+export function CheckinFormSheet({ accounts, previous = null, actions, onDone }: Props) {
   const format = useMoneyFormat()
   // Local date, not UTC. East of UTC these differ for part of every day, and a UTC
   // "today" would default the field to yesterday and cap it there — leaving the user's
@@ -29,7 +35,10 @@ export function CheckinFormSheet({ accounts, actions, onDone }: Props) {
   const active = accounts.filter((a) => !a.archived)
 
   const [entries, setEntries] = useState<EntryDraft[]>(() =>
-    active.map((a) => ({ accountId: a.id, valueCents: 0 })),
+    active.map((a) => ({
+      accountId: a.id,
+      valueCents: previous?.entries.find((e) => e.accountId === a.id)?.valueCents ?? 0,
+    })),
   )
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)

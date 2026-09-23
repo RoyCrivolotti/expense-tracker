@@ -106,7 +106,7 @@ describe('CheckinList', () => {
     expect(screen.queryByRole('button', { name: /delete check-in/i })).not.toBeInTheDocument()
   })
 
-  it('calls deleteWealthCheckin when delete button is clicked', () => {
+  it('asks before deleting, and only deletes once confirmed', () => {
     const actions = makeActions()
     const accounts = [makeAccount(1)]
     const checkins = [makeCheckin(1, '2025-06-01', [{ accountId: 1, valueCents: 100_000_00 }])]
@@ -119,8 +119,30 @@ describe('CheckinList', () => {
         actions={actions}
       />,
     )
-    const btn = screen.getByRole('button', { name: /delete check-in/i })
-    fireEvent.click(btn)
+    fireEvent.click(screen.getByRole('button', { name: /delete check-in/i }))
+
+    expect(screen.getByText(/Delete the .*2025 check-in\?/)).toBeInTheDocument()
+    expect(actions.deleteWealthCheckin).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
     expect(actions.deleteWealthCheckin).toHaveBeenCalledWith(1)
+  })
+
+  it('keeps the check-in when the confirm is cancelled', () => {
+    const actions = makeActions()
+    const checkins = [makeCheckin(1, '2025-06-01', [{ accountId: 1, valueCents: 100_000_00 }])]
+    render(
+      <CheckinList
+        checkins={checkins}
+        accounts={[makeAccount(1)]}
+        plan={null}
+        canWrite={true}
+        actions={actions}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /delete check-in/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(actions.deleteWealthCheckin).not.toHaveBeenCalled()
   })
 })
