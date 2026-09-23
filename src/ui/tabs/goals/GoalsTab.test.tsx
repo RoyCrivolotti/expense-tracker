@@ -43,6 +43,49 @@ describe('GoalsTab', () => {
     expect(screen.getByText('Progress snapshot')).toBeInTheDocument()
   })
 
+  it('keeps milestones and accounts in Setup, out of Progress', async () => {
+    const user = userEvent.setup()
+    const model = buildExpenseModel(
+      makeDataset({ wealthAccounts: [makeWealthAccount({ id: 1, name: 'Broker' })] }),
+    )
+    render(<GoalsTab model={model} actions={makeActions()} />)
+
+    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    expect(screen.getByText('Progress snapshot')).toBeInTheDocument()
+    expect(screen.queryByText('Wealth accounts')).not.toBeInTheDocument()
+    expect(screen.queryByText('Milestones')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('radio', { name: 'Setup' }))
+    expect(screen.getByText('Wealth accounts')).toBeInTheDocument()
+    expect(screen.getByText('Milestones')).toBeInTheDocument()
+    expect(screen.getByText('Broker')).toBeInTheDocument()
+    expect(screen.queryByText('Progress snapshot')).not.toBeInTheDocument()
+  })
+
+  it('writes milestone edits made in Setup to settings', async () => {
+    const user = userEvent.setup()
+    const actions = makeActions()
+    render(<GoalsTab model={makeModel()} actions={actions} />)
+
+    await user.click(screen.getByRole('radio', { name: 'Setup' }))
+    await user.click(screen.getByText('+ Add milestone'))
+
+    expect(actions.updateSettings).toHaveBeenCalledTimes(1)
+    const patch = vi.mocked(actions.updateSettings).mock.calls[0]![0]
+    expect(patch.milestones).toHaveLength(defaultExpenseSettings().milestones.length + 1)
+  })
+
+  it('takes an empty Progress view to Setup', async () => {
+    const user = userEvent.setup()
+    render(<GoalsTab model={makeModel()} actions={makeActions()} />)
+
+    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('button', { name: 'Set up accounts' }))
+
+    expect(screen.getByRole('radio', { name: 'Setup' })).toBeChecked()
+    expect(screen.getByText('Wealth accounts')).toBeInTheDocument()
+  })
+
   it('shows Plan view content when Plan tab is active', () => {
     render(<GoalsTab model={makeModel()} />)
     expect(screen.getByText(/Invested portfolio projection/i)).toBeInTheDocument()
