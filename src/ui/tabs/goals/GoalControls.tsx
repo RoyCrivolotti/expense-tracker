@@ -58,14 +58,11 @@ export function GoalControls({ draft, latest = null, onChange }: GoalControlsPro
         <MoneyField
           label="Starting invested"
           value={draft.startInvestedCents}
-          max={50_000_000}
           onChange={(v) => onChange({ startInvestedCents: v })}
         />
         <MoneyField
           label="Monthly investing"
           value={draft.monthlyContributionCents}
-          max={2_000_00}
-          step={10_00}
           onChange={(v) => onChange({ monthlyContributionCents: v })}
         />
         <PercentField
@@ -83,9 +80,8 @@ export function GoalControls({ draft, latest = null, onChange }: GoalControlsPro
         <NumberField
           label="Horizon (years)"
           value={draft.horizonYears}
-          min={5}
-          max={40}
-          format={(v) => String(v)}
+          min={1}
+          max={60}
           onChange={(v) => onChange({ horizonYears: v })}
         />
       </ControlSection>
@@ -93,8 +89,6 @@ export function GoalControls({ draft, latest = null, onChange }: GoalControlsPro
         <MoneyField
           label="House price"
           value={draft.housePriceCents}
-          max={100_000_000}
-          step={25_000_00}
           onChange={(v) => onChange({ housePriceCents: v })}
         />
         <PercentField
@@ -106,8 +100,6 @@ export function GoalControls({ draft, latest = null, onChange }: GoalControlsPro
         <MoneyField
           label="Purchase fees"
           value={draft.transactionCostsCents}
-          max={5_000_000}
-          step={50_000}
           onChange={(v) => onChange({ transactionCostsCents: v })}
         />
         <p className={styles.fieldHint}>
@@ -123,9 +115,8 @@ export function GoalControls({ draft, latest = null, onChange }: GoalControlsPro
         <NumberField
           label="Mortgage term (years)"
           value={draft.mortgageTermYears}
-          min={5}
+          min={1}
           max={40}
-          format={String}
           onChange={(v) => onChange({ mortgageTermYears: v })}
         />
         <PercentField
@@ -143,8 +134,6 @@ export function GoalControls({ draft, latest = null, onChange }: GoalControlsPro
         <MoneyField
           label="Rent (monthly)"
           value={draft.rentMonthlyCents}
-          max={300_000}
-          step={5_000}
           onChange={(v) => onChange({ rentMonthlyCents: v })}
         />
       </ControlSection>
@@ -156,8 +145,6 @@ export function GoalControls({ draft, latest = null, onChange }: GoalControlsPro
         <MoneyField
           label="Annual spend at FI"
           value={draft.annualSpendCents}
-          max={150_000_00}
-          step={1_000_00}
           onChange={(v) => onChange({ annualSpendCents: v })}
         />
         <p className={styles.fieldHint}>
@@ -319,19 +306,10 @@ function LifeEventForm({
           />
         </div>
       </label>
-      <NumberField
-        label="Year"
-        value={year}
-        min={1}
-        max={horizonYears}
-        format={String}
-        onChange={setYear}
-      />
+      <NumberField label="Year" value={year} min={1} max={horizonYears} onChange={setYear} />
       <MoneyField
         label="Amount (+ inflow / − outflow)"
         value={Math.abs(amountCents)}
-        max={100_000_000_00}
-        step={1_000_00}
         onChange={(v) => setAmountCents(amountCents < 0 ? -v : v)}
       />
       <div className={styles.lifeEventSignRow}>
