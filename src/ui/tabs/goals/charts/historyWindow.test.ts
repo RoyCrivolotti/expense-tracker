@@ -11,12 +11,14 @@ describe('monthsBetweenDates', () => {
 })
 
 describe('defaultHistoryWindow', () => {
-  it('starts at a year with no check-ins or recent ones', () => {
-    expect(defaultHistoryWindow(null, '2026-09-23')).toBe('1y')
-    expect(defaultHistoryWindow('2026-03-01', '2026-09-23')).toBe('1y')
+  it('starts at three months with no check-ins or recent ones', () => {
+    expect(defaultHistoryWindow(null, '2026-09-23')).toBe('3m')
+    expect(defaultHistoryWindow('2026-08-01', '2026-09-23')).toBe('3m')
   })
 
-  it('widens to hold the earliest check-in', () => {
+  it('widens just enough to hold the earliest check-in', () => {
+    expect(defaultHistoryWindow('2026-06-01', '2026-09-23')).toBe('6m')
+    expect(defaultHistoryWindow('2026-03-01', '2026-09-23')).toBe('1y')
     expect(defaultHistoryWindow('2025-06-01', '2026-09-23')).toBe('2y')
     expect(defaultHistoryWindow('2022-01-01', '2026-09-23')).toBe('5y')
     expect(defaultHistoryWindow('2010-01-01', '2026-09-23')).toBe('all')
@@ -34,18 +36,24 @@ describe('historyAxis', () => {
     expect(axis.labels.filter((l) => l !== '').length).toBeLessThanOrEqual(5)
   })
 
+  it('has a three-month axis for the shortest window', () => {
+    const axis = historyAxis('3m', null, '2026-09-23')
+    expect(axis.steps).toBe(3)
+    expect(axis.titles).toEqual(["Jun '26", "Jul '26", "Aug '26", "Sep '26"])
+  })
+
   it('thins the labels when told there is room for fewer', () => {
     const axis = historyAxis('1y', null, '2026-09-23', 3)
     expect(axis.labels.filter((l) => l !== '')).toEqual(["Sep '25", "Mar '26", "Sep '26"])
   })
 
-  it('reaches back to the earliest check-in for All, and never less than a year', () => {
+  it('reaches back to the earliest check-in for All, and never less than three months', () => {
     const wide = historyAxis('all', '2024-03-10', '2026-09-23')
     expect(xIndexFor('2024-03-10', '2026-09-23', wide)).toBeGreaterThanOrEqual(0)
     expect(wide.stepMonths).toBe(3)
 
-    const recent = historyAxis('all', '2026-08-01', '2026-09-23')
-    expect(recent.steps * recent.stepMonths).toBe(12)
+    const recent = historyAxis('all', '2026-09-01', '2026-09-23')
+    expect(recent.steps * recent.stepMonths).toBe(3)
   })
 })
 

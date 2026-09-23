@@ -17,8 +17,13 @@ import { formatMoneyAxis, formatMoneyShort } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { useGoalsNarrow } from '../useGoalsNarrow'
 import { nearestScatterValue } from './checkinChartUtils'
-import { WINDOW_OPTIONS, type WindowKey } from './checkinWindow'
-import { defaultHistoryWindow, historyAxis, xIndexFor } from './historyWindow'
+import {
+  HISTORY_WINDOWS,
+  defaultHistoryWindow,
+  historyAxis,
+  xIndexFor,
+  type HistoryWindowKey,
+} from './historyWindow'
 import goalStyles from '../goals.module.css'
 import progressStyles from '../progress.module.css'
 
@@ -53,7 +58,7 @@ export function NetWorthHistoryChart({ checkins, accounts }: Props) {
     [checkins],
   )
   const earliest = sorted[0]?.checkinDate ?? null
-  const [chosen, setChosen] = useState<WindowKey | null>(null)
+  const [chosen, setChosen] = useState<HistoryWindowKey | null>(null)
   const window = chosen ?? defaultHistoryWindow(earliest, today)
 
   const model = useMemo(() => {
@@ -125,7 +130,7 @@ export function NetWorthHistoryChart({ checkins, accounts }: Props) {
       <div className={progressStyles.chartHeaderRow}>
         <h3 className={goalStyles.sectionTitle}>Net worth over time</h3>
         <SegmentedControl
-          options={WINDOW_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+          options={HISTORY_WINDOWS.map((o) => ({ value: o.value, label: o.label }))}
           value={window}
           onChange={setChosen}
           ariaLabel="History window"
