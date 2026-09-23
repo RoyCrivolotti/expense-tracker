@@ -4,9 +4,8 @@
  * starting point is what is off, and a re-baseline is the fix rather than more saving.
  */
 import type { GoalScenario, WealthAccount, WealthCheckin } from '../types'
+import { DAY_MS, utcDateMs } from './dates'
 import { trackStatus } from './wealthTracking'
-
-const DAY_MS = 86_400_000
 
 export interface SteadyGap {
   /** The earliest check-in in the run. */
@@ -16,19 +15,14 @@ export interface SteadyGap {
   count: number
 }
 
-function utcMs(date: string): number {
-  const [y, m, d] = date.split('-').map(Number) as [number, number, number]
-  return Date.UTC(y, m - 1, d)
-}
-
 /** The check-ins from the last one that is at least `minDays` older than the latest. */
 function recentRun(checkins: WealthCheckin[], minDays: number): WealthCheckin[] {
   const sorted = [...checkins].sort((a, b) => a.checkinDate.localeCompare(b.checkinDate))
   const latest = sorted[sorted.length - 1]
   if (!latest) return []
-  const latestMs = utcMs(latest.checkinDate)
+  const latestMs = utcDateMs(latest.checkinDate)
   for (let i = sorted.length - 1; i >= 0; i--) {
-    if (latestMs - utcMs(sorted[i]!.checkinDate) >= minDays * DAY_MS) return sorted.slice(i)
+    if (latestMs - utcDateMs(sorted[i]!.checkinDate) >= minDays * DAY_MS) return sorted.slice(i)
   }
   return []
 }

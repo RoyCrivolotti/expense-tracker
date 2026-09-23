@@ -195,6 +195,17 @@ export function addDaysIso(iso: string, days: number): string {
   return `${yy}-${mm}-${dd}`
 }
 
+export const DAY_MS = 86_400_000
+
+/**
+ * The first instant of an ISO date as UTC milliseconds. For arithmetic between two dates
+ * in days or fractions of a day, where a local-time parse would drift across a DST change.
+ */
+export function utcDateMs(iso: string): number {
+  const [y, m, d] = iso.split('-').map(Number) as [number, number, number]
+  return Date.UTC(y, m - 1, d)
+}
+
 /** Whole-day distance from `a` to `b` (b - a), positive when `b` is later. */
 export function daysBetween(a: string, b: string): number {
   const [ay, am, ad] = a.split('-').map(Number) as [number, number, number]

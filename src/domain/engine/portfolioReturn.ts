@@ -9,9 +9,9 @@
  * balance rise is either return or a contribution, never both.
  */
 import type { Transaction, WealthAccount, WealthCheckin } from '../types'
+import { DAY_MS, utcDateMs } from './dates'
 import { checkinInvestedCents } from './wealthTracking'
 
-const DAY_MS = 86_400_000
 const YEAR_DAYS = 365.25
 
 export interface PortfolioReturn {
@@ -25,11 +25,6 @@ export interface PortfolioReturn {
   contributionsCents: number
 }
 
-function utcMs(date: string): number {
-  const [y, m, d] = date.split('-').map(Number) as [number, number, number]
-  return Date.UTC(y, m - 1, d)
-}
-
 /** Null until two check-ins at least thirty days apart exist, or when nothing was invested. */
 export function portfolioReturn(
   checkins: WealthCheckin[],
@@ -40,8 +35,8 @@ export function portfolioReturn(
   const sorted = [...checkins].sort((a, b) => a.checkinDate.localeCompare(b.checkinDate))
   const first = sorted[0]!
   const last = sorted[sorted.length - 1]!
-  const startMs = utcMs(first.checkinDate)
-  const endMs = utcMs(last.checkinDate)
+  const startMs = utcDateMs(first.checkinDate)
+  const endMs = utcDateMs(last.checkinDate)
   const days = (endMs - startMs) / DAY_MS
   if (days < 30) return null
 
@@ -53,7 +48,7 @@ export function portfolioReturn(
     if (t.type !== 'investment' || t.status === 'cancelled' || t.status === 'forecast') continue
     if (t.date <= first.checkinDate || t.date > last.checkinDate) continue
     contributionsCents += t.amountCents
-    weightedCents += t.amountCents * ((endMs - utcMs(t.date)) / DAY_MS / days)
+    weightedCents += t.amountCents * ((endMs - utcDateMs(t.date)) / DAY_MS / days)
   }
   const base = startCents + weightedCents
   if (base <= 0) return null
