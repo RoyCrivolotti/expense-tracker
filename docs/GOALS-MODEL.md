@@ -8,7 +8,7 @@ from D1 only.
 
 The Goals tab has three views:
 
-- **Plan** — projection lab. Configure scenarios, compare alternatives, see the hero net-worth chart with uncertainty bands and life-event markers.
+- **Plan** — projection lab. Configure scenarios, compare alternatives, see the hero net-worth chart with uncertainty bands and life-event markers. The hero has 5Y/10Y/20Y/All windows that cut everything drawn at the same year, and its legend rows hide or show a saved scenario's line (the same state as the chip's eye); a table under it puts the scenarios side by side as numbers.
 - **Progress** — wealth tracking. Log actual balances per account, see on/off-track status against your plan, and compare actuals to the projection over time.
 - **Setup** — what Progress measures with: the milestone ladder and the wealth accounts each check-in records a balance for.
 
