@@ -4,30 +4,24 @@ import { DateInput } from '../../components/DateInput'
 import { PercentStepper } from '../../components/PercentStepper'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import styles from './goals.module.css'
+import stepperStyles from '../../components/PercentStepper.module.css'
 
 interface MoneyFieldProps {
   label: string
   value: number
-  min?: number
-  max?: number
-  step?: number
   onChange: (cents: number) => void
-  showSlider?: boolean
 }
 
-export function MoneyField({
-  label,
-  value,
-  min = 0,
-  max = 100_000_000,
-  step = 10_000,
-  onChange,
-  showSlider = true,
-}: MoneyFieldProps) {
+/**
+ * A money amount typed in full. There is no slider and no ceiling: a starting balance or a
+ * house price is a fact the user knows, not a dial to explore, and any cap would be wrong for
+ * somebody.
+ */
+export function MoneyField({ label, value, onChange }: MoneyFieldProps) {
   const format = useMoneyFormat()
   const commit = useCallback(
-    (next: number) => onChange(Math.min(max, Math.max(min, next))),
-    [max, min, onChange],
+    (raw: string) => onChange(Math.max(0, parseMoneyToCents(raw, format))),
+    [format, onChange],
   )
 
   return (
@@ -41,23 +35,12 @@ export function MoneyField({
           inputMode="decimal"
           aria-label={label}
           defaultValue={formatMoneyInput(value, format)}
-          onBlur={(e) => commit(parseMoneyToCents(e.target.value, format))}
+          onBlur={(e) => commit(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') commit(parseMoneyToCents(e.currentTarget.value, format))
+            if (e.key === 'Enter') commit(e.currentTarget.value)
           }}
         />
       </div>
-      {showSlider ? (
-        <input
-          className={styles.range}
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          onChange={(e) => commit(Number(e.target.value))}
-        />
-      ) : null}
     </label>
   )
 }
@@ -67,60 +50,57 @@ interface NumberFieldProps {
   value: number
   min: number
   max: number
-  step?: number
-  format?: (v: number) => string
   onChange: (v: number) => void
-  showSlider?: boolean
 }
 
-export function NumberField({
-  label,
-  value,
-  min,
-  max,
-  step = 1,
-  format = String,
-  onChange,
-  showSlider = true,
-}: NumberFieldProps) {
+/** A whole number with a −/+ stepper, the same shape as the percent stepper. */
+export function NumberField({ label, value, min, max, onChange }: NumberFieldProps) {
   const commit = useCallback(
-    (raw: string) => {
-      const n = Number(raw.replace(',', '.'))
-      if (Number.isNaN(n)) return
-      onChange(Math.min(max, Math.max(min, Math.round(n))))
+    (next: number) => {
+      if (Number.isNaN(next)) return
+      onChange(Math.min(max, Math.max(min, Math.round(next))))
     },
     [max, min, onChange],
   )
 
   return (
-    <label className={styles.field}>
+    <div className={styles.field}>
       <div className={styles.fieldRow}>
         <span className={styles.fieldLabel}>{label}</span>
-        <input
-          key={value}
-          className={styles.valueInput}
-          type="text"
-          inputMode="numeric"
-          aria-label={label}
-          defaultValue={format(value)}
-          onBlur={(e) => commit(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') commit(e.currentTarget.value)
-          }}
-        />
+        <div className={stepperStyles.wrap}>
+          <button
+            type="button"
+            className={stepperStyles.btn}
+            aria-label={`Decrease ${label}`}
+            disabled={value <= min}
+            onClick={() => commit(value - 1)}
+          >
+            −
+          </button>
+          <input
+            key={value}
+            className={stepperStyles.input}
+            type="text"
+            inputMode="numeric"
+            aria-label={label}
+            defaultValue={String(value)}
+            onBlur={(e) => commit(Number(e.target.value.replace(',', '.')))}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commit(Number(e.currentTarget.value.replace(',', '.')))
+            }}
+          />
+          <button
+            type="button"
+            className={stepperStyles.btn}
+            aria-label={`Increase ${label}`}
+            disabled={value >= max}
+            onClick={() => commit(value + 1)}
+          >
+            +
+          </button>
+        </div>
       </div>
-      {showSlider ? (
-        <input
-          className={styles.range}
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
-        />
-      ) : null}
-    </label>
+    </div>
   )
 }
 

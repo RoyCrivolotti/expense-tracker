@@ -80,6 +80,48 @@ describe('GoalControls', () => {
     expect(screen.getByText(/Log a wealth check-in first/)).toBeInTheDocument()
   })
 
+  it('keeps sliders for percentages and the purchase year only', () => {
+    render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
+
+    const sliders = screen.getAllByRole('slider')
+    const named = sliders.map((s) => s.getAttribute('aria-label'))
+    expect(named).toEqual(
+      expect.arrayContaining([
+        'Contribution growth (%/yr)',
+        'Real return',
+        'Down payment',
+        'Mortgage rate (%/yr)',
+        'House appreciation (%/yr)',
+        'Withdrawal rate at FI',
+      ]),
+    )
+    // Six percent sliders plus the unlabelled purchase-year one; no money or year slider.
+    expect(sliders).toHaveLength(7)
+  })
+
+  it('accepts a starting balance above the old slider cap', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<GoalControls draft={makeDraft()} onChange={onChange} />)
+
+    const input = screen.getByRole('textbox', { name: 'Starting invested' })
+    await user.clear(input)
+    await user.type(input, '1000000')
+    await user.tab()
+
+    expect(onChange).toHaveBeenCalledWith({ startInvestedCents: 1_000_000_00 })
+  })
+
+  it('steps the horizon with the + button', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<GoalControls draft={{ ...makeDraft(), horizonYears: 29 }} onChange={onChange} />)
+
+    await user.click(screen.getByRole('button', { name: 'Increase Horizon (years)' }))
+
+    expect(onChange).toHaveBeenCalledWith({ horizonYears: 30 })
+  })
+
   it('calls onChange with annualContributionGrowth when slider changes', () => {
     const onChange = vi.fn()
     render(<GoalControls draft={makeDraft()} onChange={onChange} />)
