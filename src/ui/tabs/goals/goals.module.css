@@ -57,8 +57,44 @@
 
   .layout[data-mobile-view='adjust'] .areaControls {
     display: block;
-    order: 3;
+    order: 4;
   }
+
+  /* The draft's line pinned under the app header while the controls scroll beneath it, so
+     a slider is tuned against the line it moves. The offset is the header's height; the
+     header carries the top safe-area inset, so this has to as well. */
+  .layout[data-mobile-view='adjust'] .areaMini {
+    display: block;
+    order: 3;
+    position: sticky;
+    top: calc(3.5rem + env(safe-area-inset-top, 0px));
+    z-index: 5;
+    padding: 0.5rem 0 0.25rem;
+    background: var(--color-bg);
+  }
+
+  /* Controls fade out as they pass under the chart instead of being cut off along a line:
+     a short run of the page background below the block, so the edge reads as depth. */
+  .layout[data-mobile-view='adjust'] .areaMini::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    height: 1.25rem;
+    background: linear-gradient(to bottom, var(--color-bg), transparent);
+    pointer-events: none;
+  }
+
+  /* Charts take the touch so a finger can scrub along the line, but this one sits where a
+     scroll often starts. Vertical pans go to the page; scrubbing sideways still works. */
+  .layout[data-mobile-view='adjust'] .areaMini svg {
+    touch-action: pan-y;
+  }
+}
+
+.areaMini {
+  display: none;
 }
 
 .mobilePlanToggleRow {
