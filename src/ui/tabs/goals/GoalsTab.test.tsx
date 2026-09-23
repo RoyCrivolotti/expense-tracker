@@ -93,7 +93,7 @@ describe('GoalsTab', () => {
     render(<GoalsTab model={model} actions={actions} />)
 
     // Opens on the plan, which is labelled rather than offered.
-    expect(screen.getByText('Your plan')).toBeInTheDocument()
+    expect(screen.getAllByText('Current plan').length).toBeGreaterThan(0)
     expect(screen.queryByRole('button', { name: 'Use as my plan' })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Path B' }))

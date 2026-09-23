@@ -44,9 +44,12 @@ export function ScenarioChips({
               className={styles.chipSelect}
               onClick={() => onSelect(s)}
             >
-              <span className={styles.swatch} style={{ background: s.color }} aria-hidden />
-              {label}
-              {s.isActive ? <span className={styles.chipTag}>plan</span> : null}
+              {/* Its own line, above the name, so it never wraps mid-word beside a long title. */}
+              {s.isActive ? <span className={styles.chipTag}>Current plan</span> : null}
+              <span className={styles.chipTitle}>
+                <span className={styles.swatch} style={{ background: s.color }} aria-hidden />
+                {label}
+              </span>
             </button>
             <button
               type="button"
