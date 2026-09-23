@@ -8,7 +8,7 @@ import {
 } from '../../engine'
 import { Card, EmptyState, SectionTitle } from './primitives'
 import { scenarioHeadline } from '../tabs/goals/scenarioHeadline'
-import { resolveDashboardScenario } from '../tabs/goals/scenarioSelection'
+import { activePlan } from '../tabs/goals/scenarioSelection'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { formatMoneyShort } from '../tabs/goals/chartTheme'
 import styles from './GoalsCard.module.css'
@@ -45,10 +45,7 @@ function TrackBadge({ deltaCents, deltaMonths, format }: TrackBadgeProps) {
 
 export function GoalsCard({ dataset, onOpenGoals }: GoalsCardProps) {
   const format = useMoneyFormat()
-  const scenario = useMemo(
-    () => resolveDashboardScenario(dataset.goalScenarios),
-    [dataset.goalScenarios],
-  )
+  const scenario = useMemo(() => activePlan(dataset.goalScenarios), [dataset.goalScenarios])
   const avgSaving = useMemo(() => {
     const totals = [...computeMonthlyTotals(dataset.transactions).values()]
     return averageMonthlySaving(totals.map((t) => t.netSavingCents))
@@ -74,8 +71,9 @@ export function GoalsCard({ dataset, onOpenGoals }: GoalsCardProps) {
             actionLabel={onOpenGoals ? 'Open Goals' : undefined}
             onAction={onOpenGoals}
           >
-            Model multi-scenario wealth projections: house purchase timing, FIRE milestones, and
-            net worth over time.
+            {dataset.goalScenarios.length > 0
+              ? 'Pick one of your scenarios as your plan under Goals, and this card will track it.'
+              : 'Model multi-scenario wealth projections: house purchase timing, FIRE milestones, and net worth over time.'}
           </EmptyState>
         </Card>
       </>

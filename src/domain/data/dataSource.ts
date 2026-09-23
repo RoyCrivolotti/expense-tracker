@@ -86,7 +86,10 @@ export interface DeleteAccountResult {
   reassignedToId: number | null
   createdAccount?: Account
 }
-export type NewGoalScenario = Omit<GoalScenario, 'id'>
+/** Activation is its own call (`activateScenario`), so the flag is not part of a write. */
+export type NewGoalScenario = Omit<GoalScenario, 'id' | 'isActive'>
+/** What the PATCH route accepts: field edits, or `{ isActive: true }` on its own. */
+export type ScenarioPatch = Partial<NewGoalScenario> & { isActive?: boolean }
 export type NewWealthAccount = Omit<WealthAccount, 'id'>
 export type NewWealthCheckin = {
   checkinDate: string
@@ -131,6 +134,8 @@ export interface ExpenseDataSource {
   updateSettings?(patch: Partial<ExpenseSettings>): Promise<ExpenseSettings>
   createScenario?(input: NewGoalScenario): Promise<GoalScenario>
   updateScenario?(id: number, patch: Partial<NewGoalScenario>): Promise<GoalScenario>
+  /** Make this scenario the owner's plan; the previous plan stops being one. */
+  activateScenario?(id: number): Promise<GoalScenario>
   deleteScenario?(id: number): Promise<void>
   createInstallmentPlan?(input: NewInstallmentPlan): Promise<InstallmentPlan>
   updateInstallmentPlan?(id: number, patch: Partial<NewInstallmentPlan>): Promise<InstallmentPlan>

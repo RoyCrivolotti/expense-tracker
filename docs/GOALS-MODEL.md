@@ -9,7 +9,11 @@ from D1 only.
 The Goals tab has two views:
 
 - **Plan** — projection lab. Configure scenarios, compare alternatives, see the hero net-worth chart with uncertainty bands and life-event markers.
-- **Progress** — wealth tracking. Log actual balances per account, see on/off-track status against the active scenario, and compare actuals to the projection over time.
+- **Progress** — wealth tracking. Log actual balances per account, see on/off-track status against your plan, and compare actuals to the projection over time.
+
+### The plan
+
+One saved scenario per owner is *the plan*: `goal_scenarios.is_active`, set with **Use as my plan** in the scenario editor and enforced by a partial unique index so an owner can never have two. Progress, the dashboard Goals card and every check-in delta measure against it. The editor's selection is a different thing: loading another scenario to explore it does not change what you are measured against. An owner's first scenario becomes the plan on creation; deleting the plan leaves none until another is chosen.
 
 ## Return and contributions
 
@@ -155,7 +159,7 @@ wealth_checkin_entries: checkin_id, account_id, value_cents
 }
 ```
 
-Displayed in `WealthSummaryCard` (Progress view) and `GoalsCard` (dashboard badge).
+Displayed in `WealthSummaryCard` (Progress view) and `GoalsCard` (dashboard badge), both against the plan (`activePlan` in `scenarioSelection.ts`), never against whatever the editor has loaded.
 
 ## Seeding personal scenarios
 

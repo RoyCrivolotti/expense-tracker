@@ -79,6 +79,7 @@ function noopActions(): ExpenseActions {
     updateSettings: vi.fn(),
     createScenario: vi.fn(),
     updateScenario: vi.fn(),
+    activateScenario: vi.fn(),
     deleteScenario: vi.fn(),
     createInstallmentPlan: vi.fn(),
     updateInstallmentPlan: vi.fn(),

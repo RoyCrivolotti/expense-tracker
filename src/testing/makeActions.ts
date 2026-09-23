@@ -44,6 +44,7 @@ export function makeActions(overrides: Partial<ExpenseActions> = {}): ExpenseAct
     updateSettings: vi.fn().mockResolvedValue(undefined),
     createScenario: vi.fn().mockResolvedValue(makeScenario()),
     updateScenario: vi.fn().mockResolvedValue(undefined),
+    activateScenario: vi.fn().mockResolvedValue(undefined),
     deleteScenario: vi.fn().mockResolvedValue(undefined),
     createInstallmentPlan: vi.fn().mockResolvedValue({ id: 1 }),
     updateInstallmentPlan: vi.fn().mockResolvedValue(undefined),

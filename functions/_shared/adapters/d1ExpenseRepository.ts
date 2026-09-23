@@ -13,6 +13,7 @@ import {
   updateTransaction,
 } from '../dbWrite'
 import {
+  activateScenario,
   createAccount,
   createCategory,
   createScenario,
@@ -82,6 +83,7 @@ export function createD1ExpenseRepository(env: Env): ExpenseRepository {
     updateSettings: (owner, patch) => updateSettings(env, owner, patch),
     createScenario: (owner, input) => createScenario(env, owner, input),
     updateScenario: (owner, id, patch) => updateScenario(env, owner, id, patch),
+    activateScenario: (owner, id) => activateScenario(env, owner, id),
     deleteScenario: (owner, id) => deleteScenario(env, owner, id),
     bulkInsertTransactions: (owner, inputs) => bulkInsertTransactions(env, owner, inputs),
     createInstallmentPlan: (owner, input) => createInstallmentPlan(env, owner, input),

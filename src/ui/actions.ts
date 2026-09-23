@@ -82,6 +82,8 @@ export interface ExpenseActions {
   updateSettings: (patch: Partial<ExpenseSettings>) => Promise<void>
   createScenario: (input: NewGoalScenario) => Promise<GoalScenario>
   updateScenario: (id: number, patch: Partial<NewGoalScenario>) => Promise<void>
+  /** Make this scenario the plan; whichever was the plan before stops being one. */
+  activateScenario: (id: number) => Promise<void>
   deleteScenario: (id: number) => Promise<void>
   createInstallmentPlan: (input: NewInstallmentPlan) => Promise<InstallmentPlan>
   updateInstallmentPlan: (id: number, patch: Partial<NewInstallmentPlan>) => Promise<void>

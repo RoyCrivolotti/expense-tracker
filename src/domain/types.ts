@@ -227,6 +227,12 @@ export interface GoalScenario {
   planStartDate: string | null
   /** One-off cash events applied to the invested portfolio in the projection. */
   lifeEvents: LifeEvent[]
+  /**
+   * The owner's plan: the one scenario that Progress, the dashboard and check-in
+   * deltas measure against. At most one per owner; set through activation, never
+   * through a create or patch, so the editor's selection and the plan stay separate.
+   */
+  isActive: boolean
 }
 
 /**

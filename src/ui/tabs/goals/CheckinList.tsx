@@ -13,7 +13,7 @@ import goalStyles from './goals.module.css'
 interface Props {
   checkins: WealthCheckin[]
   accounts: WealthAccount[]
-  activeScenario: GoalScenario | null
+  plan: GoalScenario | null
   canWrite: boolean
   actions: ExpenseActions | undefined
 }
@@ -28,7 +28,7 @@ function accountName(id: number, accounts: WealthAccount[]) {
   return accounts.find((a) => a.id === id)?.name ?? `Account ${id}`
 }
 
-export function CheckinList({ checkins, accounts, activeScenario, canWrite, actions }: Props) {
+export function CheckinList({ checkins, accounts, plan, canWrite, actions }: Props) {
   const format = useMoneyFormat()
 
   const sorted = [...checkins].sort((a, b) => (b.checkinDate > a.checkinDate ? 1 : -1))
@@ -43,7 +43,7 @@ export function CheckinList({ checkins, accounts, activeScenario, canWrite, acti
         <div className={styles.checkinTimeline}>
           {sorted.map((c) => {
             const netWorth = checkinNetWorthCents(c, accounts)
-            const status = activeScenario ? trackStatus(c, activeScenario, accounts) : null
+            const status = plan ? trackStatus(c, plan, accounts) : null
             const ahead = status ? status.deltaCents >= 0 : null
 
             return (

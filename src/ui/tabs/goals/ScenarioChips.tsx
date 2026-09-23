@@ -46,6 +46,7 @@ export function ScenarioChips({
             >
               <span className={styles.swatch} style={{ background: s.color }} aria-hidden />
               {label}
+              {s.isActive ? <span className={styles.chipTag}>plan</span> : null}
             </button>
             <button
               type="button"

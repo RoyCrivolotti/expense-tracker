@@ -32,11 +32,17 @@ function baseRow(overrides: Partial<GoalScenarioRow> = {}): GoalScenarioRow {
     safe_withdrawal_rate: 0.04,
     plan_start_date: null,
     life_events: '[]',
+    is_active: 0,
     ...overrides,
   }
 }
 
 describe('toGoalScenario', () => {
+  it('maps is_active to a boolean', () => {
+    expect(toGoalScenario(baseRow()).isActive).toBe(false)
+    expect(toGoalScenario(baseRow({ is_active: 1 })).isActive).toBe(true)
+  })
+
   it('maps a row with empty life_events to lifeEvents: []', () => {
     const result = toGoalScenario(baseRow())
     expect(result.lifeEvents).toEqual([])

@@ -3,6 +3,7 @@ import type { Env } from '../../_shared/env'
 import { createInMemoryAccessDb } from '../../_shared/testing/inMemoryAccessDb'
 import { invokeExpenseApiRoute } from '../../_shared/testing/invokeExpenseApiRoute'
 import { inMemoryExpenseRepository } from '../../../src/testing/inMemoryExpenseRepository'
+import { makeScenario } from '../../../src/testing/factories'
 import { onRequestPost as createAccount } from './accounts/index'
 import { onRequestPatch as patchAccount, onRequestDelete as deleteAccount } from './accounts/[id]'
 import { onRequestPost as createCategory } from './categories/index'
@@ -244,6 +245,48 @@ describe('expenses API (middleware + handlers + in-memory repo)', () => {
     expect(deleted.status).toBe(200)
     const dataset = await repo.loadDataset(OWNER)
     expect(dataset.goalScenarios).toHaveLength(0)
+  })
+
+  it('moves the plan to the activated scenario and off the previous one', async () => {
+    const store = createInMemoryAccessDb()
+    store.seedActiveUser(OWNER, { groups: ['expenses'] })
+    const repo = inMemoryExpenseRepository(
+      {
+        goalScenarios: [
+          makeScenario({ id: 1, name: 'First', isActive: true }),
+          makeScenario({ id: 2, name: 'Second', sortOrder: 1 }),
+        ],
+      },
+      OWNER,
+    )
+
+    const response = await invokeExpenseApiRoute({
+      handler: patchScenario,
+      repo,
+      env: expenseEnv(store),
+      method: 'PATCH',
+      url: 'https://expenses.test/api/expenses/scenarios/2',
+      params: { id: '2' },
+      body: { isActive: true },
+      email: OWNER,
+    })
+
+    expect(response.status).toBe(200)
+    expect((await readJson<{ isActive: boolean }>(response)).isActive).toBe(true)
+    const { goalScenarios } = await repo.loadDataset(OWNER)
+    expect(goalScenarios.map((s) => s.isActive)).toEqual([false, true])
+
+    const refused = await invokeExpenseApiRoute({
+      handler: patchScenario,
+      repo,
+      env: expenseEnv(store),
+      method: 'PATCH',
+      url: 'https://expenses.test/api/expenses/scenarios/1',
+      params: { id: '1' },
+      body: { isActive: true, name: 'Renamed too' },
+      email: OWNER,
+    })
+    expect(refused.status).toBe(400)
   })
 
   it('persists statement paidOn and rejects paid without a date', async () => {

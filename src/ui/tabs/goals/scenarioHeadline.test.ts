@@ -24,6 +24,7 @@ const base: GoalScenario = {
   safeWithdrawalRate: 0.04,
   planStartDate: null,
   lifeEvents: [],
+  isActive: false,
 }
 
 describe('scenarioHeadline', () => {

@@ -21,6 +21,7 @@ interface ScenarioManagerProps {
   onSaveDraft: (name: string) => void
   onSaveChanges: () => void
   onDiscard: () => void
+  onActivate: () => void
   onScenarioCreated: (scenario: GoalScenario) => void
 }
 
@@ -33,7 +34,8 @@ export function ScenarioManager(props: ScenarioManagerProps) {
       <h3 className={styles.sectionTitle}>Scenarios</h3>
       <p className={styles.chartHint}>
         Each colored line on the projection is a saved scenario. Tap one to load it into the editor
-        below, toggle its dot to show or hide it, or save your current draft to compare.
+        below, toggle its dot to show or hide it, or save your current draft to compare. The one
+        marked as your plan is what Progress measures you against.
       </p>
       <ScenarioChips
         scenarios={scenarios}
@@ -60,6 +62,7 @@ export function ScenarioManager(props: ScenarioManagerProps) {
         onPatch={props.onPatch}
         onSaveChanges={props.onSaveChanges}
         onDiscard={props.onDiscard}
+        onActivate={props.onActivate}
         onSaveDraft={props.onSaveDraft}
         onScenarioCreated={props.onScenarioCreated}
       />

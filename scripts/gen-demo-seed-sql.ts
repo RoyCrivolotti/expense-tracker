@@ -46,10 +46,16 @@ interface ScenarioSeed {
   rentMonthlyCents: number
   annualSpendCents: number
   safeWithdrawalRate: number
+  isActive?: boolean
 }
 
 const scenarioFile = JSON.parse(readFileSync(scenariosPath, 'utf8')) as {
   scenarios: ScenarioSeed[]
+}
+// The demo owner needs a plan for Progress to show anything; the first path is it
+// unless the file says otherwise.
+if (!scenarioFile.scenarios.some((s) => s.isActive) && scenarioFile.scenarios[0]) {
+  scenarioFile.scenarios[0].isActive = true
 }
 
 const str = (v: string | null | undefined): string =>
@@ -113,14 +119,14 @@ for (const s of scenarioFile.scenarios) {
        expected_real_return, horizon_years,
        house_price_cents, down_payment_fraction, house_purchase_year, transaction_costs_cents,
        mortgage_term_years, mortgage_rate_annual, house_appreciation_rate,
-       rent_monthly_cents, annual_spend_cents, safe_withdrawal_rate
+       rent_monthly_cents, annual_spend_cents, safe_withdrawal_rate, is_active
      ) VALUES (
        ${owner}, ${str(s.name)}, ${str(color)}, ${s.sortOrder},
        ${s.startInvestedCents}, ${s.monthlyContributionCents}, ${s.annualContributionGrowth},
        ${s.expectedRealReturn}, ${s.horizonYears},
        ${s.housePriceCents}, ${s.downPaymentFraction}, ${purchaseYear}, ${s.transactionCostsCents},
        ${s.mortgageTermYears}, ${s.mortgageRateAnnual}, ${s.houseAppreciationRate},
-       ${s.rentMonthlyCents}, ${s.annualSpendCents}, ${s.safeWithdrawalRate}
+       ${s.rentMonthlyCents}, ${s.annualSpendCents}, ${s.safeWithdrawalRate}, ${s.isActive ? 1 : 0}
      );`,
   )
 }

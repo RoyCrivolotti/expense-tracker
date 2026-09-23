@@ -1,32 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import type { GoalScenario } from '../../../types'
-import { lastAddedScenario, resolveDashboardScenario } from './scenarioSelection'
+import { makeScenario } from '../../../testing/factories'
+import { activePlan, initialEditorScenario, lastAddedScenario } from './scenarioSelection'
 
-function scenario(id: number, sortOrder: number): GoalScenario {
-  return {
-    id,
-    name: `Plan ${id}`,
-    color: '#000',
-    sortOrder,
-    startInvestedCents: 0,
-    monthlyContributionCents: 100_000,
-    annualContributionGrowth: 0,
-    expectedRealReturn: 0.06,
-    horizonYears: 30,
-    housePriceCents: 0,
-    downPaymentFraction: 0.2,
-    housePurchaseYear: null,
-    transactionCostsCents: 0,
-    mortgageTermYears: 30,
-    mortgageRateAnnual: 0.04,
-    houseAppreciationRate: 0.02,
-    rentMonthlyCents: 0,
-    annualSpendCents: 50_000_00,
-    safeWithdrawalRate: 0.04,
-    planStartDate: null,
-    lifeEvents: [],
-  }
-}
+const scenario = (id: number, sortOrder: number, isActive = false) =>
+  makeScenario({ id, name: `Plan ${id}`, sortOrder, isActive })
 
 describe('lastAddedScenario', () => {
   it('returns null when empty', () => {
@@ -39,9 +16,23 @@ describe('lastAddedScenario', () => {
   })
 })
 
-describe('resolveDashboardScenario', () => {
-  it('falls back to last added when nothing pinned', () => {
-    const scenarios = [scenario(1, 0), scenario(2, 1)]
-    expect(resolveDashboardScenario(scenarios)?.id).toBe(2)
+describe('activePlan', () => {
+  it('is the scenario flagged as the plan, whatever its position', () => {
+    const scenarios = [scenario(1, 0, true), scenario(2, 1)]
+    expect(activePlan(scenarios)?.id).toBe(1)
+  })
+
+  it('is null when no scenario has been chosen', () => {
+    expect(activePlan([scenario(1, 0), scenario(2, 1)])).toBeNull()
+  })
+})
+
+describe('initialEditorScenario', () => {
+  it('opens on the plan when there is one', () => {
+    expect(initialEditorScenario([scenario(1, 0, true), scenario(2, 1)])?.id).toBe(1)
+  })
+
+  it('falls back to the last added scenario', () => {
+    expect(initialEditorScenario([scenario(1, 0), scenario(2, 1)])?.id).toBe(2)
   })
 })

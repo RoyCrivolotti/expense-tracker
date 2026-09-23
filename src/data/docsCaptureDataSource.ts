@@ -362,8 +362,13 @@ export const docsCaptureDataSource: ExpenseDataSource = {
   },
   createScenario(input: NewGoalScenario) {
     nextId += 1
-    const scenario: GoalScenario = { ...input, id: nextId }
+    const scenario: GoalScenario = { ...input, id: nextId, isActive: false }
     return Promise.resolve(scenario)
+  },
+  activateScenario(id: number) {
+    const scenario = docsCaptureGoalScenarios().find((s) => s.id === id)
+    if (!scenario) return Promise.reject(new Error('Scenario not found'))
+    return Promise.resolve({ ...scenario, isActive: true })
   },
   updateScenario(id: number, patch: Partial<NewGoalScenario>) {
     const scenario: GoalScenario = {
@@ -388,6 +393,7 @@ export const docsCaptureDataSource: ExpenseDataSource = {
       safeWithdrawalRate: 0.04,
       planStartDate: null,
       lifeEvents: [],
+      isActive: false,
       ...patch,
     }
     return Promise.resolve(scenario)

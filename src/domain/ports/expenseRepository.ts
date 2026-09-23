@@ -106,6 +106,8 @@ export interface ExpenseRepository {
     id: number,
     patch: Partial<NewGoalScenario>,
   ): Promise<GoalScenario>
+  /** Exactly one plan per owner: activating one deactivates the rest, atomically. */
+  activateScenario(owner: string, id: number): Promise<GoalScenario>
   deleteScenario(owner: string, id: number): Promise<void>
   bulkInsertTransactions(owner: string, inputs: NewTransaction[]): Promise<Transaction[]>
   createInstallmentPlan(owner: string, input: NewInstallmentPlan): Promise<InstallmentPlan>

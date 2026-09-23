@@ -96,7 +96,7 @@ function CompactNarrative({
   ].filter((s): s is PlanStat => s != null)
   return (
     <>
-      <span className={styles.chartFooterLabel}>Current plan summary</span>
+      <span className={styles.chartFooterLabel}>Scenario summary</span>
       <div className={styles.statStrip}>
         {stats.map((s) => (
           <div key={s.label} className={styles.statItem}>

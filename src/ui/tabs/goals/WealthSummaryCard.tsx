@@ -16,21 +16,23 @@ import goalStyles from './goals.module.css'
 interface Props {
   checkins: WealthCheckin[]
   accounts: WealthAccount[]
-  activeScenario: GoalScenario | null
+  plan: GoalScenario | null
 }
 
 function StatusRow({
   status,
+  planName,
   format,
 }: {
   status: TrackStatus | null
+  planName: string | null
   format: MoneyFormat
 }) {
   if (!status) {
     return (
       <div className={styles.summaryStatus}>
         <span className={[styles.statusDot, styles.statusDotNeutral].join(' ')} />
-        <span>No active plan to compare against</span>
+        <span>No plan chosen yet. Open a scenario under Plan and choose Use as my plan.</span>
       </div>
     )
   }
@@ -53,6 +55,7 @@ function StatusRow({
         >
           ({ahead ? '+' : ''}{formatMoneyShort(status.deltaCents, format)})
         </span>
+        {planName ? <span className={styles.summaryPlanName}> · measured against {planName}</span> : null}
       </span>
     </div>
   )
@@ -72,7 +75,7 @@ function MonthsHint({ status }: { status: TrackStatus }) {
   )
 }
 
-export function WealthSummaryCard({ checkins, accounts, activeScenario }: Props) {
+export function WealthSummaryCard({ checkins, accounts, plan }: Props) {
   const format = useMoneyFormat()
   const latest = latestCheckin(checkins)
 
@@ -89,13 +92,13 @@ export function WealthSummaryCard({ checkins, accounts, activeScenario }: Props)
 
   const netWorth = checkinNetWorthCents(latest, accounts)
   const invested = checkinInvestedCents(latest, accounts)
-  const status = activeScenario ? trackStatus(latest, activeScenario, accounts) : null
+  const status = plan ? trackStatus(latest, plan, accounts) : null
 
   return (
     <Card>
       <h3 className={goalStyles.sectionTitle}>Progress snapshot</h3>
       <div className={styles.summaryCardContent}>
-        <StatusRow status={status} format={format} />
+        <StatusRow status={status} planName={plan?.name ?? null} format={format} />
         <div className={styles.summaryRow}>
           <span>Net worth</span>
           <span className={styles.summaryValue}>{formatMoneyShort(netWorth, format)}</span>

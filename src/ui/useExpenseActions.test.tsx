@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { ExpenseDataset, Transaction } from '../types'
 import type { ExpenseDataSource, NewTransaction } from '../data/dataSource'
 import { defaultExpenseSettings } from '../engine'
+import { makeScenario } from '../testing/factories'
 import { useExpenseActions } from './useExpenseActions'
 
 const baseDataset: ExpenseDataset = {
@@ -207,7 +208,7 @@ describe('useExpenseActions — attachments', () => {
     const { result } = renderHook(() =>
       useExpenseActions({ canWrite: true, load: vi.fn(), ...source }, applyPatch, vi.fn()),
     )
-    return { actions: result.current!, read: () => dataset }
+    return { actions: result.current!, applyPatch, read: () => dataset }
   }
 
   it('puts an uploaded receipt into the dataset', async () => {
@@ -234,5 +235,23 @@ describe('useExpenseActions — attachments', () => {
     })
 
     expect(read().attachments).toEqual([])
+  })
+
+  it('activateScenario makes that scenario the only plan in the dataset', async () => {
+    const first = makeScenario({ id: 1, sortOrder: 0, isActive: true })
+    const second = makeScenario({ id: 2, sortOrder: 1 })
+    const activateScenario = vi.fn().mockResolvedValue({ ...second, isActive: true })
+    const { actions, applyPatch, read } = harness({ activateScenario })
+    applyPatch((d) => ({ ...d, goalScenarios: [first, second] }))
+
+    await act(async () => {
+      await actions.activateScenario(2)
+    })
+
+    expect(activateScenario).toHaveBeenCalledWith(2)
+    expect(read().goalScenarios.map((s) => [s.id, s.isActive])).toEqual([
+      [1, false],
+      [2, true],
+    ])
   })
 })

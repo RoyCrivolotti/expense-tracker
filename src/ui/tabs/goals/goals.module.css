@@ -409,7 +409,15 @@
   min-width: 0;
 }
 
-.dirtyPill {
+.pillRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.dirtyPill,
+.planPill {
   align-self: flex-start;
   padding: 0.15rem 0.45rem;
   border-radius: 999px;
@@ -419,6 +427,21 @@
   text-transform: uppercase;
   color: var(--color-accent);
   background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface));
+}
+
+.planPill {
+  color: var(--exp-success);
+  background: color-mix(in srgb, var(--exp-success) 14%, var(--color-surface));
+}
+
+/* Marks the plan inside its chip; the chip's own accent still means "in the editor". */
+.chipTag {
+  margin-left: 0.15rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--exp-success);
 }
 
 .btnText {

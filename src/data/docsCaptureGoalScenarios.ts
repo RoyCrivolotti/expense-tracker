@@ -9,6 +9,8 @@ export function docsCaptureGoalScenarios(): GoalScenario[] {
     color: SCENARIO_COLORS[index % SCENARIO_COLORS.length] ?? '#6366f1',
     planStartDate: null,
     lifeEvents: [],
+    // The first path is the plan, so the gallery shows a Progress view with a status.
+    isActive: index === 0,
     ...row,
   }))
 }

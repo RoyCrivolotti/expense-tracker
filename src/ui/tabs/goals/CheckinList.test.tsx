@@ -30,7 +30,7 @@ describe('CheckinList', () => {
       <CheckinList
         checkins={[]}
         accounts={[]}
-        activeScenario={null}
+        plan={null}
         canWrite={true}
         actions={makeActions()}
       />,
@@ -48,7 +48,7 @@ describe('CheckinList', () => {
       <CheckinList
         checkins={checkins}
         accounts={accounts}
-        activeScenario={null}
+        plan={null}
         canWrite={true}
         actions={makeActions()}
       />,
@@ -64,7 +64,7 @@ describe('CheckinList', () => {
       <CheckinList
         checkins={checkins}
         accounts={accounts}
-        activeScenario={null}
+        plan={null}
         canWrite={true}
         actions={makeActions()}
       />,
@@ -83,7 +83,7 @@ describe('CheckinList', () => {
       <CheckinList
         checkins={checkins}
         accounts={accounts}
-        activeScenario={scenario}
+        plan={scenario}
         canWrite={true}
         actions={makeActions()}
       />,
@@ -98,7 +98,7 @@ describe('CheckinList', () => {
       <CheckinList
         checkins={checkins}
         accounts={accounts}
-        activeScenario={null}
+        plan={null}
         canWrite={false}
         actions={undefined}
       />,
@@ -114,7 +114,7 @@ describe('CheckinList', () => {
       <CheckinList
         checkins={checkins}
         accounts={accounts}
-        activeScenario={null}
+        plan={null}
         canWrite={true}
         actions={actions}
       />,

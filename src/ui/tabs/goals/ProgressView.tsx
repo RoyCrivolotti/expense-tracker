@@ -23,7 +23,7 @@ interface Props {
   milestones: Milestone[]
   /** amountCents -> date first observed at or above, from check-in history. */
   reached: Map<number, string>
-  activeScenario: GoalScenario | null
+  plan: GoalScenario | null
   actions: ExpenseActions | undefined
   canWrite: boolean
   settings?: ExpenseSettings | undefined
@@ -35,7 +35,7 @@ export function ProgressView({
   checkins,
   milestones,
   reached,
-  activeScenario,
+  plan,
   actions,
   canWrite,
   settings,
@@ -48,7 +48,7 @@ export function ProgressView({
       <WealthSummaryCard
         checkins={checkins}
         accounts={accounts}
-        activeScenario={activeScenario}
+        plan={plan}
       />
 
       <ReachedMilestones milestones={milestones} reached={reached} />
@@ -60,7 +60,7 @@ export function ProgressView({
       <CheckinHistoryChart
         checkins={checkins}
         accounts={accounts}
-        activeScenario={activeScenario}
+        plan={plan}
       />
 
       {canWrite && actions ? (
@@ -84,7 +84,7 @@ export function ProgressView({
       <CheckinList
         checkins={checkins}
         accounts={accounts}
-        activeScenario={activeScenario}
+        plan={plan}
         canWrite={canWrite}
         actions={actions}
       />

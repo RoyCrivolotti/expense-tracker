@@ -261,14 +261,32 @@ export function patchAfterSettings(
   return d
 }
 
+function sortScenarios(scenarios: GoalScenario[]): GoalScenario[] {
+  return scenarios.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+}
+
+/** The server keeps one plan per owner; mirror that so no reload is needed to see it. */
+function withOnlyPlan(scenarios: GoalScenario[], plan: GoalScenario): GoalScenario[] {
+  return scenarios.map((s) => (s.id === plan.id ? plan : { ...s, isActive: false }))
+}
+
 export function patchAfterScenarioCreate(
   dataset: ExpenseDataset,
   scenario: GoalScenario,
 ): ExpenseDataset {
   const d = cloneDataset(dataset)
-  d.goalScenarios = [...d.goalScenarios, scenario].sort(
-    (a, b) => a.sortOrder - b.sortOrder || a.id - b.id,
-  )
+  // An owner's first scenario comes back as their plan.
+  const others = scenario.isActive ? withOnlyPlan(d.goalScenarios, scenario) : d.goalScenarios
+  d.goalScenarios = sortScenarios([...others, scenario])
+  return d
+}
+
+export function patchAfterScenarioActivate(
+  dataset: ExpenseDataset,
+  scenario: GoalScenario,
+): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  d.goalScenarios = sortScenarios(withOnlyPlan(d.goalScenarios, scenario))
   return d
 }
 
@@ -278,7 +296,7 @@ export function patchAfterScenarioUpdate(
 ): ExpenseDataset {
   const d = cloneDataset(dataset)
   upsertById(d.goalScenarios, scenario)
-  d.goalScenarios.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+  sortScenarios(d.goalScenarios)
   return d
 }
 
