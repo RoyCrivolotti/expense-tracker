@@ -120,9 +120,10 @@ describe('ExpensesApp tab wiring', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Log check-in' }))
 
-    expect(await screen.findByRole('button', { name: 'Save check-in' })).toBeInTheDocument()
+    // The Goals tab is a lazy chunk, and CI takes longer than the default second to load it.
+    expect(await screen.findByRole('button', { name: 'Save check-in' }, { timeout: 15_000 })).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: 'Progress' })).toBeChecked()
-  })
+  }, 20_000)
 
   it('opens the transactions tab with the dataset it was given', async () => {
     const dataset = datasetWith({
