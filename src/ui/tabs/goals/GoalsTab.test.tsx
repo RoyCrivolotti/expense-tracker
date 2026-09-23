@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { GoalsTab } from './GoalsTab'
@@ -100,6 +100,45 @@ describe('GoalsTab', () => {
     await user.click(screen.getByRole('button', { name: 'Use as my plan' }))
 
     expect(actions.activateScenario).toHaveBeenCalledWith(2)
+  })
+
+  it('asks before a chip switch drops unsaved edits, and keeps them on Cancel', async () => {
+    const user = userEvent.setup()
+    const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })
+    const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })
+    const model = buildExpenseModel(makeDataset({ goalScenarios: [plan, other] }))
+    render(<GoalsTab model={model} actions={makeActions()} />)
+
+    const name = screen.getByLabelText('Scenario name')
+    fireEvent.change(name, { target: { value: 'Path A, tweaked' } })
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Path B' }))
+    expect(screen.getByText('Discard unsaved changes to Path A?')).toBeInTheDocument()
+    expect(screen.getByLabelText('Scenario name')).toHaveValue('Path A, tweaked')
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Scenario name')).toHaveValue('Path A, tweaked')
+
+    await user.click(screen.getByRole('button', { name: 'Path B' }))
+    // The header has its own Discard button; the one in the sheet is the answer.
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Discard' }))
+    expect(screen.getByLabelText('Scenario name')).toHaveValue('Path B')
+    expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
+  })
+
+  it('switches chips without asking when nothing is unsaved', async () => {
+    const user = userEvent.setup()
+    const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })
+    const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })
+    const model = buildExpenseModel(makeDataset({ goalScenarios: [plan, other] }))
+    render(<GoalsTab model={model} actions={makeActions()} />)
+
+    await user.click(screen.getByRole('button', { name: 'Path B' }))
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Scenario name')).toHaveValue('Path B')
   })
 
   it('measures Progress against the plan, not the scenario loaded in the editor', async () => {

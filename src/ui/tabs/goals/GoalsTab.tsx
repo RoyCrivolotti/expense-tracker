@@ -17,6 +17,9 @@ import type { ChartSeries } from '../../charts/LinearChart'
 import { Card, SectionTitle } from '../../components/primitives'
 import { SegmentedControl } from '../../components/SegmentedControl'
 import { PercentStepper } from '../../components/PercentStepper'
+import { ConfirmSheet } from '../../components/ConfirmSheet'
+import { Presence } from '../../components/Presence'
+import { EXIT_MS } from '../../hooks/motion'
 import { GoalControls } from './GoalControls'
 import { ScenarioManager } from './ScenarioManager'
 import { GoalsExplainer } from './GoalsExplainer'
@@ -167,8 +170,28 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
     void actions.activateScenario(activeId)
   }, [actions, activeId])
 
-  const onSelectScenario = selectScenario
+  // Loading another scenario replaces the draft, so unsaved edits are held back behind a
+  // question. Held as its own value so the sheet keeps its text while it animates out.
+  const [pendingSelect, setPendingSelect] = useState<GoalScenario | null>(null)
+  const [discardOpen, setDiscardOpen] = useState(false)
+  const onSelectScenario = useCallback(
+    (scenario: GoalScenario) => {
+      if (scenario.id === activeId) return
+      if (dirty) {
+        setPendingSelect(scenario)
+        setDiscardOpen(true)
+        return
+      }
+      selectScenario(scenario)
+    },
+    [activeId, dirty, selectScenario],
+  )
+  const onDiscardAndSelect = useCallback(() => {
+    setDiscardOpen(false)
+    if (pendingSelect) selectScenario(pendingSelect)
+  }, [pendingSelect, selectScenario])
 
+  // Switching to the unsaved draft keeps the current edits, so it needs no question.
   const onSelectEditing = useCallback(() => {
     setActiveId(null)
   }, [])
@@ -302,6 +325,18 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
               onActivate={onActivate}
               onScenarioCreated={selectScenario}
             />
+            <Presence show={discardOpen} exitMs={EXIT_MS.sheet}>
+              {pendingSelect ? (
+                <ConfirmSheet
+                  title={`Discard unsaved changes to ${activeScenario?.name ?? draft.name}?`}
+                  message={`Loading ${pendingSelect.name} drops the edits made here. Save changes first to keep them.`}
+                  confirmLabel="Discard"
+                  destructive
+                  onConfirm={onDiscardAndSelect}
+                  onCancel={() => setDiscardOpen(false)}
+                />
+              ) : null}
+            </Presence>
           </div>
           <div className={styles.areaControls}>
             <Card>
