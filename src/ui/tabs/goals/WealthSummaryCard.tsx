@@ -21,21 +21,27 @@ interface Props {
 
 function StatusRow({
   status,
-  planName,
+  plan,
   format,
 }: {
   status: TrackStatus | null
-  planName: string | null
+  plan: GoalScenario | null
   format: MoneyFormat
 }) {
   if (!status) {
+    // Two different gaps: no plan at all, or a plan the projection cannot be dated
+    // against. Telling the second user to go choose a plan sends them the wrong way.
+    const why = !plan
+      ? 'No plan chosen yet. Open a scenario under Plan and choose Use as my plan.'
+      : `${plan.name} has no start date yet. Set one under Plan tracking, or re-baseline it from this check-in, to see whether you are ahead or behind.`
     return (
       <div className={styles.summaryStatus}>
         <span className={[styles.statusDot, styles.statusDotNeutral].join(' ')} />
-        <span>No plan chosen yet. Open a scenario under Plan and choose Use as my plan.</span>
+        <span>{why}</span>
       </div>
     )
   }
+  const planName = plan?.name ?? null
   const ahead = status.deltaCents >= 0
   return (
     <div className={styles.summaryStatus}>
@@ -98,7 +104,7 @@ export function WealthSummaryCard({ checkins, accounts, plan }: Props) {
     <Card>
       <h3 className={goalStyles.sectionTitle}>Progress snapshot</h3>
       <div className={styles.summaryCardContent}>
-        <StatusRow status={status} planName={plan?.name ?? null} format={format} />
+        <StatusRow status={status} plan={plan} format={format} />
         <div className={styles.summaryRow}>
           <span>Net worth</span>
           <span className={styles.summaryValue}>{formatMoneyShort(netWorth, format)}</span>

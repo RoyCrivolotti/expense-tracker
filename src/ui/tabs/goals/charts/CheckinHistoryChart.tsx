@@ -1,6 +1,7 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { GoalScenario, WealthAccount, WealthCheckin } from '../../../../types'
 import { Card } from '../../../components/primitives'
+import { SegmentedControl } from '../../../components/SegmentedControl'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import type { ScatterPoint } from '../../../charts/linearScale'
 import { ChartLegend } from '../../../charts/ChartLegend'
@@ -10,11 +11,13 @@ import {
   yearOffsetFromDate,
   checkinInvestedCents,
 } from '../../../../engine'
-import { sparseLabels } from '../../../charts/linearScale'
-import { formatMoneyShort } from '../chartTheme'
+import { todayIso } from '../../../components/transactionFormState'
+import { formatMoneyAxis } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { buildCheckinTooltip } from './checkinChartUtils'
+import { WINDOW_OPTIONS, defaultWindow, stepMonthsFor, windowSeries, type WindowKey } from './checkinWindow'
 import goalStyles from '../goals.module.css'
+import progressStyles from '../progress.module.css'
 
 interface Props {
   checkins: WealthCheckin[]
@@ -26,84 +29,95 @@ const ACTUAL_COLOR = '#10b981'
 
 export function CheckinHistoryChart({ checkins, accounts, plan }: Props) {
   const format = useMoneyFormat()
+  const planStartDate = plan?.planStartDate ?? null
+  const elapsedYears = useMemo(
+    () => (planStartDate ? (yearOffsetFromDate(planStartDate, todayIso()) ?? 0) : 0),
+    [planStartDate],
+  )
+  const [chosen, setChosen] = useState<WindowKey | null>(null)
+  const window = chosen ?? defaultWindow(elapsedYears)
 
-  const { series, labels, todayIndex, years, scatterPoints } = useMemo(() => {
-    if (!plan?.planStartDate) {
-      return { series: [], labels: [], todayIndex: undefined, years: [] as number[], scatterPoints: [] as ScatterPoint[] }
-    }
-
-    const params = scenarioToParams(plan)
-    const points = projectNetWorth(params)
-    const yrs = points.map((p) => p.year)
-
-    const projSeries: ChartSeries = {
-      id: 'plan',
-      color: plan.color,
-      values: points.map((p) => p.investedCents),
-      dashed: false,
-    }
-
+  const model = useMemo(() => {
+    if (!plan || !planStartDate) return null
+    const points = projectNetWorth(scenarioToParams(plan))
+    const years = WINDOW_OPTIONS.find((o) => o.value === window)?.years ?? plan.horizonYears
+    const windowYears = Math.min(years, plan.horizonYears)
+    const series = windowSeries(points, planStartDate, windowYears, stepMonthsFor(windowYears))
     const scatter: ScatterPoint[] = checkins
       .map((c) => {
-        const offset = yearOffsetFromDate(plan.planStartDate!, c.checkinDate)
-        if (offset === null) return null
-        const value = checkinInvestedCents(c, accounts)
-        return { xIndex: offset, value }
+        const offset = yearOffsetFromDate(planStartDate, c.checkinDate)
+        if (offset === null || offset < 0 || offset > windowYears) return null
+        return { xIndex: offset / series.stepYears, value: checkinInvestedCents(c, accounts) }
       })
       .filter((p): p is ScatterPoint => p !== null)
+    const todayIndex =
+      elapsedYears >= 0 && elapsedYears <= windowYears ? elapsedYears / series.stepYears : undefined
+    // Roughly one tick's worth of the fitted axis, so the labels get enough decimals.
+    const shown = [...series.values, ...scatter.map((p) => p.value)]
+    const tickStep = (Math.max(...shown) - Math.min(...shown)) / 5
+    return { series, scatter, todayIndex, tickStep }
+  }, [plan, planStartDate, window, checkins, accounts, elapsedYears])
 
-    const actualSeries: ChartSeries = {
+  const planColor = plan?.color
+  const tooltip = useCallback(
+    (i: number) =>
+      buildCheckinTooltip(
+        i,
+        model?.series.titles ?? [],
+        model?.series.values ?? [],
+        model?.scatter ?? [],
+        format,
+        planColor,
+        ACTUAL_COLOR,
+      ),
+    [model, format, planColor],
+  )
+
+  if (!plan || !planStartDate || !model) return null
+
+  const chartSeries: ChartSeries[] = [
+    { id: 'plan', color: plan.color, values: model.series.values, dashed: false },
+    {
       id: 'actuals',
       color: ACTUAL_COLOR,
       values: [],
       kind: 'scatter',
-      points: scatter,
-    }
-
-    const todayOffset = yearOffsetFromDate(
-      plan.planStartDate,
-      new Date().toISOString().slice(0, 10),
-    )
-
-    return {
-      series: [projSeries, actualSeries],
-      labels: sparseLabels(yrs, 6).map((l) => (l === null ? '' : String(l))),
-      todayIndex: todayOffset ?? undefined,
-      years: yrs,
-      scatterPoints: scatter,
-    }
-  }, [plan, checkins, accounts])
-
-  const planColor = plan?.color
-  const tooltip = useCallback(
-    (i: number) => buildCheckinTooltip(i, years, series[0]?.values ?? [], scatterPoints, format, planColor, ACTUAL_COLOR),
-    [years, series, scatterPoints, format, planColor],
-  )
-
-  if (!plan?.planStartDate) {
-    return null
-  }
-
-  const legendItems = [
-    { label: 'Plan', color: plan.color },
-    { label: 'Actual', color: ACTUAL_COLOR },
+      points: model.scatter,
+      // Joined, so the check-ins read as how the portfolio moved, not as stray dots.
+      connect: true,
+    },
   ]
 
   return (
     <Card>
-      <h3 className={goalStyles.sectionTitle}>Actual vs plan</h3>
+      <div className={progressStyles.chartHeaderRow}>
+        <h3 className={goalStyles.sectionTitle}>Actual vs plan</h3>
+        <SegmentedControl
+          options={WINDOW_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+          value={window}
+          onChange={setChosen}
+          ariaLabel="Time window"
+          layout="compact"
+        />
+      </div>
       <LinearChart
         height={180}
-        series={series}
-        xLabels={labels}
+        series={chartSeries}
+        xLabels={model.series.labels}
         refLines={[]}
         markerYears={[]}
-        {...(todayIndex !== undefined ? { todayIndex } : {})}
-        formatValue={(c) => formatMoneyShort(c, format)}
+        fitDomain
+        {...(model.todayIndex !== undefined ? { todayIndex: model.todayIndex } : {})}
+        formatValue={(c) => formatMoneyAxis(c, format, model.tickStep)}
         ariaLabel="Actual wealth vs plan projection"
         tooltip={tooltip}
       />
-      <ChartLegend items={legendItems} />
+      <ChartLegend
+        items={[
+          { label: 'Plan', color: plan.color },
+          { label: 'Actual', color: ACTUAL_COLOR },
+        ]}
+      />
     </Card>
   )
 }

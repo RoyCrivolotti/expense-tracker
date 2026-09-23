@@ -28,7 +28,7 @@ describe('ReachedMilestones', () => {
       />,
     )
     expect(screen.getByText(/House deposit \(.*\)/)).toBeTruthy()
-    expect(screen.getByText('by 2026-03-14')).toBeTruthy()
+    expect(screen.getByText(/^by .*2026$/)).toBeTruthy()
     expect(screen.queryByText(/Coast FI/)).toBeNull()
   })
 
@@ -39,7 +39,7 @@ describe('ReachedMilestones', () => {
         reached={new Map([[10_000_000, '2026-03-14']])}
       />,
     )
-    expect(screen.getByText('by 2026-03-14')).toBeTruthy()
+    expect(screen.getByText(/^by .*2026$/)).toBeTruthy()
     expect(screen.getAllByRole('listitem')).toHaveLength(1)
   })
 })

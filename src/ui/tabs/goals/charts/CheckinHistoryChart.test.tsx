@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { CheckinHistoryChart } from './CheckinHistoryChart'
 import { nearestScatterValue, buildCheckinTooltip } from './checkinChartUtils'
@@ -79,6 +79,24 @@ describe('CheckinHistoryChart', () => {
     expect(container.querySelector('svg')).not.toBeNull()
   })
 
+  it('opens on a one-year window for a plan that just started, and widens on request', () => {
+    const start = new Date()
+    start.setMonth(start.getMonth() - 2)
+    const scenario = makeScenario({ planStartDate: start.toISOString().slice(0, 10), horizonYears: 30 })
+    render(<CheckinHistoryChart checkins={[]} accounts={[]} plan={scenario} />)
+
+    expect(screen.getByRole('radio', { name: '1Y' })).toBeChecked()
+
+    fireEvent.click(screen.getByRole('radio', { name: '5Y' }))
+    expect(screen.getByRole('radio', { name: '5Y' })).toBeChecked()
+  })
+
+  it('opens wide enough to keep today off the right edge of an older plan', () => {
+    const scenario = makeScenario({ planStartDate: '2020-01-01', horizonYears: 30 })
+    render(<CheckinHistoryChart checkins={[]} accounts={[]} plan={scenario} />)
+    expect(screen.getByRole('radio', { name: '10Y' })).toBeChecked()
+  })
+
   it('renders a legend with Plan and Actual entries', () => {
     const scenario = makeScenario({ planStartDate: '2020-01-01' })
     const accounts = [makeAccount(1)]
@@ -125,7 +143,7 @@ describe('buildCheckinTooltip', () => {
   const format = EU_MONEY_FORMAT
 
   it('returns Plan line for the given year index', () => {
-    const result = buildCheckinTooltip(1, [0, 1, 2], [100_000, 200_000, 300_000], [], format)
+    const result = buildCheckinTooltip(1, ['Year 0', 'Year 1', 'Year 2'], [100_000, 200_000, 300_000], [], format)
     expect(result.title).toBe('Year 1')
     expect(result.lines).toHaveLength(1)
     expect(result.lines[0]!.label).toBe('Plan')
@@ -133,14 +151,14 @@ describe('buildCheckinTooltip', () => {
 
   it('includes Actual line when a scatter point is nearby', () => {
     const scatter = [{ xIndex: 1.2, value: 180_000 }]
-    const result = buildCheckinTooltip(1, [0, 1], [100_000, 200_000], scatter, format)
+    const result = buildCheckinTooltip(1, ['Year 0', 'Year 1'], [100_000, 200_000], scatter, format)
     expect(result.lines).toHaveLength(2)
     expect(result.lines[1]!.label).toBe('Actual')
   })
 
   it('omits Actual line when no scatter point is nearby', () => {
     const scatter = [{ xIndex: 5, value: 180_000 }]
-    const result = buildCheckinTooltip(1, [0, 1], [100_000, 200_000], scatter, format)
+    const result = buildCheckinTooltip(1, ['Year 0', 'Year 1'], [100_000, 200_000], scatter, format)
     expect(result.lines).toHaveLength(1)
   })
 })

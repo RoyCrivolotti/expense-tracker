@@ -41,6 +41,8 @@ export interface ChartSeries {
   band?: { lo: number[]; hi: number[] }
   /** Sparse check-in actuals. Used only when kind === 'scatter'. */
   points?: ScatterPoint[]
+  /** Join scatter points in x order, so readings over time read as a line. */
+  connect?: boolean
 }
 
 interface Props {
@@ -60,6 +62,8 @@ interface Props {
   onActiveIndexChange?: (index: number | null) => void
   /** Floor for the auto-computed Y-axis max — keeps the scale stable across re-renders that change value magnitude (e.g. a real/nominal display toggle). */
   yDomainMax?: number | undefined
+  /** Fit the Y axis to the values in view instead of anchoring it at zero. */
+  fitDomain?: boolean
 }
 
 function pointsOf(values: number[], x: (i: number) => number, y: (v: number) => number): Pt[] {
@@ -71,6 +75,7 @@ function useGeometry(
   height: number,
   refLines: number[],
   yDomainMax: number | undefined,
+  fitDomain: boolean | undefined,
 ) {
   return useMemo(() => {
     const n = series.find((s) => s.kind !== 'scatter' && s.kind !== 'band')?.values.length ?? 0
@@ -91,6 +96,7 @@ function useGeometry(
     const domain = collectDomain(
       [lineValues, stackedValues, envelopeValues, scatterValues],
       refLines,
+      fitDomain !== true,
     )
     // yDomainMax raises the floor rather than overriding outright, so a caller
     // locking the scale (e.g. real/nominal toggle) can never clip band/scatter
@@ -101,7 +107,7 @@ function useGeometry(
     const xForIndex = (i: number) =>
       n <= 1 ? PAD.left + innerW / 2 : PAD.left + (i / (n - 1)) * innerW
     return { n, innerH, stackedBands, areaSeries, ticks: nice.ticks, scaleY, xForIndex }
-  }, [series, height, refLines, yDomainMax])
+  }, [series, height, refLines, yDomainMax, fitDomain])
 }
 
 function domainTuple(d: { min: number; max: number }): [number, number] {
@@ -122,9 +128,10 @@ export function LinearChart({
   tooltipMode = 'full',
   onActiveIndexChange,
   yDomainMax,
+  fitDomain,
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
-  const geo = useGeometry(series, height, refLines, yDomainMax)
+  const geo = useGeometry(series, height, refLines, yDomainMax, fitDomain)
   const { active, containerRef, ...handlers } = useChartFocus(geo.n, geo.xForIndex)
   const focusX = active != null ? geo.xForIndex(active) : 0
   const anchor = useSvgAnchor(svgRef, active != null ? focusX : null, active != null ? PAD.top : null)
@@ -198,6 +205,7 @@ export function LinearChart({
             points={s.points ?? []}
             xForIndex={geo.xForIndex}
             scaleY={geo.scaleY}
+            connect={s.connect ?? false}
           />
         ))}
         {refLines.filter(Number.isFinite).map((v) => (

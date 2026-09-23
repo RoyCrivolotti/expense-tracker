@@ -371,7 +371,10 @@ export const docsCaptureDataSource: ExpenseDataSource = {
     return Promise.resolve({ ...scenario, isActive: true })
   },
   updateScenario(id: number, patch: Partial<NewGoalScenario>) {
-    const scenario: GoalScenario = {
+    // Start from the seeded row, as the real API returns the whole row: a stub built
+    // from the patch alone came back without the plan flag, so saving the plan's
+    // start date silently un-chose it.
+    const base: GoalScenario = docsCaptureGoalScenarios().find((s) => s.id === id) ?? {
       id,
       name: 'Scenario',
       color: '#6366f1',
@@ -394,9 +397,8 @@ export const docsCaptureDataSource: ExpenseDataSource = {
       planStartDate: null,
       lifeEvents: [],
       isActive: false,
-      ...patch,
     }
-    return Promise.resolve(scenario)
+    return Promise.resolve({ ...base, ...patch, id })
   },
   deleteScenario() {
     return Promise.resolve()

@@ -73,7 +73,7 @@ export function ActiveScenarioHeader({
         <>
           <div className={styles.pillRow}>
             {activeScenario.isActive ? (
-              <span className={styles.planPill}>Your plan</span>
+              <span className={styles.planPill}>Current plan</span>
             ) : (
               <button type="button" className={styles.btnText} onClick={onActivate}>
                 Use as my plan
