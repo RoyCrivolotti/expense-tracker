@@ -9,6 +9,7 @@ import { FireChart } from './charts/FireChart'
 import { RentVsOwnChart } from './charts/RentVsOwnChart'
 import { SavingsRateChart } from './charts/SavingsRateChart'
 import type { MonthlyFlow } from '../../../engine'
+import { useGoalsNarrow } from './useGoalsNarrow'
 import styles from './goals.module.css'
 
 const VIEWS = [
@@ -28,21 +29,8 @@ const DESKTOP_LAYOUT = [
 
 type DesktopLayout = (typeof DESKTOP_LAYOUT)[number]['value']
 
-const NARROW_MQ = '(max-width: 899px)'
-const STACK_CHART_HEIGHT = 280
-
-function useGoalsNarrow(): boolean {
-  const [narrow, setNarrow] = useState(() =>
-    typeof window !== 'undefined' ? window.matchMedia(NARROW_MQ).matches : false,
-  )
-  useEffect(() => {
-    const mql = window.matchMedia(NARROW_MQ)
-    const handler = (e: MediaQueryListEvent) => setNarrow(e.matches)
-    mql.addEventListener('change', handler)
-    return () => mql.removeEventListener('change', handler)
-  }, [])
-  return narrow
-}
+// Real pixels now that the charts size themselves to their container.
+const STACK_CHART_HEIGHT = 260
 
 /** Tracks whether a horizontally scrollable element has more content off either edge. */
 function useScrollEdges() {

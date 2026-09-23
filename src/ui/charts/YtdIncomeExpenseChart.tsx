@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useRef } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
 import { computeMonthlyTotals } from '../../engine'
 import { formatCents } from '../../engine/money'
@@ -45,7 +45,8 @@ export function YtdIncomeExpenseChart({ model, month }: Props) {
     [innerW, innerH, maxVal, points.length],
   )
   const xForIndex = useCallback((i: number) => coords(i, 0).x, [coords])
-  const { active, containerRef, ...pointerHandlers } = useChartFocus(points.length, xForIndex)
+  const containerRef = useRef<HTMLElement>(null)
+  const { active, ...pointerHandlers } = useChartFocus(points.length, xForIndex, containerRef)
 
   if (points.length === 0) return null
 

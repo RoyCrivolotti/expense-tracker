@@ -1,3 +1,4 @@
+import type { ChartFocusHandlers } from './useChartFocus'
 import { useRef } from 'react'
 import { formatCents } from '../../engine/money'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
@@ -21,7 +22,7 @@ interface Props {
   focusX: number
   coords: (idx: number, val: number) => { x: number; y: number }
   line: (key: 'cumIncome' | 'cumExpense') => string
-  pointerHandlers: Record<string, (e: React.PointerEvent<SVGSVGElement>) => void>
+  pointerHandlers: ChartFocusHandlers
 }
 
 export function YtdLineChartView({
@@ -45,6 +46,7 @@ export function YtdLineChartView({
         ref={svgRef}
         viewBox={`0 0 ${CHART_W} ${CHART_H}`}
         className={styles.svg}
+        tabIndex={0}
         role="img"
         aria-label="Cumulative year-to-date income and expenses"
         {...pointerHandlers}
