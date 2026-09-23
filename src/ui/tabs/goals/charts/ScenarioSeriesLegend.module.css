@@ -32,6 +32,39 @@
   min-width: 0;
 }
 
+/* A row that is a button keeps the row's grid and loses the button's own chrome. The
+   hidden state dims the whole row rather than removing it, so the line can come back. */
+.rowItem {
+  list-style: none;
+  margin-bottom: 0.35rem;
+}
+.rowButton {
+  width: 100%;
+  margin: 0;
+  padding: 0.15rem 0.25rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm, 6px);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.rowButton:hover {
+  background: var(--color-surface-muted);
+}
+.rowButton:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+.rowHidden {
+  opacity: 0.45;
+}
+.rowHidden .label {
+  text-decoration: line-through;
+}
+
 .swatch {
   width: 12px;
   height: 12px;

@@ -246,11 +246,6 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     [onSaveDraft],
   )
 
-  const visibleScenarios = useMemo(
-    () => dataset.goalScenarios.filter((s) => !hiddenIds.has(s.id)),
-    [dataset.goalScenarios, hiddenIds],
-  )
-
   // Scatter points: actual invested values from check-ins plotted on the hero chart.
   const checkinExtraSeries = useMemo<ChartSeries | null>(() => {
     if (!activeScenario?.planStartDate) return null
@@ -385,7 +380,9 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
           </div>
           <div className={`${styles.heroBlock} ${styles.areaHero}`}>
             <NetWorthChart
-              scenarios={visibleScenarios}
+              scenarios={dataset.goalScenarios}
+              hiddenIds={hiddenIds}
+              onToggleVisible={onToggleVisible}
               draft={deferredDraft}
               milestones={milestones}
               activeId={activeId}
