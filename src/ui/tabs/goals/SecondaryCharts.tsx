@@ -7,7 +7,8 @@ import { CompositionChart } from './charts/CompositionChart'
 import { MilestoneMatrix } from './charts/MilestoneMatrix'
 import { FireChart } from './charts/FireChart'
 import { RentVsOwnChart } from './charts/RentVsOwnChart'
-import { SavingsRateChart, type MonthlySaving } from './charts/SavingsRateChart'
+import { SavingsRateChart } from './charts/SavingsRateChart'
+import type { MonthlyFlow } from '../../../engine'
 import styles from './goals.module.css'
 
 const VIEWS = [
@@ -15,7 +16,7 @@ const VIEWS = [
   { value: 'milestones', label: 'Milestones' },
   { value: 'fire', label: 'FIRE' },
   { value: 'rent', label: 'Rent vs buy' },
-  { value: 'savings', label: 'Saving' },
+  { value: 'savings', label: 'Investing' },
 ] as const
 
 type SecondaryView = (typeof VIEWS)[number]['value']
@@ -73,7 +74,7 @@ function useScrollEdges() {
 interface SecondaryChartsProps {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
-  monthly: MonthlySaving[]
+  monthly: MonthlyFlow[]
   milestones: Milestone[]
   reached: Map<number, string>
 }
@@ -91,7 +92,7 @@ function SecondaryViewChart({
   view: SecondaryView
   scenarios: GoalScenario[]
   draft: NewGoalScenario
-  monthly: MonthlySaving[]
+  monthly: MonthlyFlow[]
   milestones: Milestone[]
   reached: Map<number, string>
   chartHeight?: number | undefined
@@ -219,7 +220,7 @@ function SecondaryChartStack({
 }: {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
-  monthly: MonthlySaving[]
+  monthly: MonthlyFlow[]
   milestones: Milestone[]
   reached: Map<number, string>
 }) {

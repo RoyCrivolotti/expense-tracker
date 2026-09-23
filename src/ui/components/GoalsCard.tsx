@@ -1,9 +1,11 @@
 import { useMemo } from 'react'
 import type { ExpenseDataset } from '../../types'
 import {
-  averageMonthlySaving,
+  averageMonthlyCents,
   computeMonthlyTotals,
   latestCheckin,
+  monthlyFlows,
+  monthsSincePlanStart,
   trackStatus,
 } from '../../engine'
 import { Card, EmptyState, SectionTitle } from './primitives'
@@ -46,13 +48,16 @@ function TrackBadge({ deltaCents, deltaMonths, format }: TrackBadgeProps) {
 export function GoalsCard({ dataset, onOpenGoals }: GoalsCardProps) {
   const format = useMoneyFormat()
   const scenario = useMemo(() => activePlan(dataset.goalScenarios), [dataset.goalScenarios])
-  const avgSaving = useMemo(() => {
-    const totals = [...computeMonthlyTotals(dataset.transactions).values()]
-    return averageMonthlySaving(totals.map((t) => t.netSavingCents))
-  }, [dataset.transactions])
+  // The pace kept since the plan began: investment transactions per month, which is
+  // what the plan's monthly figure promises, rather than net saving.
+  const avgInvesting = useMemo(() => {
+    const flows = monthlyFlows(computeMonthlyTotals(dataset.transactions))
+    const since = monthsSincePlanStart(flows, scenario?.planStartDate ?? null)
+    return averageMonthlyCents(since.map((m) => m.investedCents))
+  }, [dataset.transactions, scenario])
   const headline = useMemo(
-    () => (scenario ? scenarioHeadline(scenario, avgSaving, format) : null),
-    [scenario, avgSaving, format],
+    () => (scenario ? scenarioHeadline(scenario, avgInvesting, format) : null),
+    [scenario, avgInvesting, format],
   )
 
   const track = useMemo(() => {

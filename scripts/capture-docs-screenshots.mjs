@@ -249,7 +249,7 @@ const GOALS_MOBILE_VIEWS = [
   { label: 'Milestones', file: 'milestones' },
   { label: 'FIRE', file: 'fire' },
   { label: 'Rent vs buy', file: 'rent' },
-  { label: 'Saving', file: 'savings' },
+  { label: 'Investing', file: 'savings' },
 ]
 
 async function captureGoalsMobile(page) {

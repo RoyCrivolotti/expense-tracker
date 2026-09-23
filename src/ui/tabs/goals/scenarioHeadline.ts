@@ -21,10 +21,14 @@ function shortName(name: string): string {
   return colon >= 0 ? name.slice(0, colon).trim() : name
 }
 
-/** One- or two-line dashboard summary from a scenario's projection assumptions. */
+/**
+ * One- or two-line dashboard summary from a scenario's projection assumptions.
+ * `actualMonthlyInvestingCents` is the pace actually kept (investment transactions
+ * per month since the plan began), shown when it differs from what the plan assumes.
+ */
 export function scenarioHeadline(
   scenario: ScenarioLike,
-  actualMonthlySavingCents?: number,
+  actualMonthlyInvestingCents?: number,
   format: MoneyFormat = EU_MONEY_FORMAT,
 ): ScenarioHeadline {
   const params = scenarioToParams('id' in scenario ? scenario : { ...scenario, id: 0 })
@@ -41,10 +45,10 @@ export function scenarioHeadline(
     `plan ${formatCents(scenario.monthlyContributionCents, format)}/mo`,
   ]
   if (
-    actualMonthlySavingCents != null &&
-    actualMonthlySavingCents !== scenario.monthlyContributionCents
+    actualMonthlyInvestingCents != null &&
+    actualMonthlyInvestingCents !== scenario.monthlyContributionCents
   ) {
-    secondaryParts.push(`actual avg ${formatCents(actualMonthlySavingCents, format)}/mo`)
+    secondaryParts.push(`actual avg ${formatCents(actualMonthlyInvestingCents, format)}/mo invested`)
   }
 
   return { primary, secondary: secondaryParts.join(' · ') }

@@ -1,5 +1,6 @@
 import { memo, useMemo } from 'react'
 import type { NewGoalScenario } from '../../../../data/dataSource'
+import { monthsSincePlanStart, type MonthlyFlow } from '../../../../engine'
 import { ChartShell } from './ChartShell'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
@@ -9,21 +10,29 @@ import { formatMoneyShort } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import styles from '../goals.module.css'
 
-export interface MonthlySaving {
-  month: string
-  netSavingCents: number
-}
+const INVESTED_COLOR = 'var(--exp-investment)'
+const SAVING_COLOR = 'color-mix(in srgb, var(--exp-income) 55%, transparent)'
 
 const LEGEND: LegendItem[] = [
-  { label: 'Actual net saving', color: 'var(--exp-income)' },
+  { label: 'Invested', color: INVESTED_COLOR },
+  { label: 'Net saving', color: SAVING_COLOR },
   { label: 'Plan assumption', color: 'color-mix(in srgb, var(--color-text) 45%, transparent)' },
 ]
+
+/** Long enough to see a habit, short enough that the labels stay readable. */
+const MAX_MONTHS = 24
 
 function monthLabel(month: string): string {
   const [year, mm] = month.split('-')
   return mm && year ? `${mm}/${year.slice(2)}` : month
 }
 
+/**
+ * Whether the monthly pace the plan assumes is being kept. The plan's figure is money
+ * going into the portfolio, so it is compared with investment transactions; net saving
+ * is drawn fainter beside it, because the gap between the two is money that stayed in
+ * the current account.
+ */
 function SavingsRateChartImpl({
   draft,
   monthly,
@@ -31,12 +40,15 @@ function SavingsRateChartImpl({
   embedded = false,
 }: {
   draft: NewGoalScenario
-  monthly: MonthlySaving[]
+  monthly: MonthlyFlow[]
   height?: number
   embedded?: boolean
 }) {
   const format = useMoneyFormat()
-  const recent = useMemo(() => monthly.slice(-18), [monthly])
+  const recent = useMemo(
+    () => monthsSincePlanStart(monthly, draft.planStartDate).slice(-MAX_MONTHS),
+    [monthly, draft.planStartDate],
+  )
   const labels = useMemo(() => {
     const step = Math.max(1, Math.ceil(recent.length / 6))
     return sparseLabels(
@@ -48,29 +60,34 @@ function SavingsRateChartImpl({
   if (recent.length === 0) {
     return (
       <ChartShell embedded={embedded}>
-        <h3 className={styles.chartTitle}>Actual saving vs plan</h3>
+        <h3 className={styles.chartTitle}>Actual investing vs plan</h3>
         <p className={styles.chartHint}>No monthly history yet to compare against your plan.</p>
       </ChartShell>
     )
   }
 
   const series: ChartSeries[] = [
-    { id: 'actual', color: 'var(--exp-income)', values: recent.map((m) => m.netSavingCents) },
+    { id: 'saving', color: SAVING_COLOR, values: recent.map((m) => m.netSavingCents), dashed: true },
+    { id: 'invested', color: INVESTED_COLOR, values: recent.map((m) => m.investedCents) },
   ]
   const tooltip = (i: number): { title: string; lines: TooltipLine[] } => ({
     title: recent[i]?.month ?? '',
     lines: [
-      { label: 'Saved', value: formatMoneyShort(recent[i]?.netSavingCents ?? 0, format), tone: 'neutral' },
+      { label: 'Invested', value: formatMoneyShort(recent[i]?.investedCents ?? 0, format), tone: 'neutral' },
+      { label: 'Net saving', value: formatMoneyShort(recent[i]?.netSavingCents ?? 0, format), tone: 'neutral' },
       { label: 'Plan', value: formatMoneyShort(draft.monthlyContributionCents, format), tone: 'neutral' },
     ],
   })
+  const since = draft.planStartDate ? ' since the plan started' : ''
 
   return (
     <ChartShell embedded={embedded}>
-      <h3 className={styles.chartTitle}>Actual saving vs plan</h3>
+      <h3 className={styles.chartTitle}>Actual investing vs plan</h3>
       <p className={styles.chartHint}>
-        Monthly net saving from posted transactions vs the{' '}
-        {formatMoneyShort(draft.monthlyContributionCents, format)}/mo this scenario assumes.
+        Investment transactions per month{since} vs the{' '}
+        {formatMoneyShort(draft.monthlyContributionCents, format)}/mo this scenario assumes. The
+        fainter line is net saving, what was left after expenses; the gap is money that stayed in
+        the current account.
       </p>
       <LinearChart
         height={height}
@@ -78,7 +95,7 @@ function SavingsRateChartImpl({
         xLabels={labels}
         refLines={[draft.monthlyContributionCents]}
         formatValue={(c) => formatMoneyShort(c, format)}
-        ariaLabel="Monthly net saving versus planned contribution"
+        ariaLabel="Monthly investing versus planned contribution"
         tooltip={tooltip}
       />
       <ChartLegend items={LEGEND} />

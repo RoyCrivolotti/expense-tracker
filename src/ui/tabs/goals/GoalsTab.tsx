@@ -4,8 +4,9 @@ import type { ExpenseActions } from '../../actions'
 import type { GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import {
-  averageMonthlySaving,
+  averageMonthlyCents,
   computeMonthlyTotals,
+  monthlyFlows,
   yearOffsetFromDate,
   checkinInvestedCents,
   latestCheckin,
@@ -26,7 +27,6 @@ import { draftFromDataset } from './goalsDefaults'
 import { activePlan, initialEditorScenario } from './scenarioSelection'
 import { NetWorthChart } from './charts/NetWorthChart'
 import { NetWorthNowCard } from './charts/NetWorthNowCard'
-import type { MonthlySaving } from './charts/SavingsRateChart'
 import styles from './goals.module.css'
 import progressStyles from './progress.module.css'
 
@@ -113,14 +113,14 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
       date: latest.checkinDate,
     }
   }, [dataset.wealthCheckins, dataset.wealthAccounts])
-  const monthly = useMemo<MonthlySaving[]>(() => {
-    const entries = [...computeMonthlyTotals(dataset.transactions).entries()].sort(([a], [b]) =>
-      a.localeCompare(b),
-    )
-    return entries.map(([month, t]) => ({ month, netSavingCents: t.netSavingCents }))
-  }, [dataset.transactions])
+  const monthly = useMemo(
+    () => monthlyFlows(computeMonthlyTotals(dataset.transactions)),
+    [dataset.transactions],
+  )
+  // Seeds a new draft's monthly contribution: what has actually gone into the
+  // portfolio, not what was left over after expenses.
   const avgSaving = useMemo(
-    () => averageMonthlySaving(monthly.map((m) => m.netSavingCents)),
+    () => averageMonthlyCents(monthly.map((m) => m.investedCents)),
     [monthly],
   )
 
