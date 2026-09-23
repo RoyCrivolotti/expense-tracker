@@ -1,6 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import { docsCaptureDataSource } from './docsCaptureDataSource'
 
+describe('docsCaptureDataSource.updateSettings', () => {
+  it('returns the whole settings with the patch merged on, as the API does', async () => {
+    const dataset = await docsCaptureDataSource.load()
+
+    const updated = await docsCaptureDataSource.updateSettings!({ cashReserveMonths: 6 })
+
+    // A patch alone would leave the Goals tab reading milestones off undefined.
+    expect(updated.cashReserveMonths).toBe(6)
+    expect(updated.milestones).toEqual(dataset.settings.milestones)
+    expect(updated.claimantName).toBe(dataset.settings.claimantName)
+  })
+})
+
 describe('docsCaptureDataSource.updateTransaction', () => {
   it('keeps the edited row’s id and merges the patch onto it, unlike a fresh stub', async () => {
     const dataset = await docsCaptureDataSource.load()
