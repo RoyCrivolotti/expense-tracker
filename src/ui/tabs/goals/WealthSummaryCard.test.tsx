@@ -1,6 +1,7 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 import { WealthSummaryCard } from './WealthSummaryCard'
+import { planValueAtDate } from '../../../engine'
 import { makeScenario } from '../../../testing/factories'
 import type { WealthAccount, WealthCheckin } from '../../../types'
 
@@ -93,6 +94,33 @@ describe('WealthSummaryCard', () => {
     render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={null} />)
     expect(screen.getByText(/returned/)).toHaveTextContent(/5,0\s?% so far since/)
     expect(screen.queryByText(/a year/)).not.toBeInTheDocument()
+  })
+
+  it('suggests a re-baseline when the gap has held still for half a year', () => {
+    const scenario = makeScenario({ id: 1, name: 'Path A', planStartDate: '2025-01-01' })
+    const accounts = [makeAccount(1, 'investment')]
+    const behind = (id: number, date: string) =>
+      makeCheckin(id, date, [{ accountId: 1, valueCents: planValueAtDate(scenario, date)! - 50_000_00 }])
+    const checkins = [behind(1, '2026-01-01'), behind(2, '2026-04-01'), behind(3, '2026-07-15')]
+    const onRebaseline = vi.fn()
+    render(
+      <WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} onRebaseline={onRebaseline} />,
+    )
+
+    expect(screen.getByText(/Every check-in since .*2026 has sat about 50k € behind/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
+    expect(onRebaseline).toHaveBeenCalled()
+  })
+
+  it('says nothing about re-baselining while the gap is still moving', () => {
+    const scenario = makeScenario({ id: 1, planStartDate: '2025-01-01' })
+    const accounts = [makeAccount(1, 'investment')]
+    const at = (id: number, date: string, gap: number) =>
+      makeCheckin(id, date, [{ accountId: 1, valueCents: planValueAtDate(scenario, date)! + gap }])
+    const checkins = [at(1, '2026-01-01', -90_000_00), at(2, '2026-04-01', -40_000_00), at(3, '2026-07-15', -5_000_00)]
+    render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} onRebaseline={vi.fn()} />)
+
+    expect(screen.queryByText(/Every check-in since/)).not.toBeInTheDocument()
   })
 
   it('compounds a year or more to a yearly rate and sets it against the plan', () => {
