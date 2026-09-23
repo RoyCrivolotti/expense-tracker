@@ -17,9 +17,15 @@ function makeCheckin(
 }
 
 describe('WealthSummaryCard', () => {
-  it('shows empty state when no check-ins', () => {
-    render(<WealthSummaryCard checkins={[]} accounts={[]} plan={null} />)
+  it('asks for a check-in when there is an account to log against', () => {
+    render(<WealthSummaryCard checkins={[]} accounts={[makeAccount(1, 'investment')]} plan={null} />)
     expect(screen.getByText(/log your first wealth check-in/i)).toBeInTheDocument()
+  })
+
+  it('points to Setup when there is no account yet', () => {
+    render(<WealthSummaryCard checkins={[]} accounts={[]} plan={null} />)
+    expect(screen.getByText(/under Setup/)).toBeInTheDocument()
+    expect(screen.queryByText(/log your first wealth check-in/i)).not.toBeInTheDocument()
   })
 
   it('shows net worth from latest check-in', () => {

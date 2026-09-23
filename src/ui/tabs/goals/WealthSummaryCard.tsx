@@ -86,11 +86,15 @@ export function WealthSummaryCard({ checkins, accounts, plan }: Props) {
   const latest = latestCheckin(checkins)
 
   if (!latest) {
+    // A check-in needs an account to record, so without one the first step is Setup.
+    const hasAccounts = accounts.some((a) => !a.archived)
     return (
       <Card>
         <h3 className={goalStyles.sectionTitle}>Progress snapshot</h3>
         <p className={styles.emptyHint}>
-          Log your first wealth check-in below to see where you stand against your plan.
+          {hasAccounts
+            ? 'Log your first wealth check-in below to see where you stand against your plan.'
+            : 'Name the accounts you track under Setup, then log a check-in to see where you stand against your plan.'}
         </p>
       </Card>
     )
