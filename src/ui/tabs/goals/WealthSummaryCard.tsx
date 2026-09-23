@@ -52,7 +52,7 @@ function CashReserveHint({ reserve, format }: { reserve: CashReserve; format: Mo
       <strong style={{ color: met ? 'var(--exp-success)' : 'var(--exp-danger)' }}>
         {months} months
       </strong>{' '}
-      of spending, against a target of {reserve.targetMonths}.
+      of spending, against a target of {reserve.targetMonths} months.
     </p>
   )
 }
