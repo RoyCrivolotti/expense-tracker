@@ -63,6 +63,12 @@
   background: var(--exp-danger);
 }
 
+.nudge {
+  margin: 0.6rem 0 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
 .openLink {
   font: inherit;
   font-size: 0.75rem;
