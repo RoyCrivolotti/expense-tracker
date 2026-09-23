@@ -998,6 +998,13 @@
   color: var(--color-text-muted);
   font-size: 0.72rem;
 }
+/* Unreached milestones: late ones carry the danger tint, undated ones stay plain. */
+.milestoneChipLate {
+  background: color-mix(in srgb, var(--exp-danger) 12%, transparent);
+}
+.milestoneChipMuted {
+  background: var(--color-surface-muted);
+}
 
 .secondaryStack {
   display: flex;

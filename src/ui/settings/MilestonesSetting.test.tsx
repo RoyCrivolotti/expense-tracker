@@ -4,6 +4,9 @@ import { MilestonesSetting } from './MilestonesSetting'
 import { defaultExpenseSettings, defaultMilestones, MILESTONE_MAX_COUNT } from '../../engine'
 import type { ExpenseSettings, Milestone } from '../../types'
 
+// The native date field, so a change event carries the value straight through.
+vi.mock('../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: () => true }))
+
 function settingsWith(milestones: Milestone[]): ExpenseSettings {
   return { ...defaultExpenseSettings(), milestones }
 }
@@ -19,6 +22,26 @@ describe('MilestonesSetting', () => {
   it('shows an empty state when the list is empty', () => {
     render(<MilestonesSetting settings={settingsWith([])} onChange={vi.fn()} />)
     expect(screen.getByText(/No milestones\./)).toBeTruthy()
+  })
+
+  it('saves a target date, and clears it again', () => {
+    const onChange = vi.fn()
+    const { rerender } = render(
+      <MilestonesSetting settings={settingsWith(oneMilestone)} onChange={onChange} />,
+    )
+
+    fireEvent.change(screen.getByLabelText('Target date for milestone House deposit'), {
+      target: { value: '2028-06-01' },
+    })
+    const dated = [{ amountCents: 10_000_000, label: 'House deposit', targetDate: '2028-06-01' }]
+    expect(onChange).toHaveBeenLastCalledWith({ milestones: dated })
+
+    // The clear button only exists once the saved list carries the date.
+    rerender(<MilestonesSetting settings={settingsWith(dated)} onChange={onChange} />)
+    fireEvent.click(screen.getByLabelText('Clear target date for milestone House deposit'))
+    expect(onChange).toHaveBeenLastCalledWith({
+      milestones: [{ amountCents: 10_000_000, label: 'House deposit' }],
+    })
   })
 
   it('saves a renamed milestone on blur', () => {

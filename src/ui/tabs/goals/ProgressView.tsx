@@ -82,7 +82,7 @@ export function ProgressView({
         plan={plan}
       />
 
-      <ReachedMilestones milestones={milestones} reached={reached} />
+      <ReachedMilestones milestones={milestones} reached={reached} plan={plan} />
 
       {canWrite && actions && !hasAccounts ? (
         <EmptyState actionLabel="Set up accounts" onAction={onOpenSetup}>

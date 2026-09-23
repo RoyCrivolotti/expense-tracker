@@ -312,9 +312,15 @@
    remove buttons line up down the column. */
 .milestoneRow {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 7rem auto auto;
+  grid-template-columns: minmax(0, 1fr) 7rem auto auto auto;
   align-items: center;
   gap: 0.5rem;
+}
+/* The date and its clear button read as one control. */
+.milestoneTarget {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 .milestoneLabelInput,
 .milestoneAmountInput {
@@ -382,6 +388,11 @@
   }
   .milestoneFormatted {
     display: none;
+  }
+  /* The date drops to a second line under the name and amount, with the row's remove
+     button beside it rather than stretched across a line of its own. */
+  .milestoneTarget {
+    grid-column: 1 / 3;
   }
 }
 
