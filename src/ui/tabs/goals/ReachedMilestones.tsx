@@ -2,6 +2,7 @@ import type { Milestone } from '../../../types'
 import { formatCents, milestoneLabelWithAmount } from '../../../engine'
 import { Card } from '../../components/primitives'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
+import { formatCheckinDate } from './checkinDate'
 import styles from './goals.module.css'
 
 interface Props {
@@ -24,7 +25,9 @@ export function ReachedMilestones({ milestones, reached }: Props) {
           <li key={m.amountCents} className={styles.reachedChip}>
             <span aria-hidden="true">✓</span>
             <span>{milestoneLabelWithAmount(m, (c) => formatCents(c, format))}</span>
-            <span className={styles.reachedChipDate}>by {reached.get(m.amountCents)}</span>
+            <span className={styles.reachedChipDate}>
+              by {formatCheckinDate(reached.get(m.amountCents)!)}
+            </span>
           </li>
         ))}
       </ul>
