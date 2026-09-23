@@ -41,6 +41,8 @@ export interface ChartSeries {
   band?: { lo: number[]; hi: number[] }
   /** Sparse check-in actuals. Used only when kind === 'scatter'. */
   points?: ScatterPoint[]
+  /** Join scatter points in x order, so readings over time read as a line. */
+  connect?: boolean
 }
 
 interface Props {
@@ -203,6 +205,7 @@ export function LinearChart({
             points={s.points ?? []}
             xForIndex={geo.xForIndex}
             scaleY={geo.scaleY}
+            connect={s.connect ?? false}
           />
         ))}
         {refLines.filter(Number.isFinite).map((v) => (

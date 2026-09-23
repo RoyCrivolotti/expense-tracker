@@ -77,7 +77,15 @@ export function CheckinHistoryChart({ checkins, accounts, plan }: Props) {
 
   const chartSeries: ChartSeries[] = [
     { id: 'plan', color: plan.color, values: model.series.values, dashed: false },
-    { id: 'actuals', color: ACTUAL_COLOR, values: [], kind: 'scatter', points: model.scatter },
+    {
+      id: 'actuals',
+      color: ACTUAL_COLOR,
+      values: [],
+      kind: 'scatter',
+      points: model.scatter,
+      // Joined, so the check-ins read as how the portfolio moved, not as stray dots.
+      connect: true,
+    },
   ]
 
   return (

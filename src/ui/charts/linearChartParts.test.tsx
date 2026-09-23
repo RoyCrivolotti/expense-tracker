@@ -66,6 +66,36 @@ describe('ChartScatterLayer', () => {
     expect(svg.querySelectorAll('circle')).toHaveLength(2)
   })
 
+  it('joins the points in x order when asked to connect them', () => {
+    const svg = renderInSvg(
+      <ChartScatterLayer
+        color="#22c55e"
+        points={[
+          { xIndex: 5, value: 80 },
+          { xIndex: 2, value: 50 },
+        ]}
+        xForIndex={xForIndex}
+        scaleY={scaleY}
+        connect
+      />,
+    )
+    expect(svg.querySelector('path')?.getAttribute('d')).toBe('M20.0,50.0 L50.0,20.0')
+    expect(svg.querySelectorAll('circle')).toHaveLength(2)
+  })
+
+  it('draws no line for a single point, even when connecting', () => {
+    const svg = renderInSvg(
+      <ChartScatterLayer
+        color="#22c55e"
+        points={[{ xIndex: 3, value: 40 }]}
+        xForIndex={xForIndex}
+        scaleY={scaleY}
+        connect
+      />,
+    )
+    expect(svg.querySelector('path')).toBeNull()
+  })
+
   it('positions circles using xForIndex and scaleY', () => {
     const svg = renderInSvg(
       <ChartScatterLayer

@@ -179,14 +179,29 @@ export function ChartScatterLayer({
   points,
   xForIndex,
   scaleY,
+  connect = false,
 }: {
   color: string
   points: ScatterPoint[]
   xForIndex: (i: number) => number
   scaleY: (v: number) => number
+  /** Join the points in x order, so a series of readings shows how it moved. */
+  connect?: boolean
 }) {
+  const ordered = connect ? [...points].sort((a, b) => a.xIndex - b.xIndex) : []
   return (
     <>
+      {ordered.length > 1 ? (
+        <path
+          d={ordered
+            .map((p, i) => `${i === 0 ? 'M' : 'L'}${xForIndex(p.xIndex).toFixed(1)},${scaleY(p.value).toFixed(1)}`)
+            .join(' ')}
+          fill="none"
+          strokeWidth={2}
+          style={{ stroke: color }}
+          className={styles.scatterLine}
+        />
+      ) : null}
       {points.map((p, i) => (
         <circle
           key={i}
