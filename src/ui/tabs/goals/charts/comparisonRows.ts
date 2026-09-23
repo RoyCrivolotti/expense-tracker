@@ -10,6 +10,8 @@ function shortName(name: string): string {
 }
 
 export interface ComparisonRow {
+  /** Stable across renames and shared short names: the scenario id, or 'draft'. */
+  key: string
   name: string
   color: string
   horizonYears: number
@@ -39,14 +41,15 @@ export function comparisonRows(
   format: MoneyFormat,
 ): ComparisonRow[] {
   const all = [
-    ...scenarios.map((s) => ({ name: shortName(s.name), color: s.color, scenario: s })),
-    { name: `${shortName(draft.name)} (editing)`, color: draft.color, scenario: { ...draft, id: 0 } },
+    ...scenarios.map((s) => ({ key: `saved-${s.id}`, name: shortName(s.name), color: s.color, scenario: s })),
+    { key: 'draft', name: `${shortName(draft.name)} (editing)`, color: draft.color, scenario: { ...draft, id: 0 } },
   ]
-  return all.map(({ name, color, scenario }) => {
+  return all.map(({ key, name, color, scenario }) => {
     const params = scenarioToParams(scenario)
     const points = projectNetWorth(params)
     const end = points[points.length - 1]
     return {
+      key,
       name,
       color,
       horizonYears: end?.year ?? scenario.horizonYears,

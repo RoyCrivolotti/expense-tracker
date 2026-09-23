@@ -6,7 +6,7 @@ import { comparisonRows, type ComparisonRow } from './comparisonRows'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import styles from '../goals.module.css'
 
-type Column = keyof Omit<ComparisonRow, 'name' | 'color' | 'horizonYears'>
+type Column = keyof Omit<ComparisonRow, 'key' | 'name' | 'color' | 'horizonYears'>
 
 const COLUMNS: { key: Column; label: string }[] = [
   { key: 'fi', label: 'FI' },
@@ -58,7 +58,7 @@ function ScenarioComparisonImpl({
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.name}>
+              <tr key={row.key}>
                 <td className={styles.milestoneScenarioCell}>
                   <span
                     className={styles.swatch}
