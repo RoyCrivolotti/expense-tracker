@@ -118,4 +118,18 @@ describe('NetWorthHistoryChart', () => {
     fireEvent.click(screen.getByRole('radio', { name: '1Y' }))
     expect(container.querySelectorAll('circle')).toHaveLength(2)
   })
+
+  it('says so when a chosen window holds no check-in, instead of drawing a flat zero', () => {
+    const checkins = [
+      checkin(1, monthsAgo(30), 100_000_00, 0),
+      checkin(2, monthsAgo(13), 150_000_00, 0),
+    ]
+    const { container } = render(<NetWorthHistoryChart checkins={checkins} accounts={accounts} />)
+    fireEvent.click(screen.getByRole('radio', { name: '3M' }))
+
+    expect(screen.getByText('No check-in in the last 3M. Widen the window to see them.')).toBeInTheDocument()
+    expect(container.querySelector('svg')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('radio', { name: 'All' }))
+    expect(container.querySelectorAll('circle')).toHaveLength(4)
+  })
 })

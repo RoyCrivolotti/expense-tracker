@@ -49,6 +49,35 @@ function nearestByStep(points: ScatterPoint[], steps: number): number[] {
   })
 }
 
+interface HistoryModel {
+  carrier: number[]
+  netWorth: ScatterPoint[]
+  invested: ScatterPoint[]
+  assets: ScatterPoint[]
+}
+
+/** The drawn series and their legend; the assets line joins only once a debt is logged. */
+function chartParts(model: HistoryModel) {
+  const withDebt = model.assets.length > 0
+  const series: ChartSeries[] = [
+    { id: 'calendar', color: 'transparent', values: model.carrier },
+    { id: 'net-worth', color: NET_WORTH_COLOR, values: [], kind: 'scatter', points: model.netWorth, connect: true },
+    ...(withDebt
+      ? [{ id: 'assets', color: ASSETS_COLOR, values: [], kind: 'scatter' as const, points: model.assets, connect: true }]
+      : []),
+    { id: 'invested', color: INVESTED_COLOR, values: [], kind: 'scatter', points: model.invested, connect: true },
+  ]
+  const legend = [
+    { label: 'Net worth', color: NET_WORTH_COLOR },
+    ...(withDebt ? [{ label: 'Assets', color: ASSETS_COLOR }] : []),
+    { label: 'Invested', color: INVESTED_COLOR },
+  ]
+  const ariaLabel = withDebt
+    ? 'Net worth, assets and invested balance by check-in'
+    : 'Net worth and invested balance by check-in'
+  return { series, legend, ariaLabel }
+}
+
 export function NetWorthHistoryChart({ checkins, accounts }: Props) {
   const format = useMoneyFormat()
   const narrow = useGoalsNarrow()
@@ -110,20 +139,8 @@ export function NetWorthHistoryChart({ checkins, accounts }: Props) {
     )
   }
 
-  const withDebt = model.assets.length > 0
-  const series: ChartSeries[] = [
-    { id: 'calendar', color: 'transparent', values: model.carrier },
-    { id: 'net-worth', color: NET_WORTH_COLOR, values: [], kind: 'scatter', points: model.netWorth, connect: true },
-    ...(withDebt
-      ? [{ id: 'assets', color: ASSETS_COLOR, values: [], kind: 'scatter' as const, points: model.assets, connect: true }]
-      : []),
-    { id: 'invested', color: INVESTED_COLOR, values: [], kind: 'scatter', points: model.invested, connect: true },
-  ]
-  const legend = [
-    { label: 'Net worth', color: NET_WORTH_COLOR },
-    ...(withDebt ? [{ label: 'Assets', color: ASSETS_COLOR }] : []),
-    { label: 'Invested', color: INVESTED_COLOR },
-  ]
+  const windowLabel = HISTORY_WINDOWS.find((o) => o.value === window)?.label ?? ''
+  const { series, legend, ariaLabel } = chartParts(model)
 
   return (
     <Card>
@@ -137,18 +154,28 @@ export function NetWorthHistoryChart({ checkins, accounts }: Props) {
           layout="compact"
         />
       </div>
-      <LinearChart
-        height={narrow ? 180 : 220}
-        series={series}
-        xLabels={model.axis.labels}
-        refLines={[]}
-        markerYears={[]}
-        fitDomain
-        formatValue={(c) => formatMoneyAxis(c, format, model.tickStep)}
-        ariaLabel={withDebt ? 'Net worth, assets and invested balance by check-in' : 'Net worth and invested balance by check-in'}
-        tooltip={tooltip}
-      />
-      <ChartLegend items={legend} />
+      {model.netWorth.length === 0 ? (
+        // A window chosen by hand can miss every check-in; the carrier would then draw a
+        // flat line at zero, which reads as a balance of nothing.
+        <p className={progressStyles.emptyHint}>
+          No check-in in the last {windowLabel}. Widen the window to see them.
+        </p>
+      ) : (
+        <>
+          <LinearChart
+            height={narrow ? 180 : 220}
+            series={series}
+            xLabels={model.axis.labels}
+            refLines={[]}
+            markerYears={[]}
+            fitDomain
+            formatValue={(c) => formatMoneyAxis(c, format, model.tickStep)}
+            ariaLabel={ariaLabel}
+            tooltip={tooltip}
+          />
+          <ChartLegend items={legend} />
+        </>
+      )}
     </Card>
   )
 }
