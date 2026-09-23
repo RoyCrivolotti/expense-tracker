@@ -83,4 +83,28 @@ describe('WealthSummaryCard', () => {
     // A hundred million against a 1,000 a month plan is decades, not a month count.
     expect(screen.getByText(/more than \d+ years ahead/)).toBeInTheDocument()
   })
+
+  it('reads the return "so far" under a year of check-ins', () => {
+    const accounts = [makeAccount(1, 'investment')]
+    const checkins = [
+      makeCheckin(1, '2026-01-01', [{ accountId: 1, valueCents: 100_000_00 }]),
+      makeCheckin(2, '2026-07-01', [{ accountId: 1, valueCents: 105_000_00 }]),
+    ]
+    render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={null} />)
+    expect(screen.getByText(/returned/)).toHaveTextContent(/5,0\s?% so far since/)
+    expect(screen.queryByText(/a year/)).not.toBeInTheDocument()
+  })
+
+  it('compounds a year or more to a yearly rate and sets it against the plan', () => {
+    const scenario = makeScenario({ name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2025-01-01' })
+    const accounts = [makeAccount(1, 'investment')]
+    const checkins = [
+      makeCheckin(1, '2025-01-01', [{ accountId: 1, valueCents: 100_000_00 }]),
+      makeCheckin(2, '2026-01-01', [{ accountId: 1, valueCents: 104_000_00 }]),
+    ]
+    render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />)
+    const line = screen.getByText(/Your portfolio returned/)
+    expect(line).toHaveTextContent(/4,0\s?% a year/)
+    expect(line).toHaveTextContent(/7,0\s?% a year, after inflation, that Path A assumes/)
+  })
 })

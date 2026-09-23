@@ -1,12 +1,15 @@
-import type { GoalScenario, WealthAccount, WealthCheckin } from '../../../types'
-import type { TrackStatus } from '../../../engine'
+import type { GoalScenario, Transaction, WealthAccount, WealthCheckin } from '../../../types'
+import type { PortfolioReturn, TrackStatus } from '../../../engine'
 import { Card } from '../../components/primitives'
 import {
   checkinInvestedCents,
   checkinNetWorthCents,
+  formatPercent,
   latestCheckin,
+  portfolioReturn,
   trackStatus,
 } from '../../../engine'
+import { formatCheckinDate } from './checkinDate'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import type { MoneyFormat } from '../../../engine/money'
 import { formatMoneyShort } from './chartTheme'
@@ -18,6 +21,49 @@ interface Props {
   checkins: WealthCheckin[]
   accounts: WealthAccount[]
   plan: GoalScenario | null
+  /** Investment transactions are the contributions taken out of the measured return. */
+  transactions?: Transaction[]
+}
+
+const hintStyle = { fontSize: '0.8125rem', color: 'var(--color-text-muted)', margin: 0 } as const
+
+/**
+ * Whether being behind is a saving problem or a market one. Under a full year the figure
+ * is the period's return and reads "so far"; from a year on it is compounded to a yearly
+ * rate and set against the plan's assumption, which is a real return, so a nominal figure
+ * a little above it is roughly on par.
+ */
+function ReturnHint({
+  ret,
+  plan,
+  format,
+}: {
+  ret: PortfolioReturn
+  plan: GoalScenario | null
+  format: MoneyFormat
+}) {
+  const since = formatCheckinDate(ret.startDate)
+  const assumed = plan
+    ? ` against the ${formatPercent(plan.expectedRealReturn, format)} a year, after inflation, that ${plan.name} assumes`
+    : ''
+  if (ret.annualised === null) {
+    return (
+      <p style={hintStyle}>
+        Your portfolio has returned <strong>{formatPercent(ret.periodReturn, format)} so far</strong>{' '}
+        since {since}{assumed}.
+      </p>
+    )
+  }
+  const onPar = !plan || ret.annualised >= plan.expectedRealReturn
+  return (
+    <p style={hintStyle}>
+      Your portfolio returned{' '}
+      <strong style={{ color: onPar ? 'var(--exp-success)' : 'var(--exp-danger)' }}>
+        {formatPercent(ret.annualised, format)} a year
+      </strong>{' '}
+      since {since}{assumed}.
+    </p>
+  )
 }
 
 function StatusRow({
@@ -71,7 +117,7 @@ function StatusRow({
 function MonthsHint({ status }: { status: TrackStatus }) {
   const ahead = status.deltaCents >= 0
   return (
-    <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', margin: 0 }}>
+    <p style={hintStyle}>
       Equivalent to being{' '}
       <strong style={{ color: ahead ? 'var(--exp-success)' : 'var(--exp-danger)' }}>
         {contributionGapLabel(status.deltaMonths)}
@@ -81,9 +127,10 @@ function MonthsHint({ status }: { status: TrackStatus }) {
   )
 }
 
-export function WealthSummaryCard({ checkins, accounts, plan }: Props) {
+export function WealthSummaryCard({ checkins, accounts, plan, transactions = [] }: Props) {
   const format = useMoneyFormat()
   const latest = latestCheckin(checkins)
+  const ret = portfolioReturn(checkins, accounts, transactions)
 
   if (!latest) {
     // A check-in needs an account to record, so without one the first step is Setup.
@@ -124,6 +171,7 @@ export function WealthSummaryCard({ checkins, accounts, plan }: Props) {
           ) : null}
         </div>
         {status && status.deltaMonths !== 0 ? <MonthsHint status={status} /> : null}
+        {ret ? <ReturnHint ret={ret} plan={plan} format={format} /> : null}
       </div>
     </Card>
   )
