@@ -85,6 +85,12 @@
     background: linear-gradient(to bottom, var(--color-bg), transparent);
     pointer-events: none;
   }
+
+  /* Charts take the touch so a finger can scrub along the line, but this one sits where a
+     scroll often starts. Vertical pans go to the page; scrubbing sideways still works. */
+  .layout[data-mobile-view='adjust'] .areaMini svg {
+    touch-action: pan-y;
+  }
 }
 
 .areaMini {
