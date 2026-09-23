@@ -104,6 +104,22 @@ export function checkinInvestedCents(
     .reduce((sum, e) => sum + e.valueCents, 0)
 }
 
+/** Sum of everything owned in a check-in (cents): every account that is not a debt. */
+export function checkinAssetsCents(checkin: WealthCheckin, accounts: WealthAccount[]): number {
+  const debtIds = new Set(accounts.filter((a) => a.kind === 'debt').map((a) => a.id))
+  const known = new Set(accounts.map((a) => a.id))
+  return checkin.entries
+    .filter((e) => known.has(e.accountId) && !debtIds.has(e.accountId))
+    .reduce((sum, e) => sum + e.valueCents, 0)
+}
+
+/** Whether any check-in records a balance against a debt account. */
+export function hasDebtEntries(checkins: WealthCheckin[], accounts: WealthAccount[]): boolean {
+  const debtIds = new Set(accounts.filter((a) => a.kind === 'debt').map((a) => a.id))
+  if (debtIds.size === 0) return false
+  return checkins.some((c) => c.entries.some((e) => debtIds.has(e.accountId) && e.valueCents !== 0))
+}
+
 /**
  * Sum total net worth across all accounts in a check-in (cents).
  * Debt accounts are subtracted; all others are added.

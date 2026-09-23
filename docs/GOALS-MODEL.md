@@ -52,6 +52,10 @@ Symmetric **net worth** comparison via `projectRentVsBuy` (`src/domain/engine/re
 
 Breakeven = first year buyer net worth ≥ renter net worth. Simplifications: constant real rent, fixed carry rate (1.5%/yr default, not yet a UI control), no selling costs or transaction friction on resale.
 
+## Net worth over time
+
+The Progress history chart joins the check-ins on a calendar axis ending today: total net worth (debts subtracted) and the invested balance. Once any check-in carries a balance against a debt-kind account, a third line, assets (everything owned, debts left out), joins them, so a mortgage taken on in one month reads as a loan rather than as a loss of net worth. Without debt the two would coincide, so it stays off.
+
 ## Cash reserve
 
 `settings.cashReserveMonths` (`cash_reserve_months`, 0 = no target) is the emergency-fund target in months of spending, set under the Goals tab's Setup view. Progress takes the cash-kind accounts in the latest check-in and divides by the mean of the last twelve budget months' expenses (`cashReserve` in `engine/cashReserve.ts`), and says how many months they cover, against the target when there is one. It never enters the invested-only tracking above.
