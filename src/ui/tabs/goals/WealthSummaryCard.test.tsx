@@ -80,6 +80,7 @@ describe('WealthSummaryCard', () => {
     render(
       <WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />,
     )
-    expect(screen.getByText(/month/i)).toBeInTheDocument()
+    // A hundred million against a 1,000 a month plan is decades, not a month count.
+    expect(screen.getByText(/more than \d+ years ahead/)).toBeInTheDocument()
   })
 })
