@@ -272,18 +272,28 @@ function useFiTarget(isHero: boolean, draft: NewGoalScenario): number | null {
   }, [isHero, draft.annualSpendCents, draft.safeWithdrawalRate])
 }
 
-/** Milestones the plan gets within reach of, plus the FI target when it is not one of them. */
-function useRefLines(milestones: Milestone[], yDomainMax: number | undefined, fiTargetCents: number | null) {
+/**
+ * Milestones the plan gets within reach of, plus the FI target when it is not one of
+ * them. Inside a window the FI target answers to the same ceiling, or a 5Y view could
+ * never zoom in; in the All view it is always drawn, since the whole horizon is the one
+ * place to see how far off it is.
+ */
+function useRefLines(
+  milestones: Milestone[],
+  yDomainMax: number | undefined,
+  fiTargetCents: number | null,
+  windowed: boolean,
+) {
   return useMemo(() => {
     // A milestone far above the plan's own ceiling would squash the projection
     // flat against the axis, so only draw the ones it gets within reach of.
     const ceiling = yDomainMax != null && yDomainMax > 0 ? yDomainMax * 1.15 : Infinity
     const base = milestones.map((m) => m.amountCents).filter((m) => m <= ceiling)
-    // The FI target answers to the same ceiling, or a 5Y window could never zoom in.
-    return fiTargetCents !== null && fiTargetCents <= ceiling && !base.includes(fiTargetCents)
+    const fiFits = fiTargetCents !== null && (!windowed || fiTargetCents <= ceiling)
+    return fiFits && !base.includes(fiTargetCents)
       ? [...base, fiTargetCents].sort((a, b) => a - b)
       : base
-  }, [milestones, yDomainMax, fiTargetCents])
+  }, [milestones, yDomainMax, fiTargetCents, windowed])
 }
 
 function HeroWindowPicker({
@@ -398,7 +408,7 @@ function NetWorthChartImpl({
     [series, extra, years, realMode, inflationRate],
   )
 
-  const refLines = useRefLines(milestones, yDomainMax, useFiTarget(isHero, draft))
+  const refLines = useRefLines(milestones, yDomainMax, useFiTarget(isHero, draft), windowYears !== null)
   const staticLegend: LegendItem[] = useMemo(
     () => series.map((s, idx) => ({ label: names[idx] ?? s.id, color: s.color })),
     [series, names],

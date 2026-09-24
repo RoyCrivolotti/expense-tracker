@@ -155,7 +155,7 @@ describe('NetWorthChart', () => {
     expect(values().every((v) => v === '')).toBe(true)
   })
 
-  it('drops an FI target far above the projection, as it does a milestone', () => {
+  it('keeps a far-off FI target in the All view and drops it inside a window, as a milestone', () => {
     const { container } = render(
       <NetWorthChart
         milestones={[]}
@@ -164,7 +164,11 @@ describe('NetWorthChart', () => {
         variant="hero"
       />,
     )
+    expect(container.textContent).toMatch(/100\.0M/)
+    fireEvent.click(screen.getByRole('radio', { name: '5Y' }))
     expect(container.textContent).not.toMatch(/100\.0M/)
+    fireEvent.click(screen.getByRole('radio', { name: 'All' }))
+    expect(container.textContent).toMatch(/100\.0M/)
   })
 
   it('offers no window buttons for a horizon the shortest window would not cut', () => {
