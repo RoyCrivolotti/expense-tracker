@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_HOUSE_APPRECIATION,
+  DEFAULT_INFLATION_RATE,
   DEFAULT_MORTGAGE_RATE,
   DEFAULT_MORTGAGE_TERM_YEARS,
   DEFAULT_REAL_RETURN,
@@ -265,5 +266,47 @@ describe('the two figures GOALS-MODEL.md states', () => {
     expect(lo).toEqual(projectNetWorthBand(params, 0.03).lo)
     expect(hi).toEqual(projectNetWorthBand(params, 0.03).hi)
     expect(lo).not.toEqual(projectNetWorthBand(params, 0.02).lo)
+  })
+})
+
+describe('the house and the mortgage in a real plan', () => {
+  const price = 400_000_000
+  const loan = price * 0.8
+
+  it('grows the house only by what its appreciation beats inflation by', () => {
+    // Appreciation equal to inflation is no growth in today's money at all.
+    const flat = projectNetWorth(
+      baseParams({ housePurchaseYear: 5, houseAppreciationRate: DEFAULT_INFLATION_RATE }),
+    )
+    expect(flat[5]!.houseEquityCents).toBe(price)
+    expect(flat[25]!.houseEquityCents).toBe(price)
+
+    // 2.5% against 2% inflation: ten years owned is (1.025 / 1.02) ten times over.
+    const grown = projectNetWorth(baseParams({ housePurchaseYear: 5, houseAppreciationRate: 0.025 }))
+    expect(grown[15]!.houseEquityCents).toBe(Math.round(price * (1.025 / 1.02) ** 10))
+    // Nothing is owned before the purchase.
+    expect(grown[4]!.houseEquityCents).toBe(0)
+  })
+
+  it('owes what the bank\'s schedule leaves, in today\'s money', () => {
+    const rate = 0.03
+    const months = 360
+    const i = rate / 12
+    const payment = (loan * i) / (1 - (1 + i) ** -months)
+    const nominalBalance = (elapsed: number) => loan * (1 + i) ** elapsed - payment * (((1 + i) ** elapsed - 1) / i)
+
+    const points = projectNetWorth(baseParams({ housePurchaseYear: 5, mortgageRateAnnual: rate, mortgageTermYears: 30 }))
+    // Ten years in, the nominal balance, brought back ten years at the assumed inflation.
+    const expected = nominalBalance(120) / (1 + DEFAULT_INFLATION_RATE) ** 10
+    expect(Math.abs(points[15]!.mortgageBalanceCents - expected)).toBeLessThanOrEqual(2)
+    // It is the full loan the day it is taken, and is paid off at the end of the term.
+    expect(points[5]!.mortgageBalanceCents).toBe(loan)
+    expect(projectNetWorth(baseParams({ housePurchaseYear: 0, mortgageTermYears: 30 }))[30]!.mortgageBalanceCents).toBe(0)
+  })
+
+  it('takes inflation off a loan with no interest too', () => {
+    const points = projectNetWorth(baseParams({ housePurchaseYear: 0, mortgageRateAnnual: 0, mortgageTermYears: 20 }))
+    // Half repaid after ten years, and what is left counted in today's money.
+    expect(points[10]!.mortgageBalanceCents).toBe(Math.round((loan / 2) / (1 + DEFAULT_INFLATION_RATE) ** 10))
   })
 })

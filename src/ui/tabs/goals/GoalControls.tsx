@@ -135,6 +135,11 @@ export function GoalControls({ draft, latest = null, onChange }: GoalControlsPro
           max={0.1}
           onChange={(v) => onChange({ houseAppreciationRate: v })}
         />
+        <p className={styles.fieldHint}>
+          The mortgage rate and house appreciation are nominal, as a bank and the price index
+          quote them. The plan takes inflation off both, so the house and the debt are in
+          today&apos;s money like everything else.
+        </p>
         <PurchaseYearField
           value={draft.housePurchaseYear}
           maxYear={draft.horizonYears}

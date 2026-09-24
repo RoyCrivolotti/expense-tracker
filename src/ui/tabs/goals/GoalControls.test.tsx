@@ -25,6 +25,13 @@ describe('GoalControls', () => {
     expect(screen.getByLabelText('Contribution growth (%/yr)')).toBeInTheDocument()
   })
 
+  it('says the mortgage rate and house appreciation are nominal and what the plan does with them', () => {
+    render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
+    expect(
+      screen.getByText(/mortgage rate and house appreciation are nominal.*takes inflation off both/s),
+    ).toBeInTheDocument()
+  })
+
   it('renders the mortgage rate control in Housing section', () => {
     render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
     expect(screen.getByLabelText('Mortgage rate (%/yr)')).toBeInTheDocument()
