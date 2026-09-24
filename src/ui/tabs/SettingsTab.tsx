@@ -156,8 +156,9 @@ function PreferencesView({
       {actions && (
         <DefaultAccountSetting
           accounts={model.dataset.accounts}
+          categories={model.dataset.categories}
           settings={model.dataset.settings}
-          onChange={(accountId) => void actions.updateSettings({ defaultAccountId: accountId })}
+          onChange={(patch) => void actions.updateSettings(patch)}
         />
       )}
     </>
