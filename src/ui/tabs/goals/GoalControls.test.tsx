@@ -115,7 +115,7 @@ describe('GoalControls', () => {
     expect(named).toEqual(
       expect.arrayContaining([
         'Contribution growth (%/yr)',
-        'Expected return',
+        'Real return',
         'Down payment',
         'Mortgage rate (%/yr)',
         'House appreciation (%/yr)',

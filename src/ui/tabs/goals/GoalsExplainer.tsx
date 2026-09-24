@@ -15,8 +15,8 @@ const buildTerms = (cur: string): { term: string; body: string }[] => [
     body: 'A saved set of assumptions (return, contribution, horizon, house plans). Each one is a colored line on the projection so you can compare futures side by side.',
   },
   {
-    term: 'Expected return',
-    body: "The yearly growth the plan assumes for the invested portfolio, before inflation. Check-ins are compared with it as they are. The chart's Purchasing power view deflates every figure by the inflation rate you set, to show what it buys in today's money.",
+    term: 'Real return',
+    body: "The yearly growth the plan assumes for the invested portfolio after inflation, so every projected figure, the FI target and the milestones are in today's money. Check-ins are broker balances in the money of their day, and Progress deflates them before comparing. The chart's Nominal view does the reverse and inflates the projection at the rate you set.",
   },
   {
     term: 'Horizon (years)',

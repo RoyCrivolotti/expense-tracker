@@ -41,8 +41,8 @@ function ScenarioComparisonImpl({
     <ChartShell embedded={embedded}>
       <h3 className={styles.chartTitle}>Scenarios side by side</h3>
       <p className={styles.chartHint}>
-        Net worth and invested are{horizon}, as projected and before inflation; FI and the house
-        purchase are counted in years from the plan start; monthly is what each path invests.
+        Net worth and invested are{horizon}, in today's money; FI and the house purchase are
+        counted in years from the plan start; monthly is what each path invests.
       </p>
       <div className={styles.milestoneScroll}>
         <table className={styles.milestoneTable}>

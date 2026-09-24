@@ -74,7 +74,7 @@ export function GoalControls({ draft, latest = null, onChange }: GoalControlsPro
           onChange={(v) => onChange({ annualContributionGrowth: v })}
         />
         <PercentField
-          label="Expected return"
+          label="Real return"
           value={draft.expectedRealReturn}
           max={0.15}
           onChange={(v) => onChange({ expectedRealReturn: v })}

@@ -266,7 +266,7 @@ export function monthlyMortgageCents(params: ProjectionParams): number {
   )
 }
 
-/** Year-by-year drawdown after reaching FI (a constant withdrawal, in the plan's nominal terms). */
+/** Year-by-year drawdown after reaching FI (a constant withdrawal in today's money, like the rest of the plan). */
 export function projectDrawdown(
   startPortfolioCents: number,
   annualWithdrawalCents: number,

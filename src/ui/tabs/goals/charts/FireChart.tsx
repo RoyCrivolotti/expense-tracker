@@ -60,7 +60,7 @@ function FireChartImpl({
       <p className={styles.chartHint}>
         FI target {formatMoneyShort(fiTarget, format)}
         {fiYear != null ? ` · reached year ${fiYear}` : ' · not reached in horizon'}. Post-FI
-        only: year 0 on this chart is the FI year, not today. Constant withdrawal after that.
+        only: year 0 on this chart is the FI year, not today. Constant withdrawal in today's money after that.
       </p>
       <LinearChart
         height={height}

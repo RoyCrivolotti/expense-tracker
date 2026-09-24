@@ -26,7 +26,7 @@ A gap that holds still is the plan's starting point, not the saving, so the snap
 
 | Parameter | Default (demo) |
 | --- | --- |
-| Expected return | 7% / year (nominal; the field is still `expectedRealReturn`) |
+| Real return | 7% / year |
 | Contribution growth | 0% / year (adjustable per scenario in Goals UI) |
 | Net retention (salary model) | 65% of gross — **engine helper only** (`annualSavingsFromCashflow`); charts use explicit `monthlyContributionCents` |
 
@@ -98,17 +98,17 @@ Stored as a JSON column (`life_events`) on `goal_scenarios`. Applied in the year
 
 The hero chart shows a shaded band for ±3 pp around the scenario's `expectedRealReturn`, computed by `projectNetWorthBand` in `scenarioProjection.ts`. The band uses the same contribution and housing logic as the main projection. Chart layer: `kind: 'band'` on `ChartSeries`, rendered by `ChartBandLayer` in `linearChartParts.tsx`.
 
-## Nominal, and the purchasing-power view
+## Real, and the nominal view
 
-The plan is nominal: the expected return grows nominal balances, check-ins are nominal balances off a statement, and every comparison in Progress and the comparison table is made in those terms. The control is labelled "Expected return"; the field keeps its historical name `expectedRealReturn`, since it is a database column and an API field.
+The plan is real: the return is a real return, so every projected figure, the FI target, the constant rent and withdrawal, the milestones and the comparison table are in today's money. Check-ins are broker balances in the money of their day, so wherever Progress sets one against the plan (`trackStatus`, the "Actual vs plan" chart, the measured return) the balance is deflated first, by `DEFAULT_INFLATION_RATE` (2%, approximating the ECB target) over the years since the plan start. Milestones reached are the exception: a milestone counts as reached when a check-in shows the number, in the money of that day.
 
-The hero chart's footer toggle switches to purchasing power, which deflates every drawn figure by an inflation rate the user can adjust there (`DEFAULT_INFLATION_RATE`, 2%, approximating the ECB target):
+The hero chart shows the plan in today's money by default. Its footer toggle switches to a nominal view, which inflates every drawn figure at a rate the user can adjust there (the same 2% by default), and leaves the check-in dots as they are, since they are already nominal:
 
 ```
-purchasingPower[y] = nominal[y] / (1 + rate)^y
+nominal[y] = real[y] × (1 + rate)^y
 ```
 
-Check-in scatter points are deflated by their own fractional year offset (`xIndex`) so actuals stay aligned with the deflated projection line (`applyRealTransform` in `nominalTransform.ts`).
+In the default view the dots are deflated by their own fractional year offset (`xIndex`) instead, so an actual exactly on plan sits on the line either way (`inflateSeries` and `deflatePoints` in `nominalTransform.ts`).
 
 ## Engine formula
 
