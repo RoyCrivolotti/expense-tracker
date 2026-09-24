@@ -15,6 +15,8 @@ export interface ScenarioLegendItem {
 }
 
 export interface ScenarioLegendBreakdown {
+  /** Scenario id, or 'draft'; two scenarios can share a name. */
+  id: string
   label: string
   color: string
   dashed?: boolean
@@ -189,7 +191,7 @@ export function ScenarioSeriesLegend({
       {breakdowns.length > 0 ? (
         <div className={styles.breakdownStack}>
           {breakdowns.map((entry) => (
-            <BreakdownRows key={entry.label} {...entry} format={format} />
+            <BreakdownRows key={entry.id} {...entry} format={format} />
           ))}
         </div>
       ) : null}

@@ -196,6 +196,7 @@ function useChartLegendState(
       if (!breakdown) return []
       return [
         {
+          id: line.scenarioId === null ? 'draft' : String(line.scenarioId),
           label: line.name,
           color: line.color,
           ...(line.dashed ? { dashed: true as const } : {}),
