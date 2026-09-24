@@ -1,5 +1,5 @@
-import { render } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 import { NetWorthChart } from './NetWorthChart'
 import { applyRealTransform } from './nominalTransform'
 import { makeScenario } from '../../../../testing/factories'
@@ -94,6 +94,65 @@ describe('applyRealTransform', () => {
 })
 
 describe('NetWorthChart', () => {
+  it('cuts the hero projection at the chosen window', () => {
+    const { container } = render(
+      <NetWorthChart
+        milestones={milestones}
+        scenarios={[]}
+        draft={{ ...defaultDraft, horizonYears: 30 }}
+        variant="hero"
+      />,
+    )
+    const lastLabel = () => {
+      const texts = [...container.querySelectorAll('text')].map((t) => t.textContent ?? '')
+      return texts.filter((t) => /^\d+$/.test(t)).map(Number).sort((a, b) => a - b).pop()
+    }
+    expect(lastLabel()).toBe(30)
+
+    fireEvent.click(screen.getByRole('radio', { name: '5Y' }))
+    expect(lastLabel()).toBe(5)
+
+    fireEvent.click(screen.getByRole('radio', { name: 'All' }))
+    expect(lastLabel()).toBe(30)
+  })
+
+  it('offers no window buttons for a horizon the shortest window would not cut', () => {
+    render(
+      <NetWorthChart milestones={milestones} scenarios={[]} draft={{ ...defaultDraft, horizonYears: 5 }} variant="hero" />,
+    )
+    expect(screen.queryByRole('radio', { name: 'All' })).not.toBeInTheDocument()
+  })
+
+  it('lists a hidden scenario dimmed in the legend and toggles it from there', () => {
+    const shown = makeScenario({ id: 1, name: 'Path A' })
+    const hidden = makeScenario({ id: 2, name: 'Path B' })
+    const onToggleVisible = vi.fn()
+    const { container } = render(
+      <NetWorthChart
+        milestones={milestones}
+        scenarios={[shown, hidden]}
+        hiddenIds={new Set([2])}
+        onToggleVisible={onToggleVisible}
+        draft={defaultDraft}
+        activeId={null}
+        variant="hero"
+      />,
+    )
+    // The shown scenario and the draft draw a line each; the hidden one draws none.
+    expect(container.querySelectorAll('path').length).toBeGreaterThanOrEqual(2)
+    const hide = screen.getByRole('button', { name: 'Hide Path A on chart' })
+    expect(hide).toHaveAttribute('aria-pressed', 'true')
+    const show = screen.getByRole('button', { name: 'Show Path B on chart' })
+    expect(show).toHaveAttribute('aria-pressed', 'false')
+
+    fireEvent.click(show)
+    expect(onToggleVisible).toHaveBeenCalledWith(2)
+    fireEvent.click(hide)
+    expect(onToggleVisible).toHaveBeenCalledWith(1)
+    // The draft is always drawn, so its row is not a toggle.
+    expect(screen.queryByRole('button', { name: /\(editing\) on chart/ })).not.toBeInTheDocument()
+  })
+
   it('renders without crashing with default props', () => {
     const { container } = render(
       <NetWorthChart

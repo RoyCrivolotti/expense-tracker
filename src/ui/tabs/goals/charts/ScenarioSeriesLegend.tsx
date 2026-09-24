@@ -8,6 +8,10 @@ export interface ScenarioLegendItem {
   color: string
   dashed?: boolean
   valueCents: number | null
+  /** The saved scenario behind the line; the draft has none and cannot be hidden. */
+  scenarioId?: number
+  /** Hidden on the chart: listed dimmed so it can be brought back. */
+  hidden?: boolean
 }
 
 export interface ScenarioLegendBreakdown {
@@ -22,6 +26,38 @@ interface ScenarioSeriesLegendProps {
   activeYear: number | null
   breakdowns: ScenarioLegendBreakdown[]
   yearZeroHint?: boolean
+  /** Makes each saved scenario's row a toggle for its line, as chart legends usually are. */
+  onToggle?: ((scenarioId: number) => void) | undefined
+}
+
+/** One legend row; a button when the row can hide or show its line. */
+function LegendRow({ item, onToggle, format }: { item: ScenarioLegendItem; onToggle: ScenarioSeriesLegendProps['onToggle']; format: MoneyFormat }) {
+  const body = (
+    <>
+      <SeriesSwatch color={item.color} {...(item.dashed ? { dashed: true } : {})} />
+      <span className={styles.label}>{item.label}</span>
+      <span className={styles.value}>
+        {item.valueCents != null ? formatMoneyShort(item.valueCents, format) : ''}
+      </span>
+    </>
+  )
+  if (onToggle && item.scenarioId !== undefined) {
+    const id = item.scenarioId
+    return (
+      <li className={styles.rowItem}>
+        <button
+          type="button"
+          className={item.hidden ? `${styles.row} ${styles.rowButton} ${styles.rowHidden}` : `${styles.row} ${styles.rowButton}`}
+          aria-pressed={!item.hidden}
+          aria-label={`${item.hidden ? 'Show' : 'Hide'} ${item.label} on chart`}
+          onClick={() => onToggle(id)}
+        >
+          {body}
+        </button>
+      </li>
+    )
+  }
+  return <li className={styles.row}>{body}</li>
 }
 
 function DashedSwatch({ color }: { color: string }) {
@@ -130,26 +166,24 @@ export function ScenarioSeriesLegend({
   activeYear,
   breakdowns,
   yearZeroHint = false,
+  onToggle,
 }: ScenarioSeriesLegendProps) {
   const format = useMoneyFormat()
   if (items.length === 0) return null
+  const hint = onToggle
+    ? 'Tap or hover the chart to compare values by year. Tap a scenario below to hide or show its line.'
+    : 'Tap or hover the chart to compare values by year.'
 
   return (
     <div className={styles.wrap}>
       {activeYear != null ? (
         <p className={styles.yearHeader}>Year {activeYear}</p>
       ) : (
-        <p className={styles.hint}>Tap or hover the chart to compare values by year.</p>
+        <p className={styles.hint}>{hint}</p>
       )}
       <ul className={styles.list}>
         {items.map((item) => (
-          <li key={item.label} className={styles.row}>
-            <SeriesSwatch color={item.color} {...(item.dashed ? { dashed: true } : {})} />
-            <span className={styles.label}>{item.label}</span>
-            <span className={styles.value}>
-              {item.valueCents != null ? formatMoneyShort(item.valueCents, format) : ''}
-            </span>
-          </li>
+          <LegendRow key={item.label} item={item} onToggle={onToggle} format={format} />
         ))}
       </ul>
       {breakdowns.length > 0 ? (

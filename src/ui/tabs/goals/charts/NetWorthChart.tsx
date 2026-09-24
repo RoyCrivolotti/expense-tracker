@@ -11,6 +11,9 @@ import { sparseLabels } from '../../../charts/linearScale'
 import { formatMoneyShort } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { useGoalsNarrow } from '../useGoalsNarrow'
+import { SegmentedControl } from '../../../components/SegmentedControl'
+import { HERO_WINDOWS, clipToWindow, heroWindowsFor, insideWindow, type HeroWindowKey } from './heroWindow'
+import progressStyles from '../progress.module.css'
 import {
   ScenarioSeriesLegend,
   type ScenarioLegendBreakdown,
@@ -21,22 +24,28 @@ import { applyRealTransform } from './nominalTransform'
 
 interface ScenarioLine {
   id: string
+  /** The saved scenario behind the line; null for the draft. */
+  scenarioId: number | null
   name: string
   color: string
   dashed: boolean
   params: ProjectionParams
 }
 
+const NO_HIDDEN: ReadonlySet<number> = new Set()
+
 function scenarioLines(
   saved: GoalScenario[],
   draft: NewGoalScenario,
   activeId: number | null,
   dirty: boolean,
+  hiddenIds: ReadonlySet<number> = NO_HIDDEN,
 ): ScenarioLine[] {
   const lines: ScenarioLine[] = saved
-    .filter((s) => s.id !== activeId || dirty)
+    .filter((s) => (s.id !== activeId || dirty) && !hiddenIds.has(s.id))
     .map((s) => ({
       id: `saved-${s.id}`,
+      scenarioId: s.id,
       name: s.name,
       color: s.color,
       dashed: false,
@@ -44,6 +53,7 @@ function scenarioLines(
     }))
   lines.push({
     id: 'draft',
+    scenarioId: null,
     name: `${draft.name} (editing)`,
     color: draft.color,
     dashed: true,
@@ -121,6 +131,7 @@ function PortfolioLegend({
   activeYear,
   breakdowns,
   yearZeroHint,
+  onToggle,
 }: {
   isHero: boolean
   staticLegend: LegendItem[]
@@ -128,6 +139,7 @@ function PortfolioLegend({
   activeYear: number | null
   breakdowns: ScenarioLegendBreakdown[]
   yearZeroHint: boolean
+  onToggle: ((scenarioId: number) => void) | undefined
 }) {
   if (isHero) {
     return (
@@ -136,6 +148,7 @@ function PortfolioLegend({
         activeYear={activeYear}
         breakdowns={breakdowns}
         yearZeroHint={yearZeroHint}
+        onToggle={onToggle}
       />
     )
   }
@@ -148,18 +161,30 @@ function useChartLegendState(
   names: string[],
   years: number[],
   activeIndex: number | null,
+  hiddenScenarios: GoalScenario[] = [],
 ) {
   const activeYear = activeIndex != null ? years[activeIndex] ?? null : null
-  const legendItems: ScenarioLegendItem[] = useMemo(
-    () =>
-      series.map((s, idx) => ({
+  const legendItems: ScenarioLegendItem[] = useMemo(() => {
+    const drawn = series.map((s, idx) => {
+      const scenarioId = lines[idx]?.scenarioId ?? null
+      return {
         label: names[idx] ?? s.id,
         color: s.color,
         ...(s.dashed ? { dashed: true as const } : {}),
+        ...(scenarioId !== null ? { scenarioId } : {}),
         valueCents: activeIndex != null ? s.values[activeIndex] ?? 0 : null,
-      })),
-    [series, names, activeIndex],
-  )
+      }
+    })
+    // Hidden scenarios stay in the legend, dimmed, so they can be brought back from here.
+    const hidden = hiddenScenarios.map((s) => ({
+      label: s.name,
+      color: s.color,
+      scenarioId: s.id,
+      hidden: true,
+      valueCents: null,
+    }))
+    return [...drawn, ...hidden]
+  }, [series, names, lines, activeIndex, hiddenScenarios])
   const breakdowns: ScenarioLegendBreakdown[] = useMemo(() => {
     if (activeYear == null) return []
     return lines.flatMap((line) => {
@@ -188,6 +213,122 @@ function heroHeight(narrow: boolean): number {
   return narrow ? 210 : 300
 }
 
+/** The hero's window buttons: which years of the projection are drawn. */
+function useHeroWindow(isHero: boolean, horizonYears: number) {
+  const [heroWindow, setHeroWindow] = useState<HeroWindowKey>('all')
+  const heroWindows = useMemo(() => heroWindowsFor(horizonYears), [horizonYears])
+  const chosen = HERO_WINDOWS.find((w) => w.value === heroWindow)?.years ?? null
+  return { heroWindow, setHeroWindow, heroWindows, windowYears: isHero ? chosen : null }
+}
+
+/** The draft's uncertainty band, hero only. */
+function useBandSeries(isHero: boolean, draft: NewGoalScenario): ChartSeries | null {
+  return useMemo(() => {
+    if (!isHero) return null
+    const { lo, hi } = projectNetWorthBand(scenarioToParams(draft))
+    return { id: 'uncertainty-band', color: draft.color, values: [], kind: 'band', band: { lo, hi } }
+  }, [isHero, draft])
+}
+
+/** Everything drawn, cut at the window in one go so the axis fits what is left. */
+function useWindowedSeries(
+  full: { years: number[]; series: ChartSeries[] },
+  band: ChartSeries | null,
+  extra: ChartSeries[],
+  windowYears: number | null,
+) {
+  return useMemo(() => {
+    const bandList = band ? [band] : []
+    const cut = clipToWindow(full.years, [...full.series, ...bandList, ...extra], windowYears)
+    const n = full.series.length
+    return {
+      years: cut.years,
+      series: cut.series.slice(0, n),
+      band: band ? cut.series[n] ?? null : null,
+      extra: cut.series.slice(n + bandList.length),
+    }
+  }, [full, band, extra, windowYears])
+}
+
+function useLifeEventMarkers(isHero: boolean, draft: NewGoalScenario, windowYears: number | null) {
+  return useMemo(() => {
+    if (!isHero) return []
+    return (draft.lifeEvents ?? [])
+      .filter((ev) => ev.year >= 1 && ev.year <= draft.horizonYears && insideWindow(ev.year, windowYears))
+      .map((ev) => ({ yearIndex: ev.year, label: ev.label, amountCents: ev.amountCents }))
+  }, [isHero, draft.lifeEvents, draft.horizonYears, windowYears])
+}
+
+/** The FI number for the draft, hero only, and only when spend and rate make sense. */
+function useFiTarget(isHero: boolean, draft: NewGoalScenario): number | null {
+  return useMemo(() => {
+    if (!isHero || draft.annualSpendCents <= 0 || draft.safeWithdrawalRate <= 0) return null
+    return Math.round(draft.annualSpendCents / draft.safeWithdrawalRate)
+  }, [isHero, draft.annualSpendCents, draft.safeWithdrawalRate])
+}
+
+/** Milestones the plan gets within reach of, plus the FI target when it is not one of them. */
+function useRefLines(milestones: Milestone[], yDomainMax: number | undefined, fiTargetCents: number | null) {
+  return useMemo(() => {
+    // A milestone far above the plan's own ceiling would squash the projection
+    // flat against the axis, so only draw the ones it gets within reach of.
+    const ceiling = yDomainMax != null && yDomainMax > 0 ? yDomainMax * 1.15 : Infinity
+    const base = milestones.map((m) => m.amountCents).filter((m) => m <= ceiling)
+    return fiTargetCents !== null && !base.includes(fiTargetCents)
+      ? [...base, fiTargetCents].sort((a, b) => a - b)
+      : base
+  }, [milestones, yDomainMax, fiTargetCents])
+}
+
+function HeroWindowPicker({
+  windows,
+  value,
+  onChange,
+}: {
+  windows: ReturnType<typeof heroWindowsFor>
+  value: HeroWindowKey
+  onChange: (next: HeroWindowKey) => void
+}) {
+  if (windows.length < 2) return null
+  return (
+    <SegmentedControl
+      options={windows.map((w) => ({ value: w.value, label: w.label }))}
+      value={value}
+      onChange={onChange}
+      ariaLabel="Projection window"
+      layout="compact"
+    />
+  )
+}
+
+/** The today marker, only while it lies inside the window. */
+function todayProp(todayIndex: number | undefined, windowYears: number | null): { todayIndex?: number } {
+  return insideWindow(todayIndex, windowYears) && todayIndex !== undefined ? { todayIndex } : {}
+}
+
+function variantProps(
+  isHero: boolean,
+  narrow: boolean,
+  markerYears: { yearIndex: number }[],
+  lifeEventMarkers: { yearIndex: number; label: string; amountCents: number }[],
+  onActiveIndexChange: (index: number | null) => void,
+) {
+  return isHero
+    ? {
+        height: heroHeight(narrow),
+        markerYears,
+        lifeEventMarkers,
+        tooltipMode: 'hidden' as const,
+        onActiveIndexChange,
+      }
+    : { height: 210, markerYears: [], tooltipMode: 'full' as const }
+}
+
+const HERO_HINT =
+  'At a purchase year, return and contributions apply before the down payment is withdrawn — select a year on the chart for values and the purchase breakdown. Dashed vertical marks show purchase years.'
+const DEFAULT_HINT =
+  'Compare saved scenarios plus your live edits. At a purchase year, return and contributions apply before the down payment is withdrawn — hover that year for the breakdown.'
+
 function NetWorthChartImpl({
   scenarios,
   draft,
@@ -200,6 +341,8 @@ function NetWorthChartImpl({
   realMode = false,
   inflationRate,
   milestones,
+  hiddenIds,
+  onToggleVisible,
 }: {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
@@ -212,6 +355,9 @@ function NetWorthChartImpl({
   realMode?: boolean
   inflationRate?: number
   milestones: Milestone[]
+  /** Saved scenarios left off the chart; the legend lists them dimmed and can bring them back. */
+  hiddenIds?: ReadonlySet<number> | undefined
+  onToggleVisible?: ((scenarioId: number) => void) | undefined
 }) {
   const format = useMoneyFormat()
   const narrow = useGoalsNarrow()
@@ -219,50 +365,34 @@ function NetWorthChartImpl({
   const onActiveIndexChange = useCallback((index: number | null) => {
     setActiveIndex(index)
   }, [])
+  const isHero = variant === 'hero'
+  const { heroWindow, setHeroWindow, heroWindows, windowYears } = useHeroWindow(isHero, draft.horizonYears)
 
   const lines = useMemo(
-    () => scenarioLines(scenarios, draft, activeId, dirty),
-    [scenarios, draft, activeId, dirty],
+    () => scenarioLines(scenarios, draft, activeId, dirty, hiddenIds),
+    [scenarios, draft, activeId, dirty, hiddenIds],
   )
-  const { years, series, names } = useMemo(() => buildSeries(lines), [lines])
+  const hiddenScenarios = useMemo(
+    () => scenarios.filter((s) => hiddenIds?.has(s.id)),
+    [scenarios, hiddenIds],
+  )
+  const full = useMemo(() => buildSeries(lines), [lines])
+  const names = full.names
+  const bandSeries = useBandSeries(isHero, draft)
+  const { years, series, band, extra } = useWindowedSeries(full, bandSeries, extraSeries, windowYears)
   const markerYears = useMemo(() => purchaseMarkerIndices(lines, years), [lines, years])
-  const isHero = variant === 'hero'
   const labels = useMemo(() => sparseLabels(years, 5), [years])
-
-  const bandSeries = useMemo<ChartSeries | null>(() => {
-    if (!isHero) return null
-    const params = scenarioToParams(draft)
-    const { lo, hi } = projectNetWorthBand(params)
-    return { id: 'uncertainty-band', color: draft.color, values: [], kind: 'band', band: { lo, hi } }
-  }, [isHero, draft])
 
   // Locks the Y-axis to the larger of the real/nominal maxima so toggling display
   // mode moves the lines on a fixed scale instead of rescaling the whole chart.
   const { displaySeries, displayExtraSeries, yDomainMax } = useMemo(
-    () => computeChartDisplayData(series, extraSeries, years, realMode, inflationRate),
-    [series, extraSeries, years, realMode, inflationRate],
+    () => computeChartDisplayData(series, extra, years, realMode, inflationRate),
+    [series, extra, years, realMode, inflationRate],
   )
 
-  const fiTargetCents = useMemo(() => {
-    if (!isHero || draft.annualSpendCents <= 0 || draft.safeWithdrawalRate <= 0) return null
-    return Math.round(draft.annualSpendCents / draft.safeWithdrawalRate)
-  }, [isHero, draft.annualSpendCents, draft.safeWithdrawalRate])
-
-  const refLines = useMemo(() => {
-    // A milestone far above the plan's own ceiling would squash the projection
-    // flat against the axis, so only draw the ones it gets within reach of.
-    const ceiling = yDomainMax != null && yDomainMax > 0 ? yDomainMax * 1.15 : Infinity
-    const base = milestones.map((m) => m.amountCents).filter((m) => m <= ceiling)
-    return fiTargetCents !== null && !base.includes(fiTargetCents)
-      ? [...base, fiTargetCents].sort((a, b) => a - b)
-      : base
-  }, [milestones, yDomainMax, fiTargetCents])
+  const refLines = useRefLines(milestones, yDomainMax, useFiTarget(isHero, draft))
   const staticLegend: LegendItem[] = useMemo(
-    () =>
-      series.map((s, idx) => ({
-        label: names[idx] ?? s.id,
-        color: s.color,
-      })),
+    () => series.map((s, idx) => ({ label: names[idx] ?? s.id, color: s.color })),
     [series, names],
   )
   const { activeYear, legendItems, breakdowns, yearZeroHint } = useChartLegendState(
@@ -271,6 +401,7 @@ function NetWorthChartImpl({
     names,
     years,
     activeIndex,
+    hiddenScenarios,
   )
 
   const tooltip = useCallback(
@@ -286,40 +417,22 @@ function NetWorthChartImpl({
     [years, displaySeries, names, format],
   )
 
-  const lifeEventMarkers = useMemo(
-    () =>
-      isHero
-        ? (draft.lifeEvents ?? [])
-            .filter((ev) => ev.year >= 1 && ev.year <= draft.horizonYears)
-            .map((ev) => ({ yearIndex: ev.year, label: ev.label, amountCents: ev.amountCents }))
-        : [],
-    [isHero, draft.lifeEvents, draft.horizonYears],
-  )
-
-  const chartHint = isHero
-    ? 'At a purchase year, return and contributions apply before the down payment is withdrawn — select a year on the chart for values and the purchase breakdown. Dashed vertical marks show purchase years.'
-    : 'Compare saved scenarios plus your live edits. At a purchase year, return and contributions apply before the down payment is withdrawn — hover that year for the breakdown.'
-
-  const heroVariantProps = isHero
-    ? {
-        height: heroHeight(narrow),
-        markerYears,
-        lifeEventMarkers,
-        tooltipMode: 'hidden' as const,
-        onActiveIndexChange,
-      }
-    : { height: 210, markerYears: [], tooltipMode: 'full' as const }
+  const lifeEventMarkers = useLifeEventMarkers(isHero, draft, windowYears)
+  const heroVariantProps = variantProps(isHero, narrow, markerYears, lifeEventMarkers, onActiveIndexChange)
 
   return (
     <Card className={isHero ? `${styles.chartCard} ${styles.heroChart}` : styles.chartCard}>
-      <h3 className={styles.chartTitle}>Invested portfolio projection</h3>
-      <p className={styles.chartHint}>{chartHint}</p>
+      <div className={progressStyles.chartHeaderRow}>
+        <h3 className={styles.chartTitle}>Invested portfolio projection</h3>
+        {isHero ? <HeroWindowPicker windows={heroWindows} value={heroWindow} onChange={setHeroWindow} /> : null}
+      </div>
+      <p className={styles.chartHint}>{isHero ? HERO_HINT : DEFAULT_HINT}</p>
       <LinearChart
         {...heroVariantProps}
-        series={[...(bandSeries ? [bandSeries] : []), ...displaySeries, ...displayExtraSeries]}
+        series={[...(band ? [band] : []), ...displaySeries, ...displayExtraSeries]}
         xLabels={labels}
         refLines={refLines}
-        {...(todayIndex !== undefined ? { todayIndex } : {})}
+        {...todayProp(todayIndex, windowYears)}
         yDomainMax={yDomainMax}
         formatValue={(c) => formatMoneyShort(c, format)}
         ariaLabel="Invested portfolio projection by year"
@@ -332,6 +445,7 @@ function NetWorthChartImpl({
         activeYear={activeYear}
         breakdowns={breakdowns}
         yearZeroHint={yearZeroHint}
+        onToggle={onToggleVisible}
       />
       {footer != null ? <div className={styles.chartFooter}>{footer}</div> : null}
     </Card>

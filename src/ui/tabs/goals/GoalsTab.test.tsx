@@ -85,6 +85,22 @@ describe('GoalsTab', () => {
     expect(screen.getByRole('button', { name: 'Save check-in' })).toBeInTheDocument()
   })
 
+  it('hides a scenario from the hero legend and the chip agrees', async () => {
+    const user = userEvent.setup()
+    const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })
+    const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })
+    const model = buildExpenseModel(makeDataset({ goalScenarios: [plan, other] }))
+    render(<GoalsTab model={model} actions={makeActions()} />)
+
+    // The chip's eye comes first in the DOM; the legend row is the second control.
+    const toggles = screen.getAllByRole('button', { name: 'Hide Path B on chart' })
+    expect(toggles).toHaveLength(2)
+    await user.click(toggles[1]!)
+
+    // Both the legend row and the chip's eye now offer to show it again.
+    expect(screen.getAllByRole('button', { name: 'Show Path B on chart' })).toHaveLength(2)
+  })
+
   it('takes an empty Progress view to Setup', async () => {
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} actions={makeActions()} />)
