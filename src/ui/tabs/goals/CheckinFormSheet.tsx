@@ -49,8 +49,12 @@ export function CheckinFormSheet({ accounts, previous = null, actions, onDone }:
     )
   }
 
+  // A check-in with every balance at zero says nothing, yet it would silence the
+  // dashboard's nudge for a month and read as being behind by the whole plan.
+  const empty = entries.every((e) => e.valueCents === 0)
+
   const handleSubmit = async () => {
-    if (!date) return
+    if (!date || empty) return
     setSubmitting(true)
     setError(null)
     try {
@@ -113,6 +117,9 @@ export function CheckinFormSheet({ accounts, previous = null, actions, onDone }:
                   inputMode="decimal"
                   aria-label={`Value for ${acc.name}`}
                   defaultValue={formatMoneyInput(entry.valueCents, format)}
+                  // On every keystroke too, so Save wakes up as the first balance is typed
+                  // rather than only once the field is left.
+                  onChange={(e) => setEntry(entry.accountId, parseMoneyToCents(e.target.value, format))}
                   onBlur={(e) =>
                     setEntry(entry.accountId, parseMoneyToCents(e.target.value, format))
                   }
@@ -150,7 +157,8 @@ export function CheckinFormSheet({ accounts, previous = null, actions, onDone }:
           <button
             className={goalStyles.btn}
             onClick={() => { void handleSubmit() }}
-            disabled={submitting || !date}
+            disabled={submitting || !date || empty}
+            title={empty ? 'Enter at least one balance' : undefined}
           >
             {submitting ? 'Saving…' : 'Save check-in'}
           </button>
