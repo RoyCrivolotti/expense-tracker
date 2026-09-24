@@ -56,7 +56,10 @@ export function ScenarioChips({
               className={styles.chipEye}
               aria-pressed={!hidden}
               aria-label={hidden ? `Show ${label} on chart` : `Hide ${label} on chart`}
-              title={hidden ? 'Hidden on chart' : 'Shown on chart'}
+              // The loaded scenario is always drawn as the editing line, so hiding it
+              // would change nothing on the chart.
+              disabled={activeId === s.id}
+              title={activeId === s.id ? 'Always shown while loaded' : hidden ? 'Hidden on chart' : 'Shown on chart'}
               onClick={() => onToggleVisible(s.id)}
             >
               {hidden ? '○' : '●'}
