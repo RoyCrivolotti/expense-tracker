@@ -90,6 +90,11 @@ layer applies it to a payload that carries both fields, and the D1 adapter check
 that carries only one of them against the stored row, and refuses a bulk type change away
 from `investment` while any target row is a withdrawal.
 
+### Migrations run by hand
+
+Deploy does not apply migrations. `0025` (`settings.cash_reserve_months`) must be applied
+to prod before the cash reserve target ships, or saving that one setting fails.
+
 ## Scripts (expense-tracker)
 
 | Script | npm alias | Purpose |
