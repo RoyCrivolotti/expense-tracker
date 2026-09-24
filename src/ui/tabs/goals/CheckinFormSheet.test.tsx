@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 vi.mock('../../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: () => true }))
 
 import { CheckinFormSheet } from './CheckinFormSheet'
+import { makeWealthCheckin } from '../../../testing/factories'
 import { todayIso } from '../../components/transactionFormState'
 import type { ExpenseActions } from '../../actions'
 import type { WealthAccount } from '../../../types'
@@ -68,13 +69,55 @@ describe('CheckinFormSheet', () => {
     expect(actions.createWealthCheckin).toHaveBeenCalled()
   })
 
-  it('will not save a check-in with every balance at zero', () => {
+  it('will not save a check-in with every balance at zero, and says why', () => {
     const actions = makeActions()
     render(<CheckinFormSheet accounts={[makeAccount(1)]} actions={actions} />)
     const save = screen.getByRole('button', { name: /save check-in/i })
     expect(save).toBeDisabled()
+    expect(screen.getByRole('status')).toHaveTextContent('Enter at least one balance to save.')
     fireEvent.change(screen.getByLabelText('Value for Account 1'), { target: { value: '1000' } })
     expect(save).toBeEnabled()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('keeps a zero the user typed or carried over, and drops one they never touched', async () => {
+    const actions = makeActions()
+    const user = userEvent.setup()
+    const previous = makeWealthCheckin({
+      checkinDate: '2026-08-01',
+      entries: [{ accountId: 2, valueCents: 0 }],
+    })
+    render(
+      <CheckinFormSheet
+        accounts={[makeAccount(1), makeAccount(2, 'cash'), makeAccount(3, 'cash')]}
+        actions={actions}
+        previous={previous}
+      />,
+    )
+    fireEvent.change(screen.getByLabelText('Value for Account 1'), { target: { value: '1000' } })
+    // Account 3 is typed as zero on purpose; account 2 carries its recorded zero over.
+    fireEvent.change(screen.getByLabelText('Value for Account 3'), { target: { value: '0' } })
+    await user.click(screen.getByRole('button', { name: /save check-in/i }))
+    expect(actions.createWealthCheckin).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entries: [
+          { accountId: 1, valueCents: 100_000 },
+          { accountId: 2, valueCents: 0 },
+          { accountId: 3, valueCents: 0 },
+        ],
+      }),
+    )
+  })
+
+  it('drops a new account left at zero', async () => {
+    const actions = makeActions()
+    const user = userEvent.setup()
+    render(<CheckinFormSheet accounts={[makeAccount(1), makeAccount(2, 'cash')]} actions={actions} />)
+    fireEvent.change(screen.getByLabelText('Value for Account 1'), { target: { value: '1000' } })
+    await user.click(screen.getByRole('button', { name: /save check-in/i }))
+    expect(actions.createWealthCheckin).toHaveBeenCalledWith(
+      expect.objectContaining({ entries: [{ accountId: 1, valueCents: 100_000 }] }),
+    )
   })
 
   it('calls onDone when cancel is clicked', async () => {
