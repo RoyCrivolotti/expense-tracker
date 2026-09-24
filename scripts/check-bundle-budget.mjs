@@ -27,7 +27,12 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // Raised from 184 KB to 190 KB for the Goals UX round (confirm sheets in the Goals tab, a
 // Setup view, the pinned mini chart and the net worth history chart): about 1.5 KB gzip
 // took the total from ~182.5 KB to a few bytes over 184,000.
-const TOTAL_MAX_GZIP = 190_000
+//
+// Raised from 190 KB to 196 KB for the wealth follow-ups (withdrawals, hero windows and
+// legend toggles, the comparison table, milestone dates, the cash reserve, the re-baseline
+// confirm sheet): about 4 KB gzip across sixteen PRs took the total to 190.3 KB, and the
+// last of them was the one to cross the line.
+const TOTAL_MAX_GZIP = 196_000
 const GOALS_MAX_GZIP = 40_000
 
 function gzipBytes(path) {
