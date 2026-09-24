@@ -1,6 +1,11 @@
 /** Generic engine defaults for the public repo (no personal figures). */
 
 export const DEFAULT_REAL_RETURN = 0.07
+/**
+ * The plan is nominal; this is only the default rate the Purchasing power view deflates
+ * it by, adjustable in the chart footer. One constant so the chart and the tab agree.
+ */
+export const DEFAULT_INFLATION_RATE = 0.02
 export const DEFAULT_HOUSE_APPRECIATION = 0.025
 
 /** Fallback milestone ladder for owners who have not customised theirs. */

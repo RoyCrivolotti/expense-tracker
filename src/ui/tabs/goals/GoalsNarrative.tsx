@@ -123,7 +123,7 @@ function FullNarrative({
     <Card>
       <h3 className={styles.chartTitle}>What this means</h3>
       <p className={styles.narrative}>
-        At {formatPercent(draft.expectedRealReturn, format)} real return and{' '}
+        At {formatPercent(draft.expectedRealReturn, format)} expected return and{' '}
         {formatCents(draft.monthlyContributionCents, format)}/mo invested, your portfolio reaches{' '}
         {formatCents(end?.investedCents ?? 0, format)} invested and{' '}
         {formatCents(end?.netWorthCents ?? 0, format)} net worth in {draft.horizonYears} years.

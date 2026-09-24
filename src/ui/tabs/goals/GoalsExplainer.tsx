@@ -15,6 +15,10 @@ const buildTerms = (cur: string): { term: string; body: string }[] => [
     body: 'A saved set of assumptions (return, contribution, horizon, house plans). Each one is a colored line on the projection so you can compare futures side by side.',
   },
   {
+    term: 'Expected return',
+    body: "The yearly growth the plan assumes for the invested portfolio, before inflation. Check-ins are compared with it as they are. The chart's Purchasing power view deflates every figure by the inflation rate you set, to show what it buys in today's money.",
+  },
+  {
     term: 'Horizon (years)',
     body: 'How far the projection runs: years 0 through your horizon. Portfolio and housing assumptions apply over this window. FI is also searched within it.',
   },

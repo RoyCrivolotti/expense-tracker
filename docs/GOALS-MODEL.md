@@ -18,7 +18,7 @@ One saved scenario per owner is *the plan*: `goal_scenarios.is_active`, set with
 
 Two questions, two sources. *How far along am I* is a balance and comes from check-ins, which capture market value however the money arrived. *Am I keeping the pace* is a flow and comes from `investment` transactions per month since the plan's start date (`monthlyFlows` and `monthsSincePlanStart` in `engine/goals.ts`), compared with the plan's monthly contribution on the dashboard card and in the "Actual investing vs plan" chart. Net saving is drawn beside it for context only; the gap between the two is money that stayed in the current account. A one-off inflow belongs in the plan as a life event or a re-baseline, not in the monthly average.
 
-A third question, *is being behind a saving problem or a market one*, is the measured return on the Progress snapshot (`portfolioReturn` in `engine/portfolioReturn.ts`). It is a linked Modified Dietz: each stretch between two consecutive check-ins gets its own return, the end balance less the start balance less the net flows, over the start balance plus each flow weighted by the share of the stretch it was in for, and the stretches are chained. That is the standard approximation of a time-weighted return, the same kind of figure as the plan's expected rate, and it gets closer to the true one the more often check-ins are logged. Flows are `investment` transactions: positive going in, negative coming back out, which is how a sale to cash or a dividend paid out is recorded (the form calls it Withdraw). A check-in is the balance at the end of its day, so a flow dated a check-in belongs to the stretch that ends there. The figure reads "so far" under a year and as a yearly rate from a year on, set against the plan's expected rate as it is: the plan calls that rate real, but on/off track compares nominal check-in balances with the plan line grown at it, so a portfolio that returned exactly the plan's rate is exactly on plan and the two lines have to agree. It is null with fewer than two check-ins thirty days apart, and when a stretch starts at nothing yet ends with money that no transaction accounts for.
+A third question, *is being behind a saving problem or a market one*, is the measured return on the Progress snapshot (`portfolioReturn` in `engine/portfolioReturn.ts`). It is a linked Modified Dietz: each stretch between two consecutive check-ins gets its own return, the end balance less the start balance less the net flows, over the start balance plus each flow weighted by the share of the stretch it was in for, and the stretches are chained. That is the standard approximation of a time-weighted return, the same kind of figure as the plan's expected rate, and it gets closer to the true one the more often check-ins are logged. Flows are `investment` transactions: positive going in, negative coming back out, which is how a sale to cash or a dividend paid out is recorded (the form calls it Withdraw). A check-in is the balance at the end of its day, so a flow dated a check-in belongs to the stretch that ends there. The figure reads "so far" under a year and as a yearly rate from a year on, set against the plan's expected return as it is: the plan is nominal, on/off track compares nominal check-in balances with the plan line grown at that rate, so a portfolio that returned exactly the plan's rate is exactly on plan and the two lines agree. It is null with fewer than two check-ins thirty days apart, and when a stretch starts at nothing yet ends with money that no transaction accounts for.
 
 A gap that holds still is the plan's starting point, not the saving, so the snapshot offers a re-baseline (`steadyGap` in `engine/steadyGap.ts`) when the check-ins reaching back at least 180 days number three or more, all sit on the same side of the plan, their spread from smallest to largest gap is within a quarter of the mean gap, and that mean is worth at least three months of the plan's contribution. Below that it is on-plan noise and stays quiet. The button writes the plan's start to the latest check-in and patches the editor's draft of the same plan, so Plan does not then offer to save the old start back.
 
@@ -26,7 +26,7 @@ A gap that holds still is the plan's starting point, not the saving, so the snap
 
 | Parameter | Default (demo) |
 | --- | --- |
-| Real return | 7% / year |
+| Expected return | 7% / year (nominal; the field is still `expectedRealReturn`) |
 | Contribution growth | 0% / year (adjustable per scenario in Goals UI) |
 | Net retention (salary model) | 65% of gross — **engine helper only** (`annualSavingsFromCashflow`); charts use explicit `monthlyContributionCents` |
 
@@ -54,7 +54,7 @@ Symmetric **net worth** comparison via `projectRentVsBuy` (`src/domain/engine/re
 - **Rent & invest:** starts with down payment + transaction costs in a side portfolio; each year invests the surplus when rent + invested cash beats buyer outlay.
 - **Buy now:** equity (appreciation − mortgage) plus any side portfolio when buying costs less than renting.
 
-Breakeven = first year buyer net worth ≥ renter net worth. Simplifications: constant real rent, fixed carry rate (1.5%/yr default, not yet a UI control), no selling costs or transaction friction on resale.
+Breakeven = first year buyer net worth ≥ renter net worth. Simplifications: constant rent, fixed carry rate (1.5%/yr default, not yet a UI control), no selling costs or transaction friction on resale.
 
 ## Net worth over time
 
@@ -98,15 +98,17 @@ Stored as a JSON column (`life_events`) on `goal_scenarios`. Applied in the year
 
 The hero chart shows a shaded band for ±3 pp around the scenario's `expectedRealReturn`, computed by `projectNetWorthBand` in `scenarioProjection.ts`. The band uses the same contribution and housing logic as the main projection. Chart layer: `kind: 'band'` on `ChartSeries`, rendered by `ChartBandLayer` in `linearChartParts.tsx`.
 
-## Nominal vs real display
+## Nominal, and the purchasing-power view
 
-The hero chart defaults to nominal values. A toggle in the chart footer switches to purchasing power, which is the real (inflation-adjusted) view:
+The plan is nominal: the expected return grows nominal balances, check-ins are nominal balances off a statement, and every comparison in Progress and the comparison table is made in those terms. The control is labelled "Expected return"; the field keeps its historical name `expectedRealReturn`, since it is a database column and an API field.
+
+The hero chart's footer toggle switches to purchasing power, which deflates every drawn figure by an inflation rate the user can adjust there (`DEFAULT_INFLATION_RATE`, 2%, approximating the ECB target):
 
 ```
-nominalValue[y] = realValue[y] × (1 + 0.02)^y
+purchasingPower[y] = nominal[y] / (1 + rate)^y
 ```
 
-The 2% rate approximates the ECB target. Check-in scatter points are also scaled by their fractional year offset (`xIndex`) so actuals stay aligned with the nominal projection line.
+Check-in scatter points are deflated by their own fractional year offset (`xIndex`) so actuals stay aligned with the deflated projection line (`applyRealTransform` in `nominalTransform.ts`).
 
 ## Engine formula
 
@@ -114,7 +116,7 @@ Each year `y = 1…N`:
 
 ```
 contribution[y] = monthlyContributionCents × 12 × (1 + contributionGrowth)^(y - 1)
-invested[y] = invested[y-1] × (1 + realReturn) + contribution[y] + lifeEventImpact(y)
+invested[y] = invested[y-1] × (1 + expectedReturn) + contribution[y] + lifeEventImpact(y)
 ```
 
 At `housePurchaseYear > 0`, after growth and contribution that year:

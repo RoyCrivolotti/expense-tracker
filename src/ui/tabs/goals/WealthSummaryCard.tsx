@@ -99,9 +99,9 @@ const hintStyle = { fontSize: '0.8125rem', color: 'var(--color-text-muted)', mar
 /**
  * Whether being behind is a saving problem or a market one. Under a full year the figure
  * is the period's return and reads "so far"; from a year on it is compounded to a yearly
- * rate and set against the plan's expected rate as it is. The plan calls that rate real,
- * but on/off track compares the same nominal balances with the plan line grown at it, so
- * a portfolio that returned exactly the plan's rate is exactly on plan, and this line has
+ * rate and set against the plan's expected return as it is. The plan is nominal: on/off
+ * track compares the same nominal balances with the plan line grown at that rate, so a
+ * portfolio that returned exactly the plan's rate is exactly on plan, and this line has
  * to agree with the one above it rather than deflate on its own.
  */
 function ReturnHint({

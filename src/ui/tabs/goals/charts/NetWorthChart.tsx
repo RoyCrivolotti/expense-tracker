@@ -2,7 +2,7 @@ import { memo, useCallback, useMemo, useState, type ReactNode } from 'react'
 import type { GoalScenario, Milestone } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import type { ProjectionParams } from '../../../../engine'
-import { projectNetWorth, projectNetWorthBand, purchaseYearBreakdown, scenarioToParams } from '../../../../engine'
+import { DEFAULT_INFLATION_RATE, projectNetWorth, projectNetWorthBand, purchaseYearBreakdown, scenarioToParams } from '../../../../engine'
 import { Card } from '../../../components/primitives'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
@@ -84,8 +84,6 @@ function buildSeries(
   })
   return { years, series, names: lines.map((l) => l.name) }
 }
-
-const DEFAULT_INFLATION_RATE = 0.02
 
 /** Nominal (default) vs real-purchasing-power series, plus a Y-axis floor
  *  covering both so toggling doesn't rescale the chart. */

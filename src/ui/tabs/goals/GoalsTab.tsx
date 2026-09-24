@@ -4,6 +4,7 @@ import type { ExpenseActions } from '../../actions'
 import type { GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import {
+  DEFAULT_INFLATION_RATE,
   averageMonthlyCents,
   computeMonthlyTotals,
   defaultBudgetMonth,
@@ -120,7 +121,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
   const [displayMode, setDisplayMode] = useState<DisplayMode>('nominal')
   // Single configurable rate rather than year-by-year inputs — a reasonable
   // simplification for a multi-decade projection. Resets on reload; display-only.
-  const [nominalInflation, setNominalInflation] = useState(0.02)
+  const [nominalInflation, setNominalInflation] = useState(DEFAULT_INFLATION_RATE)
   // Mobile-only: swaps the chart block for the controls form in place, in lieu
   // of a separate route. Ignored on desktop, where both are always visible.
   const [mobilePlanView, setMobilePlanView] = useState<MobilePlanView>('chart')
