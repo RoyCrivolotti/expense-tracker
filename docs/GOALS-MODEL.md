@@ -133,7 +133,7 @@ Net worth = invested + house equity − mortgage balance.
 
 ### Plan start date
 
-`goal_scenarios.plan_start_date` (ISO date, editable per scenario) anchors the projection to the calendar. Used by:
+`goal_scenarios.plan_start_date` (ISO date, editable per scenario) anchors the projection to the calendar. Re-baselining (from the editor, or from the Progress snapshot's button, which asks first) sets it and `start_invested_cents` from the latest check-in and moves life events and the house purchase year by the whole years the start moved (`rebaseline` in `engine/rebaselinePatch.ts`), dropping an event now behind the new start, since its money is already in the balance the plan restarts from. Used by:
 
 - `yearOffsetFromDate(planStartDate, date)` — converts a calendar date to a fractional projection-year offset.
 - `planValueAtOffset(scenario, offset)` — interpolates the projected invested value at a fractional year offset.
