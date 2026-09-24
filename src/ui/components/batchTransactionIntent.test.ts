@@ -86,6 +86,23 @@ describe('buildBatchTransactions', () => {
     expect(result.ok && 'flagId' in result.transactions[0]!).toBe(false)
   })
 
+  it('files an investment row under the investments category when one is given', () => {
+    const batches = [
+      {
+        id: 'b1',
+        date: '2026-07-05',
+        rows: [
+          { id: 'r1', amount: '100', description: 'ETF', accountId: 1, categoryId: 3, type: 'investment' as const },
+          { id: 'r2', amount: '20', description: 'Bread', accountId: 1, categoryId: 3, type: 'expense' as const },
+        ],
+      },
+    ]
+    const result = buildBatchTransactions(batches, EU_MONEY_FORMAT, 1, null, 9)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.transactions.map((t) => t.categoryId)).toEqual([9, 3])
+  })
+
   it('defaults to unflagged when the argument is omitted', () => {
     const result = buildBatchTransactions(
       [batch({ rows: [row({ description: 'Coffee', amount: '3' })] })],
