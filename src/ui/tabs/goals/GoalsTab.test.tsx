@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { GoalsTab } from './GoalsTab'
+import { ToastContext } from '../../hooks/useToast'
 import { buildExpenseModel } from '../../buildExpenseModel'
 import { makeDataset, makeScenario, makeWealthAccount, makeWealthCheckin } from '../../../testing/factories'
 import { makeActions } from '../../../testing/makeActions'
@@ -251,6 +252,38 @@ describe('GoalsTab', () => {
     // or the header would offer to save the old start back over the re-baseline.
     const saved = { ...plan, ...patch }
     rerender(<GoalsTab model={buildExpenseModel({ ...dataset, goalScenarios: [saved] })} actions={actions} />)
+    await user.click(screen.getByRole('radio', { name: 'Plan' }))
+    expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
+  })
+
+  it('leaves the editor alone and says so when the re-baseline write fails', async () => {
+    const user = userEvent.setup()
+    const showToast = vi.fn()
+    const actions = makeActions()
+    vi.mocked(actions.updateScenario).mockRejectedValue(new Error('boom'))
+    const plan = makeScenario({ id: 1, name: 'Path A', isActive: true, planStartDate: '2025-01-01' })
+    const accounts = [makeWealthAccount({ id: 1, name: 'Broker', kind: 'investment' })]
+    // The button belongs to the steady-gap hint, which needs three check-ins over half a year.
+    const behind = (id: number, date: string) =>
+      makeWealthCheckin({
+        id,
+        checkinDate: date,
+        entries: [{ accountId: 1, valueCents: planValueAtDate(plan, date)! - 50_000_00 }],
+      })
+    const checkins = [behind(1, '2026-01-01'), behind(2, '2026-04-01'), behind(3, '2026-07-15')]
+    const dataset = makeDataset({ goalScenarios: [plan], wealthAccounts: accounts, wealthCheckins: checkins })
+    render(
+      <ToastContext.Provider value={{ showToast }}>
+        <GoalsTab model={buildExpenseModel(dataset)} actions={actions} />
+      </ToastContext.Provider>,
+    )
+
+    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Re-baseline' }))
+
+    expect(showToast).toHaveBeenCalledWith("Something went wrong, so that change probably wasn't saved.", 'error')
+    // Nothing was written, so Plan must not offer to save a start that never landed.
     await user.click(screen.getByRole('radio', { name: 'Plan' }))
     expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
   })

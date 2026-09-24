@@ -25,6 +25,8 @@ import { Card, SectionTitle } from '../../components/primitives'
 import { SegmentedControl } from '../../components/SegmentedControl'
 import { PercentStepper } from '../../components/PercentStepper'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
+import { failureMessage } from '../../hooks/useFailureToast'
+import { useToast } from '../../hooks/useToast'
 import { Presence } from '../../components/Presence'
 import { EXIT_MS } from '../../hooks/motion'
 import { GoalControls } from './GoalControls'
@@ -349,14 +351,23 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     if (!actions || !plan || !latestSnapshot) return
     setRebaselinePreview(rebaseline(plan, latestSnapshot))
   }, [actions, plan, latestSnapshot])
-  const onRebaselineConfirm = useCallback(() => {
+  const { showToast } = useToast()
+  const onRebaselineConfirm = useCallback(async () => {
     if (!actions || !plan || !latestSnapshot || !rebaselinePreview) return
-    void actions.updateScenario(plan.id, rebaselinePreview.patch)
     // The draft is re-baselined from its own values, so an unsaved life-event or house
     // edit in the editor moves with the start rather than being overwritten by the plan's.
-    if (activeId === plan.id) patchDraft(rebaseline(draft, latestSnapshot).patch)
+    const draftPatch = activeId === plan.id ? rebaseline(draft, latestSnapshot).patch : null
     setRebaselinePreview(null)
-  }, [actions, plan, latestSnapshot, rebaselinePreview, activeId, patchDraft, draft])
+    try {
+      await actions.updateScenario(plan.id, rebaselinePreview.patch)
+    } catch (e) {
+      // The plan did not move, so the editor's draft must not either, or Plan would offer to
+      // save a start that was never written.
+      showToast(failureMessage(e), 'error')
+      return
+    }
+    if (draftPatch) patchDraft(draftPatch)
+  }, [actions, plan, latestSnapshot, rebaselinePreview, activeId, patchDraft, draft, showToast])
 
   const onToggleVisible = useCallback((id: number) => {
     setHiddenIds((prev) => {
@@ -437,7 +448,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
         <RebaselineSheet
           preview={rebaselinePreview}
           format={format}
-          onConfirm={onRebaselineConfirm}
+          onConfirm={() => { void onRebaselineConfirm() }}
           onCancel={() => setRebaselinePreview(null)}
         />
         <ProgressView
