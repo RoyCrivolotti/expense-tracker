@@ -125,7 +125,11 @@ export function CheckinFormSheet({ accounts, previous = null, actions, onDone }:
                   type="text"
                   inputMode="decimal"
                   aria-label={`Value for ${acc.name}`}
-                  defaultValue={formatMoneyInput(entry.valueCents, format)}
+                  // A zero starts empty, not as "0,00": typing into a prefilled zero appends
+                  // ("0,005000"), and an empty field says plainly that nothing is entered yet.
+                  defaultValue={entry.valueCents === 0 ? '' : formatMoneyInput(entry.valueCents, format)}
+                  placeholder={formatMoneyInput(0, format)}
+                  onFocus={(e) => e.currentTarget.select()}
                   // On every keystroke too, so Save wakes up as the first balance is typed
                   // rather than only once the field is left.
                   onChange={(e) => setEntry(entry.accountId, parseMoneyToCents(e.target.value, format))}
