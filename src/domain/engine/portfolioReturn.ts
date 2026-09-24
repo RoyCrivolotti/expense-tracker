@@ -76,7 +76,11 @@ function stretchReturn(
 /**
  * Null until two check-ins at least thirty days apart exist, when nothing was ever
  * invested, or when a stretch had nothing invested to earn on while its balance still
- * moved, which means money arrived that no transaction accounts for.
+ * moved, which means money arrived that no transaction accounts for. Null too when a
+ * stretch comes out below minus one hundred percent, which the Dietz approximation can
+ * do when a large contribution lands late in a stretch that then collapses: no honest
+ * rate exists, and a root of a negative number would be NaN. Exactly minus one hundred
+ * percent is a return, and stays one.
  */
 export function portfolioReturn(
   checkins: WealthCheckin[],
@@ -97,6 +101,8 @@ export function portfolioReturn(
     const stretch = stretchReturn(start, sorted[i]!, accounts, flows)
     if (stretch === null) return null
     if (stretch === 'empty') continue
+    // Judged per stretch: two such stretches would multiply back to a positive number.
+    if (1 + stretch.rate < 0) return null
     first ??= start
     growth *= 1 + stretch.rate
     contributionsCents += stretch.flowCents
