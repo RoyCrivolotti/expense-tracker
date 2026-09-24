@@ -1,11 +1,26 @@
 import { shiftBudgetMonth, shortMonthYearLabel } from '../../../../engine'
-import { WINDOW_OPTIONS, stepMonthsFor, type WindowKey } from './checkinWindow'
+import { stepMonthsFor } from './checkinWindow'
 
 /**
  * A calendar axis for what has already happened, as opposed to `checkinWindow`, which
- * lays the plan out forward from its start. This one ends today and looks back, so a
- * check-in logged this morning sits on the right edge rather than past it.
+ * lays the plan out forward from its start. This one ends today and looks back.
+ *
+ * Its windows start shorter than the plan chart's: check-ins arrive a month apart, so a
+ * new user has two months of them, and a year-long axis squeezes those into one corner.
  */
+export type HistoryWindowKey = '3m' | '6m' | '1y' | '2y' | '5y' | 'all'
+
+export const HISTORY_WINDOWS: { value: HistoryWindowKey; label: string; months: number | null }[] = [
+  { value: '3m', label: '3M', months: 3 },
+  { value: '6m', label: '6M', months: 6 },
+  { value: '1y', label: '1Y', months: 12 },
+  { value: '2y', label: '2Y', months: 24 },
+  { value: '5y', label: '5Y', months: 60 },
+  { value: 'all', label: 'All', months: null },
+]
+
+/** 'All' never shows less than this, so a single old reading does not fill the plot. */
+const MIN_ALL_MONTHS = 3
 
 const DAY_MS = 86_400_000
 const DAYS_PER_MONTH = 365.25 / 12
@@ -21,10 +36,10 @@ export function monthsBetweenDates(from: string, to: string): number {
 }
 
 /** The smallest window that reaches back to the earliest check-in, with a month to spare. */
-export function defaultHistoryWindow(earliestDate: string | null, today: string): WindowKey {
-  if (!earliestDate) return '1y'
-  const wanted = (monthsBetweenDates(earliestDate, today) + 1) / 12
-  return WINDOW_OPTIONS.find((o) => o.years != null && o.years >= wanted)?.value ?? 'all'
+export function defaultHistoryWindow(earliestDate: string | null, today: string): HistoryWindowKey {
+  if (!earliestDate) return '3m'
+  const wanted = monthsBetweenDates(earliestDate, today) + 1
+  return HISTORY_WINDOWS.find((o) => o.months != null && o.months >= wanted)?.value ?? 'all'
 }
 
 export interface HistoryAxis {
@@ -38,21 +53,18 @@ export interface HistoryAxis {
 }
 
 /**
- * The axis for `window`, ending today. 'all' reaches back to the earliest check-in and
- * never shows less than a year, so a single old reading does not fill the plot.
+ * The axis for `window`, ending today. 'all' reaches back to the earliest check-in.
  * `maxLabels` is how many month labels the axis has room for.
  */
 export function historyAxis(
-  window: WindowKey,
+  window: HistoryWindowKey,
   earliestDate: string | null,
   today: string,
   maxLabels = 5,
 ): HistoryAxis {
-  const years = WINDOW_OPTIONS.find((o) => o.value === window)?.years ?? null
+  const fixed = HISTORY_WINDOWS.find((o) => o.value === window)?.months ?? null
   const months =
-    years != null
-      ? years * 12
-      : Math.max(12, Math.ceil(monthsBetweenDates(earliestDate ?? today, today)) + 1)
+    fixed ?? Math.max(MIN_ALL_MONTHS, Math.ceil(monthsBetweenDates(earliestDate ?? today, today)) + 1)
   const stepMonths = stepMonthsFor(months / 12)
   const steps = Math.ceil(months / stepMonths)
   const todayMonth = today.slice(0, 7)
