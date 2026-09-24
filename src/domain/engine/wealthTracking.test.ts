@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { GoalScenario, WealthAccount, WealthCheckin } from '../types'
 import {
+  checkinAssetsCents,
   checkinInvestedCents,
   checkinNetWorthCents,
+  hasDebtEntries,
   latestCheckin,
   milestonesReached,
   planValueAtDate,
@@ -163,6 +165,34 @@ describe('checkinInvestedCents', () => {
   it('returns 0 when no investment accounts have entries', () => {
     const checkin = makeCheckin('2024-06-01', [{ accountId: 2, valueCents: 10_000_000 }])
     expect(checkinInvestedCents(checkin, accounts)).toBe(0)
+  })
+})
+
+describe('checkinAssetsCents and hasDebtEntries', () => {
+  const mixed = [
+    makeAccount(1, 'investment'),
+    makeAccount(2, 'cash'),
+    makeAccount(3, 'debt'),
+  ]
+
+  it('adds up everything owned and leaves the debt out, unlike net worth', () => {
+    const checkin = makeCheckin('2026-01-01', [
+      { accountId: 1, valueCents: 50_000_00 },
+      { accountId: 2, valueCents: 10_000_00 },
+      { accountId: 3, valueCents: 40_000_00 },
+      { accountId: 9, valueCents: 1_00 },
+    ])
+    expect(checkinAssetsCents(checkin, mixed)).toBe(60_000_00)
+    expect(checkinNetWorthCents(checkin, mixed)).toBe(20_000_00)
+  })
+
+  it('reports debt only when a check-in actually carries a debt balance', () => {
+    const noDebt = makeCheckin('2026-01-01', [{ accountId: 1, valueCents: 1 }])
+    const paidOff = makeCheckin('2026-02-01', [{ accountId: 3, valueCents: 0 }])
+    const owing = makeCheckin('2026-03-01', [{ accountId: 3, valueCents: 5 }])
+    expect(hasDebtEntries([noDebt, paidOff], mixed)).toBe(false)
+    expect(hasDebtEntries([noDebt, owing], mixed)).toBe(true)
+    expect(hasDebtEntries([owing], [makeAccount(1, 'investment')])).toBe(false)
   })
 })
 

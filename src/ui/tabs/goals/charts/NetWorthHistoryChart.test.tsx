@@ -83,6 +83,29 @@ describe('NetWorthHistoryChart', () => {
     expect(screen.getAllByText('Invested')).toHaveLength(2)
   })
 
+  it('adds an assets line once a debt is logged, so a mortgage does not read as a loss', () => {
+    const withMortgage = [...accounts, { id: 3, name: 'Mortgage', kind: 'debt' as const, sortOrder: 2, archived: false }]
+    const before = checkin(1, monthsAgo(3), 100_000_00, 50_000_00)
+    const bought: WealthCheckin = {
+      ...checkin(2, monthsAgo(0), 100_000_00, 10_000_00),
+      entries: [
+        { accountId: 1, valueCents: 100_000_00 },
+        { accountId: 2, valueCents: 10_000_00 },
+        { accountId: 3, valueCents: 300_000_00 },
+      ],
+    }
+    const { container, rerender } = render(<NetWorthHistoryChart checkins={[before, bought]} accounts={withMortgage} />)
+
+    expect(screen.getByText('Assets')).toBeInTheDocument()
+    expect(container.querySelectorAll('circle')).toHaveLength(6)
+    expect(screen.getByRole('img', { name: /assets/ })).toBeInTheDocument()
+
+    // The same accounts with no debt balance logged: two lines, as before.
+    rerender(<NetWorthHistoryChart checkins={[before, checkin(2, monthsAgo(0), 110_000_00, 10_000_00)]} accounts={withMortgage} />)
+    expect(screen.queryByText('Assets')).not.toBeInTheDocument()
+    expect(container.querySelectorAll('circle')).toHaveLength(4)
+  })
+
   it('drops readings outside a narrower window and widens on request', () => {
     const checkins = [
       checkin(1, monthsAgo(30), 100_000_00, 0),

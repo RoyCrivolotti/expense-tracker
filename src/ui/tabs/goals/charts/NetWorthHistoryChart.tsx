@@ -6,7 +6,12 @@ import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import type { ScatterPoint } from '../../../charts/linearScale'
 import { ChartLegend } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
-import { checkinInvestedCents, checkinNetWorthCents } from '../../../../engine'
+import {
+  checkinAssetsCents,
+  checkinInvestedCents,
+  checkinNetWorthCents,
+  hasDebtEntries,
+} from '../../../../engine'
 import { todayIso } from '../../../components/transactionFormState'
 import { formatMoneyAxis, formatMoneyShort } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
@@ -25,6 +30,8 @@ interface Props {
 const NET_WORTH_COLOR = '#6366f1'
 /** The same green as Actual on the plan chart: both are the invested balance from check-ins. */
 const INVESTED_COLOR = '#10b981'
+/** Everything owned, debts left out. Only drawn once a debt is logged, when it differs from net worth. */
+const ASSETS_COLOR = '#f59e0b'
 
 /** The net worth reading nearest each axis step, in x. */
 function nearestByStep(points: ScatterPoint[], steps: number): number[] {
@@ -57,24 +64,31 @@ export function NetWorthHistoryChart({ checkins, accounts }: Props) {
       .filter(({ x }) => x >= 0 && x <= axis.steps)
     const netWorth = placed.map(({ x, c }) => ({ xIndex: x, value: checkinNetWorthCents(c, accounts) }))
     const invested = placed.map(({ x, c }) => ({ xIndex: x, value: checkinInvestedCents(c, accounts) }))
+    // With a mortgage logged, net worth drops by the loan the month the house is bought while
+    // what is owned does not; the two lines apart is the honest picture. Without any debt they
+    // would sit on top of each other, so the second stays away.
+    const assets = hasDebtEntries(sorted, accounts)
+      ? placed.map(({ x, c }) => ({ xIndex: x, value: checkinAssetsCents(c, accounts) }))
+      : []
     // The chart lays its x axis out from a line series, so an unseen one carries the calendar.
     // It holds the nearest net worth at each step, which keeps the fitted y axis unchanged.
     const carrier = nearestByStep(netWorth, axis.steps)
-    const shown = [...netWorth, ...invested].map((p) => p.value)
+    const shown = [...netWorth, ...invested, ...assets].map((p) => p.value)
     const tickStep = shown.length > 0 ? (Math.max(...shown) - Math.min(...shown)) / 5 : 0
-    return { axis, netWorth, invested, carrier, tickStep }
+    return { axis, netWorth, invested, assets, carrier, tickStep }
   }, [window, earliest, today, sorted, accounts, narrow])
 
   const tooltip = useCallback(
     (i: number): { title: string; lines: TooltipLine[] } => {
       const lines: TooltipLine[] = []
-      const netWorth = nearestScatterValue(model.netWorth, i)
-      const invested = nearestScatterValue(model.invested, i)
-      if (netWorth !== null) {
-        lines.push({ label: 'Net worth', value: formatMoneyShort(netWorth, format), color: NET_WORTH_COLOR })
-      }
-      if (invested !== null) {
-        lines.push({ label: 'Invested', value: formatMoneyShort(invested, format), color: INVESTED_COLOR })
+      const named: [string, ScatterPoint[], string][] = [
+        ['Net worth', model.netWorth, NET_WORTH_COLOR],
+        ['Assets', model.assets, ASSETS_COLOR],
+        ['Invested', model.invested, INVESTED_COLOR],
+      ]
+      for (const [label, points, color] of named) {
+        const value = nearestScatterValue(points, i)
+        if (value !== null) lines.push({ label, value: formatMoneyShort(value, format), color })
       }
       return { title: model.axis.titles[i] ?? String(i), lines }
     },
@@ -91,10 +105,19 @@ export function NetWorthHistoryChart({ checkins, accounts }: Props) {
     )
   }
 
+  const withDebt = model.assets.length > 0
   const series: ChartSeries[] = [
     { id: 'calendar', color: 'transparent', values: model.carrier },
     { id: 'net-worth', color: NET_WORTH_COLOR, values: [], kind: 'scatter', points: model.netWorth, connect: true },
+    ...(withDebt
+      ? [{ id: 'assets', color: ASSETS_COLOR, values: [], kind: 'scatter' as const, points: model.assets, connect: true }]
+      : []),
     { id: 'invested', color: INVESTED_COLOR, values: [], kind: 'scatter', points: model.invested, connect: true },
+  ]
+  const legend = [
+    { label: 'Net worth', color: NET_WORTH_COLOR },
+    ...(withDebt ? [{ label: 'Assets', color: ASSETS_COLOR }] : []),
+    { label: 'Invested', color: INVESTED_COLOR },
   ]
 
   return (
@@ -117,15 +140,10 @@ export function NetWorthHistoryChart({ checkins, accounts }: Props) {
         markerYears={[]}
         fitDomain
         formatValue={(c) => formatMoneyAxis(c, format, model.tickStep)}
-        ariaLabel="Net worth and invested balance by check-in"
+        ariaLabel={withDebt ? 'Net worth, assets and invested balance by check-in' : 'Net worth and invested balance by check-in'}
         tooltip={tooltip}
       />
-      <ChartLegend
-        items={[
-          { label: 'Net worth', color: NET_WORTH_COLOR },
-          { label: 'Invested', color: INVESTED_COLOR },
-        ]}
-      />
+      <ChartLegend items={legend} />
     </Card>
   )
 }
