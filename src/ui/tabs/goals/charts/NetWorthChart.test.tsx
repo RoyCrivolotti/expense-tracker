@@ -116,6 +116,18 @@ describe('NetWorthChart', () => {
     expect(lastLabel()).toBe(30)
   })
 
+  it('drops an FI target far above the projection, as it does a milestone', () => {
+    const { container } = render(
+      <NetWorthChart
+        milestones={[]}
+        scenarios={[]}
+        draft={{ ...defaultDraft, horizonYears: 30, annualSpendCents: 4_000_000_00, safeWithdrawalRate: 0.04 }}
+        variant="hero"
+      />,
+    )
+    expect(container.textContent).not.toMatch(/100\.0M/)
+  })
+
   it('offers no window buttons for a horizon the shortest window would not cut', () => {
     render(
       <NetWorthChart milestones={milestones} scenarios={[]} draft={{ ...defaultDraft, horizonYears: 5 }} variant="hero" />,

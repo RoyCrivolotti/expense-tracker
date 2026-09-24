@@ -279,7 +279,8 @@ function useRefLines(milestones: Milestone[], yDomainMax: number | undefined, fi
     // flat against the axis, so only draw the ones it gets within reach of.
     const ceiling = yDomainMax != null && yDomainMax > 0 ? yDomainMax * 1.15 : Infinity
     const base = milestones.map((m) => m.amountCents).filter((m) => m <= ceiling)
-    return fiTargetCents !== null && !base.includes(fiTargetCents)
+    // The FI target answers to the same ceiling, or a 5Y window could never zoom in.
+    return fiTargetCents !== null && fiTargetCents <= ceiling && !base.includes(fiTargetCents)
       ? [...base, fiTargetCents].sort((a, b) => a - b)
       : base
   }, [milestones, yDomainMax, fiTargetCents])
