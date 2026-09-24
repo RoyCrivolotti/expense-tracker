@@ -32,8 +32,11 @@ export function normalizeMilestones(input: Milestone[]): Milestone[] {
     .map((m) => ({
       amountCents: m.amountCents,
       label: (m.label ?? '').trim().slice(0, MILESTONE_LABEL_MAX_LENGTH),
+      ...(m.targetDate ? { targetDate: m.targetDate } : {}),
     }))
 }
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
 /** A milestone's trimmed name, or null when it is unnamed. */
 export function milestoneName(m: Milestone): string | null {
@@ -61,21 +64,30 @@ export function validateMilestones(value: unknown): string | null {
     return `milestones must have at most ${MILESTONE_MAX_COUNT} entries`
   }
   for (const entry of value) {
-    if (typeof entry !== 'object' || entry === null) {
-      return 'each milestone must be an object'
-    }
-    const { amountCents, label } = entry as Partial<Milestone>
-    if (
-      typeof amountCents !== 'number' ||
-      !Number.isInteger(amountCents) ||
-      amountCents <= 0 ||
-      amountCents > MILESTONE_MAX_CENTS
-    ) {
-      return `milestone amountCents must be an integer between 1 and ${MILESTONE_MAX_CENTS}`
-    }
-    if (label !== undefined && typeof label !== 'string') {
-      return 'milestone label must be a string'
-    }
+    const error = validateMilestone(entry)
+    if (error) return error
+  }
+  return null
+}
+
+function validateMilestone(entry: unknown): string | null {
+  if (typeof entry !== 'object' || entry === null) {
+    return 'each milestone must be an object'
+  }
+  const { amountCents, label, targetDate } = entry as Partial<Milestone>
+  if (
+    typeof amountCents !== 'number' ||
+    !Number.isInteger(amountCents) ||
+    amountCents <= 0 ||
+    amountCents > MILESTONE_MAX_CENTS
+  ) {
+    return `milestone amountCents must be an integer between 1 and ${MILESTONE_MAX_CENTS}`
+  }
+  if (label !== undefined && typeof label !== 'string') {
+    return 'milestone label must be a string'
+  }
+  if (targetDate !== undefined && (typeof targetDate !== 'string' || !ISO_DATE.test(targetDate))) {
+    return 'milestone targetDate must be a YYYY-MM-DD string'
   }
   return null
 }

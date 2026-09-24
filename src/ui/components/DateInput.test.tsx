@@ -76,6 +76,14 @@ describe('DateInput disabled reaches both pickers', () => {
 
     expect(screen.getByRole('button', { name: 'Date' })).toBeDisabled()
   })
+
+  it('shows the placeholder while empty, its own or the default', () => {
+    const { rerender } = render(<DateInput value="" onChange={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Date' })).toHaveTextContent('Select date')
+
+    rerender(<DateInput value="" placeholder="Target date" onChange={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Date' })).toHaveTextContent('Target date')
+  })
 })
 
 describe('DateInput — pausing the enclosing modal trap', () => {

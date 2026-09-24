@@ -84,6 +84,21 @@ describe('validateMilestones', () => {
     expect(validateMilestones([{ amountCents: 1 }])).toBeNull()
   })
 
+  it('accepts a target date as YYYY-MM-DD and nothing else', () => {
+    expect(validateMilestones([{ amountCents: 1, label: '', targetDate: '2028-06-01' }])).toBeNull()
+    expect(validateMilestones([{ amountCents: 1, label: '', targetDate: 'June 2028' }])).toMatch(/targetDate/)
+    expect(validateMilestones([{ amountCents: 1, label: '', targetDate: 2028 }])).toMatch(/targetDate/)
+  })
+
+  it('keeps a target date through normalisation and leaves the key off without one', () => {
+    const [dated, undated] = normalizeMilestones([
+      { amountCents: 2, label: 'b', targetDate: '2028-06-01' },
+      { amountCents: 1, label: 'a' },
+    ])
+    expect(dated).toEqual({ amountCents: 1, label: 'a' })
+    expect(undated).toEqual({ amountCents: 2, label: 'b', targetDate: '2028-06-01' })
+  })
+
   it('rejects a non-array', () => {
     expect(validateMilestones('nope')).toMatch(/must be an array/)
     expect(validateMilestones(null)).toMatch(/must be an array/)

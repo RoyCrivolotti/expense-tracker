@@ -244,6 +244,8 @@ export interface Milestone {
   amountCents: number
   /** Short optional name, e.g. "House deposit". Empty renders as the amount. */
   label: string
+  /** Optional YYYY-MM-DD by which the amount should be reached; lets Progress say on track or late. */
+  targetDate?: string
 }
 
 /** Opening balances and other scalar settings used by running-balance views. */

@@ -312,9 +312,15 @@
    remove buttons line up down the column. */
 .milestoneRow {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 7rem auto auto;
+  grid-template-columns: minmax(0, 1fr) 7rem auto auto auto;
   align-items: center;
   gap: 0.5rem;
+}
+/* The date and its clear button read as one control. */
+.milestoneTarget {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 .milestoneLabelInput,
 .milestoneAmountInput {
@@ -374,11 +380,41 @@
   color: var(--color-text-muted);
 }
 
-/* The formatted preview is the first thing to go when the row runs out of
-   room; the editable fields matter more than the echo of what was typed. */
+/* On a phone each milestone is a small panel of its own: the name and its remove
+   button on the first line, the amount and the target date sharing the second. The
+   formatted preview goes; the editable fields matter more than the echo of what was
+   typed. */
 @media (max-width: 560px) {
   .milestoneRow {
-    grid-template-columns: minmax(0, 1fr) 6rem auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-areas:
+      'name name remove'
+      'amount target target';
+    padding: 0.6rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+  }
+  .milestoneLabelInput {
+    grid-area: name;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .milestoneAmountInput {
+    grid-area: amount;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .milestoneTarget {
+    grid-area: target;
+    display: flex;
+  }
+  /* The date control fills its half; the clear button, when there is one, sits after it. */
+  .milestoneTarget > :first-child {
+    flex: 1;
+    min-width: 0;
+  }
+  .milestoneRow > .milestoneRemove {
+    grid-area: remove;
   }
   .milestoneFormatted {
     display: none;

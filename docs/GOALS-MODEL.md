@@ -54,7 +54,7 @@ Breakeven = first year buyer net worth ≥ renter net worth. Simplifications: co
 
 ## Milestones
 
-Per-owner list of named net-worth targets, measured against the **invested portfolio only**. Edited from the Goals tab's Setup view and stored as JSON in `settings.milestones`; up to 12 entries, each with an optional name.
+Per-owner list of named net-worth targets, measured against the **invested portfolio only**. Edited from the Goals tab's Setup view and stored as JSON in `settings.milestones`; up to 12 entries, each with an optional name and an optional target date (`targetDate`, YYYY-MM-DD). With a target date, Progress dates the plan's crossing of the amount (`milestoneCrossingDate`, interpolated inside the crossing year from the plan start) and says on track or late; without one it shows the expected date alone. A check-in at or above the amount counts as reached whatever the plan says.
 
 A named milestone is always shown with its amount, since the name alone does not say how far away the target is. In prose that reads "House deposit (100k €)" (`milestoneLabelWithAmount`); in the years-to-milestone matrix the two are stacked on separate header lines, with the full name and reached date in the header's tooltip because columns are narrow. An unnamed milestone shows only its amount.
 

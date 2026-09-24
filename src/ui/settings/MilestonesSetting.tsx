@@ -9,6 +9,7 @@ import {
   resolveMoneyFormat,
 } from '../../engine'
 import { Card } from '../components/primitives'
+import { DateInput } from '../components/DateInput'
 import styles from '../tabs/tabs.module.css'
 import goalStyles from '../tabs/goals/goals.module.css'
 
@@ -41,6 +42,7 @@ function MilestoneRow({
 }) {
   const [label, setLabel] = useState(milestone.label)
   const [amount, setAmount] = useState(String(milestone.amountCents / 100))
+  const targetDate = milestone.targetDate ?? ''
 
   function resolveAmountCents(): number {
     const units = Number(amount)
@@ -51,10 +53,10 @@ function MilestoneRow({
     return isAmountTaken(next) ? milestone.amountCents : next
   }
 
-  function commit() {
+  function commit(nextTarget = targetDate) {
     const amountCents = resolveAmountCents()
     setAmount(String(amountCents / 100))
-    onCommit({ amountCents, label })
+    onCommit({ amountCents, label, ...(nextTarget ? { targetDate: nextTarget } : {}) })
   }
 
   return (
@@ -67,7 +69,7 @@ function MilestoneRow({
         value={label}
         maxLength={MILESTONE_LABEL_MAX_LENGTH}
         onChange={(e) => setLabel(e.target.value)}
-        onBlur={commit}
+        onBlur={() => commit()}
       />
       <input
         className={styles.milestoneAmountInput}
@@ -77,9 +79,28 @@ function MilestoneRow({
         step={1000}
         value={amount}
         onChange={(e) => setAmount(e.target.value)}
-        onBlur={commit}
+        onBlur={() => commit()}
       />
       <span className={styles.milestoneFormatted}>{formatted}</span>
+      {/* Optional: with a date, Progress can say on track or late instead of only reached. */}
+      <span className={styles.milestoneTarget}>
+        <DateInput
+          value={targetDate}
+          placeholder="Target date"
+          ariaLabel={`Target date for milestone ${milestone.label || formatted}`}
+          onChange={(iso) => commit(iso)}
+        />
+        {targetDate ? (
+          <button
+            type="button"
+            className={styles.milestoneRemove}
+            aria-label={`Clear target date for milestone ${milestone.label || formatted}`}
+            onClick={() => commit('')}
+          >
+            ×
+          </button>
+        ) : null}
+      </span>
       <button
         type="button"
         className={styles.milestoneRemove}
@@ -136,7 +157,8 @@ export function MilestonesSetting({ settings, onChange }: Props) {
           <p className={styles.settingHint}>
             Net-worth targets shown on the Goals charts and the years-to-milestone matrix, measured
             against your invested portfolio. Names are optional, and a named milestone is shown with
-            its amount alongside; an unnamed one shows the amount on its own.
+            its amount alongside; an unnamed one shows the amount on its own. Give one a target date
+            and Progress will say whether the plan reaches it in time.
           </p>
 
           {milestones.length > 0 ? (
