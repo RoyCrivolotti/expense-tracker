@@ -3,20 +3,17 @@ import type { GoalScenario, WealthAccount, WealthCheckin } from '../../../../typ
 import { Card } from '../../../components/primitives'
 import { SegmentedControl } from '../../../components/SegmentedControl'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
-import type { ScatterPoint } from '../../../charts/linearScale'
 import { ChartLegend } from '../../../charts/ChartLegend'
 import {
   projectNetWorth,
   scenarioToParams,
   yearOffsetFromDate,
-  checkinInvestedCents,
-  nominalToReal,
 } from '../../../../engine'
 import { todayIso } from '../../../components/transactionFormState'
 import { formatMoneyAxis } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { useGoalsNarrow } from '../useGoalsNarrow'
-import { buildCheckinTooltip } from './checkinChartUtils'
+import { buildCheckinTooltip, realCheckinPoints } from './checkinChartUtils'
 import { WINDOW_OPTIONS, defaultWindow, stepMonthsFor, windowSeries, type WindowKey } from './checkinWindow'
 import goalStyles from '../goals.module.css'
 import progressStyles from '../progress.module.css'
@@ -46,17 +43,7 @@ export function CheckinHistoryChart({ checkins, accounts, plan }: Props) {
     const years = WINDOW_OPTIONS.find((o) => o.value === window)?.years ?? plan.horizonYears
     const windowYears = Math.min(years, plan.horizonYears)
     const series = windowSeries(points, planStartDate, windowYears, stepMonthsFor(windowYears))
-    const scatter: ScatterPoint[] = checkins
-      .map((c) => {
-        const offset = yearOffsetFromDate(planStartDate, c.checkinDate)
-        if (offset === null || offset < 0 || offset > windowYears) return null
-        // In the plan's money, like the line: a balance exactly on plan sits on it.
-        return {
-          xIndex: offset / series.stepYears,
-          value: nominalToReal(checkinInvestedCents(c, accounts), planStartDate, c.checkinDate),
-        }
-      })
-      .filter((p): p is ScatterPoint => p !== null)
+    const scatter = realCheckinPoints(checkins, accounts, planStartDate, windowYears, series.stepYears)
     const todayIndex =
       elapsedYears >= 0 && elapsedYears <= windowYears ? elapsedYears / series.stepYears : undefined
     // Roughly one tick's worth of the fitted axis, so the labels get enough decimals.
