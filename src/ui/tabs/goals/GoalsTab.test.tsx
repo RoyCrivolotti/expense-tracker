@@ -348,8 +348,9 @@ describe('GoalsTab', () => {
     await user.click(screen.getByRole('radio', { name: 'Progress' }))
     await user.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
     const sheet = screen.getByRole('alertdialog')
-    expect(sheet).toHaveTextContent(/moved 2 years earlier/)
-    expect(sheet).toHaveTextContent(/Dropped, already behind the new start: Bonus/)
+    // It says what it replaces as well as what it puts in, and names the dropped event by its date.
+    expect(sheet).toHaveTextContent(/restarts on .*2026 from .*, instead of .*2024 from /)
+    expect(sheet).toHaveTextContent(/Bonus \(.*2025\) is already in the balance, so it is dropped\./)
     await user.click(within(sheet).getByRole('button', { name: 'Cancel' }))
     expect(actions.updateScenario).not.toHaveBeenCalled()
 

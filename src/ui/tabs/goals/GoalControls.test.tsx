@@ -102,9 +102,7 @@ describe('GoalControls', () => {
     expect(onChange).toHaveBeenCalledWith(patch)
     // The parent applies the patch to the draft, and the note describes what it now holds.
     rerender(<GoalControls draft={{ ...draft, ...patch }} latest={latest} onChange={onChange} />)
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'Life events and the house purchase moved 2 years earlier to keep their dates. Dropped, already behind the new start: Bonus.',
-    )
+    expect(screen.getByRole('status')).toHaveTextContent(/Bonus \(.*2025\) is already in the balance, so it is dropped\./)
   })
 
   it('drops the note about what a re-baseline moved once the draft no longer holds it', () => {

@@ -144,16 +144,20 @@ function RebaselineSheet({
   onConfirm: () => void
   onCancel: () => void
 }) {
-  const summary = preview ? rebaselineSummary(preview, format) : null
+  const summary = preview ? rebaselineSummary(preview, format, formatCheckinDate) : []
+  // What is being replaced is said too, so the sheet is not only about what it puts in.
+  const replaced = preview?.previous.planStartDate
+    ? `, instead of ${formatCheckinDate(preview.previous.planStartDate)} from ${formatCents(preview.previous.investedCents, format)}`
+    : ''
   const start = preview
-    ? `The plan restarts on ${formatCheckinDate(preview.patch.planStartDate)} from ${formatCents(preview.patch.startInvestedCents, format)}. From then on ahead or behind measures only what you do next.`
+    ? `The plan restarts on ${formatCheckinDate(preview.patch.planStartDate)} from ${formatCents(preview.patch.startInvestedCents, format)}${replaced}. From then on ahead or behind measures only what you do next.`
     : ''
   return (
     <Presence show={preview !== null} exitMs={EXIT_MS.sheet}>
       {preview ? (
         <ConfirmSheet
           title="Re-baseline the plan from the latest check-in?"
-          message={summary ? [start, summary] : start}
+          message={summary.length > 0 ? [start, ...summary] : start}
           confirmLabel="Re-baseline"
           onConfirm={onConfirm}
           onCancel={onCancel}

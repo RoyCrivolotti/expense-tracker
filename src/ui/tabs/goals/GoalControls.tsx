@@ -52,12 +52,12 @@ export function GoalControls({ draft, latest = null, onChange }: GoalControlsPro
   // What the last re-baseline moved, so a dropped event is not found out at Save. Kept with
   // the values it left in the draft: once the draft no longer holds them (Discard, another
   // scenario loaded) the note describes something that is not there and goes away.
-  const [rebaselined, setRebaselined] = useState<{ text: string; planStartDate: string; lifeEvents: string } | null>(null)
+  const [rebaselined, setRebaselined] = useState<{ lines: string[]; planStartDate: string; lifeEvents: string } | null>(null)
   const note =
     rebaselined &&
     rebaselined.planStartDate === draft.planStartDate &&
     rebaselined.lifeEvents === JSON.stringify(draft.lifeEvents)
-      ? rebaselined.text
+      ? rebaselined.lines
       : null
   const rebaselineHint = latest
     ? `Sets the starting balance to ${formatCents(latest.investedCents, format)} and the start date to ${formatCheckinDate(latest.date)}, your latest check-in. From then on ahead or behind measures only what you did after that date, which is the reset to reach for after a one-off inflow, or when the plan was made from a guess.`
@@ -188,10 +188,10 @@ export function GoalControls({ draft, latest = null, onChange }: GoalControlsPro
               if (!latest) return
               const next = rebaseline(draft, latest)
               onChange(next.patch)
-              const text = rebaselineSummary(next, format)
+              const lines = rebaselineSummary(next, format, formatCheckinDate)
               setRebaselined(
-                text
-                  ? { text, planStartDate: next.patch.planStartDate, lifeEvents: JSON.stringify(next.patch.lifeEvents) }
+                lines.length > 0
+                  ? { lines, planStartDate: next.patch.planStartDate, lifeEvents: JSON.stringify(next.patch.lifeEvents) }
                   : null,
               )
             }}
@@ -200,9 +200,13 @@ export function GoalControls({ draft, latest = null, onChange }: GoalControlsPro
           </button>
           <p className={styles.fieldHint}>{rebaselineHint}</p>
           {note ? (
-            <p className={styles.fieldHint} role="status">
-              {note}
-            </p>
+            <div role="status">
+              {note.map((line) => (
+                <p key={line} className={styles.fieldHint}>
+                  {line}
+                </p>
+              ))}
+            </div>
           ) : null}
         </div>
       </ControlSection>
