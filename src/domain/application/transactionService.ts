@@ -92,7 +92,15 @@ export function validateNewTransaction(input: NewTransaction): NewTransaction {
 
 export function validateBulkTransactions(raw: unknown): NewTransaction[] {
   if (!Array.isArray(raw)) throw new ValidationError('transactions array is required')
-  return raw.map((item) => validateNewTransaction(item as NewTransaction))
+  return raw.map((item, i) => {
+    try {
+      return validateNewTransaction(item as NewTransaction)
+    } catch (e) {
+      // A batch is refused whole, so the row has to be named or a long import is a hunt.
+      if (e instanceof ValidationError) throw new ValidationError(`Row ${i + 1}: ${e.message}`)
+      throw e
+    }
+  })
 }
 
 export async function bulkCreateTransactions(

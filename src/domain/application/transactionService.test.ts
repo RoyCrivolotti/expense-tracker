@@ -59,6 +59,8 @@ describe('transactionService validation', () => {
     expect(() => validateBulkTransactions([{ ...validTxn, amountCents: NaN }])).toThrow(
       'amountCents must be a whole number of cents, not zero',
     )
+    // The whole batch is refused, so the message says which row.
+    expect(() => validateBulkTransactions([validTxn, { ...validTxn, amountCents: 0 }])).toThrow('Row 2: amountCents')
   })
 
   it('bulk create and delete delegate to the repository', async () => {
