@@ -60,6 +60,16 @@ describe('NetWorthHistoryChart', () => {
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
   })
 
+  it('says balances are as logged, since the plan chart beside it is in today\'s money', () => {
+    render(
+      <NetWorthHistoryChart
+        checkins={[checkin(1, monthsAgo(6), 100_000_00, 20_000_00), checkin(2, monthsAgo(3), 110_000_00, 25_000_00)]}
+        accounts={accounts}
+      />,
+    )
+    expect(screen.getByText('Balances as logged, in the money of each day.')).toBeInTheDocument()
+  })
+
   it('joins the check-ins as net worth and invested lines on a calendar axis', () => {
     const checkins = [
       checkin(1, monthsAgo(6), 100_000_00, 20_000_00),

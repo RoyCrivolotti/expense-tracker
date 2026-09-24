@@ -563,16 +563,23 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
                     />
                   </div>
                   {displayMode === 'nominal' ? (
-                    <div className={progressStyles.inflationRow}>
-                      <span className={progressStyles.inflationLabel}>Inflation in this view</span>
-                      <PercentStepper
-                        value={nominalInflation}
-                        onChange={setNominalInflation}
-                        min={0}
-                        max={0.1}
-                        ariaLabel="Inflation rate percentage"
-                      />
-                    </div>
+                    <>
+                      <div className={progressStyles.inflationRow}>
+                        <span className={progressStyles.inflationLabel}>Inflation in this view</span>
+                        <PercentStepper
+                          value={nominalInflation}
+                          onChange={setNominalInflation}
+                          min={0}
+                          max={0.1}
+                          ariaLabel="Inflation rate percentage"
+                        />
+                      </div>
+                      <p className={styles.chartHint}>
+                        Nominal inflates the plan line and its band at this rate. The summary above, the FI
+                        target and the milestones stay in today&apos;s money, so the target lines are only
+                        drawn in Purchasing power.
+                      </p>
+                    </>
                   ) : null}
                 </>
               }

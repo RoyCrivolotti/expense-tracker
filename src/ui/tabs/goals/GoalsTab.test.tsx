@@ -564,6 +564,11 @@ describe('GoalsTab', () => {
 
     expect(screen.getByText('Inflation in this view')).toBeInTheDocument()
     expect(screen.getByLabelText('Inflation rate percentage')).toBeInTheDocument()
+    // What stays in today's money is said beside the toggle, not left to be inferred.
+    expect(screen.getByText(/stay in today's money, so the target lines are only drawn in Purchasing power/)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('radio', { name: 'Purchasing power' }))
+    expect(screen.queryByText(/target lines are only drawn in Purchasing power/)).not.toBeInTheDocument()
   })
 
   it('adjusts the inflation rate via the stepper in the nominal view', async () => {

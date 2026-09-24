@@ -256,8 +256,12 @@ function useRefLines(
   yDomainMax: number | undefined,
   fiTargetCents: number | null,
   windowed: boolean,
+  nominalMode: boolean,
 ) {
   return useMemo(() => {
+    // The targets are in today's money and a reference line is flat, while the nominal view
+    // inflates the plan past them: drawn there, the plan would seem to cross them early.
+    if (nominalMode) return []
     // A milestone far above the plan's own ceiling would squash the projection
     // flat against the axis, so only draw the ones it gets within reach of.
     const ceiling = yDomainMax != null && yDomainMax > 0 ? yDomainMax * 1.15 : Infinity
@@ -266,7 +270,7 @@ function useRefLines(
     return fiFits && !base.includes(fiTargetCents)
       ? [...base, fiTargetCents].sort((a, b) => a - b)
       : base
-  }, [milestones, yDomainMax, fiTargetCents, windowed])
+  }, [milestones, yDomainMax, fiTargetCents, windowed, nominalMode])
 }
 
 function HeroWindowPicker({
@@ -381,7 +385,7 @@ function NetWorthChartImpl({
     [series, extra, years, nominalMode, inflationRate, band],
   )
 
-  const refLines = useRefLines(milestones, yDomainMax, useFiTarget(isHero, draft), windowYears !== null)
+  const refLines = useRefLines(milestones, yDomainMax, useFiTarget(isHero, draft), windowYears !== null, nominalMode)
   const staticLegend: LegendItem[] = useMemo(
     () => series.map((s, idx) => ({ label: names[idx] ?? s.id, color: s.color })),
     [series, names],

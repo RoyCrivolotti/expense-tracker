@@ -442,6 +442,23 @@ describe('NetWorthChart', () => {
     expect(container.querySelectorAll(`.${chartStyles.refLine}`)).toHaveLength(1)
   })
 
+  it('draws no target lines in the nominal view, where a flat line would be crossed early', () => {
+    const render1 = (nominalMode: boolean) =>
+      render(
+        <NetWorthChart
+          scenarios={[defaultDraft]}
+          draft={defaultDraft}
+          milestones={[{ amountCents: 10_000_000, label: '' }]}
+          activeId={defaultDraft.id}
+          variant="hero"
+          nominalMode={nominalMode}
+        />,
+      ).container
+    expect(render1(false).querySelectorAll(`.${chartStyles.refLine}`)).toHaveLength(1)
+    // Targets are in today's money and the nominal view inflates the plan past them.
+    expect(render1(true).querySelectorAll(`.${chartStyles.refLine}`)).toHaveLength(0)
+  })
+
   it('drops a milestone far above the projection so it cannot flatten the chart', () => {
     const { container } = render(
       <NetWorthChart

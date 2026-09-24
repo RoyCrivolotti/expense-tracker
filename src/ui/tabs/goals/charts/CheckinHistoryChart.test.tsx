@@ -71,6 +71,11 @@ describe('CheckinHistoryChart', () => {
     expect(circles.length).toBeGreaterThanOrEqual(2)
   })
 
+  it('says the chart is in today\'s money, and at what rate check-ins are brought back', () => {
+    render(<CheckinHistoryChart checkins={[]} accounts={[]} plan={makeScenario({ planStartDate: '2020-01-01' })} />)
+    expect(screen.getByText(/In today's money: each check-in is brought back at 2,?0?%? a year/)).toBeInTheDocument()
+  })
+
   it('renders a today marker line', () => {
     const scenario = makeScenario({ planStartDate: '2020-01-01' })
     const { container } = render(

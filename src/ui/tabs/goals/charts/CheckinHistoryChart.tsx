@@ -8,6 +8,8 @@ import {
   projectNetWorth,
   scenarioToParams,
   yearOffsetFromDate,
+  DEFAULT_INFLATION_RATE,
+  formatPercent,
 } from '../../../../engine'
 import { todayIso } from '../../../components/transactionFormState'
 import { formatMoneyAxis } from '../chartTheme'
@@ -94,6 +96,10 @@ export function CheckinHistoryChart({ checkins, accounts, plan }: Props) {
           layout="compact"
         />
       </div>
+      <p className={goalStyles.chartHint}>
+        In today&apos;s money: each check-in is brought back at {formatPercent(DEFAULT_INFLATION_RATE)} a year to sit
+        against the plan.
+      </p>
       <LinearChart
         height={narrow ? 180 : 220}
         series={chartSeries}
