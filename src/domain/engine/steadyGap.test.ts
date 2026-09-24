@@ -40,11 +40,13 @@ describe('steadyGap', () => {
   })
 
   it('stays quiet while a gap widens, even when each reading is near the mean', () => {
-    // 80k to 133k is within a quarter of the 106k mean on both ends, yet the gap has
-    // grown by two thirds: that is the saving, not the starting point.
+    // 80k and 133k are each within a quarter of the 106.5k mean, so a rule on each
+    // reading's distance from the mean would call this steady, yet the gap has grown by
+    // two thirds: that is the saving, not the starting point. The middle reading sits
+    // on the mean so the two ends are exactly the old rule's limit.
     expect(
       steadyGap(
-        [off(1, '2026-01-01', -80_000_00), off(2, '2026-04-01', -106_000_00), off(3, '2026-07-15', -133_000_00)],
+        [off(1, '2026-01-01', -80_000_00), off(2, '2026-04-01', -106_500_00), off(3, '2026-07-15', -133_000_00)],
         plan,
         accounts,
       ),
