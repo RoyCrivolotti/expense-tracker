@@ -372,8 +372,6 @@ function NetWorthChartImpl({
     setActiveIndex(index)
   }, [])
   const isHero = variant === 'hero'
-  const { heroWindow, setHeroWindow, heroWindows, windowYears } = useHeroWindow(isHero, draft.horizonYears)
-
   const lines = useMemo(
     () => scenarioLines(scenarios, draft, activeId, dirty, hiddenIds),
     [scenarios, draft, activeId, dirty, hiddenIds],
@@ -383,6 +381,10 @@ function NetWorthChartImpl({
     [scenarios, hiddenIds],
   )
   const full = useMemo(() => buildSeries(lines), [lines])
+  // The windows on offer follow how far the chart actually runs, which is the longest
+  // drawn horizon, not only the draft's.
+  const extentYears = full.years[full.years.length - 1] ?? draft.horizonYears
+  const { heroWindow, setHeroWindow, heroWindows, windowYears } = useHeroWindow(isHero, extentYears)
   const names = full.names
   const bandSeries = useBandSeries(isHero, draft)
   const { years, series, band, extra } = useWindowedSeries(full, bandSeries, extraSeries, windowYears)

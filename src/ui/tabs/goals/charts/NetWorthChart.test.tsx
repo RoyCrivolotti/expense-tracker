@@ -116,6 +116,14 @@ describe('NetWorthChart', () => {
     expect(lastLabel()).toBe(30)
   })
 
+  it('offers windows for the longest drawn horizon, not only the draft', () => {
+    const long = makeScenario({ id: 9, name: 'Long', horizonYears: 40 })
+    render(
+      <NetWorthChart milestones={milestones} scenarios={[long]} draft={{ ...defaultDraft, horizonYears: 5 }} variant="hero" activeId={null} />,
+    )
+    expect(screen.getByRole('radio', { name: '20Y' })).toBeInTheDocument()
+  })
+
   it('drops an FI target far above the projection, as it does a milestone', () => {
     const { container } = render(
       <NetWorthChart
