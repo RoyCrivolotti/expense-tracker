@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { WealthSummaryCard } from './WealthSummaryCard'
-import { planValueAtDate } from '../../../engine'
+import { planValueAtDate, realToNominal } from '../../../engine'
 import { makeScenario, makeTransaction } from '../../../testing/factories'
 import type { WealthAccount, WealthCheckin } from '../../../types'
 
@@ -100,7 +100,9 @@ describe('WealthSummaryCard', () => {
     const scenario = makeScenario({ id: 1, name: 'Path A', planStartDate: '2025-01-01' })
     const accounts = [makeAccount(1, 'investment')]
     const behind = (id: number, date: string) =>
-      makeCheckin(id, date, [{ accountId: 1, valueCents: planValueAtDate(scenario, date)! - 50_000_00 }])
+      makeCheckin(id, date, [
+        { accountId: 1, valueCents: realToNominal(planValueAtDate(scenario, date)! - 50_000_00, '2025-01-01', date) },
+      ])
     const checkins = [behind(1, '2026-01-01'), behind(2, '2026-04-01'), behind(3, '2026-07-15')]
     const onRebaseline = vi.fn()
     render(
@@ -156,11 +158,12 @@ describe('WealthSummaryCard', () => {
     ]
     render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />)
     const line = screen.getByText(/Your portfolio returned/)
-    expect(line).toHaveTextContent(/4,0\s?% a year since Jan 1, 2025 against the 7,0\s?% a year that Path A assumes/)
+    expect(line).toHaveTextContent(/4,0\s?% a year since Jan 1, 2025, about 2,0\s?% once 2,0\s?% inflation is taken off/)
+    expect(line).toHaveTextContent(/against the 7,0\s?% a year, after inflation, that Path A assumes/)
     expect(screen.getByText(/4,0\s?% a year$/)).toHaveStyle({ color: 'var(--exp-danger)' })
   })
 
-  it('reads a return that matches the plan rate as on par, as the on-track line would', () => {
+  it('colours the return by its real rate, so a nominal match with the plan is still short', () => {
     const scenario = makeScenario({ name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2025-01-01' })
     const accounts = [makeAccount(1, 'investment')]
     const checkins = [
@@ -169,6 +172,6 @@ describe('WealthSummaryCard', () => {
     ]
     render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />)
     const rate = screen.getByText(/7,0\s?% a year$/)
-    expect(rate).toHaveStyle({ color: 'var(--exp-success)' })
+    expect(rate).toHaveStyle({ color: 'var(--exp-danger)' })
   })
 })

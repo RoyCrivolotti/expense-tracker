@@ -10,6 +10,8 @@ import {
   planValueAtDate,
   planValueAtOffset,
   trackStatus,
+  realToNominal,
+  nominalToReal,
   yearOffsetFromDate,
 } from './wealthTracking'
 
@@ -227,25 +229,39 @@ describe('trackStatus', () => {
     expect(trackStatus(checkin, scenario, accounts)).toBeNull()
   })
 
-  it('returns positive delta when actual > projected', () => {
+  it('returns positive delta when actual > projected, in the plan\'s money', () => {
     const scenario = makeScenario({ planStartDate: '2024-01-01' })
     const projected = planValueAtDate(scenario, '2025-01-01')!
-    const actual = projected + 5_000_000
+    // A broker balance a year on is nominal; 5M ahead in today's money is a little more.
+    const actual = realToNominal(projected + 5_000_000, '2024-01-01', '2025-01-01')
     const checkin = makeCheckin('2025-01-01', [{ accountId: 1, valueCents: actual }])
     const status = trackStatus(checkin, scenario, accounts)
     expect(status).not.toBeNull()
-    expect(status!.deltaCents).toBe(5_000_000)
+    expect(status!.actualInvestedCents).toBe(actual)
+    expect(status!.actualRealInvestedCents).toBeCloseTo(projected + 5_000_000, -1)
+    expect(status!.deltaCents).toBeCloseTo(5_000_000, -1)
     expect(status!.deltaMonths).toBeGreaterThan(0)
   })
 
-  it('returns negative delta when actual < projected', () => {
+  it('returns negative delta when actual < projected, and a nominal match reads as behind', () => {
     const scenario = makeScenario({ planStartDate: '2024-01-01' })
     const projected = planValueAtDate(scenario, '2025-01-01')!
-    const actual = projected - 3_000_000
-    const checkin = makeCheckin('2025-01-01', [{ accountId: 1, valueCents: actual }])
-    const status = trackStatus(checkin, scenario, accounts)
-    expect(status!.deltaCents).toBe(-3_000_000)
+    const actual = realToNominal(projected - 3_000_000, '2024-01-01', '2025-01-01')
+    const status = trackStatus(makeCheckin('2025-01-01', [{ accountId: 1, valueCents: actual }]), scenario, accounts)
+    expect(status!.deltaCents).toBeCloseTo(-3_000_000, -1)
     expect(status!.deltaMonths).toBeLessThan(0)
+    // The plan's figure is in today's money; a balance that only matches it nominally
+    // has lost a year of inflation.
+    const nominalMatch = trackStatus(makeCheckin('2025-01-01', [{ accountId: 1, valueCents: projected }]), scenario, accounts)
+    expect(nominalMatch!.deltaCents).toBeLessThan(0)
+  })
+
+  it('converts between today\'s money and the money of a later day, and leaves the start alone', () => {
+    expect(realToNominal(100_000_00, '2024-01-01', '2024-01-01')).toBe(100_000_00)
+    expect(nominalToReal(realToNominal(100_000_00, '2024-01-01', '2026-01-01'), '2024-01-01', '2026-01-01')).toBe(100_000_00)
+    expect(realToNominal(100_000_00, '2024-01-01', '2025-01-01', 0.05)).toBeCloseTo(105_000_00, -4)
+    // A check-in before the plan start is not deflated into the future.
+    expect(nominalToReal(100_000_00, '2024-01-01', '2023-01-01')).toBe(100_000_00)
   })
 
   it('exposes projectedInvestedCents and actualInvestedCents', () => {

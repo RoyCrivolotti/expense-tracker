@@ -2,6 +2,7 @@ import type { GoalScenario, Transaction, WealthAccount, WealthCheckin } from '..
 import type { CashReserve, PortfolioReturn, SteadyGap, TrackStatus } from '../../../engine'
 import { Card } from '../../components/primitives'
 import {
+  DEFAULT_INFLATION_RATE,
   cashReserve,
   checkinInvestedCents,
   checkinNetWorthCents,
@@ -99,10 +100,8 @@ const hintStyle = { fontSize: '0.8125rem', color: 'var(--color-text-muted)', mar
 /**
  * Whether being behind is a saving problem or a market one. Under a full year the figure
  * is the period's return and reads "so far"; from a year on it is compounded to a yearly
- * rate and set against the plan's expected return as it is. The plan is nominal: on/off
- * track compares the same nominal balances with the plan line grown at that rate, so a
- * portfolio that returned exactly the plan's rate is exactly on plan, and this line has
- * to agree with the one above it rather than deflate on its own.
+ * rate, has the assumed inflation taken off, and is set against the plan's real return,
+ * the same way on/off track above it deflates the balance before comparing.
  */
 function ReturnHint({
   ret,
@@ -124,15 +123,17 @@ function ReturnHint({
       </p>
     )
   }
-  const onPar = !plan || ret.annualised >= plan.expectedRealReturn
+  const real = (1 + ret.annualised) / (1 + DEFAULT_INFLATION_RATE) - 1
+  const onPar = !plan || real >= plan.expectedRealReturn
   return (
     <p style={hintStyle}>
       Your portfolio returned{' '}
       <strong style={{ color: onPar ? 'var(--exp-success)' : 'var(--exp-danger)' }}>
         {formatPercent(ret.annualised, format)} a year
       </strong>{' '}
-      since {since}
-      {plan ? ` against the ${planRate} that ${plan.name} assumes` : ''}.
+      since {since}, about {formatPercent(real, format)} once{' '}
+      {formatPercent(DEFAULT_INFLATION_RATE, format)} inflation is taken off
+      {plan ? ` against the ${planRate}, after inflation, that ${plan.name} assumes` : ''}.
     </p>
   )
 }
