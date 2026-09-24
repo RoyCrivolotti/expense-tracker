@@ -21,6 +21,8 @@ interface DashboardTabProps {
   month: string
   actions?: ExpenseActions | undefined
   onNavigate?: (tab: TabId) => void
+  /** Opens Goals on Progress with the check-in form up. */
+  onLogCheckin?: () => void
 }
 
 type BudgetSort = 'size' | 'order' | 'overbudget'
@@ -92,7 +94,7 @@ function BudgetsSection({
   )
 }
 
-export function DashboardTab({ model, month, actions, onNavigate }: DashboardTabProps) {
+export function DashboardTab({ model, month, actions, onNavigate, onLogCheckin }: DashboardTabProps) {
   const { dataset } = model
   const [budgetSort, setBudgetSort] = useState<BudgetSort>('size')
 
@@ -132,7 +134,11 @@ export function DashboardTab({ model, month, actions, onNavigate }: DashboardTab
         onOpenSettings={() => onNavigate?.('settings')}
       />
 
-      <GoalsCard dataset={dataset} onOpenGoals={() => onNavigate?.('goals')} />
+      <GoalsCard
+        dataset={dataset}
+        onOpenGoals={() => onNavigate?.('goals')}
+        onLogCheckin={actions && onLogCheckin ? onLogCheckin : undefined}
+      />
 
       <DashboardRecentActivity model={model} actions={actions} />
     </div>

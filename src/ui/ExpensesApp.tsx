@@ -32,6 +32,7 @@ import { MONTH_LOCKED_HINT } from './tabs/selectionLockHints'
 import styles from './ExpensesApp.module.css'
 
 const GoalsTab = lazy(() => import('./tabs/goals/GoalsTab'))
+import type { GoalsEntry } from './tabs/goals/GoalsTab'
 
 // Tabs without a month picker / FAB-heavy footer: trim the large bottom dead zone.
 const COMPACT_FOOTER_TABS: ReadonlySet<TabId> = new Set(['goals', 'analytics', 'settings'])
@@ -58,6 +59,8 @@ function TabView({
   ownerAccess,
   accountEmail,
   onNavigate,
+  onLogCheckin,
+  goalsEntry,
   onRunSetup,
   onTxnSelectModeChange,
   monthNavigation,
@@ -72,6 +75,9 @@ function TabView({
   ownerAccess?: { pendingCount: number } | undefined
   accountEmail?: string | undefined
   onNavigate: (tab: TabId) => void
+  /** Opens Goals on Progress with the check-in form up, from the dashboard's nudge. */
+  onLogCheckin: () => void
+  goalsEntry: GoalsEntry
   onRunSetup: () => void
   onTxnSelectModeChange: (selecting: boolean) => void
   monthNavigation: number
@@ -99,7 +105,7 @@ function TabView({
     case 'goals':
       return (
         <Suspense fallback={<div className={styles.center}>Loading goals…</div>}>
-          <GoalsTab model={model} actions={actions} />
+          <GoalsTab model={model} actions={actions} entry={goalsEntry} />
         </Suspense>
       )
     case 'settings':
@@ -122,6 +128,7 @@ function TabView({
           month={month}
           actions={actions}
           onNavigate={onNavigate}
+          onLogCheckin={onLogCheckin}
         />
       )
   }
@@ -250,6 +257,17 @@ function ExpensesAppReady({
 
   const [theme, setTheme] = useExpenseTheme()
   const [tab, setTab] = useState<TabId>('dashboard')
+  // Where Goals should open when the dashboard sends the user there for a check-in. Cleared
+  // by every ordinary tab change, so a later visit to Goals opens on Plan as usual.
+  const [goalsEntry, setGoalsEntry] = useState<GoalsEntry>(null)
+  const selectTab = (next: TabId) => {
+    setGoalsEntry(null)
+    setTab(next)
+  }
+  const logCheckin = () => {
+    setGoalsEntry('checkin')
+    setTab('goals')
+  }
   const [month, setMonth] = useState<string | null>(null)
   // The header's month picker belongs to the shell, but on Transactions it drives the
   // list, and a selection there must not have the list changed under it. This is the
@@ -296,7 +314,7 @@ function ExpensesAppReady({
       />
       <AppShell
         activeId={tab}
-        onSelect={setTab}
+        onSelect={selectTab}
         title="Expenses"
         settingsBadge={settingsBadge}
         hubGrants={hubGrants}
@@ -341,7 +359,9 @@ function ExpensesAppReady({
             onThemeChange={setTheme}
             ownerAccess={ownerAccess}
             accountEmail={accountEmail}
-            onNavigate={setTab}
+            onNavigate={selectTab}
+            onLogCheckin={logCheckin}
+            goalsEntry={goalsEntry}
             onTxnSelectModeChange={holdMonthForSelection}
             monthNavigation={monthNavigation}
             onRunSetup={() => {

@@ -14,11 +14,36 @@ import { activePlan } from '../tabs/goals/scenarioSelection'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { formatMoneyShort } from '../tabs/goals/chartTheme'
 import { contributionGapLabel } from '../tabs/goals/contributionGap'
+import { daysSinceCheckin } from './checkinAge'
 import styles from './GoalsCard.module.css'
 
 interface GoalsCardProps {
   dataset: ExpenseDataset
   onOpenGoals?: () => void
+  /** Opens Goals on Progress with the check-in form up; absent when nothing can be written. */
+  onLogCheckin?: (() => void) | undefined
+}
+
+/** Check-ins are monthly by design; a month without one is worth a word. */
+const NUDGE_AFTER_DAYS = 30
+
+/**
+ * Manual check-ins die of neglect, and nothing else in the app asks for one. Shown once
+ * there is an account to log against and the last check-in is a month old, or missing.
+ */
+function CheckinNudge({ dataset, onLogCheckin }: { dataset: ExpenseDataset; onLogCheckin: () => void }) {
+  if (!dataset.wealthAccounts.some((a) => !a.archived)) return null
+  const days = daysSinceCheckin(dataset)
+  if (days !== null && days < NUDGE_AFTER_DAYS) return null
+  const text = days === null ? 'No check-in logged yet.' : `Last check-in ${days} days ago.`
+  return (
+    <p className={styles.nudge}>
+      {text}{' '}
+      <button type="button" className={styles.openLink} onClick={onLogCheckin}>
+        Log check-in
+      </button>
+    </p>
+  )
 }
 
 interface TrackBadgeProps {
@@ -44,7 +69,7 @@ function TrackBadge({ deltaCents, deltaMonths, format }: TrackBadgeProps) {
   )
 }
 
-export function GoalsCard({ dataset, onOpenGoals }: GoalsCardProps) {
+export function GoalsCard({ dataset, onOpenGoals, onLogCheckin }: GoalsCardProps) {
   const format = useMoneyFormat()
   const scenario = useMemo(() => activePlan(dataset.goalScenarios), [dataset.goalScenarios])
   // The pace kept since the plan began: investment transactions per month, which is
@@ -103,6 +128,7 @@ export function GoalsCard({ dataset, onOpenGoals }: GoalsCardProps) {
         {track ? (
           <TrackBadge deltaCents={track.deltaCents} deltaMonths={track.deltaMonths} format={format} />
         ) : null}
+        {onLogCheckin ? <CheckinNudge dataset={dataset} onLogCheckin={onLogCheckin} /> : null}
         {onOpenGoals ? (
           <button type="button" className={styles.cta} onClick={onOpenGoals}>
             Open Goals

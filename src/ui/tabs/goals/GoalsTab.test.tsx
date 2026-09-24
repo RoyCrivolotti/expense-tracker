@@ -75,6 +75,16 @@ describe('GoalsTab', () => {
     expect(patch.milestones).toHaveLength(defaultExpenseSettings().milestones.length + 1)
   })
 
+  it('opens on Progress with the check-in form up when sent for a check-in', () => {
+    const model = buildExpenseModel(
+      makeDataset({ wealthAccounts: [makeWealthAccount({ id: 1, name: 'Broker' })] }),
+    )
+    render(<GoalsTab model={model} actions={makeActions()} entry="checkin" />)
+
+    expect(screen.getByRole('radio', { name: 'Progress' })).toBeChecked()
+    expect(screen.getByRole('button', { name: 'Save check-in' })).toBeInTheDocument()
+  })
+
   it('takes an empty Progress view to Setup', async () => {
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} actions={makeActions()} />)

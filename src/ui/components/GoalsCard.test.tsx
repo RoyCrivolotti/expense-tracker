@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 import { GoalsCard } from './GoalsCard'
 import { makeDataset, makeScenario, makeWealthAccount, makeWealthCheckin } from '../../testing/factories'
 
@@ -79,6 +79,59 @@ describe('GoalsCard', () => {
       />,
     )
     expect(screen.getByText(/behind/i)).toBeInTheDocument()
+  })
+
+  it('nudges for a check-in once the last one is a month old', () => {
+    const onLogCheckin = vi.fn()
+    const old = new Date()
+    old.setDate(old.getDate() - 45)
+    const dataset = makeDataset({
+      goalScenarios: [makeScenario({ id: 1, isActive: true })],
+      wealthAccounts: [makeWealthAccount({ id: 1 })],
+      wealthCheckins: [makeWealthCheckin({ id: 1, checkinDate: old.toISOString().slice(0, 10) })],
+    })
+    render(<GoalsCard dataset={dataset} onLogCheckin={onLogCheckin} />)
+
+    expect(screen.getByText(/Last check-in 4[45] days ago/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Log check-in' }))
+    expect(onLogCheckin).toHaveBeenCalled()
+  })
+
+  it('asks for the first check-in once there is an account, and not before', () => {
+    const plan = makeScenario({ id: 1, isActive: true })
+    const { rerender } = render(
+      <GoalsCard dataset={makeDataset({ goalScenarios: [plan] })} onLogCheckin={vi.fn()} />,
+    )
+    expect(screen.queryByText(/check-in/)).not.toBeInTheDocument()
+
+    rerender(
+      <GoalsCard
+        dataset={makeDataset({ goalScenarios: [plan], wealthAccounts: [makeWealthAccount({ id: 1 })] })}
+        onLogCheckin={vi.fn()}
+      />,
+    )
+    expect(screen.getByText('No check-in logged yet.')).toBeInTheDocument()
+  })
+
+  it('stays quiet after a recent check-in, and without a way to log one', () => {
+    const recent = new Date()
+    recent.setDate(recent.getDate() - 3)
+    const dataset = makeDataset({
+      goalScenarios: [makeScenario({ id: 1, isActive: true })],
+      wealthAccounts: [makeWealthAccount({ id: 1 })],
+      wealthCheckins: [makeWealthCheckin({ id: 1, checkinDate: recent.toISOString().slice(0, 10) })],
+    })
+    const { rerender } = render(<GoalsCard dataset={dataset} onLogCheckin={vi.fn()} />)
+    expect(screen.queryByText(/Last check-in/)).not.toBeInTheDocument()
+
+    const stale = new Date()
+    stale.setDate(stale.getDate() - 90)
+    rerender(
+      <GoalsCard
+        dataset={{ ...dataset, wealthCheckins: [makeWealthCheckin({ id: 1, checkinDate: stale.toISOString().slice(0, 10) })] }}
+      />,
+    )
+    expect(screen.queryByText(/Last check-in/)).not.toBeInTheDocument()
   })
 
   it('renders an "Open Goals" link when onOpenGoals is provided', () => {

@@ -55,9 +55,13 @@ const DISPLAY_MODE_OPTIONS: { value: DisplayMode; label: string }[] = [
   { value: 'purchasing-power', label: 'Purchasing power' },
 ]
 
+/** How the tab was reached: 'checkin' opens Progress with the check-in form up. */
+export type GoalsEntry = 'checkin' | null
+
 interface GoalsTabProps {
   model: ExpenseModel
   actions?: ExpenseActions | undefined
+  entry?: GoalsEntry
 }
 
 function scenarioToDraft(s: GoalScenario): NewGoalScenario {
@@ -97,9 +101,13 @@ function bootstrapEditor(
   return { activeId: null, draft: draftFromDataset(dataset, avgSaving) }
 }
 
-export function GoalsTab({ model, actions }: GoalsTabProps) {
+function initialView(entry: GoalsEntry | undefined): TabView {
+  return entry === 'checkin' ? 'progress' : 'plan'
+}
+
+export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
   const { dataset } = model
-  const [view, setView] = useState<TabView>('plan')
+  const [view, setView] = useState<TabView>(() => initialView(entry))
   const [displayMode, setDisplayMode] = useState<DisplayMode>('nominal')
   // Single configurable rate rather than year-by-year inputs — a reasonable
   // simplification for a multi-decade projection. Resets on reload; display-only.
@@ -299,6 +307,7 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
           actions={actions}
           canWrite={actions != null}
           onOpenSetup={() => setView('setup')}
+          openCheckinForm={entry === 'checkin'}
         />
       ) : null}
       {view === 'plan' ? (

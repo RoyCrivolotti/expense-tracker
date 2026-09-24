@@ -25,6 +25,8 @@ interface Props {
   canWrite: boolean
   /** Takes the user to the Setup view, where accounts are named. */
   onOpenSetup?: (() => void) | undefined
+  /** Start with the check-in form open, as the dashboard's nudge asks. */
+  openCheckinForm?: boolean
 }
 
 /**
@@ -55,8 +57,9 @@ export function ProgressView({
   actions,
   canWrite,
   onOpenSetup,
+  openCheckinForm = false,
 }: Props) {
-  const [showCheckinForm, setShowCheckinForm] = useState(false)
+  const [showCheckinForm, setShowCheckinForm] = useState(openCheckinForm)
   const latest = latestCheckin(checkins)
   // A check-in records a balance per account, so with none there is nothing to log yet.
   const hasAccounts = accounts.some((a) => !a.archived)

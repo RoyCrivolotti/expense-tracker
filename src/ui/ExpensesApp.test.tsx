@@ -4,6 +4,7 @@ import type { ExpenseDataSource } from '../data/dataSource'
 import type { ExpenseDataset } from '../types'
 import { defaultExpenseSettings } from '../engine'
 import { allGroupsGranted } from '../domain/accessGroups'
+import { makeScenario, makeWealthAccount } from '../testing/factories'
 import { ExpensesApp } from './ExpensesApp'
 import { setMotionDisabledForTests } from './hooks/motion'
 import { ToastProvider } from './hooks/ToastProvider'
@@ -107,6 +108,23 @@ describe('ExpensesApp onboarding wiring', () => {
 })
 
 describe('ExpensesApp tab wiring', () => {
+  it('sends the dashboard nudge to Goals with the check-in form open', async () => {
+    const dataset = datasetWith({
+      categories: [{ id: 1, name: 'Groceries', monthlyBudgetCents: 30000, sortOrder: 0, active: true }],
+      accounts: [{ id: 1, name: 'Main debit', kind: 'debit', settlement: 'immediate', active: true }],
+      goalScenarios: [makeScenario({ id: 1, isActive: true })],
+      wealthAccounts: [makeWealthAccount({ id: 1, name: 'Broker' })],
+    })
+    render(<ExpensesApp source={sourceThatSucceeds(dataset)} hubGrants={allGroupsGranted()} />)
+    await waitFor(() => expect(screen.queryByText('Welcome to Expenses')).toBeNull())
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Log check-in' }))
+
+    // The Goals tab is a lazy chunk, and CI takes longer than the default second to load it.
+    expect(await screen.findByRole('button', { name: 'Save check-in' }, { timeout: 15_000 })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Progress' })).toBeChecked()
+  }, 20_000)
+
   it('opens the transactions tab with the dataset it was given', async () => {
     const dataset = datasetWith({
       categories: [{ id: 1, name: 'Groceries', monthlyBudgetCents: 30000, sortOrder: 0, active: true }],
