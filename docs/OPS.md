@@ -81,6 +81,15 @@ Transaction import expects the same header as export (see `src/domain/data/expor
 
 Settings → Data → Import includes a **Download template** with the header and one example row.
 
+### Investment withdrawals
+
+A negative `amount_cents` on an `investment` row is money taken back out of the portfolio: a
+sale to cash, a dividend paid out. The transaction form records it as Withdraw. Every other
+type stays positive. The rule lives in `src/domain/data/amountSign.ts`; the application
+layer applies it to a payload that carries both fields, and the D1 adapter checks a patch
+that carries only one of them against the stored row, and refuses a bulk type change away
+from `investment` while any target row is a withdrawal.
+
 ## Scripts (expense-tracker)
 
 | Script | npm alias | Purpose |

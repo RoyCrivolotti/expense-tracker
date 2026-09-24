@@ -97,8 +97,9 @@ export function ImportDataSection({ model, actions }: ImportDataSectionProps) {
       <p className={importStyles.guide}>
         CSV must match the export format exactly. Columns: {describeExportCsvColumns()}.{' '}
         <code>category</code> and <code>account</code> must match existing names.{' '}
-        <code>type</code> is one of {types}. <code>amount_cents</code> is integer cents (always
-        positive). Easiest path: export from Settings first, edit, then re-import.
+        <code>type</code> is one of {types}. <code>amount_cents</code> is integer cents, positive
+        except on an <code>investment</code> row, where a negative amount is a withdrawal. Easiest
+        path: export from Settings first, edit, then re-import.
       </p>
       <div className={importStyles.actions}>
         <button type="button" className={styles.addBtn} onClick={() => inputRef.current?.click()}>
