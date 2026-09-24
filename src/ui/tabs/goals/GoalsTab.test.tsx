@@ -320,6 +320,59 @@ describe('GoalsTab', () => {
     )
   })
 
+  it('keeps an unsaved life-event edit through a re-baseline from Progress', async () => {
+    const user = userEvent.setup()
+    const actions = makeActions()
+    const plan = makeScenario({
+      id: 1,
+      name: 'Path A',
+      isActive: true,
+      planStartDate: '2024-07-15',
+      lifeEvents: [
+        { year: 3, amountCents: -20_000_00, label: 'Car' },
+        { year: 5, amountCents: 30_000_00, label: 'Gift' },
+      ],
+    })
+    const accounts = [makeWealthAccount({ id: 1, name: 'Broker', kind: 'investment' })]
+    const behind = (id: number, date: string) =>
+      makeWealthCheckin({
+        id,
+        checkinDate: date,
+        entries: [{ accountId: 1, valueCents: planValueAtDate(plan, date)! - 50_000_00 }],
+      })
+    const checkins = [behind(1, '2026-01-01'), behind(2, '2026-04-01'), behind(3, '2026-07-15')]
+    const dataset = makeDataset({ goalScenarios: [plan], wealthAccounts: accounts, wealthCheckins: checkins })
+    const { rerender } = render(<GoalsTab model={buildExpenseModel(dataset)} actions={actions} />)
+
+    // An edit in the editor that has not been saved: the car is taken out.
+    fireEvent.click(screen.getByLabelText('Remove Car'))
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Re-baseline' }))
+
+    // The write is the saved plan's, which still has the car (a year 1 event now).
+    expect(actions.updateScenario).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        lifeEvents: [
+          { year: 1, amountCents: -20_000_00, label: 'Car' },
+          { year: 3, amountCents: 30_000_00, label: 'Gift' },
+        ],
+      }),
+    )
+    const patch = vi.mocked(actions.updateScenario).mock.calls[0]![1]
+    rerender(<GoalsTab model={buildExpenseModel({ ...dataset, goalScenarios: [{ ...plan, ...patch }] })} actions={actions} />)
+    await user.click(screen.getByRole('radio', { name: 'Plan' }))
+
+    // The draft moved from its own values: the gift carries over, and the car stays taken out
+    // rather than coming back from the saved plan. It is still an edit nobody has saved.
+    expect(screen.queryByLabelText('Remove Car')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Remove Gift')).toBeInTheDocument()
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
+  })
+
   it('says which life events a re-baseline moves or drops before writing them', async () => {
     const user = userEvent.setup()
     const actions = makeActions()
