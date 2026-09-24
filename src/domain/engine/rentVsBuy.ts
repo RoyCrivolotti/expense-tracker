@@ -5,15 +5,15 @@
  *
  * Both parties are modelled fairly. The renter starts by investing the cash a
  * buyer would sink into the down payment and transaction costs. Each year, the
- * party with the lower housing outlay invests the surplus at the expected return.
+ * party with the lower housing outlay invests the surplus at the real return.
  * The buyer also accrues home equity (appreciation + principal paid down).
  *
  * Net worth(buy, t) = side portfolio + home equity(t).
  * Net worth(rent, t) = side portfolio (no equity).
  *
- * Simplifications (documented for honesty): rent and carry costs are constant,
- * both side portfolios earn the same expected return (nominal, like the rest of
- * the plan), and selling costs are ignored.
+ * Simplifications (documented for honesty): rent and carry costs are constant in
+ * today's money, both side portfolios earn the same real return, and selling costs
+ * are ignored.
  */
 import { monthlyMortgageCents, projectNetWorth, type ProjectionParams } from './projection'
 import { DEFAULT_HOME_CARRY_RATE } from './projectionConstants'

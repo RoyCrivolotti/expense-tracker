@@ -10,6 +10,7 @@ import {
   scenarioToParams,
   yearOffsetFromDate,
   checkinInvestedCents,
+  nominalToReal,
 } from '../../../../engine'
 import { todayIso } from '../../../components/transactionFormState'
 import { formatMoneyAxis } from '../chartTheme'
@@ -49,7 +50,11 @@ export function CheckinHistoryChart({ checkins, accounts, plan }: Props) {
       .map((c) => {
         const offset = yearOffsetFromDate(planStartDate, c.checkinDate)
         if (offset === null || offset < 0 || offset > windowYears) return null
-        return { xIndex: offset / series.stepYears, value: checkinInvestedCents(c, accounts) }
+        // In the plan's money, like the line: a balance exactly on plan sits on it.
+        return {
+          xIndex: offset / series.stepYears,
+          value: nominalToReal(checkinInvestedCents(c, accounts), planStartDate, c.checkinDate),
+        }
       })
       .filter((p): p is ScatterPoint => p !== null)
     const todayIndex =

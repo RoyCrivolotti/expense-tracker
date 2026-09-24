@@ -1,11 +1,23 @@
 import { memo } from 'react'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import type { Milestone } from '../../../../types'
-import { fireNumber, formatCents, milestoneLabelWithAmount } from '../../../../engine'
+import { fireNumber, formatCents, milestoneLabelWithAmount, nominalToReal } from '../../../../engine'
 import { Card } from '../../../components/primitives'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { formatCheckinDate, type InvestedSnapshot } from '../checkinDate'
 import styles from '../goals.module.css'
+
+/**
+ * The share of the FI target reached. The target is in today's money and a check-in is
+ * in the money of its day, so the balance is deflated to the plan start first. Milestones
+ * stay nominal, as the check-in history that marks them reached is.
+ */
+function fiShare(draft: NewGoalScenario, latest: InvestedSnapshot | null, current: number, fiTarget: number) {
+  if (fiTarget <= 0 || draft.annualSpendCents <= 0) return null
+  const real =
+    latest && draft.planStartDate ? nominalToReal(latest.investedCents, draft.planStartDate, latest.date) : current
+  return Math.min(100, Math.max(0, (real / fiTarget) * 100))
+}
 
 /** "You are here" snapshot: invested today vs the FI target and next milestone. */
 function NetWorthNowCardImpl({
@@ -31,10 +43,7 @@ function NetWorthNowCardImpl({
     ? `as of ${formatCheckinDate(latest.date)}`
     : 'at plan start, no check-in yet'
   const fiTarget = fireNumber(draft.annualSpendCents, draft.safeWithdrawalRate)
-  const pct =
-    fiTarget > 0 && draft.annualSpendCents > 0
-      ? Math.min(100, Math.max(0, (current / fiTarget) * 100))
-      : null
+  const pct = fiShare(draft, latest, current, fiTarget)
   // Skip anything a check-in already recorded as reached, so a dip in the
   // portfolio does not re-suggest a milestone that was actually hit.
   const next =

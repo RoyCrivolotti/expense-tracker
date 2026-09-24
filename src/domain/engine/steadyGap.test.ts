@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import { steadyGap } from './steadyGap'
-import { planValueAtDate } from './wealthTracking'
+import { planValueAtDate, realToNominal } from './wealthTracking'
 import { makeScenario, makeWealthAccount, makeWealthCheckin } from '../../testing/factories'
 
 const accounts = [makeWealthAccount({ id: 1, kind: 'investment' })]
 const plan = makeScenario({ id: 1, isActive: true, planStartDate: '2025-01-01' })
 
-/** A check-in sitting `gapCents` off the plan on that date. */
+/** A check-in sitting `gapCents` off the plan on that date, in the plan's money. */
 function off(id: number, date: string, gapCents: number) {
   const projected = planValueAtDate(plan, date)!
   return makeWealthCheckin({
     id,
     checkinDate: date,
-    entries: [{ accountId: 1, valueCents: projected + gapCents }],
+    entries: [{ accountId: 1, valueCents: realToNominal(projected + gapCents, plan.planStartDate!, date) }],
   })
 }
 
@@ -58,7 +58,11 @@ describe('steadyGap', () => {
     // months of contributions is where it starts to be a starting-point problem.
     const monthly = makeScenario({ id: 3, isActive: true, planStartDate: '2025-01-01', monthlyContributionCents: 1_500_00 })
     const near = (id: number, date: string, gap: number) =>
-      makeWealthCheckin({ id, checkinDate: date, entries: [{ accountId: 1, valueCents: planValueAtDate(monthly, date)! + gap }] })
+      makeWealthCheckin({
+        id,
+        checkinDate: date,
+        entries: [{ accountId: 1, valueCents: realToNominal(planValueAtDate(monthly, date)! + gap, '2025-01-01', date) }],
+      })
     expect(
       steadyGap([near(1, '2026-01-01', -900_00), near(2, '2026-04-01', -1_000_00), near(3, '2026-07-15', -1_100_00)], monthly, accounts),
     ).toBeNull()

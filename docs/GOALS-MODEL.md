@@ -16,7 +16,7 @@ The Goals tab has three views:
 
 One saved scenario per owner is *the plan*: `goal_scenarios.is_active`, set with **Use as my plan** in the scenario editor and enforced by a partial unique index so an owner can never have two. Progress, the dashboard Goals card and every check-in delta measure against it. The editor's selection is a different thing: loading another scenario to explore it does not change what you are measured against. An owner's first scenario becomes the plan on creation; deleting the plan leaves none until another is chosen.
 
-Two questions, two sources. *How far along am I* is a balance and comes from check-ins, which capture market value however the money arrived. *Am I keeping the pace* is a flow and comes from `investment` transactions per month since the plan's start date (`monthlyFlows` and `monthsSincePlanStart` in `engine/goals.ts`), compared with the plan's monthly contribution on the dashboard card and in the "Actual investing vs plan" chart. Net saving is drawn beside it for context only; the gap between the two is money that stayed in the current account. A one-off inflow belongs in the plan as a life event or a re-baseline, not in the monthly average.
+Two questions, two sources. *How far along am I* is a balance and comes from check-ins, which capture market value however the money arrived. *Am I keeping the pace* is a flow and comes from the `investment` transactions put in per month since the plan's start date, withdrawals left out (`monthlyFlows` and `monthsSincePlanStart` in `engine/goals.ts`), compared with the plan's monthly contribution on the dashboard card and in the "Actual investing vs plan" chart. Net saving is drawn beside it for context only; the gap between the two is money that stayed in the current account. A one-off inflow belongs in the plan as a life event or a re-baseline, not in the monthly average.
 
 A third question, *is being behind a saving problem or a market one*, is the measured return on the Progress snapshot (`portfolioReturn` in `engine/portfolioReturn.ts`). It is a linked Modified Dietz: each stretch between two consecutive check-ins gets its own return, the end balance less the start balance less the net flows, over the start balance plus each flow weighted by the share of the stretch it was in for, and the stretches are chained. That is the standard approximation of a time-weighted return, the same kind of figure as the plan's expected rate, and it gets closer to the true one the more often check-ins are logged. Flows are `investment` transactions: positive going in, negative coming back out, which is how a sale to cash or a dividend paid out is recorded (the form calls it Withdraw). A check-in is the balance at the end of its day, so a flow dated a check-in belongs to the stretch that ends there. The figure reads "so far" under a year and as a yearly rate from a year on, set against the plan's expected return as it is: the plan is nominal, on/off track compares nominal check-in balances with the plan line grown at that rate, so a portfolio that returned exactly the plan's rate is exactly on plan and the two lines agree. It is null with fewer than two check-ins thirty days apart, and when a stretch starts at nothing yet ends with money that no transaction accounts for.
 
@@ -26,7 +26,7 @@ A gap that holds still is the plan's starting point, not the saving, so the snap
 
 | Parameter | Default (demo) |
 | --- | --- |
-| Expected return | 7% / year (nominal; the field is still `expectedRealReturn`) |
+| Real return | 7% / year |
 | Contribution growth | 0% / year (adjustable per scenario in Goals UI) |
 | Net retention (salary model) | 65% of gross — **engine helper only** (`annualSavingsFromCashflow`); charts use explicit `monthlyContributionCents` |
 
@@ -98,17 +98,17 @@ Stored as a JSON column (`life_events`) on `goal_scenarios`. Applied in the year
 
 The hero chart shows a shaded band for ±3 pp around the scenario's `expectedRealReturn`, computed by `projectNetWorthBand` in `scenarioProjection.ts`. The band uses the same contribution and housing logic as the main projection. Chart layer: `kind: 'band'` on `ChartSeries`, rendered by `ChartBandLayer` in `linearChartParts.tsx`.
 
-## Nominal, and the purchasing-power view
+## Real, and the nominal view
 
-The plan is nominal: the expected return grows nominal balances, check-ins are nominal balances off a statement, and every comparison in Progress and the comparison table is made in those terms. The control is labelled "Expected return"; the field keeps its historical name `expectedRealReturn`, since it is a database column and an API field.
+The plan is real: the return is a real return, so every projected figure, the FI target, the constant rent and withdrawal, the milestones and the comparison table are in today's money. Check-ins are broker balances in the money of their day, so wherever Progress sets one against the plan (`trackStatus`, the "Actual vs plan" chart, the measured return) the balance is deflated first, by `DEFAULT_INFLATION_RATE` (2%, approximating the ECB target) over the years since the plan start. Milestones reached are the exception: a milestone counts as reached when a check-in shows the number, in the money of that day.
 
-The hero chart's footer toggle switches to purchasing power, which deflates every drawn figure by an inflation rate the user can adjust there (`DEFAULT_INFLATION_RATE`, 2%, approximating the ECB target):
+The hero chart shows the plan in today's money by default. Its footer toggle switches to a nominal view, which inflates every drawn figure at a rate the user can adjust there (the same 2% by default), and leaves the check-in dots as they are, since they are already nominal:
 
 ```
-purchasingPower[y] = nominal[y] / (1 + rate)^y
+nominal[y] = real[y] × (1 + rate)^y
 ```
 
-Check-in scatter points are deflated by their own fractional year offset (`xIndex`) so actuals stay aligned with the deflated projection line (`applyRealTransform` in `nominalTransform.ts`).
+In the default view the dots are deflated by their own fractional year offset (`xIndex`) instead, so an actual exactly on plan sits on the line either way (`inflateSeries` and `deflatePoints` in `nominalTransform.ts`).
 
 ## Engine formula
 

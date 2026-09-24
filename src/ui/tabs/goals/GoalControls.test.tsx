@@ -73,6 +73,7 @@ describe('GoalControls', () => {
       planStartDate: '2026-09-11',
       lifeEvents: [],
       housePurchaseYear: null,
+      monthlyContributionCents: 100_000,
     })
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
@@ -95,6 +96,7 @@ describe('GoalControls', () => {
       planStartDate: '2026-09-11',
       lifeEvents: [{ year: 1, amountCents: -20_000_00, label: 'Car' }],
       housePurchaseYear: 3,
+      monthlyContributionCents: 100_000,
     })
     expect(screen.getByRole('status')).toHaveTextContent(
       'Life events and the house purchase moved 2 years earlier to keep their dates. Dropped, already behind the new start: Bonus.',
@@ -115,7 +117,7 @@ describe('GoalControls', () => {
     expect(named).toEqual(
       expect.arrayContaining([
         'Contribution growth (%/yr)',
-        'Expected return',
+        'Real return',
         'Down payment',
         'Mortgage rate (%/yr)',
         'House appreciation (%/yr)',

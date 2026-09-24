@@ -10,7 +10,8 @@ export function averageMonthlyCents(centsByMonth: number[]): number {
 /**
  * One month of the two flows a plan cares about: what was left after expenses, and
  * what actually went into the portfolio. They differ by whatever stayed in the
- * current account, which is why the pace of a plan is judged on the second.
+ * current account, which is why the pace of a plan is judged on the second. Money taken
+ * back out is not counted against it: a sale to cash is the return line's business.
  */
 export interface MonthlyFlow {
   month: string
@@ -21,7 +22,7 @@ export interface MonthlyFlow {
 /** The flows per budget month, oldest first. */
 export function monthlyFlows(totals: Map<string, MonthlyTotals>): MonthlyFlow[] {
   return [...totals.values()]
-    .map((t) => ({ month: t.month, netSavingCents: t.netSavingCents, investedCents: t.investmentsCents }))
+    .map((t) => ({ month: t.month, netSavingCents: t.netSavingCents, investedCents: t.contributionsCents }))
     .sort((a, b) => a.month.localeCompare(b.month))
 }
 

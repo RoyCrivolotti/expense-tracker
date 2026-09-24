@@ -51,10 +51,9 @@ describe('ScenarioComparison', () => {
     expect(screen.getByText(/after 30 years/)).toBeInTheDocument()
   })
 
-  it('says the figures are as projected, not deflated to today\'s money', () => {
+  it('says the figures are in today\'s money, as the whole plan is', () => {
     render(<ScenarioComparison scenarios={[]} draft={draft} />)
-    expect(screen.getByText(/as projected and before inflation/)).toBeInTheDocument()
-    expect(screen.queryByText(/today's money/)).not.toBeInTheDocument()
+    expect(screen.getByText(/in today's money/)).toBeInTheDocument()
   })
 
   it('keeps two scenarios with the same short name apart', () => {

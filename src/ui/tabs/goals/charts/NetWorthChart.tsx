@@ -20,7 +20,7 @@ import {
   type ScenarioLegendItem,
 } from './ScenarioSeriesLegend'
 import styles from '../goals.module.css'
-import { applyRealTransform } from './nominalTransform'
+import { deflatePoints, inflateSeries } from './nominalTransform'
 
 interface ScenarioLine {
   id: string
@@ -85,28 +85,32 @@ function buildSeries(
   return { years, series, names: lines.map((l) => l.name) }
 }
 
-/** Nominal (default) vs real-purchasing-power series, plus a Y-axis floor
- *  covering both so toggling doesn't rescale the chart. */
+/**
+ * The plan is real, so the default view is today's money with the check-in dots deflated
+ * to it; the nominal view inflates the plan instead and leaves the dots as they are. The
+ * Y-axis floor covers both so toggling does not rescale the chart.
+ */
 function computeChartDisplayData(
   series: ChartSeries[],
   extraSeries: ChartSeries[],
   years: number[],
-  realMode: boolean,
+  nominalMode: boolean,
   inflationRate: number = DEFAULT_INFLATION_RATE,
+  band: ChartSeries | null = null,
 ): {
   displaySeries: ChartSeries[]
   displayExtraSeries: ChartSeries[]
+  displayBand: ChartSeries | null
   yDomainMax: number | undefined
 } {
-  const realSeries = applyRealTransform(series, years, inflationRate)
-  const values = [...series, ...realSeries].flatMap((s) => s.values)
+  const nominalSeries = inflateSeries(series, years, inflationRate)
+  const values = [...series, ...nominalSeries].flatMap((s) => s.values)
+  // The band is the line's own spread, so it goes up with the line or it bounds nothing.
+  const displayBand = band && nominalMode ? (inflateSeries([band], years, inflationRate)[0] ?? null) : band
   return {
-    displaySeries: realMode ? realSeries : series,
-    // Check-in actuals are nominal, so real mode has to deflate them alongside the plan
-    // lines; otherwise the dots stay put while the projection drops beneath them.
-    displayExtraSeries: realMode
-      ? applyRealTransform(extraSeries, years, inflationRate)
-      : extraSeries,
+    displaySeries: nominalMode ? nominalSeries : series,
+    displayExtraSeries: nominalMode ? extraSeries : deflatePoints(extraSeries, inflationRate),
+    displayBand,
     yDomainMax: values.length > 0 ? Math.max(...values) : undefined,
   }
 }
@@ -352,7 +356,7 @@ function NetWorthChartImpl({
   footer,
   extraSeries = [],
   todayIndex,
-  realMode = false,
+  nominalMode = false,
   inflationRate,
   milestones,
   hiddenIds,
@@ -366,7 +370,7 @@ function NetWorthChartImpl({
   footer?: ReactNode
   extraSeries?: ChartSeries[]
   todayIndex?: number
-  realMode?: boolean
+  nominalMode?: boolean
   inflationRate?: number
   milestones: Milestone[]
   /** Saved scenarios left off the chart; the legend lists them dimmed and can bring them back. */
@@ -401,9 +405,9 @@ function NetWorthChartImpl({
 
   // Locks the Y-axis to the larger of the real/nominal maxima so toggling display
   // mode moves the lines on a fixed scale instead of rescaling the whole chart.
-  const { displaySeries, displayExtraSeries, yDomainMax } = useMemo(
-    () => computeChartDisplayData(series, extra, years, realMode, inflationRate),
-    [series, extra, years, realMode, inflationRate],
+  const { displaySeries, displayExtraSeries, displayBand, yDomainMax } = useMemo(
+    () => computeChartDisplayData(series, extra, years, nominalMode, inflationRate, band),
+    [series, extra, years, nominalMode, inflationRate, band],
   )
 
   const refLines = useRefLines(milestones, yDomainMax, useFiTarget(isHero, draft), windowYears !== null)
@@ -445,7 +449,7 @@ function NetWorthChartImpl({
       <p className={styles.chartHint}>{isHero ? HERO_HINT : DEFAULT_HINT}</p>
       <LinearChart
         {...heroVariantProps}
-        series={[...(band ? [band] : []), ...displaySeries, ...displayExtraSeries]}
+        series={[...(displayBand ? [displayBand] : []), ...displaySeries, ...displayExtraSeries]}
         xLabels={labels}
         refLines={refLines}
         {...todayProp(todayIndex, windowYears)}

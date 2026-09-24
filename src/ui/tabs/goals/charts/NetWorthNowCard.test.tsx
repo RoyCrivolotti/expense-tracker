@@ -25,6 +25,22 @@ describe('NetWorthNowCard', () => {
     expect(screen.queryByText('100.000,00 €')).toBeNull()
   })
 
+  it('takes the FI share from the balance in today\'s money, and shows the balance as measured', () => {
+    // 4% of 1M a year: the target is 25M, in the plan start's money.
+    const draft = makeScenario({ annualSpendCents: 1_000_000, safeWithdrawalRate: 0.04, planStartDate: '2020-01-01' })
+    render(
+      <NetWorthNowCard
+        draft={draft}
+        latest={{ investedCents: 22_500_000, date: '2026-01-01' }}
+        milestones={[]}
+        reached={noneReached}
+      />,
+    )
+    expect(screen.getByText('225.000,00 €')).toBeTruthy()
+    // 225k six years on is about 200k in 2020 money at 2%: 80% of the target, not 90%.
+    expect(screen.getByText('80%')).toBeTruthy()
+  })
+
   it('says it is showing the plan start when there is no check-in yet', () => {
     const draft = makeScenario({ annualSpendCents: 4_000_000 })
     render(<NetWorthNowCard draft={draft} latest={null} milestones={[]} reached={noneReached} />)

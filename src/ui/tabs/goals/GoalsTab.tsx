@@ -159,7 +159,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     setCheckinEntry(false)
     setView(next)
   }, [])
-  const [displayMode, setDisplayMode] = useState<DisplayMode>('nominal')
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('purchasing-power')
   // Single configurable rate rather than year-by-year inputs — a reasonable
   // simplification for a multi-decade projection. Resets on reload; display-only.
   const [nominalInflation, setNominalInflation] = useState(DEFAULT_INFLATION_RATE)
@@ -286,11 +286,13 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     setRebaselinePreview(rebaseline(plan, latestSnapshot))
   }, [actions, plan, latestSnapshot])
   const onRebaselineConfirm = useCallback(() => {
-    if (!actions || !plan || !rebaselinePreview) return
+    if (!actions || !plan || !latestSnapshot || !rebaselinePreview) return
     void actions.updateScenario(plan.id, rebaselinePreview.patch)
-    if (activeId === plan.id) patchDraft(rebaselinePreview.patch)
+    // The draft is re-baselined from its own values, so an unsaved life-event or house
+    // edit in the editor moves with the start rather than being overwritten by the plan's.
+    if (activeId === plan.id) patchDraft(rebaseline(draft, latestSnapshot).patch)
     setRebaselinePreview(null)
-  }, [actions, plan, rebaselinePreview, activeId, patchDraft])
+  }, [actions, plan, latestSnapshot, rebaselinePreview, activeId, patchDraft, draft])
 
   const onToggleVisible = useCallback((id: number) => {
     setHiddenIds((prev) => {
@@ -485,7 +487,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
                       layout="compact"
                     />
                   </div>
-                  {displayMode === 'purchasing-power' ? (
+                  {displayMode === 'nominal' ? (
                     <div className={progressStyles.inflationRow}>
                       <span className={progressStyles.inflationLabel}>Inflation assumed</span>
                       <PercentStepper
@@ -500,7 +502,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
                 </>
               }
               extraSeries={checkinExtraSeries ? [checkinExtraSeries] : []}
-              realMode={displayMode === 'purchasing-power'}
+              nominalMode={displayMode === 'nominal'}
               inflationRate={nominalInflation}
               {...(heroTodayIndex !== undefined ? { todayIndex: heroTodayIndex } : {})}
             />

@@ -432,23 +432,25 @@ describe('GoalsTab', () => {
     expect(mini()).not.toBeInTheDocument()
   })
 
-  it('shows the inflation stepper only when Purchasing power mode is active', async () => {
+  it('shows the inflation stepper only in the nominal view', async () => {
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} />)
 
+    // Today's money is the default; inflation only matters once the plan is inflated.
+    expect(screen.getByRole('radio', { name: 'Purchasing power' })).toBeChecked()
     expect(screen.queryByLabelText('Inflation rate percentage')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('radio', { name: 'Purchasing power' }))
+    await user.click(screen.getByRole('radio', { name: 'Nominal' }))
 
     expect(screen.getByText('Inflation assumed')).toBeInTheDocument()
     expect(screen.getByLabelText('Inflation rate percentage')).toBeInTheDocument()
   })
 
-  it('adjusts the inflation rate via the stepper in Purchasing power mode', async () => {
+  it('adjusts the inflation rate via the stepper in the nominal view', async () => {
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} />)
 
-    await user.click(screen.getByRole('radio', { name: 'Purchasing power' }))
+    await user.click(screen.getByRole('radio', { name: 'Nominal' }))
     const input = screen.getByLabelText('Inflation rate percentage')
     expect(input).toHaveValue('2,0')
 

@@ -5,6 +5,7 @@
  *   - The projected invested-portfolio value at any calendar date.
  *   - An on/off-track status: delta in € and in equivalent months.
  */
+import { DEFAULT_INFLATION_RATE } from './projectionConstants'
 import { projectNetWorth } from './projection'
 import { scenarioToParams } from './scenarioProjection'
 import type { GoalScenario, Milestone, WealthAccount, WealthCheckin } from '../types'
@@ -23,6 +24,8 @@ export interface TrackStatus {
    * Computed as delta / monthly-contribution, clamped to ±horizonYears×12.
    */
   deltaMonths: number
+  /** The check-in's balance in the plan's money, which is what `deltaCents` is taken from. */
+  actualRealInvestedCents: number
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -140,6 +143,32 @@ export function checkinNetWorthCents(
  * Compute on/off-track status for a check-in against a scenario.
  * Returns null when the scenario has no planStartDate or the date is invalid.
  */
+/**
+ * A broker balance brought to the plan's money. The plan is real, in the money of its
+ * start date; a check-in is nominal, in the money of its own day, so the years between
+ * the two are taken off at the assumed inflation before the balance is set against the
+ * plan line. The reverse puts a real figure into the money of a later day.
+ */
+export function nominalToReal(
+  cents: number,
+  planStartDate: string,
+  date: string,
+  inflationRate = DEFAULT_INFLATION_RATE,
+): number {
+  const years = yearOffsetFromDate(planStartDate, date) ?? 0
+  return Math.round(cents / Math.pow(1 + inflationRate, Math.max(0, years)))
+}
+
+export function realToNominal(
+  cents: number,
+  planStartDate: string,
+  date: string,
+  inflationRate = DEFAULT_INFLATION_RATE,
+): number {
+  const years = yearOffsetFromDate(planStartDate, date) ?? 0
+  return Math.round(cents * Math.pow(1 + inflationRate, Math.max(0, years)))
+}
+
 export function trackStatus(
   checkin: WealthCheckin,
   scenario: GoalScenario,
@@ -150,7 +179,8 @@ export function trackStatus(
   if (projected === null) return null
 
   const actualInvestedCents = checkinInvestedCents(checkin, accounts)
-  const deltaCents = actualInvestedCents - projected
+  const actualRealInvestedCents = nominalToReal(actualInvestedCents, scenario.planStartDate, checkin.checkinDate)
+  const deltaCents = actualRealInvestedCents - projected
 
   // Monthly contribution at the check-in's year (approximate using year 1 value).
   const monthlyContrib = scenario.monthlyContributionCents
@@ -162,6 +192,7 @@ export function trackStatus(
   return {
     projectedInvestedCents: projected,
     actualInvestedCents,
+    actualRealInvestedCents,
     deltaCents,
     deltaMonths,
   }

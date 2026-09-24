@@ -22,6 +22,11 @@ export const FORM_TYPES: readonly { value: TypeChoice; label: string }[] = [
   STORED_TYPES[3]!,
 ]
 
+/** Money coming back out of the portfolio: an investment with the direction flipped. */
+export function isWithdrawal(form: Pick<FormFields, 'type' | 'outflow'>): boolean {
+  return form.type === 'investment' && form.outflow
+}
+
 export function typeChoice(form: Pick<FormFields, 'type' | 'outflow'>): TypeChoice {
   return form.type === 'investment' && form.outflow ? 'withdraw' : form.type
 }
