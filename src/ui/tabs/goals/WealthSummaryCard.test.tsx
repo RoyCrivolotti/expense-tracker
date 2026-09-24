@@ -156,12 +156,11 @@ describe('WealthSummaryCard', () => {
     ]
     render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />)
     const line = screen.getByText(/Your portfolio returned/)
-    expect(line).toHaveTextContent(/4,0\s?% a year/)
-    expect(line).toHaveTextContent(/about 2,0\s?% once 2,0\s?% inflation is taken off/)
-    expect(line).toHaveTextContent(/against the 7,0\s?% a year that Path A assumes/)
+    expect(line).toHaveTextContent(/4,0\s?% a year since Jan 1, 2025 against the 7,0\s?% a year that Path A assumes/)
+    expect(screen.getByText(/4,0\s?% a year$/)).toHaveStyle({ color: 'var(--exp-danger)' })
   })
 
-  it('colours the return by its real rate, so a nominal match with the plan is still short', () => {
+  it('reads a return that matches the plan rate as on par, as the on-track line would', () => {
     const scenario = makeScenario({ name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2025-01-01' })
     const accounts = [makeAccount(1, 'investment')]
     const checkins = [
@@ -170,6 +169,6 @@ describe('WealthSummaryCard', () => {
     ]
     render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />)
     const rate = screen.getByText(/7,0\s?% a year$/)
-    expect(rate).toHaveStyle({ color: 'var(--exp-danger)' })
+    expect(rate).toHaveStyle({ color: 'var(--exp-success)' })
   })
 })
