@@ -81,6 +81,10 @@ describe('milestoneStanding', () => {
     expect(milestoneStanding(inYearTwo, plan, '2028-03-01', '2028-06-01').kind).toBe('reached')
   })
 
+  it('cannot be dated from a malformed start date', () => {
+    expect(milestoneCrossingDate(makeScenario({ ...plan, planStartDate: 'garbage' }), 120_000_00)).toBeNull()
+  })
+
   it('gives the expected date alone without a target, and says so past the horizon', () => {
     expect(milestoneStanding(inYearTwo, plan, undefined)).toEqual({ kind: 'expected', expected: '2028-01-01' })
     expect(milestoneStanding({ amountCents: 1_000_000_000_00, label: '', targetDate: '2030-01-01' }, plan, undefined)).toEqual({

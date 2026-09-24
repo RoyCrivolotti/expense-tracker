@@ -29,6 +29,8 @@ export function yearsToAmount(plan: GoalScenario, amountCents: number): number |
   return null
 }
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
 /** Today's date in the local calendar, as the check-in form records it. */
 function localToday(): string {
   const d = new Date()
@@ -37,7 +39,8 @@ function localToday(): string {
 
 /** The calendar date the plan crosses the amount, or null without a start date or within the horizon. */
 export function milestoneCrossingDate(plan: GoalScenario, amountCents: number): string | null {
-  if (!plan.planStartDate) return null
+  // A start date only the API could have written malformed must not take Progress down.
+  if (!plan.planStartDate || !ISO_DATE.test(plan.planStartDate)) return null
   const years = yearsToAmount(plan, amountCents)
   if (years === null) return null
   // Whole years by the calendar, so two years from 1 January is 1 January; only the part
