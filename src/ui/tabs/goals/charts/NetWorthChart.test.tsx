@@ -100,6 +100,18 @@ describe('NetWorthChart', () => {
     const lastLabel = () => {
       const texts = [...container.querySelectorAll('text')].map((t) => t.textContent ?? '')
       return texts.filter((t) => /^\d+$/.test(t)).map(Number).sort((a, b) => a - b).pop()
+    }
+    fireEvent.click(screen.getByRole('radio', { name: '5Y' }))
+    expect(lastLabel()).toBe(5)
+
+    rerender(
+      <NetWorthChart milestones={milestones} scenarios={[]} draft={{ ...defaultDraft, horizonYears: 4 }} variant="hero" />,
+    )
+    // No window can cut a four-year horizon, so the picker goes entirely, and the chart
+    // draws the whole horizon rather than a stale five-year cut or nothing at all.
+    expect(screen.queryByRole('radiogroup', { name: 'Projection window' })).not.toBeInTheDocument()
+    expect(container.querySelectorAll('path').length).toBeGreaterThan(0)
+    expect(lastLabel()).toBe(4)
 
     // With shorter windows still on offer, the lost one falls back to All, not to a
     // window that happens to be first.
@@ -113,18 +125,6 @@ describe('NetWorthChart', () => {
     expect(screen.queryByRole('radio', { name: '20Y' })).not.toBeInTheDocument()
     expect(screen.getByRole('radio', { name: 'All' })).toBeChecked()
     expect(lastLabel()).toBe(8)
-    }
-    fireEvent.click(screen.getByRole('radio', { name: '5Y' }))
-    expect(lastLabel()).toBe(5)
-
-    rerender(
-      <NetWorthChart milestones={milestones} scenarios={[]} draft={{ ...defaultDraft, horizonYears: 4 }} variant="hero" />,
-    )
-    // No window can cut a four-year horizon, so the picker goes entirely, and the chart
-    // draws the whole horizon rather than a stale five-year cut or nothing at all.
-    expect(screen.queryByRole('radiogroup', { name: 'Projection window' })).not.toBeInTheDocument()
-    expect(container.querySelectorAll('path').length).toBeGreaterThan(0)
-    expect(lastLabel()).toBe(4)
   })
 
   it('offers windows for the longest drawn horizon, not only the draft', () => {
