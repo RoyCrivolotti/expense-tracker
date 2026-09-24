@@ -96,16 +96,21 @@ function computeChartDisplayData(
   years: number[],
   nominalMode: boolean,
   inflationRate: number = DEFAULT_INFLATION_RATE,
+  band: ChartSeries | null = null,
 ): {
   displaySeries: ChartSeries[]
   displayExtraSeries: ChartSeries[]
+  displayBand: ChartSeries | null
   yDomainMax: number | undefined
 } {
   const nominalSeries = inflateSeries(series, years, inflationRate)
   const values = [...series, ...nominalSeries].flatMap((s) => s.values)
+  // The band is the line's own spread, so it goes up with the line or it bounds nothing.
+  const displayBand = band && nominalMode ? (inflateSeries([band], years, inflationRate)[0] ?? null) : band
   return {
     displaySeries: nominalMode ? nominalSeries : series,
     displayExtraSeries: nominalMode ? extraSeries : deflatePoints(extraSeries, inflationRate),
+    displayBand,
     yDomainMax: values.length > 0 ? Math.max(...values) : undefined,
   }
 }
@@ -400,9 +405,9 @@ function NetWorthChartImpl({
 
   // Locks the Y-axis to the larger of the real/nominal maxima so toggling display
   // mode moves the lines on a fixed scale instead of rescaling the whole chart.
-  const { displaySeries, displayExtraSeries, yDomainMax } = useMemo(
-    () => computeChartDisplayData(series, extra, years, nominalMode, inflationRate),
-    [series, extra, years, nominalMode, inflationRate],
+  const { displaySeries, displayExtraSeries, displayBand, yDomainMax } = useMemo(
+    () => computeChartDisplayData(series, extra, years, nominalMode, inflationRate, band),
+    [series, extra, years, nominalMode, inflationRate, band],
   )
 
   const refLines = useRefLines(milestones, yDomainMax, useFiTarget(isHero, draft), windowYears !== null)
@@ -444,7 +449,7 @@ function NetWorthChartImpl({
       <p className={styles.chartHint}>{isHero ? HERO_HINT : DEFAULT_HINT}</p>
       <LinearChart
         {...heroVariantProps}
-        series={[...(band ? [band] : []), ...displaySeries, ...displayExtraSeries]}
+        series={[...(displayBand ? [displayBand] : []), ...displaySeries, ...displayExtraSeries]}
         xLabels={labels}
         refLines={refLines}
         {...todayProp(todayIndex, windowYears)}

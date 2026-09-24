@@ -338,6 +338,27 @@ describe('NetWorthChart', () => {
     expect(paths.length).toBeGreaterThanOrEqual(2)
   })
 
+  it('inflates the band with the line in the nominal view', () => {
+    const bandPath = (nominalMode: boolean) => {
+      const { container, unmount } = render(
+        <NetWorthChart
+          milestones={milestones}
+          scenarios={[defaultDraft]}
+          draft={defaultDraft}
+          activeId={defaultDraft.id}
+          variant="hero"
+          nominalMode={nominalMode}
+        />,
+      )
+      // The band is drawn first, as a filled area rather than a stroke.
+      const d = container.querySelector('path')?.getAttribute('d')
+      unmount()
+      return d
+    }
+    // Locked Y axis, so a band that moved up with the line has a different outline.
+    expect(bandPath(true)).not.toBe(bandPath(false))
+  })
+
   it('does not render uncertainty band on default variant', () => {
     const { container: hero } = render(
       <NetWorthChart
