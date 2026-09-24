@@ -89,18 +89,45 @@ describe('GoalControls', () => {
         { year: 3, amountCents: -20_000_00, label: 'Car' },
       ],
     }
-    render(<GoalControls draft={draft} latest={{ investedCents: 11_700_000, date: '2026-09-11' }} onChange={onChange} />)
+    const latest = { investedCents: 11_700_000, date: '2026-09-11' }
+    const { rerender } = render(<GoalControls draft={draft} latest={latest} onChange={onChange} />)
     fireEvent.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
-    expect(onChange).toHaveBeenCalledWith({
+    const patch = {
       startInvestedCents: 11_700_000,
       planStartDate: '2026-09-11',
       lifeEvents: [{ year: 1, amountCents: -20_000_00, label: 'Car' }],
       housePurchaseYear: 3,
       monthlyContributionCents: 100_000,
-    })
+    }
+    expect(onChange).toHaveBeenCalledWith(patch)
+    // The parent applies the patch to the draft, and the note describes what it now holds.
+    rerender(<GoalControls draft={{ ...draft, ...patch }} latest={latest} onChange={onChange} />)
     expect(screen.getByRole('status')).toHaveTextContent(
       'Life events and the house purchase moved 2 years earlier to keep their dates. Dropped, already behind the new start: Bonus.',
     )
+  })
+
+  it('drops the note about what a re-baseline moved once the draft no longer holds it', () => {
+    const draft = {
+      ...makeDraft(),
+      planStartDate: '2024-09-11',
+      lifeEvents: [{ year: 1, amountCents: 5_000_00, label: 'Bonus' }],
+    }
+    const latest = { investedCents: 11_700_000, date: '2026-09-11' }
+    const { rerender } = render(<GoalControls draft={draft} latest={latest} onChange={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
+    // The parent applies the patch; the note describes what is now in the draft.
+    const applied = {
+      ...draft,
+      planStartDate: '2026-09-11',
+      lifeEvents: [],
+    }
+    rerender(<GoalControls draft={applied} latest={latest} onChange={vi.fn()} />)
+    expect(screen.getByRole('status')).toHaveTextContent('Bonus')
+
+    // Discard puts the old draft back: the note would now describe something that is not there.
+    rerender(<GoalControls draft={draft} latest={latest} onChange={vi.fn()} />)
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
   it('cannot re-baseline before the first check-in, and says why', () => {
