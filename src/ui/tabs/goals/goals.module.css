@@ -1005,6 +1005,27 @@
 .milestoneChipMuted {
   background: var(--color-surface-muted);
 }
+/* A pill wraps mid-number once a standing carries two dates. On a phone each milestone
+   is a row of its own: the mark and the amount on one line, the standing under them. */
+@media (max-width: 560px) {
+  .reachedChips {
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .reachedChip {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 0.4rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: 0.6rem;
+  }
+  .reachedChip > span:nth-child(2) {
+    white-space: nowrap;
+  }
+  .reachedChipDate {
+    grid-column: 2;
+  }
+}
 
 .secondaryStack {
   display: flex;
