@@ -99,12 +99,19 @@ function isAlreadyEntered(
   )
 }
 
+function computeDaySpread(sortedDates: string[]): number {
+  if (sortedDates.length === 0) return 0
+  const days = sortedDates.map((d) => parseInt(d.slice(8), 10))
+  return Math.max(...days) - Math.min(...days)
+}
+
 function buildSuggestion(
   group: OccurrenceGroup,
   frequency: RecurringFrequency,
   confidence: number,
   predictedDate: string,
   predictedBudgetMonth: string,
+  daySpread: number,
 ): RecurringSuggestion {
   return {
     description: group.label,
@@ -117,6 +124,7 @@ function buildSuggestion(
     frequency,
     confidence,
     occurrences: group.dates.length,
+    daySpread,
   }
 }
 
@@ -153,9 +161,11 @@ function trySuggestGroup(
   transactions: Transaction[],
   forMonth: string | undefined,
   priorMonth: string | null,
+  priorPriorMonth: string | null,
   rolloverDay: number | undefined,
 ): RecurringSuggestion | null {
-  if (priorMonth && !group.budgetMonths.has(priorMonth)) return null
+  if (priorMonth && !group.budgetMonths.has(priorMonth) && !group.budgetMonths.has(priorPriorMonth ?? ''))
+    return null
 
   const sorted = [...group.dates].sort()
   const gaps = sorted.slice(1).map((d, i) => daysBetween(sorted[i]!, d))
@@ -179,6 +189,7 @@ function trySuggestGroup(
     Math.min(regularity, 1),
     prediction.predictedDate,
     prediction.predictedBM,
+    computeDaySpread(sorted),
   )
 }
 
@@ -190,11 +201,12 @@ export function detectRecurring(
   const forMonth = options?.forBudgetMonth
   const rolloverDay = options?.rolloverDay
   const priorMonth = forMonth ? priorBudgetMonth(forMonth) : null
+  const priorPriorMonth = priorMonth ? priorBudgetMonth(priorMonth) : null
   const groups = groupTransactions(transactions)
   const suggestions: RecurringSuggestion[] = []
 
   for (const group of groups) {
-    const suggestion = trySuggestGroup(group, transactions, forMonth, priorMonth, rolloverDay)
+    const suggestion = trySuggestGroup(group, transactions, forMonth, priorMonth, priorPriorMonth, rolloverDay)
     if (suggestion) suggestions.push(suggestion)
   }
 

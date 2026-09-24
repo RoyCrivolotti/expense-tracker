@@ -95,6 +95,25 @@ describe('detectRecurring', () => {
     expect(suggestions).toHaveLength(0)
   })
 
+  it('sets daySpread to max minus min day-of-month across occurrences', () => {
+    const txns = [
+      makeTxn({ date: '2026-01-25', description: 'Crunchyroll' }),
+      makeTxn({ date: '2026-02-27', description: 'Crunchyroll' }),
+      makeTxn({ date: '2026-03-30', description: 'Crunchyroll' }),
+      makeTxn({ date: '2026-04-26', description: 'Crunchyroll' }),
+    ]
+    const suggestions = detectRecurring(txns)
+    expect(suggestions[0]!.daySpread).toBe(5) // 30 - 25
+  })
+
+  it('sets daySpread to 0 when all occurrences fall on the same day', () => {
+    const txns = monthlyDates(2026, 1, 15, 4).map((date) =>
+      makeTxn({ date, description: 'Netflix' }),
+    )
+    const suggestions = detectRecurring(txns)
+    expect(suggestions[0]!.daySpread).toBe(0)
+  })
+
   it('uses most recent amount within a group', () => {
     const dates = monthlyDates(2026, 1, 10, 4)
     const txns = dates.map((date, i) =>
@@ -110,12 +129,23 @@ describe('detectRecurring', () => {
     expect(suggestions[0]!.categoryId).toBe(5)
   })
 
-  it('excludes groups missing from the prior budget month', () => {
-    const txns = monthlyDates(2026, 1, 5, 5).map((date) =>
+  it('excludes groups absent from both of the last two prior budget months', () => {
+    // Last entry is 2026-04, requesting 2026-07: prior=2026-06, priorPrior=2026-05 — both missing.
+    const txns = monthlyDates(2026, 1, 5, 4).map((date) =>
       makeTxn({ date, description: 'Psicólogo', budgetMonth: date.slice(0, 7) }),
     )
     const suggestions = detectRecurring(txns, { forBudgetMonth: '2026-07' })
     expect(suggestions.find((s) => s.description === 'Psicólogo')).toBeUndefined()
+  })
+
+  it('still suggests when the immediately prior month was skipped but the one before was present', () => {
+    // Logged Jan–Aug, nothing in Sep (forgot to log it), requesting Oct.
+    // priorMonth=2026-09 absent, priorPriorMonth=2026-08 present → should surface.
+    const txns = monthlyDates(2026, 1, 17, 8).map((date) =>
+      makeTxn({ date, description: '1Password', budgetMonth: date.slice(0, 7), amountCents: 447 }),
+    )
+    const suggestions = detectRecurring(txns, { forBudgetMonth: '2026-10' })
+    expect(suggestions.find((s) => s.description === '1Password')).toBeDefined()
   })
 
   it('includes groups present in the prior budget month', () => {

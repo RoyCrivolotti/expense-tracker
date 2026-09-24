@@ -13,6 +13,8 @@ export interface RecurringSuggestion {
   frequency: RecurringFrequency
   confidence: number
   occurrences: number
+  /** Max minus min day-of-month across historical occurrences. Used to widen the due-soon window. */
+  daySpread: number
 }
 
 export interface GroupKey {
