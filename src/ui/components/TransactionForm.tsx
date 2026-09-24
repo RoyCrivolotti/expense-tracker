@@ -316,6 +316,12 @@ export function TransactionForm({
       onViewChange('installment')
       return null
     }
+    // The chip is hidden for a withdrawal, but a plan set up before the switch is still here.
+    if (isWithdrawal(form) && (intent.intent.kind === 'new' || intent.intent.kind === 'link')) {
+      setErr('A withdrawal cannot be split into installments; remove the plan first')
+      onViewChange('installment')
+      return null
+    }
     return { cents, intent: intent.intent }
   }
 

@@ -367,6 +367,25 @@ describe('TransactionModal — withdrawals', () => {
     expect(form.getByRole('button', { name: 'No plan' })).toBeInTheDocument()
   })
 
+  it('refuses a plan set up before the switch to Withdraw, and shows where to remove it', async () => {
+    const { container, actions } = renderModal({
+      actions: { createTransaction: vi.fn().mockResolvedValue(makeTransaction({ id: 7 })) },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /no plan/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'New plan' }))
+    fireEvent.change(screen.getByLabelText('Total installments'), { target: { value: '12' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+    const form = singleForm(container)
+    fireEvent.click(form.getByRole('button', { name: 'Withdraw' }))
+    fireEvent.change(form.getByLabelText(/amount/i), { target: { value: '198,40' } })
+    fireEvent.change(form.getByLabelText(/description/i), { target: { value: 'Sold ETF' } })
+    fireEvent.click(form.getByRole('button', { name: 'Add transaction' }))
+
+    expect(await screen.findByText(/cannot be split into installments/)).toBeInTheDocument()
+    expect(screen.getByText('Installment plan')).toBeInTheDocument()
+    expect(actions.createTransaction).not.toHaveBeenCalled()
+  })
+
   it('saves a withdrawal as a negative investment', async () => {
     const { container, actions } = renderModal({
       actions: { createTransaction: vi.fn().mockResolvedValue(makeTransaction({ id: 7 })) },
