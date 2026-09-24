@@ -77,7 +77,12 @@ export interface StoredTransaction {
   accountId: number
   categoryId: number
   type: TxnType
-  /** Always positive; the type decides how it affects totals. */
+  /**
+   * Positive; the type decides how it affects totals. The one exception is an
+   * `investment`, which may be negative: money taken back out of the portfolio (a sale to
+   * cash, a dividend paid out), which nets against the month's investing and counts as an
+   * outflow in the measured portfolio return.
+   */
   amountCents: number
   cancelled: boolean
   notes?: string

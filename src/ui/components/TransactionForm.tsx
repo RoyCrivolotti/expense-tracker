@@ -65,7 +65,8 @@ function toInput(form: FormFields, cents: number, editing: Transaction | null): 
     accountId: form.accountId,
     categoryId: form.categoryId,
     type: form.type,
-    amountCents: cents,
+    // Money out of the portfolio is stored as a negative investment.
+    amountCents: form.type === 'investment' && form.outflow ? -cents : cents,
     cancelled: editing?.cancelled ?? false,
     ...(form.notes.trim() ? { notes: form.notes.trim() } : {}),
     // Always sent, including as null — on edit that is how the flag is cleared,

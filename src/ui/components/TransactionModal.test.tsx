@@ -356,6 +356,24 @@ async function fillAndStage(container: HTMLElement, file = receipt()) {
   await userEvent.upload(input, file)
 }
 
+describe('TransactionModal — withdrawals', () => {
+  it('saves a withdrawal as a negative investment', async () => {
+    const { container, actions } = renderModal({
+      actions: { createTransaction: vi.fn().mockResolvedValue(makeTransaction({ id: 7 })) },
+    })
+    const form = singleForm(container)
+    fireEvent.click(form.getByRole('button', { name: 'Withdraw' }))
+    fireEvent.change(form.getByLabelText(/amount/i), { target: { value: '198,40' } })
+    fireEvent.change(form.getByLabelText(/description/i), { target: { value: 'Sold ETF' } })
+    fireEvent.click(form.getByRole('button', { name: 'Add transaction' }))
+
+    await waitFor(() => expect(actions.createTransaction).toHaveBeenCalledTimes(1))
+    expect(actions.createTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'investment', amountCents: -19_840 }),
+    )
+  })
+})
+
 describe('TransactionModal — receipts staged on the add form', () => {
   it('uploads a staged receipt against the id the create returned', async () => {
     const created = makeTransaction({ id: 42 })

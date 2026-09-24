@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react'
-import type { Transaction, TxnType } from '../../types'
+import type { Transaction } from '../../types'
 import type { DescriptionSuggestion } from '../../data/descriptionIndex'
 import { defaultBudgetMonth } from '../../engine/dates'
 import { RECEIPT_CLIENT_POLICY } from '../../data/receiptClientPolicy'
@@ -17,14 +17,8 @@ import type { PendingReceipt } from '../../data/pendingReceipts'
 import { ReceiptStrip } from './ReceiptStrip'
 import { ReimbursementLink } from './ReimbursementLink'
 import type { FormFields, Setter } from './transactionFormState'
+import { FORM_TYPES, typeChoice, type TypeChoice } from './transactionTypes'
 import styles from './TransactionForm.module.css'
-
-const TYPES: { value: TxnType; label: string }[] = [
-  { value: 'expense', label: 'Expense' },
-  { value: 'income', label: 'Income' },
-  { value: 'investment', label: 'Invest' },
-  { value: 'refund', label: 'Refund' },
-]
 
 export function Field({
   label,
@@ -53,10 +47,18 @@ export function Field({
   )
 }
 
-export function TypeSelector({ value, onChange }: { value: TxnType; onChange: (t: TxnType) => void }) {
+export function TypeSelector<T extends TypeChoice>({
+  options,
+  value,
+  onChange,
+}: {
+  options: readonly { value: T; label: string }[]
+  value: T
+  onChange: (t: T) => void
+}) {
   return (
-    <div className={styles.types}>
-      {TYPES.map((t) => (
+    <div className={styles.types} style={{ gridTemplateColumns: `repeat(${options.length}, 1fr)` }}>
+      {options.map((t) => (
         <button
           key={t.value}
           type="button"
@@ -213,7 +215,14 @@ export function Fields({
 
   return (
     <>
-      <TypeSelector value={form.type} onChange={(t) => set('type', t)} />
+      <TypeSelector
+        options={FORM_TYPES}
+        value={typeChoice(form)}
+        onChange={(t) => {
+          set('type', t === 'withdraw' ? 'investment' : t)
+          set('outflow', t === 'withdraw')
+        }}
+      />
       <Field label={`Amount (${format.symbol})`}>
         <input
           className={styles.amount}

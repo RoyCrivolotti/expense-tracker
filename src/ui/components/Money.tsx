@@ -22,7 +22,9 @@ interface MoneyProps {
 function signFor(cents: number, type?: TxnType, signed?: boolean): string {
   if (cents === 0) return ''
   if (type === 'income') return '+'
-  if (type === 'expense' || type === 'investment') return '−'
+  if (type === 'expense') return '−'
+  // A negative investment is money back out of the portfolio, so it reads as a credit.
+  if (type === 'investment') return cents < 0 ? '+' : '−'
   if (type === 'refund') return cents >= 0 ? '+' : '−'
   if (signed) return cents >= 0 ? '+' : '−'
   return ''

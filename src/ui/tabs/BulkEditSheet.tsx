@@ -7,6 +7,7 @@ import type { ExpenseActions } from '../actions'
 import { selectableOptions, optionLabel } from '../components/pickerOptions'
 import { offScreenNote } from './useTransactionSelection'
 import { TypeSelector } from '../components/TransactionFields'
+import { STORED_TYPES } from '../components/transactionTypes'
 import { FlagField } from '../components/FlagField'
 import { createFlagInPlace } from '../components/quickFlag'
 import { Modal } from '../components/Modal'
@@ -129,7 +130,7 @@ export function BulkEditSheet({
           enabled={fields.typeEnabled}
           onToggle={(v) => set('typeEnabled', v)}
         >
-          <TypeSelector value={fields.type} onChange={(t) => set('type', t)} />
+          <TypeSelector options={STORED_TYPES} value={fields.type} onChange={(t) => set('type', t)} />
         </ToggleField>
 
         <ToggleField

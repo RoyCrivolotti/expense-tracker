@@ -13,7 +13,6 @@
 
 .types {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
   gap: 0.4rem;
 }
 .typeBtn {
@@ -37,7 +36,8 @@
 .typeActive[data-type='income'] {
   background: var(--exp-income);
 }
-.typeActive[data-type='investment'] {
+.typeActive[data-type='investment'],
+.typeActive[data-type='withdraw'] {
   background: var(--exp-investment);
 }
 .typeActive[data-type='refund'] {

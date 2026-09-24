@@ -5,6 +5,7 @@ import type { TransactionSeed } from '../actions'
 import { EU_MONEY_FORMAT, parseMoneyToCents } from '../../engine/money'
 import { defaultExpenseSettings } from '../../engine'
 import { initialFields } from './transactionFormState'
+import { makeTransaction } from '../../testing/factories'
 
 function minimalModel(): ExpenseModel {
   return {
@@ -86,6 +87,7 @@ describe('initialFields', () => {
     const fields = initialFields(null, minimalModel(), EU_MONEY_FORMAT, seed)
     expect(fields).toEqual({
       type: 'expense',
+      outflow: false,
       amount: '1.456,60',
       description: 'Rent',
       categoryId: 3,
@@ -149,5 +151,17 @@ describe('initialFields — a seeded transaction', () => {
     })
 
     expect(fields.flagId).toBeNull()
+  })
+
+  it('opens a negative investment as a withdrawal of its size', () => {
+    const editing = makeTransaction({ type: 'investment', amountCents: -50_000 })
+    const fields = initialFields(editing, minimalModel(), EU_MONEY_FORMAT)
+    expect(fields.type).toBe('investment')
+    expect(fields.outflow).toBe(true)
+    expect(fields.amount).toBe('500,00')
+
+    const copy = initialFields(null, minimalModel(), EU_MONEY_FORMAT, { type: 'investment', amountCents: -50_000 })
+    expect(copy.outflow).toBe(true)
+    expect(copy.amount).toBe('500,00')
   })
 })

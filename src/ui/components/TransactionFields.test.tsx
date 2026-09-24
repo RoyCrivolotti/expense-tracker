@@ -50,6 +50,7 @@ function modelWith(overrides: Partial<ExpenseModel['dataset']> = {}): ExpenseMod
 function baseForm(overrides: Partial<FormFields> = {}): FormFields {
   return {
     type: 'expense',
+    outflow: false,
     amount: '10,00',
     description: '',
     categoryId: 1,
@@ -265,5 +266,28 @@ describe('Date/Budget month native-input overlay', () => {
     fireEvent.change(screen.getByDisplayValue('2026-07'), { target: { value: '2026-11' } })
     expect(set).toHaveBeenCalledWith('budgetMonth', '2026-11')
     expect(set).not.toHaveBeenCalledWith('date', expect.anything())
+  })
+})
+
+describe('Fields type selector', () => {
+  it('offers Withdraw as an investment with the money going out', () => {
+    const set = vi.fn()
+    render(
+      <Fields form={baseForm()} set={set} model={modelWith()} editing={null} onAcceptSuggestion={vi.fn()} />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Withdraw' }))
+    expect(set).toHaveBeenCalledWith('type', 'investment')
+    expect(set).toHaveBeenCalledWith('outflow', true)
+
+    set.mockClear()
+    fireEvent.click(screen.getByRole('button', { name: 'Invest' }))
+    expect(set).toHaveBeenCalledWith('type', 'investment')
+    expect(set).toHaveBeenCalledWith('outflow', false)
+  })
+
+  it('shows a negative investment as Withdraw, not Invest', () => {
+    renderFields(baseForm({ type: 'investment', outflow: true }), modelWith())
+    expect(screen.getByRole('button', { name: 'Withdraw' }).className).toMatch(/typeActive/)
+    expect(screen.getByRole('button', { name: 'Invest' }).className).not.toMatch(/typeActive/)
   })
 })
