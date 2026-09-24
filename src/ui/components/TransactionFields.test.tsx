@@ -285,6 +285,44 @@ describe('Fields type selector', () => {
     expect(set).toHaveBeenCalledWith('outflow', false)
   })
 
+  it('locks the category to the investments category for Invest and Withdraw, and explains Withdraw', () => {
+    const set = vi.fn()
+    const model = modelWith({
+      categories: [
+        { id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true },
+        { id: 2, name: 'Investments', monthlyBudgetCents: 0, sortOrder: 1, active: true },
+      ],
+    })
+    const { rerender } = render(
+      <Fields form={baseForm({ categoryId: 1 })} set={set} model={model} editing={null} onAcceptSuggestion={vi.fn()} />,
+    )
+    expect(screen.getByLabelText('Category')).toBeEnabled()
+    expect(screen.queryByRole('note')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Withdraw' }))
+    expect(set).toHaveBeenCalledWith('categoryId', 2)
+
+    rerender(
+      <Fields
+        form={baseForm({ type: 'investment', outflow: true, categoryId: 2 })}
+        set={set}
+        model={model}
+        editing={null}
+        onAcceptSuggestion={vi.fn()}
+      />,
+    )
+    expect(screen.getByLabelText('Category')).toBeDisabled()
+    expect(screen.getByLabelText('Category')).toHaveValue('2')
+    expect(screen.getByText(/Investments always go here/)).toBeInTheDocument()
+    expect(screen.getByRole('note')).toHaveTextContent(/Money taken out of your investments/)
+  })
+
+  it('leaves the category free for an investment when no investments category exists', () => {
+    renderFields(baseForm({ type: 'investment' }), modelWith())
+    expect(screen.getByLabelText('Category')).toBeEnabled()
+    expect(screen.queryByText(/Investments always go here/)).not.toBeInTheDocument()
+  })
+
   it('shows a negative investment as Withdraw, not Invest', () => {
     renderFields(baseForm({ type: 'investment', outflow: true }), modelWith())
     expect(screen.getByRole('button', { name: 'Withdraw' }).className).toMatch(/typeActive/)

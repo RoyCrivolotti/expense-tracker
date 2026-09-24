@@ -1,5 +1,6 @@
 import type { Transaction, TxnType } from '../../types'
 import { resolveDefaultAccountId } from '../../data/defaultAccount'
+import { resolveInvestmentCategoryId } from '../../data/investmentCategory'
 import { defaultBudgetMonth } from '../../engine/dates'
 import { formatMoneyInput, type MoneyFormat } from '../../engine/money'
 import type { ExpenseModel } from '../useExpenseData'
@@ -80,6 +81,25 @@ function isOutflow(txn: { type?: TxnType | undefined; amountCents?: number | und
 
 /** Seed the form from an existing transaction, a recurring suggestion, or sensible defaults. */
 export function initialFields(
+  editing: Transaction | null,
+  model: ExpenseModel,
+  format: MoneyFormat,
+  seed?: TransactionSeed,
+): FormFields {
+  return lockInvestmentCategory(startingFields(editing, model, format, seed), model)
+}
+
+/**
+ * An investment is filed under the investments category whichever way the money moves,
+ * so a row that opens as one, or turns into one, takes that category over its own.
+ */
+export function lockInvestmentCategory(fields: FormFields, model: ExpenseModel): FormFields {
+  if (fields.type !== 'investment') return fields
+  const locked = resolveInvestmentCategoryId(model.dataset.categories, model.dataset.settings)
+  return locked === null ? fields : { ...fields, categoryId: locked }
+}
+
+function startingFields(
   editing: Transaction | null,
   model: ExpenseModel,
   format: MoneyFormat,

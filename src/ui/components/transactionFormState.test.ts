@@ -153,6 +153,23 @@ describe('initialFields — a seeded transaction', () => {
     expect(fields.flagId).toBeNull()
   })
 
+  it('files an investment under the investments category, whichever way it points', () => {
+    const model = minimalModel()
+    model.dataset.categories = [
+      ...model.dataset.categories,
+      { id: 9, name: 'Investments', monthlyBudgetCents: 0, sortOrder: 2, active: true },
+    ]
+    const deposit = makeTransaction({ type: 'investment', amountCents: 50_000, categoryId: 3 })
+    expect(initialFields(deposit, model, EU_MONEY_FORMAT).categoryId).toBe(9)
+    const withdrawal = makeTransaction({ type: 'investment', amountCents: -50_000, categoryId: 3 })
+    expect(initialFields(withdrawal, model, EU_MONEY_FORMAT).categoryId).toBe(9)
+    // The chosen setting wins over the name.
+    model.dataset.settings = { ...model.dataset.settings, investmentCategoryId: 3 }
+    expect(initialFields(deposit, model, EU_MONEY_FORMAT).categoryId).toBe(3)
+    // An expense keeps its own.
+    expect(initialFields(makeTransaction({ type: 'expense', categoryId: 3 }), model, EU_MONEY_FORMAT).categoryId).toBe(3)
+  })
+
   it('opens a negative investment as a withdrawal of its size', () => {
     const editing = makeTransaction({ type: 'investment', amountCents: -50_000 })
     const fields = initialFields(editing, minimalModel(), EU_MONEY_FORMAT)
