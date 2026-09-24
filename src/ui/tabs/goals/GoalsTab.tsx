@@ -292,6 +292,7 @@ export function GoalsTab({ model, actions }: GoalsTabProps) {
         <ProgressView
           accounts={dataset.wealthAccounts}
           checkins={dataset.wealthCheckins}
+          transactions={dataset.transactions}
           milestones={milestones}
           reached={reachedMilestones}
           plan={plan}

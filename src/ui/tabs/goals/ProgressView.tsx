@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { GoalScenario, Milestone, WealthAccount, WealthCheckin } from '../../../types'
+import type { GoalScenario, Milestone, Transaction, WealthAccount, WealthCheckin } from '../../../types'
 import type { ExpenseActions } from '../../actions'
 import { latestCheckin } from '../../../engine'
 import { EmptyState } from '../../components/primitives'
@@ -15,6 +15,8 @@ import goalStyles from './goals.module.css'
 interface Props {
   accounts: WealthAccount[]
   checkins: WealthCheckin[]
+  /** For the measured return: investment transactions are the contributions. */
+  transactions?: Transaction[]
   milestones: Milestone[]
   /** amountCents -> date first observed at or above, from check-in history. */
   reached: Map<number, string>
@@ -28,6 +30,7 @@ interface Props {
 export function ProgressView({
   accounts,
   checkins,
+  transactions = [],
   milestones,
   reached,
   plan,
@@ -45,6 +48,7 @@ export function ProgressView({
         checkins={checkins}
         accounts={accounts}
         plan={plan}
+        transactions={transactions}
       />
 
       <NetWorthHistoryChart checkins={checkins} accounts={accounts} />
