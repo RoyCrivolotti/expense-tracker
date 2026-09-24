@@ -172,7 +172,9 @@ function useChartLegendState(
         color: s.color,
         ...(s.dashed ? { dashed: true as const } : {}),
         ...(scenarioId !== null ? { scenarioId } : {}),
-        valueCents: activeIndex != null ? s.values[activeIndex] ?? 0 : null,
+        // Gated on the year, not the index: a narrower window can leave a hovered index
+        // past the end, and that must read as nothing rather than as zero.
+        valueCents: activeYear != null && activeIndex != null ? s.values[activeIndex] ?? 0 : null,
       }
     })
     // Hidden scenarios stay in the legend, dimmed, so they can be brought back from here.
@@ -184,7 +186,7 @@ function useChartLegendState(
       valueCents: null,
     }))
     return [...drawn, ...hidden]
-  }, [series, names, lines, activeIndex, hiddenScenarios])
+  }, [series, names, lines, activeIndex, activeYear, hiddenScenarios])
   const breakdowns: ScenarioLegendBreakdown[] = useMemo(() => {
     if (activeYear == null) return []
     return lines.flatMap((line) => {
@@ -215,8 +217,11 @@ function heroHeight(narrow: boolean): number {
 
 /** The hero's window buttons: which years of the projection are drawn. */
 function useHeroWindow(isHero: boolean, horizonYears: number) {
-  const [heroWindow, setHeroWindow] = useState<HeroWindowKey>('all')
+  const [picked, setHeroWindow] = useState<HeroWindowKey>('all')
   const heroWindows = useMemo(() => heroWindowsFor(horizonYears), [horizonYears])
+  // A window the horizon has since shrunk under falls back to All rather than sitting
+  // selected-but-unlisted; picking it again once the horizon grows still works.
+  const heroWindow = heroWindows.some((w) => w.value === picked) ? picked : 'all'
   const chosen = HERO_WINDOWS.find((w) => w.value === heroWindow)?.years ?? null
   return { heroWindow, setHeroWindow, heroWindows, windowYears: isHero ? chosen : null }
 }

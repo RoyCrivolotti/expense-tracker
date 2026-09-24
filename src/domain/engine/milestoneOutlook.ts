@@ -4,16 +4,11 @@
  * the year it happens in, then placed on the calendar from the plan's start date.
  */
 import type { GoalScenario, Milestone } from '../types'
+import { DAY_MS, utcDateMs } from './dates'
 import { projectNetWorth } from './projection'
 import { scenarioToParams } from './scenarioProjection'
 
-const DAY_MS = 86_400_000
 const YEAR_DAYS = 365.25
-
-function utcMs(date: string): number {
-  const [y, m, d] = date.split('-').map(Number) as [number, number, number]
-  return Date.UTC(y, m - 1, d)
-}
 
 function isoAt(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10)
@@ -42,7 +37,7 @@ export function milestoneCrossingDate(plan: GoalScenario, amountCents: number): 
   // Whole years by the calendar, so two years from 1 January is 1 January; only the part
   // year inside the crossing year is counted in days.
   const whole = Math.floor(years)
-  const start = new Date(utcMs(plan.planStartDate))
+  const start = new Date(utcDateMs(plan.planStartDate))
   start.setUTCFullYear(start.getUTCFullYear() + whole)
   return isoAt(start.getTime() + Math.round((years - whole) * YEAR_DAYS) * DAY_MS)
 }
@@ -71,7 +66,7 @@ export function milestoneStanding(
   const target = milestone.targetDate ?? null
   if (!expected) return { kind: 'beyond-horizon', target }
   if (!target) return { kind: 'expected', expected }
-  const lateMs = utcMs(expected) - utcMs(target)
+  const lateMs = utcDateMs(expected) - utcDateMs(target)
   if (lateMs <= 0) return { kind: 'on-track', expected, target }
   return { kind: 'late', expected, target, monthsLate: Math.max(1, Math.round(lateMs / DAY_MS / (YEAR_DAYS / 12))) }
 }

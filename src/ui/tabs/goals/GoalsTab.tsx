@@ -108,6 +108,13 @@ function initialView(entry: GoalsEntry | undefined): TabView {
 export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
   const { dataset } = model
   const [view, setView] = useState<TabView>(() => initialView(entry))
+  // The dashboard's nudge opens the check-in form once; leaving Progress and coming back
+  // within the tab must not open it again.
+  const [checkinEntry, setCheckinEntry] = useState(entry === 'checkin')
+  const changeView = useCallback((next: TabView) => {
+    setCheckinEntry(false)
+    setView(next)
+  }, [])
   const [displayMode, setDisplayMode] = useState<DisplayMode>('nominal')
   // Single configurable rate rather than year-by-year inputs — a reasonable
   // simplification for a multi-decade projection. Resets on reload; display-only.
@@ -175,6 +182,14 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
   const selectScenario = useCallback((scenario: GoalScenario) => {
     setActiveId(scenario.id)
     setDraft(scenarioToDraft(scenario))
+    // The loaded scenario is always drawn as the editing line, so a hidden flag on it would
+    // only leave the chip and legend saying two things at once.
+    setHiddenIds((prev) => {
+      if (!prev.has(scenario.id)) return prev
+      const next = new Set(prev)
+      next.delete(scenario.id)
+      return next
+    })
   }, [])
 
   const onActivate = useCallback(() => {
@@ -276,7 +291,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
         <SegmentedControl
           options={VIEW_OPTIONS}
           value={view}
-          onChange={setView}
+          onChange={changeView}
           ariaLabel="Goals view"
           layout="compact"
         />
@@ -301,8 +316,8 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
           plan={plan}
           actions={actions}
           canWrite={actions != null}
-          onOpenSetup={() => setView('setup')}
-          openCheckinForm={entry === 'checkin'}
+          onOpenSetup={() => changeView('setup')}
+          openCheckinForm={checkinEntry}
           cashReserveMonths={dataset.settings.cashReserveMonths}
         />
       ) : null}

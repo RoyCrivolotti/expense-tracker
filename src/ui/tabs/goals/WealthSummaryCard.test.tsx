@@ -157,6 +157,19 @@ describe('WealthSummaryCard', () => {
     render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />)
     const line = screen.getByText(/Your portfolio returned/)
     expect(line).toHaveTextContent(/4,0\s?% a year/)
-    expect(line).toHaveTextContent(/7,0\s?% a year, after inflation, that Path A assumes/)
+    expect(line).toHaveTextContent(/about 2,0\s?% once 2,0\s?% inflation is taken off/)
+    expect(line).toHaveTextContent(/against the 7,0\s?% a year that Path A assumes/)
+  })
+
+  it('colours the return by its real rate, so a nominal match with the plan is still short', () => {
+    const scenario = makeScenario({ name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2025-01-01' })
+    const accounts = [makeAccount(1, 'investment')]
+    const checkins = [
+      makeCheckin(1, '2025-01-01', [{ accountId: 1, valueCents: 100_000_00 }]),
+      makeCheckin(2, '2026-01-01', [{ accountId: 1, valueCents: 107_000_00 }]),
+    ]
+    render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />)
+    const rate = screen.getByText(/7,0\s?% a year$/)
+    expect(rate).toHaveStyle({ color: 'var(--exp-danger)' })
   })
 })

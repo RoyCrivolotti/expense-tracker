@@ -24,9 +24,14 @@ export function checkinCashCents(checkin: WealthCheckin, accounts: WealthAccount
   return checkin.entries.filter((e) => cashIds.has(e.accountId)).reduce((s, e) => s + e.valueCents, 0)
 }
 
-/** Mean expenses over the last months with any transactions, or null with none. */
+/**
+ * Mean expenses over the last months that recorded any, or null with none. A month with
+ * only income or investing logged says nothing about spending, so it does not count as a
+ * month of zero and pull the average down.
+ */
 export function averageMonthlySpendCents(transactions: Transaction[]): number | null {
   const months = [...computeMonthlyTotals(transactions).values()]
+    .filter((m) => m.expensesCents !== 0)
     .sort((a, b) => a.month.localeCompare(b.month))
     .slice(-CASH_RESERVE_SPEND_MONTHS)
   if (months.length === 0) return null

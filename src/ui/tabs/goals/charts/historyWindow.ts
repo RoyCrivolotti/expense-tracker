@@ -1,4 +1,4 @@
-import { shiftBudgetMonth, shortMonthYearLabel } from '../../../../engine'
+import { DAY_MS, shiftBudgetMonth, shortMonthYearLabel, utcDateMs } from '../../../../engine'
 import { stepMonthsFor } from './checkinWindow'
 
 /**
@@ -22,17 +22,11 @@ export const HISTORY_WINDOWS: { value: HistoryWindowKey; label: string; months: 
 /** 'All' never shows less than this, so a single old reading does not fill the plot. */
 const MIN_ALL_MONTHS = 3
 
-const DAY_MS = 86_400_000
 const DAYS_PER_MONTH = 365.25 / 12
-
-function utcMs(date: string): number {
-  const [y, m, d] = date.split('-').map(Number) as [number, number, number]
-  return Date.UTC(y, m - 1, d)
-}
 
 /** Months from one date to another, counted in days, so the day of a check-in places it. */
 export function monthsBetweenDates(from: string, to: string): number {
-  return (utcMs(to) - utcMs(from)) / DAY_MS / DAYS_PER_MONTH
+  return (utcDateMs(to) - utcDateMs(from)) / DAY_MS / DAYS_PER_MONTH
 }
 
 /** The smallest window that reaches back to the earliest check-in, with a month to spare. */
