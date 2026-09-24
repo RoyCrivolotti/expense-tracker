@@ -32,6 +32,7 @@ function MilestoneRow({
   isAmountTaken,
   onCommit,
   onRemove,
+  failed,
 }: {
   milestone: Milestone
   currencySymbol: string
@@ -39,6 +40,8 @@ function MilestoneRow({
   isAmountTaken: (amountCents: number) => boolean
   onCommit: (amountCents: number, next: Milestone) => void
   onRemove: () => void
+  /** The row whose save last failed, and a count so the same row can fail twice. */
+  failed: { amountCents: number; n: number } | null
 }) {
   const [label, setLabel] = useState(milestone.label)
   const [amount, setAmount] = useState(String(milestone.amountCents / 100))
@@ -53,6 +56,22 @@ function MilestoneRow({
   useEffect(() => {
     targetRef.current = targetDate
   }, [targetDate])
+
+  // Read through a ref so the reset below runs only when a save failed, not on every
+  // change to the prop, which would wipe what is being typed in another row's wake.
+  const savedRef = useRef(milestone)
+  useEffect(() => {
+    savedRef.current = milestone
+  })
+  useEffect(() => {
+    // Only the row whose edit was refused goes back; another row's typing is untouched.
+    const saved = savedRef.current
+    if (failed === null || failed.amountCents !== saved.amountCents) return
+    setLabel(saved.label)
+    setAmount(String(saved.amountCents / 100))
+    keyRef.current = saved.amountCents
+    targetRef.current = saved.targetDate ?? ''
+  }, [failed])
 
   function resolveAmountCents(): number {
     const units = Number(amount)
@@ -140,12 +159,18 @@ export function MilestonesSetting({ settings, onChange }: Props) {
   // A save that fails would otherwise fail in silence: the input keeps the edit while
   // the server never got it.
   const [error, setError] = useState<string | null>(null)
+  const [failed, setFailed] = useState<{ amountCents: number; n: number } | null>(null)
+  const errorRef = useRef<HTMLParagraphElement>(null)
+  useEffect(() => {
+    // On a phone the list runs under the fold; an alert nobody sees is no alert.
+    if (error) errorRef.current?.scrollIntoView?.({ block: 'nearest' })
+  }, [error])
 
   useEffect(() => {
     if (inFlight.current === 0) workingRef.current = milestones
   }, [milestones])
 
-  const save = async (next: Milestone[]) => {
+  const save = async (next: Milestone[], origin: number | null = null) => {
     const previous = workingRef.current
     workingRef.current = next
     inFlight.current += 1
@@ -159,6 +184,7 @@ export function MilestonesSetting({ settings, onChange }: Props) {
       if (seq === latestSave.current) {
         workingRef.current = previous
         setError(e instanceof Error ? e.message : 'Could not save the milestones')
+        if (origin !== null) setFailed((f) => ({ amountCents: origin, n: (f?.n ?? 0) + 1 }))
       }
     } finally {
       inFlight.current -= 1
@@ -171,7 +197,7 @@ export function MilestonesSetting({ settings, onChange }: Props) {
   // list again, so the row falls back to its saved one and the retry carries the edit.
   const replaceAmount = (key: number, savedAmountCents: number, next: Milestone) => {
     const known = workingRef.current.some((m) => m.amountCents === key) ? key : savedAmountCents
-    void save(workingRef.current.map((m) => (m.amountCents === known ? next : m)))
+    void save(workingRef.current.map((m) => (m.amountCents === known ? next : m)), savedAmountCents)
   }
   const removeAmount = (amountCents: number) =>
     void save(workingRef.current.filter((m) => m.amountCents !== amountCents))
@@ -188,6 +214,11 @@ export function MilestonesSetting({ settings, onChange }: Props) {
             its amount alongside; an unnamed one shows the amount on its own. Give one a target date
             and Progress will say whether the plan reaches it in time.
           </p>
+          {error ? (
+            <p ref={errorRef} className={styles.settingError} role="alert">
+              Could not save the milestones: {error}
+            </p>
+          ) : null}
 
           {milestones.length > 0 ? (
             <ul className={styles.milestoneList}>
@@ -202,6 +233,7 @@ export function MilestonesSetting({ settings, onChange }: Props) {
                     workingRef.current.some((other) => other.amountCents === cents)
                   }
                   onCommit={(key, next) => replaceAmount(key, m.amountCents, next)}
+                  failed={failed}
                   onRemove={() => removeAmount(m.amountCents)}
                 />
               ))}
@@ -213,11 +245,6 @@ export function MilestonesSetting({ settings, onChange }: Props) {
             </p>
           )}
 
-          {error ? (
-            <p className={styles.settingError} role="alert">
-              Could not save the milestones: {error}
-            </p>
-          ) : null}
           <div className={styles.milestoneActions}>
             <button
               type="button"

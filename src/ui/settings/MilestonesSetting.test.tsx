@@ -69,13 +69,13 @@ describe('MilestonesSetting', () => {
     fireEvent.blur(amount)
     expect(await screen.findByRole('alert')).toHaveTextContent('Network down')
 
-    // The working list rolled back to 10M; the row still addresses itself and the
-    // retry carries the new amount together with the date.
+    // The row shows what the server holds again, and the next edit addresses that.
+    await waitFor(() => expect(amount).toHaveValue(100000))
     fireEvent.change(screen.getByLabelText('Target date for milestone House deposit'), {
       target: { value: '2028-06-01' },
     })
     expect(onChange).toHaveBeenLastCalledWith({
-      milestones: [{ amountCents: 25_000_000, label: 'House deposit', targetDate: '2028-06-01' }],
+      milestones: [{ amountCents: 10_000_000, label: 'House deposit', targetDate: '2028-06-01' }],
     })
     await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
   })
