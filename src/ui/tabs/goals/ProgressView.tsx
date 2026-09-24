@@ -27,6 +27,8 @@ interface Props {
   onOpenSetup?: (() => void) | undefined
   /** Start with the check-in form open, as the dashboard's nudge asks. */
   openCheckinForm?: boolean
+  /** The emergency-fund target from Setup; 0 means none. */
+  cashReserveMonths?: number
 }
 
 /**
@@ -58,6 +60,7 @@ export function ProgressView({
   canWrite,
   onOpenSetup,
   openCheckinForm = false,
+  cashReserveMonths = 0,
 }: Props) {
   const [showCheckinForm, setShowCheckinForm] = useState(openCheckinForm)
   const latest = latestCheckin(checkins)
@@ -71,6 +74,7 @@ export function ProgressView({
         accounts={accounts}
         plan={plan}
         transactions={transactions}
+        cashReserveMonths={cashReserveMonths}
         onRebaseline={rebaselineFrom(canWrite ? actions : undefined, plan, latest, accounts)}
       />
 

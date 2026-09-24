@@ -1,7 +1,8 @@
 import type { GoalScenario, Transaction, WealthAccount, WealthCheckin } from '../../../types'
-import type { PortfolioReturn, SteadyGap, TrackStatus } from '../../../engine'
+import type { CashReserve, PortfolioReturn, SteadyGap, TrackStatus } from '../../../engine'
 import { Card } from '../../components/primitives'
 import {
+  cashReserve,
   checkinInvestedCents,
   checkinNetWorthCents,
   formatPercent,
@@ -26,6 +27,34 @@ interface Props {
   transactions?: Transaction[]
   /** Re-baselines the plan from the latest check-in; absent in a read-only session. */
   onRebaseline?: (() => void) | undefined
+  /** The emergency-fund target from Setup; 0 means none. */
+  cashReserveMonths?: number
+}
+
+/** Cash as months of spending, against the target when there is one. */
+function CashReserveHint({ reserve, format }: { reserve: CashReserve; format: MoneyFormat }) {
+  const cash = formatMoneyShort(reserve.cashCents, format)
+  if (reserve.monthsCovered === null) {
+    return <p style={hintStyle}>Cash reserve: <strong>{cash}</strong>.</p>
+  }
+  const months = reserve.monthsCovered.toFixed(1)
+  if (reserve.targetMonths <= 0) {
+    return (
+      <p style={hintStyle}>
+        Cash reserve: <strong>{cash}</strong>, about {months} months of spending.
+      </p>
+    )
+  }
+  const met = reserve.monthsCovered >= reserve.targetMonths
+  return (
+    <p style={hintStyle}>
+      Cash reserve: <strong>{cash}</strong> covers{' '}
+      <strong style={{ color: met ? 'var(--exp-success)' : 'var(--exp-danger)' }}>
+        {months} months
+      </strong>{' '}
+      of spending, against a target of {reserve.targetMonths}.
+    </p>
+  )
 }
 
 /**
@@ -162,17 +191,46 @@ function MonthsHint({ status }: { status: TrackStatus }) {
   )
 }
 
+/** The lines under the figures: each one earns its place only when it has something to say. */
+function SnapshotHints({
+  latest,
+  status,
+  checkins,
+  accounts,
+  plan,
+  transactions,
+  cashReserveMonths,
+  onRebaseline,
+  format,
+}: Required<Pick<Props, 'checkins' | 'accounts' | 'plan' | 'transactions' | 'cashReserveMonths'>> & {
+  latest: WealthCheckin
+  status: TrackStatus | null
+  onRebaseline: (() => void) | undefined
+  format: MoneyFormat
+}) {
+  const ret = portfolioReturn(checkins, accounts, transactions)
+  const stale = plan ? steadyGap(checkins, plan, accounts) : null
+  const reserve = cashReserve(latest, accounts, transactions, cashReserveMonths)
+  return (
+    <>
+      {status && status.deltaMonths !== 0 ? <MonthsHint status={status} /> : null}
+      {ret ? <ReturnHint ret={ret} plan={plan} format={format} /> : null}
+      {reserve ? <CashReserveHint reserve={reserve} format={format} /> : null}
+      {stale ? <SteadyGapHint gap={stale} format={format} onRebaseline={onRebaseline} /> : null}
+    </>
+  )
+}
+
 export function WealthSummaryCard({
   checkins,
   accounts,
   plan,
   transactions = [],
   onRebaseline,
+  cashReserveMonths = 0,
 }: Props) {
   const format = useMoneyFormat()
   const latest = latestCheckin(checkins)
-  const ret = portfolioReturn(checkins, accounts, transactions)
-  const stale = plan ? steadyGap(checkins, plan, accounts) : null
 
   if (!latest) {
     // A check-in needs an account to record, so without one the first step is Setup.
@@ -212,9 +270,17 @@ export function WealthSummaryCard({
             </>
           ) : null}
         </div>
-        {status && status.deltaMonths !== 0 ? <MonthsHint status={status} /> : null}
-        {ret ? <ReturnHint ret={ret} plan={plan} format={format} /> : null}
-        {stale ? <SteadyGapHint gap={stale} format={format} onRebaseline={onRebaseline} /> : null}
+        <SnapshotHints
+          latest={latest}
+          status={status}
+          checkins={checkins}
+          accounts={accounts}
+          plan={plan}
+          transactions={transactions}
+          cashReserveMonths={cashReserveMonths}
+          onRebaseline={onRebaseline}
+          format={format}
+        />
       </div>
     </Card>
   )

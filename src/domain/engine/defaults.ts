@@ -18,5 +18,6 @@ export function defaultExpenseSettings(): ExpenseSettings {
     budgetRolloverDay: DEFAULT_BUDGET_ROLLOVER_DAY,
     milestones: defaultMilestones(),
     claimantName: '',
+    cashReserveMonths: 0,
   }
 }

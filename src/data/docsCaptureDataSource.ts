@@ -29,6 +29,7 @@ import type {
   NewWealthCheckin,
 } from './dataSource'
 import { deriveTransactions } from '../domain/engine/status'
+import { defaultExpenseSettings } from '../domain/engine/defaults'
 import { csvDataSource } from './csvDataSource'
 import { docsCaptureGoalScenarios } from './docsCaptureGoalScenarios'
 import { docsCaptureWealthAccounts, docsCaptureWealthCheckins } from './docsCaptureWealth'
@@ -220,6 +221,7 @@ function stubTxn(input: NewTransaction): Transaction {
  * had done nothing for exactly that reason.
  */
 let loaded: Transaction[] = []
+let loadedSettings: ExpenseSettings = defaultExpenseSettings()
 
 export const docsCaptureDataSource: ExpenseDataSource = {
   canWrite: true,
@@ -232,6 +234,7 @@ export const docsCaptureDataSource: ExpenseDataSource = {
         wealthCheckins: docsCaptureWealthCheckins(),
       })
       loaded = enriched.transactions
+      loadedSettings = enriched.settings
       return enriched
     })
   },
@@ -360,8 +363,11 @@ export const docsCaptureDataSource: ExpenseDataSource = {
   deleteAccount() {
     return Promise.resolve({ reassignedToId: null })
   },
+  // The real API returns the whole settings row. A patch alone would replace the loaded
+  // settings with, say, one number and no milestones, and the Goals tab reads those.
   updateSettings(patch: Partial<ExpenseSettings>) {
-    return Promise.resolve(patch as ExpenseSettings)
+    loadedSettings = { ...loadedSettings, ...patch }
+    return Promise.resolve(loadedSettings)
   },
   createScenario(input: NewGoalScenario) {
     nextId += 1

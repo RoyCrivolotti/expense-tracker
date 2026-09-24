@@ -15,9 +15,23 @@ function makeRow(overrides: Partial<SettingsRow> = {}): SettingsRow {
     number_locale: null,
     budget_rollover_day: null,
     milestones: null,
+    claimant_name: null,
+    cash_reserve_months: null,
     ...overrides,
   }
 }
+
+describe('updateSettings with cashReserveMonths', () => {
+  it('accepts a whole number of months up to five years, and nothing else', async () => {
+    const { env } = stubEnv(makeRow({ cash_reserve_months: 6 }))
+    await expect(updateSettings(env, OWNER, { cashReserveMonths: 6 })).resolves.toMatchObject({
+      cashReserveMonths: 6,
+    })
+    for (const bad of [-1, 2.5, 61]) {
+      await expect(updateSettings(env, OWNER, { cashReserveMonths: bad })).rejects.toBeInstanceOf(HttpError)
+    }
+  })
+})
 
 function stubEnv(returnRow: SettingsRow) {
   const first = vi.fn().mockResolvedValue(returnRow)

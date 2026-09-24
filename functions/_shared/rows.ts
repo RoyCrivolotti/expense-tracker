@@ -181,10 +181,12 @@ export interface SettingsRow {
   budget_rollover_day: number | null
   milestones: string | null
   claimant_name: string | null
+  cash_reserve_months: number | null
 }
 
 export function toSettings(r: SettingsRow): ExpenseSettings {
   return {
+    cashReserveMonths: r.cash_reserve_months ?? 0,
     openingCashCents: r.opening_cash_cents,
     openingInvestmentCents: r.opening_investment_cents,
     defaultAccountId: r.default_account_id ?? null,

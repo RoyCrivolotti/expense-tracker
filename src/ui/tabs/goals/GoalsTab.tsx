@@ -308,6 +308,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
           canWrite={actions != null}
           onOpenSetup={() => setView('setup')}
           openCheckinForm={entry === 'checkin'}
+          cashReserveMonths={dataset.settings.cashReserveMonths}
         />
       ) : null}
       {view === 'plan' ? (

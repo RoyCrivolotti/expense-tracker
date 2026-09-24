@@ -52,6 +52,10 @@ Symmetric **net worth** comparison via `projectRentVsBuy` (`src/domain/engine/re
 
 Breakeven = first year buyer net worth ≥ renter net worth. Simplifications: constant real rent, fixed carry rate (1.5%/yr default, not yet a UI control), no selling costs or transaction friction on resale.
 
+## Cash reserve
+
+`settings.cashReserveMonths` (`cash_reserve_months`, 0 = no target) is the emergency-fund target in months of spending, set under the Goals tab's Setup view. Progress takes the cash-kind accounts in the latest check-in and divides by the mean of the last twelve budget months' expenses (`cashReserve` in `engine/cashReserve.ts`), and says how many months they cover, against the target when there is one. It never enters the invested-only tracking above.
+
 ## Milestones
 
 Per-owner list of named net-worth targets, measured against the **invested portfolio only**. Edited from the Goals tab's Setup view and stored as JSON in `settings.milestones`; up to 12 entries, each with an optional name and an optional target date (`targetDate`, YYYY-MM-DD). With a target date, Progress dates the plan's crossing of the amount (`milestoneCrossingDate`, interpolated inside the crossing year from the plan start) and says on track or late; without one it shows the expected date alone. A check-in at or above the amount counts as reached whatever the plan says.

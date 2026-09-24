@@ -3,6 +3,13 @@ import { describe, expect, it, vi } from 'vitest'
 import { GoalsCard } from './GoalsCard'
 import { makeDataset, makeScenario, makeWealthAccount, makeWealthCheckin } from '../../testing/factories'
 
+/** The local calendar date `n` days ago; the card counts days in local time too. */
+function daysAgoIso(n: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() - n)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 describe('GoalsCard', () => {
   it('renders empty state when no scenarios exist', () => {
     render(<GoalsCard dataset={makeDataset()} />)
@@ -83,16 +90,14 @@ describe('GoalsCard', () => {
 
   it('nudges for a check-in once the last one is a month old', () => {
     const onLogCheckin = vi.fn()
-    const old = new Date()
-    old.setDate(old.getDate() - 45)
     const dataset = makeDataset({
       goalScenarios: [makeScenario({ id: 1, isActive: true })],
       wealthAccounts: [makeWealthAccount({ id: 1 })],
-      wealthCheckins: [makeWealthCheckin({ id: 1, checkinDate: old.toISOString().slice(0, 10) })],
+      wealthCheckins: [makeWealthCheckin({ id: 1, checkinDate: daysAgoIso(45) })],
     })
     render(<GoalsCard dataset={dataset} onLogCheckin={onLogCheckin} />)
 
-    expect(screen.getByText(/Last check-in 4[45] days ago/)).toBeInTheDocument()
+    expect(screen.getByText('Last check-in 45 days ago.')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Log check-in' }))
     expect(onLogCheckin).toHaveBeenCalled()
   })
@@ -114,21 +119,17 @@ describe('GoalsCard', () => {
   })
 
   it('stays quiet after a recent check-in, and without a way to log one', () => {
-    const recent = new Date()
-    recent.setDate(recent.getDate() - 3)
     const dataset = makeDataset({
       goalScenarios: [makeScenario({ id: 1, isActive: true })],
       wealthAccounts: [makeWealthAccount({ id: 1 })],
-      wealthCheckins: [makeWealthCheckin({ id: 1, checkinDate: recent.toISOString().slice(0, 10) })],
+      wealthCheckins: [makeWealthCheckin({ id: 1, checkinDate: daysAgoIso(3) })],
     })
     const { rerender } = render(<GoalsCard dataset={dataset} onLogCheckin={vi.fn()} />)
     expect(screen.queryByText(/Last check-in/)).not.toBeInTheDocument()
 
-    const stale = new Date()
-    stale.setDate(stale.getDate() - 90)
     rerender(
       <GoalsCard
-        dataset={{ ...dataset, wealthCheckins: [makeWealthCheckin({ id: 1, checkinDate: stale.toISOString().slice(0, 10) })] }}
+        dataset={{ ...dataset, wealthCheckins: [makeWealthCheckin({ id: 1, checkinDate: daysAgoIso(90) })] }}
       />,
     )
     expect(screen.queryByText(/Last check-in/)).not.toBeInTheDocument()
