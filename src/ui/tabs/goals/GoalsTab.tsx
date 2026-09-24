@@ -102,6 +102,22 @@ const EDIT_KEYS = [
   'planStartDate',
 ] as const satisfies readonly (keyof NewGoalScenario)[]
 
+/** Whether the draft holds edits its saved scenario does not. */
+function differsFrom(draft: NewGoalScenario, saved: GoalScenario): boolean {
+  if (draft.name !== saved.name) return true
+  if (JSON.stringify(draft.lifeEvents) !== JSON.stringify(saved.lifeEvents)) return true
+  return EDIT_KEYS.some((k) => draft[k] !== saved[k])
+}
+
+/** A detached draft (no scenario loaded) holding edits its origin does not. */
+function hasDetachedEdits(
+  loaded: GoalScenario | null,
+  base: GoalScenario | null,
+  draft: NewGoalScenario,
+): boolean {
+  return loaded === null && base !== null && differsFrom(draft, base)
+}
+
 function bootstrapEditor(
   dataset: ExpenseModel['dataset'],
   avgSaving: number,
@@ -137,6 +153,43 @@ function RebaselineSheet({
           title="Re-baseline the plan from the latest check-in?"
           message={summary ? [start, summary] : start}
           confirmLabel="Re-baseline"
+          onConfirm={onConfirm}
+          onCancel={onCancel}
+        />
+      ) : null}
+    </Presence>
+  )
+}
+
+/**
+ * Asked before loading another scenario over unsaved edits. Held inside Presence so the
+ * sheet keeps its text while it animates out. A detached draft has no saved scenario to
+ * "save changes" to, so it is told to save the draft as a new one.
+ */
+function DiscardSheet({
+  pending,
+  open,
+  detached,
+  name,
+  onConfirm,
+  onCancel,
+}: {
+  pending: GoalScenario | null
+  open: boolean
+  detached: boolean
+  name: string
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  const keep = detached ? 'Save the draft as a new scenario first to keep them.' : 'Save changes first to keep them.'
+  return (
+    <Presence show={open} exitMs={EXIT_MS.sheet}>
+      {pending ? (
+        <ConfirmSheet
+          title={detached ? 'Discard the unsaved draft?' : `Discard unsaved changes to ${name}?`}
+          message={`Loading ${pending.name} drops the edits made here. ${keep}`}
+          confirmLabel="Discard"
+          destructive
           onConfirm={onConfirm}
           onCancel={onCancel}
         />
@@ -193,6 +246,11 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
   const [activeId, setActiveId] = useState<number | null>(
     () => bootstrapEditor(dataset, avgSaving).activeId,
   )
+  // The saved scenario the draft was last loaded from. Detaching to "Unsaved draft" clears
+  // activeId but keeps the edits, and this is what they are still measured against.
+  const [baseId, setBaseId] = useState<number | null>(
+    () => bootstrapEditor(dataset, avgSaving).activeId,
+  )
   const [draft, setDraft] = useState<NewGoalScenario>(
     () => bootstrapEditor(dataset, avgSaving).draft,
   )
@@ -216,15 +274,21 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
   )
   const plan = useMemo(() => activePlan(dataset.goalScenarios), [dataset.goalScenarios])
 
-  const dirty = useMemo(() => {
-    if (!activeScenario) return false
-    if (draft.name !== activeScenario.name) return true
-    if (JSON.stringify(draft.lifeEvents) !== JSON.stringify(activeScenario.lifeEvents)) return true
-    return EDIT_KEYS.some((k) => draft[k] !== activeScenario[k])
-  }, [activeScenario, draft])
+  const dirty = useMemo(
+    () => activeScenario !== null && differsFrom(draft, activeScenario),
+    [activeScenario, draft],
+  )
+  // A detached draft has no saved scenario of its own, so loading another one would drop
+  // its edits just as surely; it is measured against the scenario it came from.
+  const baseScenario = useMemo(
+    () => dataset.goalScenarios.find((s) => s.id === baseId) ?? null,
+    [dataset.goalScenarios, baseId],
+  )
+  const detachedEdits = hasDetachedEdits(activeScenario, baseScenario, draft)
 
   const selectScenario = useCallback((scenario: GoalScenario) => {
     setActiveId(scenario.id)
+    setBaseId(scenario.id)
     setDraft(scenarioToDraft(scenario))
     // The loaded scenario is always drawn as the editing line, so a hidden flag on it would
     // only leave the chip and legend saying two things at once.
@@ -248,14 +312,14 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
   const onSelectScenario = useCallback(
     (scenario: GoalScenario) => {
       if (scenario.id === activeId) return
-      if (dirty) {
+      if (dirty || detachedEdits) {
         setPendingSelect(scenario)
         setDiscardOpen(true)
         return
       }
       selectScenario(scenario)
     },
-    [activeId, dirty, selectScenario],
+    [activeId, dirty, detachedEdits, selectScenario],
   )
   const onDiscardAndSelect = useCallback(() => {
     setDiscardOpen(false)
@@ -431,18 +495,14 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
               onActivate={onActivate}
               onScenarioCreated={selectScenario}
             />
-            <Presence show={discardOpen} exitMs={EXIT_MS.sheet}>
-              {pendingSelect ? (
-                <ConfirmSheet
-                  title={`Discard unsaved changes to ${activeScenario?.name ?? draft.name}?`}
-                  message={`Loading ${pendingSelect.name} drops the edits made here. Save changes first to keep them.`}
-                  confirmLabel="Discard"
-                  destructive
-                  onConfirm={onDiscardAndSelect}
-                  onCancel={() => setDiscardOpen(false)}
-                />
-              ) : null}
-            </Presence>
+            <DiscardSheet
+              pending={pendingSelect}
+              open={discardOpen}
+              detached={activeId === null}
+              name={activeScenario?.name ?? draft.name}
+              onConfirm={onDiscardAndSelect}
+              onCancel={() => setDiscardOpen(false)}
+            />
           </div>
           {mobilePlanView === 'adjust' ? (
             // Phone only: the toggle is hidden on desktop, so this never mounts there.

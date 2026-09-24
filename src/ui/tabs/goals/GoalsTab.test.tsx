@@ -347,6 +347,39 @@ describe('GoalsTab', () => {
     expect(actions.updateScenario).toHaveBeenCalledWith(1, expect.objectContaining({ color: '#10b981' }))
   })
 
+  it('asks before a chip switch drops the edits of a detached draft too', async () => {
+    const user = userEvent.setup()
+    const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })
+    const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })
+    const model = buildExpenseModel(makeDataset({ goalScenarios: [plan, other] }))
+    render(<GoalsTab model={model} actions={makeActions()} />)
+
+    fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
+    // Detaching keeps the edits, and with no saved scenario loaded nothing tracks them as unsaved.
+    await user.click(screen.getByRole('button', { name: 'Unsaved draft' }))
+    await user.click(screen.getByRole('button', { name: 'Path B' }))
+
+    expect(screen.getByText('Discard the unsaved draft?')).toBeInTheDocument()
+    expect(screen.getByLabelText('Scenario name')).toHaveValue('Path A, tweaked')
+
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Discard' }))
+    expect(screen.getByLabelText('Scenario name')).toHaveValue('Path B')
+  })
+
+  it('does not ask when a detached draft has no edits', async () => {
+    const user = userEvent.setup()
+    const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })
+    const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })
+    const model = buildExpenseModel(makeDataset({ goalScenarios: [plan, other] }))
+    render(<GoalsTab model={model} actions={makeActions()} />)
+
+    await user.click(screen.getByRole('button', { name: 'Unsaved draft' }))
+    await user.click(screen.getByRole('button', { name: 'Path B' }))
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Scenario name')).toHaveValue('Path B')
+  })
+
   it('switches chips without asking when nothing is unsaved', async () => {
     const user = userEvent.setup()
     const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })
