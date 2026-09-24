@@ -183,7 +183,7 @@ export function ScenarioSeriesLegend({
       )}
       <ul className={styles.list}>
         {items.map((item) => (
-          <LegendRow key={item.label} item={item} onToggle={onToggle} format={format} />
+          <LegendRow key={item.scenarioId ?? item.label} item={item} onToggle={onToggle} format={format} />
         ))}
       </ul>
       {breakdowns.length > 0 ? (

@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { ScenarioComparison } from './ScenarioComparison'
 import { comparisonRows } from './comparisonRows'
 import { makeScenario } from '../../../../testing/factories'
@@ -49,6 +49,19 @@ describe('ScenarioComparison', () => {
     expect(screen.getAllByRole('row')).toHaveLength(3)
     expect(screen.getByText('Path D (editing)')).toBeInTheDocument()
     expect(screen.getByText(/after 30 years/)).toBeInTheDocument()
+  })
+
+  it('keeps two scenarios with the same short name apart', () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+    render(
+      <ScenarioComparison
+        scenarios={[makeScenario({ id: 1, name: 'Path: A' }), makeScenario({ id: 2, name: 'Path: B' })]}
+        draft={draft}
+      />,
+    )
+    expect(screen.getAllByRole('row')).toHaveLength(4)
+    expect(errors).not.toHaveBeenCalled()
+    errors.mockRestore()
   })
 
   it('marks each row with its own horizon when they differ', () => {
