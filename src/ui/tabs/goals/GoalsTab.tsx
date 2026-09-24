@@ -564,7 +564,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
                   </div>
                   {displayMode === 'nominal' ? (
                     <div className={progressStyles.inflationRow}>
-                      <span className={progressStyles.inflationLabel}>Inflation assumed</span>
+                      <span className={progressStyles.inflationLabel}>Inflation in this view</span>
                       <PercentStepper
                         value={nominalInflation}
                         onChange={setNominalInflation}

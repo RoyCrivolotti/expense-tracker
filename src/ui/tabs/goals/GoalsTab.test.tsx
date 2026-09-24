@@ -562,7 +562,7 @@ describe('GoalsTab', () => {
 
     await user.click(screen.getByRole('radio', { name: 'Nominal' }))
 
-    expect(screen.getByText('Inflation assumed')).toBeInTheDocument()
+    expect(screen.getByText('Inflation in this view')).toBeInTheDocument()
     expect(screen.getByLabelText('Inflation rate percentage')).toBeInTheDocument()
   })
 

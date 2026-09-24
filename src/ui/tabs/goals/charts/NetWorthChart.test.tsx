@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { NetWorthChart } from './NetWorthChart'
-import { deflatePoints, inflateSeries } from './nominalTransform'
+import { computeChartDisplayData, deflatePoints, inflateSeries } from './nominalTransform'
 import { makeScenario } from '../../../../testing/factories'
 import { defaultMilestones } from '../../../../engine'
 import type { ChartSeries } from '../../../charts/LinearChart'
@@ -467,5 +467,24 @@ describe('NetWorthChart', () => {
       />,
     )
     expect(container.querySelector('svg')).not.toBeNull()
+  })
+})
+
+describe('computeChartDisplayData', () => {
+  const years = [0, 1, 2, 3]
+  const plan: ChartSeries = { id: 'plan', color: '#6366f1', values: [100_000_00, 110_000_00, 120_000_00, 130_000_00] }
+  const dot: ChartSeries = { id: 'actuals', color: '#10b981', values: [], kind: 'scatter', points: [{ xIndex: 2, value: 104_040_00 }] }
+
+  it('deflates the dots at the assumed rate whatever the view is set to', () => {
+    const at = (rate: number) => computeChartDisplayData([plan], [dot], years, false, rate).displayExtraSeries[0]!.points![0]!.value
+    // The stepper is a what-if for the nominal view; the dots must agree with the status line.
+    expect(at(0.08)).toBe(at(0.02))
+    expect(at(0.08)).toBe(Math.round(104_040_00 / 1.02 ** 2))
+  })
+
+  it('inflates the plan at the view\'s own rate and leaves the dots as they are in the nominal view', () => {
+    const view = computeChartDisplayData([plan], [dot], years, true, 0.05)
+    expect(view.displaySeries[0]!.values[2]).toBe(Math.round(120_000_00 * 1.05 ** 2))
+    expect(view.displayExtraSeries[0]!.points![0]!.value).toBe(104_040_00)
   })
 })
