@@ -8,8 +8,9 @@ import {
   MILESTONE_MAX_COUNT,
   resolveMoneyFormat,
 } from '../../engine'
-import { Card, SectionTitle } from '../components/primitives'
+import { Card } from '../components/primitives'
 import styles from '../tabs/tabs.module.css'
+import goalStyles from '../tabs/goals/goals.module.css'
 
 interface Props {
   settings: ExpenseSettings
@@ -128,8 +129,9 @@ export function MilestonesSetting({ settings, onChange }: Props) {
 
   return (
     <>
-      <SectionTitle>Milestones</SectionTitle>
       <Card>
+        {/* Same card title as the accounts card beside it in Setup, not a page heading. */}
+        <h3 className={goalStyles.sectionTitle}>Milestones</h3>
         <div className={styles.settingGroup}>
           <p className={styles.settingHint}>
             Net-worth targets shown on the Goals charts and the years-to-milestone matrix, measured
