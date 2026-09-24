@@ -8,6 +8,7 @@ function totals(month: string, netSavingCents: number, investmentsCents: number)
     incomeCents: 0,
     expensesCents: 0,
     investmentsCents,
+    contributionsCents: Math.max(0, investmentsCents),
     netSavingCents,
     netExpenseByAccount: new Map(),
     cashMovementCents: 0,

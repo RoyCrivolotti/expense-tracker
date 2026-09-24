@@ -20,6 +20,8 @@ export interface MonthlyTotals {
   incomeCents: number
   expensesCents: number
   investmentsCents: number
+  /** Money put into the portfolio; withdrawals are left out, since a sale is not a lapse in saving. */
+  contributionsCents: number
   netSavingCents: number
   /** Net expense (expense − refund) per account id. */
   netExpenseByAccount: Map<number, number>
@@ -33,6 +35,7 @@ function emptyTotals(month: string): MonthlyTotals {
     incomeCents: 0,
     expensesCents: 0,
     investmentsCents: 0,
+    contributionsCents: 0,
     netSavingCents: 0,
     netExpenseByAccount: new Map(),
     cashMovementCents: 0,
@@ -46,6 +49,7 @@ function applyTxn(acc: MonthlyTotals, txn: Transaction): void {
   }
   if (txn.type === 'investment') {
     acc.investmentsCents += txn.amountCents
+    if (txn.amountCents > 0) acc.contributionsCents += txn.amountCents
     return
   }
   const signed = txn.type === 'refund' ? -txn.amountCents : txn.amountCents
