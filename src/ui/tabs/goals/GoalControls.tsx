@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import type { LifeEvent } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
-import { formatCents, type MoneyFormat } from '../../../engine'
+import { formatCents, rebaseline, rebaselineSummary, type MoneyFormat } from '../../../engine'
 import {
   DateField,
   MoneyField,
@@ -49,6 +49,8 @@ function ControlSection({
 export function GoalControls({ draft, latest = null, onChange }: GoalControlsProps) {
   const format = useMoneyFormat()
   const purchaseHint = purchaseSummary(draft, format)
+  // What the last re-baseline moved, so a dropped event is not found out at Save.
+  const [rebaselined, setRebaselined] = useState<string | null>(null)
   const rebaselineHint = latest
     ? `Sets the starting balance to ${formatCents(latest.investedCents, format)} and the start date to ${formatCheckinDate(latest.date)}, your latest check-in. From then on ahead or behind measures only what you did after that date, which is the reset to reach for after a one-off inflow, or when the plan was made from a guess.`
     : 'Log a wealth check-in first; re-baselining sets the starting balance and start date from it.'
@@ -176,12 +178,19 @@ export function GoalControls({ draft, latest = null, onChange }: GoalControlsPro
             disabled={!latest}
             onClick={() => {
               if (!latest) return
-              onChange({ startInvestedCents: latest.investedCents, planStartDate: latest.date })
+              const next = rebaseline(draft, latest)
+              onChange(next.patch)
+              setRebaselined(rebaselineSummary(next, format))
             }}
           >
             Re-baseline from latest check-in
           </button>
           <p className={styles.fieldHint}>{rebaselineHint}</p>
+          {rebaselined ? (
+            <p className={styles.fieldHint} role="status">
+              {rebaselined}
+            </p>
+          ) : null}
         </div>
       </ControlSection>
       <ControlSection title="Life events" defaultOpen={false}>
