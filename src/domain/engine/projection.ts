@@ -3,6 +3,7 @@
  * All money in integer cents; rates as fractions (0.07 = 7% real).
  */
 import { pmt } from './finance'
+import { DEFAULT_INFLATION_RATE } from './projectionConstants'
 import type { LifeEvent } from '../types'
 
 export interface YearPoint {
@@ -44,6 +45,10 @@ function annualContribution(
   return Math.round(monthlyCents * 12 * factor)
 }
 
+/**
+ * The house price is in today's money, like everything in a real plan, so the appreciation
+ * a user enters (nominal, as prices are quoted) counts only for what it beats inflation by.
+ */
 function houseEquityAtYear(
   housePriceCents: number,
   appreciation: number,
@@ -52,9 +57,15 @@ function houseEquityAtYear(
 ): number {
   if (purchaseYear === null || year < purchaseYear) return 0
   const yearsOwned = year - purchaseYear
-  return Math.round(housePriceCents * Math.pow(1 + appreciation, yearsOwned))
+  const realGrowth = (1 + appreciation) / (1 + DEFAULT_INFLATION_RATE)
+  return Math.round(housePriceCents * Math.pow(realGrowth, yearsOwned))
 }
 
+/**
+ * What is still owed, in today's money. The loan is a fixed schedule at the bank's
+ * (nominal) rate, so its balance is deflated by the years since purchase: inflation eats
+ * into a debt that does not grow with it.
+ */
 function mortgageBalanceAtYear(
   loanCents: number,
   rateAnnual: number,
@@ -67,14 +78,15 @@ function mortgageBalanceAtYear(
   if (monthsElapsed <= 0) return loanCents
   const monthlyRate = rateAnnual / 12
   const totalMonths = termYears * 12
+  const deflator = Math.pow(1 + DEFAULT_INFLATION_RATE, year - purchaseYear)
   if (monthlyRate === 0) {
     const paid = Math.round((loanCents / totalMonths) * monthsElapsed)
-    return Math.max(0, loanCents - paid)
+    return Math.max(0, Math.round((loanCents - paid) / deflator))
   }
   const payment = pmt(monthlyRate, totalMonths, loanCents)
   const growth = Math.pow(1 + monthlyRate, monthsElapsed)
   const balance = loanCents * growth - payment * ((growth - 1) / monthlyRate)
-  return Math.max(0, Math.round(balance))
+  return Math.max(0, Math.round(balance / deflator))
 }
 
 function lifeEventImpact(events: LifeEvent[], year: number): number {

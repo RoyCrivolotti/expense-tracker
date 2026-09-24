@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { GoalsTab } from './GoalsTab'
+import { ToastContext } from '../../hooks/useToast'
 import { buildExpenseModel } from '../../buildExpenseModel'
 import { makeDataset, makeScenario, makeWealthAccount, makeWealthCheckin } from '../../../testing/factories'
 import { makeActions } from '../../../testing/makeActions'
@@ -255,6 +256,38 @@ describe('GoalsTab', () => {
     expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
   })
 
+  it('leaves the editor alone and says so when the re-baseline write fails', async () => {
+    const user = userEvent.setup()
+    const showToast = vi.fn()
+    const actions = makeActions()
+    vi.mocked(actions.updateScenario).mockRejectedValue(new Error('boom'))
+    const plan = makeScenario({ id: 1, name: 'Path A', isActive: true, planStartDate: '2025-01-01' })
+    const accounts = [makeWealthAccount({ id: 1, name: 'Broker', kind: 'investment' })]
+    // The button belongs to the steady-gap hint, which needs three check-ins over half a year.
+    const behind = (id: number, date: string) =>
+      makeWealthCheckin({
+        id,
+        checkinDate: date,
+        entries: [{ accountId: 1, valueCents: planValueAtDate(plan, date)! - 50_000_00 }],
+      })
+    const checkins = [behind(1, '2026-01-01'), behind(2, '2026-04-01'), behind(3, '2026-07-15')]
+    const dataset = makeDataset({ goalScenarios: [plan], wealthAccounts: accounts, wealthCheckins: checkins })
+    render(
+      <ToastContext.Provider value={{ showToast }}>
+        <GoalsTab model={buildExpenseModel(dataset)} actions={actions} />
+      </ToastContext.Provider>,
+    )
+
+    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Re-baseline' }))
+
+    expect(showToast).toHaveBeenCalledWith("Something went wrong, so that change probably wasn't saved.", 'error')
+    // Nothing was written, so Plan must not offer to save a start that never landed.
+    await user.click(screen.getByRole('radio', { name: 'Plan' }))
+    expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
+  })
+
   it('saves a pending edit together with a re-baseline, not over it', async () => {
     const user = userEvent.setup()
     const actions = makeActions()
@@ -287,6 +320,59 @@ describe('GoalsTab', () => {
     )
   })
 
+  it('keeps an unsaved life-event edit through a re-baseline from Progress', async () => {
+    const user = userEvent.setup()
+    const actions = makeActions()
+    const plan = makeScenario({
+      id: 1,
+      name: 'Path A',
+      isActive: true,
+      planStartDate: '2024-07-15',
+      lifeEvents: [
+        { year: 3, amountCents: -20_000_00, label: 'Car' },
+        { year: 5, amountCents: 30_000_00, label: 'Gift' },
+      ],
+    })
+    const accounts = [makeWealthAccount({ id: 1, name: 'Broker', kind: 'investment' })]
+    const behind = (id: number, date: string) =>
+      makeWealthCheckin({
+        id,
+        checkinDate: date,
+        entries: [{ accountId: 1, valueCents: planValueAtDate(plan, date)! - 50_000_00 }],
+      })
+    const checkins = [behind(1, '2026-01-01'), behind(2, '2026-04-01'), behind(3, '2026-07-15')]
+    const dataset = makeDataset({ goalScenarios: [plan], wealthAccounts: accounts, wealthCheckins: checkins })
+    const { rerender } = render(<GoalsTab model={buildExpenseModel(dataset)} actions={actions} />)
+
+    // An edit in the editor that has not been saved: the car is taken out.
+    fireEvent.click(screen.getByLabelText('Remove Car'))
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Re-baseline' }))
+
+    // The write is the saved plan's, which still has the car (a year 1 event now).
+    expect(actions.updateScenario).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        lifeEvents: [
+          { year: 1, amountCents: -20_000_00, label: 'Car' },
+          { year: 3, amountCents: 30_000_00, label: 'Gift' },
+        ],
+      }),
+    )
+    const patch = vi.mocked(actions.updateScenario).mock.calls[0]![1]
+    rerender(<GoalsTab model={buildExpenseModel({ ...dataset, goalScenarios: [{ ...plan, ...patch }] })} actions={actions} />)
+    await user.click(screen.getByRole('radio', { name: 'Plan' }))
+
+    // The draft moved from its own values: the gift carries over, and the car stays taken out
+    // rather than coming back from the saved plan. It is still an edit nobody has saved.
+    expect(screen.queryByLabelText('Remove Car')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Remove Gift')).toBeInTheDocument()
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
+  })
+
   it('says which life events a re-baseline moves or drops before writing them', async () => {
     const user = userEvent.setup()
     const actions = makeActions()
@@ -315,8 +401,9 @@ describe('GoalsTab', () => {
     await user.click(screen.getByRole('radio', { name: 'Progress' }))
     await user.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
     const sheet = screen.getByRole('alertdialog')
-    expect(sheet).toHaveTextContent(/moved 2 years earlier/)
-    expect(sheet).toHaveTextContent(/Dropped, already behind the new start: Bonus/)
+    // It says what it replaces as well as what it puts in, and names the dropped event by its date.
+    expect(sheet).toHaveTextContent(/restarts on .*2026 from .*, instead of .*2024 from /)
+    expect(sheet).toHaveTextContent(/Bonus \(.*2025\) is already in the balance, so it is dropped\./)
     await user.click(within(sheet).getByRole('button', { name: 'Cancel' }))
     expect(actions.updateScenario).not.toHaveBeenCalled()
 
@@ -345,6 +432,39 @@ describe('GoalsTab', () => {
 
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
     expect(actions.updateScenario).toHaveBeenCalledWith(1, expect.objectContaining({ color: '#10b981' }))
+  })
+
+  it('asks before a chip switch drops the edits of a detached draft too', async () => {
+    const user = userEvent.setup()
+    const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })
+    const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })
+    const model = buildExpenseModel(makeDataset({ goalScenarios: [plan, other] }))
+    render(<GoalsTab model={model} actions={makeActions()} />)
+
+    fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
+    // Detaching keeps the edits, and with no saved scenario loaded nothing tracks them as unsaved.
+    await user.click(screen.getByRole('button', { name: 'Unsaved draft' }))
+    await user.click(screen.getByRole('button', { name: 'Path B' }))
+
+    expect(screen.getByText('Discard the unsaved draft?')).toBeInTheDocument()
+    expect(screen.getByLabelText('Scenario name')).toHaveValue('Path A, tweaked')
+
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Discard' }))
+    expect(screen.getByLabelText('Scenario name')).toHaveValue('Path B')
+  })
+
+  it('does not ask when a detached draft has no edits', async () => {
+    const user = userEvent.setup()
+    const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })
+    const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })
+    const model = buildExpenseModel(makeDataset({ goalScenarios: [plan, other] }))
+    render(<GoalsTab model={model} actions={makeActions()} />)
+
+    await user.click(screen.getByRole('button', { name: 'Unsaved draft' }))
+    await user.click(screen.getByRole('button', { name: 'Path B' }))
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Scenario name')).toHaveValue('Path B')
   })
 
   it('switches chips without asking when nothing is unsaved', async () => {
@@ -442,8 +562,13 @@ describe('GoalsTab', () => {
 
     await user.click(screen.getByRole('radio', { name: 'Nominal' }))
 
-    expect(screen.getByText('Inflation assumed')).toBeInTheDocument()
+    expect(screen.getByText('Inflation in this view')).toBeInTheDocument()
     expect(screen.getByLabelText('Inflation rate percentage')).toBeInTheDocument()
+    // What stays in today's money is said beside the toggle, not left to be inferred.
+    expect(screen.getByText(/stay in today's money, so the target lines are only drawn in Purchasing power/)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('radio', { name: 'Purchasing power' }))
+    expect(screen.queryByText(/target lines are only drawn in Purchasing power/)).not.toBeInTheDocument()
   })
 
   it('adjusts the inflation rate via the stepper in the nominal view', async () => {

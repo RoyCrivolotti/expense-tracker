@@ -1,7 +1,29 @@
 import type { ScatterPoint } from '../../../charts/linearScale'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
 import type { MoneyFormat } from '../../../../engine/money'
+import { checkinInvestedCents, nominalToReal, yearOffsetFromDate } from '../../../../engine'
+import type { WealthAccount, WealthCheckin } from '../../../../types'
 import { formatMoneyShort } from '../chartTheme'
+
+/**
+ * Check-ins as chart points, in the plan's money like its line: a balance exactly on plan
+ * sits on it. Those before the plan starts or past the window are left out, and x is in
+ * steps of the chart's axis.
+ */
+export function realCheckinPoints(
+  checkins: WealthCheckin[],
+  accounts: WealthAccount[],
+  planStartDate: string,
+  windowYears: number,
+  stepYears: number,
+): ScatterPoint[] {
+  return checkins.flatMap((c) => {
+    const offset = yearOffsetFromDate(planStartDate, c.checkinDate)
+    if (offset === null || offset < 0 || offset > windowYears) return []
+    const value = nominalToReal(checkinInvestedCents(c, accounts), planStartDate, c.checkinDate)
+    return [{ xIndex: offset / stepYears, value }]
+  })
+}
 
 export function nearestScatterValue(points: ScatterPoint[], index: number): number | null {
   let best: ScatterPoint | null = null

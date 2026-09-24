@@ -58,10 +58,11 @@ describe('activateScenario', () => {
 
     expect(batch).toHaveBeenCalledOnce()
     expect(statements.map((s) => s.sql.replace(/\s+/g, ' ').trim())).toEqual([
-      'UPDATE goal_scenarios SET is_active = 0 WHERE owner = ? AND is_active = 1',
+      'UPDATE goal_scenarios SET is_active = 0 WHERE owner = ? AND is_active = 1 AND EXISTS (SELECT 1 FROM goal_scenarios WHERE id = ? AND owner = ?)',
       "UPDATE goal_scenarios SET is_active = 1, updated_at = datetime('now') WHERE id = ? AND owner = ? RETURNING *",
     ])
-    expect(statements[0]?.values).toEqual([OWNER])
+    // Only cleared when the target is this owner's, so a 404 leaves the current plan alone.
+    expect(statements[0]?.values).toEqual([OWNER, 7, OWNER])
     expect(statements[1]?.values).toEqual([7, OWNER])
     expect(result.isActive).toBe(true)
   })

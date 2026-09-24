@@ -33,6 +33,8 @@ function cellLabel(years: number | null): string {
 }
 
 interface Row {
+  /** Scenario id, or 'draft'; names are not unique, so they cannot key a row. */
+  id: string
   name: string
   color: string
   cells: (number | null)[]
@@ -44,14 +46,16 @@ function buildRows(
   milestones: Milestone[],
 ): Row[] {
   const all = [
-    ...scenarios.map((s) => ({ name: shortName(s.name), color: s.color, params: scenarioToParams(s) })),
+    ...scenarios.map((s) => ({ id: String(s.id), name: shortName(s.name), color: s.color, params: scenarioToParams(s) })),
     {
+      id: 'draft',
       name: `${shortName(draft.name)} (editing)`,
       color: draft.color,
       params: scenarioToParams({ ...draft, id: 0 }),
     },
   ]
-  return all.map(({ name, color, params }) => ({
+  return all.map(({ id, name, color, params }) => ({
+    id,
     name,
     color,
     cells: milestones.map((m) => yearsToTargetFromProjection(params, m.amountCents, false)),
@@ -147,7 +151,7 @@ function MilestoneMatrixImpl({
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.name}>
+              <tr key={row.id}>
                 <td className={styles.milestoneScenarioCell}>
                   <span
                     className={styles.swatch}

@@ -536,10 +536,15 @@ export async function activateScenario(
 ): Promise<GoalScenario> {
   // Two statements, not one CASE: SQLite checks the partial unique index row by row,
   // so a single UPDATE that sets the new plan before it clears the old one fails.
-  // batch() runs them as one transaction.
+  // batch() runs them as one transaction. The first only clears when the target is this
+  // owner's, because the 404 below cannot undo it: an unknown id from a stale tab must not
+  // leave the owner with no plan at all.
   const [, result] = await env.DB.batch<GoalScenarioRow>([
-    env.DB.prepare('UPDATE goal_scenarios SET is_active = 0 WHERE owner = ? AND is_active = 1')
-      .bind(owner),
+    env.DB.prepare(
+      `UPDATE goal_scenarios SET is_active = 0
+       WHERE owner = ? AND is_active = 1
+         AND EXISTS (SELECT 1 FROM goal_scenarios WHERE id = ? AND owner = ?)`,
+    ).bind(owner, id, owner),
     env.DB.prepare(
       `UPDATE goal_scenarios SET is_active = 1, updated_at = datetime('now')
        WHERE id = ? AND owner = ? RETURNING *`,

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
@@ -44,7 +44,36 @@ describe('CheckinFormSheet', () => {
     render(<CheckinFormSheet accounts={accounts} previous={previous} actions={makeActions()} />)
 
     expect(screen.getByLabelText(/value for account 1/i)).toHaveValue('110.000,00')
-    expect(screen.getByLabelText(/value for account 2/i)).toHaveValue('0,00')
+    // A zero is an empty field with the zero as its placeholder, so typing cannot append to it.
+    expect(screen.getByLabelText(/value for account 2/i)).toHaveValue('')
+    expect(screen.getByLabelText(/value for account 2/i)).toHaveAttribute('placeholder', '0,00')
+  })
+
+  it('selects what a field holds when it is focused, so typing replaces it', () => {
+    const previous = {
+      id: 9,
+      checkinDate: '2026-08-05',
+      createdAt: '2026-08-05T00:00:00.000Z',
+      entries: [{ accountId: 1, valueCents: 11_000_000 }],
+    }
+    render(<CheckinFormSheet accounts={[makeAccount(1)]} previous={previous} actions={makeActions()} />)
+    const field = screen.getByLabelText<HTMLInputElement>(/value for account 1/i)
+
+    act(() => field.focus())
+
+    expect(field.selectionStart).toBe(0)
+    expect(field.selectionEnd).toBe('110.000,00'.length)
+  })
+
+  it('takes typed digits as the whole balance in a field that started empty', async () => {
+    const user = userEvent.setup()
+    render(<CheckinFormSheet accounts={[makeAccount(1)]} actions={makeActions()} />)
+    const field = screen.getByLabelText<HTMLInputElement>(/value for account 1/i)
+
+    await user.click(field)
+    await user.type(field, '5000')
+
+    expect(field).toHaveValue('5000')
   })
 
   it('renders date input defaulting to today', () => {

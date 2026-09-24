@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { CheckinHistoryChart } from './CheckinHistoryChart'
-import { nearestScatterValue, buildCheckinTooltip } from './checkinChartUtils'
+import { nearestScatterValue, buildCheckinTooltip, realCheckinPoints } from './checkinChartUtils'
 import { makeScenario } from '../../../../testing/factories'
 import { EU_MONEY_FORMAT } from '../../../../engine/money'
 import type { WealthAccount, WealthCheckin } from '../../../../types'
@@ -69,6 +69,11 @@ describe('CheckinHistoryChart', () => {
     )
     const circles = container.querySelectorAll('circle')
     expect(circles.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('says the chart is in today\'s money, and at what rate check-ins are brought back', () => {
+    render(<CheckinHistoryChart checkins={[]} accounts={[]} plan={makeScenario({ planStartDate: '2020-01-01' })} />)
+    expect(screen.getByText(/In today's money: each check-in is brought back at 2,?0?%? a year/)).toBeInTheDocument()
   })
 
   it('renders a today marker line', () => {
@@ -160,5 +165,31 @@ describe('buildCheckinTooltip', () => {
     const scatter = [{ xIndex: 5, value: 180_000 }]
     const result = buildCheckinTooltip(1, ['Year 0', 'Year 1'], [100_000, 200_000], scatter, format)
     expect(result.lines).toHaveLength(1)
+  })
+})
+
+describe('realCheckinPoints', () => {
+  const accounts = [makeAccount(1)]
+
+  it('brings a balance to the plan\'s money, so one exactly on plan sits on the line', () => {
+    // Two years at the assumed 2% inflation: 104.040 in the money of the day is 100.000 of the start's.
+    const points = realCheckinPoints([makeCheckin(1, '2027-01-01', 104_040_00)], accounts, '2025-01-01', 10, 1)
+    expect(points).toHaveLength(1)
+    expect(points[0]!.value).toBeGreaterThan(99_900_00)
+    expect(points[0]!.value).toBeLessThan(100_100_00)
+    // Not the raw balance: leaving it nominal would read as ahead of a plan it is exactly on.
+    expect(points[0]!.value).not.toBe(104_040_00)
+    expect(points[0]!.xIndex).toBeCloseTo(2, 1)
+  })
+
+  it('leaves out check-ins before the plan starts or past the window, and scales x by the step', () => {
+    const checkins = [
+      makeCheckin(1, '2024-06-01', 50_000_00),
+      makeCheckin(2, '2026-01-01', 60_000_00),
+      makeCheckin(3, '2031-01-01', 90_000_00),
+    ]
+    const points = realCheckinPoints(checkins, accounts, '2025-01-01', 3, 0.5)
+    expect(points).toHaveLength(1)
+    expect(points[0]!.xIndex).toBeCloseTo(2, 1)
   })
 })

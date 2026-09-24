@@ -154,6 +154,7 @@ export function NetWorthHistoryChart({ checkins, accounts }: Props) {
           layout="compact"
         />
       </div>
+      <p className={goalStyles.chartHint}>Balances as logged, in the money of each day.</p>
       {model.netWorth.length === 0 ? (
         // A window chosen by hand can miss every check-in; the carrier would then draw a
         // flat line at zero, which reads as a balance of nothing.

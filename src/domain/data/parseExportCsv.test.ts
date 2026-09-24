@@ -53,6 +53,35 @@ describe('parseExportCsv', () => {
     expect(errors[0]?.message).toContain('Unknown category')
   })
 
+  it('refuses a negative amount on anything but an investment, naming the line', () => {
+    const rows = [
+      '1,2026-06-15,2026-06,Ok,Groceries,Santander Debit,expense,1250,posted,0,',
+      '2,2026-06-16,2026-06,Bad,Groceries,Santander Debit,expense,-500,posted,0,',
+      '3,2026-06-17,2026-06,Bad refund,Groceries,Santander Debit,refund,-500,posted,0,',
+    ]
+    const { rows: parsed, errors } = parseExportCsv(`${EXPORT_CSV_HEADER}\n${rows.join('\n')}`, DATASET)
+    expect(parsed).toHaveLength(1)
+    // Lines count the header as line 1, so these are the file's own lines.
+    expect(errors).toEqual([
+      { line: 3, message: 'Amounts must be positive, except a withdrawal from an investment' },
+      { line: 4, message: 'Amounts must be positive, except a withdrawal from an investment' },
+    ])
+  })
+
+  it('accepts a negative investment, which is a withdrawal', () => {
+    const row = '1,2026-06-15,2026-06,Sold,Groceries,Santander Debit,investment,-500000,posted,0,'
+    const { rows, errors } = parseExportCsv(`${EXPORT_CSV_HEADER}\n${row}`, DATASET)
+    expect(errors).toHaveLength(0)
+    expect(rows[0]?.input).toMatchObject({ type: 'investment', amountCents: -500_000 })
+  })
+
+  it('refuses a fraction of a cent, naming the line', () => {
+    const row = '1,2026-06-15,2026-06,Odd,Groceries,Santander Debit,expense,12.5,posted,0,'
+    const { rows, errors } = parseExportCsv(`${EXPORT_CSV_HEADER}\n${row}`, DATASET)
+    expect(rows).toHaveLength(0)
+    expect(errors).toEqual([{ line: 2, message: 'Amount must be a whole number of cents' }])
+  })
+
   it('skips zero-amount rows', () => {
     const header =
       'id,date,budget_month,description,category,account,type,amount_cents,status,cancelled,notes'

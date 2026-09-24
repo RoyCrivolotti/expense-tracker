@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { MilestoneMatrix } from './MilestoneMatrix'
 import { makeScenario } from '../../../../testing/factories'
 import { defaultMilestones } from '../../../../engine'
@@ -8,6 +8,22 @@ const draft = makeScenario()
 const noneReached = new Map<number, string>()
 
 describe('MilestoneMatrix', () => {
+  it('keeps two same-named scenarios as two rows, without a key warning', () => {
+    // Duplicating a scenario and renaming it back, or reusing a name, gives two rows with
+    // one label; keyed by name, React warned and could drop or repeat a row.
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const a = makeScenario({ id: 1, name: 'Path A' })
+    const b = makeScenario({ id: 2, name: 'Path A' })
+
+    render(<MilestoneMatrix scenarios={[a, b]} draft={draft} milestones={defaultMilestones()} reached={noneReached} />)
+
+    // Both saved rows are drawn, beside the editing row and the header row.
+    expect(screen.getAllByRole('row', { name: /^Path A/ })).toHaveLength(2)
+    expect(screen.getAllByRole('row')).toHaveLength(4)
+    expect(error).not.toHaveBeenCalled()
+    error.mockRestore()
+  })
+
   it('renders one column header per milestone', () => {
     render(
       <MilestoneMatrix

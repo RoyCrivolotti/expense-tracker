@@ -49,8 +49,16 @@ function ControlSection({
 export function GoalControls({ draft, latest = null, onChange }: GoalControlsProps) {
   const format = useMoneyFormat()
   const purchaseHint = purchaseSummary(draft, format)
-  // What the last re-baseline moved, so a dropped event is not found out at Save.
-  const [rebaselined, setRebaselined] = useState<string | null>(null)
+  // What the last re-baseline moved, so a dropped event is not found out at Save. Kept with
+  // the values it left in the draft: once the draft no longer holds them (Discard, another
+  // scenario loaded) the note describes something that is not there and goes away.
+  const [rebaselined, setRebaselined] = useState<{ lines: string[]; planStartDate: string; lifeEvents: string } | null>(null)
+  const note =
+    rebaselined &&
+    rebaselined.planStartDate === draft.planStartDate &&
+    rebaselined.lifeEvents === JSON.stringify(draft.lifeEvents)
+      ? rebaselined.lines
+      : null
   const rebaselineHint = latest
     ? `Sets the starting balance to ${formatCents(latest.investedCents, format)} and the start date to ${formatCheckinDate(latest.date)}, your latest check-in. From then on ahead or behind measures only what you did after that date, which is the reset to reach for after a one-off inflow, or when the plan was made from a guess.`
     : 'Log a wealth check-in first; re-baselining sets the starting balance and start date from it.'
@@ -127,6 +135,11 @@ export function GoalControls({ draft, latest = null, onChange }: GoalControlsPro
           max={0.1}
           onChange={(v) => onChange({ houseAppreciationRate: v })}
         />
+        <p className={styles.fieldHint}>
+          The mortgage rate and house appreciation are nominal, as a bank and the price index
+          quote them. The plan takes inflation off both, so the house and the debt are in
+          today&apos;s money like everything else.
+        </p>
         <PurchaseYearField
           value={draft.housePurchaseYear}
           maxYear={draft.horizonYears}
@@ -180,16 +193,25 @@ export function GoalControls({ draft, latest = null, onChange }: GoalControlsPro
               if (!latest) return
               const next = rebaseline(draft, latest)
               onChange(next.patch)
-              setRebaselined(rebaselineSummary(next, format))
+              const lines = rebaselineSummary(next, format, formatCheckinDate)
+              setRebaselined(
+                lines.length > 0
+                  ? { lines, planStartDate: next.patch.planStartDate, lifeEvents: JSON.stringify(next.patch.lifeEvents) }
+                  : null,
+              )
             }}
           >
             Re-baseline from latest check-in
           </button>
           <p className={styles.fieldHint}>{rebaselineHint}</p>
-          {rebaselined ? (
-            <p className={styles.fieldHint} role="status">
-              {rebaselined}
-            </p>
+          {note ? (
+            <div role="status">
+              {note.map((line) => (
+                <p key={line} className={styles.fieldHint}>
+                  {line}
+                </p>
+              ))}
+            </div>
           ) : null}
         </div>
       </ControlSection>

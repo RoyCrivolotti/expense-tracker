@@ -2,7 +2,7 @@ import { memo, useCallback, useMemo, useState, type ReactNode } from 'react'
 import type { GoalScenario, Milestone } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import type { ProjectionParams } from '../../../../engine'
-import { DEFAULT_INFLATION_RATE, projectNetWorth, projectNetWorthBand, purchaseYearBreakdown, scenarioToParams } from '../../../../engine'
+import { projectNetWorth, projectNetWorthBand, purchaseYearBreakdown, scenarioToParams } from '../../../../engine'
 import { Card } from '../../../components/primitives'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
@@ -20,7 +20,7 @@ import {
   type ScenarioLegendItem,
 } from './ScenarioSeriesLegend'
 import styles from '../goals.module.css'
-import { deflatePoints, inflateSeries } from './nominalTransform'
+import { computeChartDisplayData } from './nominalTransform'
 
 interface ScenarioLine {
   id: string
@@ -83,36 +83,6 @@ function buildSeries(
     }
   })
   return { years, series, names: lines.map((l) => l.name) }
-}
-
-/**
- * The plan is real, so the default view is today's money with the check-in dots deflated
- * to it; the nominal view inflates the plan instead and leaves the dots as they are. The
- * Y-axis floor covers both so toggling does not rescale the chart.
- */
-function computeChartDisplayData(
-  series: ChartSeries[],
-  extraSeries: ChartSeries[],
-  years: number[],
-  nominalMode: boolean,
-  inflationRate: number = DEFAULT_INFLATION_RATE,
-  band: ChartSeries | null = null,
-): {
-  displaySeries: ChartSeries[]
-  displayExtraSeries: ChartSeries[]
-  displayBand: ChartSeries | null
-  yDomainMax: number | undefined
-} {
-  const nominalSeries = inflateSeries(series, years, inflationRate)
-  const values = [...series, ...nominalSeries].flatMap((s) => s.values)
-  // The band is the line's own spread, so it goes up with the line or it bounds nothing.
-  const displayBand = band && nominalMode ? (inflateSeries([band], years, inflationRate)[0] ?? null) : band
-  return {
-    displaySeries: nominalMode ? nominalSeries : series,
-    displayExtraSeries: nominalMode ? extraSeries : deflatePoints(extraSeries, inflationRate),
-    displayBand,
-    yDomainMax: values.length > 0 ? Math.max(...values) : undefined,
-  }
 }
 
 function purchaseMarkerIndices(lines: ScenarioLine[], years: number[]): { yearIndex: number }[] {
@@ -196,6 +166,7 @@ function useChartLegendState(
       if (!breakdown) return []
       return [
         {
+          id: line.scenarioId === null ? 'draft' : String(line.scenarioId),
           label: line.name,
           color: line.color,
           ...(line.dashed ? { dashed: true as const } : {}),
@@ -285,8 +256,12 @@ function useRefLines(
   yDomainMax: number | undefined,
   fiTargetCents: number | null,
   windowed: boolean,
+  nominalMode: boolean,
 ) {
   return useMemo(() => {
+    // The targets are in today's money and a reference line is flat, while the nominal view
+    // inflates the plan past them: drawn there, the plan would seem to cross them early.
+    if (nominalMode) return []
     // A milestone far above the plan's own ceiling would squash the projection
     // flat against the axis, so only draw the ones it gets within reach of.
     const ceiling = yDomainMax != null && yDomainMax > 0 ? yDomainMax * 1.15 : Infinity
@@ -295,7 +270,7 @@ function useRefLines(
     return fiFits && !base.includes(fiTargetCents)
       ? [...base, fiTargetCents].sort((a, b) => a - b)
       : base
-  }, [milestones, yDomainMax, fiTargetCents, windowed])
+  }, [milestones, yDomainMax, fiTargetCents, windowed, nominalMode])
 }
 
 function HeroWindowPicker({
@@ -410,7 +385,7 @@ function NetWorthChartImpl({
     [series, extra, years, nominalMode, inflationRate, band],
   )
 
-  const refLines = useRefLines(milestones, yDomainMax, useFiTarget(isHero, draft), windowYears !== null)
+  const refLines = useRefLines(milestones, yDomainMax, useFiTarget(isHero, draft), windowYears !== null, nominalMode)
   const staticLegend: LegendItem[] = useMemo(
     () => series.map((s, idx) => ({ label: names[idx] ?? s.id, color: s.color })),
     [series, names],

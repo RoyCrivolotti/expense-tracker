@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_HOUSE_APPRECIATION,
+  DEFAULT_INFLATION_RATE,
   DEFAULT_MORTGAGE_RATE,
   DEFAULT_MORTGAGE_TERM_YEARS,
   DEFAULT_REAL_RETURN,
   DEFAULT_TRANSACTION_COSTS_CENTS,
 } from './projectionConstants'
 import { projectRentVsBuy, type RentVsBuyInput } from './rentVsBuy'
-import type { ProjectionParams } from './projection'
+import { monthlyMortgageCents, projectNetWorth, type ProjectionParams } from './projection'
 
 function baseParams(overrides: Partial<ProjectionParams> = {}): ProjectionParams {
   return {
@@ -66,5 +67,18 @@ describe('projectRentVsBuy', () => {
     const cross = result.breakevenYear ?? 0
     const at = result.points[cross]
     expect(at && at.buyNetWorthCents >= at.rentNetWorthCents).toBe(true)
+  })
+
+  it('counts the mortgage payment in today\'s money, so it shrinks against a constant rent', () => {
+    const params = baseParams({ housePurchaseYear: 5 })
+    const payment = monthlyMortgageCents({ ...params, housePurchaseYear: 0 })
+    // Rent equal to the payment: at a fixed nominal payment the buyer is ahead in today's
+    // money, so it is the buyer who has a surplus to invest from year one.
+    const result = projectRentVsBuy({ params, rentMonthlyCents: payment, carryRate: 0 })
+    const year1 = projectNetWorth({ ...params, housePurchaseYear: 0 })[1]!
+    const buySidePortfolio = result.points[1]!.buyNetWorthCents - (year1.houseEquityCents - year1.mortgageBalanceCents)
+    const annual = payment * 12
+    expect(buySidePortfolio).toBe(annual - Math.round(annual / (1 + DEFAULT_INFLATION_RATE)))
+    expect(buySidePortfolio).toBeGreaterThan(0)
   })
 })

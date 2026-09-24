@@ -16,7 +16,7 @@
  * are ignored.
  */
 import { monthlyMortgageCents, projectNetWorth, type ProjectionParams } from './projection'
-import { DEFAULT_HOME_CARRY_RATE } from './projectionConstants'
+import { DEFAULT_HOME_CARRY_RATE, DEFAULT_INFLATION_RATE } from './projectionConstants'
 
 export interface RentVsBuyPoint {
   year: number
@@ -58,8 +58,10 @@ export function projectRentVsBuy(input: RentVsBuyInput): RentVsBuyResult {
     if (t > 0) {
       rentPortfolio = Math.round(rentPortfolio * (1 + r))
       buyPortfolio = Math.round(buyPortfolio * (1 + r))
+      // The payment is fixed in the bank's money, so in today's it shrinks each year, while
+      // rent is held constant in today's money.
       const buyerOutlay =
-        (t <= params.mortgageTermYears ? annualMortgageCents : 0) +
+        (t <= params.mortgageTermYears ? Math.round(annualMortgageCents / Math.pow(1 + DEFAULT_INFLATION_RATE, t)) : 0) +
         Math.round(point.houseEquityCents * carryRate)
       const surplus = buyerOutlay - annualRentCents
       if (surplus > 0) rentPortfolio += surplus
