@@ -70,6 +70,14 @@ export function validateMilestones(value: unknown): string | null {
   return null
 }
 
+/** The shape and the calendar both: 2026-13-45 has the shape and is no date. */
+function isCalendarDate(value: string): boolean {
+  if (!ISO_DATE.test(value)) return false
+  const [y, m, d] = value.split('-').map(Number) as [number, number, number]
+  const date = new Date(Date.UTC(y, m - 1, d))
+  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d
+}
+
 function validateMilestone(entry: unknown): string | null {
   if (typeof entry !== 'object' || entry === null) {
     return 'each milestone must be an object'
@@ -86,7 +94,7 @@ function validateMilestone(entry: unknown): string | null {
   if (label !== undefined && typeof label !== 'string') {
     return 'milestone label must be a string'
   }
-  if (targetDate !== undefined && (typeof targetDate !== 'string' || !ISO_DATE.test(targetDate))) {
+  if (targetDate !== undefined && (typeof targetDate !== 'string' || !isCalendarDate(targetDate))) {
     return 'milestone targetDate must be a YYYY-MM-DD string'
   }
   return null

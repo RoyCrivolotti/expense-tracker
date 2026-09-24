@@ -37,11 +37,15 @@ function MilestoneRow({
   currencySymbol: string
   formatted: string
   isAmountTaken: (amountCents: number) => boolean
-  onCommit: (next: Milestone) => void
+  onCommit: (amountCents: number, next: Milestone) => void
   onRemove: () => void
 }) {
   const [label, setLabel] = useState(milestone.label)
   const [amount, setAmount] = useState(String(milestone.amountCents / 100))
+  // The row is addressed by amount. After the amount itself is edited the working list
+  // already holds the new one while the prop still has the old, so a date picked in that
+  // gap must address the new amount or it would match nothing and be lost.
+  const keyRef = useRef(milestone.amountCents)
   const targetDate = milestone.targetDate ?? ''
 
   function resolveAmountCents(): number {
@@ -49,14 +53,16 @@ function MilestoneRow({
     if (!Number.isFinite(units) || units <= 0) return milestone.amountCents
     const next = Math.min(MILESTONE_MAX_CENTS, Math.round(units * 100))
     // Saving a duplicate would let the server's de-duplication drop this row and
-    // its label without the edit ever being visible, so collisions revert.
-    return isAmountTaken(next) ? milestone.amountCents : next
+    // its label without the edit ever being visible, so collisions revert. The row's
+    // own last commit is not a collision, even while it is still in flight.
+    return next !== keyRef.current && isAmountTaken(next) ? keyRef.current : next
   }
 
   function commit(nextTarget = targetDate) {
     const amountCents = resolveAmountCents()
     setAmount(String(amountCents / 100))
-    onCommit({ amountCents, label, ...(nextTarget ? { targetDate: nextTarget } : {}) })
+    onCommit(keyRef.current, { amountCents, label, ...(nextTarget ? { targetDate: nextTarget } : {}) })
+    keyRef.current = amountCents
   }
 
   return (
@@ -173,7 +179,7 @@ export function MilestonesSetting({ settings, onChange }: Props) {
                     cents !== m.amountCents &&
                     workingRef.current.some((other) => other.amountCents === cents)
                   }
-                  onCommit={(next) => replaceAmount(m.amountCents, next)}
+                  onCommit={replaceAmount}
                   onRemove={() => removeAmount(m.amountCents)}
                 />
               ))}

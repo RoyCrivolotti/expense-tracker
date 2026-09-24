@@ -279,7 +279,8 @@ function useRefLines(milestones: Milestone[], yDomainMax: number | undefined, fi
     // flat against the axis, so only draw the ones it gets within reach of.
     const ceiling = yDomainMax != null && yDomainMax > 0 ? yDomainMax * 1.15 : Infinity
     const base = milestones.map((m) => m.amountCents).filter((m) => m <= ceiling)
-    return fiTargetCents !== null && !base.includes(fiTargetCents)
+    // The FI target answers to the same ceiling, or a 5Y window could never zoom in.
+    return fiTargetCents !== null && fiTargetCents <= ceiling && !base.includes(fiTargetCents)
       ? [...base, fiTargetCents].sort((a, b) => a - b)
       : base
   }, [milestones, yDomainMax, fiTargetCents])
@@ -371,8 +372,6 @@ function NetWorthChartImpl({
     setActiveIndex(index)
   }, [])
   const isHero = variant === 'hero'
-  const { heroWindow, setHeroWindow, heroWindows, windowYears } = useHeroWindow(isHero, draft.horizonYears)
-
   const lines = useMemo(
     () => scenarioLines(scenarios, draft, activeId, dirty, hiddenIds),
     [scenarios, draft, activeId, dirty, hiddenIds],
@@ -382,6 +381,10 @@ function NetWorthChartImpl({
     [scenarios, hiddenIds],
   )
   const full = useMemo(() => buildSeries(lines), [lines])
+  // The windows on offer follow how far the chart actually runs, which is the longest
+  // drawn horizon, not only the draft's.
+  const extentYears = full.years[full.years.length - 1] ?? draft.horizonYears
+  const { heroWindow, setHeroWindow, heroWindows, windowYears } = useHeroWindow(isHero, extentYears)
   const names = full.names
   const bandSeries = useBandSeries(isHero, draft)
   const { years, series, band, extra } = useWindowedSeries(full, bandSeries, extraSeries, windowYears)

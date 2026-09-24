@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { ExpenseSettings } from '../../types'
 import { Card } from '../components/primitives'
 import styles from '../tabs/tabs.module.css'
@@ -11,8 +12,32 @@ interface Props {
   onChange: (patch: Partial<ExpenseSettings>) => void | Promise<void>
 }
 
-/** The emergency-fund target, in months of spending. Zero switches the comparison off. */
+/**
+ * The emergency-fund target, in months of spending. Zero switches the comparison off.
+ * The field holds its own draft and saves on blur or Enter: bound straight to the saved
+ * value, each keystroke would race the round trip, and an empty field would save zero.
+ */
 export function CashReserveSetting({ settings, onChange }: Props) {
+  const saved = settings.cashReserveMonths
+  const [draft, setDraft] = useState(String(saved))
+  // A save landing from elsewhere replaces the draft; tracked in render rather than in
+  // an effect so the field never shows the old value for a frame.
+  const [seen, setSeen] = useState(saved)
+  if (seen !== saved) {
+    setSeen(saved)
+    setDraft(String(saved))
+  }
+
+  const commit = () => {
+    const months = draft.trim() === '' ? NaN : Number(draft)
+    if (Number.isInteger(months) && months >= 0 && months <= MAX_MONTHS) {
+      if (months !== saved) void onChange({ cashReserveMonths: months })
+      setDraft(String(months))
+    } else {
+      setDraft(String(saved))
+    }
+  }
+
   return (
     <Card>
       <h3 className={goalStyles.sectionTitle}>Cash reserve</h3>
@@ -25,12 +50,11 @@ export function CashReserveSetting({ settings, onChange }: Props) {
             min={0}
             max={MAX_MONTHS}
             step={1}
-            value={settings.cashReserveMonths}
-            onChange={(e) => {
-              const months = Number(e.target.value)
-              if (Number.isInteger(months) && months >= 0 && months <= MAX_MONTHS) {
-                void onChange({ cashReserveMonths: months })
-              }
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.currentTarget.blur()
             }}
           />
         </label>

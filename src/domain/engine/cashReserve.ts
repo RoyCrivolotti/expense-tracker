@@ -27,11 +27,12 @@ export function checkinCashCents(checkin: WealthCheckin, accounts: WealthAccount
 /**
  * Mean expenses over the last months that recorded any, or null with none. A month with
  * only income or investing logged says nothing about spending, so it does not count as a
- * month of zero and pull the average down.
+ * month of zero and pull the average down. The month still under way (`openMonth`) is
+ * left out for the same reason: its spending so far is not a month's spending.
  */
-export function averageMonthlySpendCents(transactions: Transaction[]): number | null {
+export function averageMonthlySpendCents(transactions: Transaction[], openMonth?: string): number | null {
   const months = [...computeMonthlyTotals(transactions).values()]
-    .filter((m) => m.expensesCents !== 0)
+    .filter((m) => m.expensesCents !== 0 && (openMonth === undefined || m.month < openMonth))
     .sort((a, b) => a.month.localeCompare(b.month))
     .slice(-CASH_RESERVE_SPEND_MONTHS)
   if (months.length === 0) return null
@@ -39,16 +40,22 @@ export function averageMonthlySpendCents(transactions: Transaction[]): number | 
   return Math.round(total / months.length)
 }
 
-/** Null when the check-in records no cash account, since there is nothing to measure. */
+/**
+ * Null when the check-in records no balance against a live cash account, since there is
+ * nothing to measure: an archived account, or one added after the check-in, must not read
+ * as a reserve of zero.
+ */
 export function cashReserve(
   checkin: WealthCheckin,
   accounts: WealthAccount[],
   transactions: Transaction[],
   targetMonths: number,
+  openMonth?: string,
 ): CashReserve | null {
-  if (!accounts.some((a) => a.kind === 'cash')) return null
-  const cashCents = checkinCashCents(checkin, accounts)
-  const monthlySpendCents = averageMonthlySpendCents(transactions)
+  const live = accounts.filter((a) => a.kind === 'cash' && !a.archived)
+  if (!checkin.entries.some((e) => live.some((a) => a.id === e.accountId))) return null
+  const cashCents = checkinCashCents(checkin, live)
+  const monthlySpendCents = averageMonthlySpendCents(transactions, openMonth)
   const monthsCovered =
     monthlySpendCents !== null && monthlySpendCents > 0 ? cashCents / monthlySpendCents : null
   return { cashCents, monthlySpendCents, monthsCovered, targetMonths }

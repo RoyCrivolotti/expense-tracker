@@ -66,6 +66,25 @@ describe('milestoneStanding', () => {
     })
   })
 
+  it("is overdue once the plan's own date has passed with no check-in reaching it", () => {
+    expect(milestoneStanding(inYearTwo, plan, undefined, '2028-06-01')).toEqual({
+      kind: 'overdue',
+      expected: '2028-01-01',
+      target: null,
+    })
+    // The target is still ahead, but "on track" would be the plan's word against the facts.
+    expect(milestoneStanding({ ...inYearTwo, targetDate: '2029-01-01' }, plan, undefined, '2028-06-01')).toEqual({
+      kind: 'overdue',
+      expected: '2028-01-01',
+      target: '2029-01-01',
+    })
+    expect(milestoneStanding(inYearTwo, plan, '2028-03-01', '2028-06-01').kind).toBe('reached')
+  })
+
+  it('cannot be dated from a malformed start date', () => {
+    expect(milestoneCrossingDate(makeScenario({ ...plan, planStartDate: 'garbage' }), 120_000_00)).toBeNull()
+  })
+
   it('gives the expected date alone without a target, and says so past the horizon', () => {
     expect(milestoneStanding(inYearTwo, plan, undefined)).toEqual({ kind: 'expected', expected: '2028-01-01' })
     expect(milestoneStanding({ amountCents: 1_000_000_000_00, label: '', targetDate: '2030-01-01' }, plan, undefined)).toEqual({

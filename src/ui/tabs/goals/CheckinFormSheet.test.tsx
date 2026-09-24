@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
@@ -63,8 +63,18 @@ describe('CheckinFormSheet', () => {
     const actions = makeActions()
     const user = userEvent.setup()
     render(<CheckinFormSheet accounts={[makeAccount(1)]} actions={actions} />)
+    fireEvent.change(screen.getByLabelText('Value for Account 1'), { target: { value: '1000' } })
     await user.click(screen.getByRole('button', { name: /save check-in/i }))
     expect(actions.createWealthCheckin).toHaveBeenCalled()
+  })
+
+  it('will not save a check-in with every balance at zero', () => {
+    const actions = makeActions()
+    render(<CheckinFormSheet accounts={[makeAccount(1)]} actions={actions} />)
+    const save = screen.getByRole('button', { name: /save check-in/i })
+    expect(save).toBeDisabled()
+    fireEvent.change(screen.getByLabelText('Value for Account 1'), { target: { value: '1000' } })
+    expect(save).toBeEnabled()
   })
 
   it('calls onDone when cancel is clicked', async () => {
@@ -100,6 +110,7 @@ describe('CheckinFormSheet when the save fails', () => {
     } as unknown as ExpenseActions
     render(<CheckinFormSheet accounts={[makeAccount(1)]} actions={actions} />)
 
+    fireEvent.change(screen.getByLabelText('Value for Account 1'), { target: { value: '1000' } })
     await userEvent.click(screen.getByRole('button', { name: /save check-in/i }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('checkinDate cannot be in the future')
@@ -115,6 +126,7 @@ describe('CheckinFormSheet when the save fails', () => {
     const onDone = vi.fn()
     render(<CheckinFormSheet accounts={[makeAccount(1)]} actions={actions} onDone={onDone} />)
 
+    fireEvent.change(screen.getByLabelText('Value for Account 1'), { target: { value: '1000' } })
     await userEvent.click(screen.getByRole('button', { name: /save check-in/i }))
     expect(await screen.findByRole('alert')).toBeInTheDocument()
 

@@ -88,6 +88,8 @@ describe('validateMilestones', () => {
     expect(validateMilestones([{ amountCents: 1, label: '', targetDate: '2028-06-01' }])).toBeNull()
     expect(validateMilestones([{ amountCents: 1, label: '', targetDate: 'June 2028' }])).toMatch(/targetDate/)
     expect(validateMilestones([{ amountCents: 1, label: '', targetDate: 2028 }])).toMatch(/targetDate/)
+    expect(validateMilestones([{ amountCents: 1, label: '', targetDate: '2026-13-45' }])).toMatch(/targetDate/)
+    expect(validateMilestones([{ amountCents: 1, label: '', targetDate: '2027-02-29' }])).toMatch(/targetDate/)
   })
 
   it('keeps a target date through normalisation and leaves the key off without one', () => {

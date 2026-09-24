@@ -32,6 +32,14 @@ function describe(standing: MilestoneStanding): { mark: string; text: string; to
       }
     case 'expected':
       return { mark: '→', text: `expected ${formatCheckinDate(standing.expected)}`, tone: 'muted' }
+    case 'overdue':
+      return {
+        mark: '!',
+        text: `not reached yet; the plan had it by ${formatCheckinDate(standing.expected)}${
+          standing.target ? `, target ${formatCheckinDate(standing.target)}` : ''
+        }`,
+        tone: 'bad',
+      }
     case 'beyond-horizon':
       return {
         mark: '→',

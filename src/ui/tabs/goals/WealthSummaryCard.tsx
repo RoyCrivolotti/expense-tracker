@@ -29,6 +29,8 @@ interface Props {
   onRebaseline?: (() => void) | undefined
   /** The emergency-fund target from Setup; 0 means none. */
   cashReserveMonths?: number
+  /** The budget month still under way, left out of the spending average. */
+  openBudgetMonth?: string | undefined
 }
 
 /** Cash as months of spending, against the target when there is one. */
@@ -38,6 +40,9 @@ function CashReserveHint({ reserve, format }: { reserve: CashReserve; format: Mo
     return <p style={hintStyle}>Cash reserve: <strong>{cash}</strong>.</p>
   }
   const months = reserve.monthsCovered.toFixed(1)
+  // Judged on the figure shown: 5.96 reads "6.0", and "6.0 months" in red against a
+  // target of 6 would look like a rounding error, which is what it would be.
+  const shown = Number(months)
   if (reserve.targetMonths <= 0) {
     return (
       <p style={hintStyle}>
@@ -45,7 +50,7 @@ function CashReserveHint({ reserve, format }: { reserve: CashReserve; format: Mo
       </p>
     )
   }
-  const met = reserve.monthsCovered >= reserve.targetMonths
+  const met = shown >= reserve.targetMonths
   return (
     <p style={hintStyle}>
       Cash reserve: <strong>{cash}</strong> covers{' '}
@@ -91,13 +96,13 @@ function SteadyGapHint({
 
 const hintStyle = { fontSize: '0.8125rem', color: 'var(--color-text-muted)', margin: 0 } as const
 
-/** The inflation taken off a measured (nominal) return before it meets the plan's real one. */
-const ASSUMED_INFLATION = 0.02
-
 /**
  * Whether being behind is a saving problem or a market one. Under a full year the figure
  * is the period's return and reads "so far"; from a year on it is compounded to a yearly
- * rate, has the assumed inflation taken off, and is set against the plan's real return.
+ * rate and set against the plan's expected rate as it is. The plan calls that rate real,
+ * but on/off track compares the same nominal balances with the plan line grown at it, so
+ * a portfolio that returned exactly the plan's rate is exactly on plan, and this line has
+ * to agree with the one above it rather than deflate on its own.
  */
 function ReturnHint({
   ret,
@@ -115,22 +120,18 @@ function ReturnHint({
       <p style={hintStyle}>
         Your portfolio has returned <strong>{formatPercent(ret.periodReturn, format)} so far</strong>{' '}
         since {since}
-        {plan ? ` against the ${planRate}, after inflation, that ${plan.name} assumes` : ''}.
+        {plan ? ` against the ${planRate} that ${plan.name} assumes` : ''}.
       </p>
     )
   }
-  // Balances are nominal and the plan's rate is real, so the two only meet after inflation
-  // comes off; the same 2% the hero chart's purchasing-power view assumes.
-  const real = (1 + ret.annualised) / (1 + ASSUMED_INFLATION) - 1
-  const onPar = !plan || real >= plan.expectedRealReturn
+  const onPar = !plan || ret.annualised >= plan.expectedRealReturn
   return (
     <p style={hintStyle}>
       Your portfolio returned{' '}
       <strong style={{ color: onPar ? 'var(--exp-success)' : 'var(--exp-danger)' }}>
         {formatPercent(ret.annualised, format)} a year
       </strong>{' '}
-      since {since}, about {formatPercent(real, format)} once{' '}
-      {formatPercent(ASSUMED_INFLATION, format)} inflation is taken off
+      since {since}
       {plan ? ` against the ${planRate} that ${plan.name} assumes` : ''}.
     </p>
   )
@@ -206,9 +207,11 @@ function SnapshotHints({
   plan,
   transactions,
   cashReserveMonths,
+  openBudgetMonth,
   onRebaseline,
   format,
 }: Required<Pick<Props, 'checkins' | 'accounts' | 'plan' | 'transactions' | 'cashReserveMonths'>> & {
+  openBudgetMonth: string | undefined
   latest: WealthCheckin
   status: TrackStatus | null
   onRebaseline: (() => void) | undefined
@@ -216,7 +219,7 @@ function SnapshotHints({
 }) {
   const ret = portfolioReturn(checkins, accounts, transactions)
   const stale = plan ? steadyGap(checkins, plan, accounts) : null
-  const reserve = cashReserve(latest, accounts, transactions, cashReserveMonths)
+  const reserve = cashReserve(latest, accounts, transactions, cashReserveMonths, openBudgetMonth)
   return (
     <>
       {status && status.deltaMonths !== 0 ? <MonthsHint status={status} /> : null}
@@ -234,6 +237,7 @@ export function WealthSummaryCard({
   transactions = [],
   onRebaseline,
   cashReserveMonths = 0,
+  openBudgetMonth,
 }: Props) {
   const format = useMoneyFormat()
   const latest = latestCheckin(checkins)
@@ -284,6 +288,7 @@ export function WealthSummaryCard({
           plan={plan}
           transactions={transactions}
           cashReserveMonths={cashReserveMonths}
+          openBudgetMonth={openBudgetMonth}
           onRebaseline={onRebaseline}
           format={format}
         />
