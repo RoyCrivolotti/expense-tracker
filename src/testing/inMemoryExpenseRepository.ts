@@ -34,6 +34,7 @@ import type {
   WealthCheckin,
 } from '../domain/types'
 import { RepoHttpError } from './repoHttpError'
+import { AMOUNT_SIGN_MESSAGE, amountSignAllowed } from '../domain/data/amountSign'
 
 export type ExpenseRepositorySeed = Partial<ExpenseDataset>
 
@@ -481,6 +482,11 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       if (patch.categoryId != null) assertOwnedCategory(store, patch.categoryId)
       const keys = Object.keys(patch) as (keyof NewTransaction)[]
       if (keys.length === 0) throw new RepoHttpError(400, 'Empty patch')
+      // Mirrors the D1 adapter: the row after the patch may not carry a withdrawal on
+      // anything but an investment.
+      if (!amountSignAllowed(patch.amountCents ?? existing.amountCents, patch.type ?? existing.type)) {
+        throw new RepoHttpError(400, AMOUNT_SIGN_MESSAGE)
+      }
       const { planId: nextPlanId, installmentIndex: nextIndex, flagId: nextFlagId, ...rest } = patch
       let updated: StoredTransaction = { ...existing, ...rest, id: existing.id }
       if ('flagId' in patch) {
@@ -535,6 +541,13 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       if (patch.categoryId != null) assertOwnedCategory(store, patch.categoryId)
       if (patch.flagId != null) assertOwnedFlag(store, patch.flagId)
       const idSet = new Set(ids)
+      if (patch.type != null && patch.type !== 'investment') {
+        // Mirrors the D1 adapter: a type change away from investment must not leave a
+        // withdrawal on an expense row, and it is refused before anything is touched.
+        if (store.transactions.some((t) => idSet.has(t.id) && t.amountCents < 0)) {
+          throw new RepoHttpError(400, AMOUNT_SIGN_MESSAGE)
+        }
+      }
       if (patch.settledBy != null) {
         assertOwnedTransactionId(store, patch.settledBy)
         // Check every target before mutating any, so a conflict cannot leave half

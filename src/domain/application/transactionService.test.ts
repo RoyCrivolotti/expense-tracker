@@ -32,30 +32,32 @@ describe('transactionService validation', () => {
 
   it('rejects a non-finite amountCents', () => {
     expect(() => validateNewTransaction({ ...validTxn, amountCents: NaN })).toThrow(
-      'amountCents must be a whole number of cents, greater than zero',
+      'amountCents must be a whole number of cents, not zero',
     )
   })
 
   it('rejects a fractional amountCents, which is not a sum this ledger can hold', () => {
     expect(() => validateNewTransaction({ ...validTxn, amountCents: 12.5 })).toThrow(
-      'amountCents must be a whole number of cents, greater than zero',
+      'amountCents must be a whole number of cents, not zero',
     )
   })
 
-  it('rejects a zero or negative amountCents', () => {
+  it('rejects a zero amountCents, and a negative one on anything but an investment', () => {
     expect(() => validateNewTransaction({ ...validTxn, amountCents: 0 })).toThrow(
-      'amountCents must be a whole number of cents, greater than zero',
+      'amountCents must be a whole number of cents, not zero',
     )
-    expect(() => validateNewTransaction({ ...validTxn, amountCents: -1000 })).toThrow(
-      'amountCents must be a whole number of cents, greater than zero',
+    expect(() => validateNewTransaction({ ...validTxn, type: 'expense', amountCents: -1000 })).toThrow(
+      'Amounts must be positive, except a withdrawal from an investment',
     )
+    // A withdrawal: money back out of the portfolio.
+    expect(validateNewTransaction({ ...validTxn, type: 'investment', amountCents: -1000 }).amountCents).toBe(-1000)
   })
 
   it('validates bulk payloads with the same rules', () => {
     expect(validateBulkTransactions([validTxn])).toHaveLength(1)
     expect(() => validateBulkTransactions('nope')).toThrow('transactions array is required')
     expect(() => validateBulkTransactions([{ ...validTxn, amountCents: NaN }])).toThrow(
-      'amountCents must be a whole number of cents, greater than zero',
+      'amountCents must be a whole number of cents, not zero',
     )
   })
 
@@ -218,7 +220,11 @@ describe('validateTransactionPatch', () => {
     // given, which made this the one write path looser than create and bulk edit.
     expect(() => validateTransactionPatch({ amountCents: 'lots' })).toThrow('amountCents')
     expect(() => validateTransactionPatch({ amountCents: 0 })).toThrow('amountCents')
-    expect(() => validateTransactionPatch({ amountCents: -500 })).toThrow('amountCents')
+    // A negative amount alone cannot be judged without the row's type; that is the
+    // repository's check. With the type in the same patch it is judged here.
+    expect(validateTransactionPatch({ amountCents: -500 })).toEqual({ amountCents: -500 })
+    expect(() => validateTransactionPatch({ amountCents: -500, type: 'expense' })).toThrow('withdrawal')
+    expect(validateTransactionPatch({ amountCents: -500, type: 'investment' })).toEqual({ amountCents: -500, type: 'investment' })
     expect(() => validateTransactionPatch({ amountCents: 12.5 })).toThrow('amountCents')
     expect(() => validateTransactionPatch({ date: 'yesterday' })).toThrow('date must be YYYY-MM-DD')
     expect(() => validateTransactionPatch({ budgetMonth: '2026-1' })).toThrow('budgetMonth')

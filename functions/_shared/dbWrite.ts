@@ -1,6 +1,7 @@
 import type { StoredTransaction, Transaction } from '../domain/types'
 import type { BulkTransactionPatch, NewTransaction } from '../domain/data/dataSource'
 import { deriveStatus } from '../domain/engine/status'
+import { AMOUNT_SIGN_MESSAGE, amountSignAllowed } from '../domain/data/amountSign'
 import { parseIsoDate } from '../domain/engine/dates'
 import type { Env } from './env'
 import {
@@ -243,6 +244,50 @@ async function assertNoneSettledElsewhere(
   if ((results ?? []).length > 0) throw new HttpError(409, SETTLED_ELSEWHERE)
 }
 
+/**
+ * A negative amount belongs only on an investment row. The service checks a patch that
+ * carries both fields; a patch with one of them needs the stored row for the other.
+ */
+async function assertAmountSignAgainstRow(
+  env: Env,
+  owner: string,
+  id: number,
+  patch: TxnPatch,
+): Promise<void> {
+  const hasAmount = patch.amountCents != null
+  const hasType = patch.type != null
+  // Both present: the service already judged them. Neither: nothing to judge.
+  if (hasAmount === hasType) return
+  // A positive amount is fine on any type; an investment takes either sign.
+  if (hasAmount && patch.amountCents! >= 0) return
+  if (hasType && patch.type === 'investment') return
+  const row = await env.DB.prepare('SELECT type, amount_cents FROM transactions WHERE id = ? AND owner = ?')
+    .bind(id, owner)
+    .first<{ type: TxnRow['type']; amount_cents: number }>()
+  // A missing row is the UPDATE's own not-found to report.
+  if (!row) return
+  const amount = hasAmount ? patch.amountCents! : row.amount_cents
+  const type = hasType ? patch.type! : row.type
+  if (!amountSignAllowed(amount, type)) throw new HttpError(400, AMOUNT_SIGN_MESSAGE)
+}
+
+/** A type change away from investment must not leave a withdrawal on an expense row. */
+async function assertNoWithdrawalLeavingInvestment(
+  env: Env,
+  owner: string,
+  ids: number[],
+  placeholders: string,
+  type: BulkTransactionPatch['type'],
+): Promise<void> {
+  if (type == null || type === 'investment') return
+  const { results } = await env.DB.prepare(
+    `SELECT id FROM transactions WHERE owner = ? AND id IN (${placeholders}) AND amount_cents < 0`,
+  )
+    .bind(owner, ...ids)
+    .all<{ id: number }>()
+  if ((results ?? []).length > 0) throw new HttpError(400, AMOUNT_SIGN_MESSAGE)
+}
+
 /** Every foreign key a transaction patch can carry must belong to the same owner. */
 async function assertPatchOwnership(env: Env, owner: string, patch: TxnPatch): Promise<void> {
   if (patch.accountId != null) await assertOwnedAccount(env, owner, patch.accountId)
@@ -288,6 +333,7 @@ export async function updateTransaction(
   const link = await planLinkColumns(env, owner, id, patch)
   if (keys.length === 0 && link.sets.length === 0) throw new HttpError(400, 'Empty patch')
   await assertPatchOwnership(env, owner, patch)
+  await assertAmountSignAgainstRow(env, owner, id, patch)
   const sets = keys
     .map((k) => `${COLUMN[k]} = ?`)
     .concat(link.sets, "updated_at = datetime('now')")
@@ -423,6 +469,7 @@ export async function bulkUpdateTransactions(
   // row settled elsewhere rather than failing, so deciding from its changed-row count
   // afterwards has already committed the rows that did qualify.
   await assertNoneSettledElsewhere(env, owner, ids, placeholders, patch.settledBy)
+  await assertNoWithdrawalLeavingInvestment(env, owner, ids, placeholders, patch.type)
   const sets = keys.map((k) => `${COLUMN[k]} = ?`).concat("updated_at = datetime('now')")
   const patchRec = patch as Record<string, unknown>
   const values = keys.map((k) => patchValue(k, patchRec[k]))
