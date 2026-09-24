@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { NetWorthChart } from './NetWorthChart'
-import { applyRealTransform } from './nominalTransform'
+import { deflatePoints, inflateSeries } from './nominalTransform'
 import { makeScenario } from '../../../../testing/factories'
 import { defaultMilestones } from '../../../../engine'
 import type { ChartSeries } from '../../../charts/LinearChart'
@@ -10,46 +10,34 @@ import chartStyles from '../../../charts/charts.module.css'
 const defaultDraft = makeScenario()
 const milestones = defaultMilestones()
 
-describe('applyRealTransform', () => {
-  it('deflates values by the given rate per year offset', () => {
+describe('inflateSeries and deflatePoints', () => {
+  it('inflates values by the given rate per year offset, and leaves year zero alone', () => {
+    const series: ChartSeries[] = [{ id: 's1', color: '#000', values: [100_000_000, 100_000_000], kind: 'line' }]
+    const result = inflateSeries(series, [0, 1], 0.02)
+    expect(result[0]!.values[0]).toBe(100_000_000)
+    expect(result[0]!.values[1]).toBe(Math.round(100_000_000 * 1.02))
+    expect(inflateSeries(series, [0, 1], 0.05)[0]!.values[1]).toBe(Math.round(100_000_000 * 1.05))
+  })
+
+  it('inflates the band with the line, and leaves a series without one alone', () => {
     const series: ChartSeries[] = [
-      { id: 's1', color: '#000', values: [0, 100_000_000], kind: 'line' },
+      { id: 'b1', color: '#000', values: [0, 100_000_000], kind: 'line', band: { lo: [0, 80_000_000], hi: [0, 120_000_000] } },
+      { id: 's2', color: '#000', values: [0], kind: 'line' },
     ]
-    const years = [0, 1]
-    const result = applyRealTransform(series, years, 0.02)
-    expect(result[0]!.values[0]).toBe(0)
-    expect(result[0]!.values[1]).toBe(Math.round(100_000_000 / 1.02))
+    const result = inflateSeries(series, [0, 1], 0.02)
+    expect(result[0]!.band?.lo[1]).toBe(Math.round(80_000_000 * 1.02))
+    expect(result[0]!.band?.hi[1]).toBe(Math.round(120_000_000 * 1.02))
+    expect(result[1]!.band).toBeUndefined()
   })
 
-  it('uses the passed inflation rate for deflation', () => {
-    const series: ChartSeries[] = [{ id: 's1', color: '#000', values: [100_000_000], kind: 'line' }]
-    const result = applyRealTransform(series, [1], 0.05)
-    expect(result[0]!.values[0]).toBe(Math.round(100_000_000 / 1.05))
-  })
-
-  it('deflates band lo and hi when band is present', () => {
+  it('leaves scatter points as they are when inflating: check-ins are already nominal', () => {
     const series: ChartSeries[] = [
-      {
-        id: 'b1',
-        color: '#000',
-        values: [0, 100_000_000],
-        kind: 'line',
-        band: { lo: [0, 80_000_000], hi: [0, 120_000_000] },
-      },
+      { id: 'actuals', color: '#10b981', values: [], kind: 'scatter', points: [{ xIndex: 2.5, value: 200_000_000 }] },
     ]
-    const years = [0, 1]
-    const result = applyRealTransform(series, years, 0.02)
-    expect(result[0]!.band?.lo[1]).toBe(Math.round(80_000_000 / 1.02))
-    expect(result[0]!.band?.hi[1]).toBe(Math.round(120_000_000 / 1.02))
+    expect(inflateSeries(series, [], 0.02)[0]!.points?.[0]?.value).toBe(200_000_000)
   })
 
-  it('omits band property when original series has no band', () => {
-    const series: ChartSeries[] = [{ id: 's2', color: '#000', values: [0], kind: 'line' }]
-    const result = applyRealTransform(series, [0], 0.02)
-    expect(result[0]!.band).toBeUndefined()
-  })
-
-  it('deflates scatter points by their own fractional xIndex', () => {
+  it('deflates scatter points by their own fractional xIndex, and nothing else', () => {
     const series: ChartSeries[] = [
       {
         id: 'actuals',
@@ -61,35 +49,24 @@ describe('applyRealTransform', () => {
           { xIndex: 2.5, value: 200_000_000 },
         ],
       },
+      { id: 's3', color: '#000', values: [50], kind: 'line' },
     ]
-    // `years` is empty on purpose: a scatter series carries no aligned values, so the
-    // deflation has to come from each point's own xIndex, not an array position.
-    const result = applyRealTransform(series, [], 0.02)
+    const result = deflatePoints(series, 0.02)
     expect(result[0]!.points?.[0]?.value).toBe(100_000_000)
     expect(result[0]!.points?.[1]?.value).toBe(Math.round(200_000_000 / Math.pow(1.02, 2.5)))
+    expect(result[1]!.values).toEqual([50])
+    expect(result[1]!.points).toBeUndefined()
   })
 
-  it('omits points when the series has none', () => {
-    const series: ChartSeries[] = [{ id: 's3', color: '#000', values: [0], kind: 'line' }]
-    expect(applyRealTransform(series, [0], 0.02)[0]!.points).toBeUndefined()
-  })
-
-  it('keeps a check-in that matches the plan level with the plan line', () => {
-    // The bug this guards: a portfolio exactly on plan read as far ahead of it, because
-    // only the line moved when the purchasing-power toggle flipped.
-    const onPlanCents = 100_000_000
-    const series: ChartSeries[] = [
-      { id: 'plan', color: '#000', values: [0, onPlanCents], kind: 'line' },
-      {
-        id: 'actuals',
-        color: '#10b981',
-        values: [],
-        kind: 'scatter',
-        points: [{ xIndex: 1, value: onPlanCents }],
-      },
-    ]
-    const result = applyRealTransform(series, [0, 1], 0.02)
-    expect(result[1]!.points?.[0]?.value).toBe(result[0]!.values[1])
+  it('keeps a check-in that matches the plan level with the plan line, either way round', () => {
+    // A portfolio exactly on plan must read as on plan in both views: deflating the dot
+    // meets the real line, and the nominal view inflates the line up to the dot.
+    const onPlanReal = 100_000_000
+    const onPlanNominal = Math.round(onPlanReal * 1.02)
+    const line: ChartSeries = { id: 'plan', color: '#000', values: [0, onPlanReal], kind: 'line' }
+    const dot: ChartSeries = { id: 'actuals', color: '#10b981', values: [], kind: 'scatter', points: [{ xIndex: 1, value: onPlanNominal }] }
+    expect(deflatePoints([dot], 0.02)[0]!.points?.[0]?.value).toBe(onPlanReal)
+    expect(inflateSeries([line], [0, 1], 0.02)[0]!.values[1]).toBe(onPlanNominal)
   })
 })
 
@@ -123,6 +100,19 @@ describe('NetWorthChart', () => {
     const lastLabel = () => {
       const texts = [...container.querySelectorAll('text')].map((t) => t.textContent ?? '')
       return texts.filter((t) => /^\d+$/.test(t)).map(Number).sort((a, b) => a - b).pop()
+
+    // With shorter windows still on offer, the lost one falls back to All, not to a
+    // window that happens to be first.
+    rerender(
+      <NetWorthChart milestones={milestones} scenarios={[]} draft={{ ...defaultDraft, horizonYears: 30 }} variant="hero" />,
+    )
+    fireEvent.click(screen.getByRole('radio', { name: '20Y' }))
+    rerender(
+      <NetWorthChart milestones={milestones} scenarios={[]} draft={{ ...defaultDraft, horizonYears: 8 }} variant="hero" />,
+    )
+    expect(screen.queryByRole('radio', { name: '20Y' })).not.toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'All' })).toBeChecked()
+    expect(lastLabel()).toBe(8)
     }
     fireEvent.click(screen.getByRole('radio', { name: '5Y' }))
     expect(lastLabel()).toBe(5)
@@ -278,7 +268,7 @@ describe('NetWorthChart', () => {
     expect(Number(svg!.getAttribute('viewBox')?.split(' ')[3] ?? 0)).toBeGreaterThan(200)
   })
 
-  it('renders without crashing when realMode is true', () => {
+  it('renders without crashing in the nominal view', () => {
     const { container } = render(
       <NetWorthChart
         milestones={milestones}
@@ -286,13 +276,13 @@ describe('NetWorthChart', () => {
         draft={defaultDraft}
         activeId={defaultDraft.id}
         variant="hero"
-        realMode
+        nominalMode
       />,
     )
     expect(container.querySelector('svg')).not.toBeNull()
   })
 
-  it('draws a check-in dot lower in real mode than in nominal mode', () => {
+  it('draws a check-in dot lower in today\'s money than in the nominal view', () => {
     const extra: ChartSeries = {
       id: 'actuals',
       color: '#10b981',
@@ -300,7 +290,7 @@ describe('NetWorthChart', () => {
       kind: 'scatter',
       points: [{ xIndex: 10, value: 50_000_000 }],
     }
-    const cy = (realMode: boolean) => {
+    const cy = (nominalMode: boolean) => {
       const { container } = render(
         <NetWorthChart
           milestones={milestones}
@@ -308,17 +298,18 @@ describe('NetWorthChart', () => {
           draft={defaultDraft}
           activeId={defaultDraft.id}
           extraSeries={[extra]}
-          realMode={realMode}
+          nominalMode={nominalMode}
         />,
       )
       const circle = container.querySelector('circle')
       return Number(circle!.getAttribute('cy'))
     }
-    // The Y axis is locked across both modes, and SVG y grows downward.
-    expect(cy(true)).toBeGreaterThan(cy(false))
+    // The Y axis is locked across both modes, and SVG y grows downward: the deflated dot
+    // of the default view sits lower than the untouched one of the nominal view.
+    expect(cy(false)).toBeGreaterThan(cy(true))
   })
 
-  it('renders without crashing with a custom inflationRate in realMode', () => {
+  it('renders without crashing with a custom inflationRate in the nominal view', () => {
     const { container } = render(
       <NetWorthChart
         milestones={milestones}
@@ -326,7 +317,7 @@ describe('NetWorthChart', () => {
         draft={defaultDraft}
         activeId={defaultDraft.id}
         variant="hero"
-        realMode
+        nominalMode
         inflationRate={0.05}
       />,
     )

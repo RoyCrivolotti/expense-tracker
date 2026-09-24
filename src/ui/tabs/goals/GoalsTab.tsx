@@ -159,7 +159,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     setCheckinEntry(false)
     setView(next)
   }, [])
-  const [displayMode, setDisplayMode] = useState<DisplayMode>('nominal')
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('purchasing-power')
   // Single configurable rate rather than year-by-year inputs — a reasonable
   // simplification for a multi-decade projection. Resets on reload; display-only.
   const [nominalInflation, setNominalInflation] = useState(DEFAULT_INFLATION_RATE)
@@ -485,7 +485,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
                       layout="compact"
                     />
                   </div>
-                  {displayMode === 'purchasing-power' ? (
+                  {displayMode === 'nominal' ? (
                     <div className={progressStyles.inflationRow}>
                       <span className={progressStyles.inflationLabel}>Inflation assumed</span>
                       <PercentStepper
@@ -500,7 +500,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
                 </>
               }
               extraSeries={checkinExtraSeries ? [checkinExtraSeries] : []}
-              realMode={displayMode === 'purchasing-power'}
+              nominalMode={displayMode === 'nominal'}
               inflationRate={nominalInflation}
               {...(heroTodayIndex !== undefined ? { todayIndex: heroTodayIndex } : {})}
             />
