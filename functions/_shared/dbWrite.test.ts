@@ -6,6 +6,7 @@ import {
   bulkInsertTransactions,
 } from './dbWrite'
 import type { Env } from './env'
+import { AMOUNT_SIGN_MESSAGE } from '../domain/data/amountSign'
 
 function envWith(first: unknown): Env {
   return {
@@ -27,6 +28,8 @@ function envForBulkUpdate(opts: {
   changes?: number
   /** Ids the pre-check should report as already settled by a different payment. */
   settledElsewhere?: number[]
+  /** Ids the pre-check should report as carrying a negative amount. */
+  withdrawals?: number[]
   /** Set true by the mock if the UPDATE statement is ever prepared. */
   updateRan?: { value: boolean }
   /** Every SQL string prepared, in order, when the caller wants to inspect them. */
@@ -38,6 +41,7 @@ function envForBulkUpdate(opts: {
     ownedSettledBy = true,
     changes = 1,
     settledElsewhere = [],
+    withdrawals = [],
     updateRan,
     prepared,
   } = opts
@@ -78,6 +82,10 @@ function envForBulkUpdate(opts: {
           // shape as the accounts/categories checks above, against `transactions`.
           if (sql.includes('transactions') && sql.includes('SELECT 1')) {
             return { first: vi.fn().mockResolvedValue(ownedSettledBy ? { ok: 1 } : null) }
+          }
+          // The withdrawal pre-check on a type change, before any write.
+          if (sql.includes('amount_cents < 0')) {
+            return { all: vi.fn().mockResolvedValue({ results: withdrawals.map((id) => ({ id })) }) }
           }
           // The conflict pre-check, before any write. Distinguished from the
           // post-update re-fetch by selecting `id` rather than `*`.
@@ -157,6 +165,51 @@ function envForSettleGuard(opts: {
             return null
           }),
         }),
+      }),
+    },
+  } as unknown as Env
+}
+
+/**
+ * The row-aware sign check reads `type, amount_cents` before the UPDATE; this stub
+ * answers that read with the given row and lets the UPDATE return it unchanged.
+ */
+function envForSignCheck(
+  row: { type: string; amountCents: number } | null,
+  prepared: string[] = [],
+): Env {
+  const txnRow = row && {
+    id: 5,
+    owner: 'a@b.com',
+    date: '2026-01-01',
+    budget_month: '2026-01',
+    description: 'Test',
+    account_id: 1,
+    category_id: 2,
+    type: row.type,
+    amount_cents: row.amountCents,
+    cancelled: 0,
+    notes: null,
+    plan_id: null,
+    installment_index: null,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  }
+  return {
+    DB: {
+      prepare: (sql: string) => ({
+        bind: () => {
+          prepared.push(sql)
+          return {
+            first: vi.fn().mockImplementation(async () => {
+              if (sql.startsWith('SELECT type, amount_cents')) {
+                return txnRow && { type: txnRow.type, amount_cents: txnRow.amount_cents }
+              }
+              if (sql.startsWith('UPDATE transactions')) return txnRow
+              return null
+            }),
+          }
+        },
       }),
     },
   } as unknown as Env
@@ -294,6 +347,64 @@ describe('updateTransaction settledBy guard', () => {
     await expect(
       updateTransaction(env, 'a@b.com', 5, { settledBy: 50 }),
     ).rejects.toMatchObject({ status: 404, message: 'Transaction not found' })
+  })
+})
+
+describe('updateTransaction amount sign against the stored row', () => {
+  it('refuses a negative amount alone on a row that is not an investment', async () => {
+    await expect(
+      updateTransaction(envForSignCheck({ type: 'expense', amountCents: 1000 }), 'a@b.com', 5, { amountCents: -500 }),
+    ).rejects.toMatchObject({ status: 400, message: AMOUNT_SIGN_MESSAGE })
+  })
+
+  it('accepts a negative amount alone on an investment row', async () => {
+    const updated = await updateTransaction(
+      envForSignCheck({ type: 'investment', amountCents: 1000 }),
+      'a@b.com',
+      5,
+      { amountCents: -500 },
+    )
+    expect(updated.id).toBe(5)
+  })
+
+  it('refuses a type change away from investment on a withdrawal', async () => {
+    await expect(
+      updateTransaction(envForSignCheck({ type: 'investment', amountCents: -500 }), 'a@b.com', 5, { type: 'expense' }),
+    ).rejects.toMatchObject({ status: 400, message: AMOUNT_SIGN_MESSAGE })
+  })
+
+  it('does not read the row when the patch alone settles the question', async () => {
+    const prepared: string[] = []
+    await updateTransaction(envForSignCheck({ type: 'expense', amountCents: 1000 }, prepared), 'a@b.com', 5, { amountCents: 500 })
+    await updateTransaction(envForSignCheck({ type: 'expense', amountCents: 1000 }, prepared), 'a@b.com', 5, { type: 'investment' })
+    await updateTransaction(envForSignCheck({ type: 'expense', amountCents: 1000 }, prepared), 'a@b.com', 5, {
+      amountCents: -500,
+      type: 'investment',
+    })
+    expect(prepared.some((sql) => sql.startsWith('SELECT type, amount_cents'))).toBe(false)
+  })
+
+  it('leaves a missing row to the update to report', async () => {
+    await expect(
+      updateTransaction(envForSignCheck(null), 'a@b.com', 5, { amountCents: -500 }),
+    ).rejects.toMatchObject({ status: 404 })
+  })
+})
+
+describe('bulkUpdateTransactions withdrawals', () => {
+  it('refuses a type change away from investment while a target is a withdrawal, before writing', async () => {
+    const updateRan = { value: false }
+    await expect(
+      bulkUpdateTransactions(envForBulkUpdate({ withdrawals: [1], updateRan }), 'a@b.com', [1, 2], { type: 'expense' }),
+    ).rejects.toMatchObject({ status: 400, message: AMOUNT_SIGN_MESSAGE })
+    expect(updateRan.value).toBe(false)
+  })
+
+  it('skips the check for a change to investment or one that leaves the type alone', async () => {
+    const prepared: string[] = []
+    await bulkUpdateTransactions(envForBulkUpdate({ prepared, withdrawals: [1] }), 'a@b.com', [1], { type: 'investment' })
+    await bulkUpdateTransactions(envForBulkUpdate({ prepared, withdrawals: [1] }), 'a@b.com', [1], { categoryId: 2 })
+    expect(prepared.some((sql) => sql.includes('amount_cents < 0'))).toBe(false)
   })
 })
 

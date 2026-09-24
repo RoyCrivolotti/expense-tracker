@@ -54,6 +54,7 @@ export function ProgressView({
   onRebaseline,
 }: Props) {
   const [showCheckinForm, setShowCheckinForm] = useState(openCheckinForm)
+  const latest = latestCheckin(checkins)
   // A check-in records a balance per account, so with none there is nothing to log yet.
   const hasAccounts = accounts.some((a) => !a.archived)
 
@@ -77,7 +78,12 @@ export function ProgressView({
         plan={plan}
       />
 
-      <ReachedMilestones milestones={milestones} reached={reached} plan={plan} />
+      <ReachedMilestones
+        milestones={milestones}
+        reached={reached}
+        plan={plan}
+        latestCheckin={latest}
+      />
 
       {canWrite && actions && !hasAccounts ? (
         <EmptyState actionLabel="Set up accounts" onAction={onOpenSetup}>
@@ -89,7 +95,7 @@ export function ProgressView({
         showCheckinForm ? (
           <CheckinFormSheet
             accounts={accounts}
-            previous={latestCheckin(checkins)}
+            previous={latest}
             actions={actions}
             onDone={() => setShowCheckinForm(false)}
           />

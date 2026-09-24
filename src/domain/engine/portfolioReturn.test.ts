@@ -133,6 +133,38 @@ describe('portfolioReturn', () => {
     expect(r.contributionsCents).toBe(-50_000_00)
   })
 
+  it('gives up when a stretch comes out below minus one hundred percent, and keeps a total loss', () => {
+    // 100k, another 100k added a month before the end, 50k left: the approximation
+    // puts the stretch below minus one hundred percent, where no rate exists.
+    expect(
+      portfolioReturn(
+        [checkin(1, '2025-01-01', 100_000_00), checkin(2, '2026-01-01', 50_000_00)],
+        accounts,
+        [contribution('2025-12-01', 100_000_00)],
+      ),
+    ).toBeNull()
+    // Two such stretches multiply back to a positive number; each is judged on its own.
+    expect(
+      portfolioReturn(
+        [
+          checkin(1, '2025-01-01', 100_000_00),
+          checkin(2, '2026-01-01', 50_000_00),
+          checkin(3, '2027-01-01', 25_000_00),
+        ],
+        accounts,
+        [contribution('2025-12-01', 100_000_00), contribution('2026-12-01', 100_000_00)],
+      ),
+    ).toBeNull()
+    // Losing it all is a return of minus one hundred percent, not an error.
+    const wiped = portfolioReturn(
+      [checkin(1, '2025-01-01', 100_000_00), checkin(2, '2026-01-01', 0)],
+      accounts,
+      [],
+    )!
+    expect(wiped.periodReturn).toBe(-1)
+    expect(wiped.annualised).toBe(-1)
+  })
+
   it('skips the stretches before the portfolio opened', () => {
     const r = portfolioReturn(
       [

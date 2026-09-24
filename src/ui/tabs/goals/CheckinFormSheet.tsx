@@ -42,12 +42,21 @@ export function CheckinFormSheet({ accounts, previous = null, actions, onDone }:
   )
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Which fields the user has been in. A zero the user typed, or one carried over from
+  // the previous check-in, is a balance; a zero left on an account they never touched
+  // is not. The form only creates, so a field never starts from this check-in's own row.
+  const [touched, setTouched] = useState<ReadonlySet<number>>(() => new Set())
 
   const setEntry = (accountId: number, valueCents: number) => {
     setEntries((prev) =>
       prev.map((e) => (e.accountId === accountId ? { ...e, valueCents } : e)),
     )
+    setTouched((prev) => (prev.has(accountId) ? prev : new Set(prev).add(accountId)))
   }
+  const recorded = (e: EntryDraft) =>
+    e.valueCents !== 0 ||
+    touched.has(e.accountId) ||
+    previous?.entries.some((p) => p.accountId === e.accountId) === true
 
   // A check-in with every balance at zero says nothing, yet it would silence the
   // dashboard's nudge for a month and read as being behind by the whole plan.
@@ -62,7 +71,7 @@ export function CheckinFormSheet({ accounts, previous = null, actions, onDone }:
       await actions.createWealthCheckin({
         checkinDate: date,
         ...(trimmedNote ? { note: trimmedNote } : {}),
-        entries: entries.filter((e) => e.valueCents !== 0),
+        entries: entries.filter(recorded),
       })
       onDone?.()
     } catch (e) {
@@ -152,13 +161,17 @@ export function CheckinFormSheet({ accounts, previous = null, actions, onDone }:
             {error}
           </p>
         ) : null}
+        {empty ? (
+          <p className={styles.formHint} role="status">
+            Enter at least one balance to save.
+          </p>
+        ) : null}
 
         <div className={styles.formActions}>
           <button
             className={goalStyles.btn}
             onClick={() => { void handleSubmit() }}
             disabled={submitting || !date || empty}
-            title={empty ? 'Enter at least one balance' : undefined}
           >
             {submitting ? 'Saving…' : 'Save check-in'}
           </button>

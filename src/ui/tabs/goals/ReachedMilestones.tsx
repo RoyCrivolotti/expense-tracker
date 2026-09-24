@@ -1,4 +1,4 @@
-import type { GoalScenario, Milestone } from '../../../types'
+import type { GoalScenario, Milestone, WealthCheckin } from '../../../types'
 import { formatCents, milestoneLabelWithAmount, milestoneStanding, type MilestoneStanding } from '../../../engine'
 import { Card } from '../../components/primitives'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
@@ -11,6 +11,8 @@ interface Props {
   reached: Map<number, string>
   /** The plan the unreached ones are dated against; null shows only the reached ones. */
   plan?: GoalScenario | null
+  /** The newest check-in: the evidence an unreached milestone is judged overdue by. */
+  latestCheckin?: WealthCheckin | null
 }
 
 /** Words for where a milestone stands, and a mark for the chip. */
@@ -55,10 +57,11 @@ function describe(standing: MilestoneStanding): { mark: string; text: string; to
  * Every milestone with where it stands: reached by a check-in, or dated by the plan and set
  * against its target. Without a datable plan only the reached ones are worth a line.
  */
-export function ReachedMilestones({ milestones, reached, plan = null }: Props) {
+export function ReachedMilestones({ milestones, reached, plan = null, latestCheckin = null }: Props) {
   const format = useMoneyFormat()
+  const asOf = latestCheckin?.checkinDate ?? null
   const rows = milestones
-    .map((m) => ({ m, standing: describe(milestoneStanding(m, plan, reached.get(m.amountCents))) }))
+    .map((m) => ({ m, standing: describe(milestoneStanding(m, plan, reached.get(m.amountCents), asOf)) }))
     .filter((r): r is { m: Milestone; standing: NonNullable<ReturnType<typeof describe>> } => r.standing !== null)
   if (rows.length === 0) return null
   const allReached = rows.every((r) => r.standing.mark === '✓')

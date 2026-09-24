@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { MilestonesSetting } from './MilestonesSetting'
 import { defaultExpenseSettings, defaultMilestones, MILESTONE_MAX_COUNT } from '../../engine'
@@ -56,6 +56,53 @@ describe('MilestonesSetting', () => {
     expect(onChange).toHaveBeenLastCalledWith({
       milestones: [{ amountCents: 25_000_000, label: 'House deposit', targetDate: '2028-06-01' }],
     })
+  })
+
+  it('still addresses the row after a failed amount save, and says the save failed', async () => {
+    const onChange = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('Network down'))
+      .mockResolvedValue(undefined)
+    render(<MilestonesSetting settings={settingsWith(oneMilestone)} onChange={onChange} />)
+    const amount = screen.getByLabelText(/Milestone amount/)
+    fireEvent.change(amount, { target: { value: '250000' } })
+    fireEvent.blur(amount)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Network down')
+
+    // The working list rolled back to 10M; the row still addresses itself and the
+    // retry carries the new amount together with the date.
+    fireEvent.change(screen.getByLabelText('Target date for milestone House deposit'), {
+      target: { value: '2028-06-01' },
+    })
+    expect(onChange).toHaveBeenLastCalledWith({
+      milestones: [{ amountCents: 25_000_000, label: 'House deposit', targetDate: '2028-06-01' }],
+    })
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
+  })
+
+  it('does not roll back a later save that landed when an earlier one fails', async () => {
+    let failFirst: (e: Error) => void = () => {}
+    const onChange = vi
+      .fn()
+      .mockImplementationOnce(() => new Promise<void>((_, reject) => { failFirst = reject }))
+      .mockResolvedValue(undefined)
+    render(<MilestonesSetting settings={settingsWith(oneMilestone)} onChange={onChange} />)
+    const amount = screen.getByLabelText(/Milestone amount/)
+    fireEvent.change(amount, { target: { value: '250000' } })
+    fireEvent.blur(amount)
+    fireEvent.change(screen.getByLabelText('Target date for milestone House deposit'), {
+      target: { value: '2028-06-01' },
+    })
+    // The second save carried the amount along and landed; now the first fails.
+    failFirst(new Error('Network down'))
+    await waitFor(() => expect(onChange).toHaveBeenCalledTimes(2))
+    // The working list keeps what the server holds, and nothing says a save failed.
+    fireEvent.change(screen.getAllByLabelText('Milestone name')[0]!, { target: { value: 'Deposit' } })
+    fireEvent.blur(screen.getAllByLabelText('Milestone name')[0]!)
+    expect(onChange).toHaveBeenLastCalledWith({
+      milestones: [{ amountCents: 25_000_000, label: 'Deposit', targetDate: '2028-06-01' }],
+    })
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('saves a renamed milestone on blur', () => {

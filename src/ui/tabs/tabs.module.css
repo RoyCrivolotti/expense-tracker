@@ -484,6 +484,15 @@
   margin: 0;
 }
 
+.settingError {
+  font-size: 0.85rem;
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--exp-danger) 12%, transparent);
+  color: var(--exp-danger);
+}
+
 /* Groups related fields (e.g. currency + number format + preview) with even
    spacing; a border between consecutive groups makes it unambiguous which
    group a trailing hint paragraph belongs to. */

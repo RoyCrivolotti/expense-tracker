@@ -31,12 +31,6 @@ export function yearsToAmount(plan: GoalScenario, amountCents: number): number |
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
-/** Today's date in the local calendar, as the check-in form records it. */
-function localToday(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
 /** The calendar date the plan crosses the amount, or null without a start date or within the horizon. */
 export function milestoneCrossingDate(plan: GoalScenario, amountCents: number): string | null {
   // A start date only the API could have written malformed must not take Progress down.
@@ -63,23 +57,24 @@ export type MilestoneStanding =
 
 /**
  * One line's worth of standing for a milestone: reached (by a check-in), on track or late
- * for its target date, expected on a date with no target, overdue when the plan's own date
- * has passed without a check-in reaching it, past the horizon, or unknown when the plan
- * cannot be dated. "On track" is the plan's word, not the portfolio's: once the plan's
- * date is behind us the check-ins have the say, and none has reached it.
+ * for its target date, expected on a date with no target, overdue, past the horizon, or
+ * unknown when the plan cannot be dated. Overdue needs evidence: `asOf` is the newest
+ * check-in's date, and only a check-in dated on or after the plan's expected crossing
+ * that did not reach the amount can say the plan was wrong. With no check-in, or none
+ * that late, the plan's own dates stand. The clock never enters into it.
  */
 export function milestoneStanding(
   milestone: Milestone,
   plan: GoalScenario | null,
   reachedOn: string | undefined,
-  today = localToday(),
+  asOf: string | null = null,
 ): MilestoneStanding {
   if (reachedOn) return { kind: 'reached', on: reachedOn }
   if (!plan?.planStartDate) return { kind: 'unknown' }
   const expected = milestoneCrossingDate(plan, milestone.amountCents)
   const target = milestone.targetDate ?? null
   if (!expected) return { kind: 'beyond-horizon', target }
-  if (expected < today) return { kind: 'overdue', expected, target }
+  if (asOf !== null && expected <= asOf) return { kind: 'overdue', expected, target }
   if (!target) return { kind: 'expected', expected }
   const lateMs = utcDateMs(expected) - utcDateMs(target)
   if (lateMs <= 0) return { kind: 'on-track', expected, target }

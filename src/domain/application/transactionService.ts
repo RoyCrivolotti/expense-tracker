@@ -2,6 +2,7 @@ import type { BulkTransactionPatch, NewTransaction } from '../data/dataSource'
 import { parseDeleteTransactionIds } from '../data/transactionIds'
 import type { ExpenseRepository } from '../ports/expenseRepository'
 import type { ExpenseSettings, TxnType } from '../types'
+import { AMOUNT_SIGN_MESSAGE, amountSignAllowed } from '../data/amountSign'
 import { ValidationError } from './validationError'
 
 const BULK_PATCH_KEYS = new Set<string>([
@@ -32,15 +33,20 @@ function requireString(value: unknown, label: string): string {
 }
 
 /**
- * Whole cents, above zero. Integer rather than merely finite, because a fractional
+ * Whole cents, not zero. Integer rather than merely finite, because a fractional
  * amount is not a sum of money this ledger can hold: SQLite stores it as given and
- * every total downstream inherits the fraction.
+ * every total downstream inherits the fraction. The sign is checked against the type
+ * separately, since a negative amount is only meaningful on an investment row.
  */
 function requireAmountCents(value: unknown): number {
-  if (!Number.isInteger(value) || (value as number) <= 0) {
-    throw new ValidationError('amountCents must be a whole number of cents, greater than zero')
+  if (!Number.isInteger(value) || value === 0) {
+    throw new ValidationError('amountCents must be a whole number of cents, not zero')
   }
   return value as number
+}
+
+function assertAmountSign(amountCents: number, type: TxnType): void {
+  if (!amountSignAllowed(amountCents, type)) throw new ValidationError(AMOUNT_SIGN_MESSAGE)
 }
 
 const FIELD_VALIDATORS: Record<string, (v: unknown, p: BulkTransactionPatch) => void> = {
@@ -80,6 +86,7 @@ export function validateNewTransaction(input: NewTransaction): NewTransaction {
   // source of truth: any other caller (a future import path, a retry, a script)
   // must be stopped here too, not just trusted.
   requireAmountCents(input.amountCents)
+  assertAmountSign(input.amountCents, input.type)
   return input
 }
 
@@ -196,6 +203,11 @@ export function validateTransactionPatch(raw: unknown): Partial<NewTransaction> 
   const patch: Record<string, unknown> = {}
   for (const key of Object.keys(obj)) {
     if (obj[key] !== undefined) PATCH_FIELD_VALIDATORS[key]!(obj[key], patch)
+  }
+  // With both fields in hand the sign can be judged here; with only one, the stored row
+  // has the other, and the repository checks it before writing.
+  if (typeof patch.amountCents === 'number' && typeof patch.type === 'string') {
+    assertAmountSign(patch.amountCents, patch.type as TxnType)
   }
   return patch
 }

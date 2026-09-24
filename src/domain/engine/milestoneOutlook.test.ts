@@ -79,6 +79,11 @@ describe('milestoneStanding', () => {
       target: '2029-01-01',
     })
     expect(milestoneStanding(inYearTwo, plan, '2028-03-01', '2028-06-01').kind).toBe('reached')
+    // On the expected date itself the check-in already counts as evidence.
+    expect(milestoneStanding(inYearTwo, plan, undefined, '2028-01-01').kind).toBe('overdue')
+    // With no check-in, or one from before the plan's date, the plan's word stands.
+    expect(milestoneStanding(inYearTwo, plan, undefined).kind).toBe('expected')
+    expect(milestoneStanding(inYearTwo, plan, undefined, '2027-12-31').kind).toBe('expected')
   })
 
   it('cannot be dated from a malformed start date', () => {

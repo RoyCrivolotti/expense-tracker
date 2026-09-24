@@ -130,7 +130,10 @@ describe('NetWorthChart', () => {
     rerender(
       <NetWorthChart milestones={milestones} scenarios={[]} draft={{ ...defaultDraft, horizonYears: 4 }} variant="hero" />,
     )
-    expect(screen.queryByRole('radio', { name: '5Y' })).not.toBeInTheDocument()
+    // No window can cut a four-year horizon, so the picker goes entirely, and the chart
+    // draws the whole horizon rather than a stale five-year cut or nothing at all.
+    expect(screen.queryByRole('radiogroup', { name: 'Projection window' })).not.toBeInTheDocument()
+    expect(container.querySelectorAll('path').length).toBeGreaterThan(0)
     expect(lastLabel()).toBe(4)
   })
 
@@ -149,13 +152,17 @@ describe('NetWorthChart', () => {
     const svg = container.querySelector('svg')!
     fireEvent.keyDown(svg, { key: 'End' })
     const values = () => [...container.querySelectorAll('[class*="value"]')].map((el) => el.textContent ?? '')
+    // The draft's row shows year 30's figure once a year is focused.
+    expect(values().length).toBeGreaterThan(0)
     expect(values().some((v) => v !== '')).toBe(true)
 
     fireEvent.click(screen.getByRole('radio', { name: '5Y' }))
+    // The rows are still there, and every one is blank: not zero, not the old figure.
+    expect(values().length).toBeGreaterThan(0)
     expect(values().every((v) => v === '')).toBe(true)
   })
 
-  it('drops an FI target far above the projection, as it does a milestone', () => {
+  it('keeps a far-off FI target in the All view and drops it inside a window, as a milestone', () => {
     const { container } = render(
       <NetWorthChart
         milestones={[]}
@@ -164,7 +171,11 @@ describe('NetWorthChart', () => {
         variant="hero"
       />,
     )
+    expect(container.textContent).toMatch(/100\.0M/)
+    fireEvent.click(screen.getByRole('radio', { name: '5Y' }))
     expect(container.textContent).not.toMatch(/100\.0M/)
+    fireEvent.click(screen.getByRole('radio', { name: 'All' }))
+    expect(container.textContent).toMatch(/100\.0M/)
   })
 
   it('offers no window buttons for a horizon the shortest window would not cut', () => {

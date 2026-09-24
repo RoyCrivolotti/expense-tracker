@@ -51,6 +51,12 @@ describe('ScenarioComparison', () => {
     expect(screen.getByText(/after 30 years/)).toBeInTheDocument()
   })
 
+  it('says the figures are as projected, not deflated to today\'s money', () => {
+    render(<ScenarioComparison scenarios={[]} draft={draft} />)
+    expect(screen.getByText(/as projected and before inflation/)).toBeInTheDocument()
+    expect(screen.queryByText(/today's money/)).not.toBeInTheDocument()
+  })
+
   it('keeps two scenarios with the same short name apart', () => {
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
     render(
