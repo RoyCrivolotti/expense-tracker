@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { ReachedMilestones } from './ReachedMilestones'
-import { makeScenario } from '../../../testing/factories'
+import { makeScenario, makeWealthCheckin } from '../../../testing/factories'
 
 const milestones = [
   { amountCents: 10_000_000, label: 'House deposit' },
@@ -79,10 +79,33 @@ describe('ReachedMilestones', () => {
         milestones={[{ amountCents: 10_000_000, label: 'Past due', targetDate: '2030-01-01' }]}
         reached={new Map()}
         plan={plan}
+        latestCheckin={makeWealthCheckin({ checkinDate: '2026-09-01', entries: [] })}
       />,
     )
     expect(screen.getByText(/^not reached yet; the plan had it by .*, target .*2030$/)).toBeInTheDocument()
     expect(screen.queryByText(/on track/)).not.toBeInTheDocument()
+  })
+
+  it('does not call a milestone overdue without a check-in to say so', () => {
+    const plan = makeScenario({
+      id: 1,
+      isActive: true,
+      planStartDate: '2020-01-01',
+      startInvestedCents: 9_000_000,
+      monthlyContributionCents: 100_000,
+      expectedRealReturn: 0.05,
+      horizonYears: 10,
+      housePurchaseYear: null,
+    })
+    render(
+      <ReachedMilestones
+        milestones={[{ amountCents: 10_000_000, label: 'Past due', targetDate: '2030-01-01' }]}
+        reached={new Map()}
+        plan={plan}
+      />,
+    )
+    expect(screen.queryByText(/not reached yet/)).not.toBeInTheDocument()
+    expect(screen.getByText(/^on track: .*, target .*2030$/)).toBeInTheDocument()
   })
 
   it('keeps the reached heading when everything listed has been reached', () => {
