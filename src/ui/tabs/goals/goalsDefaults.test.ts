@@ -38,6 +38,10 @@ describe('draftFromDataset', () => {
     expect(draft.monthlyContributionCents).toBe(40_000)
   })
 
+  it('never seeds a contribution below zero', () => {
+    expect(draftFromDataset(makeDataset(), -40_000).monthlyContributionCents).toBe(0)
+  })
+
   it('starts from zero today when nothing has been checked in yet', () => {
     const draft = draftFromDataset(makeDataset(), 0)
 
