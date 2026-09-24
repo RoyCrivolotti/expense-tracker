@@ -286,11 +286,13 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     setRebaselinePreview(rebaseline(plan, latestSnapshot))
   }, [actions, plan, latestSnapshot])
   const onRebaselineConfirm = useCallback(() => {
-    if (!actions || !plan || !rebaselinePreview) return
+    if (!actions || !plan || !latestSnapshot || !rebaselinePreview) return
     void actions.updateScenario(plan.id, rebaselinePreview.patch)
-    if (activeId === plan.id) patchDraft(rebaselinePreview.patch)
+    // The draft is re-baselined from its own values, so an unsaved life-event or house
+    // edit in the editor moves with the start rather than being overwritten by the plan's.
+    if (activeId === plan.id) patchDraft(rebaseline(draft, latestSnapshot).patch)
     setRebaselinePreview(null)
-  }, [actions, plan, rebaselinePreview, activeId, patchDraft])
+  }, [actions, plan, latestSnapshot, rebaselinePreview, activeId, patchDraft, draft])
 
   const onToggleVisible = useCallback((id: number) => {
     setHiddenIds((prev) => {
