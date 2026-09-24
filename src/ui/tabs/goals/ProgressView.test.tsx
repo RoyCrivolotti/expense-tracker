@@ -61,8 +61,9 @@ describe('ProgressView', () => {
     expect(screen.queryByText('Milestones')).not.toBeInTheDocument()
   })
 
-  it('re-baselines the plan from the latest check-in when the steady-gap button is pressed', () => {
+  it('hands the steady-gap button to the tab, which owns the plan and its draft', () => {
     const actions = makeActions()
+    const onRebaseline = vi.fn()
     const plan = makeScenario({ id: 7, isActive: true, planStartDate: '2025-01-01' })
     const accounts = [makeWealthAccount({ id: 1, kind: 'investment' })]
     const behind = (id: number, date: string) =>
@@ -80,16 +81,15 @@ describe('ProgressView', () => {
         reached={new Map()}
         plan={plan}
         actions={actions}
+        onRebaseline={onRebaseline}
         canWrite
       />,
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
 
-    expect(actions.updateScenario).toHaveBeenCalledWith(7, {
-      startInvestedCents: planValueAtDate(plan, '2026-07-15')! - 50_000_00,
-      planStartDate: '2026-07-15',
-    })
+    expect(onRebaseline).toHaveBeenCalledTimes(1)
+    expect(actions.updateScenario).not.toHaveBeenCalled()
   })
 
   it('offers nothing to log in a read-only session', () => {

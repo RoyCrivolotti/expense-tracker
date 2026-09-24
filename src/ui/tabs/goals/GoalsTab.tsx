@@ -232,6 +232,16 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     if (activeScenario) setDraft(scenarioToDraft(activeScenario))
   }, [activeScenario])
 
+  // Progress writes the plan directly, and the editor's draft of that same plan would
+  // otherwise still hold the old start: the header would report unsaved changes, and
+  // saving them would write the old start back over the re-baseline.
+  const onRebaseline = useCallback(() => {
+    if (!actions || !plan || !latestSnapshot) return
+    const patch = { startInvestedCents: latestSnapshot.investedCents, planStartDate: latestSnapshot.date }
+    void actions.updateScenario(plan.id, patch)
+    if (activeId === plan.id) patchDraft(patch)
+  }, [actions, plan, latestSnapshot, activeId, patchDraft])
+
   const onToggleVisible = useCallback((id: number) => {
     setHiddenIds((prev) => {
       const next = new Set(prev)
@@ -319,6 +329,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
           onOpenSetup={() => changeView('setup')}
           openCheckinForm={checkinEntry}
           cashReserveMonths={dataset.settings.cashReserveMonths}
+          onRebaseline={onRebaseline}
         />
       ) : null}
       {view === 'plan' ? (

@@ -38,24 +38,30 @@ function gapDeltas(run: WealthCheckin[], plan: GoalScenario, accounts: WealthAcc
   return deltas
 }
 
-/** All on one side of the plan, and none further than `tolerance` of the mean from it. */
+/**
+ * All on one side of the plan, with the whole spread from smallest to largest gap within
+ * `tolerance` of the mean. The spread, not each gap's distance from the mean: a gap that
+ * drifted from three quarters of the mean to five quarters of it has moved by half, and
+ * saying it held still would be wrong.
+ */
 function isSteady(deltas: number[], mean: number, tolerance: number): boolean {
   if (mean === 0) return false
-  return deltas.every(
-    (d) => Math.sign(d) === Math.sign(mean) && Math.abs(d - mean) <= Math.abs(mean) * tolerance,
-  )
+  if (!deltas.every((d) => Math.sign(d) === Math.sign(mean))) return false
+  return Math.max(...deltas) - Math.min(...deltas) <= Math.abs(mean) * tolerance
 }
 
 /**
  * Null unless the check-ins reaching back at least `minDays` from the latest one number
- * `minCount` or more, all sit on the same side of the plan, and each is within
- * `tolerance` of their mean gap. The plan needs a start date.
+ * `minCount` or more, all sit on the same side of the plan, their spread is within
+ * `tolerance` of their mean gap, and that gap is worth at least `minMonths` of the plan's
+ * monthly contribution. A smaller gap is on-plan noise, and telling someone their
+ * starting point is wrong over it would be a nag. The plan needs a start date.
  */
 export function steadyGap(
   checkins: WealthCheckin[],
   plan: GoalScenario,
   accounts: WealthAccount[],
-  { minDays = 180, minCount = 3, tolerance = 0.25 } = {},
+  { minDays = 180, minCount = 3, tolerance = 0.25, minMonths = 3 } = {},
 ): SteadyGap | null {
   if (!plan.planStartDate) return null
   const run = recentRun(checkins, minDays)
@@ -63,6 +69,7 @@ export function steadyGap(
   const deltas = gapDeltas(run, plan, accounts)
   if (!deltas) return null
   const mean = deltas.reduce((s, d) => s + d, 0) / deltas.length
+  if (Math.abs(mean) < minMonths * plan.monthlyContributionCents) return null
   if (!isSteady(deltas, mean, tolerance)) return null
   return { sinceDate: run[0]!.checkinDate, meanDeltaCents: Math.round(mean), count: run.length }
 }
