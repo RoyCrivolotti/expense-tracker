@@ -357,6 +357,16 @@ async function fillAndStage(container: HTMLElement, file = receipt()) {
 }
 
 describe('TransactionModal — withdrawals', () => {
+  it('offers no installment plan for a withdrawal', () => {
+    const { container } = renderModal()
+    const form = singleForm(container)
+    expect(form.getByRole('button', { name: 'No plan' })).toBeInTheDocument()
+    fireEvent.click(form.getByRole('button', { name: 'Withdraw' }))
+    expect(form.queryByRole('button', { name: 'No plan' })).not.toBeInTheDocument()
+    fireEvent.click(form.getByRole('button', { name: 'Invest' }))
+    expect(form.getByRole('button', { name: 'No plan' })).toBeInTheDocument()
+  })
+
   it('saves a withdrawal as a negative investment', async () => {
     const { container, actions } = renderModal({
       actions: { createTransaction: vi.fn().mockResolvedValue(makeTransaction({ id: 7 })) },

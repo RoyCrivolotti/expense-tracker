@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Transaction } from '../../types'
 import type { NewTransaction } from '../../data/dataSource'
 import { parseMoneyToCents } from '../../engine/money'
+import { isWithdrawal } from './transactionTypes'
 import {
   revokeStaged,
   type PendingReceipt,
@@ -136,12 +137,16 @@ function installmentControl({
   editing,
   model,
   onOpen,
+  withdrawal,
 }: {
   draft: InstallmentDraft
   editing: Transaction | null
   model: ExpenseModel
   onOpen: () => void
+  /** A withdrawal is money coming back; splitting it into payments makes no sense. */
+  withdrawal: boolean
 }): { chip: ReactNode; bar: ReactNode } {
+  if (withdrawal && !hasInstallmentLink(draft, editing)) return { chip: undefined, bar: undefined }
   if (!hasInstallmentLink(draft, editing)) {
     return {
       chip: (
@@ -355,7 +360,13 @@ export function TransactionForm({
     }
   }
 
-  const installment = installmentControl({ draft, editing, model, onOpen: () => onViewChange('installment') })
+  const installment = installmentControl({
+    draft,
+    editing,
+    model,
+    onOpen: () => onViewChange('installment'),
+    withdrawal: isWithdrawal(form),
+  })
 
   return (
     <form
