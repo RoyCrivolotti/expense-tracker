@@ -47,7 +47,7 @@ describe('ReachedMilestones', () => {
     render(
       <ReachedMilestones
         milestones={[
-          { amountCents: 10_000_000, label: 'Soon', targetDate: '2030-01-01' },
+          { amountCents: 11_000_000, label: 'Soon', targetDate: '2031-01-01' },
           { amountCents: 12_000_000, label: 'Tight', targetDate: '2026-06-01' },
           { amountCents: 15_000_000, label: 'Undated' },
           { amountCents: 900_000_000, label: 'Far', targetDate: '2040-01-01' },
@@ -57,10 +57,32 @@ describe('ReachedMilestones', () => {
       />,
     )
     expect(screen.getByText('Milestones')).toBeInTheDocument()
-    expect(screen.getByText(/^on track: .*, target .*2030$/)).toBeInTheDocument()
+    expect(screen.getByText(/^on track: .*, target .*2031$/)).toBeInTheDocument()
     expect(screen.getByText(/^\d+ months late: .*, target .*2026$/)).toBeInTheDocument()
     expect(screen.getByText(/^expected .*20\d\d$/)).toBeInTheDocument()
     expect(screen.getByText(/^not within the horizon, target .*2040$/)).toBeInTheDocument()
+  })
+
+  it('says a milestone the plan should have crossed by now is not reached yet', () => {
+    const plan = makeScenario({
+      id: 1,
+      isActive: true,
+      planStartDate: '2020-01-01',
+      startInvestedCents: 9_000_000,
+      monthlyContributionCents: 100_000,
+      expectedRealReturn: 0.05,
+      horizonYears: 10,
+      housePurchaseYear: null,
+    })
+    render(
+      <ReachedMilestones
+        milestones={[{ amountCents: 10_000_000, label: 'Past due', targetDate: '2030-01-01' }]}
+        reached={new Map()}
+        plan={plan}
+      />,
+    )
+    expect(screen.getByText(/^not reached yet; the plan had it by .*, target .*2030$/)).toBeInTheDocument()
+    expect(screen.queryByText(/on track/)).not.toBeInTheDocument()
   })
 
   it('keeps the reached heading when everything listed has been reached', () => {

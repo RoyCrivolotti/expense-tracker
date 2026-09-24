@@ -62,7 +62,7 @@ The Progress history chart joins the check-ins on a calendar axis ending today: 
 
 ## Cash reserve
 
-`settings.cashReserveMonths` (`cash_reserve_months`, 0 = no target) is the emergency-fund target in months of spending, set under the Goals tab's Setup view. Progress takes the cash-kind accounts in the latest check-in and divides by the mean of the last twelve budget months' expenses (`cashReserve` in `engine/cashReserve.ts`), and says how many months they cover, against the target when there is one. It never enters the invested-only tracking above.
+`settings.cashReserveMonths` (`cash_reserve_months`, 0 = no target) is the emergency-fund target in months of spending, set under the Goals tab's Setup view. Progress takes the live cash-kind accounts with a balance in the latest check-in and divides by the mean expenses of the last twelve completed budget months that recorded any (`cashReserve` in `engine/cashReserve.ts`), and says how many months they cover, against the target when there is one. With no such balance the line stays off rather than reading as zero. It never enters the invested-only tracking above.
 
 ## Milestones
 
