@@ -2,6 +2,18 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## September 2026 (wealth follow-ups)
+
+- **The plan is in today's money, and Progress compares like with like.** The projection, the FI target, the milestones and the comparison table are real; a check-in is a balance in the money of its day, so on/off track, "Actual vs plan" and the measured return take the assumed 2% inflation off it before setting it against the plan. The hero chart opens on Purchasing power, and its Nominal view inflates the plan and its band at a rate you can set there; the FI and milestone lines are only drawn in today's money.
+- **Withdraw.** Money taken out of the portfolio (a sale to cash, a dividend paid out) is recorded as a negative investment. The goals pace counts only what went in, and the measured return chains across check-ins and counts what came out.
+- **Milestones and accounts live under Setup**, with an optional target date for a milestone, and Progress says whether you are on track, late or overdue for it.
+- **A cash reserve target**, in months of spending, set under Setup; Progress says how many months your cash accounts cover.
+- **Re-baseline from Progress** asks first and says what it will change: the new start, the start it replaces, the monthly investing a growing contribution has reached, and where each life event and the house purchase land. Events already behind the new start are dropped, since their money is in the balance.
+- **A check-in nudge** on the dashboard once the last one is a month old, and a hint to re-baseline when the gap to the plan has held still for half a year.
+- **The scenario comparison table, shorter windows on the history chart, and horizon windows with a legend that hides lines on the hero chart.**
+- **Housing is in today's money too.** The mortgage rate and house appreciation are nominal, as quoted; the plan takes inflation off both.
+- **Fixes.** A new account's check-in field starts empty instead of "0,00" (typing appended to it); an unknown scenario id from a stale tab no longer leaves you with no active plan; switching scenarios from "Unsaved draft" asks before dropping edits; a failed cash reserve or re-baseline save says so instead of looking saved; a CSV import names the line it refused.
+
 ## September 2026 (correctness pass)
 
 Mostly fixes to things the app was getting quietly wrong rather than new ground.

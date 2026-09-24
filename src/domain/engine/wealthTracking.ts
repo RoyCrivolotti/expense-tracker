@@ -140,10 +140,6 @@ export function checkinNetWorthCents(
 }
 
 /**
- * Compute on/off-track status for a check-in against a scenario.
- * Returns null when the scenario has no planStartDate or the date is invalid.
- */
-/**
  * A broker balance brought to the plan's money. The plan is real, in the money of its
  * start date; a check-in is nominal, in the money of its own day, so the years between
  * the two are taken off at the assumed inflation before the balance is set against the
@@ -169,6 +165,10 @@ export function realToNominal(
   return Math.round(cents * Math.pow(1 + inflationRate, Math.max(0, years)))
 }
 
+/**
+ * Compute on/off-track status for a check-in against a scenario.
+ * Returns null when the scenario has no planStartDate or the date is invalid.
+ */
 export function trackStatus(
   checkin: WealthCheckin,
   scenario: GoalScenario,
