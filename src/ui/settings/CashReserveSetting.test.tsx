@@ -57,4 +57,33 @@ describe('CashReserveSetting', () => {
     expect(input).toHaveValue(3)
     expect(onChange).not.toHaveBeenCalled()
   })
+  it('puts the saved value back and says so when the save fails', async () => {
+    const onChange = vi.fn().mockRejectedValue(new Error('boom'))
+    render(<CashReserveSetting settings={{ ...defaultExpenseSettings(), cashReserveMonths: 3 }} onChange={onChange} />)
+    const input = screen.getByLabelText('Months of spending to hold in cash')
+
+    fireEvent.change(input, { target: { value: '9' } })
+    fireEvent.blur(input)
+
+    // A field still showing 9 would read as saved when it is not.
+    expect(await screen.findByRole('alert')).toHaveTextContent("Something went wrong, so that change probably wasn't saved.")
+    expect(input).toHaveValue(3)
+
+    // Typing again clears the message.
+    fireEvent.change(input, { target: { value: '4' } })
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('drops what was typed on Escape instead of saving it', () => {
+    const onChange = vi.fn()
+    render(<CashReserveSetting settings={{ ...defaultExpenseSettings(), cashReserveMonths: 3 }} onChange={onChange} />)
+    const input = screen.getByLabelText('Months of spending to hold in cash')
+
+    input.focus()
+    fireEvent.change(input, { target: { value: '9' } })
+    fireEvent.keyDown(input, { key: 'Escape' })
+
+    expect(input).toHaveValue(3)
+    expect(onChange).not.toHaveBeenCalled()
+  })
 })
