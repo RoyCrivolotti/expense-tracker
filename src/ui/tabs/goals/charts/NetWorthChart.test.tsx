@@ -116,12 +116,43 @@ describe('NetWorthChart', () => {
     expect(lastLabel()).toBe(30)
   })
 
+  it('falls back to the whole horizon when the chosen window is no longer offered', () => {
+    const { container, rerender } = render(
+      <NetWorthChart milestones={milestones} scenarios={[]} draft={{ ...defaultDraft, horizonYears: 30 }} variant="hero" />,
+    )
+    const lastLabel = () => {
+      const texts = [...container.querySelectorAll('text')].map((t) => t.textContent ?? '')
+      return texts.filter((t) => /^\d+$/.test(t)).map(Number).sort((a, b) => a - b).pop()
+    }
+    fireEvent.click(screen.getByRole('radio', { name: '5Y' }))
+    expect(lastLabel()).toBe(5)
+
+    rerender(
+      <NetWorthChart milestones={milestones} scenarios={[]} draft={{ ...defaultDraft, horizonYears: 4 }} variant="hero" />,
+    )
+    expect(screen.queryByRole('radio', { name: '5Y' })).not.toBeInTheDocument()
+    expect(lastLabel()).toBe(4)
+  })
+
   it('offers windows for the longest drawn horizon, not only the draft', () => {
     const long = makeScenario({ id: 9, name: 'Long', horizonYears: 40 })
     render(
       <NetWorthChart milestones={milestones} scenarios={[long]} draft={{ ...defaultDraft, horizonYears: 5 }} variant="hero" activeId={null} />,
     )
     expect(screen.getByRole('radio', { name: '20Y' })).toBeInTheDocument()
+  })
+
+  it('blanks the legend values, rather than showing zero, when a window drops the hovered year', () => {
+    const { container } = render(
+      <NetWorthChart milestones={milestones} scenarios={[]} draft={{ ...defaultDraft, horizonYears: 30 }} variant="hero" />,
+    )
+    const svg = container.querySelector('svg')!
+    fireEvent.keyDown(svg, { key: 'End' })
+    const values = () => [...container.querySelectorAll('[class*="value"]')].map((el) => el.textContent ?? '')
+    expect(values().some((v) => v !== '')).toBe(true)
+
+    fireEvent.click(screen.getByRole('radio', { name: '5Y' }))
+    expect(values().every((v) => v === '')).toBe(true)
   })
 
   it('drops an FI target far above the projection, as it does a milestone', () => {
