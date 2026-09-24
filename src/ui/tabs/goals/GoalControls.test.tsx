@@ -71,7 +71,34 @@ describe('GoalControls', () => {
     expect(onChange).toHaveBeenCalledWith({
       startInvestedCents: 11_700_000,
       planStartDate: '2026-09-11',
+      lifeEvents: [],
+      housePurchaseYear: null,
     })
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('moves life events and the house purchase with the start, and says what it dropped', () => {
+    const onChange = vi.fn()
+    const draft = {
+      ...makeDraft(),
+      planStartDate: '2024-09-11',
+      housePurchaseYear: 5,
+      lifeEvents: [
+        { year: 1, amountCents: 5_000_00, label: 'Bonus' },
+        { year: 3, amountCents: -20_000_00, label: 'Car' },
+      ],
+    }
+    render(<GoalControls draft={draft} latest={{ investedCents: 11_700_000, date: '2026-09-11' }} onChange={onChange} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
+    expect(onChange).toHaveBeenCalledWith({
+      startInvestedCents: 11_700_000,
+      planStartDate: '2026-09-11',
+      lifeEvents: [{ year: 1, amountCents: -20_000_00, label: 'Car' }],
+      housePurchaseYear: 3,
+    })
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Life events and the house purchase moved 2 years earlier to keep their dates. Dropped, already behind the new start: Bonus.',
+    )
   })
 
   it('cannot re-baseline before the first check-in, and says why', () => {

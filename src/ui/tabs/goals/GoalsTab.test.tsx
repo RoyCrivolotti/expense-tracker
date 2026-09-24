@@ -241,8 +241,11 @@ describe('GoalsTab', () => {
 
     await user.click(screen.getByRole('radio', { name: 'Progress' }))
     await user.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
+    // It asks first, since it writes the plan straight away.
+    expect(actions.updateScenario).not.toHaveBeenCalled()
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Re-baseline' }))
     const patch = { startInvestedCents: planValueAtDate(plan, '2026-07-15')! - 50_000_00, planStartDate: '2026-07-15' }
-    expect(actions.updateScenario).toHaveBeenCalledWith(1, patch)
+    expect(actions.updateScenario).toHaveBeenCalledWith(1, expect.objectContaining(patch))
 
     // The write lands and the dataset refreshes; the draft must already agree with it,
     // or the header would offer to save the old start back over the re-baseline.
@@ -270,6 +273,7 @@ describe('GoalsTab', () => {
     fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
     await user.click(screen.getByRole('radio', { name: 'Progress' }))
     await user.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Re-baseline' }))
     await user.click(screen.getByRole('radio', { name: 'Plan' }))
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
 
@@ -279,6 +283,51 @@ describe('GoalsTab', () => {
         name: 'Path A, tweaked',
         startInvestedCents: planValueAtDate(plan, '2026-07-15')! - 50_000_00,
         planStartDate: '2026-07-15',
+      }),
+    )
+  })
+
+  it('says which life events a re-baseline moves or drops before writing them', async () => {
+    const user = userEvent.setup()
+    const actions = makeActions()
+    const plan = makeScenario({
+      id: 1,
+      name: 'Path A',
+      isActive: true,
+      planStartDate: '2024-07-15',
+      housePurchaseYear: 4,
+      lifeEvents: [
+        { year: 1, amountCents: 5_000_00, label: 'Bonus' },
+        { year: 3, amountCents: -20_000_00, label: 'Car' },
+      ],
+    })
+    const accounts = [makeWealthAccount({ id: 1, name: 'Broker', kind: 'investment' })]
+    const behind = (id: number, date: string) =>
+      makeWealthCheckin({
+        id,
+        checkinDate: date,
+        entries: [{ accountId: 1, valueCents: planValueAtDate(plan, date)! - 50_000_00 }],
+      })
+    const checkins = [behind(1, '2026-01-01'), behind(2, '2026-04-01'), behind(3, '2026-07-15')]
+    const model = buildExpenseModel(makeDataset({ goalScenarios: [plan], wealthAccounts: accounts, wealthCheckins: checkins }))
+    render(<GoalsTab model={model} actions={actions} />)
+
+    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
+    const sheet = screen.getByRole('alertdialog')
+    expect(sheet).toHaveTextContent(/moved 2 years earlier/)
+    expect(sheet).toHaveTextContent(/Dropped, already behind the new start: Bonus/)
+    await user.click(within(sheet).getByRole('button', { name: 'Cancel' }))
+    expect(actions.updateScenario).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Re-baseline' }))
+    expect(actions.updateScenario).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        planStartDate: '2026-07-15',
+        lifeEvents: [{ year: 1, amountCents: -20_000_00, label: 'Car' }],
+        housePurchaseYear: 2,
       }),
     )
   })

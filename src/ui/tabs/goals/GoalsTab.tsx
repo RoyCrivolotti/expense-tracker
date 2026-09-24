@@ -8,6 +8,11 @@ import {
   averageMonthlyCents,
   computeMonthlyTotals,
   defaultBudgetMonth,
+  formatCents,
+  rebaseline,
+  rebaselineSummary,
+  type MoneyFormat,
+  type Rebaseline,
   monthlyFlows,
   yearOffsetFromDate,
   checkinInvestedCents,
@@ -35,6 +40,8 @@ import { NetWorthChart } from './charts/NetWorthChart'
 import { NetWorthMiniChart } from './charts/NetWorthMiniChart'
 import { NetWorthNowCard } from './charts/NetWorthNowCard'
 import { todayIso } from '../../components/transactionFormState'
+import { useMoneyFormat } from '../../hooks/moneyFormatContext'
+import { formatCheckinDate } from './checkinDate'
 import styles from './goals.module.css'
 import progressStyles from './progress.module.css'
 
@@ -102,6 +109,40 @@ function bootstrapEditor(
   const first = initialEditorScenario(dataset.goalScenarios)
   if (first) return { activeId: first.id, draft: scenarioToDraft(first) }
   return { activeId: null, draft: draftFromDataset(dataset, avgSaving) }
+}
+
+/**
+ * What a re-baseline from Progress is about to write, asked before it is written. Held
+ * inside Presence so the sheet can animate out after the answer.
+ */
+function RebaselineSheet({
+  preview,
+  format,
+  onConfirm,
+  onCancel,
+}: {
+  preview: Rebaseline | null
+  format: MoneyFormat
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  const summary = preview ? rebaselineSummary(preview, format) : null
+  const start = preview
+    ? `The plan restarts on ${formatCheckinDate(preview.patch.planStartDate)} from ${formatCents(preview.patch.startInvestedCents, format)}. From then on ahead or behind measures only what you do next.`
+    : ''
+  return (
+    <Presence show={preview !== null} exitMs={EXIT_MS.sheet}>
+      {preview ? (
+        <ConfirmSheet
+          title="Re-baseline the plan from the latest check-in?"
+          message={summary ? [start, summary] : start}
+          confirmLabel="Re-baseline"
+          onConfirm={onConfirm}
+          onCancel={onCancel}
+        />
+      ) : null}
+    </Presence>
+  )
 }
 
 function initialView(entry: GoalsEntry | undefined): TabView {
@@ -235,15 +276,21 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     if (activeScenario) setDraft(scenarioToDraft(activeScenario))
   }, [activeScenario])
 
-  // Progress writes the plan directly, and the editor's draft of that same plan would
-  // otherwise still hold the old start: the header would report unsaved changes, and
-  // saving them would write the old start back over the re-baseline.
+  // Progress writes the plan directly, so it asks first, saying what moves. The editor's
+  // draft of that same plan is patched alongside the write, or the header would report
+  // unsaved changes and saving them would write the old start back over the re-baseline.
+  const format = useMoneyFormat()
+  const [rebaselinePreview, setRebaselinePreview] = useState<Rebaseline | null>(null)
   const onRebaseline = useCallback(() => {
     if (!actions || !plan || !latestSnapshot) return
-    const patch = { startInvestedCents: latestSnapshot.investedCents, planStartDate: latestSnapshot.date }
-    void actions.updateScenario(plan.id, patch)
-    if (activeId === plan.id) patchDraft(patch)
-  }, [actions, plan, latestSnapshot, activeId, patchDraft])
+    setRebaselinePreview(rebaseline(plan, latestSnapshot))
+  }, [actions, plan, latestSnapshot])
+  const onRebaselineConfirm = useCallback(() => {
+    if (!actions || !plan || !rebaselinePreview) return
+    void actions.updateScenario(plan.id, rebaselinePreview.patch)
+    if (activeId === plan.id) patchDraft(rebaselinePreview.patch)
+    setRebaselinePreview(null)
+  }, [actions, plan, rebaselinePreview, activeId, patchDraft])
 
   const onToggleVisible = useCallback((id: number) => {
     setHiddenIds((prev) => {
@@ -320,6 +367,13 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
         />
       ) : null}
       {view === 'progress' ? (
+        <>
+        <RebaselineSheet
+          preview={rebaselinePreview}
+          format={format}
+          onConfirm={onRebaselineConfirm}
+          onCancel={() => setRebaselinePreview(null)}
+        />
         <ProgressView
           accounts={dataset.wealthAccounts}
           checkins={dataset.wealthCheckins}
@@ -335,6 +389,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
           openBudgetMonth={defaultBudgetMonth(todayIso(), dataset.settings.budgetRolloverDay)}
           onRebaseline={onRebaseline}
         />
+        </>
       ) : null}
       {view === 'plan' ? (
         <>
