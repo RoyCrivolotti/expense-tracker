@@ -47,6 +47,12 @@ function MilestoneRow({
   // gap must address the new amount or it would match nothing and be lost.
   const keyRef = useRef(milestone.amountCents)
   const targetDate = milestone.targetDate ?? ''
+  // The date the row last committed, for the same reason: a rename right after a date
+  // pick must carry the date even though the prop has not caught up with it yet.
+  const targetRef = useRef(targetDate)
+  useEffect(() => {
+    targetRef.current = targetDate
+  }, [targetDate])
 
   function resolveAmountCents(): number {
     const units = Number(amount)
@@ -58,11 +64,12 @@ function MilestoneRow({
     return next !== keyRef.current && isAmountTaken(next) ? keyRef.current : next
   }
 
-  function commit(nextTarget = targetDate) {
+  function commit(nextTarget = targetRef.current) {
     const amountCents = resolveAmountCents()
     setAmount(String(amountCents / 100))
     onCommit(keyRef.current, { amountCents, label, ...(nextTarget ? { targetDate: nextTarget } : {}) })
     keyRef.current = amountCents
+    targetRef.current = nextTarget
   }
 
   return (
@@ -129,6 +136,10 @@ export function MilestonesSetting({ settings, onChange }: Props) {
   // working list and updates synchronously, ahead of the server round-trip.
   const workingRef = useRef(milestones)
   const inFlight = useRef(0)
+  const latestSave = useRef(0)
+  // A save that fails would otherwise fail in silence: the input keeps the edit while
+  // the server never got it.
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (inFlight.current === 0) workingRef.current = milestones
@@ -138,19 +149,30 @@ export function MilestonesSetting({ settings, onChange }: Props) {
     const previous = workingRef.current
     workingRef.current = next
     inFlight.current += 1
+    const seq = ++latestSave.current
+    setError(null)
     try {
       await onChange({ milestones: next })
-    } catch {
-      workingRef.current = previous
+    } catch (e) {
+      // A later save was built on this list and carried this edit with it; if that one
+      // landed, rolling back here would discard what the server already holds.
+      if (seq === latestSave.current) {
+        workingRef.current = previous
+        setError(e instanceof Error ? e.message : 'Could not save the milestones')
+      }
     } finally {
       inFlight.current -= 1
     }
   }
 
   // Addressed by amount rather than index: the working list can already differ
-  // from the rendered one while a save is in flight.
-  const replaceAmount = (amountCents: number, next: Milestone) =>
-    void save(workingRef.current.map((m) => (m.amountCents === amountCents ? next : m)))
+  // from the rendered one while a save is in flight. A row addresses itself by the
+  // amount it last committed; after a failed save that amount is gone from the working
+  // list again, so the row falls back to its saved one and the retry carries the edit.
+  const replaceAmount = (key: number, savedAmountCents: number, next: Milestone) => {
+    const known = workingRef.current.some((m) => m.amountCents === key) ? key : savedAmountCents
+    void save(workingRef.current.map((m) => (m.amountCents === known ? next : m)))
+  }
   const removeAmount = (amountCents: number) =>
     void save(workingRef.current.filter((m) => m.amountCents !== amountCents))
 
@@ -179,7 +201,7 @@ export function MilestonesSetting({ settings, onChange }: Props) {
                     cents !== m.amountCents &&
                     workingRef.current.some((other) => other.amountCents === cents)
                   }
-                  onCommit={replaceAmount}
+                  onCommit={(key, next) => replaceAmount(key, m.amountCents, next)}
                   onRemove={() => removeAmount(m.amountCents)}
                 />
               ))}
@@ -191,6 +213,11 @@ export function MilestonesSetting({ settings, onChange }: Props) {
             </p>
           )}
 
+          {error ? (
+            <p className={styles.settingError} role="alert">
+              Could not save the milestones: {error}
+            </p>
+          ) : null}
           <div className={styles.milestoneActions}>
             <button
               type="button"
