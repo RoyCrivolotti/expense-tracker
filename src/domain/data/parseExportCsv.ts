@@ -5,6 +5,7 @@
 import { unguardCsvValue } from './csvFormulaGuard'
 import type { ExpenseDataset, TxnType } from '../types'
 import type { NewTransaction } from './dataSource'
+import { AMOUNT_SIGN_MESSAGE, amountSignAllowed } from './amountSign'
 import { EXPORT_CSV_HEADER, EXPORT_CSV_TYPES } from './exportCsvFormat'
 
 export { EXPORT_CSV_HEADER } from './exportCsvFormat'
@@ -64,6 +65,9 @@ function parseAmount(raw: string | undefined, line: number): number | ParseExpor
   if (!Number.isFinite(amountCents) || amountCents === 0) {
     return { line, message: 'Skipped zero or invalid amount' }
   }
+  // The server refuses a fraction of a cent for every row, so the file's own line says so
+  // here rather than the whole batch failing on a position in the parsed list.
+  if (!Number.isInteger(amountCents)) return { line, message: 'Amount must be a whole number of cents' }
   return amountCents
 }
 
@@ -94,6 +98,9 @@ function resolveRowRefs(
   if ('message' in account) return account
   const type = parseType(typeRaw, line)
   if (isParseError(type)) return type
+  // Only an investment may be negative (a withdrawal). The server refuses the whole batch on
+  // any other negative row, so it is caught here, where the row still has its line number.
+  if (!amountSignAllowed(amount, type)) return { line, message: AMOUNT_SIGN_MESSAGE }
   return { categoryId: category.id, accountId: account.id, type, amountCents: amount }
 }
 
