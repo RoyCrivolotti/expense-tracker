@@ -3,6 +3,7 @@ import type { GoalScenario, Milestone } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import { SegmentedControl } from '../../components/SegmentedControl'
 import { Card } from '../../components/primitives'
+import { ScenarioComparison } from './charts/ScenarioComparison'
 import { CompositionChart } from './charts/CompositionChart'
 import { MilestoneMatrix } from './charts/MilestoneMatrix'
 import { FireChart } from './charts/FireChart'
@@ -13,6 +14,7 @@ import { useGoalsNarrow } from './useGoalsNarrow'
 import styles from './goals.module.css'
 
 const VIEWS = [
+  { value: 'compare', label: 'Compare' },
   { value: 'composition', label: 'Composition' },
   { value: 'milestones', label: 'Milestones' },
   { value: 'fire', label: 'FIRE' },
@@ -88,6 +90,8 @@ function SecondaryViewChart({
 }) {
   const h = chartHeight
   switch (view) {
+    case 'compare':
+      return <ScenarioComparison scenarios={scenarios} draft={draft} embedded={embedded} />
     case 'composition':
       return h != null ? (
         <CompositionChart draft={draft} height={h} embedded={embedded} />
@@ -214,6 +218,7 @@ function SecondaryChartStack({
 }) {
   return (
     <div className={styles.secondaryStack}>
+      <ScenarioComparison scenarios={scenarios} draft={draft} />
       <CompositionChart draft={draft} height={STACK_CHART_HEIGHT} />
       <MilestoneMatrix
         scenarios={scenarios}
@@ -236,7 +241,7 @@ export function SecondaryCharts({
   reached,
 }: SecondaryChartsProps) {
   const narrow = useGoalsNarrow()
-  const [view, setView] = useState<SecondaryView>('composition')
+  const [view, setView] = useState<SecondaryView>('compare')
   const [desktopLayout, setDesktopLayout] = useState<DesktopLayout>('stack')
 
   if (narrow) {
