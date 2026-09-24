@@ -11,6 +11,7 @@ function makeRow(overrides: Partial<SettingsRow> = {}): SettingsRow {
     opening_cash_cents: 0,
     opening_investment_cents: 0,
     default_account_id: null,
+    investment_category_id: null,
     currency_code: null,
     number_locale: null,
     budget_rollover_day: null,
@@ -20,6 +21,24 @@ function makeRow(overrides: Partial<SettingsRow> = {}): SettingsRow {
     ...overrides,
   }
 }
+
+describe('updateSettings with investmentCategoryId', () => {
+  it('checks the category is the owner\'s before saving it', async () => {
+    const { env, bind } = stubEnv(makeRow({ investment_category_id: 4 }))
+    await expect(updateSettings(env, OWNER, { investmentCategoryId: 4 })).resolves.toMatchObject({
+      investmentCategoryId: 4,
+    })
+    // The ownership check binds the category id with the owner before the UPDATE.
+    expect(bind.mock.calls.some((args) => args[0] === 4 && args[1] === OWNER)).toBe(true)
+  })
+
+  it('clears the choice with null', async () => {
+    const { env } = stubEnv(makeRow({ investment_category_id: null }))
+    await expect(updateSettings(env, OWNER, { investmentCategoryId: null })).resolves.toMatchObject({
+      investmentCategoryId: null,
+    })
+  })
+})
 
 describe('updateSettings with cashReserveMonths', () => {
   it('accepts a whole number of months up to five years, and nothing else', async () => {

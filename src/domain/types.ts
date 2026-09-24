@@ -259,6 +259,11 @@ export interface ExpenseSettings {
   openingInvestmentCents: number
   /** Pre-selected account when creating a new transaction; null = first active account. */
   defaultAccountId: number | null
+  /**
+   * The category every investment row is filed under, whichever way the money moves;
+   * the form locks it. Null falls back to a category named for investments, if any.
+   */
+  investmentCategoryId: number | null
   /** ISO 4217 code driving the currency symbol, e.g. 'EUR', 'USD'. */
   currencyCode: string
   /** BCP-47 locale driving digit grouping and decimal separator, e.g. 'de-DE', 'en-US'. */
