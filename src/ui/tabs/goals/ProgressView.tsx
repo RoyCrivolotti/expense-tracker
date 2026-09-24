@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { GoalScenario, Milestone, Transaction, WealthAccount, WealthCheckin } from '../../../types'
 import type { ExpenseActions } from '../../actions'
-import { latestCheckin } from '../../../engine'
+import { checkinInvestedCents, latestCheckin } from '../../../engine'
 import { EmptyState } from '../../components/primitives'
 import { WealthSummaryCard } from './WealthSummaryCard'
 import { ReachedMilestones } from './ReachedMilestones'
@@ -27,6 +27,24 @@ interface Props {
   onOpenSetup?: (() => void) | undefined
 }
 
+/**
+ * The same write the Plan view's re-baseline button makes, but straight to the plan
+ * rather than through the editor's draft, since Progress has no draft to save.
+ */
+function rebaselineFrom(
+  actions: ExpenseActions | undefined,
+  plan: GoalScenario | null,
+  latest: WealthCheckin | null,
+  accounts: WealthAccount[],
+): (() => void) | undefined {
+  if (!actions || !plan || !latest) return undefined
+  return () =>
+    void actions.updateScenario(plan.id, {
+      startInvestedCents: checkinInvestedCents(latest, accounts),
+      planStartDate: latest.checkinDate,
+    })
+}
+
 export function ProgressView({
   accounts,
   checkins,
@@ -39,6 +57,7 @@ export function ProgressView({
   onOpenSetup,
 }: Props) {
   const [showCheckinForm, setShowCheckinForm] = useState(false)
+  const latest = latestCheckin(checkins)
   // A check-in records a balance per account, so with none there is nothing to log yet.
   const hasAccounts = accounts.some((a) => !a.archived)
 
@@ -49,6 +68,7 @@ export function ProgressView({
         accounts={accounts}
         plan={plan}
         transactions={transactions}
+        onRebaseline={rebaselineFrom(canWrite ? actions : undefined, plan, latest, accounts)}
       />
 
       <NetWorthHistoryChart checkins={checkins} accounts={accounts} />

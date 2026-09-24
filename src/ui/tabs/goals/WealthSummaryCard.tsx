@@ -1,5 +1,5 @@
 import type { GoalScenario, Transaction, WealthAccount, WealthCheckin } from '../../../types'
-import type { PortfolioReturn, TrackStatus } from '../../../engine'
+import type { PortfolioReturn, SteadyGap, TrackStatus } from '../../../engine'
 import { Card } from '../../components/primitives'
 import {
   checkinInvestedCents,
@@ -7,6 +7,7 @@ import {
   formatPercent,
   latestCheckin,
   portfolioReturn,
+  steadyGap,
   trackStatus,
 } from '../../../engine'
 import { formatCheckinDate } from './checkinDate'
@@ -23,6 +24,40 @@ interface Props {
   plan: GoalScenario | null
   /** Investment transactions are the contributions taken out of the measured return. */
   transactions?: Transaction[]
+  /** Re-baselines the plan from the latest check-in; absent in a read-only session. */
+  onRebaseline?: (() => void) | undefined
+}
+
+/**
+ * A gap that has held still for half a year is the plan's starting point being wrong,
+ * not the saving. Said once, with the fix to hand, rather than left as a red number.
+ */
+function SteadyGapHint({
+  gap,
+  format,
+  onRebaseline,
+}: {
+  gap: SteadyGap
+  format: MoneyFormat
+  onRebaseline: (() => void) | undefined
+}) {
+  const behind = gap.meanDeltaCents < 0
+  return (
+    <div className={styles.steadyGap}>
+      <p style={hintStyle}>
+        Every check-in since {formatCheckinDate(gap.sinceDate)} has sat about{' '}
+        {formatMoneyShort(Math.abs(gap.meanDeltaCents), format)} {behind ? 'behind' : 'ahead'}. A gap
+        that does not move is the plan's starting point, not your saving. Re-baselining sets the
+        plan's start to the latest check-in, so from here on ahead or behind measures only what
+        you do next.
+      </p>
+      {onRebaseline ? (
+        <button type="button" className={goalStyles.btn} onClick={onRebaseline}>
+          Re-baseline from latest check-in
+        </button>
+      ) : null}
+    </div>
+  )
 }
 
 const hintStyle = { fontSize: '0.8125rem', color: 'var(--color-text-muted)', margin: 0 } as const
@@ -127,10 +162,17 @@ function MonthsHint({ status }: { status: TrackStatus }) {
   )
 }
 
-export function WealthSummaryCard({ checkins, accounts, plan, transactions = [] }: Props) {
+export function WealthSummaryCard({
+  checkins,
+  accounts,
+  plan,
+  transactions = [],
+  onRebaseline,
+}: Props) {
   const format = useMoneyFormat()
   const latest = latestCheckin(checkins)
   const ret = portfolioReturn(checkins, accounts, transactions)
+  const stale = plan ? steadyGap(checkins, plan, accounts) : null
 
   if (!latest) {
     // A check-in needs an account to record, so without one the first step is Setup.
@@ -172,6 +214,7 @@ export function WealthSummaryCard({ checkins, accounts, plan, transactions = [] 
         </div>
         {status && status.deltaMonths !== 0 ? <MonthsHint status={status} /> : null}
         {ret ? <ReturnHint ret={ret} plan={plan} format={format} /> : null}
+        {stale ? <SteadyGapHint gap={stale} format={format} onRebaseline={onRebaseline} /> : null}
       </div>
     </Card>
   )
