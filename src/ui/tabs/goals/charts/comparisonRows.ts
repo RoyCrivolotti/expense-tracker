@@ -1,6 +1,6 @@
 import type { GoalScenario } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { projectNetWorth, scenarioToParams, yearsToFi } from '../../../../engine'
+import { formatCents, projectNetWorth, scenarioToParams, yearsToFi } from '../../../../engine'
 import type { MoneyFormat } from '../../../../engine'
 import { formatMoneyShort } from '../chartTheme'
 
@@ -57,7 +57,8 @@ export function comparisonRows(
       netWorth: end ? formatMoneyShort(end.netWorthCents, format) : '',
       invested: end ? formatMoneyShort(end.investedCents, format) : '',
       house: houseLabel(scenario.housePurchaseYear),
-      monthly: formatMoneyShort(scenario.monthlyContributionCents, format),
+      // Exact: 1,000, 1,400 and 1,499 a month are three different plans, not "1k".
+      monthly: formatCents(scenario.monthlyContributionCents, format),
     }
   })
 }
