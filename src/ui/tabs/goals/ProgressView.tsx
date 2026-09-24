@@ -29,6 +29,8 @@ interface Props {
   openCheckinForm?: boolean
   /** The emergency-fund target from Setup; 0 means none. */
   cashReserveMonths?: number
+  /** The budget month still under way, left out of the cash reserve's spending average. */
+  openBudgetMonth?: string | undefined
   /**
    * Re-baselines the plan from the latest check-in. Owned by the tab, which also holds
    * the editor's draft of that plan and must keep it in step with the write.
@@ -48,6 +50,7 @@ export function ProgressView({
   onOpenSetup,
   openCheckinForm = false,
   cashReserveMonths = 0,
+  openBudgetMonth,
   onRebaseline,
 }: Props) {
   const [showCheckinForm, setShowCheckinForm] = useState(openCheckinForm)
@@ -62,6 +65,7 @@ export function ProgressView({
         plan={plan}
         transactions={transactions}
         cashReserveMonths={cashReserveMonths}
+        openBudgetMonth={openBudgetMonth}
         onRebaseline={canWrite ? onRebaseline : undefined}
       />
 

@@ -6,6 +6,7 @@ import type { NewGoalScenario } from '../../../data/dataSource'
 import {
   averageMonthlyCents,
   computeMonthlyTotals,
+  defaultBudgetMonth,
   monthlyFlows,
   yearOffsetFromDate,
   checkinInvestedCents,
@@ -32,6 +33,7 @@ import { activePlan, initialEditorScenario } from './scenarioSelection'
 import { NetWorthChart } from './charts/NetWorthChart'
 import { NetWorthMiniChart } from './charts/NetWorthMiniChart'
 import { NetWorthNowCard } from './charts/NetWorthNowCard'
+import { todayIso } from '../../components/transactionFormState'
 import styles from './goals.module.css'
 import progressStyles from './progress.module.css'
 
@@ -329,6 +331,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
           onOpenSetup={() => changeView('setup')}
           openCheckinForm={checkinEntry}
           cashReserveMonths={dataset.settings.cashReserveMonths}
+          openBudgetMonth={defaultBudgetMonth(todayIso(), dataset.settings.budgetRolloverDay)}
           onRebaseline={onRebaseline}
         />
       ) : null}

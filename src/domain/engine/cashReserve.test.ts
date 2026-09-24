@@ -68,4 +68,20 @@ describe('cashReserve', () => {
     expect(cashReserve(checkin, accounts, [], 6)!.monthsCovered).toBeNull()
     expect(cashReserve(checkin, [accounts[0]!], [], 6)).toBeNull()
   })
+
+  it('needs a live cash account with a balance in the check-in, not just a cash account', () => {
+    const archived = accounts.map((a) => (a.kind === 'cash' ? { ...a, archived: true } : a))
+    expect(cashReserve(checkin, archived, [], 6)).toBeNull()
+    const investedOnly = makeWealthCheckin({ entries: [{ accountId: 1, valueCents: 900_000_00 }] })
+    expect(cashReserve(investedOnly, accounts, [], 6)).toBeNull()
+    // An archived account's balance stays out of the sum too.
+    const oneArchived = accounts.map((a) => (a.id === 3 ? { ...a, archived: true } : a))
+    expect(cashReserve(checkin, oneArchived, [], 6)!.cashCents).toBe(8_000_00)
+  })
+
+  it('leaves the month still under way out of the average', () => {
+    const txns = [spend('2026-06', 3_000_00), spend('2026-07', 3_000_00), spend('2026-08', 500_00)]
+    expect(averageMonthlySpendCents(txns, '2026-08')).toBe(3_000_00)
+    expect(averageMonthlySpendCents(txns)).toBe(2_166_67)
+  })
 })

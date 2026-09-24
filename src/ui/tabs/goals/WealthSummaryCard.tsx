@@ -29,6 +29,8 @@ interface Props {
   onRebaseline?: (() => void) | undefined
   /** The emergency-fund target from Setup; 0 means none. */
   cashReserveMonths?: number
+  /** The budget month still under way, left out of the spending average. */
+  openBudgetMonth?: string | undefined
 }
 
 /** Cash as months of spending, against the target when there is one. */
@@ -38,6 +40,9 @@ function CashReserveHint({ reserve, format }: { reserve: CashReserve; format: Mo
     return <p style={hintStyle}>Cash reserve: <strong>{cash}</strong>.</p>
   }
   const months = reserve.monthsCovered.toFixed(1)
+  // Judged on the figure shown: 5.96 reads "6.0", and "6.0 months" in red against a
+  // target of 6 would look like a rounding error, which is what it would be.
+  const shown = Number(months)
   if (reserve.targetMonths <= 0) {
     return (
       <p style={hintStyle}>
@@ -45,7 +50,7 @@ function CashReserveHint({ reserve, format }: { reserve: CashReserve; format: Mo
       </p>
     )
   }
-  const met = reserve.monthsCovered >= reserve.targetMonths
+  const met = shown >= reserve.targetMonths
   return (
     <p style={hintStyle}>
       Cash reserve: <strong>{cash}</strong> covers{' '}
@@ -202,9 +207,11 @@ function SnapshotHints({
   latest,
   status,
   checkins,
+  openBudgetMonth,
   accounts,
   plan,
   transactions,
+  openBudgetMonth: string | undefined
   cashReserveMonths,
   onRebaseline,
   format,
@@ -216,7 +223,7 @@ function SnapshotHints({
 }) {
   const ret = portfolioReturn(checkins, accounts, transactions)
   const stale = plan ? steadyGap(checkins, plan, accounts) : null
-  const reserve = cashReserve(latest, accounts, transactions, cashReserveMonths)
+  const reserve = cashReserve(latest, accounts, transactions, cashReserveMonths, openBudgetMonth)
   return (
     <>
       {status && status.deltaMonths !== 0 ? <MonthsHint status={status} /> : null}
@@ -230,6 +237,7 @@ function SnapshotHints({
 export function WealthSummaryCard({
   checkins,
   accounts,
+  openBudgetMonth,
   plan,
   transactions = [],
   onRebaseline,
@@ -280,6 +288,7 @@ export function WealthSummaryCard({
           latest={latest}
           status={status}
           checkins={checkins}
+          openBudgetMonth={openBudgetMonth}
           accounts={accounts}
           plan={plan}
           transactions={transactions}
