@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { GoalScenario, Milestone, Transaction, WealthAccount, WealthCheckin } from '../../../types'
 import type { ExpenseActions } from '../../actions'
-import { checkinInvestedCents, latestCheckin } from '../../../engine'
+import { latestCheckin } from '../../../engine'
 import { EmptyState } from '../../components/primitives'
 import { WealthSummaryCard } from './WealthSummaryCard'
 import { ReachedMilestones } from './ReachedMilestones'
@@ -29,24 +29,11 @@ interface Props {
   openCheckinForm?: boolean
   /** The emergency-fund target from Setup; 0 means none. */
   cashReserveMonths?: number
-}
-
-/**
- * The same write the Plan view's re-baseline button makes, but straight to the plan
- * rather than through the editor's draft, since Progress has no draft to save.
- */
-function rebaselineFrom(
-  actions: ExpenseActions | undefined,
-  plan: GoalScenario | null,
-  latest: WealthCheckin | null,
-  accounts: WealthAccount[],
-): (() => void) | undefined {
-  if (!actions || !plan || !latest) return undefined
-  return () =>
-    void actions.updateScenario(plan.id, {
-      startInvestedCents: checkinInvestedCents(latest, accounts),
-      planStartDate: latest.checkinDate,
-    })
+  /**
+   * Re-baselines the plan from the latest check-in. Owned by the tab, which also holds
+   * the editor's draft of that plan and must keep it in step with the write.
+   */
+  onRebaseline?: (() => void) | undefined
 }
 
 export function ProgressView({
@@ -61,9 +48,9 @@ export function ProgressView({
   onOpenSetup,
   openCheckinForm = false,
   cashReserveMonths = 0,
+  onRebaseline,
 }: Props) {
   const [showCheckinForm, setShowCheckinForm] = useState(openCheckinForm)
-  const latest = latestCheckin(checkins)
   // A check-in records a balance per account, so with none there is nothing to log yet.
   const hasAccounts = accounts.some((a) => !a.archived)
 
@@ -75,7 +62,7 @@ export function ProgressView({
         plan={plan}
         transactions={transactions}
         cashReserveMonths={cashReserveMonths}
-        onRebaseline={rebaselineFrom(canWrite ? actions : undefined, plan, latest, accounts)}
+        onRebaseline={canWrite ? onRebaseline : undefined}
       />
 
       <NetWorthHistoryChart checkins={checkins} accounts={accounts} />

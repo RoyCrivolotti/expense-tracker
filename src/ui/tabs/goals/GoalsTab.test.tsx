@@ -5,7 +5,7 @@ import { GoalsTab } from './GoalsTab'
 import { buildExpenseModel } from '../../buildExpenseModel'
 import { makeDataset, makeScenario, makeWealthAccount, makeWealthCheckin } from '../../../testing/factories'
 import { makeActions } from '../../../testing/makeActions'
-import { defaultExpenseSettings } from '../../../engine'
+import { defaultExpenseSettings, planValueAtDate } from '../../../engine'
 
 beforeAll(() => {
   Object.defineProperty(window, 'matchMedia', {
@@ -222,6 +222,65 @@ describe('GoalsTab', () => {
     await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Discard' }))
     expect(screen.getByLabelText('Scenario name')).toHaveValue('Path B')
     expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
+  })
+
+  it('keeps the editor in step with a re-baseline made from Progress', async () => {
+    const user = userEvent.setup()
+    const actions = makeActions()
+    const plan = makeScenario({ id: 1, name: 'Path A', isActive: true, planStartDate: '2025-01-01' })
+    const accounts = [makeWealthAccount({ id: 1, name: 'Broker', kind: 'investment' })]
+    const behind = (id: number, date: string) =>
+      makeWealthCheckin({
+        id,
+        checkinDate: date,
+        entries: [{ accountId: 1, valueCents: planValueAtDate(plan, date)! - 50_000_00 }],
+      })
+    const checkins = [behind(1, '2026-01-01'), behind(2, '2026-04-01'), behind(3, '2026-07-15')]
+    const dataset = makeDataset({ goalScenarios: [plan], wealthAccounts: accounts, wealthCheckins: checkins })
+    const { rerender } = render(<GoalsTab model={buildExpenseModel(dataset)} actions={actions} />)
+
+    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
+    const patch = { startInvestedCents: planValueAtDate(plan, '2026-07-15')! - 50_000_00, planStartDate: '2026-07-15' }
+    expect(actions.updateScenario).toHaveBeenCalledWith(1, patch)
+
+    // The write lands and the dataset refreshes; the draft must already agree with it,
+    // or the header would offer to save the old start back over the re-baseline.
+    const saved = { ...plan, ...patch }
+    rerender(<GoalsTab model={buildExpenseModel({ ...dataset, goalScenarios: [saved] })} actions={actions} />)
+    await user.click(screen.getByRole('radio', { name: 'Plan' }))
+    expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
+  })
+
+  it('saves a pending edit together with a re-baseline, not over it', async () => {
+    const user = userEvent.setup()
+    const actions = makeActions()
+    const plan = makeScenario({ id: 1, name: 'Path A', isActive: true, planStartDate: '2025-01-01' })
+    const accounts = [makeWealthAccount({ id: 1, name: 'Broker', kind: 'investment' })]
+    const behind = (id: number, date: string) =>
+      makeWealthCheckin({
+        id,
+        checkinDate: date,
+        entries: [{ accountId: 1, valueCents: planValueAtDate(plan, date)! - 50_000_00 }],
+      })
+    const checkins = [behind(1, '2026-01-01'), behind(2, '2026-04-01'), behind(3, '2026-07-15')]
+    const model = buildExpenseModel(makeDataset({ goalScenarios: [plan], wealthAccounts: accounts, wealthCheckins: checkins }))
+    render(<GoalsTab model={model} actions={actions} />)
+
+    fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
+    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
+    await user.click(screen.getByRole('radio', { name: 'Plan' }))
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    expect(actions.updateScenario).toHaveBeenLastCalledWith(
+      1,
+      expect.objectContaining({
+        name: 'Path A, tweaked',
+        startInvestedCents: planValueAtDate(plan, '2026-07-15')! - 50_000_00,
+        planStartDate: '2026-07-15',
+      }),
+    )
   })
 
   it('treats a colour change as an unsaved edit and saves it with the rest', async () => {
