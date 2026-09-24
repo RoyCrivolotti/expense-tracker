@@ -39,6 +39,32 @@ describe('steadyGap', () => {
     ).toBeNull()
   })
 
+  it('stays quiet while a gap widens, even when each reading is near the mean', () => {
+    // 80k to 133k is within a quarter of the 106k mean on both ends, yet the gap has
+    // grown by two thirds: that is the saving, not the starting point.
+    expect(
+      steadyGap(
+        [off(1, '2026-01-01', -80_000_00), off(2, '2026-04-01', -106_000_00), off(3, '2026-07-15', -133_000_00)],
+        plan,
+        accounts,
+      ),
+    ).toBeNull()
+  })
+
+  it('ignores a gap too small to be worth a re-baseline', () => {
+    // About a thousand behind on a plan investing 1,500 a month is on-plan noise; three
+    // months of contributions is where it starts to be a starting-point problem.
+    const monthly = makeScenario({ id: 3, isActive: true, planStartDate: '2025-01-01', monthlyContributionCents: 1_500_00 })
+    const near = (id: number, date: string, gap: number) =>
+      makeWealthCheckin({ id, checkinDate: date, entries: [{ accountId: 1, valueCents: planValueAtDate(monthly, date)! + gap }] })
+    expect(
+      steadyGap([near(1, '2026-01-01', -900_00), near(2, '2026-04-01', -1_000_00), near(3, '2026-07-15', -1_100_00)], monthly, accounts),
+    ).toBeNull()
+    expect(
+      steadyGap([near(1, '2026-01-01', -4_400_00), near(2, '2026-04-01', -4_600_00), near(3, '2026-07-15', -4_500_00)], monthly, accounts),
+    ).not.toBeNull()
+  })
+
   it('needs half a year of check-ins, and enough of them', () => {
     expect(
       steadyGap([off(1, '2026-05-01', -100_000_00), off(2, '2026-06-01', -100_000_00), off(3, '2026-07-01', -100_000_00)], plan, accounts),
