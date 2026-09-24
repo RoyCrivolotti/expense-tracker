@@ -44,6 +44,20 @@ describe('MilestonesSetting', () => {
     })
   })
 
+  it('keeps a date picked while the amount edit is still in flight', () => {
+    const onChange = vi.fn(() => new Promise<void>(() => {}))
+    render(<MilestonesSetting settings={settingsWith(oneMilestone)} onChange={onChange} />)
+    const amount = screen.getByLabelText(/Milestone amount/)
+    fireEvent.change(amount, { target: { value: '250000' } })
+    fireEvent.blur(amount)
+    fireEvent.change(screen.getByLabelText('Target date for milestone House deposit'), {
+      target: { value: '2028-06-01' },
+    })
+    expect(onChange).toHaveBeenLastCalledWith({
+      milestones: [{ amountCents: 25_000_000, label: 'House deposit', targetDate: '2028-06-01' }],
+    })
+  })
+
   it('saves a renamed milestone on blur', () => {
     const onChange = vi.fn()
     render(<MilestonesSetting settings={settingsWith(oneMilestone)} onChange={onChange} />)
