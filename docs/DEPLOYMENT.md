@@ -87,7 +87,7 @@ If Workers Scripts Edit is missing, CI deploy of the backup cron worker fails un
 npx wrangler d1 execute roy-expenses --remote --file=migrations/NNNN_name.sql
 ```
 
-Apply through `0025_cash_reserve_months.sql` on production.
+Apply through `0026_investment_category.sql` on production.
 
 **Check what a database actually has before trusting this line.** It has been wrong: on
 2026-09-15 production turned out to have no `_migrations` table at all, `0020` never having
@@ -207,6 +207,8 @@ record on a database that already has a `transactions` table means the same thin
 `0024_goal_scenario_active.sql` adds `is_active INTEGER NOT NULL DEFAULT 0` on `goal_scenarios`, backfills each owner's newest scenario as their plan (what the app was already comparing against, so nothing moves on deploy), and adds a partial unique index so an owner can never hold two. The backfill is scoped to owners with no plan yet. Owner-agnostic — no placeholder substitution needed. **Apply it before (or with) the code deploy** — creating and activating a scenario both write the column.
 
 `0025_cash_reserve_months.sql` adds a nullable `cash_reserve_months` on `settings`: the emergency-fund target Progress measures cash accounts against, read as 0 (no target) when null. Owner-agnostic, nothing to backfill. **Apply it before (or with) the code deploy** — saving the target from Setup writes the column, and the previous release never reads it.
+
+`0026_investment_category.sql` adds a nullable `investment_category_id` on `settings`: the category every investment transaction is filed under, in both directions, chosen under Settings → New transactions. Null falls back to a category named for investments. Owner-agnostic, nothing to backfill, same timing as `0025`.
 
 ## Old URL
 

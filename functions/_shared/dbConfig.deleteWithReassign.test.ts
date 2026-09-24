@@ -37,7 +37,7 @@ function stubEnv(opts: {
 const OWNER = 'owner@example.com'
 
 describe('deleteCategory', () => {
-  it('deletes an unused category outright, without touching batch', async () => {
+  it('deletes an unused category outright, forgetting it as the investments category in the same batch', async () => {
     const { env, batch } = stubEnv({
       first: (sql) => (sql.includes('COUNT(*)') ? { n: 0 } : null),
     })
@@ -45,7 +45,12 @@ describe('deleteCategory', () => {
     const result = await deleteCategory(env, OWNER, 5)
 
     expect(result).toEqual({ reassignedToId: null })
-    expect(batch).not.toHaveBeenCalled()
+    expect(batch).toHaveBeenCalledOnce()
+    const stmts = batch.mock.calls[0]![0] as StatementStub[]
+    expect(stmts.map((s) => s.sql)).toEqual([
+      expect.stringContaining('investment_category_id = NULL'),
+      expect.stringContaining('DELETE FROM categories'),
+    ])
   })
 
   it('blocks deleting a category still in use when no reassign target is given', async () => {
@@ -111,11 +116,13 @@ describe('deleteCategory', () => {
     expect(stmts.map((s) => s.sql)).toEqual([
       'UPDATE transactions SET category_id = ? WHERE category_id = ? AND owner = ?',
       'UPDATE installment_plans SET category_id = ? WHERE category_id = ? AND owner = ?',
+      'UPDATE settings SET investment_category_id = NULL WHERE owner = ? AND investment_category_id = ?',
       'DELETE FROM categories WHERE id = ? AND owner = ?',
     ])
     expect(stmts[0]!.args).toEqual([7, 5, OWNER])
     expect(stmts[1]!.args).toEqual([7, 5, OWNER])
-    expect(stmts[2]!.args).toEqual([5, OWNER])
+    expect(stmts[2]!.args).toEqual([OWNER, 5])
+    expect(stmts[3]!.args).toEqual([5, OWNER])
   })
 
   it('creates a new category first when createCategory is given, then reassigns to it', async () => {

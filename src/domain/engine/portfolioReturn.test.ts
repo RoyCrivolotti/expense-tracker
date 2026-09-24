@@ -84,5 +84,70 @@ describe('portfolioReturn', () => {
     expect(
       portfolioReturn([checkin(1, '2025-01-01', 0), checkin(2, '2026-01-01', 0)], accounts, []),
     ).toBeNull()
+    // Money appeared that no transaction accounts for: nothing honest can be said.
+    expect(
+      portfolioReturn([checkin(1, '2025-01-01', 0), checkin(2, '2026-01-01', 50_000_00)], accounts, []),
+    ).toBeNull()
+  })
+
+  it('chains the stretches between check-ins', () => {
+    // Up 10%, then down 5%: one unit left in from the start is worth 1.1 × 0.95.
+    const r = portfolioReturn(
+      [
+        checkin(1, '2025-01-01', 100_000_00),
+        checkin(2, '2025-07-01', 110_000_00),
+        checkin(3, '2026-01-01', 104_500_00),
+      ],
+      accounts,
+      [],
+    )!
+    expect(r.periodReturn).toBeCloseTo(1.1 * 0.95 - 1, 6)
+    expect(r.periods).toBe(2)
+  })
+
+  it('is not swayed by when the money went in, unlike a single-period figure', () => {
+    // The portfolio halved, then a large contribution landed and the market went flat.
+    // Time-weighted that is −50%; measured start to end in one go it would read about
+    // −33%, because the late money dilutes the loss.
+    const r = portfolioReturn(
+      [
+        checkin(1, '2025-01-01', 100_000_00),
+        checkin(2, '2025-07-01', 50_000_00),
+        checkin(3, '2026-01-01', 150_000_00),
+      ],
+      accounts,
+      [contribution('2025-07-02', 100_000_00)],
+    )!
+    expect(r.periodReturn).toBeCloseTo(-0.5, 6)
+    expect(r.contributionsCents).toBe(100_000_00)
+  })
+
+  it('treats a negative investment as money taken back out', () => {
+    // 100k, 50k sold to cash halfway, 50k left: no return, not a 50% loss.
+    const r = portfolioReturn(
+      [checkin(1, '2025-01-01', 100_000_00), checkin(2, '2026-01-01', 50_000_00)],
+      accounts,
+      [contribution('2025-07-02', -50_000_00)],
+    )!
+    expect(r.periodReturn).toBeCloseTo(0, 6)
+    expect(r.contributionsCents).toBe(-50_000_00)
+  })
+
+  it('skips the stretches before the portfolio opened', () => {
+    const r = portfolioReturn(
+      [
+        checkin(1, '2025-01-01', 0),
+        checkin(2, '2025-04-01', 0),
+        checkin(3, '2026-01-01', 110_000_00),
+      ],
+      accounts,
+      [contribution('2025-04-02', 100_000_00)],
+    )!
+    expect(r.periods).toBe(1)
+    expect(r.periodReturn).toBeCloseTo(0.1, 2)
+    // The period starts where the money did, so the yearly rate is not spread over the
+    // empty months before it.
+    expect(r.startDate).toBe('2025-04-01')
+    expect(r.annualised).toBeNull()
   })
 })

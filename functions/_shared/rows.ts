@@ -176,6 +176,7 @@ export interface SettingsRow {
   opening_cash_cents: number
   opening_investment_cents: number
   default_account_id: number | null
+  investment_category_id: number | null
   currency_code: string | null
   number_locale: string | null
   budget_rollover_day: number | null
@@ -190,6 +191,7 @@ export function toSettings(r: SettingsRow): ExpenseSettings {
     openingCashCents: r.opening_cash_cents,
     openingInvestmentCents: r.opening_investment_cents,
     defaultAccountId: r.default_account_id ?? null,
+    investmentCategoryId: r.investment_category_id ?? null,
     currencyCode: r.currency_code ?? DEFAULT_CURRENCY_CODE,
     numberLocale: r.number_locale ?? DEFAULT_NUMBER_LOCALE,
     claimantName: r.claimant_name ?? '',

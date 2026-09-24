@@ -106,6 +106,13 @@ async function countCategoryUsage(env: Env, owner: string, id: number): Promise<
   return (txns?.n ?? 0) + (plans?.n ?? 0)
 }
 
+/** Forgets a category as the one investments are filed under, when it is. */
+function clearInvestmentCategory(env: Env, owner: string, id: number) {
+  return env.DB.prepare(
+    'UPDATE settings SET investment_category_id = NULL WHERE owner = ? AND investment_category_id = ?',
+  ).bind(owner, id)
+}
+
 async function deletePlainCategory(
   env: Env,
   owner: string,
@@ -113,10 +120,14 @@ async function deletePlainCategory(
 ): Promise<DeleteCategoryResult> {
   const usage = await countCategoryUsage(env, owner, id)
   if (usage > 0) throw new HttpError(409, `Category is in use by ${usage} record(s)`)
-  const result = await env.DB.prepare('DELETE FROM categories WHERE id = ? AND owner = ?')
-    .bind(id, owner)
-    .run()
-  if ((result.meta.changes ?? 0) === 0) throw new HttpError(404, 'Category not found')
+  // An unused category can still be the one investments are filed under; clear that in
+  // the same batch so the delete cannot leave it dangling.
+  const results = await env.DB.batch([
+    clearInvestmentCategory(env, owner, id),
+    env.DB.prepare('DELETE FROM categories WHERE id = ? AND owner = ?').bind(id, owner),
+  ])
+  const result = results[results.length - 1]
+  if ((result?.meta.changes ?? 0) === 0) throw new HttpError(404, 'Category not found')
   return { reassignedToId: null }
 }
 
@@ -170,6 +181,7 @@ export async function deleteCategory(
       env.DB.prepare(
         'UPDATE installment_plans SET category_id = ? WHERE category_id = ? AND owner = ?',
       ).bind(targetId, id, owner),
+      clearInvestmentCategory(env, owner, id),
       env.DB.prepare('DELETE FROM categories WHERE id = ? AND owner = ?').bind(id, owner),
     ])
     const deleteResult = results[results.length - 1]
@@ -363,6 +375,7 @@ const SETTINGS_COLUMNS: ColumnMap<ExpenseSettings> = {
   openingCashCents: 'opening_cash_cents',
   openingInvestmentCents: 'opening_investment_cents',
   defaultAccountId: 'default_account_id',
+  investmentCategoryId: 'investment_category_id',
   currencyCode: 'currency_code',
   numberLocale: 'number_locale',
   budgetRolloverDay: 'budget_rollover_day',
@@ -372,6 +385,7 @@ const SETTINGS_COLUMNS: ColumnMap<ExpenseSettings> = {
 const NULLABLE_SETTINGS = new Set<keyof ExpenseSettings>([
   'claimantName',
   'defaultAccountId',
+  'investmentCategoryId',
   'currencyCode',
   'numberLocale',
   'budgetRolloverDay',
@@ -418,6 +432,9 @@ export async function updateSettings(
 ): Promise<ExpenseSettings> {
   if (patch.defaultAccountId != null) {
     await assertOwnedAccount(env, owner, patch.defaultAccountId)
+  }
+  if (patch.investmentCategoryId != null) {
+    await assertOwnedCategory(env, owner, patch.investmentCategoryId)
   }
   assertSettingsPatch(patch)
   const { sets, values } = buildUpdate(SETTINGS_COLUMNS, patch, coerceSettings)

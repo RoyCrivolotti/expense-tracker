@@ -1,5 +1,6 @@
 import type { Transaction, TxnType } from '../../types'
 import { resolveDefaultAccountId } from '../../data/defaultAccount'
+import { resolveInvestmentCategoryId } from '../../data/investmentCategory'
 import { defaultBudgetMonth } from '../../engine/dates'
 import { formatMoneyInput, type MoneyFormat } from '../../engine/money'
 import type { ExpenseModel } from '../useExpenseData'
@@ -7,6 +8,11 @@ import type { TransactionSeed } from '../actions'
 
 export interface FormFields {
   type: TxnType
+  /**
+   * Money taken back out of the portfolio rather than put in: a sale to cash, a dividend
+   * paid out. Only meaningful with `type: 'investment'`; stored as a negative amount.
+   */
+  outflow: boolean
   amount: string
   description: string
   categoryId: number
@@ -35,6 +41,7 @@ function defaultFields(model: ExpenseModel): FormFields {
   const today = todayIso()
   return {
     type: 'expense',
+    outflow: false,
     amount: '',
     description: '',
     // Prefer an active category so a brand-new transaction never opens already
@@ -52,7 +59,9 @@ function applySeed(defaults: FormFields, seed: TransactionSeed, format: MoneyFor
   return {
     ...defaults,
     ...(seed.type != null ? { type: seed.type } : {}),
-    ...(seed.amountCents != null ? { amount: formatMoneyInput(seed.amountCents, format) } : {}),
+    ...(seed.amountCents != null
+      ? { amount: formatMoneyInput(Math.abs(seed.amountCents), format), outflow: isOutflow(seed) }
+      : {}),
     ...(seed.description != null ? { description: seed.description } : {}),
     ...(seed.categoryId != null ? { categoryId: seed.categoryId } : {}),
     ...(seed.accountId != null ? { accountId: seed.accountId } : {}),
@@ -65,8 +74,32 @@ function applySeed(defaults: FormFields, seed: TransactionSeed, format: MoneyFor
   }
 }
 
+/** A negative investment is money that came back out; the form shows its size and a direction. */
+function isOutflow(txn: { type?: TxnType | undefined; amountCents?: number | undefined }): boolean {
+  return txn.type === 'investment' && (txn.amountCents ?? 0) < 0
+}
+
 /** Seed the form from an existing transaction, a recurring suggestion, or sensible defaults. */
 export function initialFields(
+  editing: Transaction | null,
+  model: ExpenseModel,
+  format: MoneyFormat,
+  seed?: TransactionSeed,
+): FormFields {
+  return lockInvestmentCategory(startingFields(editing, model, format, seed), model)
+}
+
+/**
+ * An investment is filed under the investments category whichever way the money moves,
+ * so a row that opens as one, or turns into one, takes that category over its own.
+ */
+export function lockInvestmentCategory(fields: FormFields, model: ExpenseModel): FormFields {
+  if (fields.type !== 'investment') return fields
+  const locked = resolveInvestmentCategoryId(model.dataset.categories, model.dataset.settings)
+  return locked === null ? fields : { ...fields, categoryId: locked }
+}
+
+function startingFields(
   editing: Transaction | null,
   model: ExpenseModel,
   format: MoneyFormat,
@@ -75,7 +108,8 @@ export function initialFields(
   if (editing) {
     return {
       type: editing.type,
-      amount: formatMoneyInput(editing.amountCents, format),
+      outflow: isOutflow(editing),
+      amount: formatMoneyInput(Math.abs(editing.amountCents), format),
       description: editing.description,
       categoryId: editing.categoryId,
       accountId: editing.accountId,

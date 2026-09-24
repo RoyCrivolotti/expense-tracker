@@ -77,7 +77,12 @@ export interface StoredTransaction {
   accountId: number
   categoryId: number
   type: TxnType
-  /** Always positive; the type decides how it affects totals. */
+  /**
+   * Positive; the type decides how it affects totals. The one exception is an
+   * `investment`, which may be negative: money taken back out of the portfolio (a sale to
+   * cash, a dividend paid out), which nets against the month's investing and counts as an
+   * outflow in the measured portfolio return.
+   */
   amountCents: number
   cancelled: boolean
   notes?: string
@@ -254,6 +259,11 @@ export interface ExpenseSettings {
   openingInvestmentCents: number
   /** Pre-selected account when creating a new transaction; null = first active account. */
   defaultAccountId: number | null
+  /**
+   * The category every investment row is filed under, whichever way the money moves;
+   * the form locks it. Null falls back to a category named for investments, if any.
+   */
+  investmentCategoryId: number | null
   /** ISO 4217 code driving the currency symbol, e.g. 'EUR', 'USD'. */
   currencyCode: string
   /** BCP-47 locale driving digit grouping and decimal separator, e.g. 'de-DE', 'en-US'. */

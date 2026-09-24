@@ -75,7 +75,7 @@ Transaction import expects the same header as export (see `src/domain/data/expor
 
 - **category** / **account**: must match existing names exactly.
 - **type**: `expense`, `income`, `investment`, or `refund`.
-- **amount_cents**: integer cents, always positive.
+- **amount_cents**: integer cents, positive; an `investment` may be negative for money taken back out of the portfolio.
 - **date** / **budget_month**: ISO `YYYY-MM-DD` and `YYYY-MM`.
 - Easiest path: Settings → Data → Export, edit the CSV, then Import.
 

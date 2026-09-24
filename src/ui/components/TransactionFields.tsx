@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react'
-import type { Transaction, TxnType } from '../../types'
+import type { Transaction } from '../../types'
 import type { DescriptionSuggestion } from '../../data/descriptionIndex'
 import { defaultBudgetMonth } from '../../engine/dates'
 import { RECEIPT_CLIENT_POLICY } from '../../data/receiptClientPolicy'
@@ -11,20 +11,15 @@ import { DateInput } from './DateInput'
 import { DescriptionCombobox } from './DescriptionCombobox'
 import { MonthInput } from './MonthInput'
 import { optionLabel, selectableOptions } from './pickerOptions'
+import { resolveInvestmentCategoryId } from '../../data/investmentCategory'
 import { FlagField } from './FlagField'
 import { createFlagInPlace } from './quickFlag'
 import type { PendingReceipt } from '../../data/pendingReceipts'
 import { ReceiptStrip } from './ReceiptStrip'
 import { ReimbursementLink } from './ReimbursementLink'
 import type { FormFields, Setter } from './transactionFormState'
+import { FORM_TYPES, typeChoice, type TypeChoice } from './transactionTypes'
 import styles from './TransactionForm.module.css'
-
-const TYPES: { value: TxnType; label: string }[] = [
-  { value: 'expense', label: 'Expense' },
-  { value: 'income', label: 'Income' },
-  { value: 'investment', label: 'Invest' },
-  { value: 'refund', label: 'Refund' },
-]
 
 export function Field({
   label,
@@ -53,10 +48,18 @@ export function Field({
   )
 }
 
-export function TypeSelector({ value, onChange }: { value: TxnType; onChange: (t: TxnType) => void }) {
+export function TypeSelector<T extends TypeChoice>({
+  options,
+  value,
+  onChange,
+}: {
+  options: readonly { value: T; label: string }[]
+  value: T
+  onChange: (t: T) => void
+}) {
   return (
-    <div className={styles.types}>
-      {TYPES.map((t) => (
+    <div className={styles.types} style={{ gridTemplateColumns: `repeat(${options.length}, 1fr)` }}>
+      {options.map((t) => (
         <button
           key={t.value}
           type="button"
@@ -71,15 +74,54 @@ export function TypeSelector({ value, onChange }: { value: TxnType; onChange: (t
   )
 }
 
+/**
+ * The type chips, and under them the one type that needs a word: Withdraw, which is an
+ * investment with the money going the other way and is easy to take for something else.
+ */
+function TypeChips({
+  form,
+  set,
+  investmentCategoryId,
+}: {
+  form: FormFields
+  set: Setter
+  investmentCategoryId: number | null
+}) {
+  return (
+    <>
+      <TypeSelector
+        options={FORM_TYPES}
+        value={typeChoice(form)}
+        onChange={(t) => {
+          const investment = t === 'investment' || t === 'withdraw'
+          set('type', investment ? 'investment' : t)
+          set('outflow', t === 'withdraw')
+          if (investment && investmentCategoryId !== null) set('categoryId', investmentCategoryId)
+        }}
+      />
+      {form.type === 'investment' && form.outflow ? (
+        <p className={styles.fieldHint} role="note">
+          Money taken out of your investments and into this account: a sale moved to cash, a
+          dividend paid out. Moving money between investment accounts is not a withdrawal.
+        </p>
+      ) : null}
+    </>
+  )
+}
+
 function CategoryAccountRow({
   form,
   set,
   model,
+  investmentCategoryId,
 }: {
   form: FormFields
   set: Setter
   model: ExpenseModel
+  /** The investments category; an investment row is locked to it. */
+  investmentCategoryId: number | null
 }) {
+  const lockedCategoryId = form.type === 'investment' ? investmentCategoryId : null
   const categories = selectableOptions(model.dataset.categories, form.categoryId)
   const accounts = selectableOptions(model.dataset.accounts, form.accountId)
   const selectedCategory = model.dataset.categories.find((c) => c.id === form.categoryId)
@@ -90,7 +132,11 @@ function CategoryAccountRow({
     <div className={styles.row}>
       <div className={styles.fieldStack}>
         <Field label="Category">
-          <select value={form.categoryId} onChange={(e) => set('categoryId', Number(e.target.value))}>
+          <select
+            value={form.categoryId}
+            disabled={lockedCategoryId !== null}
+            onChange={(e) => set('categoryId', Number(e.target.value))}
+          >
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {optionLabel(c)}
@@ -98,6 +144,9 @@ function CategoryAccountRow({
             ))}
           </select>
         </Field>
+        {lockedCategoryId !== null ? (
+          <p className={styles.fieldHint}>Investments always go here; change it under Settings.</p>
+        ) : null}
         {categoryInactive ? (
           <p className={styles.inactiveWarning}>This category is inactive</p>
         ) : null}
@@ -207,13 +256,14 @@ export function Fields({
   }
 
   const showNoteInput = noteExpanded || form.notes !== ''
+  const investmentCategoryId = resolveInvestmentCategoryId(model.dataset.categories, model.dataset.settings)
   const attachments = receiptTargetId != null ? model.lookup.attachments(receiptTargetId) : []
   const receiptAtCap =
     attachments.length + pendingFiles.length >= RECEIPT_CLIENT_POLICY.maxPerTransaction
 
   return (
     <>
-      <TypeSelector value={form.type} onChange={(t) => set('type', t)} />
+      <TypeChips form={form} set={set} investmentCategoryId={investmentCategoryId} />
       <Field label={`Amount (${format.symbol})`}>
         <input
           className={styles.amount}
@@ -243,7 +293,7 @@ export function Fields({
           />
         )}
       </Field>
-      <CategoryAccountRow form={form} set={set} model={model} />
+      <CategoryAccountRow form={form} set={set} model={model} investmentCategoryId={investmentCategoryId} />
       <DateBudgetRow form={form} set={set} onDate={onDate} onTrapPausedChange={onTrapPausedChange} />
 
       {actions ? (

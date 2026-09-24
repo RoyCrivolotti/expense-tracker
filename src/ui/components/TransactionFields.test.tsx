@@ -50,6 +50,7 @@ function modelWith(overrides: Partial<ExpenseModel['dataset']> = {}): ExpenseMod
 function baseForm(overrides: Partial<FormFields> = {}): FormFields {
   return {
     type: 'expense',
+    outflow: false,
     amount: '10,00',
     description: '',
     categoryId: 1,
@@ -265,5 +266,66 @@ describe('Date/Budget month native-input overlay', () => {
     fireEvent.change(screen.getByDisplayValue('2026-07'), { target: { value: '2026-11' } })
     expect(set).toHaveBeenCalledWith('budgetMonth', '2026-11')
     expect(set).not.toHaveBeenCalledWith('date', expect.anything())
+  })
+})
+
+describe('Fields type selector', () => {
+  it('offers Withdraw as an investment with the money going out', () => {
+    const set = vi.fn()
+    render(
+      <Fields form={baseForm()} set={set} model={modelWith()} editing={null} onAcceptSuggestion={vi.fn()} />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Withdraw' }))
+    expect(set).toHaveBeenCalledWith('type', 'investment')
+    expect(set).toHaveBeenCalledWith('outflow', true)
+
+    set.mockClear()
+    fireEvent.click(screen.getByRole('button', { name: 'Invest' }))
+    expect(set).toHaveBeenCalledWith('type', 'investment')
+    expect(set).toHaveBeenCalledWith('outflow', false)
+  })
+
+  it('locks the category to the investments category for Invest and Withdraw, and explains Withdraw', () => {
+    const set = vi.fn()
+    const model = modelWith({
+      categories: [
+        { id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true },
+        { id: 2, name: 'Investments', monthlyBudgetCents: 0, sortOrder: 1, active: true },
+      ],
+    })
+    const { rerender } = render(
+      <Fields form={baseForm({ categoryId: 1 })} set={set} model={model} editing={null} onAcceptSuggestion={vi.fn()} />,
+    )
+    expect(screen.getByLabelText('Category')).toBeEnabled()
+    expect(screen.queryByRole('note')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Withdraw' }))
+    expect(set).toHaveBeenCalledWith('categoryId', 2)
+
+    rerender(
+      <Fields
+        form={baseForm({ type: 'investment', outflow: true, categoryId: 2 })}
+        set={set}
+        model={model}
+        editing={null}
+        onAcceptSuggestion={vi.fn()}
+      />,
+    )
+    expect(screen.getByLabelText('Category')).toBeDisabled()
+    expect(screen.getByLabelText('Category')).toHaveValue('2')
+    expect(screen.getByText(/Investments always go here/)).toBeInTheDocument()
+    expect(screen.getByRole('note')).toHaveTextContent(/Money taken out of your investments/)
+  })
+
+  it('leaves the category free for an investment when no investments category exists', () => {
+    renderFields(baseForm({ type: 'investment' }), modelWith())
+    expect(screen.getByLabelText('Category')).toBeEnabled()
+    expect(screen.queryByText(/Investments always go here/)).not.toBeInTheDocument()
+  })
+
+  it('shows a negative investment as Withdraw, not Invest', () => {
+    renderFields(baseForm({ type: 'investment', outflow: true }), modelWith())
+    expect(screen.getByRole('button', { name: 'Withdraw' }).className).toMatch(/typeActive/)
+    expect(screen.getByRole('button', { name: 'Invest' }).className).not.toMatch(/typeActive/)
   })
 })

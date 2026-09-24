@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { DescriptionSuggestion } from '../../data/descriptionIndex'
 import { applyDescriptionSuggestion } from '../../data/applyDescriptionSuggestion'
 import { resolveDefaultAccountId } from '../../data/defaultAccount'
+import { resolveInvestmentCategoryId } from '../../data/investmentCategory'
 import { addDaysIso } from '../../engine/dates'
 import { parseMoneyToCents } from '../../engine/money'
 import type { TxnType } from '../../types'
@@ -165,6 +166,7 @@ export function BatchTransactionForm({
       }),
     )
 
+  const investmentCategoryId = resolveInvestmentCategoryId(model.dataset.categories, model.dataset.settings)
   const saveableRows = batches.flatMap((b) =>
     b.rows.filter((r) => !isRowEmpty(r) && Math.abs(parseMoneyToCents(r.amount, format)) > 0),
   )
@@ -177,6 +179,7 @@ export function BatchTransactionForm({
       format,
       model.dataset.settings.budgetRolloverDay,
       flagId,
+      investmentCategoryId,
     )
     if (!result.ok) {
       setErrors(result.errors)
@@ -269,7 +272,8 @@ export function BatchTransactionForm({
               </select>
               <select
                 className={`${styles.compactSelect} ${styles.compactCategory}`}
-                value={row.categoryId}
+                value={row.type === 'investment' && investmentCategoryId !== null ? investmentCategoryId : row.categoryId}
+                disabled={row.type === 'investment' && investmentCategoryId !== null}
                 aria-label="Category"
                 onChange={(e) => updateRow(batch.id, row.id, { categoryId: Number(e.target.value) })}
               >

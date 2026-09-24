@@ -13,6 +13,7 @@ export function defaultExpenseSettings(): ExpenseSettings {
     openingCashCents: 0,
     openingInvestmentCents: 0,
     defaultAccountId: null,
+    investmentCategoryId: null,
     currencyCode: DEFAULT_CURRENCY_CODE,
     numberLocale: DEFAULT_NUMBER_LOCALE,
     budgetRolloverDay: DEFAULT_BUDGET_ROLLOVER_DAY,

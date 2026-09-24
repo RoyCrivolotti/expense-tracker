@@ -49,6 +49,8 @@ export function buildBatchTransactions(
   format: MoneyFormat,
   budgetRolloverDay: number,
   flagId: number | null = null,
+  /** The investments category; an investment row is filed under it whatever it picked. */
+  investmentCategoryId: number | null = null,
 ): BuildBatchResult {
   const transactions: NewTransaction[] = []
   const errors: Record<string, string> = {}
@@ -67,7 +69,7 @@ export function buildBatchTransactions(
         budgetMonth,
         description: row.description.trim(),
         accountId: row.accountId,
-        categoryId: row.categoryId,
+        categoryId: row.type === 'investment' && investmentCategoryId !== null ? investmentCategoryId : row.categoryId,
         type: row.type,
         amountCents: cents,
         cancelled: false,

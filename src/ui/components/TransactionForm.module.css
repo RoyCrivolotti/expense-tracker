@@ -13,7 +13,6 @@
 
 .types {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
   gap: 0.4rem;
 }
 .typeBtn {
@@ -37,7 +36,8 @@
 .typeActive[data-type='income'] {
   background: var(--exp-income);
 }
-.typeActive[data-type='investment'] {
+.typeActive[data-type='investment'],
+.typeActive[data-type='withdraw'] {
   background: var(--exp-investment);
 }
 .typeActive[data-type='refund'] {
@@ -93,6 +93,13 @@
   font-size: 0.82rem;
   margin: 0;
 }
+/* A quiet line under a field, for what the form decided on the user's behalf. */
+.fieldHint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
 .inactiveWarning {
   font-size: 0.78rem;
   color: var(--exp-warning, #b45309);
