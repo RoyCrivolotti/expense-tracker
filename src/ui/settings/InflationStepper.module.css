@@ -1,0 +1,7 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+  max-width: 100%;
+}
