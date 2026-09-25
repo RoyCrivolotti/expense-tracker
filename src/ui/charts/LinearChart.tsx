@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, type RefObject } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
+import type { RefObject } from 'react'
 import { ChartTooltip, type TooltipLine } from './ChartTooltip'
 import { useElementWidth } from '../hooks/useElementWidth'
 import {
