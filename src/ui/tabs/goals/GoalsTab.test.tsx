@@ -590,10 +590,10 @@ describe('GoalsTab', () => {
     render(<GoalsTab model={makeModel()} actions={makeActions()} />)
     await user.click(screen.getByRole('radio', { name: 'Nominal' }))
 
-    expect(screen.getByText(/only previews this chart and is not saved/)).toBeInTheDocument()
-    expect(screen.getByText(/Everything else in Goals uses the saved 2,0%/)).toBeInTheDocument()
-    expect(screen.getByText(/To change it, set it in Setup/)).toBeInTheDocument()
-    expect(screen.getByText(/target lines are only drawn in Purchasing power/)).toBeInTheDocument()
+    // One paragraph: what stays in today's money, and that the preview is not saved.
+    const note = screen.getByText(/The preview is not saved/)
+    expect(note).toHaveTextContent(/the rest of Goals uses the saved 2,0%, which you change in Setup/)
+    expect(note).toHaveTextContent(/target lines are only drawn in Purchasing power/)
   })
 
   it('previews without saving, and Progress and the saved rate stay where they were', async () => {
@@ -672,7 +672,7 @@ describe('GoalsTab', () => {
     await user.click(screen.getByRole('radio', { name: 'Nominal' }))
 
     expect(screen.getByLabelText('Preview inflation')).toHaveValue('4,0')
-    expect(screen.getByText(/Everything else in Goals uses the saved 4,0%/)).toBeInTheDocument()
+    expect(screen.getByText(/the rest of Goals uses the saved 4,0%/)).toBeInTheDocument()
   })
 
   it('opens Setup on the assumed inflation from the Nominal note, and only from there', async () => {
@@ -715,8 +715,8 @@ describe('GoalsTab', () => {
 
     stepPreviewUp()
     expect(screen.getByLabelText('Preview inflation')).toHaveValue('2,5')
-    expect(screen.getByText(/Everything else in Goals uses the saved 2,0%/)).toBeInTheDocument()
+    expect(screen.getByText(/the rest of Goals uses the saved 2,0%\./)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Open Setup' })).not.toBeInTheDocument()
-    expect(screen.queryByText(/To change it, set it in Setup/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/which you change in Setup/)).not.toBeInTheDocument()
   })
 })

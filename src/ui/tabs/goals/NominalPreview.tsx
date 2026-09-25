@@ -45,22 +45,19 @@ export function NominalPreview({ saved, preview, onPreview, onOpenSetup }: Props
         ) : null}
       </div>
       <p className={styles.chartHint}>
-        Nominal inflates the plan line and its band, so this is the plan in future euros. The
-        summary, the FI target and the milestones stay in today&apos;s money, so the target lines
-        are only drawn in Purchasing power.
-      </p>
-      <p className={styles.chartHint}>
-        The rate above only previews this chart and is not saved. Everything else in Goals uses the
-        saved {formatPercent(saved, format)}.
+        The summary, the FI target and the milestones stay in today&apos;s money, so the target lines
+        are only drawn in Purchasing power. The preview is not saved: the rest of Goals uses the
+        saved {formatPercent(saved, format)}
         {onOpenSetup ? (
           <>
-            {' '}
-            To change it, set it in Setup.{' '}
+            , which you change in Setup.{' '}
             <button type="button" className={styles.btnText} onClick={onOpenSetup}>
               Open Setup
             </button>
           </>
-        ) : null}
+        ) : (
+          '.'
+        )}
       </p>
     </>
   )
