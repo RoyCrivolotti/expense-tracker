@@ -6,6 +6,10 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 
 - **The plan as it stands from your latest check-in**, without re-baselining. A dotted line in the plan's colour on the portfolio projection from the check-in on, a "from today" row under the plan in the comparison and milestone tables (years counted from the check-in), a second date for each unreached milestone on Progress, and a second FI year on the dashboard card. The plan line and ahead/behind keep their baseline; this says what happens now from the balance actually there.
 
+## September 2026 (chart readout on a phone)
+
+- **A chart's tooltip is a panel above it on a phone**, always there: it reads the latest point until another is tapped, so a chart at the bottom of the screen no longer opens its tooltip below the fold and nothing scrolls. The panel is as tall as its tallest point, so the chart does not move while a finger slides along it. A point with a breakdown (the purchase year on the composition chart) shows it under the chart. The income and expense charts do the same; the category pie chart still shows its tooltip under the chart, and wide screens keep the tooltip at the pointer.
+
 ## September 2026 (comparison table and chart tooltips)
 
 - **The comparison table reads at a year.** The same 5Y, 10Y and 20Y windows as the hero chart, or each path's horizon as before; a path whose horizon is shorter says so in the cell. A loaded, unchanged scenario is listed once, as the chart draws it, and a long name runs to two lines with the full name on hover; the milestone table follows both.
