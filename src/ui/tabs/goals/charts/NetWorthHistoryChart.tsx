@@ -11,12 +11,13 @@ import {
   checkinInvestedCents,
   checkinNetWorthCents,
   hasDebtEntries,
+  shortDateLabel,
 } from '../../../../engine'
 import { todayIso } from '../../../components/transactionFormState'
 import { formatMoneyAxis, formatMoneyShort } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { useGoalsNarrow } from '../useGoalsNarrow'
-import { nearestScatterValue } from './checkinChartUtils'
+import { nearestScatter, readingLabel } from './checkinChartUtils'
 import {
   HISTORY_WINDOWS,
   defaultHistoryWindow,
@@ -94,15 +95,15 @@ export function NetWorthHistoryChart({ checkins, accounts }: Props) {
     // Five month labels run into each other on a phone; three fit.
     const axis = historyAxis(window, earliest, today, narrow ? 3 : 5)
     const placed = sorted
-      .map((c) => ({ x: xIndexFor(c.checkinDate, today, axis), c }))
+      .map((c) => ({ x: xIndexFor(c.checkinDate, today, axis), c, label: shortDateLabel(c.checkinDate) }))
       .filter(({ x }) => x >= 0 && x <= axis.steps)
-    const netWorth = placed.map(({ x, c }) => ({ xIndex: x, value: checkinNetWorthCents(c, accounts) }))
-    const invested = placed.map(({ x, c }) => ({ xIndex: x, value: checkinInvestedCents(c, accounts) }))
+    const netWorth = placed.map(({ x, c, label }) => ({ xIndex: x, value: checkinNetWorthCents(c, accounts), label }))
+    const invested = placed.map(({ x, c, label }) => ({ xIndex: x, value: checkinInvestedCents(c, accounts), label }))
     // With a mortgage logged, net worth drops by the loan the month the house is bought while
     // what is owned does not; the two lines apart is the honest picture. Without any debt they
     // would sit on top of each other, so the second stays away.
     const assets = hasDebtEntries(sorted, accounts)
-      ? placed.map(({ x, c }) => ({ xIndex: x, value: checkinAssetsCents(c, accounts) }))
+      ? placed.map(({ x, c, label }) => ({ xIndex: x, value: checkinAssetsCents(c, accounts), label }))
       : []
     // The chart lays its x axis out from a line series, so an unseen one carries the calendar.
     // It holds the nearest net worth at each step, which keeps the fitted y axis unchanged.
@@ -120,9 +121,13 @@ export function NetWorthHistoryChart({ checkins, accounts }: Props) {
         ['Assets', model.assets, ASSETS_COLOR],
         ['Invested', model.invested, INVESTED_COLOR],
       ]
+      // A step with no reading of its own names the nearest one by its date, rather than
+      // going blank as if nothing had been logged.
       for (const [label, points, color] of named) {
-        const value = nearestScatterValue(points, i)
-        if (value !== null) lines.push({ label, value: formatMoneyShort(value, format), color })
+        const reading = nearestScatter(points, i)
+        if (reading !== null) {
+          lines.push({ label: readingLabel(label, reading.on), value: formatMoneyShort(reading.value, format), color })
+        }
       }
       return { title: model.axis.titles[i] ?? String(i), lines }
     },

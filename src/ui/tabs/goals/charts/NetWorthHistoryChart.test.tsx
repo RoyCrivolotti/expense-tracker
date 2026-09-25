@@ -93,6 +93,20 @@ describe('NetWorthHistoryChart', () => {
     expect(screen.getAllByText('Invested')).toHaveLength(2)
   })
 
+  it('names the nearest reading by its date from a step that has none of its own', () => {
+    const checkins = [checkin(1, monthsAgo(11), 100_000_00, 20_000_00), checkin(2, monthsAgo(0), 125_000_00, 20_000_00)]
+    render(<NetWorthHistoryChart checkins={checkins} accounts={accounts} />)
+    // The middle of a one-year window is months from either reading.
+    fireEvent.keyDown(screen.getByRole('img'), { key: 'Home' })
+    fireEvent.keyDown(screen.getByRole('img'), { key: 'ArrowRight' })
+    fireEvent.keyDown(screen.getByRole('img'), { key: 'ArrowRight' })
+    fireEvent.keyDown(screen.getByRole('img'), { key: 'ArrowRight' })
+    fireEvent.keyDown(screen.getByRole('img'), { key: 'ArrowRight' })
+    const tooltip = screen.getByRole('tooltip')
+    expect(tooltip).toHaveTextContent(/Net worth, \d{1,2} \w{3} \d{4}/)
+    expect(tooltip).toHaveTextContent(/Invested, \d{1,2} \w{3} \d{4}/)
+  })
+
   it('adds an assets line once a debt is logged, so a mortgage does not read as a loss', () => {
     const withMortgage = [...accounts, { id: 3, name: 'Mortgage', kind: 'debt' as const, sortOrder: 2, archived: false }]
     const before = checkin(1, monthsAgo(3), 100_000_00, 50_000_00)

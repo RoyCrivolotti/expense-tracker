@@ -8,6 +8,8 @@ export interface ScatterPoint {
   /** Fractional year index — can be between integer indices. */
   xIndex: number
   value: number
+  /** The reading's own date, for a tooltip that names it from a step it does not sit on. */
+  label?: string
 }
 
 /** Value-space vertical band for a stacked area (lo <= hi). */
