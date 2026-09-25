@@ -39,20 +39,33 @@ function niceNum(range: number, round: boolean): number {
   return nice * 10 ** exp
 }
 
-/** Round a [min,max] range outward to readable tick boundaries. */
+/** How far past the data the axis may run, as a share of the data's own range. */
+const AXIS_MARGIN = 0.08
+
+/**
+ * Readable ticks over a [min,max] range. The step comes from the range itself, and the axis
+ * runs to the next gridline only when that is within a small margin of the data. Past it the
+ * axis stops at the data plus the margin, so a value just over a gridline does not leave a
+ * chart half empty above its lines.
+ */
 export function niceScale(
   min: number,
   max: number,
   count = 5,
 ): { min: number; max: number; ticks: number[] } {
   const hi = min === max ? min + 1 : max
-  const range = niceNum(hi - min, false)
-  const step = niceNum(range / Math.max(1, count - 1), true) || 1
+  const span = hi - min
+  const step = niceNum(span / Math.max(1, count - 1), true) || 1
   const niceMin = Math.floor(min / step) * step
   const niceMax = Math.ceil(hi / step) * step
+  const bottom = Math.max(niceMin, min - span * AXIS_MARGIN)
+  const top = Math.min(niceMax, hi + span * AXIS_MARGIN)
+  const slack = step * 1e-9
   const ticks: number[] = []
-  for (let v = niceMin; v <= niceMax + step / 2; v += step) ticks.push(Math.round(v))
-  return { min: niceMin, max: niceMax, ticks }
+  for (let i = 0, v = niceMin; v <= top + slack; i++, v = niceMin + i * step) {
+    if (v >= bottom - slack) ticks.push(Math.round(v))
+  }
+  return { min: bottom, max: top, ticks }
 }
 
 /**

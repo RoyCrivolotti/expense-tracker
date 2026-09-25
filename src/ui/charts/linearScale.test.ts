@@ -21,13 +21,42 @@ describe('niceScale', () => {
     expect(min).toBe(0)
     expect(max).toBeGreaterThanOrEqual(93)
     expect(ticks[0]).toBe(0)
-    expect(ticks[ticks.length - 1]).toBe(max)
+    expect(ticks.every((t) => t <= max)).toBe(true)
   })
 
   it('handles negative minimums', () => {
-    const { min, max } = niceScale(-40, 120)
+    const { min, max, ticks } = niceScale(-40, 120)
     expect(min).toBeLessThanOrEqual(-40)
     expect(max).toBeGreaterThanOrEqual(120)
+    expect(ticks).toContain(0)
+  })
+
+  it('stops at the data plus a small margin, not at the next gridline', () => {
+    // A peak just over a gridline used to get a whole extra step above it (2.05M under a 3M axis).
+    const { max, ticks } = niceScale(0, 2_050_000)
+    expect(max).toBeLessThan(2_050_000 * 1.09)
+    expect(ticks.every((t) => t <= max)).toBe(true)
+    // ...and still takes the gridline when it is close, so a round top stays round.
+    expect(niceScale(0, 2_950_000).max).toBe(3_000_000)
+  })
+
+  it('leaves at most the margin above the data, and readable ticks, across magnitudes', () => {
+    for (const power of [3, 4, 5, 6, 7, 8, 9]) {
+      for (let mantissa = 1; mantissa < 10; mantissa += 0.037) {
+        const peak = mantissa * 10 ** power
+        const { max, ticks } = niceScale(0, peak)
+        expect(max).toBeGreaterThanOrEqual(peak)
+        expect(max).toBeLessThanOrEqual(peak * 1.081)
+        expect(ticks.length).toBeGreaterThanOrEqual(3)
+        expect(ticks.length).toBeLessThanOrEqual(7)
+      }
+    }
+  })
+
+  it('keeps the margin below the data as well, when the data goes negative', () => {
+    const { min } = niceScale(-1_050_000, 1_000_000)
+    expect(min).toBeGreaterThan(-1_050_000 - 2_050_000 * 0.081)
+    expect(min).toBeLessThanOrEqual(-1_050_000)
   })
 })
 
