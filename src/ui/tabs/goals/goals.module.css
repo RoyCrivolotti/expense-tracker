@@ -889,10 +889,30 @@
   text-align: left;
   padding: 0.3rem 0.5rem 0.3rem 0;
   min-width: 5.5rem;
-  max-width: 8rem;
-  white-space: nowrap;
+  max-width: 9rem;
+}
+
+/* A name runs to two lines before it is cut: one line lost "(editing)" and the words that
+   tell two paths apart. The full name is in the title for the rest. */
+.milestoneScenarioNameRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.milestoneScenarioNameRow .swatch {
+  /* On the first line's middle, whether the name takes one line or two. */
+  margin-top: calc((1.25em - 8px) / 2);
+}
+
+.milestoneScenarioName {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
 }
 
 /* Scenario names stay readable while the milestone columns scroll under them.
