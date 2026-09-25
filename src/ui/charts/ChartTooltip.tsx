@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import styles from './charts.module.css'
 import { useDockedTooltip } from './useDockedTooltip'
@@ -73,16 +74,28 @@ function FloatingTooltip({ title, lines, anchor }: Props) {
   )
 }
 
+/**
+ * The docked tooltip is in the page flow under the chart, so for a chart at the bottom of
+ * the screen it opens below the fold. It scrolls into view by the least amount that shows
+ * it whole, which is nothing when it is already in view.
+ */
+function DockedTooltip({ title, lines }: Pick<Props, 'title' | 'lines'>) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    // Not every environment has it (jsdom does not).
+    ref.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
+  }, [])
+  return (
+    <div ref={ref} className={styles.tooltipDocked} role="tooltip">
+      <TooltipBody title={title} lines={lines} />
+    </div>
+  )
+}
+
 export function ChartTooltip({ title, lines, anchor }: Props) {
   const docked = useDockedTooltip()
 
-  if (docked) {
-    return (
-      <div className={styles.tooltipDocked} role="tooltip">
-        <TooltipBody title={title} lines={lines} />
-      </div>
-    )
-  }
+  if (docked) return <DockedTooltip title={title} lines={lines} />
 
   return <FloatingTooltip title={title} lines={lines} anchor={anchor} />
 }

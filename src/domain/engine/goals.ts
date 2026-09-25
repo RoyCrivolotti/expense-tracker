@@ -8,6 +8,19 @@ export function averageMonthlyCents(centsByMonth: number[]): number {
 }
 
 /**
+ * The middle month: what a typical month looks like once a one-off lump sum, which the
+ * mean carries for every month after it, is set aside. No threshold to pick, unlike
+ * dropping "outliers", and a lump sum is still in the mean, where it belongs. Zero for
+ * no months; the mean of the two middle months when their number is even.
+ */
+export function medianMonthlyCents(centsByMonth: number[]): number {
+  if (centsByMonth.length === 0) return 0
+  const sorted = [...centsByMonth].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  return sorted.length % 2 === 1 ? sorted[mid]! : Math.round((sorted[mid - 1]! + sorted[mid]!) / 2)
+}
+
+/**
  * One month of the two flows a plan cares about: what was left after expenses, and
  * what actually went into the portfolio. They differ by whatever stayed in the
  * current account, which is why the pace of a plan is judged on the second. Money taken

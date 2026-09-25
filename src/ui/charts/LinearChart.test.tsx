@@ -1,6 +1,7 @@
 import { fireEvent, render } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { LinearChart, type ChartSeries } from './LinearChart'
+import { nearestIndex } from './useChartFocus'
 
 function makeLine(id: string, values: number[]): ChartSeries {
   return { id, color: '#6366f1', values }
@@ -51,6 +52,18 @@ describe('LinearChart', () => {
     expect(onActiveIndexChange).toHaveBeenLastCalledWith(2)
     fireEvent.blur(svg)
     expect(onActiveIndexChange).toHaveBeenLastCalledWith(null)
+  })
+
+  it('picks the nearest step while a finger drags, and only within reach for a hover', () => {
+    const x = (i: number) => i * 100
+    // Hover: a point between two steps but further than the reach from both is nothing.
+    expect(nearestIndex(150, 3, x, 28)).toBeNull()
+    expect(nearestIndex(120, 3, x, 28)).toBe(1)
+    // Drag: the finger is still on the chart, so the nearest step stays lit.
+    expect(nearestIndex(150, 3, x)).toBe(1)
+    expect(nearestIndex(-500, 3, x)).toBe(0)
+    expect(nearestIndex(500, 3, x)).toBe(2)
+    expect(nearestIndex(0, 0, x)).toBeNull()
   })
 
   it('draws in a viewBox as wide as its container, in CSS pixels', () => {

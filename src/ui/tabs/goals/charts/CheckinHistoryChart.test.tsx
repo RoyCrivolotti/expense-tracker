@@ -1,7 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { CheckinHistoryChart } from './CheckinHistoryChart'
-import { nearestScatterValue, buildCheckinTooltip, realCheckinPoints } from './checkinChartUtils'
+import { nearestScatter,
+  nearestScatterValue, buildCheckinTooltip, realCheckinPoints } from './checkinChartUtils'
 import { makeScenario } from '../../../../testing/factories'
 import { EU_MONEY_FORMAT } from '../../../../engine/money'
 import type { WealthAccount, WealthCheckin } from '../../../../types'
@@ -162,10 +163,28 @@ describe('buildCheckinTooltip', () => {
     expect(result.lines[1]!.label).toBe('Actual')
   })
 
-  it('omits Actual line when no scatter point is nearby', () => {
-    const scatter = [{ xIndex: 5, value: 180_000 }]
+  it('names the nearest reading by its date when none sits at the step', () => {
+    const scatter = [{ xIndex: 5, value: 180_000, label: '11 Sep 2026' }]
     const result = buildCheckinTooltip(1, ['Year 0', 'Year 1'], [100_000, 200_000], scatter, format)
+    expect(result.lines).toHaveLength(2)
+    expect(result.lines[1]!.label).toBe('Actual, 11 Sep 2026')
+  })
+
+  it('omits the Actual line only when there is no reading at all', () => {
+    const result = buildCheckinTooltip(1, ['Year 0', 'Year 1'], [100_000, 200_000], [], format)
     expect(result.lines).toHaveLength(1)
+  })
+})
+
+describe('nearestScatter', () => {
+  it('is the step\'s own reading within half a step, and the nearest one, dated, beyond', () => {
+    const points = [
+      { xIndex: 2.3, value: 100, label: '3 Mar 2026' },
+      { xIndex: 5.1, value: 200, label: '1 Jun 2026' },
+    ]
+    expect(nearestScatter(points, 2)).toEqual({ value: 100, on: null })
+    expect(nearestScatter(points, 4)).toEqual({ value: 200, on: '1 Jun 2026' })
+    expect(nearestScatter([], 0)).toBeNull()
   })
 })
 
@@ -181,6 +200,11 @@ describe('realCheckinPoints', () => {
     // Not the raw balance: leaving it nominal would read as ahead of a plan it is exactly on.
     expect(points[0]!.value).not.toBe(104_040_00)
     expect(points[0]!.xIndex).toBeCloseTo(2, 1)
+  })
+
+  it('carries each check-in\'s date, for a tooltip read from a step it does not sit on', () => {
+    const points = realCheckinPoints([makeCheckin(1, '2027-01-01', 104_040_00)], accounts, '2025-01-01', 10, 1, DEFAULT_INFLATION_RATE)
+    expect(points[0]!.label).toBe('1 Jan 2027')
   })
 
   it('leaves out check-ins before the plan starts or past the window, and scales x by the step', () => {

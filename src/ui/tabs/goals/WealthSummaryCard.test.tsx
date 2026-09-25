@@ -85,6 +85,40 @@ describe('WealthSummaryCard', () => {
     expect(screen.getByText(/more than \d+ years ahead/)).toBeInTheDocument()
   })
 
+  it('reads the pace kept against the plan, naming a typical month when a lump sum skews the mean', () => {
+    const scenario = makeScenario({ name: 'Path A', planStartDate: '2025-01-01', monthlyContributionCents: 150_000 })
+    const accounts = [makeAccount(1)]
+    const checkins = [makeCheckin(1, '2025-06-01', [{ accountId: 1, valueCents: 10_000_000 }])]
+    const invest = (id: number, month: string, amountCents: number) =>
+      makeTransaction({ id, type: 'investment', budgetMonth: month, date: `${month}-10`, amountCents })
+    // Five months of 1,000 and one 50,000 sale of a flat: the mean says 9,166, a typical month 1,000.
+    const steady = [
+      invest(1, '2025-01', 100_000),
+      invest(2, '2025-02', 100_000),
+      invest(3, '2025-03', 100_000),
+      invest(4, '2025-04', 100_000),
+      invest(5, '2025-05', 100_000),
+    ]
+    const { rerender } = render(
+      <WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} transactions={steady} />,
+    )
+    const pace = () => screen.getByText(/a month it assumes/)
+    expect(pace()).toHaveTextContent(/Investing 1\.000,00 € a month on average over the 5 months since the plan started, against the 1\.500,00 € a month it assumes/)
+    expect(screen.queryByText(/typical month/)).not.toBeInTheDocument()
+    expect(screen.getByText(/1\.000,00 € a month$/)).toHaveStyle({ color: 'var(--exp-danger)' })
+
+    rerender(
+      <WealthSummaryCard
+        checkins={checkins}
+        accounts={accounts}
+        plan={scenario}
+        transactions={[...steady, invest(6, '2025-06', 5_000_000)]}
+      />,
+    )
+    expect(pace()).toHaveTextContent(/9\.166,67 € a month on average over the 6 months since the plan started, 1\.000,00 € in a typical month/)
+    expect(screen.getByText(/9\.166,67 € a month$/)).toHaveStyle({ color: 'var(--exp-success)' })
+  })
+
   it('reads the return "so far" under a year of check-ins', () => {
     const accounts = [makeAccount(1, 'investment')]
     const checkins = [

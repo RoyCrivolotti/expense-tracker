@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { ScenarioComparison } from './ScenarioComparison'
 import { comparisonRows } from './comparisonRows'
@@ -27,6 +27,26 @@ describe('comparisonRows', () => {
     expect(rows[0]!.fi).toMatch(/^(now|year \d+|not in horizon)$/)
   })
 
+  it('leaves the draft out when told it is a loaded scenario with no edits', () => {
+    const saved = makeScenario({ id: 1, name: 'Path A: Invest only' })
+    const { id: savedId, isActive: active, ...asDraft } = saved
+    void savedId
+    void active
+    const rows = comparisonRows([saved], asDraft, EU_MONEY_FORMAT, DEFAULT_INFLATION_RATE, false)
+    expect(rows.map((r) => r.name)).toEqual(['Path A'])
+  })
+
+  it('reads net worth and invested at a chosen year, or at a shorter horizon', () => {
+    const long = makeScenario({ id: 1, name: 'Long', horizonYears: 30, housePurchaseYear: null })
+    const short = makeScenario({ id: 2, name: 'Short', horizonYears: 8, housePurchaseYear: null })
+    const rows = comparisonRows([long, short], draft, EU_MONEY_FORMAT, DEFAULT_INFLATION_RATE, false, 10)
+    expect(rows.map((r) => r.atYear)).toEqual([10, 8])
+    // Year 10 of a growing plan is less than its year 30.
+    const atHorizon = comparisonRows([long], draft, EU_MONEY_FORMAT, DEFAULT_INFLATION_RATE, false)
+    expect(atHorizon[0]!.atYear).toBe(30)
+    expect(rows[0]!.invested).not.toBe(atHorizon[0]!.invested)
+  })
+
   it('says when FI is not reached within the horizon', () => {
     const rows = comparisonRows(
       [],
@@ -51,6 +71,19 @@ describe('ScenarioComparison', () => {
     expect(screen.getByText(/after 30 years/)).toBeInTheDocument()
   })
 
+  it('shows a loaded, unchanged scenario once, as the chart does', () => {
+    render(
+      <ScenarioComparison
+        scenarios={[makeScenario({ id: 1, name: 'Path A: Invest only' })]}
+        draft={draft}
+        includeDraft={false}
+      />,
+    )
+    // The header row and the one scenario: no "(editing)" twin of it.
+    expect(screen.getAllByRole('row')).toHaveLength(2)
+    expect(screen.queryByText(/\(editing\)/)).not.toBeInTheDocument()
+  })
+
   it('says the figures are in today\'s money, as the whole plan is', () => {
     render(<ScenarioComparison scenarios={[]} draft={draft} />)
     expect(screen.getByText(/in today's money/)).toBeInTheDocument()
@@ -67,6 +100,35 @@ describe('ScenarioComparison', () => {
     expect(screen.getAllByRole('row')).toHaveLength(4)
     expect(errors).not.toHaveBeenCalled()
     errors.mockRestore()
+  })
+
+  it('offers the hero chart\'s windows and reads the table at the chosen one', () => {
+    render(
+      <ScenarioComparison
+        scenarios={[makeScenario({ id: 1, name: 'Path A: Invest only', horizonYears: 30 })]}
+        draft={draft}
+      />,
+    )
+    const group = screen.getByRole('radiogroup', { name: 'Comparison year' })
+    expect(group).toHaveTextContent('5Y10Y20YHorizon')
+    expect(screen.getByRole('radio', { name: 'Horizon' })).toBeChecked()
+    expect(screen.getByText(/after 30 years/)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('radio', { name: '10Y' }))
+    expect(screen.getByText(/after 10 years/)).toBeInTheDocument()
+  })
+
+  it('marks a path whose horizon is shorter than the chosen year', () => {
+    render(
+      <ScenarioComparison
+        scenarios={[makeScenario({ id: 1, name: 'Short', horizonYears: 8 })]}
+        draft={{ ...draft, horizonYears: 30 }}
+      />,
+    )
+    fireEvent.click(screen.getByRole('radio', { name: '20Y' }))
+    expect(screen.getByText(/after 20 years, or at a path’s horizon when it is shorter/)).toBeInTheDocument()
+    expect(screen.getAllByText(/\(8y\)$/)).toHaveLength(2)
+    expect(screen.getAllByText(/\(20y\)$/)).toHaveLength(2)
   })
 
   it('marks each row with its own horizon when they differ', () => {

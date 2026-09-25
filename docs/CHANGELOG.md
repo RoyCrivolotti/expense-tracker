@@ -2,6 +2,13 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## September 2026 (comparison table and chart tooltips)
+
+- **The comparison table reads at a year.** The same 5Y, 10Y and 20Y windows as the hero chart, or each path's horizon as before; a path whose horizon is shorter says so in the cell. A loaded, unchanged scenario is listed once, as the chart draws it, and a long name runs to two lines with the full name on hover; the milestone table follows both.
+- **The Progress snapshot says what pace has been kept**: the monthly average invested since the plan started against the monthly figure the plan assumes, and a typical month beside it when a lump sum has pulled the average away from it.
+- **Hiding a scenario keeps its place in the legend** instead of dropping to the bottom.
+- **Chart tooltips.** A finger sliding along a chart keeps the nearest step lit instead of blinking out between steps; a scroll that starts outside the chart no longer closes the tooltip, only a tap does; on a phone the tooltip scrolls into view when a chart at the bottom of the screen opens it below the fold; and the Progress charts name the nearest reading, with its date, from a step that has none of its own.
+
 ## September 2026 (wealth follow-ups)
 
 - **The plan is in today's money, and Progress compares like with like.** The projection, the FI target, the milestones and the comparison table are real; a check-in is a balance in the money of its day, so on/off track, "Actual vs plan" and the measured return take the assumed inflation off it before setting it against the plan. That is one setting, 2% until you change it, in Setup beside the cash reserve target; every Goals view uses it. The hero chart opens on Purchasing power, and its Nominal view inflates the plan and its band at the same rate, and can preview another rate without saving it, with a note pointing to Setup for changing it for real; the FI and milestone lines are only drawn in today's money.

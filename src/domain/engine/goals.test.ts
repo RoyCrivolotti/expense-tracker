@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { averageMonthlyCents, monthlyFlows, monthsSincePlanStart, type MonthlyFlow } from './goals'
+import { averageMonthlyCents, medianMonthlyCents, monthlyFlows, monthsSincePlanStart, type MonthlyFlow } from './goals'
 import type { MonthlyTotals } from './monthlyTotals'
 
 function totals(month: string, netSavingCents: number, investmentsCents: number): MonthlyTotals {
@@ -29,6 +29,24 @@ describe('averageMonthlyCents', () => {
   it('rounds the mean across months', () => {
     expect(averageMonthlyCents([100000, 200000, 300000])).toBe(200000)
     expect(averageMonthlyCents([100001, 100002])).toBe(100002)
+  })
+})
+
+describe('medianMonthlyCents', () => {
+  it('returns zero for an empty month list', () => {
+    expect(medianMonthlyCents([])).toBe(0)
+  })
+
+  it('sets a one-off lump sum aside, which the mean cannot', () => {
+    // Eleven months of 1,000 and one of 50,000: the mean says 5,083 a month, the median 1,000.
+    const months = [...Array.from({ length: 11 }, () => 100_000), 5_000_000]
+    expect(averageMonthlyCents(months)).toBe(508_333)
+    expect(medianMonthlyCents(months)).toBe(100_000)
+  })
+
+  it('takes the middle month, or the mean of the two middle ones', () => {
+    expect(medianMonthlyCents([300, 100, 200])).toBe(200)
+    expect(medianMonthlyCents([100, 400, 200, 300])).toBe(250)
   })
 })
 

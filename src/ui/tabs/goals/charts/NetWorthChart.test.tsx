@@ -206,6 +206,26 @@ describe('NetWorthChart', () => {
     expect(screen.queryByRole('button', { name: /\(editing\) on chart/ })).not.toBeInTheDocument()
   })
 
+  it('keeps a hidden scenario in its place in the legend', () => {
+    const a = makeScenario({ id: 1, name: 'Path A' })
+    const b = makeScenario({ id: 2, name: 'Path B' })
+    const c = makeScenario({ id: 3, name: 'Path C' })
+    render(
+      <NetWorthChart
+        milestones={milestones}
+        scenarios={[a, b, c]}
+        hiddenIds={new Set([1])}
+        onToggleVisible={vi.fn()}
+        draft={defaultDraft}
+        activeId={null}
+        variant="hero"
+      />,
+    )
+    const rows = screen.getAllByRole('button', { name: /on chart$/ }).map((el) => el.getAttribute('aria-label'))
+    // Hidden or not, A stays first; hiding it must not shuffle B and C up a row.
+    expect(rows).toEqual(['Show Path A on chart', 'Hide Path B on chart', 'Hide Path C on chart'])
+  })
+
   it('renders without crashing with default props', () => {
     const { container } = render(
       <NetWorthChart

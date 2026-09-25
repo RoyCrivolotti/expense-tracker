@@ -1,12 +1,19 @@
 import type { GoalScenario, Transaction, WealthAccount, WealthCheckin } from '../../../types'
 import type { CashReserve, PortfolioReturn, SteadyGap, TrackStatus } from '../../../engine'
+import { useMemo } from 'react'
 import { Card } from '../../components/primitives'
 import {
+  averageMonthlyCents,
   cashReserve,
   checkinInvestedCents,
   checkinNetWorthCents,
+  computeMonthlyTotals,
+  formatCents,
   formatPercent,
   latestCheckin,
+  medianMonthlyCents,
+  monthlyFlows,
+  monthsSincePlanStart,
   portfolioReturn,
   steadyGap,
   trackStatus,
@@ -32,6 +39,44 @@ interface Props {
   cashReserveMonths?: number
   /** The budget month still under way, left out of the spending average. */
   openBudgetMonth?: string | undefined
+}
+
+/**
+ * The pace kept since the plan began, against the monthly figure it assumes. The mean is
+ * the pace; a typical month is named beside it when a one-off lump sum has pulled the
+ * mean away from what most months look like, so the two are not confused for each other.
+ */
+function PaceHint({
+  plan,
+  transactions,
+  format,
+}: {
+  plan: GoalScenario
+  transactions: Transaction[]
+  format: MoneyFormat
+}) {
+  const months = useMemo(
+    () => monthsSincePlanStart(monthlyFlows(computeMonthlyTotals(transactions)), plan.planStartDate),
+    [transactions, plan.planStartDate],
+  )
+  if (months.length === 0 || plan.monthlyContributionCents <= 0) return null
+  const invested = months.map((m) => m.investedCents)
+  const mean = averageMonthlyCents(invested)
+  const median = medianMonthlyCents(invested)
+  const onPace = mean >= plan.monthlyContributionCents
+  // A tenth apart is a lump sum or a pause, not rounding.
+  const typical = Math.abs(mean - median) > mean * 0.1 ? median : null
+  return (
+    <p style={hintStyle}>
+      Investing{' '}
+      <strong style={{ color: onPace ? 'var(--exp-success)' : 'var(--exp-danger)' }}>
+        {formatCents(mean, format)} a month
+      </strong>{' '}
+      on average over the {months.length} month{months.length === 1 ? '' : 's'} since the plan started
+      {typical !== null ? `, ${formatCents(typical, format)} in a typical month` : ''}, against the{' '}
+      {formatCents(plan.monthlyContributionCents, format)} a month it assumes.
+    </p>
+  )
 }
 
 /** Cash as months of spending, against the target when there is one. */
@@ -227,6 +272,7 @@ function SnapshotHints({
   return (
     <>
       {status && status.deltaMonths !== 0 ? <MonthsHint status={status} /> : null}
+      {plan ? <PaceHint plan={plan} transactions={transactions} format={format} /> : null}
       {ret ? <ReturnHint ret={ret} plan={plan} format={format} inflationRate={inflationRate} /> : null}
       {reserve ? <CashReserveHint reserve={reserve} format={format} /> : null}
       {stale ? <SteadyGapHint gap={stale} format={format} onRebaseline={onRebaseline} /> : null}
