@@ -1,5 +1,4 @@
 import type { ChartSeries } from '../../../charts/LinearChart'
-import { DEFAULT_INFLATION_RATE } from '../../../../engine'
 
 function factor(yearOffset: number, inflationRate: number): number {
   return Math.pow(1 + inflationRate, yearOffset)
@@ -46,17 +45,16 @@ export function deflatePoints(series: ChartSeries[], inflationRate: number): Cha
  * to it; the nominal view inflates the plan instead and leaves the dots as they are. The
  * Y-axis floor covers both so toggling does not rescale the chart.
  *
- * `inflationRate` is the view's own what-if and only inflates the plan and its band. The
- * dots are deflated at the assumed rate every other comparison uses (the on-track line,
- * "Where you are today", Actual vs plan), so moving the stepper cannot make the chart
- * disagree with the status written beside it.
+ * `inflationRate` is the owner's assumed inflation, and the only one: it inflates the plan
+ * and its band in the nominal view and deflates the dots in the other, the same rate every
+ * other comparison with actuals uses, so the chart cannot disagree with the status beside it.
  */
 export function computeChartDisplayData(
   series: ChartSeries[],
   extraSeries: ChartSeries[],
   years: number[],
   nominalMode: boolean,
-  inflationRate: number = DEFAULT_INFLATION_RATE,
+  inflationRate: number,
   band: ChartSeries | null = null,
 ): {
   displaySeries: ChartSeries[]
@@ -70,7 +68,7 @@ export function computeChartDisplayData(
   const displayBand = band && nominalMode ? (inflateSeries([band], years, inflationRate)[0] ?? null) : band
   return {
     displaySeries: nominalMode ? nominalSeries : series,
-    displayExtraSeries: nominalMode ? extraSeries : deflatePoints(extraSeries, DEFAULT_INFLATION_RATE),
+    displayExtraSeries: nominalMode ? extraSeries : deflatePoints(extraSeries, inflationRate),
     displayBand,
     yDomainMax: values.length > 0 ? Math.max(...values) : undefined,
   }

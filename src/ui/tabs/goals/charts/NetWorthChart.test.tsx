@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { NetWorthChart } from './NetWorthChart'
+import { AssumedInflationContext } from '../../../hooks/assumedInflationContext'
 import { computeChartDisplayData, deflatePoints, inflateSeries } from './nominalTransform'
 import { makeScenario } from '../../../../testing/factories'
 import { defaultMilestones } from '../../../../engine'
@@ -309,19 +310,26 @@ describe('NetWorthChart', () => {
     expect(cy(false)).toBeGreaterThan(cy(true))
   })
 
-  it('renders without crashing with a custom inflationRate in the nominal view', () => {
-    const { container } = render(
-      <NetWorthChart
-        milestones={milestones}
-        scenarios={[defaultDraft]}
-        draft={defaultDraft}
-        activeId={defaultDraft.id}
-        variant="hero"
-        nominalMode
-        inflationRate={0.05}
-      />,
-    )
-    expect(container.querySelector('svg')).not.toBeNull()
+  it('draws the nominal view at the owner\'s assumed inflation', () => {
+    // The chart has no rate of its own: the same plan is drawn higher at a higher inflation.
+    const top = (rate: number) => {
+      const { container, unmount } = render(
+        <AssumedInflationContext.Provider value={rate}>
+          <NetWorthChart
+            milestones={milestones}
+            scenarios={[defaultDraft]}
+            draft={defaultDraft}
+            activeId={defaultDraft.id}
+            variant="hero"
+            nominalMode
+          />
+        </AssumedInflationContext.Provider>,
+      )
+      const labels = [...container.querySelectorAll('text')].map((t) => t.textContent ?? '')
+      unmount()
+      return labels.join('|')
+    }
+    expect(top(0.06)).not.toBe(top(0.02))
   })
 
   it('renders uncertainty band path on hero variant', () => {
@@ -492,16 +500,21 @@ describe('computeChartDisplayData', () => {
   const plan: ChartSeries = { id: 'plan', color: '#6366f1', values: [100_000_00, 110_000_00, 120_000_00, 130_000_00] }
   const dot: ChartSeries = { id: 'actuals', color: '#10b981', values: [], kind: 'scatter', points: [{ xIndex: 2, value: 104_040_00 }] }
 
-  it('deflates the dots at the assumed rate whatever the view is set to', () => {
-    const at = (rate: number) => computeChartDisplayData([plan], [dot], years, false, rate).displayExtraSeries[0]!.points![0]!.value
-    // The stepper is a what-if for the nominal view; the dots must agree with the status line.
-    expect(at(0.08)).toBe(at(0.02))
-    expect(at(0.08)).toBe(Math.round(104_040_00 / 1.02 ** 2))
+  it('deflates the dots and inflates the plan by the one rate it is given', () => {
+    const rate = 0.05
+    // Today's money: the dots come back by the rate, the plan is left as it is.
+    const real = computeChartDisplayData([plan], [dot], years, false, rate)
+    expect(real.displayExtraSeries[0]!.points![0]!.value).toBe(Math.round(104_040_00 / 1.05 ** 2))
+    expect(real.displaySeries[0]!.values).toEqual(plan.values)
+    // Nominal: the plan goes up by the same rate and the dots, already nominal, stay.
+    const nominal = computeChartDisplayData([plan], [dot], years, true, rate)
+    expect(nominal.displaySeries[0]!.values[2]).toBe(Math.round(120_000_00 * 1.05 ** 2))
+    expect(nominal.displayExtraSeries[0]!.points![0]!.value).toBe(104_040_00)
   })
 
-  it('inflates the plan at the view\'s own rate and leaves the dots as they are in the nominal view', () => {
-    const view = computeChartDisplayData([plan], [dot], years, true, 0.05)
-    expect(view.displaySeries[0]!.values[2]).toBe(Math.round(120_000_00 * 1.05 ** 2))
-    expect(view.displayExtraSeries[0]!.points![0]!.value).toBe(104_040_00)
+  it('has no rate of its own to fall back on', () => {
+    // A different rate moves both, so nothing in the chart is fixed at 2%.
+    const at = (rate: number) => computeChartDisplayData([plan], [dot], years, false, rate).displayExtraSeries[0]!.points![0]!.value
+    expect(at(0.08)).toBeLessThan(at(0.02))
   })
 })

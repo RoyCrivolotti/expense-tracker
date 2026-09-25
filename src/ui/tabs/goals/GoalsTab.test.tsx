@@ -552,36 +552,46 @@ describe('GoalsTab', () => {
     expect(mini()).not.toBeInTheDocument()
   })
 
-  it('shows the inflation stepper only in the nominal view', async () => {
+  it('has one inflation setting, under the view switcher on every view, and none in the chart', async () => {
     const user = userEvent.setup()
-    render(<GoalsTab model={makeModel()} />)
+    render(<GoalsTab model={makeModel()} actions={makeActions()} />)
 
-    // Today's money is the default; inflation only matters once the plan is inflated.
+    for (const view of ['Plan', 'Progress', 'Setup']) {
+      await user.click(screen.getByRole('radio', { name: view }))
+      expect(screen.getAllByLabelText('Assumed inflation')).toHaveLength(1)
+    }
+
+    // The chart's Nominal view reads that setting rather than carrying a stepper of its own.
+    await user.click(screen.getByRole('radio', { name: 'Plan' }))
     expect(screen.getByRole('radio', { name: 'Purchasing power' })).toBeChecked()
-    expect(screen.queryByLabelText('Inflation rate percentage')).not.toBeInTheDocument()
-
     await user.click(screen.getByRole('radio', { name: 'Nominal' }))
-
-    expect(screen.getByText('Inflation in this view')).toBeInTheDocument()
-    expect(screen.getByLabelText('Inflation rate percentage')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Inflation rate percentage')).not.toBeInTheDocument()
+    expect(screen.queryByText('Inflation in this view')).not.toBeInTheDocument()
+    expect(screen.getAllByLabelText('Assumed inflation')).toHaveLength(1)
     // What stays in today's money is said beside the toggle, not left to be inferred.
-    expect(screen.getByText(/stay in today's money, so the target lines are only drawn in Purchasing power/)).toBeInTheDocument()
+    expect(screen.getByText(/at the assumed inflation set at the top of this tab/)).toBeInTheDocument()
+    expect(screen.getByText(/target lines are only drawn in Purchasing power/)).toBeInTheDocument()
 
     await user.click(screen.getByRole('radio', { name: 'Purchasing power' }))
     expect(screen.queryByText(/target lines are only drawn in Purchasing power/)).not.toBeInTheDocument()
   })
 
-  it('adjusts the inflation rate via the stepper in the nominal view', async () => {
-    const user = userEvent.setup()
-    render(<GoalsTab model={makeModel()} />)
-
-    await user.click(screen.getByRole('radio', { name: 'Nominal' }))
-    const input = screen.getByLabelText('Inflation rate percentage')
+  it('saves the assumed inflation as a setting when it is changed', () => {
+    const actions = makeActions()
+    render(<GoalsTab model={makeModel()} actions={actions} />)
+    const input = screen.getByLabelText('Assumed inflation')
     expect(input).toHaveValue('2,0')
 
     fireEvent.change(input, { target: { value: '3' } })
     fireEvent.blur(input)
 
-    expect(screen.getByLabelText('Inflation rate percentage')).toHaveValue('3,0')
+    expect(actions.updateSettings).toHaveBeenCalledWith({ assumedInflation: 0.03 })
+  })
+
+  it('shows the assumed inflation but cannot change it in a read-only session', () => {
+    render(<GoalsTab model={makeModel()} />)
+    expect(screen.queryByLabelText('Assumed inflation')).not.toBeInTheDocument()
+    expect(screen.getByText('Assumed inflation')).toBeInTheDocument()
+    expect(screen.getByText('2,0%')).toBeInTheDocument()
   })
 })

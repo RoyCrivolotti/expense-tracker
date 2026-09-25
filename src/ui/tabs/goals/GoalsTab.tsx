@@ -4,7 +4,6 @@ import type { ExpenseActions } from '../../actions'
 import type { GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import {
-  DEFAULT_INFLATION_RATE,
   averageMonthlyCents,
   computeMonthlyTotals,
   defaultBudgetMonth,
@@ -23,13 +22,13 @@ import type { InvestedSnapshot } from './checkinDate'
 import type { ChartSeries } from '../../charts/LinearChart'
 import { Card, SectionTitle } from '../../components/primitives'
 import { SegmentedControl } from '../../components/SegmentedControl'
-import { PercentStepper } from '../../components/PercentStepper'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { failureMessage } from '../../hooks/useFailureToast'
 import { useToast } from '../../hooks/useToast'
 import { Presence } from '../../components/Presence'
 import { EXIT_MS } from '../../hooks/motion'
 import { GoalControls } from './GoalControls'
+import { InflationSetting } from './InflationSetting'
 import { ScenarioManager } from './ScenarioManager'
 import { GoalsExplainer } from './GoalsExplainer'
 import { GoalsNarrative } from './GoalsNarrative'
@@ -219,9 +218,6 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     setView(next)
   }, [])
   const [displayMode, setDisplayMode] = useState<DisplayMode>('purchasing-power')
-  // Single configurable rate rather than year-by-year inputs — a reasonable
-  // simplification for a multi-decade projection. Resets on reload; display-only.
-  const [nominalInflation, setNominalInflation] = useState(DEFAULT_INFLATION_RATE)
   // Mobile-only: swaps the chart block for the controls form in place, in lieu
   // of a separate route. Ignored on desktop, where both are always visible.
   const [mobilePlanView, setMobilePlanView] = useState<MobilePlanView>('chart')
@@ -438,6 +434,11 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
         />
       </div>
 
+      <InflationSetting
+        value={dataset.settings.assumedInflation}
+        onChange={actions ? (patch) => actions.updateSettings(patch) : undefined}
+      />
+
       {view === 'setup' ? (
         <SetupView
           accounts={dataset.wealthAccounts}
@@ -563,29 +564,16 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
                     />
                   </div>
                   {displayMode === 'nominal' ? (
-                    <>
-                      <div className={progressStyles.inflationRow}>
-                        <span className={progressStyles.inflationLabel}>Inflation in this view</span>
-                        <PercentStepper
-                          value={nominalInflation}
-                          onChange={setNominalInflation}
-                          min={0}
-                          max={0.1}
-                          ariaLabel="Inflation rate percentage"
-                        />
-                      </div>
-                      <p className={styles.chartHint}>
-                        Nominal inflates the plan line and its band at this rate. The summary above, the FI
-                        target and the milestones stay in today&apos;s money, so the target lines are only
-                        drawn in Purchasing power.
-                      </p>
-                    </>
+                    <p className={styles.chartHint}>
+                      Nominal inflates the plan line and its band at the assumed inflation set at the top of
+                      this tab. The summary, the FI target and the milestones stay in today&apos;s money, so
+                      the target lines are only drawn in Purchasing power.
+                    </p>
                   ) : null}
                 </>
               }
               extraSeries={checkinExtraSeries ? [checkinExtraSeries] : []}
               nominalMode={displayMode === 'nominal'}
-              inflationRate={nominalInflation}
               {...(heroTodayIndex !== undefined ? { todayIndex: heroTodayIndex } : {})}
             />
           </div>

@@ -16,7 +16,7 @@ const buildTerms = (cur: string): { term: string; body: string }[] => [
   },
   {
     term: 'Real return',
-    body: "The yearly growth the plan assumes for the invested portfolio after inflation, so every projected figure, the FI target and the milestones are in today's money. Check-ins are broker balances in the money of their day, and Progress deflates them before comparing. The chart's Nominal view does the reverse and inflates the projection at the rate you set.",
+    body: "The yearly growth the plan assumes for the invested portfolio after inflation, so every projected figure, the FI target and the milestones are in today's money. Check-ins are broker balances in the money of their day, and Progress deflates them before comparing, at the assumed inflation set under the view switcher. The chart's Nominal view does the reverse and inflates the projection at that same rate.",
   },
   {
     term: 'Horizon (years)',

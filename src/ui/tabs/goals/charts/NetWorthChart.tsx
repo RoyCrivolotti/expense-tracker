@@ -334,7 +334,6 @@ function NetWorthChartImpl({
   extraSeries = [],
   todayIndex,
   nominalMode = false,
-  inflationRate,
   milestones,
   hiddenIds,
   onToggleVisible,
@@ -348,7 +347,6 @@ function NetWorthChartImpl({
   extraSeries?: ChartSeries[]
   todayIndex?: number
   nominalMode?: boolean
-  inflationRate?: number
   milestones: Milestone[]
   /** Saved scenarios left off the chart; the legend lists them dimmed and can bring them back. */
   hiddenIds?: ReadonlySet<number> | undefined
@@ -384,8 +382,8 @@ function NetWorthChartImpl({
   // Locks the Y-axis to the larger of the real/nominal maxima so toggling display
   // mode moves the lines on a fixed scale instead of rescaling the whole chart.
   const { displaySeries, displayExtraSeries, displayBand, yDomainMax } = useMemo(
-    () => computeChartDisplayData(series, extra, years, nominalMode, inflationRate, band),
-    [series, extra, years, nominalMode, inflationRate, band],
+    () => computeChartDisplayData(series, extra, years, nominalMode, assumedInflation, band),
+    [series, extra, years, nominalMode, assumedInflation, band],
   )
 
   const refLines = useRefLines(milestones, yDomainMax, useFiTarget(isHero, draft), windowYears !== null, nominalMode)
