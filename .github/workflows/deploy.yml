@@ -7,7 +7,10 @@ on:
 
 concurrency:
   group: expense-tracker-deploy
-  cancel-in-progress: true
+  # Queue rather than cancel. A run cancelled part way through the migration step would leave
+  # dev migrated and production not, while a deploy that waits its turn only ships a little
+  # later, and the newest queued run is the one that goes.
+  cancel-in-progress: false
 
 env:
   CLOUDFLARE_ACCOUNT_ID: '800abdfb2ec1687266f66fd349c41d6a'
@@ -30,6 +33,15 @@ jobs:
 
       - run: npm ci
       - run: npm run verify
+
+      # Before the deploy, so the code that ships finds its columns. Each file is recorded in
+      # the import that applies it, and one that would break the release still running is
+      # refused; see "Migrations" in docs/DEPLOYMENT.md. Either way the deploy below does not
+      # run, and the site stays on the last release.
+      - name: Apply migrations (dev, then production)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: node scripts/migrate.mjs all --yes
 
       - name: Sync access env (owner)
         env:
