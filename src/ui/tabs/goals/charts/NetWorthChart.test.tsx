@@ -333,7 +333,7 @@ describe('NetWorthChart', () => {
   })
 
   it('previews the nominal view at another rate, and only there', () => {
-    const labels = (nominalMode: boolean, viewInflation?: number) => {
+    const drawing = (nominalMode: boolean, viewInflation?: number) => {
       const { container, unmount } = render(
         <NetWorthChart
           milestones={milestones}
@@ -346,15 +346,18 @@ describe('NetWorthChart', () => {
         />,
       )
       const text = [...container.querySelectorAll('text')].map((t) => t.textContent ?? '').join('|')
+      const paths = [...container.querySelectorAll('path')].map((p) => p.getAttribute('d') ?? '').join('|')
       unmount()
-      return text
+      return { text, paths }
     }
-    // The saved rate is 2%. Nominal at a previewed 6% draws the plan higher...
-    expect(labels(true, 0.06)).not.toBe(labels(true))
-    // ...and is the same as the saved rate being 6%, since only the inflating changes.
-    expect(labels(true, 0.02)).toBe(labels(true))
+    // The saved rate is 2%. A previewed 6% draws the plan higher, and the chart grows its axis to fit it.
+    expect(drawing(true, 0.06).paths).not.toBe(drawing(true).paths)
+    expect(drawing(true, 0.06).text).not.toBe(drawing(true).text)
+    // A lower preview draws the plan lower against the same axis, so the labels do not move.
+    expect(drawing(true, 0.0).paths).not.toBe(drawing(true).paths)
+    expect(drawing(true, 0.0).text).toBe(drawing(true).text)
     // In Today's money the plan is not inflated, so a rate left over from a preview does nothing.
-    expect(labels(false, 0.06)).toBe(labels(false))
+    expect(drawing(false, 0.06)).toEqual(drawing(false))
   })
 
   it('renders uncertainty band path on hero variant', () => {
@@ -535,6 +538,19 @@ describe('computeChartDisplayData', () => {
     const nominal = computeChartDisplayData([plan], [dot], years, true, rate)
     expect(nominal.displaySeries[0]!.values[2]).toBe(Math.round(120_000_00 * 1.05 ** 2))
     expect(nominal.displayExtraSeries[0]!.points![0]!.value).toBe(104_040_00)
+  })
+
+  it('draws a previewed rate but keeps the axis floor at the saved rate\'s, and the dots as they are', () => {
+    const saved = computeChartDisplayData([plan], [dot], years, true, 0.02)
+    const preview = computeChartDisplayData([plan], [dot], years, true, 0.02, null, 0.06)
+
+    expect(preview.displaySeries[0]!.values[3]).toBe(Math.round(130_000_00 * 1.06 ** 3))
+    expect(preview.displaySeries[0]!.values).not.toEqual(saved.displaySeries[0]!.values)
+    // The scale holds still whatever is previewed; the chart grows it only if a line no longer fits.
+    expect(preview.yDomainMax).toBe(saved.yDomainMax)
+    expect(preview.displayExtraSeries[0]!.points![0]!.value).toBe(104_040_00)
+    // A preview rate equal to the saved one is not a change.
+    expect(computeChartDisplayData([plan], [dot], years, true, 0.02, null, 0.02)).toEqual(saved)
   })
 
   it('has no rate of its own to fall back on', () => {

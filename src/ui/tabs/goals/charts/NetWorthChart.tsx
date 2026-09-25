@@ -201,14 +201,6 @@ function useHeroWindow(isHero: boolean, horizonYears: number) {
   return { heroWindow, setHeroWindow, heroWindows, windowYears: isHero ? chosen : null }
 }
 
-/**
- * What the drawing is inflated (or, outside the Nominal view, deflated) by: the saved rate,
- * unless the Nominal view is showing a preview.
- */
-function nominalRate(nominalMode: boolean, preview: number | null | undefined, saved: number): number {
-  return nominalMode && preview != null ? preview : saved
-}
-
 /** The draft's uncertainty band, hero only. */
 function useBandSeries(isHero: boolean, draft: NewGoalScenario, inflationRate: number): ChartSeries | null {
   return useMemo(() => {
@@ -358,8 +350,9 @@ function NetWorthChartImpl({
   nominalMode?: boolean
   /**
    * The rate the Nominal view inflates the plan by while it is being previewed. It changes
-   * only that drawing: the projection, the check-in dots and everything beside the chart
-   * stay at the saved assumed inflation, and it has no effect outside the Nominal view.
+   * only that drawing: the projection, the check-in dots, the Y-axis floor and everything
+   * beside the chart stay at the saved assumed inflation, and it has no effect outside the
+   * Nominal view.
    */
   viewInflation?: number | null | undefined
   milestones: Milestone[]
@@ -396,10 +389,9 @@ function NetWorthChartImpl({
 
   // Locks the Y-axis to the larger of the real/nominal maxima so toggling display
   // mode moves the lines on a fixed scale instead of rescaling the whole chart.
-  const displayInflation = nominalRate(nominalMode, viewInflation, assumedInflation)
   const { displaySeries, displayExtraSeries, displayBand, yDomainMax } = useMemo(
-    () => computeChartDisplayData(series, extra, years, nominalMode, displayInflation, band),
-    [series, extra, years, nominalMode, displayInflation, band],
+    () => computeChartDisplayData(series, extra, years, nominalMode, assumedInflation, band, viewInflation),
+    [series, extra, years, nominalMode, assumedInflation, band, viewInflation],
   )
 
   const refLines = useRefLines(milestones, yDomainMax, useFiTarget(isHero, draft), windowYears !== null, nominalMode)

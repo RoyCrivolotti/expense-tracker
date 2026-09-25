@@ -41,13 +41,35 @@ export function deflatePoints(series: ChartSeries[], inflationRate: number): Cha
 }
 
 /**
+ * What the saved rate's Nominal view would have drawn for the band, while a preview is up.
+ * The band runs above the line, so it is what sets the axis there; without it in the floor
+ * the axis would follow the preview instead of holding still.
+ */
+function previewAxisBand(
+  band: ChartSeries | null,
+  nominalMode: boolean,
+  viewInflation: number | null,
+  years: number[],
+  inflationRate: number,
+): number[] {
+  if (!band || !nominalMode || viewInflation === null) return []
+  return inflateSeries([band], years, inflationRate)[0]?.band?.hi ?? []
+}
+
+/**
  * The plan is real, so the default view is today's money with the check-in dots deflated
  * to it; the nominal view inflates the plan instead and leaves the dots as they are. The
  * Y-axis floor covers both so toggling does not rescale the chart.
  *
- * `inflationRate` is the owner's assumed inflation, and the only one: it inflates the plan
- * and its band in the nominal view and deflates the dots in the other, the same rate every
- * other comparison with actuals uses, so the chart cannot disagree with the status beside it.
+ * `inflationRate` is the owner's assumed inflation: it inflates the plan and its band in the
+ * nominal view and deflates the dots in the other, the same rate every other comparison with
+ * actuals uses, so the chart cannot disagree with the status beside it.
+ *
+ * `viewInflation` is a preview of the nominal view under another rate. It changes what is
+ * drawn there and nothing else. The axis floor is the one the saved rate gives that view,
+ * band included, so stepping the preview moves the plan against a scale that holds still.
+ * The chart itself grows the axis when a drawn line no longer fits, which it does rather
+ * than clip.
  */
 export function computeChartDisplayData(
   series: ChartSeries[],
@@ -56,6 +78,7 @@ export function computeChartDisplayData(
   nominalMode: boolean,
   inflationRate: number,
   band: ChartSeries | null = null,
+  viewInflation: number | null = null,
 ): {
   displaySeries: ChartSeries[]
   displayExtraSeries: ChartSeries[]
@@ -63,11 +86,15 @@ export function computeChartDisplayData(
   yDomainMax: number | undefined
 } {
   const nominalSeries = inflateSeries(series, years, inflationRate)
-  const values = [...series, ...nominalSeries].flatMap((s) => s.values)
+  const values = [...series, ...nominalSeries]
+    .flatMap((s) => s.values)
+    .concat(previewAxisBand(band, nominalMode, viewInflation, years, inflationRate))
+  const drawnRate = viewInflation ?? inflationRate
+  const drawnSeries = drawnRate === inflationRate ? nominalSeries : inflateSeries(series, years, drawnRate)
   // The band is the line's own spread, so it goes up with the line or it bounds nothing.
-  const displayBand = band && nominalMode ? (inflateSeries([band], years, inflationRate)[0] ?? null) : band
+  const displayBand = band && nominalMode ? (inflateSeries([band], years, drawnRate)[0] ?? null) : band
   return {
-    displaySeries: nominalMode ? nominalSeries : series,
+    displaySeries: nominalMode ? drawnSeries : series,
     displayExtraSeries: nominalMode ? extraSeries : deflatePoints(extraSeries, inflationRate),
     displayBand,
     yDomainMax: values.length > 0 ? Math.max(...values) : undefined,
