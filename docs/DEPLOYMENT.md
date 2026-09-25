@@ -85,9 +85,10 @@ If Workers Scripts Edit is missing, CI deploy of the backup cron worker fails un
 
 ```bash
 npx wrangler d1 execute roy-expenses --remote --file=migrations/NNNN_name.sql
+npx wrangler d1 execute roy-expenses --remote --command="INSERT OR IGNORE INTO _migrations (name) VALUES ('NNNN_name')"
 ```
 
-Apply through `0026_investment_category.sql` on production.
+Apply through `0027_assumed_inflation.sql` on production, and record each file in `_migrations` as you go, by its name without `.sql`. `npm run migrate:dev` records for the dev database itself; nothing does for production. The app never reads the table, so a missing row breaks nothing until someone trusts the record, which is how the drift described below happened.
 
 **Check what a database actually has before trusting this line.** It has been wrong: on
 2026-09-15 production turned out to have no `_migrations` table at all, `0020` never having
