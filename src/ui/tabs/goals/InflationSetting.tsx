@@ -26,12 +26,16 @@ interface Props {
 export function InflationSetting({ value, onChange }: Props) {
   const [draft, setDraft] = useState(value)
   const [error, setError] = useState<string | null>(null)
+  // True from the first step until the last one has landed. The saved value arriving in the
+  // middle of that is an earlier step, and taking it would pull the stepper back to it for a
+  // round trip before the newer one it is waiting on replaces it.
+  const [busy, setBusy] = useState(false)
   // A value saved from elsewhere replaces the draft; tracked in render rather than in an
   // effect so the stepper never shows the old value for a frame.
   const [seen, setSeen] = useState(value)
   if (seen !== value) {
     setSeen(value)
-    setDraft(value)
+    if (!busy) setDraft(value)
   }
 
   // What the save handlers need without being recreated on every render.
@@ -49,6 +53,7 @@ export function InflationSetting({ value, onChange }: Props) {
   // Sends `first`, then whatever was clicked while it was in flight, until nothing newer is left.
   const save = useCallback(async (first: number) => {
     inFlight.current = true
+    setBusy(true)
     let next: number | null = first
     try {
       while (next !== null) {
@@ -65,6 +70,7 @@ export function InflationSetting({ value, onChange }: Props) {
       setError(failureMessage(e))
     } finally {
       inFlight.current = false
+      setBusy(false)
     }
   }, [])
 

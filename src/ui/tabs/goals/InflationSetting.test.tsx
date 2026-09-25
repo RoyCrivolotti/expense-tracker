@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { useState } from 'react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { InflationSetting } from './InflationSetting'
 
 /** A save the test settles by hand, to have several steps arrive while one is in flight. */
@@ -16,6 +17,8 @@ function deferred() {
 const input = () => screen.getByLabelText<HTMLInputElement>('Assumed inflation')
 
 describe('InflationSetting', () => {
+  afterEach(() => vi.useRealTimers())
+
   it('shows the saved rate and saves a typed one as a setting', () => {
     const onChange = vi.fn().mockResolvedValue(undefined)
     render(<InflationSetting value={0.02} onChange={onChange} />)
@@ -60,6 +63,44 @@ describe('InflationSetting', () => {
 
     expect(onChange).toHaveBeenCalledTimes(2)
     expect(onChange).toHaveBeenLastCalledWith({ assumedInflation: 0.035 })
+  })
+
+  it('does not step back to an earlier value while a newer one waits to be sent', async () => {
+    vi.useFakeTimers()
+    const sent: number[] = []
+    // A parent like the app: a save takes 100 ms, and when it lands the saved value changes.
+    function Parent() {
+      const [saved, setSaved] = useState(0.02)
+      const onChange = (patch: { assumedInflation?: number }) =>
+        new Promise<void>((resolve) => {
+          setTimeout(() => {
+            sent.push(patch.assumedInflation ?? saved)
+            setSaved(patch.assumedInflation ?? saved)
+            resolve()
+          }, 100)
+        })
+      return <InflationSetting value={saved} onChange={onChange} />
+    }
+    render(<Parent />)
+    const up = () => fireEvent.click(screen.getByRole('button', { name: 'Increase percentage' }))
+
+    up()
+    up()
+    up()
+    expect(input()).toHaveValue('3,5')
+
+    // The first save lands while two more steps wait behind it: the field keeps the newest.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(101)
+    })
+    expect(sent).toEqual([0.025])
+    expect(input()).toHaveValue('3,5')
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(101)
+    })
+    expect(sent).toEqual([0.025, 0.035])
+    expect(input()).toHaveValue('3,5')
   })
 
   it('holds the range: past ten percent is ten, and below zero is zero', async () => {
