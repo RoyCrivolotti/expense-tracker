@@ -3,7 +3,7 @@ import type { ExpenseModel } from '../useExpenseData'
 import { computeMonthlyTotals } from '../../engine'
 import { formatCents } from '../../engine/money'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
-import { chartMax, innerSize, PAD, yAt } from './chartLayout'
+import { chartAxis, innerSize, PAD, yAt } from './chartLayout'
 import { YtdLineChartView } from './YtdLineChartView'
 import { useChartFocus } from './useChartFocus'
 import styles from './charts.module.css'
@@ -36,7 +36,7 @@ export function YtdIncomeExpenseChart({ model, month }: Props) {
   const months = model.months.filter((m) => m.startsWith(`${year}-`) && m <= month)
   const points = useMemo(() => cumulativeYtdPoints(model, months), [model, months])
   const { w: innerW, h: innerH } = innerSize()
-  const maxVal = chartMax(points.flatMap((p) => [p.cumIncome, p.cumExpense]))
+  const { max: maxVal, ticks } = chartAxis(points.flatMap((p) => [p.cumIncome, p.cumExpense]))
   const coords = useCallback(
     (idx: number, val: number) => ({
       x: PAD.left + (idx / Math.max(1, points.length - 1)) * innerW,
@@ -70,6 +70,7 @@ export function YtdIncomeExpenseChart({ model, month }: Props) {
       <YtdLineChartView
         points={points}
         maxVal={maxVal}
+        ticks={ticks}
         innerH={innerH}
         active={active}
         focusX={active != null ? coords(active, 0).x : 0}

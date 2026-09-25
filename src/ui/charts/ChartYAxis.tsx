@@ -1,16 +1,16 @@
 import { formatCentsCompact } from '../../engine/money'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
-import { CHART_W, PAD, yAt, yTickValues } from './chartLayout'
+import { CHART_W, PAD, yAt } from './chartLayout'
 import styles from './charts.module.css'
 
 interface Props {
   maxVal: number
+  ticks: number[]
   innerH: number
 }
 
-export function ChartYAxis({ maxVal, innerH }: Props) {
+export function ChartYAxis({ maxVal, ticks, innerH }: Props) {
   const format = useMoneyFormat()
-  const ticks = yTickValues(maxVal)
   const x0 = PAD.left
   const x1 = CHART_W - PAD.right
   const baseline = PAD.top + innerH

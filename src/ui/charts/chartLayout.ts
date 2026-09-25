@@ -1,3 +1,5 @@
+import { niceScale } from './linearScale'
+
 export const CHART_W = 360
 export const CHART_H = 200
 export const PAD = { top: 18, right: 16, bottom: 34, left: 60 } as const
@@ -8,21 +10,14 @@ export function monthLabel(ym: string): string {
   return names[Number(m) - 1] ?? ym
 }
 
-/** Round up to a readable axis maximum. */
-export function chartMax(values: number[]): number {
-  const peak = Math.max(1, ...values)
-  const mag = 10 ** Math.floor(Math.log10(peak))
-  const norm = peak / mag
-  const nice = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10
-  return nice * mag
-}
-
-export function yTickValues(maxVal: number, count = 5): number[] {
-  const ticks: number[] = []
-  for (let i = 0; i < count; i++) {
-    ticks.push(Math.round((maxVal * i) / (count - 1)))
-  }
-  return ticks
+/**
+ * A zero-based axis over the values: its top, and the gridlines under it. The top stays close
+ * to the data (see `niceScale`), so the bars are not squeezed into the lower half of a chart
+ * whose ceiling is the next power-of-ten step.
+ */
+export function chartAxis(values: number[]): { max: number; ticks: number[] } {
+  const { max, ticks } = niceScale(0, Math.max(1, ...values))
+  return { max, ticks: [...new Set(ticks)] }
 }
 
 export function innerSize() {

@@ -17,6 +17,7 @@ export interface YtdPoint {
 interface Props {
   points: YtdPoint[]
   maxVal: number
+  ticks: number[]
   innerH: number
   active: number | null
   focusX: number
@@ -28,6 +29,7 @@ interface Props {
 export function YtdLineChartView({
   points,
   maxVal,
+  ticks,
   innerH,
   active,
   focusX,
@@ -51,7 +53,7 @@ export function YtdLineChartView({
         aria-label="Cumulative year-to-date income and expenses"
         {...pointerHandlers}
       >
-        <ChartYAxis maxVal={maxVal} innerH={innerH} />
+        <ChartYAxis maxVal={maxVal} ticks={ticks} innerH={innerH} />
         <path d={line('cumIncome')} className={styles.lineIncome} fill="none" strokeWidth={2.5} />
         <path d={line('cumExpense')} className={styles.lineExpense} fill="none" strokeWidth={2.5} />
         {points.map((p, i) => (

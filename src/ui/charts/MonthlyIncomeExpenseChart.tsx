@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
 import { computeMonthlyTotals } from '../../engine'
-import { chartMax, innerSize, PAD } from './chartLayout'
+import { chartAxis, innerSize, PAD } from './chartLayout'
 import { MonthlyBarChartView } from './MonthlyBarChartView'
 import { useChartFocus } from './useChartFocus'
 import styles from './charts.module.css'
@@ -29,7 +29,7 @@ export function MonthlyIncomeExpenseChart({ model }: Props) {
   const { w: innerW, h: innerH } = innerSize()
   const groupW = innerW / Math.max(1, rows.length)
   const barW = Math.min(16, groupW / 3)
-  const maxVal = chartMax(rows.flatMap((r) => [r.income, r.expenses]))
+  const { max: maxVal, ticks } = chartAxis(rows.flatMap((r) => [r.income, r.expenses]))
   const xForIndex = useCallback((i: number) => PAD.left + i * groupW + groupW / 2, [groupW])
   const containerRef = useRef<HTMLElement>(null)
   const { active, ...pointerHandlers } = useChartFocus(rows.length, xForIndex, containerRef)
@@ -42,6 +42,7 @@ export function MonthlyIncomeExpenseChart({ model }: Props) {
       <MonthlyBarChartView
         rows={rows}
         maxVal={maxVal}
+        ticks={ticks}
         innerH={innerH}
         barW={barW}
         active={active}

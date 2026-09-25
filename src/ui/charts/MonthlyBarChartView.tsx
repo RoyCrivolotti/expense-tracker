@@ -17,6 +17,7 @@ export interface BarRow {
 interface Props {
   rows: BarRow[]
   maxVal: number
+  ticks: number[]
   innerH: number
   barW: number
   active: number | null
@@ -28,6 +29,7 @@ interface Props {
 export function MonthlyBarChartView({
   rows,
   maxVal,
+  ticks,
   innerH,
   barW,
   active,
@@ -51,7 +53,7 @@ export function MonthlyBarChartView({
         aria-label="Bar chart of monthly income and expenses"
         {...pointerHandlers}
       >
-        <ChartYAxis maxVal={maxVal} innerH={innerH} />
+        <ChartYAxis maxVal={maxVal} ticks={ticks} innerH={innerH} />
         {rows.map((r, i) => {
           const x0 = xForIndex(i)
           const incH = (r.income / maxVal) * innerH
