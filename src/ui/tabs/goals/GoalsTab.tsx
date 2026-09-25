@@ -12,6 +12,7 @@ import {
   latestCheckin,
   milestonesReached,
   monthlyFlows,
+  planFromToday,
   rebaseline,
   rebaselineSummary,
   type MoneyFormat,
@@ -254,6 +255,10 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     () => monthlyFlows(computeMonthlyTotals(dataset.transactions)),
     [dataset.transactions],
   )
+  const plan = useMemo(() => activePlan(dataset.goalScenarios), [dataset.goalScenarios])
+  // The plan as it stands from the latest check-in: derived, never saved, and null until
+  // there is a dated plan and a check-in to restart it from.
+  const fromToday = useMemo(() => planFromToday(plan, latestSnapshot), [plan, latestSnapshot])
   // Seeds a new draft's monthly contribution: what has actually gone into the
   // portfolio, not what was left over after expenses.
   const avgSaving = useMemo(
@@ -290,8 +295,6 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     () => dataset.goalScenarios.find((s) => s.id === activeId) ?? null,
     [dataset.goalScenarios, activeId],
   )
-  const plan = useMemo(() => activePlan(dataset.goalScenarios), [dataset.goalScenarios])
-
   const dirty = useMemo(
     () => activeScenario !== null && differsFrom(draft, activeScenario),
     [activeScenario, draft],
@@ -482,6 +485,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
           cashReserveMonths={dataset.settings.cashReserveMonths}
           openBudgetMonth={defaultBudgetMonth(todayIso(), dataset.settings.budgetRolloverDay)}
           onRebaseline={onRebaseline}
+          fromToday={fromToday}
         />
         </>
       ) : null}
@@ -586,6 +590,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
                 </>
               }
               extraSeries={checkinExtraSeries ? [checkinExtraSeries] : []}
+              fromToday={fromToday}
               nominalMode={displayMode === 'nominal'}
               viewInflation={previewInflation}
               {...(heroTodayIndex !== undefined ? { todayIndex: heroTodayIndex } : {})}
@@ -600,6 +605,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
               reached={reachedMilestones}
               activeId={activeId}
               dirty={dirty}
+              fromToday={fromToday}
             />
           </div>
         </div>

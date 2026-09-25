@@ -71,6 +71,20 @@ function previewAxisBand(
  * The chart itself grows the axis when a drawn line no longer fits, which it does rather
  * than clip.
  */
+/** A projection given as points is real like the lines: the nominal view inflates each by its own year. */
+export function inflatePoints(series: ChartSeries[], inflationRate: number): ChartSeries[] {
+  return series.map((s) =>
+    s.points
+      ? { ...s, points: s.points.map((p) => ({ ...p, value: Math.round(p.value * factor(p.xIndex, inflationRate)) })) }
+      : s,
+  )
+}
+
+/** Real point series as drawn: inflated with the lines in the nominal view, untouched otherwise. */
+function drawnRealPoints(realPoints: ChartSeries[], nominalMode: boolean, rate: number): ChartSeries[] {
+  return nominalMode ? inflatePoints(realPoints, rate) : realPoints
+}
+
 export function computeChartDisplayData(
   series: ChartSeries[],
   extraSeries: ChartSeries[],
@@ -79,9 +93,12 @@ export function computeChartDisplayData(
   inflationRate: number,
   band: ChartSeries | null = null,
   viewInflation: number | null = null,
+  /** Real projections drawn as points (the plan from today): inflated with the lines, never deflated. */
+  realPoints: ChartSeries[] = [],
 ): {
   displaySeries: ChartSeries[]
   displayExtraSeries: ChartSeries[]
+  displayRealPoints: ChartSeries[]
   displayBand: ChartSeries | null
   yDomainMax: number | undefined
 } {
@@ -96,6 +113,7 @@ export function computeChartDisplayData(
   return {
     displaySeries: nominalMode ? drawnSeries : series,
     displayExtraSeries: nominalMode ? extraSeries : deflatePoints(extraSeries, inflationRate),
+    displayRealPoints: drawnRealPoints(realPoints, nominalMode, drawnRate),
     displayBand,
     yDomainMax: values.length > 0 ? Math.max(...values) : undefined,
   }

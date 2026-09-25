@@ -4,6 +4,8 @@ import {
   averageMonthlyCents,
   computeMonthlyTotals,
   latestCheckin,
+  checkinInvestedCents,
+  planFromToday,
   monthlyFlows,
   monthsSincePlanStart,
   trackStatus,
@@ -81,9 +83,16 @@ export function GoalsCard({ dataset, onOpenGoals, onLogCheckin }: GoalsCardProps
     const since = monthsSincePlanStart(flows, scenario?.planStartDate ?? null)
     return averageMonthlyCents(since.map((m) => m.investedCents))
   }, [dataset.transactions, scenario])
+  const fromToday = useMemo(() => {
+    const latest = latestCheckin(dataset.wealthCheckins)
+    return planFromToday(
+      scenario,
+      latest ? { investedCents: checkinInvestedCents(latest, dataset.wealthAccounts), date: latest.checkinDate } : null,
+    )
+  }, [scenario, dataset.wealthCheckins, dataset.wealthAccounts])
   const headline = useMemo(
-    () => (scenario ? scenarioHeadline(scenario, inflationRate, avgInvesting, format) : null),
-    [scenario, inflationRate, avgInvesting, format],
+    () => (scenario ? scenarioHeadline(scenario, inflationRate, avgInvesting, format, fromToday) : null),
+    [scenario, inflationRate, avgInvesting, format, fromToday],
   )
 
   const track = useMemo(() => {

@@ -1,6 +1,7 @@
 import { memo, useMemo } from 'react'
 import { useAssumedInflation } from '../../..//hooks/assumedInflationContext'
 import type { GoalScenario, Milestone } from '../../../../types'
+import type { PlanFromToday } from '../../../../engine'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import {
   milestoneName,
@@ -47,9 +48,16 @@ function buildRows(
   milestones: Milestone[],
   inflationRate: number,
   includeDraft: boolean,
+  fromToday: PlanFromToday | null,
 ): Row[] {
   const all = [
-    ...scenarios.map((s) => ({ id: String(s.id), name: shortName(s.name), color: s.color, params: scenarioToParams(s, inflationRate) })),
+    ...scenarios.flatMap((s) => [
+      { id: String(s.id), name: shortName(s.name), color: s.color, params: scenarioToParams(s, inflationRate) },
+      // The plan from the latest check-in, under the plan: its years count from the check-in.
+      ...(fromToday && s.id === fromToday.scenario.id
+        ? [{ id: 'from-today', name: `${shortName(s.name)}, from today`, color: s.color, params: scenarioToParams(fromToday.scenario, inflationRate) }]
+        : []),
+    ]),
     // Only when the draft is a line of its own: a loaded scenario with no edits is drawn as
     // the draft on the chart, and a row for both would be the same plan twice.
     ...(includeDraft
@@ -125,6 +133,7 @@ function MilestoneMatrixImpl({
   milestones,
   reached,
   includeDraft = true,
+  fromToday = null,
   embedded = false,
 }: {
   scenarios: GoalScenario[]
@@ -134,12 +143,14 @@ function MilestoneMatrixImpl({
   reached: Map<number, string>
   /** False when the draft is a loaded scenario with no edits, which already has its row. */
   includeDraft?: boolean
+  /** The plan restarted from the latest check-in, listed under the plan. */
+  fromToday?: PlanFromToday | null | undefined
   embedded?: boolean
 }) {
   const inflationRate = useAssumedInflation()
   const rows = useMemo(
-    () => buildRows(scenarios, draft, milestones, inflationRate, includeDraft),
-    [scenarios, draft, milestones, inflationRate, includeDraft],
+    () => buildRows(scenarios, draft, milestones, inflationRate, includeDraft, fromToday),
+    [scenarios, draft, milestones, inflationRate, includeDraft, fromToday],
   )
 
   return (
@@ -147,6 +158,7 @@ function MilestoneMatrixImpl({
       <h3 className={styles.chartTitle}>Years to milestone</h3>
       <p className={styles.chartHint}>
         Invested portfolio only. Edit the list under Settings → Milestones.
+        {fromToday ? ' "From today" counts years from your latest check-in.' : ''}
       </p>
       {milestones.length === 0 ? (
         <p className={styles.chartHint}>No milestones set.</p>

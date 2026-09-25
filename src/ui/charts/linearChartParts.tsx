@@ -180,6 +180,8 @@ export function ChartScatterLayer({
   xForIndex,
   scaleY,
   connect = false,
+  dashed = false,
+  dots = true,
 }: {
   color: string
   points: ScatterPoint[]
@@ -187,6 +189,9 @@ export function ChartScatterLayer({
   scaleY: (v: number) => number
   /** Join the points in x order, so a series of readings shows how it moved. */
   connect?: boolean
+  dashed?: boolean
+  /** Off for a projection given as points: the joining line is the drawing, not the points. */
+  dots?: boolean
 }) {
   const ordered = connect ? [...points].sort((a, b) => a.xIndex - b.xIndex) : []
   return (
@@ -198,11 +203,12 @@ export function ChartScatterLayer({
             .join(' ')}
           fill="none"
           strokeWidth={2}
+          strokeDasharray={dashed ? '2 4' : undefined}
           style={{ stroke: color }}
           className={styles.scatterLine}
         />
       ) : null}
-      {points.map((p, i) => (
+      {(dots ? points : []).map((p, i) => (
         <circle
           key={i}
           cx={xForIndex(p.xIndex)}

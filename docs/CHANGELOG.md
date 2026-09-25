@@ -2,6 +2,10 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## September 2026 (the plan from today)
+
+- **The plan as it stands from your latest check-in**, without re-baselining. A dotted line in the plan's colour on the portfolio projection from the check-in on, a "from today" row under the plan in the comparison and milestone tables (years counted from the check-in), a second date for each unreached milestone on Progress, and a second FI year on the dashboard card. The plan line and ahead/behind keep their baseline; this says what happens now from the balance actually there.
+
 ## September 2026 (comparison table and chart tooltips)
 
 - **The comparison table reads at a year.** The same 5Y, 10Y and 20Y windows as the hero chart, or each path's horizon as before; a path whose horizon is shorter says so in the cell. A loaded, unchanged scenario is listed once, as the chart draws it, and a long name runs to two lines with the full name on hover; the milestone table follows both.

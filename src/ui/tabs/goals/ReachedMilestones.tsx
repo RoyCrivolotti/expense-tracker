@@ -1,5 +1,12 @@
 import type { GoalScenario, Milestone, WealthCheckin } from '../../../types'
-import { formatCents, milestoneLabelWithAmount, milestoneStanding, type MilestoneStanding } from '../../../engine'
+import {
+  formatCents,
+  milestoneCrossingDate,
+  milestoneLabelWithAmount,
+  milestoneStanding,
+  type MilestoneStanding,
+  type PlanFromToday,
+} from '../../../engine'
 import { Card } from '../../components/primitives'
 import { useAssumedInflation } from '../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
@@ -14,6 +21,24 @@ interface Props {
   plan?: GoalScenario | null
   /** The newest check-in: the evidence an unreached milestone is judged overdue by. */
   latestCheckin?: WealthCheckin | null
+  /** The plan restarted from that check-in, which dates an unreached milestone from where you are. */
+  fromToday?: PlanFromToday | null | undefined
+}
+
+/**
+ * Where the plan crosses the milestone counted from the latest check-in. The plan's own
+ * date says whether the plan was right; this says when to expect it now, which is the
+ * question once you are ahead or behind.
+ */
+function fromTodayText(
+  milestone: Milestone,
+  standing: MilestoneStanding,
+  fromToday: PlanFromToday | null | undefined,
+  inflationRate: number,
+): string {
+  if (!fromToday || standing.kind === 'reached' || standing.kind === 'unknown') return ''
+  const date = milestoneCrossingDate(fromToday.scenario, milestone.amountCents, inflationRate)
+  return date ? `; from today, ${formatCheckinDate(date)}` : '; from today, not within the horizon'
 }
 
 /** Words for where a milestone stands, and a mark for the chip. */
@@ -58,12 +83,25 @@ function describe(standing: MilestoneStanding): { mark: string; text: string; to
  * Every milestone with where it stands: reached by a check-in, or dated by the plan and set
  * against its target. Without a datable plan only the reached ones are worth a line.
  */
-export function ReachedMilestones({ milestones, reached, plan = null, latestCheckin = null }: Props) {
+export function ReachedMilestones({
+  milestones,
+  reached,
+  plan = null,
+  latestCheckin = null,
+  fromToday = null,
+}: Props) {
   const format = useMoneyFormat()
   const inflationRate = useAssumedInflation()
   const asOf = latestCheckin?.checkinDate ?? null
   const rows = milestones
-    .map((m) => ({ m, standing: describe(milestoneStanding(m, plan, reached.get(m.amountCents), inflationRate, asOf)) }))
+    .map((m) => {
+      const standing = milestoneStanding(m, plan, reached.get(m.amountCents), inflationRate, asOf)
+      const described = describe(standing)
+      return {
+        m,
+        standing: described ? { ...described, text: described.text + fromTodayText(m, standing, fromToday, inflationRate) } : null,
+      }
+    })
     .filter((r): r is { m: Milestone; standing: NonNullable<ReturnType<typeof describe>> } => r.standing !== null)
   if (rows.length === 0) return null
   const allReached = rows.every((r) => r.standing.mark === '✓')

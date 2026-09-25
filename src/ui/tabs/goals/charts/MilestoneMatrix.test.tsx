@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { MilestoneMatrix } from './MilestoneMatrix'
 import { makeScenario } from '../../../../testing/factories'
+import { planFromToday } from '../../../../engine'
 import { defaultMilestones } from '../../../../engine'
 
 const draft = makeScenario()
@@ -115,6 +116,22 @@ describe('MilestoneMatrix', () => {
     )
     expect(screen.queryByText(/\(editing\)/)).toBeNull()
     expect(screen.getAllByRole('row')).toHaveLength(3)
+  })
+
+  it('lists the plan from today under the plan', () => {
+    const plan = makeScenario({ id: 2, name: 'Aggressive', planStartDate: '2024-01-01', isActive: true })
+    render(
+      <MilestoneMatrix
+        scenarios={[draft, plan]}
+        draft={draft}
+        milestones={[{ amountCents: 10_000_000, label: '' }]}
+        reached={noneReached}
+        fromToday={planFromToday(plan, { investedCents: 1, date: '2026-01-01' })}
+      />,
+    )
+    const names = screen.getAllByRole('row').slice(1).map((r) => r.querySelector('td')?.textContent)
+    expect(names).toEqual(['Scenario', 'Aggressive', 'Aggressive, from today', 'Scenario (editing)'])
+    expect(screen.getByText(/counts years from your latest check-in/)).toBeInTheDocument()
   })
 
   it('marks a reached milestone with the month it was first observed', () => {

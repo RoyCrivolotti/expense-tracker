@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { ReachedMilestones } from './ReachedMilestones'
 import { makeScenario, makeWealthCheckin } from '../../../testing/factories'
+import { planFromToday } from '../../../engine'
 
 const milestones = [
   { amountCents: 10_000_000, label: 'House deposit' },
@@ -31,6 +32,34 @@ describe('ReachedMilestones', () => {
     expect(screen.getByText(/House deposit \(.*\)/)).toBeTruthy()
     expect(screen.getByText(/^by .*2026$/)).toBeTruthy()
     expect(screen.queryByText(/Coast FI/)).toBeNull()
+  })
+
+  it('dates an unreached milestone from today as well, which is the date that moves with check-ins', () => {
+    const plan = makeScenario({
+      id: 1,
+      isActive: true,
+      planStartDate: '2026-01-01',
+      startInvestedCents: 9_000_000,
+      monthlyContributionCents: 100_000,
+      expectedRealReturn: 0.05,
+      horizonYears: 10,
+      housePurchaseYear: null,
+    })
+    // Ahead of plan a year in: the crossing from today comes sooner than the plan said.
+    const latest = makeWealthCheckin({ id: 1, checkinDate: '2027-01-01', entries: [{ accountId: 1, valueCents: 10_800_000 }] })
+    render(
+      <ReachedMilestones
+        milestones={[{ amountCents: 11_000_000, label: 'Soon' }, { amountCents: 900_000_000, label: 'Far' }]}
+        reached={new Map()}
+        plan={plan}
+        latestCheckin={latest}
+        fromToday={planFromToday(plan, { investedCents: 10_800_000, date: '2027-01-01' })}
+      />,
+    )
+    const soon = screen.getByText(/^expected .*; from today, .*$/)
+    const [planned, fromToday] = soon.textContent.replace('expected ', '').split('; from today, ')
+    expect(new Date(fromToday!).getTime()).toBeLessThan(new Date(planned!).getTime())
+    expect(screen.getByText(/not within the horizon; from today, not within the horizon/)).toBeInTheDocument()
   })
 
   it('dates the unreached ones by the plan and sets them against their targets', () => {

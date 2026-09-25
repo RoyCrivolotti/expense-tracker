@@ -1,7 +1,7 @@
 import { memo, useCallback, useMemo, useState, type ReactNode } from 'react'
 import type { GoalScenario, Milestone } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import type { ProjectionParams } from '../../../../engine'
+import type { PlanFromToday, ProjectionParams } from '../../../../engine'
 import { projectNetWorth, projectNetWorthBand, purchaseYearBreakdown, scenarioToParams } from '../../../../engine'
 import { Card } from '../../../components/primitives'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
@@ -22,6 +22,7 @@ import {
 } from './ScenarioSeriesLegend'
 import styles from '../goals.module.css'
 import { computeChartDisplayData } from './nominalTransform'
+import { pointSeriesValueAt } from './checkinChartUtils'
 
 interface ScenarioLine {
   id: string
@@ -203,6 +204,48 @@ function useHeroWindow(isHero: boolean, horizonYears: number) {
   return { heroWindow, setHeroWindow, heroWindows, windowYears: isHero ? chosen : null }
 }
 
+/**
+ * The plan from the latest check-in, hero only: the same assumptions projected from the
+ * balance actually there, drawn from the check-in's place on the plan's axis as a dotted
+ * line in the plan's colour, so ahead or behind can be read on into the future rather than
+ * only as a gap today.
+ */
+function useFromTodaySeries(
+  isHero: boolean,
+  fromToday: PlanFromToday | null | undefined,
+  inflationRate: number,
+  windowYears: number | null,
+  extentYears: number,
+): ChartSeries | null {
+  return useMemo(() => {
+    if (!isHero || !fromToday) return null
+    const limit = windowYears ?? extentYears
+    const points = projectNetWorth(scenarioToParams(fromToday.scenario, inflationRate))
+      .map((p) => ({ xIndex: fromToday.offsetYears + p.year, value: p.investedCents }))
+      .filter((p) => p.xIndex <= limit)
+    if (points.length < 2) return null
+    return {
+      id: 'from-today',
+      color: fromToday.scenario.color,
+      values: [],
+      kind: 'scatter',
+      points,
+      connect: true,
+      dashed: true,
+      dots: false,
+    }
+  }, [isHero, fromToday, inflationRate, windowYears, extentYears])
+}
+
+/** The from-today line as drawn, with the legend label it goes under. */
+function fromTodayDrawing(
+  realPoints: ChartSeries[],
+  fromToday: PlanFromToday | null | undefined,
+): { line: ChartSeries | null; label: string } {
+  const line = realPoints[0] ?? null
+  return { line, label: fromToday ? `${fromToday.scenario.name}, from today` : '' }
+}
+
 /** The draft's uncertainty band, hero only. */
 function useBandSeries(isHero: boolean, draft: NewGoalScenario, inflationRate: number): ChartSeries | null {
   return useMemo(() => {
@@ -340,6 +383,7 @@ function NetWorthChartImpl({
   milestones,
   hiddenIds,
   onToggleVisible,
+  fromToday,
 }: {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
@@ -350,6 +394,8 @@ function NetWorthChartImpl({
   extraSeries?: ChartSeries[]
   todayIndex?: number
   nominalMode?: boolean
+  /** The plan restarted from the latest check-in, drawn dotted from the check-in on. */
+  fromToday?: PlanFromToday | null | undefined
   /**
    * The rate the Nominal view inflates the plan by while it is being previewed. It changes
    * only that drawing: the projection, the check-in dots, the Y-axis floor and everything
@@ -381,16 +427,28 @@ function NetWorthChartImpl({
   const { heroWindow, setHeroWindow, heroWindows, windowYears } = useHeroWindow(isHero, extentYears)
   const names = full.names
   const bandSeries = useBandSeries(isHero, draft, assumedInflation)
+  const fromTodaySeries = useFromTodaySeries(isHero, fromToday, assumedInflation, windowYears, extentYears)
   const { years, series, band, extra } = useWindowedSeries(full, bandSeries, extraSeries, windowYears)
   const markerYears = useMemo(() => purchaseMarkerIndices(lines, years), [lines, years])
   const labels = useMemo(() => sparseLabels(years, 5), [years])
 
   // Locks the Y-axis to the larger of the real/nominal maxima so toggling display
   // mode moves the lines on a fixed scale instead of rescaling the whole chart.
-  const { displaySeries, displayExtraSeries, displayBand, yDomainMax } = useMemo(
-    () => computeChartDisplayData(series, extra, years, nominalMode, assumedInflation, band, viewInflation),
-    [series, extra, years, nominalMode, assumedInflation, band, viewInflation],
+  const { displaySeries, displayExtraSeries, displayRealPoints, displayBand, yDomainMax } = useMemo(
+    () =>
+      computeChartDisplayData(
+        series,
+        extra,
+        years,
+        nominalMode,
+        assumedInflation,
+        band,
+        viewInflation,
+        fromTodaySeries ? [fromTodaySeries] : [],
+      ),
+    [series, extra, years, nominalMode, assumedInflation, band, viewInflation, fromTodaySeries],
   )
+  const { line: fromTodayLine, label: fromTodayLabel } = fromTodayDrawing(displayRealPoints, fromToday)
 
   const refLines = useRefLines(milestones, yDomainMax, useFiTarget(isHero, draft), windowYears !== null, nominalMode)
   const staticLegend: LegendItem[] = useMemo(
@@ -415,10 +473,20 @@ function NetWorthChartImpl({
         value: formatMoneyShort(s.values[i] ?? 0, format),
         tone: 'neutral',
       }))
+      const fromTodayValue = fromTodayLine ? pointSeriesValueAt(fromTodayLine.points ?? [], year) : null
+      if (fromTodayValue !== null) {
+        tooltipLines.push({ label: fromTodayLabel, value: formatMoneyShort(fromTodayValue, format), tone: 'neutral' })
+      }
       return { title: `Year ${year}`, lines: tooltipLines }
     },
-    [years, displaySeries, names, format],
+    [years, displaySeries, names, format, fromTodayLine, fromTodayLabel],
   )
+  // Listed last, after the draft: it belongs to the plan but is not a scenario of its own.
+  const legendWithFromToday: ScenarioLegendItem[] = useMemo(() => {
+    if (!fromTodayLine) return legendItems
+    const valueCents = activeYear != null ? pointSeriesValueAt(fromTodayLine.points ?? [], activeYear) : null
+    return [...legendItems, { label: fromTodayLabel, color: fromTodayLine.color, dotted: true, valueCents }]
+  }, [legendItems, fromTodayLine, fromTodayLabel, activeYear])
 
   const lifeEventMarkers = useLifeEventMarkers(isHero, draft, windowYears)
   const heroVariantProps = variantProps(isHero, narrow, markerYears, lifeEventMarkers, onActiveIndexChange)
@@ -432,7 +500,7 @@ function NetWorthChartImpl({
       <p className={styles.chartHint}>{isHero ? HERO_HINT : DEFAULT_HINT}</p>
       <LinearChart
         {...heroVariantProps}
-        series={[...(displayBand ? [displayBand] : []), ...displaySeries, ...displayExtraSeries]}
+        series={[...(displayBand ? [displayBand] : []), ...displaySeries, ...displayRealPoints, ...displayExtraSeries]}
         xLabels={labels}
         refLines={refLines}
         {...todayProp(todayIndex, windowYears)}
@@ -444,7 +512,7 @@ function NetWorthChartImpl({
       <PortfolioLegend
         isHero={isHero}
         staticLegend={staticLegend}
-        legendItems={legendItems}
+        legendItems={legendWithFromToday}
         activeYear={activeYear}
         breakdowns={breakdowns}
         yearZeroHint={yearZeroHint}
