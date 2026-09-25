@@ -598,6 +598,8 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
               monthly={monthly}
               milestones={milestones}
               reached={reachedMilestones}
+              activeId={activeId}
+              dirty={dirty}
             />
           </div>
         </div>

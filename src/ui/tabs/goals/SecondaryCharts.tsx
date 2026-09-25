@@ -67,6 +67,13 @@ interface SecondaryChartsProps {
   monthly: MonthlyFlow[]
   milestones: Milestone[]
   reached: Map<number, string>
+  /**
+   * The draft is a row of its own in the tables only when it is a line of its own on the
+   * chart: detached, or a loaded scenario with edits. Loaded and unchanged, it is that
+   * scenario, and the chart draws it once.
+   */
+  activeId: number | null
+  dirty: boolean
 }
 
 function SecondaryViewChart({
@@ -76,6 +83,7 @@ function SecondaryViewChart({
   monthly,
   milestones,
   reached,
+  includeDraft,
   chartHeight,
   embedded = false,
 }: {
@@ -85,13 +93,14 @@ function SecondaryViewChart({
   monthly: MonthlyFlow[]
   milestones: Milestone[]
   reached: Map<number, string>
+  includeDraft: boolean
   chartHeight?: number | undefined
   embedded?: boolean
 }) {
   const h = chartHeight
   switch (view) {
     case 'compare':
-      return <ScenarioComparison scenarios={scenarios} draft={draft} embedded={embedded} />
+      return <ScenarioComparison scenarios={scenarios} draft={draft} includeDraft={includeDraft} embedded={embedded} />
     case 'composition':
       return h != null ? (
         <CompositionChart draft={draft} height={h} embedded={embedded} />
@@ -105,6 +114,7 @@ function SecondaryViewChart({
           draft={draft}
           milestones={milestones}
           reached={reached}
+          includeDraft={includeDraft}
           embedded={embedded}
         />
       )
@@ -209,22 +219,25 @@ function SecondaryChartStack({
   monthly,
   milestones,
   reached,
+  includeDraft,
 }: {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
   monthly: MonthlyFlow[]
   milestones: Milestone[]
   reached: Map<number, string>
+  includeDraft: boolean
 }) {
   return (
     <div className={styles.secondaryStack}>
-      <ScenarioComparison scenarios={scenarios} draft={draft} />
+      <ScenarioComparison scenarios={scenarios} draft={draft} includeDraft={includeDraft} />
       <CompositionChart draft={draft} height={STACK_CHART_HEIGHT} />
       <MilestoneMatrix
         scenarios={scenarios}
         draft={draft}
         milestones={milestones}
         reached={reached}
+        includeDraft={includeDraft}
       />
       <FireChart draft={draft} height={STACK_CHART_HEIGHT} />
       <RentVsOwnChart draft={draft} height={STACK_CHART_HEIGHT} />
@@ -239,10 +252,13 @@ export function SecondaryCharts({
   monthly,
   milestones,
   reached,
+  activeId,
+  dirty,
 }: SecondaryChartsProps) {
   const narrow = useGoalsNarrow()
   const [view, setView] = useState<SecondaryView>('compare')
   const [desktopLayout, setDesktopLayout] = useState<DesktopLayout>('stack')
+  const includeDraft = activeId === null || dirty
 
   if (narrow) {
     return (
@@ -254,6 +270,7 @@ export function SecondaryCharts({
           monthly={monthly}
           milestones={milestones}
           reached={reached}
+          includeDraft={includeDraft}
           embedded
         />
       </TabbedChart>
@@ -279,6 +296,7 @@ export function SecondaryCharts({
           monthly={monthly}
           milestones={milestones}
           reached={reached}
+          includeDraft={includeDraft}
         />
       ) : (
         <TabbedChart view={view} onViewChange={setView}>
@@ -289,6 +307,7 @@ export function SecondaryCharts({
             monthly={monthly}
             milestones={milestones}
             reached={reached}
+            includeDraft={includeDraft}
             chartHeight={STACK_CHART_HEIGHT}
             embedded
           />

@@ -27,6 +27,15 @@ describe('comparisonRows', () => {
     expect(rows[0]!.fi).toMatch(/^(now|year \d+|not in horizon)$/)
   })
 
+  it('leaves the draft out when told it is a loaded scenario with no edits', () => {
+    const saved = makeScenario({ id: 1, name: 'Path A: Invest only' })
+    const { id: savedId, isActive: active, ...asDraft } = saved
+    void savedId
+    void active
+    const rows = comparisonRows([saved], asDraft, EU_MONEY_FORMAT, DEFAULT_INFLATION_RATE, false)
+    expect(rows.map((r) => r.name)).toEqual(['Path A'])
+  })
+
   it('says when FI is not reached within the horizon', () => {
     const rows = comparisonRows(
       [],
@@ -49,6 +58,19 @@ describe('ScenarioComparison', () => {
     expect(screen.getAllByRole('row')).toHaveLength(3)
     expect(screen.getByText('Path D (editing)')).toBeInTheDocument()
     expect(screen.getByText(/after 30 years/)).toBeInTheDocument()
+  })
+
+  it('shows a loaded, unchanged scenario once, as the chart does', () => {
+    render(
+      <ScenarioComparison
+        scenarios={[makeScenario({ id: 1, name: 'Path A: Invest only' })]}
+        draft={draft}
+        includeDraft={false}
+      />,
+    )
+    // The header row and the one scenario: no "(editing)" twin of it.
+    expect(screen.getAllByRole('row')).toHaveLength(2)
+    expect(screen.queryByText(/\(editing\)/)).not.toBeInTheDocument()
   })
 
   it('says the figures are in today\'s money, as the whole plan is', () => {

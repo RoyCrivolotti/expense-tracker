@@ -34,16 +34,23 @@ function fiLabel(year: number | null): string {
   return `year ${year}`
 }
 
-/** The numbers the charts make you hover for, one row per scenario and one for the draft. */
+/**
+ * The numbers the charts make you hover for, one row per scenario, plus one for the draft
+ * when it is a line of its own. A loaded scenario with no edits is drawn as the draft on
+ * the chart, so a row for both would be the same plan twice.
+ */
 export function comparisonRows(
   scenarios: GoalScenario[],
   draft: NewGoalScenario,
   format: MoneyFormat,
   inflationRate: number,
+  includeDraft = true,
 ): ComparisonRow[] {
   const all = [
     ...scenarios.map((s) => ({ key: `saved-${s.id}`, name: shortName(s.name), color: s.color, scenario: s })),
-    { key: 'draft', name: `${shortName(draft.name)} (editing)`, color: draft.color, scenario: { ...draft, id: 0 } },
+    ...(includeDraft
+      ? [{ key: 'draft', name: `${shortName(draft.name)} (editing)`, color: draft.color, scenario: { ...draft, id: 0 } }]
+      : []),
   ]
   return all.map(({ key, name, color, scenario }) => {
     const params = scenarioToParams(scenario, inflationRate)

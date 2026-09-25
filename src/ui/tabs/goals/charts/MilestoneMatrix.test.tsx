@@ -103,6 +103,20 @@ describe('MilestoneMatrix', () => {
     expect(screen.getAllByRole('row')).toHaveLength(4)
   })
 
+  it('shows a loaded, unchanged scenario once, as the chart does', () => {
+    render(
+      <MilestoneMatrix
+        scenarios={[draft, makeScenario({ id: 2, name: 'Aggressive' })]}
+        draft={draft}
+        milestones={[{ amountCents: 10_000_000, label: '' }]}
+        reached={noneReached}
+        includeDraft={false}
+      />,
+    )
+    expect(screen.queryByText(/\(editing\)/)).toBeNull()
+    expect(screen.getAllByRole('row')).toHaveLength(3)
+  })
+
   it('marks a reached milestone with the month it was first observed', () => {
     render(
       <MilestoneMatrix

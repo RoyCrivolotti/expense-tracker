@@ -27,17 +27,20 @@ function cell(row: ComparisonRow, key: Column, sharedHorizon: boolean): string {
 function ScenarioComparisonImpl({
   scenarios,
   draft,
+  includeDraft = true,
   embedded = false,
 }: {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
+  /** False when the draft is a loaded scenario with no edits, which already has its row. */
+  includeDraft?: boolean
   embedded?: boolean
 }) {
   const format = useMoneyFormat()
   const inflationRate = useAssumedInflation()
   const rows = useMemo(
-    () => comparisonRows(scenarios, draft, format, inflationRate),
-    [scenarios, draft, format, inflationRate],
+    () => comparisonRows(scenarios, draft, format, inflationRate, includeDraft),
+    [scenarios, draft, format, inflationRate, includeDraft],
   )
   const sharedHorizon = rows.every((r) => r.horizonYears === rows[0]?.horizonYears)
   const horizon = sharedHorizon && rows[0] ? ` after ${rows[0].horizonYears} years` : ' at each path’s horizon'

@@ -46,15 +46,22 @@ function buildRows(
   draft: NewGoalScenario,
   milestones: Milestone[],
   inflationRate: number,
+  includeDraft: boolean,
 ): Row[] {
   const all = [
     ...scenarios.map((s) => ({ id: String(s.id), name: shortName(s.name), color: s.color, params: scenarioToParams(s, inflationRate) })),
-    {
-      id: 'draft',
-      name: `${shortName(draft.name)} (editing)`,
-      color: draft.color,
-      params: scenarioToParams({ ...draft, id: 0 }, inflationRate),
-    },
+    // Only when the draft is a line of its own: a loaded scenario with no edits is drawn as
+    // the draft on the chart, and a row for both would be the same plan twice.
+    ...(includeDraft
+      ? [
+          {
+            id: 'draft',
+            name: `${shortName(draft.name)} (editing)`,
+            color: draft.color,
+            params: scenarioToParams({ ...draft, id: 0 }, inflationRate),
+          },
+        ]
+      : []),
   ]
   return all.map(({ id, name, color, params }) => ({
     id,
@@ -117,6 +124,7 @@ function MilestoneMatrixImpl({
   draft,
   milestones,
   reached,
+  includeDraft = true,
   embedded = false,
 }: {
   scenarios: GoalScenario[]
@@ -124,12 +132,14 @@ function MilestoneMatrixImpl({
   milestones: Milestone[]
   /** amountCents -> date first observed at or above, from check-in history. */
   reached: Map<number, string>
+  /** False when the draft is a loaded scenario with no edits, which already has its row. */
+  includeDraft?: boolean
   embedded?: boolean
 }) {
   const inflationRate = useAssumedInflation()
   const rows = useMemo(
-    () => buildRows(scenarios, draft, milestones, inflationRate),
-    [scenarios, draft, milestones, inflationRate],
+    () => buildRows(scenarios, draft, milestones, inflationRate, includeDraft),
+    [scenarios, draft, milestones, inflationRate, includeDraft],
   )
 
   return (
