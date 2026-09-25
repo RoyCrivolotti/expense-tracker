@@ -47,3 +47,19 @@ describe('inMemoryExpenseRepository settings milestones', () => {
     expect(settings.milestones).toEqual([])
   })
 })
+
+describe('inMemoryExpenseRepository settings assumedInflation', () => {
+  it('starts at 2% and keeps a value it is given', async () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    expect((await repo.loadDataset(OWNER)).settings.assumedInflation).toBe(0.02)
+    expect((await repo.updateSettings(OWNER, { assumedInflation: 0.035 })).assumedInflation).toBe(0.035)
+  })
+
+  // The double must refuse what the API refuses, or a test would pass on a value D1 rejects.
+  it('refuses a value outside zero to ten percent, and one that is not a number', () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    for (const bad of [-0.01, 0.11, NaN, '0.02' as unknown as number]) {
+      expect(() => repo.updateSettings(OWNER, { assumedInflation: bad })).toThrow(RepoHttpError)
+    }
+  })
+})

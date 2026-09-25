@@ -92,8 +92,10 @@ from `investment` while any target row is a withdrawal.
 
 ### Migrations run by hand
 
-Deploy does not apply migrations. `0025` (`settings.cash_reserve_months`) must be applied
-to prod before the cash reserve target ships, or saving that one setting fails.
+Deploy does not apply migrations. `0025` (`settings.cash_reserve_months`), `0026`
+(`settings.investment_category_id`) and `0027` (`settings.assumed_inflation`) must be applied
+to prod before the settings they hold ship, or saving that one setting fails. Reading is safe
+without them: a missing column reads as its default.
 
 ## Scripts (expense-tracker)
 

@@ -289,6 +289,12 @@ export interface ExpenseSettings {
    * measures the cash balance against. Zero means no target.
    */
   cashReserveMonths: number
+  /**
+   * The yearly inflation the Goals tab assumes (0.02 = 2%): check-in balances are brought back
+   * to today's money by it before they meet the plan, as are the house and the mortgage, and
+   * the nominal view inflates the plan by it. One value for the owner, not per plan.
+   */
+  assumedInflation: number
 }
 
 /**

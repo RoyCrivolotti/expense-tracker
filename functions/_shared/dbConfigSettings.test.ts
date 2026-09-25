@@ -18,6 +18,7 @@ function makeRow(overrides: Partial<SettingsRow> = {}): SettingsRow {
     milestones: null,
     claimant_name: null,
     cash_reserve_months: null,
+    assumed_inflation: null,
     ...overrides,
   }
 }
@@ -49,6 +50,35 @@ describe('updateSettings with cashReserveMonths', () => {
     for (const bad of [-1, 2.5, 61]) {
       await expect(updateSettings(env, OWNER, { cashReserveMonths: bad })).rejects.toBeInstanceOf(HttpError)
     }
+  })
+})
+
+describe('updateSettings with assumedInflation', () => {
+  it('accepts a yearly fraction from none up to ten percent, and nothing else', async () => {
+    const { env } = stubEnv(makeRow({ assumed_inflation: 0.035 }))
+    await expect(updateSettings(env, OWNER, { assumedInflation: 0.035 })).resolves.toMatchObject({
+      assumedInflation: 0.035,
+    })
+    for (const ok of [0, 0.1]) {
+      await expect(updateSettings(env, OWNER, { assumedInflation: ok })).resolves.toBeDefined()
+    }
+    for (const bad of [-0.01, 0.11, NaN, '0.02' as unknown as number, null as unknown as number]) {
+      await expect(updateSettings(env, OWNER, { assumedInflation: bad })).rejects.toBeInstanceOf(HttpError)
+    }
+  })
+
+  it('reads as 2% until one is set, including on a database without the column', async () => {
+    const { env } = stubEnv(makeRow({ assumed_inflation: null }))
+    await expect(updateSettings(env, OWNER, { claimantName: 'Alex' })).resolves.toMatchObject({
+      assumedInflation: 0.02,
+    })
+    // A row from before the migration has no such key at all.
+    const { assumed_inflation: omitted, ...before } = makeRow()
+    void omitted
+    const { env: oldEnv } = stubEnv(before as SettingsRow)
+    await expect(updateSettings(oldEnv, OWNER, { claimantName: 'Alex' })).resolves.toMatchObject({
+      assumedInflation: 0.02,
+    })
   })
 })
 

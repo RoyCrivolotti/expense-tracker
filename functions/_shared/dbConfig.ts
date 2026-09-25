@@ -5,6 +5,7 @@ import type {
   GoalScenario,
   Milestone,
 } from '../domain/types'
+import { assumedInflationError } from '../domain/engine/assumedInflation'
 import { normalizeMilestones, validateMilestones } from '../domain/engine/milestones'
 import type {
   DeleteAccountOptions,
@@ -381,6 +382,7 @@ const SETTINGS_COLUMNS: ColumnMap<ExpenseSettings> = {
   budgetRolloverDay: 'budget_rollover_day',
   milestones: 'milestones',
   cashReserveMonths: 'cash_reserve_months',
+  assumedInflation: 'assumed_inflation',
 }
 const NULLABLE_SETTINGS = new Set<keyof ExpenseSettings>([
   'claimantName',
@@ -391,6 +393,7 @@ const NULLABLE_SETTINGS = new Set<keyof ExpenseSettings>([
   'budgetRolloverDay',
   'milestones',
   'cashReserveMonths',
+  'assumedInflation',
 ])
 /** Five years of spending in cash is already absurd; past it the number is a typo. */
 export const CASH_RESERVE_MAX_MONTHS = 60
@@ -399,6 +402,22 @@ const coerceSettings: Coerce<ExpenseSettings> = (key, value) => {
     return value === undefined ? null : JSON.stringify(normalizeMilestones(value as Milestone[]))
   }
   return NULLABLE_SETTINGS.has(key) ? (value ?? null) : (value ?? 0)
+}
+
+/** The Goals tab's own scalars: the cash reserve target and the assumed inflation. */
+function assertGoalsSettings(patch: Partial<ExpenseSettings>): void {
+  if (
+    patch.cashReserveMonths !== undefined &&
+    (!Number.isInteger(patch.cashReserveMonths) ||
+      patch.cashReserveMonths < 0 ||
+      patch.cashReserveMonths > CASH_RESERVE_MAX_MONTHS)
+  ) {
+    throw new HttpError(400, `cashReserveMonths must be an integer between 0 and ${CASH_RESERVE_MAX_MONTHS}`)
+  }
+  if (patch.assumedInflation !== undefined) {
+    const error = assumedInflationError(patch.assumedInflation)
+    if (error) throw new HttpError(400, error)
+  }
 }
 
 /** The scalar checks that need no database; the account check stays with the query. */
@@ -415,14 +434,7 @@ function assertSettingsPatch(patch: Partial<ExpenseSettings>): void {
     const error = validateMilestones(patch.milestones)
     if (error) throw new HttpError(400, error)
   }
-  if (
-    patch.cashReserveMonths !== undefined &&
-    (!Number.isInteger(patch.cashReserveMonths) ||
-      patch.cashReserveMonths < 0 ||
-      patch.cashReserveMonths > CASH_RESERVE_MAX_MONTHS)
-  ) {
-    throw new HttpError(400, `cashReserveMonths must be an integer between 0 and ${CASH_RESERVE_MAX_MONTHS}`)
-  }
+  assertGoalsSettings(patch)
 }
 
 export async function updateSettings(
