@@ -50,19 +50,6 @@ export function readingLabel(label: string, on: string | null): string {
   return on ? `${label}, ${on}` : label
 }
 
-export function nearestScatterValue(points: ScatterPoint[], index: number): number | null {
-  let best: ScatterPoint | null = null
-  let bestDist = Infinity
-  for (const p of points) {
-    const d = Math.abs(p.xIndex - index)
-    if (d <= 0.5 && d < bestDist) {
-      best = p
-      bestDist = d
-    }
-  }
-  return best?.value ?? null
-}
-
 export function buildCheckinTooltip(
   i: number,
   titles: string[],

@@ -60,11 +60,11 @@ function ScenarioComparisonImpl({
 }) {
   const format = useMoneyFormat()
   const inflationRate = useAssumedInflation()
-  const [window, setWindow] = useState<HeroWindowKey>('all')
+  const [selectedWindow, setSelectedWindow] = useState<HeroWindowKey>('all')
   const maxHorizon = Math.max(draft.horizonYears, ...scenarios.map((s) => s.horizonYears))
   const options = yearOptions(maxHorizon)
   // A window the horizons no longer reach falls back to the horizon, as the hero chart does.
-  const chosen = options.some((o) => o.value === window) ? window : 'all'
+  const chosen = options.some((o) => o.value === selectedWindow) ? selectedWindow : 'all'
   const year = HERO_WINDOWS.find((w) => w.value === chosen)?.years ?? null
   const rows = useMemo(
     () => comparisonRows(scenarios, draft, format, inflationRate, includeDraft, year),
@@ -79,7 +79,7 @@ function ScenarioComparisonImpl({
         <SegmentedControl
           options={options}
           value={chosen}
-          onChange={setWindow}
+          onChange={setSelectedWindow}
           ariaLabel="Comparison year"
           layout="compact"
         />
