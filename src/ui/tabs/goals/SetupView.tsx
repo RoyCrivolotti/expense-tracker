@@ -13,13 +13,22 @@ interface Props {
   settings: ExpenseSettings
   actions: ExpenseActions | undefined
   onSettingsChange: ((patch: Partial<ExpenseSettings>) => void | Promise<void>) | undefined
+  /** Bring the assumed inflation into view, for the link that opens Setup on it. */
+  focusInflation?: boolean
 }
 
 /**
  * The things Progress is measured with, kept apart from the measuring: the milestone ladder
  * and the accounts each check-in records a balance for.
  */
-export function SetupView({ accounts, checkins, settings, actions, onSettingsChange }: Props) {
+export function SetupView({
+  accounts,
+  checkins,
+  settings,
+  actions,
+  onSettingsChange,
+  focusInflation = false,
+}: Props) {
   if (!actions || !onSettingsChange) {
     return <p className={goalStyles.chartHint}>Read-only session — setup cannot be changed.</p>
   }
@@ -35,7 +44,7 @@ export function SetupView({ accounts, checkins, settings, actions, onSettingsCha
       <MilestonesSetting settings={settings} onChange={onSettingsChange} />
       <WealthAccountsManager accounts={accounts} checkins={checkins} actions={actions} />
       <CashReserveSetting settings={settings} onChange={onSettingsChange} />
-      <InflationSetting settings={settings} onChange={onSettingsChange} />
+      <InflationSetting settings={settings} onChange={onSettingsChange} scrollIntoView={focusInflation} />
     </div>
   )
 }

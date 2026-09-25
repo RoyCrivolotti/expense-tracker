@@ -332,6 +332,31 @@ describe('NetWorthChart', () => {
     expect(top(0.06)).not.toBe(top(0.02))
   })
 
+  it('previews the nominal view at another rate, and only there', () => {
+    const labels = (nominalMode: boolean, viewInflation?: number) => {
+      const { container, unmount } = render(
+        <NetWorthChart
+          milestones={milestones}
+          scenarios={[defaultDraft]}
+          draft={defaultDraft}
+          activeId={defaultDraft.id}
+          variant="hero"
+          nominalMode={nominalMode}
+          viewInflation={viewInflation}
+        />,
+      )
+      const text = [...container.querySelectorAll('text')].map((t) => t.textContent ?? '').join('|')
+      unmount()
+      return text
+    }
+    // The saved rate is 2%. Nominal at a previewed 6% draws the plan higher...
+    expect(labels(true, 0.06)).not.toBe(labels(true))
+    // ...and is the same as the saved rate being 6%, since only the inflating changes.
+    expect(labels(true, 0.02)).toBe(labels(true))
+    // In Today's money the plan is not inflated, so a rate left over from a preview does nothing.
+    expect(labels(false, 0.06)).toBe(labels(false))
+  })
+
   it('renders uncertainty band path on hero variant', () => {
     const { container } = render(
       <NetWorthChart

@@ -37,6 +37,11 @@
   color: var(--color-text-muted);
 }
 
+/* Text buttons pin themselves to the top of a flex row; this one belongs on the text baseline. */
+.inflationRow > .inflationReset {
+  align-self: baseline;
+}
+
 /* ─── Summary card ───────────────────────────────────────────────────────── */
 
 .summaryCardContent {
