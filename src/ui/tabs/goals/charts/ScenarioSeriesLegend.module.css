@@ -99,6 +99,11 @@
   color: var(--color-text);
 }
 
+.valueNone {
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
 .breakdown {
   margin-top: 0.55rem;
   padding-top: 0.55rem;

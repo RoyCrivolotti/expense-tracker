@@ -251,6 +251,33 @@ describe('NetWorthChart', () => {
     expect(screen.queryByRole('button', { name: /from today on chart/ })).not.toBeInTheDocument()
   })
 
+  it('reads the plan from today at the last year of the axis and of a window, and says where it has not started', () => {
+    const plan = makeScenario({ id: 1, name: 'Path A', planStartDate: '2024-01-01', isActive: true })
+    // Half a year past a whole one, so its steps fall between the axis' years, not on them.
+    const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-07-01' })
+    const { container } = render(
+      <NetWorthChart
+        milestones={milestones}
+        scenarios={[plan]}
+        draft={defaultDraft}
+        activeId={null}
+        variant="hero"
+        fromToday={fromToday}
+      />,
+    )
+    const svg = container.querySelector('svg[role="img"]')!
+    const row = () => screen.getByText('Path A, from today').closest('li')!
+    fireEvent.keyDown(svg, { key: 'End' })
+    expect(row().textContent).toMatch(/\d/)
+    fireEvent.click(screen.getByRole('radio', { name: '10Y' }))
+    fireEvent.keyDown(svg, { key: 'End' })
+    expect(row().textContent).toMatch(/\d/)
+    // Before the check-in the line has not started: a dash, not an empty row.
+    fireEvent.keyDown(svg, { key: 'Home' })
+    expect(row().textContent).toContain('-')
+    expect(row().textContent).not.toMatch(/\d/)
+  })
+
   it('reads the from-today line off its segment for the legend and the tooltip', () => {
     const points = [
       { xIndex: 2.5, value: 100 },

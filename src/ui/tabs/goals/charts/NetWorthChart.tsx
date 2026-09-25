@@ -220,9 +220,20 @@ function useFromTodaySeries(
   return useMemo(() => {
     if (!isHero || !fromToday) return null
     const limit = windowYears ?? extentYears
-    const points = projectNetWorth(scenarioToParams(fromToday.scenario, inflationRate))
-      .map((p) => ({ xIndex: fromToday.offsetYears + p.year, value: p.investedCents }))
-      .filter((p) => p.xIndex <= limit)
+    const all = projectNetWorth(scenarioToParams(fromToday.scenario, inflationRate)).map((p) => ({
+      xIndex: fromToday.offsetYears + p.year,
+      value: p.investedCents,
+    }))
+    const points = all.filter((p) => p.xIndex <= limit)
+    // The steps sit a fraction of a year past the axis' own (the check-in is not on a year), so
+    // the last one inside the window stops short of it, and the line has no value at the final
+    // year. Carry it there along the step it is cut from.
+    const last = points[points.length - 1]
+    const next = all[points.length]
+    if (last && next && last.xIndex < limit) {
+      const t = (limit - last.xIndex) / (next.xIndex - last.xIndex)
+      points.push({ xIndex: limit, value: Math.round(last.value + t * (next.value - last.value)) })
+    }
     if (points.length < 2) return null
     return {
       id: 'from-today',
@@ -485,7 +496,12 @@ function NetWorthChartImpl({
   const legendWithFromToday: ScenarioLegendItem[] = useMemo(() => {
     if (!fromTodayLine) return legendItems
     const valueCents = activeYear != null ? pointSeriesValueAt(fromTodayLine.points ?? [], activeYear) : null
-    return [...legendItems, { label: fromTodayLabel, color: fromTodayLine.color, dotted: true, valueCents }]
+    // Before the check-in the line has not started; say so rather than leave the row blank.
+    const outOfRun = activeYear != null && valueCents === null
+    return [
+      ...legendItems,
+      { label: fromTodayLabel, color: fromTodayLine.color, dotted: true, valueCents, ...(outOfRun ? { outOfRun } : {}) },
+    ]
   }, [legendItems, fromTodayLine, fromTodayLabel, activeYear])
 
   const lifeEventMarkers = useLifeEventMarkers(isHero, draft, windowYears)
