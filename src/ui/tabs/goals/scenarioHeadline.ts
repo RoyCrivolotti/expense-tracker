@@ -7,6 +7,7 @@ import {
   scenarioToParams,
   yearsToFi,
   type MoneyFormat,
+  type PlanFromToday,
 } from '../../../engine'
 
 type ScenarioLike = GoalScenario | NewGoalScenario
@@ -21,6 +22,15 @@ function shortName(name: string): string {
   return colon >= 0 ? name.slice(0, colon).trim() : name
 }
 
+/** The FI year counted from the latest check-in, which is the one that moves as check-ins land. */
+function fiFromTodayLabel(fromToday: PlanFromToday, inflationRate: number): string {
+  const params = scenarioToParams(fromToday.scenario, inflationRate)
+  const years = yearsToFi(params, fromToday.scenario.annualSpendCents, fromToday.scenario.safeWithdrawalRate)
+  if (years === null) return 'from today, FI beyond the horizon'
+  if (years === 0) return "FI at today's balance"
+  return `from today, FI in ${years} year${years === 1 ? '' : 's'}`
+}
+
 /**
  * One- or two-line dashboard summary from a scenario's projection assumptions.
  * `actualMonthlyInvestingCents` is the pace actually kept (investment transactions
@@ -31,6 +41,7 @@ export function scenarioHeadline(
   inflationRate: number,
   actualMonthlyInvestingCents?: number,
   format: MoneyFormat = EU_MONEY_FORMAT,
+  fromToday: PlanFromToday | null = null,
 ): ScenarioHeadline {
   const params = scenarioToParams('id' in scenario ? scenario : { ...scenario, id: 0 }, inflationRate)
   const series = projectNetWorth(params)
@@ -39,6 +50,7 @@ export function scenarioHeadline(
 
   const primaryParts = [shortName(scenario.name)]
   if (fiYear != null) primaryParts.push(`FI year ${fiYear}`)
+  if (fromToday) primaryParts.push(fiFromTodayLabel(fromToday, inflationRate))
   const primary = primaryParts.join(' · ')
 
   const secondaryParts = [
