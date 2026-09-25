@@ -5,7 +5,8 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 ## September 2026 (chart readability)
 
 - **The Y axis fits the lines.** The projection chart no longer stretches to the uncertainty band's upper edge or to the other view's height, so the lines fill the plot and can be told apart; a band that runs higher is clipped at the top. Purchasing power and Nominal each fit their own axis, so switching between them rescales. On every chart the axis now stops at most 8% past the data, and the income and expense charts follow the same rule.
-- **Long scenario names wrap** in the projection legend instead of being cut off, and the plan from today shows its figure at the last year (it stopped a fraction of a year short), with a dash before the check-in.
+- **A far-off FI target no longer stretches the chart.** It follows the same rule as the milestones, in every window: left off when the plan does not come near it, with a line under the chart saying where it is. The axis labels are also held to what the chart's height can show, so the small pinned chart no longer crowds them.
+- **Long scenario names wrap** in the projection legend (and the purchase breakdown title, and the category names beside the pie) instead of being cut off, and the plan from today shows its figure at the last year (it stopped a fraction of a year short), with a dash before the check-in.
 
 ## September 2026 (the plan from today)
 
