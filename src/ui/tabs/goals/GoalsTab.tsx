@@ -605,6 +605,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
               activeId={activeId}
               dirty={dirty}
             />
+              fromToday={fromToday}
           </div>
         </div>
       </div>

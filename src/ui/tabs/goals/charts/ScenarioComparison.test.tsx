@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { ScenarioComparison } from './ScenarioComparison'
 import { comparisonRows } from './comparisonRows'
 import { makeScenario } from '../../../../testing/factories'
-import { EU_MONEY_FORMAT, DEFAULT_INFLATION_RATE } from '../../../../engine'
+import { EU_MONEY_FORMAT, DEFAULT_INFLATION_RATE, planFromToday } from '../../../../engine'
 
 const { id, isActive, ...draft } = makeScenario({ name: 'Path D: Draft', housePurchaseYear: null })
 void id
@@ -45,6 +45,31 @@ describe('comparisonRows', () => {
     const atHorizon = comparisonRows([long], draft, EU_MONEY_FORMAT, DEFAULT_INFLATION_RATE, false)
     expect(atHorizon[0]!.atYear).toBe(30)
     expect(rows[0]!.invested).not.toBe(atHorizon[0]!.invested)
+  })
+
+  it('lists the plan from today under the plan, in its colour, counting years from the check-in', () => {
+    const plan = makeScenario({ id: 2, name: 'Path B: Plan', color: '#abcdef', planStartDate: '2024-01-01', isActive: true, housePurchaseYear: null })
+    const other = makeScenario({ id: 3, name: 'Path C', housePurchaseYear: null })
+    const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-01-01' })
+    const rows = comparisonRows([plan, other], draft, EU_MONEY_FORMAT, DEFAULT_INFLATION_RATE, false, 10, fromToday)
+    expect(rows.map((r) => r.name)).toEqual(['Path B', 'Path B, from today', 'Path C'])
+    expect(rows[1]!.color).toBe('#abcdef')
+    expect(rows[1]!.key).toBe('from-today')
+    // Ten years from the check-in, restarted from a higher balance: more than the plan at its year 10.
+    expect(rows[1]!.invested).not.toBe(rows[0]!.invested)
+  })
+
+  it('says what the from-today row is and where it counts from', () => {
+    const plan = makeScenario({ id: 2, name: 'Path B', planStartDate: '2024-01-01', isActive: true })
+    render(
+      <ScenarioComparison
+        scenarios={[plan]}
+        draft={draft}
+        fromToday={planFromToday(plan, { investedCents: 1, date: '2026-01-01' })}
+      />,
+    )
+    expect(screen.getByText('Path B, from today')).toBeInTheDocument()
+    expect(screen.getByText(/restarted from the balance in your latest check-in, Jan 1, 2026, and counts its years from there/)).toBeInTheDocument()
   })
 
   it('says when FI is not reached within the horizon', () => {

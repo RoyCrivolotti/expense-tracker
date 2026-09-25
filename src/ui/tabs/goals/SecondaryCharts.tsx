@@ -9,7 +9,7 @@ import { MilestoneMatrix } from './charts/MilestoneMatrix'
 import { FireChart } from './charts/FireChart'
 import { RentVsOwnChart } from './charts/RentVsOwnChart'
 import { SavingsRateChart } from './charts/SavingsRateChart'
-import type { MonthlyFlow } from '../../../engine'
+import type { MonthlyFlow, PlanFromToday } from '../../../engine'
 import { useGoalsNarrow } from './useGoalsNarrow'
 import styles from './goals.module.css'
 
@@ -74,6 +74,8 @@ interface SecondaryChartsProps {
    */
   activeId: number | null
   dirty: boolean
+  /** The plan restarted from the latest check-in, for the tables that list scenarios. */
+  fromToday: PlanFromToday | null
 }
 
 function SecondaryViewChart({
@@ -84,6 +86,7 @@ function SecondaryViewChart({
   milestones,
   reached,
   includeDraft,
+  fromToday,
   chartHeight,
   embedded = false,
 }: {
@@ -94,13 +97,16 @@ function SecondaryViewChart({
   milestones: Milestone[]
   reached: Map<number, string>
   includeDraft: boolean
+  fromToday: PlanFromToday | null
   chartHeight?: number | undefined
   embedded?: boolean
 }) {
   const h = chartHeight
   switch (view) {
     case 'compare':
-      return <ScenarioComparison scenarios={scenarios} draft={draft} includeDraft={includeDraft} embedded={embedded} />
+      return (
+        <ScenarioComparison scenarios={scenarios} draft={draft} includeDraft={includeDraft} fromToday={fromToday} embedded={embedded} />
+      )
     case 'composition':
       return h != null ? (
         <CompositionChart draft={draft} height={h} embedded={embedded} />
@@ -115,6 +121,7 @@ function SecondaryViewChart({
           milestones={milestones}
           reached={reached}
           includeDraft={includeDraft}
+          fromToday={fromToday}
           embedded={embedded}
         />
       )
@@ -220,6 +227,7 @@ function SecondaryChartStack({
   milestones,
   reached,
   includeDraft,
+  fromToday,
 }: {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
@@ -227,10 +235,11 @@ function SecondaryChartStack({
   milestones: Milestone[]
   reached: Map<number, string>
   includeDraft: boolean
+  fromToday: PlanFromToday | null
 }) {
   return (
     <div className={styles.secondaryStack}>
-      <ScenarioComparison scenarios={scenarios} draft={draft} includeDraft={includeDraft} />
+      <ScenarioComparison scenarios={scenarios} draft={draft} includeDraft={includeDraft} fromToday={fromToday} />
       <CompositionChart draft={draft} height={STACK_CHART_HEIGHT} />
       <MilestoneMatrix
         scenarios={scenarios}
@@ -238,6 +247,7 @@ function SecondaryChartStack({
         milestones={milestones}
         reached={reached}
         includeDraft={includeDraft}
+        fromToday={fromToday}
       />
       <FireChart draft={draft} height={STACK_CHART_HEIGHT} />
       <RentVsOwnChart draft={draft} height={STACK_CHART_HEIGHT} />
@@ -254,6 +264,7 @@ export function SecondaryCharts({
   reached,
   activeId,
   dirty,
+  fromToday,
 }: SecondaryChartsProps) {
   const narrow = useGoalsNarrow()
   const [view, setView] = useState<SecondaryView>('compare')
@@ -271,6 +282,7 @@ export function SecondaryCharts({
           milestones={milestones}
           reached={reached}
           includeDraft={includeDraft}
+          fromToday={fromToday}
           embedded
         />
       </TabbedChart>
@@ -297,6 +309,7 @@ export function SecondaryCharts({
           milestones={milestones}
           reached={reached}
           includeDraft={includeDraft}
+          fromToday={fromToday}
         />
       ) : (
         <TabbedChart view={view} onViewChange={setView}>
@@ -308,6 +321,7 @@ export function SecondaryCharts({
             milestones={milestones}
             reached={reached}
             includeDraft={includeDraft}
+            fromToday={fromToday}
             chartHeight={STACK_CHART_HEIGHT}
             embedded
           />

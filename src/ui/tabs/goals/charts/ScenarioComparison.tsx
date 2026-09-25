@@ -1,6 +1,8 @@
 import { memo, useMemo, useState } from 'react'
 import type { GoalScenario } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
+import type { PlanFromToday } from '../../../../engine'
+import { formatCheckinDate } from '../checkinDate'
 import { SegmentedControl } from '../../../components/SegmentedControl'
 import { ChartShell } from './ChartShell'
 import { comparisonRows, type ComparisonRow } from './comparisonRows'
@@ -50,12 +52,15 @@ function ScenarioComparisonImpl({
   scenarios,
   draft,
   includeDraft = true,
+  fromToday = null,
   embedded = false,
 }: {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
   /** False when the draft is a loaded scenario with no edits, which already has its row. */
   includeDraft?: boolean
+  /** The plan restarted from the latest check-in, listed under the plan. */
+  fromToday?: PlanFromToday | null | undefined
   embedded?: boolean
 }) {
   const format = useMoneyFormat()
@@ -67,8 +72,8 @@ function ScenarioComparisonImpl({
   const chosen = options.some((o) => o.value === window) ? window : 'all'
   const year = HERO_WINDOWS.find((w) => w.value === chosen)?.years ?? null
   const rows = useMemo(
-    () => comparisonRows(scenarios, draft, format, inflationRate, includeDraft, year),
-    [scenarios, draft, format, inflationRate, includeDraft, year],
+    () => comparisonRows(scenarios, draft, format, inflationRate, includeDraft, year, fromToday),
+    [scenarios, draft, format, inflationRate, includeDraft, year, fromToday],
   )
   const sharedYear = rows.every((r) => r.atYear === rows[0]?.atYear)
 
@@ -87,6 +92,9 @@ function ScenarioComparisonImpl({
       <p className={styles.chartHint}>
         Net worth and invested are{readAt(rows, year)}, in today's money; FI and the house purchase are
         counted in years from the plan start; monthly is what each path invests.
+        {fromToday
+          ? ` "From today" is your plan restarted from the balance in your latest check-in, ${formatCheckinDate(fromToday.since)}, and counts its years from there.`
+          : ''}
       </p>
       <div className={styles.milestoneScroll}>
         <table className={styles.milestoneTable}>
