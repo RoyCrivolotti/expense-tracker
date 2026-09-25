@@ -15,6 +15,8 @@ export interface ComparisonRow {
   name: string
   color: string
   horizonYears: number
+  /** The plan year net worth and invested are read at: the one asked for, or the horizon when shorter. */
+  atYear: number
   fi: string
   netWorth: string
   invested: string
@@ -37,7 +39,8 @@ function fiLabel(year: number | null): string {
 /**
  * The numbers the charts make you hover for, one row per scenario, plus one for the draft
  * when it is a line of its own. A loaded scenario with no edits is drawn as the draft on
- * the chart, so a row for both would be the same plan twice.
+ * the chart, so a row for both would be the same plan twice. Net worth and invested are
+ * read at `year`, or at each path's horizon when null or when the horizon is shorter.
  */
 export function comparisonRows(
   scenarios: GoalScenario[],
@@ -45,6 +48,7 @@ export function comparisonRows(
   format: MoneyFormat,
   inflationRate: number,
   includeDraft = true,
+  year: number | null = null,
 ): ComparisonRow[] {
   const all = [
     ...scenarios.map((s) => ({ key: `saved-${s.id}`, name: shortName(s.name), color: s.color, scenario: s })),
@@ -55,12 +59,15 @@ export function comparisonRows(
   return all.map(({ key, name, color, scenario }) => {
     const params = scenarioToParams(scenario, inflationRate)
     const points = projectNetWorth(params)
-    const end = points[points.length - 1]
+    const last = points[points.length - 1]
+    const atYear = year === null ? (last?.year ?? scenario.horizonYears) : Math.min(year, scenario.horizonYears)
+    const end = points.find((p) => p.year === atYear) ?? last
     return {
       key,
       name,
       color,
-      horizonYears: end?.year ?? scenario.horizonYears,
+      horizonYears: last?.year ?? scenario.horizonYears,
+      atYear,
       fi: fiLabel(yearsToFi(params, scenario.annualSpendCents, scenario.safeWithdrawalRate)),
       netWorth: end ? formatMoneyShort(end.netWorthCents, format) : '',
       invested: end ? formatMoneyShort(end.investedCents, format) : '',
