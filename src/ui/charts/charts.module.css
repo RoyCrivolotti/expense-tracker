@@ -245,6 +245,37 @@
   pointer-events: none;
 }
 
+/* The readout above a chart: the docked panel with no gap above it, holding the tallest state
+   and the current one in one grid cell. */
+.readout {
+  display: grid;
+  margin: 0 0 0.625rem;
+}
+.readout > * {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+.readoutSizer {
+  visibility: hidden;
+}
+
+.tooltipHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 0 0.5rem;
+}
+.tooltipHead .tooltipTitle {
+  margin: 0;
+}
+.tooltipNote {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
 .tooltipTitle {
   margin: 0 0 0.5rem;
   font-size: 0.8125rem;

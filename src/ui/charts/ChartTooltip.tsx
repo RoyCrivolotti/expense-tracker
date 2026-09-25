@@ -23,10 +23,17 @@ interface Props {
   anchor: Anchor | null
 }
 
-function TooltipBody({ title, lines }: Pick<Props, 'title' | 'lines'>) {
+export function TooltipBody({ title, lines, note }: Pick<Props, 'title' | 'lines'> & { note?: string | undefined }) {
   return (
     <>
-      <p className={styles.tooltipTitle}>{title}</p>
+      {note ? (
+        <div className={styles.tooltipHead}>
+          <p className={styles.tooltipTitle}>{title}</p>
+          <p className={styles.tooltipNote}>{note}</p>
+        </div>
+      ) : (
+        <p className={styles.tooltipTitle}>{title}</p>
+      )}
       <ul className={styles.tooltipList}>
         {lines.map((line) => (
           <li
@@ -79,12 +86,13 @@ function FloatingTooltip({ title, lines, anchor }: Props) {
  * the screen it opens below the fold. It scrolls into view by the least amount that shows
  * it whole, which is nothing when it is already in view.
  */
-function DockedTooltip({ title, lines }: Pick<Props, 'title' | 'lines'>) {
+export function DockedTooltip({ title, lines, scroll = true }: Pick<Props, 'title' | 'lines'> & { scroll?: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
+    if (!scroll) return
     // Not every environment has it (jsdom does not).
     ref.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
-  }, [])
+  }, [scroll])
   return (
     <div ref={ref} className={styles.tooltipDocked} role="tooltip">
       <TooltipBody title={title} lines={lines} />
