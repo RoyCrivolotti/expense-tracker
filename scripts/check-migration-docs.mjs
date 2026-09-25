@@ -2,6 +2,7 @@
 /** Fail verify when migration files are not reflected in DEPLOYMENT.md. */
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { invalidMigrationNames } from './migrate.mjs'
 
 const root = join(import.meta.dirname, '..')
 const migrationsDir = join(root, 'migrations')
@@ -13,6 +14,13 @@ const files = readdirSync(migrationsDir)
 
 if (files.length === 0) {
   console.error('No migration files found in migrations/')
+  process.exit(1)
+}
+
+// The name is written into the `_migrations` record, so it has to be one that can be.
+const badNames = invalidMigrationNames(files)
+if (badNames.length > 0) {
+  console.error(`Migration file names must look like 0028_short_name.sql (lowercase words): ${badNames.join(', ')}`)
   process.exit(1)
 }
 
