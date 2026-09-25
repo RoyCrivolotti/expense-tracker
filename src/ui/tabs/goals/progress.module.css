@@ -22,35 +22,6 @@
   margin-top: 0.5rem;
 }
 
-/* The Goals tab's inflation setting, under the view switcher and shared by every view. */
-.inflationSetting {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0 0 0.5rem;
-}
-
-.inflationRow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.inflationLabel {
-  font-size: 0.8125rem;
-  color: var(--color-text-muted);
-}
-
-.inflationHint {
-  margin: 0;
-  max-width: 36rem;
-  text-align: center;
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-}
-
 /* ─── Summary card ───────────────────────────────────────────────────────── */
 
 .summaryCardContent {

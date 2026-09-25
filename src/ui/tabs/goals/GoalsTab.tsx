@@ -5,18 +5,19 @@ import type { GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import {
   averageMonthlyCents,
+  checkinInvestedCents,
   computeMonthlyTotals,
   defaultBudgetMonth,
   formatCents,
+  formatPercent,
+  latestCheckin,
+  milestonesReached,
+  monthlyFlows,
   rebaseline,
   rebaselineSummary,
   type MoneyFormat,
   type Rebaseline,
-  monthlyFlows,
   yearOffsetFromDate,
-  checkinInvestedCents,
-  latestCheckin,
-  milestonesReached,
 } from '../../../engine'
 import type { InvestedSnapshot } from './checkinDate'
 import type { ChartSeries } from '../../charts/LinearChart'
@@ -28,7 +29,6 @@ import { useToast } from '../../hooks/useToast'
 import { Presence } from '../../components/Presence'
 import { EXIT_MS } from '../../hooks/motion'
 import { GoalControls } from './GoalControls'
-import { InflationSetting } from './InflationSetting'
 import { ScenarioManager } from './ScenarioManager'
 import { GoalsExplainer } from './GoalsExplainer'
 import { GoalsNarrative } from './GoalsNarrative'
@@ -213,10 +213,18 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
   // The dashboard's nudge opens the check-in form once; leaving Progress and coming back
   // within the tab must not open it again.
   const [checkinEntry, setCheckinEntry] = useState(entry === 'checkin')
+  // The Nominal note links to the assumed inflation in Setup, which then scrolls to it; any
+  // other way of getting to Setup must not.
+  const [focusInflation, setFocusInflation] = useState(false)
   const changeView = useCallback((next: TabView) => {
     setCheckinEntry(false)
+    setFocusInflation(false)
     setView(next)
   }, [])
+  const openInflationSetting = useCallback(() => {
+    changeView('setup')
+    setFocusInflation(true)
+  }, [changeView])
   const [displayMode, setDisplayMode] = useState<DisplayMode>('purchasing-power')
   // Mobile-only: swaps the chart block for the controls form in place, in lieu
   // of a separate route. Ignored on desktop, where both are always visible.
@@ -434,11 +442,6 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
         />
       </div>
 
-      <InflationSetting
-        value={dataset.settings.assumedInflation}
-        onChange={actions ? (patch) => actions.updateSettings(patch) : undefined}
-      />
-
       {view === 'setup' ? (
         <SetupView
           accounts={dataset.wealthAccounts}
@@ -446,6 +449,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
           settings={dataset.settings}
           actions={actions}
           onSettingsChange={actions ? (patch) => actions.updateSettings(patch) : undefined}
+          focusInflation={focusInflation}
         />
       ) : null}
       {view === 'progress' ? (
@@ -565,9 +569,18 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
                   </div>
                   {displayMode === 'nominal' ? (
                     <p className={styles.chartHint}>
-                      Nominal inflates the plan line and its band at the assumed inflation set at the top of
-                      this tab. The summary, the FI target and the milestones stay in today&apos;s money, so
-                      the target lines are only drawn in Purchasing power.
+                      Nominal inflates the plan line and its band at the assumed inflation,{' '}
+                      {formatPercent(dataset.settings.assumedInflation, format)} a year, which is set in Setup. The
+                      summary, the FI target and the milestones stay in today&apos;s money, so the target lines
+                      are only drawn in Purchasing power.
+                      {actions ? (
+                        <>
+                          {' '}
+                          <button type="button" className={styles.btnText} onClick={openInflationSetting}>
+                            Open Setup
+                          </button>
+                        </>
+                      ) : null}
                     </p>
                   ) : null}
                 </>
