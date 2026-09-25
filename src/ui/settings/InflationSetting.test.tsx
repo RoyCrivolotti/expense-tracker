@@ -1,15 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { InflationSetting } from './InflationSetting'
 import { defaultExpenseSettings } from '../../engine'
 
 const settings = (assumedInflation: number) => ({ ...defaultExpenseSettings(), assumedInflation })
 
 describe('InflationSetting', () => {
-  afterEach(() => {
-    Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
-  })
-
   it('says what the rate converts, not that the plan is at it', () => {
     render(<InflationSetting settings={settings(0.02)} onChange={vi.fn()} />)
     // The plan is in today's money whatever the rate is; the rate is what brings the rest to it.
@@ -28,15 +24,5 @@ describe('InflationSetting', () => {
     fireEvent.blur(input)
 
     expect(onChange).toHaveBeenCalledWith({ assumedInflation: 0.035 })
-  })
-
-  it('brings itself into view only when asked to', () => {
-    const scrollIntoView = vi.fn()
-    Element.prototype.scrollIntoView = scrollIntoView
-    const { rerender } = render(<InflationSetting settings={settings(0.02)} onChange={vi.fn()} />)
-    expect(scrollIntoView).not.toHaveBeenCalled()
-
-    rerender(<InflationSetting settings={settings(0.02)} onChange={vi.fn()} scrollIntoView />)
-    expect(scrollIntoView).toHaveBeenCalledTimes(1)
   })
 })

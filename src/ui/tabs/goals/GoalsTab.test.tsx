@@ -1,8 +1,10 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { useState } from 'react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { GoalsTab } from './GoalsTab'
 import { ToastContext } from '../../hooks/useToast'
+import { AssumedInflationContext } from '../../hooks/assumedInflationContext'
 import { buildExpenseModel } from '../../buildExpenseModel'
 import { makeDataset, makeScenario, makeWealthAccount, makeWealthCheckin } from '../../../testing/factories'
 import { makeActions } from '../../../testing/makeActions'
@@ -29,11 +31,6 @@ function makeModel() {
 }
 
 describe('GoalsTab', () => {
-  // jsdom has no scrollIntoView; tests that stub it must not leave it behind.
-  afterEach(() => {
-    Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
-  })
-
   it('renders with Plan view by default', () => {
     render(<GoalsTab model={makeModel()} />)
     expect(screen.getByRole('radio', { name: 'Plan' })).toBeInTheDocument()
@@ -557,47 +554,104 @@ describe('GoalsTab', () => {
     expect(mini()).not.toBeInTheDocument()
   })
 
-  it('sets the assumed inflation in Setup and nowhere else in Goals, the chart included', async () => {
+  it('offers the assumed inflation beside the chart\'s view toggle, and in Setup, but not in Progress', async () => {
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} actions={makeActions()} />)
 
-    for (const view of ['Plan', 'Progress']) {
-      await user.click(screen.getByRole('radio', { name: view }))
-      expect(screen.queryByLabelText('Assumed inflation')).not.toBeInTheDocument()
-    }
-    await user.click(screen.getByRole('radio', { name: 'Setup' }))
+    // Both views of the chart are changed by it, so it is there in both.
+    expect(screen.getAllByLabelText('Assumed inflation')).toHaveLength(1)
+    await user.click(screen.getByRole('radio', { name: 'Nominal' }))
     expect(screen.getAllByLabelText('Assumed inflation')).toHaveLength(1)
 
-    // The chart's Nominal view reads that setting rather than carrying a stepper of its own.
-    await user.click(screen.getByRole('radio', { name: 'Plan' }))
-    await user.click(screen.getByRole('radio', { name: 'Nominal' }))
+    await user.click(screen.getByRole('radio', { name: 'Progress' }))
     expect(screen.queryByLabelText('Assumed inflation')).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('Inflation rate percentage')).not.toBeInTheDocument()
-    // It says what the rate is and where it is set, and what stays in today's money.
-    expect(screen.getByText(/at the assumed inflation, 2,0% a year, which is set in Setup/)).toBeInTheDocument()
-    expect(screen.getByText(/target lines are only drawn in Purchasing power/)).toBeInTheDocument()
-
-    await user.click(screen.getByRole('radio', { name: 'Purchasing power' }))
-    expect(screen.queryByText(/target lines are only drawn in Purchasing power/)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('radio', { name: 'Setup' }))
+    expect(screen.getAllByLabelText('Assumed inflation')).toHaveLength(1)
   })
 
-  it('opens Setup on the assumed inflation from the Nominal note, and only from there', async () => {
+  it('says on the chart that the rate is one saved setting, and what Nominal leaves in today\'s money', async () => {
     const user = userEvent.setup()
-    const scrollIntoView = vi.fn()
-    Element.prototype.scrollIntoView = scrollIntoView
     render(<GoalsTab model={makeModel()} actions={makeActions()} />)
 
+    expect(screen.getByText(/one saved setting, so changing it here changes every Goals view/)).toBeInTheDocument()
+    expect(screen.queryByText(/target lines are only drawn in Purchasing power/)).not.toBeInTheDocument()
+
     await user.click(screen.getByRole('radio', { name: 'Nominal' }))
-    await user.click(screen.getByRole('button', { name: 'Open Setup' }))
+    expect(screen.getByText(/at the assumed inflation\. The summary/)).toBeInTheDocument()
+    expect(screen.getByText(/target lines are only drawn in Purchasing power/)).toBeInTheDocument()
+    expect(screen.getByText(/one saved setting/)).toBeInTheDocument()
+  })
 
-    expect(screen.getByRole('radio', { name: 'Setup' })).toBeChecked()
-    expect(screen.getByLabelText('Assumed inflation')).toBeInTheDocument()
-    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+  it('saves the assumed inflation as the setting when it is changed on the chart', () => {
+    const actions = makeActions()
+    render(<GoalsTab model={makeModel()} actions={actions} />)
+    const input = screen.getByLabelText('Assumed inflation')
+    expect(input).toHaveValue('2,0')
 
-    // Coming back to Setup by the switcher is not a request to scroll to it.
-    await user.click(screen.getByRole('radio', { name: 'Plan' }))
+    fireEvent.change(input, { target: { value: '3' } })
+    fireEvent.blur(input)
+
+    expect(actions.updateSettings).toHaveBeenCalledWith({ assumedInflation: 0.03 })
+  })
+
+  it('shows the chart and Setup the same saved rate', async () => {
+    const user = userEvent.setup()
+    const model = buildExpenseModel(
+      makeDataset({ settings: { ...defaultExpenseSettings(), assumedInflation: 0.04 } }),
+    )
+    render(<GoalsTab model={model} actions={makeActions()} />)
+
+    expect(screen.getByLabelText('Assumed inflation')).toHaveValue('4,0')
     await user.click(screen.getByRole('radio', { name: 'Setup' }))
-    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+    expect(screen.getByLabelText('Assumed inflation')).toHaveValue('4,0')
+  })
+
+  it('moves Progress with the rate stepped on the chart', async () => {
+    const user = userEvent.setup()
+    const plan = makeScenario({ id: 1, name: 'Path A', isActive: true, planStartDate: '2025-01-01' })
+    const accounts = [makeWealthAccount({ id: 1, name: 'Broker', kind: 'investment' })]
+    const behind = (id: number, date: string) =>
+      makeWealthCheckin({
+        id,
+        checkinDate: date,
+        entries: [{ accountId: 1, valueCents: planValueAtDate(plan, date, DEFAULT_INFLATION_RATE)! - 50_000_00 }],
+      })
+    const base = makeDataset({
+      goalScenarios: [plan],
+      wealthAccounts: accounts,
+      wealthCheckins: [behind(1, '2026-01-01'), behind(2, '2026-04-01'), behind(3, '2026-07-15')],
+    })
+    // The app in miniature: a saved rate that every view reads, and a write that changes it.
+    function App() {
+      const [rate, setRate] = useState(DEFAULT_INFLATION_RATE)
+      const actions = {
+        ...makeActions(),
+        updateSettings: (patch: { assumedInflation?: number }) => {
+          setRate(patch.assumedInflation ?? rate)
+          return Promise.resolve()
+        },
+      }
+      const model = buildExpenseModel({ ...base, settings: { ...base.settings, assumedInflation: rate } })
+      return (
+        <AssumedInflationContext.Provider value={rate}>
+          <GoalsTab model={model} actions={actions} />
+        </AssumedInflationContext.Provider>
+      )
+    }
+    render(<App />)
+
+    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    const before = screen.getByText(/Behind plan/).textContent
+    expect(before).toMatch(/-52/)
+
+    await user.click(screen.getByRole('radio', { name: 'Plan' }))
+    const input = screen.getByLabelText('Assumed inflation')
+    fireEvent.change(input, { target: { value: '4' } })
+    fireEvent.blur(input)
+
+    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    // Same check-ins and plan; only the rate they are brought back to today's money at moved.
+    await waitFor(() => expect(screen.getByText(/Behind plan/).textContent).not.toBe(before))
   })
 
   it('saves the assumed inflation as a setting when it is changed in Setup', async () => {
@@ -614,13 +668,11 @@ describe('GoalsTab', () => {
     expect(actions.updateSettings).toHaveBeenCalledWith({ assumedInflation: 0.03 })
   })
 
-  it('says where the assumed inflation is set, without a link, in a read-only session', async () => {
-    const user = userEvent.setup()
+  it('shows the rate without a stepper in a read-only session', () => {
     render(<GoalsTab model={makeModel()} />)
-    await user.click(screen.getByRole('radio', { name: 'Nominal' }))
 
-    expect(screen.getByText(/2,0% a year, which is set in Setup/)).toBeInTheDocument()
-    // Setup would only say the session is read-only, so there is nothing to open.
-    expect(screen.queryByRole('button', { name: 'Open Setup' })).not.toBeInTheDocument()
+    expect(screen.getByText('Assumed inflation')).toBeInTheDocument()
+    expect(screen.getByText('2,0%')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Assumed inflation')).not.toBeInTheDocument()
   })
 })
