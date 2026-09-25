@@ -44,6 +44,8 @@ export interface ChartSeries {
   points?: ScatterPoint[]
   /** Join scatter points in x order, so readings over time read as a line. */
   connect?: boolean
+  /** Draw a marker at each point. Off for a projection given as points, which is a line. */
+  dots?: boolean
 }
 
 interface Props {
@@ -213,6 +215,8 @@ export function LinearChart({
             xForIndex={geo.xForIndex}
             scaleY={geo.scaleY}
             connect={s.connect ?? false}
+            dashed={s.dashed ?? false}
+            dots={s.dots ?? true}
           />
         ))}
         {refLines.filter(Number.isFinite).map((v) => (
