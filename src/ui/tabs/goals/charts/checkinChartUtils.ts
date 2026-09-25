@@ -16,11 +16,12 @@ export function realCheckinPoints(
   planStartDate: string,
   windowYears: number,
   stepYears: number,
+  inflationRate: number,
 ): ScatterPoint[] {
   return checkins.flatMap((c) => {
     const offset = yearOffsetFromDate(planStartDate, c.checkinDate)
     if (offset === null || offset < 0 || offset > windowYears) return []
-    const value = nominalToReal(checkinInvestedCents(c, accounts), planStartDate, c.checkinDate)
+    const value = nominalToReal(checkinInvestedCents(c, accounts), planStartDate, c.checkinDate, inflationRate)
     return [{ xIndex: offset / stepYears, value }]
   })
 }

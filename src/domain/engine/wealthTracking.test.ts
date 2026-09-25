@@ -14,6 +14,7 @@ import {
   nominalToReal,
   yearOffsetFromDate,
 } from './wealthTracking'
+import { DEFAULT_INFLATION_RATE } from './projectionConstants'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -125,24 +126,24 @@ describe('planValueAtOffset', () => {
 describe('planValueAtDate', () => {
   it('returns null when scenario has no planStartDate', () => {
     const scenario = makeScenario({ planStartDate: null })
-    expect(planValueAtDate(scenario, '2025-01-01')).toBeNull()
+    expect(planValueAtDate(scenario, '2025-01-01', DEFAULT_INFLATION_RATE)).toBeNull()
   })
 
   it('returns startInvestedCents at plan start date', () => {
     const scenario = makeScenario({ planStartDate: '2024-01-01' })
-    const v = planValueAtDate(scenario, '2024-01-01')
+    const v = planValueAtDate(scenario, '2024-01-01', DEFAULT_INFLATION_RATE)
     expect(v).toBe(10_000_000)
   })
 
   it('returns a value greater than start after one year', () => {
     const scenario = makeScenario({ planStartDate: '2024-01-01' })
-    const v = planValueAtDate(scenario, '2025-01-01')
+    const v = planValueAtDate(scenario, '2025-01-01', DEFAULT_INFLATION_RATE)
     expect(v).toBeGreaterThan(10_000_000)
   })
 
   it('returns null for malformed date', () => {
     const scenario = makeScenario({ planStartDate: '2024-01-01' })
-    expect(planValueAtDate(scenario, 'bad')).toBeNull()
+    expect(planValueAtDate(scenario, 'bad', DEFAULT_INFLATION_RATE)).toBeNull()
   })
 })
 
@@ -226,16 +227,16 @@ describe('trackStatus', () => {
   it('returns null when scenario has no planStartDate', () => {
     const scenario = makeScenario({ planStartDate: null })
     const checkin = makeCheckin('2025-01-01', [{ accountId: 1, valueCents: 15_000_000 }])
-    expect(trackStatus(checkin, scenario, accounts)).toBeNull()
+    expect(trackStatus(checkin, scenario, accounts, DEFAULT_INFLATION_RATE)).toBeNull()
   })
 
   it('returns positive delta when actual > projected, in the plan\'s money', () => {
     const scenario = makeScenario({ planStartDate: '2024-01-01' })
-    const projected = planValueAtDate(scenario, '2025-01-01')!
+    const projected = planValueAtDate(scenario, '2025-01-01', DEFAULT_INFLATION_RATE)!
     // A broker balance a year on is nominal; 5M ahead in today's money is a little more.
-    const actual = realToNominal(projected + 5_000_000, '2024-01-01', '2025-01-01')
+    const actual = realToNominal(projected + 5_000_000, '2024-01-01', '2025-01-01', DEFAULT_INFLATION_RATE)
     const checkin = makeCheckin('2025-01-01', [{ accountId: 1, valueCents: actual }])
-    const status = trackStatus(checkin, scenario, accounts)
+    const status = trackStatus(checkin, scenario, accounts, DEFAULT_INFLATION_RATE)
     expect(status).not.toBeNull()
     expect(status!.actualInvestedCents).toBe(actual)
     expect(status!.actualRealInvestedCents).toBeCloseTo(projected + 5_000_000, -1)
@@ -245,29 +246,42 @@ describe('trackStatus', () => {
 
   it('returns negative delta when actual < projected, and a nominal match reads as behind', () => {
     const scenario = makeScenario({ planStartDate: '2024-01-01' })
-    const projected = planValueAtDate(scenario, '2025-01-01')!
-    const actual = realToNominal(projected - 3_000_000, '2024-01-01', '2025-01-01')
-    const status = trackStatus(makeCheckin('2025-01-01', [{ accountId: 1, valueCents: actual }]), scenario, accounts)
+    const projected = planValueAtDate(scenario, '2025-01-01', DEFAULT_INFLATION_RATE)!
+    const actual = realToNominal(projected - 3_000_000, '2024-01-01', '2025-01-01', DEFAULT_INFLATION_RATE)
+    const status = trackStatus(makeCheckin('2025-01-01', [{ accountId: 1, valueCents: actual }]), scenario, accounts, DEFAULT_INFLATION_RATE)
     expect(status!.deltaCents).toBeCloseTo(-3_000_000, -1)
     expect(status!.deltaMonths).toBeLessThan(0)
     // The plan's figure is in today's money; a balance that only matches it nominally
     // has lost a year of inflation.
-    const nominalMatch = trackStatus(makeCheckin('2025-01-01', [{ accountId: 1, valueCents: projected }]), scenario, accounts)
+    const nominalMatch = trackStatus(makeCheckin('2025-01-01', [{ accountId: 1, valueCents: projected }]), scenario, accounts, DEFAULT_INFLATION_RATE)
     expect(nominalMatch!.deltaCents).toBeLessThan(0)
   })
 
+  it('brings a check-in back at the inflation it is given, and reads the plan the same way', () => {
+    const scenario = makeScenario({ planStartDate: '2024-01-01' })
+    const rate = 0.05
+    const projected = planValueAtDate(scenario, '2025-01-01', rate)!
+    // A balance exactly on plan in the money of the day: one year of 5% on the plan's figure.
+    const onPlan = realToNominal(projected, '2024-01-01', '2025-01-01', rate)
+    const status = trackStatus(makeCheckin('2025-01-01', [{ accountId: 1, valueCents: onPlan }]), scenario, accounts, rate)
+    expect(status!.deltaCents).toBeCloseTo(0, -1)
+    // The same balance against a plan that assumes 2% is not on plan: it is a little ahead.
+    const at2 = trackStatus(makeCheckin('2025-01-01', [{ accountId: 1, valueCents: onPlan }]), scenario, accounts, 0.02)
+    expect(at2!.deltaCents).toBeGreaterThan(0)
+  })
+
   it('converts between today\'s money and the money of a later day, and leaves the start alone', () => {
-    expect(realToNominal(100_000_00, '2024-01-01', '2024-01-01')).toBe(100_000_00)
-    expect(nominalToReal(realToNominal(100_000_00, '2024-01-01', '2026-01-01'), '2024-01-01', '2026-01-01')).toBe(100_000_00)
+    expect(realToNominal(100_000_00, '2024-01-01', '2024-01-01', DEFAULT_INFLATION_RATE)).toBe(100_000_00)
+    expect(nominalToReal(realToNominal(100_000_00, '2024-01-01', '2026-01-01', DEFAULT_INFLATION_RATE), '2024-01-01', '2026-01-01', DEFAULT_INFLATION_RATE)).toBe(100_000_00)
     expect(realToNominal(100_000_00, '2024-01-01', '2025-01-01', 0.05)).toBeCloseTo(105_000_00, -4)
     // A check-in before the plan start is not deflated into the future.
-    expect(nominalToReal(100_000_00, '2024-01-01', '2023-01-01')).toBe(100_000_00)
+    expect(nominalToReal(100_000_00, '2024-01-01', '2023-01-01', DEFAULT_INFLATION_RATE)).toBe(100_000_00)
   })
 
   it('exposes projectedInvestedCents and actualInvestedCents', () => {
     const scenario = makeScenario({ planStartDate: '2024-01-01' })
     const checkin = makeCheckin('2024-01-01', [{ accountId: 1, valueCents: 10_000_000 }])
-    const status = trackStatus(checkin, scenario, accounts)
+    const status = trackStatus(checkin, scenario, accounts, DEFAULT_INFLATION_RATE)
     expect(status!.projectedInvestedCents).toBe(10_000_000)
     expect(status!.actualInvestedCents).toBe(10_000_000)
     expect(status!.deltaCents).toBe(0)

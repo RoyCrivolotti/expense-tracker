@@ -39,13 +39,14 @@ export function comparisonRows(
   scenarios: GoalScenario[],
   draft: NewGoalScenario,
   format: MoneyFormat,
+  inflationRate: number,
 ): ComparisonRow[] {
   const all = [
     ...scenarios.map((s) => ({ key: `saved-${s.id}`, name: shortName(s.name), color: s.color, scenario: s })),
     { key: 'draft', name: `${shortName(draft.name)} (editing)`, color: draft.color, scenario: { ...draft, id: 0 } },
   ]
   return all.map(({ key, name, color, scenario }) => {
-    const params = scenarioToParams(scenario)
+    const params = scenarioToParams(scenario, inflationRate)
     const points = projectNetWorth(params)
     const end = points[points.length - 1]
     return {

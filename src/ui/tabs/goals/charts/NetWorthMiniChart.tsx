@@ -1,4 +1,5 @@
 import { memo, useCallback, useMemo } from 'react'
+import { useAssumedInflation } from '../../..//hooks/assumedInflationContext'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import { projectNetWorth, projectNetWorthBand, scenarioToParams } from '../../../../engine'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
@@ -14,8 +15,9 @@ const MINI_HEIGHT = 120
  */
 function NetWorthMiniChartImpl({ draft }: { draft: NewGoalScenario }) {
   const format = useMoneyFormat()
+  const inflationRate = useAssumedInflation()
   const { series, labels } = useMemo(() => {
-    const params = scenarioToParams({ ...draft, id: 0 })
+    const params = scenarioToParams({ ...draft, id: 0 }, inflationRate)
     const points = projectNetWorth(params)
     const { lo, hi } = projectNetWorthBand(params)
     const band: ChartSeries = {
@@ -36,7 +38,7 @@ function NetWorthMiniChartImpl({ draft }: { draft: NewGoalScenario }) {
       series: [band, line],
       labels: points.map((p, i) => (i === 0 || i === last ? String(p.year) : '')),
     }
-  }, [draft])
+  }, [draft, inflationRate])
   const tooltip = useCallback((i: number) => ({ title: `Year ${i}`, lines: [] }), [])
 
   return (

@@ -2,10 +2,9 @@
 
 export const DEFAULT_REAL_RETURN = 0.07
 /**
- * The plan is real. This is the inflation it assumes wherever it meets a nominal figure:
- * check-in balances deflated before they are compared with the plan, the house and the
- * mortgage brought back to today's money, and the starting rate of the nominal view's
- * stepper (which is only for that view). One constant so they all agree.
+ * What the assumed-inflation setting reads as until the owner sets one: 2%, about the ECB's
+ * target. It is a default, not an assumption of its own: every calculation takes the rate as
+ * an argument, from the owner's setting.
  */
 export const DEFAULT_INFLATION_RATE = 0.02
 export const DEFAULT_HOUSE_APPRECIATION = 0.025

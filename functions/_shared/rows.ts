@@ -17,6 +17,7 @@ import type {
   WealthCheckinEntry,
 } from '../domain/types'
 import { DEFAULT_BUDGET_ROLLOVER_DAY } from '../domain/engine/dates'
+import { DEFAULT_INFLATION_RATE } from '../domain/engine/projectionConstants'
 import { parseMilestones } from '../domain/engine/milestones'
 import { DEFAULT_CURRENCY_CODE, DEFAULT_NUMBER_LOCALE } from '../domain/engine/money'
 
@@ -183,11 +184,14 @@ export interface SettingsRow {
   milestones: string | null
   claimant_name: string | null
   cash_reserve_months: number | null
+  assumed_inflation: number | null
 }
 
 export function toSettings(r: SettingsRow): ExpenseSettings {
   return {
     cashReserveMonths: r.cash_reserve_months ?? 0,
+    // Undefined too, on a database that has not had the column added yet.
+    assumedInflation: r.assumed_inflation ?? DEFAULT_INFLATION_RATE,
     openingCashCents: r.opening_cash_cents,
     openingInvestmentCents: r.opening_investment_cents,
     defaultAccountId: r.default_account_id ?? null,

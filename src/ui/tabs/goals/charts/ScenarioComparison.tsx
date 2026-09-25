@@ -3,6 +3,7 @@ import type { GoalScenario } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import { ChartShell } from './ChartShell'
 import { comparisonRows, type ComparisonRow } from './comparisonRows'
+import { useAssumedInflation } from '../../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import styles from '../goals.module.css'
 
@@ -33,7 +34,11 @@ function ScenarioComparisonImpl({
   embedded?: boolean
 }) {
   const format = useMoneyFormat()
-  const rows = useMemo(() => comparisonRows(scenarios, draft, format), [scenarios, draft, format])
+  const inflationRate = useAssumedInflation()
+  const rows = useMemo(
+    () => comparisonRows(scenarios, draft, format, inflationRate),
+    [scenarios, draft, format, inflationRate],
+  )
   const sharedHorizon = rows.every((r) => r.horizonYears === rows[0]?.horizonYears)
   const horizon = sharedHorizon && rows[0] ? ` after ${rows[0].horizonYears} years` : ' at each path’s horizon'
 

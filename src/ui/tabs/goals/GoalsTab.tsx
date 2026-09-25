@@ -4,26 +4,24 @@ import type { ExpenseActions } from '../../actions'
 import type { GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import {
-  DEFAULT_INFLATION_RATE,
   averageMonthlyCents,
+  checkinInvestedCents,
   computeMonthlyTotals,
   defaultBudgetMonth,
   formatCents,
+  latestCheckin,
+  milestonesReached,
+  monthlyFlows,
   rebaseline,
   rebaselineSummary,
   type MoneyFormat,
   type Rebaseline,
-  monthlyFlows,
   yearOffsetFromDate,
-  checkinInvestedCents,
-  latestCheckin,
-  milestonesReached,
 } from '../../../engine'
 import type { InvestedSnapshot } from './checkinDate'
 import type { ChartSeries } from '../../charts/LinearChart'
 import { Card, SectionTitle } from '../../components/primitives'
 import { SegmentedControl } from '../../components/SegmentedControl'
-import { PercentStepper } from '../../components/PercentStepper'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { failureMessage } from '../../hooks/useFailureToast'
 import { useToast } from '../../hooks/useToast'
@@ -33,6 +31,7 @@ import { GoalControls } from './GoalControls'
 import { ScenarioManager } from './ScenarioManager'
 import { GoalsExplainer } from './GoalsExplainer'
 import { GoalsNarrative } from './GoalsNarrative'
+import { NominalPreview } from './NominalPreview'
 import { SecondaryCharts } from './SecondaryCharts'
 import { ProgressView } from './ProgressView'
 import { SetupView } from './SetupView'
@@ -214,14 +213,27 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
   // The dashboard's nudge opens the check-in form once; leaving Progress and coming back
   // within the tab must not open it again.
   const [checkinEntry, setCheckinEntry] = useState(entry === 'checkin')
+  // The Nominal note links to the assumed inflation in Setup, which then scrolls to it; any
+  // other way of getting to Setup must not.
+  const [focusInflation, setFocusInflation] = useState(false)
+  // The rate the Nominal view is being tried at, if not the saved one. It lives only as long
+  // as the chart it was tried on: leaving the view or the Nominal mode drops it.
+  const [previewInflation, setPreviewInflation] = useState<number | null>(null)
   const changeView = useCallback((next: TabView) => {
     setCheckinEntry(false)
+    setFocusInflation(false)
+    setPreviewInflation(null)
     setView(next)
   }, [])
+  const openInflationSetting = useCallback(() => {
+    changeView('setup')
+    setFocusInflation(true)
+  }, [changeView])
   const [displayMode, setDisplayMode] = useState<DisplayMode>('purchasing-power')
-  // Single configurable rate rather than year-by-year inputs — a reasonable
-  // simplification for a multi-decade projection. Resets on reload; display-only.
-  const [nominalInflation, setNominalInflation] = useState(DEFAULT_INFLATION_RATE)
+  const changeDisplayMode = useCallback((next: DisplayMode) => {
+    setPreviewInflation(null)
+    setDisplayMode(next)
+  }, [])
   // Mobile-only: swaps the chart block for the controls form in place, in lieu
   // of a separate route. Ignored on desktop, where both are always visible.
   const [mobilePlanView, setMobilePlanView] = useState<MobilePlanView>('chart')
@@ -445,6 +457,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
           settings={dataset.settings}
           actions={actions}
           onSettingsChange={actions ? (patch) => actions.updateSettings(patch) : undefined}
+          focusInflation={focusInflation}
         />
       ) : null}
       {view === 'progress' ? (
@@ -557,35 +570,24 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
                     <SegmentedControl
                       options={DISPLAY_MODE_OPTIONS}
                       value={displayMode}
-                      onChange={setDisplayMode}
+                      onChange={changeDisplayMode}
                       ariaLabel="Value display mode"
                       layout="compact"
                     />
                   </div>
                   {displayMode === 'nominal' ? (
-                    <>
-                      <div className={progressStyles.inflationRow}>
-                        <span className={progressStyles.inflationLabel}>Inflation in this view</span>
-                        <PercentStepper
-                          value={nominalInflation}
-                          onChange={setNominalInflation}
-                          min={0}
-                          max={0.1}
-                          ariaLabel="Inflation rate percentage"
-                        />
-                      </div>
-                      <p className={styles.chartHint}>
-                        Nominal inflates the plan line and its band at this rate. The summary above, the FI
-                        target and the milestones stay in today&apos;s money, so the target lines are only
-                        drawn in Purchasing power.
-                      </p>
-                    </>
+                    <NominalPreview
+                      saved={dataset.settings.assumedInflation}
+                      preview={previewInflation}
+                      onPreview={setPreviewInflation}
+                      onOpenSetup={actions ? openInflationSetting : undefined}
+                    />
                   ) : null}
                 </>
               }
               extraSeries={checkinExtraSeries ? [checkinExtraSeries] : []}
               nominalMode={displayMode === 'nominal'}
-              inflationRate={nominalInflation}
+              viewInflation={previewInflation}
               {...(heroTodayIndex !== undefined ? { todayIndex: heroTodayIndex } : {})}
             />
           </div>

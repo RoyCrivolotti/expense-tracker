@@ -11,6 +11,7 @@ import {
 import { Card, EmptyState, SectionTitle } from './primitives'
 import { scenarioHeadline } from '../tabs/goals/scenarioHeadline'
 import { activePlan } from '../tabs/goals/scenarioSelection'
+import { useAssumedInflation } from '../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { formatMoneyShort } from '../tabs/goals/chartTheme'
 import { contributionGapLabel } from '../tabs/goals/contributionGap'
@@ -71,6 +72,7 @@ function TrackBadge({ deltaCents, deltaMonths, format }: TrackBadgeProps) {
 
 export function GoalsCard({ dataset, onOpenGoals, onLogCheckin }: GoalsCardProps) {
   const format = useMoneyFormat()
+  const inflationRate = useAssumedInflation()
   const scenario = useMemo(() => activePlan(dataset.goalScenarios), [dataset.goalScenarios])
   // The pace kept since the plan began: investment transactions per month, which is
   // what the plan's monthly figure promises, rather than net saving.
@@ -80,16 +82,16 @@ export function GoalsCard({ dataset, onOpenGoals, onLogCheckin }: GoalsCardProps
     return averageMonthlyCents(since.map((m) => m.investedCents))
   }, [dataset.transactions, scenario])
   const headline = useMemo(
-    () => (scenario ? scenarioHeadline(scenario, avgInvesting, format) : null),
-    [scenario, avgInvesting, format],
+    () => (scenario ? scenarioHeadline(scenario, inflationRate, avgInvesting, format) : null),
+    [scenario, inflationRate, avgInvesting, format],
   )
 
   const track = useMemo(() => {
     if (!scenario) return null
     const latest = latestCheckin(dataset.wealthCheckins)
     if (!latest) return null
-    return trackStatus(latest, scenario, dataset.wealthAccounts)
-  }, [scenario, dataset.wealthCheckins, dataset.wealthAccounts])
+    return trackStatus(latest, scenario, dataset.wealthAccounts, inflationRate)
+  }, [scenario, dataset.wealthCheckins, dataset.wealthAccounts, inflationRate])
 
   if (!scenario || !headline) {
     return (

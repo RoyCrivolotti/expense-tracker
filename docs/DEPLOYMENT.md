@@ -85,9 +85,10 @@ If Workers Scripts Edit is missing, CI deploy of the backup cron worker fails un
 
 ```bash
 npx wrangler d1 execute roy-expenses --remote --file=migrations/NNNN_name.sql
+npx wrangler d1 execute roy-expenses --remote --command="INSERT OR IGNORE INTO _migrations (name) VALUES ('NNNN_name')"
 ```
 
-Apply through `0026_investment_category.sql` on production.
+Apply through `0027_assumed_inflation.sql` on production, and record each file in `_migrations` as you go, by its name without `.sql`. `npm run migrate:dev` records for the dev database itself; nothing does for production. The app never reads the table, so a missing row breaks nothing until someone trusts the record, which is how the drift described below happened.
 
 **Check what a database actually has before trusting this line.** It has been wrong: on
 2026-09-15 production turned out to have no `_migrations` table at all, `0020` never having
@@ -209,6 +210,8 @@ record on a database that already has a `transactions` table means the same thin
 `0025_cash_reserve_months.sql` adds a nullable `cash_reserve_months` on `settings`: the emergency-fund target Progress measures cash accounts against, read as 0 (no target) when null. Owner-agnostic, nothing to backfill. **Apply it before (or with) the code deploy** — saving the target from Setup writes the column, and the previous release never reads it.
 
 `0026_investment_category.sql` adds a nullable `investment_category_id` on `settings`: the category every investment transaction is filed under, in both directions, chosen under Settings → New transactions. Null falls back to a category named for investments. Owner-agnostic, nothing to backfill, same timing as `0025`.
+
+`0027_assumed_inflation.sql` adds a nullable `assumed_inflation` on `settings`: the yearly inflation the Goals tab assumes wherever it brings a nominal figure back to today's money, read as 2% when null. It is one value for the owner, not one per plan, so every scenario and the comparison table share a basis. Owner-agnostic, nothing to backfill, same timing as `0025`: apply it before (or with) the code deploy, since changing the rate writes the column.
 
 ## Old URL
 

@@ -24,6 +24,7 @@ function baseParams(overrides: Partial<ProjectionParams> = {}): ProjectionParams
     mortgageTermYears: DEFAULT_MORTGAGE_TERM_YEARS,
     mortgageRateAnnual: DEFAULT_MORTGAGE_RATE,
     houseAppreciationRate: DEFAULT_HOUSE_APPRECIATION,
+    inflationRate: DEFAULT_INFLATION_RATE,
     ...overrides,
   }
 }
@@ -80,5 +81,16 @@ describe('projectRentVsBuy', () => {
     const annual = payment * 12
     expect(buySidePortfolio).toBe(annual - Math.round(annual / (1 + DEFAULT_INFLATION_RATE)))
     expect(buySidePortfolio).toBeGreaterThan(0)
+  })
+
+  it('shrinks the payment by the inflation it is given', () => {
+    const rate = 0.05
+    const params = baseParams({ housePurchaseYear: 5, inflationRate: rate })
+    const payment = monthlyMortgageCents({ ...params, housePurchaseYear: 0 })
+    const result = projectRentVsBuy({ params, rentMonthlyCents: payment, carryRate: 0 })
+    const year1 = projectNetWorth({ ...params, housePurchaseYear: 0 })[1]!
+    const buySidePortfolio = result.points[1]!.buyNetWorthCents - (year1.houseEquityCents - year1.mortgageBalanceCents)
+    const annual = payment * 12
+    expect(buySidePortfolio).toBe(annual - Math.round(annual / (1 + rate)))
   })
 })

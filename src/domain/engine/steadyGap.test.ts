@@ -2,17 +2,18 @@ import { describe, expect, it } from 'vitest'
 import { steadyGap } from './steadyGap'
 import { planValueAtDate, realToNominal } from './wealthTracking'
 import { makeScenario, makeWealthAccount, makeWealthCheckin } from '../../testing/factories'
+import { DEFAULT_INFLATION_RATE } from './projectionConstants'
 
 const accounts = [makeWealthAccount({ id: 1, kind: 'investment' })]
 const plan = makeScenario({ id: 1, isActive: true, planStartDate: '2025-01-01' })
 
 /** A check-in sitting `gapCents` off the plan on that date, in the plan's money. */
 function off(id: number, date: string, gapCents: number) {
-  const projected = planValueAtDate(plan, date)!
+  const projected = planValueAtDate(plan, date, DEFAULT_INFLATION_RATE)!
   return makeWealthCheckin({
     id,
     checkinDate: date,
-    entries: [{ accountId: 1, valueCents: realToNominal(projected + gapCents, plan.planStartDate!, date) }],
+    entries: [{ accountId: 1, valueCents: realToNominal(projected + gapCents, plan.planStartDate!, date, DEFAULT_INFLATION_RATE) }],
   })
 }
 
@@ -21,7 +22,7 @@ describe('steadyGap', () => {
     const gap = steadyGap(
       [off(1, '2026-01-01', -100_000_00), off(2, '2026-04-01', -105_000_00), off(3, '2026-07-15', -98_000_00)],
       plan,
-      accounts,
+      accounts, DEFAULT_INFLATION_RATE,
     )
     expect(gap).not.toBeNull()
     expect(gap!.sinceDate).toBe('2026-01-01')
@@ -34,7 +35,7 @@ describe('steadyGap', () => {
       steadyGap(
         [off(1, '2026-01-01', -100_000_00), off(2, '2026-04-01', -50_000_00), off(3, '2026-07-15', -10_000_00)],
         plan,
-        accounts,
+        accounts, DEFAULT_INFLATION_RATE,
       ),
     ).toBeNull()
   })
@@ -48,7 +49,7 @@ describe('steadyGap', () => {
       steadyGap(
         [off(1, '2026-01-01', -80_000_00), off(2, '2026-04-01', -106_500_00), off(3, '2026-07-15', -133_000_00)],
         plan,
-        accounts,
+        accounts, DEFAULT_INFLATION_RATE,
       ),
     ).toBeNull()
   })
@@ -61,21 +62,21 @@ describe('steadyGap', () => {
       makeWealthCheckin({
         id,
         checkinDate: date,
-        entries: [{ accountId: 1, valueCents: realToNominal(planValueAtDate(monthly, date)! + gap, '2025-01-01', date) }],
+        entries: [{ accountId: 1, valueCents: realToNominal(planValueAtDate(monthly, date, DEFAULT_INFLATION_RATE)! + gap, '2025-01-01', date, DEFAULT_INFLATION_RATE) }],
       })
     expect(
-      steadyGap([near(1, '2026-01-01', -900_00), near(2, '2026-04-01', -1_000_00), near(3, '2026-07-15', -1_100_00)], monthly, accounts),
+      steadyGap([near(1, '2026-01-01', -900_00), near(2, '2026-04-01', -1_000_00), near(3, '2026-07-15', -1_100_00)], monthly, accounts, DEFAULT_INFLATION_RATE),
     ).toBeNull()
     expect(
-      steadyGap([near(1, '2026-01-01', -4_400_00), near(2, '2026-04-01', -4_600_00), near(3, '2026-07-15', -4_500_00)], monthly, accounts),
+      steadyGap([near(1, '2026-01-01', -4_400_00), near(2, '2026-04-01', -4_600_00), near(3, '2026-07-15', -4_500_00)], monthly, accounts, DEFAULT_INFLATION_RATE),
     ).not.toBeNull()
   })
 
   it('needs half a year of check-ins, and enough of them', () => {
     expect(
-      steadyGap([off(1, '2026-05-01', -100_000_00), off(2, '2026-06-01', -100_000_00), off(3, '2026-07-01', -100_000_00)], plan, accounts),
+      steadyGap([off(1, '2026-05-01', -100_000_00), off(2, '2026-06-01', -100_000_00), off(3, '2026-07-01', -100_000_00)], plan, accounts, DEFAULT_INFLATION_RATE),
     ).toBeNull()
-    expect(steadyGap([off(1, '2026-01-01', -100_000_00), off(2, '2026-07-15', -100_000_00)], plan, accounts)).toBeNull()
+    expect(steadyGap([off(1, '2026-01-01', -100_000_00), off(2, '2026-07-15', -100_000_00)], plan, accounts, DEFAULT_INFLATION_RATE)).toBeNull()
   })
 
   it('only looks at the recent run, so an old wobble does not block it', () => {
@@ -87,16 +88,16 @@ describe('steadyGap', () => {
         off(4, '2026-07-15', -100_000_00),
       ],
       plan,
-      accounts,
+      accounts, DEFAULT_INFLATION_RATE,
     )
     expect(gap?.sinceDate).toBe('2026-01-01')
   })
 
   it('needs a plan with a start date and a gap on one side', () => {
     const undated = makeScenario({ id: 2, planStartDate: null })
-    expect(steadyGap([off(1, '2026-01-01', -1), off(2, '2026-04-01', -1), off(3, '2026-07-15', -1)], undated, accounts)).toBeNull()
+    expect(steadyGap([off(1, '2026-01-01', -1), off(2, '2026-04-01', -1), off(3, '2026-07-15', -1)], undated, accounts, DEFAULT_INFLATION_RATE)).toBeNull()
     expect(
-      steadyGap([off(1, '2026-01-01', -100_000_00), off(2, '2026-04-01', 100_000_00), off(3, '2026-07-15', -100_000_00)], plan, accounts),
+      steadyGap([off(1, '2026-01-01', -100_000_00), off(2, '2026-04-01', 100_000_00), off(3, '2026-07-15', -100_000_00)], plan, accounts, DEFAULT_INFLATION_RATE),
     ).toBeNull()
   })
 })

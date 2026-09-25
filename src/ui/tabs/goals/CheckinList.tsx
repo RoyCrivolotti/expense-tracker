@@ -9,6 +9,7 @@ import {
   checkinNetWorthCents,
   trackStatus,
 } from '../../../engine'
+import { useAssumedInflation } from '../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { formatMoneyShort } from './chartTheme'
 import { formatCheckinDate } from './checkinDate'
@@ -29,6 +30,7 @@ function accountName(id: number, accounts: WealthAccount[]) {
 
 export function CheckinList({ checkins, accounts, plan, canWrite, actions }: Props) {
   const format = useMoneyFormat()
+  const inflationRate = useAssumedInflation()
   // A check-in is a month's worth of balances typed by hand and cannot be re-created
   // once gone, so the one-tap delete asks first. The check-in stays in state while the
   // sheet animates out, so it does not lose its title mid-exit.
@@ -47,7 +49,7 @@ export function CheckinList({ checkins, accounts, plan, canWrite, actions }: Pro
         <div className={styles.checkinTimeline}>
           {sorted.map((c) => {
             const netWorth = checkinNetWorthCents(c, accounts)
-            const status = plan ? trackStatus(c, plan, accounts) : null
+            const status = plan ? trackStatus(c, plan, accounts, inflationRate) : null
             const ahead = status ? status.deltaCents >= 0 : null
 
             return (

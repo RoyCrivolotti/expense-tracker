@@ -28,10 +28,11 @@ function shortName(name: string): string {
  */
 export function scenarioHeadline(
   scenario: ScenarioLike,
+  inflationRate: number,
   actualMonthlyInvestingCents?: number,
   format: MoneyFormat = EU_MONEY_FORMAT,
 ): ScenarioHeadline {
-  const params = scenarioToParams('id' in scenario ? scenario : { ...scenario, id: 0 })
+  const params = scenarioToParams('id' in scenario ? scenario : { ...scenario, id: 0 }, inflationRate)
   const series = projectNetWorth(params)
   const end = series[series.length - 1]
   const fiYear = yearsToFi(params, scenario.annualSpendCents, scenario.safeWithdrawalRate)

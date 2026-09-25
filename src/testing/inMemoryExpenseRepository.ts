@@ -16,6 +16,7 @@ import { deriveStatus, deriveTransactions } from '../domain/engine/status'
 import { addDaysIso } from '../domain/engine/dates'
 import { withoutFlag, withoutSettlement } from '../domain/engine/flagGroups'
 import { defaultExpenseSettings } from '../domain/engine/defaults'
+import { assumedInflationError } from '../domain/engine/assumedInflation'
 import { normalizeMilestones, validateMilestones } from '../domain/engine/milestones'
 import type {
   Account,
@@ -795,6 +796,10 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
         const error = validateMilestones(patch.milestones)
         if (error) throw new RepoHttpError(400, error)
         patch = { ...patch, milestones: normalizeMilestones(patch.milestones) }
+      }
+      if (patch.assumedInflation !== undefined) {
+        const error = assumedInflationError(patch.assumedInflation)
+        if (error) throw new RepoHttpError(400, error)
       }
       store.settings = { ...store.settings, ...patch }
       return Promise.resolve({ ...store.settings })

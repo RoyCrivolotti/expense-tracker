@@ -1,4 +1,5 @@
 import { memo, useMemo } from 'react'
+import { useAssumedInflation } from '../../..//hooks/assumedInflationContext'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import { projectNetWorth, purchaseYearBreakdown, scenarioToParams } from '../../../../engine'
 import { ChartShell } from './ChartShell'
@@ -26,9 +27,10 @@ function CompositionChartImpl({
   height?: number
   embedded?: boolean
 }) {
+  const inflationRate = useAssumedInflation()
   const points = useMemo(
-    () => projectNetWorth(scenarioToParams({ ...draft, id: 0 })),
-    [draft],
+    () => projectNetWorth(scenarioToParams({ ...draft, id: 0 }, inflationRate)),
+    [draft, inflationRate],
   )
   const format = useMoneyFormat()
   const years = points.map((p) => p.year)
@@ -68,7 +70,7 @@ function CompositionChartImpl({
         tone: 'neutral',
       },
     ]
-    const breakdown = purchaseYearBreakdown(scenarioToParams({ ...draft, id: 0 }), year)
+    const breakdown = purchaseYearBreakdown(scenarioToParams({ ...draft, id: 0 }, inflationRate), year)
     if (breakdown) lines.push(...purchaseBreakdownTooltipLines(breakdown, format))
     return { title: `Year ${year}`, lines }
   }

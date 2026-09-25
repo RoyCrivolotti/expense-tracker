@@ -22,6 +22,22 @@ describe('SetupView', () => {
     expect(screen.getByText('Broker')).toBeInTheDocument()
   })
 
+  it('carries the assumptions Progress is measured with, the assumed inflation among them', () => {
+    render(
+      <SetupView
+        accounts={[]}
+        checkins={[]}
+        settings={defaultExpenseSettings()}
+        actions={makeActions()}
+        onSettingsChange={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('Cash reserve')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Assumed inflation' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Assumed inflation')).toHaveValue('2,0')
+  })
+
   it('says so in a read-only session instead of offering editors', () => {
     render(
       <SetupView

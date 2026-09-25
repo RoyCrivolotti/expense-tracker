@@ -1,4 +1,5 @@
 import { memo, useMemo } from 'react'
+import { useAssumedInflation } from '../../..//hooks/assumedInflationContext'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import {
   fireNumber,
@@ -30,8 +31,9 @@ function FireChartImpl({
   height?: number
   embedded?: boolean
 }) {
+  const inflationRate = useAssumedInflation()
   const { fiTarget, fiYear, balances } = useMemo(() => {
-    const params = scenarioToParams({ ...draft, id: 0 })
+    const params = scenarioToParams({ ...draft, id: 0 }, inflationRate)
     const target = fireNumber(draft.annualSpendCents, draft.safeWithdrawalRate)
     const year = yearsToFi(params, draft.annualSpendCents, draft.safeWithdrawalRate)
     const growth = projectNetWorth(params)
@@ -43,7 +45,7 @@ function FireChartImpl({
       Math.min(30, draft.horizonYears),
     )
     return { fiTarget: target, fiYear: year, balances: drawdown }
-  }, [draft])
+  }, [draft, inflationRate])
 
   const format = useMoneyFormat()
   const labels = useMemo(() => sparseLabels(balances.map((_, y) => y), 5), [balances])

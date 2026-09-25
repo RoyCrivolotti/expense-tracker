@@ -28,10 +28,15 @@ function recentRun(checkins: WealthCheckin[], minDays: number): WealthCheckin[] 
 }
 
 /** Actual minus projected for each check-in, or null if any cannot be measured. */
-function gapDeltas(run: WealthCheckin[], plan: GoalScenario, accounts: WealthAccount[]): number[] | null {
+function gapDeltas(
+  run: WealthCheckin[],
+  plan: GoalScenario,
+  accounts: WealthAccount[],
+  inflationRate: number,
+): number[] | null {
   const deltas: number[] = []
   for (const c of run) {
-    const status = trackStatus(c, plan, accounts)
+    const status = trackStatus(c, plan, accounts, inflationRate)
     if (!status) return null
     deltas.push(status.deltaCents)
   }
@@ -61,12 +66,13 @@ export function steadyGap(
   checkins: WealthCheckin[],
   plan: GoalScenario,
   accounts: WealthAccount[],
+  inflationRate: number,
   { minDays = 180, minCount = 3, tolerance = 0.25, minMonths = 3 } = {},
 ): SteadyGap | null {
   if (!plan.planStartDate) return null
   const run = recentRun(checkins, minDays)
   if (run.length < minCount) return null
-  const deltas = gapDeltas(run, plan, accounts)
+  const deltas = gapDeltas(run, plan, accounts, inflationRate)
   if (!deltas) return null
   const mean = deltas.reduce((s, d) => s + d, 0) / deltas.length
   if (Math.abs(mean) < minMonths * plan.monthlyContributionCents) return null

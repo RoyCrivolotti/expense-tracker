@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { ProgressView } from './ProgressView'
 import { makeScenario, makeWealthAccount, makeWealthCheckin } from '../../../testing/factories'
 import { makeActions } from '../../../testing/makeActions'
-import { planValueAtDate } from '../../../engine'
+import { planValueAtDate, DEFAULT_INFLATION_RATE } from '../../../engine'
 
 beforeAll(() => {
   // The check-in chart's tooltip reads a media query; jsdom has no matchMedia.
@@ -70,7 +70,7 @@ describe('ProgressView', () => {
       makeWealthCheckin({
         id,
         checkinDate: date,
-        entries: [{ accountId: 1, valueCents: planValueAtDate(plan, date)! - 50_000_00 }],
+        entries: [{ accountId: 1, valueCents: planValueAtDate(plan, date, DEFAULT_INFLATION_RATE)! - 50_000_00 }],
       })
     const checkins = [behind(1, '2026-01-01'), behind(2, '2026-04-01'), behind(3, '2026-07-15')]
     render(

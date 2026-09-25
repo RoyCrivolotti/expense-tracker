@@ -5,7 +5,6 @@
  *   - The projected invested-portfolio value at any calendar date.
  *   - An on/off-track status: delta in € and in equivalent months.
  */
-import { DEFAULT_INFLATION_RATE } from './projectionConstants'
 import { projectNetWorth } from './projection'
 import { scenarioToParams } from './scenarioProjection'
 import type { GoalScenario, Milestone, WealthAccount, WealthCheckin } from '../types'
@@ -83,11 +82,11 @@ export function planValueAtOffset(
  * for a given scenario.  Returns null when planStartDate is not set on the
  * scenario or the date is unparseable.
  */
-export function planValueAtDate(scenario: GoalScenario, date: string): number | null {
+export function planValueAtDate(scenario: GoalScenario, date: string, inflationRate: number): number | null {
   if (!scenario.planStartDate) return null
   const offset = yearOffsetFromDate(scenario.planStartDate, date)
   if (offset === null) return null
-  const params = scenarioToParams(scenario)
+  const params = scenarioToParams(scenario, inflationRate)
   const points = projectNetWorth(params)
   return planValueAtOffset(points, offset)
 }
@@ -149,7 +148,7 @@ export function nominalToReal(
   cents: number,
   planStartDate: string,
   date: string,
-  inflationRate = DEFAULT_INFLATION_RATE,
+  inflationRate: number,
 ): number {
   const years = yearOffsetFromDate(planStartDate, date) ?? 0
   return Math.round(cents / Math.pow(1 + inflationRate, Math.max(0, years)))
@@ -159,7 +158,7 @@ export function realToNominal(
   cents: number,
   planStartDate: string,
   date: string,
-  inflationRate = DEFAULT_INFLATION_RATE,
+  inflationRate: number,
 ): number {
   const years = yearOffsetFromDate(planStartDate, date) ?? 0
   return Math.round(cents * Math.pow(1 + inflationRate, Math.max(0, years)))
@@ -173,13 +172,14 @@ export function trackStatus(
   checkin: WealthCheckin,
   scenario: GoalScenario,
   accounts: WealthAccount[],
+  inflationRate: number,
 ): TrackStatus | null {
   if (!scenario.planStartDate) return null
-  const projected = planValueAtDate(scenario, checkin.checkinDate)
+  const projected = planValueAtDate(scenario, checkin.checkinDate, inflationRate)
   if (projected === null) return null
 
   const actualInvestedCents = checkinInvestedCents(checkin, accounts)
-  const actualRealInvestedCents = nominalToReal(actualInvestedCents, scenario.planStartDate, checkin.checkinDate)
+  const actualRealInvestedCents = nominalToReal(actualInvestedCents, scenario.planStartDate, checkin.checkinDate, inflationRate)
   const deltaCents = actualRealInvestedCents - projected
 
   // Monthly contribution at the check-in's year (approximate using year 1 value).

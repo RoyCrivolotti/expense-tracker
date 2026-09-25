@@ -1,4 +1,5 @@
 import { memo, useMemo } from 'react'
+import { useAssumedInflation } from '../../..//hooks/assumedInflationContext'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import { projectRentVsBuy, scenarioToParams } from '../../../../engine'
 import { ChartShell } from './ChartShell'
@@ -24,13 +25,14 @@ function RentVsOwnChartImpl({
   height?: number
   embedded?: boolean
 }) {
+  const inflationRate = useAssumedInflation()
   const { points, breakevenYear } = useMemo(
     () =>
       projectRentVsBuy({
-        params: scenarioToParams({ ...draft, id: 0 }),
+        params: scenarioToParams({ ...draft, id: 0 }, inflationRate),
         rentMonthlyCents: draft.rentMonthlyCents,
       }),
-    [draft],
+    [draft, inflationRate],
   )
   const format = useMoneyFormat()
   const years = points.map((p) => p.year)

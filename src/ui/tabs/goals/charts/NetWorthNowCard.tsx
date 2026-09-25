@@ -3,6 +3,7 @@ import type { NewGoalScenario } from '../../../../data/dataSource'
 import type { Milestone } from '../../../../types'
 import { fireNumber, formatCents, milestoneLabelWithAmount, nominalToReal } from '../../../../engine'
 import { Card } from '../../../components/primitives'
+import { useAssumedInflation } from '../../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { formatCheckinDate, type InvestedSnapshot } from '../checkinDate'
 import styles from '../goals.module.css'
@@ -12,10 +13,18 @@ import styles from '../goals.module.css'
  * in the money of its day, so the balance is deflated to the plan start first. Milestones
  * stay nominal, as the check-in history that marks them reached is.
  */
-function fiShare(draft: NewGoalScenario, latest: InvestedSnapshot | null, current: number, fiTarget: number) {
+function fiShare(
+  draft: NewGoalScenario,
+  latest: InvestedSnapshot | null,
+  current: number,
+  fiTarget: number,
+  inflationRate: number,
+) {
   if (fiTarget <= 0 || draft.annualSpendCents <= 0) return null
   const real =
-    latest && draft.planStartDate ? nominalToReal(latest.investedCents, draft.planStartDate, latest.date) : current
+    latest && draft.planStartDate
+      ? nominalToReal(latest.investedCents, draft.planStartDate, latest.date, inflationRate)
+      : current
   return Math.min(100, Math.max(0, (real / fiTarget) * 100))
 }
 
@@ -38,12 +47,13 @@ function NetWorthNowCardImpl({
   reached: Map<number, string>
 }) {
   const format = useMoneyFormat()
+  const inflationRate = useAssumedInflation()
   const current = latest ? latest.investedCents : draft.startInvestedCents
   const measured = latest
     ? `as of ${formatCheckinDate(latest.date)}`
     : 'at plan start, no check-in yet'
   const fiTarget = fireNumber(draft.annualSpendCents, draft.safeWithdrawalRate)
-  const pct = fiShare(draft, latest, current, fiTarget)
+  const pct = fiShare(draft, latest, current, fiTarget, inflationRate)
   // Skip anything a check-in already recorded as reached, so a dip in the
   // portfolio does not re-suggest a milestone that was actually hit.
   const next =

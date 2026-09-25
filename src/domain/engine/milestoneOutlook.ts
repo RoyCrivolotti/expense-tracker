@@ -15,8 +15,8 @@ function isoAt(ms: number): string {
 }
 
 /** The fractional year, from the plan start, at which the invested line first reaches the amount. */
-export function yearsToAmount(plan: GoalScenario, amountCents: number): number | null {
-  const points = projectNetWorth(scenarioToParams(plan))
+export function yearsToAmount(plan: GoalScenario, amountCents: number, inflationRate: number): number | null {
+  const points = projectNetWorth(scenarioToParams(plan, inflationRate))
   for (let i = 0; i < points.length; i++) {
     const p = points[i]!
     if (p.investedCents < amountCents) continue
@@ -32,10 +32,10 @@ export function yearsToAmount(plan: GoalScenario, amountCents: number): number |
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
 /** The calendar date the plan crosses the amount, or null without a start date or within the horizon. */
-export function milestoneCrossingDate(plan: GoalScenario, amountCents: number): string | null {
+export function milestoneCrossingDate(plan: GoalScenario, amountCents: number, inflationRate: number): string | null {
   // A start date only the API could have written malformed must not take Progress down.
   if (!plan.planStartDate || !ISO_DATE.test(plan.planStartDate)) return null
-  const years = yearsToAmount(plan, amountCents)
+  const years = yearsToAmount(plan, amountCents, inflationRate)
   if (years === null) return null
   // Whole years by the calendar, so two years from 1 January is 1 January; only the part
   // year inside the crossing year is counted in days.
@@ -67,11 +67,12 @@ export function milestoneStanding(
   milestone: Milestone,
   plan: GoalScenario | null,
   reachedOn: string | undefined,
+  inflationRate: number,
   asOf: string | null = null,
 ): MilestoneStanding {
   if (reachedOn) return { kind: 'reached', on: reachedOn }
   if (!plan?.planStartDate) return { kind: 'unknown' }
-  const expected = milestoneCrossingDate(plan, milestone.amountCents)
+  const expected = milestoneCrossingDate(plan, milestone.amountCents, inflationRate)
   const target = milestone.targetDate ?? null
   if (!expected) return { kind: 'beyond-horizon', target }
   if (asOf !== null && expected <= asOf) return { kind: 'overdue', expected, target }
