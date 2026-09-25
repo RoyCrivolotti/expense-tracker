@@ -37,6 +37,27 @@ describe('ChartTooltip', () => {
     expect(scrollIntoView).not.toHaveBeenCalled()
   })
 
+  it('slides back into the free band when it hangs out of it, over the chart if it must', () => {
+    docked = true
+    // The bars' probes are 60px; the tooltip itself is what the test moves around.
+    let panel = { top: 10, bottom: 300 }
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (this.style.visibility === 'hidden') return { top: 0, bottom: 60, height: 60 } as DOMRect
+      return { ...panel, height: panel.bottom - panel.top } as DOMRect
+    })
+    const { rerender } = render(<ChartTooltip title="Year 5" lines={[]} anchor={null} side="above" />)
+    // Poking 50px above the band's top (60px): moved down.
+    expect(screen.getByRole('tooltip').style.transform).toBe('translateY(50px)')
+    // Hanging below the band: moved up.
+    panel = { top: 500, bottom: window.innerHeight + 100 }
+    rerender(<ChartTooltip title="Year 6" lines={[]} anchor={null} side="below" />)
+    expect(screen.getByRole('tooltip').style.transform).toBe(`translateY(${-160}px)`)
+    // Inside: not moved.
+    panel = { top: 200, bottom: 400 }
+    rerender(<ChartTooltip title="Year 7" lines={[]} anchor={null} side="below" />)
+    expect(screen.getByRole('tooltip').style.transform).toBe('')
+  })
+
   it('opens above when no side is given', () => {
     docked = true
     render(<ChartTooltip title="Year 5" lines={[]} anchor={null} />)

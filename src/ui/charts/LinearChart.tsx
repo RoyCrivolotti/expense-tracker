@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, type RefObject } from 'react'
 import { ChartTooltip, type TooltipLine } from './ChartTooltip'
 import { useElementWidth } from '../hooks/useElementWidth'
 import {
@@ -63,6 +63,8 @@ interface Props {
   /** Index of the current year in the x-axis for a "today" vertical marker. */
   todayIndex?: number
   tooltipMode?: 'full' | 'hidden'
+  /** An element below the chart that already shows the tapped point's values (the hero's legend): while it is fully on screen the tooltip stays away, so it does not cover what it repeats. */
+  readoutRef?: RefObject<HTMLElement | null>
   onActiveIndexChange?: (index: number | null) => void
   /** Floor for the auto-computed Y-axis max — keeps the scale stable across re-renders that change value magnitude (e.g. a real/nominal display toggle). */
   yDomainMax?: number | undefined
@@ -131,6 +133,7 @@ export function LinearChart({
   lifeEventMarkers = [],
   todayIndex,
   tooltipMode = 'full',
+  readoutRef,
   onActiveIndexChange,
   yDomainMax,
   fitDomain,
@@ -145,7 +148,10 @@ export function LinearChart({
   const focusX = active != null ? geo.xForIndex(active) : 0
   const anchor = useSvgAnchor(svgRef, active != null ? focusX : null, active != null ? PAD.top : null)
   const tip = active != null ? tooltip(active) : null
-  const side = useTooltipSide(active != null, containerRef)
+  const { side, show } = useTooltipSide(active != null, containerRef, {
+    enabled: tooltipMode === 'full',
+    unlessVisible: readoutRef,
+  })
   const lineSeries = series.filter((s) => s.kind !== 'area' && s.kind !== 'band' && s.kind !== 'scatter')
 
   useEffect(() => {
@@ -259,7 +265,7 @@ export function LinearChart({
           lineSeries={lineSeries}
         />
       </svg>
-      {tip && tooltipMode === 'full' ? (
+      {tip && show ? (
         <ChartTooltip anchor={anchor} side={side} title={tip.title} lines={tip.lines} />
       ) : null}
     </div>

@@ -1,8 +1,9 @@
+import { useLayoutEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import styles from './charts.module.css'
 import { useDockedTooltip } from './useDockedTooltip'
 import { useTooltipPosition } from './useTooltipPosition'
-import type { TooltipSide } from './useTooltipSide'
+import { nudgeIntoBand, visibleBand, type TooltipSide } from './useTooltipSide'
 
 export interface TooltipLine {
   label: string
@@ -82,8 +83,24 @@ function FloatingTooltip({ title, lines, anchor }: Props) {
  * it needs no scrolling to reach: tapping away to scroll is what closes it.
  */
 function DockedTooltip({ title, lines, side }: Pick<Props, 'title' | 'lines'> & { side: TooltipSide }) {
+  const ref = useRef<HTMLDivElement>(null)
+  // A panel taller than the room on its side would sit under the header or the tab bar, out of
+  // reach: it slides back into the free band, over the chart if it must. Set on the element
+  // rather than in state so a tooltip that changes height as the point changes does not
+  // render twice.
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.transform = ''
+    const shift = nudgeIntoBand(el.getBoundingClientRect(), visibleBand())
+    if (shift !== 0) el.style.transform = `translateY(${shift}px)`
+  })
   return (
-    <div className={`${styles.tooltipDocked} ${side === 'above' ? styles.tooltipAbove : styles.tooltipBelow}`} role="tooltip">
+    <div
+      ref={ref}
+      className={`${styles.tooltipDocked} ${side === 'above' ? styles.tooltipAbove : styles.tooltipBelow}`}
+      role="tooltip"
+    >
       <TooltipBody title={title} lines={lines} />
     </div>
   )
