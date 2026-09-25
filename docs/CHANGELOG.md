@@ -2,6 +2,11 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## September 2026 (chart readability)
+
+- **The Y axis fits the lines.** The projection chart no longer stretches to the uncertainty band's upper edge or to the other view's height, so the lines fill the plot and can be told apart; a band that runs higher is clipped at the top. Purchasing power and Nominal each fit their own axis, so switching between them rescales. On every chart the axis now stops at most 8% past the data, and the income and expense charts follow the same rule.
+- **Long scenario names wrap** in the projection legend instead of being cut off, and the plan from today shows its figure at the last year (it stopped a fraction of a year short), with a dash before the check-in.
+
 ## September 2026 (the plan from today)
 
 - **The plan as it stands from your latest check-in**, without re-baselining. A dotted line in the plan's colour on the portfolio projection from the check-in on, a "from today" row under the plan in the comparison and milestone tables (years counted from the check-in), a second date for each unreached milestone on Progress, and a second FI year on the dashboard card. The plan line and ahead/behind keep their baseline; this says what happens now from the balance actually there.
