@@ -7,6 +7,8 @@ export interface ScenarioLegendItem {
   label: string
   color: string
   dashed?: boolean
+  /** The plan from today: drawn dotted, in the plan's colour. */
+  dotted?: boolean
   valueCents: number | null
   /** The saved scenario behind the line; the draft has none and cannot be hidden. */
   scenarioId?: number
@@ -36,7 +38,7 @@ interface ScenarioSeriesLegendProps {
 function LegendRow({ item, onToggle, format }: { item: ScenarioLegendItem; onToggle: ScenarioSeriesLegendProps['onToggle']; format: MoneyFormat }) {
   const body = (
     <>
-      <SeriesSwatch color={item.color} {...(item.dashed ? { dashed: true } : {})} />
+      <SeriesSwatch color={item.color} {...(item.dashed ? { dashed: true } : {})} {...(item.dotted ? { dotted: true } : {})} />
       <span className={styles.label}>{item.label}</span>
       <span className={styles.value}>
         {item.valueCents != null ? formatMoneyShort(item.valueCents, format) : ''}
@@ -100,13 +102,26 @@ function DashedSwatch({ color }: { color: string }) {
   )
 }
 
+function DottedSwatch({ color }: { color: string }) {
+  return (
+    <svg className={styles.dashedSwatch} viewBox="0 0 12 12" aria-hidden>
+      {[2, 6, 10].map((cx) => (
+        <circle key={cx} cx={cx} cy={6} r={1.3} fill={color} />
+      ))}
+    </svg>
+  )
+}
+
 function SeriesSwatch({
   color,
   dashed = false,
+  dotted = false,
 }: {
   color: string
   dashed?: boolean
+  dotted?: boolean
 }) {
+  if (dotted) return <DottedSwatch color={color} />
   if (dashed) return <DashedSwatch color={color} />
   return <span className={styles.swatch} style={{ background: color }} aria-hidden />
 }

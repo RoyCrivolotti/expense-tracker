@@ -2,7 +2,9 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { NetWorthChart } from './NetWorthChart'
 import { AssumedInflationContext } from '../../../hooks/assumedInflationContext'
-import { computeChartDisplayData, deflatePoints, inflateSeries } from './nominalTransform'
+import { computeChartDisplayData, deflatePoints, inflatePoints, inflateSeries } from './nominalTransform'
+import { pointSeriesValueAt } from './checkinChartUtils'
+import { planFromToday } from '../../../../engine'
 import { makeScenario } from '../../../../testing/factories'
 import { defaultMilestones } from '../../../../engine'
 import type { ChartSeries } from '../../../charts/LinearChart'
@@ -224,6 +226,52 @@ describe('NetWorthChart', () => {
     const rows = screen.getAllByRole('button', { name: /on chart$/ }).map((el) => el.getAttribute('aria-label'))
     // Hidden or not, A stays first; hiding it must not shuffle B and C up a row.
     expect(rows).toEqual(['Show Path A on chart', 'Hide Path B on chart', 'Hide Path C on chart'])
+  })
+
+  it('draws the plan from today as a dotted line in the plan\'s colour, with a legend row', () => {
+    const plan = makeScenario({ id: 1, name: 'Path A', color: '#123456', planStartDate: '2024-01-01', isActive: true })
+    const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-01-01' })
+    const { container } = render(
+      <NetWorthChart
+        milestones={milestones}
+        scenarios={[plan]}
+        draft={defaultDraft}
+        activeId={null}
+        variant="hero"
+        fromToday={fromToday}
+      />,
+    )
+    const dotted = [...container.querySelectorAll('path')].filter((p) => p.getAttribute('stroke-dasharray') === '2 4')
+    expect(dotted).toHaveLength(1)
+    expect(dotted[0]!.getAttribute('style')).toContain('rgb(18, 52, 86)')
+    // A line, not readings: no markers along it.
+    expect(container.querySelector('svg[role="img"]')!.querySelectorAll('circle')).toHaveLength(0)
+    expect(screen.getByText('Path A, from today')).toBeInTheDocument()
+    // Not a scenario of its own, so nothing to hide.
+    expect(screen.queryByRole('button', { name: /from today on chart/ })).not.toBeInTheDocument()
+  })
+
+  it('reads the from-today line off its segment for the legend and the tooltip', () => {
+    const points = [
+      { xIndex: 2.5, value: 100 },
+      { xIndex: 3.5, value: 200 },
+    ]
+    expect(pointSeriesValueAt(points, 3)).toBe(150)
+    expect(pointSeriesValueAt(points, 2.5)).toBe(100)
+    // Before the check-in the plan from today does not exist yet.
+    expect(pointSeriesValueAt(points, 1)).toBeNull()
+    expect(pointSeriesValueAt([], 1)).toBeNull()
+  })
+
+  it('inflates a real point series by each point\'s own year in the nominal view', () => {
+    const series: ChartSeries[] = [
+      { id: 'from-today', color: '#000', values: [], kind: 'scatter', points: [{ xIndex: 2, value: 100_000_000 }] },
+    ]
+    expect(inflatePoints(series, 0.02)[0]!.points?.[0]?.value).toBe(Math.round(100_000_000 * 1.02 ** 2))
+    const shown = computeChartDisplayData([], [], [0, 1, 2], true, 0.02, null, null, series)
+    expect(shown.displayRealPoints[0]!.points?.[0]?.value).toBe(Math.round(100_000_000 * 1.02 ** 2))
+    const real = computeChartDisplayData([], [], [0, 1, 2], false, 0.02, null, null, series)
+    expect(real.displayRealPoints[0]!.points?.[0]?.value).toBe(100_000_000)
   })
 
   it('renders without crashing with default props', () => {
