@@ -210,7 +210,7 @@ record on a database that already has a `transactions` table means the same thin
 
 `0026_investment_category.sql` adds a nullable `investment_category_id` on `settings`: the category every investment transaction is filed under, in both directions, chosen under Settings → New transactions. Null falls back to a category named for investments. Owner-agnostic, nothing to backfill, same timing as `0025`.
 
-`0027_assumed_inflation.sql` adds a nullable `assumed_inflation` on `settings`: the yearly inflation the Goals tab assumes wherever it brings a nominal figure back to today's money, read as 2% when null. It is one value for the owner, not one per plan, so every scenario and the comparison table share a basis. Owner-agnostic, nothing to backfill, same timing as `0025`: apply it before (or with) the code deploy, since changing the rate in the Goals tab writes the column.
+`0027_assumed_inflation.sql` adds a nullable `assumed_inflation` on `settings`: the yearly inflation the Goals tab assumes wherever it brings a nominal figure back to today's money, read as 2% when null. It is one value for the owner, not one per plan, so every scenario and the comparison table share a basis. Owner-agnostic, nothing to backfill, same timing as `0025`: apply it before (or with) the code deploy, since changing the rate in Setup writes the column.
 
 ## Old URL
 
