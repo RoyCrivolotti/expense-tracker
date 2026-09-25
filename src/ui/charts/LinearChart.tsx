@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef } from 'react'
-import type { RefObject } from 'react'
 import { ChartTooltip, type TooltipLine } from './ChartTooltip'
 import { useElementWidth } from '../hooks/useElementWidth'
 import {
@@ -25,6 +24,7 @@ import {
   type Pt,
   type ScatterPoint,
 } from './linearScale'
+import type { RefObject } from 'react'
 import styles from './charts.module.css'
 
 const FALLBACK_W = 360
