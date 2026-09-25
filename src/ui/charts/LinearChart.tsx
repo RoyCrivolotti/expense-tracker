@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useId, useMemo, useRef } from 'react'
 import { ChartTooltip, type TooltipLine } from './ChartTooltip'
 import { useElementWidth } from '../hooks/useElementWidth'
 import {
@@ -97,8 +97,13 @@ function useGeometry(
     const lineValues = series
       .filter((s) => s.kind !== 'area' && s.kind !== 'band' && s.kind !== 'scatter')
       .flatMap((s) => s.values)
+    // A band is the spread around a line, not the thing being read: a wide one would set
+    // the axis and leave the lines squeezed under it. It is held to the height of what it
+    // surrounds and clipped there, so the axis fits the lines.
+    const solidMax = Math.max(...[...lineValues, ...stackedValues, ...scatterValues].filter(Number.isFinite))
+    const bandCap = solidMax > 0 ? solidMax : Infinity
     const domain = collectDomain(
-      [lineValues, stackedValues, envelopeValues, scatterValues],
+      [lineValues, stackedValues, envelopeValues.map((v) => Math.min(v, bandCap)), scatterValues],
       refLines,
       fitDomain !== true,
     )
@@ -110,7 +115,7 @@ function useGeometry(
     const scaleY = makeScale(nice.min, nice.max, PAD.top + innerH, PAD.top)
     const xForIndex = (i: number) =>
       n <= 1 ? PAD.left + innerW / 2 : PAD.left + (i / (n - 1)) * innerW
-    return { n, innerH, stackedBands, areaSeries, ticks: nice.ticks, scaleY, xForIndex }
+    return { n, innerH, innerW, stackedBands, areaSeries, ticks: nice.ticks, scaleY, xForIndex }
   }, [series, width, height, refLines, yDomainMax, fitDomain])
 }
 
@@ -135,6 +140,8 @@ export function LinearChart({
   fitDomain,
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
+  // useId gives ':r1:', which a url(#...) reference does not reliably take.
+  const plotClipId = `plot-${useId().replace(/:/g, '')}`
   const containerRef = useRef<HTMLDivElement>(null)
   // The viewBox is the wrapper's width in CSS pixels, so text, strokes and hit areas
   // render at their own size instead of being scaled up with the chart.
@@ -184,19 +191,24 @@ export function LinearChart({
             />
           )
         })}
-        {series.filter((s) => s.kind === 'band').map((s) =>
-          s.band ? (
-            <ChartBandLayer
-              key={s.id}
-              color={s.color}
-              lo={s.band.lo}
-              hi={s.band.hi}
-              xForIndex={geo.xForIndex}
-              scaleY={geo.scaleY}
-              fillOpacity={0.18}
-            />
-          ) : null,
-        )}
+        <clipPath id={plotClipId}>
+          <rect x={PAD.left - 1} y={PAD.top} width={geo.innerW + 2} height={geo.innerH + 1} />
+        </clipPath>
+        <g clipPath={`url(#${plotClipId})`}>
+          {series.filter((s) => s.kind === 'band').map((s) =>
+            s.band ? (
+              <ChartBandLayer
+                key={s.id}
+                color={s.color}
+                lo={s.band.lo}
+                hi={s.band.hi}
+                xForIndex={geo.xForIndex}
+                scaleY={geo.scaleY}
+                fillOpacity={0.18}
+              />
+            ) : null,
+          )}
+        </g>
         {lineSeries.map((s) => (
           <path
             key={s.id}

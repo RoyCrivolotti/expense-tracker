@@ -300,7 +300,7 @@ function useFiTarget(isHero: boolean, draft: NewGoalScenario): number | null {
  */
 function useRefLines(
   milestones: Milestone[],
-  yDomainMax: number | undefined,
+  drawnMax: number | undefined,
   fiTargetCents: number | null,
   windowed: boolean,
   nominalMode: boolean,
@@ -311,13 +311,13 @@ function useRefLines(
     if (nominalMode) return []
     // A milestone far above the plan's own ceiling would squash the projection
     // flat against the axis, so only draw the ones it gets within reach of.
-    const ceiling = yDomainMax != null && yDomainMax > 0 ? yDomainMax * 1.15 : Infinity
+    const ceiling = drawnMax != null && drawnMax > 0 ? drawnMax * 1.15 : Infinity
     const base = milestones.map((m) => m.amountCents).filter((m) => m <= ceiling)
     const fiFits = fiTargetCents !== null && (!windowed || fiTargetCents <= ceiling)
     return fiFits && !base.includes(fiTargetCents)
       ? [...base, fiTargetCents].sort((a, b) => a - b)
       : base
-  }, [milestones, yDomainMax, fiTargetCents, windowed, nominalMode])
+  }, [milestones, drawnMax, fiTargetCents, windowed, nominalMode])
 }
 
 function HeroWindowPicker({
@@ -432,9 +432,9 @@ function NetWorthChartImpl({
   const markerYears = useMemo(() => purchaseMarkerIndices(lines, years), [lines, years])
   const labels = useMemo(() => sparseLabels(years, 5), [years])
 
-  // Locks the Y-axis to the larger of the real/nominal maxima so toggling display
-  // mode moves the lines on a fixed scale instead of rescaling the whole chart.
-  const { displaySeries, displayExtraSeries, displayRealPoints, displayBand, yDomainMax } = useMemo(
+  // Each view fits its own axis, so Purchasing power is not stretched to the nominal plan's
+  // height; toggling rescales, and only Nominal holds a floor (for the rate preview).
+  const { displaySeries, displayExtraSeries, displayRealPoints, displayBand, yDomainMax, drawnMax } = useMemo(
     () =>
       computeChartDisplayData(
         series,
@@ -450,7 +450,7 @@ function NetWorthChartImpl({
   )
   const { line: fromTodayLine, label: fromTodayLabel } = fromTodayDrawing(displayRealPoints, fromToday)
 
-  const refLines = useRefLines(milestones, yDomainMax, useFiTarget(isHero, draft), windowYears !== null, nominalMode)
+  const refLines = useRefLines(milestones, drawnMax, useFiTarget(isHero, draft), windowYears !== null, nominalMode)
   const staticLegend: LegendItem[] = useMemo(
     () => series.map((s, idx) => ({ label: names[idx] ?? s.id, color: s.color })),
     [series, names],

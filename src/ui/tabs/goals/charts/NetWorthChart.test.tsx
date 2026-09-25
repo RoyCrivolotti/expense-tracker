@@ -4,7 +4,7 @@ import { NetWorthChart } from './NetWorthChart'
 import { AssumedInflationContext } from '../../../hooks/assumedInflationContext'
 import { computeChartDisplayData, deflatePoints, inflatePoints, inflateSeries } from './nominalTransform'
 import { pointSeriesValueAt } from './checkinChartUtils'
-import { planFromToday } from '../../../../engine'
+import { planFromToday, projectNetWorth, scenarioToParams } from '../../../../engine'
 import { makeScenario } from '../../../../testing/factories'
 import { defaultMilestones } from '../../../../engine'
 import type { ChartSeries } from '../../../charts/LinearChart'
@@ -351,31 +351,44 @@ describe('NetWorthChart', () => {
     expect(container.querySelector('svg')).not.toBeNull()
   })
 
-  it('draws a check-in dot lower in today\'s money than in the nominal view', () => {
-    const extra: ChartSeries = {
-      id: 'actuals',
-      color: '#10b981',
-      values: [],
-      kind: 'scatter',
-      points: [{ xIndex: 10, value: 50_000_000 }],
-    }
-    const cy = (nominalMode: boolean) => {
-      const { container } = render(
+  it('fits each view to its own plan, so today\'s money is not stretched to the nominal height', () => {
+    const axisTop = (nominalMode: boolean) => {
+      const { container, unmount } = render(
         <NetWorthChart
-          milestones={milestones}
+          milestones={[]}
           scenarios={[defaultDraft]}
           draft={defaultDraft}
           activeId={defaultDraft.id}
-          extraSeries={[extra]}
+          variant="hero"
           nominalMode={nominalMode}
         />,
       )
-      const circle = container.querySelector('circle')
-      return Number(circle!.getAttribute('cy'))
+      const labels = [...container.querySelectorAll('text[text-anchor="end"]')].map((t) => t.textContent ?? '')
+      unmount()
+      const cents = labels.flatMap((l) => {
+        const m = /^([\d.]+)([KM])/.exec(l)
+        return m ? [Number(m[1]) * (m[2] === 'M' ? 1e6 : 1e3)] : []
+      })
+      return Math.max(...cents)
     }
-    // The Y axis is locked across both modes, and SVG y grows downward: the deflated dot
-    // of the default view sits lower than the untouched one of the nominal view.
-    expect(cy(false)).toBeGreaterThan(cy(true))
+    expect(axisTop(false)).toBeLessThan(axisTop(true))
+  })
+
+  it('draws only the milestones within reach of what is drawn in this view', () => {
+    const realEnd = projectNetWorth(scenarioToParams(defaultDraft, 0.02)).at(-1)!.investedCents
+    const near = Math.round(realEnd * 1.1)
+    // Out of reach of today's money, but under the nominal plan the axis used to be held to.
+    const far = Math.round(realEnd * 1.6)
+    const { container } = render(
+      <NetWorthChart
+        milestones={[near, far].map((amountCents) => ({ amountCents, label: '' }))}
+        scenarios={[defaultDraft]}
+        draft={defaultDraft}
+        activeId={defaultDraft.id}
+        variant="hero"
+      />,
+    )
+    expect(container.querySelectorAll(`line.${chartStyles.refLine}`)).toHaveLength(1)
   })
 
   it('draws the nominal view at the owner\'s assumed inflation', () => {
@@ -459,7 +472,7 @@ describe('NetWorthChart', () => {
       unmount()
       return d
     }
-    // Locked Y axis, so a band that moved up with the line has a different outline.
+    // The nominal band is inflated year by year with the line, so its outline is a different shape.
     expect(bandPath(true)).not.toBe(bandPath(false))
   })
 
