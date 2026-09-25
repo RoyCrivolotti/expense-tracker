@@ -337,6 +337,30 @@ describe('NetWorthChart', () => {
     expect(Number(svg!.getAttribute('viewBox')?.split(' ')[3] ?? 0)).toBeGreaterThan(200)
   })
 
+  it('reads the year in a panel above the hero chart on a phone, where the legend is below the fold', () => {
+    const onPhone = (matches: boolean) =>
+      vi.stubGlobal('matchMedia', (media: string) => ({
+        matches,
+        media,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }))
+    const heroProps = { milestones, scenarios: [defaultDraft], draft: defaultDraft, activeId: defaultDraft.id, variant: 'hero' as const }
+    onPhone(true)
+    const { container, unmount } = render(<NetWorthChart {...heroProps} />)
+    expect(container.querySelector('[data-readout="live"]')).toHaveTextContent('Year 30')
+    fireEvent.keyDown(container.querySelector('svg[role="img"]')!, { key: 'Home' })
+    expect(container.querySelector('[data-readout="live"]')).toHaveTextContent('Year 0')
+    unmount()
+    // On a wide screen the legend under the chart is the readout, and nothing floats.
+    onPhone(false)
+    const wide = render(<NetWorthChart {...heroProps} />)
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    fireEvent.keyDown(wide.container.querySelector('svg[role="img"]')!, { key: 'Home' })
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+    vi.unstubAllGlobals()
+  })
+
   it('renders without crashing in the nominal view', () => {
     const { container } = render(
       <NetWorthChart

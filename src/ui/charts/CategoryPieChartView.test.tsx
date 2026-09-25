@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { CategoryPieChartView, type PieSlice } from './CategoryPieChartView'
 
 beforeAll(() => {
@@ -66,5 +66,39 @@ describe('CategoryPieChartView legend pointer events', () => {
     expect(screen.getByText('Food')).toBeDefined()
     expect(screen.getByText('Rent')).toBeDefined()
     expect(screen.getByText('Fun')).toBeDefined()
+  })
+})
+
+describe('CategoryPieChartView on a phone', () => {
+  afterEach(() => vi.unstubAllGlobals())
+  const onPhone = () =>
+    vi.stubGlobal('matchMedia', (media: string) => ({
+      matches: true,
+      media,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }))
+  const live = (container: HTMLElement) => container.querySelector('[data-readout="live"]')!
+
+  it('reads the whole month above the pie until a slice is tapped', () => {
+    onPhone()
+    const { container } = render(
+      <CategoryPieChartView paths={makeSlices()} active={null} onShow={vi.fn()} onHide={vi.fn()} />,
+    )
+    expect(live(container)).toHaveTextContent('All categories')
+    expect(live(container)).toHaveTextContent('Tap a slice')
+    // Above the pie, so it is on screen when the pie is low on the page.
+    expect(screen.getByRole('status').compareDocumentPosition(container.querySelector('svg')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('reads the tapped slice instead, and floats nothing', () => {
+    onPhone()
+    const { container } = render(
+      <CategoryPieChartView paths={makeSlices()} active={1} onShow={vi.fn()} onHide={vi.fn()} />,
+    )
+    expect(live(container)).toHaveTextContent('Rent')
+    expect(live(container)).toHaveTextContent('30%')
+    expect(live(container)).not.toHaveTextContent('Tap a slice')
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
   })
 })
