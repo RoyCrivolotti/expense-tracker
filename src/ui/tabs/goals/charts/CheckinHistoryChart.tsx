@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
+import { useAssumedInflation } from '../../..//hooks/assumedInflationContext'
 import type { GoalScenario, WealthAccount, WealthCheckin } from '../../../../types'
 import { Card } from '../../../components/primitives'
 import { SegmentedControl } from '../../../components/SegmentedControl'
@@ -8,7 +9,6 @@ import {
   projectNetWorth,
   scenarioToParams,
   yearOffsetFromDate,
-  DEFAULT_INFLATION_RATE,
   formatPercent,
 } from '../../../../engine'
 import { todayIso } from '../../../components/transactionFormState'
@@ -30,6 +30,7 @@ const ACTUAL_COLOR = '#10b981'
 
 export function CheckinHistoryChart({ checkins, accounts, plan }: Props) {
   const format = useMoneyFormat()
+  const inflationRate = useAssumedInflation()
   const narrow = useGoalsNarrow()
   const planStartDate = plan?.planStartDate ?? null
   const elapsedYears = useMemo(
@@ -41,18 +42,18 @@ export function CheckinHistoryChart({ checkins, accounts, plan }: Props) {
 
   const model = useMemo(() => {
     if (!plan || !planStartDate) return null
-    const points = projectNetWorth(scenarioToParams(plan))
+    const points = projectNetWorth(scenarioToParams(plan, inflationRate))
     const years = WINDOW_OPTIONS.find((o) => o.value === window)?.years ?? plan.horizonYears
     const windowYears = Math.min(years, plan.horizonYears)
     const series = windowSeries(points, planStartDate, windowYears, stepMonthsFor(windowYears))
-    const scatter = realCheckinPoints(checkins, accounts, planStartDate, windowYears, series.stepYears)
+    const scatter = realCheckinPoints(checkins, accounts, planStartDate, windowYears, series.stepYears, inflationRate)
     const todayIndex =
       elapsedYears >= 0 && elapsedYears <= windowYears ? elapsedYears / series.stepYears : undefined
     // Roughly one tick's worth of the fitted axis, so the labels get enough decimals.
     const shown = [...series.values, ...scatter.map((p) => p.value)]
     const tickStep = (Math.max(...shown) - Math.min(...shown)) / 5
     return { series, scatter, todayIndex, tickStep }
-  }, [plan, planStartDate, window, checkins, accounts, elapsedYears])
+  }, [plan, planStartDate, window, checkins, accounts, elapsedYears, inflationRate])
 
   const planColor = plan?.color
   const tooltip = useCallback(
@@ -97,7 +98,7 @@ export function CheckinHistoryChart({ checkins, accounts, plan }: Props) {
         />
       </div>
       <p className={goalStyles.chartHint}>
-        In today&apos;s money: each check-in is brought back at {formatPercent(DEFAULT_INFLATION_RATE)} a year to sit
+        In today&apos;s money: each check-in is brought back at {formatPercent(inflationRate)} a year to sit
         against the plan.
       </p>
       <LinearChart

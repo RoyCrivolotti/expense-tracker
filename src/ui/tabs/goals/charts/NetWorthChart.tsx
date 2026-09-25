@@ -9,6 +9,7 @@ import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
 import { sparseLabels } from '../../../charts/linearScale'
 import { formatMoneyShort } from '../chartTheme'
+import { useAssumedInflation } from '../../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { useGoalsNarrow } from '../useGoalsNarrow'
 import { SegmentedControl } from '../../../components/SegmentedControl'
@@ -39,6 +40,7 @@ function scenarioLines(
   draft: NewGoalScenario,
   activeId: number | null,
   dirty: boolean,
+  inflationRate: number,
   hiddenIds: ReadonlySet<number> = NO_HIDDEN,
 ): ScenarioLine[] {
   const lines: ScenarioLine[] = saved
@@ -49,7 +51,7 @@ function scenarioLines(
       name: s.name,
       color: s.color,
       dashed: false,
-      params: scenarioToParams(s),
+      params: scenarioToParams(s, inflationRate),
     }))
   lines.push({
     id: 'draft',
@@ -57,7 +59,7 @@ function scenarioLines(
     name: `${draft.name} (editing)`,
     color: draft.color,
     dashed: true,
-    params: scenarioToParams({ ...draft, id: 0 }),
+    params: scenarioToParams({ ...draft, id: 0 }, inflationRate),
   })
   return lines
 }
@@ -200,12 +202,12 @@ function useHeroWindow(isHero: boolean, horizonYears: number) {
 }
 
 /** The draft's uncertainty band, hero only. */
-function useBandSeries(isHero: boolean, draft: NewGoalScenario): ChartSeries | null {
+function useBandSeries(isHero: boolean, draft: NewGoalScenario, inflationRate: number): ChartSeries | null {
   return useMemo(() => {
     if (!isHero) return null
-    const { lo, hi } = projectNetWorthBand(scenarioToParams(draft))
+    const { lo, hi } = projectNetWorthBand(scenarioToParams(draft, inflationRate))
     return { id: 'uncertainty-band', color: draft.color, values: [], kind: 'band', band: { lo, hi } }
-  }, [isHero, draft])
+  }, [isHero, draft, inflationRate])
 }
 
 /** Everything drawn, cut at the window in one go so the axis fits what is left. */
@@ -353,6 +355,7 @@ function NetWorthChartImpl({
   onToggleVisible?: ((scenarioId: number) => void) | undefined
 }) {
   const format = useMoneyFormat()
+  const assumedInflation = useAssumedInflation()
   const narrow = useGoalsNarrow()
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const onActiveIndexChange = useCallback((index: number | null) => {
@@ -360,8 +363,8 @@ function NetWorthChartImpl({
   }, [])
   const isHero = variant === 'hero'
   const lines = useMemo(
-    () => scenarioLines(scenarios, draft, activeId, dirty, hiddenIds),
-    [scenarios, draft, activeId, dirty, hiddenIds],
+    () => scenarioLines(scenarios, draft, activeId, dirty, assumedInflation, hiddenIds),
+    [scenarios, draft, activeId, dirty, assumedInflation, hiddenIds],
   )
   const hiddenScenarios = useMemo(
     () => scenarios.filter((s) => hiddenIds?.has(s.id)),
@@ -373,7 +376,7 @@ function NetWorthChartImpl({
   const extentYears = full.years[full.years.length - 1] ?? draft.horizonYears
   const { heroWindow, setHeroWindow, heroWindows, windowYears } = useHeroWindow(isHero, extentYears)
   const names = full.names
-  const bandSeries = useBandSeries(isHero, draft)
+  const bandSeries = useBandSeries(isHero, draft, assumedInflation)
   const { years, series, band, extra } = useWindowedSeries(full, bandSeries, extraSeries, windowYears)
   const markerYears = useMemo(() => purchaseMarkerIndices(lines, years), [lines, years])
   const labels = useMemo(() => sparseLabels(years, 5), [years])

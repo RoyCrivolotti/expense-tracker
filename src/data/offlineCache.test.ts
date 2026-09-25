@@ -10,6 +10,8 @@ describe('isCompatibleSnapshot', () => {
 
   it('rejects a snapshot from an older schema version', () => {
     expect(isCompatibleSnapshot({ version: 1 })).toBe(false)
+    // Version 2 predates `settings.assumedInflation`, which every projection now reads.
+    expect(isCompatibleSnapshot({ version: 2 })).toBe(false)
   })
 
   it('rejects a missing record', () => {
@@ -17,6 +19,6 @@ describe('isCompatibleSnapshot', () => {
   })
 
   it('accepts a snapshot written by this build', () => {
-    expect(isCompatibleSnapshot({ version: 2 })).toBe(true)
+    expect(isCompatibleSnapshot({ version: 3 })).toBe(true)
   })
 })

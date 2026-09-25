@@ -1,4 +1,5 @@
 import type { NewGoalScenario } from '../../../data/dataSource'
+import { useAssumedInflation } from '../..//hooks/assumedInflationContext'
 import type { Milestone } from '../../../types'
 import {
   fireNumber,
@@ -30,8 +31,8 @@ interface MilestoneStat {
  * The two milestones worth narrating: the next one the plan should cross, and
  * the top of the ladder. Collapses to one when the next milestone is the top.
  */
-function narrativeMilestones(draft: NewGoalScenario, milestones: Milestone[]) {
-  const params = scenarioToParams({ ...draft, id: 0 })
+function narrativeMilestones(draft: NewGoalScenario, milestones: Milestone[], inflationRate: number) {
+  const params = scenarioToParams({ ...draft, id: 0 }, inflationRate)
   const toStat = (milestone: Milestone): MilestoneStat => ({
     milestone,
     year: yearsToTargetFromProjection(params, milestone.amountCents, false),
@@ -58,13 +59,13 @@ function milestoneSentences(
   return parts.length > 0 ? ` ${parts.join(' ')}` : ''
 }
 
-function getNarrativeStats(draft: NewGoalScenario, milestones: Milestone[]) {
-  const params = scenarioToParams({ ...draft, id: 0 })
+function getNarrativeStats(draft: NewGoalScenario, milestones: Milestone[], inflationRate: number) {
+  const params = scenarioToParams({ ...draft, id: 0 }, inflationRate)
   const series = projectNetWorth(params)
   const end = series[series.length - 1]
   const fiYear = yearsToFi(params, draft.annualSpendCents, draft.safeWithdrawalRate)
   const fiTarget = fireNumber(draft.annualSpendCents, draft.safeWithdrawalRate)
-  return { end, fiYear, fiTarget, ...narrativeMilestones(draft, milestones) }
+  return { end, fiYear, fiTarget, ...narrativeMilestones(draft, milestones, inflationRate) }
 }
 
 interface PlanStat {
@@ -80,7 +81,8 @@ function CompactNarrative({
   milestones: Milestone[]
 }) {
   const format = useMoneyFormat()
-  const { end, next, fiYear } = getNarrativeStats(draft, milestones)
+  const inflationRate = useAssumedInflation()
+  const { end, next, fiYear } = getNarrativeStats(draft, milestones, inflationRate)
   const stats: PlanStat[] = [
     {
       label: `Net worth in ${draft.horizonYears} yrs`,
@@ -117,7 +119,8 @@ function FullNarrative({
   milestones: Milestone[]
 }) {
   const format = useMoneyFormat()
-  const { end, next, top, fiYear, fiTarget } = getNarrativeStats(draft, milestones)
+  const inflationRate = useAssumedInflation()
+  const { end, next, top, fiYear, fiTarget } = getNarrativeStats(draft, milestones, inflationRate)
   const short = (c: number) => formatMoneyShort(c, format)
   return (
     <Card>

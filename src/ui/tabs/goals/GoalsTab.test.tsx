@@ -6,7 +6,7 @@ import { ToastContext } from '../../hooks/useToast'
 import { buildExpenseModel } from '../../buildExpenseModel'
 import { makeDataset, makeScenario, makeWealthAccount, makeWealthCheckin } from '../../../testing/factories'
 import { makeActions } from '../../../testing/makeActions'
-import { defaultExpenseSettings, planValueAtDate } from '../../../engine'
+import { defaultExpenseSettings, planValueAtDate, DEFAULT_INFLATION_RATE } from '../../../engine'
 
 beforeAll(() => {
   Object.defineProperty(window, 'matchMedia', {
@@ -234,7 +234,7 @@ describe('GoalsTab', () => {
       makeWealthCheckin({
         id,
         checkinDate: date,
-        entries: [{ accountId: 1, valueCents: planValueAtDate(plan, date)! - 50_000_00 }],
+        entries: [{ accountId: 1, valueCents: planValueAtDate(plan, date, DEFAULT_INFLATION_RATE)! - 50_000_00 }],
       })
     const checkins = [behind(1, '2026-01-01'), behind(2, '2026-04-01'), behind(3, '2026-07-15')]
     const dataset = makeDataset({ goalScenarios: [plan], wealthAccounts: accounts, wealthCheckins: checkins })
@@ -245,7 +245,7 @@ describe('GoalsTab', () => {
     // It asks first, since it writes the plan straight away.
     expect(actions.updateScenario).not.toHaveBeenCalled()
     await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Re-baseline' }))
-    const patch = { startInvestedCents: planValueAtDate(plan, '2026-07-15')! - 50_000_00, planStartDate: '2026-07-15' }
+    const patch = { startInvestedCents: planValueAtDate(plan, '2026-07-15', DEFAULT_INFLATION_RATE)! - 50_000_00, planStartDate: '2026-07-15' }
     expect(actions.updateScenario).toHaveBeenCalledWith(1, expect.objectContaining(patch))
 
     // The write lands and the dataset refreshes; the draft must already agree with it,
@@ -268,7 +268,7 @@ describe('GoalsTab', () => {
       makeWealthCheckin({
         id,
         checkinDate: date,
-        entries: [{ accountId: 1, valueCents: planValueAtDate(plan, date)! - 50_000_00 }],
+        entries: [{ accountId: 1, valueCents: planValueAtDate(plan, date, DEFAULT_INFLATION_RATE)! - 50_000_00 }],
       })
     const checkins = [behind(1, '2026-01-01'), behind(2, '2026-04-01'), behind(3, '2026-07-15')]
     const dataset = makeDataset({ goalScenarios: [plan], wealthAccounts: accounts, wealthCheckins: checkins })
@@ -297,7 +297,7 @@ describe('GoalsTab', () => {
       makeWealthCheckin({
         id,
         checkinDate: date,
-        entries: [{ accountId: 1, valueCents: planValueAtDate(plan, date)! - 50_000_00 }],
+        entries: [{ accountId: 1, valueCents: planValueAtDate(plan, date, DEFAULT_INFLATION_RATE)! - 50_000_00 }],
       })
     const checkins = [behind(1, '2026-01-01'), behind(2, '2026-04-01'), behind(3, '2026-07-15')]
     const model = buildExpenseModel(makeDataset({ goalScenarios: [plan], wealthAccounts: accounts, wealthCheckins: checkins }))
@@ -314,7 +314,7 @@ describe('GoalsTab', () => {
       1,
       expect.objectContaining({
         name: 'Path A, tweaked',
-        startInvestedCents: planValueAtDate(plan, '2026-07-15')! - 50_000_00,
+        startInvestedCents: planValueAtDate(plan, '2026-07-15', DEFAULT_INFLATION_RATE)! - 50_000_00,
         planStartDate: '2026-07-15',
       }),
     )
@@ -338,7 +338,7 @@ describe('GoalsTab', () => {
       makeWealthCheckin({
         id,
         checkinDate: date,
-        entries: [{ accountId: 1, valueCents: planValueAtDate(plan, date)! - 50_000_00 }],
+        entries: [{ accountId: 1, valueCents: planValueAtDate(plan, date, DEFAULT_INFLATION_RATE)! - 50_000_00 }],
       })
     const checkins = [behind(1, '2026-01-01'), behind(2, '2026-04-01'), behind(3, '2026-07-15')]
     const dataset = makeDataset({ goalScenarios: [plan], wealthAccounts: accounts, wealthCheckins: checkins })
@@ -392,7 +392,7 @@ describe('GoalsTab', () => {
       makeWealthCheckin({
         id,
         checkinDate: date,
-        entries: [{ accountId: 1, valueCents: planValueAtDate(plan, date)! - 50_000_00 }],
+        entries: [{ accountId: 1, valueCents: planValueAtDate(plan, date, DEFAULT_INFLATION_RATE)! - 50_000_00 }],
       })
     const checkins = [behind(1, '2026-01-01'), behind(2, '2026-04-01'), behind(3, '2026-07-15')]
     const model = buildExpenseModel(makeDataset({ goalScenarios: [plan], wealthAccounts: accounts, wealthCheckins: checkins }))

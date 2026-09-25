@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { GoalScenario } from '../../../types'
 import { scenarioHeadline } from './scenarioHeadline'
+import { DEFAULT_INFLATION_RATE } from '../../../engine'
 
 const base: GoalScenario = {
   id: 1,
@@ -29,20 +30,20 @@ const base: GoalScenario = {
 
 describe('scenarioHeadline', () => {
   it('includes short name and FI year in primary line', () => {
-    const { primary } = scenarioHeadline(base)
+    const { primary } = scenarioHeadline(base, DEFAULT_INFLATION_RATE)
     expect(primary).toMatch(/^Rent & invest/)
     expect(primary).toContain('FI year')
   })
 
   it('shows plan and actual saving when they differ', () => {
-    const { secondary } = scenarioHeadline(base, 72_000)
+    const { secondary } = scenarioHeadline(base, DEFAULT_INFLATION_RATE, 72_000)
     expect(secondary).toContain('plan ')
     expect(secondary).toContain('/mo')
     expect(secondary).toContain('actual avg')
   })
 
   it('omits actual avg when it matches plan', () => {
-    const { secondary } = scenarioHeadline(base, 100_000)
+    const { secondary } = scenarioHeadline(base, DEFAULT_INFLATION_RATE, 100_000)
     expect(secondary).not.toContain('actual avg')
   })
 })

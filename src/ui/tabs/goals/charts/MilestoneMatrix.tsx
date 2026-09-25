@@ -1,4 +1,5 @@
 import { memo, useMemo } from 'react'
+import { useAssumedInflation } from '../../..//hooks/assumedInflationContext'
 import type { GoalScenario, Milestone } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import {
@@ -44,14 +45,15 @@ function buildRows(
   scenarios: GoalScenario[],
   draft: NewGoalScenario,
   milestones: Milestone[],
+  inflationRate: number,
 ): Row[] {
   const all = [
-    ...scenarios.map((s) => ({ id: String(s.id), name: shortName(s.name), color: s.color, params: scenarioToParams(s) })),
+    ...scenarios.map((s) => ({ id: String(s.id), name: shortName(s.name), color: s.color, params: scenarioToParams(s, inflationRate) })),
     {
       id: 'draft',
       name: `${shortName(draft.name)} (editing)`,
       color: draft.color,
-      params: scenarioToParams({ ...draft, id: 0 }),
+      params: scenarioToParams({ ...draft, id: 0 }, inflationRate),
     },
   ]
   return all.map(({ id, name, color, params }) => ({
@@ -124,7 +126,11 @@ function MilestoneMatrixImpl({
   reached: Map<number, string>
   embedded?: boolean
 }) {
-  const rows = useMemo(() => buildRows(scenarios, draft, milestones), [scenarios, draft, milestones])
+  const inflationRate = useAssumedInflation()
+  const rows = useMemo(
+    () => buildRows(scenarios, draft, milestones, inflationRate),
+    [scenarios, draft, milestones, inflationRate],
+  )
 
   return (
     <ChartShell embedded={embedded}>

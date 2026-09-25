@@ -3,7 +3,6 @@
  * All money in integer cents; rates as fractions (0.07 = 7% real).
  */
 import { pmt } from './finance'
-import { DEFAULT_INFLATION_RATE } from './projectionConstants'
 import type { LifeEvent } from '../types'
 
 export interface YearPoint {
@@ -31,6 +30,11 @@ export interface ProjectionParams {
   mortgageTermYears: number
   mortgageRateAnnual: number
   houseAppreciationRate: number
+  /**
+   * The yearly inflation the plan assumes (0.02 = 2%), from the owner's setting. Required, with
+   * no fallback: the house and the mortgage are brought back to today's money by it.
+   */
+  inflationRate: number
   /** One-off cash flows applied at specific projection years. Default: none. */
   lifeEvents?: LifeEvent[]
 }
@@ -52,12 +56,13 @@ function annualContribution(
 function houseEquityAtYear(
   housePriceCents: number,
   appreciation: number,
+  inflationRate: number,
   purchaseYear: HousePurchaseYear,
   year: number,
 ): number {
   if (purchaseYear === null || year < purchaseYear) return 0
   const yearsOwned = year - purchaseYear
-  const realGrowth = (1 + appreciation) / (1 + DEFAULT_INFLATION_RATE)
+  const realGrowth = (1 + appreciation) / (1 + inflationRate)
   return Math.round(housePriceCents * Math.pow(realGrowth, yearsOwned))
 }
 
@@ -70,6 +75,7 @@ function mortgageBalanceAtYear(
   loanCents: number,
   rateAnnual: number,
   termYears: number,
+  inflationRate: number,
   purchaseYear: HousePurchaseYear,
   year: number,
 ): number {
@@ -78,7 +84,7 @@ function mortgageBalanceAtYear(
   if (monthsElapsed <= 0) return loanCents
   const monthlyRate = rateAnnual / 12
   const totalMonths = termYears * 12
-  const deflator = Math.pow(1 + DEFAULT_INFLATION_RATE, year - purchaseYear)
+  const deflator = Math.pow(1 + inflationRate, year - purchaseYear)
   if (monthlyRate === 0) {
     const paid = Math.round((loanCents / totalMonths) * monthsElapsed)
     return Math.max(0, Math.round((loanCents - paid) / deflator))
@@ -190,6 +196,7 @@ export function projectNetWorth(params: ProjectionParams): YearPoint[] {
     const houseEquity = houseEquityAtYear(
       params.housePriceCents,
       params.houseAppreciationRate,
+      params.inflationRate,
       params.housePurchaseYear,
       year,
     )
@@ -197,6 +204,7 @@ export function projectNetWorth(params: ProjectionParams): YearPoint[] {
       loanCents,
       params.mortgageRateAnnual,
       params.mortgageTermYears,
+      params.inflationRate,
       params.housePurchaseYear,
       year,
     )

@@ -2,7 +2,6 @@ import type { GoalScenario, Transaction, WealthAccount, WealthCheckin } from '..
 import type { CashReserve, PortfolioReturn, SteadyGap, TrackStatus } from '../../../engine'
 import { Card } from '../../components/primitives'
 import {
-  DEFAULT_INFLATION_RATE,
   cashReserve,
   checkinInvestedCents,
   checkinNetWorthCents,
@@ -13,6 +12,7 @@ import {
   trackStatus,
 } from '../../../engine'
 import { formatCheckinDate } from './checkinDate'
+import { useAssumedInflation } from '../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import type { MoneyFormat } from '../../../engine/money'
 import { formatMoneyShort } from './chartTheme'
@@ -107,10 +107,12 @@ function ReturnHint({
   ret,
   plan,
   format,
+  inflationRate,
 }: {
   ret: PortfolioReturn
   plan: GoalScenario | null
   format: MoneyFormat
+  inflationRate: number
 }) {
   const since = formatCheckinDate(ret.startDate)
   const planRate = plan ? `${formatPercent(plan.expectedRealReturn, format)} a year` : ''
@@ -123,7 +125,7 @@ function ReturnHint({
       </p>
     )
   }
-  const real = (1 + ret.annualised) / (1 + DEFAULT_INFLATION_RATE) - 1
+  const real = (1 + ret.annualised) / (1 + inflationRate) - 1
   const onPar = !plan || real >= plan.expectedRealReturn
   return (
     <p style={hintStyle}>
@@ -132,7 +134,7 @@ function ReturnHint({
         {formatPercent(ret.annualised, format)} a year
       </strong>{' '}
       since {since}, about {formatPercent(real, format)} once{' '}
-      {formatPercent(DEFAULT_INFLATION_RATE, format)} inflation is taken off
+      {formatPercent(inflationRate, format)} inflation is taken off
       {plan ? ` against the ${planRate}, after inflation, that ${plan.name} assumes` : ''}.
     </p>
   )
@@ -218,13 +220,14 @@ function SnapshotHints({
   onRebaseline: (() => void) | undefined
   format: MoneyFormat
 }) {
+  const inflationRate = useAssumedInflation()
   const ret = portfolioReturn(checkins, accounts, transactions)
-  const stale = plan ? steadyGap(checkins, plan, accounts) : null
+  const stale = plan ? steadyGap(checkins, plan, accounts, inflationRate) : null
   const reserve = cashReserve(latest, accounts, transactions, cashReserveMonths, openBudgetMonth)
   return (
     <>
       {status && status.deltaMonths !== 0 ? <MonthsHint status={status} /> : null}
-      {ret ? <ReturnHint ret={ret} plan={plan} format={format} /> : null}
+      {ret ? <ReturnHint ret={ret} plan={plan} format={format} inflationRate={inflationRate} /> : null}
       {reserve ? <CashReserveHint reserve={reserve} format={format} /> : null}
       {stale ? <SteadyGapHint gap={stale} format={format} onRebaseline={onRebaseline} /> : null}
     </>
@@ -241,6 +244,7 @@ export function WealthSummaryCard({
   openBudgetMonth,
 }: Props) {
   const format = useMoneyFormat()
+  const inflationRate = useAssumedInflation()
   const latest = latestCheckin(checkins)
 
   if (!latest) {
@@ -260,7 +264,7 @@ export function WealthSummaryCard({
 
   const netWorth = checkinNetWorthCents(latest, accounts)
   const invested = checkinInvestedCents(latest, accounts)
-  const status = plan ? trackStatus(latest, plan, accounts) : null
+  const status = plan ? trackStatus(latest, plan, accounts, inflationRate) : null
 
   return (
     <Card>

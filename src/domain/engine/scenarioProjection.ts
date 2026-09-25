@@ -4,8 +4,11 @@ import { projectNetWorth, type ProjectionParams } from './projection'
 
 type ScenarioInput = NewGoalScenario | GoalScenario
 
-/** Map a persisted or draft scenario to engine projection params. */
-export function scenarioToParams(scenario: ScenarioInput): ProjectionParams {
+/**
+ * Map a persisted or draft scenario to engine projection params. The inflation is the
+ * owner's, not the scenario's, so it is given and never defaulted.
+ */
+export function scenarioToParams(scenario: ScenarioInput, inflationRate: number): ProjectionParams {
   return {
     startInvestedCents: scenario.startInvestedCents,
     monthlyContributionCents: scenario.monthlyContributionCents,
@@ -19,6 +22,7 @@ export function scenarioToParams(scenario: ScenarioInput): ProjectionParams {
     mortgageTermYears: scenario.mortgageTermYears,
     mortgageRateAnnual: scenario.mortgageRateAnnual,
     houseAppreciationRate: scenario.houseAppreciationRate,
+    inflationRate,
     ...(scenario.lifeEvents?.length ? { lifeEvents: scenario.lifeEvents } : {}),
   }
 }

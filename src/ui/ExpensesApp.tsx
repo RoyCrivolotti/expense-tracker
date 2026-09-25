@@ -22,6 +22,7 @@ import { AnalyticsTab } from './tabs/AnalyticsTab'
 import { SettingsTab } from './tabs/SettingsTab'
 import { clearOnboardingSkip, isOnboardingSkipped } from './onboarding/onboardingStorage'
 import { ConnectivityProvider } from './hooks/ConnectivityProvider'
+import { AssumedInflationContext } from './hooks/assumedInflationContext'
 import { MoneyFormatProvider } from './hooks/MoneyFormatProvider'
 import { useConnectivityState } from './hooks/useConnectivityState'
 import { useConnectivity } from './hooks/useConnectivity'
@@ -207,17 +208,19 @@ function ExpensesAppLoaded({
         currencyCode={model.dataset.settings.currencyCode}
         numberLocale={model.dataset.settings.numberLocale}
       >
-        <ExpensesAppReady
-          source={source}
-          model={model}
-          applyPatch={applyPatch}
-          reload={reload}
-          refreshing={refreshing}
-          refreshOutcome={refreshOutcome}
-          hubGrants={hubGrants}
-          {...(ownerAccess ? { ownerAccess } : {})}
-          {...(accountEmail ? { accountEmail } : {})}
-        />
+        <AssumedInflationContext.Provider value={model.dataset.settings.assumedInflation}>
+          <ExpensesAppReady
+            source={source}
+            model={model}
+            applyPatch={applyPatch}
+            reload={reload}
+            refreshing={refreshing}
+            refreshOutcome={refreshOutcome}
+            hubGrants={hubGrants}
+            {...(ownerAccess ? { ownerAccess } : {})}
+            {...(accountEmail ? { accountEmail } : {})}
+          />
+        </AssumedInflationContext.Provider>
       </MoneyFormatProvider>
     </ConnectivityProvider>
   )

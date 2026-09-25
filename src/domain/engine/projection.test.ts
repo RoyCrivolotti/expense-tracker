@@ -33,6 +33,7 @@ function baseParams(overrides: Partial<ProjectionParams> = {}): ProjectionParams
     mortgageTermYears: DEFAULT_MORTGAGE_TERM_YEARS,
     mortgageRateAnnual: DEFAULT_MORTGAGE_RATE,
     houseAppreciationRate: DEFAULT_HOUSE_APPRECIATION,
+    inflationRate: DEFAULT_INFLATION_RATE,
     ...overrides,
   }
 }
@@ -163,6 +164,7 @@ describe.skipIf(!hasFrParity)('workbook milestone parity (local only)', () => {
         mortgageTermYears: scenario.mortgageTermYears,
         mortgageRateAnnual: scenario.mortgageRateAnnual,
         houseAppreciationRate: scenario.houseAppreciationRate,
+        inflationRate: DEFAULT_INFLATION_RATE,
       }
       const series = projectInvested(params)
       milestones.forEach((m, i) => {
@@ -244,6 +246,7 @@ describe('the two figures GOALS-MODEL.md states', () => {
     mortgageTermYears: 30,
     mortgageRateAnnual: 0,
     houseAppreciationRate: 0,
+    inflationRate: DEFAULT_INFLATION_RATE,
   }
 
   it('starts contribution growth in year 2, not year 1', () => {
@@ -308,5 +311,22 @@ describe('the house and the mortgage in a real plan', () => {
     const points = projectNetWorth(baseParams({ housePurchaseYear: 0, mortgageRateAnnual: 0, mortgageTermYears: 20 }))
     // Half repaid after ten years, and what is left counted in today's money.
     expect(points[10]!.mortgageBalanceCents).toBe(Math.round((loan / 2) / (1 + DEFAULT_INFLATION_RATE) ** 10))
+  })
+
+  it('uses the inflation it is given, not a default', () => {
+    const rate = 0.04
+    const points = projectNetWorth(
+      baseParams({ housePurchaseYear: 5, houseAppreciationRate: 0.025, inflationRate: rate }),
+    )
+    expect(points[15]!.houseEquityCents).toBe(Math.round(price * (1.025 / (1 + rate)) ** 10))
+
+    const i = 0.03 / 12
+    const payment = (loan * i) / (1 - (1 + i) ** -360)
+    const nominal = loan * (1 + i) ** 120 - payment * (((1 + i) ** 120 - 1) / i)
+    expect(Math.abs(points[15]!.mortgageBalanceCents - nominal / (1 + rate) ** 10)).toBeLessThanOrEqual(2)
+    // More inflation is a smaller house and a smaller debt in today's money.
+    const atTwo = projectNetWorth(baseParams({ housePurchaseYear: 5 }))
+    expect(points[15]!.houseEquityCents).toBeLessThan(atTwo[15]!.houseEquityCents)
+    expect(points[15]!.mortgageBalanceCents).toBeLessThan(atTwo[15]!.mortgageBalanceCents)
   })
 })

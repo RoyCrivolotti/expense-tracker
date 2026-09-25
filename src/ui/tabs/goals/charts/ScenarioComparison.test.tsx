@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { ScenarioComparison } from './ScenarioComparison'
 import { comparisonRows } from './comparisonRows'
 import { makeScenario } from '../../../../testing/factories'
-import { EU_MONEY_FORMAT } from '../../../../engine'
+import { EU_MONEY_FORMAT, DEFAULT_INFLATION_RATE } from '../../../../engine'
 
 const { id, isActive, ...draft } = makeScenario({ name: 'Path D: Draft', housePurchaseYear: null })
 void id
@@ -18,7 +18,7 @@ describe('comparisonRows', () => {
         makeScenario({ id: 3, name: 'Path C: Buy in year 5', housePurchaseYear: 5 }),
       ],
       draft,
-      EU_MONEY_FORMAT,
+      EU_MONEY_FORMAT, DEFAULT_INFLATION_RATE,
     )
     expect(rows.map((r) => r.name)).toEqual(['Path A', 'Path B', 'Path C', 'Path D (editing)'])
     expect(rows.map((r) => r.house)).toEqual(['never', 'now', 'year 5', 'never'])
@@ -31,7 +31,7 @@ describe('comparisonRows', () => {
     const rows = comparisonRows(
       [],
       { ...draft, annualSpendCents: 900_000_00, safeWithdrawalRate: 0.03, horizonYears: 5 },
-      EU_MONEY_FORMAT,
+      EU_MONEY_FORMAT, DEFAULT_INFLATION_RATE,
     )
     expect(rows[0]!.fi).toBe('not in horizon')
   })

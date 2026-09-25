@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { WealthSummaryCard } from './WealthSummaryCard'
-import { planValueAtDate, realToNominal } from '../../../engine'
+import { planValueAtDate, realToNominal, DEFAULT_INFLATION_RATE } from '../../../engine'
 import { makeScenario, makeTransaction } from '../../../testing/factories'
 import type { WealthAccount, WealthCheckin } from '../../../types'
 
@@ -101,7 +101,7 @@ describe('WealthSummaryCard', () => {
     const accounts = [makeAccount(1, 'investment')]
     const behind = (id: number, date: string) =>
       makeCheckin(id, date, [
-        { accountId: 1, valueCents: realToNominal(planValueAtDate(scenario, date)! - 50_000_00, '2025-01-01', date) },
+        { accountId: 1, valueCents: realToNominal(planValueAtDate(scenario, date, DEFAULT_INFLATION_RATE)! - 50_000_00, '2025-01-01', date, DEFAULT_INFLATION_RATE) },
       ])
     const checkins = [behind(1, '2026-01-01'), behind(2, '2026-04-01'), behind(3, '2026-07-15')]
     const onRebaseline = vi.fn()
@@ -118,7 +118,7 @@ describe('WealthSummaryCard', () => {
     const scenario = makeScenario({ id: 1, planStartDate: '2025-01-01' })
     const accounts = [makeAccount(1, 'investment')]
     const at = (id: number, date: string, gap: number) =>
-      makeCheckin(id, date, [{ accountId: 1, valueCents: planValueAtDate(scenario, date)! + gap }])
+      makeCheckin(id, date, [{ accountId: 1, valueCents: planValueAtDate(scenario, date, DEFAULT_INFLATION_RATE)! + gap }])
     const checkins = [at(1, '2026-01-01', -90_000_00), at(2, '2026-04-01', -40_000_00), at(3, '2026-07-15', -5_000_00)]
     render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} onRebaseline={vi.fn()} />)
 

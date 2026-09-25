@@ -5,6 +5,7 @@ import { nearestScatterValue, buildCheckinTooltip, realCheckinPoints } from './c
 import { makeScenario } from '../../../../testing/factories'
 import { EU_MONEY_FORMAT } from '../../../../engine/money'
 import type { WealthAccount, WealthCheckin } from '../../../../types'
+import { DEFAULT_INFLATION_RATE } from '../../../../engine'
 
 beforeAll(() => {
   Object.defineProperty(window, 'matchMedia', {
@@ -173,7 +174,7 @@ describe('realCheckinPoints', () => {
 
   it('brings a balance to the plan\'s money, so one exactly on plan sits on the line', () => {
     // Two years at the assumed 2% inflation: 104.040 in the money of the day is 100.000 of the start's.
-    const points = realCheckinPoints([makeCheckin(1, '2027-01-01', 104_040_00)], accounts, '2025-01-01', 10, 1)
+    const points = realCheckinPoints([makeCheckin(1, '2027-01-01', 104_040_00)], accounts, '2025-01-01', 10, 1, DEFAULT_INFLATION_RATE)
     expect(points).toHaveLength(1)
     expect(points[0]!.value).toBeGreaterThan(99_900_00)
     expect(points[0]!.value).toBeLessThan(100_100_00)
@@ -188,7 +189,7 @@ describe('realCheckinPoints', () => {
       makeCheckin(2, '2026-01-01', 60_000_00),
       makeCheckin(3, '2031-01-01', 90_000_00),
     ]
-    const points = realCheckinPoints(checkins, accounts, '2025-01-01', 3, 0.5)
+    const points = realCheckinPoints(checkins, accounts, '2025-01-01', 3, 0.5, DEFAULT_INFLATION_RATE)
     expect(points).toHaveLength(1)
     expect(points[0]!.xIndex).toBeCloseTo(2, 1)
   })

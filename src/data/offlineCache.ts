@@ -11,7 +11,7 @@ const SNAPSHOT_KEY = 'latest'
  * and white-screen the app on the first load after a deploy. Discarding a
  * stale snapshot costs one network fetch; not discarding it costs the session.
  */
-const SNAPSHOT_VERSION = 2
+const SNAPSHOT_VERSION = 3
 
 interface SnapshotRecord {
   key: string

@@ -1,6 +1,7 @@
 import type { GoalScenario, Milestone, WealthCheckin } from '../../../types'
 import { formatCents, milestoneLabelWithAmount, milestoneStanding, type MilestoneStanding } from '../../../engine'
 import { Card } from '../../components/primitives'
+import { useAssumedInflation } from '../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { formatCheckinDate } from './checkinDate'
 import styles from './goals.module.css'
@@ -59,9 +60,10 @@ function describe(standing: MilestoneStanding): { mark: string; text: string; to
  */
 export function ReachedMilestones({ milestones, reached, plan = null, latestCheckin = null }: Props) {
   const format = useMoneyFormat()
+  const inflationRate = useAssumedInflation()
   const asOf = latestCheckin?.checkinDate ?? null
   const rows = milestones
-    .map((m) => ({ m, standing: describe(milestoneStanding(m, plan, reached.get(m.amountCents), asOf)) }))
+    .map((m) => ({ m, standing: describe(milestoneStanding(m, plan, reached.get(m.amountCents), inflationRate, asOf)) }))
     .filter((r): r is { m: Milestone; standing: NonNullable<ReturnType<typeof describe>> } => r.standing !== null)
   if (rows.length === 0) return null
   const allReached = rows.every((r) => r.standing.mark === '✓')
