@@ -95,8 +95,8 @@ export function InflationSetting({ value, onChange }: Props) {
         />
       </div>
       <p className={styles.inflationHint}>
-        Everything in Goals is in today&apos;s money at this rate: check-ins, the house and the mortgage are
-        brought back by it, and the Nominal view inflates the plan by it.
+        Goals is in today&apos;s money. Check-ins, the house and the mortgage are brought back to today&apos;s
+        money at this rate, and the Nominal view inflates the plan by it.
       </p>
       {error ? (
         <p className={tabStyles.settingError} role="alert">

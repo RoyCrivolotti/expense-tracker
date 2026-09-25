@@ -19,6 +19,13 @@ const input = () => screen.getByLabelText<HTMLInputElement>('Assumed inflation')
 describe('InflationSetting', () => {
   afterEach(() => vi.useRealTimers())
 
+  it('says what the rate converts, not that the plan is at it', () => {
+    render(<InflationSetting value={0.02} onChange={vi.fn()} />)
+    // The plan is in today's money whatever the rate is; the rate is what brings the rest to it.
+    expect(screen.getByText(/brought back to today's money at this rate/)).toBeInTheDocument()
+    expect(screen.queryByText(/everything in goals is in today's money at this rate/i)).not.toBeInTheDocument()
+  })
+
   it('shows the saved rate and saves a typed one as a setting', () => {
     const onChange = vi.fn().mockResolvedValue(undefined)
     render(<InflationSetting value={0.02} onChange={onChange} />)
