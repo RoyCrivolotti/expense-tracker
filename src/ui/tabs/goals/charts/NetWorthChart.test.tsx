@@ -155,7 +155,7 @@ describe('NetWorthChart', () => {
     expect(values().every((v) => v === '')).toBe(true)
   })
 
-  it('keeps a far-off FI target in the All view and drops it inside a window, as a milestone', () => {
+  it('does not stretch the axis to a far-off FI target, in any window, and says where it is', () => {
     const { container } = render(
       <NetWorthChart
         milestones={[]}
@@ -164,11 +164,29 @@ describe('NetWorthChart', () => {
         variant="hero"
       />,
     )
-    expect(container.textContent).toMatch(/100\.0M/)
+    const yLabels = () =>
+      [...container.querySelectorAll('text[text-anchor="end"]')].map((t) => t.textContent ?? '').join('|')
+    // A 100M target over a plan that reaches a few million: it would set the axis if drawn.
+    expect(yLabels()).not.toMatch(/100\.0M/)
+    expect(screen.getByText(/The FI target, 100\.0M/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('radio', { name: '5Y' }))
-    expect(container.textContent).not.toMatch(/100\.0M/)
-    fireEvent.click(screen.getByRole('radio', { name: 'All' }))
-    expect(container.textContent).toMatch(/100\.0M/)
+    expect(yLabels()).not.toMatch(/100\.0M/)
+    expect(screen.getByText(/The FI target, 100\.0M/)).toBeInTheDocument()
+  })
+
+  it('still draws an FI target the plan gets within reach of, with no note', () => {
+    const realEnd = projectNetWorth(scenarioToParams(defaultDraft, 0.02)).at(-1)!.investedCents
+    const spend = Math.round(realEnd * 1.05 * 0.04)
+    const { container } = render(
+      <NetWorthChart
+        milestones={[]}
+        scenarios={[]}
+        draft={{ ...defaultDraft, horizonYears: 30, annualSpendCents: spend, safeWithdrawalRate: 0.04 }}
+        variant="hero"
+      />,
+    )
+    expect(container.querySelectorAll(`line.${chartStyles.refLine}`)).toHaveLength(1)
+    expect(screen.queryByText(/The FI target,/)).not.toBeInTheDocument()
   })
 
   it('offers no window buttons for a horizon the shortest window would not cut', () => {
