@@ -8,7 +8,7 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 
 ## September 2026 (chart readout on a phone)
 
-- **A chart's tooltip is a panel above it on a phone**, always there: it reads the latest point until another is tapped, so a chart at the bottom of the screen no longer opens its tooltip below the fold and nothing scrolls. The panel is as tall as its tallest point, so the chart does not move while a finger slides along it. A point with a breakdown (the purchase year on the composition chart) shows it under the chart. The income and expense charts do the same; the category pie chart still shows its tooltip under the chart, and wide screens keep the tooltip at the pointer.
+- **A chart's tooltip is a panel above it on a phone**, always there: it reads the latest point until another is tapped, so a chart at the bottom of the screen no longer opens its tooltip below the fold and nothing scrolls. The panel is as tall as its tallest point, so the chart does not move while a finger slides along it. While a point is tapped the panel stays under the app header, for a chart scrolled up beneath it. A point with a breakdown (the purchase year on the composition chart) shows it under the chart. The income and expense charts do the same; the category pie chart still shows its tooltip under the chart, and wide screens keep the tooltip at the pointer.
 
 ## September 2026 (comparison table and chart tooltips)
 

@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LinearChart } from './LinearChart'
 import type { TooltipLine } from './ChartTooltip'
+import chartStyles from './charts.module.css'
 
 function phone(matches: boolean) {
   vi.stubGlobal('matchMedia', (media: string) => ({
@@ -56,6 +57,16 @@ describe('the docked readout on a phone', () => {
     expect(live(container)).not.toHaveTextContent('Tap the chart')
     fireEvent.keyDown(svg, { key: 'Escape' })
     expect(live(container)).toHaveTextContent('Year 2')
+  })
+
+  it('stays under the app header while a point is tapped, and only then', () => {
+    phone(true)
+    const { container } = render(<LinearChart {...props} />)
+    expect(screen.getByRole('status')).not.toHaveClass(chartStyles.readoutPinned!)
+    fireEvent.keyDown(container.querySelector('svg')!, { key: 'Home' })
+    expect(screen.getByRole('status')).toHaveClass(chartStyles.readoutPinned!)
+    fireEvent.keyDown(container.querySelector('svg')!, { key: 'Escape' })
+    expect(screen.getByRole('status')).not.toHaveClass(chartStyles.readoutPinned!)
   })
 
   it('is as tall as its tallest point, so it never moves the chart under it', () => {

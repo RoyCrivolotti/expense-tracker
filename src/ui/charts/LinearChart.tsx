@@ -193,7 +193,7 @@ export function LinearChart({
 
   return (
     <div ref={containerRef} className={styles.chartWrap}>
-      {readout ? <ChartReadout tip={readout.tip} tallest={readout.tallest} note={readout.note} /> : null}
+      {readout ? <ChartReadout tip={readout.tip} tallest={readout.tallest} note={readout.note} pinned={active !== null} /> : null}
       <svg
         ref={svgRef}
         viewBox={`0 0 ${width} ${height}`}

@@ -258,6 +258,15 @@
 .readoutSizer {
   visibility: hidden;
 }
+/* While a point is tapped the panel stays under the app header, so a chart scrolled until its
+   top edge is under the header still shows its values. It keeps its place in the flow, so
+   pinning it moves nothing. The offset is the header's height (a little over 3.5rem) plus the
+   top safe-area inset the header carries. */
+.readoutPinned {
+  position: sticky;
+  top: calc(3.8rem + env(safe-area-inset-top, 0px));
+  z-index: 4;
+}
 
 .tooltipHead {
   display: flex;

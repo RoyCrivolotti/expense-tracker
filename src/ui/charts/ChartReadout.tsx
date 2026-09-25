@@ -13,14 +13,17 @@ export function ChartReadout({
   tip,
   tallest,
   note,
+  pinned,
 }: {
   tip: ReadoutTip
   tallest: ReadoutTip
+  /** A point is tapped: keep the panel under the app header while its chart is on screen. */
+  pinned: boolean
   /** A hint beside the title: how to read another point, or that this one has more to read. */
   note?: string | undefined
 }) {
   return (
-    <div className={`${styles.tooltipDocked} ${styles.readout}`} role="status">
+    <div className={`${styles.tooltipDocked} ${styles.readout}${pinned ? ` ${styles.readoutPinned}` : ''}`} role="status">
       {/* The tallest state, unseen, so the panel is as tall as it will ever be. */}
       <div className={styles.readoutSizer} aria-hidden>
         <TooltipBody title={tallest.title} lines={tallest.lines} note={RESTING_NOTE} />

@@ -54,7 +54,7 @@ export function MonthlyBarChartView({
 
   return (
     <div className={styles.chartWrap}>
-      {docked && latest ? <ChartReadout tip={tipFor(focus ?? latest)} tallest={tipFor(latest)} note={focus == null ? RESTING_NOTE : undefined} /> : null}
+      {docked && latest ? <ChartReadout tip={tipFor(focus ?? latest)} tallest={tipFor(latest)} note={focus == null ? RESTING_NOTE : undefined} pinned={focus != null} /> : null}
       <svg
         ref={svgRef}
         viewBox={`0 0 ${CHART_W} ${CHART_H}`}
