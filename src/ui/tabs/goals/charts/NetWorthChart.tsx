@@ -135,7 +135,8 @@ function useChartLegendState(
   names: string[],
   years: number[],
   activeIndex: number | null,
-  hiddenScenarios: GoalScenario[] = [],
+  scenarios: GoalScenario[],
+  hiddenIds: ReadonlySet<number> = NO_HIDDEN,
 ) {
   const activeYear = activeIndex != null ? years[activeIndex] ?? null : null
   const legendItems: ScenarioLegendItem[] = useMemo(() => {
@@ -151,16 +152,17 @@ function useChartLegendState(
         valueCents: activeYear != null && activeIndex != null ? s.values[activeIndex] ?? 0 : null,
       }
     })
-    // Hidden scenarios stay in the legend, dimmed, so they can be brought back from here.
-    const hidden = hiddenScenarios.map((s) => ({
-      label: s.name,
-      color: s.color,
-      scenarioId: s.id,
-      hidden: true,
-      valueCents: null,
-    }))
-    return [...drawn, ...hidden]
-  }, [series, names, lines, activeIndex, activeYear, hiddenScenarios])
+    const drawnById = new Map(drawn.flatMap((d) => (d.scenarioId !== undefined ? [[d.scenarioId, d] as const] : [])))
+    // In the scenarios' own order, a hidden one dimmed in its place so it can be brought
+    // back from here, rather than dropping to the bottom and moving the rows under it. A
+    // loaded, unchanged scenario is drawn as the draft and has no row of its own.
+    const rows = scenarios.flatMap((s) => {
+      if (hiddenIds.has(s.id)) return [{ label: s.name, color: s.color, scenarioId: s.id, hidden: true, valueCents: null }]
+      const item = drawnById.get(s.id)
+      return item ? [item] : []
+    })
+    return [...rows, ...drawn.filter((d) => d.scenarioId === undefined)]
+  }, [series, names, lines, activeIndex, activeYear, scenarios, hiddenIds])
   const breakdowns: ScenarioLegendBreakdown[] = useMemo(() => {
     if (activeYear == null) return []
     return lines.flatMap((line) => {
@@ -372,10 +374,6 @@ function NetWorthChartImpl({
     () => scenarioLines(scenarios, draft, activeId, dirty, assumedInflation, hiddenIds),
     [scenarios, draft, activeId, dirty, assumedInflation, hiddenIds],
   )
-  const hiddenScenarios = useMemo(
-    () => scenarios.filter((s) => hiddenIds?.has(s.id)),
-    [scenarios, hiddenIds],
-  )
   const full = useMemo(() => buildSeries(lines), [lines])
   // The windows on offer follow how far the chart actually runs, which is the longest
   // drawn horizon, not only the draft's.
@@ -405,7 +403,8 @@ function NetWorthChartImpl({
     names,
     years,
     activeIndex,
-    hiddenScenarios,
+    scenarios,
+    hiddenIds,
   )
 
   const tooltip = useCallback(
