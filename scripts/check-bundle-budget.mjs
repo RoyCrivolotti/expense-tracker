@@ -32,7 +32,11 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // legend toggles, the comparison table, milestone dates, the cash reserve, the re-baseline
 // confirm sheet): about 4 KB gzip across sixteen PRs took the total to 190.3 KB, and the
 // last of them was the one to cross the line.
-const TOTAL_MAX_GZIP = 196_000
+//
+// Raised from 196 KB to 198 KB for the phone tooltip placement and the chart-axis and legend
+// fixes: main was at 195.4 KB, the axis and legend fixes add about 0.6 KB and the tooltip change
+// about 0.5 KB, which takes either PR to the limit and the two together past it.
+const TOTAL_MAX_GZIP = 198_000
 const GOALS_MAX_GZIP = 40_000
 
 function gzipBytes(path) {
