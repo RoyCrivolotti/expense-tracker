@@ -6,9 +6,10 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 
 - **The plan as it stands from your latest check-in**, without re-baselining. A dotted line in the plan's colour on the portfolio projection from the check-in on, a "from today" row under the plan in the comparison and milestone tables (years counted from the check-in), a second date for each unreached milestone on Progress, and a second FI year on the dashboard card. The plan line and ahead/behind keep their baseline; this says what happens now from the balance actually there.
 
-## September 2026 (chart readout on a phone)
+## September 2026 (chart tooltips on a phone)
 
-- **A chart's tooltip is a panel above it on a phone**, always there: it reads the latest point until another is tapped, so a chart at the bottom of the screen no longer opens its tooltip below the fold and nothing scrolls. The panel is as tall as its tallest point, so the chart does not move while a finger slides along it. While a point is tapped the panel stays under the app header, for a chart scrolled up beneath it. A point with a breakdown (the purchase year on the composition chart) shows it under the chart. The projection chart, the income and expense charts and the category pie chart do the same (the pie reads the month's total until a slice is tapped). Wide screens keep the tooltip at the pointer, and the legend under the projection chart still lists the year's values.
+- **A chart's tooltip opens on the side of the chart with more room**, above or below it, and stays there while you slide along the chart. It is laid over the page instead of sitting in it, so it takes no space, the chart never moves and nothing scrolls to reach it. Every chart with a tooltip does this: the projection charts (the main one had none, its values were only in a legend below it), the income and expense charts and the category pie. Wide screens keep the tooltip at the pointer.
+- **Negative amounts on chart axes are compact too** (-5.0M, not -5.000.000,00). The Composition chart's lowest tick, the mortgage below zero, lost the start of its label.
 
 ## September 2026 (comparison table and chart tooltips)
 
