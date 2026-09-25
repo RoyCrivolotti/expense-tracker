@@ -63,7 +63,7 @@ interface Props {
   todayIndex?: number
   tooltipMode?: 'full' | 'hidden'
   onActiveIndexChange?: (index: number | null) => void
-  /** Floor for the auto-computed Y-axis max — keeps the scale stable across re-renders that change value magnitude (e.g. a real/nominal display toggle). */
+  /** Floor for the auto-computed Y-axis max: holds the scale still while what is drawn changes (a previewed inflation rate). */
   yDomainMax?: number | undefined
   /** Fit the Y axis to the values in view instead of anchoring it at zero. */
   fitDomain?: boolean
@@ -108,8 +108,8 @@ function useGeometry(
       fitDomain !== true,
     )
     // yDomainMax raises the floor rather than overriding outright, so a caller
-    // locking the scale (e.g. real/nominal toggle) can never clip band/scatter
-    // data that legitimately extends past it.
+    // holding the scale still (the Nominal view while a rate is previewed) can never
+    // clip a line or check-in that legitimately extends past it.
     const effectiveMax = yDomainMax !== undefined ? Math.max(domain.max, yDomainMax) : domain.max
     const nice = niceScale(...domainTuple({ min: domain.min, max: effectiveMax }))
     const scaleY = makeScale(nice.min, nice.max, PAD.top + innerH, PAD.top)
@@ -140,7 +140,7 @@ export function LinearChart({
   fitDomain,
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
-  // useId gives ':r1:', which a url(#...) reference does not reliably take.
+  // useId can return characters (colons, in older React) that a url(#...) reference does not take.
   const plotClipId = `plot-${useId().replace(/:/g, '')}`
   const containerRef = useRef<HTMLDivElement>(null)
   // The viewBox is the wrapper's width in CSS pixels, so text, strokes and hit areas
