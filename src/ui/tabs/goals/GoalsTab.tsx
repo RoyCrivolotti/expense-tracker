@@ -485,6 +485,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
           cashReserveMonths={dataset.settings.cashReserveMonths}
           openBudgetMonth={defaultBudgetMonth(todayIso(), dataset.settings.budgetRolloverDay)}
           onRebaseline={onRebaseline}
+          fromToday={fromToday}
         />
         </>
       ) : null}
@@ -604,8 +605,8 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
               reached={reachedMilestones}
               activeId={activeId}
               dirty={dirty}
-            />
               fromToday={fromToday}
+            />
           </div>
         </div>
       </div>

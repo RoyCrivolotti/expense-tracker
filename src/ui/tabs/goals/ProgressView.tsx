@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { GoalScenario, Milestone, Transaction, WealthAccount, WealthCheckin } from '../../../types'
 import type { ExpenseActions } from '../../actions'
-import { latestCheckin } from '../../../engine'
+import { latestCheckin, type PlanFromToday } from '../../../engine'
 import { EmptyState } from '../../components/primitives'
 import { WealthSummaryCard } from './WealthSummaryCard'
 import { ReachedMilestones } from './ReachedMilestones'
@@ -21,6 +21,8 @@ interface Props {
   /** amountCents -> date first observed at or above, from check-in history. */
   reached: Map<number, string>
   plan: GoalScenario | null
+  /** The plan restarted from the latest check-in, for dating milestones from where you are. */
+  fromToday?: PlanFromToday | null | undefined
   actions: ExpenseActions | undefined
   canWrite: boolean
   /** Takes the user to the Setup view, where accounts are named. */
@@ -45,6 +47,7 @@ export function ProgressView({
   milestones,
   reached,
   plan,
+  fromToday,
   actions,
   canWrite,
   onOpenSetup,
@@ -83,6 +86,7 @@ export function ProgressView({
         reached={reached}
         plan={plan}
         latestCheckin={latest}
+        fromToday={fromToday}
       />
 
       {canWrite && actions && !hasAccounts ? (
