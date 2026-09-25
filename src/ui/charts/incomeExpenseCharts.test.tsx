@@ -1,5 +1,5 @@
 import { fireEvent, render } from '@testing-library/react'
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { buildExpenseModel } from '../buildExpenseModel'
 import { makeDataset, makeTransaction } from '../../testing/factories'
 import { MonthlyIncomeExpenseChart } from './MonthlyIncomeExpenseChart'
@@ -55,36 +55,5 @@ describe('the income and expense charts', () => {
     fireEvent.keyDown(svg, { key: 'End' })
     expect(container.querySelector('svg')).not.toBeNull()
     fireEvent.keyDown(svg, { key: 'Home' })
-  })
-})
-
-describe('the income and expense charts on a phone', () => {
-  afterEach(() => vi.unstubAllGlobals())
-  const onPhone = () =>
-    vi.stubGlobal('matchMedia', (media: string) => ({
-      matches: true,
-      media,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    }))
-  const live = (container: HTMLElement) => container.querySelector('[data-readout="live"]')!
-
-  it('read the latest month before anything is tapped, and the tapped month after', () => {
-    onPhone()
-    const { container } = render(<MonthlyIncomeExpenseChart model={model()} />)
-    expect(live(container)).toHaveTextContent('Jun')
-    expect(live(container)).toHaveTextContent('Tap the chart to see another point')
-    fireEvent.keyDown(container.querySelector('svg')!, { key: 'Home' })
-    expect(live(container)).toHaveTextContent('Income')
-    expect(live(container)).not.toHaveTextContent('Tap the chart')
-  })
-
-  it('show the year to date at the latest month too', () => {
-    onPhone()
-    const { container } = render(<YtdIncomeExpenseChart model={model()} month="2026-06" />)
-    expect(live(container)).toHaveTextContent('Jun')
-    expect(live(container)).toHaveTextContent('Net')
-    fireEvent.keyDown(container.querySelector('svg')!, { key: 'Home' })
-    expect(live(container)).toHaveTextContent('May')
   })
 })

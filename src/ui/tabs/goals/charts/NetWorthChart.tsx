@@ -361,7 +361,7 @@ function variantProps(
         markerYears,
         lifeEventMarkers,
         // The legend under the chart reads the year on a wide screen. On a phone it is below the
-        // fold whenever the chart is low on the screen, so the readout above the chart carries it.
+        // fold whenever the chart is low on the screen, so the tooltip carries it there.
         tooltipMode: docked ? ('full' as const) : ('hidden' as const),
         onActiveIndexChange,
       }

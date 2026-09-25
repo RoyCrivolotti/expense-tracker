@@ -234,66 +234,29 @@
   pointer-events: none;
 }
 
+/* The phone tooltip, laid over the page on the chart's own edge. Out of the flow, it takes no
+   room, so opening it moves nothing; the side is chosen in useTooltipSide. The chart's wrapper
+   is its containing block. */
 .tooltipDocked {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 10;
   box-sizing: border-box;
-  width: 100%;
-  margin-top: 0.625rem;
   padding: 0.625rem 1rem;
-  background: color-mix(in srgb, var(--color-text) 6%, var(--color-bg));
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm, 6px);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--color-text) 14%, transparent);
   pointer-events: none;
 }
-
-/* The readout above a chart: the docked panel with no gap above it, holding the tallest state
-   and the current one in one grid cell. */
-.readout {
-  display: grid;
-  margin: 0 0 0.625rem;
+.tooltipAbove {
+  bottom: 100%;
+  margin-bottom: 0.375rem;
 }
-.readout > * {
-  grid-area: 1 / 1;
-  min-width: 0;
-}
-.readoutSizer {
-  visibility: hidden;
-}
-/* While a point is tapped the panel stays under the app header, so a chart scrolled until its
-   top edge is under the header still shows its values. It keeps its place in the flow, so
-   pinning it moves nothing. The offset is the header's height (a little over 3.5rem) plus the
-   top safe-area inset the header carries. */
-.readoutPinned {
-  position: sticky;
-  top: calc(3.8rem + env(safe-area-inset-top, 0px));
-  z-index: 4;
-}
-
-.tooltipHead {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin: 0 0 0.5rem;
-}
-/* The hint gives way first: the title keeps its width and the row stays one line, so the
-   panel is as tall as its rows whatever the screen width. */
-.tooltipHead .tooltipTitle {
-  flex: none;
-  max-width: 100%;
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-.tooltipNote {
-  flex: 0 1 auto;
-  min-width: 0;
-  margin: 0;
-  overflow: hidden;
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-  text-align: right;
-  text-overflow: ellipsis;
-  /* One line, so the hint never makes the panel taller than the rows it holds. */
-  white-space: nowrap;
+.tooltipBelow {
+  top: 100%;
+  margin-top: 0.375rem;
 }
 
 .tooltipTitle {

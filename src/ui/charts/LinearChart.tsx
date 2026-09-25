@@ -1,8 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { ChartTooltip, type TooltipLine } from './ChartTooltip'
-import { ChartReadout, ChartReadoutDetail } from './ChartReadout'
-import { DETAIL_NOTE, RESTING_NOTE, isDetail, summaryOf, tallestTip } from './readoutTips'
-import { useDockedTooltip } from './useDockedTooltip'
 import { useElementWidth } from '../hooks/useElementWidth'
 import {
   ChartGrid,
@@ -17,6 +14,7 @@ import {
 } from './linearChartParts'
 import { useChartFocus } from './useChartFocus'
 import { useSvgAnchor } from './useSvgAnchor'
+import { useTooltipSide } from './useTooltipSide'
 import {
   collectDomain,
   linePath,
@@ -117,42 +115,6 @@ function useGeometry(
   }, [series, width, height, refLines, yDomainMax, fitDomain])
 }
 
-/**
- * What the docked readout shows: the tapped point's summary, or the last one until a point is
- * tapped, and the tallest summary of any point, which its height is held to.
- */
-function useReadout(
-  docked: boolean,
-  tooltipMode: 'full' | 'hidden',
-  count: number,
-  active: number | null,
-  tooltip: (index: number) => { title: string; lines: TooltipLine[] },
-) {
-  const enabled = docked && tooltipMode === 'full'
-  const tallest = useMemo(
-    () => (enabled && count > 0 ? tallestTip(Array.from({ length: count }, (_, i) => summaryOf(tooltip(i)))) : null),
-    [enabled, count, tooltip],
-  )
-  if (!enabled || count === 0 || tallest === null) return null
-  const shown = tooltip(active ?? count - 1)
-  const note = active === null ? RESTING_NOTE : shown.lines.some(isDetail) ? DETAIL_NOTE : undefined
-  return { tip: summaryOf(shown), tallest, note }
-}
-
-/** On a wide screen the tooltip floats at the pointer; on a phone only the point's detail lines go under the chart. */
-function TipBelow({
-  tip,
-  docked,
-  anchor,
-}: {
-  tip: { title: string; lines: TooltipLine[] } | null
-  docked: boolean
-  anchor: { x: number; y: number } | null
-}) {
-  if (!tip) return null
-  return docked ? <ChartReadoutDetail tip={tip} /> : <ChartTooltip anchor={anchor} title={tip.title} lines={tip.lines} />
-}
-
 function domainTuple(d: { min: number; max: number }): [number, number] {
   return [d.min, d.max]
 }
@@ -183,8 +145,7 @@ export function LinearChart({
   const focusX = active != null ? geo.xForIndex(active) : 0
   const anchor = useSvgAnchor(svgRef, active != null ? focusX : null, active != null ? PAD.top : null)
   const tip = active != null ? tooltip(active) : null
-  const docked = useDockedTooltip()
-  const readout = useReadout(docked, tooltipMode, geo.n, active, tooltip)
+  const side = useTooltipSide(active != null, containerRef)
   const lineSeries = series.filter((s) => s.kind !== 'area' && s.kind !== 'band' && s.kind !== 'scatter')
 
   useEffect(() => {
@@ -193,7 +154,6 @@ export function LinearChart({
 
   return (
     <div ref={containerRef} className={styles.chartWrap}>
-      {readout ? <ChartReadout tip={readout.tip} tallest={readout.tallest} note={readout.note} pinned={active !== null} /> : null}
       <svg
         ref={svgRef}
         viewBox={`0 0 ${width} ${height}`}
@@ -299,7 +259,9 @@ export function LinearChart({
           lineSeries={lineSeries}
         />
       </svg>
-      <TipBelow tip={tooltipMode === 'full' ? tip : null} docked={docked} anchor={anchor} />
+      {tip && tooltipMode === 'full' ? (
+        <ChartTooltip anchor={anchor} side={side} title={tip.title} lines={tip.lines} />
+      ) : null}
     </div>
   )
 }

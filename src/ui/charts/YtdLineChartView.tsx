@@ -3,12 +3,10 @@ import { useRef } from 'react'
 import { formatCents } from '../../engine/money'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { ChartTooltip } from './ChartTooltip'
-import { ChartReadout } from './ChartReadout'
-import { RESTING_NOTE, type ReadoutTip } from './readoutTips'
-import { useDockedTooltip } from './useDockedTooltip'
 import { ChartYAxis } from './ChartYAxis'
 import { CHART_H, CHART_W, PAD, monthLabel } from './chartLayout'
 import { useSvgAnchor } from './useSvgAnchor'
+import { useTooltipSide } from './useTooltipSide'
 import styles from './charts.module.css'
 
 export interface YtdPoint {
@@ -40,22 +38,13 @@ export function YtdLineChartView({
 }: Props) {
   const format = useMoneyFormat()
   const svgRef = useRef<SVGSVGElement>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
   const focus = active != null ? points[active] : null
-  const docked = useDockedTooltip()
-  const tipFor = (p: YtdPoint): ReadoutTip => ({
-    title: monthLabel(p.month),
-    lines: [
-      { label: 'Cumulative income', value: formatCents(p.cumIncome, format), tone: 'income' },
-      { label: 'Cumulative expenses', value: formatCents(p.cumExpense, format), tone: 'expense' },
-      { label: 'Net', value: formatCents(p.cumIncome - p.cumExpense, format), tone: 'neutral' },
-    ],
-  })
-  const latest = points[points.length - 1]
+  const side = useTooltipSide(focus != null, wrapRef)
   const anchor = useSvgAnchor(svgRef, focus ? focusX : null, focus ? PAD.top : null)
 
   return (
-    <div className={styles.chartWrap}>
-      {docked && latest ? <ChartReadout tip={tipFor(focus ?? latest)} tallest={tipFor(latest)} note={focus == null ? RESTING_NOTE : undefined} pinned={focus != null} /> : null}
+    <div ref={wrapRef} className={styles.chartWrap}>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${CHART_W} ${CHART_H}`}
@@ -81,7 +70,18 @@ export function YtdLineChartView({
           </>
         )}
       </svg>
-      {focus && !docked && <ChartTooltip anchor={anchor} title={tipFor(focus).title} lines={tipFor(focus).lines} />}
+      {focus && (
+        <ChartTooltip
+          anchor={anchor}
+          side={side}
+          title={monthLabel(focus.month)}
+          lines={[
+            { label: 'Cumulative income', value: formatCents(focus.cumIncome, format), tone: 'income' },
+            { label: 'Cumulative expenses', value: formatCents(focus.cumExpense, format), tone: 'expense' },
+            { label: 'Net', value: formatCents(focus.cumIncome - focus.cumExpense, format), tone: 'neutral' },
+          ]}
+        />
+      )}
     </div>
   )
 }
