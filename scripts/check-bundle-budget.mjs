@@ -33,9 +33,9 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // confirm sheet): about 4 KB gzip across sixteen PRs took the total to 190.3 KB, and the
 // last of them was the one to cross the line.
 //
-// Raised from 196 KB to 198 KB for the chart readout on a phone and the chart-axis and legend
-// fixes: main was at 195.4 KB, the readout adds about 0.8 KB and the axis and legend fixes
-// about 0.4 KB, so whichever of the two lands second would have crossed the line.
+// Raised from 196 KB to 198 KB for the phone tooltip placement and the chart-axis and legend
+// fixes: main was at 195.4 KB, the tooltip change adds about 0.5 KB and the axis and legend
+// fixes about 0.4 KB, so whichever of the two lands second would have crossed the line.
 const TOTAL_MAX_GZIP = 198_000
 const GOALS_MAX_GZIP = 40_000
 
