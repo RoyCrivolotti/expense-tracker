@@ -111,12 +111,17 @@ function useGeometry(
     // holding the scale still (the Nominal view while a rate is previewed) can never
     // clip a line or check-in that legitimately extends past it.
     const effectiveMax = yDomainMax !== undefined ? Math.max(domain.max, yDomainMax) : domain.max
-    const nice = niceScale(...domainTuple({ min: domain.min, max: effectiveMax }))
+    const nice = niceScale(...domainTuple({ min: domain.min, max: effectiveMax }), 5, maxTicksFor(innerH))
     const scaleY = makeScale(nice.min, nice.max, PAD.top + innerH, PAD.top)
     const xForIndex = (i: number) =>
       n <= 1 ? PAD.left + innerW / 2 : PAD.left + (i / (n - 1)) * innerW
     return { n, innerH, innerW, stackedBands, areaSeries, ticks: nice.ticks, scaleY, xForIndex }
   }, [series, width, height, refLines, yDomainMax, fitDomain])
+}
+
+/** One axis label per 26px of plot: closer than that, labels at 11px start to touch. */
+function maxTicksFor(innerH: number): number {
+  return Math.max(2, Math.floor(innerH / 26) + 1)
 }
 
 function domainTuple(d: { min: number; max: number }): [number, number] {

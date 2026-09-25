@@ -53,6 +53,24 @@ describe('niceScale', () => {
     }
   })
 
+  it('holds the tick count to what the height can label, by coarsening the step', () => {
+    // Seven ticks on a 76px plot are 12px apart, so the labels touch.
+    for (let mantissa = 1; mantissa < 10; mantissa += 0.037) {
+      for (const maxTicks of [3, 4, 5]) {
+        const { ticks } = niceScale(0, mantissa * 10 ** 7, 5, maxTicks)
+        expect(ticks.length).toBeLessThanOrEqual(maxTicks)
+        expect(ticks.length).toBeGreaterThanOrEqual(2)
+      }
+    }
+  })
+
+  it('never lists a tick twice, even for a flat or tiny range', () => {
+    for (const [min, max] of [[100, 100], [0, 0], [5, 5.4], [0, 1]] as const) {
+      const { ticks } = niceScale(min, max)
+      expect(new Set(ticks).size).toBe(ticks.length)
+    }
+  })
+
   it('keeps the margin below the data as well, when the data goes negative', () => {
     const { min } = niceScale(-1_050_000, 1_000_000)
     expect(min).toBeGreaterThan(-1_050_000 - 2_050_000 * 0.081)
