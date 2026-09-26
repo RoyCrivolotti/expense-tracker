@@ -251,7 +251,7 @@
 
 /* The phone tooltip, laid over the page on the chart's own edge. Out of the flow, it takes no
    room, so opening it moves nothing; the side is chosen in useTooltipSide. The chart's wrapper
-   is its containing block. */
+   is its containing block, except for the pinned panel. */
 .tooltipDocked {
   position: absolute;
   left: 0;
@@ -269,9 +269,15 @@
   bottom: 100%;
   margin-bottom: 0.375rem;
 }
-.tooltipBelow {
-  top: 100%;
-  margin-top: 0.375rem;
+/* Where the chart has no room for the panel above it, the panel is pinned to the screen just above
+   the tab bar instead of hanging under the chart. Its left and width are set from the chart's, in
+   ChartTooltip, since a fixed box has the screen for a containing block. The same gap as the
+   panel keeps from the chart, so "room below the chart" means what it did. */
+.tooltipPinned {
+  position: fixed;
+  left: auto;
+  right: auto;
+  bottom: calc(var(--exp-bottom-bar, 4rem) + env(safe-area-inset-bottom, 0px) + 0.375rem);
 }
 
 .tooltipTitle {

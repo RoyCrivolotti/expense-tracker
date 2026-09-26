@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 
+/** `below` is the panel pinned to the screen under the chart; `above` is the one on the chart's edge. */
 export type TooltipSide = 'above' | 'below'
 
 // The app's own bars cover the ends of the screen: the header, and on a phone the tab bar. A
@@ -7,7 +8,7 @@ export type TooltipSide = 'above' | 'below'
 const HEADER_HEIGHT = 'calc(3.8rem + env(safe-area-inset-top, 0px))'
 const TAB_BAR_HEIGHT = 'calc(var(--exp-bottom-bar, 4rem) + env(safe-area-inset-bottom, 0px))'
 
-/** The gap the panel keeps from the chart (`.tooltipAbove` / `.tooltipBelow`), which its height does not include. */
+/** The gap the panel keeps from the chart (`.tooltipAbove` / `.tooltipPinned`), which its height does not include. */
 const PANEL_GAP = 6
 
 /** How much less the other side must cut off, in pixels, before a panel that no longer fits swaps to it. */
