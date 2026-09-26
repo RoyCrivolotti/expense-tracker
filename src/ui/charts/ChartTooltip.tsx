@@ -1,14 +1,16 @@
-import { useCallback, useContext, useEffect, useLayoutEffect, useRef } from 'react'
+import { useContext, useLayoutEffect, useRef, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import styles from './charts.module.css'
 import { TooltipVisibilityContext } from './tooltipVisibility'
 import { useDockedTooltip } from './useDockedTooltip'
 import { useInBand } from './useInBand'
 import { useTooltipPosition } from './useTooltipPosition'
-import { nudgeIntoBand, visibleBand, type TooltipSide } from './useTooltipSide'
+import { useTooltipSide } from './useTooltipSide'
 
 /** How much of the tooltip has to be on screen for it to count as showing. */
 const ON_SCREEN_SHARE = 0.4
+/** How much of its chart has to be on screen for a phone tooltip to be shown at all. */
+const CHART_ON_SCREEN_SHARE = 0.4
 
 export interface TooltipLine {
   label: string
@@ -27,8 +29,11 @@ interface Props {
   title: string
   lines: TooltipLine[]
   anchor: Anchor | null
-  /** Which side of the chart the phone tooltip opens on (see `useTooltipSide`). */
-  side?: TooltipSide
+  /**
+   * The chart a phone tooltip belongs to. It sits on the chart's edge, on the side with room
+   * (see `useTooltipSide`), and is not shown while the chart is mostly off screen.
+   */
+  chart?: RefObject<HTMLElement | null>
 }
 
 function TooltipBody({ title, lines }: Pick<Props, 'title' | 'lines'>) {
@@ -84,54 +89,22 @@ function FloatingTooltip({ title, lines, anchor }: Props) {
 
 /**
  * On a phone the tooltip is a panel on the chart's own edge, on the side with more room. It is
- * laid over the page rather than in it, so it takes no space and the chart never moves, and
- * it needs no scrolling to reach: tapping away to scroll is what closes it.
+ * laid over the page rather than in it, so it takes no space and the chart never moves, and it
+ * needs no scrolling to reach: tapping away to scroll is what closes it.
+ *
+ * Nothing about where it sits is stored. CSS puts it against the chart's edge, so it moves with
+ * the chart, and the only choice, which edge, is made again from where the chart is now. An
+ * offset worked out when it opened would be wrong as soon as the page scrolled, and covered the
+ * chart or left the panel out of reach.
  */
-function DockedTooltip({ title, lines, side }: Pick<Props, 'title' | 'lines'> & { side: TooltipSide }) {
+function DockedPanel({ title, lines, chart }: Pick<Props, 'title' | 'lines'> & { chart: Props['chart'] | undefined }) {
   const ref = useRef<HTMLDivElement>(null)
-  // The free band is measured once, when the tooltip opens, and again only when the screen
-  // changes (a rotation, the browser's toolbar): measuring it lays out probe elements, and it
-  // does not change as a finger slides along the chart.
-  const band = useRef<ReturnType<typeof visibleBand> | null>(null)
-  // A panel taller than the room on its side would sit under the header or the tab bar, out of
-  // reach: it slides back into the free band, over the chart if it must. Set on the element
-  // rather than in state so a tooltip that changes height as the point changes does not
-  // render twice.
-  const place = useCallback(() => {
-    const el = ref.current
-    if (!el) return
-    band.current ??= visibleBand()
-    el.style.transform = ''
-    const shift = nudgeIntoBand(el.getBoundingClientRect(), band.current)
-    if (shift !== 0) el.style.transform = `translateY(${shift}px)`
-  }, [])
-  // Only when what it shows or where it sits changes, never on a scroll: the chart re-renders
-  // as the page scrolls (its anchor follows it), and sliding again then would pin the panel to
-  // the top of the screen and keep it there after the chart had scrolled away. It belongs to
-  // its chart, so it scrolls with it.
-  const content = `${title}|${lines.map((line) => `${line.label}:${line.value}`).join('|')}`
-  useLayoutEffect(() => {
-    // The content key is what this effect follows; it is not read inside.
-    void content
-    place()
-  }, [place, content, side])
-  useEffect(() => {
-    const vv = window.visualViewport
-    const remeasure = () => {
-      band.current = null
-      place()
-    }
-    vv?.addEventListener('resize', remeasure)
-    window.addEventListener('resize', remeasure)
-    return () => {
-      vv?.removeEventListener('resize', remeasure)
-      window.removeEventListener('resize', remeasure)
-    }
-  }, [place])
-  // Tells the chart's owner whether it is showing, and that it is gone once it closes.
+  const side = useTooltipSide(chart, ref, contentKey(title, lines))
+  // Tells the chart's owner whether it is showing, and that it is gone once it closes. Before
+  // paint: after it, the owner's legend would keep its figures for a frame beside the panel.
   const onScreen = useInBand(ref, ON_SCREEN_SHARE)
   const report = useContext(TooltipVisibilityContext)
-  useEffect(() => {
+  useLayoutEffect(() => {
     report?.(onScreen)
     return () => report?.(false)
   }, [report, onScreen])
@@ -146,10 +119,18 @@ function DockedTooltip({ title, lines, side }: Pick<Props, 'title' | 'lines'> & 
   )
 }
 
-export function ChartTooltip({ title, lines, anchor, side = 'above' }: Props) {
+function DockedTooltip({ title, lines, chart }: Pick<Props, 'title' | 'lines'> & { chart: Props['chart'] | undefined }) {
+  // A panel is only as useful as the chart it belongs to: with the chart scrolled away it would
+  // hang over whatever is there now. Where nothing can be observed it is shown.
+  const chartOnScreen = useInBand(chart, CHART_ON_SCREEN_SHARE, { enabled: chart !== undefined, fallback: true })
+  if (chart !== undefined && !chartOnScreen) return null
+  return <DockedPanel title={title} lines={lines} chart={chart} />
+}
+
+export function ChartTooltip({ title, lines, anchor, chart }: Props) {
   const docked = useDockedTooltip()
 
-  if (docked) return <DockedTooltip title={title} lines={lines} side={side} />
+  if (docked) return <DockedTooltip title={title} lines={lines} chart={chart} />
 
   return <FloatingTooltip title={title} lines={lines} anchor={anchor} />
 }

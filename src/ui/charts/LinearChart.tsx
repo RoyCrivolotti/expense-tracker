@@ -15,7 +15,6 @@ import {
 } from './linearChartParts'
 import { useChartFocus } from './useChartFocus'
 import { useSvgAnchor } from './useSvgAnchor'
-import { useTooltipSide } from './useTooltipSide'
 import {
   collectDomain,
   linePath,
@@ -161,7 +160,6 @@ export function LinearChart({
   const focusX = active != null ? geo.xForIndex(active) : 0
   const anchor = useSvgAnchor(svgRef, active != null ? focusX : null, active != null ? PAD.top : null)
   const tip = active != null ? tooltip(active) : null
-  const side = useTooltipSide(active != null, containerRef, { enabled: tooltipMode === 'full' })
   const lineSeries = series.filter((s) => s.kind !== 'area' && s.kind !== 'band' && s.kind !== 'scatter')
 
   useEffect(() => {
@@ -283,7 +281,7 @@ export function LinearChart({
         />
       </svg>
       {tip && tooltipMode === 'full' ? (
-        <ChartTooltip anchor={anchor} side={side} title={tip.title} lines={tip.lines} />
+        <ChartTooltip anchor={anchor} chart={containerRef} title={tip.title} lines={tip.lines} />
       ) : null}
     </div>
   )
