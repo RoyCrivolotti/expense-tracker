@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useState, type ReactNode } from 'react'
+import { memo, useCallback, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import type { GoalScenario, Milestone } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import type { MoneyFormat, PlanFromToday, ProjectionParams } from '../../../../engine'
@@ -101,6 +101,7 @@ function purchaseMarkerIndices(lines: ScenarioLine[], years: number[]): { yearIn
 
 function PortfolioLegend({
   isHero,
+  legendRef,
   staticLegend,
   legendItems,
   activeYear,
@@ -109,6 +110,7 @@ function PortfolioLegend({
   onToggle,
 }: {
   isHero: boolean
+  legendRef: RefObject<HTMLDivElement | null>
   staticLegend: LegendItem[]
   legendItems: ScenarioLegendItem[]
   activeYear: number | null
@@ -118,13 +120,15 @@ function PortfolioLegend({
 }) {
   if (isHero) {
     return (
-      <ScenarioSeriesLegend
-        items={legendItems}
-        activeYear={activeYear}
-        breakdowns={breakdowns}
-        yearZeroHint={yearZeroHint}
-        onToggle={onToggle}
-      />
+      <div ref={legendRef}>
+        <ScenarioSeriesLegend
+          items={legendItems}
+          activeYear={activeYear}
+          breakdowns={breakdowns}
+          yearZeroHint={yearZeroHint}
+          onToggle={onToggle}
+        />
+      </div>
     )
   }
   return <ChartLegend items={staticLegend} variant="stack" />
@@ -373,7 +377,10 @@ function variantProps(
         height: heroHeight(narrow),
         markerYears,
         lifeEventMarkers,
-        tooltipMode: 'hidden' as const,
+        // On a wide screen the legend under the chart reads the year. Where the page is one column
+        // the legend can be below the fold, so the chart gets a tooltip too, which stays away
+        // while the legend is fully on screen and would only cover what it repeats.
+        tooltipMode: narrow ? ('full' as const) : ('hidden' as const),
         onActiveIndexChange,
       }
     : { height: 210, markerYears: [], tooltipMode: 'full' as const }
@@ -426,6 +433,7 @@ function NetWorthChartImpl({
   const format = useMoneyFormat()
   const assumedInflation = useAssumedInflation()
   const narrow = useGoalsNarrow()
+  const legendRef = useRef<HTMLDivElement>(null)
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const onActiveIndexChange = useCallback((index: number | null) => {
     setActiveIndex(index)
@@ -486,11 +494,12 @@ function NetWorthChartImpl({
       const tooltipLines: TooltipLine[] = displaySeries.map((s, idx) => ({
         label: names[idx] ?? s.id,
         value: formatMoneyShort(s.values[i] ?? 0, format),
+        color: s.color,
         tone: 'neutral',
       }))
       const fromTodayValue = fromTodayLine ? pointSeriesValueAt(fromTodayLine.points ?? [], year) : null
       if (fromTodayValue !== null) {
-        tooltipLines.push({ label: fromTodayLabel, value: formatMoneyShort(fromTodayValue, format), tone: 'neutral' })
+        tooltipLines.push({ label: fromTodayLabel, value: formatMoneyShort(fromTodayValue, format), color: fromTodayLine?.color, tone: 'neutral' })
       }
       return { title: `Year ${year}`, lines: tooltipLines }
     },
@@ -519,6 +528,7 @@ function NetWorthChartImpl({
       </div>
       <p className={styles.chartHint}>{isHero ? HERO_HINT : DEFAULT_HINT}</p>
       <LinearChart
+        readoutRef={legendRef}
         {...heroVariantProps}
         aboveTop={fiMarker(fiAbove, format)}
         series={[...(displayBand ? [displayBand] : []), ...displaySeries, ...displayRealPoints, ...displayExtraSeries]}
@@ -538,6 +548,7 @@ function NetWorthChartImpl({
         breakdowns={breakdowns}
         yearZeroHint={yearZeroHint}
         onToggle={onToggleVisible}
+        legendRef={legendRef}
       />
       {footer != null ? <div className={styles.chartFooter}>{footer}</div> : null}
     </Card>

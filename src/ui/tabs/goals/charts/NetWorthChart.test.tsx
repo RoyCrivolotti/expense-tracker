@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { NetWorthChart } from './NetWorthChart'
 import { AssumedInflationContext } from '../../../hooks/assumedInflationContext'
 import { computeChartDisplayData, deflatePoints, inflatePoints, inflateSeries } from './nominalTransform'
@@ -9,6 +9,12 @@ import { makeScenario } from '../../../../testing/factories'
 import { defaultMilestones } from '../../../../engine'
 import type { ChartSeries } from '../../../charts/LinearChart'
 import chartStyles from '../../../charts/charts.module.css'
+
+// A test that stubs the media query or a measurement must not leave it behind, even when it fails.
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+})
 
 const defaultDraft = makeScenario()
 const milestones = defaultMilestones()
@@ -382,6 +388,43 @@ describe('NetWorthChart', () => {
     const svg = container.querySelector('svg')
     expect(svg).not.toBeNull()
     expect(Number(svg!.getAttribute('viewBox')?.split(' ')[3] ?? 0)).toBeGreaterThan(200)
+  })
+
+  it('gives the hero chart a tooltip where the page is one column, unless its legend is fully on screen', () => {
+    const media = (matches: boolean) =>
+      vi.stubGlobal('matchMedia', (query: string) => ({
+        matches,
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }))
+    const heroProps = { milestones, scenarios: [defaultDraft], draft: defaultDraft, activeId: defaultDraft.id, variant: 'hero' as const }
+    media(true)
+    const { container, unmount } = render(<NetWorthChart {...heroProps} />)
+    const svg = container.querySelector('svg[role="img"]')!
+    const legend = screen.getByText(/Tap or hover the chart/).closest('div')!.parentElement!
+    const legendAt = (top: number, bottom: number) =>
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+        if (this.style.visibility === 'hidden') return { top: 0, bottom: 0, height: 0 } as DOMRect
+        return this === legend
+          ? ({ top, bottom, height: bottom - top } as DOMRect)
+          : ({ top: 100, bottom: 330, height: 230 } as DOMRect)
+      })
+    // Its legend, which repeats the values, is fully on screen: the tooltip would cover it.
+    legendAt(340, 600)
+    fireEvent.keyDown(svg, { key: 'Home' })
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+    fireEvent.keyDown(svg, { key: 'Escape' })
+    // Below the fold: the tooltip is what shows the year.
+    legendAt(window.innerHeight + 20, window.innerHeight + 400)
+    fireEvent.keyDown(svg, { key: 'Home' })
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Year 0')
+    unmount()
+    // On a wide screen the legend under the chart is the readout, and nothing floats.
+    media(false)
+    const wide = render(<NetWorthChart {...heroProps} />)
+    fireEvent.keyDown(wide.container.querySelector('svg[role="img"]')!, { key: 'Home' })
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
   })
 
   it('renders without crashing in the nominal view', () => {

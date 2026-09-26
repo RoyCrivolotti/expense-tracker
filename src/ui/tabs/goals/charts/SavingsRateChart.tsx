@@ -12,11 +12,12 @@ import styles from '../goals.module.css'
 
 const INVESTED_COLOR = 'var(--exp-investment)'
 const SAVING_COLOR = 'color-mix(in srgb, var(--exp-income) 55%, transparent)'
+const PLAN_COLOR = 'color-mix(in srgb, var(--color-text) 45%, transparent)'
 
 const LEGEND: LegendItem[] = [
   { label: 'Invested', color: INVESTED_COLOR },
   { label: 'Net saving', color: SAVING_COLOR },
-  { label: 'Plan assumption', color: 'color-mix(in srgb, var(--color-text) 45%, transparent)' },
+  { label: 'Plan assumption', color: PLAN_COLOR },
 ]
 
 /** Long enough to see a habit, short enough that the labels stay readable. */
@@ -73,9 +74,9 @@ function SavingsRateChartImpl({
   const tooltip = (i: number): { title: string; lines: TooltipLine[] } => ({
     title: recent[i]?.month ?? '',
     lines: [
-      { label: 'Invested', value: formatMoneyShort(recent[i]?.investedCents ?? 0, format), tone: 'neutral' },
-      { label: 'Net saving', value: formatMoneyShort(recent[i]?.netSavingCents ?? 0, format), tone: 'neutral' },
-      { label: 'Plan', value: formatMoneyShort(draft.monthlyContributionCents, format), tone: 'neutral' },
+      { label: 'Invested', value: formatMoneyShort(recent[i]?.investedCents ?? 0, format), color: INVESTED_COLOR, tone: 'neutral' },
+      { label: 'Net saving', value: formatMoneyShort(recent[i]?.netSavingCents ?? 0, format), color: SAVING_COLOR, tone: 'neutral' },
+      { label: 'Plan', value: formatMoneyShort(draft.monthlyContributionCents, format), color: PLAN_COLOR, tone: 'neutral' },
     ],
   })
   const since = draft.planStartDate ? ' since the plan started' : ''

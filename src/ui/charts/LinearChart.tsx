@@ -15,6 +15,7 @@ import {
 } from './linearChartParts'
 import { useChartFocus } from './useChartFocus'
 import { useSvgAnchor } from './useSvgAnchor'
+import { useTooltipSide } from './useTooltipSide'
 import {
   collectDomain,
   linePath,
@@ -24,6 +25,7 @@ import {
   type Pt,
   type ScatterPoint,
 } from './linearScale'
+import type { RefObject } from 'react'
 import styles from './charts.module.css'
 
 const FALLBACK_W = 360
@@ -70,6 +72,8 @@ interface Props {
   yDomainMax?: number | undefined
   /** Fit the Y axis to the values in view instead of anchoring it at zero. */
   fitDomain?: boolean
+  /** An element below the chart that already shows the tapped point's values (the hero's legend): while it is fully on screen the tooltip stays away, so it does not cover what it repeats. */
+  readoutRef?: RefObject<HTMLElement | null>
 }
 
 function pointsOf(values: number[], x: (i: number) => number, y: (v: number) => number): Pt[] {
@@ -147,6 +151,7 @@ export function LinearChart({
   onActiveIndexChange,
   yDomainMax,
   fitDomain,
+  readoutRef,
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   // useId can return characters (colons, in older React) that a url(#...) reference does not take.
@@ -160,6 +165,10 @@ export function LinearChart({
   const focusX = active != null ? geo.xForIndex(active) : 0
   const anchor = useSvgAnchor(svgRef, active != null ? focusX : null, active != null ? PAD.top : null)
   const tip = active != null ? tooltip(active) : null
+  const { side, show } = useTooltipSide(active != null, containerRef, {
+    enabled: tooltipMode === 'full',
+    unlessVisible: readoutRef,
+  })
   const lineSeries = series.filter((s) => s.kind !== 'area' && s.kind !== 'band' && s.kind !== 'scatter')
 
   useEffect(() => {
@@ -279,8 +288,8 @@ export function LinearChart({
           lineSeries={lineSeries}
         />
       </svg>
-      {tip && tooltipMode === 'full' ? (
-        <ChartTooltip anchor={anchor} title={tip.title} lines={tip.lines} />
+      {tip && show ? (
+        <ChartTooltip anchor={anchor} side={side} title={tip.title} lines={tip.lines} />
       ) : null}
     </div>
   )

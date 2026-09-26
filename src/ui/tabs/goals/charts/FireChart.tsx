@@ -17,8 +17,10 @@ import { formatMoneyShort } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import styles from '../goals.module.css'
 
+const BALANCE_COLOR = '#8b5cf6'
+
 const FIRE_LEGEND: LegendItem[] = [
-  { label: 'Portfolio balance', color: '#8b5cf6' },
+  { label: 'Portfolio balance', color: BALANCE_COLOR },
   { label: 'FI target', color: 'color-mix(in srgb, var(--color-text) 45%, transparent)' },
 ]
 
@@ -49,11 +51,11 @@ function FireChartImpl({
 
   const format = useMoneyFormat()
   const labels = useMemo(() => sparseLabels(balances.map((_, y) => y), 5), [balances])
-  const series: ChartSeries[] = [{ id: 'balance', color: '#8b5cf6', values: balances, width: 2 }]
+  const series: ChartSeries[] = [{ id: 'balance', color: BALANCE_COLOR, values: balances, width: 2 }]
 
   const tooltip = (i: number): { title: string; lines: TooltipLine[] } => ({
     title: `Year ${i}`,
-    lines: [{ label: 'Portfolio', value: formatMoneyShort(balances[i] ?? 0, format), tone: 'neutral' }],
+    lines: [{ label: 'Portfolio', value: formatMoneyShort(balances[i] ?? 0, format), color: BALANCE_COLOR, tone: 'neutral' }],
   })
 
   return (

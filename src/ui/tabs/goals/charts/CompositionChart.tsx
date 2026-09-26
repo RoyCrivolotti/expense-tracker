@@ -12,10 +12,14 @@ import { purchaseBreakdownTooltipLines } from '../purchaseTooltip'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import styles from '../goals.module.css'
 
+const INVESTED_COLOR = 'var(--exp-investment)'
+const HOUSE_COLOR = 'var(--exp-income)'
+const MORTGAGE_COLOR = 'var(--exp-danger)'
+
 const COMPOSITION_LEGEND: LegendItem[] = [
-  { label: 'Invested portfolio', color: 'var(--exp-investment)' },
-  { label: 'House equity', color: 'var(--exp-income)' },
-  { label: 'Mortgage owed', color: 'var(--exp-danger)' },
+  { label: 'Invested portfolio', color: INVESTED_COLOR },
+  { label: 'House equity', color: HOUSE_COLOR },
+  { label: 'Mortgage owed', color: MORTGAGE_COLOR },
 ]
 
 function CompositionChartImpl({
@@ -39,19 +43,19 @@ function CompositionChartImpl({
   const series: ChartSeries[] = [
     {
       id: 'invested',
-      color: 'var(--exp-investment)',
+      color: INVESTED_COLOR,
       kind: 'area',
       values: points.map((p) => p.investedCents),
     },
     {
       id: 'house',
-      color: 'var(--exp-income)',
+      color: HOUSE_COLOR,
       kind: 'area',
       values: points.map((p) => p.houseEquityCents),
     },
     {
       id: 'mortgage',
-      color: 'var(--exp-danger)',
+      color: MORTGAGE_COLOR,
       kind: 'area',
       values: points.map((p) => -p.mortgageBalanceCents),
     },
@@ -61,9 +65,9 @@ function CompositionChartImpl({
     const p = points[i]
     const year = years[i] ?? i
     const lines: TooltipLine[] = [
-      { label: 'Invested', value: formatMoneyShort(p?.investedCents ?? 0, format), tone: 'neutral' },
-      { label: 'House equity', value: formatMoneyShort(p?.houseEquityCents ?? 0, format), tone: 'neutral' },
-      { label: 'Mortgage', value: formatMoneyShort(p?.mortgageBalanceCents ?? 0, format), tone: 'neutral' },
+      { label: 'Invested', value: formatMoneyShort(p?.investedCents ?? 0, format), color: INVESTED_COLOR, tone: 'neutral' },
+      { label: 'House equity', value: formatMoneyShort(p?.houseEquityCents ?? 0, format), color: HOUSE_COLOR, tone: 'neutral' },
+      { label: 'Mortgage', value: formatMoneyShort(p?.mortgageBalanceCents ?? 0, format), color: MORTGAGE_COLOR, tone: 'neutral' },
       {
         label: 'Net worth',
         value: formatMoneyShort(p?.netWorthCents ?? 0, format),

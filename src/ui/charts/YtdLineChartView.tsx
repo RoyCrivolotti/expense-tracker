@@ -6,6 +6,7 @@ import { ChartTooltip } from './ChartTooltip'
 import { ChartYAxis } from './ChartYAxis'
 import { CHART_H, CHART_W, PAD, monthLabel } from './chartLayout'
 import { useSvgAnchor } from './useSvgAnchor'
+import { useTooltipSide } from './useTooltipSide'
 import styles from './charts.module.css'
 
 export interface YtdPoint {
@@ -39,11 +40,13 @@ export function YtdLineChartView({
 }: Props) {
   const format = useMoneyFormat()
   const svgRef = useRef<SVGSVGElement>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
   const focus = active != null ? points[active] : null
+  const { side } = useTooltipSide(focus != null, wrapRef)
   const anchor = useSvgAnchor(svgRef, focus ? focusX : null, focus ? PAD.top : null)
 
   return (
-    <div className={styles.chartWrap}>
+    <div ref={wrapRef} className={styles.chartWrap}>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${CHART_W} ${CHART_H}`}
@@ -72,6 +75,7 @@ export function YtdLineChartView({
       {focus && (
         <ChartTooltip
           anchor={anchor}
+          side={side}
           title={monthLabel(focus.month)}
           lines={[
             { label: 'Cumulative income', value: formatCents(focus.cumIncome, format), tone: 'income' },
