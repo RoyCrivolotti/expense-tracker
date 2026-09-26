@@ -9,6 +9,7 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 ## September 2026 (chart tooltips on a phone)
 
 - **A chart's tooltip opens on the side of the chart with more room**, above or below it, and stays there while you slide along the chart. It is laid over the page instead of sitting in it, so it takes no space, the chart never moves and nothing scrolls to reach it. Every chart with a tooltip does this: the projection charts (the main one had none, its values were only in a legend below it), the income and expense charts and the category pie. Wide screens keep the tooltip at the pointer. A tooltip taller than the room on either side, such as the purchase breakdown on a small phone, slides back into view over the chart. The main projection chart shows a tooltip only when its legend, which repeats the values, is below the fold; with the legend on screen the legend is the readout.
+- **Tooltip rows carry the colour of their series**, as the Progress charts already did: the composition, FIRE, rent versus buy, savings rate and main projection charts showed plain text, with the colours only in the legend.
 - **Negative amounts are compact too** (-5.0M, not -5.000.000,00). The Composition chart's lowest tick, the mortgage below zero, lost the start of its label. The same form now applies wherever an amount is negative, such as the behind-plan figure on the summary card, which used to print to the cent while the ahead figure was compact.
 
 ## September 2026 (comparison table and chart tooltips)
