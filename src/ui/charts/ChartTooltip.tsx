@@ -88,18 +88,41 @@ function FloatingTooltip({ title, lines, anchor }: Props) {
 }
 
 /**
- * On a phone the tooltip is a panel on the chart's own edge, on the side with more room. It is
- * laid over the page rather than in it, so it takes no space and the chart never moves, and it
- * needs no scrolling to reach: tapping away to scroll is what closes it.
+ * On a phone the tooltip is a panel laid over the page rather than in it, so it takes no space and
+ * the chart never moves, and it needs no scrolling to reach: tapping away to scroll is what
+ * closes it. With room above the chart it sits against the chart's top edge and moves with it. With
+ * more room below, it is pinned to the screen above the tab bar instead, so it stays where it can
+ * be read while the page scrolls.
  *
- * Nothing about where it sits is stored. CSS puts it against the chart's edge, so it moves with
- * the chart, and the only choice, which edge, is made again from where the chart is now. An
- * offset worked out when it opened would be wrong as soon as the page scrolled, and covered the
- * chart or left the panel out of reach.
+ * Nothing about where it sits is stored. CSS puts it against the chart's edge or the screen's, and
+ * the only choice, which of the two, is made again from where the chart is now. An offset worked
+ * out when it opened would be wrong as soon as the page scrolled, and covered the chart or left
+ * the panel out of reach.
  */
 function DockedPanel({ title, lines, chart }: Pick<Props, 'title' | 'lines'> & { chart: Props['chart'] | undefined }) {
   const ref = useRef<HTMLDivElement>(null)
   const side = useTooltipSide(chart, ref, contentKey(title, lines))
+  const pinned = side === 'below'
+  // A fixed box is laid out against the screen, so it takes the chart's left and width by hand.
+  // They only change when the screen does, never as the page scrolls.
+  useLayoutEffect(() => {
+    const el = ref.current
+    const box = chart?.current
+    if (!el) return undefined
+    if (!pinned || !box) {
+      el.style.left = ''
+      el.style.width = ''
+      return undefined
+    }
+    const across = () => {
+      const r = box.getBoundingClientRect()
+      el.style.left = `${r.left}px`
+      el.style.width = `${r.width}px`
+    }
+    across()
+    window.addEventListener('resize', across)
+    return () => window.removeEventListener('resize', across)
+  }, [chart, pinned])
   // Tells the chart's owner whether it is showing, and that it is gone once it closes. Before
   // paint: after it, the owner's legend would keep its figures for a frame beside the panel.
   const onScreen = useInBand(ref, ON_SCREEN_SHARE)
@@ -111,7 +134,7 @@ function DockedPanel({ title, lines, chart }: Pick<Props, 'title' | 'lines'> & {
   return (
     <div
       ref={ref}
-      className={`${styles.tooltipDocked} ${side === 'above' ? styles.tooltipAbove : styles.tooltipBelow}`}
+      className={`${styles.tooltipDocked} ${pinned ? styles.tooltipPinned : styles.tooltipAbove}`}
       role="tooltip"
     >
       <TooltipBody title={title} lines={lines} />

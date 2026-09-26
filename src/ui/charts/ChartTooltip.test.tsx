@@ -68,7 +68,7 @@ describe('ChartTooltip on a phone', () => {
     unmount()
     const high = scene(80, 310)
     render(<ChartTooltip title="Year 5" lines={lines} anchor={null} chart={high.ref} />)
-    expect(screen.getByRole('tooltip')).toHaveClass(chartStyles.tooltipBelow!)
+    expect(screen.getByRole('tooltip')).toHaveClass(chartStyles.tooltipPinned!)
     // It is laid over the page, so nothing needs to move for it to be seen.
     expect(scrollIntoView).not.toHaveBeenCalled()
   })
@@ -96,7 +96,34 @@ describe('ChartTooltip on a phone', () => {
     // The chart scrolled up the screen: the panel (100px) would be under the header.
     s.move(80, 310)
     scrolled()
-    expect(screen.getByRole('tooltip')).toHaveClass(chartStyles.tooltipBelow!)
+    expect(screen.getByRole('tooltip')).toHaveClass(chartStyles.tooltipPinned!)
+  })
+
+  it('is pinned to the screen, across the chart, when it goes below, and back on the chart when above', () => {
+    docked = true
+    const s = scene(80, 310)
+    // The chart has a left edge and a width of its own.
+    const rect = (t: number, b: number) => ({ top: t, bottom: b, height: b - t, left: 16, width: 343 }) as DOMRect
+    s.ref.current.getBoundingClientRect = () => rect(80, 310)
+    render(<ChartTooltip title="Year 1" lines={[]} anchor={null} chart={s.ref} />)
+    const panel = screen.getByRole('tooltip')
+    expect(panel).toHaveClass(chartStyles.tooltipPinned!)
+    expect(panel).not.toHaveClass(chartStyles.tooltipAbove!)
+    expect(panel.style.left).toBe('16px')
+    expect(panel.style.width).toBe('343px')
+    // The screen changes width: the panel follows the chart across.
+    s.ref.current.getBoundingClientRect = () => ({ ...rect(80, 310), left: 8, width: 400 })
+    act(() => {
+      window.dispatchEvent(new Event('resize'))
+    })
+    expect(panel.style.left).toBe('8px')
+    expect(panel.style.width).toBe('400px')
+    // The chart is lower on the screen and the panel goes above it: back to the chart's own width.
+    s.ref.current.getBoundingClientRect = () => rect(window.innerHeight - 300, window.innerHeight - 70)
+    scrolled()
+    expect(panel).toHaveClass(chartStyles.tooltipAbove!)
+    expect(panel.style.left).toBe('')
+    expect(panel.style.width).toBe('')
   })
 
   it('is not shown while its chart is mostly off screen, and comes back with it', () => {
@@ -115,7 +142,7 @@ describe('ChartTooltip on a phone', () => {
     // Back: chosen afresh, for where the chart is now.
     s.move(80, 310)
     act(() => io.emit(0.8, 0))
-    expect(screen.getByRole('tooltip')).toHaveClass(chartStyles.tooltipBelow!)
+    expect(screen.getByRole('tooltip')).toHaveClass(chartStyles.tooltipPinned!)
   })
 
   it('tells whoever drew the chart whether it is on screen, and that it is gone when it closes', () => {

@@ -48,9 +48,9 @@ describe('the tooltip of a chart on a phone', () => {
     const { container } = render(<LinearChart {...props} />)
     const svg = container.querySelector('svg')!
     fireEvent.keyDown(svg, { key: 'Home' })
-    expect(screen.getByRole('tooltip')).toHaveClass(chartStyles.tooltipBelow!)
+    expect(screen.getByRole('tooltip')).toHaveClass(chartStyles.tooltipPinned!)
     fireEvent.keyDown(svg, { key: 'ArrowRight' })
-    expect(screen.getByRole('tooltip')).toHaveClass(chartStyles.tooltipBelow!)
+    expect(screen.getByRole('tooltip')).toHaveClass(chartStyles.tooltipPinned!)
     expect(screen.getByRole('tooltip')).toHaveTextContent('Year 1')
   })
 })
