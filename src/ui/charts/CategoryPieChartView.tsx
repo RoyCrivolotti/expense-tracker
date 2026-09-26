@@ -52,7 +52,7 @@ export function CategoryPieChartView({ paths, active, onShow, onHide }: Props) {
   const colRef = useRef<HTMLDivElement>(null)
   const total = paths[0]?.total ?? 1
   const focus = active != null ? paths[active] : null
-  const { side } = useTooltipSide(focus != null, colRef)
+  const side = useTooltipSide(focus != null, colRef)
   const anchor = useSvgAnchor(
     svgRef,
     focus ? focus.labelX : null,

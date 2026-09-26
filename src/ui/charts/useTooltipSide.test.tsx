@@ -78,9 +78,9 @@ describe('useTooltipSide', () => {
     phone()
     withBars()
     const low = boxAt(window.innerHeight - 300, window.innerHeight - 70)
-    expect(renderHook(() => useTooltipSide(true, low.ref)).result.current.side).toBe('above')
+    expect(renderHook(() => useTooltipSide(true, low.ref)).result.current).toBe('above')
     const high = boxAt(70, 300)
-    expect(renderHook(() => useTooltipSide(true, high.ref)).result.current.side).toBe('below')
+    expect(renderHook(() => useTooltipSide(true, high.ref)).result.current).toBe('below')
   })
 
   it('holds its side while open, and chooses again the next time it opens', () => {
@@ -90,35 +90,36 @@ describe('useTooltipSide', () => {
     const { result, rerender } = renderHook(({ open }) => useTooltipSide(open, chart.ref), {
       initialProps: { open: true },
     })
-    expect(result.current.side).toBe('below')
+    expect(result.current).toBe('below')
     // The page moves under the open tooltip: it must not jump to the other side.
     chart.move(window.innerHeight - 300, window.innerHeight - 70)
     rerender({ open: true })
-    expect(result.current.side).toBe('below')
+    expect(result.current).toBe('below')
     rerender({ open: false })
     rerender({ open: true })
-    expect(result.current.side).toBe('above')
+    expect(result.current).toBe('above')
   })
 
   it('measures nothing on a wide screen, or for a chart with no tooltip', () => {
     const spy = withBars()
     const chart = boxAt(70, 300)
     phone(false)
-    expect(renderHook(() => useTooltipSide(true, chart.ref)).result.current).toEqual({ side: 'above', show: true })
+    expect(renderHook(() => useTooltipSide(true, chart.ref)).result.current).toBe('above')
     phone(true)
-    expect(renderHook(() => useTooltipSide(true, chart.ref, { enabled: false })).result.current.show).toBe(false)
+    expect(renderHook(() => useTooltipSide(true, chart.ref, { enabled: false })).result.current).toBe('above')
     expect(spy).not.toHaveBeenCalled()
   })
 
-  it('stays away while the element that repeats its values is fully on screen', () => {
-    phone(false)
+  it('decides when a tooltip becomes enabled while a point is already selected', () => {
+    phone()
     withBars()
     const chart = boxAt(70, 300)
-    const shown = boxAt(320, 600)
-    const show = () => renderHook(() => useTooltipSide(true, chart.ref, { unlessVisible: shown.ref })).result.current.show
-    expect(show()).toBe(false)
-    // Partly under the tab bar: the tooltip is needed after all.
-    shown.move(600, window.innerHeight + 100)
-    expect(show()).toBe(true)
+    const { result, rerender } = renderHook(({ enabled }) => useTooltipSide(true, chart.ref, { enabled }), {
+      initialProps: { enabled: false },
+    })
+    expect(result.current).toBe('above')
+    // The main chart's tooltip comes and goes as its legend scrolls in and out of view.
+    rerender({ enabled: true })
+    expect(result.current).toBe('below')
   })
 })

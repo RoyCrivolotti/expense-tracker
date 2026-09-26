@@ -7,6 +7,8 @@ import { Card } from '../../../components/primitives'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
+import { TooltipVisibilityContext } from '../../../charts/tooltipVisibility'
+import { useInBand } from '../../../charts/useInBand'
 import { sparseLabels } from '../../../charts/linearScale'
 import { formatMoneyShort } from '../chartTheme'
 import { useAssumedInflation } from '../../../hooks/assumedInflationContext'
@@ -101,7 +103,8 @@ function purchaseMarkerIndices(lines: ScenarioLine[], years: number[]): { yearIn
 
 function PortfolioLegend({
   isHero,
-  legendRef,
+  listRef,
+  valuesHidden,
   staticLegend,
   legendItems,
   activeYear,
@@ -110,7 +113,8 @@ function PortfolioLegend({
   onToggle,
 }: {
   isHero: boolean
-  legendRef: RefObject<HTMLDivElement | null>
+  listRef: RefObject<HTMLUListElement | null>
+  valuesHidden: boolean
   staticLegend: LegendItem[]
   legendItems: ScenarioLegendItem[]
   activeYear: number | null
@@ -120,15 +124,15 @@ function PortfolioLegend({
 }) {
   if (isHero) {
     return (
-      <div ref={legendRef}>
-        <ScenarioSeriesLegend
-          items={legendItems}
-          activeYear={activeYear}
-          breakdowns={breakdowns}
-          yearZeroHint={yearZeroHint}
-          onToggle={onToggle}
-        />
-      </div>
+      <ScenarioSeriesLegend
+        items={legendItems}
+        activeYear={activeYear}
+        breakdowns={breakdowns}
+        yearZeroHint={yearZeroHint}
+        onToggle={onToggle}
+        listRef={listRef}
+        valuesHidden={valuesHidden}
+      />
     )
   }
   return <ChartLegend items={staticLegend} variant="stack" />
@@ -372,9 +376,21 @@ function todayProp(todayIndex: number | undefined, windowYears: number | null): 
   return insideWindow(todayIndex, windowYears) && todayIndex !== undefined ? { todayIndex } : {}
 }
 
+/**
+ * Which readout the main chart uses on a phone, decided live as the page scrolls. The legend
+ * under the chart reads the tapped year when its value list is fully on screen; when it is not,
+ * the chart gets a tooltip. Never both: while that tooltip is on screen the legend keeps its
+ * space but hides the figures, and when the tooltip has scrolled away and the legend is only
+ * partly on screen it shows them again.
+ */
+function readoutMode(narrow: boolean, legendInBand: boolean, selected: boolean, popupOnScreen: boolean) {
+  return { showPopup: narrow && !legendInBand, valuesHidden: selected && popupOnScreen && !legendInBand }
+}
+
 function variantProps(
   isHero: boolean,
   narrow: boolean,
+  showPopup: boolean,
   markerYears: { yearIndex: number }[],
   lifeEventMarkers: { yearIndex: number; label: string; amountCents: number }[],
   onActiveIndexChange: (index: number | null) => void,
@@ -384,10 +400,7 @@ function variantProps(
         height: heroHeight(narrow),
         markerYears,
         lifeEventMarkers,
-        // On a wide screen the legend under the chart reads the year. Where the page is one column
-        // the legend can be below the fold, so the chart gets a tooltip too, which stays away
-        // while the legend is fully on screen and would only cover what it repeats.
-        tooltipMode: narrow ? ('full' as const) : ('hidden' as const),
+        tooltipMode: showPopup ? ('full' as const) : ('hidden' as const),
         onActiveIndexChange,
       }
     : { height: 210, markerYears: [], tooltipMode: 'full' as const }
@@ -440,8 +453,11 @@ function NetWorthChartImpl({
   const format = useMoneyFormat()
   const assumedInflation = useAssumedInflation()
   const narrow = useGoalsNarrow()
-  const legendRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLUListElement>(null)
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
+  const [popupOnScreen, setPopupOnScreen] = useState(false)
+  const legendInBand = useInBand(listRef, 1, narrow)
+  const { showPopup, valuesHidden } = readoutMode(narrow, legendInBand, activeIndex !== null, popupOnScreen)
   const onActiveIndexChange = useCallback((index: number | null) => {
     setActiveIndex(index)
   }, [])
@@ -526,7 +542,7 @@ function NetWorthChartImpl({
   }, [legendItems, fromTodayLine, fromTodayLabel, activeYear])
 
   const lifeEventMarkers = useLifeEventMarkers(isHero, draft, windowYears)
-  const heroVariantProps = variantProps(isHero, narrow, markerYears, lifeEventMarkers, onActiveIndexChange)
+  const heroVariantProps = variantProps(isHero, narrow, showPopup, markerYears, lifeEventMarkers, onActiveIndexChange)
 
   return (
     <Card className={isHero ? `${styles.chartCard} ${styles.heroChart}` : styles.chartCard}>
@@ -535,19 +551,20 @@ function NetWorthChartImpl({
         {isHero ? <HeroWindowPicker windows={heroWindows} value={heroWindow} onChange={setHeroWindow} /> : null}
       </div>
       <p className={styles.chartHint}>{isHero ? HERO_HINT : DEFAULT_HINT}</p>
-      <LinearChart
-        readoutRef={legendRef}
-        {...heroVariantProps}
-        aboveTop={fiChartMarker}
-        series={[...(displayBand ? [displayBand] : []), ...displaySeries, ...displayRealPoints, ...displayExtraSeries]}
-        xLabels={labels}
-        refLines={refLines}
-        {...todayProp(todayIndex, windowYears)}
-        yDomainMax={yDomainMax}
-        formatValue={(c) => formatMoneyShort(c, format)}
-        ariaLabel={projectionLabel(fiChartMarker)}
-        tooltip={tooltip}
-      />
+      <TooltipVisibilityContext.Provider value={setPopupOnScreen}>
+        <LinearChart
+          {...heroVariantProps}
+          aboveTop={fiChartMarker}
+          series={[...(displayBand ? [displayBand] : []), ...displaySeries, ...displayRealPoints, ...displayExtraSeries]}
+          xLabels={labels}
+          refLines={refLines}
+          {...todayProp(todayIndex, windowYears)}
+          yDomainMax={yDomainMax}
+          formatValue={(c) => formatMoneyShort(c, format)}
+          ariaLabel={projectionLabel(fiChartMarker)}
+          tooltip={tooltip}
+        />
+      </TooltipVisibilityContext.Provider>
       <PortfolioLegend
         isHero={isHero}
         staticLegend={staticLegend}
@@ -556,7 +573,8 @@ function NetWorthChartImpl({
         breakdowns={breakdowns}
         yearZeroHint={yearZeroHint}
         onToggle={onToggleVisible}
-        legendRef={legendRef}
+        listRef={listRef}
+        valuesHidden={valuesHidden}
       />
       {footer != null ? <div className={styles.chartFooter}>{footer}</div> : null}
     </Card>

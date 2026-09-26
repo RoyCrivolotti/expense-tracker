@@ -1,3 +1,4 @@
+import type { Ref } from 'react'
 import type { MoneyFormat, PurchaseYearBreakdown } from '../../../../engine'
 import { formatMoneyShort, formatSignedMoneyShort } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
@@ -32,6 +33,14 @@ interface ScenarioSeriesLegendProps {
   activeYear: number | null
   breakdowns: ScenarioLegendBreakdown[]
   yearZeroHint?: boolean
+  /** The value list, for a caller that needs to know whether it is on screen. */
+  listRef?: Ref<HTMLUListElement> | undefined
+  /**
+   * The year header and the figures are unseen but keep their space. The chart's tooltip is
+   * showing them, and taking the space away would change the list's height and its place on
+   * screen, which the caller reads.
+   */
+  valuesHidden?: boolean
   /** Makes each saved scenario's row a toggle for its line, as chart legends usually are. */
   onToggle?: ((scenarioId: number) => void) | undefined
 }
@@ -185,6 +194,8 @@ export function ScenarioSeriesLegend({
   activeYear,
   breakdowns,
   yearZeroHint = false,
+  listRef,
+  valuesHidden = false,
   onToggle,
 }: ScenarioSeriesLegendProps) {
   const format = useMoneyFormat()
@@ -194,13 +205,13 @@ export function ScenarioSeriesLegend({
     : 'Tap or hover the chart to compare values by year.'
 
   return (
-    <div className={styles.wrap}>
+    <div className={valuesHidden ? `${styles.wrap} ${styles.valuesHidden}` : styles.wrap}>
       {activeYear != null ? (
         <p className={styles.yearHeader}>Year {activeYear}</p>
       ) : (
         <p className={styles.hint}>{hint}</p>
       )}
-      <ul className={styles.list}>
+      <ul ref={listRef} className={styles.list}>
         {items.map((item) => (
           <LegendRow key={item.scenarioId ?? item.label} item={item} onToggle={onToggle} format={format} />
         ))}

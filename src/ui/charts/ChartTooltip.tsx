@@ -1,9 +1,14 @@
-import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
+import { useCallback, useContext, useEffect, useLayoutEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import styles from './charts.module.css'
+import { TooltipVisibilityContext } from './tooltipVisibility'
 import { useDockedTooltip } from './useDockedTooltip'
+import { useInBand } from './useInBand'
 import { useTooltipPosition } from './useTooltipPosition'
 import { nudgeIntoBand, visibleBand, type TooltipSide } from './useTooltipSide'
+
+/** How much of the tooltip has to be on screen for it to count as showing. */
+const ON_SCREEN_SHARE = 0.4
 
 export interface TooltipLine {
   label: string
@@ -100,7 +105,16 @@ function DockedTooltip({ title, lines, side }: Pick<Props, 'title' | 'lines'> & 
     const shift = nudgeIntoBand(el.getBoundingClientRect(), band.current)
     if (shift !== 0) el.style.transform = `translateY(${shift}px)`
   }, [])
-  useLayoutEffect(place)
+  // Only when what it shows or where it sits changes, never on a scroll: the chart re-renders
+  // as the page scrolls (its anchor follows it), and sliding again then would pin the panel to
+  // the top of the screen and keep it there after the chart had scrolled away. It belongs to
+  // its chart, so it scrolls with it.
+  const content = `${title}|${lines.map((line) => `${line.label}:${line.value}`).join('|')}`
+  useLayoutEffect(() => {
+    // The content key is what this effect follows; it is not read inside.
+    void content
+    place()
+  }, [place, content, side])
   useEffect(() => {
     const vv = window.visualViewport
     const remeasure = () => {
@@ -114,6 +128,13 @@ function DockedTooltip({ title, lines, side }: Pick<Props, 'title' | 'lines'> & 
       window.removeEventListener('resize', remeasure)
     }
   }, [place])
+  // Tells the chart's owner whether it is showing, and that it is gone once it closes.
+  const onScreen = useInBand(ref, ON_SCREEN_SHARE)
+  const report = useContext(TooltipVisibilityContext)
+  useEffect(() => {
+    report?.(onScreen)
+    return () => report?.(false)
+  }, [report, onScreen])
   return (
     <div
       ref={ref}

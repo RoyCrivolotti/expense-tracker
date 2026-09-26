@@ -2,6 +2,8 @@ import { act, render, screen } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { ChartTooltip } from './ChartTooltip'
 import chartStyles from './charts.module.css'
+import { TooltipVisibilityContext } from './tooltipVisibility'
+import { installFakeIntersectionObserver } from '../../testing/fakeIntersectionObserver'
 
 let docked = false
 
@@ -19,6 +21,7 @@ beforeAll(() => {
 })
 
 afterEach(() => {
+  vi.unstubAllGlobals()
   vi.restoreAllMocks()
 })
 
@@ -77,6 +80,47 @@ describe('ChartTooltip', () => {
       window.dispatchEvent(new Event('resize'))
     })
     expect(probes.mock.calls.length).toBeGreaterThan(opened)
+  })
+
+  it('stays where it is when the page scrolls, and slides again only when what it shows changes', () => {
+    docked = true
+    let panel = { top: 10, bottom: 300 }
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (this.style.visibility === 'hidden') return { top: 0, bottom: 60, height: 60 } as DOMRect
+      return { ...panel, height: panel.bottom - panel.top } as DOMRect
+    })
+    const lines = [{ label: 'Plan', value: '1k €' }]
+    const { rerender } = render(<ChartTooltip title="Year 1" lines={lines} anchor={{ x: 1, y: 1 }} side="above" />)
+    expect(screen.getByRole('tooltip').style.transform).toBe('translateY(50px)')
+    // The chart re-renders on every scroll frame; the panel would be pinned to the top of the
+    // screen if it slid again each time, and left there once the chart had scrolled away.
+    panel = { top: -400, bottom: -110 }
+    rerender(<ChartTooltip title="Year 1" lines={[{ ...lines[0]! }]} anchor={{ x: 1, y: 5 }} side="above" />)
+    expect(screen.getByRole('tooltip').style.transform).toBe('translateY(50px)')
+    // A different point is a different panel: placed again.
+    panel = { top: 200, bottom: 400 }
+    rerender(<ChartTooltip title="Year 2" lines={lines} anchor={{ x: 1, y: 5 }} side="above" />)
+    expect(screen.getByRole('tooltip').style.transform).toBe('')
+  })
+
+  it('tells whoever drew the chart whether it is on screen, and that it is gone when it closes', () => {
+    docked = true
+    const io = installFakeIntersectionObserver()
+    const report = vi.fn()
+    const { unmount } = render(
+      <TooltipVisibilityContext.Provider value={report}>
+        <ChartTooltip title="Year 1" lines={[]} anchor={null} side="above" />
+      </TooltipVisibilityContext.Provider>,
+    )
+    // Nothing is reported as on screen until the observer says so.
+    expect(report).toHaveBeenLastCalledWith(false)
+    act(() => io.emit(0.6))
+    expect(report).toHaveBeenLastCalledWith(true)
+    act(() => io.emit(0.1))
+    expect(report).toHaveBeenLastCalledWith(false)
+    act(() => io.emit(0.6))
+    unmount()
+    expect(report).toHaveBeenLastCalledWith(false)
   })
 
   it('opens above when no side is given', () => {

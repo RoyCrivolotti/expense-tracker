@@ -3,6 +3,12 @@
   min-width: 0;
 }
 
+/* The tooltip is showing the figures: they keep their space so the list does not move. */
+.valuesHidden .yearHeader,
+.valuesHidden .value {
+  visibility: hidden;
+}
+
 .hint {
   margin: 0 0 0.45rem;
   font-size: 0.75rem;
