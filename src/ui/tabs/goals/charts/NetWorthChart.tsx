@@ -479,11 +479,12 @@ function NetWorthChartImpl({
       const tooltipLines: TooltipLine[] = displaySeries.map((s, idx) => ({
         label: names[idx] ?? s.id,
         value: formatMoneyShort(s.values[i] ?? 0, format),
+        color: s.color,
         tone: 'neutral',
       }))
       const fromTodayValue = fromTodayLine ? pointSeriesValueAt(fromTodayLine.points ?? [], year) : null
       if (fromTodayValue !== null) {
-        tooltipLines.push({ label: fromTodayLabel, value: formatMoneyShort(fromTodayValue, format), tone: 'neutral' })
+        tooltipLines.push({ label: fromTodayLabel, value: formatMoneyShort(fromTodayValue, format), color: fromTodayLine?.color, tone: 'neutral' })
       }
       return { title: `Year ${year}`, lines: tooltipLines }
     },

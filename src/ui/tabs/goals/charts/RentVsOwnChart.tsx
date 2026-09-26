@@ -11,9 +11,12 @@ import { formatMoneyShort } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import styles from '../goals.module.css'
 
+const RENT_COLOR = 'var(--exp-warning)'
+const BUY_COLOR = 'var(--exp-investment)'
+
 const LEGEND: LegendItem[] = [
-  { label: 'Rent & invest', color: 'var(--exp-warning)' },
-  { label: 'Buy now', color: 'var(--exp-investment)' },
+  { label: 'Rent & invest', color: RENT_COLOR },
+  { label: 'Buy now', color: BUY_COLOR },
 ]
 
 function RentVsOwnChartImpl({
@@ -39,15 +42,15 @@ function RentVsOwnChartImpl({
   const labels = useMemo(() => sparseLabels(years, 5), [years])
 
   const series: ChartSeries[] = [
-    { id: 'rent', color: 'var(--exp-warning)', values: points.map((p) => p.rentNetWorthCents) },
-    { id: 'buy', color: 'var(--exp-investment)', values: points.map((p) => p.buyNetWorthCents) },
+    { id: 'rent', color: RENT_COLOR, values: points.map((p) => p.rentNetWorthCents) },
+    { id: 'buy', color: BUY_COLOR, values: points.map((p) => p.buyNetWorthCents) },
   ]
 
   const tooltip = (i: number): { title: string; lines: TooltipLine[] } => ({
     title: `Year ${years[i] ?? i}`,
     lines: [
-      { label: 'Rent & invest', value: formatMoneyShort(points[i]?.rentNetWorthCents ?? 0, format), tone: 'neutral' },
-      { label: 'Buy now', value: formatMoneyShort(points[i]?.buyNetWorthCents ?? 0, format), tone: 'neutral' },
+      { label: 'Rent & invest', value: formatMoneyShort(points[i]?.rentNetWorthCents ?? 0, format), color: RENT_COLOR, tone: 'neutral' },
+      { label: 'Buy now', value: formatMoneyShort(points[i]?.buyNetWorthCents ?? 0, format), color: BUY_COLOR, tone: 'neutral' },
     ],
   })
 
