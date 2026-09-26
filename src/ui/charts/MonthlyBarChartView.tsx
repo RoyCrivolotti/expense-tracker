@@ -6,7 +6,6 @@ import { ChartTooltip } from './ChartTooltip'
 import { ChartYAxis } from './ChartYAxis'
 import { CHART_H, CHART_W, PAD, monthLabel, yAt } from './chartLayout'
 import { useSvgAnchor } from './useSvgAnchor'
-import { useTooltipSide } from './useTooltipSide'
 import styles from './charts.module.css'
 
 export interface BarRow {
@@ -42,7 +41,6 @@ export function MonthlyBarChartView({
   const svgRef = useRef<SVGSVGElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const focus = active != null ? rows[active] : null
-  const side = useTooltipSide(focus != null, wrapRef)
   const anchor = useSvgAnchor(svgRef, focus ? focusX : null, focus ? PAD.top : null)
 
   return (
@@ -79,7 +77,7 @@ export function MonthlyBarChartView({
       {focus && (
         <ChartTooltip
           anchor={anchor}
-          side={side}
+          chart={wrapRef}
           title={monthLabel(focus.month)}
           lines={[
             { label: 'Income', value: formatCents(focus.income, format), tone: 'income' },

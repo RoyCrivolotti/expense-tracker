@@ -408,12 +408,16 @@ describe('NetWorthChart', () => {
     const { container, unmount } = render(<NetWorthChart {...heroProps} />)
     const svg = container.querySelector('svg[role="img"]')!
     const legend = container.querySelector('ul')!.parentElement!
-    // The first observer is the legend's value list; the tooltip adds its own when it opens.
+    // The first observer is the legend's value list. A tooltip adds one for its chart, and once
+    // that is mostly on screen, one for itself.
     const legendIs = (ratio: number) => act(() => io.emit(ratio, 0))
-    const tooltipIs = (ratio: number) => act(() => io.emit(ratio, 1))
+    const chartIs = (ratio: number) => act(() => io.emit(ratio, 1))
+    const tooltipIs = (ratio: number) => act(() => io.emit(ratio, 2))
 
-    // The legend is not fully on screen: a tap gives a tooltip, and the legend still shows.
+    // The legend is not fully on screen and the chart is: a tap gives a tooltip, and the legend
+    // still shows.
     fireEvent.keyDown(svg, { key: 'Home' })
+    chartIs(0.8)
     expect(screen.getByRole('tooltip')).toHaveTextContent('Year 0')
     expect(legend).not.toHaveClass(legendStyles.valuesHidden!)
     // The tooltip is on screen: the legend keeps its space but unsees the figures.
@@ -425,14 +429,23 @@ describe('NetWorthChart', () => {
     expect(legend).not.toHaveClass(legendStyles.valuesHidden!)
     // Scrolled back: the tooltip returns, over the same selection.
     legendIs(0.3)
+    chartIs(0.8)
     expect(screen.getByRole('tooltip')).toHaveTextContent('Year 0')
     tooltipIs(0.8)
     expect(legend).toHaveClass(legendStyles.valuesHidden!)
-    // The tooltip scrolled away with its chart while the legend is only partly on screen: the
-    // legend shows the figures again, so there is a readout.
-    tooltipIs(0.1)
+    // The chart scrolled away while the legend is only partly on screen: the tooltip goes with
+    // it, and the legend shows the figures again, so there is a readout.
+    chartIs(0.1)
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
     expect(legend).not.toHaveClass(legendStyles.valuesHidden!)
     expect(legend).toHaveTextContent('Year 0')
+    // The chart comes back, and so does the tooltip, over the same selection.
+    chartIs(0.8)
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Year 0')
+    // A tooltip mostly out of the free band while its chart is not (both sides too short for
+    // it): the legend shows the figures rather than leave no readout.
+    tooltipIs(0.1)
+    expect(legend).not.toHaveClass(legendStyles.valuesHidden!)
     // Clearing the selection leaves the legend as it was.
     fireEvent.keyDown(svg, { key: 'Escape' })
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()

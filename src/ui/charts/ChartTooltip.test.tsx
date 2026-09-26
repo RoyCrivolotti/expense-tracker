@@ -1,5 +1,5 @@
 import { act, render, screen } from '@testing-library/react'
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ChartTooltip } from './ChartTooltip'
 import chartStyles from './charts.module.css'
 import { TooltipVisibilityContext } from './tooltipVisibility'
@@ -20,121 +20,154 @@ beforeAll(() => {
   })
 })
 
+beforeEach(() => {
+  vi.useFakeTimers()
+})
+
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
 })
 
-describe('ChartTooltip', () => {
-  it('opens on the side it is given on a phone, and scrolls nothing', () => {
+const BAR = 60
+
+/** The bars' probes are 60px; the chart is where the test puts it, and the panel is 100px tall. */
+function scene(top: number, bottom: number) {
+  const chart = document.createElement('div')
+  const move = (t: number, b: number) => {
+    chart.getBoundingClientRect = () => ({ top: t, bottom: b, height: b - t }) as DOMRect
+  }
+  move(top, bottom)
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+    return (this.style.visibility === 'hidden' ? { top: 0, bottom: BAR, height: BAR } : { top: 0, bottom: 0, height: 0 }) as DOMRect
+  })
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(100)
+  return { ref: { current: chart }, move }
+}
+
+const scrolled = () => {
+  act(() => {
+    window.dispatchEvent(new Event('scroll'))
+  })
+  act(() => {
+    vi.advanceTimersByTime(20)
+  })
+}
+
+describe('ChartTooltip on a phone', () => {
+  it('opens on the side of its chart with more room, and scrolls nothing', () => {
     docked = true
     const scrollIntoView = vi.fn()
     Element.prototype.scrollIntoView = scrollIntoView
     const lines = [{ label: 'Plan', value: '1k €' }]
-    const { rerender } = render(<ChartTooltip title="Year 5" lines={lines} anchor={null} side="below" />)
+    const low = scene(window.innerHeight - 300, window.innerHeight - 70)
+    const { unmount } = render(<ChartTooltip title="Year 5" lines={lines} anchor={null} chart={low.ref} />)
     expect(screen.getByRole('tooltip')).toHaveTextContent('Year 5')
-    expect(screen.getByRole('tooltip')).toHaveClass(chartStyles.tooltipBelow!)
-    rerender(<ChartTooltip title="Year 5" lines={lines} anchor={null} side="above" />)
     expect(screen.getByRole('tooltip')).toHaveClass(chartStyles.tooltipAbove!)
+    unmount()
+    const high = scene(80, 310)
+    render(<ChartTooltip title="Year 5" lines={lines} anchor={null} chart={high.ref} />)
+    expect(screen.getByRole('tooltip')).toHaveClass(chartStyles.tooltipBelow!)
     // It is laid over the page, so nothing needs to move for it to be seen.
     expect(scrollIntoView).not.toHaveBeenCalled()
   })
 
-  it('slides back into the free band when it hangs out of it, over the chart if it must', () => {
+  it('is never moved off its chart by an offset: it sits on the chart edge and moves with it', () => {
     docked = true
-    // The bars' probes are 60px; the tooltip itself is what the test moves around.
-    let panel = { top: 10, bottom: 300 }
-    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-      if (this.style.visibility === 'hidden') return { top: 0, bottom: 60, height: 60 } as DOMRect
-      return { ...panel, height: panel.bottom - panel.top } as DOMRect
-    })
-    const { rerender } = render(<ChartTooltip title="Year 5" lines={[]} anchor={null} side="above" />)
-    // Poking 50px above the band's top (60px): moved down.
-    expect(screen.getByRole('tooltip').style.transform).toBe('translateY(50px)')
-    // Hanging below the band: moved up.
-    panel = { top: 500, bottom: window.innerHeight + 100 }
-    rerender(<ChartTooltip title="Year 6" lines={[]} anchor={null} side="below" />)
-    expect(screen.getByRole('tooltip').style.transform).toBe(`translateY(${-160}px)`)
-    // Inside: not moved.
-    panel = { top: 200, bottom: 400 }
-    rerender(<ChartTooltip title="Year 7" lines={[]} anchor={null} side="below" />)
-    expect(screen.getByRole('tooltip').style.transform).toBe('')
+    const s = scene(window.innerHeight - 300, window.innerHeight - 70)
+    render(<ChartTooltip title="Year 1" lines={[]} anchor={{ x: 1, y: 1 }} chart={s.ref} />)
+    const panel = screen.getByRole('tooltip')
+    expect(panel.style.transform).toBe('')
+    // The page scrolls, and the chart is where it was and then nowhere near the header or tab bar:
+    // the panel is not slid, pinned or measured into another place.
+    s.move(window.innerHeight - 400, window.innerHeight - 170)
+    scrolled()
+    expect(screen.getByRole('tooltip')).toBe(panel)
+    expect(panel.style.transform).toBe('')
+    expect(panel).toHaveClass(chartStyles.tooltipAbove!)
   })
 
-  it('measures the free band once while it is open, and again when the screen changes', () => {
+  it('changes side as the page scrolls under it, once the side it is on runs out of room', () => {
     docked = true
-    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-      if (this.style.visibility === 'hidden') return { top: 0, bottom: 60, height: 60 } as DOMRect
-      return { top: 200, bottom: 400, height: 200 } as DOMRect
-    })
-    const probes = vi.spyOn(document.body, 'appendChild')
-    const { rerender } = render(<ChartTooltip title="Year 1" lines={[]} anchor={null} side="above" />)
-    const opened = probes.mock.calls.length
-    expect(opened).toBeGreaterThan(0)
-    // A finger sliding along the chart re-renders it with each point: no more probes.
-    rerender(<ChartTooltip title="Year 2" lines={[]} anchor={null} side="above" />)
-    rerender(<ChartTooltip title="Year 3" lines={[]} anchor={null} side="above" />)
-    expect(probes.mock.calls.length).toBe(opened)
-    // A rotation or the browser's toolbar changes the band: measured again.
-    act(() => {
-      window.dispatchEvent(new Event('resize'))
-    })
-    expect(probes.mock.calls.length).toBeGreaterThan(opened)
+    const s = scene(window.innerHeight - 300, window.innerHeight - 70)
+    render(<ChartTooltip title="Year 1" lines={[]} anchor={null} chart={s.ref} />)
+    expect(screen.getByRole('tooltip')).toHaveClass(chartStyles.tooltipAbove!)
+    // The chart scrolled up the screen: the panel (100px) would be under the header.
+    s.move(80, 310)
+    scrolled()
+    expect(screen.getByRole('tooltip')).toHaveClass(chartStyles.tooltipBelow!)
   })
 
-  it('stays where it is when the page scrolls, and slides again only when what it shows changes', () => {
+  it('is not shown while its chart is mostly off screen, and comes back with it', () => {
     docked = true
-    let panel = { top: 10, bottom: 300 }
-    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-      if (this.style.visibility === 'hidden') return { top: 0, bottom: 60, height: 60 } as DOMRect
-      return { ...panel, height: panel.bottom - panel.top } as DOMRect
-    })
-    const lines = [{ label: 'Plan', value: '1k €' }]
-    const { rerender } = render(<ChartTooltip title="Year 1" lines={lines} anchor={{ x: 1, y: 1 }} side="above" />)
-    expect(screen.getByRole('tooltip').style.transform).toBe('translateY(50px)')
-    // The chart re-renders on every scroll frame; the panel would be pinned to the top of the
-    // screen if it slid again each time, and left there once the chart had scrolled away.
-    panel = { top: -400, bottom: -110 }
-    rerender(<ChartTooltip title="Year 1" lines={[{ ...lines[0]! }]} anchor={{ x: 1, y: 5 }} side="above" />)
-    expect(screen.getByRole('tooltip').style.transform).toBe('translateY(50px)')
-    // A different point is a different panel: placed again.
-    panel = { top: 200, bottom: 400 }
-    rerender(<ChartTooltip title="Year 2" lines={lines} anchor={{ x: 1, y: 5 }} side="above" />)
-    expect(screen.getByRole('tooltip').style.transform).toBe('')
+    const io = installFakeIntersectionObserver()
+    // Below the fold when the tooltip is first drawn: measured at once, not shown.
+    const s = scene(window.innerHeight + 100, window.innerHeight + 330)
+    render(<ChartTooltip title="Year 1" lines={[]} anchor={null} chart={s.ref} />)
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+    s.move(window.innerHeight - 300, window.innerHeight - 70)
+    act(() => io.emit(0.8))
+    expect(screen.getByRole('tooltip')).toBeInTheDocument()
+    // The chart scrolled away: the panel would hang over whatever is there now.
+    act(() => io.emit(0.1, 0))
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+    // Back: chosen afresh, for where the chart is now.
+    s.move(80, 310)
+    act(() => io.emit(0.8, 0))
+    expect(screen.getByRole('tooltip')).toHaveClass(chartStyles.tooltipBelow!)
   })
 
   it('tells whoever drew the chart whether it is on screen, and that it is gone when it closes', () => {
     docked = true
     const io = installFakeIntersectionObserver()
+    const s = scene(window.innerHeight - 300, window.innerHeight - 70)
     const report = vi.fn()
     const { unmount } = render(
       <TooltipVisibilityContext.Provider value={report}>
-        <ChartTooltip title="Year 1" lines={[]} anchor={null} side="above" />
+        <ChartTooltip title="Year 1" lines={[]} anchor={null} chart={s.ref} />
       </TooltipVisibilityContext.Provider>,
     )
-    // Nothing is reported as on screen until the observer says so.
+    // The chart is the first thing observed; nothing is showing yet, so nothing is reported.
+    act(() => io.emit(0.8, 0))
     expect(report).toHaveBeenLastCalledWith(false)
-    act(() => io.emit(0.6))
+    // The panel is the second: nothing is reported as on screen until it says so.
+    act(() => io.emit(0.6, 1))
     expect(report).toHaveBeenLastCalledWith(true)
-    act(() => io.emit(0.1))
+    act(() => io.emit(0.1, 1))
     expect(report).toHaveBeenLastCalledWith(false)
-    act(() => io.emit(0.6))
+    act(() => io.emit(0.6, 1))
+    // The chart going away takes the panel with it, and that is reported too.
+    act(() => io.emit(0.1, 0))
+    expect(report).toHaveBeenLastCalledWith(false)
+    act(() => io.emit(0.8, 0))
+    act(() => io.emit(0.6, 1))
     unmount()
     expect(report).toHaveBeenLastCalledWith(false)
   })
 
-  it('opens above when no side is given', () => {
+  it('opens above and is always shown when it has no chart to follow', () => {
     docked = true
     render(<ChartTooltip title="Year 5" lines={[]} anchor={null} />)
     expect(screen.getByRole('tooltip')).toHaveClass(chartStyles.tooltipAbove!)
   })
+})
 
-  it('floats beside the anchor on a wide screen, and scrolls nothing', () => {
+describe('ChartTooltip on a wide screen', () => {
+  it('floats beside the anchor, and scrolls nothing', () => {
     docked = false
     const scrollIntoView = vi.fn()
     Element.prototype.scrollIntoView = scrollIntoView
     render(<ChartTooltip title="Year 5" lines={[]} anchor={{ x: 10, y: 10 }} />)
     expect(screen.getByRole('tooltip')).toHaveTextContent('Year 5')
     expect(scrollIntoView).not.toHaveBeenCalled()
+  })
+
+  it('observes nothing, since the floating tooltip is not tied to the page', () => {
+    docked = false
+    const io = installFakeIntersectionObserver()
+    const s = scene(80, 310)
+    render(<ChartTooltip title="Year 5" lines={[]} anchor={{ x: 10, y: 10 }} chart={s.ref} />)
+    expect(io.live()).toHaveLength(0)
   })
 })

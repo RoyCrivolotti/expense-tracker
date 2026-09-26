@@ -3,7 +3,6 @@ import { formatCents } from '../../engine/money'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { ChartTooltip } from './ChartTooltip'
 import { useSvgAnchor } from './useSvgAnchor'
-import { useTooltipSide } from './useTooltipSide'
 import styles from './charts.module.css'
 
 const SIZE = 220
@@ -52,7 +51,6 @@ export function CategoryPieChartView({ paths, active, onShow, onHide }: Props) {
   const colRef = useRef<HTMLDivElement>(null)
   const total = paths[0]?.total ?? 1
   const focus = active != null ? paths[active] : null
-  const side = useTooltipSide(focus != null, colRef)
   const anchor = useSvgAnchor(
     svgRef,
     focus ? focus.labelX : null,
@@ -74,7 +72,7 @@ export function CategoryPieChartView({ paths, active, onShow, onHide }: Props) {
         {focus && (
           <ChartTooltip
             anchor={anchor}
-            side={side}
+            chart={colRef}
             title={focus.name}
             lines={[
               { label: 'Amount', value: formatCents(focus.cents, format), tone: 'expense' },
