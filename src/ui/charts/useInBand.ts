@@ -22,7 +22,10 @@ export function useInBand(target: RefObject<Element | null>, min: number, enable
         {
           // The bars cover the ends of the viewport, so the band is the viewport shrunk by them.
           rootMargin: `-${Math.round(band.top)}px 0px -${Math.max(0, Math.round(window.innerHeight - band.bottom))}px 0px`,
-          threshold: [min],
+          // The observer reports when the ratio crosses one of these. The slack is counted as in
+          // band, so it must be a threshold too, or a ratio that landed just under `min` would
+          // be counted in band and never reported again as it fell away.
+          threshold: [min - RATIO_SLACK, min],
         },
       )
       io.observe(el)

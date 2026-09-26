@@ -35,7 +35,8 @@ describe('useInBand', () => {
     })
     renderHook(() => useInBand(element(), 1))
     expect(io.live()[0]!.options?.rootMargin).toBe('-60px 0px -60px 0px')
-    expect(io.live()[0]!.options?.threshold).toEqual([1])
+    // The slack is a threshold too, so a ratio that lands just under 1 is reported again as it falls.
+    expect(io.live()[0]!.options?.threshold).toEqual([0.99, 1])
   })
 
   it('observes again when the screen is resized, and stops when it goes away', () => {
