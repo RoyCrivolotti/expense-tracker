@@ -178,8 +178,9 @@ describe('NetWorthChart', () => {
     fireEvent.click(screen.getByRole('radio', { name: '5Y' }))
     expect(yLabels()).not.toMatch(/100\.0M/)
     expect(screen.getByText('FI 100.0M €')).toBeInTheDocument()
-    // The marker says what it is for a screen reader.
+    // The marker's title is not read out of an image, so the chart's own name carries the target.
     expect(container.querySelector('title')?.textContent).toMatch(/is above the top of this chart/)
+    expect(screen.getByRole('img', { name: /Invested portfolio projection by year\. The FI target, 100\.0M .*, is above the top of this chart\./ })).toBeInTheDocument()
   })
 
   it('still draws an FI target the plan gets within reach of, with no marker', () => {
@@ -195,6 +196,7 @@ describe('NetWorthChart', () => {
     )
     expect(container.querySelectorAll(`line.${chartStyles.refLine}`)).toHaveLength(1)
     expect(screen.queryByText(/^FI /)).not.toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Invested portfolio projection by year' })).toBeInTheDocument()
   })
 
   it('offers no window buttons for a horizon the shortest window would not cut', () => {
