@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { ChartTooltip } from './ChartTooltip'
 import chartStyles from './charts.module.css'
@@ -56,6 +56,27 @@ describe('ChartTooltip', () => {
     panel = { top: 200, bottom: 400 }
     rerender(<ChartTooltip title="Year 7" lines={[]} anchor={null} side="below" />)
     expect(screen.getByRole('tooltip').style.transform).toBe('')
+  })
+
+  it('measures the free band once while it is open, and again when the screen changes', () => {
+    docked = true
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (this.style.visibility === 'hidden') return { top: 0, bottom: 60, height: 60 } as DOMRect
+      return { top: 200, bottom: 400, height: 200 } as DOMRect
+    })
+    const probes = vi.spyOn(document.body, 'appendChild')
+    const { rerender } = render(<ChartTooltip title="Year 1" lines={[]} anchor={null} side="above" />)
+    const opened = probes.mock.calls.length
+    expect(opened).toBeGreaterThan(0)
+    // A finger sliding along the chart re-renders it with each point: no more probes.
+    rerender(<ChartTooltip title="Year 2" lines={[]} anchor={null} side="above" />)
+    rerender(<ChartTooltip title="Year 3" lines={[]} anchor={null} side="above" />)
+    expect(probes.mock.calls.length).toBe(opened)
+    // A rotation or the browser's toolbar changes the band: measured again.
+    act(() => {
+      window.dispatchEvent(new Event('resize'))
+    })
+    expect(probes.mock.calls.length).toBeGreaterThan(opened)
   })
 
   it('opens above when no side is given', () => {

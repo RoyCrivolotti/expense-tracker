@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import styles from './charts.module.css'
 import { useDockedTooltip } from './useDockedTooltip'
@@ -84,17 +84,36 @@ function FloatingTooltip({ title, lines, anchor }: Props) {
  */
 function DockedTooltip({ title, lines, side }: Pick<Props, 'title' | 'lines'> & { side: TooltipSide }) {
   const ref = useRef<HTMLDivElement>(null)
+  // The free band is measured once, when the tooltip opens, and again only when the screen
+  // changes (a rotation, the browser's toolbar): measuring it lays out probe elements, and it
+  // does not change as a finger slides along the chart.
+  const band = useRef<ReturnType<typeof visibleBand> | null>(null)
   // A panel taller than the room on its side would sit under the header or the tab bar, out of
   // reach: it slides back into the free band, over the chart if it must. Set on the element
   // rather than in state so a tooltip that changes height as the point changes does not
   // render twice.
-  useLayoutEffect(() => {
+  const place = useCallback(() => {
     const el = ref.current
     if (!el) return
+    band.current ??= visibleBand()
     el.style.transform = ''
-    const shift = nudgeIntoBand(el.getBoundingClientRect(), visibleBand())
+    const shift = nudgeIntoBand(el.getBoundingClientRect(), band.current)
     if (shift !== 0) el.style.transform = `translateY(${shift}px)`
-  })
+  }, [])
+  useLayoutEffect(place)
+  useEffect(() => {
+    const vv = window.visualViewport
+    const remeasure = () => {
+      band.current = null
+      place()
+    }
+    vv?.addEventListener('resize', remeasure)
+    window.addEventListener('resize', remeasure)
+    return () => {
+      vv?.removeEventListener('resize', remeasure)
+      window.removeEventListener('resize', remeasure)
+    }
+  }, [place])
   return (
     <div
       ref={ref}
