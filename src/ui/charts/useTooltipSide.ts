@@ -54,34 +54,28 @@ export function nudgeIntoBand(box: { top: number; bottom: number }, band: { top:
 interface TooltipSideOptions {
   /** False for a chart that shows no tooltip: nothing is measured. */
   enabled?: boolean
-  /** An element that already shows the tapped point's values. While it is fully on screen the tooltip stays away, so it never covers what it repeats. */
-  unlessVisible?: RefObject<HTMLElement | null> | undefined
 }
 
 /**
- * Which side of the chart its tooltip opens on, and whether it opens at all: the side with
- * more room, decided as the tooltip opens and held until it closes, so the panel does not jump
- * from one side to the other while a finger slides along the chart, or as the page settles
- * under it. Only measured where it matters: on a phone, or when there is an element to defer to.
+ * Which side of the chart its tooltip opens on: the side with more room, decided as the tooltip
+ * opens and held until it closes, so the panel does not jump from one side to the other while a
+ * finger slides along the chart, or as the page settles under it. Only measured on a phone,
+ * where the tooltip is docked; a tooltip that becomes enabled while a point is selected is
+ * decided at that moment.
  */
 export function useTooltipSide(
   open: boolean,
   chart: RefObject<HTMLElement | null>,
-  { enabled = true, unlessVisible }: TooltipSideOptions = {},
-): { side: TooltipSide; show: boolean } {
+  { enabled = true }: TooltipSideOptions = {},
+): TooltipSide {
   const docked = useDockedTooltip()
-  const [decision, setDecision] = useState<{ side: TooltipSide; covered: boolean }>({ side: 'above', covered: false })
+  const [side, setSide] = useState<TooltipSide>('above')
   useLayoutEffect(() => {
-    if (!open || !enabled || !chart.current || !(docked || unlessVisible)) return
-    const band = visibleBand()
-    const shown = unlessVisible?.current?.getBoundingClientRect()
+    if (!open || !enabled || !docked || !chart.current) return
     // The room can only be measured after layout; setting it here, before paint, means the
     // tooltip is never seen on the wrong side first.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setDecision({
-      side: pickSide(roomAround(chart.current.getBoundingClientRect(), band)),
-      covered: shown !== undefined && shown.top >= band.top && shown.bottom <= band.bottom,
-    })
-  }, [open, enabled, chart, docked, unlessVisible])
-  return { side: decision.side, show: enabled && !decision.covered }
+    setSide(pickSide(roomAround(chart.current.getBoundingClientRect())))
+  }, [open, enabled, chart, docked])
+  return side
 }

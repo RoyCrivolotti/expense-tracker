@@ -1,5 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { installFakeIntersectionObserver } from '../../../../testing/fakeIntersectionObserver'
+import legendStyles from './ScenarioSeriesLegend.module.css'
 import { NetWorthChart } from './NetWorthChart'
 import { AssumedInflationContext } from '../../../hooks/assumedInflationContext'
 import { computeChartDisplayData, deflatePoints, inflatePoints, inflateSeries } from './nominalTransform'
@@ -392,7 +394,7 @@ describe('NetWorthChart', () => {
     expect(Number(svg!.getAttribute('viewBox')?.split(' ')[3] ?? 0)).toBeGreaterThan(200)
   })
 
-  it('gives the hero chart a tooltip where the page is one column, unless its legend is fully on screen', () => {
+  it('hands the readout between the legend and a tooltip as the page scrolls, never showing both', () => {
     const media = (matches: boolean) =>
       vi.stubGlobal('matchMedia', (query: string) => ({
         matches,
@@ -402,29 +404,43 @@ describe('NetWorthChart', () => {
       }))
     const heroProps = { milestones, scenarios: [defaultDraft], draft: defaultDraft, activeId: defaultDraft.id, variant: 'hero' as const }
     media(true)
+    const io = installFakeIntersectionObserver()
     const { container, unmount } = render(<NetWorthChart {...heroProps} />)
     const svg = container.querySelector('svg[role="img"]')!
-    const legend = screen.getByText(/Tap or hover the chart/).closest('div')!.parentElement!
-    const legendAt = (top: number, bottom: number) =>
-      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-        if (this.style.visibility === 'hidden') return { top: 0, bottom: 0, height: 0 } as DOMRect
-        return this === legend
-          ? ({ top, bottom, height: bottom - top } as DOMRect)
-          : ({ top: 100, bottom: 330, height: 230 } as DOMRect)
-      })
-    // Its legend, which repeats the values, is fully on screen: the tooltip would cover it.
-    legendAt(340, 600)
-    fireEvent.keyDown(svg, { key: 'Home' })
-    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
-    fireEvent.keyDown(svg, { key: 'Escape' })
-    // Below the fold: the tooltip is what shows the year.
-    legendAt(window.innerHeight + 20, window.innerHeight + 400)
+    const legend = container.querySelector('ul')!.parentElement!
+    // The first observer is the legend's value list; the tooltip adds its own when it opens.
+    const legendIs = (ratio: number) => act(() => io.emit(ratio, 0))
+    const tooltipIs = (ratio: number) => act(() => io.emit(ratio, 1))
+
+    // The legend is not fully on screen: a tap gives a tooltip, and the legend still shows.
     fireEvent.keyDown(svg, { key: 'Home' })
     expect(screen.getByRole('tooltip')).toHaveTextContent('Year 0')
+    expect(legend).not.toHaveClass(legendStyles.valuesHidden!)
+    // The tooltip is on screen: the legend keeps its space but unsees the figures.
+    tooltipIs(0.8)
+    expect(legend).toHaveClass(legendStyles.valuesHidden!)
+    // Scrolled until the legend is fully on screen: the tooltip goes, the legend shows.
+    legendIs(1)
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+    expect(legend).not.toHaveClass(legendStyles.valuesHidden!)
+    // Scrolled back: the tooltip returns, over the same selection.
+    legendIs(0.3)
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Year 0')
+    tooltipIs(0.8)
+    expect(legend).toHaveClass(legendStyles.valuesHidden!)
+    // The tooltip scrolled away with its chart while the legend is only partly on screen: the
+    // legend shows the figures again, so there is a readout.
+    tooltipIs(0.1)
+    expect(legend).not.toHaveClass(legendStyles.valuesHidden!)
+    expect(legend).toHaveTextContent('Year 0')
+    // Clearing the selection leaves the legend as it was.
+    fireEvent.keyDown(svg, { key: 'Escape' })
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
     unmount()
-    // On a wide screen the legend under the chart is the readout, and nothing floats.
+    // On a wide screen the legend under the chart is the readout: nothing is observed or floats.
     media(false)
     const wide = render(<NetWorthChart {...heroProps} />)
+    expect(io.live()).toHaveLength(0)
     fireEvent.keyDown(wide.container.querySelector('svg[role="img"]')!, { key: 'Home' })
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
   })

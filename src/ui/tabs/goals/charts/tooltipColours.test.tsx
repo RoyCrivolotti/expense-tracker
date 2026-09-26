@@ -53,17 +53,14 @@ describe('the colour of each series in its tooltip', () => {
   })
 
   it('marks the plan from today too, once the year is past the check-in', () => {
-    // A phone with the legend below the fold, which is when the main chart has a tooltip.
+    // A phone, where the main chart has a tooltip unless its legend is fully on screen (nothing
+    // is observed here, so it is not).
     vi.stubGlobal('matchMedia', (media: string) => ({
       matches: true,
       media,
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
     }))
-    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-      const legend = this.textContent?.includes('Tap or hover the chart') && !this.querySelector('svg')
-      return (legend ? { top: window.innerHeight + 50, bottom: window.innerHeight + 300, height: 250 } : { top: 100, bottom: 330, height: 230 }) as DOMRect
-    })
     const plan = makeScenario({ id: 1, name: 'Path A', planStartDate: '2024-01-01', isActive: true })
     const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-07-01' })
     const chart = (

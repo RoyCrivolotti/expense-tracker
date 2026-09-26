@@ -42,7 +42,7 @@ export function YtdLineChartView({
   const svgRef = useRef<SVGSVGElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const focus = active != null ? points[active] : null
-  const { side } = useTooltipSide(focus != null, wrapRef)
+  const side = useTooltipSide(focus != null, wrapRef)
   const anchor = useSvgAnchor(svgRef, focus ? focusX : null, focus ? PAD.top : null)
 
   return (
