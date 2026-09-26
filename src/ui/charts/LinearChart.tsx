@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useId, useMemo, useRef } from 'react'
 import { ChartTooltip, type TooltipLine } from './ChartTooltip'
 import { useElementWidth } from '../hooks/useElementWidth'
 import {
@@ -7,6 +7,7 @@ import {
   ChartBandLayer,
   ChartScatterLayer,
   ChartTodayMarker,
+  ChartAboveMarker,
   ChartPurchaseMarkers,
   ChartLifeEventMarkers,
   ChartFocusIndicator,
@@ -62,8 +63,10 @@ interface Props {
   /** Index of the current year in the x-axis for a "today" vertical marker. */
   todayIndex?: number
   tooltipMode?: 'full' | 'hidden'
+  /** A target above the top of the chart (the FI number), marked on its top edge instead of stretching the axis to it. */
+  aboveTop?: { label: string; title: string } | undefined
   onActiveIndexChange?: (index: number | null) => void
-  /** Floor for the auto-computed Y-axis max — keeps the scale stable across re-renders that change value magnitude (e.g. a real/nominal display toggle). */
+  /** Floor for the auto-computed Y-axis max: holds the scale still while what is drawn changes (a previewed inflation rate). */
   yDomainMax?: number | undefined
   /** Fit the Y axis to the values in view instead of anchoring it at zero. */
   fitDomain?: boolean
@@ -97,21 +100,31 @@ function useGeometry(
     const lineValues = series
       .filter((s) => s.kind !== 'area' && s.kind !== 'band' && s.kind !== 'scatter')
       .flatMap((s) => s.values)
+    // A band is the spread around a line, not the thing being read: a wide one would set
+    // the axis and leave the lines squeezed under it. It is held to the height of what it
+    // surrounds and clipped there, so the axis fits the lines.
+    const solidMax = Math.max(...[...lineValues, ...stackedValues, ...scatterValues].filter(Number.isFinite))
+    const bandCap = solidMax > 0 ? solidMax : Infinity
     const domain = collectDomain(
-      [lineValues, stackedValues, envelopeValues, scatterValues],
+      [lineValues, stackedValues, envelopeValues.map((v) => Math.min(v, bandCap)), scatterValues],
       refLines,
       fitDomain !== true,
     )
     // yDomainMax raises the floor rather than overriding outright, so a caller
-    // locking the scale (e.g. real/nominal toggle) can never clip band/scatter
-    // data that legitimately extends past it.
+    // holding the scale still (the Nominal view while a rate is previewed) can never
+    // clip a line or check-in that legitimately extends past it.
     const effectiveMax = yDomainMax !== undefined ? Math.max(domain.max, yDomainMax) : domain.max
-    const nice = niceScale(...domainTuple({ min: domain.min, max: effectiveMax }))
+    const nice = niceScale(...domainTuple({ min: domain.min, max: effectiveMax }), 5, maxTicksFor(innerH))
     const scaleY = makeScale(nice.min, nice.max, PAD.top + innerH, PAD.top)
     const xForIndex = (i: number) =>
       n <= 1 ? PAD.left + innerW / 2 : PAD.left + (i / (n - 1)) * innerW
-    return { n, innerH, stackedBands, areaSeries, ticks: nice.ticks, scaleY, xForIndex }
+    return { n, innerH, innerW, stackedBands, areaSeries, ticks: nice.ticks, scaleY, xForIndex }
   }, [series, width, height, refLines, yDomainMax, fitDomain])
+}
+
+/** One axis label per 26px of plot: closer than that, labels at 11px start to touch. */
+function maxTicksFor(innerH: number): number {
+  return Math.max(2, Math.floor(innerH / 26) + 1)
 }
 
 function domainTuple(d: { min: number; max: number }): [number, number] {
@@ -130,11 +143,14 @@ export function LinearChart({
   lifeEventMarkers = [],
   todayIndex,
   tooltipMode = 'full',
+  aboveTop,
   onActiveIndexChange,
   yDomainMax,
   fitDomain,
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
+  // useId can return characters (colons, in older React) that a url(#...) reference does not take.
+  const plotClipId = `plot-${useId().replace(/:/g, '')}`
   const containerRef = useRef<HTMLDivElement>(null)
   // The viewBox is the wrapper's width in CSS pixels, so text, strokes and hit areas
   // render at their own size instead of being scaled up with the chart.
@@ -184,19 +200,24 @@ export function LinearChart({
             />
           )
         })}
-        {series.filter((s) => s.kind === 'band').map((s) =>
-          s.band ? (
-            <ChartBandLayer
-              key={s.id}
-              color={s.color}
-              lo={s.band.lo}
-              hi={s.band.hi}
-              xForIndex={geo.xForIndex}
-              scaleY={geo.scaleY}
-              fillOpacity={0.18}
-            />
-          ) : null,
-        )}
+        <clipPath id={plotClipId}>
+          <rect x={PAD.left - 1} y={PAD.top} width={geo.innerW + 2} height={geo.innerH + 1} />
+        </clipPath>
+        <g clipPath={`url(#${plotClipId})`}>
+          {series.filter((s) => s.kind === 'band').map((s) =>
+            s.band ? (
+              <ChartBandLayer
+                key={s.id}
+                color={s.color}
+                lo={s.band.lo}
+                hi={s.band.hi}
+                xForIndex={geo.xForIndex}
+                scaleY={geo.scaleY}
+                fillOpacity={0.18}
+              />
+            ) : null,
+          )}
+        </g>
         {lineSeries.map((s) => (
           <path
             key={s.id}
@@ -229,6 +250,7 @@ export function LinearChart({
             className={styles.refLine}
           />
         ))}
+        <ChartAboveMarker marker={aboveTop} x={PAD.left + 8} y={PAD.top} />
         {todayIndex !== undefined && (
           <ChartTodayMarker
             x={geo.xForIndex(todayIndex)}

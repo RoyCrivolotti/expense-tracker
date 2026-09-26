@@ -1,7 +1,7 @@
 import { memo, useCallback, useMemo, useState, type ReactNode } from 'react'
 import type { GoalScenario, Milestone } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import type { PlanFromToday, ProjectionParams } from '../../../../engine'
+import type { MoneyFormat, PlanFromToday, ProjectionParams } from '../../../../engine'
 import { projectNetWorth, projectNetWorthBand, purchaseYearBreakdown, scenarioToParams } from '../../../../engine'
 import { Card } from '../../../components/primitives'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
@@ -220,9 +220,20 @@ function useFromTodaySeries(
   return useMemo(() => {
     if (!isHero || !fromToday) return null
     const limit = windowYears ?? extentYears
-    const points = projectNetWorth(scenarioToParams(fromToday.scenario, inflationRate))
-      .map((p) => ({ xIndex: fromToday.offsetYears + p.year, value: p.investedCents }))
-      .filter((p) => p.xIndex <= limit)
+    const all = projectNetWorth(scenarioToParams(fromToday.scenario, inflationRate)).map((p) => ({
+      xIndex: fromToday.offsetYears + p.year,
+      value: p.investedCents,
+    }))
+    const points = all.filter((p) => p.xIndex <= limit)
+    // The steps sit a fraction of a year past the axis' own (the check-in is not on a year), so
+    // the last one inside the window stops short of it, and the line has no value at the final
+    // year. Carry it there along the step it is cut from.
+    const last = points[points.length - 1]
+    const next = all[points.length]
+    if (last && next && last.xIndex < limit) {
+      const t = (limit - last.xIndex) / (next.xIndex - last.xIndex)
+      points.push({ xIndex: limit, value: Math.round(last.value + t * (next.value - last.value)) })
+    }
     if (points.length < 2) return null
     return {
       id: 'from-today',
@@ -293,31 +304,35 @@ function useFiTarget(isHero: boolean, draft: NewGoalScenario): number | null {
 }
 
 /**
- * Milestones the plan gets within reach of, plus the FI target when it is not one of
- * them. Inside a window the FI target answers to the same ceiling, or a 5Y view could
- * never zoom in; in the All view it is always drawn, since the whole horizon is the one
- * place to see how far off it is.
+ * Milestones the plan gets within reach of, plus the FI target when it is not one of them.
+ * A target far above the plan is left off, and reported, rather than drawn: a reference
+ * line sets the axis, so a 25M target over a plan that reaches 8M would leave the lines in
+ * the bottom third of the chart. That holds in every window, All included.
  */
 function useRefLines(
   milestones: Milestone[],
-  yDomainMax: number | undefined,
+  drawnMax: number | undefined,
   fiTargetCents: number | null,
-  windowed: boolean,
   nominalMode: boolean,
-) {
+): { lines: number[]; fiAbove: number | null } {
   return useMemo(() => {
     // The targets are in today's money and a reference line is flat, while the nominal view
     // inflates the plan past them: drawn there, the plan would seem to cross them early.
-    if (nominalMode) return []
-    // A milestone far above the plan's own ceiling would squash the projection
-    // flat against the axis, so only draw the ones it gets within reach of.
-    const ceiling = yDomainMax != null && yDomainMax > 0 ? yDomainMax * 1.15 : Infinity
+    if (nominalMode) return { lines: [], fiAbove: null }
+    const ceiling = drawnMax != null && drawnMax > 0 ? drawnMax * 1.15 : Infinity
     const base = milestones.map((m) => m.amountCents).filter((m) => m <= ceiling)
-    const fiFits = fiTargetCents !== null && (!windowed || fiTargetCents <= ceiling)
-    return fiFits && !base.includes(fiTargetCents)
-      ? [...base, fiTargetCents].sort((a, b) => a - b)
-      : base
-  }, [milestones, yDomainMax, fiTargetCents, windowed, nominalMode])
+    const fiFits = fiTargetCents !== null && fiTargetCents <= ceiling
+    const lines =
+      fiFits && !base.includes(fiTargetCents) ? [...base, fiTargetCents].sort((a, b) => a - b) : base
+    return { lines, fiAbove: fiTargetCents !== null && !fiFits ? fiTargetCents : null }
+  }, [milestones, drawnMax, fiTargetCents, nominalMode])
+}
+
+/** The FI target as a marker on the chart's top edge when it is above the chart, so leaving it off the axis is not a silent omission. */
+function fiMarker(cents: number | null, format: MoneyFormat): { label: string; title: string } | undefined {
+  if (cents === null) return undefined
+  const amount = formatMoneyShort(cents, format)
+  return { label: `FI ${amount}`, title: `The FI target, ${amount}, is above the top of this chart.` }
 }
 
 function HeroWindowPicker({
@@ -432,9 +447,9 @@ function NetWorthChartImpl({
   const markerYears = useMemo(() => purchaseMarkerIndices(lines, years), [lines, years])
   const labels = useMemo(() => sparseLabels(years, 5), [years])
 
-  // Locks the Y-axis to the larger of the real/nominal maxima so toggling display
-  // mode moves the lines on a fixed scale instead of rescaling the whole chart.
-  const { displaySeries, displayExtraSeries, displayRealPoints, displayBand, yDomainMax } = useMemo(
+  // Each view fits its own axis, so Purchasing power is not stretched to the nominal plan's
+  // height; toggling rescales, and only Nominal holds a floor (for the rate preview).
+  const { displaySeries, displayExtraSeries, displayRealPoints, displayBand, yDomainMax, drawnMax } = useMemo(
     () =>
       computeChartDisplayData(
         series,
@@ -450,7 +465,7 @@ function NetWorthChartImpl({
   )
   const { line: fromTodayLine, label: fromTodayLabel } = fromTodayDrawing(displayRealPoints, fromToday)
 
-  const refLines = useRefLines(milestones, yDomainMax, useFiTarget(isHero, draft), windowYears !== null, nominalMode)
+  const { lines: refLines, fiAbove } = useRefLines(milestones, drawnMax, useFiTarget(isHero, draft), nominalMode)
   const staticLegend: LegendItem[] = useMemo(
     () => series.map((s, idx) => ({ label: names[idx] ?? s.id, color: s.color })),
     [series, names],
@@ -485,7 +500,12 @@ function NetWorthChartImpl({
   const legendWithFromToday: ScenarioLegendItem[] = useMemo(() => {
     if (!fromTodayLine) return legendItems
     const valueCents = activeYear != null ? pointSeriesValueAt(fromTodayLine.points ?? [], activeYear) : null
-    return [...legendItems, { label: fromTodayLabel, color: fromTodayLine.color, dotted: true, valueCents }]
+    // Before the check-in the line has not started; say so rather than leave the row blank.
+    const outOfRun = activeYear != null && valueCents === null
+    return [
+      ...legendItems,
+      { label: fromTodayLabel, color: fromTodayLine.color, dotted: true, valueCents, ...(outOfRun ? { outOfRun } : {}) },
+    ]
   }, [legendItems, fromTodayLine, fromTodayLabel, activeYear])
 
   const lifeEventMarkers = useLifeEventMarkers(isHero, draft, windowYears)
@@ -500,6 +520,7 @@ function NetWorthChartImpl({
       <p className={styles.chartHint}>{isHero ? HERO_HINT : DEFAULT_HINT}</p>
       <LinearChart
         {...heroVariantProps}
+        aboveTop={fiMarker(fiAbove, format)}
         series={[...(displayBand ? [displayBand] : []), ...displaySeries, ...displayRealPoints, ...displayExtraSeries]}
         xLabels={labels}
         refLines={refLines}

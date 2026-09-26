@@ -206,6 +206,60 @@ describe('LinearChart', () => {
     expect(Math.max(...gridLabels)).toBeGreaterThanOrEqual(500)
   })
 
+  it('fits the axis to the lines, not to a band that runs far above them', () => {
+    const { container } = render(
+      <LinearChart
+        {...defaultProps}
+        xLabels={['a', 'b', 'c']}
+        series={[
+          {
+            id: 'band',
+            color: '#6366f1',
+            values: [],
+            kind: 'band',
+            band: { lo: [10, 15, 20], hi: [50, 90, 300] },
+          },
+          makeLine('line', [10, 20, 30]),
+        ]}
+      />,
+    )
+    const gridLabels = [...container.querySelectorAll('text[text-anchor="end"]')]
+      .map((t) => Number(t.textContent))
+      .filter(Number.isFinite)
+    expect(Math.max(...gridLabels)).toBeLessThan(100)
+  })
+
+  it('clips the band at the plot, since it can now run past the top of the axis', () => {
+    const { container } = render(
+      <LinearChart
+        {...defaultProps}
+        xLabels={['a', 'b', 'c']}
+        series={[
+          { id: 'band', color: '#6366f1', values: [], kind: 'band', band: { lo: [1, 2, 3], hi: [50, 90, 300] } },
+          makeLine('line', [10, 20, 30]),
+        ]}
+      />,
+    )
+    const clip = container.querySelector('clipPath')
+    expect(clip).not.toBeNull()
+    const group = container.querySelector(`g[clip-path="url(#${clip!.id})"]`)
+    expect(group?.querySelector('path')).not.toBeNull()
+  })
+
+  it('still draws a band that has no line beside it in full', () => {
+    const { container } = render(
+      <LinearChart
+        {...defaultProps}
+        xLabels={['a', 'b', 'c']}
+        series={[{ id: 'band', color: '#6366f1', values: [], kind: 'band', band: { lo: [10, 15, 20], hi: [50, 90, 300] } }]}
+      />,
+    )
+    const gridLabels = [...container.querySelectorAll('text[text-anchor="end"]')]
+      .map((t) => Number(t.textContent))
+      .filter(Number.isFinite)
+    expect(Math.max(...gridLabels)).toBeGreaterThanOrEqual(300)
+  })
+
   it('renders without todayIndex without error', () => {
     expect(() =>
       render(

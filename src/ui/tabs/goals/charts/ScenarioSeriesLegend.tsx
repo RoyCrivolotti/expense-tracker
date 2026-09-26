@@ -9,6 +9,8 @@ export interface ScenarioLegendItem {
   dashed?: boolean
   /** The plan from today: drawn dotted, in the plan's colour. */
   dotted?: boolean
+  /** The line does not reach the focused year: the row shows a dash, not a blank. */
+  outOfRun?: boolean
   valueCents: number | null
   /** The saved scenario behind the line; the draft has none and cannot be hidden. */
   scenarioId?: number
@@ -40,8 +42,8 @@ function LegendRow({ item, onToggle, format }: { item: ScenarioLegendItem; onTog
     <>
       <SeriesSwatch color={item.color} {...(item.dashed ? { dashed: true } : {})} {...(item.dotted ? { dotted: true } : {})} />
       <span className={styles.label}>{item.label}</span>
-      <span className={styles.value}>
-        {item.valueCents != null ? formatMoneyShort(item.valueCents, format) : ''}
+      <span className={item.outOfRun ? `${styles.value} ${styles.valueNone}` : styles.value}>
+        {item.valueCents != null ? formatMoneyShort(item.valueCents, format) : item.outOfRun ? '-' : ''}
       </span>
     </>
   )

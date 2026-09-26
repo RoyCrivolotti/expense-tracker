@@ -39,20 +39,53 @@ function niceNum(range: number, round: boolean): number {
   return nice * 10 ** exp
 }
 
-/** Round a [min,max] range outward to readable tick boundaries. */
+/** How far past the data the axis may run, as a share of the data's own range. */
+const AXIS_MARGIN = 0.08
+
+/** The next step up the 1-2-5 ladder: 1, 2, 5, 10, 20, 50... */
+function coarser(step: number): number {
+  const exp = Math.floor(Math.log10(step))
+  const mantissa = Math.round(step / 10 ** exp)
+  return (mantissa === 1 ? 2 : mantissa === 2 ? 5 : 10) * 10 ** exp
+}
+
+function axisAt(min: number, hi: number, step: number) {
+  const span = hi - min
+  const niceMin = Math.floor(min / step) * step
+  const niceMax = Math.ceil(hi / step) * step
+  const bottom = Math.max(niceMin, min - span * AXIS_MARGIN)
+  const top = Math.min(niceMax, hi + span * AXIS_MARGIN)
+  const slack = step * 1e-9
+  const ticks = new Set<number>()
+  for (let i = 0, v = niceMin; v <= top + slack; i++, v = niceMin + i * step) {
+    if (v >= bottom - slack) ticks.add(Math.round(v))
+  }
+  return { min: bottom, max: top, ticks: [...ticks] }
+}
+
+/**
+ * Readable ticks over a [min,max] range. The step comes from the range itself, and the axis
+ * runs to the next gridline only when that is within a small margin of the data. Past it the
+ * axis stops at the data plus the margin, so a value just over a gridline does not leave a
+ * chart half empty above its lines. `maxTicks` is what the height can label: past it the step
+ * goes up the ladder until the ticks fit, so a short chart is not left with labels on top of
+ * each other.
+ */
 export function niceScale(
   min: number,
   max: number,
   count = 5,
+  maxTicks = 7,
 ): { min: number; max: number; ticks: number[] } {
   const hi = min === max ? min + 1 : max
-  const range = niceNum(hi - min, false)
-  const step = niceNum(range / Math.max(1, count - 1), true) || 1
-  const niceMin = Math.floor(min / step) * step
-  const niceMax = Math.ceil(hi / step) * step
-  const ticks: number[] = []
-  for (let v = niceMin; v <= niceMax + step / 2; v += step) ticks.push(Math.round(v))
-  return { min: niceMin, max: niceMax, ticks }
+  let step = niceNum((hi - min) / Math.max(1, count - 1), true) || 1
+  let scale = axisAt(min, hi, step)
+  // Each rung at least doubles the step, so a few rungs always get down to two ticks.
+  for (let rung = 0; rung < 24 && scale.ticks.length > Math.max(2, maxTicks); rung++) {
+    step = coarser(step)
+    scale = axisAt(min, hi, step)
+  }
+  return scale
 }
 
 /**

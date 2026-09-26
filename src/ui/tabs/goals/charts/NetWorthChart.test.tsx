@@ -4,7 +4,7 @@ import { NetWorthChart } from './NetWorthChart'
 import { AssumedInflationContext } from '../../../hooks/assumedInflationContext'
 import { computeChartDisplayData, deflatePoints, inflatePoints, inflateSeries } from './nominalTransform'
 import { pointSeriesValueAt } from './checkinChartUtils'
-import { planFromToday } from '../../../../engine'
+import { planFromToday, projectNetWorth, scenarioToParams } from '../../../../engine'
 import { makeScenario } from '../../../../testing/factories'
 import { defaultMilestones } from '../../../../engine'
 import type { ChartSeries } from '../../../charts/LinearChart'
@@ -155,7 +155,7 @@ describe('NetWorthChart', () => {
     expect(values().every((v) => v === '')).toBe(true)
   })
 
-  it('keeps a far-off FI target in the All view and drops it inside a window, as a milestone', () => {
+  it('does not stretch the axis to a far-off FI target, in any window, and marks it on the top edge', () => {
     const { container } = render(
       <NetWorthChart
         milestones={[]}
@@ -164,11 +164,31 @@ describe('NetWorthChart', () => {
         variant="hero"
       />,
     )
-    expect(container.textContent).toMatch(/100\.0M/)
+    const yLabels = () =>
+      [...container.querySelectorAll('text[text-anchor="end"]')].map((t) => t.textContent ?? '').join('|')
+    // A 100M target over a plan that reaches a few million: it would set the axis if drawn.
+    expect(yLabels()).not.toMatch(/100\.0M/)
+    expect(screen.getByText('FI 100.0M €')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('radio', { name: '5Y' }))
-    expect(container.textContent).not.toMatch(/100\.0M/)
-    fireEvent.click(screen.getByRole('radio', { name: 'All' }))
-    expect(container.textContent).toMatch(/100\.0M/)
+    expect(yLabels()).not.toMatch(/100\.0M/)
+    expect(screen.getByText('FI 100.0M €')).toBeInTheDocument()
+    // The marker says what it is for a screen reader.
+    expect(container.querySelector('title')?.textContent).toMatch(/is above the top of this chart/)
+  })
+
+  it('still draws an FI target the plan gets within reach of, with no marker', () => {
+    const realEnd = projectNetWorth(scenarioToParams(defaultDraft, 0.02)).at(-1)!.investedCents
+    const spend = Math.round(realEnd * 1.05 * 0.04)
+    const { container } = render(
+      <NetWorthChart
+        milestones={[]}
+        scenarios={[]}
+        draft={{ ...defaultDraft, horizonYears: 30, annualSpendCents: spend, safeWithdrawalRate: 0.04 }}
+        variant="hero"
+      />,
+    )
+    expect(container.querySelectorAll(`line.${chartStyles.refLine}`)).toHaveLength(1)
+    expect(screen.queryByText(/^FI /)).not.toBeInTheDocument()
   })
 
   it('offers no window buttons for a horizon the shortest window would not cut', () => {
@@ -249,6 +269,33 @@ describe('NetWorthChart', () => {
     expect(screen.getByText('Path A, from today')).toBeInTheDocument()
     // Not a scenario of its own, so nothing to hide.
     expect(screen.queryByRole('button', { name: /from today on chart/ })).not.toBeInTheDocument()
+  })
+
+  it('reads the plan from today at the last year of the axis and of a window, and says where it has not started', () => {
+    const plan = makeScenario({ id: 1, name: 'Path A', planStartDate: '2024-01-01', isActive: true })
+    // Half a year past a whole one, so its steps fall between the axis' years, not on them.
+    const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-07-01' })
+    const { container } = render(
+      <NetWorthChart
+        milestones={milestones}
+        scenarios={[plan]}
+        draft={defaultDraft}
+        activeId={null}
+        variant="hero"
+        fromToday={fromToday}
+      />,
+    )
+    const svg = container.querySelector('svg[role="img"]')!
+    const row = () => screen.getByText('Path A, from today').closest('li')!
+    fireEvent.keyDown(svg, { key: 'End' })
+    expect(row().textContent).toMatch(/\d/)
+    fireEvent.click(screen.getByRole('radio', { name: '10Y' }))
+    fireEvent.keyDown(svg, { key: 'End' })
+    expect(row().textContent).toMatch(/\d/)
+    // Before the check-in the line has not started: a dash, not an empty row.
+    fireEvent.keyDown(svg, { key: 'Home' })
+    expect(row().textContent).toContain('-')
+    expect(row().textContent).not.toMatch(/\d/)
   })
 
   it('reads the from-today line off its segment for the legend and the tooltip', () => {
@@ -351,31 +398,44 @@ describe('NetWorthChart', () => {
     expect(container.querySelector('svg')).not.toBeNull()
   })
 
-  it('draws a check-in dot lower in today\'s money than in the nominal view', () => {
-    const extra: ChartSeries = {
-      id: 'actuals',
-      color: '#10b981',
-      values: [],
-      kind: 'scatter',
-      points: [{ xIndex: 10, value: 50_000_000 }],
-    }
-    const cy = (nominalMode: boolean) => {
-      const { container } = render(
+  it('fits each view to its own plan, so today\'s money is not stretched to the nominal height', () => {
+    const axisTop = (nominalMode: boolean) => {
+      const { container, unmount } = render(
         <NetWorthChart
-          milestones={milestones}
+          milestones={[]}
           scenarios={[defaultDraft]}
           draft={defaultDraft}
           activeId={defaultDraft.id}
-          extraSeries={[extra]}
+          variant="hero"
           nominalMode={nominalMode}
         />,
       )
-      const circle = container.querySelector('circle')
-      return Number(circle!.getAttribute('cy'))
+      const labels = [...container.querySelectorAll('text[text-anchor="end"]')].map((t) => t.textContent ?? '')
+      unmount()
+      const cents = labels.flatMap((l) => {
+        const m = /^([\d.]+)([KM])/.exec(l)
+        return m ? [Number(m[1]) * (m[2] === 'M' ? 1e6 : 1e3)] : []
+      })
+      return Math.max(...cents)
     }
-    // The Y axis is locked across both modes, and SVG y grows downward: the deflated dot
-    // of the default view sits lower than the untouched one of the nominal view.
-    expect(cy(false)).toBeGreaterThan(cy(true))
+    expect(axisTop(false)).toBeLessThan(axisTop(true))
+  })
+
+  it('draws only the milestones within reach of what is drawn in this view', () => {
+    const realEnd = projectNetWorth(scenarioToParams(defaultDraft, 0.02)).at(-1)!.investedCents
+    const near = Math.round(realEnd * 1.1)
+    // Out of reach of today's money, but under the nominal plan the axis used to be held to.
+    const far = Math.round(realEnd * 1.6)
+    const { container } = render(
+      <NetWorthChart
+        milestones={[near, far].map((amountCents) => ({ amountCents, label: '' }))}
+        scenarios={[defaultDraft]}
+        draft={defaultDraft}
+        activeId={defaultDraft.id}
+        variant="hero"
+      />,
+    )
+    expect(container.querySelectorAll(`line.${chartStyles.refLine}`)).toHaveLength(1)
   })
 
   it('draws the nominal view at the owner\'s assumed inflation', () => {
@@ -459,7 +519,7 @@ describe('NetWorthChart', () => {
       unmount()
       return d
     }
-    // Locked Y axis, so a band that moved up with the line has a different outline.
+    // The nominal band is inflated year by year with the line, so its outline is a different shape.
     expect(bandPath(true)).not.toBe(bandPath(false))
   })
 
