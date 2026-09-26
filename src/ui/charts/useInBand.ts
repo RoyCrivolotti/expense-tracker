@@ -1,20 +1,43 @@
-import { useEffect, useState, type RefObject } from 'react'
+import { useLayoutEffect, useState, type RefObject } from 'react'
 import { visibleBand } from './useTooltipSide'
 
 /** Slack for an intersection ratio that should read 1 and comes back as 0.9999. */
 const RATIO_SLACK = 0.01
 
+interface Options {
+  /** False observes nothing and answers false. */
+  enabled?: boolean
+  /** The answer where there is no IntersectionObserver (jsdom): a caller that hides things on a false wants true here. */
+  fallback?: boolean
+}
+
+/** The share of a box inside the band, from its own geometry: the answer before the observer's first report. */
+function shareInBand(el: Element): number {
+  const box = el.getBoundingClientRect()
+  const band = visibleBand()
+  const height = box.bottom - box.top
+  return height > 0 ? Math.max(0, Math.min(box.bottom, band.bottom) - Math.max(box.top, band.top)) / height : 0
+}
+
 /**
  * Whether at least `min` of an element (1 is all of it) is inside the part of the screen the
  * app's own bars leave free. Observed rather than measured on scroll: the callback fires when
- * the element crosses `min`, not on every frame, and reading it costs no layout. Where
- * IntersectionObserver is missing (jsdom) it is false.
+ * the element crosses `min`, not on every frame, and reading it costs no layout. It is measured
+ * once as the element is first watched, since the observer's first report comes a frame late and
+ * that frame would show the wrong thing.
  */
-export function useInBand(target: RefObject<Element | null>, min: number, enabled = true): boolean {
+export function useInBand(
+  target: RefObject<Element | null> | undefined,
+  min: number,
+  { enabled = true, fallback = false }: Options = {},
+): boolean {
   const [inBand, setInBand] = useState(false)
-  useEffect(() => {
-    const el = target.current
-    if (!enabled || !el || typeof IntersectionObserver === 'undefined') return undefined
+  const observable = typeof IntersectionObserver !== 'undefined'
+  useLayoutEffect(() => {
+    const el = target?.current
+    if (!enabled || !el || !observable) return undefined
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setInBand(shareInBand(el) >= min - RATIO_SLACK)
     const observe = () => {
       const band = visibleBand()
       const io = new IntersectionObserver(
@@ -45,6 +68,7 @@ export function useInBand(target: RefObject<Element | null>, min: number, enable
       vv?.removeEventListener('resize', remake)
       window.removeEventListener('resize', remake)
     }
-  }, [target, min, enabled])
-  return enabled && inBand
+  }, [target, min, enabled, observable])
+  if (!enabled) return false
+  return observable ? inBand : fallback
 }

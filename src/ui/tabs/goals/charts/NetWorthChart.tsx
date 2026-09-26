@@ -456,7 +456,7 @@ function NetWorthChartImpl({
   const listRef = useRef<HTMLUListElement>(null)
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const [popupOnScreen, setPopupOnScreen] = useState(false)
-  const legendInBand = useInBand(listRef, 1, narrow)
+  const legendInBand = useInBand(listRef, 1, { enabled: narrow })
   const { showPopup, valuesHidden } = readoutMode(narrow, legendInBand, activeIndex !== null, popupOnScreen)
   const onActiveIndexChange = useCallback((index: number | null) => {
     setActiveIndex(index)
