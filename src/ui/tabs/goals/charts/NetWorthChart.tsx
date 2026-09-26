@@ -333,6 +333,13 @@ function useRefLines(
 }
 
 /** The FI target as a marker on the chart's top edge when it is above the chart, so leaving it off the axis is not a silent omission. */
+const PROJECTION_LABEL = 'Invested portfolio projection by year'
+
+/** The chart's accessible name, which carries the FI target when it is only marked: the marker's own title is not read out of an image. */
+function projectionLabel(marker: { title: string } | undefined): string {
+  return marker ? `${PROJECTION_LABEL}. ${marker.title}` : PROJECTION_LABEL
+}
+
 function fiMarker(cents: number | null, format: MoneyFormat): { label: string; title: string } | undefined {
   if (cents === null) return undefined
   const amount = formatMoneyShort(cents, format)
@@ -474,6 +481,7 @@ function NetWorthChartImpl({
   const { line: fromTodayLine, label: fromTodayLabel } = fromTodayDrawing(displayRealPoints, fromToday)
 
   const { lines: refLines, fiAbove } = useRefLines(milestones, drawnMax, useFiTarget(isHero, draft), nominalMode)
+  const fiChartMarker = fiMarker(fiAbove, format)
   const staticLegend: LegendItem[] = useMemo(
     () => series.map((s, idx) => ({ label: names[idx] ?? s.id, color: s.color })),
     [series, names],
@@ -530,14 +538,14 @@ function NetWorthChartImpl({
       <LinearChart
         readoutRef={legendRef}
         {...heroVariantProps}
-        aboveTop={fiMarker(fiAbove, format)}
+        aboveTop={fiChartMarker}
         series={[...(displayBand ? [displayBand] : []), ...displaySeries, ...displayRealPoints, ...displayExtraSeries]}
         xLabels={labels}
         refLines={refLines}
         {...todayProp(todayIndex, windowYears)}
         yDomainMax={yDomainMax}
         formatValue={(c) => formatMoneyShort(c, format)}
-        ariaLabel="Invested portfolio projection by year"
+        ariaLabel={projectionLabel(fiChartMarker)}
         tooltip={tooltip}
       />
       <PortfolioLegend
