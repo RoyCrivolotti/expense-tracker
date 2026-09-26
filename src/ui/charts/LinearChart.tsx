@@ -65,12 +65,12 @@ interface Props {
   todayIndex?: number
   tooltipMode?: 'full' | 'hidden'
   onActiveIndexChange?: (index: number | null) => void
-  /** An element below the chart that already shows the tapped point's values (the hero's legend): while it is fully on screen the tooltip stays away, so it does not cover what it repeats. */
-  readoutRef?: RefObject<HTMLElement | null>
   /** Floor for the auto-computed Y-axis max — keeps the scale stable across re-renders that change value magnitude (e.g. a real/nominal display toggle). */
   yDomainMax?: number | undefined
   /** Fit the Y axis to the values in view instead of anchoring it at zero. */
   fitDomain?: boolean
+  /** An element below the chart that already shows the tapped point's values (the hero's legend): while it is fully on screen the tooltip stays away, so it does not cover what it repeats. */
+  readoutRef?: RefObject<HTMLElement | null>
 }
 
 function pointsOf(values: number[], x: (i: number) => number, y: (v: number) => number): Pt[] {
@@ -135,9 +135,9 @@ export function LinearChart({
   todayIndex,
   tooltipMode = 'full',
   onActiveIndexChange,
-  readoutRef,
   yDomainMax,
   fitDomain,
+  readoutRef,
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
