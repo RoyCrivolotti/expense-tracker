@@ -508,8 +508,8 @@ function NetWorthChartImpl({
       </div>
       <p className={styles.chartHint}>{isHero ? HERO_HINT : DEFAULT_HINT}</p>
       <LinearChart
-        {...heroVariantProps}
         readoutRef={legendRef}
+        {...heroVariantProps}
         series={[...(displayBand ? [displayBand] : []), ...displaySeries, ...displayRealPoints, ...displayExtraSeries]}
         xLabels={labels}
         refLines={refLines}

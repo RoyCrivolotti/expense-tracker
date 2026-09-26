@@ -64,9 +64,9 @@ interface Props {
   /** Index of the current year in the x-axis for a "today" vertical marker. */
   todayIndex?: number
   tooltipMode?: 'full' | 'hidden'
+  onActiveIndexChange?: (index: number | null) => void
   /** An element below the chart that already shows the tapped point's values (the hero's legend): while it is fully on screen the tooltip stays away, so it does not cover what it repeats. */
   readoutRef?: RefObject<HTMLElement | null>
-  onActiveIndexChange?: (index: number | null) => void
   /** Floor for the auto-computed Y-axis max — keeps the scale stable across re-renders that change value magnitude (e.g. a real/nominal display toggle). */
   yDomainMax?: number | undefined
   /** Fit the Y axis to the values in view instead of anchoring it at zero. */
@@ -134,8 +134,8 @@ export function LinearChart({
   lifeEventMarkers = [],
   todayIndex,
   tooltipMode = 'full',
-  readoutRef,
   onActiveIndexChange,
+  readoutRef,
   yDomainMax,
   fitDomain,
 }: Props) {
