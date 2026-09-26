@@ -100,7 +100,16 @@ function DockedTooltip({ title, lines, side }: Pick<Props, 'title' | 'lines'> & 
     const shift = nudgeIntoBand(el.getBoundingClientRect(), band.current)
     if (shift !== 0) el.style.transform = `translateY(${shift}px)`
   }, [])
-  useLayoutEffect(place)
+  // Only when what it shows or where it sits changes, never on a scroll: the chart re-renders
+  // as the page scrolls (its anchor follows it), and sliding again then would pin the panel to
+  // the top of the screen and keep it there after the chart had scrolled away. It belongs to
+  // its chart, so it scrolls with it.
+  const content = `${title}|${lines.map((line) => `${line.label}:${line.value}`).join('|')}`
+  useLayoutEffect(() => {
+    // The content key is what this effect follows; it is not read inside.
+    void content
+    place()
+  }, [place, content, side])
   useEffect(() => {
     const vv = window.visualViewport
     const remeasure = () => {
