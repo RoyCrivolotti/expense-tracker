@@ -1,7 +1,7 @@
 import { memo, useCallback, useMemo, useState, type ReactNode } from 'react'
 import type { GoalScenario, Milestone } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import type { PlanFromToday, ProjectionParams } from '../../../../engine'
+import type { MoneyFormat, PlanFromToday, ProjectionParams } from '../../../../engine'
 import { projectNetWorth, projectNetWorthBand, purchaseYearBreakdown, scenarioToParams } from '../../../../engine'
 import { Card } from '../../../components/primitives'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
@@ -328,11 +328,11 @@ function useRefLines(
   }, [milestones, drawnMax, fiTargetCents, nominalMode])
 }
 
-/** Where the FI target is when it is off the chart, so leaving it off is not a silent omission. */
-function FiAboveNote({ cents }: { cents: number | null }) {
-  const format = useMoneyFormat()
-  if (cents === null) return null
-  return <p className={styles.chartHint}>The FI target, {formatMoneyShort(cents, format)}, is above the top of this chart.</p>
+/** The FI target as a marker on the chart's top edge when it is above the chart, so leaving it off the axis is not a silent omission. */
+function fiMarker(cents: number | null, format: MoneyFormat): { label: string; title: string } | undefined {
+  if (cents === null) return undefined
+  const amount = formatMoneyShort(cents, format)
+  return { label: `FI ${amount}`, title: `The FI target, ${amount}, is above the top of this chart.` }
 }
 
 function HeroWindowPicker({
@@ -520,6 +520,7 @@ function NetWorthChartImpl({
       <p className={styles.chartHint}>{isHero ? HERO_HINT : DEFAULT_HINT}</p>
       <LinearChart
         {...heroVariantProps}
+        aboveTop={fiMarker(fiAbove, format)}
         series={[...(displayBand ? [displayBand] : []), ...displaySeries, ...displayRealPoints, ...displayExtraSeries]}
         xLabels={labels}
         refLines={refLines}
@@ -529,7 +530,6 @@ function NetWorthChartImpl({
         ariaLabel="Invested portfolio projection by year"
         tooltip={tooltip}
       />
-      <FiAboveNote cents={fiAbove} />
       <PortfolioLegend
         isHero={isHero}
         staticLegend={staticLegend}

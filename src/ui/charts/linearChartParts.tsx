@@ -223,6 +223,32 @@ export function ChartScatterLayer({
   )
 }
 
+/**
+ * A target above the top of the chart, marked on its top edge: an arrow pointing up and the
+ * amount. The axis does not stretch to it (it would squeeze the plan flat), but it is not
+ * forgotten either.
+ */
+export function ChartAboveMarker({
+  marker,
+  x,
+  y,
+}: {
+  marker: { label: string; title: string } | undefined
+  x: number
+  y: number
+}) {
+  if (!marker) return null
+  return (
+    <g className={styles.aboveMarker}>
+      <title>{marker.title}</title>
+      <path d={`M${x} ${y + 9} L${x + 4} ${y + 2} L${x + 8} ${y + 9} Z`} />
+      <text x={x + 13} y={y + 9}>
+        {marker.label}
+      </text>
+    </g>
+  )
+}
+
 /** Solid vertical "today" marker line. */
 export function ChartTodayMarker({
   x,

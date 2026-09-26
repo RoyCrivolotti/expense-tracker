@@ -155,7 +155,7 @@ describe('NetWorthChart', () => {
     expect(values().every((v) => v === '')).toBe(true)
   })
 
-  it('does not stretch the axis to a far-off FI target, in any window, and says where it is', () => {
+  it('does not stretch the axis to a far-off FI target, in any window, and marks it on the top edge', () => {
     const { container } = render(
       <NetWorthChart
         milestones={[]}
@@ -168,13 +168,15 @@ describe('NetWorthChart', () => {
       [...container.querySelectorAll('text[text-anchor="end"]')].map((t) => t.textContent ?? '').join('|')
     // A 100M target over a plan that reaches a few million: it would set the axis if drawn.
     expect(yLabels()).not.toMatch(/100\.0M/)
-    expect(screen.getByText(/The FI target, 100\.0M/)).toBeInTheDocument()
+    expect(screen.getByText('FI 100.0M €')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('radio', { name: '5Y' }))
     expect(yLabels()).not.toMatch(/100\.0M/)
-    expect(screen.getByText(/The FI target, 100\.0M/)).toBeInTheDocument()
+    expect(screen.getByText('FI 100.0M €')).toBeInTheDocument()
+    // The marker says what it is for a screen reader.
+    expect(container.querySelector('title')?.textContent).toMatch(/is above the top of this chart/)
   })
 
-  it('still draws an FI target the plan gets within reach of, with no note', () => {
+  it('still draws an FI target the plan gets within reach of, with no marker', () => {
     const realEnd = projectNetWorth(scenarioToParams(defaultDraft, 0.02)).at(-1)!.investedCents
     const spend = Math.round(realEnd * 1.05 * 0.04)
     const { container } = render(
@@ -186,7 +188,7 @@ describe('NetWorthChart', () => {
       />,
     )
     expect(container.querySelectorAll(`line.${chartStyles.refLine}`)).toHaveLength(1)
-    expect(screen.queryByText(/The FI target,/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^FI /)).not.toBeInTheDocument()
   })
 
   it('offers no window buttons for a horizon the shortest window would not cut', () => {

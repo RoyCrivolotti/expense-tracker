@@ -7,6 +7,7 @@ import {
   ChartBandLayer,
   ChartScatterLayer,
   ChartTodayMarker,
+  ChartAboveMarker,
   ChartPurchaseMarkers,
   ChartLifeEventMarkers,
   ChartFocusIndicator,
@@ -62,6 +63,8 @@ interface Props {
   /** Index of the current year in the x-axis for a "today" vertical marker. */
   todayIndex?: number
   tooltipMode?: 'full' | 'hidden'
+  /** A target above the top of the chart (the FI number), marked on its top edge instead of stretching the axis to it. */
+  aboveTop?: { label: string; title: string } | undefined
   onActiveIndexChange?: (index: number | null) => void
   /** Floor for the auto-computed Y-axis max: holds the scale still while what is drawn changes (a previewed inflation rate). */
   yDomainMax?: number | undefined
@@ -140,6 +143,7 @@ export function LinearChart({
   lifeEventMarkers = [],
   todayIndex,
   tooltipMode = 'full',
+  aboveTop,
   onActiveIndexChange,
   yDomainMax,
   fitDomain,
@@ -246,6 +250,7 @@ export function LinearChart({
             className={styles.refLine}
           />
         ))}
+        <ChartAboveMarker marker={aboveTop} x={PAD.left + 8} y={PAD.top} />
         {todayIndex !== undefined && (
           <ChartTodayMarker
             x={geo.xForIndex(todayIndex)}
