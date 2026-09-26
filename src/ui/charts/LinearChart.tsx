@@ -259,7 +259,6 @@ export function LinearChart({
             className={styles.refLine}
           />
         ))}
-        <ChartAboveMarker marker={aboveTop} x={PAD.left + 8} y={PAD.top} />
         {todayIndex !== undefined && (
           <ChartTodayMarker
             x={geo.xForIndex(todayIndex)}
@@ -279,6 +278,8 @@ export function LinearChart({
           xForIndex={geo.xForIndex}
           yTop={PAD.top}
         />
+        {/* Above the year marks, or a dashed vertical mark runs through its text. */}
+        <ChartAboveMarker marker={aboveTop} x={PAD.left + 8} y={PAD.top} />
         <ChartFocusIndicator
           active={active}
           focusX={focusX}

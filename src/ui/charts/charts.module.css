@@ -167,6 +167,13 @@
   font-weight: 600;
   pointer-events: none;
 }
+/* A halo in the card's colour, so a mark or the band behind the label does not run through it. */
+.aboveMarker text {
+  stroke: var(--color-bg-subtle, color-mix(in srgb, var(--color-text) 4%, var(--color-bg)));
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  paint-order: stroke;
+}
 
 .eventMarker {
   stroke: color-mix(in srgb, var(--color-text-muted) 40%, transparent);
