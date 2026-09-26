@@ -90,12 +90,15 @@ layer applies it to a payload that carries both fields, and the D1 adapter check
 that carries only one of them against the stored row, and refuses a bulk type change away
 from `investment` while any target row is a withdrawal.
 
-### Migrations run by hand
+### Migrations
 
-Deploy does not apply migrations. `0025` (`settings.cash_reserve_months`), `0026`
-(`settings.investment_category_id`) and `0027` (`settings.assumed_inflation`) must be applied
-to prod before the settings they hold ship, or saving that one setting fails. Reading is safe
-without them: a missing column reads as its default.
+The Deploy workflow applies pending migrations to dev and then prod before it deploys the code
+(see [DEPLOYMENT.md](./DEPLOYMENT.md)). `npm run migrate:status` shows what each is missing,
+and the PR preview workflow prints the same. The first merge after this landed applies anything
+not yet recorded, so read that output first: a file that was applied by hand but never recorded
+would be applied again, fail on the duplicate column, and stop the deploy until its row is
+inserted. The script refuses to run at all when a database's record has a hole below its
+highest entry, which is the usual shape of a forgotten row.
 
 ## Scripts (expense-tracker)
 
@@ -108,7 +111,7 @@ without them: a missing column reads as its default.
 | `scripts/setup-dev-bindings.mjs` | `setup:dev-bindings` | Re-apply D1 bindings on `roy-expenses-stg` |
 | `scripts/seed-dev.mjs` | `seed:dev` / `seed:dev-from-prod` | Prod D1 export → dev (`.tmp/` gitignored); private QA only |
 | `scripts/seed-demo-staging.mjs` | `seed:demo-staging` | Synthetic demo tenant on `roy-expenses-dev` (public fixtures) |
-| `scripts/migrate-dev.mjs` | `migrate:dev` | Apply new migrations to dev (post-seed only) |
+| `scripts/migrate.mjs` | `migrate:status` / `migrate:dev` | Apply pending migrations, recording each; the Deploy workflow runs it for dev and prod (dev by hand only after a seed) |
 | `scripts/deploy-dev.sh` | `deploy:dev` | Deploy to `roy-expenses-stg` |
 
 PRs on expense-tracker run `.github/workflows/deploy-dev.yml`.
