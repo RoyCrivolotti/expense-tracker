@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { installFakeBars } from '../../testing/fakeBars'
 import { installFakeIntersectionObserver } from '../../testing/fakeIntersectionObserver'
 import { useInBand } from './useInBand'
 
@@ -34,10 +35,7 @@ describe('useInBand', () => {
 
   it('looks at the free band: the viewport less the header and the tab bar', () => {
     const io = installFakeIntersectionObserver()
-    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-      // The probes for the bars, 60px each.
-      return (this.style.visibility === 'hidden' ? { top: 0, bottom: 60, height: 60 } : { top: 0, bottom: 0, height: 0 }) as DOMRect
-    })
+    installFakeBars()
     watch(1)
     expect(io.live()[0]!.options?.rootMargin).toBe('-60px 0px -60px 0px')
     // The slack is a threshold too, so a ratio that lands just under 1 is reported again as it falls.
@@ -56,6 +54,24 @@ describe('useInBand', () => {
     expect(io.live()).toHaveLength(1)
     unmount()
     expect(io.live()).toHaveLength(0)
+  })
+
+  it('re-answers from geometry at once on a resize too, not only when it is first watched', () => {
+    installFakeIntersectionObserver()
+    let box = { top: 10, bottom: 110 }
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      return (this.style.visibility === 'hidden' ? { top: 0, bottom: 60, height: 60 } : { ...box, height: box.bottom - box.top }) as DOMRect
+    })
+    const { result } = watch(1)
+    // Half of it under the header: not fully in band yet, and nothing has reported otherwise.
+    expect(result.current).toBe(false)
+    // The rotation that triggers the resize also moves the element fully into the band. The new
+    // observer's first report is still a frame away, but this does not wait for it.
+    box = { top: 100, bottom: 200 }
+    act(() => {
+      window.dispatchEvent(new Event('resize'))
+    })
+    expect(result.current).toBe(true)
   })
 
   it('is false, and observes nothing, when disabled', () => {
