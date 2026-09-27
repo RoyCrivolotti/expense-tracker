@@ -285,6 +285,15 @@
   pointer-events: auto;
 }
 
+/* Where a chart has a fixed, always-present readout to fall back to (the main projection
+   chart's legend), the docked panel is only ever drawn above the chart: below is this instead,
+   invisible and out of the way, rather than a second, shorter-lived readout of its own. The
+   panel stays mounted so its own height keeps informing which side useTooltipSide picks. */
+.tooltipDockedBelowSuppressed {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .tooltipTitle {
   margin: 0 0 0.5rem;
   font-size: 0.8125rem;

@@ -34,6 +34,12 @@ interface Props {
    * (see `useTooltipSide`), and is not shown while the chart is mostly off screen.
    */
   chart?: RefObject<HTMLElement | null>
+  /**
+   * Whether the docked panel may sit below the chart. False for a chart with its own
+   * always-present readout to fall back to (see `DockedPanel`): below, the panel stays mounted
+   * but invisible, and that readout is what shows instead. Defaults to true.
+   */
+  dockBelow?: boolean | undefined
 }
 
 function TooltipBody({ title, lines }: Pick<Props, 'title' | 'lines'>) {
@@ -101,13 +107,27 @@ function FloatingTooltip({ title, lines, anchor }: Props) {
  * rows instead of being drawn over the header or tab bar. `pointer-events` is switched back on
  * only then, so the ordinary case (nearly all of them) still passes a tap straight through to the
  * page underneath, exactly as before.
+ *
+ * Where `dockBelow` is false, a panel that would sit below the chart is drawn invisible instead:
+ * it stays mounted, since useTooltipSide needs its rendered height to keep judging which side
+ * has room, but nothing about it is shown or reported as on screen. A chart with its own
+ * always-present readout uses this so that readout, not a second below-the-chart one, is what a
+ * reader falls back to.
  */
-function DockedPanel({ title, lines, chart }: Pick<Props, 'title' | 'lines'> & { chart: Props['chart'] | undefined }) {
+function DockedPanel({
+  title,
+  lines,
+  chart,
+  dockBelow,
+}: Pick<Props, 'title' | 'lines' | 'dockBelow'> & { chart: Props['chart'] | undefined }) {
   const ref = useRef<HTMLDivElement>(null)
   const { side, maxHeight } = useTooltipSide(chart, ref, contentKey(title, lines))
+  // dockBelow left unset means true, so this only ever suppresses on an explicit false.
+  const suppressed = dockBelow === false && side === 'below'
   // Tells the chart's owner whether it is showing, and that it is gone once it closes. Before
   // paint: after it, the owner's legend would keep its figures for a frame beside the panel.
-  const onScreen = useInBand(ref, ON_SCREEN_SHARE)
+  // A suppressed panel is never on screen, whatever its own bounding box says.
+  const onScreen = useInBand(ref, ON_SCREEN_SHARE) && !suppressed
   const report = useContext(TooltipVisibilityContext)
   useLayoutEffect(() => {
     report?.(onScreen)
@@ -117,27 +137,33 @@ function DockedPanel({ title, lines, chart }: Pick<Props, 'title' | 'lines'> & {
   return (
     <div
       ref={ref}
-      className={`${styles.tooltipDocked} ${sideClass}${maxHeight !== null ? ` ${styles.tooltipScrollable}` : ''}`}
+      className={`${styles.tooltipDocked} ${sideClass}${maxHeight !== null ? ` ${styles.tooltipScrollable}` : ''}${suppressed ? ` ${styles.tooltipDockedBelowSuppressed}` : ''}`}
       style={maxHeight !== null ? { maxHeight } : undefined}
       role="tooltip"
+      aria-hidden={suppressed || undefined}
     >
       <TooltipBody title={title} lines={lines} />
     </div>
   )
 }
 
-function DockedTooltip({ title, lines, chart }: Pick<Props, 'title' | 'lines'> & { chart: Props['chart'] | undefined }) {
+function DockedTooltip({
+  title,
+  lines,
+  chart,
+  dockBelow,
+}: Pick<Props, 'title' | 'lines' | 'dockBelow'> & { chart: Props['chart'] | undefined }) {
   // A panel is only as useful as the chart it belongs to: with the chart scrolled away it would
   // hang over whatever is there now. Where nothing can be observed it is shown.
   const chartOnScreen = useInBand(chart, CHART_ON_SCREEN_SHARE, { enabled: chart !== undefined, fallback: true })
   if (chart !== undefined && !chartOnScreen) return null
-  return <DockedPanel title={title} lines={lines} chart={chart} />
+  return <DockedPanel title={title} lines={lines} chart={chart} dockBelow={dockBelow} />
 }
 
-export function ChartTooltip({ title, lines, anchor, chart }: Props) {
+export function ChartTooltip({ title, lines, anchor, chart, dockBelow }: Props) {
   const docked = useDockedTooltip()
 
-  if (docked) return <DockedTooltip title={title} lines={lines} chart={chart} />
+  if (docked) return <DockedTooltip title={title} lines={lines} chart={chart} dockBelow={dockBelow} />
 
   return <FloatingTooltip title={title} lines={lines} anchor={anchor} />
 }

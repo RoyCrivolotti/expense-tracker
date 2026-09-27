@@ -63,6 +63,8 @@ interface Props {
   /** Index of the current year in the x-axis for a "today" vertical marker. */
   todayIndex?: number
   tooltipMode?: 'full' | 'hidden'
+  /** Passed straight through to `ChartTooltip`; see its own doc comment. Defaults to true. */
+  dockBelow?: boolean | undefined
   /** A target above the top of the chart (the FI number), marked on its top edge instead of stretching the axis to it. */
   aboveTop?: { label: string; title: string } | undefined
   onActiveIndexChange?: (index: number | null) => void
@@ -143,6 +145,7 @@ export function LinearChart({
   lifeEventMarkers = [],
   todayIndex,
   tooltipMode = 'full',
+  dockBelow,
   aboveTop,
   onActiveIndexChange,
   yDomainMax,
@@ -281,7 +284,7 @@ export function LinearChart({
         />
       </svg>
       {tip && tooltipMode === 'full' ? (
-        <ChartTooltip anchor={anchor} chart={containerRef} title={tip.title} lines={tip.lines} />
+        <ChartTooltip anchor={anchor} chart={containerRef} title={tip.title} lines={tip.lines} dockBelow={dockBelow} />
       ) : null}
     </div>
   )

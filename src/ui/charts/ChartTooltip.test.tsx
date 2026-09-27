@@ -170,6 +170,53 @@ describe('ChartTooltip on a phone', () => {
     expect(panel).toHaveClass(chartStyles.tooltipScrollable!)
     expect(panel.style.maxHeight).not.toBe('')
   })
+
+  describe('with dockBelow false, for a chart with its own readout to fall back to', () => {
+    it('still opens above a chart with room there', () => {
+      docked = true
+      const low = scene(window.innerHeight - 300, window.innerHeight - 70)
+      render(<ChartTooltip title="Year 5" lines={[]} anchor={null} chart={low.ref} dockBelow={false} />)
+      expect(screen.getByRole('tooltip')).toHaveClass(chartStyles.tooltipAbove!)
+    })
+
+    it('stays mounted but invisible, and out of the accessibility tree, where it would go below', () => {
+      docked = true
+      // No room above: without dockBelow this docks below instead.
+      const high = scene(80, 310)
+      const { container } = render(
+        <ChartTooltip title="Year 5" lines={[]} anchor={null} chart={high.ref} dockBelow={false} />,
+      )
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+      const panel = container.querySelector(`.${chartStyles.tooltipDocked}`)
+      expect(panel).not.toBeNull()
+      expect(panel).toHaveClass(chartStyles.tooltipBelow!, chartStyles.tooltipDockedBelowSuppressed!)
+    })
+
+    it('reports itself as never on screen while suppressed, even once its panel is', () => {
+      docked = true
+      const io = installFakeIntersectionObserver()
+      const high = scene(80, 310)
+      const report = vi.fn()
+      render(
+        <TooltipVisibilityContext.Provider value={report}>
+          <ChartTooltip title="Year 5" lines={[]} anchor={null} chart={high.ref} dockBelow={false} />
+        </TooltipVisibilityContext.Provider>,
+      )
+      act(() => io.emit(0.8, 0))
+      act(() => io.emit(0.8, 1))
+      expect(report).toHaveBeenLastCalledWith(false)
+    })
+
+    it('reappears once scrolling gives it room above again', () => {
+      docked = true
+      const s = scene(80, 310)
+      render(<ChartTooltip title="Year 5" lines={[]} anchor={null} chart={s.ref} dockBelow={false} />)
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+      s.move(window.innerHeight - 300, window.innerHeight - 70)
+      scrolled()
+      expect(screen.getByRole('tooltip')).toHaveClass(chartStyles.tooltipAbove!)
+    })
+  })
 })
 
 describe('ChartTooltip on a wide screen', () => {

@@ -61,6 +61,9 @@ describe('the colour of each series in its tooltip', () => {
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
     }))
+    // Room above the chart, or jsdom's unmocked {0,0,0,0} rect reads as none, and the tooltip
+    // (now never docking below, with a legend to fall back to instead) would not show at all.
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ top: 600, bottom: 700, height: 100 } as DOMRect)
     const plan = makeScenario({ id: 1, name: 'Path A', planStartDate: '2024-01-01', isActive: true })
     const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-07-01' })
     const chart = (

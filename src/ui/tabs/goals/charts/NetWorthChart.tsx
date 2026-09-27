@@ -379,9 +379,10 @@ function todayProp(todayIndex: number | undefined, windowYears: number | null): 
 /**
  * Which readout the main chart uses on a phone, decided live as the page scrolls. The legend
  * under the chart reads the tapped year when its value list is fully on screen; when it is not,
- * the chart gets a tooltip. Never both: while that tooltip is on screen the legend keeps its
- * space but hides the figures, and when the tooltip has scrolled away and the legend is only
- * partly on screen it shows them again.
+ * the chart gets a tooltip above it (below is `dockBelow: false` in `variantProps`, so a chart
+ * with no room above shows nothing there rather than a second, shorter-lived readout). Never
+ * both: while the tooltip is on screen the legend keeps its space but hides the figures, and
+ * once the tooltip is gone, whether scrolled away or with nowhere to go, it shows them again.
  */
 function readoutMode(narrow: boolean, legendInBand: boolean, selected: boolean, popupOnScreen: boolean) {
   return { showPopup: narrow && !legendInBand, valuesHidden: selected && popupOnScreen && !legendInBand }
@@ -401,6 +402,9 @@ function variantProps(
         markerYears,
         lifeEventMarkers,
         tooltipMode: showPopup ? ('full' as const) : ('hidden' as const),
+        // The legend below has its own always-there readout; the tooltip never has to fall
+        // back to a second one below the chart, only above it or not at all.
+        dockBelow: false,
         onActiveIndexChange,
       }
     : { height: 210, markerYears: [], tooltipMode: 'full' as const }
