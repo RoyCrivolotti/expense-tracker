@@ -484,6 +484,15 @@ describe('NetWorthChart', () => {
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
     expect(legend).not.toHaveClass(legendStyles.valuesHidden!)
     expect(legend).toHaveTextContent('Year 0')
+    // Not just absent from the accessibility tree for some unrelated reason: this is
+    // specifically the below-docked panel, drawn invisible, proving `dockBelow: false` made it
+    // all the way from variantProps through LinearChart to the panel itself. If a future change
+    // dropped it anywhere along that chain, the panel would render as an ordinary visible
+    // below-docked tooltip and the assertion above would already have failed, but this pins down
+    // *why* nothing showed.
+    const panel = container.querySelector(`.${chartStyles.tooltipDocked}`)
+    expect(panel).not.toBeNull()
+    expect(panel).toHaveClass(chartStyles.tooltipBelow!, chartStyles.tooltipDockedBelowSuppressed!)
   })
 
   it('renders without crashing in the nominal view', () => {

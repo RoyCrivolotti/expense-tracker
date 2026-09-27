@@ -3,6 +3,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { ChartTooltip } from './ChartTooltip'
 import chartStyles from './charts.module.css'
 import { TooltipVisibilityContext } from './tooltipVisibility'
+import { installFakeBars } from '../../testing/fakeBars'
 import { installFakeIntersectionObserver } from '../../testing/fakeIntersectionObserver'
 
 let docked = false
@@ -30,8 +31,6 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-const BAR = 60
-
 /** The bars' probes are 60px; the chart is where the test puts it, and the panel is `panelHeight` tall. */
 function scene(top: number, bottom: number, panelHeight = 100) {
   const chart = document.createElement('div')
@@ -39,9 +38,7 @@ function scene(top: number, bottom: number, panelHeight = 100) {
     chart.getBoundingClientRect = () => ({ top: t, bottom: b, height: b - t }) as DOMRect
   }
   move(top, bottom)
-  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-    return (this.style.visibility === 'hidden' ? { top: 0, bottom: BAR, height: BAR } : { top: 0, bottom: 0, height: 0 }) as DOMRect
-  })
+  installFakeBars()
   vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(panelHeight)
   return { ref: { current: chart }, move }
 }

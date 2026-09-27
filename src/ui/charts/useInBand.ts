@@ -55,9 +55,13 @@ export function useInBand(
       return io
     }
     let io = observe()
-    // A rotation or the browser's toolbar moves the band, and the margin is fixed at creation.
+    // A rotation or the browser's toolbar moves the band, and the margin is fixed at creation, so
+    // the observer is remade. Re-measured synchronously too, the same as on mount: the new
+    // observer's first report is a frame late, and a resize is exactly when the old answer is
+    // most likely to already be wrong.
     const remake = () => {
       io.disconnect()
+      setInBand(shareInBand(el) >= min - RATIO_SLACK)
       io = observe()
     }
     const vv = window.visualViewport
