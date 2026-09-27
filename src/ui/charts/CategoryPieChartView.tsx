@@ -78,6 +78,10 @@ export function CategoryPieChartView({ paths, active, onShow, onHide }: Props) {
               { label: 'Amount', value: formatCents(focus.cents, format), tone: 'expense' },
               { label: 'Share', value: `${Math.round((focus.cents / total) * 100)}%`, tone: 'neutral' },
             ]}
+            // The legend below already shows every category's amount and share, and highlights
+            // the active one, so a tooltip with no room above has a live readout to fall back to
+            // instead of covering that legend's own rows.
+            dockBelow={false}
           />
         )}
       </div>

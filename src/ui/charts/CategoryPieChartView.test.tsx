@@ -1,6 +1,8 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { CategoryPieChartView, type PieSlice } from './CategoryPieChartView'
+import chartStyles from './charts.module.css'
+import { installFakeBars } from '../../testing/fakeBars'
 
 beforeAll(() => {
   Object.defineProperty(window, 'matchMedia', {
@@ -14,6 +16,10 @@ beforeAll(() => {
       dispatchEvent: vi.fn(),
     })),
   })
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
 })
 
 function makeSlices(): PieSlice[] {
@@ -66,5 +72,40 @@ describe('CategoryPieChartView legend pointer events', () => {
     expect(screen.getByText('Food')).toBeDefined()
     expect(screen.getByText('Rent')).toBeDefined()
     expect(screen.getByText('Fun')).toBeDefined()
+  })
+})
+
+describe('CategoryPieChartView tooltip on a phone', () => {
+  it('does not dock below the chart: its own legend already reads the active slice', () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query: string) =>
+        ({
+          matches: true,
+          media: query,
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+        }) as unknown as MediaQueryList,
+    )
+    installFakeBars()
+    // Mounted with nothing selected first, then given a selection, as a real tap would: mounting
+    // straight in with `active` already set would (in this test environment only, per a React
+    // ref-commit-order quirk with an ancestor ref and its child in the very same commit) settle
+    // before `colRef` was attached, unlike a real tap, which always lands well after the chart's
+    // own ref is set.
+    const { container, rerender } = render(
+      <CategoryPieChartView paths={makeSlices()} active={null} onShow={vi.fn()} onHide={vi.fn()} />,
+    )
+    // No room above the chart, and plenty below.
+    container.querySelector<HTMLElement>(`.${chartStyles.pieChartCol}`)!.getBoundingClientRect = () =>
+      ({ top: 20, bottom: 240, height: 220 }) as DOMRect
+    rerender(<CategoryPieChartView paths={makeSlices()} active={0} onShow={vi.fn()} onHide={vi.fn()} />)
+    // Not shown to the user or the accessibility tree...
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+    // ...but still mounted, drawn invisible, since useTooltipSide needs it to keep measuring.
+    const panel = container.querySelector(`.${chartStyles.tooltipDocked}`)
+    expect(panel).not.toBeNull()
+    expect(panel).toHaveClass(chartStyles.tooltipDockedBelowSuppressed!)
+    // The legend is the readout instead: it already named and valued the active slice.
+    expect(container.querySelector(`li.${chartStyles.legendActive}`)).toHaveTextContent('Food')
   })
 })
