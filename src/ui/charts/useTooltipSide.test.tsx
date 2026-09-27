@@ -1,16 +1,11 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { installFakeBars } from '../../testing/fakeBars'
 import { capHeight, chooseSide, pickSide, roomAround, useTooltipSide, visibleBand } from './useTooltipSide'
 
 const BAR = 60
 const PANEL = 200
-
-/** jsdom lays nothing out, so the bars' probes are given a height; everything else is left to the caller. */
-function withBars() {
-  return vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-    return (this.style.visibility === 'hidden' ? { top: 0, bottom: BAR, height: BAR } : { top: 0, bottom: 0, height: 0 }) as DOMRect
-  })
-}
+const withBars = installFakeBars
 
 /** A chart that can be moved, and a panel of a fixed content height, as refs. */
 function scene(top: number, bottom: number, panelHeight = PANEL) {
