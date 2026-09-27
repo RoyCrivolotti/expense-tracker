@@ -408,6 +408,11 @@ describe('NetWorthChart', () => {
     const { container, unmount } = render(<NetWorthChart {...heroProps} />)
     const svg = container.querySelector('svg[role="img"]')!
     const legend = container.querySelector('ul')!.parentElement!
+    // Room above the chart, none of interest below: jsdom lays nothing out, so an unmocked rect
+    // reads as {0,0,0,0}, which the tooltip would misread as "no room above" and dock below —
+    // suppressed now the chart has a legend to fall back to instead. This test is about the
+    // hand-off with the legend, not which side a shown tooltip picks.
+    svg.parentElement!.getBoundingClientRect = () => ({ top: 600, bottom: 700, height: 100 }) as DOMRect
     // The first observer is the legend's value list. A tooltip adds one for its chart, and once
     // that is mostly on screen, one for itself.
     const legendIs = (ratio: number) => act(() => io.emit(ratio, 0))
@@ -456,6 +461,29 @@ describe('NetWorthChart', () => {
     expect(io.live()).toHaveLength(0)
     fireEvent.keyDown(wide.container.querySelector('svg[role="img"]')!, { key: 'Home' })
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+  })
+
+  it('never docks its tooltip below the chart: with no room above, the legend is the readout instead', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: true,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }))
+    const io = installFakeIntersectionObserver()
+    const heroProps = { milestones, scenarios: [defaultDraft], draft: defaultDraft, activeId: defaultDraft.id, variant: 'hero' as const }
+    const { container } = render(<NetWorthChart {...heroProps} />)
+    const svg = container.querySelector('svg[role="img"]')!
+    const legend = container.querySelector('ul')!.parentElement!
+    // No room above the chart, plenty below: without a legend to fall back to, the tooltip
+    // would dock below instead.
+    svg.parentElement!.getBoundingClientRect = () => ({ top: 10, bottom: 110, height: 100 }) as DOMRect
+    fireEvent.keyDown(svg, { key: 'Home' })
+    act(() => io.emit(0.8, 0)) // legend not fully in band
+    act(() => io.emit(0.8, 1)) // chart on screen
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+    expect(legend).not.toHaveClass(legendStyles.valuesHidden!)
+    expect(legend).toHaveTextContent('Year 0')
   })
 
   it('renders without crashing in the nominal view', () => {
