@@ -1,14 +1,11 @@
-import { useContext, useLayoutEffect, useRef, type RefObject } from 'react'
+import { useRef, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import styles from './charts.module.css'
-import { TooltipVisibilityContext } from './tooltipVisibility'
 import { useDockedTooltip } from './useDockedTooltip'
 import { useInBand } from './useInBand'
 import { useTooltipPosition } from './useTooltipPosition'
 import { useTooltipSide } from './useTooltipSide'
 
-/** How much of the tooltip has to be on screen for it to count as showing. */
-const ON_SCREEN_SHARE = 0.4
 /** How much of its chart has to be on screen for a phone tooltip to be shown at all. */
 const CHART_ON_SCREEN_SHARE = 0.4
 
@@ -110,9 +107,8 @@ function FloatingTooltip({ title, lines, anchor }: Props) {
  *
  * Where `dockBelow` is false, a panel that would sit below the chart is drawn invisible instead:
  * it stays mounted, since useTooltipSide needs its rendered height to keep judging which side
- * has room, but nothing about it is shown or reported as on screen. A chart with its own
- * always-present readout uses this so that readout, not a second below-the-chart one, is what a
- * reader falls back to.
+ * has room, but nothing about it is shown. A chart with its own always-present readout uses this
+ * so that readout, not a second below-the-chart one, is what a reader falls back to.
  */
 function DockedPanel({
   title,
@@ -124,15 +120,6 @@ function DockedPanel({
   const { side, maxHeight } = useTooltipSide(chart, ref, contentKey(title, lines))
   // dockBelow left unset means true, so this only ever suppresses on an explicit false.
   const suppressed = dockBelow === false && side === 'below'
-  // Tells the chart's owner whether it is showing, and that it is gone once it closes. Before
-  // paint: after it, the owner's legend would keep its figures for a frame beside the panel.
-  // A suppressed panel is never on screen, whatever its own bounding box says.
-  const onScreen = useInBand(ref, ON_SCREEN_SHARE) && !suppressed
-  const report = useContext(TooltipVisibilityContext)
-  useLayoutEffect(() => {
-    report?.(onScreen)
-    return () => report?.(false)
-  }, [report, onScreen])
   const sideClass = side === 'above' ? styles.tooltipAbove : styles.tooltipBelow
   return (
     <div

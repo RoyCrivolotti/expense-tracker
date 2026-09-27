@@ -1,7 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { installFakeIntersectionObserver } from '../../../../testing/fakeIntersectionObserver'
-import legendStyles from './ScenarioSeriesLegend.module.css'
 import { NetWorthChart } from './NetWorthChart'
 import { AssumedInflationContext } from '../../../hooks/assumedInflationContext'
 import { computeChartDisplayData, deflatePoints, inflatePoints, inflateSeries } from './nominalTransform'
@@ -394,7 +393,7 @@ describe('NetWorthChart', () => {
     expect(Number(svg!.getAttribute('viewBox')?.split(' ')[3] ?? 0)).toBeGreaterThan(200)
   })
 
-  it('hands the readout between the legend and a tooltip as the page scrolls, never showing both', () => {
+  it('shows a tooltip only while its own legend is out of view; the legend always shows its values', () => {
     const media = (matches: boolean) =>
       vi.stubGlobal('matchMedia', (query: string) => ({
         matches,
@@ -408,49 +407,37 @@ describe('NetWorthChart', () => {
     const { container, unmount } = render(<NetWorthChart {...heroProps} />)
     const svg = container.querySelector('svg[role="img"]')!
     const legend = container.querySelector('ul')!.parentElement!
-    // Room above the chart, none of interest below: jsdom lays nothing out, so an unmocked rect
-    // reads as {0,0,0,0}, which the tooltip would misread as "no room above" and dock below —
-    // suppressed now the chart has a legend to fall back to instead. This test is about the
-    // hand-off with the legend, not which side a shown tooltip picks.
+    // Room above the chart: jsdom lays nothing out, so an unmocked rect reads as {0,0,0,0},
+    // which the tooltip would misread as "no room above" and dock below (suppressed, since the
+    // chart has a legend to fall back to). This test is about the hand-off with the legend, not
+    // which side a shown tooltip picks.
     svg.parentElement!.getBoundingClientRect = () => ({ top: 600, bottom: 700, height: 100 }) as DOMRect
-    // The first observer is the legend's value list. A tooltip adds one for its chart, and once
-    // that is mostly on screen, one for itself.
+    // The first observer is the legend's value list; the second is the tooltip's chart.
     const legendIs = (ratio: number) => act(() => io.emit(ratio, 0))
     const chartIs = (ratio: number) => act(() => io.emit(ratio, 1))
-    const tooltipIs = (ratio: number) => act(() => io.emit(ratio, 2))
 
     // The legend is not fully on screen and the chart is: a tap gives a tooltip, and the legend
-    // still shows.
+    // shows the same figures too, not stepping aside for it.
     fireEvent.keyDown(svg, { key: 'Home' })
     chartIs(0.8)
     expect(screen.getByRole('tooltip')).toHaveTextContent('Year 0')
-    expect(legend).not.toHaveClass(legendStyles.valuesHidden!)
-    // The tooltip is on screen: the legend keeps its space but unsees the figures.
-    tooltipIs(0.8)
-    expect(legend).toHaveClass(legendStyles.valuesHidden!)
-    // Scrolled until the legend is fully on screen: the tooltip goes, the legend shows.
+    expect(legend).toHaveTextContent('Year 0')
+    // Scrolled until the legend is fully on screen: the tooltip goes, the legend is still there.
     legendIs(1)
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
-    expect(legend).not.toHaveClass(legendStyles.valuesHidden!)
+    expect(legend).toHaveTextContent('Year 0')
     // Scrolled back: the tooltip returns, over the same selection.
     legendIs(0.3)
     chartIs(0.8)
     expect(screen.getByRole('tooltip')).toHaveTextContent('Year 0')
-    tooltipIs(0.8)
-    expect(legend).toHaveClass(legendStyles.valuesHidden!)
-    // The chart scrolled away while the legend is only partly on screen: the tooltip goes with
-    // it, and the legend shows the figures again, so there is a readout.
+    // The chart scrolls away while the legend is only partly on screen: the tooltip goes with
+    // it; the legend was never dependent on it and needs no re-check.
     chartIs(0.1)
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
-    expect(legend).not.toHaveClass(legendStyles.valuesHidden!)
     expect(legend).toHaveTextContent('Year 0')
     // The chart comes back, and so does the tooltip, over the same selection.
     chartIs(0.8)
     expect(screen.getByRole('tooltip')).toHaveTextContent('Year 0')
-    // A tooltip mostly out of the free band while its chart is not (both sides too short for
-    // it): the legend shows the figures rather than leave no readout.
-    tooltipIs(0.1)
-    expect(legend).not.toHaveClass(legendStyles.valuesHidden!)
     // Clearing the selection leaves the legend as it was.
     fireEvent.keyDown(svg, { key: 'Escape' })
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
@@ -482,7 +469,6 @@ describe('NetWorthChart', () => {
     act(() => io.emit(0.8, 0)) // legend not fully in band
     act(() => io.emit(0.8, 1)) // chart on screen
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
-    expect(legend).not.toHaveClass(legendStyles.valuesHidden!)
     expect(legend).toHaveTextContent('Year 0')
     // Not just absent from the accessibility tree for some unrelated reason: this is
     // specifically the below-docked panel, drawn invisible, proving `dockBelow: false` made it
