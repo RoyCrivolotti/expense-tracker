@@ -96,10 +96,15 @@ function FloatingTooltip({ title, lines, anchor }: Props) {
  * the chart, and the only choice, which edge, is made again from where the chart is now. An
  * offset worked out when it opened would be wrong as soon as the page scrolled, and covered the
  * chart or left the panel out of reach.
+ *
+ * A panel with too many rows for its side gets a cap from `useTooltipSide` and scrolls its own
+ * rows instead of being drawn over the header or tab bar. `pointer-events` is switched back on
+ * only then, so the ordinary case (nearly all of them) still passes a tap straight through to the
+ * page underneath, exactly as before.
  */
 function DockedPanel({ title, lines, chart }: Pick<Props, 'title' | 'lines'> & { chart: Props['chart'] | undefined }) {
   const ref = useRef<HTMLDivElement>(null)
-  const side = useTooltipSide(chart, ref, contentKey(title, lines))
+  const { side, maxHeight } = useTooltipSide(chart, ref, contentKey(title, lines))
   // Tells the chart's owner whether it is showing, and that it is gone once it closes. Before
   // paint: after it, the owner's legend would keep its figures for a frame beside the panel.
   const onScreen = useInBand(ref, ON_SCREEN_SHARE)
@@ -108,10 +113,12 @@ function DockedPanel({ title, lines, chart }: Pick<Props, 'title' | 'lines'> & {
     report?.(onScreen)
     return () => report?.(false)
   }, [report, onScreen])
+  const sideClass = side === 'above' ? styles.tooltipAbove : styles.tooltipBelow
   return (
     <div
       ref={ref}
-      className={`${styles.tooltipDocked} ${side === 'above' ? styles.tooltipAbove : styles.tooltipBelow}`}
+      className={`${styles.tooltipDocked} ${sideClass}${maxHeight !== null ? ` ${styles.tooltipScrollable}` : ''}`}
+      style={maxHeight !== null ? { maxHeight } : undefined}
       role="tooltip"
     >
       <TooltipBody title={title} lines={lines} />

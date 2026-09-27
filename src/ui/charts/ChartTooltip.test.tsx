@@ -32,8 +32,8 @@ afterEach(() => {
 
 const BAR = 60
 
-/** The bars' probes are 60px; the chart is where the test puts it, and the panel is 100px tall. */
-function scene(top: number, bottom: number) {
+/** The bars' probes are 60px; the chart is where the test puts it, and the panel is `panelHeight` tall. */
+function scene(top: number, bottom: number, panelHeight = 100) {
   const chart = document.createElement('div')
   const move = (t: number, b: number) => {
     chart.getBoundingClientRect = () => ({ top: t, bottom: b, height: b - t }) as DOMRect
@@ -42,7 +42,7 @@ function scene(top: number, bottom: number) {
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
     return (this.style.visibility === 'hidden' ? { top: 0, bottom: BAR, height: BAR } : { top: 0, bottom: 0, height: 0 }) as DOMRect
   })
-  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(100)
+  vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(panelHeight)
   return { ref: { current: chart }, move }
 }
 
@@ -150,6 +150,25 @@ describe('ChartTooltip on a phone', () => {
     docked = true
     render(<ChartTooltip title="Year 5" lines={[]} anchor={null} />)
     expect(screen.getByRole('tooltip')).toHaveClass(chartStyles.tooltipAbove!)
+  })
+
+  it('draws an ordinary panel at its natural height, with taps passing through, while it fits', () => {
+    docked = true
+    const s = scene(window.innerHeight - 300, window.innerHeight - 70, 100)
+    render(<ChartTooltip title="Year 1" lines={[]} anchor={null} chart={s.ref} />)
+    const panel = screen.getByRole('tooltip')
+    expect(panel).not.toHaveClass(chartStyles.tooltipScrollable!)
+    expect(panel.style.maxHeight).toBe('')
+  })
+
+  it('scrolls its own rows, and stops passing taps through, once it no longer fits either side', () => {
+    docked = true
+    // Little room on either side, and a panel far taller than either has to give it.
+    const s = scene(window.innerHeight / 2 - 40, window.innerHeight / 2 + 40, 900)
+    render(<ChartTooltip title="Year 1" lines={[]} anchor={null} chart={s.ref} />)
+    const panel = screen.getByRole('tooltip')
+    expect(panel).toHaveClass(chartStyles.tooltipScrollable!)
+    expect(panel.style.maxHeight).not.toBe('')
   })
 })
 

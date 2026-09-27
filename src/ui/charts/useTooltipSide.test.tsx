@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { chooseSide, pickSide, roomAround, useTooltipSide, visibleBand } from './useTooltipSide'
+import { capHeight, chooseSide, pickSide, roomAround, useTooltipSide, visibleBand } from './useTooltipSide'
 
 const BAR = 60
 const PANEL = 200
@@ -12,11 +12,11 @@ function withBars() {
   })
 }
 
-/** A chart that can be moved, and a panel of a fixed height, as refs. */
-function scene(top: number, bottom: number) {
+/** A chart that can be moved, and a panel of a fixed content height, as refs. */
+function scene(top: number, bottom: number, panelHeight = PANEL) {
   const chart = document.createElement('div')
   const panel = document.createElement('div')
-  Object.defineProperty(panel, 'offsetHeight', { value: PANEL })
+  Object.defineProperty(panel, 'scrollHeight', { value: panelHeight, configurable: true })
   const move = (t: number, b: number) => {
     chart.getBoundingClientRect = () => ({ top: t, bottom: b, height: b - t }) as DOMRect
   }
@@ -110,49 +110,85 @@ describe('chooseSide', () => {
   })
 })
 
+describe('capHeight', () => {
+  it('draws the panel at its natural height while it already fits', () => {
+    expect(capHeight(300, 200, 100)).toBeNull()
+    // Right at the edge: still fits.
+    expect(capHeight(206, 200, 100)).toBeNull()
+  })
+
+  it('caps to the room left once the gap is set aside, when that is more than the floor', () => {
+    expect(capHeight(300, 500, 100)).toBe(294)
+  })
+
+  it('never shrinks the panel past the floor, even where that still clips a little', () => {
+    expect(capHeight(50, 500, 100)).toBe(100)
+  })
+
+  it('never caps to more than the content actually needs', () => {
+    // The floor is roomier than the content itself would ever require.
+    expect(capHeight(50, 80, 100)).toBe(80)
+  })
+})
+
 describe('useTooltipSide', () => {
   const render = (s: ReturnType<typeof scene>, content = 'Year 1') =>
     renderHook(({ text }) => useTooltipSide(s.chart, s.panel, text), { initialProps: { text: content } })
 
   it('opens above a chart low on the screen and below one high on it', () => {
     withBars()
-    expect(render(scene(screenHeight() - 300, screenHeight() - 70)).result.current).toBe('above')
-    expect(render(scene(70, 300)).result.current).toBe('below')
+    expect(render(scene(screenHeight() - 300, screenHeight() - 70)).result.current.side).toBe('above')
+    expect(render(scene(70, 300)).result.current.side).toBe('below')
   })
 
   it('is above when it has no chart to measure', () => {
     withBars()
-    expect(renderHook(() => useTooltipSide(undefined, scene(0, 0).panel, 'x')).result.current).toBe('above')
+    expect(renderHook(() => useTooltipSide(undefined, scene(0, 0).panel, 'x')).result.current.side).toBe('above')
+  })
+
+  it('has no cap while the panel already fits on its side', () => {
+    withBars()
+    expect(render(scene(screenHeight() - 300, screenHeight() - 70)).result.current.maxHeight).toBeNull()
+  })
+
+  it('caps the panel to the room on its side once it no longer fits either side', () => {
+    withBars()
+    // A short gap between the chart and both bars, and a panel far taller than either.
+    const s = scene(screenHeight() / 2 - 40, screenHeight() / 2 + 40, 900)
+    const { result } = render(s)
+    // The panel is capped, not drawn at its full, overflowing height.
+    expect(result.current.maxHeight).not.toBeNull()
+    expect(result.current.maxHeight as number).toBeLessThan(900)
   })
 
   it('works the side out again as the page scrolls under it, once the side it is on runs out', () => {
     withBars()
     const s = scene(screenHeight() - 300, screenHeight() - 70)
     const { result } = render(s)
-    expect(result.current).toBe('above')
+    expect(result.current.side).toBe('above')
     // Still room for the panel above: it stays above however the page moves.
     s.move(screenHeight() - 500, screenHeight() - 270)
     event('scroll')
-    expect(result.current).toBe('above')
+    expect(result.current.side).toBe('above')
     // The chart has gone up the screen, and the panel would sit under the header: below.
     s.move(150, 380)
     event('scroll')
-    expect(result.current).toBe('below')
+    expect(result.current.side).toBe('below')
     // And back down: above again, once below has run out.
     s.move(screenHeight() - 200, screenHeight() - 30)
     event('scroll')
-    expect(result.current).toBe('above')
+    expect(result.current.side).toBe('above')
   })
 
   it('also works the side out when what it shows changes, since that changes its height', () => {
     withBars()
     const s = scene(screenHeight() - 300, screenHeight() - 70)
     const { result, rerender } = render(s)
-    expect(result.current).toBe('above')
+    expect(result.current.side).toBe('above')
     // The chart moved without a scroll event reaching it; the next thing it shows settles it.
     s.move(150, 380)
     rerender({ text: 'Year 2' })
-    expect(result.current).toBe('below')
+    expect(result.current.side).toBe('below')
   })
 
   it('measures the bars once, and again only when the screen changes', () => {
