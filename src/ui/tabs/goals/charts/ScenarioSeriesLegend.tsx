@@ -35,12 +35,6 @@ interface ScenarioSeriesLegendProps {
   yearZeroHint?: boolean
   /** The value list, for a caller that needs to know whether it is on screen. */
   listRef?: Ref<HTMLUListElement> | undefined
-  /**
-   * The year header and the figures are unseen but keep their space. The chart's tooltip is
-   * showing them, and taking the space away would change the list's height and its place on
-   * screen, which the caller reads.
-   */
-  valuesHidden?: boolean
   /** Makes each saved scenario's row a toggle for its line, as chart legends usually are. */
   onToggle?: ((scenarioId: number) => void) | undefined
 }
@@ -195,7 +189,6 @@ export function ScenarioSeriesLegend({
   breakdowns,
   yearZeroHint = false,
   listRef,
-  valuesHidden = false,
   onToggle,
 }: ScenarioSeriesLegendProps) {
   const format = useMoneyFormat()
@@ -205,7 +198,7 @@ export function ScenarioSeriesLegend({
     : 'Tap or hover the chart to compare values by year.'
 
   return (
-    <div className={valuesHidden ? `${styles.wrap} ${styles.valuesHidden}` : styles.wrap}>
+    <div className={styles.wrap}>
       {activeYear != null ? (
         <p className={styles.yearHeader}>Year {activeYear}</p>
       ) : (

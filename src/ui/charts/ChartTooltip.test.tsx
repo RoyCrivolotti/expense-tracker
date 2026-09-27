@@ -2,7 +2,6 @@ import { act, render, screen } from '@testing-library/react'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ChartTooltip } from './ChartTooltip'
 import chartStyles from './charts.module.css'
-import { TooltipVisibilityContext } from './tooltipVisibility'
 import { installFakeBars } from '../../testing/fakeBars'
 import { installFakeIntersectionObserver } from '../../testing/fakeIntersectionObserver'
 
@@ -115,34 +114,6 @@ describe('ChartTooltip on a phone', () => {
     expect(screen.getByRole('tooltip')).toHaveClass(chartStyles.tooltipBelow!)
   })
 
-  it('tells whoever drew the chart whether it is on screen, and that it is gone when it closes', () => {
-    docked = true
-    const io = installFakeIntersectionObserver()
-    const s = scene(window.innerHeight - 300, window.innerHeight - 70)
-    const report = vi.fn()
-    const { unmount } = render(
-      <TooltipVisibilityContext.Provider value={report}>
-        <ChartTooltip title="Year 1" lines={[]} anchor={null} chart={s.ref} />
-      </TooltipVisibilityContext.Provider>,
-    )
-    // The chart is the first thing observed; nothing is showing yet, so nothing is reported.
-    act(() => io.emit(0.8, 0))
-    expect(report).toHaveBeenLastCalledWith(false)
-    // The panel is the second: nothing is reported as on screen until it says so.
-    act(() => io.emit(0.6, 1))
-    expect(report).toHaveBeenLastCalledWith(true)
-    act(() => io.emit(0.1, 1))
-    expect(report).toHaveBeenLastCalledWith(false)
-    act(() => io.emit(0.6, 1))
-    // The chart going away takes the panel with it, and that is reported too.
-    act(() => io.emit(0.1, 0))
-    expect(report).toHaveBeenLastCalledWith(false)
-    act(() => io.emit(0.8, 0))
-    act(() => io.emit(0.6, 1))
-    unmount()
-    expect(report).toHaveBeenLastCalledWith(false)
-  })
-
   it('opens above and is always shown when it has no chart to follow', () => {
     docked = true
     render(<ChartTooltip title="Year 5" lines={[]} anchor={null} />)
@@ -187,21 +158,6 @@ describe('ChartTooltip on a phone', () => {
       const panel = container.querySelector(`.${chartStyles.tooltipDocked}`)
       expect(panel).not.toBeNull()
       expect(panel).toHaveClass(chartStyles.tooltipBelow!, chartStyles.tooltipDockedBelowSuppressed!)
-    })
-
-    it('reports itself as never on screen while suppressed, even once its panel is', () => {
-      docked = true
-      const io = installFakeIntersectionObserver()
-      const high = scene(80, 310)
-      const report = vi.fn()
-      render(
-        <TooltipVisibilityContext.Provider value={report}>
-          <ChartTooltip title="Year 5" lines={[]} anchor={null} chart={high.ref} dockBelow={false} />
-        </TooltipVisibilityContext.Provider>,
-      )
-      act(() => io.emit(0.8, 0))
-      act(() => io.emit(0.8, 1))
-      expect(report).toHaveBeenLastCalledWith(false)
     })
 
     it('reappears once scrolling gives it room above again', () => {

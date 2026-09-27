@@ -2,7 +2,6 @@ import { render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createRef } from 'react'
 import { ScenarioSeriesLegend, type ScenarioLegendBreakdown } from './ScenarioSeriesLegend'
-import styles from './ScenarioSeriesLegend.module.css'
 import type { PurchaseYearBreakdown } from '../../../../engine'
 
 const breakdown: PurchaseYearBreakdown = {
@@ -42,17 +41,12 @@ describe('ScenarioSeriesLegend', () => {
     expect(error).not.toHaveBeenCalled()
   })
 
-  it('unsees the year header and the figures without taking their space, and hands out its list', () => {
+  it('hands out its list, and always shows the year header and the figures', () => {
     const listRef = createRef<HTMLUListElement>()
     const items = [{ label: 'Path A', color: '#6366f1', valueCents: 250_000_00 }]
     const props = { items, activeYear: 12, breakdowns: [], listRef }
-    const { container, rerender } = render(<ScenarioSeriesLegend {...props} />)
-    const wrap = container.firstElementChild!
-    expect(wrap).not.toHaveClass(styles.valuesHidden!)
+    const { container } = render(<ScenarioSeriesLegend {...props} />)
     expect(listRef.current).toBe(container.querySelector('ul'))
-    rerender(<ScenarioSeriesLegend {...props} valuesHidden />)
-    // Hidden by class, not removed: the row's height and the list's place on screen must not move.
-    expect(container.firstElementChild).toHaveClass(styles.valuesHidden!)
     expect(screen.getByText('Year 12')).toBeInTheDocument()
     expect(screen.getByText('Path A')).toBeInTheDocument()
   })
