@@ -52,7 +52,6 @@ function FlagGroupSection({
   onSelect?: ((txn: Transaction) => void) | undefined
 }) {
   const preview = group.transactions.slice(0, PREVIEW_LIMIT)
-  const hidden = group.count - preview.length
   return (
     <details className={styles.group}>
       <summary className={styles.summary}>
@@ -79,38 +78,45 @@ function FlagGroupSection({
           {...(onSelect ? { onSelect } : {})}
         />
         <div className={styles.groupActions}>
-          <button
-            type="button"
-            className={styles.filterBtn}
-            onClick={filterLocked ? onLockedFilterPress : () => onFilterByFlag(group.flag.id)}
-            {...(filterLocked ? { 'aria-disabled': true } : {})}
-          >
-            {hidden > 0 ? `See all ${group.count} in the list` : 'Show these in the list'}
-          </button>
-          {/* Only where somebody owes the money back. On a flag you keep just
-              to find things later, an expense report is a document addressed to
-              nobody for money that is not coming. */}
-          {group.flag.reimbursable ? (
+          <div className={styles.actionsRow}>
             <button
               type="button"
-              className={styles.packBtn}
-              onClick={() => onOpenReport(group.flag.id)}
+              className={styles.filterBtn}
+              onClick={filterLocked ? onLockedFilterPress : () => onFilterByFlag(group.flag.id)}
+              {...(filterLocked ? { 'aria-disabled': true } : {})}
             >
-              Expense report
+              Filter by flag
             </button>
-          ) : null}
+            {/* Only where somebody owes the money back. On a flag you keep just
+                to find things later, an expense report is a document addressed to
+                nobody for money that is not coming. */}
+            {group.flag.reimbursable ? (
+              <button
+                type="button"
+                className={styles.packBtn}
+                onClick={() => onOpenReport(group.flag.id)}
+              >
+                Expense report
+              </button>
+            ) : null}
+          </div>
           {/*
             Hidden once nothing is outstanding: the amount would prefill 0,00 €
-            and the form rejects that, so the button would only ever fail.
+            and the form rejects that, so the button would only ever fail. Its
+            own row, half width and right-aligned under Expense report — the
+            button it most often follows — rather than stretched or wrapped
+            wherever flex happens to leave room for it.
           */}
           {group.flag.reimbursable && group.totalCents > 0 ? (
-            <button
-              type="button"
-              className={styles.settleBtn}
-              onClick={() => onSettle(group)}
-            >
-              Record reimbursement
-            </button>
+            <div className={styles.actionsRow}>
+              <button
+                type="button"
+                className={styles.settleBtn}
+                onClick={() => onSettle(group)}
+              >
+                Record reimbursement
+              </button>
+            </div>
           ) : null}
         </div>
       </div>

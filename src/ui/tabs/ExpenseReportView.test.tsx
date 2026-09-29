@@ -314,6 +314,63 @@ describe('ExpenseReportView — the document', () => {
   })
 })
 
+describe('ExpenseReportView — filtering to items with a receipt', () => {
+  it('offers no toggle when every line already has a receipt', () => {
+    renderPack(
+      datasetWith([txn(1, '2026-05-02')], [makeAttachment({ id: 5, transactionId: 1 })]),
+    )
+
+    expect(
+      screen.queryByRole('radiogroup', { name: 'Filter the report by receipt' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('drops the unreceipted line and re-totals once checked', async () => {
+    const user = userEvent.setup()
+    renderPack(
+      datasetWith(
+        [
+          txn(1, '2026-05-02', { amountCents: 10_000 }),
+          txn(2, '2026-05-09', { amountCents: 4_000 }),
+        ],
+        [makeAttachment({ id: 5, transactionId: 1 })],
+      ),
+    )
+
+    await user.click(screen.getByRole('radio', { name: 'With receipt' }))
+
+    const rows = screen.getAllByRole('row')
+    expect(rows).toHaveLength(3) // header + the one receipted row + total
+    expect(within(rows[2]!).getByText('100,00 €')).toBeInTheDocument()
+    expect(screen.queryByText(/no receipt attached/)).not.toBeInTheDocument()
+  })
+
+  it('goes back to the full claim once switched back to all items', async () => {
+    const user = userEvent.setup()
+    renderPack(
+      datasetWith(
+        [txn(1, '2026-05-02'), txn(2, '2026-05-09')],
+        [makeAttachment({ id: 5, transactionId: 1 })],
+      ),
+    )
+
+    await user.click(screen.getByRole('radio', { name: 'With receipt' }))
+    await user.click(screen.getByRole('radio', { name: 'All items' }))
+
+    expect(screen.getAllByRole('row')).toHaveLength(4) // header + both rows + total
+  })
+
+  it('says so, rather than rendering an empty sheet, when nothing has a receipt yet', async () => {
+    const user = userEvent.setup()
+    renderPack(datasetWith([txn(1, '2026-05-02'), txn(2, '2026-05-09')], []))
+
+    await user.click(screen.getByRole('radio', { name: 'With receipt' }))
+
+    expect(screen.getByText('None of these items have a receipt attached yet.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Download CSV' })).not.toBeInTheDocument()
+  })
+})
+
 describe('ExpenseReportView — renaming the claim', () => {
   it('defaults the title to the flag name', () => {
     renderPack(datasetWith([txn(1, '2026-05-02')]))

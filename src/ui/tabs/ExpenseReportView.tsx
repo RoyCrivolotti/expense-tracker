@@ -4,10 +4,12 @@ import type { ExpenseDataset, Transaction } from '../../types'
 import {
   buildExpenseReport,
   buildSettledReport,
+  receiptsOnlyReport,
   reportReceipts,
   type ExpenseReport,
 } from '../../domain/engine/expenseReport'
 import { pastReportDrifted } from '../../domain/engine/pastReports'
+import { SegmentedControl } from '../components/SegmentedControl'
 import { ExpenseReportSheet } from './ExpenseReportSheet'
 import { todayIso } from '../components/transactionFormState'
 import { exitVars } from '../hooks/motion'
@@ -18,6 +20,11 @@ import { deliverReceipts } from '../../data/receiptDownload'
 import { namedReceipts, receiptPackName } from '../../domain/engine/receiptFiles'
 import type { Lookup } from '../format'
 import styles from './ExpenseReportView.module.css'
+
+const RECEIPT_FILTER_OPTIONS: { value: 'all' | 'receipted'; label: string }[] = [
+  { value: 'all', label: 'All items' },
+  { value: 'receipted', label: 'With receipt' },
+]
 
 interface Props {
   dataset: ExpenseDataset
@@ -113,6 +120,36 @@ function ReceiptsButton({
   )
 }
 
+/**
+ * The all-items/with-receipt pill above the sheet.
+ *
+ * Its own component so the view keeps its branch count. Hidden entirely
+ * rather than disabled when nothing is missing a receipt: the filter would
+ * have nothing left to do, and the count is already shown in the sheet
+ * itself, so a dimmed control here would just be a second copy of it.
+ */
+function ReceiptFilterControl({
+  hasMissingReceipts,
+  receiptsOnly,
+  onChange,
+}: {
+  hasMissingReceipts: boolean
+  receiptsOnly: boolean
+  onChange: (receiptsOnly: boolean) => void
+}) {
+  if (!hasMissingReceipts) return null
+  return (
+    <div className={styles.reportControls}>
+      <SegmentedControl
+        options={RECEIPT_FILTER_OPTIONS}
+        value={receiptsOnly ? 'receipted' : 'all'}
+        onChange={(value) => onChange(value === 'receipted')}
+        ariaLabel="Filter the report by receipt"
+      />
+    </div>
+  )
+}
+
 export function ExpenseReportView({
   dataset: liveDataset,
   lookup,
@@ -136,7 +173,7 @@ export function ExpenseReportView({
    * well would put the nav, the FAB and the month's transactions into the PDF
    * the user is about to hand to somebody.
    */
-  const report =
+  const baseReport =
     settledByPaymentId != null
       ? buildSettledReport(
           settledByPaymentId,
@@ -152,24 +189,33 @@ export function ExpenseReportView({
   // report is stored, so there is nowhere to keep an edited title between
   // visits without inventing storage for a document that rebuilds itself fresh
   // every time it is opened.
-  const [title, setTitle] = useState(() => report?.flag.name ?? '')
+  const [title, setTitle] = useState(() => baseReport?.flag.name ?? '')
 
   /*
-   * Guarded on `report`, and declared before the early return so the hook order
+   * Guarded on `baseReport`, and declared before the early return so the hook order
    * is stable. Setting the flag unconditionally meant an empty report rendered
    * nothing while leaving `<body data-report-open>` set for the rest of the
    * session — and theme.css hides #root under that attribute when printing, so
    * Cmd+P anywhere in the app produced a blank page until reload.
    */
   useEffect(() => {
-    if (!report) return
+    if (!baseReport) return
     document.body.dataset.reportOpen = 'true'
     return () => {
       delete document.body.dataset.reportOpen
     }
-  }, [report])
+  }, [baseReport])
 
-  if (!report) return null
+  // Session-only, like the toolbar itself: reopening the report starts from
+  // the full claim again.
+  const [receiptsOnly, setReceiptsOnly] = useState(false)
+
+  if (!baseReport) return null
+
+  // Null only when every line left has no receipt — reachable by toggling the
+  // filter on a claim that turns out to have none, not by anything a fresh
+  // open of the report can produce.
+  const report = receiptsOnly ? receiptsOnlyReport(baseReport) : baseReport
 
   // Only a reopened report can have drifted: an open claim has nothing submitted
   // to differ from yet.
@@ -186,40 +232,52 @@ export function ExpenseReportView({
         <button type="button" className={styles.closeBtn} onClick={onClose}>
           Back
         </button>
-        <div className={styles.toolbarActions}>
-          <button
-            type="button"
-            className={styles.secondaryBtn}
-            onClick={() =>
-              downloadExpenseReportCsv(report, {
-                format,
-                categoryName: lookup.categoryName,
-                accountName: lookup.accountName,
-                claimantName: dataset.settings.claimantName,
-                title,
-              })
-            }
-            aria-label="Download CSV"
-          >
-            {/* Two labels rather than one that wraps: at 390px "Print or save as
-                PDF" breaks onto a second line and pushes the toolbar to twice
-                the height, on the one screen where vertical space is scarcest.
-                aria-label carries the full wording either way. */}
-            <span className={styles.labelLong}>Download CSV</span>
-            <span className={styles.labelShort}>CSV</span>
-          </button>
-          <ReceiptsButton report={report} lookup={lookup} title={title} />
-          <button
-            type="button"
-            className={styles.printBtn}
-            onClick={() => window.print()}
-            aria-label="Print or save as PDF"
-          >
-            <span className={styles.labelLong}>Print or save as PDF</span>
-            <span className={styles.labelShort}>Print</span>
-          </button>
-        </div>
+        {report ? (
+          <div className={styles.toolbarActions}>
+            <button
+              type="button"
+              className={styles.secondaryBtn}
+              onClick={() =>
+                downloadExpenseReportCsv(report, {
+                  format,
+                  categoryName: lookup.categoryName,
+                  accountName: lookup.accountName,
+                  claimantName: dataset.settings.claimantName,
+                  title,
+                })
+              }
+              aria-label="Download CSV"
+            >
+              {/* Two labels rather than one that wraps: at 390px "Print or save as
+                  PDF" breaks onto a second line and pushes the toolbar to twice
+                  the height, on the one screen where vertical space is scarcest.
+                  aria-label carries the full wording either way. */}
+              <span className={styles.labelLong}>Download CSV</span>
+              <span className={styles.labelShort}>CSV</span>
+            </button>
+            <ReceiptsButton report={report} lookup={lookup} title={title} />
+            <button
+              type="button"
+              className={styles.printBtn}
+              onClick={() => window.print()}
+              aria-label="Print or save as PDF"
+            >
+              <span className={styles.labelLong}>Print or save as PDF</span>
+              <span className={styles.labelShort}>Print</span>
+            </button>
+          </div>
+        ) : null}
       </div>
+
+      {/* Screen only, like the toolbar above it — the printed page is whichever
+          version was on screen when Print was pressed. Aligned to the sheet's own
+          column rather than the full-width toolbar, since it controls the sheet
+          specifically and not the page. */}
+      <ReceiptFilterControl
+        hasMissingReceipts={baseReport.missingReceipts.length > 0}
+        receiptsOnly={receiptsOnly}
+        onChange={setReceiptsOnly}
+      />
 
       {drifted ? (
         <p className={styles.driftNotice}>
@@ -228,17 +286,25 @@ export function ExpenseReportView({
         </p>
       ) : null}
 
-      <ExpenseReportSheet
-        report={report}
-        lookup={lookup}
-        format={format}
-        claimantName={dataset.settings.claimantName}
-        currencyCode={dataset.settings.currencyCode}
-        issuedOn={issuedOn ?? todayIso()}
-        title={title}
-        onTitleChange={setTitle}
-        onOpenTransaction={onOpenTransaction}
-      />
+      {report ? (
+        <ExpenseReportSheet
+          report={report}
+          lookup={lookup}
+          format={format}
+          claimantName={dataset.settings.claimantName}
+          currencyCode={dataset.settings.currencyCode}
+          issuedOn={issuedOn ?? todayIso()}
+          title={title}
+          onTitleChange={setTitle}
+          onOpenTransaction={onOpenTransaction}
+        />
+      ) : (
+        // Reachable only by turning the toggle on when nothing claimed has a
+        // receipt yet — a fresh open of the report always has at least one line.
+        <p className={styles.emptyNotice}>
+          None of these items have a receipt attached yet.
+        </p>
+      )}
     </div>,
     document.body,
   )

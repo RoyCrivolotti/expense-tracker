@@ -3,6 +3,7 @@ import type { Flag, Transaction, TransactionAttachment } from '../types'
 import {
   buildExpenseReport,
   buildSettledReport,
+  receiptsOnlyReport,
   reportReceipts,
   reportReference,
 } from './expenseReport'
@@ -303,5 +304,95 @@ describe('reportReceipts', () => {
     const report = buildExpenseReport(1, [txn(1, '2026-05-02', { flagId: 1 })], [WORK], [])
 
     expect(reportReceipts(report!)).toEqual([])
+  })
+})
+
+describe('receiptsOnlyReport', () => {
+  it('drops lines with no receipt and re-totals to match', () => {
+    const report = buildExpenseReport(
+      1,
+      [
+        txn(1, '2026-05-02', { flagId: 1, amountCents: 10_000 }),
+        txn(2, '2026-05-09', { flagId: 1, amountCents: 4_000 }),
+      ],
+      [WORK],
+      [attachment(10, 1)],
+    )
+
+    const filtered = receiptsOnlyReport(report!)
+
+    expect(filtered?.lines.map((l) => l.transaction.id)).toEqual([1])
+    expect(filtered?.totalClaimedCents).toBe(10_000)
+    expect(filtered?.outstandingCents).toBe(10_000)
+  })
+
+  it('says nothing is missing, since every remaining line has one', () => {
+    const report = buildExpenseReport(
+      1,
+      [txn(1, '2026-05-02', { flagId: 1 }), txn(2, '2026-05-09', { flagId: 1 })],
+      [WORK],
+      [attachment(10, 1)],
+    )
+
+    expect(receiptsOnlyReport(report!)?.missingReceipts).toEqual([])
+  })
+
+  it('renumbers the receipts left, so the figures still read 1, 2, 3', () => {
+    const report = buildExpenseReport(
+      1,
+      [
+        txn(1, '2026-05-02', { flagId: 1 }),
+        txn(2, '2026-05-04', { flagId: 1 }),
+        txn(3, '2026-05-09', { flagId: 1 }),
+      ],
+      [WORK],
+      [attachment(10, 1), attachment(11, 3)],
+    )
+
+    const filtered = receiptsOnlyReport(report!)
+
+    expect(filtered?.lines.map((l) => l.receiptRefs)).toEqual([[1], [2]])
+  })
+
+  it('narrows the period to the lines that are left', () => {
+    const report = buildExpenseReport(
+      1,
+      [
+        txn(1, '2026-05-02', { flagId: 1 }),
+        txn(2, '2026-05-04', { flagId: 1 }),
+        txn(3, '2026-05-09', { flagId: 1 }),
+      ],
+      [WORK],
+      [attachment(10, 2)],
+    )
+
+    const filtered = receiptsOnlyReport(report!)
+
+    expect(filtered?.from).toBe('2026-05-04')
+    expect(filtered?.to).toBe('2026-05-04')
+  })
+
+  it('keeps a credit regardless of whether the original spend had a receipt', () => {
+    const report = buildExpenseReport(
+      1,
+      [
+        txn(1, '2026-05-02', { flagId: 1, amountCents: 10_000 }),
+        txn(2, '2026-06-14', { flagId: 1, amountCents: 4_000, type: 'refund' }),
+      ],
+      [WORK],
+      [attachment(10, 1)],
+    )
+
+    const filtered = receiptsOnlyReport(report!)
+
+    expect(filtered?.credits).toHaveLength(1)
+    expect(filtered?.creditedCents).toBe(4_000)
+    expect(filtered?.outstandingCents).toBe(6_000)
+  })
+
+  it('is null when nothing left has a receipt', () => {
+    const report = buildExpenseReport(1, [txn(1, '2026-05-02', { flagId: 1 })], [WORK], [])
+
+    expect(receiptsOnlyReport(report!)).toBeNull()
   })
 })

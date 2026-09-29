@@ -39,7 +39,11 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 //
 // Raised from 198 KB to 198.5 KB for the editable report title: main was already at 197,931
 // bytes with 69 left, and the rename control adds about 0.2 KB.
-const TOTAL_MAX_GZIP = 198_500
+//
+// Raised from 198.5 KB to 199 KB for the receipts-only report filter and the flagged card's
+// button-width fix, landing on top of the title change above: the merged total came to
+// 198,418 bytes.
+const TOTAL_MAX_GZIP = 199_000
 const GOALS_MAX_GZIP = 40_000
 
 function gzipBytes(path) {

@@ -187,19 +187,21 @@ describe('FlaggedCard', () => {
 
     await userEvent.click(screen.getByText(/across 1 flag/))
     await userEvent.click(screen.getByText('Work travel'))
-    await userEvent.click(screen.getByRole('button', { name: /Show these in the list/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Filter by flag' }))
 
     expect(onFilterByFlag).toHaveBeenCalledWith(1)
   })
 
-  it('offers to see all of a long group, naming the real total', async () => {
+  it('keeps the same label regardless of how many are hidden from the preview', async () => {
+    // A count in the label made its width unpredictable, which is exactly what
+    // the fixed-width layout below it needs not to happen.
     const many = Array.from({ length: 8 }, () => txn({ flagId: 1 }))
     renderCard(makeDataset({ flags: [work], transactions: many }))
 
     await userEvent.click(screen.getByText(/across 1 flag/))
     await userEvent.click(screen.getByText('Work travel'))
 
-    expect(screen.getByRole('button', { name: /See all 8 in the list/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Filter by flag' })).toBeInTheDocument()
   })
 
   it('opens the flag manager', async () => {
@@ -295,7 +297,7 @@ describe('FlaggedCard — flags that are not about being paid back', () => {
 
     expect(screen.getByText('Tax deductible')).toBeInTheDocument()
     await userEvent.click(screen.getByText('Tax deductible'))
-    expect(screen.getByRole('button', { name: /in the list/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Filter by flag' })).toBeInTheDocument()
   })
 })
 
@@ -307,7 +309,7 @@ describe('FlaggedCard while rows are being selected', () => {
       makeDataset({ flags: [work], transactions: [txn({ flagId: 1 })] }),
       true,
     )
-    const jump = screen.getByRole('button', { name: /Show these in the list/ })
+    const jump = screen.getByRole('button', { name: 'Filter by flag' })
 
     expect(jump).toHaveAttribute('aria-disabled', 'true')
     await userEvent.click(jump)
