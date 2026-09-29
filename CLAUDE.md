@@ -94,7 +94,8 @@ WIP commit. If you must stash, tag it (`git stash push -u -m "<tag>"`) and resto
 ## Database
 
 ```bash
-npm run migrate:dev              # apply pending migrations to dev D1
+npm run migrate:status           # what dev and prod are each missing; changes nothing
+npm run migrate:dev              # apply pending migrations to dev D1 (prod's run on merge)
 npm run bootstrap:allowed-users  # seed allowed_users from config
 npm run seed:dev                 # copy a prod snapshot into dev
 npx wrangler d1 list
@@ -102,8 +103,11 @@ npx wrangler d1 list
 
 Migrations are numbered `.sql` files applied in order. Re-running one is destructive, not
 merely noisy — `0003` and `0012` contain unscoped `UPDATE`s and `DROP TABLE`s — so apply
-only the files a database has not had. [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) covers that
-and the `--file` import failure with its `--command` fallback.
+only the files a database has not had. The Deploy workflow does that for dev and prod when a
+PR merges, before the code deploys, so a migration must be one the release already running
+can live with (no drops or renames of what it reads).
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) covers that and the `--file` import failure with its
+`--command` fallback.
 
 ## Wrangler
 
@@ -122,7 +126,7 @@ npm run deploy        # production
 npm run deploy:dev    # staging
 ```
 
-CI deploys `main` automatically. Every PR gets a staging preview at
+CI applies pending migrations and then deploys `main` automatically. Every PR gets a staging preview at
 `https://<sanitized-branch>.roy-expenses-stg.pages.dev`, and `deploy-dev.yml` posts that
 URL into the PR description itself — don't add a second one by hand.
 

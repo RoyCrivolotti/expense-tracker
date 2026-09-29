@@ -42,6 +42,15 @@ jobs:
       - run: npm ci
       - run: npm run verify
 
+      # What the deploy workflow will apply to dev and production when this merges, so a
+      # migration shows up here before it runs. Informational: a record problem in one
+      # database should not stop previews, and the merge run says it again if it stays.
+      - name: Show migrations pending on merge
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npm run migrate:status
+
       - name: Deploy preview (branch dev)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

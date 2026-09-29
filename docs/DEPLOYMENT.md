@@ -64,7 +64,7 @@ npm run sync:access-env
 
 ## CI
 
-Push to `main` → verify → sync access env → deploy **production** (`expense-tracker`) and **staging** (`roy-expenses-stg`) → deploy backup cron worker.
+Push to `main` → verify → apply migrations (dev, then production) → sync access env → deploy **production** (`expense-tracker`) and **staging** (`roy-expenses-stg`) → deploy backup cron worker.
 
 Pull requests → verify + deploy **staging** only (`.github/workflows/deploy-dev.yml`). See [OPS.md](./OPS.md) for staging setup.
 
@@ -83,16 +83,28 @@ If Workers Scripts Edit is missing, CI deploy of the backup cron worker fails un
 
 ## Migrations
 
+A PR that adds a file under `migrations/` needs nothing else. When it merges, the Deploy workflow applies whatever dev and production are missing, dev first, **before** it deploys the code, so the release that ships finds its columns. If a migration fails the deploy does not run and the site stays on the last release; fix the cause and re-run the workflow (`gh workflow run deploy.yml`). Runs queue rather than cancel each other, so two quick merges cannot cut a migration short. Each file is recorded in `_migrations` in the same import that applies it, and wrangler says an import that fails to complete leaves the database as it was, so applying and recording go together. Every record is read and checked before anything is applied: a database whose record cannot be trusted (see below) stops the run before either database moves, and so does a read that fails for any reason other than the table not existing yet, since "nothing recorded" would otherwise pass for a brand-new database. Wrangler warns that a database is unavailable while a file is imported, so a migration is a brief pause in service; keep them small.
+
+**Write migrations the release already running can live with**, because that release is what is live while they apply. Add tables and columns, nullable or with a default; do not drop or rename what the live release reads. Removing something takes two PRs: one that stops reading it, and once that has shipped, one that drops it with `-- migrate: destructive-ok` at the top of the file. The script refuses a pending file with a `DROP TABLE`, `DROP COLUMN`, `DROP VIEW`, `DROP TRIGGER`, `DROP INDEX`, `DELETE FROM` or `RENAME` that lacks the marker, which stops the deploy rather than the database. That is a net for the obvious cases, not a proof; a migration that rewrites data with an unscoped `UPDATE` still needs a reviewer's eye. Name files `NNNN_short_name.sql` (lowercase letters, digits and underscores): the name is written into the record, so `verify` and the script reject anything else. A brand-new database applies its whole history, drops included.
+
+A PR preview runs against the shared dev database, which the merge run has not migrated yet. For a PR that carries a migration, apply it to dev first with `npm run migrate:dev`; the preview workflow prints what is pending in dev and production under "Show migrations pending on merge".
+
+```bash
+npm run migrate:status               # what dev and production are each missing; changes nothing
+npm run migrate:dev                  # apply to dev only
+node scripts/migrate.mjs all --yes   # what the workflow runs; production needs --yes
+```
+
+Set `DEV_D1_NAME` or `PROD_D1_NAME` to point at differently named databases. The notes for each file further down say when it had to run relative to the deploy; new files always run before it. The app never reads `_migrations`, so a missing row breaks nothing until someone trusts the record, which is how the drift described below happened. The script trusts the record rather than the schema, so the check below still applies when a database is in doubt. A single file can still be run by hand:
+
 ```bash
 npx wrangler d1 execute roy-expenses --remote --file=migrations/NNNN_name.sql
 npx wrangler d1 execute roy-expenses --remote --command="INSERT OR IGNORE INTO _migrations (name) VALUES ('NNNN_name')"
 ```
 
-Apply through `0027_assumed_inflation.sql` on production, and record each file in `_migrations` as you go, by its name without `.sql`. `npm run migrate:dev` records for the dev database itself; nothing does for production. The app never reads the table, so a missing row breaks nothing until someone trusts the record, which is how the drift described below happened.
-
-**Check what a database actually has before trusting this line.** It has been wrong: on
+**Check what a database actually has before trusting the record.** It has been wrong: on
 2026-09-15 production turned out to have no `_migrations` table at all, `0020` never having
-been applied there, while this section read as though it had. The record is the thing to
+been applied there, while the docs read as though it had. The record is the thing to
 query, and the schema is the thing that settles it:
 
 ```bash
@@ -102,8 +114,8 @@ npx wrangler d1 execute <db> --remote --command="SELECT name FROM pragma_table_i
 
 ### Migration tracking (read before re-running anything)
 
-`0020_migrations_table.sql` adds `_migrations(name, applied_at)`. `npm run migrate:dev` now applies
-only files not recorded there, and records each one after it applies.
+`0020_migrations_table.sql` adds `_migrations(name, applied_at)`. The migrate script applies
+only files not recorded there, and records each one with the import that applies it.
 
 This exists because **re-running a migration was never merely noisy — it was destructive.**
 `0003_multi_user.sql` starts with `ALTER TABLE categories ADD COLUMN owner`, which fails "duplicate
