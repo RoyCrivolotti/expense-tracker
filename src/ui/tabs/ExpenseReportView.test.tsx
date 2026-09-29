@@ -314,6 +314,84 @@ describe('ExpenseReportView — the document', () => {
   })
 })
 
+describe('ExpenseReportView — renaming the claim', () => {
+  it('defaults the title to the flag name', () => {
+    renderPack(datasetWith([txn(1, '2026-05-02')]))
+
+    expect(screen.getByRole('heading', { name: 'Work travel' })).toBeInTheDocument()
+  })
+
+  it('renames the claim to something an employer can read, without the app open', async () => {
+    const user = userEvent.setup()
+    renderPack(datasetWith([txn(1, '2026-05-02')]))
+
+    await user.click(screen.getByRole('button', { name: 'Rename' }))
+    const input = screen.getByRole('textbox', { name: 'Report title' })
+    await user.clear(input)
+    await user.type(input, 'Alicante trip, August 2026{Enter}')
+
+    expect(screen.getByRole('heading', { name: 'Alicante trip, August 2026' })).toBeInTheDocument()
+  })
+
+  it('discards the edit on Escape', async () => {
+    const user = userEvent.setup()
+    renderPack(datasetWith([txn(1, '2026-05-02')]))
+
+    await user.click(screen.getByRole('button', { name: 'Rename' }))
+    await user.type(screen.getByRole('textbox', { name: 'Report title' }), ' — draft{Escape}')
+
+    expect(screen.getByRole('heading', { name: 'Work travel' })).toBeInTheDocument()
+  })
+
+  it('falls back to the previous title rather than printing a blank one', async () => {
+    const user = userEvent.setup()
+    renderPack(datasetWith([txn(1, '2026-05-02')]))
+
+    await user.click(screen.getByRole('button', { name: 'Rename' }))
+    await user.clear(screen.getByRole('textbox', { name: 'Report title' }))
+    await user.keyboard('{Enter}')
+
+    expect(screen.getByRole('heading', { name: 'Work travel' })).toBeInTheDocument()
+  })
+
+  it('carries the renamed title into the CSV filename', async () => {
+    const user = userEvent.setup()
+    renderPack(datasetWith([txn(1, '2026-05-02')]))
+    await user.click(screen.getByRole('button', { name: 'Rename' }))
+    await user.clear(screen.getByRole('textbox', { name: 'Report title' }))
+    await user.type(screen.getByRole('textbox', { name: 'Report title' }), 'Alicante trip{Enter}')
+
+    const createObjectURL = vi.fn(() => 'blob:x')
+    vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL: vi.fn() })
+    const anchor = document.createElement('a')
+    vi.spyOn(anchor, 'click').mockImplementation(() => {})
+    vi.spyOn(document, 'createElement').mockReturnValueOnce(anchor)
+
+    await user.click(screen.getByRole('button', { name: 'Download CSV' }))
+
+    expect(anchor.download).toBe('alicante-trip-2026-05.csv')
+
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
+  it('carries the renamed title into the receipts pack name', async () => {
+    const user = userEvent.setup()
+    vi.mocked(deliverReceipts).mockResolvedValue('zipped')
+    renderPack(
+      datasetWith([txn(1, '2026-08-19')], [makeAttachment({ id: 5, transactionId: 1, contentType: 'image/jpeg' })]),
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Rename' }))
+    await user.clear(screen.getByRole('textbox', { name: 'Report title' }))
+    await user.type(screen.getByRole('textbox', { name: 'Report title' }), 'Alicante trip{Enter}')
+
+    await user.click(screen.getByRole('button', { name: 'Send receipts' }))
+
+    expect(deliverReceipts).toHaveBeenCalledWith(expect.anything(), 'Alicante trip 2026-08 receipts')
+  })
+})
+
 describe('ExpenseReportView — sending the receipts on their own', () => {
   it('hands every receipt over, named and in a folder for the claim', async () => {
     const user = userEvent.setup()

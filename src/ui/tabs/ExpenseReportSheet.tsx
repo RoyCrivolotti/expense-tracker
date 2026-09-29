@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react'
 import type { Transaction } from '../../types'
 import {
   reportReference,
@@ -17,6 +18,9 @@ interface SheetProps {
   currencyCode: string
   /** Today, as the issue date. Injected so the printed date is testable. */
   issuedOn: string
+  /** What the claim is called on the document. Defaults to the flag's own name. */
+  title: string
+  onTitleChange: (title: string) => void
   /** Opens a line's editor, so a missing receipt can be attached from here. */
   onOpenTransaction?: ((txn: Transaction) => void) | undefined
 }
@@ -29,6 +33,8 @@ export function ExpenseReportSheet({
   claimantName,
   currencyCode,
   issuedOn,
+  title,
+  onTitleChange,
   onOpenTransaction,
 }: SheetProps) {
   const receipts = reportReceipts(report)
@@ -40,6 +46,8 @@ export function ExpenseReportSheet({
         claimantName={claimantName}
         currencyCode={currencyCode}
         issuedOn={issuedOn}
+        title={title}
+        onTitleChange={onTitleChange}
       />
       <ReportTable report={report} lookup={lookup} format={format} />
       <MissingReceipts report={report} lookup={lookup} onOpenTransaction={onOpenTransaction} />
@@ -102,22 +110,83 @@ export function ExpenseReportSheet({
   )
 }
 
+/**
+ * The claim's name, editable in place.
+ *
+ * "WT-202608" is a handle the claimant can use to find the claim again, not
+ * something an employer reading the document can act on — they need to know
+ * what it's *for*. Defaults to the flag's name, and the edit is session-only:
+ * nothing about a report is stored, so there is nowhere to keep it between
+ * visits without inventing storage for a document that already builds itself
+ * fresh every time it is opened.
+ */
+function EditableTitle({
+  title,
+  onTitleChange,
+}: {
+  title: string
+  onTitleChange: (title: string) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const commit = () => {
+    const next = inputRef.current?.value.trim()
+    if (next) onTitleChange(next)
+    setEditing(false)
+  }
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        className={styles.titleInput}
+        defaultValue={title}
+        autoFocus
+        aria-label="Report title"
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            commit()
+          } else if (e.key === 'Escape') {
+            setEditing(false)
+          }
+        }}
+      />
+    )
+  }
+
+  return (
+    <div className={styles.titleRow}>
+      <h1 className={styles.title}>{title}</h1>
+      <button type="button" className={styles.titleEditBtn} onClick={() => setEditing(true)}>
+        Rename
+      </button>
+    </div>
+  )
+}
+
 function ReportHeader({
   report,
   claimantName,
   currencyCode,
   issuedOn,
+  title,
+  onTitleChange,
 }: {
   report: ExpenseReport
   claimantName: string
   currencyCode: string
   issuedOn: string
+  title: string
+  onTitleChange: (title: string) => void
 }) {
   return (
     <header className={styles.header}>
       <div className={styles.headerMain}>
         <p className={styles.docType}>Expense report</p>
-        <h1 className={styles.title}>{report.flag.name}</h1>
+        <EditableTitle title={title} onTitleChange={onTitleChange} />
         {report.flag.description ? <p className={styles.subtitle}>{report.flag.description}</p> : null}
       </div>
       <dl className={styles.meta}>

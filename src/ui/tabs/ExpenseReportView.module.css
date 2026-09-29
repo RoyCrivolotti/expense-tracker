@@ -164,6 +164,38 @@
   font-size: 1.5rem;
 }
 
+.titleRow {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.titleEditBtn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-size: 0.8rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.titleInput {
+  display: block;
+  width: 100%;
+  max-width: 24rem;
+  margin: 0;
+  padding: 0 0 0.1rem;
+  border: 0;
+  border-bottom: 1px dashed var(--color-border);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 1.5rem;
+}
+
 .subtitle {
   margin: 0.25rem 0 0;
   color: var(--color-text-muted);
@@ -443,8 +475,16 @@
   }
 
   .toolbar,
-  .driftNotice {
+  .driftNotice,
+  .titleEditBtn {
     display: none;
+  }
+
+  /* Printing mid-edit is reachable (Cmd+P while the title field has focus), so
+     the input has to read as plain text rather than as a form control on paper. */
+  .titleInput {
+    border-bottom: 0;
+    color: #111;
   }
 
   .sheet {
