@@ -75,26 +75,19 @@
   font-size: 0.8rem;
 }
 
-.receiptsOnlyToggle {
+/*
+ * Same max-width, margin and horizontal padding as .sheet below, so its right
+ * edge lines up with the document's rather than the full-width toolbar's — this
+ * controls the sheet specifically, and sitting flush with the page edge like the
+ * toolbar read as unrelated to it. The pill itself is the same SegmentedControl
+ * used for the dashboard's budget sort, rather than a one-off checkbox.
+ */
+.reportControls {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 0.85rem 1.75rem 0;
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 1rem 0;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--color-text);
-  cursor: pointer;
-  user-select: none;
-}
-
-/* Matches the checkbox styling used everywhere else it appears in the app
-   (BulkEditSheet, InstallmentStep, TransactionList): sized up from the
-   browser default and tinted to the theme, rather than left unstyled. */
-.receiptsOnlyToggle input {
-  width: 1.05rem;
-  height: 1.05rem;
-  accent-color: var(--color-accent);
-  flex: none;
+  justify-content: flex-end;
 }
 
 .emptyNotice {
@@ -253,6 +246,10 @@
 @media (max-width: 479px) {
   .sheet {
     padding: 1.25rem 1rem 2rem;
+  }
+
+  .reportControls {
+    padding: 0.85rem 1rem 0;
   }
 
   .hideNarrow {
@@ -472,7 +469,7 @@
 
   .toolbar,
   .driftNotice,
-  .receiptsOnlyToggle {
+  .reportControls {
     display: none;
   }
 

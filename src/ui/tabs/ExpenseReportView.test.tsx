@@ -321,7 +321,7 @@ describe('ExpenseReportView — filtering to items with a receipt', () => {
     )
 
     expect(
-      screen.queryByRole('checkbox', { name: /Only items with a receipt/ }),
+      screen.queryByRole('radiogroup', { name: 'Filter the report by receipt' }),
     ).not.toBeInTheDocument()
   })
 
@@ -337,7 +337,7 @@ describe('ExpenseReportView — filtering to items with a receipt', () => {
       ),
     )
 
-    await user.click(screen.getByRole('checkbox', { name: /Only items with a receipt/ }))
+    await user.click(screen.getByRole('radio', { name: 'With receipt' }))
 
     const rows = screen.getAllByRole('row')
     expect(rows).toHaveLength(3) // header + the one receipted row + total
@@ -345,7 +345,7 @@ describe('ExpenseReportView — filtering to items with a receipt', () => {
     expect(screen.queryByText(/no receipt attached/)).not.toBeInTheDocument()
   })
 
-  it('goes back to the full claim once unchecked', async () => {
+  it('goes back to the full claim once switched back to all items', async () => {
     const user = userEvent.setup()
     renderPack(
       datasetWith(
@@ -354,9 +354,8 @@ describe('ExpenseReportView — filtering to items with a receipt', () => {
       ),
     )
 
-    const toggle = screen.getByRole('checkbox', { name: /Only items with a receipt/ })
-    await user.click(toggle)
-    await user.click(toggle)
+    await user.click(screen.getByRole('radio', { name: 'With receipt' }))
+    await user.click(screen.getByRole('radio', { name: 'All items' }))
 
     expect(screen.getAllByRole('row')).toHaveLength(4) // header + both rows + total
   })
@@ -365,7 +364,7 @@ describe('ExpenseReportView — filtering to items with a receipt', () => {
     const user = userEvent.setup()
     renderPack(datasetWith([txn(1, '2026-05-02'), txn(2, '2026-05-09')], []))
 
-    await user.click(screen.getByRole('checkbox', { name: /Only items with a receipt/ }))
+    await user.click(screen.getByRole('radio', { name: 'With receipt' }))
 
     expect(screen.getByText('None of these items have a receipt attached yet.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Download CSV' })).not.toBeInTheDocument()

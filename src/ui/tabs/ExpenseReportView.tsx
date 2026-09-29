@@ -9,6 +9,7 @@ import {
   type ExpenseReport,
 } from '../../domain/engine/expenseReport'
 import { pastReportDrifted } from '../../domain/engine/pastReports'
+import { SegmentedControl } from '../components/SegmentedControl'
 import { ExpenseReportSheet } from './ExpenseReportSheet'
 import { todayIso } from '../components/transactionFormState'
 import { exitVars } from '../hooks/motion'
@@ -19,6 +20,11 @@ import { deliverReceipts } from '../../data/receiptDownload'
 import { namedReceipts, receiptPackName } from '../../domain/engine/receiptFiles'
 import type { Lookup } from '../format'
 import styles from './ExpenseReportView.module.css'
+
+const RECEIPT_FILTER_OPTIONS: { value: 'all' | 'receipted'; label: string }[] = [
+  { value: 'all', label: 'All items' },
+  { value: 'receipted', label: 'With receipt' },
+]
 
 interface Props {
   dataset: ExpenseDataset
@@ -103,6 +109,36 @@ function ReceiptsButton({ report, lookup }: { report: ExpenseReport; lookup: Loo
         </p>
       ) : null}
     </>
+  )
+}
+
+/**
+ * The all-items/with-receipt pill above the sheet.
+ *
+ * Its own component so the view keeps its branch count. Hidden entirely
+ * rather than disabled when nothing is missing a receipt: the filter would
+ * have nothing left to do, and the count is already shown in the sheet
+ * itself, so a dimmed control here would just be a second copy of it.
+ */
+function ReceiptFilterControl({
+  hasMissingReceipts,
+  receiptsOnly,
+  onChange,
+}: {
+  hasMissingReceipts: boolean
+  receiptsOnly: boolean
+  onChange: (receiptsOnly: boolean) => void
+}) {
+  if (!hasMissingReceipts) return null
+  return (
+    <div className={styles.reportControls}>
+      <SegmentedControl
+        options={RECEIPT_FILTER_OPTIONS}
+        value={receiptsOnly ? 'receipted' : 'all'}
+        onChange={(value) => onChange(value === 'receipted')}
+        ariaLabel="Filter the report by receipt"
+      />
+    </div>
   )
 }
 
@@ -218,20 +254,15 @@ export function ExpenseReportView({
         ) : null}
       </div>
 
-      {/* Only where there is something to filter: a claim with every line already
-          receipted has nothing for the toggle to do. Screen only, like the toolbar
-          it sits under — the printed page is whichever version was on screen when
-          Print was pressed. */}
-      {baseReport.missingReceipts.length > 0 ? (
-        <label className={styles.receiptsOnlyToggle}>
-          <input
-            type="checkbox"
-            checked={receiptsOnly}
-            onChange={(e) => setReceiptsOnly(e.target.checked)}
-          />
-          Only items with a receipt attached
-        </label>
-      ) : null}
+      {/* Screen only, like the toolbar above it — the printed page is whichever
+          version was on screen when Print was pressed. Aligned to the sheet's own
+          column rather than the full-width toolbar, since it controls the sheet
+          specifically and not the page. */}
+      <ReceiptFilterControl
+        hasMissingReceipts={baseReport.missingReceipts.length > 0}
+        receiptsOnly={receiptsOnly}
+        onChange={setReceiptsOnly}
+      />
 
       {drifted ? (
         <p className={styles.driftNotice}>
