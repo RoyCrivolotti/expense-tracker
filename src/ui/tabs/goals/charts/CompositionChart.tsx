@@ -1,10 +1,10 @@
-import { memo, useMemo } from 'react'
+import { memo, useMemo, useState } from 'react'
 import { useAssumedInflation } from '../../..//hooks/assumedInflationContext'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import { projectNetWorth, purchaseYearBreakdown, scenarioToParams } from '../../../../engine'
 import { ChartShell } from './ChartShell'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
-import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
+import { LiveLegend, type LiveLegendItem } from '../../../charts/LiveLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
 import { sparseLabels } from '../../../charts/linearScale'
 import { formatMoneyShort } from '../chartTheme'
@@ -16,7 +16,7 @@ const INVESTED_COLOR = 'var(--exp-investment)'
 const HOUSE_COLOR = 'var(--exp-income)'
 const MORTGAGE_COLOR = 'var(--exp-danger)'
 
-const COMPOSITION_LEGEND: LegendItem[] = [
+const COMPOSITION_LEGEND_LABELS = [
   { label: 'Invested portfolio', color: INVESTED_COLOR },
   { label: 'House equity', color: HOUSE_COLOR },
   { label: 'Mortgage owed', color: MORTGAGE_COLOR },
@@ -39,6 +39,13 @@ function CompositionChartImpl({
   const format = useMoneyFormat()
   const years = points.map((p) => p.year)
   const labels = useMemo(() => sparseLabels(years, 5), [years])
+  const [activeIndex, setActiveIndex] = useState<number | null>(null)
+  const activePoint = activeIndex != null ? points[activeIndex] : undefined
+  const legendItems: LiveLegendItem[] = [
+    { ...COMPOSITION_LEGEND_LABELS[0]!, valueCents: activePoint?.investedCents ?? null },
+    { ...COMPOSITION_LEGEND_LABELS[1]!, valueCents: activePoint?.houseEquityCents ?? null },
+    { ...COMPOSITION_LEGEND_LABELS[2]!, valueCents: activePoint?.mortgageBalanceCents ?? null },
+  ]
 
   const series: ChartSeries[] = [
     {
@@ -92,8 +99,9 @@ function CompositionChartImpl({
         formatValue={(c) => formatMoneyShort(c, format)}
         ariaLabel="Net worth composition by year"
         tooltip={tooltip}
+        onActiveIndexChange={setActiveIndex}
       />
-      <ChartLegend items={COMPOSITION_LEGEND} />
+      <LiveLegend items={legendItems} formatValue={(c) => formatMoneyShort(c, format)} />
     </ChartShell>
   )
 }
