@@ -223,3 +223,35 @@ export function reportReceipts(report: ExpenseReport): ReceiptFigure[] {
     })),
   )
 }
+
+/**
+ * The same claim, keeping only the lines that have a receipt.
+ *
+ * For asking for reimbursement on just what can be proven, leaving the rest to
+ * be covered out of pocket or claimed separately once a receipt turns up.
+ * Credits stay: a reimbursement already received or a ticket handed back
+ * reduces what can be claimed regardless of whether the original spend had a
+ * receipt. Renumbers the R-references so the receipts section that follows
+ * still reads 1, 2, 3 rather than skipping the lines left out.
+ */
+export function receiptsOnlyReport(report: ExpenseReport): ExpenseReport | null {
+  const lines = report.lines.filter((line) => line.receipts.length > 0)
+  if (lines.length === 0) return null
+
+  let nextRef = 0
+  const renumbered = lines.map((line) => ({
+    ...line,
+    receiptRefs: line.receipts.map(() => (nextRef += 1)),
+  }))
+
+  const totalClaimedCents = renumbered.reduce((sum, line) => sum + line.transaction.amountCents, 0)
+  return {
+    ...report,
+    lines: renumbered,
+    totalClaimedCents,
+    outstandingCents: totalClaimedCents - report.creditedCents,
+    from: renumbered[0]!.transaction.date,
+    to: renumbered[renumbered.length - 1]!.transaction.date,
+    missingReceipts: [],
+  }
+}

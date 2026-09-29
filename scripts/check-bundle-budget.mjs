@@ -36,7 +36,10 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // Raised from 196 KB to 198 KB for the phone tooltip placement and the chart-axis and legend
 // fixes: main was at 195.4 KB, the axis and legend fixes add about 0.6 KB and the tooltip change
 // about 0.5 KB, which takes either PR to the limit and the two together past it.
-const TOTAL_MAX_GZIP = 198_000
+//
+// Raised from 198 KB to 198.3 KB for the receipts-only report filter: main was already at
+// 197,931 bytes with 69 left, and the toggle adds about 0.17 KB.
+const TOTAL_MAX_GZIP = 198_300
 const GOALS_MAX_GZIP = 40_000
 
 function gzipBytes(path) {

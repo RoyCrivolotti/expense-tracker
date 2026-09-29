@@ -75,6 +75,21 @@
   font-size: 0.8rem;
 }
 
+.receiptsOnlyToggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.emptyNotice {
+  margin: 2rem 1rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
 /* One of the pair is always hidden; the wide one wins from 421px up. */
 .labelShort {
   display: inline;
@@ -443,7 +458,8 @@
   }
 
   .toolbar,
-  .driftNotice {
+  .driftNotice,
+  .receiptsOnlyToggle {
     display: none;
   }
 

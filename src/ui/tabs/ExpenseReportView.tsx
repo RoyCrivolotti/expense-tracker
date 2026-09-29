@@ -4,6 +4,7 @@ import type { ExpenseDataset, Transaction } from '../../types'
 import {
   buildExpenseReport,
   buildSettledReport,
+  receiptsOnlyReport,
   reportReceipts,
   type ExpenseReport,
 } from '../../domain/engine/expenseReport'
@@ -128,7 +129,7 @@ export function ExpenseReportView({
    * well would put the nav, the FAB and the month's transactions into the PDF
    * the user is about to hand to somebody.
    */
-  const report =
+  const baseReport =
     settledByPaymentId != null
       ? buildSettledReport(
           settledByPaymentId,
@@ -141,21 +142,30 @@ export function ExpenseReportView({
         : null
 
   /*
-   * Guarded on `report`, and declared before the early return so the hook order
+   * Guarded on `baseReport`, and declared before the early return so the hook order
    * is stable. Setting the flag unconditionally meant an empty report rendered
    * nothing while leaving `<body data-report-open>` set for the rest of the
    * session — and theme.css hides #root under that attribute when printing, so
    * Cmd+P anywhere in the app produced a blank page until reload.
    */
   useEffect(() => {
-    if (!report) return
+    if (!baseReport) return
     document.body.dataset.reportOpen = 'true'
     return () => {
       delete document.body.dataset.reportOpen
     }
-  }, [report])
+  }, [baseReport])
 
-  if (!report) return null
+  // Session-only, like the toolbar itself: reopening the report starts from
+  // the full claim again.
+  const [receiptsOnly, setReceiptsOnly] = useState(false)
+
+  if (!baseReport) return null
+
+  // Null only when every line left has no receipt — reachable by toggling the
+  // filter on a claim that turns out to have none, not by anything a fresh
+  // open of the report can produce.
+  const report = receiptsOnly ? receiptsOnlyReport(baseReport) : baseReport
 
   // Only a reopened report can have drifted: an open claim has nothing submitted
   // to differ from yet.
@@ -172,39 +182,56 @@ export function ExpenseReportView({
         <button type="button" className={styles.closeBtn} onClick={onClose}>
           Back
         </button>
-        <div className={styles.toolbarActions}>
-          <button
-            type="button"
-            className={styles.secondaryBtn}
-            onClick={() =>
-              downloadExpenseReportCsv(report, {
-                format,
-                categoryName: lookup.categoryName,
-                accountName: lookup.accountName,
-                claimantName: dataset.settings.claimantName,
-              })
-            }
-            aria-label="Download CSV"
-          >
-            {/* Two labels rather than one that wraps: at 390px "Print or save as
-                PDF" breaks onto a second line and pushes the toolbar to twice
-                the height, on the one screen where vertical space is scarcest.
-                aria-label carries the full wording either way. */}
-            <span className={styles.labelLong}>Download CSV</span>
-            <span className={styles.labelShort}>CSV</span>
-          </button>
-          <ReceiptsButton report={report} lookup={lookup} />
-          <button
-            type="button"
-            className={styles.printBtn}
-            onClick={() => window.print()}
-            aria-label="Print or save as PDF"
-          >
-            <span className={styles.labelLong}>Print or save as PDF</span>
-            <span className={styles.labelShort}>Print</span>
-          </button>
-        </div>
+        {report ? (
+          <div className={styles.toolbarActions}>
+            <button
+              type="button"
+              className={styles.secondaryBtn}
+              onClick={() =>
+                downloadExpenseReportCsv(report, {
+                  format,
+                  categoryName: lookup.categoryName,
+                  accountName: lookup.accountName,
+                  claimantName: dataset.settings.claimantName,
+                })
+              }
+              aria-label="Download CSV"
+            >
+              {/* Two labels rather than one that wraps: at 390px "Print or save as
+                  PDF" breaks onto a second line and pushes the toolbar to twice
+                  the height, on the one screen where vertical space is scarcest.
+                  aria-label carries the full wording either way. */}
+              <span className={styles.labelLong}>Download CSV</span>
+              <span className={styles.labelShort}>CSV</span>
+            </button>
+            <ReceiptsButton report={report} lookup={lookup} />
+            <button
+              type="button"
+              className={styles.printBtn}
+              onClick={() => window.print()}
+              aria-label="Print or save as PDF"
+            >
+              <span className={styles.labelLong}>Print or save as PDF</span>
+              <span className={styles.labelShort}>Print</span>
+            </button>
+          </div>
+        ) : null}
       </div>
+
+      {/* Only where there is something to filter: a claim with every line already
+          receipted has nothing for the toggle to do. Screen only, like the toolbar
+          it sits under — the printed page is whichever version was on screen when
+          Print was pressed. */}
+      {baseReport.missingReceipts.length > 0 ? (
+        <label className={styles.receiptsOnlyToggle}>
+          <input
+            type="checkbox"
+            checked={receiptsOnly}
+            onChange={(e) => setReceiptsOnly(e.target.checked)}
+          />
+          Only items with a receipt attached
+        </label>
+      ) : null}
 
       {drifted ? (
         <p className={styles.driftNotice}>
@@ -213,15 +240,23 @@ export function ExpenseReportView({
         </p>
       ) : null}
 
-      <ExpenseReportSheet
-        report={report}
-        lookup={lookup}
-        format={format}
-        claimantName={dataset.settings.claimantName}
-        currencyCode={dataset.settings.currencyCode}
-        issuedOn={issuedOn ?? todayIso()}
-        onOpenTransaction={onOpenTransaction}
-      />
+      {report ? (
+        <ExpenseReportSheet
+          report={report}
+          lookup={lookup}
+          format={format}
+          claimantName={dataset.settings.claimantName}
+          currencyCode={dataset.settings.currencyCode}
+          issuedOn={issuedOn ?? todayIso()}
+          onOpenTransaction={onOpenTransaction}
+        />
+      ) : (
+        // Reachable only by turning the toggle on when nothing claimed has a
+        // receipt yet — a fresh open of the report always has at least one line.
+        <p className={styles.emptyNotice}>
+          None of these items have a receipt attached yet.
+        </p>
+      )}
     </div>,
     document.body,
   )
