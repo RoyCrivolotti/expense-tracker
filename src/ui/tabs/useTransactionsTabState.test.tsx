@@ -299,7 +299,7 @@ describe('useTransactionsTabState — the month arrows and the date scope', () =
   })
 
   it('keeps the all-dates jump from a flag until the user moves the month', () => {
-    // "Show these in the list" sets all dates after any number of earlier moves.
+    // "Filter by flag" sets all dates after any number of earlier moves.
     const { result, rerender } = renderAt('2026-06', 7)
     act(() => result.current.setDateScope('allDates'))
     rerender({ m: '2026-06', nav: 7 })

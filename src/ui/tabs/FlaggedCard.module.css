@@ -94,17 +94,23 @@
   padding: 0.25rem 0.35rem 0.5rem;
 }
 
-/* Wraps: three actions do not fit one 375px row, and squeezing them makes
-   every label truncate to something unreadable. */
+/* Two explicit rows rather than one wrapping flex row: three actions do not fit
+   one 375px row, and letting them wrap left every button's width at the mercy
+   of how much space the one before it happened to take. */
 .groupActions {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+.actionsRow {
+  display: flex;
   gap: 0.4rem;
 }
 
 .filterBtn {
-  flex: 1;
-  margin-top: 0.35rem;
+  flex: 1 1 0;
   padding: 0.45rem;
   border: 1px dashed var(--color-border);
   border-radius: 0.6rem;
@@ -127,11 +133,13 @@
   background: none;
 }
 
-/* Solid, unlike the dashed secondary actions beside it: this is the one that
-   closes the claim out, and it is what you came to the card to do. */
+/* Solid, unlike the dashed secondary actions above it: this is the one that
+   closes the claim out, and it is what you came to the card to do. Half width,
+   matching Expense report above it, and pushed to the right edge with the
+   other half left bare rather than stretched to fill it. */
 .settleBtn {
-  flex: none;
-  margin-top: 0.35rem;
+  flex: 0 0 calc(50% - 0.2rem);
+  margin-left: auto;
   padding: 0.45rem 0.8rem;
   border: 1px solid transparent;
   border-radius: 0.6rem;
@@ -144,8 +152,7 @@
 }
 
 .packBtn {
-  flex: none;
-  margin-top: 0.35rem;
+  flex: 1 1 0;
   padding: 0.45rem 0.8rem;
   border: 1px dashed var(--color-border);
   border-radius: 0.6rem;
