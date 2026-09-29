@@ -1,6 +1,7 @@
-import { useMemo, useRef, useState, useCallback } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
 import { computeCategoryActuals } from '../../engine'
+import { claimActiveTooltip, releaseActiveTooltip } from './activeTooltipRegistry'
 import { CategoryPieChartView, type PieSlice } from './CategoryPieChartView'
 import { useDismissOnOutsidePointer } from './useDismissOnOutsidePointer'
 import styles from './charts.module.css'
@@ -72,6 +73,14 @@ export function CategoryPieChart({ model, month }: Props) {
   const dismiss = useCallback(() => setActive(null), [])
 
   useDismissOnOutsidePointer(containerRef, active != null, dismiss)
+
+  // Only one chart's tooltip stays open at a time across the page: claiming the registry
+  // closes whoever had it before.
+  useEffect(() => {
+    if (active != null) claimActiveTooltip(dismiss)
+    else releaseActiveTooltip(dismiss)
+    return () => releaseActiveTooltip(dismiss)
+  }, [active, dismiss])
 
   if (!paths) return null
 

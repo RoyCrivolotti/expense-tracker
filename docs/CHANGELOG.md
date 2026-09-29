@@ -2,6 +2,11 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## September 2026 (one chart tooltip at a time)
+
+- **Opening one chart's tooltip now closes another's.** Charts stacked on the same screen, such as Progress's net worth history above the check-in history, or Analytics' monthly and year-to-date charts beside the category pie, could each have their tooltip open at once. Tapping or hovering a chart now closes whichever other one was open.
+- **The composition chart's legend now shows live figures for the focused point**, the way the main projection chart's does, instead of only naming the three series with a fixed colour key.
+
 ## September 2026 (chart readability)
 
 - **The Y axis fits the lines.** The projection chart no longer stretches to the uncertainty band's upper edge or to the other view's height, so the lines fill the plot and can be told apart; a band that runs higher is clipped at the top. Purchasing power and Nominal each fit their own axis, so switching between them rescales. On every chart the axis now stops at most 8% past the data, and the income and expense charts follow the same rule.

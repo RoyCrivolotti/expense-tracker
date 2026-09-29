@@ -1,7 +1,8 @@
 import type { ChartFocusHandlers } from './useChartFocus'
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { formatCents } from '../../engine/money'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
+import { claimActiveTooltip, releaseActiveTooltip } from './activeTooltipRegistry'
 import { ChartTooltip } from './ChartTooltip'
 import { ChartYAxis } from './ChartYAxis'
 import { CHART_H, CHART_W, PAD, monthLabel, yAt } from './chartLayout'
@@ -42,6 +43,16 @@ export function MonthlyBarChartView({
   const wrapRef = useRef<HTMLDivElement>(null)
   const focus = active != null ? rows[active] : null
   const anchor = useSvgAnchor(svgRef, focus ? focusX : null, focus ? PAD.top : null)
+
+  const showsTooltip = focus != null
+
+  // Only one chart's tooltip stays open at a time across the page: claiming the registry
+  // closes whoever had it before.
+  useEffect(() => {
+    if (showsTooltip) claimActiveTooltip(pointerHandlers.onBlur)
+    else releaseActiveTooltip(pointerHandlers.onBlur)
+    return () => releaseActiveTooltip(pointerHandlers.onBlur)
+  }, [showsTooltip, pointerHandlers.onBlur])
 
   return (
     <div ref={wrapRef} className={styles.chartWrap}>

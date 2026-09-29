@@ -1,7 +1,22 @@
 import { fireEvent, render } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { LinearChart, type ChartSeries } from './LinearChart'
 import { nearestIndex } from './useChartFocus'
+
+beforeAll(() => {
+  // The docked tooltip reads a media query; jsdom has no matchMedia.
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  })
+})
 
 function makeLine(id: string, values: number[]): ChartSeries {
   return { id, color: '#6366f1', values }
@@ -269,5 +284,62 @@ describe('LinearChart', () => {
         />,
       ),
     ).not.toThrow()
+  })
+
+  it('closes the other chart\'s tooltip when a second one opens, so only one shows at a time', () => {
+    const { container } = render(
+      <>
+        <LinearChart
+          {...defaultProps}
+          series={[makeLine('a', [10, 20, 30])]}
+          tooltip={() => ({ title: 'Chart A', lines: [] })}
+        />
+        <LinearChart
+          {...defaultProps}
+          series={[makeLine('b', [40, 50, 60])]}
+          tooltip={() => ({ title: 'Chart B', lines: [] })}
+        />
+      </>,
+    )
+    const [svgA, svgB] = container.querySelectorAll('svg')
+
+    fireEvent.keyDown(svgA!, { key: 'ArrowRight' })
+    let tooltips = document.body.querySelectorAll('[role="tooltip"]')
+    expect(tooltips).toHaveLength(1)
+    expect(tooltips[0]).toHaveTextContent('Chart A')
+
+    fireEvent.keyDown(svgB!, { key: 'ArrowRight' })
+    tooltips = document.body.querySelectorAll('[role="tooltip"]')
+    expect(tooltips).toHaveLength(1)
+    expect(tooltips[0]).toHaveTextContent('Chart B')
+  })
+
+  it('never claims the shared tooltip slot when tooltipMode is hidden', () => {
+    const { container } = render(
+      <>
+        <LinearChart
+          {...defaultProps}
+          series={[makeLine('hero', [10, 20, 30])]}
+          tooltip={() => ({ title: 'Hero', lines: [] })}
+          tooltipMode="hidden"
+        />
+        <LinearChart
+          {...defaultProps}
+          series={[makeLine('normal', [40, 50, 60])]}
+          tooltip={() => ({ title: 'Normal', lines: [] })}
+        />
+      </>,
+    )
+    const [svgHero, svgNormal] = container.querySelectorAll('svg')
+
+    fireEvent.keyDown(svgNormal!, { key: 'ArrowRight' })
+    expect(document.body.querySelectorAll('[role="tooltip"]')).toHaveLength(1)
+
+    // Focusing the hidden-mode chart never renders its own tooltip, and must not close
+    // the real one open elsewhere on the page.
+    fireEvent.keyDown(svgHero!, { key: 'ArrowRight' })
+    const tooltips = document.body.querySelectorAll('[role="tooltip"]')
+    expect(tooltips).toHaveLength(1)
+    expect(tooltips[0]).toHaveTextContent('Normal')
   })
 })
