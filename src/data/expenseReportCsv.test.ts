@@ -61,6 +61,15 @@ describe('expenseReportCsv', () => {
     expect(rows[2]).toContain('Total expenses')
   })
 
+  it('prints a custom title in place of the flag name, when one is given', () => {
+    const csv = expenseReportCsv(reportFor(datasetWith([txn(1, '2026-05-02', { flagId: 1 })])), {
+      ...options,
+      title: 'Alicante trip, August 2026',
+    })
+
+    expect(csv).toContain('Claim,"Alicante trip, August 2026"\n')
+  })
+
   it('carries the transaction notes through as the business purpose', () => {
     // An approver asks what a dinner was *for*; notes already holds exactly that.
     const csv = expenseReportCsv(reportFor(datasetWith([txn(1, '2026-05-02', { flagId: 1, notes: 'Kick-off with Acme' })])), options)
@@ -148,7 +157,7 @@ describe('expenseReportCsv', () => {
 })
 
 describe('downloadExpenseReportCsv', () => {
-  function captureDownload(dataset: ExpenseDataset, flagId: number) {
+  function captureDownload(dataset: ExpenseDataset, flagId: number, extra: Partial<typeof options & { title: string }> = {}) {
     const created: string[] = []
     const revoked: string[] = []
     vi.stubGlobal('URL', {
@@ -163,7 +172,7 @@ describe('downloadExpenseReportCsv', () => {
     const click = vi.spyOn(anchor, 'click').mockImplementation(() => {})
     vi.spyOn(document, 'createElement').mockReturnValueOnce(anchor)
 
-    downloadExpenseReportCsv(reportFor(dataset, flagId), options)
+    downloadExpenseReportCsv(reportFor(dataset, flagId), { ...options, ...extra })
 
     return { anchor, click, created, revoked }
   }
@@ -184,6 +193,16 @@ describe('downloadExpenseReportCsv', () => {
     // first in Downloads, or lands beside it as work-travel(1).csv.
     expect(anchor.download).toBe('work-travel-q2-2026-2026-05.csv')
     expect(click).toHaveBeenCalled()
+  })
+
+  it('names the file after a custom title rather than the flag, when one is given', () => {
+    const dataset = makeDataset({
+      flags: [makeFlag({ id: 1, name: 'Work travel' })],
+      transactions: [txn(1, '2026-05-02', { flagId: 1 })],
+    })
+    const { anchor } = captureDownload(dataset, 1, { title: 'Alicante trip, August 2026' })
+
+    expect(anchor.download).toBe('alicante-trip-august-2026-2026-05.csv')
   })
 
   it('falls back to a usable name when the flag name has no usable characters', () => {

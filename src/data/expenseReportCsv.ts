@@ -34,6 +34,8 @@ export interface ExpenseReportCsvOptions {
   format: MoneyFormat
   categoryName: (id: number) => string
   accountName: (id: number) => string
+  /** The claim's own name, as edited in the report view. Falls back to the flag's. */
+  title?: string
 }
 
 /**
@@ -68,7 +70,7 @@ export function expenseReportCsv(
   // The spreadsheet copy of the claim carried neither claimant nor reference,
   // so a second submission was indistinguishable from the first.
   const preamble = [
-    ['Claim', escText(report.flag.name)].join(','),
+    ['Claim', escText(options.title ?? report.flag.name)].join(','),
     // reportReference maps the first character of each word in the description, so a
     // description beginning `=` produces a reference beginning `=` too.
     ['Reference', escText(reportReference(report))].join(','),
@@ -98,7 +100,8 @@ export function downloadExpenseReportCsv(
   // Period in the filename: without it a second report on the same flag lands in
   // Downloads as work-travel(1).csv, or overwrites the first.
   const period = report.from ? `-${report.from.slice(0, 7)}` : ''
-  const slug = report.flag.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  const name = options.title ?? report.flag.name
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
