@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef } from 'react'
+import { claimActiveTooltip, releaseActiveTooltip } from './activeTooltipRegistry'
 import { ChartTooltip, type TooltipLine } from './ChartTooltip'
 import { useElementWidth } from '../hooks/useElementWidth'
 import {
@@ -133,6 +134,14 @@ function domainTuple(d: { min: number; max: number }): [number, number] {
   return [d.min, d.max]
 }
 
+/** A tooltip shows only in 'full' mode: 'hidden' tracks focus for a caller's own readout instead. */
+function tooltipShows(
+  tip: { title: string; lines: TooltipLine[] } | null,
+  tooltipMode: 'full' | 'hidden',
+): boolean {
+  return tip != null && tooltipMode === 'full'
+}
+
 export function LinearChart({
   height,
   series,
@@ -163,11 +172,21 @@ export function LinearChart({
   const focusX = active != null ? geo.xForIndex(active) : 0
   const anchor = useSvgAnchor(svgRef, active != null ? focusX : null, active != null ? PAD.top : null)
   const tip = active != null ? tooltip(active) : null
+  const showsTooltip = tooltipShows(tip, tooltipMode)
   const lineSeries = series.filter((s) => s.kind !== 'area' && s.kind !== 'band' && s.kind !== 'scatter')
 
   useEffect(() => {
     onActiveIndexChange?.(active)
   }, [active, onActiveIndexChange])
+
+  // Only one chart's tooltip stays open at a time across the page: claiming the registry
+  // closes whoever had it before. Gated on showsTooltip, not `active`, so a chart tracking
+  // focus without ever rendering a tooltip (tooltipMode="hidden") can never close a real one.
+  useEffect(() => {
+    if (showsTooltip) claimActiveTooltip(handlers.onBlur)
+    else releaseActiveTooltip(handlers.onBlur)
+    return () => releaseActiveTooltip(handlers.onBlur)
+  }, [showsTooltip, handlers.onBlur])
 
   return (
     <div ref={containerRef} className={styles.chartWrap}>
@@ -283,7 +302,7 @@ export function LinearChart({
           lineSeries={lineSeries}
         />
       </svg>
-      {tip && tooltipMode === 'full' ? (
+      {tip && showsTooltip ? (
         <ChartTooltip anchor={anchor} chart={containerRef} title={tip.title} lines={tip.lines} dockBelow={dockBelow} />
       ) : null}
     </div>

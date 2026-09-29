@@ -56,4 +56,20 @@ describe('the income and expense charts', () => {
     expect(container.querySelector('svg')).not.toBeNull()
     fireEvent.keyDown(svg, { key: 'Home' })
   })
+
+  it('closes the monthly chart\'s tooltip when the YTD chart\'s opens, as they do side by side on the Analytics tab', () => {
+    const { container } = render(
+      <>
+        <MonthlyIncomeExpenseChart model={model()} />
+        <YtdIncomeExpenseChart model={model()} month="2026-06" />
+      </>,
+    )
+    const [monthlySvg, ytdSvg] = container.querySelectorAll('svg')
+
+    fireEvent.keyDown(monthlySvg!, { key: 'ArrowRight' })
+    expect(document.body.querySelectorAll('[role="tooltip"]')).toHaveLength(1)
+
+    fireEvent.keyDown(ytdSvg!, { key: 'End' })
+    expect(document.body.querySelectorAll('[role="tooltip"]')).toHaveLength(1)
+  })
 })
