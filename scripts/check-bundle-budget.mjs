@@ -37,9 +37,13 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // fixes: main was at 195.4 KB, the axis and legend fixes add about 0.6 KB and the tooltip change
 // about 0.5 KB, which takes either PR to the limit and the two together past it.
 //
-// Raised from 198 KB to 198.3 KB for the receipts-only report filter: main was already at
-// 197,931 bytes with 69 left, and the toggle adds about 0.17 KB.
-const TOTAL_MAX_GZIP = 198_300
+// Raised from 198 KB to 198.5 KB for the editable report title: main was already at 197,931
+// bytes with 69 left, and the rename control adds about 0.2 KB.
+//
+// Raised from 198.5 KB to 199 KB for the receipts-only report filter and the flagged card's
+// button-width fix, landing on top of the title change above: the merged total came to
+// 198,418 bytes.
+const TOTAL_MAX_GZIP = 199_000
 const GOALS_MAX_GZIP = 40_000
 
 function gzipBytes(path) {

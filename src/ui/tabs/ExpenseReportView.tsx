@@ -59,7 +59,15 @@ interface Props {
  * hidden when a report has no receipts: the button going missing between two
  * reports reads as a bug, where a disabled one with a reason does not.
  */
-function ReceiptsButton({ report, lookup }: { report: ExpenseReport; lookup: Lookup }) {
+function ReceiptsButton({
+  report,
+  lookup,
+  title,
+}: {
+  report: ExpenseReport
+  lookup: Lookup
+  title: string
+}) {
   const format = useMoneyFormat()
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
@@ -74,7 +82,7 @@ function ReceiptsButton({ report, lookup }: { report: ExpenseReport; lookup: Loo
         namedReceipts(figures, format, (f) =>
           f.transaction.description || lookup.categoryName(f.transaction.categoryId),
         ),
-        receiptPackName(report.flag.name, report.from),
+        receiptPackName(title, report.from),
       )
     } catch (e) {
       // AbortError is the user dismissing the share sheet, which is not a
@@ -177,6 +185,12 @@ export function ExpenseReportView({
         ? buildExpenseReport(flagId, dataset.transactions, dataset.flags, dataset.attachments)
         : null
 
+  // Defaults to the flag's name and lives only for this visit: nothing about a
+  // report is stored, so there is nowhere to keep an edited title between
+  // visits without inventing storage for a document that rebuilds itself fresh
+  // every time it is opened.
+  const [title, setTitle] = useState(() => baseReport?.flag.name ?? '')
+
   /*
    * Guarded on `baseReport`, and declared before the early return so the hook order
    * is stable. Setting the flag unconditionally meant an empty report rendered
@@ -229,6 +243,7 @@ export function ExpenseReportView({
                   categoryName: lookup.categoryName,
                   accountName: lookup.accountName,
                   claimantName: dataset.settings.claimantName,
+                  title,
                 })
               }
               aria-label="Download CSV"
@@ -240,7 +255,7 @@ export function ExpenseReportView({
               <span className={styles.labelLong}>Download CSV</span>
               <span className={styles.labelShort}>CSV</span>
             </button>
-            <ReceiptsButton report={report} lookup={lookup} />
+            <ReceiptsButton report={report} lookup={lookup} title={title} />
             <button
               type="button"
               className={styles.printBtn}
@@ -279,6 +294,8 @@ export function ExpenseReportView({
           claimantName={dataset.settings.claimantName}
           currencyCode={dataset.settings.currencyCode}
           issuedOn={issuedOn ?? todayIso()}
+          title={title}
+          onTitleChange={setTitle}
           onOpenTransaction={onOpenTransaction}
         />
       ) : (
