@@ -80,8 +80,21 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.6rem 1rem 0;
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Matches the checkbox styling used everywhere else it appears in the app
+   (BulkEditSheet, InstallmentStep, TransactionList): sized up from the
+   browser default and tinted to the theme, rather than left unstyled. */
+.receiptsOnlyToggle input {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--color-accent);
+  flex: none;
 }
 
 .emptyNotice {
