@@ -109,9 +109,24 @@
   gap: 0.4rem;
 }
 
+/*
+ * Border-box, so settleBtn's explicit calc(50% - 0.2rem) below is the final
+ * outer width rather than a content width with padding added on top.
+ */
+.actionsRow > button {
+  box-sizing: border-box;
+}
+
+/*
+ * Same horizontal padding as packBtn and settleBtn. flex-grow with a basis of
+ * 0 adds free space to each item's *content* box, not its outer box — so two
+ * items with equal grow but unequal padding still end up visibly unequal
+ * widths, by exactly the padding difference. Border-box sizing does not
+ * change this: a flex-basis of 0 clamps to the padding regardless.
+ */
 .filterBtn {
   flex: 1 1 0;
-  padding: 0.45rem;
+  padding: 0.45rem 0.8rem;
   border: 1px dashed var(--color-border);
   border-radius: 0.6rem;
   background: none;
