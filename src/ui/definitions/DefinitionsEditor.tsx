@@ -10,6 +10,7 @@ import { PresenceValue } from '../components/Presence'
 import { EXIT_MS } from '../hooks/motion'
 import { ConfigModal, type EditTarget } from './ConfigModal'
 import { FlagList } from './FlagList'
+import { LabelList } from './LabelList'
 import { CategoryIcon } from '../components/CategoryIcon'
 import styles from './definitions.module.css'
 import tabStyles from '../tabs/tabs.module.css'
@@ -148,6 +149,7 @@ export function DefinitionsEditor({
       <SectionTitle>Accounts</SectionTitle>
       <AccountList model={model} onEdit={setTarget} />
       <FlagList model={model} actions={actions} />
+      <LabelList model={model} actions={actions} />
       <SectionTitle>Opening balances</SectionTitle>
       <ScalarCard
         rows={<BalanceRows s={model.dataset.settings} />}

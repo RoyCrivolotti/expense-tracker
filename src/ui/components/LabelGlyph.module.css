@@ -1,0 +1,10 @@
+.dot {
+  display: inline-flex;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 999px;
+  background: currentColor;
+  flex: none;
+  vertical-align: -0.05em;
+  margin-right: 0.3rem;
+}
