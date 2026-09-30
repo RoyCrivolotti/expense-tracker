@@ -30,6 +30,10 @@ interface Props {
   /** Absent until at least one reimbursement has been recorded. */
   onViewPast?: (() => void) | undefined
   onSelect?: ((txn: Transaction) => void) | undefined
+  /** Clears one transaction's flag without opening the editor. */
+  onClearFlag?: ((txn: Transaction) => void) | undefined
+  /** Clears every transaction in a group's flag at once, behind a confirmation. */
+  onClearGroup?: ((group: FlagGroup) => void) | undefined
 }
 
 function FlagGroupSection({
@@ -41,6 +45,8 @@ function FlagGroupSection({
   onOpenReport,
   onSettle,
   onSelect,
+  onClearFlag,
+  onClearGroup,
 }: {
   group: FlagGroup
   model: ExpenseModel
@@ -50,6 +56,8 @@ function FlagGroupSection({
   onOpenReport: (flagId: number) => void
   onSettle: (group: FlagGroup) => void
   onSelect?: ((txn: Transaction) => void) | undefined
+  onClearFlag?: ((txn: Transaction) => void) | undefined
+  onClearGroup?: ((group: FlagGroup) => void) | undefined
 }) {
   const preview = group.transactions.slice(0, PREVIEW_LIMIT)
   return (
@@ -76,6 +84,7 @@ function FlagGroupSection({
           flat
           showDate
           {...(onSelect ? { onSelect } : {})}
+          {...(onClearFlag ? { onClearFlag } : {})}
         />
         <div className={styles.groupActions}>
           <div className={styles.actionsRow}>
@@ -118,6 +127,21 @@ function FlagGroupSection({
               </button>
             </div>
           ) : null}
+          {/* Every flag can be cleared this way, reimbursable or not — a flag is
+              "needs attention", and this is how you say a group of them no
+              longer does without reimbursing anything. Its own row: the two
+              rows above already fill 375px between them. */}
+          {onClearGroup ? (
+            <div className={styles.actionsRow}>
+              <button
+                type="button"
+                className={styles.clearAllBtn}
+                onClick={() => onClearGroup(group)}
+              >
+                Clear all in this group
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
     </details>
@@ -143,6 +167,8 @@ export function FlaggedCard({
   onManage,
   onViewPast,
   onSelect,
+  onClearFlag,
+  onClearGroup,
 }: Props) {
   const groups = groupTransactionsByFlag(model.dataset.transactions, model.dataset.flags)
   if (groups.length === 0) return null
@@ -183,6 +209,8 @@ export function FlaggedCard({
                 onOpenReport={onOpenReport}
                 onSettle={onSettle}
                 {...(onSelect ? { onSelect } : {})}
+                {...(onClearFlag ? { onClearFlag } : {})}
+                {...(onClearGroup ? { onClearGroup } : {})}
               />
             ))}
             <div className={styles.cardActions}>

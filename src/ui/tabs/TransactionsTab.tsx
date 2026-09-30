@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
+import type { FlagGroup } from '../../domain/engine/flagGroups'
 import { detectRecurring, defaultBudgetMonth, type StatementPaymentRow } from '../../engine'
 import { Money } from '../components/Money'
 import { TransactionList } from '../components/TransactionList'
+import { ConfirmSheet } from '../components/ConfirmSheet'
 import { PresenceValue } from '../components/Presence'
 import { StatementPaymentSheet } from '../components/StatementPaymentSheet'
 import { TxnFilters } from './TxnFilters'
@@ -53,6 +55,7 @@ export function TransactionsTab({
   const [editingStatement, setEditingStatement] = useState<StatementPaymentRow | null>(null)
   const [statementPending, setStatementPending] = useState(false)
   const [managingFlags, setManagingFlags] = useState(false)
+  const [clearingGroup, setClearingGroup] = useState<FlagGroup | null>(null)
   const reimbursement = useReimbursement(actions)
   const [reportFlagId, setReportFlagId] = useState<number | null>(null)
   const past = usePastReports(model.dataset.transactions)
@@ -88,6 +91,12 @@ export function TransactionsTab({
             onManage={() => setManagingFlags(true)}
             onViewPast={past.entry}
             onSelect={actions.onEdit}
+            onClearFlag={(txn) => {
+              void actions.updateTransaction(txn.id, { flagId: null }).catch((error: unknown) => {
+                showToast(error instanceof Error ? error.message : 'Could not clear the flag', 'error')
+              })
+            }}
+            onClearGroup={setClearingGroup}
           />
           <InstallmentsCard model={model} actions={actions} month={month} />
           {upcoming.length > 0 && (
@@ -206,6 +215,33 @@ export function TransactionsTab({
             onRecord={reimbursement.record}
           />
         )}
+      </PresenceValue>
+
+      <PresenceValue value={actions ? clearingGroup : null} exitMs={EXIT_MS.sheet}>
+        {(group) =>
+          actions && (
+            <ConfirmSheet
+              title={`Clear ${group.flag.name}?`}
+              message={`${itemCountLabel(group.count)} will lose this flag. You can re-flag them individually afterwards.`}
+              confirmLabel="Clear all"
+              onConfirm={() => {
+                setClearingGroup(null)
+                void actions
+                  .updateTransactions(
+                    group.transactions.map((t) => t.id),
+                    { flagId: null },
+                  )
+                  .catch((error: unknown) => {
+                    showToast(
+                      error instanceof Error ? error.message : 'Could not clear the flag',
+                      'error',
+                    )
+                  })
+              }}
+              onCancel={() => setClearingGroup(null)}
+            />
+          )
+        }
       </PresenceValue>
 
       <TransactionsFlagOverlays

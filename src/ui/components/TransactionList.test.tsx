@@ -126,6 +126,29 @@ describe('TransactionList budget month pill', () => {
   })
 })
 
+describe('TransactionList onClearFlag', () => {
+  it('renders a trailing clear-flag action when passed', async () => {
+    const onClearFlag = vi.fn()
+    render(
+      <TransactionList
+        rows={rows(txn({ id: 1, description: 'Madrid hotel' }))}
+        lookup={lookup}
+        flat
+        onClearFlag={onClearFlag}
+      />,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Clear flag' }))
+    expect(onClearFlag).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }))
+  })
+
+  it('renders the plain row with no second button when absent', () => {
+    render(<TransactionList rows={rows(txn({ id: 1, description: 'Madrid hotel' }))} lookup={lookup} flat />)
+
+    expect(screen.queryByRole('button', { name: 'Clear flag' })).not.toBeInTheDocument()
+  })
+})
+
 describe('TransactionList collapsible date groups', () => {
   beforeEach(() => {
     localStorage.clear()

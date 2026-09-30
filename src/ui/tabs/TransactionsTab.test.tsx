@@ -262,3 +262,50 @@ describe('TransactionsTab reimbursements', () => {
     expect(actions.createTransaction).not.toHaveBeenCalled()
   })
 })
+
+describe('TransactionsTab — clearing a flag', () => {
+  const claim = () =>
+    modelFor([makeTransaction({ id: 7, flagId: 1, amountCents: 10_000 })], {
+      flags: [makeFlag({ id: 1, name: 'Work travel' })],
+      accounts: [DEBIT],
+      categories: [{ id: 1, name: 'Travel', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
+    })
+
+  it('clears one transaction without opening the editor', async () => {
+    const actions = makeActions()
+    const user = userEvent.setup()
+    render(<TransactionsTab model={claim()} month="2025-01" actions={actions} />)
+
+    await user.click(screen.getByRole('button', { name: 'Clear flag' }))
+
+    await waitFor(() => expect(actions.updateTransaction).toHaveBeenCalledWith(7, { flagId: null }))
+  })
+
+  it('asks before clearing every transaction in the group, and cancelling does nothing', async () => {
+    const actions = makeActions()
+    const user = userEvent.setup()
+    render(<TransactionsTab model={claim()} month="2025-01" actions={actions} />)
+
+    await user.click(screen.getByRole('button', { name: 'Clear all in this group' }))
+    const sheet = screen.getByRole('alertdialog')
+    await user.click(within(sheet).getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(actions.updateTransactions).not.toHaveBeenCalled()
+  })
+
+  it('clears every transaction in the group on confirm', async () => {
+    const actions = makeActions()
+    const user = userEvent.setup()
+    render(<TransactionsTab model={claim()} month="2025-01" actions={actions} />)
+
+    await user.click(screen.getByRole('button', { name: 'Clear all in this group' }))
+    const sheet = screen.getByRole('alertdialog')
+    await user.click(within(sheet).getByRole('button', { name: 'Clear all' }))
+
+    await waitFor(() =>
+      expect(actions.updateTransactions).toHaveBeenCalledWith([7], { flagId: null }),
+    )
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+  })
+})
