@@ -52,6 +52,47 @@ describe('docsCaptureDataSource.updateTransaction', () => {
   })
 })
 
+describe('docsCaptureDataSource.updateFlag', () => {
+  it('merges a partial patch onto the existing flag, unlike a fresh stub', async () => {
+    const dataset = await docsCaptureDataSource.load()
+    const before = dataset.flags.find((f) => f.name === 'Work travel')!
+
+    // The auto-label editor's actual save: a patch with nothing but this one field.
+    const updated = await docsCaptureDataSource.updateFlag!(before.id, { autoLabelId: 1 })
+
+    // The bug: a stub built from the patch alone came back named "Flag", losing
+    // everything the editor's own patch never mentioned.
+    expect(updated.id).toBe(before.id)
+    expect(updated.name).toBe('Work travel')
+    expect(updated.color).toBe(before.color)
+    expect(updated.reimbursable).toBe(before.reimbursable)
+    expect(updated.autoLabelId).toBe(1)
+  })
+
+  it('persists the merge, so a later read of the same flag sees it', async () => {
+    const dataset = await docsCaptureDataSource.load()
+    const target = dataset.flags.find((f) => f.name === 'Tax deductible')!
+
+    await docsCaptureDataSource.updateFlag!(target.id, { autoLabelId: 2 })
+    const second = await docsCaptureDataSource.updateFlag!(target.id, { description: 'Reviewed yearly' })
+
+    expect(second.id).toBe(target.id)
+    expect(second.autoLabelId).toBe(2)
+    expect(second.description).toBe('Reviewed yearly')
+  })
+
+  it('clears autoLabelId on an explicit null, same contract as the real API', async () => {
+    const dataset = await docsCaptureDataSource.load()
+    const target = dataset.flags.find((f) => f.name === 'Work travel')!
+
+    await docsCaptureDataSource.updateFlag!(target.id, { autoLabelId: 3 })
+    const cleared = await docsCaptureDataSource.updateFlag!(target.id, { autoLabelId: null })
+
+    expect(cleared.autoLabelId).toBeUndefined()
+    expect(cleared.name).toBe('Work travel')
+  })
+})
+
 describe('docsCaptureDataSource.createTransaction', () => {
   it('registers the new row so a same-session lookup by id finds it', async () => {
     await docsCaptureDataSource.load()
