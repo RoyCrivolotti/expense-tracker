@@ -146,3 +146,28 @@ export function summarizeFlagGroups(groups: FlagGroup[]): {
     { count: 0, totalCents: 0 },
   )
 }
+
+/**
+ * Which flag a settled claim's rows once belonged to.
+ *
+ * Reimbursing a row clears its flag, so `rows.find(t => t.flagId != null)`
+ * misses for every settlement recorded that way — the direct link is gone by
+ * design. A flag configured with an auto-label leaves a second trace: the
+ * label is still on the rows it was applied to, even once the flag itself
+ * clears. Falling back to that match restores the claim's identity (its glyph
+ * and colour in Past reports) without changing what a settle actually stores.
+ *
+ * A label could in theory belong to more than one flag's auto-label; the first
+ * match wins, same as the direct lookup this extends. Rows that still carry a
+ * `flagId` (settled before this fallback existed, or settled by something that
+ * never clears it) are unaffected — that direct link always wins first.
+ */
+export function settledFlagId(rows: Transaction[], flags: Flag[]): number | undefined {
+  const direct = rows.find((t) => t.flagId != null)?.flagId
+  if (direct != null) return direct
+  const viaAutoLabel = flags.find((f) => {
+    const autoLabelId = f.autoLabelId
+    return autoLabelId != null && rows.some((t) => (t.labelIds ?? []).includes(autoLabelId))
+  })
+  return viaAutoLabel?.id
+}

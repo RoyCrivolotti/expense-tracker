@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Flag, Transaction } from '../types'
-import { groupTransactionsByFlag, summarizeFlagGroups } from './flagGroups'
+import { groupTransactionsByFlag, settledFlagId, summarizeFlagGroups } from './flagGroups'
 
 function flag(overrides: Partial<Flag> & { id: number }): Flag {
   return {
@@ -165,5 +165,42 @@ describe('summarizeFlagGroups', () => {
 
   it('is zero for no groups', () => {
     expect(summarizeFlagGroups([])).toEqual({ count: 0, totalCents: 0 })
+  })
+})
+
+describe('settledFlagId', () => {
+  it('prefers a flagId still on the rows over any auto-label match', () => {
+    const flags = [flag({ id: 1 }), flag({ id: 2, autoLabelId: 7 })]
+    const rows = [txn({ flagId: 1, labelIds: [7] })]
+
+    expect(settledFlagId(rows, flags)).toBe(1)
+  })
+
+  it('falls back to a flag whose auto-label is on one of the rows', () => {
+    const flags = [flag({ id: 1, autoLabelId: 7 })]
+    const rows = [txn({ labelIds: [7] })]
+
+    expect(settledFlagId(rows, flags)).toBe(1)
+  })
+
+  it('is undefined when nothing carries flagId and no auto-label matches', () => {
+    const flags = [flag({ id: 1, autoLabelId: 7 })]
+    const rows = [txn({ labelIds: [8] })]
+
+    expect(settledFlagId(rows, flags)).toBeUndefined()
+  })
+
+  it('is undefined for a flag with no auto-label configured', () => {
+    const flags = [flag({ id: 1 })]
+    const rows = [txn({ labelIds: [7] })]
+
+    expect(settledFlagId(rows, flags)).toBeUndefined()
+  })
+
+  it('treats a missing labelIds key the same as an empty array', () => {
+    const flags = [flag({ id: 1, autoLabelId: 7 })]
+    const rows = [txn()]
+
+    expect(settledFlagId(rows, flags)).toBeUndefined()
   })
 })

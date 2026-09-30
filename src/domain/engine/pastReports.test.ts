@@ -81,6 +81,34 @@ describe('listPastReports', () => {
 
     expect(reports[0]?.coveredCents).toBe(6_000)
   })
+
+  it('recovers the flag from its auto-label once settling has cleared flagId', () => {
+    // Reimbursing clears flagId on the covered rows, so the direct lookup misses.
+    // The auto-label the flag was configured with is still on those rows.
+    const withAutoLabel = makeFlag({ id: 4, autoLabelId: 7 })
+    const reports = listPastReports(
+      [
+        makeTransaction({ id: 1, settledBy: 99, amountCents: 10_000, labelIds: [7] }),
+        payment(99, '2026-06-14'),
+      ],
+      [withAutoLabel],
+    )
+
+    expect(reports[0]?.flag?.id).toBe(4)
+  })
+
+  it('leaves the flag undefined when no row carries flagId or a matching auto-label', () => {
+    const withAutoLabel = makeFlag({ id: 4, autoLabelId: 7 })
+    const reports = listPastReports(
+      [
+        makeTransaction({ id: 1, settledBy: 99, amountCents: 10_000, labelIds: [8] }),
+        payment(99, '2026-06-14'),
+      ],
+      [withAutoLabel],
+    )
+
+    expect(reports[0]?.flag).toBeUndefined()
+  })
 })
 
 /** A payment carrying the snapshot the settle stamps on it (migration 0021). */

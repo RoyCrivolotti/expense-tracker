@@ -1,4 +1,5 @@
 import type { Flag, Transaction } from '../types'
+import { settledFlagId } from './flagGroups'
 
 /**
  * A reimbursement you have already recorded, and what it covered.
@@ -99,7 +100,7 @@ export function listPastReports(transactions: Transaction[], flags: Flag[]): Pas
     // A payment deleted in another tab before this dataset refreshed. Skipped
     // rather than thrown on — the rows return to the card on the next load.
     if (!payment) continue
-    const flagId = rows.find((t) => t.flagId != null)?.flagId
+    const flagId = settledFlagId(rows, flags)
     reports.push({
       payment,
       flag: flags.find((f) => f.id === flagId),
