@@ -48,12 +48,22 @@ export function validateFlagDescription(description: string | undefined): string
   return trimmed
 }
 
+/** `undefined` leaves it alone, `null` clears it — same contract as the patch itself. */
+export function validateFlagAutoLabelId(autoLabelId: unknown): number | null | undefined {
+  if (autoLabelId === undefined || autoLabelId === null) return autoLabelId
+  if (!Number.isInteger(autoLabelId) || (autoLabelId as number) <= 0) {
+    throw new ValidationError('Flag auto-label id must be a positive whole number')
+  }
+  return autoLabelId as number
+}
+
 function normalizeNewFlag(input: NewFlag): NewFlag {
   // `description` is pulled out of the spread on purpose: spreading `input`
   // first would carry the raw, untrimmed value through whenever the normalised
   // one is dropped for being blank.
-  const { description: raw, ...rest } = input
+  const { description: raw, autoLabelId: rawAutoLabelId, ...rest } = input
   const description = validateFlagDescription(raw)
+  const autoLabelId = validateFlagAutoLabelId(rawAutoLabelId)
   return {
     ...rest,
     name: validateFlagName(input.name),
@@ -61,6 +71,7 @@ function normalizeNewFlag(input: NewFlag): NewFlag {
     sortOrder: validateFlagSortOrder(input.sortOrder),
     active: validateFlagActive(input.active),
     ...(description ? { description } : {}),
+    ...(autoLabelId != null ? { autoLabelId } : {}),
   }
 }
 
@@ -83,6 +94,11 @@ export async function patchFlag(
     // Explicit '' is how the editor clears a description, so map it to '' (not
     // undefined) — dropping the key would leave the old text in place.
     next.description = validateFlagDescription(patch.description) ?? ''
+  }
+  if (patch.autoLabelId !== undefined) {
+    // The guard above already excludes the `undefined` the validator can return
+    // for an absent input; this call can never see that branch.
+    next.autoLabelId = validateFlagAutoLabelId(patch.autoLabelId) as number | null
   }
   return repo.updateFlag(owner, id, next)
 }

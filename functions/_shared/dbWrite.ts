@@ -125,6 +125,21 @@ export async function maybeCompletePlan(env: Env, owner: string, planId: number 
     .run()
 }
 
+/**
+ * The forward half of a flag's auto-label: whenever a write assigns `flagId` to
+ * `transactionId`, that flag's configured label (if any) is applied too. A
+ * statement, not a run-it-here call, so bulkUpdateTransactions can batch one per
+ * affected row alongside its own UPDATE rather than a separate round trip per row.
+ * `INSERT OR IGNORE` plus the `auto_label_id IS NOT NULL` filter make this a safe
+ * no-op both for a flag with no auto-label and for a row that already has it.
+ */
+function maybeApplyAutoLabelStatement(env: Env, owner: string, transactionId: number, flagId: number) {
+  return env.DB.prepare(
+    `INSERT OR IGNORE INTO transaction_labels (transaction_id, label_id)
+     SELECT ?, auto_label_id FROM flags WHERE id = ? AND owner = ? AND auto_label_id IS NOT NULL`,
+  ).bind(transactionId, flagId, owner)
+}
+
 export async function insertTransaction(
   env: Env,
   owner: string,
@@ -157,6 +172,7 @@ export async function insertTransaction(
     .first<TxnRow>()
   if (!row) throw new HttpError(500, 'Insert failed')
   if (planLink) await maybeCompletePlan(env, owner, planLink.planId)
+  if (input.flagId != null) await maybeApplyAutoLabelStatement(env, owner, row.id, input.flagId).run()
   return deriveOne(env, owner, toStoredTxn(row))
 }
 
@@ -300,6 +316,23 @@ async function assertNoWithdrawalLeavingInvestment(
   if ((results ?? []).length > 0) throw new HttpError(400, AMOUNT_SIGN_MESSAGE)
 }
 
+/**
+ * The statements a bulk update batches alongside its own UPDATE: the report
+ * snapshot when settling, and one auto-label fan-out per row when assigning a
+ * flag (see maybeApplyAutoLabelStatement — unlike the single-row write paths,
+ * a bulk update's row count is not known until `ids` is given, so this cannot
+ * be one shared statement the way reportSnapshotStatement is).
+ */
+function bulkFollowUpStatements(env: Env, owner: string, ids: number[], patch: BulkTransactionPatch) {
+  const statements = []
+  if (patch.settledBy != null) statements.push(reportSnapshotStatement(env, owner, patch.settledBy))
+  if (patch.flagId != null) {
+    const flagId = patch.flagId
+    statements.push(...ids.map((id) => maybeApplyAutoLabelStatement(env, owner, id, flagId)))
+  }
+  return statements
+}
+
 /** Every foreign key a transaction patch can carry must belong to the same owner. */
 async function assertPatchOwnership(env: Env, owner: string, patch: TxnPatch): Promise<void> {
   if (patch.accountId != null) await assertOwnedAccount(env, owner, patch.accountId)
@@ -369,6 +402,7 @@ export async function updateTransaction(
     throw new HttpError(404, 'Transaction not found')
   }
   if (patch.settledBy != null) await reportSnapshotStatement(env, owner, patch.settledBy).run()
+  if (patch.flagId != null) await maybeApplyAutoLabelStatement(env, owner, row.id, patch.flagId).run()
   // installmentIndex alone is a no-op in planLinkColumns (it requires planId in
   // the same patch), so it doesn't need its own check here.
   if ('cancelled' in patch || 'planId' in patch) await maybeCompletePlan(env, owner, row.plan_id)
@@ -510,11 +544,7 @@ export async function bulkUpdateTransactions(
   const write = env.DB.prepare(
     `UPDATE transactions SET ${sets.join(', ')} WHERE owner = ? AND id IN (${placeholders})${guard.clause}`,
   ).bind(...values, owner, ...ids, ...guard.values)
-  const [updated] = await env.DB.batch(
-    patch.settledBy != null
-      ? [write, reportSnapshotStatement(env, owner, patch.settledBy)]
-      : [write],
-  )
+  const [updated] = await env.DB.batch([write, ...bulkFollowUpStatements(env, owner, ids, patch)])
   // Backstop for the window between that check and this UPDATE: a concurrent request
   // could settle one of these rows in between. The guard clause still refuses to
   // double-settle it; this surfaces that as a conflict instead of a short result set.
