@@ -7,6 +7,8 @@ import { Presence } from '../components/Presence'
 import { EXIT_MS } from '../hooks/motion'
 import { LabelsModal } from './LabelsModal'
 import styles from './definitions.module.css'
+// Reused for .rowGlyph only: the settings-row glyph sizing is identical to the
+// flag list's own, and duplicating one class was not worth a second stylesheet.
 import flagStyles from './FlagsModal.module.css'
 
 /** Settings-side list of labels. Mirrors FlagList exactly. */

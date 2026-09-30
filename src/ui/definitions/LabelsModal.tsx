@@ -7,6 +7,9 @@ import { Modal } from '../components/Modal'
 import { LabelGlyph } from '../components/LabelGlyph'
 import { LabelForm } from './LabelForm'
 import defStyles from './definitions.module.css'
+// Reused wholesale: a label row (glyph, name, meta, archived tag, Edit button)
+// is laid out identically to a flag row, so this borrows that stylesheet
+// rather than cloning it — see LabelPickerPopover for the same call on its CSS.
 import styles from './FlagsModal.module.css'
 
 type Editing = { label: Label } | { label: null } | null
