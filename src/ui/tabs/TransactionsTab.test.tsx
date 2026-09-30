@@ -232,7 +232,7 @@ describe('TransactionsTab reimbursements', () => {
     await user.click(within(sheet).getByRole('button', { name: /^Record / }))
 
     await waitFor(() =>
-      expect(actions.updateTransactions).toHaveBeenCalledWith([7], { settledBy: 99 }),
+      expect(actions.updateTransactions).toHaveBeenCalledWith([7], { settledBy: 99, flagId: null }),
     )
     expect(actions.createTransaction).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'refund', amountCents: 10_000 }),

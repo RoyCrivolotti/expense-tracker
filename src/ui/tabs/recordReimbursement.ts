@@ -1,4 +1,4 @@
-import type { NewTransaction } from '../../data/dataSource'
+import type { BulkTransactionPatch, NewTransaction } from '../../data/dataSource'
 import type { ExpenseActions } from '../actions'
 
 /**
@@ -54,6 +54,16 @@ export function reimbursementFailureCopy(error: unknown): string {
   return `${why}. Nothing was recorded — try again.`
 }
 
+/**
+ * The patch a settle applies to the rows it covers: link them to the payment, and
+ * clear their flag — a flag is "needs attention", and being paid back is how that
+ * resolves. Only reimbursements recorded from now on behave this way; nothing here
+ * touches a row a payment already settled before this shipped.
+ */
+export function buildSettlementPatch(paymentId: number): BulkTransactionPatch {
+  return { settledBy: paymentId, flagId: null }
+}
+
 export async function recordReimbursement(
   actions: ExpenseActions,
   input: NewTransaction,
@@ -62,7 +72,7 @@ export async function recordReimbursement(
   const created = await actions.createTransaction(input)
   if (transactionIds.length === 0) return
   try {
-    await actions.updateTransactions(transactionIds, { settledBy: created.id })
+    await actions.updateTransactions(transactionIds, buildSettlementPatch(created.id))
   } catch (error) {
     let rolledBack = true
     try {

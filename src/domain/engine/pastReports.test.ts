@@ -46,6 +46,17 @@ describe('listPastReports', () => {
     expect(reports.map((r) => r.payment.id)).toEqual([99, 98])
   })
 
+  it('leaves flag undefined once a reimbursement clears it (flags now auto-clear on settle)', () => {
+    const reports = listPastReports(
+      [makeTransaction({ id: 1, settledBy: 99, amountCents: 10_000 }), payment(99, '2026-06-14')],
+      [WORK],
+    )
+
+    expect(reports[0]?.flag).toBeUndefined()
+    expect(reports[0]?.count).toBe(1)
+    expect(reports[0]?.coveredCents).toBe(10_000)
+  })
+
   it('is empty before anything has been reimbursed', () => {
     expect(listPastReports([makeTransaction({ id: 1, flagId: 4 })], [WORK])).toEqual([])
   })

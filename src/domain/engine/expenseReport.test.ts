@@ -216,6 +216,28 @@ describe('buildExpenseReport', () => {
     expect(buildSettledReport(99, [txn(1, '2026-05-02', { flagId: 1 })], [WORK], [])).toBeNull()
   })
 
+  it('falls back to a stand-in flag once a reimbursement clears it (flags now auto-clear on settle)', () => {
+    const report = buildSettledReport(
+      99,
+      [
+        txn(1, '2026-05-02', { settledBy: 99, amountCents: 10_000 }),
+        txn(2, '2026-05-09', { settledBy: 99, amountCents: 4_000 }),
+        txn(99, '2026-06-14', {
+          type: 'refund',
+          description: 'Reimbursement — Work travel',
+          amountCents: 14_000,
+        }),
+      ],
+      [WORK],
+      [],
+    )
+
+    expect(report?.lines.map((l) => l.transaction.id)).toEqual([1, 2])
+    expect(report?.totalClaimedCents).toBe(14_000)
+    expect(report?.flag.name).toBe('Reimbursement — Work travel')
+    expect(report?.flag.active).toBe(false)
+  })
+
   it('keeps a row cancelled after settlement, because the report was already sent', () => {
     // The live path drops cancelled rows, inheriting the card's rule. A past
     // report deliberately does not: it reconstructs a document that has already
