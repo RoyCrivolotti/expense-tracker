@@ -140,4 +140,15 @@ describe('FlagAutoLabelEditor', () => {
 
     expect(actions.updateFlag).toHaveBeenCalledWith(flag.id, { autoLabelId: 9 })
   })
+
+  it('backs out of quick-create on Escape without closing the whole editor', async () => {
+    renderEditor()
+
+    await userEvent.click(screen.getByRole('button', { name: '+ New label' }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'New label name' }), 'Madrid{Escape}')
+
+    // Escape here means "not this after all", not "abandon the flag".
+    expect(screen.getByRole('button', { name: '+ New label' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()
+  })
 })
