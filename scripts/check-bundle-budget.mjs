@@ -43,7 +43,11 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // Raised from 198.5 KB to 199 KB for the receipts-only report filter and the flagged card's
 // button-width fix, landing on top of the title change above: the merged total came to
 // 198,418 bytes.
-const TOTAL_MAX_GZIP = 199_000
+//
+// Raised from 199 KB to 202 KB for the Labels feature (a Settings management screen, a
+// multi-select picker with inline quick-create, and the label chip row on transaction
+// rows): about 2 KB gzip took the total to 201,006 bytes.
+const TOTAL_MAX_GZIP = 202_000
 const GOALS_MAX_GZIP = 40_000
 
 function gzipBytes(path) {
