@@ -849,7 +849,7 @@ describe('flag auto-label fan-out', () => {
     await insertTransaction(env, 'a@b.com', { ...baseTxn, flagId: 9 })
 
     const call = recorded.find((r) => r.sql.includes(AUTO_LABEL_SQL_FRAGMENT))
-    expect(call?.args).toEqual([5, 9, 'a@b.com'])
+    expect(call?.args).toEqual([5, 'a@b.com', 9, 'a@b.com'])
   })
 
   it('insertTransaction does not run the fan-out when no flag is set', async () => {
@@ -868,7 +868,7 @@ describe('flag auto-label fan-out', () => {
     await updateTransaction(env, 'a@b.com', 5, { flagId: 9 })
 
     const call = recorded.find((r) => r.sql.includes(AUTO_LABEL_SQL_FRAGMENT))
-    expect(call?.args).toEqual([5, 9, 'a@b.com'])
+    expect(call?.args).toEqual([5, 'a@b.com', 9, 'a@b.com'])
   })
 
   it('updateTransaction does not run the fan-out when the patch leaves flagId untouched', async () => {
@@ -891,9 +891,27 @@ describe('flag auto-label fan-out', () => {
     const fanOutCalls = batched.filter((s) => s.sql.includes(AUTO_LABEL_SQL_FRAGMENT))
     expect(fanOutCalls).toHaveLength(3)
     expect(fanOutCalls.map((s) => s.args)).toEqual([
-      [5, 9, 'a@b.com'],
-      [6, 9, 'a@b.com'],
-      [7, 9, 'a@b.com'],
+      [5, 'a@b.com', 9, 'a@b.com'],
+      [6, 'a@b.com', 9, 'a@b.com'],
+      [7, 'a@b.com', 9, 'a@b.com'],
     ])
+  })
+
+  it('bulkUpdateTransactions scopes the fan-out to transactions this owner actually has', async () => {
+    // A raw id in `ids` is never checked against `owner` before this statement is
+    // built (the UPDATE it runs alongside excludes a foreign id on its own, but
+    // this INSERT is independent of that) — so the SELECT itself has to filter the
+    // transaction by owner too, not just the flag, or an owner could attach one of
+    // their own auto-labels to an id that belongs to someone else entirely.
+    const recorded: Recorded[] = []
+    const env = envForAutoLabel({ row: txnRow, recorded })
+
+    await bulkUpdateTransactions(env, 'a@b.com', [5], { flagId: 9 })
+
+    const call = recorded.find((r) => r.sql.includes(AUTO_LABEL_SQL_FRAGMENT))
+    expect(call?.sql).toMatch(/FROM transactions t,\s*flags f/)
+    expect(call?.sql).toContain('t.id = ?')
+    expect(call?.sql).toContain('t.owner = ?')
+    expect(call?.args).toEqual([5, 'a@b.com', 9, 'a@b.com'])
   })
 })

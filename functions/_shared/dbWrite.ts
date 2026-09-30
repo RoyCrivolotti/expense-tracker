@@ -132,12 +132,21 @@ export async function maybeCompletePlan(env: Env, owner: string, planId: number 
  * affected row alongside its own UPDATE rather than a separate round trip per row.
  * `INSERT OR IGNORE` plus the `auto_label_id IS NOT NULL` filter make this a safe
  * no-op both for a flag with no auto-label and for a row that already has it.
+ *
+ * Joins through `transactions` and filters it to `owner` too, not just `flags`:
+ * `bulkUpdateTransactions` batches one of these per id in the caller's raw `ids`
+ * array, before that array has been checked against `owner` (the UPDATE it runs
+ * alongside excludes a foreign id itself via its own `WHERE owner = ?`, but this
+ * statement runs independently of that, so it needs the same guarantee on its own
+ * rather than trusting the id it was handed).
  */
 function maybeApplyAutoLabelStatement(env: Env, owner: string, transactionId: number, flagId: number) {
   return env.DB.prepare(
     `INSERT OR IGNORE INTO transaction_labels (transaction_id, label_id)
-     SELECT ?, auto_label_id FROM flags WHERE id = ? AND owner = ? AND auto_label_id IS NOT NULL`,
-  ).bind(transactionId, flagId, owner)
+     SELECT t.id, f.auto_label_id
+     FROM transactions t, flags f
+     WHERE t.id = ? AND t.owner = ? AND f.id = ? AND f.owner = ? AND f.auto_label_id IS NOT NULL`,
+  ).bind(transactionId, owner, flagId, owner)
 }
 
 export async function insertTransaction(
