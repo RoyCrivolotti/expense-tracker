@@ -76,9 +76,32 @@ export async function deleteLabel(
   await assertOwnedLabel(env, owner, id)
   const [cleared] = await env.DB.batch([
     env.DB.prepare('DELETE FROM transaction_labels WHERE label_id = ?').bind(id),
+    // A flag configured to auto-apply this label must not keep pointing at a
+    // label that no longer exists (migration 0029's own invariant).
+    env.DB
+      .prepare('UPDATE flags SET auto_label_id = NULL WHERE auto_label_id = ? AND owner = ?')
+      .bind(id, owner),
     env.DB.prepare('DELETE FROM labels WHERE id = ? AND owner = ?').bind(id, owner),
   ])
   return { unlabeled: cleared?.meta?.changes ?? 0 }
+}
+
+/**
+ * Retroactive half of a flag's auto-label: every transaction currently carrying
+ * `flagId` picks up `labelId` immediately. `INSERT OR IGNORE` against
+ * transaction_labels' `UNIQUE(transaction_id, label_id)` makes this idempotent —
+ * safe to run again, or against a row that already has the label some other way.
+ */
+export function applyLabelToFlaggedTransactionsStatement(
+  env: Env,
+  owner: string,
+  flagId: number,
+  labelId: number,
+) {
+  return env.DB.prepare(
+    `INSERT OR IGNORE INTO transaction_labels (transaction_id, label_id)
+     SELECT t.id, ? FROM transactions t WHERE t.flag_id = ? AND t.owner = ?`,
+  ).bind(labelId, flagId, owner)
 }
 
 /**

@@ -304,7 +304,8 @@ export const docsCaptureDataSource: ExpenseDataSource = {
   },
   createFlag(input) {
     nextFlagId += 1
-    return Promise.resolve({ ...input, id: nextFlagId })
+    const { autoLabelId, ...rest } = input
+    return Promise.resolve({ ...rest, id: nextFlagId, ...(autoLabelId != null ? { autoLabelId } : {}) })
   },
   updateFlag(id, patch) {
     return Promise.resolve({
@@ -315,6 +316,7 @@ export const docsCaptureDataSource: ExpenseDataSource = {
       sortOrder: patch.sortOrder ?? 0,
       active: patch.active ?? true,
       ...(patch.description ? { description: patch.description } : {}),
+      ...(patch.autoLabelId != null ? { autoLabelId: patch.autoLabelId } : {}),
     })
   },
   deleteFlag() {
