@@ -32,6 +32,7 @@ function minimalModel(): ExpenseModel {
       categoryName: () => 'Health',
       accountName: () => 'Debit',
       flag: () => undefined,
+      label: () => undefined,
       attachments: () => [],
       installmentPlan: () => undefined,
       settlementFor: () => undefined,
@@ -97,6 +98,7 @@ describe('initialFields', () => {
       budgetMonth: '2026-07',
       notes: '',
       flagId: null,
+      labelIds: [],
     })
   })
 

@@ -14,6 +14,8 @@ import { optionLabel, selectableOptions } from './pickerOptions'
 import { resolveInvestmentCategoryId } from '../../data/investmentCategory'
 import { FlagField } from './FlagField'
 import { createFlagInPlace } from './quickFlag'
+import { LabelField } from './LabelField'
+import { createLabelInPlace } from './quickLabel'
 import type { PendingReceipt } from '../../data/pendingReceipts'
 import { ReceiptStrip } from './ReceiptStrip'
 import { ReimbursementLink } from './ReimbursementLink'
@@ -329,6 +331,13 @@ export function Fields({
               onChange={(flagId) => set('flagId', flagId)}
               onTrapPausedChange={onTrapPausedChange}
               onCreate={createFlagInPlace(actions, model.dataset.flags)}
+            />
+            <LabelField
+              labels={model.dataset.labels}
+              value={form.labelIds}
+              onChange={(labelIds) => set('labelIds', labelIds)}
+              onTrapPausedChange={onTrapPausedChange}
+              onCreate={createLabelInPlace(actions, model.dataset.labels)}
             />
             {installmentChip}
           </div>

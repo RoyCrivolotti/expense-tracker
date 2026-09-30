@@ -38,6 +38,7 @@ function modelWith(overrides: Partial<ExpenseModel['dataset']> = {}): ExpenseMod
       categoryName: () => '',
       accountName: () => '',
       flag: () => undefined,
+      label: () => undefined,
       attachments: () => [],
       installmentPlan: () => undefined,
       settlementFor: () => undefined,
@@ -60,6 +61,7 @@ function baseForm(overrides: Partial<FormFields> = {}): FormFields {
     budgetMonth: '2026-07',
     notes: '',
     flagId: null,
+    labelIds: [],
     ...overrides,
   }
 }

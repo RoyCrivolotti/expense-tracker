@@ -43,6 +43,7 @@ function modelWith(dataset: ExpenseDataset): ExpenseModel {
       categoryName: () => '',
       accountName: () => '',
       flag: () => undefined,
+      label: () => undefined,
       attachments: () => [],
       installmentPlan: () => undefined,
       settlementFor: () => undefined,

@@ -71,6 +71,7 @@ function modelWithPlans(
       category: (id) => (id === 3 ? { id: 3, name: 'Tech', monthlyBudgetCents: 0, sortOrder: 0, active: true } : undefined),
       account: (id) => accs.find((a) => a.id === id),
       flag: () => undefined,
+      label: () => undefined,
       attachments: () => [],
       categoryName: () => 'Tech',
       accountName: (id) => accs.find((a) => a.id === id)?.name ?? 'Unknown',

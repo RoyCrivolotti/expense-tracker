@@ -22,6 +22,8 @@ export interface FormFields {
   notes: string
   /** null = no flag. Kept out of the string-y fields since it is an id. */
   flagId: number | null
+  /** Saved separately from the rest of the form — see TransactionForm's submit. */
+  labelIds: number[]
 }
 
 export type Setter = <K extends keyof FormFields>(key: K, value: FormFields[K]) => void
@@ -52,6 +54,7 @@ function defaultFields(model: ExpenseModel): FormFields {
     budgetMonth: defaultBudgetMonth(today, model.dataset.settings.budgetRolloverDay),
     notes: '',
     flagId: null,
+    labelIds: [],
   }
 }
 
@@ -117,6 +120,7 @@ function startingFields(
       budgetMonth: editing.budgetMonth,
       notes: editing.notes ?? '',
       flagId: editing.flagId ?? null,
+      labelIds: editing.labelIds ?? [],
     }
   }
   const defaults = defaultFields(model)
