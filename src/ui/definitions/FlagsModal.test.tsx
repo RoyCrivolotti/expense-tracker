@@ -265,3 +265,47 @@ describe('FlagsModal — deleting while the confirm sheet leaves', () => {
     expect(formCancel).toBeDisabled()
   })
 })
+
+describe('FlagsModal — configuring an auto-label', () => {
+  it('opens the auto-label editor when the row (not Edit) is clicked', async () => {
+    renderModal(makeDataset({ flags: [work] }))
+
+    await userEvent.click(screen.getByRole('button', { name: /Work travel/ }))
+
+    expect(screen.getByText(/Applied to every transaction flagged Work travel/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /No auto-label/ })).toBeInTheDocument()
+  })
+
+  it('still opens FlagForm from Edit, unchanged', async () => {
+    renderModal(makeDataset({ flags: [work] }))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
+
+    expect(screen.getByPlaceholderText('Work travel')).toBeInTheDocument()
+  })
+
+  it('saves the chosen label against the flag and returns to the list', async () => {
+    const trip = { id: 5, name: 'Japan trip', color: '#6366f1', sortOrder: 0, active: true }
+    const updateFlag = vi.fn().mockResolvedValue(undefined)
+    renderModal(makeDataset({ flags: [work], labels: [trip] }), { updateFlag })
+
+    await userEvent.click(screen.getByRole('button', { name: /Work travel/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Japan trip/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(updateFlag).toHaveBeenCalledWith(1, { autoLabelId: 5 })
+    expect(screen.getByText('Work travel')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /No auto-label/ })).not.toBeInTheDocument()
+  })
+
+  it('returns to the list without saving on Cancel', async () => {
+    const updateFlag = vi.fn()
+    renderModal(makeDataset({ flags: [work] }), { updateFlag })
+
+    await userEvent.click(screen.getByRole('button', { name: /Work travel/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(updateFlag).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument()
+  })
+})
