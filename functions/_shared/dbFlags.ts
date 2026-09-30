@@ -26,9 +26,10 @@ function coerce(key: keyof NewFlag, value: unknown): unknown {
 }
 
 export async function createFlag(env: Env, owner: string, input: NewFlag): Promise<Flag> {
+  if (input.autoLabelId != null) await assertOwnedLabel(env, owner, input.autoLabelId)
   const row = await env.DB.prepare(
-    `INSERT INTO flags (owner, name, color, description, reimbursable, sort_order, active)
-     VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *`,
+    `INSERT INTO flags (owner, name, color, description, reimbursable, sort_order, active, auto_label_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
   )
     .bind(
       owner,
@@ -38,6 +39,7 @@ export async function createFlag(env: Env, owner: string, input: NewFlag): Promi
       input.reimbursable ? 1 : 0,
       input.sortOrder,
       input.active ? 1 : 0,
+      input.autoLabelId ?? null,
     )
     .first<FlagRow>()
   if (!row) throw new HttpError(500, 'Flag insert failed')

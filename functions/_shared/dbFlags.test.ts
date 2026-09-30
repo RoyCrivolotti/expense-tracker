@@ -76,7 +76,7 @@ describe('createFlag', () => {
         active: true,
       })
       .then(() => {
-        expect(bound).toEqual([OWNER, 'Work travel', '#6366f1', 'Reimbursable', 1, 0, 1])
+        expect(bound).toEqual([OWNER, 'Work travel', '#6366f1', 'Reimbursable', 1, 0, 1, null])
       })
   })
 
@@ -115,6 +115,47 @@ describe('createFlag', () => {
     await expect(
       createFlag(env, OWNER, { name: 'Work', color: '#6366f1', sortOrder: 0, active: true }),
     ).rejects.toMatchObject({ status: 500, message: 'Flag insert failed' })
+  })
+
+  it('binds a configured auto-label after checking the owner has it', async () => {
+    let bound: unknown[] = []
+    const { env } = stubEnv({
+      first: (sql, args) => {
+        if (sql.includes('FROM labels')) return { ok: 1 }
+        bound = args
+        return { ...FLAG_ROW, auto_label_id: 5 }
+      },
+    })
+
+    const flag = await createFlag(env, OWNER, {
+      name: 'Work travel',
+      color: '#6366f1',
+      reimbursable: true,
+      sortOrder: 0,
+      active: true,
+      autoLabelId: 5,
+    })
+
+    expect(bound.at(-1)).toBe(5)
+    expect(flag.autoLabelId).toBe(5)
+  })
+
+  it('rejects an auto-label id the owner does not have, without inserting anything', async () => {
+    const { env, prepare } = stubEnv({
+      first: (sql) => (sql.includes('FROM labels') ? null : { ...FLAG_ROW }),
+    })
+
+    await expect(
+      createFlag(env, OWNER, {
+        name: 'Work travel',
+        color: '#6366f1',
+        reimbursable: true,
+        sortOrder: 0,
+        active: true,
+        autoLabelId: 99,
+      }),
+    ).rejects.toMatchObject({ status: 400, message: 'Invalid labelId' })
+    expect(prepare).not.toHaveBeenCalledWith(expect.stringContaining('INSERT INTO flags'))
   })
 })
 
