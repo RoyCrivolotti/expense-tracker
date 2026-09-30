@@ -191,6 +191,89 @@ describe('useExpenseActions — flags', () => {
 
 })
 
+describe('useExpenseActions — labels', () => {
+  const label = { id: 7, name: 'Japan trip', color: '#6366f1', sortOrder: 0, active: true }
+
+  function harness(source: Partial<ExpenseDataSource>) {
+    let dataset = baseDataset
+    const applyPatch = vi.fn((patch: (d: ExpenseDataset) => ExpenseDataset) => {
+      dataset = patch(dataset)
+    })
+    const { result } = renderHook(() =>
+      useExpenseActions({ canWrite: true, load: vi.fn(), ...source }, applyPatch, vi.fn()),
+    )
+    return { actions: result.current!, applyPatch, read: () => dataset }
+  }
+
+  it('createLabel returns the saved label and puts it in the dataset', async () => {
+    const createLabel = vi.fn().mockResolvedValue(label)
+    const { actions, read } = harness({ createLabel })
+
+    let created
+    await act(async () => {
+      created = await actions.createLabel({
+        name: 'Japan trip',
+        color: '#6366f1',
+        sortOrder: 0,
+        active: true,
+      })
+    })
+
+    expect(createLabel).toHaveBeenCalled()
+    expect(created).toEqual(label)
+    expect(read().labels).toEqual([label])
+  })
+
+  it('updateLabel replaces the label in the dataset', async () => {
+    const renamed = { ...label, name: 'Osaka trip' }
+    const { actions, read } = harness({
+      createLabel: vi.fn().mockResolvedValue(label),
+      updateLabel: vi.fn().mockResolvedValue(renamed),
+    })
+
+    await act(async () => {
+      await actions.createLabel({ name: 'Japan trip', color: '#6366f1', sortOrder: 0, active: true })
+      await actions.updateLabel(label.id, { name: 'Osaka trip' })
+    })
+
+    expect(read().labels).toEqual([renamed])
+  })
+
+  it('deleteLabel drops the label and reports how many rows were unlabeled', async () => {
+    const { actions, read } = harness({
+      createLabel: vi.fn().mockResolvedValue(label),
+      deleteLabel: vi.fn().mockResolvedValue({ unlabeled: 3 }),
+    })
+
+    let result
+    await act(async () => {
+      await actions.createLabel({ name: 'Japan trip', color: '#6366f1', sortOrder: 0, active: true })
+      result = await actions.deleteLabel(label.id)
+    })
+
+    expect(result).toEqual({ unlabeled: 3 })
+    expect(read().labels).toEqual([])
+  })
+
+  it('setTransactionLabels calls source and applies the transaction it returns', async () => {
+    const labelled: Transaction = { ...savedTxn, labelIds: [7] }
+    const setTransactionLabels = vi.fn().mockResolvedValue(labelled)
+    const source: ExpenseDataSource = { canWrite: true, load: vi.fn(), setTransactionLabels }
+    let dataset = { ...baseDataset, transactions: [savedTxn] }
+    const applyPatch = vi.fn((patch: (d: ExpenseDataset) => ExpenseDataset) => {
+      dataset = patch(dataset)
+    })
+    const { result } = renderHook(() => useExpenseActions(source, applyPatch, vi.fn()))
+
+    await act(async () => {
+      await result.current!.setTransactionLabels(42, [7])
+    })
+
+    expect(setTransactionLabels).toHaveBeenCalledWith(42, [7])
+    expect(dataset.transactions[0]?.labelIds).toEqual([7])
+  })
+})
+
 describe('useExpenseActions — attachments', () => {
   const attachment = {
     id: 5,
