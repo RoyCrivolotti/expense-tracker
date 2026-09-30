@@ -1,22 +1,32 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { ExpenseRepository } from '../ports/expenseRepository'
+import type { Label } from '../types'
+import type { NewLabel } from '../data/dataSource'
+import { makeLabel } from '../../testing/factories'
 import { createLabel, patchLabel, removeLabel, setTransactionLabels } from './labelService'
+
+// Destructuring in the parameter position keeps the discarded binding inside
+// ESLint's argsIgnorePattern — see the same trick in domain/engine/flagGroups.ts.
+function withoutId({ id: _id, ...rest }: Label): NewLabel {
+  return rest
+}
 
 // Named so assertions reference these directly rather than repo.method — a
 // method-shorthand interface like ExpenseRepository trips
 // @typescript-eslint/unbound-method when the property itself is the assertion target.
 const createLabelMock = vi.fn().mockResolvedValue({})
+const updateLabelMock = vi.fn().mockResolvedValue({})
 const deleteLabelMock = vi.fn().mockResolvedValue({ unlabeled: 0 })
 const setTransactionLabelsMock = vi.fn().mockResolvedValue({})
 
 const repo = {
   createLabel: createLabelMock,
-  updateLabel: vi.fn().mockResolvedValue({}),
+  updateLabel: updateLabelMock,
   deleteLabel: deleteLabelMock,
   setTransactionLabels: setTransactionLabelsMock,
 } as unknown as ExpenseRepository
 
-const valid = { name: 'Japan trip', color: '#10b981', sortOrder: 0, active: true }
+const valid = withoutId(makeLabel())
 
 describe('labelService — sortOrder and active', () => {
   it('rejects a non-numeric sort order instead of letting SQLite store it as text', async () => {
@@ -65,6 +75,30 @@ describe('labelService — name and colour', () => {
     await expect(
       createLabel(repo, 'owner@example.com', { ...valid, description: 'x'.repeat(141) }),
     ).rejects.toThrow(/140 characters or fewer/)
+  })
+
+  it('trims and keeps a well-formed description', async () => {
+    await createLabel(repo, 'owner@example.com', { ...valid, description: '  Spring trip  ' })
+    const [, sent] = createLabelMock.mock.calls.at(-1) as [string, { description?: string }]
+    expect(sent.description).toBe('Spring trip')
+  })
+
+  it('patches a description to a new value', async () => {
+    await patchLabel(repo, 'owner@example.com', 1, { description: 'Autumn trip' })
+    expect(updateLabelMock).toHaveBeenCalledWith(
+      'owner@example.com',
+      1,
+      expect.objectContaining({ description: 'Autumn trip' }),
+    )
+  })
+
+  it('clears a description via an explicit empty string', async () => {
+    await patchLabel(repo, 'owner@example.com', 1, { description: '' })
+    expect(updateLabelMock).toHaveBeenCalledWith(
+      'owner@example.com',
+      1,
+      expect.objectContaining({ description: '' }),
+    )
   })
 })
 

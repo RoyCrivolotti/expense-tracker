@@ -130,6 +130,48 @@ describe('labels API (middleware + handlers + in-memory repo)', () => {
     expect(await body<Label>(response)).toMatchObject({ name: 'Osaka trip' })
   })
 
+  it('patches a description, then clears it with an explicit empty string', async () => {
+    const { store, repo } = seeded()
+    const label = await makeLabel(store, repo)
+
+    const withDescription = await invokeExpenseApiRoute({
+      handler: patchLabel,
+      repo,
+      env: ownerEnv(store),
+      url: `${BASE}/labels/${label.id}`,
+      method: 'PATCH',
+      params: { id: String(label.id) },
+      body: { description: 'Spring 2027' },
+    })
+    expect(await body<Label>(withDescription)).toMatchObject({ description: 'Spring 2027' })
+
+    const cleared = await invokeExpenseApiRoute({
+      handler: patchLabel,
+      repo,
+      env: ownerEnv(store),
+      url: `${BASE}/labels/${label.id}`,
+      method: 'PATCH',
+      params: { id: String(label.id) },
+      body: { description: '' },
+    })
+    expect(await body<Label>(cleared)).not.toHaveProperty('description')
+  })
+
+  it('404s when deleting a label that is not yours', async () => {
+    const { store, repo } = seeded()
+    const response = await invokeExpenseApiRoute({
+      handler: deleteLabel,
+      repo,
+      env: ownerEnv(store),
+      url: `${BASE}/labels/999`,
+      method: 'DELETE',
+      params: { id: '999' },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await body<{ error: string }>(response)).toEqual({ error: 'Invalid labelId' })
+  })
+
   it('applies labels to a transaction through the dedicated PUT route', async () => {
     const { store, repo } = seeded()
     const work = await makeLabel(store, repo, { name: 'Work trip' })
@@ -144,6 +186,9 @@ describe('labels API (middleware + handlers + in-memory repo)', () => {
       params: { id: '1' },
       body: { labelIds: [work.id, tax.id] },
     })
+
+    const dataset = await repo.loadDataset(OWNER)
+    expect(dataset.transactions.find((t) => t.id === 1)?.labelIds).toEqual([work.id, tax.id])
 
     expect(response.status).toBe(200)
     const txn = await body<Transaction>(response)
