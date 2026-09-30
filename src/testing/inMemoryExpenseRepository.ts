@@ -223,6 +223,41 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
     )
   }
 
+  /** Same reason as withoutFlag/withoutSettlement in flagGroups.ts: exactOptionalPropertyTypes
+   *  means "no auto-label" has to be an absent key, not an assigned undefined. */
+  function withoutAutoLabel({ autoLabelId: _autoLabelId, ...rest }: Flag): Flag {
+    return rest
+  }
+
+  /** Whether `store.transactionLabels` already links this pair. */
+  function alreadyLabeled(store: OwnerStore, transactionId: number, labelId: number): boolean {
+    return store.transactionLabels.some(
+      (tl) => tl.transactionId === transactionId && tl.labelId === labelId,
+    )
+  }
+
+  /**
+   * Mirrors dbLabels.ts's applyLabelToFlaggedTransactionsStatement: every
+   * transaction currently carrying `flagId` picks up `labelId`, deduped against
+   * one it already has some other way.
+   */
+  function applyLabelToFlaggedTransactions(store: OwnerStore, flagId: number, labelId: number): void {
+    for (const t of store.transactions) {
+      if (t.flagId === flagId && !alreadyLabeled(store, t.id, labelId)) {
+        store.transactionLabels.push({ transactionId: t.id, labelId })
+      }
+    }
+  }
+
+  /** Mirrors dbWrite.ts's maybeApplyAutoLabelStatement: the forward half. */
+  function maybeApplyAutoLabel(store: OwnerStore, transactionId: number, flagId: number | undefined): void {
+    if (flagId == null) return
+    const labelId = store.flags.find((f) => f.id === flagId)?.autoLabelId
+    if (labelId != null && !alreadyLabeled(store, transactionId, labelId)) {
+      store.transactionLabels.push({ transactionId, labelId })
+    }
+  }
+
   /** Mirrors assertCheckinDate in dbWealth.ts, including its one day of UTC slack. */
   function invalidCheckinDate(date: string | undefined): RepoHttpError | undefined {
     if (!date?.match(/^\d{4}-\d{2}-\d{2}$/)) {
@@ -473,6 +508,7 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       ...(planLink ?? {}),
     }
     store.transactions.push(stored)
+    maybeApplyAutoLabel(store, stored.id, input.flagId ?? undefined)
     return deriveOne(stored, store.accounts, store.statements, store.transactionLabels)
   }
 
@@ -529,7 +565,10 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
         // Mirrors the D1 adapter: null clears the flag, an id sets it after an
         // ownership check, absent leaves it alone.
         if (nextFlagId == null) delete updated.flagId
-        else updated = { ...updated, flagId: assertOwnedFlag(store, nextFlagId).id }
+        else {
+          updated = { ...updated, flagId: assertOwnedFlag(store, nextFlagId).id }
+          maybeApplyAutoLabel(store, id, nextFlagId)
+        }
       }
       if ('planId' in patch) {
         if (nextPlanId == null) {
@@ -609,6 +648,9 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
           flagId != null ? { ...base, ...rest, flagId } : { ...base, ...rest }
         const next: StoredTransaction =
           settledBy != null ? { ...withFlag, settledBy } : withFlag
+        // Before deriveOne below, not after the loop: deriveOne reads
+        // store.transactionLabels for this row's labelIds right here.
+        if (flagId != null) maybeApplyAutoLabel(store, next.id, flagId)
         updated.push(deriveOne(next, store.accounts, store.statements, store.transactionLabels))
         return next
       })
@@ -738,7 +780,8 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
 
     createFlag: (owner, input) => {
       const store = storeFor(owner)
-      const flag: Flag = { ...input, id: nextId(store.flags) }
+      const { autoLabelId, ...rest } = input
+      const flag: Flag = { ...rest, id: nextId(store.flags), ...(autoLabelId != null ? { autoLabelId } : {}) }
       store.flags.push(flag)
       store.flags.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
       return Promise.resolve({ ...flag })
@@ -749,8 +792,9 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       const index = store.flags.findIndex((f) => f.id === id)
       if (index < 0) throw new RepoHttpError(404, 'Flag not found')
       if (Object.keys(patch).length === 0) throw new RepoHttpError(400, 'Empty patch')
+      if (patch.autoLabelId != null) assertOwnedLabel(store, patch.autoLabelId)
       const current = store.flags[index] as Flag
-      const { description, ...rest } = patch
+      const { description, autoLabelId, ...rest } = patch
       const next: Flag = { ...current, ...rest, id }
       // '' is how the editor clears a description; drop the key rather than
       // storing an empty string (exactOptionalPropertyTypes forbids undefined).
@@ -758,8 +802,16 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
         if (description === '') delete next.description
         else next.description = description
       }
+      // null is how the editor clears the auto-label; same reasoning as description.
+      if (autoLabelId !== undefined) {
+        if (autoLabelId == null) delete next.autoLabelId
+        else next.autoLabelId = autoLabelId
+      }
       store.flags[index] = next
       store.flags.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+      // Retroactive: mirrors dbFlags.ts's updateFlag calling
+      // applyLabelToFlaggedTransactionsStatement after the same write.
+      if (autoLabelId != null) applyLabelToFlaggedTransactions(store, id, autoLabelId)
       return Promise.resolve({ ...next })
     },
 
@@ -808,6 +860,9 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       assertOwnedLabel(store, id)
       const before = store.transactionLabels.length
       store.transactionLabels = store.transactionLabels.filter((tl) => tl.labelId !== id)
+      // A flag configured to auto-apply this label must not keep pointing at a
+      // label that no longer exists (migration 0029's own invariant).
+      store.flags = store.flags.map((f) => (f.autoLabelId === id ? withoutAutoLabel(f) : f))
       store.labels = store.labels.filter((l) => l.id !== id)
       return Promise.resolve({ unlabeled: before - store.transactionLabels.length })
     },

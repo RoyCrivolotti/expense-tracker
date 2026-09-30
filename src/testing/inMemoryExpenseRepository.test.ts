@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { inMemoryExpenseRepository } from './inMemoryExpenseRepository'
 import { RepoHttpError } from './repoHttpError'
 import { defaultMilestones } from '../domain/engine/milestones'
+import { makeFlag, makeLabel, makeTransaction } from './factories'
 
 const OWNER = 'owner@example.com'
 
@@ -61,5 +62,133 @@ describe('inMemoryExpenseRepository settings assumedInflation', () => {
     for (const bad of [-0.01, 0.11, NaN, '0.02' as unknown as number]) {
       expect(() => repo.updateSettings(OWNER, { assumedInflation: bad })).toThrow(RepoHttpError)
     }
+  })
+})
+
+/**
+ * Mirrors dbFlags.test.ts/dbWrite.test.ts's coverage of the D1 adapter, but against
+ * the double the rest of the application layer actually runs its own tests
+ * against — see the architecture doc's warning that divergence here means a test
+ * suite passing while production breaks.
+ */
+describe('inMemoryExpenseRepository flag auto-label', () => {
+  it('retroactively labels every transaction already carrying the flag', async () => {
+    const flag = makeFlag({ id: 1 })
+    const label = makeLabel({ id: 2 })
+    const carrying = makeTransaction({ id: 10, flagId: 1 })
+    const notCarrying = makeTransaction({ id: 11 })
+    const repo = inMemoryExpenseRepository({ flags: [flag], labels: [label], transactions: [carrying, notCarrying] }, OWNER)
+
+    await repo.updateFlag(OWNER, 1, { autoLabelId: 2 })
+
+    const dataset = await repo.loadDataset(OWNER)
+    expect(dataset.transactions.find((t) => t.id === 10)?.labelIds).toEqual([2])
+    expect(dataset.transactions.find((t) => t.id === 11)?.labelIds).toEqual([])
+  })
+
+  it('does not duplicate a label the transaction already carries some other way', async () => {
+    const flag = makeFlag({ id: 1 })
+    const label = makeLabel({ id: 2 })
+    const carrying = makeTransaction({ id: 10, flagId: 1, labelIds: [2] })
+    const repo = inMemoryExpenseRepository({ flags: [flag], labels: [label], transactions: [carrying] }, OWNER)
+
+    await repo.updateFlag(OWNER, 1, { autoLabelId: 2 })
+
+    const dataset = await repo.loadDataset(OWNER)
+    expect(dataset.transactions.find((t) => t.id === 10)?.labelIds).toEqual([2])
+  })
+
+  // Mirrors the settings tests above: this double validates synchronously,
+  // before returning a promise, so the throw happens on the call itself.
+  it('rejects an auto-label id the owner does not have', () => {
+    const flag = makeFlag({ id: 1 })
+    const repo = inMemoryExpenseRepository({ flags: [flag] }, OWNER)
+
+    expect(() => repo.updateFlag(OWNER, 1, { autoLabelId: 99 })).toThrow('Invalid labelId')
+  })
+
+  const account = { id: 1, name: 'Cash', kind: 'debit' as const, settlement: 'immediate' as const, active: true }
+  const category = { id: 1, name: 'Misc', monthlyBudgetCents: 0, sortOrder: 0, active: true }
+
+  it('applies the auto-label going forward when insertTransaction assigns the flag', async () => {
+    const flag = makeFlag({ id: 1, autoLabelId: 2 })
+    const label = makeLabel({ id: 2 })
+    const repo = inMemoryExpenseRepository(
+      { flags: [flag], labels: [label], accounts: [account], categories: [category] },
+      OWNER,
+    )
+
+    const created = await repo.insertTransaction(OWNER, {
+      date: '2026-01-01',
+      budgetMonth: '2026-01',
+      description: 'Coffee',
+      accountId: 1,
+      categoryId: 1,
+      type: 'expense',
+      amountCents: 350,
+      cancelled: false,
+      flagId: 1,
+    })
+
+    expect(created.labelIds).toEqual([2])
+  })
+
+  it('applies the auto-label going forward when updateTransaction assigns the flag', async () => {
+    const flag = makeFlag({ id: 1, autoLabelId: 2 })
+    const label = makeLabel({ id: 2 })
+    const existing = makeTransaction({ id: 10 })
+    const repo = inMemoryExpenseRepository(
+      { flags: [flag], labels: [label], transactions: [existing] },
+      OWNER,
+    )
+
+    const updated = await repo.updateTransaction(OWNER, 10, { flagId: 1 })
+
+    expect(updated.labelIds).toEqual([2])
+  })
+
+  it('applies the auto-label going forward when bulkUpdateTransactions assigns the flag', async () => {
+    const flag = makeFlag({ id: 1, autoLabelId: 2 })
+    const label = makeLabel({ id: 2 })
+    const a = makeTransaction({ id: 10 })
+    const b = makeTransaction({ id: 11 })
+    const repo = inMemoryExpenseRepository({ flags: [flag], labels: [label], transactions: [a, b] }, OWNER)
+
+    const updated = await repo.bulkUpdateTransactions(OWNER, [10, 11], { flagId: 1 })
+
+    expect(updated.map((t) => t.labelIds)).toEqual([[2], [2]])
+  })
+
+  it('does not fan out for a flag with no auto-label configured', async () => {
+    const flag = makeFlag({ id: 1 })
+    const repo = inMemoryExpenseRepository(
+      { flags: [flag], accounts: [account], categories: [category] },
+      OWNER,
+    )
+
+    const created = await repo.insertTransaction(OWNER, {
+      date: '2026-01-01',
+      budgetMonth: '2026-01',
+      description: 'Coffee',
+      accountId: 1,
+      categoryId: 1,
+      type: 'expense',
+      amountCents: 350,
+      cancelled: false,
+      flagId: 1,
+    })
+
+    expect(created.labelIds).toEqual([])
+  })
+
+  it('clears a flag’s dangling auto-label when that label is deleted', async () => {
+    const flag = makeFlag({ id: 1, autoLabelId: 2 })
+    const label = makeLabel({ id: 2 })
+    const repo = inMemoryExpenseRepository({ flags: [flag], labels: [label] }, OWNER)
+
+    await repo.deleteLabel(OWNER, 2)
+
+    const dataset = await repo.loadDataset(OWNER)
+    expect(dataset.flags.find((f) => f.id === 1)?.autoLabelId).toBeUndefined()
   })
 })
