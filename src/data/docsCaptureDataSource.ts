@@ -239,11 +239,19 @@ export const docsCaptureDataSource: ExpenseDataSource = {
       return enriched
     })
   },
+  // Registered in `loaded`, not just returned: a same-session follow-up call that
+  // looks the new row up by id (setTransactionLabels, then an immediate edit)
+  // found nothing here before this, and silently no-opped against a row `loaded`
+  // had never heard of.
   createTransaction(input) {
-    return Promise.resolve(stubTxn(input))
+    const txn = stubTxn(input)
+    loaded = [...loaded, txn]
+    return Promise.resolve(txn)
   },
   createTransactions(inputs) {
-    return Promise.resolve(inputs.map((input) => stubTxn(input)))
+    const created = inputs.map((input) => stubTxn(input))
+    loaded = [...loaded, ...created]
+    return Promise.resolve(created)
   },
   // stubTxn always mints a fresh id, which is right for a create but wrong for a patch:
   // the caller replaces the row whose id matches what comes back (see
