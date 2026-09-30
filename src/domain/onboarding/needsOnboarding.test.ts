@@ -5,6 +5,7 @@ import { needsOnboarding } from './needsOnboarding'
 
 const empty: ExpenseDataset = {
   flags: [],
+  labels: [],
   attachments: [],
   categories: [],
   accounts: [],

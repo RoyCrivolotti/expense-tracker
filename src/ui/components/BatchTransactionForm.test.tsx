@@ -14,6 +14,7 @@ function dataset(): ExpenseDataset {
     flags: [
       { id: 7, name: 'Work travel', color: '#6366f1', reimbursable: true, sortOrder: 0, active: true },
     ],
+    labels: [],
     attachments: [],
     categories: [
       { id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true },

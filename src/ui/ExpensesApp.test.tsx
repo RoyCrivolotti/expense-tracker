@@ -26,6 +26,7 @@ beforeAll(() => {
 function datasetWith(overrides: Partial<ExpenseDataset> = {}): ExpenseDataset {
   return {
     flags: [],
+    labels: [],
     attachments: [],
     categories: [],
     accounts: [],

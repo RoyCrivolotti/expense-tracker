@@ -12,6 +12,7 @@ import { validateDueDay, validatePlanInput } from '../../domain/application/inst
 function datasetWith(overrides: Partial<ExpenseDataset> = {}): ExpenseDataset {
   return {
     flags: [],
+    labels: [],
     attachments: [],
     categories: [
       { id: 1, name: 'Tech', monthlyBudgetCents: 0, sortOrder: 0, active: true },

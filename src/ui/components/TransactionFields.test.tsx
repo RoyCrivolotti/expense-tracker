@@ -12,6 +12,7 @@ function modelWith(overrides: Partial<ExpenseModel['dataset']> = {}): ExpenseMod
   return {
     dataset: {
       flags: [],
+      labels: [],
       attachments: [],
       categories: [
         { id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true },
