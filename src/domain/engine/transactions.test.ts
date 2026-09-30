@@ -103,3 +103,41 @@ describe('filterTransactions — flagId', () => {
     expect(filterTransactions(rows, {})).toHaveLength(3)
   })
 })
+
+describe('filterTransactions — labelIds', () => {
+  const rows = [
+    { ...txn(1, '2026-06-01'), labelIds: [1] },
+    { ...txn(2, '2026-06-02'), labelIds: [2] },
+    { ...txn(3, '2026-06-03'), labelIds: [1, 2] },
+    txn(4, '2026-06-04'),
+  ]
+
+  it('returns everything when no label filter is set', () => {
+    expect(filterTransactions(rows, {})).toHaveLength(4)
+  })
+
+  it('returns everything when the label filter is an empty array', () => {
+    expect(filterTransactions(rows, { labelIds: [] })).toHaveLength(4)
+  })
+
+  it('narrows to transactions carrying the one selected label', () => {
+    expect(filterTransactions(rows, { labelIds: [1] }).map((t) => t.id)).toEqual([3, 1])
+  })
+
+  it('matches any selected label, not all of them (OR)', () => {
+    expect(filterTransactions(rows, { labelIds: [1, 2] }).map((t) => t.id)).toEqual([3, 2, 1])
+  })
+
+  it('never matches a label-less transaction against a non-empty filter', () => {
+    expect(filterTransactions(rows, { labelIds: [1, 2] }).map((t) => t.id)).not.toContain(4)
+  })
+
+  it('combines with the flag filter by AND, while labels themselves stay OR', () => {
+    const mixed = [
+      { ...txn(1, '2026-06-01'), flagId: 9, labelIds: [1] },
+      { ...txn(2, '2026-06-02'), flagId: 9, labelIds: [2] },
+      { ...txn(3, '2026-06-03'), flagId: 10, labelIds: [1] },
+    ]
+    expect(filterTransactions(mixed, { flagId: 9, labelIds: [1, 2] }).map((t) => t.id)).toEqual([2, 1])
+  })
+})

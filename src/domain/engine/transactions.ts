@@ -13,6 +13,11 @@ export interface TxnFilter {
   query?: string
   /** A flag id narrows to that flag; 'none' narrows to unflagged transactions. */
   flagId?: number | 'none'
+  /** Any selected label matches (OR) — a transaction carrying label A or B is
+   *  kept, not just one carrying both. Unlike flagId there is no 'none' value:
+   *  a transaction can hold zero labels validly, but that is not itself a
+   *  filterable dimension the way "unflagged" is. */
+  labelIds?: number[]
 }
 
 function matchesQuery(txn: Transaction, query: string): boolean {
@@ -42,10 +47,17 @@ function matchesFlag(txn: Transaction, filter: TxnFilter): boolean {
   return txn.flagId === filter.flagId
 }
 
+function matchesLabels(txn: Transaction, filter: TxnFilter): boolean {
+  if (!filter.labelIds || filter.labelIds.length === 0) return true
+  const ids = filter.labelIds
+  return (txn.labelIds ?? []).some((id) => ids.includes(id))
+}
+
 function matchesDimensions(txn: Transaction, filter: TxnFilter): boolean {
   if (filter.categoryId != null && txn.categoryId !== filter.categoryId) return false
   if (filter.accountId != null && txn.accountId !== filter.accountId) return false
   if (!matchesFlag(txn, filter)) return false
+  if (!matchesLabels(txn, filter)) return false
   if (!matchesTypeAndStatus(txn, filter)) return false
   if (filter.query && !matchesQuery(txn, filter.query)) return false
   return true
