@@ -13,7 +13,14 @@
  */
 import { vi } from 'vitest'
 import type { ExpenseActions } from '../ui/actions'
-import { makeFlag, makeScenario, makeTransaction, makeWealthAccount, makeWealthCheckin } from './factories'
+import {
+  makeFlag,
+  makeLabel,
+  makeScenario,
+  makeTransaction,
+  makeWealthAccount,
+  makeWealthCheckin,
+} from './factories'
 
 export function makeActions(overrides: Partial<ExpenseActions> = {}): ExpenseActions {
   return {
@@ -35,6 +42,10 @@ export function makeActions(overrides: Partial<ExpenseActions> = {}): ExpenseAct
     createFlag: vi.fn().mockResolvedValue(makeFlag()),
     updateFlag: vi.fn().mockResolvedValue(undefined),
     deleteFlag: vi.fn().mockResolvedValue({ unflagged: 0 }),
+    createLabel: vi.fn().mockResolvedValue(makeLabel()),
+    updateLabel: vi.fn().mockResolvedValue(undefined),
+    deleteLabel: vi.fn().mockResolvedValue({ unlabeled: 0 }),
+    setTransactionLabels: vi.fn().mockResolvedValue(undefined),
     createCategory: vi.fn().mockResolvedValue(undefined),
     updateCategory: vi.fn().mockResolvedValue(undefined),
     deleteCategory: vi.fn().mockResolvedValue({ reassigned: 0 }),
