@@ -635,6 +635,41 @@ describe('TransactionModal — receipts staged on the add form', () => {
     expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument()
     expect(onClose).not.toHaveBeenCalled()
   })
+
+  it('sends a label change made before a retry, not the set the first press already saved', async () => {
+    // `editing` is null for the whole create-then-retry session, so comparing the retry
+    // press against `editing?.labelIds` would always read "[] vs []" here — the bug this
+    // guards is comparing against that fixed snapshot instead of what the first press
+    // actually persisted.
+    const trip = makeLabel({ id: 1, name: 'Japan trip' })
+    const setTransactionLabels = vi.fn().mockResolvedValue(undefined)
+    const { container } = renderModal({
+      actions: {
+        createTransaction: vi.fn().mockResolvedValue(makeTransaction({ id: 42 })),
+        uploadAttachment: vi.fn().mockRejectedValue(new Error('offline')),
+        setTransactionLabels,
+      },
+      labels: [trip],
+    })
+
+    await fillAndStage(container)
+    await userEvent.click(singleForm(container).getByRole('button', { name: 'No labels' }))
+    await userEvent.click(screen.getByRole('button', { name: /Japan trip/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Done' }))
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+
+    await waitFor(() => expect(setTransactionLabels).toHaveBeenCalledWith(42, [1]))
+    const retry = await singleForm(container).findByRole('button', { name: 'Save and retry' })
+
+    // Clear the label the first press just saved, then retry.
+    await userEvent.click(singleForm(container).getByRole('button', { name: '1 label' }))
+    await userEvent.click(screen.getByRole('button', { name: /Japan trip/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Done' }))
+    fireEvent.click(retry)
+
+    await waitFor(() => expect(setTransactionLabels).toHaveBeenCalledTimes(2))
+    expect(setTransactionLabels).toHaveBeenLastCalledWith(42, [])
+  })
 })
 
 describe('TransactionModal — the other tab’s draft', () => {
