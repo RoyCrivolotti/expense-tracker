@@ -196,6 +196,7 @@ function enrichDocsCaptureDataset(dataset: ExpenseDataset): ExpenseDataset {
 
 let nextId = 900_000
 let nextFlagId = 970_100
+let nextLabelId = 990_100
 let nextAttachmentId = 960_100
 
 function stubTxn(input: NewTransaction): Transaction {
@@ -310,6 +311,33 @@ export const docsCaptureDataSource: ExpenseDataSource = {
   },
   deleteFlag() {
     return Promise.resolve({ unflagged: 0 })
+  },
+  createLabel(input) {
+    nextLabelId += 1
+    return Promise.resolve({ ...input, id: nextLabelId })
+  },
+  updateLabel(id, patch) {
+    return Promise.resolve({
+      id,
+      name: patch.name ?? 'Label',
+      color: patch.color ?? '#6366f1',
+      sortOrder: patch.sortOrder ?? 0,
+      active: patch.active ?? true,
+      ...(patch.description ? { description: patch.description } : {}),
+    })
+  },
+  deleteLabel() {
+    return Promise.resolve({ unlabeled: 0 })
+  },
+  // Merged onto the real row, same reason as updateTransaction above: a
+  // transaction built from labelIds alone would come back having lost its
+  // amount, its category, everything else the caller's optimistic patch relies on.
+  setTransactionLabels(transactionId, labelIds) {
+    const existing = loaded.find((t) => t.id === transactionId)
+    if (!existing) return Promise.reject(new Error('Transaction not found'))
+    const merged: Transaction = { ...existing, labelIds }
+    loaded = loaded.map((t) => (t.id === transactionId ? merged : t))
+    return Promise.resolve(merged)
   },
   setStatementPaid(accountId, yearMonth, paid, paidOn) {
     const row: AccountStatement = {
