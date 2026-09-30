@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Transaction } from '../../types'
 import type { TransactionListRow } from '../../engine'
 import { buildLookup } from '../format'
-import { makeDataset } from '../../testing/factories'
+import { makeDataset, makeLabel } from '../../testing/factories'
 import { TransactionList } from './TransactionList'
 
 const lookup = buildLookup(
@@ -183,6 +183,55 @@ describe('TransactionList onClearFlag', () => {
 
     await userEvent.click(screen.getByText('Madrid hotel'))
     expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }))
+  })
+})
+
+describe('TransactionList label chips', () => {
+  const trip = makeLabel({ id: 1, name: 'Japan trip' })
+  const work = makeLabel({ id: 2, name: 'Work trip', color: '#f59e0b', sortOrder: 1 })
+  const move = makeLabel({ id: 3, name: 'Moving', color: '#ef4444', sortOrder: 2 })
+
+  const labelLookup = buildLookup(
+    makeDataset({
+      categories: [
+        { id: 1, name: 'Investments', monthlyBudgetCents: 0, sortOrder: 0, active: true },
+      ],
+      accounts: [
+        { id: 1, name: 'Santander Debit', kind: 'debit', settlement: 'immediate', active: true },
+      ],
+      labels: [trip, work, move],
+    }),
+  )
+
+  it('shows no chip row on a transaction with no labels', () => {
+    render(<TransactionList rows={rows(txn())} lookup={labelLookup} />)
+    expect(screen.queryByText('Japan trip')).not.toBeInTheDocument()
+  })
+
+  it('shows a single chip', () => {
+    render(<TransactionList rows={rows(txn({ labelIds: [1] }))} lookup={labelLookup} />)
+    expect(screen.getByText('Japan trip')).toBeInTheDocument()
+  })
+
+  it('shows every chip up to the visible limit without an overflow pill', () => {
+    render(<TransactionList rows={rows(txn({ labelIds: [1, 2] }))} lookup={labelLookup} />)
+    expect(screen.getByText('Japan trip')).toBeInTheDocument()
+    expect(screen.getByText('Work trip')).toBeInTheDocument()
+    expect(screen.queryByText(/^\+\d/)).not.toBeInTheDocument()
+  })
+
+  it('collapses labels beyond the visible limit into a "+N" pill', () => {
+    render(<TransactionList rows={rows(txn({ labelIds: [1, 2, 3] }))} lookup={labelLookup} />)
+    expect(screen.getByText('Japan trip')).toBeInTheDocument()
+    expect(screen.getByText('Work trip')).toBeInTheDocument()
+    expect(screen.queryByText('Moving')).not.toBeInTheDocument()
+    expect(screen.getByText('+1')).toBeInTheDocument()
+  })
+
+  it('drops a label id that no longer resolves, rather than rendering a broken chip', () => {
+    render(<TransactionList rows={rows(txn({ labelIds: [999] }))} lookup={labelLookup} />)
+    expect(screen.queryByText(/^\+\d/)).not.toBeInTheDocument()
+    expect(screen.getByText('Degiro')).toBeInTheDocument()
   })
 })
 

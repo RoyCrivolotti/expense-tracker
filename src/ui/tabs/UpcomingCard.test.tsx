@@ -11,6 +11,7 @@ const lookup: Lookup = {
   category: () => undefined,
   account: () => undefined,
   flag: () => undefined,
+  label: () => undefined,
   attachments: () => [],
   categoryName: () => 'Subscriptions',
   accountName: () => 'Santander',

@@ -210,6 +210,40 @@ function uploadFailureMessage(count: number, reason: string | null): string {
   return `The transaction was saved, but ${count} ${noun} could not be uploaded.${why} Try again, or remove them and attach later.`
 }
 
+/**
+ * Labels are not part of NewTransaction — they go through their own PUT
+ * endpoint (see setTransactionLabels), which is a replace-whole-set call, not
+ * a column patch. Comparing against what the transaction already had avoids
+ * firing it on every save of a transaction nobody has ever labelled.
+ */
+function labelsChanged(next: number[], previous: number[] | undefined): boolean {
+  const prev = previous ?? []
+  if (next.length !== prev.length) return true
+  const prevSet = new Set(prev)
+  return next.some((id) => !prevSet.has(id))
+}
+
+/**
+ * Save the label set if it changed, returning an error message rather than
+ * throwing: the transaction itself is already saved by the time this runs, so
+ * a labels failure has to be reported without submit's own catch treating it
+ * as "could not save" the transaction.
+ */
+async function saveLabelsIfChanged(
+  actions: ExpenseActions | undefined,
+  transactionId: number | null,
+  next: number[],
+  previous: number[] | undefined,
+): Promise<string | null> {
+  if (transactionId == null || !actions || !labelsChanged(next, previous)) return null
+  try {
+    await actions.setTransactionLabels(transactionId, next)
+    return null
+  } catch (e) {
+    return e instanceof Error ? e.message : 'Could not update labels'
+  }
+}
+
 export function TransactionForm({
   model,
   editing,
@@ -359,7 +393,17 @@ export function TransactionForm({
       // would create a second installment plan alongside the first.
       const intent = savedId != null ? undefined : valid.intent
       const saved = await onSubmit(toInput(form, valid.cents, editing), targetId, intent)
-      await afterSave(saved?.id ?? targetId ?? null)
+      const savedTxnId = saved?.id ?? targetId ?? null
+      const labelsError = await saveLabelsIfChanged(
+        actions,
+        savedTxnId,
+        form.labelIds,
+        editing?.labelIds,
+      )
+      await afterSave(savedTxnId)
+      // After afterSave's own toast, not before: the toast has one slot, and the
+      // transaction-saved message would otherwise overwrite this one immediately.
+      if (labelsError) showToast(`Transaction saved, but labels were not: ${labelsError}`, 'error')
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not save')
       setBusy(false)
