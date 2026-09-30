@@ -52,6 +52,29 @@ describe('docsCaptureDataSource.updateTransaction', () => {
   })
 })
 
+describe('docsCaptureDataSource.createTransaction', () => {
+  it('registers the new row so a same-session lookup by id finds it', async () => {
+    await docsCaptureDataSource.load()
+
+    const created = await docsCaptureDataSource.createTransaction!({
+      date: '2026-09-30',
+      budgetMonth: '2026-09',
+      description: 'Kyoto ryokan',
+      accountId: 1,
+      categoryId: 1,
+      type: 'expense',
+      amountCents: 4_500,
+      cancelled: false,
+    })
+    // Exactly the sequence TransactionForm's submit runs: create, then set the
+    // label set against the id the create just returned, in the same session.
+    const labelled = await docsCaptureDataSource.setTransactionLabels!(created.id, [1])
+
+    expect(labelled.id).toBe(created.id)
+    expect(labelled.labelIds).toEqual([1])
+  })
+})
+
 describe('docsCaptureDataSource.setTransactionLabels', () => {
   it('merges labelIds onto the existing row, keeping everything else intact', async () => {
     const dataset = await docsCaptureDataSource.load()
