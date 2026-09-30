@@ -222,13 +222,21 @@ describe('deleting a transaction takes its attachments with it', () => {
     // change that was not about attachments at all.
     const sql = statements.map((s) => s.sql)
     expect(sql.some((q) => q.includes('DELETE FROM transaction_attachments'))).toBe(true)
+    expect(sql.some((q) => q.includes('DELETE FROM transaction_labels'))).toBe(true)
     expect(sql.some((q) => q.includes('DELETE FROM transactions'))).toBe(true)
+    // Every statement scopes to the owner — transaction_labels has no owner column
+    // of its own, so its cleanup does it through a subquery on transactions instead.
     for (const statement of statements) expect(statement.args).toContain(OWNER)
   })
 
   it('still 404s when the transaction was not this owner’s', async () => {
     const { env } = stubEnv({
-      batch: () => [{ meta: { changes: 0 } }, { meta: { changes: 0 } }, { meta: { changes: 0 } }],
+      batch: () => [
+        { meta: { changes: 0 } },
+        { meta: { changes: 0 } },
+        { meta: { changes: 0 } },
+        { meta: { changes: 0 } },
+      ],
     })
 
     await expect(deleteTransaction(env, OWNER, 7)).rejects.toMatchObject({ status: 404 })
@@ -236,7 +244,12 @@ describe('deleting a transaction takes its attachments with it', () => {
 
   it('cascades for a bulk delete too', async () => {
     const { env, batch } = stubEnv({
-      batch: () => [{ meta: { changes: 2 } }, { meta: { changes: 2 } }, { meta: { changes: 2 } }],
+      batch: () => [
+        { meta: { changes: 2 } },
+        { meta: { changes: 2 } },
+        { meta: { changes: 2 } },
+        { meta: { changes: 2 } },
+      ],
     })
 
     await expect(deleteTransactions(env, OWNER, [4, 5])).resolves.toBe(2)
@@ -244,6 +257,8 @@ describe('deleting a transaction takes its attachments with it', () => {
     const statements = batch.mock.calls[0]?.[0] as { sql: string; args: unknown[] }[]
     const attachments = statements.find((q) => q.sql.includes('DELETE FROM transaction_attachments'))
     expect(attachments?.args).toEqual([OWNER, 4, 5])
+    const labels = statements.find((q) => q.sql.includes('DELETE FROM transaction_labels'))
+    expect(labels?.args).toEqual([OWNER, 4, 5])
   })
 })
 

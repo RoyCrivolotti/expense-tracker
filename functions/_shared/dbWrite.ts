@@ -23,7 +23,14 @@ import {
   assertOwnedTransaction,
 } from './ownership'
 
-async function deriveOne(env: Env, owner: string, stored: StoredTransaction): Promise<Transaction> {
+/**
+ * Attach derived status and current labels to a stored row. Exported so
+ * dbLabels.ts's `setTransactionLabels` can return a transaction reflecting the
+ * write it just made, using the same choke point every other write path does —
+ * the alternative (each write path re-deriving labelIds itself) is exactly the
+ * kind of drift that would let one of them silently keep returning `[]`.
+ */
+export async function deriveOne(env: Env, owner: string, stored: StoredTransaction): Promise<Transaction> {
   const acc = await env.DB.prepare('SELECT * FROM accounts WHERE id = ? AND owner = ?')
     .bind(stored.accountId, owner)
     .first<AccountRow>()
@@ -35,7 +42,12 @@ async function deriveOne(env: Env, owner: string, stored: StoredTransaction): Pr
   const account = acc ? toAccount(acc) : undefined
   const statements = stmt ? [toStatement(stmt)] : []
   const status = account ? deriveStatus(stored, account, statements) : 'posted'
-  return { ...stored, status }
+  const { results } = await env.DB
+    .prepare('SELECT label_id FROM transaction_labels WHERE transaction_id = ?')
+    .bind(stored.id)
+    .all<{ label_id: number }>()
+  const labelIds = (results ?? []).map((r) => r.label_id)
+  return { ...stored, status, labelIds }
 }
 
 interface PlanLinkInput {
@@ -374,9 +386,20 @@ export async function updateTransaction(
  * an R2 delete cannot join a D1 batch.
  */
 export async function deleteTransaction(env: Env, owner: string, id: number): Promise<void> {
-  const [, , deleted] = await env.DB.batch([
+  const [, , , deleted] = await env.DB.batch([
     env.DB
       .prepare('DELETE FROM transaction_attachments WHERE transaction_id = ? AND owner = ?')
+      .bind(id, owner),
+    // Belt-and-suspenders alongside transaction_labels' own ON DELETE CASCADE
+    // (migration 0028) — see that migration's comment on why the cascade alone
+    // is not trusted. Scoped through a subquery rather than a bare
+    // `transaction_id = ?`: transaction_labels carries no owner column of its
+    // own, and an unscoped delete here would let a caller who does not own this
+    // id still wipe another owner's label links for it.
+    env.DB
+      .prepare(
+        'DELETE FROM transaction_labels WHERE transaction_id IN (SELECT id FROM transactions WHERE id = ? AND owner = ?)',
+      )
       .bind(id, owner),
     // Releasing what this row reimbursed, if it was a reimbursement. Without it
     // the rows it covered keep pointing at a transaction that no longer exists
@@ -436,10 +459,20 @@ export async function deleteTransactions(env: Env, owner: string, ids: number[])
   if (ids.length === 0) return 0
   const placeholders = ids.map(() => '?').join(', ')
   // Same cascade as the single delete, same reasons.
-  const [, , deleted] = await env.DB.batch([
+  const [, , , deleted] = await env.DB.batch([
     env.DB
       .prepare(
         `DELETE FROM transaction_attachments WHERE owner = ? AND transaction_id IN (${placeholders})`,
+      )
+      .bind(owner, ...ids),
+    // Scoped through a subquery, same reason as the single delete: transaction_labels
+    // has no owner column, so a bare `transaction_id IN (...)` would let a caller
+    // wipe another owner's label links for an id that is not theirs.
+    env.DB
+      .prepare(
+        `DELETE FROM transaction_labels WHERE transaction_id IN (
+           SELECT id FROM transactions WHERE owner = ? AND id IN (${placeholders})
+         )`,
       )
       .bind(owner, ...ids),
     env.DB

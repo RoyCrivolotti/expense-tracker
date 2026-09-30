@@ -31,6 +31,7 @@ import {
   updateInstallmentPlan,
 } from '../dbInstallments'
 import { createFlag, deleteFlag, updateFlag } from '../dbFlags'
+import { createLabel, deleteLabel, setTransactionLabels, updateLabel } from '../dbLabels'
 import {
   attachmentBytesUsed,
   attachmentKeysForTransactions,
@@ -74,6 +75,11 @@ export function createD1ExpenseRepository(env: Env): ExpenseRepository {
     createFlag: (owner, input) => createFlag(env, owner, input),
     updateFlag: (owner, id, patch) => updateFlag(env, owner, id, patch),
     deleteFlag: (owner, id) => deleteFlag(env, owner, id),
+    createLabel: (owner, input) => createLabel(env, owner, input),
+    updateLabel: (owner, id, patch) => updateLabel(env, owner, id, patch),
+    deleteLabel: (owner, id) => deleteLabel(env, owner, id),
+    setTransactionLabels: (owner, transactionId, labelIds) =>
+      setTransactionLabels(env, owner, transactionId, labelIds),
     createCategory: (owner, input) => createCategory(env, owner, input),
     updateCategory: (owner, id, patch) => updateCategory(env, owner, id, patch),
     deleteCategory: (owner, id, options) => deleteCategory(env, owner, id, options),

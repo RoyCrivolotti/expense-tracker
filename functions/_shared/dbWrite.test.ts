@@ -72,6 +72,11 @@ function envForBulkUpdate(opts: {
       prepare: (sql: string) => ({
         bind: () => {
           prepared?.push(sql)
+          // deriveOne's labelIds lookup, on every write path; no test here cares
+          // about labels, so an empty result is always the right answer.
+          if (sql.includes('transaction_labels')) {
+            return { all: vi.fn().mockResolvedValue({ results: [] }) }
+          }
           if (sql.includes('accounts') && sql.includes('SELECT 1')) {
             return { first: vi.fn().mockResolvedValue(ownedAccount ? { ok: 1 } : null) }
           }
@@ -164,6 +169,8 @@ function envForSettleGuard(opts: {
             }
             return null
           }),
+          // deriveOne's labelIds lookup; no test here cares about labels.
+          all: vi.fn().mockResolvedValue({ results: [] }),
         }),
       }),
     },
@@ -208,6 +215,8 @@ function envForSignCheck(
               if (sql.startsWith('UPDATE transactions')) return txnRow
               return null
             }),
+            // deriveOne's labelIds lookup; no test here cares about labels.
+            all: vi.fn().mockResolvedValue({ results: [] }),
           }
         },
       }),
@@ -563,6 +572,11 @@ function envForPlanCompletion(opts: {
       prepare: (sql: string) => ({
         bind: () => {
           prepared?.push(sql)
+          // deriveOne's labelIds lookup, on every write path; no test here cares
+          // about labels, so an empty result is always the right answer.
+          if (sql.includes('transaction_labels')) {
+            return { all: vi.fn().mockResolvedValue({ results: [] }) }
+          }
           if (sql.includes('accounts') && sql.includes('SELECT 1')) {
             return { first: vi.fn().mockResolvedValue({ ok: 1 }) }
           }
@@ -694,5 +708,66 @@ describe('bulkInsertTransactions', () => {
     ).rejects.toThrow()
 
     expect(inserted).toEqual([])
+  })
+})
+
+/**
+ * `deriveOne` (used by every write path above) also attaches `labelIds` from a
+ * `transaction_labels` lookup, so a write's response reflects real, current
+ * labels rather than silently reporting `[]` for a row that has some.
+ */
+describe('deriveOne — labelIds', () => {
+  function envForUpdateWithLabels(labelIds: number[]): Env {
+    const txnRow = {
+      id: 5,
+      owner: 'a@b.com',
+      date: '2026-01-01',
+      budget_month: '2026-01',
+      description: 'Test',
+      account_id: 1,
+      category_id: 2,
+      type: 'expense',
+      amount_cents: -1000,
+      cancelled: 0,
+      notes: null,
+      plan_id: null,
+      installment_index: null,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    }
+    return {
+      DB: {
+        prepare: (sql: string) => ({
+          bind: () => ({
+            first: vi.fn().mockImplementation(async () => {
+              if (sql.startsWith('UPDATE transactions')) return txnRow
+              return null
+            }),
+            all: vi.fn().mockImplementation(async () => {
+              if (sql.includes('transaction_labels')) {
+                return { results: labelIds.map((label_id) => ({ label_id })) }
+              }
+              return { results: [] }
+            }),
+          }),
+        }),
+      },
+    } as unknown as Env
+  }
+
+  it('attaches the labels a transaction currently carries', async () => {
+    const env = envForUpdateWithLabels([2, 3])
+
+    const txn = await updateTransaction(env, 'a@b.com', 5, { description: 'Renamed' })
+
+    expect(txn.labelIds).toEqual([2, 3])
+  })
+
+  it('attaches an empty array for a transaction with none, not undefined', async () => {
+    const env = envForUpdateWithLabels([])
+
+    const txn = await updateTransaction(env, 'a@b.com', 5, { description: 'Renamed' })
+
+    expect(txn.labelIds).toEqual([])
   })
 })

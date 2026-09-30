@@ -26,6 +26,7 @@ import type {
   ExpenseDataset,
   ExpenseSettings,
   Flag,
+  Label,
   TransactionAttachment,
   GoalScenario,
   InstallmentPlan,
@@ -43,6 +44,9 @@ interface OwnerStore {
   categories: Category[]
   accounts: Account[]
   flags: Flag[]
+  labels: Label[]
+  /** transaction_labels' in-memory shape: a plain link list, no surrogate id needed here. */
+  transactionLabels: { transactionId: number; labelId: number }[]
   attachments: TransactionAttachment[]
   transactions: StoredTransaction[]
   statements: AccountStatement[]
@@ -68,10 +72,18 @@ function deriveOne(
   stored: StoredTransaction,
   accounts: Account[],
   statements: AccountStatement[],
+  transactionLabels: { transactionId: number; labelId: number }[],
 ): Transaction {
   const account = accounts.find((a) => a.id === stored.accountId)
   const status = account ? deriveStatus(stored, account, statements) : 'posted'
-  return { ...stored, status }
+  const labelIds = transactionLabels
+    .filter((tl) => tl.transactionId === stored.id)
+    .map((tl) => tl.labelId)
+  // Set last so it always wins over anything spread in from `stored` — a seeded
+  // transaction can carry a stray `labelIds` (seeding is Partial<ExpenseDataset>,
+  // and a Transaction literal may include it), but this store's own
+  // transactionLabels list, not that field, is the source of truth.
+  return { ...stored, status, labelIds }
 }
 
 /**
@@ -88,8 +100,12 @@ function emptyStore(seed: ExpenseRepositorySeed = {}): OwnerStore {
     categories: list(seed.categories),
     accounts: list(seed.accounts),
     flags: list(seed.flags),
+    labels: list(seed.labels),
+    transactionLabels: [],
     attachments: list(seed.attachments),
-    transactions: (seed.transactions ?? []).map(({ status: _status, ...stored }) => stored),
+    transactions: (seed.transactions ?? []).map(
+      ({ status: _status, labelIds: _labelIds, ...stored }) => stored,
+    ),
     statements: list(seed.accountStatements),
     cashActuals: list(seed.cashActuals),
     settings: { ...DEFAULT_SETTINGS, ...seed.settings },
@@ -161,6 +177,12 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
     return flag
   }
 
+  function assertOwnedLabel(store: OwnerStore, labelId: number): Label {
+    const label = store.labels.find((l) => l.id === labelId)
+    if (!label) throw new RepoHttpError(400, 'Invalid labelId')
+    return label
+  }
+
   function assertOwnedPlan(store: OwnerStore, planId: number): InstallmentPlan {
     const plan = store.installmentPlans.find((p) => p.id === planId)
     if (!plan) throw new RepoHttpError(400, 'Invalid planId')
@@ -230,9 +252,13 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
   }
 
   /** Mirrors assertOwnedTransaction in functions/_shared/ownership.ts. */
-  function assertOwnedTransactionId(store: OwnerStore, transactionId: number): void {
+  function assertOwnedTransactionId(
+    store: OwnerStore,
+    transactionId: number,
+    field = 'settledBy',
+  ): void {
     if (!store.transactions.some((t) => t.id === transactionId)) {
-      throw new RepoHttpError(400, 'Invalid settledBy')
+      throw new RepoHttpError(400, `Invalid ${field}`)
     }
   }
 
@@ -447,18 +473,27 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       ...(planLink ?? {}),
     }
     store.transactions.push(stored)
-    return deriveOne(stored, store.accounts, store.statements)
+    return deriveOne(stored, store.accounts, store.statements, store.transactionLabels)
   }
 
   return {
     loadDataset: (owner) => {
       const store = storeFor(owner)
+      const derived = deriveTransactions(store.transactions, store.accounts, store.statements).map(
+        (t) => ({
+          ...t,
+          labelIds: store.transactionLabels
+            .filter((tl) => tl.transactionId === t.id)
+            .map((tl) => tl.labelId),
+        }),
+      )
       return Promise.resolve({
         categories: [...store.categories],
         accounts: [...store.accounts],
         flags: [...store.flags],
+        labels: [...store.labels],
         attachments: [...store.attachments],
-        transactions: deriveTransactions(store.transactions, store.accounts, store.statements),
+        transactions: derived,
         accountStatements: [...store.statements],
         cashActuals: [...store.cashActuals],
         settings: { ...store.settings },
@@ -511,7 +546,9 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       }
       const index = store.transactions.findIndex((row) => row.id === id)
       store.transactions[index] = updated
-      return Promise.resolve(deriveOne(updated, store.accounts, store.statements))
+      return Promise.resolve(
+        deriveOne(updated, store.accounts, store.statements, store.transactionLabels),
+      )
     },
 
     deleteTransaction: (owner, id) => {
@@ -519,6 +556,7 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       const index = store.transactions.findIndex((row) => row.id === id)
       if (index < 0) throw new RepoHttpError(404, 'Transaction not found')
       store.transactions.splice(index, 1)
+      store.transactionLabels = store.transactionLabels.filter((tl) => tl.transactionId !== id)
       // Mirrors the D1 cascade; without it the double would let a transaction
       // go while leaving attachment rows the real backend removes.
       dropAttachmentsFor(owner, store, [id])
@@ -531,6 +569,7 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       const idSet = new Set(ids)
       const before = store.transactions.length
       store.transactions = store.transactions.filter((row) => !idSet.has(row.id))
+      store.transactionLabels = store.transactionLabels.filter((tl) => !idSet.has(tl.transactionId))
       dropAttachmentsFor(owner, store, ids)
       releaseSettledBy(store, ids)
       return Promise.resolve(before - store.transactions.length)
@@ -570,7 +609,7 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
           flagId != null ? { ...base, ...rest, flagId } : { ...base, ...rest }
         const next: StoredTransaction =
           settledBy != null ? { ...withFlag, settledBy } : withFlag
-        updated.push(deriveOne(next, store.accounts, store.statements))
+        updated.push(deriveOne(next, store.accounts, store.statements, store.transactionLabels))
         return next
       })
       if (patch.settledBy != null) stampReportSnapshot(store, patch.settledBy)
@@ -735,6 +774,55 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
       })
       store.flags = store.flags.filter((f) => f.id !== id)
       return Promise.resolve({ unflagged })
+    },
+
+    createLabel: (owner, input) => {
+      const store = storeFor(owner)
+      const label: Label = { ...input, id: nextId(store.labels) }
+      store.labels.push(label)
+      store.labels.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+      return Promise.resolve({ ...label })
+    },
+
+    updateLabel: (owner, id, patch) => {
+      const store = storeFor(owner)
+      const index = store.labels.findIndex((l) => l.id === id)
+      if (index < 0) throw new RepoHttpError(404, 'Label not found')
+      if (Object.keys(patch).length === 0) throw new RepoHttpError(400, 'Empty patch')
+      const current = store.labels[index] as Label
+      const { description, ...rest } = patch
+      const next: Label = { ...current, ...rest, id }
+      // '' is how the editor clears a description; drop the key rather than
+      // storing an empty string (exactOptionalPropertyTypes forbids undefined).
+      if (description !== undefined) {
+        if (description === '') delete next.description
+        else next.description = description
+      }
+      store.labels[index] = next
+      store.labels.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+      return Promise.resolve({ ...next })
+    },
+
+    deleteLabel: (owner, id) => {
+      const store = storeFor(owner)
+      assertOwnedLabel(store, id)
+      const before = store.transactionLabels.length
+      store.transactionLabels = store.transactionLabels.filter((tl) => tl.labelId !== id)
+      store.labels = store.labels.filter((l) => l.id !== id)
+      return Promise.resolve({ unlabeled: before - store.transactionLabels.length })
+    },
+
+    setTransactionLabels: (owner, transactionId, labelIds) => {
+      const store = storeFor(owner)
+      assertOwnedTransactionId(store, transactionId, 'transactionId')
+      const deduped = [...new Set(labelIds)]
+      for (const labelId of deduped) assertOwnedLabel(store, labelId)
+      store.transactionLabels = store.transactionLabels.filter(
+        (tl) => tl.transactionId !== transactionId,
+      )
+      for (const labelId of deduped) store.transactionLabels.push({ transactionId, labelId })
+      const stored = findStored(store, transactionId)
+      return Promise.resolve(deriveOne(stored, store.accounts, store.statements, store.transactionLabels))
     },
 
     createCategory: (owner, input) => {

@@ -7,6 +7,7 @@ import type {
   Flag,
   GoalScenario,
   InstallmentPlan,
+  Label,
   LifeEvent,
   StoredTransaction,
   TransactionAttachment,
@@ -45,6 +46,15 @@ export interface FlagRow {
   color: string
   description: string | null
   reimbursable: number
+  sort_order: number
+  active: number
+}
+
+export interface LabelRow {
+  id: number
+  name: string
+  color: string
+  description: string | null
   sort_order: number
   active: number
 }
@@ -113,6 +123,17 @@ export function toFlag(r: FlagRow): Flag {
     sortOrder: r.sort_order,
     active: r.active === 1,
     reimbursable: r.reimbursable === 1,
+    ...(r.description ? { description: r.description } : {}),
+  }
+}
+
+export function toLabel(r: LabelRow): Label {
+  return {
+    id: r.id,
+    name: r.name,
+    color: r.color,
+    sortOrder: r.sort_order,
+    active: r.active === 1,
     ...(r.description ? { description: r.description } : {}),
   }
 }

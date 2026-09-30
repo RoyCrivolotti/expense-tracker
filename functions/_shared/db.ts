@@ -11,6 +11,7 @@ import {
   toFlag,
   toGoalScenario,
   toInstallmentPlan,
+  toLabel,
   toSettings,
   toStatement,
   toStoredTxn,
@@ -24,6 +25,7 @@ import {
   type FlagRow,
   type GoalScenarioRow,
   type InstallmentPlanRow,
+  type LabelRow,
   type SettingsRow,
   type StatementRow,
   type TxnRow,
@@ -46,6 +48,7 @@ export async function loadDataset(env: Env, owner: string): Promise<ExpenseDatas
     categories,
     accounts,
     flagRows,
+    labelRows,
     attachmentRows,
     txns,
     statements,
@@ -56,6 +59,7 @@ export async function loadDataset(env: Env, owner: string): Promise<ExpenseDatas
     wealthAccountRows,
     wealthCheckinRows,
     wealthCheckinEntryRows,
+    transactionLabelRows,
   ] = await Promise.all([
     rows<CategoryRow>(
       env.DB,
@@ -64,6 +68,7 @@ export async function loadDataset(env: Env, owner: string): Promise<ExpenseDatas
     ),
     rows<AccountRow>(env.DB, 'SELECT * FROM accounts WHERE owner = ? ORDER BY id', owner),
     rows<FlagRow>(env.DB, 'SELECT * FROM flags WHERE owner = ? ORDER BY sort_order, id', owner),
+    rows<LabelRow>(env.DB, 'SELECT * FROM labels WHERE owner = ? ORDER BY sort_order, id', owner),
     // Metadata only — the bytes are fetched by URL from /api/expenses/attachments/:id.
     rows<AttachmentRow>(
       env.DB,
@@ -107,6 +112,17 @@ export async function loadDataset(env: Env, owner: string): Promise<ExpenseDatas
       .bind(owner)
       .all<WealthCheckinEntryRow & { checkin_id: number }>()
       .then((r) => r.results ?? []),
+    // Load every transaction_labels row for this owner in one query, joined only
+    // to scope by owner; keyed by transaction_id below. Same shape as the
+    // wealth-checkin-entries load above.
+    env.DB.prepare(
+      `SELECT tl.transaction_id, tl.label_id FROM transaction_labels tl
+       JOIN transactions t ON t.id = tl.transaction_id
+       WHERE t.owner = ?`,
+    )
+      .bind(owner)
+      .all<{ transaction_id: number; label_id: number }>()
+      .then((r) => r.results ?? []),
   ])
 
   const mappedAccounts = accounts.map(toAccount)
@@ -125,12 +141,27 @@ export async function loadDataset(env: Env, owner: string): Promise<ExpenseDatas
     toWealthCheckin(c, (entriesByCheckin.get(c.id) ?? []).map(toWealthCheckinEntry)),
   )
 
+  // Group by transaction_id for O(1) lookup when attaching labelIds below.
+  const labelIdsByTxn = new Map<number, number[]>()
+  for (const tl of transactionLabelRows) {
+    const list = labelIdsByTxn.get(tl.transaction_id) ?? []
+    list.push(tl.label_id)
+    labelIdsByTxn.set(tl.transaction_id, list)
+  }
+  // labelIds is not a real column, so it is merged on after deriveTransactions
+  // rather than carried through toStoredTxn — same reason status itself is
+  // derived rather than stored.
+  const derivedTransactions = deriveTransactions(stored, mappedAccounts, mappedStatements).map(
+    (t) => ({ ...t, labelIds: labelIdsByTxn.get(t.id) ?? [] }),
+  )
+
   return {
     categories: categories.map(toCategory),
     accounts: mappedAccounts,
     flags: flagRows.map(toFlag),
+    labels: labelRows.map(toLabel),
     attachments: attachmentRows.map(toAttachment),
-    transactions: deriveTransactions(stored, mappedAccounts, mappedStatements),
+    transactions: derivedTransactions,
     accountStatements: mappedStatements,
     cashActuals: cashActuals.map(toCashActual),
     installmentPlans: planRows.map(toInstallmentPlan),
