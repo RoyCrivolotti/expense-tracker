@@ -210,6 +210,11 @@ function uploadFailureMessage(count: number, reason: string | null): string {
   return `The transaction was saved, but ${count} ${noun} could not be uploaded.${why} Try again, or remove them and attach later.`
 }
 
+/** A fresh transaction, and one nobody has labelled yet, both start from none. */
+function initialLabelIds(editing: Transaction | null): number[] {
+  return editing?.labelIds ?? []
+}
+
 /**
  * Labels are not part of NewTransaction — they go through their own PUT
  * endpoint (see setTransactionLabels), which is a replace-whole-set call, not
@@ -227,17 +232,21 @@ function labelsChanged(next: number[], previous: number[] | undefined): boolean 
  * Save the label set if it changed, returning an error message rather than
  * throwing: the transaction itself is already saved by the time this runs, so
  * a labels failure has to be reported without submit's own catch treating it
- * as "could not save" the transaction.
+ * as "could not save" the transaction. `onSaved` fires only once the PUT has
+ * actually landed — a rejection leaves the caller's known-good set alone,
+ * since the server never moved off it.
  */
 async function saveLabelsIfChanged(
   actions: ExpenseActions | undefined,
   transactionId: number | null,
   next: number[],
   previous: number[] | undefined,
+  onSaved: (saved: number[]) => void,
 ): Promise<string | null> {
   if (transactionId == null || !actions || !labelsChanged(next, previous)) return null
   try {
     await actions.setTransactionLabels(transactionId, next)
+    onSaved(next)
     return null
   } catch (e) {
     return e instanceof Error ? e.message : 'Could not update labels'
@@ -276,6 +285,16 @@ export function TransactionForm({
   // Ref, not state: only ever needs its first-render value, and re-rendering to
   // update it would be pointless — nothing should ever change what "opening state" means.
   const initialSnapshot = useRef({ form, draft })
+  /**
+   * The label set actually confirmed on the server for this session, advanced after
+   * each successful save rather than read from `editing?.labelIds` directly. `editing`
+   * itself never changes while the form is open (see ExpensesApp's `modal.txn`), so once
+   * a "Save and retry" round trips one save, comparing the next press against the
+   * original `editing.labelIds` compares against a value the server has already moved
+   * past — a second edit made only to the labels, right before that retry, then reads as
+   * "unchanged" and never reaches setTransactionLabels at all.
+   */
+  const lastSavedLabelIds = useRef(initialLabelIds(editing))
   useEffect(() => {
     const dirty =
       JSON.stringify(form) !== JSON.stringify(initialSnapshot.current.form) ||
@@ -398,7 +417,10 @@ export function TransactionForm({
         actions,
         savedTxnId,
         form.labelIds,
-        editing?.labelIds,
+        lastSavedLabelIds.current,
+        (saved) => {
+          lastSavedLabelIds.current = saved
+        },
       )
       await afterSave(savedTxnId)
       // After afterSave's own toast, not before: the toast has one slot, and the
