@@ -1,7 +1,11 @@
-import type { Account, Category, Flag, TxnType } from '../../types'
+import { useRef, useState } from 'react'
+import type { Account, Category, Flag, Label, TxnType } from '../../types'
 import { CloseIcon } from '../icons'
 import { DateInput } from '../components/DateInput'
+import { LabelPickerPopover } from '../components/LabelPickerPopover'
+import { Presence } from '../components/Presence'
 import { SegmentedControl } from '../components/SegmentedControl'
+import { EXIT_MS } from '../hooks/motion'
 import type { StatusFilter } from './TxnFilters'
 import type { TxnDateScope } from './txnDateScope'
 import styles from './tabs.module.css'
@@ -250,6 +254,64 @@ export function StatusTypeRow({
         <option value="investment">Investment</option>
         <option value="refund">Refund</option>
       </select>
+    </div>
+  )
+}
+
+function labelTriggerText(value: number[], labels: Label[]): string {
+  if (value.length === 0) return 'Labels'
+  if (value.length === 1) return labels.find((l) => l.id === value[0])?.name ?? '1 label'
+  return `Labels (${value.length})`
+}
+
+/**
+ * Multi-select sibling of the flag <select> above: a label filter can match more
+ * than one label at once (OR), which a native select can't express, so this is a
+ * trigger button reusing LabelPickerPopover — the same picker the edit sheet uses
+ * (see LabelField) — rather than a second multi-select widget.
+ */
+export function LabelFilterRow({
+  labels,
+  labelIds,
+  selectMode,
+  onLabelIds,
+}: {
+  labels: Label[]
+  labelIds: number[]
+  selectMode: boolean
+  onLabelIds: (ids: number[]) => void
+}) {
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const [open, setOpen] = useState(false)
+
+  if (labels.length === 0) return null
+
+  const toggle = (id: number) => {
+    onLabelIds(labelIds.includes(id) ? labelIds.filter((x) => x !== id) : [...labelIds, id])
+  }
+
+  return (
+    <div className={styles.selectRow}>
+      <button
+        type="button"
+        ref={triggerRef}
+        className={labelIds.length > 0 ? `${styles.labelTrigger} ${styles.labelTriggerActive}` : styles.labelTrigger}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        disabled={selectMode}
+        onClick={() => setOpen((o) => !o)}
+      >
+        {labelTriggerText(labelIds, labels)}
+      </button>
+      <Presence show={open} exitMs={EXIT_MS.popover}>
+        <LabelPickerPopover
+          value={labelIds}
+          labels={labels}
+          triggerRef={triggerRef}
+          onToggle={toggle}
+          onClose={() => setOpen(false)}
+        />
+      </Presence>
     </div>
   )
 }

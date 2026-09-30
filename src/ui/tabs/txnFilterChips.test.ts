@@ -6,9 +6,14 @@ function input(overrides: Partial<Parameters<typeof buildActiveFilterChips>[0]> 
     categories: [{ id: 1, name: 'Travel', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
     accounts: [{ id: 2, name: 'Debit', kind: 'debit' as const, settlement: 'immediate' as const, active: true }],
     flags: [{ id: 3, name: 'Work travel', color: '#6366f1', reimbursable: true, sortOrder: 0, active: true }],
+    labels: [
+      { id: 10, name: 'Madrid trip', color: '#f59e0b', sortOrder: 0, active: true },
+      { id: 11, name: 'Moving', color: '#10b981', sortOrder: 1, active: true },
+    ],
     categoryId: 'all' as const,
     accountId: 'all' as const,
     flagId: 'all' as const,
+    labelIds: [] as number[],
     txnType: 'all' as const,
     status: 'all' as const,
     dateScope: 'budgetMonth' as const,
@@ -17,6 +22,7 @@ function input(overrides: Partial<Parameters<typeof buildActiveFilterChips>[0]> 
     onCategory: vi.fn(),
     onAccount: vi.fn(),
     onFlag: vi.fn(),
+    onLabelIds: vi.fn(),
     onTxnType: vi.fn(),
     onStatus: vi.fn(),
     onDateScope: vi.fn(),
@@ -59,6 +65,39 @@ describe('buildActiveFilterChips', () => {
     )
 
     expect(chips.map((c) => c.key)).toEqual(['category', 'account', 'flag', 'type', 'status'])
+  })
+
+  it('names a single selected label', () => {
+    expect(buildActiveFilterChips(input({ labelIds: [10] }))[0]?.label).toBe('Label: Madrid trip')
+  })
+
+  it('joins two selected labels by name', () => {
+    expect(buildActiveFilterChips(input({ labelIds: [10, 11] }))[0]?.label).toBe(
+      'Labels: Madrid trip, Moving',
+    )
+  })
+
+  it('shows a count instead of names once more than two labels are selected', () => {
+    expect(buildActiveFilterChips(input({ labelIds: [10, 11, 12] }))[0]?.label).toBe('Labels (3)')
+  })
+
+  it('falls back to a generic name when a selected label is gone', () => {
+    expect(buildActiveFilterChips(input({ labelIds: [99] }))[0]?.label).toBe('Label: Label')
+  })
+
+  it('clearing the labels chip resets the whole selection', () => {
+    const onLabelIds = vi.fn()
+    buildActiveFilterChips(input({ labelIds: [10, 11], onLabelIds }))[0]?.onClear()
+
+    expect(onLabelIds).toHaveBeenCalledWith([])
+  })
+
+  it('orders the labels chip between flag and type', () => {
+    const chips = buildActiveFilterChips(
+      input({ categoryId: 1, accountId: 2, flagId: 3, labelIds: [10], txnType: 'expense', status: 'posted' }),
+    )
+
+    expect(chips.map((c) => c.key)).toEqual(['category', 'account', 'flag', 'labels', 'type', 'status'])
   })
 
   it('still builds the other chips', () => {
