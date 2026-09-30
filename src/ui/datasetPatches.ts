@@ -11,6 +11,7 @@ import type {
   Flag,
   GoalScenario,
   InstallmentPlan,
+  Label,
   Transaction,
   TransactionAttachment,
   WealthAccount,
@@ -187,6 +188,28 @@ export function patchAfterFlagDelete(dataset: ExpenseDataset, id: number): Expen
   const d = cloneDataset(dataset)
   d.flags = d.flags.filter((f) => f.id !== id)
   d.transactions = d.transactions.map((t) => (t.flagId === id ? withoutFlag(t) : t))
+  return d
+}
+
+export function patchAfterLabel(dataset: ExpenseDataset, label: Label): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  upsertById(d.labels, label)
+  d.labels.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+  return d
+}
+
+/**
+ * Deleting a label unlinks it from its transactions rather than reassigning
+ * them — the mirror of what dbLabels.deleteLabel does in D1. Unlike a flag's
+ * single flagId, a label id has to be filtered out of each transaction's
+ * array rather than cleared outright, since other labels on the same row survive.
+ */
+export function patchAfterLabelDelete(dataset: ExpenseDataset, id: number): ExpenseDataset {
+  const d = cloneDataset(dataset)
+  d.labels = d.labels.filter((l) => l.id !== id)
+  d.transactions = d.transactions.map((t) =>
+    t.labelIds?.includes(id) ? { ...t, labelIds: t.labelIds.filter((lid) => lid !== id) } : t,
+  )
   return d
 }
 
