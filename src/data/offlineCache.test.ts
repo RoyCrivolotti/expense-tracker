@@ -12,6 +12,8 @@ describe('isCompatibleSnapshot', () => {
     expect(isCompatibleSnapshot({ version: 1 })).toBe(false)
     // Version 2 predates `settings.assumedInflation`, which every projection now reads.
     expect(isCompatibleSnapshot({ version: 2 })).toBe(false)
+    // Version 3 predates `labels`, which buildLookup now maps over.
+    expect(isCompatibleSnapshot({ version: 3 })).toBe(false)
   })
 
   it('rejects a missing record', () => {
@@ -19,6 +21,6 @@ describe('isCompatibleSnapshot', () => {
   })
 
   it('accepts a snapshot written by this build', () => {
-    expect(isCompatibleSnapshot({ version: 3 })).toBe(true)
+    expect(isCompatibleSnapshot({ version: 4 })).toBe(true)
   })
 })
