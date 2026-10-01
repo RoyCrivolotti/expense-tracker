@@ -206,3 +206,44 @@ describe('buildTransactionListRows — flag filter', () => {
     expect(rows.filter((r) => r.kind === 'transaction')).toHaveLength(1)
   })
 })
+
+describe('buildTransactionListRows — label filter', () => {
+  const statements: AccountStatement[] = [
+    { accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-06-15' },
+  ]
+  const settings = { defaultAccountId: 1 }
+
+  function rowsFor(filter: Parameters<typeof buildTransactionListRows>[1]) {
+    return buildTransactionListRows(
+      [
+        txn({ budgetMonth: '2026-06', id: 10, labelIds: [4] }),
+        txn({ budgetMonth: '2026-06', id: 11, labelIds: [] }),
+      ],
+      filter,
+      statements,
+      cashRows,
+      accounts,
+      settings,
+    )
+  }
+
+  it('keeps the synthetic card-payment row when no label filter is set', () => {
+    expect(rowsFor({ month: '2026-06' }).some((r) => r.kind === 'statement-payment')).toBe(true)
+  })
+
+  it('excludes card payments when narrowing to one or more labels', () => {
+    // Same reasoning as the flag filter above: they are synthetic rows and can
+    // never carry a label, so showing them under "Work trip" would be wrong —
+    // this is the exact bug a real user hit after filtering by label.
+    const rows = rowsFor({ month: '2026-06', labelIds: [4] })
+
+    expect(rows.some((r) => r.kind === 'statement-payment')).toBe(false)
+    expect(rows).toHaveLength(1)
+  })
+
+  it('excludes card payments for an empty label selection the same as no filter', () => {
+    const rows = rowsFor({ month: '2026-06', labelIds: [] })
+
+    expect(rows.some((r) => r.kind === 'statement-payment')).toBe(true)
+  })
+})
