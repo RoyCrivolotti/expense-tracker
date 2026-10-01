@@ -250,6 +250,9 @@
 /* A <button> trigger, not a <select>, so it needs its own rule rather than
    reusing `.selectRow select` above — see LabelFilterRow. */
 .labelTrigger {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
   flex: 1 1 5.75rem;
   min-width: 0;
   padding: 0.6rem 0.75rem;
@@ -260,9 +263,24 @@
   font: inherit;
   font-size: 0.9rem;
   text-align: left;
+}
+
+.labelTriggerText {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Rotated to point down, matching the sibling <select>s' native chevron —
+   this is a plain button, so it gets none of its own. */
+.labelTriggerChevron {
+  width: 0.7rem;
+  height: 0.7rem;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transform: rotate(90deg);
 }
 .labelTrigger:focus-visible {
   border-color: var(--color-accent);

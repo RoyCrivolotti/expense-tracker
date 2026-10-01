@@ -7,6 +7,7 @@ import { Presence } from '../components/Presence'
 import { SegmentedControl } from '../components/SegmentedControl'
 import { EXIT_MS } from '../hooks/motion'
 import { useToggleIds } from '../hooks/useToggleIds'
+import { ChevronIcon } from '../icons'
 import type { StatusFilter } from './TxnFilters'
 import type { TxnDateScope } from './txnDateScope'
 import styles from './tabs.module.css'
@@ -299,7 +300,8 @@ export function LabelFilterRow({
         disabled={selectMode}
         onClick={() => setOpen((o) => !o)}
       >
-        {labelTriggerText(labelIds, labels)}
+        <span className={styles.labelTriggerText}>{labelTriggerText(labelIds, labels)}</span>
+        <ChevronIcon className={styles.labelTriggerChevron} aria-hidden="true" />
       </button>
       <Presence show={open} exitMs={EXIT_MS.popover}>
         <LabelPickerPopover
