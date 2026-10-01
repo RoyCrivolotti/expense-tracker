@@ -6,6 +6,7 @@ import type { ExpenseActions } from '../actions'
 import { EmptyState } from '../components/primitives'
 import { Modal } from '../components/Modal'
 import { FlagGlyph } from '../components/FlagGlyph'
+import { ChevronIcon } from '../icons'
 import { FlagForm } from './FlagForm'
 import { FlagAutoLabelEditor } from './FlagAutoLabelEditor'
 import defStyles from './definitions.module.css'
@@ -113,6 +114,7 @@ export function FlagsModal({
                       {usageCount(model, flag.id) === 1 ? '' : 's'}
                     </span>
                   </div>
+                  <ChevronIcon className={styles.rowChevron} aria-hidden="true" />
                 </button>
                 {onOpenReport && hasReport(model, flag) ? (
                   <button

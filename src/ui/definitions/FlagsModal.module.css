@@ -60,3 +60,12 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Signals that rowMain itself opens something (the auto-label editor), the
+   same way a disclosure row elsewhere in the app would. */
+.rowChevron {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
