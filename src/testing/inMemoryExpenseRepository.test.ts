@@ -191,4 +191,65 @@ describe('inMemoryExpenseRepository flag auto-label', () => {
     const dataset = await repo.loadDataset(OWNER)
     expect(dataset.flags.find((f) => f.id === 1)?.autoLabelId).toBeUndefined()
   })
+
+  it('setting the same auto-label twice is a harmless no-op re-run', async () => {
+    const flag = makeFlag({ id: 1 })
+    const label = makeLabel({ id: 2 })
+    const carrying = makeTransaction({ id: 10, flagId: 1 })
+    const repo = inMemoryExpenseRepository({ flags: [flag], labels: [label], transactions: [carrying] }, OWNER)
+
+    await repo.updateFlag(OWNER, 1, { autoLabelId: 2 })
+    await repo.updateFlag(OWNER, 1, { autoLabelId: 2 })
+
+    const dataset = await repo.loadDataset(OWNER)
+    expect(dataset.transactions.find((t) => t.id === 10)?.labelIds).toEqual([2])
+  })
+
+  it('archiving a flag or its auto-label does not strip labels already applied', async () => {
+    const flag = makeFlag({ id: 1 })
+    const label = makeLabel({ id: 2 })
+    const carrying = makeTransaction({ id: 10, flagId: 1 })
+    const repo = inMemoryExpenseRepository({ flags: [flag], labels: [label], transactions: [carrying] }, OWNER)
+    await repo.updateFlag(OWNER, 1, { autoLabelId: 2 })
+
+    await repo.updateFlag(OWNER, 1, { active: false })
+    await repo.updateLabel(OWNER, 2, { active: false })
+
+    const dataset = await repo.loadDataset(OWNER)
+    expect(dataset.transactions.find((t) => t.id === 10)?.labelIds).toEqual([2])
+  })
+})
+
+/**
+ * Mirrors wealthRepository.test.ts's "does not leak another owner account
+ * across the tenancy boundary" — the existing auto-label and setTransactionLabels
+ * ownership tests above only ever reject a nonexistent id, never a label that
+ * genuinely belongs to a different, real owner.
+ */
+describe('inMemoryExpenseRepository labels — tenancy boundary', () => {
+  it('rejects another owner’s real label as an auto-label', async () => {
+    const flag = makeFlag({ id: 1 })
+    const repo = inMemoryExpenseRepository({ flags: [flag] }, OWNER)
+    const theirLabel = await repo.createLabel('other@example.com', {
+      name: 'Their trip',
+      color: '#10b981',
+      sortOrder: 0,
+      active: true,
+    })
+
+    expect(() => repo.updateFlag(OWNER, 1, { autoLabelId: theirLabel.id })).toThrow('Invalid labelId')
+  })
+
+  it('rejects another owner’s real label when setting transaction labels', async () => {
+    const mine = makeTransaction({ id: 10 })
+    const repo = inMemoryExpenseRepository({ transactions: [mine] }, OWNER)
+    const theirLabel = await repo.createLabel('other@example.com', {
+      name: 'Their trip',
+      color: '#10b981',
+      sortOrder: 0,
+      active: true,
+    })
+
+    expect(() => repo.setTransactionLabels(OWNER, 10, [theirLabel.id])).toThrow('Invalid labelId')
+  })
 })
