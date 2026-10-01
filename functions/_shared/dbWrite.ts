@@ -42,8 +42,15 @@ export async function deriveOne(env: Env, owner: string, stored: StoredTransacti
   const account = acc ? toAccount(acc) : undefined
   const statements = stmt ? [toStatement(stmt)] : []
   const status = account ? deriveStatus(stored, account, statements) : 'posted'
+  // Joined to labels, not read off transaction_labels alone: a row whose label
+  // was since deleted is dropped here rather than returned, matching loadDataset
+  // (db.ts) and the tolerance flagGroups.ts already gives a dangling flagId.
   const { results } = await env.DB
-    .prepare('SELECT label_id FROM transaction_labels WHERE transaction_id = ?')
+    .prepare(
+      `SELECT tl.label_id FROM transaction_labels tl
+       JOIN labels l ON l.id = tl.label_id
+       WHERE tl.transaction_id = ?`,
+    )
     .bind(stored.id)
     .all<{ label_id: number }>()
   const labelIds = (results ?? []).map((r) => r.label_id)

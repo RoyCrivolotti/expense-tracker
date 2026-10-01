@@ -770,6 +770,21 @@ describe('deriveOne — labelIds', () => {
 
     expect(txn.labelIds).toEqual([])
   })
+
+  it('joins against labels, so a transaction_labels row whose label was deleted cannot surface', async () => {
+    let capturedSql = ''
+    const env = envForUpdateWithLabels([2, 3])
+    const DB = env.DB as unknown as { prepare: (sql: string) => unknown }
+    const prepare = DB.prepare.bind(DB)
+    DB.prepare = (sql: string) => {
+      if (sql.includes('transaction_labels')) capturedSql = sql
+      return prepare(sql)
+    }
+
+    await updateTransaction(env, 'a@b.com', 5, { description: 'Renamed' })
+
+    expect(capturedSql).toMatch(/JOIN labels l ON l\.id = tl\.label_id/)
+  })
 })
 
 /**

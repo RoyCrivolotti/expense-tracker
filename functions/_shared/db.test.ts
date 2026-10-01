@@ -88,4 +88,18 @@ describe('loadDataset — labels', () => {
 
     expect(dataset.transactions[0]?.labelIds).toEqual([])
   })
+
+  it('joins against labels, so a transaction_labels row whose label was deleted cannot surface', async () => {
+    let capturedSql = ''
+    const env = stubEnv()
+    const prepare = env.DB.prepare
+    env.DB.prepare = (sql: string) => {
+      if (sql.includes('FROM transaction_labels tl')) capturedSql = sql
+      return prepare(sql)
+    }
+
+    await loadDataset(env, OWNER)
+
+    expect(capturedSql).toMatch(/JOIN labels l ON l\.id = tl\.label_id/)
+  })
 })
