@@ -106,6 +106,9 @@ export function horizontalPlacement(
  * for its old height, so it either hangs off the bottom of the screen or, once
  * a keyboard shrinks the viewport, flips above and lands somewhere unrelated to
  * the field it belongs to.
+ *
+ * Also repositions when the trigger itself moves, which a sibling appearing
+ * or disappearing can do without ever resizing or scrolling anything.
  */
 export function usePopoverPosition(
   triggerRef: RefObject<HTMLElement | null>,
@@ -168,6 +171,22 @@ export function usePopoverPosition(
     const observer = new ResizeObserver(update)
     observer.observe(popover)
 
+    /*
+     * A sibling of the trigger appearing or disappearing — the Flag select in
+     * TxnFilterRows's three-column grid vanishing when the last active flag
+     * is archived is the case that surfaced this — shifts the trigger into a
+     * different grid column without changing the trigger's own box size, so
+     * neither a ResizeObserver on the trigger nor the window/scroll listeners
+     * below would ever fire. A MutationObserver on the trigger's parent
+     * catches exactly that: any addition or removal among the trigger's
+     * siblings. Scoped to the parent rather than the whole document, since
+     * that parent is the structural boundary any sibling-driven layout shift
+     * has to cross to reach the trigger.
+     */
+    const triggerParent = trigger.parentElement
+    const parentObserver = triggerParent ? new MutationObserver(update) : null
+    parentObserver?.observe(triggerParent as Element, { childList: true, subtree: true })
+
     window.addEventListener('resize', update)
     window.addEventListener('scroll', update, true)
     // The keyboard opening resizes the visual viewport without firing a window
@@ -176,6 +195,7 @@ export function usePopoverPosition(
     window.visualViewport?.addEventListener('scroll', update)
     return () => {
       observer.disconnect()
+      parentObserver?.disconnect()
       window.removeEventListener('resize', update)
       window.removeEventListener('scroll', update, true)
       window.visualViewport?.removeEventListener('resize', update)
