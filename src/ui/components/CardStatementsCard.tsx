@@ -33,7 +33,7 @@ function findPaidOn(
 }
 
 export function CardStatementsCard({ dataset, month, actions }: CardStatementsCardProps) {
-  const [pending, setPending] = useState<number | null>(null)
+  const [pending, setPending] = useState<ReadonlySet<number>>(() => new Set())
   const [editingId, setEditingId] = useState<number | null>(null)
 
   const statements = useMemo<StatementRow[]>(() => {
@@ -59,9 +59,18 @@ export function CardStatementsCard({ dataset, month, actions }: CardStatementsCa
 
   if (statements.length === 0) return null
 
+  // A save is tracked per card: one card's save finishing must not unlock another's.
+  const track = (accountId: number, saving: boolean) =>
+    setPending((prev) => {
+      const next = new Set(prev)
+      if (saving) next.add(accountId)
+      else next.delete(accountId)
+      return next
+    })
+
   const save = actions?.setStatementPaid
     ? async (accountId: number, paid: boolean, paidOn?: string) => {
-        setPending(accountId)
+        track(accountId, true)
         try {
           await actions.setStatementPaid(
             accountId,
@@ -70,7 +79,7 @@ export function CardStatementsCard({ dataset, month, actions }: CardStatementsCa
             paid ? (paidOn ?? todayLocalIso()) : undefined,
           )
         } finally {
-          setPending(null)
+          track(accountId, false)
         }
       }
     : undefined
@@ -88,7 +97,7 @@ export function CardStatementsCard({ dataset, month, actions }: CardStatementsCa
             amountCents={s.chargeCents}
             paid={s.paid}
             paidOn={s.paidOn}
-            disabled={pending === s.id}
+            disabled={pending.has(s.id)}
             {...(save && s.chargeCents !== 0 ? { onPress: () => setEditingId(s.id) } : {})}
           />
         ))}
@@ -102,7 +111,7 @@ export function CardStatementsCard({ dataset, month, actions }: CardStatementsCa
               amountCents={statement.chargeCents}
               paid={statement.paid}
               paidOn={statement.paidOn}
-              disabled={pending === statement.id}
+              disabled={pending.has(statement.id)}
               onClose={() => setEditingId(null)}
               onSave={(paid, paidOn) => save(statement.id, paid, paidOn)}
             />
