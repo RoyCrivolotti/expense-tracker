@@ -12,6 +12,7 @@ import type {
   ExpenseSettings,
   GoalScenario,
   InstallmentPlan,
+  Label,
   StoredTransaction,
   Transaction,
   TransactionAttachment,
@@ -223,6 +224,7 @@ function stubTxn(input: NewTransaction): Transaction {
  */
 let loaded: Transaction[] = []
 let loadedFlags: Flag[] = []
+let loadedLabels: Label[] = []
 let loadedSettings: ExpenseSettings = defaultExpenseSettings()
 
 export const docsCaptureDataSource: ExpenseDataSource = {
@@ -237,6 +239,7 @@ export const docsCaptureDataSource: ExpenseDataSource = {
       })
       loaded = enriched.transactions
       loadedFlags = enriched.flags
+      loadedLabels = enriched.labels
       loadedSettings = enriched.settings
       return enriched
     })
@@ -345,19 +348,32 @@ export const docsCaptureDataSource: ExpenseDataSource = {
   deleteFlag() {
     return Promise.resolve({ unflagged: 0 })
   },
+  // Registered in loadedLabels, same reason as createFlag: a same-session
+  // updateLabel or setTransactionLabels against the id this returns needs a
+  // real row to merge its partial patch onto.
   createLabel(input) {
     nextLabelId += 1
-    return Promise.resolve({ ...input, id: nextLabelId })
+    const label: Label = { ...input, id: nextLabelId }
+    loadedLabels = [...loadedLabels, label]
+    return Promise.resolve(label)
   },
+  // Merged onto the real row, not rebuilt from the patch: a rename sends only
+  // { name }, and a stub built from the patch alone silently reset sortOrder
+  // to 0 — the same failure mode updateFlag's own comment describes.
   updateLabel(id, patch) {
-    return Promise.resolve({
-      id,
-      name: patch.name ?? 'Label',
-      color: patch.color ?? '#6366f1',
-      sortOrder: patch.sortOrder ?? 0,
-      active: patch.active ?? true,
-      ...(patch.description ? { description: patch.description } : {}),
-    })
+    const existing = loadedLabels.find((l) => l.id === id)
+    const merged: Label = existing
+      ? { ...existing, ...patch, id }
+      : {
+          id,
+          name: patch.name ?? 'Label',
+          color: patch.color ?? '#6366f1',
+          sortOrder: patch.sortOrder ?? 0,
+          active: patch.active ?? true,
+          ...(patch.description ? { description: patch.description } : {}),
+        }
+    loadedLabels = loadedLabels.map((l) => (l.id === id ? merged : l))
+    return Promise.resolve(merged)
   },
   deleteLabel() {
     return Promise.resolve({ unlabeled: 0 })

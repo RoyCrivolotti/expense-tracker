@@ -93,6 +93,63 @@ describe('docsCaptureDataSource.updateFlag', () => {
   })
 })
 
+describe('docsCaptureDataSource.createLabel', () => {
+  it('registers the new label so a same-session updateLabel finds it', async () => {
+    await docsCaptureDataSource.load()
+
+    const created = await docsCaptureDataSource.createLabel!({
+      name: 'Madrid trip',
+      color: '#10b981',
+      sortOrder: 0,
+      active: true,
+    })
+    const updated = await docsCaptureDataSource.updateLabel!(created.id, { name: 'Madrid trip, May' })
+
+    // The bug: an unregistered createLabel left updateLabel with nothing to merge
+    // onto, so it fell back to a stub that lost sortOrder and color.
+    expect(updated.name).toBe('Madrid trip, May')
+    expect(updated.color).toBe('#10b981')
+    expect(updated.sortOrder).toBe(0)
+  })
+})
+
+describe('docsCaptureDataSource.updateLabel', () => {
+  it('merges a partial patch onto the existing label, unlike a fresh stub', async () => {
+    await docsCaptureDataSource.load()
+    const label = await docsCaptureDataSource.createLabel!({
+      name: 'Work trip',
+      color: '#6366f1',
+      sortOrder: 3,
+      active: true,
+    })
+
+    // A rename sends only the one field, same as the real editor.
+    const updated = await docsCaptureDataSource.updateLabel!(label.id, { name: 'Work trip, renamed' })
+
+    expect(updated.id).toBe(label.id)
+    expect(updated.name).toBe('Work trip, renamed')
+    // The bug: a stub built from the patch alone silently reset this to 0.
+    expect(updated.sortOrder).toBe(3)
+    expect(updated.color).toBe('#6366f1')
+  })
+
+  it('persists the merge, so a later read of the same label sees it', async () => {
+    await docsCaptureDataSource.load()
+    const label = await docsCaptureDataSource.createLabel!({
+      name: 'Friend trip',
+      color: '#f59e0b',
+      sortOrder: 1,
+      active: true,
+    })
+
+    await docsCaptureDataSource.updateLabel!(label.id, { description: 'Group travel' })
+    const second = await docsCaptureDataSource.updateLabel!(label.id, { sortOrder: 2 })
+
+    expect(second.description).toBe('Group travel')
+    expect(second.sortOrder).toBe(2)
+  })
+})
+
 describe('docsCaptureDataSource.createTransaction', () => {
   it('registers the new row so a same-session lookup by id finds it', async () => {
     await docsCaptureDataSource.load()
