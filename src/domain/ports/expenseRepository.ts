@@ -6,6 +6,7 @@ import type {
   ExpenseDataset,
   ExpenseSettings,
   Flag,
+  Label,
   TransactionAttachment,
   GoalScenario,
   InstallmentPlan,
@@ -26,6 +27,7 @@ import type {
   NewFlag,
   NewGoalScenario,
   NewInstallmentPlan,
+  NewLabel,
   NewTransaction,
   NewWealthAccount,
   NewWealthCheckin,
@@ -99,6 +101,16 @@ export interface ExpenseRepository {
   updateFlag(owner: string, id: number, patch: Partial<NewFlag>): Promise<Flag>
   /** Deletes the flag and clears it from its transactions in one batch. */
   deleteFlag(owner: string, id: number): Promise<{ unflagged: number }>
+  createLabel(owner: string, input: NewLabel): Promise<Label>
+  updateLabel(owner: string, id: number, patch: Partial<NewLabel>): Promise<Label>
+  /** Deletes the label and unlinks it from its transactions in one operation. */
+  deleteLabel(owner: string, id: number): Promise<{ unlabeled: number }>
+  /** Replaces a transaction's whole label set; ids are deduped and ownership-checked. */
+  setTransactionLabels(
+    owner: string,
+    transactionId: number,
+    labelIds: number[],
+  ): Promise<Transaction>
   updateSettings(owner: string, patch: Partial<ExpenseSettings>): Promise<ExpenseSettings>
   createScenario(owner: string, input: NewGoalScenario): Promise<GoalScenario>
   updateScenario(

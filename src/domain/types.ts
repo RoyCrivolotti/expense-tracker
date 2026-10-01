@@ -63,6 +63,27 @@ export interface Flag {
 }
 
 /**
+ * A persistent, multi-value tag a user applies to transactions to record what
+ * they belong to — a trip, a project — regardless of any flag's lifecycle. A
+ * flag says "this still needs something done about it" and clears once that
+ * happens (see `Flag`); a label says "this belongs to X" and is never cleared
+ * by anything the app does on its own, only by hand. A transaction can carry
+ * any number of labels, unlike a flag's one-at-a-time link. Setting
+ * `active: false` archives a label: it drops out of the pickers but keeps its
+ * existing links.
+ */
+export interface Label {
+  id: number
+  name: string
+  /** Hex, `#rrggbb`. Presets come from SCENARIO_COLORS; custom values allowed. */
+  color: string
+  /** Optional note explaining what the label is for. */
+  description?: string
+  sortOrder: number
+  active: boolean
+}
+
+/**
  * A stored transaction. `status` is NOT stored — only `cancelled` is. The
  * effective status is derived from the account's settlement and the matching
  * statement's paid flag (see engine/status.ts).
@@ -120,6 +141,18 @@ export interface StoredTransaction {
 /** A transaction with its derived status, as consumed by the compute engine. */
 export interface Transaction extends StoredTransaction {
   status: TxnStatus
+  /**
+   * Labels this transaction carries, joined in from `transaction_labels` —
+   * never a real column, so it lives here rather than on `StoredTransaction`,
+   * the same reason `status` does not live there either. Optional rather than
+   * always-present: a handful of ids belonging to another relation is not
+   * worth forcing on every test fixture and hand-built transaction literal in
+   * the app the way `flagId`/`settledBy` already are not. Real data (`loadDataset`,
+   * the write paths) always resolves it to a concrete array, `[]` when a
+   * transaction has none — treat an absent key the same as `[]`, never as
+   * "unknown".
+   */
+  labelIds?: number[]
 }
 
 /**
@@ -333,6 +366,7 @@ export interface ExpenseDataset {
   categories: Category[]
   accounts: Account[]
   flags: Flag[]
+  labels: Label[]
   attachments: TransactionAttachment[]
   /** Transactions with derived status already applied. */
   transactions: Transaction[]

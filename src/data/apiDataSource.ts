@@ -12,6 +12,7 @@ import type {
   Flag,
   GoalScenario,
   InstallmentPlan,
+  Label,
   Transaction,
   TransactionAttachment,
   WealthAccount,
@@ -29,6 +30,7 @@ import type {
   NewFlag,
   NewGoalScenario,
   NewInstallmentPlan,
+  NewLabel,
   NewTransaction,
   NewWealthAccount,
   NewWealthCheckin,
@@ -125,6 +127,26 @@ export const apiDataSource: ExpenseDataSource = {
     }),
   deleteFlag: (id: number) =>
     req<{ unflagged: number }>(`${BASE}/flags/${id}`, { method: 'DELETE' }),
+  createLabel: (input: NewLabel) =>
+    req<Label>(`${BASE}/labels`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    }),
+  updateLabel: (id: number, patch: Partial<NewLabel>) =>
+    req<Label>(`${BASE}/labels/${id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(patch),
+    }),
+  deleteLabel: (id: number) =>
+    req<{ unlabeled: number }>(`${BASE}/labels/${id}`, { method: 'DELETE' }),
+  setTransactionLabels: (transactionId: number, labelIds: number[]) =>
+    req<Transaction>(`${BASE}/transactions/${transactionId}/labels`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ labelIds }),
+    }),
   createCategory: (input: NewCategory) =>
     req<Category>(`${BASE}/categories`, {
       method: 'POST',

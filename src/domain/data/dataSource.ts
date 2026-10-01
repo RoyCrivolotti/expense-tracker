@@ -11,6 +11,7 @@ import type {
   ExpenseDataset,
   ExpenseSettings,
   Flag,
+  Label,
   TransactionAttachment,
   GoalScenario,
   InstallmentPlan,
@@ -41,6 +42,7 @@ export type BulkTransactionPatch = Partial<
 export type NewCategory = Omit<Category, 'id'>
 export type NewAccount = Omit<Account, 'id'>
 export type NewFlag = Omit<Flag, 'id'>
+export type NewLabel = Omit<Label, 'id'>
 
 /** The storage-facing half of an attachment, kept off the domain type. */
 export interface AttachmentSource {
@@ -131,6 +133,12 @@ export interface ExpenseDataSource {
   updateFlag?(id: number, patch: Partial<NewFlag>): Promise<Flag>
   /** Deleting a flag clears it from its transactions; the result says how many. */
   deleteFlag?(id: number): Promise<{ unflagged: number }>
+  createLabel?(input: NewLabel): Promise<Label>
+  updateLabel?(id: number, patch: Partial<NewLabel>): Promise<Label>
+  /** Deleting a label unlinks it from its transactions; the result says how many. */
+  deleteLabel?(id: number): Promise<{ unlabeled: number }>
+  /** Replaces a transaction's whole label set. */
+  setTransactionLabels?(transactionId: number, labelIds: number[]): Promise<Transaction>
   updateSettings?(patch: Partial<ExpenseSettings>): Promise<ExpenseSettings>
   createScenario?(input: NewGoalScenario): Promise<GoalScenario>
   updateScenario?(id: number, patch: Partial<NewGoalScenario>): Promise<GoalScenario>

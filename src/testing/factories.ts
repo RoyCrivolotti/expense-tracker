@@ -8,6 +8,7 @@ import type {
   ExpenseDataset,
   Flag,
   GoalScenario,
+  Label,
   Transaction,
   TransactionAttachment,
   WealthAccount,
@@ -22,6 +23,7 @@ export function makeDataset(overrides: Partial<ExpenseDataset> = {}): ExpenseDat
     categories: [],
     accounts: [],
     flags: [],
+    labels: [],
     attachments: [],
     transactions: [],
     accountStatements: [],
@@ -74,6 +76,18 @@ export function makeFlag(overrides: Partial<Flag> = {}): Flag {
     name: 'Work travel',
     color: '#6366f1',
     reimbursable: true,
+    sortOrder: 0,
+    active: true,
+    ...overrides,
+  }
+}
+
+/** Build a minimal valid Label for tests. */
+export function makeLabel(overrides: Partial<Label> = {}): Label {
+  return {
+    id: 1,
+    name: 'Japan trip',
+    color: '#10b981',
     sortOrder: 0,
     active: true,
     ...overrides,

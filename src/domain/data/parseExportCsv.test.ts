@@ -6,6 +6,7 @@ import { defaultExpenseSettings } from '../engine'
 
 const DATASET: ExpenseDataset = {
   flags: [],
+  labels: [],
   attachments: [],
   categories: [
     { id: 1, name: 'Groceries', monthlyBudgetCents: 50000, sortOrder: 0, active: true },

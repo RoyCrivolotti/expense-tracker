@@ -44,6 +44,7 @@ function datasetWithPlans(
 ): ExpenseDataset {
   return {
     flags: [],
+    labels: [],
     attachments: [],
     categories: [{ id: 3, name: 'Tech', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
     accounts: extras.accounts ?? accounts,

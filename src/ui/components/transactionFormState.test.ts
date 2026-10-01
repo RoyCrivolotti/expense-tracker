@@ -11,6 +11,7 @@ function minimalModel(): ExpenseModel {
   return {
     dataset: {
       flags: [],
+      labels: [],
       attachments: [],
       categories: [{ id: 3, name: 'Health', monthlyBudgetCents: 0, sortOrder: 1, active: true }],
       accounts: [

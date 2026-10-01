@@ -30,21 +30,30 @@ export async function assertOwnedFlag(env: Env, owner: string, flagId: number): 
   if (!row) throw new HttpError(400, 'Invalid flagId')
 }
 
+export async function assertOwnedLabel(env: Env, owner: string, labelId: number): Promise<void> {
+  const row = await env.DB.prepare('SELECT 1 AS ok FROM labels WHERE id = ? AND owner = ?')
+    .bind(labelId, owner)
+    .first<{ ok: number }>()
+  if (!row) throw new HttpError(400, 'Invalid labelId')
+}
+
 /**
- * `settledBy` points at another transaction (the reimbursement payment), so it needs
- * the same tenancy check as any other foreign key — without it a patch can aim a row's
- * settlement at an id belonging to someone else, and the delete-time cleanup that would
- * normally release it is scoped `AND owner = ?`, so nothing can ever reconcile it.
+ * A transaction id used as a foreign key needs the same tenancy check as any other —
+ * without it a patch can aim at an id belonging to someone else, and a delete-time
+ * cleanup scoped `AND owner = ?` could never reconcile it. `settledBy` was the first
+ * caller (a reimbursement payment id) and stays the default error field; the labels
+ * PUT route passes its own since the id there is a path parameter, not a patch field.
  */
 export async function assertOwnedTransaction(
   env: Env,
   owner: string,
   transactionId: number,
+  field = 'settledBy',
 ): Promise<void> {
   const row = await env.DB.prepare('SELECT 1 AS ok FROM transactions WHERE id = ? AND owner = ?')
     .bind(transactionId, owner)
     .first<{ ok: number }>()
-  if (!row) throw new HttpError(400, 'Invalid settledBy')
+  if (!row) throw new HttpError(400, `Invalid ${field}`)
 }
 
 export async function assertOwnedPlan(env: Env, owner: string, planId: number): Promise<void> {

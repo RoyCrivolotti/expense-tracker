@@ -6,6 +6,7 @@ import { buildOnboardingSettingsPatch, runOnboardingSetup } from './runOnboardin
 
 const emptyDataset: ExpenseDataset = {
   flags: [],
+  labels: [],
   attachments: [],
   categories: [],
   accounts: [],

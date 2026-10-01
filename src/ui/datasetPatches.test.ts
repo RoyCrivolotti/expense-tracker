@@ -22,6 +22,7 @@ import { makeScenario } from '../testing/factories'
 function dataset(overrides: Partial<ExpenseDataset> = {}): ExpenseDataset {
   return {
     flags: [],
+    labels: [],
     attachments: [],
     categories: [],
     accounts: [],

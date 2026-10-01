@@ -5,6 +5,7 @@ import { resolveDescriptionTemplate } from './applyDescriptionSuggestion'
 
 const dataset: ExpenseDataset = {
   flags: [],
+  labels: [],
   attachments: [],
   categories: [
     { id: 1, name: 'Food', monthlyBudgetCents: 0, sortOrder: 0, active: true },

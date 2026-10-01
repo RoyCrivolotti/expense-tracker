@@ -21,6 +21,7 @@ function setOnline(online: boolean) {
 
 const emptyDataset: ExpenseDataset = {
   flags: [],
+  labels: [],
   attachments: [],
   categories: [],
   accounts: [],
