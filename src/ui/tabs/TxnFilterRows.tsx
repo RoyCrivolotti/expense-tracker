@@ -6,6 +6,7 @@ import { LabelPickerPopover } from '../components/LabelPickerPopover'
 import { Presence } from '../components/Presence'
 import { SegmentedControl } from '../components/SegmentedControl'
 import { EXIT_MS } from '../hooks/motion'
+import { useToggleIds } from '../hooks/useToggleIds'
 import type { StatusFilter } from './TxnFilters'
 import type { TxnDateScope } from './txnDateScope'
 import styles from './tabs.module.css'
@@ -283,12 +284,9 @@ export function LabelFilterRow({
 }) {
   const triggerRef = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(false)
+  const toggle = useToggleIds(labelIds, onLabelIds)
 
   if (labels.length === 0) return null
-
-  const toggle = (id: number) => {
-    onLabelIds(labelIds.includes(id) ? labelIds.filter((x) => x !== id) : [...labelIds, id])
-  }
 
   return (
     <div className={styles.selectRow}>

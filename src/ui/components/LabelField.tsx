@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import type { Label } from '../../types'
 import { EXIT_MS } from '../hooks/motion'
+import { useToggleIds } from '../hooks/useToggleIds'
 import { LabelPickerPopover } from './LabelPickerPopover'
 import { Presence } from './Presence'
 import styles from './FlagField.module.css'
@@ -39,9 +40,7 @@ export function LabelField({ labels, value, onChange, onTrapPausedChange, onCrea
     onTrapPausedChange?.(next)
   }
 
-  const toggle = (labelId: number) => {
-    onChange(value.includes(labelId) ? value.filter((id) => id !== labelId) : [...value, labelId])
-  }
+  const toggle = useToggleIds(value, onChange)
 
   return (
     <>
