@@ -250,9 +250,29 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.6rem;
 }
+/*
+ * Five of these six fields are native <select>s; the label filter is a
+ * hand-built button (see below). A native select's own background and height
+ * come from the browser/OS, not from this stylesheet, and in practice they
+ * don't land on the same values .labelTrigger uses — a visibly different fill
+ * color, and a box short enough that Grid's default stretch-to-row-height
+ * pulls every select in a row taller than its own content, which is also why
+ * a select's text can end up sitting off-center rather than vertically
+ * centered. Giving every field in this row the same explicit height,
+ * background and radius removes the guesswork: nothing is left for Grid to
+ * stretch, and the native select's own text centers correctly within a box
+ * it was actually asked to be that size, not just forced into one.
+ */
 .filterRow select,
 .filterRow .labelTrigger {
   min-width: 0;
+  height: 2.75rem;
+  border-radius: 999px;
+  background-color: var(--color-surface-muted);
+}
+.filterRow select {
+  border: 1px solid transparent;
+  color: var(--color-text);
 }
 .filterRow select.activeSelect {
   border-color: var(--color-accent);
@@ -262,13 +282,8 @@
  * The label filter is the one field in this row that can't be a native
  * <select> — it needs to pick several labels at once (OR), which a select
  * can't express — so it is a hand-built button next to five real selects.
- * Browsers render a <select> here as a fully rounded pill with no border
- * until it holds a value; this is the one place .labelTrigger is made to
- * match that specifically; LabelField's own use of it elsewhere (the edit
- * sheet's chip row) is a different context and keeps its own look.
  */
 .filterRow .labelTrigger {
-  border-radius: 999px;
   padding-left: 1rem;
 }
 .filterLabelChevron {
