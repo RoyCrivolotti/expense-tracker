@@ -52,6 +52,12 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // trigger button plus the same multi-select picker the edit sheet already uses):
 // about 500 bytes gzip took the total from 201,537 bytes, left over from the
 // auto-label configuration feature, to 202,060.
+//
+// The past-report flag-identity fallback landed around the same point in the stack
+// and independently needed the same bump for the same reason (auto-label
+// configuration's own headroom): its own tests alone pushed the total to 202,026
+// bytes against the pre-label-filtering budget. The two bumps merged onto the same
+// 203 KB ceiling rather than stacking into two separate raises.
 const TOTAL_MAX_GZIP = 203_000
 const GOALS_MAX_GZIP = 40_000
 
