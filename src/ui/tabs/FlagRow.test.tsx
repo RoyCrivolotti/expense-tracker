@@ -2,11 +2,12 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { Flag } from '../../types'
-import { makeFlag } from '../../testing/factories'
+import { makeFlag, makeLabel } from '../../testing/factories'
 import { PrimaryFilterRow, SecondaryFilterRow } from './TxnFilterRows'
 
 const work = makeFlag({ id: 1, name: 'Work travel' })
 const archived = makeFlag({ id: 2, name: 'Old claim', active: false })
+const travel = makeLabel({ id: 1, name: 'Travel' })
 
 function renderRow(overrides: { flags?: Flag[]; flagId?: number | 'all' | 'none'; selectMode?: boolean } = {}) {
   const onFlag = vi.fn()
@@ -155,5 +156,78 @@ describe('filter selects keep their meaning without the "All" prefix', () => {
     renderRow()
     expect(screen.getByRole('combobox', { name: 'Filter by status' })).toHaveDisplayValue('Status')
     expect(screen.getByRole('combobox', { name: 'Filter by flag' })).toHaveDisplayValue('Flag')
+  })
+})
+
+describe('filter row DOM order', () => {
+  // The two rows were restructured from three separate rows into aligned
+  // three-column grids specifically so Category/Type/Account and
+  // Status/Flag/Label would line up visually. A test that only checks each
+  // control exists somewhere would pass even if the visual order regressed
+  // (e.g. two fields transposed), so this asserts the actual DOM sequence.
+  it('renders PrimaryFilterRow as Category, then Type, then Account', () => {
+    const { container } = render(
+      <PrimaryFilterRow
+        categories={[]}
+        accounts={[]}
+        categoryId="all"
+        accountId="all"
+        txnType="all"
+        selectMode={false}
+        onCategory={vi.fn()}
+        onAccount={vi.fn()}
+        onTxnType={vi.fn()}
+      />,
+    )
+
+    const names = [...container.querySelectorAll('select')].map((el) => el.getAttribute('aria-label'))
+
+    expect(names).toEqual(['Filter by category', 'Filter by type', 'Filter by account'])
+  })
+
+  it('renders SecondaryFilterRow as Status, then Flag, then Label', () => {
+    const { container } = render(
+      <SecondaryFilterRow
+        flags={[work]}
+        flagId="all"
+        onFlag={vi.fn()}
+        status="all"
+        selectMode={false}
+        onStatus={vi.fn()}
+        labels={[travel]}
+        labelIds={[]}
+        onLabelIds={vi.fn()}
+      />,
+    )
+
+    const names = [...container.querySelectorAll('select, button[aria-haspopup="dialog"]')].map((el) =>
+      el.tagName === 'SELECT' ? el.getAttribute('aria-label') : 'Label',
+    )
+
+    expect(names).toEqual(['Filter by status', 'Filter by flag', 'Label'])
+  })
+
+  it('keeps Status before Label when the flag select has nothing to show', () => {
+    const { container } = render(
+      <SecondaryFilterRow
+        flags={[]}
+        flagId="all"
+        onFlag={vi.fn()}
+        status="all"
+        selectMode={false}
+        onStatus={vi.fn()}
+        labels={[travel]}
+        labelIds={[]}
+        onLabelIds={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByRole('combobox', { name: 'Filter by flag' })).not.toBeInTheDocument()
+
+    const names = [...container.querySelectorAll('select, button[aria-haspopup="dialog"]')].map((el) =>
+      el.tagName === 'SELECT' ? el.getAttribute('aria-label') : 'Label',
+    )
+
+    expect(names).toEqual(['Filter by status', 'Label'])
   })
 })

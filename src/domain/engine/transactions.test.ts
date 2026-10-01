@@ -140,4 +140,23 @@ describe('filterTransactions — labelIds', () => {
     ]
     expect(filterTransactions(mixed, { flagId: 9, labelIds: [1, 2] }).map((t) => t.id)).toEqual([2, 1])
   })
+
+  it('combines category, flag, and label filters all at once', () => {
+    const mixed = [
+      // category and flag match, but its only label isn't one of the selected ones
+      { ...txn(1, '2026-06-01'), categoryId: 1, flagId: 9, labelIds: [3] },
+      // matches all three dimensions, via the first selected label
+      { ...txn(2, '2026-06-02'), categoryId: 1, flagId: 9, labelIds: [1] },
+      // category and one selected label match, but the flag doesn't
+      { ...txn(3, '2026-06-03'), categoryId: 1, flagId: 10, labelIds: [1] },
+      // flag and label match, but the category doesn't
+      { ...txn(4, '2026-06-04'), categoryId: 2, flagId: 9, labelIds: [1] },
+      // matches all three dimensions, via the second selected label (OR within labels)
+      { ...txn(5, '2026-06-05'), categoryId: 1, flagId: 9, labelIds: [2] },
+    ]
+
+    const out = filterTransactions(mixed, { categoryId: 1, flagId: 9, labelIds: [1, 2] })
+
+    expect(out.map((t) => t.id)).toEqual([5, 2])
+  })
 })
