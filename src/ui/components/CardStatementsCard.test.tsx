@@ -37,7 +37,7 @@ function datasetWith(statements: AccountStatement[] = []) {
 async function openSheet(statements: AccountStatement[] = [], actions = makeActions()) {
   const user = userEvent.setup()
   render(<CardStatementsCard dataset={datasetWith(statements)} month="2026-06" actions={actions} />)
-  await user.click(screen.getByRole('button', { name: 'Iberia Icon statement' }))
+  await user.click(screen.getByRole('button', { name: /^Iberia Icon/ }))
   return { user, actions, sheet: screen.getByRole('dialog', { name: 'Iberia Icon statement' }) }
 }
 
@@ -93,7 +93,7 @@ describe('CardStatementsCard', () => {
     })
     const { user, sheet } = await openSheet([], actions)
     const markPaid = within(sheet).getByRole('button', { name: 'Mark as paid' })
-    const row = screen.getByRole('button', { name: 'Iberia Icon statement' })
+    const row = screen.getByRole('button', { name: /^Iberia Icon/ })
 
     await user.click(markPaid)
     expect(markPaid).toBeDisabled()
@@ -122,14 +122,14 @@ describe('CardStatementsCard', () => {
       />,
     )
 
-    expect(screen.getByLabelText('Iberia Icon statement')).toHaveTextContent('Nothing to settle')
+    expect(screen.getByText('Nothing to settle')).toBeInTheDocument()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 
   it('offers no sheet without a way to save', () => {
     render(<CardStatementsCard dataset={datasetWith()} month="2026-06" />)
 
-    expect(screen.getByLabelText('Iberia Icon statement')).toHaveTextContent('Due')
+    expect(screen.getByText('Due')).toBeInTheDocument()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 })

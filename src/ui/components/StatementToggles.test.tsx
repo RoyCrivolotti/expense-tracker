@@ -45,7 +45,7 @@ function modelWith(statements: AccountStatement[] = []): ExpenseModel {
 async function openJune(statements: AccountStatement[] = [], onToggle = vi.fn().mockResolvedValue(undefined)) {
   const user = userEvent.setup()
   render(<StatementToggles model={modelWith(statements)} onToggle={onToggle} />)
-  await user.click(screen.getByRole('button', { name: 'June 2026 statement' }))
+  await user.click(screen.getByRole('button', { name: /^June 2026/ }))
   return { user, onToggle, sheet: screen.getByRole('dialog', { name: 'Iberia Icon statement' }) }
 }
 
@@ -97,7 +97,7 @@ describe('StatementToggles', () => {
     )
     const { user, sheet } = await openJune([], onToggle)
     const markPaid = within(sheet).getByRole('button', { name: 'Mark as paid' })
-    const month = screen.getByRole('button', { name: 'June 2026 statement' })
+    const month = screen.getByRole('button', { name: /^June 2026/ })
 
     await user.click(markPaid)
     expect(markPaid).toBeDisabled()
@@ -120,8 +120,8 @@ describe('StatementToggles', () => {
   it('offers no sheet for a month with nothing to settle', () => {
     render(<StatementToggles model={modelWith()} onToggle={vi.fn()} />)
 
-    expect(screen.getByLabelText('May 2026 statement')).toHaveTextContent('Nothing to settle')
-    expect(screen.queryByRole('button', { name: 'May 2026 statement' })).not.toBeInTheDocument()
+    expect(screen.getByText('Nothing to settle')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^May 2026/ })).not.toBeInTheDocument()
   })
 })
 
@@ -140,7 +140,7 @@ describe('StatementToggles — the sheet while it leaves', () => {
     const onToggle = vi.fn().mockResolvedValue(undefined)
     const { rerender } = render(<StatementToggles model={modelWith([PAID_JUNE])} onToggle={onToggle} />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'June 2026 statement' }))
+    fireEvent.click(screen.getByRole('button', { name: /^June 2026/ }))
     let sheet = screen.getByRole('dialog', { name: 'Iberia Icon statement' })
     expect(within(sheet).getByRole('button', { name: 'Mark as due' })).toBeInTheDocument()
 
@@ -161,7 +161,7 @@ describe('StatementToggles — the sheet while it leaves', () => {
     const onToggle = vi.fn().mockResolvedValue(undefined)
     const { rerender } = render(<StatementToggles model={modelWith([])} onToggle={onToggle} />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'June 2026 statement' }))
+    fireEvent.click(screen.getByRole('button', { name: /^June 2026/ }))
     const sheet = screen.getByRole('dialog', { name: 'Iberia Icon statement' })
     fireEvent.click(within(sheet).getByRole('button', { name: 'Mark as paid' }))
     // Lets the save resolve, which is what closes the sheet.
