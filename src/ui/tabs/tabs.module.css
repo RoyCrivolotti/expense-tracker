@@ -253,16 +253,15 @@
 /*
  * Five of these six fields are native <select>s; the label filter is a
  * hand-built button (see below). When this row moved from a flex .selectRow
- * to this fixed-column grid, the explicit padding and font-size .selectRow
- * select used to carry over came along for the className rename in name only
- * — nothing here replaced them, so every select fell back to the browser's
- * own UA defaults (near-zero padding, whatever font-size the engine picks)
- * until a select's background/radius/height got patched back in later,
- * piecemeal, without the padding or font-size. Both are restored here as one
- * explicit rule so no field is left guessing at a browser default again: the
- * same padding and font-size on every one of the six, native or not, is what
- * actually makes them read as one consistent row rather than six individually
- * patched ones. Font-size matches what theme.css forces every <select> to
+ * to this fixed-column grid, the explicit padding, font and font-size
+ * .selectRow select used to carry over came along for the className rename
+ * in name only — nothing here replaced them, so every select fell back to
+ * the browser's own UA defaults for a form control (near-zero padding, the
+ * OS's own form-control font rather than the app's, whatever font-size the
+ * engine picks) until a select's background/radius/height got patched back
+ * in later, piecemeal, without the padding or font. All three are restored
+ * here as one explicit rule so no field is left guessing at a browser
+ * default again. Font-size matches what theme.css forces every <select> to
  * below 719px (to stop iOS zooming in on focus) — a <select> never actually
  * focuses in this row's own styling sense, but all six need to read the same
  * size regardless of which one is a real <select>.
@@ -274,6 +273,7 @@
   padding: 0.6rem 0.75rem;
   border-radius: 999px;
   background-color: var(--color-surface-muted);
+  font: inherit;
   font-size: 1rem;
 }
 .filterRow select {
