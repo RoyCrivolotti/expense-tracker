@@ -124,6 +124,41 @@ describe('usePopoverPosition — repositioning after it opens', () => {
     expect(resizeObservers).toHaveLength(0)
   })
 
+  it('re-places the popover when a sibling disappears and the trigger shifts, with no resize or scroll', async () => {
+    // TxnFilterRows's three-column grid: Flag and Label sit side by side, and
+    // Flag disappears entirely once there are no flags left to filter by (the
+    // last active flag gets archived while the row, and an open Label
+    // popover, stay mounted behind the Flags modal). The Label trigger then
+    // slides from the grid's second column into its first — its own box
+    // keeps the same width, so nothing here is a resize, and the window
+    // never scrolls either.
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const flagSelect = document.createElement('select')
+    const trigger = elementWithRect({ top: 100, bottom: 130, left: 150 })
+    container.append(flagSelect, trigger)
+
+    const popover = elementWithRect({ width: 200, height: 100 })
+    const triggerRef = { current: trigger }
+    const popoverRef = { current: popover }
+
+    const { result } = renderHook(() => usePopoverPosition(triggerRef, popoverRef))
+    expect(result.current).toMatchObject({ top: 134, left: 150 })
+
+    // The Flag select unmounts and the Label trigger takes its place in the
+    // grid — simulated here as jsdom has no layout engine to shift it for us.
+    trigger.getBoundingClientRect = () => ({ top: 100, bottom: 130, left: 20, width: 0, height: 0 }) as DOMRect
+    await act(async () => {
+      container.removeChild(flagSelect)
+      // MutationObserver callbacks run as a microtask, after the removal above.
+      await Promise.resolve()
+    })
+
+    expect(result.current).toMatchObject({ top: 134, left: 20 })
+
+    container.remove()
+  })
+
   it('measures the visual viewport, so an open keyboard counts as lost room', () => {
     // window.innerHeight does not move when iOS opens the keyboard. Trusting it
     // made every popover near the bottom of a form believe it had room to open
