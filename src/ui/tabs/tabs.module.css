@@ -252,23 +252,29 @@
 }
 /*
  * Five of these six fields are native <select>s; the label filter is a
- * hand-built button (see below). A native select's own background and height
- * come from the browser/OS, not from this stylesheet, and in practice they
- * don't land on the same values .labelTrigger uses — a visibly different fill
- * color, and a box short enough that Grid's default stretch-to-row-height
- * pulls every select in a row taller than its own content, which is also why
- * a select's text can end up sitting off-center rather than vertically
- * centered. Giving every field in this row the same explicit height,
- * background and radius removes the guesswork: nothing is left for Grid to
- * stretch, and the native select's own text centers correctly within a box
- * it was actually asked to be that size, not just forced into one.
+ * hand-built button (see below). When this row moved from a flex .selectRow
+ * to this fixed-column grid, the explicit padding and font-size .selectRow
+ * select used to carry over came along for the className rename in name only
+ * — nothing here replaced them, so every select fell back to the browser's
+ * own UA defaults (near-zero padding, whatever font-size the engine picks)
+ * until a select's background/radius/height got patched back in later,
+ * piecemeal, without the padding or font-size. Both are restored here as one
+ * explicit rule so no field is left guessing at a browser default again: the
+ * same padding and font-size on every one of the six, native or not, is what
+ * actually makes them read as one consistent row rather than six individually
+ * patched ones. Font-size matches what theme.css forces every <select> to
+ * below 719px (to stop iOS zooming in on focus) — a <select> never actually
+ * focuses in this row's own styling sense, but all six need to read the same
+ * size regardless of which one is a real <select>.
  */
 .filterRow select,
 .filterRow .labelTrigger {
   min-width: 0;
   height: 2.75rem;
+  padding: 0.6rem 0.75rem;
   border-radius: 999px;
   background-color: var(--color-surface-muted);
+  font-size: 1rem;
 }
 .filterRow select {
   border: 1px solid transparent;
@@ -279,32 +285,31 @@
   box-shadow: inset 0 0 0 1px var(--color-accent);
 }
 /*
- * The label filter is the one field in this row that can't be a native
- * <select> — it needs to pick several labels at once (OR), which a select
- * can't express — so it is a hand-built button next to five real selects.
+ * A hand-drawn stand-in for the native caret the five selects get for free from
+ * the OS — it can get close but never pixel-match a system-drawn glyph, so this
+ * is sized down from the icon's default scale to read closer to how small and
+ * thin iOS actually draws its own select arrow.
  */
-.filterRow .labelTrigger {
-  padding-left: 1rem;
-}
 .filterLabelChevron {
-  width: 0.85rem;
-  height: 0.85rem;
+  width: 0.7rem;
+  height: 0.7rem;
   flex-shrink: 0;
   color: var(--color-text-muted);
 }
 /* A <button> trigger, not a <select>, so it needs its own rule rather than
-   reusing `.filterRow select` above — see SecondaryFilterRow. */
+   reusing `.filterRow select` above — see SecondaryFilterRow. Sizing (padding,
+   font-size, height, radius, background) all come from `.filterRow
+   .labelTrigger` above; this is the one field in this row that can't be a
+   native <select> — it needs to pick several labels at once (OR), which a
+   select can't express — so it still needs its own rule for the shape a
+   select gets from the browser for free: flex layout, no default border. */
 .labelTrigger {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.6rem 0.75rem;
   border: 1px solid transparent;
-  border-radius: 0.7rem;
-  background: var(--color-surface-muted);
   color: var(--color-text);
   font: inherit;
-  font-size: 0.9rem;
   text-align: left;
 }
 
@@ -316,15 +321,6 @@
   white-space: nowrap;
 }
 
-/* Rotated to point down, matching the sibling <select>s' native chevron —
-   this is a plain button, so it gets none of its own. */
-.labelTriggerChevron {
-  width: 0.7rem;
-  height: 0.7rem;
-  flex-shrink: 0;
-  color: var(--color-text-muted);
-  transform: rotate(90deg);
-}
 .labelTrigger:focus-visible {
   border-color: var(--color-accent);
   outline: none;
