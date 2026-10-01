@@ -109,11 +109,13 @@ export function TransactionsTab({
         categories={model.dataset.categories}
         accounts={model.dataset.accounts}
         flags={model.dataset.flags}
+        labels={model.dataset.labels}
         query={state.query}
         status={state.status}
         categoryId={state.categoryId}
         accountId={state.accountId}
         flagId={state.flagId}
+        labelIds={state.labelIds}
         txnType={state.txnType}
         dateScope={state.dateScope}
         customDateFrom={state.customDateFrom}
@@ -128,6 +130,7 @@ export function TransactionsTab({
         onCategory={state.setCategoryId}
         onAccount={state.setAccountId}
         onFlag={state.setFlagId}
+        onLabelIds={state.setLabelIds}
         onStatus={state.setStatus}
         onTxnType={state.setTxnType}
         onDateScope={state.setDateScope}

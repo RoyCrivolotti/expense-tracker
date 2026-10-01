@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TxnFilters, type TxnFiltersProps } from './TxnFilters'
 
@@ -7,6 +7,7 @@ function baseProps(overrides: Partial<TxnFiltersProps> = {}): TxnFiltersProps {
   return {
     categories: [],
     flags: [],
+    labels: [],
     accounts: [],
     query: '',
     status: 'all',
@@ -25,6 +26,8 @@ function baseProps(overrides: Partial<TxnFiltersProps> = {}): TxnFiltersProps {
     onCategory: vi.fn(),
     flagId: 'all',
     onFlag: vi.fn(),
+    labelIds: [],
+    onLabelIds: vi.fn(),
     onAccount: vi.fn(),
     onStatus: vi.fn(),
     onTxnType: vi.fn(),
@@ -152,5 +155,96 @@ describe('TxnFilters', () => {
     expect(screen.queryByText('Date scope')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /Filters/ }))
     expect(screen.getByText('Date scope')).toBeInTheDocument()
+  })
+
+  it('offers no label filter when there are no labels to filter by', async () => {
+    const user = userEvent.setup()
+    render(<TxnFilters {...baseProps({ labels: [] })} />)
+    await user.click(screen.getByRole('button', { name: /Filters/ }))
+
+    expect(screen.queryByRole('button', { name: 'Labels' })).not.toBeInTheDocument()
+  })
+
+  it('picks up a label from the filter picker without closing it', async () => {
+    const user = userEvent.setup()
+    const onLabelIds = vi.fn()
+    render(
+      <TxnFilters
+        {...baseProps({
+          labels: [
+            { id: 10, name: 'Madrid trip', color: '#f59e0b', sortOrder: 0, active: true },
+          ],
+          onLabelIds,
+        })}
+      />,
+    )
+    await user.click(screen.getByRole('button', { name: /Filters/ }))
+    await user.click(screen.getByRole('button', { name: 'Labels' }))
+    const dialog = screen.getByRole('dialog', { name: 'Choose labels' })
+    await user.click(within(dialog).getByRole('button', { name: /Madrid trip/ }))
+
+    expect(onLabelIds).toHaveBeenCalledWith([10])
+    expect(dialog).toBeInTheDocument()
+  })
+
+  it('shows a count on the trigger once more than one label is selected', async () => {
+    const user = userEvent.setup()
+    render(
+      <TxnFilters
+        {...baseProps({
+          labels: [
+            { id: 10, name: 'Madrid trip', color: '#f59e0b', sortOrder: 0, active: true },
+            { id: 11, name: 'Moving', color: '#10b981', sortOrder: 1, active: true },
+          ],
+          labelIds: [10, 11],
+        })}
+      />,
+    )
+    await user.click(screen.getByRole('button', { name: /Filters/ }))
+
+    expect(screen.getByRole('button', { name: 'Labels (2)' })).toBeInTheDocument()
+  })
+
+  it('closes the label picker from its own Done button', async () => {
+    const user = userEvent.setup()
+    render(
+      <TxnFilters
+        {...baseProps({
+          labels: [
+            { id: 10, name: 'Madrid trip', color: '#f59e0b', sortOrder: 0, active: true },
+          ],
+        })}
+      />,
+    )
+    await user.click(screen.getByRole('button', { name: /Filters/ }))
+    await user.click(screen.getByRole('button', { name: 'Labels' }))
+    const dialog = screen.getByRole('dialog', { name: 'Choose labels' })
+    await user.click(within(dialog).getByRole('button', { name: 'Done' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Choose labels' })).not.toBeInTheDocument()
+  })
+
+  it('names the selected label on the trigger and unpicks it on a second click', async () => {
+    const user = userEvent.setup()
+    const onLabelIds = vi.fn()
+    render(
+      <TxnFilters
+        {...baseProps({
+          labels: [
+            { id: 10, name: 'Madrid trip', color: '#f59e0b', sortOrder: 0, active: true },
+          ],
+          labelIds: [10],
+          onLabelIds,
+        })}
+      />,
+    )
+    await user.click(screen.getByRole('button', { name: /Filters/ }))
+
+    expect(screen.getByRole('button', { name: 'Madrid trip' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Madrid trip' }))
+    const dialog = screen.getByRole('dialog', { name: 'Choose labels' })
+    await user.click(within(dialog).getByRole('button', { name: /Madrid trip/ }))
+
+    expect(onLabelIds).toHaveBeenCalledWith([])
   })
 })

@@ -47,7 +47,12 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // Raised from 199 KB to 202 KB for the Labels feature (a Settings management screen, a
 // multi-select picker with inline quick-create, and the label chip row on transaction
 // rows): about 2 KB gzip took the total to 201,006 bytes.
-const TOTAL_MAX_GZIP = 202_000
+//
+// Raised from 202 KB to 203 KB for the label filter on the transactions list (a
+// trigger button plus the same multi-select picker the edit sheet already uses):
+// about 500 bytes gzip took the total from 201,537 bytes, left over from the
+// auto-label configuration feature, to 202,060.
+const TOTAL_MAX_GZIP = 203_000
 const GOALS_MAX_GZIP = 40_000
 
 function gzipBytes(path) {

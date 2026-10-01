@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import type { Flag, TxnType } from '../../types'
+import type { Flag, Label, TxnType } from '../../types'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import {
@@ -20,10 +20,11 @@ import {
   type TxnDateScope,
 } from './txnDateScope'
 
-function useTxnListFilters(month: string, flags: Flag[], monthNavigation: number) {
+function useTxnListFilters(month: string, flags: Flag[], labels: Label[], monthNavigation: number) {
   const [categoryId, setCategoryId] = useState<number | 'all'>('all')
   const [accountId, setAccountId] = useState<number | 'all'>('all')
   const [rawFlagId, setFlagId] = useState<number | 'all' | 'none'>('all')
+  const [rawLabelIds, setLabelIds] = useState<number[]>([])
   const [txnType, setTxnType] = useState<TxnType | 'all'>('all')
   const [status, setStatus] = useState<StatusFilter>('all')
   const [query, setQuery] = useState('')
@@ -44,6 +45,17 @@ function useTxnListFilters(month: string, flags: Flag[], monthNavigation: number
     () =>
       typeof rawFlagId === 'number' && !flags.some((f) => f.id === rawFlagId) ? 'all' : rawFlagId,
     [rawFlagId, flags],
+  )
+
+  /**
+   * Same self-healing as `flagId`, adapted for an array: a selected label can be
+   * deleted while its filter is still applied, so stale ids are dropped every
+   * render rather than stored, keeping the list, the chip and the picker in
+   * agreement.
+   */
+  const labelIds = useMemo(
+    () => rawLabelIds.filter((id) => labels.some((l) => l.id === id)),
+    [rawLabelIds, labels],
   )
 
   /**
@@ -71,6 +83,7 @@ function useTxnListFilters(month: string, flags: Flag[], monthNavigation: number
       ...(categoryId !== 'all' ? { categoryId } : {}),
       ...(accountId !== 'all' ? { accountId } : {}),
       ...(flagId !== 'all' ? { flagId } : {}),
+      ...(labelIds.length > 0 ? { labelIds } : {}),
       ...(txnType !== 'all' ? { type: txnType } : {}),
       ...(query.trim() ? { query: query.trim() } : {}),
     }),
@@ -83,6 +96,7 @@ function useTxnListFilters(month: string, flags: Flag[], monthNavigation: number
       categoryId,
       accountId,
       flagId,
+      labelIds,
       txnType,
       query,
     ],
@@ -93,26 +107,29 @@ function useTxnListFilters(month: string, flags: Flag[], monthNavigation: number
       categoryId !== 'all' ||
       accountId !== 'all' ||
       flagId !== 'all' ||
+      labelIds.length > 0 ||
       txnType !== 'all' ||
       status !== 'all' ||
       isSecondaryDateScope(dateScope),
-    [query, categoryId, accountId, flagId, txnType, status, dateScope],
+    [query, categoryId, accountId, flagId, labelIds, txnType, status, dateScope],
   )
   const secondaryFilterCount = useMemo(
     () =>
       (categoryId !== 'all' ? 1 : 0) +
       (accountId !== 'all' ? 1 : 0) +
       (flagId !== 'all' ? 1 : 0) +
+      (labelIds.length > 0 ? 1 : 0) +
       (txnType !== 'all' ? 1 : 0) +
       (status !== 'all' ? 1 : 0) +
       (isSecondaryDateScope(dateScope) ? 1 : 0),
-    [categoryId, accountId, flagId, txnType, status, dateScope],
+    [categoryId, accountId, flagId, labelIds, txnType, status, dateScope],
   )
   const clearFilters = () => {
     setQuery('')
     setCategoryId('all')
     setAccountId('all')
     setFlagId('all')
+    setLabelIds([])
     setTxnType('all')
     setStatus('all')
     setDateScope('budgetMonth')
@@ -126,6 +143,8 @@ function useTxnListFilters(month: string, flags: Flag[], monthNavigation: number
     setAccountId,
     flagId,
     setFlagId,
+    labelIds,
+    setLabelIds,
     txnType,
     setTxnType,
     status,
@@ -159,7 +178,12 @@ export function useTransactionsTabState(
   actions?: ExpenseActions,
   shell: TransactionsShell = {},
 ) {
-  const filters = useTxnListFilters(month, model.dataset.flags, shell.monthNavigation ?? 0)
+  const filters = useTxnListFilters(
+    month,
+    model.dataset.flags,
+    model.dataset.labels,
+    shell.monthNavigation ?? 0,
+  )
   const isMobile = useIsMobile()
 
   const results = useMemo(

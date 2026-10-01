@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import type { Account, Category, Flag, TxnStatus, TxnType } from '../../types'
+import type { Account, Category, Flag, Label, TxnStatus, TxnType } from '../../types'
 import styles from './tabs.module.css'
 import { ActiveFilterChips } from './ActiveFilterChips'
 import { buildActiveFilterChips } from './txnFilterChips'
@@ -7,6 +7,7 @@ import {
   CategoryAccountRow,
   DateScopeRow,
   FilterToggleRow,
+  LabelFilterRow,
   LockShield,
   SearchRow,
   StatusTypeRow,
@@ -20,11 +21,13 @@ export interface TxnFiltersProps {
   categories: Category[]
   accounts: Account[]
   flags: Flag[]
+  labels: Label[]
   query: string
   status: StatusFilter
   categoryId: number | 'all'
   accountId: number | 'all'
   flagId: number | 'all' | 'none'
+  labelIds: number[]
   txnType: TxnType | 'all'
   dateScope: TxnDateScope
   customDateFrom: string
@@ -40,6 +43,7 @@ export interface TxnFiltersProps {
   onCategory: (value: number | 'all') => void
   onAccount: (value: number | 'all') => void
   onFlag: (value: number | 'all' | 'none') => void
+  onLabelIds: (ids: number[]) => void
   onStatus: (value: StatusFilter) => void
   onTxnType: (value: TxnType | 'all') => void
   onDateScope: (value: TxnDateScope) => void
@@ -101,6 +105,12 @@ export function TxnFilters(props: TxnFiltersProps) {
             selectMode={props.selectMode}
             onStatus={props.onStatus}
             onTxnType={props.onTxnType}
+          />
+          <LabelFilterRow
+            labels={props.labels}
+            labelIds={props.labelIds}
+            selectMode={props.selectMode}
+            onLabelIds={props.onLabelIds}
           />
           <DateScopeRow
             dateScope={props.dateScope}

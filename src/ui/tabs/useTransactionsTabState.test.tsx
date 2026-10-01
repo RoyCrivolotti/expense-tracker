@@ -1,12 +1,14 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
-import { makeDataset, makeFlag, makeTransaction } from '../../testing/factories'
+import { makeDataset, makeFlag, makeLabel, makeTransaction } from '../../testing/factories'
 import { buildLookup } from '../format'
 import type { ExpenseActions } from '../actions'
 import type { ExpenseModel } from '../useExpenseData'
 import { useTransactionsTabState } from './useTransactionsTabState'
 
 const work = makeFlag({ id: 1, name: 'Work travel' })
+const madrid = makeLabel({ id: 20, name: 'Madrid trip' })
+const moving = makeLabel({ id: 21, name: 'Moving' })
 
 // useIsMobile reads matchMedia, which jsdom does not implement.
 beforeAll(() => {
@@ -20,8 +22,8 @@ beforeAll(() => {
   })
 })
 
-function modelWith(flags = [work]): ExpenseModel {
-  const dataset = makeDataset({ flags })
+function modelWith(flags = [work], labels: ReturnType<typeof makeLabel>[] = []): ExpenseModel {
+  const dataset = makeDataset({ flags, labels })
   return {
     dataset,
     lookup: buildLookup(dataset),
@@ -64,6 +66,62 @@ describe('useTransactionsTabState — flag filter', () => {
     act(() => result.current.setFlagId('none'))
 
     expect(result.current.flagId).toBe('none')
+  })
+})
+
+describe('useTransactionsTabState — label filter', () => {
+  it('keeps a label filter that still resolves', () => {
+    const { result } = renderHook(() =>
+      useTransactionsTabState(modelWith([], [madrid]), '2026-05'),
+    )
+
+    act(() => result.current.setLabelIds([madrid.id]))
+
+    expect(result.current.labelIds).toEqual([madrid.id])
+    expect(result.current.hasActiveFilters).toBe(true)
+    expect(result.current.secondaryFilterCount).toBe(1)
+  })
+
+  it('drops only the stale id when one of several selected labels is deleted', () => {
+    // Same self-healing as the flag filter, but per-id: losing one selected label
+    // should not silently clear the other, still-valid one.
+    const { result, rerender } = renderHook(
+      ({ model }) => useTransactionsTabState(model, '2026-05'),
+      { initialProps: { model: modelWith([], [madrid, moving]) } },
+    )
+
+    act(() => result.current.setLabelIds([madrid.id, moving.id]))
+    expect(result.current.labelIds).toEqual([madrid.id, moving.id])
+
+    rerender({ model: modelWith([], [moving]) })
+
+    expect(result.current.labelIds).toEqual([moving.id])
+    expect(result.current.hasActiveFilters).toBe(true)
+  })
+
+  it('resets cleanly to no active filter when every selected label is deleted', () => {
+    const { result, rerender } = renderHook(
+      ({ model }) => useTransactionsTabState(model, '2026-05'),
+      { initialProps: { model: modelWith([], [madrid]) } },
+    )
+
+    act(() => result.current.setLabelIds([madrid.id]))
+    rerender({ model: modelWith([], []) })
+
+    expect(result.current.labelIds).toEqual([])
+    expect(result.current.hasActiveFilters).toBe(false)
+    expect(result.current.secondaryFilterCount).toBe(0)
+  })
+
+  it('clearFilters resets the label selection along with everything else', () => {
+    const { result } = renderHook(() =>
+      useTransactionsTabState(modelWith([], [madrid]), '2026-05'),
+    )
+
+    act(() => result.current.setLabelIds([madrid.id]))
+    act(() => result.current.clearFilters())
+
+    expect(result.current.labelIds).toEqual([])
   })
 })
 

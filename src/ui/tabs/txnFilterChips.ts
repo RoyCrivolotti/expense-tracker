@@ -1,4 +1,4 @@
-import type { Account, Category, Flag, TxnType } from '../../types'
+import type { Account, Category, Flag, Label, TxnType } from '../../types'
 import type { StatusFilter } from './TxnFilters'
 import { isSecondaryDateScope, scopeChipLabel, type TxnDateScope } from './txnDateScope'
 
@@ -12,9 +12,11 @@ interface ChipInput {
   categories: Category[]
   accounts: Account[]
   flags: Flag[]
+  labels: Label[]
   categoryId: number | 'all'
   accountId: number | 'all'
   flagId: number | 'all' | 'none'
+  labelIds: number[]
   txnType: TxnType | 'all'
   status: StatusFilter
   dateScope: TxnDateScope
@@ -23,6 +25,7 @@ interface ChipInput {
   onCategory: (value: number | 'all') => void
   onAccount: (value: number | 'all') => void
   onFlag: (value: number | 'all' | 'none') => void
+  onLabelIds: (ids: number[]) => void
   onTxnType: (value: TxnType | 'all') => void
   onStatus: (value: StatusFilter) => void
   onDateScope: (value: TxnDateScope) => void
@@ -58,6 +61,18 @@ const flagChip: ChipBuilder = (input) => {
   return { key: 'flag', label: `Flag: ${name}`, onClear: () => input.onFlag('all') }
 }
 
+/** Names for up to two selected labels fit in a chip; beyond that a count reads
+ *  better than a long comma-separated list crowding the row. */
+const labelsChip: ChipBuilder = (input) => {
+  if (input.labelIds.length === 0) return null
+  if (input.labelIds.length > 2) {
+    return { key: 'labels', label: `Labels (${input.labelIds.length})`, onClear: () => input.onLabelIds([]) }
+  }
+  const names = input.labelIds.map((id) => input.labels.find((l) => l.id === id)?.name ?? 'Label')
+  const label = names.length === 1 ? `Label: ${names[0]}` : `Labels: ${names.join(', ')}`
+  return { key: 'labels', label, onClear: () => input.onLabelIds([]) }
+}
+
 const typeChip: ChipBuilder = (input) =>
   input.txnType === 'all'
     ? null
@@ -87,6 +102,7 @@ const BUILDERS: ChipBuilder[] = [
   categoryChip,
   accountChip,
   flagChip,
+  labelsChip,
   typeChip,
   statusChip,
   dateChip,
