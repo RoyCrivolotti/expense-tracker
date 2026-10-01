@@ -258,6 +258,25 @@
   border-color: var(--color-accent);
   box-shadow: inset 0 0 0 1px var(--color-accent);
 }
+/*
+ * The label filter is the one field in this row that can't be a native
+ * <select> — it needs to pick several labels at once (OR), which a select
+ * can't express — so it is a hand-built button next to five real selects.
+ * Browsers render a <select> here as a fully rounded pill with no border
+ * until it holds a value; this is the one place .labelTrigger is made to
+ * match that specifically; LabelField's own use of it elsewhere (the edit
+ * sheet's chip row) is a different context and keeps its own look.
+ */
+.filterRow .labelTrigger {
+  border-radius: 999px;
+  padding-left: 1rem;
+}
+.filterLabelChevron {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
 /* A <button> trigger, not a <select>, so it needs its own rule rather than
    reusing `.filterRow select` above — see SecondaryFilterRow. */
 .labelTrigger {

@@ -96,6 +96,17 @@ export function ChevronIcon(props: IconProps) {
   )
 }
 
+/** The up/down pair a native <select> draws on its own — see LabelFilterRow's
+    comment on why the label filter needs one of its own. */
+export function SelectChevronIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M8 10l4-4 4 4" />
+      <path d="M8 14l4 4 4-4" />
+    </svg>
+  )
+}
+
 export function RefreshIcon(props: IconProps) {
   return (
     <svg {...base} {...props}>

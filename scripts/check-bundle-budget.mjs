@@ -58,7 +58,12 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // configuration's own headroom): its own tests alone pushed the total to 202,026
 // bytes against the pre-label-filtering budget. The two bumps merged onto the same
 // 203 KB ceiling rather than stacking into two separate raises.
-const TOTAL_MAX_GZIP = 203_000
+//
+// Raised from 203 KB to 204 KB for the label filter's pill-shaped chevron (a second
+// small icon plus its CSS): main had drifted to 202,984 bytes across everything merged
+// since the 203 KB ceiling was set, leaving 16 bytes — enough for CI's build to land on
+// either side of the line depending on minifier non-determinism, which is what happened.
+const TOTAL_MAX_GZIP = 204_000
 const GOALS_MAX_GZIP = 40_000
 
 function gzipBytes(path) {

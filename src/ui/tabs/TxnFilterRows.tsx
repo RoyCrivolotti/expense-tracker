@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import type { Account, Category, Flag, Label, TxnType } from '../../types'
-import { ChevronIcon, CloseIcon } from '../icons'
+import { CloseIcon, SelectChevronIcon } from '../icons'
 import { DateInput } from '../components/DateInput'
 import { LabelPickerPopover } from '../components/LabelPickerPopover'
 import { Presence } from '../components/Presence'
@@ -301,7 +301,7 @@ export function SecondaryFilterRow({
             onClick={() => setOpen((o) => !o)}
           >
             <span className={styles.labelTriggerText}>{labelTriggerText(labelIds, labels)}</span>
-            <ChevronIcon className={styles.labelTriggerChevron} aria-hidden="true" />
+            <SelectChevronIcon className={styles.filterLabelChevron} aria-hidden="true" />
           </button>
           <Presence show={open} exitMs={EXIT_MS.popover}>
             <LabelPickerPopover
