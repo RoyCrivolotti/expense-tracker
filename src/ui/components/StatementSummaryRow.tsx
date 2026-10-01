@@ -19,6 +19,12 @@ function statusText(paid: boolean, amountCents: number, paidOn?: string): string
   return paidOn ? `Paid · ${shortDayLabel(paidOn)}` : 'Paid'
 }
 
+/** A statement with nothing to settle is neither due nor paid, so it keeps the muted meta colour. */
+function statusTone(paid: boolean, amountCents: number): string | undefined {
+  if (amountCents === 0) return undefined
+  return paid ? styles.paid : styles.due
+}
+
 /**
  * Single presentational row for a card statement: icon, name, status, amount.
  * Used identically on Dashboard, Settings, and Transactions — tapping it is
@@ -36,13 +42,11 @@ export function StatementSummaryRow({
   const tappable = Boolean(onPress)
   const Tag = tappable ? 'button' : 'div'
   const status = statusText(paid, amountCents, paidOn)
-  const meta = subtitle ? `${subtitle} · ${status}` : status
 
   return (
     <Tag
       type={tappable ? 'button' : undefined}
       className={`${styles.row}${tappable ? ` ${styles.rowButton}` : ''}`}
-      aria-label={`${name} statement`}
       {...(tappable ? { onClick: onPress, disabled } : {})}
     >
       <span className={styles.iconWrap} aria-hidden>
@@ -52,7 +56,10 @@ export function StatementSummaryRow({
       </span>
       <div className={styles.body}>
         <p className={styles.title}>{name}</p>
-        <p className={styles.meta}>{meta}</p>
+        <p className={styles.meta}>
+          {subtitle ? `${subtitle} · ` : ''}
+          <span className={statusTone(paid, amountCents)}>{status}</span>
+        </p>
       </div>
       <Money
         cents={amountCents}
@@ -60,6 +67,11 @@ export function StatementSummaryRow({
         signed
         className={`${styles.amount}${amountCents === 0 ? ` ${styles.amountMuted}` : ''}`}
       />
+      {tappable ? (
+        <span className={styles.chevron} aria-hidden>
+          ›
+        </span>
+      ) : null}
     </Tag>
   )
 }
