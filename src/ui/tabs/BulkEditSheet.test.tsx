@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BulkEditSheet } from './BulkEditSheet'
@@ -259,6 +259,21 @@ describe('BulkEditSheet', () => {
 })
 
 describe('BulkEditSheet — budget month respects the rollover day', () => {
+  // Pinned rather than read from the real clock: the second test below passes
+  // today's own day-of-month as the rollover day, which silently collided with
+  // the first test's day-1 special case on the 1st of every month, failing
+  // once a month for a reason that had nothing to do with either test.
+  beforeEach(() => {
+    // Only Date is faked — faking setTimeout/requestAnimationFrame too hangs
+    // userEvent and React's own scheduling, which both need real timers to
+    // ever resolve.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 5, 15))
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   /** Reads the patch the sheet emits when only Budget month is toggled on. */
   async function budgetMonthFor(rolloverDay: number): Promise<string | undefined> {
     const user = userEvent.setup()
