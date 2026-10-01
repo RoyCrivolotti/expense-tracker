@@ -46,12 +46,24 @@ function matchesFlagFilter(filter: TxnFilter): boolean {
   return typeof filter.flagId !== 'number'
 }
 
+/**
+ * Same reasoning as matchesFlagFilter, for the same synthetic-row reason: a
+ * statement payment can't carry a label, so narrowing to one or more labels
+ * must exclude it — otherwise filtering by "Work trip" lists unrelated card
+ * payments. Labels have no "none" sentinel the way flags do, so there is no
+ * equivalent case to keep them for.
+ */
+function matchesLabelFilter(filter: TxnFilter): boolean {
+  return !filter.labelIds || filter.labelIds.length === 0
+}
+
 function matchesStatementPayment(row: StatementPaymentRow, filter: TxnFilter): boolean {
   if (!matchesPeriod(row, filter)) return false
   if (!matchesAccount(row, filter)) return false
   if (!matchesType(filter)) return false
   if (!matchesCategoryAndStatus(filter)) return false
   if (!matchesFlagFilter(filter)) return false
+  if (!matchesLabelFilter(filter)) return false
   if (filter.query && !matchesQuery(row, filter.query)) return false
   return true
 }
