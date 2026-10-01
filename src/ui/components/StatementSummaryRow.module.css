@@ -49,6 +49,16 @@
   font-size: 0.74rem;
   color: var(--color-text-muted);
 }
+.due,
+.paid {
+  font-weight: 600;
+}
+.due {
+  color: var(--exp-warning-text);
+}
+.paid {
+  color: var(--exp-success-text);
+}
 .amount {
   flex: none;
   font-size: 0.92rem;
