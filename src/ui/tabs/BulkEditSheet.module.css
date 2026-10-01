@@ -36,6 +36,12 @@
 .fieldInput {
   margin-top: 0.5rem;
 }
+.fieldHint {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+}
 .fieldInput select,
 .fieldInput input[type='date'],
 .fieldInput input[type='month'] {

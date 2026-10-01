@@ -20,6 +20,9 @@ export interface BulkEditFieldState {
   flagEnabled: boolean
   /** null means "clear the flag" — a real choice, not an empty state. */
   flagId: number | null
+  labelsEnabled: boolean
+  /** Labels to add, never to remove — see buildBulkLabelAdditions. */
+  labelIds: number[]
 }
 
 export function anyFieldEnabled(fields: BulkEditFieldState): boolean {
@@ -29,7 +32,8 @@ export function anyFieldEnabled(fields: BulkEditFieldState): boolean {
     fields.typeEnabled ||
     fields.dateEnabled ||
     fields.budgetMonthEnabled ||
-    fields.flagEnabled
+    fields.flagEnabled ||
+    fields.labelsEnabled
   )
 }
 
@@ -42,4 +46,17 @@ export function buildBulkPatch(fields: BulkEditFieldState): BulkTransactionPatch
   if (fields.budgetMonthEnabled) patch.budgetMonth = fields.budgetMonth
   if (fields.flagEnabled) patch.flagId = fields.flagId
   return patch
+}
+
+/**
+ * Labels have no bulk column to patch (a transaction's label set is replaced
+ * through its own endpoint, one transaction at a time — see setTransactionLabels),
+ * and unlike every other field here, "apply to many" can't mean "replace": the
+ * rows in one bulk edit can each already carry a different set, and labels are
+ * only ever removed by hand everywhere else in the app. So this returns labels
+ * to add, for the caller to union onto each row's own existing set — never a
+ * replacement list.
+ */
+export function buildBulkLabelAdditions(fields: BulkEditFieldState): number[] {
+  return fields.labelsEnabled ? fields.labelIds : []
 }

@@ -10,9 +10,12 @@ import { TypeSelector } from '../components/TransactionFields'
 import { STORED_TYPES } from '../components/transactionTypes'
 import { FlagField } from '../components/FlagField'
 import { createFlagInPlace } from '../components/quickFlag'
+import { LabelField } from '../components/LabelField'
+import { createLabelInPlace } from '../components/quickLabel'
 import { Modal } from '../components/Modal'
 import {
   anyFieldEnabled,
+  buildBulkLabelAdditions,
   buildBulkPatch,
   type BulkEditFieldState,
 } from './bulkEditFields'
@@ -26,7 +29,7 @@ interface BulkEditSheetProps {
   model: ExpenseModel
   actions?: ExpenseActions | undefined
   busy: boolean
-  onApply: (patch: BulkTransactionPatch) => void
+  onApply: (patch: BulkTransactionPatch, labelIdsToAdd: number[]) => void
   onCancel: () => void
 }
 
@@ -69,6 +72,8 @@ export function BulkEditSheet({
     budgetMonth: defaultBudgetMonth(todayIso(), model.dataset.settings.budgetRolloverDay),
     flagEnabled: false,
     flagId: model.dataset.flags.find((f) => f.active)?.id ?? null,
+    labelsEnabled: false,
+    labelIds: [],
   })
 
   const set = <K extends keyof BulkEditFieldState>(key: K, value: BulkEditFieldState[K]) =>
@@ -76,7 +81,7 @@ export function BulkEditSheet({
 
   const anyEnabled = anyFieldEnabled(fields)
 
-  const handleApply = () => onApply(buildBulkPatch(fields))
+  const handleApply = () => onApply(buildBulkPatch(fields), buildBulkLabelAdditions(fields))
 
   const categories = selectableOptions(model.dataset.categories, 0)
   const accounts = selectableOptions(model.dataset.accounts, 0)
@@ -169,6 +174,22 @@ export function BulkEditSheet({
             onTrapPausedChange={setPopoverOpen}
             {...(actions ? { onCreate: createFlagInPlace(actions, model.dataset.flags) } : {})}
           />
+        </ToggleField>
+        <ToggleField
+          label="Labels"
+          enabled={fields.labelsEnabled}
+          onToggle={(v) => set('labelsEnabled', v)}
+        >
+          <LabelField
+            labels={model.dataset.labels}
+            value={fields.labelIds}
+            onChange={(labelIds) => set('labelIds', labelIds)}
+            onTrapPausedChange={setPopoverOpen}
+            {...(actions ? { onCreate: createLabelInPlace(actions, model.dataset.labels) } : {})}
+          />
+          {/* Unlike every field above, this can't mean "replace": the rows in one
+              bulk edit can each already carry a different set of labels. */}
+          <p className={styles.fieldHint}>Added to whatever each transaction already has.</p>
         </ToggleField>
       </div>
 

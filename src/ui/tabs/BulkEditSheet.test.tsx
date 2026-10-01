@@ -11,6 +11,7 @@ function makeModel(budgetRolloverDay = 1): ExpenseModel {
     dataset: {
       settings: { ...defaultExpenseSettings(), budgetRolloverDay },
       flags: [],
+      labels: [],
       categories: [
         { id: 1, name: 'Groceries', active: true, displayOrder: 0, isDefault: false },
         { id: 2, name: 'Dining out', active: true, displayOrder: 1, isDefault: false },
@@ -96,7 +97,7 @@ describe('BulkEditSheet', () => {
     )
     await user.click(screen.getByLabelText('Category'))
     await user.click(screen.getByRole('button', { name: 'Apply changes' }))
-    expect(onApply).toHaveBeenCalledWith({ categoryId: 1 })
+    expect(onApply).toHaveBeenCalledWith({ categoryId: 1 }, [])
   })
 
   it('calls onCancel when Cancel is clicked', async () => {
@@ -128,6 +129,7 @@ describe('BulkEditSheet', () => {
     await user.click(screen.getByRole('button', { name: 'Apply changes' }))
     expect(onApply).toHaveBeenCalledWith(
       expect.objectContaining({ categoryId: 1, type: 'expense' }),
+      [],
     )
   })
 
@@ -140,7 +142,7 @@ describe('BulkEditSheet', () => {
     await user.click(screen.getByLabelText('Category'))
     await user.selectOptions(screen.getByRole('combobox'), '2')
     await user.click(screen.getByRole('button', { name: 'Apply changes' }))
-    expect(onApply).toHaveBeenCalledWith({ categoryId: 2 })
+    expect(onApply).toHaveBeenCalledWith({ categoryId: 2 }, [])
   })
 
   it('shows account select and includes it in patch', async () => {
@@ -153,7 +155,7 @@ describe('BulkEditSheet', () => {
     const selects = screen.getAllByRole('combobox')
     await user.selectOptions(selects[0]!, '11')
     await user.click(screen.getByRole('button', { name: 'Apply changes' }))
-    expect(onApply).toHaveBeenCalledWith({ accountId: 11 })
+    expect(onApply).toHaveBeenCalledWith({ accountId: 11 }, [])
   })
 
   it('shows date input and includes it in patch', async () => {
@@ -168,7 +170,7 @@ describe('BulkEditSheet', () => {
     const { fireEvent } = await import('@testing-library/react')
     fireEvent.change(dateInput, { target: { value: '2026-06-15' } })
     await userEvent.click(screen.getByRole('button', { name: 'Apply changes' }))
-    expect(onApply).toHaveBeenCalledWith({ date: '2026-06-15' })
+    expect(onApply).toHaveBeenCalledWith({ date: '2026-06-15' }, [])
   })
 
   it('shows budget month input and includes it in patch', async () => {
@@ -182,7 +184,7 @@ describe('BulkEditSheet', () => {
     const { fireEvent } = await import('@testing-library/react')
     fireEvent.change(monthInput, { target: { value: '2026-06' } })
     await userEvent.click(screen.getByRole('button', { name: 'Apply changes' }))
-    expect(onApply).toHaveBeenCalledWith({ budgetMonth: '2026-06' })
+    expect(onApply).toHaveBeenCalledWith({ budgetMonth: '2026-06' }, [])
   })
 
   it('changes type when a different type button is clicked', async () => {
@@ -194,7 +196,7 @@ describe('BulkEditSheet', () => {
     await user.click(screen.getByLabelText('Type'))
     await user.click(screen.getByRole('button', { name: 'Income' }))
     await user.click(screen.getByRole('button', { name: 'Apply changes' }))
-    expect(onApply).toHaveBeenCalledWith({ type: 'income' })
+    expect(onApply).toHaveBeenCalledWith({ type: 'income' }, [])
   })
 
   it('offers the flag field once the owner has flags, and can clear one', async () => {
@@ -211,7 +213,7 @@ describe('BulkEditSheet', () => {
     await user.click(screen.getByRole('button', { name: /No flag/ }))
     await user.click(screen.getByRole('button', { name: 'Apply changes' }))
 
-    expect(onApply).toHaveBeenCalledWith({ flagId: null })
+    expect(onApply).toHaveBeenCalledWith({ flagId: null }, [])
   })
 
   it('offers the flag field even before any flag exists, so it stays discoverable', async () => {
@@ -254,7 +256,93 @@ describe('BulkEditSheet', () => {
     await user.click(screen.getByRole('button', { name: 'Apply changes' }))
 
     expect(createFlag).toHaveBeenCalledWith(expect.objectContaining({ name: 'Madrid trip' }))
-    expect(onApply).toHaveBeenCalledWith({ flagId: 9 })
+    expect(onApply).toHaveBeenCalledWith({ flagId: 9 }, [])
+  })
+
+  it('offers the labels field even before any label exists, so it stays discoverable', async () => {
+    const user = userEvent.setup()
+    render(
+      <BulkEditSheet count={2} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />,
+    )
+
+    await user.click(screen.getByLabelText('Labels'))
+
+    expect(screen.getByRole('button', { name: 'No labels' })).toBeInTheDocument()
+  })
+
+  it('picks an existing label and applies it as an addition, not a patch field', async () => {
+    const model = makeModel()
+    model.dataset.labels = [
+      { id: 3, name: 'Madrid trip', color: '#6366f1', sortOrder: 0, active: true },
+    ]
+    const onApply = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <BulkEditSheet count={2} model={model} busy={false} onApply={onApply} onCancel={vi.fn()} />,
+    )
+
+    await user.click(screen.getByLabelText('Labels'))
+    await user.click(screen.getByRole('button', { name: 'No labels' }))
+    await user.click(screen.getByRole('button', { name: 'Madrid trip' }))
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+    await user.click(screen.getByRole('button', { name: 'Apply changes' }))
+
+    // Labels never go in the patch — there is no column for them, see
+    // buildBulkLabelAdditions. They arrive as the second argument instead.
+    expect(onApply).toHaveBeenCalledWith({}, [3])
+  })
+
+  it('explains that labels are added, not replaced, since rows can differ', async () => {
+    const user = userEvent.setup()
+    render(
+      <BulkEditSheet count={2} model={makeModel()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />,
+    )
+
+    await user.click(screen.getByLabelText('Labels'))
+
+    expect(screen.getByText('Added to whatever each transaction already has.')).toBeInTheDocument()
+  })
+
+  it('creates a label in place from bulk edit and applies it', async () => {
+    const user = userEvent.setup()
+    const onApply = vi.fn()
+    const createLabel = vi.fn().mockResolvedValue({ id: 12 })
+    const actions = { createLabel } as unknown as ExpenseActions
+    render(
+      <BulkEditSheet
+        count={2}
+        model={makeModel()}
+        actions={actions}
+        busy={false}
+        onApply={onApply}
+        onCancel={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByLabelText('Labels'))
+    await user.click(screen.getByRole('button', { name: 'No labels' }))
+    await user.click(screen.getByRole('button', { name: '+ New label' }))
+    await user.type(screen.getByRole('textbox', { name: 'New label name' }), 'Madrid trip{Enter}')
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+    await user.click(screen.getByRole('button', { name: 'Apply changes' }))
+
+    expect(createLabel).toHaveBeenCalledWith(expect.objectContaining({ name: 'Madrid trip' }))
+    expect(onApply).toHaveBeenCalledWith({}, [12])
+  })
+
+  it('enables Apply for a labels-only edit, with nothing else toggled', async () => {
+    const model = makeModel()
+    model.dataset.labels = [
+      { id: 3, name: 'Madrid trip', color: '#6366f1', sortOrder: 0, active: true },
+    ]
+    const user = userEvent.setup()
+    render(
+      <BulkEditSheet count={2} model={model} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />,
+    )
+
+    await user.click(screen.getByLabelText('Labels'))
+
+    expect(screen.getByRole('button', { name: 'Apply changes' })).toBeEnabled()
   })
 })
 

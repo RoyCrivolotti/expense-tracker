@@ -182,7 +182,25 @@ describe('TransactionsSelectFooter bulk edit', () => {
     await userEvent.click(screen.getByLabelText('Category'))
     await userEvent.click(screen.getByRole('button', { name: 'Apply changes' }))
 
-    expect(selection.confirmBulkEdit).toHaveBeenCalledWith({ categoryId: 1 })
+    expect(selection.confirmBulkEdit).toHaveBeenCalledWith({ categoryId: 1 }, [])
+  })
+
+  it('threads chosen labels through as the second argument, never into the patch', async () => {
+    const model = buildExpenseModel(
+      makeDataset({
+        labels: [{ id: 3, name: 'Madrid trip', color: '#6366f1', sortOrder: 0, active: true }],
+      }),
+    )
+    const selection = makeSelection({ pendingBulkEdit: true })
+    render(footer(selection, { model }))
+
+    await userEvent.click(screen.getByLabelText('Labels'))
+    await userEvent.click(screen.getByRole('button', { name: 'No labels' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Madrid trip' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Done' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Apply changes' }))
+
+    expect(selection.confirmBulkEdit).toHaveBeenCalledWith({}, [3])
   })
 
   it('backs out on Cancel without applying anything', async () => {
