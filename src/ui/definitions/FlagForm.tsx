@@ -123,7 +123,8 @@ export function FlagForm({
           To be reimbursed
           <span className={styles.checkHint}>
             Adds an expense report and a Record reimbursement action to this flag. Leave it off for
-            a flag you only use to find things later, like tax-deductible spending.
+            a flag that just needs a closer look, not money back — for a permanent tag like
+            tax-deductible spending, use a label instead.
           </span>
         </span>
       </label>
