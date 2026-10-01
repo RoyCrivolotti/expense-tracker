@@ -227,6 +227,38 @@ let loadedFlags: Flag[] = []
 let loadedLabels: Label[] = []
 let loadedSettings: ExpenseSettings = defaultExpenseSettings()
 
+/** Add `labelId` to `labelIds` if it is not already there, without mutating the input. */
+function withLabelAdded(labelIds: number[] | undefined, labelId: number): number[] {
+  const current = labelIds ?? []
+  return current.includes(labelId) ? current : [...current, labelId]
+}
+
+/**
+ * Forward half, mirrors dbWrite.ts's maybeApplyAutoLabelStatement: a transaction
+ * carrying a flag that has an auto-label picks it up too. A flag with no
+ * autoLabelId, or a transaction with no flagId, is left untouched.
+ */
+function withAutoLabel(txn: Transaction): Transaction {
+  if (txn.flagId == null) return txn
+  const labelId = loadedFlags.find((f) => f.id === txn.flagId)?.autoLabelId
+  if (labelId == null) return txn
+  const labelIds = withLabelAdded(txn.labelIds, labelId)
+  return labelIds === txn.labelIds ? txn : { ...txn, labelIds }
+}
+
+/**
+ * Retroactive half, mirrors dbFlags.ts's applyLabelToFlaggedTransactionsStatement:
+ * configuring a flag's auto-label also labels every transaction already carrying
+ * that flag, deduped against one it already has some other way.
+ */
+function applyAutoLabelToFlagged(flagId: number, labelId: number): void {
+  loaded = loaded.map((t) => {
+    if (t.flagId !== flagId) return t
+    const labelIds = withLabelAdded(t.labelIds, labelId)
+    return labelIds === t.labelIds ? t : { ...t, labelIds }
+  })
+}
+
 export const docsCaptureDataSource: ExpenseDataSource = {
   canWrite: true,
   load(): Promise<ExpenseDataset> {
@@ -249,12 +281,12 @@ export const docsCaptureDataSource: ExpenseDataSource = {
   // found nothing here before this, and silently no-opped against a row `loaded`
   // had never heard of.
   createTransaction(input) {
-    const txn = stubTxn(input)
+    const txn = withAutoLabel(stubTxn(input))
     loaded = [...loaded, txn]
     return Promise.resolve(txn)
   },
   createTransactions(inputs) {
-    const created = inputs.map((input) => stubTxn(input))
+    const created = inputs.map((input) => withAutoLabel(stubTxn(input)))
     loaded = [...loaded, ...created]
     return Promise.resolve(created)
   },
@@ -267,8 +299,9 @@ export const docsCaptureDataSource: ExpenseDataSource = {
     const merged = existing
       ? ({ ...existing, ...patch } as Transaction)
       : stubTxn({ ...patch, id } as NewTransaction & { id: number })
-    loaded = loaded.map((t) => (t.id === id ? merged : t))
-    return Promise.resolve(merged)
+    const withLabel = withAutoLabel(merged)
+    loaded = loaded.map((t) => (t.id === id ? withLabel : t))
+    return Promise.resolve(withLabel)
   },
   // Was missing entirely, so anything routed through the bulk path — the
   // bulk-edit sheet, and recording a reimbursement — threw
@@ -280,9 +313,10 @@ export const docsCaptureDataSource: ExpenseDataSource = {
       // Merged onto the real row, not rebuilt from the patch: the caller
       // replaces its copy with what comes back, so a rebuilt row would drop
       // every field the patch did not mention.
-      return existing
+      const merged = existing
         ? ({ ...existing, ...patch } as Transaction)
         : stubTxn({ ...patch, id } as NewTransaction & { id: number })
+      return withAutoLabel(merged)
     })
     loaded = loaded.map((t) => transactions.find((u) => u.id === t.id) ?? t)
     return Promise.resolve({ updated: transactions.length, transactions })
@@ -343,6 +377,9 @@ export const docsCaptureDataSource: ExpenseDataSource = {
       else merged.autoLabelId = autoLabelId
     }
     loadedFlags = loadedFlags.map((f) => (f.id === id ? merged : f))
+    // Retroactive: mirrors dbFlags.ts's updateFlag applying the auto-label to
+    // every transaction already carrying this flag, the moment it's configured.
+    if (autoLabelId != null) applyAutoLabelToFlagged(id, autoLabelId)
     return Promise.resolve(merged)
   },
   deleteFlag() {

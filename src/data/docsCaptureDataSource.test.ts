@@ -91,6 +91,114 @@ describe('docsCaptureDataSource.updateFlag', () => {
     expect(cleared.autoLabelId).toBeUndefined()
     expect(cleared.name).toBe('Work travel')
   })
+
+  it('retroactively labels every transaction already carrying the flag', async () => {
+    const dataset = await docsCaptureDataSource.load()
+    const target = dataset.flags.find((f) => f.name === 'Work travel')!
+    const flagged = dataset.transactions.filter((t) => t.flagId === target.id)
+    const untouchedRow = dataset.transactions.find((t) => t.flagId !== target.id)!
+    expect(flagged.length).toBeGreaterThan(0)
+
+    await docsCaptureDataSource.updateFlag!(target.id, { autoLabelId: 1 })
+
+    // The bug: the real backend's applyLabelToFlaggedTransactions has no mirror
+    // here, so configuring an auto-label did nothing to rows already flagged.
+    // An empty-patch updateTransaction is a no-op read of the persisted row,
+    // same probe the "persists the merge" tests above use.
+    for (const row of flagged) {
+      const after = await docsCaptureDataSource.updateTransaction!(row.id, {})
+      expect(after.labelIds).toContain(1)
+    }
+    // A row that never carried the flag is untouched by the retroactive apply.
+    const untouchedAfter = await docsCaptureDataSource.updateTransaction!(untouchedRow.id, {})
+    expect(untouchedAfter.labelIds ?? []).not.toContain(1)
+  })
+
+  it('does not duplicate the label when the same auto-label is configured twice', async () => {
+    const dataset = await docsCaptureDataSource.load()
+    const target = dataset.flags.find((f) => f.name === 'Work travel')!
+    const flaggedRow = dataset.transactions.find((t) => t.flagId === target.id)!
+
+    await docsCaptureDataSource.updateFlag!(target.id, { autoLabelId: 1 })
+    await docsCaptureDataSource.updateFlag!(target.id, { autoLabelId: 1 })
+    const updated = await docsCaptureDataSource.updateTransaction!(flaggedRow.id, {})
+
+    expect(updated.labelIds?.filter((id) => id === 1)).toEqual([1])
+  })
+
+  it('does not fan out a label when the flag has no auto-label configured', async () => {
+    const dataset = await docsCaptureDataSource.load()
+    const target = dataset.flags.find((f) => f.name === 'Tax deductible')!
+    const flaggedRow = dataset.transactions.find((t) => t.flagId === target.id)
+
+    await docsCaptureDataSource.updateFlag!(target.id, { description: 'Reviewed yearly' })
+
+    if (flaggedRow) {
+      const updated = await docsCaptureDataSource.updateTransaction!(flaggedRow.id, {})
+      expect(updated.labelIds ?? []).toEqual(flaggedRow.labelIds ?? [])
+    }
+  })
+})
+
+describe('docsCaptureDataSource auto-label forward apply', () => {
+  it('labels a newly created transaction whose flag has an auto-label', async () => {
+    const dataset = await docsCaptureDataSource.load()
+    const target = dataset.flags.find((f) => f.name === 'Work travel')!
+    await docsCaptureDataSource.updateFlag!(target.id, { autoLabelId: 1 })
+
+    const created = await docsCaptureDataSource.createTransaction!({
+      date: '2026-09-30',
+      budgetMonth: '2026-09',
+      description: 'Client dinner',
+      accountId: 1,
+      categoryId: 1,
+      type: 'expense',
+      amountCents: 3_200,
+      cancelled: false,
+      flagId: target.id,
+    })
+
+    expect(created.labelIds).toContain(1)
+  })
+
+  it('labels a transaction when its flagId is updated to a flag with an auto-label', async () => {
+    const dataset = await docsCaptureDataSource.load()
+    const target = dataset.flags.find((f) => f.name === 'Work travel')!
+    await docsCaptureDataSource.updateFlag!(target.id, { autoLabelId: 1 })
+    const unflaggedRow = dataset.transactions.find((t) => t.flagId == null)!
+
+    const updated = await docsCaptureDataSource.updateTransaction!(unflaggedRow.id, {
+      flagId: target.id,
+    })
+
+    expect(updated.labelIds).toContain(1)
+  })
+
+  it('does not duplicate a label the transaction already carries independently', async () => {
+    const dataset = await docsCaptureDataSource.load()
+    const target = dataset.flags.find((f) => f.name === 'Work travel')!
+    await docsCaptureDataSource.updateFlag!(target.id, { autoLabelId: 1 })
+    const unflaggedRow = dataset.transactions.find((t) => t.flagId == null)!
+    await docsCaptureDataSource.setTransactionLabels!(unflaggedRow.id, [1])
+
+    const updated = await docsCaptureDataSource.updateTransaction!(unflaggedRow.id, {
+      flagId: target.id,
+    })
+
+    expect(updated.labelIds?.filter((id) => id === 1)).toEqual([1])
+  })
+
+  it('does not label a transaction whose flag has no auto-label', async () => {
+    const dataset = await docsCaptureDataSource.load()
+    const target = dataset.flags.find((f) => f.name === 'Tax deductible')!
+    const unflaggedRow = dataset.transactions.find((t) => t.flagId == null)!
+
+    const updated = await docsCaptureDataSource.updateTransaction!(unflaggedRow.id, {
+      flagId: target.id,
+    })
+
+    expect(updated.labelIds ?? []).toEqual(unflaggedRow.labelIds ?? [])
+  })
 })
 
 describe('docsCaptureDataSource.createLabel', () => {
