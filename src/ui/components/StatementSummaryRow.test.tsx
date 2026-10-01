@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { StatementSummaryRow } from './StatementSummaryRow'
 import styles from './StatementSummaryRow.module.css'
@@ -93,5 +94,82 @@ describe('StatementSummaryRow', () => {
 
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
     expect(screen.getByText('Iberia Icon')).toBeInTheDocument()
+  })
+
+  describe('mark as paid today', () => {
+    const markPaid = () => screen.queryByRole('button', { name: 'Mark as paid today for Iberia Icon' })
+
+    it('is not offered unless the caller asks for it', () => {
+      render(
+        <StatementSummaryRow name="Iberia Icon" amountCents={CHARGE} paid={false} onPress={vi.fn()} />,
+      )
+
+      expect(markPaid()).not.toBeInTheDocument()
+    })
+
+    it('is named for the card it belongs to and runs its handler', async () => {
+      const onMarkPaidToday = vi.fn()
+      render(
+        <StatementSummaryRow
+          name="Iberia Icon"
+          amountCents={CHARGE}
+          paid={false}
+          onPress={vi.fn()}
+          onMarkPaidToday={onMarkPaidToday}
+        />,
+      )
+
+      await userEvent.click(markPaid()!)
+
+      expect(onMarkPaidToday).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not press the row when it is pressed', async () => {
+      const onPress = vi.fn()
+      render(
+        <StatementSummaryRow
+          name="Iberia Icon"
+          amountCents={CHARGE}
+          paid={false}
+          onPress={onPress}
+          onMarkPaidToday={vi.fn()}
+        />,
+      )
+
+      await userEvent.click(markPaid()!)
+
+      expect(onPress).not.toHaveBeenCalled()
+    })
+
+    it('sits beside the row, not inside it, so no button holds another', () => {
+      render(
+        <StatementSummaryRow
+          name="Iberia Icon"
+          amountCents={CHARGE}
+          paid={false}
+          onPress={vi.fn()}
+          onMarkPaidToday={vi.fn()}
+        />,
+      )
+
+      const row = screen.getByRole('button', { name: /^Iberia Icon/ })
+      expect(row).not.toContainElement(markPaid())
+    })
+
+    it('is disabled with the row while a save is in flight', () => {
+      render(
+        <StatementSummaryRow
+          name="Iberia Icon"
+          amountCents={CHARGE}
+          paid={false}
+          disabled
+          onPress={vi.fn()}
+          onMarkPaidToday={vi.fn()}
+        />,
+      )
+
+      expect(markPaid()).toBeDisabled()
+      expect(screen.getByRole('button', { name: /^Iberia Icon/ })).toBeDisabled()
+    })
   })
 })

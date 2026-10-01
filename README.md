@@ -12,7 +12,7 @@ Shared UI: [`folio-shell`](https://github.com/RoyCrivolotti/folio-shell) on [npm
 
 | Area | Highlights |
 | --- | --- |
-| **Dashboard** | Monthly KPIs, budget health, **card statements** (tap a row to mark paid/due or edit the date), Goals teaser, **Latest / Recently added** toggle |
+| **Dashboard** | Monthly KPIs, budget health, **card statements** ("Mark as paid today" on a due card, or tap the row to pick the paid date or mark it due), Goals teaser, **Latest / Recently added** toggle |
 | **Transactions** | **Date scope** (budget month, last 3 months, all dates, custom), filters, batch delete, recurring **Upcoming**, **installment plans** (bounded payment schedules; credit-card installments are created for you as they come due), **multi-select** (long-press or Select) with bulk edit and delete, **per-day +** and **duplicate**, **statement payment rows** on `paidOn` (same tap-to-edit sheet as Dashboard/Settings), **header refresh** |
 | **Flags & reimbursements** | Named markers on transactions, **printable expense reports** with receipt cross-references, **line-by-line settlement** linking a payment to what it covered, CSV for an employer, past reports |
 | **Receipts** | Photo or PDF attachments per transaction (R2), client-side downscaling, storage usage in Settings |

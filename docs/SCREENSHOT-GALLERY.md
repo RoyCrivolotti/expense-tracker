@@ -18,7 +18,7 @@ Goals shots use three demo scenarios from [`fixtures/demo-goal-scenarios.json`](
 | --- | --- |
 | ![Dashboard desktop](./screenshots/gallery/dashboard-desktop.png) | ![Dashboard mobile](./screenshots/gallery/dashboard-mobile.png) |
 
-Header **Refresh** appears on every tab (not shown in cropped dashboard shots). **Card statements** on Dashboard show one row per deferred card with its status (Due / Paid · date / Nothing to settle) and amount; tap a row to open the same paid/due editor used on Settings and Transactions.
+Header **Refresh** appears on every tab (not shown in cropped dashboard shots). **Card statements** on Dashboard show one row per deferred card with its status (Due / Paid · date / Nothing to settle) and amount. A due card has a **Mark as paid today** button under its row; tap the row itself to open the same paid/due editor used on Settings and Transactions.
 
 | Desktop (light) |
 | --- |

@@ -5,10 +5,13 @@ import { computeCashReconciliation } from '../../engine'
 import { isStatementPaid } from '../../engine/status'
 import { todayLocalIso } from '../dates'
 import { EXIT_MS } from '../hooks/motion'
+import { failureMessage } from '../hooks/useFailureToast'
+import { useToast } from '../hooks/useToast'
 import { PresenceValue } from './Presence'
 import { StatementPaymentSheet } from './StatementPaymentSheet'
 import { StatementSummaryRow } from './StatementSummaryRow'
 import { Card, SectionTitle } from './primitives'
+import styles from './CardStatementsCard.module.css'
 
 interface CardStatementsCardProps {
   dataset: ExpenseDataset
@@ -35,6 +38,7 @@ function findPaidOn(
 export function CardStatementsCard({ dataset, month, actions }: CardStatementsCardProps) {
   const [pending, setPending] = useState<ReadonlySet<number>>(() => new Set())
   const [editingId, setEditingId] = useState<number | null>(null)
+  const { showToast } = useToast()
 
   const statements = useMemo<StatementRow[]>(() => {
     const deferred = dataset.accounts.filter((a) => a.settlement === 'deferred' && a.active)
@@ -84,23 +88,43 @@ export function CardStatementsCard({ dataset, month, actions }: CardStatementsCa
       }
     : undefined
 
+  // One tap, dated today. Another day is picked in the sheet the row opens.
+  const markPaidToday = save
+    ? async (row: StatementRow) => {
+        try {
+          await save(row.id, true)
+          showToast(`${row.name} marked paid today`, 'success')
+        } catch (e) {
+          showToast(failureMessage(e), 'error')
+        }
+      }
+    : undefined
+
   const editing = statements.find((s) => s.id === editingId) ?? null
 
   return (
     <>
       <SectionTitle>Card statements</SectionTitle>
       <Card>
-        {statements.map((s) => (
-          <StatementSummaryRow
-            key={s.id}
-            name={s.name}
-            amountCents={s.chargeCents}
-            paid={s.paid}
-            paidOn={s.paidOn}
-            disabled={pending.has(s.id)}
-            {...(save && s.chargeCents !== 0 ? { onPress: () => setEditingId(s.id) } : {})}
-          />
-        ))}
+        <div className={styles.list}>
+          {statements.map((s) => {
+            const actionable = save !== undefined && s.chargeCents !== 0
+            return (
+              <StatementSummaryRow
+                key={s.id}
+                name={s.name}
+                amountCents={s.chargeCents}
+                paid={s.paid}
+                paidOn={s.paidOn}
+                disabled={pending.has(s.id)}
+                {...(actionable ? { onPress: () => setEditingId(s.id) } : {})}
+                {...(actionable && !s.paid && markPaidToday
+                  ? { onMarkPaidToday: () => void markPaidToday(s) }
+                  : {})}
+              />
+            )
+          })}
+        </div>
       </Card>
       <PresenceValue value={save ? editing : null} exitMs={EXIT_MS.sheet}>
         {(statement) =>

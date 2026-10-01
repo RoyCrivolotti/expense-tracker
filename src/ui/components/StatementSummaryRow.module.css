@@ -1,3 +1,10 @@
+/* The tint and the corners sit on the wrapper so a row and the button under it read as one
+   piece. It clips, so the row's hover and focus are drawn inside it. */
+.item {
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-bg));
+  overflow: hidden;
+}
 .row {
   display: flex;
   align-items: center;
@@ -5,21 +12,61 @@
   width: 100%;
   padding: 0.65rem 0.85rem;
   border: 0;
-  border-radius: var(--exp-radius, 0.75rem);
-  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-bg));
+  border-radius: inherit;
+  background: none;
   text-align: left;
   font: inherit;
   color: inherit;
+}
+.rowAboveAction {
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
 }
 .rowButton {
   cursor: pointer;
 }
 .rowButton:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-bg));
+  background: color-mix(in srgb, var(--color-accent) 4%, transparent);
+}
+.rowButton:focus-visible,
+.markPaid:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
 }
 .rowButton:disabled {
   opacity: 0.6;
   cursor: default;
+}
+.markPaid {
+  display: block;
+  width: calc(100% - 1.7rem);
+  min-height: 2.75rem;
+  margin: 0 0.85rem 0.65rem;
+  border: 0;
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  /* The plain accent on its own tint is only 4.5:1 in the light theme. */
+  color: color-mix(in srgb, var(--color-accent) 80%, var(--color-text));
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+.markPaid:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+.markPaid:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+/* Text a screen reader needs but the layout already conveys another way. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .iconWrap {
   flex: none;
