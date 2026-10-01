@@ -6,6 +6,7 @@ import { makeDataset, makeFlag, makeTransaction } from '../../testing/factories'
 import { makeActions } from '../../testing/makeActions'
 import { buildLookup } from '../format'
 import type { ExpenseModel } from '../useExpenseData'
+import { ToastContext } from '../hooks/useToast'
 import { TransactionsTab } from './TransactionsTab'
 import { RESULTS_ANCHOR_ID } from './scrollToResults'
 
@@ -307,5 +308,39 @@ describe('TransactionsTab — clearing a flag', () => {
       expect(actions.updateTransactions).toHaveBeenCalledWith([7], { flagId: null }),
     )
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+  })
+
+  it('toasts the failure instead of throwing when clearing one flag fails', async () => {
+    const actions = makeActions()
+    vi.mocked(actions.updateTransaction).mockRejectedValue(new Error('Offline'))
+    const showToast = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <ToastContext.Provider value={{ showToast }}>
+        <TransactionsTab model={claim()} month="2025-01" actions={actions} />
+      </ToastContext.Provider>,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Clear flag' }))
+
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith('Offline', 'error'))
+  })
+
+  it('toasts a generic message when clearing the group fails without one', async () => {
+    const actions = makeActions()
+    vi.mocked(actions.updateTransactions).mockRejectedValue('not an Error instance')
+    const showToast = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <ToastContext.Provider value={{ showToast }}>
+        <TransactionsTab model={claim()} month="2025-01" actions={actions} />
+      </ToastContext.Provider>,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Clear all in this group' }))
+    const sheet = screen.getByRole('alertdialog')
+    await user.click(within(sheet).getByRole('button', { name: 'Clear all' }))
+
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith('Could not clear the flag', 'error'))
   })
 })
