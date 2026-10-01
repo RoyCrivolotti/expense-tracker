@@ -121,7 +121,7 @@ const CARD: Account = { id: 2, name: 'Iberia Icon', kind: 'credit', settlement: 
  * A paid June statement. A statement only becomes a row in the list once it is paid and
  * has a charge behind it, and the row sits on the day it was paid.
  */
-function paidStatementModel(): ExpenseModel {
+function paidStatementModel(paidOn = '2026-06-15'): ExpenseModel {
   return modelFor(
     [
       makeTransaction({
@@ -134,7 +134,7 @@ function paidStatementModel(): ExpenseModel {
     ],
     {
       accounts: [DEBIT, CARD],
-      accountStatements: [{ accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-06-15' }],
+      accountStatements: [{ accountId: 2, yearMonth: '2026-06', paid: true, paidOn }],
     },
   )
 }
@@ -151,14 +151,14 @@ describe('TransactionsTab statement payments', () => {
     const { sheet } = await openStatementSheet()
 
     expect(within(sheet).getByText('June 2026')).toBeInTheDocument()
-    expect(within(sheet).getByRole('button', { name: 'Paid' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(sheet).getByText('Paid')).toBeInTheDocument()
     expect(within(sheet).getByLabelText('Statement paid on')).toHaveValue('2026-06-15')
   })
 
   it('marks the statement due again and closes the sheet', async () => {
     const { user, actions, sheet } = await openStatementSheet()
 
-    await user.click(within(sheet).getByRole('button', { name: 'Paid' }))
+    await user.click(within(sheet).getByRole('button', { name: 'Mark as due' }))
 
     expect(actions.setStatementPaid).toHaveBeenCalledWith(2, '2026-06', false, undefined)
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
@@ -177,6 +177,22 @@ describe('TransactionsTab statement payments', () => {
     expect(sheet).toBeInTheDocument()
   })
 
+  it('shows the new paid date once the save has changed the model', async () => {
+    const user = userEvent.setup()
+    const actions = makeActions()
+    const { rerender } = render(
+      <TransactionsTab model={paidStatementModel()} month="2026-06" actions={actions} />,
+    )
+    await user.click(screen.getByRole('button', { name: /Iberia Icon statement/ }))
+
+    rerender(
+      <TransactionsTab model={paidStatementModel('2026-06-20')} month="2026-06" actions={actions} />,
+    )
+
+    const sheet = screen.getByRole('dialog', { name: 'Iberia Icon statement' })
+    expect(within(sheet).getByLabelText('Statement paid on')).toHaveValue('2026-06-20')
+  })
+
   it('locks the sheet while the change is being saved', async () => {
     let finish!: () => void
     const actions = makeActions({
@@ -188,15 +204,15 @@ describe('TransactionsTab statement payments', () => {
       ),
     })
     const { sheet } = await openStatementSheet(actions)
-    const toggle = within(sheet).getByRole('button', { name: 'Paid' })
+    const markDue = within(sheet).getByRole('button', { name: 'Mark as due' })
 
     fireEvent.change(within(sheet).getByLabelText('Statement paid on'), {
       target: { value: '2026-06-20' },
     })
-    expect(toggle).toBeDisabled()
+    expect(markDue).toBeDisabled()
 
     finish()
-    await waitFor(() => expect(toggle).toBeEnabled())
+    await waitFor(() => expect(markDue).toBeEnabled())
   })
 
   it('closes without saving anything', async () => {

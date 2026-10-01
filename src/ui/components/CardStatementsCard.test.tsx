@@ -50,19 +50,20 @@ describe('CardStatementsCard', () => {
     vi.useRealTimers()
   })
 
-  it('opens the pressed card statement and marks it paid today', async () => {
+  it('opens the pressed card statement and marks it paid today, then closes', async () => {
     const { user, actions, sheet } = await openSheet()
 
     expect(within(sheet).getByText('June 2026')).toBeInTheDocument()
-    await user.click(within(sheet).getByRole('button', { name: 'Due' }))
+    await user.click(within(sheet).getByRole('button', { name: 'Mark as paid' }))
 
     expect(actions.setStatementPaid).toHaveBeenCalledWith(2, '2026-06', true, '2026-06-20')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
   it('marks a paid statement due again, without a paid date, and closes the sheet', async () => {
     const { user, actions, sheet } = await openSheet([PAID_JUNE])
 
-    await user.click(within(sheet).getByRole('button', { name: 'Paid' }))
+    await user.click(within(sheet).getByRole('button', { name: 'Mark as due' }))
 
     expect(actions.setStatementPaid).toHaveBeenCalledWith(2, '2026-06', false, undefined)
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
@@ -91,15 +92,15 @@ describe('CardStatementsCard', () => {
       ),
     })
     const { user, sheet } = await openSheet([], actions)
-    const toggle = within(sheet).getByRole('button', { name: 'Due' })
+    const markPaid = within(sheet).getByRole('button', { name: 'Mark as paid' })
     const row = screen.getByRole('button', { name: 'Iberia Icon statement' })
 
-    await user.click(toggle)
-    expect(toggle).toBeDisabled()
+    await user.click(markPaid)
+    expect(markPaid).toBeDisabled()
     expect(row).toBeDisabled()
 
     finish()
-    await waitFor(() => expect(toggle).toBeEnabled())
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(row).toBeEnabled()
   })
 

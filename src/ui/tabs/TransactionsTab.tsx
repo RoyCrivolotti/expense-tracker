@@ -31,6 +31,15 @@ function itemCountLabel(count: number): string {
   return `${count} item${count === 1 ? '' : 's'}`
 }
 
+/** The tapped row is a snapshot, so a date edit made in the sheet would never reach it.
+ * The statement itself is current, and a filter cannot hide it while the sheet is open. */
+function livePaidOn(model: ExpenseModel, row: StatementPaymentRow): string {
+  const statement = model.dataset.accountStatements.find(
+    (s) => s.accountId === row.cardAccountId && s.yearMonth === row.budgetMonth,
+  )
+  return statement?.paidOn ?? row.date
+}
+
 interface TransactionsTabProps {
   model: ExpenseModel
   month: string
@@ -186,7 +195,7 @@ export function TransactionsTab({
               yearMonth={statement.budgetMonth}
               amountCents={statement.amountCents}
               paid
-              paidOn={statement.date}
+              paidOn={livePaidOn(model, statement)}
               disabled={statementPending}
               onClose={() => setEditingStatement(null)}
               onSave={async (paid, paidOn) => {

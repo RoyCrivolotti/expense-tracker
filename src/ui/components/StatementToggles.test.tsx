@@ -58,19 +58,20 @@ describe('StatementToggles', () => {
     vi.useRealTimers()
   })
 
-  it('opens the sheet of the month that was pressed and marks it paid today', async () => {
+  it('opens the sheet of the month that was pressed and marks it paid today, then closes', async () => {
     const { user, onToggle, sheet } = await openJune()
 
     expect(within(sheet).getByText('June 2026')).toBeInTheDocument()
-    await user.click(within(sheet).getByRole('button', { name: 'Due' }))
+    await user.click(within(sheet).getByRole('button', { name: 'Mark as paid' }))
 
     expect(onToggle).toHaveBeenCalledWith(2, '2026-06', true, '2026-06-20')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
   it('marks a paid month due again, without a paid date, and closes the sheet', async () => {
     const { user, onToggle, sheet } = await openJune([PAID_JUNE])
 
-    await user.click(within(sheet).getByRole('button', { name: 'Paid' }))
+    await user.click(within(sheet).getByRole('button', { name: 'Mark as due' }))
 
     expect(onToggle).toHaveBeenCalledWith(2, '2026-06', false, undefined)
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
@@ -95,15 +96,15 @@ describe('StatementToggles', () => {
         }),
     )
     const { user, sheet } = await openJune([], onToggle)
-    const toggle = within(sheet).getByRole('button', { name: 'Due' })
+    const markPaid = within(sheet).getByRole('button', { name: 'Mark as paid' })
     const month = screen.getByRole('button', { name: 'June 2026 statement' })
 
-    await user.click(toggle)
-    expect(toggle).toBeDisabled()
+    await user.click(markPaid)
+    expect(markPaid).toBeDisabled()
     expect(month).toBeDisabled()
 
     finish()
-    await waitFor(() => expect(toggle).toBeEnabled())
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(month).toBeEnabled()
   })
 
@@ -141,15 +142,36 @@ describe('StatementToggles — the sheet while it leaves', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'June 2026 statement' }))
     let sheet = screen.getByRole('dialog', { name: 'Iberia Icon statement' })
-    expect(within(sheet).getByRole('button', { name: 'Paid' })).toBeInTheDocument()
+    expect(within(sheet).getByRole('button', { name: 'Mark as due' })).toBeInTheDocument()
 
     fireEvent.click(within(sheet).getByRole('button', { name: 'Close' }))
 
     // An unrelated change (a background refresh, say) lands while the sheet is mid-exit.
-    // Read live, "Paid" would flip to "Due" here, mid-fade, instead of staying as it was.
+    // Read live, "Mark as due" would flip to "Mark as paid" here, mid-fade, instead of
+    // staying as it was.
     rerender(<StatementToggles model={modelWith([])} onToggle={onToggle} />)
     sheet = screen.getByRole('dialog', { name: 'Iberia Icon statement' })
-    expect(within(sheet).getByRole('button', { name: 'Paid' })).toBeInTheDocument()
+    expect(within(sheet).getByRole('button', { name: 'Mark as due' })).toBeInTheDocument()
+
+    await act(() => vi.advanceTimersByTimeAsync(EXIT_MS.sheet))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('keeps saying "Mark as paid" while it leaves after marking the statement paid', async () => {
+    const onToggle = vi.fn().mockResolvedValue(undefined)
+    const { rerender } = render(<StatementToggles model={modelWith([])} onToggle={onToggle} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'June 2026 statement' }))
+    const sheet = screen.getByRole('dialog', { name: 'Iberia Icon statement' })
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Mark as paid' }))
+    // Lets the save resolve, which is what closes the sheet.
+    await act(() => vi.advanceTimersByTimeAsync(0))
+
+    // The save has landed and the sheet is leaving. It must not flip to "Mark as due".
+    rerender(<StatementToggles model={modelWith([PAID_JUNE])} onToggle={onToggle} />)
+    const leaving = screen.getByRole('dialog', { name: 'Iberia Icon statement' })
+    expect(within(leaving).getByRole('button', { name: 'Mark as paid' })).toBeInTheDocument()
+    expect(within(leaving).queryByRole('button', { name: 'Mark as due' })).not.toBeInTheDocument()
 
     await act(() => vi.advanceTimersByTimeAsync(EXIT_MS.sheet))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()

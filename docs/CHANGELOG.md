@@ -2,6 +2,11 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (marking a card statement paid)
+
+- **The card statement sheet has buttons, not a pill to tap.** The small Due/Paid pill was also the control, and it was labelled with the state the statement was in rather than what tapping it did. A due statement now shows a date field, set to today, and a "Mark as paid" button that saves and closes the sheet. A paid one shows its date and a "Mark as due" button. A save that fails now says why in the sheet and leaves it open.
+- **The Transactions statement sheet shows a new paid date straight away.** It used to jump back to the old date until the sheet was reopened.
+
 ## September 2026 (one chart tooltip at a time)
 
 - **Opening one chart's tooltip now closes another's.** Charts stacked on the same screen, such as Progress's net worth history above the check-in history, or Analytics' monthly and year-to-date charts beside the category pie, could each have their tooltip open at once. Tapping or hovering a chart now closes whichever other one was open.
