@@ -48,6 +48,7 @@ export interface FlagRow {
   reimbursable: number
   sort_order: number
   active: number
+  auto_label_id: number | null
 }
 
 export interface LabelRow {
@@ -124,6 +125,7 @@ export function toFlag(r: FlagRow): Flag {
     active: r.active === 1,
     reimbursable: r.reimbursable === 1,
     ...(r.description ? { description: r.description } : {}),
+    ...(r.auto_label_id != null ? { autoLabelId: r.auto_label_id } : {}),
   }
 }
 

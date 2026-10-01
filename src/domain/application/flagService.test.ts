@@ -34,3 +34,44 @@ describe('flagService — sortOrder and active', () => {
     await expect(createFlag(repo, 'owner@example.com', valid)).resolves.toBeDefined()
   })
 })
+
+describe('flagService — autoLabelId', () => {
+  it('rejects zero, a negative id, and a non-integer', async () => {
+    await expect(
+      patchFlag(repo, 'owner@example.com', 1, { autoLabelId: 0 }),
+    ).rejects.toThrow(/positive whole number/)
+    await expect(
+      patchFlag(repo, 'owner@example.com', 1, { autoLabelId: -1 }),
+    ).rejects.toThrow(/positive whole number/)
+    await expect(
+      patchFlag(repo, 'owner@example.com', 1, { autoLabelId: 1.5 }),
+    ).rejects.toThrow(/positive whole number/)
+  })
+
+  it('passes a valid id through to the repository', async () => {
+    const updateFlag = vi.fn().mockResolvedValue({})
+    await patchFlag({ updateFlag } as unknown as ExpenseRepository, 'owner@example.com', 1, {
+      autoLabelId: 5,
+    })
+
+    expect(updateFlag).toHaveBeenCalledWith('owner@example.com', 1, { autoLabelId: 5 })
+  })
+
+  it('passes an explicit null through, to clear it', async () => {
+    const updateFlag = vi.fn().mockResolvedValue({})
+    await patchFlag({ updateFlag } as unknown as ExpenseRepository, 'owner@example.com', 1, {
+      autoLabelId: null,
+    })
+
+    expect(updateFlag).toHaveBeenCalledWith('owner@example.com', 1, { autoLabelId: null })
+  })
+
+  it('leaves it out of the repository call when absent from the patch', async () => {
+    const updateFlag = vi.fn().mockResolvedValue({})
+    await patchFlag({ updateFlag } as unknown as ExpenseRepository, 'owner@example.com', 1, {
+      name: 'Renamed',
+    })
+
+    expect(updateFlag.mock.calls[0]?.[2]).not.toHaveProperty('autoLabelId')
+  })
+})

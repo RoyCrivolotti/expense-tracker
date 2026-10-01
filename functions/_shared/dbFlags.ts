@@ -2,7 +2,8 @@ import type { NewFlag } from '../domain/data/dataSource'
 import type { Flag } from '../domain/types'
 import type { Env } from './env'
 import { HttpError } from './http'
-import { assertOwnedFlag } from './ownership'
+import { applyLabelToFlaggedTransactionsStatement } from './dbLabels'
+import { assertOwnedFlag, assertOwnedLabel } from './ownership'
 import { toFlag, type FlagRow } from './rows'
 
 type ColumnMap = Record<keyof NewFlag, string>
@@ -14,6 +15,7 @@ const FLAG_COLUMNS: ColumnMap = {
   reimbursable: 'reimbursable',
   sortOrder: 'sort_order',
   active: 'active',
+  autoLabelId: 'auto_label_id',
 }
 
 function coerce(key: keyof NewFlag, value: unknown): unknown {
@@ -24,9 +26,10 @@ function coerce(key: keyof NewFlag, value: unknown): unknown {
 }
 
 export async function createFlag(env: Env, owner: string, input: NewFlag): Promise<Flag> {
+  if (input.autoLabelId != null) await assertOwnedLabel(env, owner, input.autoLabelId)
   const row = await env.DB.prepare(
-    `INSERT INTO flags (owner, name, color, description, reimbursable, sort_order, active)
-     VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *`,
+    `INSERT INTO flags (owner, name, color, description, reimbursable, sort_order, active, auto_label_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
   )
     .bind(
       owner,
@@ -36,6 +39,7 @@ export async function createFlag(env: Env, owner: string, input: NewFlag): Promi
       input.reimbursable ? 1 : 0,
       input.sortOrder,
       input.active ? 1 : 0,
+      input.autoLabelId ?? null,
     )
     .first<FlagRow>()
   if (!row) throw new HttpError(500, 'Flag insert failed')
@@ -50,12 +54,20 @@ export async function updateFlag(
 ): Promise<Flag> {
   const keys = (Object.keys(patch) as (keyof NewFlag)[]).filter((k) => k in FLAG_COLUMNS)
   if (keys.length === 0) throw new HttpError(400, 'Empty patch')
+  if (patch.autoLabelId != null) await assertOwnedLabel(env, owner, patch.autoLabelId)
   const sets = keys.map((k) => `${FLAG_COLUMNS[k]} = ?`).join(', ')
   const values = keys.map((k) => coerce(k, patch[k]))
   const row = await env.DB.prepare(`UPDATE flags SET ${sets} WHERE id = ? AND owner = ? RETURNING *`)
     .bind(...values, id, owner)
     .first<FlagRow>()
   if (!row) throw new HttpError(404, 'Flag not found')
+  // Retroactive: every transaction already carrying this flag picks up the
+  // auto-label immediately, not just ones flagged from now on. Run after the
+  // RETURNING update, not batched with it — this is a fan-out over however many
+  // rows already carry the flag, not a fixed-shape write the two could share.
+  if (patch.autoLabelId != null) {
+    await applyLabelToFlaggedTransactionsStatement(env, owner, id, patch.autoLabelId).run()
+  }
   return toFlag(row)
 }
 

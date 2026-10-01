@@ -6,7 +6,7 @@ import { useDismissOnOutsidePointer } from '../charts/useDismissOnOutsidePointer
 import { usePopoverMotion } from '../hooks/usePopoverMotion'
 import { usePopoverPosition } from '../hooks/usePopoverPosition'
 import { selectableLabels } from './labelPickerOptions'
-import { duplicateLabelName, quickLabelDraft } from './quickLabel'
+import { QuickCreateLabel } from './QuickCreateLabel'
 // Reused wholesale: this picker's list/option/swatch/create styling is
 // identical to the flag picker's — only the selection behaviour differs
 // (toggle-and-stay-open here, versus pick-and-close there), which lives in
@@ -22,79 +22,6 @@ interface Props {
   onClose: () => void
   /** Create a label from here. Optional, same reason as FlagPickerPopover's onCreate. */
   onCreate?: ((name: string) => Promise<number>) | undefined
-}
-
-/** Name-only label creation, inline in the picker. Mirrors QuickCreate in FlagPickerPopover. */
-function QuickCreate({
-  labels,
-  onCreate,
-  onCreated,
-  onCancel,
-}: {
-  labels: Label[]
-  onCreate: (name: string) => Promise<number>
-  onCreated: (labelId: number) => void
-  onCancel: () => void
-}) {
-  const [name, setName] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
-
-  const submit = async () => {
-    if (busy) return
-    if (!quickLabelDraft(name, labels)) {
-      setErr('Enter a name')
-      return
-    }
-    if (duplicateLabelName(name, labels)) {
-      setErr('There is already a label with that name')
-      return
-    }
-    setBusy(true)
-    setErr(null)
-    try {
-      onCreated(await onCreate(name))
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Could not create the label')
-      setBusy(false)
-    }
-  }
-
-  return (
-    <div className={styles.create}>
-      <input
-        className={styles.createInput}
-        type="text"
-        autoFocus
-        aria-label="New label name"
-        placeholder="e.g. Japan trip"
-        value={name}
-        disabled={busy}
-        onChange={(e) => {
-          setName(e.target.value)
-          setErr(null)
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault()
-            void submit()
-          } else if (e.key === 'Escape') {
-            e.preventDefault()
-            e.stopPropagation()
-            onCancel()
-          }
-        }}
-      />
-      <button type="button" className={styles.createAdd} disabled={busy} onClick={() => void submit()}>
-        {busy ? 'Adding…' : 'Add'}
-      </button>
-      {err ? (
-        <p className={styles.createError} role="alert">
-          {err}
-        </p>
-      ) : null}
-    </div>
-  )
 }
 
 export function LabelPickerPopover({ value, labels, triggerRef, onToggle, onClose, onCreate }: Props) {
@@ -160,7 +87,7 @@ export function LabelPickerPopover({ value, labels, triggerRef, onToggle, onClos
       ) : null}
       {onCreate ? (
         creating ? (
-          <QuickCreate
+          <QuickCreateLabel
             labels={labels}
             onCreate={onCreate}
             onCreated={(id) => {

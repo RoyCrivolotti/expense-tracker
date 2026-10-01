@@ -222,6 +222,7 @@ function stubTxn(input: NewTransaction): Transaction {
  * had done nothing for exactly that reason.
  */
 let loaded: Transaction[] = []
+let loadedFlags: Flag[] = []
 let loadedSettings: ExpenseSettings = defaultExpenseSettings()
 
 export const docsCaptureDataSource: ExpenseDataSource = {
@@ -235,6 +236,7 @@ export const docsCaptureDataSource: ExpenseDataSource = {
         wealthCheckins: docsCaptureWealthCheckins(),
       })
       loaded = enriched.transactions
+      loadedFlags = enriched.flags
       loadedSettings = enriched.settings
       return enriched
     })
@@ -302,20 +304,43 @@ export const docsCaptureDataSource: ExpenseDataSource = {
   deleteAttachment() {
     return Promise.resolve()
   },
+  // Registered in loadedFlags, same reason as createTransaction: a same-session
+  // updateFlag against the id this returns (the auto-label editor's very next
+  // step) needs a real row to merge its partial patch onto.
   createFlag(input) {
     nextFlagId += 1
-    return Promise.resolve({ ...input, id: nextFlagId })
+    const { autoLabelId, ...rest } = input
+    const flag: Flag = { ...rest, id: nextFlagId, ...(autoLabelId != null ? { autoLabelId } : {}) }
+    loadedFlags = [...loadedFlags, flag]
+    return Promise.resolve(flag)
   },
+  // Merged onto the real row, not rebuilt from the patch: updateFlag(id, {
+  // autoLabelId }) is a genuinely partial patch (the auto-label editor sends
+  // nothing else), and a stub built from the patch alone came back named
+  // "Flag" — this file's own updateTransaction comment describes exactly
+  // this failure mode.
   updateFlag(id, patch) {
-    return Promise.resolve({
-      id,
-      name: patch.name ?? 'Flag',
-      color: patch.color ?? '#6366f1',
-      reimbursable: patch.reimbursable ?? true,
-      sortOrder: patch.sortOrder ?? 0,
-      active: patch.active ?? true,
-      ...(patch.description ? { description: patch.description } : {}),
-    })
+    const existing = loadedFlags.find((f) => f.id === id)
+    const { autoLabelId, ...rest } = patch
+    const merged: Flag = existing
+      ? { ...existing, ...rest, id }
+      : {
+          id,
+          name: patch.name ?? 'Flag',
+          color: patch.color ?? '#6366f1',
+          reimbursable: patch.reimbursable ?? true,
+          sortOrder: patch.sortOrder ?? 0,
+          active: patch.active ?? true,
+          ...(patch.description ? { description: patch.description } : {}),
+        }
+    // null is how the editor clears it; absent leaves whatever the merge above
+    // already carried forward.
+    if (autoLabelId !== undefined) {
+      if (autoLabelId == null) delete merged.autoLabelId
+      else merged.autoLabelId = autoLabelId
+    }
+    loadedFlags = loadedFlags.map((f) => (f.id === id ? merged : f))
+    return Promise.resolve(merged)
   },
   deleteFlag() {
     return Promise.resolve({ unflagged: 0 })

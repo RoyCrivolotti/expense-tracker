@@ -180,7 +180,7 @@ describe('deleteLabel', () => {
   it('clears the label from transaction_labels and deletes it in one batch', async () => {
     const { env, batch } = stubEnv({
       first: () => OK,
-      batch: () => [{ meta: { changes: 3 } }, { meta: { changes: 1 } }],
+      batch: () => [{ meta: { changes: 3 } }, { meta: { changes: 1 } }, { meta: { changes: 1 } }],
     })
 
     const result = await deleteLabel(env, OWNER, 7)
@@ -189,9 +189,22 @@ describe('deleteLabel', () => {
     const statements = batch.mock.calls[0]?.[0] as StatementStub[]
     expect(statements.map((s) => s.sql)).toEqual([
       'DELETE FROM transaction_labels WHERE label_id = ?',
+      'UPDATE flags SET auto_label_id = NULL WHERE auto_label_id = ? AND owner = ?',
       'DELETE FROM labels WHERE id = ? AND owner = ?',
     ])
     expect(result).toEqual({ unlabeled: 3 })
+  })
+
+  it('clears a flag auto-labelled with this label, so it cannot dangle', async () => {
+    const { env, batch } = stubEnv({
+      first: () => OK,
+      batch: () => [{ meta: { changes: 0 } }, { meta: { changes: 1 } }, { meta: { changes: 1 } }],
+    })
+
+    await deleteLabel(env, OWNER, 7)
+
+    const statements = batch.mock.calls[0]?.[0] as StatementStub[]
+    expect(statements[1]?.args).toEqual([7, OWNER])
   })
 
   it('rejects a label the owner does not have, without writing anything', async () => {

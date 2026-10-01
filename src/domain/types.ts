@@ -60,6 +60,13 @@ export interface Flag {
   reimbursable: boolean
   sortOrder: number
   active: boolean
+  /**
+   * A label applied automatically to every transaction this flag is set on,
+   * both retroactively when configured and going forward. Lets a flag that
+   * clears on reimbursement hand off to a label that never does, without
+   * tagging every claimed row by hand. Absent means no auto-label.
+   */
+  autoLabelId?: number
 }
 
 /**

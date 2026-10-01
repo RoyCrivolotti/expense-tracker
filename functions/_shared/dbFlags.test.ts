@@ -15,19 +15,22 @@ interface StatementStub {
 function stubEnv(opts: {
   first?: (sql: string, args: unknown[]) => unknown
   batch?: (stmts: StatementStub[]) => unknown[]
+  run?: (sql: string, args: unknown[]) => unknown
 }) {
   const first = opts.first ?? (() => null)
   const batch = vi.fn(
     opts.batch ?? ((stmts: StatementStub[]) => stmts.map(() => ({ meta: { changes: 0 } }))),
   )
+  const run = vi.fn((sql: string, args: unknown[]) => (opts.run ?? (() => ({ meta: { changes: 0 } })))(sql, args))
   const prepare = vi.fn((sql: string) => ({
     bind: (...args: unknown[]) => ({
       sql,
       args,
       first: vi.fn().mockImplementation(async () => first(sql, args)),
+      run: vi.fn().mockImplementation(async () => run(sql, args)),
     }),
   }))
-  return { env: { DB: { prepare, batch } } as unknown as Env, prepare, batch }
+  return { env: { DB: { prepare, batch } } as unknown as Env, prepare, batch, run }
 }
 
 const OWNER = 'owner@example.com'
@@ -73,7 +76,7 @@ describe('createFlag', () => {
         active: true,
       })
       .then(() => {
-        expect(bound).toEqual([OWNER, 'Work travel', '#6366f1', 'Reimbursable', 1, 0, 1])
+        expect(bound).toEqual([OWNER, 'Work travel', '#6366f1', 'Reimbursable', 1, 0, 1, null])
       })
   })
 
@@ -112,6 +115,47 @@ describe('createFlag', () => {
     await expect(
       createFlag(env, OWNER, { name: 'Work', color: '#6366f1', sortOrder: 0, active: true }),
     ).rejects.toMatchObject({ status: 500, message: 'Flag insert failed' })
+  })
+
+  it('binds a configured auto-label after checking the owner has it', async () => {
+    let bound: unknown[] = []
+    const { env } = stubEnv({
+      first: (sql, args) => {
+        if (sql.includes('FROM labels')) return { ok: 1 }
+        bound = args
+        return { ...FLAG_ROW, auto_label_id: 5 }
+      },
+    })
+
+    const flag = await createFlag(env, OWNER, {
+      name: 'Work travel',
+      color: '#6366f1',
+      reimbursable: true,
+      sortOrder: 0,
+      active: true,
+      autoLabelId: 5,
+    })
+
+    expect(bound.at(-1)).toBe(5)
+    expect(flag.autoLabelId).toBe(5)
+  })
+
+  it('rejects an auto-label id the owner does not have, without inserting anything', async () => {
+    const { env, prepare } = stubEnv({
+      first: (sql) => (sql.includes('FROM labels') ? null : { ...FLAG_ROW }),
+    })
+
+    await expect(
+      createFlag(env, OWNER, {
+        name: 'Work travel',
+        color: '#6366f1',
+        reimbursable: true,
+        sortOrder: 0,
+        active: true,
+        autoLabelId: 99,
+      }),
+    ).rejects.toMatchObject({ status: 400, message: 'Invalid labelId' })
+    expect(prepare).not.toHaveBeenCalledWith(expect.stringContaining('INSERT INTO flags'))
   })
 })
 
@@ -209,5 +253,47 @@ describe('updateFlag', () => {
       status: 404,
       message: 'Flag not found',
     })
+  })
+
+  it('rejects an auto-label id the owner does not have, without writing anything', async () => {
+    const { env, prepare } = stubEnv({
+      first: (sql) => (sql.includes('FROM labels') ? null : { ...FLAG_ROW }),
+    })
+
+    await expect(updateFlag(env, OWNER, 1, { autoLabelId: 99 })).rejects.toMatchObject({
+      status: 400,
+      message: 'Invalid labelId',
+    })
+    expect(prepare).not.toHaveBeenCalledWith(expect.stringContaining('UPDATE flags'))
+  })
+
+  it('retroactively applies the auto-label, after the update, with the right bind order', async () => {
+    const { env, run } = stubEnv({
+      first: (sql) => (sql.includes('FROM labels') ? { ok: 1 } : { ...FLAG_ROW, auto_label_id: 5 }),
+    })
+
+    await updateFlag(env, OWNER, 1, { autoLabelId: 5 })
+
+    expect(run).toHaveBeenCalledTimes(1)
+    const [sql, args] = run.mock.calls[0] as [string, unknown[]]
+    expect(sql).toContain('INSERT OR IGNORE INTO transaction_labels (transaction_id, label_id)')
+    expect(sql).toContain('SELECT t.id')
+    expect(args).toEqual([5, 1, OWNER])
+  })
+
+  it('does not run the retroactive apply when autoLabelId is not in the patch', async () => {
+    const { env, run } = stubEnv({ first: () => ({ ...FLAG_ROW }) })
+
+    await updateFlag(env, OWNER, 1, { name: 'Renamed' })
+
+    expect(run).not.toHaveBeenCalled()
+  })
+
+  it('does not retroactively apply when autoLabelId is explicitly cleared to null', async () => {
+    const { env, run } = stubEnv({ first: () => ({ ...FLAG_ROW, auto_label_id: null }) })
+
+    await updateFlag(env, OWNER, 1, { autoLabelId: null })
+
+    expect(run).not.toHaveBeenCalled()
   })
 })

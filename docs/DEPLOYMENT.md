@@ -88,7 +88,7 @@ npx wrangler d1 execute roy-expenses --remote --file=migrations/NNNN_name.sql
 npx wrangler d1 execute roy-expenses --remote --command="INSERT OR IGNORE INTO _migrations (name) VALUES ('NNNN_name')"
 ```
 
-Apply through `0028_labels.sql` on production, and record each file in `_migrations` as you go, by its name without `.sql`. `npm run migrate:dev` records for the dev database itself; nothing does for production. The app never reads the table, so a missing row breaks nothing until someone trusts the record, which is how the drift described below happened.
+Apply through `0029_flag_auto_label.sql` on production, and record each file in `_migrations` as you go, by its name without `.sql`. `npm run migrate:dev` records for the dev database itself; nothing does for production. The app never reads the table, so a missing row breaks nothing until someone trusts the record, which is how the drift described below happened.
 
 **Check what a database actually has before trusting this line.** It has been wrong: on
 2026-09-15 production turned out to have no `_migrations` table at all, `0020` never having
@@ -214,6 +214,8 @@ record on a database that already has a `transactions` table means the same thin
 `0027_assumed_inflation.sql` adds a nullable `assumed_inflation` on `settings`: the yearly inflation the Goals tab assumes wherever it brings a nominal figure back to today's money, read as 2% when null. It is one value for the owner, not one per plan, so every scenario and the comparison table share a basis. Owner-agnostic, nothing to backfill, same timing as `0025`: apply it before (or with) the code deploy, since changing the rate writes the column.
 
 `0028_labels.sql` adds a `labels` table and a `transaction_labels` join table: a persistent, multi-value tag a transaction can carry, distinct from a flag (which is transient and clears on reimbursement — see `0018`). A transaction can hold any number of labels, which is why this needed a join table rather than another single column like `flag_id`. Both tables are brand new and nothing in the shipped app reads or writes them yet, so there is no backfill and no deploy-order constraint — apply it whenever is convenient before the code that uses it lands.
+
+`0029_flag_auto_label.sql` adds a nullable `auto_label_id` on `flags`: configuring it applies that label to every transaction currently carrying the flag, and to every one the flag is assigned to afterward. Nullable and no enforced FK, same reasoning as `flag_id` itself (`0015`) and `settled_by` (`0018`) — D1/SQLite's `ALTER TABLE` cannot add one. Nothing defaults it on existing flags, so there is no backfill; apply it whenever is convenient before the code that reads it lands.
 
 ## Old URL
 

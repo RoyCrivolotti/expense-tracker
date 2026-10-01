@@ -771,3 +771,147 @@ describe('deriveOne — labelIds', () => {
     expect(txn.labelIds).toEqual([])
   })
 })
+
+/**
+ * The forward half of a flag's auto-label (see dbLabels.ts's
+ * applyLabelToFlaggedTransactionsStatement for the retroactive half, tested via
+ * dbFlags.test.ts's updateFlag). A write assigning a flag also fans out that
+ * flag's configured label, whichever write path it goes through.
+ */
+describe('flag auto-label fan-out', () => {
+  interface Recorded {
+    sql: string
+    args: unknown[]
+  }
+
+  /**
+   * `bind()`'s own return value carries its `sql`/`args` (not just the side-channel
+   * `recorded` array), so the statements bulkUpdateTransactions passes to
+   * `env.DB.batch([...])` are directly inspectable for which ones were the
+   * auto-label fan-out, alongside `recorded` for the non-batched insert/update paths.
+   */
+  function envForAutoLabel(opts: { row: Record<string, unknown>; recorded: Recorded[] }): Env {
+    const { row, recorded } = opts
+    return {
+      DB: {
+        batch: vi.fn((stmts: { meta?: { changes: number } }[]) =>
+          Promise.resolve(stmts.map((s) => ({ meta: s.meta ?? { changes: 1 } }))),
+        ),
+        prepare: (sql: string) => ({
+          bind: (...args: unknown[]) => {
+            recorded.push({ sql, args })
+            return {
+              sql,
+              args,
+              first: vi.fn().mockImplementation(async () => {
+                if (sql.startsWith('INSERT INTO transactions')) return row
+                if (sql.startsWith('UPDATE transactions')) return row
+                // Every ownership pre-check (account/category/flag) only needs truthy.
+                return { ok: 1 }
+              }),
+              all: vi.fn().mockImplementation(async () => {
+                if (sql.includes('transaction_labels')) return { results: [] }
+                return { results: [] }
+              }),
+              run: vi.fn().mockResolvedValue({ meta: { changes: 1 } }),
+              meta: { changes: 1 },
+            }
+          },
+        }),
+      },
+    } as unknown as Env
+  }
+
+  const AUTO_LABEL_SQL_FRAGMENT = 'auto_label_id IS NOT NULL'
+  const txnRow = {
+    id: 5,
+    owner: 'a@b.com',
+    date: '2026-01-01',
+    budget_month: '2026-01',
+    description: 'Test',
+    account_id: 1,
+    category_id: 2,
+    type: 'expense',
+    amount_cents: -1000,
+    cancelled: 0,
+    notes: null,
+    plan_id: null,
+    installment_index: null,
+    flag_id: 9,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  }
+
+  it('insertTransaction applies the flag’s auto-label when flagId is set', async () => {
+    const recorded: Recorded[] = []
+    const env = envForAutoLabel({ row: txnRow, recorded })
+
+    await insertTransaction(env, 'a@b.com', { ...baseTxn, flagId: 9 })
+
+    const call = recorded.find((r) => r.sql.includes(AUTO_LABEL_SQL_FRAGMENT))
+    expect(call?.args).toEqual([5, 'a@b.com', 9, 'a@b.com'])
+  })
+
+  it('insertTransaction does not run the fan-out when no flag is set', async () => {
+    const recorded: Recorded[] = []
+    const env = envForAutoLabel({ row: { ...txnRow, flag_id: null }, recorded })
+
+    await insertTransaction(env, 'a@b.com', baseTxn)
+
+    expect(recorded.some((r) => r.sql.includes(AUTO_LABEL_SQL_FRAGMENT))).toBe(false)
+  })
+
+  it('updateTransaction applies the flag’s auto-label when the patch sets flagId', async () => {
+    const recorded: Recorded[] = []
+    const env = envForAutoLabel({ row: txnRow, recorded })
+
+    await updateTransaction(env, 'a@b.com', 5, { flagId: 9 })
+
+    const call = recorded.find((r) => r.sql.includes(AUTO_LABEL_SQL_FRAGMENT))
+    expect(call?.args).toEqual([5, 'a@b.com', 9, 'a@b.com'])
+  })
+
+  it('updateTransaction does not run the fan-out when the patch leaves flagId untouched', async () => {
+    const recorded: Recorded[] = []
+    const env = envForAutoLabel({ row: txnRow, recorded })
+
+    await updateTransaction(env, 'a@b.com', 5, { description: 'Renamed' })
+
+    expect(recorded.some((r) => r.sql.includes(AUTO_LABEL_SQL_FRAGMENT))).toBe(false)
+  })
+
+  it('bulkUpdateTransactions batches one fan-out statement per affected row', async () => {
+    const recorded: Recorded[] = []
+    const env = envForAutoLabel({ row: txnRow, recorded })
+    const batch = env.DB.batch as ReturnType<typeof vi.fn>
+
+    await bulkUpdateTransactions(env, 'a@b.com', [5, 6, 7], { flagId: 9 })
+
+    const [batched] = batch.mock.calls[0] as [Recorded[]]
+    const fanOutCalls = batched.filter((s) => s.sql.includes(AUTO_LABEL_SQL_FRAGMENT))
+    expect(fanOutCalls).toHaveLength(3)
+    expect(fanOutCalls.map((s) => s.args)).toEqual([
+      [5, 'a@b.com', 9, 'a@b.com'],
+      [6, 'a@b.com', 9, 'a@b.com'],
+      [7, 'a@b.com', 9, 'a@b.com'],
+    ])
+  })
+
+  it('bulkUpdateTransactions scopes the fan-out to transactions this owner actually has', async () => {
+    // A raw id in `ids` is never checked against `owner` before this statement is
+    // built (the UPDATE it runs alongside excludes a foreign id on its own, but
+    // this INSERT is independent of that) — so the SELECT itself has to filter the
+    // transaction by owner too, not just the flag, or an owner could attach one of
+    // their own auto-labels to an id that belongs to someone else entirely.
+    const recorded: Recorded[] = []
+    const env = envForAutoLabel({ row: txnRow, recorded })
+
+    await bulkUpdateTransactions(env, 'a@b.com', [5], { flagId: 9 })
+
+    const call = recorded.find((r) => r.sql.includes(AUTO_LABEL_SQL_FRAGMENT))
+    expect(call?.sql).toMatch(/FROM transactions t,\s*flags f/)
+    expect(call?.sql).toContain('t.id = ?')
+    expect(call?.sql).toContain('t.owner = ?')
+    expect(call?.args).toEqual([5, 'a@b.com', 9, 'a@b.com'])
+  })
+})

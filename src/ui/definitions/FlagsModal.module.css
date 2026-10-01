@@ -10,6 +10,25 @@
   opacity: 0.55;
 }
 
+/* Wraps the glyph + name/meta so that area alone opens the auto-label editor,
+   while Edit and Expense report stay sibling buttons in the same row (nesting
+   a button inside a button is invalid HTML and double-fires clicks). Resets
+   button chrome so it reads as part of the row, not as a control of its own. */
+.rowMain {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 .rowGlyph {
   width: 0.95rem;
   height: 0.95rem;

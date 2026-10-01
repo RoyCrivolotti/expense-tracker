@@ -41,7 +41,10 @@ export type BulkTransactionPatch = Partial<
 
 export type NewCategory = Omit<Category, 'id'>
 export type NewAccount = Omit<Account, 'id'>
-export type NewFlag = Omit<Flag, 'id'>
+// autoLabelId is optional-and-nullable here, unlike on Flag itself (optional only):
+// a patch needs to express "clear it" with an explicit null, the same way
+// flagId does on NewTransaction below.
+export type NewFlag = Omit<Flag, 'id' | 'autoLabelId'> & { autoLabelId?: number | null }
 export type NewLabel = Omit<Label, 'id'>
 
 /** The storage-facing half of an attachment, kept off the domain type. */

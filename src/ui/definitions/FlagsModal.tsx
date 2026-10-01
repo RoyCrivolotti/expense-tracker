@@ -7,6 +7,7 @@ import { EmptyState } from '../components/primitives'
 import { Modal } from '../components/Modal'
 import { FlagGlyph } from '../components/FlagGlyph'
 import { FlagForm } from './FlagForm'
+import { FlagAutoLabelEditor } from './FlagAutoLabelEditor'
 import defStyles from './definitions.module.css'
 import styles from './FlagsModal.module.css'
 
@@ -46,14 +47,21 @@ export function FlagsModal({
 }) {
   const [editing, setEditing] = useState<Editing>(null)
   const [confirming, setConfirming] = useState(false)
+  const [configuringLabel, setConfiguringLabel] = useState<Flag | null>(null)
   const flags = model.dataset.flags
 
-  const title = editing ? (editing.flag ? `Edit ${editing.flag.name}` : 'New flag') : 'Flags'
+  const title = editing
+    ? editing.flag
+      ? `Edit ${editing.flag.name}`
+      : 'New flag'
+    : configuringLabel
+      ? `Auto-label: ${configuringLabel.name}`
+      : 'Flags'
 
   return (
     <Modal
       title={title}
-      {...(editing
+      {...(editing || configuringLabel
         ? {}
         : { subtitle: 'Reusable markers for transactions you need to track.' })}
       onClose={confirming ? () => setConfirming(false) : onClose}
@@ -68,6 +76,13 @@ export function FlagsModal({
           onDone={() => setEditing(null)}
           onConfirmingChange={setConfirming}
         />
+      ) : configuringLabel ? (
+        <FlagAutoLabelEditor
+          flag={configuringLabel}
+          labels={model.dataset.labels}
+          actions={actions}
+          onDone={() => setConfiguringLabel(null)}
+        />
       ) : (
         <>
           {flags.length === 0 ? (
@@ -81,18 +96,24 @@ export function FlagsModal({
                 key={flag.id}
                 className={flag.active ? styles.row : `${styles.row} ${styles.inactive}`}
               >
-                <FlagGlyph flag={flag} className={styles.rowGlyph} />
-                <div className={styles.rowBody}>
-                  <span className={styles.rowName}>
-                    {flag.name}
-                    {flag.active ? null : <span className={styles.archived}> · archived</span>}
-                  </span>
-                  <span className={styles.rowMeta}>
-                    {flag.description ? `${flag.description} · ` : ''}
-                    {usageCount(model, flag.id)} transaction
-                    {usageCount(model, flag.id) === 1 ? '' : 's'}
-                  </span>
-                </div>
+                <button
+                  type="button"
+                  className={styles.rowMain}
+                  onClick={() => setConfiguringLabel(flag)}
+                >
+                  <FlagGlyph flag={flag} className={styles.rowGlyph} />
+                  <div className={styles.rowBody}>
+                    <span className={styles.rowName}>
+                      {flag.name}
+                      {flag.active ? null : <span className={styles.archived}> · archived</span>}
+                    </span>
+                    <span className={styles.rowMeta}>
+                      {flag.description ? `${flag.description} · ` : ''}
+                      {usageCount(model, flag.id)} transaction
+                      {usageCount(model, flag.id) === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                </button>
                 {onOpenReport && hasReport(model, flag) ? (
                   <button
                     type="button"
