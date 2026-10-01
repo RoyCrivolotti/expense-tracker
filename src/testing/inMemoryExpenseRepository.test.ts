@@ -89,8 +89,20 @@ describe('inMemoryExpenseRepository flag auto-label', () => {
   it('does not duplicate a label the transaction already carries some other way', async () => {
     const flag = makeFlag({ id: 1 })
     const label = makeLabel({ id: 2 })
-    const carrying = makeTransaction({ id: 10, flagId: 1, labelIds: [2] })
-    const repo = inMemoryExpenseRepository({ flags: [flag], labels: [label], transactions: [carrying] }, OWNER)
+    // `labelIds` on a seeded Transaction is informational only (emptyStore
+    // strips it) — the real pre-existing link has to go through the seed's
+    // dedicated transactionLabels field, or this test would start the
+    // transaction with no labels at all and never reach the dedup branch.
+    const carrying = makeTransaction({ id: 10, flagId: 1 })
+    const repo = inMemoryExpenseRepository(
+      {
+        flags: [flag],
+        labels: [label],
+        transactions: [carrying],
+        transactionLabels: [{ transactionId: 10, labelId: 2 }],
+      },
+      OWNER,
+    )
 
     await repo.updateFlag(OWNER, 1, { autoLabelId: 2 })
 
