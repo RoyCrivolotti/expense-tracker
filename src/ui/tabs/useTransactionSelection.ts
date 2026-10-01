@@ -1,5 +1,6 @@
 import { useEffect, useEffectEvent, useMemo, useState } from 'react'
 import type { BulkTransactionPatch } from '../../data/dataSource'
+import type { Transaction } from '../../types'
 import type { ExpenseActions } from '../actions'
 import { useToast } from '../hooks/useToast'
 import { toggleDateSelection } from './selectionUtils'
@@ -61,6 +62,8 @@ export function useTransactionSelection(
   visibleIds?: readonly number[],
   existingIds?: readonly number[],
   onSelectModeChange?: (selecting: boolean) => void,
+  /** Looked up by id to union onto each row's own labels — see confirmBulkEdit. */
+  transactions?: readonly Pick<Transaction, 'id' | 'labelIds'>[],
 ) {
   const { showToast } = useToast()
   const [selectMode, setSelectModeState] = useState(false)
@@ -174,12 +177,40 @@ export function useTransactionSelection(
 
   const cancelBulkEdit = () => setPendingBulkEdit(false)
 
-  const confirmBulkEdit = async (patch: BulkTransactionPatch) => {
+  /**
+   * Labels are additive here, unlike every other bulk field: the rows in one
+   * bulk edit can each already carry a different set, and a label is only ever
+   * removed by hand everywhere else in the app (see bulkEditFields.ts). Each
+   * selected row keeps whatever it already has, plus whatever was picked.
+   *
+   * One request per row, since there is no bulk label-set endpoint — a
+   * transaction's labels are replaced one at a time (setTransactionLabels). If
+   * any of them fails this throws like the patch above, landing in the same
+   * catch: a partial label application with no count attached would be a worse
+   * outcome than one "could not update" toast covering both.
+   */
+  const applyLabelAdditions = async (ids: number[], labelIdsToAdd: number[]) => {
+    const byId = new Map((transactions ?? []).map((t) => [t.id, t.labelIds]))
+    await Promise.all(
+      ids.map((id) => {
+        const current = byId.get(id) ?? []
+        const next = [...new Set([...current, ...labelIdsToAdd])]
+        return actions!.setTransactionLabels(id, next)
+      }),
+    )
+  }
+
+  const confirmBulkEdit = async (patch: BulkTransactionPatch, labelIdsToAdd: number[] = []) => {
     if (!actions || selected.size === 0) return
     const count = selected.size
+    const ids = [...selected]
     setBusy(true)
     try {
-      const updated = await actions.updateTransactions([...selected], patch)
+      // A patch with nothing in it is rejected server-side as an empty edit — a
+      // labels-only bulk edit has no column to set, so this is skipped rather
+      // than sent.
+      const updated = Object.keys(patch).length > 0 ? await actions.updateTransactions(ids, patch) : count
+      if (labelIdsToAdd.length > 0) await applyLabelAdditions(ids, labelIdsToAdd)
       exitSelect()
       showToast(bulkOutcomeCopy('Updated', updated, count), 'success')
     } catch (err) {

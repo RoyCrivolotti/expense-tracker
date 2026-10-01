@@ -145,6 +145,115 @@ describe('useTransactionSelection — bulk edit', () => {
     expect(result.current.selected.has(5)).toBe(true)
   })
 
+  it('confirmBulkEdit unions chosen labels onto each row’s own existing set', async () => {
+    const setTransactionLabels = vi.fn().mockResolvedValue(undefined)
+    const actions = mockActions({ setTransactionLabels })
+    const transactions = [
+      { id: 5, labelIds: [1] },
+      { id: 6, labelIds: [] },
+    ]
+    const { result } = renderHook(() =>
+      useTransactionSelection(actions, undefined, undefined, undefined, transactions),
+    )
+    act(() => result.current.toggleSelectMode())
+    act(() => result.current.toggleSelected(5))
+    act(() => result.current.toggleSelected(6))
+
+    await act(async () => {
+      await result.current.confirmBulkEdit({}, [2])
+    })
+
+    // Row 5 already had label 1 — it keeps it, label 2 is added alongside it.
+    expect(setTransactionLabels).toHaveBeenCalledWith(5, [1, 2])
+    expect(setTransactionLabels).toHaveBeenCalledWith(6, [2])
+  })
+
+  it('does not duplicate a label a row already carries', async () => {
+    const setTransactionLabels = vi.fn().mockResolvedValue(undefined)
+    const actions = mockActions({ setTransactionLabels })
+    const transactions = [{ id: 5, labelIds: [2] }]
+    const { result } = renderHook(() =>
+      useTransactionSelection(actions, undefined, undefined, undefined, transactions),
+    )
+    act(() => result.current.toggleSelectMode())
+    act(() => result.current.toggleSelected(5))
+
+    await act(async () => {
+      await result.current.confirmBulkEdit({}, [2])
+    })
+
+    expect(setTransactionLabels).toHaveBeenCalledWith(5, [2])
+  })
+
+  it('skips updateTransactions for a labels-only edit, since there is no column to patch', async () => {
+    const updateTransactions = vi.fn((ids: number[]) => Promise.resolve(ids.length))
+    const setTransactionLabels = vi.fn().mockResolvedValue(undefined)
+    const actions = mockActions({ updateTransactions, setTransactionLabels })
+    const { result } = renderHook(() =>
+      useTransactionSelection(actions, undefined, undefined, undefined, [{ id: 5, labelIds: [] }]),
+    )
+    act(() => result.current.toggleSelectMode())
+    act(() => result.current.toggleSelected(5))
+
+    await act(async () => {
+      await result.current.confirmBulkEdit({}, [2])
+    })
+
+    expect(updateTransactions).not.toHaveBeenCalled()
+    expect(setTransactionLabels).toHaveBeenCalledWith(5, [2])
+  })
+
+  it('applies both a column patch and label additions in the same confirm', async () => {
+    const updateTransactions = vi.fn((ids: number[]) => Promise.resolve(ids.length))
+    const setTransactionLabels = vi.fn().mockResolvedValue(undefined)
+    const actions = mockActions({ updateTransactions, setTransactionLabels })
+    const { result } = renderHook(() =>
+      useTransactionSelection(actions, undefined, undefined, undefined, [{ id: 5, labelIds: [] }]),
+    )
+    act(() => result.current.toggleSelectMode())
+    act(() => result.current.toggleSelected(5))
+
+    await act(async () => {
+      await result.current.confirmBulkEdit({ categoryId: 1 }, [2])
+    })
+
+    expect(updateTransactions).toHaveBeenCalledWith([5], { categoryId: 1 })
+    expect(setTransactionLabels).toHaveBeenCalledWith(5, [2])
+  })
+
+  it('reports failure and keeps the selection when a label addition fails', async () => {
+    const setTransactionLabels = vi.fn().mockRejectedValue(new Error('Offline'))
+    const actions = mockActions({ setTransactionLabels })
+    const { result } = renderHook(() =>
+      useTransactionSelection(actions, undefined, undefined, undefined, [{ id: 5, labelIds: [] }]),
+    )
+    act(() => result.current.toggleSelectMode())
+    act(() => result.current.toggleSelected(5))
+
+    await act(async () => {
+      await result.current.confirmBulkEdit({}, [2])
+    })
+
+    expect(result.current.selectMode).toBe(true)
+    expect(result.current.selected.has(5)).toBe(true)
+  })
+
+  it('treats an unknown row as having no existing labels, rather than throwing', async () => {
+    // A row selected before this hook was given the live transactions list — the
+    // lookup simply misses, it must not crash the whole bulk edit.
+    const setTransactionLabels = vi.fn().mockResolvedValue(undefined)
+    const actions = mockActions({ setTransactionLabels })
+    const { result } = renderHook(() => useTransactionSelection(actions, undefined, undefined, undefined, []))
+    act(() => result.current.toggleSelectMode())
+    act(() => result.current.toggleSelected(5))
+
+    await act(async () => {
+      await result.current.confirmBulkEdit({}, [2])
+    })
+
+    expect(setTransactionLabels).toHaveBeenCalledWith(5, [2])
+  })
+
   it('exitSelect clears pendingBulkEdit along with other state', () => {
     const { result } = renderHook(() => useTransactionSelection(mockActions()))
     act(() => result.current.toggleSelectMode())

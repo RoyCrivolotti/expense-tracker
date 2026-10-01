@@ -23,7 +23,7 @@ interface SelectionState {
   confirmBatchDelete: () => Promise<void>
   requestBulkEdit: () => void
   cancelBulkEdit: () => void
-  confirmBulkEdit: (patch: BulkTransactionPatch) => Promise<void>
+  confirmBulkEdit: (patch: BulkTransactionPatch, labelIdsToAdd: number[]) => Promise<void>
 }
 
 interface TransactionsSelectFooterProps {
@@ -97,7 +97,7 @@ export function TransactionsSelectFooter({
             model={model}
             actions={actions}
             busy={selection.busy}
-            onApply={(patch) => void selection.confirmBulkEdit(patch)}
+            onApply={(patch, labelIdsToAdd) => void selection.confirmBulkEdit(patch, labelIdsToAdd)}
             onCancel={selection.cancelBulkEdit}
           />
         )}
