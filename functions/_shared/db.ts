@@ -112,12 +112,17 @@ export async function loadDataset(env: Env, owner: string): Promise<ExpenseDatas
       .bind(owner)
       .all<WealthCheckinEntryRow & { checkin_id: number }>()
       .then((r) => r.results ?? []),
-    // Load every transaction_labels row for this owner in one query, joined only
-    // to scope by owner; keyed by transaction_id below. Same shape as the
-    // wealth-checkin-entries load above.
+    // Load every transaction_labels row for this owner in one query, keyed by
+    // transaction_id below. Same shape as the wealth-checkin-entries load above.
+    // Joined to labels too, not just transactions: a transaction_labels row whose
+    // label no longer exists is dropped here rather than surfaced, the same
+    // tolerance flagGroups.ts already gives a dangling flagId — deleteLabel
+    // cleans these up itself, but a read path should not assume every write path
+    // got that right.
     env.DB.prepare(
       `SELECT tl.transaction_id, tl.label_id FROM transaction_labels tl
        JOIN transactions t ON t.id = tl.transaction_id
+       JOIN labels l ON l.id = tl.label_id
        WHERE t.owner = ?`,
     )
       .bind(owner)
