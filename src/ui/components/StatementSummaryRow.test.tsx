@@ -65,6 +65,29 @@ describe('StatementSummaryRow', () => {
     expect(name).toContain('1.373,45')
   })
 
+  it('shows a chevron when it can be pressed, kept out of its name', () => {
+    render(
+      <StatementSummaryRow
+        name="Iberia Icon"
+        amountCents={CHARGE}
+        paid={false}
+        onPress={vi.fn()}
+      />,
+    )
+
+    const button = screen.getByRole('button')
+    expect(button).toHaveTextContent('›')
+    expect(button).not.toHaveAccessibleName(expect.stringContaining('›'))
+  })
+
+  it('has no chevron when it cannot be pressed', () => {
+    const { container } = render(
+      <StatementSummaryRow name="Iberia Icon" amountCents={CHARGE} paid={false} />,
+    )
+
+    expect(container).not.toHaveTextContent('›')
+  })
+
   it('is plain content, not a button, when it cannot be pressed', () => {
     render(<StatementSummaryRow name="Iberia Icon" amountCents={CHARGE} paid={false} />)
 

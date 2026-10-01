@@ -67,6 +67,11 @@ export function StatementSummaryRow({
         signed
         className={`${styles.amount}${amountCents === 0 ? ` ${styles.amountMuted}` : ''}`}
       />
+      {tappable ? (
+        <span className={styles.chevron} aria-hidden>
+          ›
+        </span>
+      ) : null}
     </Tag>
   )
 }
