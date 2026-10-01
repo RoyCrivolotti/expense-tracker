@@ -16,6 +16,8 @@ import {
   patchAfterCategoryDelete,
   patchAfterFlag,
   patchAfterFlagDelete,
+  patchAfterLabel,
+  patchAfterLabelDelete,
   patchAfterInstallmentPlanCreate,
   patchAfterInstallmentPlanDelete,
   patchAfterInstallmentPlanUpdate,
@@ -111,6 +113,24 @@ export function useExpenseActions(
         const result = await source.deleteFlag!(id)
         applyPatch((d) => patchAfterFlagDelete(d, id))
         return result
+      },
+      createLabel: async (input) => {
+        const label = await source.createLabel!(input)
+        applyPatch((d) => patchAfterLabel(d, label))
+        return label
+      },
+      updateLabel: async (id, patch) => {
+        const label = await source.updateLabel!(id, patch)
+        applyPatch((d) => patchAfterLabel(d, label))
+      },
+      deleteLabel: async (id) => {
+        const result = await source.deleteLabel!(id)
+        applyPatch((d) => patchAfterLabelDelete(d, id))
+        return result
+      },
+      setTransactionLabels: async (transactionId, labelIds) => {
+        const txn = await source.setTransactionLabels!(transactionId, labelIds)
+        applyPatch((d) => patchAfterTransactionUpdate(d, txn))
       },
       createCategory: async (input) => {
         const category = await source.createCategory!(input)

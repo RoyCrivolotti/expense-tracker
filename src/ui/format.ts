@@ -4,6 +4,7 @@ import type {
   ExpenseDataset,
   Flag,
   InstallmentPlan,
+  Label,
   Transaction,
   TransactionAttachment,
   TxnStatus,
@@ -14,6 +15,7 @@ export interface Lookup {
   category: (id: number) => Category | undefined
   account: (id: number) => Account | undefined
   flag: (id: number) => Flag | undefined
+  label: (id: number) => Label | undefined
   attachments: (transactionId: number) => TransactionAttachment[]
   categoryName: (id: number) => string
   accountName: (id: number) => string
@@ -29,6 +31,7 @@ export function buildLookup(dataset: ExpenseDataset): Lookup {
   const accs = new Map(dataset.accounts.map((a) => [a.id, a]))
   const plans = new Map(dataset.installmentPlans.map((p) => [p.id, p]))
   const flags = new Map(dataset.flags.map((f) => [f.id, f]))
+  const labels = new Map(dataset.labels.map((l) => [l.id, l]))
   // Grouped once per dataset rather than filtered per row: the transactions
   // list re-renders often and this would otherwise be quadratic.
   const attachmentsByTxn = new Map<number, TransactionAttachment[]>()
@@ -43,6 +46,7 @@ export function buildLookup(dataset: ExpenseDataset): Lookup {
     category: (id) => cats.get(id),
     account: (id) => accs.get(id),
     flag: (id) => flags.get(id),
+    label: (id) => labels.get(id),
     attachments: (transactionId) => attachmentsByTxn.get(transactionId) ?? [],
     categoryName: (id) => cats.get(id)?.name ?? 'Uncategorised',
     accountName: (id) => accs.get(id)?.name ?? 'Unknown',

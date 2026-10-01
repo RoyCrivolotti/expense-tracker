@@ -3,6 +3,7 @@ import type {
   Flag,
   GoalScenario,
   InstallmentPlan,
+  Label,
   Transaction,
   TxnType,
   WealthAccount,
@@ -19,6 +20,7 @@ import type {
   NewFlag,
   NewGoalScenario,
   NewInstallmentPlan,
+  NewLabel,
   NewTransaction,
   NewWealthAccount,
   NewWealthCheckin,
@@ -73,6 +75,12 @@ export interface ExpenseActions {
   updateFlag: (id: number, patch: Partial<NewFlag>) => Promise<void>
   /** Resolves with how many transactions were unflagged, for the toast. */
   deleteFlag: (id: number) => Promise<{ unflagged: number }>
+  createLabel: (input: NewLabel) => Promise<Label>
+  updateLabel: (id: number, patch: Partial<NewLabel>) => Promise<void>
+  /** Resolves with how many transactions were unlabeled, for the toast. */
+  deleteLabel: (id: number) => Promise<{ unlabeled: number }>
+  /** Replaces a transaction's whole label set. */
+  setTransactionLabels: (transactionId: number, labelIds: number[]) => Promise<void>
   createCategory: (input: NewCategory) => Promise<void>
   updateCategory: (id: number, patch: Partial<NewCategory>) => Promise<void>
   deleteCategory: (id: number, options?: DeleteCategoryOptions) => Promise<DeleteCategoryResult>

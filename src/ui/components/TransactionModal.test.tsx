@@ -1,20 +1,20 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import type { ExpenseDataset, InstallmentPlan, Transaction } from '../../types'
+import type { ExpenseDataset, InstallmentPlan, Label, Transaction } from '../../types'
 import { defaultExpenseSettings } from '../../engine'
 import type { ExpenseActions, TransactionSeed } from '../actions'
 import { makeActions } from '../../testing/makeActions'
-import { makeTransaction } from '../../testing/factories'
+import { makeLabel, makeTransaction } from '../../testing/factories'
 import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
 import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
 import type { ExpenseModel } from '../useExpenseData'
 import { TransactionModal } from './TransactionModal'
 
-function dataset(): ExpenseDataset {
+function dataset(labels: Label[] = []): ExpenseDataset {
   return {
     flags: [],
-    labels: [],
+    labels,
     attachments: [],
     categories: [{ id: 1, name: 'Groceries', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
     accounts: [{ id: 1, name: 'Cash', kind: 'debit', settlement: 'immediate', active: true }],
@@ -29,15 +29,16 @@ function dataset(): ExpenseDataset {
   }
 }
 
-function model(plan?: InstallmentPlan): ExpenseModel {
+function model(plan?: InstallmentPlan, labels: Label[] = []): ExpenseModel {
   return {
-    dataset: dataset(),
+    dataset: dataset(labels),
     lookup: {
       category: () => undefined,
       account: () => undefined,
       categoryName: () => '',
       accountName: () => '',
       flag: () => undefined,
+      label: (id) => labels.find((l) => l.id === id),
       attachments: () => [],
       installmentPlan: (id) => (plan && plan.id === id ? plan : undefined),
       settlementFor: () => undefined,
@@ -55,6 +56,7 @@ function renderModal(
     onClose?: () => void
     actions?: Partial<ExpenseActions>
     plan?: InstallmentPlan
+    labels?: Label[]
   } = {},
 ) {
   const actions = makeActions(props.actions ?? {})
@@ -62,7 +64,7 @@ function renderModal(
   const view = render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
       <TransactionModal
-        model={model(props.plan)}
+        model={model(props.plan, props.labels)}
         actions={actions}
         editing={props.editing ?? null}
         seed={props.seed}
@@ -357,6 +359,13 @@ async function fillAndStage(container: HTMLElement, file = receipt()) {
   await userEvent.upload(input, file)
 }
 
+/** The minimum a from-scratch add needs to pass validation, with no receipt involved. */
+function fillMinimum(container: HTMLElement) {
+  const form = singleForm(container)
+  fireEvent.change(form.getByLabelText(/amount/i), { target: { value: '10,00' } })
+  fireEvent.change(form.getByLabelText(/description/i), { target: { value: 'Kyoto hotel' } })
+}
+
 describe('TransactionModal — withdrawals', () => {
   it('offers no installment plan for a withdrawal', () => {
     const { container } = renderModal()
@@ -401,6 +410,112 @@ describe('TransactionModal — withdrawals', () => {
     expect(actions.createTransaction).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'investment', amountCents: -19_840 }),
     )
+  })
+})
+
+describe('TransactionModal — labels', () => {
+  const trip = makeLabel({ id: 1, name: 'Japan trip' })
+  const work = makeLabel({ id: 2, name: 'Work trip', color: '#f59e0b', sortOrder: 1 })
+
+  it('applies a label chosen on the add form to the id the create returned', async () => {
+    const created = makeTransaction({ id: 42 })
+    const setTransactionLabels = vi.fn().mockResolvedValue(undefined)
+    const { container, actions } = renderModal({
+      actions: { createTransaction: vi.fn().mockResolvedValue(created), setTransactionLabels },
+      labels: [trip, work],
+    })
+
+    fillMinimum(container)
+    await userEvent.click(singleForm(container).getByRole('button', { name: 'No labels' }))
+    await userEvent.click(screen.getByRole('button', { name: /Japan trip/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Done' }))
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+
+    await waitFor(() => expect(setTransactionLabels).toHaveBeenCalledWith(42, [1]))
+    expect(actions.createTransaction).toHaveBeenCalledTimes(1)
+  })
+
+  it('never calls setTransactionLabels when the picker was opened but left untouched', async () => {
+    const created = makeTransaction({ id: 42 })
+    const { container, actions } = renderModal({
+      actions: { createTransaction: vi.fn().mockResolvedValue(created) },
+      labels: [trip],
+    })
+
+    fillMinimum(container)
+    await userEvent.click(singleForm(container).getByRole('button', { name: 'No labels' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Done' }))
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+
+    await waitFor(() => expect(actions.createTransaction).toHaveBeenCalledTimes(1))
+    expect(actions.setTransactionLabels).not.toHaveBeenCalled()
+  })
+
+  it('does not call setTransactionLabels on an untouched edit', async () => {
+    const editing = makeTransaction({ id: 5, labelIds: [1] })
+    const { container, actions } = renderModal({
+      editing,
+      labels: [trip, work],
+      actions: { updateTransaction: vi.fn().mockResolvedValue(undefined) },
+    })
+
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => expect(actions.updateTransaction).toHaveBeenCalledTimes(1))
+    expect(actions.setTransactionLabels).not.toHaveBeenCalled()
+  })
+
+  it('saves an edited label set against the existing id, additively', async () => {
+    const editing = makeTransaction({ id: 5, labelIds: [1] })
+    const setTransactionLabels = vi.fn().mockResolvedValue(undefined)
+    const { container } = renderModal({
+      editing,
+      labels: [trip, work],
+      actions: { updateTransaction: vi.fn().mockResolvedValue(undefined), setTransactionLabels },
+    })
+
+    await userEvent.click(singleForm(container).getByRole('button', { name: '1 label' }))
+    await userEvent.click(screen.getByRole('button', { name: /Work trip/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Done' }))
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => expect(setTransactionLabels).toHaveBeenCalledWith(5, [1, 2]))
+  })
+
+  it('removing every label sends an empty set, not a skipped call', async () => {
+    const editing = makeTransaction({ id: 5, labelIds: [1] })
+    const setTransactionLabels = vi.fn().mockResolvedValue(undefined)
+    const { container } = renderModal({
+      editing,
+      labels: [trip],
+      actions: { updateTransaction: vi.fn().mockResolvedValue(undefined), setTransactionLabels },
+    })
+
+    await userEvent.click(singleForm(container).getByRole('button', { name: '1 label' }))
+    await userEvent.click(screen.getByRole('button', { name: /Japan trip/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Done' }))
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => expect(setTransactionLabels).toHaveBeenCalledWith(5, []))
+  })
+
+  it('reports a labels failure without treating the already-saved transaction as unsaved', async () => {
+    const created = makeTransaction({ id: 42 })
+    const setTransactionLabels = vi.fn().mockRejectedValue(new Error('Network is down'))
+    const { container, onClose } = renderModal({
+      actions: { createTransaction: vi.fn().mockResolvedValue(created), setTransactionLabels },
+      labels: [trip],
+    })
+
+    fillMinimum(container)
+    await userEvent.click(singleForm(container).getByRole('button', { name: 'No labels' }))
+    await userEvent.click(screen.getByRole('button', { name: /Japan trip/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Done' }))
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+
+    // The row is safe; only its labels failed, so the modal still closes like any
+    // other successful save rather than treating a saved transaction as unsaved input.
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
   })
 })
 
@@ -519,6 +634,41 @@ describe('TransactionModal — receipts staged on the add form', () => {
     // Without this the photos are dropped silently: nothing else on the form changed.
     expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument()
     expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('sends a label change made before a retry, not the set the first press already saved', async () => {
+    // `editing` is null for the whole create-then-retry session, so comparing the retry
+    // press against `editing?.labelIds` would always read "[] vs []" here — the bug this
+    // guards is comparing against that fixed snapshot instead of what the first press
+    // actually persisted.
+    const trip = makeLabel({ id: 1, name: 'Japan trip' })
+    const setTransactionLabels = vi.fn().mockResolvedValue(undefined)
+    const { container } = renderModal({
+      actions: {
+        createTransaction: vi.fn().mockResolvedValue(makeTransaction({ id: 42 })),
+        uploadAttachment: vi.fn().mockRejectedValue(new Error('offline')),
+        setTransactionLabels,
+      },
+      labels: [trip],
+    })
+
+    await fillAndStage(container)
+    await userEvent.click(singleForm(container).getByRole('button', { name: 'No labels' }))
+    await userEvent.click(screen.getByRole('button', { name: /Japan trip/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Done' }))
+    fireEvent.click(singleForm(container).getByRole('button', { name: 'Add transaction' }))
+
+    await waitFor(() => expect(setTransactionLabels).toHaveBeenCalledWith(42, [1]))
+    const retry = await singleForm(container).findByRole('button', { name: 'Save and retry' })
+
+    // Clear the label the first press just saved, then retry.
+    await userEvent.click(singleForm(container).getByRole('button', { name: '1 label' }))
+    await userEvent.click(screen.getByRole('button', { name: /Japan trip/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Done' }))
+    fireEvent.click(retry)
+
+    await waitFor(() => expect(setTransactionLabels).toHaveBeenCalledTimes(2))
+    expect(setTransactionLabels).toHaveBeenLastCalledWith(42, [])
   })
 })
 

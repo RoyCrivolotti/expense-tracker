@@ -14,6 +14,8 @@ import {
   patchAfterCategoryDelete,
   patchAfterFlag,
   patchAfterFlagDelete,
+  patchAfterLabel,
+  patchAfterLabelDelete,
   patchAfterScenarioActivate,
   patchAfterScenarioCreate,
 } from './datasetPatches'
@@ -447,6 +449,77 @@ describe('flag patches', () => {
     expect(Object.keys(next.transactions[0] ?? {})).not.toContain('flagId')
   })
 
+})
+
+describe('label patches', () => {
+  const trip = { id: 1, name: 'Japan trip', color: '#6366f1', sortOrder: 1, active: true }
+  const move = { id: 2, name: 'Moving', color: '#10b981', sortOrder: 0, active: true }
+
+  function txn(id: number, labelIds?: number[]): Transaction {
+    return {
+      id,
+      date: '2026-05-01',
+      budgetMonth: '2026-05',
+      description: 'Hotel',
+      accountId: 1,
+      categoryId: 1,
+      type: 'expense',
+      amountCents: 1_000,
+      cancelled: false,
+      status: 'posted',
+      ...(labelIds ? { labelIds } : {}),
+    }
+  }
+
+  it('inserts a new label in sort order', () => {
+    const next = patchAfterLabel(dataset({ labels: [trip] }), move)
+
+    expect(next.labels.map((l) => l.id)).toEqual([2, 1])
+  })
+
+  it('replaces an existing label rather than duplicating it', () => {
+    const next = patchAfterLabel(dataset({ labels: [trip] }), { ...trip, name: 'Osaka trip' })
+
+    expect(next.labels).toHaveLength(1)
+    expect(next.labels[0]?.name).toBe('Osaka trip')
+  })
+
+  it('does not mutate the dataset it was given', () => {
+    const before = dataset({ labels: [trip] })
+    patchAfterLabel(before, move)
+
+    expect(before.labels).toHaveLength(1)
+  })
+
+  it('unlinks a label from its transactions when it is deleted', () => {
+    const before = dataset({ labels: [trip, move], transactions: [txn(1, [1]), txn(2, [2])] })
+    const next = patchAfterLabelDelete(before, 1)
+
+    expect(next.labels.map((l) => l.id)).toEqual([2])
+    expect(next.transactions[0]?.labelIds).toEqual([])
+    expect(next.transactions[1]?.labelIds).toEqual([2])
+  })
+
+  it('leaves the other labels on a multi-labelled transaction alone', () => {
+    const before = dataset({ labels: [trip, move], transactions: [txn(1, [1, 2])] })
+    const next = patchAfterLabelDelete(before, 1)
+
+    expect(next.transactions[0]?.labelIds).toEqual([2])
+  })
+
+  it('leaves an unlabelled transaction untouched', () => {
+    const before = dataset({ labels: [trip], transactions: [txn(1)] })
+    const next = patchAfterLabelDelete(before, 1)
+
+    expect(next.transactions[0]?.labelIds).toBeUndefined()
+  })
+
+  it('does not mutate the dataset when deleting a label', () => {
+    const before = dataset({ labels: [trip, move], transactions: [txn(1, [1])] })
+    patchAfterLabelDelete(before, 1)
+
+    expect(before.transactions[0]?.labelIds).toEqual([1])
+  })
 })
 
 describe('attachment patches', () => {

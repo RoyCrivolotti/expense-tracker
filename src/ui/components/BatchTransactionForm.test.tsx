@@ -45,6 +45,7 @@ function model(): ExpenseModel {
       categoryName: () => '',
       accountName: () => '',
       flag: () => undefined,
+      label: () => undefined,
       attachments: () => [],
       installmentPlan: () => undefined,
       settlementFor: () => undefined,

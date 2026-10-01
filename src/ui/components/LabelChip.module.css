@@ -1,0 +1,32 @@
+/* Colour comes in via the --label-color custom property rather than a fixed
+   tone (unlike Pill in primitives.tsx): a label's colour is user-chosen, not
+   one of a handful of built-in tones. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 9rem;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--label-color) 16%, transparent);
+  color: var(--label-color);
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.overflow {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  flex: none;
+}

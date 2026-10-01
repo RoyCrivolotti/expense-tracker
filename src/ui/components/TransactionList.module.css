@@ -375,6 +375,14 @@
   text-overflow: ellipsis;
   min-width: 0;
 }
+/* Only rendered when a transaction carries at least one label. Wraps rather
+   than clipping — a row with labels is already taller than one without, and
+   truncating a colour-coded tag reads as a bug where a wrapped one does not. */
+.labelRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
 /* Amount over its badges, mirroring .body's two lines so every row is the same
    height and the budget month lines up in a column down the right edge. */
 .amountRail {
