@@ -114,7 +114,7 @@ export function buildSettledReport(
  * originally submitted. A reference that changed beats a document that will not
  * open.
  */
-function standInFlag(payment: Transaction | undefined): Flag {
+export function standInFlag(payment: Transaction | undefined): Flag {
   return {
     id: payment?.id ?? 0,
     name: payment?.description || 'Reimbursement',

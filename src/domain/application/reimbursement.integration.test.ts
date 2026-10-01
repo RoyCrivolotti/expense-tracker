@@ -434,7 +434,7 @@ describe('a past report whose flag has been deleted', () => {
     const past = listPastReports(dataset.transactions, dataset.flags)
 
     expect(past).toHaveLength(1)
-    expect(past[0]?.flag).toBeUndefined()
+    expect(past[0]?.flag.active).toBe(false)
     expect(past[0]?.count).toBe(1)
   })
 })

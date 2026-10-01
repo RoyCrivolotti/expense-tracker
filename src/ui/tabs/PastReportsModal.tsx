@@ -49,9 +49,7 @@ export function PastReportsModal({ model, onClose, onOpenReport, onOpenPayment }
             <li key={report.payment.id} className={styles.row}>
               <div className={styles.body}>
                 <span className={styles.name}>
-                  {report.flag ? (
-                    <FlagGlyph flag={report.flag} className={styles.glyph} decorative />
-                  ) : null}
+                  <FlagGlyph flag={report.flag} className={styles.glyph} decorative />
                   {/* The payment's own description: whatever you named it when
                       you recorded it. */}
                   {report.payment.description || 'Reimbursement'}

@@ -46,13 +46,16 @@ describe('listPastReports', () => {
     expect(reports.map((r) => r.payment.id)).toEqual([99, 98])
   })
 
-  it('leaves flag undefined once a reimbursement clears it (flags now auto-clear on settle)', () => {
+  it('falls back to a stand-in flag once a reimbursement clears it (flags now auto-clear on settle)', () => {
     const reports = listPastReports(
       [makeTransaction({ id: 1, settledBy: 99, amountCents: 10_000 }), payment(99, '2026-06-14')],
       [WORK],
     )
 
-    expect(reports[0]?.flag).toBeUndefined()
+    // Matches buildSettledReport's own fallback, so the list and the report it
+    // opens agree on a settlement whose flag is gone.
+    expect(reports[0]?.flag.name).toBe('Alicante expenses, September 2026')
+    expect(reports[0]?.flag.active).toBe(false)
     expect(reports[0]?.count).toBe(1)
     expect(reports[0]?.coveredCents).toBe(10_000)
   })
@@ -97,7 +100,7 @@ describe('listPastReports', () => {
     expect(reports[0]?.flag?.id).toBe(4)
   })
 
-  it('leaves the flag undefined when no row carries flagId or a matching auto-label', () => {
+  it('falls back to a stand-in flag when no row carries flagId or a matching auto-label', () => {
     const withAutoLabel = makeFlag({ id: 4, autoLabelId: 7 })
     const reports = listPastReports(
       [
@@ -107,7 +110,8 @@ describe('listPastReports', () => {
       [withAutoLabel],
     )
 
-    expect(reports[0]?.flag).toBeUndefined()
+    expect(reports[0]?.flag.name).toBe('Alicante expenses, September 2026')
+    expect(reports[0]?.flag.active).toBe(false)
   })
 })
 

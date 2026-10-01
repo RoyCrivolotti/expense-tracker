@@ -1,5 +1,6 @@
 import type { Flag, Transaction } from '../types'
 import { settledFlagId } from './flagGroups'
+import { standInFlag } from './expenseReport'
 
 /**
  * A reimbursement you have already recorded, and what it covered.
@@ -14,7 +15,8 @@ import { settledFlagId } from './flagGroups'
  */
 export interface PastReport {
   payment: Transaction
-  flag: Flag | undefined
+  /** Never missing: falls back to a stand-in (see standInFlag) once the real flag is gone. */
+  flag: Flag
   /** How many transactions the payment covered when it was recorded. */
   count: number
   /** What those came to, which need not equal what was paid. */
@@ -101,9 +103,14 @@ export function listPastReports(transactions: Transaction[], flags: Flag[]): Pas
     // rather than thrown on — the rows return to the card on the next load.
     if (!payment) continue
     const flagId = settledFlagId(rows, flags)
+    // Matches buildSettledReport's own fallback: the list used to show nothing
+    // at all for a settlement whose flag is gone, while opening its report
+    // showed a stand-in glyph and name. One screen disagreeing with the next
+    // about the same settlement was the actual bug.
+    const flag = flags.find((f) => f.id === flagId) ?? standInFlag(payment)
     reports.push({
       payment,
-      flag: flags.find((f) => f.id === flagId),
+      flag,
       ...againstSnapshot(payment, rows),
     })
   }
