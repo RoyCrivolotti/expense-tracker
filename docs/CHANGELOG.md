@@ -2,6 +2,10 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (marking a card statement paid)
+
+- **The Transactions statement sheet shows a new paid date straight away.** It used to jump back to the old date until the sheet was reopened.
+
 ## September 2026 (one chart tooltip at a time)
 
 - **Opening one chart's tooltip now closes another's.** Charts stacked on the same screen, such as Progress's net worth history above the check-in history, or Analytics' monthly and year-to-date charts beside the category pie, could each have their tooltip open at once. Tapping or hovering a chart now closes whichever other one was open.

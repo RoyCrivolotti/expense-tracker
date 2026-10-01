@@ -121,7 +121,7 @@ const CARD: Account = { id: 2, name: 'Iberia Icon', kind: 'credit', settlement: 
  * A paid June statement. A statement only becomes a row in the list once it is paid and
  * has a charge behind it, and the row sits on the day it was paid.
  */
-function paidStatementModel(): ExpenseModel {
+function paidStatementModel(paidOn = '2026-06-15'): ExpenseModel {
   return modelFor(
     [
       makeTransaction({
@@ -134,7 +134,7 @@ function paidStatementModel(): ExpenseModel {
     ],
     {
       accounts: [DEBIT, CARD],
-      accountStatements: [{ accountId: 2, yearMonth: '2026-06', paid: true, paidOn: '2026-06-15' }],
+      accountStatements: [{ accountId: 2, yearMonth: '2026-06', paid: true, paidOn }],
     },
   )
 }
@@ -175,6 +175,22 @@ describe('TransactionsTab statement payments', () => {
       expect(actions.setStatementPaid).toHaveBeenCalledWith(2, '2026-06', true, '2026-06-20'),
     )
     expect(sheet).toBeInTheDocument()
+  })
+
+  it('shows the new paid date once the save has changed the model', async () => {
+    const user = userEvent.setup()
+    const actions = makeActions()
+    const { rerender } = render(
+      <TransactionsTab model={paidStatementModel()} month="2026-06" actions={actions} />,
+    )
+    await user.click(screen.getByRole('button', { name: /Iberia Icon statement/ }))
+
+    rerender(
+      <TransactionsTab model={paidStatementModel('2026-06-20')} month="2026-06" actions={actions} />,
+    )
+
+    const sheet = screen.getByRole('dialog', { name: 'Iberia Icon statement' })
+    expect(within(sheet).getByLabelText('Statement paid on')).toHaveValue('2026-06-20')
   })
 
   it('locks the sheet while the change is being saved', async () => {
