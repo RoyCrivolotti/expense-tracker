@@ -1,10 +1,42 @@
 .amountRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   margin: 0 0 1rem;
   font-size: 0.9rem;
   color: var(--color-text-muted);
 }
 .hint {
-  margin: 1rem 0 0;
+  margin: 0.6rem 0 1rem;
   font-size: 0.78rem;
   color: var(--color-text-muted);
+}
+
+.primary,
+.secondary {
+  flex: 1;
+  min-height: 2.75rem;
+  border-radius: 0.7rem;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+/* The accent-contrast token, not white: the dark theme's accent is too light for white text. */
+.primary {
+  padding: 0.8rem;
+  border: 0;
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+.secondary {
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text);
+}
+.primary:disabled,
+.secondary:disabled {
+  opacity: 0.6;
+  cursor: default;
 }

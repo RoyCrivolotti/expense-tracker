@@ -151,14 +151,14 @@ describe('TransactionsTab statement payments', () => {
     const { sheet } = await openStatementSheet()
 
     expect(within(sheet).getByText('June 2026')).toBeInTheDocument()
-    expect(within(sheet).getByRole('button', { name: 'Paid' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(sheet).getByText('Paid')).toBeInTheDocument()
     expect(within(sheet).getByLabelText('Statement paid on')).toHaveValue('2026-06-15')
   })
 
   it('marks the statement due again and closes the sheet', async () => {
     const { user, actions, sheet } = await openStatementSheet()
 
-    await user.click(within(sheet).getByRole('button', { name: 'Paid' }))
+    await user.click(within(sheet).getByRole('button', { name: 'Mark as due' }))
 
     expect(actions.setStatementPaid).toHaveBeenCalledWith(2, '2026-06', false, undefined)
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
@@ -204,15 +204,15 @@ describe('TransactionsTab statement payments', () => {
       ),
     })
     const { sheet } = await openStatementSheet(actions)
-    const toggle = within(sheet).getByRole('button', { name: 'Paid' })
+    const markDue = within(sheet).getByRole('button', { name: 'Mark as due' })
 
     fireEvent.change(within(sheet).getByLabelText('Statement paid on'), {
       target: { value: '2026-06-20' },
     })
-    expect(toggle).toBeDisabled()
+    expect(markDue).toBeDisabled()
 
     finish()
-    await waitFor(() => expect(toggle).toBeEnabled())
+    await waitFor(() => expect(markDue).toBeEnabled())
   })
 
   it('closes without saving anything', async () => {
