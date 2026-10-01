@@ -38,7 +38,18 @@ import type {
 import { RepoHttpError } from './repoHttpError'
 import { AMOUNT_SIGN_MESSAGE, amountSignAllowed } from '../domain/data/amountSign'
 
-export type ExpenseRepositorySeed = Partial<ExpenseDataset>
+export type ExpenseRepositorySeed = Partial<ExpenseDataset> & {
+  /**
+   * Pre-existing transaction_labels link rows. ExpenseDataset has no field for
+   * this — a label a transaction already carries only shows up as that
+   * transaction's `labelIds` — so a seed that wants to start from a transaction
+   * already linked to a label (rather than one that picks the link up during
+   * the behavior under test) has to go through this instead. A `labelIds` on a
+   * seeded `Transaction` itself is informational only; `emptyStore` strips it,
+   * exactly like the `status` D1 would also derive rather than trust.
+   */
+  transactionLabels?: { transactionId: number; labelId: number }[]
+}
 
 interface OwnerStore {
   categories: Category[]
@@ -101,8 +112,11 @@ function emptyStore(seed: ExpenseRepositorySeed = {}): OwnerStore {
     accounts: list(seed.accounts),
     flags: list(seed.flags),
     labels: list(seed.labels),
-    transactionLabels: [],
+    transactionLabels: list(seed.transactionLabels),
     attachments: list(seed.attachments),
+    // A seeded transaction's own `labelIds` is dropped here, not read: the
+    // store's source of truth for which labels a transaction carries is
+    // `transactionLabels` above, seeded through the dedicated field instead.
     transactions: (seed.transactions ?? []).map(
       ({ status: _status, labelIds: _labelIds, ...stored }) => stored,
     ),

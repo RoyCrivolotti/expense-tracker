@@ -89,8 +89,20 @@ describe('inMemoryExpenseRepository flag auto-label', () => {
   it('does not duplicate a label the transaction already carries some other way', async () => {
     const flag = makeFlag({ id: 1 })
     const label = makeLabel({ id: 2 })
-    const carrying = makeTransaction({ id: 10, flagId: 1, labelIds: [2] })
-    const repo = inMemoryExpenseRepository({ flags: [flag], labels: [label], transactions: [carrying] }, OWNER)
+    // `labelIds` on a seeded Transaction is informational only (emptyStore
+    // strips it) — the real pre-existing link has to go through the seed's
+    // dedicated transactionLabels field, or this test would start the
+    // transaction with no labels at all and never reach the dedup branch.
+    const carrying = makeTransaction({ id: 10, flagId: 1 })
+    const repo = inMemoryExpenseRepository(
+      {
+        flags: [flag],
+        labels: [label],
+        transactions: [carrying],
+        transactionLabels: [{ transactionId: 10, labelId: 2 }],
+      },
+      OWNER,
+    )
 
     await repo.updateFlag(OWNER, 1, { autoLabelId: 2 })
 
@@ -217,6 +229,38 @@ describe('inMemoryExpenseRepository flag auto-label', () => {
 
     const dataset = await repo.loadDataset(OWNER)
     expect(dataset.transactions.find((t) => t.id === 10)?.labelIds).toEqual([2])
+  })
+
+  /**
+   * An archived label is not excluded from auto-label fan-out, by design — it
+   * keeps receiving new fan-out the same way it keeps the chips it already has
+   * elsewhere in the app. assertOwnedLabel and the fan-out itself never check
+   * `active`, so a flag can point at an already-archived label from the start.
+   */
+  it('still retroactively applies an auto-label that is already archived', async () => {
+    const flag = makeFlag({ id: 1 })
+    const label = makeLabel({ id: 2, active: false })
+    const carrying = makeTransaction({ id: 10, flagId: 1 })
+    const repo = inMemoryExpenseRepository({ flags: [flag], labels: [label], transactions: [carrying] }, OWNER)
+
+    await repo.updateFlag(OWNER, 1, { autoLabelId: 2 })
+
+    const dataset = await repo.loadDataset(OWNER)
+    expect(dataset.transactions.find((t) => t.id === 10)?.labelIds).toEqual([2])
+  })
+
+  it('still applies an already-archived auto-label going forward when a transaction is flagged', async () => {
+    const flag = makeFlag({ id: 1, autoLabelId: 2 })
+    const label = makeLabel({ id: 2, active: false })
+    const existing = makeTransaction({ id: 10 })
+    const repo = inMemoryExpenseRepository(
+      { flags: [flag], labels: [label], transactions: [existing] },
+      OWNER,
+    )
+
+    const updated = await repo.updateTransaction(OWNER, 10, { flagId: 1 })
+
+    expect(updated.labelIds).toEqual([2])
   })
 })
 
