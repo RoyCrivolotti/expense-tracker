@@ -1,13 +1,12 @@
 import { useRef, useState } from 'react'
 import type { Account, Category, Flag, Label, TxnType } from '../../types'
-import { CloseIcon } from '../icons'
+import { ChevronIcon, CloseIcon } from '../icons'
 import { DateInput } from '../components/DateInput'
 import { LabelPickerPopover } from '../components/LabelPickerPopover'
 import { Presence } from '../components/Presence'
 import { SegmentedControl } from '../components/SegmentedControl'
 import { EXIT_MS } from '../hooks/motion'
 import { useToggleIds } from '../hooks/useToggleIds'
-import { ChevronIcon } from '../icons'
 import type { StatusFilter } from './TxnFilters'
 import type { TxnDateScope } from './txnDateScope'
 import styles from './tabs.module.css'
@@ -137,25 +136,34 @@ export function FilterToggleRow({
   )
 }
 
-export function CategoryAccountRow({
+/**
+ * Category, Type, Account, in that order — a fixed three-column row so it lines
+ * up exactly with SecondaryFilterRow below it (see .filterRow), rather than the
+ * two dimensions it used to hold stretching to fill the row on their own.
+ */
+export function PrimaryFilterRow({
   categories,
   accounts,
   categoryId,
   accountId,
+  txnType,
   selectMode,
   onCategory,
   onAccount,
+  onTxnType,
 }: {
   categories: Category[]
   accounts: Account[]
   categoryId: number | 'all'
   accountId: number | 'all'
+  txnType: TxnType | 'all'
   selectMode: boolean
   onCategory: (value: number | 'all') => void
   onAccount: (value: number | 'all') => void
+  onTxnType: (value: TxnType | 'all') => void
 }) {
   return (
-    <div className={styles.selectRow}>
+    <div className={styles.filterRow}>
       <select
         className={categoryId !== 'all' ? styles.activeSelect : undefined}
         value={categoryId}
@@ -169,6 +177,19 @@ export function CategoryAccountRow({
             {c.name}
           </option>
         ))}
+      </select>
+      <select
+        className={txnType !== 'all' ? styles.activeSelect : undefined}
+        value={txnType}
+        onChange={(e) => onTxnType(e.target.value as TxnType | 'all')}
+        disabled={selectMode}
+        aria-label="Filter by type"
+      >
+        <option value="all">Type</option>
+        <option value="expense">Expense</option>
+        <option value="income">Income</option>
+        <option value="investment">Investment</option>
+        <option value="refund">Refund</option>
       </select>
       <select
         className={accountId !== 'all' ? styles.activeSelect : undefined}
@@ -188,28 +209,65 @@ export function CategoryAccountRow({
   )
 }
 
-export function StatusTypeRow({
+function labelTriggerText(value: number[], labels: Label[]): string {
+  if (value.length === 0) return 'Labels'
+  if (value.length === 1) return labels.find((l) => l.id === value[0])?.name ?? '1 label'
+  return `Labels (${value.length})`
+}
+
+/**
+ * Status, Flag, Label, in that order — the second fixed three-column row, lined
+ * up with PrimaryFilterRow above it via the shared .filterRow grid. Flag and
+ * Label both disappear when there is nothing to filter by (no flags, no
+ * labels), so this row can hold anywhere from one to three columns; the grid
+ * leaves the rest blank rather than stretching what is left to fill the row,
+ * which is what keeps both rows aligned regardless of how many show up.
+ *
+ * The label picker reuses LabelPickerPopover — the same multi-select the edit
+ * sheet uses (see LabelField) — rather than a second multi-select widget, since
+ * a label filter can match more than one label at once (OR), which a native
+ * select can't express.
+ */
+export function SecondaryFilterRow({
   flags,
   flagId,
   onFlag,
   status,
-  txnType,
-  selectMode,
   onStatus,
-  onTxnType,
+  labels,
+  labelIds,
+  onLabelIds,
+  selectMode,
 }: {
   flags?: Flag[]
   flagId?: number | 'all' | 'none'
   onFlag?: (value: number | 'all' | 'none') => void
   status: StatusFilter
-  txnType: TxnType | 'all'
-  selectMode: boolean
   onStatus: (value: StatusFilter) => void
-  onTxnType: (value: TxnType | 'all') => void
+  labels: Label[]
+  labelIds: number[]
+  onLabelIds: (ids: number[]) => void
+  selectMode: boolean
 }) {
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const [open, setOpen] = useState(false)
+  const toggle = useToggleIds(labelIds, onLabelIds)
   const flagOptions = flags?.filter((f) => f.active || f.id === flagId)
+
   return (
-    <div className={styles.selectRow}>
+    <div className={styles.filterRow}>
+      <select
+        className={status !== 'all' ? styles.activeSelect : undefined}
+        value={status}
+        onChange={(e) => onStatus(e.target.value as StatusFilter)}
+        disabled={selectMode}
+        aria-label="Filter by status"
+      >
+        <option value="all">Status</option>
+        <option value="posted">Posted</option>
+        <option value="forecast">Forecast</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
       {flagOptions && flagOptions.length > 0 && flagId !== undefined && onFlag ? (
         <select
           className={flagId !== 'all' ? styles.activeSelect : undefined}
@@ -231,87 +289,31 @@ export function StatusTypeRow({
           ))}
         </select>
       ) : null}
-      <select
-        className={status !== 'all' ? styles.activeSelect : undefined}
-        value={status}
-        onChange={(e) => onStatus(e.target.value as StatusFilter)}
-        disabled={selectMode}
-        aria-label="Filter by status"
-      >
-        <option value="all">Status</option>
-        <option value="posted">Posted</option>
-        <option value="forecast">Forecast</option>
-        <option value="cancelled">Cancelled</option>
-      </select>
-      <select
-        className={txnType !== 'all' ? styles.activeSelect : undefined}
-        value={txnType}
-        onChange={(e) => onTxnType(e.target.value as TxnType | 'all')}
-        disabled={selectMode}
-        aria-label="Filter by type"
-      >
-        <option value="all">Type</option>
-        <option value="expense">Expense</option>
-        <option value="income">Income</option>
-        <option value="investment">Investment</option>
-        <option value="refund">Refund</option>
-      </select>
-    </div>
-  )
-}
-
-function labelTriggerText(value: number[], labels: Label[]): string {
-  if (value.length === 0) return 'Labels'
-  if (value.length === 1) return labels.find((l) => l.id === value[0])?.name ?? '1 label'
-  return `Labels (${value.length})`
-}
-
-/**
- * Multi-select sibling of the flag <select> above: a label filter can match more
- * than one label at once (OR), which a native select can't express, so this is a
- * trigger button reusing LabelPickerPopover — the same picker the edit sheet uses
- * (see LabelField) — rather than a second multi-select widget.
- */
-export function LabelFilterRow({
-  labels,
-  labelIds,
-  selectMode,
-  onLabelIds,
-}: {
-  labels: Label[]
-  labelIds: number[]
-  selectMode: boolean
-  onLabelIds: (ids: number[]) => void
-}) {
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const [open, setOpen] = useState(false)
-  const toggle = useToggleIds(labelIds, onLabelIds)
-
-  if (labels.length === 0) return null
-
-  return (
-    <div className={styles.selectRow}>
-      <button
-        type="button"
-        ref={triggerRef}
-        className={labelIds.length > 0 ? `${styles.labelTrigger} ${styles.labelTriggerActive}` : styles.labelTrigger}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        disabled={selectMode}
-        onClick={() => setOpen((o) => !o)}
-      >
-        <span className={styles.labelTriggerText}>{labelTriggerText(labelIds, labels)}</span>
-        <ChevronIcon className={styles.labelTriggerChevron} aria-hidden="true" />
-      </button>
-      <Presence show={open} exitMs={EXIT_MS.popover}>
-        <LabelPickerPopover
-          value={labelIds}
-          labels={labels}
-          triggerRef={triggerRef}
-          onToggle={toggle}
-          onClose={() => setOpen(false)}
-        />
-      </Presence>
+      {labels.length > 0 ? (
+        <>
+          <button
+            type="button"
+            ref={triggerRef}
+            className={labelIds.length > 0 ? `${styles.labelTrigger} ${styles.labelTriggerActive}` : styles.labelTrigger}
+            aria-haspopup="dialog"
+            aria-expanded={open}
+            disabled={selectMode}
+            onClick={() => setOpen((o) => !o)}
+          >
+            <span className={styles.labelTriggerText}>{labelTriggerText(labelIds, labels)}</span>
+            <ChevronIcon className={styles.labelTriggerChevron} aria-hidden="true" />
+          </button>
+          <Presence show={open} exitMs={EXIT_MS.popover}>
+            <LabelPickerPopover
+              value={labelIds}
+              labels={labels}
+              triggerRef={triggerRef}
+              onToggle={toggle}
+              onClose={() => setOpen(false)}
+            />
+          </Presence>
+        </>
+      ) : null}
     </div>
   )
 }

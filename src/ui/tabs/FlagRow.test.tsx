@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { Flag } from '../../types'
 import { makeFlag } from '../../testing/factories'
-import { CategoryAccountRow, StatusTypeRow } from './TxnFilterRows'
+import { PrimaryFilterRow, SecondaryFilterRow } from './TxnFilterRows'
 
 const work = makeFlag({ id: 1, name: 'Work travel' })
 const archived = makeFlag({ id: 2, name: 'Old claim', active: false })
@@ -12,21 +12,22 @@ function renderRow(overrides: { flags?: Flag[]; flagId?: number | 'all' | 'none'
   const onFlag = vi.fn()
   const { flags = [work], flagId = 'all' as const, selectMode = false } = overrides
   render(
-    <StatusTypeRow
+    <SecondaryFilterRow
       flags={flags}
       flagId={flagId}
       onFlag={onFlag}
       status="all"
-      txnType="all"
       selectMode={selectMode}
       onStatus={vi.fn()}
-      onTxnType={vi.fn()}
+      labels={[]}
+      labelIds={[]}
+      onLabelIds={vi.fn()}
     />,
   )
   return { onFlag }
 }
 
-describe('StatusTypeRow flag select', () => {
+describe('SecondaryFilterRow flag select', () => {
   it('offers all flags, unflagged, and each active flag', () => {
     renderRow()
     const select = screen.getByRole('combobox', { name: 'Filter by flag' })
@@ -84,32 +85,75 @@ describe('filter selects keep their meaning without the "All" prefix', () => {
   // The unfiltered option now reads "Status" rather than "All statuses", so once a value
   // is chosen the visible text is just "Posted". The accessible name is what still says
   // which filter this is.
-  it('names status and type by the filter they apply', () => {
+  it('names status by the filter it applies', () => {
     renderRow()
     expect(screen.getByRole('combobox', { name: 'Filter by status' })).toBeInTheDocument()
-    expect(screen.getByRole('combobox', { name: 'Filter by type' })).toBeInTheDocument()
   })
 
-  it('names category and account the same way', () => {
+  it('reports a chosen status', async () => {
+    const onStatus = vi.fn()
     render(
-      <CategoryAccountRow
+      <SecondaryFilterRow
+        flags={[work]}
+        flagId="all"
+        onFlag={vi.fn()}
+        status="all"
+        selectMode={false}
+        onStatus={onStatus}
+        labels={[]}
+        labelIds={[]}
+        onLabelIds={vi.fn()}
+      />,
+    )
+
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Filter by status' }), 'posted')
+
+    expect(onStatus).toHaveBeenCalledWith('posted')
+  })
+
+  it('reports a chosen type', async () => {
+    const onTxnType = vi.fn()
+    render(
+      <PrimaryFilterRow
         categories={[]}
         accounts={[]}
         categoryId="all"
         accountId="all"
+        txnType="all"
         selectMode={false}
         onCategory={vi.fn()}
         onAccount={vi.fn()}
+        onTxnType={onTxnType}
+      />,
+    )
+
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Filter by type' }), 'refund')
+
+    expect(onTxnType).toHaveBeenCalledWith('refund')
+  })
+
+  it('names category, type and account the same way', () => {
+    render(
+      <PrimaryFilterRow
+        categories={[]}
+        accounts={[]}
+        categoryId="all"
+        accountId="all"
+        txnType="all"
+        selectMode={false}
+        onCategory={vi.fn()}
+        onAccount={vi.fn()}
+        onTxnType={vi.fn()}
       />,
     )
     expect(screen.getByRole('combobox', { name: 'Filter by category' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Filter by type' })).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Filter by account' })).toBeInTheDocument()
   })
 
   it('shows the one-word default when nothing is chosen', () => {
     renderRow()
     expect(screen.getByRole('combobox', { name: 'Filter by status' })).toHaveDisplayValue('Status')
-    expect(screen.getByRole('combobox', { name: 'Filter by type' })).toHaveDisplayValue('Type')
     expect(screen.getByRole('combobox', { name: 'Filter by flag' })).toHaveDisplayValue('Flag')
   })
 })
