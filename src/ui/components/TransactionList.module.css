@@ -210,6 +210,58 @@
   outline-offset: -2px;
 }
 
+/* Only rendered when a row carries a trailing action (the Flagged card's "Clear
+   flag"). Owns the border and full width .row normally carries itself, since
+   here that has to wrap both the row button and the action beside it. */
+.rowWithAction {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Same look as .row, minus the border/width it hands off to .rowWithAction, and
+   flex: 1 1 auto in place of width: 100% so it shares the row with the action. */
+.rowMain {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  padding: 0.6rem 0.25rem;
+  cursor: pointer;
+}
+.rowMain:hover {
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+.rowMain:focus-visible {
+  outline-offset: -2px;
+}
+
+.clearFlagBtn {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.clearFlagBtn:hover {
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+  color: var(--color-text);
+}
+.clearFlagBtn svg {
+  width: 1rem;
+  height: 1rem;
+}
+
 .swipeWrap {
   position: relative;
   overflow: hidden;

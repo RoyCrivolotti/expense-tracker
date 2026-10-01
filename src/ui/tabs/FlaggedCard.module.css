@@ -179,6 +179,28 @@
   cursor: pointer;
 }
 
+/* Muted rather than accent-coloured, unlike filterBtn/packBtn above: this one
+   changes data (clears a flag from every row in the group) rather than just
+   navigating or reading, and it is not the reason the card exists the way
+   Record reimbursement is — it earns a quieter, more secondary tone. */
+.clearAllBtn {
+  flex: 1 1 0;
+  padding: 0.45rem 0.8rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 0.6rem;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.clearAllBtn:hover {
+  background: color-mix(in srgb, var(--color-text-muted) 10%, transparent);
+  color: var(--color-text);
+}
+
 /* Full-width inside the Card, matching "Manage plans" on InstallmentsCard,
    rather than a ~20px pill in the section title that no other card uses. */
 .manageBtn {

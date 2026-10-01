@@ -4,6 +4,7 @@ import { makeActions } from '../../testing/makeActions'
 import { makeTransaction } from '../../testing/factories'
 import {
   ReimbursementSettleError,
+  buildSettlementPatch,
   recordReimbursement,
   reimbursementFailureCopy,
 } from './recordReimbursement'
@@ -27,7 +28,7 @@ describe('recordReimbursement', () => {
     await recordReimbursement(actions, payment, [1, 2])
 
     expect(actions.createTransaction).toHaveBeenCalledWith(payment)
-    expect(actions.updateTransactions).toHaveBeenCalledWith([1, 2], { settledBy: 99 })
+    expect(actions.updateTransactions).toHaveBeenCalledWith([1, 2], { settledBy: 99, flagId: null })
   })
 
   it('creates the payment without a flag, so it cannot subtract twice', () => {
@@ -116,6 +117,12 @@ describe('ReimbursementSettleError', () => {
     const err = await recordReimbursement(actions, payment, [1]).catch((e: unknown) => e)
 
     expect((err as ReimbursementSettleError).status).toBe(409)
+  })
+})
+
+describe('buildSettlementPatch', () => {
+  it('links the rows to the payment and clears their flag', () => {
+    expect(buildSettlementPatch(99)).toEqual({ settledBy: 99, flagId: null })
   })
 })
 

@@ -6,6 +6,7 @@ import { makeDataset, makeFlag, makeTransaction } from '../../testing/factories'
 import { makeActions } from '../../testing/makeActions'
 import { buildLookup } from '../format'
 import type { ExpenseModel } from '../useExpenseData'
+import { ToastContext } from '../hooks/useToast'
 import { TransactionsTab } from './TransactionsTab'
 import { RESULTS_ANCHOR_ID } from './scrollToResults'
 
@@ -232,7 +233,7 @@ describe('TransactionsTab reimbursements', () => {
     await user.click(within(sheet).getByRole('button', { name: /^Record / }))
 
     await waitFor(() =>
-      expect(actions.updateTransactions).toHaveBeenCalledWith([7], { settledBy: 99 }),
+      expect(actions.updateTransactions).toHaveBeenCalledWith([7], { settledBy: 99, flagId: null }),
     )
     expect(actions.createTransaction).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'refund', amountCents: 10_000 }),
@@ -260,5 +261,86 @@ describe('TransactionsTab reimbursements', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(actions.createTransaction).not.toHaveBeenCalled()
+  })
+})
+
+describe('TransactionsTab — clearing a flag', () => {
+  const claim = () =>
+    modelFor([makeTransaction({ id: 7, flagId: 1, amountCents: 10_000 })], {
+      flags: [makeFlag({ id: 1, name: 'Work travel' })],
+      accounts: [DEBIT],
+      categories: [{ id: 1, name: 'Travel', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
+    })
+
+  it('clears one transaction without opening the editor', async () => {
+    const actions = makeActions()
+    const user = userEvent.setup()
+    render(<TransactionsTab model={claim()} month="2025-01" actions={actions} />)
+
+    await user.click(screen.getByRole('button', { name: 'Clear flag' }))
+
+    await waitFor(() => expect(actions.updateTransaction).toHaveBeenCalledWith(7, { flagId: null }))
+  })
+
+  it('asks before clearing every transaction in the group, and cancelling does nothing', async () => {
+    const actions = makeActions()
+    const user = userEvent.setup()
+    render(<TransactionsTab model={claim()} month="2025-01" actions={actions} />)
+
+    await user.click(screen.getByRole('button', { name: 'Clear all in this group' }))
+    const sheet = screen.getByRole('alertdialog')
+    await user.click(within(sheet).getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(actions.updateTransactions).not.toHaveBeenCalled()
+  })
+
+  it('clears every transaction in the group on confirm', async () => {
+    const actions = makeActions()
+    const user = userEvent.setup()
+    render(<TransactionsTab model={claim()} month="2025-01" actions={actions} />)
+
+    await user.click(screen.getByRole('button', { name: 'Clear all in this group' }))
+    const sheet = screen.getByRole('alertdialog')
+    await user.click(within(sheet).getByRole('button', { name: 'Clear all' }))
+
+    await waitFor(() =>
+      expect(actions.updateTransactions).toHaveBeenCalledWith([7], { flagId: null }),
+    )
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+  })
+
+  it('toasts the failure instead of throwing when clearing one flag fails', async () => {
+    const actions = makeActions()
+    vi.mocked(actions.updateTransaction).mockRejectedValue(new Error('Offline'))
+    const showToast = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <ToastContext.Provider value={{ showToast }}>
+        <TransactionsTab model={claim()} month="2025-01" actions={actions} />
+      </ToastContext.Provider>,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Clear flag' }))
+
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith('Offline', 'error'))
+  })
+
+  it('toasts a generic message when clearing the group fails without one', async () => {
+    const actions = makeActions()
+    vi.mocked(actions.updateTransactions).mockRejectedValue('not an Error instance')
+    const showToast = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <ToastContext.Provider value={{ showToast }}>
+        <TransactionsTab model={claim()} month="2025-01" actions={actions} />
+      </ToastContext.Provider>,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Clear all in this group' }))
+    const sheet = screen.getByRole('alertdialog')
+    await user.click(within(sheet).getByRole('button', { name: 'Clear all' }))
+
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith('Could not clear the flag', 'error'))
   })
 })

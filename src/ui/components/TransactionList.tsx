@@ -19,6 +19,8 @@ interface TransactionListProps {
   onDuplicate?: (txn: Transaction) => void
   onAddForDate?: (date: string) => void
   onDelete?: (id: number) => Promise<void>
+  /** A trailing "Clear flag" action per row — only the Flagged card's preview list sets this. */
+  onClearFlag?: (txn: Transaction) => void
   selectMode?: boolean
   selectedIds?: ReadonlySet<number>
   onToggleSelect?: (id: number) => void
@@ -27,6 +29,19 @@ interface TransactionListProps {
   swipeDelete?: boolean
   onClearFilters?: () => void
   onEditStatementPayment?: (row: Extract<TransactionListRow, { kind: 'statement-payment' }>) => void
+}
+
+/** The optional per-row callbacks, gathered so renderRow's own branch count
+ *  does not grow with every one added — see onClearFlag's addition. */
+function optionalRowProps(props: Omit<TransactionListProps, 'rows' | 'lookup'>) {
+  return {
+    ...(props.onSelect ? { onSelect: props.onSelect } : {}),
+    ...(props.onDuplicate ? { onDuplicate: props.onDuplicate } : {}),
+    ...(props.onDelete ? { onDelete: props.onDelete } : {}),
+    ...(props.onClearFlag ? { onClearFlag: props.onClearFlag } : {}),
+    ...(props.onToggleSelect ? { onToggleSelect: props.onToggleSelect } : {}),
+    ...(props.onLongPressSelect ? { onLongPressSelect: props.onLongPressSelect } : {}),
+  }
 }
 
 function renderRow(
@@ -52,11 +67,7 @@ function renderRow(
       selectMode={props.selectMode ?? false}
       selected={props.selectedIds?.has(row.txn.id) ?? false}
       swipeDelete={props.swipeDelete ?? false}
-      {...(props.onSelect ? { onSelect: props.onSelect } : {})}
-      {...(props.onDuplicate ? { onDuplicate: props.onDuplicate } : {})}
-      {...(props.onDelete ? { onDelete: props.onDelete } : {})}
-      {...(props.onToggleSelect ? { onToggleSelect: props.onToggleSelect } : {})}
-      {...(props.onLongPressSelect ? { onLongPressSelect: props.onLongPressSelect } : {})}
+      {...optionalRowProps(props)}
     />
   )
 }

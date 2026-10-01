@@ -126,6 +126,66 @@ describe('TransactionList budget month pill', () => {
   })
 })
 
+describe('TransactionList swipe mode', () => {
+  it('hands its optional callbacks down to the swipe row once swipeDelete is on', async () => {
+    // swipeEnabled only turns on with swipeDelete *and* at least one of
+    // onDelete/onDuplicate — gathered into one row via swipeRowProps rather
+    // than four separate ternaries on TransactionRow itself.
+    const onSelect = vi.fn()
+    const onDelete = vi.fn()
+    render(
+      <TransactionList
+        rows={rows(txn({ id: 1, description: 'Madrid hotel' }))}
+        lookup={lookup}
+        swipeDelete
+        onSelect={onSelect}
+        onDelete={onDelete}
+      />,
+    )
+
+    await userEvent.click(screen.getByText('Madrid hotel'))
+
+    expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }))
+  })
+})
+
+describe('TransactionList onClearFlag', () => {
+  it('renders a trailing clear-flag action when passed', async () => {
+    const onClearFlag = vi.fn()
+    render(
+      <TransactionList
+        rows={rows(txn({ id: 1, description: 'Madrid hotel' }))}
+        lookup={lookup}
+        flat
+        onClearFlag={onClearFlag}
+      />,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Clear flag' }))
+    expect(onClearFlag).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }))
+  })
+
+  it('renders the plain row with no second button when absent', () => {
+    render(<TransactionList rows={rows(txn({ id: 1, description: 'Madrid hotel' }))} lookup={lookup} flat />)
+
+    expect(screen.queryByRole('button', { name: 'Clear flag' })).not.toBeInTheDocument()
+  })
+
+  it('still opens the row for editing when a clear-flag action sits next to it', async () => {
+    // The Flagged card's preview rows are both tappable (edit) and clearable (×)
+    // at once — the two buttons are siblings, not nested, so neither should
+    // steal the other's click.
+    const onSelect = vi.fn()
+    const row = txn({ id: 1, description: 'Madrid hotel' })
+    render(
+      <TransactionList rows={rows(row)} lookup={lookup} flat onClearFlag={vi.fn()} onSelect={onSelect} />,
+    )
+
+    await userEvent.click(screen.getByText('Madrid hotel'))
+    expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }))
+  })
+})
+
 describe('TransactionList collapsible date groups', () => {
   beforeEach(() => {
     localStorage.clear()

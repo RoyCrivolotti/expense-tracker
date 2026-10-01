@@ -119,9 +119,10 @@ export interface StoredTransaction {
    * The `refund` transaction that reimbursed this row, when one has. Set by
    * recording a reimbursement, cleared if that reimbursement is deleted.
    *
-   * A settled row keeps its flag but drops out of the Flagged card, so the card
-   * stays a list of what is still owed while the history of which rows were in
-   * which claim survives.
+   * A settled row also has its `flagId` cleared in the same patch (see
+   * recordReimbursement.ts) — a flag means "needs attention", and being paid
+   * back is how that resolves. A row settled before that shipped keeps
+   * whatever flag it already had, untouched.
    */
   settledBy?: number
   /**

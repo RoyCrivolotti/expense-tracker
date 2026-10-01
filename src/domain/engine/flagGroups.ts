@@ -54,9 +54,11 @@ export interface FlagGroup {
  *   flag deleted in another tab — and it must not throw.
  * - Cancelled transactions are excluded entirely: you are not claiming back
  *   something that never happened.
- * - Reimbursed rows (`settledBy` set) drop out, which is how a claim ends. They
- *   keep their flag, so deleting the reimbursement brings them straight back and
- *   "what was in the June claim" stays answerable.
+ * - Reimbursed rows (`settledBy` set) drop out, which is how a claim ends. A
+ *   reimbursement recorded from now on also clears `flagId` (see
+ *   recordReimbursement.ts), so this exclusion mostly guards legacy rows settled
+ *   before that shipped — they kept their flag, and deleting their reimbursement
+ *   still brings them straight back exactly as before.
  * - Only `expense` and `refund` rows are admitted. An income or investment row
  *   carrying a flag is a mis-typed transaction, and letting one in made `count`
  *   and `totalCents` describe different sets — `netSpendCents` skips those two
@@ -107,9 +109,12 @@ function bucketByFlag(transactions: Transaction[]): Map<number, Transaction[]> {
   for (const txn of transactions) {
     if (txn.flagId == null || txn.status === 'cancelled') continue
     if (txn.type !== 'expense' && txn.type !== 'refund') continue
-    // Reimbursed rows keep their flag but leave the work list: the card answers
-    // "what am I still owed", and a row that has been paid back is not that.
-    // They are still reachable — the claim they belonged to can be reprinted.
+    // Reimbursed rows leave the work list either way: the card answers "what am
+    // I still owed", and a row that has been paid back is not that. A row settled
+    // from now on has no flagId left to bucket by regardless (see
+    // recordReimbursement.ts); this check mostly guards a legacy row that is
+    // still flagged from before that shipped. Either way the claim it belonged
+    // to stays reachable for reprinting.
     if (txn.settledBy != null) continue
     const bucket = byFlag.get(txn.flagId)
     if (bucket) bucket.push(txn)

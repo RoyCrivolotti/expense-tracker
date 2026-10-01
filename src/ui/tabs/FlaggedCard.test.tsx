@@ -44,6 +44,8 @@ function renderCard(dataset: ExpenseDataset, filterLocked = false) {
   const onManage = vi.fn()
   const onOpenReport = vi.fn()
   const onSettle = vi.fn()
+  const onClearFlag = vi.fn()
+  const onClearGroup = vi.fn()
   render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
       <FlaggedCard
@@ -54,10 +56,12 @@ function renderCard(dataset: ExpenseDataset, filterLocked = false) {
         onOpenReport={onOpenReport}
         onSettle={onSettle}
         onManage={onManage}
+        onClearFlag={onClearFlag}
+        onClearGroup={onClearGroup}
       />
     </MoneyFormatProvider>,
   )
-  return { onFilterByFlag, onLockedFilterPress, onManage, onOpenReport, onSettle }
+  return { onFilterByFlag, onLockedFilterPress, onManage, onOpenReport, onSettle, onClearFlag, onClearGroup }
 }
 
 describe('FlaggedCard', () => {
@@ -298,6 +302,55 @@ describe('FlaggedCard — flags that are not about being paid back', () => {
     expect(screen.getByText('Tax deductible')).toBeInTheDocument()
     await userEvent.click(screen.getByText('Tax deductible'))
     expect(screen.getByRole('button', { name: 'Filter by flag' })).toBeInTheDocument()
+  })
+})
+
+describe('FlaggedCard — clearing a flag', () => {
+  it('clears one transaction without opening the editor', async () => {
+    const { onClearFlag } = renderCard(
+      makeDataset({ flags: [work], transactions: [txn({ flagId: 1, description: 'Madrid hotel' })] }),
+    )
+
+    await userEvent.click(screen.getByText(/across 1 flag/))
+    await userEvent.click(screen.getByText('Work travel'))
+    await userEvent.click(screen.getByRole('button', { name: 'Clear flag' }))
+
+    expect(onClearFlag).toHaveBeenCalledWith(expect.objectContaining({ description: 'Madrid hotel' }))
+  })
+
+  it('asks to clear every transaction in the group at once', async () => {
+    const { onClearGroup } = renderCard(
+      makeDataset({
+        flags: [work],
+        transactions: [txn({ flagId: 1 }), txn({ flagId: 1 })],
+      }),
+    )
+
+    await userEvent.click(screen.getByText(/across 1 flag/))
+    await userEvent.click(screen.getByText('Work travel'))
+    await userEvent.click(screen.getByRole('button', { name: 'Clear all in this group' }))
+
+    expect(onClearGroup).toHaveBeenCalledWith(expect.objectContaining({ count: 2 }))
+  })
+
+  it('offers no clear actions when the callbacks are not passed', async () => {
+    render(
+      <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
+        <FlaggedCard
+          model={modelFor(makeDataset({ flags: [work], transactions: [txn({ flagId: 1 })] }))}
+          onFilterByFlag={vi.fn()}
+          onOpenReport={vi.fn()}
+          onSettle={vi.fn()}
+          onManage={vi.fn()}
+        />
+      </MoneyFormatProvider>,
+    )
+
+    await userEvent.click(screen.getByText(/across 1 flag/))
+    await userEvent.click(screen.getByText('Work travel'))
+
+    expect(screen.queryByRole('button', { name: 'Clear flag' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Clear all in this group' })).not.toBeInTheDocument()
   })
 })
 
