@@ -5,6 +5,7 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 ## October 2026 (marking a card statement paid)
 
 - **A statement row shows at a glance whether it is due or paid.** The word is amber when due and green when paid, instead of the muted grey of everything around it, on the dashboard, in Settings and in Transactions. A screen reader now hears the status and the amount along with the name.
+- **A statement row you can tap shows a chevron.** Nothing marked these rows as something to open. A statement with nothing to settle has no chevron, since there is nothing to open.
 - **The card statement sheet has buttons, not a pill to tap.** The small Due/Paid pill was also the control, and it was labelled with the state the statement was in rather than what tapping it did. A due statement now shows a date field, set to today, and a "Mark as paid" button that saves and closes the sheet. A paid one shows its date and a "Mark as due" button. A save that fails now says why in the sheet and leaves it open.
 - **The Transactions statement sheet shows a new paid date straight away.** It used to jump back to the old date until the sheet was reopened.
 
