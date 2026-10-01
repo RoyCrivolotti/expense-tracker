@@ -343,4 +343,56 @@ describe('TransactionsTab — clearing a flag', () => {
 
     await waitFor(() => expect(showToast).toHaveBeenCalledWith('Could not clear the flag', 'error'))
   })
+
+  it('clears every transaction in a group of more than one on confirm', async () => {
+    const claimOfTwo = () =>
+      modelFor(
+        [
+          makeTransaction({ id: 7, flagId: 1, amountCents: 10_000 }),
+          makeTransaction({ id: 8, flagId: 1, amountCents: 5_000 }),
+        ],
+        {
+          flags: [makeFlag({ id: 1, name: 'Work travel' })],
+          accounts: [DEBIT],
+          categories: [{ id: 1, name: 'Travel', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
+        },
+      )
+    const actions = makeActions()
+    const user = userEvent.setup()
+    render(<TransactionsTab model={claimOfTwo()} month="2025-01" actions={actions} />)
+
+    await user.click(screen.getByRole('button', { name: 'Clear all in this group' }))
+    const sheet = screen.getByRole('alertdialog')
+    await user.click(within(sheet).getByRole('button', { name: 'Clear all' }))
+
+    await waitFor(() =>
+      expect(actions.updateTransactions).toHaveBeenCalledWith([7, 8], { flagId: null }),
+    )
+  })
+
+  it('empties the Flagged card once the group it showed is actually cleared', async () => {
+    const actions = makeActions()
+    const user = userEvent.setup()
+    const { rerender } = render(<TransactionsTab model={claim()} month="2025-01" actions={actions} />)
+    expect(screen.getByText('Work travel')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Clear flag' }))
+    await waitFor(() => expect(actions.updateTransaction).toHaveBeenCalledWith(7, { flagId: null }))
+
+    // The component takes its data from props; this mirrors what the real app does
+    // once the action above resolves and the dataset is reloaded without the flag.
+    rerender(
+      <TransactionsTab
+        model={modelFor([makeTransaction({ id: 7, amountCents: 10_000 })], {
+          flags: [makeFlag({ id: 1, name: 'Work travel' })],
+          accounts: [DEBIT],
+          categories: [{ id: 1, name: 'Travel', monthlyBudgetCents: 0, sortOrder: 0, active: true }],
+        })}
+        month="2025-01"
+        actions={actions}
+      />,
+    )
+
+    expect(screen.queryByText('Work travel')).not.toBeInTheDocument()
+  })
 })
