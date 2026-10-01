@@ -1,5 +1,5 @@
 import type { Flag, Transaction, TransactionAttachment } from '../types'
-import { buildFlagGroup } from './flagGroups'
+import { buildFlagGroup, settledFlagId } from './flagGroups'
 
 export interface ReportLine {
   transaction: Transaction
@@ -88,7 +88,7 @@ export function buildSettledReport(
 ): ExpenseReport | null {
   const covered = transactions.filter((t) => t.settledBy === reimbursementId)
   if (covered.length === 0) return null
-  const flagId = covered.find((t) => t.flagId != null)?.flagId
+  const flagId = settledFlagId(covered, flags)
   const flag =
     flags.find((f) => f.id === flagId) ??
     standInFlag(transactions.find((t) => t.id === reimbursementId))

@@ -238,6 +238,35 @@ describe('buildExpenseReport', () => {
     expect(report?.flag.active).toBe(false)
   })
 
+  it('recovers the flag from its auto-label once settling has cleared flagId', () => {
+    // Reimbursing clears flagId on the covered rows, so the direct lookup misses.
+    // The auto-label the flag was configured with is still on those rows.
+    const withAutoLabel = flag({ id: 1, autoLabelId: 7 })
+    const report = buildSettledReport(
+      99,
+      [txn(1, '2026-05-02', { settledBy: 99, amountCents: 10_000, labelIds: [7] })],
+      [withAutoLabel],
+      [],
+    )
+
+    expect(report?.flag.id).toBe(1)
+  })
+
+  it('still falls back to the payment name when no flag matches by id or auto-label', () => {
+    const withAutoLabel = flag({ id: 1, autoLabelId: 7 })
+    const report = buildSettledReport(
+      99,
+      [
+        txn(1, '2026-05-02', { settledBy: 99, amountCents: 10_000, labelIds: [8] }),
+        txn(99, '2026-05-02', { type: 'refund', amountCents: 10_000, description: 'Madrid trip' }),
+      ],
+      [withAutoLabel],
+      [],
+    )
+
+    expect(report?.flag.name).toBe('Madrid trip')
+  })
+
   it('keeps a row cancelled after settlement, because the report was already sent', () => {
     // The live path drops cancelled rows, inheriting the card's rule. A past
     // report deliberately does not: it reconstructs a document that has already
