@@ -7,6 +7,7 @@ import { buildSettledReport, reportReference } from '../engine/expenseReport'
 import { listPastReports } from '../engine/pastReports'
 import { buildBatchTransactions } from '../../ui/components/batchTransactionIntent'
 import { buildReimbursementLinks } from '../engine/reimbursementLinks'
+import { buildSettlementPatch } from '../../ui/tabs/recordReimbursement'
 import { bulkUpdateTransactions } from './transactionService'
 
 const OWNER = 'owner@example.com'
@@ -112,6 +113,30 @@ describe('recording a reimbursement, end to end', () => {
 
     expect(settled?.flagId).toBe(4)
     expect(settled?.settledBy).toBe(payment.id)
+  })
+
+  it('does not bring the flag back when a reimbursement that cleared it is later deleted', async () => {
+    // The "puts the rows back" tests elsewhere in this file settle through a raw
+    // settledBy-only patch, which is how an already-settled row from before this
+    // behaviour shipped stays flagged forever (see "keeps the flag on a settled
+    // row" above). A reimbursement recorded through the real app flow clears the
+    // flag on settle (recordReimbursement.ts's buildSettlementPatch) — nothing
+    // records what the flag used to be, so undoing the payment cannot restore it.
+    const repo = repoWithClaim()
+    const flight = await repo.insertTransaction(OWNER, line('Flight', 10_000))
+    const payment = await repo.insertTransaction(OWNER, reimbursement(10_000))
+    await bulkUpdateTransactions(repo, OWNER, [flight.id], buildSettlementPatch(payment.id))
+
+    const settled = (await repo.loadDataset(OWNER)).transactions.find((t) => t.id === flight.id)
+    expect(settled?.flagId).toBeUndefined()
+
+    await repo.deleteTransaction(OWNER, payment.id)
+
+    const after = await repo.loadDataset(OWNER)
+    const flightAfter = after.transactions.find((t) => t.id === flight.id)
+    expect(flightAfter?.flagId).toBeUndefined()
+    expect(flightAfter?.settledBy).toBeUndefined()
+    expect(groupTransactionsByFlag(after.transactions, after.flags)).toEqual([])
   })
 })
 
