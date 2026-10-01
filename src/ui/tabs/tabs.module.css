@@ -236,80 +236,25 @@
   flex: 1 1 5.75rem;
   min-width: 0;
 }
-/*
- * PrimaryFilterRow (category, type, account) and SecondaryFilterRow (status,
- * flag, label) each hold up to three fields, and the two rows need to line up
- * with each other — a flex row that stretches to fill whatever shows up (as
- * .selectRow does) would size status/flag/label differently from category/
- * type/account whenever one of flag or label is absent. A fixed three-column
- * grid gives every field the same width regardless: a row with fewer than
- * three leaves the remainder blank rather than stretching into it.
- */
-.filterRow {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.6rem;
-}
-/*
- * Five of these six fields are native <select>s; the label filter is a
- * hand-built button (see below). When this row moved from a flex .selectRow
- * to this fixed-column grid, the explicit padding, font and font-size
- * .selectRow select used to carry over came along for the className rename
- * in name only — nothing here replaced them, so every select fell back to
- * the browser's own UA defaults for a form control (near-zero padding, the
- * OS's own form-control font rather than the app's, whatever font-size the
- * engine picks) until a select's background/radius/height got patched back
- * in later, piecemeal, without the padding or font. All three are restored
- * here as one explicit rule so no field is left guessing at a browser
- * default again. Font-size matches what theme.css forces every <select> to
- * below 719px (to stop iOS zooming in on focus) — a <select> never actually
- * focuses in this row's own styling sense, but all six need to read the same
- * size regardless of which one is a real <select>.
- */
-.filterRow select,
-.filterRow .labelTrigger {
-  min-width: 0;
-  height: 2.75rem;
-  padding: 0.6rem 0.75rem;
-  border-radius: 999px;
-  background-color: var(--color-surface-muted);
-  font: inherit;
-  font-size: 1rem;
-}
-.filterRow select {
-  border: 1px solid transparent;
-  color: var(--color-text);
-}
-.filterRow select.activeSelect {
+.selectRow select.activeSelect {
   border-color: var(--color-accent);
   box-shadow: inset 0 0 0 1px var(--color-accent);
 }
-/*
- * A hand-drawn stand-in for the native caret the five selects get for free from
- * the OS — it can get close but never pixel-match a system-drawn glyph, so this
- * is sized down from the icon's default scale to read closer to how small and
- * thin iOS actually draws its own select arrow.
- */
-.filterLabelChevron {
-  width: 0.7rem;
-  height: 0.7rem;
-  flex-shrink: 0;
-  color: var(--color-text-muted);
-}
 /* A <button> trigger, not a <select>, so it needs its own rule rather than
-   reusing `.filterRow select` above — see SecondaryFilterRow. Sizing (padding,
-   font-size, height, radius, background) all come from `.filterRow
-   .labelTrigger` above; this is the one field in this row that can't be a
-   native <select> — it needs to pick several labels at once (OR), which a
-   select can't express — so it still needs its own rule for the shape a
-   select gets from the browser for free: flex layout, no default border. */
+   reusing `.selectRow select` above — see LabelFilterRow. */
 .labelTrigger {
   display: flex;
   align-items: center;
   gap: 0.35rem;
+  flex: 1 1 5.75rem;
+  min-width: 0;
+  padding: 0.6rem 0.75rem;
   border: 1px solid transparent;
+  border-radius: 0.7rem;
+  background: var(--color-surface-muted);
   color: var(--color-text);
   font: inherit;
+  font-size: 0.9rem;
   text-align: left;
 }
 
@@ -321,6 +266,15 @@
   white-space: nowrap;
 }
 
+/* Rotated to point down, matching the sibling <select>s' native chevron —
+   this is a plain button, so it gets none of its own. */
+.labelTriggerChevron {
+  width: 0.7rem;
+  height: 0.7rem;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transform: rotate(90deg);
+}
 .labelTrigger:focus-visible {
   border-color: var(--color-accent);
   outline: none;
