@@ -2,33 +2,31 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { Flag } from '../../types'
-import { makeFlag, makeLabel } from '../../testing/factories'
-import { PrimaryFilterRow, SecondaryFilterRow } from './TxnFilterRows'
+import { makeFlag } from '../../testing/factories'
+import { CategoryAccountRow, StatusTypeRow } from './TxnFilterRows'
 
 const work = makeFlag({ id: 1, name: 'Work travel' })
 const archived = makeFlag({ id: 2, name: 'Old claim', active: false })
-const travel = makeLabel({ id: 1, name: 'Travel' })
 
 function renderRow(overrides: { flags?: Flag[]; flagId?: number | 'all' | 'none'; selectMode?: boolean } = {}) {
   const onFlag = vi.fn()
   const { flags = [work], flagId = 'all' as const, selectMode = false } = overrides
   render(
-    <SecondaryFilterRow
+    <StatusTypeRow
       flags={flags}
       flagId={flagId}
       onFlag={onFlag}
       status="all"
+      txnType="all"
       selectMode={selectMode}
       onStatus={vi.fn()}
-      labels={[]}
-      labelIds={[]}
-      onLabelIds={vi.fn()}
+      onTxnType={vi.fn()}
     />,
   )
   return { onFlag }
 }
 
-describe('SecondaryFilterRow flag select', () => {
+describe('StatusTypeRow flag select', () => {
   it('offers all flags, unflagged, and each active flag', () => {
     renderRow()
     const select = screen.getByRole('combobox', { name: 'Filter by flag' })
@@ -86,148 +84,32 @@ describe('filter selects keep their meaning without the "All" prefix', () => {
   // The unfiltered option now reads "Status" rather than "All statuses", so once a value
   // is chosen the visible text is just "Posted". The accessible name is what still says
   // which filter this is.
-  it('names status by the filter it applies', () => {
+  it('names status and type by the filter they apply', () => {
     renderRow()
     expect(screen.getByRole('combobox', { name: 'Filter by status' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Filter by type' })).toBeInTheDocument()
   })
 
-  it('reports a chosen status', async () => {
-    const onStatus = vi.fn()
+  it('names category and account the same way', () => {
     render(
-      <SecondaryFilterRow
-        flags={[work]}
-        flagId="all"
-        onFlag={vi.fn()}
-        status="all"
-        selectMode={false}
-        onStatus={onStatus}
-        labels={[]}
-        labelIds={[]}
-        onLabelIds={vi.fn()}
-      />,
-    )
-
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Filter by status' }), 'posted')
-
-    expect(onStatus).toHaveBeenCalledWith('posted')
-  })
-
-  it('reports a chosen type', async () => {
-    const onTxnType = vi.fn()
-    render(
-      <PrimaryFilterRow
+      <CategoryAccountRow
         categories={[]}
         accounts={[]}
         categoryId="all"
         accountId="all"
-        txnType="all"
         selectMode={false}
         onCategory={vi.fn()}
         onAccount={vi.fn()}
-        onTxnType={onTxnType}
-      />,
-    )
-
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Filter by type' }), 'refund')
-
-    expect(onTxnType).toHaveBeenCalledWith('refund')
-  })
-
-  it('names category, type and account the same way', () => {
-    render(
-      <PrimaryFilterRow
-        categories={[]}
-        accounts={[]}
-        categoryId="all"
-        accountId="all"
-        txnType="all"
-        selectMode={false}
-        onCategory={vi.fn()}
-        onAccount={vi.fn()}
-        onTxnType={vi.fn()}
       />,
     )
     expect(screen.getByRole('combobox', { name: 'Filter by category' })).toBeInTheDocument()
-    expect(screen.getByRole('combobox', { name: 'Filter by type' })).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Filter by account' })).toBeInTheDocument()
   })
 
   it('shows the one-word default when nothing is chosen', () => {
     renderRow()
     expect(screen.getByRole('combobox', { name: 'Filter by status' })).toHaveDisplayValue('Status')
+    expect(screen.getByRole('combobox', { name: 'Filter by type' })).toHaveDisplayValue('Type')
     expect(screen.getByRole('combobox', { name: 'Filter by flag' })).toHaveDisplayValue('Flag')
-  })
-})
-
-describe('filter row DOM order', () => {
-  // The two rows were restructured from three separate rows into aligned
-  // three-column grids specifically so Category/Type/Account and
-  // Status/Flag/Label would line up visually. A test that only checks each
-  // control exists somewhere would pass even if the visual order regressed
-  // (e.g. two fields transposed), so this asserts the actual DOM sequence.
-  it('renders PrimaryFilterRow as Category, then Type, then Account', () => {
-    const { container } = render(
-      <PrimaryFilterRow
-        categories={[]}
-        accounts={[]}
-        categoryId="all"
-        accountId="all"
-        txnType="all"
-        selectMode={false}
-        onCategory={vi.fn()}
-        onAccount={vi.fn()}
-        onTxnType={vi.fn()}
-      />,
-    )
-
-    const names = [...container.querySelectorAll('select')].map((el) => el.getAttribute('aria-label'))
-
-    expect(names).toEqual(['Filter by category', 'Filter by type', 'Filter by account'])
-  })
-
-  it('renders SecondaryFilterRow as Status, then Flag, then Label', () => {
-    const { container } = render(
-      <SecondaryFilterRow
-        flags={[work]}
-        flagId="all"
-        onFlag={vi.fn()}
-        status="all"
-        selectMode={false}
-        onStatus={vi.fn()}
-        labels={[travel]}
-        labelIds={[]}
-        onLabelIds={vi.fn()}
-      />,
-    )
-
-    const names = [...container.querySelectorAll('select, button[aria-haspopup="dialog"]')].map((el) =>
-      el.tagName === 'SELECT' ? el.getAttribute('aria-label') : 'Label',
-    )
-
-    expect(names).toEqual(['Filter by status', 'Filter by flag', 'Label'])
-  })
-
-  it('keeps Status before Label when the flag select has nothing to show', () => {
-    const { container } = render(
-      <SecondaryFilterRow
-        flags={[]}
-        flagId="all"
-        onFlag={vi.fn()}
-        status="all"
-        selectMode={false}
-        onStatus={vi.fn()}
-        labels={[travel]}
-        labelIds={[]}
-        onLabelIds={vi.fn()}
-      />,
-    )
-
-    expect(screen.queryByRole('combobox', { name: 'Filter by flag' })).not.toBeInTheDocument()
-
-    const names = [...container.querySelectorAll('select, button[aria-haspopup="dialog"]')].map((el) =>
-      el.tagName === 'SELECT' ? el.getAttribute('aria-label') : 'Label',
-    )
-
-    expect(names).toEqual(['Filter by status', 'Label'])
   })
 })
