@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { anyFieldEnabled, buildBulkPatch, type BulkEditFieldState } from './bulkEditFields'
+import {
+  anyFieldEnabled,
+  buildBulkLabelAdditions,
+  buildBulkPatch,
+  type BulkEditFieldState,
+} from './bulkEditFields'
 
 function fields(overrides: Partial<BulkEditFieldState> = {}): BulkEditFieldState {
   return {
@@ -15,6 +20,8 @@ function fields(overrides: Partial<BulkEditFieldState> = {}): BulkEditFieldState
     budgetMonth: '2026-05',
     flagEnabled: false,
     flagId: 7,
+    labelsEnabled: false,
+    labelIds: [3, 4],
     ...overrides,
   }
 }
@@ -26,6 +33,10 @@ describe('anyFieldEnabled', () => {
 
   it('counts the flag field, so Apply enables for a flag-only edit', () => {
     expect(anyFieldEnabled(fields({ flagEnabled: true }))).toBe(true)
+  })
+
+  it('counts the labels field, so Apply enables for a labels-only edit', () => {
+    expect(anyFieldEnabled(fields({ labelsEnabled: true }))).toBe(true)
   })
 })
 
@@ -68,5 +79,23 @@ describe('buildBulkPatch', () => {
       budgetMonth: '2026-05',
       flagId: 7,
     })
+  })
+
+  it('never includes labels: there is no column to patch for them', () => {
+    expect(buildBulkPatch(fields({ labelsEnabled: true }))).toEqual({})
+  })
+})
+
+describe('buildBulkLabelAdditions', () => {
+  it('is empty for an untouched form', () => {
+    expect(buildBulkLabelAdditions(fields())).toEqual([])
+  })
+
+  it('is empty when the labels field is toggled off, even with labels chosen', () => {
+    expect(buildBulkLabelAdditions(fields({ labelIds: [3, 4] }))).toEqual([])
+  })
+
+  it('returns the chosen labels once the field is on', () => {
+    expect(buildBulkLabelAdditions(fields({ labelsEnabled: true, labelIds: [3, 4] }))).toEqual([3, 4])
   })
 })
