@@ -1,10 +1,12 @@
 import type { NewFlag } from '../data/dataSource'
 import type { ExpenseRepository } from '../ports/expenseRepository'
 import { ValidationError } from './validationError'
-
-/** Longer than this and the description stops being a hint and starts being a note. */
-const MAX_DESCRIPTION_LENGTH = 140
-const HEX_COLOR = /^#[0-9a-f]{6}$/i
+import {
+  validateEntityActive,
+  validateEntityColor,
+  validateEntityDescription,
+  validateEntitySortOrder,
+} from './entityValidation'
 
 export function validateFlagName(name: string | undefined): string {
   const trimmed = name?.trim()
@@ -13,11 +15,15 @@ export function validateFlagName(name: string | undefined): string {
 }
 
 export function validateFlagColor(color: string | undefined): string {
-  const trimmed = color?.trim().toLowerCase()
-  if (!trimmed || !HEX_COLOR.test(trimmed)) {
-    throw new ValidationError('Flag colour must be a hex value like #6366f1')
-  }
-  return trimmed
+  return validateEntityColor('Flag', color)
+}
+
+export function validateFlagSortOrder(sortOrder: unknown): number {
+  return validateEntitySortOrder('Flag', sortOrder)
+}
+
+export function validateFlagActive(active: unknown): boolean {
+  return validateEntityActive('Flag', active)
 }
 
 /**
@@ -25,27 +31,8 @@ export function validateFlagColor(color: string | undefined): string {
  * string and "no description" mean the same thing to a reader, and collapsing
  * them here keeps the column NULL instead of storing ''.
  */
-export function validateFlagSortOrder(sortOrder: unknown): number {
-  // SQLite has type affinity, not type enforcement: a non-numeric value is
-  // stored as TEXT in an INTEGER column and silently breaks every sort that
-  // reads it back. An explicit null fails the NOT NULL constraint and leaks the
-  // raw D1 message through mapAppError. Reject both here instead.
-  if (!Number.isInteger(sortOrder)) throw new ValidationError('Flag sort order must be a whole number')
-  return sortOrder as number
-}
-
-export function validateFlagActive(active: unknown): boolean {
-  if (typeof active !== 'boolean') throw new ValidationError('Flag active must be true or false')
-  return active
-}
-
 export function validateFlagDescription(description: string | undefined): string | undefined {
-  const trimmed = description?.trim()
-  if (!trimmed) return undefined
-  if (trimmed.length > MAX_DESCRIPTION_LENGTH) {
-    throw new ValidationError(`Flag description must be ${MAX_DESCRIPTION_LENGTH} characters or fewer`)
-  }
-  return trimmed
+  return validateEntityDescription('Flag', description)
 }
 
 /** `undefined` leaves it alone, `null` clears it — same contract as the patch itself. */

@@ -1,10 +1,12 @@
 import type { NewLabel } from '../data/dataSource'
 import type { ExpenseRepository } from '../ports/expenseRepository'
 import { ValidationError } from './validationError'
-
-/** Longer than this and the description stops being a hint and starts being a note. */
-const MAX_DESCRIPTION_LENGTH = 140
-const HEX_COLOR = /^#[0-9a-f]{6}$/i
+import {
+  validateEntityActive,
+  validateEntityColor,
+  validateEntityDescription,
+  validateEntitySortOrder,
+} from './entityValidation'
 
 export function validateLabelName(name: string | undefined): string {
   const trimmed = name?.trim()
@@ -13,23 +15,15 @@ export function validateLabelName(name: string | undefined): string {
 }
 
 export function validateLabelColor(color: string | undefined): string {
-  const trimmed = color?.trim().toLowerCase()
-  if (!trimmed || !HEX_COLOR.test(trimmed)) {
-    throw new ValidationError('Label colour must be a hex value like #6366f1')
-  }
-  return trimmed
+  return validateEntityColor('Label', color)
 }
 
 export function validateLabelSortOrder(sortOrder: unknown): number {
-  // Same reasoning as validateFlagSortOrder: a non-numeric value is stored as
-  // TEXT in an INTEGER column and silently breaks every sort that reads it back.
-  if (!Number.isInteger(sortOrder)) throw new ValidationError('Label sort order must be a whole number')
-  return sortOrder as number
+  return validateEntitySortOrder('Label', sortOrder)
 }
 
 export function validateLabelActive(active: unknown): boolean {
-  if (typeof active !== 'boolean') throw new ValidationError('Label active must be true or false')
-  return active
+  return validateEntityActive('Label', active)
 }
 
 /**
@@ -38,12 +32,7 @@ export function validateLabelActive(active: unknown): boolean {
  * them here keeps the column NULL instead of storing ''.
  */
 export function validateLabelDescription(description: string | undefined): string | undefined {
-  const trimmed = description?.trim()
-  if (!trimmed) return undefined
-  if (trimmed.length > MAX_DESCRIPTION_LENGTH) {
-    throw new ValidationError(`Label description must be ${MAX_DESCRIPTION_LENGTH} characters or fewer`)
-  }
-  return trimmed
+  return validateEntityDescription('Label', description)
 }
 
 function normalizeNewLabel(input: NewLabel): NewLabel {
