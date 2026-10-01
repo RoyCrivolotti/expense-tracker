@@ -232,29 +232,38 @@
   flex-wrap: wrap;
   gap: 0.6rem;
 }
-/*
- * This row can hold three selects: flag, status and type. The basis is the narrowest a
- * select can be while still showing its one-word default ("Status" needs 46px of text),
- * so three fit side by side on any phone 330px or wider and only narrower screens wrap
- * one to its own line. A chosen value longer than the default ("Investment") is clipped
- * by the native control, as it always was; the active border says a filter is set.
- */
 .selectRow select {
   flex: 1 1 5.75rem;
   min-width: 0;
 }
-.selectRow select.activeSelect {
+/*
+ * PrimaryFilterRow (category, type, account) and SecondaryFilterRow (status,
+ * flag, label) each hold up to three fields, and the two rows need to line up
+ * with each other — a flex row that stretches to fill whatever shows up (as
+ * .selectRow does) would size status/flag/label differently from category/
+ * type/account whenever one of flag or label is absent. A fixed three-column
+ * grid gives every field the same width regardless: a row with fewer than
+ * three leaves the remainder blank rather than stretching into it.
+ */
+.filterRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.filterRow select,
+.filterRow .labelTrigger {
+  min-width: 0;
+}
+.filterRow select.activeSelect {
   border-color: var(--color-accent);
   box-shadow: inset 0 0 0 1px var(--color-accent);
 }
 /* A <button> trigger, not a <select>, so it needs its own rule rather than
-   reusing `.selectRow select` above — see LabelFilterRow. */
+   reusing `.filterRow select` above — see SecondaryFilterRow. */
 .labelTrigger {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  flex: 1 1 5.75rem;
-  min-width: 0;
   padding: 0.6rem 0.75rem;
   border: 1px solid transparent;
   border-radius: 0.7rem;

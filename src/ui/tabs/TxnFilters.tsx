@@ -4,13 +4,12 @@ import styles from './tabs.module.css'
 import { ActiveFilterChips } from './ActiveFilterChips'
 import { buildActiveFilterChips } from './txnFilterChips'
 import {
-  CategoryAccountRow,
   DateScopeRow,
   FilterToggleRow,
-  LabelFilterRow,
   LockShield,
+  PrimaryFilterRow,
   SearchRow,
-  StatusTypeRow,
+  SecondaryFilterRow,
 } from './TxnFilterRows'
 
 import type { TxnDateScope } from './txnDateScope'
@@ -87,30 +86,27 @@ export function TxnFilters(props: TxnFiltersProps) {
       ) : null}
       {expanded ? (
         <div className={styles.filterSecondary}>
-          <CategoryAccountRow
+          <PrimaryFilterRow
             categories={props.categories}
             accounts={props.accounts}
             categoryId={props.categoryId}
             accountId={props.accountId}
+            txnType={props.txnType}
             selectMode={props.selectMode}
             onCategory={props.onCategory}
             onAccount={props.onAccount}
+            onTxnType={props.onTxnType}
           />
-          <StatusTypeRow
+          <SecondaryFilterRow
             flags={props.flags}
             flagId={props.flagId}
             onFlag={props.onFlag}
             status={props.status}
-            txnType={props.txnType}
-            selectMode={props.selectMode}
             onStatus={props.onStatus}
-            onTxnType={props.onTxnType}
-          />
-          <LabelFilterRow
             labels={props.labels}
             labelIds={props.labelIds}
-            selectMode={props.selectMode}
             onLabelIds={props.onLabelIds}
+            selectMode={props.selectMode}
           />
           <DateScopeRow
             dateScope={props.dateScope}
