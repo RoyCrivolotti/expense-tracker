@@ -149,12 +149,24 @@ describe('TxnFilters', () => {
     expect(screen.queryByText('Clear filters')).not.toBeInTheDocument()
   })
 
-  it('expands the secondary filter rows on toggle click', async () => {
+  it('opens the filter sheet on toggle click', async () => {
     const user = userEvent.setup()
     render(<TxnFilters {...baseProps()} />)
     expect(screen.queryByText('Date scope')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /Filters/ }))
+    expect(screen.getByRole('dialog', { name: 'Filters' })).toBeInTheDocument()
     expect(screen.getByText('Date scope')).toBeInTheDocument()
+  })
+
+  it('closes the filter sheet from its own Close button', async () => {
+    const user = userEvent.setup()
+    render(<TxnFilters {...baseProps()} />)
+    await user.click(screen.getByRole('button', { name: /Filters/ }))
+    const sheet = screen.getByRole('dialog', { name: 'Filters' })
+
+    await user.click(within(sheet).getByRole('button', { name: 'Close' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Filters' })).not.toBeInTheDocument()
   })
 
   it('offers no label filter when there are no labels to filter by', async () => {
