@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { GOALS_CONTENT_ANCHOR_ID, scrollToGoalsContent } from './scrollToGoalsContent'
+import {
+  GOALS_CONTENT_ANCHOR_ID,
+  restoreScrollPosition,
+  scrollToGoalsContent,
+} from './scrollToGoalsContent'
 
 function mountAnchor() {
   const anchor = document.createElement('div')
@@ -19,6 +23,7 @@ function runFramesNow() {
 
 afterEach(() => {
   document.body.innerHTML = ''
+  vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
 
@@ -78,5 +83,19 @@ describe('scrollToGoalsContent', () => {
     scrollToGoalsContent('auto')
 
     expect(scrollIntoView).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('restoreScrollPosition', () => {
+  it('scrolls to the saved position on the next frame, not before', () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    const frames: FrameRequestCallback[] = []
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => frames.push(cb))
+
+    restoreScrollPosition(1400)
+    expect(scrollTo).not.toHaveBeenCalled()
+
+    frames.forEach((cb) => cb(0))
+    expect(scrollTo).toHaveBeenCalledWith({ top: 1400, behavior: 'auto' })
   })
 })

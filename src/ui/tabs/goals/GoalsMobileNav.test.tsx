@@ -1,8 +1,10 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { adjustSectionId } from './adjustSections'
 import { GoalsMobileNav } from './GoalsMobileNav'
+import type { GoalsMobileView } from './goalsView'
 import { GOALS_CONTENT_ANCHOR_ID } from './scrollToGoalsContent'
 
 /** jsdom lays nothing out: the row sticks 60px down, and is either there (stuck) or lower. */
@@ -37,9 +39,17 @@ function renderNav(value: 'chart' | 'adjust' | 'progress' | 'setup', onChange = 
   return { onChange, scrollIntoView }
 }
 
+/** The nav holding the selection, as the tab does, so a tap changes what it shows. */
+function ControlledNav({ start }: { start: GoalsMobileView }) {
+  const [value, setValue] = useState(start)
+  return <GoalsMobileNav value={value} onChange={setValue} />
+}
+
 describe('GoalsMobileNav', () => {
   afterEach(() => {
     vi.restoreAllMocks()
+    // A spy made again on the same method keeps the calls the last test made to it.
+    vi.clearAllMocks()
     vi.unstubAllGlobals()
     document.getElementById(GOALS_CONTENT_ANCHOR_ID)?.remove()
     document.getElementById(adjustSectionId('portfolio'))?.remove()
@@ -122,5 +132,75 @@ describe('GoalsMobileNav', () => {
 
     expect(scrollIntoView).not.toHaveBeenCalled()
     expect(onChange).toHaveBeenCalledWith('progress')
+  })
+
+  describe('with a view to come back to', () => {
+    function setScrollY(y: number) {
+      vi.spyOn(window, 'scrollY', 'get').mockReturnValue(y)
+    }
+
+    function renderControlled(start: GoalsMobileView) {
+      const target = document.createElement('div')
+      target.id = GOALS_CONTENT_ANCHOR_ID
+      const scrollIntoView = vi.fn()
+      target.scrollIntoView = scrollIntoView
+      document.body.append(target)
+      vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+        cb(0)
+        return 0
+      })
+      const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+      render(<ControlledNav start={start} />)
+      layOut(true)
+      return { scrollIntoView, scrollTo }
+    }
+
+    it('puts a view back where it was left, and sends a view not seen before to its content', async () => {
+      const user = userEvent.setup()
+      const { scrollIntoView, scrollTo } = renderControlled('chart')
+
+      setScrollY(1400)
+      await user.click(screen.getByRole('radio', { name: 'Progress' }))
+      expect(scrollIntoView).toHaveBeenCalledTimes(1)
+      expect(scrollTo).not.toHaveBeenCalled()
+
+      setScrollY(111)
+      await user.click(screen.getByRole('radio', { name: 'Chart' }))
+      expect(scrollTo).toHaveBeenLastCalledWith({ top: 1400, behavior: 'auto' })
+
+      setScrollY(1400)
+      await user.click(screen.getByRole('radio', { name: 'Progress' }))
+      expect(scrollTo).toHaveBeenLastCalledWith({ top: 111, behavior: 'auto' })
+    })
+
+    it('keeps each view\'s own place, so Adjust comes back where Adjust was left', async () => {
+      const user = userEvent.setup()
+      const controls = document.createElement('details')
+      controls.id = adjustSectionId('portfolio')
+      document.body.append(controls)
+      vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+      const { scrollTo } = renderControlled('chart')
+
+      setScrollY(300)
+      await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+      setScrollY(2000)
+      await user.click(screen.getByRole('radio', { name: 'Chart' }))
+      expect(scrollTo).toHaveBeenLastCalledWith({ top: 300, behavior: 'auto' })
+
+      setScrollY(300)
+      await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+      expect(scrollTo).toHaveBeenLastCalledWith({ top: 2000, behavior: 'auto' })
+    })
+
+    it('still goes to the top of the content when the segment already selected is tapped', async () => {
+      const user = userEvent.setup()
+      const { scrollIntoView, scrollTo } = renderControlled('progress')
+
+      setScrollY(900)
+      await user.click(screen.getByRole('radio', { name: 'Progress' }))
+
+      expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' })
+      expect(scrollTo).not.toHaveBeenCalled()
+    })
   })
 })
