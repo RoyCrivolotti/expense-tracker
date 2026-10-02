@@ -78,6 +78,13 @@
   cursor: pointer;
 }
 
+/* The day header is stuck inside the band the page's scroll padding keeps clear, like the bar
+   above it (tabs.module.css). */
+.dayHeaderRow *,
+.dayHeaderSelect * {
+  scroll-margin-top: calc(-1 * var(--scroll-pad-top, 0px));
+}
+
 .dayHeaderRow {
   position: sticky;
   top: calc(

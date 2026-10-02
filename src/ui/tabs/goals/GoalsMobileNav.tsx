@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { SegmentedControl } from '../../components/SegmentedControl'
+import { isStuck } from '../../hooks/stickyScroll'
 import { GOALS_NAV_ID } from './goalsAnchors'
 import { landOnAdjustControls } from './scrollToAdjustSection'
 import { scrollToGoalsContent } from './scrollToGoalsContent'
@@ -37,13 +38,9 @@ export function GoalsMobileNav({ value, onChange, memory }: GoalsMobileNavProps)
   usePinnedScrollPadding(value)
 
   const select = (next: GoalsMobileView) => {
-    const rowEl = row.current
-    // Stuck: the row has been carried down to its sticky top (as the browser resolved it,
-    // safe-area inset included). A row still lower than that has nothing above it to scroll
-    // back to, so a tap near the top must not nudge. The 0.5 is sub-pixel slack.
-    const stuck =
-      rowEl !== null &&
-      rowEl.getBoundingClientRect().top <= (Number.parseFloat(getComputedStyle(rowEl).top) || 0) + 0.5
+    // Stuck: the row has been carried down to its sticky top, so a tap near the top of the page
+    // has nothing above the row to scroll back to and must not nudge.
+    const stuck = isStuck(row.current)
     onChange(next)
     if (next === value) {
       if (stuck) scrollToGoalsContent('smooth')

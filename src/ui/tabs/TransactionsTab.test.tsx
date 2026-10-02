@@ -412,3 +412,14 @@ describe('TransactionsTab — clearing a flag', () => {
     expect(screen.queryByText('Work travel')).not.toBeInTheDocument()
   })
 })
+
+describe('TransactionsTab — keyboard focus', () => {
+  it('keeps focus clear of its sticky bars while it is on screen, and puts the page back after', () => {
+    const { unmount } = render(<TransactionsTab model={modelFor([makeTransaction({ id: 1 })])} month="2025-01" />)
+
+    expect(document.documentElement.style.scrollPaddingTop).not.toBe('')
+
+    unmount()
+    expect(document.documentElement.style.scrollPaddingTop).toBe('')
+  })
+})

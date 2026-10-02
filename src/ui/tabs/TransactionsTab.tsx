@@ -14,6 +14,7 @@ import { InstallmentsCard } from './InstallmentsCard'
 import { FlaggedCard } from './FlaggedCard'
 import { TransactionsFlagOverlays } from './TransactionsFlagOverlays'
 import { TransactionsSelectFooter } from './TransactionsSelectFooter'
+import { useTransactionsScrollPadding } from './useTransactionsScrollPadding'
 import { useTransactionsTabState } from './useTransactionsTabState'
 import { scrollToResults } from './scrollToResults'
 import { useDebouncedAnnouncement } from '../hooks/useDebouncedAnnouncement'
@@ -61,6 +62,7 @@ export function TransactionsTab({
     onSelectModeChange,
     monthNavigation,
   })
+  useTransactionsScrollPadding(state.listRows.length > 0, state.selectMode)
   const [editingStatement, setEditingStatement] = useState<StatementPaymentRow | null>(null)
   const [statementPending, setStatementPending] = useState(false)
   const [managingFlags, setManagingFlags] = useState(false)

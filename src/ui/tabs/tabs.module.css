@@ -6,11 +6,6 @@
   max-width: 100%;
 }
 
-.settingsTabBar {
-  width: 100%;
-  padding-bottom: 0.25rem;
-}
-
 .analyticsSection {
   display: flex;
   flex-direction: column;
@@ -503,8 +498,20 @@
   font-size: 0.82rem;
   color: var(--color-text-muted);
   /* The Flagged card's drill-in scrolls here. AppShell's header is sticky, so without
-     this the bar lands underneath it. A few pixels of air below the header. */
-  scroll-margin-top: calc(var(--exp-header) + var(--exp-header-air) + env(safe-area-inset-top, 0px));
+     this the bar lands underneath it. A few pixels of air below the header. The browser adds
+     the page's scroll padding to this, which is as much as the header and the air alone on
+     most pages and more where a page pins the bar and the day headers, so it is taken back out. */
+  scroll-margin-top: calc(
+    var(--exp-header) + var(--exp-header-air) + env(safe-area-inset-top, 0px) -
+      var(--scroll-pad-top, 0px)
+  );
+}
+
+/* The bar is stuck inside the band the page's scroll padding keeps clear (useTransactionsScrollPadding).
+   Focus inside it takes that padding back out, or a control that is stuck would count as hidden
+   and the page would scroll to uncover it. */
+.resultBar * {
+  scroll-margin-top: calc(-1 * var(--scroll-pad-top, 0px));
 }
 
 .resultBar .filterToggle {

@@ -1,9 +1,10 @@
 import { afterRender, scrollBehavior } from '../../hooks/scrollTiming'
+import { PINNED_AIR_PX, stickyBottom } from '../../hooks/stickyScroll'
 import { adjustSectionId, type AdjustSection } from './adjustSections'
 import { ADJUST_STACK_ID, GOALS_NAV_ID } from './goalsAnchors'
 
 /** Air between what is pinned and the top edge of whatever is scrolled to under it. */
-export const GAP_PX = 8
+export const GAP_PX = PINNED_AIR_PX
 
 /** Long enough for iOS's keyboard to arrive, and its own scroll to a focused field to follow. */
 const KEYBOARD_SETTLE_MS = 400
@@ -24,15 +25,10 @@ function pinnedElement(): HTMLElement | null {
   return document.getElementById(GOALS_NAV_ID)
 }
 
-/**
- * Where the bottom edge of what is pinned sits once it is stuck. Its sticky `top` is read as
- * the browser resolved it (safe-area inset included) rather than rebuilt here, and its height
- * is measured, so neither is written down a second time. Zero when nothing is pinned.
- */
+/** Where the bottom edge of what is pinned sits once it is stuck; zero when nothing is pinned. */
 export function pinnedBottom(): number {
   const pinned = pinnedElement()
-  if (!pinned) return 0
-  return (Number.parseFloat(getComputedStyle(pinned).top) || 0) + pinned.offsetHeight
+  return pinned ? stickyBottom(pinned) : 0
 }
 
 /** Scroll an Adjust section's heading to just under what is pinned, opening it first. */

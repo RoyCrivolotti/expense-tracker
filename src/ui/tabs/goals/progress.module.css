@@ -10,7 +10,9 @@
    phone just under the stuck view row too, the place goals.module.css gives .contentAnchor,
    which takes the page's scroll padding back out for the same reason. */
 .landingTarget {
-  scroll-margin-top: calc(var(--exp-header) + env(safe-area-inset-top, 0px));
+  scroll-margin-top: calc(
+    var(--exp-header) + env(safe-area-inset-top, 0px) - var(--scroll-pad-top, 0px)
+  );
 }
 
 @media (max-width: 899px) {

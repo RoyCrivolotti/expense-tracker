@@ -1,4 +1,4 @@
-import { afterRender, scrollBehavior } from '../../hooks/scrollTiming'
+import { restoreScroll, scrollToAnchor } from '../../hooks/stickyScroll'
 import { showAdjustSections, type AdjustSection } from './adjustSections'
 import { GOALS_CONTENT_ANCHOR_ID } from './goalsAnchors'
 
@@ -11,15 +11,7 @@ import { GOALS_CONTENT_ANCHOR_ID } from './goalsAnchors'
  * jumps, since its content has just been swapped in.
  */
 export function scrollToGoalsContent(behavior: 'auto' | 'smooth'): void {
-  afterRender(() => {
-    const anchor = document.getElementById(GOALS_CONTENT_ANCHOR_ID)
-    if (!anchor) return
-    // Not every environment has scrollIntoView (jsdom does not).
-    anchor.scrollIntoView?.({
-      behavior: scrollBehavior(behavior),
-      block: 'start',
-    })
-  })
+  scrollToAnchor(GOALS_CONTENT_ANCHOR_ID, behavior)
 }
 
 /**
@@ -28,8 +20,5 @@ export function scrollToGoalsContent(behavior: 'auto' | 'smooth'): void {
  * something on the page it was taken from, so `open` brings back the ones that were showing.
  */
 export function restoreScrollPosition(top: number, open: readonly AdjustSection[] | null = null): void {
-  afterRender(() => {
-    if (open) showAdjustSections(open)
-    window.scrollTo({ top, behavior: 'auto' })
-  })
+  restoreScroll(top, open ? () => showAdjustSections(open) : undefined)
 }

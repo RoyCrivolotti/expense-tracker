@@ -2,11 +2,11 @@
   --goals-gap: 1.25rem;
   /* The phone's view switcher, stuck under the app header; the pinned mini chart stops
      below it, so both read this. */
-  --goals-nav-h: 2.75rem;
+  --goals-nav-h: var(--exp-subnav-h);
   /* The row and the pinned chart tuck this far under what sits above them. iOS lets sticky
      elements drift by a device pixel while the page coasts, and edges that only touch would
      show that as a hairline of the cards scrolling past underneath. */
-  --goals-tuck: 1px;
+  --goals-tuck: var(--exp-subnav-tuck);
   display: flex;
   flex-direction: column;
   gap: var(--goals-gap);
@@ -15,11 +15,14 @@
 
 /* Where a jump to the view's own content leaves it. The anchor is as tall as nothing, and takes
    back the gap it adds to the stack. From 900px up there is no view row, so what is above it is
-   the app header alone. */
+   the app header alone. The browser adds the page's scroll padding to the margin, so that is
+   taken back out wherever the anchor is meant to land by the margin. */
 .contentAnchor {
   height: 0;
   margin-bottom: calc(-1 * var(--goals-gap));
-  scroll-margin-top: calc(var(--exp-header) + env(safe-area-inset-top, 0px));
+  scroll-margin-top: calc(
+    var(--exp-header) + env(safe-area-inset-top, 0px) - var(--scroll-pad-top, 0px)
+  );
 }
 
 /* A phone puts the content just under the stuck view row. The browser adds the page's scroll

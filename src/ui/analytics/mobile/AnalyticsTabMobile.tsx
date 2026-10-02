@@ -1,13 +1,12 @@
 import { useState } from 'react'
 import type { ExpenseModel } from '../../useExpenseData'
 import type { ExpenseActions } from '../../actions'
-import { SegmentedControl } from '../../components/SegmentedControl'
+import { SectionTabs } from '../../components/SectionTabs'
 import { InsightsCharts } from '../../charts/InsightsCharts'
 import { MonthlySummaryMobile } from './MonthlySummaryMobile'
 import { MonthlyTotalsMobile } from './MonthlyTotalsMobile'
 import { CashReconMobile } from './CashReconMobile'
 import { YearlyOverviewMobile } from './YearlyOverviewMobile'
-import styles from './mobile.module.css'
 
 type Section = 'summary' | 'totals' | 'cash' | 'year'
 
@@ -32,16 +31,13 @@ export function AnalyticsTabMobile({
   const [section, setSection] = useState<Section>('summary')
 
   return (
-    <div className={styles.shell}>
-      <div className={styles.tabBar}>
-        <SegmentedControl
-          options={SECTIONS}
-          value={section}
-          onChange={setSection}
-          ariaLabel="Analytics section"
-          layout="bar"
-        />
-      </div>
+    <SectionTabs
+      id="analytics-section"
+      ariaLabel="Analytics section"
+      options={SECTIONS}
+      value={section}
+      onChange={setSection}
+    >
       {section === 'summary' && (
         <>
           <MonthlySummaryMobile model={model} month={month} onMonthChange={onMonthChange} />
@@ -56,6 +52,6 @@ export function AnalyticsTabMobile({
         />
       )}
       {section === 'year' && <YearlyOverviewMobile model={model} />}
-    </div>
+    </SectionTabs>
   )
 }

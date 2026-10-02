@@ -67,7 +67,7 @@ function stopDev(dev) {
  */
 async function openAccountSettings(page) {
   await page.getByRole('button', { name: 'Settings' }).click()
-  await page.getByRole('radio', { name: 'Account', exact: true }).click()
+  await page.getByRole('tab', { name: 'Account', exact: true }).click()
   await page.waitForSelector('text=Manage access', { timeout: 15000 })
 }
 
@@ -389,7 +389,7 @@ async function capture() {
   await m.waitForSelector('text=Budget vs actual', { timeout: 15000 })
   await m.waitForTimeout(300)
   await m.screenshot({ path: join(OUT, 'analytics-mobile.png') })
-  await m.getByRole('radio', { name: 'Cash' }).click()
+  await m.getByRole('tab', { name: 'Cash' }).click()
   await m.waitForSelector('text=Carryover', { timeout: 15000 })
   await m.waitForTimeout(350)
   await m.screenshot({ path: join(OUT, 'analytics-cash-mobile.png') })

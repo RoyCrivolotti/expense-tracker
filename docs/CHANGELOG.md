@@ -2,6 +2,11 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (section tabs)
+
+- **The Analytics and Settings sections stay under the header.** The Summary, Totals, Cash and Year row on a phone, and the Preferences, Setup, Account and Data row in Settings, are stuck under the header as you scroll, as Goals' row is, so changing section from deep in a long page no longer means scrolling back to the top. A section you have not been in opens at its content, just under the row, tapping the one you are on goes back up, and a section you left comes back where you left it. The row is 44px high on a phone and is announced to a screen reader as tabs over one panel. "Preferences" now fits whole on the narrowest phones. On a desktop the Settings row stays put too, at its old height.
+- **Keyboard focus stays clear of what is pinned on every page.** Tab and Shift+Tab scrolled a control only to the edge of the screen everywhere but Goals, which could leave it behind the header or the bottom bar. In Transactions it could also be behind the filter bar or the day heading stuck under it. The page now keeps focus clear of them.
+
 ## October 2026 (Goals on a phone)
 
 - **One row to move around Goals on a phone.** Chart, Adjust, Progress and Assumptions are a single row under the header that stays put as you scroll, so changing view from deep in Adjust no longer means scrolling back to the top. A view you have not been in opens at its content, just under the row, and tapping the one you are on is a quick way back up. Wide screens keep Plan, Progress and Assumptions. The row is announced to a screen reader as tabs over one panel.
