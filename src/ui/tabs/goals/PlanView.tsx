@@ -112,8 +112,8 @@ interface PlanViewProps {
 }
 
 /**
- * Plan: the scenarios and controls beside the projection and the charts under it. Charts read
- * the editor's deferred draft, so dragging a control never waits on them.
+ * Plan: the scenarios and controls beside the projection, with the snapshot and the charts
+ * under it. Charts read the editor's deferred draft, so dragging a control never waits on them.
  */
 export function PlanView({
   half,
@@ -134,14 +134,6 @@ export function PlanView({
     <div className={styles.layout} data-mobile-view={half}>
       <PlanSidebar half={half} scenarios={scenarios} editor={editor} actions={actions} latest={latest} />
       <div className={styles.areaOutputs}>
-        <div className={styles.areaNow}>
-          <NetWorthNowCard
-            draft={deferredDraft}
-            latest={latest}
-            milestones={milestones}
-            reached={reached}
-          />
-        </div>
         <div className={`${styles.heroBlock} ${styles.areaHero}`}>
           <PlanHero
             scenarios={scenarios}
@@ -151,6 +143,14 @@ export function PlanView({
             accounts={accounts}
             fromToday={fromToday}
             display={display}
+          />
+        </div>
+        <div className={styles.areaNow}>
+          <NetWorthNowCard
+            draft={deferredDraft}
+            latest={latest}
+            milestones={milestones}
+            reached={reached}
           />
         </div>
         <div className={styles.areaSecondary}>
