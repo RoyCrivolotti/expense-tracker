@@ -60,4 +60,8 @@ if (!('ResizeObserver' in globalThis)) {
 afterEach(() => {
   cleanup()
   resizeObservers.length = 0
+  // The scrollTo spy above is one function for the whole file, and spying on it again hands
+  // back the same one with the last test's calls still on it: a test that expects no scroll
+  // would pass or fail depending on which test ran before it.
+  if (typeof window !== 'undefined' && vi.isMockFunction(window.scrollTo)) window.scrollTo.mockReset()
 })
