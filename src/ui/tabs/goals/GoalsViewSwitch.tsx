@@ -4,6 +4,7 @@ import {
   GOALS_VIEW_TABS,
   mobileSelection,
   mobileViewOf,
+  optionsFrom,
   type GoalsMobileView,
   type MobilePlanView,
   type TabView,
@@ -12,11 +13,7 @@ import type { GoalsScrollMemory } from './useGoalsScrollMemory'
 import { useGoalsNarrow } from './useGoalsNarrow'
 import styles from './goals.module.css'
 
-const VIEW_OPTIONS: { value: TabView; label: string }[] = [
-  { value: 'plan', label: 'Plan' },
-  { value: 'progress', label: 'Progress' },
-  { value: 'assumptions', label: 'Assumptions' },
-]
+const VIEW_OPTIONS = optionsFrom<TabView>({ plan: 'Plan', progress: 'Progress', assumptions: 'Assumptions' })
 
 interface GoalsViewSwitchProps {
   view: TabView

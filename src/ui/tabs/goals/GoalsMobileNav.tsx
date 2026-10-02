@@ -3,18 +3,17 @@ import { SegmentedControl } from '../../components/SegmentedControl'
 import { GOALS_NAV_ID } from './goalsAnchors'
 import { landOnAdjustControls } from './scrollToAdjustSection'
 import { scrollToGoalsContent } from './scrollToGoalsContent'
-import type { GoalsMobileView } from './goalsView'
+import { GOALS_VIEW_TABS, optionsFrom, type GoalsMobileView } from './goalsView'
 import type { GoalsScrollMemory } from './useGoalsScrollMemory'
 import { usePinnedScrollPadding } from './usePinnedScrollPadding'
 import styles from './goals.module.css'
-import { GOALS_VIEW_TABS } from './goalsView'
 
-const OPTIONS: { value: GoalsMobileView; label: string }[] = [
-  { value: 'chart', label: 'Chart' },
-  { value: 'adjust', label: 'Adjust' },
-  { value: 'progress', label: 'Progress' },
-  { value: 'assumptions', label: 'Assumptions' },
-]
+const OPTIONS = optionsFrom<GoalsMobileView>({
+  chart: 'Chart',
+  adjust: 'Adjust',
+  progress: 'Progress',
+  assumptions: 'Assumptions',
+})
 
 interface GoalsMobileNavProps {
   value: GoalsMobileView

@@ -4,6 +4,15 @@ export type MobilePlanView = 'chart' | 'adjust'
 /** The phone's four views: Plan is split in two there, so it has no segment of its own. */
 export type GoalsMobileView = MobilePlanView | Exclude<TabView, 'plan'>
 
+/**
+ * The options of a control over a union, from a label for each of its values: one left out is
+ * a type error, which a list of options would not be. They come in the order the labels are
+ * written.
+ */
+export function optionsFrom<T extends string>(labels: Record<T, string>): { value: T; label: string }[] {
+  return (Object.keys(labels) as T[]).map((value) => ({ value, label: labels[value] }))
+}
+
 /** What a link that opens Assumptions asks it to bring into view; any other way in starts at the top. */
 export type AssumptionsFocus = 'inflation' | 'accounts'
 
