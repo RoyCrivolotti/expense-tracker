@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { adjustSectionId } from './adjustSections'
 import { GoalsMobileNav } from './GoalsMobileNav'
 import type { GoalsMobileView } from './goalsView'
-import { GOALS_CONTENT_ANCHOR_ID } from './scrollToGoalsContent'
+import { GOALS_CONTENT_ANCHOR_ID, GOALS_NAV_ID } from './scrollToGoalsContent'
 import { useGoalsScrollMemory, type GoalsScrollMemory } from './useGoalsScrollMemory'
 
 /** jsdom lays nothing out: the row sticks 60px down, and is either there (stuck) or lower. */
@@ -73,6 +73,17 @@ describe('GoalsMobileNav', () => {
     const labels = screen.getAllByRole('tab').map((r) => r.textContent)
     expect(labels).toEqual(['Chart', 'Adjust', 'Progress', 'Assumptions'])
     expect(screen.getByRole('tab', { name: 'Adjust' })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('is the row that the scroll helpers measure as pinned, and keeps focus clear of it', () => {
+    const memory: GoalsScrollMemory = { leave: vi.fn(), recall: vi.fn(() => false) }
+    const { unmount } = render(<GoalsMobileNav value="chart" onChange={vi.fn()} memory={memory} />)
+
+    expect(document.getElementById(GOALS_NAV_ID)).toContainElement(screen.getByRole('tablist'))
+    expect(document.documentElement.style.scrollPaddingTop).not.toBe('')
+
+    unmount()
+    expect(document.documentElement.style.scrollPaddingTop).toBe('')
   })
 
   it('reports the view that was tapped', async () => {

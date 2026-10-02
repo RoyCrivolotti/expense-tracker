@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { prefersReducedMotion } from '../../hooks/prefersReducedMotion'
 import {
   ADJUST_SECTIONS,
   adjustSectionId,
   pickActiveSection,
   type AdjustSection,
 } from './adjustSections'
-import { keepClearOfStack, scrollToAdjustSection, stackBottom } from './scrollToAdjustSection'
+import { keepClearOfStack, pinnedBottom, scrollToAdjustSection } from './scrollToAdjustSection'
 import { UnsavedGroup, type UnsavedActions } from './UnsavedGroup'
 import { useGoalsNarrow } from './useGoalsNarrow'
 import styles from './goals.module.css'
@@ -41,7 +42,7 @@ export function AdjustSectionNav({ unsaved }: { unsaved?: UnsavedActions | undef
       const tops = sections.map((el) => el?.getBoundingClientRect().top ?? Infinity)
       const atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2
       const endsIn = atBottom ? sections.map((el) => el instanceof HTMLDetailsElement && el.open).lastIndexOf(true) : -1
-      const next = ADJUST_SECTIONS[pickActiveSection(tops, stackBottom() + READING_MARGIN_PX, endsIn)]
+      const next = ADJUST_SECTIONS[pickActiveSection(tops, pinnedBottom() + READING_MARGIN_PX, endsIn)]
       if (next) setActive(next.key)
     }
     const release = () => {
@@ -82,7 +83,10 @@ export function AdjustSectionNav({ unsaved }: { unsaved?: UnsavedActions | undef
     const chip = strip.current?.querySelector<HTMLElement>('[aria-current="true"]')
     const row = strip.current
     if (!chip || !row || typeof row.scrollTo !== 'function') return
-    row.scrollTo({ left: chip.offsetLeft - (row.clientWidth - chip.offsetWidth) / 2, behavior: 'smooth' })
+    row.scrollTo({
+      left: chip.offsetLeft - (row.clientWidth - chip.offsetWidth) / 2,
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+    })
   }, [active, hasActions])
 
   if (!narrow) return null

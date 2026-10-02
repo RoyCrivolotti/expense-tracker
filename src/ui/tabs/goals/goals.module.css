@@ -21,10 +21,12 @@
 }
 
 /* Where a tap on the row takes the page: the first thing of the view that is open, past the
-   intro Plan has, with its top edge just under the stuck row. */
+   intro Plan has, with its top edge just under the stuck row. The browser adds the page's scroll
+   padding (usePinnedScrollPadding) to this margin, so it is taken back out. */
 .contentAnchor {
   scroll-margin-top: calc(
-    var(--exp-header) + var(--goals-nav-h) - var(--goals-tuck) + env(safe-area-inset-top, 0px)
+    var(--exp-header) + var(--goals-nav-h) - var(--goals-tuck) + env(safe-area-inset-top, 0px) -
+      var(--scroll-pad-top, 0px)
   );
 }
 
@@ -36,6 +38,14 @@
   flex-direction: column;
   gap: var(--goals-gap);
   min-width: 0;
+}
+
+/* The row and the pinned chart sit inside the band that the page's scroll padding keeps clear.
+   Focus inside them takes that padding back out, or a control that is stuck would count as
+   hidden and the page would scroll to uncover it. */
+.nav *,
+.areaMini * {
+  scroll-margin-top: calc(-1 * var(--scroll-pad-top, 0px));
 }
 
 /* The view switcher everywhere but a phone. */
@@ -149,6 +159,26 @@
      scroll often starts. Vertical pans go to the page; scrubbing sideways still works. */
   .layout[data-mobile-view='adjust'] .areaMini svg {
     touch-action: pan-y;
+  }
+
+  /* On a screen this short a pinned chart and chips would leave almost no page between them and
+     the bottom bar, so they scroll away with the page and only the view row stays. rem here is
+     the browser's default text size, so large text on a tall screen is caught as well. 26rem is
+     below any portrait phone's height even with Safari's toolbars out, so it does not flip as
+     they come and go; a phone on its side is found by its orientation instead, which cannot. */
+  @media (max-height: 26rem), (orientation: landscape) and (max-height: 32rem) {
+    .layout[data-mobile-view='adjust'] .areaMini {
+      position: static;
+    }
+
+    .layout[data-mobile-view='adjust'] .areaMini::after {
+      content: none;
+    }
+
+    /* Not pinned, so what is focused in it can be under the row like anything else. */
+    .layout[data-mobile-view='adjust'] .areaMini * {
+      scroll-margin-top: 0;
+    }
   }
 }
 
@@ -424,6 +454,14 @@
   color: var(--color-accent);
 }
 
+/* Forced colours replaces the tint that marks the current chip, so it gets a heavier border in the
+   system's highlight colour. */
+@media (forced-colors: active) {
+  .chipActive {
+    border: 2px solid Highlight;
+  }
+}
+
 .chipGroup {
   flex: none;
   display: inline-flex;
@@ -450,13 +488,29 @@
 .sectionNav {
   flex: 1;
   min-width: 0;
+  /* The room under the chips for their tap area (see .sectionChips) is padding, which the strip
+     and this box clip to, taken back out of the layout here. */
+  margin-bottom: -0.2rem;
 }
 
 /* With the actions beside them the chips run out of room before they run out of chips, so
-   the last visible one fades out instead of being cut. */
+   the last visible one fades out instead of being cut. The strip ends with room as wide as the
+   fade, so that scrolled to its end the last chip is clear of it, and keeps a chip that takes
+   focus out of the fade, which the browser does not know is there. */
 .sectionRowActions .sectionNav {
-  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 1.25rem), transparent);
-  mask-image: linear-gradient(to right, #000 calc(100% - 1.25rem), transparent);
+  --strip-fade: 1.25rem;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--strip-fade)), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - var(--strip-fade)), transparent);
+}
+
+.sectionRowActions .sectionChips {
+  scroll-padding-inline-end: var(--strip-fade);
+}
+
+.sectionRowActions .sectionChips::after {
+  content: '';
+  flex: none;
+  width: var(--strip-fade);
 }
 
 /* Beside the chips, so no taller than they are. The rule at the left says these are not
@@ -475,11 +529,26 @@
 
 .chipRow.sectionChips {
   margin-bottom: 0;
-  padding: 0.3rem 0 0.1rem;
+  padding: 0.3rem 0;
 }
 
 .sectionChips .chip {
   padding: 0.3rem 0.6rem;
+}
+
+/* The chips and the buttons beside them are 27.6px high. Their tap area reaches up and down into
+   the room around them, to 37px, unpainted and without the row growing; their neighbours are
+   beside them, not above or below, so none of it is on another control. */
+.sectionChips .chip,
+.unsavedActions .btn {
+  position: relative;
+}
+
+.sectionChips .chip::before,
+.unsavedActions .btn::before {
+  content: '';
+  position: absolute;
+  inset: -0.3rem 0;
 }
 
 .chipHidden {
@@ -1166,7 +1235,7 @@
 .btnPrimary {
   background: var(--color-accent);
   border-color: var(--color-accent);
-  color: #fff;
+  color: var(--color-accent-contrast);
 }
 
 .btn:hover {

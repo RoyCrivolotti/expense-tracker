@@ -7,10 +7,12 @@
 }
 
 /* Where a link to a card in Assumptions leaves it: its top just under the stuck view row,
-   the place goals.module.css gives .contentAnchor. */
+   the place goals.module.css gives .contentAnchor, which takes the page's scroll padding back
+   out for the same reason. */
 .landingTarget {
   scroll-margin-top: calc(
-    var(--exp-header) + var(--goals-nav-h) - var(--goals-tuck) + env(safe-area-inset-top, 0px)
+    var(--exp-header) + var(--goals-nav-h) - var(--goals-tuck) + env(safe-area-inset-top, 0px) -
+      var(--scroll-pad-top, 0px)
   );
 }
 

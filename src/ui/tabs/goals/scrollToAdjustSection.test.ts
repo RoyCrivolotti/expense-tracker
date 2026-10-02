@@ -1,12 +1,13 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { adjustSectionId } from './adjustSections'
 import {
   ADJUST_STACK_ID,
   keepClearOfStack,
   landOnAdjustControls,
+  pinnedBottom,
   scrollToAdjustSection,
-  stackBottom,
 } from './scrollToAdjustSection'
+import { GOALS_NAV_ID } from './scrollToGoalsContent'
 
 function mount(tag: 'div' | 'details', id: string, rect: Partial<DOMRect> = {}, height = 0) {
   const el = document.createElement(tag)
@@ -17,35 +18,60 @@ function mount(tag: 'div' | 'details', id: string, rect: Partial<DOMRect> = {}, 
   return el
 }
 
+/** jsdom lays nothing out, so what the browser would resolve is written as inline style. */
+function pin(el: HTMLElement, top?: string) {
+  el.style.position = 'sticky'
+  if (top !== undefined) el.style.top = top
+}
+
+/** The stack as the browser has it where it is pinned, and the row above it as it always is. */
+function mountPinned(rows: { stackHeight?: number; stackTop?: string; rowHeight?: number; rowTop?: string }) {
+  const row = mount('div', GOALS_NAV_ID, {}, rows.rowHeight ?? 0)
+  pin(row, rows.rowTop)
+  if (rows.stackHeight === undefined) return
+  pin(mount('div', ADJUST_STACK_ID, {}, rows.stackHeight), rows.stackTop)
+}
+
 afterEach(() => {
   document.body.innerHTML = ''
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
 
-describe('stackBottom', () => {
-  it('is zero when there is no pinned stack', () => {
-    expect(stackBottom()).toBe(0)
+describe('pinnedBottom', () => {
+  it('is zero when nothing is pinned', () => {
+    expect(pinnedBottom()).toBe(0)
   })
 
-  it('is the stack\'s resolved sticky top plus its height', () => {
-    const stack = mount('div', ADJUST_STACK_ID, {}, 176)
-    vi.spyOn(window, 'getComputedStyle').mockReturnValue({ top: '103px' } as CSSStyleDeclaration)
+  it("is the stack's resolved sticky top plus its height when the stack is pinned", () => {
+    mountPinned({ stackHeight: 164, stackTop: '103px', rowHeight: 44, rowTop: '60px' })
 
-    expect(stackBottom()).toBe(279)
-    expect(stack).toBeInTheDocument()
+    expect(pinnedBottom()).toBe(267)
   })
 
   it('counts only the height when the browser does not resolve a top', () => {
-    mount('div', ADJUST_STACK_ID, {}, 176)
+    mountPinned({ stackHeight: 176 })
 
-    expect(stackBottom()).toBe(176)
+    expect(pinnedBottom()).toBe(176)
+  })
+
+  it('is the bottom of the view row when the stack is not pinned, as on a short screen', () => {
+    mountPinned({ stackHeight: 164, rowHeight: 44, rowTop: '60px' })
+    document.getElementById(ADJUST_STACK_ID)!.style.position = 'static'
+
+    expect(pinnedBottom()).toBe(104)
+  })
+
+  it('is the bottom of the view row in a view that has no stack', () => {
+    mountPinned({ rowHeight: 44, rowTop: '60px' })
+
+    expect(pinnedBottom()).toBe(104)
   })
 })
 
 describe('scrollToAdjustSection', () => {
   it('scrolls by the distance from the pinned stack, opening a closed section first', () => {
-    mount('div', ADJUST_STACK_ID, {}, 176)
+    mountPinned({ stackHeight: 176 })
     const section = mount('details', adjustSectionId('events'), { top: 538 })
     const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
 
@@ -53,6 +79,17 @@ describe('scrollToAdjustSection', () => {
 
     expect((section as HTMLDetailsElement).open).toBe(true)
     expect(scrollBy).toHaveBeenCalledWith({ top: 538 - 176 - 8, behavior: 'smooth' })
+  })
+
+  it('scrolls to just under the view row when the stack is not pinned', () => {
+    mountPinned({ stackHeight: 176, rowHeight: 44, rowTop: '60px' })
+    document.getElementById(ADJUST_STACK_ID)!.style.position = 'static'
+    mount('details', adjustSectionId('housing'), { top: 538 })
+    const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+
+    scrollToAdjustSection('housing', 'auto')
+
+    expect(scrollBy).toHaveBeenCalledWith({ top: 538 - 104 - 8, behavior: 'auto' })
   })
 
   it('jumps without animation when the viewer asked for reduced motion', () => {
@@ -97,59 +134,154 @@ describe('landOnAdjustControls', () => {
 
     expect(scrollBy).toHaveBeenCalledTimes(1)
   })
+
+  it('lands under the view row when the stack is not pinned', () => {
+    mountPinned({ stackHeight: 164, rowHeight: 44, rowTop: '60px' })
+    document.getElementById(ADJUST_STACK_ID)!.style.position = 'static'
+    mount('details', adjustSectionId('portfolio'), { top: 700 })
+    const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+    vi.stubGlobal('requestAnimationFrame', undefined)
+
+    landOnAdjustControls()
+
+    expect(scrollBy).toHaveBeenCalledWith({ top: 700 - 104 - 8, behavior: 'auto' })
+  })
 })
 
 describe('keepClearOfStack', () => {
-  function fieldAt(top: number) {
-    return mount('div', 'a-field', { top })
+  /** A field that has focus, as one that has just taken it does, at `top` in the viewport. */
+  function focusedFieldAt(top: number, id = 'a-field') {
+    const field = document.createElement('input')
+    field.id = id
+    vi.spyOn(field, 'getBoundingClientRect').mockReturnValue({ top } as DOMRect)
+    document.body.append(field)
+    field.focus()
+    return field
   }
 
   function stackAt(top: number, bottom: number) {
-    mount('div', ADJUST_STACK_ID, { top, bottom })
+    pin(mount('div', ADJUST_STACK_ID, { top, bottom }))
   }
 
-  it('scrolls a field that is behind the stack to just below it, again once the keyboard has settled', () => {
-    vi.useFakeTimers()
-    stackAt(103, 267)
-    const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+  function frameRunsAtOnce() {
     vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
       cb(0)
       return 0
     })
+  }
 
-    keepClearOfStack(fieldAt(150))
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    // Lets a check still pending finish and put its listeners away, so none outlives the test.
+    vi.runOnlyPendingTimers()
+    vi.useRealTimers()
+  })
+
+  it('scrolls a field that is behind the stack to just below it, again once the keyboard has settled', () => {
+    stackAt(103, 267)
+    const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+    frameRunsAtOnce()
+
+    keepClearOfStack(focusedFieldAt(150))
     expect(scrollBy).toHaveBeenCalledTimes(1)
     expect(scrollBy).toHaveBeenLastCalledWith({ top: 150 - 267 - 8, behavior: 'auto' })
 
     vi.advanceTimersByTime(400)
     expect(scrollBy).toHaveBeenCalledTimes(2)
-    vi.useRealTimers()
   })
 
   it('leaves a field that is below the stack, or above it, where it is', () => {
-    vi.useFakeTimers()
     stackAt(103, 267)
     const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
     vi.stubGlobal('requestAnimationFrame', undefined)
 
-    keepClearOfStack(fieldAt(400))
+    keepClearOfStack(focusedFieldAt(400))
     vi.advanceTimersByTime(400)
     document.getElementById('a-field')?.remove()
-    keepClearOfStack(fieldAt(60))
+    keepClearOfStack(focusedFieldAt(60))
     vi.advanceTimersByTime(400)
 
     expect(scrollBy).not.toHaveBeenCalled()
-    vi.useRealTimers()
   })
 
-  it('does nothing when there is no stack on the page', () => {
-    vi.useFakeTimers()
+  it('measures against the view row when the stack is not pinned', () => {
+    mount('div', GOALS_NAV_ID, { top: 60, bottom: 104 })
+    stackAt(-400, -236)
+    document.getElementById(ADJUST_STACK_ID)!.style.position = 'static'
     const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
     vi.stubGlobal('requestAnimationFrame', undefined)
 
-    keepClearOfStack(fieldAt(150))
+    keepClearOfStack(focusedFieldAt(90))
+
+    expect(scrollBy).toHaveBeenCalledWith({ top: 90 - 104 - 8, behavior: 'auto' })
+  })
+
+  it('does nothing when there is no stack on the page', () => {
+    const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+    vi.stubGlobal('requestAnimationFrame', undefined)
+
+    keepClearOfStack(focusedFieldAt(150))
 
     expect(scrollBy).not.toHaveBeenCalled()
-    vi.useRealTimers()
+  })
+
+  describe('once the keyboard has had time to settle', () => {
+    it('does not scroll for a field that has lost focus', () => {
+      stackAt(103, 267)
+      const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+      frameRunsAtOnce()
+      keepClearOfStack(focusedFieldAt(150))
+      scrollBy.mockClear()
+
+      focusedFieldAt(500, 'another-field')
+      vi.advanceTimersByTime(400)
+
+      expect(scrollBy).not.toHaveBeenCalled()
+    })
+
+    it.each(['wheel', 'touchstart'])('does not scroll after the viewer has scrolled with a %s', (type) => {
+      stackAt(103, 267)
+      const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+      frameRunsAtOnce()
+      keepClearOfStack(focusedFieldAt(150))
+      scrollBy.mockClear()
+
+      window.dispatchEvent(new Event(type))
+      vi.advanceTimersByTime(400)
+
+      expect(scrollBy).not.toHaveBeenCalled()
+    })
+
+    it('is dropped when another field takes focus, so only the newest field is checked', () => {
+      stackAt(103, 267)
+      vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+      frameRunsAtOnce()
+
+      const first = focusedFieldAt(150)
+      const second = focusedFieldAt(500, 'another-field')
+      const timersBefore = vi.getTimerCount()
+
+      keepClearOfStack(first)
+      expect(vi.getTimerCount()).toBe(timersBefore + 1)
+      keepClearOfStack(second)
+      expect(vi.getTimerCount()).toBe(timersBefore + 1)
+    })
+
+    it('stops listening for the viewer once it has run', () => {
+      stackAt(103, 267)
+      vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+      frameRunsAtOnce()
+      const remove = vi.spyOn(window, 'removeEventListener')
+
+      keepClearOfStack(focusedFieldAt(150))
+      expect(remove).not.toHaveBeenCalledWith('wheel', expect.any(Function))
+      vi.advanceTimersByTime(400)
+
+      expect(remove).toHaveBeenCalledWith('wheel', expect.any(Function))
+      expect(remove).toHaveBeenCalledWith('touchstart', expect.any(Function))
+    })
   })
 })

@@ -187,6 +187,23 @@ describe('AdjustSectionNav', () => {
     expect(scrollTo).toHaveBeenLastCalledWith({ left: -50, behavior: 'smooth' })
   })
 
+  it('moves the marked chip into sight without animation when the viewer asked for reduced motion', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === NARROW_MQ || query === '(prefers-reduced-motion: reduce)',
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }))
+    const scrollTo = vi.fn()
+    HTMLElement.prototype.scrollTo = scrollTo
+    const user = userEvent.setup()
+    render(<AdjustSectionNav />)
+    scrollTo.mockClear()
+
+    await user.click(screen.getByRole('button', { name: 'Tracking' }))
+
+    expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'auto' }))
+  })
+
   it('offers Save and Discard beside the chips only when there are unsaved changes, and runs them', async () => {
     const user = userEvent.setup()
     const unsaved = { name: 'Path A', saving: false, onSave: vi.fn(), onDiscard: vi.fn() }
@@ -290,6 +307,7 @@ describe('AdjustSectionNav', () => {
   it('keeps a field that takes focus clear of the pinned block, but not a button', async () => {
     const stack = document.createElement('div')
     stack.id = ADJUST_STACK_ID
+    stack.style.position = 'sticky'
     document.body.append(stack)
     const field = document.createElement('input')
     document.body.append(field)
