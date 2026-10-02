@@ -1,21 +1,13 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CategoryPieChartView, type PieSlice } from './CategoryPieChartView'
 import chartStyles from './charts.module.css'
 import { installFakeBars } from '../../testing/fakeBars'
+import { installFakeMatchMedia } from '../../testing/fakeMatchMedia'
 
-beforeAll(() => {
-  Object.defineProperty(window, 'matchMedia', {
-    writable: true,
-    value: vi.fn().mockImplementation((query: string) => ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })),
-  })
+// Made again for every test: a phone's answer, once set, would otherwise stay for the tests after it.
+beforeEach(() => {
+  installFakeMatchMedia()
 })
 
 afterEach(() => {
@@ -77,15 +69,7 @@ describe('CategoryPieChartView legend pointer events', () => {
 
 describe('CategoryPieChartView tooltip on a phone', () => {
   it('does not dock below the chart: its own legend already reads the active slice', () => {
-    vi.spyOn(window, 'matchMedia').mockImplementation(
-      (query: string) =>
-        ({
-          matches: true,
-          media: query,
-          addEventListener: vi.fn(),
-          removeEventListener: vi.fn(),
-        }) as unknown as MediaQueryList,
-    )
+    installFakeMatchMedia(() => true)
     installFakeBars()
     // Mounted with nothing selected first, then given a selection, as a real tap would: mounting
     // straight in with `active` already set would (in this test environment only, per a React
