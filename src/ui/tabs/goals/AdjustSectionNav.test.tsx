@@ -135,6 +135,18 @@ describe('AdjustSectionNav', () => {
     expect(current()).toBe('FIRE')
   })
 
+  it('lets go of a tapped chip when the viewer presses the page, as a scrollbar drag does', async () => {
+    const user = userEvent.setup()
+    render(<AdjustSectionNav />)
+    await user.click(screen.getByRole('button', { name: 'Events' }))
+    placeSections({ portfolio: -900, housing: -500, fire: -50, tracking: 300, events: 400 })
+
+    fireEvent.pointerDown(window)
+    scrollPage()
+
+    expect(current()).toBe('FIRE')
+  })
+
   it('keeps the marked chip in sight inside the sideways-scrolling strip', async () => {
     const scrollTo = vi.fn()
     HTMLElement.prototype.scrollTo = scrollTo

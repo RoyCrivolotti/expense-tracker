@@ -18,8 +18,9 @@ export interface UnsavedActions {
 /** Under the line by this much, a section counts as the one being read. */
 const READING_MARGIN_PX = 12
 
-/** How the viewer got to scrolling: a touch, the wheel or a key, rather than a chip's jump. */
-const USER_SCROLL_EVENTS = ['touchstart', 'wheel', 'keydown'] as const
+/** How the viewer got to scrolling: a touch, the wheel, a key or a press (a scrollbar drag
+ *  makes no other event), rather than a chip's jump. */
+const USER_SCROLL_EVENTS = ['touchstart', 'wheel', 'keydown', 'pointerdown'] as const
 
 /**
  * Jump links to the Adjust sections, pinned with the draft's chart so a slider two sections
