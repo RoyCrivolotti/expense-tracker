@@ -445,6 +445,21 @@
   background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
 }
 
+/* The jump links under the pinned chart in Adjust: the secondary chart picker's chips, with the
+   room around the row taken in, since the row is pinned with the chart. */
+.sectionNav {
+  display: block;
+}
+
+.chipRow.sectionChips {
+  margin-bottom: 0;
+  padding: 0.3rem 0 0.1rem;
+}
+
+.sectionChips .chip {
+  padding: 0.3rem 0.6rem;
+}
+
 .chipHidden {
   opacity: 0.5;
 }

@@ -607,6 +607,23 @@ describe('GoalsTab', () => {
     expect(screen.getByLabelText('Preview inflation')).toHaveValue('2,5')
   })
 
+  it('pins the section chips with the chart in Adjust, and shows them nowhere else', async () => {
+    mockPhoneWidth()
+    const user = userEvent.setup()
+    render(<GoalsTab model={makeModel()} />)
+    // Hidden from the accessibility tree outside the phone breakpoint, which jsdom cannot match.
+    const chips = () => screen.queryByRole('navigation', { name: 'Adjust sections', hidden: true })
+
+    expect(chips()).not.toBeInTheDocument()
+    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+
+    expect(chips()).toBeInTheDocument()
+    expect(document.getElementById('goals-adjust-stack')).toContainElement(chips())
+    expect(document.getElementById('goals-adjust-housing')).toBeInTheDocument()
+    await user.click(screen.getByRole('radio', { name: 'Chart' }))
+    expect(chips()).not.toBeInTheDocument()
+  })
+
   it('starts the scroll target after Plan\'s intro and glossary, and straight after the switch for Progress', async () => {
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} />)
