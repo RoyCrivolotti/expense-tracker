@@ -4,7 +4,7 @@
  * spelled in the file that happens to render each one.
  */
 
-/** Where a Goals view's own content starts: past the intro and glossary, which only Plan has. */
+/** Where a Goals view's own content starts, for a jump to put under the view row. */
 export const GOALS_CONTENT_ANCHOR_ID = 'goals-content-top'
 
 /** The sticky row of Goals views on a phone, which is what stays pinned in every view. */

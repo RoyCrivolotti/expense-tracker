@@ -9,6 +9,7 @@ import { AdjustStack } from './AdjustStack'
 import type { InvestedSnapshot } from './checkinDate'
 import { NetWorthNowCard } from './charts/NetWorthNowCard'
 import { GoalControls } from './GoalControls'
+import { GoalsIntro } from './GoalsIntro'
 import type { MobilePlanView } from './goalsView'
 import { PlanHero, type ValueDisplay } from './PlanHero'
 import { ScenarioManager } from './ScenarioManager'
@@ -47,7 +48,10 @@ interface PlanSidebarProps {
   latest: InvestedSnapshot | null
 }
 
-/** The scenarios, the controls and, on a phone's Adjust half, the pinned chart over them. */
+/**
+ * The scenarios, the controls and, on a phone's Adjust half, the pinned chart over them. A wide
+ * screen's intro and glossary end it, under the controls they explain.
+ */
 function PlanSidebar({ half, scenarios, editor, actions, latest }: PlanSidebarProps) {
   const { draft, dirty, saving, onSaveChanges, onDiscard } = editor
   return (
@@ -90,6 +94,7 @@ function PlanSidebar({ half, scenarios, editor, actions, latest }: PlanSidebarPr
           <GoalControls draft={draft} latest={latest} onChange={editor.patchDraft} />
         </Card>
       </div>
+      <GoalsIntro placement="sidebar-end" />
     </div>
   )
 }
@@ -131,41 +136,44 @@ export function PlanView({
 }: PlanViewProps) {
   const { deferredDraft, activeId, dirty } = editor
   return (
-    <div className={styles.layout} data-mobile-view={half}>
-      <PlanSidebar half={half} scenarios={scenarios} editor={editor} actions={actions} latest={latest} />
-      <div className={styles.areaOutputs}>
-        <div className={`${styles.heroBlock} ${styles.areaHero}`}>
-          <PlanHero
-            scenarios={scenarios}
-            editor={editor}
-            milestones={milestones}
-            checkins={checkins}
-            accounts={accounts}
-            fromToday={fromToday}
-            display={display}
-          />
-        </div>
-        <div className={styles.areaNow}>
-          <NetWorthNowCard
-            draft={deferredDraft}
-            latest={latest}
-            milestones={milestones}
-            reached={reached}
-          />
-        </div>
-        <div className={styles.areaSecondary}>
-          <SecondaryCharts
-            scenarios={scenarios}
-            draft={deferredDraft}
-            monthly={monthly}
-            milestones={milestones}
-            reached={reached}
-            activeId={activeId}
-            dirty={dirty}
-            fromToday={fromToday}
-          />
+    <>
+      <div className={styles.layout} data-mobile-view={half}>
+        <PlanSidebar half={half} scenarios={scenarios} editor={editor} actions={actions} latest={latest} />
+        <div className={styles.areaOutputs}>
+          <div className={`${styles.heroBlock} ${styles.areaHero}`}>
+            <PlanHero
+              scenarios={scenarios}
+              editor={editor}
+              milestones={milestones}
+              checkins={checkins}
+              accounts={accounts}
+              fromToday={fromToday}
+              display={display}
+            />
+          </div>
+          <div className={styles.areaNow}>
+            <NetWorthNowCard
+              draft={deferredDraft}
+              latest={latest}
+              milestones={milestones}
+              reached={reached}
+            />
+          </div>
+          <div className={styles.areaSecondary}>
+            <SecondaryCharts
+              scenarios={scenarios}
+              draft={deferredDraft}
+              monthly={monthly}
+              milestones={milestones}
+              reached={reached}
+              activeId={activeId}
+              dirty={dirty}
+              fromToday={fromToday}
+            />
+          </div>
         </div>
       </div>
-    </div>
+      <GoalsIntro placement="page-end" />
+    </>
   )
 }

@@ -12,7 +12,6 @@ import {
 } from '../../../engine'
 import type { InvestedSnapshot } from './checkinDate'
 import { SectionTitle } from '../../components/primitives'
-import { GoalsIntro } from './GoalsIntro'
 import { GoalsViewSwitch } from './GoalsViewSwitch'
 import { GoalsPanel } from './GoalsPanel'
 import { mobileViewOf, type AssumptionsFocus, type MobilePlanView, type TabView } from './goalsView'
@@ -132,12 +131,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
       />
 
       <GoalsPanel view={view} planHalf={mobilePlanView}>
-        {/*
-          Between the view switch and a view's own content: Plan's intro and glossary (on a screen
-          wide enough to lead with them), and the anchor a tap on the switch scrolls to. Progress
-          and Assumptions start at the anchor.
-        */}
-        <GoalsIntro placement="top" show={view === 'plan'} />
+        {/* Where a tap on the switch scrolls to: the start of whichever view's content follows. */}
         <div id={GOALS_CONTENT_ANCHOR_ID} className={styles.contentAnchor} />
 
         {view === 'assumptions' ? (
@@ -186,7 +180,6 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
             }}
           />
         ) : null}
-        <GoalsIntro placement="bottom" show={view === 'plan'} />
       </GoalsPanel>
     </div>
   )

@@ -5,10 +5,10 @@ import { GOALS_CONTENT_ANCHOR_ID } from './goalsAnchors'
 /**
  * Bring the content of the Goals view that is now open to just under the sticky view row.
  *
- * Deferred a frame so it measures the view after React has rendered it: Plan has an intro
- * above its content and Progress and Assumptions do not, so the target moves with the view that
- * was opened. `smooth` is for a tap on the view already open, where nothing else changes on
- * screen; opening another view jumps, since its content has just been swapped in.
+ * Deferred a frame so it measures the view after React has rendered it: the views are not the
+ * same height, so what the page can scroll to depends on the one that was opened. `smooth` is
+ * for a tap on the view already open, where nothing else changes on screen; opening another view
+ * jumps, since its content has just been swapped in.
  */
 export function scrollToGoalsContent(behavior: 'auto' | 'smooth'): void {
   afterRender(() => {
