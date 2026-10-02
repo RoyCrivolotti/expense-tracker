@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AdjustSectionNav } from './AdjustSectionNav'
 import { ADJUST_SECTIONS, adjustSectionId, type AdjustSection } from './adjustSections'
-import { ADJUST_STACK_ID } from './scrollToAdjustSection'
+import { ADJUST_STACK_ID } from './goalsAnchors'
 import { NARROW_MQ } from './useGoalsNarrow'
 
 /** Where each section's top is, in viewport pixels; the tests move these to "scroll". */

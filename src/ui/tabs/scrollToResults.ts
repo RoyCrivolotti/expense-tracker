@@ -1,4 +1,4 @@
-import { prefersReducedMotion } from '../hooks/prefersReducedMotion'
+import { afterRender, scrollBehavior } from '../hooks/scrollTiming'
 
 /** The results summary doubles as the scroll anchor and the list's live region. */
 export const RESULTS_ANCHOR_ID = 'txn-results'
@@ -12,14 +12,10 @@ export const RESULTS_ANCHOR_ID = 'txn-results'
  * *after* React has re-rendered it, not the taller pre-filter one.
  */
 export function scrollToResults(): void {
-  const run = () => {
-    // The rest of the app honours prefers-reduced-motion in theme.css; a
-    // smooth-scrolled jump is exactly the kind of movement that setting is for.
+  afterRender(() => {
     document.getElementById(RESULTS_ANCHOR_ID)?.scrollIntoView({
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+      behavior: scrollBehavior('smooth'),
       block: 'start',
     })
-  }
-  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run)
-  else run()
+  })
 }

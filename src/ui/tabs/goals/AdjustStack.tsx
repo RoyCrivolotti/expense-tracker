@@ -2,7 +2,7 @@ import type { NewGoalScenario } from '../../../data/dataSource'
 import { AdjustSectionNav } from './AdjustSectionNav'
 import type { UnsavedActions } from './UnsavedGroup'
 import { NetWorthMiniChart } from './charts/NetWorthMiniChart'
-import { ADJUST_STACK_ID } from './scrollToAdjustSection'
+import { ADJUST_STACK_ID } from './goalsAnchors'
 import { useGoalsNarrow } from './useGoalsNarrow'
 import styles from './goals.module.css'
 

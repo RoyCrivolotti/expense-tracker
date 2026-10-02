@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { adjustSectionId } from './adjustSections'
 import { GoalsMobileNav } from './GoalsMobileNav'
 import type { GoalsMobileView } from './goalsView'
-import { GOALS_CONTENT_ANCHOR_ID, GOALS_NAV_ID } from './scrollToGoalsContent'
+import { GOALS_CONTENT_ANCHOR_ID, GOALS_NAV_ID } from './goalsAnchors'
 import { useGoalsScrollMemory, type GoalsScrollMemory } from './useGoalsScrollMemory'
 
 /** jsdom lays nothing out: the row sticks 60px down, and is either there (stuck) or lower. */

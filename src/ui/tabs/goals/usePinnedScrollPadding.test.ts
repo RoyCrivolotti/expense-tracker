@@ -1,8 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { GoalsMobileView } from './goalsView'
-import { ADJUST_STACK_ID } from './scrollToAdjustSection'
-import { GOALS_NAV_ID } from './scrollToGoalsContent'
+import { ADJUST_STACK_ID, GOALS_NAV_ID } from './goalsAnchors'
 import { usePinnedScrollPadding } from './usePinnedScrollPadding'
 
 /** A sticky block as the browser would have laid it out; jsdom lays nothing out itself. */

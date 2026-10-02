@@ -1,9 +1,6 @@
-import { prefersReducedMotion } from '../../hooks/prefersReducedMotion'
+import { afterRender, scrollBehavior } from '../../hooks/scrollTiming'
 import { adjustSectionId, type AdjustSection } from './adjustSections'
-import { GOALS_NAV_ID } from './scrollToGoalsContent'
-
-/** The block pinned under the view row in Adjust: the draft's chart and the section chips. */
-export const ADJUST_STACK_ID = 'goals-adjust-stack'
+import { ADJUST_STACK_ID, GOALS_NAV_ID } from './goalsAnchors'
 
 /** Air between what is pinned and the top edge of whatever is scrolled to under it. */
 export const GAP_PX = 8
@@ -45,7 +42,7 @@ export function scrollToAdjustSection(key: AdjustSection, behavior: 'auto' | 'sm
   if (section instanceof HTMLDetailsElement) section.open = true
   window.scrollBy({
     top: section.getBoundingClientRect().top - pinnedBottom() - GAP_PX,
-    behavior: prefersReducedMotion() ? 'auto' : behavior,
+    behavior: scrollBehavior(behavior),
   })
 }
 
@@ -55,9 +52,7 @@ export function scrollToAdjustSection(key: AdjustSection, behavior: 'auto' | 'sm
  * have been rendered before they are measured.
  */
 export function landOnAdjustControls(): void {
-  const run = () => scrollToAdjustSection('portfolio', 'auto')
-  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run)
-  else run()
+  afterRender(() => scrollToAdjustSection('portfolio', 'auto'))
 }
 
 /**
@@ -79,8 +74,7 @@ export function keepClearOfStack(field: Element): void {
     if (top < pinned.top || top >= pinned.bottom) return
     window.scrollBy({ top: top - pinned.bottom - GAP_PX, behavior: 'auto' })
   }
-  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(check)
-  else check()
+  afterRender(check)
 
   let viewerScrolled = false
   const onViewerScroll = () => {

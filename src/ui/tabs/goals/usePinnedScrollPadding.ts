@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import type { GoalsMobileView } from './goalsView'
-import { ADJUST_STACK_ID, GAP_PX, pinnedBottom } from './scrollToAdjustSection'
-import { GOALS_NAV_ID } from './scrollToGoalsContent'
+import { ADJUST_STACK_ID, GOALS_NAV_ID } from './goalsAnchors'
+import { GAP_PX, pinnedBottom } from './scrollToAdjustSection'
 
 /** What the fixed bottom bar and the home indicator cover, and a little air above them. */
 const BOTTOM_PADDING = 'calc(var(--exp-bottom-bar) + env(safe-area-inset-bottom, 0px) + 0.5rem)'

@@ -1,13 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { adjustSectionId } from './adjustSections'
+import { ADJUST_STACK_ID, GOALS_NAV_ID } from './goalsAnchors'
 import {
-  ADJUST_STACK_ID,
   keepClearOfStack,
   landOnAdjustControls,
   pinnedBottom,
   scrollToAdjustSection,
 } from './scrollToAdjustSection'
-import { GOALS_NAV_ID } from './scrollToGoalsContent'
 
 function mount(tag: 'div' | 'details', id: string, rect: Partial<DOMRect> = {}, height = 0) {
   const el = document.createElement(tag)

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { prefersReducedMotion } from '../../hooks/prefersReducedMotion'
+import { scrollBehavior } from '../../hooks/scrollTiming'
 import {
   ADJUST_SECTIONS,
   adjustSectionId,
@@ -85,7 +85,7 @@ export function AdjustSectionNav({ unsaved }: { unsaved?: UnsavedActions | undef
     if (!chip || !row || typeof row.scrollTo !== 'function') return
     row.scrollTo({
       left: chip.offsetLeft - (row.clientWidth - chip.offsetWidth) / 2,
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+      behavior: scrollBehavior('smooth'),
     })
   }, [active, hasActions])
 
