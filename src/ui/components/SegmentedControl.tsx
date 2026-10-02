@@ -12,6 +12,12 @@ interface SegmentedControlProps<T extends string> {
   ariaLabel: string
   /** compact: inline pill. bar: full-width equal segments. scroll: horizontal chip row. */
   layout?: 'compact' | 'bar' | 'scroll'
+  /**
+   * tall: a bar that fills the height it is given, with one-line labels and segments as tall as
+   * the bar. For the control a page is navigated by, where a thumb must hit it mid-scroll.
+   * Only the bar layout has it.
+   */
+  size?: 'default' | 'tall'
   disabled?: boolean
 }
 
@@ -22,11 +28,12 @@ export function SegmentedControl<T extends string>({
   onChange,
   ariaLabel,
   layout = 'compact',
+  size = 'default',
   disabled = false,
 }: SegmentedControlProps<T>) {
   const groupClass =
     layout === 'bar'
-      ? `${styles.group} ${styles.groupBar}`
+      ? `${styles.group} ${styles.groupBar}${size === 'tall' ? ` ${styles.tall}` : ''}`
       : layout === 'scroll'
         ? `${styles.group} ${styles.groupScroll}`
         : styles.group

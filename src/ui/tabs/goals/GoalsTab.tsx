@@ -31,7 +31,8 @@ import { EXIT_MS } from '../../hooks/motion'
 import { GoalControls } from './GoalControls'
 import { ScenarioManager } from './ScenarioManager'
 import { GoalsExplainer } from './GoalsExplainer'
-import { GoalsViewSwitch, type MobilePlanView, type TabView } from './GoalsViewSwitch'
+import { GoalsViewSwitch } from './GoalsViewSwitch'
+import type { MobilePlanView, TabView } from './goalsView'
 import { GOALS_CONTENT_ANCHOR_ID } from './scrollToGoalsContent'
 import { ADJUST_STACK_ID } from './scrollToAdjustSection'
 import { AdjustSectionNav } from './AdjustSectionNav'
@@ -535,7 +536,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
           </div>
           {mobilePlanView === 'adjust' ? (
             // Phone only: only the phone's row offers Adjust.
-            <div id={ADJUST_STACK_ID} className={styles.areaMini}>
+            <div id={ADJUST_STACK_ID} className={`${styles.areaMini} ${styles.fadeBelow}`}>
               <NetWorthMiniChart draft={deferredDraft} />
               <AdjustSectionNav />
             </div>

@@ -1,11 +1,8 @@
 import { SegmentedControl } from '../../components/SegmentedControl'
-import { GoalsMobileNav, type GoalsMobileView } from './GoalsMobileNav'
+import { GoalsMobileNav } from './GoalsMobileNav'
+import { mobileSelection, mobileViewOf, type GoalsMobileView, type MobilePlanView, type TabView } from './goalsView'
 import { useGoalsNarrow } from './useGoalsNarrow'
 import styles from './goals.module.css'
-
-export type TabView = 'plan' | 'progress' | 'setup'
-/** On a phone Plan is two screens, the chart and the controls, instead of one. */
-export type MobilePlanView = 'chart' | 'adjust'
 
 const VIEW_OPTIONS: { value: TabView; label: string }[] = [
   { value: 'plan', label: 'Plan' },
@@ -43,14 +40,9 @@ export function GoalsViewSwitch({
   }
 
   const onMobileChange = (next: GoalsMobileView) => {
-    if (next === 'chart' || next === 'adjust') {
-      onPlanHalfChange(next)
-      // Moving between the halves is not a change of view, which drops what a view change
-      // drops (the inflation preview).
-      if (view !== 'plan') onViewChange('plan')
-    } else {
-      onViewChange(next)
-    }
+    const change = mobileSelection(next, view)
+    if (change.half) onPlanHalfChange(change.half)
+    if (change.view) onViewChange(change.view)
   }
-  return <GoalsMobileNav value={view === 'plan' ? planHalf : view} onChange={onMobileChange} />
+  return <GoalsMobileNav value={mobileViewOf(view, planHalf)} onChange={onMobileChange} />
 }

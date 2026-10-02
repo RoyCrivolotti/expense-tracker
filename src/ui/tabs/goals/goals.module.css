@@ -14,10 +14,7 @@
 }
 
 /* Phone only: GoalsMobileNav is not rendered from 900px up.
-   The nav anchor takes the row's place in the flow, so comparing it with the row says
-   whether the row is stuck. Both anchors are as tall as nothing, and take back the gap they
-   add to the stack. */
-.navAnchor,
+   The anchor is as tall as nothing, and takes back the gap it adds to the stack. */
 .contentAnchor {
   height: 0;
   margin-bottom: calc(-1 * var(--goals-gap));
@@ -48,21 +45,17 @@
   background: var(--color-bg);
 }
 
-/* The way around Goals, used mid-scroll with a thumb: segments taller than the bar's
-   default, which is sized for a control that is not the page's navigation. */
-.nav [role='radiogroup'] [role='radio'] {
-  padding-block: 0.5rem;
-}
-
-/* What scrolls under the row fades out rather than being cut along its edge, as under the
-   mini chart. In Adjust the chart's own padding sits below this, so it shows nothing there. */
-.nav::after {
+/* What scrolls under a pinned block fades out instead of being cut along its edge: a short
+   run of the page background below it, so the edge reads as depth. For the row that run is
+   short (in Adjust the chart's own padding sits under it, so it shows nothing there), and the
+   pinned chart sets a longer one with --fade-h. The block must be positioned. */
+.fadeBelow::after {
   content: '';
   position: absolute;
   left: 0;
   right: 0;
   top: 100%;
-  height: 0.5rem;
+  height: var(--fade-h, 0.5rem);
   background: linear-gradient(to bottom, var(--color-bg), transparent);
   pointer-events: none;
 }
@@ -136,19 +129,7 @@
     z-index: 5;
     padding: 0.5rem 0 0.25rem;
     background: var(--color-bg);
-  }
-
-  /* Controls fade out as they pass under the chart instead of being cut off along a line:
-     a short run of the page background below the block, so the edge reads as depth. */
-  .layout[data-mobile-view='adjust'] .areaMini::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 100%;
-    height: 1.25rem;
-    background: linear-gradient(to bottom, var(--color-bg), transparent);
-    pointer-events: none;
+    --fade-h: 1.25rem;
   }
 
   /* Charts take the touch so a finger can scrub along the line, but this one sits where a

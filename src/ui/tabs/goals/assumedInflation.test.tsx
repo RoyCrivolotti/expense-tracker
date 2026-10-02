@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react'
 import type { ReactElement } from 'react'
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import { GoalsCard } from '../../components/GoalsCard'
 import { AssumedInflationContext } from '../../hooks/assumedInflationContext'
 import { CheckinList } from './CheckinList'
@@ -9,6 +9,7 @@ import { CheckinHistoryChart } from './charts/CheckinHistoryChart'
 import { NetWorthNowCard } from './charts/NetWorthNowCard'
 import { ScenarioComparison } from './charts/ScenarioComparison'
 import { makeDataset, makeScenario, makeWealthAccount, makeWealthCheckin } from '../../../testing/factories'
+import { installFakeMatchMedia } from '../../../testing/fakeMatchMedia'
 
 /**
  * The assumed inflation is the owner's setting and the engine has no fallback for it, so
@@ -16,15 +17,7 @@ import { makeDataset, makeScenario, makeWealthAccount, makeWealthCheckin } from 
  * with the rate is a consumer that has the default baked in.
  */
 beforeAll(() => {
-  Object.defineProperty(window, 'matchMedia', {
-    writable: true,
-    value: vi.fn().mockImplementation((query: string) => ({
-      matches: false,
-      media: query,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    })),
-  })
+  installFakeMatchMedia()
 })
 
 const accounts = [makeWealthAccount({ id: 1, kind: 'investment' })]

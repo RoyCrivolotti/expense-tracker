@@ -5,14 +5,20 @@ import { adjustSectionId } from './adjustSections'
 import { GoalsMobileNav } from './GoalsMobileNav'
 import { GOALS_CONTENT_ANCHOR_ID } from './scrollToGoalsContent'
 
-/** jsdom lays nothing out: put the row where the app header would stick it, and the anchor
- *  either with it (nothing scrolled) or far above it (the row is stuck). The anchor is
- *  whatever sits just before the row. */
+/** jsdom lays nothing out: the row sticks 60px down, and is either there (stuck) or lower. */
 function layOut(stuck: boolean) {
-  const anchor = screen.getByRole('radiogroup').parentElement!.previousElementSibling
-  vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
-    const top = this === anchor && stuck ? -300 : 61
-    return { top, bottom: top, left: 0, right: 0, width: 0, height: 0, x: 0, y: top, toJSON: () => ({}) }
+  const top = stuck ? 60 : 150
+  screen.getByRole('radiogroup').parentElement!.style.top = '60px'
+  vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+    top,
+    bottom: top,
+    left: 0,
+    right: 0,
+    width: 0,
+    height: 0,
+    x: 0,
+    y: top,
+    toJSON: () => ({}),
   })
 }
 
