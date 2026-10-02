@@ -13,21 +13,24 @@
   min-width: 0;
 }
 
-/* Phone only: GoalsMobileNav is not rendered from 900px up.
-   The anchor is as tall as nothing, and takes back the gap it adds to the stack. */
+/* Where a jump to the view's own content leaves it, past the intro Plan has. The anchor is as
+   tall as nothing, and takes back the gap it adds to the stack. From 900px up there is no view
+   row, so what is above it is the app header alone. */
 .contentAnchor {
   height: 0;
   margin-bottom: calc(-1 * var(--goals-gap));
+  scroll-margin-top: calc(var(--exp-header) + env(safe-area-inset-top, 0px));
 }
 
-/* Where a tap on the row takes the page: the first thing of the view that is open, past the
-   intro Plan has, with its top edge just under the stuck row. The browser adds the page's scroll
+/* A phone puts the content just under the stuck view row. The browser adds the page's scroll
    padding (usePinnedScrollPadding) to this margin, so it is taken back out. */
-.contentAnchor {
-  scroll-margin-top: calc(
-    var(--exp-header) + var(--goals-nav-h) - var(--goals-tuck) + env(safe-area-inset-top, 0px) -
-      var(--scroll-pad-top, 0px)
-  );
+@media (max-width: 899px) {
+  .contentAnchor {
+    scroll-margin-top: calc(
+      var(--exp-header) + var(--goals-nav-h) - var(--goals-tuck) + env(safe-area-inset-top, 0px) -
+        var(--scroll-pad-top, 0px)
+    );
+  }
 }
 
 /* What sits under the view row. A real box, because the tabpanel role is not reliable on
