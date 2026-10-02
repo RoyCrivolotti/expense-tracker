@@ -197,9 +197,10 @@
   color: var(--color-text);
   background: color-mix(in srgb, var(--color-text) 8%, transparent);
 }
-.selectRow select,
+.filterFields select,
 .selectRow input[type='date'] {
   width: 100%;
+  min-width: 0;
   padding: 0.6rem 0.75rem;
   border: 1px solid transparent;
   border-radius: 0.7rem;
@@ -208,7 +209,7 @@
   font: inherit;
   font-size: 0.9rem;
 }
-.selectRow select:focus,
+.filterFields select:focus,
 .selectRow input[type='date']:focus {
   border-color: var(--color-accent);
   outline: none;
@@ -219,34 +220,41 @@
   gap: 0.5rem;
 }
 
-.dateScopeLabel {
-  display: block;
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-  margin-bottom: 0.35rem;
-}
 .selectRow {
   display: flex;
   flex-wrap: wrap;
   gap: 0.6rem;
 }
-.selectRow select {
-  flex: 1 1 5.75rem;
-  min-width: 0;
+/*
+ * Every filter field in the sheet, three to a row (see FilterFields). A fixed column
+ * count gives each field the same width however many exist; four fields drop to two
+ * columns so none is left alone on a row.
+ */
+.filterFields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
 }
-.selectRow select.activeSelect {
+.filterFields select {
+  /* Three to a row leaves about 106px a box on a 375px phone; "Category" and the native
+     arrow need most of it, so the sides give a little back. */
+  padding-inline: 0.6rem;
+}
+.filterFields[data-columns='2'] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.filterFields select.activeSelect {
   border-color: var(--color-accent);
   box-shadow: inset 0 0 0 1px var(--color-accent);
 }
 /* A <button> trigger, not a <select>, so it needs its own rule rather than
-   reusing `.selectRow select` above — see LabelFilterRow. */
+   reusing `.filterFields select` above — see LabelFilterField. */
 .labelTrigger {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  flex: 1 1 5.75rem;
   min-width: 0;
-  padding: 0.6rem 0.75rem;
+  padding: 0.6rem;
   border: 1px solid transparent;
   border-radius: 0.7rem;
   background: var(--color-surface-muted);
@@ -254,6 +262,13 @@
   font: inherit;
   font-size: 0.9rem;
   text-align: left;
+}
+/* theme.css forces every <select> to 16px below 720px so iOS does not zoom on focus.
+   This button sits in the same grid, so it has to read the same size. */
+@media (max-width: 719px) {
+  .labelTrigger {
+    font-size: 16px;
+  }
 }
 
 .labelTriggerText {
