@@ -14,6 +14,8 @@ export interface UnsavedActions {
   /** The scenario the edits are to. The buttons are named after it, since the scenario card
    *  above the controls has a Save and a Discard of its own. */
   name: string
+  /** A save is in flight: Discard would put the editor back while the write still carries the edits. */
+  saving: boolean
   onSave: () => void
   onDiscard: () => void
 }
@@ -112,13 +114,20 @@ export function AdjustSectionNav({ unsaved }: { unsaved?: UnsavedActions | undef
       </nav>
       {unsaved ? (
         <div role="group" aria-label="Unsaved changes" className={styles.unsavedActions}>
-          <button type="button" className={styles.btn} aria-label="Discard changes" onClick={unsaved.onDiscard}>
+          <button
+            type="button"
+            className={styles.btn}
+            aria-label="Discard changes"
+            disabled={unsaved.saving}
+            onClick={unsaved.onDiscard}
+          >
             Discard
           </button>
           <button
             type="button"
             className={`${styles.btn} ${styles.btnPrimary}`}
             aria-label={`Save changes to ${unsaved.name}`}
+            disabled={unsaved.saving}
             onClick={unsaved.onSave}
           >
             Save

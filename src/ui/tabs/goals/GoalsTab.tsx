@@ -396,7 +396,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     setActiveId(null)
   }, [])
 
-  const { save: onSaveChanges } = useScenarioSave(actions, activeId, draft, draft.name)
+  const { save: onSaveChanges, saving } = useScenarioSave(actions, activeId, draft, draft.name)
 
   const onDiscard = useCallback(() => {
     if (activeScenario) setDraft(scenarioToDraft(activeScenario))
@@ -543,6 +543,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
               canWrite={actions != null}
               actions={actions}
               dirty={dirty}
+              saving={saving}
               onSelect={onSelectScenario}
               onSelectEditing={onSelectEditing}
               onToggleVisible={onToggleVisible}
@@ -568,6 +569,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
               draft={deferredDraft}
               unsaved={unsavedActions(actions != null, dirty, {
                 name: draft.name,
+                saving,
                 onSave: onSaveChanges,
                 onDiscard,
               })}

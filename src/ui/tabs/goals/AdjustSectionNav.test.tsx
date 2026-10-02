@@ -182,14 +182,14 @@ describe('AdjustSectionNav', () => {
     const { rerender } = render(<AdjustSectionNav />)
     expect(scrollTo).toHaveBeenLastCalledWith({ left: -150, behavior: 'smooth' })
 
-    rerender(<AdjustSectionNav unsaved={{ name: 'Path A', onSave: vi.fn(), onDiscard: vi.fn() }} />)
+    rerender(<AdjustSectionNav unsaved={{ name: 'Path A', saving: false, onSave: vi.fn(), onDiscard: vi.fn() }} />)
 
     expect(scrollTo).toHaveBeenLastCalledWith({ left: -50, behavior: 'smooth' })
   })
 
   it('offers Save and Discard beside the chips only when there are unsaved changes, and runs them', async () => {
     const user = userEvent.setup()
-    const unsaved = { name: 'Path A', onSave: vi.fn(), onDiscard: vi.fn() }
+    const unsaved = { name: 'Path A', saving: false, onSave: vi.fn(), onDiscard: vi.fn() }
     const { rerender } = render(<AdjustSectionNav />)
     expect(screen.queryByRole('group', { name: 'Unsaved changes' })).not.toBeInTheDocument()
 
@@ -206,6 +206,18 @@ describe('AdjustSectionNav', () => {
       'Discard',
       'Save',
     ])
+  })
+
+  it('takes neither Save nor Discard while a save is in flight', () => {
+    const unsaved = { name: 'Path A', saving: false, onSave: vi.fn(), onDiscard: vi.fn() }
+    const { rerender } = render(<AdjustSectionNav unsaved={unsaved} />)
+    const group = screen.getByRole('group', { name: 'Unsaved changes' })
+    const buttons = () => within(group).getAllByRole('button')
+    for (const button of buttons()) expect(button).toBeEnabled()
+
+    rerender(<AdjustSectionNav unsaved={{ ...unsaved, saving: true }} />)
+
+    for (const button of buttons()) expect(button).toBeDisabled()
   })
 
   it('keeps a field that takes focus clear of the pinned block, but not a button', async () => {

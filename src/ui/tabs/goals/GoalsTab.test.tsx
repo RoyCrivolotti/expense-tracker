@@ -706,6 +706,35 @@ describe('GoalsTab', () => {
     expect(row()).not.toBeInTheDocument()
   })
 
+  it('holds Save and Discard in the row and the card while a save is in flight, so the editor cannot be put back under it', async () => {
+    mockPhoneWidth()
+    const user = userEvent.setup()
+    const actions = makeActions()
+    let finish!: () => void
+    vi.mocked(actions.updateScenario).mockReturnValue(new Promise<void>((resolve) => (finish = resolve)))
+    const plan = makeScenario({ id: 1, name: 'Path A', isActive: true })
+    render(<GoalsTab model={buildExpenseModel(makeDataset({ goalScenarios: [plan] }))} actions={actions} />)
+    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+    fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
+    const button = (name: string) => screen.getByRole('button', { name, hidden: true })
+    const held = ['Save changes to Path A, tweaked', 'Discard changes', 'Save changes', 'Discard']
+
+    await user.click(button('Save changes to Path A, tweaked'))
+    for (const name of held) expect(button(name)).toBeDisabled()
+    await user.click(button('Save changes to Path A, tweaked'))
+    await user.click(button('Discard changes'))
+    await user.click(button('Discard'))
+
+    expect(actions.updateScenario).toHaveBeenCalledTimes(1)
+    expect(screen.getByLabelText('Scenario name')).toHaveValue('Path A, tweaked')
+
+    await act(async () => {
+      finish()
+      await Promise.resolve()
+    })
+    for (const name of held) expect(button(name)).toBeEnabled()
+  })
+
   it('offers no Save in a read-only session, which cannot save', async () => {
     mockPhoneWidth()
     const user = userEvent.setup()
