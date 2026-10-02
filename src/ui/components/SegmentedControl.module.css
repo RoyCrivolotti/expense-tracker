@@ -64,10 +64,13 @@
   container-type: inline-size;
 }
 
-/* The label shrinks with the bar rather than being cut or wrapped: at larger text sizes on
-   a narrow phone four labels no longer fit at their usual size, and the bar's height is
-   fixed. 4.5cqi leaves "Progress" room in a quarter of the bar down to about 288px. */
+/* Segments take their label's width and share what is left, so a long label does not have to
+   fit a quarter of the bar. The label also shrinks with the bar rather than being cut or
+   wrapped: at larger text sizes on a narrow phone the labels no longer fit at their usual
+   size, and the bar's height is fixed. 4.5cqi keeps four labels (about 30 characters in all)
+   inside the bar down to about 288px wide. */
 .tall .seg {
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   justify-content: center;
