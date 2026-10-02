@@ -695,10 +695,13 @@ describe('GoalsTab', () => {
     expect(row()).not.toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
-    await user.click(button('Save'))
+    // The scenario card has a Save changes and a Discard of its own, so the row's say whose they are.
+    expect(screen.getByRole('button', { name: 'Save changes', hidden: true })).not.toBe(button('Save changes to Path A, tweaked'))
+    expect(screen.getByRole('button', { name: 'Discard', hidden: true })).not.toBe(button('Discard changes'))
+    await user.click(button('Save changes to Path A, tweaked'))
     expect(actions.updateScenario).toHaveBeenCalledWith(1, expect.objectContaining({ name: 'Path A, tweaked' }))
 
-    await user.click(button('Discard'))
+    await user.click(button('Discard changes'))
     expect(screen.getByLabelText('Scenario name')).toHaveValue('Path A')
     expect(row()).not.toBeInTheDocument()
   })

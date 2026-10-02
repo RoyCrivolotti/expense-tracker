@@ -11,6 +11,9 @@ import styles from './goals.module.css'
 
 /** What can be done with edits to a saved scenario that have not been saved. */
 export interface UnsavedActions {
+  /** The scenario the edits are to. The buttons are named after it, since the scenario card
+   *  above the controls has a Save and a Discard of its own. */
+  name: string
   onSave: () => void
   onDiscard: () => void
 }
@@ -109,10 +112,15 @@ export function AdjustSectionNav({ unsaved }: { unsaved?: UnsavedActions | undef
       </nav>
       {unsaved ? (
         <div role="group" aria-label="Unsaved changes" className={styles.unsavedActions}>
-          <button type="button" className={styles.btn} onClick={unsaved.onDiscard}>
+          <button type="button" className={styles.btn} aria-label="Discard changes" onClick={unsaved.onDiscard}>
             Discard
           </button>
-          <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={unsaved.onSave}>
+          <button
+            type="button"
+            className={`${styles.btn} ${styles.btnPrimary}`}
+            aria-label={`Save changes to ${unsaved.name}`}
+            onClick={unsaved.onSave}
+          >
             Save
           </button>
         </div>

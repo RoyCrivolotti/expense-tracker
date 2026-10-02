@@ -223,10 +223,9 @@ function GoalsContentTop({ showIntro }: { showIntro: boolean }) {
 function unsavedActions(
   canWrite: boolean,
   dirty: boolean,
-  onSave: () => void,
-  onDiscard: () => void,
+  actions: UnsavedActions,
 ): UnsavedActions | undefined {
-  return canWrite && dirty ? { onSave, onDiscard } : undefined
+  return canWrite && dirty ? actions : undefined
 }
 
 function initialView(entry: GoalsEntry | undefined): TabView {
@@ -567,7 +566,11 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
             // Phone only: only the phone's row offers Adjust.
             <AdjustStack
               draft={deferredDraft}
-              unsaved={unsavedActions(actions != null, dirty, onSaveChanges, onDiscard)}
+              unsaved={unsavedActions(actions != null, dirty, {
+                name: draft.name,
+                onSave: onSaveChanges,
+                onDiscard,
+              })}
             />
           ) : null}
           <div className={styles.areaControls}>

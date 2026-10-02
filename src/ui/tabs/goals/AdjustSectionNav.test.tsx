@@ -182,21 +182,21 @@ describe('AdjustSectionNav', () => {
     const { rerender } = render(<AdjustSectionNav />)
     expect(scrollTo).toHaveBeenLastCalledWith({ left: -150, behavior: 'smooth' })
 
-    rerender(<AdjustSectionNav unsaved={{ onSave: vi.fn(), onDiscard: vi.fn() }} />)
+    rerender(<AdjustSectionNav unsaved={{ name: 'Path A', onSave: vi.fn(), onDiscard: vi.fn() }} />)
 
     expect(scrollTo).toHaveBeenLastCalledWith({ left: -50, behavior: 'smooth' })
   })
 
   it('offers Save and Discard beside the chips only when there are unsaved changes, and runs them', async () => {
     const user = userEvent.setup()
-    const unsaved = { onSave: vi.fn(), onDiscard: vi.fn() }
+    const unsaved = { name: 'Path A', onSave: vi.fn(), onDiscard: vi.fn() }
     const { rerender } = render(<AdjustSectionNav />)
     expect(screen.queryByRole('group', { name: 'Unsaved changes' })).not.toBeInTheDocument()
 
     rerender(<AdjustSectionNav unsaved={unsaved} />)
     const group = screen.getByRole('group', { name: 'Unsaved changes' })
-    await user.click(within(group).getByRole('button', { name: 'Save' }))
-    await user.click(within(group).getByRole('button', { name: 'Discard' }))
+    await user.click(within(group).getByRole('button', { name: 'Save changes to Path A' }))
+    await user.click(within(group).getByRole('button', { name: 'Discard changes' }))
 
     expect(unsaved.onSave).toHaveBeenCalledTimes(1)
     expect(unsaved.onDiscard).toHaveBeenCalledTimes(1)
