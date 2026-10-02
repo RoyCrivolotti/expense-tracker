@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { adjustSectionId } from './adjustSections'
 import {
   ADJUST_STACK_ID,
+  keepClearOfStack,
   landOnAdjustControls,
   scrollToAdjustSection,
   stackBottom,
@@ -95,5 +96,60 @@ describe('landOnAdjustControls', () => {
     landOnAdjustControls()
 
     expect(scrollBy).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('keepClearOfStack', () => {
+  function fieldAt(top: number) {
+    return mount('div', 'a-field', { top })
+  }
+
+  function stackAt(top: number, bottom: number) {
+    mount('div', ADJUST_STACK_ID, { top, bottom })
+  }
+
+  it('scrolls a field that is behind the stack to just below it, again once the keyboard has settled', () => {
+    vi.useFakeTimers()
+    stackAt(103, 267)
+    const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+      cb(0)
+      return 0
+    })
+
+    keepClearOfStack(fieldAt(150))
+    expect(scrollBy).toHaveBeenCalledTimes(1)
+    expect(scrollBy).toHaveBeenLastCalledWith({ top: 150 - 267 - 8, behavior: 'auto' })
+
+    vi.advanceTimersByTime(400)
+    expect(scrollBy).toHaveBeenCalledTimes(2)
+    vi.useRealTimers()
+  })
+
+  it('leaves a field that is below the stack, or above it, where it is', () => {
+    vi.useFakeTimers()
+    stackAt(103, 267)
+    const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+    vi.stubGlobal('requestAnimationFrame', undefined)
+
+    keepClearOfStack(fieldAt(400))
+    vi.advanceTimersByTime(400)
+    document.getElementById('a-field')?.remove()
+    keepClearOfStack(fieldAt(60))
+    vi.advanceTimersByTime(400)
+
+    expect(scrollBy).not.toHaveBeenCalled()
+    vi.useRealTimers()
+  })
+
+  it('does nothing when there is no stack on the page', () => {
+    vi.useFakeTimers()
+    const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+    vi.stubGlobal('requestAnimationFrame', undefined)
+
+    keepClearOfStack(fieldAt(150))
+
+    expect(scrollBy).not.toHaveBeenCalled()
+    vi.useRealTimers()
   })
 })

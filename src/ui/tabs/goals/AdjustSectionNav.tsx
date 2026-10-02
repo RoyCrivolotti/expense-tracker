@@ -5,7 +5,7 @@ import {
   pickActiveSection,
   type AdjustSection,
 } from './adjustSections'
-import { scrollToAdjustSection, stackBottom } from './scrollToAdjustSection'
+import { keepClearOfStack, scrollToAdjustSection, stackBottom } from './scrollToAdjustSection'
 import { useGoalsNarrow } from './useGoalsNarrow'
 import styles from './goals.module.css'
 
@@ -60,6 +60,18 @@ export function AdjustSectionNav({ unsaved }: { unsaved?: UnsavedActions | undef
       window.removeEventListener('resize', update)
       for (const type of USER_SCROLL_EVENTS) window.removeEventListener(type, release)
     }
+  }, [narrow])
+
+  // A field that takes focus, with the keyboard up or from a key press, is not left behind the
+  // pinned block. Buttons are not fields to clear, and the block's own are not under it.
+  useEffect(() => {
+    if (!narrow) return
+    const onFocus = (event: FocusEvent) => {
+      const target = event.target
+      if (target instanceof Element && target.matches('input, select, textarea')) keepClearOfStack(target)
+    }
+    document.addEventListener('focusin', onFocus)
+    return () => document.removeEventListener('focusin', onFocus)
   }, [narrow])
 
   // The strip scrolls sideways, so the marked chip is kept in sight inside it.

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AdjustSectionNav } from './AdjustSectionNav'
 import { ADJUST_SECTIONS, adjustSectionId } from './adjustSections'
+import { ADJUST_STACK_ID } from './scrollToAdjustSection'
 import { NARROW_MQ } from './useGoalsNarrow'
 
 /** Where each section's top is, in viewport pixels; the tests move these to "scroll". */
@@ -135,6 +136,25 @@ describe('AdjustSectionNav', () => {
       'Discard',
       'Save',
     ])
+  })
+
+  it('keeps a field that takes focus clear of the pinned block, but not a button', async () => {
+    const stack = document.createElement('div')
+    stack.id = ADJUST_STACK_ID
+    document.body.append(stack)
+    const field = document.createElement('input')
+    document.body.append(field)
+    // The block spans 0 to 300 and the field starts at 100, behind it. Set on the elements
+    // themselves, since the prototype's rect is already mocked for the sections.
+    stack.getBoundingClientRect = () => ({ top: 0, bottom: 300 }) as DOMRect
+    field.getBoundingClientRect = () => ({ top: 100 }) as DOMRect
+    render(<AdjustSectionNav />, { container: stack })
+
+    fireEvent.focusIn(screen.getByRole('button', { name: 'FIRE' }))
+    expect(window.scrollBy).not.toHaveBeenCalled()
+
+    fireEvent.focusIn(field)
+    await vi.waitFor(() => expect(window.scrollBy).toHaveBeenCalledWith({ top: 100 - 300 - 8, behavior: 'auto' }))
   })
 
   it('stops listening when it leaves the page', () => {
