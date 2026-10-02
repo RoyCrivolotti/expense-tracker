@@ -254,11 +254,11 @@ async function captureGoalsDesktop(page) {
   await goToGoals(page)
   await page.screenshot({ path: join(OUT, 'goals-desktop-full.png'), fullPage: true })
 
-  await captureGoalsProgressAndSetup(page, 'desktop', true)
+  await captureGoalsProgressAndAssumptions(page, 'desktop', true)
 }
 
 /** The Progress and Assumptions views; `fullPage` for desktop, the top of the view on a phone. */
-async function captureGoalsProgressAndSetup(page, suffix, fullPage) {
+async function captureGoalsProgressAndAssumptions(page, suffix, fullPage) {
   await page.getByRole('radio', { name: 'Progress', exact: true }).click()
   await page.waitForSelector('text=Net worth over time', { timeout: 15000 })
   await page.waitForTimeout(400)
@@ -267,7 +267,7 @@ async function captureGoalsProgressAndSetup(page, suffix, fullPage) {
   await page.getByRole('radio', { name: 'Assumptions', exact: true }).click()
   await page.waitForSelector('text=Wealth accounts', { timeout: 15000 })
   await page.waitForTimeout(300)
-  await page.screenshot({ path: join(OUT, `goals-${suffix}-setup.png`), fullPage })
+  await page.screenshot({ path: join(OUT, `goals-${suffix}-assumptions.png`), fullPage })
 }
 
 const GOALS_MOBILE_VIEWS = [
@@ -304,7 +304,7 @@ async function captureGoalsMobile(page) {
   }
 
   await page.evaluate(() => window.scrollTo(0, 0))
-  await captureGoalsProgressAndSetup(page, 'mobile', false)
+  await captureGoalsProgressAndAssumptions(page, 'mobile', false)
 }
 
 async function capture() {
