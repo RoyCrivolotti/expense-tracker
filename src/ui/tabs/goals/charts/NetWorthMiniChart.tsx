@@ -6,6 +6,7 @@ import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { formatMoneyShort } from '../chartTheme'
 import { useMediaQuery } from '../../../hooks/useMediaQuery'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
+import styles from './NetWorthMiniChart.module.css'
 
 /** Room above the plot: the top axis label's half height, and no more, since this chart is pinned. */
 const MINI_PAD_TOP = 8
@@ -17,6 +18,20 @@ const SHORT_DEVICE_MQ = '(max-device-height: 700px)'
 const MINI_HEIGHT_SHORT = 96
 
 /**
+ * The readout sits in the plot's top-left, where a line that starts low and ends top-right has
+ * not got to. A low return against a large balance runs near the top the whole way, so it moves
+ * to the bottom-left then. Judged on the first 55% of the line, which is as far as the readout
+ * reaches on a 320px phone, against the top 40% and bottom 40% of its range, a little more than
+ * the readout covers.
+ */
+function readoutSide(values: number[]): 'top' | 'bottom' {
+  const peak = Math.max(...values)
+  const reach = values.slice(0, Math.ceil(values.length * 0.55))
+  const hits = (inRange: (v: number) => boolean) => reach.some(inRange)
+  return hits((v) => v > 0.6 * peak) && !hits((v) => v < 0.4 * peak) ? 'bottom' : 'top'
+}
+
+/**
  * The scenario being edited, and nothing else: its line and its uncertainty band, with the
  * first and last year labelled. Pinned above the controls on a phone so a slider can be tuned
  * against the line it moves; the hero chart carries the legend, milestones and markers.
@@ -25,7 +40,7 @@ function NetWorthMiniChartImpl({ draft }: { draft: NewGoalScenario }) {
   const format = useMoneyFormat()
   const inflationRate = useAssumedInflation()
   const height = useMediaQuery(SHORT_DEVICE_MQ) ? MINI_HEIGHT_SHORT : MINI_HEIGHT
-  const { series, labels } = useMemo(() => {
+  const { series, labels, end, side } = useMemo(() => {
     const params = scenarioToParams({ ...draft, id: 0 }, inflationRate)
     const points = projectNetWorth(params)
     const { lo, hi } = projectNetWorthBand(params)
@@ -46,21 +61,30 @@ function NetWorthMiniChartImpl({ draft }: { draft: NewGoalScenario }) {
     return {
       series: [band, line],
       labels: points.map((p, i) => (i === 0 || i === last ? String(p.year) : '')),
+      end: points[last],
+      side: readoutSide(line.values),
     }
   }, [draft, inflationRate])
   const tooltip = useCallback((i: number) => ({ title: `Year ${i}`, lines: [] }), [])
 
   return (
-    <LinearChart
-      height={height}
-      padTop={MINI_PAD_TOP}
-      series={series}
-      xLabels={labels}
-      formatValue={(c) => formatMoneyShort(c, format)}
-      ariaLabel="Projection of the scenario being edited"
-      tooltip={tooltip}
-      tooltipMode="hidden"
-    />
+    <div className={styles.wrap}>
+      <LinearChart
+        height={height}
+        padTop={MINI_PAD_TOP}
+        series={series}
+        xLabels={labels}
+        formatValue={(c) => formatMoneyShort(c, format)}
+        ariaLabel="Projection of the scenario being edited"
+        tooltip={tooltip}
+        tooltipMode="hidden"
+      />
+      {end ? (
+        <span className={styles.readout} data-side={side} aria-hidden="true">
+          Year {end.year} · {formatMoneyShort(end.investedCents, format)}
+        </span>
+      ) : null}
+    </div>
   )
 }
 

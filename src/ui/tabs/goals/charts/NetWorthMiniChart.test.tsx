@@ -3,6 +3,14 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { installFakeMatchMedia } from '../../../../testing/fakeMatchMedia'
 import { NetWorthMiniChart } from './NetWorthMiniChart'
 import { makeScenario } from '../../../../testing/factories'
+import type { NewGoalScenario } from '../../../../data/dataSource'
+
+function draftOf(overrides: Parameters<typeof makeScenario>[0]): NewGoalScenario {
+  const { id, isActive, ...draft } = makeScenario(overrides)
+  void id
+  void isActive
+  return draft
+}
 
 describe('NetWorthMiniChart', () => {
   // The hook reads a media query, so the stub is put back to answering no, which is jsdom's own.
@@ -35,5 +43,46 @@ describe('NetWorthMiniChart', () => {
       .map((t) => t.textContent)
       .filter((t) => t === '0' || t === '10')
     expect(xLabels).toEqual(['0', '10'])
+  })
+
+  describe('end value readout', () => {
+    // No return and no contributions: the line stays at the 100k it starts at.
+    const flat = { horizonYears: 10, expectedRealReturn: 0, monthlyContributionCents: 0 }
+
+    it('names the last year and where the line ends, outside the accessibility tree', () => {
+      render(<NetWorthMiniChart draft={draftOf(flat)} />)
+
+      const readout = screen.getByText('Year 10 · 100k €')
+      expect(readout).toHaveAttribute('aria-hidden', 'true')
+    })
+
+    it('follows the draft, so a slider can be judged without reading the axis', () => {
+      const { rerender } = render(<NetWorthMiniChart draft={draftOf(flat)} />)
+      expect(screen.getByText('Year 10 · 100k €')).toBeInTheDocument()
+
+      rerender(<NetWorthMiniChart draft={draftOf({ ...flat, expectedRealReturn: 0.07, horizonYears: 20 })} />)
+
+      expect(screen.queryByText('Year 10 · 100k €')).not.toBeInTheDocument()
+      expect(screen.getByText(/^Year 20 · 3\d\dk €$/)).toBeInTheDocument()
+    })
+
+    it('does not change the chart height', () => {
+      const { rerender } = render(<NetWorthMiniChart draft={draftOf(flat)} />)
+      const viewBox = () => screen.getByRole('img').getAttribute('viewBox')
+      expect(viewBox()).toBe('0 0 360 112')
+
+      rerender(<NetWorthMiniChart draft={draftOf({ ...flat, expectedRealReturn: 0.12 })} />)
+
+      expect(viewBox()).toBe('0 0 360 112')
+    })
+
+    it('sits top-left, and drops to the bottom-left when the line runs along the top', () => {
+      const { rerender } = render(<NetWorthMiniChart draft={draftOf({ horizonYears: 30 })} />)
+      expect(screen.getByText(/^Year 30/)).toHaveAttribute('data-side', 'top')
+
+      rerender(<NetWorthMiniChart draft={draftOf({ horizonYears: 30, expectedRealReturn: 0, monthlyContributionCents: 0 })} />)
+
+      expect(screen.getByText(/^Year 30/)).toHaveAttribute('data-side', 'bottom')
+    })
   })
 })
