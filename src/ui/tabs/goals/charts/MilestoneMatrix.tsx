@@ -157,7 +157,7 @@ function MilestoneMatrixImpl({
     <ChartShell embedded={embedded}>
       <h3 className={styles.chartTitle}>Years to milestone</h3>
       <p className={styles.chartHint}>
-        Invested portfolio only. Edit the list under Settings → Milestones.
+        Invested portfolio only. Edit the list in Assumptions.
         {fromToday ? ' "From today" counts years from your latest check-in.' : ''}
       </p>
       {milestones.length === 0 ? (

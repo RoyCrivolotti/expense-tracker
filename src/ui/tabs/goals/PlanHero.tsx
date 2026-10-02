@@ -3,6 +3,7 @@ import type { GoalScenario, Milestone, WealthAccount, WealthCheckin } from '../.
 import { checkinInvestedCents, yearOffsetFromDate, type PlanFromToday } from '../../../engine'
 import type { ChartSeries } from '../../charts/LinearChart'
 import { SegmentedControl } from '../../components/SegmentedControl'
+import { todayIso } from '../../components/transactionFormState'
 import { NetWorthChart } from './charts/NetWorthChart'
 import { GoalsNarrative } from './GoalsNarrative'
 import { NominalPreview } from './NominalPreview'
@@ -69,8 +70,7 @@ export function PlanHero({
 
   const heroTodayIndex = useMemo(() => {
     if (!activeScenario?.planStartDate) return undefined
-    const today = new Date().toISOString().slice(0, 10)
-    const offset = yearOffsetFromDate(activeScenario.planStartDate, today)
+    const offset = yearOffsetFromDate(activeScenario.planStartDate, todayIso())
     return offset !== null && offset >= 0 ? offset : undefined
   }, [activeScenario])
 

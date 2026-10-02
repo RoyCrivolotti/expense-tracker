@@ -174,6 +174,6 @@ describe('MilestoneMatrix', () => {
         reached={noneReached}
       />,
     )
-    expect(screen.getByText(/Settings → Milestones/)).toBeTruthy()
+    expect(screen.getByText(/Edit the list in Assumptions/)).toBeTruthy()
   })
 })
