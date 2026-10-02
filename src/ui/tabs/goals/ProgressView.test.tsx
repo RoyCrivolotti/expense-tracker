@@ -32,7 +32,7 @@ describe('ProgressView', () => {
     expect(onOpenAssumptions).toHaveBeenCalled()
   })
 
-  it('offers to log a check-in once an account exists, and keeps setup elsewhere', () => {
+  it('offers to log a check-in once an account exists, and keeps the assumptions in their own view', () => {
     render(
       <ProgressView
         accounts={[makeWealthAccount({ id: 1 })]}
