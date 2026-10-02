@@ -63,7 +63,12 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // small icon plus its CSS): main had drifted to 202,984 bytes across everything merged
 // since the 203 KB ceiling was set, leaving 16 bytes — enough for CI's build to land on
 // either side of the line depending on minifier non-determinism, which is what happened.
-const TOTAL_MAX_GZIP = 204_000
+//
+// Raised from 204 KB to 206 KB for the Adjust section chips (the chip row with its scroll
+// watcher, and the helpers that scroll a section under the pinned chart): about 0.8 KB gzip
+// took the total from 203.6 KB to 204.4 KB, over the line. The extra KB beyond that is so the
+// next one-line change does not fail the build, as the notes above describe.
+const TOTAL_MAX_GZIP = 206_000
 const GOALS_MAX_GZIP = 40_000
 
 function gzipBytes(path) {
