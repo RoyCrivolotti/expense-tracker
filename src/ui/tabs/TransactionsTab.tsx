@@ -80,7 +80,7 @@ export function TransactionsTab({
   const explainFilterLock = () => showToast(FILTERS_LOCKED_HINT)
 
   return (
-    <div className={styles.stack}>
+    <div className={`${styles.stack} ${styles.txnStack}`}>
       {actions && (
         <>
           <FlaggedCard

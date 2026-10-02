@@ -459,17 +459,37 @@
   }
 }
 
-/* The Filters button and the list's totals on one line. The id is the scroll anchor
-   the Flagged card's drill-in scrolls to. */
+/* The sticky bar's height, shared with the day headers that stack under it
+   (TransactionList.module.css reads it; elsewhere it falls back to 0). */
+.txnStack {
+  --txn-bar-h: 2.75rem;
+}
+
+/*
+ * The Filters button and the list's totals on one line, held under the app header while
+ * the list scrolls. Full-bleed (the page pads 1rem each side) so rows pass cleanly under
+ * it. The top padding is the few pixels of the bar that tuck beneath the header, the same
+ * overlap the day headers use, so the content sits centred in what is actually visible.
+ * Background is opaque: rows scroll underneath.
+ */
 .resultBar {
+  position: sticky;
+  top: calc(3.5rem + env(safe-area-inset-top, 0px));
+  z-index: 6;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
+  height: var(--txn-bar-h);
+  margin-inline: -1rem;
+  padding: 0.3rem 1rem 0;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
   font-size: 0.82rem;
   color: var(--color-text-muted);
-  /* AppShell's header is sticky (~3.5rem plus the safe-area inset), so without
-     this the bar lands underneath it. */
+  /* The Flagged card's drill-in scrolls here. AppShell's header is sticky
+     (~3.5rem plus the safe-area inset), so without this the bar lands
+     underneath it. */
   scroll-margin-top: calc(4rem + env(safe-area-inset-top, 0px));
 }
 
