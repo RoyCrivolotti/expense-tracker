@@ -4,7 +4,7 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 
 ## October 2026 (Goals on a phone)
 
-- **One row to move around Goals on a phone.** Chart, Adjust, Progress and Setup are a single row under the header that stays put as you scroll, so changing view from deep in Adjust no longer means scrolling back to the top. Tapping a segment brings that view to the top, and tapping the one you are on is a quick way back up. Wide screens keep Plan, Progress and Setup.
+- **One row to move around Goals on a phone.** Chart, Adjust, Progress and Setup are a single row under the header that stays put as you scroll, so changing view from deep in Adjust no longer means scrolling back to the top. Tapping a segment brings that view's content to the top, below the intro, and tapping the one you are on is a quick way back up. Wide screens keep Plan, Progress and Setup.
 - **The pinned chart in Adjust sits flush under the row.** It used to tuck 5px under the header.
 
 ## October 2026 (marking a card statement paid)
