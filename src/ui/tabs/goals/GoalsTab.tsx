@@ -1,65 +1,30 @@
-import { useCallback, useDeferredValue, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { ExpenseModel } from '../../useExpenseData'
 import type { ExpenseActions } from '../../actions'
-import type { GoalScenario } from '../../../types'
-import type { NewGoalScenario } from '../../../data/dataSource'
 import {
   averageMonthlyCents,
   checkinInvestedCents,
   computeMonthlyTotals,
-  defaultBudgetMonth,
-  formatCents,
   latestCheckin,
   milestonesReached,
   monthlyFlows,
   planFromToday,
-  rebaseline,
-  rebaselineSummary,
-  type MoneyFormat,
-  type Rebaseline,
-  yearOffsetFromDate,
 } from '../../../engine'
 import type { InvestedSnapshot } from './checkinDate'
-import type { ChartSeries } from '../../charts/LinearChart'
-import { Card, SectionTitle } from '../../components/primitives'
-import { SegmentedControl } from '../../components/SegmentedControl'
-import { ConfirmSheet } from '../../components/ConfirmSheet'
-import { failureMessage } from '../../hooks/useFailureToast'
-import { useToast } from '../../hooks/useToast'
-import { Presence } from '../../components/Presence'
-import { EXIT_MS } from '../../hooks/motion'
-import { GoalControls } from './GoalControls'
-import { ScenarioManager } from './ScenarioManager'
+import { SectionTitle } from '../../components/primitives'
 import { GoalsIntro } from './GoalsIntro'
 import { GoalsViewSwitch } from './GoalsViewSwitch'
 import { GoalsPanel } from './GoalsPanel'
 import { mobileViewOf, type AssumptionsFocus, type MobilePlanView, type TabView } from './goalsView'
 import { useGoalsScrollMemory } from './useGoalsScrollMemory'
 import { GOALS_CONTENT_ANCHOR_ID } from './goalsAnchors'
-import { AdjustStack } from './AdjustStack'
-import type { UnsavedActions } from './UnsavedGroup'
-import { GoalsNarrative } from './GoalsNarrative'
-import { NominalPreview } from './NominalPreview'
-import { SecondaryCharts } from './SecondaryCharts'
-import { ProgressView } from './ProgressView'
+import { ProgressPane } from './ProgressPane'
 import { AssumptionsView } from './AssumptionsView'
-import { draftFromDataset } from './goalsDefaults'
-import { useScenarioSave } from './useScenarioSave'
-import { activePlan, initialEditorScenario } from './scenarioSelection'
-import { NetWorthChart } from './charts/NetWorthChart'
-import { NetWorthNowCard } from './charts/NetWorthNowCard'
-import { todayIso } from '../../components/transactionFormState'
-import { useMoneyFormat } from '../../hooks/moneyFormatContext'
-import { formatCheckinDate } from './checkinDate'
+import { useScenarioEditor } from './useScenarioEditor'
+import { PlanView } from './PlanView'
+import type { DisplayMode } from './PlanHero'
+import { activePlan } from './scenarioSelection'
 import styles from './goals.module.css'
-import progressStyles from './progress.module.css'
-
-type DisplayMode = 'nominal' | 'purchasing-power'
-
-const DISPLAY_MODE_OPTIONS: { value: DisplayMode; label: string }[] = [
-  { value: 'nominal', label: 'Nominal' },
-  { value: 'purchasing-power', label: 'Purchasing power' },
-]
 
 /** How the tab was reached: 'checkin' opens Progress with the check-in form up. */
 export type GoalsEntry = 'checkin' | null
@@ -68,157 +33,6 @@ interface GoalsTabProps {
   model: ExpenseModel
   actions?: ExpenseActions | undefined
   entry?: GoalsEntry
-}
-
-function scenarioToDraft(s: GoalScenario): NewGoalScenario {
-  const { id, isActive, ...rest } = s
-  void id
-  void isActive
-  return rest
-}
-
-// Fields the controls and the header can change; used to detect unsaved edits to a saved plan.
-const EDIT_KEYS = [
-  'color',
-  'startInvestedCents',
-  'monthlyContributionCents',
-  'annualContributionGrowth',
-  'expectedRealReturn',
-  'horizonYears',
-  'housePriceCents',
-  'downPaymentFraction',
-  'housePurchaseYear',
-  'transactionCostsCents',
-  'mortgageTermYears',
-  'mortgageRateAnnual',
-  'houseAppreciationRate',
-  'rentMonthlyCents',
-  'annualSpendCents',
-  'safeWithdrawalRate',
-  'planStartDate',
-] as const satisfies readonly (keyof NewGoalScenario)[]
-
-/** Whether the draft holds edits its saved scenario does not. */
-function differsFrom(draft: NewGoalScenario, saved: GoalScenario): boolean {
-  if (draft.name !== saved.name) return true
-  if (JSON.stringify(draft.lifeEvents) !== JSON.stringify(saved.lifeEvents)) return true
-  return EDIT_KEYS.some((k) => draft[k] !== saved[k])
-}
-
-/** A detached draft (no scenario loaded) holding edits its origin does not. */
-function hasDetachedEdits(
-  loaded: GoalScenario | null,
-  base: GoalScenario | null,
-  draft: NewGoalScenario,
-): boolean {
-  return loaded === null && base !== null && differsFrom(draft, base)
-}
-
-function bootstrapEditor(
-  dataset: ExpenseModel['dataset'],
-  avgSaving: number,
-): { activeId: number | null; draft: NewGoalScenario } {
-  const first = initialEditorScenario(dataset.goalScenarios)
-  if (first) return { activeId: first.id, draft: scenarioToDraft(first) }
-  return { activeId: null, draft: draftFromDataset(dataset, avgSaving) }
-}
-
-/**
- * What a re-baseline from Progress is about to write, asked before it is written. Held
- * inside Presence so the sheet can animate out after the answer.
- */
-function RebaselineSheet({
-  preview,
-  format,
-  onConfirm,
-  onCancel,
-}: {
-  preview: Rebaseline | null
-  format: MoneyFormat
-  onConfirm: () => void
-  onCancel: () => void
-}) {
-  const summary = preview ? rebaselineSummary(preview, format, formatCheckinDate) : []
-  // What is being replaced is said too, so the sheet is not only about what it puts in.
-  const replaced = preview?.previous.planStartDate
-    ? `, instead of ${formatCheckinDate(preview.previous.planStartDate)} from ${formatCents(preview.previous.investedCents, format)}`
-    : ''
-  const start = preview
-    ? `The plan restarts on ${formatCheckinDate(preview.patch.planStartDate)} from ${formatCents(preview.patch.startInvestedCents, format)}${replaced}. From then on ahead or behind measures only what you do next.`
-    : ''
-  return (
-    <Presence show={preview !== null} exitMs={EXIT_MS.sheet}>
-      {preview ? (
-        <ConfirmSheet
-          title="Re-baseline the plan from the latest check-in?"
-          message={summary.length > 0 ? [start, ...summary] : start}
-          confirmLabel="Re-baseline"
-          onConfirm={onConfirm}
-          onCancel={onCancel}
-        />
-      ) : null}
-    </Presence>
-  )
-}
-
-/**
- * Asked before loading another scenario over unsaved edits. Held inside Presence so the
- * sheet keeps its text while it animates out. A detached draft has no saved scenario to
- * "save changes" to, so it is told to save the draft as a new one.
- */
-function DiscardSheet({
-  pending,
-  open,
-  detached,
-  name,
-  onConfirm,
-  onCancel,
-}: {
-  pending: GoalScenario | null
-  open: boolean
-  detached: boolean
-  name: string
-  onConfirm: () => void
-  onCancel: () => void
-}) {
-  const keep = detached ? 'Save the draft as a new scenario first to keep them.' : 'Save changes first to keep them.'
-  return (
-    <Presence show={open} exitMs={EXIT_MS.sheet}>
-      {pending ? (
-        <ConfirmSheet
-          title={detached ? 'Discard the unsaved draft?' : `Discard unsaved changes to ${name}?`}
-          message={`Loading ${pending.name} drops the edits made here. ${keep}`}
-          confirmLabel="Discard"
-          destructive
-          onConfirm={onConfirm}
-          onCancel={onCancel}
-        />
-      ) : null}
-    </Presence>
-  )
-}
-
-/**
- * What sits between the view switch and a view's own content: Plan's intro and glossary (on
- * a screen wide enough to lead with them), and the anchor a tap on the switch scrolls to.
- * Progress and Assumptions start at the anchor.
- */
-function GoalsContentTop({ showIntro }: { showIntro: boolean }) {
-  return (
-    <>
-      <GoalsIntro placement="top" show={showIntro} />
-      <div id={GOALS_CONTENT_ANCHOR_ID} className={styles.contentAnchor} />
-    </>
-  )
-}
-
-/** Edits to a saved scenario, which the Adjust section row can save or drop; none otherwise. */
-function unsavedActions(
-  canWrite: boolean,
-  dirty: boolean,
-  actions: UnsavedActions,
-): UnsavedActions | undefined {
-  return canWrite && dirty ? actions : undefined
 }
 
 function initialView(entry: GoalsEntry | undefined): TabView {
@@ -303,175 +117,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     [monthly],
   )
 
-  const [activeId, setActiveId] = useState<number | null>(
-    () => bootstrapEditor(dataset, avgSaving).activeId,
-  )
-  // The saved scenario the draft was last loaded from. Detaching to "Unsaved draft" clears
-  // activeId but keeps the edits, and this is what they are still measured against.
-  const [baseId, setBaseId] = useState<number | null>(
-    () => bootstrapEditor(dataset, avgSaving).activeId,
-  )
-  const [draft, setDraft] = useState<NewGoalScenario>(
-    () => bootstrapEditor(dataset, avgSaving).draft,
-  )
-  const [hiddenIds, setHiddenIds] = useState<ReadonlySet<number>>(() => new Set())
-  // Controls read `draft` (instant); charts read the deferred copy so dragging a
-  // slider never blocks on the projection recompute (keeps the thumb at 60fps).
-  const deferredDraft = useDeferredValue(draft)
-
-  // Editing keeps the saved plan active; we track dirtiness rather than
-  // detaching to a fresh draft, so the user can save changes in place.
-  const patchDraft = useCallback((patch: Partial<NewGoalScenario>) => {
-    setDraft((prev) => ({ ...prev, ...patch }))
-  }, [])
-
-  // Two different "current" scenarios: the one loaded in the editor (activeId), and the
-  // owner's plan, which Progress measures against. Exploring a path must not change
-  // what you are being measured against.
-  const activeScenario = useMemo(
-    () => dataset.goalScenarios.find((s) => s.id === activeId) ?? null,
-    [dataset.goalScenarios, activeId],
-  )
-  const dirty = useMemo(
-    () => activeScenario !== null && differsFrom(draft, activeScenario),
-    [activeScenario, draft],
-  )
-  // A detached draft has no saved scenario of its own, so loading another one would drop
-  // its edits just as surely; it is measured against the scenario it came from.
-  const baseScenario = useMemo(
-    () => dataset.goalScenarios.find((s) => s.id === baseId) ?? null,
-    [dataset.goalScenarios, baseId],
-  )
-  const detachedEdits = hasDetachedEdits(activeScenario, baseScenario, draft)
-
-  const selectScenario = useCallback((scenario: GoalScenario) => {
-    setActiveId(scenario.id)
-    setBaseId(scenario.id)
-    setDraft(scenarioToDraft(scenario))
-    // The loaded scenario is always drawn as the editing line, so a hidden flag on it would
-    // only leave the chip and legend saying two things at once.
-    setHiddenIds((prev) => {
-      if (!prev.has(scenario.id)) return prev
-      const next = new Set(prev)
-      next.delete(scenario.id)
-      return next
-    })
-  }, [])
-
-  const onActivate = useCallback(() => {
-    if (!actions || activeId == null) return
-    void actions.activateScenario(activeId)
-  }, [actions, activeId])
-
-  // Loading another scenario replaces the draft, so unsaved edits are held back behind a
-  // question. Held as its own value so the sheet keeps its text while it animates out.
-  const [pendingSelect, setPendingSelect] = useState<GoalScenario | null>(null)
-  const [discardOpen, setDiscardOpen] = useState(false)
-  const onSelectScenario = useCallback(
-    (scenario: GoalScenario) => {
-      if (scenario.id === activeId) return
-      if (dirty || detachedEdits) {
-        setPendingSelect(scenario)
-        setDiscardOpen(true)
-        return
-      }
-      selectScenario(scenario)
-    },
-    [activeId, dirty, detachedEdits, selectScenario],
-  )
-  const onDiscardAndSelect = useCallback(() => {
-    setDiscardOpen(false)
-    if (pendingSelect) selectScenario(pendingSelect)
-  }, [pendingSelect, selectScenario])
-
-  // Switching to the unsaved draft keeps the current edits, so it needs no question.
-  const onSelectEditing = useCallback(() => {
-    setActiveId(null)
-  }, [])
-
-  const { save: onSaveChanges, saving } = useScenarioSave(actions, activeId, draft, draft.name)
-
-  const onDiscard = useCallback(() => {
-    if (activeScenario) setDraft(scenarioToDraft(activeScenario))
-  }, [activeScenario])
-
-  // Progress writes the plan directly, so it asks first, saying what moves. The editor's
-  // draft of that same plan is patched alongside the write, or the header would report
-  // unsaved changes and saving them would write the old start back over the re-baseline.
-  const format = useMoneyFormat()
-  const [rebaselinePreview, setRebaselinePreview] = useState<Rebaseline | null>(null)
-  const onRebaseline = useCallback(() => {
-    if (!actions || !plan || !latestSnapshot) return
-    setRebaselinePreview(rebaseline(plan, latestSnapshot))
-  }, [actions, plan, latestSnapshot])
-  const { showToast } = useToast()
-  const onRebaselineConfirm = useCallback(async () => {
-    if (!actions || !plan || !latestSnapshot || !rebaselinePreview) return
-    // The draft is re-baselined from its own values, so an unsaved life-event or house
-    // edit in the editor moves with the start rather than being overwritten by the plan's.
-    const draftPatch = activeId === plan.id ? rebaseline(draft, latestSnapshot).patch : null
-    setRebaselinePreview(null)
-    try {
-      await actions.updateScenario(plan.id, rebaselinePreview.patch)
-    } catch (e) {
-      // The plan did not move, so the editor's draft must not either, or Plan would offer to
-      // save a start that was never written.
-      showToast(failureMessage(e), 'error')
-      return
-    }
-    if (draftPatch) patchDraft(draftPatch)
-  }, [actions, plan, latestSnapshot, rebaselinePreview, activeId, patchDraft, draft, showToast])
-
-  const onToggleVisible = useCallback((id: number) => {
-    setHiddenIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }, [])
-
-  const onSaveDraft = useCallback(
-    async (name: string) => {
-      if (!actions) return
-      const scenario = await actions.createScenario({
-        ...draft,
-        name,
-        sortOrder: dataset.goalScenarios.length,
-      })
-      selectScenario(scenario)
-    },
-    [actions, draft, dataset.goalScenarios, selectScenario],
-  )
-
-  const handleSaveDraft = useCallback(
-    (name: string) => {
-      void onSaveDraft(name)
-    },
-    [onSaveDraft],
-  )
-
-  // Scatter points: actual invested values from check-ins plotted on the hero chart.
-  const checkinExtraSeries = useMemo<ChartSeries | null>(() => {
-    if (!activeScenario?.planStartDate) return null
-    const points = dataset.wealthCheckins
-      .map((c) => {
-        const offset = yearOffsetFromDate(activeScenario.planStartDate!, c.checkinDate)
-        if (offset === null) return null
-        const value = checkinInvestedCents(c, dataset.wealthAccounts)
-        return { xIndex: offset, value }
-      })
-      .filter((p): p is NonNullable<typeof p> => p !== null)
-    if (points.length === 0) return null
-    return { id: 'actuals-overlay', color: '#f59e0b', values: [], kind: 'scatter', points }
-  }, [activeScenario, dataset.wealthCheckins, dataset.wealthAccounts])
-
-  const heroTodayIndex = useMemo(() => {
-    if (!activeScenario?.planStartDate) return undefined
-    const today = new Date().toISOString().slice(0, 10)
-    const offset = yearOffsetFromDate(activeScenario.planStartDate, today)
-    return offset !== null && offset >= 0 ? offset : undefined
-  }, [activeScenario])
+  const editor = useScenarioEditor(dataset, actions, avgSaving)
 
   return (
     <div className={styles.stack}>
@@ -486,160 +132,61 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
       />
 
       <GoalsPanel view={view} planHalf={mobilePlanView}>
-      <GoalsContentTop showIntro={view === 'plan'} />
+        {/*
+          Between the view switch and a view's own content: Plan's intro and glossary (on a screen
+          wide enough to lead with them), and the anchor a tap on the switch scrolls to. Progress
+          and Assumptions start at the anchor.
+        */}
+        <GoalsIntro placement="top" show={view === 'plan'} />
+        <div id={GOALS_CONTENT_ANCHOR_ID} className={styles.contentAnchor} />
 
-      {view === 'assumptions' ? (
-        <AssumptionsView
-          accounts={dataset.wealthAccounts}
-          checkins={dataset.wealthCheckins}
-          settings={dataset.settings}
-          actions={actions}
-          onSettingsChange={actions ? (patch) => actions.updateSettings(patch) : undefined}
-          focus={assumptionsFocus}
-        />
-      ) : null}
-      {view === 'progress' ? (
-        <>
-        <RebaselineSheet
-          preview={rebaselinePreview}
-          format={format}
-          onConfirm={() => { void onRebaselineConfirm() }}
-          onCancel={() => setRebaselinePreview(null)}
-        />
-        <ProgressView
-          accounts={dataset.wealthAccounts}
-          checkins={dataset.wealthCheckins}
-          transactions={dataset.transactions}
-          milestones={milestones}
-          reached={reachedMilestones}
-          plan={plan}
-          actions={actions}
-          canWrite={actions != null}
-          onOpenAssumptions={openAccountsSetup}
-          openCheckinForm={checkinEntry}
-          cashReserveMonths={dataset.settings.cashReserveMonths}
-          openBudgetMonth={defaultBudgetMonth(todayIso(), dataset.settings.budgetRolloverDay)}
-          onRebaseline={onRebaseline}
-          fromToday={fromToday}
-        />
-        </>
-      ) : null}
-      {view === 'plan' ? (
-        <>
-          <div className={styles.layout} data-mobile-view={mobilePlanView}>
-        <div className={styles.areaSidebar}>
-          <div className={styles.areaScenarios}>
-            <ScenarioManager
-              scenarios={dataset.goalScenarios}
-              activeId={activeId}
-              draft={draft}
-              hiddenIds={hiddenIds}
-              canWrite={actions != null}
-              actions={actions}
-              dirty={dirty}
-              saving={saving}
-              onSelect={onSelectScenario}
-              onSelectEditing={onSelectEditing}
-              onToggleVisible={onToggleVisible}
-              onPatch={patchDraft}
-              onSaveDraft={handleSaveDraft}
-              onSaveChanges={onSaveChanges}
-              onDiscard={onDiscard}
-              onActivate={onActivate}
-              onScenarioCreated={selectScenario}
-            />
-            <DiscardSheet
-              pending={pendingSelect}
-              open={discardOpen}
-              detached={activeId === null}
-              name={activeScenario?.name ?? draft.name}
-              onConfirm={onDiscardAndSelect}
-              onCancel={() => setDiscardOpen(false)}
-            />
-          </div>
-          {mobilePlanView === 'adjust' ? (
-            // Phone only: only the phone's row offers Adjust.
-            <AdjustStack
-              draft={deferredDraft}
-              unsaved={unsavedActions(actions != null, dirty, {
-                name: draft.name,
-                saving,
-                onSave: onSaveChanges,
-                onDiscard,
-              })}
-            />
-          ) : null}
-          <div className={styles.areaControls}>
-            <Card>
-              <GoalControls draft={draft} latest={latestSnapshot} onChange={patchDraft} />
-            </Card>
-          </div>
-        </div>
-        <div className={styles.areaOutputs}>
-          <div className={styles.areaNow}>
-            <NetWorthNowCard
-              draft={deferredDraft}
-              latest={latestSnapshot}
-              milestones={milestones}
-              reached={reachedMilestones}
-            />
-          </div>
-          <div className={`${styles.heroBlock} ${styles.areaHero}`}>
-            <NetWorthChart
-              scenarios={dataset.goalScenarios}
-              hiddenIds={hiddenIds}
-              onToggleVisible={onToggleVisible}
-              draft={deferredDraft}
-              milestones={milestones}
-              activeId={activeId}
-              dirty={dirty}
-              variant="hero"
-              footer={
-                <>
-                  <GoalsNarrative draft={deferredDraft} milestones={milestones} compact />
-                  <div className={progressStyles.displayModeRow}>
-                    <SegmentedControl
-                      options={DISPLAY_MODE_OPTIONS}
-                      value={displayMode}
-                      onChange={changeDisplayMode}
-                      ariaLabel="Value display mode"
-                      layout="compact"
-                    />
-                  </div>
-                  {displayMode === 'nominal' ? (
-                    <NominalPreview
-                      saved={dataset.settings.assumedInflation}
-                      preview={previewInflation}
-                      onPreview={setPreviewInflation}
-                      onOpenAssumptions={actions ? openInflationSetting : undefined}
-                    />
-                  ) : null}
-                </>
-              }
-              extraSeries={checkinExtraSeries ? [checkinExtraSeries] : []}
-              fromToday={fromToday}
-              nominalMode={displayMode === 'nominal'}
-              viewInflation={previewInflation}
-              {...(heroTodayIndex !== undefined ? { todayIndex: heroTodayIndex } : {})}
-            />
-          </div>
-          <div className={styles.areaSecondary}>
-            <SecondaryCharts
-              scenarios={dataset.goalScenarios}
-              draft={deferredDraft}
-              monthly={monthly}
-              milestones={milestones}
-              reached={reachedMilestones}
-              activeId={activeId}
-              dirty={dirty}
-              fromToday={fromToday}
-            />
-          </div>
-        </div>
-      </div>
-        </>
-      ) : null}
-      <GoalsIntro placement="bottom" show={view === 'plan'} />
+        {view === 'assumptions' ? (
+          <AssumptionsView
+            accounts={dataset.wealthAccounts}
+            checkins={dataset.wealthCheckins}
+            settings={dataset.settings}
+            actions={actions}
+            onSettingsChange={actions ? (patch) => actions.updateSettings(patch) : undefined}
+            focus={assumptionsFocus}
+          />
+        ) : null}
+        {view === 'progress' ? (
+          <ProgressPane
+            dataset={dataset}
+            actions={actions}
+            plan={plan}
+            latestSnapshot={latestSnapshot}
+            fromToday={fromToday}
+            reached={reachedMilestones}
+            openCheckinForm={checkinEntry}
+            onOpenAccountsSetup={openAccountsSetup}
+            editor={editor}
+          />
+        ) : null}
+        {view === 'plan' ? (
+          <PlanView
+            half={mobilePlanView}
+            scenarios={dataset.goalScenarios}
+            editor={editor}
+            actions={actions}
+            latest={latestSnapshot}
+            milestones={milestones}
+            reached={reachedMilestones}
+            monthly={monthly}
+            checkins={dataset.wealthCheckins}
+            accounts={dataset.wealthAccounts}
+            fromToday={fromToday}
+            display={{
+              mode: displayMode,
+              onModeChange: changeDisplayMode,
+              assumedInflation: dataset.settings.assumedInflation,
+              preview: previewInflation,
+              onPreview: setPreviewInflation,
+              onOpenSetting: actions ? openInflationSetting : undefined,
+            }}
+          />
+        ) : null}
+        <GoalsIntro placement="bottom" show={view === 'plan'} />
       </GoalsPanel>
     </div>
   )
