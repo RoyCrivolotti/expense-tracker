@@ -68,7 +68,13 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // watcher, and the helpers that scroll a section under the pinned chart): about 0.8 KB gzip
 // took the total from 203.6 KB to 204.4 KB, over the line. The extra KB beyond that is so the
 // next one-line change does not fail the build, as the notes above describe.
-const TOTAL_MAX_GZIP = 206_000
+//
+// Raised from 206 KB to 209 KB for the Goals follow-ups on a phone (the Save and Discard
+// confirmation and focus handling, the scroll memory kept by the tab, the pinned-area scroll
+// padding, the end-value readout on the pinned chart, tab semantics for the view row, and the
+// short-screen layout): the stack of them took the total from 205.5 KB to 206.9 KB, so the
+// branch that carries the Save row was the first to cross the line.
+const TOTAL_MAX_GZIP = 209_000
 const GOALS_MAX_GZIP = 40_000
 
 function gzipBytes(path) {

@@ -454,6 +454,24 @@ describe('GoalsTab', () => {
     )
   })
 
+  it('confirms a save with a toast that names the scenario', async () => {
+    const user = userEvent.setup()
+    const showToast = vi.fn()
+    const plan = makeScenario({ id: 1, name: 'Path A', isActive: true })
+    render(
+      <ToastContext.Provider value={{ showToast }}>
+        <GoalsTab model={buildExpenseModel(makeDataset({ goalScenarios: [plan] }))} actions={makeActions()} />
+      </ToastContext.Provider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
+    expect(showToast).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    expect(showToast).toHaveBeenCalledTimes(1)
+    expect(showToast).toHaveBeenCalledWith('Saved Path A, tweaked', 'success')
+  })
+
   it('treats a colour change as an unsaved edit and saves it with the rest', async () => {
     const user = userEvent.setup()
     const actions = makeActions()
@@ -677,12 +695,68 @@ describe('GoalsTab', () => {
     expect(row()).not.toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
-    await user.click(button('Save'))
+    // The scenario card has a Save changes and a Discard of its own, so the row's say whose they are.
+    expect(screen.getByRole('button', { name: 'Save changes', hidden: true })).not.toBe(button('Save changes to Path A, tweaked'))
+    expect(screen.getByRole('button', { name: 'Discard', hidden: true })).not.toBe(button('Discard changes'))
+    await user.click(button('Save changes to Path A, tweaked'))
     expect(actions.updateScenario).toHaveBeenCalledWith(1, expect.objectContaining({ name: 'Path A, tweaked' }))
 
-    await user.click(button('Discard'))
+    await user.click(button('Discard changes'))
     expect(screen.getByLabelText('Scenario name')).toHaveValue('Path A')
     expect(row()).not.toBeInTheDocument()
+  })
+
+  it('holds Save and Discard in the row and the card while a save is in flight, so the editor cannot be put back under it', async () => {
+    mockPhoneWidth()
+    const user = userEvent.setup()
+    const actions = makeActions()
+    let finish!: () => void
+    vi.mocked(actions.updateScenario).mockReturnValue(new Promise<void>((resolve) => (finish = resolve)))
+    const plan = makeScenario({ id: 1, name: 'Path A', isActive: true })
+    render(<GoalsTab model={buildExpenseModel(makeDataset({ goalScenarios: [plan] }))} actions={actions} />)
+    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+    fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
+    const button = (name: string) => screen.getByRole('button', { name, hidden: true })
+    const held = ['Save changes to Path A, tweaked', 'Discard changes', 'Save changes', 'Discard']
+
+    await user.click(button('Save changes to Path A, tweaked'))
+    for (const name of held) expect(button(name)).toBeDisabled()
+    await user.click(button('Save changes to Path A, tweaked'))
+    await user.click(button('Discard changes'))
+    await user.click(button('Discard'))
+
+    expect(actions.updateScenario).toHaveBeenCalledTimes(1)
+    expect(screen.getByLabelText('Scenario name')).toHaveValue('Path A, tweaked')
+
+    await act(async () => {
+      finish()
+      await Promise.resolve()
+    })
+    for (const name of held) expect(button(name)).toBeEnabled()
+  })
+
+  it('puts focus on the marked chip when Enter on Save sends the row away, not on the page', async () => {
+    mockPhoneWidth()
+    const user = userEvent.setup()
+    const actions = makeActions()
+    const plan = makeScenario({ id: 1, name: 'Path A', isActive: true })
+    const dataset = makeDataset({ goalScenarios: [plan] })
+    const { rerender } = render(<GoalsTab model={buildExpenseModel(dataset)} actions={actions} />)
+    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+    fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
+    screen.getByRole('button', { name: 'Save changes to Path A, tweaked', hidden: true }).focus()
+
+    await user.keyboard('{Enter}')
+    // The write lands and the dataset refreshes, so nothing is unsaved any more.
+    rerender(
+      <GoalsTab
+        model={buildExpenseModel({ ...dataset, goalScenarios: [{ ...plan, name: 'Path A, tweaked' }] })}
+        actions={actions}
+      />,
+    )
+
+    expect(screen.queryByRole('group', { name: 'Unsaved changes', hidden: true })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { current: true, hidden: true })).toHaveFocus()
   })
 
   it('offers no Save in a read-only session, which cannot save', async () => {
@@ -722,6 +796,18 @@ describe('GoalsTab', () => {
     expect(mini()).toBeInTheDocument()
     await user.click(screen.getByRole('radio', { name: 'Chart' }))
     expect(mini()).not.toBeInTheDocument()
+  })
+
+  it('drops the pinned chart and chips when the window is widened from phone Adjust to desktop', async () => {
+    mockPhoneWidth()
+    const user = userEvent.setup()
+    render(<GoalsTab model={makeModel()} />)
+    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+    expect(document.getElementById('goals-adjust-stack')).toBeInTheDocument()
+
+    act(() => media.change(NARROW_MQ, false))
+
+    expect(document.getElementById('goals-adjust-stack')).not.toBeInTheDocument()
   })
 
   it('offers a preview of the inflation in the Nominal view only, and the setting itself in Assumptions only', async () => {

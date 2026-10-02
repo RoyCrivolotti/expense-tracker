@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ADJUST_SECTIONS,
   adjustSectionId,
@@ -6,14 +6,9 @@ import {
   type AdjustSection,
 } from './adjustSections'
 import { keepClearOfStack, scrollToAdjustSection, stackBottom } from './scrollToAdjustSection'
+import { UnsavedGroup, type UnsavedActions } from './UnsavedGroup'
 import { useGoalsNarrow } from './useGoalsNarrow'
 import styles from './goals.module.css'
-
-/** What can be done with edits to a saved scenario that have not been saved. */
-export interface UnsavedActions {
-  onSave: () => void
-  onDiscard: () => void
-}
 
 /** Under the line by this much, a section counts as the one being read. */
 const READING_MARGIN_PX = 12
@@ -75,13 +70,20 @@ export function AdjustSectionNav({ unsaved }: { unsaved?: UnsavedActions | undef
     return () => document.removeEventListener('focusin', onFocus)
   }, [narrow])
 
-  // The strip scrolls sideways, so the marked chip is kept in sight inside it.
+  // Where focus goes when the actions leave with it: the chip for the section being read.
+  const focusMarkedChip = useCallback(() => {
+    strip.current?.querySelector<HTMLElement>('[aria-current="true"]')?.focus({ preventScroll: true })
+  }, [])
+
+  // The strip scrolls sideways, so the marked chip is kept in sight inside it. The actions
+  // narrow it when they appear, which can leave the marked chip half under the fade.
+  const hasActions = unsaved !== undefined
   useEffect(() => {
     const chip = strip.current?.querySelector<HTMLElement>('[aria-current="true"]')
     const row = strip.current
     if (!chip || !row || typeof row.scrollTo !== 'function') return
     row.scrollTo({ left: chip.offsetLeft - (row.clientWidth - chip.offsetWidth) / 2, behavior: 'smooth' })
-  }, [active])
+  }, [active, hasActions])
 
   if (!narrow) return null
   return (
@@ -105,16 +107,7 @@ export function AdjustSectionNav({ unsaved }: { unsaved?: UnsavedActions | undef
           ))}
         </div>
       </nav>
-      {unsaved ? (
-        <div role="group" aria-label="Unsaved changes" className={styles.unsavedActions}>
-          <button type="button" className={styles.btn} onClick={unsaved.onDiscard}>
-            Discard
-          </button>
-          <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={unsaved.onSave}>
-            Save
-          </button>
-        </div>
-      ) : null}
+      {unsaved ? <UnsavedGroup unsaved={unsaved} onGone={focusMarkedChip} /> : null}
     </div>
   )
 }

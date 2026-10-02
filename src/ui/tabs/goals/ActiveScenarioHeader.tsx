@@ -23,6 +23,8 @@ interface ActiveScenarioHeaderProps {
   scenarioCount: number
   usedColors: readonly string[]
   dirty: boolean
+  /** A save is in flight, so neither Save nor Discard can be taken. */
+  saving: boolean
   canWrite: boolean
   actions?: ExpenseActions | undefined
   onPatch: (patch: Partial<NewGoalScenario>) => void
@@ -39,6 +41,7 @@ export function ActiveScenarioHeader({
   scenarioCount,
   usedColors,
   dirty,
+  saving,
   canWrite,
   actions,
   onPatch,
@@ -94,12 +97,12 @@ export function ActiveScenarioHeader({
             <button
               type="button"
               className={`${styles.btn} ${styles.btnPrimary}`}
-              disabled={!dirty}
+              disabled={!dirty || saving}
               onClick={onSaveChanges}
             >
               Save changes
             </button>
-            <button type="button" className={styles.btn} disabled={!dirty} onClick={onDiscard}>
+            <button type="button" className={styles.btn} disabled={!dirty || saving} onClick={onDiscard}>
               Discard
             </button>
             {actions ? (

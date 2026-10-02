@@ -35,17 +35,17 @@ import { GoalsViewSwitch } from './GoalsViewSwitch'
 import { mobileViewOf, type AssumptionsFocus, type MobilePlanView, type TabView } from './goalsView'
 import { useGoalsScrollMemory } from './useGoalsScrollMemory'
 import { GOALS_CONTENT_ANCHOR_ID } from './scrollToGoalsContent'
-import { ADJUST_STACK_ID } from './scrollToAdjustSection'
-import { AdjustSectionNav, type UnsavedActions } from './AdjustSectionNav'
+import { AdjustStack } from './AdjustStack'
+import type { UnsavedActions } from './UnsavedGroup'
 import { GoalsNarrative } from './GoalsNarrative'
 import { NominalPreview } from './NominalPreview'
 import { SecondaryCharts } from './SecondaryCharts'
 import { ProgressView } from './ProgressView'
 import { AssumptionsView } from './AssumptionsView'
 import { draftFromDataset } from './goalsDefaults'
+import { useScenarioSave } from './useScenarioSave'
 import { activePlan, initialEditorScenario } from './scenarioSelection'
 import { NetWorthChart } from './charts/NetWorthChart'
-import { NetWorthMiniChart } from './charts/NetWorthMiniChart'
 import { NetWorthNowCard } from './charts/NetWorthNowCard'
 import { todayIso } from '../../components/transactionFormState'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
@@ -223,10 +223,9 @@ function GoalsContentTop({ showIntro }: { showIntro: boolean }) {
 function unsavedActions(
   canWrite: boolean,
   dirty: boolean,
-  onSave: () => void,
-  onDiscard: () => void,
+  actions: UnsavedActions,
 ): UnsavedActions | undefined {
-  return canWrite && dirty ? { onSave, onDiscard } : undefined
+  return canWrite && dirty ? actions : undefined
 }
 
 function initialView(entry: GoalsEntry | undefined): TabView {
@@ -397,10 +396,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     setActiveId(null)
   }, [])
 
-  const onSaveChanges = useCallback(() => {
-    if (!actions || activeId == null) return
-    void actions.updateScenario(activeId, draft)
-  }, [actions, activeId, draft])
+  const { save: onSaveChanges, saving } = useScenarioSave(actions, activeId, draft, draft.name)
 
   const onDiscard = useCallback(() => {
     if (activeScenario) setDraft(scenarioToDraft(activeScenario))
@@ -547,6 +543,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
               canWrite={actions != null}
               actions={actions}
               dirty={dirty}
+              saving={saving}
               onSelect={onSelectScenario}
               onSelectEditing={onSelectEditing}
               onToggleVisible={onToggleVisible}
@@ -568,10 +565,15 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
           </div>
           {mobilePlanView === 'adjust' ? (
             // Phone only: only the phone's row offers Adjust.
-            <div id={ADJUST_STACK_ID} className={`${styles.areaMini} ${styles.fadeBelow}`}>
-              <NetWorthMiniChart draft={deferredDraft} />
-              <AdjustSectionNav unsaved={unsavedActions(actions != null, dirty, onSaveChanges, onDiscard)} />
-            </div>
+            <AdjustStack
+              draft={deferredDraft}
+              unsaved={unsavedActions(actions != null, dirty, {
+                name: draft.name,
+                saving,
+                onSave: onSaveChanges,
+                onDiscard,
+              })}
+            />
           ) : null}
           <div className={styles.areaControls}>
             <Card>

@@ -5,18 +5,23 @@ import { makeScenario } from '../../../testing/factories'
 import { makeActions } from '../../../testing/makeActions'
 import type { GoalScenario } from '../../../types'
 
-function renderHeader(scenario: GoalScenario, actions = makeActions()) {
+function renderHeader(
+  scenario: GoalScenario,
+  actions = makeActions(),
+  { dirty = false, saving = false }: { dirty?: boolean; saving?: boolean } = {},
+) {
   const { id, isActive, ...draft } = scenario
   void id
   void isActive
   const onPatch = vi.fn()
-  render(
+  const { unmount } = render(
     <ActiveScenarioHeader
       draft={draft}
       activeScenario={scenario}
       scenarioCount={1}
       usedColors={[scenario.color]}
-      dirty={false}
+      dirty={dirty}
+      saving={saving}
       canWrite
       actions={actions}
       onPatch={onPatch}
@@ -27,7 +32,7 @@ function renderHeader(scenario: GoalScenario, actions = makeActions()) {
       onScenarioCreated={vi.fn()}
     />,
   )
-  return { actions, onPatch }
+  return { actions, onPatch, unmount }
 }
 
 describe('ActiveScenarioHeader', () => {
@@ -57,6 +62,20 @@ describe('ActiveScenarioHeader', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
 
     expect(screen.getByText(/It is your current plan/)).toBeInTheDocument()
+  })
+
+  it('takes Save changes and Discard once there are edits, but not while a save is in flight', () => {
+    const scenario = makeScenario({ id: 7, name: 'Path B' })
+    const buttons = () => [
+      screen.getByRole('button', { name: 'Save changes' }),
+      screen.getByRole('button', { name: 'Discard' }),
+    ]
+    const { unmount } = renderHeader(scenario, makeActions(), { dirty: true })
+    for (const button of buttons()) expect(button).toBeEnabled()
+    unmount()
+
+    renderHeader(scenario, makeActions(), { dirty: true, saving: true })
+    for (const button of buttons()) expect(button).toBeDisabled()
   })
 
   it('changes colour through the draft rather than writing it straight away', () => {

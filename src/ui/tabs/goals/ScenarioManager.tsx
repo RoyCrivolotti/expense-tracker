@@ -14,6 +14,7 @@ interface ScenarioManagerProps {
   canWrite: boolean
   actions?: ExpenseActions | undefined
   dirty: boolean
+  saving: boolean
   onSelect: (scenario: GoalScenario) => void
   onSelectEditing: () => void
   onToggleVisible: (id: number) => void
@@ -57,6 +58,7 @@ export function ScenarioManager(props: ScenarioManagerProps) {
         scenarioCount={scenarios.length}
         usedColors={scenarios.map((s) => s.color)}
         dirty={dirty}
+        saving={props.saving}
         canWrite={canWrite}
         actions={actions}
         onPatch={props.onPatch}
