@@ -10,10 +10,13 @@ export function ActiveFilterChips({
   chips,
   locked = false,
   onLockedPress,
+  onClear,
 }: {
   chips: ActiveFilterChip[]
   locked?: boolean
   onLockedPress?: (() => void) | undefined
+  /** Clears every filter at once. Omitted while rows are selected, when clearing would narrow the list. */
+  onClear?: (() => void) | undefined
 }) {
   if (chips.length === 0) return null
   return (
@@ -29,6 +32,11 @@ export function ActiveFilterChips({
           {chip.label} ×
         </button>
       ))}
+      {onClear ? (
+        <button type="button" className={styles.filterClear} onClick={onClear}>
+          Clear filters
+        </button>
+      ) : null}
     </div>
   )
 }

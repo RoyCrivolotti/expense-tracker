@@ -15,7 +15,7 @@ import { FlaggedCard } from './FlaggedCard'
 import { TransactionsFlagOverlays } from './TransactionsFlagOverlays'
 import { TransactionsSelectFooter } from './TransactionsSelectFooter'
 import { useTransactionsTabState } from './useTransactionsTabState'
-import { RESULTS_ANCHOR_ID, scrollToResults } from './scrollToResults'
+import { scrollToResults } from './scrollToResults'
 import { useDebouncedAnnouncement } from '../hooks/useDebouncedAnnouncement'
 import { EXIT_MS } from '../hooks/motion'
 import { useToast } from '../hooks/useToast'
@@ -80,7 +80,7 @@ export function TransactionsTab({
   const explainFilterLock = () => showToast(FILTERS_LOCKED_HINT)
 
   return (
-    <div className={styles.stack}>
+    <div className={`${styles.stack} ${styles.txnStack}`}>
       {actions && (
         <>
           <FlaggedCard
@@ -134,6 +134,17 @@ export function TransactionsTab({
         canSelect={state.canDelete}
         secondaryFilterCount={state.secondaryFilterCount}
         hasActiveFilters={state.hasActiveFilters}
+        summary={
+          <span className={styles.resultStats}>
+            <span>{itemCountLabel(state.listRows.length)}</span>
+            <span>
+              <span className={styles.resultLabel}>Net spend </span>
+              <span className={styles.resultAmount}>
+                <Money cents={state.totalCents} signed={state.totalCents < 0} />
+              </span>
+            </span>
+          </span>
+        }
         onClearFilters={state.clearFilters}
         onQuery={state.setQuery}
         onCategory={state.setCategoryId}
@@ -157,15 +168,6 @@ export function TransactionsTab({
       <p className={styles.visuallyHidden} role="status">
         {announcement}
       </p>
-      <div id={RESULTS_ANCHOR_ID} className={styles.resultSummary}>
-        <span className={styles.resultStats}>
-          <span>{itemCountLabel(state.listRows.length)}</span>
-          <span>
-            Net spend <Money cents={state.totalCents} signed={state.totalCents < 0} />
-          </span>
-        </span>
-      </div>
-
       <TransactionList
         rows={state.listRows}
         lookup={model.lookup}

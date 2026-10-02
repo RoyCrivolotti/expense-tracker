@@ -61,14 +61,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
-  margin-bottom: 0.5rem;
-}
-
-.filterToggleRow {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
 }
 
 .filterToggle {
@@ -93,6 +85,12 @@
 .filterToggle[aria-disabled='true'] {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.filterToggleIcon {
+  width: 0.95rem;
+  height: 0.95rem;
+  flex-shrink: 0;
 }
 
 .filterToggleActive,
@@ -461,28 +459,80 @@
   }
 }
 
-.resultSummary {
-  /* The Flagged card's drill-in scrolls here. AppShell's header is sticky
-     (~3.5rem plus the safe-area inset), so without this the summary lands
-     underneath it. */
-  scroll-margin-top: calc(4rem + env(safe-area-inset-top, 0px));
+/* The sticky bar's height, shared with the day headers that stack under it
+   (TransactionList.module.css reads it; elsewhere it falls back to 0). */
+.txnStack {
+  --txn-bar-h: 2.75rem;
+}
+
+/*
+ * The Filters button and the list's totals on one line, held under the app header while
+ * the list scrolls. Full-bleed (the page pads 1rem each side) so rows pass cleanly under
+ * it. The top padding is the few pixels of the bar that tuck beneath the header, the same
+ * overlap the day headers use, so the content sits centred in what is actually visible.
+ * Background is opaque: rows scroll underneath.
+ */
+.resultBar {
+  position: sticky;
+  top: calc(3.5rem + env(safe-area-inset-top, 0px));
+  z-index: 6;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   gap: 0.5rem;
+  height: var(--txn-bar-h);
+  margin-inline: -1rem;
+  padding: 0.3rem 1rem 0;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
   font-size: 0.82rem;
   color: var(--color-text-muted);
-  padding: 0.25rem;
-  margin-bottom: 0.25rem;
+  /* The Flagged card's drill-in scrolls here. AppShell's header is sticky
+     (~3.5rem plus the safe-area inset), so without this the bar lands
+     underneath it. */
+  scroll-margin-top: calc(4rem + env(safe-area-inset-top, 0px));
+}
+
+.resultBar .filterToggle {
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+}
+
+/* The chips belong to the bar above them, not to the list below. */
+.resultBar + .filterChips {
+  margin-top: -0.4rem;
+}
+
+/* Filters are narrowing the list, so the totals beside them cover a subset. */
+.resultBar[data-filtered] {
+  background: color-mix(in srgb, var(--color-accent) 9%, var(--color-bg));
+  border-bottom-color: color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+.resultBar[data-filtered] .resultAmount {
+  color: var(--color-accent);
 }
 
 .resultStats {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.35rem 0.75rem;
+  align-items: baseline;
+  gap: 0.75rem;
   margin-left: auto;
+  white-space: nowrap;
   text-align: right;
+}
+
+.resultAmount {
+  font-weight: 650;
+  color: var(--color-text);
+}
+
+/* Room is tight beside the Filters button on the narrowest phones; the amount's sign
+   already says what it is. */
+@media (max-width: 359px) {
+  .resultLabel {
+    display: none;
+  }
 }
 
 .filterClear {

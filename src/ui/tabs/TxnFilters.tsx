@@ -1,11 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import type { Account, Category, Flag, Label, TxnStatus, TxnType } from '../../types'
 import styles from './tabs.module.css'
 import { ActiveFilterChips } from './ActiveFilterChips'
 import { buildActiveFilterChips } from './txnFilterChips'
 import { Presence } from '../components/Presence'
 import { EXIT_MS } from '../hooks/motion'
-import { FilterToggleRow, SearchRow } from './TxnFilterRows'
+import { FilterToggle, SearchRow } from './TxnFilterRows'
+import { RESULTS_ANCHOR_ID } from './scrollToResults'
 import { TxnFiltersSheet } from './TxnFiltersSheet'
 
 import type { TxnDateScope } from './txnDateScope'
@@ -33,6 +34,8 @@ export interface TxnFiltersProps {
   canSelect: boolean
   secondaryFilterCount: number
   hasActiveFilters: boolean
+  /** The item count and net spend, shown beside the Filters button in the sticky bar. */
+  summary: ReactNode
   onClearFilters: () => void
   onQuery: (value: string) => void
   onCategory: (value: number | 'all') => void
@@ -54,29 +57,42 @@ export function TxnFilters(props: TxnFiltersProps) {
   const activeChips = useMemo(() => buildActiveFilterChips(props), [props])
 
   return (
-    <div className={styles.filters}>
-      <SearchRow
-        query={props.query}
-        selectMode={props.selectMode}
-        selectBusy={props.selectBusy ?? false}
-        canSelect={props.canSelect}
-        onQuery={props.onQuery}
-        onToggleSelectMode={props.onToggleSelectMode}
-        onLockedPress={props.onLockedPress}
-      />
-      <FilterToggleRow
-        expanded={expanded}
-        onToggle={() => setExpanded((open) => !open)}
-        secondaryFilterCount={props.secondaryFilterCount}
-        hasActiveFilters={props.hasActiveFilters}
-        selectMode={props.selectMode}
-        onClearFilters={props.onClearFilters}
-        onLockedPress={props.onLockedPress}
-      />
+    <>
+      <div className={styles.filters}>
+        <SearchRow
+          query={props.query}
+          selectMode={props.selectMode}
+          selectBusy={props.selectBusy ?? false}
+          canSelect={props.canSelect}
+          onQuery={props.onQuery}
+          onToggleSelectMode={props.onToggleSelectMode}
+          onLockedPress={props.onLockedPress}
+        />
+      </div>
+      {/*
+        A direct child of the page stack rather than of .filters: a sticky element only
+        holds while its parent is on screen, and .filters is two rows tall. The id is the
+        scroll anchor the Flagged card drills in to (see scrollToResults).
+      */}
+      <div
+        id={RESULTS_ANCHOR_ID}
+        className={styles.resultBar}
+        {...(props.hasActiveFilters ? { 'data-filtered': 'true' } : {})}
+      >
+        <FilterToggle
+          expanded={expanded}
+          onToggle={() => setExpanded((open) => !open)}
+          secondaryFilterCount={props.secondaryFilterCount}
+          selectMode={props.selectMode}
+          onLockedPress={props.onLockedPress}
+        />
+        {props.summary}
+      </div>
       <ActiveFilterChips
         chips={activeChips}
         locked={props.selectMode}
         onLockedPress={props.onLockedPress}
+        onClear={props.hasActiveFilters && !props.selectMode ? props.onClearFilters : undefined}
       />
       <Presence show={expanded} exitMs={EXIT_MS.sheet}>
         <TxnFiltersSheet
@@ -107,6 +123,6 @@ export function TxnFilters(props: TxnFiltersProps) {
           onLockedPress={props.onLockedPress}
         />
       </Presence>
-    </div>
+    </>
   )
 }
