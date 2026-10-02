@@ -41,11 +41,12 @@ export function AdjustSectionNav({ unsaved }: { unsaved?: UnsavedActions | undef
     if (!narrow) return
     const update = () => {
       if (pinned.current) return
-      const tops = ADJUST_SECTIONS.map(
-        (s) => document.getElementById(adjustSectionId(s.key))?.getBoundingClientRect().top ?? Infinity,
-      )
+      const sections = ADJUST_SECTIONS.map((s) => document.getElementById(adjustSectionId(s.key)))
+      const tops = sections.map((el) => el?.getBoundingClientRect().top ?? Infinity)
+      const last = sections[sections.length - 1]
       const atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2
-      const next = ADJUST_SECTIONS[pickActiveSection(tops, stackBottom() + READING_MARGIN_PX, atBottom)]
+      const endsInLast = atBottom && last instanceof HTMLDetailsElement && last.open
+      const next = ADJUST_SECTIONS[pickActiveSection(tops, stackBottom() + READING_MARGIN_PX, endsInLast)]
       if (next) setActive(next.key)
     }
     const release = () => {

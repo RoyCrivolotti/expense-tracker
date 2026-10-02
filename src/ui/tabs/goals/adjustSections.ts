@@ -16,11 +16,12 @@ export function adjustSectionId(key: AdjustSection): string {
 
 /**
  * The section the viewer is in: the last whose top has reached the line under the pinned
- * stack. Sections too short to ever reach that line, at the end of the page, would never be
- * the answer, so the bottom of the page names the last one.
+ * stack. A last section too short to ever reach that line would never be the answer, so when
+ * the page ends in it (scrolled to the end, with that section's controls shown) it is named.
+ * Folded, it is a row at the foot of the page, and what is being read is the section above.
  */
-export function pickActiveSection(tops: readonly number[], line: number, atBottom: boolean): number {
-  if (atBottom) return tops.length - 1
+export function pickActiveSection(tops: readonly number[], line: number, endsInLast: boolean): number {
+  if (endsInLast) return tops.length - 1
   let active = 0
   tops.forEach((top, i) => {
     if (top <= line) active = i

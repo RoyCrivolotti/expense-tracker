@@ -21,7 +21,11 @@ describe('pickActiveSection', () => {
     expect(pickActiveSection([150, 400, 700, 900, 1000], line, false)).toBe(0)
   })
 
-  it('is the last section at the bottom of the page, whatever the tops say', () => {
+  it('is the last section when the page ends in it, whatever the tops say', () => {
     expect(pickActiveSection([-900, -600, -300, 200, 260], line, true)).toBe(4)
+  })
+
+  it('is still the last section to have reached the line when the page ends in a folded one', () => {
+    expect(pickActiveSection([-900, -600, -300, 200, 260], line, false)).toBe(2)
   })
 })
