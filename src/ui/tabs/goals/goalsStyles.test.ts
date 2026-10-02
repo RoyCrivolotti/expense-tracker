@@ -44,4 +44,11 @@ describe('goals styles', () => {
     expect(segment?.body).not.toMatch(/overflow(-[xy])?:\s*(hidden|clip|auto|scroll)/)
     expect(reach?.body).toMatch(/position:\s*absolute/)
   })
+
+  it('extends the tap area of the section chips and the buttons beside them past their painted edges', () => {
+    const css = stylesheet('tabs/goals/goals.module.css')
+
+    expect(css).toContain('.sectionChips .chip::before')
+    expect(css).toContain('.unsavedActions .btn::before')
+  })
 })

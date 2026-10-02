@@ -488,6 +488,9 @@
 .sectionNav {
   flex: 1;
   min-width: 0;
+  /* The room under the chips for their tap area (see .sectionChips) is padding, which the strip
+     and this box clip to, taken back out of the layout here. */
+  margin-bottom: -0.2rem;
 }
 
 /* With the actions beside them the chips run out of room before they run out of chips, so
@@ -513,11 +516,26 @@
 
 .chipRow.sectionChips {
   margin-bottom: 0;
-  padding: 0.3rem 0 0.1rem;
+  padding: 0.3rem 0;
 }
 
 .sectionChips .chip {
   padding: 0.3rem 0.6rem;
+}
+
+/* The chips and the buttons beside them are 27.6px high. Their tap area reaches up and down into
+   the room around them, to 37px, unpainted and without the row growing; their neighbours are
+   beside them, not above or below, so none of it is on another control. */
+.sectionChips .chip,
+.unsavedActions .btn {
+  position: relative;
+}
+
+.sectionChips .chip::before,
+.unsavedActions .btn::before {
+  content: '';
+  position: absolute;
+  inset: -0.3rem 0;
 }
 
 .chipHidden {
