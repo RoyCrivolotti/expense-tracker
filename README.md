@@ -101,10 +101,10 @@ Full DNS, Access, D1, and CI setup: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — layers, ports/adapters, invariants
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — hosting, access control, migrations
 - [docs/SCREENSHOT-GALLERY.md](docs/SCREENSHOT-GALLERY.md) — full UI screenshot reference
-- [docs/CHANGELOG.md](docs/CHANGELOG.md) — recent product changes (July 2026)
+- [docs/CHANGELOG.md](docs/CHANGELOG.md) — recent product changes
 - [docs/GOALS-MODEL.md](docs/GOALS-MODEL.md) — wealth projection assumptions
 - [docs/OPS.md](docs/OPS.md) — staging, backups, ops scripts
-- [docs/TESTING.md](docs/TESTING.md) — unit and API integration tests
+- [docs/TESTING.md](docs/TESTING.md) — unit and API integration tests, and the manual browser checks
 
 ## License
 
