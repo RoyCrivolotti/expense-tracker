@@ -3,6 +3,7 @@ import type { GoalScenario, Milestone } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import { SegmentedControl } from '../../components/SegmentedControl'
 import { Card } from '../../components/primitives'
+import { useRadioGroupKeys } from '../../hooks/useRadioGroupKeys'
 import { ScenarioComparison } from './charts/ScenarioComparison'
 import { CompositionChart } from './charts/CompositionChart'
 import { MilestoneMatrix } from './charts/MilestoneMatrix'
@@ -154,6 +155,15 @@ function SecondaryTabPicker({
   onViewChange: (v: SecondaryView) => void
 }) {
   const { ref, atStart, atEnd } = useScrollEdges()
+  const { stop, onKeyDown } = useRadioGroupKeys({
+    groupRef: ref,
+    count: VIEWS.length,
+    selected: VIEWS.findIndex((v) => v.value === view),
+    onSelect: (index) => {
+      const next = VIEWS[index]
+      if (next && next.value !== view) onViewChange(next.value)
+    },
+  })
   const scrollStep = (dir: 1 | -1) => ref.current?.scrollBy({ left: dir * 140, behavior: 'smooth' })
   const cls = [
     styles.tabScroller,
@@ -174,13 +184,20 @@ function SecondaryTabPicker({
       >
         ‹
       </button>
-      <div className={styles.chipRow} role="radiogroup" aria-label="Secondary chart view" ref={ref}>
-        {VIEWS.map((opt) => (
+      <div
+        className={styles.chipRow}
+        role="radiogroup"
+        aria-label="Secondary chart view"
+        ref={ref}
+        onKeyDown={onKeyDown}
+      >
+        {VIEWS.map((opt, i) => (
           <button
             key={opt.value}
             type="button"
             role="radio"
             aria-checked={view === opt.value}
+            tabIndex={i === stop ? 0 : -1}
             className={`${styles.chip}${view === opt.value ? ` ${styles.chipActive}` : ''}`}
             onClick={() => onViewChange(opt.value)}
           >
