@@ -71,7 +71,7 @@
   padding: 0.35rem 0.7rem;
   border-radius: 0.6rem;
   background: var(--color-surface-muted);
-  color: var(--color-text-muted);
+  color: var(--color-text);
   font: inherit;
   font-size: 0.85rem;
   font-weight: 600;
@@ -79,7 +79,7 @@
 }
 
 .filterToggle:hover:not([aria-disabled='true']) {
-  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-text) 8%, var(--color-surface-muted));
 }
 
 .filterToggle[aria-disabled='true'] {
