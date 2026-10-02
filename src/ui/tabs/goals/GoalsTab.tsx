@@ -32,6 +32,7 @@ import { GoalControls } from './GoalControls'
 import { ScenarioManager } from './ScenarioManager'
 import { GoalsExplainer } from './GoalsExplainer'
 import { GoalsViewSwitch, type MobilePlanView, type TabView } from './GoalsViewSwitch'
+import { GOALS_CONTENT_ANCHOR_ID } from './scrollToGoalsContent'
 import { GoalsNarrative } from './GoalsNarrative'
 import { NominalPreview } from './NominalPreview'
 import { SecondaryCharts } from './SecondaryCharts'
@@ -189,6 +190,28 @@ function DiscardSheet({
         />
       ) : null}
     </Presence>
+  )
+}
+
+/**
+ * What sits between the view switch and a view's own content: Plan's intro and glossary, and
+ * the anchor a tap on the switch scrolls to. Progress and Setup start at the anchor.
+ */
+function GoalsContentTop({ showIntro }: { showIntro: boolean }) {
+  return (
+    <>
+      {showIntro ? (
+        <>
+          <p className={styles.intro}>
+            Project your net worth and financial independence under different assumptions.
+            Horizon sets how far the projection runs and where FI is searched. Adjust the
+            controls, save a scenario, then compare scenarios on the charts.
+          </p>
+          <GoalsExplainer />
+        </>
+      ) : null}
+      <div id={GOALS_CONTENT_ANCHOR_ID} className={styles.contentAnchor} />
+    </>
   )
 }
 
@@ -438,6 +461,8 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
         onPlanHalfChange={setMobilePlanView}
       />
 
+      <GoalsContentTop showIntro={view === 'plan'} />
+
       {view === 'setup' ? (
         <SetupView
           accounts={dataset.wealthAccounts}
@@ -476,12 +501,6 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
       ) : null}
       {view === 'plan' ? (
         <>
-          <p className={styles.intro}>
-            Project your net worth and financial independence under different assumptions. Horizon
-            sets how far the projection runs and where FI is searched. Adjust the controls, save a
-            scenario, then compare scenarios on the charts.
-          </p>
-          <GoalsExplainer />
           <div className={styles.layout} data-mobile-view={mobilePlanView}>
         <div className={styles.areaSidebar}>
           <div className={styles.areaScenarios}>

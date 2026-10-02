@@ -10,12 +10,19 @@
 }
 
 /* Phone only: GoalsMobileNav is not rendered from 900px up.
-   The anchor takes the row's place in the flow, so a scroll to it ends with the row exactly
-   where it sticks. It is as tall as nothing, and takes back the gap it adds to the stack. */
-.navAnchor {
+   The nav anchor takes the row's place in the flow, so comparing it with the row says
+   whether the row is stuck. Both anchors are as tall as nothing, and take back the gap they
+   add to the stack. */
+.navAnchor,
+.contentAnchor {
   height: 0;
   margin-bottom: calc(-1 * var(--goals-gap));
-  scroll-margin-top: calc(var(--exp-header) + env(safe-area-inset-top, 0px));
+}
+
+/* Where a tap on the row takes the page: the first thing of the view that is open, past the
+   intro Plan has, with its top edge just under the stuck row. */
+.contentAnchor {
+  scroll-margin-top: calc(var(--exp-header) + var(--goals-nav-h) + env(safe-area-inset-top, 0px));
 }
 
 .nav {

@@ -607,6 +607,20 @@ describe('GoalsTab', () => {
     expect(screen.getByLabelText('Preview inflation')).toHaveValue('2,5')
   })
 
+  it('starts the scroll target after Plan\'s intro and glossary, and straight after the switch for Progress', async () => {
+    const user = userEvent.setup()
+    render(<GoalsTab model={makeModel()} />)
+    const anchor = () => document.getElementById('goals-content-top')!
+    const before = (a: Node, b: Node) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
+
+    expect(before(screen.getByText('What do these terms mean?'), anchor())).toBe(true)
+    expect(before(anchor(), screen.getByText('Where you are today'))).toBe(true)
+
+    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    expect(screen.queryByText('What do these terms mean?')).not.toBeInTheDocument()
+    expect(before(anchor(), screen.getByText('Progress snapshot'))).toBe(true)
+  })
+
   it('pins a compact chart of the draft above the controls in the Adjust panel only', async () => {
     usePhone()
     const user = userEvent.setup()
