@@ -735,6 +735,30 @@ describe('GoalsTab', () => {
     for (const name of held) expect(button(name)).toBeEnabled()
   })
 
+  it('puts focus on the marked chip when Enter on Save sends the row away, not on the page', async () => {
+    mockPhoneWidth()
+    const user = userEvent.setup()
+    const actions = makeActions()
+    const plan = makeScenario({ id: 1, name: 'Path A', isActive: true })
+    const dataset = makeDataset({ goalScenarios: [plan] })
+    const { rerender } = render(<GoalsTab model={buildExpenseModel(dataset)} actions={actions} />)
+    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+    fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
+    screen.getByRole('button', { name: 'Save changes to Path A, tweaked', hidden: true }).focus()
+
+    await user.keyboard('{Enter}')
+    // The write lands and the dataset refreshes, so nothing is unsaved any more.
+    rerender(
+      <GoalsTab
+        model={buildExpenseModel({ ...dataset, goalScenarios: [{ ...plan, name: 'Path A, tweaked' }] })}
+        actions={actions}
+      />,
+    )
+
+    expect(screen.queryByRole('group', { name: 'Unsaved changes', hidden: true })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { current: true, hidden: true })).toHaveFocus()
+  })
+
   it('offers no Save in a read-only session, which cannot save', async () => {
     mockPhoneWidth()
     const user = userEvent.setup()

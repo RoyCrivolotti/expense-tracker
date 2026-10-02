@@ -220,6 +220,73 @@ describe('AdjustSectionNav', () => {
     for (const button of buttons()) expect(button).toBeDisabled()
   })
 
+  describe('when Save and Discard go', () => {
+    const unsaved = { name: 'Path A', saving: false, onSave: vi.fn(), onDiscard: vi.fn() }
+    const markedChip = () => screen.getByRole('button', { current: true })
+
+    it('moves focus to the marked chip if it was on one of them, rather than dropping it to the page', () => {
+      const { rerender } = render(<AdjustSectionNav unsaved={unsaved} />)
+      screen.getByRole('button', { name: 'Discard changes' }).focus()
+
+      rerender(<AdjustSectionNav />)
+
+      expect(markedChip()).toHaveFocus()
+    })
+
+    it('does the same when the viewer pressed Save, which disabled it and so blurred it', () => {
+      const { rerender } = render(<AdjustSectionNav unsaved={unsaved} />)
+      const save = screen.getByRole('button', { name: 'Save changes to Path A' })
+      save.focus()
+
+      rerender(<AdjustSectionNav unsaved={{ ...unsaved, saving: true }} />)
+      // A browser blurs a focused button that becomes disabled and leaves focus on the page.
+      const active = vi.spyOn(document, 'activeElement', 'get').mockReturnValue(document.body)
+      fireEvent.focusOut(save)
+      rerender(<AdjustSectionNav />)
+      active.mockRestore()
+
+      expect(markedChip()).toHaveFocus()
+    })
+
+    it('hands focus back to the button when the write fails and the buttons come back', () => {
+      const { rerender } = render(<AdjustSectionNav unsaved={unsaved} />)
+      const save = screen.getByRole('button', { name: 'Save changes to Path A' })
+      save.focus()
+      const focus = vi.spyOn(save, 'focus')
+
+      rerender(<AdjustSectionNav unsaved={{ ...unsaved, saving: true }} />)
+      // A browser blurs a focused button that becomes disabled and leaves focus on the page.
+      const active = vi.spyOn(document, 'activeElement', 'get').mockReturnValue(document.body)
+      fireEvent.focusOut(save)
+      expect(focus).not.toHaveBeenCalled()
+      rerender(<AdjustSectionNav unsaved={unsaved} />)
+      active.mockRestore()
+
+      expect(focus).toHaveBeenCalledTimes(1)
+    })
+
+    it('leaves focus where the viewer put it when it was not on them', () => {
+      const { rerender } = render(<AdjustSectionNav unsaved={unsaved} />)
+      const field = document.createElement('input')
+      document.body.append(field)
+      field.focus()
+
+      rerender(<AdjustSectionNav />)
+
+      expect(field).toHaveFocus()
+    })
+
+    it('does not pull focus back once the viewer has moved on from them', () => {
+      const { rerender } = render(<AdjustSectionNav unsaved={unsaved} />)
+      screen.getByRole('button', { name: 'Discard changes' }).focus()
+      screen.getByRole('button', { name: 'Discard changes' }).blur()
+
+      rerender(<AdjustSectionNav />)
+
+      expect(document.body).toHaveFocus()
+    })
+  })
+
   it('keeps a field that takes focus clear of the pinned block, but not a button', async () => {
     const stack = document.createElement('div')
     stack.id = ADJUST_STACK_ID

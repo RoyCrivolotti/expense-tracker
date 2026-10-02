@@ -36,7 +36,7 @@ import { mobileViewOf, type AssumptionsFocus, type MobilePlanView, type TabView 
 import { useGoalsScrollMemory } from './useGoalsScrollMemory'
 import { GOALS_CONTENT_ANCHOR_ID } from './scrollToGoalsContent'
 import { AdjustStack } from './AdjustStack'
-import type { UnsavedActions } from './AdjustSectionNav'
+import type { UnsavedActions } from './UnsavedGroup'
 import { GoalsNarrative } from './GoalsNarrative'
 import { NominalPreview } from './NominalPreview'
 import { SecondaryCharts } from './SecondaryCharts'

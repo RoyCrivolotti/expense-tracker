@@ -1,5 +1,6 @@
 import type { NewGoalScenario } from '../../../data/dataSource'
-import { AdjustSectionNav, type UnsavedActions } from './AdjustSectionNav'
+import { AdjustSectionNav } from './AdjustSectionNav'
+import type { UnsavedActions } from './UnsavedGroup'
 import { NetWorthMiniChart } from './charts/NetWorthMiniChart'
 import { ADJUST_STACK_ID } from './scrollToAdjustSection'
 import { useGoalsNarrow } from './useGoalsNarrow'
