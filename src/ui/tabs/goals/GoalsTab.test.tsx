@@ -724,6 +724,18 @@ describe('GoalsTab', () => {
     expect(mini()).not.toBeInTheDocument()
   })
 
+  it('drops the pinned chart and chips when the window is widened from phone Adjust to desktop', async () => {
+    mockPhoneWidth()
+    const user = userEvent.setup()
+    render(<GoalsTab model={makeModel()} />)
+    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+    expect(document.getElementById('goals-adjust-stack')).toBeInTheDocument()
+
+    act(() => media.change(NARROW_MQ, false))
+
+    expect(document.getElementById('goals-adjust-stack')).not.toBeInTheDocument()
+  })
+
   it('offers a preview of the inflation in the Nominal view only, and the setting itself in Assumptions only', async () => {
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} actions={makeActions()} />)

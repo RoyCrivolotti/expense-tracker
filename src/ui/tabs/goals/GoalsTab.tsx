@@ -35,8 +35,8 @@ import { GoalsViewSwitch } from './GoalsViewSwitch'
 import { mobileViewOf, type AssumptionsFocus, type MobilePlanView, type TabView } from './goalsView'
 import { useGoalsScrollMemory } from './useGoalsScrollMemory'
 import { GOALS_CONTENT_ANCHOR_ID } from './scrollToGoalsContent'
-import { ADJUST_STACK_ID } from './scrollToAdjustSection'
-import { AdjustSectionNav, type UnsavedActions } from './AdjustSectionNav'
+import { AdjustStack } from './AdjustStack'
+import type { UnsavedActions } from './AdjustSectionNav'
 import { GoalsNarrative } from './GoalsNarrative'
 import { NominalPreview } from './NominalPreview'
 import { SecondaryCharts } from './SecondaryCharts'
@@ -45,7 +45,6 @@ import { AssumptionsView } from './AssumptionsView'
 import { draftFromDataset } from './goalsDefaults'
 import { activePlan, initialEditorScenario } from './scenarioSelection'
 import { NetWorthChart } from './charts/NetWorthChart'
-import { NetWorthMiniChart } from './charts/NetWorthMiniChart'
 import { NetWorthNowCard } from './charts/NetWorthNowCard'
 import { todayIso } from '../../components/transactionFormState'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
@@ -568,10 +567,10 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
           </div>
           {mobilePlanView === 'adjust' ? (
             // Phone only: only the phone's row offers Adjust.
-            <div id={ADJUST_STACK_ID} className={`${styles.areaMini} ${styles.fadeBelow}`}>
-              <NetWorthMiniChart draft={deferredDraft} />
-              <AdjustSectionNav unsaved={unsavedActions(actions != null, dirty, onSaveChanges, onDiscard)} />
-            </div>
+            <AdjustStack
+              draft={deferredDraft}
+              unsaved={unsavedActions(actions != null, dirty, onSaveChanges, onDiscard)}
+            />
           ) : null}
           <div className={styles.areaControls}>
             <Card>
