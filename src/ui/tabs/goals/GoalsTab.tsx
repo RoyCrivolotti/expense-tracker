@@ -31,6 +31,7 @@ import { EXIT_MS } from '../../hooks/motion'
 import { GoalControls } from './GoalControls'
 import { ScenarioManager } from './ScenarioManager'
 import { GoalsExplainer } from './GoalsExplainer'
+import { GoalsViewSwitch, type MobilePlanView, type TabView } from './GoalsViewSwitch'
 import { GoalsNarrative } from './GoalsNarrative'
 import { NominalPreview } from './NominalPreview'
 import { SecondaryCharts } from './SecondaryCharts'
@@ -47,20 +48,7 @@ import { formatCheckinDate } from './checkinDate'
 import styles from './goals.module.css'
 import progressStyles from './progress.module.css'
 
-type TabView = 'plan' | 'progress' | 'setup'
 type DisplayMode = 'nominal' | 'purchasing-power'
-type MobilePlanView = 'chart' | 'adjust'
-
-const VIEW_OPTIONS: { value: TabView; label: string }[] = [
-  { value: 'plan', label: 'Plan' },
-  { value: 'progress', label: 'Progress' },
-  { value: 'setup', label: 'Setup' },
-]
-
-const MOBILE_PLAN_VIEW_OPTIONS: { value: MobilePlanView; label: string }[] = [
-  { value: 'chart', label: 'Chart' },
-  { value: 'adjust', label: 'Adjust' },
-]
 
 const DISPLAY_MODE_OPTIONS: { value: DisplayMode; label: string }[] = [
   { value: 'nominal', label: 'Nominal' },
@@ -443,15 +431,12 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     <div className={styles.stack}>
       <SectionTitle>Goals</SectionTitle>
 
-      <div className={progressStyles.viewSwitcherRow}>
-        <SegmentedControl
-          options={VIEW_OPTIONS}
-          value={view}
-          onChange={changeView}
-          ariaLabel="Goals view"
-          layout="compact"
-        />
-      </div>
+      <GoalsViewSwitch
+        view={view}
+        onViewChange={changeView}
+        planHalf={mobilePlanView}
+        onPlanHalfChange={setMobilePlanView}
+      />
 
       {view === 'setup' ? (
         <SetupView
@@ -497,15 +482,6 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
             scenario, then compare scenarios on the charts.
           </p>
           <GoalsExplainer />
-          <div className={styles.mobilePlanToggleRow}>
-            <SegmentedControl
-              options={MOBILE_PLAN_VIEW_OPTIONS}
-              value={mobilePlanView}
-              onChange={setMobilePlanView}
-              ariaLabel="Plan mobile view"
-              layout="compact"
-            />
-          </div>
           <div className={styles.layout} data-mobile-view={mobilePlanView}>
         <div className={styles.areaSidebar}>
           <div className={styles.areaScenarios}>
