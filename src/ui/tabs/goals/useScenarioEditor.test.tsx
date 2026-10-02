@@ -1,8 +1,16 @@
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import { bootstrapEditor } from './scenarioDraft'
+import type * as ScenarioDraft from './scenarioDraft'
 import { useScenarioEditor, type ScenarioEditor } from './useScenarioEditor'
 import { makeDataset, makeScenario } from '../../../testing/factories'
 import { makeActions } from '../../../testing/makeActions'
+
+// Counts how often the first draft is built; it is still the real thing.
+vi.mock('./scenarioDraft', async (importOriginal) => {
+  const real = await importOriginal<typeof ScenarioDraft>()
+  return { ...real, bootstrapEditor: vi.fn(real.bootstrapEditor) }
+})
 
 function setup() {
   const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })
@@ -74,5 +82,48 @@ describe('useScenarioEditor', () => {
     )
     expect(result.current.activeId).toBe(9)
     expect(result.current.draft.name).toBe('Path C')
+  })
+  it('builds the first draft once, not once for each piece of state it seeds', () => {
+    vi.mocked(bootstrapEditor).mockClear()
+
+    setup()
+
+    expect(bootstrapEditor).toHaveBeenCalledTimes(1)
+  })
+
+  describe('hidden lines', () => {
+    function setupWithRerender() {
+      const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })
+      const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })
+      const actions = makeActions()
+      return {
+        plan,
+        other,
+        ...renderHook(
+          ({ scenarios }) => useScenarioEditor(makeDataset({ goalScenarios: scenarios }), actions, 0),
+          { initialProps: { scenarios: [plan, other] } },
+        ),
+      }
+    }
+
+    it('forgets a line that was hidden once its scenario is gone', () => {
+      const { result, rerender, plan, other } = setupWithRerender()
+      act(() => result.current.onToggleVisible(other.id))
+      expect(result.current.hiddenIds.has(other.id)).toBe(true)
+
+      rerender({ scenarios: [plan] })
+
+      expect(result.current.hiddenIds.size).toBe(0)
+    })
+
+    it('keeps the same set while every hidden line still has its scenario', () => {
+      const { result, rerender, plan, other } = setupWithRerender()
+      act(() => result.current.onToggleVisible(other.id))
+      const hidden = result.current.hiddenIds
+
+      rerender({ scenarios: [plan, { ...other, name: 'Path B, renamed' }] })
+
+      expect(result.current.hiddenIds).toBe(hidden)
+    })
   })
 })
