@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { render, fireEvent } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import { SegmentedControl } from '../components/SegmentedControl'
 import { useFocusTrap } from './useFocusTrap'
 
 function TrapHarness({ hiddenFirst }: { hiddenFirst: boolean }) {
@@ -33,6 +34,45 @@ describe('useFocusTrap — hidden descendants', () => {
     rerender(<TrapHarness hiddenFirst={false} />)
     fireEvent.keyDown(document, { key: 'Tab' })
     expect(document.activeElement).toHaveAttribute('aria-label', 'hidden field')
+  })
+})
+
+describe('useFocusTrap — a segmented control inside the trap', () => {
+  // Only the selected radio is a tab stop; the others are tabindex -1. A trap that counted
+  // them would think the last radio was where Tab ends, which no Tab press can reach.
+  function TrapWithRadios() {
+    const ref = useRef<HTMLDivElement>(null)
+    useFocusTrap(ref, vi.fn())
+    return (
+      <div ref={ref}>
+        <button type="button">close</button>
+        <SegmentedControl
+          ariaLabel="Period"
+          value="b"
+          onChange={vi.fn()}
+          options={[
+            { value: 'a', label: 'A' },
+            { value: 'b', label: 'B' },
+            { value: 'c', label: 'C' },
+          ]}
+        />
+      </div>
+    )
+  }
+
+  it('wraps Tab from the one radio that is a tab stop', () => {
+    const { getByRole } = render(<TrapWithRadios />)
+    getByRole('radio', { name: 'B' }).focus()
+    const notPrevented = fireEvent.keyDown(document, { key: 'Tab' })
+    expect(notPrevented).toBe(false)
+    expect(document.activeElement).toHaveTextContent('close')
+  })
+
+  it('sends Shift+Tab from the first control to that same radio', () => {
+    const { getByRole } = render(<TrapWithRadios />)
+    expect(document.activeElement).toHaveTextContent('close')
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(getByRole('radio', { name: 'B' }))
   })
 })
 

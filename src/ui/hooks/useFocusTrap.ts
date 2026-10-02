@@ -8,8 +8,11 @@ function focusableWithin(root: HTMLElement): HTMLElement[] {
   // only affects rendering, not the DOM tree) — exclude those, or a trap containing a
   // mounted-but-hidden sibling (e.g. a form kept alive to preserve its state while
   // another is shown) sends initial focus, and Tab-cycles, into unreachable fields.
+  // The same goes for a roving group's other members (tabindex -1): `button:not([disabled])`
+  // matches them, but Tab skips them, so as the last match one would never be where focus
+  // is and the wrap would never fire, letting focus out of the dialog.
   return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
-    (el) => el.closest('[hidden]') === null,
+    (el) => el.tabIndex >= 0 && el.closest('[hidden]') === null,
   )
 }
 
