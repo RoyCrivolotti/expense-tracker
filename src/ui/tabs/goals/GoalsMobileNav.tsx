@@ -4,6 +4,7 @@ import { landOnAdjustControls } from './scrollToAdjustSection'
 import { GOALS_NAV_ID, scrollToGoalsContent } from './scrollToGoalsContent'
 import type { GoalsMobileView } from './goalsView'
 import type { GoalsScrollMemory } from './useGoalsScrollMemory'
+import { usePinnedScrollPadding } from './usePinnedScrollPadding'
 import styles from './goals.module.css'
 import { GOALS_VIEW_TABS } from './goalsView'
 
@@ -33,6 +34,7 @@ interface GoalsMobileNavProps {
  */
 export function GoalsMobileNav({ value, onChange, memory }: GoalsMobileNavProps) {
   const row = useRef<HTMLDivElement>(null)
+  usePinnedScrollPadding(value)
 
   const select = (next: GoalsMobileView) => {
     const rowEl = row.current

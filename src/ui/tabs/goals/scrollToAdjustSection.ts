@@ -5,8 +5,8 @@ import { GOALS_NAV_ID } from './scrollToGoalsContent'
 /** The block pinned under the view row in Adjust: the draft's chart and the section chips. */
 export const ADJUST_STACK_ID = 'goals-adjust-stack'
 
-/** Air between the pinned stack and the section's top edge when one is scrolled to. */
-const GAP_PX = 8
+/** Air between what is pinned and the top edge of whatever is scrolled to under it. */
+export const GAP_PX = 8
 
 /** Long enough for iOS's keyboard to arrive, and its own scroll to a focused field to follow. */
 const KEYBOARD_SETTLE_MS = 400

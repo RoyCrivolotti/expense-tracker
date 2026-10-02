@@ -21,10 +21,12 @@
 }
 
 /* Where a tap on the row takes the page: the first thing of the view that is open, past the
-   intro Plan has, with its top edge just under the stuck row. */
+   intro Plan has, with its top edge just under the stuck row. The browser adds the page's scroll
+   padding (usePinnedScrollPadding) to this margin, so it is taken back out. */
 .contentAnchor {
   scroll-margin-top: calc(
-    var(--exp-header) + var(--goals-nav-h) - var(--goals-tuck) + env(safe-area-inset-top, 0px)
+    var(--exp-header) + var(--goals-nav-h) - var(--goals-tuck) + env(safe-area-inset-top, 0px) -
+      var(--scroll-pad-top, 0px)
   );
 }
 
@@ -36,6 +38,14 @@
   flex-direction: column;
   gap: var(--goals-gap);
   min-width: 0;
+}
+
+/* The row and the pinned chart sit inside the band that the page's scroll padding keeps clear.
+   Focus inside them takes that padding back out, or a control that is stuck would count as
+   hidden and the page would scroll to uncover it. */
+.nav *,
+.areaMini * {
+  scroll-margin-top: calc(-1 * var(--scroll-pad-top, 0px));
 }
 
 /* The view switcher everywhere but a phone. */

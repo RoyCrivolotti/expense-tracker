@@ -157,6 +157,13 @@
   }
 }
 
+/* Pinned over the page, so focus in it must not be moved by the page's scroll padding: a
+   page that pins more under the header sets --scroll-pad-top for what it keeps focus clear of. */
+.header *,
+.rail * {
+  scroll-margin-top: calc(-1 * var(--scroll-pad-top, 0px));
+}
+
 .header {
   position: sticky;
   top: 0;
