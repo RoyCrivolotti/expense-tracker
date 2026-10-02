@@ -32,6 +32,7 @@ import { GoalControls } from './GoalControls'
 import { ScenarioManager } from './ScenarioManager'
 import { GoalsExplainer } from './GoalsExplainer'
 import { GoalsViewSwitch } from './GoalsViewSwitch'
+import { GoalsPanel } from './GoalsPanel'
 import { mobileViewOf, type AssumptionsFocus, type MobilePlanView, type TabView } from './goalsView'
 import { useGoalsScrollMemory } from './useGoalsScrollMemory'
 import { GOALS_CONTENT_ANCHOR_ID } from './scrollToGoalsContent'
@@ -492,6 +493,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
         memory={memory}
       />
 
+      <GoalsPanel view={view} planHalf={mobilePlanView}>
       <GoalsContentTop showIntro={view === 'plan'} />
 
       {view === 'assumptions' ? (
@@ -645,6 +647,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
       </div>
         </>
       ) : null}
+      </GoalsPanel>
     </div>
   )
 }

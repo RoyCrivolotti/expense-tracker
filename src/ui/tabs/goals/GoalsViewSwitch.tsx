@@ -1,6 +1,13 @@
 import { SegmentedControl } from '../../components/SegmentedControl'
 import { GoalsMobileNav } from './GoalsMobileNav'
-import { mobileSelection, mobileViewOf, type GoalsMobileView, type MobilePlanView, type TabView } from './goalsView'
+import {
+  GOALS_VIEW_TABS,
+  mobileSelection,
+  mobileViewOf,
+  type GoalsMobileView,
+  type MobilePlanView,
+  type TabView,
+} from './goalsView'
 import type { GoalsScrollMemory } from './useGoalsScrollMemory'
 import { useGoalsNarrow } from './useGoalsNarrow'
 import styles from './goals.module.css'
@@ -38,6 +45,7 @@ export function GoalsViewSwitch({
           onChange={onViewChange}
           ariaLabel="Goals view"
           layout="compact"
+          tabs={GOALS_VIEW_TABS}
         />
       </div>
     )

@@ -7,6 +7,12 @@ export type GoalsMobileView = MobilePlanView | Exclude<TabView, 'plan'>
 /** What a link that opens Assumptions asks it to bring into view; any other way in starts at the top. */
 export type AssumptionsFocus = 'inflation' | 'accounts'
 
+/**
+ * The view row is a tab list over one panel: what ties each tab (`goals-view-<view>`) to the
+ * panel that shows the selected view. Only one row is mounted at a time, phone or wide.
+ */
+export const GOALS_VIEW_TABS = { idPrefix: 'goals-view', panelId: 'goals-panel' }
+
 /** What the phone's one row shows as selected: Plan is whichever of its halves was last open. */
 export function mobileViewOf(view: TabView, half: MobilePlanView): GoalsMobileView {
   return view === 'plan' ? half : view

@@ -28,6 +28,16 @@
   );
 }
 
+/* What sits under the view row. A real box, because the tabpanel role is not reliable on
+   display: contents, so it has the column and gap the stack has and what is inside lays out
+   as the stack's own children did. */
+.viewPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--goals-gap);
+  min-width: 0;
+}
+
 /* The view switcher everywhere but a phone. */
 .viewSwitcherRow {
   display: flex;
