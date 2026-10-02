@@ -1,8 +1,6 @@
-import { useCallback, useDeferredValue, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { ExpenseModel } from '../../useExpenseData'
 import type { ExpenseActions } from '../../actions'
-import type { GoalScenario } from '../../../types'
-import type { NewGoalScenario } from '../../../data/dataSource'
 import {
   averageMonthlyCents,
   checkinInvestedCents,
@@ -43,9 +41,8 @@ import { NominalPreview } from './NominalPreview'
 import { SecondaryCharts } from './SecondaryCharts'
 import { ProgressView } from './ProgressView'
 import { AssumptionsView } from './AssumptionsView'
-import { draftFromDataset } from './goalsDefaults'
-import { useScenarioSave } from './useScenarioSave'
-import { activePlan, initialEditorScenario } from './scenarioSelection'
+import { useScenarioEditor, type DiscardPrompt } from './useScenarioEditor'
+import { activePlan } from './scenarioSelection'
 import { NetWorthChart } from './charts/NetWorthChart'
 import { NetWorthNowCard } from './charts/NetWorthNowCard'
 import { todayIso } from '../../components/transactionFormState'
@@ -68,59 +65,6 @@ interface GoalsTabProps {
   model: ExpenseModel
   actions?: ExpenseActions | undefined
   entry?: GoalsEntry
-}
-
-function scenarioToDraft(s: GoalScenario): NewGoalScenario {
-  const { id, isActive, ...rest } = s
-  void id
-  void isActive
-  return rest
-}
-
-// Fields the controls and the header can change; used to detect unsaved edits to a saved plan.
-const EDIT_KEYS = [
-  'color',
-  'startInvestedCents',
-  'monthlyContributionCents',
-  'annualContributionGrowth',
-  'expectedRealReturn',
-  'horizonYears',
-  'housePriceCents',
-  'downPaymentFraction',
-  'housePurchaseYear',
-  'transactionCostsCents',
-  'mortgageTermYears',
-  'mortgageRateAnnual',
-  'houseAppreciationRate',
-  'rentMonthlyCents',
-  'annualSpendCents',
-  'safeWithdrawalRate',
-  'planStartDate',
-] as const satisfies readonly (keyof NewGoalScenario)[]
-
-/** Whether the draft holds edits its saved scenario does not. */
-function differsFrom(draft: NewGoalScenario, saved: GoalScenario): boolean {
-  if (draft.name !== saved.name) return true
-  if (JSON.stringify(draft.lifeEvents) !== JSON.stringify(saved.lifeEvents)) return true
-  return EDIT_KEYS.some((k) => draft[k] !== saved[k])
-}
-
-/** A detached draft (no scenario loaded) holding edits its origin does not. */
-function hasDetachedEdits(
-  loaded: GoalScenario | null,
-  base: GoalScenario | null,
-  draft: NewGoalScenario,
-): boolean {
-  return loaded === null && base !== null && differsFrom(draft, base)
-}
-
-function bootstrapEditor(
-  dataset: ExpenseModel['dataset'],
-  avgSaving: number,
-): { activeId: number | null; draft: NewGoalScenario } {
-  const first = initialEditorScenario(dataset.goalScenarios)
-  if (first) return { activeId: first.id, draft: scenarioToDraft(first) }
-  return { activeId: null, draft: draftFromDataset(dataset, avgSaving) }
 }
 
 /**
@@ -173,14 +117,7 @@ function DiscardSheet({
   name,
   onConfirm,
   onCancel,
-}: {
-  pending: GoalScenario | null
-  open: boolean
-  detached: boolean
-  name: string
-  onConfirm: () => void
-  onCancel: () => void
-}) {
+}: DiscardPrompt) {
   const keep = detached ? 'Save the draft as a new scenario first to keep them.' : 'Save changes first to keep them.'
   return (
     <Presence show={open} exitMs={EXIT_MS.sheet}>
@@ -303,97 +240,25 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     [monthly],
   )
 
-  const [activeId, setActiveId] = useState<number | null>(
-    () => bootstrapEditor(dataset, avgSaving).activeId,
-  )
-  // The saved scenario the draft was last loaded from. Detaching to "Unsaved draft" clears
-  // activeId but keeps the edits, and this is what they are still measured against.
-  const [baseId, setBaseId] = useState<number | null>(
-    () => bootstrapEditor(dataset, avgSaving).activeId,
-  )
-  const [draft, setDraft] = useState<NewGoalScenario>(
-    () => bootstrapEditor(dataset, avgSaving).draft,
-  )
-  const [hiddenIds, setHiddenIds] = useState<ReadonlySet<number>>(() => new Set())
-  // Controls read `draft` (instant); charts read the deferred copy so dragging a
-  // slider never blocks on the projection recompute (keeps the thumb at 60fps).
-  const deferredDraft = useDeferredValue(draft)
-
-  // Editing keeps the saved plan active; we track dirtiness rather than
-  // detaching to a fresh draft, so the user can save changes in place.
-  const patchDraft = useCallback((patch: Partial<NewGoalScenario>) => {
-    setDraft((prev) => ({ ...prev, ...patch }))
-  }, [])
-
-  // Two different "current" scenarios: the one loaded in the editor (activeId), and the
-  // owner's plan, which Progress measures against. Exploring a path must not change
-  // what you are being measured against.
-  const activeScenario = useMemo(
-    () => dataset.goalScenarios.find((s) => s.id === activeId) ?? null,
-    [dataset.goalScenarios, activeId],
-  )
-  const dirty = useMemo(
-    () => activeScenario !== null && differsFrom(draft, activeScenario),
-    [activeScenario, draft],
-  )
-  // A detached draft has no saved scenario of its own, so loading another one would drop
-  // its edits just as surely; it is measured against the scenario it came from.
-  const baseScenario = useMemo(
-    () => dataset.goalScenarios.find((s) => s.id === baseId) ?? null,
-    [dataset.goalScenarios, baseId],
-  )
-  const detachedEdits = hasDetachedEdits(activeScenario, baseScenario, draft)
-
-  const selectScenario = useCallback((scenario: GoalScenario) => {
-    setActiveId(scenario.id)
-    setBaseId(scenario.id)
-    setDraft(scenarioToDraft(scenario))
-    // The loaded scenario is always drawn as the editing line, so a hidden flag on it would
-    // only leave the chip and legend saying two things at once.
-    setHiddenIds((prev) => {
-      if (!prev.has(scenario.id)) return prev
-      const next = new Set(prev)
-      next.delete(scenario.id)
-      return next
-    })
-  }, [])
-
-  const onActivate = useCallback(() => {
-    if (!actions || activeId == null) return
-    void actions.activateScenario(activeId)
-  }, [actions, activeId])
-
-  // Loading another scenario replaces the draft, so unsaved edits are held back behind a
-  // question. Held as its own value so the sheet keeps its text while it animates out.
-  const [pendingSelect, setPendingSelect] = useState<GoalScenario | null>(null)
-  const [discardOpen, setDiscardOpen] = useState(false)
-  const onSelectScenario = useCallback(
-    (scenario: GoalScenario) => {
-      if (scenario.id === activeId) return
-      if (dirty || detachedEdits) {
-        setPendingSelect(scenario)
-        setDiscardOpen(true)
-        return
-      }
-      selectScenario(scenario)
-    },
-    [activeId, dirty, detachedEdits, selectScenario],
-  )
-  const onDiscardAndSelect = useCallback(() => {
-    setDiscardOpen(false)
-    if (pendingSelect) selectScenario(pendingSelect)
-  }, [pendingSelect, selectScenario])
-
-  // Switching to the unsaved draft keeps the current edits, so it needs no question.
-  const onSelectEditing = useCallback(() => {
-    setActiveId(null)
-  }, [])
-
-  const { save: onSaveChanges, saving } = useScenarioSave(actions, activeId, draft, draft.name)
-
-  const onDiscard = useCallback(() => {
-    if (activeScenario) setDraft(scenarioToDraft(activeScenario))
-  }, [activeScenario])
+  const {
+    activeId,
+    draft,
+    deferredDraft,
+    hiddenIds,
+    activeScenario,
+    dirty,
+    saving,
+    discardPrompt,
+    patchDraft,
+    selectScenario,
+    onSelectScenario,
+    onSelectEditing,
+    onToggleVisible,
+    onActivate,
+    onSaveChanges,
+    onSaveDraft,
+    onDiscard,
+  } = useScenarioEditor(dataset, actions, avgSaving)
 
   // Progress writes the plan directly, so it asks first, saying what moves. The editor's
   // draft of that same plan is patched alongside the write, or the header would report
@@ -421,35 +286,6 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     }
     if (draftPatch) patchDraft(draftPatch)
   }, [actions, plan, latestSnapshot, rebaselinePreview, activeId, patchDraft, draft, showToast])
-
-  const onToggleVisible = useCallback((id: number) => {
-    setHiddenIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }, [])
-
-  const onSaveDraft = useCallback(
-    async (name: string) => {
-      if (!actions) return
-      const scenario = await actions.createScenario({
-        ...draft,
-        name,
-        sortOrder: dataset.goalScenarios.length,
-      })
-      selectScenario(scenario)
-    },
-    [actions, draft, dataset.goalScenarios, selectScenario],
-  )
-
-  const handleSaveDraft = useCallback(
-    (name: string) => {
-      void onSaveDraft(name)
-    },
-    [onSaveDraft],
-  )
 
   // Scatter points: actual invested values from check-ins plotted on the hero chart.
   const checkinExtraSeries = useMemo<ChartSeries | null>(() => {
@@ -542,20 +378,13 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
               onSelectEditing={onSelectEditing}
               onToggleVisible={onToggleVisible}
               onPatch={patchDraft}
-              onSaveDraft={handleSaveDraft}
+              onSaveDraft={onSaveDraft}
               onSaveChanges={onSaveChanges}
               onDiscard={onDiscard}
               onActivate={onActivate}
               onScenarioCreated={selectScenario}
             />
-            <DiscardSheet
-              pending={pendingSelect}
-              open={discardOpen}
-              detached={activeId === null}
-              name={activeScenario?.name ?? draft.name}
-              onConfirm={onDiscardAndSelect}
-              onCancel={() => setDiscardOpen(false)}
-            />
+            <DiscardSheet {...discardPrompt} />
           </div>
           {mobilePlanView === 'adjust' ? (
             // Phone only: only the phone's row offers Adjust.
