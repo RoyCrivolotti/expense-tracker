@@ -11,6 +11,12 @@ const GAP_PX = 8
 /** Long enough for iOS's keyboard to arrive, and its own scroll to a focused field to follow. */
 const KEYBOARD_SETTLE_MS = 400
 
+/** The viewer taking the scrolling over, after which a nudge from here would fight them. */
+const VIEWER_SCROLL_EVENTS = ['wheel', 'touchstart'] as const
+
+/** Puts away the delayed check of the field that last took focus: its timer and its listeners. */
+let endSettleCheck: (() => void) | undefined
+
 /**
  * What covers the top of the page once it has scrolled: the stack in Adjust, which is only
  * pinned on a screen with room for it, and the view row otherwise.
@@ -55,13 +61,17 @@ export function landOnAdjustControls(): void {
 }
 
 /**
- * Nudge the page, if need be, so a field that has just taken focus is not behind the pinned
- * stack. The browser scrolls a focused field into view, but to the edge of what it counts as
+ * Nudge the page, if need be, so a field that has just taken focus is not behind what is
+ * pinned. The browser scrolls a focused field into view, but to the edge of what it counts as
  * visible, which does not know the stack covers the top of it; with the keyboard up, iOS does
  * it again once the keyboard has finished arriving, so the check runs twice. A field above the
  * stack, or already below it, is left where it is.
+ *
+ * The second check is only for a field that still has focus and a page the viewer has not
+ * scrolled since: otherwise it would pull the page back from where they have taken it.
  */
 export function keepClearOfStack(field: Element): void {
+  endSettleCheck?.()
   const check = () => {
     const pinned = pinnedElement()?.getBoundingClientRect()
     if (!pinned) return
@@ -71,5 +81,19 @@ export function keepClearOfStack(field: Element): void {
   }
   if (typeof requestAnimationFrame === 'function') requestAnimationFrame(check)
   else check()
-  setTimeout(check, KEYBOARD_SETTLE_MS)
+
+  let viewerScrolled = false
+  const onViewerScroll = () => {
+    viewerScrolled = true
+  }
+  for (const type of VIEWER_SCROLL_EVENTS) window.addEventListener(type, onViewerScroll, { passive: true })
+  const timer = setTimeout(() => {
+    if (!viewerScrolled && document.activeElement === field) check()
+    endSettleCheck?.()
+  }, KEYBOARD_SETTLE_MS)
+  endSettleCheck = () => {
+    clearTimeout(timer)
+    for (const type of VIEWER_SCROLL_EVENTS) window.removeEventListener(type, onViewerScroll)
+    endSettleCheck = undefined
+  }
 }
