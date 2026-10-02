@@ -16,6 +16,7 @@ const MINI_HEIGHT = 112
  *  changes as Safari's toolbars come and go, and a chart that resized while scrolling would jump. */
 const SHORT_DEVICE_MQ = '(max-device-height: 700px)'
 const MINI_HEIGHT_SHORT = 96
+const LABEL = 'Projection of the scenario being edited'
 
 /**
  * The readout sits in the plot's top-left, where a line that starts low and ends top-right has
@@ -66,6 +67,9 @@ function NetWorthMiniChartImpl({ draft }: { draft: NewGoalScenario }) {
     }
   }, [draft, inflationRate])
   const tooltip = useCallback((i: number) => ({ title: `Year ${i}`, lines: [] }), [])
+  // The pill and the chart's name read from the same figure, so a screen reader hears what a
+  // sighted viewer sees, and the pill itself is hidden from it.
+  const readout = end ? { year: end.year, money: formatMoneyShort(end.investedCents, format) } : null
 
   return (
     <div className={styles.wrap}>
@@ -75,13 +79,13 @@ function NetWorthMiniChartImpl({ draft }: { draft: NewGoalScenario }) {
         series={series}
         xLabels={labels}
         formatValue={(c) => formatMoneyShort(c, format)}
-        ariaLabel="Projection of the scenario being edited"
+        ariaLabel={readout ? `${LABEL}, ending at ${readout.money} in year ${readout.year}` : LABEL}
         tooltip={tooltip}
         tooltipMode="hidden"
       />
-      {end ? (
+      {readout ? (
         <span className={styles.readout} data-side={side} aria-hidden="true">
-          Year {end.year} · {formatMoneyShort(end.investedCents, format)}
+          Year {readout.year} · {readout.money}
         </span>
       ) : null}
     </div>

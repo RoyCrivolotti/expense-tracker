@@ -24,7 +24,7 @@ describe('NetWorthMiniChart', () => {
 
     render(<NetWorthMiniChart draft={draft} />)
 
-    const svg = screen.getByRole('img', { name: 'Projection of the scenario being edited' })
+    const svg = screen.getByRole('img', { name: /^Projection of the scenario being edited/ })
     expect(svg.getAttribute('viewBox')).toBe('0 0 360 96')
   })
 
@@ -34,7 +34,7 @@ describe('NetWorthMiniChart', () => {
     void isActive
     const { container } = render(<NetWorthMiniChart draft={draft} />)
 
-    const svg = screen.getByRole('img', { name: 'Projection of the scenario being edited' })
+    const svg = screen.getByRole('img', { name: /^Projection of the scenario being edited/ })
     expect(svg.getAttribute('viewBox')).toBe('0 0 360 112')
     // One filled band and one line, nothing else: no legend, no milestone lines.
     expect(container.querySelectorAll('path').length).toBeGreaterThanOrEqual(2)
@@ -64,6 +64,17 @@ describe('NetWorthMiniChart', () => {
 
       expect(screen.queryByText('Year 10 · 100k €')).not.toBeInTheDocument()
       expect(screen.getByText(/^Year 20 · 3\d\dk €$/)).toBeInTheDocument()
+    })
+
+    it('puts the same figure in the chart\'s accessible name', () => {
+      const { rerender } = render(<NetWorthMiniChart draft={draftOf(flat)} />)
+      expect(screen.getByRole('img', { name: 'Projection of the scenario being edited, ending at 100k € in year 10' })).toBeInTheDocument()
+
+      rerender(<NetWorthMiniChart draft={draftOf({ ...flat, expectedRealReturn: 0.07, horizonYears: 20 })} />)
+
+      const name = screen.getByRole('img').getAttribute('aria-label')
+      const readout = screen.getByText(/^Year 20 · /).textContent ?? ''
+      expect(name).toBe(`Projection of the scenario being edited, ending at ${readout.slice('Year 20 · '.length)} in year 20`)
     })
 
     it('does not change the chart height', () => {
