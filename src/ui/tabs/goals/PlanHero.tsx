@@ -68,6 +68,36 @@ export function PlanHero({
     return { id: 'actuals-overlay', color: '#f59e0b', values: [], kind: 'scatter', points }
   }, [activeScenario, checkins, accounts])
 
+  // A new array or element on every render would make the memoised chart redraw each time the
+  // editor's state changes (the discard question, a save in flight), none of which it draws.
+  const extraSeries = useMemo(() => (checkinExtraSeries ? [checkinExtraSeries] : []), [checkinExtraSeries])
+  const { mode, onModeChange, assumedInflation, preview, onPreview, onOpenSetting } = display
+  const footer = useMemo(
+    () => (
+      <>
+        <GoalsNarrative draft={deferredDraft} milestones={milestones} compact />
+        <div className={progressStyles.displayModeRow}>
+          <SegmentedControl
+            options={DISPLAY_MODE_OPTIONS}
+            value={mode}
+            onChange={onModeChange}
+            ariaLabel="Value display mode"
+            layout="compact"
+          />
+        </div>
+        {mode === 'nominal' ? (
+          <NominalPreview
+            saved={assumedInflation}
+            preview={preview}
+            onPreview={onPreview}
+            onOpenAssumptions={onOpenSetting}
+          />
+        ) : null}
+      </>
+    ),
+    [deferredDraft, milestones, mode, onModeChange, assumedInflation, preview, onPreview, onOpenSetting],
+  )
+
   const heroTodayIndex = useMemo(() => {
     if (!activeScenario?.planStartDate) return undefined
     const offset = yearOffsetFromDate(activeScenario.planStartDate, todayIso())
@@ -84,29 +114,8 @@ export function PlanHero({
       activeId={editor.activeId}
       dirty={editor.dirty}
       variant="hero"
-      footer={
-        <>
-          <GoalsNarrative draft={deferredDraft} milestones={milestones} compact />
-          <div className={progressStyles.displayModeRow}>
-            <SegmentedControl
-              options={DISPLAY_MODE_OPTIONS}
-              value={display.mode}
-              onChange={display.onModeChange}
-              ariaLabel="Value display mode"
-              layout="compact"
-            />
-          </div>
-          {display.mode === 'nominal' ? (
-            <NominalPreview
-              saved={display.assumedInflation}
-              preview={display.preview}
-              onPreview={display.onPreview}
-              onOpenAssumptions={display.onOpenSetting}
-            />
-          ) : null}
-        </>
-      }
-      extraSeries={checkinExtraSeries ? [checkinExtraSeries] : []}
+      footer={footer}
+      extraSeries={extraSeries}
       fromToday={fromToday}
       nominalMode={display.mode === 'nominal'}
       viewInflation={display.preview}

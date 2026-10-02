@@ -14,13 +14,23 @@ import { makeActions } from '../../../testing/makeActions'
 // asked for: a prop that changes identity on every render shows up as a count that climbs.
 type Chart = ComponentType<Record<string, unknown>>
 
-const renders = vi.hoisted(() => ({ nowCard: 0, miniChart: 0 }))
+const renders = vi.hoisted(() => ({ nowCard: 0, miniChart: 0, hero: 0 }))
 
 vi.mock('./charts/NetWorthNowCard', async (importOriginal) => {
   const { NetWorthNowCard: Real } = await importOriginal<{ NetWorthNowCard: Chart }>()
   return {
     NetWorthNowCard: memo((props: Record<string, unknown>) => {
       renders.nowCard++
+      return <Real {...props} />
+    }),
+  }
+})
+
+vi.mock('./charts/NetWorthChart', async (importOriginal) => {
+  const { NetWorthChart: Real } = await importOriginal<{ NetWorthChart: Chart }>()
+  return {
+    NetWorthChart: memo((props: Record<string, unknown>) => {
+      renders.hero++
       return <Real {...props} />
     }),
   }
@@ -45,6 +55,7 @@ beforeAll(() => {
 beforeEach(() => {
   renders.nowCard = 0
   renders.miniChart = 0
+  renders.hero = 0
   // Opening Adjust scrolls to its controls, which jsdom does not implement.
   vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
 })
@@ -96,5 +107,30 @@ describe('GoalsTab renders', () => {
     await user.click(screen.getAllByRole('button', { name: 'Hide Path B on chart' })[0]!)
 
     expect(renders.miniChart).toBe(settled)
+  })
+  it('leaves the hero chart alone when the question about discarding edits opens and closes', async () => {
+    const user = userEvent.setup()
+    render(<GoalsTab model={twoScenarios()} actions={makeActions()} />)
+    fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
+    const settled = renders.hero
+    expect(settled).toBeGreaterThan(0)
+
+    // Choosing another scenario with edits unsaved asks first, which is the editor's state
+    // changing and nothing the chart is drawn from.
+    await user.click(screen.getByRole('button', { name: 'Path B' }))
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(renders.hero).toBe(settled)
+  })
+
+  it('redraws the hero chart when a line is hidden', async () => {
+    const user = userEvent.setup()
+    render(<GoalsTab model={twoScenarios()} actions={makeActions()} />)
+    const settled = renders.hero
+
+    await user.click(screen.getAllByRole('button', { name: 'Hide Path B on chart' })[0]!)
+
+    expect(renders.hero).toBeGreaterThan(settled)
   })
 })
