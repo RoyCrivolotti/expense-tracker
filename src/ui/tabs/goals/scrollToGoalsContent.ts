@@ -3,6 +3,12 @@ import { prefersReducedMotion } from '../../hooks/prefersReducedMotion'
 /** Where a Goals view's own content starts: past the intro and glossary, which only Plan has. */
 export const GOALS_CONTENT_ANCHOR_ID = 'goals-content-top'
 
+/** Run `run` once React has rendered what the viewer just did, and the browser has laid it out. */
+function afterRender(run: () => void): void {
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run)
+  else run()
+}
+
 /**
  * Bring the content of the Goals view that is now open to just under the sticky view row.
  *
@@ -10,15 +16,29 @@ export const GOALS_CONTENT_ANCHOR_ID = 'goals-content-top'
  * above its content and Progress and Setup do not, so the target moves with the view that
  * was opened. `smooth` is for a tap on the view already open, where nothing else changes on
  * screen; opening another view jumps, since its content has just been swapped in.
+ *
+ * `ifPast` leaves the page where it is unless the content already starts above the place it
+ * would be put, as it does for a link followed from far down another view; from the top of the
+ * page, scrolling would only push the intro away.
  */
-export function scrollToGoalsContent(behavior: 'auto' | 'smooth'): void {
-  const run = () => {
+export function scrollToGoalsContent(
+  behavior: 'auto' | 'smooth',
+  options: { ifPast?: boolean } = {},
+): void {
+  afterRender(() => {
+    const anchor = document.getElementById(GOALS_CONTENT_ANCHOR_ID)
+    if (!anchor) return
+    const marginTop = Number.parseFloat(getComputedStyle(anchor).scrollMarginTop) || 0
+    if (options.ifPast && anchor.getBoundingClientRect().top >= marginTop) return
     // Not every environment has scrollIntoView (jsdom does not).
-    document.getElementById(GOALS_CONTENT_ANCHOR_ID)?.scrollIntoView?.({
+    anchor.scrollIntoView?.({
       behavior: prefersReducedMotion() ? 'auto' : behavior,
       block: 'start',
     })
-  }
-  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run)
-  else run()
+  })
+}
+
+/** Put the page back where it was, once the view it was left on has been rendered again. */
+export function restoreScrollPosition(top: number): void {
+  afterRender(() => window.scrollTo({ top, behavior: 'auto' }))
 }

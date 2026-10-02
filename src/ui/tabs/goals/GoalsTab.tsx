@@ -33,7 +33,7 @@ import { ScenarioManager } from './ScenarioManager'
 import { GoalsExplainer } from './GoalsExplainer'
 import { GoalsViewSwitch } from './GoalsViewSwitch'
 import type { MobilePlanView, TabView } from './goalsView'
-import { GOALS_CONTENT_ANCHOR_ID } from './scrollToGoalsContent'
+import { GOALS_CONTENT_ANCHOR_ID, scrollToGoalsContent } from './scrollToGoalsContent'
 import { ADJUST_STACK_ID } from './scrollToAdjustSection'
 import { AdjustSectionNav } from './AdjustSectionNav'
 import { GoalsNarrative } from './GoalsNarrative'
@@ -240,6 +240,10 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     setPreviewInflation(null)
     setView(next)
   }, [])
+  const openSetup = useCallback(() => {
+    changeView('setup')
+    scrollToGoalsContent('auto', { ifPast: true })
+  }, [changeView])
   const openInflationSetting = useCallback(() => {
     changeView('setup')
     setFocusInflation(true)
@@ -493,7 +497,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
           plan={plan}
           actions={actions}
           canWrite={actions != null}
-          onOpenSetup={() => changeView('setup')}
+          onOpenSetup={openSetup}
           openCheckinForm={checkinEntry}
           cashReserveMonths={dataset.settings.cashReserveMonths}
           openBudgetMonth={defaultBudgetMonth(todayIso(), dataset.settings.budgetRolloverDay)}

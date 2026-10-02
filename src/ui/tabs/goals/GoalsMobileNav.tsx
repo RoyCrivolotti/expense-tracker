@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import { SegmentedControl } from '../../components/SegmentedControl'
 import { landOnAdjustControls } from './scrollToAdjustSection'
-import { scrollToGoalsContent } from './scrollToGoalsContent'
+import { restoreScrollPosition, scrollToGoalsContent } from './scrollToGoalsContent'
 import type { GoalsMobileView } from './goalsView'
 import styles from './goals.module.css'
 
@@ -23,11 +23,13 @@ interface GoalsMobileNavProps {
  *
  * Tapping a segment from down the page brings that view's content to the top, under the row,
  * rather than leaving the scroll position wherever the old view's offset falls in the new
- * one. Tapping the segment already selected does the same, which is the usual way to say
- * "back to the top" on a phone.
+ * one, and a view that has been left comes back to where it was left. Tapping the segment
+ * already selected goes to the top of its content, which is the usual way to say "back to the
+ * top" on a phone.
  */
 export function GoalsMobileNav({ value, onChange }: GoalsMobileNavProps) {
   const row = useRef<HTMLDivElement>(null)
+  const left = useRef<Partial<Record<GoalsMobileView, number>>>({})
 
   const select = (next: GoalsMobileView) => {
     const rowEl = row.current
@@ -37,10 +39,19 @@ export function GoalsMobileNav({ value, onChange }: GoalsMobileNavProps) {
     const stuck =
       rowEl !== null &&
       rowEl.getBoundingClientRect().top <= (Number.parseFloat(getComputedStyle(rowEl).top) || 0) + 0.5
+    if (next !== value) left.current[value] = window.scrollY
     onChange(next)
-    // Opening Adjust is a request for the controls, wherever the page was.
-    if (next === 'adjust' && value !== 'adjust') landOnAdjustControls()
-    else if (stuck) scrollToGoalsContent(next === value ? 'smooth' : 'auto')
+    const before = left.current[next]
+    if (next === value) {
+      if (stuck) scrollToGoalsContent('smooth')
+    } else if (before !== undefined) {
+      restoreScrollPosition(before)
+    } else if (next === 'adjust') {
+      // Opening Adjust for the first time is a request for the controls, wherever the page was.
+      landOnAdjustControls()
+    } else if (stuck) {
+      scrollToGoalsContent('auto')
+    }
   }
 
   return (
