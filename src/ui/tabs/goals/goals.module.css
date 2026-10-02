@@ -208,9 +208,13 @@
     flex-direction: column;
     gap: 1rem;
     position: sticky;
-    top: calc(var(--exp-header) + var(--exp-header-air));
+    /* Under the header, which carries the top safe-area inset; dvh is the whole screen, so
+       the height it leaves takes that inset off as well. */
+    top: calc(var(--exp-header) + var(--exp-header-air) + env(safe-area-inset-top, 0px));
     align-self: start;
-    max-height: calc(100dvh - var(--exp-header) - var(--exp-header-air) - 1rem);
+    max-height: calc(
+      100dvh - var(--exp-header) - var(--exp-header-air) - env(safe-area-inset-top, 0px) - 1rem
+    );
     overflow-x: hidden;
     overflow-y: auto;
     min-width: 0;
