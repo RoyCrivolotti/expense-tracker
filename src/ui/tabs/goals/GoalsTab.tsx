@@ -30,7 +30,7 @@ import { Presence } from '../../components/Presence'
 import { EXIT_MS } from '../../hooks/motion'
 import { GoalControls } from './GoalControls'
 import { ScenarioManager } from './ScenarioManager'
-import { GoalsExplainer } from './GoalsExplainer'
+import { GoalsIntro } from './GoalsIntro'
 import { GoalsViewSwitch } from './GoalsViewSwitch'
 import { GoalsPanel } from './GoalsPanel'
 import { mobileViewOf, type AssumptionsFocus, type MobilePlanView, type TabView } from './goalsView'
@@ -199,22 +199,14 @@ function DiscardSheet({
 }
 
 /**
- * What sits between the view switch and a view's own content: Plan's intro and glossary, and
- * the anchor a tap on the switch scrolls to. Progress and Assumptions start at the anchor.
+ * What sits between the view switch and a view's own content: Plan's intro and glossary (on
+ * a screen wide enough to lead with them), and the anchor a tap on the switch scrolls to.
+ * Progress and Assumptions start at the anchor.
  */
 function GoalsContentTop({ showIntro }: { showIntro: boolean }) {
   return (
     <>
-      {showIntro ? (
-        <>
-          <p className={styles.intro}>
-            Project your net worth and when you can reach financial independence. Horizon sets
-            how far the projection runs and where FI is searched. Adjust the controls, save a
-            scenario, then compare scenarios on the charts.
-          </p>
-          <GoalsExplainer />
-        </>
-      ) : null}
+      <GoalsIntro placement="top" show={showIntro} />
       <div id={GOALS_CONTENT_ANCHOR_ID} className={styles.contentAnchor} />
     </>
   )
@@ -647,6 +639,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
       </div>
         </>
       ) : null}
+      <GoalsIntro placement="bottom" show={view === 'plan'} />
       </GoalsPanel>
     </div>
   )
