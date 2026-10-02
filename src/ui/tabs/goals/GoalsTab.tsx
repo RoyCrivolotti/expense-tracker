@@ -5,39 +5,25 @@ import {
   averageMonthlyCents,
   checkinInvestedCents,
   computeMonthlyTotals,
-  defaultBudgetMonth,
-  formatCents,
   latestCheckin,
   milestonesReached,
   monthlyFlows,
   planFromToday,
-  rebaseline,
-  rebaselineSummary,
-  type MoneyFormat,
-  type Rebaseline,
 } from '../../../engine'
 import type { InvestedSnapshot } from './checkinDate'
-import { ConfirmSheet } from '../../components/ConfirmSheet'
-import { failureMessage } from '../../hooks/useFailureToast'
-import { useToast } from '../../hooks/useToast'
-import { Presence } from '../../components/Presence'
-import { EXIT_MS } from '../../hooks/motion'
+import { SectionTitle } from '../../components/primitives'
 import { GoalsIntro } from './GoalsIntro'
 import { GoalsViewSwitch } from './GoalsViewSwitch'
 import { GoalsPanel } from './GoalsPanel'
 import { mobileViewOf, type AssumptionsFocus, type MobilePlanView, type TabView } from './goalsView'
-import { SectionTitle } from '../../components/primitives'
 import { useGoalsScrollMemory } from './useGoalsScrollMemory'
 import { GOALS_CONTENT_ANCHOR_ID } from './goalsAnchors'
-import { ProgressView } from './ProgressView'
+import { ProgressPane } from './ProgressPane'
 import { AssumptionsView } from './AssumptionsView'
 import { useScenarioEditor } from './useScenarioEditor'
 import { PlanView } from './PlanView'
 import type { DisplayMode } from './PlanHero'
 import { activePlan } from './scenarioSelection'
-import { todayIso } from '../../components/transactionFormState'
-import { useMoneyFormat } from '../../hooks/moneyFormatContext'
-import { formatCheckinDate } from './checkinDate'
 import styles from './goals.module.css'
 
 /** How the tab was reached: 'checkin' opens Progress with the check-in form up. */
@@ -47,44 +33,6 @@ interface GoalsTabProps {
   model: ExpenseModel
   actions?: ExpenseActions | undefined
   entry?: GoalsEntry
-}
-
-/**
- * What a re-baseline from Progress is about to write, asked before it is written. Held
- * inside Presence so the sheet can animate out after the answer.
- */
-function RebaselineSheet({
-  preview,
-  format,
-  onConfirm,
-  onCancel,
-}: {
-  preview: Rebaseline | null
-  format: MoneyFormat
-  onConfirm: () => void
-  onCancel: () => void
-}) {
-  const summary = preview ? rebaselineSummary(preview, format, formatCheckinDate) : []
-  // What is being replaced is said too, so the sheet is not only about what it puts in.
-  const replaced = preview?.previous.planStartDate
-    ? `, instead of ${formatCheckinDate(preview.previous.planStartDate)} from ${formatCents(preview.previous.investedCents, format)}`
-    : ''
-  const start = preview
-    ? `The plan restarts on ${formatCheckinDate(preview.patch.planStartDate)} from ${formatCents(preview.patch.startInvestedCents, format)}${replaced}. From then on ahead or behind measures only what you do next.`
-    : ''
-  return (
-    <Presence show={preview !== null} exitMs={EXIT_MS.sheet}>
-      {preview ? (
-        <ConfirmSheet
-          title="Re-baseline the plan from the latest check-in?"
-          message={summary.length > 0 ? [start, ...summary] : start}
-          confirmLabel="Re-baseline"
-          onConfirm={onConfirm}
-          onCancel={onCancel}
-        />
-      ) : null}
-    </Presence>
-  )
 }
 
 /**
@@ -184,34 +132,6 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
   )
 
   const editor = useScenarioEditor(dataset, actions, avgSaving)
-  const { activeId, draft, patchDraft } = editor
-
-  // Progress writes the plan directly, so it asks first, saying what moves. The editor's
-  // draft of that same plan is patched alongside the write, or the header would report
-  // unsaved changes and saving them would write the old start back over the re-baseline.
-  const format = useMoneyFormat()
-  const [rebaselinePreview, setRebaselinePreview] = useState<Rebaseline | null>(null)
-  const onRebaseline = useCallback(() => {
-    if (!actions || !plan || !latestSnapshot) return
-    setRebaselinePreview(rebaseline(plan, latestSnapshot))
-  }, [actions, plan, latestSnapshot])
-  const { showToast } = useToast()
-  const onRebaselineConfirm = useCallback(async () => {
-    if (!actions || !plan || !latestSnapshot || !rebaselinePreview) return
-    // The draft is re-baselined from its own values, so an unsaved life-event or house
-    // edit in the editor moves with the start rather than being overwritten by the plan's.
-    const draftPatch = activeId === plan.id ? rebaseline(draft, latestSnapshot).patch : null
-    setRebaselinePreview(null)
-    try {
-      await actions.updateScenario(plan.id, rebaselinePreview.patch)
-    } catch (e) {
-      // The plan did not move, so the editor's draft must not either, or Plan would offer to
-      // save a start that was never written.
-      showToast(failureMessage(e), 'error')
-      return
-    }
-    if (draftPatch) patchDraft(draftPatch)
-  }, [actions, plan, latestSnapshot, rebaselinePreview, activeId, patchDraft, draft, showToast])
 
   return (
     <div className={styles.stack}>
@@ -239,30 +159,17 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
         />
       ) : null}
       {view === 'progress' ? (
-        <>
-        <RebaselineSheet
-          preview={rebaselinePreview}
-          format={format}
-          onConfirm={() => { void onRebaselineConfirm() }}
-          onCancel={() => setRebaselinePreview(null)}
-        />
-        <ProgressView
-          accounts={dataset.wealthAccounts}
-          checkins={dataset.wealthCheckins}
-          transactions={dataset.transactions}
-          milestones={milestones}
-          reached={reachedMilestones}
-          plan={plan}
+        <ProgressPane
+          dataset={dataset}
           actions={actions}
-          canWrite={actions != null}
-          onOpenAssumptions={openAccountsSetup}
-          openCheckinForm={checkinEntry}
-          cashReserveMonths={dataset.settings.cashReserveMonths}
-          openBudgetMonth={defaultBudgetMonth(todayIso(), dataset.settings.budgetRolloverDay)}
-          onRebaseline={onRebaseline}
+          plan={plan}
+          latestSnapshot={latestSnapshot}
           fromToday={fromToday}
+          reached={reachedMilestones}
+          openCheckinForm={checkinEntry}
+          onOpenAccountsSetup={openAccountsSetup}
+          editor={editor}
         />
-        </>
       ) : null}
       {view === 'plan' ? (
         <PlanView
