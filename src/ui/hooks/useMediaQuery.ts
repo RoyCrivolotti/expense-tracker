@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 
 function list(query: string): MediaQueryList | null {
   // jsdom has no matchMedia; without it, nothing matches.
@@ -7,15 +7,23 @@ function list(query: string): MediaQueryList | null {
     : null
 }
 
-/** Whether a media query matches, kept in step as it changes. */
+/**
+ * Whether a media query matches, kept in step as it changes. An external store rather than state
+ * set from an effect, so a change between render and subscription is not lost and a new `query`
+ * is answered on the render that passes it.
+ */
 export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(() => list(query)?.matches ?? false)
-  useEffect(() => {
-    const mql = list(query)
-    if (!mql) return
-    const handler = (e: MediaQueryListEvent) => setMatches(e.matches)
-    mql.addEventListener('change', handler)
-    return () => mql.removeEventListener('change', handler)
-  }, [query])
-  return matches
+  const subscribe = useCallback(
+    (notify: () => void) => {
+      const mql = list(query)
+      mql?.addEventListener('change', notify)
+      return () => mql?.removeEventListener('change', notify)
+    },
+    [query],
+  )
+  return useSyncExternalStore(
+    subscribe,
+    () => list(query)?.matches ?? false,
+    () => false,
+  )
 }

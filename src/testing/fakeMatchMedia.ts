@@ -3,14 +3,18 @@ import { vi } from 'vitest'
 /**
  * jsdom has no matchMedia. This installs one that answers every query from `matching`, and that
  * lets a test report a query changing, as a window resized across a breakpoint does:
- * `setMatching` changes the answers for queries made from then on, and `change` tells whoever
- * is listening to one query that it now matches, or no longer does.
+ * `setMatching` changes the answers, without telling anyone listening, and `change` makes one
+ * query match, or stop matching, and tells whoever is listening to it. Like a real
+ * MediaQueryList, one already handed out answers with what is true now.
  */
 export function installFakeMatchMedia(matching: (query: string) => boolean = () => false) {
   let current = matching
+  const changed = new Map<string, boolean>()
   const listeners = new Map<string, Set<(event: MediaQueryListEvent) => void>>()
   const matchMedia = vi.fn((query: string) => ({
-    matches: current(query),
+    get matches() {
+      return changed.get(query) ?? current(query)
+    },
     media: query,
     onchange: null,
     addListener: vi.fn(),
@@ -28,8 +32,10 @@ export function installFakeMatchMedia(matching: (query: string) => boolean = () 
     matchMedia,
     setMatching(next: (query: string) => boolean) {
       current = next
+      changed.clear()
     },
     change(query: string, matches: boolean) {
+      changed.set(query, matches)
       listeners.get(query)?.forEach((listener) => listener({ matches, media: query } as MediaQueryListEvent))
     },
   }
