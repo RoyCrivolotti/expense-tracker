@@ -15,48 +15,30 @@ import {
   rebaselineSummary,
   type MoneyFormat,
   type Rebaseline,
-  yearOffsetFromDate,
 } from '../../../engine'
 import type { InvestedSnapshot } from './checkinDate'
-import type { ChartSeries } from '../../charts/LinearChart'
-import { Card, SectionTitle } from '../../components/primitives'
-import { SegmentedControl } from '../../components/SegmentedControl'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { failureMessage } from '../../hooks/useFailureToast'
 import { useToast } from '../../hooks/useToast'
 import { Presence } from '../../components/Presence'
 import { EXIT_MS } from '../../hooks/motion'
-import { GoalControls } from './GoalControls'
-import { ScenarioManager } from './ScenarioManager'
 import { GoalsIntro } from './GoalsIntro'
 import { GoalsViewSwitch } from './GoalsViewSwitch'
 import { GoalsPanel } from './GoalsPanel'
 import { mobileViewOf, type AssumptionsFocus, type MobilePlanView, type TabView } from './goalsView'
+import { SectionTitle } from '../../components/primitives'
 import { useGoalsScrollMemory } from './useGoalsScrollMemory'
 import { GOALS_CONTENT_ANCHOR_ID } from './goalsAnchors'
-import { AdjustStack } from './AdjustStack'
-import type { UnsavedActions } from './UnsavedGroup'
-import { GoalsNarrative } from './GoalsNarrative'
-import { NominalPreview } from './NominalPreview'
-import { SecondaryCharts } from './SecondaryCharts'
 import { ProgressView } from './ProgressView'
 import { AssumptionsView } from './AssumptionsView'
-import { useScenarioEditor, type DiscardPrompt } from './useScenarioEditor'
+import { useScenarioEditor } from './useScenarioEditor'
+import { PlanView } from './PlanView'
+import type { DisplayMode } from './PlanHero'
 import { activePlan } from './scenarioSelection'
-import { NetWorthChart } from './charts/NetWorthChart'
-import { NetWorthNowCard } from './charts/NetWorthNowCard'
 import { todayIso } from '../../components/transactionFormState'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { formatCheckinDate } from './checkinDate'
 import styles from './goals.module.css'
-import progressStyles from './progress.module.css'
-
-type DisplayMode = 'nominal' | 'purchasing-power'
-
-const DISPLAY_MODE_OPTIONS: { value: DisplayMode; label: string }[] = [
-  { value: 'nominal', label: 'Nominal' },
-  { value: 'purchasing-power', label: 'Purchasing power' },
-]
 
 /** How the tab was reached: 'checkin' opens Progress with the check-in form up. */
 export type GoalsEntry = 'checkin' | null
@@ -106,36 +88,6 @@ function RebaselineSheet({
 }
 
 /**
- * Asked before loading another scenario over unsaved edits. Held inside Presence so the
- * sheet keeps its text while it animates out. A detached draft has no saved scenario to
- * "save changes" to, so it is told to save the draft as a new one.
- */
-function DiscardSheet({
-  pending,
-  open,
-  detached,
-  name,
-  onConfirm,
-  onCancel,
-}: DiscardPrompt) {
-  const keep = detached ? 'Save the draft as a new scenario first to keep them.' : 'Save changes first to keep them.'
-  return (
-    <Presence show={open} exitMs={EXIT_MS.sheet}>
-      {pending ? (
-        <ConfirmSheet
-          title={detached ? 'Discard the unsaved draft?' : `Discard unsaved changes to ${name}?`}
-          message={`Loading ${pending.name} drops the edits made here. ${keep}`}
-          confirmLabel="Discard"
-          destructive
-          onConfirm={onConfirm}
-          onCancel={onCancel}
-        />
-      ) : null}
-    </Presence>
-  )
-}
-
-/**
  * What sits between the view switch and a view's own content: Plan's intro and glossary (on
  * a screen wide enough to lead with them), and the anchor a tap on the switch scrolls to.
  * Progress and Assumptions start at the anchor.
@@ -147,15 +99,6 @@ function GoalsContentTop({ showIntro }: { showIntro: boolean }) {
       <div id={GOALS_CONTENT_ANCHOR_ID} className={styles.contentAnchor} />
     </>
   )
-}
-
-/** Edits to a saved scenario, which the Adjust section row can save or drop; none otherwise. */
-function unsavedActions(
-  canWrite: boolean,
-  dirty: boolean,
-  actions: UnsavedActions,
-): UnsavedActions | undefined {
-  return canWrite && dirty ? actions : undefined
 }
 
 function initialView(entry: GoalsEntry | undefined): TabView {
@@ -240,25 +183,8 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     [monthly],
   )
 
-  const {
-    activeId,
-    draft,
-    deferredDraft,
-    hiddenIds,
-    activeScenario,
-    dirty,
-    saving,
-    discardPrompt,
-    patchDraft,
-    selectScenario,
-    onSelectScenario,
-    onSelectEditing,
-    onToggleVisible,
-    onActivate,
-    onSaveChanges,
-    onSaveDraft,
-    onDiscard,
-  } = useScenarioEditor(dataset, actions, avgSaving)
+  const editor = useScenarioEditor(dataset, actions, avgSaving)
+  const { activeId, draft, patchDraft } = editor
 
   // Progress writes the plan directly, so it asks first, saying what moves. The editor's
   // draft of that same plan is patched alongside the write, or the header would report
@@ -286,28 +212,6 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     }
     if (draftPatch) patchDraft(draftPatch)
   }, [actions, plan, latestSnapshot, rebaselinePreview, activeId, patchDraft, draft, showToast])
-
-  // Scatter points: actual invested values from check-ins plotted on the hero chart.
-  const checkinExtraSeries = useMemo<ChartSeries | null>(() => {
-    if (!activeScenario?.planStartDate) return null
-    const points = dataset.wealthCheckins
-      .map((c) => {
-        const offset = yearOffsetFromDate(activeScenario.planStartDate!, c.checkinDate)
-        if (offset === null) return null
-        const value = checkinInvestedCents(c, dataset.wealthAccounts)
-        return { xIndex: offset, value }
-      })
-      .filter((p): p is NonNullable<typeof p> => p !== null)
-    if (points.length === 0) return null
-    return { id: 'actuals-overlay', color: '#f59e0b', values: [], kind: 'scatter', points }
-  }, [activeScenario, dataset.wealthCheckins, dataset.wealthAccounts])
-
-  const heroTodayIndex = useMemo(() => {
-    if (!activeScenario?.planStartDate) return undefined
-    const today = new Date().toISOString().slice(0, 10)
-    const offset = yearOffsetFromDate(activeScenario.planStartDate, today)
-    return offset !== null && offset >= 0 ? offset : undefined
-  }, [activeScenario])
 
   return (
     <div className={styles.stack}>
@@ -361,112 +265,27 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
         </>
       ) : null}
       {view === 'plan' ? (
-        <>
-          <div className={styles.layout} data-mobile-view={mobilePlanView}>
-        <div className={styles.areaSidebar}>
-          <div className={styles.areaScenarios}>
-            <ScenarioManager
-              scenarios={dataset.goalScenarios}
-              activeId={activeId}
-              draft={draft}
-              hiddenIds={hiddenIds}
-              canWrite={actions != null}
-              actions={actions}
-              dirty={dirty}
-              saving={saving}
-              onSelect={onSelectScenario}
-              onSelectEditing={onSelectEditing}
-              onToggleVisible={onToggleVisible}
-              onPatch={patchDraft}
-              onSaveDraft={onSaveDraft}
-              onSaveChanges={onSaveChanges}
-              onDiscard={onDiscard}
-              onActivate={onActivate}
-              onScenarioCreated={selectScenario}
-            />
-            <DiscardSheet {...discardPrompt} />
-          </div>
-          {mobilePlanView === 'adjust' ? (
-            // Phone only: only the phone's row offers Adjust.
-            <AdjustStack
-              draft={deferredDraft}
-              unsaved={unsavedActions(actions != null, dirty, {
-                name: draft.name,
-                saving,
-                onSave: onSaveChanges,
-                onDiscard,
-              })}
-            />
-          ) : null}
-          <div className={styles.areaControls}>
-            <Card>
-              <GoalControls draft={draft} latest={latestSnapshot} onChange={patchDraft} />
-            </Card>
-          </div>
-        </div>
-        <div className={styles.areaOutputs}>
-          <div className={styles.areaNow}>
-            <NetWorthNowCard
-              draft={deferredDraft}
-              latest={latestSnapshot}
-              milestones={milestones}
-              reached={reachedMilestones}
-            />
-          </div>
-          <div className={`${styles.heroBlock} ${styles.areaHero}`}>
-            <NetWorthChart
-              scenarios={dataset.goalScenarios}
-              hiddenIds={hiddenIds}
-              onToggleVisible={onToggleVisible}
-              draft={deferredDraft}
-              milestones={milestones}
-              activeId={activeId}
-              dirty={dirty}
-              variant="hero"
-              footer={
-                <>
-                  <GoalsNarrative draft={deferredDraft} milestones={milestones} compact />
-                  <div className={progressStyles.displayModeRow}>
-                    <SegmentedControl
-                      options={DISPLAY_MODE_OPTIONS}
-                      value={displayMode}
-                      onChange={changeDisplayMode}
-                      ariaLabel="Value display mode"
-                      layout="compact"
-                    />
-                  </div>
-                  {displayMode === 'nominal' ? (
-                    <NominalPreview
-                      saved={dataset.settings.assumedInflation}
-                      preview={previewInflation}
-                      onPreview={setPreviewInflation}
-                      onOpenAssumptions={actions ? openInflationSetting : undefined}
-                    />
-                  ) : null}
-                </>
-              }
-              extraSeries={checkinExtraSeries ? [checkinExtraSeries] : []}
-              fromToday={fromToday}
-              nominalMode={displayMode === 'nominal'}
-              viewInflation={previewInflation}
-              {...(heroTodayIndex !== undefined ? { todayIndex: heroTodayIndex } : {})}
-            />
-          </div>
-          <div className={styles.areaSecondary}>
-            <SecondaryCharts
-              scenarios={dataset.goalScenarios}
-              draft={deferredDraft}
-              monthly={monthly}
-              milestones={milestones}
-              reached={reachedMilestones}
-              activeId={activeId}
-              dirty={dirty}
-              fromToday={fromToday}
-            />
-          </div>
-        </div>
-      </div>
-        </>
+        <PlanView
+          half={mobilePlanView}
+          scenarios={dataset.goalScenarios}
+          editor={editor}
+          actions={actions}
+          latest={latestSnapshot}
+          milestones={milestones}
+          reached={reachedMilestones}
+          monthly={monthly}
+          checkins={dataset.wealthCheckins}
+          accounts={dataset.wealthAccounts}
+          fromToday={fromToday}
+          display={{
+            mode: displayMode,
+            onModeChange: changeDisplayMode,
+            assumedInflation: dataset.settings.assumedInflation,
+            preview: previewInflation,
+            onPreview: setPreviewInflation,
+            onOpenSetting: actions ? openInflationSetting : undefined,
+          }}
+        />
       ) : null}
       <GoalsIntro placement="bottom" show={view === 'plan'} />
       </GoalsPanel>
