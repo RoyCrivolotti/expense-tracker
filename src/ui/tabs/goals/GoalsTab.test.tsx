@@ -765,12 +765,20 @@ describe('GoalsTab', () => {
     expect(screen.getByRole('button', { current: true, hidden: true })).toHaveFocus()
   })
 
-  it('offers no Save in a read-only session, which cannot save', async () => {
+  it('offers no Save in a read-only session, which cannot save, even once a control has been edited', async () => {
     mockPhoneWidth()
     const user = userEvent.setup()
-    render(<GoalsTab model={makeModel()} />)
+    const plan = makeScenario({ id: 1, name: 'Path A', isActive: true })
+    render(<GoalsTab model={buildExpenseModel(makeDataset({ goalScenarios: [plan] }))} />)
     await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+    const field = screen.getByLabelText('Monthly investing')
+    const before = (field as HTMLInputElement).value
 
+    // The controls take edits in any session, and the draft then differs from the saved plan.
+    fireEvent.change(field, { target: { value: '12345' } })
+    fireEvent.blur(field)
+
+    expect((field as HTMLInputElement).value).not.toBe(before)
     expect(screen.queryByRole('group', { name: 'Unsaved changes', hidden: true })).not.toBeInTheDocument()
   })
 
