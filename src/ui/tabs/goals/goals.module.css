@@ -127,7 +127,7 @@
         env(safe-area-inset-top, 0px)
     );
     z-index: 5;
-    padding: 0.5rem 0 0.25rem;
+    padding: 0.25rem 0 0.25rem;
     background: var(--color-bg);
     --fade-h: 1.25rem;
   }
@@ -428,8 +428,36 @@
 
 /* The jump links under the pinned chart in Adjust: the secondary chart picker's chips, with the
    room around the row taken in, since the row is pinned with the chart. */
+.sectionRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .sectionNav {
-  display: block;
+  flex: 1;
+  min-width: 0;
+}
+
+/* With the actions beside them the chips run out of room before they run out of chips, so
+   the last visible one fades out instead of being cut. */
+.sectionRowActions .sectionNav {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 1.25rem), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 1.25rem), transparent);
+}
+
+/* Beside the chips, so no taller than they are. The rule at the left says these are not
+   sections, and keeps them from reading as a last chip. */
+.unsavedActions {
+  display: flex;
+  flex: none;
+  gap: 0.35rem;
+  padding: 0.3rem 0 0.1rem 0.5rem;
+  border-left: 1px solid var(--color-border);
+}
+
+.unsavedActions .btn {
+  padding: 0.3rem 0.65rem;
 }
 
 .chipRow.sectionChips {

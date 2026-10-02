@@ -35,7 +35,7 @@ import { GoalsViewSwitch } from './GoalsViewSwitch'
 import type { MobilePlanView, TabView } from './goalsView'
 import { GOALS_CONTENT_ANCHOR_ID, scrollToGoalsContent } from './scrollToGoalsContent'
 import { ADJUST_STACK_ID } from './scrollToAdjustSection'
-import { AdjustSectionNav } from './AdjustSectionNav'
+import { AdjustSectionNav, type UnsavedActions } from './AdjustSectionNav'
 import { GoalsNarrative } from './GoalsNarrative'
 import { NominalPreview } from './NominalPreview'
 import { SecondaryCharts } from './SecondaryCharts'
@@ -216,6 +216,16 @@ function GoalsContentTop({ showIntro }: { showIntro: boolean }) {
       <div id={GOALS_CONTENT_ANCHOR_ID} className={styles.contentAnchor} />
     </>
   )
+}
+
+/** Edits to a saved scenario, which the Adjust section row can save or drop; none otherwise. */
+function unsavedActions(
+  canWrite: boolean,
+  dirty: boolean,
+  onSave: () => void,
+  onDiscard: () => void,
+): UnsavedActions | undefined {
+  return canWrite && dirty ? { onSave, onDiscard } : undefined
 }
 
 function initialView(entry: GoalsEntry | undefined): TabView {
@@ -542,7 +552,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
             // Phone only: only the phone's row offers Adjust.
             <div id={ADJUST_STACK_ID} className={`${styles.areaMini} ${styles.fadeBelow}`}>
               <NetWorthMiniChart draft={deferredDraft} />
-              <AdjustSectionNav />
+              <AdjustSectionNav unsaved={unsavedActions(actions != null, dirty, onSaveChanges, onDiscard)} />
             </div>
           ) : null}
           <div className={styles.areaControls}>

@@ -31,6 +31,20 @@ const defaultProps = {
 }
 
 describe('LinearChart', () => {
+  it('leaves 16px above the plot unless asked for less', () => {
+    const plotTop = (props: { padTop?: number }) => {
+      const { container, unmount } = render(
+        <LinearChart {...defaultProps} {...props} series={[makeLine('s1', [10, 20, 30])]} />,
+      )
+      const rect = container.querySelector('clipPath rect')
+      unmount()
+      return rect?.getAttribute('y')
+    }
+
+    expect(plotTop({})).toBe('16')
+    expect(plotTop({ padTop: 8 })).toBe('8')
+  })
+
   it('steps the focus with the arrow keys and clears it with Escape', () => {
     const onActiveIndexChange = vi.fn()
     const { container } = render(

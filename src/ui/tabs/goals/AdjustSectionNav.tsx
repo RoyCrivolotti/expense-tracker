@@ -5,9 +5,15 @@ import {
   pickActiveSection,
   type AdjustSection,
 } from './adjustSections'
-import { scrollToAdjustSection, stackBottom } from './scrollToAdjustSection'
+import { keepClearOfStack, scrollToAdjustSection, stackBottom } from './scrollToAdjustSection'
 import { useGoalsNarrow } from './useGoalsNarrow'
 import styles from './goals.module.css'
+
+/** What can be done with edits to a saved scenario that have not been saved. */
+export interface UnsavedActions {
+  onSave: () => void
+  onDiscard: () => void
+}
 
 /** Under the line by this much, a section counts as the one being read. */
 const READING_MARGIN_PX = 12
@@ -21,8 +27,11 @@ const USER_SCROLL_EVENTS = ['touchstart', 'wheel', 'keydown'] as const
  *
  * A chip's section cannot always reach the top of the screen (the last ones sit on a short
  * page), so after a tap that chip stays marked until the viewer scrolls for themselves.
+ *
+ * Edits to a saved scenario are saved or dropped from the same row, since the controls that
+ * make them are screens below the card that holds those buttons.
  */
-export function AdjustSectionNav() {
+export function AdjustSectionNav({ unsaved }: { unsaved?: UnsavedActions | undefined }) {
   const narrow = useGoalsNarrow()
   const [active, setActive] = useState<AdjustSection>('portfolio')
   const strip = useRef<HTMLDivElement>(null)
@@ -53,6 +62,18 @@ export function AdjustSectionNav() {
     }
   }, [narrow])
 
+  // A field that takes focus, with the keyboard up or from a key press, is not left behind the
+  // pinned block. Buttons are not fields to clear, and the block's own are not under it.
+  useEffect(() => {
+    if (!narrow) return
+    const onFocus = (event: FocusEvent) => {
+      const target = event.target
+      if (target instanceof Element && target.matches('input, select, textarea')) keepClearOfStack(target)
+    }
+    document.addEventListener('focusin', onFocus)
+    return () => document.removeEventListener('focusin', onFocus)
+  }, [narrow])
+
   // The strip scrolls sideways, so the marked chip is kept in sight inside it.
   useEffect(() => {
     const chip = strip.current?.querySelector<HTMLElement>('[aria-current="true"]')
@@ -63,24 +84,36 @@ export function AdjustSectionNav() {
 
   if (!narrow) return null
   return (
-    <nav aria-label="Adjust sections" className={styles.sectionNav}>
-      <div className={`${styles.chipRow} ${styles.sectionChips}`} ref={strip}>
-        {ADJUST_SECTIONS.map((s) => (
-          <button
-            key={s.key}
-            type="button"
-            className={`${styles.chip}${s.key === active ? ` ${styles.chipActive}` : ''}`}
-            aria-current={s.key === active ? 'true' : undefined}
-            onClick={() => {
-              pinned.current = true
-              setActive(s.key)
-              scrollToAdjustSection(s.key, 'smooth')
-            }}
-          >
-            {s.chip}
+    <div className={`${styles.sectionRow}${unsaved ? ` ${styles.sectionRowActions}` : ''}`}>
+      <nav aria-label="Adjust sections" className={styles.sectionNav}>
+        <div className={`${styles.chipRow} ${styles.sectionChips}`} ref={strip}>
+          {ADJUST_SECTIONS.map((s) => (
+            <button
+              key={s.key}
+              type="button"
+              className={`${styles.chip}${s.key === active ? ` ${styles.chipActive}` : ''}`}
+              aria-current={s.key === active ? 'true' : undefined}
+              onClick={() => {
+                pinned.current = true
+                setActive(s.key)
+                scrollToAdjustSection(s.key, 'smooth')
+              }}
+            >
+              {s.chip}
+            </button>
+          ))}
+        </div>
+      </nav>
+      {unsaved ? (
+        <div role="group" aria-label="Unsaved changes" className={styles.unsavedActions}>
+          <button type="button" className={styles.btn} onClick={unsaved.onDiscard}>
+            Discard
           </button>
-        ))}
-      </div>
-    </nav>
+          <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={unsaved.onSave}>
+            Save
+          </button>
+        </div>
+      ) : null}
+    </div>
   )
 }
