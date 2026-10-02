@@ -454,6 +454,24 @@ describe('GoalsTab', () => {
     )
   })
 
+  it('confirms a save with a toast that names the scenario', async () => {
+    const user = userEvent.setup()
+    const showToast = vi.fn()
+    const plan = makeScenario({ id: 1, name: 'Path A', isActive: true })
+    render(
+      <ToastContext.Provider value={{ showToast }}>
+        <GoalsTab model={buildExpenseModel(makeDataset({ goalScenarios: [plan] }))} actions={makeActions()} />
+      </ToastContext.Provider>,
+    )
+
+    fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
+    expect(showToast).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    expect(showToast).toHaveBeenCalledTimes(1)
+    expect(showToast).toHaveBeenCalledWith('Saved Path A, tweaked', 'success')
+  })
+
   it('treats a colour change as an unsaved edit and saves it with the rest', async () => {
     const user = userEvent.setup()
     const actions = makeActions()

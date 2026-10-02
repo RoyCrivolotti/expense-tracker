@@ -43,6 +43,7 @@ import { SecondaryCharts } from './SecondaryCharts'
 import { ProgressView } from './ProgressView'
 import { AssumptionsView } from './AssumptionsView'
 import { draftFromDataset } from './goalsDefaults'
+import { useScenarioSave } from './useScenarioSave'
 import { activePlan, initialEditorScenario } from './scenarioSelection'
 import { NetWorthChart } from './charts/NetWorthChart'
 import { NetWorthNowCard } from './charts/NetWorthNowCard'
@@ -396,10 +397,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     setActiveId(null)
   }, [])
 
-  const onSaveChanges = useCallback(() => {
-    if (!actions || activeId == null) return
-    void actions.updateScenario(activeId, draft)
-  }, [actions, activeId, draft])
+  const { save: onSaveChanges } = useScenarioSave(actions, activeId, draft, draft.name)
 
   const onDiscard = useCallback(() => {
     if (activeScenario) setDraft(scenarioToDraft(activeScenario))
