@@ -30,7 +30,7 @@ export function DayGroupHeader({
   if (selectMode) {
     const state = dateSelectionState(selectedIds, ids)
     return (
-      <div className={styles.dayHeaderSelect} data-state={state}>
+      <div className={styles.dayHeaderSelect} data-state={state} data-day-header>
         <button
           type="button"
           className={`${styles.dayCollapseBtn} tapActive`}
@@ -54,7 +54,7 @@ export function DayGroupHeader({
   }
 
   return (
-    <div className={styles.dayHeaderRow}>
+    <div className={styles.dayHeaderRow} data-day-header>
       <button
         type="button"
         className={`${styles.dayToggleBtn} tapActive`}

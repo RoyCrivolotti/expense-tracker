@@ -51,4 +51,13 @@ describe('the page scroll padding', () => {
   ])('is taken out of the scroll margin of %s %s, which already counts the header, so it lands where it did', (file, selector) => {
     expect(declarations(stylesheet(file), selector)).toMatch(/-\s+var\(--scroll-pad-top, 0px\)/)
   })
+
+  it.each([
+    ['tabs/tabs.module.css', '.resultBar *'],
+    ['components/TransactionList.module.css', '.dayHeaderRow *,\n.dayHeaderSelect *'],
+  ])('is taken back out by what sticks under the header in Transactions, %s %s', (file, selector) => {
+    expect(declarations(stylesheet(file), selector)).toMatch(
+      /scroll-margin-top:\s*calc\(-1 \* var\(--scroll-pad-top, 0px\)\)/,
+    )
+  })
 })

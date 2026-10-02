@@ -512,6 +512,13 @@
   );
 }
 
+/* The bar is stuck inside the band the page's scroll padding keeps clear (useTransactionsScrollPadding).
+   Focus inside it takes that padding back out, or a control that is stuck would count as hidden
+   and the page would scroll to uncover it. */
+.resultBar * {
+  scroll-margin-top: calc(-1 * var(--scroll-pad-top, 0px));
+}
+
 .resultBar .filterToggle {
   padding: 0.4rem 0.8rem;
   border-radius: 999px;
