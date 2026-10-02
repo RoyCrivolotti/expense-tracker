@@ -90,4 +90,40 @@ describe('useScenarioEditor', () => {
 
     expect(bootstrapEditor).toHaveBeenCalledTimes(1)
   })
+
+  describe('hidden lines', () => {
+    function setupWithRerender() {
+      const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })
+      const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })
+      const actions = makeActions()
+      return {
+        plan,
+        other,
+        ...renderHook(
+          ({ scenarios }) => useScenarioEditor(makeDataset({ goalScenarios: scenarios }), actions, 0),
+          { initialProps: { scenarios: [plan, other] } },
+        ),
+      }
+    }
+
+    it('forgets a line that was hidden once its scenario is gone', () => {
+      const { result, rerender, plan, other } = setupWithRerender()
+      act(() => result.current.onToggleVisible(other.id))
+      expect(result.current.hiddenIds.has(other.id)).toBe(true)
+
+      rerender({ scenarios: [plan] })
+
+      expect(result.current.hiddenIds.size).toBe(0)
+    })
+
+    it('keeps the same set while every hidden line still has its scenario', () => {
+      const { result, rerender, plan, other } = setupWithRerender()
+      act(() => result.current.onToggleVisible(other.id))
+      const hidden = result.current.hiddenIds
+
+      rerender({ scenarios: [plan, { ...other, name: 'Path B, renamed' }] })
+
+      expect(result.current.hiddenIds).toBe(hidden)
+    })
+  })
 })

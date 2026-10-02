@@ -62,7 +62,13 @@ export function useScenarioEditor(
   // activeId but keeps the edits, and this is what they are still measured against.
   const [baseId, setBaseId] = useState<number | null>(first.activeId)
   const [draft, setDraft] = useState<NewGoalScenario>(first.draft)
-  const [hiddenIds, setHiddenIds] = useState<ReadonlySet<number>>(() => new Set())
+  const [hidden, setHiddenIds] = useState<ReadonlySet<number>>(() => new Set())
+  // A line hidden by hand is forgotten with its scenario. The same set comes back while every
+  // id in it still has one, so what is keyed on it (the chart's lines) does not redo its work.
+  const hiddenIds = useMemo(() => {
+    const known = new Set(dataset.goalScenarios.map((s) => s.id))
+    return [...hidden].every((id) => known.has(id)) ? hidden : new Set([...hidden].filter((id) => known.has(id)))
+  }, [hidden, dataset.goalScenarios])
   // Controls read `draft` (instant); charts read the deferred copy so dragging a
   // slider never blocks on the projection recompute (keeps the thumb at 60fps).
   const deferredDraft = useDeferredValue(draft)
