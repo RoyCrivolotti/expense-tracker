@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { SegmentedControl } from './SegmentedControl'
 
@@ -19,6 +19,19 @@ describe('SegmentedControl', () => {
     render(<SegmentedControl options={options} value="b" onChange={vi.fn()} ariaLabel="Test" />)
     expect(screen.getByRole('radio', { name: 'A' })).toHaveAttribute('aria-checked', 'false')
     expect(screen.getByRole('radio', { name: 'B' })).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('is a tall bar only when the bar layout is asked for the tall size', () => {
+    const tall = (props: { layout?: 'compact' | 'bar' | 'scroll'; size?: 'default' | 'tall' }) =>
+      render(
+        <SegmentedControl options={options} value="a" onChange={vi.fn()} ariaLabel="Test" {...props} />,
+      ).getByRole('radiogroup').className.includes('tall')
+
+    expect(tall({ layout: 'bar', size: 'tall' })).toBe(true)
+    cleanup()
+    expect(tall({ layout: 'bar' })).toBe(false)
+    cleanup()
+    expect(tall({ layout: 'compact', size: 'tall' })).toBe(false)
   })
 
   it('does not fire onChange while disabled', () => {

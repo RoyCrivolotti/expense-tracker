@@ -58,6 +58,7 @@ export function GoalsMobileNav({ value, onChange }: GoalsMobileNavProps) {
           onChange={select}
           ariaLabel="Goals view"
           layout="bar"
+          size="tall"
         />
       </div>
     </>

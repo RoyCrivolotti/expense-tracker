@@ -48,12 +48,6 @@
   background: var(--color-bg);
 }
 
-/* The way around Goals, used mid-scroll with a thumb: segments taller than the bar's
-   default, which is sized for a control that is not the page's navigation. */
-.nav [role='radiogroup'] [role='radio'] {
-  padding-block: 0.5rem;
-}
-
 /* What scrolls under the row fades out rather than being cut along its edge, as under the
    mini chart. In Adjust the chart's own padding sits below this, so it shows nothing there. */
 .nav::after {

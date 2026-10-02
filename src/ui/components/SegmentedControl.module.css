@@ -55,6 +55,28 @@
   line-height: 1.2;
 }
 
+/* Fills the height of whatever holds it. The segments stretch with it, so the whole bar is
+   a tap target, and a label that does not fit is cut rather than wrapped onto a second line
+   that would make the bar outgrow its box. */
+.tall {
+  align-self: stretch;
+  box-sizing: border-box;
+  container-type: inline-size;
+}
+
+/* The label shrinks with the bar rather than being cut or wrapped: at larger text sizes on
+   a narrow phone four labels no longer fit at their usual size, and the bar's height is
+   fixed. 4.5cqi leaves "Progress" room in a quarter of the bar down to about 288px. */
+.tall .seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 0.25rem;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: min(0.78rem, 4.5cqi);
+}
+
 .groupScroll {
   display: flex;
   width: 100%;
