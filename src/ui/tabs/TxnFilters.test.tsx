@@ -168,10 +168,12 @@ describe('TxnFilters', () => {
   it('opens the filter sheet on toggle click', async () => {
     const user = userEvent.setup()
     render(<TxnFilters {...baseProps()} />)
-    expect(screen.queryByText('Date scope')).not.toBeInTheDocument()
+    expect(screen.queryByRole('radiogroup', { name: 'Date scope' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /Filters/ }))
     expect(screen.getByRole('dialog', { name: 'Filters' })).toBeInTheDocument()
-    expect(screen.getByText('Date scope')).toBeInTheDocument()
+    // The control keeps its accessible name; the visible title above it is gone.
+    expect(screen.getByRole('radiogroup', { name: 'Date scope' })).toBeInTheDocument()
+    expect(screen.queryByText('Date scope')).not.toBeInTheDocument()
   })
 
   it('closes the filter sheet from its own Close button', async () => {

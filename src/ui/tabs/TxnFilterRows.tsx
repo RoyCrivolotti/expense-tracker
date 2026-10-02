@@ -358,9 +358,6 @@ export function DateScopeRow({
 }) {
   return (
     <div className={styles.dateScopeBlock}>
-      <span className={styles.dateScopeLabel} id="txn-date-scope-label">
-        Date scope
-      </span>
       <SegmentedControl
         options={DATE_SCOPE_OPTIONS}
         value={dateScope}
