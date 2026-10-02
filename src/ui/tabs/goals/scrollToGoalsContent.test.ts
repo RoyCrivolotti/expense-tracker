@@ -56,6 +56,15 @@ describe('scrollToGoalsContent', () => {
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' })
   })
 
+  it('does not throw where the anchor cannot scroll itself into view', () => {
+    const anchor = document.createElement('div')
+    anchor.id = GOALS_CONTENT_ANCHOR_ID
+    document.body.append(anchor)
+    runFramesNow()
+
+    expect(() => scrollToGoalsContent('auto')).not.toThrow()
+  })
+
   it('does not throw when the anchor is not mounted', () => {
     runFramesNow()
 

@@ -13,7 +13,8 @@ export const GOALS_CONTENT_ANCHOR_ID = 'goals-content-top'
  */
 export function scrollToGoalsContent(behavior: 'auto' | 'smooth'): void {
   const run = () => {
-    document.getElementById(GOALS_CONTENT_ANCHOR_ID)?.scrollIntoView({
+    // Not every environment has scrollIntoView (jsdom does not).
+    document.getElementById(GOALS_CONTENT_ANCHOR_ID)?.scrollIntoView?.({
       behavior: prefersReducedMotion() ? 'auto' : behavior,
       block: 'start',
     })
