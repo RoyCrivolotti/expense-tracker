@@ -4,10 +4,11 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 
 ## October 2026 (Goals on a phone)
 
-- **One row to move around Goals on a phone.** Chart, Adjust, Progress and Setup are a single row under the header that stays put as you scroll, so changing view from deep in Adjust no longer means scrolling back to the top. Tapping a segment brings that view's content to the top, below the intro, and tapping the one you are on is a quick way back up. Wide screens keep Plan, Progress and Setup.
+- **One row to move around Goals on a phone.** Chart, Adjust, Progress and Assumptions are a single row under the header that stays put as you scroll, so changing view from deep in Adjust no longer means scrolling back to the top. Tapping a segment brings that view's content to the top, below the intro, and tapping the one you are on is a quick way back up. Wide screens keep Plan, Progress and Assumptions.
 - **The pinned chart in Adjust sits flush under the row.** It used to tuck 5px under the header.
 - **Chips in Adjust jump between its sections.** Portfolio, Housing, FIRE, Tracking and Events sit under the pinned chart. Tapping one scrolls to that section, opening it if it was closed, and the chip for the section you are reading is marked as you scroll. On a narrower phone the row scrolls sideways.
 - **Adjust opens at its controls.** Tapping Adjust scrolls to the first section under the chart, instead of leaving you at the cards above it. Tapping Adjust again takes you back up to them.
+- **Goals' Setup view is now called Assumptions.** It holds the milestones, the wealth accounts, the cash reserve and the assumed inflation, and shared its name with Settings' Setup. The Nominal note, the glossary and the empty Progress card point to it by the new name. Earlier entries below still say Setup.
 
 ## October 2026 (marking a card statement paid)
 

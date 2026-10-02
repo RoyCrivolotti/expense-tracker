@@ -205,7 +205,7 @@ export function MilestonesSetting({ settings, onChange }: Props) {
   return (
     <>
       <Card>
-        {/* Same card title as the accounts card beside it in Setup, not a page heading. */}
+        {/* Same card title as the accounts card beside it in Assumptions, not a page heading. */}
         <h3 className={goalStyles.sectionTitle}>Milestones</h3>
         <div className={styles.settingGroup}>
           <p className={styles.settingHint}>

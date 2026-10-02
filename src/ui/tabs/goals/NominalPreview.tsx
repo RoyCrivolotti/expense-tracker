@@ -18,7 +18,7 @@ interface Props {
  * A way to look at the Nominal view under another inflation without touching the setting.
  * It only re-inflates the plan line and its band drawn on the chart. The status, Progress,
  * the comparison table and the dashboard read the saved rate, so trying a rate here can
- * never make them disagree with each other; the note says so and points to Setup.
+ * never make them disagree with each other; the note says so and points to Assumptions.
  */
 export function NominalPreview({ saved, preview, onPreview, onOpenSetup }: Props) {
   const format = useMoneyFormat()
@@ -50,9 +50,9 @@ export function NominalPreview({ saved, preview, onPreview, onOpenSetup }: Props
         saved {formatPercent(saved, format)}
         {onOpenSetup ? (
           <>
-            , which you change in Setup.{' '}
+            , which you change in Assumptions.{' '}
             <button type="button" className={styles.btnText} onClick={onOpenSetup}>
-              Open Setup
+              Open Assumptions
             </button>
           </>
         ) : (

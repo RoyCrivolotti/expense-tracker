@@ -7,7 +7,7 @@ import styles from './goals.module.css'
 const VIEW_OPTIONS: { value: TabView; label: string }[] = [
   { value: 'plan', label: 'Plan' },
   { value: 'progress', label: 'Progress' },
-  { value: 'setup', label: 'Setup' },
+  { value: 'setup', label: 'Assumptions' },
 ]
 
 interface GoalsViewSwitchProps {
@@ -17,7 +17,7 @@ interface GoalsViewSwitchProps {
   onPlanHalfChange: (next: MobilePlanView) => void
 }
 
-/** Plan / Progress / Setup, or on a phone the one row of Chart / Adjust / Progress / Setup. */
+/** Plan / Progress / Assumptions, or on a phone the row of Chart / Adjust / Progress / Assumptions. */
 export function GoalsViewSwitch({
   view,
   onViewChange,

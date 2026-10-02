@@ -13,13 +13,14 @@ interface Props {
   settings: ExpenseSettings
   actions: ExpenseActions | undefined
   onSettingsChange: ((patch: Partial<ExpenseSettings>) => void | Promise<void>) | undefined
-  /** Bring the assumed inflation into view, for the link that opens Setup on it. */
+  /** Bring the assumed inflation into view, for the link that opens Assumptions on it. */
   focusInflation?: boolean
 }
 
 /**
- * The things Progress is measured with, kept apart from the measuring: the milestone ladder
- * and the accounts each check-in records a balance for.
+ * The Assumptions view: the things Progress is measured with, kept apart from the measuring.
+ * The milestone ladder, the accounts each check-in records a balance for, the cash reserve and
+ * the assumed inflation.
  */
 export function SetupView({
   accounts,
@@ -30,7 +31,7 @@ export function SetupView({
   focusInflation = false,
 }: Props) {
   if (!actions || !onSettingsChange) {
-    return <p className={goalStyles.chartHint}>Read-only session — setup cannot be changed.</p>
+    return <p className={goalStyles.chartHint}>Read-only session — assumptions cannot be changed.</p>
   }
 
   return (

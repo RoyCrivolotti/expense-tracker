@@ -207,7 +207,7 @@ record on a database that already has a `transactions` table means the same thin
 
 `0024_goal_scenario_active.sql` adds `is_active INTEGER NOT NULL DEFAULT 0` on `goal_scenarios`, backfills each owner's newest scenario as their plan (what the app was already comparing against, so nothing moves on deploy), and adds a partial unique index so an owner can never hold two. The backfill is scoped to owners with no plan yet. Owner-agnostic — no placeholder substitution needed. **Apply it before (or with) the code deploy** — creating and activating a scenario both write the column.
 
-`0025_cash_reserve_months.sql` adds a nullable `cash_reserve_months` on `settings`: the emergency-fund target Progress measures cash accounts against, read as 0 (no target) when null. Owner-agnostic, nothing to backfill. **Apply it before (or with) the code deploy** — saving the target from Setup writes the column, and the previous release never reads it.
+`0025_cash_reserve_months.sql` adds a nullable `cash_reserve_months` on `settings`: the emergency-fund target Progress measures cash accounts against, read as 0 (no target) when null. Owner-agnostic, nothing to backfill. **Apply it before (or with) the code deploy** — saving the target from Assumptions writes the column, and the previous release never reads it.
 
 `0026_investment_category.sql` adds a nullable `investment_category_id` on `settings`: the category every investment transaction is filed under, in both directions, chosen under Settings → New transactions. Null falls back to a category named for investments. Owner-agnostic, nothing to backfill, same timing as `0025`.
 
