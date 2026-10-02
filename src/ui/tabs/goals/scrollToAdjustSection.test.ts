@@ -4,9 +4,10 @@ import {
   ADJUST_STACK_ID,
   keepClearOfStack,
   landOnAdjustControls,
+  pinnedBottom,
   scrollToAdjustSection,
-  stackBottom,
 } from './scrollToAdjustSection'
+import { GOALS_NAV_ID } from './scrollToGoalsContent'
 
 function mount(tag: 'div' | 'details', id: string, rect: Partial<DOMRect> = {}, height = 0) {
   const el = document.createElement(tag)
@@ -17,35 +18,60 @@ function mount(tag: 'div' | 'details', id: string, rect: Partial<DOMRect> = {}, 
   return el
 }
 
+/** jsdom lays nothing out, so what the browser would resolve is written as inline style. */
+function pin(el: HTMLElement, top?: string) {
+  el.style.position = 'sticky'
+  if (top !== undefined) el.style.top = top
+}
+
+/** The stack as the browser has it where it is pinned, and the row above it as it always is. */
+function mountPinned(rows: { stackHeight?: number; stackTop?: string; rowHeight?: number; rowTop?: string }) {
+  const row = mount('div', GOALS_NAV_ID, {}, rows.rowHeight ?? 0)
+  pin(row, rows.rowTop)
+  if (rows.stackHeight === undefined) return
+  pin(mount('div', ADJUST_STACK_ID, {}, rows.stackHeight), rows.stackTop)
+}
+
 afterEach(() => {
   document.body.innerHTML = ''
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
 
-describe('stackBottom', () => {
-  it('is zero when there is no pinned stack', () => {
-    expect(stackBottom()).toBe(0)
+describe('pinnedBottom', () => {
+  it('is zero when nothing is pinned', () => {
+    expect(pinnedBottom()).toBe(0)
   })
 
-  it('is the stack\'s resolved sticky top plus its height', () => {
-    const stack = mount('div', ADJUST_STACK_ID, {}, 176)
-    vi.spyOn(window, 'getComputedStyle').mockReturnValue({ top: '103px' } as CSSStyleDeclaration)
+  it("is the stack's resolved sticky top plus its height when the stack is pinned", () => {
+    mountPinned({ stackHeight: 164, stackTop: '103px', rowHeight: 44, rowTop: '60px' })
 
-    expect(stackBottom()).toBe(279)
-    expect(stack).toBeInTheDocument()
+    expect(pinnedBottom()).toBe(267)
   })
 
   it('counts only the height when the browser does not resolve a top', () => {
-    mount('div', ADJUST_STACK_ID, {}, 176)
+    mountPinned({ stackHeight: 176 })
 
-    expect(stackBottom()).toBe(176)
+    expect(pinnedBottom()).toBe(176)
+  })
+
+  it('is the bottom of the view row when the stack is not pinned, as on a short screen', () => {
+    mountPinned({ stackHeight: 164, rowHeight: 44, rowTop: '60px' })
+    document.getElementById(ADJUST_STACK_ID)!.style.position = 'static'
+
+    expect(pinnedBottom()).toBe(104)
+  })
+
+  it('is the bottom of the view row in a view that has no stack', () => {
+    mountPinned({ rowHeight: 44, rowTop: '60px' })
+
+    expect(pinnedBottom()).toBe(104)
   })
 })
 
 describe('scrollToAdjustSection', () => {
   it('scrolls by the distance from the pinned stack, opening a closed section first', () => {
-    mount('div', ADJUST_STACK_ID, {}, 176)
+    mountPinned({ stackHeight: 176 })
     const section = mount('details', adjustSectionId('events'), { top: 538 })
     const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
 
@@ -53,6 +79,17 @@ describe('scrollToAdjustSection', () => {
 
     expect((section as HTMLDetailsElement).open).toBe(true)
     expect(scrollBy).toHaveBeenCalledWith({ top: 538 - 176 - 8, behavior: 'smooth' })
+  })
+
+  it('scrolls to just under the view row when the stack is not pinned', () => {
+    mountPinned({ stackHeight: 176, rowHeight: 44, rowTop: '60px' })
+    document.getElementById(ADJUST_STACK_ID)!.style.position = 'static'
+    mount('details', adjustSectionId('housing'), { top: 538 })
+    const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+
+    scrollToAdjustSection('housing', 'auto')
+
+    expect(scrollBy).toHaveBeenCalledWith({ top: 538 - 104 - 8, behavior: 'auto' })
   })
 
   it('jumps without animation when the viewer asked for reduced motion', () => {
@@ -97,6 +134,18 @@ describe('landOnAdjustControls', () => {
 
     expect(scrollBy).toHaveBeenCalledTimes(1)
   })
+
+  it('lands under the view row when the stack is not pinned', () => {
+    mountPinned({ stackHeight: 164, rowHeight: 44, rowTop: '60px' })
+    document.getElementById(ADJUST_STACK_ID)!.style.position = 'static'
+    mount('details', adjustSectionId('portfolio'), { top: 700 })
+    const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+    vi.stubGlobal('requestAnimationFrame', undefined)
+
+    landOnAdjustControls()
+
+    expect(scrollBy).toHaveBeenCalledWith({ top: 700 - 104 - 8, behavior: 'auto' })
+  })
 })
 
 describe('keepClearOfStack', () => {
@@ -105,7 +154,7 @@ describe('keepClearOfStack', () => {
   }
 
   function stackAt(top: number, bottom: number) {
-    mount('div', ADJUST_STACK_ID, { top, bottom })
+    pin(mount('div', ADJUST_STACK_ID, { top, bottom }))
   }
 
   it('scrolls a field that is behind the stack to just below it, again once the keyboard has settled', () => {
@@ -139,6 +188,20 @@ describe('keepClearOfStack', () => {
     vi.advanceTimersByTime(400)
 
     expect(scrollBy).not.toHaveBeenCalled()
+    vi.useRealTimers()
+  })
+
+  it('measures against the view row when the stack is not pinned', () => {
+    vi.useFakeTimers()
+    mount('div', GOALS_NAV_ID, { top: 60, bottom: 104 })
+    stackAt(-400, -236)
+    document.getElementById(ADJUST_STACK_ID)!.style.position = 'static'
+    const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+    vi.stubGlobal('requestAnimationFrame', undefined)
+
+    keepClearOfStack(fieldAt(90))
+
+    expect(scrollBy).toHaveBeenCalledWith({ top: 90 - 104 - 8, behavior: 'auto' })
     vi.useRealTimers()
   })
 

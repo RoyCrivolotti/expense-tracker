@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import { SegmentedControl } from '../../components/SegmentedControl'
 import { landOnAdjustControls } from './scrollToAdjustSection'
-import { scrollToGoalsContent } from './scrollToGoalsContent'
+import { GOALS_NAV_ID, scrollToGoalsContent } from './scrollToGoalsContent'
 import type { GoalsMobileView } from './goalsView'
 import type { GoalsScrollMemory } from './useGoalsScrollMemory'
 import styles from './goals.module.css'
@@ -58,7 +58,7 @@ export function GoalsMobileNav({ value, onChange, memory }: GoalsMobileNavProps)
 
   return (
     <>
-      <div ref={row} className={`${styles.nav} ${styles.fadeBelow}`}>
+      <div ref={row} id={GOALS_NAV_ID} className={`${styles.nav} ${styles.fadeBelow}`}>
         <SegmentedControl
           options={OPTIONS}
           value={value}

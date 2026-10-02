@@ -4,6 +4,9 @@ import { showAdjustSections, type AdjustSection } from './adjustSections'
 /** Where a Goals view's own content starts: past the intro and glossary, which only Plan has. */
 export const GOALS_CONTENT_ANCHOR_ID = 'goals-content-top'
 
+/** The sticky row of Goals views on a phone, which is what stays pinned in every view. */
+export const GOALS_NAV_ID = 'goals-nav'
+
 /** Run `run` once React has rendered what the viewer just did, and the browser has laid it out. */
 function afterRender(run: () => void): void {
   if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run)

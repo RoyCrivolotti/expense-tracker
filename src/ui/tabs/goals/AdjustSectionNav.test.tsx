@@ -290,6 +290,7 @@ describe('AdjustSectionNav', () => {
   it('keeps a field that takes focus clear of the pinned block, but not a button', async () => {
     const stack = document.createElement('div')
     stack.id = ADJUST_STACK_ID
+    stack.style.position = 'sticky'
     document.body.append(stack)
     const field = document.createElement('input')
     document.body.append(field)
