@@ -19,8 +19,9 @@ const READING_MARGIN_PX = 12
 const USER_SCROLL_EVENTS = ['touchstart', 'wheel', 'keydown', 'pointerdown'] as const
 
 /**
- * Jump links to the Adjust sections, pinned with the draft's chart so a slider two sections
- * down is a tap away. The chip for the section being read is marked as it scrolls past.
+ * Jump links to the Adjust sections, pinned with the draft's chart (on a screen with room for
+ * both) so a slider two sections down is a tap away. The chip for the section being read is
+ * marked as it scrolls past.
  *
  * A chip's section cannot always reach the top of the screen (the last ones sit on a short
  * page), so after a tap that chip stays marked until the viewer scrolls for themselves.
