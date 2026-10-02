@@ -23,6 +23,11 @@ describe('pickActiveSection', () => {
     expect(pickActiveSection([-400, -50, 101, 300, 500], line, -1)).toBe(1)
   })
 
+  it('counts a section whose top is on the line, and not one a pixel under it', () => {
+    expect(pickActiveSection([-400, -50, 100, 300, 500], line, -1)).toBe(2)
+    expect(pickActiveSection([-400, -50, 100.5, 300, 500], line, -1)).toBe(1)
+  })
+
   it('is the first section before any has reached the line', () => {
     expect(pickActiveSection([150, 400, 700, 900, 1000], line, -1)).toBe(0)
   })
