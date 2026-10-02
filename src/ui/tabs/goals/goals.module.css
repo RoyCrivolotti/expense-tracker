@@ -3,6 +3,10 @@
   /* The phone's view switcher, stuck under the app header; the pinned mini chart stops
      below it, so both read this. */
   --goals-nav-h: 2.75rem;
+  /* The row and the pinned chart tuck this far under what sits above them. iOS lets sticky
+     elements drift by a device pixel while the page coasts, and edges that only touch would
+     show that as a hairline of the cards scrolling past underneath. */
+  --goals-tuck: 1px;
   display: flex;
   flex-direction: column;
   gap: var(--goals-gap);
@@ -22,12 +26,14 @@
 /* Where a tap on the row takes the page: the first thing of the view that is open, past the
    intro Plan has, with its top edge just under the stuck row. */
 .contentAnchor {
-  scroll-margin-top: calc(var(--exp-header) + var(--goals-nav-h) + env(safe-area-inset-top, 0px));
+  scroll-margin-top: calc(
+    var(--exp-header) + var(--goals-nav-h) - var(--goals-tuck) + env(safe-area-inset-top, 0px)
+  );
 }
 
 .nav {
   position: sticky;
-  top: calc(var(--exp-header) + env(safe-area-inset-top, 0px));
+  top: calc(var(--exp-header) - var(--goals-tuck) + env(safe-area-inset-top, 0px));
   z-index: 6;
   display: flex;
   align-items: center;
@@ -116,7 +122,10 @@
     display: block;
     order: 3;
     position: sticky;
-    top: calc(var(--exp-header) + var(--goals-nav-h) + env(safe-area-inset-top, 0px));
+    top: calc(
+      var(--exp-header) + var(--goals-nav-h) - 2 * var(--goals-tuck) +
+        env(safe-area-inset-top, 0px)
+    );
     z-index: 5;
     padding: 0.5rem 0 0.25rem;
     background: var(--color-bg);
