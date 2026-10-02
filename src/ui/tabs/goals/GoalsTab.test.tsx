@@ -712,7 +712,7 @@ describe('GoalsTab', () => {
     // The block is display:none outside the phone breakpoint, which jsdom cannot match, so
     // this asks the DOM rather than the accessibility tree.
     const mini = () =>
-      container.querySelector('svg[aria-label="Projection of the scenario being edited"]')
+      container.querySelector('svg[aria-label^="Projection of the scenario being edited"]')
 
     expect(mini()).not.toBeInTheDocument()
     await user.click(screen.getByRole('radio', { name: 'Adjust' }))

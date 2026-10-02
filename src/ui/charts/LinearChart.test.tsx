@@ -45,6 +45,43 @@ describe('LinearChart', () => {
     expect(plotTop({ padTop: 8 })).toBe('8')
   })
 
+  it('keeps the plot inside the box however much room above it is asked for', () => {
+    const clip = (padTop: number) => {
+      const { container, unmount } = render(
+        <LinearChart {...defaultProps} height={112} padTop={padTop} series={[makeLine('s1', [10, 20, 30])]} />,
+      )
+      const rect = container.querySelector('clipPath rect')!
+      unmount()
+      return { y: Number(rect.getAttribute('y')), height: Number(rect.getAttribute('height')) }
+    }
+
+    // The plot always keeps a pixel above the 28px of x-axis labels, so its clip stays drawable.
+    expect(clip(90)).toEqual({ y: 83, height: 2 })
+    expect(clip(112)).toEqual({ y: 83, height: 2 })
+    expect(clip(-6)).toEqual({ y: 0, height: 85 })
+    expect(clip(0)).toEqual({ y: 0, height: 85 })
+    expect(clip(83)).toEqual({ y: 83, height: 2 })
+  })
+
+  it('is a Tab stop only when something shows where the arrow keys have moved the focus', () => {
+    const tabIndexOf = (props: Partial<Parameters<typeof LinearChart>[0]>) => {
+      const { container, unmount } = render(
+        <LinearChart {...defaultProps} series={[makeLine('s1', [10, 20, 30])]} {...props} />,
+      )
+      const svg = container.querySelector('svg')!
+      const tabIndex = svg.getAttribute('tabindex')
+      unmount()
+      return tabIndex
+    }
+
+    expect(tabIndexOf({})).toBe('0')
+    expect(tabIndexOf({ tooltipMode: 'full' })).toBe('0')
+    // A caller reading the focus (the hero chart's live legend) is the readout.
+    expect(tabIndexOf({ tooltipMode: 'hidden', onActiveIndexChange: vi.fn() })).toBe('0')
+    // Nothing reads the marker: still focusable by click, but not a stop on the way past.
+    expect(tabIndexOf({ tooltipMode: 'hidden' })).toBe('-1')
+  })
+
   it('steps the focus with the arrow keys and clears it with Escape', () => {
     const onActiveIndexChange = vi.fn()
     const { container } = render(

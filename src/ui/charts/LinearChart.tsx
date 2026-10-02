@@ -94,7 +94,9 @@ function useGeometry(
   padTopProp: number | undefined,
 ) {
   return useMemo(() => {
-    const padTop = padTopProp ?? PAD.top
+    // Kept inside the box: a padTop at or past the plot's bottom edge would give the clip
+    // path a negative height and draw nothing, and a negative one pushes the plot off the top.
+    const padTop = Math.max(0, Math.min(padTopProp ?? PAD.top, height - PAD.bottom - 1))
     const n = series.find((s) => s.kind !== 'scatter' && s.kind !== 'band')?.values.length ?? 0
     const innerH = height - padTop - PAD.bottom
     const innerW = width - PAD.left - PAD.right
@@ -147,6 +149,18 @@ function tooltipShows(
   tooltipMode: 'full' | 'hidden',
 ): boolean {
   return tip != null && tooltipMode === 'full'
+}
+
+/**
+ * Arrow keys step a marker, so a chart is only worth a Tab stop when something shows where it
+ * is: a tooltip, or a caller reading the focus through onActiveIndexChange (the hero chart's
+ * legend). Without either it stays focusable by click but is not a silent stop in the Tab order.
+ */
+function tabIndexFor(
+  tooltipMode: 'full' | 'hidden',
+  onActiveIndexChange: Props['onActiveIndexChange'],
+): 0 | -1 {
+  return tooltipMode === 'full' || onActiveIndexChange !== undefined ? 0 : -1
 }
 
 export function LinearChart({
@@ -204,7 +218,7 @@ export function LinearChart({
         className={styles.svg}
         role="img"
         aria-label={ariaLabel}
-        tabIndex={0}
+        tabIndex={tabIndexFor(tooltipMode, onActiveIndexChange)}
         onContextMenu={(e) => e.preventDefault()}
         {...handlers}
       >
