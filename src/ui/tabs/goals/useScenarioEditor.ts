@@ -2,62 +2,8 @@ import { useCallback, useDeferredValue, useMemo, useState } from 'react'
 import type { ExpenseDataset, GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import type { ExpenseActions } from '../../actions'
-import { draftFromDataset } from './goalsDefaults'
-import { initialEditorScenario } from './scenarioSelection'
+import { bootstrapEditor, differsFrom, hasDetachedEdits, scenarioToDraft } from './scenarioDraft'
 import { useScenarioSave } from './useScenarioSave'
-
-function scenarioToDraft(s: GoalScenario): NewGoalScenario {
-  const { id, isActive, ...rest } = s
-  void id
-  void isActive
-  return rest
-}
-
-// Fields the controls and the header can change; used to detect unsaved edits to a saved plan.
-const EDIT_KEYS = [
-  'color',
-  'startInvestedCents',
-  'monthlyContributionCents',
-  'annualContributionGrowth',
-  'expectedRealReturn',
-  'horizonYears',
-  'housePriceCents',
-  'downPaymentFraction',
-  'housePurchaseYear',
-  'transactionCostsCents',
-  'mortgageTermYears',
-  'mortgageRateAnnual',
-  'houseAppreciationRate',
-  'rentMonthlyCents',
-  'annualSpendCents',
-  'safeWithdrawalRate',
-  'planStartDate',
-] as const satisfies readonly (keyof NewGoalScenario)[]
-
-/** Whether the draft holds edits its saved scenario does not. */
-function differsFrom(draft: NewGoalScenario, saved: GoalScenario): boolean {
-  if (draft.name !== saved.name) return true
-  if (JSON.stringify(draft.lifeEvents) !== JSON.stringify(saved.lifeEvents)) return true
-  return EDIT_KEYS.some((k) => draft[k] !== saved[k])
-}
-
-/** A detached draft (no scenario loaded) holding edits its origin does not. */
-function hasDetachedEdits(
-  loaded: GoalScenario | null,
-  base: GoalScenario | null,
-  draft: NewGoalScenario,
-): boolean {
-  return loaded === null && base !== null && differsFrom(draft, base)
-}
-
-function bootstrapEditor(
-  dataset: ExpenseDataset,
-  avgSaving: number,
-): { activeId: number | null; draft: NewGoalScenario } {
-  const first = initialEditorScenario(dataset.goalScenarios)
-  if (first) return { activeId: first.id, draft: scenarioToDraft(first) }
-  return { activeId: null, draft: draftFromDataset(dataset, avgSaving) }
-}
 
 /**
  * The question asked before loading another scenario over unsaved edits. `pending` is held
