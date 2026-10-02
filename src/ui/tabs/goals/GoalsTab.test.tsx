@@ -2,27 +2,37 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { GoalsTab } from './GoalsTab'
+import { NARROW_MQ } from './useGoalsNarrow'
 import { ToastContext } from '../../hooks/useToast'
 import { buildExpenseModel } from '../../buildExpenseModel'
 import { makeDataset, makeScenario, makeWealthAccount, makeWealthCheckin } from '../../../testing/factories'
 import { makeActions } from '../../../testing/makeActions'
 import { defaultExpenseSettings, planValueAtDate, DEFAULT_INFLATION_RATE } from '../../../engine'
 
+function mockMatchMedia(narrow: boolean) {
+  return (query: string) => ({
+    matches: narrow && query === NARROW_MQ,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })
+}
+
 beforeAll(() => {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
-    value: vi.fn().mockImplementation((query: string) => ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })),
+    value: vi.fn().mockImplementation(mockMatchMedia(false)),
   })
 })
+
+/** Phone width: one row of four views, where wide screens have the three-way switch. */
+function mockPhoneWidth() {
+  vi.mocked(window.matchMedia).mockImplementation(mockMatchMedia(true))
+}
 
 /** The plan tab has other steppers; this is the one beside the preview field. */
 function stepPreviewUp() {
@@ -38,6 +48,7 @@ describe('GoalsTab', () => {
   // jsdom has no scrollIntoView; tests that stub it must not leave it behind.
   afterEach(() => {
     Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
+    vi.mocked(window.matchMedia).mockImplementation(mockMatchMedia(false))
   })
 
   it('renders with Plan view by default', () => {
@@ -528,18 +539,34 @@ describe('GoalsTab', () => {
     expect(screen.getByText(/measured against Path A/i)).toBeInTheDocument()
   })
 
-  it('defaults the mobile Chart/Adjust toggle to Chart', () => {
-    const model = buildExpenseModel(makeDataset())
-    const { container } = render(<GoalsTab model={model} />)
+  it('keeps the three-way switch on wide screens, where Plan shows the chart and the controls together', () => {
+    render(<GoalsTab model={makeModel()} />)
 
+    expect(screen.getByRole('radio', { name: 'Plan' })).toBeChecked()
+    expect(screen.queryByRole('radio', { name: 'Chart' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('radio', { name: 'Adjust' })).not.toBeInTheDocument()
+  })
+
+  it('has one row of four views on a phone, opening on Chart', () => {
+    mockPhoneWidth()
+    const { container } = render(<GoalsTab model={makeModel()} />)
+
+    const row = screen.getByRole('radiogroup', { name: 'Goals view' })
+    expect(within(row).getAllByRole('radio').map((r) => r.textContent)).toEqual([
+      'Chart',
+      'Adjust',
+      'Progress',
+      'Setup',
+    ])
+    expect(screen.queryByRole('radio', { name: 'Plan' })).not.toBeInTheDocument()
     expect(screen.getByRole('radio', { name: 'Chart' })).toBeChecked()
     expect(container.querySelector('[data-mobile-view="chart"]')).not.toBeNull()
   })
 
-  it('switches to the Adjust panel via the mobile Chart/Adjust toggle', async () => {
+  it('switches to the Adjust panel from the phone row', async () => {
+    mockPhoneWidth()
     const user = userEvent.setup()
-    const model = buildExpenseModel(makeDataset())
-    const { container } = render(<GoalsTab model={model} />)
+    const { container } = render(<GoalsTab model={makeModel()} />)
 
     await user.click(screen.getByRole('radio', { name: 'Adjust' }))
 
@@ -548,7 +575,54 @@ describe('GoalsTab', () => {
     expect(container.querySelector('[data-mobile-view="chart"]')).toBeNull()
   })
 
+  it('reaches Progress and Setup from the phone row, and comes back to the half of Plan it left', async () => {
+    mockPhoneWidth()
+    const user = userEvent.setup()
+    const { container } = render(<GoalsTab model={makeModel()} />)
+
+    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    expect(screen.getByText('Progress snapshot')).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Adjust' })).not.toBeChecked()
+    expect(container.querySelector('[data-mobile-view]')).toBeNull()
+
+    await user.click(screen.getByRole('radio', { name: 'Setup' }))
+    expect(screen.getByRole('radio', { name: 'Setup' })).toBeChecked()
+
+    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+    expect(screen.getByRole('radio', { name: 'Adjust' })).toBeChecked()
+    expect(container.querySelector('[data-mobile-view="adjust"]')).not.toBeNull()
+  })
+
+  it('keeps the inflation preview while moving between Chart and Adjust, as the old toggle did', async () => {
+    mockPhoneWidth()
+    const user = userEvent.setup()
+    render(<GoalsTab model={makeModel()} actions={makeActions()} />)
+    await user.click(screen.getByRole('radio', { name: 'Nominal' }))
+    stepPreviewUp()
+
+    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+    await user.click(screen.getByRole('radio', { name: 'Chart' }))
+
+    expect(screen.getByLabelText('Preview inflation')).toHaveValue('2,5')
+  })
+
+  it('starts the scroll target after Plan\'s intro and glossary, and straight after the switch for Progress', async () => {
+    const user = userEvent.setup()
+    render(<GoalsTab model={makeModel()} />)
+    const anchor = () => document.getElementById('goals-content-top')!
+    const before = (a: Node, b: Node) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
+
+    expect(before(screen.getByText('What do these terms mean?'), anchor())).toBe(true)
+    expect(before(anchor(), screen.getByText('Where you are today'))).toBe(true)
+
+    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    expect(screen.queryByText('What do these terms mean?')).not.toBeInTheDocument()
+    expect(before(anchor(), screen.getByText('Progress snapshot'))).toBe(true)
+  })
+
   it('pins a compact chart of the draft above the controls in the Adjust panel only', async () => {
+    mockPhoneWidth()
     const user = userEvent.setup()
     const { container } = render(<GoalsTab model={makeModel()} />)
     // The block is display:none outside the phone breakpoint, which jsdom cannot match, so

@@ -23,6 +23,10 @@
   --exp-rail: 15rem;
   --exp-rail-collapsed: 4.5rem;
   --exp-bottom-bar: 4rem;
+  /* The app header's height without the top safe-area inset: its padding twice over, the
+     2.25rem menu button and the 1px border. AppShell's `.header` is held to at least this, and
+     whatever sticks under the header reads it. */
+  --exp-header: calc(1.5rem + 2.25rem + 1px);
   --exp-max: 56rem;
 
   /*

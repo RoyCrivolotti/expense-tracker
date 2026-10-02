@@ -1,0 +1,73 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { GOALS_CONTENT_ANCHOR_ID, scrollToGoalsContent } from './scrollToGoalsContent'
+
+function mountAnchor() {
+  const anchor = document.createElement('div')
+  anchor.id = GOALS_CONTENT_ANCHOR_ID
+  const scrollIntoView = vi.fn()
+  anchor.scrollIntoView = scrollIntoView
+  document.body.append(anchor)
+  return scrollIntoView
+}
+
+function runFramesNow() {
+  vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+    cb(0)
+    return 0
+  })
+}
+
+afterEach(() => {
+  document.body.innerHTML = ''
+  vi.unstubAllGlobals()
+})
+
+describe('scrollToGoalsContent', () => {
+  it('scrolls the content anchor to the top on the next frame, in the way it was asked', () => {
+    const scrollIntoView = mountAnchor()
+    runFramesNow()
+
+    scrollToGoalsContent('smooth')
+    expect(scrollIntoView).toHaveBeenLastCalledWith({ behavior: 'smooth', block: 'start' })
+
+    scrollToGoalsContent('auto')
+    expect(scrollIntoView).toHaveBeenLastCalledWith({ behavior: 'auto', block: 'start' })
+  })
+
+  it('does not wait for the frame before it has been asked for one', () => {
+    const scrollIntoView = mountAnchor()
+    const frames: FrameRequestCallback[] = []
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => frames.push(cb))
+
+    scrollToGoalsContent('auto')
+    expect(scrollIntoView).not.toHaveBeenCalled()
+
+    frames.forEach((cb) => cb(0))
+    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+  })
+
+  it('jumps without animation when the viewer asked for reduced motion', () => {
+    const scrollIntoView = mountAnchor()
+    runFramesNow()
+    vi.stubGlobal('matchMedia', () => ({ matches: true }))
+
+    scrollToGoalsContent('smooth')
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' })
+  })
+
+  it('does not throw when the anchor is not mounted', () => {
+    runFramesNow()
+
+    expect(() => scrollToGoalsContent('auto')).not.toThrow()
+  })
+
+  it('scrolls at once where requestAnimationFrame is absent', () => {
+    const scrollIntoView = mountAnchor()
+    vi.stubGlobal('requestAnimationFrame', undefined)
+
+    scrollToGoalsContent('auto')
+
+    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+  })
+})

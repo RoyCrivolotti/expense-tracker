@@ -2,6 +2,11 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (Goals on a phone)
+
+- **One row to move around Goals on a phone.** Chart, Adjust, Progress and Setup are a single row under the header that stays put as you scroll, so changing view from deep in Adjust no longer means scrolling back to the top. Tapping a segment brings that view's content to the top, below the intro, and tapping the one you are on is a quick way back up. Wide screens keep Plan, Progress and Setup.
+- **The pinned chart in Adjust sits flush under the row.** It used to tuck 5px under the header.
+
 ## October 2026 (marking a card statement paid)
 
 - **A due card on the dashboard has a "Mark as paid today" button.** One tap marks the statement paid and dates it today, as the Due pill in the sheet used to. To use another day, tap the row and pick it before marking it paid. The button shows only while a statement is due and has something to settle, and not in Settings, where every month of every card is listed.

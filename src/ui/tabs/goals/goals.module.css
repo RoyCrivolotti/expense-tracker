@@ -1,8 +1,70 @@
 .stack {
+  --goals-gap: 1.25rem;
+  /* The phone's view switcher, stuck under the app header; the pinned mini chart stops
+     below it, so both read this. */
+  --goals-nav-h: 2.75rem;
+  /* The row and the pinned chart tuck this far under what sits above them. iOS lets sticky
+     elements drift by a device pixel while the page coasts, and edges that only touch would
+     show that as a hairline of the cards scrolling past underneath. */
+  --goals-tuck: 1px;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: var(--goals-gap);
   min-width: 0;
+}
+
+/* Phone only: GoalsMobileNav is not rendered from 900px up.
+   The nav anchor takes the row's place in the flow, so comparing it with the row says
+   whether the row is stuck. Both anchors are as tall as nothing, and take back the gap they
+   add to the stack. */
+.navAnchor,
+.contentAnchor {
+  height: 0;
+  margin-bottom: calc(-1 * var(--goals-gap));
+}
+
+/* Where a tap on the row takes the page: the first thing of the view that is open, past the
+   intro Plan has, with its top edge just under the stuck row. */
+.contentAnchor {
+  scroll-margin-top: calc(
+    var(--exp-header) + var(--goals-nav-h) - var(--goals-tuck) + env(safe-area-inset-top, 0px)
+  );
+}
+
+/* The view switcher everywhere but a phone. */
+.viewSwitcherRow {
+  display: flex;
+  justify-content: center;
+  padding: 0.25rem 0 0.5rem;
+}
+
+.nav {
+  position: sticky;
+  top: calc(var(--exp-header) - var(--goals-tuck) + env(safe-area-inset-top, 0px));
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  height: var(--goals-nav-h);
+  background: var(--color-bg);
+}
+
+/* The way around Goals, used mid-scroll with a thumb: segments taller than the bar's
+   default, which is sized for a control that is not the page's navigation. */
+.nav [role='radiogroup'] [role='radio'] {
+  padding-block: 0.5rem;
+}
+
+/* What scrolls under the row fades out rather than being cut along its edge, as under the
+   mini chart. In Adjust the chart's own padding sits below this, so it shows nothing there. */
+.nav::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 0.5rem;
+  background: linear-gradient(to bottom, var(--color-bg), transparent);
+  pointer-events: none;
 }
 
 .layout {
@@ -17,8 +79,8 @@
 }
 
 /* Mobile: flat column via flex order. Wrappers use display:contents.
-   Controls are hidden by default — the Chart/Adjust toggle (data-mobile-view
-   on .layout) swaps them in for the hero + secondary charts. */
+   Controls are hidden by default; the Chart/Adjust segments (data-mobile-view
+   on .layout) swap them in for the hero + secondary charts. */
 @media (max-width: 899px) {
   .heroBlock {
     margin: 0 -0.15rem;
@@ -67,7 +129,10 @@
     display: block;
     order: 3;
     position: sticky;
-    top: calc(3.5rem + env(safe-area-inset-top, 0px));
+    top: calc(
+      var(--exp-header) + var(--goals-nav-h) - 2 * var(--goals-tuck) +
+        env(safe-area-inset-top, 0px)
+    );
     z-index: 5;
     padding: 0.5rem 0 0.25rem;
     background: var(--color-bg);
@@ -95,18 +160,6 @@
 
 .areaMini {
   display: none;
-}
-
-.mobilePlanToggleRow {
-  display: flex;
-  justify-content: center;
-  margin: 0 0 0.25rem;
-}
-
-@media (min-width: 900px) {
-  .mobilePlanToggleRow {
-    display: none;
-  }
 }
 
 /*

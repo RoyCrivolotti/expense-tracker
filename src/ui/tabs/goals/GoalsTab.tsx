@@ -31,6 +31,8 @@ import { EXIT_MS } from '../../hooks/motion'
 import { GoalControls } from './GoalControls'
 import { ScenarioManager } from './ScenarioManager'
 import { GoalsExplainer } from './GoalsExplainer'
+import { GoalsViewSwitch, type MobilePlanView, type TabView } from './GoalsViewSwitch'
+import { GOALS_CONTENT_ANCHOR_ID } from './scrollToGoalsContent'
 import { GoalsNarrative } from './GoalsNarrative'
 import { NominalPreview } from './NominalPreview'
 import { SecondaryCharts } from './SecondaryCharts'
@@ -47,20 +49,7 @@ import { formatCheckinDate } from './checkinDate'
 import styles from './goals.module.css'
 import progressStyles from './progress.module.css'
 
-type TabView = 'plan' | 'progress' | 'setup'
 type DisplayMode = 'nominal' | 'purchasing-power'
-type MobilePlanView = 'chart' | 'adjust'
-
-const VIEW_OPTIONS: { value: TabView; label: string }[] = [
-  { value: 'plan', label: 'Plan' },
-  { value: 'progress', label: 'Progress' },
-  { value: 'setup', label: 'Setup' },
-]
-
-const MOBILE_PLAN_VIEW_OPTIONS: { value: MobilePlanView; label: string }[] = [
-  { value: 'chart', label: 'Chart' },
-  { value: 'adjust', label: 'Adjust' },
-]
 
 const DISPLAY_MODE_OPTIONS: { value: DisplayMode; label: string }[] = [
   { value: 'nominal', label: 'Nominal' },
@@ -201,6 +190,28 @@ function DiscardSheet({
         />
       ) : null}
     </Presence>
+  )
+}
+
+/**
+ * What sits between the view switch and a view's own content: Plan's intro and glossary, and
+ * the anchor a tap on the switch scrolls to. Progress and Setup start at the anchor.
+ */
+function GoalsContentTop({ showIntro }: { showIntro: boolean }) {
+  return (
+    <>
+      {showIntro ? (
+        <>
+          <p className={styles.intro}>
+            Project your net worth and financial independence under different assumptions.
+            Horizon sets how far the projection runs and where FI is searched. Adjust the
+            controls, save a scenario, then compare scenarios on the charts.
+          </p>
+          <GoalsExplainer />
+        </>
+      ) : null}
+      <div id={GOALS_CONTENT_ANCHOR_ID} className={styles.contentAnchor} />
+    </>
   )
 }
 
@@ -443,15 +454,14 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     <div className={styles.stack}>
       <SectionTitle>Goals</SectionTitle>
 
-      <div className={progressStyles.viewSwitcherRow}>
-        <SegmentedControl
-          options={VIEW_OPTIONS}
-          value={view}
-          onChange={changeView}
-          ariaLabel="Goals view"
-          layout="compact"
-        />
-      </div>
+      <GoalsViewSwitch
+        view={view}
+        onViewChange={changeView}
+        planHalf={mobilePlanView}
+        onPlanHalfChange={setMobilePlanView}
+      />
+
+      <GoalsContentTop showIntro={view === 'plan'} />
 
       {view === 'setup' ? (
         <SetupView
@@ -491,21 +501,6 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
       ) : null}
       {view === 'plan' ? (
         <>
-          <p className={styles.intro}>
-            Project your net worth and financial independence under different assumptions. Horizon
-            sets how far the projection runs and where FI is searched. Adjust the controls, save a
-            scenario, then compare scenarios on the charts.
-          </p>
-          <GoalsExplainer />
-          <div className={styles.mobilePlanToggleRow}>
-            <SegmentedControl
-              options={MOBILE_PLAN_VIEW_OPTIONS}
-              value={mobilePlanView}
-              onChange={setMobilePlanView}
-              ariaLabel="Plan mobile view"
-              layout="compact"
-            />
-          </div>
           <div className={styles.layout} data-mobile-view={mobilePlanView}>
         <div className={styles.areaSidebar}>
           <div className={styles.areaScenarios}>
@@ -537,7 +532,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
             />
           </div>
           {mobilePlanView === 'adjust' ? (
-            // Phone only: the toggle is hidden on desktop, so this never mounts there.
+            // Phone only: only the phone's row offers Adjust.
             <div className={styles.areaMini}>
               <NetWorthMiniChart draft={deferredDraft} />
             </div>
