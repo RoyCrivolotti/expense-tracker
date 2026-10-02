@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { adjustSectionId } from './adjustSections'
-import { ADJUST_STACK_ID, scrollToAdjustSection, stackBottom } from './scrollToAdjustSection'
+import {
+  ADJUST_STACK_ID,
+  landOnAdjustControls,
+  scrollToAdjustSection,
+  stackBottom,
+} from './scrollToAdjustSection'
 
 function mount(tag: 'div' | 'details', id: string, rect: Partial<DOMRect> = {}, height = 0) {
   const el = document.createElement(tag)
@@ -65,5 +70,30 @@ describe('scrollToAdjustSection', () => {
     scrollToAdjustSection('housing', 'auto')
 
     expect(scrollBy).not.toHaveBeenCalled()
+  })
+})
+
+describe('landOnAdjustControls', () => {
+  it('scrolls to the first section on the next frame, not before', () => {
+    mount('details', adjustSectionId('portfolio'), { top: 700 })
+    const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+    const frames: FrameRequestCallback[] = []
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => frames.push(cb))
+
+    landOnAdjustControls()
+    expect(scrollBy).not.toHaveBeenCalled()
+
+    frames.forEach((cb) => cb(0))
+    expect(scrollBy).toHaveBeenCalledWith({ top: 700 - 8, behavior: 'auto' })
+  })
+
+  it('scrolls at once where requestAnimationFrame is absent', () => {
+    mount('details', adjustSectionId('portfolio'), { top: 700 })
+    const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+    vi.stubGlobal('requestAnimationFrame', undefined)
+
+    landOnAdjustControls()
+
+    expect(scrollBy).toHaveBeenCalledTimes(1)
   })
 })

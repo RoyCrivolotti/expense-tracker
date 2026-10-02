@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
 import { GoalsTab } from './GoalsTab'
 import { NARROW_MQ } from './useGoalsNarrow'
 import { ToastContext } from '../../hooks/useToast'
@@ -45,8 +45,15 @@ function makeModel() {
 }
 
 describe('GoalsTab', () => {
+  // Opening Adjust scrolls to its controls, which jsdom does not implement.
+  let scrollBy: MockInstance
+  beforeEach(() => {
+    scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+  })
+
   // jsdom has no scrollIntoView; tests that stub it must not leave it behind.
   afterEach(() => {
+    scrollBy.mockRestore()
     Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
     vi.mocked(window.matchMedia).mockImplementation(mockMatchMedia(false))
   })
@@ -620,6 +627,7 @@ describe('GoalsTab', () => {
     expect(chips()).toBeInTheDocument()
     expect(document.getElementById('goals-adjust-stack')).toContainElement(chips())
     expect(document.getElementById('goals-adjust-housing')).toBeInTheDocument()
+    await vi.waitFor(() => expect(scrollBy).toHaveBeenCalledTimes(1))
     await user.click(screen.getByRole('radio', { name: 'Chart' }))
     expect(chips()).not.toBeInTheDocument()
   })

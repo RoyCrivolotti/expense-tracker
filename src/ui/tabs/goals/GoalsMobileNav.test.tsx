@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { adjustSectionId } from './adjustSections'
 import { GoalsMobileNav } from './GoalsMobileNav'
 import { GOALS_CONTENT_ANCHOR_ID } from './scrollToGoalsContent'
 
@@ -35,6 +36,7 @@ describe('GoalsMobileNav', () => {
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
     document.getElementById(GOALS_CONTENT_ANCHOR_ID)?.remove()
+    document.getElementById(adjustSectionId('portfolio'))?.remove()
   })
 
   it('offers the four views and marks the current one', () => {
@@ -76,6 +78,33 @@ describe('GoalsMobileNav', () => {
     await user.click(screen.getByRole('radio', { name: 'Chart' }))
 
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' })
+  })
+
+  it('lands on the Adjust controls when Adjust is opened, even from the top of the page', async () => {
+    const user = userEvent.setup()
+    const { scrollIntoView } = renderNav('chart')
+    const controls = document.createElement('details')
+    controls.id = adjustSectionId('portfolio')
+    document.body.append(controls)
+    const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+    layOut(false)
+
+    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+
+    expect(scrollBy).toHaveBeenCalledTimes(1)
+    expect(scrollIntoView).not.toHaveBeenCalled()
+  })
+
+  it('goes back to the top of Adjust, not to its controls, when Adjust is tapped again', async () => {
+    const user = userEvent.setup()
+    const { scrollIntoView } = renderNav('adjust')
+    const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+    layOut(true)
+
+    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' })
+    expect(scrollBy).not.toHaveBeenCalled()
   })
 
   it('leaves the scroll alone when the row has not left its place', async () => {

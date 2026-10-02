@@ -28,3 +28,14 @@ export function scrollToAdjustSection(key: AdjustSection, behavior: 'auto' | 'sm
     behavior: prefersReducedMotion() ? 'auto' : behavior,
   })
 }
+
+/**
+ * Open Adjust at its controls rather than at the cards above them, so the first thing on
+ * screen under the pinned chart is a slider. Deferred a frame so the stack and the controls
+ * have been rendered before they are measured.
+ */
+export function landOnAdjustControls(): void {
+  const run = () => scrollToAdjustSection('portfolio', 'auto')
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run)
+  else run()
+}

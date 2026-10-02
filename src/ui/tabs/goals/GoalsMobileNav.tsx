@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { SegmentedControl } from '../../components/SegmentedControl'
+import { landOnAdjustControls } from './scrollToAdjustSection'
 import { scrollToGoalsContent } from './scrollToGoalsContent'
 import styles from './goals.module.css'
 
@@ -42,7 +43,9 @@ export function GoalsMobileNav({ value, onChange }: GoalsMobileNavProps) {
       rowEl !== null &&
       anchorEl.getBoundingClientRect().top < rowEl.getBoundingClientRect().top - 0.5
     onChange(next)
-    if (stuck) scrollToGoalsContent(next === value ? 'smooth' : 'auto')
+    // Opening Adjust is a request for the controls, wherever the page was.
+    if (next === 'adjust' && value !== 'adjust') landOnAdjustControls()
+    else if (stuck) scrollToGoalsContent(next === value ? 'smooth' : 'auto')
   }
 
   return (
