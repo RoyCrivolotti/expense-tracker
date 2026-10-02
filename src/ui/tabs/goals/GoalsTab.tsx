@@ -536,7 +536,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
           </div>
           {mobilePlanView === 'adjust' ? (
             // Phone only: only the phone's row offers Adjust.
-            <div id={ADJUST_STACK_ID} className={styles.areaMini}>
+            <div id={ADJUST_STACK_ID} className={`${styles.areaMini} ${styles.fadeBelow}`}>
               <NetWorthMiniChart draft={deferredDraft} />
               <AdjustSectionNav />
             </div>

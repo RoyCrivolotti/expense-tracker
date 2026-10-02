@@ -45,7 +45,7 @@ export function GoalsMobileNav({ value, onChange }: GoalsMobileNavProps) {
 
   return (
     <>
-      <div ref={row} className={styles.nav}>
+      <div ref={row} className={`${styles.nav} ${styles.fadeBelow}`}>
         <SegmentedControl
           options={OPTIONS}
           value={value}
