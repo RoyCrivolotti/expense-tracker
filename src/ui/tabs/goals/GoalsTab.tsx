@@ -33,6 +33,8 @@ import { ScenarioManager } from './ScenarioManager'
 import { GoalsExplainer } from './GoalsExplainer'
 import { GoalsViewSwitch, type MobilePlanView, type TabView } from './GoalsViewSwitch'
 import { GOALS_CONTENT_ANCHOR_ID } from './scrollToGoalsContent'
+import { ADJUST_STACK_ID } from './scrollToAdjustSection'
+import { AdjustSectionNav } from './AdjustSectionNav'
 import { GoalsNarrative } from './GoalsNarrative'
 import { NominalPreview } from './NominalPreview'
 import { SecondaryCharts } from './SecondaryCharts'
@@ -533,8 +535,9 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
           </div>
           {mobilePlanView === 'adjust' ? (
             // Phone only: only the phone's row offers Adjust.
-            <div className={styles.areaMini}>
+            <div id={ADJUST_STACK_ID} className={styles.areaMini}>
               <NetWorthMiniChart draft={deferredDraft} />
+              <AdjustSectionNav />
             </div>
           ) : null}
           <div className={styles.areaControls}>

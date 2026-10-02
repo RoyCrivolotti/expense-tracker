@@ -11,6 +11,7 @@ import {
 } from './goalControlFields'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { formatCheckinDate, type InvestedSnapshot } from './checkinDate'
+import { ADJUST_SECTIONS, adjustSectionId, type AdjustSection } from './adjustSections'
 import styles from './goals.module.css'
 
 function purchaseSummary(draft: NewGoalScenario, format: MoneyFormat): string | null {
@@ -30,16 +31,17 @@ interface GoalControlsProps {
 }
 
 function ControlSection({
-  title,
+  section,
   defaultOpen = true,
   children,
 }: {
-  title: string
+  section: AdjustSection
   defaultOpen?: boolean
   children: ReactNode
 }) {
+  const title = ADJUST_SECTIONS.find((s) => s.key === section)?.title
   return (
-    <details className={styles.controlSection} open={defaultOpen}>
+    <details id={adjustSectionId(section)} className={styles.controlSection} open={defaultOpen}>
       <summary className={styles.controlSummary}>{title}</summary>
       <div className={styles.controlBody}>{children}</div>
     </details>
@@ -64,7 +66,7 @@ export function GoalControls({ draft, latest = null, onChange }: GoalControlsPro
     : 'Log a wealth check-in first; re-baselining sets the starting balance and start date from it.'
   return (
     <div className={styles.controlsStack}>
-      <ControlSection title="Portfolio">
+      <ControlSection section="portfolio">
         <MoneyField
           label="Starting invested"
           value={draft.startInvestedCents}
@@ -95,7 +97,7 @@ export function GoalControls({ draft, latest = null, onChange }: GoalControlsPro
           onChange={(v) => onChange({ horizonYears: v })}
         />
       </ControlSection>
-      <ControlSection title="Housing">
+      <ControlSection section="housing">
         <MoneyField
           label="House price"
           value={draft.housePriceCents}
@@ -152,7 +154,7 @@ export function GoalControls({ draft, latest = null, onChange }: GoalControlsPro
           onChange={(v) => onChange({ rentMonthlyCents: v })}
         />
       </ControlSection>
-      <ControlSection title="FIRE / withdrawal">
+      <ControlSection section="fire">
         <p className={styles.fieldHint}>
           Models life after financial independence, not withdrawals today. FI is searched within
           your Horizon (years); if never reached, drawdown charts show the target only.
@@ -177,7 +179,7 @@ export function GoalControls({ draft, latest = null, onChange }: GoalControlsPro
           Lower rate = spend less = higher FI target. FI target = annual spend ÷ this rate.
         </p>
       </ControlSection>
-      <ControlSection title="Plan tracking" defaultOpen={false}>
+      <ControlSection section="tracking" defaultOpen={false}>
         <DateField
           label="Plan start date"
           value={draft.planStartDate ?? null}
@@ -215,7 +217,7 @@ export function GoalControls({ draft, latest = null, onChange }: GoalControlsPro
           ) : null}
         </div>
       </ControlSection>
-      <ControlSection title="Life events" defaultOpen={false}>
+      <ControlSection section="events" defaultOpen={false}>
         <p className={styles.fieldHint}>
           One-off cash events (bonuses, inheritances, large purchases) applied to the portfolio in a
           specific projection year. Shown as diamond markers on the chart.
