@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { prefersReducedMotion } from '../../hooks/prefersReducedMotion'
 import {
   ADJUST_SECTIONS,
   adjustSectionId,
@@ -82,7 +83,10 @@ export function AdjustSectionNav({ unsaved }: { unsaved?: UnsavedActions | undef
     const chip = strip.current?.querySelector<HTMLElement>('[aria-current="true"]')
     const row = strip.current
     if (!chip || !row || typeof row.scrollTo !== 'function') return
-    row.scrollTo({ left: chip.offsetLeft - (row.clientWidth - chip.offsetWidth) / 2, behavior: 'smooth' })
+    row.scrollTo({
+      left: chip.offsetLeft - (row.clientWidth - chip.offsetWidth) / 2,
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+    })
   }, [active, hasActions])
 
   if (!narrow) return null
