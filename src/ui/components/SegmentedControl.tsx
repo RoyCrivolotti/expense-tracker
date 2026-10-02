@@ -63,7 +63,8 @@ export function SegmentedControl<T extends string>({
   const stop = Math.max(selected, 0)
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (disabled) return
+    // Alt/Cmd+Left is the browser's Back and Ctrl/Cmd+Home/End scroll the page: leave them alone.
+    if (disabled || event.altKey || event.ctrlKey || event.metaKey) return
     const target = keyTarget(event.key, stop, options.length)
     const option = target === null ? undefined : options[target]
     if (target === null || !option) return

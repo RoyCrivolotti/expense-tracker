@@ -96,6 +96,18 @@ describe('SegmentedControl', () => {
       expect(screen.getByRole('radio', { name: 'A' })).toBeChecked()
     })
 
+    it('leaves a key alone when Alt, Ctrl or Cmd is held, so browser shortcuts still work', () => {
+      render(<Group start="b" />)
+      const middle = screen.getByRole('radio', { name: 'B' })
+      middle.focus()
+
+      for (const modifier of ['altKey', 'ctrlKey', 'metaKey'] as const) {
+        const notPrevented = fireEvent.keyDown(middle, { key: 'ArrowLeft', [modifier]: true })
+        expect(notPrevented).toBe(true)
+        expect(middle).toBeChecked()
+      }
+    })
+
     it('does not move while disabled', async () => {
       const user = userEvent.setup()
       const onChange = vi.fn()
