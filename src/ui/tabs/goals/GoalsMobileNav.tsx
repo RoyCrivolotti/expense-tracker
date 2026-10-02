@@ -59,18 +59,16 @@ export function GoalsMobileNav({ value, onChange, memory }: GoalsMobileNavProps)
   }
 
   return (
-    <>
-      <div ref={row} id={GOALS_NAV_ID} className={`${styles.nav} ${styles.fadeBelow}`}>
-        <SegmentedControl
-          options={OPTIONS}
-          value={value}
-          onChange={select}
-          ariaLabel="Goals view"
-          layout="bar"
-          size="tall"
-          tabs={GOALS_VIEW_TABS}
-        />
-      </div>
-    </>
+    <div ref={row} id={GOALS_NAV_ID} className={`${styles.nav} ${styles.fadeBelow}`}>
+      <SegmentedControl
+        options={OPTIONS}
+        value={value}
+        onChange={select}
+        ariaLabel="Goals view"
+        layout="bar"
+        size="tall"
+        tabs={GOALS_VIEW_TABS}
+      />
+    </div>
   )
 }
