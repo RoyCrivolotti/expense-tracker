@@ -172,6 +172,21 @@ describe('AdjustSectionNav', () => {
     expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }))
   })
 
+  it('re-centres the marked chip when the actions appear and narrow the strip', () => {
+    const scrollTo = vi.fn()
+    HTMLElement.prototype.scrollTo = scrollTo
+    // jsdom has no layout: the strip is 300px wide until the actions sit beside it, then 100px.
+    vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(() =>
+      document.querySelector('[aria-label="Unsaved changes"]') ? 100 : 300,
+    )
+    const { rerender } = render(<AdjustSectionNav />)
+    expect(scrollTo).toHaveBeenLastCalledWith({ left: -150, behavior: 'smooth' })
+
+    rerender(<AdjustSectionNav unsaved={{ onSave: vi.fn(), onDiscard: vi.fn() }} />)
+
+    expect(scrollTo).toHaveBeenLastCalledWith({ left: -50, behavior: 'smooth' })
+  })
+
   it('offers Save and Discard beside the chips only when there are unsaved changes, and runs them', async () => {
     const user = userEvent.setup()
     const unsaved = { onSave: vi.fn(), onDiscard: vi.fn() }

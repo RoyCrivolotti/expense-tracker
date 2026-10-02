@@ -75,13 +75,15 @@ export function AdjustSectionNav({ unsaved }: { unsaved?: UnsavedActions | undef
     return () => document.removeEventListener('focusin', onFocus)
   }, [narrow])
 
-  // The strip scrolls sideways, so the marked chip is kept in sight inside it.
+  // The strip scrolls sideways, so the marked chip is kept in sight inside it. The actions
+  // narrow it when they appear, which can leave the marked chip half under the fade.
+  const hasActions = unsaved !== undefined
   useEffect(() => {
     const chip = strip.current?.querySelector<HTMLElement>('[aria-current="true"]')
     const row = strip.current
     if (!chip || !row || typeof row.scrollTo !== 'function') return
     row.scrollTo({ left: chip.offsetLeft - (row.clientWidth - chip.offsetWidth) / 2, behavior: 'smooth' })
-  }, [active])
+  }, [active, hasActions])
 
   if (!narrow) return null
   return (
