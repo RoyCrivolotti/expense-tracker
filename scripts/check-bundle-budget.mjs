@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
  * Fail verify if the production JS bundle grows past budget. Guards the win from
- * dropping Recharts (the lazy Goals chunk went 108 KB -> ~8 KB gzip): re-adding a
- * heavy chart/vendor lib would blow these limits. Budgets are gzip bytes with
- * headroom; bump deliberately when a real feature needs the room.
+ * dropping Recharts (the lazy Goals chunk went 108 KB -> ~8 KB gzip, and is ~37 KB now that
+ * Goals has grown): re-adding a heavy chart/vendor lib would blow these limits. Budgets are
+ * gzip bytes with headroom; bump deliberately when a real feature needs the room.
  */
 import { readdirSync, readFileSync } from 'node:fs'
 import { gzipSync } from 'node:zlib'
@@ -11,7 +11,7 @@ import { join } from 'node:path'
 
 const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 
-// gzip bytes. Today: total ~180 KB, GoalsTab ~21 KB.
+// gzip bytes. Today: total ~207 KB, GoalsTab ~37 KB.
 //
 // Raised from 160 KB when flags, receipts and the claim pack landed: three
 // features' worth of UI took the total from ~146 KB to ~159 KB, leaving under
@@ -24,9 +24,9 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // popover exits, the folds): about 1.7 KB gzip took the total from ~178.3 KB to 179,969
 // bytes, which left 31 bytes and would have failed the next unrelated change.
 //
-// Raised from 184 KB to 190 KB for the Goals UX round (confirm sheets in the Goals tab, a
-// Setup view, the pinned mini chart and the net worth history chart): about 1.5 KB gzip
-// took the total from ~182.5 KB to a few bytes over 184,000.
+// Raised from 184 KB to 190 KB for the Goals UX round (confirm sheets in the Goals tab, an
+// Assumptions view (called Setup then), the pinned mini chart and the net worth history
+// chart): about 1.5 KB gzip took the total from ~182.5 KB to a few bytes over 184,000.
 //
 // Raised from 190 KB to 196 KB for the wealth follow-ups (withdrawals, hero windows and
 // legend toggles, the comparison table, milestone dates, the cash reserve, the re-baseline
