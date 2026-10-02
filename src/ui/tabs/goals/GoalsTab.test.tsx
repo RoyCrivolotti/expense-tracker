@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
 import { GoalsTab } from './GoalsTab'
@@ -539,6 +539,31 @@ describe('GoalsTab', () => {
     expect(screen.getByRole('radio', { name: 'Plan' })).toBeChecked()
     expect(screen.queryByRole('radio', { name: 'Chart' })).not.toBeInTheDocument()
     expect(screen.queryByRole('radio', { name: 'Adjust' })).not.toBeInTheDocument()
+  })
+
+  it('swaps the switch when the window crosses the breakpoint, keeping the view and the half of Plan', async () => {
+    mockPhoneWidth()
+    const user = userEvent.setup()
+    render(<GoalsTab model={makeModel()} />)
+    const labels = () =>
+      within(screen.getByRole('radiogroup', { name: 'Goals view' }))
+        .getAllByRole('radio')
+        .map((r) => r.textContent)
+    const widen = (wide: boolean) => act(() => media.change(NARROW_MQ, !wide))
+
+    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+    widen(true)
+    expect(labels()).toEqual(['Plan', 'Progress', 'Setup'])
+    expect(screen.getByRole('radio', { name: 'Plan' })).toBeChecked()
+
+    widen(false)
+    expect(labels()).toEqual(['Chart', 'Adjust', 'Progress', 'Setup'])
+    expect(screen.getByRole('radio', { name: 'Adjust' })).toBeChecked()
+
+    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    widen(true)
+    expect(screen.getByRole('radio', { name: 'Progress' })).toBeChecked()
+    expect(screen.getByText('Progress snapshot')).toBeInTheDocument()
   })
 
   it('has one row of four views on a phone, opening on Chart', () => {
