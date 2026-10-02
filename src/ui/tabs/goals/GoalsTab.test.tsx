@@ -904,6 +904,31 @@ describe('GoalsTab', () => {
       expect(scrollTo).toHaveBeenLastCalledWith({ top: 2000, behavior: 'auto' })
     })
 
+    it('opens the Adjust sections that were showing before it scrolls back, as Plan unmounts them', async () => {
+      const user = userEvent.setup()
+      render(<GoalsTab model={makeModel()} actions={makeActions()} />)
+      await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+      const events = document.getElementById('goals-adjust-events')
+      if (!(events instanceof HTMLDetailsElement)) throw new Error('no events section')
+      events.open = true
+      scrollY.mockReturnValue(2125)
+      await user.click(screen.getByRole('radio', { name: 'Progress' }))
+      let openWhenScrolled: boolean | null = null
+      scrollTo.mockImplementation(() => {
+        const back = document.getElementById('goals-adjust-events')
+        openWhenScrolled = back instanceof HTMLDetailsElement ? back.open : null
+      })
+      // The frame comes after the controls have been rendered again, as in a browser.
+      const frames: FrameRequestCallback[] = []
+      vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => frames.push(cb))
+
+      await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+      frames.forEach((cb) => cb(0))
+
+      expect(scrollTo).toHaveBeenLastCalledWith({ top: 2125, behavior: 'auto' })
+      expect(openWhenScrolled).toBe(true)
+    })
+
     it('goes back to where Progress was when its own link took the viewer to Assumptions', async () => {
       const user = userEvent.setup()
       render(<GoalsTab model={makeModel()} actions={makeActions()} />)

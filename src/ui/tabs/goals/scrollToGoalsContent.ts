@@ -1,4 +1,5 @@
 import { prefersReducedMotion } from '../../hooks/prefersReducedMotion'
+import { showAdjustSections, type AdjustSection } from './adjustSections'
 
 /** Where a Goals view's own content starts: past the intro and glossary, which only Plan has. */
 export const GOALS_CONTENT_ANCHOR_ID = 'goals-content-top'
@@ -38,7 +39,14 @@ export function scrollToGoalsContent(
   })
 }
 
-/** Put the page back where it was, once the view it was left on has been rendered again. */
-export function restoreScrollPosition(top: number): void {
-  afterRender(() => window.scrollTo({ top, behavior: 'auto' }))
+/**
+ * Put the page back where it was, once the view it was left on has been rendered again.
+ * Adjust's sections fold themselves when its controls are unmounted, and an offset only means
+ * something on the page it was taken from, so `open` brings back the ones that were showing.
+ */
+export function restoreScrollPosition(top: number, open: readonly AdjustSection[] | null = null): void {
+  afterRender(() => {
+    if (open) showAdjustSections(open)
+    window.scrollTo({ top, behavior: 'auto' })
+  })
 }

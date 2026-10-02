@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useRef } from 'react'
+import { openAdjustSections, type AdjustSection } from './adjustSections'
 import type { GoalsMobileView } from './goalsView'
 import { restoreScrollPosition } from './scrollToGoalsContent'
 import { useGoalsNarrow } from './useGoalsNarrow'
 
-/** Where each of the phone's views was when it was last left. */
+/** Where a view was when it was left, and for Adjust which of its sections were showing. */
+interface Left {
+  top: number
+  open: readonly AdjustSection[] | null
+}
+
+/** Where the phone's views were left, and putting one back. */
 export interface GoalsScrollMemory {
   /** Note where the page is as `from` is left, by whatever route leaves it. */
   leave: (from: GoalsMobileView) => void
@@ -20,7 +27,7 @@ export interface GoalsScrollMemory {
  */
 export function useGoalsScrollMemory(): GoalsScrollMemory {
   const narrow = useGoalsNarrow()
-  const left = useRef<Partial<Record<GoalsMobileView, number>>>({})
+  const left = useRef<Partial<Record<GoalsMobileView, Left>>>({})
   useEffect(() => {
     left.current = {}
   }, [narrow])
@@ -28,12 +35,12 @@ export function useGoalsScrollMemory(): GoalsScrollMemory {
   return useMemo(
     () => ({
       leave: (from) => {
-        left.current[from] = window.scrollY
+        left.current[from] = { top: window.scrollY, open: from === 'adjust' ? openAdjustSections() : null }
       },
       recall: (view) => {
-        const top = left.current[view]
-        if (top === undefined) return false
-        restoreScrollPosition(top)
+        const at = left.current[view]
+        if (!at) return false
+        restoreScrollPosition(at.top, at.open)
         return true
       },
     }),

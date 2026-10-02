@@ -14,6 +14,24 @@ export function adjustSectionId(key: AdjustSection): string {
   return `goals-adjust-${key}`
 }
 
+function sectionElement(key: AdjustSection): HTMLDetailsElement | null {
+  const el = document.getElementById(adjustSectionId(key))
+  return el instanceof HTMLDetailsElement ? el : null
+}
+
+/** The sections whose controls are shown on the page now, in the order they are shown. */
+export function openAdjustSections(): AdjustSection[] {
+  return ADJUST_SECTIONS.filter((s) => sectionElement(s.key)?.open).map((s) => s.key)
+}
+
+/** Show these sections' controls and fold the others. */
+export function showAdjustSections(open: readonly AdjustSection[]): void {
+  for (const s of ADJUST_SECTIONS) {
+    const el = sectionElement(s.key)
+    if (el) el.open = open.includes(s.key)
+  }
+}
+
 /**
  * The section the viewer is in: the last whose top has reached the line under the pinned
  * stack. A last section too short to ever reach that line would never be the answer, so when

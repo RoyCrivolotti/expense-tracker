@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { ADJUST_SECTIONS, adjustSectionId, openAdjustSections, type AdjustSection } from './adjustSections'
 import {
   GOALS_CONTENT_ANCHOR_ID,
   restoreScrollPosition,
@@ -128,5 +129,23 @@ describe('restoreScrollPosition', () => {
 
     frames.forEach((cb) => cb(0))
     expect(scrollTo).toHaveBeenCalledWith({ top: 1400, behavior: 'auto' })
+  })
+
+  it('shows the Adjust sections it is given, and only those, before it scrolls', () => {
+    let shown: AdjustSection[] = []
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {
+      shown = openAdjustSections()
+    })
+    runFramesNow()
+    for (const s of ADJUST_SECTIONS) {
+      const el = document.createElement('details')
+      el.id = adjustSectionId(s.key)
+      el.open = s.key !== 'events'
+      document.body.append(el)
+    }
+
+    restoreScrollPosition(2125, ['events'])
+
+    expect(shown).toEqual(['events'])
   })
 })

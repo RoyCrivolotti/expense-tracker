@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { installFakeMatchMedia } from '../../../testing/fakeMatchMedia'
+import { ADJUST_SECTIONS, adjustSectionId, openAdjustSections } from './adjustSections'
 import { NARROW_MQ } from './useGoalsNarrow'
 import { useGoalsScrollMemory } from './useGoalsScrollMemory'
 
@@ -59,6 +60,53 @@ describe('useGoalsScrollMemory', () => {
     rerender()
 
     expect(result.current).toBe(first)
+  })
+
+  describe('for Adjust, whose sections fold up when its controls are unmounted', () => {
+    function mountSections(open: string[]) {
+      for (const s of ADJUST_SECTIONS) {
+        const el = document.createElement('details')
+        el.id = adjustSectionId(s.key)
+        el.open = open.includes(s.key)
+        document.body.append(el)
+      }
+    }
+
+    afterEach(() => {
+      document.body.innerHTML = ''
+    })
+
+    it('opens the sections that were showing before it scrolls, so the offset lands on the same page', () => {
+      let openWhenScrolled: string[] = []
+      vi.spyOn(window, 'scrollTo').mockImplementation(() => {
+        openWhenScrolled = openAdjustSections()
+      })
+      runFramesNow()
+      const { result } = renderHook(() => useGoalsScrollMemory())
+      mountSections(['portfolio', 'events'])
+      setScrollY(2125)
+      result.current.leave('adjust')
+
+      document.body.innerHTML = ''
+      mountSections(['portfolio', 'housing', 'fire'])
+      result.current.recall('adjust')
+
+      expect(openWhenScrolled).toEqual(['portfolio', 'events'])
+    })
+
+    it('leaves the sections alone when another view is put back', () => {
+      vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+      runFramesNow()
+      const { result } = renderHook(() => useGoalsScrollMemory())
+      mountSections(['portfolio', 'events'])
+      result.current.leave('chart')
+
+      document.body.innerHTML = ''
+      mountSections(['fire'])
+      result.current.recall('chart')
+
+      expect(openAdjustSections()).toEqual(['fire'])
+    })
   })
 
   it('forgets where views were left when the window crosses the breakpoint', () => {
