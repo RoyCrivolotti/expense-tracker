@@ -10,7 +10,11 @@ import { useGoalsScrollMemory, type GoalsScrollMemory } from './useGoalsScrollMe
 
 /** jsdom lays nothing out: the row sticks 60px down, and is either there (stuck) or lower. */
 function layOut(stuck: boolean) {
-  const top = stuck ? 60 : 150
+  layOutAt(stuck ? 60 : 150)
+}
+
+/** The row sticks 60px down and is `top` px down now. */
+function layOutAt(top: number) {
   screen.getByRole('tablist').parentElement!.style.top = '60px'
   vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
     top,
@@ -117,6 +121,29 @@ describe('GoalsMobileNav', () => {
     await user.click(screen.getByRole('tab', { name: 'Chart' }))
 
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' })
+  })
+
+  it('does not scroll when the segment already selected is tapped and the row has not left its place', async () => {
+    const user = userEvent.setup()
+    const { scrollIntoView } = renderNav('chart')
+    layOut(false)
+
+    await user.click(screen.getByRole('tab', { name: 'Chart' }))
+
+    expect(scrollIntoView).not.toHaveBeenCalled()
+  })
+
+  it('counts the row as in its place within half a pixel of where it sticks, and not further', async () => {
+    const user = userEvent.setup()
+    const { scrollIntoView } = renderNav('chart')
+
+    layOutAt(60.5)
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
+    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+
+    layOutAt(60.6)
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
+    expect(scrollIntoView).toHaveBeenCalledTimes(1)
   })
 
   it('lands on the Adjust controls when Adjust is opened, even from the top of the page', async () => {
