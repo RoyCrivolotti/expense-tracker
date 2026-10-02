@@ -32,7 +32,8 @@ import { GoalControls } from './GoalControls'
 import { ScenarioManager } from './ScenarioManager'
 import { GoalsExplainer } from './GoalsExplainer'
 import { GoalsViewSwitch } from './GoalsViewSwitch'
-import type { MobilePlanView, TabView } from './goalsView'
+import { mobileViewOf, type MobilePlanView, type TabView } from './goalsView'
+import { useGoalsScrollMemory } from './useGoalsScrollMemory'
 import { GOALS_CONTENT_ANCHOR_ID, scrollToGoalsContent } from './scrollToGoalsContent'
 import { ADJUST_STACK_ID } from './scrollToAdjustSection'
 import { AdjustSectionNav, type UnsavedActions } from './AdjustSectionNav'
@@ -244,12 +245,29 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
   // The rate the Nominal view is being tried at, if not the saved one. It lives only as long
   // as the chart it was tried on: leaving the view or the Nominal mode drops it.
   const [previewInflation, setPreviewInflation] = useState<number | null>(null)
-  const changeView = useCallback((next: TabView) => {
-    setCheckinEntry(false)
-    setFocusInflation(false)
-    setPreviewInflation(null)
-    setView(next)
-  }, [])
+  // Mobile-only: swaps the chart block for the controls form in place, in lieu
+  // of a separate route. Ignored on desktop, where both are always visible.
+  const [mobilePlanView, setMobilePlanView] = useState<MobilePlanView>('chart')
+  // Leaving a view by any route, the row or a link, notes where it was for coming back.
+  const memory = useGoalsScrollMemory()
+  const current = mobileViewOf(view, mobilePlanView)
+  const changeView = useCallback(
+    (next: TabView) => {
+      memory.leave(current)
+      setCheckinEntry(false)
+      setFocusInflation(false)
+      setPreviewInflation(null)
+      setView(next)
+    },
+    [memory, current],
+  )
+  const changePlanHalf = useCallback(
+    (next: MobilePlanView) => {
+      memory.leave(current)
+      setMobilePlanView(next)
+    },
+    [memory, current],
+  )
   const openAssumptions = useCallback(() => {
     changeView('assumptions')
     scrollToGoalsContent('auto', { ifPast: true })
@@ -263,9 +281,6 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     setPreviewInflation(null)
     setDisplayMode(next)
   }, [])
-  // Mobile-only: swaps the chart block for the controls form in place, in lieu
-  // of a separate route. Ignored on desktop, where both are always visible.
-  const [mobilePlanView, setMobilePlanView] = useState<MobilePlanView>('chart')
   const milestones = dataset.settings.milestones
   const reachedMilestones = useMemo(
     () => milestonesReached(milestones, dataset.wealthCheckins, dataset.wealthAccounts),
@@ -475,7 +490,8 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
         view={view}
         onViewChange={changeView}
         planHalf={mobilePlanView}
-        onPlanHalfChange={setMobilePlanView}
+        onPlanHalfChange={changePlanHalf}
+        memory={memory}
       />
 
       <GoalsContentTop showIntro={view === 'plan'} />

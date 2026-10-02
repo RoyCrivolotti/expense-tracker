@@ -6,6 +6,7 @@ import { adjustSectionId } from './adjustSections'
 import { GoalsMobileNav } from './GoalsMobileNav'
 import type { GoalsMobileView } from './goalsView'
 import { GOALS_CONTENT_ANCHOR_ID } from './scrollToGoalsContent'
+import { useGoalsScrollMemory, type GoalsScrollMemory } from './useGoalsScrollMemory'
 
 /** jsdom lays nothing out: the row sticks 60px down, and is either there (stuck) or lower. */
 function layOut(stuck: boolean) {
@@ -35,14 +36,25 @@ function renderNav(value: 'chart' | 'adjust' | 'progress' | 'assumptions', onCha
     cb(0)
     return 0
   })
-  render(<GoalsMobileNav value={value} onChange={onChange} />)
-  return { onChange, scrollIntoView }
+  const memory: GoalsScrollMemory = { leave: vi.fn(), recall: vi.fn(() => false) }
+  render(<GoalsMobileNav value={value} onChange={onChange} memory={memory} />)
+  return { onChange, scrollIntoView, memory }
 }
 
-/** The nav holding the selection, as the tab does, so a tap changes what it shows. */
+/** The nav holding the selection and the memory, as the tab does, so a tap changes what it shows. */
 function ControlledNav({ start }: { start: GoalsMobileView }) {
   const [value, setValue] = useState(start)
-  return <GoalsMobileNav value={value} onChange={setValue} />
+  const memory = useGoalsScrollMemory()
+  return (
+    <GoalsMobileNav
+      value={value}
+      memory={memory}
+      onChange={(next) => {
+        memory.leave(value)
+        setValue(next)
+      }}
+    />
+  )
 }
 
 describe('GoalsMobileNav', () => {
@@ -121,6 +133,20 @@ describe('GoalsMobileNav', () => {
 
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' })
     expect(scrollBy).not.toHaveBeenCalled()
+  })
+
+  it('puts a view back where the tab remembers it, rather than going to its content', async () => {
+    const user = userEvent.setup()
+    const { memory, scrollIntoView } = renderNav('chart')
+    vi.mocked(memory.recall).mockReturnValue(true)
+    layOut(true)
+
+    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+
+    expect(memory.recall).toHaveBeenCalledWith('progress')
+    expect(scrollIntoView).not.toHaveBeenCalled()
+    // Noting where the view was left is the tab's job, since links leave views too.
+    expect(memory.leave).not.toHaveBeenCalled()
   })
 
   it('leaves the scroll alone when the row has not left its place', async () => {

@@ -1,8 +1,9 @@
 import { useRef } from 'react'
 import { SegmentedControl } from '../../components/SegmentedControl'
 import { landOnAdjustControls } from './scrollToAdjustSection'
-import { restoreScrollPosition, scrollToGoalsContent } from './scrollToGoalsContent'
+import { scrollToGoalsContent } from './scrollToGoalsContent'
 import type { GoalsMobileView } from './goalsView'
+import type { GoalsScrollMemory } from './useGoalsScrollMemory'
 import styles from './goals.module.css'
 
 const OPTIONS: { value: GoalsMobileView; label: string }[] = [
@@ -15,6 +16,8 @@ const OPTIONS: { value: GoalsMobileView; label: string }[] = [
 interface GoalsMobileNavProps {
   value: GoalsMobileView
   onChange: (next: GoalsMobileView) => void
+  /** Where the views were left, kept by the tab so a link that skips this row is remembered too. */
+  memory: GoalsScrollMemory
 }
 
 /**
@@ -27,9 +30,8 @@ interface GoalsMobileNavProps {
  * already selected goes to the top of its content, which is the usual way to say "back to the
  * top" on a phone.
  */
-export function GoalsMobileNav({ value, onChange }: GoalsMobileNavProps) {
+export function GoalsMobileNav({ value, onChange, memory }: GoalsMobileNavProps) {
   const row = useRef<HTMLDivElement>(null)
-  const left = useRef<Partial<Record<GoalsMobileView, number>>>({})
 
   const select = (next: GoalsMobileView) => {
     const rowEl = row.current
@@ -39,14 +41,13 @@ export function GoalsMobileNav({ value, onChange }: GoalsMobileNavProps) {
     const stuck =
       rowEl !== null &&
       rowEl.getBoundingClientRect().top <= (Number.parseFloat(getComputedStyle(rowEl).top) || 0) + 0.5
-    if (next !== value) left.current[value] = window.scrollY
     onChange(next)
-    const before = left.current[next]
     if (next === value) {
       if (stuck) scrollToGoalsContent('smooth')
-    } else if (before !== undefined) {
-      restoreScrollPosition(before)
-    } else if (next === 'adjust') {
+      return
+    }
+    if (memory.recall(next)) return
+    if (next === 'adjust') {
       // Opening Adjust for the first time is a request for the controls, wherever the page was.
       landOnAdjustControls()
     } else if (stuck) {
