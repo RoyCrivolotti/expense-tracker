@@ -1,19 +1,19 @@
 import { useRef } from 'react'
 import { SegmentedControl } from '../../components/SegmentedControl'
+import { GOALS_NAV_ID } from './goalsAnchors'
 import { landOnAdjustControls } from './scrollToAdjustSection'
-import { GOALS_NAV_ID, scrollToGoalsContent } from './scrollToGoalsContent'
-import type { GoalsMobileView } from './goalsView'
+import { scrollToGoalsContent } from './scrollToGoalsContent'
+import { GOALS_VIEW_TABS, optionsFrom, type GoalsMobileView } from './goalsView'
 import type { GoalsScrollMemory } from './useGoalsScrollMemory'
 import { usePinnedScrollPadding } from './usePinnedScrollPadding'
 import styles from './goals.module.css'
-import { GOALS_VIEW_TABS } from './goalsView'
 
-const OPTIONS: { value: GoalsMobileView; label: string }[] = [
-  { value: 'chart', label: 'Chart' },
-  { value: 'adjust', label: 'Adjust' },
-  { value: 'progress', label: 'Progress' },
-  { value: 'assumptions', label: 'Assumptions' },
-]
+const OPTIONS = optionsFrom<GoalsMobileView>({
+  chart: 'Chart',
+  adjust: 'Adjust',
+  progress: 'Progress',
+  assumptions: 'Assumptions',
+})
 
 interface GoalsMobileNavProps {
   value: GoalsMobileView
@@ -59,18 +59,16 @@ export function GoalsMobileNav({ value, onChange, memory }: GoalsMobileNavProps)
   }
 
   return (
-    <>
-      <div ref={row} id={GOALS_NAV_ID} className={`${styles.nav} ${styles.fadeBelow}`}>
-        <SegmentedControl
-          options={OPTIONS}
-          value={value}
-          onChange={select}
-          ariaLabel="Goals view"
-          layout="bar"
-          size="tall"
-          tabs={GOALS_VIEW_TABS}
-        />
-      </div>
-    </>
+    <div ref={row} id={GOALS_NAV_ID} className={`${styles.nav} ${styles.fadeBelow}`}>
+      <SegmentedControl
+        options={OPTIONS}
+        value={value}
+        onChange={select}
+        ariaLabel="Goals view"
+        layout="bar"
+        size="tall"
+        tabs={GOALS_VIEW_TABS}
+      />
+    </div>
   )
 }

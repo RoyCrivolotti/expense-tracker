@@ -504,7 +504,7 @@
   color: var(--color-text-muted);
   /* The Flagged card's drill-in scrolls here. AppShell's header is sticky, so without
      this the bar lands underneath it. A few pixels of air below the header. */
-  scroll-margin-top: calc(var(--exp-header) + 3px + env(safe-area-inset-top, 0px));
+  scroll-margin-top: calc(var(--exp-header) + var(--exp-header-air) + env(safe-area-inset-top, 0px));
 }
 
 .resultBar .filterToggle {

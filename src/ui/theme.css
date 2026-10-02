@@ -27,6 +27,8 @@
      2.25rem menu button and the 1px border. AppShell's `.header` is held to at least this, and
      whatever sticks under the header reads it. */
   --exp-header: calc(1.5rem + 2.25rem + 1px);
+  /* The air left between the app header and what sticks, or is scrolled to, just under it. */
+  --exp-header-air: 3px;
   /* How far the Transactions bar and its day headers sit under the app header, so the
      one-pixel drift iOS gives sticky elements while the page coasts never opens a gap. */
   --exp-header-tuck: 0.3125rem;

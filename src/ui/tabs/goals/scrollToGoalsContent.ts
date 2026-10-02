@@ -1,17 +1,6 @@
-import { prefersReducedMotion } from '../../hooks/prefersReducedMotion'
+import { afterRender, scrollBehavior } from '../../hooks/scrollTiming'
 import { showAdjustSections, type AdjustSection } from './adjustSections'
-
-/** Where a Goals view's own content starts: past the intro and glossary, which only Plan has. */
-export const GOALS_CONTENT_ANCHOR_ID = 'goals-content-top'
-
-/** The sticky row of Goals views on a phone, which is what stays pinned in every view. */
-export const GOALS_NAV_ID = 'goals-nav'
-
-/** Run `run` once React has rendered what the viewer just did, and the browser has laid it out. */
-function afterRender(run: () => void): void {
-  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run)
-  else run()
-}
+import { GOALS_CONTENT_ANCHOR_ID } from './goalsAnchors'
 
 /**
  * Bring the content of the Goals view that is now open to just under the sticky view row.
@@ -27,7 +16,7 @@ export function scrollToGoalsContent(behavior: 'auto' | 'smooth'): void {
     if (!anchor) return
     // Not every environment has scrollIntoView (jsdom does not).
     anchor.scrollIntoView?.({
-      behavior: prefersReducedMotion() ? 'auto' : behavior,
+      behavior: scrollBehavior(behavior),
       block: 'start',
     })
   })

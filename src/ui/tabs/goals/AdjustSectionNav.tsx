@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { prefersReducedMotion } from '../../hooks/prefersReducedMotion'
+import { scrollBehavior } from '../../hooks/scrollTiming'
 import {
   ADJUST_SECTIONS,
   adjustSectionId,
+  inAdjustControls,
   pickActiveSection,
   type AdjustSection,
 } from './adjustSections'
@@ -19,8 +20,9 @@ const READING_MARGIN_PX = 12
 const USER_SCROLL_EVENTS = ['touchstart', 'wheel', 'keydown', 'pointerdown'] as const
 
 /**
- * Jump links to the Adjust sections, pinned with the draft's chart so a slider two sections
- * down is a tap away. The chip for the section being read is marked as it scrolls past.
+ * Jump links to the Adjust sections, pinned with the draft's chart (on a screen with room for
+ * both) so a slider two sections down is a tap away. The chip for the section being read is
+ * marked as it scrolls past.
  *
  * A chip's section cannot always reach the top of the screen (the last ones sit on a short
  * page), so after a tap that chip stays marked until the viewer scrolls for themselves.
@@ -59,13 +61,16 @@ export function AdjustSectionNav({ unsaved }: { unsaved?: UnsavedActions | undef
     }
   }, [narrow])
 
-  // A field that takes focus, with the keyboard up or from a key press, is not left behind the
-  // pinned block. Buttons are not fields to clear, and the block's own are not under it.
+  // A field of the controls that takes focus, with the keyboard up or from a key press, is not
+  // left behind the pinned block. Buttons are not fields to clear, the block's own are not
+  // under it, and a dialog's field is on a layer of its own that the block does not cover.
   useEffect(() => {
     if (!narrow) return
     const onFocus = (event: FocusEvent) => {
       const target = event.target
-      if (target instanceof Element && target.matches('input, select, textarea')) keepClearOfStack(target)
+      if (target instanceof Element && target.matches('input, select, textarea') && inAdjustControls(target)) {
+        keepClearOfStack(target)
+      }
     }
     document.addEventListener('focusin', onFocus)
     return () => document.removeEventListener('focusin', onFocus)
@@ -85,7 +90,7 @@ export function AdjustSectionNav({ unsaved }: { unsaved?: UnsavedActions | undef
     if (!chip || !row || typeof row.scrollTo !== 'function') return
     row.scrollTo({
       left: chip.offsetLeft - (row.clientWidth - chip.offsetWidth) / 2,
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+      behavior: scrollBehavior('smooth'),
     })
   }, [active, hasActions])
 

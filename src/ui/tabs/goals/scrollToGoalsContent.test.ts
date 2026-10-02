@@ -1,10 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ADJUST_SECTIONS, adjustSectionId, openAdjustSections, type AdjustSection } from './adjustSections'
-import {
-  GOALS_CONTENT_ANCHOR_ID,
-  restoreScrollPosition,
-  scrollToGoalsContent,
-} from './scrollToGoalsContent'
+import { GOALS_CONTENT_ANCHOR_ID } from './goalsAnchors'
+import { restoreScrollPosition, scrollToGoalsContent } from './scrollToGoalsContent'
 
 function mountAnchor() {
   const anchor = document.createElement('div')

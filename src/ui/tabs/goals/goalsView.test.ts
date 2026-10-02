@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { mobileSelection, mobileViewOf } from './goalsView'
+import { mobileSelection, mobileViewOf, optionsFrom } from './goalsView'
+
+describe('optionsFrom', () => {
+  it('lists a value and its label for each one, in the order the labels are written', () => {
+    expect(optionsFrom<'b' | 'a'>({ b: 'Bee', a: 'Ay' })).toEqual([
+      { value: 'b', label: 'Bee' },
+      { value: 'a', label: 'Ay' },
+    ])
+  })
+})
 
 describe('mobileViewOf', () => {
   it('is the half of Plan that was last open while Plan is the view', () => {

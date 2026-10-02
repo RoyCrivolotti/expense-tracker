@@ -11,7 +11,7 @@ import {
 } from './goalControlFields'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { formatCheckinDate, type InvestedSnapshot } from './checkinDate'
-import { ADJUST_SECTIONS, adjustSectionId, type AdjustSection } from './adjustSections'
+import { ADJUST_LABELS, adjustSectionId, type AdjustSection } from './adjustSections'
 import styles from './goals.module.css'
 
 function purchaseSummary(draft: NewGoalScenario, format: MoneyFormat): string | null {
@@ -39,10 +39,9 @@ function ControlSection({
   defaultOpen?: boolean
   children: ReactNode
 }) {
-  const title = ADJUST_SECTIONS.find((s) => s.key === section)?.title
   return (
     <details id={adjustSectionId(section)} className={styles.controlSection} open={defaultOpen}>
-      <summary className={styles.controlSummary}>{title}</summary>
+      <summary className={styles.controlSummary}>{ADJUST_LABELS[section].title}</summary>
       <div className={styles.controlBody}>{children}</div>
     </details>
   )

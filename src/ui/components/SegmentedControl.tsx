@@ -51,6 +51,11 @@ function keyTarget(key: string, index: number, count: number): number | null {
   }
 }
 
+/** The options of a group as elements, in order: what a key moves focus between. */
+function optionElements(group: HTMLElement | null): HTMLElement[] {
+  return group ? Array.from(group.querySelectorAll<HTMLElement>('[role="radio"], [role="tab"]')) : []
+}
+
 /** What makes an option a radio, or a tab, and says whether it is the chosen one. */
 function optionAttributes(value: string, chosen: boolean, tabs: TabsProps | undefined) {
   if (!tabs) return { role: 'radio', 'aria-checked': chosen }
@@ -88,12 +93,19 @@ export function SegmentedControl<T extends string>({
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     // Alt/Cmd+Left is the browser's Back and Ctrl/Cmd+Home/End scroll the page: leave them alone.
     if (disabled || event.altKey || event.ctrlKey || event.metaKey) return
-    const target = keyTarget(event.key, stop, options.length)
-    const option = target === null ? undefined : options[target]
-    if (target === null || !option) return
+    const radios = optionElements(group.current)
+    // Step from the option that has focus, which is not the selected one when the parent has
+    // not followed a change, or the selection moved while focus stayed; the tab stop otherwise.
+    const focused = radios.indexOf(event.target as HTMLElement)
+    const target = keyTarget(event.key, focused < 0 ? stop : focused, options.length)
+    if (target === null) return
+    const option = options[target]
+    if (!option) return
     event.preventDefault()
-    onChange(option.value)
-    group.current?.querySelectorAll<HTMLElement>('[role="radio"], [role="tab"]')[target]?.focus()
+    // A key that lands on the chosen option has nothing to report (a click on it does, for a
+    // control that treats tapping the current segment as a request of its own).
+    if (option.value !== value) onChange(option.value)
+    radios[target]?.focus()
   }
 
   return (

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AdjustSectionNav } from './AdjustSectionNav'
 import { ADJUST_SECTIONS, adjustSectionId, type AdjustSection } from './adjustSections'
-import { ADJUST_STACK_ID } from './scrollToAdjustSection'
+import { ADJUST_STACK_ID } from './goalsAnchors'
 import { NARROW_MQ } from './useGoalsNarrow'
 
 /** Where each section's top is, in viewport pixels; the tests move these to "scroll". */
@@ -310,7 +310,7 @@ describe('AdjustSectionNav', () => {
     stack.style.position = 'sticky'
     document.body.append(stack)
     const field = document.createElement('input')
-    document.body.append(field)
+    sectionElement('housing').append(field)
     // The block spans 0 to 300 and the field starts at 100, behind it. Set on the elements
     // themselves, since the prototype's rect is already mocked for the sections.
     stack.getBoundingClientRect = () => ({ top: 0, bottom: 300 }) as DOMRect
@@ -322,6 +322,31 @@ describe('AdjustSectionNav', () => {
 
     fireEvent.focusIn(field)
     await vi.waitFor(() => expect(window.scrollBy).toHaveBeenCalledWith({ top: 100 - 300 - 8, behavior: 'auto' }))
+  })
+
+  it('leaves a field outside the Adjust controls alone, as one in a dialog', () => {
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+      cb(0)
+      return 0
+    })
+    const stack = document.createElement('div')
+    stack.id = ADJUST_STACK_ID
+    stack.style.position = 'sticky'
+    document.body.append(stack)
+    stack.getBoundingClientRect = () => ({ top: 0, bottom: 300 }) as DOMRect
+    const dialogField = document.createElement('input')
+    dialogField.getBoundingClientRect = () => ({ top: 100 }) as DOMRect
+    document.body.append(dialogField)
+    const controlField = document.createElement('input')
+    controlField.getBoundingClientRect = () => ({ top: 100 }) as DOMRect
+    sectionElement('tracking').append(controlField)
+    render(<AdjustSectionNav />, { container: stack })
+
+    fireEvent.focusIn(dialogField)
+    expect(window.scrollBy).not.toHaveBeenCalled()
+
+    fireEvent.focusIn(controlField)
+    expect(window.scrollBy).toHaveBeenCalledWith({ top: 100 - 300 - 8, behavior: 'auto' })
   })
 
   it('stops listening when it leaves the page', () => {
