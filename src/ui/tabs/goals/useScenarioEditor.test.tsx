@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { useScenarioEditor, type ScenarioEditor } from './useScenarioEditor'
 import { makeDataset, makeScenario } from '../../../testing/factories'
 import { makeActions } from '../../../testing/makeActions'
@@ -15,7 +15,7 @@ function setup() {
     seen.push(editor)
     return editor
   })
-  return { ...hook, seen, plan, other }
+  return { ...hook, seen, plan, other, actions }
 }
 
 describe('useScenarioEditor', () => {
@@ -57,5 +57,22 @@ describe('useScenarioEditor', () => {
     expect(result.current.onSelectEditing).toBe(onSelectEditing)
     expect(result.current.hiddenIds).toBe(hiddenIds)
     expect(result.current.activeScenario).toBe(activeScenario)
+  })
+
+  it('saves the draft as a new scenario, last in the list, and loads it', async () => {
+    const { result, actions } = setup()
+    vi.mocked(actions.createScenario).mockResolvedValue(makeScenario({ id: 9, name: 'Path C', sortOrder: 2 }))
+    act(() => result.current.patchDraft({ monthlyContributionCents: 5 }))
+
+    await act(async () => {
+      result.current.onSaveDraft('Path C')
+      await Promise.resolve()
+    })
+
+    expect(actions.createScenario).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Path C', sortOrder: 2, monthlyContributionCents: 5 }),
+    )
+    expect(result.current.activeId).toBe(9)
+    expect(result.current.draft.name).toBe('Path C')
   })
 })
