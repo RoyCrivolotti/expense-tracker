@@ -489,7 +489,7 @@
  */
 .resultBar {
   position: sticky;
-  top: calc(3.5rem + env(safe-area-inset-top, 0px));
+  top: calc(var(--exp-header) - var(--exp-header-tuck) + env(safe-area-inset-top, 0px));
   z-index: 6;
   display: flex;
   align-items: center;
@@ -502,10 +502,9 @@
   border-bottom: 1px solid var(--color-border);
   font-size: 0.82rem;
   color: var(--color-text-muted);
-  /* The Flagged card's drill-in scrolls here. AppShell's header is sticky
-     (~3.5rem plus the safe-area inset), so without this the bar lands
-     underneath it. */
-  scroll-margin-top: calc(4rem + env(safe-area-inset-top, 0px));
+  /* The Flagged card's drill-in scrolls here. AppShell's header is sticky, so without
+     this the bar lands underneath it. A few pixels of air below the header. */
+  scroll-margin-top: calc(var(--exp-header) + 3px + env(safe-area-inset-top, 0px));
 }
 
 .resultBar .filterToggle {

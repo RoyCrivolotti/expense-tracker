@@ -80,7 +80,10 @@
 
 .dayHeaderRow {
   position: sticky;
-  top: calc(3.5rem + env(safe-area-inset-top, 0px) + var(--txn-bar-h, 0px));
+  top: calc(
+    var(--exp-header) - var(--exp-header-tuck) + env(safe-area-inset-top, 0px) +
+      var(--txn-bar-h, 0px)
+  );
   z-index: 5;
   display: flex;
   align-items: center;
@@ -126,7 +129,10 @@
 
 .dayHeaderSelect {
   position: sticky;
-  top: calc(3.5rem + env(safe-area-inset-top, 0px) + var(--txn-bar-h, 0px));
+  top: calc(
+    var(--exp-header) - var(--exp-header-tuck) + env(safe-area-inset-top, 0px) +
+      var(--txn-bar-h, 0px)
+  );
   z-index: 5;
   display: flex;
   align-items: center;
