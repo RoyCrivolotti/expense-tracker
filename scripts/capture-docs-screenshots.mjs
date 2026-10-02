@@ -284,6 +284,9 @@ async function captureGoalsMobile(page) {
   await page.screenshot({ path: join(OUT, 'goals-mobile.png') })
 
   await page.getByText('What do these terms mean?').click()
+  // On a phone the glossary is below the charts and controls, so what opens is under the fold:
+  // bring it up under the view row.
+  await page.getByText('What do these terms mean?').evaluate((el) => el.scrollIntoView({ block: 'start' }))
   await page.waitForTimeout(250)
   await page.screenshot({ path: join(OUT, 'goals-mobile-explainer.png') })
   await page.getByText('What do these terms mean?').click()
@@ -299,6 +302,10 @@ async function captureGoalsMobile(page) {
 
   for (const view of GOALS_MOBILE_VIEWS) {
     await page.getByRole('radio', { name: view.label }).click()
+    // The picker is below the scenarios on a phone: bring it, and the chart under it, up.
+    await page
+      .getByRole('radiogroup', { name: 'Secondary chart view' })
+      .evaluate((el) => el.scrollIntoView({ block: 'start' }))
     await page.waitForTimeout(450)
     await page.screenshot({ path: join(OUT, `goals-mobile-${view.file}.png`) })
   }
