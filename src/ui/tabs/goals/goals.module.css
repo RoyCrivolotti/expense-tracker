@@ -160,6 +160,26 @@
   .layout[data-mobile-view='adjust'] .areaMini svg {
     touch-action: pan-y;
   }
+
+  /* On a screen this short a pinned chart and chips would leave almost no page between them and
+     the bottom bar, so they scroll away with the page and only the view row stays. rem here is
+     the browser's default text size, so large text on a tall screen is caught as well. 26rem is
+     below any portrait phone's height even with Safari's toolbars out, so it does not flip as
+     they come and go; a phone on its side is found by its orientation instead, which cannot. */
+  @media (max-height: 26rem), (orientation: landscape) and (max-height: 32rem) {
+    .layout[data-mobile-view='adjust'] .areaMini {
+      position: static;
+    }
+
+    .layout[data-mobile-view='adjust'] .areaMini::after {
+      content: none;
+    }
+
+    /* Not pinned, so what is focused in it can be under the row like anything else. */
+    .layout[data-mobile-view='adjust'] .areaMini * {
+      scroll-margin-top: 0;
+    }
+  }
 }
 
 .areaMini {

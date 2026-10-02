@@ -7,7 +7,8 @@ function phoneRules(): CSSStyleRule[] {
   for (const sheet of Array.from(document.styleSheets)) {
     for (const rule of Array.from(sheet.cssRules)) {
       if (rule instanceof CSSMediaRule && rule.conditionText === '(max-width: 899px)') {
-        rules.push(...(Array.from(rule.cssRules) as CSSStyleRule[]))
+        // A nested @media (the short-screen rule) has no selector of its own.
+        rules.push(...(Array.from(rule.cssRules).filter((r) => 'selectorText' in r) as CSSStyleRule[]))
       }
     }
   }
