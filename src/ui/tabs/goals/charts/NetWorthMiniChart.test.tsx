@@ -45,6 +45,13 @@ describe('NetWorthMiniChart', () => {
     expect(xLabels).toEqual(['0', '10'])
   })
 
+  it('asks for less room above its plot than a chart has by default, since it is pinned', () => {
+    const { container } = render(<NetWorthMiniChart draft={draftOf({ horizonYears: 10 })} />)
+
+    // The default is 16px; the top axis label is half a line high, and no more is wanted here.
+    expect(container.querySelector('clipPath rect')!.getAttribute('y')).toBe('8')
+  })
+
   describe('end value readout', () => {
     // No return and no contributions: the line stays at the 100k it starts at.
     const flat = { horizonYears: 10, expectedRealReturn: 0, monthlyContributionCents: 0 }
