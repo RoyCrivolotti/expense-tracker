@@ -43,7 +43,8 @@
     "sync:backup-alerts": "node scripts/sync-backup-alerts.mjs",
     "capture:screenshots": "node scripts/capture-docs-screenshots.mjs",
     "verify:goals-tabs": "node scripts/verify-goals-mobile-tabs.mjs",
-    "verify:goals-nav": "node scripts/verify-goals-nav.mjs"
+    "verify:goals-nav": "node scripts/verify-goals-nav.mjs",
+    "verify:section-tabs": "node scripts/verify-section-tabs.mjs"
   },
   "dependencies": {
     "fflate": "^0.8.3",
