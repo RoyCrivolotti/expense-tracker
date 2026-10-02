@@ -454,6 +454,14 @@
   color: var(--color-accent);
 }
 
+/* Forced colours replaces the tint that marks the current chip, so it gets a heavier border in the
+   system's highlight colour. */
+@media (forced-colors: active) {
+  .chipActive {
+    border: 2px solid Highlight;
+  }
+}
+
 .chipGroup {
   flex: none;
   display: inline-flex;

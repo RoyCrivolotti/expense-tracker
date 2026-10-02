@@ -2,9 +2,14 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-/** The rules of a stylesheet in src/ui, as selector and declarations, flattened out of any @media. */
+/** A stylesheet in src/ui, without its comments. */
+function stylesheet(file: string): string {
+  return readFileSync(resolve(process.cwd(), 'src/ui', file), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+}
+
+/** The rules of a stylesheet, as selector and declarations, flattened out of any @media. */
 function rules(file: string): { selector: string; body: string }[] {
-  const css = readFileSync(resolve(process.cwd(), 'src/ui', file), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+  const css = stylesheet(file)
   return [...css.matchAll(/([^{};]+)\{([^{}]*)\}/g)].map((m) => ({
     selector: (m[1] ?? '').trim(),
     body: m[2] ?? '',
@@ -20,5 +25,14 @@ describe('goals styles', () => {
         expect(color, `${selector} in ${file}`).toBe('var(--color-accent-contrast)')
       }
     }
+  })
+
+  it.each([
+    ['components/SegmentedControl.module.css', '.active'],
+    ['tabs/goals/goals.module.css', '.chipActive'],
+  ])('gives %s %s a border in forced colours, where its fill is replaced', (file, selector) => {
+    const forced = /@media \(forced-colors: active\) \{([\s\S]*?)\n\}/.exec(stylesheet(file))?.[1] ?? ''
+
+    expect(forced).toMatch(new RegExp(`\\${selector}\\s*\\{[^}]*border:\\s*2px solid Highlight`))
   })
 })
