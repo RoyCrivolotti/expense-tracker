@@ -644,6 +644,37 @@ describe('GoalsTab', () => {
     expect(chips()).not.toBeInTheDocument()
   })
 
+  it('saves or drops edits to a saved scenario from the Adjust section row', async () => {
+    mockPhoneWidth()
+    const user = userEvent.setup()
+    const actions = makeActions()
+    const plan = makeScenario({ id: 1, name: 'Path A', isActive: true })
+    render(<GoalsTab model={buildExpenseModel(makeDataset({ goalScenarios: [plan] }))} actions={actions} />)
+    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+    const row = () => screen.queryByRole('group', { name: 'Unsaved changes', hidden: true })
+    const button = (name: string) =>
+      within(row()!).getByRole('button', { name, hidden: true })
+
+    expect(row()).not.toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
+    await user.click(button('Save'))
+    expect(actions.updateScenario).toHaveBeenCalledWith(1, expect.objectContaining({ name: 'Path A, tweaked' }))
+
+    await user.click(button('Discard'))
+    expect(screen.getByLabelText('Scenario name')).toHaveValue('Path A')
+    expect(row()).not.toBeInTheDocument()
+  })
+
+  it('offers no Save in a read-only session, which cannot save', async () => {
+    mockPhoneWidth()
+    const user = userEvent.setup()
+    render(<GoalsTab model={makeModel()} />)
+    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+
+    expect(screen.queryByRole('group', { name: 'Unsaved changes', hidden: true })).not.toBeInTheDocument()
+  })
+
   it('starts the scroll target after Plan\'s intro and glossary, and straight after the switch for Progress', async () => {
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} />)

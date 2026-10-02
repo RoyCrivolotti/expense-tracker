@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AdjustSectionNav } from './AdjustSectionNav'
@@ -114,6 +114,27 @@ describe('AdjustSectionNav', () => {
     await user.click(screen.getByRole('button', { name: 'Tracking' }))
 
     expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }))
+  })
+
+  it('offers Save and Discard beside the chips only when there are unsaved changes, and runs them', async () => {
+    const user = userEvent.setup()
+    const unsaved = { onSave: vi.fn(), onDiscard: vi.fn() }
+    const { rerender } = render(<AdjustSectionNav />)
+    expect(screen.queryByRole('group', { name: 'Unsaved changes' })).not.toBeInTheDocument()
+
+    rerender(<AdjustSectionNav unsaved={unsaved} />)
+    const group = screen.getByRole('group', { name: 'Unsaved changes' })
+    await user.click(within(group).getByRole('button', { name: 'Save' }))
+    await user.click(within(group).getByRole('button', { name: 'Discard' }))
+
+    expect(unsaved.onSave).toHaveBeenCalledTimes(1)
+    expect(unsaved.onDiscard).toHaveBeenCalledTimes(1)
+    // The chips are still all there to jump with.
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual([
+      ...ADJUST_SECTIONS.map((s) => s.chip),
+      'Discard',
+      'Save',
+    ])
   })
 
   it('stops listening when it leaves the page', () => {
