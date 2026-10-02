@@ -8,6 +8,9 @@ import {
   scrollToAdjustSection,
 } from './scrollToAdjustSection'
 
+/** What the stack measures on a 375px phone: the chart and the row of chips. */
+const STACK_HEIGHT = 164
+
 function mount(tag: 'div' | 'details', id: string, rect: Partial<DOMRect> = {}, height = 0) {
   const el = document.createElement(tag)
   el.id = id
@@ -43,19 +46,19 @@ describe('pinnedBottom', () => {
   })
 
   it("is the stack's resolved sticky top plus its height when the stack is pinned", () => {
-    mountPinned({ stackHeight: 164, stackTop: '103px', rowHeight: 44, rowTop: '60px' })
+    mountPinned({ stackHeight: STACK_HEIGHT, stackTop: '103px', rowHeight: 44, rowTop: '60px' })
 
-    expect(pinnedBottom()).toBe(267)
+    expect(pinnedBottom()).toBe(103 + STACK_HEIGHT)
   })
 
   it('counts only the height when the browser does not resolve a top', () => {
-    mountPinned({ stackHeight: 176 })
+    mountPinned({ stackHeight: STACK_HEIGHT })
 
-    expect(pinnedBottom()).toBe(176)
+    expect(pinnedBottom()).toBe(STACK_HEIGHT)
   })
 
   it('is the bottom of the view row when the stack is not pinned, as on a short screen', () => {
-    mountPinned({ stackHeight: 164, rowHeight: 44, rowTop: '60px' })
+    mountPinned({ stackHeight: STACK_HEIGHT, rowHeight: 44, rowTop: '60px' })
     document.getElementById(ADJUST_STACK_ID)!.style.position = 'static'
 
     expect(pinnedBottom()).toBe(104)
@@ -70,18 +73,18 @@ describe('pinnedBottom', () => {
 
 describe('scrollToAdjustSection', () => {
   it('scrolls by the distance from the pinned stack, opening a closed section first', () => {
-    mountPinned({ stackHeight: 176 })
+    mountPinned({ stackHeight: STACK_HEIGHT })
     const section = mount('details', adjustSectionId('events'), { top: 538 })
     const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
 
     scrollToAdjustSection('events', 'smooth')
 
     expect((section as HTMLDetailsElement).open).toBe(true)
-    expect(scrollBy).toHaveBeenCalledWith({ top: 538 - 176 - 8, behavior: 'smooth' })
+    expect(scrollBy).toHaveBeenCalledWith({ top: 538 - STACK_HEIGHT - 8, behavior: 'smooth' })
   })
 
   it('scrolls to just under the view row when the stack is not pinned', () => {
-    mountPinned({ stackHeight: 176, rowHeight: 44, rowTop: '60px' })
+    mountPinned({ stackHeight: STACK_HEIGHT, rowHeight: 44, rowTop: '60px' })
     document.getElementById(ADJUST_STACK_ID)!.style.position = 'static'
     mount('details', adjustSectionId('housing'), { top: 538 })
     const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
@@ -135,7 +138,7 @@ describe('landOnAdjustControls', () => {
   })
 
   it('lands under the view row when the stack is not pinned', () => {
-    mountPinned({ stackHeight: 164, rowHeight: 44, rowTop: '60px' })
+    mountPinned({ stackHeight: STACK_HEIGHT, rowHeight: 44, rowTop: '60px' })
     document.getElementById(ADJUST_STACK_ID)!.style.position = 'static'
     mount('details', adjustSectionId('portfolio'), { top: 700 })
     const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
