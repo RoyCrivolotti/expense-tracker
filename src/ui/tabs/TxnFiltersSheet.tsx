@@ -1,16 +1,13 @@
 import type { Account, Category, Flag, Label, TxnType } from '../../types'
 import { Modal } from '../components/Modal'
-import { CategoryAccountRow, DateScopeRow, LabelFilterRow, LockShield, StatusTypeRow } from './TxnFilterRows'
+import { DateScopeRow, FilterFields, LockShield } from './TxnFilterRows'
 import type { StatusFilter } from './TxnFilters'
 import type { TxnDateScope } from './txnDateScope'
 import styles from './tabs.module.css'
 
 /**
- * Experiment: the same six fields and date scope that used to sit inline between the
- * toggle and the transaction list — moved into a sheet instead, so adjusting a filter
- * no longer pushes the list down by the ~220px those rows take up. Reuses
- * CategoryAccountRow/StatusTypeRow/LabelFilterRow/DateScopeRow unchanged; only where
- * they render has changed.
+ * The filter fields and date scope in a sheet, so adjusting a filter does not push the
+ * transaction list down by the ~170px they take up inline.
  */
 export function TxnFiltersSheet({
   categories,
@@ -68,26 +65,25 @@ export function TxnFiltersSheet({
   return (
     <Modal title="Filters" onClose={onClose}>
       <div className={styles.filterSecondary}>
-        <CategoryAccountRow
+        <FilterFields
           categories={categories}
           accounts={accounts}
+          flags={flags}
+          labels={labels}
           categoryId={categoryId}
           accountId={accountId}
+          txnType={txnType}
+          status={status}
+          flagId={flagId}
+          labelIds={labelIds}
           selectMode={selectMode}
           onCategory={onCategory}
           onAccount={onAccount}
-        />
-        <StatusTypeRow
-          flags={flags}
-          flagId={flagId}
-          onFlag={onFlag}
-          status={status}
-          txnType={txnType}
-          selectMode={selectMode}
-          onStatus={onStatus}
           onTxnType={onTxnType}
+          onStatus={onStatus}
+          onFlag={onFlag}
+          onLabelIds={onLabelIds}
         />
-        <LabelFilterRow labels={labels} labelIds={labelIds} selectMode={selectMode} onLabelIds={onLabelIds} />
         <DateScopeRow
           dateScope={dateScope}
           customDateFrom={customDateFrom}

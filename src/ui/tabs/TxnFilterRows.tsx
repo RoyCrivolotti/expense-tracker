@@ -126,25 +126,156 @@ export function FilterToggle({
   )
 }
 
-export function CategoryAccountRow({
+function labelTriggerText(value: number[], labels: Label[]): string {
+  if (value.length === 0) return 'Labels'
+  if (value.length === 1) return labels.find((l) => l.id === value[0])?.name ?? '1 label'
+  return `Labels (${value.length})`
+}
+
+/**
+ * Multi-select sibling of the flag <select>: a label filter can match more than one
+ * label at once (OR), which a native select can't express, so this is a trigger button
+ * reusing LabelPickerPopover — the same picker the edit sheet uses (see LabelField) —
+ * rather than a second multi-select widget. Renders into FilterFields' grid beside the
+ * selects, so it is a plain cell, not a row of its own.
+ */
+function LabelFilterField({
+  labels,
+  labelIds,
+  selectMode,
+  onLabelIds,
+}: {
+  labels: Label[]
+  labelIds: number[]
+  selectMode: boolean
+  onLabelIds: (ids: number[]) => void
+}) {
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const [open, setOpen] = useState(false)
+  const toggle = useToggleIds(labelIds, onLabelIds)
+
+  return (
+    <>
+      <button
+        type="button"
+        ref={triggerRef}
+        className={labelIds.length > 0 ? `${styles.labelTrigger} ${styles.labelTriggerActive}` : styles.labelTrigger}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        disabled={selectMode}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span className={styles.labelTriggerText}>{labelTriggerText(labelIds, labels)}</span>
+        <ChevronIcon className={styles.labelTriggerChevron} aria-hidden="true" />
+      </button>
+      <Presence show={open} exitMs={EXIT_MS.popover}>
+        <LabelPickerPopover
+          value={labelIds}
+          labels={labels}
+          triggerRef={triggerRef}
+          onToggle={toggle}
+          onClose={() => setOpen(false)}
+        />
+      </Presence>
+    </>
+  )
+}
+
+/** The flags the filter can offer, or null when there is nothing to filter by. */
+function shownFlagOptions(
+  flags: Flag[] | undefined,
+  flagId: number | 'all' | 'none' | undefined,
+  onFlag: unknown,
+): Flag[] | null {
+  const options = flags?.filter((f) => f.active || f.id === flagId) ?? []
+  return options.length > 0 && flagId !== undefined && onFlag ? options : null
+}
+
+function FlagFilterSelect({
+  options,
+  flagId,
+  selectMode,
+  onFlag,
+}: {
+  options: Flag[]
+  flagId: number | 'all' | 'none'
+  selectMode: boolean
+  onFlag: (value: number | 'all' | 'none') => void
+}) {
+  return (
+    <select
+      className={flagId !== 'all' ? styles.activeSelect : undefined}
+      value={flagId}
+      onChange={(e) => {
+        const raw = e.target.value
+        onFlag(raw === 'all' || raw === 'none' ? raw : Number(raw))
+      }}
+      disabled={selectMode}
+      aria-label="Filter by flag"
+    >
+      <option value="all">Flag</option>
+      <option value="none">Unflagged</option>
+      {options.map((f) => (
+        <option key={f.id} value={f.id}>
+          {f.name}
+          {f.active ? '' : ' (archived)'}
+        </option>
+      ))}
+    </select>
+  )
+}
+
+/**
+ * Every filter field in the sheet as one grid, three to a row: Category, Account, Type,
+ * then Status, Flag, Labels. Flag and Labels only exist once there is something to filter
+ * by, so a user without them has four or five fields; four go two to a row rather than
+ * leaving Status alone on a line, and five leave the last cell blank rather than
+ * stretching two boxes wider than the rest.
+ */
+export function FilterFields({
   categories,
   accounts,
+  flags,
+  labels,
   categoryId,
   accountId,
+  txnType,
+  status,
+  flagId,
+  labelIds,
   selectMode,
   onCategory,
   onAccount,
+  onTxnType,
+  onStatus,
+  onFlag,
+  onLabelIds,
 }: {
   categories: Category[]
   accounts: Account[]
+  flags?: Flag[]
+  labels: Label[]
   categoryId: number | 'all'
   accountId: number | 'all'
+  txnType: TxnType | 'all'
+  status: StatusFilter
+  flagId?: number | 'all' | 'none'
+  labelIds: number[]
   selectMode: boolean
   onCategory: (value: number | 'all') => void
   onAccount: (value: number | 'all') => void
+  onTxnType: (value: TxnType | 'all') => void
+  onStatus: (value: StatusFilter) => void
+  onFlag?: (value: number | 'all' | 'none') => void
+  onLabelIds: (ids: number[]) => void
 }) {
+  const flagOptions = shownFlagOptions(flags, flagId, onFlag)
+  const showLabels = labels.length > 0
+  const fieldCount = 4 + Number(flagOptions !== null) + Number(showLabels)
+  const columns = fieldCount === 4 ? 2 : 3
+
   return (
-    <div className={styles.selectRow}>
+    <div className={styles.filterFields} data-columns={columns}>
       <select
         className={categoryId !== 'all' ? styles.activeSelect : undefined}
         value={categoryId}
@@ -173,65 +304,6 @@ export function CategoryAccountRow({
           </option>
         ))}
       </select>
-    </div>
-  )
-}
-
-export function StatusTypeRow({
-  flags,
-  flagId,
-  onFlag,
-  status,
-  txnType,
-  selectMode,
-  onStatus,
-  onTxnType,
-}: {
-  flags?: Flag[]
-  flagId?: number | 'all' | 'none'
-  onFlag?: (value: number | 'all' | 'none') => void
-  status: StatusFilter
-  txnType: TxnType | 'all'
-  selectMode: boolean
-  onStatus: (value: StatusFilter) => void
-  onTxnType: (value: TxnType | 'all') => void
-}) {
-  const flagOptions = flags?.filter((f) => f.active || f.id === flagId)
-  return (
-    <div className={styles.selectRow}>
-      {flagOptions && flagOptions.length > 0 && flagId !== undefined && onFlag ? (
-        <select
-          className={flagId !== 'all' ? styles.activeSelect : undefined}
-          value={flagId}
-          onChange={(e) => {
-            const raw = e.target.value
-            onFlag(raw === 'all' || raw === 'none' ? raw : Number(raw))
-          }}
-          disabled={selectMode}
-          aria-label="Filter by flag"
-        >
-          <option value="all">Flag</option>
-          <option value="none">Unflagged</option>
-          {flagOptions.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.name}
-              {f.active ? '' : ' (archived)'}
-            </option>
-          ))}
-        </select>
-      ) : null}
-      <select
-        className={status !== 'all' ? styles.activeSelect : undefined}
-        value={status}
-        onChange={(e) => onStatus(e.target.value as StatusFilter)}
-        disabled={selectMode}
-        aria-label="Filter by status"
-      >
-        <option value="all">Status</option>
-        <option value="posted">Posted</option>
-        <option value="forecast">Forecast</option>
-        <option value="cancelled">Cancelled</option>
-      </select>
       <select
         className={txnType !== 'all' ? styles.activeSelect : undefined}
         value={txnType}
@@ -245,62 +317,24 @@ export function StatusTypeRow({
         <option value="investment">Investment</option>
         <option value="refund">Refund</option>
       </select>
-    </div>
-  )
-}
-
-function labelTriggerText(value: number[], labels: Label[]): string {
-  if (value.length === 0) return 'Labels'
-  if (value.length === 1) return labels.find((l) => l.id === value[0])?.name ?? '1 label'
-  return `Labels (${value.length})`
-}
-
-/**
- * Multi-select sibling of the flag <select> above: a label filter can match more
- * than one label at once (OR), which a native select can't express, so this is a
- * trigger button reusing LabelPickerPopover — the same picker the edit sheet uses
- * (see LabelField) — rather than a second multi-select widget.
- */
-export function LabelFilterRow({
-  labels,
-  labelIds,
-  selectMode,
-  onLabelIds,
-}: {
-  labels: Label[]
-  labelIds: number[]
-  selectMode: boolean
-  onLabelIds: (ids: number[]) => void
-}) {
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const [open, setOpen] = useState(false)
-  const toggle = useToggleIds(labelIds, onLabelIds)
-
-  if (labels.length === 0) return null
-
-  return (
-    <div className={styles.selectRow}>
-      <button
-        type="button"
-        ref={triggerRef}
-        className={labelIds.length > 0 ? `${styles.labelTrigger} ${styles.labelTriggerActive}` : styles.labelTrigger}
-        aria-haspopup="dialog"
-        aria-expanded={open}
+      <select
+        className={status !== 'all' ? styles.activeSelect : undefined}
+        value={status}
+        onChange={(e) => onStatus(e.target.value as StatusFilter)}
         disabled={selectMode}
-        onClick={() => setOpen((o) => !o)}
+        aria-label="Filter by status"
       >
-        <span className={styles.labelTriggerText}>{labelTriggerText(labelIds, labels)}</span>
-        <ChevronIcon className={styles.labelTriggerChevron} aria-hidden="true" />
-      </button>
-      <Presence show={open} exitMs={EXIT_MS.popover}>
-        <LabelPickerPopover
-          value={labelIds}
-          labels={labels}
-          triggerRef={triggerRef}
-          onToggle={toggle}
-          onClose={() => setOpen(false)}
-        />
-      </Presence>
+        <option value="all">Status</option>
+        <option value="posted">Posted</option>
+        <option value="forecast">Forecast</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+      {flagOptions && flagId !== undefined && onFlag ? (
+        <FlagFilterSelect options={flagOptions} flagId={flagId} selectMode={selectMode} onFlag={onFlag} />
+      ) : null}
+      {showLabels ? (
+        <LabelFilterField labels={labels} labelIds={labelIds} selectMode={selectMode} onLabelIds={onLabelIds} />
+      ) : null}
     </div>
   )
 }
