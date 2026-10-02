@@ -106,6 +106,19 @@ describe('AdjustSectionNav', () => {
       expect(current()).toBe('FIRE')
     })
 
+    it('marks the last section with its controls shown, when the ones after it are folded', () => {
+      // A tall phone: the end of the page is FIRE's controls and two folded rows, and FIRE's
+      // heading never gets up to the line.
+      placeSections({ portfolio: -700, housing: -300, fire: 400, tracking: 700, events: 750 })
+      sectionElement('fire').open = true
+      render(<AdjustSectionNav />)
+      expect(current()).toBe('FIRE')
+
+      sectionElement('tracking').open = true
+      scrollPage()
+      expect(current()).toBe('Tracking')
+    })
+
     it('moves to the last chip once its controls are opened', () => {
       render(<AdjustSectionNav />)
       expect(current()).toBe('FIRE')

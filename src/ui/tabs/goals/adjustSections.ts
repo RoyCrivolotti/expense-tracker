@@ -34,15 +34,14 @@ export function showAdjustSections(open: readonly AdjustSection[]): void {
 
 /**
  * The section the viewer is in: the last whose top has reached the line under the pinned
- * stack. A last section too short to ever reach that line would never be the answer, so when
- * the page ends in it (scrolled to the end, with that section's controls shown) it is named.
- * Folded, it is a row at the foot of the page, and what is being read is the section above.
+ * stack. The sections at the end of the page may be too short, or folded to a row, to ever
+ * reach that line, so scrolled to the end the answer is at least `endsIn`, the last section
+ * whose controls are shown (-1 when not at the end, or when none is shown).
  */
-export function pickActiveSection(tops: readonly number[], line: number, endsInLast: boolean): number {
-  if (endsInLast) return tops.length - 1
-  let active = 0
+export function pickActiveSection(tops: readonly number[], line: number, endsIn: number): number {
+  let active = Math.max(endsIn, 0)
   tops.forEach((top, i) => {
-    if (top <= line) active = i
+    if (top <= line && i > active) active = i
   })
   return active
 }

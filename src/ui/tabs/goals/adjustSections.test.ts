@@ -19,20 +19,21 @@ describe('pickActiveSection', () => {
   const line = 100
 
   it('is the last section whose top has reached the line', () => {
-    expect(pickActiveSection([-400, -50, 90, 300, 500], line, false)).toBe(2)
-    expect(pickActiveSection([-400, -50, 101, 300, 500], line, false)).toBe(1)
+    expect(pickActiveSection([-400, -50, 90, 300, 500], line, -1)).toBe(2)
+    expect(pickActiveSection([-400, -50, 101, 300, 500], line, -1)).toBe(1)
   })
 
   it('is the first section before any has reached the line', () => {
-    expect(pickActiveSection([150, 400, 700, 900, 1000], line, false)).toBe(0)
+    expect(pickActiveSection([150, 400, 700, 900, 1000], line, -1)).toBe(0)
   })
 
-  it('is the last section when the page ends in it, whatever the tops say', () => {
-    expect(pickActiveSection([-900, -600, -300, 200, 260], line, true)).toBe(4)
+  it('is the section the end of the page belongs to, whatever the tops say', () => {
+    expect(pickActiveSection([-900, -600, -300, 200, 260], line, 4)).toBe(4)
+    expect(pickActiveSection([-900, -600, 200, 300, 400], line, 2)).toBe(2)
   })
 
-  it('is still the last section to have reached the line when the page ends in a folded one', () => {
-    expect(pickActiveSection([-900, -600, -300, 200, 260], line, false)).toBe(2)
+  it('is a section that has reached the line even when it comes after the one the page ends in', () => {
+    expect(pickActiveSection([-900, -600, -300, -80, 300], line, 2)).toBe(3)
   })
 })
 
