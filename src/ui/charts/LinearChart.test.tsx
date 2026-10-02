@@ -63,6 +63,25 @@ describe('LinearChart', () => {
     expect(clip(83)).toEqual({ y: 83, height: 2 })
   })
 
+  it('is a Tab stop only when something shows where the arrow keys have moved the focus', () => {
+    const tabIndexOf = (props: Partial<Parameters<typeof LinearChart>[0]>) => {
+      const { container, unmount } = render(
+        <LinearChart {...defaultProps} series={[makeLine('s1', [10, 20, 30])]} {...props} />,
+      )
+      const svg = container.querySelector('svg')!
+      const tabIndex = svg.getAttribute('tabindex')
+      unmount()
+      return tabIndex
+    }
+
+    expect(tabIndexOf({})).toBe('0')
+    expect(tabIndexOf({ tooltipMode: 'full' })).toBe('0')
+    // A caller reading the focus (the hero chart's live legend) is the readout.
+    expect(tabIndexOf({ tooltipMode: 'hidden', onActiveIndexChange: vi.fn() })).toBe('0')
+    // Nothing reads the marker: still focusable by click, but not a stop on the way past.
+    expect(tabIndexOf({ tooltipMode: 'hidden' })).toBe('-1')
+  })
+
   it('steps the focus with the arrow keys and clears it with Escape', () => {
     const onActiveIndexChange = vi.fn()
     const { container } = render(

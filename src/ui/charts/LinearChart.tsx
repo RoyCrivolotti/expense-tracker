@@ -151,6 +151,18 @@ function tooltipShows(
   return tip != null && tooltipMode === 'full'
 }
 
+/**
+ * Arrow keys step a marker, so a chart is only worth a Tab stop when something shows where it
+ * is: a tooltip, or a caller reading the focus through onActiveIndexChange (the hero chart's
+ * legend). Without either it stays focusable by click but is not a silent stop in the Tab order.
+ */
+function tabIndexFor(
+  tooltipMode: 'full' | 'hidden',
+  onActiveIndexChange: Props['onActiveIndexChange'],
+): 0 | -1 {
+  return tooltipMode === 'full' || onActiveIndexChange !== undefined ? 0 : -1
+}
+
 export function LinearChart({
   height,
   padTop,
@@ -206,7 +218,7 @@ export function LinearChart({
         className={styles.svg}
         role="img"
         aria-label={ariaLabel}
-        tabIndex={0}
+        tabIndex={tabIndexFor(tooltipMode, onActiveIndexChange)}
         onContextMenu={(e) => e.preventDefault()}
         {...handlers}
       >
