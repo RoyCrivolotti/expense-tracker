@@ -243,6 +243,9 @@ async function captureGoalsDesktop(page) {
   await page.screenshot({ path: join(OUT, 'goals-desktop.png') })
 
   await page.getByText('What do these terms mean?').click()
+  // The glossary ends the sidebar, so what opens is under the fold: bring it up to the top of the
+  // sidebar, which scrolls on its own.
+  await page.getByText('What do these terms mean?').evaluate((el) => el.scrollIntoView({ block: 'start' }))
   await page.waitForTimeout(250)
   await page.screenshot({ path: join(OUT, 'goals-desktop-explainer.png') })
   await page.getByText('What do these terms mean?').click()
