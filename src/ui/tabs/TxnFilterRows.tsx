@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import type { Account, Category, Flag, Label, TxnType } from '../../types'
-import { ChevronIcon, CloseIcon } from '../icons'
+import { ChevronIcon, CloseIcon, FilterIcon } from '../icons'
 import { DateInput } from '../components/DateInput'
 import { LabelPickerPopover } from '../components/LabelPickerPopover'
 import { Presence } from '../components/Presence'
@@ -93,46 +93,36 @@ export function SearchRow({
   )
 }
 
-export function FilterToggleRow({
+export function FilterToggle({
   expanded,
   onToggle,
   secondaryFilterCount,
-  hasActiveFilters,
   selectMode,
-  onClearFilters,
   onLockedPress,
 }: {
   expanded: boolean
   onToggle: () => void
   secondaryFilterCount: number
-  hasActiveFilters: boolean
   selectMode: boolean
-  onClearFilters: () => void
   onLockedPress?: (() => void) | undefined
 }) {
   const active = secondaryFilterCount > 0
   return (
-    <div className={styles.filterToggleRow}>
-      <button
-        type="button"
-        className={`${styles.filterToggle}${active ? ` ${styles.filterToggleActive}` : ''}`}
-        onClick={selectMode ? onLockedPress : onToggle}
-        {...(selectMode ? { 'aria-disabled': true } : {})}
-        aria-expanded={expanded}
-      >
-        <span>{expanded ? '▾' : '▸'} Filters</span>
-        {active ? (
-          <span className={styles.filterToggleBadge} aria-label={`${secondaryFilterCount} active filters`}>
-            {secondaryFilterCount}
-          </span>
-        ) : null}
-      </button>
-      {hasActiveFilters && !selectMode ? (
-        <button type="button" className={styles.filterClear} onClick={onClearFilters}>
-          Clear filters
-        </button>
+    <button
+      type="button"
+      className={`${styles.filterToggle}${active ? ` ${styles.filterToggleActive}` : ''}`}
+      onClick={selectMode ? onLockedPress : onToggle}
+      {...(selectMode ? { 'aria-disabled': true } : {})}
+      aria-expanded={expanded}
+    >
+      <FilterIcon className={styles.filterToggleIcon} aria-hidden="true" />
+      <span>Filters</span>
+      {active ? (
+        <span className={styles.filterToggleBadge} aria-label={`${secondaryFilterCount} active filters`}>
+          {secondaryFilterCount}
+        </span>
       ) : null}
-    </div>
+    </button>
   )
 }
 

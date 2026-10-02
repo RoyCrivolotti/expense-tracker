@@ -21,6 +21,7 @@ function baseProps(overrides: Partial<TxnFiltersProps> = {}): TxnFiltersProps {
     canSelect: true,
     secondaryFilterCount: 0,
     hasActiveFilters: false,
+    summary: <span>3 items</span>,
     onClearFilters: vi.fn(),
     onQuery: vi.fn(),
     onCategory: vi.fn(),
@@ -112,7 +113,7 @@ describe('TxnFilters', () => {
     expect(screen.queryByText('Clear filters')).not.toBeInTheDocument()
   })
 
-  it('shows Clear filters next to the toggle once a filter is active, and clears on click', async () => {
+  it('shows Clear filters with the active chips once a filter is active, and clears on click', async () => {
     const user = userEvent.setup()
     const onClearFilters = vi.fn()
     render(
@@ -147,6 +148,13 @@ describe('TxnFilters', () => {
     )
     expect(screen.getByLabelText('2 active filters')).toBeInTheDocument()
     expect(screen.queryByText('Clear filters')).not.toBeInTheDocument()
+  })
+
+  it('puts the summary beside the Filters button, as the results anchor', () => {
+    render(<TxnFilters {...baseProps({ summary: <span>7 items</span> })} />)
+    const bar = document.getElementById('txn-results')!
+    expect(within(bar).getByRole('button', { name: /Filters/ })).toBeInTheDocument()
+    expect(within(bar).getByText('7 items')).toBeInTheDocument()
   })
 
   it('opens the filter sheet on toggle click', async () => {

@@ -61,14 +61,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
-  margin-bottom: 0.5rem;
-}
-
-.filterToggleRow {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
 }
 
 .filterToggle {
@@ -93,6 +85,12 @@
 .filterToggle[aria-disabled='true'] {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.filterToggleIcon {
+  width: 0.95rem;
+  height: 0.95rem;
+  flex-shrink: 0;
 }
 
 .filterToggleActive,
@@ -461,28 +459,50 @@
   }
 }
 
-.resultSummary {
-  /* The Flagged card's drill-in scrolls here. AppShell's header is sticky
-     (~3.5rem plus the safe-area inset), so without this the summary lands
-     underneath it. */
-  scroll-margin-top: calc(4rem + env(safe-area-inset-top, 0px));
+/* The Filters button and the list's totals on one line. The id is the scroll anchor
+   the Flagged card's drill-in scrolls to. */
+.resultBar {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   gap: 0.5rem;
   font-size: 0.82rem;
   color: var(--color-text-muted);
-  padding: 0.25rem;
-  margin-bottom: 0.25rem;
+  /* AppShell's header is sticky (~3.5rem plus the safe-area inset), so without
+     this the bar lands underneath it. */
+  scroll-margin-top: calc(4rem + env(safe-area-inset-top, 0px));
+}
+
+.resultBar .filterToggle {
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+}
+
+/* The chips belong to the bar above them, not to the list below. */
+.resultBar + .filterChips {
+  margin-top: -0.4rem;
 }
 
 .resultStats {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.35rem 0.75rem;
+  align-items: baseline;
+  gap: 0.75rem;
   margin-left: auto;
+  white-space: nowrap;
   text-align: right;
+}
+
+.resultAmount {
+  font-weight: 650;
+  color: var(--color-text);
+}
+
+/* Room is tight beside the Filters button on the narrowest phones; the amount's sign
+   already says what it is. */
+@media (max-width: 359px) {
+  .resultLabel {
+    display: none;
+  }
 }
 
 .filterClear {
