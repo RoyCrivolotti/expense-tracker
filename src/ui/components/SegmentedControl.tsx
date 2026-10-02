@@ -6,6 +6,11 @@ interface Option<T extends string> {
   label: string
 }
 
+interface TabsProps {
+  idPrefix: string
+  panelId: string
+}
+
 interface SegmentedControlProps<T extends string> {
   options: Option<T>[]
   value: T
@@ -19,10 +24,16 @@ interface SegmentedControlProps<T extends string> {
    * Only the bar layout has it.
    */
   size?: 'default' | 'tall'
+  /**
+   * For a control that swaps which panel of content is shown, not one that picks a value: it
+   * is announced as tabs. `idPrefix` names each tab (`<idPrefix>-<value>`, for the panel's
+   * `aria-labelledby`) and `panelId` is the panel they all control. The keyboard is the same.
+   */
+  tabs?: TabsProps
   disabled?: boolean
 }
 
-/** Where a key moves the selection in a radio group: arrows step and wrap, Home and End jump. */
+/** Where a key moves the selection in a radio group or tab list: arrows step and wrap, Home and End jump. */
 function keyTarget(key: string, index: number, count: number): number | null {
   switch (key) {
     case 'ArrowRight':
@@ -40,6 +51,17 @@ function keyTarget(key: string, index: number, count: number): number | null {
   }
 }
 
+/** What makes an option a radio, or a tab, and says whether it is the chosen one. */
+function optionAttributes(value: string, chosen: boolean, tabs: TabsProps | undefined) {
+  if (!tabs) return { role: 'radio', 'aria-checked': chosen }
+  return {
+    role: 'tab',
+    'aria-selected': chosen,
+    'aria-controls': tabs.panelId,
+    id: `${tabs.idPrefix}-${value}`,
+  }
+}
+
 /** Compact pill-style toggle for small sets of mutually exclusive options. */
 export function SegmentedControl<T extends string>({
   options,
@@ -48,6 +70,7 @@ export function SegmentedControl<T extends string>({
   ariaLabel,
   layout = 'compact',
   size = 'default',
+  tabs,
   disabled = false,
 }: SegmentedControlProps<T>) {
   const groupClass =
@@ -58,7 +81,7 @@ export function SegmentedControl<T extends string>({
         : styles.group
   const group = useRef<HTMLDivElement>(null)
   const selected = options.findIndex((o) => o.value === value)
-  // One tab stop for the whole group, on the selected radio (the first when none is): the
+  // One tab stop for the whole group, on the selected option (the first when none is): the
   // arrow keys move within it, as they do between native radio buttons.
   const stop = Math.max(selected, 0)
 
@@ -70,17 +93,22 @@ export function SegmentedControl<T extends string>({
     if (target === null || !option) return
     event.preventDefault()
     onChange(option.value)
-    group.current?.querySelectorAll<HTMLElement>('[role="radio"]')[target]?.focus()
+    group.current?.querySelectorAll<HTMLElement>('[role="radio"], [role="tab"]')[target]?.focus()
   }
 
   return (
-    <div ref={group} className={groupClass} role="radiogroup" aria-label={ariaLabel} onKeyDown={onKeyDown}>
+    <div
+      ref={group}
+      className={groupClass}
+      role={tabs ? 'tablist' : 'radiogroup'}
+      aria-label={ariaLabel}
+      onKeyDown={onKeyDown}
+    >
       {options.map((opt, i) => (
         <button
           key={opt.value}
           type="button"
-          role="radio"
-          aria-checked={opt.value === value}
+          {...optionAttributes(opt.value, opt.value === value, tabs)}
           tabIndex={i === stop ? 0 : -1}
           className={
             opt.value === value ? `${styles.seg} tapActive ${styles.active}` : `${styles.seg} tapActive`
