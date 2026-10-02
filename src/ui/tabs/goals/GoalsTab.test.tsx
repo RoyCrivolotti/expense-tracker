@@ -782,14 +782,24 @@ describe('GoalsTab', () => {
     expect(screen.queryByRole('group', { name: 'Unsaved changes', hidden: true })).not.toBeInTheDocument()
   })
 
-  it('starts the scroll target after Plan\'s intro and glossary, and straight after the switch for Progress', async () => {
+  it('leads the outputs with the projection chart on a wide screen, ahead of the snapshot and the detail charts', () => {
+    render(<GoalsTab model={makeModel()} />)
+    const before = (a: Node, b: Node) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
+    const chart = screen.getByRole('heading', { name: 'Invested portfolio projection' })
+
+    expect(before(chart, screen.getByText('Where you are today'))).toBe(true)
+    expect(before(chart, screen.getByText('Net worth composition'))).toBe(true)
+  })
+
+  it('starts the scroll target straight after the switch, ahead of everything Plan and Progress show', async () => {
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} />)
     const anchor = () => document.getElementById('goals-content-top')!
     const before = (a: Node, b: Node) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
 
-    expect(before(screen.getByText('What do these terms mean?'), anchor())).toBe(true)
-    expect(before(anchor(), screen.getByText('Where you are today'))).toBe(true)
+    expect(before(anchor(), screen.getByLabelText('Monthly investing'))).toBe(true)
+    expect(before(anchor(), screen.getByRole('heading', { name: 'Invested portfolio projection' }))).toBe(true)
+    expect(before(anchor(), screen.getByText('What do these terms mean?'))).toBe(true)
 
     await user.click(screen.getByRole('tab', { name: 'Progress' }))
     expect(screen.queryByText('What do these terms mean?')).not.toBeInTheDocument()

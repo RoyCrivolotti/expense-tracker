@@ -13,9 +13,9 @@
   min-width: 0;
 }
 
-/* Where a jump to the view's own content leaves it, past the intro Plan has. The anchor is as
-   tall as nothing, and takes back the gap it adds to the stack. From 900px up there is no view
-   row, so what is above it is the app header alone. */
+/* Where a jump to the view's own content leaves it. The anchor is as tall as nothing, and takes
+   back the gap it adds to the stack. From 900px up there is no view row, so what is above it is
+   the app header alone. */
 .contentAnchor {
   height: 0;
   margin-bottom: calc(-1 * var(--goals-gap));
@@ -231,6 +231,14 @@
 
   .areaScenarios {
     min-width: 0;
+  }
+
+  /* Last in the sidebar it is reference text, set like the help text of the controls above it
+     rather than as a lead paragraph. */
+  .areaSidebar > .intro {
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    margin: 0;
   }
 }
 
