@@ -288,7 +288,12 @@ async function captureGoalsMobile(page) {
   await page.screenshot({ path: join(OUT, 'goals-mobile-explainer.png') })
   await page.getByText('What do these terms mean?').click()
 
-  await page.getByRole('button', { name: 'Path B: House now', exact: true }).scrollIntoViewIfNeeded()
+  // Not scrollIntoViewIfNeeded: that counts anything inside the viewport as visible, even a
+  // chip the fixed tab bar covers, and on a phone this chip can sit exactly there. Centring
+  // it always scrolls, clear of the tab bar and of anything sticky at the top.
+  await page
+    .getByRole('button', { name: 'Path B: House now', exact: true })
+    .evaluate((el) => el.scrollIntoView({ block: 'center' }))
   await page.waitForTimeout(350)
   await page.screenshot({ path: join(OUT, 'goals-mobile-scenarios.png') })
 
