@@ -494,10 +494,23 @@
 }
 
 /* With the actions beside them the chips run out of room before they run out of chips, so
-   the last visible one fades out instead of being cut. */
+   the last visible one fades out instead of being cut. The strip ends with room as wide as the
+   fade, so that scrolled to its end the last chip is clear of it, and keeps a chip that takes
+   focus out of the fade, which the browser does not know is there. */
 .sectionRowActions .sectionNav {
-  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 1.25rem), transparent);
-  mask-image: linear-gradient(to right, #000 calc(100% - 1.25rem), transparent);
+  --strip-fade: 1.25rem;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--strip-fade)), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - var(--strip-fade)), transparent);
+}
+
+.sectionRowActions .sectionChips {
+  scroll-padding-inline-end: var(--strip-fade);
+}
+
+.sectionRowActions .sectionChips::after {
+  content: '';
+  flex: none;
+  width: var(--strip-fade);
 }
 
 /* Beside the chips, so no taller than they are. The rule at the left says these are not

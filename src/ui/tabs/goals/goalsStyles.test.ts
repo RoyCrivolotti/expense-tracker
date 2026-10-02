@@ -51,4 +51,13 @@ describe('goals styles', () => {
     expect(css).toContain('.sectionChips .chip::before')
     expect(css).toContain('.unsavedActions .btn::before')
   })
+
+  it('ends the chip strip with room as wide as the fade that Save and Discard bring, and keeps focus out of it', () => {
+    const all = rules('tabs/goals/goals.module.css')
+    const spacer = all.find((r) => r.selector === '.sectionRowActions .sectionChips::after')
+    const strip = all.find((r) => r.selector === '.sectionRowActions .sectionChips')
+
+    expect(spacer?.body).toMatch(/width:\s*var\(--strip-fade\)/)
+    expect(strip?.body).toMatch(/scroll-padding-inline-end:\s*var\(--strip-fade\)/)
+  })
 })
