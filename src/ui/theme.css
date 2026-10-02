@@ -58,6 +58,33 @@
   --radius-sm: 6px;
 }
 
+/*
+ * Where the page's visible area starts and ends for whatever the browser scrolls into view: a
+ * control reached with Tab or Shift+Tab, a field that takes focus, an anchor. Left alone the
+ * browser scrolls to the edge of the screen, which is behind the sticky app header at the top and
+ * the fixed bottom bar at the foot. The top is the header and a little air.
+ *
+ * The padding is also kept in --scroll-pad-top so what is stuck at the top (the header, the rail,
+ * a page's own sticky bars) can take it back out of its scroll margin, or focus on a control in it
+ * would scroll the page to uncover it. A page that pins more under the header sets larger values
+ * on the root while it is mounted (hooks/scrollPadding.ts).
+ */
+html {
+  --scroll-pad-top: calc(var(--exp-header) + var(--exp-header-air) + env(safe-area-inset-top, 0px));
+  scroll-padding-top: var(--scroll-pad-top);
+}
+
+/* Only a phone has the bottom bar: from 768px AppShell puts a rail beside the page instead. The
+   Transactions selection bar sits on top of it while rows are being picked. */
+@media (max-width: 767px) {
+  html {
+    scroll-padding-bottom: calc(
+      var(--exp-bottom-bar) + env(safe-area-inset-bottom, 0px) + var(--exp-selection-bar, 0px) +
+        0.5rem
+    );
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-exp-theme='light']) {
     /* Without this, a user whose dark mode comes from the OS preference alone

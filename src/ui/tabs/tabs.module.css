@@ -503,8 +503,13 @@
   font-size: 0.82rem;
   color: var(--color-text-muted);
   /* The Flagged card's drill-in scrolls here. AppShell's header is sticky, so without
-     this the bar lands underneath it. A few pixels of air below the header. */
-  scroll-margin-top: calc(var(--exp-header) + var(--exp-header-air) + env(safe-area-inset-top, 0px));
+     this the bar lands underneath it. A few pixels of air below the header. The browser adds
+     the page's scroll padding to this, which is as much as the header and the air alone on
+     most pages and more where a page pins the bar and the day headers, so it is taken back out. */
+  scroll-margin-top: calc(
+    var(--exp-header) + var(--exp-header-air) + env(safe-area-inset-top, 0px) -
+      var(--scroll-pad-top, 0px)
+  );
 }
 
 .resultBar .filterToggle {
