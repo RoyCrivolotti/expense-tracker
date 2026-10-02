@@ -95,16 +95,19 @@
     display: contents;
   }
 
+  /* The chart leads Chart: below the snapshot and the scenario list it would start a screen
+     and a half down. Adjust shows neither the chart nor the detail charts, so its order
+     (below) is the snapshot, the scenarios, the pinned chart, then the controls. */
   .areaNow {
-    order: 1;
-  }
-
-  .areaScenarios {
     order: 2;
   }
 
-  .areaHero {
+  .areaScenarios {
     order: 3;
+  }
+
+  .areaHero {
+    order: 1;
   }
 
   .areaSecondary {
@@ -122,7 +125,7 @@
 
   .layout[data-mobile-view='adjust'] .areaControls {
     display: block;
-    order: 4;
+    order: 5;
   }
 
   /* The draft's line pinned under the app header while the controls scroll beneath it, so
@@ -130,7 +133,7 @@
      header carries the top safe-area inset, so this has to as well. */
   .layout[data-mobile-view='adjust'] .areaMini {
     display: block;
-    order: 3;
+    order: 4;
     position: sticky;
     top: calc(
       var(--exp-header) + var(--goals-nav-h) - 2 * var(--goals-tuck) +
