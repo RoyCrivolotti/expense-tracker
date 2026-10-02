@@ -10,7 +10,9 @@ The Goals tab has three views:
 
 - **Plan** — projection lab. Configure scenarios, compare alternatives, see the hero net-worth chart with uncertainty bands and life-event markers. The hero has 5Y/10Y/20Y/All windows that cut everything drawn at the same year, and its legend rows hide or show a saved scenario's line (the same state as the chip's eye); a table under it puts the scenarios side by side as numbers.
 - **Progress** — wealth tracking. Log actual balances per account, see on/off-track status against your plan, and compare actuals to the projection over time.
-- **Assumptions** — what Progress measures with: the milestone ladder and the wealth accounts each check-in records a balance for.
+- **Assumptions** — what Progress measures with: the milestone ladder, the wealth accounts each check-in records a balance for, the cash reserve target in months of spending, and the assumed inflation every Goals view uses.
+
+Below 900px wide the switch is one row of four segments, Chart, Adjust, Progress and Assumptions, because Plan is two screens there: Chart holds the hero chart, the snapshot, the scenarios and the detail charts, and Adjust keeps the snapshot and the scenarios, and puts the controls under a pinned chart of the draft.
 
 ### The plan
 
