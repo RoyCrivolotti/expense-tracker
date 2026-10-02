@@ -72,7 +72,7 @@
 }
 
 /* Mobile: flat column via flex order. Wrappers use display:contents.
-   Controls are hidden by default — the Chart/Adjust segments (data-mobile-view
+   Controls are hidden by default; the Chart/Adjust segments (data-mobile-view
    on .layout) swap them in for the hero + secondary charts. */
 @media (max-width: 899px) {
   .heroBlock {

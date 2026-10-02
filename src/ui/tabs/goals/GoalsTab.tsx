@@ -532,7 +532,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
             />
           </div>
           {mobilePlanView === 'adjust' ? (
-            // Phone only: the toggle is hidden on desktop, so this never mounts there.
+            // Phone only: only the phone's row offers Adjust.
             <div className={styles.areaMini}>
               <NetWorthMiniChart draft={deferredDraft} />
             </div>

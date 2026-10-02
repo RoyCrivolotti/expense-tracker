@@ -30,7 +30,7 @@ beforeAll(() => {
 })
 
 /** Phone width: one row of four views, where wide screens have the three-way switch. */
-function usePhone() {
+function mockPhoneWidth() {
   vi.mocked(window.matchMedia).mockImplementation(mockMatchMedia(true))
 }
 
@@ -548,11 +548,11 @@ describe('GoalsTab', () => {
   })
 
   it('has one row of four views on a phone, opening on Chart', () => {
-    usePhone()
+    mockPhoneWidth()
     const { container } = render(<GoalsTab model={makeModel()} />)
 
     const row = screen.getByRole('radiogroup', { name: 'Goals view' })
-    expect(within(row).getAllByRole('radio').map((r) => r.getAttribute('aria-label') ?? r.textContent)).toEqual([
+    expect(within(row).getAllByRole('radio').map((r) => r.textContent)).toEqual([
       'Chart',
       'Adjust',
       'Progress',
@@ -564,7 +564,7 @@ describe('GoalsTab', () => {
   })
 
   it('switches to the Adjust panel from the phone row', async () => {
-    usePhone()
+    mockPhoneWidth()
     const user = userEvent.setup()
     const { container } = render(<GoalsTab model={makeModel()} />)
 
@@ -576,7 +576,7 @@ describe('GoalsTab', () => {
   })
 
   it('reaches Progress and Setup from the phone row, and comes back to the half of Plan it left', async () => {
-    usePhone()
+    mockPhoneWidth()
     const user = userEvent.setup()
     const { container } = render(<GoalsTab model={makeModel()} />)
 
@@ -595,7 +595,7 @@ describe('GoalsTab', () => {
   })
 
   it('keeps the inflation preview while moving between Chart and Adjust, as the old toggle did', async () => {
-    usePhone()
+    mockPhoneWidth()
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} actions={makeActions()} />)
     await user.click(screen.getByRole('radio', { name: 'Nominal' }))
@@ -622,7 +622,7 @@ describe('GoalsTab', () => {
   })
 
   it('pins a compact chart of the draft above the controls in the Adjust panel only', async () => {
-    usePhone()
+    mockPhoneWidth()
     const user = userEvent.setup()
     const { container } = render(<GoalsTab model={makeModel()} />)
     // The block is display:none outside the phone breakpoint, which jsdom cannot match, so
