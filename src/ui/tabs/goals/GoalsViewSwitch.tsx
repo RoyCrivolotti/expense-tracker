@@ -7,7 +7,7 @@ import styles from './goals.module.css'
 const VIEW_OPTIONS: { value: TabView; label: string }[] = [
   { value: 'plan', label: 'Plan' },
   { value: 'progress', label: 'Progress' },
-  { value: 'setup', label: 'Assumptions' },
+  { value: 'assumptions', label: 'Assumptions' },
 ]
 
 interface GoalsViewSwitchProps {

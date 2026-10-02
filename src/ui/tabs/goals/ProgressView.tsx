@@ -26,7 +26,7 @@ interface Props {
   actions: ExpenseActions | undefined
   canWrite: boolean
   /** Takes the user to the Assumptions view, where accounts are named. */
-  onOpenSetup?: (() => void) | undefined
+  onOpenAssumptions?: (() => void) | undefined
   /** Start with the check-in form open, as the dashboard's nudge asks. */
   openCheckinForm?: boolean
   /** The emergency-fund target from Assumptions; 0 means none. */
@@ -50,7 +50,7 @@ export function ProgressView({
   fromToday,
   actions,
   canWrite,
-  onOpenSetup,
+  onOpenAssumptions,
   openCheckinForm = false,
   cashReserveMonths = 0,
   openBudgetMonth,
@@ -90,7 +90,7 @@ export function ProgressView({
       />
 
       {canWrite && actions && !hasAccounts ? (
-        <EmptyState actionLabel="Set up accounts" onAction={onOpenSetup}>
+        <EmptyState actionLabel="Set up accounts" onAction={onOpenAssumptions}>
           Name the accounts you track before logging a check-in.
         </EmptyState>
       ) : null}

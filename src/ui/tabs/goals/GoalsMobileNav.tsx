@@ -9,7 +9,7 @@ const OPTIONS: { value: GoalsMobileView; label: string }[] = [
   { value: 'chart', label: 'Chart' },
   { value: 'adjust', label: 'Adjust' },
   { value: 'progress', label: 'Progress' },
-  { value: 'setup', label: 'Assumptions' },
+  { value: 'assumptions', label: 'Assumptions' },
 ]
 
 interface GoalsMobileNavProps {

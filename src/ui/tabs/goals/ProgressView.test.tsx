@@ -13,7 +13,7 @@ beforeAll(() => {
 
 describe('ProgressView', () => {
   it('sends the user to Assumptions when there is no account to log against', () => {
-    const onOpenSetup = vi.fn()
+    const onOpenAssumptions = vi.fn()
     render(
       <ProgressView
         accounts={[makeWealthAccount({ id: 1, archived: true })]}
@@ -23,13 +23,13 @@ describe('ProgressView', () => {
         plan={null}
         actions={makeActions()}
         canWrite
-        onOpenSetup={onOpenSetup}
+        onOpenAssumptions={onOpenAssumptions}
       />,
     )
 
     expect(screen.queryByRole('button', { name: '+ Log check-in' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Set up accounts' }))
-    expect(onOpenSetup).toHaveBeenCalled()
+    expect(onOpenAssumptions).toHaveBeenCalled()
   })
 
   it('offers to log a check-in once an account exists, and keeps setup elsewhere', () => {
