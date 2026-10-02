@@ -2,10 +2,8 @@ import { useRef } from 'react'
 import { SegmentedControl } from '../../components/SegmentedControl'
 import { landOnAdjustControls } from './scrollToAdjustSection'
 import { scrollToGoalsContent } from './scrollToGoalsContent'
+import type { GoalsMobileView } from './goalsView'
 import styles from './goals.module.css'
-
-/** The phone's four Goals views: Plan is split in two there, so it has no segment of its own. */
-export type GoalsMobileView = 'chart' | 'adjust' | 'progress' | 'setup'
 
 const OPTIONS: { value: GoalsMobileView; label: string }[] = [
   { value: 'chart', label: 'Chart' },
