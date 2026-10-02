@@ -18,6 +18,8 @@ function renderFields(
   } = {},
 ) {
   const onFlag = vi.fn()
+  const onStatus = vi.fn()
+  const onTxnType = vi.fn()
   const { flags = [work], flagId = 'all' as const, labels = [], selectMode = false } = overrides
   const view = render(
     <FilterFields
@@ -34,13 +36,13 @@ function renderFields(
       selectMode={selectMode}
       onCategory={vi.fn()}
       onAccount={vi.fn()}
-      onTxnType={vi.fn()}
-      onStatus={vi.fn()}
+      onTxnType={onTxnType}
+      onStatus={onStatus}
       onFlag={onFlag}
       onLabelIds={vi.fn()}
     />,
   )
-  return { onFlag, container: view.container }
+  return { onFlag, onStatus, onTxnType, container: view.container }
 }
 
 describe('FilterFields flag select', () => {
@@ -111,6 +113,16 @@ describe('filter selects keep their meaning without the "All" prefix', () => {
     renderFields()
     expect(screen.getByRole('combobox', { name: 'Filter by category' })).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Filter by account' })).toBeInTheDocument()
+  })
+
+  it('reports a chosen status and a chosen type', async () => {
+    const { onStatus, onTxnType } = renderFields()
+
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Filter by status' }), 'posted')
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Filter by type' }), 'refund')
+
+    expect(onStatus).toHaveBeenCalledWith('posted')
+    expect(onTxnType).toHaveBeenCalledWith('refund')
   })
 
   it('shows the one-word default when nothing is chosen', () => {
