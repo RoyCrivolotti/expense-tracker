@@ -18,8 +18,9 @@ export interface UnsavedActions {
 /** Under the line by this much, a section counts as the one being read. */
 const READING_MARGIN_PX = 12
 
-/** How the viewer got to scrolling: a touch, the wheel or a key, rather than a chip's jump. */
-const USER_SCROLL_EVENTS = ['touchstart', 'wheel', 'keydown'] as const
+/** How the viewer got to scrolling: a touch, the wheel, a key or a press (a scrollbar drag
+ *  makes no other event), rather than a chip's jump. */
+const USER_SCROLL_EVENTS = ['touchstart', 'wheel', 'keydown', 'pointerdown'] as const
 
 /**
  * Jump links to the Adjust sections, pinned with the draft's chart so a slider two sections
@@ -41,11 +42,11 @@ export function AdjustSectionNav({ unsaved }: { unsaved?: UnsavedActions | undef
     if (!narrow) return
     const update = () => {
       if (pinned.current) return
-      const tops = ADJUST_SECTIONS.map(
-        (s) => document.getElementById(adjustSectionId(s.key))?.getBoundingClientRect().top ?? Infinity,
-      )
+      const sections = ADJUST_SECTIONS.map((s) => document.getElementById(adjustSectionId(s.key)))
+      const tops = sections.map((el) => el?.getBoundingClientRect().top ?? Infinity)
       const atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2
-      const next = ADJUST_SECTIONS[pickActiveSection(tops, stackBottom() + READING_MARGIN_PX, atBottom)]
+      const endsIn = atBottom ? sections.map((el) => el instanceof HTMLDetailsElement && el.open).lastIndexOf(true) : -1
+      const next = ADJUST_SECTIONS[pickActiveSection(tops, stackBottom() + READING_MARGIN_PX, endsIn)]
       if (next) setActive(next.key)
     }
     const release = () => {

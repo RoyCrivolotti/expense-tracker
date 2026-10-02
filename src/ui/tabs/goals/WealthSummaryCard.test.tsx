@@ -25,7 +25,7 @@ describe('WealthSummaryCard', () => {
 
   it('points to Assumptions when there is no account yet', () => {
     render(<WealthSummaryCard checkins={[]} accounts={[]} plan={null} />)
-    expect(screen.getByText(/under Assumptions/)).toBeInTheDocument()
+    expect(screen.getByText(/Set up accounts in Assumptions/)).toBeInTheDocument()
     expect(screen.queryByText(/log your first wealth check-in/i)).not.toBeInTheDocument()
   })
 

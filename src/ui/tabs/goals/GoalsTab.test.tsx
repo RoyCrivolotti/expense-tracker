@@ -156,20 +156,23 @@ describe('GoalsTab', () => {
     expect(screen.getByText('Wealth accounts')).toBeInTheDocument()
   })
 
-  it('brings the content of Assumptions into view when the empty Progress view sends the user there from far down', async () => {
+  it('lands on the accounts in Assumptions when the empty Progress view sends the user to set them up, and only then', async () => {
     const user = userEvent.setup()
     const scrollIntoView = vi.fn()
     Element.prototype.scrollIntoView = scrollIntoView
     render(<GoalsTab model={makeModel()} actions={makeActions()} />)
     await user.click(screen.getByRole('radio', { name: 'Progress' }))
-    // Scrolled well past where the content starts: jsdom lays nothing out, so say so.
-    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({ top: -600 } as DOMRect)
 
     await user.click(screen.getByRole('button', { name: 'Set up accounts' }))
 
-    await vi.waitFor(() =>
-      expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ block: 'start' })),
-    )
+    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start' })
+    expect(scrollIntoView.mock.contexts[0]).toContainElement(screen.getByText('Wealth accounts'))
+
+    // Coming back to Assumptions by the switcher is not a request to scroll to it.
+    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('radio', { name: 'Assumptions' }))
+    expect(scrollIntoView).toHaveBeenCalledTimes(1)
   })
 
   it('shows Plan view content when Plan tab is active', () => {
@@ -850,6 +853,110 @@ describe('GoalsTab', () => {
     await user.click(screen.getByRole('radio', { name: 'Plan' }))
     await user.click(screen.getByRole('radio', { name: 'Assumptions' }))
     expect(scrollIntoView).toHaveBeenCalledTimes(1)
+  })
+
+  describe('coming back to a view', () => {
+    let scrollY: MockInstance
+    let scrollTo: MockInstance
+    beforeEach(() => {
+      mockPhoneWidth()
+      scrollY = vi.spyOn(window, 'scrollY', 'get').mockReturnValue(0)
+      scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+      // The spy is the setup file's, so it still holds the last test's calls.
+      scrollTo.mockClear()
+      vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+        cb(0)
+        return 0
+      })
+    })
+    afterEach(() => {
+      scrollY.mockRestore()
+      scrollTo.mockRestore()
+      vi.unstubAllGlobals()
+    })
+
+    it('goes back to where the chart was when a link, not the row, took the viewer away', async () => {
+      const user = userEvent.setup()
+      render(<GoalsTab model={makeModel()} actions={makeActions()} />)
+      scrollY.mockReturnValue(700)
+      await user.click(screen.getByRole('radio', { name: 'Progress' }))
+      await user.click(screen.getByRole('radio', { name: 'Chart' }))
+      expect(scrollTo).toHaveBeenLastCalledWith({ top: 700, behavior: 'auto' })
+
+      await user.click(screen.getByRole('radio', { name: 'Nominal' }))
+      scrollY.mockReturnValue(1360)
+      await user.click(screen.getByRole('button', { name: 'Open Assumptions' }))
+      scrollY.mockReturnValue(40)
+      await user.click(screen.getByRole('radio', { name: 'Chart' }))
+
+      expect(scrollTo).toHaveBeenLastCalledWith({ top: 1360, behavior: 'auto' })
+    })
+
+    it('keeps a place for each half of Plan, though moving between them is not a change of view', async () => {
+      const user = userEvent.setup()
+      render(<GoalsTab model={makeModel()} actions={makeActions()} />)
+      scrollY.mockReturnValue(300)
+      await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+      scrollY.mockReturnValue(2000)
+      await user.click(screen.getByRole('radio', { name: 'Chart' }))
+      expect(scrollTo).toHaveBeenLastCalledWith({ top: 300, behavior: 'auto' })
+
+      scrollY.mockReturnValue(300)
+      await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+
+      expect(scrollTo).toHaveBeenLastCalledWith({ top: 2000, behavior: 'auto' })
+    })
+
+    it('opens the Adjust sections that were showing before it scrolls back, as Plan unmounts them', async () => {
+      const user = userEvent.setup()
+      render(<GoalsTab model={makeModel()} actions={makeActions()} />)
+      await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+      const events = document.getElementById('goals-adjust-events')
+      if (!(events instanceof HTMLDetailsElement)) throw new Error('no events section')
+      events.open = true
+      scrollY.mockReturnValue(2125)
+      await user.click(screen.getByRole('radio', { name: 'Progress' }))
+      let openWhenScrolled: boolean | null = null
+      scrollTo.mockImplementation(() => {
+        const back = document.getElementById('goals-adjust-events')
+        openWhenScrolled = back instanceof HTMLDetailsElement ? back.open : null
+      })
+      // The frame comes after the controls have been rendered again, as in a browser.
+      const frames: FrameRequestCallback[] = []
+      vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => frames.push(cb))
+
+      await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+      frames.forEach((cb) => cb(0))
+
+      expect(scrollTo).toHaveBeenLastCalledWith({ top: 2125, behavior: 'auto' })
+      expect(openWhenScrolled).toBe(true)
+    })
+
+    it('goes back to where Progress was when its own link took the viewer to Assumptions', async () => {
+      const user = userEvent.setup()
+      render(<GoalsTab model={makeModel()} actions={makeActions()} />)
+      await user.click(screen.getByRole('radio', { name: 'Progress' }))
+      scrollY.mockReturnValue(900)
+      await user.click(screen.getByRole('button', { name: 'Set up accounts' }))
+      scrollY.mockReturnValue(40)
+      await user.click(screen.getByRole('radio', { name: 'Progress' }))
+
+      expect(scrollTo).toHaveBeenLastCalledWith({ top: 900, behavior: 'auto' })
+    })
+
+    it('forgets where views were left once the window has been widened and narrowed again', async () => {
+      const user = userEvent.setup()
+      render(<GoalsTab model={makeModel()} actions={makeActions()} />)
+      scrollY.mockReturnValue(700)
+      await user.click(screen.getByRole('radio', { name: 'Progress' }))
+      scrollTo.mockClear()
+
+      act(() => media.change(NARROW_MQ, false))
+      act(() => media.change(NARROW_MQ, true))
+      await user.click(screen.getByRole('radio', { name: 'Chart' }))
+
+      expect(scrollTo).not.toHaveBeenCalled()
+    })
   })
 
   it('saves the assumed inflation as a setting when it is changed in Assumptions', async () => {

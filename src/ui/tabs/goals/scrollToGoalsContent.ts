@@ -1,4 +1,5 @@
 import { prefersReducedMotion } from '../../hooks/prefersReducedMotion'
+import { showAdjustSections, type AdjustSection } from './adjustSections'
 
 /** Where a Goals view's own content starts: past the intro and glossary, which only Plan has. */
 export const GOALS_CONTENT_ANCHOR_ID = 'goals-content-top'
@@ -16,20 +17,11 @@ function afterRender(run: () => void): void {
  * above its content and Progress and Assumptions do not, so the target moves with the view that
  * was opened. `smooth` is for a tap on the view already open, where nothing else changes on
  * screen; opening another view jumps, since its content has just been swapped in.
- *
- * `ifPast` leaves the page where it is unless the content already starts above the place it
- * would be put, as it does for a link followed from far down another view; from the top of the
- * page, scrolling would only push the intro away.
  */
-export function scrollToGoalsContent(
-  behavior: 'auto' | 'smooth',
-  options: { ifPast?: boolean } = {},
-): void {
+export function scrollToGoalsContent(behavior: 'auto' | 'smooth'): void {
   afterRender(() => {
     const anchor = document.getElementById(GOALS_CONTENT_ANCHOR_ID)
     if (!anchor) return
-    const marginTop = Number.parseFloat(getComputedStyle(anchor).scrollMarginTop) || 0
-    if (options.ifPast && anchor.getBoundingClientRect().top >= marginTop) return
     // Not every environment has scrollIntoView (jsdom does not).
     anchor.scrollIntoView?.({
       behavior: prefersReducedMotion() ? 'auto' : behavior,
@@ -38,7 +30,14 @@ export function scrollToGoalsContent(
   })
 }
 
-/** Put the page back where it was, once the view it was left on has been rendered again. */
-export function restoreScrollPosition(top: number): void {
-  afterRender(() => window.scrollTo({ top, behavior: 'auto' }))
+/**
+ * Put the page back where it was, once the view it was left on has been rendered again.
+ * Adjust's sections fold themselves when its controls are unmounted, and an offset only means
+ * something on the page it was taken from, so `open` brings back the ones that were showing.
+ */
+export function restoreScrollPosition(top: number, open: readonly AdjustSection[] | null = null): void {
+  afterRender(() => {
+    if (open) showAdjustSections(open)
+    window.scrollTo({ top, behavior: 'auto' })
+  })
 }

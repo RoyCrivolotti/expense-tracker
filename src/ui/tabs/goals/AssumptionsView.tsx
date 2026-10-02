@@ -1,9 +1,11 @@
+import { useEffect, useRef } from 'react'
 import type { ExpenseSettings, WealthAccount, WealthCheckin } from '../../../types'
 import type { ExpenseActions } from '../../actions'
 import { MilestonesSetting } from '../../settings/MilestonesSetting'
 import { CashReserveSetting } from '../../settings/CashReserveSetting'
 import { InflationSetting } from '../../settings/InflationSetting'
 import { WealthAccountsManager } from './WealthAccountsManager'
+import type { AssumptionsFocus } from './goalsView'
 import styles from './progress.module.css'
 import goalStyles from './goals.module.css'
 
@@ -13,8 +15,8 @@ interface Props {
   settings: ExpenseSettings
   actions: ExpenseActions | undefined
   onSettingsChange: ((patch: Partial<ExpenseSettings>) => void | Promise<void>) | undefined
-  /** Bring the assumed inflation into view, for the link that opens Assumptions on it. */
-  focusInflation?: boolean
+  /** Bring a card into view, for the link that opens Assumptions on it. */
+  focus?: AssumptionsFocus | null
 }
 
 /**
@@ -28,8 +30,14 @@ export function AssumptionsView({
   settings,
   actions,
   onSettingsChange,
-  focusInflation = false,
+  focus = null,
 }: Props) {
+  const accountsCard = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    // Not every environment has it (jsdom does not).
+    if (focus === 'accounts') accountsCard.current?.scrollIntoView?.({ block: 'start' })
+  }, [focus])
+
   if (!actions || !onSettingsChange) {
     return <p className={goalStyles.chartHint}>Read-only session — assumptions cannot be changed.</p>
   }
@@ -43,9 +51,11 @@ export function AssumptionsView({
         house and the mortgage back to today&apos;s money.
       </p>
       <MilestonesSetting settings={settings} onChange={onSettingsChange} />
-      <WealthAccountsManager accounts={accounts} checkins={checkins} actions={actions} />
+      <div ref={accountsCard} className={styles.landingTarget}>
+        <WealthAccountsManager accounts={accounts} checkins={checkins} actions={actions} />
+      </div>
       <CashReserveSetting settings={settings} onChange={onSettingsChange} />
-      <InflationSetting settings={settings} onChange={onSettingsChange} scrollIntoView={focusInflation} />
+      <InflationSetting settings={settings} onChange={onSettingsChange} scrollIntoView={focus === 'inflation'} />
     </div>
   )
 }

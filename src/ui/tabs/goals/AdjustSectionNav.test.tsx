@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AdjustSectionNav } from './AdjustSectionNav'
-import { ADJUST_SECTIONS, adjustSectionId } from './adjustSections'
+import { ADJUST_SECTIONS, adjustSectionId, type AdjustSection } from './adjustSections'
 import { ADJUST_STACK_ID } from './scrollToAdjustSection'
 import { NARROW_MQ } from './useGoalsNarrow'
 
@@ -54,6 +54,12 @@ afterEach(() => {
 
 const current = () => screen.getByRole('button', { current: true }).textContent
 
+function sectionElement(key: AdjustSection): HTMLDetailsElement {
+  const el = document.getElementById(adjustSectionId(key))
+  if (!(el instanceof HTMLDetailsElement)) throw new Error(`no ${key} section`)
+  return el
+}
+
 describe('AdjustSectionNav', () => {
   it('offers a chip per section on a phone, and nothing on a wide screen', () => {
     const { unmount } = render(<AdjustSectionNav />)
@@ -80,11 +86,48 @@ describe('AdjustSectionNav', () => {
     expect(current()).toBe('FIRE')
   })
 
-  it('marks the last chip at the bottom of the page, where its section never reaches the top', () => {
-    Object.defineProperty(document.documentElement, 'scrollHeight', { configurable: true, value: 100 })
-    render(<AdjustSectionNav />)
+  describe('at the bottom of the page', () => {
+    // FIRE has reached the top and the last two sections have not, as on a short phone.
+    beforeEach(() => {
+      placeSections({ portfolio: -900, housing: -500, fire: -50, tracking: 300, events: 400 })
+      Object.defineProperty(document.documentElement, 'scrollHeight', { configurable: true, value: 100 })
+    })
 
-    expect(current()).toBe('Events')
+    it('marks the last chip when its controls are shown, since its section never reaches the top', () => {
+      sectionElement('events').open = true
+      render(<AdjustSectionNav />)
+
+      expect(current()).toBe('Events')
+    })
+
+    it('keeps the section being read marked while the last one is folded to a row', () => {
+      render(<AdjustSectionNav />)
+
+      expect(current()).toBe('FIRE')
+    })
+
+    it('marks the last section with its controls shown, when the ones after it are folded', () => {
+      // A tall phone: the end of the page is FIRE's controls and two folded rows, and FIRE's
+      // heading never gets up to the line.
+      placeSections({ portfolio: -700, housing: -300, fire: 400, tracking: 700, events: 750 })
+      sectionElement('fire').open = true
+      render(<AdjustSectionNav />)
+      expect(current()).toBe('FIRE')
+
+      sectionElement('tracking').open = true
+      scrollPage()
+      expect(current()).toBe('Tracking')
+    })
+
+    it('moves to the last chip once its controls are opened', () => {
+      render(<AdjustSectionNav />)
+      expect(current()).toBe('FIRE')
+
+      sectionElement('events').open = true
+      scrollPage()
+
+      expect(current()).toBe('Events')
+    })
   })
 
   it('scrolls to a tapped section and keeps its chip marked until the viewer scrolls themselves', async () => {
@@ -102,6 +145,18 @@ describe('AdjustSectionNav', () => {
 
     fireEvent.touchStart(window)
     scrollPage()
+    expect(current()).toBe('FIRE')
+  })
+
+  it('lets go of a tapped chip when the viewer presses the page, as a scrollbar drag does', async () => {
+    const user = userEvent.setup()
+    render(<AdjustSectionNav />)
+    await user.click(screen.getByRole('button', { name: 'Events' }))
+    placeSections({ portfolio: -900, housing: -500, fire: -50, tracking: 300, events: 400 })
+
+    fireEvent.pointerDown(window)
+    scrollPage()
+
     expect(current()).toBe('FIRE')
   })
 

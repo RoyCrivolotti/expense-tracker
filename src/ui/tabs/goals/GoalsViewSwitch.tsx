@@ -1,6 +1,7 @@
 import { SegmentedControl } from '../../components/SegmentedControl'
 import { GoalsMobileNav } from './GoalsMobileNav'
 import { mobileSelection, mobileViewOf, type GoalsMobileView, type MobilePlanView, type TabView } from './goalsView'
+import type { GoalsScrollMemory } from './useGoalsScrollMemory'
 import { useGoalsNarrow } from './useGoalsNarrow'
 import styles from './goals.module.css'
 
@@ -15,6 +16,8 @@ interface GoalsViewSwitchProps {
   onViewChange: (next: TabView) => void
   planHalf: MobilePlanView
   onPlanHalfChange: (next: MobilePlanView) => void
+  /** Where the phone's views were left; the wide switch has no use for it. */
+  memory: GoalsScrollMemory
 }
 
 /** Plan / Progress / Assumptions, or on a phone the row of Chart / Adjust / Progress / Assumptions. */
@@ -23,6 +26,7 @@ export function GoalsViewSwitch({
   onViewChange,
   planHalf,
   onPlanHalfChange,
+  memory,
 }: GoalsViewSwitchProps) {
   const narrow = useGoalsNarrow()
   if (!narrow) {
@@ -44,5 +48,5 @@ export function GoalsViewSwitch({
     if (change.half) onPlanHalfChange(change.half)
     if (change.view) onViewChange(change.view)
   }
-  return <GoalsMobileNav value={mobileViewOf(view, planHalf)} onChange={onMobileChange} />
+  return <GoalsMobileNav value={mobileViewOf(view, planHalf)} onChange={onMobileChange} memory={memory} />
 }

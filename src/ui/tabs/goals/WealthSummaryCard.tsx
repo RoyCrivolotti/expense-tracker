@@ -302,7 +302,7 @@ export function WealthSummaryCard({
         <p className={styles.emptyHint}>
           {hasAccounts
             ? 'Log your first wealth check-in below to see where you stand against your plan.'
-            : 'Name the accounts you track under Assumptions, then log a check-in to see where you stand against your plan.'}
+            : 'Set up accounts in Assumptions, then log a check-in to see where you stand against your plan.'}
         </p>
       </Card>
     )

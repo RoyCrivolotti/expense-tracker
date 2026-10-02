@@ -14,16 +14,34 @@ export function adjustSectionId(key: AdjustSection): string {
   return `goals-adjust-${key}`
 }
 
+function sectionElement(key: AdjustSection): HTMLDetailsElement | null {
+  const el = document.getElementById(adjustSectionId(key))
+  return el instanceof HTMLDetailsElement ? el : null
+}
+
+/** The sections whose controls are shown on the page now, in the order they are shown. */
+export function openAdjustSections(): AdjustSection[] {
+  return ADJUST_SECTIONS.filter((s) => sectionElement(s.key)?.open).map((s) => s.key)
+}
+
+/** Show these sections' controls and fold the others. */
+export function showAdjustSections(open: readonly AdjustSection[]): void {
+  for (const s of ADJUST_SECTIONS) {
+    const el = sectionElement(s.key)
+    if (el) el.open = open.includes(s.key)
+  }
+}
+
 /**
  * The section the viewer is in: the last whose top has reached the line under the pinned
- * stack. Sections too short to ever reach that line, at the end of the page, would never be
- * the answer, so the bottom of the page names the last one.
+ * stack. The sections at the end of the page may be too short, or folded to a row, to ever
+ * reach that line, so scrolled to the end the answer is at least `endsIn`, the last section
+ * whose controls are shown (-1 when not at the end, or when none is shown).
  */
-export function pickActiveSection(tops: readonly number[], line: number, atBottom: boolean): number {
-  if (atBottom) return tops.length - 1
-  let active = 0
+export function pickActiveSection(tops: readonly number[], line: number, endsIn: number): number {
+  let active = Math.max(endsIn, 0)
   tops.forEach((top, i) => {
-    if (top <= line) active = i
+    if (top <= line && i > active) active = i
   })
   return active
 }
