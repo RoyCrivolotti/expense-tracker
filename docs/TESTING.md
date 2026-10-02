@@ -8,7 +8,7 @@ Stack: **Vitest** + **React Testing Library** (hooks) + in-memory D1 (Pages Func
 npm test              # all unit + integration tests
 npm run test:coverage # same, plus a coverage report + global threshold check
 npm run coverage:diff -- --base <sha>  # % of THIS diff's changed lines that are covered
-npm run verify         # symlinks, lint, typecheck, test:coverage, build
+npm run verify         # symlinks, migration docs, PII check, lint, typecheck, test:coverage, build, bundle budget
 PARITY_TESTS=1 npm test   # optional workbook parity (private CSV)
 ```
 
