@@ -35,4 +35,13 @@ describe('goals styles', () => {
 
     expect(forced).toMatch(new RegExp(`\\${selector}\\s*\\{[^}]*border:\\s*2px solid Highlight`))
   })
+
+  it('lets a segment of the tall bar reach across the bar, which its own overflow would clip', () => {
+    const tall = rules('components/SegmentedControl.module.css')
+    const segment = tall.find((r) => r.selector === '.tall .seg')
+    const reach = tall.find((r) => r.selector === '.tall .seg::before')
+
+    expect(segment?.body).not.toMatch(/overflow(-[xy])?:\s*(hidden|clip|auto|scroll)/)
+    expect(reach?.body).toMatch(/position:\s*absolute/)
+  })
 })

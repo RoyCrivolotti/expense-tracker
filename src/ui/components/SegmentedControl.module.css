@@ -47,11 +47,13 @@
 }
 
 .groupBar {
+  /* The room around the segments and between them; the tall bar's hit areas reach across it. */
+  --bar-inset: 0.2rem;
   display: flex;
   width: 100%;
-  gap: 0.2rem;
+  gap: var(--bar-inset);
   border-radius: var(--radius-md, 8px);
-  padding: 0.2rem;
+  padding: var(--bar-inset);
 }
 
 .groupBar .seg {
@@ -64,9 +66,9 @@
   line-height: 1.2;
 }
 
-/* Fills the height of whatever holds it. The segments stretch with it, so the whole bar is
-   a tap target, and a label that does not fit is cut rather than wrapped onto a second line
-   that would make the bar outgrow its box. */
+/* Fills the height of whatever holds it. The segments stretch with it, and reach out to the
+   edges of the bar and across the gaps between them (see ::before below), so the whole bar is a
+   tap target. A label stays on one line, which the font size below keeps inside its segment. */
 .tall {
   align-self: stretch;
   box-sizing: border-box;
@@ -84,9 +86,27 @@
   align-items: center;
   justify-content: center;
   padding-inline: 0.25rem;
-  overflow: hidden;
   white-space: nowrap;
   font-size: min(0.78rem, 4.5cqi);
+  position: relative;
+}
+
+/* Unpainted, so the bar looks as it did, but a tap on it is a tap on the segment: the bar's
+   padding and its 1px border at the top and bottom, and half a gap on each side, or all of the
+   padding and border at the bar's ends. Without it the segments are 35.6px high in a 44px bar
+   and a thumb that lands between them hits nothing. */
+.tall .seg::before {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--bar-inset) - 1px) calc(-0.5 * var(--bar-inset));
+}
+
+.tall .seg:first-child::before {
+  inset-inline-start: calc(-1 * var(--bar-inset) - 1px);
+}
+
+.tall .seg:last-child::before {
+  inset-inline-end: calc(-1 * var(--bar-inset) - 1px);
 }
 
 .groupScroll {
