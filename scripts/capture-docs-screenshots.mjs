@@ -270,6 +270,15 @@ async function captureGoalsProgressAndAssumptions(page, suffix, fullPage) {
   await page.screenshot({ path: join(OUT, `goals-${suffix}-assumptions.png`), fullPage })
 }
 
+/** The phone's Adjust view as it first opens: the pinned chart and chips, and the first section under them. */
+async function captureGoalsAdjust(page) {
+  await page.getByRole('tab', { name: 'Adjust', exact: true }).click()
+  await page.waitForSelector('#goals-adjust-stack', { timeout: 15000 })
+  // Opening Adjust scrolls to its first section on the next frame.
+  await page.waitForTimeout(500)
+  await page.screenshot({ path: join(OUT, 'goals-mobile-adjust.png') })
+}
+
 const GOALS_MOBILE_VIEWS = [
   { label: 'Composition', file: 'composition' },
   { label: 'Milestones', file: 'milestones' },
@@ -284,6 +293,9 @@ async function captureGoalsMobile(page) {
   await page.screenshot({ path: join(OUT, 'goals-mobile.png') })
 
   await page.getByText('What do these terms mean?').click()
+  // On a phone the glossary is below the charts and controls, so what opens is under the fold:
+  // bring it up under the view row.
+  await page.getByText('What do these terms mean?').evaluate((el) => el.scrollIntoView({ block: 'start' }))
   await page.waitForTimeout(250)
   await page.screenshot({ path: join(OUT, 'goals-mobile-explainer.png') })
   await page.getByText('What do these terms mean?').click()
@@ -299,12 +311,17 @@ async function captureGoalsMobile(page) {
 
   for (const view of GOALS_MOBILE_VIEWS) {
     await page.getByRole('radio', { name: view.label }).click()
+    // The picker is below the scenarios on a phone: bring it, and the chart under it, up.
+    await page
+      .getByRole('radiogroup', { name: 'Secondary chart view' })
+      .evaluate((el) => el.scrollIntoView({ block: 'start' }))
     await page.waitForTimeout(450)
     await page.screenshot({ path: join(OUT, `goals-mobile-${view.file}.png`) })
   }
 
   await page.evaluate(() => window.scrollTo(0, 0))
   await captureGoalsProgressAndAssumptions(page, 'mobile', false)
+  await captureGoalsAdjust(page)
 }
 
 async function capture() {

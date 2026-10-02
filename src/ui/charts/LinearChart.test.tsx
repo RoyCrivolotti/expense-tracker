@@ -1,5 +1,6 @@
-import { fireEvent, render } from '@testing-library/react'
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import chartStyles from './charts.module.css'
 import { LinearChart, type ChartSeries } from './LinearChart'
 import { nearestIndex } from './useChartFocus'
 
@@ -61,6 +62,73 @@ describe('LinearChart', () => {
     expect(clip(-6)).toEqual({ y: 0, height: 85 })
     expect(clip(0)).toEqual({ y: 0, height: 85 })
     expect(clip(83)).toEqual({ y: 83, height: 2 })
+  })
+
+  describe('with the room above the plot that was asked for', () => {
+    // 28px of x-axis labels sit under the plot, so on a 112px chart it ends at 84.
+    const HEIGHT = 112
+    const PLOT_BOTTOM = 84
+
+    afterEach(() => {
+      Reflect.deleteProperty(document.documentElement, 'clientHeight')
+      Reflect.deleteProperty(document.documentElement, 'clientWidth')
+    })
+
+    function renderChart(padTop?: number) {
+      const props = padTop === undefined ? {} : { padTop }
+      const utils = render(
+        <LinearChart {...defaultProps} {...props} height={HEIGHT} series={[makeLine('s1', [0, 50, 100])]} />,
+      )
+      return { ...utils, svg: utils.container.querySelector('svg')! }
+    }
+
+    const gridYs = (container: HTMLElement) =>
+      [...container.querySelectorAll('line')].map((line) => Number(line.getAttribute('y1')))
+
+    it.each([8, 16, 40])('scales the values between the top of the plot, %ipx down, and its bottom', (padTop) => {
+      const { container } = renderChart(padTop)
+
+      const ys = gridYs(container)
+      expect(Math.min(...ys)).toBe(padTop)
+      expect(Math.max(...ys)).toBe(PLOT_BOTTOM)
+    })
+
+    it('leaves 16px above the plot for the scale too, unless asked for less', () => {
+      const { container } = renderChart()
+
+      expect(Math.min(...gridYs(container))).toBe(16)
+    })
+
+    it.each([8, 40])('marks the focused step over the plot, from %ipx down to its bottom', (padTop) => {
+      const { container, svg } = renderChart(padTop)
+
+      fireEvent.keyDown(svg, { key: 'End' })
+
+      const crosshair = container.querySelector(`.${chartStyles.crosshair}`)!
+      expect(Number(crosshair.getAttribute('y1'))).toBe(padTop)
+      expect(Number(crosshair.getAttribute('y2'))).toBe(PLOT_BOTTOM)
+      // The last value is the top of the scale, and the first its bottom.
+      expect(Number(container.querySelector('circle')!.getAttribute('cy'))).toBe(padTop)
+      fireEvent.keyDown(svg, { key: 'Home' })
+      expect(Number(container.querySelector('circle')!.getAttribute('cy'))).toBe(PLOT_BOTTOM)
+    })
+
+    it.each([
+      [8, 300],
+      [40, 332],
+    ])('points a tooltip at the top of the plot, which is at %ipx, so it opens at %ipx', (padTop, opensAt) => {
+      // jsdom lays nothing out: the chart is 112px tall, 300px down the page, and the page is tall enough to show it.
+      Object.defineProperty(document.documentElement, 'clientHeight', { configurable: true, value: 768 })
+      Object.defineProperty(document.documentElement, 'clientWidth', { configurable: true, value: 1024 })
+      const { svg } = renderChart(padTop)
+      svg.getBoundingClientRect = () => ({ left: 0, top: 300, width: 360, height: HEIGHT }) as DOMRect
+      Object.defineProperty(svg, 'viewBox', { value: { baseVal: { x: 0, y: 0, width: 360, height: HEIGHT } } })
+
+      fireEvent.keyDown(svg, { key: 'Home' })
+
+      // 8px above the anchor, since the tooltip has no height here.
+      expect(screen.getByRole('tooltip').style.top).toBe(`${opensAt}px`)
+    })
   })
 
   it('is a Tab stop only when something shows where the arrow keys have moved the focus', () => {

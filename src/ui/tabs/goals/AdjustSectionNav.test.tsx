@@ -5,6 +5,7 @@ import { AdjustSectionNav } from './AdjustSectionNav'
 import { ADJUST_SECTIONS, adjustSectionId, type AdjustSection } from './adjustSections'
 import { ADJUST_STACK_ID } from './goalsAnchors'
 import { NARROW_MQ } from './useGoalsNarrow'
+import styles from './goals.module.css'
 
 /** Where each section's top is, in viewport pixels; the tests move these to "scroll". */
 let tops: Record<string, number>
@@ -119,6 +120,18 @@ describe('AdjustSectionNav', () => {
       expect(current()).toBe('Tracking')
     })
 
+    it('is at the bottom when the page ends within 2px of the screen, and not when it runs further', () => {
+      sectionElement('events').open = true
+      // jsdom's window is 768px tall and has not scrolled.
+      Object.defineProperty(document.documentElement, 'scrollHeight', { configurable: true, value: 770 })
+      render(<AdjustSectionNav />)
+      expect(current()).toBe('Events')
+
+      Object.defineProperty(document.documentElement, 'scrollHeight', { configurable: true, value: 771 })
+      scrollPage()
+      expect(current()).toBe('FIRE')
+    })
+
     it('moves to the last chip once its controls are opened', () => {
       render(<AdjustSectionNav />)
       expect(current()).toBe('FIRE')
@@ -136,6 +149,7 @@ describe('AdjustSectionNav', () => {
 
     await user.click(screen.getByRole('button', { name: 'Events' }))
     expect(window.scrollBy).toHaveBeenCalledTimes(1)
+    expect(window.scrollBy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }))
     expect(current()).toBe('Events')
 
     // The jump's own scrolling, and a section that cannot reach the top, must not move it.
@@ -148,16 +162,73 @@ describe('AdjustSectionNav', () => {
     expect(current()).toBe('FIRE')
   })
 
-  it('lets go of a tapped chip when the viewer presses the page, as a scrollbar drag does', async () => {
-    const user = userEvent.setup()
-    render(<AdjustSectionNav />)
-    await user.click(screen.getByRole('button', { name: 'Events' }))
-    placeSections({ portfolio: -900, housing: -500, fire: -50, tracking: 300, events: 400 })
+  // A touch, the wheel, a key (PageUp after tapping Events) or a press on the page, which is all
+  // a scrollbar drag sends, each hands the scrolling back to the viewer.
+  it.each(['touchstart', 'pointerdown', 'wheel', 'keydown'])(
+    'lets go of a tapped chip at the viewer\'s %s, so the mark follows the page again',
+    async (type) => {
+      const user = userEvent.setup()
+      render(<AdjustSectionNav />)
+      await user.click(screen.getByRole('button', { name: 'Events' }))
+      placeSections({ portfolio: -900, housing: -500, fire: -50, tracking: 300, events: 400 })
+      scrollPage()
+      expect(current()).toBe('Events')
 
-    fireEvent.pointerDown(window)
+      act(() => {
+        window.dispatchEvent(new Event(type))
+      })
+      scrollPage()
+
+      expect(current()).toBe('FIRE')
+    },
+  )
+
+  it('marks the chip of the section being read with the mark that can be seen, and no other', () => {
+    render(<AdjustSectionNav />)
+
+    expect(screen.getByRole('button', { name: 'Portfolio' })).toHaveClass(styles.chipActive!)
+    for (const other of ['Housing', 'FIRE', 'Tracking', 'Events']) {
+      expect(screen.getByRole('button', { name: other })).not.toHaveClass(styles.chipActive!)
+    }
+
+    placeSections({ portfolio: -500, housing: -100, fire: 500, tracking: 900, events: 1000 })
     scrollPage()
 
-    expect(current()).toBe('FIRE')
+    expect(screen.getByRole('button', { name: 'Housing' })).toHaveClass(styles.chipActive!)
+    expect(screen.getByRole('button', { name: 'Portfolio' })).not.toHaveClass(styles.chipActive!)
+  })
+
+  describe('where a section starts to count as the one being read', () => {
+    // 12px under the bottom of what is pinned; with nothing pinned in jsdom, 12px down the screen.
+    it('counts a section whose top is on that line, and not one a pixel under it', () => {
+      render(<AdjustSectionNav />)
+
+      placeSections({ portfolio: -300, housing: 12, fire: 500, tracking: 900, events: 1000 })
+      scrollPage()
+      expect(current()).toBe('Housing')
+
+      placeSections({ portfolio: -300, housing: 13, fire: 500, tracking: 900, events: 1000 })
+      scrollPage()
+      expect(current()).toBe('Portfolio')
+    })
+
+    it('puts the line under the pinned stack, wherever that is', () => {
+      const stack = document.createElement('div')
+      stack.id = ADJUST_STACK_ID
+      stack.style.position = 'sticky'
+      stack.style.top = '100px'
+      Object.defineProperty(stack, 'offsetHeight', { configurable: true, value: 164 })
+      document.body.append(stack)
+      render(<AdjustSectionNav />)
+
+      placeSections({ portfolio: -300, housing: 276, fire: 500, tracking: 900, events: 1000 })
+      scrollPage()
+      expect(current()).toBe('Housing')
+
+      placeSections({ portfolio: -300, housing: 277, fire: 500, tracking: 900, events: 1000 })
+      scrollPage()
+      expect(current()).toBe('Portfolio')
+    })
   })
 
   it('keeps the marked chip in sight inside the sideways-scrolling strip', async () => {
@@ -225,6 +296,14 @@ describe('AdjustSectionNav', () => {
     ])
   })
 
+  it('sets Save apart from Discard as the one to press', () => {
+    render(<AdjustSectionNav unsaved={{ name: 'Path A', saving: false, onSave: vi.fn(), onDiscard: vi.fn() }} />)
+    const group = screen.getByRole('group', { name: 'Unsaved changes' })
+
+    expect(within(group).getByRole('button', { name: 'Save changes to Path A' })).toHaveClass(styles.btnPrimary!)
+    expect(within(group).getByRole('button', { name: 'Discard changes' })).not.toHaveClass(styles.btnPrimary!)
+  })
+
   it('takes neither Save nor Discard while a save is in flight', () => {
     const unsaved = { name: 'Path A', saving: false, onSave: vi.fn(), onDiscard: vi.fn() }
     const { rerender } = render(<AdjustSectionNav unsaved={unsaved} />)
@@ -271,9 +350,10 @@ describe('AdjustSectionNav', () => {
       save.focus()
       const focus = vi.spyOn(save, 'focus')
 
-      rerender(<AdjustSectionNav unsaved={{ ...unsaved, saving: true }} />)
-      // A browser blurs a focused button that becomes disabled and leaves focus on the page.
+      // A browser blurs a focused button that becomes disabled and leaves focus on the page, by
+      // the time the render that disabled it has run its effects.
       const active = vi.spyOn(document, 'activeElement', 'get').mockReturnValue(document.body)
+      rerender(<AdjustSectionNav unsaved={{ ...unsaved, saving: true }} />)
       fireEvent.focusOut(save)
       expect(focus).not.toHaveBeenCalled()
       rerender(<AdjustSectionNav unsaved={unsaved} />)
@@ -349,13 +429,25 @@ describe('AdjustSectionNav', () => {
     expect(window.scrollBy).toHaveBeenCalledWith({ top: 100 - 300 - 8, behavior: 'auto' })
   })
 
-  it('stops listening when it leaves the page', () => {
-    const remove = vi.spyOn(window, 'removeEventListener')
+  it('stops listening to the page when it leaves it, taking away each listener it put up', () => {
+    const windowTypes = ['scroll', 'resize', 'touchstart', 'wheel', 'keydown', 'pointerdown']
+    const added = vi.spyOn(window, 'addEventListener')
+    const addedToDocument = vi.spyOn(document, 'addEventListener')
+    const removed = vi.spyOn(window, 'removeEventListener')
+    const removedFromDocument = vi.spyOn(document, 'removeEventListener')
     const { unmount } = render(<AdjustSectionNav />)
+    const mine = (calls: unknown[][], types: string[]) => calls.filter(([type]) => types.includes(type as string))
+    const putUp = mine(added.mock.calls, windowTypes)
+    const putUpOnDocument = mine(addedToDocument.mock.calls, ['focusin'])
+    // Each type once, so a listener that is never put away cannot hide among the others.
+    expect(putUp.map(([type]) => type).sort()).toEqual([...windowTypes].sort())
+    expect(putUpOnDocument).toHaveLength(1)
 
     unmount()
 
-    expect(remove).toHaveBeenCalledWith('scroll', expect.any(Function))
-    expect(remove).toHaveBeenCalledWith('touchstart', expect.any(Function))
+    for (const [type, listener] of putUp) expect(removed, String(type)).toHaveBeenCalledWith(type, listener)
+    for (const [type, listener] of putUpOnDocument) {
+      expect(removedFromDocument, String(type)).toHaveBeenCalledWith(type, listener)
+    }
   })
 })

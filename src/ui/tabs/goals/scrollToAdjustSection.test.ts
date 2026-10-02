@@ -195,6 +195,19 @@ describe('keepClearOfStack', () => {
     expect(scrollBy).toHaveBeenCalledTimes(2)
   })
 
+  it('counts a field whose top is at the top of the stack as behind it, and one at its bottom edge as clear', () => {
+    stackAt(103, 267)
+    const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+    vi.stubGlobal('requestAnimationFrame', undefined)
+
+    keepClearOfStack(focusedFieldAt(267))
+    expect(scrollBy).not.toHaveBeenCalled()
+
+    document.getElementById('a-field')?.remove()
+    keepClearOfStack(focusedFieldAt(103))
+    expect(scrollBy).toHaveBeenCalledWith({ top: 103 - 267 - 8, behavior: 'auto' })
+  })
+
   it('leaves a field that is below the stack, or above it, where it is', () => {
     stackAt(103, 267)
     const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
@@ -231,6 +244,20 @@ describe('keepClearOfStack', () => {
   })
 
   describe('once the keyboard has had time to settle', () => {
+    it('waits the 400ms the keyboard takes to arrive, and no less', () => {
+      stackAt(103, 267)
+      const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+      frameRunsAtOnce()
+      keepClearOfStack(focusedFieldAt(150))
+      scrollBy.mockClear()
+
+      vi.advanceTimersByTime(399)
+      expect(scrollBy).not.toHaveBeenCalled()
+
+      vi.advanceTimersByTime(1)
+      expect(scrollBy).toHaveBeenCalledTimes(1)
+    })
+
     it('does not scroll for a field that has lost focus', () => {
       stackAt(103, 267)
       const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})

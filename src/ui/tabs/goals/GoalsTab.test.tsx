@@ -32,15 +32,21 @@ function makeModel() {
 }
 
 describe('GoalsTab', () => {
-  // Opening Adjust scrolls to its controls, which jsdom does not implement.
+  // Opening Adjust scrolls to its controls, which jsdom does not implement. The scrolls wait
+  // a frame; a real one would run inside whichever test comes next, so the frame runs at once.
   let scrollBy: MockInstance
   beforeEach(() => {
     scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+      cb(0)
+      return 0
+    })
   })
 
   // jsdom has no scrollIntoView; tests that stub it must not leave it behind.
   afterEach(() => {
-    scrollBy.mockRestore()
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
     Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
     media.setMatching(() => false)
   })
@@ -759,12 +765,20 @@ describe('GoalsTab', () => {
     expect(screen.getByRole('button', { current: true, hidden: true })).toHaveFocus()
   })
 
-  it('offers no Save in a read-only session, which cannot save', async () => {
+  it('offers no Save in a read-only session, which cannot save, even once a control has been edited', async () => {
     mockPhoneWidth()
     const user = userEvent.setup()
-    render(<GoalsTab model={makeModel()} />)
+    const plan = makeScenario({ id: 1, name: 'Path A', isActive: true })
+    render(<GoalsTab model={buildExpenseModel(makeDataset({ goalScenarios: [plan] }))} />)
     await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+    const field = screen.getByLabelText('Monthly investing')
+    const before = (field as HTMLInputElement).value
 
+    // The controls take edits in any session, and the draft then differs from the saved plan.
+    fireEvent.change(field, { target: { value: '12345' } })
+    fireEvent.blur(field)
+
+    expect((field as HTMLInputElement).value).not.toBe(before)
     expect(screen.queryByRole('group', { name: 'Unsaved changes', hidden: true })).not.toBeInTheDocument()
   })
 
@@ -948,17 +962,6 @@ describe('GoalsTab', () => {
       mockPhoneWidth()
       scrollY = vi.spyOn(window, 'scrollY', 'get').mockReturnValue(0)
       scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
-      // The spy is the setup file's, so it still holds the last test's calls.
-      scrollTo.mockClear()
-      vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
-        cb(0)
-        return 0
-      })
-    })
-    afterEach(() => {
-      scrollY.mockRestore()
-      scrollTo.mockRestore()
-      vi.unstubAllGlobals()
     })
 
     it('goes back to where the chart was when a link, not the row, took the viewer away', async () => {

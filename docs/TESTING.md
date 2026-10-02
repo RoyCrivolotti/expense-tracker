@@ -8,7 +8,7 @@ Stack: **Vitest** + **React Testing Library** (hooks) + in-memory D1 (Pages Func
 npm test              # all unit + integration tests
 npm run test:coverage # same, plus a coverage report + global threshold check
 npm run coverage:diff -- --base <sha>  # % of THIS diff's changed lines that are covered
-npm run verify         # symlinks, lint, typecheck, test:coverage, build
+npm run verify         # symlinks, migration docs, PII check, lint, typecheck, test:coverage, build, bundle budget
 PARITY_TESTS=1 npm test   # optional workbook parity (private CSV)
 ```
 
@@ -21,6 +21,7 @@ PARITY_TESTS=1 npm test   # optional workbook parity (private CSV)
 | **API integration** | `functions/api/access/access.integration.test.ts`, `functions/api/expenses/expenses.integration.test.ts`, `functions/api/expenses/transactions/write.integration.test.ts` | Middleware + handlers + in-memory repo or D1 |
 | Hub nav | `src/hubNavItems.test.ts` | Group grants → visible cross-app links |
 | UI hooks | `src/ui/**/*.test.tsx` | Hook behaviour (RTL) |
+| Real browser (manual) | `scripts/verify-goals-*.mjs` | The layout jsdom cannot do (see below) |
 
 ## Pages Function integration tests
 
@@ -45,6 +46,17 @@ When adding a new protected route or group rule, extend that file first.
 exact statements sent (so reassignment SQL stays owner-scoped) and that a rejected batch surfaces
 as an error with zero partial writes. Reuse that `stubEnv()` helper for any future D1 adapter
 change that must be all-or-nothing.
+
+## Real-browser checks (manual)
+
+jsdom lays nothing out, so the unit tests for the Goals phone navigation write down every position they depend on. Two Playwright scripts measure the real thing in headless Chromium, on the `DOCS_CAPTURE=1` demo instance (seeded demo data, nothing real). Each starts its own dev server and stops it again. They are run by hand, need Chromium (`npx playwright install chromium`) and take a minute or so, so neither is part of `npm run verify` or CI.
+
+| Command | What it checks |
+| --- | --- |
+| `npm run verify:goals-tabs` | The secondary chart picker on Goals' Chart view does not overlap at 390px. Serves on port 5173. |
+| `npm run verify:goals-nav` | The Goals phone navigation at 375x812 and 320x568, plus landscape and large text: the view row sticks under the header, the hero chart is above the bottom bar on first load, each Adjust chip lands its section under the pinned stack, the marked chip follows the scroll and a tapped chip stays marked until the viewer scrolls, each view comes back where it was left (also after a link), the four labels are shown whole, Adjust is not pinned on a short screen, and no control that Tab or Shift+Tab reaches is covered by the header, the row, the stack or the bottom bar. |
+
+`verify:goals-nav` prints one line per measurement and exits 1 with what it measured for any that fail. It serves on `CAPTURE_PORT` (5173 unless set, as `npm run capture:screenshots` does) and refuses to run if something already answers there, since it would be measuring someone else's code: `CAPTURE_PORT=5490 npm run verify:goals-nav`. Run it after changing `src/ui/tabs/goals/`, `SegmentedControl` or the app shell's header or bottom bar, since a unit test cannot see most of what those break.
 
 ## Coverage gate
 

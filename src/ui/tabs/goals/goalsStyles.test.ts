@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { NARROW_MQ } from './useGoalsNarrow'
 
 /** A stylesheet in src/ui, without its comments. */
 function stylesheet(file: string): string {
@@ -59,5 +60,47 @@ describe('goals styles', () => {
 
     expect(spacer?.body).toMatch(/width:\s*var\(--strip-fade\)/)
     expect(strip?.body).toMatch(/scroll-padding-inline-end:\s*var\(--strip-fade\)/)
+  })
+})
+
+describe('the width at which Goals changes from the phone layout to the wide one', () => {
+  const narrowMax = Number(/\(max-width:\s*(\d+)px\)/.exec(NARROW_MQ)?.[1])
+  const wideMin = narrowMax + 1
+
+  /** The pixel widths a stylesheet's media queries switch at, for one kind of bound. */
+  function widths(file: string, bound: 'max' | 'min'): number[] {
+    const found = stylesheet(file).matchAll(new RegExp(`@media[^{]*\\(${bound}-width:\\s*(\\d+)px\\)`, 'g'))
+    return [...found].map((m) => Number(m[1]))
+  }
+
+  // Breakpoints of their own: a phone's narrow rows (560) and where inputs are held to 16px so
+  // iOS does not zoom into them (719). Anything else in these files that is a max-width query
+  // must be the Goals breakpoint, so one copy cannot be edited without the others.
+  const OTHER_MAX_WIDTHS = [560, 719]
+
+  it('is read from a media query in the code, which has to be a max-width', () => {
+    expect(Number.isInteger(narrowMax)).toBe(true)
+  })
+
+  it.each(['tabs/goals/goals.module.css', 'tabs/goals/progress.module.css'])(
+    'is the one that %s switches to the phone layout at',
+    (file) => {
+      const found = widths(file, 'max')
+
+      expect(found).toContain(narrowMax)
+      expect(found.filter((w) => w !== narrowMax && !OTHER_MAX_WIDTHS.includes(w))).toEqual([])
+    },
+  )
+
+  it.each(['tabs/goals/goals.module.css', 'nav/AppShell.module.css'])(
+    'is where %s starts the wide layout, one pixel up',
+    (file) => {
+      expect(widths(file, 'min')).toContain(wideMin)
+    },
+  )
+
+  it('leaves no query of the goals stylesheet a pixel off, which would show both layouts at one width', () => {
+    expect(widths('tabs/goals/goals.module.css', 'min').filter((w) => w === narrowMax)).toEqual([])
+    expect(widths('tabs/goals/goals.module.css', 'max').filter((w) => w === wideMin)).toEqual([])
   })
 })

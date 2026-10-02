@@ -5,7 +5,8 @@ import { vi } from 'vitest'
  * lets a test report a query changing, as a window resized across a breakpoint does:
  * `setMatching` changes the answers, without telling anyone listening, and `change` makes one
  * query match, or stop matching, and tells whoever is listening to it. Like a real
- * MediaQueryList, one already handed out answers with what is true now.
+ * MediaQueryList, one already handed out answers with what is true now. `listenerCount` is how
+ * many are listening to a query, for a test that something stopped.
  */
 export function installFakeMatchMedia(matching: (query: string) => boolean = () => false) {
   let current = matching
@@ -33,6 +34,9 @@ export function installFakeMatchMedia(matching: (query: string) => boolean = () 
     setMatching(next: (query: string) => boolean) {
       current = next
       changed.clear()
+    },
+    listenerCount(query: string) {
+      return listeners.get(query)?.size ?? 0
     },
     change(query: string, matches: boolean) {
       changed.set(query, matches)
