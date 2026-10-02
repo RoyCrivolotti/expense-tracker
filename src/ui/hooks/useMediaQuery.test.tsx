@@ -33,12 +33,12 @@ describe('useMediaQuery', () => {
 
   it('stops listening when the component leaves', () => {
     const media = installFakeMatchMedia()
-    const { result, unmount } = renderHook(() => useMediaQuery(QUERY))
+    const { unmount } = renderHook(() => useMediaQuery(QUERY))
+    expect(media.listenerCount(QUERY)).toBe(1)
 
     unmount()
-    act(() => media.change(QUERY, true))
 
-    expect(result.current).toBe(false)
+    expect(media.listenerCount(QUERY)).toBe(0)
   })
 
   it('answers for the new query as soon as it changes, without waiting for a change event', () => {
@@ -60,6 +60,7 @@ describe('useMediaQuery', () => {
     })
 
     rerender({ query: '(min-width: 900px)' })
+    expect(media.listenerCount(QUERY)).toBe(0)
     act(() => media.change(QUERY, true))
     expect(result.current).toBe(false)
 
