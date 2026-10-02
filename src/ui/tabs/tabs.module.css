@@ -503,6 +503,16 @@
   margin-top: -0.4rem;
 }
 
+/* Filters are narrowing the list, so the totals beside them cover a subset. */
+.resultBar[data-filtered] {
+  background: color-mix(in srgb, var(--color-accent) 9%, var(--color-bg));
+  border-bottom-color: color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+.resultBar[data-filtered] .resultAmount {
+  color: var(--color-accent);
+}
+
 .resultStats {
   display: flex;
   align-items: baseline;

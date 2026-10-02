@@ -157,6 +157,14 @@ describe('TxnFilters', () => {
     expect(within(bar).getByText('7 items')).toBeInTheDocument()
   })
 
+  it('marks the bar only while filters are narrowing the list', () => {
+    const { rerender } = render(<TxnFilters {...baseProps()} />)
+    expect(document.getElementById('txn-results')).not.toHaveAttribute('data-filtered')
+
+    rerender(<TxnFilters {...baseProps({ hasActiveFilters: true, secondaryFilterCount: 1 })} />)
+    expect(document.getElementById('txn-results')).toHaveAttribute('data-filtered', 'true')
+  })
+
   it('opens the filter sheet on toggle click', async () => {
     const user = userEvent.setup()
     render(<TxnFilters {...baseProps()} />)

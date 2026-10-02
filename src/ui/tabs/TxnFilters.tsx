@@ -77,6 +77,7 @@ export function TxnFilters(props: TxnFiltersProps) {
       <div
         id={RESULTS_ANCHOR_ID}
         className={styles.resultBar}
+        {...(props.hasActiveFilters ? { 'data-filtered': 'true' } : {})}
       >
         <FilterToggle
           expanded={expanded}
