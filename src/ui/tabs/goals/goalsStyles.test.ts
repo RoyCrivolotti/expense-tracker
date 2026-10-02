@@ -22,6 +22,8 @@ describe('goals styles', () => {
     for (const file of ['tabs/goals/goals.module.css', 'tabs/goals/progress.module.css', 'components/SegmentedControl.module.css']) {
       for (const { selector, body } of rules(file)) {
         if (!/background(-color)?:\s*var\(--color-accent\)\s*;/.test(body)) continue
+        // A slider's thumb or filled track is painted in the accent and holds no text.
+        if (selector.includes('::')) continue
         const color = /(?:^|;|\s)color:\s*([^;]+);/.exec(body)?.[1]?.trim()
         expect(color, `${selector} in ${file}`).toBe('var(--color-accent-contrast)')
       }
@@ -32,7 +34,9 @@ describe('goals styles', () => {
     ['components/SegmentedControl.module.css', '.active'],
     ['tabs/goals/goals.module.css', '.chipActive'],
   ])('gives %s %s a border in forced colours, where its fill is replaced', (file, selector) => {
-    const forced = /@media \(forced-colors: active\) \{([\s\S]*?)\n\}/.exec(stylesheet(file))?.[1] ?? ''
+    const forced = [...stylesheet(file).matchAll(/@media \(forced-colors: active\) \{([\s\S]*?)\n\}/g)]
+      .map((m) => m[1])
+      .join('\n')
 
     expect(forced).toMatch(new RegExp(`\\${selector}\\s*\\{[^}]*border:\\s*2px solid Highlight`))
   })
@@ -102,5 +106,19 @@ describe('the width at which Goals changes from the phone layout to the wide one
   it('leaves no query of the goals stylesheet a pixel off, which would show both layouts at one width', () => {
     expect(widths('tabs/goals/goals.module.css', 'min').filter((w) => w === narrowMax)).toEqual([])
     expect(widths('tabs/goals/goals.module.css', 'max').filter((w) => w === wideMin)).toEqual([])
+  })
+
+  it('draws the slider in every browser engine, and keeps it visible in forced colours', () => {
+    const css = stylesheet('tabs/goals/goals.module.css')
+    const forced = [...css.matchAll(/@media \(forced-colors: active\) \{([\s\S]*?)\n\}/g)].map((m) => m[1]).join('\n')
+
+    // The native control is replaced, so each engine needs its own parts drawn.
+    for (const part of ['::-webkit-slider-runnable-track', '::-webkit-slider-thumb', '::-moz-range-track', '::-moz-range-progress', '::-moz-range-thumb']) {
+      expect(css, part).toContain(`.range${part}`)
+    }
+    // Forced colours strips the track's gradient and the thumb's fill unless the slider opts out
+    // and names them in system colours; without it there is a thumb and no track.
+    expect(forced).toMatch(/\.range\s*\{[^}]*forced-color-adjust:\s*none/)
+    expect(forced).toContain('Highlight')
   })
 })

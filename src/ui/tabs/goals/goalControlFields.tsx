@@ -4,6 +4,7 @@ import { DateInput } from '../../components/DateInput'
 import { PercentStepper } from '../../components/PercentStepper'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import styles from './goals.module.css'
+import { fillOf } from './sliderFill'
 import stepperStyles from '../../components/PercentStepper.module.css'
 
 interface MoneyFieldProps {
@@ -132,6 +133,7 @@ export function PercentField({
       {showSlider ? (
         <input
           className={styles.range}
+          style={fillOf(value, min, max)}
           type="range"
           min={min}
           max={max}
@@ -187,6 +189,7 @@ export function PurchaseYearField({ value, maxYear, onChange }: PurchaseYearFiel
       </div>
       <input
         className={styles.range}
+        style={fillOf(raw, -1, maxYear)}
         type="range"
         min={-1}
         max={maxYear}

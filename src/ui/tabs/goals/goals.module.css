@@ -361,10 +361,127 @@
   outline: none;
 }
 
+/*
+ * The slider is the browser's own control, drawn by us. Left native it is the browser's idea
+ * of one: on iOS the unfilled track is nearly invisible on a card in light mode and a bright
+ * white bar in dark mode, and the thumb differs between browsers. Here the filled part is the
+ * accent, the rest a tint of the text colour that reads on either theme, and the thumb a round
+ * accent knob ringed in the card's colour. It is still an <input type="range">, so the keyboard,
+ * the touch drag and the screen reader's adjust gesture are the browser's.
+ *
+ * --fill is how far along the thumb is, set by the field. WebKit and Blink have no filled part
+ * of their own to colour, so the track paints it; Firefox does (::-moz-range-progress).
+ */
 .range {
+  --range-track: 0.375rem;
+  --range-thumb: 1.625rem;
+  --range-rest: color-mix(in srgb, var(--color-text) 16%, var(--color-surface));
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
   width: 100%;
   max-width: 100%;
-  accent-color: var(--color-accent);
+  /* As tall as the thumb plus a little, so a thumb is easy to land on without the row growing
+     much past what the native control took. */
+  height: 1.75rem;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.range:focus {
+  outline: none;
+}
+
+.range::-webkit-slider-runnable-track {
+  height: var(--range-track);
+  border-radius: calc(var(--range-track) / 2);
+  background: linear-gradient(
+    to right,
+    var(--color-accent) var(--fill, 0%),
+    var(--range-rest) var(--fill, 0%)
+  );
+}
+
+.range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  width: var(--range-thumb);
+  height: var(--range-thumb);
+  /* WebKit puts the thumb's top edge on the track's, so it is pulled up by the difference. */
+  margin-top: calc((var(--range-track) - var(--range-thumb)) / 2);
+  border: 0.1875rem solid var(--color-surface);
+  border-radius: 50%;
+  background: var(--color-accent);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+}
+
+.range::-moz-range-track {
+  height: var(--range-track);
+  border-radius: calc(var(--range-track) / 2);
+  background: var(--range-rest);
+}
+
+.range::-moz-range-progress {
+  height: var(--range-track);
+  border-radius: calc(var(--range-track) / 2);
+  background: var(--color-accent);
+}
+
+.range::-moz-range-thumb {
+  box-sizing: border-box;
+  width: var(--range-thumb);
+  height: var(--range-thumb);
+  border: 0.1875rem solid var(--color-surface);
+  border-radius: 50%;
+  background: var(--color-accent);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+}
+
+/* The thumb carries the keyboard focus, since it is what moves: a ring outside its own. */
+.range:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    0 0 0 0.125rem var(--color-surface),
+    0 0 0 0.3125rem var(--color-accent);
+}
+
+.range:focus-visible::-moz-range-thumb {
+  box-shadow:
+    0 0 0 0.125rem var(--color-surface),
+    0 0 0 0.3125rem var(--color-accent);
+}
+
+/* Forced colours drops the track's gradient and the thumb's fill, leaving a thumb floating on
+   nothing. Opting the slider out of that and naming each part in a system colour keeps the
+   track, how far along it is, and the thumb visible, in the colours the person chose. */
+@media (forced-colors: active) {
+  .range {
+    forced-color-adjust: none;
+  }
+
+  .range::-webkit-slider-runnable-track {
+    background: linear-gradient(to right, Highlight var(--fill, 0%), ButtonText var(--fill, 0%));
+  }
+
+  .range::-webkit-slider-thumb {
+    border-color: ButtonFace;
+    background: Highlight;
+  }
+
+  .range::-moz-range-track {
+    background: ButtonText;
+  }
+
+  .range::-moz-range-progress,
+  .range::-moz-range-thumb {
+    background: Highlight;
+  }
+
+  .range:focus-visible::-webkit-slider-thumb,
+  .range:focus-visible::-moz-range-thumb {
+    box-shadow: 0 0 0 0.1875rem ButtonText;
+  }
 }
 
 .chipRow {

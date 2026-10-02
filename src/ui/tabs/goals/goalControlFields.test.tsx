@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('../../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: () => true }))
 
-import { DateField, MoneyField, NumberField } from './goalControlFields'
+import { DateField, MoneyField, NumberField, PercentField, PurchaseYearField } from './goalControlFields'
 
 describe('MoneyField', () => {
   it('is a plain input with no slider, and takes any amount typed', async () => {
@@ -117,5 +117,21 @@ describe('DateField', () => {
       />,
     )
     expect(screen.getByText('Anchors the projection to a date.')).toBeInTheDocument()
+  })
+})
+
+describe('the sliders', () => {
+  it('tell the track how far along the thumb is, so it can paint the part behind it', () => {
+    const { rerender } = render(<PercentField label="Real return" value={0.07} max={0.2} onChange={vi.fn()} />)
+    expect(screen.getByRole('slider', { name: 'Real return' }).style.getPropertyValue('--fill')).toBe('35%')
+
+    rerender(<PercentField label="Real return" value={0.1} max={0.2} onChange={vi.fn()} />)
+    expect(screen.getByRole('slider', { name: 'Real return' }).style.getPropertyValue('--fill')).toBe('50%')
+  })
+
+  it('do so for a range that starts at never', () => {
+    render(<PurchaseYearField value={4} maxYear={9} onChange={vi.fn()} />)
+
+    expect(screen.getByRole('slider').style.getPropertyValue('--fill')).toBe('50%')
   })
 })
