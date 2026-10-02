@@ -1,4 +1,5 @@
-import { useRef, type KeyboardEvent } from 'react'
+import { useRef } from 'react'
+import { useRadioGroupKeys } from '../hooks/useRadioGroupKeys'
 import styles from './SegmentedControl.module.css'
 
 interface Option<T extends string> {
@@ -33,29 +34,6 @@ interface SegmentedControlProps<T extends string> {
   disabled?: boolean
 }
 
-/** Where a key moves the selection in a radio group or tab list: arrows step and wrap, Home and End jump. */
-function keyTarget(key: string, index: number, count: number): number | null {
-  switch (key) {
-    case 'ArrowRight':
-    case 'ArrowDown':
-      return (index + 1) % count
-    case 'ArrowLeft':
-    case 'ArrowUp':
-      return (index - 1 + count) % count
-    case 'Home':
-      return 0
-    case 'End':
-      return count - 1
-    default:
-      return null
-  }
-}
-
-/** The options of a group as elements, in order: what a key moves focus between. */
-function optionElements(group: HTMLElement | null): HTMLElement[] {
-  return group ? Array.from(group.querySelectorAll<HTMLElement>('[role="radio"], [role="tab"]')) : []
-}
-
 /** What makes an option a radio, or a tab, and says whether it is the chosen one. */
 function optionAttributes(value: string, chosen: boolean, tabs: TabsProps | undefined) {
   if (!tabs) return { role: 'radio', 'aria-checked': chosen }
@@ -86,27 +64,18 @@ export function SegmentedControl<T extends string>({
         : styles.group
   const group = useRef<HTMLDivElement>(null)
   const selected = options.findIndex((o) => o.value === value)
-  // One tab stop for the whole group, on the selected option (the first when none is): the
-  // arrow keys move within it, as they do between native radio buttons.
-  const stop = Math.max(selected, 0)
-
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    // Alt/Cmd+Left is the browser's Back and Ctrl/Cmd+Home/End scroll the page: leave them alone.
-    if (disabled || event.altKey || event.ctrlKey || event.metaKey) return
-    const radios = optionElements(group.current)
-    // Step from the option that has focus, which is not the selected one when the parent has
-    // not followed a change, or the selection moved while focus stayed; the tab stop otherwise.
-    const focused = radios.indexOf(event.target as HTMLElement)
-    const target = keyTarget(event.key, focused < 0 ? stop : focused, options.length)
-    if (target === null) return
-    const option = options[target]
-    if (!option) return
-    event.preventDefault()
+  const { stop, onKeyDown } = useRadioGroupKeys({
+    groupRef: group,
+    count: options.length,
+    selected,
+    disabled,
     // A key that lands on the chosen option has nothing to report (a click on it does, for a
     // control that treats tapping the current segment as a request of its own).
-    if (option.value !== value) onChange(option.value)
-    radios[target]?.focus()
-  }
+    onSelect: (index) => {
+      const option = options[index]
+      if (option && option.value !== value) onChange(option.value)
+    },
+  })
 
   return (
     <div
