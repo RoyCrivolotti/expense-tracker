@@ -2,24 +2,13 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { ProgressView } from './ProgressView'
 import { makeScenario, makeWealthAccount, makeWealthCheckin } from '../../../testing/factories'
+import { installFakeMatchMedia } from '../../../testing/fakeMatchMedia'
 import { makeActions } from '../../../testing/makeActions'
 import { planValueAtDate, DEFAULT_INFLATION_RATE } from '../../../engine'
 
 beforeAll(() => {
   // The check-in chart's tooltip reads a media query; jsdom has no matchMedia.
-  Object.defineProperty(window, 'matchMedia', {
-    writable: true,
-    value: vi.fn().mockImplementation((query: string) => ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })),
-  })
+  installFakeMatchMedia()
 })
 
 describe('ProgressView', () => {

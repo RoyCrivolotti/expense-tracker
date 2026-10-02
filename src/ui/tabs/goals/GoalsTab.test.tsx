@@ -3,35 +3,22 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
 import { GoalsTab } from './GoalsTab'
 import { NARROW_MQ } from './useGoalsNarrow'
+import { installFakeMatchMedia } from '../../../testing/fakeMatchMedia'
 import { ToastContext } from '../../hooks/useToast'
 import { buildExpenseModel } from '../../buildExpenseModel'
 import { makeDataset, makeScenario, makeWealthAccount, makeWealthCheckin } from '../../../testing/factories'
 import { makeActions } from '../../../testing/makeActions'
 import { defaultExpenseSettings, planValueAtDate, DEFAULT_INFLATION_RATE } from '../../../engine'
 
-function mockMatchMedia(narrow: boolean) {
-  return (query: string) => ({
-    matches: narrow && query === NARROW_MQ,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })
-}
+let media: ReturnType<typeof installFakeMatchMedia>
 
 beforeAll(() => {
-  Object.defineProperty(window, 'matchMedia', {
-    writable: true,
-    value: vi.fn().mockImplementation(mockMatchMedia(false)),
-  })
+  media = installFakeMatchMedia()
 })
 
 /** Phone width: one row of four views, where wide screens have the three-way switch. */
 function mockPhoneWidth() {
-  vi.mocked(window.matchMedia).mockImplementation(mockMatchMedia(true))
+  media.setMatching((query) => query === NARROW_MQ)
 }
 
 /** The plan tab has other steppers; this is the one beside the preview field. */
@@ -55,7 +42,7 @@ describe('GoalsTab', () => {
   afterEach(() => {
     scrollBy.mockRestore()
     Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
-    vi.mocked(window.matchMedia).mockImplementation(mockMatchMedia(false))
+    media.setMatching(() => false)
   })
 
   it('renders with Plan view by default', () => {
