@@ -31,6 +31,13 @@
   );
 }
 
+/* The view switcher everywhere but a phone. */
+.viewSwitcherRow {
+  display: flex;
+  justify-content: center;
+  padding: 0.25rem 0 0.5rem;
+}
+
 .nav {
   position: sticky;
   top: calc(var(--exp-header) - var(--goals-tuck) + env(safe-area-inset-top, 0px));

@@ -1,7 +1,7 @@
 import { SegmentedControl } from '../../components/SegmentedControl'
 import { GoalsMobileNav, type GoalsMobileView } from './GoalsMobileNav'
 import { useGoalsNarrow } from './useGoalsNarrow'
-import progressStyles from './progress.module.css'
+import styles from './goals.module.css'
 
 export type TabView = 'plan' | 'progress' | 'setup'
 /** On a phone Plan is two screens, the chart and the controls, instead of one. */
@@ -30,7 +30,7 @@ export function GoalsViewSwitch({
   const narrow = useGoalsNarrow()
   if (!narrow) {
     return (
-      <div className={progressStyles.viewSwitcherRow}>
+      <div className={styles.viewSwitcherRow}>
         <SegmentedControl
           options={VIEW_OPTIONS}
           value={view}
