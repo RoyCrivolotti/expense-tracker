@@ -67,7 +67,7 @@ function stopDev(dev) {
  */
 async function openAccountSettings(page) {
   await page.getByRole('button', { name: 'Settings' }).click()
-  await page.getByRole('radio', { name: 'Account', exact: true }).click()
+  await page.getByRole('tab', { name: 'Account', exact: true }).click()
   await page.waitForSelector('text=Manage access', { timeout: 15000 })
 }
 

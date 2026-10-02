@@ -28,3 +28,33 @@ describe('SettingsTab', () => {
     expect(actions.updateSettings).toHaveBeenLastCalledWith({ defaultAccountId: 2 })
   })
 })
+
+describe('SettingsTab sections', () => {
+  function renderSettings() {
+    const model = buildExpenseModel(makeDataset())
+    return render(
+      <SettingsTab model={model} month="2026-09" actions={makeActions()} theme="dark" onThemeChange={vi.fn()} />,
+    )
+  }
+
+  it('offers Preferences, Setup, Account and Data as tabs over one panel, opening on Preferences', () => {
+    renderSettings()
+
+    expect(screen.getByRole('tablist', { name: 'Settings section' })).toBeInTheDocument()
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Preferences', 'Setup', 'Account', 'Data'])
+    expect(screen.getByRole('tab', { name: 'Preferences' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Preferences')
+    expect(screen.getByLabelText('Default account')).toBeInTheDocument()
+  })
+
+  it('swaps the panel for the section that is tapped', () => {
+    renderSettings()
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Data' }))
+
+    expect(screen.getByRole('tab', { name: 'Data' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Data')
+    expect(screen.getByRole('tabpanel')).toHaveTextContent('Export')
+    expect(screen.queryByLabelText('Default account')).not.toBeInTheDocument()
+  })
+})

@@ -7,7 +7,7 @@ import type { ExpenseActions } from '../actions'
 import { Money } from '../components/Money'
 import type { ExpenseSettings } from '../../types'
 import { Card, EmptyState, Pill, SectionTitle } from '../components/primitives'
-import { SegmentedControl } from '../components/SegmentedControl'
+import { SectionTabs } from '../components/SectionTabs'
 import { StatementToggles } from '../components/StatementToggles'
 import { DefinitionsEditor } from '../definitions/DefinitionsEditor'
 import { AppearanceSetting } from '../settings/AppearanceSetting'
@@ -262,17 +262,13 @@ export function SettingsTab({
   const [view, setView] = useState<SettingsView>('preferences')
 
   return (
-    <div className={styles.stack}>
-      <div className={styles.settingsTabBar}>
-        <SegmentedControl
-          options={VIEW_OPTIONS}
-          value={view}
-          onChange={setView}
-          ariaLabel="Settings section"
-          layout="bar"
-        />
-      </div>
-
+    <SectionTabs
+      id="settings-section"
+      ariaLabel="Settings section"
+      options={VIEW_OPTIONS}
+      value={view}
+      onChange={setView}
+    >
       {view === 'preferences' && (
         <PreferencesView model={model} actions={actions} theme={theme} onThemeChange={onThemeChange} />
       )}
@@ -286,6 +282,6 @@ export function SettingsTab({
       )}
 
       {view === 'data' && <DataView model={model} month={month} actions={actions} />}
-    </div>
+    </SectionTabs>
   )
 }
