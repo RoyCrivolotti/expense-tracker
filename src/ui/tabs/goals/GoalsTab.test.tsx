@@ -156,20 +156,23 @@ describe('GoalsTab', () => {
     expect(screen.getByText('Wealth accounts')).toBeInTheDocument()
   })
 
-  it('brings the content of Assumptions into view when the empty Progress view sends the user there from far down', async () => {
+  it('lands on the accounts in Assumptions when the empty Progress view sends the user to set them up, and only then', async () => {
     const user = userEvent.setup()
     const scrollIntoView = vi.fn()
     Element.prototype.scrollIntoView = scrollIntoView
     render(<GoalsTab model={makeModel()} actions={makeActions()} />)
     await user.click(screen.getByRole('radio', { name: 'Progress' }))
-    // Scrolled well past where the content starts: jsdom lays nothing out, so say so.
-    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({ top: -600 } as DOMRect)
 
     await user.click(screen.getByRole('button', { name: 'Set up accounts' }))
 
-    await vi.waitFor(() =>
-      expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ block: 'start' })),
-    )
+    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start' })
+    expect(scrollIntoView.mock.contexts[0]).toContainElement(screen.getByText('Wealth accounts'))
+
+    // Coming back to Assumptions by the switcher is not a request to scroll to it.
+    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('radio', { name: 'Assumptions' }))
+    expect(scrollIntoView).toHaveBeenCalledTimes(1)
   })
 
   it('shows Plan view content when Plan tab is active', () => {

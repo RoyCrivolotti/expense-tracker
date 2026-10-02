@@ -6,6 +6,14 @@
   gap: 1rem;
 }
 
+/* Where a link to a card in Assumptions leaves it: its top just under the stuck view row,
+   the place goals.module.css gives .contentAnchor. */
+.landingTarget {
+  scroll-margin-top: calc(
+    var(--exp-header) + var(--goals-nav-h) - var(--goals-tuck) + env(safe-area-inset-top, 0px)
+  );
+}
+
 /* ─── Display mode toggle ────────────────────────────────────────────────── */
 
 .displayModeRow {

@@ -4,6 +4,9 @@ export type MobilePlanView = 'chart' | 'adjust'
 /** The phone's four views: Plan is split in two there, so it has no segment of its own. */
 export type GoalsMobileView = MobilePlanView | Exclude<TabView, 'plan'>
 
+/** What a link that opens Assumptions asks it to bring into view; any other way in starts at the top. */
+export type AssumptionsFocus = 'inflation' | 'accounts'
+
 /** What the phone's one row shows as selected: Plan is whichever of its halves was last open. */
 export function mobileViewOf(view: TabView, half: MobilePlanView): GoalsMobileView {
   return view === 'plan' ? half : view

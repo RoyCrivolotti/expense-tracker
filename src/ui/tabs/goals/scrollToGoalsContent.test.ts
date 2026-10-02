@@ -85,37 +85,6 @@ describe('scrollToGoalsContent', () => {
 
     expect(scrollIntoView).toHaveBeenCalledTimes(1)
   })
-
-  describe('when asked to scroll only if the content is past', () => {
-    function anchorAt(top: number, scrollMarginTop: string) {
-      const anchor = document.createElement('div')
-      anchor.id = GOALS_CONTENT_ANCHOR_ID
-      const scrollIntoView = vi.fn()
-      anchor.scrollIntoView = scrollIntoView
-      vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue({ top } as DOMRect)
-      vi.spyOn(window, 'getComputedStyle').mockReturnValue({ scrollMarginTop } as CSSStyleDeclaration)
-      document.body.append(anchor)
-      return scrollIntoView
-    }
-
-    it('scrolls when the content already starts above where it would be put', () => {
-      const scrollIntoView = anchorAt(-400, '104px')
-      runFramesNow()
-
-      scrollToGoalsContent('auto', { ifPast: true })
-
-      expect(scrollIntoView).toHaveBeenCalledTimes(1)
-    })
-
-    it('leaves the page alone when the content starts at or below that place', () => {
-      const scrollIntoView = anchorAt(300, '104px')
-      runFramesNow()
-
-      scrollToGoalsContent('auto', { ifPast: true })
-
-      expect(scrollIntoView).not.toHaveBeenCalled()
-    })
-  })
 })
 
 describe('restoreScrollPosition', () => {

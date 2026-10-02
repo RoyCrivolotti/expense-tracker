@@ -32,9 +32,9 @@ import { GoalControls } from './GoalControls'
 import { ScenarioManager } from './ScenarioManager'
 import { GoalsExplainer } from './GoalsExplainer'
 import { GoalsViewSwitch } from './GoalsViewSwitch'
-import { mobileViewOf, type MobilePlanView, type TabView } from './goalsView'
+import { mobileViewOf, type AssumptionsFocus, type MobilePlanView, type TabView } from './goalsView'
 import { useGoalsScrollMemory } from './useGoalsScrollMemory'
-import { GOALS_CONTENT_ANCHOR_ID, scrollToGoalsContent } from './scrollToGoalsContent'
+import { GOALS_CONTENT_ANCHOR_ID } from './scrollToGoalsContent'
 import { ADJUST_STACK_ID } from './scrollToAdjustSection'
 import { AdjustSectionNav, type UnsavedActions } from './AdjustSectionNav'
 import { GoalsNarrative } from './GoalsNarrative'
@@ -239,9 +239,10 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
   // The dashboard's nudge opens the check-in form once; leaving Progress and coming back
   // within the tab must not open it again.
   const [checkinEntry, setCheckinEntry] = useState(entry === 'checkin')
-  // The Nominal note links to the assumed inflation in Assumptions, which then scrolls to it;
-  // any other way of getting to that view must not.
-  const [focusInflation, setFocusInflation] = useState(false)
+  // The Nominal note links to the assumed inflation in Assumptions, and the empty Progress view
+  // to the accounts; Assumptions then scrolls to that card. Any other way of getting to the
+  // view must not.
+  const [assumptionsFocus, setAssumptionsFocus] = useState<AssumptionsFocus | null>(null)
   // The rate the Nominal view is being tried at, if not the saved one. It lives only as long
   // as the chart it was tried on: leaving the view or the Nominal mode drops it.
   const [previewInflation, setPreviewInflation] = useState<number | null>(null)
@@ -255,7 +256,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     (next: TabView) => {
       memory.leave(current)
       setCheckinEntry(false)
-      setFocusInflation(false)
+      setAssumptionsFocus(null)
       setPreviewInflation(null)
       setView(next)
     },
@@ -268,14 +269,15 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     },
     [memory, current],
   )
-  const openAssumptions = useCallback(() => {
-    changeView('assumptions')
-    scrollToGoalsContent('auto', { ifPast: true })
-  }, [changeView])
-  const openInflationSetting = useCallback(() => {
-    changeView('assumptions')
-    setFocusInflation(true)
-  }, [changeView])
+  const openAssumptions = useCallback(
+    (focus: AssumptionsFocus) => {
+      changeView('assumptions')
+      setAssumptionsFocus(focus)
+    },
+    [changeView],
+  )
+  const openInflationSetting = useCallback(() => openAssumptions('inflation'), [openAssumptions])
+  const openAccountsSetup = useCallback(() => openAssumptions('accounts'), [openAssumptions])
   const [displayMode, setDisplayMode] = useState<DisplayMode>('purchasing-power')
   const changeDisplayMode = useCallback((next: DisplayMode) => {
     setPreviewInflation(null)
@@ -503,7 +505,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
           settings={dataset.settings}
           actions={actions}
           onSettingsChange={actions ? (patch) => actions.updateSettings(patch) : undefined}
-          focusInflation={focusInflation}
+          focus={assumptionsFocus}
         />
       ) : null}
       {view === 'progress' ? (
@@ -523,7 +525,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
           plan={plan}
           actions={actions}
           canWrite={actions != null}
-          onOpenAssumptions={openAssumptions}
+          onOpenAssumptions={openAccountsSetup}
           openCheckinForm={checkinEntry}
           cashReserveMonths={dataset.settings.cashReserveMonths}
           openBudgetMonth={defaultBudgetMonth(todayIso(), dataset.settings.budgetRolloverDay)}
