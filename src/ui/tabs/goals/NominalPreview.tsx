@@ -11,7 +11,7 @@ interface Props {
   preview: number | null
   onPreview: (rate: number | null) => void
   /** Takes the reader to where the rate is set; absent when they cannot change it. */
-  onOpenSetup: (() => void) | undefined
+  onOpenAssumptions: (() => void) | undefined
 }
 
 /**
@@ -20,7 +20,7 @@ interface Props {
  * the comparison table and the dashboard read the saved rate, so trying a rate here can
  * never make them disagree with each other; the note says so and points to Assumptions.
  */
-export function NominalPreview({ saved, preview, onPreview, onOpenSetup }: Props) {
+export function NominalPreview({ saved, preview, onPreview, onOpenAssumptions }: Props) {
   const format = useMoneyFormat()
   const rate = preview ?? saved
   return (
@@ -48,10 +48,10 @@ export function NominalPreview({ saved, preview, onPreview, onOpenSetup }: Props
         The summary, the FI target and the milestones stay in today&apos;s money, so the target lines
         are only drawn in Purchasing power. The preview is not saved: the rest of Goals uses the
         saved {formatPercent(saved, format)}
-        {onOpenSetup ? (
+        {onOpenAssumptions ? (
           <>
             , which you change in Assumptions.{' '}
-            <button type="button" className={styles.btnText} onClick={onOpenSetup}>
+            <button type="button" className={styles.btnText} onClick={onOpenAssumptions}>
               Open Assumptions
             </button>
           </>

@@ -9,7 +9,7 @@ describe('mobileViewOf', () => {
 
   it('is the view itself for Progress and Assumptions, whatever half Plan was left on', () => {
     expect(mobileViewOf('progress', 'adjust')).toBe('progress')
-    expect(mobileViewOf('setup', 'chart')).toBe('setup')
+    expect(mobileViewOf('assumptions', 'chart')).toBe('assumptions')
   })
 })
 
@@ -21,11 +21,11 @@ describe('mobileSelection', () => {
 
   it('opens Plan on the half chosen when it comes from another view', () => {
     expect(mobileSelection('adjust', 'progress')).toEqual({ half: 'adjust', view: 'plan' })
-    expect(mobileSelection('chart', 'setup')).toEqual({ half: 'chart', view: 'plan' })
+    expect(mobileSelection('chart', 'assumptions')).toEqual({ half: 'chart', view: 'plan' })
   })
 
   it('changes the view for Progress and Assumptions and leaves Plan\'s half alone', () => {
     expect(mobileSelection('progress', 'plan')).toEqual({ half: null, view: 'progress' })
-    expect(mobileSelection('setup', 'progress')).toEqual({ half: null, view: 'setup' })
+    expect(mobileSelection('assumptions', 'progress')).toEqual({ half: null, view: 'assumptions' })
   })
 })

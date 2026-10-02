@@ -25,7 +25,7 @@ function layOut(stuck: boolean) {
 }
 
 /** The nav, with the content anchor the page would put under it, and a frame that runs at once. */
-function renderNav(value: 'chart' | 'adjust' | 'progress' | 'setup', onChange = vi.fn()) {
+function renderNav(value: 'chart' | 'adjust' | 'progress' | 'assumptions', onChange = vi.fn()) {
   const target = document.createElement('div')
   target.id = GOALS_CONTENT_ANCHOR_ID
   const scrollIntoView = vi.fn()
@@ -69,7 +69,7 @@ describe('GoalsMobileNav', () => {
 
     await user.click(screen.getByRole('radio', { name: 'Assumptions' }))
 
-    expect(onChange).toHaveBeenCalledWith('setup')
+    expect(onChange).toHaveBeenCalledWith('assumptions')
   })
 
   it('brings the new view to the top, after it has been shown, when the row is stuck', async () => {

@@ -40,7 +40,7 @@ import { GoalsNarrative } from './GoalsNarrative'
 import { NominalPreview } from './NominalPreview'
 import { SecondaryCharts } from './SecondaryCharts'
 import { ProgressView } from './ProgressView'
-import { SetupView } from './SetupView'
+import { AssumptionsView } from './AssumptionsView'
 import { draftFromDataset } from './goalsDefaults'
 import { activePlan, initialEditorScenario } from './scenarioSelection'
 import { NetWorthChart } from './charts/NetWorthChart'
@@ -250,12 +250,12 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     setPreviewInflation(null)
     setView(next)
   }, [])
-  const openSetup = useCallback(() => {
-    changeView('setup')
+  const openAssumptions = useCallback(() => {
+    changeView('assumptions')
     scrollToGoalsContent('auto', { ifPast: true })
   }, [changeView])
   const openInflationSetting = useCallback(() => {
-    changeView('setup')
+    changeView('assumptions')
     setFocusInflation(true)
   }, [changeView])
   const [displayMode, setDisplayMode] = useState<DisplayMode>('purchasing-power')
@@ -480,8 +480,8 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
 
       <GoalsContentTop showIntro={view === 'plan'} />
 
-      {view === 'setup' ? (
-        <SetupView
+      {view === 'assumptions' ? (
+        <AssumptionsView
           accounts={dataset.wealthAccounts}
           checkins={dataset.wealthCheckins}
           settings={dataset.settings}
@@ -507,7 +507,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
           plan={plan}
           actions={actions}
           canWrite={actions != null}
-          onOpenSetup={openSetup}
+          onOpenAssumptions={openAssumptions}
           openCheckinForm={checkinEntry}
           cashReserveMonths={dataset.settings.cashReserveMonths}
           openBudgetMonth={defaultBudgetMonth(todayIso(), dataset.settings.budgetRolloverDay)}
@@ -597,7 +597,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
                       saved={dataset.settings.assumedInflation}
                       preview={previewInflation}
                       onPreview={setPreviewInflation}
-                      onOpenSetup={actions ? openInflationSetting : undefined}
+                      onOpenAssumptions={actions ? openInflationSetting : undefined}
                     />
                   ) : null}
                 </>

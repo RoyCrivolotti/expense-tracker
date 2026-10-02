@@ -1,14 +1,14 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { SetupView } from './SetupView'
+import { AssumptionsView } from './AssumptionsView'
 import { defaultExpenseSettings } from '../../../engine'
 import { makeWealthAccount } from '../../../testing/factories'
 import { makeActions } from '../../../testing/makeActions'
 
-describe('SetupView', () => {
+describe('AssumptionsView', () => {
   it('shows the milestone editor and the wealth accounts', () => {
     render(
-      <SetupView
+      <AssumptionsView
         accounts={[makeWealthAccount({ id: 1, name: 'Broker' })]}
         checkins={[]}
         settings={defaultExpenseSettings()}
@@ -24,7 +24,7 @@ describe('SetupView', () => {
 
   it('carries the assumptions Progress is measured with, the assumed inflation among them', () => {
     render(
-      <SetupView
+      <AssumptionsView
         accounts={[]}
         checkins={[]}
         settings={defaultExpenseSettings()}
@@ -40,7 +40,7 @@ describe('SetupView', () => {
 
   it('says so in a read-only session instead of offering editors', () => {
     render(
-      <SetupView
+      <AssumptionsView
         accounts={[]}
         checkins={[]}
         settings={defaultExpenseSettings()}

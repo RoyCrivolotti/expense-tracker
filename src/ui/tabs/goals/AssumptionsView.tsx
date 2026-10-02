@@ -22,7 +22,7 @@ interface Props {
  * The milestone ladder, the accounts each check-in records a balance for, the cash reserve and
  * the assumed inflation.
  */
-export function SetupView({
+export function AssumptionsView({
   accounts,
   checkins,
   settings,
