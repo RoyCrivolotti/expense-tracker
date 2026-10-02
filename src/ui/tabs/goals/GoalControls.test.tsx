@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('../../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: () => true }))
 import { GoalControls } from './GoalControls'
+import { ADJUST_SECTIONS, adjustSectionId } from './adjustSections'
 import { makeScenario } from '../../../testing/factories'
 
 function makeDraft() {
@@ -13,6 +14,15 @@ function makeDraft() {
 }
 
 describe('GoalControls', () => {
+  it('has one folding section per Adjust section, in the order the section row lists them', () => {
+    const { container } = render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
+
+    // The scrollspy reads these in DOM order and indexes the chips by it.
+    const sections = Array.from(container.querySelectorAll('[id^="goals-adjust-"]'))
+    expect(sections.map((el) => el.id)).toEqual(ADJUST_SECTIONS.map((s) => adjustSectionId(s.key)))
+    for (const el of sections) expect(el).toBeInstanceOf(HTMLDetailsElement)
+  })
+
   it('renders core portfolio fields', () => {
     render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
     expect(screen.getByText('Portfolio')).toBeInTheDocument()
