@@ -45,6 +45,24 @@ describe('LinearChart', () => {
     expect(plotTop({ padTop: 8 })).toBe('8')
   })
 
+  it('keeps the plot inside the box however much room above it is asked for', () => {
+    const clip = (padTop: number) => {
+      const { container, unmount } = render(
+        <LinearChart {...defaultProps} height={112} padTop={padTop} series={[makeLine('s1', [10, 20, 30])]} />,
+      )
+      const rect = container.querySelector('clipPath rect')!
+      unmount()
+      return { y: Number(rect.getAttribute('y')), height: Number(rect.getAttribute('height')) }
+    }
+
+    // The plot always keeps a pixel above the 28px of x-axis labels, so its clip stays drawable.
+    expect(clip(90)).toEqual({ y: 83, height: 2 })
+    expect(clip(112)).toEqual({ y: 83, height: 2 })
+    expect(clip(-6)).toEqual({ y: 0, height: 85 })
+    expect(clip(0)).toEqual({ y: 0, height: 85 })
+    expect(clip(83)).toEqual({ y: 83, height: 2 })
+  })
+
   it('steps the focus with the arrow keys and clears it with Escape', () => {
     const onActiveIndexChange = vi.fn()
     const { container } = render(

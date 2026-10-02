@@ -94,7 +94,9 @@ function useGeometry(
   padTopProp: number | undefined,
 ) {
   return useMemo(() => {
-    const padTop = padTopProp ?? PAD.top
+    // Kept inside the box: a padTop at or past the plot's bottom edge would give the clip
+    // path a negative height and draw nothing, and a negative one pushes the plot off the top.
+    const padTop = Math.max(0, Math.min(padTopProp ?? PAD.top, height - PAD.bottom - 1))
     const n = series.find((s) => s.kind !== 'scatter' && s.kind !== 'band')?.values.length ?? 0
     const innerH = height - padTop - PAD.bottom
     const innerW = width - PAD.left - PAD.right
