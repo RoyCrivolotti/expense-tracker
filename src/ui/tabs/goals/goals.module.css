@@ -365,8 +365,8 @@
  * The slider is the browser's own control, drawn by us. Left native it is the browser's idea
  * of one: on iOS the unfilled track is nearly invisible on a card in light mode and a bright
  * white bar in dark mode, and the thumb differs between browsers. Here the filled part is the
- * accent, the rest a tint of the text colour that reads on either theme, and the thumb a round
- * accent knob ringed in the card's colour. It is still an <input type="range">, so the keyboard,
+ * accent, the rest a tint of the text colour that reads on either theme, and the thumb a plain
+ * round accent disc, the same in both themes. It is still an <input type="range">, so the keyboard,
  * the touch drag and the screen reader's adjust gesture are the browser's.
  *
  * --fill is how far along the thumb is, set by the field. WebKit and Blink have no filled part
@@ -411,10 +411,9 @@
   height: var(--range-thumb);
   /* WebKit puts the thumb's top edge on the track's, so it is pulled up by the difference. */
   margin-top: calc((var(--range-track) - var(--range-thumb)) / 2);
-  border: 0.1875rem solid var(--color-surface);
+  border: 0;
   border-radius: 50%;
   background: var(--color-accent);
-  box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
 }
 
 .range::-moz-range-track {
@@ -433,10 +432,9 @@
   box-sizing: border-box;
   width: var(--range-thumb);
   height: var(--range-thumb);
-  border: 0.1875rem solid var(--color-surface);
+  border: 0;
   border-radius: 50%;
   background: var(--color-accent);
-  box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
 }
 
 /* The thumb carries the keyboard focus, since it is what moves: a ring outside its own. */
@@ -464,8 +462,10 @@
     background: linear-gradient(to right, Highlight var(--fill, 0%), ButtonText var(--fill, 0%));
   }
 
+  /* The thumb and the filled track are both Highlight, so without an edge the thumb would not
+     show where it sits on the filled part. */
   .range::-webkit-slider-thumb {
-    border-color: ButtonFace;
+    border: 0.1875rem solid ButtonFace;
     background: Highlight;
   }
 
@@ -473,8 +473,12 @@
     background: ButtonText;
   }
 
-  .range::-moz-range-progress,
+  .range::-moz-range-progress {
+    background: Highlight;
+  }
+
   .range::-moz-range-thumb {
+    border: 0.1875rem solid ButtonFace;
     background: Highlight;
   }
 

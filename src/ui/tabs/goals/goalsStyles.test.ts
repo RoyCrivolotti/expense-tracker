@@ -121,4 +121,18 @@ describe('the width at which Goals changes from the phone layout to the wide one
     expect(forced).toMatch(/\.range\s*\{[^}]*forced-color-adjust:\s*none/)
     expect(forced).toContain('Highlight')
   })
+
+  it.each(['::-webkit-slider-thumb', '::-moz-range-thumb'])(
+    'paints the slider knob %s as one colour that is the same in every theme',
+    (part) => {
+      // The first rule for the part is the everyday one; the forced-colours one comes later.
+      const knob = rules('tabs/goals/goals.module.css').find((r) => r.selector === `.range${part}`)?.body ?? ''
+
+      expect(knob).toContain('background: var(--color-accent)')
+      // A ring in the card's colour or a shadow shows on one theme and vanishes on the other, so
+      // the knob looks outlined in light mode and flat in dark.
+      expect(knob).not.toMatch(/var\(--color-surface\)/)
+      expect(knob).not.toMatch(/box-shadow/)
+    },
+  )
 })
