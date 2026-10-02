@@ -156,6 +156,22 @@ describe('GoalsTab', () => {
     expect(screen.getByText('Wealth accounts')).toBeInTheDocument()
   })
 
+  it('brings Setup\'s content into view when the empty Progress view sends the user there from far down', async () => {
+    const user = userEvent.setup()
+    const scrollIntoView = vi.fn()
+    Element.prototype.scrollIntoView = scrollIntoView
+    render(<GoalsTab model={makeModel()} actions={makeActions()} />)
+    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    // Scrolled well past where the content starts: jsdom lays nothing out, so say so.
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({ top: -600 } as DOMRect)
+
+    await user.click(screen.getByRole('button', { name: 'Set up accounts' }))
+
+    await vi.waitFor(() =>
+      expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ block: 'start' })),
+    )
+  })
+
   it('shows Plan view content when Plan tab is active', () => {
     render(<GoalsTab model={makeModel()} />)
     expect(screen.getByText(/Invested portfolio projection/i)).toBeInTheDocument()
