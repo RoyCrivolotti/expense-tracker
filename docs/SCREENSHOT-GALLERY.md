@@ -102,7 +102,7 @@ Multi-scenario wealth planner in three views. Plan: three saved paths plus an un
 
 | Assumptions (desktop) | Assumptions (mobile) |
 | --- | --- |
-| ![Goals assumptions desktop](./screenshots/gallery/goals-desktop-setup.png) | ![Goals assumptions mobile](./screenshots/gallery/goals-mobile-setup.png) |
+| ![Goals assumptions desktop](./screenshots/gallery/goals-desktop-assumptions.png) | ![Goals assumptions mobile](./screenshots/gallery/goals-mobile-assumptions.png) |
 
 | Full page (desktop) | Secondary charts stack (desktop) |
 | --- | --- |
