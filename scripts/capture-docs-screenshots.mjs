@@ -97,14 +97,24 @@ async function filtersExpanded(page) {
   return page.getByRole('button', { name: /Filters/ }).getAttribute('aria-expanded')
 }
 
+function filtersSheet(page) {
+  return page.getByRole('dialog', { name: 'Filters' })
+}
+
+/**
+ * The filters are a sheet, and its scrim covers the toggle, so the toggle only opens it.
+ * Closing goes through the sheet's own Close button. The toggle's aria-expanded flips the
+ * moment the sheet starts to leave, while the dialog outlives that for its exit, so the
+ * wait is on the dialog rather than on the attribute.
+ */
 async function setFiltersExpanded(page, open) {
-  const btn = page.getByRole('button', { name: /Filters/ })
-  const expanded = await filtersExpanded(page)
-  const want = open ? 'true' : 'false'
-  if (expanded !== want) {
-    await btn.click()
-    await page.waitForTimeout(200)
+  const sheet = filtersSheet(page)
+  if ((await filtersExpanded(page)) !== String(open)) {
+    if (open) await page.getByRole('button', { name: /Filters/ }).click()
+    else await sheet.getByRole('button', { name: 'Close', exact: true }).click()
   }
+  await sheet.waitFor({ state: open ? 'visible' : 'detached' })
+  await page.waitForTimeout(200)
 }
 
 async function setMonthLabel(page, monthName) {
@@ -203,7 +213,7 @@ async function captureTransactionsMobile(m) {
   await m.waitForTimeout(300)
   await m.screenshot({ path: join(OUT, 'transactions-mobile-filters.png') })
 
-  await m.locator('select').first().selectOption({ label: 'Groceries' })
+  await filtersSheet(m).locator('select').first().selectOption({ label: 'Groceries' })
   await setFiltersExpanded(m, false)
   await m.waitForSelector('text=Clear filters', { timeout: 15000 })
   await m.waitForTimeout(300)
