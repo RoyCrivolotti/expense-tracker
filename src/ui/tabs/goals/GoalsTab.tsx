@@ -35,20 +35,6 @@ interface GoalsTabProps {
   entry?: GoalsEntry
 }
 
-/**
- * What sits between the view switch and a view's own content: Plan's intro and glossary (on
- * a screen wide enough to lead with them), and the anchor a tap on the switch scrolls to.
- * Progress and Assumptions start at the anchor.
- */
-function GoalsContentTop({ showIntro }: { showIntro: boolean }) {
-  return (
-    <>
-      <GoalsIntro placement="top" show={showIntro} />
-      <div id={GOALS_CONTENT_ANCHOR_ID} className={styles.contentAnchor} />
-    </>
-  )
-}
-
 function initialView(entry: GoalsEntry | undefined): TabView {
   return entry === 'checkin' ? 'progress' : 'plan'
 }
@@ -146,55 +132,61 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
       />
 
       <GoalsPanel view={view} planHalf={mobilePlanView}>
-      <GoalsContentTop showIntro={view === 'plan'} />
+        {/*
+          Between the view switch and a view's own content: Plan's intro and glossary (on a screen
+          wide enough to lead with them), and the anchor a tap on the switch scrolls to. Progress
+          and Assumptions start at the anchor.
+        */}
+        <GoalsIntro placement="top" show={view === 'plan'} />
+        <div id={GOALS_CONTENT_ANCHOR_ID} className={styles.contentAnchor} />
 
-      {view === 'assumptions' ? (
-        <AssumptionsView
-          accounts={dataset.wealthAccounts}
-          checkins={dataset.wealthCheckins}
-          settings={dataset.settings}
-          actions={actions}
-          onSettingsChange={actions ? (patch) => actions.updateSettings(patch) : undefined}
-          focus={assumptionsFocus}
-        />
-      ) : null}
-      {view === 'progress' ? (
-        <ProgressPane
-          dataset={dataset}
-          actions={actions}
-          plan={plan}
-          latestSnapshot={latestSnapshot}
-          fromToday={fromToday}
-          reached={reachedMilestones}
-          openCheckinForm={checkinEntry}
-          onOpenAccountsSetup={openAccountsSetup}
-          editor={editor}
-        />
-      ) : null}
-      {view === 'plan' ? (
-        <PlanView
-          half={mobilePlanView}
-          scenarios={dataset.goalScenarios}
-          editor={editor}
-          actions={actions}
-          latest={latestSnapshot}
-          milestones={milestones}
-          reached={reachedMilestones}
-          monthly={monthly}
-          checkins={dataset.wealthCheckins}
-          accounts={dataset.wealthAccounts}
-          fromToday={fromToday}
-          display={{
-            mode: displayMode,
-            onModeChange: changeDisplayMode,
-            assumedInflation: dataset.settings.assumedInflation,
-            preview: previewInflation,
-            onPreview: setPreviewInflation,
-            onOpenSetting: actions ? openInflationSetting : undefined,
-          }}
-        />
-      ) : null}
-      <GoalsIntro placement="bottom" show={view === 'plan'} />
+        {view === 'assumptions' ? (
+          <AssumptionsView
+            accounts={dataset.wealthAccounts}
+            checkins={dataset.wealthCheckins}
+            settings={dataset.settings}
+            actions={actions}
+            onSettingsChange={actions ? (patch) => actions.updateSettings(patch) : undefined}
+            focus={assumptionsFocus}
+          />
+        ) : null}
+        {view === 'progress' ? (
+          <ProgressPane
+            dataset={dataset}
+            actions={actions}
+            plan={plan}
+            latestSnapshot={latestSnapshot}
+            fromToday={fromToday}
+            reached={reachedMilestones}
+            openCheckinForm={checkinEntry}
+            onOpenAccountsSetup={openAccountsSetup}
+            editor={editor}
+          />
+        ) : null}
+        {view === 'plan' ? (
+          <PlanView
+            half={mobilePlanView}
+            scenarios={dataset.goalScenarios}
+            editor={editor}
+            actions={actions}
+            latest={latestSnapshot}
+            milestones={milestones}
+            reached={reachedMilestones}
+            monthly={monthly}
+            checkins={dataset.wealthCheckins}
+            accounts={dataset.wealthAccounts}
+            fromToday={fromToday}
+            display={{
+              mode: displayMode,
+              onModeChange: changeDisplayMode,
+              assumedInflation: dataset.settings.assumedInflation,
+              preview: previewInflation,
+              onPreview: setPreviewInflation,
+              onOpenSetting: actions ? openInflationSetting : undefined,
+            }}
+          />
+        ) : null}
+        <GoalsIntro placement="bottom" show={view === 'plan'} />
       </GoalsPanel>
     </div>
   )
