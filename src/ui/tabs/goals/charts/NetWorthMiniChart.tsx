@@ -6,7 +6,9 @@ import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { formatMoneyShort } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 
-const MINI_HEIGHT = 120
+/** Room above the plot: the top axis label's half height, and no more, since this chart is pinned. */
+const MINI_PAD_TOP = 8
+const MINI_HEIGHT = 112
 
 /**
  * The scenario being edited, and nothing else: its line and its uncertainty band, with the
@@ -44,6 +46,7 @@ function NetWorthMiniChartImpl({ draft }: { draft: NewGoalScenario }) {
   return (
     <LinearChart
       height={MINI_HEIGHT}
+      padTop={MINI_PAD_TOP}
       series={series}
       xLabels={labels}
       formatValue={(c) => formatMoneyShort(c, format)}

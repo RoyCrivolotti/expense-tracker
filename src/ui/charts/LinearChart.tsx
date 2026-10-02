@@ -52,6 +52,11 @@ export interface ChartSeries {
 
 interface Props {
   height: number
+  /**
+   * Room above the plot, for the top axis label to sit in. A chart with little height to spare
+   * can ask for less than the default.
+   */
+  padTop?: number
   series: ChartSeries[]
   xLabels: string[]
   formatValue: (v: number) => string
@@ -86,10 +91,12 @@ function useGeometry(
   refLines: number[],
   yDomainMax: number | undefined,
   fitDomain: boolean | undefined,
+  padTopProp: number | undefined,
 ) {
   return useMemo(() => {
+    const padTop = padTopProp ?? PAD.top
     const n = series.find((s) => s.kind !== 'scatter' && s.kind !== 'band')?.values.length ?? 0
-    const innerH = height - PAD.top - PAD.bottom
+    const innerH = height - padTop - PAD.bottom
     const innerW = width - PAD.left - PAD.right
     const areaSeries = series.filter((s) => s.kind === 'area')
     const stackedBands = stackAreas(areaSeries.map((a) => a.values))
@@ -118,11 +125,11 @@ function useGeometry(
     // clip a line or check-in that legitimately extends past it.
     const effectiveMax = yDomainMax !== undefined ? Math.max(domain.max, yDomainMax) : domain.max
     const nice = niceScale(...domainTuple({ min: domain.min, max: effectiveMax }), 5, maxTicksFor(innerH))
-    const scaleY = makeScale(nice.min, nice.max, PAD.top + innerH, PAD.top)
+    const scaleY = makeScale(nice.min, nice.max, padTop + innerH, padTop)
     const xForIndex = (i: number) =>
       n <= 1 ? PAD.left + innerW / 2 : PAD.left + (i / (n - 1)) * innerW
-    return { n, innerH, innerW, stackedBands, areaSeries, ticks: nice.ticks, scaleY, xForIndex }
-  }, [series, width, height, refLines, yDomainMax, fitDomain])
+    return { n, padTop, innerH, innerW, stackedBands, areaSeries, ticks: nice.ticks, scaleY, xForIndex }
+  }, [series, width, height, refLines, yDomainMax, fitDomain, padTopProp])
 }
 
 /** One axis label per 26px of plot: closer than that, labels at 11px start to touch. */
@@ -144,6 +151,7 @@ function tooltipShows(
 
 export function LinearChart({
   height,
+  padTop,
   series,
   xLabels,
   formatValue,
@@ -167,10 +175,10 @@ export function LinearChart({
   // The viewBox is the wrapper's width in CSS pixels, so text, strokes and hit areas
   // render at their own size instead of being scaled up with the chart.
   const width = useElementWidth(containerRef, FALLBACK_W)
-  const geo = useGeometry(series, width, height, refLines, yDomainMax, fitDomain)
+  const geo = useGeometry(series, width, height, refLines, yDomainMax, fitDomain, padTop)
   const { active, ...handlers } = useChartFocus(geo.n, geo.xForIndex, containerRef)
   const focusX = active != null ? geo.xForIndex(active) : 0
-  const anchor = useSvgAnchor(svgRef, active != null ? focusX : null, active != null ? PAD.top : null)
+  const anchor = useSvgAnchor(svgRef, active != null ? focusX : null, active != null ? geo.padTop : null)
   const tip = active != null ? tooltip(active) : null
   const showsTooltip = tooltipShows(tip, tooltipMode)
   const lineSeries = series.filter((s) => s.kind !== 'area' && s.kind !== 'band' && s.kind !== 'scatter')
@@ -223,7 +231,7 @@ export function LinearChart({
           )
         })}
         <clipPath id={plotClipId}>
-          <rect x={PAD.left - 1} y={PAD.top} width={geo.innerW + 2} height={geo.innerH + 1} />
+          <rect x={PAD.left - 1} y={geo.padTop} width={geo.innerW + 2} height={geo.innerH + 1} />
         </clipPath>
         <g clipPath={`url(#${plotClipId})`}>
           {series.filter((s) => s.kind === 'band').map((s) =>
@@ -275,28 +283,28 @@ export function LinearChart({
         {todayIndex !== undefined && (
           <ChartTodayMarker
             x={geo.xForIndex(todayIndex)}
-            yTop={PAD.top}
-            yBottom={PAD.top + geo.innerH}
+            yTop={geo.padTop}
+            yBottom={geo.padTop + geo.innerH}
           />
         )}
         <ChartXLabels labels={xLabels} xForIndex={geo.xForIndex} y={height - 8} />
         <ChartPurchaseMarkers
           markerYears={markerYears}
           xForIndex={geo.xForIndex}
-          yTop={PAD.top}
+          yTop={geo.padTop}
           innerH={geo.innerH}
         />
         <ChartLifeEventMarkers
           markers={lifeEventMarkers}
           xForIndex={geo.xForIndex}
-          yTop={PAD.top}
+          yTop={geo.padTop}
         />
         {/* Above the year marks, or a dashed vertical mark runs through its text. */}
-        <ChartAboveMarker marker={aboveTop} x={PAD.left + 8} y={PAD.top} />
+        <ChartAboveMarker marker={aboveTop} x={PAD.left + 8} y={geo.padTop} />
         <ChartFocusIndicator
           active={active}
           focusX={focusX}
-          yTop={PAD.top}
+          yTop={geo.padTop}
           innerH={geo.innerH}
           scaleY={geo.scaleY}
           lineSeries={lineSeries}

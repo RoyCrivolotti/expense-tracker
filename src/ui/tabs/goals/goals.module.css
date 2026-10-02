@@ -127,7 +127,7 @@
         env(safe-area-inset-top, 0px)
     );
     z-index: 5;
-    padding: 0.5rem 0 0.25rem;
+    padding: 0.25rem 0 0.25rem;
     background: var(--color-bg);
     --fade-h: 1.25rem;
   }

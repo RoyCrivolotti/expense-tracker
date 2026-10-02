@@ -11,7 +11,7 @@ describe('NetWorthMiniChart', () => {
     const { container } = render(<NetWorthMiniChart draft={draft} />)
 
     const svg = screen.getByRole('img', { name: 'Projection of the scenario being edited' })
-    expect(svg.getAttribute('viewBox')).toBe('0 0 360 120')
+    expect(svg.getAttribute('viewBox')).toBe('0 0 360 112')
     // One filled band and one line, nothing else: no legend, no milestone lines.
     expect(container.querySelectorAll('path').length).toBeGreaterThanOrEqual(2)
     expect(container.querySelector('[class*="legend"]')).toBeNull()
