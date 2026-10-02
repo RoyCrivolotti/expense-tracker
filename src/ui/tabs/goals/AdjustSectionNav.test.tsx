@@ -120,6 +120,18 @@ describe('AdjustSectionNav', () => {
       expect(current()).toBe('Tracking')
     })
 
+    it('is at the bottom when the page ends within 2px of the screen, and not when it runs further', () => {
+      sectionElement('events').open = true
+      // jsdom's window is 768px tall and has not scrolled.
+      Object.defineProperty(document.documentElement, 'scrollHeight', { configurable: true, value: 770 })
+      render(<AdjustSectionNav />)
+      expect(current()).toBe('Events')
+
+      Object.defineProperty(document.documentElement, 'scrollHeight', { configurable: true, value: 771 })
+      scrollPage()
+      expect(current()).toBe('FIRE')
+    })
+
     it('moves to the last chip once its controls are opened', () => {
       render(<AdjustSectionNav />)
       expect(current()).toBe('FIRE')
@@ -137,6 +149,7 @@ describe('AdjustSectionNav', () => {
 
     await user.click(screen.getByRole('button', { name: 'Events' }))
     expect(window.scrollBy).toHaveBeenCalledTimes(1)
+    expect(window.scrollBy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }))
     expect(current()).toBe('Events')
 
     // The jump's own scrolling, and a section that cannot reach the top, must not move it.
