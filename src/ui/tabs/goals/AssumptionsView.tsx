@@ -45,10 +45,9 @@ export function AssumptionsView({
   return (
     <div className={styles.progressStack}>
       <p className={goalStyles.intro}>
-        What Progress measures with. Milestones mark the ladder your invested portfolio climbs;
-        accounts are what each check-in records a balance for; the cash reserve is how much of
-        that should stay in cash; the assumed inflation is the rate that brings check-ins, the
-        house and the mortgage back to today&apos;s money.
+        Progress is measured with your milestones, the accounts each check-in records a balance
+        for, the months of spending to hold in cash, and an assumed inflation rate. That rate
+        brings check-ins, the house and the mortgage back to today&apos;s money.
       </p>
       <MilestonesSetting settings={settings} onChange={onSettingsChange} />
       <div ref={accountsCard} className={styles.landingTarget}>

@@ -12,7 +12,7 @@ const buildTerms = (cur: string): { term: string; body: string }[] => [
   },
   {
     term: 'Scenario',
-    body: 'A saved set of assumptions (return, contribution, horizon, house plans). Each one is a colored line on the projection so you can compare futures side by side.',
+    body: 'A saved set of choices (return, contribution, horizon, house plans). Each one is a colored line on the projection so you can compare futures side by side.',
   },
   {
     term: 'Real return',
@@ -20,7 +20,7 @@ const buildTerms = (cur: string): { term: string; body: string }[] => [
   },
   {
     term: 'Horizon (years)',
-    body: 'How far the projection runs: years 0 through your horizon. Portfolio and housing assumptions apply over this window. FI is also searched within it.',
+    body: 'How far the projection runs: years 0 through your horizon. The portfolio and housing settings apply over this window. FI is also searched within it.',
   },
   {
     term: 'FIRE / FI',
