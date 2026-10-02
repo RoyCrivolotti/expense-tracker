@@ -2,11 +2,11 @@
   --goals-gap: 1.25rem;
   /* The phone's view switcher, stuck under the app header; the pinned mini chart stops
      below it, so both read this. */
-  --goals-nav-h: 2.75rem;
+  --goals-nav-h: var(--exp-subnav-h);
   /* The row and the pinned chart tuck this far under what sits above them. iOS lets sticky
      elements drift by a device pixel while the page coasts, and edges that only touch would
      show that as a hairline of the cards scrolling past underneath. */
-  --goals-tuck: 1px;
+  --goals-tuck: var(--exp-subnav-tuck);
   display: flex;
   flex-direction: column;
   gap: var(--goals-gap);

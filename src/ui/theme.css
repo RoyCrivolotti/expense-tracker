@@ -32,6 +32,11 @@
   /* How far the Transactions bar and its day headers sit under the app header, so the
      one-pixel drift iOS gives sticky elements while the page coasts never opens a gap. */
   --exp-header-tuck: 0.3125rem;
+  /* A row of tabs a page keeps stuck under the app header: the section tabs of Analytics and
+     Settings, and Goals' view row on a phone. Its height, and how far it tucks under the header
+     so the one-pixel drift iOS gives sticky elements while the page coasts never opens a gap. */
+  --exp-subnav-h: 2.75rem;
+  --exp-subnav-tuck: 1px;
   --exp-max: 56rem;
 
   /*
