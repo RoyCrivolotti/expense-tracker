@@ -23,6 +23,9 @@
   --exp-rail: 15rem;
   --exp-rail-collapsed: 4.5rem;
   --exp-bottom-bar: 4rem;
+  /* The app header's height without the top safe-area inset (AppShell's `.header` is held
+     to at least this). Anything stuck under the header reads it, so it cannot guess. */
+  --exp-header: 3.8125rem;
   --exp-max: 56rem;
 
   /*
