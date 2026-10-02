@@ -156,7 +156,7 @@ describe('GoalsTab', () => {
     expect(screen.getByText('Wealth accounts')).toBeInTheDocument()
   })
 
-  it('brings Setup\'s content into view when the empty Progress view sends the user there from far down', async () => {
+  it('brings the content of Assumptions into view when the empty Progress view sends the user there from far down', async () => {
     const user = userEvent.setup()
     const scrollIntoView = vi.fn()
     Element.prototype.scrollIntoView = scrollIntoView
