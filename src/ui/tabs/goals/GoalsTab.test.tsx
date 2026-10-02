@@ -47,15 +47,15 @@ describe('GoalsTab', () => {
 
   it('renders with Plan view by default', () => {
     render(<GoalsTab model={makeModel()} />)
-    expect(screen.getByRole('radio', { name: 'Plan' })).toBeInTheDocument()
-    expect(screen.getByRole('radio', { name: 'Progress' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Plan' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Progress' })).toBeInTheDocument()
   })
 
   it('switches to Progress view when Progress tab is selected', async () => {
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} />)
 
-    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
 
     expect(screen.getByText('Progress snapshot')).toBeInTheDocument()
   })
@@ -67,12 +67,12 @@ describe('GoalsTab', () => {
     )
     render(<GoalsTab model={model} actions={makeActions()} />)
 
-    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
     expect(screen.getByText('Progress snapshot')).toBeInTheDocument()
     expect(screen.queryByText('Wealth accounts')).not.toBeInTheDocument()
     expect(screen.queryByText('Milestones')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('radio', { name: 'Assumptions' }))
+    await user.click(screen.getByRole('tab', { name: 'Assumptions' }))
     expect(screen.getByText('Wealth accounts')).toBeInTheDocument()
     expect(screen.getByText('Milestones')).toBeInTheDocument()
     expect(screen.getByText('Broker')).toBeInTheDocument()
@@ -84,7 +84,7 @@ describe('GoalsTab', () => {
     const actions = makeActions()
     render(<GoalsTab model={makeModel()} actions={actions} />)
 
-    await user.click(screen.getByRole('radio', { name: 'Assumptions' }))
+    await user.click(screen.getByRole('tab', { name: 'Assumptions' }))
     await user.click(screen.getByText('+ Add milestone'))
 
     expect(actions.updateSettings).toHaveBeenCalledTimes(1)
@@ -98,7 +98,7 @@ describe('GoalsTab', () => {
     )
     render(<GoalsTab model={model} actions={makeActions()} entry="checkin" />)
 
-    expect(screen.getByRole('radio', { name: 'Progress' })).toBeChecked()
+    expect(screen.getByRole('tab', { name: 'Progress' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('button', { name: 'Save check-in' })).toBeInTheDocument()
   })
 
@@ -110,8 +110,8 @@ describe('GoalsTab', () => {
     render(<GoalsTab model={model} actions={makeActions()} entry="checkin" />)
     expect(screen.getByRole('button', { name: 'Save check-in' })).toBeInTheDocument()
 
-    await user.click(screen.getByRole('radio', { name: 'Plan' }))
-    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('tab', { name: 'Plan' }))
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
     expect(screen.queryByRole('button', { name: 'Save check-in' })).not.toBeInTheDocument()
   })
 
@@ -149,10 +149,10 @@ describe('GoalsTab', () => {
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} actions={makeActions()} />)
 
-    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
     await user.click(screen.getByRole('button', { name: 'Set up accounts' }))
 
-    expect(screen.getByRole('radio', { name: 'Assumptions' })).toBeChecked()
+    expect(screen.getByRole('tab', { name: 'Assumptions' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByText('Wealth accounts')).toBeInTheDocument()
   })
 
@@ -161,7 +161,7 @@ describe('GoalsTab', () => {
     const scrollIntoView = vi.fn()
     Element.prototype.scrollIntoView = scrollIntoView
     render(<GoalsTab model={makeModel()} actions={makeActions()} />)
-    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
 
     await user.click(screen.getByRole('button', { name: 'Set up accounts' }))
 
@@ -170,8 +170,8 @@ describe('GoalsTab', () => {
     expect(scrollIntoView.mock.contexts[0]).toContainElement(screen.getByText('Wealth accounts'))
 
     // Coming back to Assumptions by the switcher is not a request to scroll to it.
-    await user.click(screen.getByRole('radio', { name: 'Progress' }))
-    await user.click(screen.getByRole('radio', { name: 'Assumptions' }))
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
+    await user.click(screen.getByRole('tab', { name: 'Assumptions' }))
     expect(scrollIntoView).toHaveBeenCalledTimes(1)
   })
 
@@ -275,7 +275,7 @@ describe('GoalsTab', () => {
     const dataset = makeDataset({ goalScenarios: [plan], wealthAccounts: accounts, wealthCheckins: checkins })
     const { rerender } = render(<GoalsTab model={buildExpenseModel(dataset)} actions={actions} />)
 
-    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
     await user.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
     // It asks first, since it writes the plan straight away.
     expect(actions.updateScenario).not.toHaveBeenCalled()
@@ -287,7 +287,7 @@ describe('GoalsTab', () => {
     // or the header would offer to save the old start back over the re-baseline.
     const saved = { ...plan, ...patch }
     rerender(<GoalsTab model={buildExpenseModel({ ...dataset, goalScenarios: [saved] })} actions={actions} />)
-    await user.click(screen.getByRole('radio', { name: 'Plan' }))
+    await user.click(screen.getByRole('tab', { name: 'Plan' }))
     expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
   })
 
@@ -313,13 +313,13 @@ describe('GoalsTab', () => {
       </ToastContext.Provider>,
     )
 
-    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
     await user.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
     await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Re-baseline' }))
 
     expect(showToast).toHaveBeenCalledWith("Something went wrong, so that change probably wasn't saved.", 'error')
     // Nothing was written, so Plan must not offer to save a start that never landed.
-    await user.click(screen.getByRole('radio', { name: 'Plan' }))
+    await user.click(screen.getByRole('tab', { name: 'Plan' }))
     expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
   })
 
@@ -339,10 +339,10 @@ describe('GoalsTab', () => {
     render(<GoalsTab model={model} actions={actions} />)
 
     fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
-    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
     await user.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
     await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Re-baseline' }))
-    await user.click(screen.getByRole('radio', { name: 'Plan' }))
+    await user.click(screen.getByRole('tab', { name: 'Plan' }))
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
 
     expect(actions.updateScenario).toHaveBeenLastCalledWith(
@@ -383,7 +383,7 @@ describe('GoalsTab', () => {
     fireEvent.click(screen.getByLabelText('Remove Car'))
     expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
     await user.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
     await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Re-baseline' }))
 
@@ -399,7 +399,7 @@ describe('GoalsTab', () => {
     )
     const patch = vi.mocked(actions.updateScenario).mock.calls[0]![1]
     rerender(<GoalsTab model={buildExpenseModel({ ...dataset, goalScenarios: [{ ...plan, ...patch }] })} actions={actions} />)
-    await user.click(screen.getByRole('radio', { name: 'Plan' }))
+    await user.click(screen.getByRole('tab', { name: 'Plan' }))
 
     // The draft moved from its own values: the gift carries over, and the car stays taken out
     // rather than coming back from the saved plan. It is still an edit nobody has saved.
@@ -433,7 +433,7 @@ describe('GoalsTab', () => {
     const model = buildExpenseModel(makeDataset({ goalScenarios: [plan], wealthAccounts: accounts, wealthCheckins: checkins }))
     render(<GoalsTab model={model} actions={actions} />)
 
-    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
     await user.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
     const sheet = screen.getByRole('alertdialog')
     // It says what it replaces as well as what it puts in, and names the dropped event by its date.
@@ -562,7 +562,7 @@ describe('GoalsTab', () => {
 
     // Load the other scenario into the editor, then look at Progress.
     await user.click(screen.getByRole('button', { name: 'Path B' }))
-    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
 
     // Against Path A's 100M start the tiny check-in is far behind; against Path B's
     // 10M start it would still be behind, but the delta names the plan's number.
@@ -573,9 +573,9 @@ describe('GoalsTab', () => {
   it('keeps the three-way switch on wide screens, where Plan shows the chart and the controls together', () => {
     render(<GoalsTab model={makeModel()} />)
 
-    expect(screen.getByRole('radio', { name: 'Plan' })).toBeChecked()
-    expect(screen.queryByRole('radio', { name: 'Chart' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('radio', { name: 'Adjust' })).not.toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Plan' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.queryByRole('tab', { name: 'Chart' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Adjust' })).not.toBeInTheDocument()
   })
 
   it('swaps the switch when the window crosses the breakpoint, keeping the view and the half of Plan', async () => {
@@ -583,23 +583,23 @@ describe('GoalsTab', () => {
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} />)
     const labels = () =>
-      within(screen.getByRole('radiogroup', { name: 'Goals view' }))
-        .getAllByRole('radio')
+      within(screen.getByRole('tablist', { name: 'Goals view' }))
+        .getAllByRole('tab')
         .map((r) => r.textContent)
     const widen = (wide: boolean) => act(() => media.change(NARROW_MQ, !wide))
 
-    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
     widen(true)
     expect(labels()).toEqual(['Plan', 'Progress', 'Assumptions'])
-    expect(screen.getByRole('radio', { name: 'Plan' })).toBeChecked()
+    expect(screen.getByRole('tab', { name: 'Plan' })).toHaveAttribute('aria-selected', 'true')
 
     widen(false)
     expect(labels()).toEqual(['Chart', 'Adjust', 'Progress', 'Assumptions'])
-    expect(screen.getByRole('radio', { name: 'Adjust' })).toBeChecked()
+    expect(screen.getByRole('tab', { name: 'Adjust' })).toHaveAttribute('aria-selected', 'true')
 
-    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
     widen(true)
-    expect(screen.getByRole('radio', { name: 'Progress' })).toBeChecked()
+    expect(screen.getByRole('tab', { name: 'Progress' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByText('Progress snapshot')).toBeInTheDocument()
   })
 
@@ -607,15 +607,15 @@ describe('GoalsTab', () => {
     mockPhoneWidth()
     const { container } = render(<GoalsTab model={makeModel()} />)
 
-    const row = screen.getByRole('radiogroup', { name: 'Goals view' })
-    expect(within(row).getAllByRole('radio').map((r) => r.textContent)).toEqual([
+    const row = screen.getByRole('tablist', { name: 'Goals view' })
+    expect(within(row).getAllByRole('tab').map((r) => r.textContent)).toEqual([
       'Chart',
       'Adjust',
       'Progress',
       'Assumptions',
     ])
-    expect(screen.queryByRole('radio', { name: 'Plan' })).not.toBeInTheDocument()
-    expect(screen.getByRole('radio', { name: 'Chart' })).toBeChecked()
+    expect(screen.queryByRole('tab', { name: 'Plan' })).not.toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Chart' })).toHaveAttribute('aria-selected', 'true')
     expect(container.querySelector('[data-mobile-view="chart"]')).not.toBeNull()
   })
 
@@ -624,9 +624,9 @@ describe('GoalsTab', () => {
     const user = userEvent.setup()
     const { container } = render(<GoalsTab model={makeModel()} />)
 
-    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
 
-    expect(screen.getByRole('radio', { name: 'Adjust' })).toBeChecked()
+    expect(screen.getByRole('tab', { name: 'Adjust' })).toHaveAttribute('aria-selected', 'true')
     expect(container.querySelector('[data-mobile-view="adjust"]')).not.toBeNull()
     expect(container.querySelector('[data-mobile-view="chart"]')).toBeNull()
   })
@@ -636,17 +636,17 @@ describe('GoalsTab', () => {
     const user = userEvent.setup()
     const { container } = render(<GoalsTab model={makeModel()} />)
 
-    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
-    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
     expect(screen.getByText('Progress snapshot')).toBeInTheDocument()
-    expect(screen.getByRole('radio', { name: 'Adjust' })).not.toBeChecked()
+    expect(screen.getByRole('tab', { name: 'Adjust' })).toHaveAttribute('aria-selected', 'false')
     expect(container.querySelector('[data-mobile-view]')).toBeNull()
 
-    await user.click(screen.getByRole('radio', { name: 'Assumptions' }))
-    expect(screen.getByRole('radio', { name: 'Assumptions' })).toBeChecked()
+    await user.click(screen.getByRole('tab', { name: 'Assumptions' }))
+    expect(screen.getByRole('tab', { name: 'Assumptions' })).toHaveAttribute('aria-selected', 'true')
 
-    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
-    expect(screen.getByRole('radio', { name: 'Adjust' })).toBeChecked()
+    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+    expect(screen.getByRole('tab', { name: 'Adjust' })).toHaveAttribute('aria-selected', 'true')
     expect(container.querySelector('[data-mobile-view="adjust"]')).not.toBeNull()
   })
 
@@ -657,8 +657,8 @@ describe('GoalsTab', () => {
     await user.click(screen.getByRole('radio', { name: 'Nominal' }))
     stepPreviewUp()
 
-    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
-    await user.click(screen.getByRole('radio', { name: 'Chart' }))
+    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Chart' }))
 
     expect(screen.getByLabelText('Preview inflation')).toHaveValue('2,5')
   })
@@ -671,13 +671,13 @@ describe('GoalsTab', () => {
     const chips = () => screen.queryByRole('navigation', { name: 'Adjust sections', hidden: true })
 
     expect(chips()).not.toBeInTheDocument()
-    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
 
     expect(chips()).toBeInTheDocument()
     expect(document.getElementById('goals-adjust-stack')).toContainElement(chips())
     expect(document.getElementById('goals-adjust-housing')).toBeInTheDocument()
     await vi.waitFor(() => expect(scrollBy).toHaveBeenCalledTimes(1))
-    await user.click(screen.getByRole('radio', { name: 'Chart' }))
+    await user.click(screen.getByRole('tab', { name: 'Chart' }))
     expect(chips()).not.toBeInTheDocument()
   })
 
@@ -687,7 +687,7 @@ describe('GoalsTab', () => {
     const actions = makeActions()
     const plan = makeScenario({ id: 1, name: 'Path A', isActive: true })
     render(<GoalsTab model={buildExpenseModel(makeDataset({ goalScenarios: [plan] }))} actions={actions} />)
-    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
     const row = () => screen.queryByRole('group', { name: 'Unsaved changes', hidden: true })
     const button = (name: string) =>
       within(row()!).getByRole('button', { name, hidden: true })
@@ -714,7 +714,7 @@ describe('GoalsTab', () => {
     vi.mocked(actions.updateScenario).mockReturnValue(new Promise<void>((resolve) => (finish = resolve)))
     const plan = makeScenario({ id: 1, name: 'Path A', isActive: true })
     render(<GoalsTab model={buildExpenseModel(makeDataset({ goalScenarios: [plan] }))} actions={actions} />)
-    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
     fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
     const button = (name: string) => screen.getByRole('button', { name, hidden: true })
     const held = ['Save changes to Path A, tweaked', 'Discard changes', 'Save changes', 'Discard']
@@ -742,7 +742,7 @@ describe('GoalsTab', () => {
     const plan = makeScenario({ id: 1, name: 'Path A', isActive: true })
     const dataset = makeDataset({ goalScenarios: [plan] })
     const { rerender } = render(<GoalsTab model={buildExpenseModel(dataset)} actions={actions} />)
-    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
     fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
     screen.getByRole('button', { name: 'Save changes to Path A, tweaked', hidden: true }).focus()
 
@@ -763,7 +763,7 @@ describe('GoalsTab', () => {
     mockPhoneWidth()
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} />)
-    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
 
     expect(screen.queryByRole('group', { name: 'Unsaved changes', hidden: true })).not.toBeInTheDocument()
   })
@@ -777,7 +777,7 @@ describe('GoalsTab', () => {
     expect(before(screen.getByText('What do these terms mean?'), anchor())).toBe(true)
     expect(before(anchor(), screen.getByText('Where you are today'))).toBe(true)
 
-    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
     expect(screen.queryByText('What do these terms mean?')).not.toBeInTheDocument()
     expect(before(anchor(), screen.getByText('Progress snapshot'))).toBe(true)
   })
@@ -792,9 +792,9 @@ describe('GoalsTab', () => {
       container.querySelector('svg[aria-label^="Projection of the scenario being edited"]')
 
     expect(mini()).not.toBeInTheDocument()
-    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
     expect(mini()).toBeInTheDocument()
-    await user.click(screen.getByRole('radio', { name: 'Chart' }))
+    await user.click(screen.getByRole('tab', { name: 'Chart' }))
     expect(mini()).not.toBeInTheDocument()
   })
 
@@ -802,7 +802,7 @@ describe('GoalsTab', () => {
     mockPhoneWidth()
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} />)
-    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
     expect(document.getElementById('goals-adjust-stack')).toBeInTheDocument()
 
     act(() => media.change(NARROW_MQ, false))
@@ -823,11 +823,11 @@ describe('GoalsTab', () => {
     expect(screen.getByLabelText('Preview inflation')).toHaveValue('2,0')
     expect(screen.queryByLabelText('Assumed inflation')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
     expect(screen.queryByLabelText('Preview inflation')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Assumed inflation')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('radio', { name: 'Assumptions' }))
+    await user.click(screen.getByRole('tab', { name: 'Assumptions' }))
     expect(screen.getByLabelText('Assumed inflation')).toBeInTheDocument()
     expect(screen.queryByLabelText('Preview inflation')).not.toBeInTheDocument()
   })
@@ -860,19 +860,19 @@ describe('GoalsTab', () => {
       wealthCheckins: [behind(1, '2026-01-01'), behind(2, '2026-04-01'), behind(3, '2026-07-15')],
     })
     render(<GoalsTab model={buildExpenseModel(dataset)} actions={actions} />)
-    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
     const before = screen.getByText(/Behind plan/).textContent
 
-    await user.click(screen.getByRole('radio', { name: 'Plan' }))
+    await user.click(screen.getByRole('tab', { name: 'Plan' }))
     await user.click(screen.getByRole('radio', { name: 'Nominal' }))
     fireEvent.change(screen.getByLabelText('Preview inflation'), { target: { value: '5' } })
     fireEvent.blur(screen.getByLabelText('Preview inflation'))
     expect(screen.getByLabelText('Preview inflation')).toHaveValue('5,0')
 
     expect(actions.updateSettings).not.toHaveBeenCalled()
-    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
     expect(screen.getByText(/Behind plan/).textContent).toBe(before)
-    await user.click(screen.getByRole('radio', { name: 'Assumptions' }))
+    await user.click(screen.getByRole('tab', { name: 'Assumptions' }))
     expect(screen.getByLabelText('Assumed inflation')).toHaveValue('2,0')
   })
 
@@ -905,8 +905,8 @@ describe('GoalsTab', () => {
     expect(screen.getByLabelText('Preview inflation')).toHaveValue('2,0')
 
     await bump()
-    await user.click(screen.getByRole('radio', { name: 'Progress' }))
-    await user.click(screen.getByRole('radio', { name: 'Plan' }))
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
+    await user.click(screen.getByRole('tab', { name: 'Plan' }))
     expect(screen.getByLabelText('Preview inflation')).toHaveValue('2,0')
   })
 
@@ -931,13 +931,13 @@ describe('GoalsTab', () => {
     await user.click(screen.getByRole('radio', { name: 'Nominal' }))
     await user.click(screen.getByRole('button', { name: 'Open Assumptions' }))
 
-    expect(screen.getByRole('radio', { name: 'Assumptions' })).toBeChecked()
+    expect(screen.getByRole('tab', { name: 'Assumptions' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByLabelText('Assumed inflation')).toBeInTheDocument()
     expect(scrollIntoView).toHaveBeenCalledTimes(1)
 
     // Coming back to Assumptions by the switcher is not a request to scroll to it.
-    await user.click(screen.getByRole('radio', { name: 'Plan' }))
-    await user.click(screen.getByRole('radio', { name: 'Assumptions' }))
+    await user.click(screen.getByRole('tab', { name: 'Plan' }))
+    await user.click(screen.getByRole('tab', { name: 'Assumptions' }))
     expect(scrollIntoView).toHaveBeenCalledTimes(1)
   })
 
@@ -965,15 +965,15 @@ describe('GoalsTab', () => {
       const user = userEvent.setup()
       render(<GoalsTab model={makeModel()} actions={makeActions()} />)
       scrollY.mockReturnValue(700)
-      await user.click(screen.getByRole('radio', { name: 'Progress' }))
-      await user.click(screen.getByRole('radio', { name: 'Chart' }))
+      await user.click(screen.getByRole('tab', { name: 'Progress' }))
+      await user.click(screen.getByRole('tab', { name: 'Chart' }))
       expect(scrollTo).toHaveBeenLastCalledWith({ top: 700, behavior: 'auto' })
 
       await user.click(screen.getByRole('radio', { name: 'Nominal' }))
       scrollY.mockReturnValue(1360)
       await user.click(screen.getByRole('button', { name: 'Open Assumptions' }))
       scrollY.mockReturnValue(40)
-      await user.click(screen.getByRole('radio', { name: 'Chart' }))
+      await user.click(screen.getByRole('tab', { name: 'Chart' }))
 
       expect(scrollTo).toHaveBeenLastCalledWith({ top: 1360, behavior: 'auto' })
     })
@@ -982,13 +982,13 @@ describe('GoalsTab', () => {
       const user = userEvent.setup()
       render(<GoalsTab model={makeModel()} actions={makeActions()} />)
       scrollY.mockReturnValue(300)
-      await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+      await user.click(screen.getByRole('tab', { name: 'Adjust' }))
       scrollY.mockReturnValue(2000)
-      await user.click(screen.getByRole('radio', { name: 'Chart' }))
+      await user.click(screen.getByRole('tab', { name: 'Chart' }))
       expect(scrollTo).toHaveBeenLastCalledWith({ top: 300, behavior: 'auto' })
 
       scrollY.mockReturnValue(300)
-      await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+      await user.click(screen.getByRole('tab', { name: 'Adjust' }))
 
       expect(scrollTo).toHaveBeenLastCalledWith({ top: 2000, behavior: 'auto' })
     })
@@ -996,12 +996,12 @@ describe('GoalsTab', () => {
     it('opens the Adjust sections that were showing before it scrolls back, as Plan unmounts them', async () => {
       const user = userEvent.setup()
       render(<GoalsTab model={makeModel()} actions={makeActions()} />)
-      await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+      await user.click(screen.getByRole('tab', { name: 'Adjust' }))
       const events = document.getElementById('goals-adjust-events')
       if (!(events instanceof HTMLDetailsElement)) throw new Error('no events section')
       events.open = true
       scrollY.mockReturnValue(2125)
-      await user.click(screen.getByRole('radio', { name: 'Progress' }))
+      await user.click(screen.getByRole('tab', { name: 'Progress' }))
       let openWhenScrolled: boolean | null = null
       scrollTo.mockImplementation(() => {
         const back = document.getElementById('goals-adjust-events')
@@ -1011,7 +1011,7 @@ describe('GoalsTab', () => {
       const frames: FrameRequestCallback[] = []
       vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => frames.push(cb))
 
-      await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+      await user.click(screen.getByRole('tab', { name: 'Adjust' }))
       frames.forEach((cb) => cb(0))
 
       expect(scrollTo).toHaveBeenLastCalledWith({ top: 2125, behavior: 'auto' })
@@ -1021,11 +1021,11 @@ describe('GoalsTab', () => {
     it('goes back to where Progress was when its own link took the viewer to Assumptions', async () => {
       const user = userEvent.setup()
       render(<GoalsTab model={makeModel()} actions={makeActions()} />)
-      await user.click(screen.getByRole('radio', { name: 'Progress' }))
+      await user.click(screen.getByRole('tab', { name: 'Progress' }))
       scrollY.mockReturnValue(900)
       await user.click(screen.getByRole('button', { name: 'Set up accounts' }))
       scrollY.mockReturnValue(40)
-      await user.click(screen.getByRole('radio', { name: 'Progress' }))
+      await user.click(screen.getByRole('tab', { name: 'Progress' }))
 
       expect(scrollTo).toHaveBeenLastCalledWith({ top: 900, behavior: 'auto' })
     })
@@ -1034,12 +1034,12 @@ describe('GoalsTab', () => {
       const user = userEvent.setup()
       render(<GoalsTab model={makeModel()} actions={makeActions()} />)
       scrollY.mockReturnValue(700)
-      await user.click(screen.getByRole('radio', { name: 'Progress' }))
+      await user.click(screen.getByRole('tab', { name: 'Progress' }))
       scrollTo.mockClear()
 
       act(() => media.change(NARROW_MQ, false))
       act(() => media.change(NARROW_MQ, true))
-      await user.click(screen.getByRole('radio', { name: 'Chart' }))
+      await user.click(screen.getByRole('tab', { name: 'Chart' }))
 
       expect(scrollTo).not.toHaveBeenCalled()
     })
@@ -1049,7 +1049,7 @@ describe('GoalsTab', () => {
     const user = userEvent.setup()
     const actions = makeActions()
     render(<GoalsTab model={makeModel()} actions={actions} />)
-    await user.click(screen.getByRole('radio', { name: 'Assumptions' }))
+    await user.click(screen.getByRole('tab', { name: 'Assumptions' }))
     const input = screen.getByLabelText('Assumed inflation')
     expect(input).toHaveValue('2,0')
 

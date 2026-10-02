@@ -11,7 +11,7 @@ import { useGoalsScrollMemory, type GoalsScrollMemory } from './useGoalsScrollMe
 /** jsdom lays nothing out: the row sticks 60px down, and is either there (stuck) or lower. */
 function layOut(stuck: boolean) {
   const top = stuck ? 60 : 150
-  screen.getByRole('radiogroup').parentElement!.style.top = '60px'
+  screen.getByRole('tablist').parentElement!.style.top = '60px'
   vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
     top,
     bottom: top,
@@ -70,16 +70,16 @@ describe('GoalsMobileNav', () => {
   it('offers the four views and marks the current one', () => {
     renderNav('adjust')
 
-    const labels = screen.getAllByRole('radio').map((r) => r.textContent)
+    const labels = screen.getAllByRole('tab').map((r) => r.textContent)
     expect(labels).toEqual(['Chart', 'Adjust', 'Progress', 'Assumptions'])
-    expect(screen.getByRole('radio', { name: 'Adjust' })).toBeChecked()
+    expect(screen.getByRole('tab', { name: 'Adjust' })).toHaveAttribute('aria-selected', 'true')
   })
 
   it('reports the view that was tapped', async () => {
     const user = userEvent.setup()
     const { onChange } = renderNav('chart')
 
-    await user.click(screen.getByRole('radio', { name: 'Assumptions' }))
+    await user.click(screen.getByRole('tab', { name: 'Assumptions' }))
 
     expect(onChange).toHaveBeenCalledWith('assumptions')
   })
@@ -89,7 +89,7 @@ describe('GoalsMobileNav', () => {
     const { onChange, scrollIntoView } = renderNav('chart')
     layOut(true)
 
-    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
 
     expect(scrollIntoView).toHaveBeenCalledTimes(1)
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' })
@@ -103,7 +103,7 @@ describe('GoalsMobileNav', () => {
     const { scrollIntoView } = renderNav('chart')
     layOut(true)
 
-    await user.click(screen.getByRole('radio', { name: 'Chart' }))
+    await user.click(screen.getByRole('tab', { name: 'Chart' }))
 
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' })
   })
@@ -117,7 +117,7 @@ describe('GoalsMobileNav', () => {
     const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
     layOut(false)
 
-    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
 
     expect(scrollBy).toHaveBeenCalledTimes(1)
     expect(scrollIntoView).not.toHaveBeenCalled()
@@ -129,7 +129,7 @@ describe('GoalsMobileNav', () => {
     const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
     layOut(true)
 
-    await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
 
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' })
     expect(scrollBy).not.toHaveBeenCalled()
@@ -141,7 +141,7 @@ describe('GoalsMobileNav', () => {
     vi.mocked(memory.recall).mockReturnValue(true)
     layOut(true)
 
-    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
 
     expect(memory.recall).toHaveBeenCalledWith('progress')
     expect(scrollIntoView).not.toHaveBeenCalled()
@@ -154,7 +154,7 @@ describe('GoalsMobileNav', () => {
     const { onChange, scrollIntoView } = renderNav('chart')
     layOut(false)
 
-    await user.click(screen.getByRole('radio', { name: 'Progress' }))
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
 
     expect(scrollIntoView).not.toHaveBeenCalled()
     expect(onChange).toHaveBeenCalledWith('progress')
@@ -186,16 +186,16 @@ describe('GoalsMobileNav', () => {
       const { scrollIntoView, scrollTo } = renderControlled('chart')
 
       setScrollY(1400)
-      await user.click(screen.getByRole('radio', { name: 'Progress' }))
+      await user.click(screen.getByRole('tab', { name: 'Progress' }))
       expect(scrollIntoView).toHaveBeenCalledTimes(1)
       expect(scrollTo).not.toHaveBeenCalled()
 
       setScrollY(111)
-      await user.click(screen.getByRole('radio', { name: 'Chart' }))
+      await user.click(screen.getByRole('tab', { name: 'Chart' }))
       expect(scrollTo).toHaveBeenLastCalledWith({ top: 1400, behavior: 'auto' })
 
       setScrollY(1400)
-      await user.click(screen.getByRole('radio', { name: 'Progress' }))
+      await user.click(screen.getByRole('tab', { name: 'Progress' }))
       expect(scrollTo).toHaveBeenLastCalledWith({ top: 111, behavior: 'auto' })
     })
 
@@ -208,13 +208,13 @@ describe('GoalsMobileNav', () => {
       const { scrollTo } = renderControlled('chart')
 
       setScrollY(300)
-      await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+      await user.click(screen.getByRole('tab', { name: 'Adjust' }))
       setScrollY(2000)
-      await user.click(screen.getByRole('radio', { name: 'Chart' }))
+      await user.click(screen.getByRole('tab', { name: 'Chart' }))
       expect(scrollTo).toHaveBeenLastCalledWith({ top: 300, behavior: 'auto' })
 
       setScrollY(300)
-      await user.click(screen.getByRole('radio', { name: 'Adjust' }))
+      await user.click(screen.getByRole('tab', { name: 'Adjust' }))
       expect(scrollTo).toHaveBeenLastCalledWith({ top: 2000, behavior: 'auto' })
     })
 
@@ -223,7 +223,7 @@ describe('GoalsMobileNav', () => {
       const { scrollIntoView, scrollTo } = renderControlled('progress')
 
       setScrollY(900)
-      await user.click(screen.getByRole('radio', { name: 'Progress' }))
+      await user.click(screen.getByRole('tab', { name: 'Progress' }))
 
       expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' })
       expect(scrollTo).not.toHaveBeenCalled()

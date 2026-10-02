@@ -121,6 +121,69 @@ describe('SegmentedControl', () => {
     })
   })
 
+  describe('as tabs', () => {
+    const three = [
+      { value: 'a', label: 'A' },
+      { value: 'b', label: 'B' },
+      { value: 'c', label: 'C' },
+    ]
+    const tabs = { idPrefix: 'view', panelId: 'panel' }
+
+    function Group({ start }: { start: string }) {
+      const [value, setValue] = useState(start)
+      return <SegmentedControl options={three} value={value} onChange={setValue} ariaLabel="View" tabs={tabs} />
+    }
+
+    it('is a tab list whose tabs name themselves and the panel they control', () => {
+      render(<Group start="b" />)
+
+      expect(screen.getByRole('tablist', { name: 'View' })).toBeInTheDocument()
+      expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument()
+      expect(screen.queryByRole('radio')).not.toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: 'A' })).toHaveAttribute('aria-selected', 'false')
+      expect(screen.getByRole('tab', { name: 'B' })).toHaveAttribute('aria-selected', 'true')
+      for (const tab of screen.getAllByRole('tab')) {
+        expect(tab).toHaveAttribute('aria-controls', 'panel')
+        expect(tab).not.toHaveAttribute('aria-checked')
+      }
+      expect(screen.getByRole('tab', { name: 'C' })).toHaveAttribute('id', 'view-c')
+    })
+
+    it('keeps one tab stop and moves selection and focus with the arrows, Home and End', async () => {
+      const user = userEvent.setup()
+      render(<Group start="a" />)
+      const tab = (name: string) => screen.getByRole('tab', { name })
+
+      expect(tab('A')).toHaveAttribute('tabindex', '0')
+      expect(tab('B')).toHaveAttribute('tabindex', '-1')
+      tab('A').focus()
+
+      await user.keyboard('{ArrowRight}')
+      expect(tab('B')).toHaveAttribute('aria-selected', 'true')
+      expect(tab('B')).toHaveFocus()
+
+      await user.keyboard('{End}')
+      expect(tab('C')).toHaveFocus()
+      await user.keyboard('{ArrowRight}')
+      expect(tab('A')).toHaveFocus()
+      await user.keyboard('{ArrowLeft}')
+      expect(tab('C')).toHaveFocus()
+      await user.keyboard('{Home}')
+      expect(tab('A')).toHaveAttribute('aria-selected', 'true')
+    })
+
+    it('leaves a key alone when Alt, Ctrl or Cmd is held', () => {
+      render(<Group start="b" />)
+      const middle = screen.getByRole('tab', { name: 'B' })
+      middle.focus()
+
+      for (const modifier of ['altKey', 'ctrlKey', 'metaKey'] as const) {
+        expect(fireEvent.keyDown(middle, { key: 'ArrowLeft', [modifier]: true })).toBe(true)
+        expect(middle).toHaveAttribute('aria-selected', 'true')
+      }
+    })
+  })
+
   it('does not fire onChange while disabled', () => {
     const onChange = vi.fn()
     render(

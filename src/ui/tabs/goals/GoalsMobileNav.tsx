@@ -5,6 +5,7 @@ import { scrollToGoalsContent } from './scrollToGoalsContent'
 import type { GoalsMobileView } from './goalsView'
 import type { GoalsScrollMemory } from './useGoalsScrollMemory'
 import styles from './goals.module.css'
+import { GOALS_VIEW_TABS } from './goalsView'
 
 const OPTIONS: { value: GoalsMobileView; label: string }[] = [
   { value: 'chart', label: 'Chart' },
@@ -65,6 +66,7 @@ export function GoalsMobileNav({ value, onChange, memory }: GoalsMobileNavProps)
           ariaLabel="Goals view"
           layout="bar"
           size="tall"
+          tabs={GOALS_VIEW_TABS}
         />
       </div>
     </>
