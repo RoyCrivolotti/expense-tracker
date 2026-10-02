@@ -283,6 +283,14 @@ describe('AdjustSectionNav', () => {
     ])
   })
 
+  it('sets Save apart from Discard as the one to press', () => {
+    render(<AdjustSectionNav unsaved={{ name: 'Path A', saving: false, onSave: vi.fn(), onDiscard: vi.fn() }} />)
+    const group = screen.getByRole('group', { name: 'Unsaved changes' })
+
+    expect(within(group).getByRole('button', { name: 'Save changes to Path A' })).toHaveClass(styles.btnPrimary!)
+    expect(within(group).getByRole('button', { name: 'Discard changes' })).not.toHaveClass(styles.btnPrimary!)
+  })
+
   it('takes neither Save nor Discard while a save is in flight', () => {
     const unsaved = { name: 'Path A', saving: false, onSave: vi.fn(), onDiscard: vi.fn() }
     const { rerender } = render(<AdjustSectionNav unsaved={unsaved} />)
@@ -329,9 +337,10 @@ describe('AdjustSectionNav', () => {
       save.focus()
       const focus = vi.spyOn(save, 'focus')
 
-      rerender(<AdjustSectionNav unsaved={{ ...unsaved, saving: true }} />)
-      // A browser blurs a focused button that becomes disabled and leaves focus on the page.
+      // A browser blurs a focused button that becomes disabled and leaves focus on the page, by
+      // the time the render that disabled it has run its effects.
       const active = vi.spyOn(document, 'activeElement', 'get').mockReturnValue(document.body)
+      rerender(<AdjustSectionNav unsaved={{ ...unsaved, saving: true }} />)
       fireEvent.focusOut(save)
       expect(focus).not.toHaveBeenCalled()
       rerender(<AdjustSectionNav unsaved={unsaved} />)
