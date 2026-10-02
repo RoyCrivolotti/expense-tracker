@@ -2,6 +2,10 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (Goals sliders)
+
+- **The Goals sliders are easier to see and to grab.** The filled part of the track is the accent colour and the rest a soft tint that shows on both themes, where iOS drew it almost invisible in light mode and as a bright bar in dark mode. The thumb is a round accent knob, and the slider is a little taller so it is easier to land on. It is still the browser's own slider, so the keyboard, the drag and VoiceOver's adjust gesture work as before, and in high-contrast mode the track and thumb stay visible.
+
 ## October 2026 (Goals on a phone)
 
 - **One row to move around Goals on a phone.** Chart, Adjust, Progress and Assumptions are a single row under the header that stays put as you scroll, so changing view from deep in Adjust no longer means scrolling back to the top. A view you have not been in opens at its content, just under the row, and tapping the one you are on is a quick way back up. Wide screens keep Plan, Progress and Assumptions. The row is announced to a screen reader as tabs over one panel.
