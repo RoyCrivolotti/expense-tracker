@@ -130,9 +130,10 @@ describe('the width at which Goals changes from the phone layout to the wide one
 
       expect(knob).toContain('background: var(--color-accent)')
       // A ring in the card's colour or a shadow shows on one theme and vanishes on the other, so
-      // the knob looks outlined in light mode and flat in dark.
+      // the knob looks outlined in light mode and flat in dark. iOS adds a shadow of its own to a
+      // restyled thumb, so it is switched off rather than left out.
       expect(knob).not.toMatch(/var\(--color-surface\)/)
-      expect(knob).not.toMatch(/box-shadow/)
+      expect(knob).toMatch(/box-shadow:\s*none/)
     },
   )
 })

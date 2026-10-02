@@ -414,6 +414,9 @@
   border: 0;
   border-radius: 50%;
   background: var(--color-accent);
+  /* iOS draws a soft shadow under a restyled thumb unless told not to, which shows on a light
+     card and not on a dark one. */
+  box-shadow: none;
 }
 
 .range::-moz-range-track {
@@ -435,6 +438,9 @@
   border: 0;
   border-radius: 50%;
   background: var(--color-accent);
+  /* iOS draws a soft shadow under a restyled thumb unless told not to, which shows on a light
+     card and not on a dark one. */
+  box-shadow: none;
 }
 
 /* The thumb carries the keyboard focus, since it is what moves: a ring outside its own. */
