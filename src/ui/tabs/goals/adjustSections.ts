@@ -18,8 +18,16 @@ export const ADJUST_SECTIONS: readonly { key: AdjustSection; title: string; chip
   Object.keys(ADJUST_LABELS) as AdjustSection[]
 ).map((key) => ({ key, ...ADJUST_LABELS[key] }))
 
+const SECTION_ID_PREFIX = 'goals-adjust-'
+
 export function adjustSectionId(key: AdjustSection): string {
-  return `goals-adjust-${key}`
+  return `${SECTION_ID_PREFIX}${key}`
+}
+
+/** Whether an element is inside the controls of one of the sections (the pinned stack, which
+ *  shares the id's prefix, is not a `<details>`). */
+export function inAdjustControls(el: Element): boolean {
+  return el.closest(`details[id^="${SECTION_ID_PREFIX}"]`) !== null
 }
 
 function sectionElement(key: AdjustSection): HTMLDetailsElement | null {

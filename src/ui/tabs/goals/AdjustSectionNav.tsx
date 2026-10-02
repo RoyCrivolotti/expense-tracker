@@ -3,6 +3,7 @@ import { scrollBehavior } from '../../hooks/scrollTiming'
 import {
   ADJUST_SECTIONS,
   adjustSectionId,
+  inAdjustControls,
   pickActiveSection,
   type AdjustSection,
 } from './adjustSections'
@@ -60,13 +61,16 @@ export function AdjustSectionNav({ unsaved }: { unsaved?: UnsavedActions | undef
     }
   }, [narrow])
 
-  // A field that takes focus, with the keyboard up or from a key press, is not left behind the
-  // pinned block. Buttons are not fields to clear, and the block's own are not under it.
+  // A field of the controls that takes focus, with the keyboard up or from a key press, is not
+  // left behind the pinned block. Buttons are not fields to clear, the block's own are not
+  // under it, and a dialog's field is on a layer of its own that the block does not cover.
   useEffect(() => {
     if (!narrow) return
     const onFocus = (event: FocusEvent) => {
       const target = event.target
-      if (target instanceof Element && target.matches('input, select, textarea')) keepClearOfStack(target)
+      if (target instanceof Element && target.matches('input, select, textarea') && inAdjustControls(target)) {
+        keepClearOfStack(target)
+      }
     }
     document.addEventListener('focusin', onFocus)
     return () => document.removeEventListener('focusin', onFocus)
