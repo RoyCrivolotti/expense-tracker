@@ -25,11 +25,11 @@ interface Props {
   fromToday?: PlanFromToday | null | undefined
   actions: ExpenseActions | undefined
   canWrite: boolean
-  /** Takes the user to the Setup view, where accounts are named. */
+  /** Takes the user to the Assumptions view, where accounts are named. */
   onOpenSetup?: (() => void) | undefined
   /** Start with the check-in form open, as the dashboard's nudge asks. */
   openCheckinForm?: boolean
-  /** The emergency-fund target from Setup; 0 means none. */
+  /** The emergency-fund target from Assumptions; 0 means none. */
   cashReserveMonths?: number
   /** The budget month still under way, left out of the cash reserve's spending average. */
   openBudgetMonth?: string | undefined

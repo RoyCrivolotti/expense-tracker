@@ -60,7 +60,7 @@ describe('GoalsTab', () => {
     expect(screen.getByText('Progress snapshot')).toBeInTheDocument()
   })
 
-  it('keeps milestones and accounts in Setup, out of Progress', async () => {
+  it('keeps milestones and accounts in Assumptions, out of Progress', async () => {
     const user = userEvent.setup()
     const model = buildExpenseModel(
       makeDataset({ wealthAccounts: [makeWealthAccount({ id: 1, name: 'Broker' })] }),
@@ -72,19 +72,19 @@ describe('GoalsTab', () => {
     expect(screen.queryByText('Wealth accounts')).not.toBeInTheDocument()
     expect(screen.queryByText('Milestones')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('radio', { name: 'Setup' }))
+    await user.click(screen.getByRole('radio', { name: 'Assumptions' }))
     expect(screen.getByText('Wealth accounts')).toBeInTheDocument()
     expect(screen.getByText('Milestones')).toBeInTheDocument()
     expect(screen.getByText('Broker')).toBeInTheDocument()
     expect(screen.queryByText('Progress snapshot')).not.toBeInTheDocument()
   })
 
-  it('writes milestone edits made in Setup to settings', async () => {
+  it('writes milestone edits made in Assumptions to settings', async () => {
     const user = userEvent.setup()
     const actions = makeActions()
     render(<GoalsTab model={makeModel()} actions={actions} />)
 
-    await user.click(screen.getByRole('radio', { name: 'Setup' }))
+    await user.click(screen.getByRole('radio', { name: 'Assumptions' }))
     await user.click(screen.getByText('+ Add milestone'))
 
     expect(actions.updateSettings).toHaveBeenCalledTimes(1)
@@ -145,14 +145,14 @@ describe('GoalsTab', () => {
     expect(screen.getAllByRole('button', { name: 'Show Path B on chart' })).toHaveLength(2)
   })
 
-  it('takes an empty Progress view to Setup', async () => {
+  it('takes an empty Progress view to Assumptions', async () => {
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} actions={makeActions()} />)
 
     await user.click(screen.getByRole('radio', { name: 'Progress' }))
     await user.click(screen.getByRole('button', { name: 'Set up accounts' }))
 
-    expect(screen.getByRole('radio', { name: 'Setup' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Assumptions' })).toBeChecked()
     expect(screen.getByText('Wealth accounts')).toBeInTheDocument()
   })
 
@@ -553,11 +553,11 @@ describe('GoalsTab', () => {
 
     await user.click(screen.getByRole('radio', { name: 'Adjust' }))
     widen(true)
-    expect(labels()).toEqual(['Plan', 'Progress', 'Setup'])
+    expect(labels()).toEqual(['Plan', 'Progress', 'Assumptions'])
     expect(screen.getByRole('radio', { name: 'Plan' })).toBeChecked()
 
     widen(false)
-    expect(labels()).toEqual(['Chart', 'Adjust', 'Progress', 'Setup'])
+    expect(labels()).toEqual(['Chart', 'Adjust', 'Progress', 'Assumptions'])
     expect(screen.getByRole('radio', { name: 'Adjust' })).toBeChecked()
 
     await user.click(screen.getByRole('radio', { name: 'Progress' }))
@@ -575,7 +575,7 @@ describe('GoalsTab', () => {
       'Chart',
       'Adjust',
       'Progress',
-      'Setup',
+      'Assumptions',
     ])
     expect(screen.queryByRole('radio', { name: 'Plan' })).not.toBeInTheDocument()
     expect(screen.getByRole('radio', { name: 'Chart' })).toBeChecked()
@@ -594,7 +594,7 @@ describe('GoalsTab', () => {
     expect(container.querySelector('[data-mobile-view="chart"]')).toBeNull()
   })
 
-  it('reaches Progress and Setup from the phone row, and comes back to the half of Plan it left', async () => {
+  it('reaches Progress and Assumptions from the phone row, and comes back to the half of Plan it left', async () => {
     mockPhoneWidth()
     const user = userEvent.setup()
     const { container } = render(<GoalsTab model={makeModel()} />)
@@ -605,8 +605,8 @@ describe('GoalsTab', () => {
     expect(screen.getByRole('radio', { name: 'Adjust' })).not.toBeChecked()
     expect(container.querySelector('[data-mobile-view]')).toBeNull()
 
-    await user.click(screen.getByRole('radio', { name: 'Setup' }))
-    expect(screen.getByRole('radio', { name: 'Setup' })).toBeChecked()
+    await user.click(screen.getByRole('radio', { name: 'Assumptions' }))
+    expect(screen.getByRole('radio', { name: 'Assumptions' })).toBeChecked()
 
     await user.click(screen.getByRole('radio', { name: 'Adjust' }))
     expect(screen.getByRole('radio', { name: 'Adjust' })).toBeChecked()
@@ -674,11 +674,11 @@ describe('GoalsTab', () => {
     expect(mini()).not.toBeInTheDocument()
   })
 
-  it('offers a preview of the inflation in the Nominal view only, and the setting itself in Setup only', async () => {
+  it('offers a preview of the inflation in the Nominal view only, and the setting itself in Assumptions only', async () => {
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} actions={makeActions()} />)
 
-    // Purchasing power is already today's money, and the saved rate is Setup's business, so
+    // Purchasing power is already today's money, and the saved rate belongs to Assumptions, so
     // there is nothing to preview there.
     expect(screen.queryByLabelText('Preview inflation')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Assumed inflation')).not.toBeInTheDocument()
@@ -691,7 +691,7 @@ describe('GoalsTab', () => {
     expect(screen.queryByLabelText('Preview inflation')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Assumed inflation')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('radio', { name: 'Setup' }))
+    await user.click(screen.getByRole('radio', { name: 'Assumptions' }))
     expect(screen.getByLabelText('Assumed inflation')).toBeInTheDocument()
     expect(screen.queryByLabelText('Preview inflation')).not.toBeInTheDocument()
   })
@@ -703,7 +703,7 @@ describe('GoalsTab', () => {
 
     // One paragraph: what stays in today's money, and that the preview is not saved.
     const note = screen.getByText(/The preview is not saved/)
-    expect(note).toHaveTextContent(/the rest of Goals uses the saved 2,0%, which you change in Setup/)
+    expect(note).toHaveTextContent(/the rest of Goals uses the saved 2,0%, which you change in Assumptions/)
     expect(note).toHaveTextContent(/target lines are only drawn in Purchasing power/)
   })
 
@@ -736,7 +736,7 @@ describe('GoalsTab', () => {
     expect(actions.updateSettings).not.toHaveBeenCalled()
     await user.click(screen.getByRole('radio', { name: 'Progress' }))
     expect(screen.getByText(/Behind plan/).textContent).toBe(before)
-    await user.click(screen.getByRole('radio', { name: 'Setup' }))
+    await user.click(screen.getByRole('radio', { name: 'Assumptions' }))
     expect(screen.getByLabelText('Assumed inflation')).toHaveValue('2,0')
   })
 
@@ -786,30 +786,30 @@ describe('GoalsTab', () => {
     expect(screen.getByText(/the rest of Goals uses the saved 4,0%/)).toBeInTheDocument()
   })
 
-  it('opens Setup on the assumed inflation from the Nominal note, and only from there', async () => {
+  it('opens Assumptions on the assumed inflation from the Nominal note, and only from there', async () => {
     const user = userEvent.setup()
     const scrollIntoView = vi.fn()
     Element.prototype.scrollIntoView = scrollIntoView
     render(<GoalsTab model={makeModel()} actions={makeActions()} />)
 
     await user.click(screen.getByRole('radio', { name: 'Nominal' }))
-    await user.click(screen.getByRole('button', { name: 'Open Setup' }))
+    await user.click(screen.getByRole('button', { name: 'Open Assumptions' }))
 
-    expect(screen.getByRole('radio', { name: 'Setup' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Assumptions' })).toBeChecked()
     expect(screen.getByLabelText('Assumed inflation')).toBeInTheDocument()
     expect(scrollIntoView).toHaveBeenCalledTimes(1)
 
-    // Coming back to Setup by the switcher is not a request to scroll to it.
+    // Coming back to Assumptions by the switcher is not a request to scroll to it.
     await user.click(screen.getByRole('radio', { name: 'Plan' }))
-    await user.click(screen.getByRole('radio', { name: 'Setup' }))
+    await user.click(screen.getByRole('radio', { name: 'Assumptions' }))
     expect(scrollIntoView).toHaveBeenCalledTimes(1)
   })
 
-  it('saves the assumed inflation as a setting when it is changed in Setup', async () => {
+  it('saves the assumed inflation as a setting when it is changed in Assumptions', async () => {
     const user = userEvent.setup()
     const actions = makeActions()
     render(<GoalsTab model={makeModel()} actions={actions} />)
-    await user.click(screen.getByRole('radio', { name: 'Setup' }))
+    await user.click(screen.getByRole('radio', { name: 'Assumptions' }))
     const input = screen.getByLabelText('Assumed inflation')
     expect(input).toHaveValue('2,0')
 
@@ -819,7 +819,7 @@ describe('GoalsTab', () => {
     expect(actions.updateSettings).toHaveBeenCalledWith({ assumedInflation: 0.03 })
   })
 
-  it('previews in a read-only session too, with no link to a Setup that cannot be changed', async () => {
+  it('previews in a read-only session too, with no link to an Assumptions view that cannot be changed', async () => {
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} />)
     await user.click(screen.getByRole('radio', { name: 'Nominal' }))
@@ -827,7 +827,7 @@ describe('GoalsTab', () => {
     stepPreviewUp()
     expect(screen.getByLabelText('Preview inflation')).toHaveValue('2,5')
     expect(screen.getByText(/the rest of Goals uses the saved 2,0%\./)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Open Setup' })).not.toBeInTheDocument()
-    expect(screen.queryByText(/which you change in Setup/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Open Assumptions' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/which you change in Assumptions/)).not.toBeInTheDocument()
   })
 })

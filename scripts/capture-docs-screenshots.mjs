@@ -257,14 +257,14 @@ async function captureGoalsDesktop(page) {
   await captureGoalsProgressAndSetup(page, 'desktop', true)
 }
 
-/** The Progress and Setup views; `fullPage` for desktop, the top of the view on a phone. */
+/** The Progress and Assumptions views; `fullPage` for desktop, the top of the view on a phone. */
 async function captureGoalsProgressAndSetup(page, suffix, fullPage) {
   await page.getByRole('radio', { name: 'Progress', exact: true }).click()
   await page.waitForSelector('text=Net worth over time', { timeout: 15000 })
   await page.waitForTimeout(400)
   await page.screenshot({ path: join(OUT, `goals-${suffix}-progress.png`), fullPage })
 
-  await page.getByRole('radio', { name: 'Setup', exact: true }).click()
+  await page.getByRole('radio', { name: 'Assumptions', exact: true }).click()
   await page.waitForSelector('text=Wealth accounts', { timeout: 15000 })
   await page.waitForTimeout(300)
   await page.screenshot({ path: join(OUT, `goals-${suffix}-setup.png`), fullPage })

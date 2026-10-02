@@ -1,3 +1,4 @@
+/** 'setup' is the key of the view the screen calls Assumptions. */
 export type TabView = 'plan' | 'progress' | 'setup'
 /** On a phone Plan is two screens, the chart and the controls, instead of one. */
 export type MobilePlanView = 'chart' | 'adjust'

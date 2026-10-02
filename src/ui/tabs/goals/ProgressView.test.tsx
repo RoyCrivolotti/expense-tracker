@@ -12,7 +12,7 @@ beforeAll(() => {
 })
 
 describe('ProgressView', () => {
-  it('sends the user to Setup when there is no account to log against', () => {
+  it('sends the user to Assumptions when there is no account to log against', () => {
     const onOpenSetup = vi.fn()
     render(
       <ProgressView

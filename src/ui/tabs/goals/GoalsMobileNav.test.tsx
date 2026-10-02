@@ -49,7 +49,7 @@ describe('GoalsMobileNav', () => {
     renderNav('adjust')
 
     const labels = screen.getAllByRole('radio').map((r) => r.textContent)
-    expect(labels).toEqual(['Chart', 'Adjust', 'Progress', 'Setup'])
+    expect(labels).toEqual(['Chart', 'Adjust', 'Progress', 'Assumptions'])
     expect(screen.getByRole('radio', { name: 'Adjust' })).toBeChecked()
   })
 
@@ -57,7 +57,7 @@ describe('GoalsMobileNav', () => {
     const user = userEvent.setup()
     const { onChange } = renderNav('chart')
 
-    await user.click(screen.getByRole('radio', { name: 'Setup' }))
+    await user.click(screen.getByRole('radio', { name: 'Assumptions' }))
 
     expect(onChange).toHaveBeenCalledWith('setup')
   })

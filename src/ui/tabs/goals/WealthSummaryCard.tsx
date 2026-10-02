@@ -35,7 +35,7 @@ interface Props {
   transactions?: Transaction[]
   /** Re-baselines the plan from the latest check-in; absent in a read-only session. */
   onRebaseline?: (() => void) | undefined
-  /** The emergency-fund target from Setup; 0 means none. */
+  /** The emergency-fund target from Assumptions; 0 means none. */
   cashReserveMonths?: number
   /** The budget month still under way, left out of the spending average. */
   openBudgetMonth?: string | undefined
@@ -294,7 +294,7 @@ export function WealthSummaryCard({
   const latest = latestCheckin(checkins)
 
   if (!latest) {
-    // A check-in needs an account to record, so without one the first step is Setup.
+    // A check-in needs an account to record, so without one the first step is Assumptions.
     const hasAccounts = accounts.some((a) => !a.archived)
     return (
       <Card>
@@ -302,7 +302,7 @@ export function WealthSummaryCard({
         <p className={styles.emptyHint}>
           {hasAccounts
             ? 'Log your first wealth check-in below to see where you stand against your plan.'
-            : 'Name the accounts you track under Setup, then log a check-in to see where you stand against your plan.'}
+            : 'Name the accounts you track under Assumptions, then log a check-in to see where you stand against your plan.'}
         </p>
       </Card>
     )

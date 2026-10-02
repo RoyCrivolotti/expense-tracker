@@ -198,7 +198,7 @@ function DiscardSheet({
 
 /**
  * What sits between the view switch and a view's own content: Plan's intro and glossary, and
- * the anchor a tap on the switch scrolls to. Progress and Setup start at the anchor.
+ * the anchor a tap on the switch scrolls to. Progress and Assumptions start at the anchor.
  */
 function GoalsContentTop({ showIntro }: { showIntro: boolean }) {
   return (
@@ -228,8 +228,8 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
   // The dashboard's nudge opens the check-in form once; leaving Progress and coming back
   // within the tab must not open it again.
   const [checkinEntry, setCheckinEntry] = useState(entry === 'checkin')
-  // The Nominal note links to the assumed inflation in Setup, which then scrolls to it; any
-  // other way of getting to Setup must not.
+  // The Nominal note links to the assumed inflation in Assumptions, which then scrolls to it;
+  // any other way of getting to that view must not.
   const [focusInflation, setFocusInflation] = useState(false)
   // The rate the Nominal view is being tried at, if not the saved one. It lives only as long
   // as the chart it was tried on: leaving the view or the Nominal mode drops it.
