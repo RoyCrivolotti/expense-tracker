@@ -1,8 +1,16 @@
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import { bootstrapEditor } from './scenarioDraft'
+import type * as ScenarioDraft from './scenarioDraft'
 import { useScenarioEditor, type ScenarioEditor } from './useScenarioEditor'
 import { makeDataset, makeScenario } from '../../../testing/factories'
 import { makeActions } from '../../../testing/makeActions'
+
+// Counts how often the first draft is built; it is still the real thing.
+vi.mock('./scenarioDraft', async (importOriginal) => {
+  const real = await importOriginal<typeof ScenarioDraft>()
+  return { ...real, bootstrapEditor: vi.fn(real.bootstrapEditor) }
+})
 
 function setup() {
   const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })
@@ -74,5 +82,12 @@ describe('useScenarioEditor', () => {
     )
     expect(result.current.activeId).toBe(9)
     expect(result.current.draft.name).toBe('Path C')
+  })
+  it('builds the first draft once, not once for each piece of state it seeds', () => {
+    vi.mocked(bootstrapEditor).mockClear()
+
+    setup()
+
+    expect(bootstrapEditor).toHaveBeenCalledTimes(1)
   })
 })
