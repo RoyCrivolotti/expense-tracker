@@ -27,19 +27,16 @@ interface GoalsMobileNavProps {
  * "back to the top" on a phone.
  */
 export function GoalsMobileNav({ value, onChange }: GoalsMobileNavProps) {
-  const anchor = useRef<HTMLDivElement>(null)
   const row = useRef<HTMLDivElement>(null)
 
   const select = (next: GoalsMobileView) => {
-    const anchorEl = anchor.current
     const rowEl = row.current
-    // The anchor sits where the row would be if it were not stuck. A row that has not moved
-    // from there has nothing above it to scroll back to, so a tap near the top must not nudge.
-    // The 0.5 is sub-pixel slack.
+    // Stuck: the row has been carried down to its sticky top (as the browser resolved it,
+    // safe-area inset included). A row still lower than that has nothing above it to scroll
+    // back to, so a tap near the top must not nudge. The 0.5 is sub-pixel slack.
     const stuck =
-      anchorEl !== null &&
       rowEl !== null &&
-      anchorEl.getBoundingClientRect().top < rowEl.getBoundingClientRect().top - 0.5
+      rowEl.getBoundingClientRect().top <= (Number.parseFloat(getComputedStyle(rowEl).top) || 0) + 0.5
     onChange(next)
     // Opening Adjust is a request for the controls, wherever the page was.
     if (next === 'adjust' && value !== 'adjust') landOnAdjustControls()
@@ -48,7 +45,6 @@ export function GoalsMobileNav({ value, onChange }: GoalsMobileNavProps) {
 
   return (
     <>
-      <div ref={anchor} className={styles.navAnchor} />
       <div ref={row} className={styles.nav}>
         <SegmentedControl
           options={OPTIONS}
