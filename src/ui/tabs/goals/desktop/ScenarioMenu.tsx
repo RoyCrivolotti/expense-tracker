@@ -37,7 +37,7 @@ function SaveAsNew({ name, onSave, onCancel }: { name: string; onSave: (name: st
   return (
     <div className={styles.menuRow}>
       <input
-        className={goalStyles.renameInput}
+        className={`${goalStyles.renameInput} ${styles.menuInput}`}
         value={copyName}
         aria-label="Name for new scenario"
         autoFocus
@@ -96,7 +96,7 @@ function MenuPopover(props: PopoverProps) {
         <ColorSwatchPicker color={draft.color} onChange={(color) => props.onPatch({ color })} label="Scenario color" />
       </div>
       <input
-        className={goalStyles.renameInput}
+        className={`${goalStyles.renameInput} ${styles.menuInput}`}
         value={draft.name}
         aria-label="Scenario name"
         placeholder="Scenario name"

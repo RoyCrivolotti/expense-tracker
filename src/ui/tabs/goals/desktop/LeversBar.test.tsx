@@ -163,9 +163,13 @@ describe('LeversBar', () => {
     expect(root.style.scrollPaddingTop).toBe('')
   })
 
-  it('keeps it clear of the bar along the bottom edge too, and gives back what the page had', () => {
+  it('keeps it clear of the bar along the bottom edge too, where the bar is held there, and gives back what the page had', () => {
     const root = document.documentElement
     root.style.scrollPaddingBottom = '5px'
+    // The stylesheet that holds it to the bottom edge, which a width query turns on.
+    const held = document.createElement('style')
+    held.textContent = '[class*="leversBar"] { position: sticky; bottom: 12px; }'
+    document.head.append(held)
     const { unmount } = render(
       <LeversBar
         draft={makeDraft()}
@@ -181,6 +185,26 @@ describe('LeversBar', () => {
     expect(root.style.scrollPaddingBottom).toBe('20px')
     unmount()
     expect(root.style.scrollPaddingBottom).toBe('5px')
+    root.style.scrollPaddingBottom = ''
+    held.remove()
+  })
+
+  it('leaves the bottom padding alone where the bar is not held to the bottom edge', () => {
+    const root = document.documentElement
+    root.style.scrollPaddingBottom = '5px'
+    const { unmount } = render(
+      <LeversBar
+        draft={makeDraft()}
+        resultDraft={makeDraft()}
+        keys={DEFAULT_LEVERS}
+        onChange={vi.fn()}
+        expanded={false}
+        panelId="p"
+        onToggle={vi.fn()}
+      />,
+    )
+    expect(root.style.scrollPaddingBottom).toBe('5px')
+    unmount()
     root.style.scrollPaddingBottom = ''
   })
 

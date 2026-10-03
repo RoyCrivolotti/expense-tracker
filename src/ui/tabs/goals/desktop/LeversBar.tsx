@@ -51,10 +51,11 @@ interface LeversBarProps {
 
 /**
  * The inputs a plan is mostly tuned with, beside the result they move, always in reach: along the
- * bottom edge while its place in the page is below the fold, then in the page, then under the app
- * header once the page has scrolled past it. The page's scroll padding covers it while it is
- * mounted, so a control reached with the keyboard is not left behind it. The rest of the inputs
- * open from the button in the result block.
+ * bottom edge while its place in the page is below the fold (where the page is wide enough for
+ * them to be one row), then in the page, then under the app header once the page has scrolled
+ * past it. The page's scroll padding covers it while it is mounted, so a control reached with
+ * the keyboard is not left behind it. The rest of the inputs open from the button in the result
+ * block.
  */
 export function LeversBar({ draft, resultDraft, keys, onChange, expanded, panelId, onToggle }: LeversBarProps) {
   const bar = useRef<HTMLDivElement>(null)

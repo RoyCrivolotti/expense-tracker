@@ -6,15 +6,22 @@
  */
 
 /* The levers bar: stuck under the app header with a little air, the way the old side panel
-   was, because it is a card and not a row. It is held at the bottom edge as well, so while its
-   place in the page is below the fold it is on screen anyway, and it leaves the edge for its
-   place as the page scrolls up to it. The wrapper is what sticks, so the scroll padding
+   was, because it is a card and not a row. The wrapper is what sticks, so the scroll padding
    (useBarScrollPadding) reads one box. */
 .leversBar {
   position: sticky;
   top: calc(var(--exp-header) + var(--exp-header-air) + env(safe-area-inset-top, 0px));
-  bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
   z-index: 6;
+}
+
+/* Where the five levers fit one row it is held at the bottom edge as well, so while its place in
+   the page is below the fold it is on screen anyway, and it leaves the edge for its place as
+   the page scrolls up to it. Narrower, the levers wrap onto a second row and the bar would cover
+   half of the chart, so it only follows the header. */
+@media (min-width: 1200px) {
+  .leversBar {
+    bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 /* Focus inside the bar takes the page's scroll padding back out, or a control that is stuck
@@ -26,7 +33,7 @@
 .levers {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 1.4rem;
+  gap: 1rem;
   align-items: start;
   padding: 0.75rem 1.1rem;
   box-shadow: 0 6px 18px color-mix(in srgb, var(--color-text) 12%, transparent);
@@ -36,8 +43,8 @@
    grows taller instead of squeezing a slider. */
 .leverGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
-  gap: 0.75rem 1.4rem;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 0.75rem 1.1rem;
   min-width: 0;
 }
 
@@ -125,8 +132,8 @@
   gap: 0.25rem;
   align-content: start;
   justify-items: start;
-  min-width: 11rem;
-  padding-left: 1.25rem;
+  min-width: 10rem;
+  padding-left: 1rem;
   border-left: 1px solid var(--color-border);
 }
 
@@ -302,6 +309,12 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+/* On the popover's own background a field would read as plain text. */
+.menuInput {
+  border-color: var(--color-border);
+  background: var(--color-surface);
 }
 
 .menuList {
