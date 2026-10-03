@@ -165,3 +165,45 @@ describe('small muted text', () => {
     expect(note?.body).not.toMatch(/opacity/)
   })
 })
+
+/** What a stylesheet says under one media query: the rules inside every block of it, and the sheet without them. */
+function underQuery(file: string, query: string): { inside: { selector: string; body: string }[]; outside: string } {
+  const css = stylesheet(file)
+  const block = new RegExp(`@media ${query.replace(/[()]/g, '\\$&')} \\{([\\s\\S]*?)\\n\\}`, 'g')
+  const inside = [...css.matchAll(block)].flatMap((m) =>
+    [...(m[1] ?? '').matchAll(/([^{};]+)\{([^{}]*)\}/g)].map((r) => ({ selector: (r[1] ?? '').trim(), body: r[2] ?? '' })),
+  )
+  return { inside, outside: css.replace(block, '') }
+}
+
+const COARSE_WIDE = '(pointer: coarse) and (min-width: 900px)'
+
+describe('the inputs panel on a touch screen', () => {
+  const goals = underQuery('tabs/goals/goals.module.css', COARSE_WIDE)
+  const rule = (selector: string) => goals.inside.find((r) => r.selector === selector)?.body ?? ''
+
+  it('takes the steppers and the amount fields to 44px, for a coarse pointer on the wide layout only', () => {
+    expect(rule('.stack')).toMatch(/--stepper-size:\s*2\.75rem/)
+    expect(rule('.stack .valueInput')).toMatch(/min-height:\s*2\.75rem/)
+    // Set nowhere else, so the phone's steppers and the ones in Settings keep their size.
+    expect(goals.outside).not.toMatch(/--stepper-size\s*:/)
+  })
+
+  it('leaves the stepper at the size it has where nothing sets one', () => {
+    const stepper = rules('components/PercentStepper.module.css')
+    const button = stepper.find((r) => r.selector === '.btn')?.body
+
+    expect(button).toMatch(/width:\s*var\(--stepper-size,\s*1\.6rem\)/)
+    expect(button).toMatch(/height:\s*var\(--stepper-size,\s*1\.6rem\)/)
+    expect(stepper.find((r) => r.selector === '.wrap')?.body).toMatch(/gap:\s*var\(--stepper-gap,\s*0\.25rem\)/)
+  })
+
+  it("keeps a row's label and the star beside it on one line whether the label wraps or not", () => {
+    // The label starts a fixed distance down, and the star is on the middle of the row's first 44px.
+    expect(rule('.stack .fieldRow')).toMatch(/align-items:\s*flex-start/)
+    const star = underQuery('tabs/goals/desktop/planDesktop.module.css', '(pointer: coarse)').inside.find(
+      (r) => r.selector === '.starrable > .star',
+    )
+    expect(star?.body).toMatch(/top:\s*0\.825rem/)
+  })
+})

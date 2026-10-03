@@ -715,6 +715,12 @@
   .star::after {
     inset: -0.9rem -0.9rem -0.15rem;
   }
+
+  /* The panel's rows are 44px (goals.module.css), so the star is on the middle of the row
+     (1.375rem down) less half its own height, where a 26px row had it 0.26rem down. */
+  .starrable > .star {
+    top: 0.825rem;
+  }
 }
 
 /* No hover on a touch screen, so the figures wear the line a field wears. */
