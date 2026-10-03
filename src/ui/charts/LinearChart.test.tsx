@@ -46,6 +46,21 @@ describe('LinearChart', () => {
     expect(plotTop({ padTop: 8 })).toBe('8')
   })
 
+  it('draws a reference line only where it can be told from the one above it', () => {
+    // 1 000 to 9 000 on an axis of a million are a pixel or two apart: one dashed smear.
+    const count = (refLines: number[]) => {
+      const { container, unmount } = render(
+        <LinearChart {...defaultProps} refLines={refLines} series={[makeLine('s1', [0, 500_000, 1_000_000])]} />,
+      )
+      const lines = container.querySelectorAll(`.${chartStyles.refLine}`).length
+      unmount()
+      return lines
+    }
+
+    expect(count([1_000, 2_000, 3_000, 4_000, 5_000])).toBe(1)
+    expect(count([1_000, 2_000, 3_000, 4_000, 5_000, 600_000])).toBe(2)
+  })
+
   describe('lines of different lengths', () => {
     /** The x of each point in a line's path, in order. */
     const xsOf = (path: Element) => [...(path.getAttribute('d') ?? '').matchAll(/[ML]([\d.]+),/g)].map((m) => Number(m[1]))

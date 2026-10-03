@@ -142,6 +142,24 @@ export function sparseLabels(values: Array<string | number>, step: number): stri
   return values.map((v, i) => (i % step === 0 || i === values.length - 1 ? String(v) : ''))
 }
 
+/**
+ * The reference lines that are far enough from one another to be told apart. Milestones sit
+ * where the user put them, and on a plan that reaches the high ones they pile up along the
+ * bottom as a dashed band no one can read; from the highest down, a line is kept only if it is
+ * at least `minGapPx` from the last one kept.
+ */
+export function spacedRefLines(values: number[], scaleY: (v: number) => number, minGapPx: number): number[] {
+  const kept: number[] = []
+  let lastY = Infinity
+  for (const v of [...new Set(values.filter(Number.isFinite))].sort((a, b) => b - a)) {
+    const y = scaleY(v)
+    if (Math.abs(lastY - y) < minGapPx) continue
+    kept.push(v)
+    lastY = y
+  }
+  return kept
+}
+
 export function linePath(points: Pt[]): string {
   return points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
 }
