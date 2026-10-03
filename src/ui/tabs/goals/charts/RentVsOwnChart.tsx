@@ -71,7 +71,9 @@ function RentVsOwnChartImpl({
           ? `Buying overtakes renting around year ${breakevenYear}.`
           : 'Renting and investing stays ahead across the whole horizon.'}{' '}
         Higher is better. The renter invests the down payment plus any monthly surplus; assumes
-        constant rent in today's money and 1.5%/yr home carry costs.
+        constant rent in today's money and 1.5%/yr home carry costs. These are the two choices on
+        their own, without your starting portfolio and contributions, so they will not match the
+        plan's net worth.
       </p>
       <LinearChart
         height={height}
