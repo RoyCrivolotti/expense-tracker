@@ -14,6 +14,7 @@ import { cellColors } from './matrixColors'
 import { formatMoneyShort } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { tableName } from '../scenarioNames'
+import { ScrollRegion } from './ScrollRegion'
 import styles from '../goals.module.css'
 
 /**
@@ -160,7 +161,7 @@ function MilestoneMatrixImpl({
       {milestones.length === 0 ? (
         <p className={styles.chartHint}>No milestones set.</p>
       ) : (
-      <div className={styles.milestoneScroll}>
+      <ScrollRegion label="Years to milestone">
         <table className={styles.milestoneTable}>
           <thead>
             <tr>
@@ -177,12 +178,12 @@ function MilestoneMatrixImpl({
           <tbody>
             {rows.map((row) => (
               <tr key={row.id}>
-                <td className={styles.milestoneScenarioCell} title={row.name}>
+                <th scope="row" className={styles.milestoneScenarioCell} title={row.name}>
                   <span className={styles.milestoneScenarioNameRow}>
                     <span className={styles.swatch} style={{ background: row.color }} />
                     <span className={styles.milestoneScenarioName}>{row.name}</span>
                   </span>
-                </td>
+                </th>
                 {row.cells.map((years, i) => (
                   <td
                     key={milestones[i]?.amountCents ?? i}
@@ -196,7 +197,7 @@ function MilestoneMatrixImpl({
             ))}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
       )}
     </ChartShell>
   )

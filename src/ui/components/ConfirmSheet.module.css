@@ -112,6 +112,8 @@
 
 .confirmDestructive {
   background: var(--exp-danger, #e5484d);
+  /* White on the dark theme's red is 2.8:1; the theme says which text the fill takes. */
+  color: var(--exp-danger-contrast, #fff);
 }
 
 @media (min-width: 560px) {

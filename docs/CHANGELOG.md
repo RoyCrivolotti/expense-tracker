@@ -20,6 +20,16 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 - **The bar's percentage field is tidier.** A typed 1,1 is stored as 0.011 and not 0.011000000000000001, which made a scenario read as edited with identical figures; Escape drops what was typed; and on a touch screen a figure is selected as it takes focus, so typing replaces it where a tap left the caret at the end and typing 5 into 1.000.000 made 10.000.005.
 - **The panel says what a house bought now does.** Moving the purchase year from Never to Now added about 4.6M to the net worth (8.2M to 12.8M in the demo) with nothing to say why. A purchase now takes nothing out of the portfolio later, which reads the starting balance as what is left after buying; the panel now says so under the purchase year.
 
+## October 2026 (a finger, a keyboard and forced colours on the wide Goals page)
+
+- **The switches on the wide page are 44px tall on a touch screen.** The Plan, Progress and Assumptions switch, the Nominal and Purchasing power switch and the window pickers were 22px, the smallest things on the page and the ones used most. Measured at 1032px with an iPad's touch emulation, all 13 went from 22px to 44px (the scenario tabs were already 44px); under 900px, the phone, is not changed.
+- **A table that scrolls sideways can be reached from the keyboard, and shows there is more.** Scenarios side by side is wider than its card at 900 to 1100px, so its Monthly column was out of sight with nothing to say so, and in Safari a scroller that cannot take focus cannot be scrolled from the keyboard. Both tables are focusable named regions with a shadow on the side that has more, and a scenario's name is the row header of its row, so a screen reader can say whose figure it is on.
+- **A chart says how to step through it from the keyboard** (the left and right arrow keys, Home, End and Escape), as its description for a screen reader. The values are not read out as they change; that needs a screen reader to judge.
+- **The chart keys keep their colours in forced-colours mode.** In Windows High Contrast the legend chips and the dots beside the table rows were white on white and the lines had no key.
+- **Discard and Delete can be read in the dark theme.** White on the dark theme's red was 2.8:1; the theme now says which text goes on a solid danger fill (6.8:1 in the dark theme) and the button takes it.
+- **The note under Where you are today is not faded.** At 11px it was 4.2:1 in the light theme, the only text on the page under 4.5:1.
+- **Rent vs buy says it is not the plan's net worth.** It is the two choices on their own, without the starting portfolio and contributions, so it will not match the figure in the bar.
+
 ## October 2026 (Goals on a tablet, and for assistive technology)
 
 - **Every percentage stepper, slider and button says which input it belongs to.** Each was announced as "Annual return percentage" with "Increase percentage" buttons, and the levers bar's sliders as "Real return slider". They now carry the input's name, a percentage slider reads out "7,0%" and the purchase year slider "Year 4", and a purchase year past a shortened horizon stays on the slider's track instead of being drawn at its end.

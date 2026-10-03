@@ -173,6 +173,21 @@ function tabIndexFor(
   return tooltipMode === 'full' || onActiveIndexChange !== undefined ? 0 : -1
 }
 
+/** What names the text that says how to use a chart from the keyboard, for the chart that can be. */
+function describedBy(steppable: boolean, id: string): { 'aria-describedby'?: string } {
+  return steppable ? { 'aria-describedby': id } : {}
+}
+
+/** Said to a screen reader as the description of a chart that takes focus; nothing on the chart says it. */
+function StepKeysHint({ id, show }: { id: string; show: boolean }) {
+  if (!show) return null
+  return (
+    <span id={id} className={styles.srOnly}>
+      Use the left and right arrow keys to step through the years, Home and End to go to the first and last, and Escape to clear.
+    </span>
+  )
+}
+
 export function LinearChart({
   height,
   padTop,
@@ -194,7 +209,9 @@ export function LinearChart({
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   // useId can return characters (colons, in older React) that a url(#...) reference does not take.
-  const plotClipId = `plot-${useId().replace(/:/g, '')}`
+  const uid = useId().replace(/:/g, '')
+  const plotClipId = `plot-${uid}`
+  const keysId = `keys-${uid}`
   const containerRef = useRef<HTMLDivElement>(null)
   // The viewBox is the wrapper's width in CSS pixels, so text, strokes and hit areas
   // render at their own size instead of being scaled up with the chart.
@@ -206,6 +223,8 @@ export function LinearChart({
   const tip = active != null ? tooltip(active) : null
   const showsTooltip = tooltipShows(tip, tooltipMode)
   const lineSeries = series.filter((s) => s.kind !== 'area' && s.kind !== 'band' && s.kind !== 'scatter')
+  // A chart that takes focus can be stepped through with the keyboard, which nothing on it says.
+  const steppable = tabIndexFor(tooltipMode, onActiveIndexChange) === 0
 
   useEffect(() => {
     onActiveIndexChange?.(active)
@@ -228,6 +247,7 @@ export function LinearChart({
         className={styles.svg}
         role="img"
         aria-label={ariaLabel}
+        {...describedBy(steppable, keysId)}
         tabIndex={tabIndexFor(tooltipMode, onActiveIndexChange)}
         onContextMenu={(e) => e.preventDefault()}
         {...handlers}
@@ -334,6 +354,7 @@ export function LinearChart({
           lineSeries={lineSeries}
         />
       </svg>
+      <StepKeysHint id={keysId} show={steppable} />
       {tip && showsTooltip ? (
         <ChartTooltip anchor={anchor} chart={containerRef} title={tip.title} lines={tip.lines} dockBelow={dockBelow} />
       ) : null}

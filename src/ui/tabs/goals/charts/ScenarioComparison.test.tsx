@@ -83,6 +83,20 @@ describe('comparisonRows', () => {
 })
 
 describe('ScenarioComparison', () => {
+  it('gives each scenario a row header, so a screen reader can say whose figure it is on', () => {
+    render(<ScenarioComparison scenarios={[makeScenario({ id: 1, name: 'Path A' })]} draft={draft} />)
+
+    expect(screen.getByRole('rowheader', { name: 'Path A' })).toHaveAttribute('scope', 'row')
+  })
+
+  it('puts its table in a named region a keyboard can focus, so a column that does not fit can be scrolled to', () => {
+    render(<ScenarioComparison scenarios={[]} draft={draft} />)
+
+    const region = screen.getByRole('region', { name: 'Scenarios side by side' })
+    expect(region).toHaveAttribute('tabindex', '0')
+    expect(region).toContainElement(screen.getByRole('table'))
+  })
+
   it('renders the table with one row per path', () => {
     render(
       <ScenarioComparison

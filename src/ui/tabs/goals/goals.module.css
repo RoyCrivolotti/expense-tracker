@@ -730,8 +730,8 @@
 .nowListNote {
   display: block;
   font-size: 0.6875rem;
+  /* The muted colour as it is: at 0.85 opacity on top of it the 11px text was 4.2:1 in the light theme. */
   color: var(--color-text-muted);
-  opacity: 0.85;
 }
 
 .progressTrack {
@@ -784,6 +784,8 @@
   height: 8px;
   border-radius: 999px;
   flex-shrink: 0;
+  /* A swatch is the key to a colour on a chart: forced colours would paint it the page colour. */
+  forced-color-adjust: none;
 }
 
 .iconBtn {
@@ -999,11 +1001,26 @@
   }
 }
 
+/* The edges of what scrolls: a shadow on the side that has more, which the card's own colour
+   covers once the content is scrolled to it (or fits). It sits behind the table's cells, so
+   where a cell has a fill of its own the shadow does not show through it. */
 .milestoneScroll {
+  --scroll-cover: var(--color-bg-subtle, color-mix(in srgb, var(--color-text) 4%, var(--color-bg)));
+  --scroll-edge: color-mix(in srgb, var(--color-text) 24%, transparent);
   overflow-x: auto;
   min-width: 0;
   max-width: 100%;
   -webkit-overflow-scrolling: touch;
+  background:
+    linear-gradient(to right, var(--scroll-cover), var(--scroll-cover)) left center / 1.5rem 100% no-repeat local,
+    linear-gradient(to left, var(--scroll-cover), var(--scroll-cover)) right center / 1.5rem 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, var(--scroll-edge), transparent) left center / 0.6rem 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, var(--scroll-edge), transparent) right center / 0.6rem 100% no-repeat scroll;
+}
+
+.milestoneScroll:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 /* Auto layout, not `fixed`: with a dozen milestones a fixed table divides the
@@ -1017,6 +1034,8 @@
 
 .milestoneScenarioHead,
 .milestoneScenarioCell {
+  /* A row header (th), which would otherwise be bold: the name reads as the row's own label, not a heading. */
+  font-weight: inherit;
   text-align: left;
   padding: 0.3rem 0.5rem 0.3rem 0;
   min-width: 5.5rem;
@@ -1360,3 +1379,13 @@
   padding: 0.25rem 0.5rem;
 }
 
+/* A finger on the wide page (a tablet, from 900px): the segmented controls that switch the view,
+   the display and the window are 22px tall, the smallest things on the page and the ones most
+   often used, so they take the 44px a touch target is held to elsewhere in the app. Under 900px
+   is the phone's layout, which has its own sizing and is not touched. */
+@media (pointer: coarse) and (min-width: 900px) {
+  .stack button[role='radio'],
+  .stack button[role='tab'] {
+    min-height: 2.75rem;
+  }
+}

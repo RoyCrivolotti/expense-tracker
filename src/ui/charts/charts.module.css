@@ -77,6 +77,16 @@
   color: var(--color-text-muted);
 }
 
+/* Text for a screen reader only: the way to use a chart that has no words on it for the keyboard. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .chartWrap {
   position: relative;
   width: 100%;
@@ -336,6 +346,8 @@
   height: 0.5rem;
   border-radius: 50%;
   flex-shrink: 0;
+  /* A swatch is the key to a colour on a chart: forced colours would paint it the page colour. */
+  forced-color-adjust: none;
 }
 
 .tooltipValue {
@@ -503,6 +515,8 @@
   height: 12px;
   border-radius: 3px;
   flex-shrink: 0;
+  /* A swatch is the key to a colour on a chart: forced colours would paint it the page colour. */
+  forced-color-adjust: none;
 }
 
 .pieLegendName {

@@ -370,12 +370,21 @@ async function checkHover(page, where) {
 
 /** Tab through the page from the view switch: the order is top to bottom, and nothing is under the bar. */
 async function checkTabWalk(page, where, open, engine) {
-  if (open) await page.getByRole('button', { name: 'All inputs' }).click()
+  if (open) {
+    await page.getByRole('button', { name: 'All inputs' }).click()
+    // The panel scrolls itself into view a frame or two after it opens. Focusing the first tab
+    // before that left the page where the panel put it, which read as a control hidden above.
+    await page.getByRole('region', { name: 'All inputs' }).waitFor()
+    await settled(page)
+  }
   await page.getByRole('tab', { name: 'Plan', exact: true }).focus()
   const stops = []
   for (let i = 0; i < 90; i++) {
     await page.keyboard.press('Tab')
     await page.waitForTimeout(25)
+    // Until the page has stopped scrolling to the control: a slow frame put the sample before the
+    // scroll, which read as a control left below the fold.
+    await settled(page)
     const stop = await page.evaluate(() => {
       const el = document.activeElement
       if (!el || el === document.body) return null

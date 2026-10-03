@@ -9,6 +9,7 @@ import { comparisonRows, type ComparisonRow } from './comparisonRows'
 import { HERO_WINDOWS, type HeroWindowKey } from './heroWindow'
 import { useAssumedInflation } from '../../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
+import { ScrollRegion } from './ScrollRegion'
 import styles from '../goals.module.css'
 import progressStyles from '../progress.module.css'
 
@@ -96,7 +97,7 @@ function ScenarioComparisonImpl({
           ? ` "From today" is your plan restarted from the balance in your latest check-in, ${formatCheckinDate(fromToday.since)}, and counts its years from there.`
           : ''}
       </p>
-      <div className={styles.milestoneScroll}>
+      <ScrollRegion label="Scenarios side by side">
         <table className={styles.milestoneTable}>
           <thead>
             <tr>
@@ -111,12 +112,12 @@ function ScenarioComparisonImpl({
           <tbody>
             {rows.map((row) => (
               <tr key={row.key}>
-                <td className={styles.milestoneScenarioCell} title={row.name}>
+                <th scope="row" className={styles.milestoneScenarioCell} title={row.name}>
                   <span className={styles.milestoneScenarioNameRow}>
                     <span className={styles.swatch} style={{ background: row.color }} />
                     <span className={styles.milestoneScenarioName}>{row.name}</span>
                   </span>
-                </td>
+                </th>
                 {COLUMNS.map((c) => (
                   <td key={c.key} className={styles.compareCell}>
                     {cell(row, c.key, sharedYear)}
@@ -126,7 +127,7 @@ function ScenarioComparisonImpl({
             ))}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
     </ChartShell>
   )
 }
