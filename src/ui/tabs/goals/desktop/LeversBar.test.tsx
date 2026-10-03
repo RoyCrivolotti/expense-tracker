@@ -163,6 +163,27 @@ describe('LeversBar', () => {
     expect(root.style.scrollPaddingTop).toBe('')
   })
 
+  it('keeps it clear of the bar along the bottom edge too, and gives back what the page had', () => {
+    const root = document.documentElement
+    root.style.scrollPaddingBottom = '5px'
+    const { unmount } = render(
+      <LeversBar
+        draft={makeDraft()}
+        resultDraft={makeDraft()}
+        keys={DEFAULT_LEVERS}
+        onChange={vi.fn()}
+        expanded={false}
+        panelId="p"
+        onToggle={vi.fn()}
+      />,
+    )
+    // The bar's own height (nothing in jsdom) and the air around it.
+    expect(root.style.scrollPaddingBottom).toBe('20px')
+    unmount()
+    expect(root.style.scrollPaddingBottom).toBe('5px')
+    root.style.scrollPaddingBottom = ''
+  })
+
   it('shows only the levers it is given', () => {
     renderBar({ keys: ['rentMonthlyCents'] })
     expect(screen.getByLabelText('Rent (monthly)')).toBeInTheDocument()

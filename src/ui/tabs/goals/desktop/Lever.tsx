@@ -44,7 +44,7 @@ function TypedValue({ label, text, unit, onCommit, inputMode, valueKey }: TypedP
         inputMode={inputMode}
         aria-label={label}
         defaultValue={text}
-        size={Math.max(3, text.length)}
+        style={{ width: `${Math.max(2, text.length) + 0.5}ch` }}
         onBlur={(e) => onCommit(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === 'Enter') onCommit(e.currentTarget.value)

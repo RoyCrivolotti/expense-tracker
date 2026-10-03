@@ -193,68 +193,6 @@
   display: none;
 }
 
-/*
- * Desktop: the sticky sidebar (scenarios + controls) spans the rows of the stack beside it
- * (projection, snapshot, detail charts). They are rows of this grid, not one wrapper, so that
- * a phone can put the scenarios between them. The last row takes what the sidebar needs below
- * the others, which keeps the stack at the top.
- */
-@media (min-width: 900px) {
-  .layout {
-    display: grid;
-    grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
-    grid-template-rows: auto auto 1fr;
-    grid-template-areas:
-      'sidebar hero'
-      'sidebar now'
-      'sidebar secondary';
-    align-items: start;
-    gap: 1rem 1.25rem;
-  }
-
-  .areaSidebar {
-    grid-area: sidebar;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    position: sticky;
-    /* Under the header, which carries the top safe-area inset; dvh is the whole screen, so
-       the height it leaves takes that inset off as well. */
-    top: calc(var(--exp-header) + var(--exp-header-air) + env(safe-area-inset-top, 0px));
-    align-self: start;
-    max-height: calc(
-      100dvh - var(--exp-header) - var(--exp-header-air) - env(safe-area-inset-top, 0px) - 1rem
-    );
-    overflow-x: hidden;
-    overflow-y: auto;
-    min-width: 0;
-  }
-
-  .areaHero {
-    grid-area: hero;
-  }
-
-  .areaNow {
-    grid-area: now;
-  }
-
-  .areaSecondary {
-    grid-area: secondary;
-  }
-
-  .areaScenarios {
-    min-width: 0;
-  }
-
-  /* Last in the sidebar it is reference text, set like the help text of the controls above it
-     rather than as a lead paragraph. */
-  .areaSidebar > .intro {
-    font-size: 0.8125rem;
-    line-height: 1.45;
-    margin: 0;
-  }
-}
-
 .panel {
   display: flex;
   flex-direction: column;
@@ -946,28 +884,6 @@
   color: var(--color-text-muted);
 }
 
-.secondaryDesktop {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  min-width: 0;
-}
-
-.secondaryHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  min-width: 0;
-}
-
-.secondaryHeading {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  margin: 0;
-  color: var(--color-text);
-}
-
 .tabbedChart {
   min-width: 0;
 }
@@ -1233,13 +1149,6 @@
   .reachedChipDate {
     grid-column: 2;
   }
-}
-
-.secondaryStack {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  min-width: 0;
 }
 
 .btnRow {

@@ -92,12 +92,11 @@ describe('the width at which Goals changes from the phone layout to the wide one
     },
   )
 
-  it.each(['tabs/goals/goals.module.css', 'nav/AppShell.module.css'])(
-    'is where %s starts the wide layout, one pixel up',
-    (file) => {
-      expect(widths(file, 'min')).toContain(wideMin)
-    },
-  )
+  // The wide page is laid out by components that only mount above this width (useGoalsNarrow), so
+  // the Goals stylesheet has nothing left to switch on; the app shell still widens the page for it.
+  it.each(['nav/AppShell.module.css'])('is where %s starts the wide layout, one pixel up', (file) => {
+    expect(widths(file, 'min')).toContain(wideMin)
+  })
 
   it('leaves no query of the goals stylesheet a pixel off, which would show both layouts at one width', () => {
     expect(widths('tabs/goals/goals.module.css', 'min').filter((w) => w === narrowMax)).toEqual([])

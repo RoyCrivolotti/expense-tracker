@@ -7,6 +7,8 @@ import { todayIso } from '../../components/transactionFormState'
 import { NetWorthChart } from './charts/NetWorthChart'
 import { GoalsNarrative } from './GoalsNarrative'
 import { NominalPreview } from './NominalPreview'
+import { useGoalsNarrow } from './useGoalsNarrow'
+import desktopStyles from './desktop/planDesktop.module.css'
 import type { ScenarioEditor } from './useScenarioEditor'
 import progressStyles from './progress.module.css'
 
@@ -72,10 +74,13 @@ export function PlanHero({
   // editor's state changes (the discard question, a save in flight), none of which it draws.
   const extraSeries = useMemo(() => (checkinExtraSeries ? [checkinExtraSeries] : []), [checkinExtraSeries])
   const { mode, onModeChange, assumedInflation, preview, onPreview, onOpenSetting } = display
+  const narrow = useGoalsNarrow()
   const footer = useMemo(
     () => (
-      <>
-        <GoalsNarrative draft={deferredDraft} milestones={milestones} compact />
+      <div className={narrow ? undefined : desktopStyles.heroFooter}>
+        <div>
+          <GoalsNarrative draft={deferredDraft} milestones={milestones} compact />
+        </div>
         <div className={progressStyles.displayModeRow}>
           <SegmentedControl
             options={DISPLAY_MODE_OPTIONS}
@@ -93,9 +98,9 @@ export function PlanHero({
             onOpenAssumptions={onOpenSetting}
           />
         ) : null}
-      </>
+      </div>
     ),
-    [deferredDraft, milestones, mode, onModeChange, assumedInflation, preview, onPreview, onOpenSetting],
+    [narrow, deferredDraft, milestones, mode, onModeChange, assumedInflation, preview, onPreview, onOpenSetting],
   )
 
   const heroTodayIndex = useMemo(() => {

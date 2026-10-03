@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef } from 'react'
+import { memo, useMemo, useRef } from 'react'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import {
   formatCentsCompact,
@@ -9,12 +9,11 @@ import {
 import { ChevronIcon } from '../../../icons'
 import { useAssumedInflation } from '../../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
-import { trackScrollPadding } from '../../../hooks/scrollPadding'
-import { PINNED_AIR_PX, stickyBottom } from '../../../hooks/stickyScroll'
 import { Card } from '../../../components/primitives'
 import goalStyles from '../goals.module.css'
 import { LEVER_SPECS } from '../leverFields'
 import { Lever } from './Lever'
+import { useBarScrollPadding } from './useBarScrollPadding'
 import styles from './planDesktop.module.css'
 
 interface ResultProps {
@@ -51,21 +50,15 @@ interface LeversBarProps {
 }
 
 /**
- * The inputs a plan is mostly tuned with, beside the result they move, stuck under the app
- * header so they stay in reach however far down the charts one has read. The page's scroll
- * padding covers the bar while it is mounted, so a control reached with the keyboard is not
- * left behind it. The rest of the inputs open from the button in the result block.
+ * The inputs a plan is mostly tuned with, beside the result they move, always in reach: along the
+ * bottom edge while its place in the page is below the fold, then in the page, then under the app
+ * header once the page has scrolled past it. The page's scroll padding covers it while it is
+ * mounted, so a control reached with the keyboard is not left behind it. The rest of the inputs
+ * open from the button in the result block.
  */
 export function LeversBar({ draft, resultDraft, keys, onChange, expanded, panelId, onToggle }: LeversBarProps) {
   const bar = useRef<HTMLDivElement>(null)
-  useEffect(
-    () =>
-      trackScrollPadding({
-        top: () => (bar.current ? stickyBottom(bar.current) : 0) + PINNED_AIR_PX,
-        watch: () => [bar.current],
-      }),
-    [],
-  )
+  useBarScrollPadding(bar)
   return (
     <div ref={bar} className={styles.leversBar}>
       <Card className={styles.levers}>

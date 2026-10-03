@@ -8,6 +8,7 @@ import { DiscardSheet } from './DiscardSheet'
 import type { InvestedSnapshot } from './checkinDate'
 import { NetWorthNowCard } from './charts/NetWorthNowCard'
 import { GoalControls } from './GoalControls'
+import { PlanDesktop } from './desktop/PlanDesktop'
 import { GoalsIntro } from './GoalsIntro'
 import type { MobilePlanView } from './goalsView'
 import { PlanHero, type ValueDisplay } from './PlanHero'
@@ -25,10 +26,7 @@ interface PlanSidebarProps {
   latest: InvestedSnapshot | null
 }
 
-/**
- * The scenarios, the controls and, on a phone's Scenarios half, the pinned chart over them. A wide
- * screen's intro and glossary end it, under the controls they explain.
- */
+/** The phone's scenarios, the controls and, on its Scenarios half, the pinned chart over them. */
 function PlanSidebar({ half, scenarios, editor, actions, latest }: PlanSidebarProps) {
   const { draft, dirty, saving, onSaveChanges, onDiscard } = editor
   return (
@@ -71,7 +69,6 @@ function PlanSidebar({ half, scenarios, editor, actions, latest }: PlanSidebarPr
           <GoalControls draft={draft} latest={latest} onChange={editor.patchDraft} />
         </Card>
       </div>
-      <GoalsIntro placement="sidebar-end" />
     </div>
   )
 }
@@ -79,20 +76,15 @@ function PlanSidebar({ half, scenarios, editor, actions, latest }: PlanSidebarPr
 type PlanBlock = 'sidebar' | 'hero' | 'now' | 'secondary'
 
 /**
- * The order the blocks come in the page, which is the order Tab and a screen reader follow, so
- * it is the order each layout shows them in. A phone's Chart reads the chart, the snapshot, the
- * scenarios and then the detail charts, with the scenarios between two blocks of the right-hand
- * column, so neither column can come first as a whole. A wide screen reads the sidebar on the
- * left before the blocks beside it. Keyed siblings keep their state when the order changes at
- * 900px.
+ * The order the blocks come in a phone's page, which is the order Tab and a screen reader
+ * follow, so it is the order the phone shows them in. Chart reads the chart, the snapshot, the
+ * scenarios and then the detail charts, with the scenarios between two blocks of what is
+ * otherwise one column. (A wide screen has its own page, desktop/PlanDesktop, in reading order.)
  */
-const PLAN_ORDER: Record<'wide' | 'narrow', readonly PlanBlock[]> = {
-  wide: ['sidebar', 'hero', 'now', 'secondary'],
-  narrow: ['hero', 'now', 'sidebar', 'secondary'],
-}
+const PLAN_ORDER: readonly PlanBlock[] = ['hero', 'now', 'sidebar', 'secondary']
 
 interface PlanViewProps {
-  /** The half a phone is showing; a wide screen shows both. */
+  /** The half a phone is showing; a wide screen shows the whole page. */
   half: MobilePlanView
   scenarios: GoalScenario[]
   editor: ScenarioEditor
@@ -152,18 +144,19 @@ function planBlocks(props: PlanViewProps): Record<PlanBlock, ReactNode> {
 }
 
 /**
- * Plan: the scenarios and controls beside the projection, with the snapshot and the charts
- * under it.
+ * Plan. A wide screen has its own page, one column from the scenarios to the detail charts. A
+ * phone keeps the scenarios and controls as a half of their own beside the chart.
  */
-export function PlanView(props: PlanViewProps) {
+export function PlanView({ half, ...rest }: PlanViewProps) {
   const narrow = useGoalsNarrow()
-  const blocks = planBlocks(props)
+  if (!narrow) return <PlanDesktop {...rest} />
+  const blocks = planBlocks({ half, ...rest })
   return (
     <>
-      <div className={styles.layout} data-mobile-view={props.half}>
-        {PLAN_ORDER[narrow ? 'narrow' : 'wide'].map((block) => blocks[block])}
+      <div className={styles.layout} data-mobile-view={half}>
+        {PLAN_ORDER.map((block) => blocks[block])}
       </div>
-      <GoalsIntro placement="page-end" />
+      <GoalsIntro />
     </>
   )
 }
