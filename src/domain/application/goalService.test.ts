@@ -90,6 +90,29 @@ describe('the scenario write paths', () => {
     expect(patched.horizonYears).toBe(25)
   })
 
+  it('refuses to rename a scenario to nothing, as it refuses to make one with no name', async () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    const saved = await createScenario(repo, OWNER, newScenario({ name: 'Path A' }))
+
+    await expect(patchScenario(repo, OWNER, saved.id, { name: '' })).rejects.toThrow('Scenario name is required')
+    await expect(patchScenario(repo, OWNER, saved.id, { name: '   ', horizonYears: 25 })).rejects.toThrow(
+      'Scenario name is required',
+    )
+    // Nothing of the refused patch was kept.
+    const { goalScenarios } = await repo.loadDataset(OWNER)
+    expect(goalScenarios[0]).toMatchObject({ name: 'Path A', horizonYears: saved.horizonYears })
+  })
+
+  it('trims a new name, and leaves the name alone when the patch has none', async () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    const saved = await createScenario(repo, OWNER, newScenario({ name: 'Path A' }))
+
+    const renamed = await patchScenario(repo, OWNER, saved.id, { name: '  Path B  ' })
+    expect(renamed.name).toBe('Path B')
+    const untouched = await patchScenario(repo, OWNER, saved.id, { horizonYears: 20 })
+    expect(untouched.name).toBe('Path B')
+  })
+
   it('saves the purchase year the slider calls "Now"', async () => {
     const repo = inMemoryExpenseRepository({}, OWNER)
     const saved = await createScenario(repo, OWNER, newScenario({ housePurchaseYear: 0 }))

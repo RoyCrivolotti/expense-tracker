@@ -87,6 +87,22 @@ describe('ScenarioBar', () => {
     expect(screen.getByRole('button', { name: 'Save scenario' })).toBeDisabled()
   })
 
+  it('will not save the edits to a scenario that has been given no name, and can still drop them', async () => {
+    const actions = makeActions()
+    render(<Harness initial={[plan, other]} actions={actions} />)
+
+    await openMenu()
+    await userEvent.clear(screen.getByLabelText('Scenario name'))
+    await userEvent.keyboard('{Escape}')
+
+    const save = screen.getByRole('button', { name: 'Save changes' })
+    expect(save).toBeDisabled()
+    expect(save).toHaveAttribute('title', 'Give the scenario a name to save it')
+    await userEvent.click(save)
+    expect(actions.updateScenario).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Discard changes' })).toBeEnabled()
+  })
+
   it('marks the open scenario as edited and offers to keep or drop the edits', async () => {
     const actions = makeActions()
     render(<Harness initial={[plan, other]} actions={actions} />)

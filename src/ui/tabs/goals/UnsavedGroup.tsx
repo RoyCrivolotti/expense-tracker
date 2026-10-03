@@ -49,6 +49,9 @@ export function UnsavedGroup({
     }
   }, [onGone])
 
+  // A scenario with no name cannot be saved (the service refuses it too); it is the edits that
+  // are the problem, so Discard stays.
+  const unnamed = unsaved.name.trim().length === 0
   return (
     <div
       ref={group}
@@ -77,8 +80,9 @@ export function UnsavedGroup({
       <button
         type="button"
         className={`${styles.btn} ${styles.btnPrimary}`}
-        aria-label={`Save changes to ${unsaved.name}`}
-        disabled={unsaved.saving}
+        aria-label={unnamed ? 'Save changes' : `Save changes to ${unsaved.name}`}
+        {...(unnamed ? { title: 'Give the scenario a name to save it' } : {})}
+        disabled={unsaved.saving || unnamed}
         onClick={unsaved.onSave}
       >
         Save
