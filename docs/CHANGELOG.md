@@ -2,6 +2,18 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (Goals on a tablet, and for assistive technology)
+
+- **Every percentage stepper, slider and button says which input it belongs to.** Each was announced as "Annual return percentage" with "Increase percentage" buttons, and the levers bar's sliders as "Real return slider". They now carry the input's name, a percentage slider reads out "7,0%" and the purchase year slider "Year 4", and a purchase year past a shortened horizon stays on the slider's track instead of being drawn at its end.
+- **The "years to milestone" colours can be read.** White text sat on the yellow, orange and red cells (1.3 to 2.8 against the background) and dark text on the dark green of "now". Only "now" is white now, and every other cell has at least 6.8.
+- **The bar's controls are bigger for a finger.** On an iPad the scenario tabs, the options button and "All inputs" are 44px tall, a star takes a tap from 46px across, and a tap beside a lever's digits puts the cursor in it. Without a hover the figures carry a faint line so it is clear they can be typed over.
+- **A star no longer looks removed when it is not.** On a touch screen the star that took the place of one just taken out of the bar drew itself as an outline, because the screen kept the hover on the spot where the finger had been.
+- **A tap outside the scenario menu closes it on a touch screen.** It stayed open, and opening it raised the keyboard over half of the page; the menu now takes the focus itself and the name is a tap away.
+- **Tabbing through the stuck bar no longer scrolls the page.** In Safari each Tab or Enter on one of its controls moved the page up by the bar's height.
+- **"+ New" is "+ Duplicate"**, which is what it does, and duplicating a copy gives "Path A (copy 2)" instead of "Path A (copy) (copy)".
+- **Milestone lines that would run together are left out.** The 100k to 1M lines of a plan past its first milestones drew as a dashed smear along the bottom of the chart; a line is drawn only if it is at least 8px from the one above.
+- **The bar's "nothing is starred" message sits in the middle of the bar** instead of at its top edge.
+
 ## October 2026 (room on the wide Goals page)
 
 - **A laptop screen now holds the whole chart and the levers bar at once.** The chart starts 94px higher (273px down at 1280px wide instead of 367px), so the chart, its legend and the bar fit a 1280x800 screen with the bar held to the bottom edge, where before the bar would have covered the chart's bottom and so was left below the fold on anything under 896px tall. The bar is pinned from 800px tall now.
