@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Fail verify if the production JS bundle grows past budget. Guards the win from
- * dropping Recharts (the lazy Goals chunk went 108 KB -> ~8 KB gzip, and is ~37 KB now that
+ * dropping Recharts (the lazy Goals chunk went 108 KB -> ~8 KB gzip, and is ~41 KB now that
  * Goals has grown): re-adding a heavy chart/vendor lib would blow these limits. Budgets are
  * gzip bytes with headroom; bump deliberately when a real feature needs the room.
  */
@@ -11,7 +11,7 @@ import { join } from 'node:path'
 
 const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 
-// gzip bytes. Today: total ~207 KB, GoalsTab ~37 KB.
+// gzip bytes. Today: total ~212 KB, GoalsTab ~41 KB.
 //
 // Raised from 160 KB when flags, receipts and the claim pack landed: three
 // features' worth of UI took the total from ~146 KB to ~159 KB, leaving under
@@ -74,8 +74,14 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // padding, the end-value readout on the pinned chart, tab semantics for the view row, and the
 // short-screen layout): the stack of them took the total from 205.5 KB to 206.9 KB, so the
 // branch that carries the Save row was the first to cross the line.
-const TOTAL_MAX_GZIP = 209_000
-const GOALS_MAX_GZIP = 40_000
+//
+// Raised from 209 KB to 214 KB, and the Goals chunk from 40 KB to 43 KB, for the one-column
+// Goals Plan on a wide screen (the scenario tabs and their menu, the levers bar, the folding
+// inputs panel and the two-column detail grid): about 4.4 KB gzip took the total from about
+// 208 KB to 212,355 bytes and the Goals chunk from about 37 KB to 41,410, which is all new UI
+// and no new library. The limits keep about 1.6 KB of headroom each, as the notes above do.
+const TOTAL_MAX_GZIP = 214_000
+const GOALS_MAX_GZIP = 43_000
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length
