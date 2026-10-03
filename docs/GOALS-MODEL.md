@@ -8,7 +8,7 @@ from D1 only.
 
 The Goals tab has three views:
 
-- **Plan** — projection lab. Configure scenarios, compare alternatives, see the hero net-worth chart with uncertainty bands and life-event markers. The hero has 5Y/10Y/20Y/All windows that cut everything drawn at the same year, and its legend rows hide or show a saved scenario's line (the same state as the chip's eye); a table under it puts the scenarios side by side as numbers.
+- **Plan** — projection lab. Configure scenarios, compare alternatives, see the hero net-worth chart with uncertainty bands and life-event markers. The hero has 5Y/10Y/20Y/All windows that cut everything drawn at the same year, and its legend rows hide or show a saved scenario's line (the same state as the chip's eye on a phone); a table under it puts the scenarios side by side as numbers. On a wide screen Plan is one column: a tab per scenario with a menu for what can be done with the open one, the hero across the page, a bar of five inputs (monthly investing, real return, horizon, purchase year, starting balance; `DEFAULT_LEVERS` in `engine/goalLevers.ts`) beside the net worth they move, the remaining inputs under an "All inputs" button, and the detail charts in two columns.
 - **Progress** — wealth tracking. Log actual balances per account, see on/off-track status against your plan, and compare actuals to the projection over time.
 - **Assumptions** — what Progress measures with: the milestone ladder, the wealth accounts each check-in records a balance for, the cash reserve target in months of spending, and the assumed inflation every Goals view uses.
 

@@ -232,9 +232,13 @@ async function goToGoals(page) {
   await page.waitForSelector('text=Recent activity', { timeout: 15000 })
   await page.getByRole('button', { name: 'Goals', exact: true }).click()
   await page.waitForSelector('text=Invested portfolio projection', { timeout: 15000 })
-  await page.waitForSelector('text=Scenarios', { timeout: 15000 })
-  // The plan's chip carries a "Current plan" tag in its name, so no exact match here.
-  await page.getByRole('button', { name: /Path A: Invest only/ }).first().waitFor({ timeout: 15000 })
+  // The plan carries a "Current plan" tag in its name, so no exact match here. It is a tab on a
+  // wide screen and a chip, which is a button, on a phone.
+  await page
+    .getByRole('tab', { name: /Path A: Invest only/ })
+    .or(page.getByRole('button', { name: /Path A: Invest only/ }))
+    .first()
+    .waitFor({ timeout: 15000 })
   await page.waitForTimeout(500)
 }
 
@@ -243,16 +247,39 @@ async function captureGoalsDesktop(page) {
   await page.screenshot({ path: join(OUT, 'goals-desktop.png') })
 
   await page.getByText('What do these terms mean?').click()
-  // The glossary ends the sidebar, so what opens is under the fold: bring it up to the top of the
-  // sidebar, which scrolls on its own.
+  // The glossary ends the page, so what opens is under the fold: bring it up to the top.
   await page.getByText('What do these terms mean?').evaluate((el) => el.scrollIntoView({ block: 'start' }))
   await page.waitForTimeout(250)
   await page.screenshot({ path: join(OUT, 'goals-desktop-explainer.png') })
   await page.getByText('What do these terms mean?').click()
 
-  await page.locator('text=Net worth composition').scrollIntoViewIfNeeded()
+  // The detail charts' heading goes just under the stuck bar of inputs, not behind it.
+  await page.getByRole('heading', { name: 'Detailed charts' }).evaluate((heading) => {
+    const bar = document.querySelector('[class*="leversBar"]')
+    const under = bar ? bar.getBoundingClientRect().bottom : 0
+    window.scrollTo(0, heading.getBoundingClientRect().top + window.scrollY - under - 16)
+  })
   await page.waitForTimeout(350)
   await page.screenshot({ path: join(OUT, 'goals-desktop-charts.png') })
+
+  // The inputs that are not in the bar, open under it, and the scenario's own menu.
+  await goToGoals(page)
+  await page.getByRole('button', { name: 'All inputs' }).click()
+  await page.getByRole('region', { name: 'All inputs' }).waitFor()
+  await page.waitForTimeout(350)
+  await page.getByRole('region', { name: 'All inputs' }).evaluate((panel) => {
+    const bar = document.querySelector('[class*="leversBar"]')
+    const under = bar ? bar.getBoundingClientRect().bottom : 0
+    window.scrollTo(0, panel.getBoundingClientRect().top + window.scrollY - under - 12)
+  })
+  await page.waitForTimeout(350)
+  await page.screenshot({ path: join(OUT, 'goals-desktop-inputs.png') })
+
+  await goToGoals(page)
+  await page.getByRole('button', { name: 'Scenario options' }).click()
+  await page.getByRole('dialog', { name: 'Scenario options' }).waitFor()
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: join(OUT, 'goals-desktop-menu.png') })
 
   await goToGoals(page)
   await page.screenshot({ path: join(OUT, 'goals-desktop-full.png'), fullPage: true })

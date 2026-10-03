@@ -90,7 +90,7 @@ Cash recon shows **Carryover**, **This month**, and **Total gap** columns (deskt
 
 ## Goals
 
-Multi-scenario wealth planner in three views. Plan: three saved paths plus an unsaved draft, FI progress, FI drawdown, rent-vs-buy net worth, and actual saving vs plan. Progress: dated check-ins with on/off-track status, net worth over time, and actual vs plan. Assumptions: the milestone ladder, the wealth accounts, the cash reserve and the assumed inflation. On desktop the projection chart leads the right-hand column and the intro and glossary end the sidebar, under the controls. Desktop secondary charts default to a full-width stack with an optional single-chart tab mode; mobile uses a scrollable chart picker. On a phone one row under the header switches between Chart, Progress, Scenarios and Assumptions (Plan is Chart and Scenarios there), and the mobile overview is Chart, which opens on the projection chart with the glossary below the charts.
+Multi-scenario wealth planner in three views. Plan: three saved paths plus an unsaved draft, FI progress, FI drawdown, rent-vs-buy net worth, and actual saving vs plan. Progress: dated check-ins with on/off-track status, net worth over time, and actual vs plan. Assumptions: the milestone ladder, the wealth accounts, the cash reserve and the assumed inflation. On desktop Plan is one column: the scenario tabs, the projection across the page, a bar of the five inputs a plan is mostly tuned with (held to the bottom edge of the screen while it is below the fold, under the header once scrolled past), the other inputs opened from "All inputs", and the detail charts in two columns, with the intro and glossary last. Mobile uses a scrollable chart picker. On a phone one row under the header switches between Chart, Progress, Scenarios and Assumptions (Plan is Chart and Scenarios there), and the mobile overview is Chart, which opens on the projection chart with the glossary below the charts.
 
 | Desktop overview | Mobile overview |
 | --- | --- |
@@ -110,9 +110,13 @@ Scenarios opens at its first section. The draft's chart and the section chips st
 | --- | --- |
 | ![Goals assumptions desktop](./screenshots/gallery/goals-desktop-assumptions.png) | ![Goals assumptions mobile](./screenshots/gallery/goals-mobile-assumptions.png) |
 
-| Full page (desktop) | Secondary charts stack (desktop) |
+| Full page (desktop) | Detail charts (desktop) |
 | --- | --- |
 | ![Goals desktop full](./screenshots/gallery/goals-desktop-full.png) | ![Goals charts desktop](./screenshots/gallery/goals-desktop-charts.png) |
+
+| All inputs open (desktop) | Scenario menu (desktop) |
+| --- | --- |
+| ![Goals inputs desktop](./screenshots/gallery/goals-desktop-inputs.png) | ![Goals menu desktop](./screenshots/gallery/goals-desktop-menu.png) |
 
 | Glossary (desktop) | Scenarios (mobile) |
 | --- | --- |
