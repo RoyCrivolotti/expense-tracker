@@ -591,6 +591,13 @@
   color: var(--color-text-muted);
 }
 
+/* With no levers the message is all the grid holds, and the result beside it is three lines high:
+   the grid takes that height so the message can sit in the middle of the bar, not at its top edge. */
+.leverGrid:has(.leverEmpty) {
+  align-self: stretch;
+  align-content: center;
+}
+
 .star {
   /* The amber is darkened a little toward the text colour: the plain amber is 2.8:1 against the
      card in the light theme, under the 3:1 a graphic that carries a state has to have. */
