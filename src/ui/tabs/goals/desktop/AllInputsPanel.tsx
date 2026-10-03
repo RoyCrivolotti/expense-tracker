@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import type { LeverKey } from '../../../../engine'
 import { Card } from '../../../components/primitives'
+import goalStyles from '../goals.module.css'
 import { Presence } from '../../../components/Presence'
 import { EXIT_MS, exitVars } from '../../../hooks/motion'
 import { useExit } from '../../../hooks/usePresence'
@@ -15,6 +16,8 @@ import {
   TrackingFields,
 } from '../goalControlSections'
 import { SECTION_KEYS } from '../leverFields'
+import type { StarredLevers } from '../useStarredLevers'
+import { Starrable } from './Starrable'
 import styles from './planDesktop.module.css'
 
 interface PanelProps {
@@ -23,8 +26,8 @@ interface PanelProps {
   /** The latest check-in, for re-baselining; null before the first one. */
   latest: InvestedSnapshot | null
   onChange: (patch: Partial<NewGoalScenario>) => void
-  /** The inputs that are in the levers bar, so they are not here a second time. */
-  omit: ReadonlySet<LeverKey>
+  /** The inputs in the levers bar, so they are not here a second time, and the stars that move them. */
+  starred: StarredLevers
 }
 
 function Column({ title, children }: { title: string; children: ReactNode }) {
@@ -46,21 +49,52 @@ function hasInputs(keys: readonly LeverKey[], omit: ReadonlySet<LeverKey>): bool
  * them, since they set where the starting balance is from. With every input in the bar it is the
  * plan start's column alone.
  */
-function PortfolioColumn({ draft, latest, onChange, omit }: Omit<PanelProps, 'id'>) {
+function PortfolioColumn({ draft, latest, onChange, omit, wrap }: ColumnProps) {
   const labels = ADJUST_LABELS
   const inputs = hasInputs(SECTION_KEYS.portfolio, omit)
   return (
     <Column title={inputs ? labels.portfolio.title : labels.tracking.title}>
-      {inputs ? <PortfolioFields draft={draft} onChange={onChange} omit={omit} /> : null}
+      {inputs ? <PortfolioFields draft={draft} onChange={onChange} omit={omit} wrap={wrap} /> : null}
       {inputs ? <h3 className={styles.columnTitle}>{labels.tracking.title}</h3> : null}
       <TrackingFields draft={draft} latest={latest} onChange={onChange} />
     </Column>
   )
 }
 
-function PanelBody({ id, draft, latest, onChange, omit }: PanelProps) {
+interface ColumnProps {
+  draft: NewGoalScenario
+  latest: InvestedSnapshot | null
+  onChange: (patch: Partial<NewGoalScenario>) => void
+  omit: ReadonlySet<LeverKey>
+  wrap: (key: LeverKey, field: ReactNode) => ReactNode
+}
+
+/** What the panel says about the stars above its columns, and the way back to the five it starts with. */
+function StarNote({ starred }: { starred: StarredLevers }) {
+  if (!starred.canEdit) return null
+  return (
+    <div className={styles.starNote}>
+      <p className={styles.starText}>
+        {starred.canAdd ? 'Star an input to keep it in the bar above.' : 'The bar holds five. Take one out of it to star another.'}
+      </p>
+      {starred.isDefault ? null : (
+        <button type="button" className={goalStyles.btn} onClick={starred.reset}>
+          Reset to defaults
+        </button>
+      )}
+    </div>
+  )
+}
+
+function PanelBody({ id, draft, latest, onChange, starred }: PanelProps) {
   const { leaving, exitMs } = useExit()
   const labels = ADJUST_LABELS
+  const omit = useMemo<ReadonlySet<LeverKey>>(() => new Set(starred.keys), [starred.keys])
+  const wrap = (key: LeverKey, field: ReactNode) => (
+    <Starrable leverKey={key} starred={starred}>
+      {field}
+    </Starrable>
+  )
   return (
     <div
       id={id}
@@ -72,15 +106,16 @@ function PanelBody({ id, draft, latest, onChange, omit }: PanelProps) {
     >
       <div className={styles.foldInner}>
         <Card>
+          <StarNote starred={starred} />
           <div className={styles.columns}>
-            <PortfolioColumn draft={draft} latest={latest} onChange={onChange} omit={omit} />
+            <PortfolioColumn draft={draft} latest={latest} onChange={onChange} omit={omit} wrap={wrap} />
             {hasInputs(SECTION_KEYS.housing, omit) ? (
               <Column title={labels.housing.title}>
-                <HousingFields draft={draft} onChange={onChange} omit={omit} />
+                <HousingFields draft={draft} onChange={onChange} omit={omit} wrap={wrap} />
               </Column>
             ) : null}
             <Column title={labels.fire.title}>
-              <FireFields draft={draft} onChange={onChange} omit={omit} />
+              <FireFields draft={draft} onChange={onChange} omit={omit} wrap={wrap} />
             </Column>
             <Column title={labels.events.title}>
               <EventsFields draft={draft} onChange={onChange} />

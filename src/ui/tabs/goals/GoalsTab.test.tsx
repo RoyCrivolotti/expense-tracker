@@ -48,6 +48,68 @@ async function renameScenario(user: User, name: string) {
 const scenarioTab = (name: string | RegExp, selected?: boolean) =>
   screen.getByRole('tab', { name, ...(selected === undefined ? {} : { selected }) })
 
+describe('GoalsTab levers', () => {
+  afterEach(() => {
+    media.setMatching(() => false)
+  })
+
+  const DEFAULTS = ['monthlyContributionCents', 'expectedRealReturn', 'horizonYears', 'housePurchaseYear', 'startInvestedCents']
+
+  it('takes an input out of the bar with its star, saves the choice, and gives the input back to the panel', async () => {
+    const user = userEvent.setup()
+    const actions = makeActions()
+    render(<GoalsTab model={makeModel()} actions={actions} />)
+
+    await user.click(screen.getByRole('button', { name: 'Remove Horizon from the bar' }))
+
+    expect(actions.updateSettings).toHaveBeenCalledWith({ goalLevers: DEFAULTS.filter((k) => k !== 'horizonYears') })
+    expect(screen.queryByLabelText('Horizon (years)')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'All inputs' }))
+    expect(screen.getByLabelText('Horizon (years)')).toBeInTheDocument()
+  })
+
+  it('puts an input from the panel in the bar with its star, at the end', async () => {
+    const user = userEvent.setup()
+    const actions = makeActions()
+    render(<GoalsTab model={makeModel()} actions={actions} />)
+
+    await user.click(screen.getByRole('button', { name: 'Remove Horizon from the bar' }))
+    await user.click(screen.getByRole('button', { name: 'All inputs' }))
+    await user.click(screen.getByRole('button', { name: 'Add House price to the bar' }))
+
+    expect(actions.updateSettings).toHaveBeenLastCalledWith({
+      goalLevers: [...DEFAULTS.filter((k) => k !== 'horizonYears'), 'housePriceCents'],
+    })
+    expect(screen.getByLabelText('House price')).toBeInTheDocument()
+    expect(within(screen.getByRole('group', { name: 'Key inputs' })).getByLabelText('House price')).toBeInTheDocument()
+  })
+
+  it('shows the inputs the owner chose, and puts the five back with Reset', async () => {
+    const user = userEvent.setup()
+    const actions = makeActions()
+    const dataset = makeDataset()
+    dataset.settings = { ...dataset.settings, goalLevers: ['rentMonthlyCents'] }
+    render(<GoalsTab model={buildExpenseModel(dataset)} actions={actions} />)
+
+    const bar = screen.getByRole('group', { name: 'Key inputs' })
+    expect(within(bar).getByLabelText('Rent (monthly)')).toBeInTheDocument()
+    expect(within(bar).queryByLabelText('Monthly investing')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'All inputs' }))
+    await user.click(screen.getByRole('button', { name: 'Reset to defaults' }))
+    expect(actions.updateSettings).toHaveBeenCalledWith({ goalLevers: DEFAULTS })
+  })
+
+  it('shows the bar as it was saved, with no stars to press, in a read-only session', async () => {
+    const user = userEvent.setup()
+    render(<GoalsTab model={makeModel()} />)
+
+    expect(screen.queryByRole('button', { name: /from the bar$/ })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'All inputs' }))
+    expect(screen.getByRole('button', { name: 'Add House price to the bar' })).toBeDisabled()
+  })
+})
+
 describe('GoalsTab', () => {
   // Opening Scenarios scrolls to its controls, which jsdom does not implement. The scrolls wait
   // a frame; a real one would run inside whichever test comes next, so the frame runs at once.

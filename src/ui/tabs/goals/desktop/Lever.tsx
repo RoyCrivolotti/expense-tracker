@@ -5,12 +5,15 @@ import type { MoneyFormat } from '../../../../engine'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import type { LeverSpec } from '../leverFields'
 import goalStyles from '../goals.module.css'
+import { StarButton } from './StarButton'
 import styles from './planDesktop.module.css'
 
 interface LeverProps {
   spec: LeverSpec
   draft: NewGoalScenario
   onChange: (patch: Partial<NewGoalScenario>) => void
+  /** Takes the input out of the bar; absent where the bar cannot be changed. */
+  onUnstar?: (() => void) | undefined
 }
 
 /** Whole amounts without the cents, so a seven-figure balance fits a bar column. */
@@ -64,7 +67,7 @@ function clamp(value: number, min: number, max: number): number {
  * where the input has one in the panel (the percentages and the purchase year). Money and years
  * stay typed: a balance or a house price is a fact, not a dial.
  */
-export function Lever({ spec, draft, onChange }: LeverProps) {
+export function Lever({ spec, draft, onChange, onUnstar }: LeverProps) {
   const format = useMoneyFormat()
   const { key, kind, label, short } = spec
   const value = draft[key]
@@ -161,7 +164,10 @@ export function Lever({ spec, draft, onChange }: LeverProps) {
 
   return (
     <div className={styles.lever}>
-      <span className={styles.leverLabel}>{short}</span>
+      <div className={styles.leverHead}>
+        <span className={styles.leverLabel} title={short}>{short}</span>
+        {onUnstar ? <StarButton filled label={`Remove ${short} from the bar`} onClick={onUnstar} /> : null}
+      </div>
       {body}
     </div>
   )

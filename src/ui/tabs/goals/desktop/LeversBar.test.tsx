@@ -208,6 +208,25 @@ describe('LeversBar', () => {
     root.style.scrollPaddingBottom = ''
   })
 
+  it('has a star on each lever that takes it out of the bar, where the bar can be changed', async () => {
+    const onUnstar = vi.fn()
+    renderBar({ onUnstar })
+    await userEvent.click(screen.getByRole('button', { name: 'Remove Horizon from the bar' }))
+    expect(onUnstar).toHaveBeenCalledWith('horizonYears')
+    expect(screen.getAllByRole('button', { name: /^Remove .* from the bar$/ })).toHaveLength(5)
+  })
+
+  it('has no stars where the bar cannot be changed', () => {
+    renderBar()
+    expect(screen.queryByRole('button', { name: /from the bar$/ })).not.toBeInTheDocument()
+  })
+
+  it('says what to do when nothing is starred, and still has its result', () => {
+    renderBar({ keys: [] })
+    expect(screen.getByText(/Nothing is starred/)).toBeInTheDocument()
+    expect(screen.getByText('Net worth at horizon')).toBeInTheDocument()
+  })
+
   it('shows only the levers it is given', () => {
     renderBar({ keys: ['rentMonthlyCents'] })
     expect(screen.getByLabelText('Rent (monthly)')).toBeInTheDocument()
