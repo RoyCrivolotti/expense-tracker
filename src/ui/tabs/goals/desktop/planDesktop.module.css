@@ -199,10 +199,12 @@
 }
 
 /* The scenario row: one tab per scenario, then what can be done with the open one. */
+/* One line, always: Unsaved changes, Discard and Save appear on the first edit, and a row that
+   wrapped to make room for them moved everything under it by 40px at 1280px. The tabs give up
+   width instead, cutting names and then scrolling. */
 .scenarioRow {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: 0.5rem;
   min-width: 0;
 }
@@ -210,9 +212,25 @@
 .tabs {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: 0.375rem;
   min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* Room for the focus ring, which the scroller would otherwise clip. */
+  padding: 3px;
+  margin: -3px;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.scenarioRow > :not(.tabs) {
+  flex: none;
+}
+
+.scenarioRow > .rowSpacer {
+  flex: 1 0 0;
 }
 
 .tab,
@@ -239,6 +257,9 @@
    78 character name made a tab 680px wide and pushed the unsaved buttons to a row of their own. */
 .tab {
   max-width: 22rem;
+  /* Shrinks with its row down to enough name to tell the scenarios apart. */
+  min-width: 6.5rem;
+  flex: 0 1 auto;
 }
 
 .tabName {
@@ -301,6 +322,31 @@
    row everything is centred on one line, and it sat 9px above the buttons beside it. */
 .scenarioRow .rowPill {
   align-self: center;
+}
+
+/* The tab already says Edited, so on a laptop the pill is the first thing to give its room to the
+   tab names; it stays in the page for a screen reader, and shows where there is room for it. */
+.scenarioRow .rowPill {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (min-width: 1500px) {
+  .scenarioRow .rowPill {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    padding: 0.15rem 0.45rem;
+    overflow: visible;
+    clip-path: none;
+  }
 }
 .unsavedActions {
   display: flex;
