@@ -12,7 +12,7 @@
  *
  * Starts its own dev server on CAPTURE_PORT (5173 unless set), with DOCS_CAPTURE=1 so it has the
  * seeded demo data and nothing real. `ENGINES=chromium,webkit` (the default is chromium) also
- * runs it in Safari's engine, and `ONLY=touch-targets` or `ONLY=lever-focus` runs just that group (a minute or two).
+ * runs it in Safari's engine, and `ONLY=touch-targets`, `ONLY=lever-focus` or `ONLY=toast` runs just that group (a minute or two).
  * Exits 1 and says what was measured if anything fails.
  */
 import { spawn } from 'node:child_process'
@@ -1082,6 +1082,112 @@ async function checkTouchTargets(browser, engine) {
   await phone.context.close()
 }
 
+/** The overlap of two boxes, in px squared. */
+function overlap(a, b) {
+  if (!a || !b) return 0
+  const w = Math.min(a.right, b.right) - Math.max(a.left, b.left)
+  const h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)
+  return w > 0 && h > 0 ? Math.round(w * h) : 0
+}
+
+/** Screens the star Undo toast is checked on: held bar, a taller screen where it is not at the edge, and touch tablets. */
+const TOAST_SCREENS = [
+  { width: 1024, height: 768 },
+  { width: 1200, height: 800 },
+  { width: 1280, height: 800 },
+  { width: 1440, height: 900 },
+  { width: 1440, height: 1024 },
+  { width: 1032, height: 1376, touch: true },
+  { width: 1133, height: 744, touch: true },
+  { width: 1366, height: 1024, touch: true },
+]
+
+/**
+ * (z2) The toast that follows taking an input out of the bar covers neither the legend, nor the
+ * bar and its controls, nor the rail's menu button, and its Undo can be pressed. It was centred
+ * over the bar, which at 1280x800 put it over the legend chips for six seconds (10092px squared
+ * of them), and at 1366x1024 on a touch screen over the bar itself.
+ */
+async function checkToastPlace(browser, engine) {
+  for (const screen of TOAST_SCREENS) {
+    const where = `${engine} ${screen.width}x${screen.height}${screen.touch ? ' touch' : ''}`
+    const { page, context } = await openPlan(browser, screen, { touch: screen.touch === true })
+    await scrollTo(page, 0)
+    const star = page.getByRole('button', { name: 'Remove Real return from the bar' })
+    // A screen the bar is not held on has it below the fold: scrolled to the middle first, as a person would.
+    if ((await star.boundingBox()).y > screen.height - 40) {
+      await star.evaluate((el) => el.scrollIntoView({ block: 'center' }))
+      await settled(page)
+    }
+    const box = await star.boundingBox()
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+    await page.getByText('Removed Real return from the bar').waitFor({ timeout: 3000 })
+    await page.waitForTimeout(400)
+    const found = await page.evaluate(() => {
+      const rect = (el) => {
+        if (!el) return null
+        const r = el.getBoundingClientRect()
+        return { left: r.left, right: r.right, top: r.top, bottom: r.bottom }
+      }
+      const bar = document.querySelector('[data-levers-bar]')
+      const undo = document.querySelector('[role="status"] button')
+      const u = undo.getBoundingClientRect()
+      const hit = document.elementFromPoint(u.left + u.width / 2, u.top + u.height / 2)
+      return {
+        toast: rect(document.querySelector('[role="status"] > div')),
+        legend: rect(document.querySelector('[data-goals-plan-wide] ul[class*="chips"]')),
+        key: rect(document.querySelector('[data-goals-plan-wide] [class*="chartKeys"]')),
+        bar: rect(bar),
+        controls: [...bar.querySelectorAll('input, button')].map(rect),
+        menu: rect([...document.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Navigate' && b.getBoundingClientRect().left < 240)),
+        links: rect(document.querySelector('[class*="railList"]')),
+        undoReachable: hit === undo || undo.contains(hit),
+        w: innerWidth,
+        h: innerHeight,
+      }
+    })
+    const t = found.toast
+    const names = { legend: overlap(t, found.legend), 'check-in key': overlap(t, found.key), bar: overlap(t, found.bar), 'bar controls': found.controls.reduce((sum, c) => sum + overlap(t, c), 0), "rail's menu button": overlap(t, found.menu), "rail's links": overlap(t, found.links) }
+    const covered = Object.entries(names).filter(([, n]) => n > 0).map(([what, n]) => `${what} ${n}px2`)
+    check(where, '(z2) the Undo toast covers neither the legend, the bar and its controls, nor the rail', covered.length === 0, `${covered.join(', ')}; toast ${px(t.left)},${px(t.top)} to ${px(t.right)},${px(t.bottom)}`)
+    check(where, '(z2) the toast is inside the window and its Undo is what a press at its centre reaches', t.left >= 0 && t.right <= found.w && t.top >= 0 && t.bottom <= found.h && found.undoReachable, `toast ${px(t.left)},${px(t.top)} to ${px(t.right)},${px(t.bottom)} in ${found.w}x${found.h}, undo reachable ${found.undoReachable}`)
+    await context.close()
+  }
+
+  // Under 1024px the rail is icons only and has no room for it: the toast keeps to the middle.
+  const narrow = await openPlan(browser, { width: 1023, height: 800 })
+  const star = narrow.page.getByRole('button', { name: 'Remove Real return from the bar' })
+  await star.scrollIntoViewIfNeeded()
+  await star.click()
+  await narrow.page.getByText('Removed Real return from the bar').waitFor({ timeout: 3000 })
+  await narrow.page.waitForTimeout(400)
+  const mid = await narrow.page.locator('[role="status"] > div').boundingBox()
+  check(`${engine} 1023x800`, '(z2) under 1024px the toast stays in the middle, clear of the 72px rail', mid !== null && mid.x >= 72 && Math.abs(mid.x + mid.width / 2 - 511.5) < 2, JSON.stringify(mid))
+  await narrow.context.close()
+
+  // The phone has no stars, but a toast is still one: it is above the bottom bar, not on it.
+  const context = await browser.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 1, colorScheme: 'dark', reducedMotion: 'reduce', hasTouch: true, isMobile: true })
+  const page = await context.newPage()
+  await page.addInitScript(() => localStorage.setItem('exp-onboarding-skipped', '1'))
+  await page.goto(`${BASE}/`)
+  await page.waitForSelector('text=Recent activity', { timeout: 20000 })
+  await page.locator('[class*="bottomBar"] button').filter({ hasText: 'Goals' }).first().click()
+  await page.getByText('Scenarios', { exact: true }).first().click()
+  const slider = page.getByRole('slider').first()
+  await slider.focus()
+  await page.keyboard.press('ArrowRight')
+  await page.getByRole('button', { name: /^Save/ }).first().click()
+  await page.getByRole('status').getByText(/^Saved/).waitFor({ timeout: 6000 })
+  await page.waitForTimeout(400)
+  const phone = await page.evaluate(() => ({
+    toast: document.querySelector('[role="status"] > div').getBoundingClientRect().toJSON(),
+    bar: document.querySelector('[class*="bottomBar"]').getBoundingClientRect().toJSON(),
+    aside: document.documentElement.hasAttribute('data-toast-aside'),
+  }))
+  check(`${engine} phone 375x812`, '(z2) on the phone the toast is above the bottom bar, in the middle, and is not asked to go aside', phone.bar.top - phone.toast.bottom >= 8 && !phone.aside && Math.abs(phone.toast.left + phone.toast.width / 2 - 187.5) < 2, JSON.stringify(phone))
+  await context.close()
+}
+
 async function checkOtherViews(browser, engine) {
   const { page, context } = await openPlan(browser, { width: 1440, height: 900 })
   for (const name of ['Progress', 'Assumptions']) {
@@ -1532,6 +1638,10 @@ async function main() {
       console.log(`\n${engine}`)
       const browser = await playwright[engine].launch()
       try {
+        if (process.env.ONLY === 'toast') {
+          await checkToastPlace(browser, engine)
+          continue
+        }
         if (process.env.ONLY === 'touch-targets') {
           await checkTouchTargets(browser, engine)
           continue
@@ -1564,6 +1674,7 @@ async function main() {
         await checkBreakpoint(browser, engine)
         await checkTouch(browser, engine)
         await checkTouchTargets(browser, engine)
+        await checkToastPlace(browser, engine)
         await checkOtherViews(browser, engine)
         await checkLeaveGuard(browser, engine)
         await checkBrowserPrompt(browser, engine)

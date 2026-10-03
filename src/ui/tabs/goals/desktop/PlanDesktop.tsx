@@ -3,6 +3,7 @@ import type { GoalScenario, Milestone, WealthAccount, WealthCheckin } from '../.
 import type { MonthlyFlow, PlanFromToday } from '../../../../engine'
 import type { ExpenseActions } from '../../../actions'
 import type { InvestedSnapshot } from '../checkinDate'
+import { useToastAside } from '../../../hooks/useToastAside'
 import { GoalsIntro } from '../GoalsIntro'
 import { PlanHero, type ValueDisplay } from '../PlanHero'
 import type { ScenarioEditor } from '../useScenarioEditor'
@@ -43,6 +44,7 @@ export interface PlanDesktopProps {
  */
 export function PlanDesktop({ scenarios, editor, actions, latest, milestones, reached, monthly, checkins, accounts, fromToday, display, levers }: PlanDesktopProps) {
   const [inputsOpen, setInputsOpen] = useState(false)
+  useToastAside()
   const { draft, deferredDraft } = editor
   const starred = useKeyboardStarToggle(levers, PANEL_ID)
   return (

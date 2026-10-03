@@ -707,6 +707,21 @@ describe('GoalsTab', () => {
     expect(screen.getByText('Progress snapshot')).toBeInTheDocument()
   })
 
+  it('asks for the toast to go in the side rail while the wide Plan is shown, and not on a phone or another view', async () => {
+    const asked = () => document.documentElement.hasAttribute('data-toast-aside')
+    const user = userEvent.setup()
+    const wide = render(<GoalsTab model={makeModel()} />)
+    expect(asked()).toBe(true)
+
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
+    expect(asked()).toBe(false)
+    wide.unmount()
+
+    mockPhoneWidth()
+    render(<GoalsTab model={makeModel()} />)
+    expect(asked()).toBe(false)
+  })
+
   it('puts the view switch in the title\'s own row on a wide screen, and under it on a phone', () => {
     const { unmount } = render(<GoalsTab model={makeModel()} />)
     const title = screen.getByRole('heading', { name: 'Goals' })
