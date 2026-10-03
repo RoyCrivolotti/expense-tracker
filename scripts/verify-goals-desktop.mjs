@@ -223,6 +223,22 @@ async function checkSticky(page, where) {
     return !bar.contains(hit)
   })
   check(where, '(g) nothing is drawn over the stuck bar', !covered)
+
+  // Focus moving about inside the stuck bar is not a reason to scroll: its controls are on screen.
+  // Safari scrolled the page by the bar's height on each, taking the bar's place as covered by itself.
+  const monthly = page.getByRole('textbox', { name: 'Monthly investing', exact: true })
+  await monthly.focus()
+  const before = await page.evaluate(() => window.scrollY)
+  // Two Tabs reach the real return and its slider; a third and later would leave the bar.
+  for (let i = 0; i < 2; i++) await page.keyboard.press('Tab')
+  await page.waitForTimeout(150)
+  const after = await page.evaluate(() => ({
+    y: window.scrollY,
+    inBar: document.querySelector('[class*="leversBar"]').contains(document.activeElement),
+  }))
+  check(where, '(g) Tab inside the stuck bar stays in the bar', after.inBar)
+  check(where, '(g) Tab inside the stuck bar does not scroll the page', near(after.y, before, 1), `scrolled from ${before} to ${after.y}`)
+  await page.evaluate(() => document.activeElement?.blur())
   await scrollTo(page, 0)
 }
 

@@ -20,12 +20,19 @@ function isSticky(bar: HTMLElement | null): bar is HTMLElement {
  *
  * Where the bar is not stuck (narrower than 75rem, where it goes by with the page) nothing
  * covers the top but the header, which the app's own padding already clears, so the top is left to it.
+ *
+ * While focus is inside the bar the padding is lifted. The bar's own controls sit in the strip the
+ * padding keeps clear, so Safari took each Tab or Enter on one as a control hidden behind the bar
+ * and scrolled the page by the bar's height to uncover it (it does not honour a negative
+ * scroll-margin on the control instead). It is put back as focus leaves, before the next control
+ * is scrolled to.
  */
 export function useBarScrollPadding(bar: RefObject<HTMLElement | null>): void {
   useEffect(() => {
     let stopTop: (() => void) | null = null
+    let focusInside = false
     const syncTop = () => {
-      const sticky = isSticky(bar.current)
+      const sticky = isSticky(bar.current) && !focusInside
       if (sticky && stopTop === null) {
         stopTop = trackScrollPadding({
           top: () => (bar.current ? stickyBottom(bar.current) : 0) + PINNED_AIR_PX,
@@ -41,17 +48,31 @@ export function useBarScrollPadding(bar: RefObject<HTMLElement | null>): void {
     const apply = () => {
       syncTop()
       const el = bar.current
-      const heldAtBottom = el !== null && getComputedStyle(el).bottom !== 'auto'
+      const heldAtBottom = el !== null && !focusInside && getComputedStyle(el).bottom !== 'auto'
       root.style.scrollPaddingBottom = heldAtBottom
         ? `${el.offsetHeight + BOTTOM_AIR_PX + PINNED_AIR_PX}px`
         : before
     }
     apply()
+    const element = bar.current
+    const enter = () => {
+      focusInside = true
+      apply()
+    }
+    const leave = (event: FocusEvent) => {
+      if (event.relatedTarget instanceof Node && element?.contains(event.relatedTarget)) return
+      focusInside = false
+      apply()
+    }
+    element?.addEventListener('focusin', enter)
+    element?.addEventListener('focusout', leave)
     window.addEventListener('resize', apply)
     const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(apply) : null
     if (bar.current) observer?.observe(bar.current)
     return () => {
       stopTop?.()
+      element?.removeEventListener('focusin', enter)
+      element?.removeEventListener('focusout', leave)
       window.removeEventListener('resize', apply)
       observer?.disconnect()
       root.style.scrollPaddingBottom = before

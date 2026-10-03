@@ -406,6 +406,45 @@ describe('LeversBar', () => {
     held.remove()
   })
 
+  it('lifts the padding while focus is inside the bar, and puts it back as focus leaves it', async () => {
+    // Safari scrolled the page by the bar's height for each control focused in the bar, as if the
+    // padding kept it clear of itself.
+    const root = document.documentElement
+    root.style.scrollPaddingTop = ''
+    root.style.scrollPaddingBottom = '5px'
+    const stuck = document.createElement('style')
+    stuck.textContent = '[class*="leversBar"] { position: sticky; top: 10px; bottom: 12px; }'
+    document.head.append(stuck)
+    const draft = makeDraft()
+    const { unmount } = render(
+      <>
+        <button type="button">Outside</button>
+        <LeversBar draft={draft} resultDraft={draft} keys={DEFAULT_LEVERS} onChange={vi.fn()} expanded={false} panelId="p" onToggle={vi.fn()} />
+      </>,
+    )
+    expect(root.style.scrollPaddingTop).toBe('18px')
+    expect(root.style.scrollPaddingBottom).toBe('20px')
+
+    await userEvent.click(screen.getByRole('textbox', { name: 'Monthly investing' }))
+    expect(root.style.scrollPaddingTop).toBe('')
+    expect(root.style.scrollPaddingBottom).toBe('5px')
+
+    // From one control of the bar to another it stays lifted.
+    await userEvent.tab()
+    expect(root.style.scrollPaddingTop).toBe('')
+    expect(root.style.scrollPaddingBottom).toBe('5px')
+
+    screen.getByRole('button', { name: 'Outside' }).focus()
+    expect(root.style.scrollPaddingTop).toBe('18px')
+    expect(root.style.scrollPaddingBottom).toBe('20px')
+
+    unmount()
+    expect(root.style.scrollPaddingTop).toBe('')
+    expect(root.style.scrollPaddingBottom).toBe('5px')
+    root.style.scrollPaddingBottom = ''
+    stuck.remove()
+  })
+
   it('leaves the bottom padding alone where the bar is not held to the bottom edge', () => {
     const root = document.documentElement
     root.style.scrollPaddingBottom = '5px'
