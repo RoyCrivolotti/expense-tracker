@@ -1,128 +1,162 @@
-import { memo, useMemo } from 'react'
+import { memo, useMemo, useState } from 'react'
 import { useAssumedInflation } from '../../..//hooks/assumedInflationContext'
 import type { GoalScenario, Milestone } from '../../../../types'
 import type { PlanFromToday } from '../../../../engine'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import {
-  milestoneName,
-  scenarioToParams,
-  shortMonthYearLabel,
-  yearsToTargetFromProjection,
-} from '../../../../engine'
+import { milestoneLabelWithAmount } from '../../../../engine'
+import { SegmentedControl } from '../../../components/SegmentedControl'
+import { todayIso } from '../../../components/transactionFormState'
 import { ChartShell } from './ChartShell'
-import { cellColors } from './matrixColors'
+import { MilestoneGrid, type CellRef, type YearsUnit } from './MilestoneGrid'
+import { buildRows, describeCell, longestHorizon, type MilestoneRow } from './milestoneModel'
 import { formatMoneyShort } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
-import { tableName } from '../scenarioNames'
-import { ScrollRegion } from './ScrollRegion'
-import { scenarioInk } from '../scenarioInk'
+import { useMediaQuery } from '../../../hooks/useMediaQuery'
 import styles from '../goals.module.css'
 
-/**
- * "Not reached" is "not within this scenario's horizon", which is what the search covers, so it is
- * named by that horizon: a flat "40+" said a milestone was more than 40 years off when it was 31
- * years off on a 30 year plan, and showed it was reached in 32 once the horizon was 45.
- */
-function cellLabel(years: number | null, horizonYears: number): string {
-  if (years === null) return `${horizonYears}+`
-  if (years === 0) return 'now'
-  return `${years}y`
-}
+const UNITS = [
+  { value: 'years', label: 'Years from now' },
+  { value: 'calendar', label: 'Calendar year' },
+] as const
 
-interface Row {
-  /** Scenario id, or 'draft'; names are not unique, so they cannot key a row. */
-  id: string
-  name: string
-  color: string
-  /** How far the search for each milestone went. */
-  horizonYears: number
-  cells: (number | null)[]
-}
+const NO_PLAN = 'No scenario is marked as your current plan, so there is nothing to compare with.'
 
-function buildRows(
-  scenarios: GoalScenario[],
-  draft: NewGoalScenario,
-  milestones: Milestone[],
-  inflationRate: number,
-  includeDraft: boolean,
-  fromToday: PlanFromToday | null,
-): Row[] {
-  const names = scenarios.map((s) => s.name)
-  const all = [
-    ...scenarios.flatMap((s) => [
-      { id: String(s.id), name: tableName(s.name, names), color: s.color, params: scenarioToParams(s, inflationRate) },
-      // The plan from the latest check-in, under the plan: its years count from the check-in.
-      ...(fromToday && s.id === fromToday.scenario.id
-        ? [{ id: 'from-today', name: `${tableName(s.name, names)}, from today`, color: s.color, params: scenarioToParams(fromToday.scenario, inflationRate) }]
-        : []),
-    ]),
-    // Only when the draft is a line of its own: a loaded scenario with no edits is drawn as
-    // the draft on the chart, and a row for both would be the same plan twice.
-    ...(includeDraft
-      ? [
-          {
-            id: 'draft',
-            name: `${tableName(draft.name, names)} (editing)`,
-            color: draft.color,
-            params: scenarioToParams({ ...draft, id: 0 }, inflationRate),
-          },
-        ]
-      : []),
-  ]
-  return all.map(({ id, name, color, params }) => ({
-    id,
-    name,
-    color,
-    horizonYears: params.horizonYears,
-    cells: milestones.map((m) => yearsToTargetFromProjection(params, m.amountCents, false)),
-  }))
-}
-
-/**
- * One stacked column header: optional name, then the amount, then a short
- * reached tick. Columns are narrow, so the long forms ("3rd goal (phase 1)",
- * "reached by 2026-07-29") live in the tooltip instead of on screen.
- */
-function MilestoneHead({
-  milestone,
-  reachedOn,
+function Toolbar({
+  unit,
+  onUnit,
+  vsPlan,
+  onVsPlan,
+  hasPlan,
 }: {
-  milestone: Milestone
-  reachedOn: string | undefined
+  unit: YearsUnit
+  onUnit: (unit: YearsUnit) => void
+  vsPlan: boolean
+  onVsPlan: () => void
+  hasPlan: boolean
+}) {
+  return (
+    <div className={styles.matrixTools}>
+      <SegmentedControl options={[...UNITS]} value={unit} onChange={onUnit} ariaLabel="Show each milestone as" />
+      <button
+        type="button"
+        className={styles.matrixToggle}
+        aria-pressed={hasPlan && vsPlan}
+        disabled={!hasPlan}
+        title={hasPlan ? 'Show how many years sooner or later each path gets there than the plan' : NO_PLAN}
+        onClick={onVsPlan}
+      >
+        vs plan
+      </button>
+    </div>
+  )
+}
+
+function Legend({ longest, plan }: { longest: number; plan: MilestoneRow | null }) {
+  return (
+    <ul className={styles.matrixLegend}>
+      <li>
+        <span className={styles.matrixLegendDone} aria-hidden="true">
+          ✓
+        </span>
+        Already there
+      </li>
+      <li>
+        <span className={`${styles.matrixKey} ${styles.matrixKeyTint}`} aria-hidden="true" />
+        Darker: further away (the darkest is {longest} {longest === 1 ? 'year' : 'years'})
+      </li>
+      <li>
+        <span className={`${styles.matrixKey} ${styles.matrixKeyBeyond}`} aria-hidden="true" />
+        Hatched: not within the path&apos;s horizon
+      </li>
+      {plan ? (
+        <li>
+          <span aria-hidden="true">
+            <span className={styles.matrixLegendSooner}>&minus;2y</span> +3y
+          </span>{' '}
+          Years sooner or later than {plan.name}, the plan
+        </li>
+      ) : null}
+    </ul>
+  )
+}
+
+function Readout({ text, touch }: { text: string | null; touch: boolean }) {
+  return (
+    <p className={text ? styles.matrixReadout : `${styles.matrixReadout} ${styles.matrixReadoutEmpty}`} aria-live="polite">
+      {text ?? `${touch ? 'Tap' : 'Point at or focus'} a cell to read it as a sentence. The arrow keys move between cells.`}
+    </p>
+  )
+}
+
+/** The sentence for the cell the reader is on, or null before they have been on one. */
+function sentenceAt(point: CellRef | null, rows: MilestoneRow[], sentences: string[][]): string | null {
+  if (!point) return null
+  const row = rows.findIndex((r) => r.id === point.rowId)
+  return sentences[row]?.[point.index] ?? null
+}
+
+function MatrixBody({
+  rows,
+  milestones,
+  reached,
+}: {
+  rows: MilestoneRow[]
+  milestones: Milestone[]
+  reached: Map<number, string>
 }) {
   const format = useMoneyFormat()
-  const amount = formatMoneyShort(milestone.amountCents, format)
-  const name = milestoneName(milestone)
-  // "by", not "on": the crossing happened somewhere between two check-ins.
-  const tooltip = [name, amount, reachedOn ? `reached by ${reachedOn}` : null]
-    .filter((part) => part !== null)
-    .join(' · ')
+  const [unit, setUnit] = useState<YearsUnit>('years')
+  const [vsPlan, setVsPlan] = useState(false)
+  const [point, setPoint] = useState<CellRef | null>(null)
+  const [live, setLive] = useState(false)
+  // No hover on a touch screen: the cells are read by tapping them.
+  const touch = useMediaQuery('(hover: none)')
+
+  const plan = rows.find((r) => r.kind === 'plan') ?? null
+  const comparing = vsPlan ? plan : null
+  const sentences = useMemo(
+    () =>
+      rows.map((row) =>
+        milestones.map((m, index) =>
+          describeCell({
+            row,
+            index,
+            amount: milestoneLabelWithAmount(m, (cents) => formatMoneyShort(cents, format)),
+            reachedOn: reached.get(m.amountCents),
+            plan: comparing,
+          }),
+        ),
+      ),
+    [rows, milestones, reached, format, comparing],
+  )
 
   return (
-    <th
-      className={
-        reachedOn === undefined
-          ? styles.milestoneHead
-          : `${styles.milestoneHead} ${styles.milestoneHeadReached}`
-      }
-      scope="col"
-      title={tooltip}
-    >
-      {name ? <span className={styles.milestoneHeadName}>{name}</span> : null}
-      <span
-        className={
-          name ? `${styles.milestoneHeadAmount} ${styles.milestoneHeadAmountSub}` : styles.milestoneHeadAmount
-        }
-      >
-        {amount}
-      </span>
-      {reachedOn ? (
-        <span className={styles.milestoneReachedOn}>
-          <span aria-hidden="true">✓ </span>
-          {shortMonthYearLabel(reachedOn)}
-        </span>
-      ) : null}
-    </th>
+    <>
+      <Toolbar
+        unit={unit}
+        onUnit={setUnit}
+        vsPlan={vsPlan}
+        onVsPlan={() => setVsPlan((on) => !on)}
+        hasPlan={plan !== null}
+      />
+      <MilestoneGrid
+        rows={rows}
+        milestones={milestones}
+        reached={reached}
+        unit={unit}
+        plan={comparing}
+        sentences={sentences}
+        point={point}
+        live={live}
+        onPoint={(cell) => {
+          setPoint(cell)
+          setLive(true)
+        }}
+        onLeave={() => setLive(false)}
+      />
+      <Legend longest={longestHorizon(rows)} plan={comparing} />
+      <Readout text={sentenceAt(point, rows, sentences)} touch={touch} />
+    </>
   )
 }
 
@@ -148,7 +182,7 @@ function MilestoneMatrixImpl({
 }) {
   const inflationRate = useAssumedInflation()
   const rows = useMemo(
-    () => buildRows(scenarios, draft, milestones, inflationRate, includeDraft, fromToday),
+    () => buildRows(scenarios, draft, milestones, inflationRate, includeDraft, fromToday, todayIso()),
     [scenarios, draft, milestones, inflationRate, includeDraft, fromToday],
   )
 
@@ -157,48 +191,13 @@ function MilestoneMatrixImpl({
       <h3 className={styles.chartTitle}>Years to milestone</h3>
       <p className={styles.chartHint}>
         Invested portfolio only. Edit the list in Assumptions.
-        {fromToday ? ' "From today" counts years from your latest check-in.' : ''}
+        {fromToday ? ' "From today" counts years from your latest check-in.' : ''} A year here is the yearly step at
+        which a path first reaches the amount, so it can be up to a year later than the date on the Progress tab.
       </p>
       {milestones.length === 0 ? (
         <p className={styles.chartHint}>No milestones set.</p>
       ) : (
-      <ScrollRegion label="Years to milestone">
-        <table className={styles.milestoneTable}>
-          <thead>
-            <tr>
-              <th className={styles.milestoneScenarioHead}>Scenario</th>
-              {milestones.map((m) => (
-                <MilestoneHead
-                  key={m.amountCents}
-                  milestone={m}
-                  reachedOn={reached.get(m.amountCents)}
-                />
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.id}>
-                <th scope="row" className={styles.milestoneScenarioCell} title={row.name}>
-                  <span className={styles.milestoneScenarioNameRow}>
-                    <span className={styles.swatch} style={{ background: scenarioInk(row.color) }} />
-                    <span className={styles.milestoneScenarioName}>{row.name}</span>
-                  </span>
-                </th>
-                {row.cells.map((years, i) => (
-                  <td
-                    key={milestones[i]?.amountCents ?? i}
-                    className={styles.milestoneCell}
-                    style={cellColors(years)}
-                  >
-                    {cellLabel(years, row.horizonYears)}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </ScrollRegion>
+        <MatrixBody rows={rows} milestones={milestones} reached={reached} />
       )}
     </ChartShell>
   )

@@ -53,12 +53,12 @@ describe('MilestoneMatrix', () => {
     expect(screen.queryByText('Path B: House now')).not.toBeInTheDocument()
   })
 
-  it('puts its table in a named region a keyboard can focus, so a column that does not fit can be scrolled to', () => {
+  it('puts its grid in a named region, which takes no tab stop of its own: the cells take the focus there', () => {
     render(<MilestoneMatrix scenarios={[draft]} draft={draft} milestones={defaultMilestones()} reached={noneReached} />)
 
     const region = screen.getByRole('region', { name: 'Years to milestone' })
-    expect(region).toHaveAttribute('tabindex', '0')
-    expect(region).toContainElement(screen.getByRole('table'))
+    expect(region).not.toHaveAttribute('tabindex')
+    expect(region).toContainElement(screen.getByRole('grid'))
   })
 
   it('gives each scenario a row header, so a screen reader can say whose figure it is on', () => {
