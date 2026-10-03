@@ -203,6 +203,13 @@ describe('LeversBar', () => {
     })
   })
 
+  it('puts the cursor in the field from a tap beside its digits, on the unit', async () => {
+    renderBar()
+    const field = screen.getByRole('textbox', { name: 'Monthly investing' })
+    await userEvent.click(field.parentElement!.querySelector('[class*="leverUnit"]')!)
+    expect(field).toHaveFocus()
+  })
+
   it('moves a percentage with its slider', () => {
     const { onChange } = renderBar()
     fireEvent.change(screen.getByRole('slider', { name: 'Real return (%/yr, after inflation)' }), { target: { value: '0.05' } })

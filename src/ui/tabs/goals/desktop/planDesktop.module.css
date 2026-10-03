@@ -130,7 +130,7 @@
   margin-left: -0.125rem;
 }
 
-.leverInput:hover {
+.leverValue:hover .leverInput {
   border-color: var(--color-border);
 }
 
@@ -677,4 +677,33 @@
   margin: 0;
   font-size: 0.8125rem;
   color: var(--color-text-muted);
+}
+
+/* A finger is a coarser pointer than a mouse, and has no hover to show a figure can be typed over.
+   Targets grow to what a touch target is held to elsewhere in the app (about 44px) without moving
+   anything where they can, by their own height where they cannot. */
+@media (pointer: coarse) {
+  .tab,
+  .newTab,
+  .allInputs {
+    min-height: 2.75rem;
+  }
+
+  .menuTrigger {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  /* Up and to both sides: below the star is the figure it belongs to, and a tap on that must
+     not take the lever out of the bar. */
+  .star::after {
+    inset: -0.9rem -0.9rem -0.15rem;
+  }
+}
+
+/* No hover on a touch screen, so the figures wear the line a field wears. */
+@media (hover: none) {
+  .leverInput {
+    border-bottom-color: var(--color-border);
+  }
 }

@@ -55,7 +55,9 @@ function TypedValue({ label, text, unit, unitFirst = false, onCommit, inputMode 
   }
   const unitText = <span className={styles.leverUnit}>{unit}</span>
   return (
-    <div className={styles.leverValue}>
+    // A label, so a tap or a click anywhere on the figure's row (not only on its digits) puts the
+    // cursor in the field. The input names itself, so the unit inside does not add to the name.
+    <label className={styles.leverValue}>
       {unitFirst ? unitText : null}
       <input
         className={unitFirst ? `${styles.leverInput} ${styles.leverInputAfterUnit}` : styles.leverInput}
@@ -71,7 +73,7 @@ function TypedValue({ label, text, unit, unitFirst = false, onCommit, inputMode 
         }}
       />
       {unitFirst ? null : unitText}
-    </div>
+    </label>
   )
 }
 

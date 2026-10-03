@@ -115,4 +115,12 @@ describe('the wide plan on a touch screen', () => {
     expect(hover).toMatch(/\.starOn:hover/)
     expect(css.replace(hover, '')).not.toMatch(/\.star(On)?:hover/)
   })
+
+  it('takes the controls to about 44px for a finger, with the star reaching up and out but not down', () => {
+    const coarse = block('pointer: coarse')
+    expect(coarse).toMatch(/min-height:\s*2\.75rem/)
+    expect(coarse).toMatch(/\.menuTrigger\s*\{[^}]*height:\s*2\.75rem/)
+    // Below the star is the figure it belongs to, which a tap on it must not take out of the bar.
+    expect(coarse).toMatch(/\.star::after\s*\{[^}]*inset:\s*-0\.9rem -0\.9rem -0\.15rem/)
+  })
 })
