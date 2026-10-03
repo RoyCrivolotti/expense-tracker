@@ -90,6 +90,85 @@ describe('LeversBar', () => {
     expect(onChange).toHaveBeenLastCalledWith({ expectedRealReturn: 0.15 })
   })
 
+  describe('a typed field', () => {
+    const RETURN = 'Real return (%/yr, after inflation)'
+
+    it('commits nothing when it is only tabbed through, whatever it shows', async () => {
+      // 4.25% is shown as "4,3", and writing that back would change the plan's numbers.
+      const { onChange } = renderBar({}, { expectedRealReturn: 0.0425 })
+      const field = screen.getByLabelText(RETURN)
+      expect(field).toHaveValue('4,3')
+
+      await userEvent.click(field)
+      await userEvent.tab()
+
+      expect(onChange).not.toHaveBeenCalled()
+    })
+
+    it('still commits what is typed, even when that is what the field shows', async () => {
+      const { onChange } = renderBar({}, { expectedRealReturn: 0.0425 })
+      const field = screen.getByLabelText(RETURN)
+
+      await userEvent.clear(field)
+      await userEvent.type(field, '4,3{Enter}')
+
+      expect(onChange).toHaveBeenLastCalledWith({ expectedRealReturn: 0.043 })
+    })
+
+    it('does not commit a value the plan already has', async () => {
+      const { onChange } = renderBar()
+      const field = screen.getByLabelText('Monthly investing')
+
+      await userEvent.clear(field)
+      await userEvent.type(field, '500{Enter}')
+
+      expect(onChange).not.toHaveBeenCalled()
+    })
+
+    it('reads the value again once it is committed, so nothing refused or clamped stays in it', async () => {
+      const { onChange } = renderBar({}, { horizonYears: 60 })
+      const horizon = screen.getByLabelText('Horizon (years)')
+
+      await userEvent.clear(horizon)
+      await userEvent.type(horizon, '100{Enter}')
+
+      expect(onChange).not.toHaveBeenCalled()
+      expect(horizon).toHaveValue('60')
+    })
+
+    it('ignores nothing typed and text, in an amount, a number of years and a percentage', async () => {
+      const { onChange } = renderBar()
+      const horizon = screen.getByLabelText('Horizon (years)')
+      const amount = screen.getByLabelText('Monthly investing')
+      const percent = screen.getByLabelText(RETURN)
+
+      await userEvent.clear(horizon)
+      await userEvent.type(horizon, '{Enter}')
+      await userEvent.clear(amount)
+      await userEvent.type(amount, 'abc{Enter}')
+      await userEvent.clear(percent)
+      await userEvent.type(percent, 'abc{Enter}')
+
+      expect(onChange).not.toHaveBeenCalled()
+      expect(horizon).toHaveValue('30')
+      expect(amount).toHaveValue('500')
+      expect(percent).toHaveValue('7,0')
+    })
+
+    it('takes a comma or a point as the decimal mark of a percentage', async () => {
+      const { onChange } = renderBar()
+      const field = screen.getByLabelText(RETURN)
+
+      await userEvent.clear(field)
+      await userEvent.type(field, '4.5{Enter}')
+      expect(onChange).toHaveBeenLastCalledWith({ expectedRealReturn: 0.045 })
+
+      await userEvent.clear(field)
+      await userEvent.type(field, '5,5 %{Enter}')
+      expect(onChange).toHaveBeenLastCalledWith({ expectedRealReturn: 0.055 })
+    })
+  })
+
   it('moves a percentage with its slider', () => {
     const { onChange } = renderBar()
     fireEvent.change(screen.getByLabelText('Real return (%/yr, after inflation) slider'), { target: { value: '0.05' } })

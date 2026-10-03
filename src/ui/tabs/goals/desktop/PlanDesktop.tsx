@@ -10,7 +10,9 @@ import type { StarredLevers } from '../useStarredLevers'
 import { AllInputsPanel } from './AllInputsPanel'
 import { DetailGrid } from './DetailGrid'
 import { LeversBar } from './LeversBar'
+import { revealPanel } from './revealPanel'
 import { ScenarioBar } from './ScenarioBar'
+import { useKeyboardStarToggle } from './useKeyboardStarToggle'
 import styles from './planDesktop.module.css'
 
 const PANEL_ID = 'goals-all-inputs'
@@ -42,6 +44,7 @@ export interface PlanDesktopProps {
 export function PlanDesktop({ scenarios, editor, actions, latest, milestones, reached, monthly, checkins, accounts, fromToday, display, levers }: PlanDesktopProps) {
   const [inputsOpen, setInputsOpen] = useState(false)
   const { draft, deferredDraft } = editor
+  const starred = useKeyboardStarToggle(levers, PANEL_ID)
   return (
     // The marker widens the page for this view only (AppShell.module.css).
     <div className={styles.page} data-goals-plan-wide>
@@ -60,12 +63,15 @@ export function PlanDesktop({ scenarios, editor, actions, latest, milestones, re
       <LeversBar
         draft={draft}
         resultDraft={deferredDraft}
-        keys={levers.keys}
+        keys={starred.keys}
         onChange={editor.patchDraft}
-        onUnstar={levers.canEdit ? levers.toggle : undefined}
+        onUnstar={starred.canEdit ? starred.toggle : undefined}
         expanded={inputsOpen}
         panelId={PANEL_ID}
-        onToggle={() => setInputsOpen((open) => !open)}
+        onToggle={() => {
+          if (!inputsOpen) revealPanel(PANEL_ID)
+          setInputsOpen((open) => !open)
+        }}
       />
       <AllInputsPanel
         id={PANEL_ID}
@@ -73,7 +79,7 @@ export function PlanDesktop({ scenarios, editor, actions, latest, milestones, re
         draft={draft}
         latest={latest}
         onChange={editor.patchDraft}
-        starred={levers}
+        starred={starred}
       />
       <DetailGrid
         scenarios={scenarios}

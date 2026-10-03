@@ -17,8 +17,14 @@
 /* Where the five levers fit one row it is held at the bottom edge as well, so while its place in
    the page is below the fold it is on screen anyway, and it leaves the edge for its place as
    the page scrolls up to it. Narrower, the levers wrap onto a second row and the bar would cover
-   half of the chart, so it only follows the header. */
-@media (min-width: 1200px) {
+   half of the chart, so it only follows the header.
+
+   Held there it is drawn over whatever is under it, and the chart, its axis and the legend that
+   carries its values end about 760px down the page. So the screen has to be tall enough to leave
+   them above the bar (the bar is about 110px and the air under it 12px), or the first thing seen
+   is a chart with its bottom edge cut off. The widths and heights are in rem, so text set larger
+   than usual, which makes the page taller and the levers wrap sooner, asks for a larger screen. */
+@media (min-width: 75rem) and (min-height: 56rem) {
   .leversBar {
     bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
   }
@@ -475,6 +481,13 @@
   font-size: 0.9375rem;
   font-weight: 600;
   color: var(--color-text);
+}
+
+/* A card that takes the whole width, over the columns. The .detail gap is a little under the
+   columns' own, so this makes up the difference. */
+.detailWide {
+  min-width: 0;
+  margin-bottom: 0.25rem;
 }
 
 /* Two columns, each its own stack, so a short card is never stretched to match the chart beside

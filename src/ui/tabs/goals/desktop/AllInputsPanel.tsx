@@ -17,6 +17,7 @@ import {
 } from '../goalControlSections'
 import { SECTION_KEYS } from '../leverFields'
 import type { StarredLevers } from '../useStarredLevers'
+import { STAR_HOME_ATTR } from './starFocus'
 import { Starrable } from './Starrable'
 import styles from './planDesktop.module.css'
 
@@ -100,6 +101,7 @@ function PanelBody({ id, draft, latest, onChange, starred }: PanelProps) {
       id={id}
       role="region"
       aria-label="All inputs"
+      {...{ [STAR_HOME_ATTR]: '' }}
       className={leaving ? `${styles.fold} ${styles.folding}` : styles.fold}
       style={exitVars(leaving, exitMs)}
       inert={leaving}
