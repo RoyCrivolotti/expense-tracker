@@ -8,7 +8,12 @@ import type { GoalScenario } from '../../../types'
 function renderHeader(
   scenario: GoalScenario,
   actions = makeActions(),
-  { dirty = false, saving = false, creating = false }: { dirty?: boolean; saving?: boolean; creating?: boolean } = {},
+  {
+    dirty = false,
+    saving = false,
+    creating = false,
+    canWrite = true,
+  }: { dirty?: boolean; saving?: boolean; creating?: boolean; canWrite?: boolean } = {},
 ) {
   const { id, isActive, ...draft } = scenario
   void id
@@ -20,9 +25,10 @@ function renderHeader(
       draft={draft}
       activeScenario={scenario}
       dirty={dirty}
+      hasEdits={dirty}
       saving={saving}
       creating={creating}
-      canWrite
+      canWrite={canWrite}
       actions={actions}
       onPatch={onPatch}
       onSaveChanges={vi.fn()}
@@ -88,6 +94,17 @@ describe('ActiveScenarioHeader', () => {
 
     renderHeader(scenario, makeActions(), { creating: true })
     expect(screen.getByRole('button', { name: 'Duplicate' })).toBeDisabled()
+  })
+
+  it('says what a read-only session does with edits once there are some', () => {
+    const scenario = makeScenario({ id: 7, name: 'Path B' })
+    const { unmount } = renderHeader(scenario, makeActions(), { canWrite: false })
+    expect(screen.getByRole('status')).toHaveTextContent('Read-only session — scenarios cannot be saved.')
+    unmount()
+
+    renderHeader(scenario, makeActions(), { canWrite: false, dirty: true })
+    expect(screen.getByRole('status')).toHaveTextContent('so these changes cannot be saved. They are lost when you leave Goals or reload.')
+    expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument()
   })
 
   it('changes colour through the draft rather than writing it straight away', () => {

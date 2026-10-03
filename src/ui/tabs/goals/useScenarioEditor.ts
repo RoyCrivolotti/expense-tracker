@@ -16,6 +16,8 @@ export interface DiscardPrompt {
   open: boolean
   /** The draft has no saved scenario to "save changes" to. */
   detached: boolean
+  /** Edits can be saved at all: false in a read-only session. */
+  canSave: boolean
   /** What the edits are to: the loaded scenario, else the draft. */
   name: string
   onConfirm: () => void
@@ -35,6 +37,8 @@ export interface ScenarioEditor {
   dirty: boolean
   /** Leaving would drop edits: the loaded scenario has some (`dirty`), or a detached draft does. */
   unsaved: boolean
+  /** Edits can be saved: false in a read-only session, where they can still be made and are lost on leaving. */
+  canSave: boolean
   saving: boolean
   /** A scenario is being created (a duplicate, or the draft saved as one): a second press waits. */
   creating: boolean
@@ -226,12 +230,14 @@ export function useScenarioEditor(
     activeScenario,
     dirty,
     unsaved,
+    canSave: actions !== undefined,
     saving,
     creating,
     discardPrompt: {
       pending: pendingSelect,
       open: discardOpen,
       detached: activeId === null,
+      canSave: actions !== undefined,
       name: activeScenario?.name ?? draft.name,
       onConfirm: onDiscardAndSelect,
       onCancel: onCancelDiscard,

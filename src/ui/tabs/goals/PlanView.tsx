@@ -41,6 +41,7 @@ function PlanSidebar({ half, scenarios, editor, actions, latest }: PlanSidebarPr
           canWrite={actions != null}
           actions={actions}
           dirty={dirty}
+          hasEdits={editor.unsaved}
           saving={saving}
           creating={editor.creating}
           onSelect={editor.onSelectScenario}

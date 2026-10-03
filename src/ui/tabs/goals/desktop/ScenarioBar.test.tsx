@@ -328,6 +328,41 @@ describe('ScenarioBar', () => {
     expect(screen.queryByRole('button', { name: /New scenario/ })).not.toBeInTheDocument()
   })
 
+  describe('when the session goes read-only in the middle of an edit', () => {
+    async function editThenGoReadOnly() {
+      const view = render(<Harness initial={[plan, other]} actions={makeActions()} />)
+      await openMenu()
+      await userEvent.type(screen.getByLabelText('Scenario name'), '!')
+      await userEvent.keyboard('{Escape}')
+      view.rerender(<Harness initial={[plan, other]} actions={undefined} />)
+    }
+
+    it('keeps the edit, drops the Edited mark, and says plainly that it cannot be saved and will be lost', async () => {
+      await editThenGoReadOnly()
+
+      expect(screen.queryByRole('button', { name: /Save changes/ })).not.toBeInTheDocument()
+      expect(tab(/^Path A! Current plan$/)).toBeInTheDocument()
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Read-only session, so these changes cannot be saved. They are lost when you leave Goals or reload.',
+      )
+    })
+
+    it('does not tell a discard question to save first, since saving is impossible', async () => {
+      await editThenGoReadOnly()
+
+      await userEvent.click(tab('Path B'))
+      const sheet = screen.getByRole('alertdialog')
+      expect(within(sheet).getByText(/Loading Path B drops the edits made here/)).toBeInTheDocument()
+      expect(within(sheet).getByText(/read-only, so they cannot be saved/)).toBeInTheDocument()
+      expect(within(sheet).queryByText(/Save changes first/)).not.toBeInTheDocument()
+    })
+
+    it('says only that scenarios cannot be saved while there is nothing edited', () => {
+      render(<Harness initial={[plan, other]} actions={undefined} />)
+      expect(screen.getByRole('status')).toHaveTextContent('Read-only session — scenarios cannot be saved.')
+    })
+  })
+
   it('offers no plan or delete for a draft that is not a saved scenario', async () => {
     render(<Harness initial={[]} actions={makeActions()} />)
     await openMenu()

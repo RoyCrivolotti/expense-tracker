@@ -14,6 +14,7 @@ interface ScenarioManagerProps {
   canWrite: boolean
   actions?: ExpenseActions | undefined
   dirty: boolean
+  hasEdits: boolean
   saving: boolean
   creating: boolean
   onSelect: (scenario: GoalScenario) => void
@@ -57,6 +58,7 @@ export function ScenarioManager(props: ScenarioManagerProps) {
         draft={draft}
         activeScenario={activeScenario}
         dirty={dirty}
+        hasEdits={props.hasEdits}
         saving={props.saving}
         creating={props.creating}
         canWrite={canWrite}
