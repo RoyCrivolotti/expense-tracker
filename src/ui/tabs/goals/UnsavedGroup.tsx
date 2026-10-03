@@ -24,11 +24,14 @@ export function UnsavedGroup({
   unsaved,
   onGone,
   className = styles.unsavedActions,
+  saveLabel = 'Save',
 }: {
   unsaved: UnsavedActions
   onGone: () => void
   /** The frame it sits in: the phone's section row has its own, the wide screen's scenario row another. */
   className?: string | undefined
+  /** What the button says: the phone's row is narrow and keeps the short word, the wide row has room. */
+  saveLabel?: string
 }) {
   const group = useRef<HTMLDivElement>(null)
   const hadFocus = useRef(false)
@@ -85,7 +88,7 @@ export function UnsavedGroup({
         disabled={unsaved.saving || unnamed}
         onClick={unsaved.onSave}
       >
-        Save
+        {saveLabel}
       </button>
     </div>
   )

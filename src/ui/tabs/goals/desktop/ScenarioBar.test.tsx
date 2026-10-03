@@ -87,6 +87,16 @@ describe('ScenarioBar', () => {
     expect(screen.getByRole('button', { name: 'Save scenario' })).toBeDisabled()
   })
 
+  it('says "Save changes" on its button, which has the room for it, and names the scenario to a screen reader', async () => {
+    render(<Harness initial={[plan, other]} actions={makeActions()} />)
+
+    await openMenu()
+    await userEvent.type(screen.getByLabelText('Scenario name'), '!')
+    await userEvent.keyboard('{Escape}')
+
+    expect(screen.getByRole('button', { name: 'Save changes to Path A!' })).toHaveTextContent(/^Save changes$/)
+  })
+
   it('will not save the edits to a scenario that has been given no name, and can still drop them', async () => {
     const actions = makeActions()
     render(<Harness initial={[plan, other]} actions={actions} />)
