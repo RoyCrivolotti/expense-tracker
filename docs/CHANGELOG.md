@@ -2,6 +2,10 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (a typed comma in a dollar format)
+
+- **A comma typed into an amount or a percentage is the decimal mark in a point format too.** With US dollars (1,234.56), typing 12,5 into Monthly investing made $125 and 1,5 made $15, and a percentage typed as 5,5 read as 0%. The mirror of the typed point in a comma format applies: a single comma with one or two digits after it, and no point, is the decimal mark, so 12,5 is $12.50 and 5,5 is 5.5%. Three digits after it (1,500) are still a thousand and a half. This is in every amount and percentage field, and the file importers still read only a comma as the decimal mark.
+
 ## October 2026 (slow answers, a typed point and a lost connection, from a review of the wide page)
 
 - **A point typed into an amount is a decimal point.** On a numeric keypad the point is the key there is, and with the default format (comma for decimals) typing 2500.75 into Monthly investing made 250.075 €, 12.5 made 125 € and 1.5 made 15 €. A single point with one or two digits after it, and no comma, now reads as the decimal mark: 2500.75 is 2.500,75 €. Three digits after it (1.500) and several points (1.234.567) are still thousands, and a point-decimal format such as US dollars is unchanged. This is in every amount field (transactions, budgets, settings, goals, check-ins). A typed percentage already read 5.5 as 5,5%.

@@ -1,6 +1,8 @@
+import type { ReactElement } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { MoneyFormatContext } from '../../hooks/moneyFormatContext'
 
 vi.mock('../../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: () => true }))
 
@@ -211,5 +213,39 @@ describe('typing nothing, or something that is not a number, into a field', () =
     await user.type(input, '%{Enter}')
     expect(onChange).not.toHaveBeenCalled()
     expect(input).toHaveValue('3,5')
+  })
+})
+
+describe('a comma typed into a field written with a decimal point', () => {
+  const usd = { locale: 'en-US', symbol: '$', symbolPosition: 'prefix' as const, decimalSeparator: '.' }
+  const inDollars = (ui: ReactElement) => (
+    <MoneyFormatContext.Provider value={usd}>{ui}</MoneyFormatContext.Provider>
+  )
+
+  it('is the decimal mark of an amount, and three digits after it still make a thousand', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(inDollars(<MoneyField label="Rent (monthly)" value={100_000} onChange={onChange} />))
+    const input = screen.getByRole('textbox', { name: 'Rent (monthly)' })
+
+    await user.clear(input)
+    await user.type(input, '12,5{Enter}')
+    expect(onChange).toHaveBeenLastCalledWith(1_250)
+
+    await user.clear(input)
+    await user.type(input, '1,500{Enter}')
+    expect(onChange).toHaveBeenLastCalledWith(150_000)
+  })
+
+  it('is the decimal mark of a percentage instead of making it 0%', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(inDollars(<PercentField label="Mortgage rate (%/yr)" value={0.035} onChange={onChange} />))
+    const input = screen.getByRole('textbox', { name: 'Mortgage rate (%/yr)' })
+    expect(input).toHaveValue('3.5')
+
+    await user.clear(input)
+    await user.type(input, '5,5{Enter}')
+    expect(onChange).toHaveBeenLastCalledWith(0.055)
   })
 })

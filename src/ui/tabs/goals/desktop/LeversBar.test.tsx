@@ -105,6 +105,24 @@ describe('LeversBar', () => {
     expect(onChange).toHaveBeenLastCalledWith({ monthlyContributionCents: 150_000 })
   })
 
+  it('reads a comma typed on a numeric keypad as the decimal mark in a dollar format, and "1,500" as a thousand and a half', async () => {
+    const usd: MoneyFormat = { locale: 'en-US', symbol: '$', symbolPosition: 'prefix', decimalSeparator: '.' }
+    const draft = makeDraft()
+    const onChange = vi.fn()
+    render(
+      <MoneyFormatContext.Provider value={usd}>
+        <LeversBar draft={draft} resultDraft={draft} keys={DEFAULT_LEVERS} expanded={false} panelId="p" onChange={onChange} onToggle={vi.fn()} />
+      </MoneyFormatContext.Provider>,
+    )
+    const field = screen.getByLabelText('Monthly investing')
+    await userEvent.clear(field)
+    await userEvent.type(field, '12,5{Enter}')
+    expect(onChange).toHaveBeenLastCalledWith({ monthlyContributionCents: 1_250 })
+    await userEvent.clear(field)
+    await userEvent.type(field, '1,500{Enter}')
+    expect(onChange).toHaveBeenLastCalledWith({ monthlyContributionCents: 150_000 })
+  })
+
   it('never commits a negative amount', async () => {
     const { onChange } = renderBar()
     const field = screen.getByLabelText('Monthly investing')

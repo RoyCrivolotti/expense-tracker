@@ -1022,6 +1022,42 @@ async function checkBrowserPrompt(browser, engine) {
   }
 }
 
+/** Goals' typed amounts and percentages in a format that writes its decimals with a point (the other mark than the demo's). */
+async function checkPointDecimal(browser, engine) {
+  const where = `${engine} point-decimal format`
+  const { page, context } = await openPlan(browser, { width: 1440, height: 900 })
+  // Through the app's own Settings, as a person would: the demo instance is writable.
+  await page.locator('[class*="rail"] button').nth(4).click()
+  // Not exact: the select sits inside its label, so the label's text carries the options too.
+  await page.getByLabel('Currency').selectOption('USD')
+  await page.getByLabel('Number format').selectOption('en-US')
+  await page.locator('[class*="rail"] button').nth(3).click()
+  await page.waitForSelector('text=Invested portfolio projection', { timeout: 20000 })
+  await settled(page)
+
+  const monthly = page.getByLabel('Monthly investing', { exact: true })
+  const typeInto = async (field, text) => {
+    await field.fill(text)
+    await field.press('Enter')
+    await page.waitForTimeout(250)
+    return field.inputValue()
+  }
+  check(where, '(y1) the demo now writes its amounts with a point', (await typeInto(monthly, '12.5')) === '12.50', await monthly.inputValue())
+  check(where, '(y1) a comma typed into "Monthly investing" is the decimal mark: 12,5 is 12.50', (await typeInto(monthly, '12,5')) === '12.50', await monthly.inputValue())
+  check(where, '(y1) 1,5 is 1.50', (await typeInto(monthly, '1,5')) === '1.50', await monthly.inputValue())
+  check(where, '(y1) 1,500 is still a thousand and a half', (await typeInto(monthly, '1,500')) === '1,500', await monthly.inputValue())
+  const ret = page.getByRole('textbox', { name: 'Real return (%/yr, after inflation)' })
+  check(where, '(y1) a comma typed into a percentage lever is its decimal mark: 5,5 is 5.5', (await typeInto(ret, '5,5')) === '5.5', await ret.inputValue())
+
+  await page.getByRole('button', { name: 'All inputs' }).click()
+  await page.getByRole('region', { name: 'All inputs' }).waitFor({ timeout: 5000 })
+  const price = page.getByLabel('House price', { exact: true })
+  check(where, '(y1) a comma typed into an amount in the inputs panel is the decimal mark', (await typeInto(price, '250000,5')) === '250,000.50', await price.inputValue())
+  const mortgage = page.getByRole('textbox', { name: 'Mortgage rate (%/yr)', exact: true })
+  check(where, '(y1) a comma typed into the percentage stepper is its decimal mark, not 0%', (await typeInto(mortgage, '3,5')) === '3.5', await mortgage.inputValue())
+  await context.close()
+}
+
 async function main() {
   if (await answers()) throw new Error(`Something already answers on ${BASE}; set CAPTURE_PORT to a free port.`)
   const dev = startDev()
@@ -1036,6 +1072,10 @@ async function main() {
           await checkTouchTargets(browser, engine)
           continue
         }
+        if (process.env.ONLY === 'y1') {
+          await checkPointDecimal(browser, engine)
+          continue
+        }
         for (const screen of SCREENS) await checkScreen(browser, screen, engine)
         await checkTabs(browser, engine)
         await checkThemesAndZoom(browser, engine)
@@ -1046,6 +1086,7 @@ async function main() {
         await checkOtherViews(browser, engine)
         await checkLeaveGuard(browser, engine)
         await checkBrowserPrompt(browser, engine)
+        await checkPointDecimal(browser, engine)
       } finally {
         await browser.close()
       }

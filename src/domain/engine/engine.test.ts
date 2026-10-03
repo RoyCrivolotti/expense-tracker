@@ -5,6 +5,7 @@ import {
   formatEuroInput,
   formatMoneyInput,
   formatPercent,
+  formatPercentInput,
   parseEuroToCents,
   parseMoneyToCents,
   parsePercentToFraction,
@@ -101,23 +102,88 @@ describe('money — a point typed into a comma-decimal format', () => {
     expect(parseMoneyToCents(typed)).toBe(cents)
   })
 
-  it('does not change a point-decimal format', () => {
-    const usd = resolveMoneyFormat('USD', 'en-US')
-    expect(parseMoneyToCents('12.5', usd)).toBe(1250)
-    expect(parseMoneyToCents('1,500', usd)).toBe(150000)
-    expect(parseMoneyToCents('1.500', usd)).toBe(150)
-  })
-
   it('leaves the workbook importer reading a point as a thousands mark', () => {
     expect(parseEuroToCents('1.5')).toBe(1500)
     expect(parseEuroToCents('2500.75')).toBe(25007500)
+    // And a comma stays the decimal mark, never a thousands mark.
+    expect(parseEuroToCents('12,5')).toBe(1250)
+  })
+})
+
+describe('money — a typed decimal mark in either format', () => {
+  const eur = resolveMoneyFormat('EUR', 'de-DE')
+  const usd = resolveMoneyFormat('USD', 'en-US')
+
+  // What each format reads for what a person types. The other mark alone with one or two digits
+  // after it is the decimal mark; three digits after it is a thousands mark.
+  it.each([
+    ['12,5', 1250, 1250],
+    ['1,5', 150, 150],
+    ['1,50', 150, 150],
+    ['1,500', 150, 150000],
+    ['1.5', 150, 150],
+    ['1.50', 150, 150],
+    ['1.500', 150000, 150],
+    ['0,5', 50, 50],
+    [',5', 50, 50],
+    ['.5', 50, 50],
+    ['-3,5', -350, -350],
+    ['-3.5', -350, -350],
+    ['12,5 €', 1250, 1250],
+    ['$ 12,5', 1250, 1250],
+    ['', 0, 0],
+    ['abc', 0, 0],
+  ])('reads %j as %i cents in euros and %i in dollars', (typed, euros, dollars) => {
+    expect(parseMoneyToCents(typed, eur)).toBe(euros)
+    expect(parseMoneyToCents(typed, usd)).toBe(dollars)
   })
 
-  it('reads a typed percentage with a point or a comma in either format', () => {
-    expect(parsePercentToFraction('5.5')).toBeCloseTo(0.055, 6)
-    expect(parsePercentToFraction('12.5')).toBeCloseTo(0.125, 6)
-    expect(parsePercentToFraction('5,5')).toBeCloseTo(0.055, 6)
-    expect(parsePercentToFraction('5.5', resolveMoneyFormat('USD', 'en-US'))).toBeCloseTo(0.055, 6)
+  it('reads a mixed amount by the format it is written in', () => {
+    expect(parseMoneyToCents('1.234,5', eur)).toBe(123450)
+    expect(parseMoneyToCents('1,234.5', usd)).toBe(123450)
+    expect(parseMoneyToCents('1,234,567.5', usd)).toBe(123456750)
+  })
+
+  it.each([0, 5, 50, 150, 1250, 99999, 100000, 123450, 987654321])(
+    'reads back what the app wrote for %i cents, and the same amount with the other mark',
+    (cents) => {
+      for (const format of [eur, usd]) {
+        const written = formatMoneyInput(cents, format)
+        expect(parseMoneyToCents(written, format)).toBe(cents)
+        // Without a thousands mark the typed amount can use either key for its decimals.
+        if (cents < 100000) {
+          const other = format.decimalSeparator === ',' ? '.' : ','
+          expect(parseMoneyToCents(written.replace(format.decimalSeparator, other), format)).toBe(cents)
+        }
+      }
+    },
+  )
+
+  it('keeps the importers strict: only a comma is a decimal mark there', () => {
+    expect(parseEuroToCents('1,5')).toBe(150)
+    expect(parseEuroToCents('1.5')).toBe(1500)
+  })
+
+  it.each([
+    ['5,5', 0.055, 0.055],
+    ['5.5', 0.055, 0.055],
+    ['12,5%', 0.125, 0.125],
+    ['12.5 %', 0.125, 0.125],
+    ['7', 0.07, 0.07],
+    ['0,5', 0.005, 0.005],
+    [',5', 0.005, 0.005],
+    ['', 0, 0],
+    ['abc', 0, 0],
+    ['1.234,5', 0, 0],
+  ])('reads the percentage %j as %d in euros and %d in dollars', (typed, euros, dollars) => {
+    expect(parsePercentToFraction(typed, eur)).toBeCloseTo(euros, 6)
+    expect(parsePercentToFraction(typed, usd)).toBeCloseTo(dollars, 6)
+  })
+
+  it.each([0.055, 0.07, 0.125, 0, 0.2])('reads back the percentage the app wrote for %d', (fraction) => {
+    for (const format of [eur, usd]) {
+      expect(parsePercentToFraction(formatPercentInput(fraction, format), format)).toBeCloseTo(fraction, 6)
+    }
   })
 })
 
