@@ -7,11 +7,20 @@
 
 /* The levers bar: stuck under the app header with a little air, the way the old side panel
    was, because it is a card and not a row. The wrapper is what sticks, so the scroll padding
-   (useBarScrollPadding) reads one box. */
+   (useBarScrollPadding) reads one box.
+
+   Only where the five levers fit one row. Narrower, they wrap to two or three rows and the bar is
+   180px or more, a quarter of a small laptop's screen, and it would sit over the page the whole
+   time it is scrolled: there it goes by with the rest of the page. */
 .leversBar {
-  position: sticky;
-  top: calc(var(--exp-header) + var(--exp-header-air) + env(safe-area-inset-top, 0px));
   z-index: 6;
+}
+
+@media (min-width: 75rem) {
+  .leversBar {
+    position: sticky;
+    top: calc(var(--exp-header) + var(--exp-header-air) + env(safe-area-inset-top, 0px));
+  }
 }
 
 /* Where the five levers fit one row it is held at the bottom edge as well, so while its place in

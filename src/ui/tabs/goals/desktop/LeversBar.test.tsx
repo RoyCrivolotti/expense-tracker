@@ -257,9 +257,13 @@ describe('LeversBar', () => {
     expect(screen.getByRole('button', { name: 'All inputs' })).toHaveAttribute('aria-expanded', 'true')
   })
 
-  it('keeps a control reached with the keyboard out from under it while it is mounted', () => {
+  it('keeps a control reached with the keyboard out from under it while it is mounted and stuck under the header', () => {
     const root = document.documentElement
     root.style.scrollPaddingTop = ''
+    // The stylesheet that sticks it, which a width query turns on.
+    const stuck = document.createElement('style')
+    stuck.textContent = '[class*="leversBar"] { position: sticky; top: 10px; }'
+    document.head.append(stuck)
     const { unmount } = render(
       <LeversBar
         draft={makeDraft()}
@@ -271,9 +275,63 @@ describe('LeversBar', () => {
         onToggle={vi.fn()}
       />,
     )
-    expect(root.style.scrollPaddingTop).not.toBe('')
+    // Its own height (nothing in jsdom) under where it sticks, and the air.
+    expect(root.style.scrollPaddingTop).toBe('18px')
     unmount()
     expect(root.style.scrollPaddingTop).toBe('')
+    stuck.remove()
+  })
+
+  it('leaves the top of the page to the app where the bar is not stuck, because it goes by with the page', () => {
+    const root = document.documentElement
+    root.style.scrollPaddingTop = '60px'
+    const { unmount } = render(
+      <LeversBar
+        draft={makeDraft()}
+        resultDraft={makeDraft()}
+        keys={DEFAULT_LEVERS}
+        onChange={vi.fn()}
+        expanded={false}
+        panelId="p"
+        onToggle={vi.fn()}
+      />,
+    )
+    // Nothing is stuck over the page, so the app's own padding for its header is the right one.
+    expect(root.style.scrollPaddingTop).toBe('60px')
+    unmount()
+    expect(root.style.scrollPaddingTop).toBe('60px')
+    root.style.scrollPaddingTop = ''
+  })
+
+  it('takes the top padding when the window grows to where the bar is stuck, and gives it back when it shrinks', () => {
+    const root = document.documentElement
+    root.style.scrollPaddingTop = '60px'
+    const stuck = document.createElement('style')
+    document.head.append(stuck)
+    const { unmount } = render(
+      <LeversBar
+        draft={makeDraft()}
+        resultDraft={makeDraft()}
+        keys={DEFAULT_LEVERS}
+        onChange={vi.fn()}
+        expanded={false}
+        panelId="p"
+        onToggle={vi.fn()}
+      />,
+    )
+    expect(root.style.scrollPaddingTop).toBe('60px')
+
+    stuck.textContent = '[class*="leversBar"] { position: sticky; top: 10px; }'
+    fireEvent(window, new Event('resize'))
+    expect(root.style.scrollPaddingTop).toBe('18px')
+
+    stuck.textContent = ''
+    fireEvent(window, new Event('resize'))
+    expect(root.style.scrollPaddingTop).toBe('60px')
+
+    unmount()
+    stuck.remove()
+    root.style.scrollPaddingTop = ''
   })
 
   it('keeps it clear of the bar along the bottom edge too, where the bar is held there, and gives back what the page had', () => {
