@@ -41,6 +41,23 @@ function hasInputs(keys: readonly LeverKey[], omit: ReadonlySet<LeverKey>): bool
   return keys.some((key) => !omit.has(key))
 }
 
+/**
+ * The portfolio's column: what is left of its inputs, and the start date and the re-baseline under
+ * them, since they set where the starting balance is from. With every input in the bar it is the
+ * plan start's column alone.
+ */
+function PortfolioColumn({ draft, latest, onChange, omit }: Omit<PanelProps, 'id'>) {
+  const labels = ADJUST_LABELS
+  const inputs = hasInputs(SECTION_KEYS.portfolio, omit)
+  return (
+    <Column title={inputs ? labels.portfolio.title : labels.tracking.title}>
+      {inputs ? <PortfolioFields draft={draft} onChange={onChange} omit={omit} /> : null}
+      {inputs ? <h3 className={styles.columnTitle}>{labels.tracking.title}</h3> : null}
+      <TrackingFields draft={draft} latest={latest} onChange={onChange} />
+    </Column>
+  )
+}
+
 function PanelBody({ id, draft, latest, onChange, omit }: PanelProps) {
   const { leaving, exitMs } = useExit()
   const labels = ADJUST_LABELS
@@ -56,11 +73,7 @@ function PanelBody({ id, draft, latest, onChange, omit }: PanelProps) {
       <div className={styles.foldInner}>
         <Card>
           <div className={styles.columns}>
-            {hasInputs(SECTION_KEYS.portfolio, omit) ? (
-              <Column title={labels.portfolio.title}>
-                <PortfolioFields draft={draft} onChange={onChange} omit={omit} />
-              </Column>
-            ) : null}
+            <PortfolioColumn draft={draft} latest={latest} onChange={onChange} omit={omit} />
             {hasInputs(SECTION_KEYS.housing, omit) ? (
               <Column title={labels.housing.title}>
                 <HousingFields draft={draft} onChange={onChange} omit={omit} />
@@ -68,8 +81,6 @@ function PanelBody({ id, draft, latest, onChange, omit }: PanelProps) {
             ) : null}
             <Column title={labels.fire.title}>
               <FireFields draft={draft} onChange={onChange} omit={omit} />
-              <h3 className={styles.columnTitle}>{labels.tracking.title}</h3>
-              <TrackingFields draft={draft} latest={latest} onChange={onChange} />
             </Column>
             <Column title={labels.events.title}>
               <EventsFields draft={draft} onChange={onChange} />
