@@ -207,3 +207,16 @@ describe('the inputs panel on a touch screen', () => {
     expect(star?.body).toMatch(/top:\s*0\.825rem/)
   })
 })
+
+describe('the legend chips on a touch screen', () => {
+  const legend = underQuery('charts/LiveLegend.module.css', COARSE_WIDE)
+
+  it('reach 0.625rem past their padding edge above and below, so the chip is not made taller', () => {
+    const reach = legend.inside.find((r) => r.selector === '.chips .rowButton::after')
+
+    expect(reach?.body).toMatch(/position:\s*absolute/)
+    expect(reach?.body).toMatch(/inset:\s*-0\.625rem -0\.25rem/)
+    // Under a fine pointer, and for the rows layout the phone has, nothing is added.
+    expect(legend.outside).not.toMatch(/rowButton::after/)
+  })
+})

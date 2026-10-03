@@ -124,3 +124,21 @@
 .chips .rowButton {
   width: auto;
 }
+
+/* A chip is the button that hides or shows its line, and is 26px tall: too little for a finger,
+   and taller chips would push the chart's legend, and the bar under it, further down. Its tap
+   area reaches 0.625rem above and below its padding edge instead (the chip's border is 1px), to
+   44px. A second line of chips is 8px under the first, so there the two areas overlap and each
+   chip has the 34px it is itself plus its gap.
+   Chips are only laid out on the wide Goals page. */
+@media (pointer: coarse) and (min-width: 900px) {
+  .chips .rowButton {
+    position: relative;
+  }
+
+  .chips .rowButton::after {
+    content: '';
+    position: absolute;
+    inset: -0.625rem -0.25rem;
+  }
+}
