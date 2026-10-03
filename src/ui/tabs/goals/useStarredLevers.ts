@@ -22,6 +22,9 @@ export interface StarredLevers {
   reset: () => void
 }
 
+/** The session can no longer write (it went read-only) with a choice still waiting to be sent. */
+class WriterGone extends Error {}
+
 const sameList = (a: readonly LeverKey[], b: readonly LeverKey[]) => a.length === b.length && a.every((key, i) => key === b[i])
 
 /**
@@ -71,7 +74,9 @@ export function useStarredLevers(saved: readonly LeverKey[], save: Save | undefi
       let next: readonly LeverKey[] | null = first
       try {
         while (next !== null) {
-          await send.current?.({ goalLevers: [...next] })
+          // A writer that is gone sent nothing: that is not a save, and must not be recorded as one.
+          if (!send.current) throw new WriterGone()
+          await send.current({ goalLevers: [...next] })
           savedRef.current = next
           const newest: readonly LeverKey[] | null = queued.current
           queued.current = null
@@ -81,7 +86,10 @@ export function useStarredLevers(saved: readonly LeverKey[], save: Save | undefi
         queued.current = null
         current.current = savedRef.current
         setDraft(savedRef.current)
-        showToast(failureMessage(e), 'error')
+        showToast(
+          e instanceof WriterGone ? "This session can no longer save changes, so the last choice wasn't saved." : failureMessage(e),
+          'error',
+        )
       } finally {
         inFlight.current = false
         setBusy(false)
