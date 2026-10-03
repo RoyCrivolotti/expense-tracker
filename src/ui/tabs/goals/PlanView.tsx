@@ -42,6 +42,7 @@ function PlanSidebar({ half, scenarios, editor, actions, latest }: PlanSidebarPr
           actions={actions}
           dirty={dirty}
           saving={saving}
+          creating={editor.creating}
           onSelect={editor.onSelectScenario}
           onSelectEditing={editor.onSelectEditing}
           onToggleVisible={editor.onToggleVisible}
@@ -50,7 +51,7 @@ function PlanSidebar({ half, scenarios, editor, actions, latest }: PlanSidebarPr
           onSaveChanges={onSaveChanges}
           onDiscard={onDiscard}
           onActivate={editor.onActivate}
-          onScenarioCreated={editor.selectScenario}
+          onDuplicate={editor.onDuplicate}
         />
         <DiscardSheet {...editor.discardPrompt} />
       </div>
