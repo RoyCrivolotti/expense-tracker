@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * Playwright check of the Goals tab's phone navigation, on the demo instance: the sticky view
- * row, the pinned Scenarios stack, the chips, per-view scroll memory, label fit and keyboard focus.
+ * row, the pinned Scenarios stack, the chips, per-view scroll memory, label fit, keyboard focus and
+ * the order Tab goes in.
  *
  * jsdom lays nothing out, so the unit tests fake every position this depends on. This is the
  * run against real layout. Manual, like verify:goals-tabs: it needs a browser and takes about a
@@ -453,6 +454,34 @@ async function checkFocus(browser, phone) {
   await context.close()
 }
 
+/**
+ * Tab goes down the page through Chart, and the chart is the first stop after the view row. A
+ * stop that sits above the one before it means the page order and what is shown disagree, as it
+ * did when the scenario controls came first and the chart, which is on top, only after them.
+ */
+async function checkTabOrder(browser, phone) {
+  const where = `${phone.name} Chart`
+  const { page, context } = await openGoals(browser, phone)
+  await tab(page, 'Chart').focus()
+  const stops = []
+  for (let i = 0; i < 120; i++) {
+    await page.keyboard.press('Tab')
+    await page.waitForTimeout(40)
+    const stop = await page.evaluate(() => {
+      const el = document.activeElement
+      if (!el || el === document.body || el.closest('nav[aria-label="Sections"]')) return null
+      const name = (el.getAttribute('aria-label') || el.textContent || el.tagName).trim().replace(/\s+/g, ' ').slice(0, 40)
+      return { name, y: el.getBoundingClientRect().top + window.scrollY, inChart: Boolean(el.closest('[class*="areaHero"]')) }
+    })
+    if (!stop) break
+    stops.push(stop)
+  }
+  check(where, '(h) Tab from the view row reaches the chart first', stops[0]?.inChart === true, `it reached "${stops[0]?.name}"`)
+  const up = stops.findIndex((stop, i) => i > 0 && stop.y < stops[i - 1].y - 2)
+  check(where, `(h) no Tab stop sits above the one before it (${stops.length} stops)`, up === -1, `"${stops[up]?.name}" is above "${stops[up - 1]?.name}"`)
+  await context.close()
+}
+
 async function main() {
   if (await answers()) throw new Error(`Something already answers on ${BASE}; set CAPTURE_PORT to a free port.`)
   const dev = startDev()
@@ -472,6 +501,7 @@ async function main() {
         await checkAdjust(browser, phone)
         await checkMemory(browser, phone)
         await checkFocus(browser, phone)
+        await checkTabOrder(browser, phone)
       }
       console.log('\nLabels')
       await checkLabels(browser)
