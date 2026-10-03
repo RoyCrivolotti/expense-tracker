@@ -285,7 +285,7 @@ async function captureGoalsAdjust(page) {
 const GOALS_MOBILE_VIEWS = [
   { label: 'Composition', file: 'composition' },
   { label: 'Milestones', file: 'milestones' },
-  { label: 'FIRE', file: 'fire' },
+  { label: 'FI', file: 'fire' },
   { label: 'Rent vs buy', file: 'rent' },
   { label: 'Investing', file: 'savings' },
 ]

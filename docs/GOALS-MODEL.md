@@ -80,7 +80,7 @@ A milestone counts as **reached** once any wealth check-in recorded an invested 
 
 Chart reference lines are capped relative to the projection's own ceiling. A milestone far above what the plan reaches is left off the chart rather than compressing the projection into a sliver at the bottom; it still appears in the matrix. The FI target follows the same rule in every window, All included: a reference line sets the axis, so a target well above the plan is left off the axis and marked on the chart's top edge with an arrow and its amount (`ChartAboveMarker`).
 
-## FIRE / withdrawal
+## Financial independence and withdrawal
 
 Safe withdrawal rate defaults to 4% (25× annual spend). Adjustable per scenario.
 

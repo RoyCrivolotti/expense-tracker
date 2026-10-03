@@ -237,9 +237,9 @@ async function checkAdjust(browser, phone) {
     return seen
   })
   // On a tall screen the last two sections never reach the line (the page ends first), so with
-  // the demo data the mark goes Portfolio, Housing, FIRE. A shorter screen gets further down
+  // the demo data the mark goes Portfolio, Housing, FI. A shorter screen gets further down
   // them. Either way it moves down the chips one at a time, never back and never past one.
-  const order = ['Portfolio', 'Housing', 'FIRE', 'Tracking', 'Events']
+  const order = ['Portfolio', 'Housing', 'FI', 'Tracking', 'Events']
   const inOrder = followed.every((label, i) => label === order[i])
   check(
     where,
@@ -248,14 +248,16 @@ async function checkAdjust(browser, phone) {
     `it went ${followed.join(', ')}`,
   )
   if (phone.height >= 812) {
-    check(where, '(c) with the demo data it goes Portfolio, Housing, FIRE', followed.join(', ') === 'Portfolio, Housing, FIRE', `it went ${followed.join(', ')}`)
+    check(where, '(c) with the demo data it goes Portfolio, Housing, FI', followed.join(', ') === 'Portfolio, Housing, FI', `it went ${followed.join(', ')}`)
   }
 
-  for (const key of ['Portfolio', 'Housing', 'FIRE', 'Tracking', 'Events']) {
+  // The chip's name, and the key its section is stored under.
+  const sectionKeys = { Portfolio: 'portfolio', Housing: 'housing', FI: 'fire', Tracking: 'tracking', Events: 'events' }
+  for (const key of Object.keys(sectionKeys)) {
     await chip(page, key).tap()
     await settled(page)
     m = await measure(page)
-    const gap = gapOf(m, key.toLowerCase())
+    const gap = gapOf(m, sectionKeys[key])
     const lands = gap >= GAP.min && gap <= GAP.max
     const atEnd = m.y >= m.max - 1
     if (key === 'Tracking' || key === 'Events') {

@@ -84,11 +84,11 @@ describe('AdjustSectionNav', () => {
 
     placeSections({ portfolio: -900, housing: -500, fire: -50, tracking: 300, events: 400 })
     scrollPage()
-    expect(current()).toBe('FIRE')
+    expect(current()).toBe('FI')
   })
 
   describe('at the bottom of the page', () => {
-    // FIRE has reached the top and the last two sections have not, as on a short phone.
+    // FI has reached the top and the last two sections have not, as on a short phone.
     beforeEach(() => {
       placeSections({ portfolio: -900, housing: -500, fire: -50, tracking: 300, events: 400 })
       Object.defineProperty(document.documentElement, 'scrollHeight', { configurable: true, value: 100 })
@@ -104,16 +104,16 @@ describe('AdjustSectionNav', () => {
     it('keeps the section being read marked while the last one is folded to a row', () => {
       render(<AdjustSectionNav />)
 
-      expect(current()).toBe('FIRE')
+      expect(current()).toBe('FI')
     })
 
     it('marks the last section with its controls shown, when the ones after it are folded', () => {
-      // A tall phone: the end of the page is FIRE's controls and two folded rows, and FIRE's
+      // A tall phone: the end of the page is FI's controls and two folded rows, and FI's
       // heading never gets up to the line.
       placeSections({ portfolio: -700, housing: -300, fire: 400, tracking: 700, events: 750 })
       sectionElement('fire').open = true
       render(<AdjustSectionNav />)
-      expect(current()).toBe('FIRE')
+      expect(current()).toBe('FI')
 
       sectionElement('tracking').open = true
       scrollPage()
@@ -129,12 +129,12 @@ describe('AdjustSectionNav', () => {
 
       Object.defineProperty(document.documentElement, 'scrollHeight', { configurable: true, value: 771 })
       scrollPage()
-      expect(current()).toBe('FIRE')
+      expect(current()).toBe('FI')
     })
 
     it('moves to the last chip once its controls are opened', () => {
       render(<AdjustSectionNav />)
-      expect(current()).toBe('FIRE')
+      expect(current()).toBe('FI')
 
       sectionElement('events').open = true
       scrollPage()
@@ -159,7 +159,7 @@ describe('AdjustSectionNav', () => {
 
     fireEvent.touchStart(window)
     scrollPage()
-    expect(current()).toBe('FIRE')
+    expect(current()).toBe('FI')
   })
 
   // A touch, the wheel, a key (PageUp after tapping Events) or a press on the page, which is all
@@ -179,7 +179,7 @@ describe('AdjustSectionNav', () => {
       })
       scrollPage()
 
-      expect(current()).toBe('FIRE')
+      expect(current()).toBe('FI')
     },
   )
 
@@ -187,7 +187,7 @@ describe('AdjustSectionNav', () => {
     render(<AdjustSectionNav />)
 
     expect(screen.getByRole('button', { name: 'Portfolio' })).toHaveClass(styles.chipActive!)
-    for (const other of ['Housing', 'FIRE', 'Tracking', 'Events']) {
+    for (const other of ['Housing', 'FI', 'Tracking', 'Events']) {
       expect(screen.getByRole('button', { name: other })).not.toHaveClass(styles.chipActive!)
     }
 
@@ -397,7 +397,7 @@ describe('AdjustSectionNav', () => {
     field.getBoundingClientRect = () => ({ top: 100 }) as DOMRect
     render(<AdjustSectionNav />, { container: stack })
 
-    fireEvent.focusIn(screen.getByRole('button', { name: 'FIRE' }))
+    fireEvent.focusIn(screen.getByRole('button', { name: 'FI' }))
     expect(window.scrollBy).not.toHaveBeenCalled()
 
     fireEvent.focusIn(field)
