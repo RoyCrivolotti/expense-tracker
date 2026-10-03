@@ -26,10 +26,14 @@ interface DetailGridProps {
 }
 
 /**
- * Everything under the projection in two columns that each stack their own cards, so none is
- * stretched to match its neighbour: the two tables that compare paths lead, then where the plan
- * stands beside what it is made of, the drawdown beside the rent against buying, and the
- * investing against plan. The cards are the ones the phone has as tabs.
+ * Everything under the projection. The years to each milestone lead across the whole page: its
+ * table needs about 530px, which a half column only has from 1440px wide, and a table that scrolls
+ * sideways hides a column (the 1M milestone at 1280px) with nothing to say so. The rest are two
+ * columns that each stack their own cards, so none is stretched to match its neighbour: the paths
+ * side by side, the drawdown and the investing against plan, beside where the plan stands, what it
+ * is made of and the rent against buying. Split three and three so the columns end within a card's
+ * height of each other (measured: 1,108px against 1,034px at 1440px wide), where four against two
+ * left one a card and a half longer. The cards are the ones the phone has as tabs.
  */
 export function DetailGrid({
   scenarios,
@@ -49,22 +53,24 @@ export function DetailGrid({
       <h3 id="goals-detail-heading" className={styles.detailHeading}>
         Detailed charts
       </h3>
+      <div className={styles.detailWide}>
+        <MilestoneMatrix
+          scenarios={scenarios}
+          draft={draft}
+          milestones={milestones}
+          reached={reached}
+          includeDraft={includeDraft}
+          fromToday={fromToday}
+        />
+      </div>
       <div className={styles.detailGrid}>
         <div className={styles.detailColumn}>
           <ScenarioComparison scenarios={scenarios} draft={draft} includeDraft={includeDraft} fromToday={fromToday} />
-          <NetWorthNowCard draft={draft} latest={latest} milestones={milestones} reached={reached} />
           <FireChart draft={draft} height={STACK_CHART_HEIGHT} />
           <SavingsRateChart draft={draft} monthly={monthly} height={STACK_CHART_HEIGHT} />
         </div>
         <div className={styles.detailColumn}>
-          <MilestoneMatrix
-            scenarios={scenarios}
-            draft={draft}
-            milestones={milestones}
-            reached={reached}
-            includeDraft={includeDraft}
-            fromToday={fromToday}
-          />
+          <NetWorthNowCard draft={draft} latest={latest} milestones={milestones} reached={reached} />
           <CompositionChart draft={draft} height={STACK_CHART_HEIGHT} />
           <RentVsOwnChart draft={draft} height={STACK_CHART_HEIGHT} />
         </div>

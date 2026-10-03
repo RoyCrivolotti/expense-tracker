@@ -158,6 +158,11 @@ function measure(page) {
       bar: box(bar),
       // The chart's legend, which carries its values on this layout, is the last of the hero to clear.
       legendBottom: box(document.querySelector('[data-goals-plan-wide] ul[class*="chips"]'))?.bottom ?? 0,
+      // How much of the years-to-milestone table is out of sight to the right of its card.
+      milestoneHidden: (() => {
+        const scroller = document.querySelector('[data-goals-plan-wide] [class*="milestoneScroll"]')
+        return scroller ? scroller.scrollWidth - scroller.clientWidth : 0
+      })(),
       barTop: bar ? getComputedStyle(bar).top : null,
       barBottom: bar ? getComputedStyle(bar).bottom : null,
       labelTops: labels.map((l) => Math.round(l.getBoundingClientRect().top)),
@@ -187,6 +192,7 @@ async function checkLayout(page, screen, where) {
   const expected = Math.min(1168, m.iw - (m.iw >= 1024 ? 240 : 72) - 32)
   check(where, '(c) the page is as wide as the column beside the rail allows, up to 76rem', m.page.width >= expected - 40, `page ${px(m.page.width)}, wanted about ${expected}`)
   check(where, '(d) the chart is wider than the 588px it had beside the side panel', m.page.width - 36 > 640, px(m.page.width))
+  check(where, '(d) every milestone column of the years-to-milestone table is in sight', m.milestoneHidden <= 1, `${px(m.milestoneHidden)} scrolled out of sight`)
   if (screen.width >= 1250) {
     // The five levers and the result block, which has a label of its own.
     const row = new Set(m.labelTops)

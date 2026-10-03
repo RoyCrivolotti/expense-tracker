@@ -483,6 +483,13 @@
   color: var(--color-text);
 }
 
+/* A card that takes the whole width, over the columns. The .detail gap is a little under the
+   columns' own, so this makes up the difference. */
+.detailWide {
+  min-width: 0;
+  margin-bottom: 0.25rem;
+}
+
 /* Two columns, each its own stack, so a short card is never stretched to match the chart beside
    it. A card in a half column may be narrower than its table, which then scrolls inside the card
    as it does on a phone. */
