@@ -10,6 +10,7 @@ import type { StarredLevers } from '../useStarredLevers'
 import { AllInputsPanel } from './AllInputsPanel'
 import { DetailGrid } from './DetailGrid'
 import { LeversBar } from './LeversBar'
+import { revealPanel } from './revealPanel'
 import { ScenarioBar } from './ScenarioBar'
 import { useKeyboardStarToggle } from './useKeyboardStarToggle'
 import styles from './planDesktop.module.css'
@@ -67,7 +68,10 @@ export function PlanDesktop({ scenarios, editor, actions, latest, milestones, re
         onUnstar={starred.canEdit ? starred.toggle : undefined}
         expanded={inputsOpen}
         panelId={PANEL_ID}
-        onToggle={() => setInputsOpen((open) => !open)}
+        onToggle={() => {
+          if (!inputsOpen) revealPanel(PANEL_ID)
+          setInputsOpen((open) => !open)
+        }}
       />
       <AllInputsPanel
         id={PANEL_ID}

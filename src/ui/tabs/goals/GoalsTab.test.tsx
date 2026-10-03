@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
 import { GoalsTab } from './GoalsTab'
@@ -51,6 +51,28 @@ const scenarioTab = (name: string | RegExp, selected?: boolean) =>
 describe('GoalsTab levers', () => {
   afterEach(() => {
     media.setMatching(() => false)
+    vi.restoreAllMocks()
+    // jsdom has no scrollIntoView; the test that stubs it must not leave it behind.
+    Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
+  })
+
+  it('brings the inputs into view when they open below the fold, and does not move the page when they close', async () => {
+    const user = userEvent.setup()
+    const scrollIntoView = vi.fn()
+    Element.prototype.scrollIntoView = scrollIntoView
+    // The bar is held to the bottom edge, so the panel's place in the page is below the screen.
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      return { top: this.id === 'goals-all-inputs' ? 1013 : 0 } as DOMRect
+    })
+    render(<GoalsTab model={makeModel()} actions={makeActions()} />)
+
+    await user.click(screen.getByRole('button', { name: 'All inputs' }))
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1))
+    expect(scrollIntoView.mock.contexts[0]).toBe(document.getElementById('goals-all-inputs'))
+
+    await user.click(screen.getByRole('button', { name: 'All inputs' }))
+    await act(() => new Promise((resolve) => requestAnimationFrame(() => resolve(undefined))))
+    expect(scrollIntoView).toHaveBeenCalledTimes(1)
   })
 
   const DEFAULTS = ['monthlyContributionCents', 'expectedRealReturn', 'horizonYears', 'housePurchaseYear', 'startInvestedCents']
