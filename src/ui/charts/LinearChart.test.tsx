@@ -46,6 +46,20 @@ describe('LinearChart', () => {
     expect(plotTop({ padTop: 8 })).toBe('8')
   })
 
+  it('describes how to step through a chart that takes focus, which nothing on it says', () => {
+    render(<LinearChart {...defaultProps} series={[makeLine('s1', [10, 20, 30])]} />)
+
+    const chart = screen.getByRole('img', { name: 'Test chart' })
+    expect(chart).toHaveAccessibleDescription(/left and right arrow keys to step through the years/)
+  })
+
+  it('has no keyboard description where the chart cannot take focus', () => {
+    // Tooltip hidden and nobody tracking the focus: it is not a stop, so there is no way to describe.
+    render(<LinearChart {...defaultProps} tooltipMode="hidden" series={[makeLine('s1', [10, 20, 30])]} />)
+
+    expect(screen.getByRole('img', { name: 'Test chart' })).not.toHaveAttribute('aria-describedby')
+  })
+
   it('draws a reference line only where it can be told from the one above it', () => {
     // 1 000 to 9 000 on an axis of a million are a pixel or two apart: one dashed smear.
     const count = (refLines: number[]) => {

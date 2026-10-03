@@ -77,6 +77,16 @@
   color: var(--color-text-muted);
 }
 
+/* Text for a screen reader only: the way to use a chart that has no words on it for the keyboard. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .chartWrap {
   position: relative;
   width: 100%;
