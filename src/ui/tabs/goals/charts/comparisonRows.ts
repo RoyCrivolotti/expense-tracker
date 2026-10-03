@@ -3,11 +3,7 @@ import type { NewGoalScenario } from '../../../../data/dataSource'
 import { formatCents, projectNetWorth, scenarioToParams, yearsToFi } from '../../../../engine'
 import type { MoneyFormat, PlanFromToday } from '../../../../engine'
 import { formatMoneyShort } from '../chartTheme'
-
-function shortName(name: string): string {
-  const colon = name.indexOf(':')
-  return colon >= 0 ? name.slice(0, colon).trim() : name
-}
+import { tableName } from '../scenarioNames'
 
 export interface ComparisonRow {
   /** Stable across renames and shared short names: the scenario id, or 'draft'. */
@@ -51,16 +47,17 @@ export function comparisonRows(
   year: number | null = null,
   fromToday: PlanFromToday | null = null,
 ): ComparisonRow[] {
+  const names = scenarios.map((s) => s.name)
   const all: { key: string; name: string; color: string; scenario: GoalScenario | (NewGoalScenario & { id: number }) }[] = scenarios.flatMap((s) => [
-    { key: `saved-${s.id}`, name: shortName(s.name), color: s.color, scenario: s },
+    { key: `saved-${s.id}`, name: tableName(s.name, names), color: s.color, scenario: s },
     // The plan restarted from the latest check-in sits under the plan, in its colour; its
     // years count from the check-in, which the table's hint says.
     ...(fromToday && s.id === fromToday.scenario.id
-      ? [{ key: 'from-today', name: `${shortName(s.name)}, from today`, color: s.color, scenario: fromToday.scenario }]
+      ? [{ key: 'from-today', name: `${tableName(s.name, names)}, from today`, color: s.color, scenario: fromToday.scenario }]
       : []),
   ])
   if (includeDraft) {
-    all.push({ key: 'draft', name: `${shortName(draft.name)} (editing)`, color: draft.color, scenario: { ...draft, id: 0 } })
+    all.push({ key: 'draft', name: `${tableName(draft.name, names)} (editing)`, color: draft.color, scenario: { ...draft, id: 0 } })
   }
   return all.map(({ key, name, color, scenario }) => {
     const params = scenarioToParams(scenario, inflationRate)
