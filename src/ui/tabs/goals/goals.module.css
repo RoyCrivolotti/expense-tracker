@@ -1493,6 +1493,267 @@
   }
 }
 
+/* The card's header on the wide page: the title, and the switch between the table and the timeline. */
+.matrixHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+}
+
+/* Years to milestone as a timeline. Where a thing sits along the axis is a fraction of it (--t, or
+   --from and --to), between a gutter of --L on the left and --R on the right for the badges, so
+   nothing is measured. The heights match ROW_HEIGHT and DOT_Y in timelineModel.ts. */
+.tl {
+  --tl-row: 54px;
+  --tl-gutter: 46px;
+}
+
+.tlFollow {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.tlBody {
+  --L: var(--tl-gutter);
+  --R: var(--tl-gutter);
+  display: flex;
+  align-items: stretch;
+}
+
+.tlNames {
+  flex: 0 0 9.5rem;
+  padding-top: 22px;
+}
+
+.tlName {
+  display: flex;
+  align-items: center;
+  height: var(--tl-row);
+  padding-right: 8px;
+  font-size: 0.75rem;
+}
+
+.tlTracks {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.tlPos {
+  position: absolute;
+  left: calc(var(--L) + (100% - var(--L) - var(--R)) * var(--t));
+}
+
+.tlAxis {
+  position: relative;
+  height: 22px;
+}
+
+.tlAxisBottom {
+  height: 34px;
+  border-top: 1px solid var(--color-border);
+}
+
+.tlTick {
+  top: 3px;
+  color: var(--color-text-muted);
+  font-size: 0.66rem;
+  line-height: 1.25;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.tlAxisBottom .tlTick {
+  top: 4px;
+}
+
+.tlGrid {
+  top: 22px;
+  bottom: 34px;
+  width: 0;
+  border-left: 1px dashed color-mix(in srgb, var(--color-text-muted) 28%, transparent);
+}
+
+.tlGridZero {
+  border-left-style: solid;
+  border-left-color: color-mix(in srgb, var(--color-text-muted) 55%, transparent);
+}
+
+.tlRow {
+  position: relative;
+  height: var(--tl-row);
+}
+
+.tlLine {
+  position: absolute;
+  top: 26px;
+  left: calc(var(--L) + (100% - var(--L) - var(--R)) * var(--from));
+  width: calc((100% - var(--L) - var(--R)) * (var(--to) - var(--from)));
+  height: 3px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--rc) 55%, var(--exp-track));
+}
+
+.tlLineDraft {
+  background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--rc) 70%, transparent) 0 6px, transparent 6px 10px);
+}
+
+/* A path whose horizon is shorter than the longest ends in hatching, to the end of the axis. The
+   transparent borders only show in forced colours, which drop the fills. */
+.tlHatch {
+  position: absolute;
+  top: 20px;
+  left: calc(var(--L) + (100% - var(--L) - var(--R)) * var(--to));
+  right: calc(var(--R) - 10px);
+  height: 15px;
+  border: 1px solid transparent;
+  border-radius: 0 4px 4px 0;
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--color-text-muted) 28%, transparent) 0 2px, transparent 2px 6px);
+}
+
+.tlCap {
+  top: 20px;
+  width: 2px;
+  height: 15px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--color-text-muted) 60%, transparent);
+}
+
+.tlDot {
+  top: 27.5px;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  padding: 0;
+  border: 2px solid var(--rc);
+  border-radius: 50%;
+  background: var(--color-surface);
+  cursor: pointer;
+  transition:
+    opacity 0.12s,
+    transform 0.12s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tlDot {
+    transition: none;
+  }
+}
+
+.tlDot:hover,
+.tlDot:focus-visible {
+  transform: scale(1.35);
+}
+
+.tlDot:focus-visible,
+.tlBadge:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Several milestones in one year: a filled dot with their number. */
+.tlDotMulti {
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  background: var(--rc);
+  color: var(--color-surface);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 12px;
+  text-align: center;
+}
+
+.tlDotDraft {
+  border-style: dashed;
+}
+
+.tlDotPick {
+  background: var(--rc);
+  transform: scale(1.3);
+}
+
+.tlDim .tlDot:not(.tlDotPick) {
+  opacity: 0.28;
+}
+
+.tlDim .tlLabel:not(.tlLabelPick) {
+  opacity: 0;
+}
+
+.tlLabel {
+  color: var(--color-text-muted);
+  font-size: 0.64rem;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.tlLabelUp {
+  top: 8px;
+}
+
+.tlLabelDown {
+  top: 40px;
+}
+
+.tlLabelPick {
+  color: var(--color-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.tlBadge {
+  position: absolute;
+  top: 18px;
+  height: 19px;
+  padding: 0 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 0.66rem;
+  line-height: 17px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tlBadgeLeft {
+  right: calc(100% - var(--L) + 8px);
+}
+
+.tlBadgeRight {
+  left: 6px;
+}
+
+.tlDim .tlBadge {
+  opacity: 0.5;
+}
+
+/* A replaced element does not stretch between left and right, so the width is its own. */
+.tlConnector {
+  position: absolute;
+  top: 22px;
+  left: var(--L);
+  width: calc(100% - var(--L) - var(--R));
+  overflow: visible;
+  pointer-events: none;
+}
+
+.tlConnector polyline {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+  opacity: 0.7;
+  vector-effect: non-scaling-stroke;
+}
+
 /* The side-by-side table shares the matrix's frame; its cells are words and money, not
    colour-coded years, so they sit left and take their own width. */
 .compareHead,
