@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from 'react'
+import { useEffect, useRef, type RefObject } from 'react'
 
 /** A finger that travels further than this between down and up is scrolling, not tapping. */
 const TAP_SLOP_PX = 8
@@ -15,6 +15,13 @@ export function useDismissOnOutsidePointer(
   onDismiss: () => void,
   excludeRef?: RefObject<HTMLElement | null>,
 ) {
+  // Read at the moment of the tap, not captured when the listeners were attached: a caller that
+  // passes a new function every render would otherwise re-attach them, and drop the pointer that
+  // was already down, whenever it re-rendered between a finger landing and lifting.
+  const dismiss = useRef(onDismiss)
+  useEffect(() => {
+    dismiss.current = onDismiss
+  })
   useEffect(() => {
     if (!active) return
     let down: { id: number; x: number; y: number } | null = null
@@ -28,7 +35,7 @@ export function useDismissOnOutsidePointer(
       if (!down || down.id !== e.pointerId) return
       const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y)
       down = null
-      if (moved <= TAP_SLOP_PX) onDismiss()
+      if (moved <= TAP_SLOP_PX) dismiss.current()
     }
     const onPointerCancel = () => {
       down = null
@@ -41,5 +48,5 @@ export function useDismissOnOutsidePointer(
       document.removeEventListener('pointerup', onPointerUp, true)
       document.removeEventListener('pointercancel', onPointerCancel, true)
     }
-  }, [active, containerRef, onDismiss, excludeRef])
+  }, [active, containerRef, excludeRef])
 }

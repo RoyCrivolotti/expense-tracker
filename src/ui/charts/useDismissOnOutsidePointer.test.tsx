@@ -27,6 +27,28 @@ describe('useDismissOnOutsidePointer', () => {
     expect(screen.getByText('closed')).toBeInTheDocument()
   })
 
+  it('still dismisses when the host re-renders, with a new callback, between the finger landing and lifting', () => {
+    // On a touch screen something re-rendered the owner of the scenario menu between the two, and
+    // a hook that held the callback it was given when it attached never saw the tap finish.
+    function Rerenders() {
+      const ref = useRef<HTMLDivElement>(null)
+      const [open, setOpen] = useState(true)
+      const [, bump] = useState(0)
+      useDismissOnOutsidePointer(ref, open, () => setOpen(false))
+      return (
+        <div>
+          <div ref={ref}>{open ? 'open' : 'closed'}</div>
+          <p onPointerDown={() => bump((n) => n + 1)}>outside</p>
+        </div>
+      )
+    }
+    render(<Rerenders />)
+    const outside = screen.getByText('outside')
+    fireEvent.pointerDown(outside, at(10, 10))
+    fireEvent.pointerUp(outside, at(10, 10))
+    expect(screen.getByText('closed')).toBeInTheDocument()
+  })
+
   it('leaves it open when the pointer scrolls instead of tapping', () => {
     render(<Host />)
     const outside = screen.getByText('outside')
