@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { formatMoneyInput, formatPercentInput, parseMoneyToCents } from '../../../../engine'
+import { formatMoneyInput, formatPercent, formatPercentInput, parseMoneyToCents } from '../../../../engine'
 import type { MoneyFormat } from '../../../../engine'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import type { LeverSpec } from '../leverFields'
@@ -55,7 +55,9 @@ function TypedValue({ label, text, unit, unitFirst = false, onCommit, inputMode 
   }
   const unitText = <span className={styles.leverUnit}>{unit}</span>
   return (
-    <div className={styles.leverValue}>
+    // A label, so a tap or a click anywhere on the figure's row (not only on its digits) puts the
+    // cursor in the field. The input names itself, so the unit inside does not add to the name.
+    <label className={styles.leverValue}>
       {unitFirst ? unitText : null}
       <input
         className={unitFirst ? `${styles.leverInput} ${styles.leverInputAfterUnit}` : styles.leverInput}
@@ -71,7 +73,7 @@ function TypedValue({ label, text, unit, unitFirst = false, onCommit, inputMode 
         }}
       />
       {unitFirst ? null : unitText}
-    </div>
+    </label>
   )
 }
 
@@ -167,7 +169,8 @@ export function Lever({ spec, draft, onChange, onUnstar }: LeverProps) {
             max={max}
             step={0.001}
             value={fraction}
-            aria-label={`${label} slider`}
+            aria-label={label}
+            aria-valuetext={formatPercent(fraction, format)}
             onChange={(e) => patch(Number(e.target.value))}
           />
         </div>
@@ -185,10 +188,10 @@ export function Lever({ spec, draft, onChange, onUnstar }: LeverProps) {
             className={goalStyles.range}
             type="range"
             min={-1}
-            max={draft.horizonYears}
+            max={Math.max(draft.horizonYears, year ?? 0)}
             step={1}
             value={year ?? -1}
-            aria-label={`${label} slider`}
+            aria-label={label}
             aria-valuetext={purchaseYearText(year)}
             onChange={(e) => {
               const v = Number(e.target.value)

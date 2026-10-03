@@ -223,6 +223,22 @@ async function checkSticky(page, where) {
     return !bar.contains(hit)
   })
   check(where, '(g) nothing is drawn over the stuck bar', !covered)
+
+  // Focus moving about inside the stuck bar is not a reason to scroll: its controls are on screen.
+  // Safari scrolled the page by the bar's height on each, taking the bar's place as covered by itself.
+  const monthly = page.getByRole('textbox', { name: 'Monthly investing', exact: true })
+  await monthly.focus()
+  const before = await page.evaluate(() => window.scrollY)
+  // Two Tabs reach the real return and its slider; a third and later would leave the bar.
+  for (let i = 0; i < 2; i++) await page.keyboard.press('Tab')
+  await page.waitForTimeout(150)
+  const after = await page.evaluate(() => ({
+    y: window.scrollY,
+    inBar: document.querySelector('[class*="leversBar"]').contains(document.activeElement),
+  }))
+  check(where, '(g) Tab inside the stuck bar stays in the bar', after.inBar)
+  check(where, '(g) Tab inside the stuck bar does not scroll the page', near(after.y, before, 1), `scrolled from ${before} to ${after.y}`)
+  await page.evaluate(() => document.activeElement?.blur())
   await scrollTo(page, 0)
 }
 
@@ -333,7 +349,7 @@ async function checkEdit(page, where) {
 
   const result = page.locator('[class*="leverResult"]')
   const resultBefore = await result.textContent()
-  const slider = page.getByLabel('Real return (%/yr, after inflation) slider')
+  const slider = page.getByRole('slider', { name: 'Real return (%/yr, after inflation)' })
   await slider.focus()
   await page.keyboard.press('ArrowRight')
   await page.keyboard.press('ArrowRight')
@@ -411,6 +427,62 @@ async function checkTabWalk(page, where, open, engine) {
   check(where, '(l) no Tab stop sits above the one before it, but across columns', outOfOrder === -1, `"${stops[outOfOrder]?.name}" is above "${stops[outOfOrder - 1]?.name}"`)
 }
 
+/**
+ * The bar's own controls and the panel it opens, with the page scrolled to the top (the bar held to
+ * the bottom edge on a tall enough screen). The page's scroll padding is what keeps a focused
+ * control clear of the bar, and it must not treat the bar's own controls as hidden behind it
+ * (Chromium scrolled the page 366px for a star on 1280x800), nor leave the panel under the bar
+ * when it is opened from the keyboard (the padding is lifted while focus is in the bar).
+ */
+async function checkBarFocus(page, where) {
+  await scrollTo(page, 0)
+  const bar = page.locator('[class*="leversBar"]')
+  const scrollY = () => page.evaluate(() => Math.round(window.scrollY))
+
+  // Only where the bar is held to the bottom edge is a star on screen at the top of the page to press.
+  const view = page.viewportSize()
+  if (view.width >= HELD_FROM.width && view.height >= HELD_FROM.height) {
+    const star = bar.getByRole('button', { name: /^Remove .* from the bar$/ }).first()
+    const starBox = await star.boundingBox()
+    const before = await scrollY()
+    await page.mouse.click(starBox.x + starBox.width / 2, starBox.y + starBox.height / 2)
+    await page.waitForTimeout(400)
+    const afterStar = await scrollY()
+    check(where, '(n) pressing a star in the bar does not scroll the page', near(afterStar, before, 1), `scrolled from ${before} to ${afterStar}`)
+  }
+
+  const open = async (how) => {
+    await scrollTo(page, 0)
+    const button = page.getByRole('button', { name: 'All inputs' })
+    if (how === 'mouse') {
+      // Below the fold on a screen the bar is not held on: a click outside the window would hit nothing.
+      await button.scrollIntoViewIfNeeded()
+      const box = await button.boundingBox()
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+    } else {
+      await button.focus()
+      await page.keyboard.press('Enter')
+    }
+    const region = page.getByRole('region', { name: 'All inputs' })
+    await region.waitFor({ timeout: 5000 })
+    await page.waitForTimeout(900)
+    const m = await page.evaluate(() => {
+      const barBox = document.querySelector('[class*="leversBar"]').getBoundingClientRect()
+      const panel = document.querySelector('[role="region"][aria-label="All inputs"]').getBoundingClientRect()
+      return { barBottom: Math.round(barBox.bottom), panelTop: Math.round(panel.top), barTop: Math.round(barBox.top) }
+    })
+    // Only where the bar is over the panel's place (stuck under the header) is there anything to be under.
+    const clear = m.barTop > 100 || m.panelTop >= m.barBottom - 0.5
+    check(where, `(n) the panel opened with the ${how} is not left under the bar`, clear, `panel top ${m.panelTop}, bar ${m.barTop} to ${m.barBottom}`)
+    await button.focus()
+    await page.keyboard.press('Enter')
+    await region.waitFor({ state: 'detached', timeout: 5000 })
+  }
+  await open('mouse')
+  await open('keyboard')
+  await scrollTo(page, 0)
+}
+
 async function checkScreen(browser, screen, engine) {
   const where = `${engine} ${screen.name}`
   const { page, context } = await openPlan(browser, screen)
@@ -424,6 +496,12 @@ async function checkScreen(browser, screen, engine) {
     await checkEdit(page, where)
   }
   await context.close()
+  if (screen.width >= 1280) {
+    // A page of its own: the star press takes a lever out of the bar, which the checks above expect five of.
+    const own = await openPlan(browser, screen)
+    await checkBarFocus(own.page, where)
+    await own.context.close()
+  }
 }
 
 async function checkTabs(browser, engine) {

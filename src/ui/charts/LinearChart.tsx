@@ -21,6 +21,7 @@ import {
   linePath,
   makeScale,
   niceScale,
+  spacedRefLines,
   stackAreas,
   type Pt,
   type ScatterPoint,
@@ -29,6 +30,8 @@ import styles from './charts.module.css'
 
 const FALLBACK_W = 360
 const PAD = { top: 16, right: 16, bottom: 28, left: 56 }
+/** Reference lines closer than this run together into one dashed smear, so the nearer one is left out. */
+const REF_LINE_MIN_GAP = 8
 
 export type { ScatterPoint }
 
@@ -291,7 +294,7 @@ export function LinearChart({
             dots={s.dots ?? true}
           />
         ))}
-        {refLines.filter(Number.isFinite).map((v) => (
+        {spacedRefLines(refLines, geo.scaleY, REF_LINE_MIN_GAP).map((v) => (
           <line
             key={v}
             x1={PAD.left}

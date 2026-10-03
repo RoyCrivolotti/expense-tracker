@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { collectDomain, linePath, makeScale, niceScale, sparseLabels, stackAreas } from './linearScale'
+import { collectDomain, linePath, makeScale, niceScale, sparseLabels, spacedRefLines, stackAreas } from './linearScale'
 
 describe('makeScale', () => {
   it('maps domain endpoints to range endpoints', () => {
@@ -135,5 +135,32 @@ describe('sparseLabels', () => {
     expect(labels[2]).toBe('2022')
     expect(labels[3]).toBe('')
     expect(labels[4]).toBe('2024')
+  })
+})
+
+describe('spacedRefLines', () => {
+  // 100px for 1000 units: a line per 10 units is a line per pixel.
+  const scale = makeScale(0, 1000, 100, 0)
+
+  it('keeps lines that are far enough apart', () => {
+    expect(spacedRefLines([100, 500, 900], scale, 8)).toEqual([900, 500, 100])
+  })
+
+  it('drops a line that would sit on the one above it, keeping the highest of a crowd', () => {
+    // The lines are 10px apart at this scale. From 500 (50px down) the next one 25px away is 200,
+    // and 100 is then only 10px below that.
+    expect(spacedRefLines([100, 200, 300, 400, 500], scale, 25)).toEqual([500, 200])
+  })
+
+  it('counts the gap from the last line it kept, not from the last it saw', () => {
+    expect(spacedRefLines([900, 850, 800, 750], scale, 8)).toEqual([900, 800])
+  })
+
+  it('ignores repeats and values that are not numbers', () => {
+    expect(spacedRefLines([500, 500, Number.NaN, Infinity], scale, 8)).toEqual([500])
+  })
+
+  it('draws every line when the gap is nothing', () => {
+    expect(spacedRefLines([100, 101, 102], scale, 0)).toEqual([102, 101, 100])
   })
 })

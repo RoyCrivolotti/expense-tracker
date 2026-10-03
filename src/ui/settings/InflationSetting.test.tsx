@@ -49,7 +49,7 @@ describe('InflationSetting', () => {
     const onChange = vi.fn().mockReturnValue(save.promise)
     render(<InflationSetting settings={settings(0.02)} onChange={onChange} />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Increase percentage' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Increase Assumed inflation' }))
 
     // Instant: the stepper has moved though the save has not come back.
     expect(input()).toHaveValue('2,5')
@@ -60,7 +60,7 @@ describe('InflationSetting', () => {
     const first = deferred()
     const onChange = vi.fn().mockReturnValueOnce(first.promise).mockResolvedValue(undefined)
     render(<InflationSetting settings={settings(0.02)} onChange={onChange} />)
-    const up = () => fireEvent.click(screen.getByRole('button', { name: 'Increase percentage' }))
+    const up = () => fireEvent.click(screen.getByRole('button', { name: 'Increase Assumed inflation' }))
 
     up()
     up()
@@ -95,7 +95,7 @@ describe('InflationSetting', () => {
       return <InflationSetting settings={settings(saved)} onChange={onChange} />
     }
     render(<Parent />)
-    const up = () => fireEvent.click(screen.getByRole('button', { name: 'Increase percentage' }))
+    const up = () => fireEvent.click(screen.getByRole('button', { name: 'Increase Assumed inflation' }))
 
     up()
     up()
@@ -135,7 +135,7 @@ describe('InflationSetting', () => {
     const onChange = vi.fn().mockReturnValue(save.promise)
     render(<InflationSetting settings={settings(0.02)} onChange={onChange} />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Increase percentage' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Increase Assumed inflation' }))
     await act(async () => {
       save.reject(new Error('boom'))
       await save.promise.catch(() => {})
@@ -146,7 +146,7 @@ describe('InflationSetting', () => {
     expect(input()).toHaveValue('2,0')
 
     onChange.mockResolvedValue(undefined)
-    fireEvent.click(screen.getByRole('button', { name: 'Increase percentage' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Increase Assumed inflation' }))
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 

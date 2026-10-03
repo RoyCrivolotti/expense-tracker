@@ -56,10 +56,10 @@ export function ScenarioBar({ scenarios, editor, actions }: ScenarioBarProps) {
         <button
           type="button"
           className={styles.newTab}
-          aria-label={`New scenario from ${draft.name || 'this one'}`}
+          aria-label={`Duplicate ${draft.name || 'this scenario'} as a new scenario`}
           onClick={duplicate}
         >
-          + New
+          + Duplicate
         </button>
       ) : null}
       <span className={styles.rowSpacer} />

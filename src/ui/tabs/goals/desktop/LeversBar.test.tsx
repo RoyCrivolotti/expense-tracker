@@ -37,7 +37,7 @@ describe('LeversBar', () => {
     expect(screen.getByLabelText('Monthly investing')).toHaveValue('500')
     expect(screen.getByLabelText('Starting invested')).toHaveValue('1.000.000')
     expect(screen.getByLabelText('Horizon (years)')).toHaveValue('30')
-    expect(screen.getByLabelText('Real return (%/yr, after inflation)')).toHaveValue('7,0')
+    expect(screen.getByRole('textbox', { name: 'Real return (%/yr, after inflation)' })).toHaveValue('7,0')
     expect(screen.getByText('Never')).toBeInTheDocument()
   })
 
@@ -50,7 +50,7 @@ describe('LeversBar', () => {
       </MoneyFormatContext.Provider>,
     )
     const order = (label: string) => {
-      const field = screen.getByLabelText(label)
+      const field = screen.getByRole('textbox', { name: label })
       const unit = field.parentElement!.querySelector('[class*="leverUnit"]')!
       return field.compareDocumentPosition(unit) & Node.DOCUMENT_POSITION_FOLLOWING ? 'after' : 'before'
     }
@@ -115,7 +115,7 @@ describe('LeversBar', () => {
 
   it('takes a typed percentage as a fraction within its range', async () => {
     const { onChange } = renderBar()
-    const ret = screen.getByLabelText('Real return (%/yr, after inflation)')
+    const ret = screen.getByRole('textbox', { name: 'Real return (%/yr, after inflation)' })
     await userEvent.clear(ret)
     await userEvent.type(ret, '9,5{Enter}')
     expect(onChange).toHaveBeenLastCalledWith({ expectedRealReturn: 0.095 })
@@ -130,7 +130,7 @@ describe('LeversBar', () => {
     it('commits nothing when it is only tabbed through, whatever it shows', async () => {
       // 4.25% is shown as "4,3", and writing that back would change the plan's numbers.
       const { onChange } = renderBar({}, { expectedRealReturn: 0.0425 })
-      const field = screen.getByLabelText(RETURN)
+      const field = screen.getByRole('textbox', { name: RETURN })
       expect(field).toHaveValue('4,3')
 
       await userEvent.click(field)
@@ -141,7 +141,7 @@ describe('LeversBar', () => {
 
     it('still commits what is typed, even when that is what the field shows', async () => {
       const { onChange } = renderBar({}, { expectedRealReturn: 0.0425 })
-      const field = screen.getByLabelText(RETURN)
+      const field = screen.getByRole('textbox', { name: RETURN })
 
       await userEvent.clear(field)
       await userEvent.type(field, '4,3{Enter}')
@@ -174,7 +174,7 @@ describe('LeversBar', () => {
       const { onChange } = renderBar()
       const horizon = screen.getByLabelText('Horizon (years)')
       const amount = screen.getByLabelText('Monthly investing')
-      const percent = screen.getByLabelText(RETURN)
+      const percent = screen.getByRole('textbox', { name: RETURN })
 
       await userEvent.clear(horizon)
       await userEvent.type(horizon, '{Enter}')
@@ -191,7 +191,7 @@ describe('LeversBar', () => {
 
     it('takes a comma or a point as the decimal mark of a percentage', async () => {
       const { onChange } = renderBar()
-      const field = screen.getByLabelText(RETURN)
+      const field = screen.getByRole('textbox', { name: RETURN })
 
       await userEvent.clear(field)
       await userEvent.type(field, '4.5{Enter}')
@@ -203,15 +203,22 @@ describe('LeversBar', () => {
     })
   })
 
+  it('puts the cursor in the field from a tap beside its digits, on the unit', async () => {
+    renderBar()
+    const field = screen.getByRole('textbox', { name: 'Monthly investing' })
+    await userEvent.click(field.parentElement!.querySelector('[class*="leverUnit"]')!)
+    expect(field).toHaveFocus()
+  })
+
   it('moves a percentage with its slider', () => {
     const { onChange } = renderBar()
-    fireEvent.change(screen.getByLabelText('Real return (%/yr, after inflation) slider'), { target: { value: '0.05' } })
+    fireEvent.change(screen.getByRole('slider', { name: 'Real return (%/yr, after inflation)' }), { target: { value: '0.05' } })
     expect(onChange).toHaveBeenLastCalledWith({ expectedRealReturn: 0.05 })
   })
 
   it('sets the purchase year from its slider, with the first step meaning never', () => {
     const { onChange } = renderBar()
-    const slider = screen.getByLabelText('Purchase year slider')
+    const slider = screen.getByRole('slider', { name: 'Purchase year' })
     expect(slider).toHaveAttribute('aria-valuetext', 'Never')
     fireEvent.change(slider, { target: { value: '5' } })
     expect(onChange).toHaveBeenLastCalledWith({ housePurchaseYear: 5 })
@@ -219,7 +226,7 @@ describe('LeversBar', () => {
 
   it('lets the purchase year slide back to never', () => {
     const { onChange } = renderBar({}, { housePurchaseYear: 5 })
-    fireEvent.change(screen.getByLabelText('Purchase year slider'), { target: { value: '-1' } })
+    fireEvent.change(screen.getByRole('slider', { name: 'Purchase year' }), { target: { value: '-1' } })
     expect(onChange).toHaveBeenLastCalledWith({ housePurchaseYear: null })
   })
 
@@ -230,9 +237,22 @@ describe('LeversBar', () => {
 
   it('gives the purchase year slider the horizon as its top', () => {
     renderBar({}, { horizonYears: 12, housePurchaseYear: 4 })
-    const slider = screen.getByLabelText('Purchase year slider')
+    const slider = screen.getByRole('slider', { name: 'Purchase year' })
     expect(slider).toHaveAttribute('max', '12')
     expect(screen.getByText('Year 4')).toBeInTheDocument()
+  })
+
+  it('keeps a purchase year past the horizon on the track, so the slider and its name agree', () => {
+    renderBar({}, { horizonYears: 10, housePurchaseYear: 15 })
+    const slider = screen.getByRole('slider', { name: 'Purchase year' })
+    expect(slider).toHaveAttribute('max', '15')
+    expect(slider).toHaveValue('15')
+    expect(slider).toHaveAttribute('aria-valuetext', 'Year 15')
+  })
+
+  it('reads a percentage slider out as a percentage rather than a bare fraction', () => {
+    renderBar()
+    expect(screen.getByRole('slider', { name: 'Real return (%/yr, after inflation)' })).toHaveAttribute('aria-valuetext', '7,0%')
   })
 
   it('shows the net worth the plan ends at, from the draft the charts read', () => {
@@ -380,10 +400,54 @@ describe('LeversBar', () => {
     )
     // The bar's own height (nothing in jsdom) and the air around it.
     expect(root.style.scrollPaddingBottom).toBe('20px')
+    // Also as a custom property, for the bar's controls to take back out of their scroll margin.
+    expect(root.style.getPropertyValue('--scroll-pad-bottom')).toBe('20px')
     unmount()
     expect(root.style.scrollPaddingBottom).toBe('5px')
+    expect(root.style.getPropertyValue('--scroll-pad-bottom')).toBe('')
     root.style.scrollPaddingBottom = ''
     held.remove()
+  })
+
+  it('lifts the padding while focus is inside the bar, and puts it back as focus leaves it', async () => {
+    // Safari scrolled the page by the bar's height for each control focused in the bar, as if the
+    // padding kept it clear of itself.
+    const root = document.documentElement
+    root.style.scrollPaddingTop = ''
+    root.style.scrollPaddingBottom = '5px'
+    const stuck = document.createElement('style')
+    stuck.textContent = '[class*="leversBar"] { position: sticky; top: 10px; bottom: 12px; }'
+    document.head.append(stuck)
+    const draft = makeDraft()
+    const { unmount } = render(
+      <>
+        <button type="button">Outside</button>
+        <LeversBar draft={draft} resultDraft={draft} keys={DEFAULT_LEVERS} onChange={vi.fn()} expanded={false} panelId="p" onToggle={vi.fn()} />
+      </>,
+    )
+    expect(root.style.scrollPaddingTop).toBe('18px')
+    expect(root.style.scrollPaddingBottom).toBe('20px')
+
+    await userEvent.click(screen.getByRole('textbox', { name: 'Monthly investing' }))
+    expect(root.style.scrollPaddingTop).toBe('')
+    expect(root.style.scrollPaddingBottom).toBe('5px')
+    // The margin that does the same for Chromium is driven by the property, which does not lift.
+    expect(root.style.getPropertyValue('--scroll-pad-bottom')).toBe('20px')
+
+    // From one control of the bar to another it stays lifted.
+    await userEvent.tab()
+    expect(root.style.scrollPaddingTop).toBe('')
+    expect(root.style.scrollPaddingBottom).toBe('5px')
+
+    screen.getByRole('button', { name: 'Outside' }).focus()
+    expect(root.style.scrollPaddingTop).toBe('18px')
+    expect(root.style.scrollPaddingBottom).toBe('20px')
+
+    unmount()
+    expect(root.style.scrollPaddingTop).toBe('')
+    expect(root.style.scrollPaddingBottom).toBe('5px')
+    root.style.scrollPaddingBottom = ''
+    stuck.remove()
   })
 
   it('leaves the bottom padding alone where the bar is not held to the bottom edge', () => {

@@ -73,7 +73,7 @@ export function LeversBar({ draft, resultDraft, keys, onChange, onUnstar, expand
   const bar = useRef<HTMLDivElement>(null)
   useBarScrollPadding(bar)
   return (
-    <div ref={bar} className={styles.leversBar}>
+    <div ref={bar} className={styles.leversBar} data-levers-bar="">
       <Card className={styles.levers}>
         <div className={styles.leverGrid} role="group" aria-label="Key inputs" {...{ [STAR_HOME_ATTR]: '' }}>
           {keys.map((key) => (

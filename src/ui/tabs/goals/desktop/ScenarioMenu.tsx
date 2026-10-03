@@ -6,6 +6,7 @@ import { ColorSwatchPicker } from '../../../components/ColorSwatchPicker'
 import { Presence } from '../../../components/Presence'
 import { EXIT_MS } from '../../../hooks/motion'
 import { useFocusTrap } from '../../../hooks/useFocusTrap'
+import { useMediaQuery } from '../../../hooks/useMediaQuery'
 import { usePopoverMotion } from '../../../hooks/usePopoverMotion'
 import { usePopoverPosition } from '../../../hooks/usePopoverPosition'
 import { useDismissOnOutsidePointer } from '../../../charts/useDismissOnOutsidePointer'
@@ -81,9 +82,12 @@ function MenuPopover(props: PopoverProps) {
   // is what most people open it to change.
   const placed = pos !== null
   const nameField = useRef<HTMLInputElement>(null)
+  // On a touch screen focus in the name raises the keyboard over half of the page every time the
+  // menu opens, whatever it was opened for. There the menu itself takes focus, and the name is a tap away.
+  const touch = useMediaQuery('(pointer: coarse)')
   useEffect(() => {
-    if (placed) nameField.current?.focus()
-  }, [placed])
+    if (placed) (touch ? popoverRef : nameField).current?.focus()
+  }, [placed, touch])
 
   // Each action that leaves the menu has done its work by then.
   const then = (action: () => void) => () => {
@@ -106,6 +110,7 @@ function MenuPopover(props: PopoverProps) {
       }}
       role="dialog"
       aria-label="Scenario options"
+      tabIndex={-1}
     >
       <div className={styles.menuRow}>
         <ColorSwatchPicker color={draft.color} onChange={(color) => props.onPatch({ color })} label="Scenario color" />

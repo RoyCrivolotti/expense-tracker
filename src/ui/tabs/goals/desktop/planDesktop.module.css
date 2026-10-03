@@ -41,9 +41,13 @@
 }
 
 /* Focus inside the bar takes the page's scroll padding back out, or a control that is stuck
-   would count as hidden under itself and the page would scroll to uncover it. */
+   would count as hidden under itself and the page would scroll to uncover it: at the top where
+   the bar is stuck under the header, and at the bottom where it is held to the edge (Chromium
+   scrolled the page 366px on 1280x800 for the star that took a removed one's place). Safari
+   ignores a scroll margin for focus; useBarScrollPadding lifts the padding for it. */
 .leversBar * {
   scroll-margin-top: calc(-1 * var(--scroll-pad-top, 0px));
+  scroll-margin-bottom: calc(-1 * var(--scroll-pad-bottom, 0px));
 }
 
 .levers {
@@ -130,7 +134,7 @@
   margin-left: -0.125rem;
 }
 
-.leverInput:hover {
+.leverValue:hover .leverInput {
   border-color: var(--color-border);
 }
 
@@ -348,6 +352,11 @@
 
 .menu[data-side='above'] {
   --pop-shift: 0.3rem;
+}
+
+/* Focus lands on the menu itself on a touch screen, which is not a control to ring. */
+.menu:focus {
+  outline: none;
 }
 
 .menuLeaving {
@@ -586,6 +595,13 @@
   color: var(--color-text-muted);
 }
 
+/* With no levers the message is all the grid holds, and the result beside it is three lines high:
+   the grid takes that height so the message can sit in the middle of the bar, not at its top edge. */
+.leverGrid:has(.leverEmpty) {
+  align-self: stretch;
+  align-content: center;
+}
+
 .star {
   /* The amber is darkened a little toward the text colour: the plain amber is 2.8:1 against the
      card in the light theme, under the 3:1 a graphic that carries a state has to have. */
@@ -614,15 +630,22 @@
   inset: -0.2rem;
 }
 
-.star:hover:not(:disabled),
 .star:focus-visible {
   color: var(--star-amber);
 }
 
 /* Pressing a filled star takes the input out of the bar, so under the pointer it shows the
-   outline it is about to become. */
-.starOn:hover:not(:disabled) svg {
-  fill: none;
+   outline it is about to become. Only where a pointer can leave: a touch screen keeps :hover on
+   whatever was last under the finger, and when the star beside it left the bar the next lever's
+   slid under that spot and drew itself as removed while it was still in. */
+@media (hover: hover) {
+  .star:hover:not(:disabled) {
+    color: var(--star-amber);
+  }
+
+  .starOn:hover:not(:disabled) svg {
+    fill: none;
+  }
 }
 
 .star:focus-visible {
@@ -670,4 +693,33 @@
   margin: 0;
   font-size: 0.8125rem;
   color: var(--color-text-muted);
+}
+
+/* A finger is a coarser pointer than a mouse, and has no hover to show a figure can be typed over.
+   Targets grow to what a touch target is held to elsewhere in the app (about 44px) without moving
+   anything where they can, by their own height where they cannot. */
+@media (pointer: coarse) {
+  .tab,
+  .newTab,
+  .allInputs {
+    min-height: 2.75rem;
+  }
+
+  .menuTrigger {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  /* Up and to both sides: below the star is the figure it belongs to, and a tap on that must
+     not take the lever out of the bar. */
+  .star::after {
+    inset: -0.9rem -0.9rem -0.15rem;
+  }
+}
+
+/* No hover on a touch screen, so the figures wear the line a field wears. */
+@media (hover: none) {
+  .leverInput {
+    border-bottom-color: var(--color-border);
+  }
 }

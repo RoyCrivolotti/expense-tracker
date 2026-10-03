@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import type { GoalScenario } from '../../../../types'
 import type { ExpenseActions } from '../../../actions'
+import { installFakeMatchMedia } from '../../../../testing/fakeMatchMedia'
 import { makeActions } from '../../../../testing/makeActions'
 import { makeDataset, makeScenario } from '../../../../testing/factories'
 import { useScenarioEditor } from '../useScenarioEditor'
@@ -156,7 +157,7 @@ describe('ScenarioBar', () => {
   it('starts a new scenario as a copy of the open one and opens it', async () => {
     const actions = makeActions()
     render(<Harness initial={[plan, other]} actions={actions} />)
-    await userEvent.click(screen.getByRole('button', { name: 'New scenario from Path A' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Duplicate Path A as a new scenario' }))
     expect(actions.createScenario).toHaveBeenCalledTimes(1)
     expect(await screen.findAllByRole('tab')).toHaveLength(3)
     expect(screen.getAllByRole('tab').at(-1)).toHaveAttribute('aria-selected', 'true')
@@ -249,6 +250,18 @@ describe('ScenarioBar', () => {
     render(<Harness initial={[plan, other]} actions={makeActions()} />)
     await openMenu()
     expect(screen.getByLabelText('Scenario name')).toHaveFocus()
+  })
+
+  it('puts focus on the menu rather than its name on a touch screen, so the keyboard stays down', async () => {
+    const media = installFakeMatchMedia((query) => query === '(pointer: coarse)')
+    try {
+      render(<Harness initial={[plan, other]} actions={makeActions()} />)
+      await openMenu()
+      expect(screen.getByRole('dialog', { name: 'Scenario options' })).toHaveFocus()
+      expect(screen.getByLabelText('Scenario name')).not.toHaveFocus()
+    } finally {
+      media.setMatching(() => false)
+    }
   })
 
   it('closes the menu with Escape and gives focus back to its button', async () => {

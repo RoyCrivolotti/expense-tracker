@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('../../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: () => true }))
 
-import { DateField, MoneyField, NumberField } from './goalControlFields'
+import { DateField, MoneyField, NumberField, PercentField, PurchaseYearField } from './goalControlFields'
 
 describe('MoneyField', () => {
   it('is a plain input with no slider, and takes any amount typed', async () => {
@@ -117,5 +117,38 @@ describe('DateField', () => {
       />,
     )
     expect(screen.getByText('Anchors the projection to a date.')).toBeInTheDocument()
+  })
+})
+
+describe('PercentField', () => {
+  it('names the stepper, its buttons and the slider after the field, and reads the slider as a percentage', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<PercentField label="Mortgage rate (%/yr)" value={0.035} onChange={onChange} />)
+
+    expect(screen.getByRole('textbox', { name: 'Mortgage rate (%/yr)' })).toHaveValue('3,5')
+    expect(screen.getByRole('slider', { name: 'Mortgage rate (%/yr)' })).toHaveAttribute('aria-valuetext', '3,5%')
+    await user.click(screen.getByRole('button', { name: 'Increase Mortgage rate (%/yr)' }))
+    expect(onChange).toHaveBeenLastCalledWith(0.04)
+    await user.click(screen.getByRole('button', { name: 'Decrease Mortgage rate (%/yr)' }))
+    expect(onChange.mock.lastCall?.[0]).toBeCloseTo(0.03, 10)
+  })
+})
+
+describe('PurchaseYearField', () => {
+  it('reads out the year, not the position, and offers a never at the start', () => {
+    render(<PurchaseYearField value={4} maxYear={10} onChange={vi.fn()} />)
+    const slider = screen.getByRole('slider', { name: 'Purchase year' })
+    expect(slider).toHaveAttribute('aria-valuetext', 'Year 4')
+    expect(slider).toHaveAttribute('min', '-1')
+    expect(slider).toHaveAttribute('max', '10')
+  })
+
+  it('keeps a year past the horizon on the track instead of clamping it to the end', () => {
+    render(<PurchaseYearField value={15} maxYear={10} onChange={vi.fn()} />)
+    const slider = screen.getByRole('slider', { name: 'Purchase year' })
+    expect(slider).toHaveAttribute('max', '15')
+    expect(slider).toHaveValue('15')
+    expect(slider).toHaveAttribute('aria-valuetext', 'Year 15')
   })
 })

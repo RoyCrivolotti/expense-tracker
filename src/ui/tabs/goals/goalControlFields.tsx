@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { formatMoneyInput, parseMoneyToCents } from '../../../engine'
+import { formatMoneyInput, formatPercent, parseMoneyToCents } from '../../../engine'
 import { DateInput } from '../../components/DateInput'
 import { PercentStepper } from '../../components/PercentStepper'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
@@ -123,11 +123,12 @@ export function PercentField({
   onChange,
   showSlider = true,
 }: PercentFieldProps) {
+  const format = useMoneyFormat()
   return (
     <div className={styles.field}>
       <div className={styles.fieldRow}>
         <span className={styles.fieldLabel}>{label}</span>
-        <PercentStepper value={value} min={min} max={max} onChange={onChange} />
+        <PercentStepper value={value} min={min} max={max} onChange={onChange} ariaLabel={label} />
       </div>
       {showSlider ? (
         <input
@@ -138,6 +139,7 @@ export function PercentField({
           step={step}
           value={value}
           aria-label={label}
+          aria-valuetext={formatPercent(value, format)}
           onChange={(e) => onChange(Number(e.target.value))}
         />
       ) : null}
@@ -178,6 +180,9 @@ export function PurchaseYearField({ value, maxYear, onChange }: PurchaseYearFiel
   const raw = value ?? -1
   const label =
     raw < 0 ? 'Never' : raw === 0 ? 'Now' : `Year ${raw}`
+  // A purchase year past the horizon (the horizon was shortened after it was set) stays on the
+  // track, where it would otherwise be clamped to the end while the label still named the year.
+  const max = Math.max(maxYear, raw)
 
   return (
     <label className={styles.field}>
@@ -189,9 +194,11 @@ export function PurchaseYearField({ value, maxYear, onChange }: PurchaseYearFiel
         className={styles.range}
         type="range"
         min={-1}
-        max={maxYear}
+        max={max}
         step={1}
         value={raw}
+        aria-label="Purchase year"
+        aria-valuetext={label}
         onChange={(e) => {
           const v = Number(e.target.value)
           onChange(v < 0 ? null : v)

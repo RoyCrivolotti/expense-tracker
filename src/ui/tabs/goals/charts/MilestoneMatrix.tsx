@@ -10,6 +10,7 @@ import {
   yearsToTargetFromProjection,
 } from '../../../../engine'
 import { ChartShell } from './ChartShell'
+import { cellColors } from './matrixColors'
 import { formatMoneyShort } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import styles from '../goals.module.css'
@@ -17,15 +18,6 @@ import styles from '../goals.module.css'
 function shortName(name: string): string {
   const colon = name.indexOf(':')
   return colon >= 0 ? name.slice(0, colon).trim() : name
-}
-
-function cellColor(years: number | null): string {
-  if (years === null) return '#fecaca'
-  if (years === 0) return '#166534'
-  if (years <= 10) return '#86efac'
-  if (years <= 20) return '#fde047'
-  if (years <= 30) return '#fdba74'
-  return '#f87171'
 }
 
 function cellLabel(years: number | null): string {
@@ -190,10 +182,7 @@ function MilestoneMatrixImpl({
                   <td
                     key={milestones[i]?.amountCents ?? i}
                     className={styles.milestoneCell}
-                    style={{
-                      background: cellColor(years),
-                      color: years !== null && years > 12 ? '#fff' : '#111',
-                    }}
+                    style={cellColors(years)}
                   >
                     {cellLabel(years)}
                   </td>
