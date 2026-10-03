@@ -3,6 +3,7 @@ import { DEFAULT_LEVERS, MAX_LEVERS, type LeverKey } from '../../../engine'
 import type { ExpenseSettings } from '../../../types'
 import { failureMessage } from '../../hooks/useFailureToast'
 import { useToast } from '../../hooks/useToast'
+import { LEVER_SPECS } from './leverFields'
 
 type Save = (patch: Partial<ExpenseSettings>) => Promise<void>
 
@@ -99,15 +100,33 @@ export function useStarredLevers(saved: readonly LeverKey[], save: Save | undefi
     [write],
   )
 
+  // The toast after a star takes an input out: the rest of the bar moves up to fill its place,
+  // and on a touch screen the star's own tooltip is not there to say what it did. Undo puts the
+  // input back where it was, in the list as it is by then, in one write.
+  const undoRemoval = useCallback(
+    (key: LeverKey, index: number) => {
+      const now = current.current
+      if (now.includes(key) || now.length >= MAX_LEVERS) return
+      choose([...now.slice(0, index), key, ...now.slice(index)])
+    },
+    [choose],
+  )
+
   const canEdit = save !== undefined
   const toggle = useCallback(
     (key: LeverKey) => {
       if (!send.current) return
       const now = current.current
-      if (now.includes(key)) choose(now.filter((k) => k !== key))
-      else if (now.length < MAX_LEVERS) choose([...now, key])
+      if (now.includes(key)) {
+        const index = now.indexOf(key)
+        choose(now.filter((k) => k !== key))
+        showToast(`Removed ${LEVER_SPECS[key].short} from the bar`, 'info', {
+          label: 'Undo',
+          onAction: () => undoRemoval(key, index),
+        })
+      } else if (now.length < MAX_LEVERS) choose([...now, key])
     },
-    [choose],
+    [choose, showToast, undoRemoval],
   )
   const reset = useCallback(() => {
     if (send.current) choose([...DEFAULT_LEVERS])

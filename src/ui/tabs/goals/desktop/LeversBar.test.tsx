@@ -450,6 +450,37 @@ describe('LeversBar', () => {
     held.remove()
   })
 
+  it("publishes the bar's height under the name toasts lift themselves by, only while the bar is held to the bottom edge", () => {
+    const root = document.documentElement
+    const height = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(111)
+    const style = document.createElement('style')
+    document.head.append(style)
+    try {
+      const { unmount } = render(
+        <LeversBar draft={makeDraft()} resultDraft={makeDraft()} keys={DEFAULT_LEVERS} onChange={vi.fn()} expanded={false} panelId="p" onToggle={vi.fn()} />,
+      )
+      // In the page, a toast has nothing to clear.
+      expect(root.style.getPropertyValue('--exp-selection-bar')).toBe('')
+
+      style.textContent = '[class*="leversBar"] { position: sticky; bottom: 12px; }'
+      fireEvent(window, new Event('resize'))
+      expect(root.style.getPropertyValue('--exp-selection-bar')).toBe('111px')
+
+      style.textContent = ''
+      fireEvent(window, new Event('resize'))
+      expect(root.style.getPropertyValue('--exp-selection-bar')).toBe('')
+
+      style.textContent = '[class*="leversBar"] { position: sticky; bottom: 12px; }'
+      fireEvent(window, new Event('resize'))
+      unmount()
+      expect(root.style.getPropertyValue('--exp-selection-bar')).toBe('')
+    } finally {
+      style.remove()
+      height.mockRestore()
+      root.style.scrollPaddingBottom = ''
+    }
+  })
+
   it('lifts the padding while focus is inside the bar, and puts it back as focus leaves it', async () => {
     // Safari scrolled the page by the bar's height for each control focused in the bar, as if the
     // padding kept it clear of itself.
