@@ -1200,6 +1200,299 @@
   white-space: nowrap;
 }
 
+/* Years to milestone. A cell is the normal text colour on a tint of the accent that deepens
+   with the years, so it reads the same in the light theme, the dark one and forced colours
+   (where the tint goes and the numbers stay); "already there" is a quiet tick and "not within
+   the horizon" a hatched box. Nothing here is a fixed colour. */
+.matrixTools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin: 0 0 0.7rem;
+}
+
+.matrixToggle {
+  appearance: none;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-text) 4%, var(--color-bg));
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+@media (hover: hover) {
+  .matrixToggle:hover:not(:disabled) {
+    color: var(--color-text);
+  }
+}
+
+.matrixToggle[aria-pressed='true'] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+.matrixToggle:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.matrixToggle:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@media (forced-colors: active) {
+  .matrixToggle[aria-pressed='true'] {
+    border: 2px solid Highlight;
+  }
+}
+
+.matrixTable tbody tr + tr > * {
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+
+.matrixTable .matrixHead {
+  vertical-align: bottom;
+}
+
+/* A name sits on the line of the figure in the box, not in the middle of a row that is taller
+   while the figures carry a line under them. */
+.matrixTable tbody th {
+  vertical-align: top;
+  padding-top: 0.65rem;
+}
+
+/* The row and column of the cell the reader is on, lightly, and heavier where they cross. */
+.matrixTable .matrixMarked {
+  font-weight: 600;
+}
+
+.matrixTable .matrixHead.matrixMarked .milestoneHeadAmount {
+  color: var(--color-accent);
+}
+
+.matrixFromToday .milestoneScenarioName {
+  color: var(--color-text-muted);
+}
+
+.matrixPlanTag {
+  align-self: flex-start;
+  margin-left: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0 5px;
+  color: var(--color-text-muted);
+  font-size: 0.6rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.matrixCell {
+  padding: 0.25rem 0.2rem;
+  vertical-align: top;
+  /* The names stay put on the left while the columns scroll, so a cell the keyboard reaches is
+     scrolled to clear of them. */
+  scroll-margin-left: 9.5rem;
+}
+
+.matrixLine {
+  background: color-mix(in srgb, var(--color-accent) 7%, transparent);
+}
+
+.matrixCross {
+  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+}
+
+.matrixCell:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+/* The border is only there so that forced colours, which drop the tint, still draws a box. */
+.matrixBox {
+  display: block;
+  min-width: 2.4rem;
+  padding: 0.3rem 0.2rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+
+.matrixTint {
+  background: color-mix(in srgb, var(--color-accent) var(--tint, 5%), transparent);
+}
+
+.matrixDone {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.matrixBeyond {
+  font-weight: 500;
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-text) 7%, transparent) 0 3px,
+    transparent 3px 6px
+  );
+  border: 1px dashed color-mix(in srgb, var(--color-text-muted) 50%, transparent);
+}
+
+.matrixGap {
+  display: block;
+  margin-top: 2px;
+  color: var(--color-text-muted);
+  font-size: 0.66rem;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.matrixSooner {
+  color: var(--exp-success-text);
+}
+
+.matrixLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.9rem;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+}
+
+.matrixLegend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.matrixKey {
+  display: inline-block;
+  width: 1.4rem;
+  height: 0.7rem;
+  border: 1px solid transparent;
+  border-radius: 3px;
+}
+
+.matrixKeyTint {
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--color-accent) 5%, transparent),
+    color-mix(in srgb, var(--color-accent) 31%, transparent)
+  );
+}
+
+.matrixKeyBeyond {
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-text) 14%, transparent) 0 3px,
+    transparent 3px 6px
+  );
+  border: 1px dashed color-mix(in srgb, var(--color-text-muted) 50%, transparent);
+}
+
+.matrixLegendSooner {
+  color: var(--exp-success-text);
+}
+
+/* The sentence for the cell in hand. Room for its two lines (four on a phone) is kept while
+   it is empty, so pointing at the first cell does not push what is under the card down. */
+.matrixReadout {
+  margin: 0.65rem 0 0;
+  min-height: 2.8em;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.matrixReadoutEmpty {
+  color: var(--color-text-muted);
+}
+
+/* A finger on the wide page: the toggle and the cells are 44px, as the other controls here. */
+@media (min-width: 900px) and (pointer: coarse) {
+  .matrixToggle {
+    min-height: 2.75rem;
+  }
+
+  .matrixCell {
+    height: 2.75rem;
+  }
+}
+
+/* The phone's layout: seven milestones in 325px with no sideways scroll, so the names give up
+   width, the columns lose their padding and the type is a notch smaller. A path's name runs to
+   two lines of the narrow column and the rest is its title. */
+@media (max-width: 899px) {
+  .matrixTable {
+    font-size: 0.7rem;
+  }
+
+  .matrixTable .milestoneScenarioHead,
+  .matrixTable .milestoneScenarioCell {
+    width: 3.7rem;
+    min-width: 3.7rem;
+    max-width: 3.7rem;
+    padding-right: 3px;
+  }
+
+  .matrixTable .milestoneScenarioNameRow {
+    gap: 4px;
+  }
+
+  .matrixTable .milestoneScenarioName {
+    font-size: 0.7rem;
+  }
+
+  .matrixTable .matrixPlanTag {
+    display: none;
+  }
+
+  .matrixTable .milestoneHead,
+  .matrixTable .matrixCell {
+    padding-left: 1px;
+    padding-right: 1px;
+  }
+
+  .matrixTable .milestoneHeadAmount {
+    font-size: 0.72rem;
+  }
+
+  .matrixTable .milestoneHeadName {
+    max-width: 2.6rem;
+    font-size: 0.6rem;
+  }
+
+  /* The month and year take two lines, so that a column is as wide as its amount and not as
+     wide as the date under it. */
+  .matrixTable .milestoneReachedOn {
+    max-width: 2.4rem;
+    margin: 0 auto;
+    font-size: 0.6rem;
+    white-space: normal;
+  }
+
+  .matrixTable .matrixCell {
+    scroll-margin-left: 4rem;
+  }
+
+  .matrixBox {
+    min-width: 0;
+    padding: 0.3rem 0;
+    font-size: 0.75rem;
+  }
+
+  .matrixReadout {
+    min-height: 5.6em;
+  }
+}
+
 /* The side-by-side table shares the matrix's frame; its cells are words and money, not
    colour-coded years, so they sit left and take their own width. */
 .compareHead,
