@@ -614,15 +614,22 @@
   inset: -0.2rem;
 }
 
-.star:hover:not(:disabled),
 .star:focus-visible {
   color: var(--star-amber);
 }
 
 /* Pressing a filled star takes the input out of the bar, so under the pointer it shows the
-   outline it is about to become. */
-.starOn:hover:not(:disabled) svg {
-  fill: none;
+   outline it is about to become. Only where a pointer can leave: a touch screen keeps :hover on
+   whatever was last under the finger, and when the star beside it left the bar the next lever's
+   slid under that spot and drew itself as removed while it was still in. */
+@media (hover: hover) {
+  .star:hover:not(:disabled) {
+    color: var(--star-amber);
+  }
+
+  .starOn:hover:not(:disabled) svg {
+    fill: none;
+  }
 }
 
 .star:focus-visible {

@@ -103,3 +103,16 @@ describe('the width at which Goals changes from the phone layout to the wide one
     expect(widths('tabs/goals/goals.module.css', 'max').filter((w) => w === wideMin)).toEqual([])
   })
 })
+
+describe('the wide plan on a touch screen', () => {
+  const css = stylesheet('tabs/goals/desktop/planDesktop.module.css')
+  const block = (query: string) => new RegExp(`@media \\(${query}\\) \\{([\\s\\S]*?)\\n\\}`).exec(css)?.[1] ?? ''
+
+  it('previews a star taking its input out of the bar only where a pointer can leave it', () => {
+    // A touch screen keeps :hover on what was last under the finger: when one star left the bar
+    // the next lever's slid under that spot and drew itself as removed while it was still in.
+    const hover = block('hover: hover')
+    expect(hover).toMatch(/\.starOn:hover/)
+    expect(css.replace(hover, '')).not.toMatch(/\.star(On)?:hover/)
+  })
+})
