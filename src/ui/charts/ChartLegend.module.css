@@ -27,4 +27,6 @@
   height: 12px;
   border-radius: 3px;
   flex: none;
+  /* A swatch is the key to a colour on a chart: forced colours would paint it the page colour. */
+  forced-color-adjust: none;
 }

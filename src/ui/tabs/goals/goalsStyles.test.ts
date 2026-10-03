@@ -124,3 +124,20 @@ describe('the wide plan on a touch screen', () => {
     expect(coarse).toMatch(/\.star::after\s*\{[^}]*inset:\s*-0\.9rem -0\.9rem -0\.15rem/)
   })
 })
+
+describe('the swatches that key a colour on a chart', () => {
+  // In forced colours the browser paints a background the page colour, so a swatch that is not
+  // exempted shows nothing and the lines it names have no key.
+  it.each([
+    ['tabs/goals/goals.module.css', '.swatch'],
+    ['charts/LiveLegend.module.css', '.swatch'],
+    ['charts/ChartLegend.module.css', '.swatch'],
+    ['charts/charts.module.css', '.swatch'],
+    ['charts/charts.module.css', '.tooltipSwatch'],
+  ])('keeps its colour in forced colours: %s %s', (file, selector) => {
+    const sized = rules(file).filter((r) => r.selector === selector && /width:/.test(r.body))
+
+    expect(sized.length).toBeGreaterThan(0)
+    for (const r of sized) expect(r.body).toMatch(/forced-color-adjust:\s*none/)
+  })
+})

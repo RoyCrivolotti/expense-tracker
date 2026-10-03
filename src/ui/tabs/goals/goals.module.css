@@ -784,6 +784,8 @@
   height: 8px;
   border-radius: 999px;
   flex-shrink: 0;
+  /* A swatch is the key to a colour on a chart: forced colours would paint it the page colour. */
+  forced-color-adjust: none;
 }
 
 .iconBtn {
