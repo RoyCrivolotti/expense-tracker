@@ -41,15 +41,11 @@ describe('trackScrollPadding', () => {
     stop()
   })
 
-  it('sets the bottom padding only when given one, and otherwise leaves the page its own', () => {
-    root.style.scrollPaddingBottom = '9px'
+  it('leaves the bottom padding to the stylesheet', () => {
     const stop = trackScrollPadding({ top: () => 112, watch: () => [] })
-    expect(root.style.scrollPaddingBottom).toBe('9px')
-    stop()
 
-    const stopWithBottom = trackScrollPadding({ top: () => 112, bottom: '80px', watch: () => [] })
-    expect(root.style.scrollPaddingBottom).toBe('80px')
-    stopWithBottom()
+    expect(root.style.scrollPaddingBottom).toBe('')
+    stop()
   })
 
   it('measures again when the window is resized, and when something it watches changes size', () => {
@@ -82,15 +78,13 @@ describe('trackScrollPadding', () => {
 
   it('puts back what was there, and stops listening, when it is stopped', () => {
     root.style.scrollPaddingTop = '3px'
-    root.style.scrollPaddingBottom = '5px'
     root.style.setProperty('--scroll-pad-top', '7px')
     const remove = vi.spyOn(window, 'removeEventListener')
-    const stop = trackScrollPadding({ top: () => 112, bottom: '80px', watch: () => [] })
+    const stop = trackScrollPadding({ top: () => 112, watch: () => [] })
 
     stop()
 
     expect(root.style.scrollPaddingTop).toBe('3px')
-    expect(root.style.scrollPaddingBottom).toBe('5px')
     expect(root.style.getPropertyValue('--scroll-pad-top')).toBe('7px')
     expect(FakeResizeObserver.instances.every((o) => o.disconnected)).toBe(true)
     expect(remove).toHaveBeenCalledWith('resize', expect.any(Function))
