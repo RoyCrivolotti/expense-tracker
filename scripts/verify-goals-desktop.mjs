@@ -4,7 +4,7 @@
  * no scroll of its own, the levers bar in reach (held to the bottom edge while its place is below
  * the fold, under the header once scrolled past), the inputs panel folding in and out, the
  * scenario menu, the stars that move an input to the bar and back, the order Tab goes in and that
- * nothing it reaches is under the bar.
+ * nothing it reaches is under the bar, and the question asked before leaving Goals with an unsaved edit.
  *
  * jsdom lays nothing out, so the unit tests cannot say any of this. Manual, like
  * verify:goals-nav: it needs a browser and takes a few minutes, so it is not part of
@@ -565,6 +565,76 @@ async function checkOtherViews(browser, engine) {
   await context.close()
 }
 
+/**
+ * Leaving Goals with an unsaved edit asks first, from the rail (the phone's bottom bar is the same
+ * guard behind another button). Stay keeps the edit and gives the keyboard back to the button it
+ * came from; Leave goes where the user pressed, and opening Goals again finds the saved value.
+ */
+async function checkLeaveGuard(browser, engine) {
+  const where = `${engine} leave guard`
+  const { page, context } = await openPlan(browser, { width: 1440, height: 900 })
+  const rail = (i) => page.locator('[class*="rail"] button').nth(i)
+  const dialog = page.getByRole('alertdialog', { name: 'Leave without saving?' })
+  const monthly = page.getByLabel('Monthly investing', { exact: true })
+  const saved = await monthly.inputValue()
+  await monthly.fill('750')
+  await monthly.press('Enter')
+  await page.getByText('Unsaved changes').first().waitFor({ timeout: 5000 })
+
+  await rail(3).click()
+  await page.waitForTimeout(300)
+  check(where, '(q) pressing the tab that is already open does not ask', (await dialog.count()) === 0)
+
+  // From the keyboard, so that every engine has focus on the button (Safari does not focus one on a click).
+  await rail(0).focus()
+  await page.keyboard.press('Enter')
+  await dialog.waitFor({ timeout: 5000 })
+  await page.waitForTimeout(300)
+  const box = await dialog.boundingBox()
+  const vp = page.viewportSize()
+  check(where, '(q) leaving with an unsaved edit asks first, inside the window', box !== null && box.x >= 0 && box.x + box.width <= vp.width && box.y >= 0 && box.y + box.height <= vp.height, JSON.stringify(box))
+  check(where, '(q) the question has put focus on Stay', await dialog.getByRole('button', { name: 'Stay' }).evaluate((el) => el === document.activeElement))
+  check(where, '(q) the page is still Goals, with the edit', (await monthly.inputValue()) === '750' && (await rail(3).getAttribute('aria-current')) === 'page', await monthly.inputValue())
+  await page.keyboard.press('Escape')
+  await dialog.waitFor({ state: 'detached', timeout: 5000 })
+  check(where, '(q) Escape stays, keeps the edit and gives focus back to the button pressed', (await monthly.inputValue()) === '750' && (await rail(0).evaluate((el) => el === document.activeElement)))
+
+  await rail(1).click()
+  await dialog.waitFor({ timeout: 5000 })
+  await dialog.getByRole('button', { name: 'Leave' }).click()
+  await dialog.waitFor({ state: 'detached', timeout: 5000 })
+  check(where, '(q) Leave goes to the place pressed, not to a default', (await rail(1).getAttribute('aria-current')) === 'page')
+  await rail(3).click()
+  await page.waitForSelector('text=Invested portfolio projection', { timeout: 20000 })
+  check(where, '(q) opening Goals again finds the saved value', (await monthly.inputValue()) === saved, `value ${await monthly.inputValue()}`)
+  await context.close()
+}
+
+/** A closed tab with an unsaved edit gets the browser's own prompt, and a clean page does not. */
+async function checkBrowserPrompt(browser, engine) {
+  const where = `${engine} leave guard`
+  for (const edited of [true, false]) {
+    const { page, context } = await openPlan(browser, { width: 1440, height: 900 })
+    if (edited) {
+      const monthly = page.getByLabel('Monthly investing', { exact: true })
+      await monthly.fill('750')
+      await monthly.press('Enter')
+      await page.getByText('Unsaved changes').first().waitFor({ timeout: 5000 })
+    }
+    let asked = null
+    page.on('dialog', (dialog) => {
+      asked = dialog.type()
+      void dialog.dismiss()
+    })
+    await page.close({ runBeforeUnload: true })
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    const what = edited ? "closing the tab with an unsaved edit asks (the browser's own prompt)" : 'closing the tab with nothing unsaved does not ask'
+    check(where, `(q) ${what}`, edited ? asked === 'beforeunload' : asked === null, `dialog: ${asked}`)
+    if (!page.isClosed()) await page.close()
+    await context.close()
+  }
+}
+
 async function main() {
   if (await answers()) throw new Error(`Something already answers on ${BASE}; set CAPTURE_PORT to a free port.`)
   const dev = startDev()
@@ -581,6 +651,8 @@ async function main() {
         await checkBreakpoint(browser, engine)
         await checkTouch(browser, engine)
         await checkOtherViews(browser, engine)
+        await checkLeaveGuard(browser, engine)
+        await checkBrowserPrompt(browser, engine)
       } finally {
         await browser.close()
       }
