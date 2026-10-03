@@ -22,4 +22,19 @@ describe('UnsavedGroup', () => {
     expect(screen.queryByText('Give the scenario a name to save it')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save changes to Path A' })).toBeEnabled()
   })
+
+  it('points Save at words the parent shows under the group, and drops the tooltip, when given their id', () => {
+    const { rerender } = render(
+      <>
+        <UnsavedGroup unsaved={unsaved('')} onGone={vi.fn()} hintId="reason" />
+        <p id="reason">Give the scenario a name to save it</p>
+      </>,
+    )
+    const save = screen.getByRole('button', { name: 'Save changes' })
+    expect(save).toHaveAccessibleDescription('Give the scenario a name to save it')
+    expect(save).not.toHaveAttribute('title')
+
+    rerender(<UnsavedGroup unsaved={unsaved('Path A')} onGone={vi.fn()} hintId="reason" />)
+    expect(screen.getByRole('button', { name: 'Save changes to Path A' })).not.toHaveAttribute('aria-describedby')
+  })
 })

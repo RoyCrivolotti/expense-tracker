@@ -296,6 +296,20 @@ describe('AdjustSectionNav', () => {
     ])
   })
 
+  it('writes the reason Save is off under the buttons while the scenario has no name, and not once it has one', () => {
+    const unsaved = { name: ' ', saving: false, onSave: vi.fn(), onDiscard: vi.fn() }
+    const { rerender } = render(<AdjustSectionNav unsaved={unsaved} />)
+
+    const save = screen.getByRole('button', { name: 'Save changes' })
+    expect(save).toBeDisabled()
+    expect(screen.getByText('Give the scenario a name to save it')).toBeVisible()
+    expect(save).toHaveAccessibleDescription('Give the scenario a name to save it')
+    expect(save).not.toHaveAttribute('title')
+
+    rerender(<AdjustSectionNav unsaved={{ ...unsaved, name: 'Path A' }} />)
+    expect(screen.queryByText('Give the scenario a name to save it')).not.toBeInTheDocument()
+  })
+
   it('sets Save apart from Discard as the one to press', () => {
     render(<AdjustSectionNav unsaved={{ name: 'Path A', saving: false, onSave: vi.fn(), onDiscard: vi.fn() }} />)
     const group = screen.getByRole('group', { name: 'Unsaved changes' })

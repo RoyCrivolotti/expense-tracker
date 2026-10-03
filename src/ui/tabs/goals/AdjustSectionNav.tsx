@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { scrollBehavior } from '../../hooks/scrollTiming'
 import {
   ADJUST_SECTIONS,
@@ -8,7 +8,7 @@ import {
   type AdjustSection,
 } from './adjustSections'
 import { keepClearOfStack, pinnedBottom, scrollToAdjustSection } from './scrollToAdjustSection'
-import { UnsavedGroup, type UnsavedActions } from './UnsavedGroup'
+import { NameHintLine, UnsavedGroup, type UnsavedActions } from './UnsavedGroup'
 import { useGoalsNarrow } from './useGoalsNarrow'
 import styles from './goals.module.css'
 
@@ -18,6 +18,22 @@ const READING_MARGIN_PX = 12
 /** How the viewer got to scrolling: a touch, the wheel, a key or a press (a scrollbar drag
  *  makes no other event), rather than a chip's jump. */
 const USER_SCROLL_EVENTS = ['touchstart', 'wheel', 'keydown', 'pointerdown'] as const
+
+/**
+ * Save and Discard at the end of the row, and while the scenario has no name the reason Save is
+ * off on a line of its own under them (the row is a phone's width, with no room beside them, and
+ * a tooltip is never shown to a finger).
+ */
+function RowActions({ unsaved, onGone }: { unsaved: UnsavedActions; onGone: () => void }) {
+  const hintId = useId()
+  const unnamed = unsaved.name.trim().length === 0
+  return (
+    <>
+      <UnsavedGroup unsaved={unsaved} onGone={onGone} hintId={hintId} />
+      {unnamed ? <NameHintLine id={hintId} className={styles.sectionHint} /> : null}
+    </>
+  )
+}
 
 /**
  * Jump links to the Scenario sections, pinned with the draft's chart (on a screen with room for
@@ -116,7 +132,7 @@ export function AdjustSectionNav({ unsaved }: { unsaved?: UnsavedActions | undef
           ))}
         </div>
       </nav>
-      {unsaved ? <UnsavedGroup unsaved={unsaved} onGone={focusMarkedChip} /> : null}
+      {unsaved ? <RowActions unsaved={unsaved} onGone={focusMarkedChip} /> : null}
     </div>
   )
 }

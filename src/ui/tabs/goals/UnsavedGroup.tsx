@@ -4,6 +4,24 @@ import styles from './goals.module.css'
 /** Why a scenario with no name cannot be saved. */
 export const NAME_HINT = 'Give the scenario a name to save it'
 
+/**
+ * The reason Save is off, as a line of its own under the buttons: the phone's rows are too narrow
+ * for it beside them, and a tooltip is never shown to a finger. The button it belongs to names it
+ * with aria-describedby.
+ */
+export function NameHintLine({ id, className = '' }: { id: string; className?: string | undefined }) {
+  return (
+    <p id={id} className={`${styles.nameHintLine} ${className}`.trim()}>
+      {NAME_HINT}
+    </p>
+  )
+}
+
+/** How a disabled Save gives its reason: it points at the words when they are on screen, else it carries them as a tooltip. */
+function saveReason(writtenAt: string | undefined): { 'aria-describedby': string } | { title: string } {
+  return writtenAt === undefined ? { title: NAME_HINT } : { 'aria-describedby': writtenAt }
+}
+
 /** What can be done with edits to a saved scenario that have not been saved. */
 export interface UnsavedActions {
   /** The scenario the edits are to. The buttons are named after it, since the scenario card
@@ -29,6 +47,7 @@ export function UnsavedGroup({
   className = styles.unsavedActions,
   saveLabel = 'Save',
   nameHint = false,
+  hintId: lineId,
 }: {
   unsaved: UnsavedActions
   onGone: () => void
@@ -41,6 +60,11 @@ export function UnsavedGroup({
    * is a tooltip, which a touch screen never shows; the phone's row has no room for the words.
    */
   nameHint?: boolean
+  /**
+   * The id of a `NameHintLine` the parent shows under the group while the scenario has no name,
+   * for a row with no room beside the buttons. Save is described by it instead of by a tooltip.
+   */
+  hintId?: string | undefined
 }) {
   const hintId = useId()
   const group = useRef<HTMLDivElement>(null)
@@ -66,6 +90,8 @@ export function UnsavedGroup({
   // are the problem, so Discard stays.
   const unnamed = unsaved.name.trim().length === 0
   const hinted = unnamed && nameHint
+  // Where the reason is written, Save points at it; where it is not, the tooltip is all there is.
+  const reason = unnamed ? saveReason(hinted ? hintId : lineId) : {}
   return (
     <div
       ref={group}
@@ -100,7 +126,7 @@ export function UnsavedGroup({
         type="button"
         className={`${styles.btn} ${styles.btnPrimary}`}
         aria-label={unnamed ? 'Save changes' : `Save changes to ${unsaved.name}`}
-        {...(hinted ? { 'aria-describedby': hintId } : unnamed ? { title: NAME_HINT } : {})}
+        {...reason}
         disabled={unsaved.saving || unnamed}
         onClick={unsaved.onSave}
       >
