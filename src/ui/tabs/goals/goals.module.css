@@ -1427,4 +1427,13 @@
     min-width: 2.75rem;
     min-height: 2.75rem;
   }
+
+  /* A slider is 17px tall, and a touch anywhere in its box takes it there (checked in Safari on an
+     iPad: a tap 17px above the track moved it), so the box is 44px. The margin takes 16px of
+     that back out of the layout, which leaves 28px of height for the track and the thumb; the box
+     reaches over the 8px above and below it. */
+  .stack .range {
+    height: 2.75rem;
+    margin-block: -0.5rem;
+  }
 }

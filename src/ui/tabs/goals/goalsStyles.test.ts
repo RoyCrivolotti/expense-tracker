@@ -217,6 +217,28 @@ describe('the inputs panel on a touch screen', () => {
   })
 })
 
+describe('the sliders and the bar levers on a touch screen', () => {
+  const goals = underQuery('tabs/goals/goals.module.css', COARSE_WIDE)
+  const plan = underQuery('tabs/goals/desktop/planDesktop.module.css', '(pointer: coarse)')
+  const planRule = (selector: string) => plan.inside.find((r) => r.selector === selector)?.body ?? ''
+
+  it('gives a slider a 44px box that takes back 16px of it as margin, so it adds 11px and not 27px', () => {
+    const range = goals.inside.find((r) => r.selector === '.stack .range')?.body
+
+    expect(range).toMatch(/height:\s*2\.75rem/)
+    expect(range).toMatch(/margin-block:\s*-0\.5rem/)
+    expect(goals.outside).not.toMatch(/\.range\s*\{[^}]*height/)
+  })
+
+  it('makes the whole row of a lever 44px, over the slider box that reaches up into it', () => {
+    expect(planRule('.leverValue')).toMatch(/min-height:\s*2\.75rem/)
+    // Above the slider's box, so a press on the lower part of the digits is theirs.
+    expect(planRule('.leverValue')).toMatch(/z-index:\s*1/)
+    expect(planRule('.leverTrack')).toMatch(/height:\s*1\.75rem/)
+    expect(plan.outside).toMatch(/\.leverTrack\s*\{[^}]*height:\s*1\.25rem/)
+  })
+})
+
 describe('the scenario menu on a touch screen', () => {
   const plan = underQuery('tabs/goals/desktop/planDesktop.module.css', '(pointer: coarse)')
   const rule = (selector: string) => plan.inside.find((r) => r.selector === selector)?.body ?? ''

@@ -743,6 +743,22 @@
   .menuBtn {
     min-height: 2.75rem;
   }
+
+  /* The bar's lever: the row of digits is a label, so the whole row is where a press puts the
+     cursor in the field, and it is 44px high with the digits at its top. The slider row is 28px
+     and its box (goals.module.css) reaches 8px past it each way. The digits row is above the
+     slider's box in the stack, so a press on the lower part of the digits is theirs and not the
+     slider's. The levers need no more height than the result column beside them has, so a bar
+     of one row is as tall as it was; one that wraps to two rows is taller by what two rows grow. */
+  .leverValue {
+    position: relative;
+    z-index: 1;
+    min-height: 2.75rem;
+  }
+
+  .leverTrack {
+    height: 1.75rem;
+  }
 }
 
 /* No hover on a touch screen, so the figures wear the line a field wears. */
