@@ -38,10 +38,10 @@ const ONE_ROW_FROM = 1200
 
 /**
  * The screen from which the bar is also held to the bottom edge while its place is below the fold
- * (planDesktop.module.css: 75rem wide and 56rem tall). A shorter screen would have the bar over
+ * (planDesktop.module.css: 75rem wide and 50rem tall). A shorter screen would have the bar over
  * the chart's axis and the legend that carries its values.
  */
-const HELD_FROM = { width: 1200, height: 896 }
+const HELD_FROM = { width: 1200, height: 800 }
 
 const failures = []
 
