@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_LEVERS, type MoneyFormat } from '../../../../engine'
+import { installFakeMatchMedia } from '../../../../testing/fakeMatchMedia'
 import { makeScenario } from '../../../../testing/factories'
 import { MoneyFormatContext } from '../../../hooks/moneyFormatContext'
 import { LeversBar } from './LeversBar'
@@ -208,6 +209,46 @@ describe('LeversBar', () => {
     const field = screen.getByRole('textbox', { name: 'Monthly investing' })
     await userEvent.click(field.parentElement!.querySelector('[class*="leverUnit"]')!)
     expect(field).toHaveFocus()
+  })
+
+  it('stores a typed percentage without the noise of dividing by a hundred', async () => {
+    const { onChange } = renderBar()
+    const field = screen.getByRole('textbox', { name: 'Real return (%/yr, after inflation)' })
+
+    await userEvent.clear(field)
+    await userEvent.type(field, '1,1{Enter}')
+
+    // 1.1 / 100 is 0.011000000000000001, which differs from the slider's own 0.011 and makes a phantom edit.
+    expect(onChange).toHaveBeenLastCalledWith({ expectedRealReturn: 0.011 })
+  })
+
+  it('drops what was typed on Escape instead of committing it when the field loses focus', async () => {
+    const { onChange } = renderBar()
+    const field = screen.getByRole('textbox', { name: 'Monthly investing' })
+
+    await userEvent.clear(field)
+    await userEvent.type(field, '900{Escape}')
+    await userEvent.tab()
+
+    expect(onChange).not.toHaveBeenCalled()
+    expect(field).toHaveValue('500')
+  })
+
+  it('selects a figure as it takes focus on a touch screen, so typing replaces it', async () => {
+    const media = installFakeMatchMedia((query) => query === '(pointer: coarse)')
+    try {
+      renderBar()
+      const field = screen.getByRole<HTMLInputElement>('textbox', { name: 'Starting invested' })
+
+      await userEvent.click(field)
+
+      await waitFor(() => {
+        expect(field.selectionStart).toBe(0)
+        expect(field.selectionEnd).toBe(field.value.length)
+      })
+    } finally {
+      media.setMatching(() => false)
+    }
   })
 
   it('moves a percentage with its slider', () => {
