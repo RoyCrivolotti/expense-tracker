@@ -13,17 +13,19 @@ function renderHeader(
     saving = false,
     creating = false,
     canWrite = true,
-  }: { dirty?: boolean; saving?: boolean; creating?: boolean; canWrite?: boolean } = {},
+    detached = false,
+  }: { dirty?: boolean; saving?: boolean; creating?: boolean; canWrite?: boolean; detached?: boolean } = {},
 ) {
   const { id, isActive, ...draft } = scenario
   void id
   void isActive
   const onPatch = vi.fn()
   const onDuplicate = vi.fn()
+  const onSaveDraft = vi.fn()
   const { unmount } = render(
     <ActiveScenarioHeader
       draft={draft}
-      activeScenario={scenario}
+      activeScenario={detached ? null : scenario}
       dirty={dirty}
       hasEdits={dirty}
       saving={saving}
@@ -34,11 +36,11 @@ function renderHeader(
       onSaveChanges={vi.fn()}
       onDiscard={vi.fn()}
       onActivate={vi.fn()}
-      onSaveDraft={vi.fn()}
+      onSaveDraft={onSaveDraft}
       onDuplicate={onDuplicate}
     />,
   )
-  return { actions, onPatch, onDuplicate, unmount }
+  return { actions, onPatch, onDuplicate, onSaveDraft, unmount }
 }
 
 describe('ActiveScenarioHeader', () => {
@@ -82,6 +84,39 @@ describe('ActiveScenarioHeader', () => {
 
     renderHeader(scenario, makeActions(), { dirty: true, saving: true })
     for (const button of buttons()) expect(button).toBeDisabled()
+  })
+
+  describe('with no name to save under', () => {
+    const HINT = 'Give the scenario a name to save it'
+
+    it('says under Save changes why it is off, in words, and has the button point at them', () => {
+      renderHeader(makeScenario({ id: 7, name: '  ' }), makeActions(), { dirty: true })
+
+      const save = screen.getByRole('button', { name: 'Save changes' })
+      expect(save).toBeDisabled()
+      expect(screen.getByText(HINT)).toBeVisible()
+      expect(save).toHaveAccessibleDescription(HINT)
+      expect(save).not.toHaveAttribute('title')
+    })
+
+    it('says the same under a new scenario\'s Save, which had no reason at all', () => {
+      renderHeader(makeScenario({ id: 7, name: '' }), makeActions(), { detached: true })
+
+      const save = screen.getByRole('button', { name: 'Save scenario' })
+      expect(save).toBeDisabled()
+      expect(screen.getByText(HINT)).toBeVisible()
+      expect(save).toHaveAccessibleDescription(HINT)
+    })
+
+    it('says nothing once there is a name', () => {
+      renderHeader(makeScenario({ id: 7, name: 'Path B' }), makeActions(), { dirty: true })
+      expect(screen.queryByText(HINT)).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Save changes' })).not.toHaveAccessibleDescription(HINT)
+
+      const { onSaveDraft } = renderHeader(makeScenario({ id: 8, name: ' Path C ' }), makeActions(), { detached: true })
+      fireEvent.click(screen.getByRole('button', { name: 'Save scenario' }))
+      expect(onSaveDraft).toHaveBeenCalledWith('Path C')
+    })
   })
 
   it('hands Duplicate to the editor, and holds the button while a copy is being made', () => {
