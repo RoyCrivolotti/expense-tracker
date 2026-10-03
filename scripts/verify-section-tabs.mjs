@@ -24,6 +24,9 @@ const PHONES = [
 ]
 const DESKTOP = { name: '1100x800', width: 1100, height: 800 }
 
+/** The air a landed section's content is left under the bar, in px (PINNED_AIR_PX). */
+const AIR = 8
+
 /** What a section bar is called, and the sections it has. Analytics' only exists on a phone. */
 const BARS = {
   Analytics: { label: 'Analytics section', sections: ['Summary', 'Totals', 'Cash', 'Year'] },
@@ -164,7 +167,7 @@ function measure(page, bar) {
 
 /**
  * The bar sticks under the header (tucked 1px beneath it), is 44px high on a phone, fades what
- * scrolls under it, and a section tapped from down the page lands its content flush under it
+ * scrolls under it, and a section tapped from down the page lands its content 8px under it
  * and comes back where it was left.
  */
 async function checkBar(browser, tabName, first, second) {
@@ -181,13 +184,33 @@ async function checkBar(browser, tabName, first, second) {
   const leftAt = m.y
   await pick(page, tabName, second)
   m = await measure(page, tabName)
-  check(where, `(b) ${second} lands its content flush under the bar`, m.anchorTop !== null && near(m.anchorTop, m.rowBottom), `content ${m.anchorTop === null ? 'n/a' : px(m.anchorTop)}, bar bottom ${px(m.rowBottom)}`)
+  check(where, `(b) ${second} lands its content ${AIR}px under the bar`, m.anchorTop !== null && near(m.anchorTop, m.rowBottom + AIR), `content ${m.anchorTop === null ? 'n/a' : px(m.anchorTop)}, bar bottom ${px(m.rowBottom)}`)
   await pick(page, tabName, first)
   m = await measure(page, tabName)
   check(where, `(b) going back to ${first} puts it where it was left`, near(m.y, leftAt), `left at ${px(leftAt)}, came back to ${px(m.y)}`)
   await pick(page, tabName, first)
   m = await measure(page, tabName)
-  check(where, '(b) tapping the section already selected goes to the top of its content', m.anchorTop !== null && near(m.anchorTop, m.rowBottom), `content ${m.anchorTop === null ? 'n/a' : px(m.anchorTop)}, bar bottom ${px(m.rowBottom)}`)
+  check(where, '(b) tapping the section already selected goes to the top of its content', m.anchorTop !== null && near(m.anchorTop, m.rowBottom + AIR), `content ${m.anchorTop === null ? 'n/a' : px(m.anchorTop)}, bar bottom ${px(m.rowBottom)}`)
+  await context.close()
+}
+
+/**
+ * A tab row answers to Left and Right, not Up and Down: with a tab focused, Down scrolls the
+ * page as it would anywhere else and the section stays, while Right still moves to the next one.
+ */
+async function checkTabKeys(browser, tabName, first, second) {
+  const where = `375x812 ${tabName} bar`
+  const { page, context } = await openApp(browser, PHONES[0], tabName)
+  const selected = () => page.evaluate((label) => document.querySelector(`[role="tablist"][aria-label="${label}"] [aria-selected="true"]`).textContent, BARS[tabName].label)
+  await tab(page, tabName, first).focus()
+  const y = await page.evaluate(() => window.scrollY)
+  await page.keyboard.press('ArrowDown')
+  await page.waitForTimeout(250)
+  const moved = await settled(page)
+  check(where, '(f) ArrowDown on a tab scrolls the page and keeps the section', moved > y && (await selected()) === first, `section ${await selected()}, scrolled from ${px(y)} to ${px(moved)}`)
+  await page.keyboard.press('ArrowRight')
+  await page.waitForTimeout(250)
+  check(where, `(f) ArrowRight moves to ${second}`, (await selected()) === second, `section ${await selected()}`)
   await context.close()
 }
 
@@ -339,6 +362,8 @@ async function main() {
       console.log('\nSection bars')
       await checkBar(browser, 'Analytics', 'Summary', 'Totals')
       await checkBar(browser, 'Settings', 'Setup', 'Data')
+      await checkTabKeys(browser, 'Analytics', 'Summary', 'Totals')
+      await checkTabKeys(browser, 'Settings', 'Preferences', 'Setup')
       for (const phone of PHONES) {
         await checkLabels(browser, phone, 'Analytics')
         await checkLabels(browser, phone, 'Settings')

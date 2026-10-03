@@ -14,6 +14,13 @@
   margin: -0.25rem 0 0;
 }
 
+/* The first thing in a section has nothing above it to tuck up under or be spaced from, and a
+   margin there would move it off the place a jump to the section puts it under the sticky bar
+   (a negative one, a hint's, would hang the first line out from under it). */
+.section > :first-child {
+  margin-top: 0;
+}
+
 .subheading {
   margin: 0.35rem 0 0;
   font: inherit;

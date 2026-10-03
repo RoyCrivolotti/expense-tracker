@@ -69,6 +69,7 @@ export function SegmentedControl<T extends string>({
     count: options.length,
     selected,
     disabled,
+    arrows: tabs ? 'horizontal' : 'all',
     // A key that lands on the chosen option has nothing to report (a click on it does, for a
     // control that treats tapping the current segment as a request of its own).
     onSelect: (index) => {

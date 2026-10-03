@@ -283,6 +283,33 @@ async function checkAdjust(browser, phone) {
   await context.close()
 }
 
+/**
+ * A view tapped from down the page lands its content under the view row with the same air the
+ * Scenarios chips leave, and tapping the one that is open goes back to that place.
+ */
+async function checkContentLanding(browser, phone) {
+  const where = `${phone.name} view row`
+  const { page, context } = await openGoals(browser, phone)
+  const gap = () =>
+    page.evaluate(() => {
+      const row = document.getElementById('goals-nav').getBoundingClientRect()
+      return document.getElementById('goals-content-top').getBoundingClientRect().top - row.bottom
+    })
+  await scrollTo(page, 600)
+  for (const name of ['Progress', 'Assumptions']) {
+    await tab(page, name).tap()
+    await settled(page)
+    const first = await gap()
+    check(where, `(h) ${name} lands its content 7-9px under the row`, first >= GAP.min && first <= GAP.max, `it is ${px(first)} under it`)
+    await scrollTo(page, 400)
+    await tab(page, name).tap()
+    await settled(page)
+    const again = await gap()
+    check(where, `(h) tapping ${name} again goes back to 7-9px under the row`, again >= GAP.min && again <= GAP.max, `it is ${px(again)} under it`)
+  }
+  await context.close()
+}
+
 async function checkMemory(browser, phone) {
   const where = `${phone.name} Chart`
   const { page, context } = await openGoals(browser, phone)
@@ -470,6 +497,7 @@ async function main() {
           await context.close()
         }
         await checkAdjust(browser, phone)
+        await checkContentLanding(browser, phone)
         await checkMemory(browser, phone)
         await checkFocus(browser, phone)
       }

@@ -61,15 +61,22 @@
   max-width: 100%;
 }
 
-/* Where a jump to the section's own content leaves it: just under the stuck bar. The anchor is
-   as tall as nothing, and takes back the gap it adds to the panel. The browser adds the page's
-   scroll padding (the bar's bottom edge, set by SectionTabs) to this margin, so it is taken
-   back out. */
+/* What a section starts with sits where a jump leaves it, a little under the bar, not a further
+   margin of its own lower: a section's first heading carries the space that once set it off from
+   what came before. */
+.panel > .anchor + * {
+  margin-top: 0;
+}
+
+/* Where a jump to the section's own content leaves it: a little under the stuck bar. The anchor
+   is as tall as nothing, and takes back the gap it adds to the panel. The browser adds the
+   page's scroll padding (the bar's bottom edge, set by SectionTabs) to this margin, so it is
+   taken back out. */
 .anchor {
   height: 0;
   margin-bottom: -1rem;
   scroll-margin-top: calc(
-    var(--exp-header) + var(--exp-subnav-h) - var(--exp-subnav-tuck) + env(safe-area-inset-top, 0px) -
-      var(--scroll-pad-top, 0px)
+    var(--exp-header) + var(--exp-subnav-h) - var(--exp-subnav-tuck) + var(--exp-pinned-air) +
+      env(safe-area-inset-top, 0px) - var(--scroll-pad-top, 0px)
   );
 }

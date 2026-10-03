@@ -123,6 +123,17 @@ describe('SectionTabs', () => {
     expect(screen.getByRole('tabpanel')).toHaveTextContent('Content of two')
   })
 
+  it('leaves ArrowDown to the page rather than moving to the next section', async () => {
+    const user = userEvent.setup()
+    render(<Page />)
+    screen.getByRole('tab', { name: 'One' }).focus()
+
+    await user.keyboard('{ArrowDown}')
+
+    expect(screen.getByRole('tab', { name: 'One' })).toHaveFocus()
+    expect(screen.getByRole('tabpanel')).toHaveTextContent('Content of one')
+  })
+
   it('puts the anchor that content is scrolled to at the top of the panel', () => {
     render(<Page />)
 
@@ -298,9 +309,9 @@ describe('SectionTabs styles', () => {
     expect(rule('.anchor')).toMatch(/-\s+var\(--scroll-pad-top, 0px\)/)
   })
 
-  it('lands the anchor under the bar, as high as the header and the bar less their tuck', () => {
+  it('lands the anchor under the bar, as high as the header and the bar less their tuck, and a little air', () => {
     expect(rule('.anchor')).toMatch(
-      /var\(--exp-header\) \+ var\(--exp-subnav-h\) - var\(--exp-subnav-tuck\) \+ env\(safe-area-inset-top, 0px\)/,
+      /var\(--exp-header\) \+ var\(--exp-subnav-h\) - var\(--exp-subnav-tuck\) \+ var\(--exp-pinned-air\) \+\s+env\(safe-area-inset-top, 0px\)/,
     )
   })
 

@@ -47,16 +47,23 @@ afterEach(() => {
 })
 
 describe('usePinnedScrollPadding', () => {
-  it('keeps focus clear of the row and the stack under the header, and of the bottom bar', () => {
+  it('keeps focus clear of the row and the stack under the header', () => {
     pinned(GOALS_NAV_ID, '60px', 44)
     pinned(ADJUST_STACK_ID, '103px', 164)
 
     renderHook(() => usePinnedScrollPadding('adjust'))
 
     expect(root.style.scrollPaddingTop).toBe('275px')
-    expect(root.style.scrollPaddingBottom).toBe(
-      'calc(var(--exp-bottom-bar) + env(safe-area-inset-bottom, 0px) + 0.5rem)',
-    )
+  })
+
+  // The row is mounted below 900px but the bottom bar only below 768px, so a padding of its own
+  // would hold focus off the foot of the page on a tablet that has no bar there.
+  it('leaves the bottom padding to the stylesheet, which only has one where there is a bottom bar', () => {
+    pinned(GOALS_NAV_ID, '60px', 44)
+
+    renderHook(() => usePinnedScrollPadding('chart'))
+
+    expect(root.style.scrollPaddingBottom).toBe('')
   })
 
   it('counts only the row in a view that has no stack, and follows the view as it changes', () => {
@@ -129,7 +136,6 @@ describe('usePinnedScrollPadding', () => {
   it('puts back what was there, and stops observing, when it leaves the page', () => {
     pinned(GOALS_NAV_ID, '60px', 44)
     root.style.scrollPaddingTop = '3px'
-    root.style.scrollPaddingBottom = '5px'
     const remove = vi.spyOn(window, 'removeEventListener')
     const { unmount } = renderHook(() => usePinnedScrollPadding('chart'))
     expect(root.style.scrollPaddingTop).toBe('112px')
@@ -137,7 +143,6 @@ describe('usePinnedScrollPadding', () => {
     unmount()
 
     expect(root.style.scrollPaddingTop).toBe('3px')
-    expect(root.style.scrollPaddingBottom).toBe('5px')
     expect(root.style.getPropertyValue('--scroll-pad-top')).toBe('')
     expect(FakeResizeObserver.instances.every((o) => o.disconnected)).toBe(true)
     expect(remove).toHaveBeenCalledWith('resize', expect.any(Function))

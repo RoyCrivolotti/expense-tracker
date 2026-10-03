@@ -264,6 +264,33 @@ describe('SegmentedControl', () => {
       expect(tab('A')).toHaveAttribute('aria-selected', 'true')
     })
 
+    it('leaves ArrowUp and ArrowDown to the page, so scrolling does not swap the section', async () => {
+      const user = userEvent.setup()
+      render(<Group start="b" />)
+      const middle = screen.getByRole('tab', { name: 'B' })
+      middle.focus()
+
+      for (const key of ['ArrowDown', 'ArrowUp']) {
+        expect(fireEvent.keyDown(middle, { key })).toBe(true)
+      }
+      await user.keyboard('{ArrowDown}{ArrowUp}')
+
+      expect(middle).toHaveAttribute('aria-selected', 'true')
+      expect(middle).toHaveFocus()
+    })
+
+    it('keeps the key press for the tab list when Left, Right, Home or End moves the selection', () => {
+      render(<Group start="b" />)
+      const middle = screen.getByRole('tab', { name: 'B' })
+      middle.focus()
+
+      for (const key of ['ArrowRight', 'ArrowLeft', 'Home', 'End']) {
+        expect(fireEvent.keyDown(screen.getByRole('tab', { selected: true }), { key })).toBe(false)
+        // Back on the middle one for the next key.
+        fireEvent.click(middle)
+      }
+    })
+
     it('leaves a key alone when Alt, Ctrl or Cmd is held', () => {
       render(<Group start="b" />)
       const middle = screen.getByRole('tab', { name: 'B' })
