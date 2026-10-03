@@ -95,8 +95,15 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // each engine, the milestone line thinning and the control names took the total to 215.1 KB.
 // All of it is small code and CSS in the one lazy chunk, with no new library, and the next
 // round of fixes from the same review is still to come.
-const TOTAL_MAX_GZIP = 217_000
-const GOALS_MAX_GZIP = 45_000
+//
+// Raised from 217 KB to 221 KB, and the Goals chunk from 45 KB to 47 KB, for the round of
+// follow-ups from the review of the wide Goals page (a guard for leaving Goals with unsaved edits,
+// the bar's second figure, the breakdown as an overlay, line colours for the light theme, a legend
+// for the check-in dots and life events, and the input and data fixes under them): main stood at
+// 216.0 KB with the Goals chunk at 44.8, and the round adds a few KB across several PRs. All of it
+// is small code and CSS, with no new library.
+const TOTAL_MAX_GZIP = 221_000
+const GOALS_MAX_GZIP = 47_000
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length
