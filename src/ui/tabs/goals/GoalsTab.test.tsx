@@ -58,8 +58,7 @@ describe('GoalsTab levers', () => {
 
   it('brings the inputs into view when they open below the fold, and does not move the page when they close', async () => {
     const user = userEvent.setup()
-    const scrollIntoView = vi.fn()
-    Element.prototype.scrollIntoView = scrollIntoView
+    const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
     // The bar is held to the bottom edge, so the panel's place in the page is below the screen.
     vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
       return { top: this.id === 'goals-all-inputs' ? 1013 : 0 } as DOMRect
@@ -67,12 +66,14 @@ describe('GoalsTab levers', () => {
     render(<GoalsTab model={makeModel()} actions={makeActions()} />)
 
     await user.click(screen.getByRole('button', { name: 'All inputs' }))
-    await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1))
-    expect(scrollIntoView.mock.contexts[0]).toBe(document.getElementById('goals-all-inputs'))
+    await waitFor(() => expect(scrollBy).toHaveBeenCalledTimes(1))
+    // Down by how far below the top of the visible page it opened.
+    expect(scrollBy).toHaveBeenCalledWith(expect.objectContaining({ top: expect.any(Number) as number }))
+    expect((scrollBy.mock.calls[0]?.[0] as ScrollToOptions).top).toBeGreaterThan(900)
 
     await user.click(screen.getByRole('button', { name: 'All inputs' }))
     await act(() => new Promise((resolve) => requestAnimationFrame(() => resolve(undefined))))
-    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+    expect(scrollBy).toHaveBeenCalledTimes(1)
   })
 
   const DEFAULTS = ['monthlyContributionCents', 'expectedRealReturn', 'horizonYears', 'housePurchaseYear', 'startInvestedCents']

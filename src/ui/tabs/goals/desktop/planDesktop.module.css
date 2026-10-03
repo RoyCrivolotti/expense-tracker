@@ -41,9 +41,13 @@
 }
 
 /* Focus inside the bar takes the page's scroll padding back out, or a control that is stuck
-   would count as hidden under itself and the page would scroll to uncover it. */
+   would count as hidden under itself and the page would scroll to uncover it: at the top where
+   the bar is stuck under the header, and at the bottom where it is held to the edge (Chromium
+   scrolled the page 366px on 1280x800 for the star that took a removed one's place). Safari
+   ignores a scroll margin for focus; useBarScrollPadding lifts the padding for it. */
 .leversBar * {
   scroll-margin-top: calc(-1 * var(--scroll-pad-top, 0px));
+  scroll-margin-bottom: calc(-1 * var(--scroll-pad-bottom, 0px));
 }
 
 .levers {

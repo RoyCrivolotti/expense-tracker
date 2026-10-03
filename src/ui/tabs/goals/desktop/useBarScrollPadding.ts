@@ -5,6 +5,13 @@ import { PINNED_AIR_PX, stickyBottom } from '../../../hooks/stickyScroll'
 /** The air between the bar and the bottom edge of the screen while it is held there (planDesktop.module.css). */
 const BOTTOM_AIR_PX = 12
 
+/**
+ * The bottom padding as a custom property, for the bar's own controls to take back out of their
+ * scroll margin (planDesktop.module.css): Chromium scrolls to uncover a focused control before it
+ * says it has focus, which is too early for the lift below to help.
+ */
+const BOTTOM_PADDING_VAR = '--scroll-pad-bottom'
+
 /** Whether the stylesheet has the bar stuck under the header (it does from 75rem wide). */
 function isSticky(bar: HTMLElement | null): bar is HTMLElement {
   return bar !== null && getComputedStyle(bar).position === 'sticky'
@@ -48,10 +55,10 @@ export function useBarScrollPadding(bar: RefObject<HTMLElement | null>): void {
     const apply = () => {
       syncTop()
       const el = bar.current
-      const heldAtBottom = el !== null && !focusInside && getComputedStyle(el).bottom !== 'auto'
-      root.style.scrollPaddingBottom = heldAtBottom
-        ? `${el.offsetHeight + BOTTOM_AIR_PX + PINNED_AIR_PX}px`
-        : before
+      const held = el !== null && getComputedStyle(el).bottom !== 'auto' ? `${el.offsetHeight + BOTTOM_AIR_PX + PINNED_AIR_PX}px` : null
+      root.style.scrollPaddingBottom = held !== null && !focusInside ? held : before
+      if (held !== null) root.style.setProperty(BOTTOM_PADDING_VAR, held)
+      else root.style.removeProperty(BOTTOM_PADDING_VAR)
     }
     apply()
     const element = bar.current
@@ -76,6 +83,7 @@ export function useBarScrollPadding(bar: RefObject<HTMLElement | null>): void {
       window.removeEventListener('resize', apply)
       observer?.disconnect()
       root.style.scrollPaddingBottom = before
+      root.style.removeProperty(BOTTOM_PADDING_VAR)
     }
   }, [bar])
 }

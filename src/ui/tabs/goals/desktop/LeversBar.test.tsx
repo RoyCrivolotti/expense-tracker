@@ -400,8 +400,11 @@ describe('LeversBar', () => {
     )
     // The bar's own height (nothing in jsdom) and the air around it.
     expect(root.style.scrollPaddingBottom).toBe('20px')
+    // Also as a custom property, for the bar's controls to take back out of their scroll margin.
+    expect(root.style.getPropertyValue('--scroll-pad-bottom')).toBe('20px')
     unmount()
     expect(root.style.scrollPaddingBottom).toBe('5px')
+    expect(root.style.getPropertyValue('--scroll-pad-bottom')).toBe('')
     root.style.scrollPaddingBottom = ''
     held.remove()
   })
@@ -428,6 +431,8 @@ describe('LeversBar', () => {
     await userEvent.click(screen.getByRole('textbox', { name: 'Monthly investing' }))
     expect(root.style.scrollPaddingTop).toBe('')
     expect(root.style.scrollPaddingBottom).toBe('5px')
+    // The margin that does the same for Chromium is driven by the property, which does not lift.
+    expect(root.style.getPropertyValue('--scroll-pad-bottom')).toBe('20px')
 
     // From one control of the bar to another it stays lifted.
     await userEvent.tab()
