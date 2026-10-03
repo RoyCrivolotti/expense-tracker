@@ -2,6 +2,15 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (slow answers, a typed point and a lost connection, from a review of the wide page)
+
+- **A point typed into an amount is a decimal point.** On a numeric keypad the point is the key there is, and with the default format (comma for decimals) typing 2500.75 into Monthly investing made 250.075 €, 12.5 made 125 € and 1.5 made 15 €. A single point with one or two digits after it, and no comma, now reads as the decimal mark: 2500.75 is 2.500,75 €. Three digits after it (1.500) and several points (1.234.567) are still thousands, and a point-decimal format such as US dollars is unchanged. This is in every amount field (transactions, budgets, settings, goals, check-ins). A typed percentage already read 5.5 as 5,5%.
+- **The phone's Duplicate button makes one copy.** A double tap on a slow connection made two scenarios, and the phone opened whichever answered last over any edit made meanwhile. It now waits for the first copy like the wide screen's button does.
+- **An answer that arrives late cannot undo a newer change.** After a slow reply to the inflation setting, the starred inputs could jump back to the old five on screen while the saved row was right; a slow Save landing after Use as my plan could leave nothing marked as the plan, and the reverse could bring back old values of a saved edit. A reply now changes only what its own write changed.
+- **A star that was never sent no longer looks saved.** If the session went read-only while a star change was waiting behind another, the bar kept the unsaved list. It goes back to the saved one and says so.
+- **Dropping edits brings back a hidden line.** Hide the saved line of the scenario you are editing from the legend, press Discard (or Save), and the legend listed it dimmed beside "(editing)", the same scenario twice. The hidden mark goes when the edits do.
+- **Going offline in the middle of an edit says what the edit is worth.** The edit stays and keeps drawing on the chart, but nothing can be saved, so a note under the scenario tabs says that and that it is lost when you leave Goals or reload. The tab no longer says Edited, and the question asked before loading another scenario no longer says to save first.
+
 ## October 2026 (reading the lines on the Goals chart)
 
 - **The pale scenario colours are drawn darker in the light theme.** Emerald, amber, cyan and lime were 2.2, 1.9, 2.1 and 1.7 to 1 against the chart card (3 to 1 is the floor for a line), so a path in one of them was thin and washed out. The colour you pick is kept; the line, its band and its key are drawn the same colour taken toward black just far enough to reach 3 to 1, and a colour that already has it (indigo, red, violet, pink) is not touched. The dark theme, where all eight already pass, is unchanged. This applies on the phone too.
