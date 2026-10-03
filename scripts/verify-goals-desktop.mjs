@@ -27,13 +27,21 @@ const ENGINES = (process.env.ENGINES ?? 'chromium').split(',')
 const SCREENS = [
   { name: '1024x768', width: 1024, height: 768 },
   { name: '1280x800', width: 1280, height: 800 },
+  { name: '1440x780', width: 1440, height: 780 },
   { name: '1440x900', width: 1440, height: 900 },
   { name: '1728x1117', width: 1728, height: 1117 },
   { name: '1920x1080', width: 1920, height: 1080 },
 ]
 
-/** The width from which the bar is one row and held to the bottom edge (planDesktop.module.css). */
+/** The width from which the five levers and the result are one row (planDesktop.module.css). */
 const ONE_ROW_FROM = 1200
+
+/**
+ * The screen from which the bar is also held to the bottom edge while its place is below the fold
+ * (planDesktop.module.css: 75rem wide and 56rem tall). A shorter screen would have the bar over
+ * the chart's axis and the legend that carries its values.
+ */
+const HELD_FROM = { width: 1200, height: 896 }
 
 const failures = []
 
@@ -148,6 +156,8 @@ function measure(page) {
       header: box(document.querySelector('header')),
       page: box(document.querySelector('[data-goals-plan-wide]')),
       bar: box(bar),
+      // The chart's legend, which carries its values on this layout, is the last of the hero to clear.
+      legendBottom: box(document.querySelector('[data-goals-plan-wide] ul[class*="chips"]'))?.bottom ?? 0,
       barTop: bar ? getComputedStyle(bar).top : null,
       barBottom: bar ? getComputedStyle(bar).bottom : null,
       labelTops: labels.map((l) => Math.round(l.getBoundingClientRect().top)),
@@ -182,9 +192,12 @@ async function checkLayout(page, screen, where) {
     const row = new Set(m.labelTops)
     check(where, '(e) the five levers and the result are on one row', row.size === 1 && m.labelTops.length === 6, `tops ${m.labelTops.join(', ')}`)
   }
-  if (screen.width >= ONE_ROW_FROM) {
+  if (screen.width >= HELD_FROM.width && screen.height >= HELD_FROM.height) {
     check(where, '(f) the bar is on screen on first load, held to the bottom edge', m.bar.bottom <= m.ih + 0.5 && m.bar.top >= 0, `bar ${px(m.bar.top)} to ${px(m.bar.bottom)} in ${m.ih}px`)
     check(where, '(f) the bar is not so tall it leaves little of the chart', m.bar.height < 140, px(m.bar.height))
+    check(where, '(f) held to the bottom edge, the bar does not cover the chart or its legend', m.bar.top >= m.legendBottom, `bar top ${px(m.bar.top)}, legend ends ${px(m.legendBottom)}`)
+  } else if (screen.width >= ONE_ROW_FROM) {
+    check(where, '(f) on a shorter screen the bar stays in the page, so it does not cover the chart', m.barBottom === 'auto' && m.bar.top >= m.legendBottom, `bar bottom ${m.barBottom}, bar top ${px(m.bar.top)}, legend ends ${px(m.legendBottom)}`)
   }
 }
 
