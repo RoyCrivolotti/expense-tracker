@@ -33,3 +33,24 @@ describe('CompositionChart legend', () => {
     expect(legendValues(container)).toEqual(['', '', ''])
   })
 })
+
+describe('CompositionChart names', () => {
+  it('calls the house series its value, not its equity, which is the value less the mortgage', () => {
+    render(<CompositionChart draft={draft} />)
+
+    expect(screen.getByText('House value')).toBeInTheDocument()
+    expect(screen.getByText(/Invested portfolio \+ house value − mortgage owed/)).toBeInTheDocument()
+    expect(screen.queryByText(/equity/i)).not.toBeInTheDocument()
+  })
+
+  it('uses the legend names in the tooltip', () => {
+    const { container } = render(<CompositionChart draft={draft} />)
+
+    fireEvent.keyDown(container.querySelector('svg[role="img"]')!, { key: 'Home' })
+
+    const tooltip = screen.getByRole('tooltip')
+    expect(tooltip).toHaveTextContent('Invested portfolio')
+    expect(tooltip).toHaveTextContent('House value')
+    expect(tooltip).toHaveTextContent('Mortgage owed')
+  })
+})

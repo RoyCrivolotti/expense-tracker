@@ -16,9 +16,11 @@ const INVESTED_COLOR = 'var(--exp-investment)'
 const HOUSE_COLOR = 'var(--exp-income)'
 const MORTGAGE_COLOR = 'var(--exp-danger)'
 
+// "House value", not equity: the series is what the house is worth, and the mortgage is its own
+// series below it. Equity is the two together, which is what the net worth line takes.
 const COMPOSITION_LEGEND_LABELS = [
   { label: 'Invested portfolio', color: INVESTED_COLOR },
-  { label: 'House equity', color: HOUSE_COLOR },
+  { label: 'House value', color: HOUSE_COLOR },
   { label: 'Mortgage owed', color: MORTGAGE_COLOR },
 ]
 
@@ -72,9 +74,9 @@ function CompositionChartImpl({
     const p = points[i]
     const year = years[i] ?? i
     const lines: TooltipLine[] = [
-      { label: 'Invested', value: formatMoneyShort(p?.investedCents ?? 0, format), color: INVESTED_COLOR, tone: 'neutral' },
-      { label: 'House equity', value: formatMoneyShort(p?.houseEquityCents ?? 0, format), color: HOUSE_COLOR, tone: 'neutral' },
-      { label: 'Mortgage', value: formatMoneyShort(p?.mortgageBalanceCents ?? 0, format), color: MORTGAGE_COLOR, tone: 'neutral' },
+      { label: 'Invested portfolio', value: formatMoneyShort(p?.investedCents ?? 0, format), color: INVESTED_COLOR, tone: 'neutral' },
+      { label: 'House value', value: formatMoneyShort(p?.houseEquityCents ?? 0, format), color: HOUSE_COLOR, tone: 'neutral' },
+      { label: 'Mortgage owed', value: formatMoneyShort(p?.mortgageBalanceCents ?? 0, format), color: MORTGAGE_COLOR, tone: 'neutral' },
       {
         label: 'Net worth',
         value: formatMoneyShort(p?.netWorthCents ?? 0, format),
@@ -90,7 +92,7 @@ function CompositionChartImpl({
     <ChartShell embedded={embedded}>
       <h3 className={styles.chartTitle}>Net worth composition</h3>
       <p className={styles.chartHint}>
-        Invested portfolio + house equity − mortgage for the scenario you are editing.
+        Invested portfolio + house value − mortgage owed, for the scenario you are editing.
       </p>
       <LinearChart
         height={height}
