@@ -2,6 +2,14 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (typing in the levers bar on a laptop screen)
+
+Measured at 1200x800, 1280x800 and 1440x800, where the bar is held to the bottom edge, in Chromium and in Safari's engine.
+
+- **Clicking beside a figure no longer scrolls the page.** A click on the unit next to a lever's number (the euro sign, "yrs", the percent sign) made Chrome scroll the page 309px, though the bar was on screen, and the top of the chart went out of sight. The click now puts the cursor in the field and leaves the page where it is, as a click on the digits always did.
+- **The bar stays one row while you type.** With the net worth at 15 characters (5.675.259.434 € after typing 5000000 a month) the result's column widened, the fifth lever wrapped to a second row at 1200px, and the bar grew from 99px to 178px, up over the chart's axis and legend by 60px. The levers now share the room that is left, and a figure that is wider than its column is cut off with an ellipsis. Nothing changes at the figures a plan has now (8.179.020 € is 160px, as before).
+- **Removing a lever with the keyboard no longer jumps the page in Safari.** Focus moves to the next star in the bar, and Safari scrolled 249px to reveal it.
+
 ## October 2026 (what the touch round left, and Undo from the keyboard)
 
 - **A star is tapped from 44px.** The tap area round a star in the inputs panel and in the bar was 46px by 34px, so a thumb a little above or below it missed. It is 44px high now with nothing moved: in the panel it is the height of the star's own row, and in the bar it goes up, since below the star is the figure it belongs to and a tap on that must not take the lever out of the bar.

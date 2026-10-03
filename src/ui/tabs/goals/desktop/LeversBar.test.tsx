@@ -590,6 +590,26 @@ describe('LeversBar', () => {
     root.style.scrollPaddingBottom = ''
   })
 
+  it('focuses a figure from a click on its unit without letting the browser scroll to it', async () => {
+    renderBar()
+    const focus = vi.spyOn(HTMLInputElement.prototype, 'focus')
+    const field = screen.getByLabelText('Monthly investing')
+    await userEvent.click(field.parentElement!.querySelector('[class*="leverUnit"]')!)
+    expect(field).toHaveFocus()
+    expect(focus.mock.calls.every(([options]) => options?.preventScroll === true)).toBe(true)
+    expect(focus).toHaveBeenCalled()
+    focus.mockRestore()
+  })
+
+  it('leaves a click on the digits to the field itself, which the browser focuses without scrolling', async () => {
+    renderBar()
+    const focus = vi.spyOn(HTMLInputElement.prototype, 'focus')
+    await userEvent.click(screen.getByLabelText('Monthly investing'))
+    expect(screen.getByLabelText('Monthly investing')).toHaveFocus()
+    expect(focus.mock.calls.some(([options]) => options?.preventScroll === true)).toBe(false)
+    focus.mockRestore()
+  })
+
   it('has a star on each lever that takes it out of the bar, where the bar can be changed', async () => {
     const onUnstar = vi.fn()
     renderBar({ onUnstar })

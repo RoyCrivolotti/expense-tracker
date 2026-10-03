@@ -296,3 +296,21 @@ describe('the legend chips on a touch screen', () => {
     expect(legend.outside).not.toMatch(/rowButton::after/)
   })
 })
+
+describe('the levers bar where it is held to the bottom edge', () => {
+  const held = underQuery('tabs/goals/desktop/planDesktop.module.css', '(min-width: 75rem) and (min-height: 50rem)')
+  const grid = held.inside.find((r) => r.selector === '.leverGrid')?.body ?? ''
+
+  it('lays its levers out in one row, however wide the result beside them gets, so it cannot grow over the legend', () => {
+    expect(grid).toMatch(/grid-auto-flow:\s*column/)
+    expect(grid).toMatch(/grid-auto-columns:\s*minmax\(0,\s*1fr\)/)
+    expect(grid).toMatch(/grid-template-columns:\s*none/)
+    // The wrapping grid is what narrower screens, where the bar goes by with the page, keep.
+    expect(held.outside).toMatch(/\.leverGrid\s*\{[^}]*repeat\(auto-fit/)
+  })
+
+  it('clips a result figure that is wider than its column, instead of taking the levers\' room', () => {
+    expect(held.outside).toMatch(/\.leverSide\s*\{[^}]*max-width:\s*15rem/)
+    expect(held.outside).toMatch(/\.leverResult\s*\{[^}]*text-overflow:\s*ellipsis/)
+  })
+})

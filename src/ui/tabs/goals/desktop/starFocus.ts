@@ -3,6 +3,9 @@ import { afterRender } from '../../../hooks/scrollTiming'
 /** Every star button, in the bar and in the panel. */
 const STAR = 'button[data-star]'
 
+/** The levers bar (LeversBar). */
+const BAR = '[data-levers-bar]'
+
 /** What holds a list of stars: the bar's row of levers, or the inputs panel. */
 export const STAR_HOME_ATTR = 'data-star-home'
 
@@ -29,6 +32,10 @@ export function toggleKeepingFocus(toggle: () => void, fallback: () => HTMLEleme
     // Stars held back (the bar is full) cannot take focus, so they do not count.
     const open = home.isConnected ? [...home.querySelectorAll<HTMLElement>(`${STAR}:not(:disabled)`)] : []
     const target = open[Math.min(index, open.length - 1)] ?? fallback()
-    target?.focus()
+    // A control in the bar sits next to the one that was just pressed, so it is already on
+    // screen. Safari reveals a control it is told to focus by where it sits in the page, not where
+    // the bar is held, and scrolled the page 249px at 1280x800. The panel's stars are left to
+    // scroll: where the list closes up the next star can be further off.
+    target?.focus({ preventScroll: target.closest(BAR) !== null })
   })
 }

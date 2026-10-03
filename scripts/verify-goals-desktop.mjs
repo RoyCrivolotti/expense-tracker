@@ -12,7 +12,7 @@
  *
  * Starts its own dev server on CAPTURE_PORT (5173 unless set), with DOCS_CAPTURE=1 so it has the
  * seeded demo data and nothing real. `ENGINES=chromium,webkit` (the default is chromium) also
- * runs it in Safari's engine, and `ONLY=touch-targets` runs just the touch-screen sizes (a minute).
+ * runs it in Safari's engine, and `ONLY=touch-targets` or `ONLY=lever-focus` runs just that group (a minute or two).
  * Exits 1 and says what was measured if anything fails.
  */
 import { spawn } from 'node:child_process'
@@ -662,6 +662,148 @@ async function checkTabs(browser, engine) {
     await checkTabWalk(page, `${engine} 1440x900`, open, engine)
     await context.close()
   }
+}
+
+/** The screens a held bar has to work on (planDesktop.module.css: from 1200x800), narrowest first. */
+const LEVER_SCREENS = [
+  { width: 1200, height: 800 },
+  { width: 1280, height: 800 },
+  { width: 1440, height: 800 },
+]
+
+/** The text fields in the bar and a value to type over each, so the figure is edited and not only focused. */
+const LEVER_FIELDS = [
+  { label: 'Starting invested', typed: '2000000' },
+  { label: 'Monthly investing', typed: '1500' },
+  { label: 'Horizon (years)', typed: '25' },
+  { label: 'Real return (%/yr, after inflation)', typed: '6' },
+]
+
+/** Where the page is and how the bar sits against the legend, for the (z1) checks. */
+function leverState(page) {
+  return page.evaluate(() => {
+    const bar = document.querySelector('[data-levers-bar]').getBoundingClientRect()
+    const legend = document.querySelector('[data-goals-plan-wide] ul[class*="chips"]').getBoundingClientRect()
+    return { y: Math.round(window.scrollY), barTop: bar.top, barHeight: bar.height, legendBottom: legend.bottom, active: document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.tagName }
+  })
+}
+
+/** Puts the page back to rest between two flows: nothing typed, nothing focused, scrolled to the top. */
+async function resetLevers(page) {
+  await page.evaluate(() => document.activeElement?.blur())
+  const discard = page.getByRole('button', { name: 'Discard changes' })
+  if (await discard.count()) await discard.click()
+  await page.waitForTimeout(250)
+  await scrollTo(page, 0)
+}
+
+/**
+ * (z1) Focusing or typing in a lever that is on screen in the held bar does not move the page, and
+ * the legend is still clear of the bar afterwards. Chromium scrolled the page 309px for a click on
+ * the unit beside a figure (it reveals a field by its place in the page, not where the bar holds
+ * it), and a 15-character net worth in the result widened its column until the five levers
+ * wrapped onto a second row at 1200px, which put the held bar over the legend.
+ */
+async function checkLeverFocus(browser, engine) {
+  for (const screen of LEVER_SCREENS) {
+    const where = `${engine} ${screen.width}x${screen.height}`
+    const { page, context } = await openPlan(browser, screen)
+    await scrollTo(page, 0)
+    const rest = await leverState(page)
+    const clear = (s) => s.legendBottom <= s.barTop + 0.5
+    const detail = (s) => `page at ${s.y}px, bar ${px(s.barTop)} to ${px(s.barTop + s.barHeight)}, legend ends ${px(s.legendBottom)}`
+    check(where, '(z1) at rest the bar is one row and the legend is clear of it', clear(rest) && rest.barHeight < 140, detail(rest))
+
+    for (const { label, typed } of LEVER_FIELDS) {
+      const field = page.getByRole('textbox', { name: label, exact: true })
+      const spots = await field.evaluate((el) => {
+        const r = el.getBoundingClientRect()
+        const u = el.parentElement.querySelector('[class*="leverUnit"]').getBoundingClientRect()
+        return { digits: [r.x + r.width / 2, r.y + r.height / 2], unit: [u.x + u.width / 2, u.y + u.height / 2] }
+      })
+      for (const how of ['digits', 'unit', 'fill']) {
+        if (how === 'fill') {
+          await field.fill(typed)
+        } else {
+          await page.mouse.click(...spots[how])
+          await page.keyboard.press('ControlOrMeta+a')
+          await page.keyboard.type(typed, { delay: 30 })
+        }
+        await page.keyboard.press('Enter')
+        await page.waitForTimeout(350)
+        const after = await leverState(page)
+        check(where, `(z1) typing ${typed} in ${label} (${how === 'fill' ? 'filled' : `a click on its ${how}`}) does not move the page`, near(after.y, 0, 1), detail(after))
+        check(where, `(z1) after typing in ${label} the legend is still clear of the bar`, clear(after) && near(after.barHeight, rest.barHeight, 1), detail(after))
+        await resetLevers(page)
+      }
+    }
+
+    // The sliders: a press on the track, the arrow keys, and Tab from the figure beside it.
+    for (const name of ['Real return (%/yr, after inflation)', 'Purchase year']) {
+      const slider = page.getByRole('slider', { name, exact: true }).first()
+      const box = await slider.boundingBox()
+      await page.mouse.click(box.x + box.width * 0.3, box.y + box.height / 2)
+      await page.keyboard.press('ArrowRight')
+      await page.keyboard.press('ArrowRight')
+      await page.waitForTimeout(350)
+      const after = await leverState(page)
+      check(where, `(z1) a press and the arrow keys on the ${name} slider do not move the page`, near(after.y, 0, 1) && clear(after), detail(after))
+      await resetLevers(page)
+    }
+    const real = page.getByRole('textbox', { name: 'Real return (%/yr, after inflation)', exact: true })
+    const realBox = await real.boundingBox()
+    await page.mouse.click(realBox.x + realBox.width / 2, realBox.y + realBox.height / 2)
+    await page.keyboard.press('Tab')
+    await page.waitForTimeout(350)
+    const tabbed = await leverState(page)
+    check(where, '(z1) Tab from a figure to the slider beside it does not move the page', near(tabbed.y, 0, 1) && clear(tabbed), detail(tabbed))
+    await resetLevers(page)
+
+    // A figure the result has no room for: it is the result that takes the room, not the levers.
+    const wide = page.getByRole('textbox', { name: 'Monthly investing', exact: true })
+    await wide.fill('5000000')
+    await wide.press('Enter')
+    await page.waitForTimeout(400)
+    const grown = await leverState(page)
+    check(where, '(z1) a 15-character net worth leaves the bar one row high and the legend clear', near(grown.barHeight, rest.barHeight, 1) && clear(grown), detail(grown))
+    await resetLevers(page)
+
+    // A star pressed from the keyboard hands focus to the next one, which must not scroll the page.
+    const star = page.getByRole('button', { name: 'Remove Monthly investing from the bar' })
+    await star.evaluate((el) => el.focus({ preventScroll: true }))
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(500)
+    const starred = await leverState(page)
+    check(where, '(z1) pressing a star with the keyboard does not move the page', near(starred.y, 0, 1) && clear(starred), detail(starred))
+    await context.close()
+  }
+
+  // The bar is not held on a 768px screen (it needs 800): it stays in the page, 797px down, and
+  // someone scrolls to it. Once it is on screen the same holds as above: a click on a figure or
+  // its unit and typing leave the page where it is, with the legend clear of the bar.
+  const short = { width: 1366, height: 768 }
+  const { page, context } = await openPlan(browser, short)
+  await scrollTo(page, 0)
+  const m = await measure(page)
+  check(`${engine} 1366x768`, '(z1) on a 768px screen the bar is not held to the bottom edge, and the legend is clear of it', m.barBottom === 'auto' && m.bar.top >= m.legendBottom, `bar bottom ${m.barBottom}, bar top ${px(m.bar.top)}, legend ends ${px(m.legendBottom)}`)
+  for (const how of ['digits', 'unit']) {
+    const at = await scrollTo(page, 200)
+    const field = page.getByRole('textbox', { name: 'Monthly investing', exact: true })
+    const spot = await field.evaluate((el, target) => {
+      const box = target === 'unit' ? el.parentElement.querySelector('[class*="leverUnit"]') : el
+      const r = box.getBoundingClientRect()
+      return [r.x + r.width / 2, r.y + r.height / 2]
+    }, how)
+    await page.mouse.click(...spot)
+    await page.keyboard.press('ControlOrMeta+a')
+    await page.keyboard.type('1500', { delay: 30 })
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(350)
+    const after = await leverState(page)
+    check(`${engine} 1366x768`, `(z1) typing in a lever there (a click on its ${how}) does not move the page, and the legend is clear of the bar`, near(after.y, at, 1) && after.legendBottom <= after.barTop + 0.5, `page ${at} to ${after.y}px, bar ${px(after.barTop)}, legend ends ${px(after.legendBottom)}`)
+    await resetLevers(page)
+  }
+  await context.close()
 }
 
 async function checkThemesAndZoom(browser, engine) {
@@ -1410,8 +1552,13 @@ async function main() {
           await checkTouchLeftovers(browser, engine)
           continue
         }
+        if (process.env.ONLY === 'lever-focus') {
+          await checkLeverFocus(browser, engine)
+          continue
+        }
         for (const screen of SCREENS) await checkScreen(browser, screen, engine)
         await checkTabs(browser, engine)
+        await checkLeverFocus(browser, engine)
         await checkThemesAndZoom(browser, engine)
         await checkLineColours(browser, engine)
         await checkBreakpoint(browser, engine)

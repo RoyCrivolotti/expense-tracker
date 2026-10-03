@@ -103,6 +103,38 @@ describe('the keyboard\'s place after a star is pressed', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'All inputs' })).toHaveFocus())
   })
 
+  it('moves to the next star in the bar without letting the browser scroll to it', async () => {
+    render(<Page initial={DEFAULT_LEVERS} />)
+    const focus = vi.spyOn(HTMLElement.prototype, 'focus')
+    removeStar('Horizon').focus()
+    focus.mockClear()
+
+    await userEvent.keyboard('{Enter}')
+
+    await waitFor(() => expect(removeStar('House purchase')).toHaveFocus())
+    const calls = focus.mock.calls.filter((_, i) => focus.mock.contexts[i] === removeStar('House purchase'))
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.[0]?.preventScroll).toBe(true)
+    focus.mockRestore()
+  })
+
+  it('lets the browser scroll to the next star in the panel, which can be further off when the list closes up', async () => {
+    render(<Page initial={[]} />)
+    const panel = screen.getByRole('region', { name: 'All inputs' })
+    const stars = within(panel).getAllByRole('button', { name: /^Add .* to the bar$/ })
+    const next = stars[2]!.getAttribute('aria-label')
+    stars[1]!.focus()
+    const focus = vi.spyOn(HTMLElement.prototype, 'focus')
+
+    await userEvent.keyboard('{Enter}')
+
+    await waitFor(() => expect(document.activeElement?.getAttribute('aria-label')).toBe(next))
+    const calls = focus.mock.calls.filter((_, i) => (focus.mock.contexts[i] as Element).getAttribute('aria-label') === next)
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.[0]?.preventScroll).toBe(false)
+    focus.mockRestore()
+  })
+
   it('leaves focus alone when the star was pressed without taking it', () => {
     render(<Page initial={DEFAULT_LEVERS} />)
 
