@@ -393,6 +393,63 @@ describe('NetWorthChart', () => {
     expect(Number(svg!.getAttribute('viewBox')?.split(' ')[3] ?? 0)).toBeGreaterThan(200)
   })
 
+  it('draws the hero taller on a wide screen, where it has the page to itself, than on a phone', () => {
+    const height = (narrow: boolean) => {
+      vi.stubGlobal('matchMedia', (query: string) => ({
+        matches: narrow && query === '(max-width: 899px)',
+        media: query,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        addListener: () => {},
+        removeListener: () => {},
+        dispatchEvent: () => false,
+        onchange: null,
+      }))
+      const { container, unmount } = render(
+        <NetWorthChart
+          milestones={milestones}
+          scenarios={[defaultDraft]}
+          draft={defaultDraft}
+          activeId={defaultDraft.id}
+          variant="hero"
+        />,
+      )
+      const h = Number(container.querySelector('svg')!.getAttribute('viewBox')?.split(' ')[3] ?? 0)
+      unmount()
+      return h
+    }
+    expect(height(false)).toBeGreaterThan(height(true))
+  })
+
+  it('sets the hero legend side by side on a wide screen and one row under another on a phone', () => {
+    const legendClass = (narrow: boolean) => {
+      vi.stubGlobal('matchMedia', (query: string) => ({
+        matches: narrow && query === '(max-width: 899px)',
+        media: query,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        addListener: () => {},
+        removeListener: () => {},
+        dispatchEvent: () => false,
+        onchange: null,
+      }))
+      const { container, unmount } = render(
+        <NetWorthChart
+          milestones={milestones}
+          scenarios={[defaultDraft]}
+          draft={defaultDraft}
+          activeId={defaultDraft.id}
+          variant="hero"
+        />,
+      )
+      const cls = container.querySelector('ul')!.className
+      unmount()
+      return cls
+    }
+    expect(legendClass(false)).toContain('chips')
+    expect(legendClass(true)).not.toContain('chips')
+  })
+
   it('shows a tooltip only while its own legend is out of view; the legend always shows its values', () => {
     const media = (matches: boolean) =>
       vi.stubGlobal('matchMedia', (query: string) => ({

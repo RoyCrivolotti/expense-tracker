@@ -102,6 +102,7 @@ function purchaseMarkerIndices(lines: ScenarioLine[], years: number[]): { yearIn
 
 function PortfolioLegend({
   isHero,
+  narrow,
   listRef,
   staticLegend,
   legendItems,
@@ -111,6 +112,7 @@ function PortfolioLegend({
   onToggle,
 }: {
   isHero: boolean
+  narrow: boolean
   listRef: RefObject<HTMLUListElement | null>
   staticLegend: LegendItem[]
   legendItems: ScenarioLegendItem[]
@@ -128,6 +130,7 @@ function PortfolioLegend({
         yearZeroHint={yearZeroHint}
         onToggle={onToggle}
         listRef={listRef}
+        layout={narrow ? 'rows' : 'chips'}
       />
     )
   }
@@ -194,7 +197,9 @@ function useChartLegendState(
 
 /** Pixels: tall enough on a desktop to read thirty years, short enough on a phone to fit above the fold. */
 function heroHeight(narrow: boolean): number {
-  return narrow ? 210 : 300
+  // A wide screen gives the chart the page's width, and a plot that wide needs the height to
+  // stay a chart and not a ribbon.
+  return narrow ? 210 : 330
 }
 
 /** The hero's window buttons: which years of the projection are drawn. */
@@ -554,6 +559,7 @@ function NetWorthChartImpl({
       />
       <PortfolioLegend
         isHero={isHero}
+        narrow={narrow}
         staticLegend={staticLegend}
         legendItems={legendWithFromToday}
         activeYear={activeYear}

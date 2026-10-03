@@ -86,3 +86,39 @@
   font-weight: 400;
   color: var(--color-text-muted);
 }
+
+/* Side by side, for a chart wide enough that a row of figures under it would otherwise be one
+   long line with the value a screen away from its name. The row keeps its swatch, name and
+   value; each is a chip that wraps onto the next line when they do not fit. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.chips .row,
+.chips .rowItem {
+  margin-bottom: 0;
+}
+
+.chips .row {
+  grid-template-columns: 12px auto auto;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-color: var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+}
+
+.chips .swatch,
+.chips .dashedSwatch {
+  margin-top: 0;
+}
+
+.chips .rowItem {
+  width: auto;
+}
+
+.chips .rowButton {
+  width: auto;
+}
