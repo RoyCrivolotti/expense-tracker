@@ -92,9 +92,9 @@ describe('ScenarioSeriesLegend', () => {
 
     it('floats the year 0 note too, and only when there is something to show', () => {
       const { rerender } = render(<ScenarioSeriesLegend {...base} breakdowns={[]} layout="chips" />)
-      expect(screen.queryByText(/Purchase at year 0/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/House already owned/)).not.toBeInTheDocument()
       rerender(<ScenarioSeriesLegend {...base} breakdowns={[]} yearZeroHint layout="chips" />)
-      expect(screen.getByText(/Purchase at year 0/).parentElement?.className).toMatch(/floater/)
+      expect(screen.getByText(/House already owned/).parentElement?.className).toMatch(/floater/)
     })
   })
 })
