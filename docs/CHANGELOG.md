@@ -2,6 +2,15 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (editing scenarios, from a review of the wide page)
+
+- **A scenario saved elsewhere is no longer written back over.** After a refresh that brought back a scenario another device had re-baselined, the editor went on with its older copy: the tab showed Edited with no edit made, the bar showed the old start balance, and Save wrote the whole copy back over the new values. The editor now puts your own edits on the new row as it arrives, and Save writes only the keys you edited.
+- **A double press makes one copy.** Two quick clicks on + Duplicate (or on Save scenario with no saved scenarios) made two scenarios on a slow connection; the button is held until the first is made. The new scenario also opens only if you have not touched anything meanwhile: an edit made, or another scenario opened, while it was being created used to be dropped without a word when it landed.
+- **Copies are told apart.** A copy of a copy counts on past the ones that exist ("Path A (copy 2)", "(copy 3)"), and a draft saved as a new scenario gets a colour no scenario has, where it kept the one it was loaded with and drew two lines alike.
+- **The inputs panel keeps the value when you type nothing, or text, over it.** Clearing the House price and tabbing out set it to 0, clearing the mortgage term set it to 1 and "abc" in a percentage set it to 0%. The panel's fields, and the percentage stepper in Settings and the Nominal preview, now put the value back, as the bar's already did.
+- **The bar's percentage field is tidier.** A typed 1,1 is stored as 0.011 and not 0.011000000000000001, which made a scenario read as edited with identical figures; Escape drops what was typed; and on a touch screen a figure is selected as it takes focus, so typing replaces it where a tap left the caret at the end and typing 5 into 1.000.000 made 10.000.005.
+- **The panel says what a house bought now does.** Moving the purchase year from Never to Now added about 4.6M to the net worth (8.2M to 12.8M in the demo) with nothing to say why. A purchase now takes nothing out of the portfolio later, which reads the starting balance as what is left after buying; the panel now says so under the purchase year.
+
 ## October 2026 (Goals on a tablet, and for assistive technology)
 
 - **Every percentage stepper, slider and button says which input it belongs to.** Each was announced as "Annual return percentage" with "Increase percentage" buttons, and the levers bar's sliders as "Real return slider". They now carry the input's name, a percentage slider reads out "7,0%" and the purchase year slider "Year 4", and a purchase year past a shortened horizon stays on the slider's track instead of being drawn at its end.
