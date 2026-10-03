@@ -80,16 +80,37 @@ export function resolveMoneyFormat(
  * currency symbol are stripped; only the format's decimal separator is honored.
  * Handles "1.456,60 €", "$1,456.60", "250000", "0,85", "-639,06". Bare integers
  * are treated as whole units. Returns 0 for empty/unparseable input.
+ *
+ * In a comma-decimal format a lone point with one or two digits after it ("2500.75") is also a
+ * decimal mark, because that is the key a numeric keypad has. Everything else keeps its meaning:
+ * "1.500" and "1.234.567" are grouped whole numbers. A point-decimal format is unchanged.
  */
 export function parseMoneyToCents(raw: string, format: MoneyFormat = EU_MONEY_FORMAT): number {
+  return parseCents(raw, format, true)
+}
+
+/**
+ * Only one point in the text and one or two digits after it, in a format that writes its
+ * decimals with a comma: "2500.75", "12.5". That is a decimal point typed on a numeric keypad,
+ * which has a point and no comma; three digits ("1.500") is a thousands mark as it always was.
+ */
+const TYPED_DECIMAL_POINT = /^[^.,]*\.\d{1,2}(?!\d)[^.,]*$/
+
+function decimalMark(body: string, format: MoneyFormat, pointMayBeDecimal: boolean): string {
+  const pointIsDecimal = pointMayBeDecimal && format.decimalSeparator === ',' && TYPED_DECIMAL_POINT.test(body)
+  return pointIsDecimal ? '.' : format.decimalSeparator
+}
+
+function parseCents(raw: string, format: MoneyFormat, pointMayBeDecimal: boolean): number {
   const stripped = raw.replace(/[\s\u00a0]/g, '')
   if (stripped === '') return 0
   const negative = stripped.startsWith('-')
   const body = negative ? stripped.slice(1) : stripped
+  const mark = decimalMark(body, format, pointMayBeDecimal)
   let normalized = ''
   for (const ch of body) {
     if (ch >= '0' && ch <= '9') normalized += ch
-    else if (ch === format.decimalSeparator) normalized += '.'
+    else if (ch === mark) normalized += '.'
     // group separators, currency symbols, and stray chars are dropped
   }
   const value = Number(normalized)
@@ -185,10 +206,11 @@ export function formatCentsCompact(cents: number, format: MoneyFormat = EU_MONEY
 }
 
 /**
- * @deprecated Use `parseMoneyToCents`. Retained for EU-only import/seed paths.
+ * @deprecated Use `parseMoneyToCents`. Retained for EU-only import/seed paths. A point stays a
+ * thousands mark here: the files it reads are written by a spreadsheet, not typed on a keypad.
  */
 export function parseEuroToCents(raw: string): number {
-  return parseMoneyToCents(raw, EU_MONEY_FORMAT)
+  return parseCents(raw, EU_MONEY_FORMAT, false)
 }
 
 /**

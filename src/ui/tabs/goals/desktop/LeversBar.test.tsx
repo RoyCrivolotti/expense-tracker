@@ -94,6 +94,17 @@ describe('LeversBar', () => {
     expect(onChange).toHaveBeenLastCalledWith({ startInvestedCents: 200_000_000 })
   })
 
+  it('reads a point typed on a numeric keypad as the decimal mark, and "1.500" as a thousand and a half', async () => {
+    const { onChange } = renderBar()
+    const field = screen.getByLabelText('Monthly investing')
+    await userEvent.clear(field)
+    await userEvent.type(field, '2500.75{Enter}')
+    expect(onChange).toHaveBeenLastCalledWith({ monthlyContributionCents: 250_075 })
+    await userEvent.clear(field)
+    await userEvent.type(field, '1.500{Enter}')
+    expect(onChange).toHaveBeenLastCalledWith({ monthlyContributionCents: 150_000 })
+  })
+
   it('never commits a negative amount', async () => {
     const { onChange } = renderBar()
     const field = screen.getByLabelText('Monthly investing')
