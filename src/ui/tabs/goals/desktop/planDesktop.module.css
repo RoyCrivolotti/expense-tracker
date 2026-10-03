@@ -710,6 +710,18 @@
     height: 2.75rem;
   }
 
+  /* Save, Discard and the rest of the buttons in the scenario row, which is 44px tall already for
+     its tabs, and "Reset to defaults", whose row is as tall as the button so nothing under it
+     moves when the button comes. */
+  .scenarioRow button,
+  .starNote button {
+    min-height: 2.75rem;
+  }
+
+  .starNote {
+    min-height: 2.75rem;
+  }
+
   /* Up and to both sides: below the star is the figure it belongs to, and a tap on that must
      not take the lever out of the bar. */
   .star::after {

@@ -264,6 +264,12 @@ describe('the scenario menu on a touch screen', () => {
   it('sets the sizes under a coarse pointer only', () => {
     expect(plan.outside).not.toMatch(/--swatch-size\s*:/)
   })
+
+  it('takes the buttons of the scenario row and Reset to defaults to 44px, in a row that is already that tall', () => {
+    expect(rule('.scenarioRow button,\n  .starNote button')).toMatch(/min-height:\s*2\.75rem/)
+    expect(rule('.starNote')).toMatch(/min-height:\s*2\.75rem/)
+    expect(plan.outside).toMatch(/\.starNote\s*\{[^}]*min-height:\s*1\.925rem/)
+  })
 })
 
 describe('the legend chips on a touch screen', () => {
