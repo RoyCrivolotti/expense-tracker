@@ -2,6 +2,12 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (leaving Goals with unsaved edits)
+
+- **Leaving Goals with an unsaved edit asks first.** Typing 900 over Monthly investing, pressing Dashboard and coming back to Goals showed 500 again with nothing said. Pressing any other section, in the side rail or the phone's bottom bar, now asks "Leave without saving?" and says that your changes to the scenario (or to the unsaved draft) will be lost. Stay closes the question and leaves everything as it was, with focus back on the button you pressed (Escape does the same); Leave goes to the section you pressed. In a read-only session the question says the changes cannot be saved instead of suggesting a save.
+- **It does not ask when nothing would be lost.** Pressing the section you are already in, moving between Plan, Progress and Assumptions (which keep the edit), and leaving while a save is on its way do not ask. Switching to another scenario tab asks the same question as before.
+- **Reloading or closing the tab with an unsaved edit gets the browser's own warning.** That also covers Back and the Navigate menu's links to other apps, which leave the page and cannot show this one's question. It is only there while an edit is unsaved.
+
 ## October 2026 (labels and numbers on the Goals charts, from a review of the wide page)
 
 - **"Years to milestone" says how far it looked.** A milestone not reached was always "40+", though the search stops at the scenario's own horizon: on a 30 year plan a milestone reached in year 32 read "40+", and with the horizon at 45 the same cell read "32y". It now says "30+" or "12+", the horizon it was looked for over.
