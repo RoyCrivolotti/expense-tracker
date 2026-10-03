@@ -67,7 +67,8 @@ export function PlanHero({
       })
       .filter((p): p is NonNullable<typeof p> => p !== null)
     if (points.length === 0) return null
-    return { id: 'actuals-overlay', color: '#f59e0b', values: [], kind: 'scatter', points }
+    // Neutral, not a scenario's colour: amber was Path C's, and nothing said what the dots were.
+    return { id: 'actuals-overlay', color: 'var(--color-text)', values: [], kind: 'scatter', points }
   }, [activeScenario, checkins, accounts])
 
   // A new array or element on every render would make the memoised chart redraw each time the
