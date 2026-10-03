@@ -28,10 +28,10 @@ function makeStarred(keys: readonly LeverKey[] = DEFAULT_LEVERS, overrides: Part
   }
 }
 
-function renderPanel(open: boolean, starred: StarredLevers = makeStarred()) {
+function renderPanel(open: boolean, starred: StarredLevers = makeStarred(), draft = makeDraft()) {
   const onChange = vi.fn()
   const ui = (isOpen: boolean) => (
-    <AllInputsPanel id="panel" open={isOpen} draft={makeDraft()} latest={null} onChange={onChange} starred={starred} />
+    <AllInputsPanel id="panel" open={isOpen} draft={draft} latest={null} onChange={onChange} starred={starred} />
   )
   const view = render(ui(open))
   return { onChange, view, ui, starred }
@@ -83,6 +83,45 @@ describe('AllInputsPanel', () => {
   })
 })
 
+describe('AllInputsPanel explanations of what is in the bar', () => {
+  const RATES_NOTE = /The mortgage rate and house appreciation are nominal/
+  const FI_FORMULA = /FI target = annual spend ÷ this rate/
+
+  it('still gives what the purchase takes from the portfolio while the purchase year is in the bar', () => {
+    // The year is in the default five, so the figure would have no other place to be.
+    renderPanel(true, makeStarred(), { ...makeDraft(), housePurchaseYear: 5 })
+
+    expect(screen.queryByLabelText('Purchase year')).not.toBeInTheDocument()
+    expect(screen.getByText(/Purchase cost from portfolio/)).toBeInTheDocument()
+  })
+
+  it('keeps the note on the two rates while either is on the page, and drops it when neither is', () => {
+    const { view } = renderPanel(true, makeStarred(['houseAppreciationRate']))
+    expect(screen.getByText(RATES_NOTE)).toBeInTheDocument()
+    view.unmount()
+
+    const other = renderPanel(true, makeStarred(['mortgageRateAnnual']))
+    expect(screen.getByText(RATES_NOTE)).toBeInTheDocument()
+    other.view.unmount()
+
+    renderPanel(true, makeStarred(['mortgageRateAnnual', 'houseAppreciationRate']))
+    expect(screen.queryByText(RATES_NOTE)).not.toBeInTheDocument()
+  })
+
+  it('keeps the FI formula while either of its inputs is on the page, and drops it when neither is', () => {
+    const { view } = renderPanel(true, makeStarred(['safeWithdrawalRate']))
+    expect(screen.getByText(FI_FORMULA)).toBeInTheDocument()
+    view.unmount()
+
+    const other = renderPanel(true, makeStarred(['annualSpendCents']))
+    expect(screen.getByText(FI_FORMULA)).toBeInTheDocument()
+    other.view.unmount()
+
+    renderPanel(true, makeStarred(['annualSpendCents', 'safeWithdrawalRate']))
+    expect(screen.queryByText(FI_FORMULA)).not.toBeInTheDocument()
+  })
+})
+
 describe('AllInputsPanel stars', () => {
   it('has a star on every input that is not in the bar, and sends it there when pressed', async () => {
     const { starred } = renderPanel(true, makeStarred(DEFAULT_LEVERS.slice(0, 4)))
@@ -109,7 +148,10 @@ describe('AllInputsPanel stars', () => {
   it('invites a star while there is room', () => {
     renderPanel(true, makeStarred(DEFAULT_LEVERS.slice(0, 2)))
     expect(screen.getByText('Star an input to keep it in the bar above.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Add House price to the bar' })).toBeEnabled()
+    const star = screen.getByRole('button', { name: 'Add House price to the bar' })
+    expect(star).toBeEnabled()
+    // Open, its tooltip says what pressing it does; held back, it says why not (above).
+    expect(star).toHaveAttribute('title', 'Add House price to the bar')
   })
 
   it('offers the way back to the five only when the bar is not them', async () => {
@@ -127,13 +169,14 @@ describe('AllInputsPanel stars', () => {
     void ui
   })
 
-  it('says nothing about stars, and cannot press one, in a read-only session', () => {
+  it('has no stars, and says nothing about them, in a read-only session', () => {
     renderPanel(true, makeStarred([], { canEdit: false, canAdd: false }))
     expect(screen.queryByText(/Star an input/)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Reset to defaults' })).not.toBeInTheDocument()
-    const star = screen.getAllByRole('button', { name: /^Add .* to the bar$/ })[0]!
-    expect(star).toBeDisabled()
-    expect(star).toHaveAttribute('title', 'Read-only session')
+    expect(screen.queryByRole('button', { name: /to the bar$/ })).not.toBeInTheDocument()
+    // The inputs themselves are all still there to read.
+    expect(screen.getByLabelText('Monthly investing')).toBeInTheDocument()
+    expect(screen.getByLabelText('House price')).toBeInTheDocument()
   })
 })
 

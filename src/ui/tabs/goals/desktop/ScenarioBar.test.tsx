@@ -58,6 +58,14 @@ describe('ScenarioBar', () => {
     expect(tab('Path B')).toHaveAttribute('aria-selected', 'true')
   })
 
+  it('puts the whole name of a scenario in its tab\'s tooltip, since a long one is cut short there', () => {
+    const name = 'A very long scenario name that would make its tab as wide as the whole row of tabs'
+    render(<Harness initial={[plan, makeScenario({ id: 3, name, sortOrder: 1 })]} actions={makeActions()} />)
+
+    expect(within(tab(/^A very long/)).getByTitle(name)).toBeInTheDocument()
+    expect(within(tab('Path A Current plan')).queryByTitle(name)).not.toBeInTheDocument()
+  })
+
   it('keeps the selected tab as the tab stop', () => {
     render(<Harness initial={[plan, other]} actions={makeActions()} />)
     expect(tab('Path A Current plan')).toHaveAttribute('tabindex', '0')
@@ -77,6 +85,32 @@ describe('ScenarioBar', () => {
     await openMenu()
     await userEvent.clear(screen.getByLabelText('Scenario name'))
     expect(screen.getByRole('button', { name: 'Save scenario' })).toBeDisabled()
+  })
+
+  it('says "Save changes" on its button, which has the room for it, and names the scenario to a screen reader', async () => {
+    render(<Harness initial={[plan, other]} actions={makeActions()} />)
+
+    await openMenu()
+    await userEvent.type(screen.getByLabelText('Scenario name'), '!')
+    await userEvent.keyboard('{Escape}')
+
+    expect(screen.getByRole('button', { name: 'Save changes to Path A!' })).toHaveTextContent(/^Save changes$/)
+  })
+
+  it('will not save the edits to a scenario that has been given no name, and can still drop them', async () => {
+    const actions = makeActions()
+    render(<Harness initial={[plan, other]} actions={actions} />)
+
+    await openMenu()
+    await userEvent.clear(screen.getByLabelText('Scenario name'))
+    await userEvent.keyboard('{Escape}')
+
+    const save = screen.getByRole('button', { name: 'Save changes' })
+    expect(save).toBeDisabled()
+    expect(save).toHaveAttribute('title', 'Give the scenario a name to save it')
+    await userEvent.click(save)
+    expect(actions.updateScenario).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Discard changes' })).toBeEnabled()
   })
 
   it('marks the open scenario as edited and offers to keep or drop the edits', async () => {

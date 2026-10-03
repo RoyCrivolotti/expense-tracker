@@ -24,11 +24,14 @@ export function UnsavedGroup({
   unsaved,
   onGone,
   className = styles.unsavedActions,
+  saveLabel = 'Save',
 }: {
   unsaved: UnsavedActions
   onGone: () => void
   /** The frame it sits in: the phone's section row has its own, the wide screen's scenario row another. */
   className?: string | undefined
+  /** What the button says: the phone's row is narrow and keeps the short word, the wide row has room. */
+  saveLabel?: string
 }) {
   const group = useRef<HTMLDivElement>(null)
   const hadFocus = useRef(false)
@@ -49,6 +52,9 @@ export function UnsavedGroup({
     }
   }, [onGone])
 
+  // A scenario with no name cannot be saved (the service refuses it too); it is the edits that
+  // are the problem, so Discard stays.
+  const unnamed = unsaved.name.trim().length === 0
   return (
     <div
       ref={group}
@@ -77,11 +83,12 @@ export function UnsavedGroup({
       <button
         type="button"
         className={`${styles.btn} ${styles.btnPrimary}`}
-        aria-label={`Save changes to ${unsaved.name}`}
-        disabled={unsaved.saving}
+        aria-label={unnamed ? 'Save changes' : `Save changes to ${unsaved.name}`}
+        {...(unnamed ? { title: 'Give the scenario a name to save it' } : {})}
+        disabled={unsaved.saving || unnamed}
         onClick={unsaved.onSave}
       >
-        Save
+        {saveLabel}
       </button>
     </div>
   )

@@ -27,7 +27,11 @@ const Tab = forwardRef<HTMLButtonElement, TabProps>(function Tab({ scenario, lab
       onClick={onClick}
     >
       <span className={styles.tabDot} style={{ background: scenario?.color ?? 'var(--color-text-muted)' }} aria-hidden />
-      {label}
+      {/* A long name is cut short with an ellipsis rather than making one tab as wide as the row;
+          the whole of it is in the tooltip. */}
+      <span className={styles.tabName} title={label}>
+        {label}
+      </span>
       {/* Spaces between the parts of the name: the flex layout drops them from the page, but not
           from what a screen reader is told. */}
       {scenario?.isActive ? (

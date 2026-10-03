@@ -85,7 +85,7 @@ function CompactNarrative({
   const { end, next, fiYear } = getNarrativeStats(draft, milestones, inflationRate)
   const stats: PlanStat[] = [
     {
-      label: `Net worth in ${draft.horizonYears} yrs`,
+      label: `Net worth in ${draft.horizonYears} ${draft.horizonYears === 1 ? 'yr' : 'yrs'}`,
       value: formatCents(end?.netWorthCents ?? 0, format),
     },
     next?.year != null

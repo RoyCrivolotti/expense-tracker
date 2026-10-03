@@ -1,8 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { DEFAULT_LEVERS } from '../../../../engine'
+import { DEFAULT_LEVERS, type MoneyFormat } from '../../../../engine'
 import { makeScenario } from '../../../../testing/factories'
+import { MoneyFormatContext } from '../../../hooks/moneyFormatContext'
 import { LeversBar } from './LeversBar'
 
 function makeDraft(overrides = {}) {
@@ -38,6 +39,39 @@ describe('LeversBar', () => {
     expect(screen.getByLabelText('Horizon (years)')).toHaveValue('30')
     expect(screen.getByLabelText('Real return (%/yr, after inflation)')).toHaveValue('7,0')
     expect(screen.getByText('Never')).toBeInTheDocument()
+  })
+
+  it('puts a dollar sign before the digits and a euro sign after them, as the money is written', () => {
+    const usd: MoneyFormat = { locale: 'en-US', symbol: '$', symbolPosition: 'prefix', decimalSeparator: '.' }
+    const draft = makeDraft()
+    render(
+      <MoneyFormatContext.Provider value={usd}>
+        <LeversBar draft={draft} resultDraft={draft} keys={DEFAULT_LEVERS} expanded={false} panelId="p" onChange={vi.fn()} onToggle={vi.fn()} />
+      </MoneyFormatContext.Provider>,
+    )
+    const order = (label: string) => {
+      const field = screen.getByLabelText(label)
+      const unit = field.parentElement!.querySelector('[class*="leverUnit"]')!
+      return field.compareDocumentPosition(unit) & Node.DOCUMENT_POSITION_FOLLOWING ? 'after' : 'before'
+    }
+    expect(order('Monthly investing')).toBe('before')
+    expect(screen.getByLabelText('Monthly investing')).toHaveValue('500')
+    // The years and the percentage keep their unit after the number.
+    expect(order('Horizon (years)')).toBe('after')
+    expect(order('Real return (%/yr, after inflation)')).toBe('after')
+  })
+
+  it('writes a euro amount with the sign after the digits', () => {
+    renderBar()
+    const field = screen.getByLabelText('Monthly investing')
+    const unit = field.parentElement!.querySelector('[class*="leverUnit"]')!
+    expect(field.compareDocumentPosition(unit) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('says "1 yr" for a one year horizon', () => {
+    renderBar({}, { horizonYears: 1 })
+    expect(screen.getByText('yr')).toBeInTheDocument()
+    expect(screen.queryByText('yrs')).not.toBeInTheDocument()
   })
 
   it('keeps the cents of an amount that has them', () => {
@@ -209,6 +243,12 @@ describe('LeversBar', () => {
     expect(screen.getByText('0 €')).toBeInTheDocument()
   })
 
+  it('says in a tooltip that the net worth is in today\'s money, which the label alone does not', () => {
+    renderBar()
+    // The tooltip is on the figure itself.
+    expect(screen.getByTitle("In today's money, after inflation")).toHaveTextContent(/€/)
+  })
+
   it('opens and closes the rest of the inputs from one button that says which', async () => {
     const { onToggle } = renderBar()
     const button = screen.getByRole('button', { name: 'All inputs' })
@@ -223,9 +263,13 @@ describe('LeversBar', () => {
     expect(screen.getByRole('button', { name: 'All inputs' })).toHaveAttribute('aria-expanded', 'true')
   })
 
-  it('keeps a control reached with the keyboard out from under it while it is mounted', () => {
+  it('keeps a control reached with the keyboard out from under it while it is mounted and stuck under the header', () => {
     const root = document.documentElement
     root.style.scrollPaddingTop = ''
+    // The stylesheet that sticks it, which a width query turns on.
+    const stuck = document.createElement('style')
+    stuck.textContent = '[class*="leversBar"] { position: sticky; top: 10px; }'
+    document.head.append(stuck)
     const { unmount } = render(
       <LeversBar
         draft={makeDraft()}
@@ -237,9 +281,63 @@ describe('LeversBar', () => {
         onToggle={vi.fn()}
       />,
     )
-    expect(root.style.scrollPaddingTop).not.toBe('')
+    // Its own height (nothing in jsdom) under where it sticks, and the air.
+    expect(root.style.scrollPaddingTop).toBe('18px')
     unmount()
     expect(root.style.scrollPaddingTop).toBe('')
+    stuck.remove()
+  })
+
+  it('leaves the top of the page to the app where the bar is not stuck, because it goes by with the page', () => {
+    const root = document.documentElement
+    root.style.scrollPaddingTop = '60px'
+    const { unmount } = render(
+      <LeversBar
+        draft={makeDraft()}
+        resultDraft={makeDraft()}
+        keys={DEFAULT_LEVERS}
+        onChange={vi.fn()}
+        expanded={false}
+        panelId="p"
+        onToggle={vi.fn()}
+      />,
+    )
+    // Nothing is stuck over the page, so the app's own padding for its header is the right one.
+    expect(root.style.scrollPaddingTop).toBe('60px')
+    unmount()
+    expect(root.style.scrollPaddingTop).toBe('60px')
+    root.style.scrollPaddingTop = ''
+  })
+
+  it('takes the top padding when the window grows to where the bar is stuck, and gives it back when it shrinks', () => {
+    const root = document.documentElement
+    root.style.scrollPaddingTop = '60px'
+    const stuck = document.createElement('style')
+    document.head.append(stuck)
+    const { unmount } = render(
+      <LeversBar
+        draft={makeDraft()}
+        resultDraft={makeDraft()}
+        keys={DEFAULT_LEVERS}
+        onChange={vi.fn()}
+        expanded={false}
+        panelId="p"
+        onToggle={vi.fn()}
+      />,
+    )
+    expect(root.style.scrollPaddingTop).toBe('60px')
+
+    stuck.textContent = '[class*="leversBar"] { position: sticky; top: 10px; }'
+    fireEvent(window, new Event('resize'))
+    expect(root.style.scrollPaddingTop).toBe('18px')
+
+    stuck.textContent = ''
+    fireEvent(window, new Event('resize'))
+    expect(root.style.scrollPaddingTop).toBe('60px')
+
+    unmount()
+    stuck.remove()
+    root.style.scrollPaddingTop = ''
   })
 
   it('keeps it clear of the bar along the bottom edge too, where the bar is held there, and gives back what the page had', () => {
@@ -293,6 +391,13 @@ describe('LeversBar', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Remove Horizon from the bar' }))
     expect(onUnstar).toHaveBeenCalledWith('horizonYears')
     expect(screen.getAllByRole('button', { name: /^Remove .* from the bar$/ })).toHaveLength(5)
+  })
+
+  it('says what a star does to a pointer that rests on it, since nothing else on the page does', () => {
+    renderBar({ onUnstar: vi.fn() })
+    for (const star of screen.getAllByRole('button', { name: /^Remove .* from the bar$/ })) {
+      expect(star).toHaveAttribute('title', star.getAttribute('aria-label'))
+    }
   })
 
   it('has no stars where the bar cannot be changed', () => {

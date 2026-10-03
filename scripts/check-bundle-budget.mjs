@@ -80,8 +80,16 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // inputs panel and the two-column detail grid): about 4.4 KB gzip took the total from about
 // 208 KB to 212,355 bytes and the Goals chunk from about 37 KB to 41,410, which is all new UI
 // and no new library. The limits keep about 1.6 KB of headroom each, as the notes above do.
-const TOTAL_MAX_GZIP = 214_000
-const GOALS_MAX_GZIP = 43_000
+//
+// Raised from 214 KB to 215 KB, and the Goals chunk from 43 KB to 44 KB, for what the review of
+// that page found. The first fixes (the keyboard's place after a star, the panel scrolling into
+// view, the lever field that only commits what was typed) left the total at 213.8 KB and the
+// Goals chunk at 42.8 KB, with 0.2 KB of headroom. The polish round on top of them (the hints
+// that stay with starred inputs, star tooltips and hover, the tab name ellipsis, the name check
+// on Save, and the bar's scroll padding that follows the window width) added about 0.3 KB, which
+// took both over. All of it is small code and CSS in the one lazy chunk, with no new library.
+const TOTAL_MAX_GZIP = 215_000
+const GOALS_MAX_GZIP = 44_000
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length

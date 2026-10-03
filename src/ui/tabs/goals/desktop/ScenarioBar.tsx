@@ -67,9 +67,10 @@ export function ScenarioBar({ scenarios, editor, actions }: ScenarioBarProps) {
         <>
           {activeScenario && dirty ? (
             <>
-              <span className={goalStyles.dirtyPill}>Unsaved changes</span>
+              <span className={`${goalStyles.dirtyPill} ${styles.rowPill}`}>Unsaved changes</span>
               <UnsavedGroup
                 className={styles.unsavedActions}
+                saveLabel="Save changes"
                 onGone={focusTab}
                 unsaved={{ name: draft.name, saving, onSave: editor.onSaveChanges, onDiscard: editor.onDiscard }}
               />

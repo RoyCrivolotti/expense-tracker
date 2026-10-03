@@ -7,11 +7,20 @@
 
 /* The levers bar: stuck under the app header with a little air, the way the old side panel
    was, because it is a card and not a row. The wrapper is what sticks, so the scroll padding
-   (useBarScrollPadding) reads one box. */
+   (useBarScrollPadding) reads one box.
+
+   Only where the five levers fit one row. Narrower, they wrap to two or three rows and the bar is
+   180px or more, a quarter of a small laptop's screen, and it would sit over the page the whole
+   time it is scrolled: there it goes by with the rest of the page. */
 .leversBar {
-  position: sticky;
-  top: calc(var(--exp-header) + var(--exp-header-air) + env(safe-area-inset-top, 0px));
   z-index: 6;
+}
+
+@media (min-width: 75rem) {
+  .leversBar {
+    position: sticky;
+    top: calc(var(--exp-header) + var(--exp-header-air) + env(safe-area-inset-top, 0px));
+  }
 }
 
 /* Where the five levers fit one row it is held at the bottom edge as well, so while its place in
@@ -115,6 +124,11 @@
   border: 1px solid transparent;
 }
 
+/* After a unit that comes first ($), the digits do not need to hang out to the label's edge: the unit is on it. */
+.leverInputAfterUnit {
+  margin-left: -0.125rem;
+}
+
 .leverInput:hover {
   border-color: var(--color-border);
 }
@@ -216,6 +230,25 @@
   border-color: color-mix(in srgb, var(--color-accent) 55%, var(--color-border));
 }
 
+/* A tab is as wide as its name up to this, and the name gives way to an ellipsis after it: a
+   78 character name made a tab 680px wide and pushed the unsaved buttons to a row of their own. */
+.tab {
+  max-width: 22rem;
+}
+
+.tabName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The pills after the name keep their size; it is the name that is cut. */
+.tabPlan,
+.tabEdited {
+  flex: none;
+}
+
 /* The one in the editor: the accent on its edge and a wash of it behind. */
 .tabOn {
   border-color: var(--color-accent);
@@ -259,6 +292,11 @@
   flex: 1;
 }
 
+/* The pill hangs from the top of its column in the phone's header, where it was built. In this
+   row everything is centred on one line, and it sat 9px above the buttons beside it. */
+.scenarioRow .rowPill {
+  align-self: center;
+}
 .unsavedActions {
   display: flex;
   gap: 0.375rem;
@@ -551,6 +589,10 @@
 }
 
 .star {
+  /* The amber is darkened a little toward the text colour: the plain amber is 2.8:1 against the
+     card in the light theme, under the 3:1 a graphic that carries a state has to have. */
+  --star-amber: color-mix(in srgb, var(--exp-warning) 80%, var(--color-text));
+  position: relative;
   display: inline-flex;
   flex: none;
   align-items: center;
@@ -565,9 +607,24 @@
   cursor: pointer;
 }
 
+/* The star is drawn small to sit in a label row. This takes the area that answers a click or a
+   tap to 24px square, the least a finger or a pointer should be asked to hit, without moving
+   anything: it is the 1.1rem star plus 0.2rem on every side. */
+.star::after {
+  content: '';
+  position: absolute;
+  inset: -0.2rem;
+}
+
 .star:hover:not(:disabled),
 .star:focus-visible {
-  color: var(--exp-warning);
+  color: var(--star-amber);
+}
+
+/* Pressing a filled star takes the input out of the bar, so under the pointer it shows the
+   outline it is about to become. */
+.starOn:hover:not(:disabled) svg {
+  fill: none;
 }
 
 .star:focus-visible {
@@ -575,22 +632,25 @@
   outline-offset: 1px;
 }
 
+/* Held back, not hidden: at 0.4 it was 2.1:1 in the dark theme and 1.4:1 in the light one, and
+   read as missing rather than as unavailable. */
 .star:disabled {
-  opacity: 0.4;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
 .starOn {
-  color: var(--exp-warning);
+  color: var(--star-amber);
 }
 
 .starrable {
   position: relative;
 }
 
+/* On the middle of the label's first line (the star is 1.1rem and a line 1.25 of the label's size). */
 .starrable > .star {
   position: absolute;
-  top: 0.05rem;
+  top: 0.26rem;
   left: -1.3rem;
   width: 1.1rem;
   height: 1.1rem;
@@ -601,6 +661,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+  /* As tall as the row is with "Reset to defaults" in it (30.8px), so the columns under it do not
+     move down by the difference when the first star is taken out and the button comes. */
+  min-height: 1.925rem;
   margin: 0 0 0.9rem;
   padding-left: 0.15rem;
 }

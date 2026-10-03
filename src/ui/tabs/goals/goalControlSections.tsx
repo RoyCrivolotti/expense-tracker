@@ -117,6 +117,9 @@ function PurchaseCostFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }:
 }
 
 function MortgageFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: SectionProps) {
+  // The note is about both rates, so it stays while either is on the page. With only one starred
+  // it would otherwise go with it and leave the other with no word on what it means.
+  const explainsRates = !omit.has('mortgageRateAnnual') || !omit.has('houseAppreciationRate')
   return (
     <>
       {omit.has('mortgageRateAnnual') ? null : (
@@ -137,27 +140,30 @@ function MortgageFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: Sec
         />)
       )}
       {omit.has('houseAppreciationRate') ? null : (
-        <>
-          {wrap('houseAppreciationRate', <PercentField
-            label={L.houseAppreciationRate.label}
-            value={draft.houseAppreciationRate}
-            max={L.houseAppreciationRate.max ?? 0.1}
-            onChange={(v) => onChange({ houseAppreciationRate: v })}
-          />)}
-          <p className={styles.fieldHint}>
-            The mortgage rate and house appreciation are nominal, as a bank and the price index
-            quote them. The plan takes inflation off both, so the house and the debt are in
-            today&apos;s money like everything else.
-          </p>
-        </>
+        wrap('houseAppreciationRate', <PercentField
+          label={L.houseAppreciationRate.label}
+          value={draft.houseAppreciationRate}
+          max={L.houseAppreciationRate.max ?? 0.1}
+          onChange={(v) => onChange({ houseAppreciationRate: v })}
+        />)
       )}
+      {explainsRates ? (
+        <p className={styles.fieldHint}>
+          The mortgage rate and house appreciation are nominal, as a bank and the price index
+          quote them. The plan takes inflation off both, so the house and the debt are in
+          today&apos;s money like everything else.
+        </p>
+      ) : null}
     </>
   )
 }
 
 function PurchaseTimingFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: SectionProps) {
   const format = useMoneyFormat()
-  const purchaseHint = omit.has('housePurchaseYear') ? null : purchaseSummary(draft, format)
+  // What the purchase takes from the portfolio is worked out from the draft, not from the year's
+  // field, so it is still said while the year is in the levers bar, where it is the one place
+  // the figure is.
+  const purchaseHint = purchaseSummary(draft, format)
   return (
     <>
       {omit.has('housePurchaseYear') ? null : (
@@ -193,6 +199,8 @@ export function HousingFields(props: SectionProps) {
 }
 
 export function FireFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: SectionProps) {
+  // The formula is about both inputs, so it stays while either is on the page.
+  const explainsTarget = !omit.has('annualSpendCents') || !omit.has('safeWithdrawalRate')
   return (
     <>
       <p className={styles.fieldHint}>
@@ -212,20 +220,20 @@ export function FireFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: 
         </>
       )}
       {omit.has('safeWithdrawalRate') ? null : (
-        <>
-          {wrap('safeWithdrawalRate', <PercentField
-            label={L.safeWithdrawalRate.label}
-            value={draft.safeWithdrawalRate}
-            min={L.safeWithdrawalRate.min ?? 0.005}
-            max={L.safeWithdrawalRate.max ?? 0.06}
-            onChange={(v) => onChange({ safeWithdrawalRate: v })}
-          />)}
-          <p className={styles.fieldHint}>
-            Share of the portfolio you would spend each year once FI (4% is the usual rule of thumb).
-            Lower rate = spend less = higher FI target. FI target = annual spend ÷ this rate.
-          </p>
-        </>
+        wrap('safeWithdrawalRate', <PercentField
+          label={L.safeWithdrawalRate.label}
+          value={draft.safeWithdrawalRate}
+          min={L.safeWithdrawalRate.min ?? 0.005}
+          max={L.safeWithdrawalRate.max ?? 0.06}
+          onChange={(v) => onChange({ safeWithdrawalRate: v })}
+        />)
       )}
+      {explainsTarget ? (
+        <p className={styles.fieldHint}>
+          Share of the portfolio you would spend each year once FI (4% is the usual rule of thumb).
+          Lower rate = spend less = higher FI target. FI target = annual spend ÷ this rate.
+        </p>
+      ) : null}
     </>
   )
 }

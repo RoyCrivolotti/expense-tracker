@@ -30,6 +30,8 @@ interface TypedProps {
   /** The value as the field writes it. The field shows this whenever it is not being typed in. */
   text: string
   unit: string
+  /** The unit comes before the digits, as a dollar sign does, instead of after them. */
+  unitFirst?: boolean
   /** Called on blur and on Enter, with what was typed, and only if something was. */
   onCommit: (raw: string) => void
   inputMode: 'decimal' | 'numeric'
@@ -43,7 +45,7 @@ interface TypedProps {
  * shows it, and a percentage shown to one decimal would lose the second one it was given. After
  * a commit the field reads the value again, so input that was refused or clamped does not stay in it.
  */
-function TypedValue({ label, text, unit, onCommit, inputMode }: TypedProps) {
+function TypedValue({ label, text, unit, unitFirst = false, onCommit, inputMode }: TypedProps) {
   const [typed, setTyped] = useState<string | null>(null)
   const shown = typed ?? text
   const commit = () => {
@@ -51,10 +53,12 @@ function TypedValue({ label, text, unit, onCommit, inputMode }: TypedProps) {
     setTyped(null)
     onCommit(typed)
   }
+  const unitText = <span className={styles.leverUnit}>{unit}</span>
   return (
     <div className={styles.leverValue}>
+      {unitFirst ? unitText : null}
       <input
-        className={styles.leverInput}
+        className={unitFirst ? `${styles.leverInput} ${styles.leverInputAfterUnit}` : styles.leverInput}
         type="text"
         inputMode={inputMode}
         aria-label={label}
@@ -66,7 +70,7 @@ function TypedValue({ label, text, unit, onCommit, inputMode }: TypedProps) {
           if (e.key === 'Enter') commit()
         }}
       />
-      <span className={styles.leverUnit}>{unit}</span>
+      {unitFirst ? null : unitText}
     </div>
   )
 }
@@ -113,6 +117,7 @@ export function Lever({ spec, draft, onChange, onUnstar }: LeverProps) {
           label={label}
           text={moneyText(cents, format)}
           unit={format.symbol}
+          unitFirst={format.symbolPosition === 'prefix'}
           inputMode="decimal"
           onCommit={(raw) => {
             if (/\d/.test(raw)) patch(Math.max(0, parseMoneyToCents(raw, format)))
@@ -129,7 +134,7 @@ export function Lever({ spec, draft, onChange, onUnstar }: LeverProps) {
         <TypedValue
           label={label}
           text={String(years)}
-          unit="yrs"
+          unit={years === 1 ? 'yr' : 'yrs'}
           inputMode="numeric"
           onCommit={(raw) => {
             const n = typedNumber(raw)

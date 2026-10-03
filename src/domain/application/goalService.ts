@@ -131,8 +131,11 @@ export async function patchScenario(
     }
     return repo.activateScenario(owner, id)
   }
-  validateScenarioNumbers(patch)
-  return repo.updateScenario(owner, id, patch)
+  // A name that is being changed has to be one, as it does when the scenario is made: an empty
+  // one saved as "Saved" and left a tab with nothing on it.
+  const checked = 'name' in patch ? { ...patch, name: validateScenarioName(patch.name) } : patch
+  validateScenarioNumbers(checked)
+  return repo.updateScenario(owner, id, checked)
 }
 
 export async function removeScenario(repo: ExpenseRepository, owner: string, id: number) {

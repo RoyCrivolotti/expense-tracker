@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { LeverKey } from '../../../engine'
 import { makeScenario } from '../../../testing/factories'
@@ -41,12 +41,30 @@ describe('the sections of the controls', () => {
     expect(screen.queryByLabelText('Monthly investing')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Withdrawal rate at FI')).not.toBeInTheDocument()
     expect(screen.queryByText('Purchase year')).not.toBeInTheDocument()
-    expect(screen.queryByText(/Purchase cost from portfolio/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Notary, agency/)).not.toBeInTheDocument()
     expect(screen.queryByText(/nominal, as a bank/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/FI target = annual spend/)).not.toBeInTheDocument()
     // What is about the section as a whole stays.
     expect(screen.getByText(/Models life after financial independence/)).toBeInTheDocument()
     expect(container.querySelectorAll('input')).toHaveLength(0)
+  })
+
+  it('still says what the purchase takes from the portfolio when its year is in the bar', () => {
+    // It is worked out from the draft and is said nowhere else, so it does not leave with the year.
+    render(<HousingFields draft={makeDraft()} onChange={vi.fn()} omit={everything(['housePurchaseYear'])} />)
+    expect(screen.queryByText('Purchase year')).not.toBeInTheDocument()
+    expect(screen.getByText(/Purchase cost from portfolio/)).toBeInTheDocument()
+  })
+
+  it('writes an edit to the withdrawal rate to the draft', () => {
+    const onChange = vi.fn()
+    render(<FireFields draft={makeDraft()} onChange={onChange} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Increase percentage' }))
+
+    expect(onChange).toHaveBeenCalledTimes(1)
+    const patch = onChange.mock.calls[0]?.[0] as { safeWithdrawalRate: number } | undefined
+    expect(patch?.safeWithdrawalRate).toBeGreaterThan(makeDraft().safeWithdrawalRate)
   })
 
   it('keeps the other inputs of a section when one is in the bar', () => {

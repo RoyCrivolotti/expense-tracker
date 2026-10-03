@@ -301,6 +301,8 @@ describe('AdjustSectionNav', () => {
     const group = screen.getByRole('group', { name: 'Unsaved changes' })
 
     expect(within(group).getByRole('button', { name: 'Save changes to Path A' })).toHaveClass(styles.btnPrimary!)
+    // The phone's row is narrow, so it keeps the short word; the wide row says "Save changes".
+    expect(within(group).getByRole('button', { name: 'Save changes to Path A' })).toHaveTextContent(/^Save$/)
     expect(within(group).getByRole('button', { name: 'Discard changes' })).not.toHaveClass(styles.btnPrimary!)
   })
 
