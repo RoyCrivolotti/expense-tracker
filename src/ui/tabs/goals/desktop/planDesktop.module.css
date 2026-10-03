@@ -277,6 +277,12 @@
 .rowSpacer {
   flex: 1;
 }
+
+/* The pill hangs from the top of its column in the phone's header, where it was built. In this
+   row everything is centred on one line, and it sat 9px above the buttons beside it. */
+.scenarioRow .rowPill {
+  align-self: center;
+}
 .unsavedActions {
   display: flex;
   gap: 0.375rem;
