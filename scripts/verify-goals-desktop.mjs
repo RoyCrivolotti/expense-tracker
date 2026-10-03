@@ -163,6 +163,7 @@ function measure(page) {
         const scroller = document.querySelector('[data-goals-plan-wide] [class*="milestoneScroll"]')
         return scroller ? scroller.scrollWidth - scroller.clientWidth : 0
       })(),
+      barPosition: bar ? getComputedStyle(bar).position : null,
       barTop: bar ? getComputedStyle(bar).top : null,
       barBottom: bar ? getComputedStyle(bar).bottom : null,
       labelTops: labels.map((l) => Math.round(l.getBoundingClientRect().top)),
@@ -197,6 +198,9 @@ async function checkLayout(page, screen, where) {
     // The five levers and the result block, which has a label of its own.
     const row = new Set(m.labelTops)
     check(where, '(e) the five levers and the result are on one row', row.size === 1 && m.labelTops.length === 6, `tops ${m.labelTops.join(', ')}`)
+  }
+  if (screen.width < ONE_ROW_FROM) {
+    check(where, '(g) below 75rem the bar goes by with the page instead of sticking over it', m.barPosition === 'static', `position ${m.barPosition}`)
   }
   if (screen.width >= HELD_FROM.width && screen.height >= HELD_FROM.height) {
     check(where, '(f) the bar is on screen on first load, held to the bottom edge', m.bar.bottom <= m.ih + 0.5 && m.bar.top >= 0, `bar ${px(m.bar.top)} to ${px(m.bar.bottom)} in ${m.ih}px`)
@@ -261,6 +265,18 @@ async function checkStars(page, where) {
   const box = await star.boundingBox()
   const field = await page.getByLabel('House price', { exact: true }).boundingBox()
   check(where, '(m) the star hangs clear of its input, to the left', box !== null && field !== null && box.x + box.width <= field.x && box.width >= 12, JSON.stringify({ box, field: field && { x: field.x } }))
+  check(where, '(m) a star says what it does when the pointer rests on it', (await star.getAttribute('title')) === 'Add House price to the bar')
+  const hit = await star.evaluate((el) => Number.parseFloat(getComputedStyle(el, '::after').width))
+  check(where, '(m) the area that takes a click on a star is 24px wide', near(hit, 24, 1), px(hit))
+  const offCentre = await star.evaluate((el) => {
+    const label = el.parentElement.querySelector('label, [class*="label"]')
+    const range = document.createRange()
+    range.selectNodeContents(label)
+    const line = range.getClientRects()[0]
+    const s = el.getBoundingClientRect()
+    return s.top + s.height / 2 - (line.top + line.height / 2)
+  })
+  check(where, "(m) the star is on the middle of its label's first line", Math.abs(offCentre) <= 1, px(offCentre))
   await star.click()
   await page.waitForTimeout(300)
   check(where, '(m) starring an input puts it in the bar, which is full again', (await count()) === 5 && (await bar.getByLabel('House price', { exact: true }).count()) === 1)
@@ -270,6 +286,17 @@ async function checkStars(page, where) {
   await page.getByRole('button', { name: 'Reset to defaults' }).click()
   await page.waitForTimeout(300)
   check(where, '(m) Reset puts the five back', (await count()) === 5 && (await bar.getByLabel('Horizon (years)', { exact: true }).count()) === 1)
+
+  // The panel is still open, with the five: taking one out brings "Reset to defaults" in, and
+  // nothing under its row may move for it.
+  const columnsTop = () => page.locator('[class*="columns"]').first().evaluate((el) => el.getBoundingClientRect().top)
+  const restingTop = await columnsTop()
+  await page.getByRole('button', { name: 'Remove Horizon from the bar' }).click()
+  await page.waitForTimeout(300)
+  const movedTop = await columnsTop()
+  check(where, '(m) the columns do not move when "Reset to defaults" comes in', near(movedTop, restingTop, 0.5), `${px(movedTop)} against ${px(restingTop)}`)
+  await page.getByRole('button', { name: 'Reset to defaults' }).click()
+  await page.waitForTimeout(300)
   await page.getByRole('button', { name: 'All inputs' }).click()
   await page.getByRole('region', { name: 'All inputs' }).waitFor({ state: 'detached', timeout: 5000 })
 }
