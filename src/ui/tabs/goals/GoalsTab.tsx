@@ -21,6 +21,7 @@ import { GOALS_CONTENT_ANCHOR_ID } from './goalsAnchors'
 import { ProgressPane } from './ProgressPane'
 import { AssumptionsView } from './AssumptionsView'
 import { useScenarioEditor } from './useScenarioEditor'
+import { useGoalsUnsavedWork } from './useGoalsUnsavedWork'
 import { useStarredLevers } from './useStarredLevers'
 import { PlanView } from './PlanView'
 import type { DisplayMode } from './PlanHero'
@@ -120,6 +121,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
   )
 
   const editor = useScenarioEditor(dataset, actions, avgSaving)
+  useGoalsUnsavedWork(editor, actions != null)
   // Kept here, not in Plan, so a choice still being saved survives a visit to another view.
   const levers = useStarredLevers(dataset.settings.goalLevers, actions?.updateSettings)
 
