@@ -33,7 +33,11 @@ const LeverResult = memo(function LeverResult({ draft }: ResultProps) {
   return (
     <>
       <div className={styles.leverHead}>
-        <span className={styles.leverLabel}>Net worth at horizon</span>
+        {/* The one place the plan's net worth is on this layout, so it is named as the summary
+            names it: the horizon in the label, which is also the input beside it. */}
+        <span className={styles.leverLabel}>
+          Net worth in {draft.horizonYears} {draft.horizonYears === 1 ? 'yr' : 'yrs'}
+        </span>
       </div>
       {/* Always today's money, whichever way the chart above is showing it. */}
       <span className={styles.leverResult} title="In today's money, after inflation">
