@@ -566,6 +566,66 @@ async function checkStability(page, where, held) {
   await page.mouse.move(0, 0)
 }
 
+/**
+ * Hide the saved line of a scenario that is being edited, then drop the edits: the scenario is
+ * drawn as the editing line again, and the legend must not also list it dimmed.
+ */
+async function checkLegendAfterDiscard(page, where) {
+  const monthly = page.getByLabel('Monthly investing', { exact: true })
+  await monthly.fill('900')
+  await monthly.press('Enter')
+  await page.getByText('Unsaved changes').waitFor({ timeout: 5000 })
+  // Not a mouse click: after typing in the bar, Safari's engine has the page scrolled so that the
+  // bar, held to the bottom edge, is over this chip at 1280x800, and the click would land on the bar.
+  await page.getByRole('button', { name: /^Hide Path A: Invest only on chart$/ }).dispatchEvent('click')
+  const shown = page.getByRole('button', { name: /^Show Path A: Invest only on chart$/ })
+  await shown.waitFor({ timeout: 5000 })
+  check(where, '(u) the saved line of an edited scenario can be hidden from the legend', (await shown.count()) === 1)
+  await page.getByRole('button', { name: /^Discard changes$/ }).click()
+  await page.waitForTimeout(400)
+  const dimmed = await page.getByRole('button', { name: /^Show Path A: Invest only on chart$/ }).count()
+  const hide = await page.getByRole('button', { name: /^Hide Path A: Invest only on chart$/ }).count()
+  check(where, '(u) after Discard the legend has no dimmed saved chip beside the editing one', dimmed === 0 && hide === 0, `${dimmed} dimmed, ${hide} with a hide button`)
+}
+
+/**
+ * A session that goes read-only in the middle of an edit: the edit stays, the tab stops saying
+ * Edited (nothing can be saved), and one note on a line of its own under the tabs says what the
+ * edit is worth.
+ */
+async function checkReadOnlyEdit(page, where) {
+  const monthly = page.getByLabel('Monthly investing', { exact: true })
+  await monthly.fill('900')
+  await monthly.press('Enter')
+  await page.getByText('Unsaved changes').waitFor({ timeout: 5000 })
+  await page.evaluate(() => window.dispatchEvent(new Event('offline')))
+  const note = page.getByText(/these changes cannot be saved/)
+  await note.waitFor({ timeout: 5000 })
+  await page.waitForTimeout(300)
+  const m = await page.evaluate(() => {
+    const rect = (el) => el.getBoundingClientRect()
+    const note = [...document.querySelectorAll('p')].find((p) => /these changes cannot be saved/.test(p.textContent))
+    const tabs = document.querySelector('[role="tablist"][aria-label="Scenarios"]')
+    const n = rect(note)
+    return {
+      noteTop: n.top,
+      noteRight: n.right,
+      noteVisible: n.width > 0 && n.height > 0 && getComputedStyle(note).visibility === 'visible',
+      tabsBottom: rect(tabs).bottom,
+      edited: [...tabs.querySelectorAll('[role="tab"]')].some((t) => /Edited/.test(t.textContent)),
+      scrollWidth: document.documentElement.scrollWidth,
+      iw: window.innerWidth,
+    }
+  })
+  check(where, '(v) read-only with an edit: the note is on screen under the scenario tabs', m.noteVisible && m.noteTop >= m.tabsBottom - 0.5 && m.noteRight <= m.iw, JSON.stringify(m))
+  check(where, '(v) read-only with an edit: no tab says Edited, and the page does not scroll sideways', !m.edited && m.scrollWidth <= m.iw, JSON.stringify(m))
+  check(where, '(v) read-only with an edit: the lever keeps the typed value', (await monthly.inputValue()) === '900')
+  await page.getByRole('tab', { name: /^Path B/ }).click()
+  const sheet = page.getByRole('alertdialog')
+  await sheet.waitFor({ timeout: 5000 })
+  check(where, '(v) read-only with an edit: the discard question does not offer to save', !/Save changes first/.test(await sheet.innerText()))
+}
+
 async function checkScreen(browser, screen, engine) {
   const where = `${engine} ${screen.name}`
   const { page, context } = await openPlan(browser, screen)
@@ -587,6 +647,12 @@ async function checkScreen(browser, screen, engine) {
     const calm = await openPlan(browser, screen)
     await checkStability(calm.page, where, screen.width >= HELD_FROM.width && screen.height >= HELD_FROM.height)
     await calm.context.close()
+    const legend = await openPlan(browser, screen)
+    await checkLegendAfterDiscard(legend.page, where)
+    await legend.context.close()
+    const readOnly = await openPlan(browser, screen)
+    await checkReadOnlyEdit(readOnly.page, where)
+    await readOnly.context.close()
   }
 }
 
