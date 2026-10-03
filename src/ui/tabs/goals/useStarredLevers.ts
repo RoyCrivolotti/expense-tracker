@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { DEFAULT_LEVERS, MAX_LEVERS, type LeverKey } from '../../../engine'
 import type { ExpenseSettings } from '../../../types'
 import { failureMessage } from '../../hooks/useFailureToast'
+import { UNDO_SHORTCUT } from '../../components/toastShortcuts'
 import { useToast } from '../../hooks/useToast'
 import { LEVER_SPECS } from './leverFields'
 
@@ -131,6 +132,7 @@ export function useStarredLevers(saved: readonly LeverKey[], save: Save | undefi
         showToast(`Removed ${LEVER_SPECS[key].short} from the bar`, 'info', {
           label: 'Undo',
           onAction: () => undoRemoval(key, index),
+          shortcut: UNDO_SHORTCUT,
         })
       } else if (now.length < MAX_LEVERS) choose([...now, key])
     },

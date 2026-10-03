@@ -182,10 +182,12 @@ describe('useStarredLevers', () => {
       act(() => result.current.toggle(second))
 
       expect(showToast).toHaveBeenCalledTimes(1)
-      const [message, tone, action] = showToast.mock.calls[0] as [string, string, { label: string; onAction: () => void }]
+      const [message, tone, action] = showToast.mock.calls[0] as [string, string, { label: string; onAction: () => void; shortcut: unknown }]
       expect(message).toBe(`Removed ${LEVER_SPECS[second].short} from the bar`)
       expect(tone).toBe('info')
       expect(action.label).toBe('Undo')
+      // Its button is the last stop on the page, so a keyboard has the key as well.
+      expect(action.shortcut).toEqual({ code: 'KeyZ', label: 'Alt+Z' })
       await settle(() => calls[0]!.resolve())
     })
 

@@ -57,6 +57,35 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* The key that does what the button does, for a keyboard and a mouse. A touch screen has neither
+   to press it with, so it is only said to a screen reader there (the same words, out of sight). */
+.shortcut {
+  flex: none;
+  margin-left: -0.25rem;
+  padding: 0.05rem 0.35rem;
+  border: 1px solid currentColor;
+  border-radius: 0.3rem;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+@media (hover: none) {
+  .shortcut {
+    display: none;
+  }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 /* Leaving is the arrival played backwards, over the time `Presence` keeps it mounted. */
 .leaving {
   animation: toastOut var(--exit-ms, 130ms) var(--motion-ease-in) forwards;
