@@ -68,6 +68,12 @@ describe('LeversBar', () => {
     expect(field.compareDocumentPosition(unit) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
+  it('says "1 yr" for a one year horizon', () => {
+    renderBar({}, { horizonYears: 1 })
+    expect(screen.getByText('yr')).toBeInTheDocument()
+    expect(screen.queryByText('yrs')).not.toBeInTheDocument()
+  })
+
   it('keeps the cents of an amount that has them', () => {
     renderBar({}, { monthlyContributionCents: 12_345 })
     expect(screen.getByLabelText('Monthly investing')).toHaveValue('123,45')

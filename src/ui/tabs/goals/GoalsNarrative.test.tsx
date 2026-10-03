@@ -31,6 +31,14 @@ describe('GoalsNarrative', () => {
     expect(screen.getByText(/Two comma club \(.*\) is not reached in the horizon/)).toBeTruthy()
   })
 
+  it('says "1 yr", not "1 yrs", for a one year horizon, and "yrs" for any other', () => {
+    const { rerender } = render(<GoalsNarrative draft={makeScenario({ horizonYears: 1 })} milestones={[]} compact />)
+    expect(screen.getByText('Net worth in 1 yr')).toBeTruthy()
+
+    rerender(<GoalsNarrative draft={makeScenario({ horizonYears: 30 })} milestones={[]} compact />)
+    expect(screen.getByText('Net worth in 30 yrs')).toBeTruthy()
+  })
+
   it('omits milestone prose entirely when there are none', () => {
     render(<GoalsNarrative draft={makeScenario()} milestones={[]} />)
     expect(screen.queryByText(/lands around year/)).toBeNull()

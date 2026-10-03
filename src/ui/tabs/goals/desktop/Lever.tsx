@@ -134,7 +134,7 @@ export function Lever({ spec, draft, onChange, onUnstar }: LeverProps) {
         <TypedValue
           label={label}
           text={String(years)}
-          unit="yrs"
+          unit={years === 1 ? 'yr' : 'yrs'}
           inputMode="numeric"
           onCommit={(raw) => {
             const n = typedNumber(raw)
