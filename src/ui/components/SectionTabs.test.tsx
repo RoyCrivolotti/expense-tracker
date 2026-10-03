@@ -309,9 +309,9 @@ describe('SectionTabs styles', () => {
     expect(rule('.anchor')).toMatch(/-\s+var\(--scroll-pad-top, 0px\)/)
   })
 
-  it('lands the anchor under the bar, as high as the header and the bar less their tuck', () => {
+  it('lands the anchor under the bar, as high as the header and the bar less their tuck, and a little air', () => {
     expect(rule('.anchor')).toMatch(
-      /var\(--exp-header\) \+ var\(--exp-subnav-h\) - var\(--exp-subnav-tuck\) \+ env\(safe-area-inset-top, 0px\)/,
+      /var\(--exp-header\) \+ var\(--exp-subnav-h\) - var\(--exp-subnav-tuck\) \+ var\(--exp-pinned-air\) \+\s+env\(safe-area-inset-top, 0px\)/,
     )
   })
 

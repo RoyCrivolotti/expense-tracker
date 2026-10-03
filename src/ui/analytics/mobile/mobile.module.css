@@ -14,6 +14,13 @@
   margin: -0.25rem 0 0;
 }
 
+/* A hint tucks up under the heading above it. As the first thing in a section it has nothing
+   above it, and the negative margin would hang its first line out from under the sticky bar a
+   jump to the section lands it beneath. */
+.hint:first-child {
+  margin-top: 0;
+}
+
 .subheading {
   margin: 0.35rem 0 0;
   font: inherit;

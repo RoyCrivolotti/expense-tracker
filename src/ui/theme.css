@@ -37,6 +37,9 @@
      so the one-pixel drift iOS gives sticky elements while the page coasts never opens a gap. */
   --exp-subnav-h: 2.75rem;
   --exp-subnav-tuck: 1px;
+  /* The air a jump to a section's content leaves under that row, as the page's scroll padding
+     leaves under it for focus (PINNED_AIR_PX in hooks/stickyScroll.ts, which this must match). */
+  --exp-pinned-air: 8px;
   --exp-max: 56rem;
 
   /*
