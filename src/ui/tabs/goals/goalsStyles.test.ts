@@ -141,3 +141,18 @@ describe('the swatches that key a colour on a chart', () => {
     for (const r of sized) expect(r.body).toMatch(/forced-color-adjust:\s*none/)
   })
 })
+
+describe('the segmented controls of the wide page on a touch screen', () => {
+  const css = stylesheet('tabs/goals/goals.module.css')
+  const narrowMax = Number(/\(max-width:\s*(\d+)px\)/.exec(NARROW_MQ)?.[1])
+
+  it('are held to 44px for a coarse pointer from the wide layout up, and not under it', () => {
+    const block = /@media \(pointer: coarse\) and \(min-width: (\d+)px\) \{([\s\S]*?)\n\}/.exec(css)
+
+    expect(block).not.toBeNull()
+    // The same width the page goes wide at, so the phone's layout is not touched.
+    expect(Number(block![1])).toBe(narrowMax + 1)
+    expect(block![2]).toMatch(/button\[role='radio'\]/)
+    expect(block![2]).toMatch(/min-height:\s*2\.75rem/)
+  })
+})

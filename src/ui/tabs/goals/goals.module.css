@@ -1377,3 +1377,13 @@
   padding: 0.25rem 0.5rem;
 }
 
+/* A finger on the wide page (a tablet, from 900px): the segmented controls that switch the view,
+   the display and the window are 22px tall, the smallest things on the page and the ones most
+   often used, so they take the 44px a touch target is held to elsewhere in the app. Under 900px
+   is the phone's layout, which has its own sizing and is not touched. */
+@media (pointer: coarse) and (min-width: 900px) {
+  .stack button[role='radio'],
+  .stack button[role='tab'] {
+    min-height: 2.75rem;
+  }
+}
