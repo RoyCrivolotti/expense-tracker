@@ -172,7 +172,8 @@ export function gapIsSooner(gap: Gap): boolean {
   return gap.kind === 'sooner' || (gap.kind === 'years' && gap.years < 0)
 }
 
-function yearsText(n: number): string {
+/** "1 year" or "6 years". */
+export function yearsText(n: number): string {
   return n === 1 ? '1 year' : `${n} years`
 }
 

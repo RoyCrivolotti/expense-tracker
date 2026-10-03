@@ -5,7 +5,7 @@
  * the fold, under the header once scrolled past), the inputs panel folding in and out, the
  * scenario menu, the stars that move an input to the bar and back, the order Tab goes in and that
  * nothing it reaches is under the bar, the question asked before leaving Goals with an unsaved edit,
- * and the Years to milestone table (`ONLY=milestone-table` runs just that).
+ * the Years to milestone table (`ONLY=milestone-table` runs just that) and its timeline (`ONLY=milestone-timeline`).
  *
  * jsdom lays nothing out, so the unit tests cannot say any of this. Manual, like
  * verify:goals-nav: it needs a browser and takes a few minutes, so it is not part of
@@ -1822,6 +1822,145 @@ async function checkMilestoneTable(browser, engine) {
   await checkMilestonePhone(browser, engine)
 }
 
+/**
+ * Years to milestone as a timeline (check group x): the switch is on the wide page only, the
+ * timeline fits its card from 900px, dots are in their rows and labels do not run into each
+ * other, following a milestone marks it and joins the paths at it, and Tab goes row by row.
+ * The editing draft is set to save a lot over 20 years, so that several milestones fall in one
+ * year and its horizon is shorter than the others'.
+ */
+async function denseDraft(page) {
+  await page.getByRole('button', { name: 'All inputs' }).click()
+  await page.waitForTimeout(400)
+  for (const [label, value] of [['Monthly investing', '20000'], ['Starting invested', '5000'], ['Horizon (years)', '20']]) {
+    const input = page.getByLabel(label, { exact: true }).last()
+    await input.fill(value)
+    await input.press('Enter')
+  }
+  await page.waitForTimeout(400)
+}
+
+const timelineSwitch = (page) => page.getByRole('radiogroup', { name: 'Show years to milestone as' })
+
+async function checkTimelineAt(browser, engine, screen, scheme) {
+  const where = `${engine} ${screen.name} ${scheme}`
+  const { page, context } = await openPlan(browser, screen, { scheme })
+  await denseDraft(page)
+  const card = matrixCard(page)
+  await card.scrollIntoViewIfNeeded()
+  check(where, '(x) the switch is in the card, with the table showing', (await timelineSwitch(page).isVisible()) && (await timelineSwitch(page).getByRole('radio', { name: 'Table' }).getAttribute('aria-checked')) === 'true')
+  const tableHeight = (await card.boundingBox()).height
+  await timelineSwitch(page).getByRole('radio', { name: 'Timeline' }).click()
+  await page.waitForTimeout(300)
+
+  const fit = await page.evaluate(() => {
+    const body = document.querySelector('[class*="tlBody"]')
+    const c = body.closest('[class*="chartCard"]').getBoundingClientRect()
+    const b = body.getBoundingClientRect()
+    return { inCard: b.left >= c.left - 0.5 && b.right <= c.right + 0.5, page: document.documentElement.scrollWidth, iw: innerWidth, tracks: document.querySelector('[class*="tlTracks"]').getBoundingClientRect().width }
+  })
+  check(where, '(x) the timeline is inside its card and the page does not scroll sideways', fit.inCard && fit.page <= fit.iw, JSON.stringify(fit))
+  check(where, '(x) the axis has room to draw in', fit.tracks >= 450, JSON.stringify(fit))
+
+  // Every dot is in its row, and no label overlaps another label, a badge or the edge of the card.
+  const layout = await page.evaluate(() => {
+    const overlap = (a, b) => a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5
+    const card = document.querySelector('[class*="tlBody"]').closest('[class*="chartCard"]').getBoundingClientRect()
+    const out = { dots: 0, outside: [], collisions: [], labelsOut: 0, labels: 0, hatched: 0 }
+    for (const row of document.querySelectorAll('[class*="tlRow"]')) {
+      const r = row.getBoundingClientRect()
+      const dots = [...row.querySelectorAll('button[class*="tlDot"]')]
+      for (const d of dots) {
+        const b = d.getBoundingClientRect()
+        out.dots += 1
+        if (b.left < r.left || b.right > r.right || b.top < r.top || b.bottom > r.bottom) out.outside.push([Math.round(b.left - r.left), Math.round(b.top - r.top)])
+      }
+      const labels = [...row.querySelectorAll('[class*="tlLabel"]')].map((l) => l.getBoundingClientRect())
+      out.labels += labels.length
+      const others = [...labels, ...[...row.querySelectorAll('[class*="tlBadge"]')].map((e) => e.getBoundingClientRect())]
+      labels.forEach((l, i) => {
+        if (l.left < card.left || l.right > card.right) out.labelsOut += 1
+        others.forEach((o, j) => { if (i !== j && overlap(l, o)) out.collisions.push([i, j]) })
+        for (const d of dots) if (overlap(l, d.getBoundingClientRect())) out.collisions.push(['dot', i])
+      })
+      if (row.querySelector('[class*="tlHatch"]')) out.hatched += 1
+    }
+    return out
+  })
+  check(where, '(x) every dot is inside its row', layout.dots >= 5 && layout.outside.length === 0, JSON.stringify(layout.outside))
+  check(where, '(x) no label runs into another label, a badge or a dot, and none is outside the card', layout.labels >= 4 && layout.collisions.length === 0 && layout.labelsOut === 0, JSON.stringify(layout))
+  check(where, '(x) the path with the shorter horizon ends in hatching', layout.hatched === 1, JSON.stringify(layout))
+
+  // Tab goes row by row: the buttons in the timeline are in the order of the rows.
+  const order = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('[class*="tlRow"]')]
+    const seen = [...document.querySelectorAll('[class*="tlRow"] button')].map((b) => rows.indexOf(b.closest('[class*="tlRow"]')))
+    return { seen, sorted: seen.every((v, i) => i === 0 || v >= seen[i - 1]), tabbable: [...document.querySelectorAll('[class*="tlRow"] button')].every((b) => b.tabIndex === 0) }
+  })
+  check(where, '(x) Tab reaches the dots in row order, every one of them a stop', order.seen.length >= 8 && order.sorted && order.tabbable, JSON.stringify(order))
+
+  // A dot reads out its sentence, and nothing moves.
+  const before = (await card.boundingBox()).height
+  const dot = page.getByRole('button', { name: /^Path B reaches/ }).first()
+  await dot.hover()
+  await page.waitForTimeout(150)
+  const after = (await card.boundingBox()).height
+  const text = await page.locator('[class*="matrixReadout"]').filter({ hasText: /reaches/ }).first().textContent()
+  check(where, '(x) pointing at a dot writes its sentence under the timeline', text === (await dot.getAttribute('aria-label')), text)
+  check(where, '(x) reading it does not change the card\'s height', near(before, after, 1), `${px(before)} then ${px(after)}`)
+
+  // Follow one milestone: the dots of it are marked, the others dim, the year is labelled on each
+  // path and a dashed line joins them, at the dots (the line is drawn from the data, not measured).
+  await page.getByRole('button', { name: '750k', exact: true }).click()
+  await page.mouse.move(2, 2)
+  await page.waitForTimeout(250)
+  const follow = await page.evaluate(() => {
+    const centre = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2] }
+    const picked = [...document.querySelectorAll('button[class*="tlDotPick"]')]
+    const svg = document.querySelector('svg[class*="tlConnector"]')
+    const poly = svg?.querySelector('polyline')
+    const s = svg?.getBoundingClientRect()
+    const pts = poly ? poly.getAttribute('points').split(' ').map((p) => p.split(',').map(Number)) : []
+    const drawn = pts.map(([x, y]) => [s.left + (x / 1000) * s.width, s.top + (y / svg.viewBox.baseVal.height) * s.height])
+    const off = drawn.map((p, i) => Math.hypot(p[0] - centre(picked[i])[0], p[1] - centre(picked[i])[1]))
+    const dimmed = [...document.querySelectorAll('button[class*="tlDot"]')].filter((d) => !d.className.includes('tlDotPick')).map((d) => getComputedStyle(d).opacity)
+    return { picked: picked.length, points: pts.length, off, dimmed, labels: [...document.querySelectorAll('[class*="tlLabelPick"]')].map((l) => l.textContent), pressed: document.querySelector('[class*="tl"] button[aria-pressed="true"]')?.textContent }
+  })
+  check(where, '(x) following 750k marks its dot on each path that reaches it and labels the year', follow.picked >= 2 && follow.pressed === '750k' && follow.labels.length === follow.picked && follow.labels.every((l) => /^\d+y$/.test(l)), JSON.stringify(follow))
+  check(where, '(x) the other dots are dimmed', follow.dimmed.length > 0 && follow.dimmed.every((o) => Number(o) < 0.4), JSON.stringify(follow.dimmed))
+  check(where, '(x) the dashed line goes through each of those dots', follow.points === follow.picked && follow.off.every((d) => d <= 1.5), JSON.stringify(follow))
+  await page.getByRole('button', { name: 'Clear' }).click()
+  check(where, '(x) Clear takes the line and the dimming away', (await page.locator('svg[class*="tlConnector"]').count()) === 0 && (await page.locator('[class*="tlDim"]').count()) === 0)
+
+  // Back to the table, which is as it was.
+  await timelineSwitch(page).getByRole('radio', { name: 'Table' }).click()
+  await page.waitForTimeout(200)
+  check(where, '(x) the table comes back at the height it had', near((await card.boundingBox()).height, tableHeight, 1), `${px(tableHeight)} then ${px((await card.boundingBox()).height)}`)
+  await context.close()
+}
+
+async function checkTimelineSwitchAbsent(browser, engine) {
+  // 899px is the phone's layout: the table alone, with no switch. 900px is the wide page, which has it.
+  for (const [width, has] of [[899, false], [900, true]]) {
+    const { page, context } = await openPlan(browser, { width, height: 800 })
+    if (width === 899) {
+      await page.getByRole('radio', { name: 'Milestones' }).click()
+      await page.waitForTimeout(300)
+    }
+    check(`${engine} ${width}px`, has ? '(x) the switch is there' : '(x) there is no switch, only the table', (await timelineSwitch(page).count()) === (has ? 1 : 0) && (await page.getByRole('grid').count()) === 1)
+    await context.close()
+  }
+  const { page, context, where } = await openPhoneMilestones(browser, 375, engine)
+  check(where, '(x) there is no switch on a phone, only the table', (await timelineSwitch(page).count()) === 0 && (await page.getByRole('grid').count()) === 1)
+  await context.close()
+}
+
+async function checkTimeline(browser, engine) {
+  for (const screen of [{ name: '900x800', width: 900, height: 800 }, SCREENS[0], SCREENS[1], SCREENS[3]]) await checkTimelineAt(browser, engine, screen, 'dark')
+  await checkTimelineAt(browser, engine, SCREENS[3], 'light')
+  await checkTimelineSwitchAbsent(browser, engine)
+}
+
 async function main() {
   if (await answers()) throw new Error(`Something already answers on ${BASE}; set CAPTURE_PORT to a free port.`)
   const dev = startDev()
@@ -1860,6 +1999,10 @@ async function main() {
           await checkLeverFocus(browser, engine)
           continue
         }
+        if (process.env.ONLY === 'milestone-timeline') {
+          await checkTimeline(browser, engine)
+          continue
+        }
         if (process.env.ONLY === 'milestone-table') {
           await checkMilestoneTable(browser, engine)
           continue
@@ -1881,6 +2024,7 @@ async function main() {
         await checkPhoneSaveReason(browser, engine)
         await checkTouchLeftovers(browser, engine)
         await checkMilestoneTable(browser, engine)
+        await checkTimeline(browser, engine)
       } finally {
         await browser.close()
       }

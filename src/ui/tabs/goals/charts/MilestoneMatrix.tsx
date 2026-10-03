@@ -8,16 +8,26 @@ import { SegmentedControl } from '../../../components/SegmentedControl'
 import { todayIso } from '../../../components/transactionFormState'
 import { ChartShell } from './ChartShell'
 import { MilestoneGrid, type CellRef, type YearsUnit } from './MilestoneGrid'
+import { MilestoneReadout } from './MilestoneReadout'
+import { MilestoneTimeline } from './MilestoneTimeline'
 import { buildRows, describeCell, longestHorizon, type MilestoneRow } from './milestoneModel'
 import { formatMoneyShort } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { useMediaQuery } from '../../../hooks/useMediaQuery'
+import { useGoalsNarrow } from '../useGoalsNarrow'
 import styles from '../goals.module.css'
 
 const UNITS = [
   { value: 'years', label: 'Years from now' },
   { value: 'calendar', label: 'Calendar year' },
 ] as const
+
+const VIEWS = [
+  { value: 'table', label: 'Table' },
+  { value: 'timeline', label: 'Timeline' },
+] as const
+
+type View = (typeof VIEWS)[number]['value']
 
 const NO_PLAN = 'No scenario is marked as your current plan, so there is nothing to compare with.'
 
@@ -77,14 +87,6 @@ function Legend({ longest, plan }: { longest: number; plan: MilestoneRow | null 
         </li>
       ) : null}
     </ul>
-  )
-}
-
-function Readout({ text, touch }: { text: string | null; touch: boolean }) {
-  return (
-    <p className={text ? styles.matrixReadout : `${styles.matrixReadout} ${styles.matrixReadoutEmpty}`} aria-live="polite">
-      {text ?? `${touch ? 'Tap' : 'Point at or focus'} a cell to read it as a sentence. The arrow keys move between cells.`}
-    </p>
   )
 }
 
@@ -155,7 +157,7 @@ function MatrixBody({
         onLeave={() => setLive(false)}
       />
       <Legend longest={longestHorizon(rows)} plan={comparing} />
-      <Readout text={sentenceAt(point, rows, sentences)} touch={touch} />
+      <MilestoneReadout text={sentenceAt(point, rows, sentences)} touch={touch} what="a cell" more=" The arrow keys move between cells." />
     </>
   )
 }
@@ -185,19 +187,34 @@ function MilestoneMatrixImpl({
     () => buildRows(scenarios, draft, milestones, inflationRate, includeDraft, fromToday, todayIso()),
     [scenarios, draft, milestones, inflationRate, includeDraft, fromToday],
   )
+  // The timeline is for the wide page; the phone has the table alone.
+  const narrow = useGoalsNarrow()
+  const [choice, setChoice] = useState<View>('table')
+  const view = narrow ? 'table' : choice
 
   return (
     <ChartShell embedded={embedded}>
-      <h3 className={styles.chartTitle}>Years to milestone</h3>
+      <div className={styles.matrixHeader}>
+        <h3 className={styles.chartTitle}>Years to milestone</h3>
+        {narrow || milestones.length === 0 ? null : (
+          <SegmentedControl options={[...VIEWS]} value={view} onChange={setChoice} ariaLabel="Show years to milestone as" />
+        )}
+      </div>
       <p className={styles.chartHint}>
         Invested portfolio only. Edit the list in Assumptions.
         {fromToday ? ' "From today" counts years from your latest check-in.' : ''} A year here is the yearly step at
         which a path first reaches the amount, so it can be up to a year later than the date on the Progress tab.
+        {view === 'timeline' ? ' Each dot is a milestone, at the year the path reaches it.' : ''}
       </p>
       {milestones.length === 0 ? (
         <p className={styles.chartHint}>No milestones set.</p>
       ) : (
-        <MatrixBody rows={rows} milestones={milestones} reached={reached} />
+        <>
+          <div hidden={view !== 'table'}>
+            <MatrixBody rows={rows} milestones={milestones} reached={reached} />
+          </div>
+          {view === 'timeline' ? <MilestoneTimeline rows={rows} milestones={milestones} reached={reached} /> : null}
+        </>
       )}
     </ChartShell>
   )

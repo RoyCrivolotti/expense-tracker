@@ -2,6 +2,13 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (years to milestone as a timeline)
+
+- **The card has a Timeline view beside the Table, on the wide page.** A switch in the card's header (from 900px wide; the phone keeps the table alone) shows each path as a row on one axis of years, with the calendar year underneath. Every milestone is a dot at the year the path reaches it, and milestones that fall in the same year share one dot with their number.
+- **Badges for what is already there and what is out of reach.** Milestones a path already has, or that a check-in reached, are one badge at the left edge ("✓ 3"); the ones not within the path's horizon are one badge past the end of the line ("→ 2"). A path with a shorter horizon than the longest ends in hatching, the path you are editing is dashed, and the plan from today sits under the plan and lands on its own calendar years.
+- **Follow one milestone.** Pressing a milestone's chip dims the other dots, writes the year on each path's dot for it and joins those dots with a dashed line, so you can see which path gets there first.
+- **The same sentences.** Pointing at, focusing or tapping a dot or badge writes the same kind of plain sentence under the timeline as the table does, and every dot and badge is a button with that sentence as its name. Tab goes through them path by path, and Enter or Space reads one out.
+
 ## October 2026 (the years to milestone table)
 
 - **The table is neutral, with a tint for distance.** The cells were fixed pastel colours, from green to red, that glared in the dark theme. A cell is now plain text on a tint of the theme's accent that deepens with the years (the darkest is the longest horizon among the rows), "already there" is a tick, and "not within the horizon" is a hatched box with the horizon and a plus. A line under the table says what each means. The text is always the normal colour, so it reads in both themes and in forced colours, where the tint goes and the numbers stay.
