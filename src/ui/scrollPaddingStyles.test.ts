@@ -146,8 +146,11 @@ describe('a jump to the content under a stuck row of tabs', () => {
     }
   })
 
-  it('does not hang the first hint of an Analytics section out above it, where the bar lands it', () => {
-    expect(declarations(stylesheet('analytics/mobile/mobile.module.css'), '.hint:first-child')).toMatch(
+  it('starts a section at that place, not a margin of its own lower down', () => {
+    expect(declarations(stylesheet('components/SectionTabs.module.css'), '.panel > .anchor + *')).toMatch(
+      /margin-top:\s*0;/,
+    )
+    expect(declarations(stylesheet('analytics/mobile/mobile.module.css'), '.section > :first-child')).toMatch(
       /margin-top:\s*0;/,
     )
   })

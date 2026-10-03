@@ -61,6 +61,13 @@
   max-width: 100%;
 }
 
+/* What a section starts with sits where a jump leaves it, a little under the bar, not a further
+   margin of its own lower: a section's first heading carries the space that once set it off from
+   what came before. */
+.panel > .anchor + * {
+  margin-top: 0;
+}
+
 /* Where a jump to the section's own content leaves it: a little under the stuck bar. The anchor
    is as tall as nothing, and takes back the gap it adds to the panel. The browser adds the
    page's scroll padding (the bar's bottom edge, set by SectionTabs) to this margin, so it is
