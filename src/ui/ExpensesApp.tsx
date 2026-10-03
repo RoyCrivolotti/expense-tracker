@@ -7,6 +7,8 @@ import { useExpenseTheme, type ExpenseTheme } from './hooks/useExpenseTheme'
 import { needsOnboarding } from '../domain/onboarding/needsOnboarding'
 import { type GroupGrants } from '../domain/accessGroups'
 import { AppShell } from './nav/AppShell'
+import { LeaveGuardProvider } from './nav/LeaveGuardProvider'
+import { useGuardLeave } from './nav/leaveGuardContext'
 import type { TabId } from './nav/navItems'
 import { PullToRefreshIndicator } from './components/PullToRefreshIndicator'
 import { ExpensesOfflineBanner } from './components/ExpensesOfflineBanner'
@@ -209,17 +211,19 @@ function ExpensesAppLoaded({
         numberLocale={model.dataset.settings.numberLocale}
       >
         <AssumedInflationContext.Provider value={model.dataset.settings.assumedInflation}>
-          <ExpensesAppReady
-            source={source}
-            model={model}
-            applyPatch={applyPatch}
-            reload={reload}
-            refreshing={refreshing}
-            refreshOutcome={refreshOutcome}
-            hubGrants={hubGrants}
-            {...(ownerAccess ? { ownerAccess } : {})}
-            {...(accountEmail ? { accountEmail } : {})}
-          />
+          <LeaveGuardProvider>
+            <ExpensesAppReady
+              source={source}
+              model={model}
+              applyPatch={applyPatch}
+              reload={reload}
+              refreshing={refreshing}
+              refreshOutcome={refreshOutcome}
+              hubGrants={hubGrants}
+              {...(ownerAccess ? { ownerAccess } : {})}
+              {...(accountEmail ? { accountEmail } : {})}
+            />
+          </LeaveGuardProvider>
         </AssumedInflationContext.Provider>
       </MoneyFormatProvider>
     </ConnectivityProvider>
@@ -263,14 +267,19 @@ function ExpensesAppReady({
   // Where Goals should open when the dashboard sends the user there for a check-in. Cleared
   // by every ordinary tab change, so a later visit to Goals opens on Plan as usual.
   const [goalsEntry, setGoalsEntry] = useState<GoalsEntry>(null)
-  const selectTab = (next: TabId) => {
-    setGoalsEntry(null)
+  const guardLeave = useGuardLeave()
+  const moveTo = (next: TabId, entry: GoalsEntry) => {
+    setGoalsEntry(entry)
     setTab(next)
   }
-  const logCheckin = () => {
-    setGoalsEntry('checkin')
-    setTab('goals')
+  // Every route out of a tab goes through the guard, which asks first if the tab holds unsaved
+  // edits. Pressing the tab already open leaves nothing, so it never asks.
+  const goTo = (next: TabId, entry: GoalsEntry) => {
+    if (next === tab) moveTo(next, entry)
+    else guardLeave(() => moveTo(next, entry))
   }
+  const selectTab = (next: TabId) => goTo(next, null)
+  const logCheckin = () => goTo('goals', 'checkin')
   const [month, setMonth] = useState<string | null>(null)
   // The header's month picker belongs to the shell, but on Transactions it drives the
   // list, and a selection there must not have the list changed under it. This is the
