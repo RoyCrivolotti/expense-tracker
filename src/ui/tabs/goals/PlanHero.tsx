@@ -8,7 +8,7 @@ import { NetWorthChart } from './charts/NetWorthChart'
 import { GoalsNarrative } from './GoalsNarrative'
 import { NominalPreview } from './NominalPreview'
 import { useGoalsNarrow } from './useGoalsNarrow'
-import desktopStyles from './desktop/planDesktop.module.css'
+import { PlanStrip } from './desktop/PlanStrip'
 import type { ScenarioEditor } from './useScenarioEditor'
 import progressStyles from './progress.module.css'
 
@@ -75,33 +75,46 @@ export function PlanHero({
   const extraSeries = useMemo(() => (checkinExtraSeries ? [checkinExtraSeries] : []), [checkinExtraSeries])
   const { mode, onModeChange, assumedInflation, preview, onPreview, onOpenSetting } = display
   const narrow = useGoalsNarrow()
-  const footer = useMemo(
+  const displaySwitch = useMemo(
     () => (
-      <div className={narrow ? undefined : desktopStyles.heroFooter}>
+      <SegmentedControl
+        options={DISPLAY_MODE_OPTIONS}
+        value={mode}
+        onChange={onModeChange}
+        ariaLabel="Value display mode"
+        layout="compact"
+      />
+    ),
+    [mode, onModeChange],
+  )
+  // A phone has the summary box with the display switch under it. A wide screen has the net worth
+  // in the levers bar, so what is left to say (FI, the next milestone) is a line, and the switch
+  // is in the card's header beside the window buttons.
+  const footer = useMemo(() => {
+    const nominalPreview =
+      mode === 'nominal' ? (
+        <NominalPreview
+          saved={assumedInflation}
+          preview={preview}
+          onPreview={onPreview}
+          onOpenAssumptions={onOpenSetting}
+        />
+      ) : null
+    return narrow ? (
+      <div>
         <div>
           <GoalsNarrative draft={deferredDraft} milestones={milestones} compact />
         </div>
-        <div className={progressStyles.displayModeRow}>
-          <SegmentedControl
-            options={DISPLAY_MODE_OPTIONS}
-            value={mode}
-            onChange={onModeChange}
-            ariaLabel="Value display mode"
-            layout="compact"
-          />
-        </div>
-        {mode === 'nominal' ? (
-          <NominalPreview
-            saved={assumedInflation}
-            preview={preview}
-            onPreview={onPreview}
-            onOpenAssumptions={onOpenSetting}
-          />
-        ) : null}
+        <div className={progressStyles.displayModeRow}>{displaySwitch}</div>
+        {nominalPreview}
       </div>
-    ),
-    [narrow, deferredDraft, milestones, mode, onModeChange, assumedInflation, preview, onPreview, onOpenSetting],
-  )
+    ) : (
+      <>
+        <PlanStrip draft={deferredDraft} milestones={milestones} />
+        {nominalPreview}
+      </>
+    )
+  }, [narrow, deferredDraft, milestones, displaySwitch, mode, assumedInflation, preview, onPreview, onOpenSetting])
 
   const heroTodayIndex = useMemo(() => {
     if (!activeScenario?.planStartDate) return undefined
@@ -120,6 +133,8 @@ export function PlanHero({
       dirty={editor.dirty}
       variant="hero"
       footer={footer}
+      footerBare={!narrow}
+      {...(narrow ? {} : { headerAside: displaySwitch })}
       extraSeries={extraSeries}
       fromToday={fromToday}
       nominalMode={display.mode === 'nominal'}

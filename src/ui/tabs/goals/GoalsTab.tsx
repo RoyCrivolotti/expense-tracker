@@ -15,6 +15,7 @@ import { SectionTitle } from '../../components/primitives'
 import { GoalsViewSwitch } from './GoalsViewSwitch'
 import { GoalsPanel } from './GoalsPanel'
 import { mobileViewOf, type AssumptionsFocus, type MobilePlanView, type TabView } from './goalsView'
+import { useGoalsNarrow } from './useGoalsNarrow'
 import { useGoalsScrollMemory } from './useGoalsScrollMemory'
 import { GOALS_CONTENT_ANCHOR_ID } from './goalsAnchors'
 import { ProgressPane } from './ProgressPane'
@@ -57,6 +58,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
   const [mobilePlanView, setMobilePlanView] = useState<MobilePlanView>('chart')
   // Leaving a view by any route, the row or a link, notes where it was for coming back.
   const memory = useGoalsScrollMemory()
+  const narrow = useGoalsNarrow()
   const current = mobileViewOf(view, mobilePlanView)
   const changeView = useCallback(
     (next: TabView) => {
@@ -121,17 +123,29 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
   // Kept here, not in Plan, so a choice still being saved survives a visit to another view.
   const levers = useStarredLevers(dataset.settings.goalLevers, actions?.updateSettings)
 
+  const viewSwitch = (
+    <GoalsViewSwitch
+      view={view}
+      onViewChange={changeView}
+      planHalf={mobilePlanView}
+      onPlanHalfChange={changePlanHalf}
+      memory={memory}
+      inline={!narrow}
+    />
+  )
+
   return (
     <div className={styles.stack}>
-      <SectionTitle>Goals</SectionTitle>
-
-      <GoalsViewSwitch
-        view={view}
-        onViewChange={changeView}
-        planHalf={mobilePlanView}
-        onPlanHalfChange={changePlanHalf}
-        memory={memory}
-      />
+      {narrow ? (
+        <>
+          <SectionTitle>Goals</SectionTitle>
+          {viewSwitch}
+        </>
+      ) : (
+        // One row on a wide screen: the title and the view switch took 60px each, a fifth of
+        // what a laptop screen has above the chart.
+        <SectionTitle action={viewSwitch}>Goals</SectionTitle>
+      )}
 
       <GoalsPanel view={view} planHalf={mobilePlanView}>
         {/* Where a tap on the switch scrolls to: the start of whichever view's content follows. */}

@@ -239,8 +239,28 @@ describe('LeversBar', () => {
     const live = makeDraft()
     const charts = makeDraft({ startInvestedCents: 0, monthlyContributionCents: 0 })
     renderBar({ draft: live, resultDraft: charts })
-    expect(screen.getByText('Net worth at horizon')).toBeInTheDocument()
+    expect(screen.getByText('Net worth in 30 yrs')).toBeInTheDocument()
     expect(screen.getByText('0 €')).toBeInTheDocument()
+  })
+
+  it('names the net worth after the horizon it is at, which is the lever beside it, and says "1 yr" for one', () => {
+    const { unmount } = render(
+      <LeversBar
+        draft={makeDraft()}
+        resultDraft={makeDraft({ horizonYears: 12 })}
+        keys={DEFAULT_LEVERS}
+        expanded={false}
+        panelId="p"
+        onChange={vi.fn()}
+        onToggle={vi.fn()}
+      />,
+    )
+    // The label follows what the charts read, as the figure does, not the live draft.
+    expect(screen.getByText('Net worth in 12 yrs')).toBeInTheDocument()
+    unmount()
+
+    renderBar({}, { horizonYears: 1 })
+    expect(screen.getByText('Net worth in 1 yr')).toBeInTheDocument()
   })
 
   it('says in a tooltip that the net worth is in today\'s money, which the label alone does not', () => {
@@ -408,7 +428,7 @@ describe('LeversBar', () => {
   it('says what to do when nothing is starred, and still has its result', () => {
     renderBar({ keys: [] })
     expect(screen.getByText(/Nothing is starred/)).toBeInTheDocument()
-    expect(screen.getByText('Net worth at horizon')).toBeInTheDocument()
+    expect(screen.getByText('Net worth in 30 yrs')).toBeInTheDocument()
   })
 
   it('shows only the levers it is given', () => {

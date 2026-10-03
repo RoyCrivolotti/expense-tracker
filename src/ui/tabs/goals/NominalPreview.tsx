@@ -45,7 +45,7 @@ export function NominalPreview({ saved, preview, onPreview, onOpenAssumptions }:
         ) : null}
       </div>
       <p className={styles.chartHint}>
-        The summary, the FI target and the milestones stay in today&apos;s money, so the target lines
+        The net worth, the FI target and the milestones stay in today&apos;s money, so the target lines
         are only drawn in Purchasing power. The preview is not saved: the rest of Goals uses the
         saved {formatPercent(saved, format)}
         {onOpenAssumptions ? (

@@ -706,6 +706,87 @@ describe('GoalsTab', () => {
     expect(screen.getByText('Progress snapshot')).toBeInTheDocument()
   })
 
+  it('puts the view switch in the title\'s own row on a wide screen, and under it on a phone', () => {
+    const { unmount } = render(<GoalsTab model={makeModel()} />)
+    const title = screen.getByRole('heading', { name: 'Goals' })
+    // One row, so the page spends one line, not two, above the chart.
+    expect(title.parentElement).toContainElement(screen.getByRole('tablist', { name: 'Goals view' }))
+    unmount()
+
+    mockPhoneWidth()
+    render(<GoalsTab model={makeModel()} />)
+    expect(screen.getByRole('heading', { name: 'Goals' }).parentElement).not.toContainElement(
+      screen.getByRole('tablist', { name: 'Goals view' }),
+    )
+  })
+
+  describe('the hero card', () => {
+    it('has the display switch in its header and a line for FI and the milestone on a wide screen, with no summary box', () => {
+      render(<GoalsTab model={makeModel()} />)
+      const header = screen.getByRole('heading', { name: 'Invested portfolio projection' }).parentElement!
+
+      // Beside the window buttons, where it is always in sight, not at the foot of the card.
+      expect(within(header).getByRole('radiogroup', { name: 'Value display mode' })).toBeInTheDocument()
+      expect(screen.queryByText('Scenario summary')).not.toBeInTheDocument()
+      // The net worth the box also gave is the levers bar's now, so it is not said twice.
+      expect(screen.getAllByText(/^Net worth in 30 yrs$/)).toHaveLength(1)
+    })
+
+    it('says in a line when the plan reaches financial independence and its next milestone, and nothing when it reaches neither', () => {
+      const reaches = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true, annualSpendCents: 100_000 })
+      const { unmount } = render(<GoalsTab model={buildExpenseModel(makeDataset({ goalScenarios: [reaches] }))} />)
+      expect(screen.getByText('Financial independence').closest('p')).toHaveTextContent('Financial independence Year 0')
+      unmount()
+
+      const never = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true, annualSpendCents: 900_000_000_000 })
+      const dataset = makeDataset({ goalScenarios: [never] })
+      dataset.settings = { ...dataset.settings, milestones: [] }
+      render(<GoalsTab model={buildExpenseModel(dataset)} />)
+      expect(screen.queryByText('Financial independence')).not.toBeInTheDocument()
+    })
+
+    it('says in a line when the plan crosses its next milestone', () => {
+      const dataset = makeDataset({
+        goalScenarios: [makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true, startInvestedCents: 100_000, monthlyContributionCents: 100_000 })],
+      })
+      dataset.settings = { ...dataset.settings, milestones: [{ amountCents: 50_000_000, label: 'Coast FI' }] }
+      render(<GoalsTab model={buildExpenseModel(dataset)} />)
+
+      expect(screen.getByText(/Coast FI .* invested/).closest('p')).toHaveTextContent(/Year \d+/)
+    })
+
+    it('explains the purchase years and the band once, under the legend, and not above the chart', () => {
+      render(<GoalsTab model={makeModel()} />)
+
+      expect(screen.queryByText(/select a year on the chart for values/)).not.toBeInTheDocument()
+      const note = screen.getByText(/Dashed vertical lines mark purchase years/)
+      // 7% real return, three points either side.
+      expect(note).toHaveTextContent('The shaded band is the line you are editing at a real return of 4,0% to 10,0%, three points either side.')
+      expect(note).toHaveTextContent('return and contributions apply before the down payment comes out')
+    })
+
+    it('keeps the summary box, the switch under it and the explanation above the chart on a phone', () => {
+      mockPhoneWidth()
+      render(<GoalsTab model={makeModel()} />)
+
+      expect(screen.getByText('Scenario summary')).toBeInTheDocument()
+      const header = screen.getByRole('heading', { name: 'Invested portfolio projection' }).parentElement!
+      expect(within(header).queryByRole('radiogroup', { name: 'Value display mode' })).not.toBeInTheDocument()
+      expect(screen.getByRole('radiogroup', { name: 'Value display mode' })).toBeInTheDocument()
+      expect(screen.getByText(/select a year on the chart for values/)).toBeInTheDocument()
+      expect(screen.queryByText(/The shaded band is the line you are editing/)).not.toBeInTheDocument()
+    })
+
+    it('names where the figures that stay in today\'s money are, in the Nominal view', async () => {
+      const user = userEvent.setup()
+      render(<GoalsTab model={makeModel()} />)
+
+      await user.click(screen.getByRole('radio', { name: 'Nominal' }))
+
+      expect(screen.getByText(/The net worth, the FI target and the milestones stay in today's money/)).toBeInTheDocument()
+    })
+  })
+
   it('has one row of four views on a phone, opening on Chart', () => {
     mockPhoneWidth()
     const { container } = render(<GoalsTab model={makeModel()} />)

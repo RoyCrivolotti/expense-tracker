@@ -1,46 +1,17 @@
 import type { NewGoalScenario } from '../../../data/dataSource'
 import { useAssumedInflation } from '../..//hooks/assumedInflationContext'
 import type { Milestone } from '../../../types'
-import {
-  fireNumber,
-  formatCents,
-  formatPercent,
-  milestoneLabelWithAmount,
-  projectNetWorth,
-  scenarioToParams,
-  yearsToFi,
-  yearsToTargetFromProjection,
-} from '../../../engine'
+import { formatCents, formatPercent, milestoneLabelWithAmount } from '../../../engine'
 import { Card } from '../../components/primitives'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { formatMoneyShort } from './chartTheme'
+import { getNarrativeStats, type MilestoneStat } from './narrativeStats'
 import styles from './goals.module.css'
 
 interface GoalsNarrativeProps {
   draft: NewGoalScenario
   milestones: Milestone[]
   compact?: boolean
-}
-
-interface MilestoneStat {
-  milestone: Milestone
-  year: number | null
-}
-
-/**
- * The two milestones worth narrating: the next one the plan should cross, and
- * the top of the ladder. Collapses to one when the next milestone is the top.
- */
-function narrativeMilestones(draft: NewGoalScenario, milestones: Milestone[], inflationRate: number) {
-  const params = scenarioToParams({ ...draft, id: 0 }, inflationRate)
-  const toStat = (milestone: Milestone): MilestoneStat => ({
-    milestone,
-    year: yearsToTargetFromProjection(params, milestone.amountCents, false),
-  })
-  const next = milestones.find((m) => m.amountCents > draft.startInvestedCents) ?? null
-  const last = milestones[milestones.length - 1] ?? null
-  const top = last && last.amountCents !== next?.amountCents ? last : null
-  return { next: next ? toStat(next) : null, top: top ? toStat(top) : null }
 }
 
 /** Prose for the narrated milestones, with a leading space, or '' when there are none. */
@@ -57,15 +28,6 @@ function milestoneSentences(
         : `${label} is not reached in the horizon.`
     })
   return parts.length > 0 ? ` ${parts.join(' ')}` : ''
-}
-
-function getNarrativeStats(draft: NewGoalScenario, milestones: Milestone[], inflationRate: number) {
-  const params = scenarioToParams({ ...draft, id: 0 }, inflationRate)
-  const series = projectNetWorth(params)
-  const end = series[series.length - 1]
-  const fiYear = yearsToFi(params, draft.annualSpendCents, draft.safeWithdrawalRate)
-  const fiTarget = fireNumber(draft.annualSpendCents, draft.safeWithdrawalRate)
-  return { end, fiYear, fiTarget, ...narrativeMilestones(draft, milestones, inflationRate) }
 }
 
 interface PlanStat {
