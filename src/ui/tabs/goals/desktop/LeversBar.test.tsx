@@ -324,6 +324,24 @@ describe('LeversBar', () => {
     expect(screen.getByText('Net worth in 1 yr')).toBeInTheDocument()
   })
 
+  it('names the invested part of the net worth when there is a house in the plan, so the chart and the bar do not look like a disagreement', () => {
+    renderBar({ resultDraft: makeDraft({ housePurchaseYear: 0 }) })
+
+    expect(screen.getByText(/\d .* invested$/)).toBeInTheDocument()
+  })
+
+  it('has no second figure for a plan with no house, where net worth and invested are the same', () => {
+    renderBar({ resultDraft: makeDraft({ housePurchaseYear: null }) })
+
+    expect(screen.queryByText(/\d .* invested$/)).not.toBeInTheDocument()
+  })
+
+  it('has no second figure for a purchase past the horizon, which the net worth does not include', () => {
+    renderBar({ resultDraft: makeDraft({ horizonYears: 5, housePurchaseYear: 12 }) })
+
+    expect(screen.queryByText(/\d .* invested$/)).not.toBeInTheDocument()
+  })
+
   it('says in a tooltip that the net worth is in today\'s money, which the label alone does not', () => {
     renderBar()
     // The tooltip is on the figure itself.
