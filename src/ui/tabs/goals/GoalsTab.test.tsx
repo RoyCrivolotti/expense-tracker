@@ -128,7 +128,8 @@ describe('GoalsTab levers', () => {
 
     expect(screen.queryByRole('button', { name: /from the bar$/ })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'All inputs' }))
-    expect(screen.getByRole('button', { name: 'Add House price to the bar' })).toBeDisabled()
+    expect(screen.getByLabelText('House price')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /to the bar$/ })).not.toBeInTheDocument()
   })
 })
 

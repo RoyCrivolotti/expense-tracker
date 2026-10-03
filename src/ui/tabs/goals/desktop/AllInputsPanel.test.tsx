@@ -166,13 +166,14 @@ describe('AllInputsPanel stars', () => {
     void ui
   })
 
-  it('says nothing about stars, and cannot press one, in a read-only session', () => {
+  it('has no stars, and says nothing about them, in a read-only session', () => {
     renderPanel(true, makeStarred([], { canEdit: false, canAdd: false }))
     expect(screen.queryByText(/Star an input/)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Reset to defaults' })).not.toBeInTheDocument()
-    const star = screen.getAllByRole('button', { name: /^Add .* to the bar$/ })[0]!
-    expect(star).toBeDisabled()
-    expect(star).toHaveAttribute('title', 'Read-only session')
+    expect(screen.queryByRole('button', { name: /to the bar$/ })).not.toBeInTheDocument()
+    // The inputs themselves are all still there to read.
+    expect(screen.getByLabelText('Monthly investing')).toBeInTheDocument()
+    expect(screen.getByLabelText('House price')).toBeInTheDocument()
   })
 })
 
