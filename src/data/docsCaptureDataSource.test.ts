@@ -12,6 +12,15 @@ describe('docsCaptureDataSource.updateSettings', () => {
     expect(updated.milestones).toEqual(dataset.settings.milestones)
     expect(updated.claimantName).toBe(dataset.settings.claimantName)
   })
+
+  it('keeps a choice of levers beside the rest of the settings', async () => {
+    const dataset = await docsCaptureDataSource.load()
+
+    const updated = await docsCaptureDataSource.updateSettings!({ goalLevers: ['rentMonthlyCents'] })
+
+    expect(updated.goalLevers).toEqual(['rentMonthlyCents'])
+    expect(updated.cashReserveMonths).toBe(dataset.settings.cashReserveMonths)
+  })
 })
 
 describe('docsCaptureDataSource.updateTransaction', () => {

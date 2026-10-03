@@ -19,6 +19,7 @@ function makeRow(overrides: Partial<SettingsRow> = {}): SettingsRow {
     claimant_name: null,
     cash_reserve_months: null,
     assumed_inflation: null,
+    goal_levers: null,
     ...overrides,
   }
 }
@@ -79,6 +80,55 @@ describe('updateSettings with assumedInflation', () => {
     await expect(updateSettings(oldEnv, OWNER, { claimantName: 'Alex' })).resolves.toMatchObject({
       assumedInflation: 0.02,
     })
+  })
+})
+
+describe('updateSettings with goalLevers', () => {
+  it('stores the list as JSON in the order it was given, and reads it back', async () => {
+    const chosen = ['rentMonthlyCents', 'horizonYears']
+    const { env, bind } = stubEnv(makeRow({ goal_levers: JSON.stringify(chosen) }))
+
+    const result = await updateSettings(env, OWNER, { goalLevers: ['rentMonthlyCents', 'horizonYears'] })
+
+    expect(boundMilestones(bind)).toBe(JSON.stringify(chosen))
+    expect(result.goalLevers).toEqual(chosen)
+  })
+
+  it('stores a deliberately empty list as "[]", which is not the same as never having chosen', async () => {
+    const { env, bind } = stubEnv(makeRow({ goal_levers: '[]' }))
+
+    const result = await updateSettings(env, OWNER, { goalLevers: [] })
+
+    expect(boundMilestones(bind)).toBe('[]')
+    expect(result.goalLevers).toEqual([])
+  })
+
+  it('refuses a sixth input, an input a scenario does not have, a repeat and what is not a list', async () => {
+    const { env } = stubEnv(makeRow())
+    const six = [
+      'startInvestedCents',
+      'monthlyContributionCents',
+      'expectedRealReturn',
+      'horizonYears',
+      'housePurchaseYear',
+      'rentMonthlyCents',
+    ]
+    for (const bad of [six, ['planStartDate'], ['horizonYears', 'horizonYears'], 'horizonYears', null]) {
+      await expect(
+        updateSettings(env, OWNER, { goalLevers: bad as unknown as [] }),
+      ).rejects.toBeInstanceOf(HttpError)
+    }
+  })
+
+  it('reads as the five defaults until one is chosen, including on a database without the column', async () => {
+    const { env } = stubEnv(makeRow({ goal_levers: null }))
+    const defaults = ['monthlyContributionCents', 'expectedRealReturn', 'horizonYears', 'housePurchaseYear', 'startInvestedCents']
+    await expect(updateSettings(env, OWNER, { claimantName: 'Alex' })).resolves.toMatchObject({ goalLevers: defaults })
+    // A row from before the migration has no such key at all.
+    const { goal_levers: omitted, ...before } = makeRow()
+    void omitted
+    const { env: oldEnv } = stubEnv(before as SettingsRow)
+    await expect(updateSettings(oldEnv, OWNER, { claimantName: 'Alex' })).resolves.toMatchObject({ goalLevers: defaults })
   })
 })
 

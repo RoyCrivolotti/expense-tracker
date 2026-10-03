@@ -139,6 +139,17 @@ export function FlagIcon(props: IconProps) {
   )
 }
 
+/**
+ * Outlined, and solid through `fill="currentColor"` for the starred state, as the flag is.
+ */
+export function StarIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M12 3.6l2.6 5.4 5.9.8-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8L3.5 9.8l5.9-.8z" />
+    </svg>
+  )
+}
+
 /** Marks a row that carries receipts. */
 export function PaperclipIcon(props: IconProps) {
   return (

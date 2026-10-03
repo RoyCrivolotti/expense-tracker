@@ -3,7 +3,8 @@
  * Playwright check of the Goals Plan page on a wide screen, on the demo instance: one column with
  * no scroll of its own, the levers bar in reach (held to the bottom edge while its place is below
  * the fold, under the header once scrolled past), the inputs panel folding in and out, the
- * scenario menu, the order Tab goes in and that nothing it reaches is under the bar.
+ * scenario menu, the stars that move an input to the bar and back, the order Tab goes in and that
+ * nothing it reaches is under the bar.
  *
  * jsdom lays nothing out, so the unit tests cannot say any of this. Manual, like
  * verify:goals-nav: it needs a browser and takes a few minutes, so it is not part of
@@ -224,6 +225,36 @@ async function checkPanel(page, where) {
   check(where, '(h) the panel closes and the page goes back to its length', near((await measure(page)).scrollHeight, before, 3), `page ${before}, then ${(await measure(page)).scrollHeight}`)
 }
 
+/** Stars: out of the bar and back to the panel, in from the panel, and the way back to the five. */
+async function checkStars(page, where) {
+  const bar = page.getByRole('group', { name: 'Key inputs' })
+  const count = () => bar.locator('[class*="leverLabel"]').count()
+  check(where, '(m) the bar starts with five levers, each with a star to take it out', (await count()) === 5 && (await bar.getByRole('button', { name: /^Remove .* from the bar$/ }).count()) === 5)
+
+  await page.getByRole('button', { name: 'Remove Horizon from the bar' }).click()
+  await page.waitForTimeout(300)
+  check(where, '(m) taking an input out of the bar leaves four', (await count()) === 4)
+
+  await page.getByRole('button', { name: 'All inputs' }).click()
+  await page.getByRole('region', { name: 'All inputs' }).waitFor({ timeout: 5000 })
+  check(where, '(m) the input is back in the panel', (await page.getByLabel('Horizon (years)', { exact: true }).count()) === 1)
+  const star = page.getByRole('button', { name: 'Add House price to the bar' })
+  const box = await star.boundingBox()
+  const field = await page.getByLabel('House price', { exact: true }).boundingBox()
+  check(where, '(m) the star hangs clear of its input, to the left', box !== null && field !== null && box.x + box.width <= field.x && box.width >= 12, JSON.stringify({ box, field: field && { x: field.x } }))
+  await star.click()
+  await page.waitForTimeout(300)
+  check(where, '(m) starring an input puts it in the bar, which is full again', (await count()) === 5 && (await bar.getByLabel('House price', { exact: true }).count()) === 1)
+  const live = await page.getByRole('button', { name: /^Add .* to the bar$/ }).evaluateAll((els) => els.filter((e) => !e.disabled).length)
+  check(where, '(m) a full bar leaves no star open to press', live === 0, `${live} open`)
+
+  await page.getByRole('button', { name: 'Reset to defaults' }).click()
+  await page.waitForTimeout(300)
+  check(where, '(m) Reset puts the five back', (await count()) === 5 && (await bar.getByLabel('Horizon (years)', { exact: true }).count()) === 1)
+  await page.getByRole('button', { name: 'All inputs' }).click()
+  await page.getByRole('region', { name: 'All inputs' }).waitFor({ state: 'detached', timeout: 5000 })
+}
+
 async function checkMenu(page, where) {
   const trigger = page.getByRole('button', { name: 'Scenario options' })
   await trigger.click()
@@ -331,6 +362,7 @@ async function checkScreen(browser, screen, engine) {
     await checkHover(page, where)
     await checkMenu(page, where)
     await checkPanel(page, where)
+    await checkStars(page, where)
     await checkEdit(page, where)
   }
   await context.close()

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import { formatCents, rebaseline, rebaselineSummary, type LeverKey, type MoneyFormat } from '../../../engine'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
@@ -18,7 +18,11 @@ export interface SectionProps {
   draft: NewGoalScenario
   onChange: (patch: Partial<NewGoalScenario>) => void
   omit?: ReadonlySet<LeverKey>
+  /** Puts something around an input that can be in the bar (the star that sends it there); the phone has nothing around them. */
+  wrap?: (key: LeverKey, field: ReactNode) => ReactNode
 }
+
+const plain = (_key: LeverKey, field: ReactNode): ReactNode => field
 
 function purchaseSummary(draft: NewGoalScenario, format: MoneyFormat): string | null {
   const purchaseYear = draft.housePurchaseYear
@@ -31,77 +35,77 @@ function purchaseSummary(draft: NewGoalScenario, format: MoneyFormat): string | 
 
 const L = LEVER_SPECS
 
-export function PortfolioFields({ draft, onChange, omit = NO_LEVERS }: SectionProps) {
+export function PortfolioFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: SectionProps) {
   return (
     <>
       {omit.has('startInvestedCents') ? null : (
-        <MoneyField
+        wrap('startInvestedCents', <MoneyField
           label={L.startInvestedCents.label}
           value={draft.startInvestedCents}
           onChange={(v) => onChange({ startInvestedCents: v })}
-        />
+        />)
       )}
       {omit.has('monthlyContributionCents') ? null : (
-        <MoneyField
+        wrap('monthlyContributionCents', <MoneyField
           label={L.monthlyContributionCents.label}
           value={draft.monthlyContributionCents}
           onChange={(v) => onChange({ monthlyContributionCents: v })}
-        />
+        />)
       )}
       {omit.has('annualContributionGrowth') ? null : (
-        <PercentField
+        wrap('annualContributionGrowth', <PercentField
           label={L.annualContributionGrowth.label}
           value={draft.annualContributionGrowth}
           max={L.annualContributionGrowth.max ?? 0.1}
           onChange={(v) => onChange({ annualContributionGrowth: v })}
-        />
+        />)
       )}
       {omit.has('expectedRealReturn') ? null : (
-        <PercentField
+        wrap('expectedRealReturn', <PercentField
           label={L.expectedRealReturn.label}
           value={draft.expectedRealReturn}
           max={L.expectedRealReturn.max ?? 0.15}
           onChange={(v) => onChange({ expectedRealReturn: v })}
-        />
+        />)
       )}
       {omit.has('horizonYears') ? null : (
-        <NumberField
+        wrap('horizonYears', <NumberField
           label={L.horizonYears.label}
           value={draft.horizonYears}
           min={L.horizonYears.min ?? 1}
           max={L.horizonYears.max ?? 60}
           onChange={(v) => onChange({ horizonYears: v })}
-        />
+        />)
       )}
     </>
   )
 }
 
-function PurchaseCostFields({ draft, onChange, omit = NO_LEVERS }: SectionProps) {
+function PurchaseCostFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: SectionProps) {
   return (
     <>
       {omit.has('housePriceCents') ? null : (
-        <MoneyField
+        wrap('housePriceCents', <MoneyField
           label={L.housePriceCents.label}
           value={draft.housePriceCents}
           onChange={(v) => onChange({ housePriceCents: v })}
-        />
+        />)
       )}
       {omit.has('downPaymentFraction') ? null : (
-        <PercentField
+        wrap('downPaymentFraction', <PercentField
           label={L.downPaymentFraction.label}
           value={draft.downPaymentFraction}
           max={L.downPaymentFraction.max ?? 0.5}
           onChange={(v) => onChange({ downPaymentFraction: v })}
-        />
+        />)
       )}
       {omit.has('transactionCostsCents') ? null : (
         <>
-          <MoneyField
+          {wrap('transactionCostsCents', <MoneyField
             label={L.transactionCostsCents.label}
             value={draft.transactionCostsCents}
             onChange={(v) => onChange({ transactionCostsCents: v })}
-          />
+          />)}
           <p className={styles.fieldHint}>
             Notary, agency, and closing costs withdrawn with the down payment in the purchase
             year.
@@ -112,34 +116,34 @@ function PurchaseCostFields({ draft, onChange, omit = NO_LEVERS }: SectionProps)
   )
 }
 
-function MortgageFields({ draft, onChange, omit = NO_LEVERS }: SectionProps) {
+function MortgageFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: SectionProps) {
   return (
     <>
       {omit.has('mortgageRateAnnual') ? null : (
-        <PercentField
+        wrap('mortgageRateAnnual', <PercentField
           label={L.mortgageRateAnnual.label}
           value={draft.mortgageRateAnnual}
           max={L.mortgageRateAnnual.max ?? 0.1}
           onChange={(v) => onChange({ mortgageRateAnnual: v })}
-        />
+        />)
       )}
       {omit.has('mortgageTermYears') ? null : (
-        <NumberField
+        wrap('mortgageTermYears', <NumberField
           label={L.mortgageTermYears.label}
           value={draft.mortgageTermYears}
           min={L.mortgageTermYears.min ?? 1}
           max={L.mortgageTermYears.max ?? 40}
           onChange={(v) => onChange({ mortgageTermYears: v })}
-        />
+        />)
       )}
       {omit.has('houseAppreciationRate') ? null : (
         <>
-          <PercentField
+          {wrap('houseAppreciationRate', <PercentField
             label={L.houseAppreciationRate.label}
             value={draft.houseAppreciationRate}
             max={L.houseAppreciationRate.max ?? 0.1}
             onChange={(v) => onChange({ houseAppreciationRate: v })}
-          />
+          />)}
           <p className={styles.fieldHint}>
             The mortgage rate and house appreciation are nominal, as a bank and the price index
             quote them. The plan takes inflation off both, so the house and the debt are in
@@ -151,25 +155,28 @@ function MortgageFields({ draft, onChange, omit = NO_LEVERS }: SectionProps) {
   )
 }
 
-function PurchaseTimingFields({ draft, onChange, omit = NO_LEVERS }: SectionProps) {
+function PurchaseTimingFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: SectionProps) {
   const format = useMoneyFormat()
   const purchaseHint = omit.has('housePurchaseYear') ? null : purchaseSummary(draft, format)
   return (
     <>
       {omit.has('housePurchaseYear') ? null : (
-        <PurchaseYearField
-          value={draft.housePurchaseYear}
-          maxYear={draft.horizonYears}
-          onChange={(v) => onChange({ housePurchaseYear: v })}
-        />
+        wrap(
+          'housePurchaseYear',
+          <PurchaseYearField
+            value={draft.housePurchaseYear}
+            maxYear={draft.horizonYears}
+            onChange={(v) => onChange({ housePurchaseYear: v })}
+          />,
+        )
       )}
       {purchaseHint ? <p className={styles.fieldHint}>{purchaseHint}</p> : null}
       {omit.has('rentMonthlyCents') ? null : (
-        <MoneyField
+        wrap('rentMonthlyCents', <MoneyField
           label={L.rentMonthlyCents.label}
           value={draft.rentMonthlyCents}
           onChange={(v) => onChange({ rentMonthlyCents: v })}
-        />
+        />)
       )}
     </>
   )
@@ -185,7 +192,7 @@ export function HousingFields(props: SectionProps) {
   )
 }
 
-export function FireFields({ draft, onChange, omit = NO_LEVERS }: SectionProps) {
+export function FireFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: SectionProps) {
   return (
     <>
       <p className={styles.fieldHint}>
@@ -194,11 +201,11 @@ export function FireFields({ draft, onChange, omit = NO_LEVERS }: SectionProps) 
       </p>
       {omit.has('annualSpendCents') ? null : (
         <>
-          <MoneyField
+          {wrap('annualSpendCents', <MoneyField
             label={L.annualSpendCents.label}
             value={draft.annualSpendCents}
             onChange={(v) => onChange({ annualSpendCents: v })}
-          />
+          />)}
           <p className={styles.fieldHint}>
             Yearly cost of living you would need the portfolio to cover after FI (within the horizon).
           </p>
@@ -206,13 +213,13 @@ export function FireFields({ draft, onChange, omit = NO_LEVERS }: SectionProps) 
       )}
       {omit.has('safeWithdrawalRate') ? null : (
         <>
-          <PercentField
+          {wrap('safeWithdrawalRate', <PercentField
             label={L.safeWithdrawalRate.label}
             value={draft.safeWithdrawalRate}
             min={L.safeWithdrawalRate.min ?? 0.005}
             max={L.safeWithdrawalRate.max ?? 0.06}
             onChange={(v) => onChange({ safeWithdrawalRate: v })}
-          />
+          />)}
           <p className={styles.fieldHint}>
             Share of the portfolio you would spend each year once FI (4% is the usual rule of thumb).
             Lower rate = spend less = higher FI target. FI target = annual spend ÷ this rate.

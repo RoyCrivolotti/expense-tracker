@@ -31,7 +31,9 @@ const LeverResult = memo(function LeverResult({ draft }: ResultProps) {
   }, [draft, inflationRate])
   return (
     <>
-      <span className={styles.leverLabel}>Net worth at horizon</span>
+      <div className={styles.leverHead}>
+        <span className={styles.leverLabel}>Net worth at horizon</span>
+      </div>
       <span className={styles.leverResult}>{formatCentsCompact(end, format)}</span>
     </>
   )
@@ -43,6 +45,8 @@ interface LeversBarProps {
   resultDraft: NewGoalScenario
   keys: readonly LeverKey[]
   onChange: (patch: Partial<NewGoalScenario>) => void
+  /** Takes an input out of the bar; absent where the bar cannot be changed. */
+  onUnstar?: ((key: LeverKey) => void) | undefined
   expanded: boolean
   /** The id of the panel the button opens. */
   panelId: string
@@ -57,7 +61,7 @@ interface LeversBarProps {
  * the keyboard is not left behind it. The rest of the inputs open from the button in the result
  * block.
  */
-export function LeversBar({ draft, resultDraft, keys, onChange, expanded, panelId, onToggle }: LeversBarProps) {
+export function LeversBar({ draft, resultDraft, keys, onChange, onUnstar, expanded, panelId, onToggle }: LeversBarProps) {
   const bar = useRef<HTMLDivElement>(null)
   useBarScrollPadding(bar)
   return (
@@ -65,8 +69,17 @@ export function LeversBar({ draft, resultDraft, keys, onChange, expanded, panelI
       <Card className={styles.levers}>
         <div className={styles.leverGrid} role="group" aria-label="Key inputs">
           {keys.map((key) => (
-            <Lever key={key} spec={LEVER_SPECS[key]} draft={draft} onChange={onChange} />
+            <Lever
+              key={key}
+              spec={LEVER_SPECS[key]}
+              draft={draft}
+              onChange={onChange}
+              onUnstar={onUnstar ? () => onUnstar(key) : undefined}
+            />
           ))}
+          {keys.length === 0 ? (
+            <p className={styles.leverEmpty}>Nothing is starred. Open All inputs and star the ones you change most.</p>
+          ) : null}
         </div>
         <div className={styles.leverSide}>
           <LeverResult draft={resultDraft} />

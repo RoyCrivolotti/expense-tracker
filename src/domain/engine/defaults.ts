@@ -5,6 +5,7 @@
  */
 import type { ExpenseSettings } from '../types'
 import { DEFAULT_BUDGET_ROLLOVER_DAY } from './dates'
+import { DEFAULT_LEVERS } from './goalLevers'
 import { defaultMilestones } from './milestones'
 import { DEFAULT_INFLATION_RATE } from './projectionConstants'
 import { DEFAULT_CURRENCY_CODE, DEFAULT_NUMBER_LOCALE } from './money'
@@ -22,5 +23,6 @@ export function defaultExpenseSettings(): ExpenseSettings {
     claimantName: '',
     cashReserveMonths: 0,
     assumedInflation: DEFAULT_INFLATION_RATE,
+    goalLevers: [...DEFAULT_LEVERS],
   }
 }

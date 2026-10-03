@@ -16,6 +16,7 @@ import { ScenarioManager } from './ScenarioManager'
 import { SecondaryCharts } from './SecondaryCharts'
 import { useGoalsNarrow } from './useGoalsNarrow'
 import type { ScenarioEditor } from './useScenarioEditor'
+import type { StarredLevers } from './useStarredLevers'
 import styles from './goals.module.css'
 
 interface PlanSidebarProps {
@@ -98,6 +99,8 @@ interface PlanViewProps {
   accounts: WealthAccount[]
   fromToday: PlanFromToday | null
   display: ValueDisplay
+  /** The inputs in a wide screen's bar; a phone has no bar. */
+  levers: StarredLevers
 }
 
 /** Charts read the editor's deferred draft, so dragging a control never waits on them. */
@@ -147,10 +150,10 @@ function planBlocks(props: PlanViewProps): Record<PlanBlock, ReactNode> {
  * Plan. A wide screen has its own page, one column from the scenarios to the detail charts. A
  * phone keeps the scenarios and controls as a half of their own beside the chart.
  */
-export function PlanView({ half, ...rest }: PlanViewProps) {
+export function PlanView({ half, levers, ...rest }: PlanViewProps) {
   const narrow = useGoalsNarrow()
-  if (!narrow) return <PlanDesktop {...rest} />
-  const blocks = planBlocks({ half, ...rest })
+  if (!narrow) return <PlanDesktop {...rest} levers={levers} />
+  const blocks = planBlocks({ half, levers, ...rest })
   return (
     <>
       <div className={styles.layout} data-mobile-view={half}>

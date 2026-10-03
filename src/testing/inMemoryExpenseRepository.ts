@@ -17,6 +17,7 @@ import { addDaysIso } from '../domain/engine/dates'
 import { withoutFlag, withoutSettlement } from '../domain/engine/flagGroups'
 import { defaultExpenseSettings } from '../domain/engine/defaults'
 import { assumedInflationError } from '../domain/engine/assumedInflation'
+import { leversError } from '../domain/engine/goalLevers'
 import { normalizeMilestones, validateMilestones } from '../domain/engine/milestones'
 import type {
   Account,
@@ -128,6 +129,14 @@ function emptyStore(seed: ExpenseRepositorySeed = {}): OwnerStore {
     wealthAccounts: list(seed.wealthAccounts),
     wealthCheckins: list(seed.wealthCheckins),
   }
+}
+
+/** The Goals tab's own settings, checked as the API checks them. */
+function assertGoalsSettings(patch: Partial<ExpenseSettings>): void {
+  const error =
+    (patch.assumedInflation !== undefined ? assumedInflationError(patch.assumedInflation) : null) ??
+    (patch.goalLevers !== undefined ? leversError(patch.goalLevers) : null)
+  if (error) throw new RepoHttpError(400, error)
 }
 
 export function inMemoryExpenseRepository(
@@ -954,10 +963,7 @@ function assertOwnedAccount(store: OwnerStore, accountId: number): Account {
         if (error) throw new RepoHttpError(400, error)
         patch = { ...patch, milestones: normalizeMilestones(patch.milestones) }
       }
-      if (patch.assumedInflation !== undefined) {
-        const error = assumedInflationError(patch.assumedInflation)
-        if (error) throw new RepoHttpError(400, error)
-      }
+      assertGoalsSettings(patch)
       store.settings = { ...store.settings, ...patch }
       return Promise.resolve({ ...store.settings })
     },

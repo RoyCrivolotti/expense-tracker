@@ -20,6 +20,7 @@ import { GOALS_CONTENT_ANCHOR_ID } from './goalsAnchors'
 import { ProgressPane } from './ProgressPane'
 import { AssumptionsView } from './AssumptionsView'
 import { useScenarioEditor } from './useScenarioEditor'
+import { useStarredLevers } from './useStarredLevers'
 import { PlanView } from './PlanView'
 import type { DisplayMode } from './PlanHero'
 import { activePlan } from './scenarioSelection'
@@ -117,6 +118,8 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
   )
 
   const editor = useScenarioEditor(dataset, actions, avgSaving)
+  // Kept here, not in Plan, so a choice still being saved survives a visit to another view.
+  const levers = useStarredLevers(dataset.settings.goalLevers, actions?.updateSettings)
 
   return (
     <div className={styles.stack}>
@@ -170,6 +173,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
             checkins={dataset.wealthCheckins}
             accounts={dataset.wealthAccounts}
             fromToday={fromToday}
+            levers={levers}
             display={{
               mode: displayMode,
               onModeChange: changeDisplayMode,

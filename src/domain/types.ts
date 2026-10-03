@@ -4,6 +4,8 @@
  * always integer cents, dates are ISO strings, and budget months are YYYY-MM.
  */
 
+import type { LeverKey } from './engine/goalLevers'
+
 export type TxnType = 'expense' | 'income' | 'investment' | 'refund'
 export type TxnStatus = 'posted' | 'forecast' | 'cancelled'
 export type AccountKind = 'debit' | 'credit'
@@ -336,6 +338,12 @@ export interface ExpenseSettings {
    * the nominal view inflates the plan by it. One value for the owner, not per plan.
    */
   assumedInflation: number
+  /**
+   * The scenario inputs the Goals page keeps in its bar, in the order they are shown: at most
+   * five, resolved to the built-in defaults when the owner has never chosen. An empty list is a
+   * deliberate choice, not a missing value.
+   */
+  goalLevers: LeverKey[]
 }
 
 /**

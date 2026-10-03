@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import type { GoalScenario, Milestone, WealthAccount, WealthCheckin } from '../../../../types'
-import { DEFAULT_LEVERS, type LeverKey, type MonthlyFlow, type PlanFromToday } from '../../../../engine'
+import type { MonthlyFlow, PlanFromToday } from '../../../../engine'
 import type { ExpenseActions } from '../../../actions'
 import type { InvestedSnapshot } from '../checkinDate'
 import { GoalsIntro } from '../GoalsIntro'
 import { PlanHero, type ValueDisplay } from '../PlanHero'
 import type { ScenarioEditor } from '../useScenarioEditor'
+import type { StarredLevers } from '../useStarredLevers'
 import { AllInputsPanel } from './AllInputsPanel'
 import { DetailGrid } from './DetailGrid'
 import { LeversBar } from './LeversBar'
@@ -13,8 +14,6 @@ import { ScenarioBar } from './ScenarioBar'
 import styles from './planDesktop.module.css'
 
 const PANEL_ID = 'goals-all-inputs'
-/** The inputs in the bar, which the panel leaves out. */
-const IN_BAR: ReadonlySet<LeverKey> = new Set(DEFAULT_LEVERS)
 
 export interface PlanDesktopProps {
   scenarios: GoalScenario[]
@@ -29,6 +28,8 @@ export interface PlanDesktopProps {
   accounts: WealthAccount[]
   fromToday: PlanFromToday | null
   display: ValueDisplay
+  /** The inputs in the bar, and the stars that change them. */
+  levers: StarredLevers
 }
 
 /**
@@ -38,7 +39,7 @@ export interface PlanDesktopProps {
  * The page is one column, so there is one scroll and the chart is never squeezed beside a
  * panel. Charts read the editor's deferred draft, so dragging a control never waits on them.
  */
-export function PlanDesktop({ scenarios, editor, actions, latest, milestones, reached, monthly, checkins, accounts, fromToday, display }: PlanDesktopProps) {
+export function PlanDesktop({ scenarios, editor, actions, latest, milestones, reached, monthly, checkins, accounts, fromToday, display, levers }: PlanDesktopProps) {
   const [inputsOpen, setInputsOpen] = useState(false)
   const { draft, deferredDraft } = editor
   return (
@@ -59,8 +60,9 @@ export function PlanDesktop({ scenarios, editor, actions, latest, milestones, re
       <LeversBar
         draft={draft}
         resultDraft={deferredDraft}
-        keys={DEFAULT_LEVERS}
+        keys={levers.keys}
         onChange={editor.patchDraft}
+        onUnstar={levers.canEdit ? levers.toggle : undefined}
         expanded={inputsOpen}
         panelId={PANEL_ID}
         onToggle={() => setInputsOpen((open) => !open)}
@@ -71,7 +73,7 @@ export function PlanDesktop({ scenarios, editor, actions, latest, milestones, re
         draft={draft}
         latest={latest}
         onChange={editor.patchDraft}
-        omit={IN_BAR}
+        starred={levers}
       />
       <DetailGrid
         scenarios={scenarios}

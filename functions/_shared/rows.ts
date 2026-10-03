@@ -19,6 +19,7 @@ import type {
 } from '../domain/types'
 import { DEFAULT_BUDGET_ROLLOVER_DAY } from '../domain/engine/dates'
 import { DEFAULT_INFLATION_RATE } from '../domain/engine/projectionConstants'
+import { parseLevers } from '../domain/engine/goalLevers'
 import { parseMilestones } from '../domain/engine/milestones'
 import { DEFAULT_CURRENCY_CODE, DEFAULT_NUMBER_LOCALE } from '../domain/engine/money'
 
@@ -208,6 +209,7 @@ export interface SettingsRow {
   claimant_name: string | null
   cash_reserve_months: number | null
   assumed_inflation: number | null
+  goal_levers: string | null
 }
 
 export function toSettings(r: SettingsRow): ExpenseSettings {
@@ -224,6 +226,8 @@ export function toSettings(r: SettingsRow): ExpenseSettings {
     claimantName: r.claimant_name ?? '',
     budgetRolloverDay: r.budget_rollover_day ?? DEFAULT_BUDGET_ROLLOVER_DAY,
     milestones: parseMilestones(r.milestones ?? null),
+    // Undefined too, on a database that has not had the column added yet.
+    goalLevers: parseLevers(r.goal_levers ?? null),
   }
 }
 

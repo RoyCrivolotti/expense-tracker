@@ -56,9 +56,13 @@
 }
 
 .leverLabel {
+  min-width: 0;
+  overflow: hidden;
   font-size: 0.6875rem;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
+  text-overflow: ellipsis;
   text-transform: uppercase;
+  white-space: nowrap;
   color: var(--color-text-muted);
 }
 
@@ -392,6 +396,8 @@
 /* As many columns as the width holds at a readable size: four where the page is wide, and the
    rest on further rows where it is not. */
 .columns {
+  /* Room on the left for the stars hung in front of the inputs. */
+  padding-left: 1.1rem;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(13.5rem, 1fr));
   gap: 0.75rem 1.5rem;
@@ -503,4 +509,91 @@
 
 .heroFooter > :nth-child(3) {
   grid-column: 1 / -1;
+}
+
+/* The star on an input: in the lever's label row, or hung in the gutter beside an input in the
+   panel (the columns have 1.5rem of gap, and the first has the card's padding). */
+.leverHead {
+  /* As tall as the star in it, so a lever's name and the result's line up whether or not it has one. */
+  min-height: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+/* A little smaller in the bar, so a name as long as "Monthly investing" and its star fit the
+   narrowest column the five levers are given on a laptop. */
+.leverHead .star {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.leverEmpty {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.star {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0.125rem;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.star:hover:not(:disabled),
+.star:focus-visible {
+  color: var(--exp-warning);
+}
+
+.star:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.star:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.starOn {
+  color: var(--exp-warning);
+}
+
+.starrable {
+  position: relative;
+}
+
+.starrable > .star {
+  position: absolute;
+  top: 0.05rem;
+  left: -1.3rem;
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.starNote {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 0 0.9rem;
+  padding-left: 0.15rem;
+}
+
+.starText {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
 }
