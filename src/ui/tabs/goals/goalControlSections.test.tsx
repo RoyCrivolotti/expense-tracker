@@ -56,6 +56,26 @@ describe('the sections of the controls', () => {
     expect(screen.getByText(/Purchase cost from portfolio/)).toBeInTheDocument()
   })
 
+  it('says what a purchase now means for the starting balance, which the year alone does not', () => {
+    const now = makeScenario({ housePurchaseYear: 0 })
+    const { id, ...rest } = now
+    void id
+    render(<HousingFields draft={rest} onChange={vi.fn()} />)
+
+    expect(screen.getByText(/Bought now: the starting balance is counted as what is left after the/)).toBeInTheDocument()
+    expect(screen.queryByText(/Purchase cost from portfolio/)).not.toBeInTheDocument()
+  })
+
+  it('says nothing about a purchase when there is none', () => {
+    const never = makeScenario({ housePurchaseYear: null })
+    const { id, ...rest } = never
+    void id
+    render(<HousingFields draft={rest} onChange={vi.fn()} />)
+
+    expect(screen.queryByText(/Bought now/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Purchase cost from portfolio/)).not.toBeInTheDocument()
+  })
+
   it('writes an edit to the withdrawal rate to the draft', () => {
     const onChange = vi.fn()
     render(<FireFields draft={makeDraft()} onChange={onChange} />)

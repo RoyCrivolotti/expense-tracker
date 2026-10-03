@@ -26,14 +26,69 @@ function setup() {
   })
   // The app patches its data before a create resolves, so the editor never selects a scenario
   // the data does not have yet.
+  const setData = (next: typeof dataset) => {
+    dataset = next
+  }
   const addToData = (scenario: GoalScenario) => {
     dataset = makeDataset({ goalScenarios: [...dataset.goalScenarios, scenario] })
     hook.rerender()
   }
-  return { ...hook, seen, plan, other, actions, addToData }
+  return { ...hook, seen, plan, other, actions, addToData, setData }
 }
 
 describe('useScenarioEditor', () => {
+  describe('when the saved scenario changes under it', () => {
+    /** The data a refresh brings back after another device re-baselined the plan. */
+    function refreshWith(setupResult: ReturnType<typeof setup>, change: Partial<GoalScenario>) {
+      const { rerender, setData, plan, other } = setupResult
+      setData(makeDataset({ goalScenarios: [{ ...plan, ...change }, other] }))
+      rerender()
+    }
+
+    it('shows a clean draft as the new row instead of as edited', () => {
+      const s = setup()
+      refreshWith(s, { startInvestedCents: 9_000_000, planStartDate: '2027-01-01' })
+
+      expect(s.result.current.draft.startInvestedCents).toBe(9_000_000)
+      expect(s.result.current.draft.planStartDate).toBe('2027-01-01')
+      expect(s.result.current.dirty).toBe(false)
+    })
+
+    it('keeps an edit and takes the rest from the new row, and saves only the edit', async () => {
+      const s = setup()
+      act(() => s.result.current.patchDraft({ monthlyContributionCents: 77_000 }))
+      refreshWith(s, { startInvestedCents: 9_000_000 })
+
+      expect(s.result.current.draft.monthlyContributionCents).toBe(77_000)
+      expect(s.result.current.draft.startInvestedCents).toBe(9_000_000)
+      expect(s.result.current.dirty).toBe(true)
+
+      await act(async () => {
+        s.result.current.onSaveChanges()
+        await Promise.resolve()
+      })
+      expect(s.actions.updateScenario).toHaveBeenCalledWith(s.plan.id, { monthlyContributionCents: 77_000 })
+    })
+
+    it('leaves the draft alone when the row comes back the same', () => {
+      const s = setup()
+      const before = s.result.current.draft
+      refreshWith(s, {})
+
+      expect(s.result.current.draft).toBe(before)
+    })
+
+    it('goes on from the new row after a save', () => {
+      const s = setup()
+      act(() => s.result.current.patchDraft({ monthlyContributionCents: 77_000 }))
+      // The write came back: the saved row is now the edit.
+      refreshWith(s, { monthlyContributionCents: 77_000 })
+
+      expect(s.result.current.dirty).toBe(false)
+      expect(s.result.current.draft.monthlyContributionCents).toBe(77_000)
+    })
+  })
+
   it('opens on the plan, with a draft of it', () => {
     const { result, plan } = setup()
 
@@ -94,6 +149,105 @@ describe('useScenarioEditor', () => {
     expect(result.current.activeId).toBe(9)
     expect(result.current.draft.name).toBe('Path C')
   })
+  describe('creating a scenario', () => {
+    /** A create that stays in flight until the test lets it land, with the row the data would get. */
+    function slowCreate(s: ReturnType<typeof setup>, created = makeScenario({ id: 9, name: 'Path A (copy)', sortOrder: 2 })) {
+      let land!: () => void
+      vi.mocked(s.actions.createScenario).mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            land = () => {
+              s.addToData(created)
+              resolve(created)
+            }
+          }),
+      )
+      return {
+        land: () =>
+          act(async () => {
+            land()
+            await Promise.resolve()
+          }),
+      }
+    }
+
+    it('makes one copy for a double press, not two', async () => {
+      const s = setup()
+      const { land } = slowCreate(s)
+
+      act(() => s.result.current.onDuplicate())
+      act(() => s.result.current.onDuplicate())
+      expect(s.actions.createScenario).toHaveBeenCalledTimes(1)
+      expect(s.result.current.creating).toBe(true)
+
+      await land()
+      expect(s.result.current.creating).toBe(false)
+      expect(s.result.current.activeId).toBe(9)
+    })
+
+    it('opens the copy when nothing was touched while it was made', async () => {
+      const s = setup()
+      const { land } = slowCreate(s)
+
+      act(() => s.result.current.onDuplicate())
+      await land()
+
+      expect(s.result.current.activeId).toBe(9)
+    })
+
+    it('leaves an edit made while it was being made where it is, and does not open the copy over it', async () => {
+      const s = setup()
+      const { land } = slowCreate(s)
+
+      act(() => s.result.current.onDuplicate())
+      act(() => s.result.current.patchDraft({ monthlyContributionCents: 99_900 }))
+      await land()
+
+      expect(s.result.current.activeId).toBe(s.plan.id)
+      expect(s.result.current.draft.monthlyContributionCents).toBe(99_900)
+      expect(s.result.current.dirty).toBe(true)
+    })
+
+    it('does not jump to the copy if another scenario was opened while it was made', async () => {
+      const s = setup()
+      const { land } = slowCreate(s)
+
+      act(() => s.result.current.onDuplicate())
+      act(() => s.result.current.onSelectScenario(s.other))
+      await land()
+
+      expect(s.result.current.activeId).toBe(s.other.id)
+    })
+
+    it('numbers a copy past the ones that exist', () => {
+      const s = setup()
+      s.addToData(makeScenario({ id: 5, name: 'Path A (copy)', sortOrder: 2 }))
+
+      act(() => s.result.current.onDuplicate())
+
+      expect(s.actions.createScenario).toHaveBeenCalledWith(expect.objectContaining({ name: 'Path A (copy 2)' }))
+    })
+
+    it('gives a draft saved as a new scenario a colour no scenario has', () => {
+      const s = setup()
+
+      act(() => s.result.current.onSaveDraft('Alt'))
+
+      // The draft was loaded from the plan, so it has the plan's colour: two lines of one colour cannot be told apart.
+      const color = vi.mocked(s.actions.createScenario).mock.calls[0]?.[0]?.color
+      expect([s.plan.color, s.other.color]).not.toContain(color)
+    })
+
+    it('keeps the draft its own colour when no scenario has it', () => {
+      const s = setup()
+      act(() => s.result.current.patchDraft({ color: '#123456' }))
+
+      act(() => s.result.current.onSaveDraft('Alt'))
+
+      expect(vi.mocked(s.actions.createScenario).mock.calls[0]?.[0]?.color).toBe('#123456')
+    })
+  })
+
   it('builds the first draft once, not once for each piece of state it seeds', () => {
     vi.mocked(bootstrapEditor).mockClear()
 

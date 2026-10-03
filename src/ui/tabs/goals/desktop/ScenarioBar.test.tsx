@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -244,6 +244,29 @@ describe('ScenarioBar', () => {
     await openMenu()
     await userEvent.click(screen.getByRole('button', { name: 'Use color #6366f1' }))
     expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
+  })
+
+  it('makes one copy for a double click on + Duplicate, and holds the button while it is made', async () => {
+    let land!: () => void
+    const actions = makeActions()
+    vi.mocked(actions.createScenario).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          land = () => resolve(makeScenario({ id: 9, name: 'Path A: Invest only (copy)' }))
+        }),
+    )
+    render(<Harness initial={[plan, other]} actions={actions} />)
+    const button = screen.getByRole('button', { name: 'Duplicate Path A as a new scenario' })
+
+    await userEvent.dblClick(button)
+
+    expect(actions.createScenario).toHaveBeenCalledTimes(1)
+    expect(button).toBeDisabled()
+    await act(async () => {
+      land()
+      await Promise.resolve()
+    })
+    expect(button).toBeEnabled()
   })
 
   it('opens the menu with focus on the scenario name', async () => {

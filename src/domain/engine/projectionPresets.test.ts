@@ -13,6 +13,12 @@ describe('copyName', () => {
     expect(copyName('Path A (copy 9)')).toBe('Path A (copy 10)')
   })
 
+  it('counts on past the copies that already exist', () => {
+    expect(copyName('Path A', ['Path A', 'Path A (copy)'])).toBe('Path A (copy 2)')
+    expect(copyName('Path A (copy)', ['Path A (copy 2)', 'Path A (copy 3)'])).toBe('Path A (copy 4)')
+    expect(copyName('Path A', ['Path B (copy)'])).toBe('Path A (copy)')
+  })
+
   it('leaves a name that only mentions a copy alone', () => {
     expect(copyName('My copy plan')).toBe('My copy plan (copy)')
     expect(copyName('Path A (copy) later')).toBe('Path A (copy) later (copy)')
@@ -23,9 +29,9 @@ describe('duplicateScenario', () => {
   it('keeps the inputs, names it as a copy, puts it where it is told and gives it a free colour', () => {
     const { id, ...source } = makeScenario({ name: 'Path A', color: '#6366f1', expectedRealReturn: 0.05 })
     void id
-    const copy = duplicateScenario(source, 3, ['#6366f1'])
+    const copy = duplicateScenario(source, 3, ['#6366f1'], ['Path A (copy)'])
 
-    expect(copy.name).toBe('Path A (copy)')
+    expect(copy.name).toBe('Path A (copy 2)')
     expect(copy.sortOrder).toBe(3)
     expect(copy.expectedRealReturn).toBe(0.05)
     expect(copy.color).toBe(pickScenarioColor(['#6366f1']))

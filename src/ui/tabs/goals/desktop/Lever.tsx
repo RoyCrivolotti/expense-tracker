@@ -3,6 +3,7 @@ import type { NewGoalScenario } from '../../../../data/dataSource'
 import { formatMoneyInput, formatPercent, formatPercentInput, parseMoneyToCents } from '../../../../engine'
 import type { MoneyFormat } from '../../../../engine'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
+import { useMediaQuery } from '../../../hooks/useMediaQuery'
 import type { LeverSpec } from '../leverFields'
 import goalStyles from '../goals.module.css'
 import { StarButton } from './StarButton'
@@ -47,6 +48,9 @@ interface TypedProps {
  */
 function TypedValue({ label, text, unit, unitFirst = false, onCommit, inputMode }: TypedProps) {
   const [typed, setTyped] = useState<string | null>(null)
+  // On a touch screen a tap puts the caret at the end, and the way to replace a figure is a long
+  // press and Select All or a dozen backspaces: the figure is selected as it takes focus instead.
+  const touch = useMediaQuery('(pointer: coarse)')
   const shown = typed ?? text
   const commit = () => {
     if (typed === null) return
@@ -67,14 +71,26 @@ function TypedValue({ label, text, unit, unitFirst = false, onCommit, inputMode 
         value={shown}
         style={{ width: `${Math.max(2, shown.length) + 0.5}ch` }}
         onChange={(e) => setTyped(e.target.value)}
+        onFocus={(e) => {
+          // After the tap has finished placing the caret, which would otherwise undo it.
+          const field = e.currentTarget
+          if (touch) setTimeout(() => field.select(), 0)
+        }}
         onBlur={commit}
         onKeyDown={(e) => {
           if (e.key === 'Enter') commit()
+          // Escape drops what was typed; the blur that follows then has nothing to commit.
+          if (e.key === 'Escape') setTyped(null)
         }}
       />
       {unitFirst ? null : unitText}
     </label>
   )
+}
+
+/** A typed percentage as a fraction, without the noise of dividing by 100 (1.1 / 100 is 0.011000000000000001). */
+function toFraction(percent: number): number {
+  return Math.round(percent * 1e4) / 1e6
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -158,7 +174,7 @@ export function Lever({ spec, draft, onChange, onUnstar }: LeverProps) {
           inputMode="decimal"
           onCommit={(raw) => {
             const n = typedNumber(raw)
-            if (n !== null) patch(clamp(n / 100, min, max))
+            if (n !== null) patch(clamp(toFraction(n), min, max))
           }}
         />
         <div className={styles.leverTrack}>

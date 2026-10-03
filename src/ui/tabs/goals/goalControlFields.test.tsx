@@ -152,3 +152,58 @@ describe('PurchaseYearField', () => {
     expect(slider).toHaveAttribute('aria-valuetext', 'Year 15')
   })
 })
+
+describe('typing nothing, or something that is not a number, into a field', () => {
+  it('leaves an amount as it was and puts it back in the box', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<MoneyField label="House price" value={400_000_00} onChange={onChange} />)
+    const input = screen.getByRole('textbox', { name: 'House price' })
+    const shown = (input as HTMLInputElement).value
+
+    await user.clear(input)
+    await user.tab()
+    expect(onChange).not.toHaveBeenCalled()
+    expect(input).toHaveValue(shown)
+
+    await user.clear(input)
+    await user.type(input, 'abc{Enter}')
+    expect(onChange).not.toHaveBeenCalled()
+    expect(input).toHaveValue(shown)
+  })
+
+  it('leaves a whole number as it was and puts it back in the box', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<NumberField label="Mortgage term (years)" value={25} min={1} max={40} onChange={onChange} />)
+    const input = screen.getByRole('textbox', { name: 'Mortgage term (years)' })
+
+    await user.clear(input)
+    await user.tab()
+    expect(onChange).not.toHaveBeenCalled()
+    expect(input).toHaveValue('25')
+
+    await user.clear(input)
+    await user.type(input, 'abc')
+    await user.tab()
+    expect(onChange).not.toHaveBeenCalled()
+    expect(input).toHaveValue('25')
+  })
+
+  it('leaves a percentage as it was and puts it back in the box', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<PercentField label="Mortgage rate (%/yr)" value={0.035} onChange={onChange} />)
+    const input = screen.getByRole('textbox', { name: 'Mortgage rate (%/yr)' })
+
+    await user.clear(input)
+    await user.tab()
+    expect(onChange).not.toHaveBeenCalled()
+    expect(input).toHaveValue('3,5')
+
+    await user.clear(input)
+    await user.type(input, '%{Enter}')
+    expect(onChange).not.toHaveBeenCalled()
+    expect(input).toHaveValue('3,5')
+  })
+})

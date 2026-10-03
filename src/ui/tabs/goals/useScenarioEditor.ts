@@ -1,8 +1,9 @@
-import { useCallback, useDeferredValue, useMemo, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import type { ExpenseDataset, GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import type { ExpenseActions } from '../../actions'
-import { bootstrapEditor, differsFrom, hasDetachedEdits, scenarioToDraft } from './scenarioDraft'
+import { duplicateScenario, pickScenarioColor } from '../../../engine'
+import { bootstrapEditor, differsFrom, hasDetachedEdits, rebaseDraft, scenarioToDraft } from './scenarioDraft'
 import { useScenarioSave } from './useScenarioSave'
 
 /**
@@ -32,6 +33,8 @@ export interface ScenarioEditor {
   /** The loaded scenario has edits that are not saved. */
   dirty: boolean
   saving: boolean
+  /** A scenario is being created (a duplicate, or the draft saved as one): a second press waits. */
+  creating: boolean
   discardPrompt: DiscardPrompt
   patchDraft: (patch: Partial<NewGoalScenario>) => void
   /** Loads a scenario into the editor, dropping the draft it replaces. */
@@ -44,6 +47,8 @@ export interface ScenarioEditor {
   onSaveChanges: () => void
   /** Saves the draft as a new scenario with this name and loads it. */
   onSaveDraft: (name: string) => void
+  /** Saves a copy of the draft as a new scenario, and opens it. */
+  onDuplicate: () => void
   onDiscard: () => void
 }
 
@@ -62,6 +67,18 @@ export function useScenarioEditor(
   // activeId but keeps the edits, and this is what they are still measured against.
   const [baseId, setBaseId] = useState<number | null>(first.activeId)
   const [draft, setDraft] = useState<NewGoalScenario>(first.draft)
+  // The saved row the draft is built on: what it was loaded from, or last rebased onto. When the
+  // data brings that row back changed (a refresh after another device saved), the draft's own
+  // edits are put on the new row, instead of the draft going on as an older copy of it that
+  // shows as edited and writes its old values back over the new ones on Save.
+  const [synced, setSynced] = useState<GoalScenario | null>(
+    () => dataset.goalScenarios.find((s) => s.id === first.activeId) ?? null,
+  )
+  const now = synced === null ? null : (dataset.goalScenarios.find((s) => s.id === synced.id) ?? null)
+  if (synced !== null && now !== null && now !== synced && differsFrom(scenarioToDraft(synced), now)) {
+    setDraft((prev) => rebaseDraft(prev, synced, now))
+    setSynced(now)
+  }
   const [hidden, setHiddenIds] = useState<ReadonlySet<number>>(() => new Set())
   // A line hidden by hand is forgotten with its scenario. The same set comes back while every
   // id in it still has one, so what is keyed on it (the chart's lines) does not redo its work.
@@ -105,6 +122,7 @@ export function useScenarioEditor(
   const selectScenario = useCallback((scenario: GoalScenario) => {
     setActiveId(scenario.id)
     setBaseId(scenario.id)
+    setSynced(scenario)
     setDraft(scenarioToDraft(scenario))
     // The loaded scenario is always drawn as the editing line, so a hidden flag on it would
     // only leave the chip and legend saying two things at once.
@@ -148,7 +166,7 @@ export function useScenarioEditor(
     setActiveId(null)
   }, [])
 
-  const { save: onSaveChanges, saving } = useScenarioSave(actions, activeId, draft, draft.name)
+  const { save: onSaveChanges, saving } = useScenarioSave(actions, activeId, draft, draft.name, activeScenario)
 
   const onDiscard = useCallback(() => {
     if (activeScenario) setDraft(scenarioToDraft(activeScenario))
@@ -163,17 +181,42 @@ export function useScenarioEditor(
     })
   }, [])
 
-  const saveDraftAs = useCallback(
-    async (name: string) => {
-      if (!actions) return
-      const scenario = await actions.createScenario({
-        ...draft,
-        name,
-        sortOrder: dataset.goalScenarios.length,
-      })
-      selectScenario(scenario)
+  // What the editor held when a create started, to tell whether anything was touched while it ran.
+  const live = useRef({ activeId, draft })
+  useEffect(() => {
+    live.current = { activeId, draft }
+  })
+  const creatingNow = useRef(false)
+  const [creating, setCreating] = useState(false)
+  // One create at a time, and the new scenario is opened only if nothing was touched while it was
+  // being made: opening it replaces the draft, so an edit made in the meantime, or another
+  // scenario opened, would be dropped without a word. A second press is the same copy twice.
+  const createAndOpen = useCallback(
+    async (input: NewGoalScenario) => {
+      if (!actions || creatingNow.current) return
+      creatingNow.current = true
+      setCreating(true)
+      const started = live.current
+      try {
+        const scenario = await actions.createScenario(input)
+        if (live.current.activeId === started.activeId && live.current.draft === started.draft) selectScenario(scenario)
+      } finally {
+        creatingNow.current = false
+        setCreating(false)
+      }
     },
-    [actions, draft, dataset.goalScenarios, selectScenario],
+    [actions, selectScenario],
+  )
+
+  const saveDraftAs = useCallback(
+    (name: string) => {
+      const used = dataset.goalScenarios.map((s) => s.color)
+      // The draft's own colour when no scenario has it; saved from another scenario's draft it is
+      // that scenario's, and two lines of one colour cannot be told apart.
+      const color = used.includes(draft.color) ? pickScenarioColor(used) : draft.color
+      return createAndOpen({ ...draft, name, color, sortOrder: dataset.goalScenarios.length })
+    },
+    [createAndOpen, draft, dataset.goalScenarios],
   )
 
   const onSaveDraft = useCallback(
@@ -183,6 +226,18 @@ export function useScenarioEditor(
     [saveDraftAs],
   )
 
+  const onDuplicate = useCallback(() => {
+    const { goalScenarios } = dataset
+    void createAndOpen(
+      duplicateScenario(
+        draft,
+        goalScenarios.length,
+        goalScenarios.map((s) => s.color),
+        goalScenarios.map((s) => s.name),
+      ),
+    )
+  }, [createAndOpen, dataset, draft])
+
   return {
     activeId,
     draft,
@@ -191,6 +246,7 @@ export function useScenarioEditor(
     activeScenario,
     dirty,
     saving,
+    creating,
     discardPrompt: {
       pending: pendingSelect,
       open: discardOpen,
@@ -207,6 +263,7 @@ export function useScenarioEditor(
     onActivate,
     onSaveChanges,
     onSaveDraft,
+    onDuplicate,
     onDiscard,
   }
 }

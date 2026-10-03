@@ -34,6 +34,15 @@ export function PercentStepper({
     [max, min, onChange],
   )
 
+  // Nothing typed, or nothing with a digit in it, is not 0%: the box goes back to the value it had.
+  const commitText = (input: HTMLInputElement) => {
+    if (!/\d/.test(input.value)) {
+      input.value = formatPercentInput(value, format)
+      return
+    }
+    commit(parsePercentToFraction(input.value, format))
+  }
+
   if (readOnly) {
     return <span className={styles.static}>{formatPercent(value, format)}</span>
   }
@@ -55,9 +64,9 @@ export function PercentStepper({
         inputMode="decimal"
         aria-label={ariaLabel}
         defaultValue={formatPercentInput(value, format)}
-        onBlur={(e) => commit(parsePercentToFraction(e.target.value, format))}
+        onBlur={(e) => commitText(e.target)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') commit(parsePercentToFraction(e.currentTarget.value, format))
+          if (e.key === 'Enter') commitText(e.currentTarget)
         }}
       />
       <button
