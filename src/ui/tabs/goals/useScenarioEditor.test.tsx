@@ -26,14 +26,69 @@ function setup() {
   })
   // The app patches its data before a create resolves, so the editor never selects a scenario
   // the data does not have yet.
+  const setData = (next: typeof dataset) => {
+    dataset = next
+  }
   const addToData = (scenario: GoalScenario) => {
     dataset = makeDataset({ goalScenarios: [...dataset.goalScenarios, scenario] })
     hook.rerender()
   }
-  return { ...hook, seen, plan, other, actions, addToData }
+  return { ...hook, seen, plan, other, actions, addToData, setData }
 }
 
 describe('useScenarioEditor', () => {
+  describe('when the saved scenario changes under it', () => {
+    /** The data a refresh brings back after another device re-baselined the plan. */
+    function refreshWith(setupResult: ReturnType<typeof setup>, change: Partial<GoalScenario>) {
+      const { rerender, setData, plan, other } = setupResult
+      setData(makeDataset({ goalScenarios: [{ ...plan, ...change }, other] }))
+      rerender()
+    }
+
+    it('shows a clean draft as the new row instead of as edited', () => {
+      const s = setup()
+      refreshWith(s, { startInvestedCents: 9_000_000, planStartDate: '2027-01-01' })
+
+      expect(s.result.current.draft.startInvestedCents).toBe(9_000_000)
+      expect(s.result.current.draft.planStartDate).toBe('2027-01-01')
+      expect(s.result.current.dirty).toBe(false)
+    })
+
+    it('keeps an edit and takes the rest from the new row, and saves only the edit', async () => {
+      const s = setup()
+      act(() => s.result.current.patchDraft({ monthlyContributionCents: 77_000 }))
+      refreshWith(s, { startInvestedCents: 9_000_000 })
+
+      expect(s.result.current.draft.monthlyContributionCents).toBe(77_000)
+      expect(s.result.current.draft.startInvestedCents).toBe(9_000_000)
+      expect(s.result.current.dirty).toBe(true)
+
+      await act(async () => {
+        s.result.current.onSaveChanges()
+        await Promise.resolve()
+      })
+      expect(s.actions.updateScenario).toHaveBeenCalledWith(s.plan.id, { monthlyContributionCents: 77_000 })
+    })
+
+    it('leaves the draft alone when the row comes back the same', () => {
+      const s = setup()
+      const before = s.result.current.draft
+      refreshWith(s, {})
+
+      expect(s.result.current.draft).toBe(before)
+    })
+
+    it('goes on from the new row after a save', () => {
+      const s = setup()
+      act(() => s.result.current.patchDraft({ monthlyContributionCents: 77_000 }))
+      // The write came back: the saved row is now the edit.
+      refreshWith(s, { monthlyContributionCents: 77_000 })
+
+      expect(s.result.current.dirty).toBe(false)
+      expect(s.result.current.draft.monthlyContributionCents).toBe(77_000)
+    })
+  })
+
   it('opens on the plan, with a draft of it', () => {
     const { result, plan } = setup()
 

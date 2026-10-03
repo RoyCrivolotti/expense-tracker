@@ -2,7 +2,7 @@ import { useCallback, useDeferredValue, useMemo, useState } from 'react'
 import type { ExpenseDataset, GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import type { ExpenseActions } from '../../actions'
-import { bootstrapEditor, differsFrom, hasDetachedEdits, scenarioToDraft } from './scenarioDraft'
+import { bootstrapEditor, differsFrom, hasDetachedEdits, rebaseDraft, scenarioToDraft } from './scenarioDraft'
 import { useScenarioSave } from './useScenarioSave'
 
 /**
@@ -62,6 +62,18 @@ export function useScenarioEditor(
   // activeId but keeps the edits, and this is what they are still measured against.
   const [baseId, setBaseId] = useState<number | null>(first.activeId)
   const [draft, setDraft] = useState<NewGoalScenario>(first.draft)
+  // The saved row the draft is built on: what it was loaded from, or last rebased onto. When the
+  // data brings that row back changed (a refresh after another device saved), the draft's own
+  // edits are put on the new row, instead of the draft going on as an older copy of it that
+  // shows as edited and writes its old values back over the new ones on Save.
+  const [synced, setSynced] = useState<GoalScenario | null>(
+    () => dataset.goalScenarios.find((s) => s.id === first.activeId) ?? null,
+  )
+  const now = synced === null ? null : (dataset.goalScenarios.find((s) => s.id === synced.id) ?? null)
+  if (synced !== null && now !== null && now !== synced && differsFrom(scenarioToDraft(synced), now)) {
+    setDraft((prev) => rebaseDraft(prev, synced, now))
+    setSynced(now)
+  }
   const [hidden, setHiddenIds] = useState<ReadonlySet<number>>(() => new Set())
   // A line hidden by hand is forgotten with its scenario. The same set comes back while every
   // id in it still has one, so what is keyed on it (the chart's lines) does not redo its work.
@@ -105,6 +117,7 @@ export function useScenarioEditor(
   const selectScenario = useCallback((scenario: GoalScenario) => {
     setActiveId(scenario.id)
     setBaseId(scenario.id)
+    setSynced(scenario)
     setDraft(scenarioToDraft(scenario))
     // The loaded scenario is always drawn as the editing line, so a hidden flag on it would
     // only leave the chip and legend saying two things at once.
@@ -148,7 +161,7 @@ export function useScenarioEditor(
     setActiveId(null)
   }, [])
 
-  const { save: onSaveChanges, saving } = useScenarioSave(actions, activeId, draft, draft.name)
+  const { save: onSaveChanges, saving } = useScenarioSave(actions, activeId, draft, draft.name, activeScenario)
 
   const onDiscard = useCallback(() => {
     if (activeScenario) setDraft(scenarioToDraft(activeScenario))

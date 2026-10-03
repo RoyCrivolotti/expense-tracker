@@ -4,7 +4,9 @@ import { describe, expect, it, vi } from 'vitest'
 import { useScenarioSave } from './useScenarioSave'
 import { draftFromDataset } from './goalsDefaults'
 import { ToastContext } from '../../hooks/useToast'
-import { makeDataset } from '../../../testing/factories'
+import type { GoalScenario } from '../../../types'
+import { makeDataset, makeScenario } from '../../../testing/factories'
+import { scenarioToDraft } from './scenarioDraft'
 import { makeActions } from '../../../testing/makeActions'
 
 const draft = draftFromDataset(makeDataset(), 0)
@@ -19,15 +21,15 @@ function deferred() {
   return { promise, resolve, reject }
 }
 
-function setup(overrides: { activeId?: number | null; withActions?: boolean } = {}) {
+function setup(overrides: { activeId?: number | null; withActions?: boolean; saved?: GoalScenario | null; draft?: typeof draft } = {}) {
   const showToast = vi.fn()
   const actions = makeActions()
   const wrapper = ({ children }: { children: ReactNode }) => (
     <ToastContext.Provider value={{ showToast }}>{children}</ToastContext.Provider>
   )
-  const { activeId = 7, withActions = true } = overrides
+  const { activeId = 7, withActions = true, saved = null, draft: written = draft } = overrides
   const hook = renderHook(
-    () => useScenarioSave(withActions ? actions : undefined, activeId, draft, 'Path A'),
+    () => useScenarioSave(withActions ? actions : undefined, activeId, written, 'Path A', saved),
     { wrapper },
   )
   return { ...hook, actions, showToast }
@@ -66,6 +68,18 @@ describe('useScenarioSave', () => {
     expect(actions.updateScenario).toHaveBeenCalledWith(7, draft)
     expect(showToast).toHaveBeenCalledTimes(1)
     expect(showToast).toHaveBeenCalledWith('Saved Path A', 'success')
+  })
+
+  it('writes only what was edited when it knows the scenario as saved, not the whole draft', async () => {
+    const saved = makeScenario({ id: 7 })
+    const edited = { ...scenarioToDraft(saved), monthlyContributionCents: saved.monthlyContributionCents + 100 }
+    const { result, actions } = setup({ saved, draft: edited })
+
+    await pressSave(result)
+
+    expect(actions.updateScenario).toHaveBeenCalledWith(7, {
+      monthlyContributionCents: saved.monthlyContributionCents + 100,
+    })
   })
 
   it('says nothing until the write has landed', async () => {
