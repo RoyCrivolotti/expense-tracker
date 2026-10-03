@@ -46,6 +46,40 @@ describe('LinearChart', () => {
     expect(plotTop({ padTop: 8 })).toBe('8')
   })
 
+  describe('lines of different lengths', () => {
+    /** The x of each point in a line's path, in order. */
+    const xsOf = (path: Element) => [...(path.getAttribute('d') ?? '').matchAll(/[ML]([\d.]+),/g)].map((m) => Number(m[1]))
+
+    function drawn(first: number[], second: number[]) {
+      const { container } = render(
+        <LinearChart
+          {...defaultProps}
+          xLabels={['0', '1', '2', '3', '4']}
+          series={[{ ...makeLine('a', first), color: '#6366f1' }, { ...makeLine('b', second), color: '#10b981' }]}
+        />,
+      )
+      const [a, b] = [...container.querySelectorAll('path[fill="none"]')]
+      return { a: xsOf(a!), b: xsOf(b!) }
+    }
+
+    it('ends the shorter line where its values end, on an axis as long as the longer one', () => {
+      const { a, b } = drawn([10, 20], [10, 20, 30, 40, 50])
+
+      expect(a).toHaveLength(2)
+      expect(b).toHaveLength(5)
+      // The same year is in the same place on both, and the short line stops at its last year.
+      expect(a[1]).toBe(b[1])
+      expect(a[1]).toBeLessThan(b[4]!)
+    })
+
+    it('does not shorten the axis when the first line is the short one', () => {
+      const short = drawn([10, 20], [10, 20, 30, 40, 50])
+      const long = drawn([10, 20, 30, 40, 50], [10, 20])
+
+      expect(short.b).toEqual(long.a)
+    })
+  })
+
   it('keeps the plot inside the box however much room above it is asked for', () => {
     const clip = (padTop: number) => {
       const { container, unmount } = render(

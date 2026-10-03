@@ -78,10 +78,19 @@ function buildSeries(
   const years = [...yearSet].sort((a, b) => a - b)
   const series: ChartSeries[] = projected.map(({ line, points }) => {
     const byYear = new Map(points.map((p) => [p.year, p.investedCents]))
+    // A line runs from year 0 to its own horizon and stops there. Filling the years after it with
+    // zero drew the portfolio falling to nothing at the end of a shorter scenario, which is what
+    // setting a longer horizon on the one being edited did to the saved ones.
+    const values: number[] = []
+    for (const year of years) {
+      const value = byYear.get(year)
+      if (value === undefined) break
+      values.push(value)
+    }
     return {
       id: line.id,
       color: line.color,
-      values: years.map((y) => byYear.get(y) ?? 0),
+      values,
       dashed: line.dashed,
       ...(line.id === 'draft' ? { width: 2.5 } : {}),
     }
@@ -150,14 +159,17 @@ function useChartLegendState(
   const legendItems: ScenarioLegendItem[] = useMemo(() => {
     const drawn = series.map((s, idx) => {
       const scenarioId = lines[idx]?.scenarioId ?? null
+      // Gated on the year, not the index: a narrower window can leave a hovered index past the
+      // end, and so can a scenario whose horizon is shorter than the chart's. Both read as
+      // nothing rather than as zero.
+      const value = activeYear != null && activeIndex != null ? s.values[activeIndex] : undefined
       return {
         label: names[idx] ?? s.id,
         color: s.color,
         ...(s.dashed ? { dashed: true as const } : {}),
         ...(scenarioId !== null ? { scenarioId } : {}),
-        // Gated on the year, not the index: a narrower window can leave a hovered index
-        // past the end, and that must read as nothing rather than as zero.
-        valueCents: activeYear != null && activeIndex != null ? s.values[activeIndex] ?? 0 : null,
+        valueCents: value ?? null,
+        ...(activeYear != null && value === undefined ? { outOfRun: true as const } : {}),
       }
     })
     const drawnById = new Map(drawn.flatMap((d) => (d.scenarioId !== undefined ? [[d.scenarioId, d] as const] : [])))
@@ -509,12 +521,12 @@ function NetWorthChartImpl({
   const tooltip = useCallback(
     (i: number): { title: string; lines: TooltipLine[] } => {
       const year = years[i] ?? i
-      const tooltipLines: TooltipLine[] = displaySeries.map((s, idx) => ({
-        label: names[idx] ?? s.id,
-        value: formatMoneyShort(s.values[i] ?? 0, format),
-        color: s.color,
-        tone: 'neutral',
-      }))
+      // A scenario whose horizon is behind this year has no value in it, so it has no line here.
+      const tooltipLines: TooltipLine[] = displaySeries.flatMap((s, idx) => {
+        const value = s.values[i]
+        if (value === undefined) return []
+        return [{ label: names[idx] ?? s.id, value: formatMoneyShort(value, format), color: s.color, tone: 'neutral' as const }]
+      })
       const fromTodayValue = fromTodayLine ? pointSeriesValueAt(fromTodayLine.points ?? [], year) : null
       if (fromTodayValue !== null) {
         tooltipLines.push({ label: fromTodayLabel, value: formatMoneyShort(fromTodayValue, format), color: fromTodayLine?.color, tone: 'neutral' })

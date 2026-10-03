@@ -35,7 +35,11 @@ export type { ScatterPoint }
 export interface ChartSeries {
   id: string
   color: string
-  /** Projection values aligned to x-axis indices. For 'scatter' kind, pass []. */
+  /**
+   * Projection values aligned to x-axis indices. For 'scatter' kind, pass [].
+   * A line may have fewer values than the axis has places, and then it ends where its values do:
+   * the axis is as long as the longest one.
+   */
   values: number[]
   kind?: 'line' | 'area' | 'scatter' | 'band'
   dashed?: boolean
@@ -97,7 +101,10 @@ function useGeometry(
     // Kept inside the box: a padTop at or past the plot's bottom edge would give the clip
     // path a negative height and draw nothing, and a negative one pushes the plot off the top.
     const padTop = Math.max(0, Math.min(padTopProp ?? PAD.top, height - PAD.bottom - 1))
-    const n = series.find((s) => s.kind !== 'scatter' && s.kind !== 'band')?.values.length ?? 0
+    const n = Math.max(
+      0,
+      ...series.filter((s) => s.kind !== 'scatter' && s.kind !== 'band').map((s) => s.values.length),
+    )
     const innerH = height - padTop - PAD.bottom
     const innerW = width - PAD.left - PAD.right
     const areaSeries = series.filter((s) => s.kind === 'area')

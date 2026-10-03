@@ -21,6 +21,7 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 - **The detail charts are two columns of cards.** Each column stacks its own cards, so "Where you are today" is no longer stretched to match the chart beside it. The All charts and One chart switch went with the old layout, since there is one arrangement.
 - **The chart's legend is a row of chips with their values** on a wide screen, instead of one row under another with each figure far from its name. The Nominal and Purchasing power switch sits beside the summary figures.
 - **Progress and Assumptions keep the page width they were laid out for.** Only Plan takes the wider page. The phone is unchanged.
+- **A scenario with a shorter horizon no longer drops to zero on the chart.** Giving the scenario you are editing a 60 year horizon drew the saved 30 year paths falling straight to nothing at year 30, which read as the portfolio being wiped out. Each line now ends at its own horizon, the legend shows a dash for it in a later year instead of 0, and the tooltip on a phone leaves it out. This holds on the phone chart too.
 
 ## October 2026 (section tabs)
 
