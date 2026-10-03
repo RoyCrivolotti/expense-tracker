@@ -32,6 +32,8 @@ export interface ScenarioEditor {
   activeScenario: GoalScenario | null
   /** The loaded scenario has edits that are not saved. */
   dirty: boolean
+  /** Leaving would drop edits: the loaded scenario has some (`dirty`), or a detached draft does. */
+  unsaved: boolean
   saving: boolean
   /** A scenario is being created (a duplicate, or the draft saved as one): a second press waits. */
   creating: boolean
@@ -117,7 +119,7 @@ export function useScenarioEditor(
     () => dataset.goalScenarios.find((s) => s.id === baseId) ?? null,
     [dataset.goalScenarios, baseId],
   )
-  const detachedEdits = hasDetachedEdits(activeScenario, baseScenario, draft)
+  const unsaved = dirty || hasDetachedEdits(activeScenario, baseScenario, draft)
 
   const selectScenario = useCallback((scenario: GoalScenario) => {
     setActiveId(scenario.id)
@@ -146,14 +148,14 @@ export function useScenarioEditor(
   const onSelectScenario = useCallback(
     (scenario: GoalScenario) => {
       if (scenario.id === activeId) return
-      if (dirty || detachedEdits) {
+      if (unsaved) {
         setPendingSelect(scenario)
         setDiscardOpen(true)
         return
       }
       selectScenario(scenario)
     },
-    [activeId, dirty, detachedEdits, selectScenario],
+    [activeId, unsaved, selectScenario],
   )
   const onDiscardAndSelect = useCallback(() => {
     setDiscardOpen(false)
@@ -245,6 +247,7 @@ export function useScenarioEditor(
     hiddenIds,
     activeScenario,
     dirty,
+    unsaved,
     saving,
     creating,
     discardPrompt: {
