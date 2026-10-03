@@ -18,6 +18,7 @@ import {
   patchAfterLabelDelete,
   patchAfterScenarioActivate,
   patchAfterScenarioCreate,
+  patchAfterScenarioUpdate,
   patchAfterSettings,
 } from './datasetPatches'
 import { makeScenario } from '../testing/factories'
@@ -642,7 +643,7 @@ describe('the plan after scenario patches', () => {
   })
 })
 
-describe('patches for a settings answer that carries more than its write changed', () => {
+describe('patches for answers that carry more than their write changed', () => {
   it('takes only the named settings from a settings row, or the whole row when none are named', () => {
     const before = dataset({ settings: { ...defaultExpenseSettings(), assumedInflation: 0.02, claimantName: 'A' } })
     const row = { ...before.settings, assumedInflation: 0.03, claimantName: 'B' }
@@ -652,5 +653,37 @@ describe('patches for a settings answer that carries more than its write changed
       assumedInflation: 0.03,
     })
     expect(patchAfterSettings(before, row).settings).toEqual(row)
+  })
+
+  it('keeps which scenario is the plan when an edited row comes back, and its fields when the plan moves', () => {
+    const one = makeScenario({ id: 1, sortOrder: 0, isActive: true, name: 'One' })
+    const two = makeScenario({ id: 2, sortOrder: 1, name: 'Two' })
+    const before = dataset({ goalScenarios: [one, two] })
+
+    const edited = patchAfterScenarioUpdate(before, { ...one, name: 'One!', isActive: false })
+    expect(edited.goalScenarios.map((s) => [s.id, s.name, s.isActive])).toEqual([
+      [1, 'One!', true],
+      [2, 'Two', false],
+    ])
+
+    const moved = patchAfterScenarioActivate(edited, { ...two, name: 'Older Two', isActive: true })
+    expect(moved.goalScenarios.map((s) => [s.id, s.name, s.isActive])).toEqual([
+      [1, 'One!', false],
+      [2, 'Two', true],
+    ])
+  })
+
+  it('adds an edited scenario it has not seen', () => {
+    const before = dataset({ goalScenarios: [makeScenario({ id: 1, isActive: true })] })
+
+    expect(patchAfterScenarioUpdate(before, makeScenario({ id: 2, sortOrder: 1 })).goalScenarios.map((s) => s.id)).toEqual([1, 2])
+  })
+
+  it('still moves the plan off the others when the activated scenario is one it has not seen', () => {
+    const before = dataset({ goalScenarios: [makeScenario({ id: 1, isActive: true })] })
+
+    expect(
+      patchAfterScenarioActivate(before, makeScenario({ id: 2, isActive: true })).goalScenarios.map((s) => [s.id, s.isActive]),
+    ).toEqual([[1, false]])
   })
 })

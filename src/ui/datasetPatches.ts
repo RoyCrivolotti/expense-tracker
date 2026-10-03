@@ -321,21 +321,34 @@ export function patchAfterScenarioCreate(
   return d
 }
 
+/**
+ * Moves the plan to a scenario. The row the server sent back is only the news that it is the plan:
+ * an edit saved while the answer was on its way is newer than the fields in it.
+ */
 export function patchAfterScenarioActivate(
   dataset: ExpenseDataset,
   scenario: GoalScenario,
 ): ExpenseDataset {
   const d = cloneDataset(dataset)
-  d.goalScenarios = sortScenarios(withOnlyPlan(d.goalScenarios, scenario))
+  d.goalScenarios = d.goalScenarios.some((s) => s.id === scenario.id)
+    ? d.goalScenarios.map((s) => ({ ...s, isActive: s.id === scenario.id }))
+    : withOnlyPlan(d.goalScenarios, scenario)
+  sortScenarios(d.goalScenarios)
   return d
 }
 
+/**
+ * Takes the edited row the server sent back. Saving edits never moves the plan, so which scenario
+ * is the plan stays as the dataset has it: the row may have been written before an activation
+ * whose answer has already arrived.
+ */
 export function patchAfterScenarioUpdate(
   dataset: ExpenseDataset,
   scenario: GoalScenario,
 ): ExpenseDataset {
   const d = cloneDataset(dataset)
-  upsertById(d.goalScenarios, scenario)
+  const have = d.goalScenarios.find((s) => s.id === scenario.id)
+  upsertById(d.goalScenarios, have ? { ...scenario, isActive: have.isActive } : scenario)
   sortScenarios(d.goalScenarios)
   return d
 }
