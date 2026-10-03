@@ -30,16 +30,21 @@ export function ChartFocusIndicator({
         y1={yTop} y2={yTop + innerH}
         className={styles.crosshair}
       />
-      {lineSeries.map((s) => (
-        <circle
-          key={s.id}
-          cx={focusX}
-          cy={scaleY(s.values[active] ?? 0)}
-          r={3.5}
-          style={{ fill: s.color, stroke: 'var(--color-bg)' }}
-          strokeWidth={1.5}
-        />
-      ))}
+      {lineSeries.flatMap((s) => {
+        const value = s.values[active]
+        // A line that has ended has no point at this year, and none is drawn at zero for it.
+        if (value === undefined) return []
+        return [
+          <circle
+            key={s.id}
+            cx={focusX}
+            cy={scaleY(value)}
+            r={3.5}
+            style={{ fill: s.color, stroke: 'var(--color-bg)' }}
+            strokeWidth={1.5}
+          />,
+        ]
+      })}
     </>
   )
 }

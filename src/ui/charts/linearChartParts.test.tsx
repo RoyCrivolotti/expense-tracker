@@ -228,4 +228,25 @@ describe('ChartFocusIndicator', () => {
     expect(svg.querySelector('line')).not.toBeNull()
     expect(svg.querySelectorAll('circle')).toHaveLength(1)
   })
+
+  it('draws no point for a line that has ended by the active place, instead of one at zero', () => {
+    const svg = renderInSvg(
+      <ChartFocusIndicator
+        active={3}
+        focusX={30}
+        yTop={10}
+        innerH={80}
+        scaleY={scaleY}
+        lineSeries={[
+          { id: 'short', color: '#6366f1', values: [0, 100] },
+          { id: 'long', color: '#10b981', values: [0, 100, 200, 300] },
+        ]}
+      />,
+    )
+
+    const circles = [...svg.querySelectorAll('circle')]
+    expect(circles).toHaveLength(1)
+    expect(circles[0]!.getAttribute('cy')).toBe(String(scaleY(300)))
+    expect(svg.querySelector('line')).not.toBeNull()
+  })
 })
