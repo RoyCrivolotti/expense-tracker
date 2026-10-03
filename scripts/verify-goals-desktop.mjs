@@ -1130,6 +1130,106 @@ async function checkFirstDraft(browser, engine) {
   await context.close()
 }
 
+/**
+ * On a phone, the reason Save is off (the scenario has no name) is written in the page, since a
+ * touch screen never shows a tooltip: under the pinned Save and Discard, and under Save in the
+ * scenario card. It comes into the pinned stack without moving the chart or the chips above it.
+ */
+async function checkPhoneSaveReason(browser, engine) {
+  for (const phone of [
+    { name: '375x812', width: 375, height: 812 },
+    { name: '320x568', width: 320, height: 568 },
+  ]) {
+    const where = `${engine} phone ${phone.name}`
+    const context = await browser.newContext({
+      viewport: { width: phone.width, height: phone.height },
+      screen: { width: phone.width, height: phone.height },
+      deviceScaleFactor: 2,
+      isMobile: true,
+      hasTouch: true,
+      colorScheme: 'light',
+      reducedMotion: 'reduce',
+    })
+    const page = await context.newPage()
+    page.on('pageerror', (e) => failures.push(`page error: ${e.message}`))
+    await page.addInitScript(() => localStorage.setItem('exp-onboarding-skipped', '1'))
+    await page.goto(`${BASE}/`)
+    await page.waitForSelector('text=Recent activity', { timeout: 20000 })
+    await page.getByRole('button', { name: 'Goals', exact: true }).click()
+    await page.getByRole('tablist', { name: 'Goals view' }).waitFor({ timeout: 15000 })
+    await page.getByRole('tab', { name: 'Scenarios', exact: true }).tap()
+    await settled(page)
+
+    const HINT = 'Give the scenario a name to save it'
+    const name = page.getByLabel('Scenario name', { exact: true })
+    await name.fill('Path A, edited')
+    await settled(page)
+    const stack = page.locator('#goals-adjust-stack')
+    const pinnedBoxes = () =>
+      page.evaluate(() => {
+        const top = (el) => (el ? Math.round(el.getBoundingClientRect().top * 10) / 10 : null)
+        const s = document.getElementById('goals-adjust-stack')
+        return {
+          stackTop: top(s),
+          stackBottom: s ? Math.round(s.getBoundingClientRect().bottom * 10) / 10 : null,
+          chart: top(s?.querySelector('svg')),
+          chips: top(s?.querySelector('nav')),
+          view: top(document.querySelector('[role="tablist"][aria-label="Goals view"]')),
+        }
+      })
+    const atScroll = async (y) => {
+      await scrollTo(page, y)
+      return pinnedBoxes()
+    }
+    const sticky = (await stack.evaluate((el) => getComputedStyle(el).position)) === 'sticky'
+    // Far enough down for the stack to be held under the view row, which is where it must not move.
+    const HELD_AT = 1600
+    const without = [await atScroll(0), await atScroll(HELD_AT)]
+    check(where, '(y3) no reason is written while the scenario has a name', (await stack.getByText(HINT).count()) === 0 && (await page.getByText(HINT).count()) === 0)
+
+    await name.fill('')
+    await settled(page)
+    const withHint = [await atScroll(0), await atScroll(HELD_AT)]
+    const line = stack.getByText(HINT)
+    check(where, '(y3) with no name, the reason is written in the pinned stack under Save and Discard', (await line.count()) === 1 && (await line.isVisible()))
+    const save = stack.getByRole('button', { name: 'Save changes', exact: true })
+    check(where, '(y3) Save is off, described by those words, and has no tooltip', (await save.isDisabled()) && (await save.getAttribute('title')) === null && (await save.evaluate((el, text) => document.getElementById(el.getAttribute('aria-describedby'))?.textContent === text, HINT)))
+    const box = await line.boundingBox()
+    const m = await measure(page)
+    check(where, '(y3) the reason is inside the screen and the page does not scroll sideways', box !== null && box.x >= 0 && box.x + box.width <= phone.width + 0.5 && m.pageScrollWidth <= m.iw, `${JSON.stringify(box)}, scrollWidth ${m.pageScrollWidth}`)
+    const lines = box ? Math.round(box.height / 14) : 0
+    check(where, '(y3) it is one line, at the end of the row', lines === 1 && box !== null && box.x + box.width >= phone.width - 24, `${lines} lines, ${JSON.stringify(box)}`)
+    // The page below the card moves for the card's own line, as it should; what is held under the
+    // view row (the chart, the chips) stays where it was.
+    if (sticky) {
+      const a = without[1]
+      const b = withHint[1]
+      check(where, '(y3) the stack is held under the view row', a.stackTop < 200, `it is at ${px(a.stackTop)}`)
+      check(where, '(y3) the chart, the chips and the view row do not move when the reason comes in', near(a.chart, b.chart, 0.5) && near(a.chips, b.chips, 0.5) && near(a.view, b.view, 0.5) && near(a.stackTop, b.stackTop, 0.5), `${JSON.stringify(a)} against ${JSON.stringify(b)}`)
+    }
+    const grew = withHint[1].stackBottom - withHint[1].stackTop - (without[1].stackBottom - without[1].stackTop)
+    check(where, '(y3) the stack grows only by the line, 14 to 24px', grew >= 14 && grew <= 24, px(grew))
+
+    // The scenario card's own Save changes says it too, under its buttons.
+    await settled(page)
+    const header = page.locator('[class*="activeHeader"]')
+    const card = header.getByRole('button', { name: 'Save changes', exact: true })
+    await card.scrollIntoViewIfNeeded()
+    const cardLine = header.getByText(HINT)
+    const cardBox = await cardLine.boundingBox()
+    const cardSave = await card.boundingBox()
+    check(where, "(y3) the scenario card writes it under its Save changes, inside the screen", cardBox !== null && cardSave !== null && cardBox.y >= cardSave.y + cardSave.height - 1 && cardBox.x >= 0 && cardBox.x + cardBox.width <= phone.width + 0.5, `${JSON.stringify(cardBox)} under ${JSON.stringify(cardSave)}`)
+    check(where, '(y3) the card\'s Save changes is off and described by it', (await card.isDisabled()) && (await card.evaluate((el, text) => document.getElementById(el.getAttribute('aria-describedby'))?.textContent === text, HINT)))
+
+    await name.fill('Path A, edited')
+    await settled(page)
+    const gone = (await page.getByText(HINT).count()) === 0
+    const back = await atScroll(0)
+    check(where, '(y3) typing a name takes the reason away and the stack goes back to its height', gone && near(back.stackBottom - back.stackTop, without[0].stackBottom - without[0].stackTop, 0.5), `${px(back.stackBottom - back.stackTop)} against ${px(without[0].stackBottom - without[0].stackTop)}`)
+    await context.close()
+  }
+}
+
 async function main() {
   if (await answers()) throw new Error(`Something already answers on ${BASE}; set CAPTURE_PORT to a free port.`)
   const dev = startDev()
@@ -1152,6 +1252,10 @@ async function main() {
           await checkFirstDraft(browser, engine)
           continue
         }
+        if (process.env.ONLY === 'y3') {
+          await checkPhoneSaveReason(browser, engine)
+          continue
+        }
         for (const screen of SCREENS) await checkScreen(browser, screen, engine)
         await checkTabs(browser, engine)
         await checkThemesAndZoom(browser, engine)
@@ -1164,6 +1268,7 @@ async function main() {
         await checkBrowserPrompt(browser, engine)
         await checkPointDecimal(browser, engine)
         await checkFirstDraft(browser, engine)
+        await checkPhoneSaveReason(browser, engine)
       } finally {
         await browser.close()
       }
