@@ -1228,7 +1228,6 @@ async function checkPhoneSaveReason(browser, engine) {
     check(where, '(y3) typing a name takes the reason away and the stack goes back to its height', gone && near(back.stackBottom - back.stackTop, without[0].stackBottom - without[0].stackTop, 0.5), `${px(back.stackBottom - back.stackTop)} against ${px(without[0].stackBottom - without[0].stackTop)}`)
     await context.close()
   }
-  await context.close()
 }
 
 /**
