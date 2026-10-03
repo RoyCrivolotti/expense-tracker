@@ -1,6 +1,6 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { formatMoneyInput, formatPercentInput, parseMoneyToCents, parsePercentToFraction } from '../../../../engine'
+import { formatMoneyInput, formatPercentInput, parseMoneyToCents } from '../../../../engine'
 import type { MoneyFormat } from '../../../../engine'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import type { LeverSpec } from '../leverFields'
@@ -27,30 +27,43 @@ function purchaseYearText(year: number | null): string {
 
 interface TypedProps {
   label: string
+  /** The value as the field writes it. The field shows this whenever it is not being typed in. */
   text: string
   unit: string
-  /** Committed on blur and on Enter, with what was typed. */
+  /** Called on blur and on Enter, with what was typed, and only if something was. */
   onCommit: (raw: string) => void
   inputMode: 'decimal' | 'numeric'
-  /** Changes when the value does by other means (a slider, Discard), which remounts the field. */
-  valueKey: number
 }
 
-/** The lever's big number: a field that reads as text until it is hovered or focused. */
-function TypedValue({ label, text, unit, onCommit, inputMode, valueKey }: TypedProps) {
+/**
+ * The lever's big number: a field that reads as text until it is hovered or focused.
+ *
+ * What is typed is kept apart from the value. A field that was only tabbed through has typed
+ * nothing, so it commits nothing: committing its text would write the value back as the field
+ * shows it, and a percentage shown to one decimal would lose the second one it was given. After
+ * a commit the field reads the value again, so input that was refused or clamped does not stay in it.
+ */
+function TypedValue({ label, text, unit, onCommit, inputMode }: TypedProps) {
+  const [typed, setTyped] = useState<string | null>(null)
+  const shown = typed ?? text
+  const commit = () => {
+    if (typed === null) return
+    setTyped(null)
+    onCommit(typed)
+  }
   return (
     <div className={styles.leverValue}>
       <input
-        key={valueKey}
         className={styles.leverInput}
         type="text"
         inputMode={inputMode}
         aria-label={label}
-        defaultValue={text}
-        style={{ width: `${Math.max(2, text.length) + 0.5}ch` }}
-        onBlur={(e) => onCommit(e.target.value)}
+        value={shown}
+        style={{ width: `${Math.max(2, shown.length) + 0.5}ch` }}
+        onChange={(e) => setTyped(e.target.value)}
+        onBlur={commit}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') onCommit(e.currentTarget.value)
+          if (e.key === 'Enter') commit()
         }}
       />
       <span className={styles.leverUnit}>{unit}</span>
@@ -63,6 +76,17 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 /**
+ * What was typed as a plain number, or null when it is not one. A comma or a point both mean
+ * the decimal mark (a percentage or a year count has no thousands), and nothing typed is not zero.
+ */
+function typedNumber(raw: string): number | null {
+  const cleaned = raw.replace(/[%\s]/g, '').replace(',', '.')
+  if (cleaned === '') return null
+  const n = Number(cleaned)
+  return Number.isFinite(n) ? n : null
+}
+
+/**
  * One input in the levers bar: its name, its value as a big number to type over, and a slider
  * where the input has one in the panel (the percentages and the purchase year). Money and years
  * stay typed: a balance or a house price is a fact, not a dial.
@@ -71,7 +95,14 @@ export function Lever({ spec, draft, onChange, onUnstar }: LeverProps) {
   const format = useMoneyFormat()
   const { key, kind, label, short } = spec
   const value = draft[key]
-  const patch = useCallback((next: number | null) => onChange({ [key]: next }), [key, onChange])
+  // A value that is already there is not an edit: it would make a new draft, and redraw the
+  // charts, for nothing.
+  const patch = useCallback(
+    (next: number | null) => {
+      if (next !== value) onChange({ [key]: next })
+    },
+    [key, onChange, value],
+  )
 
   let body
   if (kind === 'money') {
@@ -83,8 +114,9 @@ export function Lever({ spec, draft, onChange, onUnstar }: LeverProps) {
           text={moneyText(cents, format)}
           unit={format.symbol}
           inputMode="decimal"
-          valueKey={cents}
-          onCommit={(raw) => patch(Math.max(0, parseMoneyToCents(raw, format)))}
+          onCommit={(raw) => {
+            if (/\d/.test(raw)) patch(Math.max(0, parseMoneyToCents(raw, format)))
+          }}
         />
         <div className={styles.leverTrack} aria-hidden />
       </>
@@ -99,10 +131,9 @@ export function Lever({ spec, draft, onChange, onUnstar }: LeverProps) {
           text={String(years)}
           unit="yrs"
           inputMode="numeric"
-          valueKey={years}
           onCommit={(raw) => {
-            const n = Number(raw.replace(',', '.'))
-            if (!Number.isNaN(n)) patch(clamp(Math.round(n), min, max))
+            const n = typedNumber(raw)
+            if (n !== null) patch(clamp(Math.round(n), min, max))
           }}
         />
         <div className={styles.leverTrack} aria-hidden />
@@ -118,8 +149,10 @@ export function Lever({ spec, draft, onChange, onUnstar }: LeverProps) {
           text={formatPercentInput(fraction, format)}
           unit="%"
           inputMode="decimal"
-          valueKey={fraction}
-          onCommit={(raw) => patch(clamp(parsePercentToFraction(raw, format), min, max))}
+          onCommit={(raw) => {
+            const n = typedNumber(raw)
+            if (n !== null) patch(clamp(n / 100, min, max))
+          }}
         />
         <div className={styles.leverTrack}>
           <input
