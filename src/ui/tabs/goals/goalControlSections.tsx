@@ -29,11 +29,11 @@ function purchaseSummary(draft: NewGoalScenario, format: MoneyFormat): string | 
   if (purchaseYear === null) return null
   const down = Math.round(draft.housePriceCents * draft.downPaymentFraction)
   const fees = draft.transactionCostsCents
-  // Bought now, the house is already yours: nothing is taken out of the portfolio later, so the
-  // starting balance is read as what is left after the down payment and fees. Without this, moving
-  // the year from Never to Now adds the whole house to the net worth and nothing says why.
+  // Already owned, the house is yours from the start: nothing is taken out of the portfolio later, so
+  // the starting balance is read as what is left after the down payment and fees. Without this, moving
+  // the year from Never to Already own adds the whole house to the net worth and nothing says why.
   if (purchaseYear === 0) {
-    return `Bought now: the starting balance is counted as what is left after the ${formatCents(down, format)} down payment and ${formatCents(fees, format)} fees, so nothing comes out of the portfolio later.`
+    return `Already own: the starting balance is counted as what is left after the ${formatCents(down, format)} down payment and ${formatCents(fees, format)} fees, so nothing comes out of the portfolio later.`
   }
   const total = down + fees
   return `Purchase cost from portfolio: ${formatCents(down, format)} down + ${formatCents(fees, format)} fees = ${formatCents(total, format)} (dip on the invested line in year ${purchaseYear}).`

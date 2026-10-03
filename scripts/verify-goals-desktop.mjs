@@ -445,6 +445,15 @@ async function checkTabWalk(page, where, open, engine) {
  */
 async function checkBarFocus(page, where) {
   await scrollTo(page, 0)
+  // A plan with a house has a second figure in the bar (the invested part of the net worth), so it
+  // is the taller bar: it must still clear the legend where it is held to the bottom edge.
+  const size = page.viewportSize()
+  if (size.width >= HELD_FROM.width && size.height >= HELD_FROM.height) {
+    await page.getByRole('tab', { name: /Path B/ }).click()
+    await page.waitForTimeout(500)
+    const m = await measure(page)
+    check(where, '(n) with a house in the plan the held bar, a line taller, still clears the legend', m.bar.top >= m.legendBottom, `bar top ${px(m.bar.top)}, legend ends ${px(m.legendBottom)}`)
+  }
   const bar = page.locator('[class*="leversBar"]')
   const scrollY = () => page.evaluate(() => Math.round(window.scrollY))
 

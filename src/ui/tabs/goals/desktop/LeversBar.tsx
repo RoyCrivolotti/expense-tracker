@@ -26,9 +26,10 @@ interface ResultProps {
 const LeverResult = memo(function LeverResult({ draft }: ResultProps) {
   const format = useMoneyFormat()
   const inflationRate = useAssumedInflation()
-  const end = useMemo(() => {
+  const { netWorth, invested } = useMemo(() => {
     const series = projectNetWorth(scenarioToParams({ ...draft, id: 0 }, inflationRate))
-    return series[series.length - 1]?.netWorthCents ?? 0
+    const last = series[series.length - 1]
+    return { netWorth: last?.netWorthCents ?? 0, invested: last?.investedCents ?? 0 }
   }, [draft, inflationRate])
   return (
     <>
@@ -41,8 +42,13 @@ const LeverResult = memo(function LeverResult({ draft }: ResultProps) {
       </div>
       {/* Always today's money, whichever way the chart above is showing it. */}
       <span className={styles.leverResult} title="In today's money, after inflation">
-        {formatCentsCompact(end, format)}
+        {formatCentsCompact(netWorth, format)}
       </span>
+      {/* The chart above draws the invested portfolio. With a house in the plan the net worth is
+          more than that, and the two figures would otherwise look like a disagreement. */}
+      {invested !== netWorth ? (
+        <span className={styles.leverResultNote}>{formatCentsCompact(invested, format)} invested</span>
+      ) : null}
     </>
   )
 })

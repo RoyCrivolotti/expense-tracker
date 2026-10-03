@@ -56,13 +56,13 @@ describe('the sections of the controls', () => {
     expect(screen.getByText(/Purchase cost from portfolio/)).toBeInTheDocument()
   })
 
-  it('says what a purchase now means for the starting balance, which the year alone does not', () => {
+  it('says what already owning the house means for the starting balance, which the year alone does not', () => {
     const now = makeScenario({ housePurchaseYear: 0 })
     const { id, ...rest } = now
     void id
     render(<HousingFields draft={rest} onChange={vi.fn()} />)
 
-    expect(screen.getByText(/Bought now: the starting balance is counted as what is left after the/)).toBeInTheDocument()
+    expect(screen.getByText(/Already own: the starting balance is counted as what is left after the/)).toBeInTheDocument()
     expect(screen.queryByText(/Purchase cost from portfolio/)).not.toBeInTheDocument()
   })
 
@@ -72,7 +72,7 @@ describe('the sections of the controls', () => {
     void id
     render(<HousingFields draft={rest} onChange={vi.fn()} />)
 
-    expect(screen.queryByText(/Bought now/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Already own:/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Purchase cost from portfolio/)).not.toBeInTheDocument()
   })
 
