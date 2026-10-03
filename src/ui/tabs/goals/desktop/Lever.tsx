@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState, type MouseEvent } from 'react'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import { formatMoneyInput, formatPercent, formatPercentInput, parseMoneyToCents } from '../../../../engine'
 import type { MoneyFormat } from '../../../../engine'
@@ -44,6 +44,7 @@ interface TypedProps {
  */
 function TypedValue({ label, text, unit, unitFirst = false, onCommit, inputMode }: TypedProps) {
   const [typed, setTyped] = useState<string | null>(null)
+  const field = useRef<HTMLInputElement>(null)
   // On a touch screen a tap puts the caret at the end, and the way to replace a figure is a long
   // press and Select All or a dozen backspaces: the figure is selected as it takes focus instead.
   const touch = useMediaQuery('(pointer: coarse)')
@@ -53,13 +54,23 @@ function TypedValue({ label, text, unit, unitFirst = false, onCommit, inputMode 
     setTyped(null)
     onCommit(typed)
   }
+  // The label's own focus is replaced by this one: Chromium reveals a field focused that way by
+  // where the field is in the page, not where the bar is held, so a click on a figure's unit
+  // scrolled the page by 309px at 1280x800 with the bar already on screen. A click on the digits
+  // is the field's own and never scrolled.
+  const focusField = (event: MouseEvent<HTMLLabelElement>) => {
+    if (event.target === field.current) return
+    event.preventDefault()
+    field.current?.focus({ preventScroll: true })
+  }
   const unitText = <span className={styles.leverUnit}>{unit}</span>
   return (
     // A label, so a tap or a click anywhere on the figure's row (not only on its digits) puts the
     // cursor in the field. The input names itself, so the unit inside does not add to the name.
-    <label className={styles.leverValue}>
+    <label className={styles.leverValue} onClick={focusField}>
       {unitFirst ? unitText : null}
       <input
+        ref={field}
         className={unitFirst ? `${styles.leverInput} ${styles.leverInputAfterUnit}` : styles.leverInput}
         type="text"
         inputMode={inputMode}
