@@ -211,6 +211,12 @@ describe('ScenarioBar', () => {
     expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
   })
 
+  it('opens the menu with focus on the scenario name', async () => {
+    render(<Harness initial={[plan, other]} actions={makeActions()} />)
+    await openMenu()
+    expect(screen.getByLabelText('Scenario name')).toHaveFocus()
+  })
+
   it('closes the menu with Escape and gives focus back to its button', async () => {
     render(<Harness initial={[plan, other]} actions={makeActions()} />)
     const trigger = screen.getByRole('button', { name: 'Scenario options' })

@@ -1,4 +1,4 @@
-import { useRef, useState, type RefObject } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import type { GoalScenario } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
@@ -67,8 +67,23 @@ function MenuPopover(props: PopoverProps) {
   const pos = usePopoverPosition(triggerRef, popoverRef)
   const motion = usePopoverMotion(pos)
   const [saveAsNew, setSaveAsNew] = useState(false)
-  useFocusTrap(popoverRef, onClose, motion.leaving)
+  // Escape hands focus back to the button the menu came from. Safari does not focus a button when
+  // it is clicked, so the trap's own restore (to whatever had focus when the menu opened) would
+  // leave focus on the page.
+  const escape = () => {
+    onClose()
+    triggerRef.current?.focus()
+  }
+  useFocusTrap(popoverRef, escape, motion.leaving)
   useDismissOnOutsidePointer(popoverRef, !motion.leaving, onClose, triggerRef)
+  // The menu is hidden until it has been placed, and a hidden element cannot take focus, so the
+  // trap's focus on mount does not land. It goes to the name once the menu is on screen, which
+  // is what most people open it to change.
+  const placed = pos !== null
+  const nameField = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (placed) nameField.current?.focus()
+  }, [placed])
 
   // Each action that leaves the menu has done its work by then.
   const then = (action: () => void) => () => {
@@ -96,6 +111,7 @@ function MenuPopover(props: PopoverProps) {
         <ColorSwatchPicker color={draft.color} onChange={(color) => props.onPatch({ color })} label="Scenario color" />
       </div>
       <input
+        ref={nameField}
         className={`${goalStyles.renameInput} ${styles.menuInput}`}
         value={draft.name}
         aria-label="Scenario name"
