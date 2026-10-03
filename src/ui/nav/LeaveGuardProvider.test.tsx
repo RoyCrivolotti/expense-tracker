@@ -71,6 +71,15 @@ describe('leave guard', () => {
     expect(sheet()).toBeNull()
   })
 
+  it('lets every leave go when there is no shell around to ask', async () => {
+    const onGo = vi.fn()
+    render(<Section work={EDITS} onGo={onGo} />)
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Dashboard' }))
+
+    expect(onGo).toHaveBeenCalledWith('dashboard')
+  })
+
   it('asks first when the section holds edits, with Stay focused', async () => {
     const onGo = vi.fn()
     render(<Shell initial={EDITS} onGo={onGo} />)
