@@ -4,6 +4,7 @@ import type { NewGoalScenario } from '../../../data/dataSource'
 import type { ExpenseActions } from '../../actions'
 import { duplicateScenario, pickScenarioColor } from '../../../engine'
 import { bootstrapEditor, differsFrom, hasDetachedEdits, rebaseDraft, scenarioToDraft } from './scenarioDraft'
+import { useHiddenLines } from './useHiddenLines'
 import { useScenarioSave } from './useScenarioSave'
 
 /**
@@ -81,13 +82,6 @@ export function useScenarioEditor(
     setDraft((prev) => rebaseDraft(prev, synced, now))
     setSynced(now)
   }
-  const [hidden, setHiddenIds] = useState<ReadonlySet<number>>(() => new Set())
-  // A line hidden by hand is forgotten with its scenario. The same set comes back while every
-  // id in it still has one, so what is keyed on it (the chart's lines) does not redo its work.
-  const hiddenIds = useMemo(() => {
-    const known = new Set(dataset.goalScenarios.map((s) => s.id))
-    return [...hidden].every((id) => known.has(id)) ? hidden : new Set([...hidden].filter((id) => known.has(id)))
-  }, [hidden, dataset.goalScenarios])
   // Controls read `draft` (instant); charts read the deferred copy so dragging a
   // slider never blocks on the projection recompute (keeps the thumb at 60fps).
   const deferredDraft = useDeferredValue(draft)
@@ -113,6 +107,7 @@ export function useScenarioEditor(
     () => activeScenario !== null && differsFrom(draft, activeScenario),
     [activeScenario, draft],
   )
+  const { hiddenIds, onToggleVisible } = useHiddenLines(dataset.goalScenarios, activeScenario, dirty)
   // A detached draft has no saved scenario of its own, so loading another one would drop
   // its edits just as surely; it is measured against the scenario it came from.
   const baseScenario = useMemo(
@@ -126,14 +121,6 @@ export function useScenarioEditor(
     setBaseId(scenario.id)
     setSynced(scenario)
     setDraft(scenarioToDraft(scenario))
-    // The loaded scenario is always drawn as the editing line, so a hidden flag on it would
-    // only leave the chip and legend saying two things at once.
-    setHiddenIds((prev) => {
-      if (!prev.has(scenario.id)) return prev
-      const next = new Set(prev)
-      next.delete(scenario.id)
-      return next
-    })
   }, [])
 
   const onActivate = useCallback(() => {
@@ -173,15 +160,6 @@ export function useScenarioEditor(
   const onDiscard = useCallback(() => {
     if (activeScenario) setDraft(scenarioToDraft(activeScenario))
   }, [activeScenario])
-
-  const onToggleVisible = useCallback((id: number) => {
-    setHiddenIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }, [])
 
   // What the editor held when a create started, to tell whether anything was touched while it ran.
   const live = useRef({ activeId, draft })
