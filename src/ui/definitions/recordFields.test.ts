@@ -37,4 +37,11 @@ describe('recordFields percent', () => {
   it('parses a comma-decimal percent typed by hand', () => {
     expect(fromInput('percent', '3,5', EU_MONEY_FORMAT)).toBeCloseTo(0.035, 5)
   })
+
+  it('parses a percent and an amount typed with the other mark than the format writes', () => {
+    const usd = resolveMoneyFormat('USD', 'en-US')
+    expect(fromInput('percent', '3,5', usd)).toBeCloseTo(0.035, 5)
+    expect(fromInput('money', '12,5', usd)).toBe(1250)
+    expect(fromInput('money', '12.5', EU_MONEY_FORMAT)).toBe(1250)
+  })
 })
