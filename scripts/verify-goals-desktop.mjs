@@ -492,6 +492,68 @@ async function checkBarFocus(page, where) {
   await scrollTo(page, 0)
 }
 
+/**
+ * Nothing moves under the pointer or the keyboard: the first edit adds Unsaved changes, Discard and
+ * Save to the scenario row, and pointing at the chart fills the legend with values and, at a
+ * purchase year, shows a breakdown. Each used to push the page down (the row wrapped by 40px at
+ * 1280px, the breakdown added 144px, the legend wrapped and slid under the bar held at the bottom).
+ */
+async function checkStability(page, where, held) {
+  const geometry = () =>
+    page.evaluate(() => {
+      const row = document.querySelector('[class*="scenarioRow"]').getBoundingClientRect()
+      const legend = document.querySelector('[data-goals-plan-wide] ul[class*="chips"]').getBoundingClientRect()
+      const bar = document.querySelector('[data-levers-bar]').getBoundingClientRect()
+      return { rowHeight: row.height, rowBottom: row.bottom + scrollY, legendBottom: legend.bottom + scrollY, barTop: bar.top + scrollY, docHeight: document.documentElement.scrollHeight, scrolled: scrollY }
+    })
+  const rest = await geometry()
+  if (held) check(where, '(r) at rest the legend clears the bar held at the bottom', rest.legendBottom <= rest.barTop + 0.5, `legend ends ${px(rest.legendBottom)}, bar starts ${px(rest.barTop)}`)
+
+  const svg = page.locator('[data-goals-plan-wide] [role="img"]').first()
+  const box = await svg.boundingBox()
+  await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5)
+  await page.waitForTimeout(250)
+  const pointed = await geometry()
+  check(where, '(r) pointing at the chart does not move the page', near(pointed.docHeight, rest.docHeight, 1) && near(pointed.legendBottom, rest.legendBottom, 1), `page ${rest.docHeight} to ${pointed.docHeight}, legend ${px(rest.legendBottom)} to ${px(pointed.legendBottom)}`)
+  await page.mouse.move(0, 0)
+
+  const monthly = page.getByLabel('Monthly investing', { exact: true })
+  await monthly.fill('900')
+  await monthly.press('Enter')
+  await page.getByText('Unsaved changes').waitFor({ state: 'attached', timeout: 5000 })
+  await page.waitForTimeout(300)
+  const edited = await geometry()
+  check(where, '(r) the first edit keeps the scenario row one line', near(edited.rowHeight, rest.rowHeight, 1) && near(edited.rowBottom, rest.rowBottom, 1), `row ${px(rest.rowHeight)} to ${px(edited.rowHeight)}`)
+  if (held) check(where, '(r) with an edit the legend still clears the bar', edited.legendBottom <= edited.barTop + 0.5, `legend ends ${px(edited.legendBottom)}, bar starts ${px(edited.barTop)}`)
+  await page.getByRole('button', { name: 'Discard changes' }).click()
+  await page.waitForTimeout(300)
+
+  // Path C buys its house in year 5: pointing at that year lists where the money went.
+  await page.getByRole('tab', { name: /Path C/ }).click()
+  await page.waitForTimeout(400)
+  await page.evaluate(() => window.scrollTo(0, 0))
+  const c = await geometry()
+  const cBox = await svg.boundingBox()
+  let shown = false
+  let grew = 0
+  for (let f = 0.12; f <= 0.4 && !shown; f += 0.01) {
+    await page.mouse.move(cBox.x + cBox.width * f, cBox.y + cBox.height * 0.5)
+    await page.waitForTimeout(80)
+    shown = (await page.getByText('Down payment + fees').count()) > 0
+  }
+  if (shown) grew = (await geometry()).docHeight - c.docHeight
+  check(where, '(r) the purchase breakdown shows at the purchase year', shown)
+  check(where, '(r) the breakdown takes no room from the page', shown && Math.abs(grew) <= 1, `page grew ${grew}px`)
+  if (shown) {
+    const hidden = await page.evaluate(() => {
+      const el = document.querySelector('[class*="floater"]')
+      return el ? getComputedStyle(el).pointerEvents : 'none-found'
+    })
+    check(where, '(r) the breakdown lets the pointer through to the chart', hidden === 'none', hidden)
+  }
+  await page.mouse.move(0, 0)
+}
+
 async function checkScreen(browser, screen, engine) {
   const where = `${engine} ${screen.name}`
   const { page, context } = await openPlan(browser, screen)
@@ -510,6 +572,9 @@ async function checkScreen(browser, screen, engine) {
     const own = await openPlan(browser, screen)
     await checkBarFocus(own.page, where)
     await own.context.close()
+    const calm = await openPlan(browser, screen)
+    await checkStability(calm.page, where, screen.width >= HELD_FROM.width && screen.height >= HELD_FROM.height)
+    await calm.context.close()
   }
 }
 
