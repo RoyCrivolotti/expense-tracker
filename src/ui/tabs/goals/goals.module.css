@@ -61,6 +61,13 @@
   padding: 0.25rem 0 0.5rem;
 }
 
+/* On a wide screen it is in the row with the title instead, which takes the height of a row of
+   its own off the top of the page (about 46px, of the 265px above the chart on a laptop). */
+.viewSwitcherInline {
+  display: flex;
+  align-items: center;
+}
+
 .nav {
   position: sticky;
   top: calc(var(--exp-header) - var(--goals-tuck) + env(safe-area-inset-top, 0px));

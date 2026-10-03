@@ -22,6 +22,8 @@ interface GoalsViewSwitchProps {
   onPlanHalfChange: (next: MobilePlanView) => void
   /** Where the phone's views were left; the wide switch has no use for it. */
   memory: GoalsScrollMemory
+  /** The wide switch sits in the title's own row, so it has no row of its own to pad. */
+  inline?: boolean
 }
 
 /** Plan / Progress / Assumptions, or on a phone the row of Chart / Progress / Scenarios / Assumptions. */
@@ -31,11 +33,12 @@ export function GoalsViewSwitch({
   planHalf,
   onPlanHalfChange,
   memory,
+  inline = false,
 }: GoalsViewSwitchProps) {
   const narrow = useGoalsNarrow()
   if (!narrow) {
     return (
-      <div className={styles.viewSwitcherRow}>
+      <div className={inline ? styles.viewSwitcherInline : styles.viewSwitcherRow}>
         <SegmentedControl
           options={VIEW_OPTIONS}
           value={view}

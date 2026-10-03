@@ -706,6 +706,20 @@ describe('GoalsTab', () => {
     expect(screen.getByText('Progress snapshot')).toBeInTheDocument()
   })
 
+  it('puts the view switch in the title\'s own row on a wide screen, and under it on a phone', () => {
+    const { unmount } = render(<GoalsTab model={makeModel()} />)
+    const title = screen.getByRole('heading', { name: 'Goals' })
+    // One row, so the page spends one line, not two, above the chart.
+    expect(title.parentElement).toContainElement(screen.getByRole('tablist', { name: 'Goals view' }))
+    unmount()
+
+    mockPhoneWidth()
+    render(<GoalsTab model={makeModel()} />)
+    expect(screen.getByRole('heading', { name: 'Goals' }).parentElement).not.toContainElement(
+      screen.getByRole('tablist', { name: 'Goals view' }),
+    )
+  })
+
   it('has one row of four views on a phone, opening on Chart', () => {
     mockPhoneWidth()
     const { container } = render(<GoalsTab model={makeModel()} />)
