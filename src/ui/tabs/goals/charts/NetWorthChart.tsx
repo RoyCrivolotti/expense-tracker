@@ -487,7 +487,7 @@ function HeroNote({ draft, isHero, narrow }: { draft: NewGoalScenario; isHero: b
   const low = Math.max(0, draft.expectedRealReturn - RETURN_BAND_SPREAD)
   const high = draft.expectedRealReturn + RETURN_BAND_SPREAD
   return (
-    <p className={styles.chartHint}>
+    <p className={`${styles.chartHint} ${styles.heroNote}`}>
       Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment
       comes out. The shaded band is the line you are editing at a real return of {formatPercent(low, format)} to{' '}
       {formatPercent(high, format)}, three points either side.

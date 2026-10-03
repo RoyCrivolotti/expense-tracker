@@ -845,6 +845,12 @@
   background: color-mix(in srgb, var(--color-text) 4%, var(--color-surface));
 }
 
+/* The wide hero's note under its legend: set off from the chips above it, which it would
+   otherwise touch (the hint above the chart has the title's margin to stand off from). */
+.chartHint.heroNote {
+  margin-top: 0.6rem;
+}
+
 /* A footer that is one line of the card, not a box of its own: the wide hero's FI and milestone strip. */
 .chartFooterBare {
   margin-top: 0.6rem;
