@@ -35,7 +35,10 @@ const LeverResult = memo(function LeverResult({ draft }: ResultProps) {
       <div className={styles.leverHead}>
         <span className={styles.leverLabel}>Net worth at horizon</span>
       </div>
-      <span className={styles.leverResult}>{formatCentsCompact(end, format)}</span>
+      {/* Always today's money, whichever way the chart above is showing it. */}
+      <span className={styles.leverResult} title="In today's money, after inflation">
+        {formatCentsCompact(end, format)}
+      </span>
     </>
   )
 })

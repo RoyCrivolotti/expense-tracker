@@ -243,6 +243,12 @@ describe('LeversBar', () => {
     expect(screen.getByText('0 €')).toBeInTheDocument()
   })
 
+  it('says in a tooltip that the net worth is in today\'s money, which the label alone does not', () => {
+    renderBar()
+    // The tooltip is on the figure itself.
+    expect(screen.getByTitle("In today's money, after inflation")).toHaveTextContent(/€/)
+  })
+
   it('opens and closes the rest of the inputs from one button that says which', async () => {
     const { onToggle } = renderBar()
     const button = screen.getByRole('button', { name: 'All inputs' })
