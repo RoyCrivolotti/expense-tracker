@@ -88,8 +88,15 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // that stay with starred inputs, star tooltips and hover, the tab name ellipsis, the name check
 // on Save, and the bar's scroll padding that follows the window width) added about 0.3 KB, which
 // took both over. All of it is small code and CSS in the one lazy chunk, with no new library.
-const TOTAL_MAX_GZIP = 215_000
-const GOALS_MAX_GZIP = 44_000
+//
+// Raised from 215 KB to 217 KB, and the Goals chunk from 44 KB to 45 KB, for the fixes to the
+// wide page on a tablet and in Safari: main stood at 214.7 KB after the shorter hero, the
+// touch sizing, the star and menu fixes for a touch screen, the scroll padding the bar needs in
+// each engine, the milestone line thinning and the control names took the total to 215.1 KB.
+// All of it is small code and CSS in the one lazy chunk, with no new library, and the next
+// round of fixes from the same review is still to come.
+const TOTAL_MAX_GZIP = 217_000
+const GOALS_MAX_GZIP = 45_000
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length
