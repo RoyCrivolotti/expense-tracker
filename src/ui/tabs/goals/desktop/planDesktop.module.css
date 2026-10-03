@@ -210,6 +210,15 @@
 }
 
 /* The scenario row: one tab per scenario, then what can be done with the open one. */
+/* The row of tabs and buttons, and under it the note a read-only session shows: that note is a
+   sentence long, and beside the tabs it left them room for "Path..." and nothing else. */
+.scenarioBar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
 /* One line, always: Unsaved changes, Discard and Save appear on the first edit, and a row that
    wrapped to make room for them moved everything under it by 40px at 1280px. The tabs give up
    width instead, cutting names and then scrolling. */
@@ -368,6 +377,11 @@
   margin: 0;
   font-size: 0.8125rem;
   color: var(--color-text-muted);
+}
+
+/* Once there is something to lose it is a warning. */
+.readOnlyEdited {
+  color: var(--exp-warning-text);
 }
 
 .menuTrigger {

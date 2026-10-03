@@ -8,31 +8,37 @@ import type { GoalScenario } from '../../../types'
 function renderHeader(
   scenario: GoalScenario,
   actions = makeActions(),
-  { dirty = false, saving = false }: { dirty?: boolean; saving?: boolean } = {},
+  {
+    dirty = false,
+    saving = false,
+    creating = false,
+    canWrite = true,
+  }: { dirty?: boolean; saving?: boolean; creating?: boolean; canWrite?: boolean } = {},
 ) {
   const { id, isActive, ...draft } = scenario
   void id
   void isActive
   const onPatch = vi.fn()
+  const onDuplicate = vi.fn()
   const { unmount } = render(
     <ActiveScenarioHeader
       draft={draft}
       activeScenario={scenario}
-      scenarioCount={1}
-      usedColors={[scenario.color]}
       dirty={dirty}
+      hasEdits={dirty}
       saving={saving}
-      canWrite
+      creating={creating}
+      canWrite={canWrite}
       actions={actions}
       onPatch={onPatch}
       onSaveChanges={vi.fn()}
       onDiscard={vi.fn()}
       onActivate={vi.fn()}
       onSaveDraft={vi.fn()}
-      onScenarioCreated={vi.fn()}
+      onDuplicate={onDuplicate}
     />,
   )
-  return { actions, onPatch, unmount }
+  return { actions, onPatch, onDuplicate, unmount }
 }
 
 describe('ActiveScenarioHeader', () => {
@@ -76,6 +82,29 @@ describe('ActiveScenarioHeader', () => {
 
     renderHeader(scenario, makeActions(), { dirty: true, saving: true })
     for (const button of buttons()) expect(button).toBeDisabled()
+  })
+
+  it('hands Duplicate to the editor, and holds the button while a copy is being made', () => {
+    const scenario = makeScenario({ id: 7, name: 'Path B' })
+    const { actions, onDuplicate, unmount } = renderHeader(scenario)
+    fireEvent.click(screen.getByRole('button', { name: 'Duplicate' }))
+    expect(onDuplicate).toHaveBeenCalledTimes(1)
+    expect(actions.createScenario).not.toHaveBeenCalled()
+    unmount()
+
+    renderHeader(scenario, makeActions(), { creating: true })
+    expect(screen.getByRole('button', { name: 'Duplicate' })).toBeDisabled()
+  })
+
+  it('says what a read-only session does with edits once there are some', () => {
+    const scenario = makeScenario({ id: 7, name: 'Path B' })
+    const { unmount } = renderHeader(scenario, makeActions(), { canWrite: false })
+    expect(screen.getByRole('status')).toHaveTextContent('Read-only session — scenarios cannot be saved.')
+    unmount()
+
+    renderHeader(scenario, makeActions(), { canWrite: false, dirty: true })
+    expect(screen.getByRole('status')).toHaveTextContent('so these changes cannot be saved. They are lost when you leave Goals or reload.')
+    expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument()
   })
 
   it('changes colour through the draft rather than writing it straight away', () => {

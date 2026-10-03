@@ -322,6 +322,34 @@ describe('useScenarioEditor', () => {
       expect(result.current.hiddenIds.size).toBe(0)
     })
 
+    it('keeps the loaded scenario\'s saved line hidden while it is edited, and forgets that once it is drawn as the editing line again', () => {
+      const { result, plan } = setupWithRerender()
+      act(() => result.current.patchDraft({ monthlyContributionCents: 77_000 }))
+      // While edited, the saved line is drawn beside the editing one, and can be hidden.
+      act(() => result.current.onToggleVisible(plan.id))
+      expect(result.current.hiddenIds.has(plan.id)).toBe(true)
+
+      act(() => result.current.onDiscard())
+
+      expect(result.current.dirty).toBe(false)
+      expect(result.current.hiddenIds.has(plan.id)).toBe(false)
+    })
+
+    it('forgets it after a save as well, and when the edits are put back by hand', () => {
+      const { result, rerender, plan, other } = setupWithRerender()
+      act(() => result.current.patchDraft({ monthlyContributionCents: 77_000 }))
+      act(() => result.current.onToggleVisible(plan.id))
+
+      rerender({ scenarios: [{ ...plan, monthlyContributionCents: 77_000 }, other] })
+      expect(result.current.dirty).toBe(false)
+      expect(result.current.hiddenIds.has(plan.id)).toBe(false)
+
+      act(() => result.current.patchDraft({ monthlyContributionCents: 1 }))
+      act(() => result.current.onToggleVisible(plan.id))
+      act(() => result.current.patchDraft({ monthlyContributionCents: 77_000 }))
+      expect(result.current.hiddenIds.has(plan.id)).toBe(false)
+    })
+
     it('keeps the same set while every hidden line still has its scenario', () => {
       const { result, rerender, plan, other } = setupWithRerender()
       act(() => result.current.onToggleVisible(other.id))

@@ -2,22 +2,24 @@ import { useState } from 'react'
 import type { GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import type { ExpenseActions } from '../../actions'
-import { duplicateScenario } from '../../../engine'
 import { ColorSwatchPicker } from '../../components/ColorSwatchPicker'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { Presence } from '../../components/Presence'
 import { EXIT_MS } from '../../hooks/motion'
 import { deleteMessage } from './deleteMessage'
+import { readOnlyScenarioNote } from './readOnlyCopy'
 import styles from './goals.module.css'
 
 interface ActiveScenarioHeaderProps {
   draft: NewGoalScenario
   activeScenario: GoalScenario | null
-  scenarioCount: number
-  usedColors: readonly string[]
   dirty: boolean
+  /** There are edits that would be lost on leaving, saved scenario or not: all a read-only session has to say. */
+  hasEdits: boolean
   /** A save is in flight, so neither Save nor Discard can be taken. */
   saving: boolean
+  /** A scenario is being created, so a second Duplicate would make the same copy twice. */
+  creating: boolean
   canWrite: boolean
   actions?: ExpenseActions | undefined
   onPatch: (patch: Partial<NewGoalScenario>) => void
@@ -25,16 +27,16 @@ interface ActiveScenarioHeaderProps {
   onDiscard: () => void
   onActivate: () => void
   onSaveDraft: (name: string) => void
-  onScenarioCreated: (scenario: GoalScenario) => void
+  onDuplicate: () => void
 }
 
 export function ActiveScenarioHeader({
   draft,
   activeScenario,
-  scenarioCount,
-  usedColors,
   dirty,
+  hasEdits,
   saving,
+  creating,
   canWrite,
   actions,
   onPatch,
@@ -42,14 +44,18 @@ export function ActiveScenarioHeader({
   onDiscard,
   onActivate,
   onSaveDraft,
-  onScenarioCreated,
+  onDuplicate,
 }: ActiveScenarioHeaderProps) {
   const [saveAsNewOpen, setSaveAsNewOpen] = useState(false)
   const [copyName, setCopyName] = useState(`${draft.name} copy`)
   const [deleteOpen, setDeleteOpen] = useState(false)
 
   if (!canWrite) {
-    return <p className={styles.chartHint}>Read-only session — scenarios cannot be saved.</p>
+    return (
+      <p role="status" className={styles.chartHint}>
+        {readOnlyScenarioNote(hasEdits)}
+      </p>
+    )
   }
 
   const openSaveAsNew = () => {
@@ -103,11 +109,8 @@ export function ActiveScenarioHeader({
                 <button
                   type="button"
                   className={styles.btn}
-                  onClick={() => {
-                    void actions
-                      .createScenario(duplicateScenario(draft, scenarioCount, usedColors))
-                      .then(onScenarioCreated)
-                  }}
+                  disabled={creating}
+                  onClick={onDuplicate}
                 >
                   Duplicate
                 </button>

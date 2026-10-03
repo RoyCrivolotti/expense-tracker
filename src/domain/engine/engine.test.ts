@@ -73,6 +73,54 @@ describe('money — US format', () => {
   })
 })
 
+describe('money — a point typed into a comma-decimal format', () => {
+  it.each([
+    ['2500.75', 250075],
+    ['12.5', 1250],
+    ['1.5', 150],
+    ['0.5', 50],
+    ['.5', 50],
+    ['1.0', 100],
+    ['-12.5', -1250],
+    ['12.5 €', 1250],
+    ['€ 12.50', 1250],
+  ])('reads %s as a decimal mark', (typed, cents) => {
+    expect(parseMoneyToCents(typed)).toBe(cents)
+  })
+
+  it.each([
+    ['1.500', 150000],
+    ['1.234.567', 123456700],
+    ['1.500,25', 150025],
+    ['1.5,5', 1550],
+    ['12.5.5', 125500],
+    ['250.000', 25000000],
+    ['1.', 100],
+    ['1.2345', 12345 * 100],
+  ])('keeps %s as it was read before', (typed, cents) => {
+    expect(parseMoneyToCents(typed)).toBe(cents)
+  })
+
+  it('does not change a point-decimal format', () => {
+    const usd = resolveMoneyFormat('USD', 'en-US')
+    expect(parseMoneyToCents('12.5', usd)).toBe(1250)
+    expect(parseMoneyToCents('1,500', usd)).toBe(150000)
+    expect(parseMoneyToCents('1.500', usd)).toBe(150)
+  })
+
+  it('leaves the workbook importer reading a point as a thousands mark', () => {
+    expect(parseEuroToCents('1.5')).toBe(1500)
+    expect(parseEuroToCents('2500.75')).toBe(25007500)
+  })
+
+  it('reads a typed percentage with a point or a comma in either format', () => {
+    expect(parsePercentToFraction('5.5')).toBeCloseTo(0.055, 6)
+    expect(parsePercentToFraction('12.5')).toBeCloseTo(0.125, 6)
+    expect(parsePercentToFraction('5,5')).toBeCloseTo(0.055, 6)
+    expect(parsePercentToFraction('5.5', resolveMoneyFormat('USD', 'en-US'))).toBeCloseTo(0.055, 6)
+  })
+})
+
 describe('dates', () => {
   it('parses human dates to ISO', () => {
     expect(parseHumanDate('23 Oct 2025')).toBe('2025-10-23')

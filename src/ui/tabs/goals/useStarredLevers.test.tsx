@@ -27,13 +27,25 @@ function deferredSave() {
   return { save, calls }
 }
 
-function setup(saved: readonly LeverKey[], save: ((patch: { goalLevers?: LeverKey[] }) => Promise<void>) | undefined) {
+type TestSave = (patch: { goalLevers?: LeverKey[] }) => Promise<void>
+interface Props {
+  list: readonly LeverKey[]
+  save: TestSave | undefined
+}
+
+function setup(saved: readonly LeverKey[], save: TestSave | undefined) {
   const showToast = vi.fn()
   const wrapper = ({ children }: { children: ReactNode }) => (
     <ToastContext.Provider value={{ showToast }}>{children}</ToastContext.Provider>
   )
-  const view = renderHook(({ list }) => useStarredLevers(list, save), { initialProps: { list: saved }, wrapper })
-  return { ...view, showToast }
+  const view = renderHook(({ list, save: current }: Props) => useStarredLevers(list, current), {
+    initialProps: { list: saved, save } satisfies Props,
+    wrapper,
+  })
+  // The save stays as it was unless a test hands over another, or none.
+  const rerender = (next: { list: readonly LeverKey[]; save?: TestSave | undefined }) =>
+    view.rerender({ list: next.list, save: 'save' in next ? next.save : save })
+  return { ...view, rerender, showToast }
 }
 
 describe('useStarredLevers', () => {
@@ -124,6 +136,24 @@ describe('useStarredLevers', () => {
     // And the next choice starts from the saved list, not from the one that failed.
     act(() => result.current.toggle('rentMonthlyCents'))
     expect(result.current.keys).toEqual(DEFAULTS)
+  })
+
+  it('counts a vanished writer as a failure, not a save', async () => {
+    const { save, calls } = deferredSave()
+    const { result, rerender, showToast } = setup(DEFAULTS, save)
+    const afterFirst = DEFAULTS.filter((k) => k !== 'horizonYears')
+
+    act(() => result.current.toggle('horizonYears'))
+    act(() => result.current.toggle('startInvestedCents'))
+    // The session goes read-only while the second choice waits behind the first save.
+    rerender({ list: DEFAULTS, save: undefined })
+    await settle(() => calls[0]!.resolve())
+
+    // The first save did land; the second was never sent, so the bar goes back to the first.
+    expect(calls).toHaveLength(1)
+    expect(result.current.keys).toEqual(afterFirst)
+    expect(showToast).toHaveBeenCalledWith(expect.stringContaining('no longer save'), 'error')
+    expect(result.current.canEdit).toBe(false)
   })
 
   it('puts the five back with reset, and does not send what is already saved', async () => {

@@ -14,7 +14,9 @@ interface ScenarioManagerProps {
   canWrite: boolean
   actions?: ExpenseActions | undefined
   dirty: boolean
+  hasEdits: boolean
   saving: boolean
+  creating: boolean
   onSelect: (scenario: GoalScenario) => void
   onSelectEditing: () => void
   onToggleVisible: (id: number) => void
@@ -23,7 +25,7 @@ interface ScenarioManagerProps {
   onSaveChanges: () => void
   onDiscard: () => void
   onActivate: () => void
-  onScenarioCreated: (scenario: GoalScenario) => void
+  onDuplicate: () => void
 }
 
 export function ScenarioManager(props: ScenarioManagerProps) {
@@ -55,10 +57,10 @@ export function ScenarioManager(props: ScenarioManagerProps) {
       <ActiveScenarioHeader
         draft={draft}
         activeScenario={activeScenario}
-        scenarioCount={scenarios.length}
-        usedColors={scenarios.map((s) => s.color)}
         dirty={dirty}
+        hasEdits={props.hasEdits}
         saving={props.saving}
+        creating={props.creating}
         canWrite={canWrite}
         actions={actions}
         onPatch={props.onPatch}
@@ -66,7 +68,7 @@ export function ScenarioManager(props: ScenarioManagerProps) {
         onDiscard={props.onDiscard}
         onActivate={props.onActivate}
         onSaveDraft={props.onSaveDraft}
-        onScenarioCreated={props.onScenarioCreated}
+        onDuplicate={props.onDuplicate}
       />
     </Card>
   )

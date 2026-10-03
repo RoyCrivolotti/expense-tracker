@@ -816,6 +816,34 @@ describe('GoalsTab', () => {
     expect(container.querySelector('[data-mobile-view="chart"]')).toBeNull()
   })
 
+  it('makes one copy for a double tap on the phone\'s Duplicate, and holds the button while it is made', async () => {
+    mockPhoneWidth()
+    const user = userEvent.setup()
+    let land!: () => void
+    const actions = makeActions()
+    vi.mocked(actions.createScenario).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          land = () => resolve(makeScenario({ id: 1, name: 'Path A' }))
+        }),
+    )
+    const dataset = makeDataset()
+    dataset.goalScenarios = [makeScenario({ id: 1, name: 'Path A', isActive: true })]
+    render(<GoalsTab model={buildExpenseModel(dataset)} actions={actions} />)
+    await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
+    const button = screen.getByRole('button', { name: 'Duplicate' })
+
+    await user.dblClick(button)
+
+    expect(actions.createScenario).toHaveBeenCalledTimes(1)
+    expect(button).toBeDisabled()
+    await act(async () => {
+      land()
+      await Promise.resolve()
+    })
+    expect(screen.getByRole('button', { name: 'Duplicate' })).toBeEnabled()
+  })
+
   it('reaches Progress and Assumptions from the phone row, and comes back to the half of Plan it left', async () => {
     mockPhoneWidth()
     const user = userEvent.setup()

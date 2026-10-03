@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import type { ExpenseDataset } from '../types'
+import { useMemo, useRef } from 'react'
+import type { ExpenseDataset, ExpenseSettings } from '../types'
 import type { BulkTransactionPatch, ExpenseDataSource, NewTransaction } from '../data/dataSource'
 import type { ExpenseActions, ExpenseModalState } from './actions'
 import { duplicateHint, openAddModal, transactionToSeed } from './transactionSeed'
@@ -48,6 +48,9 @@ export function useExpenseActions(
   openModal: OpenModal,
   readOnly = false,
 ): ExpenseActions | undefined {
+  // Which settings write each setting was last taken from. A write's answer is the whole settings
+  // row as it stood then, so an older write answering late must not undo a newer one's.
+  const settingsOrder = useRef({ issued: 0, applied: new Map<keyof ExpenseSettings, number>() })
   return useMemo(() => {
     if (!source.canWrite || readOnly) return undefined
     return {
@@ -159,8 +162,13 @@ export function useExpenseActions(
         return result
       },
       updateSettings: async (patch) => {
+        const order = settingsOrder.current
+        const turn = ++order.issued
         const settings = await source.updateSettings!(patch)
-        applyPatch((d) => patchAfterSettings(d, settings))
+        // Only what this write changed, and only if no later write to it has been taken already.
+        const keys = (Object.keys(patch) as (keyof ExpenseSettings)[]).filter((key) => (order.applied.get(key) ?? 0) < turn)
+        for (const key of keys) order.applied.set(key, turn)
+        applyPatch((d) => patchAfterSettings(d, settings, keys))
       },
       createScenario: async (input) => {
         const scenario = await source.createScenario!(input)
