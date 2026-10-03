@@ -129,6 +129,23 @@
   }
 }
 
+/* Where the page asks for it (useToastAside: the wide Goals plan), the toast sits in the side rail
+   instead of over the page: bottom left, level with the levers bar, above the rail's menu button
+   (its top is about 50px from the bottom edge) and clear of its links (the last ends about 380px
+   down, and a toast is under 100px tall). It is as wide as the rail less a margin, so the message
+   wraps to two lines and the Undo stays beside it. Under 1024px the rail is icons only, with no
+   room for it, and the toast keeps to the middle. Nothing about the bar's height applies here, so
+   it does not follow the bar. */
+@media (min-width: 1024px) {
+  :global(:root[data-toast-aside]) .viewport {
+    left: 0.5rem;
+    transform: none;
+    bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+    max-width: calc(var(--exp-rail) - 1rem);
+    transition: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .viewport {
     transition: none;
