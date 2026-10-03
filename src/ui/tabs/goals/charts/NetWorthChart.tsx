@@ -125,6 +125,7 @@ function PortfolioLegend({
   activeYear,
   breakdowns,
   yearZeroHint,
+  breakdownInTodaysMoney,
   onToggle,
 }: {
   isHero: boolean
@@ -135,6 +136,8 @@ function PortfolioLegend({
   activeYear: number | null
   breakdowns: ScenarioLegendBreakdown[]
   yearZeroHint: boolean
+  /** The purchase breakdown is worked out in today's money, whichever way the lines are drawn. */
+  breakdownInTodaysMoney: boolean
   onToggle: ((scenarioId: number) => void) | undefined
 }) {
   if (isHero) {
@@ -144,6 +147,7 @@ function PortfolioLegend({
         activeYear={activeYear}
         breakdowns={breakdowns}
         yearZeroHint={yearZeroHint}
+        breakdownInTodaysMoney={breakdownInTodaysMoney}
         onToggle={onToggle}
         listRef={listRef}
         layout={narrow ? 'rows' : 'chips'}
@@ -664,6 +668,7 @@ function NetWorthChartImpl({
         activeYear={activeYear}
         breakdowns={breakdowns}
         yearZeroHint={yearZeroHint}
+        breakdownInTodaysMoney={nominalMode}
         onToggle={onToggleVisible}
         listRef={listRef}
       />

@@ -21,6 +21,12 @@ interface ScenarioSeriesLegendProps {
   items: ScenarioLegendItem[]
   activeYear: number | null
   breakdowns: ScenarioLegendBreakdown[]
+  /**
+   * The breakdown is worked out on the real projection, so in the Nominal view its figures are in
+   * today's money while the values above it are inflated: it says so rather than leave the two to
+   * be read as one.
+   */
+  breakdownInTodaysMoney?: boolean
   yearZeroHint?: boolean
   /** The value list, for a caller that needs to know whether it is on screen. */
   listRef?: Ref<HTMLUListElement> | undefined
@@ -85,6 +91,7 @@ export function ScenarioSeriesLegend({
   items,
   activeYear,
   breakdowns,
+  breakdownInTodaysMoney = false,
   yearZeroHint = false,
   listRef,
   onToggle,
@@ -112,6 +119,9 @@ export function ScenarioSeriesLegend({
       />
       {breakdowns.length > 0 ? (
         <div className={styles.breakdownStack}>
+          {breakdownInTodaysMoney ? (
+            <p className={styles.breakdownNote}>The purchase breakdown is in today's money, not in the Nominal values above.</p>
+          ) : null}
           {breakdowns.map((entry) => (
             <BreakdownRows key={entry.id} {...entry} format={format} />
           ))}

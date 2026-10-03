@@ -621,6 +621,34 @@ describe('NetWorthChart', () => {
     expect(container.querySelector('svg')).not.toBeNull()
   })
 
+  it("says the purchase breakdown is in today's money in the Nominal view, where the legend values above it are inflated", () => {
+    const buys = makeScenario({ housePurchaseYear: 5 })
+    const stepToPurchase = (nominalMode: boolean) => {
+      const { container, unmount } = render(
+        <NetWorthChart
+          milestones={[]}
+          scenarios={[buys]}
+          draft={buys}
+          activeId={buys.id}
+          variant="hero"
+          nominalMode={nominalMode}
+        />,
+      )
+      const svg = container.querySelector('svg[role="img"]')!
+      fireEvent.keyDown(svg, { key: 'Home' })
+      for (let i = 0; i < 5; i++) fireEvent.keyDown(svg, { key: 'ArrowRight' })
+      const shown = {
+        breakdown: screen.queryByText('Start of year') !== null,
+        note: screen.queryByText(/in today's money, not in the Nominal values/) !== null,
+      }
+      unmount()
+      return shown
+    }
+
+    expect(stepToPurchase(false)).toEqual({ breakdown: true, note: false })
+    expect(stepToPurchase(true)).toEqual({ breakdown: true, note: true })
+  })
+
   it('fits each view to its own plan, so today\'s money is not stretched to the nominal height', () => {
     const axisTop = (nominalMode: boolean) => {
       const { container, unmount } = render(
