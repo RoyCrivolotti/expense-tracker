@@ -2,6 +2,14 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (the years to milestone table)
+
+- **The table is neutral, with a tint for distance.** The cells were fixed pastel colours, from green to red, that glared in the dark theme. A cell is now plain text on a tint of the theme's accent that deepens with the years (the darkest is the longest horizon among the rows), "already there" is a tick, and "not within the horizon" is a hatched box with the horizon and a plus. A line under the table says what each means. The text is always the normal colour, so it reads in both themes and in forced colours, where the tint goes and the numbers stay.
+- **Pointing at a cell says it in a sentence.** Pointing at, focusing or tapping a cell marks its row and column and writes one sentence under the table, such as "Path B reaches 750k in 6 years, by 2032. Your check-ins reached it by May '26." Every cell carries the same sentence for a screen reader. The arrow keys, Home and End move between cells, and the grid is one Tab stop.
+- **Years from now or calendar year.** A switch above the table shows each cell as the year the path gets there instead of the years it takes. The hint under the title now says that a year here is the yearly step at which a path first reaches the amount, so it can be up to a year later than the date on the Progress tab.
+- **"vs plan" shows who is ahead.** The button puts, under each cell, how many years sooner (green, with a minus) or later (with a plus) than the plan the path gets there, "=" when level, and "sooner" or "later" where one of the two never gets there. The plan and the plan from today have no figure, and neither does a path that starts on another day than the plan, whose years are counted from somewhere else. With no scenario marked as the current plan the button is off and says why.
+- **On the phone the seven milestones fit 375px.** Amounts lose the currency sign in the column heads, the check-in dates take two lines and the columns lose their padding. At 320px the table scrolls in its own box with the names held.
+
 ## October 2026 (messages on the wide Goals page)
 
 - **"Removed Real return from the bar", with its Undo, now shows at the bottom left, in the side rail.** It was centred over the levers bar. At 1200x800 and 1280x800, where the bar is held to the bottom edge, it covered the legend chips for six seconds, and the legend is what shows the lines' values after you take an input out. On a taller screen (1440x1024, or a 12.9-inch iPad on its side), where the bar is in the page and not at the edge, it covered the bottom of the bar and some of its controls. The rail is empty between its links and its menu button and the page never goes under it, so nothing is covered at any of the sizes measured. The same goes for the other messages on this page ("Saved Path A", a failed save).
