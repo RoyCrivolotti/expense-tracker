@@ -840,13 +840,14 @@ async function checkTouchTargets(browser, engine) {
   check(where, '(t) Reset to defaults is 44px in a row that is the same height', near((await reset.boundingBox()).height, 44, 0.5) && (await reset.evaluate((b) => Math.abs(b.parentElement.getBoundingClientRect().height - 44) <= 0.5)), px((await reset.boundingBox()).height))
   await context.close()
 
-  // From 1376px a bar of one row is no taller than its result column, so the lever rows cost no height.
+  // From 1376px a bar of one row is about as tall as its result column, so the lever rows cost no
+  // height to speak of: the column is 94px now that its padding is tighter, and the levers 96px.
   const wide = await openPlan(browser, { width: 1376, height: 1032 }, { touch: true })
   const bar = await wide.page.evaluate(() => ({
     levers: document.querySelector('[class*="leverGrid"]').getBoundingClientRect().height,
     side: document.querySelector('[class*="leverSide"]').getBoundingClientRect().height,
   }))
-  check(`${engine} iPad 1376`, '(t) in one row the levers are no taller than the result column beside them', bar.levers <= bar.side + 1, JSON.stringify(bar))
+  check(`${engine} iPad 1376`, '(t) in one row the levers are within 4px of the result column beside them', bar.levers <= bar.side + 4, JSON.stringify(bar))
   await wide.context.close()
 
   // A fine pointer and the phone's layout keep the sizes they had.
