@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { bootstrapEditor } from './scenarioDraft'
 import type * as ScenarioDraft from './scenarioDraft'
 import { useScenarioEditor, type ScenarioEditor } from './useScenarioEditor'
+import type { GoalScenario } from '../../../types'
 import { makeDataset, makeScenario } from '../../../testing/factories'
 import { makeActions } from '../../../testing/makeActions'
 
@@ -15,7 +16,7 @@ vi.mock('./scenarioDraft', async (importOriginal) => {
 function setup() {
   const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })
   const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })
-  const dataset = makeDataset({ goalScenarios: [plan, other] })
+  let dataset = makeDataset({ goalScenarios: [plan, other] })
   const actions = makeActions()
   const seen: ScenarioEditor[] = []
   const hook = renderHook(() => {
@@ -23,7 +24,13 @@ function setup() {
     seen.push(editor)
     return editor
   })
-  return { ...hook, seen, plan, other, actions }
+  // The app patches its data before a create resolves, so the editor never selects a scenario
+  // the data does not have yet.
+  const addToData = (scenario: GoalScenario) => {
+    dataset = makeDataset({ goalScenarios: [...dataset.goalScenarios, scenario] })
+    hook.rerender()
+  }
+  return { ...hook, seen, plan, other, actions, addToData }
 }
 
 describe('useScenarioEditor', () => {
@@ -68,8 +75,12 @@ describe('useScenarioEditor', () => {
   })
 
   it('saves the draft as a new scenario, last in the list, and loads it', async () => {
-    const { result, actions } = setup()
-    vi.mocked(actions.createScenario).mockResolvedValue(makeScenario({ id: 9, name: 'Path C', sortOrder: 2 }))
+    const { result, actions, addToData } = setup()
+    vi.mocked(actions.createScenario).mockImplementation(() => {
+      const created = makeScenario({ id: 9, name: 'Path C', sortOrder: 2 })
+      addToData(created)
+      return Promise.resolve(created)
+    })
     act(() => result.current.patchDraft({ monthlyContributionCents: 5 }))
 
     await act(async () => {
@@ -89,6 +100,47 @@ describe('useScenarioEditor', () => {
     setup()
 
     expect(bootstrapEditor).toHaveBeenCalledTimes(1)
+  })
+
+  describe('a scenario that is deleted while it is loaded', () => {
+    function setupWithRerender() {
+      const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })
+      const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })
+      const actions = makeActions()
+      return {
+        plan,
+        other,
+        ...renderHook(
+          ({ scenarios }) => useScenarioEditor(makeDataset({ goalScenarios: scenarios }), actions, 0),
+          { initialProps: { scenarios: [plan, other] } },
+        ),
+      }
+    }
+
+    it('leaves the numbers on screen as a draft with no saved scenario behind it', () => {
+      const { result, rerender, other } = setupWithRerender()
+      expect(result.current.activeId).toBe(1)
+
+      rerender({ scenarios: [other] })
+
+      expect(result.current.activeId).toBeNull()
+      expect(result.current.activeScenario).toBeNull()
+      expect(result.current.draft.name).toBe('Path A')
+      expect(result.current.dirty).toBe(false)
+      expect(result.current.discardPrompt.detached).toBe(true)
+    })
+
+    it('is loaded again once the draft is saved as a new scenario', () => {
+      const { result, rerender, other } = setupWithRerender()
+      rerender({ scenarios: [other] })
+      const saved = makeScenario({ id: 9, name: 'Path A', sortOrder: 1 })
+
+      rerender({ scenarios: [other, saved] })
+      act(() => result.current.selectScenario(saved))
+
+      expect(result.current.activeId).toBe(9)
+      expect(result.current.activeScenario).toEqual(saved)
+    })
   })
 
   describe('hidden lines', () => {

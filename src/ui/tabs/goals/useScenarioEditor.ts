@@ -57,7 +57,7 @@ export function useScenarioEditor(
   avgSaving: number,
 ): ScenarioEditor {
   const [first] = useState(() => bootstrapEditor(dataset, avgSaving))
-  const [activeId, setActiveId] = useState<number | null>(first.activeId)
+  const [loadedId, setActiveId] = useState<number | null>(first.activeId)
   // The saved scenario the draft was last loaded from. Detaching to "Unsaved draft" clears
   // activeId but keeps the edits, and this is what they are still measured against.
   const [baseId, setBaseId] = useState<number | null>(first.activeId)
@@ -83,9 +83,13 @@ export function useScenarioEditor(
   // owner's plan, which Progress measures against. Exploring a path must not change
   // what you are being measured against.
   const activeScenario = useMemo(
-    () => dataset.goalScenarios.find((s) => s.id === activeId) ?? null,
-    [dataset.goalScenarios, activeId],
+    () => dataset.goalScenarios.find((s) => s.id === loadedId) ?? null,
+    [dataset.goalScenarios, loadedId],
   )
+  // A scenario deleted while it is loaded is not loaded any more: the numbers on screen stay,
+  // as a draft with no saved scenario behind it, which is what the tabs and the buttons must
+  // say. Reading the id from the state alone left them naming one that no longer exists.
+  const activeId = activeScenario?.id ?? null
   const dirty = useMemo(
     () => activeScenario !== null && differsFrom(draft, activeScenario),
     [activeScenario, draft],
