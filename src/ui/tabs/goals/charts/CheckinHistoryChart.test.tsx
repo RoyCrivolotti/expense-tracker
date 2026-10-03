@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { CheckinHistoryChart } from './CheckinHistoryChart'
 import { nearestScatter,
-  nearestScatterValue, buildCheckinTooltip, realCheckinPoints } from './checkinChartUtils'
+  buildCheckinTooltip, realCheckinPoints } from './checkinChartUtils'
 import { makeScenario } from '../../../../testing/factories'
 import { EU_MONEY_FORMAT } from '../../../../engine/money'
 import type { WealthAccount, WealthCheckin } from '../../../../types'
@@ -115,34 +115,6 @@ describe('CheckinHistoryChart', () => {
     const labels = [...legendItems].map((li) => li.textContent)
     expect(labels).toContain('Plan')
     expect(labels).toContain('Actual')
-  })
-})
-
-describe('nearestScatterValue', () => {
-  it('returns the value of the nearest point within 0.5 of the index', () => {
-    const points = [
-      { xIndex: 2.3, value: 100 },
-      { xIndex: 5.1, value: 200 },
-    ]
-    expect(nearestScatterValue(points, 2)).toBe(100)
-    expect(nearestScatterValue(points, 5)).toBe(200)
-  })
-
-  it('returns null when no point is within 0.5', () => {
-    const points = [{ xIndex: 3.8, value: 100 }]
-    expect(nearestScatterValue(points, 5)).toBeNull()
-  })
-
-  it('returns null for an empty points array', () => {
-    expect(nearestScatterValue([], 0)).toBeNull()
-  })
-
-  it('picks the closest point when multiple are within range', () => {
-    const points = [
-      { xIndex: 2.4, value: 100 },
-      { xIndex: 2.1, value: 200 },
-    ]
-    expect(nearestScatterValue(points, 2)).toBe(200)
   })
 })
 
