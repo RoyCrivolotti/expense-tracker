@@ -24,7 +24,7 @@ interface GoalsViewSwitchProps {
   memory: GoalsScrollMemory
 }
 
-/** Plan / Progress / Assumptions, or on a phone the row of Chart / Adjust / Progress / Assumptions. */
+/** Plan / Progress / Assumptions, or on a phone the row of Chart / Progress / Scenarios / Assumptions. */
 export function GoalsViewSwitch({
   view,
   onViewChange,

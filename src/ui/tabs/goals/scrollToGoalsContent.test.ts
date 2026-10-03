@@ -97,7 +97,7 @@ describe('restoreScrollPosition', () => {
     expect(scrollTo).toHaveBeenCalledWith({ top: 1400, behavior: 'auto' })
   })
 
-  it('shows the Adjust sections it is given, and only those, before it scrolls', () => {
+  it('shows the Scenario sections it is given, and only those, before it scrolls', () => {
     let shown: AdjustSection[] = []
     vi.spyOn(window, 'scrollTo').mockImplementation(() => {
       shown = openAdjustSections()

@@ -73,7 +73,7 @@
 
 /* What scrolls under a pinned block fades out instead of being cut along its edge: a short
    run of the page background below it, so the edge reads as depth. For the row that run is
-   short (in Adjust the chart's own padding sits under it, so it shows nothing there), and the
+   short (in Scenarios the chart's own padding sits under it, so it shows nothing there), and the
    pinned chart sets a longer one with --fade-h. The block must be positioned. */
 .fadeBelow::after {
   content: '';
@@ -98,7 +98,7 @@
 }
 
 /* Mobile: flat column via flex order. Wrappers use display:contents.
-   Controls are hidden by default; the Chart/Adjust segments (data-mobile-view
+   Controls are hidden by default; the Chart/Scenarios segments (data-mobile-view
    on .layout) swap them in for the hero + secondary charts. */
 @media (max-width: 899px) {
   .heroBlock {
@@ -112,7 +112,7 @@
   }
 
   /* The chart leads Chart: below the snapshot and the scenario list it would start a screen
-     and a half down. Adjust shows neither the chart nor the detail charts, so its order
+     and a half down. Scenarios shows neither the chart nor the detail charts, so its order
      (below) is the snapshot, the scenarios, the pinned chart, then the controls. */
   .areaNow {
     order: 2;
@@ -496,7 +496,7 @@
   background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
 }
 
-/* The jump links under the draft's chart in Adjust: the secondary chart picker's chips, with the
+/* The jump links under the draft's chart in Scenarios: the secondary chart picker's chips, with the
    room around the row taken in, since the row is pinned with the chart when the chart is. */
 .sectionRow {
   display: flex;

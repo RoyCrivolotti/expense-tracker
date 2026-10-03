@@ -49,6 +49,7 @@ export function AssumptionsView({
         for, the months of spending to hold in cash, and an assumed inflation rate. That rate
         brings check-ins, the house and the mortgage back to today&apos;s money.
       </p>
+      <p className={goalStyles.chartHint}>Return, growth and housing are per scenario, in Scenarios.</p>
       <MilestonesSetting settings={settings} onChange={onSettingsChange} />
       <div ref={accountsCard} className={styles.landingTarget}>
         <WealthAccountsManager accounts={accounts} checkins={checkins} actions={actions} />

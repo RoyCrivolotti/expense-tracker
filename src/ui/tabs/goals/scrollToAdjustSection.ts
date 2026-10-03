@@ -16,7 +16,7 @@ const VIEWER_SCROLL_EVENTS = ['wheel', 'touchstart'] as const
 let endSettleCheck: (() => void) | undefined
 
 /**
- * What covers the top of the page once it has scrolled: the stack in Adjust, which is only
+ * What covers the top of the page once it has scrolled: the stack in Scenarios, which is only
  * pinned on a screen with room for it, and the view row otherwise.
  */
 function pinnedElement(): HTMLElement | null {
@@ -31,7 +31,7 @@ export function pinnedBottom(): number {
   return pinned ? stickyBottom(pinned) : 0
 }
 
-/** Scroll an Adjust section's heading to just under what is pinned, opening it first. */
+/** Scroll an Scenarios section's heading to just under what is pinned, opening it first. */
 export function scrollToAdjustSection(key: AdjustSection, behavior: 'auto' | 'smooth'): void {
   const section = document.getElementById(adjustSectionId(key))
   if (!section) return
@@ -43,7 +43,7 @@ export function scrollToAdjustSection(key: AdjustSection, behavior: 'auto' | 'sm
 }
 
 /**
- * Open Adjust at its controls rather than at the cards above them, so the first thing on
+ * Open Scenarios at its controls rather than at the cards above them, so the first thing on
  * screen under the pinned chart is a slider. Deferred a frame so the stack and the controls
  * have been rendered before they are measured.
  */

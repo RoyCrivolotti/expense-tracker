@@ -11,8 +11,8 @@ import styles from './goals.module.css'
 
 const OPTIONS = optionsFrom<GoalsMobileView>({
   chart: 'Chart',
-  adjust: 'Adjust',
   progress: 'Progress',
+  adjust: 'Scenarios',
   assumptions: 'Assumptions',
 })
 
@@ -48,7 +48,7 @@ export function GoalsMobileNav({ value, onChange, memory }: GoalsMobileNavProps)
     }
     if (memory.recall(next)) return
     if (next === 'adjust') {
-      // Opening Adjust for the first time is a request for the controls, wherever the page was.
+      // Opening Scenarios for the first time is a request for the controls, wherever the page was.
       landOnAdjustControls()
     } else if (stuck) {
       scrollToGoalsContent('auto')

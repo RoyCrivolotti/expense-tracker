@@ -18,7 +18,7 @@ const VIEWS = [
   { value: 'compare', label: 'Compare' },
   { value: 'composition', label: 'Composition' },
   { value: 'milestones', label: 'Milestones' },
-  { value: 'fire', label: 'FIRE' },
+  { value: 'fire', label: 'FI' },
   { value: 'rent', label: 'Rent vs buy' },
   { value: 'savings', label: 'Investing' },
 ] as const

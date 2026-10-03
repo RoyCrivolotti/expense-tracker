@@ -4,7 +4,7 @@ import type { GoalsMobileView } from './goalsView'
 import { restoreScrollPosition } from './scrollToGoalsContent'
 import { useGoalsNarrow } from './useGoalsNarrow'
 
-/** Where a view was when it was left, and for Adjust which of its sections were showing. */
+/** Where a view was when it was left, and for Scenarios which of its sections were showing. */
 interface Left {
   top: number
   open: readonly AdjustSection[] | null

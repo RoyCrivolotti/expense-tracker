@@ -12,7 +12,7 @@ The Goals tab has three views:
 - **Progress** — wealth tracking. Log actual balances per account, see on/off-track status against your plan, and compare actuals to the projection over time.
 - **Assumptions** — what Progress measures with: the milestone ladder, the wealth accounts each check-in records a balance for, the cash reserve target in months of spending, and the assumed inflation every Goals view uses.
 
-Below 900px wide the switch is one row of four segments, Chart, Adjust, Progress and Assumptions, because Plan is two screens there: Chart holds the hero chart, the snapshot, the scenarios and the detail charts, and Adjust keeps the snapshot and the scenarios, and puts the controls under a pinned chart of the draft.
+Below 900px wide the switch is one row of four segments, Chart, Progress, Scenarios and Assumptions, because Plan is two screens there: Chart holds the hero chart, the snapshot, the scenarios and the detail charts, and Scenarios keeps the snapshot and the scenarios, and puts the controls under a pinned chart of the draft.
 
 ### The plan
 
@@ -80,7 +80,7 @@ A milestone counts as **reached** once any wealth check-in recorded an invested 
 
 Chart reference lines are capped relative to the projection's own ceiling. A milestone far above what the plan reaches is left off the chart rather than compressing the projection into a sliver at the bottom; it still appears in the matrix. The FI target follows the same rule in every window, All included: a reference line sets the axis, so a target well above the plan is left off the axis and marked on the chart's top edge with an arrow and its amount (`ChartAboveMarker`).
 
-## FIRE / withdrawal
+## Financial independence and withdrawal
 
 Safe withdrawal rate defaults to 4% (25× annual spend). Adjustable per scenario.
 

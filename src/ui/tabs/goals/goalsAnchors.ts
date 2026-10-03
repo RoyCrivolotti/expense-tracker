@@ -10,5 +10,5 @@ export const GOALS_CONTENT_ANCHOR_ID = 'goals-content-top'
 /** The sticky row of Goals views on a phone, which is what stays pinned in every view. */
 export const GOALS_NAV_ID = 'goals-nav'
 
-/** The draft's chart and the section chips under the view row in Adjust, pinned where the screen has room. */
+/** The draft's chart and the section chips under the view row in Scenarios, pinned where the screen has room. */
 export const ADJUST_STACK_ID = 'goals-adjust-stack'

@@ -199,7 +199,7 @@ function StatusRow({
     // against. Telling the second user to go choose a plan sends them the wrong way.
     const why = !plan
       ? 'No plan chosen yet. Open a scenario under Plan and choose Use as my plan.'
-      : `${plan.name} has no start date yet. Set one under Plan tracking, or re-baseline it from this check-in, to see whether you are ahead or behind.`
+      : `${plan.name} has no start date yet. Set one under Plan start, or re-baseline it from this check-in, to see whether you are ahead or behind.`
     return (
       <div className={styles.summaryStatus}>
         <span className={[styles.statusDot, styles.statusDotNeutral].join(' ')} />

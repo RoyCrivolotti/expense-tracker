@@ -62,7 +62,7 @@ describe('useGoalsScrollMemory', () => {
     expect(result.current).toBe(first)
   })
 
-  describe('for Adjust, whose sections fold up when its controls are unmounted', () => {
+  describe('for Scenarios, whose sections fold up when its controls are unmounted', () => {
     function mountSections(open: string[]) {
       for (const s of ADJUST_SECTIONS) {
         const el = document.createElement('details')

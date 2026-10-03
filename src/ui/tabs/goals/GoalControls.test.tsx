@@ -14,7 +14,7 @@ function makeDraft() {
 }
 
 describe('GoalControls', () => {
-  it('has one folding section per Adjust section, in the order the section row lists them', () => {
+  it('has one folding section per Scenarios section, in the order the section row lists them', () => {
     const { container } = render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
 
     // The scrollspy reads these in DOM order and indexes the chips by it.
@@ -57,9 +57,9 @@ describe('GoalControls', () => {
     expect(screen.getByLabelText('House appreciation (%/yr)')).toBeInTheDocument()
   })
 
-  it('renders the Plan tracking section (collapsed by default)', () => {
+  it('renders the Plan start section (collapsed by default)', () => {
     render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
-    expect(screen.getByText('Plan tracking')).toBeInTheDocument()
+    expect(screen.getByText('Plan start')).toBeInTheDocument()
   })
 
   it('renders the plan start date input', () => {
@@ -159,7 +159,7 @@ describe('GoalControls', () => {
     expect(named).toEqual(
       expect.arrayContaining([
         'Contribution growth (%/yr)',
-        'Real return',
+        'Real return (%/yr, after inflation)',
         'Down payment',
         'Mortgage rate (%/yr)',
         'House appreciation (%/yr)',

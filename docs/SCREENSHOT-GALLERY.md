@@ -90,17 +90,17 @@ Cash recon shows **Carryover**, **This month**, and **Total gap** columns (deskt
 
 ## Goals
 
-Multi-scenario wealth planner in three views. Plan: three saved paths plus an unsaved draft, FI progress, FIRE drawdown, rent-vs-buy net worth, and actual saving vs plan. Progress: dated check-ins with on/off-track status, net worth over time, and actual vs plan. Assumptions: the milestone ladder, the wealth accounts, the cash reserve and the assumed inflation. On desktop the projection chart leads the right-hand column and the intro and glossary end the sidebar, under the controls. Desktop secondary charts default to a full-width stack with an optional single-chart tab mode; mobile uses a scrollable chart picker. On a phone one row under the header switches between Chart, Adjust, Progress and Assumptions (Plan is Chart and Adjust there), and the mobile overview is Chart, which opens on the projection chart with the glossary below the charts.
+Multi-scenario wealth planner in three views. Plan: three saved paths plus an unsaved draft, FI progress, FI drawdown, rent-vs-buy net worth, and actual saving vs plan. Progress: dated check-ins with on/off-track status, net worth over time, and actual vs plan. Assumptions: the milestone ladder, the wealth accounts, the cash reserve and the assumed inflation. On desktop the projection chart leads the right-hand column and the intro and glossary end the sidebar, under the controls. Desktop secondary charts default to a full-width stack with an optional single-chart tab mode; mobile uses a scrollable chart picker. On a phone one row under the header switches between Chart, Progress, Scenarios and Assumptions (Plan is Chart and Scenarios there), and the mobile overview is Chart, which opens on the projection chart with the glossary below the charts.
 
 | Desktop overview | Mobile overview |
 | --- | --- |
 | ![Goals desktop](./screenshots/gallery/goals-desktop.png) | ![Goals mobile](./screenshots/gallery/goals-mobile.png) |
 
-| Adjust (mobile) |
+| Scenarios (mobile) |
 | --- |
 | ![Goals adjust mobile](./screenshots/gallery/goals-mobile-adjust.png) |
 
-Adjust opens at its first section. The draft's chart and the section chips stay pinned under the view row while the controls scroll, and Save and Discard join the chips once a saved scenario has edits.
+Scenarios opens at its first section. The draft's chart and the section chips stay pinned under the view row while the controls scroll, and Save and Discard join the chips once a saved scenario has edits.
 
 | Progress (desktop) | Progress (mobile) |
 | --- | --- |
@@ -122,9 +122,9 @@ Adjust opens at its first section. The draft's chart and the section chips stay 
 | --- | --- |
 | ![Goals explainer mobile](./screenshots/gallery/goals-mobile-explainer.png) | ![Goals composition mobile](./screenshots/gallery/goals-mobile-composition.png) |
 
-| FIRE drawdown (mobile) | Rent vs buy (mobile) |
+| FI drawdown (mobile) | Rent vs buy (mobile) |
 | --- | --- |
-| ![Goals FIRE mobile](./screenshots/gallery/goals-mobile-fire.png) | ![Goals rent mobile](./screenshots/gallery/goals-mobile-rent.png) |
+| ![Goals FI mobile](./screenshots/gallery/goals-mobile-fire.png) | ![Goals rent mobile](./screenshots/gallery/goals-mobile-rent.png) |
 
 | Actual saving vs plan (mobile) | Milestones (mobile) |
 | --- | --- |

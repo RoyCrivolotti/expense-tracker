@@ -60,7 +60,7 @@ function FireChartImpl({
 
   return (
     <ChartShell embedded={embedded}>
-      <h3 className={styles.chartTitle}>FIRE drawdown</h3>
+      <h3 className={styles.chartTitle}>FI drawdown</h3>
       <p className={styles.chartHint}>
         FI target {formatMoneyShort(fiTarget, format)}
         {fiYear != null ? ` · reached year ${fiYear}` : ' · not reached in horizon'}. Post-FI
@@ -72,7 +72,7 @@ function FireChartImpl({
         xLabels={labels}
         refLines={[fiTarget]}
         formatValue={(c) => formatMoneyShort(c, format)}
-        ariaLabel="FIRE drawdown projection by year"
+        ariaLabel="FI drawdown projection by year"
         tooltip={tooltip}
       />
       <ChartLegend items={FIRE_LEGEND} />

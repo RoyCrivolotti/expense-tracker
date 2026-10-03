@@ -20,7 +20,7 @@ const READING_MARGIN_PX = 12
 const USER_SCROLL_EVENTS = ['touchstart', 'wheel', 'keydown', 'pointerdown'] as const
 
 /**
- * Jump links to the Adjust sections, pinned with the draft's chart (on a screen with room for
+ * Jump links to the Scenario sections, pinned with the draft's chart (on a screen with room for
  * both) so a slider two sections down is a tap away. The chip for the section being read is
  * marked as it scrolls past.
  *
@@ -97,7 +97,7 @@ export function AdjustSectionNav({ unsaved }: { unsaved?: UnsavedActions | undef
   if (!narrow) return null
   return (
     <div className={`${styles.sectionRow}${unsaved ? ` ${styles.sectionRowActions}` : ''}`}>
-      <nav aria-label="Adjust sections" className={styles.sectionNav}>
+      <nav aria-label="Scenario sections" className={styles.sectionNav}>
         <div className={`${styles.chipRow} ${styles.sectionChips}`} ref={strip}>
           {ADJUST_SECTIONS.map((s) => (
             <button
