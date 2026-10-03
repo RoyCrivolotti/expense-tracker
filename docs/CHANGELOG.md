@@ -8,6 +8,39 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 - **The check-in dots are no longer amber.** They were the same amber as the third scenario's line, so a dot read as part of Path C. They are now the text colour.
 - **The chart says what its dots and diamonds are.** The legend named the lines and nothing else. A line under it now names the check-in dots and the life events (money in, money out), each only when it is on the chart.
 
+## October 2026 (nothing moves under the pointer on the wide Goals page)
+
+- **The first edit no longer pushes the page down.** At 1280px the scenario row wrapped when Unsaved changes, Discard and Save appeared, and everything under it moved 40px. The row stays one line: the tabs give up width (names are cut, then the strip scrolls), and the Unsaved changes pill is drawn only from 1500px wide, since the tab already says Edited. A screen reader still reads it.
+- **Pointing at a purchase year no longer grows the page.** The breakdown (start of year, return, down payment and so on) was added under the legend, which made the hero card 144px taller at 1440px and moved the cards and the bar below it. It now floats over the chart on the side away from the year you point at, and lets the pointer through. The phone keeps it under the legend.
+- **The legend does not wrap when you point at the chart.** At 1200 to 1280px the chips fitted on one line until the values arrived, then wrapped to two and slid under the bar held at the bottom of the screen (26px under it at 1280x800). A chip now keeps room for its value, gives up some of its name before the row wraps, and shows the full name when you rest the pointer on it.
+
+## October 2026 (the rest of the wide Goals page, for a finger)
+
+Measured at 1032px with an iPad's touch emulation. Only a touch screen from 900px wide changes; a mouse and the phone layout keep their sizes.
+
+- **The inputs panel is 44px a row.** The - and + buttons went from 26px to 44px square, and the fields (the amounts, the percentages, the years) from 26px to 44px tall. The panel is taller for it, 815px to 1001px with its columns across, and a star still sits on the first line of its label when the label wraps, which it was off by 5px on before.
+- **A slider is 44px to press.** It was 17px tall and a touch anywhere in a slider's box moves it (checked in Safari on an iPad, a tap 17px above the track moved it), so the box is 44px while it takes 28px of the page. The thumb is the one the browser draws, about 23px wide on the iPad, and is not changed.
+- **A lever's whole row of digits is 44px.** It was 30px. A bar of one row, from 1376px wide, is as tall as before; one that wraps to two rows (1032px) is 44px taller, 186px to 230px.
+- **The chart's legend chips are tapped from 44px.** They stay 26px tall, so the chart does not move; the tap area reaches past them. Where the chips wrap onto a second line each has 34px, since the lines are 8px apart.
+- **The scenario menu is for a finger.** Its rows went from 34px to 44px and the name field from 29px to 44px, and the colour dots from 20px to 28px with a 36 by 44px tap area. The menu is 40px wider (344px) to keep the nine dots in one row.
+- **Life events, Save, Discard and Reset to defaults are 44px.** Add life event and Add were 24px, Cancel 28px, the remove cross 14px by 16px, Save, Discard and Reset 31px, and the help line under the page 34px.
+- **Taking an input out of the bar says so, with Undo.** Pressing a star in the bar took the input out and the others moved up with nothing to say why, and on a touch screen the star's tooltip is not there. A message at the bottom, "Removed Real return from the bar", has an Undo that puts the input back in its place for six seconds. Where the bar is held to the bottom edge the message sits above it.
+- **Save says why it is off.** With no name, Save changes (and Save scenario for a draft) showed the reason only as a tooltip, which touch never shows. It is written beside the button now. The phone's narrow row keeps the tooltip.
+
+## October 2026 (leaving Goals with unsaved edits)
+
+- **Leaving Goals with an unsaved edit asks first.** Typing 900 over Monthly investing, pressing Dashboard and coming back to Goals showed 500 again with nothing said. Pressing any other section, in the side rail or the phone's bottom bar, now asks "Leave without saving?" and says that your changes to the scenario (or to the unsaved draft) will be lost. Stay closes the question and leaves everything as it was, with focus back on the button you pressed (Escape does the same); Leave goes to the section you pressed. In a read-only session the question says the changes cannot be saved instead of suggesting a save.
+- **It does not ask when nothing would be lost.** Pressing the section you are already in, moving between Plan, Progress and Assumptions (which keep the edit), and leaving while a save is on its way do not ask. Switching to another scenario tab asks the same question as before.
+- **Reloading or closing the tab with an unsaved edit gets the browser's own warning.** That also covers Back and the Navigate menu's links to other apps, which leave the page and cannot show this one's question. It is only there while an edit is unsaved.
+
+## October 2026 (headline figures on the wide Goals page, from a review of it)
+
+- **The FI year counts the invested portfolio, as the milestones do.** It used the net worth, house included, so a plan with a house said "Financial independence: year 0" beside a 1,0M milestone, the same amount as the FI target, ten years off. A withdrawal rate draws on what can be sold and spent, which a house is not, so the FI year and the drawdown chart's starting balance now use the portfolio.
+- **The bar shows the invested part of the net worth when there is a house.** A plan with a house read 9,0M in the bar and 4,4M at the end of its line, with nothing to say why. The bar adds a line, "4.388.000 € invested", when the two differ at the horizon.
+- **Purchase year 0 is called "Already own".** "Now" read like a purchase still to be paid for, but year 0 takes nothing out of the portfolio and counts the house from the start. The bar, the panel, its hint and the comparison table say "Already own", and a purchase year past the horizon says "past horizon", since the chart never reaches it.
+
+## October 2026 (labels and numbers on the Goals charts, from a review of the wide page)
+
 - **"Years to milestone" says how far it looked.** A milestone not reached was always "40+", though the search stops at the scenario's own horizon: on a 30 year plan a milestone reached in year 32 read "40+", and with the horizon at 45 the same cell read "32y". It now says "30+" or "12+", the horizon it was looked for over.
 - **A copy and its original are two names in the tables.** Both tables cut a name at its colon, so "Path A: Invest only" and its copy were two rows both called Path A, told apart only by a swatch. A row keeps its full name when another scenario would be given the same short one.
 - **The composition chart's house is its value, not its equity.** The legend and tooltip said "House equity 4,0M" and "Mortgage owed 3,2M" for a house with 0,8M of equity, and the hint took the mortgage off twice if read as written. The tooltip also uses the legend's names now.

@@ -41,7 +41,7 @@ function LegendRow({
   const body = (
     <>
       <SeriesSwatch color={item.color} {...(item.dashed ? { dashed: true } : {})} {...(item.dotted ? { dotted: true } : {})} />
-      <span className={styles.label}>{item.label}</span>
+      <span className={styles.label} title={item.label}>{item.label}</span>
       <span className={item.outOfRun ? `${styles.value} ${styles.valueNone}` : styles.value}>
         {item.valueCents != null ? formatValue(item.valueCents) : item.outOfRun ? '-' : ''}
       </span>

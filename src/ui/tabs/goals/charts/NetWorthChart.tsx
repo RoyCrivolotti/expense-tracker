@@ -118,6 +118,11 @@ function purchaseMarkerIndices(lines: ScenarioLine[], years: number[]): { yearIn
   return [...indices].sort((a, b) => a - b).map((yearIndex) => ({ yearIndex }))
 }
 
+/** The breakdown floats on the half of the chart the pointer is not in. */
+function floatSideFor(activeIndex: number | null, pointCount: number): 'start' | 'end' {
+  return activeIndex != null && activeIndex > (pointCount - 1) / 2 ? 'start' : 'end'
+}
+
 function PortfolioLegend({
   isHero,
   narrow,
@@ -128,6 +133,7 @@ function PortfolioLegend({
   breakdowns,
   yearZeroHint,
   breakdownInTodaysMoney,
+  floatSide,
   onToggle,
 }: {
   isHero: boolean
@@ -140,6 +146,8 @@ function PortfolioLegend({
   yearZeroHint: boolean
   /** The purchase breakdown is worked out in today's money, whichever way the lines are drawn. */
   breakdownInTodaysMoney: boolean
+  /** Which side of the chart the wide layout's floating breakdown sits on. */
+  floatSide: 'start' | 'end'
   onToggle: ((scenarioId: number) => void) | undefined
 }) {
   if (isHero) {
@@ -153,6 +161,7 @@ function PortfolioLegend({
         onToggle={onToggle}
         listRef={listRef}
         layout={narrow ? 'rows' : 'chips'}
+        floatSide={floatSide}
       />
     )
   }
@@ -684,6 +693,7 @@ function NetWorthChartImpl({
         breakdowns={breakdowns}
         yearZeroHint={yearZeroHint}
         breakdownInTodaysMoney={nominalMode}
+        floatSide={floatSideFor(activeIndex, years.length)}
         onToggle={onToggleVisible}
         listRef={listRef}
       />

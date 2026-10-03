@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_LEVERS, type LeverKey } from '../../../engine'
 import { ToastContext } from '../../hooks/useToast'
+import { LEVER_SPECS } from './leverFields'
 import { useStarredLevers } from './useStarredLevers'
 
 const DEFAULTS = [...DEFAULT_LEVERS]
@@ -137,6 +138,90 @@ describe('useStarredLevers', () => {
     const again = setup(DEFAULTS, save)
     act(() => again.result.current.reset())
     expect(calls).toHaveLength(1)
+  })
+
+  describe('the toast after a star takes an input out', () => {
+    // The second of the bar's five, so that putting it back at the end would be a different list.
+    const second = DEFAULTS[1]!
+    const withoutSecond = DEFAULTS.filter((k) => k !== second)
+
+    it('says which input left and offers to put it back', async () => {
+      const { save, calls } = deferredSave()
+      const { result, showToast } = setup(DEFAULTS, save)
+
+      act(() => result.current.toggle(second))
+
+      expect(showToast).toHaveBeenCalledTimes(1)
+      const [message, tone, action] = showToast.mock.calls[0] as [string, string, { label: string; onAction: () => void }]
+      expect(message).toBe(`Removed ${LEVER_SPECS[second].short} from the bar`)
+      expect(tone).toBe('info')
+      expect(action.label).toBe('Undo')
+      await settle(() => calls[0]!.resolve())
+    })
+
+    it('puts the input back in the place it was, in one write', async () => {
+      const { save, calls } = deferredSave()
+      const { result, showToast } = setup(DEFAULTS, save)
+      act(() => result.current.toggle(second))
+      await settle(() => calls[0]!.resolve())
+      const undo = (showToast.mock.calls[0]![2] as { onAction: () => void }).onAction
+
+      act(() => undo())
+
+      expect(result.current.keys).toEqual(DEFAULTS)
+      expect(calls).toHaveLength(2)
+      expect(calls[1]!.patch).toEqual({ goalLevers: DEFAULTS })
+      await settle(() => calls[1]!.resolve())
+    })
+
+    it('puts it back in the list as it is by then, not the one it left', async () => {
+      const { save, calls } = deferredSave()
+      const { result, showToast } = setup(DEFAULTS, save)
+      act(() => result.current.toggle(second))
+      await settle(() => calls[0]!.resolve())
+      const undo = (showToast.mock.calls[0]![2] as { onAction: () => void }).onAction
+      // Another input is taken out after it: undoing must not bring that one back too.
+      act(() => result.current.toggle(DEFAULTS[3]!))
+      await settle(() => calls[1]!.resolve())
+
+      act(() => undo())
+
+      expect(result.current.keys).toEqual(DEFAULTS.filter((k) => k !== DEFAULTS[3]))
+      await settle(() => calls[2]!.resolve())
+    })
+
+    it('does nothing when the input is back already or the bar is full again', async () => {
+      const { save, calls } = deferredSave()
+      const { result, showToast } = setup(DEFAULTS, save)
+      act(() => result.current.toggle(second))
+      await settle(() => calls[0]!.resolve())
+      const undo = (showToast.mock.calls[0]![2] as { onAction: () => void }).onAction
+
+      // Filled by another input from the panel.
+      act(() => result.current.toggle('rentMonthlyCents'))
+      await settle(() => calls[1]!.resolve())
+      act(() => undo())
+      expect(result.current.keys).toEqual([...withoutSecond, 'rentMonthlyCents'])
+      expect(calls).toHaveLength(2)
+
+      // The same input put back by hand, and then Undo pressed.
+      act(() => result.current.toggle('rentMonthlyCents'))
+      await settle(() => calls[2]!.resolve())
+      act(() => result.current.toggle(second))
+      await settle(() => calls[3]!.resolve())
+      act(() => undo())
+      expect(calls).toHaveLength(4)
+    })
+
+    it('is not shown for an input put in, only for one taken out', async () => {
+      const { save, calls } = deferredSave()
+      const { result, showToast } = setup(DEFAULTS.slice(0, 4), save)
+
+      act(() => result.current.toggle('rentMonthlyCents'))
+
+      expect(showToast).not.toHaveBeenCalled()
+      await settle(() => calls[0]!.resolve())
+    })
   })
 
   it('changes nothing in a read-only session', () => {

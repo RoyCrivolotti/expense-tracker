@@ -53,6 +53,39 @@ describe('ToastProvider', () => {
     expect(screen.queryByRole('status')).toBeNull()
   })
 
+  it('keeps a toast with a button up long enough to find it, and runs what the button offers once', () => {
+    const onAction = vi.fn()
+    function WithUndo() {
+      const { showToast } = useToast()
+      return (
+        <button type="button" onClick={() => showToast('Removed Horizon from the bar', 'info', { label: 'Undo', onAction })}>
+          go
+        </button>
+      )
+    }
+    render(
+      <ToastProvider>
+        <WithUndo />
+      </ToastProvider>,
+    )
+    act(() => screen.getByText('go').click())
+
+    act(() => {
+      vi.advanceTimersByTime(5500)
+    })
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument()
+
+    act(() => screen.getByRole('button', { name: 'Undo' }).click())
+    expect(onAction).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull()
+
+    act(() => screen.getByText('go').click())
+    act(() => {
+      vi.advanceTimersByTime(6100)
+    })
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
   it('turns an unhandled rejection into an error toast', () => {
     render(
       <ToastProvider>

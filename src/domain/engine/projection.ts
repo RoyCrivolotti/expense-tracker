@@ -262,13 +262,19 @@ export function fireNumber(annualSpendCents: number, swr: number): number {
   return Math.round(annualSpendCents / swr)
 }
 
+/**
+ * The year the invested portfolio reaches the FI target. The portfolio, not the net worth: what
+ * the withdrawal rate draws on is what can be sold and spent, and a house is not that. It is
+ * also the measure the milestones use, so the two cannot disagree about a plan with a house
+ * (net worth with the house in it said "year 0" where the portfolio had a decade to go).
+ */
 export function yearsToFi(
   params: ProjectionParams,
   annualSpendCents: number,
   swr: number,
 ): number | null {
   const target = fireNumber(annualSpendCents, swr)
-  return yearsToTargetFromProjection(params, target, true)
+  return yearsToTargetFromProjection(params, target, false)
 }
 
 /** Monthly mortgage payment for rent-vs-own comparison. */

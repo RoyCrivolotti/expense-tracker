@@ -89,6 +89,30 @@ describe('ConfirmSheet', () => {
   })
 })
 
+describe('ConfirmSheet cancel button', () => {
+  it('says Cancel unless the question names the safe answer otherwise, and either way cancels', () => {
+    const onCancel = vi.fn()
+    const { rerender } = render(
+      <ConfirmSheet title="Delete?" message="Gone." confirmLabel="Delete" onConfirm={vi.fn()} onCancel={onCancel} />,
+    )
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
+
+    rerender(
+      <ConfirmSheet
+        title="Leave?"
+        message="Gone."
+        confirmLabel="Leave"
+        cancelLabel="Stay"
+        onConfirm={vi.fn()}
+        onCancel={onCancel}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Stay' }))
+    expect(onCancel).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('ConfirmSheet leaving', () => {
   beforeEach(() => {
     vi.useFakeTimers()

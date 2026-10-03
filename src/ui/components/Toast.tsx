@@ -5,10 +5,17 @@ import styles from './Toast.module.css'
 
 export type ToastTone = 'info' | 'success' | 'error'
 
+/** A button in the toast that takes back what the message says was done. */
+export interface ToastAction {
+  label: string
+  onAction: () => void
+}
+
 export interface ToastItem {
   id: number
   message: string
   tone: ToastTone
+  action?: ToastAction | undefined
 }
 
 /** Presentational snackbar. State + auto-dismiss live in ToastProvider. */
@@ -34,12 +41,26 @@ function ToastBubble({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => 
     <div className={styles.viewport} role="status" aria-live="polite">
       <div
         key={toast.id}
-        className={`${styles.toast} ${styles[toast.tone]}${leaving ? ` ${styles.leaving}` : ''}`}
+        className={`${styles.toast} ${styles[toast.tone]}${toast.action ? ` ${styles.withAction}` : ''}${leaving ? ` ${styles.leaving}` : ''}`}
         style={exitVars(leaving, exitMs)}
         onClick={onDismiss}
         role="presentation"
       >
         {toast.message}
+        {toast.action ? (
+          <button
+            type="button"
+            className={styles.action}
+            onClick={(event) => {
+              // The tap is the action, which then takes the toast with it.
+              event.stopPropagation()
+              toast.action?.onAction()
+              onDismiss()
+            }}
+          >
+            {toast.action.label}
+          </button>
+        ) : null}
       </div>
     </div>
   )

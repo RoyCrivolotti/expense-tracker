@@ -126,6 +126,43 @@ describe('ExpensesApp tab wiring', () => {
     expect(screen.getByRole('tab', { name: 'Progress' })).toHaveAttribute('aria-selected', 'true')
   }, 20_000)
 
+  it('asks before the rail or the bottom bar takes the user off Goals with an unsaved edit, and goes where they pressed on Leave', async () => {
+    const dataset = datasetWith({
+      categories: [{ id: 1, name: 'Groceries', monthlyBudgetCents: 30000, sortOrder: 0, active: true }],
+      accounts: [{ id: 1, name: 'Main debit', kind: 'debit', settlement: 'immediate', active: true }],
+      goalScenarios: [makeScenario({ id: 1, name: 'Path A', isActive: true })],
+    })
+    render(<ExpensesApp source={sourceThatSucceeds(dataset)} hubGrants={allGroupsGranted()} />)
+    await waitFor(() => expect(screen.queryByText('Welcome to Expenses')).toBeNull())
+    // Both navs are in the page; the first is the rail, the last the bottom bar.
+    const nav = (name: string, which: 'first' | 'last') => {
+      const all = screen.getAllByRole('button', { name })
+      return which === 'first' ? all[0]! : all[all.length - 1]!
+    }
+    fireEvent.click(nav('Goals', 'first'))
+    const field = await screen.findByLabelText('Monthly investing', { exact: true }, { timeout: 15_000 })
+    const saved = (field as HTMLInputElement).value
+    fireEvent.change(field, { target: { value: '12345' } })
+    fireEvent.blur(field)
+
+    // Pressing the tab already open leaves nothing.
+    fireEvent.click(nav('Goals', 'first'))
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+
+    fireEvent.click(nav('Dashboard', 'first'))
+    expect(screen.getByRole('alertdialog', { name: 'Leave without saving?' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Stay' }))
+    expect(screen.getByLabelText('Monthly investing', { exact: true })).not.toHaveValue(saved)
+
+    fireEvent.click(nav('Settings', 'last'))
+    fireEvent.click(screen.getByRole('button', { name: 'Leave' }))
+    expect(await screen.findByRole('tab', { name: 'Account' })).toBeInTheDocument()
+
+    fireEvent.click(nav('Goals', 'first'))
+    const again = await screen.findByLabelText('Monthly investing', { exact: true }, { timeout: 15_000 })
+    expect((again as HTMLInputElement).value).toBe(saved)
+  }, 30_000)
+
   it('opens the transactions tab with the dataset it was given', async () => {
     const dataset = datasetWith({
       categories: [{ id: 1, name: 'Groceries', monthlyBudgetCents: 30000, sortOrder: 0, active: true }],
