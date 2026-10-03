@@ -2,6 +2,11 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (messages on the wide Goals page)
+
+- **"Removed Real return from the bar", with its Undo, now shows at the bottom left, in the side rail.** It was centred over the levers bar. At 1200x800 and 1280x800, where the bar is held to the bottom edge, it covered the legend chips for six seconds, and the legend is what shows the lines' values after you take an input out. On a taller screen (1440x1024, or a 12.9-inch iPad on its side), where the bar is in the page and not at the edge, it covered the bottom of the bar and some of its controls. The rail is empty between its links and its menu button and the page never goes under it, so nothing is covered at any of the sizes measured. The same goes for the other messages on this page ("Saved Path A", a failed save).
+- **Where there is no room for it the message stays where it was.** Under 1024px wide the rail is icons only, so the message is centred as before; the phone has no stars and keeps its message above the bottom bar (11px clear of it, as before).
+
 ## October 2026 (typing in the levers bar on a laptop screen)
 
 Measured at 1200x800, 1280x800 and 1440x800, where the bar is held to the bottom edge, in Chromium and in Safari's engine.
