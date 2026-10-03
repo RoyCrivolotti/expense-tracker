@@ -206,6 +206,15 @@ describe('the inputs panel on a touch screen', () => {
     )
     expect(star?.body).toMatch(/top:\s*0\.825rem/)
   })
+
+  it('takes the life event buttons, the sign labels and the help line to 44px', () => {
+    const selectors = ['.stack .addLifeEventBtn', '.stack .lifeEventCancelBtn', '.stack .lifeEventSignLabel', '.stack .controlSummary']
+    const sized = goals.inside.find((r) => selectors.every((s) => r.selector.includes(s)))
+
+    expect(sized?.body).toMatch(/min-height:\s*2\.75rem/)
+    expect(rule('.stack .lifeEventRemove')).toMatch(/min-width:\s*2\.75rem/)
+    expect(goals.outside).not.toMatch(/lifeEventRemove[^}]*min-height:\s*2\.75rem/)
+  })
 })
 
 describe('the scenario menu on a touch screen', () => {

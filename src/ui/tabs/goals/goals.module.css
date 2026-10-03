@@ -1413,4 +1413,18 @@
   .stack .fieldLabel {
     padding-top: 0.867rem;
   }
+
+  /* Life events and the help under the page. The sign of an amount is a radio 12px across with a
+     label that takes the press, so it is the label that is 44px tall. */
+  .stack .addLifeEventBtn,
+  .stack .lifeEventCancelBtn,
+  .stack .lifeEventSignLabel,
+  .stack .controlSummary {
+    min-height: 2.75rem;
+  }
+
+  .stack .lifeEventRemove {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
 }
