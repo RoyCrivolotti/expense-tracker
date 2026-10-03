@@ -18,6 +18,7 @@ export function StarButton({ filled, label, disabled = false, title, onClick }: 
       type="button"
       className={filled ? `${styles.star} ${styles.starOn}` : styles.star}
       aria-label={label}
+      data-star=""
       {...(title ? { title } : {})}
       disabled={disabled}
       onClick={onClick}

@@ -13,6 +13,7 @@ import { Card } from '../../../components/primitives'
 import goalStyles from '../goals.module.css'
 import { LEVER_SPECS } from '../leverFields'
 import { Lever } from './Lever'
+import { STAR_HOME_ATTR } from './starFocus'
 import { useBarScrollPadding } from './useBarScrollPadding'
 import styles from './planDesktop.module.css'
 
@@ -67,7 +68,7 @@ export function LeversBar({ draft, resultDraft, keys, onChange, onUnstar, expand
   return (
     <div ref={bar} className={styles.leversBar}>
       <Card className={styles.levers}>
-        <div className={styles.leverGrid} role="group" aria-label="Key inputs">
+        <div className={styles.leverGrid} role="group" aria-label="Key inputs" {...{ [STAR_HOME_ATTR]: '' }}>
           {keys.map((key) => (
             <Lever
               key={key}
