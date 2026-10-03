@@ -157,7 +157,7 @@ describe('ScenarioBar', () => {
   it('starts a new scenario as a copy of the open one and opens it', async () => {
     const actions = makeActions()
     render(<Harness initial={[plan, other]} actions={actions} />)
-    await userEvent.click(screen.getByRole('button', { name: 'New scenario from Path A' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Duplicate Path A as a new scenario' }))
     expect(actions.createScenario).toHaveBeenCalledTimes(1)
     expect(await screen.findAllByRole('tab')).toHaveLength(3)
     expect(screen.getAllByRole('tab').at(-1)).toHaveAttribute('aria-selected', 'true')
