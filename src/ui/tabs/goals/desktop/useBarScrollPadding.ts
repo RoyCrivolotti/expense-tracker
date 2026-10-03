@@ -12,6 +12,13 @@ const BOTTOM_AIR_PX = 12
  */
 const BOTTOM_PADDING_VAR = '--scroll-pad-bottom'
 
+/**
+ * The bar's height while it is held to the bottom edge, under the name the toast (and the update
+ * prompt) lift themselves by: the bar is drawn over the bottom of the page like the Transactions
+ * selection bar, and a toast there would cover the controls it just reported on.
+ */
+const HELD_BAR_VAR = '--exp-selection-bar'
+
 /** Whether the stylesheet has the bar stuck under the header (it does from 75rem wide). */
 function isSticky(bar: HTMLElement | null): bar is HTMLElement {
   return bar !== null && getComputedStyle(bar).position === 'sticky'
@@ -55,10 +62,16 @@ export function useBarScrollPadding(bar: RefObject<HTMLElement | null>): void {
     const apply = () => {
       syncTop()
       const el = bar.current
-      const held = el !== null && getComputedStyle(el).bottom !== 'auto' ? `${el.offsetHeight + BOTTOM_AIR_PX + PINNED_AIR_PX}px` : null
+      const heldHeight = el !== null && getComputedStyle(el).bottom !== 'auto' ? el.offsetHeight : null
+      const held = heldHeight !== null ? `${heldHeight + BOTTOM_AIR_PX + PINNED_AIR_PX}px` : null
       root.style.scrollPaddingBottom = held !== null && !focusInside ? held : before
-      if (held !== null) root.style.setProperty(BOTTOM_PADDING_VAR, held)
-      else root.style.removeProperty(BOTTOM_PADDING_VAR)
+      if (held !== null) {
+        root.style.setProperty(BOTTOM_PADDING_VAR, held)
+        root.style.setProperty(HELD_BAR_VAR, `${heldHeight}px`)
+      } else {
+        root.style.removeProperty(BOTTOM_PADDING_VAR)
+        root.style.removeProperty(HELD_BAR_VAR)
+      }
     }
     apply()
     const element = bar.current
@@ -84,6 +97,7 @@ export function useBarScrollPadding(bar: RefObject<HTMLElement | null>): void {
       observer?.disconnect()
       root.style.scrollPaddingBottom = before
       root.style.removeProperty(BOTTOM_PADDING_VAR)
+      root.style.removeProperty(HELD_BAR_VAR)
     }
   }, [bar])
 }

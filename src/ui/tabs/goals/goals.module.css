@@ -501,6 +501,13 @@
   padding: 0.3rem 0.65rem;
 }
 
+/* Beside a disabled Save, saying what it needs. */
+.nameHint {
+  align-self: center;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
 .chipRow.sectionChips {
   margin-bottom: 0;
   padding: 0.3rem 0;
@@ -1387,5 +1394,53 @@
   .stack button[role='radio'],
   .stack button[role='tab'] {
     min-height: 2.75rem;
+  }
+}
+
+/* The inputs panel's steppers and fields, which are 26px tall, are 44px for a finger. The
+   stepper keeps its width in check (a 44px square with a 48px field between is 141px, against
+   the 115px it was), and a row's label starts a fixed distance down instead of centring, so the
+   star hung beside it (planDesktop.module.css) is on the label's first line whether the label
+   wraps or not. */
+@media (pointer: coarse) and (min-width: 900px) {
+  .stack {
+    --stepper-size: 2.75rem;
+    --stepper-gap: 0.15rem;
+    --stepper-input-width: 3rem;
+  }
+
+  .stack .valueInput {
+    min-height: 2.75rem;
+  }
+
+  .stack .fieldRow {
+    align-items: flex-start;
+  }
+
+  .stack .fieldLabel {
+    padding-top: 0.867rem;
+  }
+
+  /* Life events and the help under the page. The sign of an amount is a radio 12px across with a
+     label that takes the press, so it is the label that is 44px tall. */
+  .stack .addLifeEventBtn,
+  .stack .lifeEventCancelBtn,
+  .stack .lifeEventSignLabel,
+  .stack .controlSummary {
+    min-height: 2.75rem;
+  }
+
+  .stack .lifeEventRemove {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  /* A slider is 17px tall, and a touch anywhere in its box takes it there (checked in Safari on an
+     iPad: a tap 17px above the track moved it), so the box is 44px. The margin takes 16px of
+     that back out of the layout, which leaves 28px of height for the track and the thumb; the box
+     reaches over the 8px above and below it. */
+  .stack .range {
+    height: 2.75rem;
+    margin-block: -0.5rem;
   }
 }

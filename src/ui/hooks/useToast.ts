@@ -1,8 +1,9 @@
 import { createContext, useContext } from 'react'
-import type { ToastTone } from '../components/Toast'
+import type { ToastAction, ToastTone } from '../components/Toast'
 
 export interface ToastApi {
-  showToast: (message: string, tone?: ToastTone) => void
+  /** `action` adds a button to the toast, which then stays up longer to be read and pressed. */
+  showToast: (message: string, tone?: ToastTone, action?: ToastAction) => void
 }
 
 /** No-op default so components/hooks work outside a provider (tests, partial mounts). */

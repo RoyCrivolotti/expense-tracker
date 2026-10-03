@@ -1,10 +1,13 @@
+/* A page that is used with a finger sets these (the wide Goals page does, on a touch screen); the
+   defaults are the sizes everywhere else. */
 .wrap {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--stepper-gap, 0.25rem);
 }
 .input {
-  width: 3.5rem;
+  width: var(--stepper-input-width, 3.5rem);
+  min-height: var(--stepper-size, 0);
   padding: 0.25rem 0.35rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm, 6px);
@@ -18,8 +21,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.6rem;
-  height: 1.6rem;
+  width: var(--stepper-size, 1.6rem);
+  height: var(--stepper-size, 1.6rem);
   padding: 0;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm, 6px);

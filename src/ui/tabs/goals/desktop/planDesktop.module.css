@@ -721,10 +721,66 @@
     height: 2.75rem;
   }
 
+  /* Save, Discard and the rest of the buttons in the scenario row, which is 44px tall already for
+     its tabs, and "Reset to defaults", whose row is as tall as the button so nothing under it
+     moves when the button comes. */
+  .scenarioRow button,
+  .starNote button {
+    min-height: 2.75rem;
+  }
+
+  .starNote {
+    min-height: 2.75rem;
+  }
+
   /* Up and to both sides: below the star is the figure it belongs to, and a tap on that must
      not take the lever out of the bar. */
   .star::after {
     inset: -0.9rem -0.9rem -0.15rem;
+  }
+
+  /* The panel's rows are 44px (goals.module.css), so the star is on the middle of the row
+     (1.375rem down) less half its own height, where a 26px row had it 0.26rem down. */
+  .starrable > .star {
+    top: 0.825rem;
+  }
+
+  /* The scenario menu: rows and the name field are 44px, and the swatches are 28px dots 8px
+     apart. A swatch's tap area is measured from inside its 2px border, so insets of 0.625rem
+     and 0.375rem make it 44 high and 36 wide, which is as wide as a dot and its gap: no overlap.
+     Nine of them are 316px, so the menu is 344px instead of 304px to hold one row. */
+  .menu {
+    --swatch-size: 1.75rem;
+    --swatch-gap: 0.5rem;
+    --swatch-hit: -0.625rem -0.375rem;
+    width: min(21.5rem, calc(100vw - 1rem));
+  }
+
+  .menuItem {
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem;
+  }
+
+  .menuInput,
+  .menuBtn {
+    min-height: 2.75rem;
+  }
+
+  /* The bar's lever: the row of digits is a label, so the whole row is where a press puts the
+     cursor in the field, and it is 44px high with the digits at its top. The slider row is 28px
+     and its box (goals.module.css) reaches 8px past it each way. The digits row is above the
+     slider's box in the stack, so a press on the lower part of the digits is theirs and not the
+     slider's. The levers need no more height than the result column beside them has, so a bar
+     of one row is as tall as it was; one that wraps to two rows is taller by what two rows grow. */
+  .leverValue {
+    position: relative;
+    z-index: 1;
+    min-height: 2.75rem;
+  }
+
+  .leverTrack {
+    height: 1.75rem;
   }
 }
 
