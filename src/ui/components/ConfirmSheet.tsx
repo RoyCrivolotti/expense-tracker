@@ -63,6 +63,8 @@ interface ConfirmSheetProps {
   /** Small muted note shown below the message, e.g. a caveat that applies regardless of content. */
   footnote?: string
   confirmLabel: string
+  /** What the safe answer is called; "Cancel" unless the question reads better with another word. */
+  cancelLabel?: string
   destructive?: boolean
   onConfirm: () => void
   onCancel: () => void
@@ -73,6 +75,7 @@ export function ConfirmSheet({
   message,
   footnote,
   confirmLabel,
+  cancelLabel = 'Cancel',
   destructive = false,
   onConfirm,
   onCancel,
@@ -105,7 +108,7 @@ export function ConfirmSheet({
       ) : null}
       <div className={styles.actions}>
         <button type="button" className={styles.cancel} onClick={onCancel}>
-          Cancel
+          {cancelLabel}
         </button>
         <button
           type="button"

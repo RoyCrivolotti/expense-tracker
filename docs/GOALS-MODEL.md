@@ -88,6 +88,8 @@ Chart reference lines are capped relative to the projection's own ceiling. A mil
 
 Safe withdrawal rate defaults to 4% (25× annual spend). Adjustable per scenario.
 
+The FI year is the year the **invested portfolio** reaches the target (`yearsToFi` in `projection.ts`), not the net worth: a withdrawal rate draws on what can be sold and spent, and a house is not that. It is the same measure the milestones use, so a plan with a house cannot show "FI in year 0" beside a milestone of the same amount ten years off. The FI drawdown chart starts from the portfolio in the FI year for the same reason.
+
 ## Life events
 
 One-off cash flows applied to the invested portfolio in a specific projection year:
