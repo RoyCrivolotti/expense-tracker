@@ -322,3 +322,80 @@ describe('docsCaptureDataSource.setTransactionLabels', () => {
     )
   })
 })
+
+describe('docsCaptureDataSource scenarios', () => {
+  /** What a scenario is made from: a seeded one without its id and plan flag. */
+  async function seedInput() {
+    const dataset = await docsCaptureDataSource.load()
+    const { id, isActive, ...input } = dataset.goalScenarios[0]!
+    void id
+    void isActive
+    return { dataset, input }
+  }
+
+  it('registers a created scenario, so a same-session "use as plan" finds it', async () => {
+    const { input } = await seedInput()
+
+    const made = await docsCaptureDataSource.createScenario!({ ...input, name: 'A copy' })
+    const active = await docsCaptureDataSource.activateScenario!(made.id)
+
+    // Before: "Scenario not found", because only the seeded rows were looked in.
+    expect(active).toMatchObject({ id: made.id, name: 'A copy', isActive: true })
+  })
+
+  it('takes the plan flag off the scenario that had it when another is activated', async () => {
+    const { dataset } = await seedInput()
+    const plan = dataset.goalScenarios.find((s) => s.isActive)!
+    const other = dataset.goalScenarios.find((s) => !s.isActive)!
+
+    await docsCaptureDataSource.activateScenario!(other.id)
+    const oldPlan = await docsCaptureDataSource.updateScenario!(plan.id, { name: 'Renamed' })
+
+    expect(oldPlan.isActive).toBe(false)
+    expect(oldPlan.name).toBe('Renamed')
+  })
+
+  it('merges an update onto a created scenario, keeping what the patch did not mention', async () => {
+    const { input } = await seedInput()
+    const made = await docsCaptureDataSource.createScenario!({ ...input, name: 'A copy', horizonYears: 25 })
+
+    const updated = await docsCaptureDataSource.updateScenario!(made.id, { name: 'Renamed' })
+
+    expect(updated).toMatchObject({ id: made.id, name: 'Renamed', horizonYears: 25 })
+  })
+
+  it('persists an update, so a later one starts from it', async () => {
+    const { input } = await seedInput()
+    const made = await docsCaptureDataSource.createScenario!({ ...input, name: 'A copy' })
+
+    await docsCaptureDataSource.updateScenario!(made.id, { horizonYears: 12 })
+    const second = await docsCaptureDataSource.updateScenario!(made.id, { name: 'Renamed' })
+
+    expect(second).toMatchObject({ name: 'Renamed', horizonYears: 12 })
+  })
+
+  it('rejects rather than fabricating a scenario for an id nothing loaded', async () => {
+    await docsCaptureDataSource.load()
+
+    await expect(docsCaptureDataSource.updateScenario!(999_999, { name: 'x' })).rejects.toThrow('Scenario not found')
+    await expect(docsCaptureDataSource.activateScenario!(999_999)).rejects.toThrow('Scenario not found')
+  })
+
+  it('forgets a deleted scenario', async () => {
+    const { input } = await seedInput()
+    const made = await docsCaptureDataSource.createScenario!({ ...input, name: 'A copy' })
+
+    await docsCaptureDataSource.deleteScenario!(made.id)
+
+    await expect(docsCaptureDataSource.activateScenario!(made.id)).rejects.toThrow('Scenario not found')
+  })
+
+  it('starts from the seeded scenarios again on a new load', async () => {
+    const { input } = await seedInput()
+    const made = await docsCaptureDataSource.createScenario!({ ...input, name: 'A copy' })
+
+    await docsCaptureDataSource.load()
+
+    await expect(docsCaptureDataSource.activateScenario!(made.id)).rejects.toThrow('Scenario not found')
+  })
+})

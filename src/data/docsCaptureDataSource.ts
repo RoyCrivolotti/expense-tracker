@@ -226,6 +226,8 @@ let loaded: Transaction[] = []
 let loadedFlags: Flag[] = []
 let loadedLabels: Label[] = []
 let loadedSettings: ExpenseSettings = defaultExpenseSettings()
+/** The scenarios as the page has them: the seeded ones, and any made or changed since the last load. */
+let loadedScenarios: GoalScenario[] = []
 
 /** Add `labelId` to `labelIds` if it is not already there, without mutating the input. */
 function withLabelAdded(labelIds: number[] | undefined, labelId: number): number[] {
@@ -273,6 +275,7 @@ export const docsCaptureDataSource: ExpenseDataSource = {
       loadedFlags = enriched.flags
       loadedLabels = enriched.labels
       loadedSettings = enriched.settings
+      loadedScenarios = enriched.goalScenarios
       return enriched
     })
   },
@@ -483,47 +486,34 @@ export const docsCaptureDataSource: ExpenseDataSource = {
     loadedSettings = { ...loadedSettings, ...patch }
     return Promise.resolve(loadedSettings)
   },
+  // Registered in `loadedScenarios`, like a created transaction: a same-session follow-up (use the
+  // copy as the plan, edit it, delete it) looked it up by id and found only the seeded scenarios,
+  // so "Duplicate, then Use as my plan" failed here with "Scenario not found".
   createScenario(input: NewGoalScenario) {
     nextId += 1
     const scenario: GoalScenario = { ...input, id: nextId, isActive: false }
+    loadedScenarios = [...loadedScenarios, scenario]
     return Promise.resolve(scenario)
   },
+  // The plan is one scenario: activating another takes it off the rest, as the real service does.
   activateScenario(id: number) {
-    const scenario = docsCaptureGoalScenarios().find((s) => s.id === id)
+    const scenario = loadedScenarios.find((s) => s.id === id)
     if (!scenario) return Promise.reject(new Error('Scenario not found'))
+    loadedScenarios = loadedScenarios.map((s) => ({ ...s, isActive: s.id === id }))
     return Promise.resolve({ ...scenario, isActive: true })
   },
+  // The real API returns the whole row, so the patch is merged onto the stored one: a stub built
+  // from the patch alone came back without the plan flag, so saving the plan's start date
+  // silently un-chose it.
   updateScenario(id: number, patch: Partial<NewGoalScenario>) {
-    // Start from the seeded row, as the real API returns the whole row: a stub built
-    // from the patch alone came back without the plan flag, so saving the plan's
-    // start date silently un-chose it.
-    const base: GoalScenario = docsCaptureGoalScenarios().find((s) => s.id === id) ?? {
-      id,
-      name: 'Scenario',
-      color: '#6366f1',
-      sortOrder: 0,
-      startInvestedCents: 0,
-      monthlyContributionCents: 0,
-      annualContributionGrowth: 0,
-      expectedRealReturn: 0.07,
-      horizonYears: 30,
-      housePriceCents: 0,
-      downPaymentFraction: 0.2,
-      housePurchaseYear: null,
-      transactionCostsCents: 0,
-      mortgageTermYears: 30,
-      mortgageRateAnnual: 0.03,
-      houseAppreciationRate: 0.025,
-      rentMonthlyCents: 0,
-      annualSpendCents: 0,
-      safeWithdrawalRate: 0.04,
-      planStartDate: null,
-      lifeEvents: [],
-      isActive: false,
-    }
-    return Promise.resolve({ ...base, ...patch, id })
+    const base = loadedScenarios.find((s) => s.id === id)
+    if (!base) return Promise.reject(new Error('Scenario not found'))
+    const updated: GoalScenario = { ...base, ...patch, id }
+    loadedScenarios = loadedScenarios.map((s) => (s.id === id ? updated : s))
+    return Promise.resolve(updated)
   },
-  deleteScenario() {
+  deleteScenario(id: number) {
+    loadedScenarios = loadedScenarios.filter((s) => s.id !== id)
     return Promise.resolve()
   },
   createInstallmentPlan(input: NewInstallmentPlan) {
