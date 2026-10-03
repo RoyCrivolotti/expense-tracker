@@ -53,6 +53,14 @@ describe('MilestoneMatrix', () => {
     expect(screen.queryByText('Path B: House now')).not.toBeInTheDocument()
   })
 
+  it('puts its table in a named region a keyboard can focus, so a column that does not fit can be scrolled to', () => {
+    render(<MilestoneMatrix scenarios={[draft]} draft={draft} milestones={defaultMilestones()} reached={noneReached} />)
+
+    const region = screen.getByRole('region', { name: 'Years to milestone' })
+    expect(region).toHaveAttribute('tabindex', '0')
+    expect(region).toContainElement(screen.getByRole('table'))
+  })
+
   it('renders one column header per milestone', () => {
     render(
       <MilestoneMatrix
