@@ -3,7 +3,8 @@ import type { ExpenseDataset, GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import type { ExpenseActions } from '../../actions'
 import { duplicateScenario, pickScenarioColor } from '../../../engine'
-import { bootstrapEditor, differsFrom, hasDetachedEdits, rebaseDraft, scenarioToDraft } from './scenarioDraft'
+import { bootstrapEditor, differsFrom, hasUnsavedEdits, rebaseDraft, scenarioToDraft } from './scenarioDraft'
+import { useBlankDraft } from './useBlankDraft'
 import { useHiddenLines } from './useHiddenLines'
 import { useScenarioSave } from './useScenarioSave'
 
@@ -118,14 +119,18 @@ export function useScenarioEditor(
     () => dataset.goalScenarios.find((s) => s.id === baseId) ?? null,
     [dataset.goalScenarios, baseId],
   )
-  const unsaved = dirty || hasDetachedEdits(activeScenario, baseScenario, draft)
+  // A draft with no saved scenario to compare with (a first-time user's, or one whose scenario was
+  // deleted) is measured against how it started, so editing it counts as work that leaving loses.
+  const { blank, clearBlank } = useBlankDraft(first, baseId, baseScenario, draft)
+  const unsaved = hasUnsavedEdits({ dirty, loaded: activeScenario, base: baseScenario, blank, draft })
 
   const selectScenario = useCallback((scenario: GoalScenario) => {
+    clearBlank()
     setActiveId(scenario.id)
     setBaseId(scenario.id)
     setSynced(scenario)
     setDraft(scenarioToDraft(scenario))
-  }, [])
+  }, [clearBlank])
 
   const onActivate = useCallback(() => {
     if (!actions || activeId == null) return

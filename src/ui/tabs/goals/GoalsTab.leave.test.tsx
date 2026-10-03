@@ -198,6 +198,65 @@ describe('leaving Goals with unsaved edits', () => {
     expect(sheet()).toBeNull()
   })
 
+  describe('a first draft, with no saved scenario to compare with', () => {
+    const noScenarios = () => buildExpenseModel(makeDataset({ goalScenarios: [] }))
+    const type = (value: string) => {
+      const field = screen.getByLabelText('Monthly investing', { exact: true })
+      fireEvent.change(field, { target: { value } })
+      fireEvent.blur(field)
+    }
+
+    it('does not ask while nothing has been edited', async () => {
+      const user = userEvent.setup()
+      renderGoals(noScenarios())
+
+      await user.click(dashboardButton())
+
+      expect(sheet()).toBeNull()
+      expect(screen.getByText('On the dashboard')).toBeInTheDocument()
+    })
+
+    it('asks once a lever is edited, with the words for a draft, and keeps the edit on Stay', async () => {
+      const user = userEvent.setup()
+      renderGoals(noScenarios())
+      type('1234')
+
+      await user.click(dashboardButton())
+
+      const dialog = screen.getByRole('alertdialog', { name: 'Leave without saving?' })
+      expect(within(dialog).getByText(/The unsaved draft will be lost if you leave/)).toBeInTheDocument()
+      expect(within(dialog).getByText(/save it as a new scenario first/)).toBeInTheDocument()
+      await user.click(within(dialog).getByRole('button', { name: 'Stay' }))
+      expect(screen.getByLabelText('Monthly investing', { exact: true })).toHaveValue('1.234')
+    })
+
+    it('goes on Leave, and does not ask again when Goals is opened and left untouched', async () => {
+      const user = userEvent.setup()
+      renderGoals(noScenarios())
+      type('1234')
+      await user.click(dashboardButton())
+      await user.click(screen.getByRole('button', { name: 'Leave' }))
+      expect(screen.getByText('On the dashboard')).toBeInTheDocument()
+
+      await user.click(screen.getByRole('button', { name: 'Goals' }))
+      await user.click(dashboardButton())
+
+      expect(sheet()).toBeNull()
+    })
+
+    it('does not ask when the edit is put back by hand', async () => {
+      const user = userEvent.setup()
+      renderGoals(noScenarios())
+      const start = screen.getByLabelText<HTMLInputElement>('Monthly investing', { exact: true }).value
+      type('1234')
+      type(start)
+
+      await user.click(dashboardButton())
+
+      expect(sheet()).toBeNull()
+    })
+  })
+
   it('tells a read-only session its changes cannot be saved, with no Save to stay for', async () => {
     const user = userEvent.setup()
     renderGoals(twoScenarios(), null)

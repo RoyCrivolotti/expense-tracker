@@ -33,7 +33,7 @@ const EDIT_KEYS = [
 ] as const satisfies readonly (keyof NewGoalScenario)[]
 
 /** The keys the draft has changed from its saved scenario. */
-export function editedKeys(draft: NewGoalScenario, saved: GoalScenario): (keyof NewGoalScenario)[] {
+export function editedKeys(draft: NewGoalScenario, saved: NewGoalScenario): (keyof NewGoalScenario)[] {
   const keys: (keyof NewGoalScenario)[] = EDIT_KEYS.filter((k) => draft[k] !== saved[k])
   if (draft.name !== saved.name) keys.push('name')
   if (JSON.stringify(draft.lifeEvents) !== JSON.stringify(saved.lifeEvents)) keys.push('lifeEvents')
@@ -41,7 +41,7 @@ export function editedKeys(draft: NewGoalScenario, saved: GoalScenario): (keyof 
 }
 
 /** Whether the draft holds edits its saved scenario does not. */
-export function differsFrom(draft: NewGoalScenario, saved: GoalScenario): boolean {
+export function differsFrom(draft: NewGoalScenario, saved: NewGoalScenario): boolean {
   return editedKeys(draft, saved).length > 0
 }
 
@@ -75,6 +75,37 @@ export function hasDetachedEdits(
   draft: NewGoalScenario,
 ): boolean {
   return loaded === null && base !== null && differsFrom(draft, base)
+}
+
+/**
+ * A draft with no saved scenario behind it, at all, holding edits its starting point does not:
+ * what a first-time user has typed into the seeded draft, or the numbers a deleted scenario left
+ * on screen. `blank` is that starting point; null while there is a saved scenario to measure against.
+ */
+export function hasBlankDraftEdits(
+  loaded: GoalScenario | null,
+  base: GoalScenario | null,
+  blank: NewGoalScenario | null,
+  draft: NewGoalScenario,
+): boolean {
+  return loaded === null && base === null && blank !== null && differsFrom(draft, blank)
+}
+
+/** Leaving would drop edits: the loaded scenario has some, or a draft with no loaded scenario does. */
+export function hasUnsavedEdits({
+  dirty,
+  loaded,
+  base,
+  blank,
+  draft,
+}: {
+  dirty: boolean
+  loaded: GoalScenario | null
+  base: GoalScenario | null
+  blank: NewGoalScenario | null
+  draft: NewGoalScenario
+}): boolean {
+  return dirty || hasDetachedEdits(loaded, base, draft) || hasBlankDraftEdits(loaded, base, blank, draft)
 }
 
 /** What the editor opens on: the plan or the last scenario saved, else a draft seeded from the data. */

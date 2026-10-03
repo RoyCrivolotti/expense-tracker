@@ -297,6 +297,97 @@ describe('useScenarioEditor', () => {
     })
   })
 
+  describe('a draft with no saved scenario behind it', () => {
+    const noScenarios = () => renderHook(() => useScenarioEditor(makeDataset({ goalScenarios: [] }), makeActions(), 0))
+
+    it('is not unsaved until something is edited', () => {
+      const { result } = noScenarios()
+
+      expect(result.current.activeId).toBeNull()
+      expect(result.current.unsaved).toBe(false)
+    })
+
+    it.each([
+      ['an amount', { monthlyContributionCents: 12_345 }],
+      ['a percentage', { expectedRealReturn: 0.05 }],
+      ['the colour', { color: '#123456' }],
+      ['the name', { name: 'Mine' }],
+      ['the life events', { lifeEvents: [{ label: 'Bonus', year: 3, amountCents: 100_000 }] }],
+    ])('is unsaved once %s is edited', (_what, patch) => {
+      const { result } = noScenarios()
+
+      act(() => result.current.patchDraft(patch))
+
+      expect(result.current.unsaved).toBe(true)
+      expect(result.current.dirty).toBe(false)
+      expect(result.current.discardPrompt.detached).toBe(true)
+    })
+
+    it('is not unsaved again when the edit is put back by hand', () => {
+      const { result } = noScenarios()
+      const start = result.current.draft.monthlyContributionCents
+
+      act(() => result.current.patchDraft({ monthlyContributionCents: 99_900 }))
+      expect(result.current.unsaved).toBe(true)
+      act(() => result.current.patchDraft({ monthlyContributionCents: start }))
+
+      expect(result.current.unsaved).toBe(false)
+    })
+
+    it('is not unsaved once it is saved as a scenario, and is measured against that scenario from then on', () => {
+      const { result, rerender } = renderHook(
+        ({ scenarios }) => useScenarioEditor(makeDataset({ goalScenarios: scenarios }), makeActions(), 0),
+        { initialProps: { scenarios: [] as GoalScenario[] } },
+      )
+      act(() => result.current.patchDraft({ monthlyContributionCents: 99_900 }))
+      const saved = makeScenario({ id: 9, name: 'New plan', monthlyContributionCents: 99_900 })
+
+      rerender({ scenarios: [saved] })
+      act(() => result.current.selectScenario(saved))
+
+      expect(result.current.unsaved).toBe(false)
+      act(() => result.current.patchDraft({ monthlyContributionCents: 1 }))
+      expect(result.current.unsaved).toBe(true)
+      expect(result.current.dirty).toBe(true)
+    })
+
+    it('is what a draft is once its scenario is deleted: untouched numbers are not unsaved, edits are', () => {
+      const plan = makeScenario({ id: 1, name: 'Path A', isActive: true })
+      const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })
+      const { result, rerender } = renderHook(
+        ({ scenarios }) => useScenarioEditor(makeDataset({ goalScenarios: scenarios }), makeActions(), 0),
+        { initialProps: { scenarios: [plan, other] } },
+      )
+      rerender({ scenarios: [other] })
+      expect(result.current.activeId).toBeNull()
+      expect(result.current.unsaved).toBe(false)
+
+      act(() => result.current.patchDraft({ horizonYears: 12 }))
+      expect(result.current.unsaved).toBe(true)
+
+      act(() => result.current.patchDraft({ horizonYears: plan.horizonYears }))
+      expect(result.current.unsaved).toBe(false)
+    })
+
+    it('is measured against the scenario that was opened after it, not against the old start', () => {
+      const plan = makeScenario({ id: 1, name: 'Path A', isActive: true })
+      const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })
+      const { result, rerender } = renderHook(
+        ({ scenarios }) => useScenarioEditor(makeDataset({ goalScenarios: scenarios }), makeActions(), 0),
+        { initialProps: { scenarios: [plan, other] } },
+      )
+      rerender({ scenarios: [other] })
+      act(() => result.current.patchDraft({ horizonYears: 12 }))
+      act(() => result.current.selectScenario(other))
+      expect(result.current.unsaved).toBe(false)
+
+      // Deleted in its turn: what is on screen then is the new start, not the first one's.
+      rerender({ scenarios: [] })
+      expect(result.current.activeId).toBeNull()
+      expect(result.current.unsaved).toBe(false)
+    })
+  })
+
   describe('hidden lines', () => {
     function setupWithRerender() {
       const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })
