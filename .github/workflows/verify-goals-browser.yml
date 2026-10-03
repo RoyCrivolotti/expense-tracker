@@ -40,8 +40,20 @@ concurrency:
 
 jobs:
   goals-browser:
-    runs-on: ubuntu-latest
+    name: goals-browser (${{ matrix.engine }})
+    # Safari's engine is only the real one on macOS: the Linux build of WebKit scrolls and focuses
+    # differently (it failed checks that pass in Safari), so it would report problems the page does
+    # not have. Chromium runs on Linux, where it is quicker.
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - engine: chromium
+            os: ubuntu-latest
+          - engine: webkit
+            os: macos-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -57,28 +69,28 @@ jobs:
 
       - run: npm ci
 
-      - name: Cache the browsers
+      - name: Cache the browser
         id: browsers
         uses: actions/cache@v4
         with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          path: ${{ runner.os == 'macOS' && '~/Library/Caches/ms-playwright' || '~/.cache/ms-playwright' }}
+          key: playwright-${{ runner.os }}-${{ matrix.engine }}-${{ hashFiles('package-lock.json') }}
 
-      - name: Install the browsers
+      - name: Install the browser
         if: steps.browsers.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium webkit
+        run: npx playwright install ${{ runner.os == 'Linux' && '--with-deps' || '' }} ${{ matrix.engine }}
 
-      - name: Install what the browsers need from the system
-        if: steps.browsers.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium webkit
+      - name: Install what the browser needs from the system
+        if: steps.browsers.outputs.cache-hit == 'true' && runner.os == 'Linux'
+        run: npx playwright install-deps ${{ matrix.engine }}
 
       # One retry: a few of its checks measure things that settle over a few frames, and a shared
       # runner is slower than a laptop. A real regression fails twice. Both runs print every check,
       # so a pass on the second is visible in the log and not hidden.
-      - name: Run the Goals page checks in Chromium and WebKit
+      - name: Run the Goals page checks in ${{ matrix.engine }}
         env:
           CAPTURE_PORT: '5173'
-          ENGINES: chromium,webkit
+          ENGINES: ${{ matrix.engine }}
         run: |
           node scripts/verify-goals-desktop.mjs || {
             echo '::warning::The Goals browser checks failed once and are being run again.'
