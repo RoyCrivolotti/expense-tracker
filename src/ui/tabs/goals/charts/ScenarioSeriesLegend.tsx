@@ -33,6 +33,8 @@ interface ScenarioSeriesLegendProps {
   /** Makes each saved scenario's row a toggle for its line, as chart legends usually are. */
   onToggle?: ((scenarioId: number) => void) | undefined
   layout?: 'rows' | 'chips' | undefined
+  /** Where the floating breakdown sits over the chart: away from the year being pointed at. */
+  floatSide?: 'start' | 'end' | undefined
 }
 
 function BreakdownRows({
@@ -87,36 +89,19 @@ function BreakdownRows({
   )
 }
 
-export function ScenarioSeriesLegend({
-  items,
-  activeYear,
+function BreakdownExtras({
   breakdowns,
-  breakdownInTodaysMoney = false,
-  yearZeroHint = false,
-  listRef,
-  onToggle,
-  layout,
-}: ScenarioSeriesLegendProps) {
-  const format = useMoneyFormat()
-  if (items.length === 0) return null
-  const hint = onToggle
-    ? 'Tap or hover the chart to compare values by year. Tap a scenario below to hide or show its line.'
-    : 'Tap or hover the chart to compare values by year.'
-
+  breakdownInTodaysMoney,
+  yearZeroHint,
+  format,
+}: {
+  breakdowns: ScenarioLegendBreakdown[]
+  breakdownInTodaysMoney: boolean
+  yearZeroHint: boolean
+  format: ReturnType<typeof useMoneyFormat>
+}) {
   return (
-    <div className={styles.wrap}>
-      {activeYear != null ? (
-        <p className={styles.yearHeader}>Year {activeYear}</p>
-      ) : (
-        <p className={styles.hint}>{hint}</p>
-      )}
-      <LiveLegend
-        items={items}
-        formatValue={(cents) => formatMoneyShort(cents, format)}
-        onToggle={onToggle}
-        listRef={listRef}
-        layout={layout}
-      />
+    <>
       {breakdowns.length > 0 ? (
         <div className={styles.breakdownStack}>
           {breakdownInTodaysMoney ? (
@@ -132,6 +117,59 @@ export function ScenarioSeriesLegend({
           Purchase at year 0 — down payment is reflected in start invested.
         </p>
       ) : null}
+    </>
+  )
+}
+
+export function ScenarioSeriesLegend({
+  items,
+  activeYear,
+  breakdowns,
+  breakdownInTodaysMoney = false,
+  yearZeroHint = false,
+  listRef,
+  onToggle,
+  layout,
+  floatSide = 'end',
+}: ScenarioSeriesLegendProps) {
+  const format = useMoneyFormat()
+  if (items.length === 0) return null
+  const hint = onToggle
+    ? 'Tap or hover the chart to compare values by year. Tap a scenario below to hide or show its line.'
+    : 'Tap or hover the chart to compare values by year.'
+
+  // Side by side the chips leave no room for a block that comes and goes with the pointer: in the
+  // flow it pushed the cards below it down by 144px, and the legend under the bar held at the
+  // bottom of a laptop screen. It floats over the chart instead and takes no room.
+  const floats = layout === 'chips' && (breakdowns.length > 0 || yearZeroHint)
+  const extras = (
+    <BreakdownExtras
+      breakdowns={breakdowns}
+      breakdownInTodaysMoney={breakdownInTodaysMoney}
+      yearZeroHint={yearZeroHint}
+      format={format}
+    />
+  )
+
+  return (
+    <div className={layout === 'chips' ? `${styles.wrap} ${styles.wrapWide}` : styles.wrap}>
+      {activeYear != null ? (
+        <p className={styles.yearHeader}>Year {activeYear}</p>
+      ) : (
+        <p className={styles.hint}>{hint}</p>
+      )}
+      <LiveLegend
+        items={items}
+        formatValue={(cents) => formatMoneyShort(cents, format)}
+        onToggle={onToggle}
+        listRef={listRef}
+        layout={layout}
+      />
+      {floats ? (
+        <div className={`${styles.floater} ${floatSide === 'start' ? styles.floaterStart : styles.floaterEnd}`}>{extras}</div>
+      ) : (
+        extras
+      )}
     </div>
   )
 }
