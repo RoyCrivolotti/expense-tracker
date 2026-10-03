@@ -32,6 +32,7 @@ import styles from '../goals.module.css'
 import { computeChartDisplayData } from './nominalTransform'
 import { pointSeriesValueAt } from './checkinChartUtils'
 import { scenarioInk } from '../scenarioInk'
+import { ChartKeys, type ChartKeyMarks } from './ChartKeys'
 
 interface ScenarioLine {
   id: string
@@ -485,6 +486,19 @@ const DEFAULT_HINT =
  * line, and what the band is, which nothing else on the chart says. Static, so it never changes
  * height as a year is hovered the way the line above the chips does.
  */
+/** Which marks the hero chart draws beyond its lines, for the key under the legend. */
+function chartKeyMarks(
+  isHero: boolean,
+  checkinSeries: number,
+  lifeEvents: { amountCents: number }[],
+): ChartKeyMarks {
+  return {
+    checkins: isHero && checkinSeries > 0,
+    lifeIn: lifeEvents.some((ev) => ev.amountCents >= 0),
+    lifeOut: lifeEvents.some((ev) => ev.amountCents < 0),
+  }
+}
+
 function HeroNote({ draft, isHero, narrow }: { draft: NewGoalScenario; isHero: boolean; narrow: boolean }) {
   const format = useMoneyFormat()
   // A phone has the explanation above the chart instead (chartHint).
@@ -673,6 +687,7 @@ function NetWorthChartImpl({
         onToggle={onToggleVisible}
         listRef={listRef}
       />
+      <ChartKeys {...chartKeyMarks(isHero, displayExtraSeries.length, lifeEventMarkers)} />
       <HeroNote draft={draft} isHero={isHero} narrow={narrow} />
       <ChartFooter footer={footer} bare={footerBare} />
     </Card>
