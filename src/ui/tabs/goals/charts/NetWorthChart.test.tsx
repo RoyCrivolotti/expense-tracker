@@ -845,6 +845,70 @@ describe('NetWorthChart', () => {
     expect(polygons.length).toBeGreaterThanOrEqual(2)
   })
 
+  describe('the key to the marks on the hero chart', () => {
+    const hero = (scenario = makeScenario(), extraSeries: ChartSeries[] = []) =>
+      render(
+        <NetWorthChart
+          milestones={milestones}
+          scenarios={[scenario]}
+          draft={scenario}
+          activeId={scenario.id}
+          variant="hero"
+          extraSeries={extraSeries}
+        />,
+      )
+
+    it('names a life event that brings money in and one that takes it out, and nothing else', () => {
+      hero(
+        makeScenario({
+          lifeEvents: [
+            { year: 3, amountCents: 10_000_000, label: 'Bonus' },
+            { year: 7, amountCents: -5_000_000, label: 'Car' },
+          ],
+        }),
+      )
+      const key = screen.getByRole('list', { name: 'Marks on the chart' })
+      expect(key).toHaveTextContent('Life event, money in')
+      expect(key).toHaveTextContent('Life event, money out')
+      expect(key).not.toHaveTextContent('Check-in')
+    })
+
+    it('names only the kind of life event that is drawn', () => {
+      hero(makeScenario({ lifeEvents: [{ year: 3, amountCents: -5_000_000, label: 'Car' }] }))
+      const key = screen.getByRole('list', { name: 'Marks on the chart' })
+      expect(key).toHaveTextContent('Life event, money out')
+      expect(key).not.toHaveTextContent('money in')
+    })
+
+    it('names the check-in dots when they are drawn', () => {
+      hero(makeScenario(), [
+        { id: 'actuals-overlay', color: 'var(--color-text)', values: [], kind: 'scatter', points: [{ xIndex: 1.2, value: 20_000_000 }] },
+      ])
+      expect(screen.getByRole('list', { name: 'Marks on the chart' })).toHaveTextContent('Check-in')
+    })
+
+    it('has no key when there are no marks to explain', () => {
+      hero(makeScenario({ lifeEvents: [] }))
+      expect(screen.queryByRole('list', { name: 'Marks on the chart' })).not.toBeInTheDocument()
+    })
+
+    it('leaves the small chart without one', () => {
+      const scenario = makeScenario({ lifeEvents: [{ year: 3, amountCents: 10_000_000, label: 'Bonus' }] })
+      render(<NetWorthChart milestones={milestones} scenarios={[scenario]} draft={scenario} activeId={scenario.id} />)
+      expect(screen.queryByRole('list', { name: 'Marks on the chart' })).not.toBeInTheDocument()
+    })
+  })
+
+  it('draws a pale preset colour in a darker ink, so its line reads on the card', () => {
+    const scenario = makeScenario({ color: '#f59e0b' })
+    const { container } = render(
+      <NetWorthChart milestones={milestones} scenarios={[scenario]} draft={scenario} activeId={scenario.id} variant="hero" />,
+    )
+    const strokes = [...container.querySelectorAll('svg path')].map((p) => (p as SVGElement).getAttribute('style') ?? '')
+    expect(strokes.some((s) => s.includes('light-dark('))).toBe(true)
+    expect(strokes.some((s) => s.includes('#f59e0b)'))).toBe(false)
+  })
+
   it('draws a reference line for a milestone the projection gets near', () => {
     const { container } = render(
       <NetWorthChart

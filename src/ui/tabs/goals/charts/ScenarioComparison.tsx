@@ -10,6 +10,7 @@ import { HERO_WINDOWS, type HeroWindowKey } from './heroWindow'
 import { useAssumedInflation } from '../../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { ScrollRegion } from './ScrollRegion'
+import { scenarioInk } from '../scenarioInk'
 import styles from '../goals.module.css'
 import progressStyles from '../progress.module.css'
 
@@ -114,7 +115,7 @@ function ScenarioComparisonImpl({
               <tr key={row.key}>
                 <th scope="row" className={styles.milestoneScenarioCell} title={row.name}>
                   <span className={styles.milestoneScenarioNameRow}>
-                    <span className={styles.swatch} style={{ background: row.color }} />
+                    <span className={styles.swatch} style={{ background: scenarioInk(row.color) }} />
                     <span className={styles.milestoneScenarioName}>{row.name}</span>
                   </span>
                 </th>

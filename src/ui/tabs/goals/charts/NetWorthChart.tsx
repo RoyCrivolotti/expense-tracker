@@ -31,6 +31,8 @@ import {
 import styles from '../goals.module.css'
 import { computeChartDisplayData } from './nominalTransform'
 import { pointSeriesValueAt } from './checkinChartUtils'
+import { scenarioInk } from '../scenarioInk'
+import { ChartKeys, type ChartKeyMarks } from './ChartKeys'
 
 interface ScenarioLine {
   id: string
@@ -58,7 +60,7 @@ function scenarioLines(
       id: `saved-${s.id}`,
       scenarioId: s.id,
       name: s.name,
-      color: s.color,
+      color: scenarioInk(s.color),
       dashed: false,
       params: scenarioToParams(s, inflationRate),
     }))
@@ -66,7 +68,7 @@ function scenarioLines(
     id: 'draft',
     scenarioId: null,
     name: `${draft.name} (editing)`,
-    color: draft.color,
+    color: scenarioInk(draft.color),
     dashed: true,
     params: scenarioToParams({ ...draft, id: 0 }, inflationRate),
   })
@@ -278,7 +280,7 @@ function useFromTodaySeries(
     if (points.length < 2) return null
     return {
       id: 'from-today',
-      color: fromToday.scenario.color,
+      color: scenarioInk(fromToday.scenario.color),
       values: [],
       kind: 'scatter',
       points,
@@ -303,7 +305,7 @@ function useBandSeries(isHero: boolean, draft: NewGoalScenario, inflationRate: n
   return useMemo(() => {
     if (!isHero) return null
     const { lo, hi } = projectNetWorthBand(scenarioToParams(draft, inflationRate))
-    return { id: 'uncertainty-band', color: draft.color, values: [], kind: 'band', band: { lo, hi } }
+    return { id: 'uncertainty-band', color: scenarioInk(draft.color), values: [], kind: 'band', band: { lo, hi } }
   }, [isHero, draft, inflationRate])
 }
 
@@ -493,6 +495,19 @@ const DEFAULT_HINT =
  * line, and what the band is, which nothing else on the chart says. Static, so it never changes
  * height as a year is hovered the way the line above the chips does.
  */
+/** Which marks the hero chart draws beyond its lines, for the key under the legend. */
+function chartKeyMarks(
+  isHero: boolean,
+  checkinSeries: number,
+  lifeEvents: { amountCents: number }[],
+): ChartKeyMarks {
+  return {
+    checkins: isHero && checkinSeries > 0,
+    lifeIn: lifeEvents.some((ev) => ev.amountCents >= 0),
+    lifeOut: lifeEvents.some((ev) => ev.amountCents < 0),
+  }
+}
+
 function HeroNote({ draft, isHero, narrow }: { draft: NewGoalScenario; isHero: boolean; narrow: boolean }) {
   const format = useMoneyFormat()
   // A phone has the explanation above the chart instead (chartHint).
@@ -682,6 +697,7 @@ function NetWorthChartImpl({
         onToggle={onToggleVisible}
         listRef={listRef}
       />
+      <ChartKeys {...chartKeyMarks(isHero, displayExtraSeries.length, lifeEventMarkers)} />
       <HeroNote draft={draft} isHero={isHero} narrow={narrow} />
       <ChartFooter footer={footer} bare={footerBare} />
     </Card>

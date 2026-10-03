@@ -15,6 +15,7 @@ import { formatMoneyShort } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { tableName } from '../scenarioNames'
 import { ScrollRegion } from './ScrollRegion'
+import { scenarioInk } from '../scenarioInk'
 import styles from '../goals.module.css'
 
 /**
@@ -180,7 +181,7 @@ function MilestoneMatrixImpl({
               <tr key={row.id}>
                 <th scope="row" className={styles.milestoneScenarioCell} title={row.name}>
                   <span className={styles.milestoneScenarioNameRow}>
-                    <span className={styles.swatch} style={{ background: row.color }} />
+                    <span className={styles.swatch} style={{ background: scenarioInk(row.color) }} />
                     <span className={styles.milestoneScenarioName}>{row.name}</span>
                   </span>
                 </th>

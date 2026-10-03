@@ -1,4 +1,5 @@
 import type { GoalScenario } from '../../../types'
+import { scenarioInk } from './scenarioInk'
 import styles from './goals.module.css'
 
 interface ScenarioChipsProps {
@@ -47,7 +48,7 @@ export function ScenarioChips({
               {/* Its own line, above the name, so it never wraps mid-word beside a long title. */}
               {s.isActive ? <span className={styles.chipTag}>Current plan</span> : null}
               <span className={styles.chipTitle}>
-                <span className={styles.swatch} style={{ background: s.color }} aria-hidden />
+                <span className={styles.swatch} style={{ background: scenarioInk(s.color) }} aria-hidden />
                 {label}
               </span>
             </button>

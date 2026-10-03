@@ -2,6 +2,12 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (reading the lines on the Goals chart)
+
+- **The pale scenario colours are drawn darker in the light theme.** Emerald, amber, cyan and lime were 2.2, 1.9, 2.1 and 1.7 to 1 against the chart card (3 to 1 is the floor for a line), so a path in one of them was thin and washed out. The colour you pick is kept; the line, its band and its key are drawn the same colour taken toward black just far enough to reach 3 to 1, and a colour that already has it (indigo, red, violet, pink) is not touched. The dark theme, where all eight already pass, is unchanged. This applies on the phone too.
+- **The check-in dots are no longer amber.** They were the same amber as the third scenario's line, so a dot read as part of Path C. They are now the text colour.
+- **The chart says what its dots and diamonds are.** The legend named the lines and nothing else. A line under it now names the check-in dots and the life events (money in, money out), each only when it is on the chart.
+
 ## October 2026 (nothing moves under the pointer on the wide Goals page)
 
 - **The first edit no longer pushes the page down.** At 1280px the scenario row wrapped when Unsaved changes, Discard and Save appeared, and everything under it moved 40px. The row stays one line: the tabs give up width (names are cut, then the strip scrolls), and the Unsaved changes pill is drawn only from 1500px wide, since the tab already says Edited. A screen reader still reads it.

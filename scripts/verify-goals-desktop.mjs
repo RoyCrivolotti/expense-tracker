@@ -608,6 +608,50 @@ async function checkThemesAndZoom(browser, engine) {
   await big.context.close()
 }
 
+/**
+ * The lines and dots on the hero chart are readable against the card in both themes: 3:1 is the
+ * floor for a graphical object, and the pale presets (amber, lime, cyan, emerald) were under it in
+ * the light theme. Read from what the browser drew, so it covers light-dark() as well as hex.
+ */
+async function checkLineColours(browser, engine) {
+  for (const scheme of ['light', 'dark']) {
+    const { page, context } = await openPlan(browser, { width: 1440, height: 900 }, { scheme })
+    const found = await page.evaluate(() => {
+      const rgb = (css) => {
+        const c = document.createElement('canvas')
+        c.width = c.height = 1
+        const x = c.getContext('2d', { willReadFrequently: true })
+        x.fillStyle = '#000'
+        x.fillStyle = css
+        x.fillRect(0, 0, 1, 1)
+        return [...x.getImageData(0, 0, 1, 1).data].slice(0, 3)
+      }
+      const lum = ([r, g, b]) => {
+        const f = (v) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
+        return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
+      }
+      const ratio = (a, b) => {
+        const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x)
+        return (hi + 0.05) / (lo + 0.05)
+      }
+      const svg = document.querySelector('[data-goals-plan-wide] svg[role="img"]')
+      const card = svg.closest('[class*="card" i]')
+      const ground = rgb(getComputedStyle(card).backgroundColor)
+      const lines = [...svg.querySelectorAll('path')]
+        .map((p) => getComputedStyle(p))
+        .filter((cs) => cs.fill === 'none' && parseFloat(cs.strokeWidth) >= 2 && cs.stroke !== 'none')
+        .map((cs) => ratio(rgb(cs.stroke), ground))
+      const dots = [...svg.querySelectorAll('circle')].map((c) => ratio(rgb(getComputedStyle(c).fill), ground))
+      return { lines, dots, ground }
+    })
+    const worstLine = Math.min(...found.lines)
+    const worstDot = found.dots.length ? Math.min(...found.dots) : Infinity
+    check(`${engine} ${scheme}`, '(s) every line on the hero chart has 3:1 against the card', found.lines.length >= 3 && worstLine >= 2.95, `${found.lines.length} lines, worst ${worstLine.toFixed(2)}:1 on ${found.ground}`)
+    check(`${engine} ${scheme}`, '(s) the check-in dots have 3:1 against the card', found.dots.length > 0 && worstDot >= 2.95, `${found.dots.length} dots, worst ${worstDot.toFixed(2)}:1`)
+    await context.close()
+  }
+}
+
 /** 899px is the phone's layout and 900px the wide one, with no width in between that shows both. */
 async function checkBreakpoint(browser, engine) {
   for (const [width, wide] of [[899, false], [900, true]]) {
@@ -926,6 +970,7 @@ async function main() {
         for (const screen of SCREENS) await checkScreen(browser, screen, engine)
         await checkTabs(browser, engine)
         await checkThemesAndZoom(browser, engine)
+        await checkLineColours(browser, engine)
         await checkBreakpoint(browser, engine)
         await checkTouch(browser, engine)
         await checkTouchTargets(browser, engine)

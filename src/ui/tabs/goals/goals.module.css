@@ -860,6 +860,52 @@
   margin-top: 0.6rem;
 }
 
+/* The marks on the hero chart, one line under the legend: a dot is a check-in, a diamond a life event. */
+.chartKeys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+}
+
+.chartKeys li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.keyMark {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  /* The mark's own colour must survive forced colours, as the legend's swatches do. */
+  forced-color-adjust: none;
+}
+
+.keyCheckin {
+  border-radius: 50%;
+  background: var(--color-text);
+  box-shadow: 0 0 0 2px var(--color-bg);
+}
+
+.keyLifeIn,
+.keyLifeOut {
+  transform: rotate(45deg) scale(0.85);
+}
+
+.keyLifeIn {
+  background: var(--exp-success);
+}
+
+.keyLifeOut {
+  background: var(--exp-danger);
+}
+
 /* A footer that is one line of the card, not a box of its own: the wide hero's FI and milestone strip. */
 .chartFooterBare {
   margin-top: 0.6rem;
