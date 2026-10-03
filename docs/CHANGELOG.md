@@ -2,6 +2,10 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (why Save is off, on the phone)
+
+- **The phone says why Save is off.** With a scenario's name cleared, Save was greyed out and the reason ("Give the scenario a name to save it") was only a tooltip, which a finger never sees; a new draft's Save scenario had no reason at all. The words now sit on a line under the buttons, in the pinned Save and Discard row and in the scenario card, and go when a name is typed. The pinned chart and chips above do not move for it. The card's Save changes is also off for an empty name now, like the other two, instead of sending the edit to be refused.
+
 ## October 2026 (a first draft is not lost without a word)
 
 - **Leaving Goals with an edited first draft asks first.** With no saved scenario, or after the one on screen was deleted, you could change every input and leave Goals or reload with no question, and the edits were gone. The question was only asked when there was a saved scenario to compare the edits with. A draft with nothing behind it is now compared with how it started: change an input and leaving asks ("The unsaved draft will be lost if you leave"), put it back by hand and it does not.
