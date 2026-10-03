@@ -208,6 +208,33 @@ describe('the inputs panel on a touch screen', () => {
   })
 })
 
+describe('the scenario menu on a touch screen', () => {
+  const plan = underQuery('tabs/goals/desktop/planDesktop.module.css', '(pointer: coarse)')
+  const rule = (selector: string) => plan.inside.find((r) => r.selector === selector)?.body ?? ''
+
+  it('has 44px rows and name field, and swatches 28px apart from each other with a 36 by 44 tap area', () => {
+    expect(rule('.menuItem')).toMatch(/min-height:\s*2\.75rem/)
+    expect(rule('.menuInput,\n  .menuBtn')).toMatch(/min-height:\s*2\.75rem/)
+    expect(rule('.menu')).toMatch(/--swatch-size:\s*1\.75rem/)
+    expect(rule('.menu')).toMatch(/--swatch-hit:\s*-0\.625rem -0\.375rem/)
+    // Nine swatches, 28px and 8px apart, are 316px: the menu is wide enough to keep them in one row.
+    expect(rule('.menu')).toMatch(/width:\s*min\(21\.5rem/)
+  })
+
+  it('leaves the swatch the size it has for the pickers that set nothing', () => {
+    const swatch = rules('components/ColorSwatchPicker.module.css')
+    const body = swatch.find((r) => r.selector === '.colorSwatch')?.body
+
+    expect(body).toMatch(/width:\s*var\(--swatch-size,\s*1\.25rem\)/)
+    expect(swatch.find((r) => r.selector === '.colorSwatch::after')?.body).toMatch(/inset:\s*var\(--swatch-hit,\s*0\)/)
+    expect(swatch.find((r) => r.selector === '.colorPicker')?.body).toMatch(/gap:\s*var\(--swatch-gap,\s*0\.3rem\)/)
+  })
+
+  it('sets the sizes under a coarse pointer only', () => {
+    expect(plan.outside).not.toMatch(/--swatch-size\s*:/)
+  })
+})
+
 describe('the legend chips on a touch screen', () => {
   const legend = underQuery('charts/LiveLegend.module.css', COARSE_WIDE)
 

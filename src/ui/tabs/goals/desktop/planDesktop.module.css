@@ -721,6 +721,28 @@
   .starrable > .star {
     top: 0.825rem;
   }
+
+  /* The scenario menu: rows and the name field are 44px, and the swatches are 28px dots 8px
+     apart. A swatch's tap area is measured from inside its 2px border, so insets of 0.625rem
+     and 0.375rem make it 44 high and 36 wide, which is as wide as a dot and its gap: no overlap.
+     Nine of them are 316px, so the menu is 344px instead of 304px to hold one row. */
+  .menu {
+    --swatch-size: 1.75rem;
+    --swatch-gap: 0.5rem;
+    --swatch-hit: -0.625rem -0.375rem;
+    width: min(21.5rem, calc(100vw - 1rem));
+  }
+
+  .menuItem {
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem;
+  }
+
+  .menuInput,
+  .menuBtn {
+    min-height: 2.75rem;
+  }
 }
 
 /* No hover on a touch screen, so the figures wear the line a field wears. */
