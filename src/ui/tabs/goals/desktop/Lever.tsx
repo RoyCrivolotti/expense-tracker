@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { formatMoneyInput, formatPercentInput, parseMoneyToCents } from '../../../../engine'
+import { formatMoneyInput, formatPercent, formatPercentInput, parseMoneyToCents } from '../../../../engine'
 import type { MoneyFormat } from '../../../../engine'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import type { LeverSpec } from '../leverFields'
@@ -167,7 +167,8 @@ export function Lever({ spec, draft, onChange, onUnstar }: LeverProps) {
             max={max}
             step={0.001}
             value={fraction}
-            aria-label={`${label} slider`}
+            aria-label={label}
+            aria-valuetext={formatPercent(fraction, format)}
             onChange={(e) => patch(Number(e.target.value))}
           />
         </div>
@@ -185,10 +186,10 @@ export function Lever({ spec, draft, onChange, onUnstar }: LeverProps) {
             className={goalStyles.range}
             type="range"
             min={-1}
-            max={draft.horizonYears}
+            max={Math.max(draft.horizonYears, year ?? 0)}
             step={1}
             value={year ?? -1}
-            aria-label={`${label} slider`}
+            aria-label={label}
             aria-valuetext={purchaseYearText(year)}
             onChange={(e) => {
               const v = Number(e.target.value)

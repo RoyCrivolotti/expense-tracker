@@ -11,7 +11,8 @@ interface PercentStepperProps {
   min?: number
   max?: number
   disabled?: boolean
-  ariaLabel?: string
+  /** What the field is called. The buttons are named from it, so two steppers on a page are never alike. */
+  ariaLabel: string
 }
 
 export function PercentStepper({
@@ -20,7 +21,7 @@ export function PercentStepper({
   min = 0,
   max = 0.2,
   disabled = false,
-  ariaLabel = 'Annual return percentage',
+  ariaLabel,
 }: PercentStepperProps) {
   const format = useMoneyFormat()
   const readOnly = disabled || onChange == null
@@ -42,7 +43,7 @@ export function PercentStepper({
       <button
         type="button"
         className={styles.btn}
-        aria-label="Decrease percentage"
+        aria-label={`Decrease ${ariaLabel}`}
         onClick={() => commit(value - STEP)}
       >
         −
@@ -62,7 +63,7 @@ export function PercentStepper({
       <button
         type="button"
         className={styles.btn}
-        aria-label="Increase percentage"
+        aria-label={`Increase ${ariaLabel}`}
         onClick={() => commit(value + STEP)}
       >
         +

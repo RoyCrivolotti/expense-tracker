@@ -67,7 +67,7 @@ afterEach(() => {
 
 /** An edit to the draft from the levers bar: what the charts are drawn from. */
 function editDraft() {
-  fireEvent.change(screen.getByLabelText('Real return (%/yr, after inflation) slider'), { target: { value: '0.05' } })
+  fireEvent.change(screen.getByRole('slider', { name: 'Real return (%/yr, after inflation)' }), { target: { value: '0.05' } })
 }
 
 function twoScenarios() {
@@ -87,7 +87,7 @@ describe('GoalsTab renders', () => {
     await user.click(screen.getAllByRole('button', { name: 'Hide Path B on chart' })[0]!)
     await user.click(screen.getByRole('radio', { name: 'Nominal' }))
     const field = screen.getByLabelText('Preview inflation').parentElement!
-    await user.click(within(field).getByRole('button', { name: 'Increase percentage' }))
+    await user.click(within(field).getByRole('button', { name: 'Increase Preview inflation' }))
 
     expect(renders.nowCard).toBe(settled)
   })

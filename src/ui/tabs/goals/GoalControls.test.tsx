@@ -32,7 +32,7 @@ describe('GoalControls', () => {
 
   it('renders the newly exposed contribution growth control', () => {
     render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
-    expect(screen.getByLabelText('Contribution growth (%/yr)')).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Contribution growth (%/yr)' })).toBeInTheDocument()
   })
 
   it('says the mortgage rate and house appreciation are nominal and what the plan does with them', () => {
@@ -44,7 +44,7 @@ describe('GoalControls', () => {
 
   it('renders the mortgage rate control in Housing section', () => {
     render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
-    expect(screen.getByLabelText('Mortgage rate (%/yr)')).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Mortgage rate (%/yr)' })).toBeInTheDocument()
   })
 
   it('renders the mortgage term control', () => {
@@ -54,7 +54,7 @@ describe('GoalControls', () => {
 
   it('renders the house appreciation control', () => {
     render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
-    expect(screen.getByLabelText('House appreciation (%/yr)')).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'House appreciation (%/yr)' })).toBeInTheDocument()
   })
 
   it('renders the Plan start section (collapsed by default)', () => {

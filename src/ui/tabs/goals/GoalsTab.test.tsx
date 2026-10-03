@@ -24,7 +24,7 @@ function mockPhoneWidth() {
 /** The plan tab has other steppers; this is the one beside the preview field. */
 function stepPreviewUp() {
   const field = screen.getByLabelText('Preview inflation').parentElement!
-  fireEvent.click(within(field).getByRole('button', { name: 'Increase percentage' }))
+  fireEvent.click(within(field).getByRole('button', { name: 'Increase Preview inflation' }))
 }
 
 function makeModel() {

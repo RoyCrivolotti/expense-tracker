@@ -23,7 +23,7 @@ describe('the sections of the controls', () => {
       </>,
     )
     for (const key of [...SECTION_KEYS.portfolio, ...SECTION_KEYS.fire]) {
-      expect(screen.getByLabelText(LEVER_SPECS[key].label)).toBeInTheDocument()
+      expect(screen.getAllByLabelText(LEVER_SPECS[key].label).length).toBeGreaterThan(0)
     }
     expect(screen.getByText('Purchase year')).toBeInTheDocument()
     expect(screen.getByText(/Purchase cost from portfolio/)).toBeInTheDocument()
@@ -60,7 +60,7 @@ describe('the sections of the controls', () => {
     const onChange = vi.fn()
     render(<FireFields draft={makeDraft()} onChange={onChange} />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Increase percentage' }))
+    fireEvent.click(screen.getByRole('button', { name: /^Increase / }))
 
     expect(onChange).toHaveBeenCalledTimes(1)
     const patch = onChange.mock.calls[0]?.[0] as { safeWithdrawalRate: number } | undefined

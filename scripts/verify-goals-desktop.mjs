@@ -333,7 +333,7 @@ async function checkEdit(page, where) {
 
   const result = page.locator('[class*="leverResult"]')
   const resultBefore = await result.textContent()
-  const slider = page.getByLabel('Real return (%/yr, after inflation) slider')
+  const slider = page.getByRole('slider', { name: 'Real return (%/yr, after inflation)' })
   await slider.focus()
   await page.keyboard.press('ArrowRight')
   await page.keyboard.press('ArrowRight')

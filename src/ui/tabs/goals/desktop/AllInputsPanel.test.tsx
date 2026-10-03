@@ -44,7 +44,7 @@ describe('AllInputsPanel', () => {
     for (const title of ['Portfolio', 'Housing', 'Financial independence', 'Plan start', 'Life events']) {
       expect(within(panel).getByRole('heading', { name: title })).toBeInTheDocument()
     }
-    expect(within(panel).getByLabelText('Contribution growth (%/yr)')).toBeInTheDocument()
+    expect(within(panel).getByRole('textbox', { name: 'Contribution growth (%/yr)' })).toBeInTheDocument()
     expect(within(panel).getByLabelText('House price')).toBeInTheDocument()
     expect(within(panel).queryByLabelText('Monthly investing')).not.toBeInTheDocument()
     expect(within(panel).queryByLabelText('Starting invested')).not.toBeInTheDocument()
