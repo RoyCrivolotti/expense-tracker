@@ -2,6 +2,10 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (a first draft is not lost without a word)
+
+- **Leaving Goals with an edited first draft asks first.** With no saved scenario, or after the one on screen was deleted, you could change every input and leave Goals or reload with no question, and the edits were gone. The question was only asked when there was a saved scenario to compare the edits with. A draft with nothing behind it is now compared with how it started: change an input and leaving asks ("The unsaved draft will be lost if you leave"), put it back by hand and it does not.
+
 ## October 2026 (a typed comma in a dollar format)
 
 - **A comma typed into an amount or a percentage is the decimal mark in a point format too.** With US dollars (1,234.56), typing 12,5 into Monthly investing made $125 and 1,5 made $15, and a percentage typed as 5,5 read as 0%. The mirror of the typed point in a comma format applies: a single comma with one or two digits after it, and no point, is the decimal mark, so 12,5 is $12.50 and 5,5 is 5.5%. Three digits after it (1,500) are still a thousand and a half. This is in every amount and percentage field, and the file importers still read only a comma as the decimal mark.
