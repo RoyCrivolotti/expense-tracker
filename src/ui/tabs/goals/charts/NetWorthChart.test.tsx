@@ -845,6 +845,16 @@ describe('NetWorthChart', () => {
     expect(polygons.length).toBeGreaterThanOrEqual(2)
   })
 
+  it('draws a pale preset colour in a darker ink, so its line reads on the card', () => {
+    const scenario = makeScenario({ color: '#f59e0b' })
+    const { container } = render(
+      <NetWorthChart milestones={milestones} scenarios={[scenario]} draft={scenario} activeId={scenario.id} variant="hero" />,
+    )
+    const strokes = [...container.querySelectorAll('svg path')].map((p) => (p as SVGElement).getAttribute('style') ?? '')
+    expect(strokes.some((s) => s.includes('light-dark('))).toBe(true)
+    expect(strokes.some((s) => s.includes('#f59e0b)'))).toBe(false)
+  })
+
   it('draws a reference line for a milestone the projection gets near', () => {
     const { container } = render(
       <NetWorthChart

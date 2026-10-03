@@ -1,6 +1,7 @@
 import { forwardRef, useRef } from 'react'
 import type { GoalScenario } from '../../../../types'
 import { useRadioGroupKeys } from '../../../hooks/useRadioGroupKeys'
+import { scenarioInk } from '../scenarioInk'
 import styles from './planDesktop.module.css'
 
 interface TabProps {
@@ -26,7 +27,7 @@ const Tab = forwardRef<HTMLButtonElement, TabProps>(function Tab({ scenario, lab
       className={active ? `${styles.tab} ${styles.tabOn}` : styles.tab}
       onClick={onClick}
     >
-      <span className={styles.tabDot} style={{ background: scenario?.color ?? 'var(--color-text-muted)' }} aria-hidden />
+      <span className={styles.tabDot} style={{ background: scenario ? scenarioInk(scenario.color) : 'var(--color-text-muted)' }} aria-hidden />
       {/* A long name is cut short with an ellipsis rather than making one tab as wide as the row;
           the whole of it is in the tooltip. */}
       <span className={styles.tabName} title={label}>

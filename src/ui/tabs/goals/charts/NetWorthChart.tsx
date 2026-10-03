@@ -31,6 +31,7 @@ import {
 import styles from '../goals.module.css'
 import { computeChartDisplayData } from './nominalTransform'
 import { pointSeriesValueAt } from './checkinChartUtils'
+import { scenarioInk } from '../scenarioInk'
 
 interface ScenarioLine {
   id: string
@@ -58,7 +59,7 @@ function scenarioLines(
       id: `saved-${s.id}`,
       scenarioId: s.id,
       name: s.name,
-      color: s.color,
+      color: scenarioInk(s.color),
       dashed: false,
       params: scenarioToParams(s, inflationRate),
     }))
@@ -66,7 +67,7 @@ function scenarioLines(
     id: 'draft',
     scenarioId: null,
     name: `${draft.name} (editing)`,
-    color: draft.color,
+    color: scenarioInk(draft.color),
     dashed: true,
     params: scenarioToParams({ ...draft, id: 0 }, inflationRate),
   })
@@ -269,7 +270,7 @@ function useFromTodaySeries(
     if (points.length < 2) return null
     return {
       id: 'from-today',
-      color: fromToday.scenario.color,
+      color: scenarioInk(fromToday.scenario.color),
       values: [],
       kind: 'scatter',
       points,
@@ -294,7 +295,7 @@ function useBandSeries(isHero: boolean, draft: NewGoalScenario, inflationRate: n
   return useMemo(() => {
     if (!isHero) return null
     const { lo, hi } = projectNetWorthBand(scenarioToParams(draft, inflationRate))
-    return { id: 'uncertainty-band', color: draft.color, values: [], kind: 'band', band: { lo, hi } }
+    return { id: 'uncertainty-band', color: scenarioInk(draft.color), values: [], kind: 'band', band: { lo, hi } }
   }, [isHero, draft, inflationRate])
 }
 
