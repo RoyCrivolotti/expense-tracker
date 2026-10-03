@@ -730,8 +730,8 @@
 .nowListNote {
   display: block;
   font-size: 0.6875rem;
+  /* The muted colour as it is: at 0.85 opacity on top of it the 11px text was 4.2:1 in the light theme. */
   color: var(--color-text-muted);
-  opacity: 0.85;
 }
 
 .progressTrack {

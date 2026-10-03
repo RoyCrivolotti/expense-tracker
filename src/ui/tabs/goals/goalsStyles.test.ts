@@ -156,3 +156,12 @@ describe('the segmented controls of the wide page on a touch screen', () => {
     expect(block![2]).toMatch(/min-height:\s*2\.75rem/)
   })
 })
+
+describe('small muted text', () => {
+  it('is not faded further with opacity, which took the note under Where you are today to 4.2:1', () => {
+    const note = rules('tabs/goals/goals.module.css').find((r) => r.selector === '.nowListNote')
+
+    expect(note?.body).toMatch(/color:\s*var\(--color-text-muted\)/)
+    expect(note?.body).not.toMatch(/opacity/)
+  })
+})
