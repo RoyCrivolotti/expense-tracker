@@ -15,6 +15,7 @@ import {
   projectInvested,
   projectNetWorth,
   purchaseYearBreakdown,
+  yearsToFi,
   yearsToTarget,
   type ProjectionParams,
 } from './projection'
@@ -328,5 +329,34 @@ describe('the house and the mortgage in a real plan', () => {
     const atTwo = projectNetWorth(baseParams({ housePurchaseYear: 5 }))
     expect(points[15]!.houseEquityCents).toBeLessThan(atTwo[15]!.houseEquityCents)
     expect(points[15]!.mortgageBalanceCents).toBeLessThan(atTwo[15]!.mortgageBalanceCents)
+  })
+})
+
+describe('yearsToFi', () => {
+  // A house owned from year 0 puts the net worth well past a 600k target at once, while the
+  // invested portfolio (what a withdrawal rate draws on) is 100k and has years to go.
+  const params = baseParams({ housePurchaseYear: 0, startInvestedCents: 10_000_000, monthlyContributionCents: 50_000 })
+  const target = { spend: 2_400_000, swr: 0.04 } // 600k
+
+  it('counts the invested portfolio, not the net worth with the house in it', () => {
+    const points = projectNetWorth(params)
+    expect(points[0]!.netWorthCents).toBeGreaterThan(60_000_000)
+    expect(points[0]!.investedCents).toBeLessThan(60_000_000)
+
+    const year = yearsToFi(params, target.spend, target.swr)
+    const portfolioYear = points.findIndex((p) => p.investedCents >= 60_000_000)
+
+    expect(year).toBe(portfolioYear)
+    expect(year).toBeGreaterThan(0)
+  })
+
+  it('is the same year as the invested milestone for that amount, so the two cannot disagree', () => {
+    const invested = projectInvested(params)
+
+    expect(yearsToFi(params, target.spend, target.swr)).toBe(yearsToTarget(invested, 60_000_000))
+  })
+
+  it('is null when the portfolio never gets there, whatever the house is worth', () => {
+    expect(yearsToFi({ ...params, horizonYears: 3 }, target.spend, target.swr)).toBeNull()
   })
 })
