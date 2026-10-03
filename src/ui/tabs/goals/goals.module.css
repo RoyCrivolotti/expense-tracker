@@ -1034,6 +1034,8 @@
 
 .milestoneScenarioHead,
 .milestoneScenarioCell {
+  /* A row header (th), which would otherwise be bold: the name reads as the row's own label, not a heading. */
+  font-weight: inherit;
   text-align: left;
   padding: 0.3rem 0.5rem 0.3rem 0;
   min-width: 5.5rem;

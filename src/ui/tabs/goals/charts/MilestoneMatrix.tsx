@@ -178,12 +178,12 @@ function MilestoneMatrixImpl({
           <tbody>
             {rows.map((row) => (
               <tr key={row.id}>
-                <td className={styles.milestoneScenarioCell} title={row.name}>
+                <th scope="row" className={styles.milestoneScenarioCell} title={row.name}>
                   <span className={styles.milestoneScenarioNameRow}>
                     <span className={styles.swatch} style={{ background: row.color }} />
                     <span className={styles.milestoneScenarioName}>{row.name}</span>
                   </span>
-                </td>
+                </th>
                 {row.cells.map((years, i) => (
                   <td
                     key={milestones[i]?.amountCents ?? i}

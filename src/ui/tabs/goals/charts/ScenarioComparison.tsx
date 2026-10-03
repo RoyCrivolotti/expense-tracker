@@ -112,12 +112,12 @@ function ScenarioComparisonImpl({
           <tbody>
             {rows.map((row) => (
               <tr key={row.key}>
-                <td className={styles.milestoneScenarioCell} title={row.name}>
+                <th scope="row" className={styles.milestoneScenarioCell} title={row.name}>
                   <span className={styles.milestoneScenarioNameRow}>
                     <span className={styles.swatch} style={{ background: row.color }} />
                     <span className={styles.milestoneScenarioName}>{row.name}</span>
                   </span>
-                </td>
+                </th>
                 {COLUMNS.map((c) => (
                   <td key={c.key} className={styles.compareCell}>
                     {cell(row, c.key, sharedYear)}

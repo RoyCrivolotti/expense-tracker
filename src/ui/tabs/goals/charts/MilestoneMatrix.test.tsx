@@ -61,6 +61,16 @@ describe('MilestoneMatrix', () => {
     expect(region).toContainElement(screen.getByRole('table'))
   })
 
+  it('gives each scenario a row header, so a screen reader can say whose figure it is on', () => {
+    const a = makeScenario({ id: 1, name: 'Path A' })
+    const b = makeScenario({ id: 2, name: 'Path B' })
+
+    render(<MilestoneMatrix scenarios={[a, b]} draft={draft} milestones={defaultMilestones()} reached={noneReached} />)
+
+    expect(screen.getByRole('rowheader', { name: 'Path A' })).toHaveAttribute('scope', 'row')
+    expect(screen.getByRole('rowheader', { name: 'Path B' })).toBeInTheDocument()
+  })
+
   it('renders one column header per milestone', () => {
     render(
       <MilestoneMatrix
@@ -165,7 +175,7 @@ describe('MilestoneMatrix', () => {
         fromToday={planFromToday(plan, { investedCents: 1, date: '2026-01-01' })}
       />,
     )
-    const names = screen.getAllByRole('row').slice(1).map((r) => r.querySelector('td')?.textContent)
+    const names = screen.getAllByRole('row').slice(1).map((r) => r.querySelector('th[scope="row"]')?.textContent)
     expect(names).toEqual(['Scenario', 'Aggressive', 'Aggressive, from today', 'Scenario (editing)'])
     expect(screen.getByText(/counts years from your latest check-in/)).toBeInTheDocument()
   })
