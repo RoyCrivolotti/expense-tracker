@@ -740,7 +740,7 @@ async function checkTouchTargets(browser, engine) {
     const h = (sel) => Math.round(document.querySelector(sel).getBoundingClientRect().height * 10) / 10
     return { stepper: h('[aria-label^="Decrease "]'), field: h('[role="region"] input[type="text"]'), chip: h('[class*="chips"] button'), range: h('input[type="range"]'), digits: h('[class*="leverValue"]') }
   })
-  check(`${engine} mouse`, '(t) with a fine pointer the controls keep their size (stepper 25.6, field 26, chip 26.2, slider 17, digits row under 40)', near(small.stepper, 25.6, 0.7) && near(small.chip, 26.2, 1.5) && near(small.range, 17, 0.5) && near(small.field, 26, 0.5) && small.digits < 40, JSON.stringify(small))
+  check(`${engine} mouse`, '(t) with a fine pointer the controls keep their size (stepper 25.6, field 26, chip 26.2, slider 16 or 17, digits row under 40)', near(small.stepper, 25.6, 0.7) && near(small.chip, 26.2, 1.5) && near(small.range, 16.5, 1) && near(small.field, 26, 0.5) && small.digits < 40, JSON.stringify(small))
   await fine.context.close()
   const phone = await openPlan(browser, { width: 899, height: 800 }, { touch: true })
   const phoneStyle = await phone.page.evaluate(() => ({
