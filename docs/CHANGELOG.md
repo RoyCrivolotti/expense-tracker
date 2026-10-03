@@ -2,6 +2,12 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (nothing moves under the pointer on the wide Goals page)
+
+- **The first edit no longer pushes the page down.** At 1280px the scenario row wrapped when Unsaved changes, Discard and Save appeared, and everything under it moved 40px. The row stays one line: the tabs give up width (names are cut, then the strip scrolls), and the Unsaved changes pill is drawn only from 1500px wide, since the tab already says Edited. A screen reader still reads it.
+- **Pointing at a purchase year no longer grows the page.** The breakdown (start of year, return, down payment and so on) was added under the legend, which made the hero card 144px taller at 1440px and moved the cards and the bar below it. It now floats over the chart on the side away from the year you point at, and lets the pointer through. The phone keeps it under the legend.
+- **The legend does not wrap when you point at the chart.** At 1200 to 1280px the chips fitted on one line until the values arrived, then wrapped to two and slid under the bar held at the bottom of the screen (26px under it at 1280x800). A chip now keeps room for its value, gives up some of its name before the row wraps, and shows the full name when you rest the pointer on it.
+
 ## October 2026 (the rest of the wide Goals page, for a finger)
 
 Measured at 1032px with an iPad's touch emulation. Only a touch screen from 900px wide changes; a mouse and the phone layout keep their sizes.

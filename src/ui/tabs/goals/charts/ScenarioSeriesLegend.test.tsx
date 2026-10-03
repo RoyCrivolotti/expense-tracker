@@ -63,4 +63,38 @@ describe('ScenarioSeriesLegend', () => {
     expect(screen.getByText('Year 12')).toBeInTheDocument()
     expect(screen.getByText('Path A')).toBeInTheDocument()
   })
+
+  describe('where the purchase breakdown sits', () => {
+    const base = {
+      items: [{ label: 'Path A', color: '#6366f1', valueCents: 1_000_000 }],
+      activeYear: 5,
+      breakdowns: [entry('1', 'Path A')],
+    }
+    // The breakdown's own wrapper, and the thing that holds it.
+    const holder = () => screen.getByText('Down payment + fees').closest('[class*="breakdownStack"]')?.parentElement
+
+    it('floats over the wide chart, so showing it takes no room from the page', () => {
+      render(<ScenarioSeriesLegend {...base} layout="chips" />)
+      expect(holder()?.className).toMatch(/floater/)
+    })
+
+    it('floats on the side it is given, away from the year being pointed at', () => {
+      const { rerender } = render(<ScenarioSeriesLegend {...base} layout="chips" />)
+      expect(holder()?.className).toMatch(/floaterEnd/)
+      rerender(<ScenarioSeriesLegend {...base} layout="chips" floatSide="start" />)
+      expect(holder()?.className).toMatch(/floaterStart/)
+    })
+
+    it('stays in the flow on the phone, where it has the width of the card', () => {
+      render(<ScenarioSeriesLegend {...base} layout="rows" />)
+      expect(holder()?.className).not.toMatch(/floater/)
+    })
+
+    it('floats the year 0 note too, and only when there is something to show', () => {
+      const { rerender } = render(<ScenarioSeriesLegend {...base} breakdowns={[]} layout="chips" />)
+      expect(screen.queryByText(/Purchase at year 0/)).not.toBeInTheDocument()
+      rerender(<ScenarioSeriesLegend {...base} breakdowns={[]} yearZeroHint layout="chips" />)
+      expect(screen.getByText(/Purchase at year 0/).parentElement?.className).toMatch(/floater/)
+    })
+  })
 })
