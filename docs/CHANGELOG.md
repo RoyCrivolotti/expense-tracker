@@ -2,6 +2,19 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (the rest of the wide Goals page, for a finger)
+
+Measured at 1032px with an iPad's touch emulation. Only a touch screen from 900px wide changes; a mouse and the phone layout keep their sizes.
+
+- **The inputs panel is 44px a row.** The - and + buttons went from 26px to 44px square, and the fields (the amounts, the percentages, the years) from 26px to 44px tall. The panel is taller for it, 815px to 1001px with its columns across, and a star still sits on the first line of its label when the label wraps, which it was off by 5px on before.
+- **A slider is 44px to press.** It was 17px tall and a touch anywhere in a slider's box moves it (checked in Safari on an iPad, a tap 17px above the track moved it), so the box is 44px while it takes 28px of the page. The thumb is the one the browser draws, about 23px wide on the iPad, and is not changed.
+- **A lever's whole row of digits is 44px.** It was 30px. A bar of one row, from 1376px wide, is as tall as before; one that wraps to two rows (1032px) is 44px taller, 186px to 230px.
+- **The chart's legend chips are tapped from 44px.** They stay 26px tall, so the chart does not move; the tap area reaches past them. Where the chips wrap onto a second line each has 34px, since the lines are 8px apart.
+- **The scenario menu is for a finger.** Its rows went from 34px to 44px and the name field from 29px to 44px, and the colour dots from 20px to 28px with a 36 by 44px tap area. The menu is 40px wider (344px) to keep the nine dots in one row.
+- **Life events, Save, Discard and Reset to defaults are 44px.** Add life event and Add were 24px, Cancel 28px, the remove cross 14px by 16px, Save, Discard and Reset 31px, and the help line under the page 34px.
+- **Taking an input out of the bar says so, with Undo.** Pressing a star in the bar took the input out and the others moved up with nothing to say why, and on a touch screen the star's tooltip is not there. A message at the bottom, "Removed Real return from the bar", has an Undo that puts the input back in its place for six seconds. Where the bar is held to the bottom edge the message sits above it.
+- **Save says why it is off.** With no name, Save changes (and Save scenario for a draft) showed the reason only as a tooltip, which touch never shows. It is written beside the button now. The phone's narrow row keeps the tooltip.
+
 ## October 2026 (labels and numbers on the Goals charts, from a review of the wide page)
 
 - **"Years to milestone" says how far it looked.** A milestone not reached was always "40+", though the search stops at the scenario's own horizon: on a 30 year plan a milestone reached in year 32 read "40+", and with the horizon at 45 the same cell read "32y". It now says "30+" or "12+", the horizon it was looked for over.
