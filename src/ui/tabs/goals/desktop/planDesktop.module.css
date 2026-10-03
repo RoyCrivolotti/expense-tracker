@@ -29,11 +29,12 @@
    half of the chart, so it only follows the header.
 
    Held there it is drawn over whatever is under it, and the chart, its axis and the legend that
-   carries its values end about 760px down the page. So the screen has to be tall enough to leave
-   them above the bar (the bar is about 110px and the air under it 12px), or the first thing seen
-   is a chart with its bottom edge cut off. The widths and heights are in rem, so text set larger
-   than usual, which makes the page taller and the levers wrap sooner, asks for a larger screen. */
-@media (min-width: 75rem) and (min-height: 56rem) {
+   carries its values end about 670px down the page (measured at every width from 1200 up). So
+   the screen has to be tall enough to leave them above the bar (the bar is about 111px and the air
+   under it 12px, which with a few px to spare is 800px), or the first thing seen is a chart with
+   its bottom edge cut off. The widths and heights are in rem, so text set larger than usual,
+   which makes the page taller and the levers wrap sooner, asks for a larger screen. */
+@media (min-width: 75rem) and (min-height: 50rem) {
   .leversBar {
     bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
   }
@@ -545,21 +546,18 @@
   min-width: 0;
 }
 
-/* The hero's footer on a wide screen: what the plan comes to, with the way the figures are shown
-   beside it instead of on a row of its own. */
-.heroFooter {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  column-gap: 1rem;
-  align-items: end;
+/* Under the hero's legend: where the plan gets to (FI, the next milestone), as one muted line. */
+.planStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-text);
 }
 
-.heroFooter > :nth-child(2) {
-  margin-top: 0;
-}
-
-.heroFooter > :nth-child(3) {
-  grid-column: 1 / -1;
+.planStripLabel {
+  color: var(--color-text-muted);
 }
 
 /* The star on an input: in the lever's label row, or hung in the gutter beside an input in the

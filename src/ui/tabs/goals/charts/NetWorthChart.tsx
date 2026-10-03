@@ -2,7 +2,14 @@ import { memo, useCallback, useMemo, useRef, useState, type ReactNode, type RefO
 import type { GoalScenario, Milestone } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import type { MoneyFormat, PlanFromToday, ProjectionParams } from '../../../../engine'
-import { projectNetWorth, projectNetWorthBand, purchaseYearBreakdown, scenarioToParams } from '../../../../engine'
+import {
+  RETURN_BAND_SPREAD,
+  formatPercent,
+  projectNetWorth,
+  projectNetWorthBand,
+  purchaseYearBreakdown,
+  scenarioToParams,
+} from '../../../../engine'
 import { Card } from '../../../components/primitives'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
@@ -384,6 +391,55 @@ function HeroWindowPicker({
   )
 }
 
+/**
+ * The hero's header: the title, and on the right the window buttons, with, where a wide screen
+ * has the room, the display switch beside them.
+ */
+function ChartHeader({
+  isHero,
+  aside,
+  windows,
+  value,
+  onChange,
+}: {
+  isHero: boolean
+  aside: ReactNode
+  windows: ReturnType<typeof heroWindowsFor>
+  value: HeroWindowKey
+  onChange: (next: HeroWindowKey) => void
+}) {
+  const picker = isHero ? <HeroWindowPicker windows={windows} value={value} onChange={onChange} /> : null
+  return (
+    <div className={progressStyles.chartHeaderRow}>
+      <h3 className={styles.chartTitle}>Invested portfolio projection</h3>
+      {isHero && aside ? (
+        <div className={styles.chartTools}>
+          {aside}
+          {picker}
+        </div>
+      ) : (
+        picker
+      )}
+    </div>
+  )
+}
+
+/** What is under the legend: a box of its own on a phone, a line of the card on a wide screen. */
+function ChartFooter({ footer, bare }: { footer: ReactNode; bare: boolean }) {
+  if (footer == null) return null
+  return <div className={bare ? styles.chartFooterBare : styles.chartFooter}>{footer}</div>
+}
+
+/**
+ * The line above the chart. On a wide screen the hero has none: what it said is a note under the
+ * legend instead (HeroNote), so the chart starts two lines higher and the page does not move
+ * when a year is hovered.
+ */
+function chartHint(isHero: boolean, narrow: boolean): string | null {
+  if (!isHero) return DEFAULT_HINT
+  return narrow ? HERO_HINT : null
+}
+
 /** The today marker, only while it lies inside the window. */
 function todayProp(todayIndex: number | undefined, windowYears: number | null): { todayIndex?: number } {
   return insideWindow(todayIndex, windowYears) && todayIndex !== undefined ? { todayIndex } : {}
@@ -419,6 +475,26 @@ const HERO_HINT =
 const DEFAULT_HINT =
   'Compare saved scenarios plus your live edits. At a purchase year, return and contributions apply before the down payment is withdrawn — hover that year for the breakdown.'
 
+/**
+ * What the wide hero's marks mean, under its legend: the purchase years, why a purchase dips the
+ * line, and what the band is, which nothing else on the chart says. Static, so it never changes
+ * height as a year is hovered the way the line above the chips does.
+ */
+function HeroNote({ draft, isHero, narrow }: { draft: NewGoalScenario; isHero: boolean; narrow: boolean }) {
+  const format = useMoneyFormat()
+  // A phone has the explanation above the chart instead (chartHint).
+  if (!isHero || narrow) return null
+  const low = Math.max(0, draft.expectedRealReturn - RETURN_BAND_SPREAD)
+  const high = draft.expectedRealReturn + RETURN_BAND_SPREAD
+  return (
+    <p className={styles.chartHint}>
+      Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment
+      comes out. The shaded band is the line you are editing at a real return of {formatPercent(low, format)} to{' '}
+      {formatPercent(high, format)}, three points either side.
+    </p>
+  )
+}
+
 function NetWorthChartImpl({
   scenarios,
   draft,
@@ -426,6 +502,8 @@ function NetWorthChartImpl({
   dirty = false,
   variant = 'default',
   footer,
+  footerBare = false,
+  headerAside,
   extraSeries = [],
   todayIndex,
   nominalMode = false,
@@ -441,6 +519,10 @@ function NetWorthChartImpl({
   dirty?: boolean
   variant?: 'default' | 'hero'
   footer?: ReactNode
+  /** The footer is a line of the card, not a box of its own. */
+  footerBare?: boolean
+  /** Beside the window buttons in the hero's header, where a wide screen has the room for it. */
+  headerAside?: ReactNode
   extraSeries?: ChartSeries[]
   todayIndex?: number
   nominalMode?: boolean
@@ -550,13 +632,18 @@ function NetWorthChartImpl({
   const lifeEventMarkers = useLifeEventMarkers(isHero, draft, windowYears)
   const heroVariantProps = variantProps(isHero, narrow, legendInBand, markerYears, lifeEventMarkers, onActiveIndexChange)
 
+  const hint = chartHint(isHero, narrow)
+
   return (
     <Card className={isHero ? `${styles.chartCard} ${styles.heroChart}` : styles.chartCard}>
-      <div className={progressStyles.chartHeaderRow}>
-        <h3 className={styles.chartTitle}>Invested portfolio projection</h3>
-        {isHero ? <HeroWindowPicker windows={heroWindows} value={heroWindow} onChange={setHeroWindow} /> : null}
-      </div>
-      <p className={styles.chartHint}>{isHero ? HERO_HINT : DEFAULT_HINT}</p>
+      <ChartHeader
+        isHero={isHero}
+        aside={headerAside}
+        windows={heroWindows}
+        value={heroWindow}
+        onChange={setHeroWindow}
+      />
+      {hint ? <p className={styles.chartHint}>{hint}</p> : null}
       <LinearChart
         {...heroVariantProps}
         aboveTop={fiChartMarker}
@@ -580,7 +667,8 @@ function NetWorthChartImpl({
         onToggle={onToggleVisible}
         listRef={listRef}
       />
-      {footer != null ? <div className={styles.chartFooter}>{footer}</div> : null}
+      <HeroNote draft={draft} isHero={isHero} narrow={narrow} />
+      <ChartFooter footer={footer} bare={footerBare} />
     </Card>
   )
 }

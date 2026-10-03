@@ -845,6 +845,20 @@
   background: color-mix(in srgb, var(--color-text) 4%, var(--color-surface));
 }
 
+/* A footer that is one line of the card, not a box of its own: the wide hero's FI and milestone strip. */
+.chartFooterBare {
+  margin-top: 0.6rem;
+}
+
+/* The hero's header, on a wide screen: the display switch beside the window buttons. */
+.chartTools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+}
+
 .chartFooterLabel {
   display: block;
   font-size: 0.6875rem;
