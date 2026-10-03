@@ -19,9 +19,17 @@ interface MoneyFieldProps {
  */
 export function MoneyField({ label, value, onChange }: MoneyFieldProps) {
   const format = useMoneyFormat()
+  // Nothing typed, or nothing with a digit in it, is not an amount of nothing: the box goes back to
+  // the value it had, as the levers bar's fields do.
   const commit = useCallback(
-    (raw: string) => onChange(Math.max(0, parseMoneyToCents(raw, format))),
-    [format, onChange],
+    (input: HTMLInputElement) => {
+      if (!/\d/.test(input.value)) {
+        input.value = formatMoneyInput(value, format)
+        return
+      }
+      onChange(Math.max(0, parseMoneyToCents(input.value, format)))
+    },
+    [format, onChange, value],
   )
 
   return (
@@ -35,9 +43,9 @@ export function MoneyField({ label, value, onChange }: MoneyFieldProps) {
           inputMode="decimal"
           aria-label={label}
           defaultValue={formatMoneyInput(value, format)}
-          onBlur={(e) => commit(e.target.value)}
+          onBlur={(e) => commit(e.target)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') commit(e.currentTarget.value)
+            if (e.key === 'Enter') commit(e.currentTarget)
           }}
         />
       </div>
@@ -62,6 +70,15 @@ export function NumberField({ label, value, min, max, onChange }: NumberFieldPro
     },
     [max, min, onChange],
   )
+  // An empty box is not a zero, and text that is not a number goes back to the value it had.
+  const commitText = (input: HTMLInputElement) => {
+    const next = Number(input.value.replace(',', '.'))
+    if (input.value.trim() === '' || Number.isNaN(next)) {
+      input.value = String(value)
+      return
+    }
+    commit(next)
+  }
 
   return (
     <div className={styles.field}>
@@ -84,9 +101,9 @@ export function NumberField({ label, value, min, max, onChange }: NumberFieldPro
             inputMode="numeric"
             aria-label={label}
             defaultValue={String(value)}
-            onBlur={(e) => commit(Number(e.target.value.replace(',', '.')))}
+            onBlur={(e) => commitText(e.target)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') commit(Number(e.currentTarget.value.replace(',', '.')))
+              if (e.key === 'Enter') commitText(e.currentTarget)
             }}
           />
           <button
