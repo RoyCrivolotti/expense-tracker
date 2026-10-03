@@ -216,6 +216,25 @@
   border-color: color-mix(in srgb, var(--color-accent) 55%, var(--color-border));
 }
 
+/* A tab is as wide as its name up to this, and the name gives way to an ellipsis after it: a
+   78 character name made a tab 680px wide and pushed the unsaved buttons to a row of their own. */
+.tab {
+  max-width: 22rem;
+}
+
+.tabName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The pills after the name keep their size; it is the name that is cut. */
+.tabPlan,
+.tabEdited {
+  flex: none;
+}
+
 /* The one in the editor: the accent on its edge and a wash of it behind. */
 .tabOn {
   border-color: var(--color-accent);
@@ -258,7 +277,6 @@
 .rowSpacer {
   flex: 1;
 }
-
 .unsavedActions {
   display: flex;
   gap: 0.375rem;

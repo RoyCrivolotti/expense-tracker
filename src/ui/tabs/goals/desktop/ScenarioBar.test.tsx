@@ -58,6 +58,14 @@ describe('ScenarioBar', () => {
     expect(tab('Path B')).toHaveAttribute('aria-selected', 'true')
   })
 
+  it('puts the whole name of a scenario in its tab\'s tooltip, since a long one is cut short there', () => {
+    const name = 'A very long scenario name that would make its tab as wide as the whole row of tabs'
+    render(<Harness initial={[plan, makeScenario({ id: 3, name, sortOrder: 1 })]} actions={makeActions()} />)
+
+    expect(within(tab(/^A very long/)).getByTitle(name)).toBeInTheDocument()
+    expect(within(tab('Path A Current plan')).queryByTitle(name)).not.toBeInTheDocument()
+  })
+
   it('keeps the selected tab as the tab stop', () => {
     render(<Harness initial={[plan, other]} actions={makeActions()} />)
     expect(tab('Path A Current plan')).toHaveAttribute('tabindex', '0')
