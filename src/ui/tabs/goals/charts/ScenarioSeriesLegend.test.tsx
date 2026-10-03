@@ -41,6 +41,19 @@ describe('ScenarioSeriesLegend', () => {
     expect(error).not.toHaveBeenCalled()
   })
 
+  it("says the purchase breakdown is in today's money when the values above it are nominal, and only then", () => {
+    const props = {
+      items: [{ label: 'Path A', color: '#6366f1', valueCents: 1_000_000 }],
+      activeYear: 5,
+      breakdowns: [entry('1', 'Path A')],
+    }
+    const { rerender } = render(<ScenarioSeriesLegend {...props} />)
+    expect(screen.queryByText(/in today's money, not in the Nominal values/)).not.toBeInTheDocument()
+
+    rerender(<ScenarioSeriesLegend {...props} breakdownInTodaysMoney />)
+    expect(screen.getByText(/in today's money, not in the Nominal values/)).toBeInTheDocument()
+  })
+
   it('hands out its list, and always shows the year header and the figures', () => {
     const listRef = createRef<HTMLUListElement>()
     const items = [{ label: 'Path A', color: '#6366f1', valueCents: 250_000_00 }]

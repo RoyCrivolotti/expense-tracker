@@ -5,21 +5,32 @@ import { formatMoneyAxis, formatMoneyShort, formatSignedMoneyShort } from './cha
 describe('formatMoneyAxis', () => {
   it('adds decimals until neighbouring ticks read differently', () => {
     // Ticks 20k apart around a million: one decimal would print 1.0M five times.
-    expect(formatMoneyAxis(1_020_000_00, EU_MONEY_FORMAT, 20_000_00)).toBe('1.02M €')
-    expect(formatMoneyAxis(1_000_000_00, EU_MONEY_FORMAT, 2_000_000_00)).toBe('1.0M €')
-    expect(formatMoneyAxis(117_500_00, EU_MONEY_FORMAT, 500_00)).toBe('117.5k €')
+    expect(formatMoneyAxis(1_020_000_00, EU_MONEY_FORMAT, 20_000_00)).toBe('1,02M €')
+    expect(formatMoneyAxis(1_000_000_00, EU_MONEY_FORMAT, 2_000_000_00)).toBe('1,0M €')
+    expect(formatMoneyAxis(117_500_00, EU_MONEY_FORMAT, 500_00)).toBe('117,5k €')
     expect(formatMoneyAxis(340_000_00, EU_MONEY_FORMAT, 100_000_00)).toBe('340k €')
   })
 
   it('never goes past three decimals, and still handles infinity', () => {
-    expect(formatMoneyAxis(1_000_100_00, EU_MONEY_FORMAT, 1_00)).toBe('1.000M €')
+    expect(formatMoneyAxis(1_000_100_00, EU_MONEY_FORMAT, 1_00)).toBe('1,000M €')
     expect(formatMoneyAxis(Infinity, EU_MONEY_FORMAT, 1)).toBe('∞ €')
   })
 })
 
 describe('formatMoneyShort', () => {
+  it('uses the decimal mark of the money format, so 8,2M sits beside 8.179.020 € and not 8.2M, which there reads as thousands', () => {
+    expect(formatMoneyShort(8_200_000_00, EU_MONEY_FORMAT)).toBe('8,2M €')
+    expect(formatMoneyShort(8_200_000_00, { ...EU_MONEY_FORMAT, locale: 'en-US', decimalSeparator: '.' })).toBe('8.2M €')
+  })
+
+  it('rolls thousands that round up into the next unit instead of printing 1000k', () => {
+    expect(formatMoneyShort(999_600_00, EU_MONEY_FORMAT)).toBe('1,0M €')
+    expect(formatMoneyShort(999_400_00, EU_MONEY_FORMAT)).toBe('999k €')
+    expect(formatMoneyShort(-999_600_00, EU_MONEY_FORMAT)).toBe('-1,0M €')
+  })
+
   it('compacts millions and thousands', () => {
-    expect(formatMoneyShort(1_200_000_00, EU_MONEY_FORMAT)).toBe('1.2M €')
+    expect(formatMoneyShort(1_200_000_00, EU_MONEY_FORMAT)).toBe('1,2M €')
     expect(formatMoneyShort(340_000_00, EU_MONEY_FORMAT)).toBe('340k €')
   })
 
@@ -43,10 +54,10 @@ describe('negative amounts', () => {
   // The Composition chart plots the mortgage below zero, so its lowest tick is negative. In full
   // ("-5.000.000,00 €") it was wider than the axis' margin and lost the start of its label.
   it('compact by size, with the minus in front', () => {
-    expect(formatMoneyShort(-5_000_000_00, EU_MONEY_FORMAT)).toBe('-5.0M €')
+    expect(formatMoneyShort(-5_000_000_00, EU_MONEY_FORMAT)).toBe('-5,0M €')
     expect(formatMoneyShort(-340_000_00, EU_MONEY_FORMAT)).toBe('-340k €')
-    expect(formatMoneyAxis(-1_020_000_00, EU_MONEY_FORMAT, 20_000_00)).toBe('-1.02M €')
-    expect(formatMoneyAxis(-117_500_00, EU_MONEY_FORMAT, 500_00)).toBe('-117.5k €')
+    expect(formatMoneyAxis(-1_020_000_00, EU_MONEY_FORMAT, 20_000_00)).toBe('-1,02M €')
+    expect(formatMoneyAxis(-117_500_00, EU_MONEY_FORMAT, 500_00)).toBe('-117,5k €')
   })
 
   it('keeps small negatives, zero and negative infinity as they were', () => {
@@ -57,13 +68,13 @@ describe('negative amounts', () => {
   })
 
   it('puts the minus before a prefix symbol, as formatCents does', () => {
-    const usd: MoneyFormat = { ...EU_MONEY_FORMAT, symbol: '$', symbolPosition: 'prefix' }
+    const usd: MoneyFormat = { ...EU_MONEY_FORMAT, symbol: '$', symbolPosition: 'prefix', decimalSeparator: '.' }
     expect(formatMoneyShort(-5_000_000_00, usd)).toBe('-$5.0M')
     expect(formatMoneyShort(5_000_000_00, usd)).toBe('$5.0M')
   })
 
   it('leaves the signed form alone, which already took the absolute value', () => {
-    expect(formatSignedMoneyShort(-5_000_000_00, EU_MONEY_FORMAT)).toBe('−5.0M €')
-    expect(formatSignedMoneyShort(5_000_000_00, EU_MONEY_FORMAT)).toBe('+5.0M €')
+    expect(formatSignedMoneyShort(-5_000_000_00, EU_MONEY_FORMAT)).toBe('−5,0M €')
+    expect(formatSignedMoneyShort(5_000_000_00, EU_MONEY_FORMAT)).toBe('+5,0M €')
   })
 })

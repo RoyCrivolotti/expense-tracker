@@ -13,15 +13,16 @@ import { ChartShell } from './ChartShell'
 import { cellColors } from './matrixColors'
 import { formatMoneyShort } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
+import { tableName } from '../scenarioNames'
 import styles from '../goals.module.css'
 
-function shortName(name: string): string {
-  const colon = name.indexOf(':')
-  return colon >= 0 ? name.slice(0, colon).trim() : name
-}
-
-function cellLabel(years: number | null): string {
-  if (years === null) return '40+'
+/**
+ * "Not reached" is "not within this scenario's horizon", which is what the search covers, so it is
+ * named by that horizon: a flat "40+" said a milestone was more than 40 years off when it was 31
+ * years off on a 30 year plan, and showed it was reached in 32 once the horizon was 45.
+ */
+function cellLabel(years: number | null, horizonYears: number): string {
+  if (years === null) return `${horizonYears}+`
   if (years === 0) return 'now'
   return `${years}y`
 }
@@ -31,6 +32,8 @@ interface Row {
   id: string
   name: string
   color: string
+  /** How far the search for each milestone went. */
+  horizonYears: number
   cells: (number | null)[]
 }
 
@@ -42,12 +45,13 @@ function buildRows(
   includeDraft: boolean,
   fromToday: PlanFromToday | null,
 ): Row[] {
+  const names = scenarios.map((s) => s.name)
   const all = [
     ...scenarios.flatMap((s) => [
-      { id: String(s.id), name: shortName(s.name), color: s.color, params: scenarioToParams(s, inflationRate) },
+      { id: String(s.id), name: tableName(s.name, names), color: s.color, params: scenarioToParams(s, inflationRate) },
       // The plan from the latest check-in, under the plan: its years count from the check-in.
       ...(fromToday && s.id === fromToday.scenario.id
-        ? [{ id: 'from-today', name: `${shortName(s.name)}, from today`, color: s.color, params: scenarioToParams(fromToday.scenario, inflationRate) }]
+        ? [{ id: 'from-today', name: `${tableName(s.name, names)}, from today`, color: s.color, params: scenarioToParams(fromToday.scenario, inflationRate) }]
         : []),
     ]),
     // Only when the draft is a line of its own: a loaded scenario with no edits is drawn as
@@ -56,7 +60,7 @@ function buildRows(
       ? [
           {
             id: 'draft',
-            name: `${shortName(draft.name)} (editing)`,
+            name: `${tableName(draft.name, names)} (editing)`,
             color: draft.color,
             params: scenarioToParams({ ...draft, id: 0 }, inflationRate),
           },
@@ -67,6 +71,7 @@ function buildRows(
     id,
     name,
     color,
+    horizonYears: params.horizonYears,
     cells: milestones.map((m) => yearsToTargetFromProjection(params, m.amountCents, false)),
   }))
 }
@@ -184,7 +189,7 @@ function MilestoneMatrixImpl({
                     className={styles.milestoneCell}
                     style={cellColors(years)}
                   >
-                    {cellLabel(years)}
+                    {cellLabel(years, row.horizonYears)}
                   </td>
                 ))}
               </tr>

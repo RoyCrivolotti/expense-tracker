@@ -8,6 +8,7 @@ import type { LifeEvent } from '../types'
 export interface YearPoint {
   year: number
   investedCents: number
+  /** What the house is worth, in today's money: not net of the mortgage, which is `mortgageBalanceCents`. */
   houseEquityCents: number
   mortgageBalanceCents: number
   netWorthCents: number

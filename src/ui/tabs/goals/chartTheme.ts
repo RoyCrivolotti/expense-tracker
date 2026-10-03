@@ -5,6 +5,11 @@ function withSign(cents: number, compact: string): string {
   return cents < 0 ? `-${compact}` : compact
 }
 
+/** A number printed by `toFixed`, with the decimal mark the owner's format uses: "8.2" is "8,2" beside "8.179.020 €". */
+function withMark(fixed: string, format: MoneyFormat): string {
+  return fixed.replace('.', format.decimalSeparator)
+}
+
 /** Compact money for dense chart axes/tooltips, e.g. 1.2M / 340k in the owner's currency. */
 export function formatMoneyShort(cents: number, format: MoneyFormat): string {
   // Infinity is larger than the millions threshold, so without this it took the
@@ -15,7 +20,10 @@ export function formatMoneyShort(cents: number, format: MoneyFormat): string {
   // By size, not by sign: a negative amount used to skip the compact forms and print in full,
   // which is wider than the axis' margin, so a tick such as -5M lost the start of its label.
   const abs = Math.abs(cents)
-  if (abs >= 1_000_000_00) return withSign(cents, applySymbol(`${(abs / 1_000_000_00).toFixed(1)}M`, format))
+  // 999,600 is "1.0M", not "1000k": the thousands round up into the next unit before they are printed.
+  if (abs >= 1_000_000_00 || Math.round(abs / 1_000_00) >= 1000) {
+    return withSign(cents, applySymbol(`${withMark((abs / 1_000_000_00).toFixed(1), format)}M`, format))
+  }
   if (abs >= 1_000_00) return withSign(cents, applySymbol(`${Math.round(abs / 1_000_00)}k`, format))
   return formatCents(cents, format)
 }
@@ -31,10 +39,10 @@ export function formatMoneyAxis(cents: number, format: MoneyFormat, stepCents: n
     Math.min(cap, Math.max(floor, Math.ceil(-Math.log10(Math.max(stepCents, 1) / unit))))
   const abs = Math.abs(cents)
   if (abs >= 1_000_000_00) {
-    return withSign(cents, applySymbol(`${(abs / 1_000_000_00).toFixed(decimalsFor(1_000_000_00, 1, 3))}M`, format))
+    return withSign(cents, applySymbol(`${withMark((abs / 1_000_000_00).toFixed(decimalsFor(1_000_000_00, 1, 3)), format)}M`, format))
   }
   if (abs >= 1_000_00) {
-    return withSign(cents, applySymbol(`${(abs / 1_000_00).toFixed(decimalsFor(1_000_00, 0, 2))}k`, format))
+    return withSign(cents, applySymbol(`${withMark((abs / 1_000_00).toFixed(decimalsFor(1_000_00, 0, 2)), format)}k`, format))
   }
   return formatCents(cents, format)
 }

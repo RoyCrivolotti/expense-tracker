@@ -39,13 +39,17 @@ function FireChartImpl({
     const target = fireNumber(draft.annualSpendCents, draft.safeWithdrawalRate)
     const year = yearsToFi(params, draft.annualSpendCents, draft.safeWithdrawalRate)
     const growth = projectNetWorth(params)
-    const fiPortfolio = year != null ? (growth[year]?.netWorthCents ?? target) : target
-    const drawdown = projectDrawdown(
-      fiPortfolio,
-      draft.annualSpendCents,
-      draft.expectedRealReturn,
-      Math.min(30, draft.horizonYears),
-    )
+    // Drawn from the year FI is reached. Where it never is there is no balance to draw: starting
+    // the line at the target would show a portfolio the plan does not have.
+    const drawdown =
+      year == null
+        ? []
+        : projectDrawdown(
+            growth[year]?.netWorthCents ?? target,
+            draft.annualSpendCents,
+            draft.expectedRealReturn,
+            Math.min(30, draft.horizonYears),
+          )
     return { fiTarget: target, fiYear: year, balances: drawdown }
   }, [draft, inflationRate])
 
@@ -58,13 +62,24 @@ function FireChartImpl({
     lines: [{ label: 'Portfolio', value: formatMoneyShort(balances[i] ?? 0, format), color: BALANCE_COLOR, tone: 'neutral' }],
   })
 
+  if (fiYear == null) {
+    return (
+      <ChartShell embedded={embedded}>
+        <h3 className={styles.chartTitle}>FI drawdown</h3>
+        <p className={styles.chartHint}>
+          FI target {formatMoneyShort(fiTarget, format)} · not reached in the horizon, so there is no
+          drawdown to show.
+        </p>
+      </ChartShell>
+    )
+  }
+
   return (
     <ChartShell embedded={embedded}>
       <h3 className={styles.chartTitle}>FI drawdown</h3>
       <p className={styles.chartHint}>
-        FI target {formatMoneyShort(fiTarget, format)}
-        {fiYear != null ? ` · reached year ${fiYear}` : ' · not reached in horizon'}. Post-FI
-        only: year 0 on this chart is the FI year, not today. Constant withdrawal in today's money after that.
+        FI target {formatMoneyShort(fiTarget, format)} · reached year {fiYear}. Post-FI only: year 0 on
+        this chart is the FI year, not today. Constant withdrawal in today's money after that.
       </p>
       <LinearChart
         height={height}

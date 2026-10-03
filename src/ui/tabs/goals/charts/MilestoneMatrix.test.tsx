@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { MilestoneMatrix } from './MilestoneMatrix'
 import { makeScenario } from '../../../../testing/factories'
@@ -23,6 +23,34 @@ describe('MilestoneMatrix', () => {
     expect(screen.getAllByRole('row')).toHaveLength(4)
     expect(error).not.toHaveBeenCalled()
     error.mockRestore()
+  })
+
+  it('names a milestone that is not reached by the horizon it was searched to, not by a flat 40+', () => {
+    const short = makeScenario({ id: 1, name: 'Short', horizonYears: 12, startInvestedCents: 0, monthlyContributionCents: 10_000 })
+    const long = makeScenario({ id: 2, name: 'Long', horizonYears: 45, startInvestedCents: 0, monthlyContributionCents: 10_000 })
+    const milestones = [{ amountCents: 1_000_000_00, label: '' }]
+
+    render(<MilestoneMatrix scenarios={[short, long]} draft={draft} milestones={milestones} reached={noneReached} />)
+
+    // 100 a month for 12 years does not reach a million, and says it was looked for 12 years.
+    expect(within(screen.getByRole('row', { name: /^Short/ })).getByText('12+')).toBeInTheDocument()
+    expect(within(screen.getByRole('row', { name: /^Long/ })).getByText('45+')).toBeInTheDocument()
+    expect(screen.queryByText('40+')).not.toBeInTheDocument()
+  })
+
+  it('keeps a copy and its original apart by name, where cutting at the colon would call both Path A', () => {
+    const original = makeScenario({ id: 1, name: 'Path A: Invest only' })
+    const copy = makeScenario({ id: 2, name: 'Path A: Invest only (copy)' })
+    const other = makeScenario({ id: 3, name: 'Path B: House now' })
+
+    render(<MilestoneMatrix scenarios={[original, copy, other]} draft={draft} milestones={defaultMilestones()} reached={noneReached} />)
+
+    expect(screen.getByText('Path A: Invest only')).toBeInTheDocument()
+    expect(screen.getByText('Path A: Invest only (copy)')).toBeInTheDocument()
+    expect(screen.queryByText('Path A')).not.toBeInTheDocument()
+    // A name nobody shares keeps its short form.
+    expect(screen.getByText('Path B')).toBeInTheDocument()
+    expect(screen.queryByText('Path B: House now')).not.toBeInTheDocument()
   })
 
   it('renders one column header per milestone', () => {
