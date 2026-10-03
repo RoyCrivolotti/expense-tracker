@@ -4,7 +4,8 @@
  * no scroll of its own, the levers bar in reach (held to the bottom edge while its place is below
  * the fold, under the header once scrolled past), the inputs panel folding in and out, the
  * scenario menu, the stars that move an input to the bar and back, the order Tab goes in and that
- * nothing it reaches is under the bar, and the question asked before leaving Goals with an unsaved edit.
+ * nothing it reaches is under the bar, the question asked before leaving Goals with an unsaved edit,
+ * and the Years to milestone table (`ONLY=milestone-table` runs just that).
  *
  * jsdom lays nothing out, so the unit tests cannot say any of this. Manual, like
  * verify:goals-nav: it needs a browser and takes a few minutes, so it is not part of
@@ -1479,6 +1480,192 @@ async function checkPhoneSaveReason(browser, engine) {
 }
 
 /**
+ * Years to milestone (check group w): the table on the wide page and on a phone. The demo's
+ * milestones are all reached by check-ins, so the editing draft is set low to have cells that are
+ * years away; its row is the one with tint, hatching and gaps to read.
+ */
+const matrixCard = (page) => page.getByRole('heading', { name: 'Years to milestone' }).locator('xpath=ancestor::*[contains(@class,"chartCard")][1]')
+
+async function lowDraft(page) {
+  await page.getByRole('button', { name: 'All inputs' }).click()
+  await page.waitForTimeout(400)
+  for (const [label, value] of [['Monthly investing', '150'], ['Starting invested', '5000']]) {
+    const input = page.getByLabel(label, { exact: true }).last()
+    await input.fill(value)
+    await input.press('Enter')
+  }
+  await page.waitForTimeout(400)
+}
+
+/** What each tinted cell shows, and whether its text keeps 4.5:1 on the tint over the card, as drawn. */
+function readTints(page) {
+  return page.evaluate(() => {
+    const rgba = (css) => {
+      const c = document.createElement('canvas')
+      c.width = c.height = 1
+      const x = c.getContext('2d', { willReadFrequently: true })
+      x.clearRect(0, 0, 1, 1)
+      x.fillStyle = css
+      x.fillRect(0, 0, 1, 1)
+      return [...x.getImageData(0, 0, 1, 1).data]
+    }
+    const lum = ([r, g, b]) => {
+      const f = (v) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
+      return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
+    }
+    const ratio = (a, b) => {
+      const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x)
+      return (hi + 0.05) / (lo + 0.05)
+    }
+    const region = document.querySelector('[role="region"][aria-label="Years to milestone"]')
+    const card = region.closest('[class*="card" i]') ?? region
+    const ground = rgba(getComputedStyle(card).backgroundColor)
+    return [...region.querySelectorAll('[class*="matrixTint"]')].map((el) => {
+      const cs = getComputedStyle(el)
+      const [r, g, b, a] = rgba(cs.backgroundColor)
+      const alpha = a / 255
+      const over = [r, g, b].map((v, i) => v * alpha + ground[i] * (1 - alpha))
+      return { text: el.textContent, tint: parseInt(el.style.getPropertyValue('--tint')), alpha: Math.round(alpha * 100), contrast: ratio(rgba(cs.color), over) }
+    })
+  })
+}
+
+async function checkMilestoneWide(browser, engine, screen, scheme) {
+  const where = `${engine} ${screen.name} ${scheme}`
+  const { page, context } = await openPlan(browser, screen, { scheme })
+  await lowDraft(page)
+  const card = matrixCard(page)
+  await card.scrollIntoViewIfNeeded()
+  await page.waitForTimeout(300)
+
+  const fit = await page.evaluate(() => {
+    const region = document.querySelector('[role="region"][aria-label="Years to milestone"]')
+    const c = region.closest('[class*="chartCard"]').getBoundingClientRect()
+    const r = region.getBoundingClientRect()
+    return { scroll: region.scrollWidth, client: region.clientWidth, inCard: r.left >= c.left - 0.5 && r.right <= c.right + 0.5, page: document.documentElement.scrollWidth, iw: innerWidth }
+  })
+  check(where, '(w) the table is inside its card and the page does not scroll sideways', fit.inCard && fit.page <= fit.iw, JSON.stringify(fit))
+  if (screen.width >= 1280) check(where, '(w) all seven milestones fit the table without its own scroll', fit.scroll <= fit.client + 1, JSON.stringify(fit))
+
+  const tints = await readTints(page)
+  const shallow = tints.find((t) => t.text === '6y')
+  const deep = tints.find((t) => t.text === '30y')
+  check(where, '(w) cells that are years away are tinted, deeper the further', tints.length >= 3 && shallow !== undefined && deep !== undefined && deep.alpha > shallow.alpha, JSON.stringify(tints))
+  const worst = Math.min(...tints.map((t) => t.contrast))
+  check(where, '(w) the text on every tint keeps 4.5:1', tints.length >= 3 && worst >= 4.5, `worst ${worst.toFixed(2)}:1`)
+  const hatched = await page.evaluate(() => [...document.querySelectorAll('[class*="matrixBeyond"]')].map((el) => ({ text: el.textContent, border: getComputedStyle(el).borderTopStyle })))
+  check(where, '(w) a milestone not within the horizon is a hatched dashed box showing the horizon with a plus', hatched.length >= 1 && hatched.every((h) => /^\d+\+$/.test(h.text) && h.border === 'dashed'), JSON.stringify(hatched))
+  check(where, '(w) a milestone already reached is a tick', (await page.locator('[class*="matrixDone"]').first().textContent()) === '✓')
+
+  // Nothing under the card moves when the first cell is pointed at.
+  const before = (await card.boundingBox()).height
+  const cells = page.getByRole('gridcell')
+  const draftCell = cells.nth((await cells.count()) - 6)
+  await draftCell.hover()
+  await page.waitForTimeout(150)
+  const after = (await card.boundingBox()).height
+  check(where, '(w) reading a cell does not change the card\'s height', near(before, after, 1), `${px(before)} then ${px(after)}`)
+  const sentence = await page.locator('[class*="matrixReadout"]').textContent()
+  check(where, '(w) pointing at a cell writes its sentence under the table', sentence === (await draftCell.getAttribute('aria-label')) && /by 20\d\d\./.test(sentence), sentence)
+  const marked = await page.evaluate(() => [...document.querySelectorAll('td[role="gridcell"]')].filter((c) => /matrixLine|matrixCross/.test(c.className)).length)
+  const dims = await page.evaluate(() => ({ rows: document.querySelectorAll('[role="grid"] tbody tr').length, cols: document.querySelectorAll('[role="grid"] thead th[scope="col"]').length }))
+  check(where, '(w) the row and the column of that cell are marked', marked === dims.rows + dims.cols - 1, `${marked} marked of ${dims.rows} rows by ${dims.cols} columns`)
+  await page.mouse.move(2, 2)
+  await page.waitForTimeout(150)
+  const left = await page.evaluate(() => [...document.querySelectorAll('td[role="gridcell"]')].filter((c) => /matrixLine|matrixCross/.test(c.className)).length)
+  check(where, '(w) the marks go when the pointer leaves, the sentence stays', left === 0 && (await page.locator('[class*="matrixReadout"]').filter({ hasText: /by 20\d\d\./ }).count()) === 1, `${left} still marked`)
+
+  // The two toggles.
+  await page.getByRole('radio', { name: 'Calendar year' }).click()
+  const years = (await readTints(page)).map((t) => t.text)
+  check(where, '(w) calendar year shows the year in each cell', years.length >= 3 && years.every((y) => /^20\d\d$/.test(y)), JSON.stringify(years))
+  await page.getByRole('radio', { name: 'Years from now' }).click()
+  const vs = page.getByRole('button', { name: 'vs plan' })
+  await vs.click()
+  const gaps = await page.evaluate(() => [...document.querySelectorAll('[class*="matrixGap"]')].map((g) => g.textContent.trim()).filter(Boolean))
+  check(where, '(w) vs plan is pressed and says how many years later each path is', (await vs.getAttribute('aria-pressed')) === 'true' && gaps.some((g) => /^\+\d+y$/.test(g)), JSON.stringify(gaps))
+  const green = await page.evaluate(() => [...document.querySelectorAll('[class*="matrixSooner"]')].length)
+  check(where, '(w) a path that is no sooner than the plan is not in green', green === 0 || gaps.some((g) => /^−/.test(g) || g === 'sooner'), `${green} green`)
+
+  // The keyboard: one tab stop, arrows, Home and End.
+  const stops = await page.evaluate(() => [...document.querySelectorAll('td[role="gridcell"]')].filter((c) => c.tabIndex === 0).length)
+  check(where, '(w) the grid is one tab stop', stops === 1, `${stops} stops`)
+  const at = () => page.evaluate(() => [document.activeElement.dataset.row, document.activeElement.dataset.col].join(','))
+  await page.locator('td[role="gridcell"][tabindex="0"]').focus()
+  const start = await at()
+  await page.keyboard.press('ArrowRight')
+  const right = await at()
+  await page.keyboard.press('ArrowUp')
+  const up = await at()
+  await page.keyboard.press('End')
+  const end = await at()
+  await page.keyboard.press('Home')
+  const home = await at()
+  const [r0, c0] = start.split(',').map(Number)
+  check(where, '(w) arrow keys, End and Home move between cells', right === `${r0},${c0 + 1}` && up === `${r0 - 1},${c0 + 1}` && end === `${r0 - 1},6` && home === `${r0 - 1},0`, JSON.stringify({ start, right, up, end, home }))
+
+  if (engine === 'chromium' && scheme === 'dark') {
+    await page.emulateMedia({ forcedColors: 'active' })
+    const box = await page.evaluate(() => {
+      const el = document.querySelector('[class*="matrixTint"]')
+      const cs = getComputedStyle(el)
+      return { style: cs.borderTopStyle, color: cs.borderTopColor, width: cs.borderTopWidth }
+    })
+    check(where, '(w) in forced colours a tinted cell is still drawn as a box', box.style === 'solid' && box.color !== 'rgba(0, 0, 0, 0)' && parseFloat(box.width) >= 1, JSON.stringify(box))
+  }
+  await context.close()
+}
+
+async function openPhoneMilestones(browser, width, engine) {
+  const context = await browser.newContext({ viewport: { width, height: 812 }, deviceScaleFactor: 2, reducedMotion: 'reduce', hasTouch: true, isMobile: true })
+  const page = await context.newPage()
+  page.on('pageerror', (e) => failures.push(`page error: ${e.message}`))
+  await page.addInitScript(() => localStorage.setItem('exp-onboarding-skipped', '1'))
+  await page.goto(`${BASE}/`)
+  await page.waitForSelector('text=Recent activity', { timeout: 20000 })
+  await page.getByRole('button', { name: /Goals/ }).last().click()
+  await page.getByRole('radio', { name: 'Milestones' }).click()
+  await page.waitForTimeout(500)
+  await matrixCard(page).scrollIntoViewIfNeeded()
+  return { page, context, where: `${engine} phone ${width}` }
+}
+
+async function checkMilestonePhone(browser, engine) {
+  for (const width of [375, 320]) {
+    const { page, context, where } = await openPhoneMilestones(browser, width, engine)
+    const fit = await page.evaluate(() => {
+      const region = document.querySelector('[role="region"][aria-label="Years to milestone"]')
+      return { scroll: region.scrollWidth, client: region.clientWidth, page: document.documentElement.scrollWidth, iw: innerWidth }
+    })
+    check(where, '(w) the page does not scroll sideways', fit.page <= fit.iw, JSON.stringify(fit))
+    // Seven milestones fit 375px; at 320px the table may scroll in its own box, with the names held.
+    if (width === 375) check(where, '(w) all seven milestones fit the table without scrolling', fit.scroll <= fit.client + 1, JSON.stringify(fit))
+    if (width === 375) {
+      // The longest sentence there is: a path against the plan, with the check-ins' date. The
+      // card keeps the room for it from the start, so reading it moves nothing.
+      await page.getByRole('button', { name: 'vs plan' }).tap()
+      // The pointer the emulation leaves behind is moved off the table: the browser repeats its last
+      // mouse position over whatever has come to lie under it, and that would read another cell.
+      await page.mouse.move(1, 1)
+      const before = (await matrixCard(page).boundingBox()).height
+      const tapped = page.getByRole('gridcell', { name: /^Path B reaches 1,0M/ })
+      await tapped.tap()
+      await page.waitForTimeout(150)
+      const text = await page.locator('[class*="matrixReadout"]').textContent()
+      const after = (await matrixCard(page).boundingBox()).height
+      check(where, '(w) tapping a cell writes its sentence', text === (await tapped.getAttribute('aria-label')) && /later than Path A \(the plan\)/.test(text), text)
+      check(where, '(w) the sentence takes the room kept for it, the card does not grow', near(before, after, 1), `${px(before)} then ${px(after)}`)
+      const toggles = await page.evaluate(() => {
+        const t = [...document.querySelectorAll('[role="radiogroup"][aria-label="Show each milestone as"], button[aria-pressed]')].map((e) => e.getBoundingClientRect())
+        return { inside: t.every((r) => r.left >= 0 && r.right <= innerWidth) }
+      })
+      check(where, '(w) the toggles fit the screen', toggles.inside, JSON.stringify(toggles))
+    }
+    await context.close()
+  }
+}
+
+/**
  * The touch round's leftovers, on an iPad's screen: the stars' tap area, the plan start date, the
  * sign radios of a life event, and (with a keyboard, so on a mouse's screen) taking back a removed
  * star without tabbing to the end of the page.
@@ -1628,6 +1815,13 @@ async function checkTouchLeftovers(browser, engine) {
   await keys.context.close()
 }
 
+async function checkMilestoneTable(browser, engine) {
+  for (const screen of [SCREENS[1], SCREENS[3], SCREENS[0]]) {
+    for (const scheme of ['light', 'dark']) await checkMilestoneWide(browser, engine, screen, scheme)
+  }
+  await checkMilestonePhone(browser, engine)
+}
+
 async function main() {
   if (await answers()) throw new Error(`Something already answers on ${BASE}; set CAPTURE_PORT to a free port.`)
   const dev = startDev()
@@ -1666,6 +1860,10 @@ async function main() {
           await checkLeverFocus(browser, engine)
           continue
         }
+        if (process.env.ONLY === 'milestone-table') {
+          await checkMilestoneTable(browser, engine)
+          continue
+        }
         for (const screen of SCREENS) await checkScreen(browser, screen, engine)
         await checkTabs(browser, engine)
         await checkLeverFocus(browser, engine)
@@ -1682,6 +1880,7 @@ async function main() {
         await checkFirstDraft(browser, engine)
         await checkPhoneSaveReason(browser, engine)
         await checkTouchLeftovers(browser, engine)
+        await checkMilestoneTable(browser, engine)
       } finally {
         await browser.close()
       }
