@@ -75,7 +75,7 @@ describe('GoalsMobileNav', () => {
     renderNav('adjust')
 
     const labels = screen.getAllByRole('tab').map((r) => r.textContent)
-    expect(labels).toEqual(['Chart', 'Scenarios', 'Progress', 'Assumptions'])
+    expect(labels).toEqual(['Chart', 'Progress', 'Scenarios', 'Assumptions'])
     expect(screen.getByRole('tab', { name: 'Scenarios' })).toHaveAttribute('aria-selected', 'true')
   })
 

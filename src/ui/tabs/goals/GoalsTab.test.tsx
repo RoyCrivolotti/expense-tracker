@@ -600,7 +600,7 @@ describe('GoalsTab', () => {
     expect(screen.getByRole('tab', { name: 'Plan' })).toHaveAttribute('aria-selected', 'true')
 
     widen(false)
-    expect(labels()).toEqual(['Chart', 'Scenarios', 'Progress', 'Assumptions'])
+    expect(labels()).toEqual(['Chart', 'Progress', 'Scenarios', 'Assumptions'])
     expect(screen.getByRole('tab', { name: 'Scenarios' })).toHaveAttribute('aria-selected', 'true')
 
     await user.click(screen.getByRole('tab', { name: 'Progress' }))
@@ -616,8 +616,8 @@ describe('GoalsTab', () => {
     const row = screen.getByRole('tablist', { name: 'Goals view' })
     expect(within(row).getAllByRole('tab').map((r) => r.textContent)).toEqual([
       'Chart',
-      'Scenarios',
       'Progress',
+      'Scenarios',
       'Assumptions',
     ])
     expect(screen.queryByRole('tab', { name: 'Plan' })).not.toBeInTheDocument()

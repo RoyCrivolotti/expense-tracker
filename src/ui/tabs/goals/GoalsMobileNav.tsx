@@ -11,8 +11,8 @@ import styles from './goals.module.css'
 
 const OPTIONS = optionsFrom<GoalsMobileView>({
   chart: 'Chart',
-  adjust: 'Scenarios',
   progress: 'Progress',
+  adjust: 'Scenarios',
   assumptions: 'Assumptions',
 })
 

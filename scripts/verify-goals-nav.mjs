@@ -288,13 +288,13 @@ async function checkMemory(browser, phone) {
   check(where, '(d) the Chart page is long enough to scroll to 900px', room >= 900, `it scrolls ${px(room)}`)
 
   await scrollTo(page, 900)
-  for (const name of ['Scenarios', 'Progress', 'Assumptions']) {
+  for (const name of ['Progress', 'Scenarios', 'Assumptions']) {
     await tab(page, name).tap()
     await settled(page)
   }
   await tab(page, 'Chart').tap()
   const back = await settled(page)
-  check(where, '(d) Chart comes back to 900px after Scenarios, Progress and Assumptions', near(back, 900, 1), `it came back to ${px(back)}`)
+  check(where, '(d) Chart comes back to 900px after Progress, Scenarios and Assumptions', near(back, 900, 1), `it came back to ${px(back)}`)
 
   // A link out of a view leaves it too, without the row being touched.
   await page.getByRole('radio', { name: 'Nominal' }).tap()

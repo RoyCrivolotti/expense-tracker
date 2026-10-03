@@ -51,7 +51,7 @@ describe('the Goals view row as tabs', () => {
     const user = userEvent.setup()
     renderTab()
 
-    expect(tabLabels()).toEqual(['Chart', 'Scenarios', 'Progress', 'Assumptions'])
+    expect(tabLabels()).toEqual(['Chart', 'Progress', 'Scenarios', 'Assumptions'])
     expect(screen.getByRole('tabpanel', { name: 'Chart' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
@@ -78,8 +78,8 @@ describe('the Goals view row as tabs', () => {
     screen.getByRole('tab', { name: 'Chart' }).focus()
 
     await user.keyboard('{ArrowRight}')
-    expect(screen.getByRole('tab', { name: 'Scenarios' })).toHaveFocus()
-    expect(screen.getByRole('tabpanel', { name: 'Scenarios' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Progress' })).toHaveFocus()
+    expect(screen.getByRole('tabpanel', { name: 'Progress' })).toBeInTheDocument()
 
     await user.keyboard('{End}')
     expect(screen.getByRole('tab', { name: 'Assumptions' })).toHaveFocus()
