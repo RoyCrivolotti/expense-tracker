@@ -1,0 +1,86 @@
+name: Verify Goals in a browser
+
+# `npm run verify` cannot see layout, scroll or touch behaviour: jsdom has none. The Goals page has
+# a script that drives the real thing (Chromium and WebKit, the widths a laptop and an iPad have,
+# keyboard and touch), and until now it only ran when somebody remembered to. Two merges that
+# each passed it alone broke main together, and a third regression only showed when it was run on
+# the merged result, so it runs here: on a PR that can change what it measures, and on main after
+# a merge, which is where the combination of PRs first exists.
+#
+# It is slow (about ten minutes) and timing sensitive, so it is its own workflow and not a step of
+# Verify: it does not hold up the checks that tell a reviewer whether the code builds. It is not
+# a required check until it has proved itself over a few weeks of PRs; make it one in the branch
+# protection rules when you trust it.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'src/ui/**'
+      - 'src/domain/**'
+      - 'src/data/**'
+      - 'scripts/verify-goals-desktop.mjs'
+      - 'index.html'
+      - 'package-lock.json'
+      - 'vite.config.*'
+      - '.github/workflows/verify-goals-browser.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/ui/**'
+      - 'src/domain/**'
+      - 'src/data/**'
+      - 'scripts/verify-goals-desktop.mjs'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+concurrency:
+  group: expense-tracker-goals-browser-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  goals-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use HTTPS for git-based npm dependencies
+        run: |
+          git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Cache the browsers
+        id: browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install the browsers
+        if: steps.browsers.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Install what the browsers need from the system
+        if: steps.browsers.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium webkit
+
+      # One retry: a few of its checks measure things that settle over a few frames, and a shared
+      # runner is slower than a laptop. A real regression fails twice. Both runs print every check,
+      # so a pass on the second is visible in the log and not hidden.
+      - name: Run the Goals page checks in Chromium and WebKit
+        env:
+          CAPTURE_PORT: '5173'
+          ENGINES: chromium,webkit
+        run: |
+          node scripts/verify-goals-desktop.mjs || {
+            echo '::warning::The Goals browser checks failed once and are being run again.'
+            node scripts/verify-goals-desktop.mjs
+          }
