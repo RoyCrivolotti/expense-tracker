@@ -350,6 +350,11 @@
   --pop-shift: 0.3rem;
 }
 
+/* Focus lands on the menu itself on a touch screen, which is not a control to ring. */
+.menu:focus {
+  outline: none;
+}
+
 .menuLeaving {
   composes: popoverLeaving from '../../../components/popoverMotion.module.css';
 }
