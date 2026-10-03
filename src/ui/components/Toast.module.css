@@ -37,13 +37,16 @@
   pointer-events: none;
 }
 
+/* The text colour follows the theme (white on the dark fills of the light theme, near-black on the
+   bright ones of the dark theme), as text on the accent does. Success sits on the darkened tone
+   in the light theme, where the bare green is only 3.3:1 against white. */
 .success {
-  background: var(--exp-success);
-  color: #fff;
+  background: var(--exp-success-text);
+  color: var(--color-accent-contrast);
 }
 .error {
   background: var(--exp-danger);
-  color: #fff;
+  color: var(--color-accent-contrast);
 }
 
 @keyframes toastIn {
