@@ -28,10 +28,10 @@ function makeStarred(keys: readonly LeverKey[] = DEFAULT_LEVERS, overrides: Part
   }
 }
 
-function renderPanel(open: boolean, starred: StarredLevers = makeStarred()) {
+function renderPanel(open: boolean, starred: StarredLevers = makeStarred(), draft = makeDraft()) {
   const onChange = vi.fn()
   const ui = (isOpen: boolean) => (
-    <AllInputsPanel id="panel" open={isOpen} draft={makeDraft()} latest={null} onChange={onChange} starred={starred} />
+    <AllInputsPanel id="panel" open={isOpen} draft={draft} latest={null} onChange={onChange} starred={starred} />
   )
   const view = render(ui(open))
   return { onChange, view, ui, starred }
@@ -80,6 +80,45 @@ describe('AllInputsPanel', () => {
     await userEvent.clear(rent)
     await userEvent.type(rent, '900{Enter}')
     expect(onChange).toHaveBeenCalledWith({ rentMonthlyCents: 90_000 })
+  })
+})
+
+describe('AllInputsPanel explanations of what is in the bar', () => {
+  const RATES_NOTE = /The mortgage rate and house appreciation are nominal/
+  const FI_FORMULA = /FI target = annual spend ÷ this rate/
+
+  it('still gives what the purchase takes from the portfolio while the purchase year is in the bar', () => {
+    // The year is in the default five, so the figure would have no other place to be.
+    renderPanel(true, makeStarred(), { ...makeDraft(), housePurchaseYear: 5 })
+
+    expect(screen.queryByLabelText('Purchase year')).not.toBeInTheDocument()
+    expect(screen.getByText(/Purchase cost from portfolio/)).toBeInTheDocument()
+  })
+
+  it('keeps the note on the two rates while either is on the page, and drops it when neither is', () => {
+    const { view } = renderPanel(true, makeStarred(['houseAppreciationRate']))
+    expect(screen.getByText(RATES_NOTE)).toBeInTheDocument()
+    view.unmount()
+
+    const other = renderPanel(true, makeStarred(['mortgageRateAnnual']))
+    expect(screen.getByText(RATES_NOTE)).toBeInTheDocument()
+    other.view.unmount()
+
+    renderPanel(true, makeStarred(['mortgageRateAnnual', 'houseAppreciationRate']))
+    expect(screen.queryByText(RATES_NOTE)).not.toBeInTheDocument()
+  })
+
+  it('keeps the FI formula while either of its inputs is on the page, and drops it when neither is', () => {
+    const { view } = renderPanel(true, makeStarred(['safeWithdrawalRate']))
+    expect(screen.getByText(FI_FORMULA)).toBeInTheDocument()
+    view.unmount()
+
+    const other = renderPanel(true, makeStarred(['annualSpendCents']))
+    expect(screen.getByText(FI_FORMULA)).toBeInTheDocument()
+    other.view.unmount()
+
+    renderPanel(true, makeStarred(['annualSpendCents', 'safeWithdrawalRate']))
+    expect(screen.queryByText(FI_FORMULA)).not.toBeInTheDocument()
   })
 })
 
