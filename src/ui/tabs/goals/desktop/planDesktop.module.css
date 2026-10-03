@@ -793,16 +793,23 @@
     min-height: 2.75rem;
   }
 
-  /* Up and to both sides: below the star is the figure it belongs to, and a tap on that must
-     not take the lever out of the bar. */
-  .star::after {
-    inset: -0.9rem -0.9rem -0.15rem;
+  /* The tap area is 44px high and 46px wide round a star 17.6px across. In the bar it goes up
+     and to both sides: below the star is the figure it belongs to, and a tap on that must not
+     take the lever out of the bar. Above it is the bar's own 10px of padding and then the gap
+     between the cards, so the area reaches 14px past the bar's top edge and takes nothing. */
+  .leverHead .star::after {
+    inset: -1.5rem -0.9rem -0.15rem;
   }
 
   /* The panel's rows are 44px (goals.module.css), so the star is on the middle of the row
-     (1.375rem down) less half its own height, where a 26px row had it 0.26rem down. */
+     (1.375rem down) less half its own height, where a 26px row had it 0.26rem down. The area is
+     as tall as that row, even above and below the star, so it reaches into no other row's field. */
   .starrable > .star {
     top: 0.825rem;
+  }
+
+  .starrable > .star::after {
+    inset: -0.825rem -0.9rem;
   }
 
   /* The scenario menu: rows and the name field are 44px, and the swatches are 28px dots 8px

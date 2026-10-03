@@ -121,7 +121,19 @@ describe('the wide plan on a touch screen', () => {
     expect(coarse).toMatch(/min-height:\s*2\.75rem/)
     expect(coarse).toMatch(/\.menuTrigger\s*\{[^}]*height:\s*2\.75rem/)
     // Below the star is the figure it belongs to, which a tap on it must not take out of the bar.
-    expect(coarse).toMatch(/\.star::after\s*\{[^}]*inset:\s*-0\.9rem -0\.9rem -0\.15rem/)
+    expect(coarse).toMatch(/\.leverHead \.star::after\s*\{[^}]*inset:\s*-1\.5rem -0\.9rem -0\.15rem/)
+    // In the panel the area is the height of the star's own row, so it reaches into no other row.
+    expect(coarse).toMatch(/\.starrable > \.star::after\s*\{[^}]*inset:\s*-0\.825rem -0\.9rem/)
+  })
+
+  it('makes a star\'s tap area 44px high wherever it is, a star being 1.1rem', () => {
+    const coarse = block('pointer: coarse')
+    const height = (selector: string) => {
+      const [top = '0', , bottom = top] = new RegExp(`${selector}\\s*\\{[^}]*inset:\\s*([^;]*);`).exec(coarse)?.[1]?.split(' ') ?? []
+      return 1.1 - Number.parseFloat(top) - Number.parseFloat(bottom)
+    }
+    expect(height('\\.leverHead \\.star::after')).toBeCloseTo(2.75, 5)
+    expect(height('\\.starrable > \\.star::after')).toBeCloseTo(2.75, 5)
   })
 })
 

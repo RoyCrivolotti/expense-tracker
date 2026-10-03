@@ -2,6 +2,12 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (what the touch round left, and Undo from the keyboard)
+
+- **A star is tapped from 44px.** The tap area round a star in the inputs panel and in the bar was 46px by 34px, so a thumb a little above or below it missed. It is 44px high now with nothing moved: in the panel it is the height of the star's own row, and in the bar it goes up, since below the star is the figure it belongs to and a tap on that must not take the lever out of the bar.
+- **The plan start date is 44px tall on a touch screen.** It was 40.8px, the one field in the inputs panel under a finger's size. The text stays in the middle of it.
+- **Alt+Z takes a removed star back from the keyboard.** The Undo button in the toast is the last stop in Tab order, so someone who removed a star with the keyboard could only reach it after tabbing through the whole page. While the toast is up, Alt+Z puts the input back where it was, from wherever focus is and without moving it; the toast says so, in words for a screen reader and as a small key beside Undo for a mouse (a touch screen, with no key to press, shows only Undo).
+
 ## October 2026 (why Save is off, on the phone)
 
 - **The phone says why Save is off.** With a scenario's name cleared, Save was greyed out and the reason ("Give the scenario a name to save it") was only a tooltip, which a finger never sees; a new draft's Save scenario had no reason at all. The words now sit on a line under the buttons, in the pinned Save and Discard row and in the scenario card, and go when a name is typed. The pinned chart and chips above do not move for it. The card's Save changes is also off for an empty name now, like the other two, instead of sending the edit to be refused.

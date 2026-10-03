@@ -1479,6 +1479,15 @@
     min-height: 2.75rem;
   }
 
+  /* The plan start date: the pill drawn over the browser's own date control (an iPad's), or the
+     button that opens the calendar where there is no native one, was 40.8px. The text stays in
+     the middle of it. */
+  .stack .fieldRow input[type='date'] + span,
+  .stack .fieldRow button[aria-haspopup='dialog'] {
+    min-height: 2.75rem;
+    padding-block: 0.75rem;
+  }
+
   .stack .fieldRow {
     align-items: flex-start;
   }

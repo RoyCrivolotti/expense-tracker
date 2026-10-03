@@ -864,7 +864,7 @@ async function checkTouchTargets(browser, engine) {
   await page.getByRole('button', { name: 'Remove Real return from the bar' }).click()
   const toast = page.getByRole('status')
   await page.getByText('Removed Real return from the bar').waitFor({ timeout: 3000 })
-  check(where, '(t) taking a star out says which input left, with Undo', (await toast.textContent()) === 'Removed Real return from the barUndo' && (await labels()).length === before.length - 1)
+  check(where, '(t) taking a star out says which input left, with Undo', /^Removed Real return from the bar\. Press Alt\+Z to undo\.Undo/.test((await toast.textContent()) ?? '') && (await labels()).length === before.length - 1)
   const undo = page.getByRole('button', { name: 'Undo' })
   check(where, '(t) the Undo button is 44px tall', (await undo.boundingBox()).height >= FINGER, px((await undo.boundingBox()).height))
   await undo.click()
@@ -1228,6 +1228,157 @@ async function checkPhoneSaveReason(browser, engine) {
     check(where, '(y3) typing a name takes the reason away and the stack goes back to its height', gone && near(back.stackBottom - back.stackTop, without[0].stackBottom - without[0].stackTop, 0.5), `${px(back.stackBottom - back.stackTop)} against ${px(without[0].stackBottom - without[0].stackTop)}`)
     await context.close()
   }
+  await context.close()
+}
+
+/**
+ * The touch round's leftovers, on an iPad's screen: the stars' tap area, the plan start date, the
+ * sign radios of a life event, and (with a keyboard, so on a mouse's screen) taking back a removed
+ * star without tabbing to the end of the page.
+ */
+async function checkTouchLeftovers(browser, engine) {
+  const where = `${engine} iPad leftovers`
+  const { page, context } = await openPlan(browser, { width: 1032, height: 1376 }, { touch: true })
+
+  // (a) A star's tap area is 44px high. In the bar it goes up (below the star is the figure it
+  // belongs to), in the panel it is the height of the row the star is on.
+  const bar = await page.evaluate(() => {
+    const star = document.querySelector('[class*="leversBar"] button[data-star]')
+    const r = star.getBoundingClientRect()
+    const after = getComputedStyle(star, '::after')
+    const cx = r.left + r.width / 2
+    const is = (y) => document.elementFromPoint(cx, y)?.closest('button[data-star]') === star
+    const areaTop = r.top + parseFloat(after.top)
+    return {
+      height: parseFloat(after.height),
+      width: parseFloat(after.width),
+      above7: is(r.top - 7),
+      topOfArea: is(areaTop + 1.5),
+      below7IsFigure: document.elementFromPoint(cx, r.bottom + 7)?.closest('[class*="leverValue"]') !== null,
+    }
+  })
+  check(where, '(y4) a star in the bar has a tap area 44px high', bar.height >= FINGER && near(bar.height, 44, 0.5), JSON.stringify(bar))
+  check(where, '(y4) a press 7px above a bar star, and at the top of its area, is the star\'s', bar.above7 && bar.topOfArea, JSON.stringify(bar))
+  check(where, '(y4) a press 7px below a bar star is still the figure\'s, so a tap on the digits does not take the lever out', bar.below7IsFigure, JSON.stringify(bar))
+  await page.getByRole('button', { name: 'All inputs' }).click()
+  await page.getByRole('region', { name: 'All inputs' }).waitFor()
+  await page.waitForTimeout(500)
+  const panel = await page.evaluate(() =>
+    [...document.querySelectorAll('[role="region"] [class*="starrable"] > button[data-star]')].map((star) => {
+      const r = star.getBoundingClientRect()
+      const wrap = star.parentElement.getBoundingClientRect()
+      const after = getComputedStyle(star, '::after')
+      const cx = r.left + r.width / 2
+      const is = (y) => document.elementFromPoint(cx, y)?.closest('button[data-star]') === star
+      const areaTop = r.top + parseFloat(after.top)
+      return { height: parseFloat(after.height), above7: is(r.top - 7), below7: is(r.bottom + 7), reachesUp: areaTop < wrap.top - 0.5 }
+    }),
+  )
+  check(where, `(y4) every star in the panel has a 44px tap area (${panel.length} measured)`, panel.length > 5 && panel.every((s) => near(s.height, 44, 0.5)), JSON.stringify(panel[0]))
+  check(where, '(y4) a press 7px above or below a panel star is the star\'s', panel.every((s) => s.above7 && s.below7), JSON.stringify(panel.filter((s) => !(s.above7 && s.below7))))
+  check(where, '(y4) the area stays inside the row of its own input, so it takes nothing from the row above', panel.every((s) => !s.reachesUp), JSON.stringify(panel.filter((s) => s.reachesUp)))
+
+  // (d) The sign of a life event is a radio 12px across: a press anywhere on its 44px label picks it.
+  await page.getByRole('button', { name: '+ Add life event' }).scrollIntoViewIfNeeded()
+  await page.getByRole('button', { name: '+ Add life event' }).click()
+  await page.waitForTimeout(300)
+  const outflow = page.locator('[class*="lifeEventSignLabel"]').filter({ hasText: 'Outflow' })
+  const inflow = page.locator('[class*="lifeEventSignLabel"]').filter({ hasText: 'Inflow' })
+  await outflow.scrollIntoViewIfNeeded()
+  const label = await outflow.boundingBox()
+  const grid = await outflow.evaluate((el) => {
+    const r = el.getBoundingClientRect()
+    const misses = []
+    for (const fx of [0.02, 0.25, 0.5, 0.75, 0.98]) {
+      for (const fy of [0.05, 0.5, 0.95]) {
+        const x = r.left + r.width * fx
+        const y = r.top + r.height * fy
+        const hit = document.elementFromPoint(x, y)
+        if (hit !== el && !el.contains(hit)) misses.push([Math.round(x), Math.round(y)])
+      }
+    }
+    return { misses, radio: el.querySelector('input').getBoundingClientRect().width }
+  })
+  check(where, '(y4) the sign radio is small but every point of its 44px label is the label\'s', label.height >= FINGER && grid.radio < 20 && grid.misses.length === 0, JSON.stringify({ height: label.height, ...grid }))
+  const checked = (loc) => loc.locator('input').isChecked()
+  for (const [name, fx, fy] of [['far right end', 0.97, 0.9], ['top left corner', 0.03, 0.08], ['the text', 0.6, 0.5]]) {
+    await inflow.locator('input').check()
+    await page.touchscreen.tap(label.x + label.width * fx, label.y + label.height * fy)
+    await page.waitForTimeout(150)
+    check(where, `(y4) a tap on ${name} of the Outflow label picks it`, (await checked(outflow)) && !(await checked(inflow)))
+  }
+  await page.getByRole('button', { name: 'Cancel' }).click()
+  await context.close()
+
+  // (b) The plan start date is 44px. An iPad draws the app's own pill over the browser's date
+  // control, which is what is measured here (the control itself only a device can show); a browser
+  // that is not an iPad has a button that opens the app's calendar, measured as well. A mouse keeps 40.8px.
+  const { devices } = await import('playwright')
+  for (const [what, options, expected] of [
+    ['an iPad (the pill over the native control)', { ...devices['iPad Pro 11 landscape'], reducedMotion: 'reduce' }, 44],
+    ['a touch screen without the iPad\'s browser (the app\'s calendar button)', { viewport: { width: 1032, height: 1376 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' }, 44],
+    ['a mouse (the app\'s calendar button)', { viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' }, 40.8],
+  ]) {
+    const ctx = await browser.newContext(options)
+    const p = await ctx.newPage()
+    p.on('pageerror', (e) => failures.push(`page error: ${e.message}`))
+    await p.addInitScript(() => localStorage.setItem('exp-onboarding-skipped', '1'))
+    await p.goto(`${BASE}/`)
+    await p.waitForSelector('text=Recent activity', { timeout: 20000 })
+    await p.locator('[class*="rail"] button').nth(3).click()
+    await p.waitForSelector('text=Invested portfolio projection', { timeout: 20000 })
+    await p.getByRole('button', { name: 'All inputs' }).click()
+    await p.getByRole('region', { name: 'All inputs' }).waitFor()
+    await p.waitForTimeout(500)
+    const date = await p.evaluate(() => {
+      const field = document.querySelector('input[type="date"][aria-label="Plan start date"], button[aria-label="Plan start date"]')
+      const pill = field.tagName === 'INPUT' ? field.nextElementSibling : field
+      const input = field.tagName === 'INPUT' ? field : null
+      return { native: field.tagName === 'INPUT', pill: pill.getBoundingClientRect().height, input: input?.getBoundingClientRect().height ?? null }
+    })
+    check(`${engine} ${what}`, `(y4) the plan start date is ${expected}px tall`, near(date.pill, expected, 0.5) && (date.input === null || near(date.input, expected, 0.5)), JSON.stringify(date))
+    await ctx.close()
+  }
+
+  // (c) Taking a star out from the keyboard: Undo is the last stop on the page, so Alt+Z does it
+  // from wherever focus is, without moving focus.
+  const keys = await openPlan(browser, { width: 1440, height: 900 })
+  const kp = keys.page
+  const labels = () => kp.locator('[class*="leversBar"] [class*="leverLabel"]').allTextContents()
+  const before = await labels()
+  await kp.getByRole('button', { name: 'Remove Horizon from the bar' }).focus()
+  await kp.keyboard.press('Enter')
+  await kp.getByText('Removed Horizon from the bar').waitFor({ timeout: 3000 })
+  await kp.waitForTimeout(200)
+  const toastText = await kp.getByRole('status').textContent()
+  check(where, '(y4) the toast says Alt+Z undoes it, in the words a screen reader reads', /Press Alt\+Z to undo\./.test(toastText ?? ''), toastText ?? '')
+  check(where, '(y4) the toast shows the key beside Undo for a mouse', await kp.locator('kbd', { hasText: 'Alt+Z' }).isVisible())
+  const focused = () => kp.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.tagName)
+  const heldBefore = await focused()
+  await kp.keyboard.press('Z')
+  check(where, '(y4) Z alone does nothing', (await labels()).length === before.length - 1)
+  await kp.keyboard.press('Alt+KeyZ')
+  await kp.waitForTimeout(300)
+  check(where, '(y4) Alt+Z puts the input back where it was and takes the toast away', JSON.stringify(await labels()) === JSON.stringify(before) && (await kp.getByRole('status').count()) === 0, JSON.stringify(await labels()))
+  check(where, '(y4) and does not move the keyboard from where it was', (await focused()) === heldBefore, `${heldBefore} then ${await focused()}`)
+  await kp.keyboard.press('Alt+KeyZ')
+  await kp.waitForTimeout(200)
+  check(where, '(y4) Alt+Z again, with no toast, does nothing', JSON.stringify(await labels()) === JSON.stringify(before))
+
+  // From a field, where the key would otherwise type a letter (Option+Z is an omega on a Mac).
+  await kp.getByRole('button', { name: 'Remove Horizon from the bar' }).focus()
+  await kp.keyboard.press('Enter')
+  await kp.getByText('Removed Horizon from the bar').waitFor({ timeout: 3000 })
+  const monthly = kp.getByLabel('Monthly investing', { exact: true })
+  const typed = await monthly.inputValue()
+  // Pressing a star hands focus to the next one after the next render: let that finish first.
+  await kp.waitForTimeout(400)
+  await monthly.focus()
+  await kp.keyboard.press('Alt+KeyZ')
+  await kp.waitForTimeout(300)
+  const inField = { restored: JSON.stringify(await labels()) === JSON.stringify(before), value: await monthly.inputValue(), typed, focused: await monthly.evaluate((el) => el === document.activeElement) }
+  check(where, '(y4) Alt+Z in a field undoes the removal and types nothing', inField.restored && inField.value === typed && inField.focused, JSON.stringify(inField))
+  await keys.context.close()
 }
 
 async function main() {
@@ -1256,6 +1407,10 @@ async function main() {
           await checkPhoneSaveReason(browser, engine)
           continue
         }
+        if (process.env.ONLY === 'y4') {
+          await checkTouchLeftovers(browser, engine)
+          continue
+        }
         for (const screen of SCREENS) await checkScreen(browser, screen, engine)
         await checkTabs(browser, engine)
         await checkThemesAndZoom(browser, engine)
@@ -1269,6 +1424,7 @@ async function main() {
         await checkPointDecimal(browser, engine)
         await checkFirstDraft(browser, engine)
         await checkPhoneSaveReason(browser, engine)
+        await checkTouchLeftovers(browser, engine)
       } finally {
         await browser.close()
       }
