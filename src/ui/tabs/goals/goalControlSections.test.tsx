@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { LeverKey } from '../../../engine'
 import { makeScenario } from '../../../testing/factories'
@@ -54,6 +54,17 @@ describe('the sections of the controls', () => {
     render(<HousingFields draft={makeDraft()} onChange={vi.fn()} omit={everything(['housePurchaseYear'])} />)
     expect(screen.queryByText('Purchase year')).not.toBeInTheDocument()
     expect(screen.getByText(/Purchase cost from portfolio/)).toBeInTheDocument()
+  })
+
+  it('writes an edit to the withdrawal rate to the draft', () => {
+    const onChange = vi.fn()
+    render(<FireFields draft={makeDraft()} onChange={onChange} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Increase percentage' }))
+
+    expect(onChange).toHaveBeenCalledTimes(1)
+    const patch = onChange.mock.calls[0]?.[0] as { safeWithdrawalRate: number } | undefined
+    expect(patch?.safeWithdrawalRate).toBeGreaterThan(makeDraft().safeWithdrawalRate)
   })
 
   it('keeps the other inputs of a section when one is in the bar', () => {
