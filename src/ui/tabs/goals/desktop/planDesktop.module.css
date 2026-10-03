@@ -343,3 +343,73 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/*
+ * The inputs panel takes its own height in and out of the page, so what is under it eases down
+ * and back up rather than jumping: the same single row going between 0fr and 1fr that the
+ * offline banner uses. Nothing inside is clipped by it but what is outside the card.
+ */
+.fold {
+  display: grid;
+  grid-template-rows: 1fr;
+  animation: panelIn var(--motion-fold) var(--motion-ease-out);
+}
+
+.folding {
+  animation: panelOut var(--exit-ms, 180ms) var(--motion-ease-in) forwards;
+}
+
+.foldInner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* As many columns as the width holds at a readable size: four where the page is wide, and the
+   rest on further rows where it is not. */
+.columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.75rem 1.75rem;
+  align-items: start;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.columnTitle {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+@keyframes panelIn {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+  to {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+}
+
+@keyframes panelOut {
+  to {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fold,
+  .folding {
+    animation: none;
+  }
+}
