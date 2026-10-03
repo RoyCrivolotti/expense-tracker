@@ -20,7 +20,16 @@ export interface UnsavedActions {
  * write, so it can be put somewhere nearby. If the write fails the buttons come back, and
  * focus with them.
  */
-export function UnsavedGroup({ unsaved, onGone }: { unsaved: UnsavedActions; onGone: () => void }) {
+export function UnsavedGroup({
+  unsaved,
+  onGone,
+  className = styles.unsavedActions,
+}: {
+  unsaved: UnsavedActions
+  onGone: () => void
+  /** The frame it sits in: the phone's section row has its own, the wide screen's scenario row another. */
+  className?: string | undefined
+}) {
   const group = useRef<HTMLDivElement>(null)
   const hadFocus = useRef(false)
   const lastFocused = useRef<EventTarget | null>(null)
@@ -45,7 +54,7 @@ export function UnsavedGroup({ unsaved, onGone }: { unsaved: UnsavedActions; onG
       ref={group}
       role="group"
       aria-label="Unsaved changes"
-      className={styles.unsavedActions}
+      className={className}
       onFocus={(event) => {
         hadFocus.current = true
         lastFocused.current = event.target

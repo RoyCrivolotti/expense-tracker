@@ -65,6 +65,11 @@ afterEach(() => {
   media.setMatching(() => false)
 })
 
+/** An edit to the draft from the levers bar: what the charts are drawn from. */
+function editDraft() {
+  fireEvent.change(screen.getByLabelText('Real return (%/yr, after inflation) slider'), { target: { value: '0.05' } })
+}
+
 function twoScenarios() {
   const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })
   const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })
@@ -91,9 +96,24 @@ describe('GoalsTab renders', () => {
     render(<GoalsTab model={twoScenarios()} actions={makeActions()} />)
     const settled = renders.nowCard
 
-    fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
+    editDraft()
 
     expect(renders.nowCard).toBeGreaterThan(settled)
+  })
+
+  it('leaves the hero chart and the now card alone while the other inputs open and close', async () => {
+    const user = userEvent.setup()
+    render(<GoalsTab model={twoScenarios()} actions={makeActions()} />)
+    const hero = renders.hero
+    const now = renders.nowCard
+
+    // Opening the panel is the tab's own state changing, and nothing the charts are drawn from.
+    await user.click(screen.getByRole('button', { name: 'All inputs' }))
+    expect(screen.getByRole('region', { name: 'All inputs' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'All inputs' }))
+
+    expect(renders.hero).toBe(hero)
+    expect(renders.nowCard).toBe(now)
   })
 
   it('leaves the pinned chart in Scenarios alone when something other than the draft changes', async () => {
@@ -111,13 +131,13 @@ describe('GoalsTab renders', () => {
   it('leaves the hero chart alone when the question about discarding edits opens and closes', async () => {
     const user = userEvent.setup()
     render(<GoalsTab model={twoScenarios()} actions={makeActions()} />)
-    fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
+    editDraft()
     const settled = renders.hero
     expect(settled).toBeGreaterThan(0)
 
     // Choosing another scenario with edits unsaved asks first, which is the editor's state
     // changing and nothing the chart is drawn from.
-    await user.click(screen.getByRole('button', { name: 'Path B' }))
+    await user.click(screen.getByRole('tab', { name: 'Path B' }))
     expect(screen.getByRole('alertdialog')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
 

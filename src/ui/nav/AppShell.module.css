@@ -157,6 +157,18 @@
   }
 }
 
+/*
+ * Plan on a wide screen is one column from the scenarios to the detail charts, and the chart and
+ * the bar of inputs over it use the width. It marks itself (data-goals-plan-wide), so Progress
+ * and Assumptions, which are laid out for the narrower page, keep it. Where :has is not
+ * supported this stays as the page was, which the layout copes with.
+ */
+@media (min-width: 900px) {
+  .contentGoals:has([data-goals-plan-wide]) {
+    max-width: 76rem;
+  }
+}
+
 /* Pinned over the page, so focus in it must not be moved by the page's scroll padding: a
    page that pins more under the header sets --scroll-pad-top for what it keeps focus clear of. */
 .header *,

@@ -31,6 +31,23 @@ function makeModel() {
   return buildExpenseModel(makeDataset())
 }
 
+type User = ReturnType<typeof userEvent.setup>
+
+/** On a wide screen a scenario's name, colour and plan are in its options menu, not on the page. */
+async function openScenarioMenu(user: User) {
+  await user.click(screen.getByRole('button', { name: 'Scenario options' }))
+}
+
+/** Renames the open scenario from its menu, as an edit to save; the menu is closed again after. */
+async function renameScenario(user: User, name: string) {
+  await openScenarioMenu(user)
+  fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: name } })
+  await user.keyboard('{Escape}')
+}
+
+const scenarioTab = (name: string | RegExp, selected?: boolean) =>
+  screen.getByRole('tab', { name, ...(selected === undefined ? {} : { selected }) })
+
 describe('GoalsTab', () => {
   // Opening Scenarios scrolls to its controls, which jsdom does not implement. The scrolls wait
   // a frame; a real one would run inside whichever test comes next, so the frame runs at once.
@@ -128,27 +145,25 @@ describe('GoalsTab', () => {
     const model = buildExpenseModel(makeDataset({ goalScenarios: [plan, other] }))
     render(<GoalsTab model={model} actions={makeActions()} />)
 
-    await user.click(screen.getAllByRole('button', { name: 'Hide Path B on chart' })[0]!)
-    expect(screen.getAllByRole('button', { name: 'Show Path B on chart' })).toHaveLength(2)
+    await user.click(screen.getByRole('button', { name: 'Hide Path B on chart' }))
+    expect(screen.getByRole('button', { name: 'Show Path B on chart' })).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /^Path B$/ }))
+    await user.click(scenarioTab('Path B'))
     expect(screen.queryByRole('button', { name: 'Show Path B on chart' })).not.toBeInTheDocument()
   })
 
-  it('hides a scenario from the hero legend and the chip agrees', async () => {
+  it('hides a scenario from the hero legend and keeps its tab', async () => {
     const user = userEvent.setup()
     const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })
     const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })
     const model = buildExpenseModel(makeDataset({ goalScenarios: [plan, other] }))
     render(<GoalsTab model={model} actions={makeActions()} />)
 
-    // The chip's eye comes first in the DOM; the legend row is the second control.
-    const toggles = screen.getAllByRole('button', { name: 'Hide Path B on chart' })
-    expect(toggles).toHaveLength(2)
-    await user.click(toggles[1]!)
+    await user.click(screen.getByRole('button', { name: 'Hide Path B on chart' }))
 
-    // Both the legend row and the chip's eye now offer to show it again.
-    expect(screen.getAllByRole('button', { name: 'Show Path B on chart' })).toHaveLength(2)
+    // The legend row now offers to show it again, and the scenario is still there to load.
+    expect(screen.getByRole('button', { name: 'Show Path B on chart' })).toBeInTheDocument()
+    expect(scenarioTab('Path B')).toBeInTheDocument()
   })
 
   it('takes an empty Progress view to Assumptions', async () => {
@@ -231,38 +246,42 @@ describe('GoalsTab', () => {
     render(<GoalsTab model={model} actions={actions} />)
 
     // Opens on the plan, which is labelled rather than offered.
-    expect(screen.getAllByText('Current plan').length).toBeGreaterThan(0)
+    expect(scenarioTab('Path A Current plan')).toBeInTheDocument()
+    await openScenarioMenu(user)
+    expect(screen.getByText('This is your current plan')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Use as my plan' })).not.toBeInTheDocument()
+    await user.keyboard('{Escape}')
 
-    await user.click(screen.getByRole('button', { name: 'Path B' }))
+    await user.click(scenarioTab('Path B'))
+    await openScenarioMenu(user)
     await user.click(screen.getByRole('button', { name: 'Use as my plan' }))
 
     expect(actions.activateScenario).toHaveBeenCalledWith(2)
   })
 
-  it('asks before a chip switch drops unsaved edits, and keeps them on Cancel', async () => {
+  it('asks before a tab switch drops unsaved edits, and keeps them on Cancel', async () => {
     const user = userEvent.setup()
     const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })
     const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })
     const model = buildExpenseModel(makeDataset({ goalScenarios: [plan, other] }))
     render(<GoalsTab model={model} actions={makeActions()} />)
 
-    const name = screen.getByLabelText('Scenario name')
-    fireEvent.change(name, { target: { value: 'Path A, tweaked' } })
+    await renameScenario(user, 'Path A, tweaked')
     expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Path B' }))
+    await user.click(scenarioTab('Path B'))
     expect(screen.getByText('Discard unsaved changes to Path A?')).toBeInTheDocument()
-    expect(screen.getByLabelText('Scenario name')).toHaveValue('Path A, tweaked')
+    // The open tab follows the name as it is typed, and stays on it while the question is up.
+    expect(scenarioTab(/Path A, tweaked/, true)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Scenario name')).toHaveValue('Path A, tweaked')
+    expect(scenarioTab(/Path A, tweaked/, true)).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Path B' }))
-    // The header has its own Discard button; the one in the sheet is the answer.
+    await user.click(scenarioTab('Path B'))
+    // The row has its own Discard button; the one in the sheet is the answer.
     await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Discard' }))
-    expect(screen.getByLabelText('Scenario name')).toHaveValue('Path B')
+    expect(scenarioTab('Path B', true)).toBeInTheDocument()
     expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
   })
 
@@ -344,12 +363,12 @@ describe('GoalsTab', () => {
     const model = buildExpenseModel(makeDataset({ goalScenarios: [plan], wealthAccounts: accounts, wealthCheckins: checkins }))
     render(<GoalsTab model={model} actions={actions} />)
 
-    fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
+    await renameScenario(user, 'Path A, tweaked')
     await user.click(screen.getByRole('tab', { name: 'Progress' }))
     await user.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
     await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Re-baseline' }))
     await user.click(screen.getByRole('tab', { name: 'Plan' }))
-    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    await user.click(screen.getByRole('button', { name: 'Save changes to Path A, tweaked' }))
 
     expect(actions.updateScenario).toHaveBeenLastCalledWith(
       1,
@@ -386,6 +405,7 @@ describe('GoalsTab', () => {
     const { rerender } = render(<GoalsTab model={buildExpenseModel(dataset)} actions={actions} />)
 
     // An edit in the editor that has not been saved: the car is taken out.
+    await user.click(screen.getByRole('button', { name: 'All inputs' }))
     fireEvent.click(screen.getByLabelText('Remove Car'))
     expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
 
@@ -409,6 +429,7 @@ describe('GoalsTab', () => {
 
     // The draft moved from its own values: the gift carries over, and the car stays taken out
     // rather than coming back from the saved plan. It is still an edit nobody has saved.
+    await user.click(screen.getByRole('button', { name: 'All inputs' }))
     expect(screen.queryByLabelText('Remove Car')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Remove Gift')).toBeInTheDocument()
     expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
@@ -470,9 +491,9 @@ describe('GoalsTab', () => {
       </ToastContext.Provider>,
     )
 
-    fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
+    await renameScenario(user, 'Path A, tweaked')
     expect(showToast).not.toHaveBeenCalled()
-    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    await user.click(screen.getByRole('button', { name: 'Save changes to Path A, tweaked' }))
 
     expect(showToast).toHaveBeenCalledTimes(1)
     expect(showToast).toHaveBeenCalledWith('Saved Path A, tweaked', 'success')
@@ -485,58 +506,49 @@ describe('GoalsTab', () => {
     const model = buildExpenseModel(makeDataset({ goalScenarios: [plan] }))
     render(<GoalsTab model={model} actions={actions} />)
 
+    await openScenarioMenu(user)
     await user.click(screen.getByRole('button', { name: 'Use color #10b981' }))
+    await user.keyboard('{Escape}')
     expect(actions.updateScenario).not.toHaveBeenCalled()
     expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    await user.click(screen.getByRole('button', { name: 'Save changes to Path A' }))
     expect(actions.updateScenario).toHaveBeenCalledWith(1, expect.objectContaining({ color: '#10b981' }))
   })
 
-  it('asks before a chip switch drops the edits of a detached draft too', async () => {
+  it('asks before a tab switch drops the edits of a detached draft too', async () => {
     const user = userEvent.setup()
     const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })
     const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })
     const model = buildExpenseModel(makeDataset({ goalScenarios: [plan, other] }))
     render(<GoalsTab model={model} actions={makeActions()} />)
 
-    fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
+    await renameScenario(user, 'Path A, tweaked')
     // Detaching keeps the edits, and with no saved scenario loaded nothing tracks them as unsaved.
-    await user.click(screen.getByRole('button', { name: 'Unsaved draft' }))
-    await user.click(screen.getByRole('button', { name: 'Path B' }))
+    await openScenarioMenu(user)
+    await user.click(screen.getByRole('button', { name: 'Keep these edits as a draft' }))
+    expect(scenarioTab('Unsaved draft', true)).toBeInTheDocument()
+    await user.click(scenarioTab('Path B'))
 
     expect(screen.getByText('Discard the unsaved draft?')).toBeInTheDocument()
-    expect(screen.getByLabelText('Scenario name')).toHaveValue('Path A, tweaked')
+    expect(scenarioTab('Unsaved draft', true)).toBeInTheDocument()
 
     await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Discard' }))
-    expect(screen.getByLabelText('Scenario name')).toHaveValue('Path B')
+    expect(scenarioTab('Path B', true)).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Unsaved draft' })).not.toBeInTheDocument()
   })
 
-  it('does not ask when a detached draft has no edits', async () => {
+  it('switches tabs without asking when nothing is unsaved', async () => {
     const user = userEvent.setup()
     const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })
     const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })
     const model = buildExpenseModel(makeDataset({ goalScenarios: [plan, other] }))
     render(<GoalsTab model={model} actions={makeActions()} />)
 
-    await user.click(screen.getByRole('button', { name: 'Unsaved draft' }))
-    await user.click(screen.getByRole('button', { name: 'Path B' }))
+    await user.click(scenarioTab('Path B'))
 
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Scenario name')).toHaveValue('Path B')
-  })
-
-  it('switches chips without asking when nothing is unsaved', async () => {
-    const user = userEvent.setup()
-    const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })
-    const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })
-    const model = buildExpenseModel(makeDataset({ goalScenarios: [plan, other] }))
-    render(<GoalsTab model={model} actions={makeActions()} />)
-
-    await user.click(screen.getByRole('button', { name: 'Path B' }))
-
-    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Scenario name')).toHaveValue('Path B')
+    expect(scenarioTab('Path B', true)).toBeInTheDocument()
   })
 
   it('measures Progress against the plan, not the scenario loaded in the editor', async () => {
@@ -567,7 +579,7 @@ describe('GoalsTab', () => {
     render(<GoalsTab model={model} actions={makeActions()} />)
 
     // Load the other scenario into the editor, then look at Progress.
-    await user.click(screen.getByRole('button', { name: 'Path B' }))
+    await user.click(scenarioTab('Path B'))
     await user.click(screen.getByRole('tab', { name: 'Progress' }))
 
     // Against Path A's 100M start the tiny check-in is far behind; against Path B's

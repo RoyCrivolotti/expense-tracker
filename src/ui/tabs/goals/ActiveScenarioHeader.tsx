@@ -7,15 +7,8 @@ import { ColorSwatchPicker } from '../../components/ColorSwatchPicker'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { Presence } from '../../components/Presence'
 import { EXIT_MS } from '../../hooks/motion'
+import { deleteMessage } from './deleteMessage'
 import styles from './goals.module.css'
-
-function deleteMessage(scenario: GoalScenario): string[] {
-  const lines = ['Its projection line goes with it. Check-ins and your other scenarios stay.']
-  if (scenario.isActive) {
-    lines.push('It is your current plan, so Progress has nothing to measure against until you pick another.')
-  }
-  return lines
-}
 
 interface ActiveScenarioHeaderProps {
   draft: NewGoalScenario

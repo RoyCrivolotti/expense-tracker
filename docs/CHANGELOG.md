@@ -2,6 +2,16 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (Goals on a wide screen)
+
+- **Plan is one column on a wide screen.** The 300px side panel with its own scroll is gone, and with it the second scroll position to keep track of. The scenario row, the chart across the page, the inputs and the detail charts follow one another down a single scroll. The chart is about 1,130px wide on a 1440px screen instead of 588px, and 330px tall instead of 300px.
+- **The inputs a plan is mostly tuned with sit in a bar under the chart.** Monthly investing, real return, horizon, the year you buy a house and the starting balance are in a row beside the net worth they move. Amounts and the horizon are typed over, and the percentages and the purchase year keep their sliders. From 1200px wide the bar is held to the bottom edge of the screen until the page scrolls up to its place, so it is in sight on a first load, and it sticks under the header once the page has scrolled past it. On narrower windows it only sticks under the header, since five levers no longer fit one row there.
+- **Every other input opens from "All inputs".** The panel folds open under the bar in as many columns as the width holds: Portfolio, Housing, Financial independence with the plan start, and Life events. An input that is in the bar is not in the panel as well.
+- **A scenario is a tab.** The tabs show which one is your plan and which has unsaved edits, and the open tab follows the name as it is typed. Arrows move between tabs and Enter opens one, so the question about unsaved edits is not asked for every tab the arrow passes. "+ New" makes a copy of the open scenario. Rename, colour, use as my plan, duplicate, delete, save as new and keep these edits as a draft are in the menu at the end of the row, which opens with the name field ready. The old chip's eye is gone: the chart's legend, which already did the same, hides and shows a line.
+- **The detail charts are two columns of cards.** Each column stacks its own cards, so "Where you are today" is no longer stretched to match the chart beside it. The All charts and One chart switch went with the old layout, since there is one arrangement.
+- **The chart's legend is a row of chips with their values** on a wide screen, instead of one row under another with each figure far from its name. The Nominal and Purchasing power switch sits beside the summary figures.
+- **Progress and Assumptions keep the page width they were laid out for.** Only Plan takes the wider page. The phone is unchanged.
+
 ## October 2026 (section tabs)
 
 - **A tapped section leaves a little air under the row.** Totals, Cash and Year in Analytics put their first line half under the row, and every other section, and each Goals view on a phone, touched it. They now stop 8px under it, as the Scenarios chips do.

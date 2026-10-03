@@ -118,61 +118,44 @@ describe('the page order of the Plan blocks', () => {
     expect(element('areaHero')).toContainElement(document.activeElement as HTMLElement)
   })
 
-  it('goes from the view switch of a wide screen to the scenarios, which are to the left of the chart', async () => {
+  it('goes from the view switch of a wide screen to the scenarios, which are the first thing on the page', async () => {
     render(<GoalsTab model={buildExpenseModel(makeDataset())} />)
     screen.getByRole('tab', { name: 'Plan' }).focus()
     await userEvent.setup().tab()
 
-    expect(element('areaScenarios')).toContainElement(document.activeElement as HTMLElement)
+    const stop = document.activeElement as HTMLElement
+    expect(stop).toHaveAttribute('role', 'tab')
+    expect(stop.closest('[role="tablist"]')).toHaveAccessibleName('Scenarios')
   })
 
-  it('keeps the sidebar before the blocks beside it on a wide screen', () => {
+  it('reads a wide screen from the scenarios to the chart, the inputs, then the detail charts', () => {
     render(<GoalsTab model={buildExpenseModel(makeDataset())} />)
-    const wide = ['areaScenarios', 'areaControls', 'areaHero', 'areaNow', 'areaSecondary']
+    const top = [
+      screen.getByRole('tablist', { name: 'Scenarios' }),
+      screen.getByRole('heading', { name: 'Invested portfolio projection' }),
+      screen.getByRole('group', { name: 'Key inputs' }),
+      screen.getByRole('heading', { name: 'Detailed charts' }),
+    ]
 
-    expect(inPageOrder([...wide].reverse())).toEqual(wide)
+    expect([...top].reverse().sort((x, y) => (x.compareDocumentPosition(y) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1))).toEqual(top)
   })
 
-  it('keeps what was typed in the scenario card when the window crosses 900px, both ways', async () => {
+  it('keeps the edits made to the draft when the window crosses 900px, both ways', async () => {
     const user = userEvent.setup()
     const model = buildExpenseModel(makeDataset({ goalScenarios: [makeScenario({ id: 1, isActive: true })] }))
     render(<GoalsTab model={model} actions={makeActions()} />)
-    await user.click(screen.getByRole('button', { name: /Save as new scenario/ }))
-    await user.type(screen.getByLabelText('Name for new scenario'), ' typed')
-    const typed = screen.getByLabelText<HTMLInputElement>('Name for new scenario').value
-    expect(inPageOrder(['areaHero', 'areaScenarios'])).toEqual(['areaScenarios', 'areaHero'])
+    const lever = screen.getByLabelText('Monthly investing')
+    await user.clear(lever)
+    await user.type(lever, '750{Enter}')
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
 
+    // The phone has the same input in its controls, in the half that is not showing.
     act(() => media.change(NARROW_MQ, true))
-    expect(inPageOrder(['areaHero', 'areaScenarios'])).toEqual(['areaHero', 'areaScenarios'])
-    expect(screen.getByLabelText('Name for new scenario')).toHaveValue(typed)
+    expect(screen.getByLabelText('Monthly investing')).toHaveValue('750,00')
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
 
     act(() => media.change(NARROW_MQ, false))
-    expect(inPageOrder(['areaHero', 'areaScenarios'])).toEqual(['areaScenarios', 'areaHero'])
-    expect(screen.getByLabelText('Name for new scenario')).toHaveValue(typed)
-  })
-})
-
-describe('the wide grid of the Plan blocks', () => {
-  /** Where the wide layout puts each block, read from the rules the page ships. */
-  const wide = () => rulesUnder('(min-width: 900px)')
-  const gridArea = (area: string) =>
-    wide().find((r) => r.selectorText === `.${styles[area]}`)?.style.getPropertyValue('grid-area')
-
-  it('names every block in the grid, the sidebar in its own column down the rows beside the others', () => {
-    const grid = wide().find((r) => r.selectorText === `.${styles.layout}`)!
-    const rows = grid.style
-      .getPropertyValue('grid-template-areas')
-      .match(/'[^']+'/g)!
-      .map((row) => row.replaceAll("'", '').split(' '))
-
-    expect(rows.map((row) => row[0])).toEqual(['sidebar', 'sidebar', 'sidebar'])
-    expect(rows.map((row) => row[1])).toEqual(['hero', 'now', 'secondary'])
-  })
-
-  it('puts each block in the grid area of its own name, or it falls into the first free cell', () => {
-    expect(gridArea('areaSidebar')).toBe('sidebar')
-    expect(gridArea('areaHero')).toBe('hero')
-    expect(gridArea('areaNow')).toBe('now')
-    expect(gridArea('areaSecondary')).toBe('secondary')
+    expect(screen.getByLabelText('Monthly investing')).toHaveValue('750')
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
   })
 })

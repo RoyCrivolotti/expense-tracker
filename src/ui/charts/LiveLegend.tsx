@@ -24,6 +24,8 @@ interface LiveLegendProps {
   onToggle?: ((scenarioId: number) => void) | undefined
   /** The row list, for a caller that needs to know whether it is on screen. */
   listRef?: Ref<HTMLUListElement> | undefined
+  /** One row under another, or side by side as chips where the chart is wide enough to hold them. */
+  layout?: 'rows' | 'chips' | undefined
 }
 
 /** One legend row; a button when the row can hide or show its series. */
@@ -133,10 +135,10 @@ export function SeriesSwatch({
  * chart can reuse the same row rendering. Callers own everything else about a legend
  * (a hint, a heading, extra rows below): this is only the row list.
  */
-export function LiveLegend({ items, formatValue, onToggle, listRef }: LiveLegendProps) {
+export function LiveLegend({ items, formatValue, onToggle, listRef, layout = 'rows' }: LiveLegendProps) {
   if (items.length === 0) return null
   return (
-    <ul ref={listRef} className={styles.list}>
+    <ul ref={listRef} className={layout === 'chips' ? `${styles.list} ${styles.chips}` : styles.list}>
       {items.map((item) => (
         <LegendRow key={item.scenarioId ?? item.label} item={item} onToggle={onToggle} formatValue={formatValue} />
       ))}

@@ -29,6 +29,17 @@ describe('LiveLegend', () => {
     expect(screen.getByText('-')).toBeInTheDocument()
   })
 
+  it('lays the rows side by side as chips when asked to, and one under another otherwise', () => {
+    const items: LiveLegendItem[] = [{ label: 'Path A', color: '#6366f1', valueCents: 100 }]
+    const { container, rerender } = render(<LiveLegend items={items} formatValue={formatValue} />)
+    const list = container.querySelector('ul')!
+    const rows = list.className
+    rerender(<LiveLegend items={items} formatValue={formatValue} layout="chips" />)
+    expect(container.querySelector('ul')!.className).not.toBe(rows)
+    expect(container.querySelector('ul')!.className).toContain('chips')
+    expect(screen.getByText('Path A')).toBeInTheDocument()
+  })
+
   it('hands out its list element via listRef', () => {
     const listRef = createRef<HTMLUListElement>()
     const { container } = render(

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { GoalScenario, Milestone } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
-import { SegmentedControl } from '../../components/SegmentedControl'
 import { Card } from '../../components/primitives'
 import { useRadioGroupKeys } from '../../hooks/useRadioGroupKeys'
 import { ScenarioComparison } from './charts/ScenarioComparison'
@@ -11,7 +10,6 @@ import { FireChart } from './charts/FireChart'
 import { RentVsOwnChart } from './charts/RentVsOwnChart'
 import { SavingsRateChart } from './charts/SavingsRateChart'
 import type { MonthlyFlow, PlanFromToday } from '../../../engine'
-import { useGoalsNarrow } from './useGoalsNarrow'
 import styles from './goals.module.css'
 
 const VIEWS = [
@@ -24,16 +22,6 @@ const VIEWS = [
 ] as const
 
 type SecondaryView = (typeof VIEWS)[number]['value']
-
-const DESKTOP_LAYOUT = [
-  { value: 'stack', label: 'All charts' },
-  { value: 'tabs', label: 'One chart' },
-] as const
-
-type DesktopLayout = (typeof DESKTOP_LAYOUT)[number]['value']
-
-// Real pixels now that the charts size themselves to their container.
-const STACK_CHART_HEIGHT = 260
 
 /** Tracks whether a horizontally scrollable element has more content off either edge. */
 function useScrollEdges() {
@@ -88,8 +76,6 @@ function SecondaryViewChart({
   reached,
   includeDraft,
   fromToday,
-  chartHeight,
-  embedded = false,
 }: {
   view: SecondaryView
   scenarios: GoalScenario[]
@@ -99,21 +85,12 @@ function SecondaryViewChart({
   reached: Map<number, string>
   includeDraft: boolean
   fromToday: PlanFromToday | null
-  chartHeight?: number | undefined
-  embedded?: boolean
 }) {
-  const h = chartHeight
   switch (view) {
     case 'compare':
-      return (
-        <ScenarioComparison scenarios={scenarios} draft={draft} includeDraft={includeDraft} fromToday={fromToday} embedded={embedded} />
-      )
+      return <ScenarioComparison scenarios={scenarios} draft={draft} includeDraft={includeDraft} fromToday={fromToday} embedded />
     case 'composition':
-      return h != null ? (
-        <CompositionChart draft={draft} height={h} embedded={embedded} />
-      ) : (
-        <CompositionChart draft={draft} embedded={embedded} />
-      )
+      return <CompositionChart draft={draft} embedded />
     case 'milestones':
       return (
         <MilestoneMatrix
@@ -123,27 +100,15 @@ function SecondaryViewChart({
           reached={reached}
           includeDraft={includeDraft}
           fromToday={fromToday}
-          embedded={embedded}
+          embedded
         />
       )
     case 'fire':
-      return h != null ? (
-        <FireChart draft={draft} height={h} embedded={embedded} />
-      ) : (
-        <FireChart draft={draft} embedded={embedded} />
-      )
+      return <FireChart draft={draft} embedded />
     case 'rent':
-      return h != null ? (
-        <RentVsOwnChart draft={draft} height={h} embedded={embedded} />
-      ) : (
-        <RentVsOwnChart draft={draft} embedded={embedded} />
-      )
+      return <RentVsOwnChart draft={draft} embedded />
     case 'savings':
-      return h != null ? (
-        <SavingsRateChart draft={draft} monthly={monthly} height={h} embedded={embedded} />
-      ) : (
-        <SavingsRateChart draft={draft} monthly={monthly} embedded={embedded} />
-      )
+      return <SavingsRateChart draft={draft} monthly={monthly} embedded />
   }
 }
 
@@ -237,42 +202,6 @@ function TabbedChart({
   )
 }
 
-function SecondaryChartStack({
-  scenarios,
-  draft,
-  monthly,
-  milestones,
-  reached,
-  includeDraft,
-  fromToday,
-}: {
-  scenarios: GoalScenario[]
-  draft: NewGoalScenario
-  monthly: MonthlyFlow[]
-  milestones: Milestone[]
-  reached: Map<number, string>
-  includeDraft: boolean
-  fromToday: PlanFromToday | null
-}) {
-  return (
-    <div className={styles.secondaryStack}>
-      <ScenarioComparison scenarios={scenarios} draft={draft} includeDraft={includeDraft} fromToday={fromToday} />
-      <CompositionChart draft={draft} height={STACK_CHART_HEIGHT} />
-      <MilestoneMatrix
-        scenarios={scenarios}
-        draft={draft}
-        milestones={milestones}
-        reached={reached}
-        includeDraft={includeDraft}
-        fromToday={fromToday}
-      />
-      <FireChart draft={draft} height={STACK_CHART_HEIGHT} />
-      <RentVsOwnChart draft={draft} height={STACK_CHART_HEIGHT} />
-      <SavingsRateChart draft={draft} monthly={monthly} height={STACK_CHART_HEIGHT} />
-    </div>
-  )
-}
-
 export function SecondaryCharts({
   scenarios,
   draft,
@@ -283,67 +212,21 @@ export function SecondaryCharts({
   dirty,
   fromToday,
 }: SecondaryChartsProps) {
-  const narrow = useGoalsNarrow()
   const [view, setView] = useState<SecondaryView>('compare')
-  const [desktopLayout, setDesktopLayout] = useState<DesktopLayout>('stack')
   const includeDraft = activeId === null || dirty
 
-  if (narrow) {
-    return (
-      <TabbedChart view={view} onViewChange={setView}>
-        <SecondaryViewChart
-          view={view}
-          scenarios={scenarios}
-          draft={draft}
-          monthly={monthly}
-          milestones={milestones}
-          reached={reached}
-          includeDraft={includeDraft}
-          fromToday={fromToday}
-          embedded
-        />
-      </TabbedChart>
-    )
-  }
-
   return (
-    <div className={styles.secondaryDesktop}>
-      <div className={styles.secondaryHeader}>
-        <h3 className={styles.secondaryHeading}>Detailed charts</h3>
-        <SegmentedControl
-          layout="compact"
-          ariaLabel="Secondary charts layout"
-          options={[...DESKTOP_LAYOUT]}
-          value={desktopLayout}
-          onChange={setDesktopLayout}
-        />
-      </div>
-      {desktopLayout === 'stack' ? (
-        <SecondaryChartStack
-          scenarios={scenarios}
-          draft={draft}
-          monthly={monthly}
-          milestones={milestones}
-          reached={reached}
-          includeDraft={includeDraft}
-          fromToday={fromToday}
-        />
-      ) : (
-        <TabbedChart view={view} onViewChange={setView}>
-          <SecondaryViewChart
-            view={view}
-            scenarios={scenarios}
-            draft={draft}
-            monthly={monthly}
-            milestones={milestones}
-            reached={reached}
-            includeDraft={includeDraft}
-            fromToday={fromToday}
-            chartHeight={STACK_CHART_HEIGHT}
-            embedded
-          />
-        </TabbedChart>
-      )}
-    </div>
+    <TabbedChart view={view} onViewChange={setView}>
+      <SecondaryViewChart
+        view={view}
+        scenarios={scenarios}
+        draft={draft}
+        monthly={monthly}
+        milestones={milestones}
+        reached={reached}
+        includeDraft={includeDraft}
+        fromToday={fromToday}
+      />
+    </TabbedChart>
   )
 }

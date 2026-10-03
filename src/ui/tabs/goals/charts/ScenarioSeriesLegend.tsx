@@ -26,6 +26,7 @@ interface ScenarioSeriesLegendProps {
   listRef?: Ref<HTMLUListElement> | undefined
   /** Makes each saved scenario's row a toggle for its line, as chart legends usually are. */
   onToggle?: ((scenarioId: number) => void) | undefined
+  layout?: 'rows' | 'chips' | undefined
 }
 
 function BreakdownRows({
@@ -87,6 +88,7 @@ export function ScenarioSeriesLegend({
   yearZeroHint = false,
   listRef,
   onToggle,
+  layout,
 }: ScenarioSeriesLegendProps) {
   const format = useMoneyFormat()
   if (items.length === 0) return null
@@ -106,6 +108,7 @@ export function ScenarioSeriesLegend({
         formatValue={(cents) => formatMoneyShort(cents, format)}
         onToggle={onToggle}
         listRef={listRef}
+        layout={layout}
       />
       {breakdowns.length > 0 ? (
         <div className={styles.breakdownStack}>
