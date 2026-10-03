@@ -3,10 +3,8 @@ import type { GoalScenario, Milestone, WealthAccount, WealthCheckin } from '../.
 import type { ExpenseActions } from '../../actions'
 import type { MonthlyFlow, PlanFromToday } from '../../../engine'
 import { Card } from '../../components/primitives'
-import { ConfirmSheet } from '../../components/ConfirmSheet'
-import { Presence } from '../../components/Presence'
-import { EXIT_MS } from '../../hooks/motion'
 import { AdjustStack } from './AdjustStack'
+import { DiscardSheet } from './DiscardSheet'
 import type { InvestedSnapshot } from './checkinDate'
 import { NetWorthNowCard } from './charts/NetWorthNowCard'
 import { GoalControls } from './GoalControls'
@@ -16,31 +14,8 @@ import { PlanHero, type ValueDisplay } from './PlanHero'
 import { ScenarioManager } from './ScenarioManager'
 import { SecondaryCharts } from './SecondaryCharts'
 import { useGoalsNarrow } from './useGoalsNarrow'
-import type { DiscardPrompt, ScenarioEditor } from './useScenarioEditor'
+import type { ScenarioEditor } from './useScenarioEditor'
 import styles from './goals.module.css'
-
-/**
- * Asked before loading another scenario over unsaved edits. Held inside Presence so the
- * sheet keeps its text while it animates out. A detached draft has no saved scenario to
- * "save changes" to, so it is told to save the draft as a new one.
- */
-function DiscardSheet({ pending, open, detached, name, onConfirm, onCancel }: DiscardPrompt) {
-  const keep = detached ? 'Save the draft as a new scenario first to keep them.' : 'Save changes first to keep them.'
-  return (
-    <Presence show={open} exitMs={EXIT_MS.sheet}>
-      {pending ? (
-        <ConfirmSheet
-          title={detached ? 'Discard the unsaved draft?' : `Discard unsaved changes to ${name}?`}
-          message={`Loading ${pending.name} drops the edits made here. ${keep}`}
-          confirmLabel="Discard"
-          destructive
-          onConfirm={onConfirm}
-          onCancel={onCancel}
-        />
-      ) : null}
-    </Presence>
-  )
-}
 
 interface PlanSidebarProps {
   half: MobilePlanView

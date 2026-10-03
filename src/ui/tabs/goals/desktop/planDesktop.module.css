@@ -149,3 +149,197 @@
     transition: none;
   }
 }
+
+/* The scenario row: one tab per scenario, then what can be done with the open one. */
+.scenarioRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.tabs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.tab,
+.newTab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4375rem 0.875rem;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.tab:hover,
+.newTab:hover {
+  border-color: color-mix(in srgb, var(--color-accent) 55%, var(--color-border));
+}
+
+/* The one in the editor: the accent on its edge and a wash of it behind. */
+.tabOn {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface));
+  font-weight: 600;
+}
+
+.newTab {
+  color: var(--color-text-muted);
+}
+
+.tabDot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.tabPlan,
+.tabEdited {
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tabPlan {
+  color: var(--exp-success-text);
+  background: color-mix(in srgb, var(--exp-success) 18%, transparent);
+}
+
+.tabEdited {
+  color: var(--exp-warning-text);
+  background: color-mix(in srgb, var(--exp-warning) 18%, transparent);
+}
+
+.rowSpacer {
+  flex: 1;
+}
+
+.unsavedActions {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.readOnly {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.menuTrigger {
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.menuTrigger:hover,
+.menuTrigger[aria-expanded='true'] {
+  border-color: var(--color-accent);
+}
+
+/* The scenario's options, in the same popover the app's other pickers use. */
+.menu {
+  composes: popoverEnter from '../../../components/popoverMotion.module.css';
+  position: fixed;
+  z-index: 1000;
+  display: grid;
+  gap: 0.6rem;
+  width: min(19rem, calc(100vw - 1rem));
+  padding: 0.7rem;
+  border-radius: 1rem;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.menu[data-side='below'] {
+  --pop-shift: -0.3rem;
+}
+
+.menu[data-side='above'] {
+  --pop-shift: 0.3rem;
+}
+
+.menuLeaving {
+  composes: popoverLeaving from '../../../components/popoverMotion.module.css';
+}
+
+.menuRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.menuList {
+  display: grid;
+  gap: 0.1rem;
+  margin: 0;
+  padding: 0.35rem 0 0;
+  list-style: none;
+  border-top: 1px solid var(--color-border);
+}
+
+.menuItem {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 0.6rem;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.8125rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menuItem:hover {
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+}
+
+.menuItem:focus-visible {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.menuDanger {
+  color: var(--exp-danger-text);
+}
+
+.menuNote {
+  display: block;
+  padding: 0.5rem 0.55rem;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
