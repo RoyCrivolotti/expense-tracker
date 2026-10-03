@@ -401,7 +401,9 @@ async function checkTabWalk(page, where, open, engine) {
       const covered = hit !== null && !el.contains(hit) && !hit.contains(el)
       return {
         name: (el.getAttribute('aria-label') || el.textContent || el.tagName).trim().replace(/\s+/g, ' ').slice(0, 40),
-        y: r.top + window.scrollY,
+        // The middle, not the top: two controls in one row can differ by a few pixels in height with a
+        // font's metrics (the scenario menu button is 36px and Duplicate is not), and neither is above the other.
+        y: r.top + r.height / 2 + window.scrollY,
         top: Math.round(r.top),
         scrollY: Math.round(window.scrollY),
         covered,
