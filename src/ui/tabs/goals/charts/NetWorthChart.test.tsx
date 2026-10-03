@@ -243,14 +243,14 @@ describe('NetWorthChart', () => {
     const yLabels = () =>
       [...container.querySelectorAll('text[text-anchor="end"]')].map((t) => t.textContent ?? '').join('|')
     // A 100M target over a plan that reaches a few million: it would set the axis if drawn.
-    expect(yLabels()).not.toMatch(/100\.0M/)
-    expect(screen.getByText('FI 100.0M €')).toBeInTheDocument()
+    expect(yLabels()).not.toMatch(/100,0M/)
+    expect(screen.getByText('FI 100,0M €')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('radio', { name: '5Y' }))
-    expect(yLabels()).not.toMatch(/100\.0M/)
-    expect(screen.getByText('FI 100.0M €')).toBeInTheDocument()
+    expect(yLabels()).not.toMatch(/100,0M/)
+    expect(screen.getByText('FI 100,0M €')).toBeInTheDocument()
     // The marker's title is not read out of an image, so the chart's own name carries the target.
     expect(container.querySelector('title')?.textContent).toMatch(/is above the top of this chart/)
-    expect(screen.getByRole('img', { name: /Invested portfolio projection by year\. The FI target, 100\.0M .*, is above the top of this chart\./ })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: /Invested portfolio projection by year\. The FI target, 100,0M .*, is above the top of this chart\./ })).toBeInTheDocument()
   })
 
   it('still draws an FI target the plan gets within reach of, with no marker', () => {
@@ -636,8 +636,9 @@ describe('NetWorthChart', () => {
       const labels = [...container.querySelectorAll('text[text-anchor="end"]')].map((t) => t.textContent ?? '')
       unmount()
       const cents = labels.flatMap((l) => {
-        const m = /^([\d.]+)([KM])/.exec(l)
-        return m ? [Number(m[1]) * (m[2] === 'M' ? 1e6 : 1e3)] : []
+        // The axis writes its decimals with the format's mark, a comma in the default one.
+        const m = /^([\d.,]+)([KM])/.exec(l)
+        return m ? [Number(m[1]!.replace(',', '.')) * (m[2] === 'M' ? 1e6 : 1e3)] : []
       })
       return Math.max(...cents)
     }
