@@ -1,0 +1,57 @@
+import { render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import type { LeverKey } from '../../../engine'
+import { makeScenario } from '../../../testing/factories'
+import { FireFields, HousingFields, PortfolioFields } from './goalControlSections'
+import { LEVER_SPECS, SECTION_KEYS } from './leverFields'
+
+function makeDraft() {
+  const { id, ...rest } = makeScenario({ housePurchaseYear: 5, transactionCostsCents: 50_000 })
+  void id
+  return rest
+}
+
+const everything = (keys: readonly LeverKey[]) => new Set(keys)
+
+describe('the sections of the controls', () => {
+  it('shows every input of a section when none is in the bar', () => {
+    render(
+      <>
+        <PortfolioFields draft={makeDraft()} onChange={vi.fn()} />
+        <HousingFields draft={makeDraft()} onChange={vi.fn()} />
+        <FireFields draft={makeDraft()} onChange={vi.fn()} />
+      </>,
+    )
+    for (const key of [...SECTION_KEYS.portfolio, ...SECTION_KEYS.fire]) {
+      expect(screen.getByLabelText(LEVER_SPECS[key].label)).toBeInTheDocument()
+    }
+    expect(screen.getByText('Purchase year')).toBeInTheDocument()
+    expect(screen.getByText(/Purchase cost from portfolio/)).toBeInTheDocument()
+  })
+
+  it('leaves out the inputs that are in the bar, with the hints that explain only them', () => {
+    const omit = everything([...SECTION_KEYS.portfolio, ...SECTION_KEYS.housing, ...SECTION_KEYS.fire])
+    const { container } = render(
+      <>
+        <PortfolioFields draft={makeDraft()} onChange={vi.fn()} omit={omit} />
+        <HousingFields draft={makeDraft()} onChange={vi.fn()} omit={omit} />
+        <FireFields draft={makeDraft()} onChange={vi.fn()} omit={omit} />
+      </>,
+    )
+    expect(screen.queryByLabelText('Monthly investing')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Withdrawal rate at FI')).not.toBeInTheDocument()
+    expect(screen.queryByText('Purchase year')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Purchase cost from portfolio/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Notary, agency/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/nominal, as a bank/)).not.toBeInTheDocument()
+    // What is about the section as a whole stays.
+    expect(screen.getByText(/Models life after financial independence/)).toBeInTheDocument()
+    expect(container.querySelectorAll('input')).toHaveLength(0)
+  })
+
+  it('keeps the other inputs of a section when one is in the bar', () => {
+    render(<PortfolioFields draft={makeDraft()} onChange={vi.fn()} omit={everything(['horizonYears'])} />)
+    expect(screen.queryByLabelText('Horizon (years)')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Starting invested')).toBeInTheDocument()
+  })
+})
