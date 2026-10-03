@@ -271,9 +271,10 @@ describe('LeversBar', () => {
     expect(onChange).toHaveBeenLastCalledWith({ housePurchaseYear: null })
   })
 
-  it('names the purchase year as now, or by its year', () => {
+  it('names purchase year 0 as already owned, not as now', () => {
     renderBar({}, { housePurchaseYear: 0 })
-    expect(screen.getByText('Now')).toBeInTheDocument()
+    expect(screen.getByText('Already own')).toBeInTheDocument()
+    expect(screen.queryByText('Now')).not.toBeInTheDocument()
   })
 
   it('gives the purchase year slider the horizon as its top', () => {
@@ -288,7 +289,8 @@ describe('LeversBar', () => {
     const slider = screen.getByRole('slider', { name: 'Purchase year' })
     expect(slider).toHaveAttribute('max', '15')
     expect(slider).toHaveValue('15')
-    expect(slider).toHaveAttribute('aria-valuetext', 'Year 15')
+    expect(slider).toHaveAttribute('aria-valuetext', 'Year 15, past horizon')
+    expect(screen.getByText('Year 15, past horizon')).toBeInTheDocument()
   })
 
   it('reads a percentage slider out as a percentage rather than a bare fraction', () => {

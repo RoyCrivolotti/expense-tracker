@@ -149,7 +149,13 @@ describe('PurchaseYearField', () => {
     const slider = screen.getByRole('slider', { name: 'Purchase year' })
     expect(slider).toHaveAttribute('max', '15')
     expect(slider).toHaveValue('15')
-    expect(slider).toHaveAttribute('aria-valuetext', 'Year 15')
+    expect(slider).toHaveAttribute('aria-valuetext', 'Year 15, past horizon')
+  })
+
+  it('calls year 0 "Already own", since nothing is paid for it later', () => {
+    render(<PurchaseYearField value={0} maxYear={10} onChange={vi.fn()} />)
+    expect(screen.getByRole('slider', { name: 'Purchase year' })).toHaveAttribute('aria-valuetext', 'Already own')
+    expect(screen.queryByText('Now')).not.toBeInTheDocument()
   })
 })
 

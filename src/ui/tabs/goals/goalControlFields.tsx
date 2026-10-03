@@ -3,6 +3,7 @@ import { formatMoneyInput, formatPercent, parseMoneyToCents } from '../../../eng
 import { DateInput } from '../../components/DateInput'
 import { PercentStepper } from '../../components/PercentStepper'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
+import { purchaseYearLabel } from './leverFields'
 import styles from './goals.module.css'
 import stepperStyles from '../../components/PercentStepper.module.css'
 
@@ -195,8 +196,7 @@ interface PurchaseYearFieldProps {
 
 export function PurchaseYearField({ value, maxYear, onChange }: PurchaseYearFieldProps) {
   const raw = value ?? -1
-  const label =
-    raw < 0 ? 'Never' : raw === 0 ? 'Now' : `Year ${raw}`
+  const label = purchaseYearLabel(value, maxYear)
   // A purchase year past the horizon (the horizon was shortened after it was set) stays on the
   // track, where it would otherwise be clamped to the end while the label still named the year.
   const max = Math.max(maxYear, raw)

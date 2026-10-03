@@ -22,7 +22,7 @@ export interface ComparisonRow {
 
 function houseLabel(year: number | null): string {
   if (year === null) return 'never'
-  if (year === 0) return 'now'
+  if (year === 0) return 'owned'
   return `year ${year}`
 }
 

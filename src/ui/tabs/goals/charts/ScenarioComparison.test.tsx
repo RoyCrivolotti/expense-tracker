@@ -21,7 +21,7 @@ describe('comparisonRows', () => {
       EU_MONEY_FORMAT, DEFAULT_INFLATION_RATE,
     )
     expect(rows.map((r) => r.name)).toEqual(['Path A', 'Path B', 'Path C', 'Path D (editing)'])
-    expect(rows.map((r) => r.house)).toEqual(['never', 'now', 'year 5', 'never'])
+    expect(rows.map((r) => r.house)).toEqual(['never', 'owned', 'year 5', 'never'])
     expect(rows[0]!.netWorth).toMatch(/€$/)
     expect(rows[0]!.horizonYears).toBe(30)
     expect(rows[0]!.fi).toMatch(/^(now|year \d+|not in horizon)$/)
