@@ -1,0 +1,151 @@
+/*
+ * The wide screen's Plan view. Sizes, spacing and colours follow the layout that was mocked up
+ * and agreed (a full-width chart over a stuck bar of levers), written in the app's tokens.
+ * Nothing here is under a width query: these components only mount on the wide layout
+ * (useGoalsNarrow), the one switch the phone's styles share.
+ */
+
+/* The levers bar: stuck under the app header with a little air, the way the old side panel
+   was, because it is a card and not a row. The wrapper is what sticks, so the scroll padding
+   (LeversBar.tsx) reads one box. */
+.leversBar {
+  position: sticky;
+  top: calc(var(--exp-header) + var(--exp-header-air) + env(safe-area-inset-top, 0px));
+  z-index: 6;
+}
+
+/* Focus inside the bar takes the page's scroll padding back out, or a control that is stuck
+   would count as hidden under itself and the page would scroll to uncover it. */
+.leversBar * {
+  scroll-margin-top: calc(-1 * var(--scroll-pad-top, 0px));
+}
+
+.levers {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1.4rem;
+  align-items: start;
+  padding: 0.75rem 1.1rem;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+
+/* Five levers in a row where there is room, and fewer to a row where there is not: the bar
+   grows taller instead of squeezing a slider. */
+.leverGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.75rem 1.4rem;
+  min-width: 0;
+}
+
+.lever {
+  display: grid;
+  gap: 0.125rem;
+  align-content: start;
+  min-width: 0;
+}
+
+.leverLabel {
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.leverValue {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.leverInput,
+.leverText {
+  font: inherit;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+/* Reads as text until it is hovered or focused, so five of them in a row are a row of figures
+   and not five boxes. The negative margin keeps the digits on the label's edge. */
+.leverInput {
+  max-width: 100%;
+  padding: 0.0625rem 0.25rem;
+  margin-left: -0.25rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+}
+
+.leverText {
+  padding: 0.0625rem 0;
+  border: 1px solid transparent;
+}
+
+.leverInput:hover {
+  border-color: var(--color-border);
+}
+
+.leverInput:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.leverUnit {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+/* Every lever has this row, with or without a slider in it, so the figures line up. */
+.leverTrack {
+  display: flex;
+  align-items: center;
+  height: 1.25rem;
+}
+
+.leverSide {
+  display: grid;
+  gap: 0.25rem;
+  align-content: start;
+  justify-items: start;
+  min-width: 11rem;
+  padding-left: 1.25rem;
+  border-left: 1px solid var(--color-border);
+}
+
+.leverResult {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.allInputs {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.chevron {
+  display: inline-flex;
+  width: 0.8rem;
+  height: 0.8rem;
+  transform: rotate(90deg);
+  transition: transform var(--motion-fold) var(--motion-ease-out);
+}
+
+.chevronOpen {
+  transform: rotate(-90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}
