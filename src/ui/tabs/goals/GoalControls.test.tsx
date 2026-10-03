@@ -14,7 +14,7 @@ function makeDraft() {
 }
 
 describe('GoalControls', () => {
-  it('has one folding section per Adjust section, in the order the section row lists them', () => {
+  it('has one folding section per Scenarios section, in the order the section row lists them', () => {
     const { container } = render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
 
     // The scrollspy reads these in DOM order and indexes the chips by it.

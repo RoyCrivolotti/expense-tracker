@@ -56,7 +56,7 @@ beforeEach(() => {
   renders.nowCard = 0
   renders.miniChart = 0
   renders.hero = 0
-  // Opening Adjust scrolls to its controls, which jsdom does not implement.
+  // Opening Scenarios scrolls to its controls, which jsdom does not implement.
   vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
 })
 
@@ -96,11 +96,11 @@ describe('GoalsTab renders', () => {
     expect(renders.nowCard).toBeGreaterThan(settled)
   })
 
-  it('leaves the pinned chart in Adjust alone when something other than the draft changes', async () => {
+  it('leaves the pinned chart in Scenarios alone when something other than the draft changes', async () => {
     media.setMatching((query) => query === NARROW_MQ)
     const user = userEvent.setup()
     render(<GoalsTab model={twoScenarios()} actions={makeActions()} />)
-    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
     const settled = renders.miniChart
     expect(settled).toBeGreaterThan(0)
 

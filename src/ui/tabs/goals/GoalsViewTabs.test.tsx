@@ -15,7 +15,7 @@ beforeAll(() => {
 
 /** The view row is the tabs of one panel: what the row selects is what the panel is named for. */
 describe('the Goals view row as tabs', () => {
-  // Opening Adjust scrolls to its controls, which jsdom does not implement.
+  // Opening Scenarios scrolls to its controls, which jsdom does not implement.
   let scrollBy: MockInstance
   beforeEach(() => {
     scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
@@ -51,11 +51,11 @@ describe('the Goals view row as tabs', () => {
     const user = userEvent.setup()
     renderTab()
 
-    expect(tabLabels()).toEqual(['Chart', 'Adjust', 'Progress', 'Assumptions'])
+    expect(tabLabels()).toEqual(['Chart', 'Scenarios', 'Progress', 'Assumptions'])
     expect(screen.getByRole('tabpanel', { name: 'Chart' })).toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
-    expect(screen.getByRole('tabpanel', { name: 'Adjust' })).toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
+    expect(screen.getByRole('tabpanel', { name: 'Scenarios' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('tab', { name: 'Assumptions' }))
     expect(screen.getByRole('tabpanel', { name: 'Assumptions' })).toBeInTheDocument()
@@ -78,8 +78,8 @@ describe('the Goals view row as tabs', () => {
     screen.getByRole('tab', { name: 'Chart' }).focus()
 
     await user.keyboard('{ArrowRight}')
-    expect(screen.getByRole('tab', { name: 'Adjust' })).toHaveFocus()
-    expect(screen.getByRole('tabpanel', { name: 'Adjust' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Scenarios' })).toHaveFocus()
+    expect(screen.getByRole('tabpanel', { name: 'Scenarios' })).toBeInTheDocument()
 
     await user.keyboard('{End}')
     expect(screen.getByRole('tab', { name: 'Assumptions' })).toHaveFocus()

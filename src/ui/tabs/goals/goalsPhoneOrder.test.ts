@@ -15,7 +15,7 @@ function phoneRules(): CSSStyleRule[] {
   return rules
 }
 
-/** The phone `order` of each area, with the rules for Adjust (`inAdjust`) winning over the plain ones. */
+/** The phone `order` of each area, with the rules for Scenarios (`inAdjust`) winning over the plain ones. */
 function phoneOrders(areas: string[], inAdjust: boolean): number[] {
   const rules = phoneRules()
   return areas.map((area) => {
@@ -44,7 +44,7 @@ describe('the phone order of the Plan areas', () => {
     expectInOrder(phoneOrders(['areaHero', 'areaNow', 'areaScenarios', 'areaSecondary'], false))
   })
 
-  it('keeps the snapshot, the scenarios, the pinned chart and then the controls in Adjust', () => {
+  it('keeps the snapshot, the scenarios, the pinned chart and then the controls in Scenarios', () => {
     expectInOrder(phoneOrders(['areaNow', 'areaScenarios', 'areaMini', 'areaControls'], true))
   })
 })

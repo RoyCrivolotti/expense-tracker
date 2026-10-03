@@ -16,7 +16,7 @@ export function scrollToGoalsContent(behavior: 'auto' | 'smooth'): void {
 
 /**
  * Put the page back where it was, once the view it was left on has been rendered again.
- * Adjust's sections fold themselves when its controls are unmounted, and an offset only means
+ * Scenarios' sections fold themselves when its controls are unmounted, and an offset only means
  * something on the page it was taken from, so `open` brings back the ones that were showing.
  */
 export function restoreScrollPosition(top: number, open: readonly AdjustSection[] | null = null): void {

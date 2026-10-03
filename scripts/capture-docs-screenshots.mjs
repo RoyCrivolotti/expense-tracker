@@ -273,11 +273,11 @@ async function captureGoalsProgressAndAssumptions(page, suffix, fullPage) {
   await page.screenshot({ path: join(OUT, `goals-${suffix}-assumptions.png`), fullPage })
 }
 
-/** The phone's Adjust view as it first opens: the pinned chart and chips, and the first section under them. */
+/** The phone's Scenarios view as it first opens: the pinned chart and chips, and the first section under them. */
 async function captureGoalsAdjust(page) {
-  await page.getByRole('tab', { name: 'Adjust', exact: true }).click()
+  await page.getByRole('tab', { name: 'Scenarios', exact: true }).click()
   await page.waitForSelector('#goals-adjust-stack', { timeout: 15000 })
-  // Opening Adjust scrolls to its first section on the next frame.
+  // Opening Scenarios scrolls to its first section on the next frame.
   await page.waitForTimeout(500)
   await page.screenshot({ path: join(OUT, 'goals-mobile-adjust.png') })
 }

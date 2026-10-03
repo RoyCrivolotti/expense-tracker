@@ -32,7 +32,7 @@ function makeModel() {
 }
 
 describe('GoalsTab', () => {
-  // Opening Adjust scrolls to its controls, which jsdom does not implement. The scrolls wait
+  // Opening Scenarios scrolls to its controls, which jsdom does not implement. The scrolls wait
   // a frame; a real one would run inside whichever test comes next, so the frame runs at once.
   let scrollBy: MockInstance
   beforeEach(() => {
@@ -581,7 +581,7 @@ describe('GoalsTab', () => {
 
     expect(screen.getByRole('tab', { name: 'Plan' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.queryByRole('tab', { name: 'Chart' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: 'Adjust' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Scenarios' })).not.toBeInTheDocument()
   })
 
   it('swaps the switch when the window crosses the breakpoint, keeping the view and the half of Plan', async () => {
@@ -594,14 +594,14 @@ describe('GoalsTab', () => {
         .map((r) => r.textContent)
     const widen = (wide: boolean) => act(() => media.change(NARROW_MQ, !wide))
 
-    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
     widen(true)
     expect(labels()).toEqual(['Plan', 'Progress', 'Assumptions'])
     expect(screen.getByRole('tab', { name: 'Plan' })).toHaveAttribute('aria-selected', 'true')
 
     widen(false)
-    expect(labels()).toEqual(['Chart', 'Adjust', 'Progress', 'Assumptions'])
-    expect(screen.getByRole('tab', { name: 'Adjust' })).toHaveAttribute('aria-selected', 'true')
+    expect(labels()).toEqual(['Chart', 'Scenarios', 'Progress', 'Assumptions'])
+    expect(screen.getByRole('tab', { name: 'Scenarios' })).toHaveAttribute('aria-selected', 'true')
 
     await user.click(screen.getByRole('tab', { name: 'Progress' }))
     widen(true)
@@ -616,7 +616,7 @@ describe('GoalsTab', () => {
     const row = screen.getByRole('tablist', { name: 'Goals view' })
     expect(within(row).getAllByRole('tab').map((r) => r.textContent)).toEqual([
       'Chart',
-      'Adjust',
+      'Scenarios',
       'Progress',
       'Assumptions',
     ])
@@ -625,14 +625,14 @@ describe('GoalsTab', () => {
     expect(container.querySelector('[data-mobile-view="chart"]')).not.toBeNull()
   })
 
-  it('switches to the Adjust panel from the phone row', async () => {
+  it('switches to the Scenarios panel from the phone row', async () => {
     mockPhoneWidth()
     const user = userEvent.setup()
     const { container } = render(<GoalsTab model={makeModel()} />)
 
-    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
 
-    expect(screen.getByRole('tab', { name: 'Adjust' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'Scenarios' })).toHaveAttribute('aria-selected', 'true')
     expect(container.querySelector('[data-mobile-view="adjust"]')).not.toBeNull()
     expect(container.querySelector('[data-mobile-view="chart"]')).toBeNull()
   })
@@ -642,42 +642,42 @@ describe('GoalsTab', () => {
     const user = userEvent.setup()
     const { container } = render(<GoalsTab model={makeModel()} />)
 
-    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
     await user.click(screen.getByRole('tab', { name: 'Progress' }))
     expect(screen.getByText('Progress snapshot')).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Adjust' })).toHaveAttribute('aria-selected', 'false')
+    expect(screen.getByRole('tab', { name: 'Scenarios' })).toHaveAttribute('aria-selected', 'false')
     expect(container.querySelector('[data-mobile-view]')).toBeNull()
 
     await user.click(screen.getByRole('tab', { name: 'Assumptions' }))
     expect(screen.getByRole('tab', { name: 'Assumptions' })).toHaveAttribute('aria-selected', 'true')
 
-    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
-    expect(screen.getByRole('tab', { name: 'Adjust' })).toHaveAttribute('aria-selected', 'true')
+    await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
+    expect(screen.getByRole('tab', { name: 'Scenarios' })).toHaveAttribute('aria-selected', 'true')
     expect(container.querySelector('[data-mobile-view="adjust"]')).not.toBeNull()
   })
 
-  it('keeps the inflation preview while moving between Chart and Adjust, as the old toggle did', async () => {
+  it('keeps the inflation preview while moving between Chart and Scenarios, as the old toggle did', async () => {
     mockPhoneWidth()
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} actions={makeActions()} />)
     await user.click(screen.getByRole('radio', { name: 'Nominal' }))
     stepPreviewUp()
 
-    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
     await user.click(screen.getByRole('tab', { name: 'Chart' }))
 
     expect(screen.getByLabelText('Preview inflation')).toHaveValue('2,5')
   })
 
-  it('pins the section chips with the chart in Adjust, and shows them nowhere else', async () => {
+  it('pins the section chips with the chart in Scenarios, and shows them nowhere else', async () => {
     mockPhoneWidth()
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} />)
     // Hidden from the accessibility tree outside the phone breakpoint, which jsdom cannot match.
-    const chips = () => screen.queryByRole('navigation', { name: 'Adjust sections', hidden: true })
+    const chips = () => screen.queryByRole('navigation', { name: 'Scenario sections', hidden: true })
 
     expect(chips()).not.toBeInTheDocument()
-    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
 
     expect(chips()).toBeInTheDocument()
     expect(document.getElementById('goals-adjust-stack')).toContainElement(chips())
@@ -687,13 +687,13 @@ describe('GoalsTab', () => {
     expect(chips()).not.toBeInTheDocument()
   })
 
-  it('saves or drops edits to a saved scenario from the Adjust section row', async () => {
+  it('saves or drops edits to a saved scenario from the Scenarios section row', async () => {
     mockPhoneWidth()
     const user = userEvent.setup()
     const actions = makeActions()
     const plan = makeScenario({ id: 1, name: 'Path A', isActive: true })
     render(<GoalsTab model={buildExpenseModel(makeDataset({ goalScenarios: [plan] }))} actions={actions} />)
-    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
     const row = () => screen.queryByRole('group', { name: 'Unsaved changes', hidden: true })
     const button = (name: string) =>
       within(row()!).getByRole('button', { name, hidden: true })
@@ -720,7 +720,7 @@ describe('GoalsTab', () => {
     vi.mocked(actions.updateScenario).mockReturnValue(new Promise<void>((resolve) => (finish = resolve)))
     const plan = makeScenario({ id: 1, name: 'Path A', isActive: true })
     render(<GoalsTab model={buildExpenseModel(makeDataset({ goalScenarios: [plan] }))} actions={actions} />)
-    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
     fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
     const button = (name: string) => screen.getByRole('button', { name, hidden: true })
     const held = ['Save changes to Path A, tweaked', 'Discard changes', 'Save changes', 'Discard']
@@ -748,7 +748,7 @@ describe('GoalsTab', () => {
     const plan = makeScenario({ id: 1, name: 'Path A', isActive: true })
     const dataset = makeDataset({ goalScenarios: [plan] })
     const { rerender } = render(<GoalsTab model={buildExpenseModel(dataset)} actions={actions} />)
-    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
     fireEvent.change(screen.getByLabelText('Scenario name'), { target: { value: 'Path A, tweaked' } })
     screen.getByRole('button', { name: 'Save changes to Path A, tweaked', hidden: true }).focus()
 
@@ -770,7 +770,7 @@ describe('GoalsTab', () => {
     const user = userEvent.setup()
     const plan = makeScenario({ id: 1, name: 'Path A', isActive: true })
     render(<GoalsTab model={buildExpenseModel(makeDataset({ goalScenarios: [plan] }))} />)
-    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
     const field = screen.getByLabelText('Monthly investing')
     const before = (field as HTMLInputElement).value
 
@@ -806,7 +806,7 @@ describe('GoalsTab', () => {
     expect(before(anchor(), screen.getByText('Progress snapshot'))).toBe(true)
   })
 
-  it('pins a compact chart of the draft above the controls in the Adjust panel only', async () => {
+  it('pins a compact chart of the draft above the controls in the Scenarios panel only', async () => {
     mockPhoneWidth()
     const user = userEvent.setup()
     const { container } = render(<GoalsTab model={makeModel()} />)
@@ -816,17 +816,17 @@ describe('GoalsTab', () => {
       container.querySelector('svg[aria-label^="Projection of the scenario being edited"]')
 
     expect(mini()).not.toBeInTheDocument()
-    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
     expect(mini()).toBeInTheDocument()
     await user.click(screen.getByRole('tab', { name: 'Chart' }))
     expect(mini()).not.toBeInTheDocument()
   })
 
-  it('drops the pinned chart and chips when the window is widened from phone Adjust to desktop', async () => {
+  it('drops the pinned chart and chips when the window is widened from phone Scenarios to desktop', async () => {
     mockPhoneWidth()
     const user = userEvent.setup()
     render(<GoalsTab model={makeModel()} />)
-    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
     expect(document.getElementById('goals-adjust-stack')).toBeInTheDocument()
 
     act(() => media.change(NARROW_MQ, false))
@@ -995,21 +995,21 @@ describe('GoalsTab', () => {
       const user = userEvent.setup()
       render(<GoalsTab model={makeModel()} actions={makeActions()} />)
       scrollY.mockReturnValue(300)
-      await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+      await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
       scrollY.mockReturnValue(2000)
       await user.click(screen.getByRole('tab', { name: 'Chart' }))
       expect(scrollTo).toHaveBeenLastCalledWith({ top: 300, behavior: 'auto' })
 
       scrollY.mockReturnValue(300)
-      await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+      await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
 
       expect(scrollTo).toHaveBeenLastCalledWith({ top: 2000, behavior: 'auto' })
     })
 
-    it('opens the Adjust sections that were showing before it scrolls back, as Plan unmounts them', async () => {
+    it('opens the Scenario sections that were showing before it scrolls back, as Plan unmounts them', async () => {
       const user = userEvent.setup()
       render(<GoalsTab model={makeModel()} actions={makeActions()} />)
-      await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+      await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
       const events = document.getElementById('goals-adjust-events')
       if (!(events instanceof HTMLDetailsElement)) throw new Error('no events section')
       events.open = true
@@ -1024,7 +1024,7 @@ describe('GoalsTab', () => {
       const frames: FrameRequestCallback[] = []
       vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => frames.push(cb))
 
-      await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+      await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
       frames.forEach((cb) => cb(0))
 
       expect(scrollTo).toHaveBeenLastCalledWith({ top: 2125, behavior: 'auto' })

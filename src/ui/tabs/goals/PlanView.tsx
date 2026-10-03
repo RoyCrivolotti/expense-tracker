@@ -49,7 +49,7 @@ interface PlanSidebarProps {
 }
 
 /**
- * The scenarios, the controls and, on a phone's Adjust half, the pinned chart over them. A wide
+ * The scenarios, the controls and, on a phone's Scenarios half, the pinned chart over them. A wide
  * screen's intro and glossary end it, under the controls they explain.
  */
 function PlanSidebar({ half, scenarios, editor, actions, latest }: PlanSidebarProps) {
@@ -79,7 +79,7 @@ function PlanSidebar({ half, scenarios, editor, actions, latest }: PlanSidebarPr
         <DiscardSheet {...editor.discardPrompt} />
       </div>
       {half === 'adjust' ? (
-        // Phone only: only the phone's row offers Adjust.
+        // Phone only: only the phone's row offers Scenarios.
         <AdjustStack
           draft={editor.deferredDraft}
           unsaved={

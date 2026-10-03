@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Playwright check of the Goals tab's phone navigation, on the demo instance: the sticky view
- * row, the pinned Adjust stack, the chips, per-view scroll memory, label fit and keyboard focus.
+ * row, the pinned Scenarios stack, the chips, per-view scroll memory, label fit and keyboard focus.
  *
  * jsdom lays nothing out, so the unit tests fake every position this depends on. This is the
  * run against real layout. Manual, like verify:goals-tabs: it needs a browser and takes about a
@@ -129,9 +129,9 @@ async function openGoals(browser, { width, height, root = null }) {
 }
 
 const tab = (page, name) => page.getByRole('tab', { name, exact: true })
-const chip = (page, name) => page.getByRole('navigation', { name: 'Adjust sections' }).getByRole('button', { name, exact: true })
+const chip = (page, name) => page.getByRole('navigation', { name: 'Scenario sections' }).getByRole('button', { name, exact: true })
 
-/** What is pinned or fixed over the page, and where the sections of Adjust are. */
+/** What is pinned or fixed over the page, and where the sections of Scenarios are. */
 function measure(page) {
   return page.evaluate(() => {
     const box = (el) => {
@@ -200,9 +200,9 @@ function gapOf(m, key) {
 }
 
 async function checkAdjust(browser, phone) {
-  const where = `${phone.name} Adjust`
+  const where = `${phone.name} Scenarios`
   const { page, context } = await openGoals(browser, phone)
-  await tab(page, 'Adjust').tap()
+  await tab(page, 'Scenarios').tap()
   await settled(page)
 
   let m = await measure(page)
@@ -288,13 +288,13 @@ async function checkMemory(browser, phone) {
   check(where, '(d) the Chart page is long enough to scroll to 900px', room >= 900, `it scrolls ${px(room)}`)
 
   await scrollTo(page, 900)
-  for (const name of ['Adjust', 'Progress', 'Assumptions']) {
+  for (const name of ['Scenarios', 'Progress', 'Assumptions']) {
     await tab(page, name).tap()
     await settled(page)
   }
   await tab(page, 'Chart').tap()
   const back = await settled(page)
-  check(where, '(d) Chart comes back to 900px after Adjust, Progress and Assumptions', near(back, 900, 1), `it came back to ${px(back)}`)
+  check(where, '(d) Chart comes back to 900px after Scenarios, Progress and Assumptions', near(back, 900, 1), `it came back to ${px(back)}`)
 
   // A link out of a view leaves it too, without the row being touched.
   await page.getByRole('radio', { name: 'Nominal' }).tap()
@@ -366,9 +366,9 @@ async function checkLabels(browser) {
 }
 
 async function checkLandscape(browser) {
-  const where = '667x375 Adjust'
+  const where = '667x375 Scenarios'
   const { page, context } = await openGoals(browser, { name: where, width: 667, height: 375 })
-  await tab(page, 'Adjust').tap()
+  await tab(page, 'Scenarios').tap()
   await settled(page)
   await scrollTo(page, 300)
   const m = await measure(page)
@@ -379,7 +379,7 @@ async function checkLandscape(browser) {
 }
 
 /**
- * Walks focus through Adjust with the keyboard and, at each stop, asks what is at a 5x5 grid of
+ * Walks focus through Scenarios with the keyboard and, at each stop, asks what is at a 5x5 grid of
  * points over the focused control. One the header, the row, the stack or the bottom bar covers
  * all over is a control the viewer cannot see.
  */
@@ -433,13 +433,13 @@ async function walkFocus(page, direction) {
 }
 
 async function checkFocus(browser, phone) {
-  const where = `${phone.name} Adjust`
+  const where = `${phone.name} Scenarios`
   const { page, context } = await openGoals(browser, phone)
-  await tab(page, 'Adjust').tap()
+  await tab(page, 'Scenarios').tap()
   await settled(page)
   for (const [direction, keys] of [['back', 'Shift+Tab'], ['forward', 'Tab']]) {
     const stops = await walkFocus(page, direction)
-    check(where, `(g) a ${keys} walk visits the controls of Adjust`, stops.length >= 20, `it visited ${stops.length}`)
+    check(where, `(g) a ${keys} walk visits the controls of Scenarios`, stops.length >= 20, `it visited ${stops.length}`)
     const hidden = stops.filter((s) => s.visible === 0)
     check(
       where,

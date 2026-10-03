@@ -8,7 +8,7 @@ import { defaultExpenseSettings } from '../../../engine'
 import { makeDataset } from '../../../testing/factories'
 import { makeActions } from '../../../testing/makeActions'
 
-// "Assumptions" is the name of a tab, holding what Progress is measured with. The Adjust
+// "Assumptions" is the name of a tab, holding what Progress is measured with. The Scenarios
 // controls are not assumptions, or someone looking for the return rate opens the wrong tab.
 describe('Goals copy that names the Assumptions tab', () => {
   it('introduces Plan without calling its controls assumptions', () => {

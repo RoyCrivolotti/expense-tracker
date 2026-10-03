@@ -12,7 +12,7 @@ The Goals tab has three views:
 - **Progress** — wealth tracking. Log actual balances per account, see on/off-track status against your plan, and compare actuals to the projection over time.
 - **Assumptions** — what Progress measures with: the milestone ladder, the wealth accounts each check-in records a balance for, the cash reserve target in months of spending, and the assumed inflation every Goals view uses.
 
-Below 900px wide the switch is one row of four segments, Chart, Adjust, Progress and Assumptions, because Plan is two screens there: Chart holds the hero chart, the snapshot, the scenarios and the detail charts, and Adjust keeps the snapshot and the scenarios, and puts the controls under a pinned chart of the draft.
+Below 900px wide the switch is one row of four segments, Chart, Scenarios, Progress and Assumptions, because Plan is two screens there: Chart holds the hero chart, the snapshot, the scenarios and the detail charts, and Scenarios keeps the snapshot and the scenarios, and puts the controls under a pinned chart of the draft.
 
 ### The plan
 

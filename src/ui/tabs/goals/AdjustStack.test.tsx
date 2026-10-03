@@ -28,7 +28,7 @@ describe('AdjustStack', () => {
     const stack = document.getElementById(ADJUST_STACK_ID)
     expect(stack).toContainElement(mini() as HTMLElement)
     // The stack is display:none outside the phone breakpoint, which jsdom cannot match.
-    expect(stack).toContainElement(screen.getByRole('navigation', { name: 'Adjust sections', hidden: true }))
+    expect(stack).toContainElement(screen.getByRole('navigation', { name: 'Scenario sections', hidden: true }))
   })
 
   it('renders nothing on a wide screen, chart included', () => {

@@ -75,8 +75,8 @@ describe('GoalsMobileNav', () => {
     renderNav('adjust')
 
     const labels = screen.getAllByRole('tab').map((r) => r.textContent)
-    expect(labels).toEqual(['Chart', 'Adjust', 'Progress', 'Assumptions'])
-    expect(screen.getByRole('tab', { name: 'Adjust' })).toHaveAttribute('aria-selected', 'true')
+    expect(labels).toEqual(['Chart', 'Scenarios', 'Progress', 'Assumptions'])
+    expect(screen.getByRole('tab', { name: 'Scenarios' })).toHaveAttribute('aria-selected', 'true')
   })
 
   it('is the row that the scroll helpers measure as pinned, and keeps focus clear of it', () => {
@@ -146,7 +146,7 @@ describe('GoalsMobileNav', () => {
     expect(scrollIntoView).toHaveBeenCalledTimes(1)
   })
 
-  it('lands on the Adjust controls when Adjust is opened, even from the top of the page', async () => {
+  it('lands on the Scenarios controls when Scenarios is opened, even from the top of the page', async () => {
     const user = userEvent.setup()
     const { scrollIntoView } = renderNav('chart')
     const controls = document.createElement('details')
@@ -155,19 +155,19 @@ describe('GoalsMobileNav', () => {
     const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
     layOut(false)
 
-    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
 
     expect(scrollBy).toHaveBeenCalledTimes(1)
     expect(scrollIntoView).not.toHaveBeenCalled()
   })
 
-  it('goes back to the top of Adjust, not to its controls, when Adjust is tapped again', async () => {
+  it('goes back to the top of Scenarios, not to its controls, when Scenarios is tapped again', async () => {
     const user = userEvent.setup()
     const { scrollIntoView } = renderNav('adjust')
     const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => {})
     layOut(true)
 
-    await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+    await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
 
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' })
     expect(scrollBy).not.toHaveBeenCalled()
@@ -237,7 +237,7 @@ describe('GoalsMobileNav', () => {
       expect(scrollTo).toHaveBeenLastCalledWith({ top: 111, behavior: 'auto' })
     })
 
-    it('keeps each view\'s own place, so Adjust comes back where Adjust was left', async () => {
+    it('keeps each view\'s own place, so Scenarios comes back where Scenarios was left', async () => {
       const user = userEvent.setup()
       const controls = document.createElement('details')
       controls.id = adjustSectionId('portfolio')
@@ -246,13 +246,13 @@ describe('GoalsMobileNav', () => {
       const { scrollTo } = renderControlled('chart')
 
       setScrollY(300)
-      await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+      await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
       setScrollY(2000)
       await user.click(screen.getByRole('tab', { name: 'Chart' }))
       expect(scrollTo).toHaveBeenLastCalledWith({ top: 300, behavior: 'auto' })
 
       setScrollY(300)
-      await user.click(screen.getByRole('tab', { name: 'Adjust' }))
+      await user.click(screen.getByRole('tab', { name: 'Scenarios' }))
       expect(scrollTo).toHaveBeenLastCalledWith({ top: 2000, behavior: 'auto' })
     })
 

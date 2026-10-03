@@ -13,7 +13,7 @@ export const ADJUST_LABELS: Record<AdjustSection, { title: string; chip: string 
   events: { title: 'Life events', chip: 'Events' },
 }
 
-/** The sections of the Adjust controls, in the order they are shown. */
+/** The sections of the Scenarios controls, in the order they are shown. */
 export const ADJUST_SECTIONS: readonly { key: AdjustSection; title: string; chip: string }[] = (
   Object.keys(ADJUST_LABELS) as AdjustSection[]
 ).map((key) => ({ key, ...ADJUST_LABELS[key] }))

@@ -1,5 +1,5 @@
 export type TabView = 'plan' | 'progress' | 'assumptions'
-/** On a phone Plan is two screens, the chart and the controls, instead of one. */
+/** On a phone Plan is two screens, the chart and the controls (labelled Scenarios, after what they edit), instead of one. */
 export type MobilePlanView = 'chart' | 'adjust'
 /** The phone's four views: Plan is split in two there, so it has no segment of its own. */
 export type GoalsMobileView = MobilePlanView | Exclude<TabView, 'plan'>

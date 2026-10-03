@@ -404,7 +404,7 @@ describe('AdjustSectionNav', () => {
     await vi.waitFor(() => expect(window.scrollBy).toHaveBeenCalledWith({ top: 100 - 300 - 8, behavior: 'auto' }))
   })
 
-  it('leaves a field outside the Adjust controls alone, as one in a dialog', () => {
+  it('leaves a field outside the Scenarios controls alone, as one in a dialog', () => {
     vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
       cb(0)
       return 0
