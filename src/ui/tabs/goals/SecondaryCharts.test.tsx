@@ -59,6 +59,17 @@ describe('the phone chart picker', () => {
     expect(chips().at(-1)).toBeChecked()
   })
 
+  it('is a radio group, so Up and Down move it as well as Left and Right', async () => {
+    const user = userEvent.setup()
+    renderOnPhone()
+    radio('Compare').focus()
+
+    await user.keyboard('{ArrowDown}')
+    expect(radio('Composition')).toBeChecked()
+    await user.keyboard('{ArrowUp}{ArrowUp}')
+    expect(chips().at(-1)).toBeChecked()
+  })
+
   it('leaves a key alone when Alt, Ctrl or Cmd is held, so browser shortcuts still work', () => {
     renderOnPhone()
     radio('Compare').focus()

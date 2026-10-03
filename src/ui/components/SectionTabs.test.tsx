@@ -123,6 +123,17 @@ describe('SectionTabs', () => {
     expect(screen.getByRole('tabpanel')).toHaveTextContent('Content of two')
   })
 
+  it('leaves ArrowDown to the page rather than moving to the next section', async () => {
+    const user = userEvent.setup()
+    render(<Page />)
+    screen.getByRole('tab', { name: 'One' }).focus()
+
+    await user.keyboard('{ArrowDown}')
+
+    expect(screen.getByRole('tab', { name: 'One' })).toHaveFocus()
+    expect(screen.getByRole('tabpanel')).toHaveTextContent('Content of one')
+  })
+
   it('puts the anchor that content is scrolled to at the top of the panel', () => {
     render(<Page />)
 

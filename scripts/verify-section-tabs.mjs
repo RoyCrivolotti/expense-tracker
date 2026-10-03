@@ -192,6 +192,26 @@ async function checkBar(browser, tabName, first, second) {
 }
 
 /**
+ * A tab row answers to Left and Right, not Up and Down: with a tab focused, Down scrolls the
+ * page as it would anywhere else and the section stays, while Right still moves to the next one.
+ */
+async function checkTabKeys(browser, tabName, first, second) {
+  const where = `375x812 ${tabName} bar`
+  const { page, context } = await openApp(browser, PHONES[0], tabName)
+  const selected = () => page.evaluate((label) => document.querySelector(`[role="tablist"][aria-label="${label}"] [aria-selected="true"]`).textContent, BARS[tabName].label)
+  await tab(page, tabName, first).focus()
+  const y = await page.evaluate(() => window.scrollY)
+  await page.keyboard.press('ArrowDown')
+  await page.waitForTimeout(250)
+  const moved = await settled(page)
+  check(where, '(f) ArrowDown on a tab scrolls the page and keeps the section', moved > y && (await selected()) === first, `section ${await selected()}, scrolled from ${px(y)} to ${px(moved)}`)
+  await page.keyboard.press('ArrowRight')
+  await page.waitForTimeout(250)
+  check(where, `(f) ArrowRight moves to ${second}`, (await selected()) === second, `section ${await selected()}`)
+  await context.close()
+}
+
+/**
  * Every label shown whole inside its segment and the bar, with no sideways scroll. Each segment
  * has an unpainted tap area that reaches past its edges (a ::before), which would count as
  * overflow, so it is switched off for the measurement.
@@ -339,6 +359,8 @@ async function main() {
       console.log('\nSection bars')
       await checkBar(browser, 'Analytics', 'Summary', 'Totals')
       await checkBar(browser, 'Settings', 'Setup', 'Data')
+      await checkTabKeys(browser, 'Analytics', 'Summary', 'Totals')
+      await checkTabKeys(browser, 'Settings', 'Preferences', 'Setup')
       for (const phone of PHONES) {
         await checkLabels(browser, phone, 'Analytics')
         await checkLabels(browser, phone, 'Settings')
