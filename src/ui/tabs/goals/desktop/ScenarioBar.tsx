@@ -1,6 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
 import type { GoalScenario } from '../../../../types'
-import { duplicateScenario } from '../../../../engine'
 import type { ExpenseActions } from '../../../actions'
 import { ConfirmSheet } from '../../../components/ConfirmSheet'
 import { Presence } from '../../../components/Presence'
@@ -29,16 +28,10 @@ interface ScenarioBarProps {
 export function ScenarioBar({ scenarios, editor, actions }: ScenarioBarProps) {
   const activeTab = useRef<HTMLButtonElement>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const { activeId, activeScenario, draft, dirty, saving } = editor
+  const { activeId, activeScenario, draft, dirty, saving, creating } = editor
   // A button that goes (Save when the write lands, Discard) hands focus to the page; this puts
   // it back on the tab of the scenario being edited.
   const focusTab = useCallback(() => activeTab.current?.focus(), [])
-
-  const duplicate = () => {
-    if (!actions) return
-    const copy = duplicateScenario(draft, scenarios.length, scenarios.map((s) => s.color))
-    void actions.createScenario(copy).then(editor.selectScenario)
-  }
 
   return (
     <div className={styles.scenarioRow}>
@@ -57,7 +50,8 @@ export function ScenarioBar({ scenarios, editor, actions }: ScenarioBarProps) {
           type="button"
           className={styles.newTab}
           aria-label={`Duplicate ${draft.name || 'this scenario'} as a new scenario`}
-          onClick={duplicate}
+          disabled={creating}
+          onClick={editor.onDuplicate}
         >
           + Duplicate
         </button>
@@ -80,7 +74,7 @@ export function ScenarioBar({ scenarios, editor, actions }: ScenarioBarProps) {
             <button
               type="button"
               className={`${goalStyles.btn} ${goalStyles.btnPrimary}`}
-              disabled={draft.name.trim().length === 0}
+              disabled={draft.name.trim().length === 0 || creating}
               onClick={() => editor.onSaveDraft(draft.name.trim())}
             >
               Save scenario
@@ -92,7 +86,7 @@ export function ScenarioBar({ scenarios, editor, actions }: ScenarioBarProps) {
             dirty={dirty}
             onPatch={editor.patchDraft}
             onActivate={editor.onActivate}
-            onDuplicate={duplicate}
+            onDuplicate={editor.onDuplicate}
             onDelete={() => setDeleteOpen(true)}
             onSaveAsNew={editor.onSaveDraft}
             onKeepAsDraft={editor.onSelectEditing}

@@ -15,21 +15,29 @@ export function pickScenarioColor(usedColors: readonly string[]): string {
   return `hsl(${hue} 70% 55%)`
 }
 
-/** "Path A" becomes "Path A (copy)", and a copy of a copy counts up ("Path A (copy 2)") instead of stacking "(copy) (copy)". */
-export function copyName(name: string): string {
+/** The name one copy on from this one: "Path A" becomes "Path A (copy)", and a copy of a copy counts up ("Path A (copy 2)"). */
+function nextCopyName(name: string): string {
   const match = /^(.*) \(copy(?: (\d+))?\)$/.exec(name)
   if (!match) return `${name} (copy)`
   return `${match[1] ?? ''} (copy ${Number(match[2] ?? 1) + 1})`
+}
+
+/** A copy's name, counting on past the copies that already exist so no two are alike. */
+export function copyName(name: string, taken: readonly string[] = []): string {
+  let candidate = nextCopyName(name)
+  while (taken.includes(candidate)) candidate = nextCopyName(candidate)
+  return candidate
 }
 
 export function duplicateScenario(
   scenario: NewGoalScenario,
   sortOrder: number,
   usedColors: readonly string[] = [],
+  usedNames: readonly string[] = [],
 ): NewGoalScenario {
   return {
     ...scenario,
-    name: copyName(scenario.name),
+    name: copyName(scenario.name, usedNames),
     sortOrder,
     color: pickScenarioColor(usedColors),
   }
