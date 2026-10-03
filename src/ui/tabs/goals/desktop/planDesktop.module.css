@@ -623,6 +623,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+  /* As tall as the row is with "Reset to defaults" in it (30.8px), so the columns under it do not
+     move down by the difference when the first star is taken out and the button comes. */
+  min-height: 1.925rem;
   margin: 0 0 0.9rem;
   padding-left: 0.15rem;
 }
