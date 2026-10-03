@@ -2,6 +2,15 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (labels and numbers on the Goals charts, from a review of the wide page)
+
+- **"Years to milestone" says how far it looked.** A milestone not reached was always "40+", though the search stops at the scenario's own horizon: on a 30 year plan a milestone reached in year 32 read "40+", and with the horizon at 45 the same cell read "32y". It now says "30+" or "12+", the horizon it was looked for over.
+- **A copy and its original are two names in the tables.** Both tables cut a name at its colon, so "Path A: Invest only" and its copy were two rows both called Path A, told apart only by a swatch. A row keeps its full name when another scenario would be given the same short one.
+- **The composition chart's house is its value, not its equity.** The legend and tooltip said "House equity 4,0M" and "Mortgage owed 3,2M" for a house with 0,8M of equity, and the hint took the mortgage off twice if read as written. The tooltip also uses the legend's names now.
+- **No FI drawdown where FI is never reached.** The card said "not reached in horizon" and still drew a balance climbing from the target, 1,0M to 3,9M for a plan worth 907k at year 30. It now says so and draws nothing.
+- **Compact amounts use your decimal mark.** The axes, the legend and the tables wrote "8.2M" beside "8.179.020 €" and "4,0%", where a point means thousands; it is "8,2M" with the default format. 999,600 printed as "1000k" and is now "1,0M".
+- **The purchase breakdown says when it is in today's money.** In the Nominal view the legend above it shows inflated values and the breakdown does not ("Path C 703k" over "End invested 637k"), so it says so.
+
 ## October 2026 (editing scenarios, from a review of the wide page)
 
 - **A scenario saved elsewhere is no longer written back over.** After a refresh that brought back a scenario another device had re-baselined, the editor went on with its older copy: the tab showed Edited with no edit made, the bar showed the old start balance, and Save wrote the whole copy back over the new values. The editor now puts your own edits on the new row as it arrives, and Save writes only the keys you edited.
