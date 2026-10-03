@@ -168,4 +168,17 @@
     position: absolute;
     inset: -0.625rem -0.25rem;
   }
+
+  /* The row scrolls sideways when the names do not fit, which clips what sticks out above and
+     below the chips. It keeps that room as padding, and gives it back as margin, so the row is
+     the height it was; the padding takes no presses itself, only the chips' own areas do. */
+  .chips {
+    padding: 0.625rem 0.25rem;
+    margin: -0.625rem -0.25rem;
+    pointer-events: none;
+  }
+
+  .chips .rowItem {
+    pointer-events: auto;
+  }
 }
