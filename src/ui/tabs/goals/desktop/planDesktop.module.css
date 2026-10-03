@@ -551,6 +551,10 @@
 }
 
 .star {
+  /* The amber is darkened a little toward the text colour: the plain amber is 2.8:1 against the
+     card in the light theme, under the 3:1 a graphic that carries a state has to have. */
+  --star-amber: color-mix(in srgb, var(--exp-warning) 80%, var(--color-text));
+  position: relative;
   display: inline-flex;
   flex: none;
   align-items: center;
@@ -565,9 +569,24 @@
   cursor: pointer;
 }
 
+/* The star is drawn small to sit in a label row. This takes the area that answers a click or a
+   tap to 24px square, the least a finger or a pointer should be asked to hit, without moving
+   anything: it is the 1.1rem star plus 0.2rem on every side. */
+.star::after {
+  content: '';
+  position: absolute;
+  inset: -0.2rem;
+}
+
 .star:hover:not(:disabled),
 .star:focus-visible {
-  color: var(--exp-warning);
+  color: var(--star-amber);
+}
+
+/* Pressing a filled star takes the input out of the bar, so under the pointer it shows the
+   outline it is about to become. */
+.starOn:hover:not(:disabled) svg {
+  fill: none;
 }
 
 .star:focus-visible {
@@ -575,22 +594,25 @@
   outline-offset: 1px;
 }
 
+/* Held back, not hidden: at 0.4 it was 2.1:1 in the dark theme and 1.4:1 in the light one, and
+   read as missing rather than as unavailable. */
 .star:disabled {
-  opacity: 0.4;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
 .starOn {
-  color: var(--exp-warning);
+  color: var(--star-amber);
 }
 
 .starrable {
   position: relative;
 }
 
+/* On the middle of the label's first line (the star is 1.1rem and a line 1.25 of the label's size). */
 .starrable > .star {
   position: absolute;
-  top: 0.05rem;
+  top: 0.26rem;
   left: -1.3rem;
   width: 1.1rem;
   height: 1.1rem;

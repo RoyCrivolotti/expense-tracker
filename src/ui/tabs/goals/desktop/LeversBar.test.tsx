@@ -295,6 +295,13 @@ describe('LeversBar', () => {
     expect(screen.getAllByRole('button', { name: /^Remove .* from the bar$/ })).toHaveLength(5)
   })
 
+  it('says what a star does to a pointer that rests on it, since nothing else on the page does', () => {
+    renderBar({ onUnstar: vi.fn() })
+    for (const star of screen.getAllByRole('button', { name: /^Remove .* from the bar$/ })) {
+      expect(star).toHaveAttribute('title', star.getAttribute('aria-label'))
+    }
+  })
+
   it('has no stars where the bar cannot be changed', () => {
     renderBar()
     expect(screen.queryByRole('button', { name: /from the bar$/ })).not.toBeInTheDocument()

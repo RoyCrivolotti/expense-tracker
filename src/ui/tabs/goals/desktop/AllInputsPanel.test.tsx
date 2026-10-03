@@ -148,7 +148,10 @@ describe('AllInputsPanel stars', () => {
   it('invites a star while there is room', () => {
     renderPanel(true, makeStarred(DEFAULT_LEVERS.slice(0, 2)))
     expect(screen.getByText('Star an input to keep it in the bar above.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Add House price to the bar' })).toBeEnabled()
+    const star = screen.getByRole('button', { name: 'Add House price to the bar' })
+    expect(star).toBeEnabled()
+    // Open, its tooltip says what pressing it does; held back, it says why not (above).
+    expect(star).toHaveAttribute('title', 'Add House price to the bar')
   })
 
   it('offers the way back to the five only when the bar is not them', async () => {

@@ -11,7 +11,11 @@ interface StarButtonProps {
   onClick: () => void
 }
 
-/** The star on an input that sends it to the levers bar, or back. */
+/**
+ * The star on an input that sends it to the levers bar, or back. Its tooltip is what pressing it
+ * does, the same as its name, unless it is held back, when it says why: nothing else on the page
+ * says what a star is until the inputs panel is open.
+ */
 export function StarButton({ filled, label, disabled = false, title, onClick }: StarButtonProps) {
   return (
     <button
@@ -19,7 +23,7 @@ export function StarButton({ filled, label, disabled = false, title, onClick }: 
       className={filled ? `${styles.star} ${styles.starOn}` : styles.star}
       aria-label={label}
       data-star=""
-      {...(title ? { title } : {})}
+      title={title ?? label}
       disabled={disabled}
       onClick={onClick}
     >
