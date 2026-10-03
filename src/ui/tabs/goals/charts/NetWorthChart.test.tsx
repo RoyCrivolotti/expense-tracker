@@ -162,6 +162,75 @@ describe('NetWorthChart', () => {
     expect(values().every((v) => v === '')).toBe(true)
   })
 
+  describe('scenarios with different horizons', () => {
+    // The scenario being edited can be given a horizon of its own, longer or shorter than the saved ones.
+    const short = makeScenario({ id: 1, name: 'Short', horizonYears: 10, color: '#10b981', sortOrder: 0 })
+    const draft = { ...defaultDraft, horizonYears: 30 }
+    const hero = { milestones, scenarios: [short], draft, activeId: null, variant: 'hero' as const }
+
+    /**
+     * How many points each drawn line has, in the order they are drawn: the saved scenarios, then
+     * the draft. A path of one point is a marker, not a line.
+     */
+    const pointCounts = (container: HTMLElement) =>
+      [...container.querySelectorAll('path[fill="none"]')]
+        .map((p) => (p.getAttribute('d') ?? '').match(/[ML]/g)?.length ?? 0)
+        .filter((count) => count > 1)
+
+    it('draws each line only as far as its own horizon, not down to zero after it', () => {
+      const { container } = render(<NetWorthChart {...hero} />)
+
+      // Years 0 to 10 for the short one, 0 to 30 for the draft.
+      expect(pointCounts(container)).toEqual([11, 31])
+    })
+
+    it('keeps the axis as long as the longest horizon, in either order', () => {
+      const long = makeScenario({ id: 2, name: 'Long', horizonYears: 30, sortOrder: 0 })
+      const { container } = render(
+        <NetWorthChart {...hero} scenarios={[long]} draft={{ ...defaultDraft, horizonYears: 10 }} />,
+      )
+
+      expect(pointCounts(container)).toEqual([31, 11])
+      const labels = [...container.querySelectorAll('text')].map((t) => t.textContent ?? '').filter((t) => /^\d+$/.test(t))
+      expect(Math.max(...labels.map(Number))).toBe(30)
+    })
+
+    it('shows a dash in the legend, not zero, for a scenario that ended before the focused year', () => {
+      const { container } = render(<NetWorthChart {...hero} />)
+      fireEvent.keyDown(container.querySelector('svg[role="img"]')!, { key: 'End' })
+
+      const rows = [...container.querySelectorAll('li')].map((li) => li.textContent ?? '')
+      expect(rows.find((r) => r.startsWith('Short'))).toBe('Short-')
+      // The scenario that does reach year 30 still shows its figure.
+      expect(rows.find((r) => r.includes('(editing)'))).toMatch(/\d/)
+    })
+
+    it('shows the figure of a scenario in a year it does reach', () => {
+      const { container } = render(<NetWorthChart {...hero} />)
+      fireEvent.keyDown(container.querySelector('svg[role="img"]')!, { key: 'Home' })
+
+      const rows = [...container.querySelectorAll('li')].map((li) => li.textContent ?? '')
+      expect(rows.find((r) => r.startsWith('Short'))).toMatch(/\d/)
+    })
+
+    it('leaves a scenario out of the tooltip for a year past its horizon', () => {
+      const { container } = render(
+        <NetWorthChart milestones={milestones} scenarios={[short]} draft={draft} activeId={null} />,
+      )
+      const svg = container.querySelector('svg[role="img"]')!
+      svg.parentElement!.getBoundingClientRect = () => ({ top: 600, bottom: 700, height: 100 }) as DOMRect
+
+      fireEvent.keyDown(svg, { key: 'Home' })
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Short')
+
+      fireEvent.keyDown(svg, { key: 'End' })
+      const tooltip = screen.getByRole('tooltip')
+      expect(tooltip).toHaveTextContent('Year 30')
+      expect(tooltip).not.toHaveTextContent('Short')
+      expect(tooltip).toHaveTextContent('(editing)')
+    })
+  })
+
   it('does not stretch the axis to a far-off FI target, in any window, and marks it on the top edge', () => {
     const { container } = render(
       <NetWorthChart
