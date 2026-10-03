@@ -100,6 +100,15 @@ npx wrangler d1 execute <db> --remote --command="SELECT name FROM _migrations OR
 npx wrangler d1 execute <db> --remote --command="SELECT name FROM pragma_table_info('transactions') WHERE name IN ('settled_by','report_count')"
 ```
 
+`npm run check:schema -- <db>` does that second check for every column at once. It builds a database
+from `migrations/`, reads the real one's columns over wrangler, and lists what is missing with the
+migration that adds it (and anything the database has that no migration makes). It only reads, and it
+exits 1 on a difference and 2 when the database could not be read. Run it after applying a migration
+and before trusting `_migrations` for anything: the record has been wrong twice, with `0013` recorded
+and `goal_scenarios.life_events` absent on 2026-09-22 (scenario saves failed), and `0026` recorded and
+`settings.investment_category_id` absent, found on 2026-10-03. It compares column names only, not types,
+defaults or indexes.
+
 ### Migration tracking (read before re-running anything)
 
 `0020_migrations_table.sql` adds `_migrations(name, applied_at)`. `npm run migrate:dev` now applies
