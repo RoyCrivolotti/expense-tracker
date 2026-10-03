@@ -102,8 +102,15 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // for the check-in dots and life events, and the input and data fixes under them): main stood at
 // 216.0 KB with the Goals chunk at 44.8, and the round adds a few KB across several PRs. All of it
 // is small code and CSS, with no new library.
-const TOTAL_MAX_GZIP = 221_000
-const GOALS_MAX_GZIP = 47_000
+//
+// Raised from 221 KB to 230 KB, and the Goals chunk from 47 KB to 54 KB, for the next round on
+// the wide Goals page: the new Years to milestone table (a tint, years or calendar year, the gap
+// to the plan, a sentence for a cell), an optional timeline beside it, and the input and
+// keyboard fixes that follow from the last review. Main stood at 218.1 KB with the Goals chunk
+// at 46.2 KB, so the last round left under 1 KB for the Goals chunk. All of it is small code and
+// CSS in the one lazy chunk, with no new library.
+const TOTAL_MAX_GZIP = 230_000
+const GOALS_MAX_GZIP = 54_000
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length
