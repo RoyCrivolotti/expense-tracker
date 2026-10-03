@@ -114,7 +114,7 @@ function BreakdownExtras({
       ) : null}
       {yearZeroHint ? (
         <p className={styles.yearZeroHint}>
-          Purchase at year 0 — down payment is reflected in start invested.
+          House already owned: the down payment is already out of the starting invested balance.
         </p>
       ) : null}
     </>

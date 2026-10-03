@@ -30,8 +30,9 @@
 
    Held there it is drawn over whatever is under it, and the chart, its axis and the legend that
    carries its values end about 670px down the page (measured at every width from 1200 up). So
-   the screen has to be tall enough to leave them above the bar (the bar is about 111px and the air
-   under it 12px, which with a few px to spare is 800px), or the first thing seen is a chart with
+   the screen has to be tall enough to leave them above the bar (the bar is 99px, or 115px with a
+   house in the plan, which has a second figure, and the air under it 12px, which with a few px to
+   spare is 800px), or the first thing seen is a chart with
    its bottom edge cut off. The widths and heights are in rem, so text set larger than usual,
    which makes the page taller and the levers wrap sooner, asks for a larger screen. */
 @media (min-width: 75rem) and (min-height: 50rem) {
@@ -55,7 +56,10 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 1rem;
   align-items: start;
-  padding: 0.75rem 1.1rem;
+  /* 0.5rem, not 0.75: with a house in the plan the result column has a line more, and the bar is
+     held over the page's bottom edge with 8px to spare at 1280x800, so the height it has is the
+     height it gets. */
+  padding: 0.5rem 1.1rem;
   box-shadow: 0 6px 18px color-mix(in srgb, var(--color-text) 12%, transparent);
 }
 
@@ -158,12 +162,19 @@
 
 .leverSide {
   display: grid;
-  gap: 0.25rem;
+  gap: 0.125rem;
   align-content: start;
   justify-items: start;
   min-width: 10rem;
   padding-left: 1rem;
   border-left: 1px solid var(--color-border);
+}
+
+.leverResultNote {
+  font-size: 0.75rem;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
 }
 
 .leverResult {
@@ -756,10 +767,66 @@
     height: 2.75rem;
   }
 
+  /* Save, Discard and the rest of the buttons in the scenario row, which is 44px tall already for
+     its tabs, and "Reset to defaults", whose row is as tall as the button so nothing under it
+     moves when the button comes. */
+  .scenarioRow button,
+  .starNote button {
+    min-height: 2.75rem;
+  }
+
+  .starNote {
+    min-height: 2.75rem;
+  }
+
   /* Up and to both sides: below the star is the figure it belongs to, and a tap on that must
      not take the lever out of the bar. */
   .star::after {
     inset: -0.9rem -0.9rem -0.15rem;
+  }
+
+  /* The panel's rows are 44px (goals.module.css), so the star is on the middle of the row
+     (1.375rem down) less half its own height, where a 26px row had it 0.26rem down. */
+  .starrable > .star {
+    top: 0.825rem;
+  }
+
+  /* The scenario menu: rows and the name field are 44px, and the swatches are 28px dots 8px
+     apart. A swatch's tap area is measured from inside its 2px border, so insets of 0.625rem
+     and 0.375rem make it 44 high and 36 wide, which is as wide as a dot and its gap: no overlap.
+     Nine of them are 316px, so the menu is 344px instead of 304px to hold one row. */
+  .menu {
+    --swatch-size: 1.75rem;
+    --swatch-gap: 0.5rem;
+    --swatch-hit: -0.625rem -0.375rem;
+    width: min(21.5rem, calc(100vw - 1rem));
+  }
+
+  .menuItem {
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem;
+  }
+
+  .menuInput,
+  .menuBtn {
+    min-height: 2.75rem;
+  }
+
+  /* The bar's lever: the row of digits is a label, so the whole row is where a press puts the
+     cursor in the field, and it is 44px high with the digits at its top. The slider row is 28px
+     and its box (goals.module.css) reaches 8px past it each way. The digits row is above the
+     slider's box in the stack, so a press on the lower part of the digits is theirs and not the
+     slider's. The levers need no more height than the result column beside them has, so a bar
+     of one row is as tall as it was; one that wraps to two rows is taller by what two rows grow. */
+  .leverValue {
+    position: relative;
+    z-index: 1;
+    min-height: 2.75rem;
+  }
+
+  .leverTrack {
+    height: 1.75rem;
   }
 }
 

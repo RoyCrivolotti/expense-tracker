@@ -2,8 +2,9 @@
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  /* --exp-selection-bar is the Transactions selection bar's height while it is up
-     (BatchBar), so a toast never covers its buttons, and a tap on them never lands on it. */
+  /* --exp-selection-bar is the height of a bar held along the bottom edge while it is up (the
+     Transactions selection bar, the Goals levers bar), so a toast never covers its buttons, and
+     a tap on them never lands on it. */
   bottom: calc(
     var(--exp-bottom-bar) + env(safe-area-inset-bottom, 0px) + var(--exp-selection-bar, 0px) + 0.75rem
   );
@@ -28,6 +29,32 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
   cursor: pointer;
   animation: toastIn var(--motion-enter-fade) var(--motion-ease-out);
+}
+
+/* A toast with a button: the message and the button side by side. The button is 44px tall and
+   takes back the toast's own padding as margin, so the toast is as tall as the button and no
+   taller, and a press anywhere on the button's row counts. */
+.withAction {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: left;
+}
+
+.action {
+  flex: none;
+  min-height: 2.75rem;
+  margin: -0.65rem -0.5rem -0.65rem 0;
+  padding: 0 0.75rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Leaving is the arrival played backwards, over the time `Presence` keeps it mounted. */

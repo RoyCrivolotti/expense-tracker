@@ -4,7 +4,7 @@ import { formatMoneyInput, formatPercent, formatPercentInput, parseMoneyToCents 
 import type { MoneyFormat } from '../../../../engine'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { useMediaQuery } from '../../../hooks/useMediaQuery'
-import type { LeverSpec } from '../leverFields'
+import { purchaseYearLabel, type LeverSpec } from '../leverFields'
 import goalStyles from '../goals.module.css'
 import { StarButton } from './StarButton'
 import styles from './planDesktop.module.css'
@@ -20,10 +20,6 @@ interface LeverProps {
 /** Whole amounts without the cents, so a seven-figure balance fits a bar column. */
 function moneyText(cents: number, format: MoneyFormat): string {
   return cents % 100 === 0 ? Math.round(cents / 100).toLocaleString(format.locale) : formatMoneyInput(cents, format)
-}
-
-function purchaseYearText(year: number | null): string {
-  return year === null ? 'Never' : year === 0 ? 'Now' : `Year ${year}`
 }
 
 interface TypedProps {
@@ -197,7 +193,7 @@ export function Lever({ spec, draft, onChange, onUnstar }: LeverProps) {
     body = (
       <>
         <div className={styles.leverValue}>
-          <span className={styles.leverText}>{purchaseYearText(year)}</span>
+          <span className={styles.leverText}>{purchaseYearLabel(year, draft.horizonYears)}</span>
         </div>
         <div className={styles.leverTrack}>
           <input
@@ -208,7 +204,7 @@ export function Lever({ spec, draft, onChange, onUnstar }: LeverProps) {
             step={1}
             value={year ?? -1}
             aria-label={label}
-            aria-valuetext={purchaseYearText(year)}
+            aria-valuetext={purchaseYearLabel(year, draft.horizonYears)}
             onChange={(e) => {
               const v = Number(e.target.value)
               patch(v < 0 ? null : v)

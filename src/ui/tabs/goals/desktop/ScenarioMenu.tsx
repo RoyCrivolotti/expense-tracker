@@ -52,7 +52,7 @@ function SaveAsNew({ name, onSave, onCancel }: { name: string; onSave: (name: st
       />
       <button
         type="button"
-        className={goalStyles.btn}
+        className={`${goalStyles.btn} ${styles.menuBtn}`}
         disabled={copyName.trim().length === 0}
         onClick={() => onSave(copyName.trim())}
       >

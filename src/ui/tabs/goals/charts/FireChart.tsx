@@ -45,7 +45,7 @@ function FireChartImpl({
       year == null
         ? []
         : projectDrawdown(
-            growth[year]?.netWorthCents ?? target,
+            growth[year]?.investedCents ?? target,
             draft.annualSpendCents,
             draft.expectedRealReturn,
             Math.min(30, draft.horizonYears),

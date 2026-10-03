@@ -4,7 +4,7 @@
  * no scroll of its own, the levers bar in reach (held to the bottom edge while its place is below
  * the fold, under the header once scrolled past), the inputs panel folding in and out, the
  * scenario menu, the stars that move an input to the bar and back, the order Tab goes in and that
- * nothing it reaches is under the bar.
+ * nothing it reaches is under the bar, and the question asked before leaving Goals with an unsaved edit.
  *
  * jsdom lays nothing out, so the unit tests cannot say any of this. Manual, like
  * verify:goals-nav: it needs a browser and takes a few minutes, so it is not part of
@@ -12,7 +12,8 @@
  *
  * Starts its own dev server on CAPTURE_PORT (5173 unless set), with DOCS_CAPTURE=1 so it has the
  * seeded demo data and nothing real. `ENGINES=chromium,webkit` (the default is chromium) also
- * runs it in Safari's engine. Exits 1 and says what was measured if anything fails.
+ * runs it in Safari's engine, and `ONLY=touch-targets` runs just the touch-screen sizes (a minute).
+ * Exits 1 and says what was measured if anything fails.
  */
 import { spawn } from 'node:child_process'
 import { dirname, join } from 'node:path'
@@ -445,6 +446,15 @@ async function checkTabWalk(page, where, open, engine) {
  */
 async function checkBarFocus(page, where) {
   await scrollTo(page, 0)
+  // A plan with a house has a second figure in the bar (the invested part of the net worth), so it
+  // is the taller bar: it must still clear the legend where it is held to the bottom edge.
+  const size = page.viewportSize()
+  if (size.width >= HELD_FROM.width && size.height >= HELD_FROM.height) {
+    await page.getByRole('tab', { name: /Path B/ }).click()
+    await page.waitForTimeout(500)
+    const m = await measure(page)
+    check(where, '(n) with a house in the plan the held bar, a line taller, still clears the legend', m.bar.top >= m.legendBottom, `bar top ${px(m.bar.top)}, legend ends ${px(m.legendBottom)}`)
+  }
   const bar = page.locator('[class*="leversBar"]')
   const scrollY = () => page.evaluate(() => Math.round(window.scrollY))
 
@@ -618,6 +628,205 @@ async function checkTouch(browser, engine) {
   await context.close()
 }
 
+/** What a touch target is held to (44px), less what rounding takes. */
+const FINGER = 43.5
+
+/** The boxes of every element the selector finds, as heights and widths, in the page. */
+function sizesOf(page, selector) {
+  return page.evaluate(
+    (sel) =>
+      [...document.querySelectorAll(sel)]
+        .filter((el) => el.getBoundingClientRect().width > 0)
+        .map((el) => {
+          const r = el.getBoundingClientRect()
+          return { name: (el.getAttribute('aria-label') || el.textContent || el.tagName).trim().slice(0, 30), w: r.width, h: r.height }
+        }),
+    selector,
+  )
+}
+
+/** Fails with the names of the ones under 44px, or says there were none to measure. */
+async function checkSizes(page, where, what, selector, { w = false, min = FINGER } = {}) {
+  const found = await sizesOf(page, selector)
+  const small = found.filter((s) => s.h < min || (w && s.w < min))
+  check(where, `${what} (${found.length} measured)`, found.length > 0 && small.length === 0, found.length === 0 ? `nothing matches ${selector}` : small.map((s) => `${s.name} ${px(s.w)}x${px(s.h)}`).join('; '))
+}
+
+/**
+ * The wide Plan page on an iPad's screen (a coarse pointer, 1032px wide): every control a finger
+ * uses is 44px, or has a tap area that is, and the way the stars, the bar and the toast behave
+ * with it. The phone's layout and a fine pointer keep their sizes.
+ */
+async function checkTouchTargets(browser, engine) {
+  const where = `${engine} iPad 1032`
+  const { page, context } = await openPlan(browser, { width: 1032, height: 1376 }, { touch: true })
+  check(where, '(t) the emulated screen has a coarse pointer', await page.evaluate(() => matchMedia('(pointer: coarse)').matches))
+
+  // The bar: the whole row of a lever's digits is 44px and the slider has a 44px box that takes
+  // 28px of the layout, and the bar is no taller for it than the result column beside the levers.
+  await checkSizes(page, where, '(t) a lever\'s row of digits is 44px', '[class*="leverValue"]')
+  await checkSizes(page, where, '(t) a slider in the bar has a 44px box', '[class*="leversBar"] input[type="range"]')
+  const footprint = await page.evaluate(() => {
+    const r = document.querySelector('[class*="leversBar"] input[type="range"]')
+    const cs = getComputedStyle(r)
+    return r.getBoundingClientRect().height + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom)
+  })
+  check(where, '(t) a slider takes 28px of the layout, not 44', near(footprint, 28, 1), px(footprint))
+  const reach = await page.evaluate(() => {
+    const r = document.querySelector('[class*="leversBar"] input[type="range"]').getBoundingClientRect()
+    const x = r.left + r.width / 4
+    const range = (y) => document.elementFromPoint(x, y)?.matches('input[type="range"]') ?? false
+    const label = document.querySelector('[class*="leversBar"] input[type="range"]').closest('[class*="leverTrack"]').previousElementSibling.getBoundingClientRect()
+    const onDigits = document.elementFromPoint(label.left + 4, label.bottom - 3)
+    return {
+      above: range(r.top + r.height / 2 - 12),
+      below: range(r.top + r.height / 2 + 18),
+      digitsRow: onDigits?.closest('[class*="leverValue"]') !== null && !(onDigits instanceof HTMLInputElement && onDigits.type === 'range'),
+    }
+  })
+  check(where, '(t) a press 12px above a slider\'s track and 18px below it is the slider\'s', reach.above && reach.below, JSON.stringify(reach))
+  check(where, '(t) a press on the lower part of a lever\'s digits row is not the slider\'s', reach.digitsRow, JSON.stringify(reach))
+
+  // The legend chips: the tap area reaches past the 26px chip.
+  const chips = await page.evaluate(() =>
+    [...document.querySelectorAll('[class*="chips"] button')].map((b) => {
+      const r = b.getBoundingClientRect()
+      const after = getComputedStyle(b, '::after')
+      const above = document.elementFromPoint(r.left + r.width / 2, r.top - 7)
+      return { h: r.height, hit: parseFloat(after.height), toggles: above !== null && b.contains(above) }
+    }),
+  )
+  check(where, '(t) a legend chip is as tall as it was (26px) with a tap area of 44px', chips.length > 0 && chips.every((c) => near(c.h, 26.2, 1.5) && c.hit >= FINGER), JSON.stringify(chips.slice(0, 3)))
+  check(where, '(t) a press 7px above the first line of chips is a chip\'s', chips.length > 0 && chips[0].toggles, JSON.stringify(chips[0]))
+
+  // The save buttons, and the words beside Save while the scenario has no name.
+  const monthly = page.getByLabel('Monthly investing', { exact: true })
+  await monthly.fill('750')
+  await monthly.press('Enter')
+  await page.getByText('Unsaved changes').first().waitFor()
+  await checkSizes(page, where, '(t) Save changes and Discard are 44px', '[role="group"][aria-label="Unsaved changes"] button')
+  await page.getByRole('button', { name: 'Scenario options' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Scenario options' })
+  await dialog.waitFor()
+  await page.waitForTimeout(300)
+  const menu = await page.evaluate(() => {
+    const d = document.querySelector('[role="dialog"][aria-label="Scenario options"]')
+    const swatches = [...d.querySelectorAll('[aria-label^="Use color"], [aria-label="Pick custom color"]')]
+    const rects = swatches.map((s) => s.getBoundingClientRect())
+    const first = swatches[0]
+    const r = rects[0]
+    const hit = getComputedStyle(first, '::after')
+    const over = document.elementFromPoint(r.left + r.width / 2, r.top - 7)
+    const under = document.elementFromPoint(r.left + r.width / 2, r.bottom + 7)
+    const box = d.getBoundingClientRect()
+    return {
+      count: swatches.length,
+      oneRow: new Set(rects.map((x) => Math.round(x.top))).size === 1,
+      size: [r.width, r.height],
+      hit: [parseFloat(hit.width), parseFloat(hit.height)],
+      overIsSwatch: over === first || first.contains(over),
+      underIsSwatch: under === first || first.contains(under),
+      pitch: rects[1].left - rects[0].left,
+      inside: box.left >= 0 && box.right <= innerWidth && box.top >= 0 && box.bottom <= innerHeight,
+    }
+  })
+  check(where, '(t) the colour dots are 28px in one row, inside the window', menu.count === 9 && menu.oneRow && near(menu.size[0], 28, 0.5) && menu.inside, JSON.stringify(menu))
+  check(where, '(t) a colour dot has a 36 by 44px tap area, with no overlap with the next', near(menu.hit[0], 36, 0.5) && near(menu.hit[1], 44, 0.5) && near(menu.pitch, 36, 0.5), JSON.stringify(menu))
+  check(where, '(t) a press 7px above or below a colour dot is that dot\'s', menu.overIsSwatch && menu.underIsSwatch, JSON.stringify(menu))
+  await checkSizes(page, where, '(t) the scenario menu\'s rows and name field are 44px', '[role="dialog"][aria-label="Scenario options"] button:not([aria-label^="Use color"]):not([aria-label="Pick custom color"]), [role="dialog"][aria-label="Scenario options"] input[type="text"]')
+  // With no name the save says why, in words, next to the button.
+  await page.getByLabel('Scenario name').fill('')
+  await page.keyboard.press('Escape')
+  await dialog.waitFor({ state: 'detached' })
+  const hint = page.getByText('Give the scenario a name to save it')
+  check(where, '(t) with no name, the words say what Save needs', await hint.isVisible())
+  const hintBox = await hint.boundingBox()
+  check(where, '(t) the words are inside the window and the page does not scroll sideways', hintBox !== null && hintBox.x >= 0 && hintBox.x + hintBox.width <= 1032 && (await measure(page)).pageScrollWidth <= 1032, JSON.stringify(hintBox))
+  check(where, '(t) Save changes is off and says why to a screen reader', (await page.getByRole('button', { name: 'Save changes' }).isDisabled()) && (await page.getByRole('button', { name: 'Save changes' }).evaluate((b) => b.getAttribute('aria-describedby') !== null)))
+  await page.getByRole('button', { name: 'Discard changes' }).click()
+  await page.waitForTimeout(300)
+
+  // A star in the bar says what it did and gives the input back where it was.
+  const labels = () => page.locator('[class*="leversBar"] [class*="leverLabel"]').allTextContents()
+  const before = await labels()
+  await page.getByRole('button', { name: 'Remove Real return from the bar' }).click()
+  const toast = page.getByRole('status')
+  await page.getByText('Removed Real return from the bar').waitFor({ timeout: 3000 })
+  check(where, '(t) taking a star out says which input left, with Undo', (await toast.textContent()) === 'Removed Real return from the barUndo' && (await labels()).length === before.length - 1)
+  const undo = page.getByRole('button', { name: 'Undo' })
+  check(where, '(t) the Undo button is 44px tall', (await undo.boundingBox()).height >= FINGER, px((await undo.boundingBox()).height))
+  await undo.click()
+  await page.waitForTimeout(300)
+  check(where, '(t) Undo puts the input back where it was and takes the toast away', JSON.stringify(await labels()) === JSON.stringify(before) && (await page.getByRole('status').count()) === 0, JSON.stringify(await labels()))
+
+  // The inputs panel.
+  await page.getByRole('button', { name: 'All inputs' }).click()
+  await page.getByRole('region', { name: 'All inputs' }).waitFor()
+  await page.waitForTimeout(500)
+  const panel = '[role="region"][aria-label="All inputs"]'
+  await checkSizes(page, where, '(t) the steppers\' - and + buttons are 44px square', `${panel} [aria-label^="Decrease "], ${panel} [aria-label^="Increase "]`, { w: true })
+  await checkSizes(page, where, '(t) the panel\'s fields are 44px', `${panel} input[type="text"]`)
+  await checkSizes(page, where, '(t) the panel\'s sliders have a 44px box', `${panel} input[type="range"]`)
+  const stars = await page.evaluate((sel) => {
+    return [...document.querySelectorAll(`${sel} [class*="starrable"]`)].map((s) => {
+      const star = s.querySelector('[data-star]')
+      const label = s.querySelector('[class*="fieldLabel"]')
+      const range = document.createRange()
+      range.selectNodeContents(label)
+      const line = range.getClientRects()[0]
+      const r = star.getBoundingClientRect()
+      return r.top + r.height / 2 - (line.top + line.height / 2)
+    })
+  }, panel)
+  check(where, '(t) every star is on the middle of its label\'s first line, wrapped or not', stars.length > 5 && stars.every((d) => Math.abs(d) <= 1.5), JSON.stringify(stars))
+  await page.getByRole('button', { name: '+ Add life event' }).scrollIntoViewIfNeeded()
+  await checkSizes(page, where, '(t) + Add life event is 44px', 'button[class*="addLifeEventBtn"]')
+  await page.getByRole('button', { name: '+ Add life event' }).click()
+  await page.waitForTimeout(300)
+  await checkSizes(page, where, '(t) the life event form\'s buttons and sign labels are 44px', '[class*="lifeEventActions"] button, [class*="lifeEventSignLabel"]')
+  await page.getByLabel('Life event label').fill('Test event')
+  await page.locator('[class*="lifeEventActions"] button').first().click()
+  await page.waitForTimeout(300)
+  await checkSizes(page, where, '(t) the life event\'s remove cross is 44px square', '[class*="lifeEventRemove"]', { w: true })
+  await checkSizes(page, where, '(t) the help line under the page is 44px', 'summary')
+  // Taking a star out brings Reset to defaults in, and the row it is in is already as tall as the button.
+  await page.getByRole('button', { name: 'Remove Horizon from the bar' }).click()
+  await page.waitForTimeout(300)
+  const reset = page.getByRole('button', { name: 'Reset to defaults' })
+  check(where, '(t) Reset to defaults is 44px in a row that is the same height', near((await reset.boundingBox()).height, 44, 0.5) && (await reset.evaluate((b) => Math.abs(b.parentElement.getBoundingClientRect().height - 44) <= 0.5)), px((await reset.boundingBox()).height))
+  await context.close()
+
+  // From 1376px a bar of one row is no taller than its result column, so the lever rows cost no height.
+  const wide = await openPlan(browser, { width: 1376, height: 1032 }, { touch: true })
+  const bar = await wide.page.evaluate(() => ({
+    levers: document.querySelector('[class*="leverGrid"]').getBoundingClientRect().height,
+    side: document.querySelector('[class*="leverSide"]').getBoundingClientRect().height,
+  }))
+  check(`${engine} iPad 1376`, '(t) in one row the levers are no taller than the result column beside them', bar.levers <= bar.side + 1, JSON.stringify(bar))
+  await wide.context.close()
+
+  // A fine pointer and the phone's layout keep the sizes they had.
+  const fine = await openPlan(browser, { width: 1280, height: 800 })
+  await fine.page.getByRole('button', { name: 'All inputs' }).click()
+  await fine.page.getByRole('region', { name: 'All inputs' }).waitFor()
+  await fine.page.waitForTimeout(400)
+  const small = await fine.page.evaluate(() => {
+    const h = (sel) => Math.round(document.querySelector(sel).getBoundingClientRect().height * 10) / 10
+    return { stepper: h('[aria-label^="Decrease "]'), field: h('[role="region"] input[type="text"]'), chip: h('[class*="chips"] button'), range: h('input[type="range"]'), digits: h('[class*="leverValue"]') }
+  })
+  check(`${engine} mouse`, '(t) with a fine pointer the controls keep their size (stepper 25.6, field 26, chip 26.2, slider 16 or 17, digits row under 40)', near(small.stepper, 25.6, 0.7) && near(small.chip, 26.2, 1.5) && near(small.range, 16.5, 1) && near(small.field, 26, 0.5) && small.digits < 40, JSON.stringify(small))
+  await fine.context.close()
+  const phone = await openPlan(browser, { width: 899, height: 800 }, { touch: true })
+  const phoneStyle = await phone.page.evaluate(() => ({
+    wide: document.querySelector('[data-goals-plan-wide]') !== null,
+    coarse: matchMedia('(pointer: coarse)').matches,
+    stepperSize: getComputedStyle(document.querySelector('[class*="_stack_"]')).getPropertyValue('--stepper-size').trim(),
+    rangeMargin: getComputedStyle(document.querySelector('input[type="range"]')).marginTop,
+  }))
+  check(`${engine} phone touch`, '(t) the phone layout on a touch screen keeps the small steppers and sliders', !phoneStyle.wide && phoneStyle.coarse && phoneStyle.stepperSize === '' && phoneStyle.rangeMargin !== '-8px', JSON.stringify(phoneStyle))
+  await phone.context.close()
+}
+
 async function checkOtherViews(browser, engine) {
   const { page, context } = await openPlan(browser, { width: 1440, height: 900 })
   for (const name of ['Progress', 'Assumptions']) {
@@ -630,6 +839,76 @@ async function checkOtherViews(browser, engine) {
   await context.close()
 }
 
+/**
+ * Leaving Goals with an unsaved edit asks first, from the rail (the phone's bottom bar is the same
+ * guard behind another button). Stay keeps the edit and gives the keyboard back to the button it
+ * came from; Leave goes where the user pressed, and opening Goals again finds the saved value.
+ */
+async function checkLeaveGuard(browser, engine) {
+  const where = `${engine} leave guard`
+  const { page, context } = await openPlan(browser, { width: 1440, height: 900 })
+  const rail = (i) => page.locator('[class*="rail"] button').nth(i)
+  const dialog = page.getByRole('alertdialog', { name: 'Leave without saving?' })
+  const monthly = page.getByLabel('Monthly investing', { exact: true })
+  const saved = await monthly.inputValue()
+  await monthly.fill('750')
+  await monthly.press('Enter')
+  await page.getByText('Unsaved changes').first().waitFor({ timeout: 5000 })
+
+  await rail(3).click()
+  await page.waitForTimeout(300)
+  check(where, '(q) pressing the tab that is already open does not ask', (await dialog.count()) === 0)
+
+  // From the keyboard, so that every engine has focus on the button (Safari does not focus one on a click).
+  await rail(0).focus()
+  await page.keyboard.press('Enter')
+  await dialog.waitFor({ timeout: 5000 })
+  await page.waitForTimeout(300)
+  const box = await dialog.boundingBox()
+  const vp = page.viewportSize()
+  check(where, '(q) leaving with an unsaved edit asks first, inside the window', box !== null && box.x >= 0 && box.x + box.width <= vp.width && box.y >= 0 && box.y + box.height <= vp.height, JSON.stringify(box))
+  check(where, '(q) the question has put focus on Stay', await dialog.getByRole('button', { name: 'Stay' }).evaluate((el) => el === document.activeElement))
+  check(where, '(q) the page is still Goals, with the edit', (await monthly.inputValue()) === '750' && (await rail(3).getAttribute('aria-current')) === 'page', await monthly.inputValue())
+  await page.keyboard.press('Escape')
+  await dialog.waitFor({ state: 'detached', timeout: 5000 })
+  check(where, '(q) Escape stays, keeps the edit and gives focus back to the button pressed', (await monthly.inputValue()) === '750' && (await rail(0).evaluate((el) => el === document.activeElement)))
+
+  await rail(1).click()
+  await dialog.waitFor({ timeout: 5000 })
+  await dialog.getByRole('button', { name: 'Leave' }).click()
+  await dialog.waitFor({ state: 'detached', timeout: 5000 })
+  check(where, '(q) Leave goes to the place pressed, not to a default', (await rail(1).getAttribute('aria-current')) === 'page')
+  await rail(3).click()
+  await page.waitForSelector('text=Invested portfolio projection', { timeout: 20000 })
+  check(where, '(q) opening Goals again finds the saved value', (await monthly.inputValue()) === saved, `value ${await monthly.inputValue()}`)
+  await context.close()
+}
+
+/** A closed tab with an unsaved edit gets the browser's own prompt, and a clean page does not. */
+async function checkBrowserPrompt(browser, engine) {
+  const where = `${engine} leave guard`
+  for (const edited of [true, false]) {
+    const { page, context } = await openPlan(browser, { width: 1440, height: 900 })
+    if (edited) {
+      const monthly = page.getByLabel('Monthly investing', { exact: true })
+      await monthly.fill('750')
+      await monthly.press('Enter')
+      await page.getByText('Unsaved changes').first().waitFor({ timeout: 5000 })
+    }
+    let asked = null
+    page.on('dialog', (dialog) => {
+      asked = dialog.type()
+      void dialog.dismiss()
+    })
+    await page.close({ runBeforeUnload: true })
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    const what = edited ? "closing the tab with an unsaved edit asks (the browser's own prompt)" : 'closing the tab with nothing unsaved does not ask'
+    check(where, `(q) ${what}`, edited ? asked === 'beforeunload' : asked === null, `dialog: ${asked}`)
+    if (!page.isClosed()) await page.close()
+    await context.close()
+  }
+}
+
 async function main() {
   if (await answers()) throw new Error(`Something already answers on ${BASE}; set CAPTURE_PORT to a free port.`)
   const dev = startDev()
@@ -640,12 +919,19 @@ async function main() {
       console.log(`\n${engine}`)
       const browser = await playwright[engine].launch()
       try {
+        if (process.env.ONLY === 'touch-targets') {
+          await checkTouchTargets(browser, engine)
+          continue
+        }
         for (const screen of SCREENS) await checkScreen(browser, screen, engine)
         await checkTabs(browser, engine)
         await checkThemesAndZoom(browser, engine)
         await checkBreakpoint(browser, engine)
         await checkTouch(browser, engine)
+        await checkTouchTargets(browser, engine)
         await checkOtherViews(browser, engine)
+        await checkLeaveGuard(browser, engine)
+        await checkBrowserPrompt(browser, engine)
       } finally {
         await browser.close()
       }

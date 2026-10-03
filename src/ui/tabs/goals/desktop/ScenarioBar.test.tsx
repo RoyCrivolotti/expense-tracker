@@ -84,8 +84,27 @@ describe('ScenarioBar', () => {
   it('will not save a draft with no name', async () => {
     render(<Harness initial={[]} actions={makeActions()} />)
     await openMenu()
+    expect(screen.queryByText('Give the scenario a name to save it')).not.toBeInTheDocument()
     await userEvent.clear(screen.getByLabelText('Scenario name'))
     expect(screen.getByRole('button', { name: 'Save scenario' })).toBeDisabled()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.getByText('Give the scenario a name to save it')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Save scenario' })).toHaveAccessibleDescription('Give the scenario a name to save it')
+  })
+
+  it('takes the hint away once the scenario has a name again', async () => {
+    render(<Harness initial={[plan, other]} actions={makeActions()} />)
+    await openMenu()
+    await userEvent.clear(screen.getByLabelText('Scenario name'))
+    await userEvent.keyboard('{Escape}')
+    expect(screen.getByText('Give the scenario a name to save it')).toBeInTheDocument()
+
+    await openMenu()
+    await userEvent.type(screen.getByLabelText('Scenario name'), 'Path A!')
+    await userEvent.keyboard('{Escape}')
+
+    expect(screen.queryByText('Give the scenario a name to save it')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save changes to Path A!' })).toBeEnabled()
   })
 
   it('says "Save changes" on its button, which has the room for it, and names the scenario to a screen reader', async () => {
@@ -108,7 +127,11 @@ describe('ScenarioBar', () => {
 
     const save = screen.getByRole('button', { name: 'Save changes' })
     expect(save).toBeDisabled()
-    expect(save).toHaveAttribute('title', 'Give the scenario a name to save it')
+    // Said in words beside the button, since a tooltip is never shown on a touch screen.
+    const hint = screen.getByText('Give the scenario a name to save it')
+    expect(hint).toBeVisible()
+    expect(save).toHaveAccessibleDescription('Give the scenario a name to save it')
+    expect(save).not.toHaveAttribute('title')
     await userEvent.click(save)
     expect(actions.updateScenario).not.toHaveBeenCalled()
     expect(screen.getByRole('button', { name: 'Discard changes' })).toBeEnabled()

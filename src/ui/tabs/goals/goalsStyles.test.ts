@@ -165,3 +165,122 @@ describe('small muted text', () => {
     expect(note?.body).not.toMatch(/opacity/)
   })
 })
+
+/** What a stylesheet says under one media query: the rules inside every block of it, and the sheet without them. */
+function underQuery(file: string, query: string): { inside: { selector: string; body: string }[]; outside: string } {
+  const css = stylesheet(file)
+  const block = new RegExp(`@media ${query.replace(/[()]/g, '\\$&')} \\{([\\s\\S]*?)\\n\\}`, 'g')
+  const inside = [...css.matchAll(block)].flatMap((m) =>
+    [...(m[1] ?? '').matchAll(/([^{};]+)\{([^{}]*)\}/g)].map((r) => ({ selector: (r[1] ?? '').trim(), body: r[2] ?? '' })),
+  )
+  return { inside, outside: css.replace(block, '') }
+}
+
+const COARSE_WIDE = '(pointer: coarse) and (min-width: 900px)'
+
+describe('the inputs panel on a touch screen', () => {
+  const goals = underQuery('tabs/goals/goals.module.css', COARSE_WIDE)
+  const rule = (selector: string) => goals.inside.find((r) => r.selector === selector)?.body ?? ''
+
+  it('takes the steppers and the amount fields to 44px, for a coarse pointer on the wide layout only', () => {
+    expect(rule('.stack')).toMatch(/--stepper-size:\s*2\.75rem/)
+    expect(rule('.stack .valueInput')).toMatch(/min-height:\s*2\.75rem/)
+    // Set nowhere else, so the phone's steppers and the ones in Settings keep their size.
+    expect(goals.outside).not.toMatch(/--stepper-size\s*:/)
+  })
+
+  it('leaves the stepper at the size it has where nothing sets one', () => {
+    const stepper = rules('components/PercentStepper.module.css')
+    const button = stepper.find((r) => r.selector === '.btn')?.body
+
+    expect(button).toMatch(/width:\s*var\(--stepper-size,\s*1\.6rem\)/)
+    expect(button).toMatch(/height:\s*var\(--stepper-size,\s*1\.6rem\)/)
+    expect(stepper.find((r) => r.selector === '.wrap')?.body).toMatch(/gap:\s*var\(--stepper-gap,\s*0\.25rem\)/)
+  })
+
+  it("keeps a row's label and the star beside it on one line whether the label wraps or not", () => {
+    // The label starts a fixed distance down, and the star is on the middle of the row's first 44px.
+    expect(rule('.stack .fieldRow')).toMatch(/align-items:\s*flex-start/)
+    const star = underQuery('tabs/goals/desktop/planDesktop.module.css', '(pointer: coarse)').inside.find(
+      (r) => r.selector === '.starrable > .star',
+    )
+    expect(star?.body).toMatch(/top:\s*0\.825rem/)
+  })
+
+  it('takes the life event buttons, the sign labels and the help line to 44px', () => {
+    const selectors = ['.stack .addLifeEventBtn', '.stack .lifeEventCancelBtn', '.stack .lifeEventSignLabel', '.stack .controlSummary']
+    const sized = goals.inside.find((r) => selectors.every((s) => r.selector.includes(s)))
+
+    expect(sized?.body).toMatch(/min-height:\s*2\.75rem/)
+    expect(rule('.stack .lifeEventRemove')).toMatch(/min-width:\s*2\.75rem/)
+    expect(goals.outside).not.toMatch(/lifeEventRemove[^}]*min-height:\s*2\.75rem/)
+  })
+})
+
+describe('the sliders and the bar levers on a touch screen', () => {
+  const goals = underQuery('tabs/goals/goals.module.css', COARSE_WIDE)
+  const plan = underQuery('tabs/goals/desktop/planDesktop.module.css', '(pointer: coarse)')
+  const planRule = (selector: string) => plan.inside.find((r) => r.selector === selector)?.body ?? ''
+
+  it('gives a slider a 44px box that takes back 16px of it as margin, so it adds 11px and not 27px', () => {
+    const range = goals.inside.find((r) => r.selector === '.stack .range')?.body
+
+    expect(range).toMatch(/height:\s*2\.75rem/)
+    expect(range).toMatch(/margin-block:\s*-0\.5rem/)
+    expect(goals.outside).not.toMatch(/\.range\s*\{[^}]*height/)
+  })
+
+  it('makes the whole row of a lever 44px, over the slider box that reaches up into it', () => {
+    expect(planRule('.leverValue')).toMatch(/min-height:\s*2\.75rem/)
+    // Above the slider's box, so a press on the lower part of the digits is theirs.
+    expect(planRule('.leverValue')).toMatch(/z-index:\s*1/)
+    expect(planRule('.leverTrack')).toMatch(/height:\s*1\.75rem/)
+    expect(plan.outside).toMatch(/\.leverTrack\s*\{[^}]*height:\s*1\.25rem/)
+  })
+})
+
+describe('the scenario menu on a touch screen', () => {
+  const plan = underQuery('tabs/goals/desktop/planDesktop.module.css', '(pointer: coarse)')
+  const rule = (selector: string) => plan.inside.find((r) => r.selector === selector)?.body ?? ''
+
+  it('has 44px rows and name field, and swatches 28px apart from each other with a 36 by 44 tap area', () => {
+    expect(rule('.menuItem')).toMatch(/min-height:\s*2\.75rem/)
+    expect(rule('.menuInput,\n  .menuBtn')).toMatch(/min-height:\s*2\.75rem/)
+    expect(rule('.menu')).toMatch(/--swatch-size:\s*1\.75rem/)
+    expect(rule('.menu')).toMatch(/--swatch-hit:\s*-0\.625rem -0\.375rem/)
+    // Nine swatches, 28px and 8px apart, are 316px: the menu is wide enough to keep them in one row.
+    expect(rule('.menu')).toMatch(/width:\s*min\(21\.5rem/)
+  })
+
+  it('leaves the swatch the size it has for the pickers that set nothing', () => {
+    const swatch = rules('components/ColorSwatchPicker.module.css')
+    const body = swatch.find((r) => r.selector === '.colorSwatch')?.body
+
+    expect(body).toMatch(/width:\s*var\(--swatch-size,\s*1\.25rem\)/)
+    expect(swatch.find((r) => r.selector === '.colorSwatch::after')?.body).toMatch(/inset:\s*var\(--swatch-hit,\s*0\)/)
+    expect(swatch.find((r) => r.selector === '.colorPicker')?.body).toMatch(/gap:\s*var\(--swatch-gap,\s*0\.3rem\)/)
+  })
+
+  it('sets the sizes under a coarse pointer only', () => {
+    expect(plan.outside).not.toMatch(/--swatch-size\s*:/)
+  })
+
+  it('takes the buttons of the scenario row and Reset to defaults to 44px, in a row that is already that tall', () => {
+    expect(rule('.scenarioRow button,\n  .starNote button')).toMatch(/min-height:\s*2\.75rem/)
+    expect(rule('.starNote')).toMatch(/min-height:\s*2\.75rem/)
+    expect(plan.outside).toMatch(/\.starNote\s*\{[^}]*min-height:\s*1\.925rem/)
+  })
+})
+
+describe('the legend chips on a touch screen', () => {
+  const legend = underQuery('charts/LiveLegend.module.css', COARSE_WIDE)
+
+  it('reach 0.625rem past their padding edge above and below, so the chip is not made taller', () => {
+    const reach = legend.inside.find((r) => r.selector === '.chips .rowButton::after')
+
+    expect(reach?.body).toMatch(/position:\s*absolute/)
+    expect(reach?.body).toMatch(/inset:\s*-0\.625rem -0\.25rem/)
+    // Under a fine pointer, and for the rows layout the phone has, nothing is added.
+    expect(legend.outside).not.toMatch(/rowButton::after/)
+  })
+})
