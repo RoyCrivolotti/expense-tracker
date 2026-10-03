@@ -94,8 +94,19 @@
    value; each is a chip that wraps onto the next line when they do not fit. */
 .chips {
   display: flex;
-  flex-wrap: wrap;
   gap: 0.5rem;
+  /* One line: the chips give up some of their names before they wrap, and scroll only when even
+     the shortest names do not fit. A row that wrapped once the values arrived moved the page
+     under a pointer sweeping the chart, and put the legend under the bar held at the bottom of
+     a laptop screen. */
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 3px;
+  margin: -3px;
+}
+
+.chips::-webkit-scrollbar {
+  display: none;
 }
 
 .chips .row,
@@ -104,7 +115,7 @@
 }
 
 .chips .row {
-  grid-template-columns: 12px auto auto;
+  grid-template-columns: 12px minmax(5rem, 1fr) auto;
   align-items: center;
   padding: 0.25rem 0.75rem;
   border-color: var(--color-border);
@@ -119,6 +130,22 @@
 
 .chips .rowItem {
   width: auto;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.chips .label {
+  overflow: hidden;
+  overflow-wrap: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The value's room is kept when there is no value yet, so a chip is as wide before the pointer
+   reaches the chart as after. */
+.chips .value {
+  min-width: 2.9rem;
+  text-align: right;
 }
 
 .chips .rowButton {
