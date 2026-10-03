@@ -72,6 +72,19 @@
   min-width: 0;
 }
 
+/* Where the bar is held to the bottom edge it is one row whatever the result beside it comes to.
+   The result's column is as wide as its figure, and a net worth of 15 characters (5.675.259.434 €) took 18px from
+   the levers, which at 1200px left room for four of them: the fifth went to a second row, the
+   bar grew from 99px to 178, and its top edge went up over the legend by 60px while someone
+   typed. The levers share what is left instead, and their names and digits clip a little first. */
+@media (min-width: 75rem) and (min-height: 50rem) {
+  .leverGrid {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+  }
+}
+
 .lever {
   display: grid;
   gap: 0.125rem;
@@ -166,6 +179,8 @@
   align-content: start;
   justify-items: start;
   min-width: 10rem;
+  /* A figure with more digits than this clips, so a typo of a few zeros cannot take the bar's room. */
+  max-width: 15rem;
   padding-left: 1rem;
   border-left: 1px solid var(--color-border);
 }
@@ -178,6 +193,10 @@
 }
 
 .leverResult {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 1.25rem;
   font-weight: 700;
   line-height: 1.3;
