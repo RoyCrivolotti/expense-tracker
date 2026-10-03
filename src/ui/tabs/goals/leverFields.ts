@@ -36,6 +36,18 @@ export const LEVER_SPECS: Record<LeverKey, LeverSpec> = {
   safeWithdrawalRate: { key: 'safeWithdrawalRate', kind: 'percent', label: 'Withdrawal rate at FI', short: 'Withdrawal rate', min: 0.005, max: 0.06 },
 }
 
+/**
+ * What a purchase year is called wherever it is shown. Year 0 is "Already own", not "Now": the
+ * plan counts the house from the start and takes nothing out of the portfolio for it, whereas
+ * "Now" reads like a purchase still to be paid for. A year past the horizon says so, since the
+ * chart never reaches it.
+ */
+export function purchaseYearLabel(year: number | null, horizonYears?: number): string {
+  if (year === null) return 'Never'
+  if (year === 0) return 'Already own'
+  return horizonYears !== undefined && year > horizonYears ? `Year ${year}, past horizon` : `Year ${year}`
+}
+
 /** Which inputs each section of the controls holds, in the order it shows them. */
 export const SECTION_KEYS = {
   portfolio: ['startInvestedCents', 'monthlyContributionCents', 'annualContributionGrowth', 'expectedRealReturn', 'horizonYears'],

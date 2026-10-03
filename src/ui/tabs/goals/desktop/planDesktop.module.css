@@ -30,8 +30,9 @@
 
    Held there it is drawn over whatever is under it, and the chart, its axis and the legend that
    carries its values end about 670px down the page (measured at every width from 1200 up). So
-   the screen has to be tall enough to leave them above the bar (the bar is about 111px and the air
-   under it 12px, which with a few px to spare is 800px), or the first thing seen is a chart with
+   the screen has to be tall enough to leave them above the bar (the bar is 99px, or 115px with a
+   house in the plan, which has a second figure, and the air under it 12px, which with a few px to
+   spare is 800px), or the first thing seen is a chart with
    its bottom edge cut off. The widths and heights are in rem, so text set larger than usual,
    which makes the page taller and the levers wrap sooner, asks for a larger screen. */
 @media (min-width: 75rem) and (min-height: 50rem) {
@@ -55,7 +56,10 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 1rem;
   align-items: start;
-  padding: 0.75rem 1.1rem;
+  /* 0.5rem, not 0.75: with a house in the plan the result column has a line more, and the bar is
+     held over the page's bottom edge with 8px to spare at 1280x800, so the height it has is the
+     height it gets. */
+  padding: 0.5rem 1.1rem;
   box-shadow: 0 6px 18px color-mix(in srgb, var(--color-text) 12%, transparent);
 }
 
@@ -158,12 +162,19 @@
 
 .leverSide {
   display: grid;
-  gap: 0.25rem;
+  gap: 0.125rem;
   align-content: start;
   justify-items: start;
   min-width: 10rem;
   padding-left: 1rem;
   border-left: 1px solid var(--color-border);
+}
+
+.leverResultNote {
+  font-size: 0.75rem;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
 }
 
 .leverResult {

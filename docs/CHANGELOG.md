@@ -2,6 +2,12 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (headline figures on the wide Goals page, from a review of it)
+
+- **The FI year counts the invested portfolio, as the milestones do.** It used the net worth, house included, so a plan with a house said "Financial independence: year 0" beside a 1,0M milestone, the same amount as the FI target, ten years off. A withdrawal rate draws on what can be sold and spent, which a house is not, so the FI year and the drawdown chart's starting balance now use the portfolio.
+- **The bar shows the invested part of the net worth when there is a house.** A plan with a house read 9,0M in the bar and 4,4M at the end of its line, with nothing to say why. The bar adds a line, "4.388.000 € invested", when the two differ at the horizon.
+- **Purchase year 0 is called "Already own".** "Now" read like a purchase still to be paid for, but year 0 takes nothing out of the portfolio and counts the house from the start. The bar, the panel, its hint and the comparison table say "Already own", and a purchase year past the horizon says "past horizon", since the chart never reaches it.
+
 ## October 2026 (labels and numbers on the Goals charts, from a review of the wide page)
 
 - **"Years to milestone" says how far it looked.** A milestone not reached was always "40+", though the search stops at the scenario's own horizon: on a 30 year plan a milestone reached in year 32 read "40+", and with the horizon at 45 the same cell read "32y". It now says "30+" or "12+", the horizon it was looked for over.
