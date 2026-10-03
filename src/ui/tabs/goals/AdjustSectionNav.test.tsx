@@ -117,7 +117,7 @@ describe('AdjustSectionNav', () => {
 
       sectionElement('tracking').open = true
       scrollPage()
-      expect(current()).toBe('Tracking')
+      expect(current()).toBe('Start date')
     })
 
     it('is at the bottom when the page ends within 2px of the screen, and not when it runs further', () => {
@@ -187,7 +187,7 @@ describe('AdjustSectionNav', () => {
     render(<AdjustSectionNav />)
 
     expect(screen.getByRole('button', { name: 'Portfolio' })).toHaveClass(styles.chipActive!)
-    for (const other of ['Housing', 'FI', 'Tracking', 'Events']) {
+    for (const other of ['Housing', 'FI', 'Start date', 'Events']) {
       expect(screen.getByRole('button', { name: other })).not.toHaveClass(styles.chipActive!)
     }
 
@@ -238,7 +238,7 @@ describe('AdjustSectionNav', () => {
     render(<AdjustSectionNav />)
     scrollTo.mockClear()
 
-    await user.click(screen.getByRole('button', { name: 'Tracking' }))
+    await user.click(screen.getByRole('button', { name: 'Start date' }))
 
     expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }))
   })
@@ -270,7 +270,7 @@ describe('AdjustSectionNav', () => {
     render(<AdjustSectionNav />)
     scrollTo.mockClear()
 
-    await user.click(screen.getByRole('button', { name: 'Tracking' }))
+    await user.click(screen.getByRole('button', { name: 'Start date' }))
 
     expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'auto' }))
   })

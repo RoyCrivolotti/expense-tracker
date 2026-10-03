@@ -239,7 +239,7 @@ async function checkAdjust(browser, phone) {
   // On a tall screen the last two sections never reach the line (the page ends first), so with
   // the demo data the mark goes Portfolio, Housing, FI. A shorter screen gets further down
   // them. Either way it moves down the chips one at a time, never back and never past one.
-  const order = ['Portfolio', 'Housing', 'FI', 'Tracking', 'Events']
+  const order = ['Portfolio', 'Housing', 'FI', 'Start date', 'Events']
   const inOrder = followed.every((label, i) => label === order[i])
   check(
     where,
@@ -252,7 +252,7 @@ async function checkAdjust(browser, phone) {
   }
 
   // The chip's name, and the key its section is stored under.
-  const sectionKeys = { Portfolio: 'portfolio', Housing: 'housing', FI: 'fire', Tracking: 'tracking', Events: 'events' }
+  const sectionKeys = { Portfolio: 'portfolio', Housing: 'housing', FI: 'fire', 'Start date': 'tracking', Events: 'events' }
   for (const key of Object.keys(sectionKeys)) {
     await chip(page, key).tap()
     await settled(page)
@@ -260,7 +260,7 @@ async function checkAdjust(browser, phone) {
     const gap = gapOf(m, sectionKeys[key])
     const lands = gap >= GAP.min && gap <= GAP.max
     const atEnd = m.y >= m.max - 1
-    if (key === 'Tracking' || key === 'Events') {
+    if (key === 'Start date' || key === 'Events') {
       // The end of the page comes before they can reach the stack, so all that can be asked is
       // that the page went as far as it goes and the chip says where it is.
       check(where, `(c) the ${key} chip is marked, and the page scrolled as far as it goes`, m.marked === key && (atEnd || lands), `marked ${m.marked}, ${px(gap)} under the stack, at ${px(m.y)} of ${px(m.max)}`)

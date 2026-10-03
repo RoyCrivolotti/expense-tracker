@@ -57,9 +57,9 @@ describe('GoalControls', () => {
     expect(screen.getByLabelText('House appreciation (%/yr)')).toBeInTheDocument()
   })
 
-  it('renders the Plan tracking section (collapsed by default)', () => {
+  it('renders the Plan start section (collapsed by default)', () => {
     render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
-    expect(screen.getByText('Plan tracking')).toBeInTheDocument()
+    expect(screen.getByText('Plan start')).toBeInTheDocument()
   })
 
   it('renders the plan start date input', () => {
