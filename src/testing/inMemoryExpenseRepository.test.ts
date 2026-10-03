@@ -65,6 +65,23 @@ describe('inMemoryExpenseRepository settings assumedInflation', () => {
   })
 })
 
+describe('inMemoryExpenseRepository settings goalLevers', () => {
+  it('starts at the five defaults and keeps a list it is given', async () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    expect((await repo.loadDataset(OWNER)).settings.goalLevers).toHaveLength(5)
+    const saved = await repo.updateSettings(OWNER, { goalLevers: ['rentMonthlyCents'] })
+    expect(saved.goalLevers).toEqual(['rentMonthlyCents'])
+  })
+
+  // The double must refuse what the API refuses, or a test would pass on a list D1 rejects.
+  it('refuses a list the API refuses', () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    for (const bad of [['planStartDate'], ['horizonYears', 'horizonYears'], 'horizonYears'] as unknown as [][]) {
+      expect(() => repo.updateSettings(OWNER, { goalLevers: bad })).toThrow(RepoHttpError)
+    }
+  })
+})
+
 /**
  * Mirrors dbFlags.test.ts/dbWrite.test.ts's coverage of the D1 adapter, but against
  * the double the rest of the application layer actually runs its own tests

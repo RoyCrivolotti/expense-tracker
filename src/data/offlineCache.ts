@@ -11,8 +11,9 @@ const SNAPSHOT_KEY = 'latest'
  * and white-screen the app on the first load after a deploy. Discarding a
  * stale snapshot costs one network fetch; not discarding it costs the session.
  */
-// Version 3 predates `labels`, which buildLookup now maps over.
-const SNAPSHOT_VERSION = 4
+// Version 3 predates `labels`, which buildLookup now maps over. Version 4 predates
+// `settings.goalLevers`, which the Goals page reads the length of.
+const SNAPSHOT_VERSION = 5
 
 interface SnapshotRecord {
   key: string

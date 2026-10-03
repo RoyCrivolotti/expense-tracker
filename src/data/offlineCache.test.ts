@@ -14,6 +14,8 @@ describe('isCompatibleSnapshot', () => {
     expect(isCompatibleSnapshot({ version: 2 })).toBe(false)
     // Version 3 predates `labels`, which buildLookup now maps over.
     expect(isCompatibleSnapshot({ version: 3 })).toBe(false)
+    // Version 4 predates `settings.goalLevers`, which the Goals page reads the length of.
+    expect(isCompatibleSnapshot({ version: 4 })).toBe(false)
   })
 
   it('rejects a missing record', () => {
@@ -21,6 +23,6 @@ describe('isCompatibleSnapshot', () => {
   })
 
   it('accepts a snapshot written by this build', () => {
-    expect(isCompatibleSnapshot({ version: 4 })).toBe(true)
+    expect(isCompatibleSnapshot({ version: 5 })).toBe(true)
   })
 })

@@ -6,6 +6,7 @@ import type {
   Milestone,
 } from '../domain/types'
 import { assumedInflationError } from '../domain/engine/assumedInflation'
+import { leversError } from '../domain/engine/goalLevers'
 import { normalizeMilestones, validateMilestones } from '../domain/engine/milestones'
 import type {
   DeleteAccountOptions,
@@ -383,6 +384,7 @@ const SETTINGS_COLUMNS: ColumnMap<ExpenseSettings> = {
   milestones: 'milestones',
   cashReserveMonths: 'cash_reserve_months',
   assumedInflation: 'assumed_inflation',
+  goalLevers: 'goal_levers',
 }
 const NULLABLE_SETTINGS = new Set<keyof ExpenseSettings>([
   'claimantName',
@@ -394,6 +396,7 @@ const NULLABLE_SETTINGS = new Set<keyof ExpenseSettings>([
   'milestones',
   'cashReserveMonths',
   'assumedInflation',
+  'goalLevers',
 ])
 /** Five years of spending in cash is already absurd; past it the number is a typo. */
 export const CASH_RESERVE_MAX_MONTHS = 60
@@ -401,10 +404,11 @@ const coerceSettings: Coerce<ExpenseSettings> = (key, value) => {
   if (key === 'milestones') {
     return value === undefined ? null : JSON.stringify(normalizeMilestones(value as Milestone[]))
   }
+  if (key === 'goalLevers') return value === undefined ? null : JSON.stringify(value)
   return NULLABLE_SETTINGS.has(key) ? (value ?? null) : (value ?? 0)
 }
 
-/** The Goals tab's own scalars: the cash reserve target and the assumed inflation. */
+/** The Goals tab's own settings: the cash reserve target, the assumed inflation and the bar's inputs. */
 function assertGoalsSettings(patch: Partial<ExpenseSettings>): void {
   if (
     patch.cashReserveMonths !== undefined &&
@@ -416,6 +420,10 @@ function assertGoalsSettings(patch: Partial<ExpenseSettings>): void {
   }
   if (patch.assumedInflation !== undefined) {
     const error = assumedInflationError(patch.assumedInflation)
+    if (error) throw new HttpError(400, error)
+  }
+  if (patch.goalLevers !== undefined) {
+    const error = leversError(patch.goalLevers)
     if (error) throw new HttpError(400, error)
   }
 }
