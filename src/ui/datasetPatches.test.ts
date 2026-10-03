@@ -18,6 +18,7 @@ import {
   patchAfterLabelDelete,
   patchAfterScenarioActivate,
   patchAfterScenarioCreate,
+  patchAfterSettings,
 } from './datasetPatches'
 import { makeScenario } from '../testing/factories'
 
@@ -638,5 +639,18 @@ describe('the plan after scenario patches', () => {
       [1, true],
       [2, false],
     ])
+  })
+})
+
+describe('patches for a settings answer that carries more than its write changed', () => {
+  it('takes only the named settings from a settings row, or the whole row when none are named', () => {
+    const before = dataset({ settings: { ...defaultExpenseSettings(), assumedInflation: 0.02, claimantName: 'A' } })
+    const row = { ...before.settings, assumedInflation: 0.03, claimantName: 'B' }
+
+    expect(patchAfterSettings(before, row, ['assumedInflation']).settings).toEqual({
+      ...before.settings,
+      assumedInflation: 0.03,
+    })
+    expect(patchAfterSettings(before, row).settings).toEqual(row)
   })
 })

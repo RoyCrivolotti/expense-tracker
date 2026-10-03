@@ -275,12 +275,29 @@ export function patchAfterAccountDelete(
   return d
 }
 
+function copySetting<K extends keyof ExpenseSettings>(to: ExpenseSettings, from: ExpenseSettings, key: K): void {
+  to[key] = from[key]
+}
+
+/**
+ * Puts a settings row the server sent back into the dataset. With `keys` only those settings are
+ * taken from it: the row is the whole table as it stood when that write was handled, so one that
+ * answers late carries older values for everything the write did not touch, and taking all of it
+ * would put them back on screen.
+ */
 export function patchAfterSettings(
   dataset: ExpenseDataset,
   settings: ExpenseSettings,
+  keys?: readonly (keyof ExpenseSettings)[],
 ): ExpenseDataset {
   const d = cloneDataset(dataset)
-  d.settings = settings
+  if (keys === undefined) {
+    d.settings = settings
+    return d
+  }
+  const next = { ...d.settings }
+  for (const key of keys) copySetting(next, settings, key)
+  d.settings = next
   return d
 }
 
