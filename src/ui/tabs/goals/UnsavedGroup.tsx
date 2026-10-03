@@ -1,5 +1,8 @@
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef } from 'react'
 import styles from './goals.module.css'
+
+/** Why a scenario with no name cannot be saved. */
+export const NAME_HINT = 'Give the scenario a name to save it'
 
 /** What can be done with edits to a saved scenario that have not been saved. */
 export interface UnsavedActions {
@@ -25,6 +28,7 @@ export function UnsavedGroup({
   onGone,
   className = styles.unsavedActions,
   saveLabel = 'Save',
+  nameHint = false,
 }: {
   unsaved: UnsavedActions
   onGone: () => void
@@ -32,7 +36,13 @@ export function UnsavedGroup({
   className?: string | undefined
   /** What the button says: the phone's row is narrow and keeps the short word, the wide row has room. */
   saveLabel?: string
+  /**
+   * Says beside the buttons why Save is off while the scenario has no name. Without it the reason
+   * is a tooltip, which a touch screen never shows; the phone's row has no room for the words.
+   */
+  nameHint?: boolean
 }) {
+  const hintId = useId()
   const group = useRef<HTMLDivElement>(null)
   const hadFocus = useRef(false)
   const lastFocused = useRef<EventTarget | null>(null)
@@ -55,6 +65,7 @@ export function UnsavedGroup({
   // A scenario with no name cannot be saved (the service refuses it too); it is the edits that
   // are the problem, so Discard stays.
   const unnamed = unsaved.name.trim().length === 0
+  const hinted = unnamed && nameHint
   return (
     <div
       ref={group}
@@ -71,6 +82,11 @@ export function UnsavedGroup({
         if (!disabled) hadFocus.current = false
       }}
     >
+      {hinted ? (
+        <span id={hintId} className={styles.nameHint}>
+          {NAME_HINT}
+        </span>
+      ) : null}
       <button
         type="button"
         className={styles.btn}
@@ -84,7 +100,7 @@ export function UnsavedGroup({
         type="button"
         className={`${styles.btn} ${styles.btnPrimary}`}
         aria-label={unnamed ? 'Save changes' : `Save changes to ${unsaved.name}`}
-        {...(unnamed ? { title: 'Give the scenario a name to save it' } : {})}
+        {...(hinted ? { 'aria-describedby': hintId } : unnamed ? { title: NAME_HINT } : {})}
         disabled={unsaved.saving || unnamed}
         onClick={unsaved.onSave}
       >
