@@ -115,6 +115,11 @@
   border: 1px solid transparent;
 }
 
+/* After a unit that comes first ($), the digits do not need to hang out to the label's edge: the unit is on it. */
+.leverInputAfterUnit {
+  margin-left: -0.125rem;
+}
+
 .leverInput:hover {
   border-color: var(--color-border);
 }

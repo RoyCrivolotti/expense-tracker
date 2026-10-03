@@ -1,8 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { DEFAULT_LEVERS } from '../../../../engine'
+import { DEFAULT_LEVERS, type MoneyFormat } from '../../../../engine'
 import { makeScenario } from '../../../../testing/factories'
+import { MoneyFormatContext } from '../../../hooks/moneyFormatContext'
 import { LeversBar } from './LeversBar'
 
 function makeDraft(overrides = {}) {
@@ -38,6 +39,33 @@ describe('LeversBar', () => {
     expect(screen.getByLabelText('Horizon (years)')).toHaveValue('30')
     expect(screen.getByLabelText('Real return (%/yr, after inflation)')).toHaveValue('7,0')
     expect(screen.getByText('Never')).toBeInTheDocument()
+  })
+
+  it('puts a dollar sign before the digits and a euro sign after them, as the money is written', () => {
+    const usd: MoneyFormat = { locale: 'en-US', symbol: '$', symbolPosition: 'prefix', decimalSeparator: '.' }
+    const draft = makeDraft()
+    render(
+      <MoneyFormatContext.Provider value={usd}>
+        <LeversBar draft={draft} resultDraft={draft} keys={DEFAULT_LEVERS} expanded={false} panelId="p" onChange={vi.fn()} onToggle={vi.fn()} />
+      </MoneyFormatContext.Provider>,
+    )
+    const order = (label: string) => {
+      const field = screen.getByLabelText(label)
+      const unit = field.parentElement!.querySelector('[class*="leverUnit"]')!
+      return field.compareDocumentPosition(unit) & Node.DOCUMENT_POSITION_FOLLOWING ? 'after' : 'before'
+    }
+    expect(order('Monthly investing')).toBe('before')
+    expect(screen.getByLabelText('Monthly investing')).toHaveValue('500')
+    // The years and the percentage keep their unit after the number.
+    expect(order('Horizon (years)')).toBe('after')
+    expect(order('Real return (%/yr, after inflation)')).toBe('after')
+  })
+
+  it('writes a euro amount with the sign after the digits', () => {
+    renderBar()
+    const field = screen.getByLabelText('Monthly investing')
+    const unit = field.parentElement!.querySelector('[class*="leverUnit"]')!
+    expect(field.compareDocumentPosition(unit) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('keeps the cents of an amount that has them', () => {
