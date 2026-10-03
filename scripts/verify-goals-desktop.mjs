@@ -1058,6 +1058,78 @@ async function checkPointDecimal(browser, engine) {
   await context.close()
 }
 
+/**
+ * A draft with no saved scenario behind it. The demo always has scenarios, so they are all deleted
+ * through the menu first: what is on screen is then the draft of a scenario that is gone, which is
+ * the same editor state as a first-time user's (nothing saved to measure the edits against).
+ */
+async function checkFirstDraft(browser, engine) {
+  const where = `${engine} first draft`
+  const { page, context } = await openPlan(browser, { width: 1440, height: 900 })
+  const rail = (i) => page.locator('[class*="rail"] button').nth(i)
+  const dialog = page.getByRole('alertdialog', { name: 'Leave without saving?' })
+  const tabs = page.getByRole('tablist', { name: 'Scenarios' }).getByRole('tab')
+  const saved = tabs.filter({ hasNotText: 'Unsaved draft' })
+  for (let guard = 0; guard < 10 && (await saved.count()) > 0; guard++) {
+    await saved.first().click()
+    await page.waitForTimeout(250)
+    await page.getByRole('button', { name: 'Scenario options' }).click()
+    await page.getByRole('button', { name: 'Delete', exact: true }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Delete', exact: true }).click()
+    await page.waitForTimeout(400)
+  }
+  check(where, '(y2) every scenario is deleted: only the unsaved draft is left', (await saved.count()) === 0 && (await tabs.count()) === 1, `${await saved.count()} saved, ${await tabs.count()} tabs`)
+
+  await rail(0).focus()
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(400)
+  check(where, '(y2) a draft nobody has touched is left without a question', (await dialog.count()) === 0 && (await rail(0).getAttribute('aria-current')) === 'page')
+  await rail(3).click()
+  await page.waitForSelector('text=Invested portfolio projection', { timeout: 20000 })
+  // The first draft is seeded again on every visit, and it is the first-time user's.
+  const monthly = page.getByLabel('Monthly investing', { exact: true })
+  const start = await monthly.inputValue()
+  await monthly.fill('7777')
+  await monthly.press('Enter')
+  await page.waitForTimeout(250)
+
+  await rail(0).focus()
+  await page.keyboard.press('Enter')
+  await dialog.waitFor({ timeout: 5000 })
+  await page.waitForTimeout(300)
+  const words = await dialog.innerText()
+  check(where, '(y2) editing a lever of that draft makes leaving ask first, in the words for a draft', /unsaved draft will be lost/i.test(words) && /save it as a new scenario/i.test(words), words)
+  check(where, '(y2) the page is still Goals with the edit', (await monthly.inputValue()) !== start && (await rail(3).getAttribute('aria-current')) === 'page')
+  await dialog.getByRole('button', { name: 'Stay' }).click()
+  await dialog.waitFor({ state: 'detached', timeout: 5000 })
+
+  await monthly.fill(start)
+  await monthly.press('Enter')
+  await page.waitForTimeout(250)
+  await rail(0).focus()
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(400)
+  check(where, '(y2) putting the edit back by hand makes leaving free again', (await dialog.count()) === 0 && (await rail(0).getAttribute('aria-current')) === 'page', `question asked: ${(await dialog.count()) > 0}`)
+
+  // And a reload or a closed tab: the browser's own prompt.
+  await rail(3).click()
+  await page.waitForSelector('text=Invested portfolio projection', { timeout: 20000 })
+  const field = page.getByLabel('Monthly investing', { exact: true })
+  await field.fill('7777')
+  await field.press('Enter')
+  await page.waitForTimeout(250)
+  let asked = null
+  page.on('dialog', (d) => {
+    asked = d.type()
+    void d.dismiss()
+  })
+  await page.close({ runBeforeUnload: true })
+  await new Promise((resolve) => setTimeout(resolve, 500))
+  check(where, "(y2) closing the tab with an edited draft asks (the browser's own prompt)", asked === 'beforeunload', `dialog: ${asked}`)
+  if (!page.isClosed()) await page.close()
+  await context.close()
+}
+
 async function main() {
   if (await answers()) throw new Error(`Something already answers on ${BASE}; set CAPTURE_PORT to a free port.`)
   const dev = startDev()
@@ -1076,6 +1148,10 @@ async function main() {
           await checkPointDecimal(browser, engine)
           continue
         }
+        if (process.env.ONLY === 'y2') {
+          await checkFirstDraft(browser, engine)
+          continue
+        }
         for (const screen of SCREENS) await checkScreen(browser, screen, engine)
         await checkTabs(browser, engine)
         await checkThemesAndZoom(browser, engine)
@@ -1087,6 +1163,7 @@ async function main() {
         await checkLeaveGuard(browser, engine)
         await checkBrowserPrompt(browser, engine)
         await checkPointDecimal(browser, engine)
+        await checkFirstDraft(browser, engine)
       } finally {
         await browser.close()
       }
