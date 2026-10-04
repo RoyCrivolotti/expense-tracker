@@ -83,7 +83,7 @@ export function NumberField({ label, value, min, max, onChange }: NumberFieldPro
 
   return (
     <div className={styles.field}>
-      <div className={styles.fieldRow}>
+      <div className={`${styles.fieldRow} ${styles.fieldRowStepper}`}>
         <span className={styles.fieldLabel}>{label}</span>
         <div className={stepperStyles.wrap}>
           <button
@@ -144,7 +144,7 @@ export function PercentField({
   const format = useMoneyFormat()
   return (
     <div className={styles.field}>
-      <div className={styles.fieldRow}>
+      <div className={`${styles.fieldRow} ${styles.fieldRowStepper}`}>
         <span className={styles.fieldLabel}>{label}</span>
         <PercentStepper value={value} min={min} max={max} onChange={onChange} ariaLabel={label} />
       </div>
