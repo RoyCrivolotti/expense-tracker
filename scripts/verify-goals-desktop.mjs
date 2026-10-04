@@ -6,11 +6,12 @@
  * scenario menu, the stars that move an input to the bar and back, the order Tab goes in and that
  * nothing it reaches is under the bar, the question asked before leaving Goals with an unsaved edit,
  * the Years to milestone table (`ONLY=milestone-table` runs just that) and its timeline (`ONLY=milestone-timeline`),
+ * both counted from today with start dates that differ (`ONLY=w2`, `ONLY=x2`),
  * and why Save is off for a scenario with no name (`ONLY=s2`).
  *
- * jsdom lays nothing out, so the unit tests cannot say any of this. Manual, like
- * verify:goals-nav: it needs a browser and takes a few minutes, so it is not part of
- * `npm run verify` or CI.
+ * jsdom lays nothing out, so the unit tests cannot say any of this. It needs a browser and takes
+ * a few minutes, so it is not part of `npm run verify`; CI runs it in its own job
+ * (.github/workflows/verify-goals-browser.yml), and it can be run by hand like verify:goals-nav.
  *
  * Starts its own dev server on CAPTURE_PORT (5173 unless set), with DOCS_CAPTURE=1 so it has the
  * seeded demo data and nothing real. `ENGINES=chromium,webkit` (the default is chromium) also
@@ -2191,6 +2192,220 @@ async function checkTimeline(browser, engine) {
   await checkTimelineSwitchAbsent(browser, engine)
 }
 
+/**
+ * The table and the timeline counted from today (check groups w2 and x2). The demo has one start
+ * date for every path, which is what hid the gaps and the widths from the earlier checks, so the
+ * situation is made here: three milestones are named (one of them long) and the editing path is
+ * given a plan start date well over a year back, so it starts on another day than the plan and
+ * has already run for a while.
+ */
+const FROM_TODAY_NAMES = ['1st goal', '2nd goal', '3rd goal (phase 1)', '', '', '', 'FIRE']
+const START_MONTHS_BACK = 15
+
+async function nameMilestones(page) {
+  await page.getByRole('tab', { name: 'Assumptions' }).click()
+  await page.waitForTimeout(400)
+  const names = page.getByLabel('Milestone name', { exact: true })
+  for (const [i, name] of FROM_TODAY_NAMES.entries()) {
+    if (!name) continue
+    await names.nth(i).fill(name)
+    await names.nth(i).blur()
+  }
+  await page.waitForTimeout(300)
+  await page.getByRole('tab', { name: 'Plan' }).click()
+  await page.waitForTimeout(400)
+}
+
+/**
+ * The editing path's start date, picked in the calendar: the 15th of the first month that is at
+ * least `monthsBack` months before today's, going back from the plan's own (six months back). The
+ * dev build's calendar steps a year too far back past a January (a state updater that sets
+ * another state runs twice there), so the month is read after each step and not counted.
+ * Returns what that makes the date, for the numbers to be checked against: the year it starts in
+ * and the years it has run, read from the date the field then shows.
+ */
+async function setDraftStart(page, monthsBack) {
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+  await page.getByRole('button', { name: 'Plan start date' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Choose a date' })
+  const behind = async () => {
+    const [, month, year] = /^([A-Za-z]+) (\d{4})/.exec((await dialog.textContent()) ?? '') ?? []
+    return page.evaluate(([m, y, months]) => {
+      const now = new Date()
+      return (now.getFullYear() - Number(y)) * 12 + now.getMonth() - months.indexOf(m)
+    }, [month, year, MONTHS])
+  }
+  for (let i = 0; i < 60 && (await behind()) < monthsBack; i += 1) await dialog.getByRole('button', { name: 'Previous month' }).click()
+  await dialog.getByRole('button', { name: /^15 / }).click()
+  await page.waitForTimeout(500)
+  const label = await page.getByRole('button', { name: 'Plan start date' }).textContent()
+  return page.evaluate((text) => {
+    const [day, month, year] = text.split(' ')
+    const start = new Date(Number(year), ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].indexOf(month), Number(day), 12)
+    return { label: text, startYear: start.getFullYear(), elapsed: (Date.now() - start.getTime()) / (365.25 * 86_400_000) }
+  }, label)
+}
+
+/** A path with start dates that differ, and milestones with names, as the situation to check. */
+async function openFromToday(browser, screen, scheme = 'dark', { names = true } = {}) {
+  const opened = await openPlan(browser, screen, { scheme })
+  if (names) await nameMilestones(opened.page)
+  await lowDraft(opened.page)
+  const start = await setDraftStart(opened.page, START_MONTHS_BACK)
+  await matrixCard(opened.page).scrollIntoViewIfNeeded()
+  await opened.page.waitForTimeout(300)
+  return { ...opened, start }
+}
+
+/** Every row of the table: its name, whether it is the plan, and for each cell what it shows and what is under it (null where the row has no line). */
+function readRows(page) {
+  return page.evaluate(() =>
+    [...document.querySelectorAll('[role="grid"] tbody tr')].map((tr) => ({
+      name: tr.querySelector('th')?.textContent ?? '',
+      plan: tr.querySelector('[class*="matrixPlanTag"]') !== null,
+      height: tr.getBoundingClientRect().height,
+      cells: [...tr.querySelectorAll('td[role="gridcell"]')].map((td) => ({
+        shown: td.querySelector('[class*="matrixBox"]')?.textContent ?? '',
+        gap: td.querySelector('[class*="matrixGap"]')?.textContent?.trim() ?? null,
+      })),
+    })),
+  )
+}
+
+/** A cell as years from today: 0 for a tick, null for a hatched box, else the number. */
+function cellYears(shown) {
+  if (shown === '✓') return 0
+  const years = /^(\d+)y$/.exec(shown)
+  return years ? Number(years[1]) : null
+}
+
+/** What the line under a cell should say for these two figures: the difference of what is shown. */
+function expectedGap(mine, theirs) {
+  if (mine === null && theirs === null) return '='
+  if (mine === null) return 'later'
+  if (theirs === null) return 'sooner'
+  if (mine === 0 && theirs === 0) return ''
+  if (mine === theirs) return '='
+  return mine < theirs ? `−${theirs - mine}y` : `+${mine - theirs}y`
+}
+
+const spread = (list) => (list.length === 0 ? 0 : Math.max(...list) - Math.min(...list))
+
+async function checkFromTodayTable(browser, engine, screen, scheme) {
+  const where = `${engine} ${screen.name} ${scheme}`
+  const { page, context, start } = await openFromToday(browser, screen, scheme)
+
+  // The years are counted from today: the draft started over a year ago, so each cell is its
+  // own step (the calendar year less its start year) less those years, rounded up.
+  const years = await readRows(page)
+  await page.getByRole('radio', { name: 'Calendar year' }).click()
+  const calendar = await readRows(page)
+  await page.getByRole('radio', { name: 'Years from now' }).click()
+  const draftAt = years.findIndex((r) => r.name.endsWith('(editing)'))
+  const counted = years[draftAt].cells.map((c, i) => ({ n: Number(calendar[draftAt].cells[i].shown) - start.startYear, shown: c.shown }))
+  const stepped = counted.filter((c) => cellYears(c.shown) !== null && cellYears(c.shown) > 0)
+  check(where, '(w2) the editing path, started over a year ago, counts its years from today: its own step less the years it has run', stepped.length >= 2 && stepped.every((c) => cellYears(c.shown) === Math.ceil(c.n - start.elapsed) && c.n - cellYears(c.shown) >= 1), JSON.stringify({ start, counted }))
+
+  // Same widths: one for every milestone column and every tinted box, though one name is long.
+  const heads = await page.evaluate(() => [...document.querySelectorAll('[role="grid"] thead th[scope="col"]')].map((t) => ({ w: t.getBoundingClientRect().width, text: t.textContent })))
+  const boxes = await page.evaluate(() => [...document.querySelectorAll('[role="grid"] [class*="matrixBox"]')].map((b) => b.getBoundingClientRect().width))
+  check(where, '(w2) every milestone column is the same width, whatever its name', heads.length === 7 && spread(heads.map((h) => h.w)) <= 1, JSON.stringify(heads))
+  check(where, '(w2) every box in the table is the same width', boxes.length >= 28 && spread(boxes) <= 1, `${px(spread(boxes))} apart over ${boxes.length}`)
+  const longHead = await page.getByRole('columnheader', { name: /3rd goal/ }).getAttribute('title')
+  check(where, '(w2) the long name is cut to the column and keeps all of it in the title', /3rd goal \(phase 1\)/.test(longHead ?? ''), longHead ?? '')
+  const inRegion = await page.evaluate(() => {
+    const region = document.querySelector('[role="region"][aria-label="Years to milestone"]')
+    const card = region.closest('[class*="chartCard"]').getBoundingClientRect()
+    const r = region.getBoundingClientRect()
+    return { in: r.left >= card.left - 0.5 && r.right <= card.right + 0.5, page: document.documentElement.scrollWidth, iw: innerWidth }
+  })
+  check(where, '(w2) the table is inside its card and the page does not scroll sideways', inRegion.in && inRegion.page <= inRegion.iw, JSON.stringify(inRegion))
+
+  // vs plan: a figure in every row that is not the plan, whatever day it started on, and it is the
+  // difference of the two cells as shown.
+  await page.getByRole('button', { name: 'vs plan' }).click()
+  await page.waitForTimeout(200)
+  const against = await readRows(page)
+  const plan = against.find((r) => r.plan)
+  const wrong = []
+  let figures = 0
+  for (const row of against) {
+    if (row === plan) continue
+    row.cells.forEach((c, i) => {
+      const want = expectedGap(cellYears(c.shown), cellYears(plan.cells[i].shown))
+      if ((c.gap ?? '') !== want) wrong.push({ row: row.name, col: i, shown: c.shown, plan: plan.cells[i].shown, gap: c.gap, want })
+      if (want !== '' && want !== '=') figures += 1
+    })
+  }
+  check(where, '(w2) vs plan gives every path that does not start on the plan\'s day its figure, the difference of the cells shown', plan !== undefined && wrong.length === 0 && figures >= 3, JSON.stringify({ wrong: wrong.slice(0, 4), figures }))
+  const draftRow = against[draftAt]
+  check(where, '(w2) including the editing path, which started over a year before the plan', draftRow.cells.some((c) => /^[+−]\d+y$|^later$|^sooner$/.test(c.gap ?? '')), JSON.stringify(draftRow.cells))
+  const fromToday = against.find((r) => /, from today$/.test(r.name))
+  check(where, '(w2) and the plan from today, which is on the same footing', fromToday !== undefined && fromToday.cells.every((c, i) => (c.gap ?? '') === expectedGap(cellYears(c.shown), cellYears(plan.cells[i].shown))), JSON.stringify(fromToday))
+  const planNow = against.find((r) => r.plan)
+  check(where, '(w2) the plan itself has no line and is no taller than without vs plan', planNow.cells.every((c) => c.gap === null) && near(planNow.height, years[against.indexOf(planNow)].height, 0.5), `${px(planNow.height)} against ${px(years[against.indexOf(planNow)].height)}`)
+  await context.close()
+}
+
+async function checkFromTodayPhone(browser, engine) {
+  for (const width of [375, 320]) {
+    const { page, context, where } = await openPhoneMilestones(browser, width, engine)
+    await page.getByRole('button', { name: 'vs plan' }).tap()
+    await page.waitForTimeout(200)
+    const fit = await page.evaluate(() => {
+      const region = document.querySelector('[role="region"][aria-label="Years to milestone"]')
+      return { scroll: region.scrollWidth, client: region.clientWidth, page: document.documentElement.scrollWidth, iw: innerWidth }
+    })
+    check(where, '(w2) with vs plan on the page does not scroll sideways', fit.page <= fit.iw, JSON.stringify(fit))
+    if (width === 375) check(where, '(w2) and all seven milestones still fit the table', fit.scroll <= fit.client + 1, JSON.stringify(fit))
+    await context.close()
+  }
+}
+
+async function checkFromTodayMilestones(browser, engine) {
+  for (const screen of [SCREENS[3], SCREENS[1], SCREENS[0]]) await checkFromTodayTable(browser, engine, screen, 'dark')
+  await checkFromTodayTable(browser, engine, SCREENS[3], 'light')
+  await checkFromTodayPhone(browser, engine)
+}
+
+async function checkFromTodayTimeline(browser, engine) {
+  const screen = SCREENS[3]
+  const where = `${engine} ${screen.name}`
+  const { page, context, start } = await openFromToday(browser, screen, 'dark', { names: false })
+  const rows = await readRows(page)
+  const draftAt = rows.findIndex((r) => r.name.endsWith('(editing)'))
+  // What each of its steps is, counted from today, worked out from the calendar year it falls in.
+  await page.getByRole('radio', { name: 'Calendar year' }).click()
+  const calendar = await readRows(page)
+  await page.getByRole('radio', { name: 'Years from now' }).click()
+  const draftYears = calendar[draftAt].cells.map((c, i) => (cellYears(rows[draftAt].cells[i].shown) === null || cellYears(rows[draftAt].cells[i].shown) === 0 ? null : Math.ceil(Number(c.shown) - start.startYear - start.elapsed)))
+  await timelineSwitch(page).getByRole('radio', { name: 'Timeline' }).click()
+  await page.waitForTimeout(300)
+
+  const axis = await page.evaluate(() => {
+    const ticks = (selector) => [...document.querySelectorAll(selector)].map((t) => t.textContent)
+    return { top: ticks('[class*="tlAxis"]:not([class*="tlAxisBottom"]) [class*="tlTick"]'), bottom: ticks('[class*="tlAxisBottom"] [class*="tlTick"]') }
+  })
+  check(where, '(x2) the axis starts at now, with the calendar year of today under it', axis.top[0] === 'now' && !axis.top.includes('start') && axis.top[1] === '5y' && axis.bottom[0] === String(new Date().getFullYear()), JSON.stringify(axis))
+
+  // The editing path started over a year back: its line starts at now, not off the left edge
+  // of the axis, and every dot is where the table's cell, counted from today, says.
+  const line = await page.evaluate((at) => {
+    const row = document.querySelectorAll('[class*="tlRow"]')[at]
+    const bar = row.querySelector('[class*="tlLine"]')
+    const dots = [...row.querySelectorAll('button[class*="tlDot"]')].map((d) => ({ t: Number(d.style.getPropertyValue('--t')), years: Number(/ in (\d+) years?/.exec(d.getAttribute('aria-label'))?.[1]) }))
+    return { from: bar.style.getPropertyValue('--from'), to: Number(bar.style.getPropertyValue('--to')), dots }
+  }, draftAt)
+  const span = 30
+  const horizon = Math.ceil(30 - start.elapsed)
+  const wanted = draftYears.filter((y) => y !== null && y > 0)
+  check(where, '(x2) the editing path\'s line starts at now and ends where its horizon, counted from today, does', Number(line.from) === 0 && near(line.to * span, horizon, 0.01), JSON.stringify({ line, horizon }))
+  check(where, '(x2) each of its dots is where its cell in the table, counted from today, says', line.dots.length >= 1 && line.dots.every((d) => wanted.includes(d.years) && near(d.t * span, d.years, 0.01)), JSON.stringify({ dots: line.dots, wanted }))
+  const ahead = await page.evaluate(() => [...document.querySelectorAll('[class*="tlLine"]')].map((b) => b.style.getPropertyValue('--from')))
+  check(where, '(x2) no path\'s line starts anywhere but at now', ahead.every((f) => f === '0'), JSON.stringify(ahead))
+  await context.close()
+}
+
 async function main() {
   if (await answers()) throw new Error(`Something already answers on ${BASE}; set CAPTURE_PORT to a free port.`)
   const dev = startDev()
@@ -2237,6 +2452,14 @@ async function main() {
           await checkMilestoneTable(browser, engine)
           continue
         }
+        if (process.env.ONLY === 'w2') {
+          await checkFromTodayMilestones(browser, engine)
+          continue
+        }
+        if (process.env.ONLY === 'x2') {
+          await checkFromTodayTimeline(browser, engine)
+          continue
+        }
         for (const screen of SCREENS) await checkScreen(browser, screen, engine)
         await checkTabs(browser, engine)
         await checkLeverFocus(browser, engine)
@@ -2255,6 +2478,8 @@ async function main() {
         await checkTouchLeftovers(browser, engine)
         await checkMilestoneTable(browser, engine)
         await checkTimeline(browser, engine)
+        await checkFromTodayMilestones(browser, engine)
+        await checkFromTodayTimeline(browser, engine)
       } finally {
         await browser.close()
       }
