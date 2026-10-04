@@ -10,6 +10,7 @@ Measured by pressing a grid of points inside every control on the Plan page with
 - **The star's area in the inputs panel is the 24px gutter it hangs in, 44px high, on a touch screen**, where it was 46 wide (35 wide for the first column's star, which has the card's padding beside it). The star itself and everything around it are as they were, and the bar's stars keep their full area.
 - **A percentage stepper is 8px narrower on a touch screen, with 4px less between it and its label.** In the narrowest columns (an iPad 1032px wide) its + button reached 9px past its column and under the next column's star, which a taller area could not fix. The field between - and + is 40px wide, not 48.
 - **Where the bar's levers wrap onto two rows**, a slider stays above the star of the lever below it.
+- **A percentage's + button no longer hangs over the next column in a wider font.** In a font a little wider than a Mac's (CI's Linux fonts, or Windows and Android) the label of Contribution growth and House appreciation could not be narrower than its longest word, so the row came out 2px wider than its four-column panel and the + button covered 2px of the next column's star. The label may now shrink (breaking a word as a last resort) and the gap is smaller. With the usual fonts the rows are exactly as they were.
 
 ## October 2026 (years to milestone, counted from today)
 
