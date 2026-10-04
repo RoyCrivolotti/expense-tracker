@@ -1,5 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MilestoneMatrix } from './MilestoneMatrix'
 import { makeScenario } from '../../../../testing/factories'
 import { planFromToday } from '../../../../engine'
@@ -7,6 +7,15 @@ import { defaultMilestones } from '../../../../engine'
 
 const draft = makeScenario()
 const noneReached = new Map<number, string>()
+
+// The paths count their years from today, so the day is fixed.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date(2026, 0, 1, 12))
+})
+afterEach(() => {
+  vi.useRealTimers()
+})
 
 describe('MilestoneMatrix', () => {
   it('keeps two same-named scenarios as two rows, without a key warning', () => {
@@ -177,7 +186,7 @@ describe('MilestoneMatrix', () => {
     )
     const names = screen.getAllByRole('row').slice(1).map((r) => r.querySelector('th[scope="row"]')?.textContent)
     expect(names).toEqual(['Scenario', 'Aggressive', 'Aggressive, from today', 'Scenario (editing)'])
-    expect(screen.getByText(/counts years from your latest check-in/)).toBeInTheDocument()
+    expect(screen.getByText(/is the plan started again from your latest check-in/)).toBeInTheDocument()
   })
 
   it('marks a reached milestone with the month it was first observed', () => {

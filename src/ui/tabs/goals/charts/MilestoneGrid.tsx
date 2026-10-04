@@ -11,6 +11,7 @@ import {
   gapIsSooner,
   gapShort,
   gapVersus,
+  longestHorizon,
   moveCell,
   tintPercent,
   type CellMove,
@@ -72,11 +73,16 @@ function MilestoneHead({
   )
 }
 
-/** What a cell says in its tinted box. */
-function cellText(row: MilestoneRow, years: number | null, unit: YearsUnit): string {
+/**
+ * What a cell says in its tinted box: the years from today, or the calendar year the path's own
+ * yearly step falls in. Already there is a tick in both.
+ */
+function cellText(row: MilestoneRow, index: number, unit: YearsUnit): string {
+  const years = row.cells[index] ?? null
+  const calendar = unit === 'calendar'
   if (years === 0) return '✓'
-  if (years === null) return `${unit === 'calendar' ? calendarYear(row, row.horizonYears) : row.horizonYears}+`
-  return unit === 'calendar' ? String(calendarYear(row, years)) : `${years}y`
+  if (years === null) return `${calendar ? calendarYear(row, row.horizonYears) : row.horizonFromNow}+`
+  return calendar ? String(calendarYear(row, row.sinceStart[index] ?? 0)) : `${years}y`
 }
 
 function boxClass(years: number | null): string {
@@ -91,13 +97,24 @@ function crosshairClass(onRow: boolean, onCol: boolean): string {
   return ''
 }
 
-function GapLine({ row, plan, index }: { row: MilestoneRow; plan: MilestoneRow; index: number }) {
+interface GapText {
+  text: string
+  sooner: boolean
+}
+
+/** The line under a cell while the table is comparing with the plan; null where there is nothing to say. */
+function gapLabel(row: MilestoneRow, plan: MilestoneRow | null, index: number): GapText | null {
   const gap = gapVersus(row, plan, index)
   // Both already there: the check marks say it, and "=" under each is only noise.
-  const text = gap === null || (gap.kind === 'same' && row.cells[index] === 0) ? ' ' : gapShort(gap)
+  if (gap === null || (gap.kind === 'same' && row.cells[index] === 0)) return null
+  return { text: gapShort(gap), sooner: gapIsSooner(gap) }
+}
+
+/** A blank line holds its height with a no-break space, so the cells of a row stay level. */
+function GapLine({ label }: { label: GapText | null }) {
   return (
-    <span className={gap !== null && gapIsSooner(gap) ? `${styles.matrixGap} ${styles.matrixSooner}` : styles.matrixGap} aria-hidden="true">
-      {text}
+    <span className={label?.sooner ? `${styles.matrixGap} ${styles.matrixSooner}` : styles.matrixGap} aria-hidden="true">
+      {label?.text ?? ' '}
     </span>
   )
 }
@@ -110,13 +127,15 @@ interface CellProps {
   unit: YearsUnit
   /** The plan, while the table is comparing with it. */
   plan: MilestoneRow | null
+  /** Whether the row keeps a line under its cells for the gap. */
+  gaps: boolean
   sentence: string
   tabStop: boolean
   crosshair: string
   onPoint: () => void
 }
 
-function Cell({ row, rowIndex, colIndex, longest, unit, plan, sentence, tabStop, crosshair, onPoint }: CellProps) {
+function Cell({ row, rowIndex, colIndex, longest, unit, plan, gaps, sentence, tabStop, crosshair, onPoint }: CellProps) {
   const years = row.cells[colIndex] ?? null
   const tint = tintPercent(years, longest)
   const style = tint === null ? undefined : ({ '--tint': `${tint}%` } as CSSProperties)
@@ -133,9 +152,9 @@ function Cell({ row, rowIndex, colIndex, longest, unit, plan, sentence, tabStop,
       onClick={onPoint}
     >
       <span className={boxClass(years)} style={style} aria-hidden="true">
-        {cellText(row, years, unit)}
+        {cellText(row, colIndex, unit)}
       </span>
-      {plan ? <GapLine row={row} plan={plan} index={colIndex} /> : null}
+      {gaps ? <GapLine label={gapLabel(row, plan, colIndex)} /> : null}
     </td>
   )
 }
@@ -194,7 +213,7 @@ export function MilestoneGrid({
   const table = useRef<HTMLTableElement>(null)
   const narrow = useGoalsNarrow()
   const [stop, setStop] = useState({ row: 0, col: 0 })
-  const longest = Math.max(1, ...rows.map((r) => r.horizonYears))
+  const longest = longestHorizon(rows)
   const at = { row: Math.min(stop.row, rows.length - 1), col: Math.min(stop.col, milestones.length - 1) }
   const markedRow = live && point ? point.rowId : null
   const markedCol = live && point ? point.index : null
@@ -213,6 +232,7 @@ export function MilestoneGrid({
       <table
         ref={table}
         className={`${styles.milestoneTable} ${styles.matrixTable}`}
+        style={{ '--cols': milestones.length } as CSSProperties}
         role="grid"
         aria-label="Years to milestone, one row per path"
         onKeyDown={onKeyDown}
@@ -248,6 +268,7 @@ export function MilestoneGrid({
                   longest={longest}
                   unit={unit}
                   plan={plan}
+                  gaps={plan !== null}
                   sentence={sentences[r]?.[c] ?? ''}
                   tabStop={at.row === r && at.col === c}
                   crosshair={crosshairClass(markedRow === row.id, markedCol === c)}
