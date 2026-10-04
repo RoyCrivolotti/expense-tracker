@@ -4,12 +4,20 @@ import { makeScenario } from '../../../../testing/factories'
 import {
   buildRows,
   calendarYear,
+  cellText,
   describeCell,
   gapIsSooner,
+  gapLabel,
   gapShort,
   gapVersus,
+  goalsPerPage,
   longestHorizon,
   moveCell,
+  pageLabel,
+  reachedByEveryRow,
+  rowHasGaps,
+  soonestFirst,
+  splitPages,
   tintPercent,
   yearsBetween,
   yearsFromNow,
@@ -376,5 +384,122 @@ describe('buildRows', () => {
     )
 
     expect(rows[0]?.cells).toEqual([0])
+  })
+})
+
+describe('goalsPerPage', () => {
+  it('fits what the width holds once the names have their share, at least two', () => {
+    expect(goalsPerPage(272)).toBe(3) // a 320px phone
+    expect(goalsPerPage(327)).toBe(4) // 375px
+    expect(goalsPerPage(382)).toBe(5) // 430px
+    expect(goalsPerPage(700)).toBe(9) // a tablet in portrait
+    expect(goalsPerPage(120)).toBe(2)
+    expect(goalsPerPage(0)).toBe(2)
+  })
+})
+
+describe('splitPages', () => {
+  const upTo = (n: number) => Array.from({ length: n }, (_, i) => i)
+
+  it('keeps everything on one page when it fits', () => {
+    expect(splitPages(upTo(3), 4)).toEqual([[0, 1, 2]])
+    expect(splitPages(upTo(4), 4)).toEqual([[0, 1, 2, 3]])
+  })
+
+  it('splits as evenly as it can, so no page is left with one column', () => {
+    expect(splitPages(upTo(5), 4)).toEqual([[0, 1, 2], [3, 4]])
+    expect(splitPages(upTo(8), 4)).toEqual([[0, 1, 2, 3], [4, 5, 6, 7]])
+    expect(splitPages(upTo(9), 4)).toEqual([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
+    expect(splitPages(upTo(7), 3)).toEqual([[0, 1, 2], [3, 4], [5, 6]])
+    expect(splitPages(upTo(10), 4)).toEqual([[0, 1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    expect(splitPages(upTo(12), 3)).toEqual([[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]])
+  })
+
+  it('keeps the indices it was given, not their position', () => {
+    expect(splitPages([1, 2, 3, 4, 5], 3)).toEqual([[1, 2, 3], [4, 5]])
+  })
+
+  it('is no pages for no milestones, and one column a page at the very least', () => {
+    expect(splitPages([], 4)).toEqual([])
+    expect(splitPages(upTo(2), 0)).toEqual([[0], [1]])
+  })
+})
+
+describe('reachedByEveryRow', () => {
+  const rowsOf = (...cells: (number | null)[][]) => cells.map((c, i) => row({ id: `r${i}`, cells: c }))
+
+  it('lists the milestones every row has a tick in', () => {
+    expect(reachedByEveryRow(rowsOf([0, 0, 4], [0, 2, 9]), 3)).toEqual([0])
+    expect(reachedByEveryRow(rowsOf([0, 0, 4], [0, 0, 9]), 3)).toEqual([0, 1])
+  })
+
+  it('leaves a milestone one row has not reached', () => {
+    expect(reachedByEveryRow(rowsOf([0, 3], [2, 3]), 2)).toEqual([])
+  })
+
+  it('does not fold a milestone a path never gets to', () => {
+    expect(reachedByEveryRow(rowsOf([0, 5], [0, null]), 2)).toEqual([0])
+  })
+
+  it('folds nothing when that would be every milestone, or when there are no rows', () => {
+    expect(reachedByEveryRow(rowsOf([0, 0], [0, 0]), 2)).toEqual([])
+    expect(reachedByEveryRow([], 3)).toEqual([])
+  })
+})
+
+describe('soonestFirst', () => {
+  it('orders by the years to the milestone, the ones that never get there last', () => {
+    const rows = [
+      row({ id: 'a', cells: [null] }),
+      row({ id: 'b', cells: [7] }),
+      row({ id: 'c', cells: [0] }),
+      row({ id: 'd', cells: [3] }),
+    ]
+    expect(soonestFirst(rows, 0).map((r) => r.id)).toEqual(['c', 'd', 'b', 'a'])
+  })
+
+  it('keeps the table order for rows that tie, and does not change the rows it was given', () => {
+    const rows = [row({ id: 'a', cells: [4] }), row({ id: 'b', cells: [4] }), row({ id: 'c', cells: [null] }), row({ id: 'd', cells: [null] })]
+    expect(soonestFirst(rows, 0).map((r) => r.id)).toEqual(['a', 'b', 'c', 'd'])
+    expect(rows.map((r) => r.id)).toEqual(['a', 'b', 'c', 'd'])
+  })
+})
+
+describe('pageLabel', () => {
+  it('names a page by its first and last milestone', () => {
+    expect(pageLabel('150k', '400k')).toBe('150k–400k')
+  })
+
+  it('is the one name for a page of one', () => {
+    expect(pageLabel('2M', '2M')).toBe('2M')
+  })
+})
+
+describe('cellText', () => {
+  it('reads years, the calendar year, a tick, and the end of the horizon with a plus', () => {
+    const r = row({ cells: [0, 6, null], sinceStart: [0, 6, null], horizonYears: 30, horizonFromNow: 30 })
+    expect(cellText(r, 0, 'years')).toBe('✓')
+    expect(cellText(r, 1, 'years')).toBe('6y')
+    expect(cellText(r, 1, 'calendar')).toBe('2032')
+    expect(cellText(r, 2, 'years')).toBe('30+')
+    expect(cellText(r, 2, 'calendar')).toBe('2056+')
+  })
+})
+
+describe('gapLabel and rowHasGaps', () => {
+  it('says the gap against the plan, and nothing where both have a tick', () => {
+    const p = row({ id: 'p', kind: 'plan', cells: [0, 3, 3] })
+    const r = row({ cells: [0, 6, 2] })
+    expect(gapLabel(r, p, 0)).toBeNull()
+    expect(gapLabel(r, p, 1)).toEqual({ text: '+3y', sooner: false })
+    expect(gapLabel(r, p, 2)).toEqual({ text: '−1y', sooner: true })
+    expect(gapLabel(r, null, 1)).toBeNull()
+  })
+
+  it('gives a row its line when any milestone has something in it, whichever page is in view', () => {
+    const p = row({ id: 'p', kind: 'plan', cells: [0, 3, 3] })
+    expect(rowHasGaps(row({ cells: [0, 3, 3] }), p)).toBe(true)
+    expect(rowHasGaps(row({ cells: [0, 0, 0] }), row({ id: 'p', kind: 'plan', cells: [0, 0, 0] }))).toBe(false)
+    expect(rowHasGaps(row({ cells: [0, 6, 2] }), null)).toBe(false)
   })
 })

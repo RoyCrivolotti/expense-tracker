@@ -379,13 +379,13 @@ describe('on a phone', () => {
     installFakeMatchMedia().setMatching(() => false)
   })
 
-  it('drops the currency sign from the column heads, so that seven of them fit, and keeps it in the sentences', () => {
+  it('asks for a tap, not a hover, and keeps the currency sign in the sentences', () => {
     installFakeMatchMedia().setMatching((query) => query === NARROW_MQ || query === '(hover: none)')
     renderTable()
 
-    expect(screen.getByRole('columnheader', { name: /^100k/ }).textContent).not.toMatch(/€/)
-    expect(screen.getByRole('columnheader', { name: /^100k/ })).toHaveAttribute('title', expect.stringContaining('100k €'))
-    expect(cell('Path A', 0).getAttribute('aria-label')).toMatch(/100k €/)
+    // 100k is there on every path from the start, so it is a line of text and not a column.
+    expect(screen.queryByRole('columnheader', { name: /^100k/ })).not.toBeInTheDocument()
+    expect(cell('Path A', 0).getAttribute('aria-label')).toMatch(/House deposit \(200k €\)/)
     expect(screen.getByText(/^Tap a cell to read it as a sentence/)).toBeInTheDocument()
   })
 })

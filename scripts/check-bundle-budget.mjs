@@ -109,8 +109,13 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // keyboard fixes that follow from the last review. Main stood at 218.1 KB with the Goals chunk
 // at 46.2 KB, so the last round left under 1 KB for the Goals chunk. All of it is small code and
 // CSS in the one lazy chunk, with no new library.
+//
+// Raised the Goals chunk from 54 KB to 58 KB for the phone's Years to milestone view (the table a
+// page of columns at a time, the by-goal list and a full-screen sheet with every milestone).
+// Main stood at 52.5 KB and the table's pages and by-goal list alone add 1.5 KB, so 54 KB left no room for the sheet. All of it is small code and CSS in the one lazy
+// chunk, with no new library.
 const TOTAL_MAX_GZIP = 230_000
-const GOALS_MAX_GZIP = 54_000
+const GOALS_MAX_GZIP = 58_000
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length

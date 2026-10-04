@@ -1447,71 +1447,236 @@
   }
 }
 
-/* The phone's layout: seven milestones in 325px with no sideways scroll, so the names give up
-   width, the columns lose their padding and the type is a notch smaller. A path's name runs to
-   two lines of the narrow column and the rest is its title. */
+/* The phone's layout: the names take 38% of the table and the milestone columns share the rest
+   equally, so a path's whole name wraps instead of being cut and no column is squeezed. How many
+   columns that is (the table is paged by width, see goalsPerPage) is decided in the component;
+   a table that has them all in one page just has narrower columns, down to 46px. */
 @media (max-width: 899px) {
   .matrixTable {
-    font-size: 0.7rem;
+    table-layout: fixed;
+    font-size: 0.72rem;
   }
 
   .matrixTable .milestoneScenarioHead,
   .matrixTable .milestoneScenarioCell {
-    width: 3.7rem;
-    min-width: 3.7rem;
-    max-width: 3.7rem;
-    padding-right: 3px;
+    width: 38%;
+    min-width: 0;
+    max-width: none;
+    padding-right: 0.4rem;
   }
 
   .matrixTable .milestoneScenarioNameRow {
-    gap: 4px;
+    gap: 5px;
   }
 
+  /* The whole name, however many lines it takes: the two-line cut is what hid "(editing)" and
+     the words that tell two paths apart. */
   .matrixTable .milestoneScenarioName {
-    font-size: 0.7rem;
-  }
-
-  .matrixTable .matrixPlanTag {
-    display: none;
-  }
-
-  .matrixTable .milestoneHead,
-  .matrixTable .matrixCell {
-    padding-left: 1px;
-    padding-right: 1px;
-  }
-
-  .matrixTable .milestoneHeadAmount {
+    display: block;
+    overflow: visible;
     font-size: 0.72rem;
   }
 
+  /* A head or a figure a pixel or two wider than its column (a font a little wider than the one
+     this was drawn in) is cut at the padding and not left to widen the scroll area: the page is
+     paged so that nothing here scrolls sideways. */
+  .matrixTable .milestoneHead,
+  .matrixTable .matrixCell {
+    padding-left: 2px;
+    padding-right: 2px;
+    overflow: hidden;
+  }
+
+  .matrixTable .milestoneHeadAmount {
+    font-size: 0.78rem;
+  }
+
   .matrixTable .milestoneHeadName {
-    max-width: 2.6rem;
-    font-size: 0.6rem;
+    max-width: 100%;
+    font-size: 0.62rem;
   }
 
   /* The month and year take two lines, so that a column is as wide as its amount and not as
      wide as the date under it. */
   .matrixTable .milestoneReachedOn {
-    max-width: 2.4rem;
     margin: 0 auto;
-    font-size: 0.6rem;
+    font-size: 0.62rem;
     white-space: normal;
-  }
-
-  .matrixTable .matrixCell {
-    scroll-margin-left: 4rem;
   }
 
   .matrixBox {
     min-width: 0;
     padding: 0.3rem 0;
-    font-size: 0.75rem;
+    font-size: 0.78rem;
   }
 
   .matrixReadout {
     min-height: 5.6em;
   }
+}
+
+/* The milestones every path already has, said in a line. */
+.matrixFolded {
+  margin: 0 0 0.6rem;
+  color: var(--color-text-muted);
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+/* The phone's two ways to read the table, and the page of milestones the table is on. */
+.matrixPhoneTools {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0 0 0.7rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* One milestone and the paths in the order they get there. */
+.byGoal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.byGoalPicker {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.byGoalStep {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.byGoalArrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 4%, var(--color-bg));
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.byGoalArrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.byGoalArrow:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.byGoalTitle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  text-align: center;
+}
+
+.byGoalAmount {
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.byGoalSub {
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  overflow-wrap: anywhere;
+}
+
+.byGoalOrder {
+  margin: 0.1rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+}
+
+.byGoalList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The swatch and the name on the left, the figure on the right, and the distance under both. */
+.byGoalRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.3rem 0.6rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+
+.byGoalRow .swatch {
+  margin-top: calc((1.3em - 8px) / 2);
+}
+
+.byGoalName {
+  font-size: 0.8rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.byGoalValue {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+
+.byGoalGap {
+  color: var(--color-text-muted);
+  font-size: 0.66rem;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* How far away, on the scale the table's tint uses (the longest horizon is the full width);
+   hatched where the path does not get there. */
+.byGoalMeter {
+  grid-column: 2 / -1;
+  height: 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--color-text) 10%, transparent);
+  overflow: hidden;
+  position: relative;
+}
+
+.byGoalMeter::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--share, 0) * 100%);
+  background: color-mix(in srgb, var(--color-accent) 70%, transparent);
+  border-radius: 3px;
+}
+
+.byGoalMeter.matrixBeyond {
+  height: 8px;
+}
+
+.byGoalMeter.matrixBeyond::after {
+  display: none;
 }
 
 /* The card's header on the wide page: the title, and the switch between the table and the timeline. */
