@@ -1,17 +1,28 @@
-import { memo, useMemo, useState } from 'react'
+import { memo, useMemo, useRef, useState } from 'react'
 import { useAssumedInflation } from '../../..//hooks/assumedInflationContext'
 import type { GoalScenario, Milestone } from '../../../../types'
 import type { PlanFromToday } from '../../../../engine'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { milestoneLabelWithAmount } from '../../../../engine'
+import { milestoneLabelWithAmount, shortMonthYearLabel } from '../../../../engine'
 import { SegmentedControl } from '../../../components/SegmentedControl'
 import { todayIso } from '../../../components/transactionFormState'
 import { ChartShell } from './ChartShell'
+import { MilestoneByGoal } from './MilestoneByGoal'
 import { MilestoneGrid, type CellRef, type YearsUnit } from './MilestoneGrid'
 import { MilestoneReadout } from './MilestoneReadout'
 import { MilestoneTimeline } from './MilestoneTimeline'
-import { buildRows, describeCell, longestHorizon, type MilestoneRow } from './milestoneModel'
+import {
+  buildRows,
+  describeCell,
+  goalsPerPage,
+  longestHorizon,
+  pageLabel,
+  reachedByEveryRow,
+  splitPages,
+  type MilestoneRow,
+} from './milestoneModel'
 import { formatMoneyShort } from '../chartTheme'
+import { useElementWidth } from '../../../hooks/useElementWidth'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { useMediaQuery } from '../../../hooks/useMediaQuery'
 import { useGoalsNarrow } from '../useGoalsNarrow'
@@ -29,7 +40,10 @@ const VIEWS = [
 
 type View = (typeof VIEWS)[number]['value']
 
-const NO_PLAN = 'No scenario is marked as your current plan, so there is nothing to compare with.'
+/** The width of a 375px phone's card, which is what a test (no layout) and the first paint go by. */
+const PHONE_WIDTH = 327
+
+const NO_PLAN ='No scenario is marked as your current plan, so there is nothing to compare with.'
 
 function Toolbar({
   unit,
@@ -97,6 +111,76 @@ function sentenceAt(point: CellRef | null, rows: MilestoneRow[], sentences: stri
   return sentences[row]?.[point.index] ?? null
 }
 
+const PHONE_VIEWS = [
+  { value: 'table', label: 'Table' },
+  { value: 'goal', label: 'By goal' },
+] as const
+
+type PhoneView = (typeof PHONE_VIEWS)[number]['value']
+
+/**
+ * The milestones every path already has, said once in words instead of as a column of ticks.
+ * A date is given where the check-ins saw the milestone reached.
+ */
+function FoldedLine({
+  milestones,
+  indices,
+  reached,
+}: {
+  milestones: Milestone[]
+  indices: number[]
+  reached: Map<number, string>
+}) {
+  const format = useMoneyFormat()
+  if (indices.length === 0) return null
+  const parts = indices.map((i) => milestoneLabelWithAmount(milestones[i] as Milestone, (cents) => formatMoneyShort(cents, format)))
+  // The check-ins' date is said once when they all agree on it: five dates in a row are noise.
+  const dates = new Set(indices.map((i) => reached.get((milestones[i] as Milestone).amountCents)))
+  const [date] = dates
+  return (
+    <p className={styles.matrixFolded}>
+      <span aria-hidden="true">✓ </span>
+      Already there on every path: {parts.join(', ')}
+      {dates.size === 1 && date ? ` (by ${shortMonthYearLabel(date)})` : ''}
+    </p>
+  )
+}
+
+/** The two ways to read the table on a phone, and which page of milestones the table is on. */
+function PhoneTools({
+  view,
+  onView,
+  pages,
+  page,
+  onPage,
+  label,
+}: {
+  view: PhoneView
+  onView: (view: PhoneView) => void
+  pages: number[][]
+  page: number
+  onPage: (page: number) => void
+  label: (index: number) => string
+}) {
+  return (
+    <div className={styles.matrixPhoneTools}>
+      <SegmentedControl options={[...PHONE_VIEWS]} value={view} onChange={onView} ariaLabel="Read the milestones as" />
+      {view === 'table' && pages.length > 1 ? (
+        <SegmentedControl
+          layout="scroll"
+          ariaLabel="Milestones shown"
+          value={String(page)}
+          onChange={(value) => onPage(Number(value))}
+          options={pages.map((p, i) => ({
+            value: String(i),
+            label: pageLabel(label(p[0] as number), label(p[p.length - 1] as number)),
+          }))}
+        />
+      ) : null}
+    </div>
+  )
+}
+
 function MatrixBody({
   rows,
   milestones,
@@ -111,11 +195,27 @@ function MatrixBody({
   const [vsPlan, setVsPlan] = useState(false)
   const [point, setPoint] = useState<CellRef | null>(null)
   const [live, setLive] = useState(false)
+  const [view, setView] = useState<PhoneView>('table')
+  const [page, setPage] = useState(0)
+  const [goal, setGoal] = useState(0)
   // No hover on a touch screen: the cells are read by tapping them.
   const touch = useMediaQuery('(hover: none)')
+  // On the phone the table shows as many milestones as its width holds, a page at a time.
+  const phone = useGoalsNarrow()
+  const box = useRef<HTMLDivElement>(null)
+  const width = useElementWidth(box, PHONE_WIDTH)
 
   const plan = rows.find((r) => r.kind === 'plan') ?? null
   const comparing = vsPlan ? plan : null
+  const all = useMemo(() => milestones.map((_, i) => i), [milestones])
+  const folded = useMemo(() => (phone ? reachedByEveryRow(rows, milestones.length) : []), [phone, rows, milestones])
+  const open = useMemo(() => all.filter((i) => !folded.includes(i)), [all, folded])
+  const pages = useMemo(() => (phone ? splitPages(open, goalsPerPage(width)) : [open]), [phone, open, width])
+  const shownPage = Math.min(page, pages.length - 1)
+  const columns = phone ? pages[shownPage] : undefined
+  const byGoal = phone && view === 'goal'
+  const goalIndex = open.includes(goal) ? goal : (open[0] ?? 0)
+  const amountOf = (i: number) => formatMoneyShort((milestones[i] as Milestone).amountCents, format)
   const sentences = useMemo(
     () =>
       rows.map((row) =>
@@ -133,7 +233,7 @@ function MatrixBody({
   )
 
   return (
-    <>
+    <div ref={box}>
       <Toolbar
         unit={unit}
         onUnit={setUnit}
@@ -141,24 +241,61 @@ function MatrixBody({
         onVsPlan={() => setVsPlan((on) => !on)}
         hasPlan={plan !== null}
       />
-      <MilestoneGrid
-        rows={rows}
-        milestones={milestones}
-        reached={reached}
-        unit={unit}
-        plan={comparing}
-        sentences={sentences}
-        point={point}
-        live={live}
-        onPoint={(cell) => {
-          setPoint(cell)
-          setLive(true)
-        }}
-        onLeave={() => setLive(false)}
-      />
+      {phone ? (
+        <>
+          <FoldedLine milestones={milestones} indices={folded} reached={reached} />
+          <PhoneTools
+            view={view}
+            onView={setView}
+            pages={pages}
+            page={shownPage}
+            label={amountOf}
+            onPage={(next) => {
+              setPage(next)
+              setPoint(null)
+              setLive(false)
+            }}
+          />
+        </>
+      ) : null}
+      {byGoal ? (
+        <MilestoneByGoal
+          rows={rows}
+          milestones={milestones}
+          indices={open}
+          index={goalIndex}
+          onIndex={setGoal}
+          unit={unit}
+          plan={comparing}
+        />
+      ) : (
+        <MilestoneGrid
+          rows={rows}
+          milestones={milestones}
+          columns={columns}
+          reached={reached}
+          unit={unit}
+          plan={comparing}
+          sentences={sentences}
+          point={point}
+          live={live}
+          onPoint={(cell) => {
+            setPoint(cell)
+            setLive(true)
+          }}
+          onLeave={() => setLive(false)}
+        />
+      )}
       <Legend longest={longestHorizon(rows)} plan={comparing} />
-      <MilestoneReadout text={sentenceAt(point, rows, sentences)} touch={touch} what="a cell" more=" The arrow keys move between cells." />
-    </>
+      {byGoal ? null : (
+        <MilestoneReadout
+          text={sentenceAt(point, rows, sentences)}
+          touch={touch}
+          what="a cell"
+          more=" The arrow keys move between cells."
+        />
+      )}
+    </div>
   )
 }
 
