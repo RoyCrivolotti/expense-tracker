@@ -542,10 +542,18 @@
 .columns {
   /* Room on the left for the stars hung in front of the inputs. */
   padding-left: 1.1rem;
+  /* The stars' tap areas sit at the bottom of this context (see .starrable > .star::after). */
+  isolation: isolate;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(13.5rem, 1fr));
   gap: 0.75rem 1.5rem;
   align-items: start;
+}
+
+/* A slider is 100% wide and has the browser's 2px margin on each side, so it reached 2px into the
+   gutter, and the star hung in front of the next column lost those 2px of its tap area to it. */
+.columns input[type='range'] {
+  margin-inline: 0;
 }
 
 .column {
@@ -746,8 +754,13 @@
 /* Held back, not hidden: at 0.4 it was 2.1:1 in the dark theme and 1.4:1 in the light one, and
    read as missing rather than as unavailable. */
 .star:disabled {
-  opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* On the drawing, not the button: an opacity on the button makes it a stacking context, and its
+   tap area could then no longer sit under the inputs round it. */
+.star:disabled svg {
+  opacity: 0.6;
 }
 
 .starOn {
@@ -765,6 +778,15 @@
   left: -1.3rem;
   width: 1.1rem;
   height: 1.1rem;
+}
+
+/* The star's tap area is wider than the gutter it hangs in, so it reaches over the input beside
+   it and over the end of the one before (a slider, a stepper's + button). It goes under them:
+   behind everything in .columns, which is one stacking context for that, so the area is only
+   what no input, label or row has taken. Without it a press on the right half of a + button
+   starred the next column's input instead of stepping the figure. */
+.starrable > .star::after {
+  z-index: -1;
 }
 
 .starNote {
@@ -861,11 +883,16 @@
      of one row is as tall as it was; one that wraps to two rows is taller by what two rows grow. */
   .leverValue {
     position: relative;
-    z-index: 1;
+    z-index: 2;
     min-height: 2.75rem;
   }
 
+  /* Above the star of a lever on the row below, whose tap area reaches 24px up: where the levers
+     wrap, that is over the end of this slider's box. One level under the digits row, which is
+     above the slider's box. */
   .leverTrack {
+    position: relative;
+    z-index: 1;
     height: 1.75rem;
   }
 }
