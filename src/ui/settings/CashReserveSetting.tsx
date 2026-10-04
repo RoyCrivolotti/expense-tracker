@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import type { ExpenseSettings } from '../../types'
 import { Card } from '../components/primitives'
 import { failureMessage } from '../hooks/useFailureToast'
+import { parseMonths } from './parseMonths'
 import styles from '../tabs/tabs.module.css'
 import goalStyles from '../tabs/goals/goals.module.css'
 
@@ -39,8 +40,8 @@ export function CashReserveSetting({ settings, onChange }: Props) {
       cancelled.current = false
       return
     }
-    const months = draft.trim() === '' ? NaN : Number(draft)
-    if (!Number.isInteger(months) || months < 0 || months > MAX_MONTHS) {
+    const months = parseMonths(draft)
+    if (months === null || months < 0 || months > MAX_MONTHS) {
       setDraft(String(saved))
       return
     }
