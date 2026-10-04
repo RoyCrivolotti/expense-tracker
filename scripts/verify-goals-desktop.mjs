@@ -7,7 +7,8 @@
  * nothing it reaches is under the bar, the question asked before leaving Goals with an unsaved edit,
  * the Years to milestone table (`ONLY=milestone-table` runs just that; `ONLY=milestone-phone` its pages and by-goal view on a phone, `ONLY=milestone-sheet` the sheet with every milestone) and its timeline (`ONLY=milestone-timeline`),
  * both counted from today with start dates that differ (`ONLY=w2`, `ONLY=x2`),
- * and why Save is off for a scenario with no name (`ONLY=s2`).
+ * why Save is off for a scenario with no name (`ONLY=s2`),
+ * and how the milestone amount and the cash reserve read what is typed (`ONLY=settings-numbers`).
  *
  * jsdom lays nothing out, so the unit tests cannot say any of this. It needs a browser and takes
  * a few minutes, so it is not part of `npm run verify`; CI runs it in its own job
@@ -2454,6 +2455,52 @@ async function checkMilestoneSheet(browser, engine) {
   await context.close()
 }
 
+/**
+ * The two Assumptions fields that read typed numbers. The milestone amount is read by the currency's
+ * format, not by the browser's number field: "150.000" (euros, where the point groups thousands) is
+ * a hundred and fifty thousand, which a number field read as 150. The cash reserve is whole months
+ * and does not take "1e1" for ten.
+ */
+async function checkSettingsNumbers(browser, engine) {
+  const context = await browser.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 2, reducedMotion: 'reduce', hasTouch: true, isMobile: true })
+  const page = await context.newPage()
+  page.on('pageerror', (e) => failures.push(`page error: ${e.message}`))
+  await page.addInitScript(() => localStorage.setItem('exp-onboarding-skipped', '1'))
+  await page.goto(`${BASE}/`)
+  await page.waitForSelector('text=Recent activity', { timeout: 20000 })
+  await page.getByRole('button', { name: /Goals/ }).last().click()
+  await page.getByRole('tab', { name: 'Assumptions' }).click()
+  await page.waitForTimeout(500)
+  const where = `${engine} settings numbers`
+
+  const amount = page.getByLabel(/Milestone amount in/).first()
+  const shown = () => amount.evaluate((el) => ({ value: el.value, type: el.type, formatted: el.parentElement.querySelector('[class*="milestoneFormatted"]').textContent }))
+  const before = await shown()
+  check(where, '(n1) the milestone amount is a text field, written as the currency writes it', before.type === 'text' && /^\d{1,3}(\.\d{3})*,\d{2}$/.test(before.value), JSON.stringify(before))
+
+  await amount.fill('150.000')
+  await amount.blur()
+  await page.waitForTimeout(400)
+  const after = await shown()
+  check(where, '(n1) "150.000" is a hundred and fifty thousand euros, not 150', /^150\.000,00$/.test(after.value) && /150[.\u00a0]?000/.test(after.formatted), JSON.stringify(after))
+
+  await amount.fill('nothing')
+  await amount.blur()
+  await page.waitForTimeout(400)
+  const junk = await shown()
+  check(where, '(n1) text with no digit puts the amount back', junk.value === after.value, JSON.stringify(junk))
+
+  const months = page.getByLabel('Months of spending to hold in cash')
+  const saved = await months.inputValue()
+  await months.focus()
+  // A number field lets an exponent through where a person can type it.
+  await page.keyboard.type('1e1')
+  await page.keyboard.press('Tab')
+  await page.waitForTimeout(400)
+  check(where, '(n1) "1e1" is not ten months of cash reserve', (await months.inputValue()) === saved, `${saved} then ${await months.inputValue()}`)
+  await context.close()
+}
+
 async function checkMilestoneTable(browser, engine) {
   for (const screen of [SCREENS[1], SCREENS[3], SCREENS[0]]) {
     for (const scheme of ['light', 'dark']) await checkMilestoneWide(browser, engine, screen, scheme)
@@ -2874,6 +2921,10 @@ async function main() {
           await checkMilestoneSheet(browser, engine)
           continue
         }
+        if (process.env.ONLY === 'settings-numbers') {
+          await checkSettingsNumbers(browser, engine)
+          continue
+        }
         if (process.env.ONLY === 'w2') {
           await checkFromTodayMilestones(browser, engine)
           continue
@@ -2903,6 +2954,7 @@ async function main() {
         await checkTimeline(browser, engine)
         await checkFromTodayMilestones(browser, engine)
         await checkFromTodayTimeline(browser, engine)
+        await checkSettingsNumbers(browser, engine)
       } finally {
         await browser.close()
       }

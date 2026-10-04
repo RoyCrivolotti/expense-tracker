@@ -3,10 +3,13 @@ import type { ExpenseSettings, Milestone } from '../../types'
 import {
   defaultMilestones,
   formatCents,
+  formatMoneyInput,
   MILESTONE_LABEL_MAX_LENGTH,
   MILESTONE_MAX_CENTS,
   MILESTONE_MAX_COUNT,
+  parseMoneyToCents,
   resolveMoneyFormat,
+  type MoneyFormat,
 } from '../../engine'
 import { Card } from '../components/primitives'
 import { DateInput } from '../components/DateInput'
@@ -27,7 +30,7 @@ function suggestedAmountCents(milestones: Milestone[]): number {
 
 function MilestoneRow({
   milestone,
-  currencySymbol,
+  format,
   formatted,
   isAmountTaken,
   onCommit,
@@ -35,7 +38,7 @@ function MilestoneRow({
   failed,
 }: {
   milestone: Milestone
-  currencySymbol: string
+  format: MoneyFormat
   formatted: string
   isAmountTaken: (amountCents: number) => boolean
   onCommit: (amountCents: number, next: Milestone) => void
@@ -44,7 +47,7 @@ function MilestoneRow({
   failed: { amountCents: number; n: number } | null
 }) {
   const [label, setLabel] = useState(milestone.label)
-  const [amount, setAmount] = useState(String(milestone.amountCents / 100))
+  const [amount, setAmount] = useState(formatMoneyInput(milestone.amountCents, format))
   // The row is addressed by amount. After the amount itself is edited the working list
   // already holds the new one while the prop still has the old, so a date picked in that
   // gap must address the new amount or it would match nothing and be lost.
@@ -60,23 +63,28 @@ function MilestoneRow({
   // Read through a ref so the reset below runs only when a save failed, not on every
   // change to the prop, which would wipe what is being typed in another row's wake.
   const savedRef = useRef(milestone)
+  const formatRef = useRef(format)
   useEffect(() => {
     savedRef.current = milestone
+    formatRef.current = format
   })
   useEffect(() => {
     // Only the row whose edit was refused goes back; another row's typing is untouched.
     const saved = savedRef.current
     if (failed === null || failed.amountCents !== saved.amountCents) return
     setLabel(saved.label)
-    setAmount(String(saved.amountCents / 100))
+    setAmount(formatMoneyInput(saved.amountCents, formatRef.current))
     keyRef.current = saved.amountCents
     targetRef.current = saved.targetDate ?? ''
   }, [failed])
 
   function resolveAmountCents(): number {
-    const units = Number(amount)
-    if (!Number.isFinite(units) || units <= 0) return milestone.amountCents
-    const next = Math.min(MILESTONE_MAX_CENTS, Math.round(units * 100))
+    // Read the way the rest of the app reads an amount, by the currency's format: "150.000" is a
+    // hundred and fifty thousand where the group mark is the point, and "1,5" is one and a half
+    // where it is not. A plain Number() read the first as 150 and dropped the second.
+    const cents = /\d/.test(amount) ? parseMoneyToCents(amount, format) : 0
+    if (cents <= 0) return milestone.amountCents
+    const next = Math.min(MILESTONE_MAX_CENTS, cents)
     // Saving a duplicate would let the server's de-duplication drop this row and
     // its label without the edit ever being visible, so collisions revert. The row's
     // own last commit is not a collision, even while it is still in flight.
@@ -85,7 +93,7 @@ function MilestoneRow({
 
   function commit(nextTarget = targetRef.current) {
     const amountCents = resolveAmountCents()
-    setAmount(String(amountCents / 100))
+    setAmount(formatMoneyInput(amountCents, format))
     onCommit(keyRef.current, { amountCents, label, ...(nextTarget ? { targetDate: nextTarget } : {}) })
     keyRef.current = amountCents
     targetRef.current = nextTarget
@@ -105,10 +113,9 @@ function MilestoneRow({
       />
       <input
         className={styles.milestoneAmountInput}
-        type="number"
-        aria-label={`Milestone amount in ${currencySymbol}`}
-        min={1}
-        step={1000}
+        type="text"
+        inputMode="decimal"
+        aria-label={`Milestone amount in ${format.symbol}`}
         value={amount}
         onChange={(e) => setAmount(e.target.value)}
         onBlur={() => commit()}
@@ -226,7 +233,7 @@ export function MilestonesSetting({ settings, onChange }: Props) {
                 <MilestoneRow
                   key={m.amountCents}
                   milestone={m}
-                  currencySymbol={format.symbol}
+                  format={format}
                   formatted={formatCents(m.amountCents, format)}
                   isAmountTaken={(cents) =>
                     cents !== m.amountCents &&

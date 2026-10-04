@@ -57,6 +57,19 @@ describe('CashReserveSetting', () => {
     expect(input).toHaveValue(3)
     expect(onChange).not.toHaveBeenCalled()
   })
+  it('does not take an exponent for a number of months', () => {
+    const onChange = vi.fn()
+    render(<CashReserveSetting settings={{ ...defaultExpenseSettings(), cashReserveMonths: 3 }} onChange={onChange} />)
+    const input = screen.getByLabelText('Months of spending to hold in cash')
+
+    // Number('1e1') is 10, and a number field lets an e through.
+    fireEvent.change(input, { target: { value: '1e1' } })
+    fireEvent.blur(input)
+
+    expect(input).toHaveValue(3)
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
   it('puts the saved value back and says so when the save fails', async () => {
     const onChange = vi.fn().mockRejectedValue(new Error('boom'))
     render(<CashReserveSetting settings={{ ...defaultExpenseSettings(), cashReserveMonths: 3 }} onChange={onChange} />)
