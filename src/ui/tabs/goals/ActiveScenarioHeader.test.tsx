@@ -1,5 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
+import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
+import { ToastContext } from '../../hooks/useToast'
 import { ActiveScenarioHeader } from './ActiveScenarioHeader'
 import { makeScenario } from '../../../testing/factories'
 import { makeActions } from '../../../testing/makeActions'
@@ -22,6 +24,11 @@ function renderHeader(
   const onPatch = vi.fn()
   const onDuplicate = vi.fn()
   const onSaveDraft = vi.fn()
+  const onSaveChanges = vi.fn()
+  const showToast = vi.fn()
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <ToastContext.Provider value={{ showToast }}>{children}</ToastContext.Provider>
+  )
   const { unmount } = render(
     <ActiveScenarioHeader
       draft={draft}
@@ -33,14 +40,15 @@ function renderHeader(
       canWrite={canWrite}
       actions={actions}
       onPatch={onPatch}
-      onSaveChanges={vi.fn()}
+      onSaveChanges={onSaveChanges}
       onDiscard={vi.fn()}
       onActivate={vi.fn()}
       onSaveDraft={onSaveDraft}
       onDuplicate={onDuplicate}
     />,
+    { wrapper },
   )
-  return { actions, onPatch, onDuplicate, onSaveDraft, unmount }
+  return { actions, onPatch, onDuplicate, onSaveDraft, onSaveChanges, showToast, unmount }
 }
 
 describe('ActiveScenarioHeader', () => {
@@ -89,29 +97,67 @@ describe('ActiveScenarioHeader', () => {
   describe('with no name to save under', () => {
     const HINT = 'Give the scenario a name to save it'
 
-    it('says under Save changes why it is off, in words, and has the button point at them', () => {
-      renderHeader(makeScenario({ id: 7, name: '  ' }), makeActions(), { dirty: true })
+    it('turns Save changes off without disabling it, and a press says why instead of saving', () => {
+      const { onSaveChanges, showToast } = renderHeader(makeScenario({ id: 7, name: '  ' }), makeActions(), { dirty: true })
 
       const save = screen.getByRole('button', { name: 'Save changes' })
-      expect(save).toBeDisabled()
-      expect(screen.getByText(HINT)).toBeVisible()
+      expect(save).toHaveAttribute('aria-disabled', 'true')
+      expect(save).not.toBeDisabled()
+      expect(save).toHaveAttribute('title', HINT)
       expect(save).toHaveAccessibleDescription(HINT)
-      expect(save).not.toHaveAttribute('title')
+
+      fireEvent.click(save)
+      expect(showToast).toHaveBeenCalledWith(HINT)
+      expect(onSaveChanges).not.toHaveBeenCalled()
     })
 
-    it('says the same under a new scenario\'s Save, which had no reason at all', () => {
-      renderHeader(makeScenario({ id: 7, name: '' }), makeActions(), { detached: true })
+    it('does the same for a new scenario\'s Save, which had no reason at all', () => {
+      const { onSaveDraft, showToast } = renderHeader(makeScenario({ id: 7, name: '' }), makeActions(), { detached: true })
 
       const save = screen.getByRole('button', { name: 'Save scenario' })
-      expect(save).toBeDisabled()
-      expect(screen.getByText(HINT)).toBeVisible()
+      expect(save).toHaveAttribute('aria-disabled', 'true')
+      expect(save).not.toBeDisabled()
       expect(save).toHaveAccessibleDescription(HINT)
+
+      fireEvent.click(save)
+      expect(showToast).toHaveBeenCalledWith(HINT)
+      expect(onSaveDraft).not.toHaveBeenCalled()
+    })
+
+    it('writes the reason nowhere in the card, so nothing in it is laid out for the reason', () => {
+      renderHeader(makeScenario({ id: 7, name: '' }), makeActions(), { dirty: true })
+
+      // One copy, the clipped description Save points at.
+      expect(screen.getAllByText(HINT)).toHaveLength(1)
+      expect(screen.getByText(HINT).className).toMatch(/srOnly/)
+    })
+
+    it('says it too for the name of a copy, which Save as new would otherwise leave unexplained', () => {
+      const { onSaveDraft, showToast } = renderHeader(makeScenario({ id: 7, name: 'Path B' }), makeActions())
+      fireEvent.click(screen.getByRole('button', { name: 'Save as new scenario…' }))
+      fireEvent.change(screen.getByLabelText('Name for new scenario'), { target: { value: ' ' } })
+
+      const saveAsNew = screen.getByRole('button', { name: 'Save as new' })
+      expect(saveAsNew).toHaveAttribute('aria-disabled', 'true')
+      expect(saveAsNew).toHaveAccessibleDescription(HINT)
+      fireEvent.click(saveAsNew)
+      expect(showToast).toHaveBeenCalledWith(HINT)
+      expect(onSaveDraft).not.toHaveBeenCalled()
+
+      fireEvent.change(screen.getByLabelText('Name for new scenario'), { target: { value: ' Path C ' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Save as new' }))
+      expect(onSaveDraft).toHaveBeenCalledWith('Path C')
     })
 
     it('says nothing once there is a name', () => {
-      renderHeader(makeScenario({ id: 7, name: 'Path B' }), makeActions(), { dirty: true })
+      const { onSaveChanges, showToast } = renderHeader(makeScenario({ id: 7, name: 'Path B' }), makeActions(), { dirty: true })
+      const save = screen.getByRole('button', { name: 'Save changes' })
       expect(screen.queryByText(HINT)).not.toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Save changes' })).not.toHaveAccessibleDescription(HINT)
+      expect(save).not.toHaveAttribute('aria-disabled')
+      expect(save).not.toHaveAccessibleDescription(HINT)
+      fireEvent.click(save)
+      expect(onSaveChanges).toHaveBeenCalledTimes(1)
+      expect(showToast).not.toHaveBeenCalled()
 
       const { onSaveDraft } = renderHeader(makeScenario({ id: 8, name: ' Path C ' }), makeActions(), { detached: true })
       fireEvent.click(screen.getByRole('button', { name: 'Save scenario' }))

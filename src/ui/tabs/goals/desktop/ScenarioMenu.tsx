@@ -10,6 +10,7 @@ import { useMediaQuery } from '../../../hooks/useMediaQuery'
 import { usePopoverMotion } from '../../../hooks/usePopoverMotion'
 import { usePopoverPosition } from '../../../hooks/usePopoverPosition'
 import { useDismissOnOutsidePointer } from '../../../charts/useDismissOnOutsidePointer'
+import { SaveButton } from '../SaveButton'
 import goalStyles from '../goals.module.css'
 import styles from './planDesktop.module.css'
 
@@ -50,14 +51,13 @@ function SaveAsNew({ name, onSave, onCancel }: { name: string; onSave: (name: st
           onCancel()
         }}
       />
-      <button
-        type="button"
+      <SaveButton
         className={`${goalStyles.btn} ${styles.menuBtn}`}
-        disabled={copyName.trim().length === 0}
-        onClick={() => onSave(copyName.trim())}
+        unnamed={copyName.trim().length === 0}
+        onSave={() => onSave(copyName.trim())}
       >
         Save as new
-      </button>
+      </SaveButton>
     </div>
   )
 }
