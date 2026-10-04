@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useState } from 'react'
 import type { GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import type { ExpenseActions } from '../../actions'
@@ -8,7 +8,7 @@ import { Presence } from '../../components/Presence'
 import { EXIT_MS } from '../../hooks/motion'
 import { deleteMessage } from './deleteMessage'
 import { readOnlyScenarioNote } from './readOnlyCopy'
-import { NameHintLine } from './UnsavedGroup'
+import { SaveButton } from './SaveButton'
 import styles from './goals.module.css'
 
 interface ActiveScenarioHeaderProps {
@@ -31,24 +31,18 @@ interface ActiveScenarioHeaderProps {
   onDuplicate: () => void
 }
 
-/** Save for a draft with no scenario behind it, with the reason it is off written under it when it has no name. */
-function DraftSave({ name, hintId, onSave }: { name: string; hintId: string; onSave: (name: string) => void }) {
-  const unnamed = name.trim().length === 0
+/** Save for a draft with no scenario behind it, which says why it is off when it has no name. */
+function DraftSave({ name, onSave }: { name: string; onSave: (name: string) => void }) {
   return (
-    <>
-      <div className={styles.btnRow}>
-        <button
-          type="button"
-          className={`${styles.btn} ${styles.btnPrimary}`}
-          disabled={unnamed}
-          {...(unnamed ? { 'aria-describedby': hintId } : {})}
-          onClick={() => onSave(name.trim())}
-        >
-          Save scenario
-        </button>
-      </div>
-      {unnamed ? <NameHintLine id={hintId} /> : null}
-    </>
+    <div className={styles.btnRow}>
+      <SaveButton
+        className={`${styles.btn} ${styles.btnPrimary}`}
+        unnamed={name.trim().length === 0}
+        onSave={() => onSave(name.trim())}
+      >
+        Save scenario
+      </SaveButton>
+    </div>
   )
 }
 
@@ -71,11 +65,7 @@ export function ActiveScenarioHeader({
   const [saveAsNewOpen, setSaveAsNewOpen] = useState(false)
   const [copyName, setCopyName] = useState(`${draft.name} copy`)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  // A scenario with no name cannot be saved, and the reason is written under the buttons: a tooltip
-  // is never shown to a finger.
-  const hintId = useId()
   const unnamed = draft.name.trim().length === 0
-  const nameReason = unnamed ? { 'aria-describedby': hintId } : {}
 
   if (!canWrite) {
     return (
@@ -120,15 +110,14 @@ export function ActiveScenarioHeader({
             {dirty ? <span className={styles.dirtyPill}>Unsaved changes</span> : null}
           </div>
           <div className={styles.btnRow}>
-            <button
-              type="button"
+            <SaveButton
               className={`${styles.btn} ${styles.btnPrimary}`}
-              disabled={!dirty || saving || unnamed}
-              {...nameReason}
-              onClick={onSaveChanges}
+              unnamed={unnamed}
+              disabled={!dirty || saving}
+              onSave={onSaveChanges}
             >
               Save changes
-            </button>
+            </SaveButton>
             <button type="button" className={styles.btn} disabled={!dirty || saving} onClick={onDiscard}>
               Discard
             </button>
@@ -161,7 +150,6 @@ export function ActiveScenarioHeader({
               </>
             ) : null}
           </div>
-          {unnamed ? <NameHintLine id={hintId} /> : null}
           {!saveAsNewOpen ? (
             <button type="button" className={styles.btnText} onClick={openSaveAsNew}>
               Save as new scenario…
@@ -174,14 +162,13 @@ export function ActiveScenarioHeader({
                 aria-label="Name for new scenario"
                 onChange={(e) => setCopyName(e.target.value)}
               />
-              <button
-                type="button"
+              <SaveButton
                 className={styles.btn}
-                disabled={copyName.trim().length === 0}
-                onClick={() => onSaveDraft(copyName.trim())}
+                unnamed={copyName.trim().length === 0}
+                onSave={() => onSaveDraft(copyName.trim())}
               >
                 Save as new
-              </button>
+              </SaveButton>
               <button type="button" className={styles.btnText} onClick={() => setSaveAsNewOpen(false)}>
                 Cancel
               </button>
@@ -189,7 +176,7 @@ export function ActiveScenarioHeader({
           )}
         </>
       ) : (
-        <DraftSave name={draft.name} hintId={hintId} onSave={onSaveDraft} />
+        <DraftSave name={draft.name} onSave={onSaveDraft} />
       )}
     </div>
   )

@@ -1,14 +1,19 @@
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { GoalScenario } from '../../../../types'
 import type { ExpenseActions } from '../../../actions'
 import { installFakeMatchMedia } from '../../../../testing/fakeMatchMedia'
 import { makeActions } from '../../../../testing/makeActions'
 import { makeDataset, makeScenario } from '../../../../testing/factories'
+import { ToastContext } from '../../../hooks/useToast'
 import { useScenarioEditor } from '../useScenarioEditor'
 import { ScenarioBar } from './ScenarioBar'
+
+const HINT = 'Give the scenario a name to save it'
+const showToast = vi.fn()
+beforeEach(() => showToast.mockClear())
 
 function Harness({ initial, actions }: { initial: GoalScenario[]; actions: ExpenseActions | undefined }) {
   const [scenarios, setScenarios] = useState(initial)
@@ -24,7 +29,11 @@ function Harness({ initial, actions }: { initial: GoalScenario[]; actions: Expen
       }
     : undefined
   const editor = useScenarioEditor(makeDataset({ goalScenarios: scenarios }), live, 0)
-  return <ScenarioBar scenarios={scenarios} editor={editor} actions={live} />
+  return (
+    <ToastContext.Provider value={{ showToast }}>
+      <ScenarioBar scenarios={scenarios} editor={editor} actions={live} />
+    </ToastContext.Provider>
+  )
 }
 
 const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true, color: '#10b981' })
@@ -81,29 +90,39 @@ describe('ScenarioBar', () => {
     expect(actions.createScenario).toHaveBeenCalledTimes(1)
   })
 
-  it('will not save a draft with no name', async () => {
-    render(<Harness initial={[]} actions={makeActions()} />)
+  it('will not save a draft with no name, and says why when Save is pressed', async () => {
+    const actions = makeActions()
+    render(<Harness initial={[]} actions={actions} />)
     await openMenu()
-    expect(screen.queryByText('Give the scenario a name to save it')).not.toBeInTheDocument()
+    expect(screen.queryByText(HINT)).not.toBeInTheDocument()
     await userEvent.clear(screen.getByLabelText('Scenario name'))
-    expect(screen.getByRole('button', { name: 'Save scenario' })).toBeDisabled()
     await userEvent.keyboard('{Escape}')
-    expect(screen.getByText('Give the scenario a name to save it')).toBeVisible()
-    expect(screen.getByRole('button', { name: 'Save scenario' })).toHaveAccessibleDescription('Give the scenario a name to save it')
+
+    const save = screen.getByRole('button', { name: 'Save scenario' })
+    expect(save).toHaveAttribute('aria-disabled', 'true')
+    expect(save).not.toBeDisabled()
+    expect(save).toHaveAttribute('title', HINT)
+    expect(save).toHaveAccessibleDescription(HINT)
+
+    await userEvent.click(save)
+    expect(showToast).toHaveBeenCalledWith(HINT)
+    expect(actions.createScenario).not.toHaveBeenCalled()
   })
 
-  it('takes the hint away once the scenario has a name again', async () => {
+  it('writes the reason nowhere in the row, and takes the explanation away once the scenario has a name again', async () => {
     render(<Harness initial={[plan, other]} actions={makeActions()} />)
     await openMenu()
     await userEvent.clear(screen.getByLabelText('Scenario name'))
     await userEvent.keyboard('{Escape}')
-    expect(screen.getByText('Give the scenario a name to save it')).toBeInTheDocument()
+    // Only the clipped description Save points at.
+    expect(screen.getAllByText(HINT)).toHaveLength(1)
+    expect(screen.getByText(HINT).className).toMatch(/srOnly/)
 
     await openMenu()
     await userEvent.type(screen.getByLabelText('Scenario name'), 'Path A!')
     await userEvent.keyboard('{Escape}')
 
-    expect(screen.queryByText('Give the scenario a name to save it')).not.toBeInTheDocument()
+    expect(screen.queryByText(HINT)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save changes to Path A!' })).toBeEnabled()
   })
 
@@ -117,7 +136,7 @@ describe('ScenarioBar', () => {
     expect(screen.getByRole('button', { name: 'Save changes to Path A!' })).toHaveTextContent(/^Save changes$/)
   })
 
-  it('will not save the edits to a scenario that has been given no name, and can still drop them', async () => {
+  it('will not save the edits to a scenario that has been given no name, says why when pressed, and can still drop them', async () => {
     const actions = makeActions()
     render(<Harness initial={[plan, other]} actions={actions} />)
 
@@ -126,13 +145,13 @@ describe('ScenarioBar', () => {
     await userEvent.keyboard('{Escape}')
 
     const save = screen.getByRole('button', { name: 'Save changes' })
-    expect(save).toBeDisabled()
-    // Said in words beside the button, since a tooltip is never shown on a touch screen.
-    const hint = screen.getByText('Give the scenario a name to save it')
-    expect(hint).toBeVisible()
-    expect(save).toHaveAccessibleDescription('Give the scenario a name to save it')
-    expect(save).not.toHaveAttribute('title')
+    expect(save).toHaveAttribute('aria-disabled', 'true')
+    expect(save).not.toBeDisabled()
+    expect(save).toHaveAccessibleDescription(HINT)
+    expect(save).toHaveAttribute('title', HINT)
     await userEvent.click(save)
+    expect(showToast).toHaveBeenCalledTimes(1)
+    expect(showToast).toHaveBeenCalledWith(HINT)
     expect(actions.updateScenario).not.toHaveBeenCalled()
     expect(screen.getByRole('button', { name: 'Discard changes' })).toBeEnabled()
   })
@@ -246,7 +265,11 @@ describe('ScenarioBar', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Save as new scenario…' }))
     await userEvent.clear(screen.getByLabelText('Name for new scenario'))
-    expect(screen.getByRole('button', { name: 'Save as new' })).toBeDisabled()
+    const saveAsNew = screen.getByRole('button', { name: 'Save as new' })
+    expect(saveAsNew).toHaveAttribute('aria-disabled', 'true')
+    await userEvent.click(saveAsNew)
+    expect(showToast).toHaveBeenCalledWith(HINT)
+    expect(actions.createScenario).not.toHaveBeenCalled()
     await userEvent.type(screen.getByLabelText('Name for new scenario'), 'Path D')
     await userEvent.click(screen.getByRole('button', { name: 'Save as new' }))
     expect(actions.createScenario).toHaveBeenCalledWith(expect.objectContaining({ name: 'Path D' }))
