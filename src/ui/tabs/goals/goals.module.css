@@ -1566,6 +1566,31 @@
     max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right))
     max(0.5rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
   animation: sheet-fade-in var(--motion-enter-fade, 150ms) ease-out;
+  /* What the bar and the sentence line are laid out by: the sheet's own width, which a sheet on
+     its side takes from the screen's height. */
+  container-type: inline-size;
+}
+
+/* A phone held upright gets the sheet a quarter turn clockwise, to be read with the phone turned
+   to the left. Its width is the screen's height and its height the screen's width, turned about
+   its top left corner and moved back onto the screen. What the phone has on its top (the notch,
+   the status bar) is then on the sheet's left, and the home indicator on its right, so the
+   insets are handed round with it. dvh and dvw, as the screen is only as tall as it is while
+   the browser's bars are where they are. */
+.sheetSideways {
+  inset: auto;
+  top: 0;
+  left: 0;
+  width: 100vh;
+  width: 100dvh;
+  height: 100vw;
+  height: 100dvw;
+  transform-origin: top left;
+  transform: translateX(100vw) rotate(90deg);
+  transform: translateX(100dvw) rotate(90deg);
+  padding:
+    max(0.75rem, env(safe-area-inset-right)) max(0.75rem, env(safe-area-inset-bottom))
+    max(0.5rem, env(safe-area-inset-left)) max(0.75rem, env(safe-area-inset-top));
 }
 
 .sheetLeaving {
@@ -1617,7 +1642,7 @@
   order: 2;
 }
 
-@media (orientation: landscape) {
+@container (min-width: 36rem) {
   .sheetBar .matrixTools {
     order: 2;
     flex: 0 0 auto;
@@ -1693,13 +1718,13 @@
   z-index: 3;
 }
 
-/* A sentence takes two lines of a screen on its side, four of one upright; its room is kept either way. */
+/* A sentence takes two lines of a sheet 36rem wide or more, four of a narrower one; its room is kept either way. */
 .sheet .matrixReadout {
   margin: 0;
   min-height: 2.8em;
 }
 
-@media (orientation: portrait) {
+@container (max-width: 35.99rem) {
   .sheet .matrixReadout {
     min-height: 5.6em;
   }

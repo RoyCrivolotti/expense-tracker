@@ -2364,7 +2364,7 @@ async function checkMilestoneSheet(browser, engine) {
         clientW: region.clientWidth,
         bar: Math.round(bar.height),
         close: Math.round(Math.min(close.width, close.height)),
-        hint: d.textContent.includes('Turn your phone sideways'),
+        hint: d.textContent.includes('Turn your phone to the left'),
         page: document.documentElement.scrollWidth - innerWidth,
         stickyHead: getComputedStyle(heads[1]).position,
       }
@@ -2384,8 +2384,15 @@ async function checkMilestoneSheet(browser, engine) {
     check(where, '(s1) the table scrolls in the sheet, and the page behind does not scroll sideways', m.scrollW > m.clientW && m.page <= 0, JSON.stringify(m))
     check(where, '(s1) the close button is 44px', m.close >= 44, `${m.close}px`)
     check(where, '(s1) the heads are held', m.stickyHead === 'sticky', m.stickyHead)
-    if (size.width === 375) check(where, '(s1) held upright it says to turn the phone', m.hint)
-    else {
+    if (size.width === 375) {
+      check(where, '(s1) held upright it says which way to turn the phone', m.hint)
+      // A quarter turn: laid out as wide as the screen is tall and as tall as it is wide.
+      const turn = await page.evaluate(() => {
+        const d = document.querySelector('[role="dialog"]')
+        return { layout: [d.offsetWidth, d.offsetHeight], screen: [innerWidth, innerHeight], matrix: getComputedStyle(d).transform }
+      })
+      check(where, '(s1) held upright the sheet is turned a quarter turn, to be read with the phone turned to the left', turn.layout[0] === turn.screen[1] && turn.layout[1] === turn.screen[0] && /^matrix\(0, 1, -1, 0/.test(turn.matrix), JSON.stringify(turn))
+    } else {
       check(where, '(s1) on its side it does not, and the bar is one row', !m.hint && m.bar <= 60, JSON.stringify({ hint: m.hint, bar: m.bar }))
     }
 
@@ -2393,12 +2400,23 @@ async function checkMilestoneSheet(browser, engine) {
     const held = await page.evaluate(() => {
       const region = document.querySelector('[role="dialog"] [role="region"]')
       const name = region.querySelector('tbody th')
-      const before = name.getBoundingClientRect().left
-      region.scrollLeft = 150
-      const after = name.getBoundingClientRect().left
-      return { before, after, moved: region.scrollLeft }
+      const turned = /sheetSideways/.test(document.querySelector('[role="dialog"]').className)
+      const place = () => (turned ? name.getBoundingClientRect().top : name.getBoundingClientRect().left)
+      const before = place()
+      region.scrollLeft = region.scrollWidth
+      const after = place()
+      return { before, after, moved: region.scrollLeft, turned }
     })
-    check(where, '(s1) the names are held while the columns scroll', held.moved > 100 && near(held.before, held.after, 1), JSON.stringify(held))
+    check(where, '(s1) the names are held while the columns scroll', held.moved > 50 && near(held.before, held.after, 1), JSON.stringify(held))
+
+    // A tap lands on the cell it is on, turned or not, and writes its sentence under the table.
+    // (The pointer the emulation leaves behind is moved off the table first, as the browser would
+    // repeat its last position over whatever has come to lie under it.)
+    await page.mouse.move(1, 1)
+    await dialog(page).getByRole('gridcell').nth(2).tap()
+    await page.waitForTimeout(150)
+    const sentence = await dialog(page).locator('p[aria-live]').textContent()
+    check(where, '(s1) a tap on a cell writes its sentence', /^Path A/.test(sentence ?? ''), sentence ?? '')
 
     // Its toggles are the card's: after closing, the card has them.
     await dialog(page).getByRole('radio', { name: 'Calendar year' }).tap()

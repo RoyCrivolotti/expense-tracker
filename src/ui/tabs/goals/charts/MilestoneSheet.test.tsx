@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { installFakeMatchMedia } from '../../../../testing/fakeMatchMedia'
 import { makeScenario } from '../../../../testing/factories'
 import { NARROW_MQ } from '../useGoalsNarrow'
+import { SIDEWAYS_MQ } from './sheetOrientation'
 import { MilestoneMatrix } from './MilestoneMatrix'
 
 const draft = makeScenario({ id: 0, name: 'Draft' })
@@ -37,8 +38,8 @@ const amounts = (...thousands: number[]) => thousands.map((k) => ({ amountCents:
 const EIGHT = amounts(100, 150, 200, 300, 400, 500, 750, 1000, 2000)
 
 /** A phone, on the card's page: `px` is the width of the card, which jsdom cannot measure. */
-function phone({ upright = true, width = 327 }: { upright?: boolean; width?: number } = {}) {
-  installFakeMatchMedia((query) => query === NARROW_MQ || query === '(hover: none)' || (query === '(orientation: portrait)' && upright))
+function phone({ upright = false, width = 327 }: { upright?: boolean; width?: number } = {}) {
+  installFakeMatchMedia((query) => query === NARROW_MQ || query === '(hover: none)' || (query === SIDEWAYS_MQ && upright))
   vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(width)
 }
 
@@ -140,26 +141,42 @@ describe('the sheet with every milestone', () => {
     expect(screen.getByRole('button', { name: 'vs plan' })).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('says to turn the phone when it is held upright, and not when it is on its side', async () => {
+  it('is drawn on its side, with the way to turn the phone, when the phone is held upright', async () => {
     phone({ upright: true })
-    const { unmount } = renderTable()
-    await open()
-    expect(screen.getByText('Turn your phone sideways for more room.')).toBeInTheDocument()
-    unmount()
-
-    phone({ upright: false })
     renderTable()
     await open()
-    expect(screen.queryByText('Turn your phone sideways for more room.')).not.toBeInTheDocument()
+
+    expect(dialog().className).toMatch(/sheetSideways/)
+    expect(within(dialog()).getByText('Turn your phone to the left to read this.')).toBeInTheDocument()
   })
 
-  it('does not say it for a mouse, where there is nothing to turn', async () => {
-    installFakeMatchMedia((query) => query === NARROW_MQ || query === '(orientation: portrait)')
+  it('is as it is, with nothing to say, when the phone is on its side or there is a mouse', async () => {
+    phone({ upright: false })
+    const { unmount } = renderTable()
+    await open()
+    expect(dialog().className).not.toMatch(/sheetSideways/)
+    expect(screen.queryByText(/Turn your phone/)).not.toBeInTheDocument()
+    unmount()
+
+    // A mouse in a narrow window held upright is not a phone: SIDEWAYS_MQ asks for touch.
+    installFakeMatchMedia((query) => query === NARROW_MQ)
     vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(327)
     renderTable()
     await open()
+    expect(dialog().className).not.toMatch(/sheetSideways/)
+  })
 
-    expect(screen.queryByText('Turn your phone sideways for more room.')).not.toBeInTheDocument()
+  it('goes back to as it is when the phone is turned, with the sheet still open', async () => {
+    const media = installFakeMatchMedia((query) => query === NARROW_MQ || query === '(hover: none)' || query === SIDEWAYS_MQ)
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(327)
+    renderTable()
+    await open()
+    expect(dialog().className).toMatch(/sheetSideways/)
+
+    media.change(SIDEWAYS_MQ, false)
+
+    await vi.waitFor(() => expect(dialog().className).not.toMatch(/sheetSideways/))
+    expect(screen.queryByText(/Turn your phone/)).not.toBeInTheDocument()
   })
 
   it('is closed when the card goes to the wide page', async () => {
