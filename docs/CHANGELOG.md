@@ -2,6 +2,15 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (years to milestone on a phone)
+
+Measured on phones 320, 375 and 430px wide, with 1, 3 and 12 milestones, in Chromium and in Safari's engine.
+
+- **The table shows as many milestone columns as the screen holds, and the rest are a page away.** Seven columns in 325px left each one about 30px wide, so the heads and the figures ran into each other. A page now holds 3 columns at 320px, 4 at 375px and 4 to 5 at 430px, none narrower than 46px, and chips above the table ("150k-400k", "500k-1,5M") turn the page. The milestones are split as evenly as they can be, so no page is left with one column, and a tablet or a phone on its side that can hold them all shows one page with no chips.
+- **A path's whole name is shown, on as many lines as it takes.** It was cut after two lines at 60px wide ("Investm ent-focus..."). The names now take 38% of the table, and the plan's "plan" tag is back next to its name.
+- **Milestones every path already has are one line of text, not a column of ticks.** "Already there on every path: 100k, 200k (by May '26)". A milestone that only some paths have stays a column. If every milestone is there already, nothing is folded.
+- **A second way to read the table, "By goal".** Pick a milestone (the chips scroll, with Previous and Next buttons) and the paths are listed under it, soonest first, each with its whole name, the years or the calendar year, a bar for how far away it is and, with "vs plan" on, how much sooner or later than the plan. The wide page is as it was.
+
 ## October 2026 (stars and the controls beside them)
 
 Measured by pressing a grid of points inside every control on the Plan page with the inputs panel open, on touch screens 1032x1376, 1133x744 and 1366x1024 and with a mouse, in Chromium and in Safari's engine.

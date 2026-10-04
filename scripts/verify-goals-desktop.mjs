@@ -5,7 +5,7 @@
  * the fold, under the header once scrolled past), the inputs panel folding in and out, the
  * scenario menu, the stars that move an input to the bar and back, the order Tab goes in and that
  * nothing it reaches is under the bar, the question asked before leaving Goals with an unsaved edit,
- * the Years to milestone table (`ONLY=milestone-table` runs just that) and its timeline (`ONLY=milestone-timeline`),
+ * the Years to milestone table (`ONLY=milestone-table` runs just that; `ONLY=milestone-phone` its pages and by-goal view on a phone) and its timeline (`ONLY=milestone-timeline`),
  * both counted from today with start dates that differ (`ONLY=w2`, `ONLY=x2`),
  * and why Save is off for a scenario with no name (`ONLY=s2`).
  *
@@ -1870,7 +1870,7 @@ async function checkMilestonePhone(browser, engine) {
     })
     check(where, '(w) the page does not scroll sideways', fit.page <= fit.iw, JSON.stringify(fit))
     // Seven milestones fit 375px; at 320px the table may scroll in its own box, with the names held.
-    if (width === 375) check(where, '(w) all seven milestones fit the table without scrolling', fit.scroll <= fit.client + 1, JSON.stringify(fit))
+    if (width === 375) check(where, '(w) the columns of the page fit the table without scrolling', fit.scroll <= fit.client + 1, JSON.stringify(fit))
     if (width === 375) {
       // The longest sentence there is: a path against the plan, with the check-ins' date. The
       // card keeps the room for it from the start, so reading it moves nothing.
@@ -2165,11 +2165,150 @@ async function checkStarOverlap(browser, engine) {
   }
 }
 
+/** A phone on the demo instance with the milestone list set to `count` entries, on the table's card. */
+async function openPhoneWithMilestones(browser, engine, width, count) {
+  const context = await browser.newContext({ viewport: { width, height: 812 }, deviceScaleFactor: 2, reducedMotion: 'reduce', hasTouch: true, isMobile: true })
+  const page = await context.newPage()
+  page.on('pageerror', (e) => failures.push(`page error: ${e.message}`))
+  await page.addInitScript(() => localStorage.setItem('exp-onboarding-skipped', '1'))
+  await page.goto(`${BASE}/`)
+  await page.waitForSelector('text=Recent activity', { timeout: 20000 })
+  await page.getByRole('button', { name: /Goals/ }).last().click()
+  await page.getByRole('tab', { name: 'Assumptions' }).click()
+  await page.waitForTimeout(400)
+  await page.getByRole('button', { name: 'Reset to defaults' }).last().click()
+  await page.waitForTimeout(300)
+  const have = () => page.getByLabel('Milestone name', { exact: true }).count()
+  while ((await have()) < count) {
+    await page.getByRole('button', { name: '+ Add milestone' }).click()
+    await page.waitForTimeout(120)
+  }
+  while ((await have()) > count) {
+    await page.getByRole('button', { name: /^Remove milestone/ }).first().click()
+    await page.waitForTimeout(120)
+  }
+  await page.getByRole('tab', { name: 'Chart' }).click()
+  await page.getByRole('radio', { name: 'Milestones' }).click()
+  await page.getByRole('heading', { name: 'Years to milestone' }).waitFor()
+  await page.waitForTimeout(500)
+  await matrixCard(page).scrollIntoViewIfNeeded()
+  return { page, context, where: `${engine} phone ${width}, ${count} milestones` }
+}
+
+/** The table as the page measures it: the columns shown, their widths, and whether anything is cut or scrolls. */
+function phoneTable(page) {
+  return page.evaluate(() => {
+    const region = document.querySelector('[role="region"][aria-label="Years to milestone"]')
+    const table = region.querySelector('table')
+    const heads = [...table.querySelectorAll('thead th')].slice(1)
+    const names = [...table.querySelectorAll('tbody th')].map((th) => th.querySelector('[class*="milestoneScenarioName_"]'))
+    return {
+      page: document.documentElement.scrollWidth - innerWidth,
+      scrolls: region.scrollWidth - region.clientWidth,
+      width: table.getBoundingClientRect().width,
+      nameWidth: table.querySelector('thead th').getBoundingClientRect().width,
+      heads: heads.map((h) => ({ text: h.textContent.replace(/\s+/g, ' ').trim(), width: h.getBoundingClientRect().width })),
+      cut: names.filter((n) => n.scrollHeight > n.clientHeight + 1 || getComputedStyle(n).overflow === 'hidden').length,
+      rows: names.length,
+      boxes: [...table.querySelectorAll('[class*="matrixBox"]')].filter((b) => b.scrollWidth > b.clientWidth + 1).length,
+    }
+  })
+}
+
+const pageChips = (page) => matrixCard(page).getByRole('radiogroup', { name: 'Milestones shown' }).getByRole('radio')
+
+/**
+ * The phone's table: as many milestone columns as the width holds (never a squeezed one), the rest
+ * a page away, every path's whole name, and the other way to read it, by goal. Twelve milestones is
+ * the most the list allows; three is a short one.
+ */
+async function checkMilestonePhoneView(browser, engine) {
+  // The columns a card of that width holds (38% for the names, 46px at least for a column) is 4, 3
+  // and 5; the seven milestones left once 100k is folded are split as evenly as can be, so the
+  // first page has 4, 3 and 4.
+  const expected = { 375: 4, 320: 3, 430: 4 }
+  for (const width of [375, 320, 430]) {
+    const { page, context, where } = await openPhoneWithMilestones(browser, engine, width, 12)
+    const first = await phoneTable(page)
+    const open = (await pageChips(page).count()) === 0 ? first.heads.length : null
+    check(where, '(p1) the page does not scroll sideways, nor does the table', first.page <= 0 && first.scrolls <= 1, JSON.stringify({ page: first.page, scrolls: first.scrolls }))
+    check(where, `(p1) a page holds ${expected[width]} columns`, first.heads.length === expected[width], JSON.stringify(first.heads))
+    check(where, '(p1) every column is at least 46px wide, and they are all the same width', first.heads.every((h) => h.width >= 45.5 && near(h.width, first.heads[0].width, 1)), JSON.stringify(first.heads))
+    check(where, '(p1) the names take about 38% of the table', near(first.nameWidth / first.width, 0.38, 0.02), `${px(first.nameWidth)} of ${px(first.width)}`)
+    check(where, '(p1) no path\'s name is cut', first.cut === 0 && first.rows >= 3, JSON.stringify({ cut: first.cut, rows: first.rows }))
+    check(where, '(p1) no figure is wider than its box', first.boxes === 0, `${first.boxes} boxes`)
+
+    // Every milestone is on some page, once.
+    const chips = pageChips(page)
+    const pages = await chips.count()
+    check(where, '(p1) there are page chips, as many as it takes', pages >= 2 && pages <= 4, `${pages} pages`)
+    const seen = []
+    for (let i = 0; i < pages; i++) {
+      await chips.nth(i).tap()
+      await page.waitForTimeout(150)
+      seen.push(...(await phoneTable(page)).heads.map((h) => h.text))
+    }
+    check(where, '(p1) the pages together hold each milestone once', new Set(seen).size === seen.length && seen.length >= 6, JSON.stringify(seen))
+    const chipsFit = await page.evaluate(() => {
+      const g = document.querySelector('[role="radiogroup"][aria-label="Milestones shown"]').getBoundingClientRect()
+      return g.left >= 0 && g.right <= innerWidth
+    })
+    check(where, '(p1) the page chips fit the screen', chipsFit)
+    await chips.nth(0).tap()
+
+    // The calendar year is four digits in a box that was sized for two.
+    await matrixCard(page).getByRole('radio', { name: 'Calendar year' }).tap()
+    await page.waitForTimeout(150)
+    const calendar = await phoneTable(page)
+    check(where, '(p1) a calendar year fits its box', calendar.boxes === 0, `${calendar.boxes} boxes`)
+    await matrixCard(page).getByRole('radio', { name: 'Years from now' }).tap()
+
+    // By goal.
+    await matrixCard(page).getByRole('radio', { name: 'By goal' }).tap()
+    await page.waitForTimeout(200)
+    const list = await page.evaluate(() => {
+      const items = [...document.querySelectorAll('[class*="byGoalRow"]')]
+      const name = (li) => li.querySelector('[class*="byGoalName"]')
+      const arrows = [...document.querySelectorAll('[class*="byGoalArrow"]')].map((b) => b.getBoundingClientRect())
+      return {
+        page: document.documentElement.scrollWidth - innerWidth,
+        items: items.length,
+        cut: items.filter((li) => name(li).scrollHeight > name(li).clientHeight + 1).length,
+        inside: items.every((li) => li.getBoundingClientRect().right <= innerWidth),
+        arrows: arrows.map((r) => Math.round(Math.min(r.width, r.height))),
+      }
+    })
+    check(where, '(p2) by goal: a row per path, whole names, nothing off the screen', list.items >= 3 && list.cut === 0 && list.inside && list.page <= 0, JSON.stringify(list))
+    check(where, '(p2) by goal: the previous and next buttons are 44px', list.arrows.length === 2 && list.arrows.every((a) => a >= 44), JSON.stringify(list.arrows))
+    // Stepping to the end brings the chip of that milestone into view.
+    for (let i = 0; i < 12; i++) await matrixCard(page).getByRole('button', { name: 'Next milestone' }).tap({ timeout: 2000 }).catch(() => {})
+    await page.waitForTimeout(300)
+    const chip = await page.evaluate(() => {
+      const group = document.querySelector('[role="radiogroup"][aria-label="Milestone"]').getBoundingClientRect()
+      const on = document.querySelector('[role="radiogroup"][aria-label="Milestone"] [aria-checked="true"]').getBoundingClientRect()
+      return { inside: on.left >= group.left - 1 && on.right <= group.right + 1 }
+    })
+    check(where, '(p2) by goal: the milestone picked with the arrows is in view in the chips', chip.inside, JSON.stringify(chip))
+    void open
+    await context.close()
+  }
+
+  // A short list is one page, and a single column is not a page.
+  for (const count of [3, 1]) {
+    const { page, context, where } = await openPhoneWithMilestones(browser, engine, 375, count)
+    const t = await phoneTable(page)
+    check(where, '(p3) no page chips for a list that fits', (await pageChips(page).count()) === 0 && t.heads.length >= 1)
+    check(where, '(p3) the columns are wide, none cut and nothing scrolls', t.cut === 0 && t.scrolls <= 1 && t.page <= 0, JSON.stringify(t))
+    await context.close()
+  }
+}
+
 async function checkMilestoneTable(browser, engine) {
   for (const screen of [SCREENS[1], SCREENS[3], SCREENS[0]]) {
     for (const scheme of ['light', 'dark']) await checkMilestoneWide(browser, engine, screen, scheme)
   }
   await checkMilestonePhone(browser, engine)
+  await checkMilestonePhoneView(browser, engine)
 }
 
 /**
@@ -2573,6 +2712,10 @@ async function main() {
         }
         if (process.env.ONLY === 'milestone-table') {
           await checkMilestoneTable(browser, engine)
+          continue
+        }
+        if (process.env.ONLY === 'milestone-phone') {
+          await checkMilestonePhoneView(browser, engine)
           continue
         }
         if (process.env.ONLY === 'w2') {
