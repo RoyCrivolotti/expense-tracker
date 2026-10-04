@@ -1409,6 +1409,34 @@
   }
 }
 
+/* On the wide page every milestone column is the same width. An auto layout sizes a column to
+   its widest header, so one long name made its column and its tinted boxes twice the others.
+   A fixed layout divides what is left after the names equally, and the table is never narrower
+   than --cols columns of 3.7rem, so a dozen milestones scroll in the card rather than
+   squeezing. A name wraps to two lines and then cuts off (its title has all of it); the
+   amount stays on one. The phone has its own tight layout below. */
+@media (min-width: 900px) {
+  .matrixTable {
+    table-layout: fixed;
+    min-width: calc(9rem + var(--cols, 7) * 3.7rem);
+  }
+
+  .matrixTable .milestoneScenarioHead,
+  .matrixTable .milestoneScenarioCell {
+    width: 9rem;
+  }
+
+  .matrixTable .milestoneHeadName {
+    max-width: 100%;
+  }
+
+  .matrixTable .milestoneHeadAmount,
+  .matrixTable .milestoneReachedOn {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
 /* The phone's layout: seven milestones in 325px with no sideways scroll, so the names give up
    width, the columns lose their padding and the type is a notch smaller. A path's name runs to
    two lines of the narrow column and the rest is its title. */

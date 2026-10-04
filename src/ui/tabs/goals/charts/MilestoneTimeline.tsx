@@ -31,6 +31,7 @@ import styles from '../goals.module.css'
 interface Frame {
   milestones: Milestone[]
   reached: Map<number, string>
+  /** The calendar year the axis starts in, which is today's. */
   startYear: number
   span: number
   /** The width in pixels the axis takes, which decides how many labels fit. */
@@ -56,7 +57,7 @@ function clusterSentence(row: MilestoneRow, cluster: DotCluster, frame: Frame): 
       plan: null,
     })
   }
-  return describeCluster(row, cluster.years, cluster.indices.map((i) => frame.full[i] ?? ''))
+  return describeCluster(row, cluster, cluster.indices.map((i) => frame.full[i] ?? ''))
 }
 
 function Reading({
@@ -97,9 +98,9 @@ function dotClass(row: MilestoneRow, cluster: DotCluster, picked: boolean): stri
 
 function Dots({ row, layout, frame }: { row: MilestoneRow; layout: RowLayout; frame: Frame }) {
   const picks = layout.clusters.map((c) => frame.follow !== null && c.indices.includes(frame.follow))
-  const texts = layout.clusters.map((c, i) => (picks[i] ? `${c.at}y` : rangeLabel(c.indices.map((j) => frame.bare[j] ?? ''))))
+  const texts = layout.clusters.map((c, i) => (picks[i] ? `${c.years}y` : rangeLabel(c.indices.map((j) => frame.bare[j] ?? ''))))
   const levels = placeLabels(
-    layout.clusters.map((c, i) => ({ at: c.at, text: texts[i] ?? '', pick: picks[i] === true })),
+    layout.clusters.map((c, i) => ({ at: c.years, text: texts[i] ?? '', pick: picks[i] === true })),
     frame.span,
     frame.track,
   )
@@ -111,14 +112,14 @@ function Dots({ row, layout, frame }: { row: MilestoneRow; layout: RowLayout; fr
             text={clusterSentence(row, c, frame)}
             frame={frame}
             className={`${dotClass(row, c, picks[i] === true)} ${styles.tlPos}`}
-            style={at(c.at, frame.span)}
+            style={at(c.years, frame.span)}
           >
             {c.indices.length > 1 ? <span aria-hidden="true">{c.indices.length}</span> : null}
           </Reading>
           {levels[i] ? (
             <span
               className={`${styles.tlLabel} ${styles.tlPos} ${levels[i] === 'up' ? styles.tlLabelUp : styles.tlLabelDown} ${picks[i] ? styles.tlLabelPick : ''}`}
-              style={at(c.at, frame.span)}
+              style={at(c.years, frame.span)}
               aria-hidden="true"
             >
               {texts[i]}
@@ -134,7 +135,8 @@ function Badges({ row, layout, end, frame }: { row: MilestoneRow; layout: RowLay
   const amounts = (indices: number[]) => indices.map((i) => frame.full[i] ?? '')
   const how = layout.gutter.map((i) => {
     const on = frame.reached.get(frame.milestones[i]?.amountCents ?? 0)
-    return on ? `reached by ${shortMonthYearLabel(on)}` : 'met at its start'
+    if (on) return `reached by ${shortMonthYearLabel(on)}`
+    return row.sinceStart[i] === 0 ? 'met at its start' : 'reached before today'
   })
   return (
     <>
@@ -168,11 +170,10 @@ function PathBar({ row, offset, end, span }: { row: MilestoneRow; offset: number
 }
 
 function TimelineRow({ row, layout, frame }: { row: MilestoneRow; layout: RowLayout; frame: Frame }) {
-  const offset = rowOffset(row, frame.startYear)
   return (
     <div className={styles.tlRow} style={{ '--rc': scenarioInk(row.color) } as CSSProperties}>
-      <PathBar row={row} offset={offset} end={offset + row.horizonYears} span={frame.span} />
-      <Badges row={row} layout={layout} end={offset + row.horizonYears} frame={frame} />
+      <PathBar row={row} offset={rowOffset(row)} end={row.horizonFromNow} span={frame.span} />
+      <Badges row={row} layout={layout} end={row.horizonFromNow} frame={frame} />
       <Dots row={row} layout={layout} frame={frame} />
     </div>
   )
@@ -210,7 +211,7 @@ function Connector({ rows, layouts, follow, span }: { rows: MilestoneRow[]; layo
   if (follow === null) return null
   const points = layouts.flatMap((layout, i) => {
     const cluster = layout.clusters.find((c) => c.indices.includes(follow))
-    return cluster ? [`${(cluster.at / span) * 1000},${i * ROW_HEIGHT + DOT_Y}`] : []
+    return cluster ? [`${(cluster.years / span) * 1000},${i * ROW_HEIGHT + DOT_Y}`] : []
   })
   if (points.length < 2) return null
   return (
@@ -271,7 +272,7 @@ function Legend({ rows, layouts }: { rows: MilestoneRow[]; layouts: RowLayout[] 
     <ul className={styles.matrixLegend}>
       {gutter > 0 ? (
         <li>
-          <span aria-hidden="true">✓ {gutter}</span> milestones already there: reached by a check-in, or met at the path&apos;s start
+          <span aria-hidden="true">✓ {gutter}</span> milestones already there: reached by a check-in, or met by the path before today
         </li>
       ) : null}
       {beyond > 0 ? (
@@ -289,18 +290,21 @@ function Legend({ rows, layouts }: { rows: MilestoneRow[]; layouts: RowLayout[] 
 }
 
 /**
- * The same paths as the table, on one axis of years: a row for each path and a dot for each
- * milestone at the year the path reaches it. Positions are fractions of the axis, set in CSS, so
+ * The same paths as the table, on one axis of years from today: a row for each path and a dot for
+ * each milestone at the year from now the path reaches it. Positions are fractions of the axis, set in CSS, so
  * nothing is measured but the width the labels have to fit in.
  */
 export function MilestoneTimeline({
   rows,
   milestones,
   reached,
+  today,
 }: {
   rows: MilestoneRow[]
   milestones: Milestone[]
   reached: Map<number, string>
+  /** Today's date, where the axis starts. */
+  today: string
 }) {
   const format = useMoneyFormat()
   const touch = useMediaQuery('(hover: none)')
@@ -309,9 +313,9 @@ export function MilestoneTimeline({
   const [follow, setFollow] = useState<number | null>(null)
   const [text, setText] = useState<string | null>(null)
 
-  const startYear = axisStartYear(rows)
-  const span = axisSpan(rows, startYear)
-  const layouts = rows.map((row) => layoutRow(row, milestones, reached, startYear))
+  const startYear = axisStartYear(today)
+  const span = axisSpan(rows)
+  const layouts = rows.map((row) => layoutRow(row, milestones, reached))
   const frame: Frame = {
     milestones,
     reached,
@@ -338,7 +342,7 @@ export function MilestoneTimeline({
       <div className={styles.tlBody}>
         <Names rows={rows} />
         <div ref={tracks} className={styles.tlTracks}>
-          <Axis ticks={ticks} span={span} label={(t) => (t === 0 ? 'start' : `${t}y`)} />
+          <Axis ticks={ticks} span={span} label={(t) => (t === 0 ? 'now' : `${t}y`)} />
           {ticks.map((t) => (
             <span key={t} className={`${styles.tlGrid} ${styles.tlPos} ${t === 0 ? styles.tlGridZero : ''}`} style={at(t, span)} aria-hidden="true" />
           ))}

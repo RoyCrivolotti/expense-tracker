@@ -183,9 +183,10 @@ function MilestoneMatrixImpl({
   embedded?: boolean
 }) {
   const inflationRate = useAssumedInflation()
+  const today = todayIso()
   const rows = useMemo(
-    () => buildRows(scenarios, draft, milestones, inflationRate, includeDraft, fromToday, todayIso()),
-    [scenarios, draft, milestones, inflationRate, includeDraft, fromToday],
+    () => buildRows(scenarios, draft, milestones, inflationRate, includeDraft, fromToday, today),
+    [scenarios, draft, milestones, inflationRate, includeDraft, fromToday, today],
   )
   // The timeline is for the wide page; the phone has the table alone.
   const narrow = useGoalsNarrow()
@@ -201,10 +202,10 @@ function MilestoneMatrixImpl({
         )}
       </div>
       <p className={styles.chartHint}>
-        Invested portfolio only. Edit the list in Assumptions.
-        {fromToday ? ' "From today" counts years from your latest check-in.' : ''} A year here is the yearly step at
-        which a path first reaches the amount, so it can be up to a year later than the date on the Progress tab.
-        {view === 'timeline' ? ' Each dot is a milestone, at the year the path reaches it.' : ''}
+        Invested portfolio only. Edit the list in Assumptions. Every path is counted in whole years from today, as the
+        yearly step at which it first reaches the amount, so it can be up to a year later than the date on the Progress
+        tab.{fromToday ? ' "From today" is the plan started again from your latest check-in.' : ''}
+        {view === 'timeline' ? ' Each dot is a milestone, at the years from now the path reaches it.' : ''}
       </p>
       {milestones.length === 0 ? (
         <p className={styles.chartHint}>No milestones set.</p>
@@ -213,7 +214,7 @@ function MilestoneMatrixImpl({
           <div hidden={view !== 'table'}>
             <MatrixBody rows={rows} milestones={milestones} reached={reached} />
           </div>
-          {view === 'timeline' ? <MilestoneTimeline rows={rows} milestones={milestones} reached={reached} /> : null}
+          {view === 'timeline' ? <MilestoneTimeline rows={rows} milestones={milestones} reached={reached} today={today} /> : null}
         </>
       )}
     </ChartShell>

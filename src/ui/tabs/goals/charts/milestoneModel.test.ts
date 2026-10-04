@@ -11,10 +11,14 @@ import {
   longestHorizon,
   moveCell,
   tintPercent,
+  yearsBetween,
+  yearsFromNow,
   type MilestoneRow,
 } from './milestoneModel'
 
+/** A row that starts today unless it says otherwise, so its cells are the same counted either way. */
 function row(overrides: Partial<MilestoneRow>): MilestoneRow {
+  const cells = overrides.cells ?? [6]
   return {
     id: 'r',
     kind: 'saved',
@@ -22,7 +26,10 @@ function row(overrides: Partial<MilestoneRow>): MilestoneRow {
     color: '#10b981',
     horizonYears: 30,
     startDate: '2026-01-01',
-    cells: [6],
+    elapsedYears: 0,
+    horizonFromNow: overrides.horizonYears ?? 30,
+    sinceStart: cells,
+    cells,
     ...overrides,
   }
 }
@@ -62,6 +69,63 @@ describe('longestHorizon', () => {
     expect(longestHorizon([row({ horizonYears: 25 }), row({ horizonYears: 45 })])).toBe(45)
     expect(longestHorizon([])).toBe(1)
   })
+
+  it('counts each horizon from today, so a path that started long ago ends sooner', () => {
+    const old = row({ horizonYears: 45, horizonFromNow: 42 })
+    expect(longestHorizon([row({ horizonYears: 30 }), old])).toBe(42)
+  })
+})
+
+describe('yearsBetween', () => {
+  it('counts whole years on an anniversary and the part of a year in between', () => {
+    expect(yearsBetween('2024-10-04', '2026-10-04')).toBe(2)
+    expect(yearsBetween('2025-10-04', '2026-10-04')).toBe(1)
+    expect(yearsBetween('2026-10-04', '2026-10-04')).toBe(0)
+    expect(yearsBetween('2024-10-04', '2026-04-04')).toBeCloseTo(1.5, 1)
+    expect(yearsBetween('2026-01-01', '2026-10-04')).toBeCloseTo(0.76, 2)
+  })
+
+  it('is negative when the start is still ahead', () => {
+    expect(yearsBetween('2027-10-04', '2026-10-04')).toBe(-1)
+    expect(yearsBetween('2026-12-01', '2026-10-04')).toBeLessThan(0)
+  })
+
+  it('does not drift across a leap day', () => {
+    expect(yearsBetween('2020-02-29', '2024-02-29')).toBe(4)
+    expect(yearsBetween('2023-03-01', '2024-03-01')).toBe(1)
+  })
+})
+
+describe('yearsFromNow', () => {
+  it("is the path's own figure for a path that started today or less than a year ago", () => {
+    expect(yearsFromNow(6, 0)).toBe(6)
+    expect(yearsFromNow(6, 0.4)).toBe(6)
+    expect(yearsFromNow(1, 0.99)).toBe(1)
+  })
+
+  it('takes the years the path has run off the figure, rounding up', () => {
+    expect(yearsFromNow(6, 3.2)).toBe(3)
+    expect(yearsFromNow(6, 3)).toBe(3)
+    expect(yearsFromNow(6, 3.01)).toBe(3)
+    expect(yearsFromNow(6, 2.99)).toBe(4)
+  })
+
+  it('adds the wait for a path that starts later', () => {
+    expect(yearsFromNow(3, -0.5)).toBe(4)
+    expect(yearsFromNow(3, -2)).toBe(5)
+  })
+
+  it('keeps already there as 0, and a path that reached it before today is there too', () => {
+    expect(yearsFromNow(0, 3.2)).toBe(0)
+    expect(yearsFromNow(0, -1.5)).toBe(0)
+    expect(yearsFromNow(3, 3.2)).toBe(0)
+    expect(yearsFromNow(3, 3)).toBe(0)
+    expect(yearsFromNow(3, 40)).toBe(0)
+  })
+
+  it('keeps not within the horizon as null', () => {
+    expect(yearsFromNow(null, 3.2)).toBeNull()
+  })
 })
 
 describe('gapVersus', () => {
@@ -77,14 +141,31 @@ describe('gapVersus', () => {
     expect(gapVersus(row({ cells: [null] }), { ...plan, cells: [null] }, 0)).toEqual({ kind: 'neither' })
   })
 
-  it('has nothing for the plan, for the plan from today, or with no plan to compare with', () => {
+  it('has nothing for the plan itself, or with no plan to compare with', () => {
     expect(gapVersus(plan, plan, 0)).toBeNull()
-    expect(gapVersus(row({ kind: 'fromToday', cells: [2] }), plan, 0)).toBeNull()
     expect(gapVersus(row({}), null, 0)).toBeNull()
   })
 
-  it('has nothing for a path that starts on another day, whose years count from somewhere else', () => {
-    expect(gapVersus(row({ startDate: '2026-06-01' }), plan, 0)).toBeNull()
+  it('gives a figure whatever day each path started on, from the years shown for both', () => {
+    const early = row({ id: 'p', kind: 'plan', startDate: '2024-04-01', elapsedYears: 2.5, sinceStart: [6], cells: [4] })
+    const late = row({ startDate: '2026-06-01', elapsedYears: 0.3, sinceStart: [7], cells: [7] })
+    expect(gapVersus(late, early, 0)).toEqual({ kind: 'years', years: 3 })
+    expect(gapVersus({ ...late, cells: [2], startDate: '2021-01-01', elapsedYears: 5.5 }, early, 0)).toEqual({
+      kind: 'years',
+      years: -2,
+    })
+  })
+
+  it('sets the plan from today against the plan too, on the same footing', () => {
+    expect(gapVersus(row({ kind: 'fromToday', cells: [5], startDate: '2026-05-01' }), plan, 0)).toEqual({
+      kind: 'years',
+      years: 2,
+    })
+  })
+
+  it('reads a path that is already there against one that is not as the years to go', () => {
+    expect(gapVersus(row({ cells: [0] }), plan, 0)).toEqual({ kind: 'years', years: -3 })
+    expect(gapVersus(row({ cells: [0] }), { ...plan, cells: [0] }, 0)).toEqual({ kind: 'same' })
   })
 
   it('compares the editing row too', () => {
@@ -119,17 +200,26 @@ describe('describeCell', () => {
     expect(describeCell({ ...base, row: row({ cells: [1] }) })).toBe('Path B reaches 750k € in 1 year, by 2027.')
   })
 
-  it('counts the year from the row\'s own start', () => {
-    expect(describeCell({ ...base, row: row({ cells: [2], startDate: '2024-05-01' }) })).toBe(
-      'Path B reaches 750k € in 2 years, by 2026.',
-    )
+  it("says the years from today, and the calendar year of the path's own step", () => {
+    const old = row({ cells: [3], sinceStart: [5], startDate: '2024-05-01', elapsedYears: 2.4 })
+    expect(describeCell({ ...base, row: old })).toBe('Path B reaches 750k € in 3 years, by 2029.')
   })
 
   it('says a path already has it, or does not get there within its horizon', () => {
     expect(describeCell({ ...base, row: row({ cells: [0] }) })).toBe('Path B already has 750k € at its start.')
     expect(describeCell({ ...base, row: row({ cells: [null], horizonYears: 25 }) })).toBe(
-      'Path B does not reach 750k € within its 25 year horizon.',
+      'Path B does not reach 750k € within its horizon (the next 25 years).',
     )
+  })
+
+  it('counts the end of the horizon from today for a path that started a while ago', () => {
+    const old = row({ cells: [null], horizonYears: 30, horizonFromNow: 27, elapsedYears: 3.2 })
+    expect(describeCell({ ...base, row: old })).toBe('Path B does not reach 750k € within its horizon (the next 27 years).')
+  })
+
+  it('says a path reached it before today, and in what year, when its own step is already behind', () => {
+    const old = row({ cells: [0], sinceStart: [3], startDate: '2022-05-01', elapsedYears: 4.4 })
+    expect(describeCell({ ...base, row: old })).toBe('Path B reached 750k € before today, in 2025.')
   })
 
   it('sets the path against the plan when asked to', () => {
@@ -234,6 +324,38 @@ describe('buildRows', () => {
       ['1', 'plan', '2024-01-01'],
       ['from-today', 'fromToday', '2026-01-01'],
     ])
+  })
+
+  it('counts each cell from today: the years since the start less the years the path has already run', () => {
+    const old = makeScenario({ id: 1, planStartDate: '2023-07-01', startInvestedCents: 1_000_000, monthlyContributionCents: 50_000 })
+    const fresh = makeScenario({ id: 2, planStartDate: '2026-10-03', startInvestedCents: 1_000_000, monthlyContributionCents: 50_000 })
+    const [first, second] = buildRows([old, fresh], draft, milestones, 0, false, null, '2026-10-04')
+
+    expect(first?.elapsedYears).toBeCloseTo(3.26, 2)
+    const n = first?.sinceStart[0] ?? 0
+    expect(n).toBeGreaterThan(4)
+    expect(first?.cells).toEqual([n - 3])
+    // Started yesterday: nothing has run, so the figure is the path's own.
+    expect(second?.sinceStart).toEqual([n])
+    expect(second?.cells).toEqual([n])
+  })
+
+  it('counts the end of the horizon from today, at least a year', () => {
+    const old = makeScenario({ id: 1, planStartDate: '2023-07-01', horizonYears: 30 })
+    const gone = makeScenario({ id: 2, planStartDate: '1990-01-01', horizonYears: 30 })
+    const rows = buildRows([old, gone], draft, milestones, 0, false, null, '2026-10-04')
+
+    expect(rows.map((r) => r.horizonFromNow)).toEqual([27, 1])
+    expect(rows.map((r) => r.horizonYears)).toEqual([30, 30])
+  })
+
+  it('shows a milestone the path passed before today as already there, keeping its own step for the calendar year', () => {
+    const old = makeScenario({ id: 1, planStartDate: '2015-01-01', startInvestedCents: 1_000_000, monthlyContributionCents: 100_000 })
+    const [row] = buildRows([old], draft, milestones, 0, false, null, '2026-10-04')
+
+    expect(row?.sinceStart[0]).toBeGreaterThan(0)
+    expect(row?.sinceStart[0]).toBeLessThanOrEqual(11)
+    expect(row?.cells).toEqual([0])
   })
 
   it('leaves the draft out when it is a loaded scenario with no edits', () => {

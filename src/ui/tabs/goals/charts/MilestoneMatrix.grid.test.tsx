@@ -1,12 +1,21 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { installFakeMatchMedia } from '../../../../testing/fakeMatchMedia'
 import { NARROW_MQ } from '../useGoalsNarrow'
 import { MilestoneMatrix } from './MilestoneMatrix'
 import { makeScenario } from '../../../../testing/factories'
 
 const draft = makeScenario({ id: 0, name: 'Draft' })
+
+// The paths count their years from today, so the day is fixed: the plans below start on it.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date(2026, 0, 1, 12))
+})
+afterEach(() => {
+  vi.useRealTimers()
+})
 
 // 100k to start and 1.000 a month at 7% real: 1M is reached inside the 30 years.
 const plan = makeScenario({
@@ -107,10 +116,54 @@ describe('years from now and calendar year', () => {
     expect(cell('Path B', 2)).toHaveTextContent('2056+')
   })
 
-  it('says in the hint that a year is the yearly step, which can be later than the date on Progress', () => {
+  it('says in the hint that every path is counted from today, in yearly steps that can be later than the date on Progress', () => {
     renderTable()
 
+    expect(screen.getByText(/Every path is counted in whole years from today/)).toBeInTheDocument()
     expect(screen.getByText(/up to a year later than the date on the Progress tab/)).toBeInTheDocument()
+  })
+
+  it('counts a path that started a while ago from today, and its calendar year from its own start', async () => {
+    const started = makeScenario({ ...plan, id: 9, name: 'Path S', isActive: false, planStartDate: '2023-07-01' })
+    renderTable([started, plan])
+    const own = Number((cell('Path S', 1).getAttribute('aria-label') ?? '').match(/by (\d{4})/)?.[1]) - 2023
+    const fromNow = Number((cell('Path S', 1).textContent ?? '').replace('y', ''))
+
+    // Started two and a half years before today: the same step is that much nearer, rounded up.
+    expect(fromNow).toBe(Math.ceil(own - 2.5))
+    await userEvent.click(screen.getByRole('radio', { name: 'Calendar year' }))
+    expect(cell('Path S', 1)).toHaveTextContent(String(2023 + own))
+  })
+
+  it('shows a milestone the path passed before today as a tick in both views, and says when', async () => {
+    const started = makeScenario({ ...plan, planStartDate: '2000-01-01', monthlyContributionCents: 1_000_000 })
+    renderTable([started])
+
+    expect(cell('Path A', 1)).toHaveTextContent('✓')
+    expect(cell('Path A', 1).getAttribute('aria-label')).toMatch(/^Path A reached House deposit \(200k €\) before today, in 20\d\d\./)
+    await userEvent.click(screen.getByRole('radio', { name: 'Calendar year' }))
+    expect(cell('Path A', 1)).toHaveTextContent('✓')
+  })
+
+  it('counts where a path ends from today too: the hatched box says the years that are left', () => {
+    const started = makeScenario({ ...slower, planStartDate: '2024-01-01' })
+    renderTable([plan, started])
+
+    expect(cell('Path B', 2)).toHaveTextContent('28+')
+    expect(cell('Path B', 2).getAttribute('aria-label')).toBe('Path B does not reach 1,0M € within its horizon (the next 28 years).')
+    expect(screen.getByText(/Darker: further away \(the darkest is 30 years\)/)).toBeInTheDocument()
+  })
+
+  it('tints a cell by the years from today, on one scale for every row', () => {
+    const started = makeScenario({ ...slower, planStartDate: '2024-01-01' })
+    renderTable([plan, started])
+
+    const tint = (c: HTMLElement) => parseInt(c.querySelector<HTMLElement>('span')!.style.getPropertyValue('--tint'))
+    const years = (c: HTMLElement) => Number((c.textContent ?? '').replace('y', ''))
+    const [a, b] = [cell('Path A', 1), cell('Path B', 1)]
+    expect(years(b)).toBeGreaterThan(years(a))
+    expect(tint(b)).toBeGreaterThan(tint(a))
+    expect(tint(b)).toBe(Math.round(5 + 26 * (years(b) / 30)))
   })
 })
 
@@ -126,7 +179,7 @@ describe('vs plan', () => {
     expect(button).toHaveAttribute('aria-pressed', 'true')
     // The slower path is behind the plan by some years at 200k.
     expect(within(cell('Path B', 1)).getByText(/^\+\d+y$/)).toBeInTheDocument()
-    // Nobody is compared with themselves, and the plan row keeps its height with an empty line.
+    // Nobody is compared with themselves.
     expect(within(cell('Path A', 1)).queryByText(/^[+−]\d+y$/)).toBeNull()
     expect(cell('Path B', 1).getAttribute('aria-label')).toMatch(/years later than Path A \(the plan\)\./)
     expect(screen.getByText(/Years sooner or later than Path A, the plan/)).toBeInTheDocument()
@@ -148,16 +201,66 @@ describe('vs plan', () => {
     expect(within(cell('Path B', 2)).getByText('later')).toBeInTheDocument()
   })
 
-  it('gives the plan from today and the plan itself no figure, since they count from another baseline', async () => {
+  const shown = (c: HTMLElement) => c.querySelector('span')?.textContent ?? ''
+  const gapOf = (c: HTMLElement) => c.querySelector('[class*="matrixGap"]')?.textContent?.trim() ?? ''
+  const signed = (text: string) => Number(text.replace('−', '-').replace(/[+y]/g, ''))
+
+  it('gives every path a figure whatever day it started on, which is the difference of the cells shown', async () => {
+    // The plan started a year and a half before the other path and two years before today.
+    const early = makeScenario({ ...plan, planStartDate: '2024-01-01' })
+    const later = makeScenario({ ...slower, planStartDate: '2025-07-01', monthlyContributionCents: 40_000 })
+    renderTable([early, later])
+    await userEvent.click(screen.getByRole('button', { name: 'vs plan' }))
+
+    const planYears = Number(shown(cell('Path A', 1)).replace('y', ''))
+    const pathYears = Number(shown(cell('Path B', 1)).replace('y', ''))
+    expect(gapOf(cell('Path B', 1))).not.toBe('')
+    expect(signed(gapOf(cell('Path B', 1)))).toBe(pathYears - planYears)
+    expect(cell('Path B', 1).getAttribute('aria-label')).toMatch(/years later than Path A \(the plan\)\./)
+  })
+
+  it('sets the plan from today against the plan as well, on the same footing, and gives the plan itself nothing', async () => {
     const dated = makeScenario({ ...plan, planStartDate: '2024-01-01' })
     renderTable([dated, makeScenario({ ...slower, planStartDate: '2024-01-01' })], {
       fromToday: { scenario: makeScenario({ ...dated, startInvestedCents: 12_000_000 }), offsetYears: 2, since: '2026-01-01' },
     })
     await userEvent.click(screen.getByRole('button', { name: 'vs plan' }))
 
-    const fromToday = screen.getByRole('row', { name: /from today/ })
-    expect(within(fromToday).queryByText(/^([+−]\d+y|=|later|sooner)$/)).toBeNull()
+    const exact = (name: string, col: number) =>
+      within(screen.getByRole('rowheader', { name: new RegExp(`^${name}( plan)?$`) }).closest('tr')!).getAllByRole('gridcell')[col] as HTMLElement
+    const planYears = Number(shown(exact('Path A', 1)).replace('y', ''))
+    const todayYears = Number(shown(exact('Path A, from today', 1)).replace('y', ''))
+    // Today's balance is behind the plan's schedule here, so the row is later than the plan.
+    expect(todayYears).toBeGreaterThan(planYears)
+    expect(signed(gapOf(exact('Path A, from today', 1)))).toBe(todayYears - planYears)
+    expect(gapOf(exact('Path A', 1))).toBe('')
     expect(within(cell('Path B', 1)).getByText(/^\+\d+y$/)).toBeInTheDocument()
+  })
+
+  it('keeps the line for the gap only in the rows that can have one', async () => {
+    renderTable()
+    const lines = (row: string) => screen.getByRole('row', { name: new RegExp(`^${row}`) }).querySelectorAll('[class*="matrixGap"]').length
+    expect(lines('Path B')).toBe(0)
+
+    await userEvent.click(screen.getByRole('button', { name: 'vs plan' }))
+
+    expect(lines('Path A')).toBe(0)
+    expect(lines('Path B')).toBe(3)
+  })
+
+  it('keeps no line in a row where every milestone is already there', async () => {
+    render(
+      <MilestoneMatrix
+        scenarios={[plan, slower]}
+        draft={draft}
+        milestones={[{ amountCents: 1_000_000, label: '' }]}
+        reached={new Map()}
+        includeDraft={false}
+      />,
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'vs plan' }))
+
+    expect(document.querySelectorAll('[class*="matrixGap"]')).toHaveLength(0)
   })
 
   it('is off, with the reason, when no scenario is marked as the plan', () => {

@@ -2,6 +2,13 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (years to milestone, counted from today)
+
+- **Every row counts its years from today.** A path's years used to count from its own start date, so a scenario that started two years ago said "7y" for a milestone that is five years away, and the "from today" row counted from your latest check-in. Each cell is now the whole years from today until the path reaches the milestone, rounded up, so "Years from now" means what it says. A path that started less than a year ago shows the same numbers as before. A milestone a path passed before today is a tick, and its sentence says so ("reached it before today, in 2025"). "Calendar year" is unchanged. The hint under the title says how the years are counted.
+- **"vs plan" works on every row.** It skipped any path whose scenario started on another day than the plan, which on real data is every one, so the rows grew taller and the line under each cell stayed empty. It now shows how many years sooner or later than the plan each path gets there, for every path including the plan from today, as the difference of the two cells on screen. The plan's own row and rows with nothing to compare no longer reserve a blank line.
+- **The milestone columns are the same width.** One long name, such as "3rd goal (phase 1)", made its column and its tinted boxes about twice as wide as the others. On the wide page every column is now the same width: a long name wraps to two lines and then ends in an ellipsis (the full name is in its tooltip), and the table scrolls inside its card when there are too many columns to fit. The phone layout is unchanged.
+- **The timeline starts at "now".** The axis counted from the plan's start year; it now starts today, every path's line starts at "now", and each dot is where the table's cell for it says, with the calendar year still underneath.
+
 ## October 2026 (Save says why it is off when you press it)
 
 - **Pressing a Save that needs a name says why.** With a scenario's name cleared, the Save buttons (Save changes in the scenario row and in the phone's pinned row and card, Save scenario for a draft, and every Save as new) still look off, but a tap, a click, Enter or Space on one now shows "Give the scenario a name to save it" at the bottom of the screen, and a mouse pointing at it gets the same words as a tooltip. A screen reader reads them as the button's description. Before, the button was disabled, which a finger and a mouse cannot press, so all it could do was sit there.

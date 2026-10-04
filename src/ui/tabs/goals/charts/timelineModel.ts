@@ -1,5 +1,5 @@
 import type { Milestone } from '../../../../types'
-import { calendarYear, yearsText, type MilestoneRow } from './milestoneModel'
+import { beyondText, calendarYear, yearsText, type MilestoneRow } from './milestoneModel'
 
 /**
  * The sizes the stylesheet gives the timeline, in pixels. The connector line is drawn from them,
@@ -12,45 +12,46 @@ export const GUTTER = 46
 
 /** Milestones of one path that fall in the same year, drawn as one dot. */
 export interface DotCluster {
-  /** Whole years from the start of the shared axis. */
-  at: number
-  /** Whole years from the path's own start, as the table reads them. */
+  /** Whole years from today, as the table reads them: where the dot sits on the axis. */
   years: number
+  /** Whole years from the path's own start, which the calendar year in its sentence is counted from. */
+  sinceStart: number
   /** Indexes into the milestone list, smallest amount first. */
   indices: number[]
 }
 
 export interface RowLayout {
-  /** Already there: met at the path's start, or reached by a check-in. Drawn as one badge at the left edge. */
+  /** Already there: met at the path's start, reached before today or by a check-in. Drawn as one badge at the left edge. */
   gutter: number[]
   /** Not within the path's horizon. Drawn as one badge past the end of the path. */
   beyond: number[]
   clusters: DotCluster[]
 }
 
-/** The calendar year the shared axis starts in: the plan's start, or the first path's when none is the plan. */
-export function axisStartYear(rows: MilestoneRow[]): number {
-  const base = rows.find((r) => r.kind === 'plan') ?? rows[0]
-  return base ? calendarYear(base, 0) : new Date().getFullYear()
+/** The calendar year the axis starts in, which is today's. */
+export function axisStartYear(today: string): number {
+  return Number(today.slice(0, 4))
 }
 
-/** How far into the axis a path starts: a path that starts later (the plan from today) is shifted by the years between. */
-export function rowOffset(row: MilestoneRow, startYear: number): number {
-  return Math.max(0, calendarYear(row, 0) - startYear)
+/**
+ * Where a path's line starts on an axis that begins today: at "now", or later when the path itself
+ * starts later. A path that started in the past has its earlier years off the left edge.
+ */
+export function rowOffset(row: MilestoneRow): number {
+  return Math.max(0, Math.ceil(-row.elapsedYears))
 }
 
-/** The length of the axis: the furthest any path's horizon reaches. */
-export function axisSpan(rows: MilestoneRow[], startYear: number): number {
-  return Math.max(1, ...rows.map((r) => rowOffset(r, startYear) + r.horizonYears))
+/** The length of the axis: the furthest any path's horizon reaches from today. */
+export function axisSpan(rows: MilestoneRow[]): number {
+  return Math.max(1, ...rows.map((r) => r.horizonFromNow))
 }
 
 /**
  * Where a path's milestones go. When every milestone has been reached by a check-in the
- * check-ins say nothing that tells them apart, so only the ones met at the path's start are
- * collapsed and the rest are placed where the path reaches them.
+ * check-ins say nothing that tells them apart, so only the ones already there on the path's own
+ * terms are collapsed and the rest are placed where the path reaches them.
  */
-export function layoutRow(row: MilestoneRow, milestones: Milestone[], reached: Map<number, string>, startYear: number): RowLayout {
-  const offset = rowOffset(row, startYear)
+export function layoutRow(row: MilestoneRow, milestones: Milestone[], reached: Map<number, string>): RowLayout {
   const allReached = milestones.every((m) => reached.has(m.amountCents))
   const gutter: number[] = []
   const beyond: number[] = []
@@ -63,7 +64,7 @@ export function layoutRow(row: MilestoneRow, milestones: Milestone[], reached: M
   })
   const clusters = [...byYear.entries()]
     .sort((a, b) => a[0] - b[0])
-    .map(([years, indices]) => ({ at: offset + years, years, indices }))
+    .map(([years, indices]) => ({ years, sinceStart: row.sinceStart[indices[0] ?? 0] ?? years, indices }))
   return { gutter, beyond, clusters }
 }
 
@@ -129,8 +130,8 @@ function listOf(parts: string[]): string {
 }
 
 /** What a dot says when it stands for several milestones that fall in the same year. */
-export function describeCluster(row: MilestoneRow, years: number, amounts: string[]): string {
-  return `${row.name} reaches ${listOf(amounts)} in ${yearsText(years)}, by ${calendarYear(row, years)}.`
+export function describeCluster(row: MilestoneRow, cluster: DotCluster, amounts: string[]): string {
+  return `${row.name} reaches ${listOf(amounts)} in ${yearsText(cluster.years)}, by ${calendarYear(row, cluster.sinceStart)}.`
 }
 
 /** What the badge at the left edge stands for. `how` says for each milestone why it is already there. */
@@ -140,5 +141,5 @@ export function describeGutter(row: MilestoneRow, amounts: string[], how: string
 
 /** What the badge past the end of a path stands for. */
 export function describeBeyond(row: MilestoneRow, amounts: string[]): string {
-  return `${row.name} does not reach ${listOf(amounts)} within its ${row.horizonYears} year horizon.`
+  return beyondText(row, listOf(amounts))
 }

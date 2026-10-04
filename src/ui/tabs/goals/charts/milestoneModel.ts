@@ -12,14 +12,23 @@ export interface MilestoneRow {
   kind: RowKind
   name: string
   color: string
-  /** How far the search for each milestone went. */
+  /** How far the search for each milestone went, in years from the row's own start. */
   horizonYears: number
-  /**
-   * The date the row's year 0 is. A row's years count from here, so two rows can only be set
-   * against each other when it is the same day.
-   */
+  /** The date the row's own year 0 is. */
   startDate: string
-  /** Whole years from the start to the first yearly step at or above each milestone; null when it is not within the horizon. */
+  /** Years from `startDate` to today, to the day: negative when the start is still ahead. */
+  elapsedYears: number
+  /** `horizonYears` counted from today instead of from the start, at least 1. */
+  horizonFromNow: number
+  /**
+   * Whole years from the row's own start to the first yearly step at or above each milestone;
+   * null when it is not within the horizon. Only the calendar year is read from these.
+   */
+  sinceStart: (number | null)[]
+  /**
+   * The same steps counted from today (see `yearsFromNow`), which is what every row shows, what
+   * the tint and the gap are made from and where the timeline puts a dot. 0 is already there.
+   */
   cells: (number | null)[]
 }
 
@@ -81,6 +90,40 @@ function sourcesOf(
   ]
 }
 
+function utcDay(year: number, month: number, day: number): number {
+  return Date.UTC(year, month - 1, day)
+}
+
+/**
+ * The years from one date to a later one (both `YYYY-MM-DD`), to the day: the whole anniversaries
+ * passed, then the part of the year since the last one. Negative when `to` is the earlier date.
+ */
+export function yearsBetween(from: string, to: string): number {
+  if (to < from) return -yearsBetween(to, from)
+  const [fy = 0, fm = 1, fd = 1] = from.split('-').map(Number)
+  const [ty = 0, tm = 1, td = 1] = to.split('-').map(Number)
+  const end = utcDay(ty, tm, td)
+  let whole = ty - fy
+  if (utcDay(fy + whole, fm, fd) > end) whole -= 1
+  const last = utcDay(fy + whole, fm, fd)
+  const next = utcDay(fy + whole + 1, fm, fd)
+  return whole + (end - last) / (next - last)
+}
+
+/**
+ * A cell counted from today, so that every row is on one footing whatever day its scenario
+ * started: the first whole year from now at or after the step the path reaches the amount in.
+ * Rounded up on purpose: the step is the first yearly one at or above the amount, so the real
+ * date is within the year before it and "within N years" is the claim that is safe to make. For a
+ * path that started less than a year ago it is the number the path itself gives. 0 is already
+ * there: the path had it at its start, or reached it before today.
+ */
+export function yearsFromNow(sinceStart: number | null, elapsedYears: number): number | null {
+  if (sinceStart === null) return null
+  if (sinceStart === 0) return 0
+  return Math.max(0, Math.ceil(sinceStart - elapsedYears))
+}
+
 /** A scenario with no start date starts today, which is what its projection's year 0 is. */
 export function buildRows(
   scenarios: GoalScenario[],
@@ -92,15 +135,23 @@ export function buildRows(
   today: string,
 ): MilestoneRow[] {
   return sourcesOf(scenarios, draft, inflationRate, includeDraft, fromToday).map(
-    ({ id, kind, name, color, startDate, params }) => ({
-      id,
-      kind,
-      name,
-      color,
-      horizonYears: params.horizonYears,
-      startDate: startDate ?? today,
-      cells: milestones.map((m) => yearsToTargetFromProjection(params, m.amountCents, false)),
-    }),
+    ({ id, kind, name, color, startDate, params }) => {
+      const start = startDate ?? today
+      const elapsedYears = yearsBetween(start, today)
+      const sinceStart = milestones.map((m) => yearsToTargetFromProjection(params, m.amountCents, false))
+      return {
+        id,
+        kind,
+        name,
+        color,
+        horizonYears: params.horizonYears,
+        startDate: start,
+        elapsedYears,
+        horizonFromNow: Math.max(1, Math.ceil(params.horizonYears - elapsedYears)),
+        sinceStart,
+        cells: sinceStart.map((n) => yearsFromNow(n, elapsedYears)),
+      }
+    },
   )
 }
 
@@ -109,9 +160,9 @@ export function calendarYear(row: MilestoneRow, years: number): number {
   return Number(row.startDate.slice(0, 4)) + years
 }
 
-/** The longest horizon among the rows, which is where the tint's scale ends. */
+/** The longest horizon among the rows counted from today, which is where the tint's scale ends. */
 export function longestHorizon(rows: MilestoneRow[]): number {
-  return Math.max(1, ...rows.map((r) => r.horizonYears))
+  return Math.max(1, ...rows.map((r) => r.horizonFromNow))
 }
 
 const TINT_MIN = 5
@@ -136,12 +187,12 @@ export type Gap =
   | { kind: 'neither' }
 
 /**
- * How one path stands against the plan for one milestone, or null where there is nothing fair
- * to say: the plan itself, the plan from today (it counts from another date), and any path
- * that does not start on the plan's day, whose years are counted from somewhere else.
+ * How one path stands against the plan for one milestone, or null for the plan itself and when
+ * there is no plan. Both sides are the years from today that the table shows, so whatever day a
+ * path started on the figure is the difference between the two cells on screen.
  */
 export function gapVersus(row: MilestoneRow, plan: MilestoneRow | null, index: number): Gap | null {
-  if (!plan || row.kind === 'plan' || row.kind === 'fromToday' || row.startDate !== plan.startDate) return null
+  if (!plan || row.kind === 'plan') return null
   const mine = row.cells[index] ?? null
   const theirs = plan.cells[index] ?? null
   if (mine === null && theirs === null) return { kind: 'neither' }
@@ -196,10 +247,18 @@ function reachedSentence(reachedOn: string | undefined): string {
   return reachedOn ? ` Your check-ins reached it by ${shortMonthYearLabel(reachedOn)}.` : ''
 }
 
-function headline(row: MilestoneRow, years: number | null, amount: string): string {
-  if (years === 0) return `${row.name} already has ${amount} at its start.`
-  if (years === null) return `${row.name} does not reach ${amount} within its ${row.horizonYears} year horizon.`
-  return `${row.name} reaches ${amount} in ${yearsText(years)}, by ${calendarYear(row, years)}.`
+/** What a path does not reach: the end of its horizon is `horizonFromNow` years away. */
+export function beyondText(row: MilestoneRow, amounts: string): string {
+  return `${row.name} does not reach ${amounts} within its horizon (the next ${row.horizonFromNow} years).`
+}
+
+function headline(row: MilestoneRow, index: number, amount: string): string {
+  const years = row.cells[index] ?? null
+  if (years === null) return beyondText(row, amount)
+  const own = row.sinceStart[index] ?? 0
+  if (own === 0) return `${row.name} already has ${amount} at its start.`
+  if (years === 0) return `${row.name} reached ${amount} before today, in ${calendarYear(row, own)}.`
+  return `${row.name} reaches ${amount} in ${yearsText(years)}, by ${calendarYear(row, own)}.`
 }
 
 /**
@@ -222,7 +281,7 @@ export function describeCell({
 }): string {
   const gap = gapVersus(row, plan, index)
   const versus = gap && plan ? gapSentence(gap, `${plan.name} (the plan)`) : ''
-  return headline(row, row.cells[index] ?? null, amount) + versus + reachedSentence(reachedOn)
+  return headline(row, index, amount) + versus + reachedSentence(reachedOn)
 }
 
 export type CellMove = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown' | 'Home' | 'End'
