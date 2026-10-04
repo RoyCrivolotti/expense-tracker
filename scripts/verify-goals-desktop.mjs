@@ -15,7 +15,7 @@
  *
  * Starts its own dev server on CAPTURE_PORT (5173 unless set), with DOCS_CAPTURE=1 so it has the
  * seeded demo data and nothing real. `ENGINES=chromium,webkit` (the default is chromium) also
- * runs it in Safari's engine, and `ONLY=touch-targets`, `ONLY=lever-focus`, `ONLY=k2` (the stars' tap areas against the controls beside them) or `ONLY=toast` runs just that group (a minute or two).
+ * runs it in Safari's engine, `FONT=Verdana` (or any wider family) sets every font on the Plan page to it, as a wider font on another system does, and `ONLY=touch-targets`, `ONLY=lever-focus`, `ONLY=k2` (the stars' tap areas against the controls beside them) or `ONLY=toast` runs just that group (a minute or two).
  * Exits 1 and says what was measured if anything fails.
  */
 import { spawn } from 'node:child_process'
@@ -131,6 +131,7 @@ async function openPlan(browser, { width, height }, { scheme = 'dark', zoom = nu
   await page.addInitScript(() => localStorage.setItem('exp-onboarding-skipped', '1'))
   await page.goto(`${BASE}/`)
   await page.waitForSelector('text=Recent activity', { timeout: 20000 })
+  if (process.env.FONT) await page.addStyleTag({ content: `*{font-family:${process.env.FONT} !important}` })
   if (zoom) await page.addStyleTag({ content: `html { font-size: ${zoom}; }` })
   await page.locator('[class*="rail"] button').nth(3).click()
   await page.waitForSelector('text=Invested portfolio projection', { timeout: 20000 })

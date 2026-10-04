@@ -299,6 +299,16 @@
   min-width: 0;
 }
 
+/* A percentage's label and its stepper. The stepper does not shrink, and a label cannot be narrower
+   than its longest word, so in a font a little wider than the one this was drawn in ("Contribution"
+   in a four-column panel) the row was a couple of pixels wider than its column and the + button
+   hung over the next column's star. The label may break a word as a last resort, so that the row
+   never is (the touch panel below also gives it 4px more room). */
+.fieldRowStepper > .fieldLabel {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .fieldValue {
   font-size: 0.875rem;
   font-weight: 600;
@@ -2208,7 +2218,7 @@
 
 /* The inputs panel's steppers and fields, which are 26px tall, are 44px for a finger. The
    stepper keeps its width in check (a 44px square with a 40px field between is 133px, against
-   the 115px it was, and with 8px between it and the label it fits the narrowest column, 216px,
+   the 115px it was, and with 4px between it and the label it fits the narrowest column, 216px,
    beside a label whose longest word is 75px: wider, and its + button reached into the gutter
    where the next column's star hangs), and a row's label starts a fixed distance down instead of centring, so the
    star hung beside it (planDesktop.module.css) is on the label's first line whether the label
@@ -2236,6 +2246,13 @@
   .stack .fieldRow {
     align-items: flex-start;
     gap: 0.5rem;
+  }
+
+  /* A stepper's row has 4px between the label and the stepper, not 8: the row has 82px for the
+     label beside the 133px stepper in the narrowest column, where the longest word is 75px in the
+     usual font and 81px ("Contribution" in Verdana, which is what CI's fonts are like). */
+  .stack .fieldRowStepper {
+    gap: 0.25rem;
   }
 
   .stack .fieldLabel {

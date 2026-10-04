@@ -30,8 +30,11 @@ interface Props {
 
 export function DatePickerPopover({ value, triggerRef, min, max, onSelect, onClose }: Props) {
   const [y, m] = value ? value.split('-').map(Number) as [number, number] : [new Date().getFullYear(), new Date().getMonth() + 1]
-  const [viewYear, setViewYear] = useState(y)
-  const [viewMonth, setViewMonth] = useState(m)
+  // Year and month move together in one state value. Two setters, one called from
+  // inside the other's updater, change the year twice under StrictMode, which
+  // runs updaters twice.
+  const [view, setView] = useState({ year: y, month: m })
+  const { year: viewYear, month: viewMonth } = view
 
   const popoverRef = useRef<HTMLDivElement>(null)
   const pos = usePopoverPosition(triggerRef, popoverRef)
@@ -41,17 +44,11 @@ export function DatePickerPopover({ value, triggerRef, min, max, onSelect, onClo
   const grid = buildCalendarGrid(viewYear, viewMonth)
 
   const prevMonth = useCallback(() => {
-    setViewMonth((prev) => {
-      if (prev === 1) { setViewYear((y) => y - 1); return 12 }
-      return prev - 1
-    })
+    setView(({ year, month }) => (month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 }))
   }, [])
 
   const nextMonth = useCallback(() => {
-    setViewMonth((prev) => {
-      if (prev === 12) { setViewYear((y) => y + 1); return 1 }
-      return prev + 1
-    })
+    setView(({ year, month }) => (month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 }))
   }, [])
 
   const selectDay = (cell: DayCell) => {
