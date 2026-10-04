@@ -2,6 +2,11 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (typed numbers in Assumptions)
+
+- **A milestone amount is read by the currency's format.** The field was a number field, which reads the browser's idea of a number and not the currency's: typing "150.000" for a hundred and fifty thousand euros saved 150. It is now a text field with the decimal keypad, written as the currency writes it ("150.000,00") and read as the rest of the app reads an amount, so "150.000" is 150 000 where the point groups thousands, "150,000" is where the comma does, and "2500,5" in a point currency is 2 500,50. Text with no digit in it puts the saved amount back, as before. The stepper arrows that moved it by 1 000 are gone.
+- **The cash reserve is whole months.** "1e1", which a number field lets through, was saved as 10 months. It now takes digits (and "6.0" or "6,0"), and anything else puts the saved value back.
+
 ## October 2026 (years to milestone on a phone)
 
 Measured on phones 320, 375 and 430px wide, with 1, 3 and 12 milestones, in Chromium and in Safari's engine.
