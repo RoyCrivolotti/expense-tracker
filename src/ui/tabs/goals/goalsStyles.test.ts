@@ -349,4 +349,12 @@ describe('the levers bar where it is held to the bottom edge', () => {
     expect(held.outside).toMatch(/\.leverSide\s*\{[^}]*max-width:\s*15rem/)
     expect(held.outside).toMatch(/\.leverResult\s*\{[^}]*text-overflow:\s*ellipsis/)
   })
+
+  it('lets the label of a percentage or number stepper shrink, so that its row is never wider than its column', () => {
+    const all = rules('tabs/goals/goals.module.css')
+    const label = all.find((r) => r.selector === '.fieldRowStepper > .fieldLabel')?.body ?? ''
+
+    expect(label).toMatch(/min-width:\s*0/)
+    expect(label).toMatch(/overflow-wrap:\s*anywhere/)
+  })
 })
