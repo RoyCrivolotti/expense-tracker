@@ -1467,10 +1467,14 @@
     font-size: 0.72rem;
   }
 
+  /* A head or a figure a pixel or two wider than its column (a font a little wider than the one
+     this was drawn in) is cut at the padding and not left to widen the scroll area: the page is
+     paged so that nothing here scrolls sideways. */
   .matrixTable .milestoneHead,
   .matrixTable .matrixCell {
     padding-left: 2px;
     padding-right: 2px;
+    overflow: hidden;
   }
 
   .matrixTable .milestoneHeadAmount {
