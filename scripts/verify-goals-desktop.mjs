@@ -15,7 +15,7 @@
  *
  * Starts its own dev server on CAPTURE_PORT (5173 unless set), with DOCS_CAPTURE=1 so it has the
  * seeded demo data and nothing real. `ENGINES=chromium,webkit` (the default is chromium) also
- * runs it in Safari's engine, and `ONLY=touch-targets`, `ONLY=lever-focus` or `ONLY=toast` runs just that group (a minute or two).
+ * runs it in Safari's engine, and `ONLY=touch-targets`, `ONLY=lever-focus`, `ONLY=k2` (the stars' tap areas against the controls beside them) or `ONLY=toast` runs just that group (a minute or two).
  * Exits 1 and says what was measured if anything fails.
  */
 import { spawn } from 'node:child_process'
@@ -2046,6 +2046,125 @@ async function checkTouchLeftovers(browser, engine) {
   await keys.context.close()
 }
 
+/**
+ * In the page: for every control on it (the panel's, the bar's, the rest), the points of a 9 by 5
+ * grid inside its own box that a press would hand to a star, and for every star the size of the
+ * part of its tap area (the ::after box) that is still the star's. The control is scrolled to the
+ * middle of the window first, so the bar is where a reader would find it.
+ */
+function starAreas() {
+  const sel = 'input:not([type="hidden"]), select, textarea, button, a[href], [role="slider"], [role="radio"], [role="tab"], [role="button"], label'
+  const ofStar = (el) => (el ? el.closest('button[data-star]') : null)
+  const stolen = []
+  const controls = [...document.querySelectorAll(sel)].filter((el) => !ofStar(el))
+  let measured = 0
+  for (const c of controls) {
+    c.scrollIntoView({ block: 'center', behavior: 'instant' })
+    const box = c.getBoundingClientRect()
+    if (box.width < 2 || box.height < 2 || box.bottom < 0 || box.top > innerHeight || getComputedStyle(c).visibility === 'hidden') continue
+    measured++
+    let taken = 0
+    for (let a = 0; a <= 8; a++) {
+      for (let b = 0; b <= 4; b++) {
+        const x = box.left + 1.5 + ((box.width - 3) * a) / 8
+        const y = box.top + 1.5 + ((box.height - 3) * b) / 4
+        if (ofStar(document.elementFromPoint(x, y))) taken++
+      }
+    }
+    if (taken > 0) {
+      const name = (c.getAttribute('aria-label') || c.getAttribute('name') || c.textContent || c.tagName).trim().slice(0, 30)
+      stolen.push(`${name} (${c.tagName.toLowerCase()}) ${taken}/45`)
+    }
+  }
+  const areas = []
+  for (const star of document.querySelectorAll('button[data-star]')) {
+    const inPanel = !!star.closest('[role="region"]')
+    if (inPanel) star.scrollIntoView({ block: 'center', behavior: 'instant' })
+    else {
+      // From the top, so the bar is in its place and not stuck under the header, which would be
+      // drawn over the 14px of the area that reach above the bar.
+      window.scrollTo({ top: 0, behavior: 'instant' })
+      star.scrollIntoView({ block: 'center', behavior: 'instant' })
+    }
+    const r = star.getBoundingClientRect()
+    const after = getComputedStyle(star, '::after')
+    const left = r.left + parseFloat(after.left)
+    const top = r.top + parseFloat(after.top)
+    let x0 = Infinity
+    let x1 = -Infinity
+    let y0 = Infinity
+    let y1 = -Infinity
+    for (let y = Math.floor(top); y < top + parseFloat(after.height); y++) {
+      for (let x = Math.floor(left); x < left + parseFloat(after.width); x++) {
+        if (ofStar(document.elementFromPoint(x + 0.5, y + 0.5)) === star) {
+          x0 = Math.min(x0, x)
+          x1 = Math.max(x1, x)
+          y0 = Math.min(y0, y)
+          y1 = Math.max(y1, y)
+        }
+      }
+    }
+    areas.push({ star: star.getAttribute('aria-label'), inPanel, w: x1 - x0 + 1, h: y1 - y0 + 1 })
+  }
+  return { measured, stolen, areas }
+}
+
+/**
+ * (k2) A star's tap area reaches past the star, and used to reach over whatever was beside it: the
+ * right end of the percentage stepper's + button in the column before (43% of its box, on an iPad
+ * 1032px wide), the ends of two sliders, a label's left edge. A press there starred an input
+ * instead of doing what the control said. For every control on the page, the sampled points must
+ * be the control's, the stars must keep an area they can be hit by, and a stepper must not reach
+ * into the gutter its star hangs in. A mouse is measured as well.
+ */
+async function checkStarOverlap(browser, engine) {
+  const where = `${engine} stars over controls`
+  const screens = [
+    { name: 'iPad 1032x1376', width: 1032, height: 1376, touch: true },
+    { name: 'iPad 1133x744', width: 1133, height: 744, touch: true },
+    { name: 'iPad 1366x1024', width: 1366, height: 1024, touch: true },
+    { name: 'mouse 1032x1376', width: 1032, height: 1376, touch: false },
+    { name: 'mouse 1133x744', width: 1133, height: 744, touch: false },
+  ]
+  for (const screen of screens) {
+    const { page, context } = await openPlan(browser, screen, { touch: screen.touch })
+    await page.getByRole('button', { name: /All inputs/ }).click()
+    await page.getByRole('region', { name: 'All inputs' }).waitFor()
+    await page.waitForTimeout(500)
+    for (const state of ['the bar full, the panel\'s stars held back', 'room in the bar, the panel\'s stars live']) {
+      if (state.startsWith('room')) {
+        await page.getByRole('button', { name: 'Remove Horizon from the bar' }).click()
+        await page.waitForTimeout(500)
+      }
+      const r = await page.evaluate(starAreas)
+      const label = `${screen.name}, ${state}`
+      check(where, `(k2) no control loses a press to a star at ${label} (${r.measured} measured)`, r.measured > 60 && r.stolen.length === 0, JSON.stringify(r.stolen))
+      const panel = r.areas.filter((a) => a.inPanel)
+      const bar = r.areas.filter((a) => !a.inPanel)
+      // 23, not 24: the gap between two columns is 24px and a pixel is counted when its middle is inside it.
+      const wide = screen.touch ? panel.filter((a) => a.w < 23 || a.h < 43) : panel.filter((a) => a.w < 23 || a.h < 23)
+      check(where, `(k2) every panel star keeps a tap area of at least 23px wide${screen.touch ? ' and 43px high' : ''} at ${label} (${panel.length} measured)`, panel.length >= 10 && wide.length === 0, JSON.stringify(wide))
+      const short = screen.touch ? bar.filter((a) => a.w < 40 || a.h < 43) : bar.filter((a) => a.w < 23 || a.h < 23)
+      check(where, `(k2) every bar star keeps its tap area at ${label} (${bar.length} measured)`, bar.length >= 4 && short.length === 0, JSON.stringify(short))
+    }
+    // The stepper's + button is the control that used to be under a star: it must end inside its column.
+    const reach = await page.evaluate(() => {
+      const columns = [...document.querySelectorAll('[role="region"] [class*="columns"] > [class*="column"]')]
+      const over = []
+      for (const column of columns) {
+        const edge = column.getBoundingClientRect().right
+        for (const button of column.querySelectorAll('button[aria-label^="Increase"]')) {
+          const past = button.getBoundingClientRect().right - edge
+          if (past > 0.5) over.push(`${button.getAttribute('aria-label')} +${past.toFixed(1)}px`)
+        }
+      }
+      return { columns: columns.length, over }
+    })
+    check(where, `(k2) a stepper's + button ends inside its column at ${screen.name}`, reach.columns >= 3 && reach.over.length === 0, JSON.stringify(reach))
+    await context.close()
+  }
+}
+
 async function checkMilestoneTable(browser, engine) {
   for (const screen of [SCREENS[1], SCREENS[3], SCREENS[0]]) {
     for (const scheme of ['light', 'dark']) await checkMilestoneWide(browser, engine, screen, scheme)
@@ -2440,6 +2559,10 @@ async function main() {
           await checkTouchLeftovers(browser, engine)
           continue
         }
+        if (process.env.ONLY === 'k2') {
+          await checkStarOverlap(browser, engine)
+          continue
+        }
         if (process.env.ONLY === 'lever-focus') {
           await checkLeverFocus(browser, engine)
           continue
@@ -2476,6 +2599,7 @@ async function main() {
         await checkFirstDraft(browser, engine)
         await checkSaveReason(browser, engine)
         await checkTouchLeftovers(browser, engine)
+        await checkStarOverlap(browser, engine)
         await checkMilestoneTable(browser, engine)
         await checkTimeline(browser, engine)
         await checkFromTodayMilestones(browser, engine)

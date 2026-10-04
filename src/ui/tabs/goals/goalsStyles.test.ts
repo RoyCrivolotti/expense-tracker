@@ -135,6 +135,36 @@ describe('the wide plan on a touch screen', () => {
     expect(height('\\.leverHead \\.star::after')).toBeCloseTo(2.75, 5)
     expect(height('\\.starrable > \\.star::after')).toBeCloseTo(2.75, 5)
   })
+
+  describe("a star's tap area", () => {
+    const plan = rules('tabs/goals/desktop/planDesktop.module.css')
+    const body = (selector: string) => plan.find((r) => r.selector === selector)?.body ?? ''
+
+    it('sits under the inputs it reaches over, in a stacking context the columns share', () => {
+      // The area is wider than the gutter, and over the end of the column before it was a slider's
+      // or a + button's press that starred an input instead.
+      expect(body('.columns')).toMatch(/isolation:\s*isolate/)
+      expect(body('.starrable > .star::after')).toMatch(/z-index:\s*-1/)
+    })
+
+    it('is not inside a stacking context of its own, which would hold it above its neighbours', () => {
+      // Held back, a star is dimmed: an opacity on the button did that, and the area went over the inputs.
+      const buttons = plan.filter((r) => /^[^,]*\.star(?![A-Za-z])[^,]*$/.test(r.selector) && !/svg|::/.test(r.selector))
+      expect(buttons.length).toBeGreaterThan(3)
+      for (const { selector, body: declarations } of buttons) {
+        expect(declarations, selector).not.toMatch(/(^|[;\s])(opacity|transform|filter|will-change|z-index|isolation|contain|mix-blend-mode)\s*:/)
+      }
+      expect(body('.star:disabled svg')).toMatch(/opacity:\s*0\.6/)
+    })
+
+    it('lets the slider of a lever on the row above stay above the star of one on the row below', () => {
+      expect(block('pointer: coarse')).toMatch(/\.leverTrack\s*\{[^}]*position:\s*relative;[^}]*z-index:\s*1/)
+    })
+
+    it('has no slider reaching into the gutter it hangs in', () => {
+      expect(body(".columns input[type='range']")).toMatch(/margin-inline:\s*0/)
+    })
+  })
 })
 
 describe('the swatches that key a colour on a chart', () => {
@@ -210,6 +240,12 @@ describe('the inputs panel on a touch screen', () => {
     expect(stepper.find((r) => r.selector === '.wrap')?.body).toMatch(/gap:\s*var\(--stepper-gap,\s*0\.25rem\)/)
   })
 
+  it('keeps a stepper narrow enough to end inside its column, where the next column\'s star hangs', () => {
+    // 133px with the 8px gap and a 75px word is the 216px the narrowest column is; the 141px it was reached 9px past.
+    expect(rule('.stack')).toMatch(/--stepper-input-width:\s*2\.5rem/)
+    expect(rule('.stack .fieldRow')).toMatch(/gap:\s*0\.5rem/)
+  })
+
   it("keeps a row's label and the star beside it on one line whether the label wraps or not", () => {
     // The label starts a fixed distance down, and the star is on the middle of the row's first 44px.
     expect(rule('.stack .fieldRow')).toMatch(/align-items:\s*flex-start/)
@@ -244,8 +280,8 @@ describe('the sliders and the bar levers on a touch screen', () => {
 
   it('makes the whole row of a lever 44px, over the slider box that reaches up into it', () => {
     expect(planRule('.leverValue')).toMatch(/min-height:\s*2\.75rem/)
-    // Above the slider's box, so a press on the lower part of the digits is theirs.
-    expect(planRule('.leverValue')).toMatch(/z-index:\s*1/)
+    // Above the slider's box (and the track, which is at 1), so a press on the lower part of the digits is theirs.
+    expect(planRule('.leverValue')).toMatch(/z-index:\s*2/)
     expect(planRule('.leverTrack')).toMatch(/height:\s*1\.75rem/)
     expect(plan.outside).toMatch(/\.leverTrack\s*\{[^}]*height:\s*1\.25rem/)
   })

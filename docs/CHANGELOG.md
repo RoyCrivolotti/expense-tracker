@@ -2,6 +2,15 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (stars and the controls beside them)
+
+Measured by pressing a grid of points inside every control on the Plan page with the inputs panel open, on touch screens 1032x1376, 1133x744 and 1366x1024 and with a mouse, in Chromium and in Safari's engine.
+
+- **A press on a control next to a star is the control's.** The star's tap area is taller and wider than the star so a finger can find it, and it reached over its neighbours. On an iPad 1032px wide, a press on the right part of the Contribution growth + button starred the next column's input instead of adding to the percentage (20 of 45 points over the button), and the ends of three sliders, the left edge of the House price, Purchase fees, Rent and Annual spend fields, and the plan start date and Re-baseline buttons did the same. At 1032x1376 that was 62 of the points sampled, over 11 controls; with a mouse it was 5, over one slider. The star's area now sits under every input and label it reaches over, so it is only what nothing else has taken, and no control loses a point to a star in either state of the bar.
+- **The star's area in the inputs panel is the 24px gutter it hangs in, 44px high, on a touch screen**, where it was 46 wide (35 wide for the first column's star, which has the card's padding beside it). The star itself and everything around it are as they were, and the bar's stars keep their full area.
+- **A percentage stepper is 8px narrower on a touch screen, with 4px less between it and its label.** In the narrowest columns (an iPad 1032px wide) its + button reached 9px past its column and under the next column's star, which a taller area could not fix. The field between - and + is 40px wide, not 48.
+- **Where the bar's levers wrap onto two rows**, a slider stays above the star of the lever below it.
+
 ## October 2026 (years to milestone, counted from today)
 
 - **Every row counts its years from today.** A path's years used to count from its own start date, so a scenario that started two years ago said "7y" for a milestone that is five years away, and the "from today" row counted from your latest check-in. Each cell is now the whole years from today until the path reaches the milestone, rounded up, so "Years from now" means what it says. A path that started less than a year ago shows the same numbers as before. A milestone a path passed before today is a tick, and its sentence says so ("reached it before today, in 2025"). "Calendar year" is unchanged. The hint under the title says how the years are counted.
