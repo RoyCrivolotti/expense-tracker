@@ -5,7 +5,7 @@
  * the fold, under the header once scrolled past), the inputs panel folding in and out, the
  * scenario menu, the stars that move an input to the bar and back, the order Tab goes in and that
  * nothing it reaches is under the bar, the question asked before leaving Goals with an unsaved edit,
- * the Years to milestone table (`ONLY=milestone-table` runs just that; `ONLY=milestone-phone` its pages and by-goal view on a phone) and its timeline (`ONLY=milestone-timeline`),
+ * the Years to milestone table (`ONLY=milestone-table` runs just that; `ONLY=milestone-phone` its pages and by-goal view on a phone, `ONLY=milestone-sheet` the sheet with every milestone) and its timeline (`ONLY=milestone-timeline`),
  * both counted from today with start dates that differ (`ONLY=w2`, `ONLY=x2`),
  * and why Save is off for a scenario with no name (`ONLY=s2`).
  *
@@ -2303,12 +2303,145 @@ async function checkMilestonePhoneView(browser, engine) {
   }
 }
 
+/**
+ * A phone on the demo instance with twelve milestones none of which every path has, so that none is
+ * folded and the card is paged at any phone width: the five the demo has already passed go, and
+ * five more above them are added.
+ */
+async function openPhoneUnreached(browser, engine, size) {
+  const context = await browser.newContext({ viewport: size, deviceScaleFactor: 2, reducedMotion: 'reduce', hasTouch: true, isMobile: true })
+  const page = await context.newPage()
+  page.on('pageerror', (e) => failures.push(`page error: ${e.message}`))
+  await page.addInitScript(() => localStorage.setItem('exp-onboarding-skipped', '1'))
+  await page.goto(`${BASE}/`)
+  await page.waitForSelector('text=Recent activity', { timeout: 20000 })
+  await page.getByRole('button', { name: /Goals/ }).last().click()
+  await page.getByRole('tab', { name: 'Assumptions' }).click()
+  await page.waitForTimeout(400)
+  await page.getByRole('button', { name: 'Reset to defaults' }).last().click()
+  await page.waitForTimeout(300)
+  for (let i = 0; i < 5; i++) {
+    await page.getByRole('button', { name: /^Remove milestone/ }).first().click()
+    await page.waitForTimeout(120)
+  }
+  while ((await page.getByLabel('Milestone name', { exact: true }).count()) < 12) {
+    await page.getByRole('button', { name: '+ Add milestone' }).click()
+    await page.waitForTimeout(120)
+  }
+  await page.getByRole('tab', { name: 'Chart' }).click()
+  await page.getByRole('radio', { name: 'Milestones' }).click()
+  await page.getByRole('heading', { name: 'Years to milestone' }).waitFor()
+  await page.waitForTimeout(500)
+  await matrixCard(page).scrollIntoViewIfNeeded()
+  return { page, context }
+}
+
+/**
+ * The sheet with every milestone: opened from the card where the card is paged, a dialog over the
+ * whole screen with the names and heads held, its toggles shared with the card, closed by its
+ * button and by Escape with the focus back where it was. Upright it says to turn the phone; on
+ * its side the bar is one row.
+ */
+async function checkMilestoneSheet(browser, engine) {
+  const open = (page) => page.getByRole('button', { name: 'All milestones' })
+  const dialog = (page) => page.getByRole('dialog', { name: /every milestone/ })
+  const measures = (page) =>
+    page.evaluate(() => {
+      const d = document.querySelector('[role="dialog"]')
+      const r = d.getBoundingClientRect()
+      const region = d.querySelector('[role="region"]')
+      const bar = d.querySelector('[class*="sheetBar"]').getBoundingClientRect()
+      const close = d.querySelector('button[aria-label="Close"]').getBoundingClientRect()
+      const heads = [...d.querySelectorAll('thead th')]
+      return {
+        box: [r.left, r.top, r.width, r.height].map(Math.round),
+        iw: innerWidth,
+        ih: innerHeight,
+        heads: heads.length - 1,
+        sign: heads[1].textContent.includes('€'),
+        scrollW: region.scrollWidth,
+        clientW: region.clientWidth,
+        bar: Math.round(bar.height),
+        close: Math.round(Math.min(close.width, close.height)),
+        hint: d.textContent.includes('Turn your phone sideways'),
+        page: document.documentElement.scrollWidth - innerWidth,
+        stickyHead: getComputedStyle(heads[1]).position,
+      }
+    })
+
+  for (const [name, size] of [['upright 375x812', { width: 375, height: 812 }], ['on its side 667x375', { width: 667, height: 375 }]]) {
+    const { page, context } = await openPhoneUnreached(browser, engine, size)
+    const where = `${engine} phone ${name}`
+    check(where, '(s1) the card offers the sheet, as its table is paged', (await open(page).count()) === 1)
+    await open(page).scrollIntoViewIfNeeded()
+    await open(page).tap()
+    await dialog(page).waitFor()
+    await page.waitForTimeout(400)
+    const m = await measures(page)
+    check(where, '(s1) the sheet covers the whole screen', m.box[0] === 0 && m.box[1] === 0 && m.box[2] === m.iw && m.box[3] === m.ih, JSON.stringify(m.box))
+    check(where, '(s1) every milestone is a column, with the currency sign', m.heads === 12 && m.sign, JSON.stringify({ heads: m.heads, sign: m.sign }))
+    check(where, '(s1) the table scrolls in the sheet, and the page behind does not scroll sideways', m.scrollW > m.clientW && m.page <= 0, JSON.stringify(m))
+    check(where, '(s1) the close button is 44px', m.close >= 44, `${m.close}px`)
+    check(where, '(s1) the heads are held', m.stickyHead === 'sticky', m.stickyHead)
+    if (size.width === 375) check(where, '(s1) held upright it says to turn the phone', m.hint)
+    else {
+      check(where, '(s1) on its side it does not, and the bar is one row', !m.hint && m.bar <= 60, JSON.stringify({ hint: m.hint, bar: m.bar }))
+    }
+
+    // The names stay while the figures scroll under them.
+    const held = await page.evaluate(() => {
+      const region = document.querySelector('[role="dialog"] [role="region"]')
+      const name = region.querySelector('tbody th')
+      const before = name.getBoundingClientRect().left
+      region.scrollLeft = 150
+      const after = name.getBoundingClientRect().left
+      return { before, after, moved: region.scrollLeft }
+    })
+    check(where, '(s1) the names are held while the columns scroll', held.moved > 100 && near(held.before, held.after, 1), JSON.stringify(held))
+
+    // Its toggles are the card's: after closing, the card has them.
+    await dialog(page).getByRole('radio', { name: 'Calendar year' }).tap()
+    await dialog(page).getByRole('button', { name: 'Close' }).tap()
+    await page.waitForTimeout(300)
+    check(where, '(s2) the sheet is gone after Close, and the card kept the calendar year', (await dialog(page).count()) === 0 && (await matrixCard(page).getByRole('radio', { name: 'Calendar year' }).getAttribute('aria-checked')) === 'true')
+
+    // Opened from the keyboard (a tap on a button does not focus it in Safari, so there would be
+    // nothing to give back), Escape closes it and the focus goes back to the button.
+    await open(page).focus()
+    await page.keyboard.press('Enter')
+    await dialog(page).waitFor()
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(300)
+    check(where, '(s2) Escape closes it', (await dialog(page).count()) === 0)
+    check(where, '(s2) the focus is back on the button that opened it', await open(page).evaluate((el) => el === document.activeElement))
+    await context.close()
+  }
+
+  // A short screen, many paths: the heads are held while the rows scroll.
+  const { page, context } = await openPhoneUnreached(browser, engine, { width: 667, height: 250 })
+  const where = `${engine} phone 667x250`
+  await open(page).scrollIntoViewIfNeeded()
+  await open(page).tap()
+  await dialog(page).waitFor()
+  await page.waitForTimeout(400)
+  const rows = await page.evaluate(() => {
+    const region = document.querySelector('[role="dialog"] [role="region"]')
+    const head = region.querySelector('thead th:nth-child(2)')
+    region.scrollTop = 60
+    const r = region.getBoundingClientRect()
+    return { scrolled: region.scrollTop, headTop: Math.round(head.getBoundingClientRect().top - r.top), canScroll: region.scrollHeight > region.clientHeight }
+  })
+  check(where, '(s3) with more rows than the screen holds the table scrolls down with its heads held', rows.canScroll && rows.scrolled > 0 && rows.headTop <= 1, JSON.stringify(rows))
+  await context.close()
+}
+
 async function checkMilestoneTable(browser, engine) {
   for (const screen of [SCREENS[1], SCREENS[3], SCREENS[0]]) {
     for (const scheme of ['light', 'dark']) await checkMilestoneWide(browser, engine, screen, scheme)
   }
   await checkMilestonePhone(browser, engine)
   await checkMilestonePhoneView(browser, engine)
+  await checkMilestoneSheet(browser, engine)
 }
 
 /**
@@ -2716,6 +2849,10 @@ async function main() {
         }
         if (process.env.ONLY === 'milestone-phone') {
           await checkMilestonePhoneView(browser, engine)
+          continue
+        }
+        if (process.env.ONLY === 'milestone-sheet') {
+          await checkMilestoneSheet(browser, engine)
           continue
         }
         if (process.env.ONLY === 'w2') {
