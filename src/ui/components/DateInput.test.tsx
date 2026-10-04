@@ -1,3 +1,4 @@
+import { StrictMode } from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -67,6 +68,51 @@ describe('DateInput popover bounds', () => {
     await user.keyboard('{ArrowRight}')
     expect(screen.getByRole('button', { name: '15 September 2026' })).toHaveFocus()
     expect(onChange).not.toHaveBeenCalled()
+  })
+})
+
+describe('DateInput popover month navigation', () => {
+  // StrictMode runs state updaters twice, which is how a year change nested inside
+  // the month updater went wrong in dev and nowhere else.
+  async function openStrict(value: string) {
+    const user = userEvent.setup()
+    render(
+      <StrictMode>
+        <DateInput value={value} onChange={vi.fn()} />
+      </StrictMode>,
+    )
+    await user.click(screen.getByRole('button', { name: 'Date' }))
+    return user
+  }
+
+  it('steps back across a January one year at a time', async () => {
+    const user = await openStrict('2026-02-10')
+    const prev = screen.getByRole('button', { name: 'Previous month' })
+
+    await user.click(prev)
+    expect(screen.getByText('January 2026')).toBeInTheDocument()
+    await user.click(prev)
+    expect(screen.getByText('December 2025')).toBeInTheDocument()
+    await user.click(prev)
+    expect(screen.getByText('November 2025')).toBeInTheDocument()
+  })
+
+  it('steps forward across a December one year at a time', async () => {
+    const user = await openStrict('2026-11-10')
+    const next = screen.getByRole('button', { name: 'Next month' })
+
+    await user.click(next)
+    expect(screen.getByText('December 2026')).toBeInTheDocument()
+    await user.click(next)
+    expect(screen.getByText('January 2027')).toBeInTheDocument()
+    await user.click(next)
+    expect(screen.getByText('February 2027')).toBeInTheDocument()
+  })
+
+  it('lands on the same month a year earlier after twelve steps back', async () => {
+    const user = await openStrict('2026-04-10')
+    for (let i = 0; i < 12; i++) await user.click(screen.getByRole('button', { name: 'Previous month' }))
+    expect(screen.getByText('April 2025')).toBeInTheDocument()
   })
 })
 
