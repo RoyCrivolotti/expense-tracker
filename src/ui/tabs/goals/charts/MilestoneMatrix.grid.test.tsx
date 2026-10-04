@@ -237,6 +237,32 @@ describe('vs plan', () => {
     expect(within(cell('Path B', 1)).getByText(/^\+\d+y$/)).toBeInTheDocument()
   })
 
+  it('keeps the line for the gap only in the rows that can have one', async () => {
+    renderTable()
+    const lines = (row: string) => screen.getByRole('row', { name: new RegExp(`^${row}`) }).querySelectorAll('[class*="matrixGap"]').length
+    expect(lines('Path B')).toBe(0)
+
+    await userEvent.click(screen.getByRole('button', { name: 'vs plan' }))
+
+    expect(lines('Path A')).toBe(0)
+    expect(lines('Path B')).toBe(3)
+  })
+
+  it('keeps no line in a row where every milestone is already there', async () => {
+    render(
+      <MilestoneMatrix
+        scenarios={[plan, slower]}
+        draft={draft}
+        milestones={[{ amountCents: 1_000_000, label: '' }]}
+        reached={new Map()}
+        includeDraft={false}
+      />,
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'vs plan' }))
+
+    expect(document.querySelectorAll('[class*="matrixGap"]')).toHaveLength(0)
+  })
+
   it('is off, with the reason, when no scenario is marked as the plan', () => {
     renderTable([makeScenario({ ...plan, isActive: false }), slower])
 

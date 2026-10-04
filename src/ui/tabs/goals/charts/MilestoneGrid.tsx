@@ -110,6 +110,11 @@ function gapLabel(row: MilestoneRow, plan: MilestoneRow | null, index: number): 
   return { text: gapShort(gap), sooner: gapIsSooner(gap) }
 }
 
+/** A row keeps the line under its cells only if one of them has something to put in it. */
+function rowHasGaps(row: MilestoneRow, plan: MilestoneRow | null): boolean {
+  return row.cells.some((_, index) => gapLabel(row, plan, index) !== null)
+}
+
 /** A blank line holds its height with a no-break space, so the cells of a row stay level. */
 function GapLine({ label }: { label: GapText | null }) {
   return (
@@ -214,6 +219,7 @@ export function MilestoneGrid({
   const narrow = useGoalsNarrow()
   const [stop, setStop] = useState({ row: 0, col: 0 })
   const longest = longestHorizon(rows)
+  const gapRows = rows.map((row) => rowHasGaps(row, plan))
   const at = { row: Math.min(stop.row, rows.length - 1), col: Math.min(stop.col, milestones.length - 1) }
   const markedRow = live && point ? point.rowId : null
   const markedCol = live && point ? point.index : null
@@ -268,7 +274,7 @@ export function MilestoneGrid({
                   longest={longest}
                   unit={unit}
                   plan={plan}
-                  gaps={plan !== null}
+                  gaps={gapRows[r] === true}
                   sentence={sentences[r]?.[c] ?? ''}
                   tabStop={at.row === r && at.col === c}
                   crosshair={crosshairClass(markedRow === row.id, markedCol === c)}
