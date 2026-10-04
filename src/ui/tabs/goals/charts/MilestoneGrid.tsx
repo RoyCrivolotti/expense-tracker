@@ -14,6 +14,7 @@ import {
   rowHasGaps,
   tintPercent,
   type CellMove,
+  type CellRef,
   type GapText,
   type MilestoneRow,
   type YearsUnit,
@@ -21,16 +22,10 @@ import {
 import { ScrollRegion } from './ScrollRegion'
 import styles from '../goals.module.css'
 
-export type { YearsUnit }
+export type { CellRef, YearsUnit }
 
 /** On a phone, more columns than this leave no room for the currency sign in a head. */
 const MAX_WITH_SIGN = 5
-
-/** The cell the reader is on: set by pointing, focus or a tap, and kept for the readout. */
-export interface CellRef {
-  rowId: string
-  index: number
-}
 
 function MilestoneHead({
   milestone,
@@ -177,6 +172,7 @@ export function MilestoneGrid({
   onPoint,
   onLeave,
   className,
+  keepSign = false,
 }: {
   rows: MilestoneRow[]
   milestones: Milestone[]
@@ -194,6 +190,8 @@ export function MilestoneGrid({
   onLeave: () => void
   /** Added to the table's own classes. */
   className?: string | undefined
+  /** Keeps the currency sign in the heads however many columns there are, for a table with the room. */
+  keepSign?: boolean
 }) {
   const table = useRef<HTMLTableElement>(null)
   const narrow = useGoalsNarrow()
@@ -243,7 +241,7 @@ export function MilestoneGrid({
                 milestone={milestones[i] as Milestone}
                 reachedOn={reached.get(milestones[i]?.amountCents ?? -1)}
                 marked={markedCol === i}
-                bare={narrow && shown.length > MAX_WITH_SIGN}
+                bare={narrow && !keepSign && shown.length > MAX_WITH_SIGN}
               />
             ))}
           </tr>

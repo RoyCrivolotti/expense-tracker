@@ -309,6 +309,19 @@ export function moveCell(
 
 export type YearsUnit = 'years' | 'calendar'
 
+/** The cell the reader is on: set by pointing, focus or a tap, and kept for the readout. */
+export interface CellRef {
+  rowId: string
+  index: number
+}
+
+/** The sentence for the cell the reader is on, or null before they have been on one. */
+export function sentenceAt(point: CellRef | null, rows: MilestoneRow[], sentences: string[][]): string | null {
+  if (!point) return null
+  const row = rows.findIndex((r) => r.id === point.rowId)
+  return sentences[row]?.[point.index] ?? null
+}
+
 /**
  * What a cell says in its tinted box: the years from today, or the calendar year the path's own
  * yearly step falls in. Already there is a tick in both.
