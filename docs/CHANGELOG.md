@@ -2,6 +2,11 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (Save says why it is off when you press it)
+
+- **Pressing a Save that needs a name says why.** With a scenario's name cleared, the Save buttons (Save changes in the scenario row and in the phone's pinned row and card, Save scenario for a draft, and every Save as new) still look off, but a tap, a click, Enter or Space on one now shows "Give the scenario a name to save it" at the bottom of the screen, and a mouse pointing at it gets the same words as a tooltip. A screen reader reads them as the button's description. Before, the button was disabled, which a finger and a mouse cannot press, so all it could do was sit there.
+- **No line of text for it.** The words that sat beside the button on the wide page and under the buttons on the phone are gone, so nothing in the page moves or changes size when a name is cleared; the pinned chart, chips and Save row keep their height. A Save that is off because a save is under way stays plainly disabled, with nothing to say.
+
 ## October 2026 (years to milestone as a timeline)
 
 - **The card has a Timeline view beside the Table, on the wide page.** A switch in the card's header (from 900px wide; the phone keeps the table alone) shows each path as a row on one axis of years, with the calendar year underneath. Every milestone is a dot at the year the path reaches it, and milestones that fall in the same year share one dot with their number.
