@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { MilestonesSetting } from './MilestonesSetting'
-import { defaultExpenseSettings, defaultMilestones, MILESTONE_MAX_COUNT } from '../../engine'
+import { defaultExpenseSettings, defaultMilestones, MILESTONE_MAX_CENTS, MILESTONE_MAX_COUNT } from '../../engine'
 import type { ExpenseSettings, Milestone } from '../../types'
 
 // The native date field, so a change event carries the value straight through.
@@ -70,7 +70,7 @@ describe('MilestonesSetting', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Network down')
 
     // The row shows what the server holds again, and the next edit addresses that.
-    await waitFor(() => expect(amount).toHaveValue(100000))
+    await waitFor(() => expect(amount).toHaveValue('100.000,00'))
     fireEvent.change(screen.getByLabelText('Target date for milestone House deposit'), {
       target: { value: '2028-06-01' },
     })
@@ -125,6 +125,72 @@ describe('MilestonesSetting', () => {
     fireEvent.blur(input)
     expect(onChange).toHaveBeenCalledWith({
       milestones: [{ amountCents: 25_000_000, label: 'House deposit' }],
+    })
+  })
+
+  describe('reads the amount by the currency format', () => {
+    const usd = { ...defaultExpenseSettings(), currencyCode: 'USD', numberLocale: 'en-US', milestones: oneMilestone }
+
+    it('shows the amount as the currency writes it', () => {
+      const { unmount } = render(<MilestonesSetting settings={settingsWith(oneMilestone)} onChange={vi.fn()} />)
+      expect(screen.getByLabelText(/Milestone amount/)).toHaveValue('100.000,00')
+      unmount()
+
+      render(<MilestonesSetting settings={usd} onChange={vi.fn()} />)
+      expect(screen.getByLabelText(/Milestone amount/)).toHaveValue('100,000.00')
+    })
+
+    it('reads a point as the group mark where the decimal mark is the comma', () => {
+      const onChange = vi.fn()
+      render(<MilestonesSetting settings={settingsWith(oneMilestone)} onChange={onChange} />)
+      const input = screen.getByLabelText(/Milestone amount/)
+      // A number field reads this as 150: a hundred and fifty euros.
+      fireEvent.change(input, { target: { value: '150.000' } })
+      fireEvent.blur(input)
+
+      expect(onChange).toHaveBeenCalledWith({ milestones: [{ amountCents: 15_000_000, label: 'House deposit' }] })
+      expect(input).toHaveValue('150.000,00')
+    })
+
+    it('reads a comma as the group mark where the decimal mark is the point', () => {
+      const onChange = vi.fn()
+      render(<MilestonesSetting settings={usd} onChange={onChange} />)
+      const input = screen.getByLabelText(/Milestone amount/)
+      fireEvent.change(input, { target: { value: '150,000' } })
+      fireEvent.blur(input)
+
+      expect(onChange).toHaveBeenCalledWith({ milestones: [{ amountCents: 15_000_000, label: 'House deposit' }] })
+    })
+
+    it('takes the other mark as the decimal one when it is alone with one or two digits, as the other fields do', () => {
+      const onChange = vi.fn()
+      render(<MilestonesSetting settings={usd} onChange={onChange} />)
+      const input = screen.getByLabelText(/Milestone amount/)
+      fireEvent.change(input, { target: { value: '2500,5' } })
+      fireEvent.blur(input)
+
+      expect(onChange).toHaveBeenCalledWith({ milestones: [{ amountCents: 250_050, label: 'House deposit' }] })
+    })
+
+    it('goes back to the saved amount for text with no digit in it', () => {
+      const onChange = vi.fn()
+      render(<MilestonesSetting settings={settingsWith(oneMilestone)} onChange={onChange} />)
+      const input = screen.getByLabelText(/Milestone amount/)
+      fireEvent.change(input, { target: { value: 'lots' } })
+      fireEvent.blur(input)
+
+      expect(onChange).toHaveBeenCalledWith({ milestones: oneMilestone })
+      expect(input).toHaveValue('100.000,00')
+    })
+
+    it('keeps the ceiling on an amount past it', () => {
+      const onChange = vi.fn()
+      render(<MilestonesSetting settings={settingsWith(oneMilestone)} onChange={onChange} />)
+      const input = screen.getByLabelText(/Milestone amount/)
+      fireEvent.change(input, { target: { value: '99999999999999' } })
+      fireEvent.blur(input)
+
+      expect(onChange).toHaveBeenCalledWith({ milestones: [{ amountCents: MILESTONE_MAX_CENTS, label: 'House deposit' }] })
     })
   })
 
