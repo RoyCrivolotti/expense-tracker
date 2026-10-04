@@ -96,6 +96,15 @@ export function ChevronIcon(props: IconProps) {
   )
 }
 
+/** Opens something to the full screen: two arrows pointing out from opposite corners. */
+export function ExpandIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M15 3h6v6M9 21H3v-6M21 3l-7.5 7.5M3 21l7.5-7.5" />
+    </svg>
+  )
+}
+
 export function RefreshIcon(props: IconProps) {
   return (
     <svg {...base} {...props}>

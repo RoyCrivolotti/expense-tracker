@@ -4,12 +4,17 @@ import type { GoalScenario, Milestone } from '../../../../types'
 import type { PlanFromToday } from '../../../../engine'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import { milestoneLabelWithAmount, shortMonthYearLabel } from '../../../../engine'
+import { Presence } from '../../../components/Presence'
 import { SegmentedControl } from '../../../components/SegmentedControl'
+import { EXIT_MS } from '../../../hooks/motion'
+import { ExpandIcon } from '../../../icons'
 import { todayIso } from '../../../components/transactionFormState'
 import { ChartShell } from './ChartShell'
 import { MilestoneByGoal } from './MilestoneByGoal'
 import { MilestoneGrid, type CellRef, type YearsUnit } from './MilestoneGrid'
 import { MilestoneReadout } from './MilestoneReadout'
+import { MilestoneSheet } from './MilestoneSheet'
+import { MilestoneToolbar } from './MilestoneToolbar'
 import { MilestoneTimeline } from './MilestoneTimeline'
 import {
   buildRows,
@@ -18,6 +23,7 @@ import {
   longestHorizon,
   pageLabel,
   reachedByEveryRow,
+  sentenceAt,
   splitPages,
   type MilestoneRow,
 } from './milestoneModel'
@@ -28,11 +34,6 @@ import { useMediaQuery } from '../../../hooks/useMediaQuery'
 import { useGoalsNarrow } from '../useGoalsNarrow'
 import styles from '../goals.module.css'
 
-const UNITS = [
-  { value: 'years', label: 'Years from now' },
-  { value: 'calendar', label: 'Calendar year' },
-] as const
-
 const VIEWS = [
   { value: 'table', label: 'Table' },
   { value: 'timeline', label: 'Timeline' },
@@ -42,38 +43,6 @@ type View = (typeof VIEWS)[number]['value']
 
 /** The width of a 375px phone's card, which is what a test (no layout) and the first paint go by. */
 const PHONE_WIDTH = 327
-
-const NO_PLAN ='No scenario is marked as your current plan, so there is nothing to compare with.'
-
-function Toolbar({
-  unit,
-  onUnit,
-  vsPlan,
-  onVsPlan,
-  hasPlan,
-}: {
-  unit: YearsUnit
-  onUnit: (unit: YearsUnit) => void
-  vsPlan: boolean
-  onVsPlan: () => void
-  hasPlan: boolean
-}) {
-  return (
-    <div className={styles.matrixTools}>
-      <SegmentedControl options={[...UNITS]} value={unit} onChange={onUnit} ariaLabel="Show each milestone as" />
-      <button
-        type="button"
-        className={styles.matrixToggle}
-        aria-pressed={hasPlan && vsPlan}
-        disabled={!hasPlan}
-        title={hasPlan ? 'Show how many years sooner or later each path gets there than the plan' : NO_PLAN}
-        onClick={onVsPlan}
-      >
-        vs plan
-      </button>
-    </div>
-  )
-}
 
 function Legend({ longest, plan }: { longest: number; plan: MilestoneRow | null }) {
   return (
@@ -102,13 +71,6 @@ function Legend({ longest, plan }: { longest: number; plan: MilestoneRow | null 
       ) : null}
     </ul>
   )
-}
-
-/** The sentence for the cell the reader is on, or null before they have been on one. */
-function sentenceAt(point: CellRef | null, rows: MilestoneRow[], sentences: string[][]): string | null {
-  if (!point) return null
-  const row = rows.findIndex((r) => r.id === point.rowId)
-  return sentences[row]?.[point.index] ?? null
 }
 
 const PHONE_VIEWS = [
@@ -146,7 +108,10 @@ function FoldedLine({
   )
 }
 
-/** The two ways to read the table on a phone, and which page of milestones the table is on. */
+/**
+ * The two ways to read the table on a phone, which page of milestones the table is on, and, where
+ * it has more than one, the way to open every milestone at once.
+ */
 function PhoneTools({
   view,
   onView,
@@ -154,6 +119,7 @@ function PhoneTools({
   page,
   onPage,
   label,
+  onSheet,
 }: {
   view: PhoneView
   onView: (view: PhoneView) => void
@@ -161,10 +127,19 @@ function PhoneTools({
   page: number
   onPage: (page: number) => void
   label: (index: number) => string
+  onSheet: () => void
 }) {
   return (
     <div className={styles.matrixPhoneTools}>
-      <SegmentedControl options={[...PHONE_VIEWS]} value={view} onChange={onView} ariaLabel="Read the milestones as" />
+      <div className={styles.matrixPhoneRow}>
+        <SegmentedControl options={[...PHONE_VIEWS]} value={view} onChange={onView} ariaLabel="Read the milestones as" />
+        {pages.length > 1 ? (
+          <button type="button" className={styles.matrixToggle} onClick={onSheet}>
+            <ExpandIcon className={styles.matrixToggleIcon} aria-hidden="true" />
+            All milestones
+          </button>
+        ) : null}
+      </div>
       {view === 'table' && pages.length > 1 ? (
         <SegmentedControl
           layout="scroll"
@@ -198,6 +173,7 @@ function MatrixBody({
   const [view, setView] = useState<PhoneView>('table')
   const [page, setPage] = useState(0)
   const [goal, setGoal] = useState(0)
+  const [sheet, setSheet] = useState(false)
   // No hover on a touch screen: the cells are read by tapping them.
   const touch = useMediaQuery('(hover: none)')
   // On the phone the table shows as many milestones as its width holds, a page at a time.
@@ -234,7 +210,7 @@ function MatrixBody({
 
   return (
     <div ref={box}>
-      <Toolbar
+      <MilestoneToolbar
         unit={unit}
         onUnit={setUnit}
         vsPlan={vsPlan}
@@ -250,6 +226,7 @@ function MatrixBody({
             pages={pages}
             page={shownPage}
             label={amountOf}
+            onSheet={() => setSheet(true)}
             onPage={(next) => {
               setPage(next)
               setPoint(null)
@@ -295,6 +272,22 @@ function MatrixBody({
           more=" The arrow keys move between cells."
         />
       )}
+      <Presence show={phone && sheet} exitMs={EXIT_MS.fade}>
+        <MilestoneSheet
+          rows={rows}
+          milestones={milestones}
+          reached={reached}
+          unit={unit}
+          onUnit={setUnit}
+          vsPlan={vsPlan}
+          onVsPlan={() => setVsPlan((on) => !on)}
+          plan={comparing}
+          hasPlan={plan !== null}
+          sentences={sentences}
+          touch={touch}
+          onClose={() => setSheet(false)}
+        />
+      </Presence>
     </div>
   )
 }

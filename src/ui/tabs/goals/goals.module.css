@@ -1520,6 +1520,177 @@
   max-width: 100%;
 }
 
+/* The view switch, and beside it the button that opens every milestone. */
+.matrixPhoneRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  max-width: 100%;
+}
+
+.matrixToggleIcon {
+  width: 0.9em;
+  height: 0.9em;
+  margin-right: 0.35em;
+  vertical-align: -0.1em;
+}
+
+/* Every milestone on the whole screen. The page behind is locked while it is open. */
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+  /* A fixed surface is placed against the screen, under the status bar and the home indicator, and
+     in landscape the notch: it pays for them itself. */
+  padding:
+    max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right))
+    max(0.5rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
+  animation: sheet-fade-in var(--motion-enter-fade, 150ms) ease-out;
+}
+
+.sheetLeaving {
+  animation: sheet-fade-out var(--exit-ms, 130ms) ease-in forwards;
+}
+
+@keyframes sheet-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes sheet-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet,
+  .sheetLeaving {
+    animation: none;
+  }
+}
+
+.sheetBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+}
+
+/* Upright: the title and the close button on one line, the toggles under them. On its side there is
+   room for the toggles between the two. */
+.sheetTitle {
+  order: 1;
+  flex: 1 1 8rem;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.sheetBar .matrixTools {
+  order: 3;
+  flex: 1 1 100%;
+  margin: 0;
+}
+
+.sheetBar .sheetClose {
+  order: 2;
+}
+
+@media (orientation: landscape) {
+  .sheetBar .matrixTools {
+    order: 2;
+    flex: 0 0 auto;
+  }
+
+  .sheetBar .sheetClose {
+    order: 3;
+  }
+}
+
+.sheetClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 4%, var(--color-bg));
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.sheetClose:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.sheetHint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.74rem;
+}
+
+/* The table is the one thing that scrolls, both ways, with its heads and names held. */
+.sheetBody {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sheetBody .milestoneScroll {
+  --scroll-cover: var(--color-bg);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.matrixTable.matrixTableSheet {
+  width: max(100%, calc(9rem + var(--cols, 7) * 3.7rem));
+}
+
+.matrixTable.matrixTableSheet .milestoneScenarioHead,
+.matrixTable.matrixTableSheet .milestoneScenarioCell {
+  width: 9rem;
+}
+
+.matrixTableSheet th:first-child,
+.matrixTableSheet td:first-child {
+  background: var(--color-bg);
+}
+
+.matrixTableSheet thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--color-bg);
+}
+
+.matrixTableSheet thead th:first-child {
+  z-index: 3;
+}
+
+/* A sentence takes two lines of a screen on its side, four of one upright; its room is kept either way. */
+.sheet .matrixReadout {
+  margin: 0;
+  min-height: 2.8em;
+}
+
+@media (orientation: portrait) {
+  .sheet .matrixReadout {
+    min-height: 5.6em;
+  }
+}
+
 /* One milestone and the paths in the order they get there. */
 .byGoal {
   display: flex;
