@@ -210,6 +210,12 @@ describe('the inputs panel on a touch screen', () => {
     expect(stepper.find((r) => r.selector === '.wrap')?.body).toMatch(/gap:\s*var\(--stepper-gap,\s*0\.25rem\)/)
   })
 
+  it('keeps a stepper narrow enough to end inside its column, where the next column\'s star hangs', () => {
+    // 133px with the 8px gap and a 75px word is the 216px the narrowest column is; the 141px it was reached 9px past.
+    expect(rule('.stack')).toMatch(/--stepper-input-width:\s*2\.5rem/)
+    expect(rule('.stack .fieldRow')).toMatch(/gap:\s*0\.5rem/)
+  })
+
   it("keeps a row's label and the star beside it on one line whether the label wraps or not", () => {
     // The label starts a fixed distance down, and the star is on the middle of the row's first 44px.
     expect(rule('.stack .fieldRow')).toMatch(/align-items:\s*flex-start/)

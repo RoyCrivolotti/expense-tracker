@@ -2042,15 +2042,17 @@
 }
 
 /* The inputs panel's steppers and fields, which are 26px tall, are 44px for a finger. The
-   stepper keeps its width in check (a 44px square with a 48px field between is 141px, against
-   the 115px it was), and a row's label starts a fixed distance down instead of centring, so the
+   stepper keeps its width in check (a 44px square with a 40px field between is 133px, against
+   the 115px it was, and with 8px between it and the label it fits the narrowest column, 216px,
+   beside a label whose longest word is 75px: wider, and its + button reached into the gutter
+   where the next column's star hangs), and a row's label starts a fixed distance down instead of centring, so the
    star hung beside it (planDesktop.module.css) is on the label's first line whether the label
    wraps or not. */
 @media (pointer: coarse) and (min-width: 900px) {
   .stack {
     --stepper-size: 2.75rem;
     --stepper-gap: 0.15rem;
-    --stepper-input-width: 3rem;
+    --stepper-input-width: 2.5rem;
   }
 
   .stack .valueInput {
@@ -2068,6 +2070,7 @@
 
   .stack .fieldRow {
     align-items: flex-start;
+    gap: 0.5rem;
   }
 
   .stack .fieldLabel {
