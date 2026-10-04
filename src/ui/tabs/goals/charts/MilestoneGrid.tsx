@@ -7,20 +7,24 @@ import { scenarioInk } from '../scenarioInk'
 import { useGoalsNarrow } from '../useGoalsNarrow'
 import {
   CELL_MOVES,
-  calendarYear,
-  gapIsSooner,
-  gapShort,
-  gapVersus,
+  cellText,
+  gapLabel,
   longestHorizon,
   moveCell,
+  rowHasGaps,
   tintPercent,
   type CellMove,
+  type GapText,
   type MilestoneRow,
+  type YearsUnit,
 } from './milestoneModel'
 import { ScrollRegion } from './ScrollRegion'
 import styles from '../goals.module.css'
 
-export type YearsUnit = 'years' | 'calendar'
+export type { YearsUnit }
+
+/** On a phone, more columns than this leave no room for the currency sign in a head. */
+const MAX_WITH_SIGN = 5
 
 /** The cell the reader is on: set by pointing, focus or a tap, and kept for the readout. */
 export interface CellRef {
@@ -73,18 +77,6 @@ function MilestoneHead({
   )
 }
 
-/**
- * What a cell says in its tinted box: the years from today, or the calendar year the path's own
- * yearly step falls in. Already there is a tick in both.
- */
-function cellText(row: MilestoneRow, index: number, unit: YearsUnit): string {
-  const years = row.cells[index] ?? null
-  const calendar = unit === 'calendar'
-  if (years === 0) return '✓'
-  if (years === null) return `${calendar ? calendarYear(row, row.horizonYears) : row.horizonFromNow}+`
-  return calendar ? String(calendarYear(row, row.sinceStart[index] ?? 0)) : `${years}y`
-}
-
 function boxClass(years: number | null): string {
   if (years === 0) return `${styles.matrixBox} ${styles.matrixDone}`
   if (years === null) return `${styles.matrixBox} ${styles.matrixBeyond}`
@@ -95,24 +87,6 @@ function crosshairClass(onRow: boolean, onCol: boolean): string {
   if (onRow && onCol) return styles.matrixCross ?? ''
   if (onRow || onCol) return styles.matrixLine ?? ''
   return ''
-}
-
-interface GapText {
-  text: string
-  sooner: boolean
-}
-
-/** The line under a cell while the table is comparing with the plan; null where there is nothing to say. */
-function gapLabel(row: MilestoneRow, plan: MilestoneRow | null, index: number): GapText | null {
-  const gap = gapVersus(row, plan, index)
-  // Both already there: the check marks say it, and "=" under each is only noise.
-  if (gap === null || (gap.kind === 'same' && row.cells[index] === 0)) return null
-  return { text: gapShort(gap), sooner: gapIsSooner(gap) }
-}
-
-/** A row keeps the line under its cells only if one of them has something to put in it. */
-function rowHasGaps(row: MilestoneRow, plan: MilestoneRow | null): boolean {
-  return row.cells.some((_, index) => gapLabel(row, plan, index) !== null)
 }
 
 /** A blank line holds its height with a no-break space, so the cells of a row stay level. */
@@ -193,6 +167,7 @@ function stepOf(event: KeyboardEvent<HTMLTableElement>): { row: number; col: num
 export function MilestoneGrid({
   rows,
   milestones,
+  columns,
   reached,
   unit,
   plan,
@@ -201,9 +176,12 @@ export function MilestoneGrid({
   live,
   onPoint,
   onLeave,
+  className,
 }: {
   rows: MilestoneRow[]
   milestones: Milestone[]
+  /** The milestones to show, by index, in order; all of them when left out. */
+  columns?: number[] | undefined
   reached: Map<number, string>
   unit: YearsUnit
   plan: MilestoneRow | null
@@ -214,13 +192,18 @@ export function MilestoneGrid({
   live: boolean
   onPoint: (cell: CellRef) => void
   onLeave: () => void
+  /** Added to the table's own classes. */
+  className?: string | undefined
 }) {
   const table = useRef<HTMLTableElement>(null)
   const narrow = useGoalsNarrow()
   const [stop, setStop] = useState({ row: 0, col: 0 })
   const longest = longestHorizon(rows)
   const gapRows = rows.map((row) => rowHasGaps(row, plan))
-  const at = { row: Math.min(stop.row, rows.length - 1), col: Math.min(stop.col, milestones.length - 1) }
+  // `data-col` and the focus stop are milestone indices, so a page of columns keeps them stable.
+  const shown = columns ?? milestones.map((_, i) => i)
+  const stopCol = shown.includes(stop.col) ? stop.col : (shown[0] ?? 0)
+  const at = { row: Math.min(stop.row, rows.length - 1), col: stopCol }
   const markedRow = live && point ? point.rowId : null
   const markedCol = live && point ? point.index : null
 
@@ -229,16 +212,20 @@ export function MilestoneGrid({
     const from = stepOf(event)
     if (!from) return
     event.preventDefault()
-    const to = moveCell(from, event.key as CellMove, { rows: rows.length, cols: milestones.length })
-    table.current?.querySelector<HTMLElement>(`td[data-row="${to.row}"][data-col="${to.col}"]`)?.focus()
+    const to = moveCell({ row: from.row, col: shown.indexOf(from.col) }, event.key as CellMove, {
+      rows: rows.length,
+      cols: shown.length,
+    })
+    const col = shown[to.col] ?? from.col
+    table.current?.querySelector<HTMLElement>(`td[data-row="${to.row}"][data-col="${col}"]`)?.focus()
   }
 
   return (
     <ScrollRegion label="Years to milestone" focusable={false}>
       <table
         ref={table}
-        className={`${styles.milestoneTable} ${styles.matrixTable}`}
-        style={{ '--cols': milestones.length } as CSSProperties}
+        className={`${styles.milestoneTable} ${styles.matrixTable}${className ? ` ${className}` : ''}`}
+        style={{ '--cols': shown.length } as CSSProperties}
         role="grid"
         aria-label="Years to milestone, one row per path"
         onKeyDown={onKeyDown}
@@ -250,13 +237,13 @@ export function MilestoneGrid({
         <thead>
           <tr>
             <th className={styles.milestoneScenarioHead}>Scenario</th>
-            {milestones.map((m, i) => (
+            {shown.map((i) => (
               <MilestoneHead
-                key={m.amountCents}
-                milestone={m}
-                reachedOn={reached.get(m.amountCents)}
+                key={milestones[i]?.amountCents ?? i}
+                milestone={milestones[i] as Milestone}
+                reachedOn={reached.get(milestones[i]?.amountCents ?? -1)}
                 marked={markedCol === i}
-                bare={narrow}
+                bare={narrow && shown.length > MAX_WITH_SIGN}
               />
             ))}
           </tr>
@@ -265,7 +252,7 @@ export function MilestoneGrid({
           {rows.map((row, r) => (
             <tr key={row.id}>
               <RowHead row={row} isPlanShown={plan !== null && row.id === plan.id} marked={markedRow === row.id} />
-              {row.cells.map((_, c) => (
+              {shown.map((c) => (
                 <Cell
                   key={milestones[c]?.amountCents ?? c}
                   row={row}
