@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { ToastContext } from '../../hooks/useToast'
 import { AdjustSectionNav } from './AdjustSectionNav'
 import { ADJUST_SECTIONS, adjustSectionId, type AdjustSection } from './adjustSections'
 import { ADJUST_STACK_ID } from './goalsAnchors'
@@ -296,18 +298,31 @@ describe('AdjustSectionNav', () => {
     ])
   })
 
-  it('writes the reason Save is off under the buttons while the scenario has no name, and not once it has one', () => {
+  it('says why Save is off, when pressed, instead of writing it into the pinned row', async () => {
+    const user = userEvent.setup()
+    const showToast = vi.fn()
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <ToastContext.Provider value={{ showToast }}>{children}</ToastContext.Provider>
+    )
     const unsaved = { name: ' ', saving: false, onSave: vi.fn(), onDiscard: vi.fn() }
-    const { rerender } = render(<AdjustSectionNav unsaved={unsaved} />)
+    const { rerender } = render(<AdjustSectionNav unsaved={unsaved} />, { wrapper })
 
     const save = screen.getByRole('button', { name: 'Save changes' })
-    expect(save).toBeDisabled()
-    expect(screen.getByText('Give the scenario a name to save it')).toBeVisible()
+    expect(save).toHaveAttribute('aria-disabled', 'true')
+    expect(save).not.toBeDisabled()
     expect(save).toHaveAccessibleDescription('Give the scenario a name to save it')
-    expect(save).not.toHaveAttribute('title')
+    // The words are only the clipped description: no line of them is in the row to take room.
+    expect(screen.getAllByText('Give the scenario a name to save it')).toHaveLength(1)
+    expect(screen.getByText('Give the scenario a name to save it').className).toMatch(/srOnly/)
+
+    await user.click(save)
+    expect(showToast).toHaveBeenCalledWith('Give the scenario a name to save it')
+    expect(unsaved.onSave).not.toHaveBeenCalled()
 
     rerender(<AdjustSectionNav unsaved={{ ...unsaved, name: 'Path A' }} />)
     expect(screen.queryByText('Give the scenario a name to save it')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Save changes to Path A' }))
+    expect(unsaved.onSave).toHaveBeenCalledTimes(1)
   })
 
   it('sets Save apart from Discard as the one to press', () => {

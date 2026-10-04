@@ -1,4 +1,4 @@
-import { useCallback, useId, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { GoalScenario } from '../../../../types'
 import type { ExpenseActions } from '../../../actions'
 import { ConfirmSheet } from '../../../components/ConfirmSheet'
@@ -7,7 +7,8 @@ import { EXIT_MS } from '../../../hooks/motion'
 import { deleteMessage } from '../deleteMessage'
 import { DiscardSheet } from '../DiscardSheet'
 import { readOnlyScenarioNote } from '../readOnlyCopy'
-import { NAME_HINT, UnsavedGroup } from '../UnsavedGroup'
+import { SaveButton } from '../SaveButton'
+import { UnsavedGroup } from '../UnsavedGroup'
 import type { ScenarioEditor } from '../useScenarioEditor'
 import goalStyles from '../goals.module.css'
 import { ScenarioMenu } from './ScenarioMenu'
@@ -21,27 +22,17 @@ interface ScenarioBarProps {
   actions: ExpenseActions | undefined
 }
 
-/** The draft's Save scenario button, with the reason it is off written beside it when it has no name. */
+/** The draft's Save scenario button, which says why it is off when it has no name. */
 function SaveDraft({ name, creating, onSave }: { name: string; creating: boolean; onSave: (name: string) => void }) {
-  const hintId = useId()
-  const unnamed = name.trim().length === 0
   return (
-    <>
-      {unnamed ? (
-        <span id={hintId} className={goalStyles.nameHint}>
-          {NAME_HINT}
-        </span>
-      ) : null}
-      <button
-        type="button"
-        className={`${goalStyles.btn} ${goalStyles.btnPrimary}`}
-        {...(unnamed ? { 'aria-describedby': hintId } : {})}
-        disabled={unnamed || creating}
-        onClick={() => onSave(name.trim())}
-      >
-        Save scenario
-      </button>
-    </>
+    <SaveButton
+      className={`${goalStyles.btn} ${goalStyles.btnPrimary}`}
+      unnamed={name.trim().length === 0}
+      disabled={creating}
+      onSave={() => onSave(name.trim())}
+    >
+      Save scenario
+    </SaveButton>
   )
 }
 
@@ -102,7 +93,6 @@ export function ScenarioBar({ scenarios, editor, actions }: ScenarioBarProps) {
                 <UnsavedGroup
                   className={styles.unsavedActions}
                   saveLabel="Save changes"
-                  nameHint
                   onGone={focusTab}
                   unsaved={{ name: draft.name, saving, onSave: editor.onSaveChanges, onDiscard: editor.onDiscard }}
                 />

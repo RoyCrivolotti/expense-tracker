@@ -5,7 +5,8 @@
  * the fold, under the header once scrolled past), the inputs panel folding in and out, the
  * scenario menu, the stars that move an input to the bar and back, the order Tab goes in and that
  * nothing it reaches is under the bar, the question asked before leaving Goals with an unsaved edit,
- * the Years to milestone table (`ONLY=milestone-table` runs just that) and its timeline (`ONLY=milestone-timeline`).
+ * the Years to milestone table (`ONLY=milestone-table` runs just that) and its timeline (`ONLY=milestone-timeline`),
+ * and why Save is off for a scenario with no name (`ONLY=s2`).
  *
  * jsdom lays nothing out, so the unit tests cannot say any of this. Manual, like
  * verify:goals-nav: it needs a browser and takes a few minutes, so it is not part of
@@ -998,15 +999,14 @@ async function checkTouchTargets(browser, engine) {
   check(where, '(t) a colour dot has a 36 by 44px tap area, with no overlap with the next', near(menu.hit[0], 36, 0.5) && near(menu.hit[1], 44, 0.5) && near(menu.pitch, 36, 0.5), JSON.stringify(menu))
   check(where, '(t) a press 7px above or below a colour dot is that dot\'s', menu.overIsSwatch && menu.underIsSwatch, JSON.stringify(menu))
   await checkSizes(page, where, '(t) the scenario menu\'s rows and name field are 44px', '[role="dialog"][aria-label="Scenario options"] button:not([aria-label^="Use color"]):not([aria-label="Pick custom color"]), [role="dialog"][aria-label="Scenario options"] input[type="text"]')
-  // With no name the save says why, in words, next to the button.
+  // With no name Save is off but still takes a press, to say why (group s2 has the rest), and no words are put in the page.
   await page.getByLabel('Scenario name').fill('')
   await page.keyboard.press('Escape')
   await dialog.waitFor({ state: 'detached' })
-  const hint = page.getByText('Give the scenario a name to save it')
-  check(where, '(t) with no name, the words say what Save needs', await hint.isVisible())
-  const hintBox = await hint.boundingBox()
-  check(where, '(t) the words are inside the window and the page does not scroll sideways', hintBox !== null && hintBox.x >= 0 && hintBox.x + hintBox.width <= 1032 && (await measure(page)).pageScrollWidth <= 1032, JSON.stringify(hintBox))
-  check(where, '(t) Save changes is off and says why to a screen reader', (await page.getByRole('button', { name: 'Save changes' }).isDisabled()) && (await page.getByRole('button', { name: 'Save changes' }).evaluate((b) => b.getAttribute('aria-describedby') !== null)))
+  check(where, '(t) with no name, no words are written in the page for what Save needs', (await writtenCopies(page, 'Give the scenario a name to save it')) === 0)
+  check(where, '(t) the page does not scroll sideways', (await measure(page)).pageScrollWidth <= 1032)
+  const off = page.getByRole('button', { name: 'Save changes' })
+  check(where, '(t) Save changes is aria-disabled, not disabled, and says why to a screen reader', (await off.getAttribute('aria-disabled')) === 'true' && (await off.getAttribute('disabled')) === null && (await off.getAttribute('aria-describedby')) !== null)
   await page.getByRole('button', { name: 'Discard changes' }).click()
   await page.waitForTimeout(300)
 
@@ -1389,103 +1389,324 @@ async function checkFirstDraft(browser, engine) {
 }
 
 /**
- * On a phone, the reason Save is off (the scenario has no name) is written in the page, since a
- * touch screen never shows a tooltip: under the pinned Save and Discard, and under Save in the
- * scenario card. It comes into the pinned stack without moving the chart or the chips above it.
+ * (s2) A Save that is off because the scenario has no name says why when it is pressed (a toast),
+ * with no words written into the layout. It is `aria-disabled`, not `disabled`, because a disabled
+ * button swallows a tap, a click and the pointer. Phones (touch, 375 and 320 wide): the pinned
+ * Save and Discard row, the scenario card's Save changes and its Save as new. A wide screen with a
+ * mouse: Save changes in the scenario row and the draft's Save scenario. Nothing moves when the name
+ * is cleared (the pinned stack keeps its height at every moment), nothing scrolls sideways, and with
+ * a name typed Save saves.
  */
+const SAVE_HINT = 'Give the scenario a name to save it'
+
+/** The toast, which is the live region; the clipped description a screen reader has is not a status. */
+const saveToast = (page) => page.locator('[role="status"]', { hasText: SAVE_HINT })
+
+const centre = (box) => ({ x: box.x + box.width / 2, y: box.y + box.height / 2 })
+
+/** A real touch at the middle of the button (Playwright's own tap and click refuse an aria-disabled one). */
+async function touchTap(page, button) {
+  const c = centre(await button.boundingBox())
+  await page.touchscreen.tap(c.x, c.y)
+}
+
+async function mouseClick(page, button) {
+  const c = centre(await button.boundingBox())
+  await page.mouse.click(c.x, c.y)
+}
+
+function saveState(button) {
+  return button.evaluate((el) => {
+    const cs = getComputedStyle(el)
+    return {
+      ariaDisabled: el.getAttribute('aria-disabled'),
+      disabled: el.disabled,
+      title: el.getAttribute('title'),
+      described: document.getElementById(el.getAttribute('aria-describedby') ?? '')?.textContent ?? null,
+      opacity: parseFloat(cs.opacity),
+      cursor: cs.cursor,
+      filter: cs.filter,
+      transform: cs.transform,
+    }
+  })
+}
+
+/** Off as a disabled button looks (the same opacity and cursor, no hover or press effect), yet enabled to a press, and described. */
+const isOffButAnswers = (s) =>
+  s.ariaDisabled === 'true' && !s.disabled && s.described === SAVE_HINT && near(s.opacity, 0.45, 0.01) && s.cursor === 'not-allowed' && s.filter === 'none'
+
+/** How many places show `text` to someone who can see: holders of it more than a pixel across, outside the toast. */
+function writtenCopies(page, text) {
+  return page.evaluate(
+    (words) =>
+      [...document.querySelectorAll('body *')].filter((el) => {
+        if (el.children.length > 0 || el.textContent !== words || el.closest('[role="status"]')) return false
+        const r = el.getBoundingClientRect()
+        return r.width > 2 && r.height > 2
+      }).length,
+    text,
+  )
+}
+
+function insideWindow(box, width, height) {
+  return box !== null && box.x >= 0 && box.y >= 0 && box.x + box.width <= width + 0.5 && box.y + box.height <= height + 0.5
+}
+
+/** Waits for the toast to be on screen, and says whether it is whole inside the window and the only one. */
+async function toastShown(page, size) {
+  const toast = saveToast(page)
+  await toast.first().waitFor({ state: 'visible', timeout: 3000 })
+  await page.waitForTimeout(250)
+  return { one: (await toast.count()) === 1, inside: insideWindow(await toast.first().boundingBox(), size.width, size.height) }
+}
+
+async function toastGone(page) {
+  await saveToast(page).first().waitFor({ state: 'detached', timeout: 7000 })
+}
+
+async function openPhone(browser, phone) {
+  const context = await browser.newContext({
+    viewport: { width: phone.width, height: phone.height },
+    screen: { width: phone.width, height: phone.height },
+    deviceScaleFactor: 2,
+    isMobile: true,
+    hasTouch: true,
+    colorScheme: 'light',
+    reducedMotion: 'reduce',
+  })
+  const page = await context.newPage()
+  page.on('pageerror', (e) => failures.push(`page error: ${e.message}`))
+  await page.addInitScript(() => localStorage.setItem('exp-onboarding-skipped', '1'))
+  await page.goto(`${BASE}/`)
+  await page.waitForSelector('text=Recent activity', { timeout: 20000 })
+  await page.getByRole('button', { name: 'Goals', exact: true }).click()
+  await page.getByRole('tablist', { name: 'Goals view' }).waitFor({ timeout: 15000 })
+  await page.getByRole('tab', { name: 'Scenarios', exact: true }).tap()
+  await settled(page)
+  return { page, context }
+}
+
+/** Where the pinned stack's parts are, and its size. */
+function pinnedBoxes(page) {
+  return page.evaluate(() => {
+    const top = (el) => (el ? Math.round(el.getBoundingClientRect().top * 10) / 10 : null)
+    const s = document.getElementById('goals-adjust-stack')
+    return {
+      stackTop: top(s),
+      height: s ? Math.round(s.getBoundingClientRect().height * 10) / 10 : null,
+      chart: top(s?.querySelector('svg')),
+      chips: top(s?.querySelector('nav')),
+      view: top(document.querySelector('[role="tablist"][aria-label="Goals view"]')),
+    }
+  })
+}
+
+/** Starts writing down every height the pinned stack has, from now on. */
+function watchStack(page) {
+  return page.evaluate(() => {
+    const stack = document.getElementById('goals-adjust-stack')
+    window.__stackHeights = [stack.getBoundingClientRect().height]
+    new ResizeObserver(() => window.__stackHeights.push(stack.getBoundingClientRect().height)).observe(stack, { box: 'border-box' })
+  })
+}
+
+const stackHeights = (page) => page.evaluate(() => window.__stackHeights)
+
+/** The pinned row, with the name cleared: Save is off but answers, the words are nowhere, and a tap shows the toast. */
+async function checkPinnedRow(page, where, phone) {
+  const stack = page.locator('#goals-adjust-stack')
+  const save = stack.getByRole('button', { name: 'Save changes', exact: true })
+  check(where, '(s2) the pinned Save is aria-disabled, not disabled, looks as off as a disabled one, and is described by the words', isOffButAnswers(await saveState(save)), JSON.stringify(await saveState(save)))
+  check(where, '(s2) no words are written in the page for it', (await writtenCopies(page, SAVE_HINT)) === 0, `${await writtenCopies(page, SAVE_HINT)} copies`)
+  check(where, '(s2) before it is pressed there is no toast', (await saveToast(page).count()) === 0)
+  await touchTap(page, save)
+  const first = await toastShown(page, phone)
+  check(where, '(s2) a tap on the pinned Save shows the toast, whole inside the screen', first.one && first.inside, JSON.stringify(first))
+  await touchTap(page, save)
+  await page.waitForTimeout(300)
+  const second = await toastShown(page, phone)
+  check(where, '(s2) a second tap while it is up leaves one toast, not two', second.one && second.inside, JSON.stringify(second))
+  const m = await measure(page)
+  check(where, '(s2) the page does not scroll sideways', m.pageScrollWidth <= m.iw, `scrollWidth ${m.pageScrollWidth}`)
+}
+
+/** The scenario card's two buttons that need a name. */
+async function checkCardSaves(page, where, phone) {
+  const header = page.locator('[class*="activeHeader"]')
+  const card = header.getByRole('button', { name: 'Save changes', exact: true })
+  await card.scrollIntoViewIfNeeded()
+  await settled(page)
+  check(where, "(s2) the scenario card's Save changes is aria-disabled and described", isOffButAnswers(await saveState(card)), JSON.stringify(await saveState(card)))
+  await toastGone(page)
+  await touchTap(page, card)
+  const shown = await toastShown(page, phone)
+  check(where, "(s2) a tap on the card's Save changes shows the toast", shown.one && shown.inside, JSON.stringify(shown))
+
+  await toastGone(page)
+  await header.getByRole('button', { name: 'Save as new scenario…' }).tap()
+  const copy = header.getByLabel('Name for new scenario')
+  await copy.fill('')
+  const asNew = header.getByRole('button', { name: 'Save as new', exact: true })
+  check(where, '(s2) Save as new with an empty name is aria-disabled and described', isOffButAnswers(await saveState(asNew)), JSON.stringify(await saveState(asNew)))
+  await asNew.scrollIntoViewIfNeeded()
+  await touchTap(page, asNew)
+  const again = await toastShown(page, phone)
+  check(where, '(s2) a tap on Save as new shows the toast', again.one && again.inside, JSON.stringify(again))
+  await header.getByRole('button', { name: 'Cancel', exact: true }).tap()
+}
+
 async function checkPhoneSaveReason(browser, engine) {
   for (const phone of [
     { name: '375x812', width: 375, height: 812 },
     { name: '320x568', width: 320, height: 568 },
   ]) {
     const where = `${engine} phone ${phone.name}`
-    const context = await browser.newContext({
-      viewport: { width: phone.width, height: phone.height },
-      screen: { width: phone.width, height: phone.height },
-      deviceScaleFactor: 2,
-      isMobile: true,
-      hasTouch: true,
-      colorScheme: 'light',
-      reducedMotion: 'reduce',
-    })
-    const page = await context.newPage()
-    page.on('pageerror', (e) => failures.push(`page error: ${e.message}`))
-    await page.addInitScript(() => localStorage.setItem('exp-onboarding-skipped', '1'))
-    await page.goto(`${BASE}/`)
-    await page.waitForSelector('text=Recent activity', { timeout: 20000 })
-    await page.getByRole('button', { name: 'Goals', exact: true }).click()
-    await page.getByRole('tablist', { name: 'Goals view' }).waitFor({ timeout: 15000 })
-    await page.getByRole('tab', { name: 'Scenarios', exact: true }).tap()
-    await settled(page)
-
-    const HINT = 'Give the scenario a name to save it'
+    const { page, context } = await openPhone(browser, phone)
     const name = page.getByLabel('Scenario name', { exact: true })
     await name.fill('Path A, edited')
     await settled(page)
-    const stack = page.locator('#goals-adjust-stack')
-    const pinnedBoxes = () =>
-      page.evaluate(() => {
-        const top = (el) => (el ? Math.round(el.getBoundingClientRect().top * 10) / 10 : null)
-        const s = document.getElementById('goals-adjust-stack')
-        return {
-          stackTop: top(s),
-          stackBottom: s ? Math.round(s.getBoundingClientRect().bottom * 10) / 10 : null,
-          chart: top(s?.querySelector('svg')),
-          chips: top(s?.querySelector('nav')),
-          view: top(document.querySelector('[role="tablist"][aria-label="Goals view"]')),
-        }
-      })
-    const atScroll = async (y) => {
-      await scrollTo(page, y)
-      return pinnedBoxes()
-    }
-    const sticky = (await stack.evaluate((el) => getComputedStyle(el).position)) === 'sticky'
+    const sticky = (await page.locator('#goals-adjust-stack').evaluate((el) => getComputedStyle(el).position)) === 'sticky'
     // Far enough down for the stack to be held under the view row, which is where it must not move.
     const HELD_AT = 1600
-    const without = [await atScroll(0), await atScroll(HELD_AT)]
-    check(where, '(y3) no reason is written while the scenario has a name', (await stack.getByText(HINT).count()) === 0 && (await page.getByText(HINT).count()) === 0)
+    const at = async (y) => {
+      await scrollTo(page, y)
+      return pinnedBoxes(page)
+    }
+    const named = [await at(0), await at(HELD_AT)]
+    await watchStack(page)
 
     await name.fill('')
     await settled(page)
-    const withHint = [await atScroll(0), await atScroll(HELD_AT)]
-    const line = stack.getByText(HINT)
-    check(where, '(y3) with no name, the reason is written in the pinned stack under Save and Discard', (await line.count()) === 1 && (await line.isVisible()))
-    const save = stack.getByRole('button', { name: 'Save changes', exact: true })
-    check(where, '(y3) Save is off, described by those words, and has no tooltip', (await save.isDisabled()) && (await save.getAttribute('title')) === null && (await save.evaluate((el, text) => document.getElementById(el.getAttribute('aria-describedby'))?.textContent === text, HINT)))
-    const box = await line.boundingBox()
-    const m = await measure(page)
-    check(where, '(y3) the reason is inside the screen and the page does not scroll sideways', box !== null && box.x >= 0 && box.x + box.width <= phone.width + 0.5 && m.pageScrollWidth <= m.iw, `${JSON.stringify(box)}, scrollWidth ${m.pageScrollWidth}`)
-    const lines = box ? Math.round(box.height / 14) : 0
-    check(where, '(y3) it is one line, at the end of the row', lines === 1 && box !== null && box.x + box.width >= phone.width - 24, `${lines} lines, ${JSON.stringify(box)}`)
-    // The page below the card moves for the card's own line, as it should; what is held under the
-    // view row (the chart, the chips) stays where it was.
+    const cleared = [await at(0), await at(HELD_AT)]
+    check(where, '(s2) clearing the name does not change the pinned stack at the top or held', near(named[0].height, cleared[0].height, 0.5) && near(named[1].height, cleared[1].height, 0.5), `${named[0].height} and ${named[1].height} against ${cleared[0].height} and ${cleared[1].height}`)
     if (sticky) {
-      const a = without[1]
-      const b = withHint[1]
-      check(where, '(y3) the stack is held under the view row', a.stackTop < 200, `it is at ${px(a.stackTop)}`)
-      check(where, '(y3) the chart, the chips and the view row do not move when the reason comes in', near(a.chart, b.chart, 0.5) && near(a.chips, b.chips, 0.5) && near(a.view, b.view, 0.5) && near(a.stackTop, b.stackTop, 0.5), `${JSON.stringify(a)} against ${JSON.stringify(b)}`)
+      const [a, b] = [named[1], cleared[1]]
+      check(where, '(s2) the chart, the chips and the view row do not move', near(a.chart, b.chart, 0.5) && near(a.chips, b.chips, 0.5) && near(a.view, b.view, 0.5) && a.stackTop < 200, `${JSON.stringify(a)} against ${JSON.stringify(b)}`)
     }
-    const grew = withHint[1].stackBottom - withHint[1].stackTop - (without[1].stackBottom - without[1].stackTop)
-    check(where, '(y3) the stack grows only by the line, 14 to 24px', grew >= 14 && grew <= 24, px(grew))
-
-    // The scenario card's own Save changes says it too, under its buttons.
-    await settled(page)
-    const header = page.locator('[class*="activeHeader"]')
-    const card = header.getByRole('button', { name: 'Save changes', exact: true })
-    await card.scrollIntoViewIfNeeded()
-    const cardLine = header.getByText(HINT)
-    const cardBox = await cardLine.boundingBox()
-    const cardSave = await card.boundingBox()
-    check(where, "(y3) the scenario card writes it under its Save changes, inside the screen", cardBox !== null && cardSave !== null && cardBox.y >= cardSave.y + cardSave.height - 1 && cardBox.x >= 0 && cardBox.x + cardBox.width <= phone.width + 0.5, `${JSON.stringify(cardBox)} under ${JSON.stringify(cardSave)}`)
-    check(where, '(y3) the card\'s Save changes is off and described by it', (await card.isDisabled()) && (await card.evaluate((el, text) => document.getElementById(el.getAttribute('aria-describedby'))?.textContent === text, HINT)))
+    await checkPinnedRow(page, where, phone)
+    await checkCardSaves(page, where, phone)
+    const heights = await stackHeights(page)
+    check(where, '(s2) the pinned stack never had another height, through the clearing and every tap', heights.every((h) => near(h, named[0].height, 0.5) || near(h, named[1].height, 0.5)), `${JSON.stringify(heights)}, it is ${named[0].height} at the top and ${named[1].height} held`)
 
     await name.fill('Path A, edited')
     await settled(page)
-    const gone = (await page.getByText(HINT).count()) === 0
-    const back = await atScroll(0)
-    check(where, '(y3) typing a name takes the reason away and the stack goes back to its height', gone && near(back.stackBottom - back.stackTop, without[0].stackBottom - without[0].stackTop, 0.5), `${px(back.stackBottom - back.stackTop)} against ${px(without[0].stackBottom - without[0].stackTop)}`)
+    await scrollTo(page, HELD_AT)
+    const save = page.locator('#goals-adjust-stack').getByRole('button', { name: 'Save changes to Path A, edited', exact: true })
+    const state = await saveState(save)
+    check(where, '(s2) with a name typed Save is on again, with no reason attached', state.ariaDisabled === null && !state.disabled && state.described === null && state.title === null, JSON.stringify(state))
+    await touchTap(page, save)
+    await page.getByRole('group', { name: 'Unsaved changes' }).waitFor({ state: 'detached', timeout: 5000 })
+    check(where, '(s2) a tap on it saves: the unsaved row goes', true)
     await context.close()
   }
+}
+
+/** Save changes in the scenario row of the wide layout: off with no name, answers a mouse and the keys. */
+async function checkWideSaveChanges(page, where, size) {
+  const monthly = page.getByLabel('Monthly investing', { exact: true })
+  await monthly.fill('750')
+  await monthly.press('Enter')
+  await page.getByText('Unsaved changes').first().waitFor()
+  const group = page.getByRole('group', { name: 'Unsaved changes' })
+  const save = group.getByRole('button').last()
+  const rowBoxes = () =>
+    page.evaluate(() => {
+      const r = (el) => {
+        const b = el?.getBoundingClientRect()
+        return b ? { x: b.x, y: b.y, w: b.width, h: b.height } : null
+      }
+      const g = document.querySelector('[role="group"][aria-label="Unsaved changes"]')
+      return { row: r(document.querySelector('[class*="scenarioBar"]')), group: r(g), save: r(g?.lastElementChild), scrollHeight: document.documentElement.scrollHeight }
+    })
+  const named = await rowBoxes()
+  await page.getByRole('button', { name: 'Scenario options' }).click()
+  await page.getByLabel('Scenario name').fill('')
+  await page.keyboard.press('Escape')
+  await page.getByRole('dialog', { name: 'Scenario options' }).waitFor({ state: 'detached' })
+  await page.waitForTimeout(250)
+  const cleared = await rowBoxes()
+  const same = (a, b) => near(a.x, b.x, 0.5) && near(a.y, b.y, 0.5) && near(a.w, b.w, 0.5) && near(a.h, b.h, 0.5)
+  check(where, '(s2) clearing the name changes nothing in the scenario row: the row, the Save and Discard group and Save keep their boxes, and the page its height', same(named.row, cleared.row) && same(named.group, cleared.group) && same(named.save, cleared.save) && named.scrollHeight === cleared.scrollHeight, `${JSON.stringify(named)} against ${JSON.stringify(cleared)}`)
+  check(where, '(s2) no words are written in the page for it', (await writtenCopies(page, SAVE_HINT)) === 0)
+
+  await page.mouse.move(0, 0)
+  const c = centre(await save.boundingBox())
+  await page.mouse.move(c.x, c.y)
+  await page.waitForTimeout(150)
+  const state = await saveState(save)
+  check(where, '(s2) Save changes is aria-disabled, not disabled, and looks off with the pointer over it, with the words as its tooltip', isOffButAnswers(state) && state.title === SAVE_HINT, JSON.stringify(state))
+  check(where, '(s2) the pointer over it does not lift or press it', state.transform === 'none', state.transform)
+  await mouseClick(page, save)
+  const clicked = await toastShown(page, size)
+  check(where, '(s2) a click shows the toast, whole inside the window', clicked.one && clicked.inside, JSON.stringify(clicked))
+  check(where, '(s2) the click saved nothing: the scenario is still unsaved', (await page.getByText('Unsaved changes').count()) > 0)
+  const shown = await rowBoxes()
+  check(where, '(s2) the toast moved nothing in the row', same(cleared.row, shown.row) && same(cleared.save, shown.save), JSON.stringify(shown))
+
+  await toastGone(page)
+  await save.focus()
+  await page.keyboard.press('Enter')
+  const enter = await toastShown(page, size)
+  check(where, '(s2) Enter on the focused Save shows the toast', enter.one && enter.inside, JSON.stringify(enter))
+  await toastGone(page)
+  await save.focus()
+  await page.keyboard.press(' ')
+  const space = await toastShown(page, size)
+  check(where, '(s2) Space on the focused Save shows the toast', space.one && space.inside, JSON.stringify(space))
+  await toastGone(page)
+
+  await page.getByRole('button', { name: 'Scenario options' }).click()
+  await page.getByLabel('Scenario name').fill('Path A, edited')
+  await page.keyboard.press('Escape')
+  await page.getByRole('dialog', { name: 'Scenario options' }).waitFor({ state: 'detached' })
+  const on = await saveState(save)
+  check(where, '(s2) with a name typed Save is on again, with no reason attached', on.ariaDisabled === null && !on.disabled && on.described === null && on.title === null, JSON.stringify(on))
+  await save.click()
+  await group.waitFor({ state: 'detached', timeout: 5000 })
+  check(where, '(s2) a click on it saves: the unsaved row goes', true)
+}
+
+/** The draft's Save scenario in the scenario row. */
+async function checkWideDraftSave(page, where, size) {
+  const monthly = page.getByLabel('Monthly investing', { exact: true })
+  await monthly.fill('800')
+  await monthly.press('Enter')
+  await page.getByText('Unsaved changes').first().waitFor()
+  await page.getByRole('button', { name: 'Scenario options' }).click()
+  await page.getByLabel('Scenario name').fill('')
+  await page.getByRole('button', { name: 'Keep these edits as a draft' }).click()
+  const save = page.getByRole('button', { name: 'Save scenario', exact: true })
+  await save.waitFor()
+  await page.waitForTimeout(300)
+  const state = await saveState(save)
+  check(where, "(s2) the draft's Save scenario is aria-disabled, not disabled, with the words as its tooltip and description", isOffButAnswers(state) && state.title === SAVE_HINT, JSON.stringify(state))
+  check(where, '(s2) no words are written in the page for it', (await writtenCopies(page, SAVE_HINT)) === 0)
+  await mouseClick(page, save)
+  const shown = await toastShown(page, size)
+  check(where, "(s2) a click on the draft's Save scenario shows the toast", shown.one && shown.inside, JSON.stringify(shown))
+  await toastGone(page)
+
+  await page.getByRole('button', { name: 'Scenario options' }).click()
+  await page.getByLabel('Scenario name').fill('Path Z')
+  await page.keyboard.press('Escape')
+  await page.getByRole('dialog', { name: 'Scenario options' }).waitFor({ state: 'detached' })
+  await save.click()
+  await page.getByRole('tab', { name: /Path Z/ }).waitFor({ timeout: 5000 })
+  check(where, "(s2) with a name typed the draft's Save scenario saves it as a scenario", true)
+}
+
+async function checkWideSaveReason(browser, engine) {
+  const size = SCREENS[3]
+  const { page, context } = await openPlan(browser, size, { scheme: 'light' })
+  const where = `${engine} wide ${size.name} mouse`
+  await checkWideSaveChanges(page, where, size)
+  await checkWideDraftSave(page, where, size)
+  await context.close()
+}
+
+async function checkSaveReason(browser, engine) {
+  await checkPhoneSaveReason(browser, engine)
+  await checkWideSaveReason(browser, engine)
 }
 
 /**
@@ -1996,8 +2217,8 @@ async function main() {
           await checkFirstDraft(browser, engine)
           continue
         }
-        if (process.env.ONLY === 'y3') {
-          await checkPhoneSaveReason(browser, engine)
+        if (process.env.ONLY === 's2') {
+          await checkSaveReason(browser, engine)
           continue
         }
         if (process.env.ONLY === 'y4') {
@@ -2030,7 +2251,7 @@ async function main() {
         await checkBrowserPrompt(browser, engine)
         await checkPointDecimal(browser, engine)
         await checkFirstDraft(browser, engine)
-        await checkPhoneSaveReason(browser, engine)
+        await checkSaveReason(browser, engine)
         await checkTouchLeftovers(browser, engine)
         await checkMilestoneTable(browser, engine)
         await checkTimeline(browser, engine)
