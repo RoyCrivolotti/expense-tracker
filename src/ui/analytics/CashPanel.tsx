@@ -27,15 +27,18 @@ function YearlySection({ model }: { model: ExpenseModel }) {
 export function CashPanel({
   model,
   month,
+  openMonth,
   actions,
 }: {
   model: ExpenseModel
   month: string
+  /** The budget month under way (rollover-aware). */
+  openMonth: string
   actions?: ExpenseActions | undefined
 }) {
   return (
     <>
-      <CashView model={model} month={month} actions={actions} />
+      <CashView model={model} month={month} openMonth={openMonth} actions={actions} />
       <YearlySection model={model} />
     </>
   )

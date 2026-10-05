@@ -1,10 +1,17 @@
 /**
  * The detail behind a Spending row: its monthly history against the budget, a
- * few summary statistics, and the biggest transactions of the selected month —
+ * few summary statistics, and the biggest transactions of the selected month:
  * the path from a number to the ledger behind it.
  */
 import type { Category, Transaction } from '../types'
-import { type AnalyticsBasis, basisOptions, signedExpense } from './analyticsPeriod'
+import {
+  type AnalyticsBasis,
+  type SameDaysCut,
+  basisOptions,
+  sameDaysCut,
+  signedExpense,
+  withinCut,
+} from './analyticsPeriod'
 import { classifyFixedSpend } from './fixedFlexible'
 import { groupMatcher, type SpendingGroupBy } from './spendingGroups'
 
@@ -27,6 +34,12 @@ export interface SpendingGroupDetailOptions {
   groupBy: SpendingGroupBy
   key: string
   topCount?: number
+  /** ISO date; with `openMonth` it clamps the open month to the same days the row total uses. */
+  today?: string
+  /** The budget month `today` falls in (rollover-aware); defaults to today's calendar month. */
+  openMonth?: string
+  /** The owner's budget rollover day; defaults to plain calendar months. */
+  rolloverDay?: number
 }
 
 function median(nums: number[]): number {
@@ -46,6 +59,7 @@ function collect(
   window: string[],
   month: string,
   basis: AnalyticsBasis,
+  cut: SameDaysCut | null,
 ): Collected {
   const opts = basisOptions(basis)
   const inWindow = new Set(window)
@@ -55,6 +69,9 @@ function collect(
     if (!inWindow.has(txn.budgetMonth) || !matches(txn)) continue
     const signed = signedExpense(txn, opts)
     if (signed === null) continue
+    // The selected open month is clamped to the same days as the row total,
+    // so the pane and the row never show two different numbers for one month.
+    if (txn.budgetMonth === month && !withinCut(txn.date, month, cut)) continue
     byMonth.set(txn.budgetMonth, (byMonth.get(txn.budgetMonth) ?? 0) + signed)
     if (txn.budgetMonth === month && txn.type === 'expense') current.push(txn)
   }
@@ -71,16 +88,18 @@ function worstOf(history: { month: string; actualCents: number }[]): { month: st
 
 export function computeSpendingGroupDetail(
   args: { transactions: Transaction[]; categories: Category[] },
-  { months, month, basis, groupBy, key, topCount = 5 }: SpendingGroupDetailOptions,
+  { months, month, basis, groupBy, key, topCount = 5, today, openMonth, rolloverDay }: SpendingGroupDetailOptions,
 ): SpendingGroupDetail {
   const classifier = classifyFixedSpend(args.transactions)
   const window = months.filter((m) => m <= month).slice(-12)
+  const cut = today === undefined ? null : sameDaysCut(month, today, openMonth, rolloverDay)
   const { byMonth, current } = collect(
     args.transactions,
     groupMatcher(groupBy, key, classifier),
     window,
     month,
     basis,
+    cut,
   )
 
   const budgetCents =

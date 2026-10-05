@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { ExpenseSettings, Transaction } from '../types'
 import { defaultExpenseSettings } from './defaults'
 import type { CashRow } from './cashReconciliation'
-import { balancesAtCost, cashBridge, monthCloseStatus } from './cashClose'
+import { balancesAtCost, cashBridge, monthCloseStatus, readyToCountMonth } from './cashClose'
 
 function row(partial: Partial<CashRow>): CashRow {
   return {
@@ -31,9 +31,38 @@ describe('monthCloseStatus', () => {
     expect(monthCloseStatus(row({ unpaidLiabilityCents: 5000 }))).toBe('waiting')
   })
 
+  it('calls the month under way open until its cash is counted', () => {
+    expect(monthCloseStatus(row({ month: '2026-03' }), undefined, '2026-03')).toBe('open')
+    expect(monthCloseStatus(row({ month: '2026-02' }), undefined, '2026-03')).toBe('ready')
+    expect(
+      monthCloseStatus(row({ month: '2026-03', actualCashCents: 949800, monthGapCents: -200 }), undefined, '2026-03'),
+    ).toBe('counted')
+  })
+
   it('treats the tolerance as inclusive', () => {
     expect(monthCloseStatus(row({ actualCashCents: 1, monthGapCents: 500 }))).toBe('counted')
     expect(monthCloseStatus(row({ actualCashCents: 1, monthGapCents: 501 }))).toBe('drift')
+  })
+})
+
+describe('readyToCountMonth', () => {
+  it('names the newest month that can be counted, below the one under way', () => {
+    const rows = [
+      row({ month: '2026-01' }),
+      row({ month: '2026-02' }),
+      row({ month: '2026-03', unpaidLiabilityCents: 5000 }),
+      row({ month: '2026-04' }),
+    ]
+    expect(readyToCountMonth(rows, '2026-04')).toBe('2026-02')
+    expect(readyToCountMonth(rows)).toBe('2026-04')
+  })
+
+  it('counts a month with no card activity as ready, like the Cash banner always did', () => {
+    expect(readyToCountMonth([row({ month: '2026-02', cardCharges: new Map() })], '2026-03')).toBe('2026-02')
+  })
+
+  it('is null when nothing can be counted', () => {
+    expect(readyToCountMonth([row({ actualCashCents: 1, monthGapCents: 0 })], '2026-03')).toBeNull()
   })
 })
 

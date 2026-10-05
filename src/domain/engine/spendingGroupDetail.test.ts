@@ -54,6 +54,24 @@ describe('computeSpendingGroupDetail', () => {
     expect(d.topTransactions.map((t) => t.description)).toEqual(['big shop'])
   })
 
+  it('clamps the selected open month to the same days the row total uses', () => {
+    const d = computeSpendingGroupDetail(
+      { transactions: txns, categories },
+      {
+        months: MONTHS,
+        month: '2026-03',
+        basis: 'committed',
+        groupBy: 'category',
+        key: '1',
+        today: '2026-03-04',
+        openMonth: '2026-03',
+      },
+    )
+    // The day-5 March rows fall outside day 4; closed months stay whole.
+    expect(d.history.map((h) => h.actualCents)).toEqual([20000, 40000, 0])
+    expect(d.topTransactions).toEqual([])
+  })
+
   it('matches merchants by normalized description with no budget line', () => {
     const d = computeSpendingGroupDetail(
       { transactions: txns, categories },

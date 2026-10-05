@@ -27,7 +27,7 @@ const BASIS_HINT: Record<AnalyticsBasis, string> = {
 
 /**
  * Period, comparison and basis for Overview; Spending shows only the basis, and
- * Cash — paid-basis by nature — shows none of it.
+ * Cash, paid-basis by nature, shows none of it.
  */
 export function AnalyticsFilterRow({
   filters,

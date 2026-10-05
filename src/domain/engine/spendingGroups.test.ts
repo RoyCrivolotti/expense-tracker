@@ -67,6 +67,41 @@ describe('computeSpendingGroups by category', () => {
       Math.round(40000 * (4 / 31)),
     )
   })
+
+  it("clamps the open month's spark point like the row total", () => {
+    const rows = computeSpendingGroups(
+      { transactions: txns, categories, labels },
+      { months: MONTHS, month: '2026-03', basis: 'committed', today: '2026-03-04', groupBy: 'category' },
+    )
+    const groceries = rows.find((r) => r.name === 'Groceries')!
+    // The spark's March point and the row total agree; February stays whole.
+    expect(groceries.spark.find((s) => s.month === '2026-03')?.cents).toBe(0)
+    expect(groceries.spark.find((s) => s.month === '2026-02')?.cents).toBe(30000)
+  })
+
+  it('counts the open month from its own first day under a rollover', () => {
+    // Day-13 rollover on Mar 5: the March budget month began Feb 13, so a Feb 20 row is inside it.
+    const rolled = [
+      txn({ date: '2026-02-20', description: 'early', amountCents: 28000 }),
+      txn({ date: '2026-03-08', description: 'later', amountCents: 9000 }),
+    ]
+    const rows = computeSpendingGroups(
+      { transactions: rolled, categories, labels },
+      {
+        months: MONTHS,
+        month: '2026-03',
+        basis: 'committed',
+        today: '2026-03-05',
+        openMonth: '2026-03',
+        rolloverDay: 13,
+        groupBy: 'category',
+      },
+    )
+    const groceries = rows.find((r) => r.name === 'Groceries')!
+    expect(groceries.currentCents).toBe(28000)
+    // 21 of the budget month's 28 days have passed.
+    expect(groceries.shouldBeTodayCents).toBe(Math.round(40000 * (21 / 28)))
+  })
 })
 
 describe('computeSpendingGroups by label and merchant', () => {

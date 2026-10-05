@@ -89,6 +89,9 @@ Two separate checks, both run in CI (`.github/workflows/verify.yml`) on every PR
    local `main`: every worktree in this repo branches straight off `origin/main` and
    never checks `main` itself out, so the local branch silently goes stale and
    `--base main` picks up other already-merged PRs as false "uncovered" diffs.
+   The check also refuses an lcov file older than a changed source file, so a
+   report left over from before your last edit cannot pass it: re-run
+   `npm run test:coverage` when it says so.
 
 Raising the global floor is welcome as coverage genuinely improves — bump the
 numbers in `vitest.config.ts` to match, don't lower them to make a red build
