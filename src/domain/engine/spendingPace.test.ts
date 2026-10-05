@@ -47,14 +47,40 @@ function rentHistory(): Transaction[] {
 describe('expectedFixedCents', () => {
   it('counts a due instalment and a monthly recurring pattern, once each', () => {
     const txns = rentHistory()
-    expect(expectedFixedCents(txns, [plan], '2026-03')).toBe(100000 + 4000)
+    expect(expectedFixedCents(txns, [plan], categories, '2026-03')).toBe(100000 + 4000)
   })
 
   it('counts nothing for a plan that has ended or not begun', () => {
     const ended = { ...plan, totalCount: 3 } // final month 2025-08
-    expect(expectedFixedCents([], [ended], '2026-03')).toBe(0)
+    expect(expectedFixedCents([], [ended], categories, '2026-03')).toBe(0)
     const future = { ...plan, anchorBudgetMonth: '2026-06' }
-    expect(expectedFixedCents([], [future], '2026-03')).toBe(0)
+    expect(expectedFixedCents([], [future], categories, '2026-03')).toBe(0)
+  })
+
+  it('lets a cancelled subscription go after two silent months', () => {
+    // Rent seen only Oct–Dec 2025: a pattern, but long gone by March.
+    const stale = ['2025-10', '2025-11', '2025-12'].map((m) =>
+      txn({ date: `${m}-01`, budgetMonth: m, description: 'Rent', amountCents: 100000 }),
+    )
+    expect(expectedFixedCents(stale, [], categories, '2026-01')).toBe(100000)
+    expect(expectedFixedCents(stale, [], categories, '2026-02')).toBe(100000)
+    expect(expectedFixedCents(stale, [], categories, '2026-03')).toBe(0)
+  })
+
+  it('leaves out charges in a category with no active budget', () => {
+    const noBudget = [
+      ...categories,
+      { id: 4, name: 'Unbudgeted', monthlyBudgetCents: 0, sortOrder: 3, active: true },
+    ]
+    const subscription = ['2026-01', '2026-02', '2026-03'].map((m) =>
+      txn({ date: `${m}-01`, budgetMonth: m, description: 'Cloud', categoryId: 4, amountCents: 900 }),
+    )
+    const archived = ['2026-01', '2026-02', '2026-03'].map((m) =>
+      txn({ date: `${m}-01`, budgetMonth: m, description: 'Old gym', categoryId: 3, amountCents: 3000 }),
+    )
+    expect(expectedFixedCents([...subscription, ...archived], [], noBudget, '2026-03')).toBe(0)
+    // Instalments follow the same rule: this plan sits in the unbudgeted category.
+    expect(expectedFixedCents([], [{ ...plan, categoryId: 4 }], noBudget, '2026-03')).toBe(0)
   })
 })
 
@@ -95,6 +121,44 @@ describe('computeSpendingPace', () => {
     })
     expect(pace.open).toBe(false)
     expect(pace.projectedCents).toBe(pace.flexibleSpentCents)
+  })
+
+  it('runs the clock from the budget month\'s own first day under a rollover', () => {
+    // Day-13 rollover on Mar 5: the March budget month began Feb 13 and runs 28 days.
+    const rolled = [
+      txn({ date: '2026-02-20', budgetMonth: '2026-03', description: 'Groceries early', amountCents: 9000 }),
+      txn({ date: '2026-03-08', budgetMonth: '2026-03', description: 'Groceries later', amountCents: 5000 }),
+    ]
+    const pace = computeSpendingPace(rolled, categories, [], classifyFixedSpend(rolled), {
+      month: '2026-03',
+      today: '2026-03-05',
+      openMonth: '2026-03',
+      rolloverDay: 13,
+      basis: 'committed',
+      prevMonth: null,
+    })
+    expect(pace.dayOfMonth).toBe(21)
+    expect(pace.daysInMonth).toBe(28)
+    expect(pace.flexibleSpentCents).toBe(9000)
+  })
+
+  it('leaves spend in categories with no active budget out of the clock, as out of the envelope', () => {
+    const noBudget = [
+      ...categories,
+      { id: 4, name: 'Dining', monthlyBudgetCents: 0, sortOrder: 3, active: true },
+    ]
+    const spend = [
+      txn({ date: '2026-03-04', description: 'Groceries run', amountCents: 9000 }),
+      txn({ date: '2026-03-05', description: 'Dinner out', categoryId: 4, amountCents: 30000 }),
+      txn({ date: '2026-03-06', description: 'Old gym', categoryId: 3, amountCents: 7000 }),
+    ]
+    const pace = computeSpendingPace(spend, noBudget, [], classifyFixedSpend(spend), {
+      month: '2026-03',
+      today: '2026-03-10',
+      basis: 'committed',
+      prevMonth: null,
+    })
+    expect(pace.flexibleSpentCents).toBe(9000)
   })
 
   it('never reports a negative flexible budget', () => {

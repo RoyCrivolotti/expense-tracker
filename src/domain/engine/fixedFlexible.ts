@@ -2,15 +2,15 @@
  * Fixed against flexible spending, detected rather than tagged: a transaction is
  * fixed when it settles an instalment plan or belongs to a recurring pattern the
  * detector already trusts (≥3 occurrences at ≥0.6 regularity). Detection can
- * misfire — it misses annual bills — so anything built on this split keeps the
+ * misfire (it misses annual bills), so anything built on this split keeps the
  * underlying transactions one tap away rather than asking to be believed.
  */
 import type { Transaction } from '../types'
 import { daysBetween } from './dates'
-import { groupTransactions, occurrenceKey } from './recurringDetect'
+import { groupTransactions, normalizeDesc, occurrenceKey } from './recurringDetect'
 import { classifyFrequency, regularityScore } from './recurringPredict'
 import type { GroupKey, OccurrenceGroup } from './recurringTypes'
-import { type AnalyticsBasis, basisOptions, signedExpense } from './analyticsPeriod'
+import { type AnalyticsBasis, type SameDaysCut, basisOptions, signedExpense, withinCut } from './analyticsPeriod'
 
 const MIN_REGULARITY = 0.6
 
@@ -29,7 +29,10 @@ function gapsOf(group: OccurrenceGroup): number[] {
 function isRecurringGroup(group: OccurrenceGroup): boolean {
   const gaps = gapsOf(group)
   if (gaps.length === 0) return false
-  if (!classifyFrequency(median(gaps))) return false
+  const frequency = classifyFrequency(median(gaps))
+  // Weekly rhythm is a habit, not an obligation: weekly groceries are exactly
+  // the spending the pace clock exists to watch.
+  if (!frequency || frequency === 'weekly') return false
   return regularityScore(gaps) >= MIN_REGULARITY
 }
 
@@ -49,8 +52,22 @@ function keyString(key: GroupKey): string {
 /** Build the classifier once per dataset; it is a per-transaction set lookup after that. */
 export function classifyFixedSpend(transactions: Transaction[]): FixedSpendClassifier {
   const fixedKeys = new Set(recurringFixedGroups(transactions).map((g) => keyString(g.key)))
+  // A refund keys by its own type, so it would never match the expense pattern it
+  // repays: the refund of a fixed charge is fixed money coming back, not flexible.
+  const matches = (txn: Transaction): boolean => {
+    if (fixedKeys.has(occurrenceKey(txn))) return true
+    if (txn.type !== 'refund') return false
+    return fixedKeys.has(
+      keyString({
+        normalizedDesc: normalizeDesc(txn.description),
+        accountId: txn.accountId,
+        categoryId: txn.categoryId,
+        type: 'expense',
+      }),
+    )
+  }
   return {
-    isFixed: (txn) => txn.planId != null || fixedKeys.has(occurrenceKey(txn)),
+    isFixed: (txn) => txn.planId != null || matches(txn),
   }
 }
 
@@ -61,21 +78,21 @@ export interface FixedFlexibleSplit {
 
 /**
  * Net expense of a budget month split into fixed and flexible, through an
- * optional day-of-month cutoff (see `sameDaysLimit`).
+ * optional same-days cut (see `sameDaysCut`).
  */
 export function splitFixedFlexible(
   transactions: Transaction[],
   classifier: FixedSpendClassifier,
   month: string,
   basis: AnalyticsBasis,
-  dayLimit: number | null = null,
+  cut: SameDaysCut | null = null,
 ): FixedFlexibleSplit {
   const opts = basisOptions(basis)
   let fixedCents = 0
   let flexibleCents = 0
   for (const txn of transactions) {
     if (txn.budgetMonth !== month) continue
-    if (dayLimit !== null && parseInt(txn.date.slice(8, 10), 10) > dayLimit) continue
+    if (!withinCut(txn.date, month, cut)) continue
     const signed = signedExpense(txn, opts)
     if (signed === null) continue
     if (classifier.isFixed(txn)) fixedCents += signed

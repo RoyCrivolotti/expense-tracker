@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Transaction } from '../types'
+import { sameDaysCut } from './analyticsPeriod'
 import { classifyFixedSpend, splitFixedFlexible } from './fixedFlexible'
 
 function txn(partial: Partial<Transaction>): Transaction {
@@ -18,7 +19,7 @@ function txn(partial: Partial<Transaction>): Transaction {
   }
 }
 
-/** Rent on the 1st, three months running — a textbook recurring pattern. */
+/** Rent on the 1st, three months running, a textbook recurring pattern. */
 function rentHistory(): Transaction[] {
   return ['2025-11', '2025-12', '2026-01'].map((m, i) =>
     txn({ id: i + 1, date: `${m}-01`, budgetMonth: m, description: 'Rent', amountCents: 100000 }),
@@ -44,6 +45,35 @@ describe('classifyFixedSpend', () => {
     const classifier = classifyFixedSpend(twoOnly)
     expect(classifier.isFixed(twoOnly[1]!)).toBe(false)
   })
+
+  it('leaves a weekly rhythm flexible — habits are what the pace clock watches', () => {
+    const weekly = ['2026-01-03', '2026-01-10', '2026-01-17', '2026-01-24'].map((d, i) =>
+      txn({ id: 50 + i, date: d, description: 'Supermarket', amountCents: 6000 }),
+    )
+    const classifier = classifyFixedSpend(weekly)
+    expect(classifier.isFixed(weekly[3]!)).toBe(false)
+  })
+
+  it('calls the refund of a fixed charge fixed money coming back', () => {
+    const history = rentHistory()
+    const refund = txn({
+      id: 80,
+      date: '2026-01-15',
+      description: 'Rent',
+      type: 'refund',
+      amountCents: 20000,
+    })
+    const unrelated = txn({
+      id: 81,
+      date: '2026-01-16',
+      description: 'Shoes',
+      type: 'refund',
+      amountCents: 4000,
+    })
+    const classifier = classifyFixedSpend([...history, refund, unrelated])
+    expect(classifier.isFixed(refund)).toBe(true)
+    expect(classifier.isFixed(unrelated)).toBe(false)
+  })
 })
 
 describe('splitFixedFlexible', () => {
@@ -65,7 +95,7 @@ describe('splitFixedFlexible', () => {
     const paid = splitFixedFlexible(txns, classifier, '2026-01', 'paid')
     expect(paid.flexibleCents).toBe(6000 + 3000 - 1000)
 
-    const throughDay10 = splitFixedFlexible(txns, classifier, '2026-01', 'committed', 10)
+    const throughDay10 = splitFixedFlexible(txns, classifier, '2026-01', 'committed', sameDaysCut('2026-01', '2026-01-10'))
     expect(throughDay10.flexibleCents).toBe(6000 - 1000 + 2000)
   })
 })

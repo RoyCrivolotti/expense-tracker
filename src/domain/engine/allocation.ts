@@ -1,6 +1,6 @@
 /**
  * Where the month's income went: fixed costs, flexible spending, investing, and
- * what was left. One bar, four buckets — the Overview's part-to-whole picture.
+ * what was left. One bar, four buckets, the Overview's part-to-whole picture.
  */
 import type { Transaction } from '../types'
 import { type AnalyticsBasis, basisOptions } from './analyticsPeriod'

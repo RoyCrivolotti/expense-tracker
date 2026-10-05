@@ -36,6 +36,7 @@ import styles from './ExpensesApp.module.css'
 const GoalsTab = lazy(() => import('./tabs/goals/GoalsTab'))
 const AnalyticsTab = lazy(() => import('./tabs/AnalyticsTab'))
 import type { GoalsEntry } from './tabs/goals/GoalsTab'
+import type { TransactionsEntry } from './tabs/transactionsEntry'
 
 // Tabs without a month picker / FAB-heavy footer: trim the large bottom dead zone.
 const COMPACT_FOOTER_TABS: ReadonlySet<TabId> = new Set(['goals', 'analytics', 'settings'])
@@ -64,6 +65,9 @@ function TabView({
   onNavigate,
   onLogCheckin,
   goalsEntry,
+  txnEntry,
+  onOpenTransactions,
+  onUseBaselineInGoals,
   onRunSetup,
   onTxnSelectModeChange,
   monthNavigation,
@@ -81,6 +85,9 @@ function TabView({
   /** Opens Goals on Progress with the check-in form up, from the dashboard's nudge. */
   onLogCheckin: () => void
   goalsEntry: GoalsEntry
+  txnEntry: TransactionsEntry | null
+  onOpenTransactions: (preset: TransactionsEntry) => void
+  onUseBaselineInGoals: (monthlyCents: number) => void
   onRunSetup: () => void
   onTxnSelectModeChange: (selecting: boolean) => void
   monthNavigation: number
@@ -94,12 +101,20 @@ function TabView({
           actions={actions}
           onSelectModeChange={onTxnSelectModeChange}
           monthNavigation={monthNavigation}
+          entry={txnEntry}
         />
       )
     case 'analytics':
       return (
         <Suspense fallback={<div className={styles.center}>Loading analytics…</div>}>
-          <AnalyticsTab model={model} month={month} onMonthChange={onMonthChange} actions={actions} />
+          <AnalyticsTab
+            model={model}
+            month={month}
+            onMonthChange={onMonthChange}
+            actions={actions}
+            onOpenTransactions={onOpenTransactions}
+            onUseBaselineInGoals={onUseBaselineInGoals}
+          />
         </Suspense>
       )
     case 'goals':
@@ -264,9 +279,12 @@ function ExpensesAppReady({
   // Where Goals should open when the dashboard sends the user there for a check-in. Cleared
   // by every ordinary tab change, so a later visit to Goals opens on Plan as usual.
   const [goalsEntry, setGoalsEntry] = useState<GoalsEntry>(null)
+  // Same idea for Transactions: the filter preset an Analytics drill-down hands over.
+  const [txnEntry, setTxnEntry] = useState<TransactionsEntry | null>(null)
   const guardLeave = useGuardLeave()
   const moveTo = (next: TabId, entry: GoalsEntry) => {
     setGoalsEntry(entry)
+    setTxnEntry(null)
     setTab(next)
   }
   // Every route out of a tab goes through the guard, which asks first if the tab holds unsaved
@@ -292,6 +310,18 @@ function ExpensesAppReady({
     setMonth(next)
     setMonthNavigation((n) => n + 1)
   }
+  // The Analytics drill-down: land on Transactions with the row's filters applied,
+  // on the month the row described. Goes through the same leave guard as any tab change.
+  const openTransactions = (preset: TransactionsEntry) => {
+    guardLeave(() => {
+      setGoalsEntry(null)
+      setTxnEntry(preset)
+      if (preset.month) navigateMonth(preset.month)
+      setTab('transactions')
+    })
+  }
+  // The baseline handoff: open Goals with the measured spend prefilled as an unsaved draft.
+  const useBaselineInGoals = (monthlyCents: number) => goTo('goals', { kind: 'baseline', monthlyCents })
   const [modal, setModal] = useState<ExpenseModalState>(null)
   const [onboardingOpen, setOnboardingOpen] = useState(
     () => source.canWrite && !readOnly && needsOnboarding(model.dataset) && !isOnboardingSkipped(),
@@ -371,6 +401,9 @@ function ExpensesAppReady({
             onNavigate={selectTab}
             onLogCheckin={logCheckin}
             goalsEntry={goalsEntry}
+            txnEntry={txnEntry}
+            onOpenTransactions={openTransactions}
+            onUseBaselineInGoals={useBaselineInGoals}
             onTxnSelectModeChange={holdMonthForSelection}
             monthNavigation={monthNavigation}
             onRunSetup={() => {

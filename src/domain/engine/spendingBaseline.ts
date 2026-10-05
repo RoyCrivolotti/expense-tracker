@@ -1,13 +1,13 @@
 /**
  * The spending baseline: what a year really costs, measured from the trailing
  * closed months, with the run-rate after known instalments end and the active
- * Goals plan's assumed spend beside it. Read-only here — the Goals handoff is a
+ * Goals plan's assumed spend beside it. Read-only here: the Goals handoff is a
  * separate, explicit step.
  */
 import type { GoalScenario, InstallmentPlan, Transaction } from '../types'
 import { shiftBudgetMonth } from './dates'
-import { finalBudgetMonth } from './installments'
-import { type AnalyticsBasis, spendThroughDay } from './analyticsPeriod'
+import { finalBudgetMonth, budgetMonthForIndex } from './installments'
+import { type AnalyticsBasis, spendThroughCut } from './analyticsPeriod'
 
 export const BASELINE_MONTHS = 12
 
@@ -31,12 +31,17 @@ function median(nums: number[]): number {
   return sorted.length % 2 === 0 ? Math.round((sorted[mid - 1]! + sorted[mid]!) / 2) : sorted[mid]!
 }
 
-/** Per-instalment cents of active expense plans still running at `month` that end within a year of it. */
+/**
+ * Per-instalment cents of active expense plans that are already running at
+ * `month` (a plan that has not started yet contributed nothing to the measured
+ * months, so there is nothing of it to subtract) and end within a year of it.
+ */
 function endingInstallmentsCents(plans: InstallmentPlan[], month: string): number {
   const horizon = shiftBudgetMonth(month, BASELINE_MONTHS)
   let total = 0
   for (const plan of plans) {
     if (!plan.active || plan.type !== 'expense') continue
+    if (budgetMonthForIndex(plan, plan.startInstallmentIndex) > month) continue
     const final = finalBudgetMonth(plan)
     if (final >= month && final <= horizon) total += plan.amountCents
   }
@@ -50,7 +55,7 @@ export interface SpendingBaselineOptions {
   basis: AnalyticsBasis
 }
 
-/** Null until at least one closed month has spending — there is nothing to measure. */
+/** Null until at least one closed month has spending: there is nothing to measure. */
 export function computeSpendingBaseline(
   transactions: Transaction[],
   plans: InstallmentPlan[],
@@ -59,7 +64,7 @@ export function computeSpendingBaseline(
 ): SpendingBaseline | null {
   const window = months.filter((m) => m < month).slice(-BASELINE_MONTHS)
   const spends = window
-    .map((m) => ({ month: m, cents: spendThroughDay(transactions, m, null, basis) }))
+    .map((m) => ({ month: m, cents: spendThroughCut(transactions, m, null, basis) }))
     .filter((s) => s.cents !== 0)
   if (spends.length === 0) return null
 

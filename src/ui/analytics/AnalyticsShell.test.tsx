@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { buildExpenseModel } from '../buildExpenseModel'
 import { makeDataset, makeTransaction } from '../../testing/factories'
 import { AnalyticsShell } from './AnalyticsShell'
@@ -107,9 +107,24 @@ describe('AnalyticsShell on a phone', () => {
     ])
 
     fireEvent.click(screen.getByRole('tab', { name: 'Spending' }))
-    expect(screen.getByText('Budget vs actual')).toBeInTheDocument()
+    expect(screen.getByRole('radiogroup', { name: 'Group spending by' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('tab', { name: 'Cash' }))
     expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Cash')
+  })
+
+  describe('with the clock moving', () => {
+    afterEach(() => vi.useRealTimers())
+
+    it('moves the open month on when the day changes, without a remount', () => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date(2026, 0, 10, 12))
+      renderShell()
+      expect(screen.getByText(/first 10 days/)).toBeInTheDocument()
+
+      vi.setSystemTime(new Date(2026, 0, 11, 9))
+      fireEvent.click(screen.getByRole('radio', { name: 'Paid only' }))
+      expect(screen.getByText(/first 11 days/)).toBeInTheDocument()
+    })
   })
 })
