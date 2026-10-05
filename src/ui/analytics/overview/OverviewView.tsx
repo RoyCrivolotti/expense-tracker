@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import type { AnalyticsBasis, AnalyticsPeriod, CompareMode } from '../../../engine'
 import type { ExpenseModel } from '../../useExpenseData'
 import { Card } from '../../components/primitives'
-import { InsightsCharts } from '../../charts/InsightsCharts'
 import { MonthlyTotalsTable } from '../MonthlyTotalsTable'
 import type { AnalyticsView } from '../analyticsView'
 import { buildOverviewData } from './overviewModel'
@@ -90,7 +89,6 @@ export function OverviewView({
         <MoversCard movers={data.movers} />
       </div>
       {data.baseline && <BaselineCard baseline={data.baseline} onUseInGoals={onUseBaselineInGoals} />}
-      <InsightsCharts model={model} month={month} basis={basis} />
     </div>
   )
 }

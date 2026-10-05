@@ -2,6 +2,42 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (the Analytics redesign)
+
+Analytics was the workbook, ported: four wide tables and three small charts that reported numbers
+and stopped. It is now three views — **Overview**, **Spending**, **Cash** — identical on phone and
+desktop, each built to answer a question and lead somewhere.
+
+- **Two correctness bugs fixed first.** Dashboard and Analytics disagreed on net saving whenever a
+  card statement was unpaid (they counted charges on different bases); both now default to the
+  committed basis, with a visible committed/paid toggle and the basis named next to it. And the
+  desktop "YTD" column summed every month in the data, so it would have been wrong from the first
+  January with two years of data; it is now the calendar year through the selected month, and says
+  which year.
+- **Overview: how am I doing?** Five tiles (income, spent, net saved, savings rate, invested), each
+  with a sparkline and a change chip naming its baseline — last month, your 3-month average, or last
+  year. A trend chart with the unpaid share of each month hatched; clicking a month moves the page
+  there. Flexible-spending pace against what the budget implies, with fixed costs counted but kept
+  out of the clock. Up to three signals computed from your numbers, each opening the place to act.
+  Where the income went, what changed, and the spending baseline. An open month is only ever
+  compared with the same days of other months.
+- **Spending: where does it go?** Ranked rows grouped by category, fixed vs flexible (detected from
+  instalment plans and recurring patterns, not tagged by hand), label (your trips) or merchant.
+  Category rows carry a budget bullet with a "where should I be today" tick; every row opens its
+  story — typical month, worst month, months over (against today's budget, and saying so), the
+  month's biggest transactions — and a deep link that lands on Transactions with the filters set.
+  The exact workbook grid stays one tap away as the Grid mode, now with CSV export.
+- **Cash: do my numbers match?** One dot per month (counted, drift found, ready, waiting on its
+  statement) and a banner pointing at the month ready to count. A bridge from opening cash to
+  expected cash with the count entered right under it, drift bars with a ±5 € tolerance band, and
+  balances labelled as cost — the "net worth" column is gone; market value lives in Goals. The
+  full table sits in a fold for audit.
+- **The baseline feeds Goals.** "Use in Goals" opens the scenario editor with your measured spend
+  prefilled as an unsaved draft; saving stays yours.
+- **Removed:** the pie (ranked rows beat it at comparison), the two-line YTD chart (the gap between
+  the lines was the information), the duplicate month picker on the phone, and the Monthly totals
+  table as a section (it lives behind the trend's Table toggle).
+
 ## October 2026 (typed numbers in Assumptions)
 
 - **A milestone amount is read by the currency's format.** The field was a number field, which reads the browser's idea of a number and not the currency's: typing "150.000" for a hundred and fifty thousand euros saved 150. It is now a text field with the decimal keypad, written as the currency writes it ("150.000,00") and read as the rest of the app reads an amount, so "150.000" is 150 000 where the point groups thousands, "150,000" is where the comma does, and "2500,5" in a point currency is 2 500,50. Text with no digit in it puts the saved amount back, as before. The stepper arrows that moved it by 1 000 are gone.
