@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { ExpenseDataset, Transaction } from '../types'
+import type { CategoryActuals } from '../engine'
 import { makeDataset } from '../testing/factories'
 import { parseExportCsv } from '../domain/data/parseExportCsv'
-import { exportTransactionsCsv } from './exportCsv'
+import { exportTransactionsCsv, monthlySummaryCsv } from './exportCsv'
 
 function txn(overrides: Partial<Transaction> = {}): Transaction {
   return {
@@ -82,5 +83,39 @@ describe('export → import round trip', () => {
 
     expect(parsed.rows[0]!.input.description).toBe('Mercadona')
     expect(parsed.rows[0]!.input.notes).toBe('weekly shop')
+  })
+})
+
+describe('monthlySummaryCsv', () => {
+  it('writes the grid exactly, in integer cents, with the year-scoped YTD', () => {
+    const rows: CategoryActuals[] = [
+      {
+        categoryId: 1,
+        name: 'Groceries',
+        monthlyBudgetCents: 40000,
+        byMonth: new Map([
+          ['2026-01', 30000],
+          ['2026-02', 25000],
+        ]),
+        ytdActualCents: 55000,
+      },
+    ]
+    expect(monthlySummaryCsv(rows, ['2026-01', '2026-02'], '2026')).toBe(
+      'category,monthly_budget_cents,2026-01,2026-02,ytd_2026_cents\nGroceries,40000,30000,25000,55000',
+    )
+  })
+
+  it('guards formula-shaped category names like the transaction export', () => {
+    const rows: CategoryActuals[] = [
+      {
+        categoryId: 1,
+        name: '=HYPERLINK("http://x")',
+        monthlyBudgetCents: 0,
+        byMonth: new Map(),
+        ytdActualCents: 0,
+      },
+    ]
+    const line = monthlySummaryCsv(rows, [], '2026').split('\n')[1]!
+    expect(line.startsWith('=')).toBe(false)
   })
 })

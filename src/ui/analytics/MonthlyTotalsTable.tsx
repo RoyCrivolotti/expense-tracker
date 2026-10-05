@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
-import type { MonthlyTotals } from '../../engine'
-import { computeMonthlyTotals } from '../../engine'
+import type { AnalyticsBasis, MonthlyTotals } from '../../engine'
+import { basisOptions, computeMonthlyTotals } from '../../engine'
 import { LedgerTable, type LedgerColumn } from './LedgerTable'
 import { sum, useMoneyCells } from './cells'
 import styles from './analytics.module.css'
@@ -10,18 +10,25 @@ const signed = (cents: number): string | undefined =>
   cents > 0 ? styles.pos : cents < 0 ? styles.neg : undefined
 
 /**
- * Per-month income / expenses / net saving / invested. Committed basis: unpaid
- * card charges count in their budget month, so the numbers agree with the
- * Dashboard and the Monthly summary instead of shifting when a statement is paid.
+ * Per-month income / expenses / net saving / invested. Defaults to the committed
+ * basis: unpaid card charges count in their budget month, so the numbers agree
+ * with the Dashboard and the Monthly summary instead of shifting when a
+ * statement is paid.
  */
-export function MonthlyTotalsTable({ model }: { model: ExpenseModel }) {
+export function MonthlyTotalsTable({
+  model,
+  basis = 'committed',
+}: {
+  model: ExpenseModel
+  basis?: AnalyticsBasis
+}) {
   const { money, moneyAlways } = useMoneyCells()
   const rows = useMemo(
     () =>
-      [
-        ...computeMonthlyTotals(model.dataset.transactions, { includeForecast: true }).values(),
-      ].sort((a, b) => a.month.localeCompare(b.month)),
-    [model.dataset],
+      [...computeMonthlyTotals(model.dataset.transactions, basisOptions(basis)).values()].sort(
+        (a, b) => a.month.localeCompare(b.month),
+      ),
+    [model.dataset, basis],
   )
   const columns: LedgerColumn<MonthlyTotals>[] = [
     { label: 'Income', value: (r) => money(r.incomeCents), cls: () => styles.pos },

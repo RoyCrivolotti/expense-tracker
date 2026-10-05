@@ -1,4 +1,5 @@
 import type { ExpenseDataset } from '../types'
+import type { CategoryActuals } from '../engine'
 import { EXPORT_CSV_HEADER } from '../domain/data/exportCsvFormat'
 import { guardCsvValue } from '../domain/data/csvFormulaGuard'
 
@@ -43,18 +44,40 @@ export function exportTransactionsCsv(
   return [header, ...rows].join('\n')
 }
 
+/**
+ * The monthly summary grid as CSV: categories down, budget and months across,
+ * plus the year-scoped YTD the grid shows. Amounts in integer cents, like the
+ * transaction export: exact, and immune to locale decimal marks.
+ */
+export function monthlySummaryCsv(rows: CategoryActuals[], months: string[], ytdYear: string): string {
+  const header = ['category', 'monthly_budget_cents', ...months, `ytd_${ytdYear}_cents`].join(',')
+  const lines = rows.map((r) =>
+    [
+      escText(r.name),
+      r.monthlyBudgetCents,
+      ...months.map((m) => r.byMonth.get(m) ?? 0),
+      r.ytdActualCents,
+    ].join(','),
+  )
+  return [header, ...lines].join('\n')
+}
+
+/** Trigger a browser download of a CSV. */
+export function downloadCsv(filename: string, csv: string): void {
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 /** Trigger a browser download of transaction CSV. */
 export function downloadTransactionsCsv(
   dataset: ExpenseDataset,
   opts: { month?: string; filename?: string } = {},
 ): void {
-  const csv = exportTransactionsCsv(dataset, opts)
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
   const monthPart = opts.month ? `-${opts.month}` : ''
-  a.href = url
-  a.download = opts.filename ?? `expenses${monthPart}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
+  downloadCsv(opts.filename ?? `expenses${monthPart}.csv`, exportTransactionsCsv(dataset, opts))
 }
