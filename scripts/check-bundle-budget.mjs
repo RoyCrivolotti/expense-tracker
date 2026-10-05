@@ -121,7 +121,13 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // Analytics chunk (which this PR takes from ~15 KB to ~22 KB), with no new library. The
 // redesign's final PR removes the old tables and charts it supersedes, which should claw
 // most of this back.
-const TOTAL_MAX_GZIP = 240_000
+// Raised from 240 KB to 244 KB for the Analytics Spending and Cash views (ranked rows with
+// budget bullets, the detail pane and sheet, the Transactions entry channel, month-close
+// dots, the cash bridge and drift bars): the two landed back to back and together add about
+// 4 KB gzip, all of it UI code and CSS in the lazy Analytics chunk, with no new library.
+// The redesign's final PR removes the old tables, the pie and the superseded charts, which
+// claws most of the Analytics growth back.
+const TOTAL_MAX_GZIP = 244_000
 const GOALS_MAX_GZIP = 58_000
 
 function gzipBytes(path) {
