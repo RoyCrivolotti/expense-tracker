@@ -120,11 +120,11 @@ describe('AnalyticsShell on a phone', () => {
       vi.useFakeTimers({ toFake: ['Date'] })
       vi.setSystemTime(new Date(2026, 0, 10, 12))
       renderShell()
-      expect(screen.getByText(/first 10 days/)).toBeInTheDocument()
+      expect(screen.getByText(/Open month, compared with the first 10 days/)).toBeInTheDocument()
 
       vi.setSystemTime(new Date(2026, 0, 11, 9))
       fireEvent.click(screen.getByRole('radio', { name: 'Paid only' }))
-      expect(screen.getByText(/first 11 days/)).toBeInTheDocument()
+      expect(screen.getByText(/Open month, compared with the first 11 days/)).toBeInTheDocument()
     })
   })
 })

@@ -89,6 +89,16 @@ describe('OverviewView', () => {
     expect(screen.getByText('Goals plan assumes')).toBeTruthy()
   })
 
+  it('says the open month\'s income split is through the same days as the headline numbers', () => {
+    renderView()
+    expect(screen.getByText(/income in the first 10 days/)).toBeTruthy()
+  })
+
+  it('calls a closed month\'s income split a whole month', () => {
+    renderView({ month: '2026-02', openMonth: '2026-03' })
+    expect(screen.getByText(/income this month/)).toBeTruthy()
+  })
+
   it('routes a signal action to the view it names', () => {
     const { onShowView } = renderView()
     fireEvent.click(screen.getByRole('button', { name: 'See the month' }))

@@ -24,6 +24,7 @@ import {
   computeSpendingBaseline,
   computeSpendingPace,
   priorBudgetMonth,
+  sameDaysCut,
   unpaidExpenseCents,
 } from '../../../engine'
 
@@ -94,7 +95,13 @@ export function buildOverviewData(model: ExpenseModel, opts: OverviewOptions): O
   return {
     kpis,
     pace,
-    allocation: computeAllocation(transactions, classifier, month, basis),
+    allocation: computeAllocation(
+      transactions,
+      classifier,
+      month,
+      basis,
+      sameDaysCut(month, today, openMonth, rolloverDay),
+    ),
     movers,
     signals,
     baseline: computeSpendingBaseline(transactions, installmentPlans, goalScenarios, {

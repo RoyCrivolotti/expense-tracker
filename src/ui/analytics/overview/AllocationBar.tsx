@@ -21,7 +21,14 @@ function segmentsOf(a: Allocation): Segment[] {
 }
 
 /** One bar, four buckets: where the month's income went. */
-export function AllocationBar({ allocation }: { allocation: Allocation }) {
+export function AllocationBar({
+  allocation,
+  throughDay,
+}: {
+  allocation: Allocation
+  /** Days of the open month counted so far, or null for a whole month. */
+  throughDay: number | null
+}) {
   const format = useMoneyFormat()
   if (allocation.incomeCents <= 0) return null
   const segments = segmentsOf(allocation)
@@ -31,7 +38,9 @@ export function AllocationBar({ allocation }: { allocation: Allocation }) {
     <Card>
       <h3 className={styles.cardTitle}>Where the income went</h3>
       <p className={styles.cardSub}>
-        Of {formatCentsCompact(allocation.incomeCents, format)} income this month.
+        {throughDay === null
+          ? `Of ${formatCentsCompact(allocation.incomeCents, format)} income this month.`
+          : `Of ${formatCentsCompact(allocation.incomeCents, format)} income in the first ${throughDay} days.`}
       </p>
       <div className={styles.alloc} role="img" aria-label="Income split into fixed, flexible, invested and left over">
         {segments.map((s) => (

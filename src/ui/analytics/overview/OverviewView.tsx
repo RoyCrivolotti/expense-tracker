@@ -95,7 +95,7 @@ export function OverviewView({
         </Card>
       )}
       <div className={styles.grid2}>
-        <AllocationBar allocation={data.allocation} />
+        <AllocationBar allocation={data.allocation} throughDay={data.kpis.openDayLimit} />
         <MoversCard movers={data.movers} />
       </div>
       {data.baseline && <BaselineCard baseline={data.baseline} onUseInGoals={onUseBaselineInGoals} />}
