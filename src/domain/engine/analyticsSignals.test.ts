@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { computeSignals, MAX_SIGNALS } from './analyticsSignals'
-import type { CashRow } from './cashReconciliation'
+import { makeCashRow as cashRow } from '../../testing/cashRow'
 import type { Mover } from './movers'
 import type { SpendingPace } from './spendingPace'
 
@@ -21,25 +21,6 @@ function pace(partial: Partial<SpendingPace> = {}): SpendingPace {
 
 function mover(partial: Partial<Mover>): Mover {
   return { categoryId: 1, name: 'Groceries', currentCents: 0, baselineCents: 0, deltaCents: 0, ...partial }
-}
-
-function cashRow(partial: Partial<CashRow>): CashRow {
-  return {
-    month: '2026-02',
-    incomeCents: 0,
-    debitExpenseCents: 0,
-    cardCharges: new Map([[2, { chargeCents: 5000, paid: true }]]),
-    investmentsCents: 0,
-    cashMovementCents: 0,
-    expectedCashCents: 0,
-    actualCashCents: null,
-    gapCents: null,
-    carryoverGapCents: null,
-    monthGapCents: null,
-    unpaidLiabilityCents: 0,
-    reconciled: false,
-    ...partial,
-  }
 }
 
 describe('computeSignals', () => {
