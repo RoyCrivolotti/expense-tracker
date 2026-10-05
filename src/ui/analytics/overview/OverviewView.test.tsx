@@ -113,6 +113,12 @@ describe('OverviewView', () => {
     expect(screen.getByText(/Use in Goals sets the plan.s annual spend to the mean times 12/)).toBeTruthy()
   })
 
+  it('lists the detected fixed costs behind the cards', () => {
+    renderView()
+    expect(screen.getByText(/Detected fixed costs \(1\)/)).toBeTruthy()
+    expect(screen.getByText(/monthly, last charged/)).toBeTruthy()
+  })
+
   it('routes a signal action to the view it names', () => {
     const { onShowView } = renderView()
     fireEvent.click(screen.getByRole('button', { name: 'See the month' }))

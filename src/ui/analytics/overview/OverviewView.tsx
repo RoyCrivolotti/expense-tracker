@@ -13,6 +13,7 @@ import { SignalsCard } from './SignalsCard'
 import { AllocationBar } from './AllocationBar'
 import { MoversCard } from './MoversCard'
 import { BaselineCard } from './BaselineCard'
+import { FixedCostsCard } from './FixedCostsCard'
 import styles from './overview.module.css'
 
 const BASELINE_NAME: Record<CompareMode, string> = {
@@ -98,6 +99,7 @@ export function OverviewView({
         <AllocationBar allocation={data.allocation} throughDay={data.kpis.openDayLimit} />
         <MoversCard movers={data.movers} />
       </div>
+      <FixedCostsCard items={data.fixedCosts} />
       {data.baseline && <BaselineCard baseline={data.baseline} onUseInGoals={onUseBaselineInGoals} />}
     </div>
   )

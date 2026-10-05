@@ -35,14 +35,14 @@ function median(nums: number[]): number {
   return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!
 }
 
-function isMonthlyGroup(group: OccurrenceGroup): boolean {
+export function isMonthlyGroup(group: OccurrenceGroup): boolean {
   const sorted = [...group.dates].sort()
   const gaps = sorted.slice(1).map((d, i) => daysBetween(sorted[i]!, d))
   return gaps.length > 0 && classifyFrequency(median(gaps)) === 'monthly'
 }
 
 /** A recurring pattern counts towards a month's fixed charges only while it is alive. */
-function activeInMonth(group: OccurrenceGroup, month: string): boolean {
+export function activeInMonth(group: OccurrenceGroup, month: string): boolean {
   const prior = priorBudgetMonth(month)
   return (
     group.budgetMonths.has(month) ||
@@ -52,7 +52,7 @@ function activeInMonth(group: OccurrenceGroup, month: string): boolean {
 }
 
 /** The categories whose budgets make up the envelope: active, with a budget set. */
-function budgetedCategoryIds(categories: Category[]): Set<number> {
+export function budgetedCategoryIds(categories: Category[]): Set<number> {
   return new Set(categories.filter((c) => c.active && c.monthlyBudgetCents > 0).map((c) => c.id))
 }
 
