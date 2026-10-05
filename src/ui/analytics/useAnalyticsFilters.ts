@@ -15,7 +15,7 @@ export interface AnalyticsFilters {
  * budgets and the Dashboard (decision: the toggle is visible, the basis is
  * named next to it, and Cash — inherently paid — never offers it). Compare
  * only applies to the single-month period; a window period is compared with
- * the window before it.
+ * the same months a year earlier.
  */
 export function useAnalyticsFilters(): AnalyticsFilters {
   const [basis, setBasis] = useState<AnalyticsBasis>('committed')

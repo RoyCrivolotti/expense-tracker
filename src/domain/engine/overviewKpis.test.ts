@@ -162,7 +162,7 @@ describe('computeOverviewKpis', () => {
     expect(k.baseline).toBeNull()
   })
 
-  it('sums the window for ytd and baselines it against the window before', () => {
+  it('sums the window for ytd and baselines it against the same months a year earlier', () => {
     const k = computeOverviewKpis(TXNS, {
       months: MONTHS,
       month: '2026-02',
@@ -172,8 +172,61 @@ describe('computeOverviewKpis', () => {
       today: '2026-04-17',
     })
     expect(k.current.spendCents).toBe(100000 + 120000)
-    // The two months before Jan–Feb are Nov–Dec 2025; Nov is missing, so no baseline.
+    // Jan and Feb 2025 are not in the data, so there is nothing to compare against.
     expect(k.baseline).toBeNull()
+  })
+
+  describe('window baselines', () => {
+    const twoYears = [
+      ...month('2025-01', 300000, 80000),
+      ...month('2025-02', 300000, 90000),
+      ...month('2025-03', 300000, 70000),
+      ...month('2025-04', 300000, 70000),
+      ...month('2026-01', 300000, 100000),
+      ...month('2026-02', 300000, 110000),
+      ...month('2026-03', 300000, 60000),
+    ]
+    const all = ['2025-01', '2025-02', '2025-03', '2025-04', '2026-01', '2026-02', '2026-03']
+    const opts = { months: all, compare: 'prevMonth' as const, basis: 'committed' as const }
+
+    it('sets year to date against the same months last year', () => {
+      const k = computeOverviewKpis(twoYears, { ...opts, month: '2026-02', period: 'ytd', today: '2026-04-17' })
+      expect(k.current.spendCents).toBe(100000 + 110000)
+      expect(k.baseline?.spendCents).toBe(80000 + 90000)
+    })
+
+    it('sets the last twelve months against the twelve before them', () => {
+      const k = computeOverviewKpis(twoYears, { ...opts, month: '2026-01', period: 'last12', today: '2026-04-17' })
+      // Twelve months back from Jan 2026 reach Feb 2025, which has no counterpart year earlier.
+      expect(k.baseline).toBeNull()
+    })
+
+    it('does not overlap the window with its baseline across a gap in the data', () => {
+      const gap = ['2025-01', '2025-03', '2026-01', '2026-03']
+      const rows = [
+        ...month('2025-01', 300000, 80000),
+        ...month('2025-03', 300000, 70000),
+        ...month('2026-01', 300000, 100000),
+        ...month('2026-03', 300000, 60000),
+      ]
+      const k = computeOverviewKpis(rows, { ...opts, months: gap, month: '2026-03', period: 'ytd', today: '2026-06-01' })
+      expect(k.current.spendCents).toBe(100000 + 60000)
+      expect(k.baseline?.spendCents).toBe(80000 + 70000)
+    })
+
+    it('cuts the open month and its counterpart at the same days', () => {
+      const rows = [
+        ...twoYears.filter((t) => t.budgetMonth !== '2026-03' && t.budgetMonth !== '2025-03'),
+        txn({ id: 901, date: '2026-03-04', budgetMonth: '2026-03', amountCents: 5000 }),
+        txn({ id: 902, date: '2026-03-20', budgetMonth: '2026-03', amountCents: 9000 }),
+        txn({ id: 903, date: '2025-03-03', budgetMonth: '2025-03', amountCents: 4000 }),
+        txn({ id: 904, date: '2025-03-25', budgetMonth: '2025-03', amountCents: 8000 }),
+      ]
+      const k = computeOverviewKpis(rows, { ...opts, month: '2026-03', period: 'ytd', today: '2026-03-10' })
+      expect(k.openDayLimit).toBe(10)
+      expect(k.current.spendCents).toBe(100000 + 110000 + 5000)
+      expect(k.baseline?.spendCents).toBe(80000 + 90000 + 4000)
+    })
   })
 
   it('serves up to twelve full months for the sparklines', () => {

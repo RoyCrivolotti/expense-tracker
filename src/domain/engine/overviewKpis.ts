@@ -48,19 +48,24 @@ function finishTotals(t: OverviewTotals): OverviewTotals {
   return t
 }
 
-/** Totals for a set of budget months, each cut like the open month (null = whole months). */
+/**
+ * Totals for a set of budget months, each cut like the open month (null = whole
+ * months). `cutOnly` limits the cut to one month of a window, so the rest stay whole.
+ */
 export function totalsForMonths(
   transactions: Transaction[],
   months: string[],
   cut: SameDaysCut | null,
   basis: AnalyticsBasis,
+  cutOnly?: string,
 ): OverviewTotals {
   const opts = basisOptions(basis)
   const wanted = new Set(months)
   const t = emptyTotals()
   for (const txn of transactions) {
     if (!wanted.has(txn.budgetMonth)) continue
-    if (!withinCut(txn.date, txn.budgetMonth, cut)) continue
+    if ((cutOnly === undefined || txn.budgetMonth === cutOnly) && !withinCut(txn.date, txn.budgetMonth, cut))
+      continue
     if (txn.status === 'cancelled') continue
     if (!opts.includeForecast && txn.status === 'forecast') continue
     if (txn.type === 'income') t.incomeCents += txn.amountCents
@@ -109,18 +114,24 @@ function monthBaseline(
   return meanTotals(window.map((m) => totalsForMonths(transactions, [m], cut, basis)))
 }
 
-/** The preceding window of the same length, for YTD and last-12 baselines. */
+/**
+ * The same calendar months a year earlier, for YTD and last-12 baselines. Shifting by
+ * the window's own length would overlap the window across a gap in the data, and put
+ * a year-to-date total beside the wrong season. The open month's counterpart is cut
+ * at the same elapsed days, so a half-finished month is not set against a whole one.
+ */
 function windowBaseline(
   transactions: Transaction[],
   months: string[],
   window: string[],
+  cut: SameDaysCut | null,
+  openMonth: string,
   basis: AnalyticsBasis,
 ): OverviewTotals | null {
-  const first = window[0]
-  if (!first) return null
-  const prior = window.map((m) => shiftBudgetMonth(m, -window.length))
+  if (window.length === 0) return null
+  const prior = window.map((m) => shiftBudgetMonth(m, -12))
   if (!prior.every((m) => months.includes(m))) return null
-  return totalsForMonths(transactions, prior, null, basis)
+  return totalsForMonths(transactions, prior, cut, basis, shiftBudgetMonth(openMonth, -12))
 }
 
 export interface OverviewKpisOptions {
@@ -142,16 +153,15 @@ export function computeOverviewKpis(
   { months, month, period, compare, basis, today, openMonth, rolloverDay }: OverviewKpisOptions,
 ): OverviewKpis {
   const window = monthsForPeriod(months, month, period)
-  // The same-days clamp applies to the single-month period; a window period sums
-  // whole months. The open month then contributes only what it has so far while
-  // the baseline window is whole months — a known skew the chips inherit.
-  const cut = period === 'month' ? sameDaysCut(month, today, openMonth, rolloverDay) : null
+  // The open month is only ever the last month of a window, and is compared like
+  // for like: the same elapsed days of the month it is set against.
+  const cut = sameDaysCut(month, today, openMonth, rolloverDay)
   const openDayLimit = cut?.elapsedDays ?? null
-  const current = totalsForMonths(transactions, window, cut, basis)
+  const current = totalsForMonths(transactions, window, cut, basis, month)
   const baseline =
     period === 'month'
       ? monthBaseline(transactions, months, month, compare, cut, basis)
-      : windowBaseline(transactions, months, window, basis)
+      : windowBaseline(transactions, months, window, cut, month, basis)
   const sparkMonths = months.filter((m) => m <= month).slice(-12)
   const series = sparkMonths.map((m) => ({
     month: m,
