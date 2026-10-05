@@ -1,7 +1,7 @@
 /**
  * The Overview's five headline numbers — income, spent, net saved, savings rate,
  * invested — for a period, with a comparison baseline. An open month is only
- * compared with the same days of other months (see `sameDaysLimit`); the savings
+ * compared with the same days of other months (see `sameDaysCut`); the savings
  * rate follows decision 6: (income − spending) ÷ income, investing is not
  * spending, and reimbursable spend counts until it is repaid.
  */
@@ -13,8 +13,10 @@ import {
   type CompareMode,
   basisOptions,
   monthsForPeriod,
-  sameDaysLimit,
+  type SameDaysCut,
+  sameDaysCut,
   signedExpense,
+  withinCut,
 } from './analyticsPeriod'
 
 export interface OverviewTotals {
@@ -46,11 +48,11 @@ function finishTotals(t: OverviewTotals): OverviewTotals {
   return t
 }
 
-/** Totals for a set of budget months, each cut at `dayLimit` (null = whole months). */
+/** Totals for a set of budget months, each cut like the open month (null = whole months). */
 export function totalsForMonths(
   transactions: Transaction[],
   months: string[],
-  dayLimit: number | null,
+  cut: SameDaysCut | null,
   basis: AnalyticsBasis,
 ): OverviewTotals {
   const opts = basisOptions(basis)
@@ -58,7 +60,7 @@ export function totalsForMonths(
   const t = emptyTotals()
   for (const txn of transactions) {
     if (!wanted.has(txn.budgetMonth)) continue
-    if (dayLimit !== null && parseInt(txn.date.slice(8, 10), 10) > dayLimit) continue
+    if (!withinCut(txn.date, txn.budgetMonth, cut)) continue
     if (txn.status === 'cancelled') continue
     if (!opts.includeForecast && txn.status === 'forecast') continue
     if (txn.type === 'income') t.incomeCents += txn.amountCents
@@ -88,7 +90,7 @@ function monthBaseline(
   months: string[],
   month: string,
   compare: CompareMode,
-  dayLimit: number | null,
+  cut: SameDaysCut | null,
   basis: AnalyticsBasis,
 ): OverviewTotals | null {
   const idx = months.indexOf(month)
@@ -96,15 +98,15 @@ function monthBaseline(
     // A viewed month missing from the data (navigated past the edge) still has
     // a meaningful "month before": the newest month below it.
     const prev = idx > 0 ? months[idx - 1] : idx === -1 ? months.filter((m) => m < month).at(-1) : undefined
-    return prev ? totalsForMonths(transactions, [prev], dayLimit, basis) : null
+    return prev ? totalsForMonths(transactions, [prev], cut, basis) : null
   }
   if (compare === 'prevYear') {
     const target = shiftBudgetMonth(month, -12)
     if (!months.includes(target)) return null
-    return totalsForMonths(transactions, [target], dayLimit, basis)
+    return totalsForMonths(transactions, [target], cut, basis)
   }
   const window = (idx === -1 ? months.filter((m) => m < month) : months.slice(0, idx)).slice(-3)
-  return meanTotals(window.map((m) => totalsForMonths(transactions, [m], dayLimit, basis)))
+  return meanTotals(window.map((m) => totalsForMonths(transactions, [m], cut, basis)))
 }
 
 /** The preceding window of the same length, for YTD and last-12 baselines. */
@@ -131,21 +133,24 @@ export interface OverviewKpisOptions {
   today: string
   /** The budget month `today` falls in (rollover-aware); defaults to today's calendar month. */
   openMonth?: string
+  /** The owner's budget rollover day; defaults to plain calendar months. */
+  rolloverDay?: number
 }
 
 export function computeOverviewKpis(
   transactions: Transaction[],
-  { months, month, period, compare, basis, today, openMonth }: OverviewKpisOptions,
+  { months, month, period, compare, basis, today, openMonth, rolloverDay }: OverviewKpisOptions,
 ): OverviewKpis {
   const window = monthsForPeriod(months, month, period)
   // The same-days clamp applies to the single-month period; a window period sums
   // whole months. The open month then contributes only what it has so far while
   // the baseline window is whole months — a known skew the chips inherit.
-  const openDayLimit = period === 'month' ? sameDaysLimit(month, today, openMonth) : null
-  const current = totalsForMonths(transactions, window, openDayLimit, basis)
+  const cut = period === 'month' ? sameDaysCut(month, today, openMonth, rolloverDay) : null
+  const openDayLimit = cut?.elapsedDays ?? null
+  const current = totalsForMonths(transactions, window, cut, basis)
   const baseline =
     period === 'month'
-      ? monthBaseline(transactions, months, month, compare, openDayLimit, basis)
+      ? monthBaseline(transactions, months, month, compare, cut, basis)
       : windowBaseline(transactions, months, window, basis)
   const sparkMonths = months.filter((m) => m <= month).slice(-12)
   const series = sparkMonths.map((m) => ({

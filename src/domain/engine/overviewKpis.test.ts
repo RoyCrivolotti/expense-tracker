@@ -100,18 +100,29 @@ describe('computeOverviewKpis', () => {
     expect(k.current.spendCents).toBe(60000)
   })
 
-  it('clamps by the rollover-aware open month when one is given', () => {
-    const k = computeOverviewKpis(TXNS, {
-      months: MONTHS,
+  it('cuts the open month by days since it began, not by day of the calendar month', () => {
+    // Day-13 rollover on Mar 5: March's budget month began Feb 13, so Feb 20 is inside it.
+    const rows = [
+      txn({ id: 1, date: '2026-02-20', budgetMonth: '2026-03', amountCents: 1000 }),
+      txn({ id: 2, date: '2026-03-04', budgetMonth: '2026-03', amountCents: 2000 }),
+      txn({ id: 3, date: '2026-03-08', budgetMonth: '2026-03', amountCents: 4000 }),
+      txn({ id: 4, date: '2026-01-20', budgetMonth: '2026-02', amountCents: 500 }),
+      txn({ id: 5, date: '2026-02-05', budgetMonth: '2026-02', amountCents: 700 }),
+    ]
+    const k = computeOverviewKpis(rows, {
+      months: ['2026-02', '2026-03'],
       month: '2026-03',
       period: 'month',
       compare: 'prevMonth',
       basis: 'committed',
-      // Feb 28 with a rollover day already puts March's budget month under way.
-      today: '2026-02-28',
+      today: '2026-03-05',
       openMonth: '2026-03',
+      rolloverDay: 13,
     })
-    expect(k.openDayLimit).toBe(28)
+    expect(k.openDayLimit).toBe(21)
+    expect(k.current.spendCents).toBe(3000)
+    // February's budget month began Jan 13, so day 21 of it ends on Feb 2: the Feb 5 row is out.
+    expect(k.baseline?.spendCents).toBe(500)
   })
 
   it('still finds the month before when the viewed month is past the data edge', () => {

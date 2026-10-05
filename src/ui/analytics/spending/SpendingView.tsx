@@ -45,7 +45,16 @@ function Detail({
     () =>
       computeSpendingGroupDetail(
         { transactions: model.dataset.transactions, categories: model.dataset.categories },
-        { months, month, basis, groupBy, key: row.key, today, openMonth },
+        {
+          months,
+          month,
+          basis,
+          groupBy,
+          key: row.key,
+          today,
+          openMonth,
+          rolloverDay: model.dataset.settings.budgetRolloverDay,
+        },
       ),
     [model.dataset, months, month, basis, groupBy, row.key, today, openMonth],
   )
@@ -93,7 +102,15 @@ export function SpendingView({ model, month, basis, today, openMonth, onOpenTran
           categories: model.dataset.categories,
           labels: model.dataset.labels,
         },
-        { months: model.months, month, basis, today, openMonth, groupBy },
+        {
+          months: model.months,
+          month,
+          basis,
+          today,
+          openMonth,
+          rolloverDay: model.dataset.settings.budgetRolloverDay,
+          groupBy,
+        },
       ),
     [model.dataset, model.months, month, basis, today, openMonth, groupBy],
   )

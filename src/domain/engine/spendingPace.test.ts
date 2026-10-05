@@ -123,6 +123,25 @@ describe('computeSpendingPace', () => {
     expect(pace.projectedCents).toBe(pace.flexibleSpentCents)
   })
 
+  it('runs the clock from the budget month\'s own first day under a rollover', () => {
+    // Day-13 rollover on Mar 5: the March budget month began Feb 13 and runs 28 days.
+    const rolled = [
+      txn({ date: '2026-02-20', budgetMonth: '2026-03', description: 'Groceries early', amountCents: 9000 }),
+      txn({ date: '2026-03-08', budgetMonth: '2026-03', description: 'Groceries later', amountCents: 5000 }),
+    ]
+    const pace = computeSpendingPace(rolled, categories, [], classifyFixedSpend(rolled), {
+      month: '2026-03',
+      today: '2026-03-05',
+      openMonth: '2026-03',
+      rolloverDay: 13,
+      basis: 'committed',
+      prevMonth: null,
+    })
+    expect(pace.dayOfMonth).toBe(21)
+    expect(pace.daysInMonth).toBe(28)
+    expect(pace.flexibleSpentCents).toBe(9000)
+  })
+
   it('never reports a negative flexible budget', () => {
     const tight: Category[] = [{ id: 1, name: 'Rent', monthlyBudgetCents: 50000, sortOrder: 0, active: true }]
     const pace = computeSpendingPace(rentHistory(), tight, [], classifyFixedSpend(rentHistory()), {

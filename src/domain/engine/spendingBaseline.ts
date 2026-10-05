@@ -7,7 +7,7 @@
 import type { GoalScenario, InstallmentPlan, Transaction } from '../types'
 import { shiftBudgetMonth } from './dates'
 import { finalBudgetMonth, budgetMonthForIndex } from './installments'
-import { type AnalyticsBasis, spendThroughDay } from './analyticsPeriod'
+import { type AnalyticsBasis, spendThroughCut } from './analyticsPeriod'
 
 export const BASELINE_MONTHS = 12
 
@@ -64,7 +64,7 @@ export function computeSpendingBaseline(
 ): SpendingBaseline | null {
   const window = months.filter((m) => m < month).slice(-BASELINE_MONTHS)
   const spends = window
-    .map((m) => ({ month: m, cents: spendThroughDay(transactions, m, null, basis) }))
+    .map((m) => ({ month: m, cents: spendThroughCut(transactions, m, null, basis) }))
     .filter((s) => s.cents !== 0)
   if (spends.length === 0) return null
 

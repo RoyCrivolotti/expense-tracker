@@ -10,7 +10,7 @@ import { daysBetween, priorBudgetMonth } from './dates'
 import { expectedIndexForMonth } from './installments'
 import { classifyFrequency } from './recurringPredict'
 import type { OccurrenceGroup } from './recurringTypes'
-import { type AnalyticsBasis, sameDaysLimit } from './analyticsPeriod'
+import { type AnalyticsBasis, budgetMonthLength, sameDaysCut } from './analyticsPeriod'
 import { type FixedSpendClassifier, recurringFixedGroups, splitFixedFlexible } from './fixedFlexible'
 
 export interface SpendingPace {
@@ -27,11 +27,6 @@ export interface SpendingPace {
   projectedCents: number
   /** Last month's flexible spend through the same day, or null without a last month. */
   lastMonthSameDayCents: number | null
-}
-
-function daysInCalendarMonth(month: string): number {
-  const [y, m] = month.split('-').map(Number) as [number, number]
-  return new Date(y, m, 0).getDate()
 }
 
 function median(nums: number[]): number {
@@ -91,6 +86,8 @@ export interface SpendingPaceOptions {
   prevMonth: string | null
   /** The budget month `today` falls in (rollover-aware); defaults to today's calendar month. */
   openMonth?: string
+  /** The owner's budget rollover day; defaults to plain calendar months. */
+  rolloverDay?: number
 }
 
 export function computeSpendingPace(
@@ -98,23 +95,23 @@ export function computeSpendingPace(
   categories: Category[],
   plans: InstallmentPlan[],
   classifier: FixedSpendClassifier,
-  { month, today, basis, prevMonth, openMonth }: SpendingPaceOptions,
+  { month, today, basis, prevMonth, openMonth, rolloverDay }: SpendingPaceOptions,
 ): SpendingPace {
-  const daysInMonth = daysInCalendarMonth(month)
-  const dayLimit = sameDaysLimit(month, today, openMonth)
-  const open = dayLimit !== null
-  const dayOfMonth = Math.min(dayLimit ?? daysInMonth, daysInMonth)
+  const daysInMonth = budgetMonthLength(month, rolloverDay)
+  const cut = sameDaysCut(month, today, openMonth, rolloverDay)
+  const open = cut !== null
+  const dayOfMonth = cut?.elapsedDays ?? daysInMonth
 
   const totalBudget = categories
     .filter((c) => c.active)
     .reduce((s, c) => s + c.monthlyBudgetCents, 0)
   const flexibleBudgetCents = Math.max(0, totalBudget - expectedFixedCents(transactions, plans, categories, month))
 
-  const split = splitFixedFlexible(transactions, classifier, month, basis, dayLimit)
+  const split = splitFixedFlexible(transactions, classifier, month, basis, cut)
   const frac = dayOfMonth / daysInMonth
   const projectedCents = open && frac > 0 ? Math.round(split.flexibleCents / frac) : split.flexibleCents
   const lastMonthSameDayCents = prevMonth
-    ? splitFixedFlexible(transactions, classifier, prevMonth, basis, dayLimit).flexibleCents
+    ? splitFixedFlexible(transactions, classifier, prevMonth, basis, cut).flexibleCents
     : null
 
   return {

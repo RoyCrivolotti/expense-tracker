@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Transaction } from '../types'
+import { sameDaysCut } from './analyticsPeriod'
 import { classifyFixedSpend, splitFixedFlexible } from './fixedFlexible'
 
 function txn(partial: Partial<Transaction>): Transaction {
@@ -94,7 +95,7 @@ describe('splitFixedFlexible', () => {
     const paid = splitFixedFlexible(txns, classifier, '2026-01', 'paid')
     expect(paid.flexibleCents).toBe(6000 + 3000 - 1000)
 
-    const throughDay10 = splitFixedFlexible(txns, classifier, '2026-01', 'committed', 10)
+    const throughDay10 = splitFixedFlexible(txns, classifier, '2026-01', 'committed', sameDaysCut('2026-01', '2026-01-10'))
     expect(throughDay10.flexibleCents).toBe(6000 - 1000 + 2000)
   })
 })

@@ -10,7 +10,7 @@ import { daysBetween } from './dates'
 import { groupTransactions, normalizeDesc, occurrenceKey } from './recurringDetect'
 import { classifyFrequency, regularityScore } from './recurringPredict'
 import type { GroupKey, OccurrenceGroup } from './recurringTypes'
-import { type AnalyticsBasis, basisOptions, signedExpense } from './analyticsPeriod'
+import { type AnalyticsBasis, type SameDaysCut, basisOptions, signedExpense, withinCut } from './analyticsPeriod'
 
 const MIN_REGULARITY = 0.6
 
@@ -78,21 +78,21 @@ export interface FixedFlexibleSplit {
 
 /**
  * Net expense of a budget month split into fixed and flexible, through an
- * optional day-of-month cutoff (see `sameDaysLimit`).
+ * optional same-days cut (see `sameDaysCut`).
  */
 export function splitFixedFlexible(
   transactions: Transaction[],
   classifier: FixedSpendClassifier,
   month: string,
   basis: AnalyticsBasis,
-  dayLimit: number | null = null,
+  cut: SameDaysCut | null = null,
 ): FixedFlexibleSplit {
   const opts = basisOptions(basis)
   let fixedCents = 0
   let flexibleCents = 0
   for (const txn of transactions) {
     if (txn.budgetMonth !== month) continue
-    if (dayLimit !== null && parseInt(txn.date.slice(8, 10), 10) > dayLimit) continue
+    if (!withinCut(txn.date, month, cut)) continue
     const signed = signedExpense(txn, opts)
     if (signed === null) continue
     if (classifier.isFixed(txn)) fixedCents += signed

@@ -8,9 +8,12 @@
 import type { Category, Label, Transaction } from '../types'
 import {
   type AnalyticsBasis,
+  type SameDaysCut,
   basisOptions,
-  sameDaysLimit,
+  budgetMonthLength,
+  sameDaysCut,
   signedExpense,
+  withinCut,
 } from './analyticsPeriod'
 import { type FixedSpendClassifier, classifyFixedSpend } from './fixedFlexible'
 import { normalizeDesc } from './recurringDetect'
@@ -50,6 +53,8 @@ export interface SpendingGroupsOptions {
   today: string
   /** The budget month `today` falls in (rollover-aware); defaults to today's calendar month. */
   openMonth?: string
+  /** The owner's budget rollover day; defaults to plain calendar months. */
+  rolloverDay?: number
   groupBy: SpendingGroupBy
 }
 
@@ -107,10 +112,6 @@ interface GroupAgg extends Membership {
   avgWindow: Map<string, number>
 }
 
-function dayOf(txn: Transaction): number {
-  return parseInt(txn.date.slice(8, 10), 10)
-}
-
 function emptyAgg(member: Membership): GroupAgg {
   return {
     ...member,
@@ -124,12 +125,12 @@ function emptyAgg(member: Membership): GroupAgg {
 
 interface CollectScope {
   month: string
-  dayLimit: number | null
+  cut: SameDaysCut | null
   avgMonths: Set<string>
 }
 
 function addToGroup(agg: GroupAgg, txn: Transaction, signed: number, scope: CollectScope): void {
-  const inDays = scope.dayLimit === null || dayOf(txn) <= scope.dayLimit
+  const inDays = withinCut(txn.date, txn.budgetMonth, scope.cut)
   // The open month's spark point obeys the same-days clamp the row total does,
   // so a tapped row never shows two different numbers for the same month.
   if (txn.budgetMonth !== scope.month || inDays) {
@@ -151,11 +152,11 @@ function collectGroups(
   opts: SpendingGroupsOptions,
   classifier: FixedSpendClassifier,
 ): Map<string, GroupAgg> {
-  const { months, month, basis, today, openMonth, groupBy } = opts
+  const { months, month, basis, today, openMonth, rolloverDay, groupBy } = opts
   const engineOpts = basisOptions(basis)
   const scope: CollectScope = {
     month,
-    dayLimit: sameDaysLimit(month, today, openMonth),
+    cut: sameDaysCut(month, today, openMonth, rolloverDay),
     avgMonths: new Set(months.filter((m) => m < month).slice(-3)),
   }
   const window = new Set(months.filter((m) => m <= month).slice(-12))
@@ -182,10 +183,8 @@ function budgetFor(
   if (opts.groupBy !== 'category') return { budgetCents: null, shouldBeTodayCents: null }
   const cat = args.categories.find((c) => String(c.id) === key)
   if (!cat || cat.monthlyBudgetCents <= 0) return { budgetCents: null, shouldBeTodayCents: null }
-  const dayLimit = sameDaysLimit(opts.month, opts.today, opts.openMonth)
-  const [y, m] = opts.month.split('-').map(Number) as [number, number]
-  const daysInMonth = new Date(y, m, 0).getDate()
-  const frac = dayLimit === null ? 1 : Math.min(dayLimit, daysInMonth) / daysInMonth
+  const cut = sameDaysCut(opts.month, opts.today, opts.openMonth, opts.rolloverDay)
+  const frac = cut === null ? 1 : cut.elapsedDays / budgetMonthLength(opts.month, opts.rolloverDay)
   return {
     budgetCents: cat.monthlyBudgetCents,
     shouldBeTodayCents: Math.round(cat.monthlyBudgetCents * frac),
