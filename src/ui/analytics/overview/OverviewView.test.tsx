@@ -99,6 +99,12 @@ describe('OverviewView', () => {
     expect(screen.getByText(/income this month/)).toBeTruthy()
   })
 
+  it('says the baseline is a trailing average over the history there is, not a year to date', () => {
+    renderView()
+    expect(screen.getByText(/of\s+history before this one, up to 12\. A trailing average, not a calendar year/)).toBeTruthy()
+    expect(screen.getByText(/Annual spend at FI/)).toBeTruthy()
+  })
+
   it('routes a signal action to the view it names', () => {
     const { onShowView } = renderView()
     fireEvent.click(screen.getByRole('button', { name: 'See the month' }))
