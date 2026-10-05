@@ -19,19 +19,27 @@ function Row({ label, value }: { label: string; value: string }) {
   )
 }
 
+/** A refund-heavy month can sit below zero; the meter floor is still the left edge. */
+function clamp01(v: number): number {
+  return Math.min(1, Math.max(0, v))
+}
+
 /**
  * Flexible spending against the pace the budget implies. Fixed costs are counted
- * but stay out of the clock — rent on the 1st is not "ahead of pace".
+ * but stay out of the clock: rent on the 1st is not "ahead of pace".
  */
-export function PaceCard({ pace }: { pace: SpendingPace }) {
+export function PaceCard({ pace, isFuture }: { pace: SpendingPace; isFuture: boolean }) {
   const format = useMoneyFormat()
   if (pace.flexibleBudgetCents <= 0) return null
-  const pct = Math.min(1, pace.flexibleSpentCents / pace.flexibleBudgetCents)
-  const tickPct = Math.min(1, pace.shouldBeTodayCents / pace.flexibleBudgetCents)
+  const pct = clamp01(pace.flexibleSpentCents / pace.flexibleBudgetCents)
+  const tickPct = clamp01(pace.shouldBeTodayCents / pace.flexibleBudgetCents)
   const ghostPct =
     pace.lastMonthSameDayCents !== null
-      ? Math.min(1, pace.lastMonthSameDayCents / pace.flexibleBudgetCents)
+      ? clamp01(pace.lastMonthSameDayCents / pace.flexibleBudgetCents)
       : null
+  const closedNote = isFuture
+    ? 'Not started — the pace clock only runs while a month is open.'
+    : 'Closed month — the pace clock only runs while a month is open.'
 
   return (
     <Card>
@@ -39,7 +47,7 @@ export function PaceCard({ pace }: { pace: SpendingPace }) {
       <p className={styles.cardSub}>
         {pace.open
           ? `Day ${pace.dayOfMonth} of ${pace.daysInMonth} — fixed costs are counted separately.`
-          : 'Closed month — the pace clock only runs while a month is open.'}
+          : closedNote}
       </p>
       <div className={styles.paceNumber}>
         {formatCentsCompact(pace.flexibleSpentCents, format)}

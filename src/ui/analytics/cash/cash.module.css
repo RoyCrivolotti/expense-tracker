@@ -99,6 +99,11 @@
   color: var(--exp-refund);
 }
 
+.dot_open {
+  border: 1.5px solid var(--color-text-muted);
+  color: var(--color-text-muted);
+}
+
 .dot_waiting {
   border: 1.5px dashed var(--color-text-muted);
   color: var(--color-text-muted);

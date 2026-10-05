@@ -61,6 +61,7 @@ function renderView(overrides: Partial<Parameters<typeof OverviewView>[0]> = {})
       period="month"
       compare="prevMonth"
       today="2026-03-10"
+      openMonth="2026-03"
       onSelectMonth={onSelectMonth}
       onShowView={onShowView}
       {...overrides}
@@ -101,10 +102,47 @@ describe('OverviewView', () => {
     expect(onUseBaselineInGoals).toHaveBeenCalledWith(expect.any(Number))
   })
 
+  it('selects the clicked trend month, mapped through the svg itself', () => {
+    // Pointer capture retargets clicks to the svg, so the svg maps x to a month.
+    // jsdom has no CTM; an identity transform stands in for it.
+    const { onSelectMonth } = renderView()
+    const svg = screen.getByRole('img', { name: 'Spending bars and income line by month' })
+    Object.assign(svg, {
+      getScreenCTM: () => ({ inverse: () => 'identity' }),
+      createSVGPoint: () => {
+        const pt = { x: 0, y: 0, matrixTransform: () => ({ x: pt.x, y: pt.y }) }
+        return pt
+      },
+    })
+    fireEvent.click(svg, { clientX: 0 })
+    expect(onSelectMonth).toHaveBeenCalledWith('2025-12')
+  })
+
+  it('selects the keyboard-focused trend month with Enter', () => {
+    const { onSelectMonth } = renderView()
+    const svg = screen.getByRole('img', { name: 'Spending bars and income line by month' })
+    fireEvent.keyDown(svg, { key: 'ArrowRight' })
+    fireEvent.keyDown(svg, { key: 'Enter' })
+    expect(onSelectMonth).toHaveBeenCalledWith('2025-12')
+  })
+
   it('opens the monthly totals table on demand', () => {
     renderView()
     expect(screen.queryByText('Net saving')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Table' }))
     expect(screen.getByText('Net saving')).toBeTruthy()
+  })
+
+  it('marks the income of a lone month with a dot, since one point draws no line', () => {
+    const oneMonth = buildExpenseModel(
+      makeDataset({
+        transactions: [
+          txn({ date: '2026-03-01', budgetMonth: '2026-03', type: 'income', description: 'Payroll', amountCents: 300_000 }),
+        ],
+      }),
+    )
+    renderView({ model: oneMonth })
+    const svg = screen.getByRole('img', { name: 'Spending bars and income line by month' })
+    expect(svg.querySelectorAll('circle')).toHaveLength(1)
   })
 })

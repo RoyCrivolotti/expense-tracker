@@ -21,6 +21,12 @@ describe('MonthCloseDots', () => {
     expect(screen.getByTitle('Mar: ready to count')).toHaveAttribute('aria-pressed', 'true')
   })
 
+  it('shows a month that has not ended as such, not as ready to count', () => {
+    render(<MonthCloseDots rows={rows} selected="2026-01" openMonth="2026-03" onSelect={() => {}} />)
+    expect(screen.getByTitle('Mar: not ended yet')).toHaveTextContent('◔')
+    expect(screen.getByTitle('Apr: not ended yet')).toHaveTextContent('◔')
+  })
+
   it('selects the month of the dot that was tapped', () => {
     const onSelect = vi.fn()
     render(<MonthCloseDots rows={rows} selected="2026-03" onSelect={onSelect} />)
