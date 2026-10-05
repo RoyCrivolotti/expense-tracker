@@ -2,6 +2,8 @@ import type { Allocation } from '../../../engine'
 import { formatCentsCompact } from '../../../engine'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { Card } from '../../components/primitives'
+import { ALLOCATION_NOTES } from '../analyticsCopy'
+import { HowCalculated } from '../shared/HowCalculated'
 import styles from './overview.module.css'
 
 interface Segment {
@@ -63,6 +65,7 @@ export function AllocationBar({
           </p>
         )}
       </div>
+      <HowCalculated notes={ALLOCATION_NOTES} />
     </Card>
   )
 }

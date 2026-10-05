@@ -39,3 +39,26 @@
   background: color-mix(in srgb, var(--exp-danger) 16%, transparent);
   color: var(--exp-danger-text);
 }
+
+.how {
+  margin-top: 0.7rem;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.howSummary {
+  cursor: pointer;
+  font-weight: 600;
+  list-style-position: inside;
+}
+
+.howBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.howBody p {
+  margin: 0;
+}

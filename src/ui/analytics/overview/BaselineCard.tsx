@@ -2,6 +2,8 @@ import type { SpendingBaseline } from '../../../engine'
 import { formatCentsCompact } from '../../../engine'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { Card } from '../../components/primitives'
+import { BASELINE_NOTES } from '../analyticsCopy'
+import { HowCalculated } from '../shared/HowCalculated'
 import { ChangeChip } from '../shared/ChangeChip'
 import styles from './overview.module.css'
 
@@ -73,6 +75,7 @@ export function BaselineCard({
           Use in Goals
         </button>
       )}
+      <HowCalculated notes={BASELINE_NOTES} />
     </Card>
   )
 }

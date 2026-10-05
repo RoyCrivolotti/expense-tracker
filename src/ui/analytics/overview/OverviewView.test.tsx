@@ -105,6 +105,14 @@ describe('OverviewView', () => {
     expect(screen.getByText(/Annual spend at FI/)).toBeTruthy()
   })
 
+  it('explains how the pace, allocation and baseline cards are calculated', () => {
+    renderView()
+    expect(screen.getAllByText('How is this calculated?')).toHaveLength(3)
+    expect(screen.getByText(/at least 3 times, monthly, quarterly or yearly/)).toBeTruthy()
+    expect(screen.getByText(/Left over is income minus fixed, flexible and invested/)).toBeTruthy()
+    expect(screen.getByText(/Use in Goals sets the plan.s annual spend to the mean times 12/)).toBeTruthy()
+  })
+
   it('routes a signal action to the view it names', () => {
     const { onShowView } = renderView()
     fireEvent.click(screen.getByRole('button', { name: 'See the month' }))
