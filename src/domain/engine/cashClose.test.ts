@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest'
 import type { ExpenseSettings, Transaction } from '../types'
 import { defaultExpenseSettings } from './defaults'
 import type { CashRow } from './cashReconciliation'
-import { balancesAtCost, cashBridge, monthCloseStatus, readyToCountMonth } from './cashClose'
+import {
+  balancesAtCost,
+  cashBridge,
+  firstCountedMonth,
+  monthCloseStatus,
+  readyToCountMonth,
+} from './cashClose'
 
 function row(partial: Partial<CashRow>): CashRow {
   return {
@@ -39,13 +45,50 @@ describe('monthCloseStatus', () => {
     ).toBe('counted')
   })
 
+  it('calls an uncounted month from before the first count untracked', () => {
+    const old = row({ month: '2026-01' })
+    expect(monthCloseStatus(old, undefined, '2026-04', '2026-03')).toBe('untracked')
+    expect(monthCloseStatus(old, undefined, '2026-04', null)).toBe('ready')
+    // A month after the first count is still counted on, as ever.
+    expect(monthCloseStatus(row({ month: '2026-03' }), undefined, '2026-04', '2026-02')).toBe('ready')
+  })
+
+  it('reads the first counted month as the baseline whatever its gap', () => {
+    const first = row({ month: '2026-02', actualCashCents: 1, monthGapCents: 90_000 })
+    expect(monthCloseStatus(first, undefined, '2026-04', '2026-02')).toBe('counted')
+    const later = row({ month: '2026-03', actualCashCents: 1, monthGapCents: 90_000 })
+    expect(monthCloseStatus(later, undefined, '2026-04', '2026-02')).toBe('drift')
+  })
+
   it('treats the tolerance as inclusive', () => {
     expect(monthCloseStatus(row({ actualCashCents: 1, monthGapCents: 500 }))).toBe('counted')
     expect(monthCloseStatus(row({ actualCashCents: 1, monthGapCents: 501 }))).toBe('drift')
   })
 })
 
+describe('firstCountedMonth', () => {
+  it('is the first month with a count, or null before any', () => {
+    expect(firstCountedMonth([row({ month: '2026-01' }), row({ month: '2026-02' })])).toBeNull()
+    expect(
+      firstCountedMonth([
+        row({ month: '2026-01' }),
+        row({ month: '2026-02', actualCashCents: 5 }),
+        row({ month: '2026-03', actualCashCents: 6 }),
+      ]),
+    ).toBe('2026-02')
+  })
+})
+
 describe('readyToCountMonth', () => {
+  it('never names a month from before counting began', () => {
+    const rows = [
+      row({ month: '2026-01' }),
+      row({ month: '2026-02', actualCashCents: 5, monthGapCents: 0 }),
+      row({ month: '2026-03', unpaidLiabilityCents: 5000 }),
+    ]
+    expect(readyToCountMonth(rows, '2026-04')).toBeNull()
+  })
+
   it('names the newest month that can be counted, below the one under way', () => {
     const rows = [
       row({ month: '2026-01' }),

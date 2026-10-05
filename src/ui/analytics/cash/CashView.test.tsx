@@ -29,7 +29,7 @@ function txn(partial: Partial<Transaction>): Transaction {
   return makeTransaction({ id: nextId++, ...partial })
 }
 
-function model() {
+function model(cashActuals: { yearMonth: string; actualCashCents: number }[] = []) {
   return buildExpenseModel(
     makeDataset({
       settings: { ...defaultExpenseSettings(), openingCashCents: 800_000, openingInvestmentCents: 100_000 },
@@ -38,7 +38,7 @@ function model() {
         { accountId: 2, yearMonth: '2026-01', paid: true },
         { accountId: 2, yearMonth: '2026-02', paid: false },
       ],
-      cashActuals: [],
+      cashActuals,
       transactions: [
         txn({ date: '2026-01-01', budgetMonth: '2026-01', type: 'income', amountCents: 300_000 }),
         txn({ date: '2026-01-05', budgetMonth: '2026-01', accountId: 2, amountCents: 20_000 }),
@@ -103,6 +103,22 @@ describe('CashView', () => {
     expect(screen.getByText(/Statements are paid\. Count the cash/)).toBeInTheDocument()
     fireEvent.click(screen.getByTitle('Feb: not ended yet'))
     expect(screen.getByText(/has not ended yet/)).toBeInTheDocument()
+  })
+
+  it('leaves months from before the first count alone and calls that count the starting point', () => {
+    // February is the first month ever counted, with a gap that holds all of January.
+    const counted = model([{ yearMonth: '2026-02', actualCashCents: 700_000 }])
+    render(<CashView model={counted} month="2026-02" openMonth="2026-03" />)
+
+    expect(screen.queryByText(/is ready to count/)).toBeNull()
+    expect(screen.getByTitle('Jan: before counting began')).toHaveTextContent('–')
+    expect(screen.getByTitle('Feb: counted')).toBeInTheDocument()
+    expect(screen.getByText(/Starting point: this count sets the baseline/)).toBeInTheDocument()
+    expect(screen.queryByText(/of it new this month/)).toBeNull()
+    expect(screen.getByText(/Drift shows from the second count/)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTitle('Jan: before counting began'))
+    expect(screen.getByText(/nothing to reconcile here/)).toBeInTheDocument()
   })
 
   it('says so when there is no month to reconcile', () => {

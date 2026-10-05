@@ -5,6 +5,7 @@ import type { BalancesAtCost, CashRow, MonthCloseStatus } from '../../../engine'
 import {
   balancesAtCost,
   computeCashReconciliation,
+  firstCountedMonth,
   formatCentsCompact,
   fullMonthLabel,
   monthCloseStatus,
@@ -25,22 +26,29 @@ const STATUS_NOTE = {
   ready: 'Statements are paid. Count the cash you hold and enter it below.',
   waiting: 'A card statement is unpaid, so the cash cannot be counted yet.',
   open: 'This month has not ended yet. Count the cash once it does.',
+  untracked: 'From before you started counting, so there is nothing to reconcile here.',
 } as const
+
+const BASELINE_NOTE =
+  'Starting point: this count sets the baseline, and drift is measured from here on.'
 
 function CloseCard({
   row,
   status,
+  baseline,
   actions,
 }: {
   row: CashRow
   status: MonthCloseStatus
+  /** The first month ever counted: its gap holds every month before it. */
+  baseline: boolean
   actions?: ExpenseActions | undefined
 }) {
   const format = useMoneyFormat()
   return (
     <Card>
       <h3 className={styles.cardTitle}>{fullMonthLabel(row.month)}</h3>
-      <p className={styles.cardSub}>{STATUS_NOTE[status]}</p>
+      <p className={styles.cardSub}>{baseline ? BASELINE_NOTE : STATUS_NOTE[status]}</p>
       <CashBridge row={row} />
       <div className={styles.countRow}>
         <span className={styles.countLabel}>Counted cash</span>
@@ -49,7 +57,8 @@ function CloseCard({
       {row.gapCents !== null && (
         <p className={styles.gapNote}>
           Total gap {formatCentsCompact(row.gapCents, format)}
-          {row.monthGapCents !== null &&
+          {!baseline &&
+            row.monthGapCents !== null &&
             ` — of it new this month: ${formatCentsCompact(row.monthGapCents, format)}`}
           .
         </p>
@@ -139,7 +148,8 @@ export function CashView({
   if (rows.length === 0 || !selected) {
     return <EmptyState>No months to reconcile yet.</EmptyState>
   }
-  const status = monthCloseStatus(selected, undefined, openMonth)
+  const countingStart = firstCountedMonth(rows)
+  const status = monthCloseStatus(selected, undefined, openMonth, countingStart)
 
   return (
     <div className={styles.stack}>
@@ -158,7 +168,12 @@ export function CashView({
         />
       </Card>
       <div className={styles.grid2}>
-        <CloseCard row={selected} status={status} actions={actions} />
+        <CloseCard
+          row={selected}
+          status={status}
+          baseline={selected.month === countingStart}
+          actions={actions}
+        />
         <DriftCard rows={rows} status={status} balances={balances} />
       </div>
       <details className={styles.fold}>

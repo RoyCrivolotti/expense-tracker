@@ -11,7 +11,7 @@ import type { CashRow } from './cashReconciliation'
 /** Expected and counted differ by tens of euros on tens of thousands; under this, the month is square. */
 export const CASH_DRIFT_TOLERANCE_CENTS = 500
 
-export type MonthCloseStatus = 'counted' | 'drift' | 'ready' | 'waiting' | 'open'
+export type MonthCloseStatus = 'counted' | 'drift' | 'ready' | 'waiting' | 'open' | 'untracked'
 
 /**
  * counted: cash entered and the month's new drift sits inside the tolerance.
@@ -19,27 +19,43 @@ export type MonthCloseStatus = 'counted' | 'drift' | 'ready' | 'waiting' | 'open
  * ready:   every statement is paid and the cash can be counted now.
  * waiting: a card statement is still unpaid, so counting would be meaningless.
  * open:    the month under way or a later one (when `openMonth` is given): it has not ended.
+ * untracked: uncounted and older than the first month ever counted (`countingStart`), from
+ *          before counting began: there is nothing to reconcile and nothing to ask for.
+ * The first counted month is the baseline: expected cash runs from the opening balance, so
+ * its gap holds every month before it and says nothing about that month alone. It reads as
+ * counted whatever the gap.
  */
 export function monthCloseStatus(
   row: CashRow,
   toleranceCents: number = CASH_DRIFT_TOLERANCE_CENTS,
   openMonth?: string,
+  countingStart?: string | null,
 ): MonthCloseStatus {
   if (row.actualCashCents !== null) {
+    if (row.month === countingStart) return 'counted'
     return Math.abs(row.monthGapCents ?? 0) <= toleranceCents ? 'counted' : 'drift'
   }
+  if (countingStart && row.month < countingStart) return 'untracked'
   if (openMonth !== undefined && row.month >= openMonth) return 'open'
   return row.unpaidLiabilityCents > 0 ? 'waiting' : 'ready'
 }
 
+/** The first month whose cash was ever counted, or null while nothing has been. */
+export function firstCountedMonth(rows: CashRow[]): string | null {
+  return rows.find((r) => r.actualCashCents !== null)?.month ?? null
+}
+
 /**
- * The newest month that can be counted now. The newest, not the oldest: months from
- * before the user began counting stay uncounted for good, and pointing at them would
- * make the prompt permanent. Shared by the Cash banner and the Overview signal so
+ * The newest month that can be counted now. The newest, not the oldest, and never one from
+ * before counting began: those stay uncounted for good, and pointing at them would make
+ * the prompt permanent. Shared by the Cash banner and the Overview signal so
  * the two always name the same month.
  */
 export function readyToCountMonth(rows: CashRow[], openMonth?: string): string | null {
-  const ready = [...rows].reverse().find((r) => monthCloseStatus(r, undefined, openMonth) === 'ready')
+  const start = firstCountedMonth(rows)
+  const ready = [...rows]
+    .reverse()
+    .find((r) => monthCloseStatus(r, undefined, openMonth, start) === 'ready')
   return ready?.month ?? null
 }
 

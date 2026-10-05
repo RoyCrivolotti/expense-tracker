@@ -27,6 +27,19 @@ describe('MonthCloseDots', () => {
     expect(screen.getByTitle('Apr: not ended yet')).toHaveTextContent('◔')
   })
 
+  it('mutes the months from before the first count', () => {
+    const counted = [
+      makeCashRow({ month: '2026-01' }),
+      makeCashRow({ month: '2026-02', actualCashCents: 100, monthGapCents: 40_000 }),
+      makeCashRow({ month: '2026-03' }),
+    ]
+    render(<MonthCloseDots rows={counted} selected="2026-02" openMonth="2026-04" onSelect={() => {}} />)
+    expect(screen.getByTitle('Jan: before counting began')).toHaveTextContent('–')
+    // The first count is the baseline, so a big gap is not drift.
+    expect(screen.getByTitle('Feb: counted')).toHaveTextContent('✓')
+    expect(screen.getByTitle('Mar: ready to count')).toHaveTextContent('●')
+  })
+
   it('selects the month of the dot that was tapped', () => {
     const onSelect = vi.fn()
     render(<MonthCloseDots rows={rows} selected="2026-03" onSelect={onSelect} />)

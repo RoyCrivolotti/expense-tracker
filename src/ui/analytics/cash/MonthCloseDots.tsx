@@ -1,5 +1,5 @@
 import type { CashRow, MonthCloseStatus } from '../../../engine'
-import { monthCloseStatus, shortMonthLabel } from '../../../engine'
+import { firstCountedMonth, monthCloseStatus, shortMonthLabel } from '../../../engine'
 import styles from './cash.module.css'
 
 const STATUS_GLYPH: Record<MonthCloseStatus, string> = {
@@ -8,6 +8,7 @@ const STATUS_GLYPH: Record<MonthCloseStatus, string> = {
   ready: '●',
   waiting: '…',
   open: '◔',
+  untracked: '–',
 }
 
 const STATUS_TITLE: Record<MonthCloseStatus, string> = {
@@ -16,9 +17,10 @@ const STATUS_TITLE: Record<MonthCloseStatus, string> = {
   ready: 'ready to count',
   waiting: 'waiting on a card statement',
   open: 'not ended yet',
+  untracked: 'before counting began',
 }
 
-/** One dot per month: counted, drift found, ready, waiting on its statement, or not ended yet. */
+/** One dot per month: counted, drift found, ready, waiting on its statement, not ended yet, or from before counting began. */
 export function MonthCloseDots({
   rows,
   selected,
@@ -31,10 +33,11 @@ export function MonthCloseDots({
   openMonth?: string | undefined
   onSelect: (month: string) => void
 }) {
+  const countingStart = firstCountedMonth(rows)
   return (
     <div className={styles.dots} role="group" aria-label="Month close status">
       {rows.map((row) => {
-        const status = monthCloseStatus(row, undefined, openMonth)
+        const status = monthCloseStatus(row, undefined, openMonth, countingStart)
         return (
           <button
             key={row.month}
