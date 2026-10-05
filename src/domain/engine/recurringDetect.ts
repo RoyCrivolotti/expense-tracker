@@ -18,7 +18,8 @@ const MIN_OCCURRENCES = 3
 const MIN_REGULARITY = 0.6
 const MS_PER_DAY = 86_400_000
 
-function normalizeDesc(description: string): string {
+/** Also the "merchant" identity for analytics group-bys: trimmed, case-folded description. */
+export function normalizeDesc(description: string): string {
   return description.trim().toLowerCase()
 }
 
@@ -36,7 +37,8 @@ function median(nums: number[]): number {
   return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!
 }
 
-function groupKey(txn: Transaction): string {
+/** One recurring-detection identity per transaction; fixed-spend classification reuses it. */
+export function occurrenceKey(txn: Transaction): string {
   return `${normalizeDesc(txn.description)}|${txn.accountId}|${txn.categoryId}|${txn.type}`
 }
 
@@ -54,7 +56,7 @@ export function groupTransactions(transactions: Transaction[]): OccurrenceGroup[
     // Installment-plan payments are a declared schedule, not a detected pattern.
     if (txn.planId != null) continue
 
-    const key = groupKey(txn)
+    const key = occurrenceKey(txn)
     const existing = map.get(key)
     if (existing) {
       existing.dates.push(txn.date)

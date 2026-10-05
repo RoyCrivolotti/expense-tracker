@@ -55,6 +55,7 @@ function TabView({
   tab,
   model,
   month,
+  onMonthChange,
   actions,
   theme,
   onThemeChange,
@@ -70,6 +71,7 @@ function TabView({
   tab: TabId
   model: ExpenseModel
   month: string
+  onMonthChange: (month: string) => void
   actions?: ExpenseActions | undefined
   theme: ExpenseTheme
   onThemeChange: (next: ExpenseTheme) => void
@@ -97,7 +99,7 @@ function TabView({
     case 'analytics':
       return (
         <Suspense fallback={<div className={styles.center}>Loading analytics…</div>}>
-          <AnalyticsTab model={model} month={month} actions={actions} />
+          <AnalyticsTab model={model} month={month} onMonthChange={onMonthChange} actions={actions} />
         </Suspense>
       )
     case 'goals':
@@ -360,6 +362,7 @@ function ExpensesAppReady({
             tab={tab}
             model={model}
             month={activeMonth}
+            onMonthChange={navigateMonth}
             actions={actions}
             theme={theme}
             onThemeChange={setTheme}

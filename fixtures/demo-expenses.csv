@@ -19,34 +19,94 @@ Feb;TRUE;TRUE
 Mar;TRUE;TRUE
 Apr;TRUE;TRUE
 May;TRUE;TRUE
-Jun;FALSE;FALSE
+Jun;TRUE;TRUE
+Jul;TRUE;TRUE
+Aug;TRUE;TRUE
+Sep;FALSE;FALSE
+Oct;FALSE;FALSE
 
 Budget Month;Date;Description;Account;Category;Type;Amount;Status;Notes
+January;01 Jan 2026;Payroll;Main Debit;;Income;3.200,00 €;Posted;
+January;05 Jan 2026;Gym membership;Main Debit;Health;Expense;35,00 €;Posted;
+January;07 Jan 2026;Weekly shop;Main Debit;Groceries;Expense;61,80 €;Posted;
+January;10 Jan 2026;Streaming;Travel Card;Entertainment;Expense;14,99 €;Posted;
+January;12 Jan 2026;Metro pass;Main Debit;Transport;Expense;40,00 €;Posted;
+January;15 Jan 2026;Electric bill;Main Debit;Utilities;Expense;103,40 €;Posted;
+January;18 Jan 2026;Dinner out;Main Debit;Dining out;Expense;38,60 €;Posted;
+January;20 Jan 2026;Index fund;Main Debit;;Investment;400,00 €;Posted;
+February;01 Feb 2026;Payroll;Main Debit;;Income;3.200,00 €;Posted;
+February;05 Feb 2026;Gym membership;Main Debit;Health;Expense;35,00 €;Posted;
+February;08 Feb 2026;Supermarket;Main Debit;Groceries;Expense;57,30 €;Posted;
+February;10 Feb 2026;Streaming;Travel Card;Entertainment;Expense;14,99 €;Posted;
+February;12 Feb 2026;Metro pass;Main Debit;Transport;Expense;40,00 €;Posted;
+February;14 Feb 2026;Café brunch;Main Debit;Dining out;Expense;24,50 €;Posted;
+February;16 Feb 2026;Electric bill;Main Debit;Utilities;Expense;97,10 €;Posted;
+February;20 Feb 2026;Index fund;Main Debit;;Investment;400,00 €;Posted;
 March;01 Mar 2026;Payroll;Main Debit;;Income;3.200,00 €;Posted;
 March;05 Mar 2026;Gym membership;Main Debit;Health;Expense;35,00 €;Posted;
 March;08 Mar 2026;Weekly shop;Main Debit;Groceries;Expense;58,20 €;Posted;
 March;10 Mar 2026;Streaming;Travel Card;Entertainment;Expense;14,99 €;Posted;
 March;12 Mar 2026;Metro pass;Main Debit;Transport;Expense;40,00 €;Posted;
 March;15 Mar 2026;Electric bill;Main Debit;Utilities;Expense;88,50 €;Posted;
+March;20 Mar 2026;Index fund;Main Debit;;Investment;400,00 €;Posted;
 April;01 Apr 2026;Payroll;Main Debit;;Income;3.200,00 €;Posted;
 April;05 Apr 2026;Gym membership;Main Debit;Health;Expense;35,00 €;Posted;
 April;09 Apr 2026;Supermarket;Main Debit;Groceries;Expense;64,10 €;Posted;
 April;10 Apr 2026;Streaming;Travel Card;Entertainment;Expense;14,99 €;Posted;
+April;12 Apr 2026;Metro pass;Main Debit;Transport;Expense;40,00 €;Posted;
 April;14 Apr 2026;Café brunch;Main Debit;Dining out;Expense;26,00 €;Posted;
+April;16 Apr 2026;Electric bill;Main Debit;Utilities;Expense;84,70 €;Posted;
 April;18 Apr 2026;Pharmacy;Main Debit;Health;Expense;16,40 €;Posted;
+April;20 Apr 2026;Index fund;Main Debit;;Investment;400,00 €;Posted;
 May;01 May 2026;Payroll;Main Debit;;Income;3.200,00 €;Posted;
 May;05 May 2026;Gym membership;Main Debit;Health;Expense;35,00 €;Posted;
 May;10 May 2026;Streaming;Travel Card;Entertainment;Expense;14,99 €;Posted;
 May;12 May 2026;Weekly shop;Main Debit;Groceries;Expense;55,00 €;Posted;
+May;14 May 2026;Metro pass;Main Debit;Transport;Expense;40,00 €;Posted;
+May;16 May 2026;Electric bill;Main Debit;Utilities;Expense;79,30 €;Posted;
 May;18 May 2026;Dinner out;Main Debit;Dining out;Expense;42,30 €;Posted;
-May;22 May 2026;Metro pass;Main Debit;Transport;Expense;40,00 €;Posted;
-May;28 May 2026;Electric bill;Main Debit;Utilities;Expense;91,00 €;Posted;
+May;20 May 2026;Index fund;Main Debit;;Investment;400,00 €;Posted;
 June;01 Jun 2026;Payroll;Main Debit;;Income;3.200,00 €;Posted;
 June;02 Jun 2026;Supermarket;Main Debit;Groceries;Expense;62,40 €;Posted;
 June;04 Jun 2026;Metro pass;Main Debit;Transport;Expense;40,00 €;Posted;
+June;05 Jun 2026;Gym membership;Main Debit;Health;Expense;35,00 €;Posted;
 June;05 Jun 2026;Café brunch;Main Debit;Dining out;Expense;28,50 €;Posted;
 June;07 Jun 2026;Electric bill;Main Debit;Utilities;Expense;94,20 €;Posted;
 June;08 Jun 2026;Pharmacy;Main Debit;Health;Expense;18,90 €;Posted;
+June;10 Jun 2026;Streaming;Travel Card;Entertainment;Expense;14,99 €;Posted;
 June;12 Jun 2026;Weekly shop;Main Debit;Groceries;Expense;71,15 €;Posted;
 June;14 Jun 2026;Dinner out;Main Debit;Dining out;Expense;46,80 €;Posted;
 June;15 Jun 2026;Index fund;Main Debit;;Investment;400,00 €;Posted;
+July;01 Jul 2026;Payroll;Main Debit;;Income;3.200,00 €;Posted;
+July;05 Jul 2026;Gym membership;Main Debit;Health;Expense;35,00 €;Posted;
+July;08 Jul 2026;Weekly shop;Main Debit;Groceries;Expense;49,60 €;Posted;
+July;10 Jul 2026;Streaming;Travel Card;Entertainment;Expense;14,99 €;Posted;
+July;12 Jul 2026;Metro pass;Main Debit;Transport;Expense;40,00 €;Posted;
+July;14 Jul 2026;Terrace dinner;Main Debit;Dining out;Expense;54,20 €;Posted;
+July;16 Jul 2026;Electric bill;Main Debit;Utilities;Expense;72,80 €;Posted;
+July;19 Jul 2026;Cinema tickets;Travel Card;Entertainment;Expense;24,00 €;Posted;
+July;20 Jul 2026;Index fund;Main Debit;;Investment;400,00 €;Posted;
+August;01 Aug 2026;Payroll;Main Debit;;Income;3.200,00 €;Posted;
+August;05 Aug 2026;Gym membership;Main Debit;Health;Expense;35,00 €;Posted;
+August;07 Aug 2026;Supermarket;Main Debit;Groceries;Expense;52,90 €;Posted;
+August;10 Aug 2026;Streaming;Travel Card;Entertainment;Expense;14,99 €;Posted;
+August;12 Aug 2026;Metro pass;Main Debit;Transport;Expense;40,00 €;Posted;
+August;15 Aug 2026;Electric bill;Main Debit;Utilities;Expense;68,40 €;Posted;
+August;17 Aug 2026;Beach day lunch;Main Debit;Dining out;Expense;31,70 €;Posted;
+August;20 Aug 2026;Index fund;Main Debit;;Investment;400,00 €;Posted;
+September;01 Sep 2026;Payroll;Main Debit;;Income;3.200,00 €;Posted;
+September;05 Sep 2026;Gym membership;Main Debit;Health;Expense;35,00 €;Posted;
+September;06 Sep 2026;Weekly shop;Main Debit;Groceries;Expense;66,50 €;Posted;
+September;08 Sep 2026;Birthday dinner;Main Debit;Dining out;Expense;78,40 €;Posted;
+September;10 Sep 2026;Streaming;Travel Card;Entertainment;Expense;14,99 €;Posted;
+September;12 Sep 2026;Metro pass;Main Debit;Transport;Expense;40,00 €;Posted;
+September;14 Sep 2026;Concert tickets;Travel Card;Entertainment;Expense;49,00 €;Posted;
+September;16 Sep 2026;Electric bill;Main Debit;Utilities;Expense;74,60 €;Posted;
+September;18 Sep 2026;Tapas night;Main Debit;Dining out;Expense;44,10 €;Posted;
+September;20 Sep 2026;Supermarket;Main Debit;Groceries;Expense;58,70 €;Posted;
+September;22 Sep 2026;Index fund;Main Debit;;Investment;400,00 €;Posted;
+October;01 Oct 2026;Payroll;Main Debit;;Income;3.200,00 €;Posted;
+October;02 Oct 2026;Weekly shop;Main Debit;Groceries;Expense;63,20 €;Posted;
+October;03 Oct 2026;Streaming;Travel Card;Entertainment;Expense;14,99 €;Posted;
+October;03 Oct 2026;Metro pass;Main Debit;Transport;Expense;40,00 €;Posted;
+October;04 Oct 2026;Café brunch;Main Debit;Dining out;Expense;27,80 €;Posted;

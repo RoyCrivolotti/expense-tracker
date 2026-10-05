@@ -114,7 +114,14 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // page of columns at a time, the by-goal list and a full-screen sheet with every milestone).
 // Main stood at 52.5 KB and the table's pages and by-goal list alone add 1.5 KB, so 54 KB left no room for the sheet. All of it is small code and CSS in the one lazy
 // chunk, with no new library.
-const TOTAL_MAX_GZIP = 230_000
+// Raised from 230 KB to 240 KB for the Analytics Overview (the engine's pace, movers,
+// signals, allocation and baseline functions, the KPI tiles, the trend chart with its
+// hatched unpaid caps, and the cards that read them): main stood at 229.5 KB after the
+// Analytics shell, and the Overview adds about 6.7 KB gzip, almost all of it in the lazy
+// Analytics chunk (which this PR takes from ~15 KB to ~22 KB), with no new library. The
+// redesign's final PR removes the old tables and charts it supersedes, which should claw
+// most of this back.
+const TOTAL_MAX_GZIP = 240_000
 const GOALS_MAX_GZIP = 58_000
 
 function gzipBytes(path) {

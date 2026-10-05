@@ -34,7 +34,7 @@ function renderShell() {
       ],
     }),
   )
-  return render(<AnalyticsShell model={model} month="2026-01" />)
+  return render(<AnalyticsShell model={model} month="2026-01" onMonthChange={vi.fn()} />)
 }
 
 describe('AnalyticsShell', () => {
@@ -64,6 +64,7 @@ describe('AnalyticsShell', () => {
 
   it('defaults to the committed basis and recomputes when switched to paid only', () => {
     renderShell()
+    fireEvent.click(screen.getByRole('button', { name: 'Table' }))
 
     // Committed: January expenses are posted 1.000 € + forecast 500 €.
     expect(screen.getAllByText('1.500,00').length).toBeGreaterThan(0)

@@ -7,10 +7,12 @@ import styles from './tabs.module.css'
 export function AnalyticsTab({
   model,
   month,
+  onMonthChange,
   actions,
 }: {
   model: ExpenseModel
   month: string
+  onMonthChange: (month: string) => void
   actions?: ExpenseActions | undefined
 }) {
   if (model.months.length === 0) {
@@ -27,7 +29,7 @@ export function AnalyticsTab({
     )
   }
 
-  return <AnalyticsShell model={model} month={month} actions={actions} />
+  return <AnalyticsShell model={model} month={month} onMonthChange={onMonthChange} actions={actions} />
 }
 
 /* The analytics chunk is lazy-loaded (like Goals), which needs a default export. */

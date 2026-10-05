@@ -1,0 +1,41 @@
+.spark {
+  width: 5rem;
+  height: 1.5rem;
+  display: block;
+}
+
+.sparkLine {
+  fill: none;
+  stroke: var(--color-text-muted);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  opacity: 0.8;
+}
+
+.sparkDot {
+  fill: var(--color-text);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 650;
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.chipGood {
+  background: color-mix(in srgb, var(--exp-success) 16%, transparent);
+  color: var(--exp-success-text);
+}
+
+.chipBad {
+  background: color-mix(in srgb, var(--exp-danger) 16%, transparent);
+  color: var(--exp-danger-text);
+}
