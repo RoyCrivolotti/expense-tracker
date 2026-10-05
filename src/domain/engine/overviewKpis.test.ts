@@ -85,6 +85,48 @@ describe('computeOverviewKpis', () => {
     expect(k.baseline?.incomeCents).toBe(300000)
   })
 
+  it('leaves a future month whole instead of clamping it to today', () => {
+    const k = computeOverviewKpis(TXNS, {
+      months: MONTHS,
+      month: '2026-03',
+      period: 'month',
+      compare: 'prevMonth',
+      basis: 'committed',
+      today: '2026-02-05',
+      openMonth: '2026-02',
+    })
+    // March is ahead of the open month, not open itself: no same-days cut.
+    expect(k.openDayLimit).toBeNull()
+    expect(k.current.spendCents).toBe(60000)
+  })
+
+  it('clamps by the rollover-aware open month when one is given', () => {
+    const k = computeOverviewKpis(TXNS, {
+      months: MONTHS,
+      month: '2026-03',
+      period: 'month',
+      compare: 'prevMonth',
+      basis: 'committed',
+      // Feb 28 with a rollover day already puts March's budget month under way.
+      today: '2026-02-28',
+      openMonth: '2026-03',
+    })
+    expect(k.openDayLimit).toBe(28)
+  })
+
+  it('still finds the month before when the viewed month is past the data edge', () => {
+    const k = computeOverviewKpis(TXNS, {
+      months: MONTHS,
+      month: '2026-05',
+      period: 'month',
+      compare: 'prevMonth',
+      basis: 'committed',
+      today: '2026-05-10',
+    })
+    // 2026-05 is not in months; the newest month below it is still the baseline.
+    expect(k.baseline?.spendCents).toBe(60000)
+  })
+
   it('averages the three closed months before with avg3', () => {
     const k = computeOverviewKpis(TXNS, {
       months: MONTHS,

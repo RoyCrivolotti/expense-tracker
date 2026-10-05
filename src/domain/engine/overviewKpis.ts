@@ -93,7 +93,9 @@ function monthBaseline(
 ): OverviewTotals | null {
   const idx = months.indexOf(month)
   if (compare === 'prevMonth') {
-    const prev = idx > 0 ? months[idx - 1] : undefined
+    // A viewed month missing from the data (navigated past the edge) still has
+    // a meaningful "month before": the newest month below it.
+    const prev = idx > 0 ? months[idx - 1] : idx === -1 ? months.filter((m) => m < month).at(-1) : undefined
     return prev ? totalsForMonths(transactions, [prev], dayLimit, basis) : null
   }
   if (compare === 'prevYear') {
@@ -127,16 +129,19 @@ export interface OverviewKpisOptions {
   basis: AnalyticsBasis
   /** ISO date, so the open-month clamp is explicit and testable. */
   today: string
+  /** The budget month `today` falls in (rollover-aware); defaults to today's calendar month. */
+  openMonth?: string
 }
 
 export function computeOverviewKpis(
   transactions: Transaction[],
-  { months, month, period, compare, basis, today }: OverviewKpisOptions,
+  { months, month, period, compare, basis, today, openMonth }: OverviewKpisOptions,
 ): OverviewKpis {
   const window = monthsForPeriod(months, month, period)
   // The same-days clamp applies to the single-month period; a window period sums
-  // whole months (the open month contributes what it has so far on both sides).
-  const openDayLimit = period === 'month' ? sameDaysLimit(month, today) : null
+  // whole months. The open month then contributes only what it has so far while
+  // the baseline window is whole months — a known skew the chips inherit.
+  const openDayLimit = period === 'month' ? sameDaysLimit(month, today, openMonth) : null
   const current = totalsForMonths(transactions, window, openDayLimit, basis)
   const baseline =
     period === 'month'

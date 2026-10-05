@@ -94,10 +94,13 @@ function DriftCard({
 export function CashView({
   model,
   month,
+  openMonth,
   actions,
 }: {
   model: ExpenseModel
   month: string
+  /** The budget month under way (rollover-aware); months past it are never "ready". */
+  openMonth: string
   actions?: ExpenseActions | undefined
 }) {
   const rows = useMemo(
@@ -111,8 +114,21 @@ export function CashView({
     [model.dataset],
   )
   const [picked, setPicked] = useState<string | null>(null)
-  const ready = rows.find((r) => monthCloseStatus(r) === 'ready')
-  const selectedMonth = picked ?? (rows.some((r) => r.month === month) ? month : rows[rows.length - 1]?.month)
+  // The header month picker outranks a dot tapped earlier: changing it means
+  // "show me that month", so the local pick resets (render-phase, pre-paint).
+  const [pickedFor, setPickedFor] = useState(month)
+  if (pickedFor !== month) {
+    setPickedFor(month)
+    setPicked(null)
+  }
+  // The newest closable month: older uncounted months are usually from before
+  // counting began, and pointing at them would make the banner permanent.
+  const ready = [...rows]
+    .reverse()
+    .find((r) => r.month < openMonth && monthCloseStatus(r) === 'ready')
+  const pickedRow = picked !== null && rows.some((r) => r.month === picked) ? picked : null
+  const selectedMonth =
+    pickedRow ?? (rows.some((r) => r.month === month) ? month : rows[rows.length - 1]?.month)
   const selected = rows.find((r) => r.month === selectedMonth)
   const balances = useMemo(
     () =>

@@ -4,7 +4,7 @@
  * the path from a number to the ledger behind it.
  */
 import type { Category, Transaction } from '../types'
-import { type AnalyticsBasis, basisOptions, signedExpense } from './analyticsPeriod'
+import { type AnalyticsBasis, basisOptions, sameDaysLimit, signedExpense } from './analyticsPeriod'
 import { classifyFixedSpend } from './fixedFlexible'
 import { groupMatcher, type SpendingGroupBy } from './spendingGroups'
 
@@ -27,6 +27,10 @@ export interface SpendingGroupDetailOptions {
   groupBy: SpendingGroupBy
   key: string
   topCount?: number
+  /** ISO date; with `openMonth` it clamps the open month to the same days the row total uses. */
+  today?: string
+  /** The budget month `today` falls in (rollover-aware); defaults to today's calendar month. */
+  openMonth?: string
 }
 
 function median(nums: number[]): number {
@@ -46,6 +50,7 @@ function collect(
   window: string[],
   month: string,
   basis: AnalyticsBasis,
+  dayLimit: number | null,
 ): Collected {
   const opts = basisOptions(basis)
   const inWindow = new Set(window)
@@ -55,6 +60,10 @@ function collect(
     if (!inWindow.has(txn.budgetMonth) || !matches(txn)) continue
     const signed = signedExpense(txn, opts)
     if (signed === null) continue
+    // The selected open month is clamped to the same days as the row total,
+    // so the pane and the row never show two different numbers for one month.
+    if (txn.budgetMonth === month && dayLimit !== null && parseInt(txn.date.slice(8, 10), 10) > dayLimit)
+      continue
     byMonth.set(txn.budgetMonth, (byMonth.get(txn.budgetMonth) ?? 0) + signed)
     if (txn.budgetMonth === month && txn.type === 'expense') current.push(txn)
   }
@@ -71,16 +80,18 @@ function worstOf(history: { month: string; actualCents: number }[]): { month: st
 
 export function computeSpendingGroupDetail(
   args: { transactions: Transaction[]; categories: Category[] },
-  { months, month, basis, groupBy, key, topCount = 5 }: SpendingGroupDetailOptions,
+  { months, month, basis, groupBy, key, topCount = 5, today, openMonth }: SpendingGroupDetailOptions,
 ): SpendingGroupDetail {
   const classifier = classifyFixedSpend(args.transactions)
   const window = months.filter((m) => m <= month).slice(-12)
+  const dayLimit = today === undefined ? null : sameDaysLimit(month, today, openMonth)
   const { byMonth, current } = collect(
     args.transactions,
     groupMatcher(groupBy, key, classifier),
     window,
     month,
     basis,
+    dayLimit,
   )
 
   const budgetCents =

@@ -4,7 +4,7 @@ import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { ChartTooltip } from '../../charts/ChartTooltip'
 import { ChartYAxis } from '../../charts/ChartYAxis'
 import { CHART_H, CHART_W, PAD, innerSize, monthLabel, yAt } from '../../charts/chartLayout'
-import { useChartFocus } from '../../charts/useChartFocus'
+import { nearestIndex, useChartFocus } from '../../charts/useChartFocus'
 import { useSvgAnchor } from '../../charts/useSvgAnchor'
 import { ChartHatchDefs, UNPAID_FILL } from '../shared/ChartHatchDefs'
 import type { TrendModel, TrendPoint } from './trendChartModel'
@@ -80,7 +80,11 @@ export function TrendChart({ model, selectedMonth, onSelectMonth }: Props) {
   const barW = Math.min(18, groupW * 0.6)
   const xForIndex = useCallback((i: number) => PAD.left + i * groupW + groupW / 2, [groupW])
   const containerRef = useRef<HTMLElement>(null)
-  const { active, ...pointerHandlers } = useChartFocus(points.length, xForIndex, containerRef)
+  const {
+    active,
+    onKeyDown: focusKeyDown,
+    ...pointerHandlers
+  } = useChartFocus(points.length, xForIndex, containerRef)
   const svgRef = useRef<SVGSVGElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const focus = active != null ? points[active] : null
@@ -94,6 +98,30 @@ export function TrendChart({ model, selectedMonth, onSelectMonth }: Props) {
     [points, xForIndex, maxVal, innerH],
   )
 
+  // The focus hook captures the pointer on pointerdown, which retargets the click
+  // to the svg itself — a per-bar hit rect would never see it. So the svg owns the
+  // click and maps it back to the nearest month, the same way hover focus does.
+  const onClick = (e: React.MouseEvent<SVGSVGElement>) => {
+    const svg = e.currentTarget
+    const ctm = svg.getScreenCTM()
+    if (!ctm) return
+    const pt = svg.createSVGPoint()
+    pt.x = e.clientX
+    pt.y = 0
+    const { x } = pt.matrixTransform(ctm.inverse())
+    const i = nearestIndex(x, points.length, xForIndex)
+    if (i !== null) onSelectMonth(points[i]!.month)
+  }
+
+  const onKeyDown = (e: React.KeyboardEvent<SVGSVGElement>) => {
+    if (e.key === 'Enter' && active != null) {
+      e.preventDefault()
+      onSelectMonth(points[active]!.month)
+      return
+    }
+    focusKeyDown(e)
+  }
+
   if (points.length === 0) return null
 
   return (
@@ -103,11 +131,13 @@ export function TrendChart({ model, selectedMonth, onSelectMonth }: Props) {
         <svg
           ref={svgRef}
           viewBox={`0 0 ${CHART_W} ${CHART_H}`}
-          className={chartStyles.svg}
+          className={`${chartStyles.svg} ${styles.trendClickable}`}
           tabIndex={0}
           role="img"
           aria-label="Spending bars and income line by month"
           {...pointerHandlers}
+          onKeyDown={onKeyDown}
+          onClick={onClick}
         >
           <ChartHatchDefs stroke="var(--exp-expense)" />
           <ChartYAxis maxVal={maxVal} ticks={ticks} innerH={innerH} />
@@ -128,18 +158,10 @@ export function TrendChart({ model, selectedMonth, onSelectMonth }: Props) {
             selectedMonth={selectedMonth}
           />
           <path d={incomeLine} className={styles.trendIncome} />
-          {points.map((p, i) => (
-            <rect
-              key={p.month}
-              x={xForIndex(i) - groupW / 2}
-              y={PAD.top}
-              width={groupW}
-              height={innerH + PAD.bottom}
-              fill="transparent"
-              className={styles.trendHit}
-              onClick={() => onSelectMonth(p.month)}
-            />
-          ))}
+          {/* One point makes a path of a single "M", which draws nothing. */}
+          {points.length === 1 && (
+            <circle cx={xForIndex(0)} cy={yAt(points[0]!.incomeCents, maxVal, innerH)} r={4} className={styles.trendIncomeDot} />
+          )}
           {focus && (
             <line x1={xForIndex(active!)} x2={xForIndex(active!)} y1={PAD.top} y2={PAD.top + innerH} className={chartStyles.crosshair} />
           )}

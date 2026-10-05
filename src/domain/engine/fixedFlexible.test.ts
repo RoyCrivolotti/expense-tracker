@@ -44,6 +44,35 @@ describe('classifyFixedSpend', () => {
     const classifier = classifyFixedSpend(twoOnly)
     expect(classifier.isFixed(twoOnly[1]!)).toBe(false)
   })
+
+  it('leaves a weekly rhythm flexible — habits are what the pace clock watches', () => {
+    const weekly = ['2026-01-03', '2026-01-10', '2026-01-17', '2026-01-24'].map((d, i) =>
+      txn({ id: 50 + i, date: d, description: 'Supermarket', amountCents: 6000 }),
+    )
+    const classifier = classifyFixedSpend(weekly)
+    expect(classifier.isFixed(weekly[3]!)).toBe(false)
+  })
+
+  it('calls the refund of a fixed charge fixed money coming back', () => {
+    const history = rentHistory()
+    const refund = txn({
+      id: 80,
+      date: '2026-01-15',
+      description: 'Rent',
+      type: 'refund',
+      amountCents: 20000,
+    })
+    const unrelated = txn({
+      id: 81,
+      date: '2026-01-16',
+      description: 'Shoes',
+      type: 'refund',
+      amountCents: 4000,
+    })
+    const classifier = classifyFixedSpend([...history, refund, unrelated])
+    expect(classifier.isFixed(refund)).toBe(true)
+    expect(classifier.isFixed(unrelated)).toBe(false)
+  })
 })
 
 describe('splitFixedFlexible', () => {

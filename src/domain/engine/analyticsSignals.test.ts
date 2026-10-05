@@ -53,6 +53,13 @@ describe('computeSignals', () => {
     expect(signals.find((s) => s.kind === 'pace')).toBeUndefined()
   })
 
+  it('holds its tongue in the first days of the month', () => {
+    // One grocery shop on day 2 extrapolates to a month of them — not a signal.
+    const early = pace({ dayOfMonth: 2, projectedCents: 300000 })
+    const signals = computeSignals({ pace: early, movers: [], cashRows: [] })
+    expect(signals.find((s) => s.kind === 'pace')).toBeUndefined()
+  })
+
   it('surfaces a mover only past the noise thresholds', () => {
     const quiet = mover({ baselineCents: 2000, currentCents: 9000, deltaCents: 7000 })
     const small = mover({ baselineCents: 50000, currentCents: 55000, deltaCents: 5000 })
@@ -61,13 +68,26 @@ describe('computeSignals', () => {
     expect(signals[0]).toMatchObject({ kind: 'mover', categoryId: 3, pct: 60, tone: 'warn' })
   })
 
-  it('points at the oldest month whose statements are paid but cash is uncounted', () => {
+  it('points at the newest month whose statements are paid but cash is uncounted', () => {
+    // January is also uncounted — likely from before counting began. Pointing
+    // at it forever would make the banner permanent, so the newest wins.
     const rows = [
-      cashRow({ month: '2026-01', actualCashCents: 500 }),
+      cashRow({ month: '2026-01' }),
       cashRow({ month: '2026-02' }),
       cashRow({ month: '2026-03', unpaidLiabilityCents: 4000 }),
     ]
     const signals = computeSignals({ pace: pace({ open: false }), movers: [], cashRows: rows })
+    expect(signals[0]).toMatchObject({ kind: 'cashReady', month: '2026-02' })
+  })
+
+  it('never calls the month under way ready to count', () => {
+    const rows = [cashRow({ month: '2026-02' }), cashRow({ month: '2026-03' })]
+    const signals = computeSignals({
+      pace: pace({ open: false }),
+      movers: [],
+      cashRows: rows,
+      openMonth: '2026-03',
+    })
     expect(signals[0]).toMatchObject({ kind: 'cashReady', month: '2026-02' })
   })
 

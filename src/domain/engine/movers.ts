@@ -40,6 +40,8 @@ export interface MoversOptions {
   month: string
   basis: AnalyticsBasis
   today: string
+  /** The budget month `today` falls in (rollover-aware); defaults to today's calendar month. */
+  openMonth?: string
   limit?: number
 }
 
@@ -47,9 +49,9 @@ export function computeMovers(
   transactions: Transaction[],
   categories: Category[],
   classifier: FixedSpendClassifier,
-  { months, month, basis, today, limit = 5 }: MoversOptions,
+  { months, month, basis, today, openMonth, limit = 5 }: MoversOptions,
 ): Mover[] {
-  const dayLimit = sameDaysLimit(month, today)
+  const dayLimit = sameDaysLimit(month, today, openMonth)
   const current = flexibleByCategory(transactions, classifier, month, dayLimit, basis)
   const window = months.filter((m) => m < month).slice(-3)
   const sums = window.map((m) => flexibleByCategory(transactions, classifier, m, dayLimit, basis))

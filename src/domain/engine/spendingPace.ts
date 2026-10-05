@@ -6,7 +6,7 @@
  * instalment plans due and monthly recurring patterns.
  */
 import type { Category, InstallmentPlan, Transaction } from '../types'
-import { daysBetween } from './dates'
+import { daysBetween, priorBudgetMonth } from './dates'
 import { expectedIndexForMonth } from './installments'
 import { classifyFrequency } from './recurringPredict'
 import type { OccurrenceGroup } from './recurringTypes'
@@ -46,24 +46,40 @@ function isMonthlyGroup(group: OccurrenceGroup): boolean {
   return gaps.length > 0 && classifyFrequency(median(gaps)) === 'monthly'
 }
 
+/** A recurring pattern counts towards a month's fixed charges only while it is alive. */
+function activeInMonth(group: OccurrenceGroup, month: string): boolean {
+  const prior = priorBudgetMonth(month)
+  return (
+    group.budgetMonths.has(month) ||
+    group.budgetMonths.has(prior) ||
+    group.budgetMonths.has(priorBudgetMonth(prior))
+  )
+}
+
 /**
  * Fixed charges expected in a budget month: instalments due plus monthly
- * recurring expenses (quarterly and annual patterns are left out — they are
- * lumpy, and guessing their month wrong would swing the envelope).
+ * recurring expenses seen in that month or the two before it — a cancelled
+ * subscription must not shrink the flexible envelope forever. Quarterly and
+ * annual patterns are left out: they are lumpy, and guessing their month wrong
+ * would swing the envelope. A charge in a category with no active budget never
+ * added to the envelope, so it must not take anything out of it either.
  */
 export function expectedFixedCents(
   transactions: Transaction[],
   plans: InstallmentPlan[],
+  categories: Category[],
   month: string,
 ): number {
+  const budgeted = new Set(categories.filter((c) => c.active && c.monthlyBudgetCents > 0).map((c) => c.id))
   let total = 0
   for (const plan of plans) {
-    if (!plan.active || plan.type !== 'expense') continue
+    if (!plan.active || plan.type !== 'expense' || !budgeted.has(plan.categoryId)) continue
     const idx = expectedIndexForMonth(plan, month)
     if (idx >= plan.startInstallmentIndex && idx <= plan.totalCount) total += plan.amountCents
   }
   for (const group of recurringFixedGroups(transactions)) {
-    if (group.key.type === 'expense' && isMonthlyGroup(group)) total += group.amountCents
+    if (group.key.type !== 'expense' || !budgeted.has(group.categoryId) || !isMonthlyGroup(group)) continue
+    if (activeInMonth(group, month)) total += group.amountCents
   }
   return total
 }
@@ -73,6 +89,8 @@ export interface SpendingPaceOptions {
   today: string
   basis: AnalyticsBasis
   prevMonth: string | null
+  /** The budget month `today` falls in (rollover-aware); defaults to today's calendar month. */
+  openMonth?: string
 }
 
 export function computeSpendingPace(
@@ -80,17 +98,17 @@ export function computeSpendingPace(
   categories: Category[],
   plans: InstallmentPlan[],
   classifier: FixedSpendClassifier,
-  { month, today, basis, prevMonth }: SpendingPaceOptions,
+  { month, today, basis, prevMonth, openMonth }: SpendingPaceOptions,
 ): SpendingPace {
   const daysInMonth = daysInCalendarMonth(month)
-  const dayLimit = sameDaysLimit(month, today)
+  const dayLimit = sameDaysLimit(month, today, openMonth)
   const open = dayLimit !== null
   const dayOfMonth = Math.min(dayLimit ?? daysInMonth, daysInMonth)
 
   const totalBudget = categories
     .filter((c) => c.active)
     .reduce((s, c) => s + c.monthlyBudgetCents, 0)
-  const flexibleBudgetCents = Math.max(0, totalBudget - expectedFixedCents(transactions, plans, month))
+  const flexibleBudgetCents = Math.max(0, totalBudget - expectedFixedCents(transactions, plans, categories, month))
 
   const split = splitFixedFlexible(transactions, classifier, month, basis, dayLimit)
   const frac = dayOfMonth / daysInMonth

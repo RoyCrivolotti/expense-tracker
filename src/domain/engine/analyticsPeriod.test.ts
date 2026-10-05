@@ -54,6 +54,16 @@ describe('sameDaysLimit', () => {
     expect(sameDaysLimit('2026-03', '2026-03-17')).toBe(17)
     expect(sameDaysLimit('2026-02', '2026-03-17')).toBeNull()
   })
+
+  it('leaves future months whole — only the one open month is partial', () => {
+    expect(sameDaysLimit('2026-04', '2026-03-17')).toBeNull()
+  })
+
+  it('takes the rollover-aware open month over the calendar one', () => {
+    // On March 28 with a rollover day the budget month under way is April.
+    expect(sameDaysLimit('2026-04', '2026-03-28', '2026-04')).toBe(28)
+    expect(sameDaysLimit('2026-03', '2026-03-28', '2026-04')).toBeNull()
+  })
 })
 
 describe('spendThroughDay', () => {

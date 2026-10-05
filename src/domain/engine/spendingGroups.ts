@@ -48,6 +48,8 @@ export interface SpendingGroupsOptions {
   month: string
   basis: AnalyticsBasis
   today: string
+  /** The budget month `today` falls in (rollover-aware); defaults to today's calendar month. */
+  openMonth?: string
   groupBy: SpendingGroupBy
 }
 
@@ -127,8 +129,12 @@ interface CollectScope {
 }
 
 function addToGroup(agg: GroupAgg, txn: Transaction, signed: number, scope: CollectScope): void {
-  agg.byMonth.set(txn.budgetMonth, (agg.byMonth.get(txn.budgetMonth) ?? 0) + signed)
   const inDays = scope.dayLimit === null || dayOf(txn) <= scope.dayLimit
+  // The open month's spark point obeys the same-days clamp the row total does,
+  // so a tapped row never shows two different numbers for the same month.
+  if (txn.budgetMonth !== scope.month || inDays) {
+    agg.byMonth.set(txn.budgetMonth, (agg.byMonth.get(txn.budgetMonth) ?? 0) + signed)
+  }
   if (!inDays) return
   if (txn.budgetMonth === scope.month) {
     agg.currentCents += signed
@@ -145,11 +151,11 @@ function collectGroups(
   opts: SpendingGroupsOptions,
   classifier: FixedSpendClassifier,
 ): Map<string, GroupAgg> {
-  const { months, month, basis, today, groupBy } = opts
+  const { months, month, basis, today, openMonth, groupBy } = opts
   const engineOpts = basisOptions(basis)
   const scope: CollectScope = {
     month,
-    dayLimit: sameDaysLimit(month, today),
+    dayLimit: sameDaysLimit(month, today, openMonth),
     avgMonths: new Set(months.filter((m) => m < month).slice(-3)),
   }
   const window = new Set(months.filter((m) => m <= month).slice(-12))
@@ -176,7 +182,7 @@ function budgetFor(
   if (opts.groupBy !== 'category') return { budgetCents: null, shouldBeTodayCents: null }
   const cat = args.categories.find((c) => String(c.id) === key)
   if (!cat || cat.monthlyBudgetCents <= 0) return { budgetCents: null, shouldBeTodayCents: null }
-  const dayLimit = sameDaysLimit(opts.month, opts.today)
+  const dayLimit = sameDaysLimit(opts.month, opts.today, opts.openMonth)
   const [y, m] = opts.month.split('-').map(Number) as [number, number]
   const daysInMonth = new Date(y, m, 0).getDate()
   const frac = dayLimit === null ? 1 : Math.min(dayLimit, daysInMonth) / daysInMonth

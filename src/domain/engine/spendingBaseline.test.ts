@@ -76,6 +76,18 @@ describe('computeSpendingBaseline', () => {
     expect(b.deltaVsPlanCents).toBeNull()
   })
 
+  it('subtracts nothing for a plan that has not started yet', () => {
+    // Starts in April and ends within the year — but it contributed nothing to
+    // the measured months, so there is nothing of it to fall away.
+    const notStarted = { ...endingPlan, anchorBudgetMonth: '2026-04', totalCount: 3 }
+    const b = computeSpendingBaseline(TXNS, [notStarted], [], {
+      months: MONTHS,
+      month: '2026-03',
+      basis: 'committed',
+    })!
+    expect(b.runRateAfterInstallmentsCents).toBe(250000)
+  })
+
   it('is null with no closed month to measure', () => {
     const b = computeSpendingBaseline([], [], [], {
       months: ['2026-03'],

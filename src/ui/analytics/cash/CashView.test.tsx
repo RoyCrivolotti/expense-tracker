@@ -52,15 +52,21 @@ function model() {
 
 describe('CashView', () => {
   it('shows a dot per month and points the banner at the one ready to count', () => {
-    render(<CashView model={model()} month="2026-02" />)
+    render(<CashView model={model()} month="2026-02" openMonth="2026-03" />)
     expect(screen.getByRole('group', { name: 'Month close status' })).toBeInTheDocument()
     // February is selected (the header month) and waiting; January is ready.
     expect(screen.getByText(/January 2026 is ready to count/)).toBeInTheDocument()
     expect(screen.getByText(/card statement is unpaid/)).toBeInTheDocument()
   })
 
+  it('never calls the month under way ready to count', () => {
+    // January's statements are paid, but January IS the month under way.
+    render(<CashView model={model()} month="2026-02" openMonth="2026-01" />)
+    expect(screen.queryByText(/is ready to count/)).toBeNull()
+  })
+
   it('walks the bridge for the month the banner selects, with the count input in place', () => {
-    render(<CashView model={model()} month="2026-02" />)
+    render(<CashView model={model()} month="2026-02" openMonth="2026-03" />)
     fireEvent.click(screen.getByText(/January 2026 is ready to count/))
 
     expect(screen.getByText('Opening cash')).toBeInTheDocument()
@@ -68,8 +74,23 @@ describe('CashView', () => {
     expect(screen.getByText(/Count the cash you hold/)).toBeInTheDocument()
   })
 
+  it('follows the header month picker even after a dot was tapped', () => {
+    const { rerender } = render(<CashView model={model()} month="2026-02" openMonth="2026-03" />)
+    // Tap over to January via the banner, then change the header month.
+    fireEvent.click(screen.getByText(/January 2026 is ready to count/))
+    expect(screen.getByText(/Count the cash you hold/)).toBeInTheDocument()
+    rerender(<CashView model={model()} month="2026-02" openMonth="2026-03" />)
+    // Same month: the tapped pick stays.
+    expect(screen.getByText(/Count the cash you hold/)).toBeInTheDocument()
+    rerender(<CashView model={model()} month="2026-01" openMonth="2026-03" />)
+    expect(screen.getByText(/Count the cash you hold/)).toBeInTheDocument()
+    rerender(<CashView model={model()} month="2026-02" openMonth="2026-03" />)
+    // The header moved back to February, so the earlier January tap is forgotten.
+    expect(screen.getByText(/card statement is unpaid/)).toBeInTheDocument()
+  })
+
   it('labels the balances as cost and keeps the full table one fold away', () => {
-    render(<CashView model={model()} month="2026-01" />)
+    render(<CashView model={model()} month="2026-01" openMonth="2026-03" />)
     expect(screen.getByText('Invested, at cost')).toBeInTheDocument()
     expect(screen.getByText(/Goals tracks the market value/)).toBeInTheDocument()
     expect(screen.getByText('Full reconciliation table')).toBeInTheDocument()
@@ -79,7 +100,7 @@ describe('CashView', () => {
 
   it('says so when there is no month to reconcile', () => {
     const empty = buildExpenseModel(makeDataset({ accounts, transactions: [], cashActuals: [] }))
-    render(<CashView model={empty} month="2026-01" />)
+    render(<CashView model={empty} month="2026-01" openMonth="2026-01" />)
     expect(screen.getByText('No months to reconcile yet.')).toBeInTheDocument()
   })
 })

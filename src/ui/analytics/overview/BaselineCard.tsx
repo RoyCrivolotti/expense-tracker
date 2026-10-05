@@ -34,7 +34,9 @@ export function BaselineCard({
   return (
     <Card>
       <h3 className={styles.cardTitle}>Spending baseline</h3>
-      <p className={styles.cardSub}>Measured over your last {baseline.months.length} closed months.</p>
+      <p className={styles.cardSub}>
+        Measured over the {baseline.months.length} closed months before this one.
+      </p>
       <div className={styles.kvList}>
         <Row label="Trailing spend, total" value={compact(baseline.totalCents)} />
         <Row label="Typical month, mean" value={compact(baseline.meanMonthlyCents)} />

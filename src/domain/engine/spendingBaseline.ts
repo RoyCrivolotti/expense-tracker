@@ -6,7 +6,7 @@
  */
 import type { GoalScenario, InstallmentPlan, Transaction } from '../types'
 import { shiftBudgetMonth } from './dates'
-import { finalBudgetMonth } from './installments'
+import { finalBudgetMonth, budgetMonthForIndex } from './installments'
 import { type AnalyticsBasis, spendThroughDay } from './analyticsPeriod'
 
 export const BASELINE_MONTHS = 12
@@ -31,12 +31,17 @@ function median(nums: number[]): number {
   return sorted.length % 2 === 0 ? Math.round((sorted[mid - 1]! + sorted[mid]!) / 2) : sorted[mid]!
 }
 
-/** Per-instalment cents of active expense plans still running at `month` that end within a year of it. */
+/**
+ * Per-instalment cents of active expense plans that are already running at
+ * `month` (a plan that has not started yet contributed nothing to the measured
+ * months, so there is nothing of it to subtract) and end within a year of it.
+ */
 function endingInstallmentsCents(plans: InstallmentPlan[], month: string): number {
   const horizon = shiftBudgetMonth(month, BASELINE_MONTHS)
   let total = 0
   for (const plan of plans) {
     if (!plan.active || plan.type !== 'expense') continue
+    if (budgetMonthForIndex(plan, plan.startInstallmentIndex) > month) continue
     const final = finalBudgetMonth(plan)
     if (final >= month && final <= horizon) total += plan.amountCents
   }

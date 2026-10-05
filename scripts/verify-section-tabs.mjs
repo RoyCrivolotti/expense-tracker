@@ -27,9 +27,9 @@ const DESKTOP = { name: '1100x800', width: 1100, height: 800 }
 /** The air a landed section's content is left under the bar, in px (PINNED_AIR_PX). */
 const AIR = 8
 
-/** What a section bar is called, and the sections it has. Analytics' only exists on a phone. */
+/** What a section bar is called, and the sections it has. Both exist at every width. */
 const BARS = {
-  Analytics: { label: 'Analytics section', sections: ['Summary', 'Totals', 'Cash', 'Year'] },
+  Analytics: { label: 'Analytics view', sections: ['Overview', 'Spending', 'Cash'] },
   Settings: { label: 'Settings section', sections: ['Preferences', 'Setup', 'Account', 'Data'] },
 }
 
@@ -334,11 +334,10 @@ async function checkFocus(page, where, max = 200) {
 }
 
 async function checkFocusEverywhere(browser, viewport) {
-  const phone = viewport.width < 768
   for (const tabName of ['Dashboard', 'Transactions', 'Analytics', 'Settings']) {
     const { page, context } = await openApp(browser, viewport, tabName === 'Dashboard' ? null : tabName)
     const where = `${viewport.name} ${tabName}`
-    const bar = tabName === 'Analytics' && !phone ? null : BARS[tabName]
+    const bar = BARS[tabName]
     if (bar) {
       for (const section of bar.sections) {
         await pick(page, tabName, section)
@@ -360,9 +359,9 @@ async function main() {
     const browser = await chromium.launch()
     try {
       console.log('\nSection bars')
-      await checkBar(browser, 'Analytics', 'Summary', 'Totals')
+      await checkBar(browser, 'Analytics', 'Overview', 'Spending')
       await checkBar(browser, 'Settings', 'Setup', 'Data')
-      await checkTabKeys(browser, 'Analytics', 'Summary', 'Totals')
+      await checkTabKeys(browser, 'Analytics', 'Overview', 'Spending')
       await checkTabKeys(browser, 'Settings', 'Preferences', 'Setup')
       for (const phone of PHONES) {
         await checkLabels(browser, phone, 'Analytics')

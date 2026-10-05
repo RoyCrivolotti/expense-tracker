@@ -28,6 +28,8 @@ interface Props {
   period: AnalyticsPeriod
   compare: CompareMode
   today: string
+  /** The budget month `today` falls in (rollover-aware). */
+  openMonth: string
   onSelectMonth: (month: string) => void
   onShowView: (view: AnalyticsView) => void
   onUseBaselineInGoals?: ((monthlyCents: number) => void) | undefined
@@ -41,13 +43,14 @@ export function OverviewView({
   period,
   compare,
   today,
+  openMonth,
   onSelectMonth,
   onShowView,
   onUseBaselineInGoals,
 }: Props) {
   const data = useMemo(
-    () => buildOverviewData(model, { month, period, compare, basis, today }),
-    [model, month, period, compare, basis, today],
+    () => buildOverviewData(model, { month, period, compare, basis, today, openMonth }),
+    [model, month, period, compare, basis, today, openMonth],
   )
   const trend = useMemo(
     () => buildTrendModel(data.kpis.series, data.unpaidByMonth),
@@ -76,7 +79,7 @@ export function OverviewView({
           </div>
           <TrendChart model={trend} selectedMonth={month} onSelectMonth={onSelectMonth} />
         </Card>
-        <PaceCard pace={data.pace} />
+        <PaceCard pace={data.pace} isFuture={month > openMonth} />
       </div>
       {showTable && (
         <Card>

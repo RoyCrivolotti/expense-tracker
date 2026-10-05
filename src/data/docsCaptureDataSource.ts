@@ -30,6 +30,7 @@ import type {
   NewWealthCheckin,
 } from './dataSource'
 import { deriveTransactions } from '../domain/engine/status'
+import { computeCashReconciliation } from '../domain/engine/cashReconciliation'
 import { defaultExpenseSettings } from '../domain/engine/defaults'
 import { csvDataSource } from './csvDataSource'
 import { docsCaptureGoalScenarios } from './docsCaptureGoalScenarios'
@@ -156,11 +157,16 @@ function enrichDocsCaptureDataset(dataset: ExpenseDataset): ExpenseDataset {
   const accountStatements: AccountStatement[] = []
   for (const card of cards) {
     accountStatements.push(
+      { accountId: card.id, yearMonth: '2026-01', paid: true, paidOn: '2026-02-14' },
+      { accountId: card.id, yearMonth: '2026-02', paid: true, paidOn: '2026-03-14' },
       { accountId: card.id, yearMonth: '2026-03', paid: true, paidOn: '2026-04-14' },
       // April budget settles mid-May — visible in May Transactions on paid date.
       { accountId: card.id, yearMonth: '2026-04', paid: true, paidOn: '2026-05-14' },
       // May budget settles mid-June — appears in June Transactions, not May.
       { accountId: card.id, yearMonth: '2026-05', paid: true, paidOn: '2026-06-14' },
+      { accountId: card.id, yearMonth: '2026-06', paid: true, paidOn: '2026-07-14' },
+      { accountId: card.id, yearMonth: '2026-07', paid: true, paidOn: '2026-08-14' },
+      // August stays unpaid, so the Cash view has a live "waiting" month.
     )
   }
   const { flags, transactions: stored } = demoFlags([...dataset.transactions, ...planTxns])
@@ -182,16 +188,34 @@ function enrichDocsCaptureDataset(dataset: ExpenseDataset): ExpenseDataset {
         },
       ]
     : []
+  const settings = { ...dataset.settings, claimantName: 'Alex Moreno' }
+  const transactions = deriveTransactions(stored, dataset.accounts, accountStatements)
+  // Counted cash through June, taken from the engine's own expectation so the
+  // amounts stay consistent with whatever the fixture adds up to — with a small
+  // deliberate gap in May, so the drift story has something to show.
+  const cashActuals: CashActual[] = computeCashReconciliation(
+    transactions,
+    dataset.accounts,
+    settings,
+    [],
+  )
+    .filter((r) => r.month <= '2026-06')
+    .map((r) => ({
+      yearMonth: r.month,
+      // The gap opens in May and carries over, as an unfound drift really would.
+      actualCashCents: r.expectedCashCents + (r.month >= '2026-05' ? -1250 : 0),
+    }))
   return {
     ...dataset,
     flags,
     attachments,
     // A claimant, so the claim's header renders as a real document rather
     // than an anonymous table.
-    settings: { ...dataset.settings, claimantName: 'Alex Moreno' },
+    settings,
     accountStatements: cards.length > 0 ? accountStatements : dataset.accountStatements,
+    cashActuals: cards.length > 0 ? cashActuals : dataset.cashActuals,
     installmentPlans: plans,
-    transactions: deriveTransactions(stored, dataset.accounts, accountStatements),
+    transactions,
   }
 }
 

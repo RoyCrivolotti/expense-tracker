@@ -36,15 +36,22 @@ export function monthsForPeriod(
 }
 
 /**
- * Day-of-month cutoff for comparing like with like. The month still under way is
+ * Day-of-month cutoff for comparing like with like. The month under way is
  * only ever compared with the same days of other months, never a partial month
- * against a full one. A budget month at or past today's calendar month counts as
- * open; the cutoff is today's day-of-month applied to each transaction's own
- * calendar date. With a budget rollover day the window shifts, but day-of-month
- * stays the honest like-for-like cut. Closed months return null (whole month).
+ * against a full one. Only `openMonth` — the budget month `today` falls in,
+ * rollover-aware via `defaultBudgetMonth` — is open: a past month is whole, and
+ * a future month shows its whole committed picture rather than a "first N days"
+ * slice of a month that has not begun. The cutoff is today's day-of-month
+ * applied to each transaction's own calendar date; with a budget rollover day
+ * the window shifts, but day-of-month stays the honest like-for-like cut.
+ * Closed months return null (whole month).
  */
-export function sameDaysLimit(month: string, today: string): number | null {
-  return month >= today.slice(0, 7) ? parseInt(today.slice(8, 10), 10) : null
+export function sameDaysLimit(
+  month: string,
+  today: string,
+  openMonth: string = today.slice(0, 7),
+): number | null {
+  return month === openMonth ? parseInt(today.slice(8, 10), 10) : null
 }
 
 function countsOn(txn: Transaction, opts: BasisOptions): boolean {
