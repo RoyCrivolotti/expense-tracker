@@ -1,6 +1,6 @@
 /**
- * The Overview's five headline numbers — income, spent, net saved, savings rate,
- * invested — for a period, with a comparison baseline. An open month is only
+ * The Overview's five headline numbers: income, spent, net saved, savings rate,
+ * invested, for a period, with a comparison baseline. An open month is only
  * compared with the same days of other months (see `sameDaysCut`); the savings
  * rate follows decision 6: (income − spending) ÷ income, investing is not
  * spending, and reimbursable spend counts until it is repaid.

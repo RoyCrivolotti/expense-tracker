@@ -8,7 +8,7 @@ function hasActivity(r: CategoryActuals): boolean {
 }
 
 /**
- * The grid's rows — budgeted or active categories, in the user's sort order.
+ * The grid's rows: budgeted or active categories, in the user's sort order.
  * The CSV export shares this so the file is the grid, not a near-miss of it.
  */
 export function monthlySummaryRows(

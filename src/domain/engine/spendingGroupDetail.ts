@@ -1,6 +1,6 @@
 /**
  * The detail behind a Spending row: its monthly history against the budget, a
- * few summary statistics, and the biggest transactions of the selected month —
+ * few summary statistics, and the biggest transactions of the selected month:
  * the path from a number to the ledger behind it.
  */
 import type { Category, Transaction } from '../types'

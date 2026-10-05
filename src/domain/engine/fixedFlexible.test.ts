@@ -19,7 +19,7 @@ function txn(partial: Partial<Transaction>): Transaction {
   }
 }
 
-/** Rent on the 1st, three months running — a textbook recurring pattern. */
+/** Rent on the 1st, three months running, a textbook recurring pattern. */
 function rentHistory(): Transaction[] {
   return ['2025-11', '2025-12', '2026-01'].map((m, i) =>
     txn({ id: i + 1, date: `${m}-01`, budgetMonth: m, description: 'Rent', amountCents: 100000 }),

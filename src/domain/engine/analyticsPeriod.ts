@@ -2,7 +2,7 @@ import type { Transaction } from '../types'
 import { addDaysIso, daysBetween, priorBudgetMonth, shiftBudgetMonth } from './dates'
 
 /**
- * Analytics basis — which card charges count. `committed` counts a charge in
+ * Analytics basis: which card charges count. `committed` counts a charge in
  * its budget month whether or not the statement is paid (matching budgets and
  * the Dashboard); `paid` counts it only once the statement is paid (matching
  * cash). Cash reconciliation is inherently paid-basis and offers no choice.

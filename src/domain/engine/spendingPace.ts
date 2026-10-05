@@ -58,7 +58,7 @@ function budgetedCategoryIds(categories: Category[]): Set<number> {
 
 /**
  * Fixed charges expected in a budget month: instalments due plus monthly
- * recurring expenses seen in that month or the two before it — a cancelled
+ * recurring expenses seen in that month or the two before it: a cancelled
  * subscription must not shrink the flexible envelope forever. Quarterly and
  * annual patterns are left out: they are lumpy, and guessing their month wrong
  * would swing the envelope. A charge in a category with no active budget never

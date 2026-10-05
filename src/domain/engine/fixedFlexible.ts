@@ -2,7 +2,7 @@
  * Fixed against flexible spending, detected rather than tagged: a transaction is
  * fixed when it settles an instalment plan or belongs to a recurring pattern the
  * detector already trusts (≥3 occurrences at ≥0.6 regularity). Detection can
- * misfire — it misses annual bills — so anything built on this split keeps the
+ * misfire (it misses annual bills), so anything built on this split keeps the
  * underlying transactions one tap away rather than asking to be believed.
  */
 import type { Transaction } from '../types'
@@ -53,7 +53,7 @@ function keyString(key: GroupKey): string {
 export function classifyFixedSpend(transactions: Transaction[]): FixedSpendClassifier {
   const fixedKeys = new Set(recurringFixedGroups(transactions).map((g) => keyString(g.key)))
   // A refund keys by its own type, so it would never match the expense pattern it
-  // repays — the refund of a fixed charge is fixed money coming back, not flexible.
+  // repays: the refund of a fixed charge is fixed money coming back, not flexible.
   const matches = (txn: Transaction): boolean => {
     if (fixedKeys.has(occurrenceKey(txn))) return true
     if (txn.type !== 'refund') return false

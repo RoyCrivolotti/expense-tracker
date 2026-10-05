@@ -1,7 +1,7 @@
 /**
  * What changed: flexible spend per category against the mean of the three closed
  * months before, cut at the same days when the month is open. Fixed charges are
- * excluded — rent moving 0% is not news.
+ * excluded: rent moving 0% is not news.
  */
 import type { Category, Transaction } from '../types'
 import {

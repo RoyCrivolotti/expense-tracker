@@ -26,7 +26,7 @@ function clamp01(v: number): number {
 
 /**
  * Flexible spending against the pace the budget implies. Fixed costs are counted
- * but stay out of the clock — rent on the 1st is not "ahead of pace".
+ * but stay out of the clock: rent on the 1st is not "ahead of pace".
  */
 export function PaceCard({ pace, isFuture }: { pace: SpendingPace; isFuture: boolean }) {
   const format = useMoneyFormat()

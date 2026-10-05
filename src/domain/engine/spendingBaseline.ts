@@ -1,7 +1,7 @@
 /**
  * The spending baseline: what a year really costs, measured from the trailing
  * closed months, with the run-rate after known instalments end and the active
- * Goals plan's assumed spend beside it. Read-only here — the Goals handoff is a
+ * Goals plan's assumed spend beside it. Read-only here: the Goals handoff is a
  * separate, explicit step.
  */
 import type { GoalScenario, InstallmentPlan, Transaction } from '../types'
@@ -55,7 +55,7 @@ export interface SpendingBaselineOptions {
   basis: AnalyticsBasis
 }
 
-/** Null until at least one closed month has spending — there is nothing to measure. */
+/** Null until at least one closed month has spending: there is nothing to measure. */
 export function computeSpendingBaseline(
   transactions: Transaction[],
   plans: InstallmentPlan[],

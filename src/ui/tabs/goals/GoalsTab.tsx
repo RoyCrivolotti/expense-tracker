@@ -40,7 +40,7 @@ import styles from './goals.module.css'
 /**
  * How the tab was reached: 'checkin' opens Progress with the check-in form up;
  * a baseline entry opens Plan with the measured monthly spend prefilled into the
- * draft's annual spend — an unsaved edit that goes through the ordinary Save
+ * draft's annual spend: an unsaved edit that goes through the ordinary Save
  * path, never a silent write.
  */
 export type GoalsEntry = 'checkin' | { kind: 'baseline'; monthlyCents: number } | null

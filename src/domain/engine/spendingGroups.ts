@@ -1,6 +1,6 @@
 /**
  * The Spending view's ranked rows: net expense grouped by category, fixed vs
- * flexible, label, or merchant. "Merchant" is the normalized description — the
+ * flexible, label, or merchant. "Merchant" is the normalized description: the
  * data has no merchant field, and recurring detection already treats a trimmed,
  * case-folded description as an identity. A transaction with two labels counts
  * in both label rows, so label totals can exceed the month total.

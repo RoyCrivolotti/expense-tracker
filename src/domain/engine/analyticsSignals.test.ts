@@ -35,7 +35,7 @@ describe('computeSignals', () => {
   })
 
   it('holds its tongue in the first days of the month', () => {
-    // One grocery shop on day 2 extrapolates to a month of them — not a signal.
+    // One grocery shop on day 2 extrapolates to a month of them, not a signal.
     const early = pace({ dayOfMonth: 2, projectedCents: 300000 })
     const signals = computeSignals({ pace: early, movers: [], cashRows: [] })
     expect(signals.find((s) => s.kind === 'pace')).toBeUndefined()
@@ -50,7 +50,7 @@ describe('computeSignals', () => {
   })
 
   it('points at the newest month whose statements are paid but cash is uncounted', () => {
-    // January is also uncounted — likely from before counting began. Pointing
+    // January is also uncounted, likely from before counting began. Pointing
     // at it forever would make the banner permanent, so the newest wins.
     const rows = [
       cashRow({ month: '2026-01' }),

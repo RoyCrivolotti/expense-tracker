@@ -2,7 +2,7 @@
  * Month close over the cash reconciliation rows: a status per month, the bridge
  * from income to expected cash, and the balances at cost. Counted cash never
  * lands exactly on the expected figure, so a tolerance band separates "counted,
- * fine" from drift worth chasing — a bare red number is never shown without the
+ * fine" from drift worth chasing: a bare red number is never shown without the
  * bridge that explains it.
  */
 import type { ExpenseSettings, Transaction } from '../types'
@@ -73,7 +73,7 @@ export function cashBridge(row: CashRow): BridgeSegment[] {
 export interface BalancesAtCost {
   /** The month's counted cash when entered, else the expected balance. */
   cashCents: number
-  /** Opening investment balance plus contributions through the month — cost, not market value. */
+  /** Opening investment balance plus contributions through the month, at cost and not market value. */
   investedAtCostCents: number
 }
 

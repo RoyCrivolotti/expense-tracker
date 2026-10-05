@@ -1,6 +1,6 @@
 /**
  * Signals: at most three rule-based findings computed from the month's numbers,
- * each pointing somewhere actionable. No model, no service — every signal is a
+ * each pointing somewhere actionable. No model, no service: every signal is a
  * deterministic function of the inputs, so it can be tested like any other
  * number on the page. The engine returns structured facts; the UI writes the
  * sentences, because money and month formatting belong to the presentation.

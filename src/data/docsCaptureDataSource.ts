@@ -191,7 +191,7 @@ function enrichDocsCaptureDataset(dataset: ExpenseDataset): ExpenseDataset {
   const settings = { ...dataset.settings, claimantName: 'Alex Moreno' }
   const transactions = deriveTransactions(stored, dataset.accounts, accountStatements)
   // Counted cash through June, taken from the engine's own expectation so the
-  // amounts stay consistent with whatever the fixture adds up to — with a small
+  // amounts stay consistent with whatever the fixture adds up to, with a small
   // deliberate gap in May, so the drift story has something to show.
   const cashActuals: CashActual[] = computeCashReconciliation(
     transactions,
