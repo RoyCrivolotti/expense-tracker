@@ -122,7 +122,7 @@ export function SpendingView({ model, month, basis, today, openMonth, onOpenTran
   const exportGrid = () => {
     downloadCsv(
       `monthly-summary-${month}.csv`,
-      monthlySummaryCsv(monthlySummaryRows(model, month, basis), model.months),
+      monthlySummaryCsv(monthlySummaryRows(model, month, basis), model.months, month.slice(0, 4)),
     )
   }
 

@@ -49,8 +49,8 @@ export function exportTransactionsCsv(
  * plus the year-scoped YTD the grid shows. Amounts in integer cents, like the
  * transaction export — exact, and immune to locale decimal marks.
  */
-export function monthlySummaryCsv(rows: CategoryActuals[], months: string[]): string {
-  const header = ['category', 'monthly_budget_cents', ...months, 'ytd_cents'].join(',')
+export function monthlySummaryCsv(rows: CategoryActuals[], months: string[], ytdYear: string): string {
+  const header = ['category', 'monthly_budget_cents', ...months, `ytd_${ytdYear}_cents`].join(',')
   const lines = rows.map((r) =>
     [
       escText(r.name),
