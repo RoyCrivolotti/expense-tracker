@@ -15,11 +15,19 @@ function cellClass(actual: number, budget: number): string | undefined {
   return undefined
 }
 
-function buildRows(model: ExpenseModel): CategoryActuals[] {
+function hasActivity(r: CategoryActuals): boolean {
+  for (const cents of r.byMonth.values()) if (cents !== 0) return true
+  return false
+}
+
+function buildRows(model: ExpenseModel, month: string): CategoryActuals[] {
   const { dataset } = model
   const order = new Map(dataset.categories.map((c) => [c.id, c.sortOrder]))
-  return computeCategoryActuals(dataset.transactions, dataset.categories, { includeForecast: true })
-    .filter((r) => r.monthlyBudgetCents > 0 || r.ytdActualCents !== 0)
+  return computeCategoryActuals(dataset.transactions, dataset.categories, {
+    includeForecast: true,
+    ytdThroughMonth: month,
+  })
+    .filter((r) => r.monthlyBudgetCents > 0 || hasActivity(r))
     .sort((a, b) => (order.get(a.categoryId) ?? 0) - (order.get(b.categoryId) ?? 0))
 }
 
@@ -40,10 +48,10 @@ function buildTotals(rows: CategoryActuals[], months: string[]) {
  * months across, net actual per cell (coloured vs that category's budget), plus
  * a budget column, a YTD column, and a totals row. Wide — scrolls on mobile.
  */
-export function MonthlySummaryGrid({ model }: { model: ExpenseModel }) {
+export function MonthlySummaryGrid({ model, month }: { model: ExpenseModel; month: string }) {
   const format = useMoneyFormat()
   const { months } = model
-  const rows = useMemo(() => buildRows(model), [model])
+  const rows = useMemo(() => buildRows(model, month), [model, month])
   const totals = useMemo(() => buildTotals(rows, months), [rows, months])
   const cell = (cents: number): string => (cents === 0 ? '—' : formatCents(cents, format, false))
 
@@ -59,7 +67,7 @@ export function MonthlySummaryGrid({ model }: { model: ExpenseModel }) {
             {months.map((m) => (
               <th key={m}>{shortMonthLabel(m)}</th>
             ))}
-            <th>YTD</th>
+            <th>YTD ({month.slice(0, 4)})</th>
           </tr>
         </thead>
         <tbody>

@@ -10,22 +10,23 @@ function lastMonths(months: string[], count: number): string[] {
   return months.slice(Math.max(0, months.length - count))
 }
 
-function monthIncomeExpense(model: ExpenseModel, month: string) {
-  const t = computeMonthlyTotals(model.dataset.transactions).get(month)
-  return { income: t?.incomeCents ?? 0, expenses: t?.expensesCents ?? 0 }
-}
-
 interface Props {
   model: ExpenseModel
 }
 
-/** Side-by-side bars for income vs expenses over recent budget months. */
+/**
+ * Side-by-side bars for income vs expenses over recent budget months.
+ * Committed basis — unpaid card charges count, matching the tables above.
+ */
 export function MonthlyIncomeExpenseChart({ model }: Props) {
   const months = lastMonths(model.months, 6)
-  const rows = useMemo(
-    () => months.map((month) => ({ month, ...monthIncomeExpense(model, month) })),
-    [model, months],
-  )
+  const rows = useMemo(() => {
+    const totals = computeMonthlyTotals(model.dataset.transactions, { includeForecast: true })
+    return months.map((month) => {
+      const t = totals.get(month)
+      return { month, income: t?.incomeCents ?? 0, expenses: t?.expensesCents ?? 0 }
+    })
+  }, [model, months])
   const { w: innerW, h: innerH } = innerSize()
   const groupW = innerW / Math.max(1, rows.length)
   const barW = Math.min(16, groupW / 3)

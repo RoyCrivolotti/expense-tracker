@@ -15,15 +15,18 @@ function valueColor(cents: number, type: 'income' | 'expense' | 'signed' | 'neut
 export function MonthlyTotalsMobile({ model }: { model: ExpenseModel }) {
   const rows = useMemo(
     () =>
-      [...computeMonthlyTotals(model.dataset.transactions).values()].sort((a, b) =>
-        b.month.localeCompare(a.month),
-      ),
+      [
+        ...computeMonthlyTotals(model.dataset.transactions, { includeForecast: true }).values(),
+      ].sort((a, b) => b.month.localeCompare(a.month)),
     [model.dataset],
   )
 
   return (
     <div className={styles.section}>
-      <p className={styles.hint}>Posted income, expenses, saving, and investments per month.</p>
+      <p className={styles.hint}>
+        Committed income, expenses, saving, and investments per month — unpaid card charges count
+        in their budget month.
+      </p>
       {rows.map((r) => (
         <div key={r.month} className={styles.monthCard}>
           <div className={styles.monthHeader}>{fullMonthLabel(r.month)}</div>

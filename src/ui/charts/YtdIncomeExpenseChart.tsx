@@ -8,18 +8,15 @@ import { YtdLineChartView } from './YtdLineChartView'
 import { useChartFocus } from './useChartFocus'
 import styles from './charts.module.css'
 
-function monthIncomeExpense(model: ExpenseModel, month: string) {
-  const t = computeMonthlyTotals(model.dataset.transactions).get(month)
-  return { income: t?.incomeCents ?? 0, expenses: t?.expensesCents ?? 0 }
-}
-
 function cumulativeYtdPoints(model: ExpenseModel, months: string[]) {
+  // Committed basis — unpaid card charges count, matching the tables above.
+  const totals = computeMonthlyTotals(model.dataset.transactions, { includeForecast: true })
   let cumIncome = 0
   let cumExpense = 0
   return months.map((m) => {
-    const t = monthIncomeExpense(model, m)
-    cumIncome += t.income
-    cumExpense += t.expenses
+    const t = totals.get(m)
+    cumIncome += t?.incomeCents ?? 0
+    cumExpense += t?.expensesCents ?? 0
     return { month: m, cumIncome, cumExpense }
   })
 }

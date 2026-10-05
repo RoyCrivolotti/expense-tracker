@@ -27,11 +27,15 @@ export function AnalyticsTabDesktop({
           charges, so it matches your workbook regardless of payment status. Scroll sideways for
           more months.
         </p>
-        <MonthlySummaryGrid model={model} />
+        <MonthlySummaryGrid model={model} month={month} />
       </section>
 
       <section className={styles.analyticsSection}>
         <SectionTitle>Monthly totals</SectionTitle>
+        <p className={tableStyles.note}>
+          Committed basis — includes unpaid card charges, so it matches the Dashboard and the
+          summary above.
+        </p>
         <MonthlyTotalsTable model={model} />
       </section>
 

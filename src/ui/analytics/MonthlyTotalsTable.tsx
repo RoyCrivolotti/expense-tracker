@@ -9,14 +9,18 @@ import styles from './analytics.module.css'
 const signed = (cents: number): string | undefined =>
   cents > 0 ? styles.pos : cents < 0 ? styles.neg : undefined
 
-/** Per-month income / expenses / net saving / invested. */
+/**
+ * Per-month income / expenses / net saving / invested. Committed basis: unpaid
+ * card charges count in their budget month, so the numbers agree with the
+ * Dashboard and the Monthly summary instead of shifting when a statement is paid.
+ */
 export function MonthlyTotalsTable({ model }: { model: ExpenseModel }) {
   const { money, moneyAlways } = useMoneyCells()
   const rows = useMemo(
     () =>
-      [...computeMonthlyTotals(model.dataset.transactions).values()].sort((a, b) =>
-        a.month.localeCompare(b.month),
-      ),
+      [
+        ...computeMonthlyTotals(model.dataset.transactions, { includeForecast: true }).values(),
+      ].sort((a, b) => a.month.localeCompare(b.month)),
     [model.dataset],
   )
   const columns: LedgerColumn<MonthlyTotals>[] = [
