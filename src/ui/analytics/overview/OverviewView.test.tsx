@@ -89,6 +89,36 @@ describe('OverviewView', () => {
     expect(screen.getByText('Goals plan assumes')).toBeTruthy()
   })
 
+  it('says the open month\'s income split is through the same days as the headline numbers', () => {
+    renderView()
+    expect(screen.getByText(/income in the first 10 days/)).toBeTruthy()
+  })
+
+  it('calls a closed month\'s income split a whole month', () => {
+    renderView({ month: '2026-02', openMonth: '2026-03' })
+    expect(screen.getByText(/income this month/)).toBeTruthy()
+  })
+
+  it('says the baseline is a trailing average over the history there is, not a year to date', () => {
+    renderView()
+    expect(screen.getByText(/of\s+history before this one, up to 12\. A trailing average, not a calendar year/)).toBeTruthy()
+    expect(screen.getByText(/Annual spend at FI/)).toBeTruthy()
+  })
+
+  it('explains how the pace, allocation and baseline cards are calculated', () => {
+    renderView()
+    expect(screen.getAllByText('How is this calculated?')).toHaveLength(3)
+    expect(screen.getByText(/at least 3 times, monthly, quarterly or yearly/)).toBeTruthy()
+    expect(screen.getByText(/Left over is income minus fixed, flexible and invested/)).toBeTruthy()
+    expect(screen.getByText(/Use in Goals sets the plan.s annual spend to the mean times 12/)).toBeTruthy()
+  })
+
+  it('lists the detected fixed costs behind the cards', () => {
+    renderView()
+    expect(screen.getByText(/Detected fixed costs \(1\)/)).toBeTruthy()
+    expect(screen.getByText(/monthly, last charged/)).toBeTruthy()
+  })
+
   it('routes a signal action to the view it names', () => {
     const { onShowView } = renderView()
     fireEvent.click(screen.getByRole('button', { name: 'See the month' }))

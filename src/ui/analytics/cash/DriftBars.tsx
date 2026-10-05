@@ -1,13 +1,28 @@
 import type { CashRow } from '../../../engine'
-import { CASH_DRIFT_TOLERANCE_CENTS, formatCents, shortMonthLabel } from '../../../engine'
+import {
+  CASH_DRIFT_TOLERANCE_CENTS,
+  firstCountedMonth,
+  formatCents,
+  shortMonthLabel,
+} from '../../../engine'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import styles from './cash.module.css'
 
-/** New drift per counted month, with the tolerance band it has to beat. */
+/**
+ * New drift per counted month, with the tolerance band it has to beat. The first count is
+ * the baseline, not a drift: its gap holds every month before it.
+ */
 export function DriftBars({ rows }: { rows: CashRow[] }) {
   const format = useMoneyFormat()
-  const counted = rows.filter((r) => r.monthGapCents !== null)
-  if (counted.length === 0) return null
+  const start = firstCountedMonth(rows)
+  const counted = rows.filter((r) => r.monthGapCents !== null && r.month !== start)
+  if (counted.length === 0) {
+    return start === null ? null : (
+      <p className={styles.driftWait}>
+        Drift shows from the second count: the first one sets the starting point.
+      </p>
+    )
+  }
   const maxAbs = Math.max(CASH_DRIFT_TOLERANCE_CENTS * 2, ...counted.map((r) => Math.abs(r.monthGapCents!)))
   const pct = (cents: number) => (Math.abs(cents) / maxAbs) * 50
   const tolPct = (CASH_DRIFT_TOLERANCE_CENTS / maxAbs) * 50

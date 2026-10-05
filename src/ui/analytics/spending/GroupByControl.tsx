@@ -5,10 +5,10 @@ const ALL_OPTIONS: { value: SpendingGroupBy; label: string }[] = [
   { value: 'category', label: 'Category' },
   { value: 'fixedFlexible', label: 'Fixed / flexible' },
   { value: 'label', label: 'Label' },
-  { value: 'merchant', label: 'Merchant' },
+  { value: 'description', label: 'Description' },
 ]
 
-/** Group by category, fixed vs flexible, label (hidden without labels) or merchant. */
+/** Group by category, fixed vs flexible, label (hidden without labels) or description. */
 export function GroupByControl({
   value,
   onChange,

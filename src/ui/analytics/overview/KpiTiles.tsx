@@ -26,8 +26,10 @@ function Tile({ spec, kpis, baselineName }: { spec: TileSpec; kpis: OverviewKpis
   const format = useMoneyFormat()
   const value = spec.pick(kpis.current)
   const baseline = kpis.baseline ? spec.pick(kpis.baseline) : null
-  const display =
-    value === null ? '—' : spec.kind === 'rate' ? formatPercent(value) : formatCentsCompact(value, format)
+  const show = (v: number) => (spec.kind === 'rate' ? formatPercent(v) : formatCentsCompact(v, format))
+  const display = value === null ? '—' : show(value)
+  // The chip says how far from the baseline; this says what the baseline is.
+  const baselineText = value === null || baseline === null ? null : `vs ${show(baseline)} ${baselineName}`
   return (
     <div className={styles.kpiTile}>
       <span className={styles.kpiLabel}>{spec.label}</span>
@@ -39,8 +41,8 @@ function Tile({ spec, kpis, baselineName }: { spec: TileSpec; kpis: OverviewKpis
           upGood={spec.upGood}
           kind={spec.kind}
         />
-        <span className={styles.kpiBaseline}>vs {baselineName}</span>
       </span>
+      {baselineText && <span className={styles.kpiBaseline}>{baselineText}</span>}
       <Sparkline
         values={kpis.series.flatMap((s) => {
           const v = spec.pick(s.totals)

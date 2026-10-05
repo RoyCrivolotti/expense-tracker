@@ -96,6 +96,33 @@ describe('SpendingView', () => {
     expect(screen.queryByText('Biggest this month')).toBeNull()
   })
 
+  it('ranks by amount by default and by item count on request', () => {
+    const many = buildExpenseModel(
+      makeDataset({
+        categories: [
+          { id: 1, name: 'Rent', monthlyBudgetCents: 0, sortOrder: 0, active: true },
+          { id: 2, name: 'Coffee', monthlyBudgetCents: 0, sortOrder: 1, active: true },
+        ],
+        transactions: [
+          txn({ date: '2026-03-01', budgetMonth: '2026-03', categoryId: 1, description: 'rent', amountCents: 120_000 }),
+          ...[3, 4, 5].map((d) =>
+            txn({ date: `2026-03-0${d}`, budgetMonth: '2026-03', categoryId: 2, description: 'flat white', amountCents: 400 }),
+          ),
+        ],
+      }),
+    )
+    render(<SpendingView model={many} month="2026-03" basis="committed" today="2026-03-20" openMonth="2026-03" />)
+    const order = () => screen.getAllByRole('button', { expanded: false }).map((b) => b.textContent ?? '')
+    expect(order()[0]).toContain('Rent')
+
+    fireEvent.click(screen.getByRole('radio', { name: 'By items' }))
+    expect(order()[0]).toContain('Coffee')
+    expect(order()[0]).toContain('3 items')
+
+    fireEvent.click(screen.getByRole('radio', { name: 'By amount' }))
+    expect(order()[0]).toContain('Rent')
+  })
+
   it('regroups by label, counting only labelled spend', () => {
     renderView()
     fireEvent.click(screen.getByRole('radio', { name: 'Label' }))
@@ -130,7 +157,7 @@ describe('presetFor', () => {
     const base = { key: '7', name: 'Market Hall', currentCents: 0, unpaidCents: 0, budgetCents: null, shouldBeTodayCents: null, spark: [], avg3Cents: null, txnCount: 0 }
     expect(presetFor('category', base, '2026-03', 'committed')).toEqual({ categoryId: 7, month: '2026-03' })
     expect(presetFor('label', base, '2026-03', 'committed')).toEqual({ labelIds: [7], month: '2026-03' })
-    expect(presetFor('merchant', base, '2026-03', 'committed')).toEqual({ query: 'Market Hall', month: '2026-03' })
+    expect(presetFor('description', base, '2026-03', 'committed')).toEqual({ query: 'Market Hall', month: '2026-03' })
     expect(presetFor('fixedFlexible', base, '2026-03', 'committed')).toBeNull()
   })
 
@@ -138,7 +165,7 @@ describe('presetFor', () => {
     const base = { key: '7', name: 'Market Hall', currentCents: 0, unpaidCents: 0, budgetCents: null, shouldBeTodayCents: null, spark: [], avg3Cents: null, txnCount: 0 }
     expect(presetFor('category', base, '2026-03', 'paid')).toEqual({ categoryId: 7, month: '2026-03', status: 'posted' })
     expect(presetFor('label', base, '2026-03', 'paid')).toEqual({ labelIds: [7], month: '2026-03', status: 'posted' })
-    expect(presetFor('merchant', base, '2026-03', 'paid')).toEqual({ query: 'Market Hall', month: '2026-03', status: 'posted' })
+    expect(presetFor('description', base, '2026-03', 'paid')).toEqual({ query: 'Market Hall', month: '2026-03', status: 'posted' })
     expect(presetFor('fixedFlexible', base, '2026-03', 'paid')).toBeNull()
   })
 })

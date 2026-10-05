@@ -1,8 +1,9 @@
 /**
  * The Spending view's ranked rows: net expense grouped by category, fixed vs
- * flexible, label, or merchant. "Merchant" is the normalized description: the
- * data has no merchant field, and recurring detection already treats a trimmed,
- * case-folded description as an identity. A transaction with two labels counts
+ * flexible, label, or description. A description row is the transaction's text,
+ * trimmed and case-folded (recurring detection already treats that as an identity),
+ * so "Netflix" and "netflix " are one row and "Netflix 03" is another; renaming
+ * transactions in bulk is how variants are merged. A transaction with two labels counts
  * in both label rows, so label totals can exceed the month total.
  */
 import type { Category, Label, Transaction } from '../types'
@@ -18,7 +19,7 @@ import {
 import { type FixedSpendClassifier, classifyFixedSpend } from './fixedFlexible'
 import { normalizeDesc } from './recurringDetect'
 
-export type SpendingGroupBy = 'category' | 'fixedFlexible' | 'label' | 'merchant'
+export type SpendingGroupBy = 'category' | 'fixedFlexible' | 'label' | 'description'
 
 export interface SpendingGroupRow {
   key: string
@@ -80,7 +81,7 @@ function membershipsOf(
       ? [{ key: 'fixed', name: 'Fixed' }]
       : [{ key: 'flexible', name: 'Flexible' }]
   }
-  if (groupBy === 'merchant') {
+  if (groupBy === 'description') {
     const key = normalizeDesc(txn.description)
     return key ? [{ key, name: txn.description.trim() }] : []
   }
@@ -100,7 +101,7 @@ export function groupMatcher(
   if (groupBy === 'category') return (txn) => String(txn.categoryId) === key
   if (groupBy === 'fixedFlexible')
     return (txn) => (classifier.isFixed(txn) ? 'fixed' : 'flexible') === key
-  if (groupBy === 'merchant') return (txn) => normalizeDesc(txn.description) === key
+  if (groupBy === 'description') return (txn) => normalizeDesc(txn.description) === key
   return (txn) => (txn.labelIds ?? []).some((id) => String(id) === key)
 }
 
@@ -214,4 +215,17 @@ export function computeSpendingGroups(
     })
   }
   return rows.sort((a, b) => b.currentCents - a.currentCents)
+}
+
+export type SpendingSort = 'amount' | 'items'
+
+/**
+ * The rows ranked by what was spent (as `computeSpendingGroups` returns them), or by how
+ * many transactions each holds, which is how "what do I buy most often" is answered: a
+ * 1.200 € rent line outranks thirty coffees by amount and never by count. Ties fall back to
+ * the amount.
+ */
+export function sortSpendingRows(rows: SpendingGroupRow[], by: SpendingSort): SpendingGroupRow[] {
+  if (by === 'amount') return rows
+  return [...rows].sort((a, b) => b.txnCount - a.txnCount || b.currentCents - a.currentCents)
 }

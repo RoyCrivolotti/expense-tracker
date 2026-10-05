@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Category, Label, Transaction } from '../types'
-import { computeSpendingGroups } from './spendingGroups'
+import { computeSpendingGroups, sortSpendingRows, type SpendingGroupRow } from './spendingGroups'
 
 const categories: Category[] = [
   { id: 1, name: 'Groceries', monthlyBudgetCents: 40000, sortOrder: 0, active: true },
@@ -104,7 +104,7 @@ describe('computeSpendingGroups by category', () => {
   })
 })
 
-describe('computeSpendingGroups by label and merchant', () => {
+describe('computeSpendingGroups by label and description', () => {
   it('counts a transaction in every label it carries', () => {
     const txns = [
       txn({ description: 'flight', amountCents: 30000, labelIds: [1, 2] }),
@@ -121,7 +121,7 @@ describe('computeSpendingGroups by label and merchant', () => {
     expect(rows[0]?.color).toBe('#f59e0b')
   })
 
-  it('groups merchants by normalized description', () => {
+  it('groups rows by normalized description', () => {
     const txns = [
       txn({ description: ' Market Hall ', amountCents: 10000 }),
       txn({ description: 'market hall', amountCents: 5000 }),
@@ -129,7 +129,7 @@ describe('computeSpendingGroups by label and merchant', () => {
     ]
     const rows = computeSpendingGroups(
       { transactions: txns, categories, labels },
-      { months: MONTHS, month: '2026-03', basis: 'committed', today: '2026-04-10', groupBy: 'merchant' },
+      { months: MONTHS, month: '2026-03', basis: 'committed', today: '2026-04-10', groupBy: 'description' },
     )
     expect(rows[0]).toMatchObject({ key: 'market hall', currentCents: 15000, txnCount: 2 })
   })
@@ -144,5 +144,29 @@ describe('computeSpendingGroups by label and merchant', () => {
     )
     expect(rows.find((r) => r.key === 'fixed')?.currentCents).toBe(100000)
     expect(rows.find((r) => r.key === 'flexible')?.currentCents).toBe(7000)
+  })
+})
+
+describe('sortSpendingRows', () => {
+  const row = (name: string, currentCents: number, txnCount: number): SpendingGroupRow => ({
+    key: name,
+    name,
+    currentCents,
+    unpaidCents: 0,
+    budgetCents: null,
+    shouldBeTodayCents: null,
+    spark: [],
+    avg3Cents: null,
+    txnCount,
+  })
+  const rows = [row('Rent', 120000, 1), row('Coffee', 1200, 3), row('Taxi', 3000, 3), row('Gift', 500, 1)]
+
+  it('keeps the order it is given by amount', () => {
+    expect(sortSpendingRows(rows, 'amount').map((r) => r.name)).toEqual(['Rent', 'Coffee', 'Taxi', 'Gift'])
+  })
+
+  it('ranks by item count, then amount, without touching the input', () => {
+    expect(sortSpendingRows(rows, 'items').map((r) => r.name)).toEqual(['Taxi', 'Coffee', 'Rent', 'Gift'])
+    expect(rows.map((r) => r.name)).toEqual(['Rent', 'Coffee', 'Taxi', 'Gift'])
   })
 })

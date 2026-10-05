@@ -6,6 +6,7 @@ import type { ExpenseModel } from '../../useExpenseData'
 import type {
   Allocation,
   AnalyticsBasis,
+  FixedCostItem,
   AnalyticsPeriod,
   AnalyticsSignal,
   CompareMode,
@@ -23,7 +24,9 @@ import {
   computeSignals,
   computeSpendingBaseline,
   computeSpendingPace,
+  detectedFixedCosts,
   priorBudgetMonth,
+  sameDaysCut,
   unpaidExpenseCents,
 } from '../../../engine'
 
@@ -34,6 +37,8 @@ export interface OverviewData {
   movers: Mover[]
   signals: AnalyticsSignal[]
   baseline: SpendingBaseline | null
+  /** What counts as fixed this month, for the reference list. */
+  fixedCosts: FixedCostItem[]
   /** Unpaid card cents per spark month, for the trend's hatched caps. */
   unpaidByMonth: Map<string, number>
 }
@@ -94,7 +99,13 @@ export function buildOverviewData(model: ExpenseModel, opts: OverviewOptions): O
   return {
     kpis,
     pace,
-    allocation: computeAllocation(transactions, classifier, month, basis),
+    allocation: computeAllocation(
+      transactions,
+      classifier,
+      month,
+      basis,
+      sameDaysCut(month, today, openMonth, rolloverDay),
+    ),
     movers,
     signals,
     baseline: computeSpendingBaseline(transactions, installmentPlans, goalScenarios, {
@@ -103,5 +114,6 @@ export function buildOverviewData(model: ExpenseModel, opts: OverviewOptions): O
       basis,
     }),
     unpaidByMonth,
+    fixedCosts: detectedFixedCosts(transactions, installmentPlans, categories, month),
   }
 }

@@ -9,7 +9,7 @@ import type { Transaction } from '../types'
 import { daysBetween } from './dates'
 import { groupTransactions, normalizeDesc, occurrenceKey } from './recurringDetect'
 import { classifyFrequency, regularityScore } from './recurringPredict'
-import type { GroupKey, OccurrenceGroup } from './recurringTypes'
+import type { GroupKey, OccurrenceGroup, RecurringFrequency } from './recurringTypes'
 import { type AnalyticsBasis, type SameDaysCut, basisOptions, signedExpense, withinCut } from './analyticsPeriod'
 
 const MIN_REGULARITY = 0.6
@@ -25,15 +25,21 @@ function gapsOf(group: OccurrenceGroup): number[] {
   return sorted.slice(1).map((d, i) => daysBetween(sorted[i]!, d))
 }
 
-/** Whether a grouped pattern is regular enough to call its members fixed spend. */
-function isRecurringGroup(group: OccurrenceGroup): boolean {
+/**
+ * The rhythm of a pattern the fixed-spend split trusts, or null when it is not regular
+ * enough to call its members fixed. Weekly rhythm is a habit, not an obligation: weekly
+ * groceries are exactly the spending the pace clock exists to watch.
+ */
+export function fixedRhythm(group: OccurrenceGroup): Exclude<RecurringFrequency, 'weekly'> | null {
   const gaps = gapsOf(group)
-  if (gaps.length === 0) return false
+  if (gaps.length === 0) return null
   const frequency = classifyFrequency(median(gaps))
-  // Weekly rhythm is a habit, not an obligation: weekly groceries are exactly
-  // the spending the pace clock exists to watch.
-  if (!frequency || frequency === 'weekly') return false
-  return regularityScore(gaps) >= MIN_REGULARITY
+  if (!frequency || frequency === 'weekly') return null
+  return regularityScore(gaps) >= MIN_REGULARITY ? frequency : null
+}
+
+function isRecurringGroup(group: OccurrenceGroup): boolean {
+  return fixedRhythm(group) !== null
 }
 
 /** The recurring groups the fixed-spend split trusts (plan rows are fixed separately). */

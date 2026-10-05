@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Transaction } from '../types'
+import { sameDaysCut } from './analyticsPeriod'
 import { computeAllocation } from './allocation'
 import { classifyFixedSpend } from './fixedFlexible'
 
@@ -47,5 +48,25 @@ describe('computeAllocation', () => {
     const a = computeAllocation(txns, classifyFixedSpend(txns), '2026-03', 'committed')
     expect(a.leftoverCents).toBe(-30000)
     expect(a.overspent).toBe(true)
+  })
+
+  it('cuts the open month at the same days the headline numbers use', () => {
+    const txns = [
+      txn({ type: 'income', date: '2026-03-01', amountCents: 300000 }),
+      txn({ type: 'income', date: '2026-03-25', amountCents: 50000 }),
+      txn({ description: 'Groceries', date: '2026-03-04', amountCents: 40000 }),
+      txn({ description: 'Gadget', date: '2026-03-20', amountCents: 20000, status: 'forecast' }),
+      txn({ type: 'investment', date: '2026-03-28', amountCents: 60000 }),
+    ]
+    const cut = sameDaysCut('2026-03', '2026-03-10')
+    const a = computeAllocation(txns, classifyFixedSpend(txns), '2026-03', 'committed', cut)
+    expect(a.incomeCents).toBe(300000)
+    expect(a.flexibleCents).toBe(40000)
+    expect(a.investedCents).toBe(0)
+    expect(a.leftoverCents).toBe(260000)
+
+    const whole = computeAllocation(txns, classifyFixedSpend(txns), '2026-03', 'committed')
+    expect(whole.incomeCents).toBe(350000)
+    expect(whole.flexibleCents).toBe(60000)
   })
 })

@@ -104,6 +104,11 @@
   color: var(--color-text-muted);
 }
 
+.dot_untracked {
+  color: var(--color-text-muted);
+  opacity: 0.55;
+}
+
 .dot_waiting {
   border: 1.5px dashed var(--color-text-muted);
   color: var(--color-text-muted);
@@ -212,6 +217,12 @@
   font-size: 0.74rem;
   color: var(--color-text-muted);
   margin-bottom: 0.2rem;
+}
+
+.driftWait {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
 }
 
 .driftTolerance {

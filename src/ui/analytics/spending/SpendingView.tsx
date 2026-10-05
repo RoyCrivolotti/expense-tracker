@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import type { AnalyticsBasis, SpendingGroupBy, SpendingGroupRow } from '../../../engine'
-import { computeSpendingGroupDetail, computeSpendingGroups } from '../../../engine'
+import type { AnalyticsBasis, SpendingGroupBy, SpendingGroupRow, SpendingSort } from '../../../engine'
+import { computeSpendingGroupDetail, computeSpendingGroups, sortSpendingRows } from '../../../engine'
 import { downloadCsv, monthlySummaryCsv } from '../../../data/exportCsv'
 import { fullMonthLabel } from '../../../engine'
 import { monthlySummaryRows } from '../monthlySummaryRows'
@@ -12,12 +12,11 @@ import { PresenceValue } from '../../components/Presence'
 import { EXIT_MS } from '../../hooks/motion'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { MonthlySummaryGrid } from '../MonthlySummaryGrid'
-import { GroupByControl } from './GroupByControl'
-import { MODE_OPTIONS, type SpendingMode } from './spendingMode'
+import { SpendingControls } from './SpendingControls'
+import type { SpendingMode } from './spendingMode'
 import { presetFor } from './presetFor'
 import { SpendingRow } from './SpendingRow'
 import { SpendingDetailBody } from './SpendingDetailBody'
-import { SegmentedControl } from '../../components/SegmentedControl'
 import styles from './spending.module.css'
 
 function Detail({
@@ -114,6 +113,8 @@ export function SpendingView({ model, month, basis, today, openMonth, onOpenTran
       ),
     [model.dataset, model.months, month, basis, today, openMonth, groupBy],
   )
+  const [sortBy, setSortBy] = useState<SpendingSort>('amount')
+  const ordered = useMemo(() => sortSpendingRows(rows, sortBy), [rows, sortBy])
   const selected = rows.find((r) => r.key === selectedKey) ?? null
   const changeGroupBy = (next: SpendingGroupBy) => {
     setGroupBy(next)
@@ -128,23 +129,16 @@ export function SpendingView({ model, month, basis, today, openMonth, onOpenTran
 
   return (
     <div className={styles.stack}>
-      <div className={styles.controls}>
-        {/* The grid is categories-only, so a group-by control over it would lie. */}
-        {mode === 'list' && (
-          <GroupByControl
-            value={groupBy}
-            onChange={changeGroupBy}
-            hasLabels={model.dataset.labels.length > 0}
-          />
-        )}
-        <span className={styles.controlsSpacer} />
-        <SegmentedControl options={MODE_OPTIONS} value={mode} onChange={setMode} ariaLabel="Spending mode" />
-        {mode === 'grid' && (
-          <button type="button" className={styles.exportBtn} onClick={exportGrid}>
-            Export CSV
-          </button>
-        )}
-      </div>
+      <SpendingControls
+        mode={mode}
+        onMode={setMode}
+        groupBy={groupBy}
+        onGroupBy={changeGroupBy}
+        hasLabels={model.dataset.labels.length > 0}
+        sortBy={sortBy}
+        onSort={setSortBy}
+        onExport={exportGrid}
+      />
 
       {mode === 'grid' ? (
         <MonthlySummaryGrid model={model} month={month} basis={basis} />
@@ -155,7 +149,7 @@ export function SpendingView({ model, month, basis, today, openMonth, onOpenTran
             {rows.length === 0 ? (
               <EmptyState>No spending recorded for this month and grouping.</EmptyState>
             ) : (
-              rows.map((row) => (
+              ordered.map((row) => (
                 <SpendingRow
                   key={row.key}
                   row={row}

@@ -78,6 +78,15 @@ describe('computeSignals', () => {
     expect(signals[0]).toMatchObject({ kind: 'cashReady', month: '2026-02' })
   })
 
+  it('does not point at a month from before counting began', () => {
+    const rows = [
+      cashRow({ month: '2026-01' }),
+      cashRow({ month: '2026-02', actualCashCents: 100, monthGapCents: 0 }),
+    ]
+    const signals = computeSignals({ pace: pace({ open: false }), movers: [], cashRows: rows, openMonth: '2026-03' })
+    expect(signals.find((s) => s.kind === 'cashReady')).toBeUndefined()
+  })
+
   it('never exceeds the cap', () => {
     const signals = computeSignals({
       pace: pace(),

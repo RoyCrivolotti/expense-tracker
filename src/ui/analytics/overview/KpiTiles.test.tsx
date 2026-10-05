@@ -25,4 +25,23 @@ describe('KpiTiles', () => {
     expect(screen.getAllByText('no comparison').length).toBeGreaterThan(0)
     expect(screen.queryByText(/pts/)).toBeNull()
   })
+
+  it('names the baseline amount beside each chip, so a percentage can be checked', () => {
+    const kpis: OverviewKpis = {
+      current: totals({ incomeCents: 320000, spendCents: 130000, savedCents: 190000, rate: 0.59 }),
+      baseline: totals({ incomeCents: 300000, spendCents: 100000, savedCents: 200000, rate: 0.67 }),
+      openDayLimit: null,
+      series: [],
+    }
+    render(<KpiTiles kpis={kpis} baselineName="3-month average" />)
+    expect(screen.getByText('vs 3.000 € 3-month average')).toBeInTheDocument()
+    expect(screen.getByText('vs 1.000 € 3-month average')).toBeInTheDocument()
+    expect(screen.getByText(/^vs 67.*3-month average$/)).toBeInTheDocument()
+  })
+
+  it('shows no baseline line when history does not reach', () => {
+    const kpis: OverviewKpis = { current: totals(), baseline: null, openDayLimit: null, series: [] }
+    render(<KpiTiles kpis={kpis} baselineName="last year" />)
+    expect(screen.queryByText(/^vs /)).toBeNull()
+  })
 })

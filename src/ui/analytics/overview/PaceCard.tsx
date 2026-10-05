@@ -2,6 +2,8 @@ import type { SpendingPace } from '../../../engine'
 import { formatCentsCompact } from '../../../engine'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { Card } from '../../components/primitives'
+import { PACE_NOTES } from '../analyticsCopy'
+import { HowCalculated } from '../shared/HowCalculated'
 import styles from './overview.module.css'
 
 function fillClass(pace: SpendingPace): string {
@@ -85,6 +87,7 @@ export function PaceCard({ pace, isFuture }: { pace: SpendingPace; isFuture: boo
         )}
         <Row label="Fixed costs so far" value={formatCentsCompact(pace.fixedSpentCents, format)} />
       </div>
+      <HowCalculated notes={PACE_NOTES} />
     </Card>
   )
 }

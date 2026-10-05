@@ -82,13 +82,13 @@ Three views under one sticky row, the same on phone and desktop. **Overview** an
 doing": five KPI tiles with change chips and sparklines, a trend chart whose unpaid card charges
 are hatched, the flexible-spending pace, up to three signals, where the income went, what changed
 against your 3-month average, and the spending baseline with a handoff into Goals. **Spending**
-answers "where does it go": ranked rows grouped by category, fixed vs flexible, label or merchant,
+answers "where does it go": ranked rows grouped by category, fixed vs flexible, label or description,
 each opening its story and a deep link into Transactions; the exact workbook grid stays as the
 Grid mode, with CSV export. **Cash** answers "do my numbers match": one dot per month close, a
 bridge from opening cash to expected cash with the count entered under it, drift bars with a ±5 €
 tolerance band, and balances labelled as cost; the full table sits in a fold. A committed/paid
 basis toggle (committed by default, matching budgets and the Dashboard) applies to Overview and
-Spending; Cash is paid-basis by nature. An open month is only compared with the same days of
+Spending; Cash is paid-basis by nature. The Overview's cards each carry a closed "How is this calculated?" note, and a closed "Detected fixed costs" card lists what counts as fixed. Cash starts counting at the first month you count: earlier months are muted, and that first count is the baseline drift is measured from. An open month is only compared with the same days of
 other months.
 
 | Overview (desktop) | Overview (mobile) |

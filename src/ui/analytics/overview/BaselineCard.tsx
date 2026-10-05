@@ -2,6 +2,8 @@ import type { SpendingBaseline } from '../../../engine'
 import { formatCentsCompact } from '../../../engine'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { Card } from '../../components/primitives'
+import { BASELINE_NOTES } from '../analyticsCopy'
+import { HowCalculated } from '../shared/HowCalculated'
 import { ChangeChip } from '../shared/ChangeChip'
 import styles from './overview.module.css'
 
@@ -35,7 +37,11 @@ export function BaselineCard({
     <Card>
       <h3 className={styles.cardTitle}>Spending baseline</h3>
       <p className={styles.cardSub}>
-        Measured over the {baseline.months.length} closed months before this one.
+        Measured over the {baseline.months.length} {baseline.months.length === 1 ? 'month' : 'months'} of
+        history before this one, up to 12. A trailing average, not a calendar year.
+      </p>
+      <p className={styles.cardSub}>
+        It is what you really spend, to set against the plan&apos;s &quot;Annual spend at FI&quot; in Goals.
       </p>
       <div className={styles.kvList}>
         <Row label="Trailing spend, total" value={compact(baseline.totalCents)} />
@@ -69,6 +75,7 @@ export function BaselineCard({
           Use in Goals
         </button>
       )}
+      <HowCalculated notes={BASELINE_NOTES} />
     </Card>
   )
 }
