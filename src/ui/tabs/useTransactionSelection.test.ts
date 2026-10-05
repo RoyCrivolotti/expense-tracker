@@ -78,6 +78,16 @@ describe('useTransactionSelection — toasts report the server count', () => {
     })
     expect(showToast).toHaveBeenCalledWith('Updated 2 transactions', 'success')
   })
+
+  it('says what a rename called the rows', async () => {
+    const actions = mockActions({ updateTransactions: vi.fn().mockResolvedValue(2) })
+    const { result, showToast } = renderWithToast(actions)
+    act(() => result.current.selectAll([1, 2]))
+    await act(async () => {
+      await result.current.confirmBulkEdit({ description: 'Netflix' })
+    })
+    expect(showToast).toHaveBeenCalledWith('Renamed 2 transactions to Netflix', 'success')
+  })
 })
 
 describe('bulkOutcomeCopy', () => {
@@ -89,6 +99,12 @@ describe('bulkOutcomeCopy', () => {
   it('names both numbers when the server touched fewer than requested', () => {
     expect(bulkOutcomeCopy('Deleted', 2, 3)).toBe('Deleted 2 of 3 transactions')
     expect(bulkOutcomeCopy('Updated', 0, 2)).toBe('Updated 0 of 2 transactions')
+  })
+
+  it('names what a rename called the rows', () => {
+    expect(bulkOutcomeCopy('Renamed', 14, 14, 'Netflix')).toBe('Renamed 14 transactions to Netflix')
+    expect(bulkOutcomeCopy('Renamed', 1, 1, 'Netflix')).toBe('Renamed 1 transaction to Netflix')
+    expect(bulkOutcomeCopy('Renamed', 3, 5, 'Netflix')).toBe('Renamed 3 of 5 transactions to Netflix')
   })
 })
 

@@ -14,11 +14,13 @@ import { LabelField } from '../components/LabelField'
 import { createLabelInPlace } from '../components/quickLabel'
 import { Modal } from '../components/Modal'
 import {
-  anyFieldEnabled,
   buildBulkLabelAdditions,
   buildBulkPatch,
+  canApplyBulkEdit,
   type BulkEditFieldState,
+  type DescriptionCount,
 } from './bulkEditFields'
+import { DescriptionField } from './DescriptionField'
 import styles from './BulkEditSheet.module.css'
 import { usePopoverTrapPause } from '../hooks/usePopoverTrapPause'
 
@@ -26,6 +28,8 @@ interface BulkEditSheetProps {
   count: number
   /** Chosen rows that are not on screen, which the edit leaves alone. */
   hiddenCount?: number
+  /** What the chosen rows are called now, for the rename field's "Replaces" hint. */
+  currentDescriptions?: readonly DescriptionCount[]
   model: ExpenseModel
   actions?: ExpenseActions | undefined
   busy: boolean
@@ -50,6 +54,7 @@ function OffScreenNote({ hiddenCount }: { hiddenCount: number | undefined }) {
 export function BulkEditSheet({
   count,
   hiddenCount,
+  currentDescriptions,
   model,
   actions,
   busy,
@@ -74,12 +79,14 @@ export function BulkEditSheet({
     flagId: model.dataset.flags.find((f) => f.active)?.id ?? null,
     labelsEnabled: false,
     labelIds: [],
+    descriptionEnabled: false,
+    description: '',
   })
 
   const set = <K extends keyof BulkEditFieldState>(key: K, value: BulkEditFieldState[K]) =>
     setFields((prev) => ({ ...prev, [key]: value }))
 
-  const anyEnabled = anyFieldEnabled(fields)
+  const canApply = canApplyBulkEdit(fields)
 
   const handleApply = () => onApply(buildBulkPatch(fields), buildBulkLabelAdditions(fields))
 
@@ -96,6 +103,19 @@ export function BulkEditSheet({
     >
       <OffScreenNote hiddenCount={hiddenCount} />
       <div className={styles.fields}>
+        <ToggleField
+          label="Description"
+          enabled={fields.descriptionEnabled}
+          onToggle={(v) => set('descriptionEnabled', v)}
+        >
+          <DescriptionField
+            value={fields.description}
+            index={model.descriptionIndex}
+            replaced={currentDescriptions}
+            onChange={(v) => set('description', v)}
+          />
+        </ToggleField>
+
         <ToggleField
           label="Category"
           enabled={fields.categoryEnabled}
@@ -200,7 +220,7 @@ export function BulkEditSheet({
         <button
           type="button"
           className={styles.applyBtn}
-          disabled={!anyEnabled || busy}
+          disabled={!canApply || busy}
           onClick={handleApply}
         >
           {busy ? 'Applying…' : 'Apply changes'}

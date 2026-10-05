@@ -33,7 +33,10 @@ export type NewTransaction = Omit<
   flagId?: number | null
 }
 export type BulkTransactionPatch = Partial<
-  Pick<NewTransaction, 'categoryId' | 'accountId' | 'type' | 'date' | 'budgetMonth' | 'flagId'>
+  Pick<
+    NewTransaction,
+    'categoryId' | 'accountId' | 'type' | 'date' | 'budgetMonth' | 'flagId' | 'description'
+  >
 > & {
   /** Reimbursement link: an id settles the rows, null un-settles them. */
   settledBy?: number | null

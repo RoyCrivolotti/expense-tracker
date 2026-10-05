@@ -1,4 +1,4 @@
-import type { TxnType } from '../../types'
+import type { Transaction, TxnType } from '../../types'
 import type { BulkTransactionPatch } from '../../data/dataSource'
 
 /**
@@ -23,6 +23,8 @@ export interface BulkEditFieldState {
   labelsEnabled: boolean
   /** Labels to add, never to remove — see buildBulkLabelAdditions. */
   labelIds: number[]
+  descriptionEnabled: boolean
+  description: string
 }
 
 export function anyFieldEnabled(fields: BulkEditFieldState): boolean {
@@ -33,8 +35,18 @@ export function anyFieldEnabled(fields: BulkEditFieldState): boolean {
     fields.dateEnabled ||
     fields.budgetMonthEnabled ||
     fields.flagEnabled ||
-    fields.labelsEnabled
+    fields.labelsEnabled ||
+    fields.descriptionEnabled
   )
+}
+
+/**
+ * Apply needs something to send, and a rename needs a name: an enabled description
+ * field that is blank (spaces count as blank) would overwrite every row with nothing.
+ */
+export function canApplyBulkEdit(fields: BulkEditFieldState): boolean {
+  if (fields.descriptionEnabled && !fields.description.trim()) return false
+  return anyFieldEnabled(fields)
 }
 
 export function buildBulkPatch(fields: BulkEditFieldState): BulkTransactionPatch {
@@ -45,6 +57,7 @@ export function buildBulkPatch(fields: BulkEditFieldState): BulkTransactionPatch
   if (fields.dateEnabled) patch.date = fields.date
   if (fields.budgetMonthEnabled) patch.budgetMonth = fields.budgetMonth
   if (fields.flagEnabled) patch.flagId = fields.flagId
+  if (fields.descriptionEnabled) patch.description = fields.description.trim()
   return patch
 }
 
@@ -59,4 +72,42 @@ export function buildBulkPatch(fields: BulkEditFieldState): BulkTransactionPatch
  */
 export function buildBulkLabelAdditions(fields: BulkEditFieldState): number[] {
   return fields.labelsEnabled ? fields.labelIds : []
+}
+
+export interface DescriptionCount {
+  description: string
+  count: number
+}
+
+/**
+ * The distinct descriptions a rename would overwrite, most common first. The
+ * Transactions search matches description and notes as a substring, so a selection
+ * made by searching can hold rows the owner did not mean to rename; this is how the
+ * sheet shows what is about to be replaced.
+ */
+export function summarizeDescriptions(
+  transactions: readonly Pick<Transaction, 'id' | 'description'>[],
+  ids: ReadonlySet<number>,
+): DescriptionCount[] {
+  const counts = new Map<string, number>()
+  for (const t of transactions) {
+    if (!ids.has(t.id)) continue
+    const description = t.description.trim()
+    counts.set(description, (counts.get(description) ?? 0) + 1)
+  }
+  return [...counts]
+    .map(([description, count]) => ({ description, count }))
+    .sort((a, b) => b.count - a.count || a.description.localeCompare(b.description))
+}
+
+const SHOWN = 5
+
+/**
+ * What the sheet says a rename will overwrite. Capped, because a search on a short word
+ * can catch dozens of spellings.
+ */
+export function replacedSummary(descriptions: readonly DescriptionCount[]): string {
+  const shown = descriptions.slice(0, SHOWN).map((d) => `${d.description} (${d.count})`)
+  const rest = descriptions.length - shown.length
+  return `Replaces ${shown.join(', ')}${rest > 0 ? ` and ${rest} more` : ''}.`
 }

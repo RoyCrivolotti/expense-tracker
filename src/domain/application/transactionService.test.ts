@@ -108,8 +108,30 @@ describe('validateBulkUpdatePatch', () => {
     expect(() => validateBulkUpdatePatch({})).toThrow('At least one field must be set')
   })
 
+  it('accepts a description and stores it trimmed', () => {
+    expect(validateBulkUpdatePatch({ description: '  Netflix ' })).toEqual({ description: 'Netflix' })
+  })
+
+  it('rejects a blank or spaces-only description, which would wipe a NOT NULL column', () => {
+    expect(() => validateBulkUpdatePatch({ description: '' })).toThrow('description cannot be blank')
+    expect(() => validateBulkUpdatePatch({ description: '   ' })).toThrow('description cannot be blank')
+  })
+
+  it('rejects a description over 140 characters, and accepts exactly 140', () => {
+    expect(() => validateBulkUpdatePatch({ description: 'x'.repeat(141) })).toThrow(
+      'description must be 140 characters or fewer',
+    )
+    expect(validateBulkUpdatePatch({ description: 'x'.repeat(140) })).toEqual({
+      description: 'x'.repeat(140),
+    })
+  })
+
+  it('rejects a description that is not text', () => {
+    expect(() => validateBulkUpdatePatch({ description: 42 })).toThrow('description must be text')
+    expect(() => validateBulkUpdatePatch({ description: null })).toThrow('description must be text')
+  })
+
   it('rejects disallowed fields', () => {
-    expect(() => validateBulkUpdatePatch({ description: 'x' })).toThrow('not bulk-editable')
     expect(() => validateBulkUpdatePatch({ amountCents: 100 })).toThrow('not bulk-editable')
     expect(() => validateBulkUpdatePatch({ notes: 'x' })).toThrow('not bulk-editable')
     expect(() => validateBulkUpdatePatch({ planId: 1 })).toThrow('not bulk-editable')

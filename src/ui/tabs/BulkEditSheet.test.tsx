@@ -346,6 +346,125 @@ describe('BulkEditSheet', () => {
   })
 })
 
+describe('BulkEditSheet rename', () => {
+  function modelWithHistory(): ExpenseModel {
+    const model = makeModel()
+    model.descriptionIndex = {
+      search: (prefix: string) =>
+        'netflix'.startsWith(prefix.trim().toLowerCase())
+          ? [{ label: 'Netflix', template: { type: 'expense', categoryId: 2, accountId: 11 } }]
+          : [],
+      resolve: () => undefined,
+    }
+    return model
+  }
+
+  it('shows the description field once toggled, and the Analytics hint', async () => {
+    const user = userEvent.setup()
+    render(
+      <BulkEditSheet count={2} model={modelWithHistory()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />,
+    )
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+
+    await user.click(screen.getByLabelText('Description'))
+
+    expect(screen.getByRole('combobox')).toBeInTheDocument()
+    expect(
+      screen.getByText('Transactions that share a description count as one recurring pattern in Analytics.'),
+    ).toBeInTheDocument()
+  })
+
+  it('blocks Apply while the field is on but empty, and when it holds only spaces', async () => {
+    const user = userEvent.setup()
+    render(
+      <BulkEditSheet count={2} model={modelWithHistory()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />,
+    )
+    await user.click(screen.getByLabelText('Description'))
+    expect(screen.getByRole('button', { name: 'Apply changes' })).toBeDisabled()
+
+    await user.type(screen.getByRole('combobox'), '   ')
+    expect(screen.getByRole('button', { name: 'Apply changes' })).toBeDisabled()
+
+    await user.type(screen.getByRole('combobox'), 'Spotify')
+    expect(screen.getByRole('button', { name: 'Apply changes' })).toBeEnabled()
+  })
+
+  it('applies the trimmed text as the description', async () => {
+    const onApply = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <BulkEditSheet count={2} model={modelWithHistory()} busy={false} onApply={onApply} onCancel={vi.fn()} />,
+    )
+    await user.click(screen.getByLabelText('Description'))
+    await user.type(screen.getByRole('combobox'), '  Spotify ')
+    await user.click(screen.getByRole('button', { name: 'Apply changes' }))
+
+    expect(onApply).toHaveBeenCalledWith({ description: 'Spotify' }, [])
+  })
+
+  it('sets the text only when an existing description is picked, never category or account', async () => {
+    const onApply = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <BulkEditSheet count={2} model={modelWithHistory()} busy={false} onApply={onApply} onCancel={vi.fn()} />,
+    )
+    await user.click(screen.getByLabelText('Description'))
+    await user.type(screen.getByRole('combobox'), 'net')
+    await user.click(screen.getByRole('option', { name: 'Netflix' }))
+    await user.click(screen.getByRole('button', { name: 'Apply changes' }))
+
+    expect(onApply).toHaveBeenCalledWith({ description: 'Netflix' }, [])
+  })
+
+  it('lists what the chosen rows are called now, capped, with a count of the rest', async () => {
+    const user = userEvent.setup()
+    const descriptions = ['A', 'B', 'C', 'D', 'E', 'F', 'G'].map((description, i) => ({
+      description,
+      count: 10 - i,
+    }))
+    render(
+      <BulkEditSheet
+        count={52}
+        currentDescriptions={descriptions}
+        model={modelWithHistory()}
+        busy={false}
+        onApply={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    )
+    await user.click(screen.getByLabelText('Description'))
+
+    expect(screen.getByText('Replaces A (10), B (9), C (8), D (7), E (6) and 2 more.')).toBeInTheDocument()
+  })
+
+  it('lists a short set in full, without "and N more"', async () => {
+    const user = userEvent.setup()
+    render(
+      <BulkEditSheet
+        count={3}
+        currentDescriptions={[{ description: 'NETFLIX.COM', count: 3 }]}
+        model={modelWithHistory()}
+        busy={false}
+        onApply={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    )
+    await user.click(screen.getByLabelText('Description'))
+
+    expect(screen.getByText('Replaces NETFLIX.COM (3).')).toBeInTheDocument()
+  })
+
+  it('says nothing about current descriptions when there are none to show', async () => {
+    const user = userEvent.setup()
+    render(
+      <BulkEditSheet count={2} currentDescriptions={[]} model={modelWithHistory()} busy={false} onApply={vi.fn()} onCancel={vi.fn()} />,
+    )
+    await user.click(screen.getByLabelText('Description'))
+
+    expect(screen.queryByText(/^Replaces/)).not.toBeInTheDocument()
+  })
+})
+
 describe('BulkEditSheet — budget month respects the rollover day', () => {
   // Pinned rather than read from the real clock: the second test below passes
   // today's own day-of-month as the rollover day, which silently collided with

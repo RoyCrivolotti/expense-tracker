@@ -61,6 +61,25 @@ describe('docsCaptureDataSource.updateTransaction', () => {
   })
 })
 
+describe('docsCaptureDataSource.updateTransactions', () => {
+  it('renames the chosen rows and leaves everything else on them alone', async () => {
+    const dataset = await docsCaptureDataSource.load()
+    const [a, b] = dataset.transactions
+
+    const { updated, transactions } = await docsCaptureDataSource.updateTransactions!(
+      [a!.id, b!.id],
+      { description: 'One common name' },
+    )
+
+    expect(updated).toBe(2)
+    expect(transactions.map((t) => t.id)).toEqual([a!.id, b!.id])
+    expect(transactions.every((t) => t.description === 'One common name')).toBe(true)
+    // Merged onto the stored row, not rebuilt from the patch: amounts survive.
+    expect(transactions[0]!.amountCents).toBe(a!.amountCents)
+    expect(transactions[1]!.categoryId).toBe(b!.categoryId)
+  })
+})
+
 describe('docsCaptureDataSource.updateFlag', () => {
   it('merges a partial patch onto the existing flag, unlike a fresh stub', async () => {
     const dataset = await docsCaptureDataSource.load()

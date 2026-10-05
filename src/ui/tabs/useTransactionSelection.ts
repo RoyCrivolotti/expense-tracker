@@ -38,12 +38,15 @@ export function batchDeleteMessage(count: number, hiddenCount = 0): string {
  * one the server touched hides exactly that.
  */
 export function bulkOutcomeCopy(
-  verb: 'Deleted' | 'Updated',
+  verb: 'Deleted' | 'Updated' | 'Renamed',
   done: number,
   requested: number,
+  /** Appended after a rename, so the toast says what the rows are now called. */
+  renamedTo?: string,
 ): string {
-  if (done < requested) return `${verb} ${done} of ${requested} transactions`
-  return `${verb} ${done} transaction${done === 1 ? '' : 's'}`
+  const suffix = renamedTo === undefined ? '' : ` to ${renamedTo}`
+  if (done < requested) return `${verb} ${done} of ${requested} transactions${suffix}`
+  return `${verb} ${done} transaction${done === 1 ? '' : 's'}${suffix}`
 }
 
 /**
@@ -212,7 +215,11 @@ export function useTransactionSelection(
       const updated = Object.keys(patch).length > 0 ? await actions.updateTransactions(ids, patch) : count
       if (labelIdsToAdd.length > 0) await applyLabelAdditions(ids, labelIdsToAdd)
       exitSelect()
-      showToast(bulkOutcomeCopy('Updated', updated, count), 'success')
+      const toast =
+        patch.description === undefined
+          ? bulkOutcomeCopy('Updated', updated, count)
+          : bulkOutcomeCopy('Renamed', updated, count, patch.description)
+      showToast(toast, 'success')
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Could not update', 'error')
     } finally {
