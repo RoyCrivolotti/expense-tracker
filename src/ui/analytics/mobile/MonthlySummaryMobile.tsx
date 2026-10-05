@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 import type { ExpenseModel } from '../../useExpenseData'
-import type { BudgetHealth } from '../../../engine'
+import type { AnalyticsBasis, BudgetHealth } from '../../../engine'
 import {
+  basisOptions,
   computeBudgetHealth,
   computeMonthlyTotals,
   computeYtdBudgetHealth,
@@ -10,7 +11,6 @@ import {
   shortMonthLabel,
   sumBudgetHealth,
 } from '../../../engine'
-import { MonthPicker } from '../../components/MonthPicker'
 import { BudgetBar } from '../../components/BudgetBar'
 import { Card, Kpi, SectionTitle } from '../../components/primitives'
 import tabStyles from '../../tabs/tabs.module.css'
@@ -19,11 +19,21 @@ import styles from './mobile.module.css'
 interface Props {
   model: ExpenseModel
   month: string
-  onMonthChange: (month: string) => void
+  basis?: AnalyticsBasis
 }
 
 function budgetedBySize(budgets: BudgetHealth[]): BudgetHealth[] {
   return budgets.filter((b) => b.budgetCents > 0).sort((a, b) => b.budgetCents - a.budgetCents)
+}
+
+const BASIS_HINT: Record<AnalyticsBasis, string> = {
+  committed: 'Includes forecast (unpaid card) charges.',
+  paid: 'Paid charges only — unpaid card charges are left out.',
+}
+
+const BASIS_HINT_INLINE: Record<AnalyticsBasis, string> = {
+  committed: 'includes forecast (unpaid card) charges',
+  paid: 'paid charges only',
 }
 
 function BudgetBarsCard({
@@ -60,13 +70,13 @@ function BudgetBarsCard({
   )
 }
 
-export function MonthlySummaryMobile({ model, month, onMonthChange }: Props) {
-  const { dataset, months, lookup } = model
+export function MonthlySummaryMobile({ model, month, basis = 'committed' }: Props) {
+  const { dataset, lookup } = model
   const year = month.slice(0, 4)
 
   const monthlyTotals = useMemo(
-    () => computeMonthlyTotals(dataset.transactions, { includeForecast: true }),
-    [dataset],
+    () => computeMonthlyTotals(dataset.transactions, basisOptions(basis)),
+    [dataset, basis],
   )
 
   const monthInvestedCents = monthlyTotals.get(month)?.investmentsCents ?? 0
@@ -74,19 +84,15 @@ export function MonthlySummaryMobile({ model, month, onMonthChange }: Props) {
 
   const budgets = useMemo(() => {
     return budgetedBySize(
-      computeBudgetHealth(dataset.transactions, dataset.categories, month, {
-        includeForecast: true,
-      }),
+      computeBudgetHealth(dataset.transactions, dataset.categories, month, basisOptions(basis)),
     )
-  }, [dataset, month])
+  }, [dataset, month, basis])
 
   const ytdBudgets = useMemo(() => {
     return budgetedBySize(
-      computeYtdBudgetHealth(dataset.transactions, dataset.categories, month, {
-        includeForecast: true,
-      }),
+      computeYtdBudgetHealth(dataset.transactions, dataset.categories, month, basisOptions(basis)),
     )
-  }, [dataset, month])
+  }, [dataset, month, basis])
 
   return (
     <div className={styles.section}>
@@ -100,12 +106,12 @@ export function MonthlySummaryMobile({ model, month, onMonthChange }: Props) {
         <Kpi label={`Invested YTD (${year})`} cents={ytdInvestedCents} type="investment" />
       </Card>
       <p className={styles.hint}>Net saving may differ if cash wasn&apos;t invested yet.</p>
-      <MonthPicker months={months} value={month} onChange={onMonthChange} layout="bar" />
-      <p className={styles.hint}>Includes forecast (unpaid card) charges.</p>
+      <h3 className={styles.subheading}>{fullMonthLabel(month)}</h3>
+      <p className={styles.hint}>{BASIS_HINT[basis]}</p>
       <BudgetBarsCard budgets={budgets} lookup={lookup} />
       <h3 className={styles.subheading}>YTD budget ({year})</h3>
       <p className={styles.hint}>
-        Cumulative through {fullMonthLabel(month)} — includes forecast (unpaid card) charges.
+        Cumulative through {fullMonthLabel(month)} — {BASIS_HINT_INLINE[basis]}.
       </p>
       <BudgetBarsCard budgets={ytdBudgets} lookup={lookup} />
     </div>

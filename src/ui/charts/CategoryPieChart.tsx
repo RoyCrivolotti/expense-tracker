@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
-import { computeCategoryActuals } from '../../engine'
+import type { AnalyticsBasis } from '../../engine'
+import { basisOptions, computeCategoryActuals } from '../../engine'
 import { claimActiveTooltip, releaseActiveTooltip } from './activeTooltipRegistry'
 import { CategoryPieChartView, type PieSlice } from './CategoryPieChartView'
 import { useDismissOnOutsidePointer } from './useDismissOnOutsidePointer'
@@ -31,10 +32,12 @@ function arcPath(startAngle: number, endAngle: number): string {
   return `M ${CX} ${CY} L ${x1} ${y1} A ${R} ${R} 0 ${large} 1 ${x2} ${y2} Z`
 }
 
-function buildSlices(model: ExpenseModel, month: string): PieSlice[] | null {
-  const actuals = computeCategoryActuals(model.dataset.transactions, model.dataset.categories, {
-    includeForecast: true,
-  })
+function buildSlices(model: ExpenseModel, month: string, basis: AnalyticsBasis): PieSlice[] | null {
+  const actuals = computeCategoryActuals(
+    model.dataset.transactions,
+    model.dataset.categories,
+    basisOptions(basis),
+  )
   const positive = actuals
     .map((a) => ({ name: a.name, cents: a.byMonth.get(month) ?? 0 }))
     .filter((s) => s.cents > 0)
@@ -62,11 +65,12 @@ function buildSlices(model: ExpenseModel, month: string): PieSlice[] | null {
 interface Props {
   model: ExpenseModel
   month: string
+  basis?: AnalyticsBasis
 }
 
 /** Expense share by category for the selected budget month. */
-export function CategoryPieChart({ model, month }: Props) {
-  const paths = useMemo(() => buildSlices(model, month), [model, month])
+export function CategoryPieChart({ model, month, basis = 'committed' }: Props) {
+  const paths = useMemo(() => buildSlices(model, month, basis), [model, month, basis])
   const [active, setActive] = useState<number | null>(null)
   const containerRef = useRef<HTMLElement>(null)
 

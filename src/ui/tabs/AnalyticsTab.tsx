@@ -1,24 +1,18 @@
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import { EmptyState, SectionTitle } from '../components/primitives'
-import { useIsMobile } from '../hooks/useIsMobile'
-import { AnalyticsTabDesktop } from './AnalyticsTabDesktop'
-import { AnalyticsTabMobile } from '../analytics/mobile/AnalyticsTabMobile'
+import { AnalyticsShell } from '../analytics/AnalyticsShell'
 import styles from './tabs.module.css'
 
 export function AnalyticsTab({
   model,
   month,
-  onMonthChange,
   actions,
 }: {
   model: ExpenseModel
   month: string
-  onMonthChange: (month: string) => void
   actions?: ExpenseActions | undefined
 }) {
-  const isMobile = useIsMobile()
-
   if (model.months.length === 0) {
     return (
       <div className={styles.stack}>
@@ -33,9 +27,8 @@ export function AnalyticsTab({
     )
   }
 
-  return isMobile ? (
-    <AnalyticsTabMobile model={model} month={month} onMonthChange={onMonthChange} actions={actions} />
-  ) : (
-    <AnalyticsTabDesktop model={model} month={month} actions={actions} />
-  )
+  return <AnalyticsShell model={model} month={month} actions={actions} />
 }
+
+/* The analytics chunk is lazy-loaded (like Goals), which needs a default export. */
+export default AnalyticsTab

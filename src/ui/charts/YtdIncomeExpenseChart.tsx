@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
-import { computeMonthlyTotals } from '../../engine'
+import type { AnalyticsBasis } from '../../engine'
+import { basisOptions, computeMonthlyTotals } from '../../engine'
 import { formatCents } from '../../engine/money'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { chartAxis, innerSize, PAD, yAt } from './chartLayout'
@@ -8,9 +9,8 @@ import { YtdLineChartView } from './YtdLineChartView'
 import { useChartFocus } from './useChartFocus'
 import styles from './charts.module.css'
 
-function cumulativeYtdPoints(model: ExpenseModel, months: string[]) {
-  // Committed basis — unpaid card charges count, matching the tables above.
-  const totals = computeMonthlyTotals(model.dataset.transactions, { includeForecast: true })
+function cumulativeYtdPoints(model: ExpenseModel, months: string[], basis: AnalyticsBasis) {
+  const totals = computeMonthlyTotals(model.dataset.transactions, basisOptions(basis))
   let cumIncome = 0
   let cumExpense = 0
   return months.map((m) => {
@@ -24,14 +24,18 @@ function cumulativeYtdPoints(model: ExpenseModel, months: string[]) {
 interface Props {
   model: ExpenseModel
   month: string
+  basis?: AnalyticsBasis
 }
 
-/** Cumulative income and expenses from January through the selected budget month. */
-export function YtdIncomeExpenseChart({ model, month }: Props) {
+/**
+ * Cumulative income and expenses from January through the selected budget month.
+ * Defaults to the committed basis — unpaid card charges count.
+ */
+export function YtdIncomeExpenseChart({ model, month, basis = 'committed' }: Props) {
   const format = useMoneyFormat()
   const year = month.slice(0, 4)
   const months = model.months.filter((m) => m.startsWith(`${year}-`) && m <= month)
-  const points = useMemo(() => cumulativeYtdPoints(model, months), [model, months])
+  const points = useMemo(() => cumulativeYtdPoints(model, months, basis), [model, months, basis])
   const { w: innerW, h: innerH } = innerSize()
   const { max: maxVal, ticks } = chartAxis(points.flatMap((p) => [p.cumIncome, p.cumExpense]))
   const coords = useCallback(

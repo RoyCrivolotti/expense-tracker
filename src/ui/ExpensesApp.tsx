@@ -20,7 +20,6 @@ import { TransactionModal } from './components/TransactionModal'
 import { EXIT_MS } from './hooks/motion'
 import { DashboardTab } from './tabs/DashboardTab'
 import { TransactionsTab } from './tabs/TransactionsTab'
-import { AnalyticsTab } from './tabs/AnalyticsTab'
 import { SettingsTab } from './tabs/SettingsTab'
 import { clearOnboardingSkip, isOnboardingSkipped } from './onboarding/onboardingStorage'
 import { ConnectivityProvider } from './hooks/ConnectivityProvider'
@@ -35,6 +34,7 @@ import { MONTH_LOCKED_HINT } from './tabs/selectionLockHints'
 import styles from './ExpensesApp.module.css'
 
 const GoalsTab = lazy(() => import('./tabs/goals/GoalsTab'))
+const AnalyticsTab = lazy(() => import('./tabs/AnalyticsTab'))
 import type { GoalsEntry } from './tabs/goals/GoalsTab'
 
 // Tabs without a month picker / FAB-heavy footer: trim the large bottom dead zone.
@@ -55,7 +55,6 @@ function TabView({
   tab,
   model,
   month,
-  onMonthChange,
   actions,
   theme,
   onThemeChange,
@@ -71,7 +70,6 @@ function TabView({
   tab: TabId
   model: ExpenseModel
   month: string
-  onMonthChange: (month: string) => void
   actions?: ExpenseActions | undefined
   theme: ExpenseTheme
   onThemeChange: (next: ExpenseTheme) => void
@@ -98,12 +96,9 @@ function TabView({
       )
     case 'analytics':
       return (
-        <AnalyticsTab
-          model={model}
-          month={month}
-          onMonthChange={onMonthChange}
-          actions={actions}
-        />
+        <Suspense fallback={<div className={styles.center}>Loading analytics…</div>}>
+          <AnalyticsTab model={model} month={month} actions={actions} />
+        </Suspense>
       )
     case 'goals':
       return (
@@ -331,7 +326,7 @@ function ExpensesAppReady({
         settingsBadge={settingsBadge}
         hubGrants={hubGrants}
         compactFooter={COMPACT_FOOTER_TABS.has(tab)}
-        goalsWide={tab === 'goals'}
+        wide={tab === 'goals' || tab === 'analytics'}
         contentRef={contentRef}
         pullIndicator={
           <PullToRefreshIndicator
@@ -365,7 +360,6 @@ function ExpensesAppReady({
             tab={tab}
             model={model}
             month={activeMonth}
-            onMonthChange={navigateMonth}
             actions={actions}
             theme={theme}
             onThemeChange={setTheme}

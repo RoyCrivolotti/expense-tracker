@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
-import { computeMonthlyTotals } from '../../engine'
+import type { AnalyticsBasis } from '../../engine'
+import { basisOptions, computeMonthlyTotals } from '../../engine'
 import { chartAxis, innerSize, PAD } from './chartLayout'
 import { MonthlyBarChartView } from './MonthlyBarChartView'
 import { useChartFocus } from './useChartFocus'
@@ -12,21 +13,22 @@ function lastMonths(months: string[], count: number): string[] {
 
 interface Props {
   model: ExpenseModel
+  basis?: AnalyticsBasis
 }
 
 /**
- * Side-by-side bars for income vs expenses over recent budget months.
- * Committed basis — unpaid card charges count, matching the tables above.
+ * Side-by-side bars for income vs expenses over recent budget months. Defaults
+ * to the committed basis — unpaid card charges count, matching the tables above.
  */
-export function MonthlyIncomeExpenseChart({ model }: Props) {
+export function MonthlyIncomeExpenseChart({ model, basis = 'committed' }: Props) {
   const months = lastMonths(model.months, 6)
   const rows = useMemo(() => {
-    const totals = computeMonthlyTotals(model.dataset.transactions, { includeForecast: true })
+    const totals = computeMonthlyTotals(model.dataset.transactions, basisOptions(basis))
     return months.map((month) => {
       const t = totals.get(month)
       return { month, income: t?.incomeCents ?? 0, expenses: t?.expensesCents ?? 0 }
     })
-  }, [model, months])
+  }, [model, months, basis])
   const { w: innerW, h: innerH } = innerSize()
   const groupW = innerW / Math.max(1, rows.length)
   const barW = Math.min(16, groupW / 3)

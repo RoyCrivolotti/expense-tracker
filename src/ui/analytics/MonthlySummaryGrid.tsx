@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
-import type { CategoryActuals } from '../../engine'
-import { computeCategoryActuals, formatCents, shortMonthLabel } from '../../engine'
+import type { AnalyticsBasis, CategoryActuals } from '../../engine'
+import { basisOptions, computeCategoryActuals, formatCents, shortMonthLabel } from '../../engine'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import styles from './analytics.module.css'
 
@@ -20,11 +20,11 @@ function hasActivity(r: CategoryActuals): boolean {
   return false
 }
 
-function buildRows(model: ExpenseModel, month: string): CategoryActuals[] {
+function buildRows(model: ExpenseModel, month: string, basis: AnalyticsBasis): CategoryActuals[] {
   const { dataset } = model
   const order = new Map(dataset.categories.map((c) => [c.id, c.sortOrder]))
   return computeCategoryActuals(dataset.transactions, dataset.categories, {
-    includeForecast: true,
+    ...basisOptions(basis),
     ytdThroughMonth: month,
   })
     .filter((r) => r.monthlyBudgetCents > 0 || hasActivity(r))
@@ -48,10 +48,18 @@ function buildTotals(rows: CategoryActuals[], months: string[]) {
  * months across, net actual per cell (coloured vs that category's budget), plus
  * a budget column, a YTD column, and a totals row. Wide — scrolls on mobile.
  */
-export function MonthlySummaryGrid({ model, month }: { model: ExpenseModel; month: string }) {
+export function MonthlySummaryGrid({
+  model,
+  month,
+  basis = 'committed',
+}: {
+  model: ExpenseModel
+  month: string
+  basis?: AnalyticsBasis
+}) {
   const format = useMoneyFormat()
   const { months } = model
-  const rows = useMemo(() => buildRows(model, month), [model, month])
+  const rows = useMemo(() => buildRows(model, month, basis), [model, month, basis])
   const totals = useMemo(() => buildTotals(rows, months), [rows, months])
   const cell = (cents: number): string => (cents === 0 ? '—' : formatCents(cents, format, false))
 

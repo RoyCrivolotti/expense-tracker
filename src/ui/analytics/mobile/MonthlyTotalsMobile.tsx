@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { ExpenseModel } from '../../useExpenseData'
-import { computeMonthlyTotals, formatCents, fullMonthLabel } from '../../../engine'
+import type { AnalyticsBasis } from '../../../engine'
+import { basisOptions, computeMonthlyTotals, formatCents, fullMonthLabel } from '../../../engine'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import styles from './mobile.module.css'
 
@@ -12,21 +13,30 @@ function valueColor(cents: number, type: 'income' | 'expense' | 'signed' | 'neut
   return ''
 }
 
-export function MonthlyTotalsMobile({ model }: { model: ExpenseModel }) {
+const HINT: Record<AnalyticsBasis, string> = {
+  committed:
+    'Committed income, expenses, saving, and investments per month — unpaid card charges count in their budget month.',
+  paid: 'Paid income, expenses, saving, and investments per month — unpaid card charges are left out.',
+}
+
+export function MonthlyTotalsMobile({
+  model,
+  basis = 'committed',
+}: {
+  model: ExpenseModel
+  basis?: AnalyticsBasis
+}) {
   const rows = useMemo(
     () =>
-      [
-        ...computeMonthlyTotals(model.dataset.transactions, { includeForecast: true }).values(),
-      ].sort((a, b) => b.month.localeCompare(a.month)),
-    [model.dataset],
+      [...computeMonthlyTotals(model.dataset.transactions, basisOptions(basis)).values()].sort(
+        (a, b) => b.month.localeCompare(a.month),
+      ),
+    [model.dataset, basis],
   )
 
   return (
     <div className={styles.section}>
-      <p className={styles.hint}>
-        Committed income, expenses, saving, and investments per month — unpaid card charges count
-        in their budget month.
-      </p>
+      <p className={styles.hint}>{HINT[basis]}</p>
       {rows.map((r) => (
         <div key={r.month} className={styles.monthCard}>
           <div className={styles.monthHeader}>{fullMonthLabel(r.month)}</div>
