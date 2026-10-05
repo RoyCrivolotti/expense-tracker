@@ -3,6 +3,7 @@ import { parseDeleteTransactionIds } from '../data/transactionIds'
 import type { ExpenseRepository } from '../ports/expenseRepository'
 import type { ExpenseSettings, TxnType } from '../types'
 import { AMOUNT_SIGN_MESSAGE, amountSignAllowed } from '../data/amountSign'
+import { MAX_DESCRIPTION_LENGTH } from './entityValidation'
 import { ValidationError } from './validationError'
 
 const BULK_PATCH_KEYS = new Set<string>([
@@ -13,6 +14,7 @@ const BULK_PATCH_KEYS = new Set<string>([
   'budgetMonth',
   'flagId',
   'settledBy',
+  'description',
 ])
 
 const VALID_TXN_TYPES = new Set<string>(['expense', 'income', 'investment', 'refund'])
@@ -30,6 +32,19 @@ function requirePattern(value: unknown, pattern: RegExp, label: string): string 
 function requireString(value: unknown, label: string): string {
   if (typeof value !== 'string') throw new ValidationError(`${label} must be text`)
   return value
+}
+
+/**
+ * The stored text is the trimmed one, so a stray space cannot make "Netflix " a second
+ * recurring pattern next to "Netflix", and the NOT NULL column never holds blank.
+ */
+function requireDescription(value: unknown): string {
+  const text = requireString(value, 'description').trim()
+  if (!text) throw new ValidationError('description cannot be blank')
+  if (text.length > MAX_DESCRIPTION_LENGTH) {
+    throw new ValidationError(`description must be ${MAX_DESCRIPTION_LENGTH} characters or fewer`)
+  }
+  return text
 }
 
 /**
@@ -60,6 +75,7 @@ const FIELD_VALIDATORS: Record<string, (v: unknown, p: BulkTransactionPatch) => 
   budgetMonth: (v, p) => { p.budgetMonth = requirePattern(v, /^\d{4}-\d{2}$/, 'budgetMonth must be YYYY-MM') },
   // null is meaningful here: it is how a selection is unflagged.
   flagId: (v, p) => { p.flagId = v === null ? null : requirePositiveInt(v, 'flagId') },
+  description: (v, p) => { p.description = requireDescription(v) },
   // Likewise: null is how deleting a reimbursement releases the rows it covered.
   settledBy: (v, p) => { p.settledBy = v === null ? null : requirePositiveInt(v, 'settledBy') },
 }
