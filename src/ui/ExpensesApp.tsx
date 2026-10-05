@@ -67,6 +67,7 @@ function TabView({
   goalsEntry,
   txnEntry,
   onOpenTransactions,
+  onUseBaselineInGoals,
   onRunSetup,
   onTxnSelectModeChange,
   monthNavigation,
@@ -86,6 +87,7 @@ function TabView({
   goalsEntry: GoalsEntry
   txnEntry: TransactionsEntry | null
   onOpenTransactions: (preset: TransactionsEntry) => void
+  onUseBaselineInGoals: (monthlyCents: number) => void
   onRunSetup: () => void
   onTxnSelectModeChange: (selecting: boolean) => void
   monthNavigation: number
@@ -111,6 +113,7 @@ function TabView({
             onMonthChange={onMonthChange}
             actions={actions}
             onOpenTransactions={onOpenTransactions}
+            onUseBaselineInGoals={onUseBaselineInGoals}
           />
         </Suspense>
       )
@@ -317,6 +320,8 @@ function ExpensesAppReady({
       setTab('transactions')
     })
   }
+  // The baseline handoff: open Goals with the measured spend prefilled as an unsaved draft.
+  const useBaselineInGoals = (monthlyCents: number) => goTo('goals', { kind: 'baseline', monthlyCents })
   const [modal, setModal] = useState<ExpenseModalState>(null)
   const [onboardingOpen, setOnboardingOpen] = useState(
     () => source.canWrite && !readOnly && needsOnboarding(model.dataset) && !isOnboardingSkipped(),
@@ -398,6 +403,7 @@ function ExpensesAppReady({
             goalsEntry={goalsEntry}
             txnEntry={txnEntry}
             onOpenTransactions={openTransactions}
+            onUseBaselineInGoals={useBaselineInGoals}
             onTxnSelectModeChange={holdMonthForSelection}
             monthNavigation={monthNavigation}
             onRunSetup={() => {

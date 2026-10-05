@@ -371,7 +371,7 @@ describe('computeCategoryActuals YTD', () => {
     const [home] = computeCategoryActuals(txns, categories, { ytdThroughMonth: '2026-02' })
     // 2025-12 is another year, 2026-03 is after the selected month.
     expect(home!.ytdActualCents).toBe(30000)
-    // byMonth itself stays complete — only the YTD aggregate is scoped.
+    // byMonth itself stays complete, only the YTD aggregate is scoped.
     expect(home!.byMonth.get('2025-12')).toBe(90000)
   })
 })

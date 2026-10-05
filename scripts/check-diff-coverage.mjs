@@ -9,10 +9,12 @@
  * pre-existing untested UI.
  *
  * Requires `coverage/lcov.info` to already exist (run `npm run test:coverage`
- * first) and a base ref/sha to diff against.
+ * first) and a base ref/sha to diff against. It refuses an lcov file older than
+ * a source file in the diff: a report from before the change says nothing about
+ * it, and would pass or fail on someone else's numbers.
  */
 import { execFileSync } from 'node:child_process'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 
 const THRESHOLD = Number(process.env.DIFF_COVERAGE_THRESHOLD ?? 90)
@@ -91,6 +93,17 @@ const diff = execFileSync(
   { encoding: 'utf8', maxBuffer: 1024 * 1024 * 100 },
 )
 const addedLines = parseAddedLines(diff)
+
+const lcovTime = statSync(LCOV_PATH).mtimeMs
+const stale = [...addedLines.keys()]
+  .filter((file) => isRelevantFile(file) && existsSync(file) && statSync(file).mtimeMs > lcovTime)
+  .map((file) => path.relative(process.cwd(), file))
+if (stale.length > 0) {
+  console.error(`check-diff-coverage: ${LCOV_PATH} is older than ${stale.length} changed file(s):`)
+  for (const file of stale.slice(0, 5)) console.error(`  ${file}`)
+  console.error('Run `npm run test:coverage` again, then re-run this check.')
+  process.exit(1)
+}
 
 let totalChanged = 0
 let totalCovered = 0

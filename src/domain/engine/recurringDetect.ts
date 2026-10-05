@@ -49,6 +49,7 @@ function budgetOffset(txn: Transaction): number {
 
 export function groupTransactions(transactions: Transaction[]): OccurrenceGroup[] {
   const map = new Map<string, OccurrenceGroup>()
+  const latestDate = new Map<string, string>()
 
   for (const txn of transactions) {
     if (txn.cancelled) continue
@@ -63,9 +64,14 @@ export function groupTransactions(transactions: Transaction[]): OccurrenceGroup[
       existing.budgetMonths.add(txn.budgetMonth)
       existing.budgetOffsets.push(budgetOffset(txn))
       existing.categoryId = txn.categoryId
-      existing.amountCents = txn.amountCents
-      existing.label = txn.description
+      // The group speaks for its newest occurrence, whatever order the rows arrive in.
+      if (txn.date >= latestDate.get(key)!) {
+        latestDate.set(key, txn.date)
+        existing.amountCents = txn.amountCents
+        existing.label = txn.description
+      }
     } else {
+      latestDate.set(key, txn.date)
       map.set(key, {
         key: {
           normalizedDesc: normalizeDesc(txn.description),

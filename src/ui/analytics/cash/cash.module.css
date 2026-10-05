@@ -1,0 +1,324 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 767px) {
+  .grid2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.cardSub {
+  margin: 0.15rem 0 0.7rem;
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+}
+
+.banner {
+  border: 1px solid color-mix(in srgb, var(--exp-warning) 40%, transparent);
+  background: color-mix(in srgb, var(--exp-warning) 10%, transparent);
+  color: var(--color-text);
+  border-radius: 10px;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Dots */
+.dots {
+  display: flex;
+  gap: 0.35rem;
+  overflow-x: auto;
+  padding: 0.5rem 0 0.2rem;
+  scrollbar-width: none;
+}
+
+.dots::-webkit-scrollbar {
+  display: none;
+}
+
+.dot {
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+  border: 1px solid transparent;
+  background: none;
+  border-radius: 10px;
+  padding: 0.3rem 0.4rem;
+  min-width: 2.6rem;
+  font: inherit;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.dot[aria-pressed='true'] {
+  border-color: var(--color-border);
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+  color: var(--color-text);
+}
+
+.dotMark {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.dot_counted {
+  background: color-mix(in srgb, var(--exp-success) 18%, transparent);
+  color: var(--exp-success-text);
+}
+
+.dot_drift {
+  background: color-mix(in srgb, var(--exp-warning) 20%, transparent);
+  color: var(--exp-warning-text);
+}
+
+.dot_ready {
+  background: color-mix(in srgb, var(--exp-refund) 22%, transparent);
+  color: var(--exp-refund);
+}
+
+.dot_open {
+  border: 1.5px solid var(--color-text-muted);
+  color: var(--color-text-muted);
+}
+
+.dot_waiting {
+  border: 1.5px dashed var(--color-text-muted);
+  color: var(--color-text-muted);
+}
+
+.dotLabel {
+  font-size: 0.68rem;
+}
+
+/* Bridge */
+.bridge {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.bridgeRow {
+  display: grid;
+  grid-template-columns: minmax(0, 9rem) 1fr auto;
+  gap: 0.6rem;
+  align-items: center;
+  font-size: 0.8rem;
+}
+
+.bridgeLabel {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bridgeTrack {
+  position: relative;
+  height: 12px;
+}
+
+.bridgeTrack::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-border);
+}
+
+.bridgeTrack i {
+  position: absolute;
+  top: 2px;
+  height: 8px;
+  border-radius: 4px;
+  left: 0;
+}
+
+.bridgeIn {
+  background: var(--exp-income);
+}
+
+.bridgeOut {
+  background: var(--exp-expense);
+  opacity: 0.85;
+}
+
+.bridgeLevel {
+  background: var(--color-text-muted);
+  opacity: 0.7;
+}
+
+.bridgeAmount {
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.countRow {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 0.8rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.84rem;
+}
+
+.countLabel {
+  color: var(--color-text-muted);
+}
+
+.gapNote {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+/* Drift */
+.drift {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.driftHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.74rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.2rem;
+}
+
+.driftTolerance {
+  white-space: nowrap;
+}
+
+.driftRow {
+  display: grid;
+  grid-template-columns: 2.2rem 1fr auto;
+  gap: 0.6rem;
+  align-items: center;
+  font-size: 0.78rem;
+}
+
+.driftMonth {
+  color: var(--color-text-muted);
+}
+
+.driftTrack {
+  position: relative;
+  height: 12px;
+}
+
+.driftTrack::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -1px;
+  bottom: -1px;
+  width: 1px;
+  background: var(--color-border);
+}
+
+.driftBand {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: color-mix(in srgb, var(--exp-success) 12%, transparent);
+  border-radius: 3px;
+}
+
+.driftOk,
+.driftOver {
+  position: absolute;
+  top: 2px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--color-text-muted);
+}
+
+.driftOver {
+  background: var(--exp-danger);
+}
+
+.driftAmount,
+.driftAmountOver {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.driftAmountOver {
+  color: var(--exp-danger-text);
+  font-weight: 650;
+}
+
+/* Balances */
+.balances {
+  margin-top: 0.9rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.balanceRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.84rem;
+}
+
+.balanceRow b {
+  font-variant-numeric: tabular-nums;
+}
+
+.balanceNote {
+  margin: 0.2rem 0 0;
+  font-size: 0.74rem;
+  color: var(--color-text-muted);
+}
+
+/* Fold */
+.fold {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 0.7rem 0.9rem;
+}
+
+.foldSummary {
+  cursor: pointer;
+  font-size: 0.84rem;
+  font-weight: 650;
+  color: var(--color-text-muted);
+}
+
+.fold[open] .foldSummary {
+  margin-bottom: 0.7rem;
+}

@@ -35,7 +35,7 @@ describe('computeMovers', () => {
         txn({ date: `${m}-05`, budgetMonth: m, categoryId: 1, description: `g ${m}`, amountCents: 30000 }),
       ),
       txn({ date: '2026-03-05', categoryId: 1, description: 'g mar', amountCents: 60000 }),
-      // Dining: steady 100 €, then 110 € — a small move.
+      // Dining: steady 100 €, then 110 €: a small move.
       ...['2025-12', '2026-01', '2026-02'].map((m) =>
         txn({ date: `${m}-08`, budgetMonth: m, categoryId: 2, description: `d ${m}`, amountCents: 10000 }),
       ),

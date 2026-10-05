@@ -24,7 +24,7 @@ export interface CategoryActualsOptions {
   includeForecast?: boolean
   /**
    * Scope `ytdActualCents` to the calendar year of this budget month, January
-   * through it. Without it the field is all-time — the workbook's original
+   * through it. Without it the field is all-time: the workbook's original
    * meaning, which stops being a "year to date" once data spans two years.
    */
   ytdThroughMonth?: string

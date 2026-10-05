@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import type { AnalyticsBasis, AnalyticsPeriod, CompareMode } from '../../../engine'
 import type { ExpenseModel } from '../../useExpenseData'
 import { Card } from '../../components/primitives'
-import { InsightsCharts } from '../../charts/InsightsCharts'
 import { MonthlyTotalsTable } from '../MonthlyTotalsTable'
 import type { AnalyticsView } from '../analyticsView'
 import { buildOverviewData } from './overviewModel'
@@ -22,6 +21,11 @@ const BASELINE_NAME: Record<CompareMode, string> = {
   prevYear: 'last year',
 }
 
+const WINDOW_BASELINE_NAME: Record<Exclude<AnalyticsPeriod, 'month'>, string> = {
+  ytd: 'last year',
+  last12: 'the year before',
+}
+
 interface Props {
   model: ExpenseModel
   month: string
@@ -29,8 +33,11 @@ interface Props {
   period: AnalyticsPeriod
   compare: CompareMode
   today: string
+  /** The budget month `today` falls in (rollover-aware). */
+  openMonth: string
   onSelectMonth: (month: string) => void
   onShowView: (view: AnalyticsView) => void
+  onUseBaselineInGoals?: ((monthlyCents: number) => void) | undefined
 }
 
 /** How am I doing? KPIs, trend, pace, signals, allocation, movers, baseline. */
@@ -41,26 +48,30 @@ export function OverviewView({
   period,
   compare,
   today,
+  openMonth,
   onSelectMonth,
   onShowView,
+  onUseBaselineInGoals,
 }: Props) {
   const data = useMemo(
-    () => buildOverviewData(model, { month, period, compare, basis, today }),
-    [model, month, period, compare, basis, today],
+    () => buildOverviewData(model, { month, period, compare, basis, today, openMonth }),
+    [model, month, period, compare, basis, today, openMonth],
   )
   const trend = useMemo(
     () => buildTrendModel(data.kpis.series, data.unpaidByMonth),
     [data.kpis.series, data.unpaidByMonth],
   )
   const [showTable, setShowTable] = useState(false)
-  const baselineName = period === 'month' ? BASELINE_NAME[compare] : 'the period before'
+  const baselineName = period === 'month' ? BASELINE_NAME[compare] : WINDOW_BASELINE_NAME[period]
   const sameDays = data.kpis.openDayLimit
 
   return (
     <div className={styles.stack}>
       {sameDays !== null && (
         <p className={styles.sameDaysNote}>
-          Open month — compared with the first {sameDays} days of {baselineName}.
+          {period === 'month'
+            ? `Open month, compared with the first ${sameDays} days of ${baselineName}.`
+            : `The open month counts its first ${sameDays} days, to match ${baselineName}.`}
         </p>
       )}
       <KpiTiles kpis={data.kpis} baselineName={baselineName} />
@@ -75,7 +86,7 @@ export function OverviewView({
           </div>
           <TrendChart model={trend} selectedMonth={month} onSelectMonth={onSelectMonth} />
         </Card>
-        <PaceCard pace={data.pace} />
+        <PaceCard pace={data.pace} isFuture={month > openMonth} />
       </div>
       {showTable && (
         <Card>
@@ -87,8 +98,7 @@ export function OverviewView({
         <AllocationBar allocation={data.allocation} />
         <MoversCard movers={data.movers} />
       </div>
-      {data.baseline && <BaselineCard baseline={data.baseline} />}
-      <InsightsCharts model={model} month={month} basis={basis} />
+      {data.baseline && <BaselineCard baseline={data.baseline} onUseInGoals={onUseBaselineInGoals} />}
     </div>
   )
 }

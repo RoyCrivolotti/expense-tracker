@@ -13,6 +13,17 @@ describe('groupTransactions', () => {
     expect(groups[0]!.dates).toHaveLength(4)
   })
 
+  it('takes the amount and label of the newest occurrence whatever the row order', () => {
+    const txns = [
+      makeTxn({ date: '2026-03-05', description: 'Netflix', amountCents: 1_500 }),
+      makeTxn({ date: '2026-01-05', description: 'netflix', amountCents: 1_000 }),
+      makeTxn({ date: '2026-02-05', description: 'NETFLIX', amountCents: 1_200 }),
+    ]
+    const [group] = groupTransactions(txns)
+    expect(group!.amountCents).toBe(1_500)
+    expect(group!.label).toBe('Netflix')
+  })
+
   it('excludes cancelled transactions', () => {
     const txns = monthlyDates(2026, 1, 5, 4).map((date) =>
       makeTxn({ date, description: 'Netflix', cancelled: true }),
