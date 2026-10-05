@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import type { ExpenseActions } from '../actions'
 import type { ExpenseModel } from '../useExpenseData'
 import { defaultBudgetMonth } from '../../engine'
@@ -34,8 +34,10 @@ export function AnalyticsShell({
 }) {
   const [view, setView] = useState<AnalyticsView>('overview')
   const filters = useAnalyticsFilters()
-  // Local calendar day, not UTC — late evening west of Greenwich is not tomorrow.
-  const today = useMemo(() => todayLocalIso(), [])
+  // Local calendar day, not UTC: late evening west of Greenwich is not tomorrow. Read on
+  // every render so a tab left open past midnight moves on with its next interaction; the
+  // string only changes once a day, so the memos downstream hold.
+  const today = todayLocalIso()
   const openMonth = defaultBudgetMonth(today, model.dataset.settings.budgetRolloverDay)
 
   return (
