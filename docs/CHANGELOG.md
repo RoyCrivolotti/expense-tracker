@@ -2,6 +2,14 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (renaming transactions in bulk)
+
+**Edit selected can now set the description on every chosen transaction.** Search for the old name in
+Transactions, select the rows and tick Description; the sheet lists the descriptions it is about to
+replace, and picking an existing one reuses its spelling. Rows that end up with the same description
+count as one recurring pattern in Analytics, so this is how "NETFLIX.COM" and "Netflix 0912" become a
+single line. The confirmation names the new description ("Renamed 14 transactions to Netflix").
+
 ## October 2026 (the Analytics redesign)
 
 Analytics was the workbook, ported: four wide tables and three small charts that reported numbers

@@ -166,6 +166,21 @@ Automatic creation for credit-card plans: `backfillInstallments` (`functions/_sh
 
 Linking pre-existing rows: open the row, use the installment step, and attach it to the plan (index defaults to the plan's next open slot, overridable). The original iPhone migration (`plan_id=1`) was a one-off SQL backfill, already applied to prod, and its helper script has since been removed.
 
+## Renaming many descriptions at once
+
+Analytics groups recurring spend by description, so "NETFLIX.COM", "Netflix 0912" and "Netflix"
+count as three patterns until they share one name. To merge them:
+
+1. In Transactions, search for the old description. Filters lock once select mode is on, so search first.
+2. Widen the date scope (all dates) so every row turns up.
+3. Choose **Select**, then **Select all**, then **Edit**.
+4. Tick **Description**, type the new name (or pick an existing one) and apply.
+
+The sheet lists the distinct descriptions it is about to replace, because the search matches notes as
+well as descriptions and can catch rows you did not mean. Renaming a row linked to an instalment plan
+keeps the link but it no longer matches the plan's own description. A reimbursement payment row's
+description is the report's name in Past reports, so renaming it renames the report.
+
 ## Gitignored local paths
 
 | Path | Purpose |
