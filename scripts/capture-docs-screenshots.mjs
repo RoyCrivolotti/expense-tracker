@@ -15,6 +15,7 @@ const OUT = join(ROOT, 'docs/screenshots/gallery')
 // 5173 is routinely taken by whichever one started first.
 const PORT = process.env.CAPTURE_PORT ?? '5173'
 const BASE = `http://127.0.0.1:${PORT}`
+const CAPTURE_DATE = '2026-10-15T12:00:00'
 
 async function applyTheme(page, theme) {
   await page.addInitScript((selected) => {
@@ -135,7 +136,7 @@ async function captureTransactionsDefault(page, filename) {
   await page.waitForSelector('text=Upcoming', { timeout: 15000 })
   await setMonthLabel(page, 'May')
   await setFiltersExpanded(page, false)
-  await page.waitForSelector('text=Travel Card statement', { timeout: 15000 })
+  await page.waitForSelector('text=Travel Credit statement', { timeout: 15000 })
   await page.waitForTimeout(300)
   await page.screenshot({ path: join(OUT, filename) })
 }
@@ -198,10 +199,15 @@ async function captureFlagsAndReports(page, suffix) {
 
 async function captureAnalyticsDesktop(page) {
   await page.getByRole('button', { name: 'Analytics' }).click()
-  await page.waitForSelector('text=Monthly summary', { timeout: 15000 })
+  await page.waitForSelector('text=Spending baseline', { timeout: 15000 })
   await page.waitForTimeout(400)
   await page.screenshot({ path: join(OUT, 'analytics-desktop.png') })
-  await page.locator('text=Cash reconciliation').scrollIntoViewIfNeeded()
+  await page.getByRole('tab', { name: 'Spending' }).click()
+  await page.waitForSelector('text=tap a row for its story', { timeout: 15000 })
+  await page.waitForTimeout(350)
+  await page.screenshot({ path: join(OUT, 'analytics-spending-desktop.png') })
+  await page.getByRole('tab', { name: 'Cash' }).click()
+  await page.waitForSelector('text=Month close', { timeout: 15000 })
   await page.waitForTimeout(350)
   await page.screenshot({ path: join(OUT, 'analytics-cash-desktop.png') })
 }
@@ -357,7 +363,10 @@ async function captureGoalsMobile(page) {
 async function capture() {
   const { chromium } = await import('playwright')
   mkdirSync(OUT, { recursive: true })
-  const browser = await chromium.launch()
+  // CHROMIUM_PATH: use a preinstalled browser where Playwright's own download is unavailable.
+  const browser = await chromium.launch(
+    process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {},
+  )
   const desktopDark = await browser.newContext({
     viewport: { width: 1280, height: 800 },
     colorScheme: 'dark',
@@ -375,6 +384,11 @@ async function capture() {
     colorScheme: 'light',
     reducedMotion: 'reduce',
   })
+  // The pages read today's date (the open month, the pace clock, "last month"), so a
+  // gallery captured on another day came out different. A fixed date, inside the demo
+  // data's last month, makes a re-run reproduce the same pictures.
+  const captureDate = new Date(process.env.CAPTURE_DATE ?? CAPTURE_DATE)
+  for (const context of [desktopDark, mobileDark, desktopLight]) await context.clock.setFixedTime(captureDate)
 
   const d = await desktopDark.newPage()
   await applyTheme(d, 'dark')
@@ -413,11 +427,15 @@ async function capture() {
   await m.screenshot({ path: join(OUT, 'dashboard-mobile.png') })
 
   await m.getByRole('button', { name: 'Analytics' }).click()
-  await m.waitForSelector('text=Budget vs actual', { timeout: 15000 })
+  await m.waitForSelector('text=Spending baseline', { timeout: 15000 })
   await m.waitForTimeout(300)
   await m.screenshot({ path: join(OUT, 'analytics-mobile.png') })
+  await m.getByRole('tab', { name: 'Spending' }).click()
+  await m.waitForSelector('text=tap a row for its story', { timeout: 15000 })
+  await m.waitForTimeout(300)
+  await m.screenshot({ path: join(OUT, 'analytics-spending-mobile.png') })
   await m.getByRole('tab', { name: 'Cash' }).click()
-  await m.waitForSelector('text=Carryover', { timeout: 15000 })
+  await m.waitForSelector('text=Month close', { timeout: 15000 })
   await m.waitForTimeout(350)
   await m.screenshot({ path: join(OUT, 'analytics-cash-mobile.png') })
 

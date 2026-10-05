@@ -585,6 +585,27 @@ describe('GoalsTab', () => {
     expect(showToast).toHaveBeenCalledWith('Saved Path A, tweaked', 'success')
   })
 
+  it('prefills the measured spend as an unsaved edit and says so in a toast', () => {
+    const showToast = vi.fn()
+    const plan = makeScenario({ id: 1, name: 'Path A', isActive: true, annualSpendCents: 18_000_00 })
+    render(
+      <ToastContext.Provider value={{ showToast }}>
+        <GoalsTab
+          model={buildExpenseModel(makeDataset({ goalScenarios: [plan] }))}
+          actions={makeActions()}
+          entry={{ kind: 'baseline', monthlyCents: 2_000_00 }}
+        />
+      </ToastContext.Provider>,
+    )
+
+    expect(screen.getByLabelText('Unsaved changes')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Save changes to Path A/ })).toBeInTheDocument()
+    expect(showToast).toHaveBeenCalledTimes(1)
+    expect(showToast).toHaveBeenCalledWith(
+      'Annual spend at FI set to 24.000,00 € from your measured spending. Save to keep it.',
+    )
+  })
+
   it('treats a colour change as an unsaved edit and saves it with the rest', async () => {
     const user = userEvent.setup()
     const actions = makeActions()

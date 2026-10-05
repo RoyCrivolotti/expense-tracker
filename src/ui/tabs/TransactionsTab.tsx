@@ -16,6 +16,7 @@ import { TransactionsFlagOverlays } from './TransactionsFlagOverlays'
 import { TransactionsSelectFooter } from './TransactionsSelectFooter'
 import { useTransactionsScrollPadding } from './useTransactionsScrollPadding'
 import { useTransactionsTabState } from './useTransactionsTabState'
+import type { TransactionsEntry } from './transactionsEntry'
 import { scrollToResults } from './scrollToResults'
 import { useDebouncedAnnouncement } from '../hooks/useDebouncedAnnouncement'
 import { EXIT_MS } from '../hooks/motion'
@@ -49,6 +50,8 @@ interface TransactionsTabProps {
   onSelectModeChange?: ((selecting: boolean) => void) | undefined
   /** How many times the user has moved the header month. */
   monthNavigation?: number | undefined
+  /** A filter preset another tab handed over on the way in (see transactionsEntry). */
+  entry?: TransactionsEntry | null | undefined
 }
 
 export function TransactionsTab({
@@ -57,10 +60,12 @@ export function TransactionsTab({
   actions,
   onSelectModeChange,
   monthNavigation,
+  entry,
 }: TransactionsTabProps) {
   const state = useTransactionsTabState(model, month, actions, {
     onSelectModeChange,
     monthNavigation,
+    entry,
   })
   useTransactionsScrollPadding(state.listRows.length > 0, state.selectMode)
   const [editingStatement, setEditingStatement] = useState<StatementPaymentRow | null>(null)

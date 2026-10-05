@@ -30,7 +30,7 @@ Header **Refresh** appears on every tab (not shown in cropped dashboard shots). 
 | --- | --- |
 | ![Transactions desktop](./screenshots/gallery/transactions-desktop.png) | ![Transactions mobile](./screenshots/gallery/transactions-mobile.png) |
 
-May budget month shows **Travel Card statement** for April on the paid date (14 May). Tap a statement row to edit the paid date. May's own statement settles in June and appears in the June tab.
+May budget month shows **Travel Credit statement** for the prior month on its paid date. Tap a statement row to edit the paid date. May's own statement settles in June and appears in the June tab.
 
 Mobile detail: collapsible filters with **date scope** dropdown, recurring **Upcoming** suggestions, **+** on each day header, swipe-left **Copy** / **Delete** (animated snap, tap row to close when open), active-filter badge with **Clear filters**, and **»** jump to latest budget month when viewing a past month.
 
@@ -78,15 +78,30 @@ rebuild any report you have already submitted.
 
 ## Analytics
 
-| Desktop overview | Cash reconciliation (desktop) |
-| --- | --- |
-| ![Analytics desktop](./screenshots/gallery/analytics-desktop.png) | ![Analytics cash desktop](./screenshots/gallery/analytics-cash-desktop.png) |
+Three views under one sticky row, the same on phone and desktop. **Overview** answers "how am I
+doing": five KPI tiles with change chips and sparklines, a trend chart whose unpaid card charges
+are hatched, the flexible-spending pace, up to three signals, where the income went, what changed
+against your 3-month average, and the spending baseline with a handoff into Goals. **Spending**
+answers "where does it go": ranked rows grouped by category, fixed vs flexible, label or merchant,
+each opening its story and a deep link into Transactions; the exact workbook grid stays as the
+Grid mode, with CSV export. **Cash** answers "do my numbers match": one dot per month close, a
+bridge from opening cash to expected cash with the count entered under it, drift bars with a ±5 €
+tolerance band, and balances labelled as cost; the full table sits in a fold. A committed/paid
+basis toggle (committed by default, matching budgets and the Dashboard) applies to Overview and
+Spending; Cash is paid-basis by nature. An open month is only compared with the same days of
+other months.
 
-| Mobile overview | Cash reconciliation (mobile) |
+| Overview (desktop) | Overview (mobile) |
 | --- | --- |
-| ![Analytics mobile](./screenshots/gallery/analytics-mobile.png) | ![Analytics cash mobile](./screenshots/gallery/analytics-cash-mobile.png) |
+| ![Analytics desktop](./screenshots/gallery/analytics-desktop.png) | ![Analytics mobile](./screenshots/gallery/analytics-mobile.png) |
 
-Cash recon shows **Carryover**, **This month**, and **Total gap** columns (desktop) or accordion detail (mobile).
+| Spending (desktop) | Spending (mobile) |
+| --- | --- |
+| ![Analytics spending desktop](./screenshots/gallery/analytics-spending-desktop.png) | ![Analytics spending mobile](./screenshots/gallery/analytics-spending-mobile.png) |
+
+| Cash (desktop) | Cash (mobile) |
+| --- | --- |
+| ![Analytics cash desktop](./screenshots/gallery/analytics-cash-desktop.png) | ![Analytics cash mobile](./screenshots/gallery/analytics-cash-mobile.png) |
 
 ## Goals
 

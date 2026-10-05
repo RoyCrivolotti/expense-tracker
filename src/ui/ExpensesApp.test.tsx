@@ -190,6 +190,63 @@ describe('ExpensesApp tab wiring', () => {
   })
 })
 
+describe('ExpensesApp Analytics handoffs', () => {
+  const spend = (id: number, month: string, description: string, categoryId: number, amountCents: number) => ({
+    id,
+    date: `${month}-10`,
+    budgetMonth: month,
+    description,
+    accountId: 1,
+    categoryId,
+    type: 'expense' as const,
+    amountCents,
+    cancelled: false,
+    status: 'posted' as const,
+  })
+  const dataset = () =>
+    datasetWith({
+      categories: [
+        { id: 1, name: 'Groceries', monthlyBudgetCents: 30000, sortOrder: 0, active: true },
+        { id: 2, name: 'Dining', monthlyBudgetCents: 0, sortOrder: 1, active: true },
+      ],
+      accounts: [{ id: 1, name: 'Main debit', kind: 'debit', settlement: 'immediate', active: true }],
+      goalScenarios: [makeScenario({ id: 1, name: 'Path A', isActive: true })],
+      transactions: [
+        spend(1, '2026-05', 'Shop may', 1, 20000),
+        spend(2, '2026-06', 'Shop june', 1, 24000),
+        spend(3, '2026-07', 'Shop july', 1, 26000),
+        spend(4, '2026-07', 'Dinner july', 2, 6000),
+      ],
+    })
+  const nav = (name: string) => screen.getAllByRole('button', { name })[0]!
+
+  it('opens Transactions on the month and filters a Spending row stands for', async () => {
+    render(<ExpensesApp source={sourceThatSucceeds(dataset())} hubGrants={allGroupsGranted()} />)
+    await waitFor(() => expect(screen.queryByText('Welcome to Expenses')).toBeNull())
+
+    fireEvent.click(nav('Analytics'))
+    // Analytics is a lazy chunk, and CI takes longer than the default second to load it.
+    fireEvent.click(await screen.findByRole('tab', { name: 'Spending' }, { timeout: 15_000 }))
+    fireEvent.click(await screen.findByRole('button', { name: /Groceries/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open in Transactions' }))
+
+    expect(await screen.findByText('Shop july')).toBeInTheDocument()
+    expect(screen.queryByText('Dinner july')).toBeNull()
+    expect(screen.queryByText('Shop june')).toBeNull()
+  }, 20_000)
+
+  it('opens Goals with the measured spend waiting as an unsaved edit', async () => {
+    render(<ExpensesApp source={sourceThatSucceeds(dataset())} hubGrants={allGroupsGranted()} />)
+    await waitFor(() => expect(screen.queryByText('Welcome to Expenses')).toBeNull())
+
+    fireEvent.click(nav('Analytics'))
+    fireEvent.click(await screen.findByRole('button', { name: 'Use in Goals' }, { timeout: 15_000 }))
+
+    expect(await screen.findByLabelText('Unsaved changes', {}, { timeout: 15_000 })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Plan' })).toHaveAttribute('aria-selected', 'true')
+  }, 40_000)
+})
+
 describe('ExpensesApp while selecting transactions', () => {
   const row = (id: number, month: string) => ({
     id,

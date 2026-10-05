@@ -22,6 +22,12 @@ export interface CategoryActualsOptions {
    * transactions are always excluded.
    */
   includeForecast?: boolean
+  /**
+   * Scope `ytdActualCents` to the calendar year of this budget month, January
+   * through it. Without it the field is all-time: the workbook's original
+   * meaning, which stops being a "year to date" once data spans two years.
+   */
+  ytdThroughMonth?: string
 }
 
 /** Net actual spend per category per budget month, plus YTD per category. */
@@ -42,17 +48,32 @@ export function computeCategoryActuals(
   }
 
   for (const txn of transactions) {
-    if (txn.status === 'cancelled') continue
-    if (!opts.includeForecast && txn.status === 'forecast') continue
-    if (txn.type !== 'expense' && txn.type !== 'refund') continue
+    const signed = countedExpenseCents(txn, opts.includeForecast ?? false)
+    if (signed === null) continue
     const entry = byCategory.get(txn.categoryId)
     if (!entry) continue
-    const signed = txn.type === 'refund' ? -txn.amountCents : txn.amountCents
     entry.byMonth.set(txn.budgetMonth, (entry.byMonth.get(txn.budgetMonth) ?? 0) + signed)
     entry.ytdActualCents += signed
   }
 
+  if (opts.ytdThroughMonth) scopeYtdToYear(byCategory.values(), opts.ytdThroughMonth)
+
   return [...byCategory.values()].sort((a, b) => a.categoryId - b.categoryId)
+}
+
+/** Signed net-expense cents for a transaction, or null when it doesn't count. */
+function countedExpenseCents(txn: Transaction, includeForecast: boolean): number | null {
+  if (txn.status === 'cancelled') return null
+  if (!includeForecast && txn.status === 'forecast') return null
+  if (txn.type !== 'expense' && txn.type !== 'refund') return null
+  return txn.type === 'refund' ? -txn.amountCents : txn.amountCents
+}
+
+function scopeYtdToYear(entries: Iterable<CategoryActuals>, throughMonth: string): void {
+  const year = throughMonth.slice(0, 4)
+  for (const entry of entries) {
+    entry.ytdActualCents = sumYearToDateActual(entry.byMonth, year, throughMonth)
+  }
 }
 
 /**

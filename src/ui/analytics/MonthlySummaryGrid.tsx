@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
-import type { CategoryActuals } from '../../engine'
-import { computeCategoryActuals, formatCents, shortMonthLabel } from '../../engine'
+import type { AnalyticsBasis, CategoryActuals } from '../../engine'
+import { formatCents, shortMonthLabel } from '../../engine'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
+import { monthlySummaryRows } from './monthlySummaryRows'
 import styles from './analytics.module.css'
 
 /** Colour an actual against its monthly budget (only when a budget is set). */
@@ -13,14 +14,6 @@ function cellClass(actual: number, budget: number): string | undefined {
   if (ratio > 1) return styles.over
   if (ratio >= 0.8) return styles.warn
   return undefined
-}
-
-function buildRows(model: ExpenseModel): CategoryActuals[] {
-  const { dataset } = model
-  const order = new Map(dataset.categories.map((c) => [c.id, c.sortOrder]))
-  return computeCategoryActuals(dataset.transactions, dataset.categories, { includeForecast: true })
-    .filter((r) => r.monthlyBudgetCents > 0 || r.ytdActualCents !== 0)
-    .sort((a, b) => (order.get(a.categoryId) ?? 0) - (order.get(b.categoryId) ?? 0))
 }
 
 function buildTotals(rows: CategoryActuals[], months: string[]) {
@@ -40,10 +33,18 @@ function buildTotals(rows: CategoryActuals[], months: string[]) {
  * months across, net actual per cell (coloured vs that category's budget), plus
  * a budget column, a YTD column, and a totals row. Wide — scrolls on mobile.
  */
-export function MonthlySummaryGrid({ model }: { model: ExpenseModel }) {
+export function MonthlySummaryGrid({
+  model,
+  month,
+  basis = 'committed',
+}: {
+  model: ExpenseModel
+  month: string
+  basis?: AnalyticsBasis
+}) {
   const format = useMoneyFormat()
   const { months } = model
-  const rows = useMemo(() => buildRows(model), [model])
+  const rows = useMemo(() => monthlySummaryRows(model, month, basis), [model, month, basis])
   const totals = useMemo(() => buildTotals(rows, months), [rows, months])
   const cell = (cents: number): string => (cents === 0 ? '—' : formatCents(cents, format, false))
 
@@ -59,7 +60,7 @@ export function MonthlySummaryGrid({ model }: { model: ExpenseModel }) {
             {months.map((m) => (
               <th key={m}>{shortMonthLabel(m)}</th>
             ))}
-            <th>YTD</th>
+            <th>YTD ({month.slice(0, 4)})</th>
           </tr>
         </thead>
         <tbody>

@@ -17,6 +17,18 @@ export function optionsFrom<T extends string>(labels: Record<T, string>): { valu
 export type AssumptionsFocus = 'inflation' | 'accounts'
 
 /**
+ * The draft edit a Goals entry carries, or null for entries that edit nothing.
+ * The Analytics baseline hands over a measured monthly spend; the scenario
+ * lever it prefills is annual.
+ */
+export function entryDraftPatch(
+  entry: 'checkin' | { kind: 'baseline'; monthlyCents: number } | null | undefined,
+): { annualSpendCents: number } | null {
+  if (!entry || entry === 'checkin') return null
+  return { annualSpendCents: entry.monthlyCents * 12 }
+}
+
+/**
  * The view row is a tab list over one panel: what ties each tab (`goals-view-<view>`) to the
  * panel that shows the selected view. Only one row is mounted at a time, phone or wide.
  */

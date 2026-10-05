@@ -15,7 +15,12 @@ import { budgetMonthFromName, defaultBudgetMonth, parseHumanDate, parseIsoDate }
 import { fv, nper, pmt } from './finance'
 import { deriveStatus, deriveTransactions } from './status'
 import { computeMonthlyTotals, investedYtdCents } from './monthlyTotals'
-import { computeBudgetHealth, computeYtdBudgetHealth, sumBudgetHealth } from './categoryBudget'
+import {
+  computeBudgetHealth,
+  computeCategoryActuals,
+  computeYtdBudgetHealth,
+  sumBudgetHealth,
+} from './categoryBudget'
 import { netSpendCents } from './transactions'
 
 describe('money', () => {
@@ -328,6 +333,46 @@ describe('monthly totals', () => {
     expect(jan.netSavingCents).toBe(450000 - 140000)
     // Feb card charge is unpaid -> forecast -> excluded from posted totals.
     expect(totals.get('2026-02')).toBeUndefined()
+  })
+
+  it('counts forecast charges on the committed basis (includeForecast)', () => {
+    const totals = computeMonthlyTotals(txns, { includeForecast: true })
+    const feb = totals.get('2026-02')!
+    expect(feb.expensesCents).toBe(10000)
+    expect(feb.netSavingCents).toBe(-10000)
+  })
+})
+
+describe('computeCategoryActuals YTD', () => {
+  const categories = [
+    { id: 1, name: 'Home', monthlyBudgetCents: 100000, sortOrder: 0, active: true },
+  ]
+  const base = {
+    description: '',
+    accountId: 1,
+    categoryId: 1,
+    type: 'expense' as const,
+    cancelled: false,
+    status: 'posted' as const,
+  }
+  const txns: Transaction[] = [
+    { ...base, id: 1, date: '2025-12-05', budgetMonth: '2025-12', amountCents: 90000 },
+    { ...base, id: 2, date: '2026-01-05', budgetMonth: '2026-01', amountCents: 10000 },
+    { ...base, id: 3, date: '2026-02-05', budgetMonth: '2026-02', amountCents: 20000 },
+    { ...base, id: 4, date: '2026-03-05', budgetMonth: '2026-03', amountCents: 40000 },
+  ]
+
+  it('is all-time without ytdThroughMonth (the workbook meaning)', () => {
+    const [home] = computeCategoryActuals(txns, categories)
+    expect(home!.ytdActualCents).toBe(160000)
+  })
+
+  it('scopes to the calendar year through the given month with ytdThroughMonth', () => {
+    const [home] = computeCategoryActuals(txns, categories, { ytdThroughMonth: '2026-02' })
+    // 2025-12 is another year, 2026-03 is after the selected month.
+    expect(home!.ytdActualCents).toBe(30000)
+    // byMonth itself stays complete, only the YTD aggregate is scoped.
+    expect(home!.byMonth.get('2025-12')).toBe(90000)
   })
 })
 

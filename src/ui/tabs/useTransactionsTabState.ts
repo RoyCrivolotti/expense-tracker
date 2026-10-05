@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { Flag, Label, TxnType } from '../../types'
+import type { TransactionsEntry } from './transactionsEntry'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import {
@@ -20,7 +21,13 @@ import {
   type TxnDateScope,
 } from './txnDateScope'
 
-function useTxnListFilters(month: string, flags: Flag[], labels: Label[], monthNavigation: number) {
+function useTxnListFilters(
+  month: string,
+  flags: Flag[],
+  labels: Label[],
+  monthNavigation: number,
+  entry?: TransactionsEntry | null,
+) {
   const [categoryId, setCategoryId] = useState<number | 'all'>('all')
   const [accountId, setAccountId] = useState<number | 'all'>('all')
   const [rawFlagId, setFlagId] = useState<number | 'all' | 'none'>('all')
@@ -34,6 +41,24 @@ function useTxnListFilters(month: string, flags: Flag[], labels: Label[], monthN
   }))
   const [customDateFrom, setCustomDateFrom] = useState('')
   const [customDateTo, setCustomDateTo] = useState('')
+
+  // An entry preset replaces the secondary filters wholesale, once per arrival
+  // (each navigation hands over a fresh object; the render-phase guard is React's
+  // documented way to adjust state when a prop changes). The list is the user's
+  // again after that.
+  const [appliedEntry, setAppliedEntry] = useState<TransactionsEntry | null>(null)
+  if (entry && entry !== appliedEntry) {
+    setAppliedEntry(entry)
+    setCategoryId(entry.categoryId ?? 'all')
+    setAccountId('all')
+    setFlagId('all')
+    setLabelIds(entry.labelIds ?? [])
+    setTxnType(entry.type ?? 'all')
+    setStatus(entry.status ?? 'all')
+    setQuery(entry.query ?? '')
+    // The month itself was navigated by the shell; keep the scope on it.
+    setScopeChoice((prev) => ({ scope: 'budgetMonth', atNavigation: prev.atNavigation }))
+  }
 
   /**
    * A flag can be deleted while its filter is still applied (from the Flagged
@@ -170,6 +195,8 @@ export interface TransactionsShell {
   onSelectModeChange?: ((selecting: boolean) => void) | undefined
   /** How many times the user has moved the header month. */
   monthNavigation?: number | undefined
+  /** A filter preset another tab handed over on the way in (see transactionsEntry). */
+  entry?: TransactionsEntry | null | undefined
 }
 
 export function useTransactionsTabState(
@@ -183,6 +210,7 @@ export function useTransactionsTabState(
     model.dataset.flags,
     model.dataset.labels,
     shell.monthNavigation ?? 0,
+    shell.entry,
   )
   const isMobile = useIsMobile()
 
