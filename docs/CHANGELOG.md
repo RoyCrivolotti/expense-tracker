@@ -2,6 +2,15 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (Analytics, made clearer)
+
+- **Cash starts counting at your first count.** Months from before you began counting are muted and never asked for, and the first count is the starting point that drift is measured from, instead of showing every month since the opening balance as new drift.
+- **Each comparison chip names what it compares against**, for example "vs 2.840 € last month", so a percentage can be checked.
+- **"Where the income went" counts the same days as the headline numbers** while the month is open.
+- **The cards explain themselves.** Pace, allocation and baseline each have a closed "How is this calculated?" note, and a new closed "Detected fixed costs" card lists every pattern and instalment plan counted as fixed, with the ones taken out of this month's pace budget marked.
+- **The spending baseline says what it is**: a trailing average over the history there is (up to 12 months), not a calendar year, to set against Goals' Annual spend at FI.
+- **Merchant is now Description**, since the app has no merchant, only the transaction's text. A By amount / By items sort works for every grouping.
+
 ## October 2026 (renaming transactions in bulk)
 
 **Edit selected can now set the description on every chosen transaction.** Search for the old name in
