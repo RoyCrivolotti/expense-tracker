@@ -100,8 +100,8 @@ describe('monthlySummaryCsv', () => {
         ytdActualCents: 55000,
       },
     ]
-    expect(monthlySummaryCsv(rows, ['2026-01', '2026-02'])).toBe(
-      'category,monthly_budget_cents,2026-01,2026-02,ytd_cents\nGroceries,40000,30000,25000,55000',
+    expect(monthlySummaryCsv(rows, ['2026-01', '2026-02'], '2026')).toBe(
+      'category,monthly_budget_cents,2026-01,2026-02,ytd_2026_cents\nGroceries,40000,30000,25000,55000',
     )
   })
 
@@ -115,7 +115,7 @@ describe('monthlySummaryCsv', () => {
         ytdActualCents: 0,
       },
     ]
-    const line = monthlySummaryCsv(rows, []).split('\n')[1]!
+    const line = monthlySummaryCsv(rows, [], '2026').split('\n')[1]!
     expect(line.startsWith('=')).toBe(false)
   })
 })

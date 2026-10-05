@@ -44,29 +44,50 @@ export interface OverviewOptions {
   compare: CompareMode
   basis: AnalyticsBasis
   today: string
+  /** The budget month `today` falls in (rollover-aware). */
+  openMonth: string
 }
 
 export function buildOverviewData(model: ExpenseModel, opts: OverviewOptions): OverviewData {
   const { dataset, months } = model
   const { transactions, categories, installmentPlans, goalScenarios } = dataset
-  const { month, period, compare, basis, today } = opts
+  const { month, period, compare, basis, today, openMonth } = opts
+  const rolloverDay = dataset.settings.budgetRolloverDay
 
   const classifier = classifyFixedSpend(transactions)
-  const kpis = computeOverviewKpis(transactions, { months, month, period, compare, basis, today })
+  const kpis = computeOverviewKpis(transactions, {
+    months,
+    month,
+    period,
+    compare,
+    basis,
+    today,
+    openMonth,
+    rolloverDay,
+  })
   const pace = computeSpendingPace(transactions, categories, installmentPlans, classifier, {
     month,
     today,
+    openMonth,
+    rolloverDay,
     basis,
     prevMonth: months.includes(priorBudgetMonth(month)) ? priorBudgetMonth(month) : null,
   })
-  const movers = computeMovers(transactions, categories, classifier, { months, month, basis, today })
+  const movers = computeMovers(transactions, categories, classifier, {
+    months,
+    month,
+    basis,
+    today,
+    openMonth,
+    rolloverDay,
+  })
   const cashRows = computeCashReconciliation(
     transactions,
     dataset.accounts,
     dataset.settings,
     dataset.cashActuals,
   )
-  const signals = computeSignals({ pace, movers, cashRows })
+  const signals = computeSignals({ pace, movers, cashRows, openMonth })
   const unpaidByMonth = new Map(
     kpis.series.map((s) => [s.month, basis === 'committed' ? unpaidExpenseCents(transactions, s.month) : 0]),
   )

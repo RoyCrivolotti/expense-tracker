@@ -1,7 +1,8 @@
 import type { Transaction } from '../types'
+import { addDaysIso, daysBetween, priorBudgetMonth, shiftBudgetMonth } from './dates'
 
 /**
- * Analytics basis — which card charges count. `committed` counts a charge in
+ * Analytics basis: which card charges count. `committed` counts a charge in
  * its budget month whether or not the statement is paid (matching budgets and
  * the Dashboard); `paid` counts it only once the statement is paid (matching
  * cash). Cash reconciliation is inherently paid-basis and offers no choice.
@@ -36,15 +37,65 @@ export function monthsForPeriod(
 }
 
 /**
- * Day-of-month cutoff for comparing like with like. The month still under way is
- * only ever compared with the same days of other months, never a partial month
- * against a full one. A budget month at or past today's calendar month counts as
- * open; the cutoff is today's day-of-month applied to each transaction's own
- * calendar date. With a budget rollover day the window shifts, but day-of-month
- * stays the honest like-for-like cut. Closed months return null (whole month).
+ * A like-for-like cut: how many days of a budget month have elapsed. The month
+ * under way is only ever compared with the same stretch of other months, never
+ * a partial month against a full one. Build it with `sameDaysCut`.
  */
-export function sameDaysLimit(month: string, today: string): number | null {
-  return month >= today.slice(0, 7) ? parseInt(today.slice(8, 10), 10) : null
+export interface SameDaysCut {
+  /** Days of the open budget month that have passed, today included. */
+  elapsedDays: number
+  /** The owner's rollover day: a budget month starts on this day of the month before. */
+  rolloverDay: number
+  /** Cutoff date per budget month, filled on demand so the hot loops stay cheap. */
+  cutoffs: Map<string, string>
+}
+
+function pad2(n: number): string {
+  return String(n).padStart(2, '0')
+}
+
+/** First calendar date of a budget month: day 1, or the rollover day of the month before. */
+export function budgetMonthStart(month: string, rolloverDay: number = 1): string {
+  return rolloverDay > 1 ? `${priorBudgetMonth(month)}-${pad2(rolloverDay)}` : `${month}-01`
+}
+
+/** How many calendar days a budget month spans. */
+export function budgetMonthLength(month: string, rolloverDay: number = 1): number {
+  return daysBetween(budgetMonthStart(month, rolloverDay), budgetMonthStart(shiftBudgetMonth(month, 1), rolloverDay))
+}
+
+/**
+ * The cut for a month, or null when the month is whole. Only `openMonth` (the
+ * budget month `today` falls in, from `defaultBudgetMonth`) is partial: a past
+ * month is whole, and a future month shows its whole committed picture rather
+ * than a slice of a month that has not begun. Days are counted from the budget
+ * month's own first day, so a rollover day of 13 cuts at "day 5 of the month
+ * that began on the 13th", not at the 5th of the calendar month.
+ */
+export function sameDaysCut(
+  month: string,
+  today: string,
+  openMonth: string = today.slice(0, 7),
+  rolloverDay: number = 1,
+): SameDaysCut | null {
+  if (month !== openMonth) return null
+  const elapsed = daysBetween(budgetMonthStart(openMonth, rolloverDay), today) + 1
+  return {
+    elapsedDays: Math.min(Math.max(elapsed, 1), budgetMonthLength(openMonth, rolloverDay)),
+    rolloverDay,
+    cutoffs: new Map(),
+  }
+}
+
+/** The same cut applied to another budget month, and whether `date` falls inside it. */
+export function withinCut(date: string, month: string, cut: SameDaysCut | null): boolean {
+  if (cut === null) return true
+  let cutoff = cut.cutoffs.get(month)
+  if (cutoff === undefined) {
+    cutoff = addDaysIso(budgetMonthStart(month, cut.rolloverDay), cut.elapsedDays - 1)
+    cut.cutoffs.set(month, cutoff)
+  }
+  return date <= cutoff
 }
 
 function countsOn(txn: Transaction, opts: BasisOptions): boolean {
@@ -61,18 +112,18 @@ export function signedExpense(txn: Transaction, opts: BasisOptions): number | nu
   return null
 }
 
-/** Net expense for a budget month through a day-of-month cutoff (null = whole month). */
-export function spendThroughDay(
+/** Net expense for a budget month through a same-days cut (null = whole month). */
+export function spendThroughCut(
   transactions: Transaction[],
   month: string,
-  day: number | null,
+  cut: SameDaysCut | null,
   basis: AnalyticsBasis,
 ): number {
   const opts = basisOptions(basis)
   let total = 0
   for (const txn of transactions) {
     if (txn.budgetMonth !== month) continue
-    if (day !== null && parseInt(txn.date.slice(8, 10), 10) > day) continue
+    if (!withinCut(txn.date, month, cut)) continue
     total += signedExpense(txn, opts) ?? 0
   }
   return total

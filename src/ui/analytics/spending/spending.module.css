@@ -45,9 +45,14 @@
   color: var(--color-text-muted);
 }
 
+/* Clears the app header and the stuck section bar (same offset as the bar in
+   SectionTabs.module.css), plus the bar's own height and a breath of air. */
 .detailCard {
   position: sticky;
-  top: 4.5rem;
+  top: calc(
+    var(--exp-header) - var(--exp-subnav-tuck) + env(safe-area-inset-top, 0px) +
+      var(--exp-subnav-h) + 0.75rem
+  );
 }
 
 .detailTitle {

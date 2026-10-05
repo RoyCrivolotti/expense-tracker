@@ -8,6 +8,7 @@ import {
   formatCentsCompact,
   fullMonthLabel,
   monthCloseStatus,
+  readyToCountMonth,
 } from '../../../engine'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { Card, EmptyState } from '../../components/primitives'
@@ -23,6 +24,7 @@ const STATUS_NOTE = {
   drift: 'Counted, with drift beyond the band: a transaction is missing or mistyped.',
   ready: 'Statements are paid. Count the cash you hold and enter it below.',
   waiting: 'A card statement is unpaid, so the cash cannot be counted yet.',
+  open: 'This month has not ended yet. Count the cash once it does.',
 } as const
 
 function CloseCard({
@@ -94,10 +96,13 @@ function DriftCard({
 export function CashView({
   model,
   month,
+  openMonth,
   actions,
 }: {
   model: ExpenseModel
   month: string
+  /** The budget month under way (rollover-aware); months past it are never "ready". */
+  openMonth: string
   actions?: ExpenseActions | undefined
 }) {
   const rows = useMemo(
@@ -111,8 +116,17 @@ export function CashView({
     [model.dataset],
   )
   const [picked, setPicked] = useState<string | null>(null)
-  const ready = rows.find((r) => monthCloseStatus(r) === 'ready')
-  const selectedMonth = picked ?? (rows.some((r) => r.month === month) ? month : rows[rows.length - 1]?.month)
+  // The header month picker outranks a dot tapped earlier: changing it means
+  // "show me that month", so the local pick resets (render-phase, pre-paint).
+  const [pickedFor, setPickedFor] = useState(month)
+  if (pickedFor !== month) {
+    setPickedFor(month)
+    setPicked(null)
+  }
+  const readyMonth = readyToCountMonth(rows, openMonth)
+  const pickedRow = picked !== null && rows.some((r) => r.month === picked) ? picked : null
+  const selectedMonth =
+    pickedRow ?? (rows.some((r) => r.month === month) ? month : rows[rows.length - 1]?.month)
   const selected = rows.find((r) => r.month === selectedMonth)
   const balances = useMemo(
     () =>
@@ -125,18 +139,23 @@ export function CashView({
   if (rows.length === 0 || !selected) {
     return <EmptyState>No months to reconcile yet.</EmptyState>
   }
-  const status = monthCloseStatus(selected)
+  const status = monthCloseStatus(selected, undefined, openMonth)
 
   return (
     <div className={styles.stack}>
-      {ready && ready.month !== selected.month && (
-        <button type="button" className={styles.banner} onClick={() => setPicked(ready.month)}>
-          {fullMonthLabel(ready.month)} is ready to count — its statements are paid.
+      {readyMonth !== null && readyMonth !== selected.month && (
+        <button type="button" className={styles.banner} onClick={() => setPicked(readyMonth)}>
+          {fullMonthLabel(readyMonth)} is ready to count.
         </button>
       )}
       <Card>
         <h3 className={styles.cardTitle}>Month close</h3>
-        <MonthCloseDots rows={rows} selected={selected.month} onSelect={setPicked} />
+        <MonthCloseDots
+          rows={rows}
+          selected={selected.month}
+          openMonth={openMonth}
+          onSelect={setPicked}
+        />
       </Card>
       <div className={styles.grid2}>
         <CloseCard row={selected} status={status} actions={actions} />

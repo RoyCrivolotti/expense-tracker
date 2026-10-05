@@ -127,6 +127,10 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // 4 KB gzip, all of it UI code and CSS in the lazy Analytics chunk, with no new library.
 // The redesign's final PR removes the old tables, the pie and the superseded charts, which
 // claws most of the Analytics growth back.
+//
+// That final PR landed: deleting the pie, the two income/expense charts and the old mobile
+// tabs took the total from 240.2 KB to 238.1 KB. The 244 KB ceiling stays, leaving the
+// usual few KB of headroom rather than resetting it to the measured byte.
 const TOTAL_MAX_GZIP = 244_000
 const GOALS_MAX_GZIP = 58_000
 

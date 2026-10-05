@@ -11,12 +11,14 @@ export function AnalyticsTab({
   onMonthChange,
   actions,
   onOpenTransactions,
+  onUseBaselineInGoals,
 }: {
   model: ExpenseModel
   month: string
   onMonthChange: (month: string) => void
   actions?: ExpenseActions | undefined
   onOpenTransactions?: ((preset: TransactionsEntry) => void) | undefined
+  onUseBaselineInGoals?: ((monthlyCents: number) => void) | undefined
 }) {
   if (model.months.length === 0) {
     return (
@@ -39,6 +41,7 @@ export function AnalyticsTab({
       onMonthChange={onMonthChange}
       actions={actions}
       onOpenTransactions={onOpenTransactions}
+      onUseBaselineInGoals={onUseBaselineInGoals}
     />
   )
 }

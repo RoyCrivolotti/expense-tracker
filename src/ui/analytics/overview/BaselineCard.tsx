@@ -18,17 +18,25 @@ function Row({ label, value, hint }: { label: string; value: string; hint?: stri
 }
 
 /**
- * What a year really costs, measured — the number Goals assumes, next to the
- * number the transactions prove. Read-only; the handoff into Goals is a later,
- * explicit step.
+ * What a year really costs, measured: the number Goals assumes, next to the
+ * number the transactions prove. "Use in Goals" opens the scenario editor with
+ * the measured spend prefilled as an unsaved draft: the save stays the user's.
  */
-export function BaselineCard({ baseline }: { baseline: SpendingBaseline }) {
+export function BaselineCard({
+  baseline,
+  onUseInGoals,
+}: {
+  baseline: SpendingBaseline
+  onUseInGoals?: ((monthlyCents: number) => void) | undefined
+}) {
   const format = useMoneyFormat()
   const compact = (cents: number) => formatCentsCompact(cents, format)
   return (
     <Card>
       <h3 className={styles.cardTitle}>Spending baseline</h3>
-      <p className={styles.cardSub}>Measured over your last {baseline.months.length} closed months.</p>
+      <p className={styles.cardSub}>
+        Measured over the {baseline.months.length} closed months before this one.
+      </p>
       <div className={styles.kvList}>
         <Row label="Trailing spend, total" value={compact(baseline.totalCents)} />
         <Row label="Typical month, mean" value={compact(baseline.meanMonthlyCents)} />
@@ -52,6 +60,15 @@ export function BaselineCard({ baseline }: { baseline: SpendingBaseline }) {
           </div>
         )}
       </div>
+      {onUseInGoals && (
+        <button
+          type="button"
+          className={styles.useInGoals}
+          onClick={() => onUseInGoals(baseline.meanMonthlyCents)}
+        >
+          Use in Goals
+        </button>
+      )}
     </Card>
   )
 }
