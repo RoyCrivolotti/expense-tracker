@@ -44,7 +44,8 @@
 }
 .fieldInput select,
 .fieldInput input[type='date'],
-.fieldInput input[type='month'] {
+.fieldInput input[type='month'],
+.fieldInput input[role='combobox'] {
   width: 100%;
   padding: 0.55rem 0.7rem;
   border: 1px solid transparent;
@@ -56,7 +57,8 @@
 }
 .fieldInput select:focus,
 .fieldInput input[type='date']:focus,
-.fieldInput input[type='month']:focus {
+.fieldInput input[type='month']:focus,
+.fieldInput input[role='combobox']:focus {
   border-color: var(--color-accent);
   outline: none;
 }

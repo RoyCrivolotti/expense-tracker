@@ -2,7 +2,7 @@ import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { makeDataset } from '../../testing/factories'
+import { makeDataset, makeTransaction } from '../../testing/factories'
 import { makeActions } from '../../testing/makeActions'
 import { buildExpenseModel } from '../buildExpenseModel'
 import { EXIT_MS, setMotionDisabledForTests } from '../hooks/motion'
@@ -201,6 +201,26 @@ describe('TransactionsSelectFooter bulk edit', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Apply changes' }))
 
     expect(selection.confirmBulkEdit).toHaveBeenCalledWith({}, [3])
+  })
+
+  it('tells the rename field which descriptions the chosen rows carry today', async () => {
+    const model = buildExpenseModel(
+      makeDataset({
+        transactions: [
+          makeTransaction({ id: 1, description: 'NETFLIX.COM' }),
+          makeTransaction({ id: 2, description: 'NETFLIX.COM' }),
+          makeTransaction({ id: 3, description: 'Netflix 0912' }),
+          makeTransaction({ id: 4, description: 'Rent' }),
+        ],
+      }),
+    )
+    const selection = makeSelection({ pendingBulkEdit: true, selected: new Set([1, 2, 3]) })
+    render(footer(selection, { model }))
+
+    await userEvent.click(screen.getByLabelText('Description'))
+
+    // Row 4 is not chosen, so Rent is not on the list.
+    expect(screen.getByText('Replaces NETFLIX.COM (2), Netflix 0912 (1).')).toBeInTheDocument()
   })
 
   it('backs out on Cancel without applying anything', async () => {

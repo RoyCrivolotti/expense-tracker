@@ -3,6 +3,8 @@ import {
   anyFieldEnabled,
   buildBulkLabelAdditions,
   buildBulkPatch,
+  canApplyBulkEdit,
+  summarizeDescriptions,
   type BulkEditFieldState,
 } from './bulkEditFields'
 
@@ -22,6 +24,8 @@ function fields(overrides: Partial<BulkEditFieldState> = {}): BulkEditFieldState
     flagId: 7,
     labelsEnabled: false,
     labelIds: [3, 4],
+    descriptionEnabled: false,
+    description: '  Netflix  ',
     ...overrides,
   }
 }
@@ -37,6 +41,35 @@ describe('anyFieldEnabled', () => {
 
   it('counts the labels field, so Apply enables for a labels-only edit', () => {
     expect(anyFieldEnabled(fields({ labelsEnabled: true }))).toBe(true)
+  })
+
+  it('counts the description field, so a rename-only edit has something to apply', () => {
+    expect(anyFieldEnabled(fields({ descriptionEnabled: true }))).toBe(true)
+  })
+})
+
+describe('canApplyBulkEdit', () => {
+  it('is false for an untouched form', () => {
+    expect(canApplyBulkEdit(fields())).toBe(false)
+  })
+
+  it('is true for a rename with text', () => {
+    expect(canApplyBulkEdit(fields({ descriptionEnabled: true }))).toBe(true)
+  })
+
+  it('is false while the description is on but empty, even with another field on', () => {
+    expect(canApplyBulkEdit(fields({ descriptionEnabled: true, description: '' }))).toBe(false)
+    expect(
+      canApplyBulkEdit(fields({ descriptionEnabled: true, description: '', categoryEnabled: true })),
+    ).toBe(false)
+  })
+
+  it('treats spaces alone as blank', () => {
+    expect(canApplyBulkEdit(fields({ descriptionEnabled: true, description: '   ' }))).toBe(false)
+  })
+
+  it('ignores a blank description that is switched off', () => {
+    expect(canApplyBulkEdit(fields({ description: '', categoryEnabled: true }))).toBe(true)
   })
 })
 
@@ -81,6 +114,14 @@ describe('buildBulkPatch', () => {
     })
   })
 
+  it('sends the description trimmed when the field is on', () => {
+    expect(buildBulkPatch(fields({ descriptionEnabled: true }))).toEqual({ description: 'Netflix' })
+  })
+
+  it('keeps the typed description out of the patch while the field is off', () => {
+    expect(buildBulkPatch(fields())).toEqual({})
+  })
+
   it('never includes labels: there is no column to patch for them', () => {
     expect(buildBulkPatch(fields({ labelsEnabled: true }))).toEqual({})
   })
@@ -97,5 +138,27 @@ describe('buildBulkLabelAdditions', () => {
 
   it('returns the chosen labels once the field is on', () => {
     expect(buildBulkLabelAdditions(fields({ labelsEnabled: true, labelIds: [3, 4] }))).toEqual([3, 4])
+  })
+})
+
+describe('summarizeDescriptions', () => {
+  const rows = [
+    { id: 1, description: 'Netflix' },
+    { id: 2, description: 'Netflix ' },
+    { id: 3, description: 'NETFLIX.COM' },
+    { id: 4, description: 'Spotify' },
+    { id: 5, description: 'Rent' },
+  ]
+
+  it('counts only the chosen rows, most common first', () => {
+    expect(summarizeDescriptions(rows, new Set([1, 2, 3, 4]))).toEqual([
+      { description: 'Netflix', count: 2 },
+      { description: 'NETFLIX.COM', count: 1 },
+      { description: 'Spotify', count: 1 },
+    ])
+  })
+
+  it('is empty when nothing chosen is in the list', () => {
+    expect(summarizeDescriptions(rows, new Set([99]))).toEqual([])
   })
 })

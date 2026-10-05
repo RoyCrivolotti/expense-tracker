@@ -7,6 +7,7 @@ import { EXIT_MS } from '../hooks/motion'
 import { BatchBar } from './BatchBar'
 import { BatchDeleteConfirm } from './BatchDeleteConfirm'
 import { BulkEditSheet } from './BulkEditSheet'
+import { summarizeDescriptions } from './bulkEditFields'
 
 interface SelectionState {
   selectMode: boolean
@@ -54,9 +55,14 @@ export function TransactionsSelectFooter({
     () => (actionsEnabled && pendingBatchDelete ? { count, hiddenCount } : null),
     [actionsEnabled, pendingBatchDelete, count, hiddenCount],
   )
+  const transactions = model.dataset.transactions
+  const selected = selection.selected
   const editing = useMemo(
-    () => (actionsEnabled && pendingBulkEdit ? { count, hiddenCount } : null),
-    [actionsEnabled, pendingBulkEdit, count, hiddenCount],
+    () =>
+      actionsEnabled && pendingBulkEdit
+        ? { count, hiddenCount, descriptions: summarizeDescriptions(transactions, selected) }
+        : null,
+    [actionsEnabled, pendingBulkEdit, count, hiddenCount, transactions, selected],
   )
   return (
     <>
@@ -94,6 +100,7 @@ export function TransactionsSelectFooter({
           <BulkEditSheet
             count={shown.count}
             hiddenCount={shown.hiddenCount}
+            currentDescriptions={shown.descriptions}
             model={model}
             actions={actions}
             busy={selection.busy}
