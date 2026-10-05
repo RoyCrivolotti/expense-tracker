@@ -51,6 +51,11 @@ function activeInMonth(group: OccurrenceGroup, month: string): boolean {
   )
 }
 
+/** The categories whose budgets make up the envelope: active, with a budget set. */
+function budgetedCategoryIds(categories: Category[]): Set<number> {
+  return new Set(categories.filter((c) => c.active && c.monthlyBudgetCents > 0).map((c) => c.id))
+}
+
 /**
  * Fixed charges expected in a budget month: instalments due plus monthly
  * recurring expenses seen in that month or the two before it — a cancelled
@@ -65,7 +70,7 @@ export function expectedFixedCents(
   categories: Category[],
   month: string,
 ): number {
-  const budgeted = new Set(categories.filter((c) => c.active && c.monthlyBudgetCents > 0).map((c) => c.id))
+  const budgeted = budgetedCategoryIds(categories)
   let total = 0
   for (const plan of plans) {
     if (!plan.active || plan.type !== 'expense' || !budgeted.has(plan.categoryId)) continue
@@ -107,11 +112,15 @@ export function computeSpendingPace(
     .reduce((s, c) => s + c.monthlyBudgetCents, 0)
   const flexibleBudgetCents = Math.max(0, totalBudget - expectedFixedCents(transactions, plans, categories, month))
 
-  const split = splitFixedFlexible(transactions, classifier, month, basis, cut)
+  // The clock measures the spend the envelope was built from: spend in a category with
+  // no active budget is neither in the envelope nor in the pace.
+  const budgeted = budgetedCategoryIds(categories)
+  const inEnvelope = transactions.filter((t) => budgeted.has(t.categoryId))
+  const split = splitFixedFlexible(inEnvelope, classifier, month, basis, cut)
   const frac = dayOfMonth / daysInMonth
   const projectedCents = open && frac > 0 ? Math.round(split.flexibleCents / frac) : split.flexibleCents
   const lastMonthSameDayCents = prevMonth
-    ? splitFixedFlexible(transactions, classifier, prevMonth, basis, cut).flexibleCents
+    ? splitFixedFlexible(inEnvelope, classifier, prevMonth, basis, cut).flexibleCents
     : null
 
   return {

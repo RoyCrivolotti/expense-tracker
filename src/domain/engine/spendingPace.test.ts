@@ -142,6 +142,25 @@ describe('computeSpendingPace', () => {
     expect(pace.flexibleSpentCents).toBe(9000)
   })
 
+  it('leaves spend in categories with no active budget out of the clock, as out of the envelope', () => {
+    const noBudget = [
+      ...categories,
+      { id: 4, name: 'Dining', monthlyBudgetCents: 0, sortOrder: 3, active: true },
+    ]
+    const spend = [
+      txn({ date: '2026-03-04', description: 'Groceries run', amountCents: 9000 }),
+      txn({ date: '2026-03-05', description: 'Dinner out', categoryId: 4, amountCents: 30000 }),
+      txn({ date: '2026-03-06', description: 'Old gym', categoryId: 3, amountCents: 7000 }),
+    ]
+    const pace = computeSpendingPace(spend, noBudget, [], classifyFixedSpend(spend), {
+      month: '2026-03',
+      today: '2026-03-10',
+      basis: 'committed',
+      prevMonth: null,
+    })
+    expect(pace.flexibleSpentCents).toBe(9000)
+  })
+
   it('never reports a negative flexible budget', () => {
     const tight: Category[] = [{ id: 1, name: 'Rent', monthlyBudgetCents: 50000, sortOrder: 0, active: true }]
     const pace = computeSpendingPace(rentHistory(), tight, [], classifyFixedSpend(rentHistory()), {
