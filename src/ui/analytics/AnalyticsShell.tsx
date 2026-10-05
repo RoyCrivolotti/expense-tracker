@@ -25,12 +25,14 @@ export function AnalyticsShell({
   onMonthChange,
   actions,
   onOpenTransactions,
+  onUseBaselineInGoals,
 }: {
   model: ExpenseModel
   month: string
   onMonthChange: (month: string) => void
   actions?: ExpenseActions | undefined
   onOpenTransactions?: ((preset: TransactionsEntry) => void) | undefined
+  onUseBaselineInGoals?: ((monthlyCents: number) => void) | undefined
 }) {
   const [view, setView] = useState<AnalyticsView>('overview')
   const filters = useAnalyticsFilters()
@@ -55,6 +57,7 @@ export function AnalyticsShell({
           today={today}
           onSelectMonth={onMonthChange}
           onShowView={setView}
+          onUseBaselineInGoals={onUseBaselineInGoals}
         />
       )}
       {view === 'spending' && (

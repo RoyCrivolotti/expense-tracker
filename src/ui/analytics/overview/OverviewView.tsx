@@ -31,6 +31,7 @@ interface Props {
   today: string
   onSelectMonth: (month: string) => void
   onShowView: (view: AnalyticsView) => void
+  onUseBaselineInGoals?: ((monthlyCents: number) => void) | undefined
 }
 
 /** How am I doing? KPIs, trend, pace, signals, allocation, movers, baseline. */
@@ -43,6 +44,7 @@ export function OverviewView({
   today,
   onSelectMonth,
   onShowView,
+  onUseBaselineInGoals,
 }: Props) {
   const data = useMemo(
     () => buildOverviewData(model, { month, period, compare, basis, today }),
@@ -87,7 +89,7 @@ export function OverviewView({
         <AllocationBar allocation={data.allocation} />
         <MoversCard movers={data.movers} />
       </div>
-      {data.baseline && <BaselineCard baseline={data.baseline} />}
+      {data.baseline && <BaselineCard baseline={data.baseline} onUseInGoals={onUseBaselineInGoals} />}
       <InsightsCharts model={model} month={month} basis={basis} />
     </div>
   )

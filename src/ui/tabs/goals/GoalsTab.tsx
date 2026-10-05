@@ -14,7 +14,13 @@ import type { InvestedSnapshot } from './checkinDate'
 import { SectionTitle } from '../../components/primitives'
 import { GoalsViewSwitch } from './GoalsViewSwitch'
 import { GoalsPanel } from './GoalsPanel'
-import { mobileViewOf, type AssumptionsFocus, type MobilePlanView, type TabView } from './goalsView'
+import {
+  entryDraftPatch,
+  mobileViewOf,
+  type AssumptionsFocus,
+  type MobilePlanView,
+  type TabView,
+} from './goalsView'
 import { useGoalsNarrow } from './useGoalsNarrow'
 import { useGoalsScrollMemory } from './useGoalsScrollMemory'
 import { GOALS_CONTENT_ANCHOR_ID } from './goalsAnchors'
@@ -28,8 +34,13 @@ import type { DisplayMode } from './PlanHero'
 import { activePlan } from './scenarioSelection'
 import styles from './goals.module.css'
 
-/** How the tab was reached: 'checkin' opens Progress with the check-in form up. */
-export type GoalsEntry = 'checkin' | null
+/**
+ * How the tab was reached: 'checkin' opens Progress with the check-in form up;
+ * a baseline entry opens Plan with the measured monthly spend prefilled into the
+ * draft's annual spend — an unsaved edit that goes through the ordinary Save
+ * path, never a silent write.
+ */
+export type GoalsEntry = 'checkin' | { kind: 'baseline'; monthlyCents: number } | null
 
 interface GoalsTabProps {
   model: ExpenseModel
@@ -121,6 +132,14 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
   )
 
   const editor = useScenarioEditor(dataset, actions, avgSaving)
+  // The Analytics baseline lands as a draft edit, once per arrival (the tab remounts on
+  // every navigation, so mount-time application is per-entry). Save remains the user's.
+  const [baselineApplied, setBaselineApplied] = useState(false)
+  const baselinePatch = entryDraftPatch(entry)
+  if (baselinePatch && !baselineApplied) {
+    setBaselineApplied(true)
+    editor.patchDraft(baselinePatch)
+  }
   useGoalsUnsavedWork(editor, actions != null)
   // Kept here, not in Plan, so a choice still being saved survives a visit to another view.
   const levers = useStarredLevers(dataset.settings.goalLevers, actions?.updateSettings)

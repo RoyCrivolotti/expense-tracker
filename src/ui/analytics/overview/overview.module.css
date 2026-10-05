@@ -374,6 +374,19 @@
   color: var(--exp-danger-text);
 }
 
+.useInGoals {
+  margin-top: 0.8rem;
+  align-self: flex-start;
+  border: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text);
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
 /* Trend */
 .trendSpend {
   fill: var(--exp-expense);

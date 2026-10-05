@@ -94,6 +94,13 @@ describe('OverviewView', () => {
     expect(onShowView).toHaveBeenCalledWith('spending')
   })
 
+  it('hands the measured baseline to Goals when asked', () => {
+    const onUseBaselineInGoals = vi.fn()
+    renderView({ onUseBaselineInGoals })
+    fireEvent.click(screen.getByRole('button', { name: 'Use in Goals' }))
+    expect(onUseBaselineInGoals).toHaveBeenCalledWith(expect.any(Number))
+  })
+
   it('opens the monthly totals table on demand', () => {
     renderView()
     expect(screen.queryByText('Net saving')).toBeNull()
