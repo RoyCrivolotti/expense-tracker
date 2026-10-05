@@ -7,6 +7,7 @@ const STATUS_GLYPH: Record<MonthCloseStatus, string> = {
   drift: '!',
   ready: '●',
   waiting: '…',
+  open: '◔',
 }
 
 const STATUS_TITLE: Record<MonthCloseStatus, string> = {
@@ -14,22 +15,26 @@ const STATUS_TITLE: Record<MonthCloseStatus, string> = {
   drift: 'drift found',
   ready: 'ready to count',
   waiting: 'waiting on a card statement',
+  open: 'not ended yet',
 }
 
-/** One dot per month: counted, drift found, ready, or waiting on its statement. */
+/** One dot per month: counted, drift found, ready, waiting on its statement, or not ended yet. */
 export function MonthCloseDots({
   rows,
   selected,
+  openMonth,
   onSelect,
 }: {
   rows: CashRow[]
   selected: string
+  /** The budget month under way; it shows as such until it closes. */
+  openMonth?: string | undefined
   onSelect: (month: string) => void
 }) {
   return (
     <div className={styles.dots} role="group" aria-label="Month close status">
       {rows.map((row) => {
-        const status = monthCloseStatus(row)
+        const status = monthCloseStatus(row, undefined, openMonth)
         return (
           <button
             key={row.month}

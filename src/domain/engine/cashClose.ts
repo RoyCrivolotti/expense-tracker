@@ -11,22 +11,36 @@ import type { CashRow } from './cashReconciliation'
 /** Expected and counted differ by tens of euros on tens of thousands; under this, the month is square. */
 export const CASH_DRIFT_TOLERANCE_CENTS = 500
 
-export type MonthCloseStatus = 'counted' | 'drift' | 'ready' | 'waiting'
+export type MonthCloseStatus = 'counted' | 'drift' | 'ready' | 'waiting' | 'open'
 
 /**
  * counted: cash entered and the month's new drift sits inside the tolerance.
  * drift:   cash entered, and this month added real drift to chase.
  * ready:   every statement is paid and the cash can be counted now.
  * waiting: a card statement is still unpaid, so counting would be meaningless.
+ * open:    the month under way or a later one (when `openMonth` is given): it has not ended.
  */
 export function monthCloseStatus(
   row: CashRow,
   toleranceCents: number = CASH_DRIFT_TOLERANCE_CENTS,
+  openMonth?: string,
 ): MonthCloseStatus {
   if (row.actualCashCents !== null) {
     return Math.abs(row.monthGapCents ?? 0) <= toleranceCents ? 'counted' : 'drift'
   }
+  if (openMonth !== undefined && row.month >= openMonth) return 'open'
   return row.unpaidLiabilityCents > 0 ? 'waiting' : 'ready'
+}
+
+/**
+ * The newest month that can be counted now. The newest, not the oldest: months from
+ * before the user began counting stay uncounted for good, and pointing at them would
+ * make the prompt permanent. Shared by the Cash banner and the Overview signal so
+ * the two always name the same month.
+ */
+export function readyToCountMonth(rows: CashRow[], openMonth?: string): string | null {
+  const ready = [...rows].reverse().find((r) => monthCloseStatus(r, undefined, openMonth) === 'ready')
+  return ready?.month ?? null
 }
 
 export interface BridgeSegment {

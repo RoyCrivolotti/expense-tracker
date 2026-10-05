@@ -98,6 +98,13 @@ describe('CashView', () => {
     expect(screen.queryByText(/net worth/i)).toBeNull()
   })
 
+  it('tells a month that has not ended apart from one that is ready to count', () => {
+    render(<CashView model={model()} month="2026-01" openMonth="2026-02" />)
+    expect(screen.getByText(/Statements are paid\. Count the cash/)).toBeInTheDocument()
+    fireEvent.click(screen.getByTitle('Feb: not ended yet'))
+    expect(screen.getByText(/has not ended yet/)).toBeInTheDocument()
+  })
+
   it('says so when there is no month to reconcile', () => {
     const empty = buildExpenseModel(makeDataset({ accounts, transactions: [], cashActuals: [] }))
     render(<CashView model={empty} month="2026-01" openMonth="2026-01" />)

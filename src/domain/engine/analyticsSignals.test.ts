@@ -91,6 +91,12 @@ describe('computeSignals', () => {
     expect(signals[0]).toMatchObject({ kind: 'cashReady', month: '2026-02' })
   })
 
+  it('names a month with no card activity too, as the Cash banner does', () => {
+    const rows = [cashRow({ month: '2026-02', cardCharges: new Map() })]
+    const signals = computeSignals({ pace: pace({ open: false }), movers: [], cashRows: rows, openMonth: '2026-03' })
+    expect(signals[0]).toMatchObject({ kind: 'cashReady', month: '2026-02' })
+  })
+
   it('never exceeds the cap', () => {
     const signals = computeSignals({
       pace: pace(),

@@ -6,6 +6,7 @@
  * sentences, because money and month formatting belong to the presentation.
  */
 import type { CashRow } from './cashReconciliation'
+import { readyToCountMonth } from './cashClose'
 import type { Mover } from './movers'
 import type { SpendingPace } from './spendingPace'
 
@@ -79,24 +80,10 @@ function moverSignal(movers: Mover[]): AnalyticsSignal | null {
   }
 }
 
-/**
- * The newest month whose statements are all paid but whose cash is not yet
- * counted, and that is not still under way. The newest, not the oldest: months
- * from before the user began counting stay uncounted forever, and pointing at
- * them would make the banner permanent.
- */
+/** The newest month ready to count, the same one the Cash view's banner names. */
 function cashSignal(cashRows: CashRow[], openMonth?: string): AnalyticsSignal | null {
-  const ready = [...cashRows]
-    .reverse()
-    .find(
-      (r) =>
-        (openMonth === undefined || r.month < openMonth) &&
-        r.actualCashCents === null &&
-        r.unpaidLiabilityCents === 0 &&
-        r.cardCharges.size > 0,
-    )
-  if (!ready) return null
-  return { kind: 'cashReady', tone: 'info', month: ready.month }
+  const month = readyToCountMonth(cashRows, openMonth)
+  return month === null ? null : { kind: 'cashReady', tone: 'info', month }
 }
 
 export function computeSignals({ pace, movers, cashRows, openMonth }: SignalInputs): AnalyticsSignal[] {
