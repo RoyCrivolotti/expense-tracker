@@ -367,3 +367,35 @@ describe('useTransactionsTabState — the month arrows and the date scope', () =
     expect(result.current.dateScope).toBe('budgetMonth')
   })
 })
+
+describe('useTransactionsTabState — entry preset', () => {
+  it('applies an Analytics drill-down preset on arrival, replacing the secondary filters', () => {
+    const model = modelWith([work], [madrid])
+    const { result, rerender } = renderHook(
+      ({ entry }: { entry: { categoryId?: number } | null }) =>
+        useTransactionsTabState(model, '2026-05', undefined, { entry }),
+      { initialProps: { entry: null as { categoryId?: number } | null } },
+    )
+    act(() => result.current.setQuery('coffee'))
+
+    rerender({ entry: { categoryId: 3 } })
+
+    expect(result.current.categoryId).toBe(3)
+    expect(result.current.query).toBe('')
+  })
+
+  it('applies the same preset again when handed a fresh object', () => {
+    const model = modelWith([work], [madrid])
+    const { result, rerender } = renderHook(
+      ({ entry }: { entry: { labelIds?: number[] } | null }) =>
+        useTransactionsTabState(model, '2026-05', undefined, { entry }),
+      { initialProps: { entry: { labelIds: [20] } } },
+    )
+    expect(result.current.labelIds).toEqual([20])
+
+    act(() => result.current.setLabelIds([]))
+    rerender({ entry: { labelIds: [20] } })
+
+    expect(result.current.labelIds).toEqual([20])
+  })
+})

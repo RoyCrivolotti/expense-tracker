@@ -19,7 +19,7 @@ beforeAll(() => {
 
 describe('AnalyticsTab', () => {
   it('shows the empty state when there is no data', () => {
-    render(<AnalyticsTab model={buildExpenseModel(makeDataset())} month="" />)
+    render(<AnalyticsTab model={buildExpenseModel(makeDataset())} month="" onMonthChange={vi.fn()} />)
     expect(screen.getByText(/No data yet/)).toBeInTheDocument()
   })
 
@@ -27,7 +27,7 @@ describe('AnalyticsTab', () => {
     const model = buildExpenseModel(
       makeDataset({ transactions: [makeTransaction({ id: 1, budgetMonth: '2026-01' })] }),
     )
-    render(<AnalyticsTab model={model} month="2026-01" />)
+    render(<AnalyticsTab model={model} month="2026-01" onMonthChange={vi.fn()} />)
     expect(screen.getByRole('tablist', { name: 'Analytics view' })).toBeInTheDocument()
   })
 })
