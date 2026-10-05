@@ -6,8 +6,9 @@ import { ANALYTICS_VIEWS, type AnalyticsView } from './analyticsView'
 import { AnalyticsFilterRow } from './AnalyticsFilterRow'
 import { useAnalyticsFilters } from './useAnalyticsFilters'
 import { OverviewView } from './overview/OverviewView'
-import { SpendingPanel } from './SpendingPanel'
+import { SpendingView } from './spending/SpendingView'
 import { CashPanel } from './CashPanel'
+import type { TransactionsEntry } from '../tabs/transactionsEntry'
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10)
@@ -23,11 +24,13 @@ export function AnalyticsShell({
   month,
   onMonthChange,
   actions,
+  onOpenTransactions,
 }: {
   model: ExpenseModel
   month: string
   onMonthChange: (month: string) => void
   actions?: ExpenseActions | undefined
+  onOpenTransactions?: ((preset: TransactionsEntry) => void) | undefined
 }) {
   const [view, setView] = useState<AnalyticsView>('overview')
   const filters = useAnalyticsFilters()
@@ -54,7 +57,14 @@ export function AnalyticsShell({
           onShowView={setView}
         />
       )}
-      {view === 'spending' && <SpendingPanel model={model} month={month} basis={filters.basis} />}
+      {view === 'spending' && (
+        <SpendingView
+          model={model}
+          month={month}
+          basis={filters.basis}
+          onOpenTransactions={onOpenTransactions}
+        />
+      )}
       {view === 'cash' && <CashPanel model={model} actions={actions} />}
     </SectionTabs>
   )

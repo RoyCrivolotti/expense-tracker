@@ -107,7 +107,7 @@ describe('AnalyticsShell on a phone', () => {
     ])
 
     fireEvent.click(screen.getByRole('tab', { name: 'Spending' }))
-    expect(screen.getByText('Budget vs actual')).toBeInTheDocument()
+    expect(screen.getByRole('radiogroup', { name: 'Group spending by' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('tab', { name: 'Cash' }))
     expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Cash')

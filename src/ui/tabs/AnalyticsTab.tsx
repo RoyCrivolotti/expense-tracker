@@ -1,5 +1,6 @@
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
+import type { TransactionsEntry } from './transactionsEntry'
 import { EmptyState, SectionTitle } from '../components/primitives'
 import { AnalyticsShell } from '../analytics/AnalyticsShell'
 import styles from './tabs.module.css'
@@ -9,11 +10,13 @@ export function AnalyticsTab({
   month,
   onMonthChange,
   actions,
+  onOpenTransactions,
 }: {
   model: ExpenseModel
   month: string
   onMonthChange: (month: string) => void
   actions?: ExpenseActions | undefined
+  onOpenTransactions?: ((preset: TransactionsEntry) => void) | undefined
 }) {
   if (model.months.length === 0) {
     return (
@@ -29,7 +32,15 @@ export function AnalyticsTab({
     )
   }
 
-  return <AnalyticsShell model={model} month={month} onMonthChange={onMonthChange} actions={actions} />
+  return (
+    <AnalyticsShell
+      model={model}
+      month={month}
+      onMonthChange={onMonthChange}
+      actions={actions}
+      onOpenTransactions={onOpenTransactions}
+    />
+  )
 }
 
 /* The analytics chunk is lazy-loaded (like Goals), which needs a default export. */
