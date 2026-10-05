@@ -88,7 +88,7 @@ Grid mode, with CSV export. **Cash** answers "do my numbers match": one dot per 
 bridge from opening cash to expected cash with the count entered under it, drift bars with a ±5 €
 tolerance band, and balances labelled as cost; the full table sits in a fold. A committed/paid
 basis toggle (committed by default, matching budgets and the Dashboard) applies to Overview and
-Spending; Cash is paid-basis by nature. An open month is only compared with the same days of
+Spending; Cash is paid-basis by nature. The Overview's cards each carry a closed "How is this calculated?" note, and a closed "Detected fixed costs" card lists what counts as fixed. Cash starts counting at the first month you count: earlier months are muted, and that first count is the baseline drift is measured from. An open month is only compared with the same days of
 other months.
 
 | Overview (desktop) | Overview (mobile) |
