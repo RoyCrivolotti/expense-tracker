@@ -52,6 +52,7 @@ export function buildOverviewData(model: ExpenseModel, opts: OverviewOptions): O
   const { dataset, months } = model
   const { transactions, categories, installmentPlans, goalScenarios } = dataset
   const { month, period, compare, basis, today, openMonth } = opts
+  const rolloverDay = dataset.settings.budgetRolloverDay
 
   const classifier = classifyFixedSpend(transactions)
   const kpis = computeOverviewKpis(transactions, {
@@ -62,11 +63,13 @@ export function buildOverviewData(model: ExpenseModel, opts: OverviewOptions): O
     basis,
     today,
     openMonth,
+    rolloverDay,
   })
   const pace = computeSpendingPace(transactions, categories, installmentPlans, classifier, {
     month,
     today,
     openMonth,
+    rolloverDay,
     basis,
     prevMonth: months.includes(priorBudgetMonth(month)) ? priorBudgetMonth(month) : null,
   })
@@ -76,6 +79,7 @@ export function buildOverviewData(model: ExpenseModel, opts: OverviewOptions): O
     basis,
     today,
     openMonth,
+    rolloverDay,
   })
   const cashRows = computeCashReconciliation(
     transactions,

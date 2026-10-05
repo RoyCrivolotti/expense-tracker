@@ -37,6 +37,21 @@ desktop, each built to answer a question and lead somewhere.
 - **Removed:** the pie (ranked rows beat it at comparison), the two-line YTD chart (the gap between
   the lines was the information), the duplicate month picker on the phone, and the Monthly totals
   table as a section (it lives behind the trend's Table toggle).
+- **The open month is counted from its own first day.** With a rollover day, a budget month starts
+  on that day of the month before, but the like-for-like cut used the day of the calendar month, so
+  on a day-13 rollover the open month's first weeks were left out of the numbers until it closed.
+  Spent, pace, movers and the Spending rows now cut every month at the same number of days since it
+  began.
+- **Year to date and the last 12 months are compared with the same months a year earlier**, with
+  the open month and its counterpart cut at the same days. The baseline used to shift back by the
+  window's own length, which overlapped the window across a gap in the data and read as a drop
+  whenever the month was half over.
+- **The pace clock measures the categories that have a budget.** Spend in a category with no
+  budget no longer turns the meter red against an envelope it was never part of.
+- **Cash names one month ready to count**, in the banner and the Overview signal alike, and a
+  month that has not ended shows as such instead of "ready".
+- **Use in Goals says what it did**, with a toast naming the annual spend it set and that it is
+  unsaved.
 
 ## October 2026 (typed numbers in Assumptions)
 

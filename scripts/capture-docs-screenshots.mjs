@@ -15,6 +15,7 @@ const OUT = join(ROOT, 'docs/screenshots/gallery')
 // 5173 is routinely taken by whichever one started first.
 const PORT = process.env.CAPTURE_PORT ?? '5173'
 const BASE = `http://127.0.0.1:${PORT}`
+const CAPTURE_DATE = '2026-10-15T12:00:00'
 
 async function applyTheme(page, theme) {
   await page.addInitScript((selected) => {
@@ -383,6 +384,11 @@ async function capture() {
     colorScheme: 'light',
     reducedMotion: 'reduce',
   })
+  // The pages read today's date (the open month, the pace clock, "last month"), so a
+  // gallery captured on another day came out different. A fixed date, inside the demo
+  // data's last month, makes a re-run reproduce the same pictures.
+  const captureDate = new Date(process.env.CAPTURE_DATE ?? CAPTURE_DATE)
+  for (const context of [desktopDark, mobileDark, desktopLight]) await context.clock.setFixedTime(captureDate)
 
   const d = await desktopDark.newPage()
   await applyTheme(d, 'dark')

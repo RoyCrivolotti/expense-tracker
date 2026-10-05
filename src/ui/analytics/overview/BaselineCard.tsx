@@ -18,7 +18,7 @@ function Row({ label, value, hint }: { label: string; value: string; hint?: stri
 }
 
 /**
- * What a year really costs, measured — the number Goals assumes, next to the
+ * What a year really costs, measured: the number Goals assumes, next to the
  * number the transactions prove. "Use in Goals" opens the scenario editor with
  * the measured spend prefilled as an unsaved draft: the save stays the user's.
  */

@@ -10,7 +10,7 @@ import { daysBetween, priorBudgetMonth } from './dates'
 import { expectedIndexForMonth } from './installments'
 import { classifyFrequency } from './recurringPredict'
 import type { OccurrenceGroup } from './recurringTypes'
-import { type AnalyticsBasis, sameDaysLimit } from './analyticsPeriod'
+import { type AnalyticsBasis, budgetMonthLength, sameDaysCut } from './analyticsPeriod'
 import { type FixedSpendClassifier, recurringFixedGroups, splitFixedFlexible } from './fixedFlexible'
 
 export interface SpendingPace {
@@ -27,11 +27,6 @@ export interface SpendingPace {
   projectedCents: number
   /** Last month's flexible spend through the same day, or null without a last month. */
   lastMonthSameDayCents: number | null
-}
-
-function daysInCalendarMonth(month: string): number {
-  const [y, m] = month.split('-').map(Number) as [number, number]
-  return new Date(y, m, 0).getDate()
 }
 
 function median(nums: number[]): number {
@@ -56,9 +51,14 @@ function activeInMonth(group: OccurrenceGroup, month: string): boolean {
   )
 }
 
+/** The categories whose budgets make up the envelope: active, with a budget set. */
+function budgetedCategoryIds(categories: Category[]): Set<number> {
+  return new Set(categories.filter((c) => c.active && c.monthlyBudgetCents > 0).map((c) => c.id))
+}
+
 /**
  * Fixed charges expected in a budget month: instalments due plus monthly
- * recurring expenses seen in that month or the two before it — a cancelled
+ * recurring expenses seen in that month or the two before it: a cancelled
  * subscription must not shrink the flexible envelope forever. Quarterly and
  * annual patterns are left out: they are lumpy, and guessing their month wrong
  * would swing the envelope. A charge in a category with no active budget never
@@ -70,7 +70,7 @@ export function expectedFixedCents(
   categories: Category[],
   month: string,
 ): number {
-  const budgeted = new Set(categories.filter((c) => c.active && c.monthlyBudgetCents > 0).map((c) => c.id))
+  const budgeted = budgetedCategoryIds(categories)
   let total = 0
   for (const plan of plans) {
     if (!plan.active || plan.type !== 'expense' || !budgeted.has(plan.categoryId)) continue
@@ -91,6 +91,8 @@ export interface SpendingPaceOptions {
   prevMonth: string | null
   /** The budget month `today` falls in (rollover-aware); defaults to today's calendar month. */
   openMonth?: string
+  /** The owner's budget rollover day; defaults to plain calendar months. */
+  rolloverDay?: number
 }
 
 export function computeSpendingPace(
@@ -98,23 +100,27 @@ export function computeSpendingPace(
   categories: Category[],
   plans: InstallmentPlan[],
   classifier: FixedSpendClassifier,
-  { month, today, basis, prevMonth, openMonth }: SpendingPaceOptions,
+  { month, today, basis, prevMonth, openMonth, rolloverDay }: SpendingPaceOptions,
 ): SpendingPace {
-  const daysInMonth = daysInCalendarMonth(month)
-  const dayLimit = sameDaysLimit(month, today, openMonth)
-  const open = dayLimit !== null
-  const dayOfMonth = Math.min(dayLimit ?? daysInMonth, daysInMonth)
+  const daysInMonth = budgetMonthLength(month, rolloverDay)
+  const cut = sameDaysCut(month, today, openMonth, rolloverDay)
+  const open = cut !== null
+  const dayOfMonth = cut?.elapsedDays ?? daysInMonth
 
   const totalBudget = categories
     .filter((c) => c.active)
     .reduce((s, c) => s + c.monthlyBudgetCents, 0)
   const flexibleBudgetCents = Math.max(0, totalBudget - expectedFixedCents(transactions, plans, categories, month))
 
-  const split = splitFixedFlexible(transactions, classifier, month, basis, dayLimit)
+  // The clock measures the spend the envelope was built from: spend in a category with
+  // no active budget is neither in the envelope nor in the pace.
+  const budgeted = budgetedCategoryIds(categories)
+  const inEnvelope = transactions.filter((t) => budgeted.has(t.categoryId))
+  const split = splitFixedFlexible(inEnvelope, classifier, month, basis, cut)
   const frac = dayOfMonth / daysInMonth
   const projectedCents = open && frac > 0 ? Math.round(split.flexibleCents / frac) : split.flexibleCents
   const lastMonthSameDayCents = prevMonth
-    ? splitFixedFlexible(transactions, classifier, prevMonth, basis, dayLimit).flexibleCents
+    ? splitFixedFlexible(inEnvelope, classifier, prevMonth, basis, cut).flexibleCents
     : null
 
   return {

@@ -79,21 +79,28 @@ describe('computeSpendingGroups by category', () => {
     expect(groceries.spark.find((s) => s.month === '2026-02')?.cents).toBe(30000)
   })
 
-  it('clamps by the rollover-aware open month when one is given', () => {
+  it('counts the open month from its own first day under a rollover', () => {
+    // Day-13 rollover on Mar 5: the March budget month began Feb 13, so a Feb 20 row is inside it.
+    const rolled = [
+      txn({ date: '2026-02-20', description: 'early', amountCents: 28000 }),
+      txn({ date: '2026-03-08', description: 'later', amountCents: 9000 }),
+    ]
     const rows = computeSpendingGroups(
-      { transactions: txns, categories, labels },
+      { transactions: rolled, categories, labels },
       {
         months: MONTHS,
         month: '2026-03',
         basis: 'committed',
-        // Feb 26 calendar-wise, but the March budget month is already under way.
-        today: '2026-02-26',
+        today: '2026-03-05',
         openMonth: '2026-03',
+        rolloverDay: 13,
         groupBy: 'category',
       },
     )
-    // Day 26 covers the day-5 March transactions.
-    expect(rows.find((r) => r.name === 'Groceries')?.currentCents).toBe(28000)
+    const groceries = rows.find((r) => r.name === 'Groceries')!
+    expect(groceries.currentCents).toBe(28000)
+    // 21 of the budget month's 28 days have passed.
+    expect(groceries.shouldBeTodayCents).toBe(Math.round(40000 * (21 / 28)))
   })
 })
 

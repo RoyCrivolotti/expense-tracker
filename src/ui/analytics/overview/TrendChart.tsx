@@ -99,7 +99,7 @@ export function TrendChart({ model, selectedMonth, onSelectMonth }: Props) {
   )
 
   // The focus hook captures the pointer on pointerdown, which retargets the click
-  // to the svg itself — a per-bar hit rect would never see it. So the svg owns the
+  // to the svg itself: a per-bar hit rect would never see it. So the svg owns the
   // click and maps it back to the nearest month, the same way hover focus does.
   const onClick = (e: React.MouseEvent<SVGSVGElement>) => {
     const svg = e.currentTarget

@@ -21,6 +21,11 @@ const BASELINE_NAME: Record<CompareMode, string> = {
   prevYear: 'last year',
 }
 
+const WINDOW_BASELINE_NAME: Record<Exclude<AnalyticsPeriod, 'month'>, string> = {
+  ytd: 'last year',
+  last12: 'the year before',
+}
+
 interface Props {
   model: ExpenseModel
   month: string
@@ -57,14 +62,16 @@ export function OverviewView({
     [data.kpis.series, data.unpaidByMonth],
   )
   const [showTable, setShowTable] = useState(false)
-  const baselineName = period === 'month' ? BASELINE_NAME[compare] : 'the period before'
+  const baselineName = period === 'month' ? BASELINE_NAME[compare] : WINDOW_BASELINE_NAME[period]
   const sameDays = data.kpis.openDayLimit
 
   return (
     <div className={styles.stack}>
       {sameDays !== null && (
         <p className={styles.sameDaysNote}>
-          Open month — compared with the first {sameDays} days of {baselineName}.
+          {period === 'month'
+            ? `Open month, compared with the first ${sameDays} days of ${baselineName}.`
+            : `The open month counts its first ${sameDays} days, to match ${baselineName}.`}
         </p>
       )}
       <KpiTiles kpis={data.kpis} baselineName={baselineName} />
