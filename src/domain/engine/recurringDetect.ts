@@ -18,7 +18,7 @@ const MIN_OCCURRENCES = 3
 const MIN_REGULARITY = 0.6
 const MS_PER_DAY = 86_400_000
 
-/** Also the "merchant" identity for analytics group-bys: trimmed, case-folded description. */
+/** Also the identity of a description in the Spending group-by: trimmed, case-folded text. */
 export function normalizeDesc(description: string): string {
   return description.trim().toLowerCase()
 }

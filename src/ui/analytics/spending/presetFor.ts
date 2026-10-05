@@ -17,6 +17,6 @@ export function presetFor(
   if (groupBy === 'category') return { categoryId: Number(row.key), month, ...status }
   if (groupBy === 'label') return { labelIds: [Number(row.key)], month, ...status }
   // Substring query: exact-match is not a filter the list has; close enough, and visible.
-  if (groupBy === 'merchant') return { query: row.name, month, ...status }
+  if (groupBy === 'description') return { query: row.name, month, ...status }
   return null
 }

@@ -82,7 +82,7 @@ Three views under one sticky row, the same on phone and desktop. **Overview** an
 doing": five KPI tiles with change chips and sparklines, a trend chart whose unpaid card charges
 are hatched, the flexible-spending pace, up to three signals, where the income went, what changed
 against your 3-month average, and the spending baseline with a handoff into Goals. **Spending**
-answers "where does it go": ranked rows grouped by category, fixed vs flexible, label or merchant,
+answers "where does it go": ranked rows grouped by category, fixed vs flexible, label or description,
 each opening its story and a deep link into Transactions; the exact workbook grid stays as the
 Grid mode, with CSV export. **Cash** answers "do my numbers match": one dot per month close, a
 bridge from opening cash to expected cash with the count entered under it, drift bars with a ±5 €

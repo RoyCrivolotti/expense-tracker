@@ -72,10 +72,10 @@ describe('computeSpendingGroupDetail', () => {
     expect(d.topTransactions).toEqual([])
   })
 
-  it('matches merchants by normalized description with no budget line', () => {
+  it('matches descriptions by their normalized text with no budget line', () => {
     const d = computeSpendingGroupDetail(
       { transactions: txns, categories },
-      { months: MONTHS, month: '2026-03', basis: 'committed', groupBy: 'merchant', key: 'big shop' },
+      { months: MONTHS, month: '2026-03', basis: 'committed', groupBy: 'description', key: 'big shop' },
     )
     expect(d.history[2]?.actualCents).toBe(25000)
     expect(d.history[2]?.budgetCents).toBeNull()
