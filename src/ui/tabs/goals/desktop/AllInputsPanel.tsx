@@ -9,6 +9,7 @@ import { useExit } from '../../../hooks/usePresence'
 import type { InvestedSnapshot } from '../checkinDate'
 import { ADJUST_LABELS } from '../adjustSections'
 import {
+  ChangesFields,
   EventsFields,
   FireFields,
   HousingFields,
@@ -118,6 +119,9 @@ function PanelBody({ id, draft, latest, onChange, starred }: PanelProps) {
             ) : null}
             <Column title={labels.fire.title}>
               <FireFields draft={draft} onChange={onChange} omit={omit} wrap={wrap} />
+            </Column>
+            <Column title={labels.changes.title}>
+              <ChangesFields draft={draft} onChange={onChange} />
             </Column>
             <Column title={labels.events.title}>
               <EventsFields draft={draft} onChange={onChange} />
