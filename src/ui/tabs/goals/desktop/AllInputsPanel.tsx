@@ -63,6 +63,22 @@ function PortfolioColumn({ draft, latest, onChange, omit, wrap }: ColumnProps) {
   )
 }
 
+/**
+ * What changes as the plan runs, in the one column: the monthly amount from a month on, and the
+ * one-off events. Two columns for them made five, which the panel has no room for at laptop widths
+ * (it would wrap to two rows), and both are short.
+ */
+function OverTimeColumn({ draft, onChange }: Pick<ColumnProps, 'draft' | 'onChange'>) {
+  const labels = ADJUST_LABELS
+  return (
+    <Column title={labels.changes.title}>
+      <ChangesFields draft={draft} onChange={onChange} />
+      <h3 className={styles.columnTitle}>{labels.events.title}</h3>
+      <EventsFields draft={draft} onChange={onChange} />
+    </Column>
+  )
+}
+
 interface ColumnProps {
   draft: NewGoalScenario
   latest: InvestedSnapshot | null
@@ -120,12 +136,7 @@ function PanelBody({ id, draft, latest, onChange, starred }: PanelProps) {
             <Column title={labels.fire.title}>
               <FireFields draft={draft} onChange={onChange} omit={omit} wrap={wrap} />
             </Column>
-            <Column title={labels.changes.title}>
-              <ChangesFields draft={draft} onChange={onChange} />
-            </Column>
-            <Column title={labels.events.title}>
-              <EventsFields draft={draft} onChange={onChange} />
-            </Column>
+            <OverTimeColumn draft={draft} onChange={onChange} />
           </div>
         </Card>
       </div>
