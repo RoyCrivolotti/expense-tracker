@@ -32,6 +32,7 @@ describe('useStartFromToday', () => {
       fromToday: input.fromToday,
       since: null,
       notRestarted: [],
+      ownStartIds: new Set(),
     })
     expect(off.scenarios).toBe(input.scenarios)
 
@@ -89,6 +90,7 @@ describe('useStartFromToday', () => {
       expect(result.current.scenarios[0]!.startInvestedCents).toBe(138_700_00)
       expect(result.current.scenarios[1]).toBe(buyNow)
       expect(result.current.notRestarted).toEqual(['House now'])
+      expect([...result.current.ownStartIds]).toEqual([3])
     })
 
     it('is kept the same way when its purchase date is already behind the check-in', () => {

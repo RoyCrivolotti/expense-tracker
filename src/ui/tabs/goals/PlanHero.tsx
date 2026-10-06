@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react'
+import { useMemo } from 'react'
 import type { GoalScenario, Milestone, WealthAccount, WealthCheckin } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import { checkinInvestedCents, yearOffsetFromDate, type PlanFromToday } from '../../../engine'
@@ -46,8 +46,6 @@ interface PlanHeroProps {
   /** The plan restarted from the latest check-in, drawn beside the saved one. */
   fromToday: PlanFromToday | null
   display: ValueDisplay
-  /** The switch that restarts every scenario from the latest check-in, for a wide screen's footer. */
-  startToggle?: ReactNode
 }
 
 /** The projection of every scenario, with the draft's narrative and the value display under it. */
@@ -61,7 +59,6 @@ export function PlanHero({
   accounts,
   fromToday,
   display,
-  startToggle,
 }: PlanHeroProps) {
 
   // Scatter points: actual invested values from check-ins plotted on the hero chart.
@@ -123,10 +120,9 @@ export function PlanHero({
       <>
         <PlanStrip draft={deferredDraft} milestones={milestones} />
         {nominalPreview}
-        {startToggle}
       </>
     )
-  }, [narrow, deferredDraft, milestones, displaySwitch, mode, assumedInflation, preview, onPreview, onOpenSetting, startToggle])
+  }, [narrow, deferredDraft, milestones, displaySwitch, mode, assumedInflation, preview, onPreview, onOpenSetting])
 
   const heroTodayIndex = useMemo(() => {
     if (!activeScenario?.planStartDate) return undefined

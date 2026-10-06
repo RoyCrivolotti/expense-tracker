@@ -1,9 +1,7 @@
 import { render, renderHook } from '@testing-library/react'
-import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { restartFromLatest } from '../../../engine'
 import type { PlanFromToday } from '../../../engine'
-import { installFakeMatchMedia } from '../../../testing/fakeMatchMedia'
 import { makeActions } from '../../../testing/makeActions'
 import { makeDataset, makeScenario, makeWealthAccount, makeWealthCheckin } from '../../../testing/factories'
 import type { ChartSeries } from '../../charts/LinearChart'
@@ -13,17 +11,14 @@ import { useScenarioEditor } from './useScenarioEditor'
 const hero = vi.hoisted(() => ({
   todayIndex: undefined as number | undefined,
   extraSeries: [] as ChartSeries[],
-  footer: undefined as ReactNode,
 }))
 vi.mock('./charts/NetWorthChart', () => ({
   NetWorthChart: (props: {
     todayIndex?: number
     extraSeries?: ChartSeries[]
-    footer?: ReactNode
   }) => {
     hero.todayIndex = props.todayIndex
     hero.extraSeries = props.extraSeries ?? []
-    hero.footer = props.footer
     return null
   },
 }))
@@ -79,7 +74,7 @@ describe('PlanHero check-in dots', () => {
     makeWealthCheckin({ id, checkinDate, entries: [{ accountId: 1, valueCents }] })
   const checkins = [checkin(1, '2026-06-01', 90_000_00), checkin(2, '2026-07-29', 107_000_00), checkin(3, '2026-10-05', 138_000_00)]
 
-  function renderHero(shown: ReturnType<typeof makeScenario>, extra: { fromToday?: PlanFromToday | null; startToggle?: ReactNode } = {}) {
+  function renderHero(shown: ReturnType<typeof makeScenario>, extra: { fromToday?: PlanFromToday | null } = {}) {
     const dataset = makeDataset({ goalScenarios: [plan] })
     const { result } = renderHook(() => useScenarioEditor(dataset, makeActions(), 0))
     render(
@@ -93,7 +88,6 @@ describe('PlanHero check-in dots', () => {
         accounts={[broker]}
         fromToday={extra.fromToday ?? null}
         display={display}
-        {...(extra.startToggle ? { startToggle: extra.startToggle } : {})}
       />,
     )
     return hero.extraSeries.find((s) => s.id === 'actuals-overlay')?.points ?? []
@@ -109,17 +103,5 @@ describe('PlanHero check-in dots', () => {
     const restarted = restartFromLatest(plan, { investedCents: 138_000_00, date: '2026-10-05' })
     const points = renderHero(restarted)
     expect(points).toEqual([{ xIndex: 0, value: 138_000_00 }])
-  })
-
-  it('puts the start-from-today switch in a wide screen\'s footer', () => {
-    installFakeMatchMedia(() => false)
-    renderHero(plan, { startToggle: <p>the switch</p> })
-    expect(render(<>{hero.footer}</>).queryByText('the switch')).not.toBeNull()
-  })
-
-  it('leaves it out of a phone\'s footer, which has it with the scenarios', () => {
-    installFakeMatchMedia(() => true)
-    renderHero(plan, { startToggle: <p>the switch</p> })
-    expect(render(<>{hero.footer}</>).queryByText('the switch')).toBeNull()
   })
 })

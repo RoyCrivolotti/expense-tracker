@@ -22,7 +22,11 @@ export interface ShownScenarios {
   since: string | null
   /** Names of the scenarios that kept their own start while the rest were restarted (see `ownsHouseFromStart`). */
   notRestarted: string[]
+  /** The saved ones among them by id, for tagging their tabs. */
+  ownStartIds: ReadonlySet<number>
 }
+
+const NONE: ReadonlySet<number> = new Set()
 
 interface Input {
   on: boolean
@@ -52,12 +56,14 @@ function ownsHouseFromStart(s: Pick<NewGoalScenario, 'housePurchaseYear' | 'hous
  */
 export function useStartFromToday({ on, latest, scenarios, draft, activeScenario, fromToday }: Input): ShownScenarios {
   return useMemo(() => {
-    if (!on || !latest) return { restarted: false, scenarios, draft, activeScenario, fromToday, since: null, notRestarted: [] }
+    if (!on || !latest) return { restarted: false, scenarios, draft, activeScenario, fromToday, since: null, notRestarted: [], ownStartIds: NONE }
     const kept = new Set<string>()
+    const keptIds = new Set<number>()
     const restart = <T extends NewGoalScenario>(s: T, isPlan: boolean): T => {
       const restarted = restartFromLatest(s, latest)
       if (isPlan || !ownsHouseFromStart(restarted)) return restarted
       kept.add(s.name)
+      if ('id' in s && typeof s.id === 'number' && s.id > 0) keptIds.add(s.id)
       return s
     }
     const shownScenarios = scenarios.map((s) => restart(s, s.isActive))
@@ -70,6 +76,7 @@ export function useStartFromToday({ on, latest, scenarios, draft, activeScenario
       fromToday: null,
       since: latest.date,
       notRestarted: [...kept],
+      ownStartIds: keptIds,
     }
   }, [on, latest, scenarios, draft, activeScenario, fromToday])
 }

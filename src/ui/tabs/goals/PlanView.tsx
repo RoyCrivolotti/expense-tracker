@@ -15,7 +15,7 @@ import type { MobilePlanView } from './goalsView'
 import { PlanHero, type ValueDisplay } from './PlanHero'
 import { ScenarioManager } from './ScenarioManager'
 import { SecondaryCharts } from './SecondaryCharts'
-import { StartFromTodayToggle, type StartFromTodayControl } from './StartFromTodayToggle'
+import { StartFromTodayRow, type StartFromTodayControl } from './StartFromTodayRow'
 import { useGoalsNarrow } from './useGoalsNarrow'
 import type { ScenarioEditor } from './useScenarioEditor'
 import { useStartFromToday, type ShownScenarios } from './useStartFromToday'
@@ -31,16 +31,18 @@ interface PlanSidebarProps {
   /** What the pinned chart reads: the editor's deferred draft, restarted or not. */
   shownDraft: NewGoalScenario
   startFromToday: StartFromTodayControl
-  notRestarted: string[]
+  shown: ShownScenarios
 }
 
 /** The phone's scenarios, the controls and, on its Scenarios half, the pinned chart over them. */
-function PlanSidebar({ half, scenarios, editor, actions, latest, shownDraft, startFromToday, notRestarted }: PlanSidebarProps) {
+function PlanSidebar({ half, scenarios, editor, actions, latest, shownDraft, startFromToday, shown }: PlanSidebarProps) {
   const { draft, dirty, saving, onSaveChanges, onDiscard } = editor
   return (
     <div className={styles.areaSidebar}>
       <div className={styles.areaScenarios}>
         <ScenarioManager
+          viewRow={<StartFromTodayRow control={startFromToday} latest={latest} notRestarted={shown.notRestarted} />}
+          ownStartIds={shown.ownStartIds}
           scenarios={scenarios}
           activeId={editor.activeId}
           draft={draft}
@@ -61,7 +63,6 @@ function PlanSidebar({ half, scenarios, editor, actions, latest, shownDraft, sta
           onActivate={editor.onActivate}
           onDuplicate={editor.onDuplicate}
         />
-        <StartFromTodayToggle control={startFromToday} latest={latest} notRestarted={notRestarted} />
         <DiscardSheet {...editor.discardPrompt} />
       </div>
       {half === 'adjust' ? (
@@ -135,7 +136,7 @@ function planBlocks(props: PlanViewProps & { shown: ShownScenarios }): Record<Pl
         latest={latest}
         shownDraft={shown.draft}
         startFromToday={props.startFromToday}
-        notRestarted={shown.notRestarted}
+        shown={shown}
       />
     ),
     hero: (
