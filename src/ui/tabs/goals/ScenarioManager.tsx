@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import type { ExpenseActions } from '../../actions'
@@ -7,6 +8,10 @@ import { ScenarioChips } from './ScenarioChips'
 import styles from './goals.module.css'
 
 interface ScenarioManagerProps {
+  /** The way to look at the scenarios from the latest check-in, which sits with them. */
+  viewRow?: ReactNode
+  /** The scenarios that keep their own start while the others are looked at from it. */
+  ownStartIds?: ReadonlySet<number>
   scenarios: GoalScenario[]
   activeId: number | null
   draft: NewGoalScenario
@@ -40,10 +45,12 @@ export function ScenarioManager(props: ScenarioManagerProps) {
         toggle its dot to show or hide it, or save your current draft to compare. The one marked as
         your plan is what Progress measures you against.
       </p>
+      {props.viewRow}
       <ScenarioChips
         scenarios={scenarios}
         activeId={activeId}
         hiddenIds={hiddenIds}
+        {...(props.ownStartIds ? { ownStartIds: props.ownStartIds } : {})}
         onSelect={props.onSelect}
         onSelectEditing={props.onSelectEditing}
         onToggleVisible={props.onToggleVisible}
