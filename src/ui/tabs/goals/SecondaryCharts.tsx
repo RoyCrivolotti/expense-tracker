@@ -71,6 +71,8 @@ interface SecondaryChartsProps {
   dirty: boolean
   /** The plan restarted from the latest check-in, for the tables that list scenarios. */
   fromToday: PlanFromToday | null
+  /** The check-in date every scenario has been restarted from, when they have. */
+  restartedFrom?: string | null
 }
 
 function SecondaryViewChart({
@@ -83,6 +85,7 @@ function SecondaryViewChart({
   reached,
   includeDraft,
   fromToday,
+  restartedFrom,
 }: {
   view: SecondaryView
   scenarios: GoalScenario[]
@@ -93,10 +96,20 @@ function SecondaryViewChart({
   reached: Map<number, string>
   includeDraft: boolean
   fromToday: PlanFromToday | null
+  restartedFrom: string | null
 }) {
   switch (view) {
     case 'compare':
-      return <ScenarioComparison scenarios={scenarios} draft={draft} includeDraft={includeDraft} fromToday={fromToday} embedded />
+      return (
+        <ScenarioComparison
+          scenarios={scenarios}
+          draft={draft}
+          includeDraft={includeDraft}
+          fromToday={fromToday}
+          restartedFrom={restartedFrom}
+          embedded
+        />
+      )
     case 'composition':
       return <CompositionChart draft={draft} embedded />
     case 'milestones':
@@ -220,6 +233,7 @@ export function SecondaryCharts({
   activeId,
   dirty,
   fromToday,
+  restartedFrom = null,
 }: SecondaryChartsProps) {
   const [view, setView] = useState<SecondaryView>('compare')
   const includeDraft = activeId === null || dirty
@@ -236,6 +250,7 @@ export function SecondaryCharts({
         reached={reached}
         includeDraft={includeDraft}
         fromToday={fromToday}
+        restartedFrom={restartedFrom}
       />
     </TabbedChart>
   )

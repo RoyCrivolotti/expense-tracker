@@ -28,6 +28,8 @@ interface DetailGridProps {
   activeId: number | null
   dirty: boolean
   fromToday: PlanFromToday | null
+  /** The check-in date every scenario has been restarted from, when they have. */
+  restartedFrom?: string | null
 }
 
 /**
@@ -51,6 +53,7 @@ export function DetailGrid({
   activeId,
   dirty,
   fromToday,
+  restartedFrom = null,
 }: DetailGridProps) {
   // The live edits are a line of their own only while they differ from what is saved.
   const includeDraft = activeId === null || dirty
@@ -71,7 +74,7 @@ export function DetailGrid({
       </div>
       <div className={styles.detailGrid}>
         <div className={styles.detailColumn}>
-          <ScenarioComparison scenarios={scenarios} draft={draft} includeDraft={includeDraft} fromToday={fromToday} />
+          <ScenarioComparison scenarios={scenarios} draft={draft} includeDraft={includeDraft} fromToday={fromToday} restartedFrom={restartedFrom} />
           <FireChart draft={draft} height={STACK_CHART_HEIGHT} />
           <SavingsRateChart draft={savedDraft} monthly={monthly} height={STACK_CHART_HEIGHT} />
         </div>

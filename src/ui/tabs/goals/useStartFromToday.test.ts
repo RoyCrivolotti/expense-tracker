@@ -30,6 +30,7 @@ describe('useStartFromToday', () => {
       draft,
       activeScenario: plan,
       fromToday: input.fromToday,
+      since: null,
       notRestarted: [],
     })
     expect(off.scenarios).toBe(input.scenarios)
@@ -48,6 +49,10 @@ describe('useStartFromToday', () => {
     ])
     expect(result.current.draft.startInvestedCents).toBe(138_700_00)
     expect(result.current.activeScenario?.planStartDate).toBe('2026-10-05')
+  })
+
+  it('says the date the years are counted from while restarted', () => {
+    expect(renderHook(() => useStartFromToday(input)).result.current.since).toBe('2026-10-05')
   })
 
   it('drops the dotted plan-from-today line, since the plan is now drawn from the check-in itself', () => {

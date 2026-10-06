@@ -106,6 +106,7 @@ export function PlanDesktop({ scenarios, editor, actions, latest, milestones, re
         activeId={editor.activeId}
         dirty={editor.dirty}
         fromToday={shown.fromToday}
+        restartedFrom={shown.since}
       />
       <GoalsIntro />
     </div>

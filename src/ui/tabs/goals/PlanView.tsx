@@ -170,6 +170,7 @@ function planBlocks(props: PlanViewProps & { shown: ShownScenarios }): Record<Pl
           activeId={activeId}
           dirty={dirty}
           fromToday={shown.fromToday}
+          restartedFrom={shown.since}
         />
       </div>
     ),

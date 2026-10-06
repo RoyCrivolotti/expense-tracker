@@ -18,6 +18,8 @@ export interface ShownScenarios {
    * drawn from the check-in, so the plan would appear twice.
    */
   fromToday: PlanFromToday | null
+  /** The check-in date they start from while restarted, for the words that say where years are counted from. */
+  since: string | null
   /** Names of the scenarios that kept their own start while the rest were restarted (see `ownsHouseFromStart`). */
   notRestarted: string[]
 }
@@ -50,7 +52,7 @@ function ownsHouseFromStart(s: Pick<NewGoalScenario, 'housePurchaseYear' | 'hous
  */
 export function useStartFromToday({ on, latest, scenarios, draft, activeScenario, fromToday }: Input): ShownScenarios {
   return useMemo(() => {
-    if (!on || !latest) return { restarted: false, scenarios, draft, activeScenario, fromToday, notRestarted: [] }
+    if (!on || !latest) return { restarted: false, scenarios, draft, activeScenario, fromToday, since: null, notRestarted: [] }
     const kept = new Set<string>()
     const restart = <T extends NewGoalScenario>(s: T, isPlan: boolean): T => {
       const restarted = restartFromLatest(s, latest)
@@ -66,6 +68,7 @@ export function useStartFromToday({ on, latest, scenarios, draft, activeScenario
       draft: restart(draft, activeScenario?.isActive === true),
       activeScenario: shownActive,
       fromToday: null,
+      since: latest.date,
       notRestarted: [...kept],
     }
   }, [on, latest, scenarios, draft, activeScenario, fromToday])
