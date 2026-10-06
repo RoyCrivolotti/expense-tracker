@@ -20,7 +20,6 @@ let box = { top: 100, height: 400 }
 
 beforeEach(() => {
   points.length = 0
-  box = { top: 100, height: 400 }
   // The chart is 400 units wide and drawn 1:1, so a step at x is a step at x pixels.
   stub(Element.prototype, 'clientWidth', { get: () => 400 })
   stub(Element.prototype, 'setPointerCapture', { value: vi.fn() })
@@ -40,6 +39,7 @@ beforeEach(() => {
   stub(SVGSVGElement.prototype, 'getBoundingClientRect', {
     value: () => ({ left: 0, ...box, width: 200 }) as DOMRect,
   })
+  box = { top: 100, height: 400 }
 })
 
 afterEach(() => {
@@ -126,16 +126,16 @@ describe('useChartFocus pointer mapping', () => {
   })
 })
 
-describe('useChartFocus clearing', () => {
+describe('useChartFocus as it always was', () => {
   it('clears when the mouse leaves, the chart loses focus, Escape is pressed or a tap lands outside', () => {
-    render(<Harness />)
-    fireEvent.keyDown(svg(), { key: 'End' })
-    expect(active()).toBe('4')
+    render(<Harness options={{ initial: 2 }} />)
+    expect(active()).toBe('2')
 
     fireEvent.pointerLeave(svg(), mouseAt(0))
     expect(active()).toBe('null')
 
     fireEvent.keyDown(svg(), { key: 'End' })
+    expect(active()).toBe('4')
     fireEvent.blur(svg())
     expect(active()).toBe('null')
 
@@ -149,9 +149,51 @@ describe('useChartFocus clearing', () => {
   })
 
   it('leaves the focus when a finger leaves, which only a mouse does on purpose', () => {
-    render(<Harness />)
-    fireEvent.keyDown(svg(), { key: 'End' })
+    render(<Harness options={{ initial: 2 }} />)
     fireEvent.pointerLeave(svg(), touchAt(0))
+    expect(active()).toBe('2')
+  })
+})
+
+describe('useChartFocus options', () => {
+  it('starts at the step it is given', () => {
+    render(<Harness options={{ initial: 3 }} />)
+    expect(active()).toBe('3')
+  })
+
+  it('keeps a sticky focus through everything that would clear it', () => {
+    render(<Harness options={{ sticky: true }} />)
+    fireEvent.pointerDown(svg(), touchAt(210))
+    expect(active()).toBe('2')
+
+    fireEvent.pointerLeave(svg(), mouseAt(0))
+    fireEvent.blur(svg())
+    fireEvent.keyDown(svg(), { key: 'Escape' })
+    tapOutside()
+    // A hover out of reach of every step is not a reason to lose the step either.
+    fireEvent.pointerUp(svg(), touchAt(0))
+    fireEvent.pointerMove(svg(), mouseAt(150))
+    expect(active()).toBe('2')
+  })
+
+  it('still moves a sticky focus to the nearest step and with the keys', () => {
+    render(<Harness options={{ sticky: true, initial: 1 }} />)
+    fireEvent.keyDown(svg(), { key: 'ArrowRight' })
+    expect(active()).toBe('2')
+    fireEvent.pointerDown(svg(), touchAt(390))
     expect(active()).toBe('4')
+    fireEvent.keyDown(svg(), { key: 'Home' })
+    expect(active()).toBe('0')
+  })
+
+  it('shows a sticky focus at the last step of a shorter chart and gets it back when it grows', () => {
+    const { rerender } = render(<Harness options={{ sticky: true, initial: 3 }} length={5} />)
+    expect(active()).toBe('3')
+    rerender(<Harness options={{ sticky: true, initial: 3 }} length={2} />)
+    expect(active()).toBe('1')
+    rerender(<Harness options={{ sticky: true, initial: 3 }} length={5} />)
+    expect(active()).toBe('3')
+    rerender(<Harness options={{ sticky: true, initial: 3 }} length={0} />)
+    expect(active()).toBe('3')
   })
 })

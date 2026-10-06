@@ -22,6 +22,14 @@ export function nearestIndex(
 }
 
 export interface ChartFocusOptions {
+  /**
+   * Keep the focused index until another is picked: leaving the chart, losing focus, tapping
+   * elsewhere, Escape and a hover out of reach do not clear it. For a surface that is all chart
+   * and its readout, where a value that vanishes when a finger lifts is the wrong thing.
+   */
+  sticky?: boolean | undefined
+  /** The index focused at the start. */
+  initial?: number | null | undefined
   /** 1 when the chart is drawn a quarter turn clockwise by an ancestor's transform. */
   turn?: 0 | 1 | undefined
 }
@@ -36,15 +44,20 @@ export function useChartFocus(
   containerRef: RefObject<HTMLElement | null>,
   options: ChartFocusOptions = {},
 ) {
-  const { turn = 0 } = options
-  const [active, setActive] = useState<number | null>(null)
+  const { sticky = false, initial = null, turn = 0 } = options
+  const [stored, setActive] = useState<number | null>(initial)
+  // A sticky index outlives the data it pointed into: a shorter window shows its last step, and
+  // the stored one comes back when the window grows again.
+  const active = sticky && stored != null && length > 0 ? Math.min(stored, length - 1) : stored
   // A finger sliding along the chart, from pointer down to up. Between two steps it is
   // still on the chart, so the nearest step stays rather than the tooltip blinking out.
   const dragging = useRef(false)
 
-  const dismiss = useCallback(() => setActive(null), [])
+  const dismiss = useCallback(() => {
+    if (!sticky) setActive(null)
+  }, [sticky])
 
-  useDismissOnOutsidePointer(containerRef, active != null, dismiss)
+  useDismissOnOutsidePointer(containerRef, active != null && !sticky, dismiss)
 
   const pick = useCallback(
     (clientX: number, clientY: number, svg: SVGSVGElement, anywhere: boolean) => {
@@ -53,9 +66,10 @@ export function useChartFocus(
       if (x === null) return
       // A hover reaches 28 CSS pixels either side, whatever the viewBox is scaled to.
       const scale = svg.viewBox.baseVal.width / svg.clientWidth
-      setActive(nearestIndex(x, length, xForIndex, anywhere ? Infinity : 28 * scale))
+      const next = nearestIndex(x, length, xForIndex, anywhere ? Infinity : 28 * scale)
+      if (next !== null || !sticky) setActive(next)
     },
-    [length, xForIndex, turn],
+    [length, xForIndex, turn, sticky],
   )
 
   const onPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
