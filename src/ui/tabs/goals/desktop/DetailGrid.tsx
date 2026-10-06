@@ -14,8 +14,13 @@ import styles from './planDesktop.module.css'
 
 interface DetailGridProps {
   scenarios: GoalScenario[]
-  /** What the charts read: the editor's deferred draft. */
+  /** What the charts read: the editor's deferred draft, restarted from the latest check-in while that is on. */
   draft: NewGoalScenario
+  /**
+   * The draft as the editor has it, for the two readings of actual money against the plan, which
+   * need the plan's real start. Defaults to `draft`.
+   */
+  savedDraft?: NewGoalScenario
   latest: InvestedSnapshot | null
   monthly: MonthlyFlow[]
   milestones: Milestone[]
@@ -23,6 +28,8 @@ interface DetailGridProps {
   activeId: number | null
   dirty: boolean
   fromToday: PlanFromToday | null
+  /** The check-in date every scenario has been restarted from, when they have. */
+  restartedFrom?: string | null
 }
 
 /**
@@ -38,6 +45,7 @@ interface DetailGridProps {
 export function DetailGrid({
   scenarios,
   draft,
+  savedDraft = draft,
   latest,
   monthly,
   milestones,
@@ -45,6 +53,7 @@ export function DetailGrid({
   activeId,
   dirty,
   fromToday,
+  restartedFrom = null,
 }: DetailGridProps) {
   // The live edits are a line of their own only while they differ from what is saved.
   const includeDraft = activeId === null || dirty
@@ -65,12 +74,12 @@ export function DetailGrid({
       </div>
       <div className={styles.detailGrid}>
         <div className={styles.detailColumn}>
-          <ScenarioComparison scenarios={scenarios} draft={draft} includeDraft={includeDraft} fromToday={fromToday} />
+          <ScenarioComparison scenarios={scenarios} draft={draft} includeDraft={includeDraft} fromToday={fromToday} restartedFrom={restartedFrom} />
           <FireChart draft={draft} height={STACK_CHART_HEIGHT} />
-          <SavingsRateChart draft={draft} monthly={monthly} height={STACK_CHART_HEIGHT} />
+          <SavingsRateChart draft={savedDraft} monthly={monthly} height={STACK_CHART_HEIGHT} />
         </div>
         <div className={styles.detailColumn}>
-          <NetWorthNowCard draft={draft} latest={latest} milestones={milestones} reached={reached} />
+          <NetWorthNowCard draft={savedDraft} latest={latest} milestones={milestones} reached={reached} />
           <CompositionChart draft={draft} height={STACK_CHART_HEIGHT} />
           <RentVsOwnChart draft={draft} height={STACK_CHART_HEIGHT} />
         </div>

@@ -44,7 +44,7 @@ export interface Rebaseline {
   shiftedYears: number
 }
 
-type Rebaselinable = Pick<
+export type Rebaselinable = Pick<
   GoalScenario,
   | 'planStartDate'
   | 'lifeEvents'
