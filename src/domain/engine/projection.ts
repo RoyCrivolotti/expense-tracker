@@ -2,6 +2,7 @@
  * Year-by-year wealth projection engine — reproduces the private workbook’s path models.
  * All money in integer cents; rates as fractions (0.07 = 7% real).
  */
+import { annualContributionCents, type ScheduleStep } from './contributionSchedule'
 import { pmt } from './finance'
 import type { LifeEvent } from '../types'
 
@@ -38,16 +39,11 @@ export interface ProjectionParams {
   inflationRate: number
   /** One-off cash flows applied at specific projection years. Default: none. */
   lifeEvents?: LifeEvent[]
-}
-
-function annualContribution(
-  monthlyCents: number,
-  growth: number,
-  year: number,
-): number {
-  if (year <= 0) return 0
-  const factor = Math.pow(1 + growth, year - 1)
-  return Math.round(monthlyCents * 12 * factor)
+  /**
+   * Changes to the monthly amount from a point on the plan's axis, in order (see
+   * `scheduleSteps`). Default: none, so the monthly amount only grows by `annualContributionGrowth`.
+   */
+  contributionSteps?: ScheduleStep[]
 }
 
 /**
@@ -171,12 +167,12 @@ export function projectNetWorth(params: ProjectionParams): YearPoint[] {
   let invested = params.startInvestedCents
 
   for (let year = 0; year <= params.horizonYears; year++) {
-    const contrib =
-      year === 0 ? 0 : annualContribution(
-        params.monthlyContributionCents,
-        params.annualContributionGrowth,
-        year,
-      )
+    const contrib = annualContributionCents(
+      params.monthlyContributionCents,
+      params.annualContributionGrowth,
+      params.contributionSteps ?? [],
+      year,
+    )
 
     if (year > 0) {
       invested = Math.round(

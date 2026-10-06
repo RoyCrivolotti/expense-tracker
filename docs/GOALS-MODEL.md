@@ -42,6 +42,12 @@ The same restart is available for every scenario at once, to compare them from w
 
 `annualContributionGrowth`: each year's monthly contribution compounds by this rate, so `monthlyContribution[y] = monthlyContributionCents × (1 + growth)^(y - 1)`. Year 1 contributes the amount you entered, and growth first applies in year 2. Exposed as a percentage slider in GoalControls.
 
+### Changing the monthly amount from a date
+
+`goal_scenarios.contribution_schedule` (`GoalScenario.contributionSchedule`, a JSON array of `{ from: 'YYYY-MM', monthlyCents }` in date order, at most ten) says "from the first of this month the scenario invests exactly this much a month". Before the first step the scenario is exactly as it was, so a scenario with no schedule produces the same figures as before, to the cent. A step is an absolute replacement, not an increment, and growth then compounds on the step's amount at each anniversary of its month: `m(t) = X × (1 + growth)^floor(t − s)` for plan offset `t` and step offset `s`, where the base is the same rule with `s = 0` and `X` the monthly amount. Amounts are in today's money like the base, and 0 is a pause. Steps need `planStartDate`: it is what gives a plan year a date to start on, and without one no step applies. A step at or before the plan start is read as the amount the plan starts with, which is how a scenario whose start was moved past a step still projects.
+
+The projection is linear in contributions, so a schedule needs no new algorithm: plan year `y` covers offsets `y − 1` to `y` counted from the plan start by the calendar (`yearsBetween`: whole anniversaries, then the fraction of the year), and it contributes twelve times the monthly rate averaged over that span by the share of it each rate was in force for (`annualContributionCents` in `engine/contributionSchedule.ts`, from steps put on the plan's axis by `scheduleSteps`). The rate changes at a step and at each anniversary of it, so the year is cut there and each piece read at its middle. A step on a year boundary changes the year it starts; one part way through weights the two amounts by days, so a step from 1 March into a plan that began on 1 January gives that year 59/365 of the old amount and the rest of the new one. The closed form for a step of `Δ` a month first affecting plan year `t0` is that it adds `12 × Δ × ((1 + r)^(y − t0 + 1) − 1) / r` to year `y`, which the tests check, because contributions earn no return in the year they are made.
+
 ## Housing
 
 | Parameter | Default (demo) |
@@ -143,7 +149,7 @@ The house price is in today's money. Appreciation and the mortgage rate are ente
 Each year `y = 1…N`:
 
 ```
-contribution[y] = monthlyContributionCents × 12 × (1 + contributionGrowth)^(y - 1)
+contribution[y] = monthlyContributionCents × 12 × (1 + contributionGrowth)^(y - 1)   // or the schedule's average over year y
 invested[y] = invested[y-1] × (1 + expectedReturn) + contribution[y] + lifeEventImpact(y)
 ```
 

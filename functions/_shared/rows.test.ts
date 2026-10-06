@@ -62,6 +62,25 @@ describe('toGoalScenario', () => {
     expect(result.lifeEvents).toEqual([])
   })
 
+  it('reads contribution_schedule into date order, and a missing, empty or unusable one as no changes', () => {
+    const schedule = [
+      { from: '2028-03', monthlyCents: 250_000 },
+      { from: '2027-01', monthlyCents: 0 },
+    ]
+    const read = toGoalScenario(baseRow({ contribution_schedule: JSON.stringify(schedule) }))
+    expect(read.contributionSchedule).toEqual([
+      { from: '2027-01', monthlyCents: 0 },
+      { from: '2028-03', monthlyCents: 250_000 },
+    ])
+    // A database that has not had the column added yet returns no such key at all.
+    expect(toGoalScenario(baseRow()).contributionSchedule).toEqual([])
+    expect(toGoalScenario(baseRow({ contribution_schedule: '[]' })).contributionSchedule).toEqual([])
+    expect(toGoalScenario(baseRow({ contribution_schedule: 'not-json' })).contributionSchedule).toEqual([])
+    expect(
+      toGoalScenario(baseRow({ contribution_schedule: '[{"from":"soon","monthlyCents":1}]' })).contributionSchedule,
+    ).toEqual([])
+  })
+
   it('maps plan_start_date null correctly', () => {
     const result = toGoalScenario(baseRow())
     expect(result.planStartDate).toBeNull()

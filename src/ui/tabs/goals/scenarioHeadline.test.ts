@@ -25,6 +25,7 @@ const base: GoalScenario = {
   safeWithdrawalRate: 0.04,
   planStartDate: null,
   lifeEvents: [],
+  contributionSchedule: [],
   isActive: false,
 }
 

@@ -487,10 +487,11 @@ const SCENARIO_COLUMNS: ColumnMap<NewGoalScenario> = {
   safeWithdrawalRate: 'safe_withdrawal_rate',
   planStartDate: 'plan_start_date',
   lifeEvents: 'life_events',
+  contributionSchedule: 'contribution_schedule',
 }
 
 const coerceScenario: Coerce<NewGoalScenario> = (k, v) => {
-  if (k === 'lifeEvents') return JSON.stringify(v ?? [])
+  if (k === 'lifeEvents' || k === 'contributionSchedule') return JSON.stringify(v ?? [])
   return v ?? null
 }
 
@@ -508,9 +509,9 @@ export async function createScenario(
        house_price_cents, down_payment_fraction, house_purchase_year, transaction_costs_cents,
        mortgage_term_years, mortgage_rate_annual, house_appreciation_rate,
        rent_monthly_cents, annual_spend_cents, safe_withdrawal_rate, life_events,
-       plan_start_date, is_active
+       contribution_schedule, plan_start_date, is_active
      ) VALUES (
-       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
        CASE WHEN EXISTS (SELECT 1 FROM goal_scenarios WHERE owner = ? AND is_active = 1)
          THEN 0 ELSE 1 END
      )
@@ -537,6 +538,7 @@ export async function createScenario(
       input.annualSpendCents,
       input.safeWithdrawalRate,
       JSON.stringify(input.lifeEvents ?? []),
+      JSON.stringify(input.contributionSchedule ?? []),
       // No DEFAULT on this column, and trackStatus() returns null without it — a
       // scenario missing it silently loses its on/off-track badge and chart markers.
       input.planStartDate ?? null,

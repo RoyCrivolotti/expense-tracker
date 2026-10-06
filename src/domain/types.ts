@@ -246,6 +246,18 @@ export interface LifeEvent {
   label: string
 }
 
+/**
+ * A change to what the scenario invests each month: from the first of `from`, the monthly amount
+ * is `monthlyCents`. Before it the scenario is exactly as it was. Dated, not keyed by projection
+ * year like a life event, so it keeps its place when the plan start moves.
+ */
+export interface ContributionStep {
+  /** The month the new amount starts in, `YYYY-MM`. */
+  from: string
+  /** The monthly amount from then on, in today's money like the base (0 is a pause). */
+  monthlyCents: number
+}
+
 export interface GoalScenario {
   id: number
   name: string
@@ -275,6 +287,11 @@ export interface GoalScenario {
   planStartDate: string | null
   /** One-off cash events applied to the invested portfolio in the projection. */
   lifeEvents: LifeEvent[]
+  /**
+   * Changes to the monthly amount from a date on, in date order. Needs `planStartDate` to
+   * mean anything: without one there is no date for a plan year to start on, so none is applied.
+   */
+  contributionSchedule: ContributionStep[]
   /**
    * The owner's plan: the one scenario that Progress, the dashboard and check-in
    * deltas measure against. At most one per owner; set through activation, never
