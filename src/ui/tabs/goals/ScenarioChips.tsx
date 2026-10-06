@@ -6,20 +6,15 @@ interface ScenarioChipsProps {
   scenarios: GoalScenario[]
   activeId: number | null
   hiddenIds: ReadonlySet<number>
-  /** The scenarios that keep their own start while the others are looked at from the latest check-in. */
-  ownStartIds?: ReadonlySet<number>
   onSelect: (s: GoalScenario) => void
   onSelectEditing: () => void
   onToggleVisible: (id: number) => void
 }
 
-const NO_IDS: ReadonlySet<number> = new Set()
-
 export function ScenarioChips({
   scenarios,
   activeId,
   hiddenIds,
-  ownStartIds = NO_IDS,
   onSelect,
   onSelectEditing,
   onToggleVisible,
@@ -52,7 +47,6 @@ export function ScenarioChips({
             >
               {/* Its own line, above the name, so it never wraps mid-word beside a long title. */}
               {s.isActive ? <span className={styles.chipTag}>Current plan</span> : null}
-              {ownStartIds.has(s.id) ? <span className={styles.chipTag}>Own start</span> : null}
               <span className={styles.chipTitle}>
                 <span className={styles.swatch} style={{ background: scenarioInk(s.color) }} aria-hidden />
                 {label}
