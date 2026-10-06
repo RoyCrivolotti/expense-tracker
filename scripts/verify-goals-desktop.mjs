@@ -8,7 +8,8 @@
  * the Years to milestone table (`ONLY=milestone-table` runs just that; `ONLY=milestone-phone` its pages and by-goal view on a phone, `ONLY=milestone-sheet` the sheet with every milestone) and its timeline (`ONLY=milestone-timeline`),
  * both counted from today with start dates that differ (`ONLY=w2`, `ONLY=x2`),
  * why Save is off for a scenario with no name (`ONLY=s2`),
- * and how the milestone amount and the cash reserve read what is typed (`ONLY=settings-numbers`).
+ * how the milestone amount and the cash reserve read what is typed (`ONLY=settings-numbers`),
+ * and the hero chart full screen on a phone, upright and on its side (`ONLY=hero-sheet`).
  *
  * jsdom lays nothing out, so the unit tests cannot say any of this. It needs a browser and takes
  * a few minutes, so it is not part of `npm run verify`; CI runs it in its own job
@@ -2863,6 +2864,136 @@ async function checkFromTodayTimeline(browser, engine) {
   await context.close()
 }
 
+/** A touch device on the Goals chart tab, where the hero chart is. */
+async function openChartTab(browser, size) {
+  const context = await browser.newContext({
+    viewport: size,
+    screen: size,
+    deviceScaleFactor: 2,
+    isMobile: true,
+    hasTouch: true,
+    colorScheme: 'light',
+    reducedMotion: 'reduce',
+  })
+  const page = await context.newPage()
+  page.on('pageerror', (e) => failures.push(`page error: ${e.message}`))
+  await page.addInitScript(() => localStorage.setItem('exp-onboarding-skipped', '1'))
+  await page.goto(`${BASE}/`)
+  await page.waitForSelector('text=Recent activity', { timeout: 20000 })
+  await page.getByRole('button', { name: /Goals/ }).last().click()
+  await page.getByRole('tablist', { name: 'Goals view' }).waitFor({ timeout: 15000 })
+  await page.getByRole('tab', { name: 'Chart', exact: true }).tap()
+  await page.waitForTimeout(600)
+  return { page, context }
+}
+
+/**
+ * The hero chart full screen (check group h1): the button is on a phone, held either way, and not on
+ * a tablet or a laptop; the sheet covers the screen and, held upright, is turned a quarter turn;
+ * the rail beside the chart is as wide as it is meant to be and does not overflow; a tap along the
+ * chart, which runs down the screen when it is turned, picks the year it is on (the proof that the
+ * pointer is read from the right axis in each engine); the window buttons and the display switch
+ * are in the bar; a row of the rail can be tapped without losing the year; Escape closes it with
+ * the focus back on the button. Logs how many pixels a year gets, which is why it is there.
+ */
+async function checkHeroSheet(browser, engine) {
+  const open = (page) => page.getByRole('button', { name: 'Open the chart full screen' })
+  const dialog = (page) => page.getByRole('dialog', { name: /full screen/ })
+  const yearOf = async (page) => {
+    const text = await dialog(page).getByLabel('Values for the year').innerText()
+    const m = /Year (\d+)/.exec(text)
+    return m ? Number(m[1]) : null
+  }
+
+  for (const [name, size] of [['upright 375x812', { width: 375, height: 812 }], ['on its side 812x375', { width: 812, height: 375 }]]) {
+    const { page, context } = await openChartTab(browser, size)
+    const where = `${engine} phone ${name}`
+    check(where, '(h1) the card has the button, and it is 44px', (await open(page).count()) === 1 && (await open(page).boundingBox()).width >= 44, '')
+    const titleBefore = await page.getByRole('heading', { name: 'Invested portfolio projection' }).first().boundingBox()
+    check(where, '(h1) the title and the button are one line', titleBefore !== null && near(titleBefore.y + titleBefore.height / 2, (await open(page).boundingBox()).y + 22, 8), JSON.stringify(titleBefore))
+    await open(page).tap()
+    await dialog(page).waitFor()
+    await page.waitForTimeout(500)
+
+    const m = await page.evaluate(() => {
+      const d = document.querySelector('[role="dialog"]')
+      const r = d.getBoundingClientRect()
+      const rail = d.querySelector('aside')
+      const svg = d.querySelector('svg[role="img"]')
+      return {
+        box: [r.left, r.top, r.width, r.height].map(Math.round),
+        iw: innerWidth,
+        ih: innerHeight,
+        layout: [d.offsetWidth, d.offsetHeight],
+        matrix: getComputedStyle(d).transform,
+        rail: rail.offsetWidth,
+        railOverflow: rail.scrollWidth - rail.clientWidth,
+        plotW: svg.viewBox.baseVal.width - 72,
+        plotH: svg.viewBox.baseVal.height - 44,
+        page: document.documentElement.scrollWidth - innerWidth,
+        tools: d.querySelector('[class*="sheetBar"]').textContent,
+      }
+    })
+    check(where, '(h1) the sheet covers the whole screen', m.box[0] === 0 && m.box[1] === 0 && m.box[2] === m.iw && m.box[3] === m.ih, JSON.stringify(m.box))
+    if (size.width === 375) {
+      check(where, '(h1) held upright it is turned a quarter turn', m.layout[0] === m.ih && m.layout[1] === m.iw && /^matrix\(0, 1, -1, 0/.test(m.matrix), JSON.stringify({ layout: m.layout, matrix: m.matrix }))
+    } else {
+      check(where, '(h1) on its side it is not turned', m.matrix === 'none', m.matrix)
+    }
+    check(where, '(h1) the rail is 168 to 192px wide, and nothing in it runs out of it', m.rail >= 167 && m.rail <= 193 && m.railOverflow <= 1, JSON.stringify({ rail: m.rail, over: m.railOverflow }))
+    console.log(`  info ${where}: a year gets ${px(m.plotW / 30)} across, and the plot is ${px(m.plotH)} tall`)
+    check(where, '(h1) a year gets at least 12px across', m.plotW / 30 >= 12, px(m.plotW / 30))
+    check(where, '(h1) the page behind does not scroll sideways', m.page <= 0, String(m.page))
+    check(where, '(h1) the bar has the display switch and the window buttons', /Nominal/.test(m.tools) && /Purchasing power/.test(m.tools) && /5Y/.test(m.tools) && /All/.test(m.tools), m.tools)
+
+    // A tap along the chart picks the year it is on, whichever way the chart runs on the screen.
+    const svg = dialog(page).locator('svg[role="img"]').first()
+    const b = await svg.boundingBox()
+    const alongY = b.height > b.width
+    const length = alongY ? b.height : b.width
+    const years = []
+    for (const f of [0.25, 0.5, 0.75]) {
+      if (alongY) await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height * f)
+      else await page.touchscreen.tap(b.x + b.width * f, b.y + b.height / 2)
+      await page.waitForTimeout(250)
+      const year = await yearOf(page)
+      const expected = Math.round(((f * length - 56) / (length - 72)) * 30)
+      years.push({ f, year, expected })
+    }
+    check(where, '(h1) a tap along the chart picks the year it is on', years.every((y) => y.year !== null && near(y.year, y.expected, 1)) && years[0].year < years[1].year && years[1].year < years[2].year, JSON.stringify(years))
+
+    // Tapping a row of the rail changes what is drawn and keeps the year.
+    const before = await yearOf(page)
+    await dialog(page).getByLabel('Values for the year').getByRole('button').first().tap()
+    await page.waitForTimeout(250)
+    check(where, '(h1) tapping a scenario in the rail keeps the year', (await yearOf(page)) === before, `${before} then ${await yearOf(page)}`)
+
+    // The card's window buttons, in the bar, change the card too.
+    await dialog(page).getByRole('radio', { name: '5Y' }).tap()
+    await page.waitForTimeout(250)
+    await dialog(page).getByRole('button', { name: 'Close' }).tap()
+    await page.waitForTimeout(300)
+    check(where, '(h1) the sheet is gone after Close, and the card has the window it was given', (await dialog(page).count()) === 0 && (await page.getByRole('radio', { name: '5Y' }).first().getAttribute('aria-checked')) === 'true')
+
+    // From the keyboard (a tap does not focus a button in Safari): Escape closes it, focus goes back.
+    await open(page).focus()
+    await page.keyboard.press('Enter')
+    await dialog(page).waitFor()
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(300)
+    check(where, '(h1) Escape closes it and the focus is back on the button', (await dialog(page).count()) === 0 && (await open(page).evaluate((el) => el === document.activeElement)))
+    await context.close()
+  }
+
+  // A tablet and a laptop give the card the room: no button.
+  const tablet = await openChartTab(browser, { width: 820, height: 1180 })
+  check(`${engine} tablet 820x1180`, '(h1) the card has no button', (await open(tablet.page).count()) === 0)
+  await tablet.context.close()
+  const { page, context } = await openPlan(browser, { width: 1280, height: 800 })
+  check(`${engine} laptop 1280x800`, '(h1) the card has no button', (await open(page).count()) === 0)
+  await context.close()
+}
+
 async function main() {
   if (await answers()) throw new Error(`Something already answers on ${BASE}; set CAPTURE_PORT to a free port.`)
   const dev = startDev()
@@ -2921,6 +3052,10 @@ async function main() {
           await checkMilestoneSheet(browser, engine)
           continue
         }
+        if (process.env.ONLY === 'hero-sheet') {
+          await checkHeroSheet(browser, engine)
+          continue
+        }
         if (process.env.ONLY === 'settings-numbers') {
           await checkSettingsNumbers(browser, engine)
           continue
@@ -2955,6 +3090,7 @@ async function main() {
         await checkFromTodayMilestones(browser, engine)
         await checkFromTodayTimeline(browser, engine)
         await checkSettingsNumbers(browser, engine)
+        await checkHeroSheet(browser, engine)
       } finally {
         await browser.close()
       }
