@@ -53,6 +53,12 @@ function useScrollEdges() {
 interface SecondaryChartsProps {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
+  /**
+   * The draft as the editor has it. `draft` is restarted from the latest check-in while that is
+   * switched on, which the chart of actual investing against the plan cannot be: it needs the
+   * plan's real start. Defaults to `draft`.
+   */
+  savedDraft?: NewGoalScenario
   monthly: MonthlyFlow[]
   milestones: Milestone[]
   reached: Map<number, string>
@@ -71,6 +77,7 @@ function SecondaryViewChart({
   view,
   scenarios,
   draft,
+  savedDraft,
   monthly,
   milestones,
   reached,
@@ -80,6 +87,7 @@ function SecondaryViewChart({
   view: SecondaryView
   scenarios: GoalScenario[]
   draft: NewGoalScenario
+  savedDraft: NewGoalScenario
   monthly: MonthlyFlow[]
   milestones: Milestone[]
   reached: Map<number, string>
@@ -108,7 +116,7 @@ function SecondaryViewChart({
     case 'rent':
       return <RentVsOwnChart draft={draft} embedded />
     case 'savings':
-      return <SavingsRateChart draft={draft} monthly={monthly} embedded />
+      return <SavingsRateChart draft={savedDraft} monthly={monthly} embedded />
   }
 }
 
@@ -205,6 +213,7 @@ function TabbedChart({
 export function SecondaryCharts({
   scenarios,
   draft,
+  savedDraft = draft,
   monthly,
   milestones,
   reached,
@@ -221,6 +230,7 @@ export function SecondaryCharts({
         view={view}
         scenarios={scenarios}
         draft={draft}
+        savedDraft={savedDraft}
         monthly={monthly}
         milestones={milestones}
         reached={reached}

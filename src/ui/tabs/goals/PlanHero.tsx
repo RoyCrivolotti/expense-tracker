@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import type { GoalScenario, Milestone, WealthAccount, WealthCheckin } from '../../../types'
+import type { NewGoalScenario } from '../../../data/dataSource'
 import { checkinInvestedCents, yearOffsetFromDate, type PlanFromToday } from '../../../engine'
 import type { ChartSeries } from '../../charts/LinearChart'
 import { SegmentedControl } from '../../components/SegmentedControl'
@@ -34,6 +35,10 @@ export interface ValueDisplay {
 
 interface PlanHeroProps {
   scenarios: GoalScenario[]
+  /** What the narrative and the chart read: the editor's deferred draft, restarted or not. */
+  draft: NewGoalScenario
+  /** The loaded scenario, whose start the check-in dots and the today marker are placed against. */
+  activeScenario: GoalScenario | null
   editor: ScenarioEditor
   milestones: Milestone[]
   checkins: WealthCheckin[]
@@ -41,19 +46,23 @@ interface PlanHeroProps {
   /** The plan restarted from the latest check-in, drawn beside the saved one. */
   fromToday: PlanFromToday | null
   display: ValueDisplay
+  /** The switch that restarts every scenario from the latest check-in, for a wide screen's footer. */
+  startToggle?: ReactNode
 }
 
 /** The projection of every scenario, with the draft's narrative and the value display under it. */
 export function PlanHero({
   scenarios,
+  draft: deferredDraft,
+  activeScenario,
   editor,
   milestones,
   checkins,
   accounts,
   fromToday,
   display,
+  startToggle,
 }: PlanHeroProps) {
-  const { activeScenario, deferredDraft } = editor
 
   // Scatter points: actual invested values from check-ins plotted on the hero chart.
   const checkinExtraSeries = useMemo<ChartSeries | null>(() => {
@@ -61,7 +70,8 @@ export function PlanHero({
     const points = checkins
       .map((c) => {
         const offset = yearOffsetFromDate(activeScenario.planStartDate!, c.checkinDate)
-        if (offset === null) return null
+        // A reading from before the plan began has no place on its axis, and would still stretch it.
+        if (offset === null || offset < 0) return null
         const value = checkinInvestedCents(c, accounts)
         return { xIndex: offset, value }
       })
@@ -113,9 +123,10 @@ export function PlanHero({
       <>
         <PlanStrip draft={deferredDraft} milestones={milestones} />
         {nominalPreview}
+        {startToggle}
       </>
     )
-  }, [narrow, deferredDraft, milestones, displaySwitch, mode, assumedInflation, preview, onPreview, onOpenSetting])
+  }, [narrow, deferredDraft, milestones, displaySwitch, mode, assumedInflation, preview, onPreview, onOpenSetting, startToggle])
 
   const heroTodayIndex = useMemo(() => {
     if (!activeScenario?.planStartDate) return undefined
