@@ -540,7 +540,14 @@ function NetWorthChartImpl({
   const { line: fromTodayLine, label: fromTodayLabel } = fromTodayDrawing(displayRealPoints, fromToday)
 
   const { lines: refLines, fiAbove } = useRefLines(milestones, drawnMax, useFiTarget(isHero, draft), nominalMode)
-  const fiChartMarker = fiMarker(fiAbove, format)
+  const fiChartMarker = useMemo(() => fiMarker(fiAbove, format), [fiAbove, format])
+  // Stable between renders, so a year pointed at, which re-renders this, does not make the chart
+  // work out its axis and paths again from arrays that only look new.
+  const chartSeries = useMemo(
+    () => [...(displayBand ? [displayBand] : []), ...displaySeries, ...displayRealPoints, ...displayExtraSeries],
+    [displayBand, displaySeries, displayRealPoints, displayExtraSeries],
+  )
+  const formatValue = useCallback((cents: number) => formatMoneyShort(cents, format), [format])
   const staticLegend: LegendItem[] = useMemo(
     () => series.map((s, idx) => ({ label: names[idx] ?? s.id, color: s.color })),
     [series, names],
@@ -595,12 +602,12 @@ function NetWorthChartImpl({
       <LinearChart
         {...heroVariantProps}
         aboveTop={fiChartMarker}
-        series={[...(displayBand ? [displayBand] : []), ...displaySeries, ...displayRealPoints, ...displayExtraSeries]}
+        series={chartSeries}
         xLabels={labels}
         refLines={refLines}
         {...todayProp(todayIndex, windowYears)}
         yDomainMax={yDomainMax}
-        formatValue={(c) => formatMoneyShort(c, format)}
+        formatValue={formatValue}
         ariaLabel={projectionLabel(fiChartMarker)}
         tooltip={tooltip}
       />
