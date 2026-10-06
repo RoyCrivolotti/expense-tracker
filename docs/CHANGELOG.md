@@ -19,6 +19,16 @@ replace, and picking an existing one reuses its spelling. Rows that end up with 
 count as one recurring pattern in Analytics, so this is how "NETFLIX.COM" and "Netflix 0912" become a
 single line. The confirmation names the new description ("Renamed 14 transactions to Netflix").
 
+## October 2026 (Goals: scenarios from today)
+
+- **Compare every scenario from today's balance.** A new switch on the Goals plan, "Start all
+  scenarios from my balance today", redraws every scenario, and the one being edited, as if it had
+  started from your latest check-in. Scenarios written before a windfall or a long stretch of
+  saving no longer start from a balance you left behind, so they can be compared with each other
+  and with where you are. It is a way of looking, not a change: nothing is saved and switching it
+  off restores the originals. A what-if that buys the house at year 0 keeps its own start, and the
+  note under the switch says so by name.
+
 ## October 2026 (the Analytics redesign)
 
 Analytics was the workbook, ported: four wide tables and three small charts that reported numbers
