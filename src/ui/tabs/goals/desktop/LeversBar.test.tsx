@@ -33,6 +33,26 @@ function renderBar(overrides: Partial<Parameters<typeof LeversBar>[0]> = {}, dra
 }
 
 describe('LeversBar', () => {
+  it('says under the monthly amount that it changes from a date, since the amount is only where it starts', () => {
+    renderBar(
+      {},
+      {
+        planStartDate: '2026-06-25',
+        contributionSchedule: [
+          { from: '2027-03', monthlyCents: 200_000 },
+          { from: '2028-01', monthlyCents: 0 },
+        ],
+      },
+    )
+    expect(screen.getByText("then 2.000,00 € from Mar '27 (+1 more)")).toBeInTheDocument()
+    expect(screen.getByLabelText('Monthly investing')).toHaveValue('500')
+  })
+
+  it('says nothing under the monthly amount when it never changes', () => {
+    renderBar()
+    expect(screen.queryByText(/^then /)).not.toBeInTheDocument()
+  })
+
   it('shows each lever with its value as the app writes it', () => {
     renderBar()
     expect(screen.getByLabelText('Monthly investing')).toHaveValue('500')
