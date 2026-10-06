@@ -58,4 +58,36 @@ describe('scenarioHeadline', () => {
     const { secondary } = scenarioHeadline(base, DEFAULT_INFLATION_RATE, 100_000)
     expect(secondary).not.toContain('actual avg')
   })
+
+  describe('for a plan that changes its monthly amount', () => {
+    const stepped: GoalScenario = {
+      ...base,
+      planStartDate: '2026-01-01',
+      contributionSchedule: [
+        { from: '2026-06', monthlyCents: 200_000 },
+        { from: '2028-03', monthlyCents: 300_000 },
+      ],
+    }
+    const at = (today: string, actual?: number, plannedAverageCents = 150_000) =>
+      scenarioHeadline(stepped, DEFAULT_INFLATION_RATE, actual, undefined, null, { today, plannedAverageCents }).secondary
+
+    it('says what the plan invests today, and the change after it', () => {
+      expect(at('2026-03-10')).toContain("plan 1.000,00 €/mo (2.000,00 € from Jun '26)")
+      expect(at('2026-09-10')).toContain("plan 2.000,00 €/mo (3.000,00 € from Mar '28)")
+      expect(at('2028-04-10')).toContain('plan 3.000,00 €/mo')
+      expect(at('2028-04-10')).not.toContain(' from ')
+    })
+
+    it('sets the pace against the average the plan had over those months, not the starting amount', () => {
+      // 1,500 kept against a planned average of 1,500 is on plan, though the plan started at 1,000.
+      expect(at('2026-09-10', 150_000)).not.toContain('actual avg')
+      expect(at('2026-09-10', 120_000)).toContain('actual avg 1.200,00 €/mo invested')
+    })
+
+    it('is the old line for a plan that never changes it, and when it is not told the date', () => {
+      expect(scenarioHeadline(base, DEFAULT_INFLATION_RATE, 72_000).secondary).toContain('plan 1.000,00 €/mo · actual avg')
+      expect(scenarioHeadline(stepped, DEFAULT_INFLATION_RATE).secondary).toContain('plan 1.000,00 €/mo')
+      expect(scenarioHeadline(stepped, DEFAULT_INFLATION_RATE).secondary).not.toContain(' from ')
+    })
+  })
 })
