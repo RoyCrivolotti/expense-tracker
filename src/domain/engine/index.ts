@@ -1,5 +1,6 @@
 /** Barrel for the expense compute engine. */
 export * from './money'
+export * from './contributionSchedule'
 export * from './dates'
 export * from './defaults'
 export * from './finance'
