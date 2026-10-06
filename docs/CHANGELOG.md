@@ -19,6 +19,19 @@ replace, and picking an existing one reuses its spelling. Rows that end up with 
 count as one recurring pattern in Analytics, so this is how "NETFLIX.COM" and "Netflix 0912" become a
 single line. The confirmation names the new description ("Renamed 14 transactions to Netflix").
 
+## October 2026 (Goals: monthly investing that changes)
+
+- **A scenario can change what it invests each month, from a date.** "From March 2028, 2,500 a
+  month", or a pause, added under "Monthly investing changes" on the Goals plan. Before the first
+  change the scenario is exactly as it was, so nothing you have saved moves. After one, the line,
+  the milestone dates, the comparison table and the "What this means" sentence follow it.
+- **The figures that compare you with the plan follow it too.** Months ahead or behind, the pace
+  sentence, the dashboard headline and the investing-against-plan chart now read the amount the
+  plan was investing at the time, not the amount it started with. This also corrects plans that
+  grow their monthly amount each year, which were being measured against their first year.
+- **A re-baseline carries the changes.** It restarts from the amount in force at the check-in and
+  keeps only the changes still to come, on their own months.
+
 ## October 2026 (the Analytics redesign)
 
 Analytics was the workbook, ported: four wide tables and three small charts that reported numbers
