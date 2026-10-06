@@ -14,7 +14,7 @@ import {
   ChartFocusIndicator,
   type LifeEventMarker,
 } from './linearChartParts'
-import { useChartFocus } from './useChartFocus'
+import { useChartFocus, type ChartFocusOptions } from './useChartFocus'
 import { useSvgAnchor } from './useSvgAnchor'
 import {
   collectDomain,
@@ -85,6 +85,8 @@ interface Props {
   yDomainMax?: number | undefined
   /** Fit the Y axis to the values in view instead of anchoring it at zero. */
   fitDomain?: boolean
+  /** How the focused year behaves; see `ChartFocusOptions`. Absent, it clears as it always has. */
+  focus?: ChartFocusOptions
 }
 
 function pointsOf(values: number[], x: (i: number) => number, y: (v: number) => number): Pt[] {
@@ -206,6 +208,7 @@ export function LinearChart({
   onActiveIndexChange,
   yDomainMax,
   fitDomain,
+  focus,
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   // useId can return characters (colons, in older React) that a url(#...) reference does not take.
@@ -217,7 +220,7 @@ export function LinearChart({
   // render at their own size instead of being scaled up with the chart.
   const width = useElementWidth(containerRef, FALLBACK_W)
   const geo = useGeometry(series, width, height, refLines, yDomainMax, fitDomain, padTop)
-  const { active, ...handlers } = useChartFocus(geo.n, geo.xForIndex, containerRef)
+  const { active, ...handlers } = useChartFocus(geo.n, geo.xForIndex, containerRef, focus)
   const focusX = active != null ? geo.xForIndex(active) : 0
   const anchor = useSvgAnchor(svgRef, active != null ? focusX : null, active != null ? geo.padTop : null)
   const tip = active != null ? tooltip(active) : null

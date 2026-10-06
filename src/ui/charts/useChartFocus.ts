@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState, type RefObject } from 'react'
+import { quarterTurnX } from './chartPointer'
 import { useDismissOnOutsidePointer } from './useDismissOnOutsidePointer'
 
 /** The index whose x is nearest, or null when the nearest is further than `reach`. */
@@ -20,6 +21,11 @@ export function nearestIndex(
   return bestDist <= reach ? best : null
 }
 
+export interface ChartFocusOptions {
+  /** 1 when the chart is drawn a quarter turn clockwise by an ancestor's transform. */
+  turn?: 0 | 1 | undefined
+}
+
 /**
  * Hover (desktop), tap (touch) or arrow keys (keyboard) focus on the nearest chart index.
  * `containerRef` is the chart's wrapper: a tap outside it clears the focus.
@@ -28,7 +34,9 @@ export function useChartFocus(
   length: number,
   xForIndex: (i: number) => number,
   containerRef: RefObject<HTMLElement | null>,
+  options: ChartFocusOptions = {},
 ) {
+  const { turn = 0 } = options
   const [active, setActive] = useState<number | null>(null)
   // A finger sliding along the chart, from pointer down to up. Between two steps it is
   // still on the chart, so the nearest step stays rather than the tooltip blinking out.
@@ -39,29 +47,25 @@ export function useChartFocus(
   useDismissOnOutsidePointer(containerRef, active != null, dismiss)
 
   const pick = useCallback(
-    (clientX: number, svg: SVGSVGElement, anywhere: boolean) => {
+    (clientX: number, clientY: number, svg: SVGSVGElement, anywhere: boolean) => {
       if (length === 0) return
-      const ctm = svg.getScreenCTM()
-      if (!ctm) return
-      const pt = svg.createSVGPoint()
-      pt.x = clientX
-      pt.y = 0
-      const { x } = pt.matrixTransform(ctm.inverse())
+      const x = plotX(svg, clientX, clientY, turn)
+      if (x === null) return
       // A hover reaches 28 CSS pixels either side, whatever the viewBox is scaled to.
       const scale = svg.viewBox.baseVal.width / svg.clientWidth
       setActive(nearestIndex(x, length, xForIndex, anywhere ? Infinity : 28 * scale))
     },
-    [length, xForIndex],
+    [length, xForIndex, turn],
   )
 
   const onPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
-    pick(e.clientX, e.currentTarget, dragging.current)
+    pick(e.clientX, e.clientY, e.currentTarget, dragging.current)
   }
 
   const onPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
     if (e.pointerType !== 'mouse') e.preventDefault()
     dragging.current = true
-    pick(e.clientX, e.currentTarget, true)
+    pick(e.clientX, e.clientY, e.currentTarget, true)
     e.currentTarget.setPointerCapture(e.pointerId)
   }
 
@@ -112,6 +116,17 @@ export function useChartFocus(
     onKeyDown,
     onBlur: dismiss,
   }
+}
+
+/** The pointer's x in viewBox units, or null when the svg has no screen matrix or box to read. */
+function plotX(svg: SVGSVGElement, clientX: number, clientY: number, turn: 0 | 1): number | null {
+  if (turn === 1) return quarterTurnX(clientY, svg.getBoundingClientRect(), svg.viewBox.baseVal.width)
+  const ctm = svg.getScreenCTM()
+  if (!ctm) return null
+  const pt = svg.createSVGPoint()
+  pt.x = clientX
+  pt.y = clientY
+  return pt.matrixTransform(ctm.inverse()).x
 }
 
 /** Everything the hook returns except `active`: spread onto the svg. */
