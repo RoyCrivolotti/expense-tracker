@@ -12,6 +12,7 @@ const base = {
   startInvestedCents: 100_000_00,
   monthlyContributionCents: 1_000_00,
   annualContributionGrowth: 0,
+  contributionSchedule: [] as { from: string; monthlyCents: number }[],
 }
 const plain = (iso: string) => iso
 
@@ -25,6 +26,7 @@ describe('rebaseline', () => {
       lifeEvents: [{ year: 1, amountCents: -20_000_00, label: 'Car' }],
       housePurchaseYear: 3,
       monthlyContributionCents: 1_000_00,
+      contributionSchedule: [],
     })
     expect(r.droppedLifeEvents).toEqual([events[0]])
   })
@@ -76,6 +78,73 @@ describe('rebaseline', () => {
   })
 })
 
+describe('rebaseline with changes to the monthly amount', () => {
+  const stepped = {
+    ...base,
+    lifeEvents: [],
+    housePurchaseYear: null,
+    planStartDate: '2026-01-01',
+    contributionSchedule: [
+      { from: '2026-07', monthlyCents: 1_500_00 },
+      { from: '2028-03', monthlyCents: 2_500_00 },
+      { from: '2030-01', monthlyCents: 0 },
+    ],
+  }
+
+  it('restarts from the amount in force at the check-in and keeps the changes still to come, on their months', () => {
+    const r = rebaseline(stepped, { investedCents: 1, date: '2027-02-15' })
+    // July 2026 is behind the check-in; March 2028 and January 2030 are not.
+    expect(r.patch.monthlyContributionCents).toBe(1_500_00)
+    expect(r.patch.contributionSchedule).toEqual([
+      { from: '2028-03', monthlyCents: 2_500_00 },
+      { from: '2030-01', monthlyCents: 0 },
+    ])
+    expect(r.droppedSteps).toEqual([{ from: '2026-07', monthlyCents: 1_500_00 }])
+  })
+
+  it('grows the amount in force for the whole years since its month, not since the plan began', () => {
+    // 1 July 2026 to 15 February 2028 is 1.6 years, so two years of 10% growth on 1,500.
+    const r = rebaseline({ ...stepped, annualContributionGrowth: 0.1 }, { investedCents: 1, date: '2028-02-15' })
+    expect(r.patch.monthlyContributionCents).toBe(Math.round(1_500_00 * 1.1 ** 2))
+  })
+
+  it('starts the changes later in the month of the check-in from the month itself', () => {
+    const r = rebaseline(stepped, { investedCents: 1, date: '2028-03-20' })
+    // A change takes effect on the first of its month, so by the 20th it is in force.
+    expect(r.patch.monthlyContributionCents).toBe(2_500_00)
+    expect(r.patch.contributionSchedule).toEqual([{ from: '2030-01', monthlyCents: 0 }])
+    expect(r.droppedSteps.map((s) => s.from)).toEqual(['2026-07', '2028-03'])
+  })
+
+  it('is the base grown as before when no change has begun yet', () => {
+    const r = rebaseline({ ...stepped, annualContributionGrowth: 0.05 }, { investedCents: 1, date: '2026-05-01' })
+    expect(r.droppedSteps).toEqual([])
+    expect(r.patch.monthlyContributionCents).toBe(1_000_00)
+    expect(r.patch.contributionSchedule).toEqual(stepped.contributionSchedule)
+  })
+
+  it('leaves the changes alone without an old start, when none of them ever applied', () => {
+    const r = rebaseline({ ...stepped, planStartDate: null }, { investedCents: 1, date: '2027-02-15' })
+    expect(r.patch.monthlyContributionCents).toBe(1_000_00)
+    expect(r.patch.contributionSchedule).toEqual(stepped.contributionSchedule)
+    expect(r.droppedSteps).toEqual([])
+  })
+
+  it('does not touch the scenario it was given', () => {
+    const before = JSON.stringify(stepped)
+    rebaseline(stepped, { investedCents: 1, date: '2027-02-15' })
+    expect(JSON.stringify(stepped)).toBe(before)
+  })
+
+  it('treats a scenario cached before the schedule existed as having none', () => {
+    const { contributionSchedule: _omitted, ...cached } = stepped
+    void _omitted
+    const r = rebaseline(cached as typeof stepped, { investedCents: 1, date: '2027-02-15' })
+    expect(r.patch.contributionSchedule).toEqual([])
+    expect(r.droppedSteps).toEqual([])
+  })
+})
+
 describe('rebaselineSummary', () => {
   const summary = (r: ReturnType<typeof rebaseline>) => rebaselineSummary(r, EU_MONEY_FORMAT, plain)
 
@@ -117,6 +186,41 @@ describe('rebaselineSummary', () => {
       'Monthly investing goes from 1.000,00 € to 1.157,63 €, as it has grown since the plan started.',
     ])
     expect(r.previous).toEqual({ investedCents: 100_000_00, planStartDate: '2023-09-11', monthlyContributionCents: 1_000_00 })
+  })
+
+  it('says which change the new monthly amount comes from, and that it is now part of it', () => {
+    const r = rebaseline(
+      {
+        ...base,
+        lifeEvents: [],
+        housePurchaseYear: null,
+        planStartDate: '2026-01-01',
+        contributionSchedule: [{ from: '2026-07', monthlyCents: 1_500_00 }],
+      },
+      { investedCents: 1, date: '2027-02-15' },
+    )
+    expect(summary(r)).toEqual([
+      'Monthly investing goes from 1.000,00 € to 1.500,00 €: the change to 1.500,00 € from 2026-07-01 is already behind the new start, so it is in the monthly amount.',
+    ])
+  })
+
+  it('lists several changes that are behind the new start, in order', () => {
+    const r = rebaseline(
+      {
+        ...base,
+        lifeEvents: [],
+        housePurchaseYear: null,
+        planStartDate: '2026-01-01',
+        contributionSchedule: [
+          { from: '2026-07', monthlyCents: 1_500_00 },
+          { from: '2027-01', monthlyCents: 2_000_00 },
+        ],
+      },
+      { investedCents: 1, date: '2027-02-15' },
+    )
+    expect(summary(r)).toEqual([
+      'Monthly investing goes from 1.000,00 € to 2.000,00 €: the change to 1.500,00 € from 2026-07-01, then 2.000,00 € from 2027-01-01 are already behind the new start, so they are in the monthly amount.',
+    ])
   })
 
   it('has no dates to give without an old start', () => {
