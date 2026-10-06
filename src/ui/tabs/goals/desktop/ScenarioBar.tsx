@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useRef, useState, type ReactNode } from 'react'
 import type { GoalScenario } from '../../../../types'
 import type { ExpenseActions } from '../../../actions'
 import { ConfirmSheet } from '../../../components/ConfirmSheet'
@@ -20,6 +20,14 @@ interface ScenarioBarProps {
   editor: ScenarioEditor
   /** Absent in a read-only session, which can look at scenarios but not change one. */
   actions: ExpenseActions | undefined
+  /**
+   * How the scenarios are looked at (from their own start or the latest check-in): the switch sits in
+   * this row, which has the room, and what it says while on gets a line under it only then.
+   */
+  viewSwitch?: ReactNode
+  viewStatus?: ReactNode
+  /** The scenarios that keep their own start while the others are looked at from the latest check-in. */
+  ownStartIds?: ReadonlySet<number>
 }
 
 /** The draft's Save scenario button, which says why it is off when it has no name. */
@@ -50,7 +58,7 @@ function ReadOnlyNote({ unsaved }: { unsaved: boolean }) {
  * it has edits that are not saved, the way to keep or drop them. The editor underneath is the
  * phone's own, so a scenario behaves the same wherever it is opened.
  */
-export function ScenarioBar({ scenarios, editor, actions }: ScenarioBarProps) {
+export function ScenarioBar({ scenarios, editor, actions, viewSwitch, viewStatus, ownStartIds }: ScenarioBarProps) {
   const activeTab = useRef<HTMLButtonElement>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const { activeId, activeScenario, draft, dirty, unsaved, saving, creating } = editor
@@ -70,6 +78,7 @@ export function ScenarioBar({ scenarios, editor, actions }: ScenarioBarProps) {
           dirty={dirty && actions != null}
           draftName={draft.name}
           showDraft={activeId === null || scenarios.length === 0}
+          {...(ownStartIds ? { ownStartIds } : {})}
           onSelect={editor.onSelectScenario}
           onSelectDraft={editor.onSelectEditing}
         />
@@ -84,6 +93,7 @@ export function ScenarioBar({ scenarios, editor, actions }: ScenarioBarProps) {
             + Duplicate
           </button>
         ) : null}
+        {viewSwitch}
         <span className={styles.rowSpacer} />
         {actions ? (
           <>
@@ -128,6 +138,7 @@ export function ScenarioBar({ scenarios, editor, actions }: ScenarioBarProps) {
           </>
         ) : null}
       </div>
+      {viewStatus}
       {actions ? null : <ReadOnlyNote unsaved={unsaved} />}
       <DiscardSheet {...editor.discardPrompt} />
     </div>

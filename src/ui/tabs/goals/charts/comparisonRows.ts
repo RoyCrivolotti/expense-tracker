@@ -18,6 +18,17 @@ export interface ComparisonRow {
   invested: string
   house: string
   monthly: string
+  /** What the monthly amount comes to after the last change to it, or null when it never changes. */
+  monthlyLater: string | null
+}
+
+/** What the scenario invests after the last change to the monthly amount; null when it never changes. */
+function laterMonthly(
+  scenario: Pick<NewGoalScenario, 'contributionSchedule'>,
+  format: MoneyFormat,
+): string | null {
+  const last = scenario.contributionSchedule?.[scenario.contributionSchedule.length - 1]
+  return last ? formatCents(last.monthlyCents, format) : null
 }
 
 function houseLabel(year: number | null): string {
@@ -77,6 +88,7 @@ export function comparisonRows(
       house: houseLabel(scenario.housePurchaseYear),
       // Exact: 1,000, 1,400 and 1,499 a month are three different plans, not "1k".
       monthly: formatCents(scenario.monthlyContributionCents, format),
+      monthlyLater: laterMonthly(scenario, format),
     }
   })
 }

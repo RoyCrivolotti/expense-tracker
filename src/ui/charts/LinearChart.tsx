@@ -14,7 +14,7 @@ import {
   ChartFocusIndicator,
   type LifeEventMarker,
 } from './linearChartParts'
-import { useChartFocus } from './useChartFocus'
+import { useChartFocus, type ChartFocusOptions } from './useChartFocus'
 import { useSvgAnchor } from './useSvgAnchor'
 import {
   collectDomain,
@@ -87,6 +87,8 @@ interface Props {
   yDomainMax?: number | undefined
   /** Fit the Y axis to the values in view instead of anchoring it at zero. */
   fitDomain?: boolean
+  /** How the focused year behaves; see `ChartFocusOptions`. Absent, it clears as it always has. */
+  focus?: ChartFocusOptions
   /**
    * Draw at the height of the box the chart is in, which the caller gives a height of its own,
    * instead of at `height` (which is then only what it is drawn at before the box is measured).
@@ -227,6 +229,7 @@ export function LinearChart({
   onActiveIndexChange,
   yDomainMax,
   fitDomain,
+  focus,
   fillHeight,
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
@@ -239,7 +242,7 @@ export function LinearChart({
   // render at their own size instead of being scaled up with the chart.
   const { width, height: drawnHeight } = useChartBox(containerRef, height, fillHeight)
   const geo = useGeometry(series, width, drawnHeight, refLines, yDomainMax, fitDomain, padTop)
-  const { active, ...handlers } = useChartFocus(geo.n, geo.xForIndex, containerRef)
+  const { active, ...handlers } = useChartFocus(geo.n, geo.xForIndex, containerRef, focus)
   const focusX = active != null ? geo.xForIndex(active) : 0
   const anchor = useSvgAnchor(svgRef, active != null ? focusX : null, active != null ? geo.padTop : null)
   const tip = active != null ? tooltip(active) : null

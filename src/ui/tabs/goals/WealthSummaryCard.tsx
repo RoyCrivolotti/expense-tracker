@@ -14,6 +14,8 @@ import {
   medianMonthlyCents,
   monthlyFlows,
   monthsSincePlanStart,
+  plannedMonthlyAt,
+  plannedMonthlyAverage,
   portfolioReturn,
   steadyGap,
   trackStatus,
@@ -59,11 +61,16 @@ function PaceHint({
     () => monthsSincePlanStart(monthlyFlows(computeMonthlyTotals(transactions)), plan.planStartDate),
     [transactions, plan.planStartDate],
   )
-  if (months.length === 0 || plan.monthlyContributionCents <= 0) return null
+  // The plan's figure over these same months: one amount for a plan that never changes it, and
+  // otherwise what it averages, with where it started and where it is now.
+  const planned = plannedMonthlyAverage(plan, months.map((m) => m.month))
+  if (months.length === 0 || planned <= 0) return null
+  const plannedFirst = plannedMonthlyAt(plan, `${months[0]!.month}-15`)
+  const plannedNow = plannedMonthlyAt(plan, `${months[months.length - 1]!.month}-15`)
   const invested = months.map((m) => m.investedCents)
   const mean = averageMonthlyCents(invested)
   const median = medianMonthlyCents(invested)
-  const onPace = mean >= plan.monthlyContributionCents
+  const onPace = mean >= planned
   // A tenth apart is a lump sum or a pause, not rounding.
   const typical = Math.abs(mean - median) > mean * 0.1 ? median : null
   return (
@@ -74,7 +81,11 @@ function PaceHint({
       </strong>{' '}
       on average over the {months.length} month{months.length === 1 ? '' : 's'} since the plan started
       {typical !== null ? `, ${formatCents(typical, format)} in a typical month` : ''}, against the{' '}
-      {formatCents(plan.monthlyContributionCents, format)} a month it assumes.
+      {formatCents(planned, format)} a month{plannedFirst === plannedNow ? '' : ' on average'} it assumes
+      {plannedFirst === plannedNow
+        ? ''
+        : ` (${formatCents(plannedFirst, format)} at first, ${formatCents(plannedNow, format)} now)`}
+      .
     </p>
   )
 }

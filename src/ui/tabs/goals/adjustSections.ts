@@ -1,4 +1,4 @@
-export type AdjustSection = 'portfolio' | 'housing' | 'fire' | 'tracking' | 'events'
+export type AdjustSection = 'portfolio' | 'housing' | 'fire' | 'tracking' | 'changes' | 'events'
 
 /**
  * What each section is called: `chip` is the short label the phone's section row uses and
@@ -10,6 +10,7 @@ export const ADJUST_LABELS: Record<AdjustSection, { title: string; chip: string 
   housing: { title: 'Housing', chip: 'Housing' },
   fire: { title: 'Financial independence', chip: 'FI' },
   tracking: { title: 'Plan start', chip: 'Start date' },
+  changes: { title: 'Monthly investing changes', chip: 'Monthly changes' },
   events: { title: 'Life events', chip: 'Events' },
 }
 

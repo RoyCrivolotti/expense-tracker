@@ -41,7 +41,7 @@ describe('AllInputsPanel', () => {
   it('lays the sections out in columns, without what is in the levers bar', () => {
     renderPanel(true)
     const panel = screen.getByRole('region', { name: 'All inputs' })
-    for (const title of ['Portfolio', 'Housing', 'Financial independence', 'Plan start', 'Life events']) {
+    for (const title of ['Portfolio', 'Housing', 'Financial independence', 'Plan start', 'Monthly investing changes', 'Life events']) {
       expect(within(panel).getByRole('heading', { name: title })).toBeInTheDocument()
     }
     expect(within(panel).getByRole('textbox', { name: 'Contribution growth (%/yr)' })).toBeInTheDocument()

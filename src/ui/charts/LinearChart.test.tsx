@@ -294,6 +294,27 @@ describe('LinearChart', () => {
     expect(onActiveIndexChange).toHaveBeenLastCalledWith(null)
   })
 
+  it('starts at, and keeps, the step its focus options give it', () => {
+    const onActiveIndexChange = vi.fn()
+    const { container } = render(
+      <LinearChart
+        {...defaultProps}
+        series={[makeLine('s1', [10, 20, 30])]}
+        onActiveIndexChange={onActiveIndexChange}
+        tooltipMode="hidden"
+        focus={{ sticky: true, initial: 1 }}
+      />,
+    )
+    const svg = container.querySelector('svg')!
+    expect(onActiveIndexChange).toHaveBeenLastCalledWith(1)
+
+    fireEvent.blur(svg)
+    fireEvent.keyDown(svg, { key: 'Escape' })
+    expect(onActiveIndexChange).toHaveBeenLastCalledWith(1)
+    fireEvent.keyDown(svg, { key: 'End' })
+    expect(onActiveIndexChange).toHaveBeenLastCalledWith(2)
+  })
+
   it('picks the nearest step while a finger drags, and only within reach for a hover', () => {
     const x = (i: number) => i * 100
     // Hover: a point between two steps but further than the reach from both is nothing.

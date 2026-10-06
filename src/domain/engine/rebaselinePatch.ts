@@ -7,10 +7,12 @@
  * since its money is in the balance the plan restarts from, and a later one lands on
  * the first anniversary of the new start at or after its date. A plan whose
  * contribution grows each year has grown for the years that passed, and restarts from
- * that.
+ * that. One with changes to the monthly amount restarts from the amount in force at the
+ * check-in, grown from the month it began in, and keeps only the changes still to come, on
+ * their own months.
  */
-import type { GoalScenario, LifeEvent } from '../types'
-import { utcDateMs } from './dates'
+import type { ContributionStep, GoalScenario, LifeEvent } from '../types'
+import { utcDateMs, yearsBetween } from './dates'
 import { formatCents, type MoneyFormat } from './money'
 import { yearOffsetFromDate } from './wealthTracking'
 
@@ -20,6 +22,8 @@ export interface RebaselinePatch {
   lifeEvents: LifeEvent[]
   housePurchaseYear: number | null
   monthlyContributionCents: number
+  /** The changes to the monthly amount that start after the check-in. */
+  contributionSchedule: ContributionStep[]
 }
 
 /** A life event with the date it had and the one it now has; null when it is dropped. */
@@ -36,6 +40,8 @@ export interface Rebaseline {
   droppedLifeEvents: LifeEvent[]
   /** Every event's old and new date, for saying what moved. Empty without an old start. */
   carried: CarriedEvent[]
+  /** Changes to the monthly amount that began by the check-in, now part of the monthly amount. */
+  droppedSteps: ContributionStep[]
   /** The house purchase's old and new date; `to` is null when it is now behind the start. */
   house: { from: string; to: string | null } | null
   /** What the plan started from before, for saying what is being replaced. */
@@ -44,7 +50,7 @@ export interface Rebaseline {
   shiftedYears: number
 }
 
-type Rebaselinable = Pick<
+export type Rebaselinable = Pick<
   GoalScenario,
   | 'planStartDate'
   | 'lifeEvents'
@@ -52,6 +58,7 @@ type Rebaselinable = Pick<
   | 'startInvestedCents'
   | 'monthlyContributionCents'
   | 'annualContributionGrowth'
+  | 'contributionSchedule'
 >
 
 /** The same day of the year, `years` on, by the calendar rather than in days. */
@@ -72,6 +79,35 @@ function carriedYear(year: number, oldStart: string, newStart: string, checkin: 
   let k = 1
   while (anniversary(newStart, k) < date) k += 1
   return k
+}
+
+/**
+ * What the monthly amount restarts from at the check-in. A change that began by then is part of
+ * the amount now, grown for the whole years since its month, and is dropped; the ones still to
+ * come keep their months, which count from the new start by themselves. Without a change in
+ * force the base is grown for the years the start moved, as it always was. With no old start the
+ * changes never applied, so they are left to the engine, which reads the ones before the new
+ * start as the amount it starts with.
+ */
+function restartContribution(
+  scenario: Rebaselinable,
+  oldStart: string | null,
+  shiftedYears: number,
+  checkinDate: string,
+): { monthlyContributionCents: number; contributionSchedule: ContributionStep[]; droppedSteps: ContributionStep[] } {
+  const schedule = scenario.contributionSchedule ?? []
+  const month = checkinDate.slice(0, 7)
+  const begun = oldStart ? schedule.filter((s) => s.from <= month) : []
+  const inForce = begun.reduce<ContributionStep | null>((latest, s) => (!latest || s.from > latest.from ? s : latest), null)
+  const growth = scenario.annualContributionGrowth
+  const monthlyContributionCents = inForce
+    ? Math.round(inForce.monthlyCents * Math.pow(1 + growth, Math.max(0, Math.round(yearsBetween(`${inForce.from}-01`, checkinDate)))))
+    : Math.round(scenario.monthlyContributionCents * Math.pow(1 + growth, Math.max(0, shiftedYears)))
+  return {
+    monthlyContributionCents,
+    contributionSchedule: oldStart ? schedule.filter((s) => s.from > month) : [...schedule],
+    droppedSteps: begun,
+  }
 }
 
 export function rebaseline(
@@ -111,8 +147,11 @@ export function rebaseline(
           to: housePurchaseYear > 0 ? anniversary(latest.date, housePurchaseYear) : null,
         }
       : null
-  const monthlyContributionCents = Math.round(
-    scenario.monthlyContributionCents * Math.pow(1 + scenario.annualContributionGrowth, Math.max(0, shiftedYears)),
+  const { monthlyContributionCents, contributionSchedule, droppedSteps } = restartContribution(
+    scenario,
+    oldStart,
+    shiftedYears,
+    latest.date,
   )
   return {
     patch: {
@@ -121,8 +160,10 @@ export function rebaseline(
       lifeEvents,
       housePurchaseYear,
       monthlyContributionCents,
+      contributionSchedule,
     },
     droppedLifeEvents,
+    droppedSteps,
     carried,
     house,
     previous: {
@@ -132,6 +173,21 @@ export function rebaseline(
     },
     shiftedYears,
   }
+}
+
+/** What happened to the monthly amount, or null when it did not move. */
+function monthlyLine(r: Rebaseline, format: MoneyFormat, formatDate: (iso: string) => string): string | null {
+  const from = formatCents(r.previous.monthlyContributionCents, format)
+  const to = formatCents(r.patch.monthlyContributionCents, format)
+  if (r.droppedSteps.length > 0) {
+    const changes = r.droppedSteps
+      .map((s) => `${formatCents(s.monthlyCents, format)} from ${formatDate(`${s.from}-01`)}`)
+      .join(', then ')
+    const one = r.droppedSteps.length === 1
+    return `Monthly investing goes from ${from} to ${to}: the change to ${changes} ${one ? 'is' : 'are'} already behind the new start, so ${one ? 'it is' : 'they are'} in the monthly amount.`
+  }
+  if (r.patch.monthlyContributionCents === r.previous.monthlyContributionCents) return null
+  return `Monthly investing goes from ${from} to ${to}, as it has grown since the plan started.`
 }
 
 /**
@@ -147,11 +203,8 @@ export function rebaselineSummary(
 ): string[] {
   const name = (e: LifeEvent) => e.label || formatCents(e.amountCents, format)
   const lines: string[] = []
-  if (r.patch.monthlyContributionCents !== r.previous.monthlyContributionCents) {
-    lines.push(
-      `Monthly investing goes from ${formatCents(r.previous.monthlyContributionCents, format)} to ${formatCents(r.patch.monthlyContributionCents, format)}, as it has grown since the plan started.`,
-    )
-  }
+  const monthly = monthlyLine(r, format, formatDate)
+  if (monthly) lines.push(monthly)
   const moved = r.carried.filter((c) => c.to !== null && c.to !== c.from)
   for (const c of moved) {
     lines.push(`${name(c.event)} moves from ${formatDate(c.from)} to ${formatDate(c.to!)}.`)

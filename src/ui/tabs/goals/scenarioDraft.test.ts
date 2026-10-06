@@ -69,6 +69,25 @@ describe('editedKeys and editedPatch', () => {
     expect(editedPatch(draft, saved)).toEqual({ lifeEvents: draft.lifeEvents })
   })
 
+  it('count the schedule of monthly changes, compared whole like life events, so Save writes it', () => {
+    const steps = [{ from: '2028-03', monthlyCents: 250_000 }]
+    const draft = { ...scenarioToDraft(saved), contributionSchedule: steps }
+
+    expect(differsFrom(draft, saved)).toBe(true)
+    expect(editedKeys(draft, saved)).toEqual(['contributionSchedule'])
+    expect(editedPatch(draft, saved)).toEqual({ contributionSchedule: steps })
+    // Edited back to what is saved, it is not an edit.
+    expect(differsFrom({ ...draft, contributionSchedule: [] }, saved)).toBe(false)
+  })
+
+  it('read a scenario cached before the schedule existed as having no changes', () => {
+    const { contributionSchedule: _omitted, ...cached } = saved
+    void _omitted
+
+    expect(differsFrom(scenarioToDraft(saved), cached as typeof saved)).toBe(false)
+    expect(differsFrom({ ...scenarioToDraft(saved), contributionSchedule: [{ from: '2028-03', monthlyCents: 1 }] }, cached as typeof saved)).toBe(true)
+  })
+
   it('are empty for a draft straight from its scenario', () => {
     expect(editedKeys(scenarioToDraft(saved), saved)).toEqual([])
     expect(editedPatch(scenarioToDraft(saved), saved)).toEqual({})

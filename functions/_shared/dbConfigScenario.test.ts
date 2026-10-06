@@ -60,3 +60,44 @@ describe('updateScenario with lifeEvents', () => {
     expect(result.lifeEvents).toEqual([])
   })
 })
+
+describe('updateScenario with contributionSchedule', () => {
+  it('writes the schedule to its own column as JSON, and reads the saved row back', async () => {
+    const schedule = [{ from: '2028-03', monthlyCents: 250_000 }]
+    const binds: unknown[][] = []
+    const sqls: string[] = []
+    const first = vi.fn().mockResolvedValue(makeRow({ contribution_schedule: JSON.stringify(schedule) }))
+    const prepare = vi.fn((sql: string) => {
+      sqls.push(sql)
+      return {
+        bind: (...args: unknown[]) => {
+          binds.push(args)
+          return { first }
+        },
+      }
+    })
+    const env = { DB: { prepare } } as unknown as Env
+
+    const result = await updateScenario(env, 'test@example.com', 1, { contributionSchedule: schedule })
+
+    expect(sqls[0]).toMatch(/SET contribution_schedule = \?/)
+    expect(binds[0]).toEqual([JSON.stringify(schedule), 1, 'test@example.com'])
+    expect(result.contributionSchedule).toEqual(schedule)
+  })
+
+  it('writes an emptied schedule as "[]", never as NULL, which the column refuses', async () => {
+    const binds: unknown[][] = []
+    const first = vi.fn().mockResolvedValue(makeRow())
+    const prepare = vi.fn(() => ({
+      bind: (...args: unknown[]) => {
+        binds.push(args)
+        return { first }
+      },
+    }))
+    const env = { DB: { prepare } } as unknown as Env
+
+    await updateScenario(env, 'test@example.com', 1, { contributionSchedule: [] })
+
+    expect(binds[0]![0]).toBe('[]')
+  })
+})

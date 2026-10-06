@@ -73,6 +73,67 @@ describe('GoalControls', () => {
     expect(screen.getByLabelText('Plan start date')).toHaveValue('2024-03-15')
   })
 
+  it('has a folded section for the monthly investing changes, between the plan start and the life events', () => {
+    const { container } = render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
+    const sections = Array.from(container.querySelectorAll('details[id^="goals-adjust-"]'))
+    const ids = sections.map((el) => el.id.replace('goals-adjust-', ''))
+    expect(ids.indexOf('changes')).toBe(ids.indexOf('tracking') + 1)
+    expect(ids.indexOf('events')).toBe(ids.indexOf('changes') + 1)
+    expect((sections[ids.indexOf('changes')] as HTMLDetailsElement).open).toBe(false)
+    expect(screen.getByText('Monthly investing changes')).toBeInTheDocument()
+  })
+
+  it('writes a change to the monthly amount through the draft, in date order', () => {
+    const onChange = vi.fn()
+    const draft = {
+      ...makeDraft(),
+      planStartDate: '2026-06-25',
+      contributionSchedule: [{ from: '2029-01', monthlyCents: 0 }],
+    }
+    render(<GoalControls draft={draft} onChange={onChange} />)
+
+    fireEvent.click(screen.getByRole('button', { name: '+ Add a change' }))
+    fireEvent.change(screen.getByLabelText('Change starts in'), { target: { value: '2027-03' } })
+    const amount = screen.getByLabelText('Monthly amount from then')
+    fireEvent.change(amount, { target: { value: '2500' } })
+    fireEvent.blur(amount)
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+
+    expect(onChange).toHaveBeenCalledWith({
+      contributionSchedule: [
+        { from: '2027-03', monthlyCents: 250_000 },
+        { from: '2029-01', monthlyCents: 0 },
+      ],
+    })
+  })
+
+  it('removes a change through the draft', () => {
+    const onChange = vi.fn()
+    const draft = {
+      ...makeDraft(),
+      planStartDate: '2026-06-25',
+      contributionSchedule: [{ from: '2027-03', monthlyCents: 200_000 }],
+    }
+    render(<GoalControls draft={draft} onChange={onChange} />)
+    fireEvent.click(screen.getByRole('button', { name: "Remove the change from Mar '27" }))
+    expect(onChange).toHaveBeenCalledWith({ contributionSchedule: [] })
+  })
+
+  it('says under the monthly amount that it changes later, and where to set that', () => {
+    const draft = {
+      ...makeDraft(),
+      planStartDate: '2026-06-25',
+      contributionSchedule: [{ from: '2027-03', monthlyCents: 200_000 }],
+    }
+    render(<GoalControls draft={draft} onChange={vi.fn()} />)
+    expect(screen.getByText("then 2.000,00 € from Mar '27. Set under Monthly investing changes.")).toBeInTheDocument()
+  })
+
+  it('has no such note when the amount never changes', () => {
+    render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
+    expect(screen.queryByText(/Set under Monthly investing changes/)).not.toBeInTheDocument()
+  })
+
   it('re-baselines the start balance and date from the latest check-in', () => {
     const onChange = vi.fn()
     render(
@@ -91,6 +152,7 @@ describe('GoalControls', () => {
       lifeEvents: [],
       housePurchaseYear: null,
       monthlyContributionCents: 100_000,
+      contributionSchedule: [],
     })
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
@@ -115,11 +177,50 @@ describe('GoalControls', () => {
       lifeEvents: [{ year: 1, amountCents: -20_000_00, label: 'Car' }],
       housePurchaseYear: 3,
       monthlyContributionCents: 100_000,
+      contributionSchedule: [],
     }
     expect(onChange).toHaveBeenCalledWith(patch)
     // The parent applies the patch to the draft, and the note describes what it now holds.
     rerender(<GoalControls draft={{ ...draft, ...patch }} latest={latest} onChange={onChange} />)
     expect(screen.getByRole('status')).toHaveTextContent(/Bonus \(.*2025\) is already in the balance, so it is dropped\./)
+  })
+
+  it('restarts from the amount a change had reached, keeps the ones to come, and says so', () => {
+    const onChange = vi.fn()
+    const draft = {
+      ...makeDraft(),
+      planStartDate: '2026-01-01',
+      housePurchaseYear: null,
+      lifeEvents: [],
+      monthlyContributionCents: 100_000,
+      contributionSchedule: [
+        { from: '2026-07', monthlyCents: 150_000 },
+        { from: '2028-03', monthlyCents: 250_000 },
+      ],
+    }
+    const latest = { investedCents: 11_700_000, date: '2027-02-15' }
+    const { rerender } = render(<GoalControls draft={draft} latest={latest} onChange={onChange} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
+
+    const patch = onChange.mock.calls[0]![0] as Partial<ReturnType<typeof makeDraft>>
+    expect(patch).toMatchObject({
+      monthlyContributionCents: 150_000,
+      contributionSchedule: [{ from: '2028-03', monthlyCents: 250_000 }],
+    })
+    rerender(<GoalControls draft={{ ...draft, ...patch }} latest={latest} onChange={onChange} />)
+    expect(screen.getByRole('status')).toHaveTextContent(
+      /Monthly investing goes from 1\.000,00 € to 1\.500,00 €: the change to 1\.500,00 € from .* is already behind the new start, so it is in the monthly amount\./,
+    )
+
+    // Editing the schedule afterwards leaves a note about a draft that is no longer there.
+    rerender(
+      <GoalControls
+        draft={{ ...draft, ...patch, contributionSchedule: [{ from: '2028-03', monthlyCents: 999_00 }] }}
+        latest={latest}
+        onChange={onChange}
+      />,
+    )
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
   it('drops the note about what a re-baseline moved once the draft no longer holds it', () => {

@@ -102,6 +102,7 @@ describe('createScenario', () => {
       safeWithdrawalRate: 0.04,
       planStartDate: null,
       lifeEvents: [],
+      contributionSchedule: [],
     })
 
     const insert = statements[0]!
@@ -111,5 +112,55 @@ describe('createScenario', () => {
     expect(insert.values[0]).toBe(OWNER)
     expect(insert.values[insert.values.length - 1]).toBe(OWNER)
     expect(created.isActive).toBe(true)
+  })
+
+  it('binds every column to its own value: one placeholder each, the schedule beside the life events', async () => {
+    const { env, statements } = stubEnv({ firstRow: row({ id: 9 }) })
+    const events = [{ year: 2, amountCents: 5_000_00, label: 'Gift' }]
+    const schedule = [{ from: '2028-03', monthlyCents: 250_000 }]
+
+    await createScenario(env, OWNER, {
+      name: 'Path A',
+      color: '#abcdef',
+      sortOrder: 4,
+      startInvestedCents: 111,
+      monthlyContributionCents: 222,
+      annualContributionGrowth: 0.01,
+      expectedRealReturn: 0.02,
+      horizonYears: 33,
+      housePriceCents: 444,
+      downPaymentFraction: 0.5,
+      housePurchaseYear: 7,
+      transactionCostsCents: 555,
+      mortgageTermYears: 25,
+      mortgageRateAnnual: 0.03,
+      houseAppreciationRate: 0.04,
+      rentMonthlyCents: 666,
+      annualSpendCents: 777,
+      safeWithdrawalRate: 0.05,
+      planStartDate: '2026-06-25',
+      lifeEvents: events,
+      contributionSchedule: schedule,
+    })
+
+    const { sql, values } = statements[0]!
+    const columns = sql
+      .slice(sql.indexOf('(') + 1, sql.indexOf(')'))
+      .split(',')
+      .map((c) => c.trim())
+    // Every column but is_active has a placeholder of its own; is_active is the CASE, with one more.
+    const placeholders = (sql.match(/\?/g) ?? []).length
+    expect(placeholders).toBe(values.length)
+    expect(columns.length).toBe(values.length)
+    expect(columns[columns.length - 1]).toBe('is_active')
+
+    const bound = (column: string) => values[columns.indexOf(column)]
+    expect(bound('owner')).toBe(OWNER)
+    expect(bound('name')).toBe('Path A')
+    expect(bound('start_invested_cents')).toBe(111)
+    expect(bound('safe_withdrawal_rate')).toBe(0.05)
+    expect(bound('life_events')).toBe(JSON.stringify(events))
+    expect(bound('contribution_schedule')).toBe(JSON.stringify(schedule))
+    expect(bound('plan_start_date')).toBe('2026-06-25')
   })
 })

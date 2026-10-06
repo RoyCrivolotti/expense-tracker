@@ -1,4 +1,8 @@
 import type { NewGoalScenario, ScenarioPatch } from '../data/dataSource'
+import {
+  normalizeContributionSchedule,
+  validateContributionSchedule,
+} from '../engine/contributionSchedule'
 import type { ExpenseRepository } from '../ports/expenseRepository'
 import { ValidationError } from './validationError'
 
@@ -74,6 +78,11 @@ export function validateScenarioNumbers(patch: Partial<NewGoalScenario>): void {
 
   validateScenarioFractions(patch)
 
+  if (rec.contributionSchedule !== undefined) {
+    const problem = validateContributionSchedule(rec.contributionSchedule)
+    if (problem) throw new ValidationError(problem)
+  }
+
   // Zero is a real answer here, not a missing one: the type says `0 = owned from day
   // one`, rentVsBuy builds its "buy now" comparison with it, and the slider offers it
   // as "Now". Only `null` means never buy, and that is already excluded above.
@@ -112,7 +121,7 @@ export async function createScenario(
   input: NewGoalScenario,
 ) {
   validateScenarioNumbers(input)
-  return repo.createScenario(owner, { ...input, name: validateScenarioName(input.name) })
+  return repo.createScenario(owner, withSortedSchedule({ ...input, name: validateScenarioName(input.name) }))
 }
 
 export async function patchScenario(
@@ -135,7 +144,13 @@ export async function patchScenario(
   // one saved as "Saved" and left a tab with nothing on it.
   const checked = 'name' in patch ? { ...patch, name: validateScenarioName(patch.name) } : patch
   validateScenarioNumbers(checked)
-  return repo.updateScenario(owner, id, checked)
+  return repo.updateScenario(owner, id, withSortedSchedule(checked))
+}
+
+/** Stored in date order, whatever order it arrived in, so the editor and the engine read one thing. */
+function withSortedSchedule<T extends Partial<NewGoalScenario>>(scenario: T): T {
+  if (!scenario.contributionSchedule) return scenario
+  return { ...scenario, contributionSchedule: normalizeContributionSchedule(scenario.contributionSchedule) }
 }
 
 export async function removeScenario(repo: ExpenseRepository, owner: string, id: number) {

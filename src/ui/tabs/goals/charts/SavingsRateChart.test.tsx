@@ -42,6 +42,28 @@ describe('SavingsRateChart', () => {
     expect(screen.getByText('Net saving')).toBeInTheDocument()
   })
 
+  it('names where the plan goes when it changes its monthly amount, and draws it as a line of its own', () => {
+    const months = [flow('2026-04', 1, 1), flow('2026-05', 2, 2), flow('2026-06', 3, 3), flow('2026-07', 4, 4)]
+    const dashedPaths = (container: HTMLElement) => container.querySelectorAll('path[stroke-dasharray]').length
+    const flat = render(<SavingsRateChart draft={draft('2026-01-01')} monthly={months} />)
+    const flatDashed = dashedPaths(flat.container)
+    flat.unmount()
+
+    const stepped = { ...draft('2026-01-01'), contributionSchedule: [{ from: '2026-06', monthlyCents: 90_000 }] }
+    const { container } = render(<SavingsRateChart draft={stepped} monthly={months} />)
+    expect(screen.getByText(/vs the plan, which goes from 500,00 € to 900,00 €\/mo over these months/)).toBeInTheDocument()
+    // The plan is a series of its own, dashed like the net saving, instead of a flat line across.
+    expect(dashedPaths(container)).toBe(flatDashed + 1)
+  })
+
+  it('draws one flat line for a plan that does not change, as before', () => {
+    render(
+      <SavingsRateChart draft={draft('2026-01-01')} monthly={[flow('2026-04', 1, 1), flow('2026-05', 2, 2)]} />,
+    )
+    expect(screen.getByText(/vs the 500,00 €\/mo this scenario assumes/)).toBeInTheDocument()
+    expect(screen.queryByText(/goes from/)).toBeNull()
+  })
+
   it('counts from the plan start when the plan has one', () => {
     render(
       <SavingsRateChart

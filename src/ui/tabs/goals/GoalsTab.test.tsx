@@ -345,6 +345,31 @@ describe('GoalsTab', () => {
     expect(actions.activateScenario).toHaveBeenCalledWith(2)
   })
 
+  it('saves a monthly-investing change added in the editor, as an edit to the scenario and nothing else', async () => {
+    const user = userEvent.setup()
+    const actions = makeActions()
+    const plan = makeScenario({
+      id: 1,
+      name: 'Path A',
+      isActive: true,
+      planStartDate: '2026-06-25',
+      monthlyContributionCents: 150_000,
+    })
+    render(<GoalsTab model={buildExpenseModel(makeDataset({ goalScenarios: [plan] }))} actions={actions} />)
+
+    await user.click(screen.getByRole('button', { name: 'All inputs' }))
+    await user.click(screen.getByRole('button', { name: '+ Add a change' }))
+    // The form opens on the month after the plan starts, at the amount the scenario starts with.
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
+    expect(screen.getByText("from Jul '26")).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Save changes to Path A' }))
+    expect(actions.updateScenario).toHaveBeenCalledWith(1, {
+      contributionSchedule: [{ from: '2026-07', monthlyCents: 150_000 }],
+    })
+  })
+
   it('asks before a tab switch drops unsaved edits, and keeps them on Cancel', async () => {
     const user = userEvent.setup()
     const plan = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true })

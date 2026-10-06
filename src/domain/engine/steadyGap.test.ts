@@ -72,6 +72,43 @@ describe('steadyGap', () => {
     ).not.toBeNull()
   })
 
+  it('measures the floor against what the plan invests at the latest check-in, so a raise makes the same gap small', () => {
+    const base = { id: 4, isActive: true, planStartDate: '2025-01-01', monthlyContributionCents: 1_500_00 }
+    const flat = makeScenario(base)
+    const raised = makeScenario({ ...base, contributionSchedule: [{ from: '2026-01', monthlyCents: 6_000_00 }] })
+    const near = (scenario: typeof flat, id: number, date: string, gap: number) =>
+      makeWealthCheckin({
+        id,
+        checkinDate: date,
+        entries: [{ accountId: 1, valueCents: realToNominal(planValueAtDate(scenario, date, DEFAULT_INFLATION_RATE)! + gap, '2025-01-01', date, DEFAULT_INFLATION_RATE) }],
+      })
+    const run = (scenario: typeof flat) => [
+      near(scenario, 1, '2026-01-01', -9_000_00),
+      near(scenario, 2, '2026-04-01', -9_200_00),
+      near(scenario, 3, '2026-07-15', -9_100_00),
+    ]
+    // Nine thousand is six months of 1,500, but only a month and a half of 6,000.
+    expect(steadyGap(run(flat), flat, accounts, DEFAULT_INFLATION_RATE)).not.toBeNull()
+    expect(steadyGap(run(raised), raised, accounts, DEFAULT_INFLATION_RATE)).toBeNull()
+  })
+
+  it('says nothing during a pause, when any gap would be worth a re-baseline', () => {
+    const paused = makeScenario({
+      id: 5,
+      isActive: true,
+      planStartDate: '2025-01-01',
+      monthlyContributionCents: 1_500_00,
+      contributionSchedule: [{ from: '2025-12', monthlyCents: 0 }],
+    })
+    const near = (id: number, date: string) =>
+      makeWealthCheckin({
+        id,
+        checkinDate: date,
+        entries: [{ accountId: 1, valueCents: realToNominal(planValueAtDate(paused, date, DEFAULT_INFLATION_RATE)! - 100, '2025-01-01', date, DEFAULT_INFLATION_RATE) }],
+      })
+    expect(steadyGap([near(1, '2026-01-01'), near(2, '2026-04-01'), near(3, '2026-07-15')], paused, accounts, DEFAULT_INFLATION_RATE)).toBeNull()
+  })
+
   it('needs half a year of check-ins, and enough of them', () => {
     expect(
       steadyGap([off(1, '2026-05-01', -100_000_00), off(2, '2026-06-01', -100_000_00), off(3, '2026-07-01', -100_000_00)], plan, accounts, DEFAULT_INFLATION_RATE),

@@ -36,7 +36,7 @@ beforeEach(() => {
     el.id = adjustSectionId(s.key)
     document.body.append(el)
   }
-  placeSections({ portfolio: 300, housing: 600, fire: 1200, tracking: 1600, events: 1700 })
+  placeSections({ portfolio: 300, housing: 600, fire: 1200, tracking: 1600, changes: 1650, events: 1700 })
   vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
     const top = tops[this.id.replace('goals-adjust-', '')] ?? 0
     return { top, bottom: top, left: 0, right: 0, width: 0, height: 0, x: 0, y: top, toJSON: () => ({}) }
@@ -80,11 +80,11 @@ describe('AdjustSectionNav', () => {
     render(<AdjustSectionNav />)
     expect(current()).toBe('Portfolio')
 
-    placeSections({ portfolio: -500, housing: -100, fire: 500, tracking: 900, events: 1000 })
+    placeSections({ portfolio: -500, housing: -100, fire: 500, tracking: 900, changes: 950, events: 1000 })
     scrollPage()
     expect(current()).toBe('Housing')
 
-    placeSections({ portfolio: -900, housing: -500, fire: -50, tracking: 300, events: 400 })
+    placeSections({ portfolio: -900, housing: -500, fire: -50, tracking: 300, changes: 350, events: 400 })
     scrollPage()
     expect(current()).toBe('FI')
   })
@@ -92,7 +92,7 @@ describe('AdjustSectionNav', () => {
   describe('at the bottom of the page', () => {
     // FI has reached the top and the last two sections have not, as on a short phone.
     beforeEach(() => {
-      placeSections({ portfolio: -900, housing: -500, fire: -50, tracking: 300, events: 400 })
+      placeSections({ portfolio: -900, housing: -500, fire: -50, tracking: 300, changes: 350, events: 400 })
       Object.defineProperty(document.documentElement, 'scrollHeight', { configurable: true, value: 100 })
     })
 
@@ -112,7 +112,7 @@ describe('AdjustSectionNav', () => {
     it('marks the last section with its controls shown, when the ones after it are folded', () => {
       // A tall phone: the end of the page is FI's controls and two folded rows, and FI's
       // heading never gets up to the line.
-      placeSections({ portfolio: -700, housing: -300, fire: 400, tracking: 700, events: 750 })
+      placeSections({ portfolio: -700, housing: -300, fire: 400, tracking: 700, changes: 725, events: 750 })
       sectionElement('fire').open = true
       render(<AdjustSectionNav />)
       expect(current()).toBe('FI')
@@ -155,7 +155,7 @@ describe('AdjustSectionNav', () => {
     expect(current()).toBe('Events')
 
     // The jump's own scrolling, and a section that cannot reach the top, must not move it.
-    placeSections({ portfolio: -900, housing: -500, fire: -50, tracking: 300, events: 400 })
+    placeSections({ portfolio: -900, housing: -500, fire: -50, tracking: 300, changes: 350, events: 400 })
     scrollPage()
     expect(current()).toBe('Events')
 
@@ -172,7 +172,7 @@ describe('AdjustSectionNav', () => {
       const user = userEvent.setup()
       render(<AdjustSectionNav />)
       await user.click(screen.getByRole('button', { name: 'Events' }))
-      placeSections({ portfolio: -900, housing: -500, fire: -50, tracking: 300, events: 400 })
+      placeSections({ portfolio: -900, housing: -500, fire: -50, tracking: 300, changes: 350, events: 400 })
       scrollPage()
       expect(current()).toBe('Events')
 
@@ -193,7 +193,7 @@ describe('AdjustSectionNav', () => {
       expect(screen.getByRole('button', { name: other })).not.toHaveClass(styles.chipActive!)
     }
 
-    placeSections({ portfolio: -500, housing: -100, fire: 500, tracking: 900, events: 1000 })
+    placeSections({ portfolio: -500, housing: -100, fire: 500, tracking: 900, changes: 950, events: 1000 })
     scrollPage()
 
     expect(screen.getByRole('button', { name: 'Housing' })).toHaveClass(styles.chipActive!)
@@ -205,11 +205,11 @@ describe('AdjustSectionNav', () => {
     it('counts a section whose top is on that line, and not one a pixel under it', () => {
       render(<AdjustSectionNav />)
 
-      placeSections({ portfolio: -300, housing: 12, fire: 500, tracking: 900, events: 1000 })
+      placeSections({ portfolio: -300, housing: 12, fire: 500, tracking: 900, changes: 950, events: 1000 })
       scrollPage()
       expect(current()).toBe('Housing')
 
-      placeSections({ portfolio: -300, housing: 13, fire: 500, tracking: 900, events: 1000 })
+      placeSections({ portfolio: -300, housing: 13, fire: 500, tracking: 900, changes: 950, events: 1000 })
       scrollPage()
       expect(current()).toBe('Portfolio')
     })
@@ -223,11 +223,11 @@ describe('AdjustSectionNav', () => {
       document.body.append(stack)
       render(<AdjustSectionNav />)
 
-      placeSections({ portfolio: -300, housing: 276, fire: 500, tracking: 900, events: 1000 })
+      placeSections({ portfolio: -300, housing: 276, fire: 500, tracking: 900, changes: 950, events: 1000 })
       scrollPage()
       expect(current()).toBe('Housing')
 
-      placeSections({ portfolio: -300, housing: 277, fire: 500, tracking: 900, events: 1000 })
+      placeSections({ portfolio: -300, housing: 277, fire: 500, tracking: 900, changes: 950, events: 1000 })
       scrollPage()
       expect(current()).toBe('Portfolio')
     })
