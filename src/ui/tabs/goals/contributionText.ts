@@ -18,3 +18,14 @@ export function contributionPhrase(scenario: Contributing, format: MoneyFormat):
   const head = changes.slice(0, -1)
   return `${now}, then ${head.length > 0 ? `${head.join(', ')} and ` : ''}${last}`
 }
+
+/**
+ * A short note for the monthly input, which edits the starting amount only: "then 2.000,00 € from
+ * Jun '27", and how many more follow. Null when the scenario never changes the amount.
+ */
+export function firstChangeNote(scenario: Pick<NewGoalScenario, 'contributionSchedule'>, format: MoneyFormat): string | null {
+  const [first, ...rest] = scenario.contributionSchedule ?? []
+  if (!first) return null
+  const more = rest.length > 0 ? ` (+${rest.length} more)` : ''
+  return `then ${formatCents(first.monthlyCents, format)} from ${shortMonthYearLabel(first.from)}${more}`
+}

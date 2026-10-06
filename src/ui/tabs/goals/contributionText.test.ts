@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { EU_MONEY_FORMAT } from '../../../engine'
-import { contributionPhrase } from './contributionText'
+import { contributionPhrase, firstChangeNote } from './contributionText'
 
 describe('contributionPhrase', () => {
   it('is the monthly amount alone for a scenario that never changes it', () => {
@@ -38,5 +38,30 @@ describe('contributionPhrase', () => {
         EU_MONEY_FORMAT,
       ),
     ).toBe("1.500,00 €/mo, then 2.000,00 €/mo from Jan '27, 2.500,00 €/mo from Mar '28 and 0,00 €/mo from Jan '30")
+  })
+})
+
+describe('firstChangeNote', () => {
+  it('is null when the amount never changes, and for a scenario cached before the schedule existed', () => {
+    expect(firstChangeNote({ contributionSchedule: [] }, EU_MONEY_FORMAT)).toBeNull()
+    expect(firstChangeNote({} as never, EU_MONEY_FORMAT)).toBeNull()
+  })
+
+  it('names the first change, and how many more follow it', () => {
+    expect(
+      firstChangeNote({ contributionSchedule: [{ from: '2027-06', monthlyCents: 2_000_00 }] }, EU_MONEY_FORMAT),
+    ).toBe("then 2.000,00 € from Jun '27")
+    expect(
+      firstChangeNote(
+        {
+          contributionSchedule: [
+            { from: '2027-06', monthlyCents: 2_000_00 },
+            { from: '2028-03', monthlyCents: 2_500_00 },
+            { from: '2030-01', monthlyCents: 0 },
+          ],
+        },
+        EU_MONEY_FORMAT,
+      ),
+    ).toBe("then 2.000,00 € from Jun '27 (+2 more)")
   })
 })
