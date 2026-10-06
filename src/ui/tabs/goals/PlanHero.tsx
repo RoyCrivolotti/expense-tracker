@@ -143,6 +143,7 @@ export function PlanHero({
       footer={footer}
       footerBare={!narrow}
       {...(narrow ? {} : { headerAside: displaySwitch })}
+      displaySwitch={displaySwitch}
       extraSeries={extraSeries}
       fromToday={fromToday}
       nominalMode={display.mode === 'nominal'}

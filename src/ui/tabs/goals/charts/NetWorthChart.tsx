@@ -19,7 +19,10 @@ import { formatMoneyShort } from '../chartTheme'
 import { useAssumedInflation } from '../../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { useGoalsNarrow } from '../useGoalsNarrow'
-import { SegmentedControl } from '../../../components/SegmentedControl'
+import { HeroWindowPicker } from './HeroWindowPicker'
+import { HeroTitleRow } from './heroSheet/HeroTitleRow'
+import { useActiveIndex } from './heroSheet/useActiveIndex'
+import { useHeroSheet } from './heroSheet/useHeroSheet'
 import { HERO_WINDOWS, clipToWindow, heroWindowsFor, insideWindow, type HeroWindowKey } from './heroWindow'
 import progressStyles from '../progress.module.css'
 import {
@@ -312,30 +315,10 @@ function fiMarker(cents: number | null, format: MoneyFormat): { label: string; t
   return { label: `FI ${amount}`, title: `The FI target, ${amount}, is above the top of this chart.` }
 }
 
-function HeroWindowPicker({
-  windows,
-  value,
-  onChange,
-}: {
-  windows: ReturnType<typeof heroWindowsFor>
-  value: HeroWindowKey
-  onChange: (next: HeroWindowKey) => void
-}) {
-  if (windows.length < 2) return null
-  return (
-    <SegmentedControl
-      options={windows.map((w) => ({ value: w.value, label: w.label }))}
-      value={value}
-      onChange={onChange}
-      ariaLabel="Projection window"
-      layout="compact"
-    />
-  )
-}
-
 /**
  * The hero's header: the title, and on the right the window buttons, with, where a wide screen
- * has the room, the display switch beside them.
+ * has the room, the display switch beside them. A phone has the button that opens the chart full
+ * screen at the end of the title's line.
  */
 function ChartHeader({
   isHero,
@@ -343,17 +326,19 @@ function ChartHeader({
   windows,
   value,
   onChange,
+  onOpenSheet,
 }: {
   isHero: boolean
   aside: ReactNode
   windows: ReturnType<typeof heroWindowsFor>
   value: HeroWindowKey
   onChange: (next: HeroWindowKey) => void
+  onOpenSheet: (() => void) | undefined
 }) {
   const picker = isHero ? <HeroWindowPicker windows={windows} value={value} onChange={onChange} /> : null
   return (
     <div className={progressStyles.chartHeaderRow}>
-      <h3 className={styles.chartTitle}>Invested portfolio projection</h3>
+      {onOpenSheet ? <HeroTitleRow onOpen={onOpenSheet} /> : <h3 className={styles.chartTitle}>Invested portfolio projection</h3>}
       {isHero && aside ? (
         <div className={styles.chartTools}>
           {aside}
@@ -459,6 +444,7 @@ function NetWorthChartImpl({
   footer,
   footerBare = false,
   headerAside,
+  displaySwitch,
   extraSeries = [],
   todayIndex,
   nominalMode = false,
@@ -478,6 +464,8 @@ function NetWorthChartImpl({
   footerBare?: boolean
   /** Beside the window buttons in the hero's header, where a wide screen has the room for it. */
   headerAside?: ReactNode
+  /** Nominal or Purchasing power, for the full-screen chart's bar: unlike `headerAside` it is there on a phone too. */
+  displaySwitch?: ReactNode
   extraSeries?: ChartSeries[]
   todayIndex?: number
   nominalMode?: boolean
@@ -499,11 +487,8 @@ function NetWorthChartImpl({
   const assumedInflation = useAssumedInflation()
   const narrow = useGoalsNarrow()
   const listRef = useRef<HTMLUListElement>(null)
-  const [activeIndex, setActiveIndex] = useState<number | null>(null)
+  const { activeIndex, onActiveIndexChange, lastIndex } = useActiveIndex()
   const legendInBand = useInBand(listRef, 1, { enabled: narrow })
-  const onActiveIndexChange = useCallback((index: number | null) => {
-    setActiveIndex(index)
-  }, [])
   const isHero = variant === 'hero'
   const lines = useMemo(
     () => scenarioLines(scenarios, draft, activeId, dirty, assumedInflation, hiddenIds),
@@ -587,6 +572,52 @@ function NetWorthChartImpl({
   const lifeEventMarkers = useLifeEventMarkers(isHero, draft, windowYears)
   const heroVariantProps = variantProps(isHero, narrow, legendInBand, markerYears, lifeEventMarkers, onActiveIndexChange)
 
+  // What the full-screen chart draws from, held between renders so a year pointed at in the card,
+  // which re-renders this, does not hand it new objects to work from.
+  const sheetChart = useMemo(
+    () => ({
+      series: chartSeries,
+      xLabels: labels,
+      refLines,
+      markerYears,
+      lifeEventMarkers,
+      ...todayProp(todayIndex, windowYears),
+      yDomainMax,
+      aboveTop: fiChartMarker,
+      ariaLabel: projectionLabel(fiChartMarker),
+      formatValue,
+      tooltip,
+    }),
+    [chartSeries, labels, refLines, markerYears, lifeEventMarkers, todayIndex, windowYears, yDomainMax, fiChartMarker, formatValue, tooltip],
+  )
+  const sheetLegend = useMemo(
+    () => ({
+      lines,
+      displaySeries,
+      names,
+      years,
+      scenarios,
+      hiddenIds,
+      fromTodayLine,
+      fromTodayLabel,
+      nominalMode,
+      onToggleVisible,
+    }),
+    [lines, displaySeries, names, years, scenarios, hiddenIds, fromTodayLine, fromTodayLabel, nominalMode, onToggleVisible],
+  )
+  const { onOpen: onOpenSheet, sheet } = useHeroSheet(
+    {
+      chart: sheetChart,
+      legend: sheetLegend,
+      displaySwitch,
+      windows: heroWindows,
+      windowValue: heroWindow,
+      onWindowChange: setHeroWindow,
+    },
+    isHero,
+    lastIndex,
+  )
+
   const hint = chartHint(isHero, narrow)
 
   return (
@@ -597,6 +628,7 @@ function NetWorthChartImpl({
         windows={heroWindows}
         value={heroWindow}
         onChange={setHeroWindow}
+        onOpenSheet={onOpenSheet}
       />
       {hint ? <p className={styles.chartHint}>{hint}</p> : null}
       <LinearChart
@@ -627,6 +659,7 @@ function NetWorthChartImpl({
       <ChartKeys {...chartKeyMarks(isHero, displayExtraSeries.length, lifeEventMarkers)} />
       <HeroNote draft={draft} isHero={isHero} narrow={narrow} />
       <ChartFooter footer={footer} bare={footerBare} />
+      {sheet}
     </Card>
   )
 }

@@ -1,0 +1,74 @@
+/* The chart and its readout side by side, under the sheet's bar. The sheet's container is as wide
+   as the sheet is, so the rail follows the sheet and not the screen: an upright phone draws the
+   sheet turned, and its width is the screen's height. */
+.body {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+/* The chart takes what the rail leaves, at the height the sheet has. Its wrapper measures this box. */
+.stage {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* The readout: every line's value in the year pointed at, with the purchase breakdown under it. It
+   scrolls on its own when a year has more to say than the sheet is tall. */
+.rail {
+  flex: 0 0 clamp(10.5rem, 24cqw, 12rem);
+  min-height: 0;
+  padding: 0.625rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+}
+
+/* The legend's own top margin is for sitting under a chart, not at the top of a box. */
+.rail > :first-child {
+  margin-top: 0;
+}
+
+/* The card's title with the button that opens the sheet at its end. It takes the header's whole
+   first line, so the window buttons wrap under it as they did, and the button's 44px reach comes
+   from a margin that gives back what it adds, so the header is no taller than it was. */
+.titleRow {
+  display: flex;
+  flex: 1 1 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.titleRow > h3 {
+  margin: 0;
+}
+
+.open {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: -0.625rem 0;
+  padding: 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 4%, var(--color-bg));
+  color: var(--color-text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.open:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
