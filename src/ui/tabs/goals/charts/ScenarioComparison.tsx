@@ -55,6 +55,7 @@ function ScenarioComparisonImpl({
   draft,
   includeDraft = true,
   fromToday = null,
+  restartedFrom = null,
   embedded = false,
 }: {
   scenarios: GoalScenario[]
@@ -63,6 +64,8 @@ function ScenarioComparisonImpl({
   includeDraft?: boolean
   /** The plan restarted from the latest check-in, listed under the plan. */
   fromToday?: PlanFromToday | null | undefined
+  /** The check-in date every row has been restarted from, when it has; years are counted from there. */
+  restartedFrom?: string | null
   embedded?: boolean
 }) {
   const format = useMoneyFormat()
@@ -93,7 +96,11 @@ function ScenarioComparisonImpl({
       </div>
       <p className={styles.chartHint}>
         Net worth and invested are{readAt(rows, year)}, in today's money; FI and the house purchase are
-        counted in years from the plan start; monthly is what each path invests
+        counted in years from{' '}
+        {restartedFrom
+          ? `${formatCheckinDate(restartedFrom)}, your latest check-in, where every path starts`
+          : 'the plan start'}
+        ; monthly is what each path invests
         {rows.some((r) => r.monthlyLater) ? ', and what a change to it comes to' : ''}.
         {fromToday
           ? ` "From today" is your plan restarted from the balance in your latest check-in, ${formatCheckinDate(fromToday.since)}, and counts its years from there.`
