@@ -14,7 +14,7 @@ import { scenarioInk } from '../scenarioInk'
 import styles from '../goals.module.css'
 import progressStyles from '../progress.module.css'
 
-type Column = keyof Omit<ComparisonRow, 'key' | 'name' | 'color' | 'horizonYears' | 'atYear'>
+type Column = keyof Omit<ComparisonRow, 'key' | 'name' | 'color' | 'horizonYears' | 'atYear' | 'monthlyLater'>
 
 /**
  * The same years the hero chart offers, so the table can be read at the window the chart
@@ -93,7 +93,8 @@ function ScenarioComparisonImpl({
       </div>
       <p className={styles.chartHint}>
         Net worth and invested are{readAt(rows, year)}, in today's money; FI and the house purchase are
-        counted in years from the plan start; monthly is what each path invests.
+        counted in years from the plan start; monthly is what each path invests
+        {rows.some((r) => r.monthlyLater) ? ', and what a change to it comes to' : ''}.
         {fromToday
           ? ` "From today" is your plan restarted from the balance in your latest check-in, ${formatCheckinDate(fromToday.since)}, and counts its years from there.`
           : ''}
@@ -122,6 +123,9 @@ function ScenarioComparisonImpl({
                 {COLUMNS.map((c) => (
                   <td key={c.key} className={styles.compareCell}>
                     {cell(row, c.key, sharedYear)}
+                    {c.key === 'monthly' && row.monthlyLater ? (
+                      <span className={styles.compareLater}>then {row.monthlyLater}</span>
+                    ) : null}
                   </td>
                 ))}
               </tr>

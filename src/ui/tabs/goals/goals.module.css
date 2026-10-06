@@ -2154,6 +2154,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* What a monthly amount changes to, under it, so the column keeps its width. */
+.compareLater {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--color-text-muted);
+}
+
 /* Reached-milestone chips on the Progress tab. */
 .reachedChips {
   display: flex;
