@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import type { InvestedSnapshot } from './checkinDate'
 import { ADJUST_LABELS, adjustSectionId, type AdjustSection } from './adjustSections'
-import { EventsFields, FireFields, HousingFields, PortfolioFields, TrackingFields } from './goalControlSections'
+import { ChangesFields, EventsFields, FireFields, HousingFields, PortfolioFields, TrackingFields } from './goalControlSections'
 import styles from './goals.module.css'
 
 interface GoalControlsProps {
@@ -44,6 +44,9 @@ export function GoalControls({ draft, latest = null, onChange }: GoalControlsPro
       </ControlSection>
       <ControlSection section="tracking" defaultOpen={false}>
         <TrackingFields draft={draft} latest={latest} onChange={onChange} />
+      </ControlSection>
+      <ControlSection section="changes" defaultOpen={false}>
+        <ChangesFields draft={draft} onChange={onChange} />
       </ControlSection>
       <ControlSection section="events" defaultOpen={false}>
         <EventsFields draft={draft} onChange={onChange} />

@@ -247,6 +247,54 @@ describe('expenses API (middleware + handlers + in-memory repo)', () => {
     expect(dataset.goalScenarios).toHaveLength(0)
   })
 
+  it('saves a scenario\'s monthly-investing changes in date order and refuses ones it cannot store', async () => {
+    const store = createInMemoryAccessDb()
+    store.seedActiveUser(OWNER, { groups: ['expenses'] })
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    const { id: _id, isActive: _isActive, ...fields } = makeScenario({ name: 'With changes' })
+    void _id
+    void _isActive
+    const created = await invokeExpenseApiRoute({
+      handler: createScenario,
+      repo,
+      env: expenseEnv(store),
+      url: 'https://expenses.test/api/expenses/scenarios',
+      method: 'POST',
+      body: {
+        ...fields,
+        contributionSchedule: [
+          { from: '2028-03', monthlyCents: 250_000 },
+          { from: '2027-01', monthlyCents: 0 },
+        ],
+      },
+      email: OWNER,
+    })
+    expect(created.status).toBe(201)
+    const scenario = await readJson<{ id: number; contributionSchedule: { from: string }[] }>(created)
+    expect(scenario.contributionSchedule.map((s) => s.from)).toEqual(['2027-01', '2028-03'])
+
+    const patch = (body: unknown) =>
+      invokeExpenseApiRoute({
+        handler: patchScenario,
+        repo,
+        env: expenseEnv(store),
+        method: 'PATCH',
+        url: `https://expenses.test/api/expenses/scenarios/${scenario.id}`,
+        params: { id: String(scenario.id) },
+        body,
+        email: OWNER,
+      })
+
+    expect((await patch({ contributionSchedule: [{ from: '2027-1', monthlyCents: 5 }] })).status).toBe(400)
+    expect((await patch({ contributionSchedule: [{ from: '2027-01', monthlyCents: 1.5 }] })).status).toBe(400)
+    // Nothing of a refused write was kept.
+    const kept = (await repo.loadDataset(OWNER)).goalScenarios[0]!
+    expect(kept.contributionSchedule.map((s) => s.from)).toEqual(['2027-01', '2028-03'])
+
+    expect((await patch({ contributionSchedule: [] })).status).toBe(200)
+    expect((await repo.loadDataset(OWNER)).goalScenarios[0]!.contributionSchedule).toEqual([])
+  })
+
   it('moves the plan to the activated scenario and off the previous one', async () => {
     const store = createInMemoryAccessDb()
     store.seedActiveUser(OWNER, { groups: ['expenses'] })

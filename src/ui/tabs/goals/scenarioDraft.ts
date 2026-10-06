@@ -37,6 +37,10 @@ export function editedKeys(draft: NewGoalScenario, saved: NewGoalScenario): (key
   const keys: (keyof NewGoalScenario)[] = EDIT_KEYS.filter((k) => draft[k] !== saved[k])
   if (draft.name !== saved.name) keys.push('name')
   if (JSON.stringify(draft.lifeEvents) !== JSON.stringify(saved.lifeEvents)) keys.push('lifeEvents')
+  // Missing on a scenario cached before the field, which reads as no changes.
+  if (JSON.stringify(draft.contributionSchedule ?? []) !== JSON.stringify(saved.contributionSchedule ?? [])) {
+    keys.push('contributionSchedule')
+  }
   return keys
 }
 

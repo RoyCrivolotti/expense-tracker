@@ -1,5 +1,6 @@
 import type { GoalScenario } from '../types'
 import type { NewGoalScenario } from '../data/dataSource'
+import { scheduleSteps } from './contributionSchedule'
 import { projectNetWorth, type ProjectionParams } from './projection'
 
 type ScenarioInput = NewGoalScenario | GoalScenario
@@ -9,6 +10,8 @@ type ScenarioInput = NewGoalScenario | GoalScenario
  * owner's, not the scenario's, so it is given and never defaulted.
  */
 export function scenarioToParams(scenario: ScenarioInput, inflationRate: number): ProjectionParams {
+  // Absent on a scenario from before the field, which a cached snapshot can still hold.
+  const steps = scheduleSteps(scenario.planStartDate, scenario.contributionSchedule)
   return {
     startInvestedCents: scenario.startInvestedCents,
     monthlyContributionCents: scenario.monthlyContributionCents,
@@ -24,6 +27,7 @@ export function scenarioToParams(scenario: ScenarioInput, inflationRate: number)
     houseAppreciationRate: scenario.houseAppreciationRate,
     inflationRate,
     ...(scenario.lifeEvents?.length ? { lifeEvents: scenario.lifeEvents } : {}),
+    ...(steps.length ? { contributionSteps: steps } : {}),
   }
 }
 

@@ -96,6 +96,14 @@
   -webkit-touch-callout: none;
 }
 
+/* A chart that fills its box: the box is measured, so it has no padding to take off the height, and
+   it holds the drawing to itself so a frame drawn at the old size is cut off, not spilled. */
+.chartWrapFill {
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+}
+
 .svg {
   width: 100%;
   height: auto;

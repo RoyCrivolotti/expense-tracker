@@ -47,6 +47,54 @@ describe('comparisonRows', () => {
     expect(rows[0]!.invested).not.toBe(atHorizon[0]!.invested)
   })
 
+  it('shows the monthly amount exactly, and what a scenario that changes it comes to after the last change', () => {
+    const rows = comparisonRows(
+      [
+        makeScenario({ id: 1, name: 'Flat', monthlyContributionCents: 1_499_00 }),
+        makeScenario({
+          id: 2,
+          name: 'Raise',
+          planStartDate: '2026-01-01',
+          monthlyContributionCents: 1_500_00,
+          contributionSchedule: [
+            { from: '2027-03', monthlyCents: 2_000_00 },
+            { from: '2029-01', monthlyCents: 2_500_00 },
+          ],
+        }),
+        makeScenario({
+          id: 3,
+          name: 'Pause',
+          planStartDate: '2026-01-01',
+          monthlyContributionCents: 1_000_00,
+          contributionSchedule: [{ from: '2027-01', monthlyCents: 0 }],
+        }),
+      ],
+      draft,
+      EU_MONEY_FORMAT,
+      DEFAULT_INFLATION_RATE,
+      false,
+    )
+    expect(rows.map((r) => r.monthly)).toEqual(['1.499,00 €', '1.500,00 €', '1.000,00 €'])
+    expect(rows.map((r) => r.monthlyLater)).toEqual([null, '2.500,00 €', '0,00 €'])
+  })
+
+  it('shows the later amount under the monthly one, and says what it is only when a row has one', () => {
+    const plain = makeScenario({ id: 1, name: 'Flat' })
+    const { rerender } = render(<ScenarioComparison scenarios={[plain]} draft={draft} includeDraft={false} />)
+    expect(screen.queryByText(/what a change to it comes to/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^then /)).not.toBeInTheDocument()
+
+    const changing = makeScenario({
+      id: 2,
+      name: 'Raise',
+      planStartDate: '2026-01-01',
+      contributionSchedule: [{ from: '2027-03', monthlyCents: 2_000_00 }],
+    })
+    rerender(<ScenarioComparison scenarios={[plain, changing]} draft={draft} includeDraft={false} />)
+    expect(screen.getByText(/monthly is what each path invests, and what a change to it comes to\./)).toBeInTheDocument()
+    expect(screen.getByText('then 2.000,00 €')).toBeInTheDocument()
+  })
+
   it('lists the plan from today under the plan, in its colour, counting years from the check-in', () => {
     const plan = makeScenario({ id: 2, name: 'Path B: Plan', color: '#abcdef', planStartDate: '2024-01-01', isActive: true, housePurchaseYear: null })
     const other = makeScenario({ id: 3, name: 'Path C', housePurchaseYear: null })
@@ -70,6 +118,16 @@ describe('comparisonRows', () => {
     )
     expect(screen.getByText('Path B, from today')).toBeInTheDocument()
     expect(screen.getByText(/restarted from the balance in your latest check-in, Jan 1, 2026, and counts its years from there/)).toBeInTheDocument()
+  })
+
+  it('says every path starts from the check-in, and counts its years from there, when they have been restarted', () => {
+    const plan = makeScenario({ id: 2, name: 'Path B', planStartDate: '2026-01-01', isActive: true })
+    const { rerender } = render(<ScenarioComparison scenarios={[plan]} draft={draft} />)
+    expect(screen.getByText(/counted in years from the plan start/)).toBeInTheDocument()
+
+    rerender(<ScenarioComparison scenarios={[plan]} draft={draft} restartedFrom="2026-10-05" />)
+    expect(screen.getByText(/counted in years from Oct 5, 2026, your latest check-in, where every path starts/)).toBeInTheDocument()
+    expect(screen.queryByText(/from the plan start/)).not.toBeInTheDocument()
   })
 
   it('says when FI is not reached within the horizon', () => {

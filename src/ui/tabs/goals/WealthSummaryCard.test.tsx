@@ -119,6 +119,45 @@ describe('WealthSummaryCard', () => {
     expect(screen.getByText(/9\.166,67 € a month$/)).toHaveStyle({ color: 'var(--exp-success)' })
   })
 
+  it('sets the pace against what the plan averages over those months when it changes its monthly amount', () => {
+    // 1,000 a month from the start, 2,000 from April: five months of 1,000, 1,000, 1,000, 2,000, 2,000 average 1,400.
+    const scenario = makeScenario({
+      name: 'Path A',
+      planStartDate: '2025-01-01',
+      monthlyContributionCents: 100_000,
+      contributionSchedule: [{ from: '2025-04', monthlyCents: 200_000 }],
+    })
+    const accounts = [makeAccount(1)]
+    const checkins = [makeCheckin(1, '2025-06-01', [{ accountId: 1, valueCents: 10_000_000 }])]
+    const invest = (id: number, month: string, amountCents: number) =>
+      makeTransaction({ id, type: 'investment', budgetMonth: month, date: `${month}-10`, amountCents })
+    const kept = ['2025-01', '2025-02', '2025-03', '2025-04', '2025-05'].map((m, i) => invest(i + 1, m, 140_000))
+    render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} transactions={kept} />)
+
+    const pace = screen.getByText(/a month on average it assumes/)
+    expect(pace).toHaveTextContent(/against the 1\.400,00 € a month on average it assumes \(1\.000,00 € at first, 2\.000,00 € now\)\./)
+    // 1,400 a month kept against an average of 1,400 planned is on pace; against the 1,000 it started
+    // with it would have read ahead, and against the 2,000 it ends on, behind.
+    expect(screen.getByText(/1\.400,00 € a month$/)).toHaveStyle({ color: 'var(--exp-success)' })
+  })
+
+  it('says nothing about pace for a plan that pauses over every month it is compared on', () => {
+    const scenario = makeScenario({
+      planStartDate: '2025-01-01',
+      monthlyContributionCents: 100_000,
+      contributionSchedule: [{ from: '2025-01', monthlyCents: 0 }],
+    })
+    render(
+      <WealthSummaryCard
+        checkins={[makeCheckin(1, '2025-06-01', [{ accountId: 1, valueCents: 10_000_000 }])]}
+        accounts={[makeAccount(1)]}
+        plan={scenario}
+        transactions={[makeTransaction({ id: 1, type: 'investment', budgetMonth: '2025-02', date: '2025-02-10', amountCents: 50_000 })]}
+      />,
+    )
+    expect(screen.queryByText(/a month it assumes/)).not.toBeInTheDocument()
+  })
+
   it('reads the return "so far" under a year of check-ins', () => {
     const accounts = [makeAccount(1, 'investment')]
     const checkins = [

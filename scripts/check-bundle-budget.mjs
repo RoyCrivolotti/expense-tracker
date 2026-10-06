@@ -131,8 +131,21 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // That final PR landed: deleting the pie, the two income/expense charts and the old mobile
 // tabs took the total from 240.2 KB to 238.1 KB. The 244 KB ceiling stays, leaving the
 // usual few KB of headroom rather than resetting it to the measured byte.
-const TOTAL_MAX_GZIP = 244_000
-const GOALS_MAX_GZIP = 58_000
+//
+// Raised from 244 KB to 248 KB for the monthly-investing changes: the plan's schedule in the
+// projection, the metrics that now read it (months behind, the pace sentence, the headline, the
+// investing-against-plan series, the comparison column) and the editor that follows. Main stood
+// at 243.3 KB after the start-from-today switch and the schedule foundation, the metrics add
+// about 0.9 KB and the editor a little more, all of it small code in the lazy Goals chunk, with
+// no new library.
+//
+// Raised the Goals chunk from 58 KB to 60 KB for the full-screen chart sheet. Main stood at 57.7 KB
+// after the monthly-investing round, and the groundwork for the sheet (the chart's focus options,
+// a chart that fills its box and the measured-size hook) is about 0.3 KB, which is the whole of the
+// room that was left. The sheet itself follows, all of it small code in the lazy Goals chunk, with
+// no new library.
+const TOTAL_MAX_GZIP = 248_000
+const GOALS_MAX_GZIP = 60_000
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length

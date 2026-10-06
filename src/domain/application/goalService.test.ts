@@ -113,6 +113,68 @@ describe('the scenario write paths', () => {
     expect(untouched.name).toBe('Path B')
   })
 
+  it('saves a schedule of monthly changes in date order, whatever order it arrives in', async () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    const saved = await createScenario(
+      repo,
+      OWNER,
+      newScenario({
+        contributionSchedule: [
+          { from: '2028-03', monthlyCents: 250_000 },
+          { from: '2027-01', monthlyCents: 0 },
+        ],
+      }),
+    )
+    expect(saved.contributionSchedule).toEqual([
+      { from: '2027-01', monthlyCents: 0 },
+      { from: '2028-03', monthlyCents: 250_000 },
+    ])
+
+    const patched = await patchScenario(repo, OWNER, saved.id, {
+      contributionSchedule: [
+        { from: '2030-01', monthlyCents: 5 },
+        { from: '2029-01', monthlyCents: 4 },
+      ],
+    })
+    expect(patched.contributionSchedule.map((s) => s.from)).toEqual(['2029-01', '2030-01'])
+  })
+
+  it('refuses a schedule it cannot store, on create and on edit, and keeps what was saved', async () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    const bad = [{ from: '2027-01', monthlyCents: -5 }]
+    await expect(createScenario(repo, OWNER, newScenario({ contributionSchedule: bad }))).rejects.toThrow(
+      'monthlyCents',
+    )
+
+    const saved = await createScenario(
+      repo,
+      OWNER,
+      newScenario({ contributionSchedule: [{ from: '2027-01', monthlyCents: 1_000 }] }),
+    )
+    await expect(patchScenario(repo, OWNER, saved.id, { contributionSchedule: bad })).rejects.toThrow('monthlyCents')
+    await expect(
+      patchScenario(repo, OWNER, saved.id, {
+        contributionSchedule: [
+          { from: '2027-01', monthlyCents: 1 },
+          { from: '2027-01', monthlyCents: 2 },
+        ],
+      }),
+    ).rejects.toThrow('two contribution steps start in 2027-01')
+    const { goalScenarios } = await repo.loadDataset(OWNER)
+    expect(goalScenarios[0]!.contributionSchedule).toEqual([{ from: '2027-01', monthlyCents: 1_000 }])
+  })
+
+  it('leaves the schedule alone when a patch does not carry one', async () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    const saved = await createScenario(
+      repo,
+      OWNER,
+      newScenario({ contributionSchedule: [{ from: '2027-01', monthlyCents: 1_000 }] }),
+    )
+    const patched = await patchScenario(repo, OWNER, saved.id, { horizonYears: 25 })
+    expect(patched.contributionSchedule).toEqual([{ from: '2027-01', monthlyCents: 1_000 }])
+  })
+
   it('saves the purchase year the slider calls "Now"', async () => {
     const repo = inMemoryExpenseRepository({}, OWNER)
     const saved = await createScenario(repo, OWNER, newScenario({ housePurchaseYear: 0 }))

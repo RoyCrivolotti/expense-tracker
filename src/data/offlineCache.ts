@@ -12,8 +12,9 @@ const SNAPSHOT_KEY = 'latest'
  * stale snapshot costs one network fetch; not discarding it costs the session.
  */
 // Version 3 predates `labels`, which buildLookup now maps over. Version 4 predates
-// `settings.goalLevers`, which the Goals page reads the length of.
-const SNAPSHOT_VERSION = 5
+// `settings.goalLevers`, which the Goals page reads the length of. Version 5 predates
+// `GoalScenario.contributionSchedule`, which every projection and the editor's draft read.
+const SNAPSHOT_VERSION = 6
 
 interface SnapshotRecord {
   key: string

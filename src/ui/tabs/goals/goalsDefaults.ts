@@ -52,5 +52,6 @@ export function draftFromDataset(
     safeWithdrawalRate: DEFAULT_SWR,
     planStartDate: latest?.checkinDate ?? todayIso(),
     lifeEvents: [],
+    contributionSchedule: [],
   }
 }

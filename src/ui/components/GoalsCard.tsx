@@ -8,6 +8,7 @@ import {
   planFromToday,
   monthlyFlows,
   monthsSincePlanStart,
+  plannedMonthlyAverage,
   trackStatus,
 } from '../../engine'
 import { Card, EmptyState, SectionTitle } from './primitives'
@@ -18,6 +19,7 @@ import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { formatMoneyShort } from '../tabs/goals/chartTheme'
 import { contributionGapLabel } from '../tabs/goals/contributionGap'
 import { daysSinceCheckin } from './checkinAge'
+import { todayIso } from './transactionFormState'
 import styles from './GoalsCard.module.css'
 
 interface GoalsCardProps {
@@ -78,10 +80,14 @@ export function GoalsCard({ dataset, onOpenGoals, onLogCheckin }: GoalsCardProps
   const scenario = useMemo(() => activePlan(dataset.goalScenarios), [dataset.goalScenarios])
   // The pace kept since the plan began: investment transactions per month, which is
   // what the plan's monthly figure promises, rather than net saving.
-  const avgInvesting = useMemo(() => {
+  const { avgInvesting, plannedAverage } = useMemo(() => {
     const flows = monthlyFlows(computeMonthlyTotals(dataset.transactions))
     const since = monthsSincePlanStart(flows, scenario?.planStartDate ?? null)
-    return averageMonthlyCents(since.map((m) => m.investedCents))
+    return {
+      avgInvesting: averageMonthlyCents(since.map((m) => m.investedCents)),
+      // What the plan averages over those same months, which is what the pace is set against.
+      plannedAverage: scenario ? plannedMonthlyAverage(scenario, since.map((m) => m.month)) : 0,
+    }
   }, [dataset.transactions, scenario])
   const fromToday = useMemo(() => {
     const latest = latestCheckin(dataset.wealthCheckins)
@@ -91,8 +97,14 @@ export function GoalsCard({ dataset, onOpenGoals, onLogCheckin }: GoalsCardProps
     )
   }, [scenario, dataset.wealthCheckins, dataset.wealthAccounts])
   const headline = useMemo(
-    () => (scenario ? scenarioHeadline(scenario, inflationRate, avgInvesting, format, fromToday) : null),
-    [scenario, inflationRate, avgInvesting, format, fromToday],
+    () =>
+      scenario
+        ? scenarioHeadline(scenario, inflationRate, avgInvesting, format, fromToday, {
+            today: todayIso(),
+            plannedAverageCents: plannedAverage,
+          })
+        : null,
+    [scenario, inflationRate, avgInvesting, plannedAverage, format, fromToday],
   )
 
   const track = useMemo(() => {
