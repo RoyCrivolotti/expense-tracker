@@ -258,6 +258,43 @@ describe('trackStatus', () => {
     expect(nominalMatch!.deltaCents).toBeLessThan(0)
   })
 
+  describe('months ahead or behind', () => {
+    const behind = (scenario: ReturnType<typeof makeScenario>, date: string, gapCents: number) => {
+      const projected = planValueAtDate(scenario, date, DEFAULT_INFLATION_RATE)!
+      const nominal = realToNominal(projected - gapCents, scenario.planStartDate!, date, DEFAULT_INFLATION_RATE)
+      return trackStatus(makeCheckin(date, [{ accountId: 1, valueCents: nominal }]), scenario, accounts, DEFAULT_INFLATION_RATE)!
+    }
+
+    it('counts a gap in the months of what the plan was putting in at the check-in, not what it started with', () => {
+      const flat = makeScenario({ planStartDate: '2024-01-01', monthlyContributionCents: 1_000_00 })
+      const stepped = makeScenario({
+        planStartDate: '2024-01-01',
+        monthlyContributionCents: 1_000_00,
+        contributionSchedule: [{ from: '2024-07', monthlyCents: 2_000_00 }],
+      })
+      // The same 6,000 gap is six months of the 1,000 the flat plan puts in, and three of the 2,000 in force by 2025.
+      expect(behind(flat, '2025-01-01', 6_000_00).deltaMonths).toBe(-6)
+      expect(behind(stepped, '2025-01-01', 6_000_00).deltaMonths).toBe(-3)
+    })
+
+    it('counts it in the amount the plan has grown to, which the year one figure missed', () => {
+      const growing = makeScenario({ planStartDate: '2024-01-01', monthlyContributionCents: 1_000_00, annualContributionGrowth: 0.1 })
+      // By January 2026 the plan invests 1,000 grown twice, so a 12,100 gap is ten months of it, not twelve.
+      expect(behind(growing, '2026-01-01', 12_100_00).deltaMonths).toBe(-10)
+    })
+
+    it('gives no months during a pause, rather than a gap in months of nothing', () => {
+      const paused = makeScenario({
+        planStartDate: '2024-01-01',
+        monthlyContributionCents: 1_000_00,
+        contributionSchedule: [{ from: '2024-07', monthlyCents: 0 }],
+      })
+      const status = behind(paused, '2025-01-01', 6_000_00)
+      expect(status.deltaMonths).toBe(0)
+      expect(status.deltaCents).toBeLessThan(0)
+    })
+  })
+
   it('brings a check-in back at the inflation it is given, and reads the plan the same way', () => {
     const scenario = makeScenario({ planStartDate: '2024-01-01' })
     const rate = 0.05

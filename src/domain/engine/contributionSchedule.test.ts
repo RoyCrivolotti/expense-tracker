@@ -4,8 +4,11 @@ import {
   CONTRIBUTION_STEP_MAX_COUNT,
   annualContributionCents,
   monthlyCentsAt,
+  nextContributionStep,
   normalizeContributionSchedule,
   parseContributionSchedule,
+  plannedMonthlyAt,
+  plannedMonthlyAverage,
   scheduleSteps,
   validateContributionSchedule,
 } from './contributionSchedule'
@@ -303,5 +306,47 @@ describe('projecting with a schedule', () => {
     const withHouse = projectNetWorth(scenarioToParams(house, DEFAULT_INFLATION_RATE))
     expect(withHouse[5]!.houseEquityCents).toBeGreaterThan(0)
     expect(withHouse[5]!.investedCents).toBeLessThan(withHouse[4]!.investedCents * (1 + r) + 12 * X)
+  })
+})
+
+describe('what the plan invests on a date', () => {
+  const plan = makeScenario({
+    planStartDate: '2026-01-01',
+    monthlyContributionCents: B,
+    annualContributionGrowth: 0.1,
+    contributionSchedule: [
+      { from: '2027-03', monthlyCents: X },
+      { from: '2029-01', monthlyCents: 0 },
+    ],
+  })
+
+  it('is the base grown by whole years, then the change in force grown from its own month', () => {
+    expect(plannedMonthlyAt(plan, '2026-01-01')).toBe(B)
+    expect(plannedMonthlyAt(plan, '2026-12-31')).toBe(B)
+    expect(plannedMonthlyAt(plan, '2027-01-01')).toBe(Math.round(B * 1.1))
+    // A change takes effect on the first of its month, at its own amount, not grown.
+    expect(plannedMonthlyAt(plan, '2027-02-28')).toBe(Math.round(B * 1.1))
+    expect(plannedMonthlyAt(plan, '2027-03-01')).toBe(X)
+    expect(plannedMonthlyAt(plan, '2028-02-28')).toBe(X)
+    expect(plannedMonthlyAt(plan, '2028-03-01')).toBe(Math.round(X * 1.1))
+    expect(plannedMonthlyAt(plan, '2029-01-01')).toBe(0)
+  })
+
+  it('reads a date before the start as the start, and no start as the base', () => {
+    expect(plannedMonthlyAt(plan, '2025-06-01')).toBe(B)
+    expect(plannedMonthlyAt({ ...plan, planStartDate: null }, '2028-01-01')).toBe(B)
+  })
+
+  it('averages the months it is asked about, each read in its middle', () => {
+    expect(plannedMonthlyAverage(plan, [])).toBe(0)
+    expect(plannedMonthlyAverage(plan, ['2026-06'])).toBe(B)
+    expect(plannedMonthlyAverage(plan, ['2027-02', '2027-03'])).toBe(Math.round((Math.round(B * 1.1) + X) / 2))
+  })
+
+  it('says what change is coming after a date', () => {
+    expect(nextContributionStep(plan, '2026-06-15')).toEqual({ from: '2027-03', monthlyCents: X })
+    expect(nextContributionStep(plan, '2027-03-01')).toEqual({ from: '2029-01', monthlyCents: 0 })
+    expect(nextContributionStep(plan, '2029-01-01')).toBeNull()
+    expect(nextContributionStep({ contributionSchedule: undefined } as never, '2026-06-15')).toBeNull()
   })
 })

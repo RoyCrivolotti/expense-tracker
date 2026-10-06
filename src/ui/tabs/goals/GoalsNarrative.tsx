@@ -5,6 +5,7 @@ import { formatCents, formatPercent, milestoneLabelWithAmount } from '../../../e
 import { Card } from '../../components/primitives'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { formatMoneyShort } from './chartTheme'
+import { contributionPhrase } from './contributionText'
 import { getNarrativeStats, type MilestoneStat } from './narrativeStats'
 import styles from './goals.module.css'
 
@@ -89,7 +90,7 @@ function FullNarrative({
       <h3 className={styles.chartTitle}>What this means</h3>
       <p className={styles.narrative}>
         At {formatPercent(draft.expectedRealReturn, format)} real return and{' '}
-        {formatCents(draft.monthlyContributionCents, format)}/mo invested, your portfolio reaches{' '}
+        {contributionPhrase(draft, format)} invested, your portfolio reaches{' '}
         {formatCents(end?.investedCents ?? 0, format)} invested and{' '}
         {formatCents(end?.netWorthCents ?? 0, format)} net worth in {draft.horizonYears} years.
         {milestoneSentences([next, top], short)}

@@ -91,6 +91,7 @@ describe('GoalControls', () => {
       lifeEvents: [],
       housePurchaseYear: null,
       monthlyContributionCents: 100_000,
+      contributionSchedule: [],
     })
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
@@ -115,11 +116,50 @@ describe('GoalControls', () => {
       lifeEvents: [{ year: 1, amountCents: -20_000_00, label: 'Car' }],
       housePurchaseYear: 3,
       monthlyContributionCents: 100_000,
+      contributionSchedule: [],
     }
     expect(onChange).toHaveBeenCalledWith(patch)
     // The parent applies the patch to the draft, and the note describes what it now holds.
     rerender(<GoalControls draft={{ ...draft, ...patch }} latest={latest} onChange={onChange} />)
     expect(screen.getByRole('status')).toHaveTextContent(/Bonus \(.*2025\) is already in the balance, so it is dropped\./)
+  })
+
+  it('restarts from the amount a change had reached, keeps the ones to come, and says so', () => {
+    const onChange = vi.fn()
+    const draft = {
+      ...makeDraft(),
+      planStartDate: '2026-01-01',
+      housePurchaseYear: null,
+      lifeEvents: [],
+      monthlyContributionCents: 100_000,
+      contributionSchedule: [
+        { from: '2026-07', monthlyCents: 150_000 },
+        { from: '2028-03', monthlyCents: 250_000 },
+      ],
+    }
+    const latest = { investedCents: 11_700_000, date: '2027-02-15' }
+    const { rerender } = render(<GoalControls draft={draft} latest={latest} onChange={onChange} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
+
+    const patch = onChange.mock.calls[0]![0] as Partial<ReturnType<typeof makeDraft>>
+    expect(patch).toMatchObject({
+      monthlyContributionCents: 150_000,
+      contributionSchedule: [{ from: '2028-03', monthlyCents: 250_000 }],
+    })
+    rerender(<GoalControls draft={{ ...draft, ...patch }} latest={latest} onChange={onChange} />)
+    expect(screen.getByRole('status')).toHaveTextContent(
+      /Monthly investing goes from 1\.000,00 € to 1\.500,00 €: the change to 1\.500,00 € from .* is already behind the new start, so it is in the monthly amount\./,
+    )
+
+    // Editing the schedule afterwards leaves a note about a draft that is no longer there.
+    rerender(
+      <GoalControls
+        draft={{ ...draft, ...patch, contributionSchedule: [{ from: '2028-03', monthlyCents: 999_00 }] }}
+        latest={latest}
+        onChange={onChange}
+      />,
+    )
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
   it('drops the note about what a re-baseline moved once the draft no longer holds it', () => {
