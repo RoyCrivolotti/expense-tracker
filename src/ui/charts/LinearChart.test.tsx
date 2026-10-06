@@ -194,6 +194,49 @@ describe('LinearChart', () => {
     })
   })
 
+  describe('fillHeight', () => {
+    const viewBoxOf = (container: HTMLElement) => container.querySelector('svg')!.getAttribute('viewBox')
+
+    afterEach(() => vi.restoreAllMocks())
+
+    function inABox(width: number, height: number) {
+      vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(width)
+      vi.spyOn(Element.prototype, 'clientHeight', 'get').mockReturnValue(height)
+    }
+
+    it('is drawn at the height of its box, and keeps the wrapper free of padding', () => {
+      inABox(700, 262)
+      const { container } = render(
+        <LinearChart {...defaultProps} fillHeight series={[makeLine('s1', [10, 20, 30])]} />,
+      )
+      expect(viewBoxOf(container)).toBe('0 0 700 262')
+      expect(container.firstElementChild!.className).toContain(chartStyles.chartWrapFill)
+    })
+
+    it('is drawn at its height prop until its box has been measured', () => {
+      inABox(700, 0)
+      const { container } = render(
+        <LinearChart {...defaultProps} fillHeight series={[makeLine('s1', [10, 20, 30])]} />,
+      )
+      expect(viewBoxOf(container)).toBe('0 0 700 200')
+    })
+
+    it('is never drawn shorter than there is room for a plot', () => {
+      inABox(700, 60)
+      const { container } = render(
+        <LinearChart {...defaultProps} fillHeight series={[makeLine('s1', [10, 20, 30])]} />,
+      )
+      expect(viewBoxOf(container)).toBe('0 0 700 120')
+    })
+
+    it('leaves a chart that does not fill its box at its height prop, and its wrapper padded', () => {
+      inABox(700, 262)
+      const { container } = render(<LinearChart {...defaultProps} series={[makeLine('s1', [10, 20, 30])]} />)
+      expect(viewBoxOf(container)).toBe('0 0 700 200')
+      expect(container.firstElementChild!.className).not.toContain(chartStyles.chartWrapFill)
+    })
+  })
+
   it('is a Tab stop only when something shows where the arrow keys have moved the focus', () => {
     const tabIndexOf = (props: Partial<Parameters<typeof LinearChart>[0]>) => {
       const { container, unmount } = render(

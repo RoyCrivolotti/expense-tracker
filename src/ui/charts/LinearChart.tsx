@@ -1,7 +1,7 @@
-import { useEffect, useId, useMemo, useRef } from 'react'
+import { useEffect, useId, useMemo, useRef, type RefObject } from 'react'
 import { claimActiveTooltip, releaseActiveTooltip } from './activeTooltipRegistry'
 import { ChartTooltip, type TooltipLine } from './ChartTooltip'
-import { useElementWidth } from '../hooks/useElementWidth'
+import { useElementSize } from '../hooks/useElementSize'
 import {
   ChartGrid,
   ChartXLabels,
@@ -29,6 +29,8 @@ import {
 import styles from './charts.module.css'
 
 const FALLBACK_W = 360
+/** The least a chart that fills its box is drawn at: below it there is no plot, only its margins. */
+const MIN_FILL_H = 120
 const PAD = { top: 16, right: 16, bottom: 28, left: 56 }
 /** Reference lines closer than this run together into one dashed smear, so the nearer one is left out. */
 const REF_LINE_MIN_GAP = 8
@@ -87,6 +89,11 @@ interface Props {
   fitDomain?: boolean
   /** How the focused year behaves; see `ChartFocusOptions`. Absent, it clears as it always has. */
   focus?: ChartFocusOptions
+  /**
+   * Draw at the height of the box the chart is in, which the caller gives a height of its own,
+   * instead of at `height` (which is then only what it is drawn at before the box is measured).
+   */
+  fillHeight?: boolean
 }
 
 function pointsOf(values: number[], x: (i: number) => number, y: (v: number) => number): Pt[] {
@@ -144,6 +151,20 @@ function useGeometry(
       n <= 1 ? PAD.left + innerW / 2 : PAD.left + (i / (n - 1)) * innerW
     return { n, padTop, innerH, innerW, stackedBands, areaSeries, ticks: nice.ticks, scaleY, xForIndex }
   }, [series, width, height, refLines, yDomainMax, fitDomain, padTopProp])
+}
+
+/**
+ * The size the chart is drawn at: its wrapper's width, and its height prop, or the wrapper's own
+ * once it has been measured when the chart fills its box (never so little that the plot is gone).
+ */
+function useChartBox(ref: RefObject<HTMLElement | null>, height: number, fillHeight: boolean | undefined) {
+  const size = useElementSize(ref, { width: FALLBACK_W, height }, fillHeight)
+  const measured = fillHeight && size.height > 0
+  return { width: size.width, height: measured ? Math.max(MIN_FILL_H, size.height) : height }
+}
+
+function wrapClass(fillHeight: boolean | undefined): string | undefined {
+  return fillHeight ? `${styles.chartWrap} ${styles.chartWrapFill}` : styles.chartWrap
 }
 
 /** One axis label per 26px of plot: closer than that, labels at 11px start to touch. */
@@ -209,6 +230,7 @@ export function LinearChart({
   yDomainMax,
   fitDomain,
   focus,
+  fillHeight,
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   // useId can return characters (colons, in older React) that a url(#...) reference does not take.
@@ -218,8 +240,8 @@ export function LinearChart({
   const containerRef = useRef<HTMLDivElement>(null)
   // The viewBox is the wrapper's width in CSS pixels, so text, strokes and hit areas
   // render at their own size instead of being scaled up with the chart.
-  const width = useElementWidth(containerRef, FALLBACK_W)
-  const geo = useGeometry(series, width, height, refLines, yDomainMax, fitDomain, padTop)
+  const { width, height: drawnHeight } = useChartBox(containerRef, height, fillHeight)
+  const geo = useGeometry(series, width, drawnHeight, refLines, yDomainMax, fitDomain, padTop)
   const { active, ...handlers } = useChartFocus(geo.n, geo.xForIndex, containerRef, focus)
   const focusX = active != null ? geo.xForIndex(active) : 0
   const anchor = useSvgAnchor(svgRef, active != null ? focusX : null, active != null ? geo.padTop : null)
@@ -243,10 +265,10 @@ export function LinearChart({
   }, [showsTooltip, handlers.onBlur])
 
   return (
-    <div ref={containerRef} className={styles.chartWrap}>
+    <div ref={containerRef} className={wrapClass(fillHeight)}>
       <svg
         ref={svgRef}
-        viewBox={`0 0 ${width} ${height}`}
+        viewBox={`0 0 ${width} ${drawnHeight}`}
         className={styles.svg}
         role="img"
         aria-label={ariaLabel}
@@ -334,7 +356,7 @@ export function LinearChart({
             yBottom={geo.padTop + geo.innerH}
           />
         )}
-        <ChartXLabels labels={xLabels} xForIndex={geo.xForIndex} y={height - 8} />
+        <ChartXLabels labels={xLabels} xForIndex={geo.xForIndex} y={drawnHeight - 8} />
         <ChartPurchaseMarkers
           markerYears={markerYears}
           xForIndex={geo.xForIndex}
