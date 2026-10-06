@@ -35,6 +35,8 @@ interface ScenarioSeriesLegendProps {
   layout?: 'rows' | 'chips' | undefined
   /** Where the floating breakdown sits over the chart: away from the year being pointed at. */
   floatSide?: 'start' | 'end' | undefined
+  /** What it says before a year is pointed at, where "below" is not where the rows are. */
+  hint?: string | undefined
 }
 
 function BreakdownRows({
@@ -121,6 +123,14 @@ function BreakdownExtras({
   )
 }
 
+/** What the legend says before a year is pointed at: what it is told to, else how to use it. */
+function legendHint(override: string | undefined, togglable: boolean): string {
+  if (override !== undefined) return override
+  return togglable
+    ? 'Tap or hover the chart to compare values by year. Tap a scenario below to hide or show its line.'
+    : 'Tap or hover the chart to compare values by year.'
+}
+
 export function ScenarioSeriesLegend({
   items,
   activeYear,
@@ -131,12 +141,11 @@ export function ScenarioSeriesLegend({
   onToggle,
   layout,
   floatSide = 'end',
+  hint: hintOverride,
 }: ScenarioSeriesLegendProps) {
   const format = useMoneyFormat()
   if (items.length === 0) return null
-  const hint = onToggle
-    ? 'Tap or hover the chart to compare values by year. Tap a scenario below to hide or show its line.'
-    : 'Tap or hover the chart to compare values by year.'
+  const hint = legendHint(hintOverride, onToggle !== undefined)
 
   // Side by side the chips leave no room for a block that comes and goes with the pointer: in the
   // flow it pushed the cards below it down by 144px, and the legend under the bar held at the
