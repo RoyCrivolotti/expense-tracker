@@ -256,11 +256,17 @@ export function TrackingFields({ draft, latest, onChange }: TrackingProps) {
   // What the last re-baseline moved, so a dropped event is not found out at Save. Kept with
   // the values it left in the draft: once the draft no longer holds them (Discard, another
   // scenario loaded) the note describes something that is not there and goes away.
-  const [rebaselined, setRebaselined] = useState<{ lines: string[]; planStartDate: string; lifeEvents: string } | null>(null)
+  const [rebaselined, setRebaselined] = useState<{
+    lines: string[]
+    planStartDate: string
+    lifeEvents: string
+    schedule: string
+  } | null>(null)
   const note =
     rebaselined &&
     rebaselined.planStartDate === draft.planStartDate &&
-    rebaselined.lifeEvents === JSON.stringify(draft.lifeEvents)
+    rebaselined.lifeEvents === JSON.stringify(draft.lifeEvents) &&
+    rebaselined.schedule === JSON.stringify(draft.contributionSchedule ?? [])
       ? rebaselined.lines
       : null
   const rebaselineHint = latest
@@ -286,7 +292,12 @@ export function TrackingFields({ draft, latest, onChange }: TrackingProps) {
             const lines = rebaselineSummary(next, format, formatCheckinDate)
             setRebaselined(
               lines.length > 0
-                ? { lines, planStartDate: next.patch.planStartDate, lifeEvents: JSON.stringify(next.patch.lifeEvents) }
+                ? {
+                    lines,
+                    planStartDate: next.patch.planStartDate,
+                    lifeEvents: JSON.stringify(next.patch.lifeEvents),
+                    schedule: JSON.stringify(next.patch.contributionSchedule),
+                  }
                 : null,
             )
           }}
