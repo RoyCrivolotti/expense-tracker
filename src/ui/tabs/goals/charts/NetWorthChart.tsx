@@ -1,13 +1,12 @@
 import { memo, useCallback, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import type { GoalScenario, Milestone } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import type { MoneyFormat, PlanFromToday, ProjectionParams } from '../../../../engine'
+import type { MoneyFormat, PlanFromToday } from '../../../../engine'
 import {
   RETURN_BAND_SPREAD,
   formatPercent,
   projectNetWorth,
   projectNetWorthBand,
-  purchaseYearBreakdown,
   scenarioToParams,
 } from '../../../../engine'
 import { Card } from '../../../components/primitives'
@@ -33,18 +32,7 @@ import { computeChartDisplayData } from './nominalTransform'
 import { pointSeriesValueAt } from './checkinChartUtils'
 import { scenarioInk } from '../scenarioInk'
 import { ChartKeys, type ChartKeyMarks } from './ChartKeys'
-
-interface ScenarioLine {
-  id: string
-  /** The saved scenario behind the line; null for the draft. */
-  scenarioId: number | null
-  name: string
-  color: string
-  dashed: boolean
-  params: ProjectionParams
-}
-
-const NO_HIDDEN: ReadonlySet<number> = new Set()
+import { NO_HIDDEN, useChartLegendState, withFromToday, type ScenarioLine } from './heroLegendState'
 
 function scenarioLines(
   saved: GoalScenario[],
@@ -166,67 +154,6 @@ function PortfolioLegend({
     )
   }
   return <ChartLegend items={staticLegend} variant="stack" />
-}
-
-function useChartLegendState(
-  lines: ScenarioLine[],
-  series: ChartSeries[],
-  names: string[],
-  years: number[],
-  activeIndex: number | null,
-  scenarios: GoalScenario[],
-  hiddenIds: ReadonlySet<number> = NO_HIDDEN,
-) {
-  const activeYear = activeIndex != null ? years[activeIndex] ?? null : null
-  const legendItems: ScenarioLegendItem[] = useMemo(() => {
-    const drawn = series.map((s, idx) => {
-      const scenarioId = lines[idx]?.scenarioId ?? null
-      // Gated on the year, not the index: a narrower window can leave a hovered index past the
-      // end, and so can a scenario whose horizon is shorter than the chart's. Both read as
-      // nothing rather than as zero.
-      const value = activeYear != null && activeIndex != null ? s.values[activeIndex] : undefined
-      return {
-        label: names[idx] ?? s.id,
-        color: s.color,
-        ...(s.dashed ? { dashed: true as const } : {}),
-        ...(scenarioId !== null ? { scenarioId } : {}),
-        valueCents: value ?? null,
-        ...(activeYear != null && value === undefined ? { outOfRun: true as const } : {}),
-      }
-    })
-    const drawnById = new Map(drawn.flatMap((d) => (d.scenarioId !== undefined ? [[d.scenarioId, d] as const] : [])))
-    // In the scenarios' own order, a hidden one dimmed in its place so it can be brought
-    // back from here, rather than dropping to the bottom and moving the rows under it. A
-    // loaded, unchanged scenario is drawn as the draft and has no row of its own.
-    const rows = scenarios.flatMap((s) => {
-      if (hiddenIds.has(s.id)) return [{ label: s.name, color: s.color, scenarioId: s.id, hidden: true, valueCents: null }]
-      const item = drawnById.get(s.id)
-      return item ? [item] : []
-    })
-    return [...rows, ...drawn.filter((d) => d.scenarioId === undefined)]
-  }, [series, names, lines, activeIndex, activeYear, scenarios, hiddenIds])
-  const breakdowns: ScenarioLegendBreakdown[] = useMemo(() => {
-    if (activeYear == null) return []
-    return lines.flatMap((line) => {
-      const breakdown = purchaseYearBreakdown(line.params, activeYear)
-      if (!breakdown) return []
-      return [
-        {
-          id: line.scenarioId === null ? 'draft' : String(line.scenarioId),
-          label: line.name,
-          color: line.color,
-          ...(line.dashed ? { dashed: true as const } : {}),
-          breakdown,
-        },
-      ]
-    })
-  }, [activeYear, lines])
-  const yearZeroHint = useMemo(() => {
-    if (activeYear !== 0 || breakdowns.length > 0) return false
-    return lines.some((line) => line.params.housePurchaseYear === 0)
-  }, [activeYear, breakdowns.length, lines])
-
-  return { activeYear, legendItems, breakdowns, yearZeroHint }
 }
 
 /** Pixels: tall enough on a desktop to read thirty years, short enough on a phone to fit above the fold. */
@@ -645,17 +572,10 @@ function NetWorthChartImpl({
     },
     [years, displaySeries, names, format, fromTodayLine, fromTodayLabel],
   )
-  // Listed last, after the draft: it belongs to the plan but is not a scenario of its own.
-  const legendWithFromToday: ScenarioLegendItem[] = useMemo(() => {
-    if (!fromTodayLine) return legendItems
-    const valueCents = activeYear != null ? pointSeriesValueAt(fromTodayLine.points ?? [], activeYear) : null
-    // Before the check-in the line has not started; say so rather than leave the row blank.
-    const outOfRun = activeYear != null && valueCents === null
-    return [
-      ...legendItems,
-      { label: fromTodayLabel, color: fromTodayLine.color, dotted: true, valueCents, ...(outOfRun ? { outOfRun } : {}) },
-    ]
-  }, [legendItems, fromTodayLine, fromTodayLabel, activeYear])
+  const legendWithFromToday = useMemo(
+    () => withFromToday(legendItems, fromTodayLine, fromTodayLabel, activeYear),
+    [legendItems, fromTodayLine, fromTodayLabel, activeYear],
+  )
 
   const lifeEventMarkers = useLifeEventMarkers(isHero, draft, windowYears)
   const heroVariantProps = variantProps(isHero, narrow, legendInBand, markerYears, lifeEventMarkers, onActiveIndexChange)
