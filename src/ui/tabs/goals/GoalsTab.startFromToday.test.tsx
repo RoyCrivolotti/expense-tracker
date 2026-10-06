@@ -53,14 +53,22 @@ function renderTab(overrides: Parameters<typeof makeDataset>[0] = {}, actions = 
 const viewGroup = () => screen.getByRole('radiogroup', { name: 'Where the scenarios start from' })
 
 describe('GoalsTab, start from my balance today', () => {
-  it('offers a two-way switch in the scenario row, on "As saved", with the balance it would use', () => {
+  it('offers a two-way switch in the row of scenario tabs, on "As saved", carrying the balance it would use', () => {
     renderTab()
     const group = viewGroup()
     expect(within(group).getByRole('radio', SAVED)).toBeChecked()
     expect(within(group).getByRole('radio', TODAY)).not.toBeChecked()
-    expect(screen.getByText(new RegExp(`My balance today is .* on ${formatCheckinDate('2026-10-05')}, your latest check-in`))).toBeInTheDocument()
-    // With the scenarios, not under the chart: the tabs and the switch share a bar.
-    expect(screen.getByRole('tablist', { name: 'Scenarios' }).parentElement?.parentElement).toContainElement(group)
+    // In the same row as the tabs, which is where the scenarios are, and which has the room: a row
+    // of its own would push the chart's legend into the inputs bar held under it on a laptop screen.
+    const row = screen.getByRole('tablist', { name: 'Scenarios' }).parentElement!
+    expect(row).toContainElement(group)
+    expect(group.parentElement).toHaveAttribute(
+      'title',
+      expect.stringMatching(new RegExp(`My balance today is .* on ${formatCheckinDate('2026-10-05')}, your latest check-in`)),
+    )
+    // Nothing more to say while it is off, so nothing takes the height.
+    expect(screen.queryByText(/My balance today is/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Details')).not.toBeInTheDocument()
   })
 
   it('is unavailable until there is a check-in to start from, and says so', () => {

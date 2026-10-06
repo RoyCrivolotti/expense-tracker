@@ -6,7 +6,7 @@ import type { InvestedSnapshot } from '../checkinDate'
 import { useToastAside } from '../../../hooks/useToastAside'
 import { GoalsIntro } from '../GoalsIntro'
 import { PlanHero, type ValueDisplay } from '../PlanHero'
-import { StartFromTodayRow, type StartFromTodayControl } from '../StartFromTodayRow'
+import { StartFromTodayStatus, StartFromTodaySwitch, type StartFromTodayControl } from '../StartFromTodayRow'
 import type { ScenarioEditor } from '../useScenarioEditor'
 import type { ShownScenarios } from '../useStartFromToday'
 import type { StarredLevers } from '../useStarredLevers'
@@ -52,14 +52,18 @@ export function PlanDesktop({ scenarios, editor, actions, latest, milestones, re
   useToastAside()
   const { draft, deferredDraft } = editor
   const starred = useKeyboardStarToggle(levers, PANEL_ID)
-  const viewRow = useMemo(
-    () => <StartFromTodayRow control={startFromToday} latest={latest} notRestarted={shown.notRestarted} />,
+  const viewSwitch = useMemo(
+    () => <StartFromTodaySwitch control={startFromToday} latest={latest} />,
+    [startFromToday, latest],
+  )
+  const viewStatus = useMemo(
+    () => <StartFromTodayStatus control={startFromToday} latest={latest} notRestarted={shown.notRestarted} />,
     [startFromToday, latest, shown.notRestarted],
   )
   return (
     // The marker widens the page for this view only (AppShell.module.css).
     <div className={styles.page} data-goals-plan-wide>
-      <ScenarioBar scenarios={scenarios} editor={editor} actions={actions} viewRow={viewRow} ownStartIds={shown.ownStartIds} />
+      <ScenarioBar scenarios={scenarios} editor={editor} actions={actions} viewSwitch={viewSwitch} viewStatus={viewStatus} ownStartIds={shown.ownStartIds} />
       <div className={styles.hero}>
         <PlanHero
           scenarios={shown.scenarios}
