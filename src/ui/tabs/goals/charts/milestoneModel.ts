@@ -1,7 +1,9 @@
 import type { GoalScenario, Milestone } from '../../../../types'
 import type { PlanFromToday } from '../../../../engine'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { scenarioToParams, shortMonthYearLabel, yearsToTargetFromProjection } from '../../../../engine'
+import { scenarioToParams, shortMonthYearLabel, yearsBetween, yearsToTargetFromProjection } from '../../../../engine'
+
+export { yearsBetween }
 import { tableName } from '../scenarioNames'
 
 export type RowKind = 'plan' | 'saved' | 'fromToday' | 'draft'
@@ -88,26 +90,6 @@ function sourcesOf(
         ]
       : []),
   ]
-}
-
-function utcDay(year: number, month: number, day: number): number {
-  return Date.UTC(year, month - 1, day)
-}
-
-/**
- * The years from one date to a later one (both `YYYY-MM-DD`), to the day: the whole anniversaries
- * passed, then the part of the year since the last one. Negative when `to` is the earlier date.
- */
-export function yearsBetween(from: string, to: string): number {
-  if (to < from) return -yearsBetween(to, from)
-  const [fy = 0, fm = 1, fd = 1] = from.split('-').map(Number)
-  const [ty = 0, tm = 1, td = 1] = to.split('-').map(Number)
-  const end = utcDay(ty, tm, td)
-  let whole = ty - fy
-  if (utcDay(fy + whole, fm, fd) > end) whole -= 1
-  const last = utcDay(fy + whole, fm, fd)
-  const next = utcDay(fy + whole + 1, fm, fd)
-  return whole + (end - last) / (next - last)
 }
 
 /**
