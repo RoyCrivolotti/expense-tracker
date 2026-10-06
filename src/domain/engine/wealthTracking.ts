@@ -5,6 +5,7 @@
  *   - The projected invested-portfolio value at any calendar date.
  *   - An on/off-track status: delta in € and in equivalent months.
  */
+import { plannedMonthlyAt } from './contributionSchedule'
 import { projectNetWorth } from './projection'
 import { scenarioToParams } from './scenarioProjection'
 import type { GoalScenario, Milestone, WealthAccount, WealthCheckin } from '../types'
@@ -182,12 +183,14 @@ export function trackStatus(
   const actualRealInvestedCents = nominalToReal(actualInvestedCents, scenario.planStartDate, checkin.checkinDate, inflationRate)
   const deltaCents = actualRealInvestedCents - projected
 
-  // Monthly contribution at the check-in's year (approximate using year 1 value).
-  const monthlyContrib = scenario.monthlyContributionCents
-  const monthlyDivisor = monthlyContrib > 0 ? monthlyContrib : 1
+  // A gap in money, as months of what the plan was putting in when the check-in was made. During a
+  // pause that is nothing, and a gap is not a number of months of nothing: no figure is given.
+  const monthlyContrib = plannedMonthlyAt(scenario, checkin.checkinDate)
   const maxMonths = Math.round(scenario.horizonYears * 12)
-  const rawDeltaMonths = deltaCents / monthlyDivisor
-  const deltaMonths = Math.max(-maxMonths, Math.min(maxMonths, Math.round(rawDeltaMonths)))
+  const deltaMonths =
+    monthlyContrib > 0
+      ? Math.max(-maxMonths, Math.min(maxMonths, Math.round(deltaCents / monthlyContrib)))
+      : 0
 
   return {
     projectedInvestedCents: projected,

@@ -4,6 +4,7 @@
  * starting point is what is off, and a re-baseline is the fix rather than more saving.
  */
 import type { GoalScenario, WealthAccount, WealthCheckin } from '../types'
+import { plannedMonthlyAt } from './contributionSchedule'
 import { DAY_MS, utcDateMs } from './dates'
 import { trackStatus } from './wealthTracking'
 
@@ -58,8 +59,8 @@ function isSteady(deltas: number[], mean: number, tolerance: number): boolean {
 /**
  * Null unless the check-ins reaching back at least `minDays` from the latest one number
  * `minCount` or more, all sit on the same side of the plan, their spread is within
- * `tolerance` of their mean gap, and that gap is worth at least `minMonths` of the plan's
- * monthly contribution. A smaller gap is on-plan noise, and telling someone their
+ * `tolerance` of their mean gap, and that gap is worth at least `minMonths` of what the plan
+ * invests each month at the latest check-in. A smaller gap is on-plan noise, and telling someone their
  * starting point is wrong over it would be a nag. The plan needs a start date.
  */
 export function steadyGap(
@@ -75,7 +76,10 @@ export function steadyGap(
   const deltas = gapDeltas(run, plan, accounts, inflationRate)
   if (!deltas) return null
   const mean = deltas.reduce((s, d) => s + d, 0) / deltas.length
-  if (Math.abs(mean) < minMonths * plan.monthlyContributionCents) return null
+  // Months of what the plan puts in now. During a pause that is nothing, which would make any
+  // gap worth saying something about, so a pause says nothing.
+  const monthly = plannedMonthlyAt(plan, run[run.length - 1]!.checkinDate)
+  if (monthly <= 0 || Math.abs(mean) < minMonths * monthly) return null
   if (!isSteady(deltas, mean, tolerance)) return null
   return { sinceDate: run[0]!.checkinDate, meanDeltaCents: Math.round(mean), count: run.length }
 }
