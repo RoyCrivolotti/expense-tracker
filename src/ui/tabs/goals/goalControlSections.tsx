@@ -4,6 +4,8 @@ import { formatCents, rebaseline, rebaselineSummary, type LeverKey, type MoneyFo
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { formatCheckinDate, type InvestedSnapshot } from './checkinDate'
 import { DateField, MoneyField, NumberField, PercentField, PurchaseYearField } from './goalControlFields'
+import { ContributionStepsList } from './ContributionSteps'
+import { firstChangeNote } from './contributionText'
 import { LifeEventsList } from './LifeEvents'
 import { LEVER_SPECS, NO_LEVERS } from './leverFields'
 import styles from './goals.module.css'
@@ -41,6 +43,30 @@ function purchaseSummary(draft: NewGoalScenario, format: MoneyFormat): string | 
 
 const L = LEVER_SPECS
 
+/**
+ * The monthly amount the scenario starts with. The changes after it are set under Monthly
+ * investing changes, so when there are some this says so rather than leave the amount looking like
+ * all there is to it.
+ */
+function MonthlyInvestingField({
+  draft,
+  onChange,
+  wrap,
+}: Pick<SectionProps, 'draft' | 'onChange'> & { wrap: NonNullable<SectionProps['wrap']> }) {
+  const format = useMoneyFormat()
+  const note = firstChangeNote(draft, format)
+  return (
+    <>
+      {wrap('monthlyContributionCents', <MoneyField
+        label={L.monthlyContributionCents.label}
+        value={draft.monthlyContributionCents}
+        onChange={(v) => onChange({ monthlyContributionCents: v })}
+      />)}
+      {note ? <p className={styles.fieldHint}>{note}. Set under Monthly investing changes.</p> : null}
+    </>
+  )
+}
+
 export function PortfolioFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: SectionProps) {
   return (
     <>
@@ -52,11 +78,7 @@ export function PortfolioFields({ draft, onChange, omit = NO_LEVERS, wrap = plai
         />)
       )}
       {omit.has('monthlyContributionCents') ? null : (
-        wrap('monthlyContributionCents', <MoneyField
-          label={L.monthlyContributionCents.label}
-          value={draft.monthlyContributionCents}
-          onChange={(v) => onChange({ monthlyContributionCents: v })}
-        />)
+        <MonthlyInvestingField draft={draft} onChange={onChange} wrap={wrap} />
       )}
       {omit.has('annualContributionGrowth') ? null : (
         wrap('annualContributionGrowth', <PercentField
@@ -277,7 +299,7 @@ export function TrackingFields({ draft, latest, onChange }: TrackingProps) {
       <DateField
         label="Plan start date"
         value={draft.planStartDate ?? null}
-        hint="Anchors the projection to a calendar date so wealth check-ins can show whether you are ahead or behind."
+        hint="Anchors the projection to a calendar date so wealth check-ins can show whether you are ahead or behind. Changes to the monthly amount count from it too."
         onChange={(v) => onChange({ planStartDate: v })}
       />
       <div className={styles.field}>
@@ -315,6 +337,26 @@ export function TrackingFields({ draft, latest, onChange }: TrackingProps) {
           </div>
         ) : null}
       </div>
+    </>
+  )
+}
+
+export function ChangesFields({ draft, onChange }: Pick<SectionProps, 'draft' | 'onChange'>) {
+  const format = useMoneyFormat()
+  return (
+    <>
+      <p className={styles.fieldHint}>
+        What you invest each month, from a month on. Before the first change the scenario is exactly as it is.
+        After one, the monthly amount is the one you give, so a pause is a change to nothing.
+      </p>
+      <ContributionStepsList
+        steps={draft.contributionSchedule ?? []}
+        planStartDate={draft.planStartDate}
+        baseCents={draft.monthlyContributionCents}
+        growth={draft.annualContributionGrowth}
+        format={format}
+        onChange={(steps) => onChange({ contributionSchedule: steps })}
+      />
     </>
   )
 }

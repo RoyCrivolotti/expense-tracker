@@ -87,6 +87,7 @@
 
 .lever {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.125rem;
   align-content: start;
   min-width: 0;
@@ -170,7 +171,20 @@
 .leverTrack {
   display: flex;
   align-items: center;
+  min-width: 0;
   height: 1.25rem;
+}
+
+/* A note longer than its cell is cut with an ellipsis rather than widening the cell, which
+   would push the star of the next lever over its label. */
+.leverNote {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 0.6875rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-muted);
 }
 
 .leverSide {

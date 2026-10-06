@@ -4,6 +4,7 @@ import { formatMoneyInput, formatPercent, formatPercentInput, parseMoneyToCents 
 import type { MoneyFormat } from '../../../../engine'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { useMediaQuery } from '../../../hooks/useMediaQuery'
+import { firstChangeNote } from '../contributionText'
 import { purchaseYearLabel, type LeverSpec } from '../leverFields'
 import goalStyles from '../goals.module.css'
 import { StarButton } from './StarButton'
@@ -116,6 +117,24 @@ function typedNumber(raw: string): number | null {
 }
 
 /**
+ * The row under a money input: empty, so the figures line up with the levers that have a slider
+ * there. The monthly amount is what the scenario starts with, and the changes after it are not a
+ * dial here, so on that one the row says they are there.
+ */
+function MoneyTrack({ leverKey, draft }: { leverKey: keyof NewGoalScenario; draft: NewGoalScenario }) {
+  const format = useMoneyFormat()
+  const note = leverKey === 'monthlyContributionCents' ? firstChangeNote(draft, format) : null
+  if (!note) return <div className={styles.leverTrack} aria-hidden />
+  return (
+    <div className={styles.leverTrack}>
+      <span className={styles.leverNote} title={note}>
+        {note}
+      </span>
+    </div>
+  )
+}
+
+/**
  * One input in the levers bar: its name, its value as a big number to type over, and a slider
  * where the input has one in the panel (the percentages and the purchase year). Money and years
  * stay typed: a balance or a house price is a fact, not a dial.
@@ -148,7 +167,7 @@ export function Lever({ spec, draft, onChange, onUnstar }: LeverProps) {
             if (/\d/.test(raw)) patch(Math.max(0, parseMoneyToCents(raw, format)))
           }}
         />
-        <div className={styles.leverTrack} aria-hidden />
+        <MoneyTrack leverKey={key} draft={draft} />
       </>
     )
   } else if (kind === 'years') {
