@@ -7,7 +7,7 @@ name: Verify Goals in a browser
 # the merged result, so it runs here: on a PR that can change what it measures, and on main after
 # a merge, which is where the combination of PRs first exists.
 #
-# It is slow (about ten minutes) and timing sensitive, so it is its own workflow and not a step of
+# It is slow and timing sensitive, so it is its own workflow and not a step of
 # Verify: it does not hold up the checks that tell a reviewer whether the code builds. It is not
 # a required check until it has proved itself over a few weeks of PRs; make it one in the branch
 # protection rules when you trust it.
@@ -20,6 +20,7 @@ on:
       - 'src/domain/**'
       - 'src/data/**'
       - 'scripts/verify-goals-desktop.mjs'
+      - 'scripts/shardUnits.mjs'
       - 'index.html'
       - 'package-lock.json'
       - 'vite.config.*'
@@ -31,6 +32,7 @@ on:
       - 'src/domain/**'
       - 'src/data/**'
       - 'scripts/verify-goals-desktop.mjs'
+      - 'scripts/shardUnits.mjs'
       - 'package-lock.json'
   workflow_dispatch:
 
@@ -40,7 +42,7 @@ concurrency:
 
 jobs:
   goals-browser:
-    name: goals-browser (${{ matrix.engine }})
+    name: goals-browser (${{ matrix.engine }} ${{ matrix.shard }}/${{ matrix.shards }})
     # Safari's engine is only the real one on macOS: the Linux build of WebKit scrolls and focuses
     # differently (it failed checks that pass in Safari), so it would report problems the page does
     # not have. Chromium runs on Linux, where it is quicker.
@@ -48,12 +50,18 @@ jobs:
     timeout-minutes: 40
     strategy:
       fail-fast: false
+      # The sections of the script are independent, so each job runs one share of them
+      # (`SHARD`, below). WebKit gets fewer, and runs slower per section, because the free plan
+      # runs only five macOS jobs at once.
       matrix:
         include:
-          - engine: chromium
-            os: ubuntu-latest
-          - engine: webkit
-            os: macos-latest
+          - { engine: chromium, os: ubuntu-latest, shard: 1, shards: 4 }
+          - { engine: chromium, os: ubuntu-latest, shard: 2, shards: 4 }
+          - { engine: chromium, os: ubuntu-latest, shard: 3, shards: 4 }
+          - { engine: chromium, os: ubuntu-latest, shard: 4, shards: 4 }
+          - { engine: webkit, os: macos-latest, shard: 1, shards: 3 }
+          - { engine: webkit, os: macos-latest, shard: 2, shards: 3 }
+          - { engine: webkit, os: macos-latest, shard: 3, shards: 3 }
     steps:
       - uses: actions/checkout@v5
 
@@ -87,12 +95,27 @@ jobs:
       # One retry: a few of its checks measure things that settle over a few frames, and a shared
       # runner is slower than a laptop. A real regression fails twice. Both runs print every check,
       # so a pass on the second is visible in the log and not hidden.
-      - name: Run the Goals page checks in ${{ matrix.engine }}
+      - name: Run part ${{ matrix.shard }} of ${{ matrix.shards }} of the Goals page checks in ${{ matrix.engine }}
         env:
           CAPTURE_PORT: '5173'
           ENGINES: ${{ matrix.engine }}
+          SHARD: ${{ matrix.shard }}/${{ matrix.shards }}
         run: |
           node scripts/verify-goals-desktop.mjs || {
             echo '::warning::The Goals browser checks failed once and are being run again.'
             node scripts/verify-goals-desktop.mjs
           }
+
+  # The one job to require once this workflow is trusted. A matrix job that failed, was
+  # cancelled or never started is not `success`, and without `always()` this job would be
+  # skipped in those cases, which reads as passing to anything that requires it.
+  goals-browser-gate:
+    name: goals-browser gate
+    needs: goals-browser
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every part must have passed
+        run: |
+          echo "result: ${{ needs.goals-browser.result }}"
+          [ "${{ needs.goals-browser.result }}" = success ]
