@@ -32,10 +32,11 @@ function Harness({ turn = 0, frozen = false }: { turn?: Turn; frozen?: boolean }
   const stage = useRef<HTMLDivElement>(null)
   const card = useRef<HTMLDivElement>(null)
   const bar = useRef<HTMLDivElement>(null)
+  const foot = useRef<HTMLDivElement>(null)
   const content = useRef<HTMLDivElement>(null)
   const grip = useRef<HTMLButtonElement>(null)
   const corner = useRef<HTMLButtonElement>(null)
-  useFloatingCard({ stage, card, bar, content, grip, corner, placement, choice, turn, frozen })
+  useFloatingCard({ stage, card, bar, foot, content, grip, corner, placement, choice, turn, frozen })
   // jsdom lays nothing out, so the sizes the hook reads are planted when the elements arrive.
   const plant = (el: HTMLElement | null, sizeOf: () => { width?: number; height: number }, keys: [string, string]) => {
     if (!el) return
@@ -67,6 +68,7 @@ function Harness({ turn = 0, frozen = false }: { turn?: Turn; frozen?: boolean }
           }}
           data-testid="content"
         />
+        <div ref={foot} />
         <button ref={corner} type="button">
           Size
         </button>

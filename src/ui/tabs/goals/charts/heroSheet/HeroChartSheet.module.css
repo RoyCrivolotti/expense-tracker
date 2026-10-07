@@ -148,6 +148,12 @@
   margin-top: 0;
 }
 
+/* The room the resize corner takes under the rows, so that it is never over a figure. */
+.floatFoot {
+  flex: none;
+  height: 1.5rem;
+}
+
 /* The corner that resizes the card: a fixed size, over the card's corner, whatever the scale. */
 .corner {
   position: absolute;

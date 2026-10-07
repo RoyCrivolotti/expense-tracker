@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MIN_SCALE, effectiveScale, scaleFromDrag, scaledSize, stepScale } from './cardScale'
+import { MIN_SCALE, effectiveScale, legendColumns, scaleFromDrag, scaledSize, stepScale } from './cardScale'
 
 const box = { width: 800, height: 300 }
 const chrome = 40
@@ -9,11 +9,11 @@ describe('effectiveScale', () => {
     expect(effectiveScale(null, box, { width: 240, height: 120 }, chrome)).toBe(1)
   })
 
-  it('is smaller, to take about two thirds of the box in the direction that is short of room, where it would not', () => {
+  it('is smaller, to take about two thirds of the height, or most of the width, of the box in the direction that is short of room, where it would not', () => {
     // 300 * 0.65 = 195, less 40 for the controls: 155 of height for content that is 310 tall.
     expect(effectiveScale(null, box, { width: 240, height: 310 }, chrome)).toBeCloseTo(0.5, 5)
-    // 800 * 0.7 = 560 of width for content that is 1120 wide.
-    expect(effectiveScale(null, box, { width: 1120, height: 100 }, chrome)).toBeCloseTo(0.5, 5)
+    // 800 * 0.8 = 640 of width for content that is 1280 wide.
+    expect(effectiveScale(null, box, { width: 1280, height: 100 }, chrome)).toBeCloseTo(0.5, 5)
   })
 
   it('is never larger than it is laid out at without being asked', () => {
@@ -79,5 +79,30 @@ describe('stepScale', () => {
   it('grows and shrinks by a tenth, and one step undoes the other', () => {
     expect(stepScale(1, 1)).toBeCloseTo(1.1, 5)
     expect(stepScale(stepScale(1, 1), -1)).toBeCloseTo(1, 10)
+  })
+})
+
+describe('legendColumns', () => {
+  it('is one column for a few rows, which fit a short box as they are', () => {
+    expect(legendColumns(3, { width: 770, height: 284 }, chrome)).toBe(1)
+  })
+
+  it('lays a long list out side by side in a wide, short box, so that it is drawn larger', () => {
+    // Nine rows are 342px tall in one column, in a box that has about 115px of height for them.
+    expect(legendColumns(9, { width: 770, height: 284 }, chrome)).toBe(3)
+  })
+
+  it('does not add a column that makes it wider than the box can show at a larger scale', () => {
+    // A tall, narrow box has the height for one column and not the width for two.
+    expect(legendColumns(9, { width: 300, height: 600 }, chrome)).toBe(1)
+  })
+
+  it('is one column where there is nothing to measure, or less than two rows', () => {
+    expect(legendColumns(9, { width: 0, height: 0 }, chrome)).toBe(1)
+    expect(legendColumns(1, { width: 770, height: 284 }, chrome)).toBe(1)
+  })
+
+  it('never uses more columns than there are rows', () => {
+    expect(legendColumns(2, { width: 2000, height: 200 }, chrome)).toBeLessThanOrEqual(2)
   })
 })

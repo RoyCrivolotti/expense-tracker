@@ -9,6 +9,8 @@ export interface CardElements {
   card: HTMLElement
   /** The controls along the card's top, which are not scaled. */
   bar: HTMLElement
+  /** The room under the content that the resize corner takes, which is not scaled either. */
+  foot: HTMLElement
   /** What the card says, laid out at its own size and drawn scaled. */
   content: HTMLElement
 }
@@ -45,7 +47,7 @@ const px = (value: number) => `${Math.round(value * 100) / 100}px`
  * it outlives the card.
  */
 export function createLayout(
-  { stage, card, bar, content }: CardElements,
+  { stage, card, bar, foot, content }: CardElements,
   placement: { current: Placement },
   choice: { current: number | null },
 ): CardLayout {
@@ -57,7 +59,7 @@ export function createLayout(
 
   const resize = (wanted: number | null) => {
     const own = natural()
-    const chrome = bar.offsetHeight
+    const chrome = bar.offsetHeight + foot.offsetHeight
     scale = effectiveScale(wanted, box(), own, chrome)
     size = scaledSize(own, chrome, scale)
     content.style.transform = `scale(${scale})`

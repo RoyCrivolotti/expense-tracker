@@ -17,6 +17,7 @@ export function useFloatingCard({
   stage,
   card,
   bar,
+  foot,
   content,
   grip,
   corner,
@@ -28,6 +29,7 @@ export function useFloatingCard({
   stage: RefObject<HTMLElement | null>
   card: RefObject<HTMLElement | null>
   bar: RefObject<HTMLElement | null>
+  foot: RefObject<HTMLElement | null>
   content: RefObject<HTMLElement | null>
   grip: RefObject<HTMLElement | null>
   corner: RefObject<HTMLElement | null>
@@ -47,15 +49,17 @@ export function useFloatingCard({
       stage: stage.current,
       card: card.current,
       bar: bar.current,
+      foot: foot.current,
       content: content.current,
       grip: grip.current,
       corner: corner.current,
     }
-    if (frozen || !els.stage || !els.card || !els.bar || !els.content || !els.grip || !els.corner) return
+    if (frozen || !els.stage || !els.card || !els.bar || !els.foot || !els.content || !els.grip || !els.corner) return
     return attachFloatingCard({
       stage: els.stage,
       card: els.card,
       bar: els.bar,
+      foot: els.foot,
       content: els.content,
       grip: els.grip,
       corner: els.corner,
@@ -63,5 +67,5 @@ export function useFloatingCard({
       choice,
       turn: () => turnNow.current,
     })
-  }, [stage, card, bar, content, grip, corner, placement, choice, frozen])
+  }, [stage, card, bar, foot, content, grip, corner, placement, choice, frozen])
 }

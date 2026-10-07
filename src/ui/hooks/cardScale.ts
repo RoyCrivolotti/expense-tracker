@@ -5,7 +5,7 @@ import type { Size } from './useElementSize'
 export const MIN_SCALE = 0.25
 
 /** How much of its box a card takes by default, and at most. Never all of it: it must have room to move. */
-const COMFORT = { width: 0.7, height: 0.65 }
+const COMFORT = { width: 0.8, height: 0.65 }
 const LIMIT = { width: 0.9, height: 0.9 }
 
 /** How much a step of the keys grows or shrinks a card by. */
@@ -60,4 +60,38 @@ export function scaleFromDrag(scale: number, content: Size, delta: Point): numbe
 /** One step larger or smaller, for the keys. */
 export function stepScale(scale: number, direction: 1 | -1): number {
   return direction === 1 ? scale * STEP : scale / STEP
+}
+
+/**
+ * What a row of a legend takes at the size it is laid out at, and what the card has besides its
+ * rows: estimates in pixels, with a name that wraps to two lines, so that a card with more rows than
+ * a short, wide box can hold in a column is laid out in more of them before it is scaled.
+ */
+const ROW = { width: 240, gap: 16, height: 38 }
+const BESIDES = { width: 20, height: 30 }
+const MOST_COLUMNS = 4
+
+/**
+ * How many columns to lay `rows` out in so that the card, drawn as large as is comfortable in `box`,
+ * has the largest text: more of them while that makes the card wider and no taller than the box can
+ * show at a larger scale, and never more than it gains from. `chrome` is the bar above the rows. A
+ * box that is not measured gets one column.
+ */
+export function legendColumns(rows: number, box: Size, chrome: number): number {
+  if (!(box.width > 0) || !(box.height > 0) || rows < 2) return 1
+  let best = 1
+  let bestScale = 0
+  for (let columns = 1; columns <= Math.min(rows, MOST_COLUMNS); columns++) {
+    const natural = {
+      width: columns * ROW.width + (columns - 1) * ROW.gap + BESIDES.width,
+      height: Math.ceil(rows / columns) * ROW.height + BESIDES.height,
+    }
+    // Drawn at its natural size at most, so a column that only makes room that is not used is not one.
+    const scale = Math.min(1, fit(box, natural, chrome, COMFORT))
+    if (scale > bestScale + 0.001) {
+      best = columns
+      bestScale = scale
+    }
+  }
+  return best
 }

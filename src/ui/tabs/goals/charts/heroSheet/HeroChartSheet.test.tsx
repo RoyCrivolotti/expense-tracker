@@ -321,7 +321,10 @@ describe('the readout floated over the chart', () => {
     vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(700)
     vi.spyOn(Element.prototype, 'clientHeight', 'get').mockReturnValue(300)
     vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(200)
-    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(40)
+    // Everything is 40 tall but the foot, which is the room under the rows for the corner.
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.className.includes('floatFoot') ? 0 : 40
+    })
     await open()
     await userEvent.click(within(dialog()).getByRole('button', FLOAT))
     const place = () => (card()!.parentElement as HTMLElement).style.transform
@@ -355,7 +358,10 @@ describe('the readout floated over the chart', () => {
     vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(700)
     vi.spyOn(Element.prototype, 'clientHeight', 'get').mockReturnValue(300)
     vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(200)
-    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(40)
+    // Everything is 40 tall but the foot, which is the room under the rows for the corner.
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.className.includes('floatFoot') ? 0 : 40
+    })
     await open()
     await userEvent.click(within(dialog()).getByRole('button', FLOAT))
     const scaleOf = () => (card()!.querySelector('[class*="floatContent"]') as HTMLElement).style.transform

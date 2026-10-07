@@ -3,10 +3,18 @@ import { CloseIcon, GripIcon, ResizeCornerIcon } from '../../../../icons'
 import { exitVars } from '../../../../hooks/motion'
 import { useExit } from '../../../../hooks/usePresence'
 import type { Placement, Turn } from '../../../../hooks/cardPlacement'
+import { legendColumns } from '../../../../hooks/cardScale'
+import { useElementSize } from '../../../../hooks/useElementSize'
 import { useFloatingCard } from '../../../../hooks/useFloatingCard'
 import { ReadoutLegend } from './HeroReadoutParts'
 import type { Readout } from './useReadout'
 import styles from './HeroChartSheet.module.css'
+
+/** Unmeasured, as in a test: the card is then one column. */
+const NO_SIZE = { width: 0, height: 0 }
+
+/** The bar of controls above the rows and the foot under them, which are not scaled (2.5rem and 1.5rem). */
+const CHROME_HEIGHT = 64
 
 /**
  * The readout as a card over the chart, with all of it shown: taken by its grip and put anywhere in
@@ -43,11 +51,14 @@ export function HeroFloatingReadout({
 }) {
   const card = useRef<HTMLDivElement>(null)
   const bar = useRef<HTMLDivElement>(null)
+  const foot = useRef<HTMLDivElement>(null)
   const content = useRef<HTMLDivElement>(null)
   const grip = useRef<HTMLButtonElement>(null)
   const corner = useRef<HTMLButtonElement>(null)
   const { leaving, exitMs } = useExit()
-  useFloatingCard({ stage, card, bar, content, grip, corner, placement, choice, turn, frozen: leaving })
+  const box = useElementSize(stage, NO_SIZE, true)
+  const columns = legendColumns(readout.items.length, box, CHROME_HEIGHT)
+  useFloatingCard({ stage, card, bar, foot, content, grip, corner, placement, choice, turn, frozen: leaving })
   useLayoutEffect(() => {
     if (focusOnMount) grip.current?.focus()
   }, [focusOnMount])
@@ -75,9 +86,10 @@ export function HeroFloatingReadout({
         </div>
         <div className={styles.floatViewport}>
           <div ref={content} className={styles.floatContent}>
-            <ReadoutLegend readout={readout} beside />
+            <ReadoutLegend readout={readout} beside columns={columns} />
           </div>
         </div>
+        <div ref={foot} className={styles.floatFoot} />
         <button
           ref={corner}
           type="button"

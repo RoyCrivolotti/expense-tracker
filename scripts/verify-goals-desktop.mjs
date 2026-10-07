@@ -3117,12 +3117,12 @@ async function checkHeroSheetFloat(browser, engine) {
     const plain = local(await rect(page, cardBox))
     await tapYear(5)
     const buys = local(await rect(page, cardBox))
-    check(where, '(h2) at a purchase year the card is wider for the breakdown beside the rows, and no taller', buys.w > plain.w + 40 && buys.h <= plain.h + 4, JSON.stringify({ plain, buys }))
+    check(where, '(h2) at a purchase year the card is wider for the breakdown beside the rows, and little taller (rows in columns are shorter than it)', buys.w > plain.w + 40 && buys.h <= plain.h * 1.2, JSON.stringify({ plain, buys }))
     const whole = await page.evaluate((sel) => {
       const c = document.querySelector(sel)
       const content = c.querySelector('[class*="floatContent"]')
       const scale = Number(content.style.transform.slice(6, -1))
-      const bar = c.querySelector('[class*="floatBar"]').offsetHeight
+      const bar = c.querySelector('[class*="floatBar"]').offsetHeight + c.querySelector('[class*="floatFoot"]').offsetHeight
       const r = c.getBoundingClientRect()
       const overflow = Math.max(content.scrollWidth - content.offsetWidth, content.scrollHeight - content.offsetHeight)
       return { scale, wide: content.offsetWidth * scale, high: bar + content.offsetHeight * scale, box: [r.width, r.height], overflow }

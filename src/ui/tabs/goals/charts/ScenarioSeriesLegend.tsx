@@ -1,4 +1,4 @@
-import type { ReactNode, Ref } from 'react'
+import type { CSSProperties, ReactNode, Ref } from 'react'
 import type { PurchaseYearBreakdown } from '../../../../engine'
 import { LiveLegend, SeriesSwatch, type LiveLegendItem } from '../../../charts/LiveLegend'
 import { formatMoneyShort, formatSignedMoneyShort } from '../chartTheme'
@@ -42,6 +42,8 @@ interface ScenarioSeriesLegendProps {
    * and not taller. For a card that has to be whole in a box that is short.
    */
   extrasBeside?: boolean | undefined
+  /** With `extrasBeside`, how many columns the rows are laid out in; a card in a wide, short box wants more than one. */
+  columns?: number | undefined
 }
 
 function BreakdownRows({
@@ -137,9 +139,9 @@ function legendHint(override: string | undefined, togglable: boolean): string {
 }
 
 /** The rows in a column and the purchase breakdown in another, each at its own width; no column when there is none. */
-function Beside({ main, extras }: { main: ReactNode; extras: ReactNode }) {
+function Beside({ main, extras, columns }: { main: ReactNode; extras: ReactNode; columns: number | undefined }) {
   return (
-    <div className={styles.beside}>
+    <div className={styles.beside} style={{ '--legend-cols': columns ?? 1 } as CSSProperties}>
       <div className={styles.besideMain}>{main}</div>
       <div className={styles.besideExtras}>{extras}</div>
     </div>
@@ -158,6 +160,7 @@ export function ScenarioSeriesLegend({
   floatSide = 'end',
   hint: hintOverride,
   extrasBeside,
+  columns,
 }: ScenarioSeriesLegendProps) {
   const format = useMoneyFormat()
   if (items.length === 0) return null
@@ -192,7 +195,7 @@ export function ScenarioSeriesLegend({
       />
     </>
   )
-  if (extrasBeside) return <Beside main={main} extras={extras} />
+  if (extrasBeside) return <Beside main={main} extras={extras} columns={columns} />
 
   return (
     <div className={layout === 'chips' ? `${styles.wrap} ${styles.wrapWide}` : styles.wrap}>

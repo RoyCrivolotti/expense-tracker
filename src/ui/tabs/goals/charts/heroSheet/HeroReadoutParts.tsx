@@ -10,9 +10,10 @@ const HINT = 'Touch the chart to read a year. Tap a scenario to hide or show its
 
 /**
  * The readout's rows, the same whether it is in the rail or in the card that floats over the chart.
- * `beside` puts a purchase year's breakdown in a column of its own, for the card.
+ * `beside` puts a purchase year's breakdown in a column of its own, for the card, and `columns` lays
+ * its rows out side by side.
  */
-export function ReadoutLegend({ readout, beside }: { readout: Readout; beside?: boolean }) {
+export function ReadoutLegend({ readout, beside, columns }: { readout: Readout; beside?: boolean; columns?: number }) {
   return (
     <ScenarioSeriesLegend
       items={readout.items}
@@ -24,6 +25,7 @@ export function ReadoutLegend({ readout, beside }: { readout: Readout; beside?: 
       layout="rows"
       hint={HINT}
       extrasBeside={beside}
+      columns={columns}
     />
   )
 }
