@@ -92,19 +92,12 @@ jobs:
         if: steps.browsers.outputs.cache-hit == 'true' && runner.os == 'Linux'
         run: npx playwright install-deps ${{ matrix.engine }}
 
-      # One retry: a few of its checks measure things that settle over a few frames, and a shared
-      # runner is slower than a laptop. A real regression fails twice. Both runs print every check,
-      # so a pass on the second is visible in the log and not hidden.
       - name: Run part ${{ matrix.shard }} of ${{ matrix.shards }} of the Goals page checks in ${{ matrix.engine }}
         env:
           CAPTURE_PORT: '5173'
           ENGINES: ${{ matrix.engine }}
           SHARD: ${{ matrix.shard }}/${{ matrix.shards }}
-        run: |
-          node scripts/verify-goals-desktop.mjs || {
-            echo '::warning::The Goals browser checks failed once and are being run again.'
-            node scripts/verify-goals-desktop.mjs
-          }
+        run: node scripts/verify-goals-desktop.mjs
 
   # The one job to require once this workflow is trusted. A matrix job that failed, was
   # cancelled or never started is not `success`, and without `always()` this job would be
