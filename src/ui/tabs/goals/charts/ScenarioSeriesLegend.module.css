@@ -186,9 +186,11 @@
   min-width: 0;
 }
 
+/* At least 14rem, and as wide as its rows need: a font that is wider than the one this was set for
+   would otherwise run its amounts out of the column and be clipped by the card. */
 .besideExtras {
-  flex: 0 0 14rem;
-  min-width: 0;
+  flex: 0 0 auto;
+  min-width: 14rem;
 }
 
 .besideExtras:empty {

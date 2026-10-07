@@ -3121,10 +3121,11 @@ async function checkHeroSheetFloat(browser, engine) {
       const scale = Number(content.style.transform.slice(6, -1))
       const bar = c.querySelector('[class*="floatBar"]').offsetHeight
       const r = c.getBoundingClientRect()
-      return { scale, wide: content.offsetWidth * scale, high: bar + content.offsetHeight * scale, box: [r.width, r.height] }
+      const overflow = Math.max(content.scrollWidth - content.offsetWidth, content.scrollHeight - content.offsetHeight)
+      return { scale, wide: content.offsetWidth * scale, high: bar + content.offsetHeight * scale, box: [r.width, r.height], overflow }
     }, cardBox)
     const [boxW, boxH] = turned ? [whole.box[1], whole.box[0]] : whole.box
-    check(where, '(h2) the card is exactly as large as its content at the scale it is drawn at, so all of it is shown', Math.abs(boxW - whole.wide) <= 1.5 && Math.abs(boxH - whole.high) <= 1.5, JSON.stringify(whole))
+    check(where, '(h2) the card is exactly as large as its content at the scale it is drawn at, with nothing running out of it, so all of it is shown', Math.abs(boxW - whole.wide) <= 1.5 && Math.abs(boxH - whole.high) <= 1.5 && whole.overflow <= 1, JSON.stringify(whole))
 
     // Seven scenarios' worth of rows in the card: it must be held under the chart's height, since a card
     // as tall as its box has no room to move up or down in (which is what seven scenarios did).
