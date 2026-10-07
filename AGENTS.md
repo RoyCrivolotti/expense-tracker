@@ -29,10 +29,10 @@ All changes — code, docs, config — must go through a pull request with the
    code has to clear.
 4. **Push and open a draft PR** (`gh pr create --draft`). Never create a
    ready-for-review PR directly.
-5. **Wait for CI** — both `verify` and `verify-and-deploy` must pass. If `verify`
+5. **Wait for CI** — both `verify` and `deploy-preview` must pass. If `verify`
    fails, fix locally and push again. An open PR with a failing or not-yet-checked
    CI run is not finished work — don't stop until you've confirmed the actual run
-   is green. `verify-and-deploy` also deploys a staging preview and posts its URL
+   is green. `deploy-preview` deploys a staging preview (it does not run `verify`) and posts its URL
    into the PR description automatically once it succeeds — no manual step needed,
    don't hand-add a second one.
 6. **Mark ready and merge** — `gh pr ready <n> && gh pr merge <n> --delete-branch`.

@@ -1,0 +1,20 @@
+name: Set up Node and install dependencies
+description: Node 22 with the npm cache, git-over-HTTPS for npm dependencies, and `npm ci`. Run after checkout.
+
+runs:
+  using: composite
+  steps:
+    # Some dependencies are git URLs written as ssh, which a runner has no key for.
+    - name: Use HTTPS for git-based npm dependencies
+      shell: bash
+      run: |
+        git config --global url."https://github.com/".insteadOf "ssh://git@github.com/"
+        git config --global url."https://github.com/".insteadOf "git@github.com:"
+
+    - uses: actions/setup-node@v5
+      with:
+        node-version: '22'
+        cache: npm
+
+    - shell: bash
+      run: npm ci

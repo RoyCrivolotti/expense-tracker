@@ -19,16 +19,19 @@
  * Starts its own dev server on CAPTURE_PORT (5173 unless set), with DOCS_CAPTURE=1 so it has the
  * seeded demo data and nothing real. `ENGINES=chromium,webkit` (the default is chromium) also
  * runs it in Safari's engine, `FONT=Verdana` (or any wider family) sets every font on the Plan page to it, as a wider font on another system does, and `ONLY=touch-targets`, `ONLY=lever-focus`, `ONLY=k2` (the stars' tap areas against the controls beside them) or `ONLY=toast` runs just that group (a minute or two).
+ * `SHARD=2/4` runs only the second of four equal parts of the default run, which is how CI splits it.
  * Exits 1 and says what was measured if anything fails.
  */
 import { spawn } from 'node:child_process'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { parseShard, pickShard } from './shardUnits.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const PORT = process.env.CAPTURE_PORT ?? '5173'
 const BASE = `http://localhost:${PORT}`
 const ENGINES = (process.env.ENGINES ?? 'chromium').split(',')
+const SHARD = parseShard(process.env.SHARD)
 
 /** The widths the page is meant for, from the narrowest laptop to a large monitor. */
 const SCREENS = [
@@ -3245,6 +3248,43 @@ async function checkHeroSheetFloat(browser, engine) {
   }
 }
 
+/**
+ * Every section of the default run, in the order it runs. Each opens its own browser contexts,
+ * so any subset can run alone, which `SHARD` relies on. A new section goes in this list or it
+ * does not run in CI. `weight` is roughly the seconds the section takes on a CI runner; it only
+ * balances the shards (see shardUnits.mjs).
+ */
+const SECTIONS = [
+  ...SCREENS.map((screen) => ({
+    name: `screen ${screen.name}`,
+    weight: screen.width === 1024 ? 2 : 18,
+    run: (browser, engine) => checkScreen(browser, screen, engine),
+  })),
+  { name: 'Tabs', weight: 15, run: checkTabs },
+  { name: 'LeverFocus', weight: 50, run: checkLeverFocus },
+  { name: 'ThemesAndZoom', weight: 3, run: checkThemesAndZoom },
+  { name: 'LineColours', weight: 3, run: checkLineColours },
+  { name: 'Breakpoint', weight: 3, run: checkBreakpoint },
+  { name: 'Touch', weight: 2, run: checkTouch },
+  { name: 'TouchTargets', weight: 9, run: checkTouchTargets },
+  { name: 'ToastPlace', weight: 20, run: checkToastPlace },
+  { name: 'OtherViews', weight: 3, run: checkOtherViews },
+  { name: 'LeaveGuard', weight: 2, run: checkLeaveGuard },
+  { name: 'BrowserPrompt', weight: 4, run: checkBrowserPrompt },
+  { name: 'PointDecimal', weight: 4, run: checkPointDecimal },
+  { name: 'FirstDraft', weight: 7, run: checkFirstDraft },
+  { name: 'SaveReason', weight: 29, run: checkSaveReason },
+  { name: 'TouchLeftovers', weight: 11, run: checkTouchLeftovers },
+  { name: 'StarOverlap', weight: 14, run: checkStarOverlap },
+  { name: 'MilestoneTable', weight: 95, run: checkMilestoneTable },
+  { name: 'Timeline', weight: 22, run: checkTimeline },
+  { name: 'FromTodayMilestones', weight: 23, run: checkFromTodayMilestones },
+  { name: 'FromTodayTimeline', weight: 4, run: checkFromTodayTimeline },
+  { name: 'SettingsNumbers', weight: 3, run: checkSettingsNumbers },
+  { name: 'HeroSheet', weight: 11, run: checkHeroSheet },
+  { name: 'HeroSheetFloat', weight: 10, run: checkHeroSheetFloat },
+]
+
 async function main() {
   if (await answers()) throw new Error(`Something already answers on ${BASE}; set CAPTURE_PORT to a free port.`)
   const dev = startDev()
@@ -3323,30 +3363,11 @@ async function main() {
           await checkFromTodayTimeline(browser, engine)
           continue
         }
-        for (const screen of SCREENS) await checkScreen(browser, screen, engine)
-        await checkTabs(browser, engine)
-        await checkLeverFocus(browser, engine)
-        await checkThemesAndZoom(browser, engine)
-        await checkLineColours(browser, engine)
-        await checkBreakpoint(browser, engine)
-        await checkTouch(browser, engine)
-        await checkTouchTargets(browser, engine)
-        await checkToastPlace(browser, engine)
-        await checkOtherViews(browser, engine)
-        await checkLeaveGuard(browser, engine)
-        await checkBrowserPrompt(browser, engine)
-        await checkPointDecimal(browser, engine)
-        await checkFirstDraft(browser, engine)
-        await checkSaveReason(browser, engine)
-        await checkTouchLeftovers(browser, engine)
-        await checkStarOverlap(browser, engine)
-        await checkMilestoneTable(browser, engine)
-        await checkTimeline(browser, engine)
-        await checkFromTodayMilestones(browser, engine)
-        await checkFromTodayTimeline(browser, engine)
-        await checkSettingsNumbers(browser, engine)
-        await checkHeroSheet(browser, engine)
-        await checkHeroSheetFloat(browser, engine)
+        for (const section of SHARD ? pickShard(SECTIONS, SHARD) : SECTIONS) {
+          const started = Date.now()
+          await section.run(browser, engine)
+          console.log(`  [${section.name}] ${((Date.now() - started) / 1000).toFixed(1)}s`)
+        }
       } finally {
         await browser.close()
       }
