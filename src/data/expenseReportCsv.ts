@@ -1,8 +1,4 @@
-import {
-  reportReference,
-  type ExpenseReport,
-  type ReportLine,
-} from '../domain/engine/expenseReport'
+import type { ExpenseReport, ReportLine } from '../domain/engine/expenseReport'
 import { formatCents, type MoneyFormat } from '../engine/money'
 import { guardCsvValue } from '../domain/data/csvFormulaGuard'
 
@@ -67,13 +63,10 @@ export function expenseReportCsv(
       esc(line.receiptRefs.map((ref) => `R${ref}`).join(' ')),
     ].join(',')
 
-  // The spreadsheet copy of the claim carried neither claimant nor reference,
-  // so a second submission was indistinguishable from the first.
+  // The spreadsheet copy of the claim carried no claimant, so a second
+  // submission was indistinguishable from the first.
   const preamble = [
     ['Claim', escText(options.title ?? report.flag.name)].join(','),
-    // reportReference maps the first character of each word in the description, so a
-    // description beginning `=` produces a reference beginning `=` too.
-    ['Reference', escText(reportReference(report))].join(','),
     ...(options.claimantName ? [['Submitted by', escText(options.claimantName)].join(',')] : []),
     '',
   ]

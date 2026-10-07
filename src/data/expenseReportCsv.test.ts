@@ -267,18 +267,6 @@ describe('formula injection', () => {
     expect(csv).toMatch(/-25,00/)
   })
 
-  it('guards the reference line when the flag name starts with a trigger', () => {
-    const dataset = makeDataset({
-      flags: [makeFlag({ id: 1, name: '=cmd travel' })],
-      transactions: [txn(1, '2026-05-02', { flagId: 1 })],
-      attachments: [],
-    })
-
-    const csv = expenseReportCsv(reportFor(dataset), options)!
-
-    expect(csv).toContain(`Reference,'=T-202605`)
-  })
-
   it('quotes a bare carriage return so it cannot terminate the record', () => {
     // Unquoted, Excel treats the CR as a row break and the next row would begin `=1+1`
     // — past the guard, which only inspects the first character.

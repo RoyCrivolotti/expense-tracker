@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react'
 import type { Transaction } from '../../types'
 import {
-  reportReference,
   reportReceipts,
   type ReportLine,
   type ExpenseReport,
@@ -196,10 +195,6 @@ function ReportHeader({
             <dd>{claimantName}</dd>
           </div>
         ) : null}
-        <div className={styles.metaRow}>
-          <dt>Reference</dt>
-          <dd>{reportReference(report)}</dd>
-        </div>
         <div className={styles.metaRow}>
           <dt>Period</dt>
           <dd>

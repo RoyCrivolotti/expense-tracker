@@ -5,7 +5,6 @@ import {
   buildSettledReport,
   receiptsOnlyReport,
   reportReceipts,
-  reportReference,
 } from './expenseReport'
 
 function flag(overrides: Partial<Flag> & { id: number }): Flag {
@@ -173,23 +172,6 @@ describe('buildExpenseReport', () => {
     expect(pack?.lines).toHaveLength(1)
     expect(pack?.from).toBe('2026-07-03')
     expect(pack?.totalClaimedCents).toBe(5_000)
-  })
-
-  it('gives the next claim its own reference, since the period moved', () => {
-    const june = buildExpenseReport(
-      1,
-      [txn(1, '2026-05-02', { flagId: 1 })],
-      [WORK],
-      [],
-    )
-    const july = buildExpenseReport(
-      1,
-      [txn(1, '2026-05-02', { flagId: 1, settledBy: 99 }), txn(2, '2026-07-03', { flagId: 1 })],
-      [WORK],
-      [],
-    )
-
-    expect(reportReference(june!)).not.toBe(reportReference(july!))
   })
 
   it('rebuilds a past report from the payment that settled it', () => {

@@ -3,7 +3,7 @@ import { inMemoryExpenseRepository } from '../../testing/inMemoryExpenseReposito
 import { groupTransactionsByFlag } from '../engine/flagGroups'
 import { buildReimbursementDraft, settleIdsFor } from '../engine/reimbursementDraft'
 import { EU_MONEY_FORMAT } from '../engine/money'
-import { buildSettledReport, reportReference } from '../engine/expenseReport'
+import { buildSettledReport } from '../engine/expenseReport'
 import { listPastReports } from '../engine/pastReports'
 import { buildBatchTransactions } from '../../ui/components/batchTransactionIntent'
 import { buildReimbursementLinks } from '../engine/reimbursementLinks'
@@ -418,9 +418,6 @@ describe('a past report whose flag has been deleted', () => {
     expect(report?.flag.name).toBe('Madrid trip, May')
     expect(report?.lines.map((l) => l.transaction.id)).toEqual([flight.id])
     expect(report?.totalClaimedCents).toBe(10_000)
-    // The reference is the one casualty: its initials come from the flag's name,
-    // which is gone. Documented on standInFlag rather than silently different.
-    expect(reportReference(report!)).toBe('MTM-202605')
   })
 
   it('leaves the row listed in Past reports, so the button has something to open', async () => {

@@ -249,7 +249,7 @@ describe('ExpenseReportView', () => {
 })
 
 describe('ExpenseReportView — the document', () => {
-  it('prints the claimant, reference, issue date and currency', () => {
+  it('prints the claimant, issue date and currency', () => {
     const dataset = makeDataset({
       flags: [work],
       transactions: [txn(1, '2026-05-02')],
@@ -258,10 +258,15 @@ describe('ExpenseReportView — the document', () => {
     renderPack(dataset)
 
     expect(screen.getByText('Alex Moreno')).toBeInTheDocument()
-    // Derived from the flag and the first claimed month, so a reprint matches.
-    expect(screen.getByText('WT-202605')).toBeInTheDocument()
     expect(screen.getByText(/12 Sep/)).toBeInTheDocument()
     expect(screen.getByText(/EUR/)).toBeInTheDocument()
+  })
+
+  it('prints no internal reference code', () => {
+    renderPack(datasetWith([txn(1, '2026-05-02')]))
+
+    expect(screen.queryByText('Reference')).not.toBeInTheDocument()
+    expect(screen.queryByText(/WT-2026/)).not.toBeInTheDocument()
   })
 
   it('omits the claimant line rather than printing a blank one', () => {
