@@ -144,8 +144,15 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // a chart that fills its box and the measured-size hook) is about 0.3 KB, which is the whole of the
 // room that was left. The sheet itself follows, all of it small code in the lazy Goals chunk, with
 // no new library.
-const TOTAL_MAX_GZIP = 248_000
-const GOALS_MAX_GZIP = 60_000
+//
+// Raised from 248 KB to 251 KB, and the Goals chunk from 60 KB to 63 KB, for the full-screen chart's
+// floating readout: the controller that moves a card and makes it larger or smaller by its corner
+// (placement as a share of the room, the scale, the pointer gestures and the keys), the layout of
+// the card whole with a purchase year's breakdown beside the rows, and the sheet around them. Main
+// stood at 247.3 KB with the Goals chunk at 59.4, and resizing a card whole added 1.1 KB over moving
+// it, all of it code in the lazy Goals chunk, with no new library.
+const TOTAL_MAX_GZIP = 251_000
+const GOALS_MAX_GZIP = 63_000
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length

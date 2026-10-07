@@ -1,4 +1,4 @@
-import type { Ref } from 'react'
+import type { ReactNode, Ref } from 'react'
 import type { PurchaseYearBreakdown } from '../../../../engine'
 import { LiveLegend, SeriesSwatch, type LiveLegendItem } from '../../../charts/LiveLegend'
 import { formatMoneyShort, formatSignedMoneyShort } from '../chartTheme'
@@ -37,6 +37,11 @@ interface ScenarioSeriesLegendProps {
   floatSide?: 'start' | 'end' | undefined
   /** What it says before a year is pointed at, where "below" is not where the rows are. */
   hint?: string | undefined
+  /**
+   * The purchase breakdown in a column of its own beside the rows, so it makes the legend wider
+   * and not taller. For a card that has to be whole in a box that is short.
+   */
+  extrasBeside?: boolean | undefined
 }
 
 function BreakdownRows({
@@ -131,6 +136,16 @@ function legendHint(override: string | undefined, togglable: boolean): string {
     : 'Tap or hover the chart to compare values by year.'
 }
 
+/** The rows in a column and the purchase breakdown in another, each at its own width; no column when there is none. */
+function Beside({ main, extras }: { main: ReactNode; extras: ReactNode }) {
+  return (
+    <div className={styles.beside}>
+      <div className={styles.besideMain}>{main}</div>
+      <div className={styles.besideExtras}>{extras}</div>
+    </div>
+  )
+}
+
 export function ScenarioSeriesLegend({
   items,
   activeYear,
@@ -142,6 +157,7 @@ export function ScenarioSeriesLegend({
   layout,
   floatSide = 'end',
   hint: hintOverride,
+  extrasBeside,
 }: ScenarioSeriesLegendProps) {
   const format = useMoneyFormat()
   if (items.length === 0) return null
@@ -160,8 +176,8 @@ export function ScenarioSeriesLegend({
     />
   )
 
-  return (
-    <div className={layout === 'chips' ? `${styles.wrap} ${styles.wrapWide}` : styles.wrap}>
+  const main = (
+    <>
       {activeYear != null ? (
         <p className={styles.yearHeader}>Year {activeYear}</p>
       ) : (
@@ -174,6 +190,13 @@ export function ScenarioSeriesLegend({
         listRef={listRef}
         layout={layout}
       />
+    </>
+  )
+  if (extrasBeside) return <Beside main={main} extras={extras} />
+
+  return (
+    <div className={layout === 'chips' ? `${styles.wrap} ${styles.wrapWide}` : styles.wrap}>
+      {main}
       {floats ? (
         <div className={`${styles.floater} ${floatSide === 'start' ? styles.floaterStart : styles.floaterEnd}`}>{extras}</div>
       ) : (

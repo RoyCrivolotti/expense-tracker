@@ -71,28 +71,26 @@
   outline-offset: -2px;
 }
 
-/* The readout as a card over the chart. The outer box is placed by its transform alone, which a
-   script writes as it is moved, so nothing here may animate it: the card inside arrives and leaves.
-   It is wider than the rail was, so fewer labels wrap and it is shorter, and never taller than the
-   chart's box: its rows scroll inside it when a year has more to say than that. */
+/* The readout as a card over the chart. The outer box is given its size and its place by a script,
+   which writes its width, height and transform as it is resized and moved, so nothing here may
+   animate or size it: the card inside arrives and leaves. The bar of controls along its top is the
+   same size at every scale, and what the card says is laid out at one size and drawn scaled, so the
+   whole of it is always shown, with nothing to scroll. */
 .floatPos {
   position: absolute;
   top: 0;
   left: 0;
   z-index: 2;
-  display: flex;
-  flex-direction: column;
-  width: min(16rem, 100%);
-  max-height: 100%;
   will-change: transform;
 }
 
 .floatCard {
   composes: popoverEnter from '../../../../components/popoverMotion.module.css';
+  position: relative;
   display: flex;
-  flex: 1 1 auto;
   flex-direction: column;
-  min-height: 0;
+  width: 100%;
+  height: 100%;
   border: 1px solid var(--color-border);
   border-radius: 10px;
   background: var(--color-surface);
@@ -123,22 +121,61 @@
   -webkit-touch-callout: none;
 }
 
-.floatCard[data-dragging] .grip,
 .floatPos[data-dragging] .grip {
   cursor: grabbing;
 }
 
-.floatBody {
+/* What the card says, at the size it is laid out at, and drawn from its top left at the scale the
+   script gives it. Clipped to the card, which is exactly as big as the scaled content. */
+.floatViewport {
+  position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  padding: 0 0.625rem 0.625rem;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: hidden;
+  border-radius: 0 0 10px 10px;
 }
 
-.floatBody > * {
+.floatContent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: max-content;
+  padding: 0 0.625rem 0.625rem;
+  transform-origin: 0 0;
+}
+
+.floatContent > * {
   margin-top: 0;
 }
+
+/* The corner that resizes the card: a fixed size, over the card's corner, whatever the scale. */
+.corner {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0.4rem;
+  border: 0;
+  border-radius: 10px 0 10px 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: nwse-resize;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.corner:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
 
 /* The card's title with the button that opens the sheet at its end. It takes the header's whole
    first line, so the window buttons wrap under it as they did, and the button's 44px reach comes

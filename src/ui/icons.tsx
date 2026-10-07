@@ -111,6 +111,15 @@ export function GripIcon(props: IconProps) {
   )
 }
 
+/** Two short diagonal lines in a corner: what the corner that resizes something is taken by. */
+export function ResizeCornerIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M20 9 9 20M20 15l-5 5" />
+    </svg>
+  )
+}
+
 /** A box with an arrow leaving its corner: take this out of where it is and float it. */
 export function PopOutIcon(props: IconProps) {
   return (

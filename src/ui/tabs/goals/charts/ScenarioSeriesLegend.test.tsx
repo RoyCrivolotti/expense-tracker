@@ -35,6 +35,20 @@ describe('ScenarioSeriesLegend', () => {
     expect(screen.getByText('Tap or hover the chart to compare values by year.')).toBeInTheDocument()
   })
 
+  it('puts the purchase breakdown in a column of its own when asked, and no column when there is none', () => {
+    const items = [{ label: 'Path A', color: '#6366f1', valueCents: 1_000_000 }]
+    const { container, rerender } = render(
+      <ScenarioSeriesLegend items={items} activeYear={5} breakdowns={[entry('1', 'Path A')]} extrasBeside />,
+    )
+    const extras = container.querySelector('[class*="besideExtras"]')!
+    expect(extras).toHaveTextContent('Down payment + fees')
+    expect(container.querySelector('[class*="besideMain"]')).toHaveTextContent('Year 5')
+    expect(container.querySelector('[class*="besideMain"]')).not.toHaveTextContent('Down payment')
+
+    rerender(<ScenarioSeriesLegend items={items} activeYear={6} breakdowns={[]} extrasBeside />)
+    expect(container.querySelector('[class*="besideExtras"]')).toBeEmptyDOMElement()
+  })
+
   it('keeps two same-named scenarios apart in the purchase breakdown', () => {
     // Scenario names are not unique (Duplicate makes "<name> (copy)", and a name can be
     // reused), so keying the breakdown by name made React warn and merge the two.
