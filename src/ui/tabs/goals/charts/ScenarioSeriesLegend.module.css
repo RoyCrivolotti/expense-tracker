@@ -171,3 +171,32 @@
   white-space: nowrap;
   color: var(--exp-expense);
 }
+
+/* The rows and the purchase breakdown side by side, each at a width of its own, for a card that is
+   drawn whole in a box that is short: the breakdown makes it wider, not taller. With nothing to
+   break down there is no second column. */
+.beside {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+}
+
+.besideMain {
+  flex: 0 0 15rem;
+  min-width: 0;
+}
+
+.besideExtras {
+  flex: 0 0 14rem;
+  min-width: 0;
+}
+
+.besideExtras:empty {
+  display: none;
+}
+
+.besideExtras .breakdownStack {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
