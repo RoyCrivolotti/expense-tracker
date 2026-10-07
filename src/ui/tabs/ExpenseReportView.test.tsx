@@ -56,12 +56,36 @@ function datasetWith(transactions: Transaction[], attachments: unknown[] = []): 
   return makeDataset({ flags: [work], transactions, attachments: attachments as never })
 }
 
+/** Clicks Download CSV and returns what the browser was handed. */
+async function downloadedCsv(user: ReturnType<typeof userEvent.setup>): Promise<string> {
+  let blob: Blob | undefined
+  vi.stubGlobal('URL', {
+    ...URL,
+    createObjectURL: (b: Blob) => {
+      blob = b
+      return 'blob:x'
+    },
+    revokeObjectURL: vi.fn(),
+  })
+  const anchor = document.createElement('a')
+  vi.spyOn(anchor, 'click').mockImplementation(() => {})
+  vi.spyOn(document, 'createElement').mockReturnValueOnce(anchor)
+
+  await user.click(screen.getByRole('button', { name: 'Download CSV' }))
+
+  const text = await blob!.text()
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+  return text
+}
+
 describe('ExpenseReportView', () => {
-  it('heads the report with the flag, its note and the claimed period', () => {
+  it('heads the report with the flag and the claimed period, not the flag’s private note', () => {
     renderPack(datasetWith([txn(1, '2026-05-02'), txn(2, '2026-05-09')]))
 
     expect(screen.getByRole('heading', { name: 'Work travel' })).toBeInTheDocument()
-    expect(screen.getByText('Reimbursable — submit monthly')).toBeInTheDocument()
+    // The flag's description is the claimant's own reminder to themselves.
+    expect(screen.queryByText('Reimbursable — submit monthly')).not.toBeInTheDocument()
     expect(screen.getByText('Expense report')).toBeInTheDocument()
     expect(screen.getByText(/2 May.*9 May/)).toBeInTheDocument()
   })
@@ -451,6 +475,51 @@ describe('ExpenseReportView — renaming the claim', () => {
     await user.click(screen.getByRole('button', { name: 'Send receipts' }))
 
     expect(deliverReceipts).toHaveBeenCalledWith(expect.anything(), 'Alicante trip 2026-08 receipts')
+  })
+})
+
+describe('ExpenseReportView — the purpose line', () => {
+  it('prints nothing until one is written', () => {
+    renderPack(datasetWith([txn(1, '2026-05-02')]))
+
+    expect(screen.getByRole('button', { name: 'Add a purpose' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
+  })
+
+  it('shows what the claimant writes under the title', async () => {
+    const user = userEvent.setup()
+    renderPack(datasetWith([txn(1, '2026-05-02')]))
+
+    await user.click(screen.getByRole('button', { name: 'Add a purpose' }))
+    await user.type(screen.getByRole('textbox', { name: 'Report purpose' }), 'Client visit, Madrid{Enter}')
+
+    expect(screen.getByText('Client visit, Madrid')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Add a purpose' })).not.toBeInTheDocument()
+  })
+
+  it('can be cleared again, unlike the title', async () => {
+    const user = userEvent.setup()
+    renderPack(datasetWith([txn(1, '2026-05-02')]))
+    await user.click(screen.getByRole('button', { name: 'Add a purpose' }))
+    await user.type(screen.getByRole('textbox', { name: 'Report purpose' }), 'Client visit{Enter}')
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }))
+    await user.clear(screen.getByRole('textbox', { name: 'Report purpose' }))
+    await user.keyboard('{Enter}')
+
+    expect(screen.queryByText('Client visit')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add a purpose' })).toBeInTheDocument()
+  })
+
+  it('goes into the CSV', async () => {
+    const user = userEvent.setup()
+    renderPack(datasetWith([txn(1, '2026-05-02')]))
+    await user.click(screen.getByRole('button', { name: 'Add a purpose' }))
+    await user.type(screen.getByRole('textbox', { name: 'Report purpose' }), 'Client visit{Enter}')
+
+    const csv = await downloadedCsv(user)
+
+    expect(csv).toContain('Purpose,Client visit\n')
   })
 })
 

@@ -11,7 +11,7 @@ import { guardCsvValue } from '../domain/data/csvFormulaGuard'
  * feature nobody asked to import. This is a different document with a different
  * audience — human-readable amounts, a receipts column, a total row.
  */
-const HEADER = ['Date', 'Description', 'Purpose', 'Category', 'Account', 'Amount', 'Receipts'] as const
+const HEADER = ['Date', 'Description', 'Notes', 'Category', 'Account', 'Amount', 'Receipts'] as const
 
 function esc(value: string): string {
   // \r is quoted as well as \n: a bare CR *inside* a value is a record terminator in
@@ -32,6 +32,8 @@ export interface ExpenseReportCsvOptions {
   accountName: (id: number) => string
   /** The claim's own name, as edited in the report view. Falls back to the flag's. */
   title?: string
+  /** What the claim is for, as written in the report view. Omitted from the file when blank. */
+  purpose?: string
 }
 
 /**
@@ -63,10 +65,12 @@ export function expenseReportCsv(
       esc(line.receiptRefs.map((ref) => `R${ref}`).join(' ')),
     ].join(',')
 
-  // The spreadsheet copy of the claim carried no claimant, so a second
-  // submission was indistinguishable from the first.
+  // Without the claimant and title, a second submission would be
+  // indistinguishable from the first.
+  const purpose = options.purpose?.trim()
   const preamble = [
     ['Claim', escText(options.title ?? report.flag.name)].join(','),
+    ...(purpose ? [['Purpose', escText(purpose)].join(',')] : []),
     ...(options.claimantName ? [['Submitted by', escText(options.claimantName)].join(',')] : []),
     '',
   ]

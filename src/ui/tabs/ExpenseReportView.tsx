@@ -190,6 +190,9 @@ export function ExpenseReportView({
   // visits without inventing storage for a document that rebuilds itself fresh
   // every time it is opened.
   const [title, setTitle] = useState(() => baseReport?.flag.name ?? '')
+  // Same lifetime as the title. Blank until the claimant writes one, and a blank
+  // purpose prints nothing.
+  const [purpose, setPurpose] = useState('')
 
   /*
    * Guarded on `baseReport`, and declared before the early return so the hook order
@@ -244,6 +247,7 @@ export function ExpenseReportView({
                   accountName: lookup.accountName,
                   claimantName: dataset.settings.claimantName,
                   title,
+                  purpose,
                 })
               }
               aria-label="Download CSV"
@@ -296,6 +300,8 @@ export function ExpenseReportView({
           issuedOn={issuedOn ?? todayIso()}
           title={title}
           onTitleChange={setTitle}
+          purpose={purpose}
+          onPurposeChange={setPurpose}
           onOpenTransaction={onOpenTransaction}
         />
       ) : (
