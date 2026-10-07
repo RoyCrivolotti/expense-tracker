@@ -80,16 +80,13 @@ export default defineConfig({
         // CI (scripts/check-diff-coverage.mjs), not by this. See docs/TESTING.md.
         //
         // Set about two points under the measured figure, which leaves room for the
-        // run-to-run wobble without letting a real drop through. **Re-measure and raise
-        // these when coverage rises.** They were calibrated once against a 44/37/38/46
-        // baseline and left there while the real numbers reached 74/68/71/76, which is
-        // a floor a third of the way below the building: coverage could have fallen by
-        // half and this would have passed.
-        // Measured 2026-09-16: 74.3 / 67.7 / 70.6 / 76.5
-        statements: 72,
-        branches: 65,
-        functions: 68,
-        lines: 74,
+        // run-to-run wobble without letting a real drop through. Re-measure and raise these
+        // when coverage rises, or they stop catching anything.
+        // Measured 2026-10-07: 90.4 / 85.0 / 89.0 / 92.1
+        statements: 88,
+        branches: 83,
+        functions: 87,
+        lines: 90,
       },
     },
   },
