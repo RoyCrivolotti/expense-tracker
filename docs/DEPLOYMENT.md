@@ -114,6 +114,22 @@ and `goal_scenarios.life_events` absent on 2026-09-22 (scenario saves failed), a
 `settings.investment_category_id` absent, found on 2026-10-03. It compares column names only, not types,
 defaults or indexes.
 
+### Writing a migration
+
+`scripts/lint-migrations.mjs` runs in the test suite on every migration numbered above 31, so these fail
+the PR before it can merge:
+
+- **Name and number:** `NNNN_lower_snake_case.sql`, numbered upwards with none missing or repeated. Two PRs
+  that each add the next number collide here, on whichever merges second.
+- **Nothing the running code may still read goes away.** `DROP TABLE`, `DROP COLUMN` and `RENAME` need a
+  `-- lint-allow: destructive <why it is safe>` comment above them. The old code keeps serving while a
+  migration runs, so ship the code that stops using a column first, then drop it in a later release.
+- **Backfills are scoped.** An `UPDATE` or `DELETE` with no `WHERE` needs
+  `-- lint-allow: unscoped <why every row is meant>`.
+- **`IF NOT EXISTS`** on every `CREATE TABLE` and `CREATE INDEX`.
+
+The reason after `lint-allow:` is required, so the decision is written down where a reviewer sees it.
+
 ### Migration tracking (read before re-running anything)
 
 `0020_migrations_table.sql` adds `_migrations(name, applied_at)`. `npm run migrate:dev` now applies
