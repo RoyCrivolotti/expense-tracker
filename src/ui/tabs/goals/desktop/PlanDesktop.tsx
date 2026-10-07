@@ -1,14 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import type { GoalScenario, Milestone, WealthAccount, WealthCheckin } from '../../../../types'
-import type { MonthlyFlow } from '../../../../engine'
+import type { MonthlyFlow, PlanFromToday } from '../../../../engine'
 import type { ExpenseActions } from '../../../actions'
 import type { InvestedSnapshot } from '../checkinDate'
 import { useToastAside } from '../../../hooks/useToastAside'
 import { GoalsIntro } from '../GoalsIntro'
 import { PlanHero, type ValueDisplay } from '../PlanHero'
-import { StartFromTodayStatus, StartFromTodaySwitch, type StartFromTodayControl } from '../StartFromTodayRow'
 import type { ScenarioEditor } from '../useScenarioEditor'
-import type { ShownScenarios } from '../useStartFromToday'
 import type { StarredLevers } from '../useStarredLevers'
 import { AllInputsPanel } from './AllInputsPanel'
 import { DetailGrid } from './DetailGrid'
@@ -31,13 +29,10 @@ export interface PlanDesktopProps {
   monthly: MonthlyFlow[]
   checkins: WealthCheckin[]
   accounts: WealthAccount[]
+  fromToday: PlanFromToday | null
   display: ValueDisplay
   /** The inputs in the bar, and the stars that change them. */
   levers: StarredLevers
-  /** Whether every scenario is looked at from the latest check-in, and the way to change it. */
-  startFromToday: StartFromTodayControl
-  /** The scenarios and the draft as the charts and tables read them. */
-  shown: ShownScenarios
 }
 
 /**
@@ -47,39 +42,29 @@ export interface PlanDesktopProps {
  * The page is one column, so there is one scroll and the chart is never squeezed beside a
  * panel. Charts read the editor's deferred draft, so dragging a control never waits on them.
  */
-export function PlanDesktop({ scenarios, editor, actions, latest, milestones, reached, monthly, checkins, accounts, display, levers, startFromToday, shown }: PlanDesktopProps) {
+export function PlanDesktop({ scenarios, editor, actions, latest, milestones, reached, monthly, checkins, accounts, fromToday, display, levers }: PlanDesktopProps) {
   const [inputsOpen, setInputsOpen] = useState(false)
   useToastAside()
   const { draft, deferredDraft } = editor
   const starred = useKeyboardStarToggle(levers, PANEL_ID)
-  const viewSwitch = useMemo(
-    () => <StartFromTodaySwitch control={startFromToday} latest={latest} />,
-    [startFromToday, latest],
-  )
-  const viewStatus = useMemo(
-    () => <StartFromTodayStatus control={startFromToday} latest={latest} notRestarted={shown.notRestarted} />,
-    [startFromToday, latest, shown.notRestarted],
-  )
   return (
     // The marker widens the page for this view only (AppShell.module.css).
     <div className={styles.page} data-goals-plan-wide>
-      <ScenarioBar scenarios={scenarios} editor={editor} actions={actions} viewSwitch={viewSwitch} viewStatus={viewStatus} ownStartIds={shown.ownStartIds} />
+      <ScenarioBar scenarios={scenarios} editor={editor} actions={actions} />
       <div className={styles.hero}>
         <PlanHero
-          scenarios={shown.scenarios}
-          draft={shown.draft}
-          activeScenario={shown.activeScenario}
+          scenarios={scenarios}
           editor={editor}
           milestones={milestones}
           checkins={checkins}
           accounts={accounts}
-          fromToday={shown.fromToday}
+          fromToday={fromToday}
           display={display}
         />
       </div>
       <LeversBar
         draft={draft}
-        resultDraft={shown.draft}
+        resultDraft={deferredDraft}
         keys={starred.keys}
         onChange={editor.patchDraft}
         onUnstar={starred.canEdit ? starred.toggle : undefined}
@@ -99,17 +84,15 @@ export function PlanDesktop({ scenarios, editor, actions, latest, milestones, re
         starred={starred}
       />
       <DetailGrid
-        scenarios={shown.scenarios}
-        draft={shown.draft}
-        savedDraft={deferredDraft}
+        scenarios={scenarios}
+        draft={deferredDraft}
         latest={latest}
         monthly={monthly}
         milestones={milestones}
         reached={reached}
         activeId={editor.activeId}
         dirty={editor.dirty}
-        fromToday={shown.fromToday}
-        restartedFrom={shown.since}
+        fromToday={fromToday}
       />
       <GoalsIntro />
     </div>

@@ -120,16 +120,6 @@ describe('comparisonRows', () => {
     expect(screen.getByText(/restarted from the balance in your latest check-in, Jan 1, 2026, and counts its years from there/)).toBeInTheDocument()
   })
 
-  it('says every path starts from the check-in, and counts its years from there, when they have been restarted', () => {
-    const plan = makeScenario({ id: 2, name: 'Path B', planStartDate: '2026-01-01', isActive: true })
-    const { rerender } = render(<ScenarioComparison scenarios={[plan]} draft={draft} />)
-    expect(screen.getByText(/counted in years from the plan start/)).toBeInTheDocument()
-
-    rerender(<ScenarioComparison scenarios={[plan]} draft={draft} restartedFrom="2026-10-05" />)
-    expect(screen.getByText(/counted in years from Oct 5, 2026, your latest check-in, where every path starts/)).toBeInTheDocument()
-    expect(screen.queryByText(/from the plan start/)).not.toBeInTheDocument()
-  })
-
   it('says when FI is not reached within the horizon', () => {
     const rows = comparisonRows(
       [],

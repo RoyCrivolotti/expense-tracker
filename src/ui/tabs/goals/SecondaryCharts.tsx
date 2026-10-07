@@ -53,12 +53,6 @@ function useScrollEdges() {
 interface SecondaryChartsProps {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
-  /**
-   * The draft as the editor has it. `draft` is restarted from the latest check-in while that is
-   * switched on, which the chart of actual investing against the plan cannot be: it needs the
-   * plan's real start. Defaults to `draft`.
-   */
-  savedDraft?: NewGoalScenario
   monthly: MonthlyFlow[]
   milestones: Milestone[]
   reached: Map<number, string>
@@ -71,45 +65,30 @@ interface SecondaryChartsProps {
   dirty: boolean
   /** The plan restarted from the latest check-in, for the tables that list scenarios. */
   fromToday: PlanFromToday | null
-  /** The check-in date every scenario has been restarted from, when they have. */
-  restartedFrom?: string | null
 }
 
 function SecondaryViewChart({
   view,
   scenarios,
   draft,
-  savedDraft,
   monthly,
   milestones,
   reached,
   includeDraft,
   fromToday,
-  restartedFrom,
 }: {
   view: SecondaryView
   scenarios: GoalScenario[]
   draft: NewGoalScenario
-  savedDraft: NewGoalScenario
   monthly: MonthlyFlow[]
   milestones: Milestone[]
   reached: Map<number, string>
   includeDraft: boolean
   fromToday: PlanFromToday | null
-  restartedFrom: string | null
 }) {
   switch (view) {
     case 'compare':
-      return (
-        <ScenarioComparison
-          scenarios={scenarios}
-          draft={draft}
-          includeDraft={includeDraft}
-          fromToday={fromToday}
-          restartedFrom={restartedFrom}
-          embedded
-        />
-      )
+      return <ScenarioComparison scenarios={scenarios} draft={draft} includeDraft={includeDraft} fromToday={fromToday} embedded />
     case 'composition':
       return <CompositionChart draft={draft} embedded />
     case 'milestones':
@@ -129,7 +108,7 @@ function SecondaryViewChart({
     case 'rent':
       return <RentVsOwnChart draft={draft} embedded />
     case 'savings':
-      return <SavingsRateChart draft={savedDraft} monthly={monthly} embedded />
+      return <SavingsRateChart draft={draft} monthly={monthly} embedded />
   }
 }
 
@@ -226,14 +205,12 @@ function TabbedChart({
 export function SecondaryCharts({
   scenarios,
   draft,
-  savedDraft = draft,
   monthly,
   milestones,
   reached,
   activeId,
   dirty,
   fromToday,
-  restartedFrom = null,
 }: SecondaryChartsProps) {
   const [view, setView] = useState<SecondaryView>('compare')
   const includeDraft = activeId === null || dirty
@@ -244,13 +221,11 @@ export function SecondaryCharts({
         view={view}
         scenarios={scenarios}
         draft={draft}
-        savedDraft={savedDraft}
         monthly={monthly}
         milestones={milestones}
         reached={reached}
         includeDraft={includeDraft}
         fromToday={fromToday}
-        restartedFrom={restartedFrom}
       />
     </TabbedChart>
   )

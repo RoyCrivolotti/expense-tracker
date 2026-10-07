@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import type { GoalScenario, Milestone, WealthAccount, WealthCheckin } from '../../../types'
-import type { NewGoalScenario } from '../../../data/dataSource'
 import type { ExpenseActions } from '../../actions'
 import type { MonthlyFlow, PlanFromToday } from '../../../engine'
 import { Card } from '../../components/primitives'
@@ -15,10 +14,8 @@ import type { MobilePlanView } from './goalsView'
 import { PlanHero, type ValueDisplay } from './PlanHero'
 import { ScenarioManager } from './ScenarioManager'
 import { SecondaryCharts } from './SecondaryCharts'
-import { StartFromTodayRow, type StartFromTodayControl } from './StartFromTodayRow'
 import { useGoalsNarrow } from './useGoalsNarrow'
 import type { ScenarioEditor } from './useScenarioEditor'
-import { useStartFromToday, type ShownScenarios } from './useStartFromToday'
 import type { StarredLevers } from './useStarredLevers'
 import styles from './goals.module.css'
 
@@ -28,21 +25,15 @@ interface PlanSidebarProps {
   editor: ScenarioEditor
   actions: ExpenseActions | undefined
   latest: InvestedSnapshot | null
-  /** What the pinned chart reads: the editor's deferred draft, restarted or not. */
-  shownDraft: NewGoalScenario
-  startFromToday: StartFromTodayControl
-  shown: ShownScenarios
 }
 
 /** The phone's scenarios, the controls and, on its Scenarios half, the pinned chart over them. */
-function PlanSidebar({ half, scenarios, editor, actions, latest, shownDraft, startFromToday, shown }: PlanSidebarProps) {
+function PlanSidebar({ half, scenarios, editor, actions, latest }: PlanSidebarProps) {
   const { draft, dirty, saving, onSaveChanges, onDiscard } = editor
   return (
     <div className={styles.areaSidebar}>
       <div className={styles.areaScenarios}>
         <ScenarioManager
-          viewRow={<StartFromTodayRow control={startFromToday} latest={latest} notRestarted={shown.notRestarted} />}
-          ownStartIds={shown.ownStartIds}
           scenarios={scenarios}
           activeId={editor.activeId}
           draft={draft}
@@ -68,7 +59,7 @@ function PlanSidebar({ half, scenarios, editor, actions, latest, shownDraft, sta
       {half === 'adjust' ? (
         // Phone only: only the phone's row offers Scenarios.
         <AdjustStack
-          draft={shownDraft}
+          draft={editor.deferredDraft}
           unsaved={
             actions != null && dirty
               ? { name: draft.name, saving, onSave: onSaveChanges, onDiscard }
@@ -112,44 +103,25 @@ interface PlanViewProps {
   display: ValueDisplay
   /** The inputs in a wide screen's bar; a phone has no bar. */
   levers: StarredLevers
-  /** Whether every scenario is looked at from the latest check-in, and the way to change it. */
-  startFromToday: StartFromTodayControl
 }
 
-/**
- * Charts read the editor's deferred draft, so dragging a control never waits on them. What
- * compares scenarios reads them as `shown`, which is restarted from the latest check-in while that
- * is switched on; what answers "was the plan right" (the snapshot card, the investing chart)
- * reads the draft as it is.
- */
-function planBlocks(props: PlanViewProps & { shown: ShownScenarios }): Record<PlanBlock, ReactNode> {
-  const { half, scenarios, editor, actions, latest, milestones, reached, shown } = props
+/** Charts read the editor's deferred draft, so dragging a control never waits on them. */
+function planBlocks(props: PlanViewProps): Record<PlanBlock, ReactNode> {
+  const { half, scenarios, editor, actions, latest, milestones, reached } = props
   const { deferredDraft, activeId, dirty } = editor
   return {
     sidebar: (
-      <PlanSidebar
-        key="sidebar"
-        half={half}
-        scenarios={scenarios}
-        editor={editor}
-        actions={actions}
-        latest={latest}
-        shownDraft={shown.draft}
-        startFromToday={props.startFromToday}
-        shown={shown}
-      />
+      <PlanSidebar key="sidebar" half={half} scenarios={scenarios} editor={editor} actions={actions} latest={latest} />
     ),
     hero: (
       <div key="hero" className={`${styles.heroBlock} ${styles.areaHero}`}>
         <PlanHero
-          scenarios={shown.scenarios}
-          draft={shown.draft}
-          activeScenario={shown.activeScenario}
+          scenarios={scenarios}
           editor={editor}
           milestones={milestones}
           checkins={props.checkins}
           accounts={props.accounts}
-          fromToday={shown.fromToday}
+          fromToday={props.fromToday}
           display={props.display}
         />
       </div>
@@ -162,16 +134,14 @@ function planBlocks(props: PlanViewProps & { shown: ShownScenarios }): Record<Pl
     secondary: (
       <div key="secondary" className={styles.areaSecondary}>
         <SecondaryCharts
-          scenarios={shown.scenarios}
-          draft={shown.draft}
-          savedDraft={deferredDraft}
+          scenarios={scenarios}
+          draft={deferredDraft}
           monthly={props.monthly}
           milestones={milestones}
           reached={reached}
           activeId={activeId}
           dirty={dirty}
-          fromToday={shown.fromToday}
-          restartedFrom={shown.since}
+          fromToday={props.fromToday}
         />
       </div>
     ),
@@ -184,16 +154,8 @@ function planBlocks(props: PlanViewProps & { shown: ShownScenarios }): Record<Pl
  */
 export function PlanView({ half, levers, ...rest }: PlanViewProps) {
   const narrow = useGoalsNarrow()
-  const shown = useStartFromToday({
-    on: rest.startFromToday.on,
-    latest: rest.latest,
-    scenarios: rest.scenarios,
-    draft: rest.editor.deferredDraft,
-    activeScenario: rest.editor.activeScenario,
-    fromToday: rest.fromToday,
-  })
-  if (!narrow) return <PlanDesktop {...rest} levers={levers} shown={shown} />
-  const blocks = planBlocks({ half, levers, shown, ...rest })
+  if (!narrow) return <PlanDesktop {...rest} levers={levers} />
+  const blocks = planBlocks({ half, levers, ...rest })
   return (
     <>
       <div className={styles.layout} data-mobile-view={half}>

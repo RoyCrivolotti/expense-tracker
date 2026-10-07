@@ -106,13 +106,6 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
     setPreviewInflation(null)
     setDisplayMode(next)
   }, [])
-  // Kept here, not in Plan, like the display mode: a look at the scenarios from today's balance
-  // survives a visit to Progress. In memory only; it is a way of looking, not a setting.
-  const [startAllFromToday, setStartAllFromToday] = useState(false)
-  const startFromToday = useMemo(
-    () => ({ on: startAllFromToday, onChange: setStartAllFromToday }),
-    [startAllFromToday],
-  )
   const milestones = dataset.settings.milestones
   const reachedMilestones = useMemo(
     () => milestonesReached(milestones, dataset.wealthCheckins, dataset.wealthAccounts),
@@ -229,7 +222,6 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
             accounts={dataset.wealthAccounts}
             fromToday={fromToday}
             levers={levers}
-            startFromToday={startFromToday}
             display={{
               mode: displayMode,
               onModeChange: changeDisplayMode,

@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import type { GoalScenario, Milestone, WealthAccount, WealthCheckin } from '../../../types'
-import type { NewGoalScenario } from '../../../data/dataSource'
 import { checkinInvestedCents, yearOffsetFromDate, type PlanFromToday } from '../../../engine'
 import type { ChartSeries } from '../../charts/LinearChart'
 import { SegmentedControl } from '../../components/SegmentedControl'
@@ -35,10 +34,6 @@ export interface ValueDisplay {
 
 interface PlanHeroProps {
   scenarios: GoalScenario[]
-  /** What the narrative and the chart read: the editor's deferred draft, restarted or not. */
-  draft: NewGoalScenario
-  /** The loaded scenario, whose start the check-in dots and the today marker are placed against. */
-  activeScenario: GoalScenario | null
   editor: ScenarioEditor
   milestones: Milestone[]
   checkins: WealthCheckin[]
@@ -51,8 +46,6 @@ interface PlanHeroProps {
 /** The projection of every scenario, with the draft's narrative and the value display under it. */
 export function PlanHero({
   scenarios,
-  draft: deferredDraft,
-  activeScenario,
   editor,
   milestones,
   checkins,
@@ -60,6 +53,7 @@ export function PlanHero({
   fromToday,
   display,
 }: PlanHeroProps) {
+  const { activeScenario, deferredDraft } = editor
 
   // Scatter points: actual invested values from check-ins plotted on the hero chart.
   const checkinExtraSeries = useMemo<ChartSeries | null>(() => {
@@ -67,8 +61,7 @@ export function PlanHero({
     const points = checkins
       .map((c) => {
         const offset = yearOffsetFromDate(activeScenario.planStartDate!, c.checkinDate)
-        // A reading from before the plan began has no place on its axis, and would still stretch it.
-        if (offset === null || offset < 0) return null
+        if (offset === null) return null
         const value = checkinInvestedCents(c, accounts)
         return { xIndex: offset, value }
       })
