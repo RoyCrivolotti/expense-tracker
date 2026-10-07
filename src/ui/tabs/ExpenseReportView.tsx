@@ -172,6 +172,24 @@ function ReportControls({
   )
 }
 
+/**
+ * Names the page while the report is open.
+ *
+ * The browser names a saved PDF after the page title, which is otherwise the
+ * app's own ("Expenses") — the attachment would arrive with no hint of what it is.
+ */
+function useDocumentTitle(title: string, report: ExpenseReport | null) {
+  const name = report ? `${title} – ${report.from.slice(0, 7)}` : null
+  useEffect(() => {
+    if (!name) return
+    const previous = document.title
+    document.title = name
+    return () => {
+      document.title = previous
+    }
+  }, [name])
+}
+
 export function ExpenseReportView({
   dataset: liveDataset,
   lookup,
@@ -238,12 +256,14 @@ export function ExpenseReportView({
   // the full claim again.
   const [receiptsOnly, setReceiptsOnly] = useState(false)
 
-  if (!baseReport) return null
-
   // Null only when every line left has no receipt — reachable by toggling the
   // filter on a claim that turns out to have none, not by anything a fresh
   // open of the report can produce.
-  const report = receiptsOnly ? receiptsOnlyReport(baseReport) : baseReport
+  const report = baseReport && receiptsOnly ? receiptsOnlyReport(baseReport) : baseReport
+
+  useDocumentTitle(title, report)
+
+  if (!baseReport) return null
 
   // Only a reopened report can have drifted: an open claim has nothing submitted
   // to differ from yet.

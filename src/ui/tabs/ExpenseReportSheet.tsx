@@ -53,6 +53,7 @@ export function ExpenseReportSheet({
         claimantName={claimantName}
         currencyCode={currencyCode}
         issuedOn={issuedOn}
+        format={format}
         title={title}
         onTitleChange={onTitleChange}
         purpose={purpose}
@@ -69,15 +70,25 @@ export function ExpenseReportSheet({
               {attachment.contentType === 'application/pdf' ? (
                 <div className={styles.pdfNote}>
                   <p className={styles.pdfNoteText}>
-                    <strong>R{ref}</strong> is a PDF, so it cannot be drawn into this page. Send{' '}
-                    <strong>{attachment.originalName ?? 'the file'}</strong> with the report — the
-                    line above is numbered so an approver can still match the two up.{' '}
-                    {/* Rendering a PDF here would mean shipping a PDF engine: pdf.js
+                    <strong>R{ref}</strong> is a PDF, sent as a separate attachment
+                    {attachment.originalName ? (
+                      <>
+                        {' '}
+                        (<strong>{attachment.originalName}</strong>)
+                      </>
+                    ) : null}
+                    .{' '}
+                    {/* Addressed to the claimant, so it stays off paper: the reader
+                        of the printed page only needs to know a file travels with it.
+                        Rendering a PDF here would mean shipping a PDF engine: pdf.js
                         is ~505 KB gzip against a 162 KB app, and it is the only
                         honest option — turning a PDF into pixels *is* the heavy
                         part. A screenshot costs nothing and already works, because
-                        receipts accept image/png. Saying so beats a dead end. */}
-                    A screenshot of it, attached as an image, would print here instead.
+                        receipts accept image/png. */}
+                    <span className={styles.screenOnly}>
+                      To have it print on this page instead, attach a screenshot of it as an
+                      image.
+                    </span>
                   </p>
                   {/* Screen only: on paper a link is a dead underline, and the
                       filename in the sentence is what the reader actually needs. */}
@@ -254,6 +265,7 @@ function ReportHeader({
   claimantName,
   currencyCode,
   issuedOn,
+  format,
   title,
   onTitleChange,
   purpose,
@@ -263,11 +275,13 @@ function ReportHeader({
   claimantName: string
   currencyCode: string
   issuedOn: string
+  format: MoneyFormat
   title: string
   onTitleChange: (title: string) => void
   purpose: string
   onPurposeChange: (purpose: string) => void
 }) {
+  const settled = report.credits.length > 0
   return (
     <header className={styles.header}>
       <div className={styles.headerMain}>
@@ -294,10 +308,23 @@ function ReportHeader({
         </div>
         <div className={styles.metaRow}>
           <dt>Items</dt>
-          <dd>
-            {report.lines.length} · {currencyCode}
-          </dd>
+          <dd>{report.lines.length}</dd>
         </div>
+        <div className={styles.metaRow}>
+          <dt>Currency</dt>
+          <dd>{currencyCode}</dd>
+        </div>
+        {/* The figure an approver is looking for, where they look first. */}
+        <div className={styles.metaRow}>
+          <dt>Total</dt>
+          <dd>{formatCents(report.totalClaimedCents, format)}</dd>
+        </div>
+        {settled ? (
+          <div className={styles.metaRow}>
+            <dt>Outstanding</dt>
+            <dd>{formatCents(report.outstandingCents, format)}</dd>
+          </div>
+        ) : null}
       </dl>
     </header>
   )
@@ -333,7 +360,11 @@ function ReportRow({
         {formatCents(signed ? -transaction.amountCents : transaction.amountCents, format)}
       </td>
       <td className={styles.numeric}>
-        {line.receiptRefs.length > 0 ? line.receiptRefs.map((r) => `R${r}`).join(' ') : '—'}
+        {line.receiptRefs.length > 0
+          ? line.receiptRefs.map((r) => `R${r}`).join(' ')
+          : signed
+            ? '—'
+            : 'No receipt'}
       </td>
     </tr>
   )

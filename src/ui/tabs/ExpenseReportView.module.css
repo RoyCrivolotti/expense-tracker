@@ -237,6 +237,10 @@
   font: inherit;
 }
 
+/* Text addressed to the person editing, not to whoever reads the printout. */
+.screenOnly {
+  color: var(--color-text-muted);
+}
 
 /* Definition list rather than a paragraph: an approver scans for the reference
    and the period, and labelled pairs survive being read out of order. */
@@ -518,7 +522,8 @@
   .toolbar,
   .driftNotice,
   .reportControls,
-  .titleEditBtn {
+  .titleEditBtn,
+  .screenOnly {
     display: none;
   }
 

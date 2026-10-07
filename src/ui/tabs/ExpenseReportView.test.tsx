@@ -107,7 +107,20 @@ describe('ExpenseReportView', () => {
     renderPack(datasetWith([txn(1, '2026-05-02'), txn(2, '2026-05-09')]))
 
     expect(screen.getByText('Total expenses')).toBeInTheDocument()
-    expect(screen.getByText('200,00 €')).toBeInTheDocument()
+    // Once in the table's total row, once in the header where an approver looks first.
+    expect(screen.getAllByText('200,00 €')).toHaveLength(2)
+  })
+
+  it('puts the total in the header', () => {
+    renderPack(datasetWith([txn(1, '2026-05-02'), txn(2, '2026-05-09')]))
+
+    expect(screen.getByText('Total').nextElementSibling).toHaveTextContent('200,00 €')
+  })
+
+  it('says “No receipt” on a line without one, rather than a bare dash', () => {
+    renderPack(datasetWith([txn(1, '2026-05-02'), txn(2, '2026-05-09')], [makeAttachment({ id: 5, transactionId: 1 })]))
+
+    expect(screen.getAllByText('No receipt')).toHaveLength(1)
   })
 
   it('warns about lines with no receipt, which is what gets a claim sent back', () => {
@@ -146,7 +159,7 @@ describe('ExpenseReportView', () => {
     // The filename is what an approver matches against the separately-sent file,
     // and the R-number is what ties it back to a row in the table.
     expect(screen.getByText('invoice.pdf')).toBeInTheDocument()
-    expect(screen.getByText(/cannot be drawn into this page/)).toBeInTheDocument()
+    expect(screen.getByText(/is a PDF, sent as a separate attachment/)).toBeInTheDocument()
     expect(screen.queryByRole('img', { name: /Receipt for/ })).not.toBeInTheDocument()
   })
 
@@ -159,7 +172,7 @@ describe('ExpenseReportView', () => {
 
     // Receipts already accept image/png, so this is a route that exists today
     // rather than a promise about a future feature.
-    expect(screen.getByText(/screenshot of it, attached as an image/)).toBeInTheDocument()
+    expect(screen.getByText(/attach a screenshot of it as an image/)).toBeInTheDocument()
   })
 
   it('offers a PDF receipt as a link, since the page cannot show it', () => {
@@ -190,10 +203,12 @@ describe('ExpenseReportView', () => {
     expect(screen.getByText('Already reimbursed')).toBeInTheDocument()
     // The row and the claimed total both read 100,00 €; the outstanding figure
     // is the one that has to differ.
-    expect(screen.getAllByText('100,00 €')).toHaveLength(2)
+    // The row, the header's Total and the table's total row.
+    expect(screen.getAllByText('100,00 €')).toHaveLength(3)
     expect(screen.getByText('Total expenses')).toBeInTheDocument()
-    expect(screen.getByText('Outstanding')).toBeInTheDocument()
-    expect(screen.getByText('60,00 €')).toBeInTheDocument()
+    // Named in the header and again as the table's last row.
+    expect(screen.getAllByText('Outstanding')).toHaveLength(2)
+    expect(screen.getAllByText('60,00 €')).toHaveLength(2)
     // Likewise the credit row and the "Less reimbursed" line.
     expect(screen.getAllByText('-40,00 €')).toHaveLength(2)
   })
@@ -273,7 +288,7 @@ describe('ExpenseReportView', () => {
 })
 
 describe('ExpenseReportView — the document', () => {
-  it('prints the claimant, issue date and currency', () => {
+  it('prints the claimant, issue date, item count and currency', () => {
     const dataset = makeDataset({
       flags: [work],
       transactions: [txn(1, '2026-05-02')],
@@ -283,7 +298,8 @@ describe('ExpenseReportView — the document', () => {
 
     expect(screen.getByText('Alex Moreno')).toBeInTheDocument()
     expect(screen.getByText(/12 Sep/)).toBeInTheDocument()
-    expect(screen.getByText(/EUR/)).toBeInTheDocument()
+    expect(screen.getByText('Items').nextElementSibling).toHaveTextContent('1')
+    expect(screen.getByText('Currency').nextElementSibling).toHaveTextContent('EUR')
   })
 
   it('prints no internal reference code', () => {
@@ -553,6 +569,39 @@ describe('ExpenseReportView — the notes on each item', () => {
 
     expect(csv).not.toContain('Ana paid')
     expect(csv).not.toContain('Notes')
+  })
+})
+
+describe('ExpenseReportView — the saved PDF’s name', () => {
+  it('names the page after the claim while it is open, then gives the app’s title back', () => {
+    document.title = 'Expenses'
+    const { unmount } = render(
+      <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
+        <ExpenseReportView
+          dataset={datasetWith([txn(1, '2026-05-02')])}
+          lookup={buildLookup(datasetWith([txn(1, '2026-05-02')]))}
+          flagId={1}
+          onClose={vi.fn()}
+        />
+      </MoneyFormatProvider>,
+    )
+
+    expect(document.title).toBe('Work travel – 2026-05')
+
+    unmount()
+
+    expect(document.title).toBe('Expenses')
+  })
+
+  it('follows a rename', async () => {
+    const user = userEvent.setup()
+    renderPack(datasetWith([txn(1, '2026-05-02')]))
+
+    await user.click(screen.getByRole('button', { name: 'Rename' }))
+    await user.clear(screen.getByRole('textbox', { name: 'Report title' }))
+    await user.type(screen.getByRole('textbox', { name: 'Report title' }), 'Madrid trip{Enter}')
+
+    expect(document.title).toBe('Madrid trip – 2026-05')
   })
 })
 
