@@ -2,6 +2,16 @@ import path from 'node:path'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
 
+// scripts/ is included so the migration-safety test can run. Those files stay out
+// of `coverage.include` below — they are build/ops tooling, not shipped code.
+const NODE_TESTS = [
+  'src/domain/**/*.test.{ts,tsx}',
+  'src/data/**/*.test.{ts,tsx}',
+  'src/testing/**/*.test.{ts,tsx}',
+  'functions/**/*.test.ts',
+  'scripts/**/*.test.ts',
+]
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -17,13 +27,31 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
-    // scripts/ is included so the migration-safety test can run. Those files stay out
-    // of `coverage.include` below — they are build/ops tooling, not shipped code.
-    include: ['src/**/*.test.{ts,tsx}', 'functions/**/*.test.ts', 'scripts/**/*.test.ts'],
-    exclude: ['functions/domain/**'],
     css: true,
+    // Tests that never touch the DOM run in node: building a jsdom environment costs about
+    // 0.2s per test file. A file in node that starts needing `document` fails with "document
+    // is not defined"; opt it back in with `// @vitest-environment jsdom` on its first line.
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'node',
+          environment: 'node',
+          include: NODE_TESTS,
+          exclude: ['functions/domain/**'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'jsdom',
+          environment: 'jsdom',
+          include: ['src/**/*.test.{ts,tsx}'],
+          exclude: ['functions/domain/**', ...NODE_TESTS],
+        },
+      },
+    ],
     coverage: {
       provider: 'v8',
       // `include` alone makes every matching file count even if no test ever
