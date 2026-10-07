@@ -3100,6 +3100,24 @@ async function checkHeroSheetFloat(browser, engine) {
     check(where, '(h2) the card is in the corner of the chart it starts in, and inside the chart', cornerOk && card.left >= box.left - 1 && card.right <= box.right + 1 && card.top >= box.top - 1 && card.bottom <= box.bottom + 1, JSON.stringify({ box, card }))
     check(where, '(h2) the card has the focus on its grip', await page.evaluate(() => document.activeElement?.getAttribute('aria-label')?.startsWith('Move the values')))
 
+    // Seven scenarios' worth of rows in the card: it must be held under the chart's height, since a card
+    // as tall as its box has no room to move up or down in (which is what seven scenarios did).
+    await page.evaluate((sel) => {
+      const list = document.querySelector(sel).querySelector('ul')
+      for (const li of [...list.children]) for (let k = 0; k < 2; k++) list.appendChild(li.cloneNode(true))
+    }, cardBox)
+    await page.waitForTimeout(150)
+    const tall = await rect(page, cardBox)
+    const chartBox = await rect(page, stage)
+    const alongHeight = (r) => (turned ? r.width : r.height)
+    check(where, '(h2) a card with many rows is held under two thirds of the chart\'s height, so it has room on both axes', alongHeight(tall) <= alongHeight(chartBox) * 0.66 + 1, JSON.stringify({ card: alongHeight(tall), chart: alongHeight(chartBox) }))
+    const upBefore = await rect(page, cardBox)
+    await page.locator(grip).focus()
+    await page.keyboard.press('ArrowUp')
+    const upAfter = await rect(page, cardBox)
+    const upMoved = Math.hypot(upAfter.left - upBefore.left, upAfter.top - upBefore.top)
+    check(where, '(h2) such a card moves on the chart\'s height axis too (an arrow up from the lower corner)', upMoved >= 8, `${upMoved}px`)
+
     // Drag: from the grip, a frame at a time, past the edges and back.
     const g = await rect(page, grip)
     const gx = g.left + g.width / 2

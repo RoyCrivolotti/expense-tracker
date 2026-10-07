@@ -73,8 +73,10 @@
 
 /* The readout as a card over the chart. The outer box is placed by its transform alone, which a
    script writes as it is moved, so nothing here may animate it: the card inside arrives and leaves.
-   It is wider than the rail was, so fewer labels wrap and it is shorter, and never taller than the
-   chart's box: its rows scroll inside it when a year has more to say than that. */
+   It is wider than the rail was, so fewer labels wrap and it is shorter. It is held to under two
+   thirds of the chart's box each way, never the whole of it: a card as tall as its box has no room
+   to move up or down in, and with seven scenarios it was. Its rows scroll inside it when a year has
+   more to say than that. */
 .floatPos {
   position: absolute;
   top: 0;
@@ -82,8 +84,8 @@
   z-index: 2;
   display: flex;
   flex-direction: column;
-  width: min(16rem, 100%);
-  max-height: 100%;
+  width: min(16rem, 60%);
+  max-height: 65%;
   will-change: transform;
 }
 
