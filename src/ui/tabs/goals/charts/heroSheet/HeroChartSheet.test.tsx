@@ -321,18 +321,18 @@ describe('the readout floated over the chart', () => {
     vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(700)
     vi.spyOn(Element.prototype, 'clientHeight', 'get').mockReturnValue(300)
     vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(200)
-    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(100)
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(40)
     await open()
     await userEvent.click(within(dialog()).getByRole('button', FLOAT))
     const place = () => (card()!.parentElement as HTMLElement).style.transform
-    expect(place()).toBe('translate3d(500px, 200px, 0)')
+    expect(place()).toBe('translate3d(500px, 220px, 0)')
 
     fireEvent.keyDown(within(dialog()).getByRole('button', GRIP), { key: 'ArrowLeft', shiftKey: true })
-    expect(place()).toBe('translate3d(436px, 200px, 0)')
+    expect(place()).toBe('translate3d(436px, 220px, 0)')
 
     await userEvent.click(within(card()!).getByRole('button', DOCK))
     await userEvent.click(within(dialog()).getByRole('button', FLOAT))
-    expect(place()).toBe('translate3d(436px, 200px, 0)')
+    expect(place()).toBe('translate3d(436px, 220px, 0)')
   })
 
   it('stays for its exit, where it was and out of reach, while the rail is already back', () => {
@@ -349,5 +349,35 @@ describe('the readout floated over the chart', () => {
     expect(card()!.parentElement).toHaveAttribute('inert')
     act(() => void vi.advanceTimersByTime(90))
     expect(card()).not.toBeInTheDocument()
+  })
+
+  it('has a corner that resizes it, and keeps the size it was given through docking and floating again', async () => {
+    vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(700)
+    vi.spyOn(Element.prototype, 'clientHeight', 'get').mockReturnValue(300)
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(200)
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(40)
+    await open()
+    await userEvent.click(within(dialog()).getByRole('button', FLOAT))
+    const scaleOf = () => (card()!.querySelector('[class*="floatContent"]') as HTMLElement).style.transform
+    expect(scaleOf()).toBe('scale(1)')
+
+    fireEvent.keyDown(within(card()!).getByRole('button', { name: /Resize the values/ }), { key: 'ArrowUp' })
+    expect(scaleOf()).toBe('scale(1.1)')
+
+    await userEvent.click(within(card()!).getByRole('button', DOCK))
+    await userEvent.click(within(dialog()).getByRole('button', FLOAT))
+    expect(scaleOf()).toBe('scale(1.1)')
+  })
+
+  it('shows a purchase year\'s breakdown in a column beside the rows, so the card is wider and not taller', async () => {
+    phone()
+    render(<Hero draft={{ ...draft, housePurchaseYear: 5 }} />)
+    await userEvent.click(screen.getByRole('button', OPEN))
+    await userEvent.click(within(dialog()).getByRole('button', FLOAT))
+    for (let i = 0; i < 6; i++) fireEvent.keyDown(chartIn(dialog()), { key: 'ArrowRight' })
+
+    const breakdown = within(card()!).getByText('Down payment + fees')
+    expect(breakdown.closest('[class*="besideExtras"]')).not.toBeNull()
+    expect(within(card()!).getByText('Year 5').closest('[class*="besideMain"]')).not.toBeNull()
   })
 })

@@ -8,8 +8,11 @@ const ANNOUNCE_AFTER_MS = 500
 
 const HINT = 'Touch the chart to read a year. Tap a scenario to hide or show its line.'
 
-/** The readout's rows, the same whether it is in the rail or in the card that floats over the chart. */
-export function ReadoutLegend({ readout }: { readout: Readout }) {
+/**
+ * The readout's rows, the same whether it is in the rail or in the card that floats over the chart.
+ * `beside` puts a purchase year's breakdown in a column of its own, for the card.
+ */
+export function ReadoutLegend({ readout, beside }: { readout: Readout; beside?: boolean }) {
   return (
     <ScenarioSeriesLegend
       items={readout.items}
@@ -20,6 +23,7 @@ export function ReadoutLegend({ readout }: { readout: Readout }) {
       onToggle={readout.onToggle}
       layout="rows"
       hint={HINT}
+      extrasBeside={beside}
     />
   )
 }

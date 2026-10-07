@@ -48,6 +48,8 @@ export const HeroChartSheet = memo(function HeroChartSheet({
   const [focusNext, setFocusNext] = useState<FocusNext>(null)
   const stage = useRef<HTMLDivElement>(null)
   const placement = useRef<Placement>(LOWER_RIGHT)
+  // The size asked for with the card's corner, kept as long as the sheet is open and not just the card.
+  const choice = useRef<number | null>(null)
   const readout = useReadout(model, active)
   const focus = useMemo(
     () => ({ sticky: true, initial: initialIndex, turn: sideways ? (1 as const) : (0 as const) }),
@@ -84,6 +86,7 @@ export const HeroChartSheet = memo(function HeroChartSheet({
             <HeroFloatingReadout
               stage={stage}
               placement={placement}
+              choice={choice}
               turn={sideways ? 1 : 0}
               readout={readout}
               onDock={() => move(false)}
