@@ -3100,6 +3100,32 @@ async function checkHeroSheetFloat(browser, engine) {
     check(where, '(h2) the card is in the corner of the chart it starts in, and inside the chart', cornerOk && card.left >= box.left - 1 && card.right <= box.right + 1 && card.top >= box.top - 1 && card.bottom <= box.bottom + 1, JSON.stringify({ box, card }))
     check(where, '(h2) the card has the focus on its grip', await page.evaluate(() => document.activeElement?.getAttribute('aria-label')?.startsWith('Move the values')))
 
+    // A purchase year's breakdown is a column beside the rows: the card is wider there, and no taller.
+    const local = (r) => (turned ? { w: r.height, h: r.width } : { w: r.width, h: r.height })
+    const tapYear = async (year) => {
+      const b = await page.locator(stage).boundingBox()
+      const length = turned ? b.height : b.width
+      const f = (56 + (year / 30) * (length - 72)) / length
+      if (turned) await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height * f)
+      else await page.touchscreen.tap(b.x + b.width * f, b.y + b.height / 2)
+      await page.waitForTimeout(300)
+    }
+    await tapYear(14)
+    const plain = local(await rect(page, cardBox))
+    await tapYear(5)
+    const buys = local(await rect(page, cardBox))
+    check(where, '(h2) at a purchase year the card is wider for the breakdown beside the rows, and no taller', buys.w > plain.w + 40 && buys.h <= plain.h + 4, JSON.stringify({ plain, buys }))
+    const whole = await page.evaluate((sel) => {
+      const c = document.querySelector(sel)
+      const content = c.querySelector('[class*="floatContent"]')
+      const scale = Number(content.style.transform.slice(6, -1))
+      const bar = c.querySelector('[class*="floatBar"]').offsetHeight
+      const r = c.getBoundingClientRect()
+      return { scale, wide: content.offsetWidth * scale, high: bar + content.offsetHeight * scale, box: [r.width, r.height] }
+    }, cardBox)
+    const [boxW, boxH] = turned ? [whole.box[1], whole.box[0]] : whole.box
+    check(where, '(h2) the card is exactly as large as its content at the scale it is drawn at, so all of it is shown', Math.abs(boxW - whole.wide) <= 1.5 && Math.abs(boxH - whole.high) <= 1.5, JSON.stringify(whole))
+
     // Seven scenarios' worth of rows in the card: it must be held under the chart's height, since a card
     // as tall as its box has no room to move up or down in (which is what seven scenarios did).
     await page.evaluate((sel) => {
@@ -3117,6 +3143,35 @@ async function checkHeroSheetFloat(browser, engine) {
     const upAfter = await rect(page, cardBox)
     const upMoved = Math.hypot(upAfter.left - upBefore.left, upAfter.top - upBefore.top)
     check(where, '(h2) such a card moves on the chart\'s height axis too (an arrow up from the lower corner)', upMoved >= 8, `${upMoved}px`)
+
+    // The corner resizes the whole card, from its top left: smaller, then larger than the box allows.
+    const cornerSel = '[role="dialog"] button[aria-label^="Resize the values"]'
+    // The announcement of the year a moment ago changes text in the dialog once; let it settle first.
+    await page.waitForTimeout(700)
+    const sizeBefore = local(await rect(page, cardBox))
+    const cn = await rect(page, cornerSel)
+    const cx = cn.left + cn.width / 2
+    const cy = cn.top + cn.height / 2
+    // A step of (x, y) in the chart's own frame is a step on the screen that depends on how the chart is turned.
+    const onScreen = (x, y) => (turned ? [-y, x] : [x, y])
+    const shrink = []
+    for (let i = 0; i <= 30; i++) shrink.push([cx + onScreen(-i * 4, -i * 3)[0], cy + onScreen(-i * 4, -i * 3)[1]])
+    const small = await dragInPage(page, cornerSel, cardBox, shrink)
+    const smaller = local(await rect(page, cardBox))
+    check(where, '(h2) the corner makes the card smaller, all of it, and adds and removes no nodes', smaller.w < sizeBefore.w - 20 && smaller.h < sizeBefore.h - 10 && small.structural === 0, JSON.stringify({ sizeBefore, smaller, structural: small.structural }))
+    const cn2 = await rect(page, cornerSel)
+    const grow = []
+    for (let i = 0; i <= 60; i++) grow.push([cn2.left + cn2.width / 2 + onScreen(i * 14, i * 10)[0], cn2.top + cn2.height / 2 + onScreen(i * 14, i * 10)[1]])
+    await dragInPage(page, cornerSel, cardBox, grow)
+    await page.waitForTimeout(80)
+    const largest = local(await rect(page, cardBox))
+    const chartNow = local(await rect(page, stage))
+    check(where, '(h2) the corner makes it larger, but never past 90% of the chart, so it can still be moved', largest.w > smaller.w && largest.w <= chartNow.w * 0.9 + 1 && largest.h <= chartNow.h * 0.9 + 1, JSON.stringify({ smaller, largest, chartNow }))
+    const back = await rect(page, cornerSel)
+    const reset = []
+    for (let i = 0; i <= 40; i++) reset.push([back.left + back.width / 2 + onScreen(-i * 14, -i * 10)[0], back.top + back.height / 2 + onScreen(-i * 14, -i * 10)[1]])
+    await dragInPage(page, cornerSel, cardBox, reset)
+
 
     // Drag: from the grip, a frame at a time, past the edges and back.
     const g = await rect(page, grip)
