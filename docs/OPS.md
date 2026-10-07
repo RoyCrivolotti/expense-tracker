@@ -108,7 +108,7 @@ without them: a missing column reads as its default.
 | `scripts/setup-dev-bindings.mjs` | `setup:dev-bindings` | Re-apply D1 bindings on `roy-expenses-stg` |
 | `scripts/seed-dev.mjs` | `seed:dev` / `seed:dev-from-prod` | Prod D1 export → dev (`.tmp/` gitignored); private QA only |
 | `scripts/seed-demo-staging.mjs` | `seed:demo-staging` | Synthetic demo tenant on `roy-expenses-dev` (public fixtures) |
-| `scripts/migrate-dev.mjs` | `migrate:dev` | Apply new migrations to dev (post-seed only) |
+| `scripts/migrate.mjs` | `migrate`, `migrate:dev` | Check any database against `migrations/`, or apply what it lacks (`migrate:dev`: dev, post-seed only) |
 | `scripts/deploy-dev.sh` | `deploy:dev` | Deploy to `roy-expenses-stg` |
 
 PRs on expense-tracker run `.github/workflows/deploy-dev.yml`.

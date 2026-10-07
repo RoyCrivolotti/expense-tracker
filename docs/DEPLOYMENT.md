@@ -88,7 +88,12 @@ npx wrangler d1 execute roy-expenses --remote --file=migrations/NNNN_name.sql
 npx wrangler d1 execute roy-expenses --remote --command="INSERT OR IGNORE INTO _migrations (name) VALUES ('NNNN_name')"
 ```
 
-Apply through `0031_contribution_schedule.sql` on production, and record each file in `_migrations` as you go, by its name without `.sql`. `npm run migrate:dev` records for the dev database itself; nothing does for production. The app never reads the table, so a missing row breaks nothing until someone trusts the record, which is how the drift described below happened.
+`npm run migrate -- <database>` does the same with the checks below built in, and writes nothing unless
+given `--apply`. It exits 0 when the database is up to date, 1 when migrations are pending, and 2 when
+it cannot trust what it sees (a hole in the record, an unseeded database, or a database it could not
+read), so a caller that must not ship code ahead of its schema can stop on anything but 0.
+
+Apply through `0031_contribution_schedule.sql` on production, and record each file in `_migrations` as you go, by its name without `.sql`. `npm run migrate:dev` records for the dev database itself, and `npm run migrate -- roy-expenses --apply` does for production. The app never reads the table, so a missing row breaks nothing until someone trusts the record, which is how the drift described below happened.
 
 **Check what a database actually has before trusting this line.** It has been wrong: on
 2026-09-15 production turned out to have no `_migrations` table at all, `0020` never having

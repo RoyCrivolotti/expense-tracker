@@ -95,6 +95,7 @@ WIP commit. If you must stash, tag it (`git stash push -u -m "<tag>"`) and resto
 
 ```bash
 npm run migrate:dev              # apply pending migrations to dev D1
+npm run migrate -- <db>          # read-only: what <db> lacks (exit 0 current, 1 pending, 2 untrusted)
 npm run bootstrap:allowed-users  # seed allowed_users from config
 npm run seed:dev                 # copy a prod snapshot into dev
 npx wrangler d1 list
