@@ -8,6 +8,7 @@ Checked in Chromium and in Safari's engine, upright at 375x812 and on its side a
 
 - **The Invested portfolio projection opens full screen on a phone.** A button at the end of the card's title opens the chart over the whole screen, turned a quarter turn when the phone is held upright (with a line that says to turn it to the left), as the milestone sheet is. Thirty years get about 17px each across instead of about 8, and the plot is taller.
 - **A rail beside the chart reads the year.** It lists every line's value in the year you touch, with the purchase breakdown under it, and tapping a scenario there still hides or shows its line. The year stays when you lift your finger, and a screen reader is told it once the year settles.
+- **The readout can float over the chart.** A control in the rail takes the rail away, so the chart has the whole width, and the same readout becomes a card over it that you drag by its grip, or move with the arrow keys, anywhere inside the chart. It stays until its cross puts it back in the rail, and it never leaves the chart or covers the bar. The sheet always opens with the rail.
 - **The bar has the window buttons and the Nominal / Purchasing power switch**, and the window buttons are the card's own, so closing the sheet leaves the card as you set it.
 
 ## October 2026 (Analytics, made clearer)

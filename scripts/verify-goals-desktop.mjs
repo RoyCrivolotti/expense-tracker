@@ -9,7 +9,8 @@
  * both counted from today with start dates that differ (`ONLY=w2`, `ONLY=x2`),
  * why Save is off for a scenario with no name (`ONLY=s2`),
  * how the milestone amount and the cash reserve read what is typed (`ONLY=settings-numbers`),
- * and the hero chart full screen on a phone, upright and on its side (`ONLY=hero-sheet`).
+ * the hero chart full screen on a phone, upright and on its side (`ONLY=hero-sheet`),
+ * and its readout floated over the chart and dragged about it (`ONLY=hero-sheet-float`).
  *
  * jsdom lays nothing out, so the unit tests cannot say any of this. It needs a browser and takes
  * a few minutes, so it is not part of `npm run verify`; CI runs it in its own job
@@ -2994,6 +2995,182 @@ async function checkHeroSheet(browser, engine) {
   await context.close()
 }
 
+/**
+ * Drags a pointer along `path` (one point per animation frame) in the page itself, with pointer
+ * events dispatched on `selector`, so that what is measured is the page's own frames and not the
+ * round trips of a driver. Returns, per frame, the time since the last, the card's box, and the
+ * pointer; and how many nodes were added or removed under the dialog while it was held.
+ */
+function dragInPage(page, selector, cardSelector, path) {
+  return page.evaluate(
+    ({ selector, cardSelector, path }) =>
+      new Promise((resolve) => {
+        const handle = document.querySelector(selector)
+        const card = document.querySelector(cardSelector)
+        const dialog = document.querySelector('[role="dialog"]')
+        let structural = 0
+        const watcher = new MutationObserver((records) => {
+          for (const r of records) if (r.type === 'childList' || r.type === 'characterData') structural += 1
+        })
+        watcher.observe(dialog, { childList: true, characterData: true, subtree: true })
+        const fire = (type, [x, y]) =>
+          handle.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 7, pointerType: 'touch', isPrimary: true, clientX: x, clientY: y }))
+        const frames = []
+        let last = performance.now()
+        let i = 0
+        fire('pointerdown', path[0])
+        const step = () => {
+          const now = performance.now()
+          if (i < path.length) {
+            fire('pointermove', path[i])
+            const r = card.getBoundingClientRect()
+            frames.push({ dt: now - last, left: r.left, top: r.top, right: r.right, bottom: r.bottom, pointer: path[i] })
+            last = now
+            i += 1
+            requestAnimationFrame(step)
+            return
+          }
+          fire('pointerup', path[path.length - 1])
+          watcher.disconnect()
+          resolve({ frames, structural })
+        }
+        requestAnimationFrame(step)
+      }),
+    { selector, cardSelector, path },
+  )
+}
+
+/**
+ * The readout floated over the hero chart (check group h2), upright and on its side: the control
+ * takes the rail away and the chart has the whole width, with no frame of the old drawing stretched to
+ * the new box; the card is in the lower right corner and takes the focus; dragged, it follows the
+ * pointer to the pixel until it meets an edge, never leaves the chart's box or covers the bar,
+ * renders nothing while it moves, and does not stutter (the page's frame times are logged); the keys
+ * move it; its cross puts the rail back with the focus on the control; its place survives the
+ * screen changing size; Escape closes the sheet.
+ */
+async function checkHeroSheetFloat(browser, engine) {
+  const open = (page) => page.getByRole('button', { name: 'Open the chart full screen' })
+  const dialog = (page) => page.getByRole('dialog', { name: /full screen/ })
+  const FLOAT = { name: 'Float the values over the chart' }
+  const rect = (page, selector) =>
+    page.evaluate((s) => {
+      const r = document.querySelector(s).getBoundingClientRect()
+      return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height }
+    }, selector)
+  const stage = '[role="dialog"] svg[role="img"]'
+  const cardBox = '[role="dialog"] [role="group"][aria-label="Values for the year"]'
+  const grip = '[role="dialog"] button[aria-label^="Move the values"]'
+
+  for (const [name, size] of [['upright 375x812', { width: 375, height: 812 }], ['on its side 812x375', { width: 812, height: 375 }]]) {
+    const { page, context } = await openChartTab(browser, size)
+    const where = `${engine} phone ${name}`
+    await open(page).tap()
+    await dialog(page).waitFor()
+    await page.waitForTimeout(400)
+    const chartBefore = await page.evaluate(() => document.querySelector('[role="dialog"] svg[role="img"]').viewBox.baseVal.width)
+    const rail = await page.evaluate(() => document.querySelector('[role="dialog"] aside').offsetWidth)
+
+    // What would be painted across the change: a resize observer made after the chart's own runs after it
+    // in the same frame and before the paint, so what it reads is what is drawn. (A sample taken in an
+    // animation frame would read the frame before the observers have run, which is never painted.)
+    await page.evaluate(() => {
+      window.__painted = []
+      const wrap = document.querySelector('[role="dialog"] svg[role="img"]').parentElement
+      const watcher = new ResizeObserver(() => {
+        const s = wrap.querySelector('svg')
+        window.__painted.push([s.viewBox.baseVal.width, wrap.clientWidth])
+      })
+      watcher.observe(wrap)
+    })
+    await dialog(page).getByRole('button', FLOAT).tap()
+    await page.waitForTimeout(600)
+    const painted = await page.evaluate(() => window.__painted)
+    check(where, '(h2) the chart is drawn at its box\'s width in every frame it is painted, never one frame at the old width', painted.length >= 1 && painted.every(([drawn, box]) => Math.abs(drawn - box) <= 1), JSON.stringify(painted))
+
+    const chartAfter = await page.evaluate(() => document.querySelector('[role="dialog"] svg[role="img"]').viewBox.baseVal.width)
+    check(where, '(h2) the rail is gone and the chart is wider by about its width', (await dialog(page).locator('aside').count()) === 0 && chartAfter - chartBefore >= rail - 2 && chartAfter - chartBefore <= rail + 24, JSON.stringify({ chartBefore, chartAfter, rail }))
+    const turned = size.width === 375
+    const box = await rect(page, stage)
+    const card = await rect(page, cardBox)
+    // The lower right corner of the chart's own frame: on the screen that is the lower right, or the lower left when it is turned.
+    const cornerOk = turned
+      ? Math.abs(card.left - box.left) <= 2 && Math.abs(box.bottom - card.bottom) <= 2
+      : Math.abs(box.right - card.right) <= 2 && Math.abs(box.bottom - card.bottom) <= 2
+    check(where, '(h2) the card is in the corner of the chart it starts in, and inside the chart', cornerOk && card.left >= box.left - 1 && card.right <= box.right + 1 && card.top >= box.top - 1 && card.bottom <= box.bottom + 1, JSON.stringify({ box, card }))
+    check(where, '(h2) the card has the focus on its grip', await page.evaluate(() => document.activeElement?.getAttribute('aria-label')?.startsWith('Move the values')))
+
+    // Drag: from the grip, a frame at a time, past the edges and back.
+    const g = await rect(page, grip)
+    const gx = g.left + g.width / 2
+    const gy = g.top + g.height / 2
+    const path = []
+    for (let i = 0; i <= 60; i++) path.push([gx - i * 5, gy - i * 3])
+    for (let i = 1; i <= 40; i++) path.push([path[60][0] + i * 9, path[60][1] + i * 6])
+    const run = await dragInPage(page, grip, cardBox, path)
+    const dts = run.frames.map((f) => f.dt).slice(1).sort((a, b) => a - b)
+    const p95 = dts[Math.floor(dts.length * 0.95)]
+    console.log(`  info ${where}: ${run.frames.length} frames, p95 ${Math.round(p95)}ms, worst ${Math.round(dts[dts.length - 1])}ms, ${run.structural} nodes added or removed while held`)
+    check(where, '(h2) a drag adds and removes no nodes, which a render would', run.structural === 0, String(run.structural))
+    check(where, '(h2) the page\'s frames in a drag are not long (p95 under 50ms)', p95 < 50, `p95 ${p95}ms`)
+
+    const start = run.frames[0]
+    const stageBox = await rect(page, stage)
+    let worst = 0
+    let reversals = 0
+    for (const f of run.frames) {
+      const inside = f.left >= stageBox.left - 1 && f.right <= stageBox.right + 1 && f.top >= stageBox.top - 1 && f.bottom <= stageBox.bottom + 1
+      if (!inside) worst = Math.max(worst, 1000)
+      const atEdge = f.left <= stageBox.left + 0.5 || f.right >= stageBox.right - 0.5 || f.top <= stageBox.top + 0.5 || f.bottom >= stageBox.bottom - 0.5
+      if (!atEdge) worst = Math.max(worst, Math.max(Math.abs(f.left - start.left - (f.pointer[0] - path[0][0])), Math.abs(f.top - start.top - (f.pointer[1] - path[0][1]))))
+    }
+    for (let i = 1; i < run.frames.length; i++) {
+      // Along the first leg the pointer only goes one way on each axis, so the card must not turn back.
+      if (i <= 60 && (run.frames[i].left > run.frames[i - 1].left + 0.5 || run.frames[i].top > run.frames[i - 1].top + 0.5)) reversals += 1
+    }
+    check(where, '(h2) the card is under the pointer to within a pixel until it meets an edge, and never outside the chart', worst <= 1, `worst ${Math.round(worst * 10) / 10}`)
+    check(where, '(h2) the card never turns back along a drag that does not', reversals === 0, String(reversals))
+
+    // A corner at a time: dragged well past it, the card is against it and inside.
+    for (const [label, dx, dy] of [['upper left', -900, -900], ['upper right', 900, -900], ['lower right', 900, 900], ['lower left', -900, 900]]) {
+      const now = await rect(page, grip)
+      await dragInPage(page, grip, cardBox, [[now.left + now.width / 2, now.top + now.height / 2], [now.left + now.width / 2 + dx, now.top + now.height / 2 + dy]])
+      await page.waitForTimeout(60)
+      const c = await rect(page, cardBox)
+      check(where, `(h2) dragged past the ${label} corner the card is inside the chart`, c.left >= stageBox.left - 1 && c.right <= stageBox.right + 1 && c.top >= stageBox.top - 1 && c.bottom <= stageBox.bottom + 1, JSON.stringify({ c, stageBox }))
+    }
+
+    // Keys: a step along the chart's own axes, and a larger one with Shift.
+    const before = await rect(page, cardBox)
+    await page.locator(grip).focus()
+    await page.keyboard.press('ArrowLeft')
+    const after = await rect(page, cardBox)
+    const moved = Math.hypot(after.left - before.left, after.top - before.top)
+    check(where, '(h2) an arrow key moves the card a step, or none at an edge', Math.abs(moved - 16) <= 1 || moved === 0, `${moved}px`)
+
+    // The screen changing size: the card is still inside the chart, in the same part of it.
+    if (!turned) {
+      const sharedBefore = await rect(page, cardBox)
+      await page.setViewportSize({ width: 700, height: 375 })
+      await page.waitForTimeout(400)
+      const s = await rect(page, stage)
+      const c = await rect(page, cardBox)
+      check(where, '(h2) a screen that changes size keeps the card inside the chart', c.left >= s.left - 1 && c.right <= s.right + 1 && c.top >= s.top - 1 && c.bottom <= s.bottom + 1, JSON.stringify({ s, c, sharedBefore }))
+      await page.setViewportSize(size)
+      await page.waitForTimeout(300)
+    }
+
+    // The cross puts the rail back with the focus on the control; Escape closes the sheet.
+    await dialog(page).getByRole('button', { name: 'Put the values back beside the chart' }).tap()
+    await page.waitForTimeout(400)
+    check(where, '(h2) the cross puts the rail back, with the focus on the control that floats it', (await dialog(page).locator('aside').count()) === 1 && (await page.evaluate(() => document.activeElement?.getAttribute('aria-label'))) === 'Float the values over the chart')
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(300)
+    check(where, '(h2) Escape closes the sheet', (await dialog(page).count()) === 0)
+    await context.close()
+  }
+}
+
 async function main() {
   if (await answers()) throw new Error(`Something already answers on ${BASE}; set CAPTURE_PORT to a free port.`)
   const dev = startDev()
@@ -3056,6 +3233,10 @@ async function main() {
           await checkHeroSheet(browser, engine)
           continue
         }
+        if (process.env.ONLY === 'hero-sheet-float') {
+          await checkHeroSheetFloat(browser, engine)
+          continue
+        }
         if (process.env.ONLY === 'settings-numbers') {
           await checkSettingsNumbers(browser, engine)
           continue
@@ -3091,6 +3272,7 @@ async function main() {
         await checkFromTodayTimeline(browser, engine)
         await checkSettingsNumbers(browser, engine)
         await checkHeroSheet(browser, engine)
+        await checkHeroSheetFloat(browser, engine)
       } finally {
         await browser.close()
       }
