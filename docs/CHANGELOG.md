@@ -2,6 +2,14 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (the projection, full screen)
+
+Checked in Chromium and in Safari's engine, upright at 375x812 and on its side at 812x375.
+
+- **The Invested portfolio projection opens full screen on a phone.** A button at the end of the card's title opens the chart over the whole screen, turned a quarter turn when the phone is held upright (with a line that says to turn it to the left), as the milestone sheet is. Thirty years get about 17px each across instead of about 8, and the plot is taller.
+- **A rail beside the chart reads the year.** It lists every line's value in the year you touch, with the purchase breakdown under it, and tapping a scenario there still hides or shows its line. The year stays when you lift your finger, and a screen reader is told it once the year settles.
+- **The bar has the window buttons and the Nominal / Purchasing power switch**, and the window buttons are the card's own, so closing the sheet leaves the card as you set it.
+
 ## October 2026 (Analytics, made clearer)
 
 - **Cash starts counting at your first count.** Months from before you began counting are muted and never asked for, and the first count is the starting point that drift is measured from, instead of showing every month since the opening balance as new drift.

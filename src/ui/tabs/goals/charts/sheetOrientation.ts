@@ -12,3 +12,16 @@ export const SIDEWAYS_MQ = '(orientation: portrait) and (hover: none) and (point
 export function useSideways(): boolean {
   return useMediaQuery(SIDEWAYS_MQ)
 }
+
+/**
+ * A phone, upright or on its side: touch, and a short side under 600px. A tablet or a laptop gives
+ * the chart card the width to read thirty years in, so it has no use for a full-screen chart. A
+ * comma list, not `or`, for the Safari versions that do not read the keyword.
+ */
+export const PHONE_MQ =
+  '(hover: none) and (pointer: coarse) and (max-width: 599px), (hover: none) and (pointer: coarse) and (max-height: 599px)'
+
+/** Whether this is a phone, in either orientation. */
+export function usePhone(): boolean {
+  return useMediaQuery(PHONE_MQ)
+}

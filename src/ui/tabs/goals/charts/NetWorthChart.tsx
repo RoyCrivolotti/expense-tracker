@@ -1,13 +1,12 @@
 import { memo, useCallback, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
 import type { GoalScenario, Milestone } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import type { MoneyFormat, PlanFromToday, ProjectionParams } from '../../../../engine'
+import type { MoneyFormat, PlanFromToday } from '../../../../engine'
 import {
   RETURN_BAND_SPREAD,
   formatPercent,
   projectNetWorth,
   projectNetWorthBand,
-  purchaseYearBreakdown,
   scenarioToParams,
 } from '../../../../engine'
 import { Card } from '../../../components/primitives'
@@ -20,7 +19,10 @@ import { formatMoneyShort } from '../chartTheme'
 import { useAssumedInflation } from '../../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { useGoalsNarrow } from '../useGoalsNarrow'
-import { SegmentedControl } from '../../../components/SegmentedControl'
+import { HeroWindowPicker } from './HeroWindowPicker'
+import { HeroTitleRow } from './heroSheet/HeroTitleRow'
+import { useActiveIndex } from './heroSheet/useActiveIndex'
+import { useHeroSheet } from './heroSheet/useHeroSheet'
 import { HERO_WINDOWS, clipToWindow, heroWindowsFor, insideWindow, type HeroWindowKey } from './heroWindow'
 import progressStyles from '../progress.module.css'
 import {
@@ -33,18 +35,7 @@ import { computeChartDisplayData } from './nominalTransform'
 import { pointSeriesValueAt } from './checkinChartUtils'
 import { scenarioInk } from '../scenarioInk'
 import { ChartKeys, type ChartKeyMarks } from './ChartKeys'
-
-interface ScenarioLine {
-  id: string
-  /** The saved scenario behind the line; null for the draft. */
-  scenarioId: number | null
-  name: string
-  color: string
-  dashed: boolean
-  params: ProjectionParams
-}
-
-const NO_HIDDEN: ReadonlySet<number> = new Set()
+import { NO_HIDDEN, useChartLegendState, withFromToday, type ScenarioLine } from './heroLegendState'
 
 function scenarioLines(
   saved: GoalScenario[],
@@ -166,67 +157,6 @@ function PortfolioLegend({
     )
   }
   return <ChartLegend items={staticLegend} variant="stack" />
-}
-
-function useChartLegendState(
-  lines: ScenarioLine[],
-  series: ChartSeries[],
-  names: string[],
-  years: number[],
-  activeIndex: number | null,
-  scenarios: GoalScenario[],
-  hiddenIds: ReadonlySet<number> = NO_HIDDEN,
-) {
-  const activeYear = activeIndex != null ? years[activeIndex] ?? null : null
-  const legendItems: ScenarioLegendItem[] = useMemo(() => {
-    const drawn = series.map((s, idx) => {
-      const scenarioId = lines[idx]?.scenarioId ?? null
-      // Gated on the year, not the index: a narrower window can leave a hovered index past the
-      // end, and so can a scenario whose horizon is shorter than the chart's. Both read as
-      // nothing rather than as zero.
-      const value = activeYear != null && activeIndex != null ? s.values[activeIndex] : undefined
-      return {
-        label: names[idx] ?? s.id,
-        color: s.color,
-        ...(s.dashed ? { dashed: true as const } : {}),
-        ...(scenarioId !== null ? { scenarioId } : {}),
-        valueCents: value ?? null,
-        ...(activeYear != null && value === undefined ? { outOfRun: true as const } : {}),
-      }
-    })
-    const drawnById = new Map(drawn.flatMap((d) => (d.scenarioId !== undefined ? [[d.scenarioId, d] as const] : [])))
-    // In the scenarios' own order, a hidden one dimmed in its place so it can be brought
-    // back from here, rather than dropping to the bottom and moving the rows under it. A
-    // loaded, unchanged scenario is drawn as the draft and has no row of its own.
-    const rows = scenarios.flatMap((s) => {
-      if (hiddenIds.has(s.id)) return [{ label: s.name, color: s.color, scenarioId: s.id, hidden: true, valueCents: null }]
-      const item = drawnById.get(s.id)
-      return item ? [item] : []
-    })
-    return [...rows, ...drawn.filter((d) => d.scenarioId === undefined)]
-  }, [series, names, lines, activeIndex, activeYear, scenarios, hiddenIds])
-  const breakdowns: ScenarioLegendBreakdown[] = useMemo(() => {
-    if (activeYear == null) return []
-    return lines.flatMap((line) => {
-      const breakdown = purchaseYearBreakdown(line.params, activeYear)
-      if (!breakdown) return []
-      return [
-        {
-          id: line.scenarioId === null ? 'draft' : String(line.scenarioId),
-          label: line.name,
-          color: line.color,
-          ...(line.dashed ? { dashed: true as const } : {}),
-          breakdown,
-        },
-      ]
-    })
-  }, [activeYear, lines])
-  const yearZeroHint = useMemo(() => {
-    if (activeYear !== 0 || breakdowns.length > 0) return false
-    return lines.some((line) => line.params.housePurchaseYear === 0)
-  }, [activeYear, breakdowns.length, lines])
-
-  return { activeYear, legendItems, breakdowns, yearZeroHint }
 }
 
 /** Pixels: tall enough on a desktop to read thirty years, short enough on a phone to fit above the fold. */
@@ -385,30 +315,10 @@ function fiMarker(cents: number | null, format: MoneyFormat): { label: string; t
   return { label: `FI ${amount}`, title: `The FI target, ${amount}, is above the top of this chart.` }
 }
 
-function HeroWindowPicker({
-  windows,
-  value,
-  onChange,
-}: {
-  windows: ReturnType<typeof heroWindowsFor>
-  value: HeroWindowKey
-  onChange: (next: HeroWindowKey) => void
-}) {
-  if (windows.length < 2) return null
-  return (
-    <SegmentedControl
-      options={windows.map((w) => ({ value: w.value, label: w.label }))}
-      value={value}
-      onChange={onChange}
-      ariaLabel="Projection window"
-      layout="compact"
-    />
-  )
-}
-
 /**
  * The hero's header: the title, and on the right the window buttons, with, where a wide screen
- * has the room, the display switch beside them.
+ * has the room, the display switch beside them. A phone has the button that opens the chart full
+ * screen at the end of the title's line.
  */
 function ChartHeader({
   isHero,
@@ -416,17 +326,19 @@ function ChartHeader({
   windows,
   value,
   onChange,
+  onOpenSheet,
 }: {
   isHero: boolean
   aside: ReactNode
   windows: ReturnType<typeof heroWindowsFor>
   value: HeroWindowKey
   onChange: (next: HeroWindowKey) => void
+  onOpenSheet: (() => void) | undefined
 }) {
   const picker = isHero ? <HeroWindowPicker windows={windows} value={value} onChange={onChange} /> : null
   return (
     <div className={progressStyles.chartHeaderRow}>
-      <h3 className={styles.chartTitle}>Invested portfolio projection</h3>
+      {onOpenSheet ? <HeroTitleRow onOpen={onOpenSheet} /> : <h3 className={styles.chartTitle}>Invested portfolio projection</h3>}
       {isHero && aside ? (
         <div className={styles.chartTools}>
           {aside}
@@ -532,6 +444,7 @@ function NetWorthChartImpl({
   footer,
   footerBare = false,
   headerAside,
+  displaySwitch,
   extraSeries = [],
   todayIndex,
   nominalMode = false,
@@ -551,6 +464,8 @@ function NetWorthChartImpl({
   footerBare?: boolean
   /** Beside the window buttons in the hero's header, where a wide screen has the room for it. */
   headerAside?: ReactNode
+  /** Nominal or Purchasing power, for the full-screen chart's bar: unlike `headerAside` it is there on a phone too. */
+  displaySwitch?: ReactNode
   extraSeries?: ChartSeries[]
   todayIndex?: number
   nominalMode?: boolean
@@ -572,11 +487,8 @@ function NetWorthChartImpl({
   const assumedInflation = useAssumedInflation()
   const narrow = useGoalsNarrow()
   const listRef = useRef<HTMLUListElement>(null)
-  const [activeIndex, setActiveIndex] = useState<number | null>(null)
+  const { activeIndex, onActiveIndexChange, lastIndex } = useActiveIndex()
   const legendInBand = useInBand(listRef, 1, { enabled: narrow })
-  const onActiveIndexChange = useCallback((index: number | null) => {
-    setActiveIndex(index)
-  }, [])
   const isHero = variant === 'hero'
   const lines = useMemo(
     () => scenarioLines(scenarios, draft, activeId, dirty, assumedInflation, hiddenIds),
@@ -613,7 +525,14 @@ function NetWorthChartImpl({
   const { line: fromTodayLine, label: fromTodayLabel } = fromTodayDrawing(displayRealPoints, fromToday)
 
   const { lines: refLines, fiAbove } = useRefLines(milestones, drawnMax, useFiTarget(isHero, draft), nominalMode)
-  const fiChartMarker = fiMarker(fiAbove, format)
+  const fiChartMarker = useMemo(() => fiMarker(fiAbove, format), [fiAbove, format])
+  // Stable between renders, so a year pointed at, which re-renders this, does not make the chart
+  // work out its axis and paths again from arrays that only look new.
+  const chartSeries = useMemo(
+    () => [...(displayBand ? [displayBand] : []), ...displaySeries, ...displayRealPoints, ...displayExtraSeries],
+    [displayBand, displaySeries, displayRealPoints, displayExtraSeries],
+  )
+  const formatValue = useCallback((cents: number) => formatMoneyShort(cents, format), [format])
   const staticLegend: LegendItem[] = useMemo(
     () => series.map((s, idx) => ({ label: names[idx] ?? s.id, color: s.color })),
     [series, names],
@@ -645,20 +564,59 @@ function NetWorthChartImpl({
     },
     [years, displaySeries, names, format, fromTodayLine, fromTodayLabel],
   )
-  // Listed last, after the draft: it belongs to the plan but is not a scenario of its own.
-  const legendWithFromToday: ScenarioLegendItem[] = useMemo(() => {
-    if (!fromTodayLine) return legendItems
-    const valueCents = activeYear != null ? pointSeriesValueAt(fromTodayLine.points ?? [], activeYear) : null
-    // Before the check-in the line has not started; say so rather than leave the row blank.
-    const outOfRun = activeYear != null && valueCents === null
-    return [
-      ...legendItems,
-      { label: fromTodayLabel, color: fromTodayLine.color, dotted: true, valueCents, ...(outOfRun ? { outOfRun } : {}) },
-    ]
-  }, [legendItems, fromTodayLine, fromTodayLabel, activeYear])
+  const legendWithFromToday = useMemo(
+    () => withFromToday(legendItems, fromTodayLine, fromTodayLabel, activeYear),
+    [legendItems, fromTodayLine, fromTodayLabel, activeYear],
+  )
 
   const lifeEventMarkers = useLifeEventMarkers(isHero, draft, windowYears)
   const heroVariantProps = variantProps(isHero, narrow, legendInBand, markerYears, lifeEventMarkers, onActiveIndexChange)
+
+  // What the full-screen chart draws from, held between renders so a year pointed at in the card,
+  // which re-renders this, does not hand it new objects to work from.
+  const sheetChart = useMemo(
+    () => ({
+      series: chartSeries,
+      xLabels: labels,
+      refLines,
+      markerYears,
+      lifeEventMarkers,
+      ...todayProp(todayIndex, windowYears),
+      yDomainMax,
+      aboveTop: fiChartMarker,
+      ariaLabel: projectionLabel(fiChartMarker),
+      formatValue,
+      tooltip,
+    }),
+    [chartSeries, labels, refLines, markerYears, lifeEventMarkers, todayIndex, windowYears, yDomainMax, fiChartMarker, formatValue, tooltip],
+  )
+  const sheetLegend = useMemo(
+    () => ({
+      lines,
+      displaySeries,
+      names,
+      years,
+      scenarios,
+      hiddenIds,
+      fromTodayLine,
+      fromTodayLabel,
+      nominalMode,
+      onToggleVisible,
+    }),
+    [lines, displaySeries, names, years, scenarios, hiddenIds, fromTodayLine, fromTodayLabel, nominalMode, onToggleVisible],
+  )
+  const { onOpen: onOpenSheet, sheet } = useHeroSheet(
+    {
+      chart: sheetChart,
+      legend: sheetLegend,
+      displaySwitch,
+      windows: heroWindows,
+      windowValue: heroWindow,
+      onWindowChange: setHeroWindow,
+    },
+    isHero,
+    lastIndex,
+  )
 
   const hint = chartHint(isHero, narrow)
 
@@ -670,17 +628,18 @@ function NetWorthChartImpl({
         windows={heroWindows}
         value={heroWindow}
         onChange={setHeroWindow}
+        onOpenSheet={onOpenSheet}
       />
       {hint ? <p className={styles.chartHint}>{hint}</p> : null}
       <LinearChart
         {...heroVariantProps}
         aboveTop={fiChartMarker}
-        series={[...(displayBand ? [displayBand] : []), ...displaySeries, ...displayRealPoints, ...displayExtraSeries]}
+        series={chartSeries}
         xLabels={labels}
         refLines={refLines}
         {...todayProp(todayIndex, windowYears)}
         yDomainMax={yDomainMax}
-        formatValue={(c) => formatMoneyShort(c, format)}
+        formatValue={formatValue}
         ariaLabel={projectionLabel(fiChartMarker)}
         tooltip={tooltip}
       />
@@ -700,6 +659,7 @@ function NetWorthChartImpl({
       <ChartKeys {...chartKeyMarks(isHero, displayExtraSeries.length, lifeEventMarkers)} />
       <HeroNote draft={draft} isHero={isHero} narrow={narrow} />
       <ChartFooter footer={footer} bare={footerBare} />
+      {sheet}
     </Card>
   )
 }

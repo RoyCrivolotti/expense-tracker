@@ -24,6 +24,17 @@ function entry(id: string, label: string): ScenarioLegendBreakdown {
 describe('ScenarioSeriesLegend', () => {
   afterEach(() => vi.restoreAllMocks())
 
+  it('says what it is told before a year is pointed at, and its usual line otherwise', () => {
+    const items = [{ label: 'Path A', color: '#6366f1', valueCents: null }]
+    const { rerender } = render(
+      <ScenarioSeriesLegend items={items} activeYear={null} breakdowns={[]} hint="Touch the chart." />,
+    )
+    expect(screen.getByText('Touch the chart.')).toBeInTheDocument()
+
+    rerender(<ScenarioSeriesLegend items={items} activeYear={null} breakdowns={[]} />)
+    expect(screen.getByText('Tap or hover the chart to compare values by year.')).toBeInTheDocument()
+  })
+
   it('keeps two same-named scenarios apart in the purchase breakdown', () => {
     // Scenario names are not unique (Duplicate makes "<name> (copy)", and a name can be
     // reused), so keying the breakdown by name made React warn and merge the two.
