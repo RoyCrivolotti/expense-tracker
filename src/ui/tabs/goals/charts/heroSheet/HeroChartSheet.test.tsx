@@ -231,3 +231,123 @@ describe('what a screen reader is told', () => {
     expect(status().textContent).toMatch(/^Year 29\. /)
   })
 })
+
+describe('the readout floated over the chart', () => {
+  const FLOAT = { name: 'Float the values over the chart' }
+  const DOCK = { name: 'Put the values back beside the chart' }
+  const GRIP = { name: /Move the values/ }
+  const rail = () => within(dialog()).queryByRole('complementary', { name: 'Values for the year' })
+  const card = () => within(dialog()).queryByRole('group', { name: 'Values for the year' })
+
+  afterEach(() => vi.restoreAllMocks())
+
+  async function open() {
+    phone()
+    const view = render(<Hero />)
+    await userEvent.click(screen.getByRole('button', OPEN))
+    return view
+  }
+
+  it('starts docked, with a control that floats it', async () => {
+    await open()
+    expect(rail()).toBeInTheDocument()
+    expect(card()).not.toBeInTheDocument()
+    expect(within(dialog()).getByRole('button', FLOAT)).toBeInTheDocument()
+  })
+
+  it('takes the rail away and shows the same readout as a card, with the year it had and the focus on its grip', async () => {
+    await open()
+    fireEvent.keyDown(chartIn(dialog()), { key: 'End' })
+    await userEvent.click(within(dialog()).getByRole('button', FLOAT))
+
+    expect(rail()).not.toBeInTheDocument()
+    expect(within(card()!).getByText('Year 30')).toBeInTheDocument()
+    expect(within(dialog()).getByRole('button', GRIP)).toHaveFocus()
+    // The chart is the same one, with the year still marked.
+    expect(chartIn(dialog())).toBeInTheDocument()
+  })
+
+  it('keeps the year the chart has when the card is touched, and still follows the chart', async () => {
+    await open()
+    await userEvent.click(within(dialog()).getByRole('button', FLOAT))
+    fireEvent.keyDown(chartIn(dialog()), { key: 'ArrowRight' })
+    fireEvent.keyDown(chartIn(dialog()), { key: 'ArrowRight' })
+    expect(within(card()!).getByText('Year 1')).toBeInTheDocument()
+    await userEvent.click(within(card()!).getByRole('button', DOCK))
+    expect(within(rail()!).getByText('Year 1')).toBeInTheDocument()
+  })
+
+  it('goes back to the rail by its cross, with the focus on the control that floats it', async () => {
+    await open()
+    await userEvent.click(within(dialog()).getByRole('button', FLOAT))
+    await userEvent.click(within(card()!).getByRole('button', DOCK))
+
+    expect(card()).not.toBeInTheDocument()
+    expect(rail()).toBeInTheDocument()
+    expect(within(dialog()).getByRole('button', FLOAT)).toHaveFocus()
+  })
+
+  it('does not take the focus when the sheet opens, which the sheet\'s own trap has', async () => {
+    await open()
+    expect(within(dialog()).getByRole('button', FLOAT)).not.toHaveFocus()
+  })
+
+  it('closes the whole sheet on Escape, floated or not', async () => {
+    await open()
+    await userEvent.click(within(dialog()).getByRole('button', FLOAT))
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('opens docked every time, whatever it was left as', async () => {
+    await open()
+    await userEvent.click(within(dialog()).getByRole('button', FLOAT))
+    await userEvent.click(within(dialog()).getByRole('button', { name: 'Close' }))
+    await userEvent.click(screen.getByRole('button', OPEN))
+    expect(rail()).toBeInTheDocument()
+    expect(card()).not.toBeInTheDocument()
+  })
+
+  it('keeps one live region for the readout through every change of place', async () => {
+    await open()
+    const status = within(dialog()).getByRole('status')
+    await userEvent.click(within(dialog()).getByRole('button', FLOAT))
+    expect(within(dialog()).getByRole('status')).toBe(status)
+    await userEvent.click(within(card()!).getByRole('button', DOCK))
+    expect(within(dialog()).getByRole('status')).toBe(status)
+  })
+
+  it('puts the card where it was left when it is floated again, and not in the corner it began in', async () => {
+    vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(700)
+    vi.spyOn(Element.prototype, 'clientHeight', 'get').mockReturnValue(300)
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(200)
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(100)
+    await open()
+    await userEvent.click(within(dialog()).getByRole('button', FLOAT))
+    const place = () => (card()!.parentElement as HTMLElement).style.transform
+    expect(place()).toBe('translate3d(500px, 200px, 0)')
+
+    fireEvent.keyDown(within(dialog()).getByRole('button', GRIP), { key: 'ArrowLeft', shiftKey: true })
+    expect(place()).toBe('translate3d(436px, 200px, 0)')
+
+    await userEvent.click(within(card()!).getByRole('button', DOCK))
+    await userEvent.click(within(dialog()).getByRole('button', FLOAT))
+    expect(place()).toBe('translate3d(436px, 200px, 0)')
+  })
+
+  it('stays for its exit, where it was and out of reach, while the rail is already back', () => {
+    phone()
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    setMotionDisabledForTests(false)
+    render(<Hero />)
+    fireEvent.click(screen.getByRole('button', OPEN))
+    fireEvent.click(within(dialog()).getByRole('button', FLOAT))
+    fireEvent.click(within(card()!).getByRole('button', DOCK))
+
+    expect(rail()).toBeInTheDocument()
+    expect(card()).toBeInTheDocument()
+    expect(card()!.parentElement).toHaveAttribute('inert')
+    act(() => void vi.advanceTimersByTime(90))
+    expect(card()).not.toBeInTheDocument()
+  })
+})

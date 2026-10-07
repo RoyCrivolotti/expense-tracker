@@ -1,32 +1,34 @@
-import { memo, useMemo, useState } from 'react'
+import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { LinearChart } from '../../../../charts/LinearChart'
-import chartStyles from '../../../../charts/charts.module.css'
-import { useDebouncedAnnouncement } from '../../../../hooks/useDebouncedAnnouncement'
-import { useMoneyFormat } from '../../../../hooks/moneyFormatContext'
-import { formatMoneyShort } from '../../chartTheme'
+import { Presence } from '../../../../components/Presence'
+import { PopOutIcon } from '../../../../icons'
+import { LOWER_RIGHT, type Placement } from '../../../../hooks/cardPlacement'
+import { EXIT_MS } from '../../../../hooks/motion'
 import goalsStyles from '../../goals.module.css'
-import { useChartLegendState, withFromToday } from '../heroLegendState'
-import { ScenarioSeriesLegend } from '../ScenarioSeriesLegend'
 import { SheetFrame } from '../SheetFrame'
 import { useSideways } from '../sheetOrientation'
+import { HeroFloatingReadout } from './HeroFloatingReadout'
+import { HeroReadoutAnnouncer, ReadoutLegend } from './HeroReadoutParts'
+import { useReadout, type Readout } from './useReadout'
 import type { HeroSheetModel } from './heroSheetModel'
-import { readoutSentence } from './heroReadout'
 import styles from './HeroChartSheet.module.css'
 
 /** Drawn at this until the stage has been measured, which is one frame. */
 const FALLBACK_HEIGHT = 240
 
-/** How long a year must stay pointed at before a screen reader is told its values. */
-const ANNOUNCE_AFTER_MS = 500
-
-const HINT = 'Touch the chart to read a year. Tap a scenario to hide or show its line.'
-
 /** The chart does not redraw for the sheet's own state, only for what the card hands over. */
 const SheetChart = memo(LinearChart)
 
+/** Where the focus goes when the readout changes places, since the control that was pressed is gone. */
+type FocusNext = 'card' | 'rail' | null
+
 /**
- * The hero chart on the whole screen, with the readout beside it. A phone held upright gets it
- * drawn a quarter turn, and then the chart reads the pointer from its height (`SheetFrame`).
+ * The hero chart on the whole screen, with the readout beside it, or over it. A phone held upright
+ * gets it drawn a quarter turn, and then the chart reads the pointer from its height (`SheetFrame`).
+ *
+ * The readout starts docked in a rail. Floated, the rail goes and the chart has the whole width, and
+ * the same readout is a card that can be moved about the chart. It is put back by its cross, and a
+ * sheet always opens docked: where the card was is kept only while the sheet is open.
  *
  * The year pointed at is kept when a finger lifts, and it is this sheet's own: it starts at the
  * card's year and the card is not told, so nothing the sheet does re-draws the card behind it.
@@ -42,10 +44,19 @@ export const HeroChartSheet = memo(function HeroChartSheet({
 }) {
   const sideways = useSideways()
   const [active, setActive] = useState<number | null>(initialIndex)
+  const [floating, setFloating] = useState(false)
+  const [focusNext, setFocusNext] = useState<FocusNext>(null)
+  const stage = useRef<HTMLDivElement>(null)
+  const placement = useRef<Placement>(LOWER_RIGHT)
+  const readout = useReadout(model, active)
   const focus = useMemo(
     () => ({ sticky: true, initial: initialIndex, turn: sideways ? (1 as const) : (0 as const) }),
     [initialIndex, sideways],
   )
+  const move = (to: boolean) => {
+    setFocusNext(to ? 'card' : 'rail')
+    setFloating(to)
+  }
 
   return (
     <SheetFrame
@@ -60,7 +71,7 @@ export const HeroChartSheet = memo(function HeroChartSheet({
       onClose={onClose}
     >
       <div className={styles.body}>
-        <div className={styles.stage}>
+        <div ref={stage} className={styles.stage}>
           <SheetChart
             {...model.chart}
             height={FALLBACK_HEIGHT}
@@ -69,51 +80,54 @@ export const HeroChartSheet = memo(function HeroChartSheet({
             onActiveIndexChange={setActive}
             focus={focus}
           />
+          <Presence show={floating} exitMs={EXIT_MS.popover}>
+            <HeroFloatingReadout
+              stage={stage}
+              placement={placement}
+              turn={sideways ? 1 : 0}
+              readout={readout}
+              onDock={() => move(false)}
+              focusOnMount={focusNext === 'card'}
+            />
+          </Presence>
         </div>
-        <HeroReadout model={model} active={active} />
+        {floating ? null : (
+          <HeroRail readout={readout} onFloat={() => move(true)} focusOnMount={focusNext === 'rail'} />
+        )}
       </div>
+      <HeroReadoutAnnouncer sentence={readout.sentence} />
     </SheetFrame>
   )
 })
 
-/** The rail: every line's value in the year pointed at, and what a purchase did in it. */
-function HeroReadout({ model, active }: { model: HeroSheetModel; active: number | null }) {
-  const format = useMoneyFormat()
-  const { legend } = model
-  const { activeYear, legendItems, breakdowns, yearZeroHint } = useChartLegendState(
-    legend.lines,
-    legend.displaySeries,
-    legend.names,
-    legend.years,
-    active,
-    legend.scenarios,
-    legend.hiddenIds,
-  )
-  const items = useMemo(
-    () => withFromToday(legendItems, legend.fromTodayLine, legend.fromTodayLabel, activeYear),
-    [legendItems, legend.fromTodayLine, legend.fromTodayLabel, activeYear],
-  )
-  const sentence = readoutSentence(activeYear, items, breakdowns.length > 0, (cents) => formatMoneyShort(cents, format))
-  const announced = useDebouncedAnnouncement(sentence, ANNOUNCE_AFTER_MS)
-
+/** The docked readout: beside the chart, with the control that floats it over the chart. */
+function HeroRail({
+  readout,
+  onFloat,
+  focusOnMount,
+}: {
+  readout: Readout
+  onFloat: () => void
+  focusOnMount: boolean
+}) {
+  const float = useRef<HTMLButtonElement>(null)
+  useLayoutEffect(() => {
+    if (focusOnMount) float.current?.focus()
+  }, [focusOnMount])
   return (
-    <>
-      <aside className={styles.rail} aria-label="Values for the year">
-        <ScenarioSeriesLegend
-          items={items}
-          activeYear={activeYear}
-          breakdowns={breakdowns}
-          breakdownInTodaysMoney={legend.nominalMode}
-          yearZeroHint={yearZeroHint}
-          onToggle={legend.onToggleVisible}
-          layout="rows"
-          hint={HINT}
-        />
-      </aside>
-      {/* Outside the rail, and kept apart from what it draws: said once when a year settles, not on each step of a drag. */}
-      <p className={chartStyles.srOnly} role="status" aria-live="polite" aria-atomic="true">
-        {announced}
-      </p>
-    </>
+    <aside className={styles.rail} aria-label="Values for the year">
+      <div className={styles.railHead}>
+        <button
+          ref={float}
+          type="button"
+          className={styles.float}
+          aria-label="Float the values over the chart"
+          onClick={onFloat}
+        >
+          <PopOutIcon aria-hidden="true" />
+        </button>
+      </div>
+      <ReadoutLegend readout={readout} />
+    </aside>
   )
 }
