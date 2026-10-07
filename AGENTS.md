@@ -25,8 +25,7 @@ All changes — code, docs, config — must go through a pull request with the
    CI requires 90% of changed lines to be covered. Write tests before pushing if
    coverage is short — this is the single most common cause of a locally-green
    `verify` turning into a red PR, since the global coverage floor `verify` checks
-   is a lenient floor calibrated to the untested legacy codebase, not a bar new
-   code has to clear.
+   guards the whole repo's number, not a bar new code has to clear.
 4. **Push and open a draft PR** (`gh pr create --draft`). Never create a
    ready-for-review PR directly.
 5. **Wait for CI** — both `verify` and `verify-and-deploy` must pass. If `verify`
