@@ -1,0 +1,104 @@
+name: CI
+
+# Everything that has to be true before a change is merged or shipped, as parallel jobs.
+# verify.yml calls it on a PR and deploy.yml on main, so the two cannot drift apart.
+# `gate` is the one job to depend on or require: it fails unless every job above it passed.
+#
+# `npm run verify` is the same list of checks run in one go on a laptop. A check added there
+# has to be added here too; scripts/ciParity.test.ts fails when one is missing.
+
+on:
+  workflow_call:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-node-deps
+      - run: node scripts/ensure-function-symlinks.mjs
+      - run: npm run lint
+
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-node-deps
+      - run: node scripts/ensure-function-symlinks.mjs
+      - run: node scripts/check-migration-docs.mjs
+      - run: node scripts/check-pii.mjs
+      - run: npm run typecheck
+      - run: npm run build
+      - run: node scripts/check-bundle-budget.mjs
+
+  test:
+    name: test (${{ matrix.shard }}/4)
+    runs-on: ubuntu-latest
+    strategy:
+      # A red shard should not hide what the others found.
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-node-deps
+      # The coverage floors are checked once, on the merged result in `gate`: a shard sees a
+      # quarter of the code and would fail every one of them. `default` keeps a failing test's
+      # output in this job's log; the blob is what `gate` merges.
+      - name: Run shard ${{ matrix.shard }} of 4
+        run: >
+          npx vitest run
+          --shard=${{ matrix.shard }}/4
+          --reporter=default --reporter=blob
+          --coverage --coverage.reporter=json-summary
+          --coverage.thresholds.statements=0 --coverage.thresholds.branches=0
+          --coverage.thresholds.functions=0 --coverage.thresholds.lines=0
+      - uses: actions/upload-artifact@v7
+        with:
+          name: vitest-blob-${{ matrix.shard }}
+          path: .vitest-reports/
+          # The folder starts with a dot, which the action skips unless told otherwise.
+          include-hidden-files: true
+          retention-days: 1
+          if-no-files-found: error
+
+  gate:
+    needs: [lint, static, test]
+    # Without `always()` a failed job above would skip this one, and a skipped job reads as
+    # passing to anything that requires it.
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every job above must have passed
+        run: |
+          echo "results: ${{ join(needs.*.result, ' ') }}"
+          for result in ${{ join(needs.*.result, ' ') }}; do
+            [ "$result" = success ] || exit 1
+          done
+
+      - uses: actions/checkout@v5
+        with:
+          # `npm run coverage:diff` needs the merge-base with the PR's base branch.
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-node-deps
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: vitest-blob-*
+          merge-multiple: true
+          path: .vitest-reports
+
+      # Applies the coverage floors in vitest.config.ts to the whole suite and writes
+      # coverage/lcov.info for the diff check below.
+      - name: Merge the shards
+        run: npx vitest run --merge-reports --coverage
+
+      - name: Diff coverage (this PR's changed lines)
+        if: github.event_name == 'pull_request'
+        run: npm run coverage:diff -- --base ${{ github.event.pull_request.base.sha }}
+
+      - name: Require screenshots on UI-facing PRs
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run check:pr-screenshots -- --base ${{ github.event.pull_request.base.sha }} --pr ${{ github.event.pull_request.number }}

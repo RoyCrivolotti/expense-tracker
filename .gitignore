@@ -26,3 +26,4 @@ docs/PUBLIC_READINESS.md
 # strings; deploy-context has account-specific IDs and token names.
 .claude/settings.local.json
 .claude/deploy-context.md
+.vitest-reports/
