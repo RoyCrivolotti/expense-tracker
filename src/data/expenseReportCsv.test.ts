@@ -88,6 +88,21 @@ describe('expenseReportCsv', () => {
     expect(expenseReportCsv(report, options)).not.toContain('Purpose,')
   })
 
+  it('drops the Notes column, and keeps the rest aligned, when notes are withheld', () => {
+    const csv = expenseReportCsv(
+      reportFor(datasetWith([txn(1, '2026-05-02', { flagId: 1, notes: 'Ana paid, I owe her' })])),
+      { ...options, showNotes: false },
+    )!
+
+    expect(headerLine(csv)).toBe('Date,Description,Category,Account,Amount,Receipts')
+    expect(csv).not.toContain('Ana paid')
+    // Amounts are quoted ("100,00 €"), so columns are checked by exact content.
+    expect(body(csv)).toEqual([
+      '2026-05-02,Txn 1,Travel,Main Debit,"100,00 €",',
+      ',Total expenses,,,"100,00 €",',
+    ])
+  })
+
   it('breaks the totals out once a reimbursement has been recorded', () => {
     const csv = expenseReportCsv(reportFor(datasetWith([
         txn(1, '2026-05-02', { flagId: 1, amountCents: 10_000 }),

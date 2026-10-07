@@ -23,6 +23,8 @@ interface SheetProps {
   /** What the claim is for, in the claimant's words. Blank prints nothing. */
   purpose: string
   onPurposeChange: (purpose: string) => void
+  /** Whether each line's own notes print under its description. */
+  showNotes: boolean
   /** Opens a line's editor, so a missing receipt can be attached from here. */
   onOpenTransaction?: ((txn: Transaction) => void) | undefined
 }
@@ -39,6 +41,7 @@ export function ExpenseReportSheet({
   onTitleChange,
   purpose,
   onPurposeChange,
+  showNotes,
   onOpenTransaction,
 }: SheetProps) {
   const receipts = reportReceipts(report)
@@ -55,7 +58,7 @@ export function ExpenseReportSheet({
         purpose={purpose}
         onPurposeChange={onPurposeChange}
       />
-      <ReportTable report={report} lookup={lookup} format={format} />
+      <ReportTable report={report} lookup={lookup} format={format} showNotes={showNotes} />
       <MissingReceipts report={report} lookup={lookup} onOpenTransaction={onOpenTransaction} />
 
       {receipts.length > 0 ? (
@@ -304,11 +307,13 @@ function ReportRow({
   line,
   lookup,
   format,
+  showNotes,
   signed = false,
 }: {
   line: ReportLine
   lookup: Lookup
   format: MoneyFormat
+  showNotes: boolean
   signed?: boolean
 }) {
   const { transaction } = line
@@ -319,7 +324,9 @@ function ReportRow({
         {transaction.description || lookup.categoryName(transaction.categoryId)}
         {/* The transaction's own notes. An approver asks what a dinner was for,
             and that is exactly what this field already holds. */}
-        {transaction.notes ? <span className={styles.notes}>{transaction.notes}</span> : null}
+        {showNotes && transaction.notes ? (
+          <span className={styles.notes}>{transaction.notes}</span>
+        ) : null}
       </td>
       <td className={styles.hideNarrow}>{lookup.categoryName(transaction.categoryId)}</td>
       <td className={styles.numeric}>
@@ -336,10 +343,12 @@ function ReportTable({
   report,
   lookup,
   format,
+  showNotes,
 }: {
   report: ExpenseReport
   lookup: Lookup
   format: MoneyFormat
+  showNotes: boolean
 }) {
   const settled = report.credits.length > 0
   return (
@@ -362,7 +371,13 @@ function ReportTable({
         </thead>
         <tbody>
           {report.lines.map((line) => (
-            <ReportRow key={line.transaction.id} line={line} lookup={lookup} format={format} />
+            <ReportRow
+              key={line.transaction.id}
+              line={line}
+              lookup={lookup}
+              format={format}
+              showNotes={showNotes}
+            />
           ))}
         </tbody>
         {settled ? (
@@ -378,6 +393,7 @@ function ReportTable({
                 line={line}
                 lookup={lookup}
                 format={format}
+                showNotes={showNotes}
                 signed
               />
             ))}

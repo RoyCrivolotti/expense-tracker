@@ -34,6 +34,11 @@ export interface ExpenseReportCsvOptions {
   title?: string
   /** What the claim is for, as written in the report view. Omitted from the file when blank. */
   purpose?: string
+  /**
+   * Whether each line's own notes go out. Off drops the whole column rather than
+   * leaving it empty, so the file does not advertise a field that was withheld.
+   */
+  showNotes?: boolean
 }
 
 /**
@@ -47,13 +52,16 @@ export function expenseReportCsv(
 ): string | null {
   if (!report) return null
 
+  const showNotes = options.showNotes ?? true
+  const header = HEADER.filter((name) => showNotes || name !== 'Notes')
+
   const row = (line: ReportLine, signed: boolean) =>
     [
       esc(line.transaction.date),
       escText(line.transaction.description || options.categoryName(line.transaction.categoryId)),
       // The transaction's own notes: an approver asks what a dinner was *for*,
       // and that is exactly what the notes field already holds.
-      escText(line.transaction.notes ?? ''),
+      ...(showNotes ? [escText(line.transaction.notes ?? '')] : []),
       escText(options.categoryName(line.transaction.categoryId)),
       escText(options.accountName(line.transaction.accountId)),
       // A credit is written negative so the Amount column still sums to the
@@ -78,14 +86,24 @@ export function expenseReportCsv(
   const credits = report.credits.map((line) => row(line, true))
   // Labels are literals and the amount must keep its sign, so neither needs guarding.
   const blank = (label: string, cents: number) =>
-    ['', label, '', '', '', formatCents(cents, options.format), ''].map(esc).join(',')
+    [
+      '',
+      label,
+      ...(showNotes ? [''] : []),
+      '',
+      '',
+      formatCents(cents, options.format),
+      '',
+    ]
+      .map(esc)
+      .join(',')
 
   const totals = [blank('Total expenses', report.totalClaimedCents)]
   if (report.credits.length > 0) {
     totals.push(blank('Less reimbursed', -report.creditedCents))
     totals.push(blank('Outstanding', report.outstandingCents))
   }
-  return [...preamble, HEADER.join(','), ...rows, ...credits, ...totals].join('\n')
+  return [...preamble, header.join(','), ...rows, ...credits, ...totals].join('\n')
 }
 
 export function downloadExpenseReportCsv(

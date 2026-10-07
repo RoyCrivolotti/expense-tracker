@@ -523,6 +523,39 @@ describe('ExpenseReportView — the purpose line', () => {
   })
 })
 
+describe('ExpenseReportView — the notes on each item', () => {
+  it('offers no switch when no item has a note', () => {
+    renderPack(datasetWith([txn(1, '2026-05-02')]))
+
+    expect(
+      screen.queryByRole('radiogroup', { name: 'Show or hide the notes on each item' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('prints them by default and withholds them on request', async () => {
+    const user = userEvent.setup()
+    renderPack(datasetWith([txn(1, '2026-05-02', { notes: 'Ana paid, I owe her' })]))
+    expect(screen.getByText('Ana paid, I owe her')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('radio', { name: 'Hide notes' }))
+
+    expect(screen.queryByText('Ana paid, I owe her')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('radio', { name: 'Show notes' }))
+    expect(screen.getByText('Ana paid, I owe her')).toBeInTheDocument()
+  })
+
+  it('keeps them out of the CSV too', async () => {
+    const user = userEvent.setup()
+    renderPack(datasetWith([txn(1, '2026-05-02', { notes: 'Ana paid, I owe her' })]))
+    await user.click(screen.getByRole('radio', { name: 'Hide notes' }))
+
+    const csv = await downloadedCsv(user)
+
+    expect(csv).not.toContain('Ana paid')
+    expect(csv).not.toContain('Notes')
+  })
+})
+
 describe('ExpenseReportView — sending the receipts on their own', () => {
   it('hands every receipt over, named and in a folder for the claim', async () => {
     const user = userEvent.setup()
