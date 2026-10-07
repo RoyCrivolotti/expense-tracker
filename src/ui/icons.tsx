@@ -96,6 +96,31 @@ export function ChevronIcon(props: IconProps) {
   )
 }
 
+/** Two columns of three dots: what something that can be dragged is taken by. */
+export function GripIcon(props: IconProps) {
+  const dot = { fill: 'currentColor', stroke: 'none' }
+  return (
+    <svg {...base} {...props}>
+      <circle cx="9" cy="6" r="1.4" {...dot} />
+      <circle cx="15" cy="6" r="1.4" {...dot} />
+      <circle cx="9" cy="12" r="1.4" {...dot} />
+      <circle cx="15" cy="12" r="1.4" {...dot} />
+      <circle cx="9" cy="18" r="1.4" {...dot} />
+      <circle cx="15" cy="18" r="1.4" {...dot} />
+    </svg>
+  )
+}
+
+/** A box with an arrow leaving its corner: take this out of where it is and float it. */
+export function PopOutIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M14 4h6v6M20 4l-9 9" />
+      <path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4" />
+    </svg>
+  )
+}
+
 /** Opens something to the full screen: two arrows pointing out from opposite corners. */
 export function ExpandIcon(props: IconProps) {
   return (

@@ -30,8 +30,113 @@
   background: var(--color-surface);
 }
 
-/* The legend's own top margin is for sitting under a chart, not at the top of a box. */
-.rail > :first-child {
+/* The rail's head holds the control that floats the readout, and is as tall as that is. */
+.railHead {
+  display: flex;
+  justify-content: flex-end;
+  margin: -0.25rem -0.25rem 0.125rem 0;
+}
+
+/* The legend's own top margin is for sitting under a chart, not under a head. */
+.railHead + * {
+  margin-top: 0;
+}
+
+.float,
+.grip,
+.dock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  height: 2.5rem;
+  padding: 0.6rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.float,
+.dock {
+  width: 2.5rem;
+}
+
+.float:focus-visible,
+.grip:focus-visible,
+.dock:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+/* The readout as a card over the chart. The outer box is placed by its transform alone, which a
+   script writes as it is moved, so nothing here may animate it: the card inside arrives and leaves.
+   It is wider than the rail was, so fewer labels wrap and it is shorter, and never taller than the
+   chart's box: its rows scroll inside it when a year has more to say than that. */
+.floatPos {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  width: min(16rem, 100%);
+  max-height: 100%;
+  will-change: transform;
+}
+
+.floatCard {
+  composes: popoverEnter from '../../../../components/popoverMotion.module.css';
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.18);
+  --pop-shift: 0.3rem;
+}
+
+.floatLeaving {
+  composes: popoverLeaving from '../../../../components/popoverMotion.module.css';
+}
+
+/* The grip is the whole bar bar the cross: a drag can start anywhere along it. */
+.floatBar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  padding-left: 0.25rem;
+}
+
+.grip {
+  flex: 1 1 auto;
+  border-radius: 8px;
+  cursor: grab;
+  /* A finger on the grip is a drag, not a scroll of the page behind it, and not a selection. */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.floatCard[data-dragging] .grip,
+.floatPos[data-dragging] .grip {
+  cursor: grabbing;
+}
+
+.floatBody {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0 0.625rem 0.625rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.floatBody > * {
   margin-top: 0;
 }
 
