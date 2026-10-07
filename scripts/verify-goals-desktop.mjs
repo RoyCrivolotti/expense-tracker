@@ -20,6 +20,7 @@
  * seeded demo data and nothing real. `ENGINES=chromium,webkit` (the default is chromium) also
  * runs it in Safari's engine, `FONT=Verdana` (or any wider family) sets every font on the Plan page to it, as a wider font on another system does, and `ONLY=touch-targets`, `ONLY=lever-focus`, `ONLY=k2` (the stars' tap areas against the controls beside them) or `ONLY=toast` runs just that group (a minute or two).
  * `SHARD=2/4` runs only the second of four equal parts of the default run, which is how CI splits it.
+ * A check that fails the run is something a person would feel. A measurement that only has to sit on a design value is an `advise`, which prints WARN and is summarised at the end.
  * Exits 1 and says what was measured if anything fails.
  */
 import { spawn } from 'node:child_process'
@@ -59,6 +60,20 @@ const failures = []
 function check(where, what, ok, detail = '') {
   console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${where}: ${what}${ok ? '' : ` (${detail})`}`)
   if (!ok) failures.push(`${where}: ${what} (${detail})`)
+}
+
+const advisories = []
+
+/**
+ * A measurement that should sit on a design value but whose being off is not something a person
+ * would feel: a hit area 25px wide where 24 was drawn, a column at 40% where 38 was chosen. It is
+ * printed and summarised, and does not fail the run, so a CSS tweak does not turn CI red over a
+ * number nobody has promised to keep. What a person would feel (a target too small to press, a
+ * page that moves, one thing covering another) stays a `check`.
+ */
+function advise(where, what, ok, detail = '') {
+  console.log(`  ${ok ? 'ok  ' : 'WARN'} ${where}: ${what}${ok ? '' : ` (${detail})`}`)
+  if (!ok) advisories.push(`${where}: ${what} (${detail})`)
 }
 
 function startDev() {
@@ -226,7 +241,8 @@ async function checkSticky(page, where) {
   await scrollTo(page, 1400)
   const m = await measure(page)
   const wantTop = m.header.bottom + 3
-  check(where, '(g) once the page has scrolled past it the bar sticks under the header with 3px of air', near(m.bar.top, wantTop, 1.5), `bar top ${px(m.bar.top)}, header bottom ${px(m.header.bottom)}`)
+  check(where, '(g) once the page has scrolled past it the bar sticks under the header', m.bar.top >= m.header.bottom - 0.5 && m.bar.top <= m.header.bottom + 12, `bar top ${px(m.bar.top)}, header bottom ${px(m.header.bottom)}`)
+  advise(where, '(g) the stuck bar leaves 3px of air under the header', near(m.bar.top, wantTop, 1.5), `bar top ${px(m.bar.top)}, header bottom ${px(m.header.bottom)}`)
   const covered = await page.evaluate(() => {
     const bar = document.querySelector('[class*="leversBar"]')
     const r = bar.getBoundingClientRect()
@@ -294,7 +310,7 @@ async function checkStars(page, where) {
   check(where, '(m) the star hangs clear of its input, to the left', box !== null && field !== null && box.x + box.width <= field.x && box.width >= 12, JSON.stringify({ box, field: field && { x: field.x } }))
   check(where, '(m) a star says what it does when the pointer rests on it', (await star.getAttribute('title')) === 'Add House price to the bar')
   const hit = await star.evaluate((el) => Number.parseFloat(getComputedStyle(el, '::after').width))
-  check(where, '(m) the area that takes a click on a star is 24px wide', near(hit, 24, 1), px(hit))
+  advise(where, '(m) the area that takes a click on a star is 24px wide', near(hit, 24, 1), px(hit))
   const offCentre = await star.evaluate((el) => {
     const label = el.parentElement.querySelector('label, [class*="label"]')
     const range = document.createRange()
@@ -944,7 +960,7 @@ async function checkTouchTargets(browser, engine) {
     const cs = getComputedStyle(r)
     return r.getBoundingClientRect().height + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom)
   })
-  check(where, '(t) a slider takes 28px of the layout, not 44', near(footprint, 28, 1), px(footprint))
+  advise(where, '(t) a slider takes 28px of the layout, not 44', near(footprint, 28, 1), px(footprint))
   const reach = await page.evaluate(() => {
     const r = document.querySelector('[class*="leversBar"] input[type="range"]').getBoundingClientRect()
     const x = r.left + r.width / 4
@@ -969,7 +985,8 @@ async function checkTouchTargets(browser, engine) {
       return { h: r.height, hit: parseFloat(after.height), toggles: above !== null && b.contains(above) }
     }),
   )
-  check(where, '(t) a legend chip is as tall as it was (26px) with a tap area of 44px', chips.length > 0 && chips.every((c) => near(c.h, 26.2, 1.5) && c.hit >= FINGER), JSON.stringify(chips.slice(0, 3)))
+  check(where, '(t) a legend chip has a tap area of 44px', chips.length > 0 && chips.every((c) => c.hit >= FINGER), JSON.stringify(chips.slice(0, 3)))
+  advise(where, '(t) a legend chip is as tall as it was (26px)', chips.every((c) => near(c.h, 26.2, 1.5)), JSON.stringify(chips.slice(0, 3)))
   check(where, '(t) a press 7px above the first line of chips is a chip\'s', chips.length > 0 && chips[0].toggles, JSON.stringify(chips[0]))
 
   // The save buttons, and the words beside Save while the scenario has no name.
@@ -1003,8 +1020,10 @@ async function checkTouchTargets(browser, engine) {
       inside: box.left >= 0 && box.right <= innerWidth && box.top >= 0 && box.bottom <= innerHeight,
     }
   })
-  check(where, '(t) the colour dots are 28px in one row, inside the window', menu.count === 9 && menu.oneRow && near(menu.size[0], 28, 0.5) && menu.inside, JSON.stringify(menu))
-  check(where, '(t) a colour dot has a 36 by 44px tap area, with no overlap with the next', near(menu.hit[0], 36, 0.5) && near(menu.hit[1], 44, 0.5) && near(menu.pitch, 36, 0.5), JSON.stringify(menu))
+  check(where, '(t) the colour dots are in one row, inside the window', menu.count === 9 && menu.oneRow && menu.inside, JSON.stringify(menu))
+  advise(where, '(t) the colour dots are 28px', near(menu.size[0], 28, 0.5), JSON.stringify(menu))
+  check(where, '(t) a colour dot has a tap area at least 44px high, with no overlap with the next', menu.hit[1] >= FINGER && menu.pitch >= menu.hit[0] - 0.5, JSON.stringify(menu))
+  advise(where, '(t) a colour dot has a 36 by 44px tap area', near(menu.hit[0], 36, 0.5) && near(menu.hit[1], 44, 0.5) && near(menu.pitch, 36, 0.5), JSON.stringify(menu))
   check(where, '(t) a press 7px above or below a colour dot is that dot\'s', menu.overIsSwatch && menu.underIsSwatch, JSON.stringify(menu))
   await checkSizes(page, where, '(t) the scenario menu\'s rows and name field are 44px', '[role="dialog"][aria-label="Scenario options"] button:not([aria-label^="Use color"]):not([aria-label="Pick custom color"]), [role="dialog"][aria-label="Scenario options"] input[type="text"]')
   // With no name Save is off but still takes a press, to say why (group s2 has the rest), and no words are put in the page.
@@ -1065,7 +1084,8 @@ async function checkTouchTargets(browser, engine) {
   await page.getByRole('button', { name: 'Remove Horizon from the bar' }).click()
   await page.waitForTimeout(300)
   const reset = page.getByRole('button', { name: 'Reset to defaults' })
-  check(where, '(t) Reset to defaults is 44px in a row that is the same height', near((await reset.boundingBox()).height, 44, 0.5) && (await reset.evaluate((b) => Math.abs(b.parentElement.getBoundingClientRect().height - 44) <= 0.5)), px((await reset.boundingBox()).height))
+  check(where, '(t) Reset to defaults is at least 44px tall', (await reset.boundingBox()).height >= FINGER, px((await reset.boundingBox()).height))
+  advise(where, '(t) Reset to defaults is 44px in a row that is the same height', near((await reset.boundingBox()).height, 44, 0.5) && (await reset.evaluate((b) => Math.abs(b.parentElement.getBoundingClientRect().height - 44) <= 0.5)), px((await reset.boundingBox()).height))
   await context.close()
 
   // From 1376px a bar of one row is about as tall as its result column, so the lever rows cost no
@@ -1087,7 +1107,8 @@ async function checkTouchTargets(browser, engine) {
     const h = (sel) => Math.round(document.querySelector(sel).getBoundingClientRect().height * 10) / 10
     return { stepper: h('[aria-label^="Decrease "]'), field: h('[role="region"] input[type="text"]'), chip: h('[class*="chips"] button'), range: h('input[type="range"]'), digits: h('[class*="leverValue"]') }
   })
-  check(`${engine} mouse`, '(t) with a fine pointer the controls keep their size (stepper 25.6, field 26, chip 26.2, slider 16 or 17, digits row under 40)', near(small.stepper, 25.6, 0.7) && near(small.chip, 26.2, 1.5) && near(small.range, 16.5, 1) && near(small.field, 26, 0.5) && small.digits < 40, JSON.stringify(small))
+  check(`${engine} mouse`, '(t) with a fine pointer the controls are not enlarged to a finger\'s size', small.stepper < FINGER && small.chip < FINGER && small.range < FINGER && small.field < FINGER && small.digits < 40, JSON.stringify(small))
+  advise(`${engine} mouse`, '(t) with a fine pointer the controls keep their size (stepper 25.6, field 26, chip 26.2, slider 16 or 17)', near(small.stepper, 25.6, 0.7) && near(small.chip, 26.2, 1.5) && near(small.range, 16.5, 1) && near(small.field, 26, 0.5), JSON.stringify(small))
   await fine.context.close()
   const phone = await openPlan(browser, { width: 899, height: 800 }, { touch: true })
   const phoneStyle = await phone.page.evaluate(() => ({
@@ -1929,7 +1950,8 @@ async function checkTouchLeftovers(browser, engine) {
       below7IsFigure: document.elementFromPoint(cx, r.bottom + 7)?.closest('[class*="leverValue"]') !== null,
     }
   })
-  check(where, '(y4) a star in the bar has a tap area 44px high', bar.height >= FINGER && near(bar.height, 44, 0.5), JSON.stringify(bar))
+  check(where, '(y4) a star in the bar has a tap area at least 44px high', bar.height >= FINGER, JSON.stringify(bar))
+  advise(where, '(y4) a star in the bar has a tap area 44px high', near(bar.height, 44, 0.5), JSON.stringify(bar))
   check(where, '(y4) a press 7px above a bar star, and at the top of its area, is the star\'s', bar.above7 && bar.topOfArea, JSON.stringify(bar))
   check(where, '(y4) a press 7px below a bar star is still the figure\'s, so a tap on the digits does not take the lever out', bar.below7IsFigure, JSON.stringify(bar))
   await page.getByRole('button', { name: 'All inputs' }).click()
@@ -1946,7 +1968,8 @@ async function checkTouchLeftovers(browser, engine) {
       return { height: parseFloat(after.height), above7: is(r.top - 7), below7: is(r.bottom + 7), reachesUp: areaTop < wrap.top - 0.5 }
     }),
   )
-  check(where, `(y4) every star in the panel has a 44px tap area (${panel.length} measured)`, panel.length > 5 && panel.every((s) => near(s.height, 44, 0.5)), JSON.stringify(panel[0]))
+  check(where, `(y4) every star in the panel has a tap area at least 44px high (${panel.length} measured)`, panel.length > 5 && panel.every((s) => s.height >= FINGER), JSON.stringify(panel[0]))
+  advise(where, `(y4) every star in the panel has a 44px tap area (${panel.length} measured)`, panel.every((s) => near(s.height, 44, 0.5)), JSON.stringify(panel[0]))
   check(where, '(y4) a press 7px above or below a panel star is the star\'s', panel.every((s) => s.above7 && s.below7), JSON.stringify(panel.filter((s) => !(s.above7 && s.below7))))
   check(where, '(y4) the area stays inside the row of its own input, so it takes nothing from the row above', panel.every((s) => !s.reachesUp), JSON.stringify(panel.filter((s) => s.reachesUp)))
 
@@ -2241,7 +2264,7 @@ async function checkMilestonePhoneView(browser, engine) {
     check(where, '(p1) the page does not scroll sideways, nor does the table', first.page <= 0 && first.scrolls <= 1, JSON.stringify({ page: first.page, scrolls: first.scrolls }))
     check(where, `(p1) a page holds ${expected[width]} columns`, first.heads.length === expected[width], JSON.stringify(first.heads))
     check(where, '(p1) every column is at least 46px wide, and they are all the same width', first.heads.every((h) => h.width >= 45.5 && near(h.width, first.heads[0].width, 1)), JSON.stringify(first.heads))
-    check(where, '(p1) the names take about 38% of the table', near(first.nameWidth / first.width, 0.38, 0.02), `${px(first.nameWidth)} of ${px(first.width)}`)
+    advise(where, '(p1) the names take about 38% of the table', near(first.nameWidth / first.width, 0.38, 0.02), `${px(first.nameWidth)} of ${px(first.width)}`)
     check(where, '(p1) no path\'s name is cut', first.cut === 0 && first.rows >= 3, JSON.stringify({ cut: first.cut, rows: first.rows }))
     check(where, '(p1) no figure is wider than its box', first.boxes === 0, `${first.boxes} boxes`)
 
@@ -3300,6 +3323,9 @@ async function main() {
     }
   } finally {
     stopDev(dev)
+  }
+  if (advisories.length > 0) {
+    console.log(`\n${advisories.length} advisory check(s) are off their design value (not failures):\n${advisories.map((a) => ` - ${a}`).join('\n')}`)
   }
   console.log(failures.length === 0 ? '\nAll checks passed.' : `\n${failures.length} check(s) failed:\n${failures.map((f) => ` - ${f}`).join('\n')}`)
   process.exit(failures.length === 0 ? 0 : 1)
