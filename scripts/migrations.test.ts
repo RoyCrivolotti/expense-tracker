@@ -6,10 +6,13 @@ import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { describe, expect, it } from 'vitest'
 import {
+  assess,
   backfillsBelowHighestApplied,
+  isMissingTable,
+  parseArgs,
   selectPendingMigrations,
   stemOf,
-} from './migrate-dev.mjs'
+} from './migrate.mjs'
 
 const MIGRATIONS = join(import.meta.dirname, '..', 'migrations')
 
@@ -147,5 +150,93 @@ describe('migration safety', () => {
       | { owner: string }
       | undefined
     expect(row?.owner).toBe('owner@example.com')
+  })
+})
+
+describe('assessing a database', () => {
+  const files = migrationFiles()
+  const never = () => {
+    throw new Error('asked whether the database has tables, which only an empty record needs')
+  }
+  const assessWith = (applied: string[], tables: () => boolean = never) =>
+    assess({ database: 'db', files, applied, hasApplicationTables: tables })
+
+  it('is current when every file is recorded', () => {
+    expect(assessWith(files.map(stemOf))).toEqual({ state: 'current', pending: [] })
+  })
+
+  it('is pending, naming the files, when the newest one is not recorded yet', () => {
+    const result = assessWith(files.slice(0, -1).map(stemOf))
+
+    expect(result).toEqual({ state: 'pending', pending: [files[files.length - 1]] })
+  })
+
+  it('is pending for everything on a fresh database', () => {
+    const result = assessWith([], () => false)
+
+    expect(result.state).toBe('pending')
+    expect(result.pending).toEqual(files)
+  })
+
+  it('does not trust a record with a hole below its highest entry', () => {
+    const result = assessWith(['0020_migrations_table'])
+
+    expect(result.state).toBe('untrusted')
+    expect(result.problem).toMatch(/earlier file\(s\) are unrecorded, starting with 0001_init\.sql/)
+  })
+
+  it('does not trust an empty record on a database that already has tables', () => {
+    const result = assessWith([], () => true)
+
+    expect(result.state).toBe('untrusted')
+    expect(result.problem).toMatch(/existing database with an unseeded record/)
+  })
+
+  it('names the database it is talking about', () => {
+    const result = assess({ database: 'roy-expenses', files, applied: ['0020_migrations_table'], hasApplicationTables: never })
+
+    expect(result.problem).toMatch(/^roy-expenses records 1 migration/)
+  })
+})
+
+describe('the command line', () => {
+  it('reads a database as a check, and --apply as an apply', () => {
+    expect(parseArgs(['roy-expenses'])).toEqual({ database: 'roy-expenses', apply: false })
+    expect(parseArgs(['roy-expenses', '--apply'])).toEqual({ database: 'roy-expenses', apply: true })
+    expect(parseArgs(['--apply', 'roy-expenses'])).toEqual({ database: 'roy-expenses', apply: true })
+  })
+
+  it.each([[[]], [['--apply']], [['a', 'b']], [['a', '--aply']], [['a', '--force']]])(
+    'refuses %j with the usage line, so a typo cannot flip a check into an apply',
+    (argv) => {
+      expect(() => parseArgs(argv)).toThrow(/^Usage: node scripts\/migrate\.mjs <database> \[--apply\]$/)
+    },
+  )
+})
+
+describe('telling a missing table from a database it could not reach', () => {
+  // Wrangler puts D1's message in the JSON it prints on stdout, not in error.message.
+  const wranglerSaid = (text: string) =>
+    Object.assign(new Error('Command failed: npx wrangler d1 execute'), {
+      stdout: JSON.stringify({ error: { text } }),
+      stderr: '',
+    })
+
+  it('recognises D1 saying the table is not there', () => {
+    expect(isMissingTable(wranglerSaid('no such table: _migrations: SQLITE_ERROR [code: 7500]'))).toBe(true)
+  })
+
+  it('does not take a network failure for a database with no record', () => {
+    const failure = Object.assign(new TypeError('fetch failed'), { stdout: '', stderr: 'fetch failed' })
+
+    expect(isMissingTable(failure)).toBe(false)
+  })
+
+  it('does not take an authentication failure for one either', () => {
+    expect(isMissingTable(wranglerSaid('Authentication error [code: 10000]'))).toBe(false)
+  })
+
+  it('copes with nothing to inspect', () => {
+    expect(isMissingTable(undefined)).toBe(false)
   })
 })

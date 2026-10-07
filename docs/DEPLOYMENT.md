@@ -88,7 +88,12 @@ npx wrangler d1 execute roy-expenses --remote --file=migrations/NNNN_name.sql
 npx wrangler d1 execute roy-expenses --remote --command="INSERT OR IGNORE INTO _migrations (name) VALUES ('NNNN_name')"
 ```
 
-Apply through `0031_contribution_schedule.sql` on production, and record each file in `_migrations` as you go, by its name without `.sql`. `npm run migrate:dev` records for the dev database itself; nothing does for production. The app never reads the table, so a missing row breaks nothing until someone trusts the record, which is how the drift described below happened.
+`npm run migrate -- <database>` does the same with the checks below built in, and writes nothing unless
+given `--apply`. It exits 0 when the database is up to date, 1 when migrations are pending, and 2 when
+it cannot trust what it sees (a hole in the record, an unseeded database, or a database it could not
+read), so a caller that must not ship code ahead of its schema can stop on anything but 0.
+
+Apply through `0031_contribution_schedule.sql` on production, and record each file in `_migrations` as you go, by its name without `.sql`. `npm run migrate:dev` records for the dev database itself, and `npm run migrate -- roy-expenses --apply` does for production. The app never reads the table, so a missing row breaks nothing until someone trusts the record, which is how the drift described below happened.
 
 **Check what a database actually has before trusting this line.** It has been wrong: on
 2026-09-15 production turned out to have no `_migrations` table at all, `0020` never having
@@ -108,6 +113,22 @@ and before trusting `_migrations` for anything: the record has been wrong twice,
 and `goal_scenarios.life_events` absent on 2026-09-22 (scenario saves failed), and `0026` recorded and
 `settings.investment_category_id` absent, found on 2026-10-03. It compares column names only, not types,
 defaults or indexes.
+
+### Writing a migration
+
+`scripts/lint-migrations.mjs` runs in the test suite on every migration numbered above 31, so these fail
+the PR before it can merge:
+
+- **Name and number:** `NNNN_lower_snake_case.sql`, numbered upwards with none missing or repeated. Two PRs
+  that each add the next number collide here, on whichever merges second.
+- **Nothing the running code may still read goes away.** `DROP TABLE`, `DROP COLUMN` and `RENAME` need a
+  `-- lint-allow: destructive <why it is safe>` comment above them. The old code keeps serving while a
+  migration runs, so ship the code that stops using a column first, then drop it in a later release.
+- **Backfills are scoped.** An `UPDATE` or `DELETE` with no `WHERE` needs
+  `-- lint-allow: unscoped <why every row is meant>`.
+- **`IF NOT EXISTS`** on every `CREATE TABLE` and `CREATE INDEX`.
+
+The reason after `lint-allow:` is required, so the decision is written down where a reviewer sees it.
 
 ### Migration tracking (read before re-running anything)
 

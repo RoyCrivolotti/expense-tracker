@@ -12,8 +12,8 @@
     "moduleDetection": "force",
     "noEmit": true,
     "strict": true,
-    // scripts/migrations.test.ts imports the pure selection helpers straight from
-    // migrate-dev.mjs so the test exercises the real implementation rather than a copy.
+    // The migration tests import the pure helpers straight from migrate.mjs and
+    // lint-migrations.mjs so they exercise the real implementation rather than a copy.
     // Their types come from JSDoc on those exports.
     "allowJs": true
   },
@@ -22,6 +22,7 @@
     "vite.docsCapture.ts",
     "vitest.config.ts",
     "scripts/**/*.ts",
-    "scripts/migrate-dev.mjs"
+    "scripts/migrate.mjs",
+    "scripts/lint-migrations.mjs"
   ]
 }
