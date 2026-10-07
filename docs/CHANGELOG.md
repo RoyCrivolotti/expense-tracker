@@ -32,16 +32,6 @@ single line. The confirmation names the new description ("Renamed 14 transaction
 - **A re-baseline carries the changes.** It restarts from the amount in force at the check-in and
   keeps only the changes still to come, on their own months.
 
-## October 2026 (Goals: scenarios from today)
-
-- **Compare every scenario from today's balance.** A new switch with the scenarios on the Goals
-  plan, "Start from: As saved | My balance today", redraws every scenario, and the one being
-  edited, as if it had started from your latest check-in. Scenarios written before a windfall or a
-  long stretch of saving no longer start from a balance you left behind, so they can be compared
-  with each other and with where you are. It is a way of looking, not a change: nothing is saved
-  and switching back restores the originals. A what-if that buys the house at year 0 keeps its own
-  start and is tagged "own start".
-
 ## October 2026 (the Analytics redesign)
 
 Analytics was the workbook, ported: four wide tables and three small charts that reported numbers

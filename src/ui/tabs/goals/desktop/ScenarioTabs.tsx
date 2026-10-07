@@ -11,14 +11,12 @@ interface TabProps {
   active: boolean
   /** Has edits that are not saved; only the tab of the open scenario says so. */
   edited: boolean
-  /** Starts from its own balance while the scenarios are looked at from the latest check-in. */
-  ownStart: boolean
   tabIndex: number
   onClick: () => void
 }
 
 /** Forwards its button so focus can be put back on the open scenario's tab. */
-const Tab = forwardRef<HTMLButtonElement, TabProps>(function Tab({ scenario, label, active, edited, ownStart, tabIndex, onClick }, ref) {
+const Tab = forwardRef<HTMLButtonElement, TabProps>(function Tab({ scenario, label, active, edited, tabIndex, onClick }, ref) {
   return (
     <button
       ref={ref}
@@ -45,14 +43,6 @@ const Tab = forwardRef<HTMLButtonElement, TabProps>(function Tab({ scenario, lab
           </span>
         </>
       ) : null}
-      {ownStart ? (
-        <>
-          {' '}
-          <span className={styles.tabOwnStart} title="Keeps its own starting balance while the others start from your balance today">
-            own start
-          </span>
-        </>
-      ) : null}
       {edited ? (
         <>
           {' '}
@@ -73,23 +63,13 @@ interface ScenarioTabsProps {
   draftName: string
   /** Show the detached draft as a tab: it is what is being edited, or all there is to edit. */
   showDraft: boolean
-  /** The scenarios that keep their own start while the others are looked at from the latest check-in. */
-  ownStartIds?: ReadonlySet<number>
   onSelect: (scenario: GoalScenario) => void
   onSelectDraft: () => void
 }
 
-const NO_IDS: ReadonlySet<number> = new Set()
-
-/** The scenario's name, or what it is being renamed to while it is open and the box has one. */
-function tabLabel(scenario: GoalScenario | null, active: boolean, draftName: string): string {
-  if (!scenario) return 'Unsaved draft'
-  return active && draftName.trim() ? draftName : scenario.name
-}
-
 /** One tab per scenario. The ref is the open scenario's tab. */
 export const ScenarioTabs = forwardRef<HTMLButtonElement, ScenarioTabsProps>(function ScenarioTabs(
-  { scenarios, activeId, dirty, draftName, showDraft, ownStartIds = NO_IDS, onSelect, onSelectDraft },
+  { scenarios, activeId, dirty, draftName, showDraft, onSelect, onSelectDraft },
   activeTab,
 ) {
   const group = useRef<HTMLDivElement>(null)
@@ -114,10 +94,9 @@ export const ScenarioTabs = forwardRef<HTMLButtonElement, ScenarioTabsProps>(fun
             key={scenario?.id ?? 'draft'}
             ref={active ? activeTab : null}
             scenario={scenario}
-            label={tabLabel(scenario, active, draftName)}
+            label={scenario ? (active && draftName.trim() ? draftName : scenario.name) : 'Unsaved draft'}
             active={active}
             edited={scenario !== null && active && dirty}
-            ownStart={scenario !== null && ownStartIds.has(scenario.id)}
             tabIndex={i === keys.stop ? 0 : -1}
             onClick={() => (scenario ? onSelect(scenario) : onSelectDraft())}
           />
