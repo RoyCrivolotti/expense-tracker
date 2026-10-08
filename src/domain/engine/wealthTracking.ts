@@ -5,12 +5,11 @@
  *   - The projected invested-portfolio value at any calendar date.
  *   - An on/off-track status: delta in € and the months it is along the plan's line.
  */
+import { dateAtYears, yearsBetween } from './dates'
 import { planDistance } from './planDistance'
 import { projectNetWorth } from './projection'
 import { scenarioToParams } from './scenarioProjection'
 import type { GoalScenario, Milestone, WealthAccount, WealthCheckin } from '../types'
-
-const MS_PER_YEAR = 365.25 * 24 * 60 * 60 * 1000
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -36,22 +35,20 @@ export interface TrackStatus {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
- * Parse a YYYY-MM-DD string into a fractional year offset from planStartDate.
- * Returns null if either date is missing or malformed.
+ * The years from the plan start to a date, counted on the calendar: a whole number on each
+ * anniversary, which is where the plan's yearly points and its steps are. Null if either date is
+ * missing or malformed.
  */
 export function yearOffsetFromDate(planStartDate: string, targetDate: string): number | null {
   if (!planStartDate?.match(/^\d{4}-\d{2}-\d{2}$/) || !targetDate?.match(/^\d{4}-\d{2}-\d{2}$/)) {
     return null
   }
-  const start = new Date(planStartDate).getTime()
-  const target = new Date(targetDate).getTime()
-  const offset = (target - start) / MS_PER_YEAR
-  return offset
+  return yearsBetween(planStartDate, targetDate)
 }
 
 /** The date a fractional year offset from the plan start falls on, counted as `yearOffsetFromDate` counts. */
 export function dateAtOffset(planStartDate: string, offsetYears: number): string {
-  return new Date(new Date(planStartDate).getTime() + offsetYears * MS_PER_YEAR).toISOString().slice(0, 10)
+  return dateAtYears(planStartDate, offsetYears)
 }
 
 /**
