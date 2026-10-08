@@ -49,6 +49,17 @@ describe('the sections of the controls', () => {
     expect(container.querySelectorAll('input')).toHaveLength(0)
   })
 
+  it('says what return to expect beside the real return, and keeps saying it when the return is in the bar', () => {
+    const { rerender } = render(<PortfolioFields draft={makeDraft()} onChange={vi.fn()} />)
+    expect(screen.getByText(/Real return: about 5% a year after inflation/)).toBeInTheDocument()
+    expect(screen.getByText(/6 to 7% is optimistic/)).toBeInTheDocument()
+
+    // Said nowhere else, so it does not leave with the input.
+    rerender(<PortfolioFields draft={makeDraft()} onChange={vi.fn()} omit={everything(['expectedRealReturn'])} />)
+    expect(screen.queryByLabelText(LEVER_SPECS.expectedRealReturn.label)).not.toBeInTheDocument()
+    expect(screen.getByText(/Real return: about 5% a year after inflation/)).toBeInTheDocument()
+  })
+
   it('still says what the purchase takes from the portfolio when its year is in the bar', () => {
     // It is worked out from the draft and is said nowhere else, so it does not leave with the year.
     render(<HousingFields draft={makeDraft()} onChange={vi.fn()} omit={everything(['housePurchaseYear'])} />)

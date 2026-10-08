@@ -106,6 +106,18 @@ describe('AllInputsPanel explanations of what is in the bar', () => {
     expect(screen.getByText(/Purchase cost from portfolio/)).toBeInTheDocument()
   })
 
+  it('keeps what return to expect when every portfolio input, the return among them, is in the bar', () => {
+    // The default five put all four portfolio inputs in the bar, so this is the layout a new plan opens in.
+    renderPanel(true, makeStarred(SECTION_KEYS.portfolio))
+    expect(screen.queryByLabelText('Real return (%/yr, after inflation)')).not.toBeInTheDocument()
+    expect(screen.getByText(/about 5% a year after inflation is what world stocks have returned/)).toBeInTheDocument()
+  })
+
+  it('says it once when the return is left in the panel', () => {
+    renderPanel(true, makeStarred([]))
+    expect(screen.getAllByText(/about 5% a year after inflation is what world stocks have returned/)).toHaveLength(1)
+  })
+
   it('keeps the note on the two rates while either is on the page, and drops it when neither is', () => {
     const { view } = renderPanel(true, makeStarred(['houseAppreciationRate']))
     expect(screen.getByText(RATES_NOTE)).toBeInTheDocument()

@@ -14,6 +14,7 @@ import {
   FireFields,
   HousingFields,
   PortfolioFields,
+  ReturnNote,
   TrackingFields,
 } from '../goalControlSections'
 import { SECTION_KEYS } from '../leverFields'
@@ -49,14 +50,14 @@ function hasInputs(keys: readonly LeverKey[], omit: ReadonlySet<LeverKey>): bool
 /**
  * The portfolio's column: what is left of its inputs, and the start date and the re-baseline under
  * them, since they set where the starting balance is from. With every input in the bar it is the
- * plan start's column alone.
+ * plan start's column alone, which still carries the note on what return to expect.
  */
 function PortfolioColumn({ draft, latest, onChange, omit, wrap }: ColumnProps) {
   const labels = ADJUST_LABELS
   const inputs = hasInputs(SECTION_KEYS.portfolio, omit)
   return (
     <Column title={inputs ? labels.portfolio.title : labels.tracking.title}>
-      {inputs ? <PortfolioFields draft={draft} onChange={onChange} omit={omit} wrap={wrap} /> : null}
+      {inputs ? <PortfolioFields draft={draft} onChange={onChange} omit={omit} wrap={wrap} /> : <ReturnNote />}
       {inputs ? <h3 className={styles.columnTitle}>{labels.tracking.title}</h3> : null}
       <TrackingFields draft={draft} latest={latest} onChange={onChange} />
     </Column>
