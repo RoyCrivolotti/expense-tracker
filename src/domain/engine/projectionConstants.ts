@@ -1,6 +1,6 @@
 /** Generic engine defaults for the public repo (no personal figures). */
 
-export const DEFAULT_REAL_RETURN = 0.07
+export const DEFAULT_REAL_RETURN = 0.05
 /**
  * What the assumed-inflation setting reads as until the owner sets one: 2%, about the ECB's
  * target. It is a default, not an assumption of its own: every calculation takes the rate as

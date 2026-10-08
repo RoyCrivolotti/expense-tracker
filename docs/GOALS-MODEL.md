@@ -50,9 +50,10 @@ A made-up plan is used wherever an example is needed (`src/testing/samplePlan.ts
 
 ## Return and contributions
 
-| Parameter | Default (demo) |
+| Parameter | Default |
 | --- | --- |
-| Real return | 7% / year |
+| Real return, a new plan | 5% / year (`DEFAULT_REAL_RETURN`), about what world stocks returned over the very long run after inflation; an existing plan keeps its own |
+| Real return, the demo scenarios | 7% / year |
 | Net retention (salary model) | 65% of gross — **engine helper only** (`annualSavingsFromCashflow`); charts use explicit `monthlyContributionCents` |
 
 The monthly amount is what the scenario starts with, `monthlyContributionCents`, and stays that until a change from a date says otherwise (below). There is no yearly raise: a rise is a dated change, which says the month and the amount.
