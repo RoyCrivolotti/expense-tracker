@@ -35,6 +35,7 @@ import { computeChartDisplayData } from './nominalTransform'
 import { pointSeriesValueAt } from './checkinChartUtils'
 import { scenarioInk } from '../scenarioInk'
 import { ChartKeys, type ChartKeyMarks } from './ChartKeys'
+import { BreakdownSlot } from './ScenarioSeriesLegend'
 import { NO_HIDDEN, useChartLegendState, withFromToday, type ScenarioLine } from './heroLegendState'
 import { usePublishHeroLegend, type HeroLegendStore } from './heroLegendStore'
 
@@ -115,6 +116,8 @@ function floatSideFor(activeIndex: number | null, pointCount: number): 'start' |
   return activeIndex != null && activeIndex > (pointCount - 1) / 2 ? 'start' : 'end'
 }
 
+const NO_BREAKDOWNS: ScenarioLegendBreakdown[] = []
+
 /** What the line under the chart says where the scenarios' chips are above it, not under it. */
 const CHIPS_ABOVE_HINT = 'The values in the chips above are for the last year, or for the year you point at.'
 
@@ -154,8 +157,8 @@ function PortfolioLegend({
         items={chipsAbove ? legendItems.filter((item) => item.dotted) : legendItems}
         {...(chipsAbove ? { chipsAbove: true, hint: CHIPS_ABOVE_HINT } : {})}
         activeYear={activeYear}
-        breakdowns={breakdowns}
-        yearZeroHint={yearZeroHint}
+        breakdowns={chipsAbove ? NO_BREAKDOWNS : breakdowns}
+        yearZeroHint={chipsAbove ? false : yearZeroHint}
         breakdownInTodaysMoney={breakdownInTodaysMoney}
         onToggle={onToggle}
         listRef={listRef}
@@ -170,8 +173,9 @@ function PortfolioLegend({
 /** Pixels: tall enough on a desktop to read thirty years, short enough on a phone to fit above the fold. */
 function heroHeight(narrow: boolean): number {
   // A wide screen gives the chart the page's width, and a plot that wide needs the height to
-  // stay a chart and not a ribbon.
-  return narrow ? 210 : 330
+  // stay a chart and not a ribbon. The open scenario's chip is as tall as its tags make it, and the
+  // levers bar held at the bottom of a 1280x800 screen still has to clear the legend under the chart.
+  return narrow ? 210 : 316
 }
 
 /** The hero's window buttons: which years of the projection are drawn. */
@@ -443,6 +447,31 @@ function HeroNote({ draft, isHero, narrow }: { draft: NewGoalScenario; isHero: b
   )
 }
 
+interface HeroFootnoteProps {
+  draft: NewGoalScenario
+  isHero: boolean
+  narrow: boolean
+  chipsAbove: boolean
+  breakdowns: ScenarioLegendBreakdown[]
+  yearZeroHint: boolean
+  breakdownInTodaysMoney: boolean
+  reserve: boolean
+}
+
+/**
+ * Under the wide hero: the note on what the marks mean. With the scenarios' chips above the chart
+ * the purchase breakdown has no legend to float over, so it takes the note's place, in a slot as
+ * tall as it, while a purchase year is pointed at.
+ */
+function HeroFootnote({ chipsAbove, breakdowns, yearZeroHint, breakdownInTodaysMoney, reserve, ...note }: HeroFootnoteProps) {
+  if (!chipsAbove || !note.isHero || note.narrow) return <HeroNote {...note} />
+  return (
+    <BreakdownSlot breakdowns={breakdowns} yearZeroHint={yearZeroHint} breakdownInTodaysMoney={breakdownInTodaysMoney} reserve={reserve}>
+      <HeroNote {...note} />
+    </BreakdownSlot>
+  )
+}
+
 function NetWorthChartImpl({
   scenarios,
   draft,
@@ -674,7 +703,16 @@ function NetWorthChartImpl({
         listRef={listRef}
       />
       <ChartKeys {...chartKeyMarks(isHero, displayExtraSeries.length, lifeEventMarkers)} />
-      <HeroNote draft={draft} isHero={isHero} narrow={narrow} />
+      <HeroFootnote
+        draft={draft}
+        isHero={isHero}
+        narrow={narrow}
+        chipsAbove={legendStore !== undefined}
+        breakdowns={breakdowns}
+        yearZeroHint={yearZeroHint}
+        breakdownInTodaysMoney={nominalMode}
+        reserve={markerYears.length > 0}
+      />
       <ChartFooter footer={footer} bare={footerBare} />
       {sheet}
     </Card>

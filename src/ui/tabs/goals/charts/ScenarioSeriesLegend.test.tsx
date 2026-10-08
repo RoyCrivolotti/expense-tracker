@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createRef } from 'react'
-import { ScenarioSeriesLegend, type ScenarioLegendBreakdown } from './ScenarioSeriesLegend'
+import { BreakdownSlot, ScenarioSeriesLegend, type ScenarioLegendBreakdown } from './ScenarioSeriesLegend'
 import type { PurchaseYearBreakdown } from '../../../../engine'
 
 const breakdown: PurchaseYearBreakdown = {
@@ -137,3 +137,33 @@ describe('ScenarioSeriesLegend', () => {
     })
   })
 })
+
+describe('BreakdownSlot', () => {
+  const props = { breakdowns: [], yearZeroHint: false, breakdownInTodaysMoney: false, reserve: false }
+
+  it('is what it is given until a purchase year is pointed at, and then the breakdown instead', () => {
+    const { rerender } = render(<BreakdownSlot {...props}>The chart's note</BreakdownSlot>)
+    expect(screen.getByText("The chart's note")).toBeInTheDocument()
+
+    rerender(<BreakdownSlot {...props} breakdowns={[entry('a', 'Path A')]}>The chart's note</BreakdownSlot>)
+    expect(screen.queryByText("The chart's note")).not.toBeInTheDocument()
+    expect(screen.getByText('Path A')).toBeInTheDocument()
+  })
+
+  it('shows the note on a house already owned at year 0 in the same place', () => {
+    render(<BreakdownSlot {...props} yearZeroHint>The chart's note</BreakdownSlot>)
+    expect(screen.getByText(/House already owned/)).toBeInTheDocument()
+  })
+
+  it('keeps room for a breakdown only where a line has a purchase, and a taller one when it says today\'s money', () => {
+    const { container, rerender } = render(<BreakdownSlot {...props}>x</BreakdownSlot>)
+    const classes = () => (container.firstElementChild as HTMLElement).className
+    const plain = classes()
+    rerender(<BreakdownSlot {...props} reserve>x</BreakdownSlot>)
+    const reserved = classes()
+    expect(reserved).not.toBe(plain)
+    rerender(<BreakdownSlot {...props} reserve breakdownInTodaysMoney>x</BreakdownSlot>)
+    expect(classes()).not.toBe(reserved)
+  })
+})
+

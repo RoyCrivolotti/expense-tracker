@@ -102,7 +102,7 @@ function BreakdownRows({
   )
 }
 
-function BreakdownExtras({
+export function BreakdownExtras({
   breakdowns,
   breakdownInTodaysMoney,
   yearZeroHint,
@@ -131,6 +131,45 @@ function BreakdownExtras({
         </p>
       ) : null}
     </>
+  )
+}
+
+interface BreakdownSlotProps {
+  breakdowns: ScenarioLegendBreakdown[]
+  yearZeroHint: boolean
+  breakdownInTodaysMoney: boolean
+  /** Some line buys in a year, so the room for its breakdown is kept whether or not it is showing. */
+  reserve: boolean
+  /** What is there while no breakdown is: the chart's note. */
+  children: ReactNode
+}
+
+function slotClass(reserve: boolean, withNote: boolean): string {
+  if (!reserve) return styles.slot ?? ''
+  return `${styles.slot} ${withNote ? styles.slotReservedNote : styles.slotReserved}`
+}
+
+/**
+ * A place under the chart that is the chart's note until a purchase year is pointed at, and that
+ * year's breakdown while it is. Nothing is covered, and nothing moves when it changes, because the
+ * room is kept when a line has a purchase.
+ */
+export function BreakdownSlot({ breakdowns, yearZeroHint, breakdownInTodaysMoney, reserve, children }: BreakdownSlotProps) {
+  const format = useMoneyFormat()
+  const showing = breakdowns.length > 0 || yearZeroHint
+  return (
+    <div className={slotClass(reserve, breakdownInTodaysMoney)}>
+      {showing ? (
+        <BreakdownExtras
+          breakdowns={breakdowns}
+          breakdownInTodaysMoney={breakdownInTodaysMoney}
+          yearZeroHint={yearZeroHint}
+          format={format}
+        />
+      ) : (
+        children
+      )}
+    </div>
   )
 }
 
