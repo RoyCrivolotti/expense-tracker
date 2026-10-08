@@ -2656,6 +2656,9 @@ async function checkTimelineAt(browser, engine, screen, scheme) {
   await card.scrollIntoViewIfNeeded()
   check(where, '(x) the switch is in the card, with the table showing', (await timelineSwitch(page).isVisible()) && (await timelineSwitch(page).getByRole('radio', { name: 'Table' }).getAttribute('aria-checked')) === 'true')
   const tableHeight = (await card.boundingBox()).height
+  // A cell is read out in the table before the switch, so the table, which stays in the page
+  // hidden, holds a sentence while the timeline is shown: the state a pointer left by chance in CI.
+  await card.getByRole('gridcell', { name: /^Path A.*reaches/ }).first().hover()
   await timelineSwitch(page).getByRole('radio', { name: 'Timeline' }).click()
   await page.waitForTimeout(300)
 
@@ -2711,7 +2714,10 @@ async function checkTimelineAt(browser, engine, screen, scheme) {
   await dot.hover()
   await page.waitForTimeout(150)
   const after = (await card.boundingBox()).height
-  const text = await page.locator('[class*="matrixReadout"]').filter({ hasText: /reaches/ }).first().textContent()
+  // The table is still in the page, hidden, with its own readout and the last sentence a cell
+  // read out. Whether a cell was under the pointer when the page scrolled to this card depends on
+  // where the pointer was, so the readout read here is the one that can be seen: the timeline's.
+  const text = await card.locator('[class*="matrixReadout"]:visible').filter({ hasText: /reaches/ }).first().textContent()
   check(where, '(x) pointing at a dot writes its sentence under the timeline', text === (await dot.getAttribute('aria-label')), text)
   check(where, '(x) reading it does not change the card\'s height', near(before, after, 1), `${px(before)} then ${px(after)}`)
 
