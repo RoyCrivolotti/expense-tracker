@@ -55,7 +55,7 @@ function describe(standing: MilestoneStanding): { mark: string; text: string; to
     case 'late':
       return {
         mark: '→',
-        text: `${standing.monthsLate} months late: ${formatCheckinDate(standing.expected)}, target ${formatCheckinDate(standing.target)}`,
+        text: `${standing.monthsLate} month${standing.monthsLate === 1 ? '' : 's'} late: ${formatCheckinDate(standing.expected)}, target ${formatCheckinDate(standing.target)}`,
         tone: 'bad',
       }
     case 'expected':

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { ReachedMilestones } from './ReachedMilestones'
 import { makeScenario, makeWealthCheckin } from '../../../testing/factories'
-import { planFromToday } from '../../../engine'
+import { DEFAULT_INFLATION_RATE, addDaysIso, milestoneCrossingDate, planFromToday } from '../../../engine'
 
 const milestones = [
   { amountCents: 10_000_000, label: 'House deposit' },
@@ -90,6 +90,29 @@ describe('ReachedMilestones', () => {
     expect(screen.getByText(/^\d+ months late: .*, target .*2026$/)).toBeInTheDocument()
     expect(screen.getByText(/^expected .*20\d\d$/)).toBeInTheDocument()
     expect(screen.getByText(/^not within the horizon, target .*2040$/)).toBeInTheDocument()
+  })
+
+  it('says "1 month late", not "1 months late"', () => {
+    const plan = makeScenario({
+      id: 1,
+      isActive: true,
+      planStartDate: '2026-01-01',
+      startInvestedCents: 9_000_000,
+      monthlyContributionCents: 100_000,
+      expectedRealReturn: 0.05,
+      horizonYears: 10,
+      housePurchaseYear: null,
+    })
+    // A target a month before the date the plan crosses the amount.
+    const crossing = milestoneCrossingDate(plan, 11_000_000, DEFAULT_INFLATION_RATE)!
+    render(
+      <ReachedMilestones
+        milestones={[{ amountCents: 11_000_000, label: 'Soon', targetDate: addDaysIso(crossing, -30) }]}
+        reached={new Map()}
+        plan={plan}
+      />,
+    )
+    expect(screen.getByText(/^1 month late: /)).toBeInTheDocument()
   })
 
   it('says a milestone the plan should have crossed by now is not reached yet', () => {
