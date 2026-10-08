@@ -30,6 +30,24 @@ A re-baseline is not needed to see what being ahead or behind does to the years 
 
 `settings.goalLevers` (`goal_levers`, a JSON array of scenario input names such as `expectedRealReturn`) is the list of inputs the wide Goals page keeps in its bar, in the order shown. Null (never chosen) reads as the five in `DEFAULT_LEVERS`; an empty array is a deliberate empty bar. At most five (`MAX_LEVERS`), no repeats, and only the fourteen numeric inputs in `LEVER_KEYS` (the plan start date and the life events are not dials); the API and the in-memory repository both refuse anything else (`leversError`), and a stored list is read back with unknown names dropped (`parseLevers`). An input in the bar is left out of the "All inputs" panel, and the phone, which has no bar, shows every input as before.
 
+## Money and terms
+
+Every euro the planner shows is in one of two moneys, and each input says which one it is typed in. The sections below rely on these meanings.
+
+| Term | Meaning |
+|---|---|
+| Real money | Euros at the plan's start date, the plan's own ruler. A year passing does not move it; only restarting the plan from a later date does (a re-baseline). |
+| Screen money | Euros on the account on a future date: screen = real x (1 + inflation)^years. |
+| Assumed inflation | One rate for the owner (`settings.assumed_inflation`), used for every conversion, also for years already gone. |
+| Return | A real return, after inflation: the typical yearly growth the plan compounds at. |
+| Typed in real money | Spending at FI, house price, rent, purchase fees, life-event amounts. The plan keeps them constant in real terms, so on the account they rise with prices. |
+| Typed in screen euros | The monthly investing amount and its changes (flat euros as sent, brought back to real money by the engine), the mortgage payment (fixed by the loan), check-in balances. |
+| Invested | The portfolio you invest in, without the house. Milestones and FI are measured against it. |
+| Net worth | Invested plus the house's value minus the loan. |
+| Plan start | `planStartDate`. Its anniversaries carry the house purchase and life events: plan year N is N years after it. |
+
+A made-up plan is used wherever an example is needed (`src/testing/samplePlan.ts`): 50.000 € now, 1.000 € a month, 5% a year after inflation and 2% inflation, started 1 January 2026 over 30 years, a 300.000 € house bought in year 8 (20% down, 6.000 € fees, a 25-year loan at 3%, prices up 3% a year), 1.000 € rent, 30.000 € a year to live on at a 4% withdrawal rate. In it, 30.000 € a year of 2026 prices costs 36.570 € on the account in 2036 (30.000 x 1,02^10).
+
 ## Return and contributions
 
 | Parameter | Default (demo) |
