@@ -631,6 +631,10 @@ async function checkValueTags(page, where, svg) {
     check(where, `(v1) pointing ${name} keeps every value chip inside the chart`, outside.length === 0, JSON.stringify(outside))
     const clashes = m.tags.flatMap((a, i) => m.tags.slice(i + 1).filter((b) => overlap(a, b)).map((b) => `${a.text} / ${b.text}`))
     check(where, `(v1) pointing ${name} leaves no value chip over another`, clashes.length === 0, clashes.join('; '))
+    // The demo has a latest check-in, so the plan has its from-today line: a chip of its own with
+    // a dotted edge, not one more solid chip the same colour as the plan's.
+    const today = await page.evaluate(() => [...document.querySelectorAll('[data-goals-plan-wide] [role="img"] rect')].filter((r) => /valueTagToday/.test(r.getAttribute('class') ?? '')).length)
+    check(where, `(v2) pointing ${name} puts one chip on the plan's dotted from-today line`, today === 1, `${today} chips`)
     if (f > 0.9 && m.dotX !== null) {
       check(where, '(v1) in the last years the chips are on the left of the dots', m.tags.every((t) => t.right <= m.dotX + 4), JSON.stringify({ dotX: m.dotX, rights: m.tags.map((t) => t.right) }))
     }
