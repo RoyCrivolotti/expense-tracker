@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { LeverKey } from '../../../engine'
 import { makeScenario } from '../../../testing/factories'
+import { samplePlan } from '../../../testing/samplePlan'
 import { FireFields, HousingFields, PortfolioFields } from './goalControlSections'
 import { LEVER_SPECS, SECTION_KEYS } from './leverFields'
 
@@ -65,6 +66,26 @@ describe('the sections of the controls', () => {
     render(<HousingFields draft={makeDraft()} onChange={vi.fn()} omit={everything(['housePurchaseYear'])} />)
     expect(screen.queryByText('Purchase year')).not.toBeInTheDocument()
     expect(screen.getByText(/Purchase cost from portfolio/)).toBeInTheDocument()
+  })
+
+  it('says what the house costs when it is bought, under the price, and keeps saying it when the price is in the bar', () => {
+    const { id, ...draft } = samplePlan()
+    void id
+    const { rerender } = render(<HousingFields draft={draft} onChange={vi.fn()} />)
+    expect(screen.getByText(/Enter today's price\. Bought in year 8 it costs about 324\.353 € in 2026 euros/)).toBeInTheDocument()
+
+    // It is worked out from the draft and said nowhere else, so it does not leave with the input.
+    rerender(<HousingFields draft={draft} onChange={vi.fn()} omit={everything(['housePriceCents'])} />)
+    expect(screen.queryByLabelText('House price')).not.toBeInTheDocument()
+    expect(screen.getByText(/Enter today's price\. Bought in year 8/)).toBeInTheDocument()
+  })
+
+  it('takes what the purchase costs from the price it has risen to', () => {
+    // 20% of 324.353,02 in 2026 euros, and the 6.000 of fees.
+    const { id, ...draft } = samplePlan()
+    void id
+    render(<HousingFields draft={draft} onChange={vi.fn()} />)
+    expect(screen.getByText(/Purchase cost from portfolio: 64\.870,56 € down \+ 6\.000,00 € fees = 70\.870,56 €/)).toBeInTheDocument()
   })
 
   it('says what already owning the house means for the starting balance, which the year alone does not', () => {

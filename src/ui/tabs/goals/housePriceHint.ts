@@ -1,0 +1,22 @@
+import { formatCentsCompact, formatPercent, housePriceAtPurchaseCents, type MoneyFormat } from '../../../engine'
+import type { NewGoalScenario } from '../../../data/dataSource'
+import { planMoneyLabel } from './planMoneyLabel'
+
+/**
+ * Said under the house price: the price entered is today's, and a house bought later has had time
+ * to rise. It gives the cost on the purchase day twice, in the money of the plan start (what the
+ * plan counts in) and in euros as paid, so the number a buyer will actually see is there too. Nothing
+ * for a house not bought, or owned already (its price is what it is worth now), or no price yet.
+ */
+export function housePriceHint(draft: NewGoalScenario, inflationRate: number, format: MoneyFormat): string | null {
+  const year = draft.housePurchaseYear
+  if (year === null || year <= 0 || draft.housePriceCents <= 0) return null
+  const real = housePriceAtPurchaseCents({ ...draft, inflationRate })
+  const paid = Math.round(real * Math.pow(1 + inflationRate, year))
+  const money = (cents: number) => formatCentsCompact(cents, format)
+  return (
+    `Enter today's price. Bought in year ${year} it costs about ${money(real)} in ${planMoneyLabel(draft.planStartDate)} ` +
+    `(${money(paid)} when you pay it), as houses rise ${formatPercent(draft.houseAppreciationRate, format)} a year ` +
+    `and inflation is ${formatPercent(inflationRate, format)}.`
+  )
+}

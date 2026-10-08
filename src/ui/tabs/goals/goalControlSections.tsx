@@ -1,11 +1,13 @@
 import { useState, type ReactNode } from 'react'
 import type { NewGoalScenario } from '../../../data/dataSource'
-import { formatCents, rebaseline, rebaselineSummary, type LeverKey, type MoneyFormat } from '../../../engine'
+import { formatCents, housePriceAtPurchaseCents, rebaseline, rebaselineSummary, type LeverKey, type MoneyFormat } from '../../../engine'
+import { useAssumedInflation } from '../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { formatCheckinDate, type InvestedSnapshot } from './checkinDate'
 import { DateField, MoneyField, NumberField, PercentField, PurchaseYearField } from './goalControlFields'
 import { ContributionStepsList } from './ContributionSteps'
 import { firstChangeNote } from './contributionText'
+import { housePriceHint } from './housePriceHint'
 import { LifeEventsList } from './LifeEvents'
 import { ADJUST_LABELS } from './adjustSections'
 import { LEVER_SPECS, NO_LEVERS } from './leverFields'
@@ -27,10 +29,10 @@ export interface SectionProps {
 
 const plain = (_key: LeverKey, field: ReactNode): ReactNode => field
 
-function purchaseSummary(draft: NewGoalScenario, format: MoneyFormat): string | null {
+function purchaseSummary(draft: NewGoalScenario, inflationRate: number, format: MoneyFormat): string | null {
   const purchaseYear = draft.housePurchaseYear
   if (purchaseYear === null) return null
-  const down = Math.round(draft.housePriceCents * draft.downPaymentFraction)
+  const down = Math.round(housePriceAtPurchaseCents({ ...draft, inflationRate }) * draft.downPaymentFraction)
   const fees = draft.transactionCostsCents
   // Already owned, the house is yours from the start: nothing is taken out of the portfolio later, so
   // the starting balance is read as what is left after the down payment and fees. Without this, moving
@@ -117,6 +119,8 @@ export function PortfolioFields({ draft, onChange, omit = NO_LEVERS, wrap = plai
 }
 
 function PurchaseCostFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: SectionProps) {
+  // Worked out from the draft and said nowhere else, so it stays when the price is in the bar.
+  const priceHint = housePriceHint(draft, useAssumedInflation(), useMoneyFormat())
   return (
     <>
       {omit.has('housePriceCents') ? null : (
@@ -126,6 +130,7 @@ function PurchaseCostFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }:
           onChange={(v) => onChange({ housePriceCents: v })}
         />)
       )}
+      {priceHint ? <p className={styles.fieldHint}>{priceHint}</p> : null}
       {omit.has('downPaymentFraction') ? null : (
         wrap('downPaymentFraction', <PercentField
           label={L.downPaymentFraction.label}
@@ -198,7 +203,7 @@ function PurchaseTimingFields({ draft, onChange, omit = NO_LEVERS, wrap = plain 
   // What the purchase takes from the portfolio is worked out from the draft, not from the year's
   // field, so it is still said while the year is in the levers bar, where it is the one place
   // the figure is.
-  const purchaseHint = purchaseSummary(draft, format)
+  const purchaseHint = purchaseSummary(draft, useAssumedInflation(), format)
   return (
     <>
       {omit.has('housePurchaseYear') ? null : (
