@@ -338,8 +338,10 @@ export function ChangesFields({ draft, onChange }: Pick<SectionProps, 'draft' | 
   return (
     <>
       <p className={styles.fieldHint}>
-        What you invest each month, from a month on. Before the first change the scenario is exactly as it is.
-        After one, the monthly amount is the one you give, so a pause is a change to nothing.
+        The amount you send each month, from a month on. It is counted in today's money at the assumed
+        inflation, so an amount that stays the same counts for less each year. Before the first change the
+        scenario is exactly as it is. After one, the monthly amount is the one you give, so a pause is a
+        change to nothing.
       </p>
       <ContributionStepsList
         steps={draft.contributionSchedule ?? []}
