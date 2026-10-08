@@ -2,6 +2,15 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (monthly investing, as a history)
+
+Checked in Chromium and in Safari's engine, at 1280px and at 375px.
+
+- **The monthly amount reads as a history.** The section, now called "Monthly investing over time", starts with the amount the plan starts with, on the plan's start date, and then lists each change from a month on: 1.000 € from 25 Jun 2026, 1.500 € from Mar '28, a pause from Jan '30. The line under it says the first line is the amount you start with and where it is set, which is the bar when it is in the bar and Portfolio when it is not.
+- **A change can be edited where it is.** Its month and its amount, with Save and Cancel, instead of removing it and adding it again.
+- **A scenario can have thirty changes, not ten**, enough for a change a year over a thirty-year plan.
+- **A pause says "pause"** rather than 0,00 €/mo, and the text above the list says to enter 0 for one.
+
 ## October 2026 (monthly investing is what you send)
 
 - **The monthly amount is what leaves your account, and the plan counts it in today's money.** The plan used to read 1.000 € a month as 1.000 € of today's money every year, which meant sending more each year: 3% inflation takes it to about 2.400 € by year 30. Someone who sends the same 1.000 € for thirty years was shown a plan that needs those larger payments. Now 1.000 € means 1.000 € each month, and each year's payments are brought back by the assumed inflation, so by year 30 a payment counts for about 40% of what the same amount did at the start. The figures of every saved scenario come out lower when inflation is above 0%, by more the longer the horizon.
