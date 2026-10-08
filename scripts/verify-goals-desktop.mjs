@@ -608,8 +608,10 @@ async function checkValueTags(page, where, svg) {
   const read = () =>
     page.evaluate(() => {
       const chart = document.querySelector('[data-goals-plan-wide] [role="img"]').getBoundingClientRect()
+      // The chip itself, not its group: the plan's from-today chip has a hollow dot in its group, out on
+      // the line, which is not part of the chip and is no clash with the chips beside it.
       const tags = [...document.querySelectorAll('[data-goals-plan-wide] [class*="valueTags"] > g')].map((g) => {
-        const r = g.getBoundingClientRect()
+        const r = (g.querySelector('rect') ?? g).getBoundingClientRect()
         return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, text: g.textContent ?? '', dots: g.querySelectorAll('circle').length }
       })
       const focusDots = [...document.querySelectorAll('[data-goals-plan-wide] [role="img"] circle')].filter((c) => !c.closest('[class*="valueTags"]'))
