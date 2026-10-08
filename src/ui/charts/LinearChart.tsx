@@ -14,6 +14,7 @@ import {
   ChartFocusIndicator,
   type LifeEventMarker,
 } from './linearChartParts'
+import { ChartValueTags } from './ChartValueTags'
 import { useChartFocus, type ChartFocusOptions } from './useChartFocus'
 import { useSvgAnchor } from './useSvgAnchor'
 import {
@@ -26,6 +27,7 @@ import {
   type Pt,
   type ScatterPoint,
 } from './linearScale'
+import type { ValueTagSpec } from './valueTags'
 import styles from './charts.module.css'
 
 const FALLBACK_W = 360
@@ -94,6 +96,8 @@ interface Props {
    * instead of at `height` (which is then only what it is drawn at before the box is measured).
    */
   fillHeight?: boolean
+  /** Tag each line's value at the focused year with a chip beside its dot; see `ChartValueTags`. */
+  valueTags?: ValueTagSpec | undefined
 }
 
 function pointsOf(values: number[], x: (i: number) => number, y: (v: number) => number): Pt[] {
@@ -231,6 +235,7 @@ export function LinearChart({
   fitDomain,
   focus,
   fillHeight,
+  valueTags,
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   // useId can return characters (colons, in older React) that a url(#...) reference does not take.
@@ -377,6 +382,17 @@ export function LinearChart({
           innerH={geo.innerH}
           scaleY={geo.scaleY}
           lineSeries={lineSeries}
+        />
+        <ChartValueTags
+          spec={valueTags}
+          active={active}
+          focusX={focusX}
+          width={width}
+          yTop={geo.padTop}
+          yBottom={geo.padTop + geo.innerH}
+          scaleY={geo.scaleY}
+          lines={lineSeries}
+          bands={series.filter((s) => s.kind === 'band')}
         />
       </svg>
       <StepKeysHint id={keysId} show={steppable} />

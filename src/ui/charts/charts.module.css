@@ -551,3 +551,47 @@
   color: var(--color-text-muted);
   font-size: 0.8125rem;
 }
+
+/* Each line's value at the focused year, in a chip level with the line's dot, in the line's colour. */
+.valueTags {
+  pointer-events: none;
+}
+
+.valueTag {
+  stroke: none;
+}
+
+.valueTagText,
+.valueTagBandText {
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.valueTagText {
+  font-weight: 600;
+}
+
+/* The over and under values of the shaded band: dashed and washed, so they read as a range and not as a line. */
+.valueTagBand {
+  fill: color-mix(in srgb, var(--color-surface) 70%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
+}
+
+.valueTagBandText {
+  fill: var(--color-text);
+}
+
+/* Lines that read the same figure: a neutral chip, so no one line's colour stands for the others. */
+.valueTagMerged {
+  fill: var(--color-surface);
+  stroke: var(--color-text-muted);
+  stroke-width: 1;
+}
+
+.valueTagMergedText {
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  fill: var(--color-text);
+}

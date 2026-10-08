@@ -11,6 +11,7 @@ import {
 } from '../../../../engine'
 import { Card } from '../../../components/primitives'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
+import type { ValueTagSpec } from '../../../charts/valueTags'
 import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
 import { useInBand } from '../../../charts/useInBand'
@@ -33,7 +34,7 @@ import {
 import styles from '../goals.module.css'
 import { computeChartDisplayData } from './nominalTransform'
 import { pointSeriesValueAt } from './checkinChartUtils'
-import { scenarioInk } from '../scenarioInk'
+import { inkOn, scenarioInk } from '../scenarioInk'
 import { ChartKeys, type ChartKeyMarks } from './ChartKeys'
 import { BreakdownSlot } from './ScenarioSeriesLegend'
 import { NO_HIDDEN, useChartLegendState, withFromToday, type ScenarioLine } from './heroLegendState'
@@ -472,6 +473,28 @@ function HeroFootnote({ chipsAbove, breakdowns, yearZeroHint, breakdownInTodaysM
   )
 }
 
+/**
+ * The wide hero tags each line's value in a chip beside its dot (and the band's over and under
+ * values), to two decimals in millions: the chips above the chart are what names the lines, so the
+ * chart itself only has to say how much. Absent where the chips are not above it.
+ */
+function useValueTags(on: boolean, expectedRealReturn: number, format: MoneyFormat): ValueTagSpec | undefined {
+  return useMemo(
+    () =>
+      on
+        ? {
+            format: (cents: number) => formatMoneyShort(cents, format, 2),
+            textOn: inkOn,
+            bandLabels: {
+              lo: formatPercent(Math.max(0, expectedRealReturn - RETURN_BAND_SPREAD), format),
+              hi: formatPercent(expectedRealReturn + RETURN_BAND_SPREAD, format),
+            },
+          }
+        : undefined,
+    [on, expectedRealReturn, format],
+  )
+}
+
 function NetWorthChartImpl({
   scenarios,
   draft,
@@ -576,6 +599,7 @@ function NetWorthChartImpl({
     [displayBand, displaySeries, displayRealPoints, displayExtraSeries],
   )
   const formatValue = useCallback((cents: number) => formatMoneyShort(cents, format), [format])
+  const valueTags = useValueTags(legendStore !== undefined && isHero && !narrow, draft.expectedRealReturn, format)
   const staticLegend: LegendItem[] = useMemo(
     () => series.map((s, idx) => ({ label: names[idx] ?? s.id, color: s.color })),
     [series, names],
@@ -685,6 +709,7 @@ function NetWorthChartImpl({
         {...todayProp(todayIndex, windowYears)}
         yDomainMax={yDomainMax}
         formatValue={formatValue}
+        valueTags={valueTags}
         ariaLabel={projectionLabel(fiChartMarker)}
         tooltip={tooltip}
       />

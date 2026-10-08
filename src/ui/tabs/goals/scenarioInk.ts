@@ -55,3 +55,18 @@ export function scenarioInk(color: string): string {
   const dark = toward(color, [255, 255, 255], DARK_GROUND)
   return light === color && dark === color ? color : `light-dark(${light}, ${dark})`
 }
+
+const LIGHT_DARK = /^light-dark\((#[0-9a-f]{6}),\s*(#[0-9a-f]{6})\)$/i
+const ON_LIGHT = '#000000'
+const ON_DARK = '#ffffff'
+
+function readableOn(background: string): string {
+  return contrastRatio(ON_DARK, background) >= contrastRatio(ON_LIGHT, background) ? ON_DARK : ON_LIGHT
+}
+
+/** The text colour that reads on a chip filled with `color` (an ink from `scenarioInk`), in either theme. */
+export function inkOn(color: string): string {
+  const pair = LIGHT_DARK.exec(color)
+  if (pair) return `light-dark(${readableOn(pair[1]!)}, ${readableOn(pair[2]!)})`
+  return HEX.test(color) ? readableOn(color) : ON_DARK
+}
