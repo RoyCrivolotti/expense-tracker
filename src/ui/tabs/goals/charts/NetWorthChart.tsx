@@ -252,6 +252,42 @@ function useBandSeries(isHero: boolean, draft: NewGoalScenario, inflationRate: n
   }, [isHero, draft, inflationRate])
 }
 
+/**
+ * The inflation the plan is projected at. The monthly amount is euros as sent, so the real line
+ * itself depends on the inflation it is brought back by: a previewed rate is a new projection,
+ * not the saved one drawn higher.
+ */
+function projectionAtPreview(
+  nominalMode: boolean,
+  viewInflation: number | null | undefined,
+  savedInflation: number,
+): { previewing: boolean; projectionRate: number } {
+  const previewing = nominalMode && viewInflation != null && viewInflation !== savedInflation
+  return { previewing, projectionRate: previewing ? viewInflation : savedInflation }
+}
+
+/**
+ * The lines at the saved inflation while another rate is being previewed, cut at the window like
+ * the lines drawn: the Nominal view holds its axis at the height the saved rate gives it, whatever
+ * is previewed, so stepping the preview moves the plan against a scale that holds still.
+ */
+function useSavedRateFloor(
+  previewing: boolean,
+  scenarios: GoalScenario[],
+  draft: NewGoalScenario,
+  activeId: number | null,
+  dirty: boolean,
+  savedInflation: number,
+  hiddenIds: ReadonlySet<number> | undefined,
+  windowYears: number | null,
+): ChartSeries[] | null {
+  return useMemo(() => {
+    if (!previewing) return null
+    const built = buildSeries(scenarioLines(scenarios, draft, activeId, dirty, savedInflation, hiddenIds))
+    return clipToWindow(built.years, built.series, windowYears).series
+  }, [previewing, scenarios, draft, activeId, dirty, savedInflation, hiddenIds, windowYears])
+}
+
 /** Everything drawn, cut at the window in one go so the axis fits what is left. */
 function useWindowedSeries(
   full: { years: number[]; series: ChartSeries[] },
@@ -533,10 +569,10 @@ function NetWorthChartImpl({
   /** The plan restarted from the latest check-in, drawn dotted from the check-in on. */
   fromToday?: PlanFromToday | null | undefined
   /**
-   * The rate the Nominal view inflates the plan by while it is being previewed. It changes
-   * only that drawing: the projection, the check-in dots, the Y-axis floor and everything
-   * beside the chart stay at the saved assumed inflation, and it has no effect outside the
-   * Nominal view.
+   * The rate the Nominal view projects and inflates the plan at while it is being previewed.
+   * It changes only that drawing: the check-in dots, the Y-axis floor and everything beside
+   * the chart stay at the saved assumed inflation, and it has no effect outside the Nominal
+   * view.
    */
   viewInflation?: number | null | undefined
   milestones: Milestone[]
@@ -556,9 +592,10 @@ function NetWorthChartImpl({
   const { activeIndex, onActiveIndexChange, lastIndex } = useActiveIndex()
   const legendInBand = useInBand(listRef, 1, { enabled: narrow })
   const isHero = variant === 'hero'
+  const { previewing, projectionRate } = projectionAtPreview(nominalMode, viewInflation, assumedInflation)
   const lines = useMemo(
-    () => scenarioLines(scenarios, draft, activeId, dirty, assumedInflation, hiddenIds),
-    [scenarios, draft, activeId, dirty, assumedInflation, hiddenIds],
+    () => scenarioLines(scenarios, draft, activeId, dirty, projectionRate, hiddenIds),
+    [scenarios, draft, activeId, dirty, projectionRate, hiddenIds],
   )
   const full = useMemo(() => buildSeries(lines), [lines])
   // The windows on offer follow how far the chart actually runs, which is the longest
@@ -566,14 +603,15 @@ function NetWorthChartImpl({
   const extentYears = full.years[full.years.length - 1] ?? draft.horizonYears
   const { heroWindow, setHeroWindow, heroWindows, windowYears } = useHeroWindow(isHero, extentYears)
   const names = full.names
-  const bandSeries = useBandSeries(isHero, draft, assumedInflation)
-  const fromTodaySeries = useFromTodaySeries(isHero, fromToday, assumedInflation, windowYears, extentYears)
+  const bandSeries = useBandSeries(isHero, draft, projectionRate)
+  const fromTodaySeries = useFromTodaySeries(isHero, fromToday, projectionRate, windowYears, extentYears)
   const { years, series, band, extra } = useWindowedSeries(full, bandSeries, extraSeries, windowYears)
   const markerYears = useMemo(() => purchaseMarkerIndices(lines, years), [lines, years])
   const labels = useMemo(() => sparseLabels(years, 5), [years])
 
   // Each view fits its own axis, so Purchasing power is not stretched to the nominal plan's
   // height; toggling rescales, and only Nominal holds a floor (for the rate preview).
+  const floorSeries = useSavedRateFloor(previewing, scenarios, draft, activeId, dirty, assumedInflation, hiddenIds, windowYears)
   const { displaySeries, displayExtraSeries, displayRealPoints, displayBand, yDomainMax, drawnMax } = useMemo(
     () =>
       computeChartDisplayData(
@@ -585,8 +623,9 @@ function NetWorthChartImpl({
         band,
         viewInflation,
         fromTodaySeries ? [fromTodaySeries] : [],
+        floorSeries,
       ),
-    [series, extra, years, nominalMode, assumedInflation, band, viewInflation, fromTodaySeries],
+    [series, extra, years, nominalMode, assumedInflation, band, viewInflation, fromTodaySeries, floorSeries],
   )
   const { line: fromTodayLine, label: fromTodayLabel } = fromTodayDrawing(displayRealPoints, fromToday)
 

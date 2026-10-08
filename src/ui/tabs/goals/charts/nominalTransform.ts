@@ -55,6 +55,23 @@ function drawnRealPoints(realPoints: ChartSeries[], nominalMode: boolean, rate: 
 }
 
 /**
+ * The plan's lines in the nominal view: `drawn` at the rate being looked at, and `floor`, the
+ * lines at the saved rate, which the axis is held to. They are the same lines unless a previewed
+ * rate came with a projection of its own (`floorSeries` is the saved rate's).
+ */
+function nominalLines(
+  series: ChartSeries[],
+  floorSeries: ChartSeries[] | null,
+  years: number[],
+  savedRate: number,
+  drawnRate: number,
+): { floor: ChartSeries[]; drawn: ChartSeries[] } {
+  const floor = inflateSeries(floorSeries ?? series, years, savedRate)
+  const drawn = floorSeries === null && drawnRate === savedRate ? floor : inflateSeries(series, years, drawnRate)
+  return { floor, drawn }
+}
+
+/**
  * The plan is real, so the default view is today's money with the check-in dots deflated
  * to it; the nominal view inflates the plan instead and leaves the dots as they are.
  *
@@ -63,9 +80,13 @@ function drawnRealPoints(realPoints: ChartSeries[], nominalMode: boolean, rate: 
  * actuals uses, so the chart cannot disagree with the status beside it.
  *
  * `viewInflation` is a preview of the nominal view under another rate. It changes what is
- * drawn there and nothing else. The axis floor is the height the saved rate gives that view,
- * so stepping the preview moves the plan against a scale that holds still. The chart itself
- * grows the axis when a drawn line no longer fits, which it does rather than clip.
+ * drawn there and nothing else. `series` must already be projected at that rate, since the
+ * monthly amount is euros as sent and the real line depends on the inflation it is brought
+ * back by: inflating a line projected at the saved rate would not be the plan at the other
+ * rate. The axis floor is the height the saved rate gives that view (`floorSeries`, the lines
+ * projected at the saved rate), so stepping the preview moves the plan against a scale that
+ * holds still. The chart itself grows the axis when a drawn line no longer fits, which it does
+ * rather than clip.
  *
  * Each view fits its own axis: Purchasing power has no floor, so it is not stretched to make
  * room for the nominal plan, which runs far higher over thirty years. The band does not set
@@ -81,6 +102,8 @@ export function computeChartDisplayData(
   viewInflation: number | null = null,
   /** Real projections drawn as points (the plan from today): inflated with the lines, never deflated. */
   realPoints: ChartSeries[] = [],
+  /** The lines projected at the saved rate, when `series` is projected at a previewed one: what the axis floor is read from. */
+  floorSeries: ChartSeries[] | null = null,
 ): {
   displaySeries: ChartSeries[]
   displayExtraSeries: ChartSeries[]
@@ -91,9 +114,8 @@ export function computeChartDisplayData(
   /** The highest value drawn in this view, band aside; what the reference lines are held to. */
   drawnMax: number | undefined
 } {
-  const nominalSeries = inflateSeries(series, years, inflationRate)
   const drawnRate = viewInflation ?? inflationRate
-  const drawnSeries = drawnRate === inflationRate ? nominalSeries : inflateSeries(series, years, drawnRate)
+  const { floor: nominalSeries, drawn: drawnSeries } = nominalLines(series, floorSeries, years, inflationRate, drawnRate)
   const displaySeries = nominalMode ? drawnSeries : series
   const displayExtraSeries = nominalMode ? extraSeries : deflatePoints(extraSeries, inflationRate)
   const displayRealPoints = drawnRealPoints(realPoints, nominalMode, drawnRate)
