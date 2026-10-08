@@ -18,6 +18,10 @@ const plan: ProjectionParams = {
   inflationRate: 0,
 }
 
+// The 400.000 € house is today's price: bought in year 5 it has risen 2.5% a year for five years (no
+// inflation here), and the down payment is a fifth of that, not of 400.000 €.
+const downPaymentInYear5 = Math.round(Math.round(40_000_000 * 1.025 ** 5) * 0.2)
+
 describe('portfolioShortfall', () => {
   it('is nothing for a plan that never buys', () => {
     expect(portfolioShortfall(plan)).toBeNull()
@@ -44,13 +48,13 @@ describe('portfolioShortfall', () => {
       year: 5,
       belowZeroCents: -points[5]!.investedCents,
       cause: 'house',
-      housePaymentCents: 8_000_000,
+      housePaymentCents: downPaymentInYear5,
     })
   })
 
   it('counts the purchase costs with the down payment', () => {
     const shortfall = portfolioShortfall({ ...plan, housePurchaseYear: 5, transactionCostsCents: 500_000 })
-    expect(shortfall?.housePaymentCents).toBe(8_500_000)
+    expect(shortfall?.housePaymentCents).toBe(downPaymentInYear5 + 500_000)
   })
 
   it('blames a life event when the house alone fits', () => {
@@ -74,7 +78,7 @@ describe('portfolioShortfall', () => {
       housePurchaseYear: 5,
       lifeEvents: [{ year: 5, amountCents: -100_000, label: 'Car' }],
     }
-    expect(portfolioShortfall(params)).toMatchObject({ year: 5, cause: 'house', housePaymentCents: 8_000_000 })
+    expect(portfolioShortfall(params)).toMatchObject({ year: 5, cause: 'house', housePaymentCents: downPaymentInYear5 })
   })
 
   it('reports the first year only, with a life event after a purchase that was paid', () => {

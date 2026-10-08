@@ -156,8 +156,14 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // wide chart (their layout, the merge of lines that read the same figure, the text colour that reads
 // on each line colour and the chips' CSS): main stood at 250.1 KB with the Goals chunk at 61.9 KB, and
 // the chips add about 1.3 KB, all of it small code in the lazy Goals chunk, with no new library.
+//
+// Raised the Goals chunk from 65 KB to 65.5 KB for the house price at purchase (the line under the
+// price, the name for the plan's money and the helper both read): the chunk stood at about 64.9 KB
+// after the new default return, the three pieces add about 0.25 KB to 65,172 bytes, and the total
+// is still under its limit at 253,745. All of it is small code in the lazy Goals chunk, with no new
+// library.
 const TOTAL_MAX_GZIP = 254_000
-const GOALS_MAX_GZIP = 65_000
+const GOALS_MAX_GZIP = 65_500
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length

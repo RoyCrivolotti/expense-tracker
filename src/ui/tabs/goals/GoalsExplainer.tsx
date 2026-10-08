@@ -7,6 +7,10 @@ const buildTerms = (cur: string): { term: string; body: string }[] => [
     body: 'When you buy: null = never; 0 = already own (capital allocated); N > 0 = buy after year N. In that year the model grows your portfolio first, then withdraws down payment plus purchase fees. Equity appears in the composition chart — the invested line dip is not your total net worth falling by that amount.',
   },
   {
+    term: 'House price',
+    body: "The price you enter is today's. A house bought in year 8 has had eight years to rise, by what houses beat inflation by, so the plan buys it at the price shown under the field.",
+  },
+  {
     term: 'Purchase fees',
     body: `Notary, agency, and closing costs (default ${cur}500 in demo). Withdrawn from the invested portfolio together with the down payment in the purchase year.`,
   },

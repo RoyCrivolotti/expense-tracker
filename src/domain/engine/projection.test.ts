@@ -81,7 +81,10 @@ describe('projection invested milestones', () => {
     })
     const breakdown = purchaseYearBreakdown(params, 10)
     expect(breakdown).not.toBeNull()
-    expect(breakdown!.totalWithdrawalCents).toBe(12_950_000 + 50_000)
+    // 370.000 € today, bought in year 10: DEFAULT_HOUSE_APPRECIATION against DEFAULT_INFLATION_RATE for ten years.
+    const priceAtPurchase = Math.round(37_000_000 * (1.025 / 1.02) ** 10)
+    expect(breakdown!.downPaymentCents).toBe(Math.round(priceAtPurchase * 0.35))
+    expect(breakdown!.totalWithdrawalCents).toBe(Math.round(priceAtPurchase * 0.35) + 50_000)
     expect(breakdown!.endInvestedCents).toBe(projectInvested(params)[10])
     expect(breakdown!.netChangeCents).toBe(
       breakdown!.endInvestedCents - breakdown!.startInvestedCents,
@@ -284,19 +287,25 @@ describe('the figure GOALS-MODEL.md states', () => {
 })
 
 describe('the house and the mortgage in a real plan', () => {
-  const price = 400_000_000
-  const loan = price * 0.8
+  // The price is today's. Bought in year 5, the house has risen for five years by what it beats
+  // inflation by, and the loan is what is left after the down payment on that price.
+  const todaysPrice = 400_000_000
+  const priceAt = (year: number, appreciation = DEFAULT_HOUSE_APPRECIATION, inflation = DEFAULT_INFLATION_RATE) =>
+    Math.round(todaysPrice * ((1 + appreciation) / (1 + inflation)) ** year)
+  const price = priceAt(5)
+  const loan = price - Math.round(price * 0.2)
 
   it('grows the house only by what its appreciation beats inflation by', () => {
     // Appreciation equal to inflation is no growth in today's money at all.
     const flat = projectNetWorth(
       baseParams({ housePurchaseYear: 5, houseAppreciationRate: DEFAULT_INFLATION_RATE }),
     )
-    expect(flat[5]!.houseEquityCents).toBe(price)
-    expect(flat[25]!.houseEquityCents).toBe(price)
+    expect(flat[5]!.houseEquityCents).toBe(todaysPrice)
+    expect(flat[25]!.houseEquityCents).toBe(todaysPrice)
 
-    // 2.5% against 2% inflation: ten years owned is (1.025 / 1.02) ten times over.
+    // 2.5% against 2% inflation: fifteen years from today, five of them waiting to buy and ten owned.
     const grown = projectNetWorth(baseParams({ housePurchaseYear: 5, houseAppreciationRate: 0.025 }))
+    expect(grown[5]!.houseEquityCents).toBe(price)
     expect(grown[15]!.houseEquityCents).toBe(Math.round(price * (1.025 / 1.02) ** 10))
     // Nothing is owned before the purchase.
     expect(grown[4]!.houseEquityCents).toBe(0)
@@ -320,8 +329,10 @@ describe('the house and the mortgage in a real plan', () => {
 
   it('takes inflation off a loan with no interest too', () => {
     const points = projectNetWorth(baseParams({ housePurchaseYear: 0, mortgageRateAnnual: 0, mortgageTermYears: 20 }))
-    // Half repaid after ten years, and what is left counted in today's money.
-    expect(points[10]!.mortgageBalanceCents).toBe(Math.round((loan / 2) / (1 + DEFAULT_INFLATION_RATE) ** 10))
+    // Owned from day one, so the loan is on today's price. Half repaid after ten years, and what is
+    // left counted in today's money.
+    const ownedLoan = todaysPrice - Math.round(todaysPrice * 0.2)
+    expect(points[10]!.mortgageBalanceCents).toBe(Math.round((ownedLoan / 2) / (1 + DEFAULT_INFLATION_RATE) ** 10))
   })
 
   it('uses the inflation it is given, not a default', () => {
@@ -329,11 +340,14 @@ describe('the house and the mortgage in a real plan', () => {
     const points = projectNetWorth(
       baseParams({ housePurchaseYear: 5, houseAppreciationRate: 0.025, inflationRate: rate }),
     )
-    expect(points[15]!.houseEquityCents).toBe(Math.round(price * (1.025 / (1 + rate)) ** 10))
+    const priceAtRate = priceAt(5, 0.025, rate)
+    expect(points[5]!.houseEquityCents).toBe(priceAtRate)
+    expect(points[15]!.houseEquityCents).toBe(Math.round(priceAtRate * (1.025 / (1 + rate)) ** 10))
 
+    const loanAtRate = priceAtRate - Math.round(priceAtRate * 0.2)
     const i = 0.03 / 12
-    const payment = (loan * i) / (1 - (1 + i) ** -360)
-    const nominal = loan * (1 + i) ** 120 - payment * (((1 + i) ** 120 - 1) / i)
+    const payment = (loanAtRate * i) / (1 - (1 + i) ** -360)
+    const nominal = loanAtRate * (1 + i) ** 120 - payment * (((1 + i) ** 120 - 1) / i)
     expect(Math.abs(points[15]!.mortgageBalanceCents - nominal / (1 + rate) ** 10)).toBeLessThanOrEqual(2)
     // More inflation is a smaller house and a smaller debt in today's money.
     const atTwo = projectNetWorth(baseParams({ housePurchaseYear: 5 }))
