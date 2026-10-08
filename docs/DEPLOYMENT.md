@@ -93,6 +93,13 @@ given `--apply`. It exits 0 when the database is up to date, 1 when migrations a
 it cannot trust what it sees (a hole in the record, an unseeded database, or a database it could not
 read), so a caller that must not ship code ahead of its schema can stop on anything but 0.
 
+`--apply` first takes a D1 Time Travel restore point and prints it with the command that goes back to it
+(`npx wrangler d1 time-travel restore <database> --bookmark=<bookmark>`), and refuses to apply if it cannot
+get one (`--no-restore-point` overrides that). A restore overwrites the whole database as it was at that
+moment, so it also discards every write since, user data included. It is for a migration that damaged data;
+for a migration that only added columns, the previous code still works and rolling the code back loses
+nothing. Cloudflare keeps 30 days of history on the paid plan and 7 on the free one.
+
 **The deploy checks both databases before it ships anything.** The `schema` job in `deploy.yml` runs
 beside the tests, read-only, and the `ship` job waits for it. If production or dev lacks a migration, or its
 record cannot be trusted, the run stops with nothing deployed. So a PR that adds a migration is done in this
