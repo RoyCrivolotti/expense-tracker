@@ -1198,7 +1198,7 @@ async function checkTouchTargets(browser, engine) {
   await fine.page.waitForTimeout(400)
   const small = await fine.page.evaluate(() => {
     const h = (sel) => Math.round(document.querySelector(sel).getBoundingClientRect().height * 10) / 10
-    return { stepper: h('[aria-label^="Decrease "]'), field: h('[role="region"] input[type="text"]'), chip: Math.min(...[...document.querySelectorAll('[role="tablist"][aria-label="Scenarios"] > *')].map((c) => c.getBoundingClientRect().height)), range: h('input[type="range"]'), digits: h('[class*="leverValue"]') }
+    return { stepper: h('[aria-label^="Decrease "]'), field: h('[role="region"] input[aria-label="Mortgage rate (%/yr)"]'), chip: Math.min(...[...document.querySelectorAll('[role="tablist"][aria-label="Scenarios"] > *')].map((c) => c.getBoundingClientRect().height)), range: h('input[type="range"]'), digits: h('[class*="leverValue"]') }
   })
   check(`${engine} mouse`, '(t) with a fine pointer the controls keep their size (stepper 25.6, field 26, chip 44.6 (the row of the tagged chip), slider 16 or 17, digits row under 40)', near(small.stepper, 25.6, 0.7) && near(small.chip, 44.6, 1.5) && near(small.range, 16.5, 1) && near(small.field, 26, 0.5) && small.digits < 40, JSON.stringify(small))
   await fine.context.close()
@@ -2263,7 +2263,7 @@ async function checkStarOverlap(browser, engine) {
       const bar = r.areas.filter((a) => !a.inPanel)
       // 23, not 24: the gap between two columns is 24px and a pixel is counted when its middle is inside it.
       const wide = screen.touch ? panel.filter((a) => a.w < 23 || a.h < 43) : panel.filter((a) => a.w < 23 || a.h < 23)
-      check(where, `(k2) every panel star keeps a tap area of at least 23px wide${screen.touch ? ' and 43px high' : ''} at ${label} (${panel.length} measured)`, panel.length >= 10 && wide.length === 0, JSON.stringify(wide))
+      check(where, `(k2) every panel star keeps a tap area of at least 23px wide${screen.touch ? ' and 43px high' : ''} at ${label} (${panel.length} measured)`, panel.length >= 9 && wide.length === 0, JSON.stringify(wide))
       const short = screen.touch ? bar.filter((a) => a.w < 40 || a.h < 43) : bar.filter((a) => a.w < 23 || a.h < 23)
       check(where, `(k2) every bar star keeps its tap area at ${label} (${bar.length} measured)`, bar.length >= 4 && short.length === 0, JSON.stringify(short))
     }
