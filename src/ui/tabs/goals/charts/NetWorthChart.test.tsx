@@ -804,6 +804,32 @@ describe('NetWorthChart', () => {
     expect(drawing(false, 0.06)).toEqual(drawing(false))
   })
 
+  it('draws a previewed rate as the plan projected at that rate, not the saved plan drawn higher', () => {
+    // The monthly amount is euros as sent, so a plan at 6% inflation is a different real line from the one
+    // at 2%. Previewing 6% over a saved 2% must draw what a saved 6% draws (the axis grows to fit it).
+    const draw = (saved: number, nominalMode: boolean, viewInflation?: number) => {
+      const { container, unmount } = render(
+        <AssumedInflationContext.Provider value={saved}>
+          <NetWorthChart
+            milestones={milestones}
+            scenarios={[defaultDraft]}
+            draft={defaultDraft}
+            activeId={defaultDraft.id}
+            variant="hero"
+            nominalMode={nominalMode}
+            viewInflation={viewInflation}
+          />
+        </AssumedInflationContext.Provider>,
+      )
+      const paths = [...container.querySelectorAll('path')].map((p) => p.getAttribute('d') ?? '').join('|')
+      const text = [...container.querySelectorAll('text')].map((t) => t.textContent ?? '').join('|')
+      unmount()
+      return { paths, text }
+    }
+    expect(draw(0.02, true, 0.06)).toEqual(draw(0.06, true))
+    expect(draw(0.02, true, 0.06)).not.toEqual(draw(0.02, true))
+  })
+
   it('renders uncertainty band path on hero variant', () => {
     const { container } = render(
       <NetWorthChart
@@ -1059,6 +1085,18 @@ describe('computeChartDisplayData', () => {
     expect(preview.displayExtraSeries[0]!.points![0]!.value).toBe(104_040_00)
     // A preview rate equal to the saved one is not a change.
     expect(computeChartDisplayData([plan], [dot], years, true, 0.02, null, 0.02)).toEqual(saved)
+  })
+
+  it('reads the axis floor from the lines projected at the saved rate when it is given them', () => {
+    // `previewed` is the plan projected at 6%: the plan the axis was built for is the 2% one.
+    const previewed: ChartSeries = { ...plan, values: [100_000_00, 108_000_00, 116_000_00, 124_000_00] }
+    const savedHeight = computeChartDisplayData([plan], [dot], years, true, 0.02).yDomainMax
+    const shown = computeChartDisplayData([previewed], [dot], years, true, 0.02, null, 0.06, [], [plan])
+
+    // Drawn at the previewed rate from the previewed projection...
+    expect(shown.displaySeries[0]!.values[3]).toBe(Math.round(124_000_00 * 1.06 ** 3))
+    // ...against the height the saved rate gives the saved projection.
+    expect(shown.yDomainMax).toBe(savedHeight)
   })
 
   it('has no rate of its own to fall back on', () => {

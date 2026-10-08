@@ -16,9 +16,11 @@ interface Props {
 
 /**
  * A way to look at the Nominal view under another inflation without touching the setting.
- * It only re-inflates the plan line and its band drawn on the chart. The status, Progress,
- * the comparison table and the dashboard read the saved rate, so trying a rate here can
- * never make them disagree with each other; the note says so and points to Assumptions.
+ * The chart projects the plan and its band again at that rate and inflates them by it: the
+ * monthly amount is euros as sent, so the plan itself depends on the rate, and the saved line
+ * drawn higher would not be it. The status, Progress, the comparison table and the dashboard
+ * read the saved rate, so trying a rate here can never make them disagree with each other;
+ * the note says so and points to Assumptions.
  */
 export function NominalPreview({ saved, preview, onPreview, onOpenAssumptions }: Props) {
   const format = useMoneyFormat()

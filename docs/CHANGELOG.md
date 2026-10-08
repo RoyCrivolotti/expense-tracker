@@ -2,6 +2,10 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (the inflation preview shows the plan at that rate)
+
+- **Trying another inflation rate in the Nominal view draws the plan at that rate.** Since the monthly amount became what you send, the plan itself depends on the inflation, but the preview only drew the saved line higher, which counted each payment as if it grew with prices. With 2% saved and 6% tried, a plan of 20.000 € and 1.000 € a month read 6,25M € at year 30; at 6% it is 4,81M €, the figure the chart shows when 6% is saved. The rest of Goals keeps the saved rate, as before.
+
 ## October 2026 (rent vs buy says who leads)
 
 - **Rent vs buy names who is ahead and from when.** At the defaults (a 400.000 € house, 1.200 € rent) it said "Buying overtakes renting around year 1" while renting led by about 640.000 € after thirty years: the first year buying drew level was called a breakeven, though renting pulled ahead again from year 5. It now says "Buying is ahead through year 4, then renting leads for the rest of the horizon, by 638k € after 30 years", or the year buying gets ahead and stays ahead.
