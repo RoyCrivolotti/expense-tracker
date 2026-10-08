@@ -2,6 +2,10 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (the house is bought at the price it has risen to)
+
+- **A house bought later costs what it will cost then.** The price you enter is today's, but the plan took the down payment, the loan and the withdrawal from that same price whenever the house was bought, so a house bought in year 8 cost no more than one bought today. It now rises by what houses beat inflation by until the purchase year: a 300.000 € house with prices up 3% a year and inflation at 2% costs about 324.353 € in 2026 euros in year 8 (380.031 € when you pay it), not 300.000 €. The price field says so under it. Plans with no house, or a house already owned, do not move; a house bought later in a plan where houses rise faster than inflation now needs a larger down payment, which can show up as a bigger dip on the invested line.
+
 ## October 2026 (new plans start at a cautious return)
 
 - **A new plan starts at a 5% real return, not 7%.** Over the very long run world stocks returned about 5% a year after inflation, and many forecasts are lower, so 7% was the optimistic end and it was what everyone who did not change the field got. A note under Real return says so. Plans already saved keep their own return.
