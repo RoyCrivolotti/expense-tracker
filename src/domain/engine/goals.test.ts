@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { averageMonthlyCents, medianMonthlyCents, monthlyFlows, monthsSincePlanStart, type MonthlyFlow } from './goals'
+import { averageMonthlyCents, medianMonthlyCents, monthlyFlows, monthsSincePlanStart, paceMonths, type MonthlyFlow } from './goals'
 import type { MonthlyTotals } from './monthlyTotals'
 
 function totals(month: string, netSavingCents: number, investmentsCents: number): MonthlyTotals {
@@ -79,5 +79,55 @@ describe('monthsSincePlanStart', () => {
 
   it('counts every month when the plan started after the last recorded one', () => {
     expect(monthsSincePlanStart(flows, '2026-09-01')).toBe(flows)
+  })
+})
+
+describe('paceMonths', () => {
+  const flows = [flow('2026-01', 1000), flow('2026-02', 1000), flow('2026-03', 1000), flow('2026-04', 833)]
+  const months = (result: ReturnType<typeof paceMonths>) => result.months.map((f) => f.month)
+
+  it('leaves out the month still under way', () => {
+    // Someone investing on the 25th has put in 833 of 1.000 by the 24th: not a month behind.
+    const result = paceMonths(flows, '2026-01-10', '2026-04')
+    expect(months(result)).toEqual(['2026-01', '2026-02', '2026-03'])
+    expect(averageMonthlyCents(result.months.map((f) => f.investedCents))).toBe(1000)
+  })
+
+  it('keeps every recorded month when no month is under way', () => {
+    expect(months(paceMonths(flows, '2026-01-10', undefined))).toHaveLength(4)
+  })
+
+  it('counts a month inside the record with no transactions as a month of nothing invested', () => {
+    const gap = [flow('2026-01', 1000), flow('2026-03', 1000)]
+    const result = paceMonths(gap, null, undefined)
+    expect(months(result)).toEqual(['2026-01', '2026-02', '2026-03'])
+    expect(result.months[1]).toEqual({ month: '2026-02', netSavingCents: 0, investedCents: 0 })
+  })
+
+  it('does not count months before the first recorded one, which are unknown rather than empty', () => {
+    const result = paceMonths(flows.slice(2), '2026-01-10', undefined)
+    expect(months(result)).toEqual(['2026-03', '2026-04'])
+    expect(result.sincePlanStart).toBe(false)
+  })
+
+  it('starts at the plan start month, whatever the day, and says they are the plan\'s own', () => {
+    const result = paceMonths(flows, '2026-02-17', '2026-04')
+    expect(months(result)).toEqual(['2026-02', '2026-03'])
+    expect(result.sincePlanStart).toBe(true)
+  })
+
+  it('crosses a year end without skipping a month', () => {
+    const across = [flow('2025-11', 1), flow('2026-02', 1)]
+    expect(months(paceMonths(across, null, undefined))).toEqual(['2025-11', '2025-12', '2026-01', '2026-02'])
+  })
+
+  it('has no pace to judge when the plan started after the last whole month', () => {
+    expect(paceMonths(flows, '2026-04-02', '2026-04')).toEqual({ months: [], sincePlanStart: true })
+    expect(paceMonths(flows, '2026-09-01', undefined)).toEqual({ months: [], sincePlanStart: true })
+  })
+
+  it('has nothing without a whole month on record, and does not claim a start it has not got', () => {
+    expect(paceMonths([flow('2026-04', 5)], null, '2026-04')).toEqual({ months: [], sincePlanStart: false })
+    expect(paceMonths([], '2026-01-01', undefined)).toEqual({ months: [], sincePlanStart: true })
   })
 })

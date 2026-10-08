@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { GoalsCard } from './GoalsCard'
 import { DEFAULT_INFLATION_RATE, planValueAtDate, realToNominal } from '../../engine'
-import { makeDataset, makeScenario, makeWealthAccount, makeWealthCheckin } from '../../testing/factories'
+import { makeDataset, makeScenario, makeTransaction, makeWealthAccount, makeWealthCheckin } from '../../testing/factories'
 
 /** The local calendar date `n` days ago; the card counts days in local time too. */
 function daysAgoIso(n: number): string {
@@ -27,6 +27,27 @@ describe('GoalsCard', () => {
     const scenario = makeScenario({ id: 1, isActive: true, name: 'Test Plan' })
     render(<GoalsCard dataset={makeDataset({ goalScenarios: [scenario] })} />)
     expect(screen.getByRole('heading', { name: 'Goals', hidden: true })).toBeInTheDocument()
+  })
+
+  it('sets the pace kept on whole months, leaving the month under way out', () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 3, 10, 12))
+    try {
+      const scenario = makeScenario({ id: 1, isActive: true, planStartDate: '2026-01-01', monthlyContributionCents: 100_000 })
+      const invest = (id: number, month: string, amountCents: number) =>
+        makeTransaction({ id, type: 'investment', budgetMonth: month, date: `${month}-10`, amountCents })
+      // 1.200 a month for three months and 100 so far in April, which is still under way.
+      const transactions = [
+        invest(1, '2026-01', 120_000),
+        invest(2, '2026-02', 120_000),
+        invest(3, '2026-03', 120_000),
+        invest(4, '2026-04', 10_000),
+      ]
+      render(<GoalsCard dataset={makeDataset({ goalScenarios: [scenario], transactions })} />)
+      expect(screen.getByText(/actual avg 1\.200,00 €\/mo invested/)).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('shows no track badge when there are no check-ins', () => {

@@ -2,6 +2,12 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (the pace and the return say no more than they know)
+
+- **The pace is read on whole months.** The month still under way counted as a full one, so someone who invests on the 25th read 833 against 1.000, in red, from the 1st to the 24th of every month. It is left out now, a month with no transactions at all counts as a month of nothing invested (it was skipped, which flattered the average), and within 2% of the plan's figure is on pace where any shortfall read red. The dashboard headline uses the same months.
+- **The sentence is true of its months.** "Since the plan started" is said only when the months start there; when the record begins later it says "recorded", and with only the month under way there is no pace line at all.
+- **A yearly return from under ten years is not coloured.** At 17% volatility the standard error of a yearly return is about 12 points after two years and 5 after ten, so green or red said ahead or behind where the figure cannot tell. It is shown plain, with "A few years of returns say little about a long-run 7,0% a year", and keeps its colour from ten years of check-ins.
+
 ## October 2026 (plainer wording on the plan screens)
 
 Text only; no figure moves.

@@ -1,3 +1,4 @@
+import { shiftBudgetMonth } from './dates'
 import type { MonthlyTotals } from './monthlyTotals'
 
 /** Mean of a list of monthly amounts, rounded to a cent; zero for no months. */
@@ -52,4 +53,41 @@ export function monthsSincePlanStart(
   const startMonth = planStartDate.slice(0, 7)
   const since = flows.filter((f) => f.month >= startMonth)
   return since.length > 0 ? since : flows
+}
+
+/** The months a pace is judged on, and whether they are the plan's own. */
+export interface PaceMonths {
+  /** Whole months, oldest first, with a month in which nothing was invested as a month of 0. */
+  months: MonthlyFlow[]
+  /** True when they run from the plan's start month, so "since the plan started" is what they are. */
+  sincePlanStart: boolean
+}
+
+/**
+ * The months the pace kept is judged on. The month still under way is left out, as it is for the
+ * cash reserve: someone who invests on the 25th reads 833 against 1.000 until then, however well
+ * they are keeping to the plan. A month inside the record with no transactions at all counts as a
+ * month of nothing invested, where the flows alone would skip it and flatter the average. Months
+ * before the first one recorded are unknown rather than empty, so they are not counted. Nothing
+ * when the plan started after the last whole month: there is no pace to judge yet.
+ */
+export function paceMonths(
+  flows: MonthlyFlow[],
+  planStartDate: string | null,
+  openMonth: string | undefined,
+): PaceMonths {
+  const closed = openMonth === undefined ? flows : flows.filter((f) => f.month < openMonth)
+  const first = closed[0]
+  if (!first) return { months: [], sincePlanStart: planStartDate !== null }
+  const startMonth = planStartDate ? planStartDate.slice(0, 7) : null
+  const from = startMonth !== null && startMonth > first.month ? startMonth : first.month
+  const last = closed[closed.length - 1]!.month
+  const sincePlanStart = startMonth !== null && startMonth >= first.month
+  if (from > last) return { months: [], sincePlanStart: true }
+  const recorded = new Map(closed.map((f) => [f.month, f]))
+  const months: MonthlyFlow[] = []
+  for (let month = from; month <= last; month = shiftBudgetMonth(month, 1)) {
+    months.push(recorded.get(month) ?? { month, netSavingCents: 0, investedCents: 0 })
+  }
+  return { months, sincePlanStart }
 }

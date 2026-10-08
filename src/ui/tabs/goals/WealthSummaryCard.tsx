@@ -13,7 +13,7 @@ import {
   latestCheckin,
   medianMonthlyCents,
   monthlyFlows,
-  monthsSincePlanStart,
+  paceMonths,
   plannedMonthlyAt,
   plannedMonthlyAverage,
   portfolioReturn,
@@ -43,23 +43,32 @@ interface Props {
   openBudgetMonth?: string | undefined
 }
 
+/** A yearly return is judged against the plan's only from this many years of history. */
+const SETTLED_RETURN_YEARS = 10
+
+/** Within this share of the plan's figure is the same pace: a transfer a few euros short is not behind. */
+const PACE_TOLERANCE = 0.98
+
 /**
- * The pace kept since the plan began, against the monthly figure it assumes. The mean is
- * the pace; a typical month is named beside it when a one-off lump sum has pulled the
- * mean away from what most months look like, so the two are not confused for each other.
+ * The pace kept since the plan began, against the monthly figure it assumes, over the whole months
+ * (the one under way is not a month yet). The mean is the pace; a typical month is named beside it
+ * when a one-off lump sum has pulled the mean away from what most months look like, so the two are
+ * not confused for each other.
  */
 function PaceHint({
   plan,
   transactions,
+  openBudgetMonth,
   format,
 }: {
   plan: GoalScenario
   transactions: Transaction[]
+  openBudgetMonth: string | undefined
   format: MoneyFormat
 }) {
-  const months = useMemo(
-    () => monthsSincePlanStart(monthlyFlows(computeMonthlyTotals(transactions)), plan.planStartDate),
-    [transactions, plan.planStartDate],
+  const { months, sincePlanStart } = useMemo(
+    () => paceMonths(monthlyFlows(computeMonthlyTotals(transactions)), plan.planStartDate, openBudgetMonth),
+    [transactions, plan.planStartDate, openBudgetMonth],
   )
   // The plan's figure over these same months: one amount for a plan that never changes it, and
   // otherwise what it averages, with where it started and where it is now.
@@ -70,7 +79,7 @@ function PaceHint({
   const invested = months.map((m) => m.investedCents)
   const mean = averageMonthlyCents(invested)
   const median = medianMonthlyCents(invested)
-  const onPace = mean >= planned
+  const onPace = mean >= planned * PACE_TOLERANCE
   // A tenth apart is a lump sum or a pause, not rounding.
   const typical = Math.abs(mean - median) > mean * 0.1 ? median : null
   return (
@@ -79,7 +88,8 @@ function PaceHint({
       <strong style={{ color: onPace ? 'var(--exp-success)' : 'var(--exp-danger)' }}>
         {formatCents(mean, format)} a month
       </strong>{' '}
-      on average over the {months.length} month{months.length === 1 ? '' : 's'} since the plan started
+      on average over the {months.length} {openBudgetMonth === undefined ? '' : 'full '}month
+      {months.length === 1 ? '' : 's'} {sincePlanStart ? 'since the plan started' : 'recorded'}
       {typical !== null ? `, ${formatCents(typical, format)} in a typical month` : ''}, against the{' '}
       {formatCents(planned, format)} a month{plannedFirst === plannedNow ? '' : ' on average'} it assumes
       {plannedFirst === plannedNow
@@ -189,16 +199,21 @@ function ReturnHint({
     )
   }
   const real = (1 + ret.annualised) / (1 + inflationRate) - 1
+  // Under ten years a yearly return is mostly the market's luck: at 17% volatility its standard
+  // error is about 12 points after two years and still 5 after ten, so a colour would say ahead or
+  // behind where the figure cannot tell. It is shown plain, with that said.
+  const settled = ret.years >= SETTLED_RETURN_YEARS
   const onPar = !plan || real >= plan.expectedRealReturn
   return (
     <p style={hintStyle}>
       Your portfolio returned{' '}
-      <strong style={{ color: onPar ? 'var(--exp-success)' : 'var(--exp-danger)' }}>
+      <strong style={settled ? { color: onPar ? 'var(--exp-success)' : 'var(--exp-danger)' } : undefined}>
         {formatPercent(ret.annualised, format)} a year
       </strong>{' '}
       since {since}, about {formatPercent(real, format)} once{' '}
       {formatPercent(inflationRate, format)} inflation is taken off
       {plan ? ` against the ${planRate}, after inflation, that ${plan.name} assumes` : ''}.
+      {plan && !settled ? ` A few years of returns say little about a long-run ${planRate}.` : ''}
     </p>
   )
 }
@@ -291,7 +306,7 @@ function SnapshotHints({
       {status?.deltaMonths && status.planDate ? (
         <MonthsHint months={status.deltaMonths} planDate={status.planDate} />
       ) : null}
-      {plan ? <PaceHint plan={plan} transactions={transactions} format={format} /> : null}
+      {plan ? <PaceHint plan={plan} transactions={transactions} openBudgetMonth={openBudgetMonth} format={format} /> : null}
       {ret ? <ReturnHint ret={ret} plan={plan} format={format} inflationRate={inflationRate} /> : null}
       {reserve ? <CashReserveHint reserve={reserve} format={format} /> : null}
       {stale ? <SteadyGapHint gap={stale} format={format} onRebaseline={onRebaseline} /> : null}
