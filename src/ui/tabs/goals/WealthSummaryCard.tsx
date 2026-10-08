@@ -43,6 +43,9 @@ interface Props {
   openBudgetMonth?: string | undefined
 }
 
+/** A yearly return is judged against the plan's only from this many years of history. */
+const SETTLED_RETURN_YEARS = 10
+
 /** Within this share of the plan's figure is the same pace: a transfer a few euros short is not behind. */
 const PACE_TOLERANCE = 0.98
 
@@ -196,16 +199,21 @@ function ReturnHint({
     )
   }
   const real = (1 + ret.annualised) / (1 + inflationRate) - 1
+  // Under ten years a yearly return is mostly the market's luck: at 17% volatility its standard
+  // error is about 12 points after two years and still 5 after ten, so a colour would say ahead or
+  // behind where the figure cannot tell. It is shown plain, with that said.
+  const settled = ret.years >= SETTLED_RETURN_YEARS
   const onPar = !plan || real >= plan.expectedRealReturn
   return (
     <p style={hintStyle}>
       Your portfolio returned{' '}
-      <strong style={{ color: onPar ? 'var(--exp-success)' : 'var(--exp-danger)' }}>
+      <strong style={settled ? { color: onPar ? 'var(--exp-success)' : 'var(--exp-danger)' } : undefined}>
         {formatPercent(ret.annualised, format)} a year
       </strong>{' '}
       since {since}, about {formatPercent(real, format)} once{' '}
       {formatPercent(inflationRate, format)} inflation is taken off
       {plan ? ` against the ${planRate}, after inflation, that ${plan.name} assumes` : ''}.
+      {plan && !settled ? ` A few years of returns say little about a long-run ${planRate}.` : ''}
     </p>
   )
 }
