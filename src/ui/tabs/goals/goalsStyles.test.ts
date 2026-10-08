@@ -261,7 +261,9 @@ describe('the inputs panel on a touch screen', () => {
 
     expect(sized?.body).toMatch(/min-height:\s*2\.75rem/)
     expect(rule('.stack .lifeEventRemove')).toMatch(/min-width:\s*2\.75rem/)
+    expect(rule('.stack .lifeEventEdit')).toMatch(/min-width:\s*2\.75rem/)
     expect(goals.outside).not.toMatch(/lifeEventRemove[^}]*min-height:\s*2\.75rem/)
+    expect(goals.outside).not.toMatch(/lifeEventEdit[^}]*min-height:\s*2\.75rem/)
   })
 })
 

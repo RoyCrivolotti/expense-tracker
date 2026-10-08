@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 // The fallback popover, as MonthInput.test.tsx does: the native control is the device's own.
 vi.mock('../../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: () => false }))
 
-import { EU_MONEY_FORMAT } from '../../../engine'
+import { CONTRIBUTION_STEP_MAX_COUNT, EU_MONEY_FORMAT } from '../../../engine'
 import { setMotionDisabledForTests } from '../../hooks/motion'
 import { MoneyFormatContext } from '../../hooks/moneyFormatContext'
 import { ContributionStepsList } from './ContributionSteps'
@@ -21,6 +21,7 @@ function setup(overrides: Partial<Parameters<typeof ContributionStepsList>[0]> =
         steps={[]}
         planStartDate="2026-06-25"
         baseCents={1_500_00}
+        startSetIn="Portfolio"
         format={EU_MONEY_FORMAT}
         onChange={onChange}
         {...overrides}
@@ -42,20 +43,32 @@ async function pickMonth(user: ReturnType<typeof userEvent.setup>, year: number,
 }
 
 describe('ContributionStepsList', () => {
-  it('lists the changes with their month and amount, each with a way to remove it', async () => {
+  it('lists the amount the plan starts with first, then the changes, each with a way to remove it', async () => {
     const steps = [
       { from: '2027-03', monthlyCents: 2_000_00 },
       { from: '2029-01', monthlyCents: 0 },
     ]
     const { onChange, user } = setup({ steps })
 
-    expect(screen.getByText("from Mar '27")).toBeInTheDocument()
-    expect(screen.getByText('2.000,00 €/mo')).toBeInTheDocument()
-    expect(screen.getByText("from Jan '29")).toBeInTheDocument()
-    expect(screen.getByText('0,00 €/mo')).toBeInTheDocument()
+    const rows = screen.getAllByRole('listitem')
+    expect(within(rows[0]!).getByText('from 25 Jun 2026')).toBeInTheDocument()
+    expect(within(rows[0]!).getByText('1.500,00 €/mo')).toBeInTheDocument()
+    expect(rows.slice(1).map((row) => row.textContent)).toEqual(["from Mar '272.000,00 €/moEdit×", "from Jan '29pauseEdit×"])
+    expect(screen.getByText('The first line is the amount you start with, set in Portfolio.')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: "Remove the change from Mar '27" }))
     expect(onChange).toHaveBeenCalledWith([{ from: '2029-01', monthlyCents: 0 }])
+  })
+
+  it('names where the starting amount is edited, which is the bar when it is in the bar', () => {
+    setup({ startSetIn: 'the bar above' })
+    expect(screen.getByText('The first line is the amount you start with, set in the bar above.')).toBeInTheDocument()
+  })
+
+  it('shows the starting amount, and no way to edit it here', () => {
+    setup()
+    const start = screen.getAllByRole('listitem')[0]!
+    expect(within(start).queryByRole('button')).not.toBeInTheDocument()
   })
 
   it('opens a form that starts on the month after the plan starts, and the amount the scenario starts with', async () => {
@@ -140,11 +153,91 @@ describe('ContributionStepsList', () => {
     expect(onChange).toHaveBeenCalledWith([])
   })
 
+  describe('editing a change', () => {
+    const steps = [
+      { from: '2027-03', monthlyCents: 2_000_00 },
+      { from: '2029-01', monthlyCents: 0 },
+    ]
+
+    it('opens the form on the change as it is, with Save instead of Add', async () => {
+      const { user } = setup({ steps })
+      await user.click(screen.getByRole('button', { name: "Edit the change from Mar '27" }))
+
+      expect(screen.getByRole('button', { name: /Change starts in/ })).toHaveTextContent("Mar '27")
+      expect(screen.getByLabelText('Monthly amount from then')).toHaveValue('2.000,00')
+      expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument()
+    })
+
+    it('replaces the change with the new amount, in date order', async () => {
+      const { onChange, user } = setup({ steps })
+      await user.click(screen.getByRole('button', { name: "Edit the change from Mar '27" }))
+      const amount = screen.getByLabelText('Monthly amount from then')
+      fireEvent.change(amount, { target: { value: '2750' } })
+      fireEvent.blur(amount)
+      await user.click(screen.getByRole('button', { name: 'Save' }))
+
+      expect(onChange).toHaveBeenCalledWith([
+        { from: '2027-03', monthlyCents: 2_750_00 },
+        { from: '2029-01', monthlyCents: 0 },
+      ])
+    })
+
+    it('moves a change to another month, which can put it after the others', async () => {
+      const { onChange, user } = setup({ steps })
+      await user.click(screen.getByRole('button', { name: "Edit the change from Mar '27" }))
+      await pickMonth(user, 2030, 'Jun')
+      await user.click(screen.getByRole('button', { name: 'Save' }))
+
+      expect(onChange).toHaveBeenCalledWith([
+        { from: '2029-01', monthlyCents: 0 },
+        { from: '2030-06', monthlyCents: 2_000_00 },
+      ])
+    })
+
+    it('lets a change keep its own month, and refuses the month of another', async () => {
+      const { onChange, user } = setup({ steps })
+      await user.click(screen.getByRole('button', { name: "Edit the change from Mar '27" }))
+      await user.click(screen.getByRole('button', { name: 'Save' }))
+      expect(onChange).toHaveBeenCalledWith(steps)
+
+      onChange.mockClear()
+      await user.click(screen.getByRole('button', { name: "Edit the change from Mar '27" }))
+      await pickMonth(user, 2029, 'Jan')
+      await user.click(screen.getByRole('button', { name: 'Save' }))
+      expect(screen.getByRole('alert')).toHaveTextContent("There is already a change from Jan '29.")
+      expect(onChange).not.toHaveBeenCalled()
+    })
+
+    it('drops the form on Cancel, and closes the add form when an edit opens, and the other way round', async () => {
+      const { onChange, user } = setup({ steps })
+      await user.click(screen.getByRole('button', { name: "Edit the change from Mar '27" }))
+      await user.click(screen.getByRole('button', { name: 'Cancel' }))
+      expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
+
+      await user.click(screen.getByRole('button', { name: '+ Add a change' }))
+      expect(screen.getByRole('button', { name: 'Add' })).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: "Edit the change from Jan '29" }))
+      expect(screen.queryByRole('button', { name: 'Add' })).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()
+
+      await user.click(screen.getByRole('button', { name: 'Cancel' }))
+      expect(onChange).not.toHaveBeenCalled()
+    })
+
+    it('has no way to edit without a plan start, since a month is counted from it', () => {
+      setup({ steps, planStartDate: null })
+      expect(screen.queryByRole('button', { name: /^Edit the change/ })).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: "Remove the change from Mar '27" })).toBeInTheDocument()
+      expect(screen.getAllByRole('listitem')[0]).toHaveTextContent('at the start1.500,00 €/mo')
+    })
+  })
+
   it('stops at the limit, and says why', () => {
-    const steps = Array.from({ length: 10 }, (_, i) => ({ from: `${2027 + i}-01`, monthlyCents: 1_000_00 }))
+    const steps = Array.from({ length: CONTRIBUTION_STEP_MAX_COUNT }, (_, i) => ({ from: `${2027 + i}-01`, monthlyCents: 1_000_00 }))
     setup({ steps })
     expect(screen.getByRole('button', { name: '+ Add a change' })).toBeDisabled()
-    expect(screen.getByText(/can have 10 changes/)).toBeInTheDocument()
+    expect(screen.getByText(new RegExp(`can have ${CONTRIBUTION_STEP_MAX_COUNT} changes`))).toBeInTheDocument()
   })
 
   it('wraps December into the January after it for a plan that starts then', async () => {

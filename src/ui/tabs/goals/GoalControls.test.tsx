@@ -68,14 +68,14 @@ describe('GoalControls', () => {
     expect(screen.getByLabelText('Plan start date')).toHaveValue('2024-03-15')
   })
 
-  it('has a folded section for the monthly investing changes, between the plan start and the life events', () => {
+  it('has a folded section for the monthly investing over time, between the plan start and the life events', () => {
     const { container } = render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
     const sections = Array.from(container.querySelectorAll('details[id^="goals-adjust-"]'))
     const ids = sections.map((el) => el.id.replace('goals-adjust-', ''))
     expect(ids.indexOf('changes')).toBe(ids.indexOf('tracking') + 1)
     expect(ids.indexOf('events')).toBe(ids.indexOf('changes') + 1)
     expect((sections[ids.indexOf('changes')] as HTMLDetailsElement).open).toBe(false)
-    expect(screen.getByText('Monthly investing changes')).toBeInTheDocument()
+    expect(screen.getByText('Monthly investing over time')).toBeInTheDocument()
   })
 
   it('writes a change to the monthly amount through the draft, in date order', () => {
@@ -114,6 +114,39 @@ describe('GoalControls', () => {
     expect(onChange).toHaveBeenCalledWith({ contributionSchedule: [] })
   })
 
+  it('edits a change through the draft, keeping the others', () => {
+    const onChange = vi.fn()
+    const draft = {
+      ...makeDraft(),
+      planStartDate: '2026-06-25',
+      contributionSchedule: [
+        { from: '2027-03', monthlyCents: 200_000 },
+        { from: '2029-01', monthlyCents: 0 },
+      ],
+    }
+    render(<GoalControls draft={draft} onChange={onChange} />)
+
+    fireEvent.click(screen.getByRole('button', { name: "Edit the change from Mar '27" }))
+    const amount = screen.getByLabelText('Monthly amount from then')
+    fireEvent.change(amount, { target: { value: '2600' } })
+    fireEvent.blur(amount)
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(onChange).toHaveBeenCalledWith({
+      contributionSchedule: [
+        { from: '2027-03', monthlyCents: 260_000 },
+        { from: '2029-01', monthlyCents: 0 },
+      ],
+    })
+  })
+
+  it('lists the starting amount first, and says it is set under Portfolio', () => {
+    const draft = { ...makeDraft(), planStartDate: '2026-06-25', monthlyContributionCents: 140_000 }
+    render(<GoalControls draft={draft} onChange={vi.fn()} />)
+    expect(screen.getByText('The first line is the amount you start with, set in Portfolio.')).toBeInTheDocument()
+    expect(screen.getByText('1.400,00 €/mo')).toBeInTheDocument()
+  })
+
   it('says under the monthly amount that it changes later, and where to set that', () => {
     const draft = {
       ...makeDraft(),
@@ -121,12 +154,12 @@ describe('GoalControls', () => {
       contributionSchedule: [{ from: '2027-03', monthlyCents: 200_000 }],
     }
     render(<GoalControls draft={draft} onChange={vi.fn()} />)
-    expect(screen.getByText("then 2.000,00 € from Mar '27. Set under Monthly investing changes.")).toBeInTheDocument()
+    expect(screen.getByText("then 2.000,00 € from Mar '27. Set under Monthly investing over time.")).toBeInTheDocument()
   })
 
   it('has no such note when the amount never changes', () => {
     render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
-    expect(screen.queryByText(/Set under Monthly investing changes/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Set under Monthly investing over time/)).not.toBeInTheDocument()
   })
 
   it('re-baselines the start balance and date from the latest check-in', () => {
