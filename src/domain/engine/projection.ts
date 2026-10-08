@@ -40,7 +40,8 @@ export interface ProjectionParams {
   lifeEvents?: LifeEvent[]
   /**
    * Changes to the monthly amount from a point on the plan's axis, in order (see
-   * `scheduleSteps`). Default: none, so the monthly amount stays what it starts as.
+   * `scheduleSteps`). Default: none, so the monthly amount stays what it starts as. Amounts are
+   * euros as sent, not today's money: the projection brings them back by `inflationRate`.
    */
   contributionSteps?: ScheduleStep[]
 }
@@ -166,7 +167,12 @@ export function projectNetWorth(params: ProjectionParams): YearPoint[] {
   let invested = params.startInvestedCents
 
   for (let year = 0; year <= params.horizonYears; year++) {
-    const contrib = annualContributionCents(params.monthlyContributionCents, params.contributionSteps ?? [], year)
+    const contrib = annualContributionCents(
+      params.monthlyContributionCents,
+      params.contributionSteps ?? [],
+      year,
+      params.inflationRate,
+    )
 
     if (year > 0) {
       invested = Math.round(

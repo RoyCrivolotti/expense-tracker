@@ -224,6 +224,34 @@ describe('life events', () => {
   })
 })
 
+describe('monthly amounts as euros sent', () => {
+  const paying = { expectedRealReturn: 0, startInvestedCents: 0, monthlyContributionCents: 100_000, horizonYears: 20 }
+
+  it('counts a flat amount for less each year in the plan\'s money, and for the full amount with no inflation', () => {
+    const none = projectNetWorth(baseParams({ ...paying, inflationRate: 0 }))
+    expect(none.map((p) => p.annualContributionCents).slice(1)).toEqual(Array(20).fill(1_200_000))
+
+    const some = projectNetWorth(baseParams({ ...paying, inflationRate: 0.03 }))
+    const yearly = some.map((p) => p.annualContributionCents).slice(1)
+    expect(yearly[0]!).toBeLessThan(1_200_000)
+    for (let i = 1; i < yearly.length; i++) expect(yearly[i]!).toBeLessThan(yearly[i - 1]!)
+  })
+
+  it('adds up to what twelve payments a year are worth when each is brought back one by one', () => {
+    const inflation = 0.03
+    const points = projectNetWorth(baseParams({ ...paying, inflationRate: inflation }))
+    let paid = 0
+    for (let month = 0; month < 12 * 10; month++) paid += 100_000 / (1 + inflation) ** ((month + 0.5) / 12)
+    expect(Math.abs(points[10]!.investedCents - paid) / paid).toBeLessThan(1e-4)
+  })
+
+  it('leaves a plan with a higher inflation lower at the end, since the same euros buy less', () => {
+    const at = (inflationRate: number) => projectNetWorth(baseParams({ horizonYears: 30, inflationRate }))[30]!.investedCents
+    expect(at(0.03)).toBeLessThan(at(0.02))
+    expect(at(0.02)).toBeLessThan(at(0))
+  })
+})
+
 describe('the figure GOALS-MODEL.md states', () => {
   /**
    * The band's spread was written down wrong and stayed wrong, because nothing failed when the

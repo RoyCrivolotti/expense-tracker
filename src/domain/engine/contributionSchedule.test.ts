@@ -149,30 +149,30 @@ describe('monthlyCentsAt', () => {
 })
 
 describe('annualContributionCents', () => {
-  it('is twelve times the base with no steps', () => {
-    expect(annualContributionCents(B, [], 0)).toBe(0)
-    expect(annualContributionCents(B, [], 1)).toBe(12 * B)
-    expect(annualContributionCents(B, [], 3)).toBe(12 * B)
+  it('is twelve times the base with no steps and no inflation', () => {
+    expect(annualContributionCents(B, [], 0, 0)).toBe(0)
+    expect(annualContributionCents(B, [], 1, 0)).toBe(12 * B)
+    expect(annualContributionCents(B, [], 3, 0)).toBe(12 * B)
   })
 
   it('does not change a year before the first step reaches it', () => {
     const steps = scheduleSteps('2026-01-01', [{ from: '2028-03', monthlyCents: X }])
-    expect(annualContributionCents(B, steps, 1)).toBe(annualContributionCents(B, [], 1))
-    expect(annualContributionCents(B, steps, 2)).toBe(annualContributionCents(B, [], 2))
+    expect(annualContributionCents(B, steps, 1, 0)).toBe(annualContributionCents(B, [], 1, 0))
+    expect(annualContributionCents(B, steps, 2, 0)).toBe(annualContributionCents(B, [], 2, 0))
   })
 
   it('switches at a year boundary: the old amount for the year before, the new one after', () => {
     const steps = scheduleSteps('2026-01-01', [{ from: '2027-01', monthlyCents: X }])
-    expect(annualContributionCents(B, steps, 1)).toBe(12 * B)
-    expect(annualContributionCents(B, steps, 2)).toBe(12 * X)
-    expect(annualContributionCents(B, steps, 3)).toBe(12 * X)
+    expect(annualContributionCents(B, steps, 1, 0)).toBe(12 * B)
+    expect(annualContributionCents(B, steps, 2, 0)).toBe(12 * X)
+    expect(annualContributionCents(B, steps, 3, 0)).toBe(12 * X)
   })
 
   it('weights a step part way through a year by the share of the year each amount was in force', () => {
     // 1 March 2027 is 59 days into the second plan year of a plan that began on 1 January 2026.
     const steps = scheduleSteps('2026-01-01', [{ from: '2027-03', monthlyCents: X }])
     const early = 59 / 365
-    expect(annualContributionCents(B, steps, 2)).toBe(Math.round(12 * (B * early + X * (1 - early))))
+    expect(annualContributionCents(B, steps, 2, 0)).toBe(Math.round(12 * (B * early + X * (1 - early))))
   })
 
   it('weights two steps in the same year by the days each was in force', () => {
@@ -181,7 +181,7 @@ describe('annualContributionCents', () => {
       { from: '2027-09', monthlyCents: 0 },
     ])
     const [first, second] = steps
-    expect(annualContributionCents(B, steps, 2)).toBe(
+    expect(annualContributionCents(B, steps, 2, 0)).toBe(
       Math.round(12 * (B * (first!.offsetYears - 1) + X * (second!.offsetYears - first!.offsetYears) + 0)),
     )
   })
@@ -191,8 +191,40 @@ describe('annualContributionCents', () => {
       { from: '2027-01', monthlyCents: 0 },
       { from: '2028-01', monthlyCents: X },
     ])
-    expect(annualContributionCents(B, steps, 2)).toBe(0)
-    expect(annualContributionCents(B, steps, 3)).toBe(12 * X)
+    expect(annualContributionCents(B, steps, 2, 0)).toBe(0)
+    expect(annualContributionCents(B, steps, 3, 0)).toBe(12 * X)
+  })
+  describe('with inflation, the amounts being euros as sent', () => {
+    const pi = 0.03
+
+    it('brings each year back to the money of the plan start, so a flat amount counts for less each year', () => {
+      const deflator = (year: number) => ((1 + pi) ** -(year - 1) - (1 + pi) ** -year) / Math.log(1 + pi)
+      for (const year of [1, 2, 10, 30]) {
+        expect(annualContributionCents(B, [], year, pi)).toBe(Math.round(12 * B * deflator(year)))
+      }
+      expect(annualContributionCents(B, [], 10, pi)).toBeLessThan(annualContributionCents(B, [], 1, pi))
+      expect(annualContributionCents(B, [], 1, pi)).toBeLessThan(12 * B)
+    })
+
+    it('agrees with discounting the twelve payments of a year one by one', () => {
+      for (const year of [1, 5, 20]) {
+        let months = 0
+        for (let i = 0; i < 12; i++) months += B / (1 + pi) ** (year - 1 + (i + 0.5) / 12)
+        expect(Math.abs(annualContributionCents(B, [], year, pi) - months) / months).toBeLessThan(1e-4)
+      }
+    })
+
+    it('discounts each amount of a year with a change in it by the days it was in force', () => {
+      const steps = scheduleSteps('2026-01-01', [{ from: '2027-03', monthlyCents: X }])
+      const at = steps[0]!.offsetYears
+      const k = Math.log(1 + pi)
+      const weight = (from: number, to: number) => ((1 + pi) ** -from - (1 + pi) ** -to) / k
+      expect(annualContributionCents(B, steps, 2, pi)).toBe(Math.round(12 * (B * weight(1, at) + X * weight(at, 2))))
+    })
+
+    it('is the plain amount when there is no inflation', () => {
+      expect(annualContributionCents(B, [], 7, 0)).toBe(12 * B)
+    })
   })
 })
 
@@ -208,7 +240,7 @@ describe('projecting with a schedule', () => {
     lifeEvents: [],
   })
   const invested = (s: ReturnType<typeof makeScenario>) =>
-    projectNetWorth(scenarioToParams(s, DEFAULT_INFLATION_RATE)).map((p) => p.investedCents)
+    projectNetWorth(scenarioToParams(s, 0)).map((p) => p.investedCents)
 
   it('is the plan as it was with no schedule, and with a schedule it cannot apply', () => {
     const base = invested(plan)
@@ -271,7 +303,7 @@ describe('projecting with a schedule', () => {
 
   it('reports what each year contributed', () => {
     const points = projectNetWorth(
-      scenarioToParams({ ...plan, contributionSchedule: [{ from: '2027-01', monthlyCents: X }] }, DEFAULT_INFLATION_RATE),
+      scenarioToParams({ ...plan, contributionSchedule: [{ from: '2027-01', monthlyCents: X }] }, 0),
     )
     expect(points.map((p) => p.annualContributionCents).slice(0, 4)).toEqual([0, 12 * B, 12 * X, 12 * X])
   })
