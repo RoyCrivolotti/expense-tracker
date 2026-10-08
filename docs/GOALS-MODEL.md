@@ -113,7 +113,7 @@ interface LifeEvent {
 }
 ```
 
-Stored as a JSON column (`life_events`) on `goal_scenarios`. Applied in the yearly loop after growth and contributions, before house purchase withdrawal. Year 0 is the initial balance — events at year 0 are not applied by the engine and not accepted by the UI (minimum year is 1). Rendered as diamond markers on the hero chart (green for inflows, amber for outflows).
+Stored as a JSON column (`life_events`) on `goal_scenarios`. Applied in the yearly loop after growth, contributions and the house purchase withdrawal. They are all added to the year's balance, so the balance at the end of a year does not depend on their order. Year 0 is the initial balance — events at year 0 are not applied by the engine and not accepted by the UI (minimum year is 1). Rendered as diamond markers on the hero chart (green for inflows, amber for outflows).
 
 ## Uncertainty bands
 
