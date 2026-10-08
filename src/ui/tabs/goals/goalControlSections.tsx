@@ -172,7 +172,7 @@ function MortgageFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: Sec
         <p className={styles.fieldHint}>
           The mortgage rate and house appreciation are nominal, as a bank and the price index
           quote them. The plan takes inflation off both, so the house and the debt are in
-          today&apos;s money like everything else.
+          today&apos;s money, like the plan.
         </p>
       ) : null}
     </>
@@ -285,7 +285,7 @@ export function TrackingFields({ draft, latest, onChange }: TrackingProps) {
       ? rebaselined.lines
       : null
   const rebaselineHint = latest
-    ? `Sets the starting balance to ${formatCents(latest.investedCents, format)} and the start date to ${formatCheckinDate(latest.date)}, your latest check-in. From then on ahead or behind measures only what you did after that date, which is the reset to reach for after a one-off inflow, or when the plan was made from a guess.`
+    ? `Sets the starting balance to ${formatCents(latest.investedCents, format)} and the start date to ${formatCheckinDate(latest.date)}, your latest check-in. From then on ahead or behind starts again from zero at that date, so it shows what you invest and how markets do from there. It is the reset to reach for after a one-off inflow, or when the plan was made from a guess.`
     : 'Log a wealth check-in first; re-baselining sets the starting balance and start date from it.'
   return (
     <>

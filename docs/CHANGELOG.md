@@ -2,6 +2,17 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (plainer wording on the plan screens)
+
+Text only; no figure moves.
+
+- **The shaded band says what it shows.** It is the plan at a return three points either side, which reads like a confidence interval and is not one. The caption now says it shows how much the return matters, not how likely an outcome is, and the phone caption, which said nothing about the band, has a sentence for it.
+- **The FI drawdown says it is an illustration.** It takes the plan's return every year, so it shows how the target works and not what a bad first decade would do. The caption and the glossary say so.
+- **The glossary says payments land at the end of the year.** That is a little cautious against paying every month, up to about 3% over thirty years at 7%, and it is what the plan has always done.
+- **Re-baselining no longer promises the gap measures only what you do next.** The gap restarts from zero but still moves with markets, so the three places that explain a re-baseline now say it follows what you invest and how markets do.
+- **The inflation texts say the monthly amount is what you send.** The Assumptions intro and the inflation setting still described a plan where the monthly amount was in today's money.
+- **"2 years ahead", not "more than 2 years ahead", at exactly 24 months, and "1 month late", not "1 months late".**
+
 ## October 2026 (a plan the portfolio cannot pay for says so)
 
 Checked in Chromium at 1280px and at 375px, in the light and the dark theme.

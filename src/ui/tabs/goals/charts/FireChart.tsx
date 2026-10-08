@@ -79,7 +79,9 @@ function FireChartImpl({
       <h3 className={styles.chartTitle}>FI drawdown</h3>
       <p className={styles.chartHint}>
         FI target {formatMoneyShort(fiTarget, format)} · reached year {fiYear}. Post-FI only: year 0 on
-        this chart is the FI year, not today. Constant withdrawal in today's money after that.
+        this chart is the FI year, not today. After that it takes the plan's return every year and
+        withdraws a constant amount in today's money, so it illustrates the target and is not a
+        forecast: a bad run of early years would leave less.
       </p>
       <LinearChart
         height={height}

@@ -42,7 +42,7 @@ function RebaselineSheet({
     ? `, instead of ${formatCheckinDate(preview.previous.planStartDate)} from ${formatCents(preview.previous.investedCents, format)}`
     : ''
   const start = preview
-    ? `The plan restarts on ${formatCheckinDate(preview.patch.planStartDate)} from ${formatCents(preview.patch.startInvestedCents, format)}${replaced}. From then on ahead or behind measures only what you do next.`
+    ? `The plan restarts on ${formatCheckinDate(preview.patch.planStartDate)} from ${formatCents(preview.patch.startInvestedCents, format)}${replaced}. From then on ahead or behind starts again from zero at that date, and follows what you invest and how markets do.`
     : ''
   return (
     <Presence show={preview !== null} exitMs={EXIT_MS.sheet}>

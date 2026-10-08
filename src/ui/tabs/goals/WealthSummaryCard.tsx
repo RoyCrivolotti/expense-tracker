@@ -139,8 +139,8 @@ function SteadyGapHint({
         Every check-in since {formatCheckinDate(gap.sinceDate)} has sat about{' '}
         {formatMoneyShort(Math.abs(gap.meanDeltaCents), format)} {behind ? 'behind' : 'ahead'}. A gap
         that does not move is the plan's starting point, not your saving. Re-baselining sets the
-        plan's start to the latest check-in, so from here on ahead or behind measures only what
-        you do next.
+        plan's start to the latest check-in, so from here on the gap comes from what you invest
+        and how markets do, not from where the plan began.
       </p>
       {onRebaseline ? (
         <button type="button" className={goalStyles.btn} onClick={onRebaseline}>

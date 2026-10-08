@@ -175,6 +175,9 @@ export function projectNetWorth(params: ProjectionParams): YearPoint[] {
     )
 
     if (year > 0) {
+      // The year's payments land at its end and earn nothing until the next year, a little
+      // cautious against paying each month (up to about 3% over thirty years at 7%). The plan
+      // keeps that convention on purpose, and the glossary says so.
       invested = Math.round(
         invested * (1 + params.expectedRealReturn) + contrib,
       )

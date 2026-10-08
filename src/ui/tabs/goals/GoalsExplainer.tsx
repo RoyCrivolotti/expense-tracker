@@ -16,7 +16,7 @@ const buildTerms = (cur: string): { term: string; body: string }[] => [
   },
   {
     term: 'Monthly investing',
-    body: "What leaves your account for your investments each month, as you send it. The plan is in today's money, so each year's payments are brought back by the assumed inflation: an amount that stays the same counts for less every year. A change from a date sets a new amount from that month on.",
+    body: "What leaves your account for your investments each month, as you send it. The plan is in today's money, so each year's payments are brought back by the assumed inflation: an amount that stays the same counts for less every year. A change from a date sets a new amount from that month on. Each year's payments are added at the end of that year, a little cautious: money sent through the year would earn a bit more.",
   },
   {
     term: 'Real return',
@@ -40,7 +40,7 @@ const buildTerms = (cur: string): { term: string; body: string }[] => [
   },
   {
     term: 'Drawdown',
-    body: 'What happens to the portfolio after you reach FI: it keeps growing with returns while you withdraw your annual spend each year. Chart years count from the FI year, not from today. If FI is not reached within the horizon, the drawdown chart shows the target only.',
+    body: "What happens to the portfolio after you reach FI: it keeps growing with returns while you withdraw your annual spend each year. It takes the plan's return every year, so it is an illustration, not a forecast: a bad run of early years would leave less. Chart years count from the FI year, not from today. If FI is not reached within the horizon, the drawdown chart shows the target only.",
   },
 ]
 
