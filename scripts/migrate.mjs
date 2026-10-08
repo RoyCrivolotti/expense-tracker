@@ -5,9 +5,14 @@
  *   node scripts/migrate.mjs <database>           what is pending; writes nothing
  *   node scripts/migrate.mjs <database> --apply   apply the pending files, recording each
  *
- * Exit codes: 0 up to date, 1 migrations pending, 2 the record cannot be trusted, the
- * database could not be read, or the arguments are wrong. A caller that must not ship code
- * ahead of its schema can run the check and stop on anything but 0.
+ * Exit codes: 0 up to date (or applied), 1 migrations pending, 2 the record cannot be trusted,
+ * the database could not be read, an apply failed, or the arguments are wrong. A caller that
+ * must not ship code ahead of its schema can run the check and stop on anything but 0.
+ *
+ * --apply first takes a D1 Time Travel restore point and prints it with the command that goes
+ * back to it, and refuses to apply if it cannot get one. Restoring discards every write since,
+ * user data included, so it is a last resort; most migrations only add, and the code that was
+ * running before still works on the schema they leave.
  *
  * Only files absent from `_migrations` are executed. Re-running is not merely noisy:
  * 0003 reassigns every row to a placeholder owner and drops four tables after its
@@ -19,7 +24,7 @@
  * record it cannot trust rather than guessing which of the two it is looking at.
  */
 import { execFileSync } from 'node:child_process'
-import { readdirSync } from 'node:fs'
+import { appendFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -117,18 +122,54 @@ export function assess({ database, files, applied, hasApplicationTables }) {
 }
 
 /**
- * `<database>` and `--apply`, nothing else. Throws a usage message otherwise, so a
- * misspelt flag cannot quietly turn an `--apply` into a read-only run, or the reverse.
+ * `<database>`, `--apply`, and with it `--no-restore-point`; nothing else. Throws a usage
+ * message otherwise, so a misspelt flag cannot quietly turn an `--apply` into a read-only run,
+ * or the reverse, and a restore point cannot be skipped by accident.
  * @param {string[]} argv
- * @returns {{ database: string, apply: boolean }}
+ * @returns {{ database: string, apply: boolean, restorePoint: boolean }}
  */
 export function parseArgs(argv) {
   const flags = argv.filter((a) => a.startsWith('--'))
   const names = argv.filter((a) => !a.startsWith('--'))
-  if (names.length !== 1 || flags.some((f) => f !== '--apply')) {
-    throw new Error('Usage: node scripts/migrate.mjs <database> [--apply]')
+  const apply = flags.includes('--apply')
+  const skipsRestorePoint = flags.includes('--no-restore-point')
+  const unknown = flags.some((f) => f !== '--apply' && f !== '--no-restore-point')
+  if (names.length !== 1 || unknown || (skipsRestorePoint && !apply)) {
+    throw new Error('Usage: node scripts/migrate.mjs <database> [--apply [--no-restore-point]]')
   }
-  return { database: names[0], apply: flags.includes('--apply') }
+  return { database: names[0], apply, restorePoint: !skipsRestorePoint }
+}
+
+/**
+ * The bookmark in the JSON that `wrangler d1 time-travel info --json` prints. Throws rather
+ * than returning nothing, since a restore point that is not there must stop an apply.
+ * @param {string} output
+ * @returns {string}
+ */
+export function parseBookmark(output) {
+  const start = output.indexOf('{')
+  const end = output.lastIndexOf('}')
+  let bookmark
+  try {
+    bookmark = JSON.parse(output.slice(start, end + 1)).bookmark
+  } catch {
+    // Falls through to the error below.
+  }
+  if (typeof bookmark !== 'string' || bookmark === '') {
+    throw new Error(`No bookmark in the Time Travel output: ${output.slice(0, 200)}`)
+  }
+  return bookmark
+}
+
+/**
+ * The command that puts a database back to a bookmark. It overwrites everything, user data
+ * included, written since.
+ * @param {string} database
+ * @param {string} bookmark
+ * @returns {string}
+ */
+export function restoreCommand(database, bookmark) {
+  return `npx wrangler d1 time-travel restore ${database} --bookmark=${bookmark}`
 }
 
 /**
@@ -181,21 +222,70 @@ function appliedNames(database) {
   }
 }
 
-function applyPending(database, pending) {
+/**
+ * A D1 Time Travel bookmark for the database as it is now. Throws, rather than returning
+ * nothing, when there is none, because an apply must not go ahead without a way back.
+ * @param {string} database
+ * @returns {string}
+ */
+export function takeRestorePoint(database) {
+  try {
+    const out = execFileSync('npx', ['wrangler', 'd1', 'time-travel', 'info', database, '--json'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: 'pipe',
+    })
+    return parseBookmark(out)
+  } catch (error) {
+    throw new Error(
+      `Could not take a restore point for ${database}, so nothing was applied: ` +
+        `${error.stderr || error.stdout || error.message}\n` +
+        `Pass --no-restore-point to apply without one.`,
+      { cause: error },
+    )
+  }
+}
+
+/** Where a person finds the way back, in the log and on the run's summary page. */
+function announceRestorePoint(database, bookmark) {
+  const lines = [
+    `Restore point for ${database}: ${bookmark}`,
+    `To put ${database} back to it (this discards every write since, user data included):`,
+    `  ${restoreCommand(database, bookmark)}`,
+  ]
+  console.log(lines.join('\n'))
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    const block = ['### Restore point', `\`${database}\` before the migrations: \`${bookmark}\``, '```', lines[2].trim(), '```']
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${block.join('\n')}\n`)
+  }
+}
+
+function applyPending(database, pending, restorePoint) {
   // The tracking table has to exist before anything can be recorded against it.
   const ordered = pending.includes(TRACKING_MIGRATION)
     ? [TRACKING_MIGRATION, ...pending.filter((f) => f !== TRACKING_MIGRATION)]
     : pending
 
-  for (const file of ordered) {
-    console.log(`Applying ${file}…`)
-    execFileSync('npx', ['wrangler', 'd1', 'execute', database, '--remote', `--file=migrations/${file}`], {
-      cwd: ROOT,
-      stdio: 'inherit',
-    })
-    // Separate call: a crash between applying and recording leaves the file pending,
-    // which is why the CREATE-only migrations also carry IF NOT EXISTS.
-    wrangler(database, ['--command', `INSERT OR IGNORE INTO _migrations (name) VALUES ('${stemOf(file)}')`])
+  const bookmark = restorePoint ? takeRestorePoint(database) : null
+  if (bookmark) announceRestorePoint(database, bookmark)
+
+  try {
+    for (const file of ordered) {
+      console.log(`Applying ${file}…`)
+      execFileSync('npx', ['wrangler', 'd1', 'execute', database, '--remote', `--file=migrations/${file}`], {
+        cwd: ROOT,
+        stdio: 'inherit',
+      })
+      // Separate call: a crash between applying and recording leaves the file pending,
+      // which is why the CREATE-only migrations also carry IF NOT EXISTS.
+      wrangler(database, ['--command', `INSERT OR IGNORE INTO _migrations (name) VALUES ('${stemOf(file)}')`])
+    }
+  } catch (error) {
+    console.error(`\nApplying to ${database} failed and it may be partly changed: ${error.message}`)
+    console.error(`Check what it has: npm run check:schema -- ${database}`)
+    if (bookmark) console.error(`To go back to before this run: ${restoreCommand(database, bookmark)}`)
+    error.reported = true
+    throw error
   }
   console.log(`Done — applied ${ordered.length} migration(s) to ${database}`)
 }
@@ -209,7 +299,7 @@ function main(argv) {
     console.error(error.message)
     return 2
   }
-  const { database, apply } = args
+  const { database, apply, restorePoint } = args
 
   let result
   let applied
@@ -242,7 +332,12 @@ function main(argv) {
     console.log('Run again with --apply to apply them.')
     return 1
   }
-  applyPending(database, result.pending)
+  try {
+    applyPending(database, result.pending, restorePoint)
+  } catch (error) {
+    if (!error.reported) console.error(error.message)
+    return 2
+  }
   return 0
 }
 

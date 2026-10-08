@@ -10,6 +10,8 @@ import {
   backfillsBelowHighestApplied,
   isMissingTable,
   parseArgs,
+  parseBookmark,
+  restoreCommand,
   selectPendingMigrations,
   stemOf,
 } from './migrate.mjs'
@@ -200,18 +202,48 @@ describe('assessing a database', () => {
 })
 
 describe('the command line', () => {
-  it('reads a database as a check, and --apply as an apply', () => {
-    expect(parseArgs(['roy-expenses'])).toEqual({ database: 'roy-expenses', apply: false })
-    expect(parseArgs(['roy-expenses', '--apply'])).toEqual({ database: 'roy-expenses', apply: true })
-    expect(parseArgs(['--apply', 'roy-expenses'])).toEqual({ database: 'roy-expenses', apply: true })
+  it('reads a database as a check, and --apply as an apply that takes a restore point', () => {
+    expect(parseArgs(['roy-expenses'])).toEqual({ database: 'roy-expenses', apply: false, restorePoint: true })
+    expect(parseArgs(['roy-expenses', '--apply'])).toEqual({ database: 'roy-expenses', apply: true, restorePoint: true })
+    expect(parseArgs(['--apply', 'roy-expenses'])).toEqual({ database: 'roy-expenses', apply: true, restorePoint: true })
   })
 
-  it.each([[[]], [['--apply']], [['a', 'b']], [['a', '--aply']], [['a', '--force']]])(
-    'refuses %j with the usage line, so a typo cannot flip a check into an apply',
-    (argv) => {
-      expect(() => parseArgs(argv)).toThrow(/^Usage: node scripts\/migrate\.mjs <database> \[--apply\]$/)
-    },
-  )
+  it('skips the restore point only when asked to, and only on an apply', () => {
+    expect(parseArgs(['db', '--apply', '--no-restore-point'])).toEqual({ database: 'db', apply: true, restorePoint: false })
+  })
+
+  it.each([
+    [[]],
+    [['--apply']],
+    [['a', 'b']],
+    [['a', '--aply']],
+    [['a', '--force']],
+    [['a', '--no-restore-point']],
+  ])('refuses %j with the usage line, so a typo cannot flip a check into an apply', (argv) => {
+    expect(() => parseArgs(argv)).toThrow(/^Usage: node scripts\/migrate\.mjs <database> \[--apply \[--no-restore-point\]\]$/)
+  })
+})
+
+describe('the restore point', () => {
+  const bookmark = '0000047e-00000000-000050fe-d69c53d380c1c46a821fb415ab27c17c'
+
+  it('reads the bookmark wrangler prints', () => {
+    expect(parseBookmark(JSON.stringify({ bookmark }, null, 2))).toBe(bookmark)
+  })
+
+  it('reads it past a banner line', () => {
+    expect(parseBookmark(`⛅️ wrangler 4.0\n${JSON.stringify({ bookmark })}\n`)).toBe(bookmark)
+  })
+
+  it.each(['', 'not json', '{}', '{"bookmark": ""}', '{"bookmark": 12}'])('refuses %j, since an apply must not go ahead without one', (output) => {
+    expect(() => parseBookmark(output)).toThrow(/No bookmark in the Time Travel output/)
+  })
+
+  it('gives the command that goes back to it', () => {
+    expect(restoreCommand('roy-expenses', bookmark)).toBe(
+      `npx wrangler d1 time-travel restore roy-expenses --bookmark=${bookmark}`,
+    )
+  })
 })
 
 describe('telling a missing table from a database it could not reach', () => {
