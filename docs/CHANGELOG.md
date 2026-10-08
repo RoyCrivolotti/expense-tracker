@@ -2,6 +2,12 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (a plan the portfolio cannot pay for says so)
+
+Checked in Chromium at 1280px and at 375px, in the light and the dark theme.
+
+- **A house or a life event that costs more than the portfolio holds is flagged under the chart.** The plan took the money out anyway and carried a negative balance that compounded like a debt, with nothing on the screen saying so: 20.000 € and 500 € a month has 62.555 € by year 5, so it cannot pay the 80.000 € down payment on a 400.000 € house, yet the chart drew a line and a net worth. The note names the year and how far below zero it goes ("The house needs more than the portfolio holds in year 5. It takes 80.000 € out (the down payment and the costs) and leaves the portfolio 17.445 € below zero"), and blames the life event instead when the house alone fits. The figures do not change; a plan that fits shows nothing.
+
 ## October 2026 (the inflation preview shows the plan at that rate)
 
 - **Trying another inflation rate in the Nominal view draws the plan at that rate.** Since the monthly amount became what you send, the plan itself depends on the inflation, but the preview only drew the saved line higher, which counted each payment as if it grew with prices. With 2% saved and 6% tried, a plan of 20.000 € and 1.000 € a month read 6,25M € at year 30; at 6% it is 4,81M €, the figure the chart shows when 6% is saved. The rest of Goals keeps the saved rate, as before.

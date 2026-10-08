@@ -62,6 +62,15 @@ The projection is linear in contributions, so a schedule needs no new algorithm:
 `housePurchaseYear`: `null` = never buy; `0` = owned from day one (capital already
 allocated); `N > 0` = buy after year N (withdraw down payment + costs that year).
 
+The withdrawal is not limited to what the portfolio holds. When it cannot cover the purchase, or a
+life event that costs more than it holds, the invested balance goes negative and then compounds at
+the plan's return, a debt no lender offers, so every figure from that year on describes a plan
+nobody could follow. `portfolioShortfall` (`engine/portfolioShortfall.ts`) names the first year the
+balance is below zero and whether the house alone (the down payment and the costs against what the
+portfolio holds before them) or a life event put it there, and `PortfolioShortfallNote` says so
+under the hero chart. The projection itself is unchanged: the note is the guard, not a clamp, since
+the right fix (a later year, less down, more invested) is the reader's to choose.
+
 ## Rent vs buy
 
 Symmetric **net worth** comparison via `projectRentVsBuy` (`src/domain/engine/rentVsBuy.ts`):
