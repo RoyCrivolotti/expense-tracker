@@ -59,6 +59,11 @@ export interface ChartSeries {
   connect?: boolean
   /** Draw a marker at each point. Off for a projection given as points, which is a line. */
   dots?: boolean
+  /**
+   * A projection given as points that is read like a line: at the focused year it gets a value tag
+   * (when the chart has them) and a hollow dot. Without it a scatter series is only its readings.
+   */
+  tagged?: boolean
 }
 
 interface Props {
@@ -393,6 +398,7 @@ export function LinearChart({
           scaleY={geo.scaleY}
           lines={lineSeries}
           bands={series.filter((s) => s.kind === 'band')}
+          pointLines={series.flatMap((s) => (s.tagged && s.points ? [{ id: s.id, color: s.color, points: s.points }] : []))}
         />
       </svg>
       <StepKeysHint id={keysId} show={steppable} />

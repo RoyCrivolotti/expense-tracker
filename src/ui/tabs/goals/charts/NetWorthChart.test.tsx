@@ -132,6 +132,30 @@ describe('NetWorthChart', () => {
     expect(tagTexts(undefined)).toEqual([])
   })
 
+  it('tags the plan from today beside its own line, once the line has started, and not before', () => {
+    const plan = makeScenario({ id: 1, name: 'Path A', planStartDate: '2024-01-01', isActive: true })
+    const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-01-01' })
+    const { container } = render(
+      <NetWorthChart
+        milestones={milestones}
+        scenarios={[plan]}
+        draft={defaultDraft}
+        activeId={null}
+        variant="hero"
+        fromToday={fromToday}
+        legendStore={createHeroLegendStore()}
+      />,
+    )
+    const svg = container.querySelector('svg[role="img"]')!
+    const todayChips = () =>
+      [...container.querySelectorAll('svg rect')].filter((r) => /valueTagToday/.test(r.getAttribute('class') ?? '')).length
+    // Before the check-in the plan from today does not exist yet.
+    fireEvent.keyDown(svg, { key: 'Home' })
+    expect(todayChips()).toBe(0)
+    fireEvent.keyDown(svg, { key: 'End' })
+    expect(todayChips()).toBe(1)
+  })
+
   it('keeps its own legend when no chips are reading it', () => {
     render(
       <NetWorthChart

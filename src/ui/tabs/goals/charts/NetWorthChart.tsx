@@ -230,6 +230,7 @@ function useFromTodaySeries(
       connect: true,
       dashed: true,
       dots: false,
+      tagged: true,
     }
   }, [isHero, fromToday, inflationRate, windowYears, extentYears])
 }
