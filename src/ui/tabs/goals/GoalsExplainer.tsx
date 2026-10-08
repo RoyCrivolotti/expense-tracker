@@ -16,7 +16,7 @@ const buildTerms = (cur: string): { term: string; body: string }[] => [
   },
   {
     term: 'Monthly investing',
-    body: "What leaves your account for your investments each month, as you send it. The plan is in today's money, so each year's payments are brought back by the assumed inflation: an amount that stays the same counts for less every year. A change from a date sets a new amount from that month on.",
+    body: "What leaves your account for your investments each month, as you send it. The plan is in today's money, so each year's payments are brought back by the assumed inflation: an amount that stays the same counts for less every year. A change from a date sets a new amount from that month on. Each year's payments are added at the end of that year, a little cautious: money sent through the year would earn a bit more.",
   },
   {
     term: 'Real return',
