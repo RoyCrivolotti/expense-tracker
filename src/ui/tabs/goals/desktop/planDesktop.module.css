@@ -252,13 +252,11 @@
 
 /* All one width, so a long name cannot make one chip a different shape from the next, and a row
    is as tall as its tallest chip (the name takes a second line where it needs one). They wrap
-   below instead of scrolling: every scenario is on the page, and so is every value. The row gap
-   leaves room for the PLAN and EDITED tags, which sit on the top edge of a chip; on the first row
-   they hang into the space under the title row. */
+   below instead of scrolling: every scenario is on the page, and so is every value. */
 .chips {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
-  gap: 0.875rem 0.5rem;
+  gap: 0.5rem;
   min-width: 0;
 }
 
@@ -292,7 +290,7 @@
   align-items: center;
   gap: 0.5rem;
   min-width: 0;
-  padding: 0.4375rem 0.75rem;
+  padding: 0.3125rem 0.75rem;
   border: 0;
   border-radius: 10px;
   background: none;
@@ -317,6 +315,16 @@
   overflow: hidden;
   line-height: 1.25;
   overflow-wrap: anywhere;
+}
+
+/* The value, and under it the PLAN and EDITED tags of the open chip: inside the chip, so they are
+   part of it, and in the value's column, so the name keeps its width. Only a tagged chip is taller. */
+.chipSide {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
 }
 
 .chipValue {
@@ -354,15 +362,9 @@
   text-decoration: line-through;
 }
 
-/* On the top edge, so a name has the whole width of the chip. Solid, so the border does not run
-   through them. */
 .chipTags {
-  position: absolute;
-  top: -9px;
-  right: 10px;
   display: flex;
-  gap: 4px;
-  pointer-events: none;
+  gap: 3px;
 }
 
 .tabDot {
@@ -374,9 +376,10 @@
 
 .tabPlan,
 .tabEdited {
-  padding: 0.1rem 0.4rem;
+  padding: 0.05rem 0.35rem;
   border-radius: 999px;
-  font-size: 0.65rem;
+  font-size: 0.625rem;
+  line-height: 1.3;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -385,12 +388,12 @@
 
 .tabPlan {
   color: var(--exp-success-text);
-  background: color-mix(in srgb, var(--exp-success) 18%, var(--color-bg));
+  background: color-mix(in srgb, var(--exp-success) 18%, transparent);
 }
 
 .tabEdited {
   color: var(--exp-warning-text);
-  background: color-mix(in srgb, var(--exp-warning) 18%, var(--color-bg));
+  background: color-mix(in srgb, var(--exp-warning) 18%, transparent);
 }
 
 /* What can be done with the open scenario, in the title row beside the view switch. */

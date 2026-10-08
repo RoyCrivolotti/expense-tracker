@@ -24,11 +24,11 @@ function EyeIcon({ off }: { off: boolean }) {
   )
 }
 
-/** The pills on a chip's top edge. A screen reader gets the same words from the chip's own text. */
+/** The pills under a chip's value. A screen reader gets the same words from the chip's own text. */
 function ChipTags({ plan, edited }: { plan: boolean; edited: boolean }) {
   if (!plan && !edited) return null
   return (
-    <span className={styles.chipTags} aria-hidden>
+    <span className={styles.chipTags}>
       {plan ? <span className={styles.tabPlan}>Plan</span> : null}
       {edited ? <span className={styles.tabEdited}>Edited</span> : null}
     </span>
@@ -104,8 +104,9 @@ function Chip({ scenario, label, line, active, edited, tabIndex, onOpen, onToggl
           {label}
         </span>
         <ChipSpeech plan={plan} edited={edited} />
-        <span className={styles.chipValue} aria-hidden>
-          {value}
+        <span className={styles.chipSide} aria-hidden>
+          <span className={styles.chipValue}>{value}</span>
+          <ChipTags plan={plan} edited={edited} />
         </span>
       </button>
       {!active && scenario && onToggle ? (
@@ -119,7 +120,6 @@ function Chip({ scenario, label, line, active, edited, tabIndex, onOpen, onToggl
           <EyeIcon off={hidden} />
         </button>
       ) : null}
-      <ChipTags plan={plan} edited={edited} />
     </div>
   )
 }
