@@ -567,11 +567,15 @@ async function checkStability(page, where, held) {
   check(where, '(r) the purchase breakdown shows at the purchase year', shown)
   check(where, '(r) the breakdown takes no room from the page', shown && Math.abs(grew) <= 1, `page grew ${grew}px`)
   if (shown) {
-    const hidden = await page.evaluate(() => {
-      const el = document.querySelector('[class*="floater"]')
-      return el ? getComputedStyle(el).pointerEvents : 'none-found'
+    // It is under the chart, in the place the chart's note is when no year is pointed at, so it
+    // covers neither the lines nor the axis labels.
+    const where_ = await page.evaluate(() => {
+      const chart = document.querySelector('[data-goals-plan-wide] [role="img"]').getBoundingClientRect()
+      const title = [...document.querySelectorAll('[data-goals-plan-wide] *')].find((e) => e.children.length === 0 && e.textContent.trim() === 'Down payment + fees')
+      const t = title.getBoundingClientRect()
+      return { chartBottom: chart.bottom, breakdownTop: t.top }
     })
-    check(where, '(r) the breakdown lets the pointer through to the chart', hidden === 'none', hidden)
+    check(where, '(r) the breakdown is under the chart, not over it', where_.breakdownTop >= where_.chartBottom - 0.5, JSON.stringify(where_))
   }
   await page.mouse.move(0, 0)
 }
@@ -638,14 +642,19 @@ async function checkChips(page, where, screen) {
 
   const open = page.getByRole('tablist', { name: 'Scenarios' }).getByRole('tab', { selected: true })
   const tags = await open.evaluate((el) => {
-    const chip = el.parentElement
-    const chipTop = chip.getBoundingClientRect().top
-    const tag = chip.querySelector('[class*="chipTags"]')
-    const name = chip.querySelector('[class*="chipName"]').getBoundingClientRect()
+    const chip = el.parentElement.getBoundingClientRect()
+    const tag = el.querySelector('[class*="chipTags"]')
+    const name = el.querySelector('[class*="chipName"]').getBoundingClientRect()
+    const value = el.querySelector('[class*="chipValue"]').getBoundingClientRect()
     const t = tag?.getBoundingClientRect()
-    return t ? { onEdge: Math.abs(t.top + t.height / 2 - chipTop) < t.height, clearOfName: t.bottom <= name.top + 0.5 || t.top >= name.bottom } : null
+    if (!t) return null
+    return {
+      inside: t.top >= chip.top && t.bottom <= chip.bottom && t.left >= chip.left && t.right <= chip.right,
+      underValue: t.top >= value.bottom - 1 && t.right <= value.right + 1,
+      clearOfName: t.left >= name.right - 0.5 || t.right <= name.left + 0.5,
+    }
   })
-  check(where, '(c) the Plan tag is on the open chip\'s top edge, clear of its name', tags?.onEdge === true && tags.clearOfName === true, JSON.stringify(tags))
+  check(where, '(c) the Plan tag is inside the open chip, under its value and clear of its name', tags?.inside === true && tags.underValue === true && tags.clearOfName === true, JSON.stringify(tags))
 
   // The actions are in the title row, beside the view switch: at the same height as "Goals".
   const row = await page.evaluate(() => {
@@ -1147,9 +1156,9 @@ async function checkTouchTargets(browser, engine) {
   await fine.page.waitForTimeout(400)
   const small = await fine.page.evaluate(() => {
     const h = (sel) => Math.round(document.querySelector(sel).getBoundingClientRect().height * 10) / 10
-    return { stepper: h('[aria-label^="Decrease "]'), field: h('[role="region"] input[type="text"]'), chip: h('[role="tablist"][aria-label="Scenarios"] > *'), range: h('input[type="range"]'), digits: h('[class*="leverValue"]') }
+    return { stepper: h('[aria-label^="Decrease "]'), field: h('[role="region"] input[type="text"]'), chip: Math.min(...[...document.querySelectorAll('[role="tablist"][aria-label="Scenarios"] > *')].map((c) => c.getBoundingClientRect().height)), range: h('input[type="range"]'), digits: h('[class*="leverValue"]') }
   })
-  check(`${engine} mouse`, '(t) with a fine pointer the controls keep their size (stepper 25.6, field 26, chip 32.3, slider 16 or 17, digits row under 40)', near(small.stepper, 25.6, 0.7) && near(small.chip, 32.3, 1.5) && near(small.range, 16.5, 1) && near(small.field, 26, 0.5) && small.digits < 40, JSON.stringify(small))
+  check(`${engine} mouse`, '(t) with a fine pointer the controls keep their size (stepper 25.6, field 26, chip 44.6 (the row of the tagged chip), slider 16 or 17, digits row under 40)', near(small.stepper, 25.6, 0.7) && near(small.chip, 44.6, 1.5) && near(small.range, 16.5, 1) && near(small.field, 26, 0.5) && small.digits < 40, JSON.stringify(small))
   await fine.context.close()
   const phone = await openPlan(browser, { width: 899, height: 800 }, { touch: true })
   const phoneStyle = await phone.page.evaluate(() => ({
