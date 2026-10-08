@@ -167,3 +167,14 @@ describe('BreakdownSlot', () => {
   })
 })
 
+describe('ScenarioSeriesLegend amounts', () => {
+  const items = [{ label: 'Path A, from today', color: '#6366f1', dotted: true, valueCents: 253_000_000 }]
+
+  it('writes millions to two decimals where the scenarios\' chips are above the chart, and to one otherwise', () => {
+    const props = { items, activeYear: 5, breakdowns: [] }
+    const { rerender } = render(<ScenarioSeriesLegend {...props} chipsAbove />)
+    expect(screen.getByText('2,53M €')).toBeInTheDocument()
+    rerender(<ScenarioSeriesLegend {...props} />)
+    expect(screen.getByText('2,5M €')).toBeInTheDocument()
+  })
+})

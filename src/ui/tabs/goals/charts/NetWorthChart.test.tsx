@@ -106,6 +106,32 @@ describe('NetWorthChart', () => {
     expect(store.get()).toEqual([])
   })
 
+  it('tags each line\'s value on the chart at the year pointed at, with the band\'s over and under, only where chips are above it', () => {
+    const tagTexts = (store: ReturnType<typeof createHeroLegendStore> | undefined) => {
+      const { container, unmount } = render(
+        <NetWorthChart
+          milestones={milestones}
+          scenarios={[defaultDraft, makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })]}
+          draft={{ ...defaultDraft, horizonYears: 30 }}
+          variant="hero"
+          legendStore={store}
+        />,
+      )
+      const svg = container.querySelector('svg[role="img"]')!
+      fireEvent.keyDown(svg, { key: 'Home' })
+      fireEvent.keyDown(svg, { key: 'ArrowRight' })
+      const texts = [...container.querySelectorAll('svg g[aria-hidden="true"] text')].map((t) => t.textContent ?? '')
+      unmount()
+      return texts
+    }
+
+    const withChips = tagTexts(createHeroLegendStore())
+    // A chip per line, and the band's two edges with the return each stands for.
+    expect(withChips.filter((t) => / · /.test(t))).toHaveLength(2)
+    expect(withChips.some((t) => /^\d+(,\d+)?(M|k)? €$|€$/.test(t) && !/ · /.test(t))).toBe(true)
+    expect(tagTexts(undefined)).toEqual([])
+  })
+
   it('keeps its own legend when no chips are reading it', () => {
     render(
       <NetWorthChart
