@@ -20,6 +20,9 @@ describe('formatMoneyAxis', () => {
 describe('formatMoneyShort', () => {
   it('uses the decimal mark of the money format, so 8,2M sits beside 8.179.020 € and not 8.2M, which there reads as thousands', () => {
     expect(formatMoneyShort(8_200_000_00, EU_MONEY_FORMAT)).toBe('8,2M €')
+    expect(formatMoneyShort(8_237_000_00, EU_MONEY_FORMAT, 2)).toBe('8,24M €')
+    // Only millions take the extra place; thousands are whole either way.
+    expect(formatMoneyShort(736_400_00, EU_MONEY_FORMAT, 2)).toBe('736k €')
     expect(formatMoneyShort(8_200_000_00, { ...EU_MONEY_FORMAT, locale: 'en-US', decimalSeparator: '.' })).toBe('8.2M €')
   })
 

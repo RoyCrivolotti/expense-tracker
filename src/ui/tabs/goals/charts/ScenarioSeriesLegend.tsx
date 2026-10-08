@@ -199,10 +199,12 @@ interface LegendMainProps {
   onToggle: ScenarioSeriesLegendProps['onToggle']
   listRef: ScenarioSeriesLegendProps['listRef']
   layout: ScenarioSeriesLegendProps['layout']
+  /** The scenarios' chips are above the chart, and its own are to two decimals in millions, so this key is too. */
+  chipsAbove: boolean
 }
 
 /** The year pointed at, or how to point at one, and the rows; no rows where the chips above have them. */
-function LegendMain({ items, activeYear, hint, format, onToggle, listRef, layout }: LegendMainProps) {
+function LegendMain({ items, activeYear, hint, format, onToggle, listRef, layout, chipsAbove }: LegendMainProps) {
   return (
     <>
       {activeYear != null ? (
@@ -213,7 +215,7 @@ function LegendMain({ items, activeYear, hint, format, onToggle, listRef, layout
       {items.length > 0 ? (
         <LiveLegend
           items={items}
-          formatValue={(cents) => formatMoneyShort(cents, format)}
+          formatValue={(cents) => formatMoneyShort(cents, format, chipsAbove ? 2 : 1)}
           onToggle={onToggle}
           listRef={listRef}
           layout={layout}
@@ -268,6 +270,7 @@ export function ScenarioSeriesLegend({
       onToggle={onToggle}
       listRef={listRef}
       layout={layout}
+      chipsAbove={chipsAbove}
     />
   )
   if (extrasBeside) return <Beside main={main} extras={extras} />

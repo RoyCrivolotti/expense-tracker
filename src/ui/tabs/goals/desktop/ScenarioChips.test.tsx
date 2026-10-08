@@ -36,14 +36,14 @@ const chipOf = (name: string | RegExp) => screen.getByRole('tab', { name }).pare
 describe('ScenarioChips', () => {
   it('gives each scenario the value its line has in the chart, and the open one the draft line\'s', () => {
     setup()
-    expect(chipOf(/^Path A/)).toHaveTextContent('8,2M')
-    expect(chipOf('Path B')).toHaveTextContent('4,4M')
+    expect(chipOf(/^Path A/)).toHaveTextContent('8.200.000')
+    expect(chipOf('Path B')).toHaveTextContent('4.400.000')
   })
 
   it('follows the chart as it publishes new values', () => {
     const { legend } = setup()
     act(() => legend.set([draftLine, { ...lineOfB, valueCents: 130_000_000 }]))
-    expect(chipOf('Path B')).toHaveTextContent('1,3M')
+    expect(chipOf('Path B')).toHaveTextContent('1.300.000')
   })
 
   it('shows no value before the chart has published any', () => {
@@ -95,13 +95,13 @@ describe('ScenarioChips', () => {
 
   it('shows the unsaved draft as a chip of its own, with the draft line\'s value, and opens it', async () => {
     const { onSelectDraft } = setup({ scenarios: [], activeId: null, showDraft: true }, [draftLine])
-    expect(chipOf('Unsaved draft')).toHaveTextContent('8,2M')
+    expect(chipOf('Unsaved draft')).toHaveTextContent('8.200.000')
     await userEvent.click(screen.getByRole('tab', { name: 'Unsaved draft' }))
     expect(onSelectDraft).toHaveBeenCalled()
   })
 
   it('does not take the dotted plan-from-today line for the draft\'s', () => {
     setup({}, [{ label: 'Path A, from today', color: '#10b981', dotted: true, valueCents: 999_000_000 }, draftLine, lineOfB])
-    expect(chipOf(/^Path A/)).toHaveTextContent('8,2M')
+    expect(chipOf(/^Path A/)).toHaveTextContent('8.200.000')
   })
 })

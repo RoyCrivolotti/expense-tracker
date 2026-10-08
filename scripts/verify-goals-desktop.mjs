@@ -598,6 +598,47 @@ async function checkLegendAfterDiscard(page, where) {
 }
 
 /**
+ * (v1) At the year pointed at, each line's value is in a chip beside its dot (merged into one with a
+ * dot each where lines read the same), with the band's over and under dashed: all inside the chart,
+ * none over another, none while nothing is pointed at, and on the left of the dots in the last
+ * years, where the right has no room.
+ */
+async function checkValueTags(page, where, svg) {
+  const box = await svg.boundingBox()
+  const read = () =>
+    page.evaluate(() => {
+      const chart = document.querySelector('[data-goals-plan-wide] [role="img"]').getBoundingClientRect()
+      const tags = [...document.querySelectorAll('[data-goals-plan-wide] [class*="valueTags"] > g')].map((g) => {
+        const r = g.getBoundingClientRect()
+        return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, text: g.textContent ?? '', dots: g.querySelectorAll('circle').length }
+      })
+      const focusDots = [...document.querySelectorAll('[data-goals-plan-wide] [role="img"] circle')].filter((c) => !c.closest('[class*="valueTags"]'))
+      const dotX = focusDots.length ? Math.max(...focusDots.map((c) => c.getBoundingClientRect().left)) : null
+      return { chart: { left: chart.left, right: chart.right, top: chart.top, bottom: chart.bottom }, tags, dotX }
+    })
+  const overlap = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1
+
+  await page.mouse.move(0, 0)
+  await page.waitForTimeout(200)
+  check(where, '(v1) with nothing pointed at there are no value chips on the chart', (await read()).tags.length === 0)
+
+  for (const [name, f] of [['in the middle', 0.5], ['in the last years', 0.97]]) {
+    await page.mouse.move(box.x + box.width * f, box.y + box.height * 0.5)
+    await page.waitForTimeout(300)
+    const m = await read()
+    check(where, `(v1) pointing ${name} puts value chips on the chart`, m.tags.length >= 3 && m.tags.every((t) => /\d/.test(t.text)), JSON.stringify(m.tags.map((t) => t.text)))
+    const outside = m.tags.filter((t) => t.left < m.chart.left - 0.5 || t.right > m.chart.right + 0.5 || t.top < m.chart.top - 0.5 || t.bottom > m.chart.bottom + 0.5)
+    check(where, `(v1) pointing ${name} keeps every value chip inside the chart`, outside.length === 0, JSON.stringify(outside))
+    const clashes = m.tags.flatMap((a, i) => m.tags.slice(i + 1).filter((b) => overlap(a, b)).map((b) => `${a.text} / ${b.text}`))
+    check(where, `(v1) pointing ${name} leaves no value chip over another`, clashes.length === 0, clashes.join('; '))
+    if (f > 0.9 && m.dotX !== null) {
+      check(where, '(v1) in the last years the chips are on the left of the dots', m.tags.every((t) => t.right <= m.dotX + 4), JSON.stringify({ dotX: m.dotX, rights: m.tags.map((t) => t.right) }))
+    }
+  }
+  await page.mouse.move(0, 0)
+}
+
+/**
  * (c) The chips: one set above the chart, all one width, the value of each line at the year pointed
  * at, an eye that hides a line and takes its value away, and the Plan and Edited tags on the top
  * edge of the open one, so the name has the whole chip.
@@ -629,6 +670,7 @@ async function checkChips(page, where, screen) {
   const pointed = await chips()
   check(where, '(c) pointing at the chart changes the values in the chips', pointed.some((c, i) => c.value !== rest[i].value))
   await page.mouse.move(0, 0)
+  await checkValueTags(page, where, svg)
 
   const eye = page.getByRole('button', { name: /^Hide .* on chart$/ }).first()
   const label = (await eye.getAttribute('aria-label')).replace(/^Hide /, '').replace(/ on chart$/, '')
@@ -2614,6 +2656,9 @@ async function checkTimelineAt(browser, engine, screen, scheme) {
   await card.scrollIntoViewIfNeeded()
   check(where, '(x) the switch is in the card, with the table showing', (await timelineSwitch(page).isVisible()) && (await timelineSwitch(page).getByRole('radio', { name: 'Table' }).getAttribute('aria-checked')) === 'true')
   const tableHeight = (await card.boundingBox()).height
+  // A cell is read out in the table before the switch, so the table, which stays in the page
+  // hidden, holds a sentence while the timeline is shown: the state a pointer left by chance in CI.
+  await card.getByRole('gridcell', { name: /^Path A.*reaches/ }).first().hover()
   await timelineSwitch(page).getByRole('radio', { name: 'Timeline' }).click()
   await page.waitForTimeout(300)
 
@@ -2669,7 +2714,10 @@ async function checkTimelineAt(browser, engine, screen, scheme) {
   await dot.hover()
   await page.waitForTimeout(150)
   const after = (await card.boundingBox()).height
-  const text = await page.locator('[class*="matrixReadout"]').filter({ hasText: /reaches/ }).first().textContent()
+  // The table is still in the page, hidden, with its own readout and the last sentence a cell
+  // read out. Whether a cell was under the pointer when the page scrolled to this card depends on
+  // where the pointer was, so the readout read here is the one that can be seen: the timeline's.
+  const text = await card.locator('[class*="matrixReadout"]:visible').filter({ hasText: /reaches/ }).first().textContent()
   check(where, '(x) pointing at a dot writes its sentence under the timeline', text === (await dot.getAttribute('aria-label')), text)
   check(where, '(x) reading it does not change the card\'s height', near(before, after, 1), `${px(before)} then ${px(after)}`)
 

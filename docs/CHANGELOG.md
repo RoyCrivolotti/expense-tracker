@@ -2,6 +2,16 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (values on the chart)
+
+Checked in Chromium and in Safari's engine, at 1280x800 and wider.
+
+- **Each line's value is on the chart, beside its dot.** At the year you point at, a solid chip in the line's colour sits level with the dot, so the amounts can be read and compared without looking up at the scenario chips. Where the right has no room (the last years) the chips move to the left of the dots. Chips that would overlap are moved together, in the order of the lines, centred on where the lines are.
+- **Lines that read the same figure share one chip**, with a dot of each colour, so a scenario and its copy take one place and not two.
+- **The shaded band's over and under values are on the chart too**, in dashed chips above and below, each with the return it stands for (for example "4,0% · 1,38M €"). They belong to the open scenario, since the band is the line being edited.
+- **Millions are written to two decimals** on the chart's chips and the line under it (2,26M €, not 2,3M €). Thousands stay whole, and the axes and tooltips keep one decimal.
+- **The scenario chips above the chart show the whole amount**, to the euro (2.241.873 €), since the rounded one is now on the chart. The phone is unchanged.
+
 ## October 2026 (scenario chips)
 
 Checked in Chromium and in Safari's engine, at 1280x800 and wider, and on an iPad.

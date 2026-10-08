@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SCENARIO_COLORS } from '../../../engine'
-import { contrastRatio, scenarioInk } from './scenarioInk'
+import { contrastRatio, inkOn, scenarioInk } from './scenarioInk'
 
 const LIGHT = '#eeeeec'
 const DARK = '#181b20'
@@ -49,5 +49,34 @@ describe('scenarioInk', () => {
     const [light, dark] = sides(scenarioInk('#808080'))
     expect(contrastRatio(light, LIGHT)).toBeGreaterThanOrEqual(3)
     expect(contrastRatio(dark, DARK)).toBeGreaterThanOrEqual(3)
+  })
+})
+
+describe('inkOn', () => {
+  it('is white on a dark colour and near-black on a light one', () => {
+    expect(inkOn('#1d4ed8')).toBe('#ffffff')
+    expect(inkOn('#f59e0b')).toBe('#000000')
+  })
+
+  it('reads on each theme\'s ink of a colour that has one for each', () => {
+    expect(inkOn('light-dark(#0f766e, #84cc16)')).toBe('light-dark(#ffffff, #000000)')
+  })
+
+  it('is white for something that is not a hex colour', () => {
+    expect(inkOn('var(--color-accent)')).toBe('#ffffff')
+  })
+
+  it('has at least 4.5:1 on every colour of the palette in both themes', () => {
+    for (const color of SCENARIO_COLORS) {
+      const ink = scenarioInk(color)
+      const pair = /^light-dark\((#[0-9a-f]{6}), (#[0-9a-f]{6})\)$/.exec(ink)
+      const grounds = pair ? [pair[1]!, pair[2]!] : [ink]
+      const text = inkOn(ink)
+      const texts = /^light-dark\((#[0-9a-f]{6}), (#[0-9a-f]{6})\)$/.exec(text)
+      grounds.forEach((bg, i) => {
+        const fg = texts ? texts[i === 0 ? 1 : 2]! : text
+        expect(contrastRatio(fg, bg)).toBeGreaterThanOrEqual(4.5)
+      })
+    }
   })
 })

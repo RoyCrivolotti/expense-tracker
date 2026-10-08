@@ -151,8 +151,13 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // the card whole with a purchase year's breakdown beside the rows, and the sheet around them. Main
 // stood at 247.3 KB with the Goals chunk at 59.4, and resizing a card whole added 1.1 KB over moving
 // it, all of it code in the lazy Goals chunk, with no new library.
-const TOTAL_MAX_GZIP = 251_000
-const GOALS_MAX_GZIP = 63_000
+//
+// Raised from 251 KB to 254 KB, and the Goals chunk from 63 KB to 65 KB, for the value chips on the
+// wide chart (their layout, the merge of lines that read the same figure, the text colour that reads
+// on each line colour and the chips' CSS): main stood at 250.1 KB with the Goals chunk at 61.9 KB, and
+// the chips add about 1.3 KB, all of it small code in the lazy Goals chunk, with no new library.
+const TOTAL_MAX_GZIP = 254_000
+const GOALS_MAX_GZIP = 65_000
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length
