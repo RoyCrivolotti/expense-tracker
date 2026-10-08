@@ -108,11 +108,7 @@ export function buildSettledReport(
  * the covered rows does the same thing.
  *
  * A past report's identity was never really the flag — it is the payment, which
- * still carries the name typed when it was recorded. The one thing that cannot
- * be recovered is the reference: `reportReference` derives its initials from
- * the flag's name, so a reprint after the flag is gone will not match what was
- * originally submitted. A reference that changed beats a document that will not
- * open.
+ * still carries the name typed when it was recorded.
  */
 export function standInFlag(payment: Transaction | undefined): Flag {
   return {
@@ -175,29 +171,6 @@ function assembleReport(
     to: lines[lines.length - 1]?.transaction.date ?? '',
     missingReceipts: lines.filter((line) => line.receipts.length === 0),
   }
-}
-
-/**
- * A short reference for the claim, stable across reprints.
- *
- * Derived from the flag and the first claimed month rather than the issue date,
- * so reprinting an unchanged claim gives the same reference — otherwise it could
- * not be quoted in an email. It is the claimant's own handle on the claim; an
- * employer will assign their own.
- *
- * Not immutable: adding a receipt dated earlier than the current first line
- * moves the period, and with it the reference. Anchoring on something that
- * cannot move would mean storing it, which this deliberately does not do.
- */
-export function reportReference(report: ExpenseReport): string {
-  const initials = report.flag.name
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((word) => [...word][0]?.toUpperCase() ?? '')
-    .join('')
-    .slice(0, 3)
-  const period = report.from ? report.from.slice(0, 7).replace('-', '') : '------'
-  return `${initials || 'CLM'}-${period}`
 }
 
 /**

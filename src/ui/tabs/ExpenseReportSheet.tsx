@@ -1,7 +1,6 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import type { Transaction } from '../../types'
 import {
-  reportReference,
   reportReceipts,
   type ReportLine,
   type ExpenseReport,
@@ -21,6 +20,11 @@ interface SheetProps {
   /** What the claim is called on the document. Defaults to the flag's own name. */
   title: string
   onTitleChange: (title: string) => void
+  /** What the claim is for, in the claimant's words. Blank prints nothing. */
+  purpose: string
+  onPurposeChange: (purpose: string) => void
+  /** Whether each line's own notes print under its description. */
+  showNotes: boolean
   /** Opens a line's editor, so a missing receipt can be attached from here. */
   onOpenTransaction?: ((txn: Transaction) => void) | undefined
 }
@@ -35,6 +39,9 @@ export function ExpenseReportSheet({
   issuedOn,
   title,
   onTitleChange,
+  purpose,
+  onPurposeChange,
+  showNotes,
   onOpenTransaction,
 }: SheetProps) {
   const receipts = reportReceipts(report)
@@ -46,10 +53,13 @@ export function ExpenseReportSheet({
         claimantName={claimantName}
         currencyCode={currencyCode}
         issuedOn={issuedOn}
+        format={format}
         title={title}
         onTitleChange={onTitleChange}
+        purpose={purpose}
+        onPurposeChange={onPurposeChange}
       />
-      <ReportTable report={report} lookup={lookup} format={format} />
+      <ReportTable report={report} lookup={lookup} format={format} showNotes={showNotes} />
       <MissingReceipts report={report} lookup={lookup} onOpenTransaction={onOpenTransaction} />
 
       {receipts.length > 0 ? (
@@ -60,15 +70,25 @@ export function ExpenseReportSheet({
               {attachment.contentType === 'application/pdf' ? (
                 <div className={styles.pdfNote}>
                   <p className={styles.pdfNoteText}>
-                    <strong>R{ref}</strong> is a PDF, so it cannot be drawn into this page. Send{' '}
-                    <strong>{attachment.originalName ?? 'the file'}</strong> with the report — the
-                    line above is numbered so an approver can still match the two up.{' '}
-                    {/* Rendering a PDF here would mean shipping a PDF engine: pdf.js
+                    <strong>R{ref}</strong> is a PDF, sent as a separate attachment
+                    {attachment.originalName ? (
+                      <>
+                        {' '}
+                        (<strong>{attachment.originalName}</strong>)
+                      </>
+                    ) : null}
+                    .{' '}
+                    {/* Addressed to the claimant, so it stays off paper: the reader
+                        of the printed page only needs to know a file travels with it.
+                        Rendering a PDF here would mean shipping a PDF engine: pdf.js
                         is ~505 KB gzip against a 162 KB app, and it is the only
                         honest option — turning a PDF into pixels *is* the heavy
                         part. A screenshot costs nothing and already works, because
-                        receipts accept image/png. Saying so beats a dead end. */}
-                    A screenshot of it, attached as an image, would print here instead.
+                        receipts accept image/png. */}
+                    <span className={styles.screenOnly}>
+                      To have it print on this page instead, attach a screenshot of it as an
+                      image.
+                    </span>
                   </p>
                   {/* Screen only: on paper a link is a dead underline, and the
                       filename in the sentence is what the reader actually needs. */}
@@ -111,28 +131,37 @@ export function ExpenseReportSheet({
 }
 
 /**
- * The claim's name, editable in place.
+ * A piece of text that is edited in place and lives only for this visit.
  *
- * "WT-202608" is a handle the claimant can use to find the claim again, not
- * something an employer reading the document can act on — they need to know
- * what it's *for*. Defaults to the flag's name, and the edit is session-only:
- * nothing about a report is stored, so there is nowhere to keep it between
- * visits without inventing storage for a document that already builds itself
- * fresh every time it is opened.
+ * Nothing about a report is stored: it rebuilds itself fresh every time it is
+ * opened, so there is nowhere to keep an edit between visits without inventing
+ * storage for a document that has none. Enter or blur commits, Escape cancels.
+ * `display` draws the resting state and is handed the function that starts an edit.
  */
-function EditableTitle({
-  title,
-  onTitleChange,
+function InlineEdit({
+  value,
+  ariaLabel,
+  inputClassName,
+  allowEmpty = false,
+  placeholder,
+  onCommit,
+  display,
 }: {
-  title: string
-  onTitleChange: (title: string) => void
+  value: string
+  ariaLabel: string
+  inputClassName: string | undefined
+  /** Whether clearing the field is a real edit. A title cannot be blank; a purpose can. */
+  allowEmpty?: boolean
+  placeholder?: string
+  onCommit: (value: string) => void
+  display: (startEditing: () => void) => ReactNode
 }) {
   const [editing, setEditing] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const commit = () => {
-    const next = inputRef.current?.value.trim()
-    if (next) onTitleChange(next)
+    const next = inputRef.current?.value.trim() ?? ''
+    if (next || allowEmpty) onCommit(next)
     setEditing(false)
   }
 
@@ -140,10 +169,11 @@ function EditableTitle({
     return (
       <input
         ref={inputRef}
-        className={styles.titleInput}
-        defaultValue={title}
+        className={inputClassName}
+        defaultValue={value}
+        placeholder={placeholder}
         autoFocus
-        aria-label="Report title"
+        aria-label={ariaLabel}
         onBlur={commit}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
@@ -157,13 +187,76 @@ function EditableTitle({
     )
   }
 
+  return <>{display(() => setEditing(true))}</>
+}
+
+/**
+ * The claim's name. An employer reading the document needs to know what it is
+ * *for*, which is why this defaults to the flag's name and can be renamed.
+ */
+function EditableTitle({
+  title,
+  onTitleChange,
+}: {
+  title: string
+  onTitleChange: (title: string) => void
+}) {
   return (
-    <div className={styles.titleRow}>
-      <h1 className={styles.title}>{title}</h1>
-      <button type="button" className={styles.titleEditBtn} onClick={() => setEditing(true)}>
-        Rename
-      </button>
-    </div>
+    <InlineEdit
+      value={title}
+      ariaLabel="Report title"
+      inputClassName={styles.titleInput}
+      onCommit={onTitleChange}
+      display={(startEditing) => (
+        <div className={styles.titleRow}>
+          <h1 className={styles.title}>{title}</h1>
+          <button type="button" className={styles.titleEditBtn} onClick={startEditing}>
+            Rename
+          </button>
+        </div>
+      )}
+    />
+  )
+}
+
+/**
+ * One line saying what the claim covers, in the claimant's own words.
+ *
+ * Blank by default and then absent from the page, so nothing prints that the
+ * claimant did not write. The flag's description used to fill this slot, but
+ * that is a note the claimant keeps for themselves ("submit monthly"), not
+ * something to put in front of an approver.
+ */
+function EditablePurpose({
+  purpose,
+  onPurposeChange,
+}: {
+  purpose: string
+  onPurposeChange: (purpose: string) => void
+}) {
+  return (
+    <InlineEdit
+      value={purpose}
+      ariaLabel="Report purpose"
+      inputClassName={styles.purposeInput}
+      placeholder="e.g. Client visit, Madrid"
+      allowEmpty
+      onCommit={onPurposeChange}
+      display={(startEditing) =>
+        purpose ? (
+          <div className={styles.titleRow}>
+            <p className={styles.subtitle}>{purpose}</p>
+            <button type="button" className={styles.titleEditBtn} onClick={startEditing}>
+              Edit
+            </button>
+          </div>
+        ) : (
+          <button type="button" className={styles.titleEditBtn} onClick={startEditing}>
+            Add a purpose
+          </button>
+        )
+      }
+    />
   )
 }
 
@@ -172,22 +265,29 @@ function ReportHeader({
   claimantName,
   currencyCode,
   issuedOn,
+  format,
   title,
   onTitleChange,
+  purpose,
+  onPurposeChange,
 }: {
   report: ExpenseReport
   claimantName: string
   currencyCode: string
   issuedOn: string
+  format: MoneyFormat
   title: string
   onTitleChange: (title: string) => void
+  purpose: string
+  onPurposeChange: (purpose: string) => void
 }) {
+  const settled = report.credits.length > 0
   return (
     <header className={styles.header}>
       <div className={styles.headerMain}>
         <p className={styles.docType}>Expense report</p>
         <EditableTitle title={title} onTitleChange={onTitleChange} />
-        {report.flag.description ? <p className={styles.subtitle}>{report.flag.description}</p> : null}
+        <EditablePurpose purpose={purpose} onPurposeChange={onPurposeChange} />
       </div>
       <dl className={styles.meta}>
         {claimantName ? (
@@ -196,10 +296,6 @@ function ReportHeader({
             <dd>{claimantName}</dd>
           </div>
         ) : null}
-        <div className={styles.metaRow}>
-          <dt>Reference</dt>
-          <dd>{reportReference(report)}</dd>
-        </div>
         <div className={styles.metaRow}>
           <dt>Period</dt>
           <dd>
@@ -212,10 +308,23 @@ function ReportHeader({
         </div>
         <div className={styles.metaRow}>
           <dt>Items</dt>
-          <dd>
-            {report.lines.length} · {currencyCode}
-          </dd>
+          <dd>{report.lines.length}</dd>
         </div>
+        <div className={styles.metaRow}>
+          <dt>Currency</dt>
+          <dd>{currencyCode}</dd>
+        </div>
+        {/* The figure an approver is looking for, where they look first. */}
+        <div className={styles.metaRow}>
+          <dt>Total</dt>
+          <dd>{formatCents(report.totalClaimedCents, format)}</dd>
+        </div>
+        {settled ? (
+          <div className={styles.metaRow}>
+            <dt>Outstanding</dt>
+            <dd>{formatCents(report.outstandingCents, format)}</dd>
+          </div>
+        ) : null}
       </dl>
     </header>
   )
@@ -225,11 +334,13 @@ function ReportRow({
   line,
   lookup,
   format,
+  showNotes,
   signed = false,
 }: {
   line: ReportLine
   lookup: Lookup
   format: MoneyFormat
+  showNotes: boolean
   signed?: boolean
 }) {
   const { transaction } = line
@@ -240,14 +351,20 @@ function ReportRow({
         {transaction.description || lookup.categoryName(transaction.categoryId)}
         {/* The transaction's own notes. An approver asks what a dinner was for,
             and that is exactly what this field already holds. */}
-        {transaction.notes ? <span className={styles.purpose}>{transaction.notes}</span> : null}
+        {showNotes && transaction.notes ? (
+          <span className={styles.notes}>{transaction.notes}</span>
+        ) : null}
       </td>
       <td className={styles.hideNarrow}>{lookup.categoryName(transaction.categoryId)}</td>
       <td className={styles.numeric}>
         {formatCents(signed ? -transaction.amountCents : transaction.amountCents, format)}
       </td>
       <td className={styles.numeric}>
-        {line.receiptRefs.length > 0 ? line.receiptRefs.map((r) => `R${r}`).join(' ') : '—'}
+        {line.receiptRefs.length > 0
+          ? line.receiptRefs.map((r) => `R${r}`).join(' ')
+          : signed
+            ? '—'
+            : 'No receipt'}
       </td>
     </tr>
   )
@@ -257,10 +374,12 @@ function ReportTable({
   report,
   lookup,
   format,
+  showNotes,
 }: {
   report: ExpenseReport
   lookup: Lookup
   format: MoneyFormat
+  showNotes: boolean
 }) {
   const settled = report.credits.length > 0
   return (
@@ -283,7 +402,13 @@ function ReportTable({
         </thead>
         <tbody>
           {report.lines.map((line) => (
-            <ReportRow key={line.transaction.id} line={line} lookup={lookup} format={format} />
+            <ReportRow
+              key={line.transaction.id}
+              line={line}
+              lookup={lookup}
+              format={format}
+              showNotes={showNotes}
+            />
           ))}
         </tbody>
         {settled ? (
@@ -299,6 +424,7 @@ function ReportTable({
                 line={line}
                 lookup={lookup}
                 format={format}
+                showNotes={showNotes}
                 signed
               />
             ))}

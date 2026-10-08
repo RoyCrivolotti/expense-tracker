@@ -56,12 +56,36 @@ function datasetWith(transactions: Transaction[], attachments: unknown[] = []): 
   return makeDataset({ flags: [work], transactions, attachments: attachments as never })
 }
 
+/** Clicks Download CSV and returns what the browser was handed. */
+async function downloadedCsv(user: ReturnType<typeof userEvent.setup>): Promise<string> {
+  let blob: Blob | undefined
+  vi.stubGlobal('URL', {
+    ...URL,
+    createObjectURL: (b: Blob) => {
+      blob = b
+      return 'blob:x'
+    },
+    revokeObjectURL: vi.fn(),
+  })
+  const anchor = document.createElement('a')
+  vi.spyOn(anchor, 'click').mockImplementation(() => {})
+  vi.spyOn(document, 'createElement').mockReturnValueOnce(anchor)
+
+  await user.click(screen.getByRole('button', { name: 'Download CSV' }))
+
+  const text = await blob!.text()
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+  return text
+}
+
 describe('ExpenseReportView', () => {
-  it('heads the report with the flag, its note and the claimed period', () => {
+  it('heads the report with the flag and the claimed period, not the flag’s private note', () => {
     renderPack(datasetWith([txn(1, '2026-05-02'), txn(2, '2026-05-09')]))
 
     expect(screen.getByRole('heading', { name: 'Work travel' })).toBeInTheDocument()
-    expect(screen.getByText('Reimbursable — submit monthly')).toBeInTheDocument()
+    // The flag's description is the claimant's own reminder to themselves.
+    expect(screen.queryByText('Reimbursable — submit monthly')).not.toBeInTheDocument()
     expect(screen.getByText('Expense report')).toBeInTheDocument()
     expect(screen.getByText(/2 May.*9 May/)).toBeInTheDocument()
   })
@@ -83,7 +107,20 @@ describe('ExpenseReportView', () => {
     renderPack(datasetWith([txn(1, '2026-05-02'), txn(2, '2026-05-09')]))
 
     expect(screen.getByText('Total expenses')).toBeInTheDocument()
-    expect(screen.getByText('200,00 €')).toBeInTheDocument()
+    // Once in the table's total row, once in the header where an approver looks first.
+    expect(screen.getAllByText('200,00 €')).toHaveLength(2)
+  })
+
+  it('puts the total in the header', () => {
+    renderPack(datasetWith([txn(1, '2026-05-02'), txn(2, '2026-05-09')]))
+
+    expect(screen.getByText('Total').nextElementSibling).toHaveTextContent('200,00 €')
+  })
+
+  it('says “No receipt” on a line without one, rather than a bare dash', () => {
+    renderPack(datasetWith([txn(1, '2026-05-02'), txn(2, '2026-05-09')], [makeAttachment({ id: 5, transactionId: 1 })]))
+
+    expect(screen.getAllByText('No receipt')).toHaveLength(1)
   })
 
   it('warns about lines with no receipt, which is what gets a claim sent back', () => {
@@ -122,7 +159,7 @@ describe('ExpenseReportView', () => {
     // The filename is what an approver matches against the separately-sent file,
     // and the R-number is what ties it back to a row in the table.
     expect(screen.getByText('invoice.pdf')).toBeInTheDocument()
-    expect(screen.getByText(/cannot be drawn into this page/)).toBeInTheDocument()
+    expect(screen.getByText(/is a PDF, sent as a separate attachment/)).toBeInTheDocument()
     expect(screen.queryByRole('img', { name: /Receipt for/ })).not.toBeInTheDocument()
   })
 
@@ -135,7 +172,7 @@ describe('ExpenseReportView', () => {
 
     // Receipts already accept image/png, so this is a route that exists today
     // rather than a promise about a future feature.
-    expect(screen.getByText(/screenshot of it, attached as an image/)).toBeInTheDocument()
+    expect(screen.getByText(/attach a screenshot of it as an image/)).toBeInTheDocument()
   })
 
   it('offers a PDF receipt as a link, since the page cannot show it', () => {
@@ -166,10 +203,12 @@ describe('ExpenseReportView', () => {
     expect(screen.getByText('Already reimbursed')).toBeInTheDocument()
     // The row and the claimed total both read 100,00 €; the outstanding figure
     // is the one that has to differ.
-    expect(screen.getAllByText('100,00 €')).toHaveLength(2)
+    // The row, the header's Total and the table's total row.
+    expect(screen.getAllByText('100,00 €')).toHaveLength(3)
     expect(screen.getByText('Total expenses')).toBeInTheDocument()
-    expect(screen.getByText('Outstanding')).toBeInTheDocument()
-    expect(screen.getByText('60,00 €')).toBeInTheDocument()
+    // Named in the header and again as the table's last row.
+    expect(screen.getAllByText('Outstanding')).toHaveLength(2)
+    expect(screen.getAllByText('60,00 €')).toHaveLength(2)
     // Likewise the credit row and the "Less reimbursed" line.
     expect(screen.getAllByText('-40,00 €')).toHaveLength(2)
   })
@@ -249,7 +288,7 @@ describe('ExpenseReportView', () => {
 })
 
 describe('ExpenseReportView — the document', () => {
-  it('prints the claimant, reference, issue date and currency', () => {
+  it('prints the claimant, issue date, item count and currency', () => {
     const dataset = makeDataset({
       flags: [work],
       transactions: [txn(1, '2026-05-02')],
@@ -258,10 +297,16 @@ describe('ExpenseReportView — the document', () => {
     renderPack(dataset)
 
     expect(screen.getByText('Alex Moreno')).toBeInTheDocument()
-    // Derived from the flag and the first claimed month, so a reprint matches.
-    expect(screen.getByText('WT-202605')).toBeInTheDocument()
     expect(screen.getByText(/12 Sep/)).toBeInTheDocument()
-    expect(screen.getByText(/EUR/)).toBeInTheDocument()
+    expect(screen.getByText('Items').nextElementSibling).toHaveTextContent('1')
+    expect(screen.getByText('Currency').nextElementSibling).toHaveTextContent('EUR')
+  })
+
+  it('prints no internal reference code', () => {
+    renderPack(datasetWith([txn(1, '2026-05-02')]))
+
+    expect(screen.queryByText('Reference')).not.toBeInTheDocument()
+    expect(screen.queryByText(/WT-2026/)).not.toBeInTheDocument()
   })
 
   it('omits the claimant line rather than printing a blank one', () => {
@@ -446,6 +491,117 @@ describe('ExpenseReportView — renaming the claim', () => {
     await user.click(screen.getByRole('button', { name: 'Send receipts' }))
 
     expect(deliverReceipts).toHaveBeenCalledWith(expect.anything(), 'Alicante trip 2026-08 receipts')
+  })
+})
+
+describe('ExpenseReportView — the purpose line', () => {
+  it('prints nothing until one is written', () => {
+    renderPack(datasetWith([txn(1, '2026-05-02')]))
+
+    expect(screen.getByRole('button', { name: 'Add a purpose' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
+  })
+
+  it('shows what the claimant writes under the title', async () => {
+    const user = userEvent.setup()
+    renderPack(datasetWith([txn(1, '2026-05-02')]))
+
+    await user.click(screen.getByRole('button', { name: 'Add a purpose' }))
+    await user.type(screen.getByRole('textbox', { name: 'Report purpose' }), 'Client visit, Madrid{Enter}')
+
+    expect(screen.getByText('Client visit, Madrid')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Add a purpose' })).not.toBeInTheDocument()
+  })
+
+  it('can be cleared again, unlike the title', async () => {
+    const user = userEvent.setup()
+    renderPack(datasetWith([txn(1, '2026-05-02')]))
+    await user.click(screen.getByRole('button', { name: 'Add a purpose' }))
+    await user.type(screen.getByRole('textbox', { name: 'Report purpose' }), 'Client visit{Enter}')
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }))
+    await user.clear(screen.getByRole('textbox', { name: 'Report purpose' }))
+    await user.keyboard('{Enter}')
+
+    expect(screen.queryByText('Client visit')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add a purpose' })).toBeInTheDocument()
+  })
+
+  it('goes into the CSV', async () => {
+    const user = userEvent.setup()
+    renderPack(datasetWith([txn(1, '2026-05-02')]))
+    await user.click(screen.getByRole('button', { name: 'Add a purpose' }))
+    await user.type(screen.getByRole('textbox', { name: 'Report purpose' }), 'Client visit{Enter}')
+
+    const csv = await downloadedCsv(user)
+
+    expect(csv).toContain('Purpose,Client visit\n')
+  })
+})
+
+describe('ExpenseReportView — the notes on each item', () => {
+  it('offers no switch when no item has a note', () => {
+    renderPack(datasetWith([txn(1, '2026-05-02')]))
+
+    expect(
+      screen.queryByRole('radiogroup', { name: 'Show or hide the notes on each item' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('prints them by default and withholds them on request', async () => {
+    const user = userEvent.setup()
+    renderPack(datasetWith([txn(1, '2026-05-02', { notes: 'Ana paid, I owe her' })]))
+    expect(screen.getByText('Ana paid, I owe her')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('radio', { name: 'Hide notes' }))
+
+    expect(screen.queryByText('Ana paid, I owe her')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('radio', { name: 'Show notes' }))
+    expect(screen.getByText('Ana paid, I owe her')).toBeInTheDocument()
+  })
+
+  it('keeps them out of the CSV too', async () => {
+    const user = userEvent.setup()
+    renderPack(datasetWith([txn(1, '2026-05-02', { notes: 'Ana paid, I owe her' })]))
+    await user.click(screen.getByRole('radio', { name: 'Hide notes' }))
+
+    const csv = await downloadedCsv(user)
+
+    expect(csv).not.toContain('Ana paid')
+    expect(csv).not.toContain('Notes')
+  })
+})
+
+describe('ExpenseReportView — the saved PDF’s name', () => {
+  it('names the page after the claim while it is open, then gives the app’s title back', () => {
+    document.title = 'Expenses'
+    const { unmount } = render(
+      <MoneyFormatProvider currencyCode="EUR" numberLocale="de-DE">
+        <ExpenseReportView
+          dataset={datasetWith([txn(1, '2026-05-02')])}
+          lookup={buildLookup(datasetWith([txn(1, '2026-05-02')]))}
+          flagId={1}
+          onClose={vi.fn()}
+        />
+      </MoneyFormatProvider>,
+    )
+
+    expect(document.title).toBe('Work travel – 2026-05')
+
+    unmount()
+
+    expect(document.title).toBe('Expenses')
+  })
+
+  it('follows a rename', async () => {
+    const user = userEvent.setup()
+    renderPack(datasetWith([txn(1, '2026-05-02')]))
+
+    await user.click(screen.getByRole('button', { name: 'Rename' }))
+    await user.clear(screen.getByRole('textbox', { name: 'Report title' }))
+    await user.type(screen.getByRole('textbox', { name: 'Report title' }), 'Madrid trip{Enter}')
+
+    expect(document.title).toBe('Madrid trip – 2026-05')
   })
 })
 

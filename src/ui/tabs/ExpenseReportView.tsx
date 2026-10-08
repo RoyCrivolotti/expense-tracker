@@ -26,6 +26,11 @@ const RECEIPT_FILTER_OPTIONS: { value: 'all' | 'receipted'; label: string }[] = 
   { value: 'receipted', label: 'With receipt' },
 ]
 
+const NOTES_OPTIONS: { value: 'shown' | 'hidden'; label: string }[] = [
+  { value: 'shown', label: 'Show notes' },
+  { value: 'hidden', label: 'Hide notes' },
+]
+
 interface Props {
   dataset: ExpenseDataset
   lookup: Lookup
@@ -121,33 +126,68 @@ function ReceiptsButton({
 }
 
 /**
- * The all-items/with-receipt pill above the sheet.
+ * The pills above the sheet: which items, and whether their notes go out.
  *
- * Its own component so the view keeps its branch count. Hidden entirely
- * rather than disabled when nothing is missing a receipt: the filter would
- * have nothing left to do, and the count is already shown in the sheet
- * itself, so a dimmed control here would just be a second copy of it.
+ * Its own component so the view keeps its branch count. Each pill is hidden
+ * entirely rather than disabled when it has nothing to do: the receipt filter
+ * when every line has a receipt (the count is already shown in the sheet itself),
+ * and the notes pill when no line has a note.
  */
-function ReceiptFilterControl({
-  hasMissingReceipts,
+function ReportControls({
+  report,
   receiptsOnly,
-  onChange,
+  onReceiptsOnlyChange,
+  showNotes,
+  onShowNotesChange,
 }: {
-  hasMissingReceipts: boolean
+  /** The full claim, not the filtered one: the pills must not vanish under their own filter. */
+  report: ExpenseReport
   receiptsOnly: boolean
-  onChange: (receiptsOnly: boolean) => void
+  onReceiptsOnlyChange: (receiptsOnly: boolean) => void
+  showNotes: boolean
+  onShowNotesChange: (showNotes: boolean) => void
 }) {
-  if (!hasMissingReceipts) return null
+  const hasMissingReceipts = report.missingReceipts.length > 0
+  const hasNotes = [...report.lines, ...report.credits].some((l) => l.transaction.notes)
+  if (!hasMissingReceipts && !hasNotes) return null
   return (
     <div className={styles.reportControls}>
-      <SegmentedControl
-        options={RECEIPT_FILTER_OPTIONS}
-        value={receiptsOnly ? 'receipted' : 'all'}
-        onChange={(value) => onChange(value === 'receipted')}
-        ariaLabel="Filter the report by receipt"
-      />
+      {hasNotes ? (
+        <SegmentedControl
+          options={NOTES_OPTIONS}
+          value={showNotes ? 'shown' : 'hidden'}
+          onChange={(value) => onShowNotesChange(value === 'shown')}
+          ariaLabel="Show or hide the notes on each item"
+        />
+      ) : null}
+      {hasMissingReceipts ? (
+        <SegmentedControl
+          options={RECEIPT_FILTER_OPTIONS}
+          value={receiptsOnly ? 'receipted' : 'all'}
+          onChange={(value) => onReceiptsOnlyChange(value === 'receipted')}
+          ariaLabel="Filter the report by receipt"
+        />
+      ) : null}
     </div>
   )
+}
+
+/**
+ * Names the page while the report is open.
+ *
+ * The browser names a saved PDF after the page title, which is otherwise the
+ * app's own ("Expenses") — the attachment would arrive with no hint of what it is.
+ */
+function useDocumentTitle(title: string, report: ExpenseReport | null) {
+  const name = report ? `${title} – ${report.from.slice(0, 7)}` : null
+  useEffect(() => {
+    if (!name) return
+    const previous = document.title
+    document.title = name
+    return () => {
+      document.title = previous
+    }
+  }, [name])
 }
 
 export function ExpenseReportView({
@@ -190,6 +230,12 @@ export function ExpenseReportView({
   // visits without inventing storage for a document that rebuilds itself fresh
   // every time it is opened.
   const [title, setTitle] = useState(() => baseReport?.flag.name ?? '')
+  // Same lifetime as the title. Blank until the claimant writes one, and a blank
+  // purpose prints nothing.
+  const [purpose, setPurpose] = useState('')
+  // Notes are free text the claimant wrote for themselves, so they are on by
+  // default (an approver asks what a dinner was for) but can be withheld.
+  const [showNotes, setShowNotes] = useState(true)
 
   /*
    * Guarded on `baseReport`, and declared before the early return so the hook order
@@ -210,12 +256,14 @@ export function ExpenseReportView({
   // the full claim again.
   const [receiptsOnly, setReceiptsOnly] = useState(false)
 
-  if (!baseReport) return null
-
   // Null only when every line left has no receipt — reachable by toggling the
   // filter on a claim that turns out to have none, not by anything a fresh
   // open of the report can produce.
-  const report = receiptsOnly ? receiptsOnlyReport(baseReport) : baseReport
+  const report = baseReport && receiptsOnly ? receiptsOnlyReport(baseReport) : baseReport
+
+  useDocumentTitle(title, report)
+
+  if (!baseReport) return null
 
   // Only a reopened report can have drifted: an open claim has nothing submitted
   // to differ from yet.
@@ -244,6 +292,8 @@ export function ExpenseReportView({
                   accountName: lookup.accountName,
                   claimantName: dataset.settings.claimantName,
                   title,
+                  purpose,
+                  showNotes,
                 })
               }
               aria-label="Download CSV"
@@ -273,10 +323,12 @@ export function ExpenseReportView({
           version was on screen when Print was pressed. Aligned to the sheet's own
           column rather than the full-width toolbar, since it controls the sheet
           specifically and not the page. */}
-      <ReceiptFilterControl
-        hasMissingReceipts={baseReport.missingReceipts.length > 0}
+      <ReportControls
+        report={baseReport}
         receiptsOnly={receiptsOnly}
-        onChange={setReceiptsOnly}
+        onReceiptsOnlyChange={setReceiptsOnly}
+        showNotes={showNotes}
+        onShowNotesChange={setShowNotes}
       />
 
       {drifted ? (
@@ -296,6 +348,9 @@ export function ExpenseReportView({
           issuedOn={issuedOn ?? todayIso()}
           title={title}
           onTitleChange={setTitle}
+          purpose={purpose}
+          onPurposeChange={setPurpose}
+          showNotes={showNotes}
           onOpenTransaction={onOpenTransaction}
         />
       ) : (

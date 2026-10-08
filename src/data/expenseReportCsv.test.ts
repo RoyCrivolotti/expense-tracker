@@ -39,7 +39,7 @@ function datasetWith(transactions: Transaction[], attachments = []): ExpenseData
 
 /**
  * The data rows, found rather than counted from the top: the claim carries a
- * claimant/reference preamble whose height depends on whether a claimant is set,
+ * claimant/purpose preamble whose height depends on whether a claimant is set,
  * so a fixed index silently reads the wrong line.
  */
 function body(csv: string): string[] {
@@ -56,7 +56,7 @@ describe('expenseReportCsv', () => {
   it('writes a header, one row per transaction, and a total', () => {
     const csv = expenseReportCsv(reportFor(datasetWith([txn(1, '2026-05-02', { flagId: 1 }), txn(2, '2026-05-04', { flagId: 1 })])), options)
 
-    expect(headerLine(csv!)).toBe('Date,Description,Purpose,Category,Account,Amount,Receipts')
+    expect(headerLine(csv!)).toBe('Date,Description,Notes,Category,Account,Amount,Receipts')
     const rows = body(csv!)
     expect(rows).toHaveLength(3)
     expect(rows[2]).toContain('Total expenses')
@@ -71,11 +71,36 @@ describe('expenseReportCsv', () => {
     expect(csv).toContain('Claim,"Alicante trip, August 2026"\n')
   })
 
-  it('carries the transaction notes through as the business purpose', () => {
+  it('carries the transaction notes through in the Notes column', () => {
     // An approver asks what a dinner was *for*; notes already holds exactly that.
     const csv = expenseReportCsv(reportFor(datasetWith([txn(1, '2026-05-02', { flagId: 1, notes: 'Kick-off with Acme' })])), options)
 
     expect(body(csv!)[0]).toContain('Kick-off with Acme')
+  })
+
+  it('prints the claim purpose under the title, and nothing when it is blank', () => {
+    const report = reportFor(datasetWith([txn(1, '2026-05-02', { flagId: 1 })]))
+
+    expect(expenseReportCsv(report, { ...options, purpose: 'Client visit, Madrid' })).toContain(
+      'Purpose,"Client visit, Madrid"\n',
+    )
+    expect(expenseReportCsv(report, { ...options, purpose: '   ' })).not.toContain('Purpose,')
+    expect(expenseReportCsv(report, options)).not.toContain('Purpose,')
+  })
+
+  it('drops the Notes column, and keeps the rest aligned, when notes are withheld', () => {
+    const csv = expenseReportCsv(
+      reportFor(datasetWith([txn(1, '2026-05-02', { flagId: 1, notes: 'Ana paid, I owe her' })])),
+      { ...options, showNotes: false },
+    )!
+
+    expect(headerLine(csv)).toBe('Date,Description,Category,Account,Amount,Receipts')
+    expect(csv).not.toContain('Ana paid')
+    // Amounts are quoted ("100,00 €"), so columns are checked by exact content.
+    expect(body(csv)).toEqual([
+      '2026-05-02,Txn 1,Travel,Main Debit,"100,00 €",',
+      ',Total expenses,,,"100,00 €",',
+    ])
   })
 
   it('breaks the totals out once a reimbursement has been recorded', () => {
@@ -267,16 +292,13 @@ describe('formula injection', () => {
     expect(csv).toMatch(/-25,00/)
   })
 
-  it('guards the reference line when the flag name starts with a trigger', () => {
-    const dataset = makeDataset({
-      flags: [makeFlag({ id: 1, name: '=cmd travel' })],
-      transactions: [txn(1, '2026-05-02', { flagId: 1 })],
-      attachments: [],
-    })
+  it('guards the purpose line when it starts with a trigger', () => {
+    const csv = expenseReportCsv(reportFor(datasetWith([txn(1, '2026-05-02', { flagId: 1 })])), {
+      ...options,
+      purpose: '=HYPERLINK("http://x","y")',
+    })!
 
-    const csv = expenseReportCsv(reportFor(dataset), options)!
-
-    expect(csv).toContain(`Reference,'=T-202605`)
+    expect(csv).toContain(`Purpose,"'=HYPERLINK`)
   })
 
   it('quotes a bare carriage return so it cannot terminate the record', () => {

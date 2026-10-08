@@ -87,7 +87,9 @@
   margin: 0 auto;
   padding: 0.85rem 1.75rem 0;
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 .emptyNotice {
@@ -218,7 +220,25 @@
 }
 
 .subtitle {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.purposeInput {
+  display: block;
+  width: 100%;
+  max-width: 24rem;
   margin: 0.25rem 0 0;
+  padding: 0 0 0.1rem;
+  border: 0;
+  border-bottom: 1px dashed var(--color-border);
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+
+/* Text addressed to the person editing, not to whoever reads the printout. */
+.screenOnly {
   color: var(--color-text-muted);
 }
 
@@ -293,7 +313,7 @@
   }
 }
 
-.purpose {
+.notes {
   display: block;
   font-size: 0.78rem;
   color: var(--color-text-muted);
@@ -502,13 +522,15 @@
   .toolbar,
   .driftNotice,
   .reportControls,
-  .titleEditBtn {
+  .titleEditBtn,
+  .screenOnly {
     display: none;
   }
 
   /* Printing mid-edit is reachable (Cmd+P while the title field has focus), so
      the input has to read as plain text rather than as a form control on paper. */
-  .titleInput {
+  .titleInput,
+  .purposeInput {
     border-bottom: 0;
     color: #111;
   }
@@ -572,7 +594,7 @@
   .range,
   .caption,
   .docType,
-  .purpose,
+  .notes,
   .sectionRow,
   .signatureLabel,
   .metaRow dt {
