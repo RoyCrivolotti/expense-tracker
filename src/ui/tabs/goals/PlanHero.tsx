@@ -8,6 +8,7 @@ import { NetWorthChart } from './charts/NetWorthChart'
 import type { HeroLegendStore } from './charts/heroLegendStore'
 import { GoalsNarrative } from './GoalsNarrative'
 import { NominalPreview } from './NominalPreview'
+import { PortfolioShortfallNote } from './PortfolioShortfallNote'
 import { useGoalsNarrow } from './useGoalsNarrow'
 import { PlanStrip } from './desktop/PlanStrip'
 import type { ScenarioEditor } from './useScenarioEditor'
@@ -107,6 +108,7 @@ export function PlanHero({
       ) : null
     return narrow ? (
       <div>
+        <PortfolioShortfallNote draft={deferredDraft} />
         <div>
           <GoalsNarrative draft={deferredDraft} milestones={milestones} compact />
         </div>
@@ -115,6 +117,7 @@ export function PlanHero({
       </div>
     ) : (
       <>
+        <PortfolioShortfallNote draft={deferredDraft} />
         <PlanStrip draft={deferredDraft} milestones={milestones} />
         {nominalPreview}
       </>

@@ -700,6 +700,22 @@
   margin-bottom: 0;
 }
 
+/* A plan that spends more than the portfolio holds: a warning tint, since what follows it is not a plan to follow. */
+.shortfallNote {
+  margin: 0.5rem 0;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--exp-warning) 55%, var(--color-border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--exp-warning) 10%, var(--color-surface));
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--color-text);
+}
+
+.shortfallNote strong {
+  color: var(--exp-warning-text);
+}
+
 .intro {
   font-size: 0.9375rem;
   line-height: 1.5;
