@@ -2,7 +2,7 @@ import { useRef } from 'react'
 import type { GoalScenario } from '../../../../types'
 import { useRadioGroupKeys } from '../../../hooks/useRadioGroupKeys'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
-import { formatMoneyShort } from '../chartTheme'
+import { formatCentsCompact } from '../../../../engine'
 import { useHeroLegend, type HeroLegendStore } from '../charts/heroLegendStore'
 import type { ScenarioLegendItem } from '../charts/ScenarioSeriesLegend'
 import { scenarioInk } from '../scenarioInk'
@@ -86,7 +86,7 @@ function Chip({ scenario, label, line, active, edited, tabIndex, onOpen, onToggl
   const format = useMoneyFormat()
   const hidden = line?.hidden === true
   const plan = scenario?.isActive === true
-  const value = !hidden && line?.valueCents != null ? formatMoneyShort(line.valueCents, format, 2) : ''
+  const value = !hidden && line?.valueCents != null ? formatCentsCompact(line.valueCents, format) : ''
   return (
     <div className={chipClass(active, hidden)}>
       <button
