@@ -68,6 +68,19 @@ function MonthlyInvestingField({
   )
 }
 
+/**
+ * What return is reasonable to type. It is said nowhere else, so it stays when the return itself is
+ * in the bar, and it names the input so it still reads on its own there.
+ */
+export function ReturnNote() {
+  return (
+    <p className={styles.fieldHint}>
+      Real return: about 5% a year after inflation is what world stocks have returned over the very long
+      run, and many forecasts are lower. 6 to 7% is optimistic.
+    </p>
+  )
+}
+
 export function PortfolioFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: SectionProps) {
   return (
     <>
@@ -89,6 +102,7 @@ export function PortfolioFields({ draft, onChange, omit = NO_LEVERS, wrap = plai
           onChange={(v) => onChange({ expectedRealReturn: v })}
         />)
       )}
+      <ReturnNote />
       {omit.has('horizonYears') ? null : (
         wrap('horizonYears', <NumberField
           label={L.horizonYears.label}

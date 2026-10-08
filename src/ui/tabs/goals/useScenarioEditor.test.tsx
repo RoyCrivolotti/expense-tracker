@@ -309,7 +309,7 @@ describe('useScenarioEditor', () => {
 
     it.each([
       ['an amount', { monthlyContributionCents: 12_345 }],
-      ['a percentage', { expectedRealReturn: 0.05 }],
+      ['a percentage', { expectedRealReturn: 0.06 }],
       ['the colour', { color: '#123456' }],
       ['the name', { name: 'Mine' }],
       ['the life events', { lifeEvents: [{ label: 'Bonus', year: 3, amountCents: 100_000 }] }],

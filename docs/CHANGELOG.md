@@ -2,6 +2,10 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (new plans start at a cautious return)
+
+- **A new plan starts at a 5% real return, not 7%.** Over the very long run world stocks returned about 5% a year after inflation, and many forecasts are lower, so 7% was the optimistic end and it was what everyone who did not change the field got. A note under Real return says so. Plans already saved keep their own return.
+
 ## October 2026 (the pace and the return say no more than they know)
 
 - **The pace is read on whole months.** The month still under way counted as a full one, so someone who invests on the 25th read 833 against 1.000, in red, from the 1st to the 24th of every month. It is left out now, a month with no transactions at all counts as a month of nothing invested (it was skipped, which flattered the average), and within 2% of the plan's figure is on pace where any shortfall read red. The dashboard headline uses the same months.
