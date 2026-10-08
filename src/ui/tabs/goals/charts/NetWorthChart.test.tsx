@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { installFakeIntersectionObserver } from '../../../../testing/fakeIntersectionObserver'
 import { NetWorthChart } from './NetWorthChart'
+import { createHeroLegendStore } from './heroLegendStore'
 import { AssumedInflationContext } from '../../../hooks/assumedInflationContext'
 import { computeChartDisplayData, deflatePoints, inflatePoints, inflateSeries } from './nominalTransform'
 import { pointSeriesValueAt } from './checkinChartUtils'
@@ -81,6 +82,43 @@ describe('inflateSeries and deflatePoints', () => {
 })
 
 describe('NetWorthChart', () => {
+  it('tells the chips above it what each line is worth, and lists none of them itself', () => {
+    const store = createHeroLegendStore()
+    const other = makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })
+    const { unmount } = render(
+      <NetWorthChart
+        milestones={milestones}
+        scenarios={[defaultDraft, other]}
+        draft={{ ...defaultDraft, horizonYears: 30 }}
+        variant="hero"
+        legendStore={store}
+      />,
+    )
+    // The last year drawn, with nothing pointed at: a value for the open scenario and for the other.
+    const items = store.get()
+    expect(items.length).toBeGreaterThanOrEqual(2)
+    expect(items.every((item) => item.valueCents != null)).toBe(true)
+    expect(items.find((item) => item.scenarioId === other.id)?.label).toBe('Path B')
+    expect(screen.getByText(/values in the chips above/)).toBeInTheDocument()
+    expect(screen.queryByText('Path B')).not.toBeInTheDocument()
+
+    unmount()
+    expect(store.get()).toEqual([])
+  })
+
+  it('keeps its own legend when no chips are reading it', () => {
+    render(
+      <NetWorthChart
+        milestones={milestones}
+        scenarios={[defaultDraft, makeScenario({ id: 2, name: 'Path B', sortOrder: 1 })]}
+        draft={{ ...defaultDraft, horizonYears: 30 }}
+        variant="hero"
+      />,
+    )
+    expect(screen.queryByText(/values in the chips above/)).not.toBeInTheDocument()
+    expect(screen.getByText('Path B')).toBeInTheDocument()
+  })
+
   it('cuts the hero projection at the chosen window', () => {
     const { container } = render(
       <NetWorthChart

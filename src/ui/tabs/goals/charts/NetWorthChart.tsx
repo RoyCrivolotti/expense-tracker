@@ -36,6 +36,7 @@ import { pointSeriesValueAt } from './checkinChartUtils'
 import { scenarioInk } from '../scenarioInk'
 import { ChartKeys, type ChartKeyMarks } from './ChartKeys'
 import { NO_HIDDEN, useChartLegendState, withFromToday, type ScenarioLine } from './heroLegendState'
+import { usePublishHeroLegend, type HeroLegendStore } from './heroLegendStore'
 
 function scenarioLines(
   saved: GoalScenario[],
@@ -114,12 +115,16 @@ function floatSideFor(activeIndex: number | null, pointCount: number): 'start' |
   return activeIndex != null && activeIndex > (pointCount - 1) / 2 ? 'start' : 'end'
 }
 
+/** What the line under the chart says where the scenarios' chips are above it, not under it. */
+const CHIPS_ABOVE_HINT = 'The values in the chips above are for the last year, or for the year you point at.'
+
 function PortfolioLegend({
   isHero,
   narrow,
   listRef,
   staticLegend,
   legendItems,
+  chipsAbove,
   activeYear,
   breakdowns,
   yearZeroHint,
@@ -129,6 +134,8 @@ function PortfolioLegend({
 }: {
   isHero: boolean
   narrow: boolean
+  /** The scenarios are listed in chips above the chart, so only what has no chip is listed here. */
+  chipsAbove: boolean
   listRef: RefObject<HTMLUListElement | null>
   staticLegend: LegendItem[]
   legendItems: ScenarioLegendItem[]
@@ -144,7 +151,8 @@ function PortfolioLegend({
   if (isHero) {
     return (
       <ScenarioSeriesLegend
-        items={legendItems}
+        items={chipsAbove ? legendItems.filter((item) => item.dotted) : legendItems}
+        {...(chipsAbove ? { chipsAbove: true, hint: CHIPS_ABOVE_HINT } : {})}
         activeYear={activeYear}
         breakdowns={breakdowns}
         yearZeroHint={yearZeroHint}
@@ -453,6 +461,7 @@ function NetWorthChartImpl({
   hiddenIds,
   onToggleVisible,
   fromToday,
+  legendStore,
 }: {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
@@ -482,6 +491,11 @@ function NetWorthChartImpl({
   /** Saved scenarios left off the chart; the legend lists them dimmed and can bring them back. */
   hiddenIds?: ReadonlySet<number> | undefined
   onToggleVisible?: ((scenarioId: number) => void) | undefined
+  /**
+   * Where the scenarios' chips, above the chart, read the lines from. With it the legend under the
+   * chart lists only what has no chip (the plan from today).
+   */
+  legendStore?: HeroLegendStore | undefined
 }) {
   const format = useMoneyFormat()
   const assumedInflation = useAssumedInflation()
@@ -546,6 +560,8 @@ function NetWorthChartImpl({
     scenarios,
     hiddenIds,
   )
+
+  usePublishHeroLegend(legendStore, lines, displaySeries, names, years, activeIndex, scenarios, hiddenIds)
 
   const tooltip = useCallback(
     (i: number): { title: string; lines: TooltipLine[] } => {
@@ -648,6 +664,7 @@ function NetWorthChartImpl({
         narrow={narrow}
         staticLegend={staticLegend}
         legendItems={legendWithFromToday}
+        chipsAbove={legendStore !== undefined}
         activeYear={activeYear}
         breakdowns={breakdowns}
         yearZeroHint={yearZeroHint}

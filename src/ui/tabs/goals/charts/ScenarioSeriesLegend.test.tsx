@@ -79,6 +79,20 @@ describe('ScenarioSeriesLegend', () => {
     expect(screen.getByText(/in today's money, not in the Nominal values/)).toBeInTheDocument()
   })
 
+  it('is only the hint, the year and the breakdown where the chips above hold the scenarios', () => {
+    const props = { items: [], breakdowns: [], chipsAbove: true, hint: 'See the chips.' }
+    const { container, rerender } = render(<ScenarioSeriesLegend {...props} activeYear={null} />)
+    expect(screen.getByText('See the chips.')).toBeInTheDocument()
+    expect(container.querySelector('ul')).toBeNull()
+    rerender(<ScenarioSeriesLegend {...props} activeYear={7} />)
+    expect(screen.getByText('Year 7')).toBeInTheDocument()
+  })
+
+  it('is nothing at all with no rows and no chips above', () => {
+    const { container } = render(<ScenarioSeriesLegend items={[]} activeYear={null} breakdowns={[]} />)
+    expect(container).toBeEmptyDOMElement()
+  })
+
   it('hands out its list, and always shows the year header and the figures', () => {
     const listRef = createRef<HTMLUListElement>()
     const items = [{ label: 'Path A', color: '#6366f1', valueCents: 250_000_00 }]
