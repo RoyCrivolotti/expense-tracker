@@ -7,7 +7,6 @@ import type { GoalScenario } from '../types'
 export const LEVER_KEYS = [
   'startInvestedCents',
   'monthlyContributionCents',
-  'annualContributionGrowth',
   'expectedRealReturn',
   'horizonYears',
   'housePriceCents',

@@ -5,16 +5,13 @@
  * inheritance already inside the balance would be added again a year on. They keep
  * their calendar dates instead: an event dated on or before the check-in is dropped,
  * since its money is in the balance the plan restarts from, and a later one lands on
- * the first anniversary of the new start at or after its date. A plan whose
- * contribution grows each year has grown for the years that passed, and restarts from
- * that. One with changes to the monthly amount restarts from the amount in force at the
- * check-in, grown from the month it began in, and keeps only the changes still to come, on
- * their own months.
+ * the first anniversary of the new start at or after its date. A plan with changes to
+ * the monthly amount restarts from the amount in force at the check-in and keeps only the
+ * changes still to come, on their own months.
  */
 import type { ContributionStep, GoalScenario, LifeEvent } from '../types'
-import { utcDateMs, yearsBetween } from './dates'
+import { utcDateMs } from './dates'
 import { formatCents, type MoneyFormat } from './money'
-import { yearOffsetFromDate } from './wealthTracking'
 
 export interface RebaselinePatch {
   startInvestedCents: number
@@ -46,8 +43,6 @@ export interface Rebaseline {
   house: { from: string; to: string | null } | null
   /** What the plan started from before, for saying what is being replaced. */
   previous: { investedCents: number; planStartDate: string | null; monthlyContributionCents: number }
-  /** Whole years the start moved by; positive when it moved later. */
-  shiftedYears: number
 }
 
 type Rebaselinable = Pick<
@@ -57,7 +52,6 @@ type Rebaselinable = Pick<
   | 'housePurchaseYear'
   | 'startInvestedCents'
   | 'monthlyContributionCents'
-  | 'annualContributionGrowth'
   | 'contributionSchedule'
 >
 
@@ -82,29 +76,22 @@ function carriedYear(year: number, oldStart: string, newStart: string, checkin: 
 }
 
 /**
- * What the monthly amount restarts from at the check-in. A change that began by then is part of
- * the amount now, grown for the whole years since its month, and is dropped; the ones still to
- * come keep their months, which count from the new start by themselves. Without a change in
- * force the base is grown for the years the start moved, as it always was. With no old start the
- * changes never applied, so they are left to the engine, which reads the ones before the new
- * start as the amount it starts with.
+ * What the monthly amount restarts from at the check-in. A change that began by then is the
+ * amount now and is dropped; the ones still to come keep their months, which count from the new
+ * start by themselves. With no old start the changes never applied, so they are left to the
+ * engine, which reads the ones before the new start as the amount it starts with.
  */
 function restartContribution(
   scenario: Rebaselinable,
   oldStart: string | null,
-  shiftedYears: number,
   checkinDate: string,
 ): { monthlyContributionCents: number; contributionSchedule: ContributionStep[]; droppedSteps: ContributionStep[] } {
   const schedule = scenario.contributionSchedule ?? []
   const month = checkinDate.slice(0, 7)
   const begun = oldStart ? schedule.filter((s) => s.from <= month) : []
   const inForce = begun.reduce<ContributionStep | null>((latest, s) => (!latest || s.from > latest.from ? s : latest), null)
-  const growth = scenario.annualContributionGrowth
-  const monthlyContributionCents = inForce
-    ? Math.round(inForce.monthlyCents * Math.pow(1 + growth, Math.max(0, Math.round(yearsBetween(`${inForce.from}-01`, checkinDate)))))
-    : Math.round(scenario.monthlyContributionCents * Math.pow(1 + growth, Math.max(0, shiftedYears)))
   return {
-    monthlyContributionCents,
+    monthlyContributionCents: inForce ? inForce.monthlyCents : scenario.monthlyContributionCents,
     contributionSchedule: oldStart ? schedule.filter((s) => s.from > month) : [...schedule],
     droppedSteps: begun,
   }
@@ -115,7 +102,6 @@ export function rebaseline(
   latest: { investedCents: number; date: string },
 ): Rebaseline {
   const oldStart = scenario.planStartDate
-  const shiftedYears = oldStart ? Math.round(yearOffsetFromDate(oldStart, latest.date) ?? 0) : 0
   const years = scenario.lifeEvents.map((event) =>
     oldStart ? carriedYear(event.year, oldStart, latest.date, latest.date) : event.year,
   )
@@ -150,7 +136,6 @@ export function rebaseline(
   const { monthlyContributionCents, contributionSchedule, droppedSteps } = restartContribution(
     scenario,
     oldStart,
-    shiftedYears,
     latest.date,
   )
   return {
@@ -171,23 +156,19 @@ export function rebaseline(
       planStartDate: oldStart,
       monthlyContributionCents: scenario.monthlyContributionCents,
     },
-    shiftedYears,
   }
 }
 
 /** What happened to the monthly amount, or null when it did not move. */
 function monthlyLine(r: Rebaseline, format: MoneyFormat, formatDate: (iso: string) => string): string | null {
+  if (r.droppedSteps.length === 0) return null
   const from = formatCents(r.previous.monthlyContributionCents, format)
   const to = formatCents(r.patch.monthlyContributionCents, format)
-  if (r.droppedSteps.length > 0) {
-    const changes = r.droppedSteps
-      .map((s) => `${formatCents(s.monthlyCents, format)} from ${formatDate(`${s.from}-01`)}`)
-      .join(', then ')
-    const one = r.droppedSteps.length === 1
-    return `Monthly investing goes from ${from} to ${to}: the change to ${changes} ${one ? 'is' : 'are'} already behind the new start, so ${one ? 'it is' : 'they are'} in the monthly amount.`
-  }
-  if (r.patch.monthlyContributionCents === r.previous.monthlyContributionCents) return null
-  return `Monthly investing goes from ${from} to ${to}, as it has grown since the plan started.`
+  const changes = r.droppedSteps
+    .map((s) => `${formatCents(s.monthlyCents, format)} from ${formatDate(`${s.from}-01`)}`)
+    .join(', then ')
+  const one = r.droppedSteps.length === 1
+  return `Monthly investing goes from ${from} to ${to}: the change to ${changes} ${one ? 'is' : 'are'} already behind the new start, so ${one ? 'it is' : 'they are'} in the monthly amount.`
 }
 
 /**

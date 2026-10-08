@@ -24,7 +24,6 @@ function baseParams(overrides: Partial<ProjectionParams> = {}): ProjectionParams
   return {
     startInvestedCents: 10_000_000,
     monthlyContributionCents: 100_000,
-    annualContributionGrowth: 0,
     expectedRealReturn: DEFAULT_REAL_RETURN,
     horizonYears: 40,
     housePriceCents: 400_000_000,
@@ -79,7 +78,6 @@ describe('projection invested milestones', () => {
       downPaymentFraction: 0.35,
       housePurchaseYear: 10,
       transactionCostsCents: 50_000,
-      annualContributionGrowth: 0,
     })
     const breakdown = purchaseYearBreakdown(params, 10)
     expect(breakdown).not.toBeNull()
@@ -133,7 +131,6 @@ describe.skipIf(!hasFrParity)('workbook milestone parity (local only)', () => {
       name: string
       startInvestedCents: number
       monthlyContributionCents: number
-      annualContributionGrowth: number
       expectedRealReturn: number
       housePriceCents: number
       downPaymentFraction: number
@@ -155,7 +152,6 @@ describe.skipIf(!hasFrParity)('workbook milestone parity (local only)', () => {
       const params: ProjectionParams = {
         startInvestedCents: scenario.startInvestedCents,
         monthlyContributionCents: scenario.monthlyContributionCents,
-        annualContributionGrowth: scenario.annualContributionGrowth,
         expectedRealReturn: scenario.expectedRealReturn,
         horizonYears: 40,
         housePriceCents: scenario.housePriceCents,
@@ -228,16 +224,15 @@ describe('life events', () => {
   })
 })
 
-describe('the two figures GOALS-MODEL.md states', () => {
+describe('the figure GOALS-MODEL.md states', () => {
   /**
-   * Both of these were written down wrong and stayed wrong, because nothing failed when
-   * the doc and the code disagreed. These pin the code, so the next person to change
-   * either one has to decide deliberately rather than leave the page stale.
+   * The band's spread was written down wrong and stayed wrong, because nothing failed when the
+   * doc and the code disagreed. This pins the code, so the next person to change it has to decide
+   * deliberately rather than leave the page stale.
    */
   const flat = {
     startInvestedCents: 0,
     monthlyContributionCents: 100_000,
-    annualContributionGrowth: 0.1,
     expectedRealReturn: 0,
     horizonYears: 3,
     housePriceCents: 0,
@@ -250,21 +245,8 @@ describe('the two figures GOALS-MODEL.md states', () => {
     inflationRate: DEFAULT_INFLATION_RATE,
   }
 
-  it('starts contribution growth in year 2, not year 1', () => {
-    // Zero return, so each year's invested total is just the contributions so far.
-    const points = projectNetWorth(flat)
-    const yearly = 100_000 * 12
-
-    // Year 1 is the amount entered, ungrown: (1 + g)^(y - 1), not (1 + g)^y.
-    expect(points[1]?.investedCents).toBe(yearly)
-    expect(points[2]?.investedCents).toBe(yearly + Math.round(yearly * 1.1))
-    expect(points[3]?.investedCents).toBe(
-      yearly + Math.round(yearly * 1.1) + Math.round(yearly * 1.1 * 1.1),
-    )
-  })
-
   it('spreads the uncertainty band 3 points either side by default', () => {
-    const params = { ...flat, expectedRealReturn: 0.07, annualContributionGrowth: 0 }
+    const params = { ...flat, expectedRealReturn: 0.07 }
     const { lo, hi } = projectNetWorthBand(params)
 
     expect(lo).toEqual(projectNetWorthBand(params, 0.03).lo)

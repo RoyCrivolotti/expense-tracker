@@ -472,7 +472,6 @@ const SCENARIO_COLUMNS: ColumnMap<NewGoalScenario> = {
   sortOrder: 'sort_order',
   startInvestedCents: 'start_invested_cents',
   monthlyContributionCents: 'monthly_contribution_cents',
-  annualContributionGrowth: 'annual_contribution_growth',
   expectedRealReturn: 'expected_real_return',
   horizonYears: 'horizon_years',
   housePriceCents: 'house_price_cents',
@@ -504,14 +503,14 @@ export async function createScenario(
   const row = await env.DB.prepare(
     `INSERT INTO goal_scenarios (
        owner, name, color, sort_order,
-       start_invested_cents, monthly_contribution_cents, annual_contribution_growth,
+       start_invested_cents, monthly_contribution_cents,
        expected_real_return, horizon_years,
        house_price_cents, down_payment_fraction, house_purchase_year, transaction_costs_cents,
        mortgage_term_years, mortgage_rate_annual, house_appreciation_rate,
        rent_monthly_cents, annual_spend_cents, safe_withdrawal_rate, life_events,
        contribution_schedule, plan_start_date, is_active
      ) VALUES (
-       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
        CASE WHEN EXISTS (SELECT 1 FROM goal_scenarios WHERE owner = ? AND is_active = 1)
          THEN 0 ELSE 1 END
      )
@@ -524,7 +523,6 @@ export async function createScenario(
       input.sortOrder,
       input.startInvestedCents,
       input.monthlyContributionCents,
-      input.annualContributionGrowth,
       input.expectedRealReturn,
       input.horizonYears,
       input.housePriceCents,

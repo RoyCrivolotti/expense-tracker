@@ -5,7 +5,7 @@
  *
  * The projection is linear in contributions, so a step needs no new algorithm: each plan year
  * contributes twelve times the average monthly rate in force over it, and the loop is otherwise
- * untouched. A schedule that changes nothing gives the same figures as before, to the cent.
+ * untouched. A schedule that changes nothing gives the same figures as one with no schedule, to the cent.
  */
 import type { ContributionStep, GoalScenario } from '../types'
 import { yearsBetween } from './dates'
@@ -95,57 +95,32 @@ export function scheduleSteps(
     .sort((a, b) => a.offsetYears - b.offsetYears)
 }
 
-/** Keeps a step that lands exactly on an anniversary from being read as the year before it. */
-const EDGE = 1e-9
-
 /**
- * What the scenario invests each month at plan offset `t` (years from the start). The base amount
- * grows by `growth` at each whole year of the plan; a step replaces it from its month, and growth
- * then compounds on the step's amount at each anniversary of that month. A step at or before the
- * plan start is the amount the plan starts with, growing from the start.
+ * What the scenario invests each month at plan offset `t` (years from the start): the base amount,
+ * or the amount of the latest step that has begun. A step at or before the plan start is the amount
+ * the plan starts with.
  */
-export function monthlyCentsAt(
-  baseCents: number,
-  growth: number,
-  steps: readonly ScheduleStep[],
-  t: number,
-): number {
+export function monthlyCentsAt(baseCents: number, steps: readonly ScheduleStep[], t: number): number {
   let amount = baseCents
-  let anchor = 0
   for (const step of steps) {
     if (step.offsetYears > t) break
     amount = step.monthlyCents
-    anchor = Math.max(0, step.offsetYears)
   }
-  return amount * Math.pow(1 + growth, Math.max(0, Math.floor(t - anchor + EDGE)))
+  return amount
 }
 
 /**
  * The monthly rate summed over the plan offsets `from` to `to`, in cents-years: the area under
- * the rate. The rate changes at a step and at each anniversary of it, so the span is cut there
- * and each piece read at its middle.
+ * the rate. The rate only changes at a step, so the span is cut there and each piece read at its
+ * middle.
  */
-function monthlyIntegral(
-  baseCents: number,
-  growth: number,
-  steps: readonly ScheduleStep[],
-  from: number,
-  to: number,
-): number {
-  const cuts = new Set<number>([from, to])
-  for (const step of steps) {
-    if (step.offsetYears > from && step.offsetYears < to) cuts.add(step.offsetYears)
-    const anchor = Math.max(0, step.offsetYears)
-    for (let k = Math.max(1, Math.floor(from - anchor)); anchor + k < to; k++) {
-      if (anchor + k > from) cuts.add(anchor + k)
-    }
-  }
-  const edges = [...cuts].sort((a, b) => a - b)
+function monthlyIntegral(baseCents: number, steps: readonly ScheduleStep[], from: number, to: number): number {
+  const edges = [from, ...steps.map((s) => s.offsetYears).filter((o) => o > from && o < to), to]
   let sum = 0
   for (let i = 1; i < edges.length; i++) {
     const a = edges[i - 1]!
     const b = edges[i]!
-    sum += monthlyCentsAt(baseCents, growth, steps, (a + b) / 2) * (b - a)
+    sum += monthlyCentsAt(baseCents, steps, (a + b) / 2) * (b - a)
   }
   return sum
 }
@@ -153,26 +128,16 @@ function monthlyIntegral(
 /**
  * What plan year `year` contributes: twelve times the monthly rate in force, averaged over the
  * year (offsets `year - 1` to `year`) by the share of it each rate was in force for. Without a
- * step in force by then it is the base amount grown by whole years, as it always was.
+ * step in force by then it is the base amount for twelve months.
  */
-export function annualContributionCents(
-  baseCents: number,
-  growth: number,
-  steps: readonly ScheduleStep[],
-  year: number,
-): number {
+export function annualContributionCents(baseCents: number, steps: readonly ScheduleStep[], year: number): number {
   if (year <= 0) return 0
-  if (steps.every((s) => s.offsetYears >= year)) {
-    return Math.round(baseCents * 12 * Math.pow(1 + growth, year - 1))
-  }
-  return Math.round(monthlyIntegral(baseCents, growth, steps, year - 1, year) * 12)
+  if (steps.every((s) => s.offsetYears >= year)) return Math.round(baseCents * 12)
+  return Math.round(monthlyIntegral(baseCents, steps, year - 1, year) * 12)
 }
 
 /** The fields of a scenario the planned monthly amount is read from. */
-export type PlannedMonthly = Pick<
-  GoalScenario,
-  'planStartDate' | 'monthlyContributionCents' | 'annualContributionGrowth' | 'contributionSchedule'
->
+export type PlannedMonthly = Pick<GoalScenario, 'planStartDate' | 'monthlyContributionCents' | 'contributionSchedule'>
 
 /** Years from the plan start to a date, never before it; 0 with no start to count from. */
 function offsetOn(scenario: PlannedMonthly, date: string): number {
@@ -182,13 +147,11 @@ function offsetOn(scenario: PlannedMonthly, date: string): number {
 
 /**
  * What the plan invests each month on a date (`YYYY-MM-DD`): the base amount, or the change in
- * force, grown by whole years since it began. A date before the plan start reads as the start.
+ * force. A date before the plan start reads as the start.
  */
 export function plannedMonthlyAt(scenario: PlannedMonthly, date: string): number {
   const steps = scheduleSteps(scenario.planStartDate, scenario.contributionSchedule)
-  return Math.round(
-    monthlyCentsAt(scenario.monthlyContributionCents, scenario.annualContributionGrowth, steps, offsetOn(scenario, date)),
-  )
+  return monthlyCentsAt(scenario.monthlyContributionCents, steps, offsetOn(scenario, date))
 }
 
 /**

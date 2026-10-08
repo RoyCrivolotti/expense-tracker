@@ -126,7 +126,6 @@ export function makeScenario(overrides: Partial<GoalScenario> = {}): GoalScenari
     sortOrder: 0,
     startInvestedCents: 10_000_000,
     monthlyContributionCents: 100_000,
-    annualContributionGrowth: 0,
     expectedRealReturn: 0.07,
     horizonYears: 30,
     housePriceCents: 400_000_000,

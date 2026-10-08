@@ -21,7 +21,6 @@ export interface LeverSpec {
 export const LEVER_SPECS: Record<LeverKey, LeverSpec> = {
   startInvestedCents: { key: 'startInvestedCents', kind: 'money', label: 'Starting invested', short: 'Starting invested' },
   monthlyContributionCents: { key: 'monthlyContributionCents', kind: 'money', label: 'Monthly investing', short: 'Monthly investing' },
-  annualContributionGrowth: { key: 'annualContributionGrowth', kind: 'percent', label: 'Contribution growth (%/yr)', short: 'Contribution growth', min: 0, max: 0.1 },
   expectedRealReturn: { key: 'expectedRealReturn', kind: 'percent', label: 'Real return (%/yr, after inflation)', short: 'Real return', min: 0, max: 0.15 },
   horizonYears: { key: 'horizonYears', kind: 'years', label: 'Horizon (years)', short: 'Horizon', min: 1, max: 60 },
   housePriceCents: { key: 'housePriceCents', kind: 'money', label: 'House price', short: 'House price' },
@@ -50,7 +49,7 @@ export function purchaseYearLabel(year: number | null, horizonYears?: number): s
 
 /** Which inputs each section of the controls holds, in the order it shows them. */
 export const SECTION_KEYS = {
-  portfolio: ['startInvestedCents', 'monthlyContributionCents', 'annualContributionGrowth', 'expectedRealReturn', 'horizonYears'],
+  portfolio: ['startInvestedCents', 'monthlyContributionCents', 'expectedRealReturn', 'horizonYears'],
   housing: ['housePriceCents', 'downPaymentFraction', 'transactionCostsCents', 'mortgageRateAnnual', 'mortgageTermYears', 'houseAppreciationRate', 'housePurchaseYear', 'rentMonthlyCents'],
   fire: ['annualSpendCents', 'safeWithdrawalRate'],
 } as const satisfies Record<string, readonly LeverKey[]>

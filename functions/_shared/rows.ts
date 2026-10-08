@@ -239,7 +239,6 @@ export interface GoalScenarioRow {
   sort_order: number
   start_invested_cents: number
   monthly_contribution_cents: number
-  annual_contribution_growth: number
   expected_real_return: number
   horizon_years: number
   house_price_cents: number
@@ -274,7 +273,6 @@ export function toGoalScenario(r: GoalScenarioRow): GoalScenario {
     sortOrder: r.sort_order,
     startInvestedCents: r.start_invested_cents,
     monthlyContributionCents: r.monthly_contribution_cents,
-    annualContributionGrowth: r.annual_contribution_growth,
     expectedRealReturn: r.expected_real_return,
     horizonYears: r.horizon_years,
     housePriceCents: r.house_price_cents,

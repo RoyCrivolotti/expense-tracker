@@ -21,7 +21,6 @@ function setup(overrides: Partial<Parameters<typeof ContributionStepsList>[0]> =
         steps={[]}
         planStartDate="2026-06-25"
         baseCents={1_500_00}
-        growth={0}
         format={EU_MONEY_FORMAT}
         onChange={onChange}
         {...overrides}
@@ -139,31 +138,6 @@ describe('ContributionStepsList', () => {
     const { onChange, user } = setup({ planStartDate: null, steps: [{ from: '2027-03', monthlyCents: 2_000_00 }] })
     await user.click(screen.getByRole('button', { name: "Remove the change from Mar '27" }))
     expect(onChange).toHaveBeenCalledWith([])
-  })
-
-  it('says how a yearly growth applies after a change, only when there is one and there is growth', () => {
-    const steps = [{ from: '2027-03', monthlyCents: 2_000_00 }]
-    const { rerender } = setup({ steps, growth: 0.03 })
-    expect(screen.getByText(/grows by 3,0\s?% a year, on the anniversary of the month it starts in/)).toBeInTheDocument()
-
-    const again = (props: Partial<Parameters<typeof ContributionStepsList>[0]>) =>
-      rerender(
-        <MoneyFormatContext.Provider value={EU_MONEY_FORMAT}>
-          <ContributionStepsList
-            steps={[]}
-            planStartDate="2026-06-25"
-            baseCents={1_500_00}
-            growth={0}
-            format={EU_MONEY_FORMAT}
-            onChange={vi.fn()}
-            {...props}
-          />
-        </MoneyFormatContext.Provider>,
-      )
-    again({ steps, growth: 0 })
-    expect(screen.queryByText(/grows by/)).not.toBeInTheDocument()
-    again({ steps: [], growth: 0.03 })
-    expect(screen.queryByText(/grows by/)).not.toBeInTheDocument()
   })
 
   it('stops at the limit, and says why', () => {

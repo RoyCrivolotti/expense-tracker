@@ -3,7 +3,6 @@ import type { ContributionStep } from '../../../types'
 import {
   CONTRIBUTION_STEP_MAX_COUNT,
   formatCents,
-  formatPercent,
   normalizeContributionSchedule,
   shortMonthYearLabel,
   type MoneyFormat,
@@ -18,8 +17,6 @@ interface StepsProps {
   planStartDate: string | null
   /** The monthly amount the scenario starts with, which a new change starts from in the form. */
   baseCents: number
-  /** The yearly growth each amount gets from the month it starts in; 0 for none. */
-  growth: number
   format: MoneyFormat
   onChange: (steps: ContributionStep[]) => void
 }
@@ -36,7 +33,7 @@ function firstMonthAfter(planStartDate: string): string {
  * month". Added and removed, not edited, like life events. Needs the plan start, which is what
  * a month is counted from.
  */
-export function ContributionStepsList({ steps, planStartDate, baseCents, growth, format, onChange }: StepsProps) {
+export function ContributionStepsList({ steps, planStartDate, baseCents, format, onChange }: StepsProps) {
   const [adding, setAdding] = useState(false)
   const full = steps.length >= CONTRIBUTION_STEP_MAX_COUNT
 
@@ -69,12 +66,6 @@ export function ContributionStepsList({ steps, planStartDate, baseCents, growth,
           ))}
         </ul>
       )}
-      {steps.length > 0 && growth > 0 ? (
-        <p className={styles.fieldHint}>
-          Each amount then grows by {formatPercent(growth, format)} a year, on the anniversary of the month it starts
-          in.
-        </p>
-      ) : null}
       {planStartDate === null ? (
         <p className={styles.fieldHint}>
           A change is counted from the plan start. Set a plan start date under Plan start to add one.

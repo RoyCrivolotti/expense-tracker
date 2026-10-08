@@ -27,7 +27,6 @@ function makeScenario(overrides: Partial<GoalScenario> = {}): GoalScenario {
     sortOrder: 0,
     startInvestedCents: 10_000_000,
     monthlyContributionCents: 100_000,
-    annualContributionGrowth: 0,
     expectedRealReturn: 0.07,
     horizonYears: 30,
     housePriceCents: 0,

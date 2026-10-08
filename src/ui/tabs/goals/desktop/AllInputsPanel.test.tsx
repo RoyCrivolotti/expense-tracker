@@ -41,10 +41,12 @@ describe('AllInputsPanel', () => {
   it('lays the sections out in columns, without what is in the levers bar', () => {
     renderPanel(true)
     const panel = screen.getByRole('region', { name: 'All inputs' })
-    for (const title of ['Portfolio', 'Housing', 'Financial independence', 'Plan start', 'Monthly investing changes', 'Life events']) {
+    for (const title of ['Housing', 'Financial independence', 'Plan start', 'Monthly investing changes', 'Life events']) {
       expect(within(panel).getByRole('heading', { name: title })).toBeInTheDocument()
     }
-    expect(within(panel).getByRole('textbox', { name: 'Contribution growth (%/yr)' })).toBeInTheDocument()
+    // All four portfolio inputs are in the bar by default, so there is no column of them.
+    expect(within(panel).queryByRole('heading', { name: 'Portfolio' })).not.toBeInTheDocument()
+    expect(within(panel).getByRole('textbox', { name: 'Mortgage rate (%/yr)' })).toBeInTheDocument()
     expect(within(panel).getByLabelText('House price')).toBeInTheDocument()
     expect(within(panel).queryByLabelText('Monthly investing')).not.toBeInTheDocument()
     expect(within(panel).queryByLabelText('Starting invested')).not.toBeInTheDocument()
@@ -58,7 +60,7 @@ describe('AllInputsPanel', () => {
   })
 
   it('keeps the portfolio column while any of its inputs is left in it', () => {
-    renderPanel(true, makeStarred(SECTION_KEYS.portfolio.slice(0, 4)))
+    renderPanel(true, makeStarred(SECTION_KEYS.portfolio.slice(0, 3)))
     expect(screen.getByRole('heading', { name: 'Portfolio' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Plan start' })).toBeInTheDocument()
   })
@@ -134,7 +136,7 @@ describe('AllInputsPanel stars', () => {
   it('stars every one of the inputs that can be starred, once each', () => {
     renderPanel(true, makeStarred([]))
     const stars = screen.getAllByRole('button', { name: /^Add .* to the bar$/ })
-    expect(stars).toHaveLength(15)
+    expect(stars).toHaveLength(14)
   })
 
   it('holds the stars back, and says why, once the bar is full', () => {
