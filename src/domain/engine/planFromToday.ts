@@ -16,7 +16,8 @@ export interface PlanFromToday {
  * answers whether the plan was right, which ahead or behind measures and a re-baseline
  * would erase; this answers what happens now: the same assumptions projected from the
  * balance actually there, with life events and the house purchase kept on their dates and
- * the contribution grown for the years passed, exactly as a re-baseline would write them.
+ * the monthly amount in force at the check-in and the changes still to come, exactly as a
+ * re-baseline would write them.
  * Never saved, so it cannot go stale at the next check-in. Null without a dated plan, or a
  * check-in before its start.
  */
