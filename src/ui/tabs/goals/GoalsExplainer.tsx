@@ -40,7 +40,7 @@ const buildTerms = (cur: string): { term: string; body: string }[] => [
   },
   {
     term: 'Drawdown',
-    body: 'What happens to the portfolio after you reach FI: it keeps growing with returns while you withdraw your annual spend each year. Chart years count from the FI year, not from today. If FI is not reached within the horizon, the drawdown chart shows the target only.',
+    body: "What happens to the portfolio after you reach FI: it keeps growing with returns while you withdraw your annual spend each year. It takes the plan's return every year, so it is an illustration, not a forecast: a bad run of early years would leave less. Chart years count from the FI year, not from today. If FI is not reached within the horizon, the drawdown chart shows the target only.",
   },
 ]
 
