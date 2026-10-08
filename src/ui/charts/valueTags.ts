@@ -1,3 +1,5 @@
+import { pointSeriesValueAt } from './linearScale'
+
 /** What a value tag says and where its line is, before the tags are laid out against each other. */
 export interface ValueTag {
   id: string
@@ -10,6 +12,8 @@ export interface ValueTag {
   text: string
   /** The over or under edge of the shaded band, not a line. */
   band: boolean
+  /** A projection drawn dotted (the plan from today): the same colour as its plan, so it is told apart by its edge. */
+  dotted: boolean
 }
 
 /** How a chart is asked to tag the values of its lines at the year pointed at. */
@@ -45,7 +49,7 @@ export function tagWidth(text: string, dots = 1): number {
 function mergeEqual(tags: ValueTag[]): ValueTag[] {
   const out: ValueTag[] = []
   for (const tag of tags) {
-    const same = tag.band ? undefined : out.find((o) => !o.band && o.text === tag.text)
+    const same = tag.band || tag.dotted ? undefined : out.find((o) => !o.band && !o.dotted && o.text === tag.text)
     if (!same) {
       out.push({ ...tag })
       continue
@@ -110,6 +114,12 @@ interface TaggedLine {
   values: number[]
 }
 
+interface TaggedPoints {
+  id: string
+  color: string
+  points: { xIndex: number; value: number }[]
+}
+
 interface TaggedBand {
   color: string
   band?: { lo: number[]; hi: number[] } | undefined
@@ -120,6 +130,7 @@ export function buildTags(
   active: number,
   lines: TaggedLine[],
   bands: TaggedBand[],
+  pointLines: TaggedPoints[],
   scaleY: (value: number) => number,
   spec: ValueTagSpec,
 ): ValueTag[] {
@@ -128,7 +139,13 @@ export function buildTags(
     const value = line.values[active]
     // A line that has ended has no point at this year, and so no tag.
     if (value === undefined) continue
-    tags.push({ id: line.id, color: line.color, colors: [line.color], y: scaleY(value), text: spec.format(value), band: false })
+    tags.push({ id: line.id, color: line.color, colors: [line.color], y: scaleY(value), text: spec.format(value), band: false, dotted: false })
+  }
+  for (const line of pointLines) {
+    // The line starts at the latest check-in and has no value before it, so no tag there.
+    const value = pointSeriesValueAt(line.points, active)
+    if (value === null) continue
+    tags.push({ id: line.id, color: line.color, colors: [line.color], y: scaleY(value), text: spec.format(value), band: false, dotted: true })
   }
   const labels = spec.bandLabels
   if (labels) {
@@ -136,8 +153,8 @@ export function buildTags(
       const lo = band.band?.lo[active]
       const hi = band.band?.hi[active]
       if (lo === undefined || hi === undefined) continue
-      tags.push({ id: `band-hi-${k}`, color: band.color, colors: [band.color], y: scaleY(hi), text: `${labels.hi} · ${spec.format(hi)}`, band: true })
-      tags.push({ id: `band-lo-${k}`, color: band.color, colors: [band.color], y: scaleY(lo), text: `${labels.lo} · ${spec.format(lo)}`, band: true })
+      tags.push({ id: `band-hi-${k}`, color: band.color, colors: [band.color], y: scaleY(hi), text: `${labels.hi} · ${spec.format(hi)}`, band: true, dotted: false })
+      tags.push({ id: `band-lo-${k}`, color: band.color, colors: [band.color], y: scaleY(lo), text: `${labels.lo} · ${spec.format(lo)}`, band: true, dotted: false })
     }
   }
   return mergeEqual(tags)
