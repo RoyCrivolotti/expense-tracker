@@ -4,6 +4,7 @@ import type { MonthlyFlow, PlanFromToday } from '../../../../engine'
 import type { ExpenseActions } from '../../../actions'
 import type { InvestedSnapshot } from '../checkinDate'
 import { useToastAside } from '../../../hooks/useToastAside'
+import { createHeroLegendStore } from '../charts/heroLegendStore'
 import { GoalsIntro } from '../GoalsIntro'
 import { PlanHero, type ValueDisplay } from '../PlanHero'
 import type { ScenarioEditor } from '../useScenarioEditor'
@@ -44,15 +45,18 @@ export interface PlanDesktopProps {
  */
 export function PlanDesktop({ scenarios, editor, actions, latest, milestones, reached, monthly, checkins, accounts, fromToday, display, levers }: PlanDesktopProps) {
   const [inputsOpen, setInputsOpen] = useState(false)
+  // The chart tells the chips above it what each line is worth where it is pointed at.
+  const [legend] = useState(createHeroLegendStore)
   useToastAside()
   const { draft, deferredDraft } = editor
   const starred = useKeyboardStarToggle(levers, PANEL_ID)
   return (
     // The marker widens the page for this view only (AppShell.module.css).
     <div className={styles.page} data-goals-plan-wide>
-      <ScenarioBar scenarios={scenarios} editor={editor} actions={actions} />
+      <ScenarioBar scenarios={scenarios} editor={editor} actions={actions} legend={legend} />
       <div className={styles.hero}>
         <PlanHero
+          legendStore={legend}
           scenarios={scenarios}
           editor={editor}
           milestones={milestones}
