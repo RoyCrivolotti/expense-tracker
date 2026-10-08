@@ -15,6 +15,10 @@ const buildTerms = (cur: string): { term: string; body: string }[] => [
     body: 'A saved set of choices (return, contribution, horizon, house plans). Each one is a colored line on the projection so you can compare futures side by side.',
   },
   {
+    term: 'Monthly investing',
+    body: "What leaves your account for your investments each month, as you send it. The plan is in today's money, so each year's payments are brought back by the assumed inflation: an amount that stays the same counts for less every year. A change from a date sets a new amount from that month on.",
+  },
+  {
     term: 'Real return',
     body: "The yearly growth the plan assumes for the invested portfolio after inflation, so every projected figure, the FI target and the milestones are in today's money. Check-ins are broker balances in the money of their day, and Progress deflates them before comparing, at the assumed inflation set in Assumptions. The chart's Nominal view does the reverse and inflates the projection at that same rate, and can preview another one without saving it.",
   },

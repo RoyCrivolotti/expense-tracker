@@ -2,6 +2,12 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (monthly investing is what you send)
+
+- **The monthly amount is what leaves your account, and the plan counts it in today's money.** The plan used to read 1.000 € a month as 1.000 € of today's money every year, which meant sending more each year: 3% inflation takes it to about 2.400 € by year 30. Someone who sends the same 1.000 € for thirty years was shown a plan that needs those larger payments. Now 1.000 € means 1.000 € each month, and each year's payments are brought back by the assumed inflation, so by year 30 a payment counts for about 40% of what the same amount did at the start. The figures of every saved scenario come out lower when inflation is above 0%, by more the longer the horizon.
+- **The editor and the glossary say so.** "Monthly investing" has an entry under "What do these terms mean?", and the section for changes starts with what the amount is and how it is counted.
+- **The pace comparison is in one money.** What the plan invests each month and what the transactions show are both what left the account, where before the plan's figure was in today's money.
+
 ## October 2026 (Contribution growth removed)
 
 - **Contribution growth is gone from the inputs.** It raised the monthly amount by a percentage on each anniversary of the plan start, which was easy to set without seeing what it did: 3% a year turned 1.000 € a month into about 2.400 € by year 30. A raise is now a dated change under "Monthly investing changes", which says the month and the amount. The setting was at 0% on every saved scenario, so no figure moves.

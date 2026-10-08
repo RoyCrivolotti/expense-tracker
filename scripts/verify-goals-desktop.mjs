@@ -1840,7 +1840,7 @@ const matrixCard = (page) => page.getByRole('heading', { name: 'Years to milesto
 async function lowDraft(page) {
   await page.getByRole('button', { name: 'All inputs' }).click()
   await page.waitForTimeout(400)
-  for (const [label, value] of [['Monthly investing', '150'], ['Starting invested', '5000']]) {
+  for (const [label, value] of [['Monthly investing', '180'], ['Starting invested', '5000']]) {
     const input = page.getByLabel(label, { exact: true }).last()
     await input.fill(value)
     await input.press('Enter')

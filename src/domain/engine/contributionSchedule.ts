@@ -4,8 +4,9 @@
  * by the projection, which turns it into what each plan year contributes.
  *
  * The projection is linear in contributions, so a step needs no new algorithm: each plan year
- * contributes twelve times the average monthly rate in force over it, and the loop is otherwise
- * untouched. A schedule that changes nothing gives the same figures as one with no schedule, to the cent.
+ * contributes twelve times the average monthly amount in force over it, brought back to the money
+ * of the plan start, and the loop is otherwise untouched. A schedule that changes nothing gives the
+ * same figures as one with no schedule, to the cent.
  */
 import type { ContributionStep, GoalScenario } from '../types'
 import { yearsBetween } from './dates'
@@ -110,30 +111,53 @@ export function monthlyCentsAt(baseCents: number, steps: readonly ScheduleStep[]
 }
 
 /**
- * The monthly rate summed over the plan offsets `from` to `to`, in cents-years: the area under
- * the rate. The rate only changes at a step, so the span is cut there and each piece read at its
- * middle.
+ * The years from `from` to `to` counted in the plan's money: each instant weighs what a euro paid
+ * then is worth in the money of the plan start, `(1 + inflation) ** -t`. With no inflation it is
+ * the plain length of the span.
  */
-function monthlyIntegral(baseCents: number, steps: readonly ScheduleStep[], from: number, to: number): number {
+function discountedYears(from: number, to: number, inflationRate: number): number {
+  if (inflationRate === 0) return to - from
+  const k = Math.log1p(inflationRate)
+  return (Math.exp(-k * from) - Math.exp(-k * to)) / k
+}
+
+/**
+ * The monthly amount summed over the plan offsets `from` to `to`, in cents-years of the plan's
+ * money. The amount only changes at a step, so the span is cut there and each piece is the amount
+ * in force times its discounted length.
+ */
+function monthlyIntegral(
+  baseCents: number,
+  steps: readonly ScheduleStep[],
+  from: number,
+  to: number,
+  inflationRate: number,
+): number {
   const edges = [from, ...steps.map((s) => s.offsetYears).filter((o) => o > from && o < to), to]
   let sum = 0
   for (let i = 1; i < edges.length; i++) {
     const a = edges[i - 1]!
     const b = edges[i]!
-    sum += monthlyCentsAt(baseCents, steps, (a + b) / 2) * (b - a)
+    sum += monthlyCentsAt(baseCents, steps, (a + b) / 2) * discountedYears(a, b, inflationRate)
   }
   return sum
 }
 
 /**
- * What plan year `year` contributes: twelve times the monthly rate in force, averaged over the
- * year (offsets `year - 1` to `year`) by the share of it each rate was in force for. Without a
- * step in force by then it is the base amount for twelve months.
+ * What plan year `year` contributes, in the plan's money (today's, at the plan start). The monthly
+ * amounts are euros as they leave the account, so each is brought back by the inflation since the
+ * start: twelve times the amount in force, averaged over the year (offsets `year - 1` to `year`) by
+ * the share of it each amount was in force for, discounted to the start. An amount that stays the
+ * same therefore counts for less each year.
  */
-export function annualContributionCents(baseCents: number, steps: readonly ScheduleStep[], year: number): number {
+export function annualContributionCents(
+  baseCents: number,
+  steps: readonly ScheduleStep[],
+  year: number,
+  inflationRate: number,
+): number {
   if (year <= 0) return 0
-  if (steps.every((s) => s.offsetYears >= year)) return Math.round(baseCents * 12)
-  return Math.round(monthlyIntegral(baseCents, steps, year - 1, year) * 12)
+  return Math.round(monthlyIntegral(baseCents, steps, year - 1, year, inflationRate) * 12)
 }
 
 /** The fields of a scenario the planned monthly amount is read from. */
