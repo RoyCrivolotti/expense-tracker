@@ -3,12 +3,14 @@
  *
  * Given a scenario (with planStartDate) and historical check-ins, computes:
  *   - The projected invested-portfolio value at any calendar date.
- *   - An on/off-track status: delta in € and in equivalent months.
+ *   - An on/off-track status: delta in € and the months it is along the plan's line.
  */
-import { plannedMonthlyAt } from './contributionSchedule'
+import { planDistance } from './planDistance'
 import { projectNetWorth } from './projection'
 import { scenarioToParams } from './scenarioProjection'
 import type { GoalScenario, Milestone, WealthAccount, WealthCheckin } from '../types'
+
+const MS_PER_YEAR = 365.25 * 24 * 60 * 60 * 1000
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -20,10 +22,13 @@ export interface TrackStatus {
   /** delta = actual − projected; positive = ahead, negative = behind. */
   deltaCents: number
   /**
-   * Months ahead (positive) or behind (negative) of the projection slope.
-   * Computed as delta / monthly-contribution, clamped to ±horizonYears×12.
+   * Whole months ahead (positive) or behind (negative) of the plan: the distance along the plan's
+   * line from the check-in to the point that has this balance (`planDistance`). Null when the
+   * line never has it, which `deltaCents` still says.
    */
-  deltaMonths: number
+  deltaMonths: number | null
+  /** The day the plan's line has the check-in's balance, in step with `deltaMonths`; null when it is. */
+  planDate: string | null
   /** The check-in's balance in the plan's money, which is what `deltaCents` is taken from. */
   actualRealInvestedCents: number
 }
@@ -40,9 +45,13 @@ export function yearOffsetFromDate(planStartDate: string, targetDate: string): n
   }
   const start = new Date(planStartDate).getTime()
   const target = new Date(targetDate).getTime()
-  const msPerYear = 365.25 * 24 * 60 * 60 * 1000
-  const offset = (target - start) / msPerYear
+  const offset = (target - start) / MS_PER_YEAR
   return offset
+}
+
+/** The date a fractional year offset from the plan start falls on, counted as `yearOffsetFromDate` counts. */
+export function dateAtOffset(planStartDate: string, offsetYears: number): string {
+  return new Date(new Date(planStartDate).getTime() + offsetYears * MS_PER_YEAR).toISOString().slice(0, 10)
 }
 
 /**
@@ -176,28 +185,28 @@ export function trackStatus(
   inflationRate: number,
 ): TrackStatus | null {
   if (!scenario.planStartDate) return null
-  const projected = planValueAtDate(scenario, checkin.checkinDate, inflationRate)
+  const offset = yearOffsetFromDate(scenario.planStartDate, checkin.checkinDate)
+  if (offset === null) return null
+  const points = projectNetWorth(scenarioToParams(scenario, inflationRate))
+  const projected = planValueAtOffset(points, offset)
   if (projected === null) return null
 
   const actualInvestedCents = checkinInvestedCents(checkin, accounts)
   const actualRealInvestedCents = nominalToReal(actualInvestedCents, scenario.planStartDate, checkin.checkinDate, inflationRate)
   const deltaCents = actualRealInvestedCents - projected
 
-  // A gap in money, as months of what the plan was putting in when the check-in was made. During a
-  // pause that is nothing, and a gap is not a number of months of nothing: no figure is given.
-  const monthlyContrib = plannedMonthlyAt(scenario, checkin.checkinDate)
-  const maxMonths = Math.round(scenario.horizonYears * 12)
-  const deltaMonths =
-    monthlyContrib > 0
-      ? Math.max(-maxMonths, Math.min(maxMonths, Math.round(deltaCents / monthlyContrib)))
-      : 0
+  // A gap in money is read along the plan's line, not divided by a monthly amount: that way it
+  // counts the plan's own growth, does not jump where the amount changes, and still means
+  // something during a pause.
+  const distance = planDistance(points, offset, actualRealInvestedCents)
 
   return {
     projectedInvestedCents: projected,
     actualInvestedCents,
     actualRealInvestedCents,
     deltaCents,
-    deltaMonths,
+    deltaMonths: distance ? Math.round(distance.months) || 0 : null,
+    planDate: distance ? dateAtOffset(scenario.planStartDate, distance.atOffset) : null,
   }
 }
 

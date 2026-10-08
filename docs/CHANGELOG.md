@@ -2,6 +2,12 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (months ahead or behind, along the plan)
+
+- **"Months ahead" is now the distance along the plan's line.** It used to divide the gap in money by what the plan invests each month. That left out what the portfolio earns by itself, so a gap read as more months than the chart shows (10.000 € ahead on 1.400 € a month said 7 months, where the plan's line gets there in 5), and it jumped on the day the monthly amount changed. The figure is now the months between the check-in and the point on the plan's line that has your balance, and the Progress snapshot says when that is: "12 months ahead of the plan, which only reaches this balance on 1 Oct 2027".
+- **A pause no longer takes it away.** With a month of nothing there was no monthly amount to divide by, so no months were shown and the dashboard badge said "On track" however far ahead you were. The line keeps rising with the return during a pause, so it has a distance.
+- **When the plan's line never has your balance there are no months, and the gap in money is said instead.** That is a balance above where the plan ends or below where it started, as after taking a house deposit out earlier than planned. The dashboard badge then reads "5k € behind" rather than a month count that was never measured.
+
 ## October 2026 (values on the chart)
 
 Checked in Chromium and in Safari's engine, at 1280x800 and wider.

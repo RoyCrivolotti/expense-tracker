@@ -17,7 +17,7 @@ import { activePlan } from '../tabs/goals/scenarioSelection'
 import { useAssumedInflation } from '../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { formatMoneyShort } from '../tabs/goals/chartTheme'
-import { contributionGapLabel } from '../tabs/goals/contributionGap'
+import { planGapLabel } from '../tabs/goals/planGap'
 import { daysSinceCheckin } from './checkinAge'
 import { todayIso } from './transactionFormState'
 import styles from './GoalsCard.module.css'
@@ -53,19 +53,23 @@ function CheckinNudge({ dataset, onLogCheckin }: { dataset: ExpenseDataset; onLo
 
 interface TrackBadgeProps {
   deltaCents: number
-  deltaMonths: number
+  deltaMonths: number | null
   format: ReturnType<typeof useMoneyFormat>
 }
 
 function TrackBadge({ deltaCents, deltaMonths, format }: TrackBadgeProps) {
   const ahead = deltaCents >= 0
   const dotClass = `${styles.trackDot} ${ahead ? styles.trackDotAhead : styles.trackDotBehind}`
+  const money = formatMoneyShort(Math.abs(deltaCents), format)
+  // Without a month count the plan's line has no point at this balance, so the gap in money is all there is.
   const label =
-    deltaMonths === 0
-      ? ahead
-        ? 'On track'
-        : `${formatMoneyShort(Math.abs(deltaCents), format)} behind`
-      : contributionGapLabel(deltaMonths)
+    deltaMonths === null
+      ? `${money} ${ahead ? 'ahead' : 'behind'}`
+      : deltaMonths === 0
+        ? ahead
+          ? 'On track'
+          : `${money} behind`
+        : planGapLabel(deltaMonths)
   return (
     <div className={`${styles.trackBadge} ${ahead ? styles.trackBadgeAhead : styles.trackBadgeBehind}`}>
       <span className={dotClass} />
