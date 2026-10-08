@@ -2,6 +2,13 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (scenario chips)
+
+Checked in Chromium and in Safari's engine, at 1280x800 and wider, and on an iPad.
+
+- **One set of chips above the chart replaces the scenario tabs and the chart's legend.** Each chip has the scenario's colour, its whole name (on two lines where it needs them), its value in the year you point at (the last year when you are not pointing), and an eye to hide its line. All chips are one width and wrap to more rows, so a long name never cuts another chip or overlaps it. Plan and Edited sit on the chip's top edge instead of using up its width. The line under the chart keeps the year, the purchase breakdown and the plan-from-today key.
+- **Duplicate, the options menu and Save / Discard are in the title row**, beside the Plan | Progress | Assumptions switch, so editing a scenario no longer changes what is above the chart.
+
 ## October 2026 (the projection, full screen)
 
 Checked in Chromium and in Safari's engine, upright at 375x812 and on its side at 812x375.
