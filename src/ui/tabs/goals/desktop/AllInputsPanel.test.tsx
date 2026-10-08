@@ -41,7 +41,7 @@ describe('AllInputsPanel', () => {
   it('lays the sections out in columns, without what is in the levers bar', () => {
     renderPanel(true)
     const panel = screen.getByRole('region', { name: 'All inputs' })
-    for (const title of ['Housing', 'Financial independence', 'Plan start', 'Monthly investing changes', 'Life events']) {
+    for (const title of ['Housing', 'Financial independence', 'Plan start', 'Monthly investing over time', 'Life events']) {
       expect(within(panel).getByRole('heading', { name: title })).toBeInTheDocument()
     }
     // All four portfolio inputs are in the bar by default, so there is no column of them.
@@ -69,6 +69,15 @@ describe('AllInputsPanel', () => {
     renderPanel(true, makeStarred(SECTION_KEYS.portfolio))
     expect(screen.queryByRole('heading', { name: 'Portfolio' })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Plan start' })).toBeInTheDocument()
+  })
+
+  it('says where the starting amount is set: the bar while it is in the bar, Portfolio when it is not', () => {
+    const { view } = renderPanel(true)
+    expect(screen.getByText('The first line is the amount you start with, set in the bar above.')).toBeInTheDocument()
+    view.unmount()
+
+    renderPanel(true, makeStarred([]))
+    expect(screen.getByText('The first line is the amount you start with, set in Portfolio.')).toBeInTheDocument()
   })
 
   it('is not on the page while closed', () => {

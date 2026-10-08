@@ -7,6 +7,7 @@ import { DateField, MoneyField, NumberField, PercentField, PurchaseYearField } f
 import { ContributionStepsList } from './ContributionSteps'
 import { firstChangeNote } from './contributionText'
 import { LifeEventsList } from './LifeEvents'
+import { ADJUST_LABELS } from './adjustSections'
 import { LEVER_SPECS, NO_LEVERS } from './leverFields'
 import styles from './goals.module.css'
 
@@ -62,7 +63,7 @@ function MonthlyInvestingField({
         value={draft.monthlyContributionCents}
         onChange={(v) => onChange({ monthlyContributionCents: v })}
       />)}
-      {note ? <p className={styles.fieldHint}>{note}. Set under Monthly investing changes.</p> : null}
+      {note ? <p className={styles.fieldHint}>{note}. Set under {ADJUST_LABELS.changes.title}.</p> : null}
     </>
   )
 }
@@ -333,20 +334,20 @@ export function TrackingFields({ draft, latest, onChange }: TrackingProps) {
   )
 }
 
-export function ChangesFields({ draft, onChange }: Pick<SectionProps, 'draft' | 'onChange'>) {
+export function ChangesFields({ draft, onChange, omit = NO_LEVERS }: Pick<SectionProps, 'draft' | 'onChange' | 'omit'>) {
   const format = useMoneyFormat()
   return (
     <>
       <p className={styles.fieldHint}>
-        The amount you send each month, from a month on. It is counted in today's money at the assumed
-        inflation, so an amount that stays the same counts for less each year. Before the first change the
-        scenario is exactly as it is. After one, the monthly amount is the one you give, so a pause is a
-        change to nothing.
+        What you send to your investments each month: the amount you start with, then each change from a month
+        on. It is counted in today's money at the assumed inflation, so an amount that stays the same counts for
+        less each year. Enter 0 for a pause.
       </p>
       <ContributionStepsList
         steps={draft.contributionSchedule ?? []}
         planStartDate={draft.planStartDate}
         baseCents={draft.monthlyContributionCents}
+        startSetIn={omit.has('monthlyContributionCents') ? 'the bar above' : 'Portfolio'}
         format={format}
         onChange={(steps) => onChange({ contributionSchedule: steps })}
       />

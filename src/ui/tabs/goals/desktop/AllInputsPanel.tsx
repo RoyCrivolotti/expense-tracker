@@ -68,11 +68,11 @@ function PortfolioColumn({ draft, latest, onChange, omit, wrap }: ColumnProps) {
  * one-off events. Two columns for them made five, which the panel has no room for at laptop widths
  * (it would wrap to two rows), and both are short.
  */
-function OverTimeColumn({ draft, onChange }: Pick<ColumnProps, 'draft' | 'onChange'>) {
+function OverTimeColumn({ draft, onChange, omit }: Pick<ColumnProps, 'draft' | 'onChange' | 'omit'>) {
   const labels = ADJUST_LABELS
   return (
     <Column title={labels.changes.title}>
-      <ChangesFields draft={draft} onChange={onChange} />
+      <ChangesFields draft={draft} onChange={onChange} omit={omit} />
       <h3 className={styles.columnTitle}>{labels.events.title}</h3>
       <EventsFields draft={draft} onChange={onChange} />
     </Column>
@@ -136,7 +136,7 @@ function PanelBody({ id, draft, latest, onChange, starred }: PanelProps) {
             <Column title={labels.fire.title}>
               <FireFields draft={draft} onChange={onChange} omit={omit} wrap={wrap} />
             </Column>
-            <OverTimeColumn draft={draft} onChange={onChange} />
+            <OverTimeColumn draft={draft} onChange={onChange} omit={omit} />
           </div>
         </Card>
       </div>

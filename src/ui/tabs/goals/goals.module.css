@@ -2365,6 +2365,21 @@
   color: var(--exp-danger);
 }
 
+.lifeEventEdit {
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  padding: 0 0.125rem;
+  flex-shrink: 0;
+}
+
+.lifeEventRow > .lifeEventForm {
+  flex: 1;
+  min-width: 0;
+}
+
 .addLifeEventBtn {
   background: none;
   border: 1px dashed var(--color-divider);
@@ -2488,6 +2503,11 @@
   }
 
   .stack .lifeEventRemove {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  .stack .lifeEventEdit {
     min-width: 2.75rem;
     min-height: 2.75rem;
   }
