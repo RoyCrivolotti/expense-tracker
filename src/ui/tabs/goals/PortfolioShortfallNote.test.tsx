@@ -5,7 +5,8 @@ import { AssumedInflationContext } from '../../hooks/assumedInflationContext'
 import { PortfolioShortfallNote } from './PortfolioShortfallNote'
 
 // A 400.000 € house takes 80.000 € down. With 20.000 € and 500 € a month the portfolio holds about 62.500 € by year 5.
-const house = { housePriceCents: 40_000_000, horizonYears: 10 }
+// Its price stays put (no rise, no inflation) so the figures read plainly; the last test lets it rise.
+const house = { housePriceCents: 40_000_000, houseAppreciationRate: 0, horizonYears: 10 }
 const thin = makeScenario({
   ...house,
   startInvestedCents: 2_000_000,
@@ -44,6 +45,12 @@ describe('PortfolioShortfallNote', () => {
   it('counts the purchase costs with the down payment', () => {
     renderNote({ ...thin, transactionCostsCents: 500_000 })
     expect(screen.getByRole('note').textContent).toContain('It takes 85.000 € out')
+  })
+
+  it('takes the down payment from the price the house has risen to by the year it is bought', () => {
+    // 400.000 € today at 2.5% a year with no inflation is 452.563 € in year 5, so 90.513 € down.
+    renderNote({ ...thin, houseAppreciationRate: 0.025 })
+    expect(screen.getByRole('note').textContent).toContain('It takes 90.513 € out')
   })
 
   it('blames a life event when the house alone fits', () => {

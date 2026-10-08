@@ -4,6 +4,7 @@
  */
 import { annualContributionCents, type ScheduleStep } from './contributionSchedule'
 import { pmt } from './finance'
+import { housePriceAtPurchaseCents, realHouseGrowth } from './housePrice'
 import type { LifeEvent } from '../types'
 
 export interface YearPoint {
@@ -47,11 +48,12 @@ export interface ProjectionParams {
 }
 
 /**
- * The house price is in today's money, like everything in a real plan, so the appreciation
- * a user enters (nominal, as prices are quoted) counts only for what it beats inflation by.
+ * What the house is worth in a year, in the plan's money, from the price it was bought at
+ * (`housePriceAtPurchaseCents`). It grows by what it beats inflation by, so it is worth the
+ * price entered today grown the whole way, and nothing before it is bought.
  */
 function houseEquityAtYear(
-  housePriceCents: number,
+  priceAtPurchaseCents: number,
   appreciation: number,
   inflationRate: number,
   purchaseYear: HousePurchaseYear,
@@ -59,8 +61,7 @@ function houseEquityAtYear(
 ): number {
   if (purchaseYear === null || year < purchaseYear) return 0
   const yearsOwned = year - purchaseYear
-  const realGrowth = (1 + appreciation) / (1 + inflationRate)
-  return Math.round(housePriceCents * Math.pow(realGrowth, yearsOwned))
+  return Math.round(priceAtPurchaseCents * Math.pow(realHouseGrowth(appreciation, inflationRate), yearsOwned))
 }
 
 /**
@@ -101,7 +102,7 @@ function lifeEventImpact(events: LifeEvent[], year: number): number {
 }
 
 function purchaseWithdrawalCents(params: ProjectionParams): number {
-  const down = Math.round(params.housePriceCents * params.downPaymentFraction)
+  const down = Math.round(housePriceAtPurchaseCents(params) * params.downPaymentFraction)
   return down + params.transactionCostsCents
 }
 
@@ -136,7 +137,7 @@ export function purchaseYearBreakdown(
   const afterGrowthCents = Math.round(startInvestedCents * (1 + params.expectedRealReturn))
   const growthCents = afterGrowthCents - startInvestedCents
   const beforePurchaseCents = afterGrowthCents + contributionCents
-  const downPaymentCents = Math.round(params.housePriceCents * params.downPaymentFraction)
+  const downPaymentCents = Math.round(housePriceAtPurchaseCents(params) * params.downPaymentFraction)
   const transactionCostsCents = params.transactionCostsCents
   const totalWithdrawalCents = purchaseWithdrawalCents(params)
   const endInvestedCents = current.investedCents
@@ -157,10 +158,10 @@ export function purchaseYearBreakdown(
 
 /** Simulate invested portfolio + housing net worth year-by-year. */
 export function projectNetWorth(params: ProjectionParams): YearPoint[] {
+  const priceCents = housePriceAtPurchaseCents(params)
   const loanCents =
     params.housePurchaseYear !== null
-      ? params.housePriceCents -
-        Math.round(params.housePriceCents * params.downPaymentFraction)
+      ? priceCents - Math.round(priceCents * params.downPaymentFraction)
       : 0
 
   const points: YearPoint[] = []
@@ -194,7 +195,7 @@ export function projectNetWorth(params: ProjectionParams): YearPoint[] {
     }
 
     const houseEquity = houseEquityAtYear(
-      params.housePriceCents,
+      priceCents,
       params.houseAppreciationRate,
       params.inflationRate,
       params.housePurchaseYear,
@@ -279,9 +280,8 @@ export function yearsToFi(
 /** Monthly mortgage payment for rent-vs-own comparison. */
 export function monthlyMortgageCents(params: ProjectionParams): number {
   if (params.housePurchaseYear === null) return 0
-  const loan =
-    params.housePriceCents -
-    Math.round(params.housePriceCents * params.downPaymentFraction)
+  const priceCents = housePriceAtPurchaseCents(params)
+  const loan = priceCents - Math.round(priceCents * params.downPaymentFraction)
   if (loan <= 0) return 0
   return Math.round(
     pmt(

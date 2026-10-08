@@ -70,7 +70,7 @@ The projection is linear in contributions, so a schedule needs no new algorithm:
 
 | Parameter | Default (demo) |
 | --- | --- |
-| House price | User input / saved scenario |
+| House price | User input / saved scenario (today's price; the plan buys at the price it has risen to) |
 | Down payment | 20% |
 | Transaction costs | €500 |
 | House appreciation | 2.5% / year |
@@ -169,7 +169,7 @@ Everything that meets a nominal figure takes it: the on/off-track line, "Where y
 
 ### The house and the mortgage
 
-The house price is in today's money. Appreciation and the mortgage rate are entered nominal, the way prices and banks quote them, and the engine takes inflation off both: the house grows by `(1 + appreciation) / (1 + inflation)` a year from the purchase year, and the mortgage balance follows the bank's fixed schedule and is then divided by `(1 + inflation)^(years since purchase)`, as is the payment set against rent in the rent-vs-buy comparison (`houseEquityAtYear` and `mortgageBalanceAtYear` in `projection.ts`, `projectRentVsBuy` in `rentVsBuy.ts`). Treating both as real instead overstated net worth: a 400,000 house bought with a 3% 30-year loan was worth about 99,000 more after fifteen years than it is now.
+The house price is entered as today's price, in the plan's money. Appreciation and the mortgage rate are entered nominal, the way prices and banks quote them, and the engine takes inflation off both. A house bought in year `Y` costs `housePrice × ((1 + appreciation) / (1 + inflation))^Y` on the day (`housePriceAtPurchaseCents` in `housePrice.ts`), because it has had `Y` years to rise by what it beats inflation by. The down payment, the loan, the withdrawal from the portfolio and the payment all follow that price, and the house is then worth it grown by the same factor each year from the purchase year, which is today's price grown the whole way. Nothing changes for a house already owned (year 0) or not bought. The mortgage balance follows the bank's fixed schedule and is then divided by `(1 + inflation)^(years since purchase)`, and the mortgage balance follows the bank's fixed schedule and is then divided by `(1 + inflation)^(years since purchase)`, as is the payment set against rent in the rent-vs-buy comparison (`houseEquityAtYear` and `mortgageBalanceAtYear` in `projection.ts`, `projectRentVsBuy` in `rentVsBuy.ts`). Treating both as real instead overstated net worth: a 400,000 house bought with a 3% 30-year loan was worth about 99,000 more after fifteen years than it is now.
 
 ## Engine formula
 
@@ -186,7 +186,7 @@ At `housePurchaseYear > 0`, after return and contribution that year:
 invested[y] -= downPayment + transactionCosts
 ```
 
-House equity after purchase: `housePrice × (1 + appreciation)^yearsOwned`.
+House equity after purchase: `housePrice × ((1 + appreciation) / (1 + inflation))^year`, the price entered today grown to that year in the plan's money. The down payment is a fraction of the price at purchase, `housePrice × ((1 + appreciation) / (1 + inflation))^housePurchaseYear`.
 
 Net worth = invested + house equity − mortgage balance.
 
