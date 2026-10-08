@@ -17,6 +17,29 @@ describe('RentVsOwnChart', () => {
     expect(screen.getByText(/without your starting portfolio and contributions, so they will not match the plan's net worth/)).toBeInTheDocument()
   })
 
+  it('says who leads and from when, not that buying overtakes renting in the first year it draws level', () => {
+    // A 400,000 house and 1,200 rent at the defaults: buying leads for four years, renting from the fifth.
+    render(
+      <RentVsOwnChart
+        draft={draftOf({
+          housePriceCents: 40_000_000,
+          rentMonthlyCents: 120_000,
+          downPaymentFraction: 0.2,
+          transactionCostsCents: 50_000,
+          mortgageRateAnnual: 0.03,
+          mortgageTermYears: 30,
+          houseAppreciationRate: 0.025,
+          expectedRealReturn: 0.07,
+          horizonYears: 30,
+        })}
+      />,
+    )
+
+    expect(screen.getByText(/Buying is ahead through year 4, then renting leads for the rest of the horizon, by .* after 30 years\./)).toBeInTheDocument()
+    expect(screen.getByText(/before\s+the costs of selling/)).toBeInTheDocument()
+    expect(screen.queryByText(/overtakes renting around year/)).not.toBeInTheDocument()
+  })
+
   it('asks for a house price when there is none, with no lines to compare', () => {
     const { container } = render(<RentVsOwnChart draft={draftOf({ housePriceCents: 0 })} />)
 

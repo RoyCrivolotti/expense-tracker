@@ -2,6 +2,7 @@ import { memo, useMemo } from 'react'
 import { useAssumedInflation } from '../../..//hooks/assumedInflationContext'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import { projectRentVsBuy, scenarioToParams } from '../../../../engine'
+import { rentVsBuyHeadline } from './rentVsBuyHeadline'
 import { ChartShell } from './ChartShell'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
@@ -29,7 +30,7 @@ function RentVsOwnChartImpl({
   embedded?: boolean
 }) {
   const inflationRate = useAssumedInflation()
-  const { points, breakevenYear } = useMemo(
+  const { points, verdict } = useMemo(
     () =>
       projectRentVsBuy({
         params: scenarioToParams({ ...draft, id: 0 }, inflationRate),
@@ -67,13 +68,11 @@ function RentVsOwnChartImpl({
     <ChartShell embedded={embedded}>
       <h3 className={styles.chartTitle}>Rent vs buy (net worth)</h3>
       <p className={styles.chartHint}>
-        {breakevenYear != null
-          ? `Buying overtakes renting around year ${breakevenYear}.`
-          : 'Renting and investing stays ahead across the whole horizon.'}{' '}
+        {rentVsBuyHeadline(verdict, points[points.length - 1], (c) => formatMoneyShort(c, format))}{' '}
         Higher is better. The renter invests the down payment plus any monthly surplus; assumes
-        constant rent in today's money and 1.5%/yr home carry costs. These are the two choices on
-        their own, without your starting portfolio and contributions, so they will not match the
-        plan's net worth.
+        constant rent in today's money and 1.5%/yr home carry costs, and the buyer's figure is before
+        the costs of selling. These are the two choices on their own, without your starting portfolio
+        and contributions, so they will not match the plan's net worth.
       </p>
       <LinearChart
         height={height}
