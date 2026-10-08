@@ -3,11 +3,12 @@ import type { ExpenseDataset } from '../../types'
 import {
   averageMonthlyCents,
   computeMonthlyTotals,
+  defaultBudgetMonth,
   latestCheckin,
   checkinInvestedCents,
   planFromToday,
   monthlyFlows,
-  monthsSincePlanStart,
+  paceMonths,
   plannedMonthlyAverage,
   trackStatus,
 } from '../../engine'
@@ -86,13 +87,17 @@ export function GoalsCard({ dataset, onOpenGoals, onLogCheckin }: GoalsCardProps
   // what the plan's monthly figure promises, rather than net saving.
   const { avgInvesting, plannedAverage } = useMemo(() => {
     const flows = monthlyFlows(computeMonthlyTotals(dataset.transactions))
-    const since = monthsSincePlanStart(flows, scenario?.planStartDate ?? null)
+    const { months } = paceMonths(
+      flows,
+      scenario?.planStartDate ?? null,
+      defaultBudgetMonth(todayIso(), dataset.settings.budgetRolloverDay),
+    )
     return {
-      avgInvesting: averageMonthlyCents(since.map((m) => m.investedCents)),
+      avgInvesting: averageMonthlyCents(months.map((m) => m.investedCents)),
       // What the plan averages over those same months, which is what the pace is set against.
-      plannedAverage: scenario ? plannedMonthlyAverage(scenario, since.map((m) => m.month)) : 0,
+      plannedAverage: scenario ? plannedMonthlyAverage(scenario, months.map((m) => m.month)) : 0,
     }
-  }, [dataset.transactions, scenario])
+  }, [dataset.transactions, dataset.settings.budgetRolloverDay, scenario])
   const fromToday = useMemo(() => {
     const latest = latestCheckin(dataset.wealthCheckins)
     return planFromToday(

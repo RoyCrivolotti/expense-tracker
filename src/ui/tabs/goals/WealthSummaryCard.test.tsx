@@ -160,6 +160,59 @@ describe('WealthSummaryCard', () => {
     expect(screen.getByText(/1\.400,00 € a month$/)).toHaveStyle({ color: 'var(--exp-success)' })
   })
 
+  describe('the pace is read on whole months', () => {
+    const scenario = makeScenario({ name: 'Path A', planStartDate: '2025-02-01', monthlyContributionCents: 100_000 })
+    const checkins = [makeCheckin(1, '2025-06-01', [{ accountId: 1, valueCents: 10_000_000 }])]
+    const invest = (id: number, month: string, amountCents: number) =>
+      makeTransaction({ id, type: 'investment', budgetMonth: month, date: `${month}-10`, amountCents })
+    const renderPace = (transactions: ReturnType<typeof invest>[], openBudgetMonth?: string) =>
+      render(
+        <WealthSummaryCard
+          checkins={checkins}
+          accounts={[makeAccount(1)]}
+          plan={scenario}
+          transactions={transactions}
+          openBudgetMonth={openBudgetMonth}
+        />,
+      )
+
+    it('leaves the month under way out, and says the months are full ones', () => {
+      renderPace([invest(1, '2025-02', 100_000), invest(2, '2025-03', 100_000), invest(3, '2025-04', 83_300)], '2025-04')
+      expect(screen.getByText(/a month it assumes/)).toHaveTextContent(
+        /Investing 1\.000,00 € a month on average over the 2 full months since the plan started, against the 1\.000,00 € a month it assumes/,
+      )
+    })
+
+    it('counts a month with nothing recorded as a month of nothing invested', () => {
+      renderPace([invest(1, '2025-02', 100_000), invest(2, '2025-04', 100_000)])
+      expect(screen.getByText(/a month it assumes/)).toHaveTextContent(
+        /Investing 666,67 € a month on average over the 3 months since the plan started/,
+      )
+    })
+
+    it('does not call a pace a few euros short behind', () => {
+      renderPace([invest(1, '2025-02', 99_000), invest(2, '2025-03', 99_000)])
+      expect(screen.getByText(/990,00 € a month$/)).toHaveStyle({ color: 'var(--exp-success)' })
+    })
+
+    it('is behind once the shortfall is more than that', () => {
+      renderPace([invest(1, '2025-02', 97_000), invest(2, '2025-03', 97_000)])
+      expect(screen.getByText(/970,00 € a month$/)).toHaveStyle({ color: 'var(--exp-danger)' })
+    })
+
+    it('says the months are the ones recorded when they do not start at the plan', () => {
+      // The record starts in March, a month after the plan did.
+      renderPace([invest(1, '2025-03', 100_000), invest(2, '2025-04', 100_000)])
+      expect(screen.getByText(/a month it assumes/)).toHaveTextContent(/over the 2 months recorded, against/)
+      expect(screen.queryByText(/since the plan started/)).not.toBeInTheDocument()
+    })
+
+    it('says nothing when the only month on record is the one under way', () => {
+      renderPace([invest(1, '2025-04', 83_300)], '2025-04')
+      expect(screen.queryByText(/a month it assumes/)).not.toBeInTheDocument()
+    })
+  })
+
   it('says nothing about pace for a plan that pauses over every month it is compared on', () => {
     const scenario = makeScenario({
       planStartDate: '2025-01-01',
