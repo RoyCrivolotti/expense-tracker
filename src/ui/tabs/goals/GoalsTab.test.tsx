@@ -823,7 +823,7 @@ describe('GoalsTab', () => {
       expect(screen.queryByText(/select a year on the chart for values/)).not.toBeInTheDocument()
       const note = screen.getByText(/Dashed vertical lines mark purchase years/)
       // 7% real return, three points either side.
-      expect(note).toHaveTextContent('The shaded band is the line you are editing at a real return of 4,0% to 10,0%, three points either side.')
+      expect(note).toHaveTextContent('The shaded band is the line you are editing at a real return of 4,0% to 10,0%, three points either side. It shows how much the return matters, not how likely an outcome is.')
       expect(note).toHaveTextContent('return and contributions apply before the down payment comes out')
     })
 
@@ -837,6 +837,7 @@ describe('GoalsTab', () => {
       expect(screen.getByRole('radiogroup', { name: 'Value display mode' })).toBeInTheDocument()
       expect(screen.getByText(/select a year on the chart for values/)).toBeInTheDocument()
       expect(screen.queryByText(/The shaded band is the line you are editing/)).not.toBeInTheDocument()
+      expect(screen.getByText(/The shaded band is the edited plan at a return three points lower and higher/)).toBeInTheDocument()
     })
 
     it('names where the figures that stay in today\'s money are, in the Nominal view', async () => {

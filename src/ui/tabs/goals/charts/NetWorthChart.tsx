@@ -243,7 +243,7 @@ function fromTodayDrawing(
   return { line, label: fromToday ? `${fromToday.scenario.name}, from today` : '' }
 }
 
-/** The draft's uncertainty band, hero only. */
+/** The draft at a return three points either side, hero only: a sensitivity to the return, not a range of likely outcomes. */
 function useBandSeries(isHero: boolean, draft: NewGoalScenario, inflationRate: number): ChartSeries | null {
   return useMemo(() => {
     if (!isHero) return null
@@ -447,7 +447,7 @@ function variantProps(
 }
 
 const HERO_HINT =
-  'At a purchase year, return and contributions apply before the down payment is withdrawn — select a year on the chart for values and the purchase breakdown. Dashed vertical marks show purchase years.'
+  'At a purchase year, return and contributions apply before the down payment is withdrawn — select a year on the chart for values and the purchase breakdown. Dashed vertical marks show purchase years. The shaded band is the edited plan at a return three points lower and higher: how much the return matters, not how likely an outcome is.'
 const DEFAULT_HINT =
   'Compare saved scenarios plus your live edits. At a purchase year, return and contributions apply before the down payment is withdrawn — hover that year for the breakdown.'
 
@@ -479,7 +479,8 @@ function HeroNote({ draft, isHero, narrow }: { draft: NewGoalScenario; isHero: b
     <p className={`${styles.chartHint} ${styles.heroNote}`}>
       Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment
       comes out. The shaded band is the line you are editing at a real return of {formatPercent(low, format)} to{' '}
-      {formatPercent(high, format)}, three points either side.
+      {formatPercent(high, format)}, three points either side. It shows how much the return matters, not how
+      likely an outcome is.
     </p>
   )
 }

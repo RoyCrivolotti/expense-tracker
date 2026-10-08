@@ -31,13 +31,14 @@ export function scenarioToParams(scenario: ScenarioInput, inflationRate: number)
 }
 
 /**
- * How far either side of the real return the uncertainty band is drawn: three points. The chart
- * says so in words, so it reads this rather than carrying a copy of the number.
+ * How far either side of the real return the band is drawn: three points. It shows how much the
+ * return matters, not how likely an outcome is. The chart says so in words, so it reads this
+ * rather than carrying a copy of the number.
  */
 export const RETURN_BAND_SPREAD = 0.03
 
 /**
- * Compute low and high investedCents arrays for a ±spread uncertainty band.
+ * Compute low and high investedCents arrays for a ±spread return band.
  * `spread` is subtracted/added to `expectedRealReturn`; lo is clamped to 0.
  */
 export function projectNetWorthBand(

@@ -33,7 +33,7 @@ function readoutSide(values: number[]): 'top' | 'bottom' {
 }
 
 /**
- * The scenario being edited, and nothing else: its line and its uncertainty band, with the
+ * The scenario being edited, and nothing else: its line and its return band, with the
  * first and last year labelled. Pinned above the controls on a phone so a slider can be tuned
  * against the line it moves; the hero chart carries the legend, milestones and markers.
  */

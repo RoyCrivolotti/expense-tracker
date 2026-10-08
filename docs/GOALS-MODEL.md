@@ -8,7 +8,7 @@ from D1 only.
 
 The Goals tab has three views:
 
-- **Plan** — projection lab. Configure scenarios, compare alternatives, see the hero net-worth chart with uncertainty bands and life-event markers. The hero has 5Y/10Y/20Y/All windows that cut everything drawn at the same year, and its legend rows hide or show a saved scenario's line (the same state as the chip's eye on a phone); a table under it puts the scenarios side by side as numbers. On a wide screen Plan is one column: a tab per scenario with a menu for what can be done with the open one, the hero across the page, a bar of up to five inputs beside the net worth they move (monthly investing, real return, horizon, purchase year and starting balance until the owner chooses others: `DEFAULT_LEVERS` in `engine/goalLevers.ts`, stored per owner in `settings.goalLevers`), the remaining inputs under an "All inputs" button, and the detail charts in two columns.
+- **Plan** — projection lab. Configure scenarios, compare alternatives, see the hero net-worth chart with return bands and life-event markers. The hero has 5Y/10Y/20Y/All windows that cut everything drawn at the same year, and its legend rows hide or show a saved scenario's line (the same state as the chip's eye on a phone); a table under it puts the scenarios side by side as numbers. On a wide screen Plan is one column: a tab per scenario with a menu for what can be done with the open one, the hero across the page, a bar of up to five inputs beside the net worth they move (monthly investing, real return, horizon, purchase year and starting balance until the owner chooses others: `DEFAULT_LEVERS` in `engine/goalLevers.ts`, stored per owner in `settings.goalLevers`), the remaining inputs under an "All inputs" button, and the detail charts in two columns.
 - **Progress** — wealth tracking. Log actual balances per account, see on/off-track status against your plan, and compare actuals to the projection over time.
 - **Assumptions** — what Progress measures with: the milestone ladder, the wealth accounts each check-in records a balance for, the cash reserve target in months of spending, and the assumed inflation every Goals view uses.
 
@@ -124,9 +124,9 @@ interface LifeEvent {
 
 Stored as a JSON column (`life_events`) on `goal_scenarios`. Applied in the yearly loop after growth, contributions and the house purchase withdrawal. They are all added to the year's balance, so the balance at the end of a year does not depend on their order. Year 0 is the initial balance — events at year 0 are not applied by the engine and not accepted by the UI (minimum year is 1). Rendered as diamond markers on the hero chart (green for inflows, amber for outflows).
 
-## Uncertainty bands
+## Return bands
 
-The hero chart shows a shaded band for ±3 pp around the scenario's `expectedRealReturn`, computed by `projectNetWorthBand` in `scenarioProjection.ts`. The band uses the same contribution and housing logic as the main projection. Chart layer: `kind: 'band'` on `ChartSeries`, rendered by `ChartBandLayer` in `linearChartParts.tsx`. The band is context, not the thing being read, so it does not set the chart's axis: `LinearChart` fits the axis to the lines and clips a band that runs higher at the top of the plot. Otherwise a wide band at thirty years would leave the lines under a ceiling twice their height.
+The hero chart shows a shaded band for ±3 pp around the scenario's `expectedRealReturn`. It is a sensitivity to the return, not a range of likely outcomes: it carries no probability, and the same plan with the return three points either side is what it draws. Computed by `projectNetWorthBand` in `scenarioProjection.ts`. The band uses the same contribution and housing logic as the main projection. Chart layer: `kind: 'band'` on `ChartSeries`, rendered by `ChartBandLayer` in `linearChartParts.tsx`. The band is context, not the thing being read, so it does not set the chart's axis: `LinearChart` fits the axis to the lines and clips a band that runs higher at the top of the plot. Otherwise a wide band at thirty years would leave the lines under a ceiling twice their height.
 
 ## Real, and the nominal view
 
