@@ -80,14 +80,6 @@ export function PortfolioFields({ draft, onChange, omit = NO_LEVERS, wrap = plai
       {omit.has('monthlyContributionCents') ? null : (
         <MonthlyInvestingField draft={draft} onChange={onChange} wrap={wrap} />
       )}
-      {omit.has('annualContributionGrowth') ? null : (
-        wrap('annualContributionGrowth', <PercentField
-          label={L.annualContributionGrowth.label}
-          value={draft.annualContributionGrowth}
-          max={L.annualContributionGrowth.max ?? 0.1}
-          onChange={(v) => onChange({ annualContributionGrowth: v })}
-        />)
-      )}
       {omit.has('expectedRealReturn') ? null : (
         wrap('expectedRealReturn', <PercentField
           label={L.expectedRealReturn.label}
@@ -353,7 +345,6 @@ export function ChangesFields({ draft, onChange }: Pick<SectionProps, 'draft' | 
         steps={draft.contributionSchedule ?? []}
         planStartDate={draft.planStartDate}
         baseCents={draft.monthlyContributionCents}
-        growth={draft.annualContributionGrowth}
         format={format}
         onChange={(steps) => onChange({ contributionSchedule: steps })}
       />

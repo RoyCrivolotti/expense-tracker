@@ -28,7 +28,6 @@ const YEAR_COUNT_FIELDS = ['horizonYears', 'mortgageTermYears'] as const
 /** Rates and fractions. Free to be negative (a pessimistic return is a real scenario),
  *  but they must be numbers, because the projection multiplies by them. */
 const RATE_FIELDS = [
-  'annualContributionGrowth',
   'expectedRealReturn',
   'mortgageRateAnnual',
   'houseAppreciationRate',

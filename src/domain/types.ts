@@ -265,7 +265,6 @@ export interface GoalScenario {
   sortOrder: number
   startInvestedCents: number
   monthlyContributionCents: number
-  annualContributionGrowth: number
   expectedRealReturn: number
   horizonYears: number
   housePriceCents: number

@@ -10,7 +10,6 @@ const base: GoalScenario = {
   sortOrder: 0,
   startInvestedCents: 500_000_00,
   monthlyContributionCents: 100_000,
-  annualContributionGrowth: 0,
   expectedRealReturn: 0.06,
   horizonYears: 30,
   housePriceCents: 0,

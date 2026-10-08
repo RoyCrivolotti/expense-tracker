@@ -11,7 +11,6 @@ const plan = makeScenario({
   planStartDate: '2024-01-01',
   startInvestedCents: 100_000_00,
   monthlyContributionCents: 1_000_00,
-  annualContributionGrowth: 0.05,
   lifeEvents: [{ year: 1, amountCents: 5_000_00, label: 'Bonus' }, { year: 3, amountCents: -20_000_00, label: 'Car' }],
   housePurchaseYear: 5,
   isActive: true,
@@ -32,12 +31,20 @@ describe('planFromToday', () => {
     expect(plan.startInvestedCents).toBe(100_000_00)
   })
 
-  it('carries what a re-baseline would: events on their dates, a grown contribution', () => {
-    const from = planFromToday(plan, { investedCents: 1, date: '2026-01-01' })!
+  it('carries what a re-baseline would: events on their dates, the monthly amount in force and the changes to come', () => {
+    const stepped = {
+      ...plan,
+      contributionSchedule: [
+        { from: '2024-07', monthlyCents: 1_500_00 },
+        { from: '2027-03', monthlyCents: 2_500_00 },
+      ],
+    }
+    const from = planFromToday(stepped, { investedCents: 1, date: '2026-01-01' })!
     // The bonus is behind the check-in and already in the balance; the car and the house keep their dates.
     expect(from.scenario.lifeEvents).toEqual([{ year: 1, amountCents: -20_000_00, label: 'Car' }])
     expect(from.scenario.housePurchaseYear).toBe(3)
-    expect(from.scenario.monthlyContributionCents).toBe(Math.round(1_000_00 * 1.05 ** 2))
+    expect(from.scenario.monthlyContributionCents).toBe(1_500_00)
+    expect(from.scenario.contributionSchedule).toEqual([{ from: '2027-03', monthlyCents: 2_500_00 }])
   })
 
   it('is nothing without a dated plan, a check-in, or one before the plan started', () => {

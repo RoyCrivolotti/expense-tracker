@@ -22,7 +22,6 @@ export type HousePurchaseYear = number | null
 export interface ProjectionParams {
   startInvestedCents: number
   monthlyContributionCents: number
-  annualContributionGrowth: number
   expectedRealReturn: number
   horizonYears: number
   housePriceCents: number
@@ -41,7 +40,7 @@ export interface ProjectionParams {
   lifeEvents?: LifeEvent[]
   /**
    * Changes to the monthly amount from a point on the plan's axis, in order (see
-   * `scheduleSteps`). Default: none, so the monthly amount only grows by `annualContributionGrowth`.
+   * `scheduleSteps`). Default: none, so the monthly amount stays what it starts as.
    */
   contributionSteps?: ScheduleStep[]
 }
@@ -167,12 +166,7 @@ export function projectNetWorth(params: ProjectionParams): YearPoint[] {
   let invested = params.startInvestedCents
 
   for (let year = 0; year <= params.horizonYears; year++) {
-    const contrib = annualContributionCents(
-      params.monthlyContributionCents,
-      params.annualContributionGrowth,
-      params.contributionSteps ?? [],
-      year,
-    )
+    const contrib = annualContributionCents(params.monthlyContributionCents, params.contributionSteps ?? [], year)
 
     if (year > 0) {
       invested = Math.round(

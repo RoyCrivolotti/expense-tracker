@@ -13,7 +13,7 @@ describe('goal levers', () => {
     expect(isLeverKey('planStartDate')).toBe(false)
     expect(isLeverKey('lifeEvents')).toBe(false)
     expect(isLeverKey(7)).toBe(false)
-    expect(LEVER_KEYS).toHaveLength(15)
+    expect(LEVER_KEYS).toHaveLength(14)
   })
 })
 
@@ -52,6 +52,10 @@ describe('parseLevers', () => {
     expect(parseLevers('["gone","rentMonthlyCents","rentMonthlyCents"]')).toEqual(['rentMonthlyCents'])
     const six = JSON.stringify([...LEVER_KEYS].slice(0, 6))
     expect(parseLevers(six)).toHaveLength(MAX_LEVERS)
+  })
+
+  it('drops the contribution growth input from a bar saved while it still existed', () => {
+    expect(parseLevers('["annualContributionGrowth","rentMonthlyCents"]')).toEqual(['rentMonthlyCents'])
   })
 
   it('does not hand out the defaults themselves to be changed', () => {

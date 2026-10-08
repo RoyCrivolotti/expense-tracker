@@ -11,7 +11,6 @@ function makeRow(overrides: Partial<GoalScenarioRow> = {}): GoalScenarioRow {
     sort_order: 0,
     start_invested_cents: 10_000_000,
     monthly_contribution_cents: 100_000,
-    annual_contribution_growth: 0,
     expected_real_return: 0.07,
     horizon_years: 30,
     house_price_cents: 0,

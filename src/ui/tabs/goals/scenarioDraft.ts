@@ -16,7 +16,6 @@ const EDIT_KEYS = [
   'color',
   'startInvestedCents',
   'monthlyContributionCents',
-  'annualContributionGrowth',
   'expectedRealReturn',
   'horizonYears',
   'housePriceCents',

@@ -37,7 +37,6 @@ export function draftFromDataset(
     startInvestedCents: latest ? checkinInvestedCents(latest, dataset.wealthAccounts) : 0,
     // A month of net withdrawals can leave the average below zero, which no plan can save.
     monthlyContributionCents: Math.max(0, avgMonthlySavingCents),
-    annualContributionGrowth: 0,
     expectedRealReturn: DEFAULT_REAL_RETURN,
     horizonYears: DEFAULT_HORIZON_YEARS,
     housePriceCents: 0,

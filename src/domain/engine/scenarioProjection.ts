@@ -15,7 +15,6 @@ export function scenarioToParams(scenario: ScenarioInput, inflationRate: number)
   return {
     startInvestedCents: scenario.startInvestedCents,
     monthlyContributionCents: scenario.monthlyContributionCents,
-    annualContributionGrowth: scenario.annualContributionGrowth,
     expectedRealReturn: scenario.expectedRealReturn,
     horizonYears: scenario.horizonYears,
     housePriceCents: scenario.housePriceCents,

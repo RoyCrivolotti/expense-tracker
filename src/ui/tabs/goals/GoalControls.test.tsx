@@ -30,11 +30,6 @@ describe('GoalControls', () => {
     expect(screen.getByLabelText('Monthly investing')).toBeInTheDocument()
   })
 
-  it('renders the newly exposed contribution growth control', () => {
-    render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
-    expect(screen.getByRole('textbox', { name: 'Contribution growth (%/yr)' })).toBeInTheDocument()
-  })
-
   it('says the mortgage rate and house appreciation are nominal and what the plan does with them', () => {
     render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
     expect(
@@ -259,7 +254,6 @@ describe('GoalControls', () => {
     const named = sliders.map((s) => s.getAttribute('aria-label'))
     expect(named).toEqual(
       expect.arrayContaining([
-        'Contribution growth (%/yr)',
         'Real return (%/yr, after inflation)',
         'Down payment',
         'Mortgage rate (%/yr)',
@@ -267,8 +261,8 @@ describe('GoalControls', () => {
         'Withdrawal rate at FI',
       ]),
     )
-    // Six percent sliders plus the unlabelled purchase-year one; no money or year slider.
-    expect(sliders).toHaveLength(7)
+    // Five percent sliders plus the unlabelled purchase-year one; no money or year slider.
+    expect(sliders).toHaveLength(6)
   })
 
   it('accepts a starting balance above the old slider cap', async () => {
@@ -292,14 +286,6 @@ describe('GoalControls', () => {
     await user.click(screen.getByRole('button', { name: 'Increase Horizon (years)' }))
 
     expect(onChange).toHaveBeenCalledWith({ horizonYears: 30 })
-  })
-
-  it('calls onChange with annualContributionGrowth when slider changes', () => {
-    const onChange = vi.fn()
-    render(<GoalControls draft={makeDraft()} onChange={onChange} />)
-    const slider = screen.getByRole('slider', { name: 'Contribution growth (%/yr)' })
-    fireEvent.change(slider, { target: { value: '0.03' } })
-    expect(onChange).toHaveBeenCalledWith({ annualContributionGrowth: 0.03 })
   })
 
   it('calls onChange with mortgageRateAnnual when mortgage rate slider changes', () => {

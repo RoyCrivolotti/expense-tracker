@@ -14,7 +14,6 @@ function baseParams(overrides: Partial<ProjectionParams> = {}): ProjectionParams
   return {
     startInvestedCents: 10_000_000,
     monthlyContributionCents: 100_000,
-    annualContributionGrowth: 0,
     expectedRealReturn: DEFAULT_REAL_RETURN,
     horizonYears: 30,
     housePriceCents: 400_000_000,
