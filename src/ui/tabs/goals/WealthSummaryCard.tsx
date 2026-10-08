@@ -25,7 +25,7 @@ import { useAssumedInflation } from '../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import type { MoneyFormat } from '../../../engine/money'
 import { formatMoneyShort } from './chartTheme'
-import { contributionGapLabel } from './contributionGap'
+import { planGapLabel } from './planGap'
 import styles from './progress.module.css'
 import goalStyles from './goals.module.css'
 
@@ -244,15 +244,14 @@ function StatusRow({
   )
 }
 
-function MonthsHint({ status }: { status: TrackStatus }) {
-  const ahead = status.deltaCents >= 0
+/** Where the plan's line has the balance, said as months and as the day it falls on. */
+function MonthsHint({ months, planDate }: { months: number; planDate: string }) {
+  const ahead = months > 0
   return (
     <p style={hintStyle}>
-      Equivalent to being{' '}
-      <strong style={{ color: ahead ? 'var(--exp-success)' : 'var(--exp-danger)' }}>
-        {contributionGapLabel(status.deltaMonths)}
-      </strong>{' '}
-      on contributions.
+      <strong style={{ color: ahead ? 'var(--exp-success)' : 'var(--exp-danger)' }}>{planGapLabel(months)}</strong>
+      {ahead ? ' of the plan, which only reaches' : ' the plan, which already had'} this balance on{' '}
+      {formatCheckinDate(planDate)}.
     </p>
   )
 }
@@ -282,7 +281,9 @@ function SnapshotHints({
   const reserve = cashReserve(latest, accounts, transactions, cashReserveMonths, openBudgetMonth)
   return (
     <>
-      {status && status.deltaMonths !== 0 ? <MonthsHint status={status} /> : null}
+      {status?.deltaMonths && status.planDate ? (
+        <MonthsHint months={status.deltaMonths} planDate={status.planDate} />
+      ) : null}
       {plan ? <PaceHint plan={plan} transactions={transactions} format={format} /> : null}
       {ret ? <ReturnHint ret={ret} plan={plan} format={format} inflationRate={inflationRate} /> : null}
       {reserve ? <CashReserveHint reserve={reserve} format={format} /> : null}

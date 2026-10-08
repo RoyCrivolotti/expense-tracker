@@ -65,7 +65,7 @@ describe('WealthSummaryCard', () => {
     expect(screen.getByText(/ahead of plan|behind plan/i)).toBeInTheDocument()
   })
 
-  it('shows months-ahead hint when delta is non-zero', () => {
+  describe('how far along the plan a balance is', () => {
     const scenario = makeScenario({
       planStartDate: '2020-01-01',
       startInvestedCents: 0,
@@ -74,15 +74,34 @@ describe('WealthSummaryCard', () => {
       horizonYears: 30,
     })
     const accounts = [makeAccount(1, 'investment')]
-    // Huge value to ensure positive delta and non-zero months
-    const checkins = [
-      makeCheckin(1, '2025-06-01', [{ accountId: 1, valueCents: 100_000_000_00 }]),
-    ]
-    render(
-      <WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />,
-    )
-    // A hundred million against a 1,000 a month plan is decades, not a month count.
-    expect(screen.getByText(/more than \d+ years ahead/)).toBeInTheDocument()
+    const date = '2025-06-01'
+    const withGap = (gapCents: number) => {
+      const projected = planValueAtDate(scenario, date, DEFAULT_INFLATION_RATE)!
+      const nominal = realToNominal(projected + gapCents, scenario.planStartDate!, date, DEFAULT_INFLATION_RATE)
+      return [makeCheckin(1, date, [{ accountId: 1, valueCents: nominal }])]
+    }
+
+    it('says how many months ahead of the plan a balance is, and the day the plan reaches it', () => {
+      render(<WealthSummaryCard checkins={withGap(2_000_000)} accounts={accounts} plan={scenario} />)
+      expect(screen.getByText(/which only reaches this balance on/)).toHaveTextContent(
+        /^\d+ months? ahead of the plan, which only reaches this balance on .*20\d\d\.$/,
+      )
+    })
+
+    it('says how many months behind, and the day the plan had the balance', () => {
+      render(<WealthSummaryCard checkins={withGap(-2_000_000)} accounts={accounts} plan={scenario} />)
+      expect(screen.getByText(/which already had this balance on/)).toHaveTextContent(
+        /^\d+ months? behind the plan, which already had this balance on .*20\d\d\.$/,
+      )
+    })
+
+    it('leaves the months out when the plan never has the balance, and still gives the gap in money', () => {
+      // A hundred million against a plan that ends far below it: the plan has no point to read it at.
+      const checkins = [makeCheckin(1, date, [{ accountId: 1, valueCents: 100_000_000_00 }])]
+      render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />)
+      expect(screen.getByText(/ahead of plan/i)).toBeInTheDocument()
+      expect(screen.queryByText(/of the plan, which only reaches/)).not.toBeInTheDocument()
+    })
   })
 
   it('reads the pace kept against the plan, naming a typical month when a lump sum skews the mean', () => {

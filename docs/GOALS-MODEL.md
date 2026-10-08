@@ -170,7 +170,7 @@ Net worth = invested + house equity − mortgage balance.
 - `yearOffsetFromDate(planStartDate, date)` — converts a calendar date to a fractional projection-year offset.
 - `planValueAtOffset(scenario, offset)` — interpolates the projected invested value at a fractional year offset.
 - `planValueAtDate(scenario, date)` — wraps the above with a calendar date.
-- `trackStatus(checkin, scenario, accounts)` — compares actual invested balance to plan projection at check-in date; returns delta in cents and months ahead/behind.
+- `trackStatus(checkin, scenario, accounts)` — compares actual invested balance to plan projection at check-in date; returns delta in cents, and how many months along the plan's line the balance is ahead or behind.
 
 ### Wealth accounts
 
@@ -202,13 +202,14 @@ wealth_checkin_entries: checkin_id, account_id, value_cents
 
 ```ts
 {
-  deltaCents: number       // actual invested − plan invested (positive = ahead)
-  deltaMonths: number      // the gap as months of what the plan was investing at the check-in; 0 during a pause
-  planCents: number        // what the plan projected at this date
+  deltaCents: number         // actual invested − plan invested (positive = ahead)
+  deltaMonths: number | null // whole months from the check-in to the point on the plan's line that has the balance
+  planDate: string | null    // the day the line has it
+  planCents: number          // what the plan projected at this date
 }
 ```
 
-`deltaMonths` divides the gap by what the plan invests each month on the check-in's date (`plannedMonthlyAt`: the base grown by whole years, or the change in force grown from its month), not by the starting amount, so it stays right when the amount changes. The plan value between two year points is still read by straight interpolation (`planValueAtOffset`), because the hero chart draws the plan as straight segments between those same points and a check-in must sit on the line that is drawn; a change part way through a year therefore shows as a gentler slope across that year, and the difference from the exact path is under three months of the change.
+`deltaMonths` is read along the plan's line (`planDistance` in `engine/planDistance.ts`), the horizontal gap on the chart. Dividing the gap in money by the monthly amount instead ignored what the portfolio earns by itself, so a gap read as more months than the line showed, and it jumped on the day the monthly amount changed and had no answer during a pause. The line is the one the hero chart draws, straight segments between the year points (`planValueAtOffset`), so a check-in sits where the chart shows it; a change part way through a year therefore shows as a gentler slope across that year, and the difference from the exact path is under three months of the change. The line is not always rising (a house purchase takes money out), so the point is the nearest one in the direction of the gap: ahead looks for the first time the line gets to the balance, behind for the last time it was at it. During a pause the line still rises with the return, so a pause has a distance. It is null before the plan starts, past its last year, for a balance the line never has (above where it ends, or below where it started, as after taking the down payment out early); the gap in money is always given, and the dashboard badge says it in money when there are no months. Past two years the months turn into "more than N years".
 
 Displayed in `WealthSummaryCard` (Progress view) and `GoalsCard` (dashboard badge), both against the plan (`activePlan` in `scenarioSelection.ts`), never against whatever the editor has loaded.
 

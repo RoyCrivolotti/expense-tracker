@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { GoalsCard } from './GoalsCard'
+import { DEFAULT_INFLATION_RATE, planValueAtDate, realToNominal } from '../../engine'
 import { makeDataset, makeScenario, makeWealthAccount, makeWealthCheckin } from '../../testing/factories'
 
 /** The local calendar date `n` days ago; the card counts days in local time too. */
@@ -86,6 +87,54 @@ describe('GoalsCard', () => {
       />,
     )
     expect(screen.getByText(/behind/i)).toBeInTheDocument()
+  })
+
+  describe('the track badge', () => {
+    const account = makeWealthAccount({ id: 1, kind: 'investment' })
+    const scenario = makeScenario({
+      isActive: true,
+      id: 1,
+      planStartDate: '2020-01-01',
+      startInvestedCents: 0,
+      monthlyContributionCents: 100_000,
+      expectedRealReturn: 0.07,
+      horizonYears: 30,
+    })
+    const date = '2025-06-01'
+    const badge = (balanceCents: number) => {
+      render(
+        <GoalsCard
+          dataset={makeDataset({
+            goalScenarios: [scenario],
+            wealthAccounts: [account],
+            wealthCheckins: [makeWealthCheckin({ id: 1, checkinDate: date, entries: [{ accountId: 1, valueCents: balanceCents }] })],
+          })}
+        />,
+      )
+    }
+    const nominalWithGap = (gapCents: number) =>
+      realToNominal(planValueAtDate(scenario, date, DEFAULT_INFLATION_RATE)! + gapCents, '2020-01-01', date, DEFAULT_INFLATION_RATE)
+
+    it('counts months along the plan line', () => {
+      badge(nominalWithGap(2_000_000))
+      expect(screen.getByText(/^\d+ months? ahead$/)).toBeInTheDocument()
+    })
+
+    it('says on track within half a month of the line', () => {
+      badge(nominalWithGap(1_000))
+      expect(screen.getByText('On track')).toBeInTheDocument()
+    })
+
+    it('says how far behind in money when it is under half a month and behind', () => {
+      badge(nominalWithGap(-1_000))
+      expect(screen.getByText(/ behind$/)).toBeInTheDocument()
+      expect(screen.queryByText(/month/)).not.toBeInTheDocument()
+    })
+
+    it('gives the gap in money when the plan never has the balance', () => {
+      badge(100_000_000_00)
+      expect(screen.getByText(/€ ahead$/)).toBeInTheDocument()
+    })
   })
 
   it('nudges for a check-in once the last one is a month old', () => {
