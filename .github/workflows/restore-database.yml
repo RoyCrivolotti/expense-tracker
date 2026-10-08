@@ -1,0 +1,91 @@
+name: Restore database
+
+# The way back from a migration that damaged data: puts a D1 database back to a Time Travel
+# bookmark, which discards every write since, user data included. The bookmark is on the summary
+# of the deploy run that took it. If the migration only added columns, roll the code back in Pages
+# instead; the previous code still works on the schema and nothing is lost. See docs/DEPLOYMENT.md,
+# If a migration goes wrong.
+#
+# Waits for approval like a production migration, and shares the deploy queue so a restore and a
+# deploy never run at once.
+
+on:
+  workflow_dispatch:
+    inputs:
+      database:
+        description: Database to restore
+        type: choice
+        required: true
+        options:
+          - roy-expenses
+          - roy-expenses-dev
+      bookmark:
+        description: Time Travel bookmark, from the summary of the deploy that took it
+        type: string
+        required: true
+      confirm:
+        description: Type the database name again; the restore discards writes since the bookmark
+        type: string
+        required: true
+
+concurrency:
+  group: expense-tracker-deploy
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_ACCOUNT_ID: '800abdfb2ec1687266f66fd349c41d6a'
+
+jobs:
+  # Before anyone is asked to approve, so a typo fails at once rather than after the click.
+  check:
+    runs-on: ubuntu-latest
+    env:
+      # Inputs go through the environment, never into the script text.
+      DATABASE: ${{ inputs.database }}
+      BOOKMARK: ${{ inputs.bookmark }}
+      CONFIRM: ${{ inputs.confirm }}
+    steps:
+      - name: Check what was asked for
+        run: |
+          if [ "$CONFIRM" != "$DATABASE" ]; then
+            echo "::error::Confirmation '$CONFIRM' is not the database name '$DATABASE'. Nothing was restored."
+            exit 1
+          fi
+          if ! printf '%s' "$BOOKMARK" | grep -Eq '^[0-9a-f]{8}-[0-9a-f]{8}-[0-9a-f]{8}-[0-9a-f]{32}$'; then
+            echo "::error::That is not a Time Travel bookmark. Copy it from the deploy run's summary. Nothing was restored."
+            exit 1
+          fi
+
+  restore:
+    needs: check
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      DATABASE: ${{ inputs.database }}
+      BOOKMARK: ${{ inputs.bookmark }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-node-deps
+
+      # Wrangler asks "OK to proceed" and, with nobody to answer, takes yes; the confirmation input
+      # and the approval above are the safeguards. It prints the bookmark that undoes the restore,
+      # which is the one to keep.
+      - name: Restore
+        run: |
+          npx wrangler d1 time-travel restore "$DATABASE" --bookmark="$BOOKMARK" > restore.log 2>&1 || { cat restore.log; exit 1; }
+          cat restore.log
+          undo=$(sed -n 's/.*previous bookmark: //p' restore.log | tail -1)
+          if [ -z "$undo" ]; then
+            echo "::warning::The restore finished but no undo bookmark was printed; see the log above."
+          fi
+          {
+            echo "### Restored $DATABASE"
+            echo "Back to bookmark \`$BOOKMARK\`, which discards every write since."
+            echo "To undo this restore, run this workflow again with bookmark \`$undo\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: What the database says about its migrations now
+        run: |
+          # Exit 1 (pending) is expected after going back past a migration.
+          npm run migrate -- "$DATABASE" || [ $? -eq 1 ]

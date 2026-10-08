@@ -100,13 +100,18 @@ moment, so it also discards every write since, user data included. It is for a m
 for a migration that only added columns, the previous code still works and rolling the code back loses
 nothing. Cloudflare keeps 30 days of history on the paid plan and 7 on the free one.
 
-**The deploy checks both databases before it ships anything.** The `schema` job in `deploy.yml` runs
-beside the tests, read-only, and the `ship` job waits for it. If production or dev lacks a migration, or its
-record cannot be trusted, the run stops with nothing deployed. So a PR that adds a migration is done in this
-order: apply it to production and dev (`npm run migrate -- <database> --apply`), then merge. Only additive
-migrations can go first, since the code now running keeps serving while the migration lands; a drop or rename
-ships in a later release (see "Writing a migration"). If a merge lands before its migration, apply it and
-re-run the failed jobs of the deploy; the code that was waiting then ships.
+**The deploy applies migrations.** On a push to `main`, a `schema` job reads both databases, read-only, and
+says what each needs. Dev is migrated automatically. Production is migrated after you approve it in GitHub
+(the `production` environment), and only when it has something pending, so a deploy with no migration never
+waits. Each apply takes a restore point first. The code ships only after every migration it needs has applied
+and the columns have been checked; if a database's record cannot be trusted, or a migration fails, nothing
+is deployed. So a migration merges, applies, and then the code that needs it ships, in that order.
+
+Because the code now running keeps serving while a migration lands, a migration has to be one it can live
+with: additions only. A drop or rename ships in a later release, once nothing reads what it removes (see
+"Writing a migration"). Deploys queue and are never cancelled, so a migration is not cut off partway; a
+production migration left waiting for approval holds the queue, and rejecting it lets the next deploy through.
+`npm run migrate -- <database> --apply` still does the same by hand.
 
 Apply through `0031_contribution_schedule.sql` on production, and record each file in `_migrations` as you go, by its name without `.sql`. `npm run migrate:dev` records for the dev database itself, and `npm run migrate -- roy-expenses --apply` does for production. The app never reads the table, so a missing row breaks nothing until someone trusts the record, which is how the drift described below happened.
 
@@ -128,6 +133,22 @@ and before trusting `_migrations` for anything: the record has been wrong twice,
 and `goal_scenarios.life_events` absent on 2026-09-22 (scenario saves failed), and `0026` recorded and
 `settings.investment_category_id` absent, found on 2026-10-03. It compares column names only, not types,
 defaults or indexes.
+
+### If a migration goes wrong
+
+Start with what actually broke, because the ways back lose different things.
+
+| What happened | What to do | What it costs |
+| ------------- | ---------- | ------------- |
+| The migration job failed, so nothing shipped | Read the log: the restore point and `npm run check:schema -- <database>` say what state it is in. Fix the migration in a new PR, or finish it by hand. The queued deploy then ships. | Nothing is lost. The database may be partly changed until you do. |
+| The migration applied and the new code is broken | Roll the code back: Cloudflare dashboard, Workers & Pages, `expense-tracker`, Deployments, pick the last good one, Rollback. The schema stays as it is. | Nothing is lost, provided the migration only added things, which is why a migration is meant to be additive. |
+| The migration damaged or lost data | Run the **Restore database** workflow (Actions, Run workflow) with the database, the bookmark from the deploy run's summary, and the database name again to confirm. It waits for your approval. | **Every write since the bookmark is lost, user data included.** The workflow records the database's state just before, so running it again with that bookmark undoes the restore. |
+
+The bookmark is on the summary page of the deploy run that applied the migration, under "Restore point",
+and in the log. Cloudflare keeps 30 days of history on the paid plan and 7 on the free one. The daily
+backup in R2 is a further fallback but is coarser than a bookmark. After a restore, `npm run migrate --
+<database>` will list the migrations it went back past as pending, and the next deploy applies them again,
+so fix the migration first.
 
 ### Writing a migration
 
