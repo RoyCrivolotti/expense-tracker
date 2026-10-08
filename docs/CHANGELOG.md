@@ -2,6 +2,12 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (Contribution growth removed)
+
+- **Contribution growth is gone from the inputs.** It raised the monthly amount by a percentage on each anniversary of the plan start, which was easy to set without seeing what it did: 3% a year turned 1.000 € a month into about 2.400 € by year 30. A raise is now a dated change under "Monthly investing changes", which says the month and the amount. The setting was at 0% on every saved scenario, so no figure moves.
+- **A saved levers bar that had it drops it.** The five inputs the bar keeps are unchanged otherwise.
+- **A re-baseline takes the amount you are investing at the check-in.** It used to count the raises so far, rounded to the nearest whole year, so the amount could come out one raise ahead for up to six months.
+
 ## October 2026 (months ahead or behind, along the plan)
 
 - **"Months ahead" is now the distance along the plan's line.** It used to divide the gap in money by what the plan invests each month. That left out what the portfolio earns by itself, so a gap read as more months than the chart shows (10.000 € ahead on 1.400 € a month said 7 months, where the plan's line gets there in 5), and it jumped on the day the monthly amount changed. The figure is now the months between the check-in and the point on the plan's line that has your balance, and the Progress snapshot says when that is: "12 months ahead of the plan, which only reaches this balance on 1 Oct 2027".
