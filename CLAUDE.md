@@ -123,7 +123,7 @@ npm run deploy        # production
 npm run deploy:dev    # staging
 ```
 
-CI deploys `main` automatically. Every PR gets a staging preview at
+CI deploys `main` automatically, after checking that production and dev have every migration (a PR that adds one needs it applied to both first: `npm run migrate -- <db> --apply`). Every PR gets a staging preview at
 `https://<sanitized-branch>.roy-expenses-stg.pages.dev`, and `deploy-dev.yml` posts that
 URL into the PR description itself — don't add a second one by hand.
 

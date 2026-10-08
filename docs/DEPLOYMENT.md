@@ -93,6 +93,14 @@ given `--apply`. It exits 0 when the database is up to date, 1 when migrations a
 it cannot trust what it sees (a hole in the record, an unseeded database, or a database it could not
 read), so a caller that must not ship code ahead of its schema can stop on anything but 0.
 
+**The deploy checks both databases before it ships anything.** The `schema` job in `deploy.yml` runs
+beside the tests, read-only, and the `ship` job waits for it. If production or dev lacks a migration, or its
+record cannot be trusted, the run stops with nothing deployed. So a PR that adds a migration is done in this
+order: apply it to production and dev (`npm run migrate -- <database> --apply`), then merge. Only additive
+migrations can go first, since the code now running keeps serving while the migration lands; a drop or rename
+ships in a later release (see "Writing a migration"). If a merge lands before its migration, apply it and
+re-run the failed jobs of the deploy; the code that was waiting then ships.
+
 Apply through `0031_contribution_schedule.sql` on production, and record each file in `_migrations` as you go, by its name without `.sql`. `npm run migrate:dev` records for the dev database itself, and `npm run migrate -- roy-expenses --apply` does for production. The app never reads the table, so a missing row breaks nothing until someone trusts the record, which is how the drift described below happened.
 
 **Check what a database actually has before trusting this line.** It has been wrong: on
