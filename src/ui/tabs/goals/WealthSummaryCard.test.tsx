@@ -188,6 +188,33 @@ describe('WealthSummaryCard', () => {
     expect(screen.queryByText(/a year/)).not.toBeInTheDocument()
   })
 
+  it('sets a return under a year against what the plan expects over the same days, not its yearly rate', () => {
+    const plan = makeScenario({ name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2025-01-01' })
+    const accounts = [makeAccount(1, 'investment')]
+    const checkins = [
+      makeCheckin(1, '2026-01-01', [{ accountId: 1, valueCents: 100_000_00 }]),
+      makeCheckin(2, '2026-07-01', [{ accountId: 1, valueCents: 105_000_00 }]),
+    ]
+    render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={plan} />)
+    // 181 days at 7% after inflation and 2% inflation is (1.07 x 1.02) ^ (181 / 365.25) - 1, about 4.4%.
+    expect(screen.getByText(/returned/)).toHaveTextContent(
+      /returned 5,0\s?% so far since .*, where Path A assumes about 4,4\s?% over the same days \(7,0\s?% a year after inflation, with 2,0\s?% inflation\)\./,
+    )
+  })
+
+  it('reads a return over a year as a yearly rate, after inflation, against the plan', () => {
+    const plan = makeScenario({ name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2025-01-01' })
+    const accounts = [makeAccount(1, 'investment')]
+    const checkins = [
+      makeCheckin(1, '2025-01-01', [{ accountId: 1, valueCents: 100_000_00 }]),
+      makeCheckin(2, '2026-07-01', [{ accountId: 1, valueCents: 125_000_00 }]),
+    ]
+    render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={plan} />)
+    const hint = screen.getByText(/returned/)
+    expect(hint).toHaveTextContent(/returned 16,\d\s?% a year since .*, about 13,\d\s?% once 2,0\s?% inflation is taken off against the 7,0\s?% a year, after inflation, that Path A assumes\./)
+    expect(screen.getByText(/a year$/)).toHaveStyle({ color: 'var(--exp-success)' })
+  })
+
   it('suggests a re-baseline when the gap has held still for half a year', () => {
     const scenario = makeScenario({ id: 1, name: 'Path A', planStartDate: '2025-01-01' })
     const accounts = [makeAccount(1, 'investment')]

@@ -2,6 +2,10 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (the measured return, against like for like)
+
+- **A return under a year is set against what the plan expects over the same days.** It said "returned 7,3% so far against the 6,0% a year that the plan assumes", a total over a few weeks beside a yearly rate, which reads as ahead whatever the plan expects. It now says what the plan assumes over those days (about 1,7% for 71 days at 6% after inflation and 3% inflation), with the rate and the inflation it comes from. From a year on it is still a yearly rate, after inflation, against the plan's.
+
 ## October 2026 (monthly investing, as a history)
 
 Checked in Chromium and in Safari's engine, at 1280px and at 375px.

@@ -173,11 +173,18 @@ function ReturnHint({
   const since = formatCheckinDate(ret.startDate)
   const planRate = plan ? `${formatPercent(plan.expectedRealReturn, format)} a year` : ''
   if (ret.annualised === null) {
+    // What is measured is a total over under a year, in the money of the day, and the plan's rate is
+    // a yearly one after inflation: set side by side they read as ahead whatever the plan expects, so
+    // the plan is stated for the same stretch.
+    const expected = plan ? Math.pow((1 + plan.expectedRealReturn) * (1 + inflationRate), ret.years) - 1 : null
     return (
       <p style={hintStyle}>
         Your portfolio has returned <strong>{formatPercent(ret.periodReturn, format)} so far</strong>{' '}
         since {since}
-        {plan ? ` against the ${planRate} that ${plan.name} assumes` : ''}.
+        {plan && expected !== null
+          ? `, where ${plan.name} assumes about ${formatPercent(expected, format)} over the same days (${planRate} after inflation, with ${formatPercent(inflationRate, format)} inflation)`
+          : ''}
+        .
       </p>
     )
   }
