@@ -69,7 +69,7 @@ Symmetric **net worth** comparison via `projectRentVsBuy` (`src/domain/engine/re
 - **Rent & invest:** starts with down payment + transaction costs in a side portfolio; each year invests the surplus when rent + invested cash beats buyer outlay.
 - **Buy now:** equity (appreciation − mortgage) plus any side portfolio when buying costs less than renting.
 
-Breakeven = first year buyer net worth ≥ renter net worth. Simplifications: constant rent, fixed carry rate (1.5%/yr default, not yet a UI control), no selling costs or transaction friction on resale.
+The verdict (`rentVsBuyVerdict`) names who leads over the horizon and from when. Buying can lead for the first years (the renter pays the purchase costs first, and the owner's equity grows with the repayments) and then fall behind for good, so the first year it draws level is not called a breakeven. `breakevenYear` is the year buying gets ahead and stays ahead to the end, and null when it does not. Simplifications: constant rent, fixed carry rate (1.5%/yr default, not yet a UI control), no selling costs or transaction friction on resale, so the buyer's figure is before the costs of selling.
 
 ## Net worth over time
 

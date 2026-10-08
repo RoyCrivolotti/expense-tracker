@@ -2,6 +2,11 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (rent vs buy says who leads)
+
+- **Rent vs buy names who is ahead and from when.** At the defaults (a 400.000 € house, 1.200 € rent) it said "Buying overtakes renting around year 1" while renting led by about 640.000 € after thirty years: the first year buying drew level was called a breakeven, though renting pulled ahead again from year 5. It now says "Buying is ahead through year 4, then renting leads for the rest of the horizon, by 638k € after 30 years", or the year buying gets ahead and stays ahead.
+- **The note says the buyer's figure is before the costs of selling**, which the comparison does not include.
+
 ## October 2026 (the measured return, against like for like)
 
 - **A return under a year is set against what the plan expects over the same days.** It said "returned 7,3% so far against the 6,0% a year that the plan assumes", a total over a few weeks beside a yearly rate, which reads as ahead whatever the plan expects. It now says what the plan assumes over those days (about 1,7% for 71 days at 6% after inflation and 3% inflation), with the rate and the inflation it comes from. From a year on it is still a yearly rate, after inflation, against the plan's.
