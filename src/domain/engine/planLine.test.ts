@@ -1,0 +1,97 @@
+import { describe, expect, it } from 'vitest'
+import { samplePlan, SAMPLE_INFLATION } from '../../testing/samplePlan'
+import { planLineOf, planValueAt, stretchAround } from './planLine'
+import { projectNetWorth } from './projection'
+import { scenarioToParams } from './scenarioProjection'
+
+const project = (over = {}) => projectNetWorth(scenarioToParams(samplePlan(over), SAMPLE_INFLATION))
+
+/** The line the app drew before: a straight chord between the year-end values. Kept here as the oracle for plans with no step. */
+function oldChord(points: { year: number; investedCents: number }[], t: number): number {
+  const i = Math.floor(t)
+  const here = points[i]!.investedCents
+  if (i >= points.length - 1) return here
+  return Math.round(here + (t - i) * (points[i + 1]!.investedCents - here))
+}
+
+describe('planLineOf and planValueAt', () => {
+  it('is the straight line between the year-end values when no year has a payment or event', () => {
+    const points = project({ housePurchaseYear: null })
+    const line = planLineOf(points)
+    for (let step = 0; step <= 30 * 24; step++) {
+      const t = step / 24
+      expect(planValueAt(line, t)).toBe(oldChord(points, t))
+    }
+  })
+
+  it('rises through the year of a house payment and drops on its anniversary', () => {
+    const points = project()
+    const line = planLineOf(points)
+    const before = points[7]!.investedCents
+    const pre = points[8]!.preEventInvestedCents
+    const post = points[8]!.investedCents
+    // At the start of year 8 (the anniversary of year 7) the line is at the year 7 value, and it
+    // climbs towards the value before the payment, not towards the value after it.
+    expect(planValueAt(line, 7)).toBe(before)
+    expect(planValueAt(line, 7.5)).toBe(Math.round(before + 0.5 * (pre - before)))
+    expect(planValueAt(line, 7 + 51 / 52)).toBeGreaterThan(Math.round(before + 0.9 * (pre - before)))
+    // On the anniversary the payment has been made.
+    expect(planValueAt(line, 8)).toBe(post)
+    expect(post).toBeLessThan(pre)
+  })
+
+  it('steps up on the anniversary of an inflow', () => {
+    const points = project({ housePurchaseYear: null, lifeEvents: [{ year: 5, amountCents: 3_000_000, label: 'Bonus' }] })
+    const line = planLineOf(points)
+    expect(planValueAt(line, 5)).toBe(points[5]!.investedCents)
+    expect(planValueAt(line, 5)! - planValueAt(line, 5 - 1 / 365)!).toBeGreaterThan(2_900_000)
+  })
+
+  it('has the value after the step at the last year too', () => {
+    const points = project({ housePurchaseYear: null, horizonYears: 10, lifeEvents: [{ year: 10, amountCents: -1_000_000, label: 'Car' }] })
+    const line = planLineOf(points)
+    expect(planValueAt(line, 10)).toBe(points[10]!.investedCents)
+  })
+
+  it.each([
+    ['before the plan starts', -0.01],
+    ['past the last year', 30.01],
+    ['not a number', Number.NaN],
+  ])('has no value %s', (_name, t) => {
+    expect(planValueAt(planLineOf(project()), t)).toBeNull()
+  })
+
+  it('treats points with no step recorded as having none', () => {
+    const line = planLineOf([
+      { year: 0, investedCents: 1000 },
+      { year: 1, investedCents: 2000 },
+    ])
+    expect(planValueAt(line, 0.5)).toBe(1500)
+  })
+
+  it('has no segments for a single point', () => {
+    expect(planValueAt(planLineOf([{ year: 0, investedCents: 1000 }]), 0)).toBe(1000)
+  })
+})
+
+describe('stretchAround', () => {
+  it('is the whole plan when nothing steps', () => {
+    expect(stretchAround(planLineOf(project({ housePurchaseYear: null })), 12.3)).toEqual({ from: 0, to: 30 })
+  })
+
+  it('runs from one step to the next', () => {
+    const line = planLineOf(project({ lifeEvents: [{ year: 12, amountCents: -1_000_000, label: 'Car' }] }))
+    expect(stretchAround(line, 3)).toEqual({ from: 0, to: 8 })
+    expect(stretchAround(line, 9.5)).toEqual({ from: 8, to: 12 })
+    expect(stretchAround(line, 20)).toEqual({ from: 12, to: 30 })
+  })
+
+  it('puts an anniversary with a step into the stretch that starts there', () => {
+    const line = planLineOf(project())
+    expect(stretchAround(line, 8)).toEqual({ from: 8, to: 30 })
+  })
+
+  it('does not call a step on a day that is not an anniversary a stretch of its own', () => {
+    expect(stretchAround(planLineOf(project()), 7.99)).toEqual({ from: 0, to: 8 })
+  })
+})

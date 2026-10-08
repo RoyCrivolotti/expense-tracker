@@ -1,0 +1,81 @@
+/**
+ * The plan's line: what the invested portfolio is on any day of the plan. It rises through each
+ * year from where the last anniversary left it to what the year's return and contributions make of
+ * it, and on the anniversary a house payment or a life event steps it up or down. A chord from one
+ * year-end value to the next put the step across the whole year before it, which read as ahead or
+ * behind to someone exactly on plan.
+ */
+
+export interface PlanPoint {
+  year: number
+  /** The year-end value, after a house payment and life events. */
+  investedCents: number
+  /** The value on the day before them; the same as `investedCents` when the year has none. */
+  preEventInvestedCents?: number
+}
+
+/** One year of the line: it runs from `start` at `from` to `end` at `to`, where it steps to `after`. */
+export interface PlanSegment {
+  from: number
+  to: number
+  start: number
+  end: number
+  after: number
+}
+
+export interface PlanLine {
+  segments: readonly PlanSegment[]
+  /** The value on the day the plan starts. */
+  first: number
+  /** The last year of the plan, in years from its start. */
+  horizon: number
+}
+
+export function planLineOf(points: readonly PlanPoint[]): PlanLine {
+  const ordered = [...points].sort((a, b) => a.year - b.year)
+  const first = ordered[0]?.investedCents ?? 0
+  const segments: PlanSegment[] = []
+  for (let i = 1; i < ordered.length; i++) {
+    const prior = ordered[i - 1]!
+    const point = ordered[i]!
+    segments.push({
+      from: prior.year,
+      to: point.year,
+      start: prior.investedCents,
+      end: point.preEventInvestedCents ?? point.investedCents,
+      after: point.investedCents,
+    })
+  }
+  return { segments, first, horizon: ordered.length > 0 ? ordered[ordered.length - 1]!.year : 0 }
+}
+
+/**
+ * The plan's value `years` after its start, in cents. On an anniversary it is the value after that
+ * year's payment or event. Null before the start, after the last year, or for a date that is not one.
+ */
+export function planValueAt(line: PlanLine, years: number): number | null {
+  if (!(years >= 0) || years > line.horizon) return null
+  const whole = Math.floor(years)
+  if (years === whole) return whole === 0 ? line.first : (line.segments[whole - 1]?.after ?? line.first)
+  const segment = line.segments[whole]
+  if (!segment) return null
+  return Math.round(segment.start + (years - segment.from) * (segment.end - segment.start))
+}
+
+function stepsAt(line: PlanLine, anniversary: number): boolean {
+  const segment = line.segments[anniversary - 1]
+  return segment !== undefined && segment.end !== segment.after
+}
+
+/**
+ * The stretch of the line without a step that has `years` in it: from the anniversary where it
+ * begins (that day's value is already after the step) to the next anniversary that steps, or the
+ * last year. Months along the line are only measured inside one.
+ */
+export function stretchAround(line: PlanLine, years: number): { from: number; to: number } {
+  let from = Math.floor(years)
+  while (from > 0 && !stepsAt(line, from)) from -= 1
+  let to = Math.floor(years) + 1
+  while (to < line.horizon && !stepsAt(line, to)) to += 1
+  return { from, to: Math.min(to, line.horizon) }
+}
