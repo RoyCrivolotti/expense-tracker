@@ -11,7 +11,7 @@
 import type { ContributionStep, GoalScenario } from '../types'
 import { yearsBetween } from './dates'
 
-export const CONTRIBUTION_STEP_MAX_COUNT = 10
+export const CONTRIBUTION_STEP_MAX_COUNT = 30
 /** A step is a monthly amount, and a million a month is already beyond any plan. */
 export const CONTRIBUTION_STEP_MAX_CENTS = 100_000_000
 
