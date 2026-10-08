@@ -10,8 +10,11 @@ function withMark(fixed: string, format: MoneyFormat): string {
   return fixed.replace('.', format.decimalSeparator)
 }
 
-/** Compact money for dense chart axes/tooltips, e.g. 1.2M / 340k in the owner's currency. */
-export function formatMoneyShort(cents: number, format: MoneyFormat): string {
+/**
+ * Compact money for dense chart axes/tooltips, e.g. 1.2M / 340k in the owner's currency. Millions
+ * have `millionDecimals` places (one, unless a reading wants more precision: 1.24M).
+ */
+export function formatMoneyShort(cents: number, format: MoneyFormat, millionDecimals = 1): string {
   // Infinity is larger than the millions threshold, so without this it took the
   // compact branch and rendered "InfinityM". formatCents already has the answer for
   // a non-finite amount, and an infinite FI target reaches here whenever a scenario's
@@ -22,7 +25,7 @@ export function formatMoneyShort(cents: number, format: MoneyFormat): string {
   const abs = Math.abs(cents)
   // 999,600 is "1.0M", not "1000k": the thousands round up into the next unit before they are printed.
   if (abs >= 1_000_000_00 || Math.round(abs / 1_000_00) >= 1000) {
-    return withSign(cents, applySymbol(`${withMark((abs / 1_000_000_00).toFixed(1), format)}M`, format))
+    return withSign(cents, applySymbol(`${withMark((abs / 1_000_000_00).toFixed(millionDecimals), format)}M`, format))
   }
   if (abs >= 1_000_00) return withSign(cents, applySymbol(`${Math.round(abs / 1_000_00)}k`, format))
   return formatCents(cents, format)

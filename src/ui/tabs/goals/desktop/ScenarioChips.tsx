@@ -86,7 +86,7 @@ function Chip({ scenario, label, line, active, edited, tabIndex, onOpen, onToggl
   const format = useMoneyFormat()
   const hidden = line?.hidden === true
   const plan = scenario?.isActive === true
-  const value = !hidden && line?.valueCents != null ? formatMoneyShort(line.valueCents, format) : ''
+  const value = !hidden && line?.valueCents != null ? formatMoneyShort(line.valueCents, format, 2) : ''
   return (
     <div className={chipClass(active, hidden)}>
       <button
