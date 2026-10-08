@@ -61,6 +61,16 @@
   padding: 0.25rem 0 0.5rem;
 }
 
+/* Plan's scenario actions and the view switch, at the right of the title row; they wrap under each
+   other on a narrow desktop rather than push the title off. */
+.titleActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem 0.75rem;
+}
+
 /* On a wide screen it is in the row with the title instead, which takes the height of a row of
    its own off the top of the page (about 46px, of the 265px above the chart on a laptop). */
 .viewSwitcherInline {

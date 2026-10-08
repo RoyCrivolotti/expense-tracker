@@ -516,14 +516,14 @@ async function checkBarFocus(page, where) {
 
 /**
  * Nothing moves under the pointer or the keyboard: the first edit adds Unsaved changes, Discard and
- * Save to the scenario row, and pointing at the chart fills the legend with values and, at a
+ * Save to the title row, and pointing at the chart fills the chips above it with values and, at a
  * purchase year, shows a breakdown. Each used to push the page down (the row wrapped by 40px at
  * 1280px, the breakdown added 144px, the legend wrapped and slid under the bar held at the bottom).
  */
 async function checkStability(page, where, held) {
   const geometry = () =>
     page.evaluate(() => {
-      const row = document.querySelector('[class*="scenarioRow"]').getBoundingClientRect()
+      const row = document.querySelector('[role="tablist"][aria-label="Scenarios"]').getBoundingClientRect()
       const legend = document.querySelector('[data-goals-plan-wide] ul[class*="chips"]').getBoundingClientRect()
       const bar = document.querySelector('[data-levers-bar]').getBoundingClientRect()
       return { rowHeight: row.height, rowBottom: row.bottom + scrollY, legendBottom: legend.bottom + scrollY, barTop: bar.top + scrollY, docHeight: document.documentElement.scrollHeight, scrolled: scrollY }
@@ -545,7 +545,7 @@ async function checkStability(page, where, held) {
   await page.getByText('Unsaved changes').waitFor({ state: 'attached', timeout: 5000 })
   await page.waitForTimeout(300)
   const edited = await geometry()
-  check(where, '(r) the first edit keeps the scenario row one line', near(edited.rowHeight, rest.rowHeight, 1) && near(edited.rowBottom, rest.rowBottom, 1), `row ${px(rest.rowHeight)} to ${px(edited.rowHeight)}`)
+  check(where, '(r) the first edit does not move the chips', near(edited.rowHeight, rest.rowHeight, 1) && near(edited.rowBottom, rest.rowBottom, 1), `chips ${px(rest.rowHeight)} to ${px(edited.rowHeight)}, ending ${px(rest.rowBottom)} to ${px(edited.rowBottom)}`)
   if (held) check(where, '(r) with an edit the legend still clears the bar', edited.legendBottom <= edited.barTop + 0.5, `legend ends ${px(edited.legendBottom)}, bar starts ${px(edited.barTop)}`)
   await page.getByRole('button', { name: 'Discard changes' }).click()
   await page.waitForTimeout(300)
@@ -567,35 +567,103 @@ async function checkStability(page, where, held) {
   check(where, '(r) the purchase breakdown shows at the purchase year', shown)
   check(where, '(r) the breakdown takes no room from the page', shown && Math.abs(grew) <= 1, `page grew ${grew}px`)
   if (shown) {
-    const hidden = await page.evaluate(() => {
-      const el = document.querySelector('[class*="floater"]')
-      return el ? getComputedStyle(el).pointerEvents : 'none-found'
+    // It is under the chart, in the place the chart's note is when no year is pointed at, so it
+    // covers neither the lines nor the axis labels.
+    const where_ = await page.evaluate(() => {
+      const chart = document.querySelector('[data-goals-plan-wide] [role="img"]').getBoundingClientRect()
+      const title = [...document.querySelectorAll('[data-goals-plan-wide] *')].find((e) => e.children.length === 0 && e.textContent.trim() === 'Down payment + fees')
+      const t = title.getBoundingClientRect()
+      return { chartBottom: chart.bottom, breakdownTop: t.top }
     })
-    check(where, '(r) the breakdown lets the pointer through to the chart', hidden === 'none', hidden)
+    check(where, '(r) the breakdown is under the chart, not over it', where_.breakdownTop >= where_.chartBottom - 0.5, JSON.stringify(where_))
   }
   await page.mouse.move(0, 0)
 }
 
 /**
- * Hide the saved line of a scenario that is being edited, then drop the edits: the scenario is
- * drawn as the editing line again, and the legend must not also list it dimmed.
+ * The chips above the chart are also its legend. While a scenario is edited its chip has no eye
+ * (it is the line being edited), and the saved line it is measured against has no chip of its own;
+ * after Discard nothing is left over from that.
  */
 async function checkLegendAfterDiscard(page, where) {
   const monthly = page.getByLabel('Monthly investing', { exact: true })
   await monthly.fill('900')
   await monthly.press('Enter')
   await page.getByText('Unsaved changes').waitFor({ timeout: 5000 })
-  // Not a mouse click: after typing in the bar, Safari's engine has the page scrolled so that the
-  // bar, held to the bottom edge, is over this chip at 1280x800, and the click would land on the bar.
-  await page.getByRole('button', { name: /^Hide Path A: Invest only on chart$/ }).dispatchEvent('click')
-  const shown = page.getByRole('button', { name: /^Show Path A: Invest only on chart$/ })
-  await shown.waitFor({ timeout: 5000 })
-  check(where, '(u) the saved line of an edited scenario can be hidden from the legend', (await shown.count()) === 1)
+  const eyesOfA = () => page.getByRole('button', { name: /^(Hide|Show) Path A: Invest only on chart$/ }).count()
+  check(where, '(u) the open scenario has no eye while it is edited, and its saved line no chip', (await eyesOfA()) === 0)
   await page.getByRole('button', { name: /^Discard changes$/ }).click()
   await page.waitForTimeout(400)
-  const dimmed = await page.getByRole('button', { name: /^Show Path A: Invest only on chart$/ }).count()
-  const hide = await page.getByRole('button', { name: /^Hide Path A: Invest only on chart$/ }).count()
-  check(where, '(u) after Discard the legend has no dimmed saved chip beside the editing one', dimmed === 0 && hide === 0, `${dimmed} dimmed, ${hide} with a hide button`)
+  check(where, '(u) after Discard the open scenario still has no eye', (await eyesOfA()) === 0)
+}
+
+/**
+ * (c) The chips: one set above the chart, all one width, the value of each line at the year pointed
+ * at, an eye that hides a line and takes its value away, and the Plan and Edited tags on the top
+ * edge of the open one, so the name has the whole chip.
+ */
+async function checkChips(page, where, screen) {
+  const chips = () =>
+    page.evaluate(() => {
+      const list = document.querySelector('[role="tablist"][aria-label="Scenarios"]')
+      return [...list.children].map((chip) => {
+        const r = chip.getBoundingClientRect()
+        const tab = chip.querySelector('[role="tab"]')
+        const name = chip.querySelector('[class*="chipName"]')
+        const value = chip.querySelector('[class*="chipValue"]')
+        return { w: Math.round(r.width * 10) / 10, top: Math.round(r.top), h: Math.round(r.height), name: name.textContent, value: value.textContent, selected: tab.getAttribute('aria-selected') === 'true', cut: name.scrollHeight > name.clientHeight + 1, over: chip.scrollWidth > chip.clientWidth + 1 }
+      })
+    })
+  const rest = await chips()
+  check(where, '(c) every chip is one width', rest.length >= 3 && rest.every((c) => near(c.w, rest[0].w, 1.5)), JSON.stringify(rest.map((c) => c.w)))
+  check(where, '(c) no chip overflows itself', rest.every((c) => !c.over), JSON.stringify(rest.filter((c) => c.over)))
+  const rows = new Map()
+  for (const c of rest) rows.set(c.top, [...(rows.get(c.top) ?? []), c.h])
+  check(where, '(c) the chips in a row are as tall as each other', [...rows.values()].every((hs) => hs.every((h) => near(h, hs[0], 1))), JSON.stringify([...rows]))
+  check(where, '(c) at rest every chip shows the value of its last year', rest.every((c) => /\d/.test(c.value)), JSON.stringify(rest.map((c) => c.value)))
+
+  const svg = page.locator('[data-goals-plan-wide] [role="img"]').first()
+  const box = await svg.boundingBox()
+  await page.mouse.move(box.x + box.width * 0.3, box.y + box.height * 0.5)
+  await page.waitForTimeout(300)
+  const pointed = await chips()
+  check(where, '(c) pointing at the chart changes the values in the chips', pointed.some((c, i) => c.value !== rest[i].value))
+  await page.mouse.move(0, 0)
+
+  const eye = page.getByRole('button', { name: /^Hide .* on chart$/ }).first()
+  const label = (await eye.getAttribute('aria-label')).replace(/^Hide /, '').replace(/ on chart$/, '')
+  await eye.dispatchEvent('click')
+  const shown = page.getByRole('button', { name: `Show ${label} on chart` })
+  await shown.waitFor({ timeout: 5000 })
+  const hidden = (await chips()).find((c) => c.name === label)
+  check(where, '(c) the eye hides a line: the chip is dimmed with no value', hidden.value === '', JSON.stringify(hidden))
+  await shown.dispatchEvent('click')
+  await page.getByRole('button', { name: `Hide ${label} on chart` }).waitFor({ timeout: 5000 })
+
+  const open = page.getByRole('tablist', { name: 'Scenarios' }).getByRole('tab', { selected: true })
+  const tags = await open.evaluate((el) => {
+    const chip = el.parentElement.getBoundingClientRect()
+    const tag = el.querySelector('[class*="chipTags"]')
+    const name = el.querySelector('[class*="chipName"]').getBoundingClientRect()
+    const value = el.querySelector('[class*="chipValue"]').getBoundingClientRect()
+    const t = tag?.getBoundingClientRect()
+    if (!t) return null
+    return {
+      inside: t.top >= chip.top && t.bottom <= chip.bottom && t.left >= chip.left && t.right <= chip.right,
+      underValue: t.top >= value.bottom - 1 && t.right <= value.right + 1,
+      clearOfName: t.left >= name.right - 0.5 || t.right <= name.left + 0.5,
+    }
+  })
+  check(where, '(c) the Plan tag is inside the open chip, under its value and clear of its name', tags?.inside === true && tags.underValue === true && tags.clearOfName === true, JSON.stringify(tags))
+
+  // The actions are in the title row, beside the view switch: at the same height as "Goals".
+  const row = await page.evaluate(() => {
+    const h2 = [...document.querySelectorAll('h2')].find((h) => h.textContent === 'Goals').getBoundingClientRect()
+    const dup = document.querySelector('button[aria-label^="Duplicate "]').getBoundingClientRect()
+    const chip = document.querySelector('[role="tablist"][aria-label="Scenarios"]').getBoundingClientRect()
+    return { h2Mid: h2.top + h2.height / 2, dup: [dup.top, dup.bottom], chipsTop: chip.top }
+  })
+  check(where, `(c) Duplicate is in the title row, above the chips${screen.width < 1100 ? ' (it may wrap)' : ''}`, screen.width < 1100 || (row.dup[0] - 4 <= row.h2Mid && row.h2Mid <= row.dup[1] + 4 && row.dup[1] < row.chipsTop), JSON.stringify(row))
 }
 
 /**
@@ -627,7 +695,7 @@ async function checkReadOnlyEdit(page, where) {
       iw: window.innerWidth,
     }
   })
-  check(where, '(v) read-only with an edit: the note is on screen under the scenario tabs', m.noteVisible && m.noteTop >= m.tabsBottom - 0.5 && m.noteRight <= m.iw, JSON.stringify(m))
+  check(where, '(v) read-only with an edit: the note is on screen under the scenario chips', m.noteVisible && m.noteTop >= m.tabsBottom - 0.5 && m.noteRight <= m.iw, JSON.stringify(m))
   check(where, '(v) read-only with an edit: no tab says Edited, and the page does not scroll sideways', !m.edited && m.scrollWidth <= m.iw, JSON.stringify(m))
   check(where, '(v) read-only with an edit: the lever keeps the typed value', (await monthly.inputValue()) === '900')
   await page.getByRole('tab', { name: /^Path B/ }).click()
@@ -647,6 +715,7 @@ async function checkScreen(browser, screen, engine) {
     await checkPanel(page, where)
     await checkStars(page, where)
     await checkEdit(page, where)
+    await checkChips(page, where, screen)
   }
   await context.close()
   if (screen.width >= 1280) {
@@ -960,17 +1029,19 @@ async function checkTouchTargets(browser, engine) {
   check(where, '(t) a press 12px above a slider\'s track and 18px below it is the slider\'s', reach.above && reach.below, JSON.stringify(reach))
   check(where, '(t) a press on the lower part of a lever\'s digits row is not the slider\'s', reach.digitsRow, JSON.stringify(reach))
 
-  // The legend chips: the tap area reaches past the 26px chip.
+  // The scenario chips are 44px with a finger, and so is the eye beside the name: a press on either
+  // half of a chip is that half's.
   const chips = await page.evaluate(() =>
-    [...document.querySelectorAll('[class*="chips"] button')].map((b) => {
-      const r = b.getBoundingClientRect()
-      const after = getComputedStyle(b, '::after')
-      const above = document.elementFromPoint(r.left + r.width / 2, r.top - 7)
-      return { h: r.height, hit: parseFloat(after.height), toggles: above !== null && b.contains(above) }
+    [...document.querySelectorAll('[role="tablist"][aria-label="Scenarios"] > *')].map((chip) => {
+      const r = chip.getBoundingClientRect()
+      const eye = chip.querySelector('[class*="chipEye"]')
+      const e = eye?.getBoundingClientRect()
+      const onName = document.elementFromPoint(r.left + 20, r.top + r.height / 2)
+      return { h: r.height, eyeW: e?.width ?? null, eyeH: e?.height ?? null, nameOpens: onName?.closest('[role="tab"]') !== null, eyeToggles: eye ? eye.contains(document.elementFromPoint(e.left + e.width / 2, e.top + e.height / 2)) : null }
     }),
   )
-  check(where, '(t) a legend chip is as tall as it was (26px) with a tap area of 44px', chips.length > 0 && chips.every((c) => near(c.h, 26.2, 1.5) && c.hit >= FINGER), JSON.stringify(chips.slice(0, 3)))
-  check(where, '(t) a press 7px above the first line of chips is a chip\'s', chips.length > 0 && chips[0].toggles, JSON.stringify(chips[0]))
+  check(where, '(t) a scenario chip and its eye are 44px with a finger', chips.length > 0 && chips.every((c) => c.h >= FINGER - 0.5 && (c.eyeW === null || (c.eyeW >= FINGER - 0.5 && c.eyeH >= FINGER - 0.5))), JSON.stringify(chips.slice(0, 3)))
+  check(where, '(t) a press on a chip\'s name opens it, and one on its eye toggles', chips.every((c) => c.nameOpens && c.eyeToggles !== false), JSON.stringify(chips.slice(0, 3)))
 
   // The save buttons, and the words beside Save while the scenario has no name.
   const monthly = page.getByLabel('Monthly investing', { exact: true })
@@ -1085,9 +1156,9 @@ async function checkTouchTargets(browser, engine) {
   await fine.page.waitForTimeout(400)
   const small = await fine.page.evaluate(() => {
     const h = (sel) => Math.round(document.querySelector(sel).getBoundingClientRect().height * 10) / 10
-    return { stepper: h('[aria-label^="Decrease "]'), field: h('[role="region"] input[type="text"]'), chip: h('[class*="chips"] button'), range: h('input[type="range"]'), digits: h('[class*="leverValue"]') }
+    return { stepper: h('[aria-label^="Decrease "]'), field: h('[role="region"] input[type="text"]'), chip: Math.min(...[...document.querySelectorAll('[role="tablist"][aria-label="Scenarios"] > *')].map((c) => c.getBoundingClientRect().height)), range: h('input[type="range"]'), digits: h('[class*="leverValue"]') }
   })
-  check(`${engine} mouse`, '(t) with a fine pointer the controls keep their size (stepper 25.6, field 26, chip 26.2, slider 16 or 17, digits row under 40)', near(small.stepper, 25.6, 0.7) && near(small.chip, 26.2, 1.5) && near(small.range, 16.5, 1) && near(small.field, 26, 0.5) && small.digits < 40, JSON.stringify(small))
+  check(`${engine} mouse`, '(t) with a fine pointer the controls keep their size (stepper 25.6, field 26, chip 44.6 (the row of the tagged chip), slider 16 or 17, digits row under 40)', near(small.stepper, 25.6, 0.7) && near(small.chip, 44.6, 1.5) && near(small.range, 16.5, 1) && near(small.field, 26, 0.5) && small.digits < 40, JSON.stringify(small))
   await fine.context.close()
   const phone = await openPlan(browser, { width: 899, height: 800 }, { touch: true })
   const phoneStyle = await phone.page.evaluate(() => ({

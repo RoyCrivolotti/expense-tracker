@@ -38,6 +38,12 @@ interface ScenarioSeriesLegendProps {
   /** What it says before a year is pointed at, where "below" is not where the rows are. */
   hint?: string | undefined
   /**
+   * The scenarios are in chips above the chart: `items` is only what has none, and the legend is
+   * still there, without them, for the year being pointed at and the breakdown that floats up
+   * from it.
+   */
+  chipsAbove?: boolean | undefined
+  /**
    * The purchase breakdown in a column of its own beside the rows, so it makes the legend wider
    * and not taller. For a card that has to be whole in a box that is short.
    */
@@ -96,7 +102,7 @@ function BreakdownRows({
   )
 }
 
-function BreakdownExtras({
+export function BreakdownExtras({
   breakdowns,
   breakdownInTodaysMoney,
   yearZeroHint,
@@ -128,6 +134,45 @@ function BreakdownExtras({
   )
 }
 
+interface BreakdownSlotProps {
+  breakdowns: ScenarioLegendBreakdown[]
+  yearZeroHint: boolean
+  breakdownInTodaysMoney: boolean
+  /** Some line buys in a year, so the room for its breakdown is kept whether or not it is showing. */
+  reserve: boolean
+  /** What is there while no breakdown is: the chart's note. */
+  children: ReactNode
+}
+
+function slotClass(reserve: boolean, withNote: boolean): string {
+  if (!reserve) return styles.slot ?? ''
+  return `${styles.slot} ${withNote ? styles.slotReservedNote : styles.slotReserved}`
+}
+
+/**
+ * A place under the chart that is the chart's note until a purchase year is pointed at, and that
+ * year's breakdown while it is. Nothing is covered, and nothing moves when it changes, because the
+ * room is kept when a line has a purchase.
+ */
+export function BreakdownSlot({ breakdowns, yearZeroHint, breakdownInTodaysMoney, reserve, children }: BreakdownSlotProps) {
+  const format = useMoneyFormat()
+  const showing = breakdowns.length > 0 || yearZeroHint
+  return (
+    <div className={slotClass(reserve, breakdownInTodaysMoney)}>
+      {showing ? (
+        <BreakdownExtras
+          breakdowns={breakdowns}
+          breakdownInTodaysMoney={breakdownInTodaysMoney}
+          yearZeroHint={yearZeroHint}
+          format={format}
+        />
+      ) : (
+        children
+      )}
+    </div>
+  )
+}
+
 /** What the legend says before a year is pointed at: what it is told to, else how to use it. */
 function legendHint(override: string | undefined, togglable: boolean): string {
   if (override !== undefined) return override
@@ -146,6 +191,43 @@ function Beside({ main, extras }: { main: ReactNode; extras: ReactNode }) {
   )
 }
 
+interface LegendMainProps {
+  items: ScenarioLegendItem[]
+  activeYear: number | null | undefined
+  hint: string
+  format: ReturnType<typeof useMoneyFormat>
+  onToggle: ScenarioSeriesLegendProps['onToggle']
+  listRef: ScenarioSeriesLegendProps['listRef']
+  layout: ScenarioSeriesLegendProps['layout']
+}
+
+/** The year pointed at, or how to point at one, and the rows; no rows where the chips above have them. */
+function LegendMain({ items, activeYear, hint, format, onToggle, listRef, layout }: LegendMainProps) {
+  return (
+    <>
+      {activeYear != null ? (
+        <p className={styles.yearHeader}>Year {activeYear}</p>
+      ) : (
+        <p className={styles.hint}>{hint}</p>
+      )}
+      {items.length > 0 ? (
+        <LiveLegend
+          items={items}
+          formatValue={(cents) => formatMoneyShort(cents, format)}
+          onToggle={onToggle}
+          listRef={listRef}
+          layout={layout}
+        />
+      ) : null}
+    </>
+  )
+}
+
+/** Where the breakdown that floats up from the legend sits: over the end of it, or the start. */
+function floaterClass(side: 'start' | 'end'): string {
+  return `${styles.floater} ${side === 'start' ? styles.floaterStart : styles.floaterEnd}`
+}
+
 export function ScenarioSeriesLegend({
   items,
   activeYear,
@@ -157,10 +239,11 @@ export function ScenarioSeriesLegend({
   layout,
   floatSide = 'end',
   hint: hintOverride,
+  chipsAbove = false,
   extrasBeside,
 }: ScenarioSeriesLegendProps) {
   const format = useMoneyFormat()
-  if (items.length === 0) return null
+  if (items.length === 0 && !chipsAbove) return null
   const hint = legendHint(hintOverride, onToggle !== undefined)
 
   // Side by side the chips leave no room for a block that comes and goes with the pointer: in the
@@ -177,20 +260,15 @@ export function ScenarioSeriesLegend({
   )
 
   const main = (
-    <>
-      {activeYear != null ? (
-        <p className={styles.yearHeader}>Year {activeYear}</p>
-      ) : (
-        <p className={styles.hint}>{hint}</p>
-      )}
-      <LiveLegend
-        items={items}
-        formatValue={(cents) => formatMoneyShort(cents, format)}
-        onToggle={onToggle}
-        listRef={listRef}
-        layout={layout}
-      />
-    </>
+    <LegendMain
+      items={items}
+      activeYear={activeYear}
+      hint={hint}
+      format={format}
+      onToggle={onToggle}
+      listRef={listRef}
+      layout={layout}
+    />
   )
   if (extrasBeside) return <Beside main={main} extras={extras} />
 
@@ -198,7 +276,7 @@ export function ScenarioSeriesLegend({
     <div className={layout === 'chips' ? `${styles.wrap} ${styles.wrapWide}` : styles.wrap}>
       {main}
       {floats ? (
-        <div className={`${styles.floater} ${floatSide === 'start' ? styles.floaterStart : styles.floaterEnd}`}>{extras}</div>
+        <div className={floaterClass(floatSide)}>{extras}</div>
       ) : (
         extras
       )}

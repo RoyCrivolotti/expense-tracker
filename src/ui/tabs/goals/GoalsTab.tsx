@@ -12,7 +12,6 @@ import {
   planFromToday,
 } from '../../../engine'
 import type { InvestedSnapshot } from './checkinDate'
-import { SectionTitle } from '../../components/primitives'
 import { GoalsViewSwitch } from './GoalsViewSwitch'
 import { GoalsPanel } from './GoalsPanel'
 import {
@@ -32,6 +31,7 @@ import { AssumptionsView } from './AssumptionsView'
 import { useScenarioEditor } from './useScenarioEditor'
 import { useGoalsUnsavedWork } from './useGoalsUnsavedWork'
 import { useStarredLevers } from './useStarredLevers'
+import { GoalsTitleRow } from './GoalsTitleRow'
 import { PlanView } from './PlanView'
 import type { DisplayMode } from './PlanHero'
 import { activePlan } from './scenarioSelection'
@@ -170,16 +170,7 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
 
   return (
     <div className={styles.stack}>
-      {narrow ? (
-        <>
-          <SectionTitle>Goals</SectionTitle>
-          {viewSwitch}
-        </>
-      ) : (
-        // One row on a wide screen: the title and the view switch took 60px each, a fifth of
-        // what a laptop screen has above the chart.
-        <SectionTitle action={viewSwitch}>Goals</SectionTitle>
-      )}
+      <GoalsTitleRow narrow={narrow} viewSwitch={viewSwitch} showActions={view === 'plan'} editor={editor} actions={actions} />
 
       <GoalsPanel view={view} planHalf={mobilePlanView}>
         {/* Where a tap on the switch scrolls to: the start of whichever view's content follows. */}

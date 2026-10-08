@@ -8,7 +8,9 @@ import { installFakeMatchMedia } from '../../../../testing/fakeMatchMedia'
 import { makeActions } from '../../../../testing/makeActions'
 import { makeDataset, makeScenario } from '../../../../testing/factories'
 import { ToastContext } from '../../../hooks/useToast'
+import { createHeroLegendStore } from '../charts/heroLegendStore'
 import { useScenarioEditor } from '../useScenarioEditor'
+import { ScenarioActions } from './ScenarioActions'
 import { ScenarioBar } from './ScenarioBar'
 
 const HINT = 'Give the scenario a name to save it'
@@ -17,6 +19,7 @@ beforeEach(() => showToast.mockClear())
 
 function Harness({ initial, actions }: { initial: GoalScenario[]; actions: ExpenseActions | undefined }) {
   const [scenarios, setScenarios] = useState(initial)
+  const [legend] = useState(createHeroLegendStore)
   const live = actions
     ? {
         ...actions,
@@ -31,7 +34,8 @@ function Harness({ initial, actions }: { initial: GoalScenario[]; actions: Expen
   const editor = useScenarioEditor(makeDataset({ goalScenarios: scenarios }), live, 0)
   return (
     <ToastContext.Provider value={{ showToast }}>
-      <ScenarioBar scenarios={scenarios} editor={editor} actions={live} />
+      {live ? <ScenarioActions editor={editor} actions={live} /> : null}
+      <ScenarioBar scenarios={scenarios} editor={editor} actions={live} legend={legend} />
     </ToastContext.Provider>
   )
 }
@@ -292,7 +296,7 @@ describe('ScenarioBar', () => {
     expect(screen.getByText('Unsaved changes')).toBeInTheDocument()
   })
 
-  it('makes one copy for a double click on + Duplicate, and holds the button while it is made', async () => {
+  it('makes one copy for a double click on Duplicate, and holds the button while it is made', async () => {
     let land!: () => void
     const actions = makeActions()
     vi.mocked(actions.createScenario).mockImplementation(

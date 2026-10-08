@@ -242,9 +242,7 @@
   }
 }
 
-/* The scenario row: one tab per scenario, then what can be done with the open one. */
-/* The row of tabs and buttons, and under it the note a read-only session shows: that note is a
-   sentence long, and beside the tabs it left them room for "Path..." and nothing else. */
+/* The scenarios as chips above the chart, and under them the note a read-only session shows. */
 .scenarioBar {
   display: flex;
   flex-direction: column;
@@ -252,91 +250,121 @@
   min-width: 0;
 }
 
-/* One line, always: Unsaved changes, Discard and Save appear on the first edit, and a row that
-   wrapped to make room for them moved everything under it by 40px at 1280px. The tabs give up
-   width instead, cutting names and then scrolling. */
-.scenarioRow {
-  display: flex;
-  align-items: center;
+/* All one width, so a long name cannot make one chip a different shape from the next, and a row
+   is as tall as its tallest chip (the name takes a second line where it needs one). They wrap
+   below instead of scrolling: every scenario is on the page, and so is every value. */
+.chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
   gap: 0.5rem;
   min-width: 0;
 }
 
-.tabs {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
+.chip {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
   min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-  /* Room for the focus ring, which the scroller would otherwise clip. */
-  padding: 3px;
-  margin: -3px;
-}
-
-.tabs::-webkit-scrollbar {
-  display: none;
-}
-
-.scenarioRow > :not(.tabs) {
-  flex: none;
-}
-
-.scenarioRow > .rowSpacer {
-  flex: 1 0 0;
-}
-
-.tab,
-.newTab {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.4375rem 0.875rem;
-  border-radius: 10px;
   border: 1px solid var(--color-border);
+  border-radius: 10px;
   background: var(--color-surface);
   color: var(--color-text);
-  font: inherit;
   font-size: 0.8125rem;
-  cursor: pointer;
 }
 
-.tab:hover,
-.newTab:hover {
+.chip:hover {
   border-color: color-mix(in srgb, var(--color-accent) 55%, var(--color-border));
 }
 
-/* A tab is as wide as its name up to this, and the name gives way to an ellipsis after it: a
-   78 character name made a tab 680px wide and pushed the unsaved buttons to a row of their own. */
-.tab {
-  max-width: 22rem;
-  /* Shrinks with its row down to enough name to tell the scenarios apart. */
-  min-width: 6.5rem;
-  flex: 0 1 auto;
-}
-
-.tabName {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* The pills after the name keep their size; it is the name that is cut. */
-.tabPlan,
-.tabEdited {
-  flex: none;
-}
-
 /* The one in the editor: the accent on its edge and a wash of it behind. */
-.tabOn {
+.chipOn,
+.chipOn:hover {
   border-color: var(--color-accent);
   background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface));
+}
+
+/* The button that opens it covers the whole chip bar the eye, so a name is not a small target. */
+.chipOpen {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.3125rem 0.75rem;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chipOn .chipOpen {
   font-weight: 600;
 }
 
-.newTab {
+/* Two lines of the name and then an ellipsis; the tooltip has the rest. */
+.chipName {
+  flex: 1;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+/* The value, and under it the PLAN and EDITED tags of the open chip: inside the chip, so they are
+   part of it, and in the value's column, so the name keeps its width. Only a tagged chip is taller. */
+.chipSide {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.chipValue {
+  flex: none;
+  min-width: 3.25rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.chipEye {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0 10px 10px 0;
+  background: none;
   color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.chipEye:hover {
+  color: var(--color-text);
+}
+
+/* Hidden from the chart: dimmed, the name struck through and no value, since there is no line. */
+.chipHidden .chipOpen,
+.chipHidden .chipEye {
+  opacity: 0.55;
+}
+
+.chipHidden .chipName {
+  text-decoration: line-through;
+}
+
+.chipTags {
+  display: flex;
+  gap: 3px;
 }
 
 .tabDot {
@@ -348,9 +376,10 @@
 
 .tabPlan,
 .tabEdited {
-  padding: 0.1rem 0.4rem;
+  padding: 0.05rem 0.35rem;
   border-radius: 999px;
-  font-size: 0.65rem;
+  font-size: 0.625rem;
+  line-height: 1.3;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -367,19 +396,44 @@
   background: color-mix(in srgb, var(--exp-warning) 18%, transparent);
 }
 
-.rowSpacer {
-  flex: 1;
+/* What can be done with the open scenario, in the title row beside the view switch. */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-/* The pill hangs from the top of its column in the phone's header, where it was built. In this
-   row everything is centred on one line, and it sat 9px above the buttons beside it. */
-.scenarioRow .rowPill {
+/* As tall as the view switch beside it, and Save and Discard (goals.module.css .btn): the title row
+   is one line of that height, so nothing shifts when those two come. */
+.duplicate {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.duplicate:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-accent) 55%, var(--color-border));
+}
+
+.duplicate:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* The pill hangs from the top of its column in the phone's header, where it was built. Here
+   everything is centred on one line. */
+.actions .rowPill {
   align-self: center;
 }
 
-/* The tab already says Edited, so on a laptop the pill is the first thing to give its room to the
-   tab names; it stays in the page for a screen reader, and shows where there is room for it. */
-.scenarioRow .rowPill {
+/* The chip already says Edited, so on a laptop the pill is the first thing to give its room to
+   the buttons; it stays in the page for a screen reader, and shows where there is room for it. */
+.actions .rowPill {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -391,7 +445,7 @@
 }
 
 @media (min-width: 1500px) {
-  .scenarioRow .rowPill {
+  .actions .rowPill {
     position: static;
     width: auto;
     height: auto;
@@ -401,6 +455,7 @@
     clip-path: none;
   }
 }
+
 .unsavedActions {
   display: flex;
   gap: 0.375rem;
@@ -418,10 +473,10 @@
 }
 
 .menuTrigger {
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 1.9rem;
+  height: 1.9rem;
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--color-surface);
   color: var(--color-text);
   font: inherit;
@@ -825,10 +880,14 @@
    Targets grow to what a touch target is held to elsewhere in the app (about 44px) without moving
    anything where they can, by their own height where they cannot. */
 @media (pointer: coarse) {
-  .tab,
-  .newTab,
+  .chip,
   .allInputs {
     min-height: 2.75rem;
+  }
+
+  /* The eye is 44px wide and, being as tall as its chip, 44px tall. */
+  .chipEye {
+    width: 2.75rem;
   }
 
   .menuTrigger {
@@ -836,10 +895,10 @@
     height: 2.75rem;
   }
 
-  /* Save, Discard and the rest of the buttons in the scenario row, which is 44px tall already for
-     its tabs, and "Reset to defaults", whose row is as tall as the button so nothing under it
-     moves when the button comes. */
-  .scenarioRow button,
+  /* Save, Discard, Duplicate and the rest of the buttons in the title row, and "Reset to
+     defaults", whose row is as tall as the button so nothing under it moves when the button
+     comes. */
+  .actions button,
   .starNote button {
     min-height: 2.75rem;
   }

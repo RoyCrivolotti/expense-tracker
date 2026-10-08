@@ -5,6 +5,7 @@ import type { ChartSeries } from '../../charts/LinearChart'
 import { SegmentedControl } from '../../components/SegmentedControl'
 import { todayIso } from '../../components/transactionFormState'
 import { NetWorthChart } from './charts/NetWorthChart'
+import type { HeroLegendStore } from './charts/heroLegendStore'
 import { GoalsNarrative } from './GoalsNarrative'
 import { NominalPreview } from './NominalPreview'
 import { useGoalsNarrow } from './useGoalsNarrow'
@@ -41,6 +42,8 @@ interface PlanHeroProps {
   /** The plan restarted from the latest check-in, drawn beside the saved one. */
   fromToday: PlanFromToday | null
   display: ValueDisplay
+  /** A wide screen's scenario chips, above the chart, read the lines from here. */
+  legendStore?: HeroLegendStore | undefined
 }
 
 /** The projection of every scenario, with the draft's narrative and the value display under it. */
@@ -52,6 +55,7 @@ export function PlanHero({
   accounts,
   fromToday,
   display,
+  legendStore,
 }: PlanHeroProps) {
   const { activeScenario, deferredDraft } = editor
 
@@ -139,6 +143,7 @@ export function PlanHero({
       displaySwitch={displaySwitch}
       extraSeries={extraSeries}
       fromToday={fromToday}
+      legendStore={legendStore}
       nominalMode={display.mode === 'nominal'}
       viewInflation={display.preview}
       {...(heroTodayIndex !== undefined ? { todayIndex: heroTodayIndex } : {})}

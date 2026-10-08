@@ -33,7 +33,8 @@
   left: 0;
 }
 
-.floater .breakdownStack {
+.floater .breakdownStack,
+.slot .breakdownStack {
   display: flex;
   flex-wrap: wrap;
   gap: 0.65rem 1.25rem;
@@ -42,25 +43,46 @@
   border-top: none;
 }
 
-.floater .breakdownNote {
+.floater .breakdownNote,
+.slot .breakdownNote {
   flex-basis: 100%;
   margin: 0;
 }
 
-.floater .breakdownStack .breakdown + .breakdown {
+.floater .breakdownStack .breakdown + .breakdown,
+.slot .breakdownStack .breakdown + .breakdown {
   margin-top: 0;
   padding-top: 0;
   border-top: none;
 }
 
-.floater .breakdownList {
+.floater .breakdownList,
+.slot .breakdownList {
   display: grid;
   grid-template-columns: repeat(2, auto);
   column-gap: 1.25rem;
 }
 
-.floater .yearZeroHint {
+.floater .yearZeroHint,
+.slot .yearZeroHint {
   margin: 0;
+}
+
+/* Under the wide chart: the chart's note, or in its place the breakdown of the purchase year pointed
+   at. Where a line has a purchase it is as tall as a breakdown at all times (two scenarios side by
+   side, one row of figures each), so pointing at the year moves nothing. */
+.slot {
+  margin-top: 0.5rem;
+  min-width: 0;
+}
+
+.slotReserved {
+  min-height: 4.5rem;
+}
+
+/* The nominal view adds the line saying the breakdown is in today's money. */
+.slotReservedNote {
+  min-height: 5.75rem;
 }
 
 .hint {
