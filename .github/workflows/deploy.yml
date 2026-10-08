@@ -5,9 +5,13 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# A deploy that is running always finishes, and only the newest one waiting is kept. Cancelling
+# would be quicker, but a cancel can land in the middle of a migration and leave a database half
+# changed. A prod migration waiting for approval holds the queue; reject it to let the next
+# deploy through.
 concurrency:
   group: expense-tracker-deploy
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   CLOUDFLARE_ACCOUNT_ID: '800abdfb2ec1687266f66fd349c41d6a'
@@ -18,35 +22,85 @@ jobs:
   ci:
     uses: ./.github/workflows/ci.yml
 
-  # Runs beside `ci`, so it adds no time. The code about to ship may read columns a migration
-  # adds, so a deploy stops here, before anything is deployed, if either database is behind
-  # the migration files or its record cannot be trusted. Read-only: nothing is applied.
+  # Runs beside `ci`, so it adds no time. Reads both databases, read-only, and says what the deploy
+  # has to do. A database with nothing pending must also have the columns its migrations make; one
+  # with something pending is checked the same way after the migration is applied. A record that
+  # cannot be trusted, or a database that cannot be read, stops the deploy here.
   schema:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    outputs:
+      dev_pending: ${{ steps.plan.outputs.dev_pending }}
+      prod_pending: ${{ steps.plan.outputs.prod_pending }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-node-deps
+
+      - name: What each database needs
+        id: plan
+        run: |
+          plan() {
+            database="$1"; name="$2"; code=0
+            npm run migrate -- "$database" || code=$?
+            case "$code" in
+              0) npm run check:schema -- "$database"; echo "${name}_pending=false" >> "$GITHUB_OUTPUT" ;;
+              1) echo "${name}_pending=true" >> "$GITHUB_OUTPUT" ;;
+              *) echo "::error::$database: its migration record cannot be trusted, or it could not be read. Nothing was deployed. See docs/DEPLOYMENT.md, Migrations."; return 1 ;;
+            esac
+          }
+          plan "$PROD_D1_NAME" prod
+          plan "$DEV_D1_NAME" dev
+
+  # Dev goes first, so a migration that does not apply is found where it costs nothing.
+  migrate-dev:
+    needs: schema
+    if: needs.schema.outputs.dev_pending == 'true'
     runs-on: ubuntu-latest
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-node-deps
+      - run: npm run migrate -- "$DEV_D1_NAME" --apply
+      - run: npm run check:schema -- "$DEV_D1_NAME"
 
-      - name: Production has every migration
-        run: npm run migrate -- "$PROD_D1_NAME"
-      - name: Production's columns are what the migrations make
-        run: npm run check:schema -- "$PROD_D1_NAME"
-      - name: Dev has every migration
-        run: npm run migrate -- "$DEV_D1_NAME"
-      - name: Dev's columns are what the migrations make
-        run: npm run check:schema -- "$DEV_D1_NAME"
-
-      - name: What to do
+  # Waits for approval in GitHub (the `production` environment), but only when production has
+  # something pending, so a deploy with no migration never waits. The restore point it takes is
+  # on this run's summary; docs/DEPLOYMENT.md says what to do if the migration goes wrong.
+  migrate-prod:
+    needs: [ci, schema, migrate-dev]
+    if: >-
+      ${{ !cancelled()
+      && needs.ci.result == 'success'
+      && needs.schema.result == 'success'
+      && needs.schema.outputs.prod_pending == 'true'
+      && contains(fromJSON('["success","skipped"]'), needs.migrate-dev.result) }}
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-node-deps
+      - run: npm run migrate -- "$PROD_D1_NAME" --apply
+      - run: npm run check:schema -- "$PROD_D1_NAME"
+      - name: The way back
         if: failure()
         run: |
-          echo "::error::A database is behind the migrations, or its record cannot be trusted. Nothing was deployed."
-          echo "Apply the missing migrations with: npm run migrate -- <database> --apply"
-          echo "(see docs/DEPLOYMENT.md, Migrations), then re-run the failed jobs of this run."
+          echo "::error::The production migration did not finish. Nothing was deployed."
+          echo "The restore point is in the log above and on this run's summary."
+          echo "To restore: run the 'Restore database' workflow (docs/DEPLOYMENT.md, If a migration goes wrong)."
 
+  # A skipped migration job means there was nothing to migrate; a failed one stops the deploy.
   ship:
-    needs: [ci, schema]
+    needs: [ci, schema, migrate-dev, migrate-prod]
+    if: >-
+      ${{ !cancelled()
+      && needs.ci.result == 'success'
+      && needs.schema.result == 'success'
+      && contains(fromJSON('["success","skipped"]'), needs.migrate-dev.result)
+      && contains(fromJSON('["success","skipped"]'), needs.migrate-prod.result) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
