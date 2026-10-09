@@ -236,7 +236,12 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 //
 // Raised from 271.72 KB to 271.99 KB for the spread table's wording (which euros each amount is in, what a run is,
 // where the bounce is set): about 180 bytes gzip took the total from 271,610 to 271,793 bytes. No new library.
-const TOTAL_MAX_GZIP = 271_990
+//
+// Raised from 271.99 KB to 272.8 KB for the spread card's fixes (a boundary that keeps a failed load to the card, the
+// hooks that hold the two market replays until the edits settle and the card is near the screen, and the card's table
+// in the scroller the milestone table uses): about 720 bytes gzip took the total from 271,793 to 272,517 bytes. The
+// card still waits for the page before it loads. No new library.
+const TOTAL_MAX_GZIP = 272_800
 const GOALS_MAX_GZIP = 72_860
 
 function gzipBytes(path) {
