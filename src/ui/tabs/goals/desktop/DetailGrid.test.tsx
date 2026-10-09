@@ -1,10 +1,11 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { act, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { installFakeIntersectionObserver } from '../../../../testing/fakeIntersectionObserver'
 import { makeScenario } from '../../../../testing/factories'
 import { DetailGrid } from './DetailGrid'
 
-function renderGrid() {
-  const { id, ...draft } = makeScenario()
+function renderGrid(over: Parameters<typeof makeScenario>[0] = {}) {
+  const { id, ...draft } = makeScenario(over)
   void id
   return render(
     <DetailGrid
@@ -60,5 +61,26 @@ describe('DetailGrid', () => {
     expect(titles()[1]).toBe('Years to milestone')
     const columns = document.querySelectorAll('[class*="detailColumn"]')
     expect(columns).toHaveLength(2)
+  })
+
+  describe('the two cards that replay the market', () => {
+    afterEach(() => {
+      vi.restoreAllMocks()
+      vi.unstubAllGlobals()
+    })
+
+    it('leaves their replays until they are near the screen', async () => {
+      const io = installFakeIntersectionObserver()
+      // Everything is far below the screen.
+      vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({ top: 9000, bottom: 9400 } as DOMRect)
+      renderGrid({ startInvestedCents: 1_000_000_00, annualSpendCents: 2_400_000 })
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(screen.getByText('Working it out…')).toBeInTheDocument()
+      expect(screen.queryByText(/the money lasts all 30 years in/)).not.toBeInTheDocument()
+
+      act(() => io.emit(0.3))
+      expect(await screen.findByText(/Each of the 10.000 runs replays your plan/)).toBeInTheDocument()
+      expect(screen.getByText(/the money lasts all 30 years in/)).toBeInTheDocument()
+    })
   })
 })

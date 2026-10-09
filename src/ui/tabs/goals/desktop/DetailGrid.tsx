@@ -9,6 +9,7 @@ import { RentVsOwnChart } from '../charts/RentVsOwnChart'
 import { SavingsRateChart } from '../charts/SavingsRateChart'
 import { LazySpreadChart } from '../charts/LazySpreadChart'
 import { ScenarioComparison } from '../charts/ScenarioComparison'
+import { NearScreen } from './NearScreen'
 import type { InvestedSnapshot } from '../checkinDate'
 import { STACK_CHART_HEIGHT } from '../secondaryChartHeight'
 import styles from './planDesktop.module.css'
@@ -72,7 +73,7 @@ export function DetailGrid({
       <div className={styles.detailGrid}>
         <div className={styles.detailColumn}>
           <ScenarioComparison scenarios={scenarios} draft={draft} includeDraft={includeDraft} fromToday={fromToday} />
-          <FireChart draft={draft} height={STACK_CHART_HEIGHT} />
+          <NearScreen>{(near) => <FireChart draft={draft} height={STACK_CHART_HEIGHT} paused={!near} />}</NearScreen>
           <SavingsRateChart draft={draft} monthly={monthly} height={STACK_CHART_HEIGHT} />
         </div>
         <div className={styles.detailColumn}>
@@ -82,7 +83,9 @@ export function DetailGrid({
         </div>
       </div>
       <div className={`${styles.detailWide} ${styles.detailWideLast}`}>
-        <LazySpreadChart draft={draft} milestones={milestones} nominal={nominal} height={STACK_CHART_HEIGHT} />
+        <NearScreen>
+          {(near) => <LazySpreadChart draft={draft} milestones={milestones} nominal={nominal} height={STACK_CHART_HEIGHT} paused={!near} />}
+        </NearScreen>
       </div>
     </section>
   )

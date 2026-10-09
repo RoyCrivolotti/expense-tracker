@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { act, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { makeScenario } from '../../../../testing/factories'
 import { AssumedInflationContext } from '../../../hooks/assumedInflationContext'
 import { MarketVolatilityContext } from '../../../hooks/marketVolatilityContext'
@@ -173,5 +173,40 @@ describe('FireChart chance the money lasts', () => {
   it('has nothing to say without spending to cover', () => {
     render(<FireChart draft={draftOf({ startInvestedCents: 100_000_000, annualSpendCents: 0 })} />)
     expect(screen.queryByText(/Started at the target/)).not.toBeInTheDocument()
+  })
+
+  describe('while the plan is being edited', () => {
+    afterEach(() => vi.useRealTimers())
+    const odds = () => screen.queryByText(/of 100 runs/)?.textContent ?? null
+    const plan = (over = {}) => draftOf({ startInvestedCents: 1_000_000_00, annualSpendCents: 2_400_000, ...over })
+
+    it('keeps the odds it had until the edits have stopped for a moment, and the rest of the card follows at once', () => {
+      vi.useFakeTimers()
+      const { rerender } = render(<FireChart draft={plan()} />)
+      const before = odds()
+      expect(before).not.toBeNull()
+      rerender(<FireChart draft={plan({ expectedRealReturn: 0.02, annualSpendCents: 1_200_000 })} />)
+      expect(odds()).toBe(before)
+      expect(screen.getByText(/FI target 300k/)).toBeInTheDocument()
+      act(() => void vi.advanceTimersByTime(250))
+      expect(odds()).not.toBe(before)
+    })
+
+    it('leaves the odds out while the card has not been near the screen, and shows them once it is', () => {
+      vi.useFakeTimers()
+      const { rerender } = render(<FireChart draft={plan()} paused />)
+      expect(odds()).toBeNull()
+      rerender(<FireChart draft={plan()} />)
+      expect(odds()).not.toBeNull()
+    })
+
+    it('keeps the odds it had while the card is far from the screen', () => {
+      vi.useFakeTimers()
+      const { rerender } = render(<FireChart draft={plan()} />)
+      const before = odds()
+      rerender(<FireChart draft={plan({ expectedRealReturn: 0.02 })} paused />)
+      act(() => void vi.advanceTimersByTime(1000))
+      expect(odds()).toBe(before)
+    })
   })
 })

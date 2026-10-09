@@ -20,6 +20,7 @@ import { planMoneyLabel } from '../planMoneyLabel'
 import { yearLabel } from '../yearLabel'
 import { ChartShell } from './ChartShell'
 import { ScrollRegion } from './ScrollRegion'
+import { useReplayInputOrLive } from './useReplayInput'
 import {
   SPREAD_RUNS,
   fiRow,
@@ -41,11 +42,14 @@ export interface SpreadChartProps {
   runs?: number
   height?: number
   embedded?: boolean
+  /** The card is far from the screen: leave the replay as it is until it is near again. */
+  paused?: boolean
 }
 
-function SpreadChartImpl({ draft: liveDraft, milestones, nominal = false, runs = SPREAD_RUNS, height = 210, embedded = false }: SpreadChartProps) {
+function SpreadChartImpl({ draft: liveDraft, milestones, nominal = false, runs = SPREAD_RUNS, height = 210, embedded = false, paused = false }: SpreadChartProps) {
+  // The replay waits until the edits have stopped for a moment, and until the card is near the screen.
   // The inputs are painted first and the replay follows, so typing is not held up by it.
-  const draft = useDeferredValue(liveDraft)
+  const draft = useDeferredValue(useReplayInputOrLive(liveDraft, paused))
   const inflationRate = useAssumedInflation()
   const volatility = useMarketVolatility()
   const format = useMoneyFormat()
