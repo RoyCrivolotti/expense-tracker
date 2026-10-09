@@ -2,6 +2,16 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (found by the last review before the planning changes landed)
+
+- **A balance exactly on the plan's line no longer reads as started behind.** The gap split took the start part from the plan's own path and not from the line the status compares with, so a first check-in a few years in, exactly on the line, showed thousands behind "at the start" and offered to restart the plan. The start part is now the first check-in's gap to the line.
+- **A good month is no longer "more than markets give".** The 30% line was held against what a short stretch would compound to over a year, so +3% in five weeks tripped it. Under a year it is held against the growth the stretch had.
+- **A milestone is not on track in green when your check-ins put it past its target.** The chip judged the plan's own date; once the plan restarted from your latest check-in reaches it after the target, or not at all, the chip says behind and shows both dates.
+- **Edit and the remove cross of a change are 24px, and stay together when the row wraps.** They were 26 by 15 and 13 by 16 pixels, 4px apart.
+- **The shortfall note is announced when it appears**, the years under the rent vs buy chart say they count from the purchase ("10y"), and the house price hint says the price is the one at the plan's start.
+- **The spread card on a phone no longer makes the page jump on its first tap in Safari**: its code is fetched ahead of its chip. A card scrolling near the screen reads the last sighting of a batch, not the first.
+- **A mortgage term shorter than a day is refused**, where 5e-324 years made the payment infinite.
+
 ## October 2026 (words that were not true for every plan)
 
 - **Rent vs buy no longer says buying stays ahead "the whole way"** above a legend that shows the buyer starting lower by the fees. It says buying is ahead in every year after you buy, and the note on what the plan leaves out says while owning costs more a month than renting, which is when it is true.
@@ -75,7 +85,7 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 
 ## October 2026 (how far luck could move the plan)
 
-- **A new card shows the plan against 10.000 different markets.** The plan is one line, which is the middle of the futures and not a floor. The card replays it with random yearly returns around the typical one, draws the middle run, the middle half as a shaded band and the 10th and 90th rank as dashed lines, and says in a sentence where they end. A table gives the years in which the middle half of the runs and 8 in 10 of them first reach each milestone and the FI target ("2044 to 2049", or "not within 30 years"), and how many of 100 runs get there. It uses the Market bounce from Assumptions, shows in the Nominal view when that is chosen, and is last in the second column on a wide screen and last in the phone's chart picker, "Spread". Only the market changes in the replay: the saving, the house, the events and the inflation are as planned.
+- **A new card shows the plan against 10.000 different markets.** The plan is one line, which is the middle of the futures and not a floor. The card replays it with random yearly returns around the typical one, draws the middle run, the middle half as a shaded band and the 10th and 90th rank as dashed lines, and says in a sentence where they end. A table gives the years in which the middle half of the runs and 8 in 10 of them first reach each milestone and the FI target ("2044 to 2049", or "not within 30 years"), and how many of 100 runs get there. It uses the Market bounce from Assumptions, shows in the Nominal view when that is chosen, and has the whole width under the two columns on a wide screen and is last in the phone's chart picker, "Spread". Only the market changes in the replay: the saving, the house, the events and the inflation are as planned.
 
 ## October 2026 (the market's bounce is a setting)
 
@@ -190,13 +200,13 @@ Checked in Chromium and in Safari's engine, at 1280px and at 375px.
 
 ## October 2026 (monthly investing is what you send)
 
-- **The monthly amount is what leaves your account, and the plan counts it in today's money.** The plan used to read 1.000 € a month as 1.000 € of today's money every year, which meant sending more each year: 3% inflation takes it to about 2.400 € by year 30. Someone who sends the same 1.000 € for thirty years was shown a plan that needs those larger payments. Now 1.000 € means 1.000 € each month, and each year's payments are brought back by the assumed inflation, so by year 30 a payment counts for about 55% of what the same amount did at the start at 2% inflation (41% at 3%). The figures of every saved scenario come out lower when inflation is above 0%, by more the longer the horizon.
+- **The monthly amount is what leaves your account, and the plan counts it in the euros of its start year.** The plan used to read 1.000 € a month as 1.000 € of today's money every year, which meant sending more each year: 3% inflation takes it to about 2.400 € by year 30. Someone who sends the same 1.000 € for thirty years was shown a plan that needs those larger payments. Now 1.000 € means 1.000 € each month, and each year's payments are brought back by the assumed inflation, so by year 30 a payment counts for about 55% of what the same amount did at the start at 2% inflation (41% at 3%). The figures of every saved scenario come out lower when inflation is above 0%, by more the longer the horizon.
 - **The editor and the glossary say so.** "Monthly investing" has an entry under "What do these terms mean?", and the section for changes starts with what the amount is and how it is counted.
-- **The pace comparison is in one money.** What the plan invests each month and what the transactions show are both what left the account, where before the plan's figure was in today's money.
+- **The pace comparison is in one money.** What the plan invests each month and what the transactions show are both what left the account, where before the plan's figure was in the plan's euros.
 
 ## October 2026 (Contribution growth removed)
 
-- **Contribution growth is gone from the inputs.** It raised the monthly amount by a percentage on each anniversary of the plan start, which was easy to set without seeing what it did: 3% a year turned 1.000 € a month into about 2.400 € by year 30. A raise is now a dated change under "Monthly investing changes", which says the month and the amount. The setting was at 0% on every saved scenario, so no figure moves.
+- **Contribution growth is gone from the inputs.** It raised the monthly amount by a percentage on each anniversary of the plan start, which was easy to set without seeing what it did: 3% a year turned 1.000 € a month into about 2.400 € by year 30. A raise is now a dated change under "Monthly investing over time", which says the month and the amount. The setting was at 0% on every saved scenario, so no figure moves.
 - **A saved levers bar that had it drops it.** The five inputs the bar keeps are unchanged otherwise.
 - **A re-baseline takes the amount you are investing at the check-in.** It used to count the raises so far, rounded to the nearest whole year, so the amount could come out one raise ahead for up to six months.
 
@@ -254,7 +264,7 @@ single line. The confirmation names the new description ("Renamed 14 transaction
 ## October 2026 (Goals: monthly investing that changes)
 
 - **A scenario can change what it invests each month, from a date.** "From March 2028, 2,500 a
-  month", or a pause, added under "Monthly investing changes" on the Goals plan. Before the first
+  month", or a pause, added under "Monthly investing over time" on the Goals plan. Before the first
   change the scenario is exactly as it was, so nothing you have saved moves. After one, the line,
   the milestone dates, the comparison table and the "What this means" sentence follow it.
 - **The figures that compare you with the plan follow it too.** Months ahead or behind, the pace
