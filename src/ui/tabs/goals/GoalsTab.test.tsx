@@ -832,6 +832,22 @@ describe('GoalsTab', () => {
       expect(note).toHaveTextContent('return and contributions apply before the down payment comes out')
     })
 
+    it('says up to three points when the return is under three, since the band stops at zero', () => {
+      const dataset = makeDataset({ goalScenarios: [makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true, expectedRealReturn: 0.02 })] })
+      render(<GoalsTab model={buildExpenseModel(dataset)} />)
+
+      // A plan at 2% has no plan at -1% to draw: the band's low edge is the 0% plan, two points down, not three.
+      expect(screen.getByText(/Dashed vertical lines mark purchase years/)).toHaveTextContent('at a real return of 0,0% to 5,0%, up to three points either side.')
+    })
+
+    it('says it on a phone too, above the chart', () => {
+      mockPhoneWidth()
+      const dataset = makeDataset({ goalScenarios: [makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true, expectedRealReturn: 0.02 })] })
+      render(<GoalsTab model={buildExpenseModel(dataset)} />)
+
+      expect(screen.getByText(/The shaded band is the edited plan at a return up to three points lower and three points higher/)).toBeInTheDocument()
+    })
+
     it('keeps the summary box, the switch under it and the explanation above the chart on a phone', () => {
       mockPhoneWidth()
       render(<GoalsTab model={makeModel()} />)

@@ -27,7 +27,10 @@ export interface RetirementOdds {
   years: number
   /** The share of runs, from 0 to 1, in which every year's withdrawal was paid in full. */
   lasts: number
-  /** How many years of withdrawals the unluckiest tenth of the runs paid in full (all of them when 90% last). */
+  /**
+   * How many years of withdrawals one run in ten paid in full or fewer (all of them when 90% last): the cut-off of
+   * the unluckiest tenth, not what that tenth got, which is less on average.
+   */
   unluckiestTenth: number
 }
 

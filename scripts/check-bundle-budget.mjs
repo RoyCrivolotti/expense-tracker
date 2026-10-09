@@ -245,7 +245,11 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // Raised from 272.8 KB to 273.24 KB for the rent vs buy note and the House section saying what moves the answer and
 // what the plan leaves out of the portfolio: about 430 bytes gzip of text took the total from 272,517 to 272,945 bytes.
 // No new library.
-const TOTAL_MAX_GZIP = 273_240
+//
+// Raised from 273.24 KB to 273.6 KB for the plain-language fixes (what the return and spending notes leave out, the
+// bounce card's note on bonds, the odds line's cut-off, the unrecorded-investing note and the band's reach): about 365
+// bytes gzip of text took the total from 272,945 to 273,310 bytes. No new library.
+const TOTAL_MAX_GZIP = 273_600
 const GOALS_MAX_GZIP = 72_860
 
 function gzipBytes(path) {

@@ -2,6 +2,15 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (what the plan counts and what it leaves out)
+
+- **The return and spending notes say what the plan leaves out.** Enter the rate the money compounds at, not the average of yearly returns (higher by about a point for stocks), and the return after fund costs and tax; the spending is before the tax on what is withdrawn, so add it.
+- **The withdrawal guide is called a rule of thumb**, not a safe rate: each rate in it fails in 13 to 24 of 100 simulated markets under the defaults, and the FI chart says how often.
+- **Choosing a bond-heavy bounce says to lower the return too.** The usual bounces of 11% and 7% lower only the bounce, and with the return left at a stock-like 5% the chance of the money lasting jumped from 86 to 93 or 99 of 100. The glossary gives 86 for a 5% return and a 15% bounce, which is when it is true.
+- **The odds line says what its cut-off means.** "In the unluckiest tenth it lasts 25 years" read as what the worst tenth gets, when 25 is the best of that tenth. It says "in 10 of the 100 it lasts 25 years or less".
+- **The note that unrecorded investing counts as the market shows whenever the saving reads less than planned**, not only below half of the plan: someone who invested exactly the plan and recorded 60% of it read two false rows of about 5.000 euros each.
+- **The shaded band says "up to three points" below a 3% return**, where it stops at zero. The timing row of the gap split says it is not something you did.
+
 ## October 2026 (rent vs buy says what it assumes)
 
 - **Rent vs buy no longer says buying was ahead for years it was not.** "Buying is ahead for the first 15 years" was written from the last year buying led, so a buyer who trailed in the opening years (the fees weigh) was said to lead them. It says "Renting overtakes buying 16 years after you buy and stays ahead to the end", which is always true.

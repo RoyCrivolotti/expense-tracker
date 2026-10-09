@@ -45,9 +45,10 @@ export function RetirementYearsField({
       />
       <p className={styles.fieldHint}>
         How long the invested money has to pay for your spending after FI. The longer, the lower the withdrawal rate
-        that is safe: the usual guide is {guideText(format)}, so {draft.retirementYears} years points to{' '}
-        {plainPercent(recommendedWithdrawalRate(draft.retirementYears), format)}. Changing the years moves the rate to
-        the guide unless you have set the rate yourself.
+        has to be: the usual guide is {guideText(format)}, so {draft.retirementYears} years points to{' '}
+        {plainPercent(recommendedWithdrawalRate(draft.retirementYears), format)}. It is a rule of thumb, not a
+        promise: the FI chart shows how often the money lasts in simulated markets. Changing the years moves the rate
+        to the guide unless you have set the rate yourself.
       </p>
     </>
   )

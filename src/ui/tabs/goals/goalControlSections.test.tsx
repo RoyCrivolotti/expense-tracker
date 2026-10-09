@@ -64,6 +64,13 @@ describe('the sections of the controls', () => {
     expect(screen.getByText(/Real return: about 5% a year after inflation/)).toBeInTheDocument()
   })
 
+  it('says to enter the rate the money compounds at, not the average of yearly returns, and that fund costs and tax are not taken out', () => {
+    render(<PortfolioFields draft={makeDraft()} onChange={vi.fn()} omit={everything(['expectedRealReturn'])} />)
+    const note = screen.getByText(/Real return: about 5% a year after inflation/)
+    expect(note).toHaveTextContent('Enter the rate your money compounds at, not the simple average of yearly returns, which is higher by about a point for stocks.')
+    expect(note).toHaveTextContent('The plan takes out no fund costs or tax, so enter the return after them.')
+  })
+
   it('still says what the purchase takes from the portfolio when its year is in the bar', () => {
     // It is worked out from the draft and is said nowhere else, so it does not leave with the year.
     render(<HousingFields draft={makeDraft()} onChange={vi.fn()} omit={everything(['housePurchaseYear'])} />)
@@ -208,6 +215,19 @@ describe('the sections of the controls', () => {
     expect(screen.getAllByLabelText('Years the money must last').length).toBeGreaterThan(0)
     expect(screen.getByText(/the usual guide is 4% up to 35 years, 3,5% up to 49 and 3,25% from 50, so 40 years points to 3,5%/)).toBeInTheDocument()
     expect(screen.getByText(/moves the rate to the guide unless you have set the rate yourself/)).toBeInTheDocument()
+  })
+
+  it('calls the guide a rule of thumb, not a safe rate, and points to the chart that shows how often the money lasts', () => {
+    render(<FireFields draft={{ ...makeDraft(), retirementYears: 30 }} onChange={vi.fn()} omit={everything(SECTION_KEYS.fire)} />)
+    const hint = screen.getByText(/How long the invested money has to pay for your spending after FI/)
+    expect(hint).toHaveTextContent('The longer, the lower the withdrawal rate has to be: the usual guide is 4% up to 35 years, 3,5% up to 49 and 3,25% from 50, so 30 years points to 4%.')
+    expect(hint).toHaveTextContent('It is a rule of thumb, not a promise: the FI chart shows how often the money lasts in simulated markets.')
+    expect(hint).not.toHaveTextContent('that is safe')
+  })
+
+  it('says to add the tax on what is withdrawn, since the plan does not, under the spending', () => {
+    render(<FireFields draft={makeDraft()} onChange={vi.fn()} />)
+    expect(screen.getByText(/Yearly cost of living you would need the portfolio to cover after FI/)).toHaveTextContent('Add the tax on what you withdraw: the plan does not.')
   })
 
   it('moves the withdrawal rate with the years while it is the guide, and leaves one set by hand alone', () => {

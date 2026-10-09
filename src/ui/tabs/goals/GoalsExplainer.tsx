@@ -52,11 +52,11 @@ const buildTerms = (cur: string): { term: string; body: string }[] => [
   },
   {
     term: 'Market bounce',
-    body: "How far a single year's return strays from the typical one. The plan assumes the typical return every year, which no run of years pays. The spread card replays the plan in 10.000 different markets, each year's return the typical one times a luck factor with this bounce (15% by default, about world stocks), and shows where the middle half of them and 8 in 10 of them end up. You set it in the Market bounce card in Assumptions. A mixed portfolio bounces less, so choose a lower one for it.",
+    body: "How far a single year's return strays from the typical one. The plan assumes the typical return every year, which no run of years pays. The spread card replays the plan in 10.000 different markets, each year's return the typical one times a luck factor with this bounce (15% by default, about world stocks), and shows where the middle half of them and 8 in 10 of them end up. You set it in the Market bounce card in Assumptions. A mixed portfolio bounces less but also grows less: choose a lower bounce here and a lower return on the plan.",
   },
   {
     term: 'Chance the money lasts',
-    body: "In how many of 100 different markets the money lasts all the years you asked for. Each run starts at the FI target, takes the spending out every year and grows what is left by the typical return times a luck factor with the market bounce. At 4% over 30 years it lasts in about 86 of 100: the other 14 are the runs with bad early years. A lower rate lasts more often, and a longer retirement less often. It is a picture of the plan's own market, not a promise.",
+    body: "In how many of 100 different markets the money lasts all the years you asked for. Each run starts at the FI target, takes the spending out every year and grows what is left by the typical return times a luck factor with the market bounce. With a typical return of 5% and a bounce of 15%, 4% over 30 years lasts in about 86 of 100: the other 14 are the runs with bad early years. A lower rate, a higher return or a smaller bounce lasts more often, and a longer retirement less often. It is a picture of the plan's own market, not a promise.",
   },
   {
     term: 'Drawdown',

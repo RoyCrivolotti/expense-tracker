@@ -52,7 +52,7 @@ export interface GapSplit {
   beforeFirstCheckin: boolean
   parts: GapParts
   merged: MergedReason | null
-  /** Less than half of what the plan puts in was recorded: investments made and not recorded are in the market. */
+  /** The recorded investing falls short of the plan's by at least a planned month, which is when the saving row reads less than planned: what was put in and not recorded is in the market. */
   recordedShort: boolean
   /** An investment account has a balance at one check-in and none at the other. */
   accountsChanged: boolean
@@ -200,7 +200,7 @@ export function splitGap(
   const carried = ownB + (statusA.actualRealInvestedCents - ownA) * growth
   const withFlows = statusA.actualRealInvestedCents * growth + recorded.grown
   const [m, s, f] = [Math.round(ownB), Math.round(carried), Math.round(withFlows)]
-  const planned = ownB - ownA * growth
+  const plannedMonthCents = Math.round(plannedMonthlyAt(plan, w.last.checkinDate) / Math.pow(1 + inflationRate, w.tb))
   const merged = mergedReason(read, plan, events, flows, accounts, recorded.count)
 
   return {
@@ -217,9 +217,9 @@ export function splitGap(
       market: statusB.actualRealInvestedCents - f,
     },
     merged,
-    recordedShort: merged === null && planned > 0 && recorded.grown < MATCH_SHARE * planned,
+    recordedShort: merged === null && plannedMonthCents > 0 && f - s <= -plannedMonthCents,
     accountsChanged: accountsChanged(w.first, w.last, accounts),
-    plannedMonthCents: Math.round(plannedMonthlyAt(plan, w.last.checkinDate) / Math.pow(1 + inflationRate, w.tb)),
+    plannedMonthCents,
   }
 }
 

@@ -4,7 +4,8 @@ import { AssumptionsView } from './AssumptionsView'
 import { GoalsExplainer } from './GoalsExplainer'
 import { GoalsTab } from './GoalsTab'
 import { buildExpenseModel } from '../../buildExpenseModel'
-import { defaultExpenseSettings } from '../../../engine'
+import { defaultExpenseSettings, fireNumber, replayRetirement } from '../../../engine'
+import { ODDS_RUNS, runsOfHundred } from './charts/retirementOddsLine'
 import { makeDataset } from '../../../testing/factories'
 import { makeActions } from '../../../testing/makeActions'
 
@@ -30,6 +31,30 @@ describe('Goals copy that names the Assumptions tab', () => {
     const { container } = render(<GoalsExplainer />)
 
     expect(container.textContent).toContain('You set it in the Market bounce card in Assumptions.')
+  })
+
+  it('says that a mixed portfolio bounces less but also grows less, so the return comes down with the bounce', () => {
+    const { container } = render(<GoalsExplainer />)
+
+    expect(container.textContent).toContain('A mixed portfolio bounces less but also grows less: choose a lower bounce here and a lower return on the plan.')
+  })
+
+  it('gives the chance of the money lasting for the return and bounce it is true for, and the figure is what the engine says', () => {
+    const { container } = render(<GoalsExplainer />)
+    const spend = 3_000_000
+    const lasts = replayRetirement({
+      startCents: fireNumber(spend, 0.04),
+      annualWithdrawalCents: spend,
+      realReturn: 0.05,
+      volatility: 0.15,
+      years: 30,
+      runs: ODDS_RUNS,
+    }).lasts
+
+    expect(runsOfHundred(lasts)).toBe(86)
+    expect(container.textContent).toContain(
+      'With a typical return of 5% and a bounce of 15%, 4% over 30 years lasts in about 86 of 100: the other 14 are the runs with bad early years. A lower rate, a higher return or a smaller bounce lasts more often, and a longer retirement less often.',
+    )
   })
 
   it('introduces the Assumptions view in plain sentences', () => {
