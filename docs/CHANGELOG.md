@@ -2,6 +2,10 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (the upkeep of the house is an input)
+
+- **Rent vs buy shows what it assumes for owning costs.** It had counted 1,5% of the house's value a year (repairs, property tax and insurance) against the buyer without saying so. The Housing section now has "Upkeep, tax and insurance", per scenario, beside the rent, and the chart reads it. Existing scenarios keep 1,5%, so no figure moves until it is changed. Needs migration 0032 on production before this is deployed.
+
 ## October 2026 (Progress says where the gap comes from)
 
 - **Ahead or behind now comes with the reasons.** Under the status line, rows in the plan's euros that add up to the gap: where you started, investing more or less than the plan puts in, the market doing better or worse than the plan assumes, and a small muted line for how the plan counts time within each year. A row that is nothing is left out. For example, 12.000 € ahead: +9.000 € from investing more than planned, +4.000 € from the market, -1.000 € from a lower start.

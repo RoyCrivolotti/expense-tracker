@@ -77,7 +77,7 @@ The projection is linear in contributions, so a schedule needs no new algorithm:
 | House appreciation | 2.5% / year |
 | Mortgage | 3% × 30 years |
 | Rent (when not owning) | €1,200 / month |
-| Home carry (rent vs buy) | 1.5% / year of home value (maintenance + tax + insurance; engine default, not yet a UI control) |
+| Home carry (rent vs buy) | 1.5% / year of home value (maintenance + tax + insurance) for a new scenario (`DEFAULT_HOME_CARRY_RATE`); per scenario since migration 0032 (`homeCarryRate`, `goal_scenarios.home_carry_rate`), shown in the Housing section as "Upkeep, tax and insurance" and held between 0 and 10% by the server |
 
 `housePurchaseYear`: `null` = never buy; `0` = owned from day one (capital already
 allocated); `N > 0` = buy after year N (withdraw down payment + costs that year).
