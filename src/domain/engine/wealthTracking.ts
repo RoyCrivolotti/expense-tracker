@@ -5,7 +5,7 @@
  *   - The projected invested-portfolio value at any calendar date.
  *   - An on/off-track status: delta in € and the months it is along the plan's line.
  */
-import { dateAtYears, yearsBetween } from './dates'
+import { dateAtYears, isCalendarDate, yearsBetween } from './dates'
 import { measurePlanDistance } from './planDistance'
 import { planLineOf, planValueAt } from './planLine'
 import { readAgainst } from './planStepWindow'
@@ -66,13 +66,6 @@ export function trackVerdict(status: Pick<TrackStatus, 'onTrack' | 'deltaCents'>
 export function yearOffsetFromDate(planStartDate: string, targetDate: string): number | null {
   if (!isCalendarDate(planStartDate) || !isCalendarDate(targetDate)) return null
   return yearsBetween(planStartDate, targetDate)
-}
-
-/** A `YYYY-MM-DD` that is a day on the calendar: a date that merely looks like one would roll over into another. */
-function isCalendarDate(value: string): boolean {
-  if (!value?.match(/^\d{4}-\d{2}-\d{2}$/)) return false
-  const parsed = new Date(`${value}T00:00:00Z`)
-  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
 }
 
 /** The date a fractional year offset from the plan start falls on, counted as `yearOffsetFromDate` counts. */
