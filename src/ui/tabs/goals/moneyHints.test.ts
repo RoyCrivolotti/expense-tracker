@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { EU_MONEY_FORMAT, scenarioToParams, yearsToFi } from '../../../engine'
 import { samplePlan, SAMPLE_INFLATION } from '../../../testing/samplePlan'
 import { onAccountCents } from './bothMoneys'
-import { rentMoneyHint, spendMoneyHint } from './moneyHints'
+import { monthlyAmountMoneyHint, rentMoneyHint, spendMoneyHint } from './moneyHints'
 
 const spend = (over = {}, inflation = SAMPLE_INFLATION) => spendMoneyHint(samplePlan(over), inflation, EU_MONEY_FORMAT)
 const rent = (over = {}, inflation = SAMPLE_INFLATION) => rentMoneyHint(samplePlan(over), inflation, EU_MONEY_FORMAT)
@@ -63,5 +63,19 @@ describe('rentMoneyHint', () => {
 
   it('has nothing to say for no rent', () => {
     expect(rent({ rentMonthlyCents: 0 })).toBeNull()
+  })
+})
+
+describe('monthlyAmountMoneyHint', () => {
+  const monthly = (over = {}, inflation = SAMPLE_INFLATION) => monthlyAmountMoneyHint(samplePlan(over), inflation, EU_MONEY_FORMAT)
+
+  it('works the amount through ten years, so "counts for less each year" has a figure', () => {
+    // 1.000 euros sent in ten years at 2% inflation: 1.000 / 1,02^10 = 820 euros of 2026.
+    expect(monthly()).toBe('For example, 1.000 € sent ten years on counts as about 820 € in 2026 euros.')
+  })
+
+  it('has nothing to say with no inflation, or with no amount', () => {
+    expect(monthly({}, 0)).toBeNull()
+    expect(monthly({ monthlyContributionCents: 0 })).toBeNull()
   })
 })

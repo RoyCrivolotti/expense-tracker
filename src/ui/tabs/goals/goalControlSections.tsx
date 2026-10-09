@@ -9,7 +9,7 @@ import { ContributionStepsList } from './ContributionSteps'
 import { firstChangeNote } from './contributionText'
 import { housePriceHint } from './housePriceHint'
 import { aboutOnAccount, bothMoneys } from './bothMoneys'
-import { feesMoneyHint, rentMoneyHint, spendMoneyHint } from './moneyHints'
+import { feesMoneyHint, monthlyAmountMoneyHint, rentMoneyHint, spendMoneyHint } from './moneyHints'
 import { planMoneyLabel } from './planMoneyLabel'
 import { LifeEventsList } from './LifeEvents'
 import { ADJUST_LABELS } from './adjustSections'
@@ -414,12 +414,13 @@ export function TrackingFields({ draft, latest, onChange }: TrackingProps) {
 
 export function ChangesFields({ draft, onChange, omit = NO_LEVERS }: Pick<SectionProps, 'draft' | 'onChange' | 'omit'>) {
   const format = useMoneyFormat()
+  const example = monthlyAmountMoneyHint(draft, useAssumedInflation(), format)
   return (
     <>
       <p className={styles.fieldHint}>
         What you send to your investments each month: the amount you start with, then each change from a month
         on. It is counted in {planMoneyLabel(draft.planStartDate, format)} at the assumed inflation, so an amount that stays the same counts for
-        less each year. Enter 0 for a pause.
+        less each year.{example ? ` ${example}` : ''} Enter 0 for a pause.
       </p>
       <ContributionStepsList
         steps={draft.contributionSchedule ?? []}

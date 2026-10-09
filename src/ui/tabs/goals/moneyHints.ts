@@ -1,6 +1,7 @@
 import { formatCentsCompact, projectNetWorth, scenarioToParams, yearsToFi, type MoneyFormat } from '../../../engine'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import { bothMoneys, type BothMoneys } from './bothMoneys'
+import { planMoneyLabel } from './planMoneyLabel'
 
 /** "about 54.341 € a year on your account in 2056", or "the same on your account in 2056". */
 function onAccountPer(b: BothMoneys, unit = ''): string {
@@ -94,4 +95,18 @@ export function eventMoneyHint({
     format,
   })
   return `Counted in ${event.planLabel}: ${onAccountPer(event)}.`
+}
+
+/** The years the monthly amount's worked figure looks ahead: far enough that the difference is plain. */
+const MONTHLY_EXAMPLE_YEARS = 10
+
+/**
+ * Said under the monthly investing: the amount is euros as sent, so one that stays the same counts for less in the plan's
+ * euros every year. Worked once, on the amount the plan starts with. Nothing without inflation or without an amount.
+ */
+export function monthlyAmountMoneyHint(draft: NewGoalScenario, inflationRate: number, format: MoneyFormat): string | null {
+  if (draft.monthlyContributionCents <= 0 || inflationRate <= 0) return null
+  const worth = Math.round(draft.monthlyContributionCents / Math.pow(1 + inflationRate, MONTHLY_EXAMPLE_YEARS))
+  const money = (cents: number) => formatCentsCompact(cents, format)
+  return `For example, ${money(draft.monthlyContributionCents)} sent ten years on counts as about ${money(worth)} in ${planMoneyLabel(draft.planStartDate, format)}.`
 }
