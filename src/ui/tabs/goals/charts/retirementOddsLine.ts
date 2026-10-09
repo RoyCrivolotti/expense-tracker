@@ -55,6 +55,7 @@ export function retirementOddsLine({
   return (
     `Started at the target, with the spending taken out each year, the money lasts all ${years} ${unit} in ` +
     `${runsOfHundred(own.odds.lasts)} of 100 runs at your ${rateText(rate, format)}${worst}${list}. ` +
-    `The typical return is ${formatPercent(realReturn, format)} a year with a bounce of ${formatPercent(volatility, format)}.`
+    `The typical return is ${formatPercent(realReturn, format)} a year with a bounce of ${formatPercent(volatility, format)}. ` +
+    'Each year is drawn independently from one kind of investment, with spending that never changes and no tax, so real history can come out higher or lower, and the odds move a lot with these inputs.'
   )
 }

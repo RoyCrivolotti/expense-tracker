@@ -32,7 +32,7 @@ describe('runsOfHundred', () => {
 describe('retirementOddsLine', () => {
   it('says how often the money lasts at the plan\'s rate, how long it lasts in the unluckiest tenth, and the other rates', () => {
     expect(line()).toBe(
-      'Started at the target, with the spending taken out each year, the money lasts all 30 years in 86 of 100 runs at your 4,0% (in 10 of the 100 it lasts 25 years or less), 91 at 3,5% and 95 at 3,0%. The typical return is 5,0% a year with a bounce of 15,0%.',
+      'Started at the target, with the spending taken out each year, the money lasts all 30 years in 86 of 100 runs at your 4,0% (in 10 of the 100 it lasts 25 years or less), 91 at 3,5% and 95 at 3,0%. The typical return is 5,0% a year with a bounce of 15,0%. Each year is drawn independently from one kind of investment, with spending that never changes and no tax, so real history can come out higher or lower, and the odds move a lot with these inputs.',
     )
   })
 
