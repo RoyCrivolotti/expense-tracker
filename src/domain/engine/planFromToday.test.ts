@@ -36,6 +36,14 @@ describe('planFromToday', () => {
     expect(plan.startInvestedCents).toBe(100_000_00)
   })
 
+  it('makes a plan from a check-in dated on the plan\'s own start day, which is how a plan usually begins', () => {
+    const from = planFromToday(plan, { investedCents: 100_000_00, date: plan.planStartDate! }, DEFAULT_INFLATION_RATE)!
+    expect(from).not.toBeNull()
+    expect(from.offsetYears).toBe(0)
+    expect(from.scenario.planStartDate).toBe(plan.planStartDate)
+    expect(planFromToday(plan, { investedCents: 100_000_00, date: '2023-12-31' }, DEFAULT_INFLATION_RATE)).toBeNull()
+  })
+
   it('carries what a re-baseline would: events on their dates, the monthly amount in force and the changes to come', () => {
     const stepped = {
       ...plan,
