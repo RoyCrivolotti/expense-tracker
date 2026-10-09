@@ -2,6 +2,10 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (the market's bounce is a setting)
+
+- **Assumptions has a Market bounce card.** How far a single year's return strays from the typical one, from 0 to 50%, with three usual choices beside the stepper: world stocks 15%, stocks and bonds 11%, mostly bonds 7%. It is one value for every scenario, 15% until set. Nothing uses it yet: the card that replays the plan with random returns comes next, and a plan's own return stays the typical growth. Needs migration 0034 on production before this is deployed.
+
 ## October 2026 (how long the money must last)
 
 - **"Years the money must last" is an input.** The FI drawdown was drawn over 30 years, or the plan's horizon if that was shorter, written into the code. It is a per-scenario input next to the withdrawal rate now, from 1 to 100 years, and the drawdown runs for it. Existing scenarios keep 30, so nothing moves except a plan with a horizon under 30 years, whose drawdown is no longer cut short by it. Needs migration 0033 on production before this is deployed.
