@@ -358,7 +358,8 @@ async function checkEdit(page, where) {
   await page.waitForTimeout(300)
   check(where, '(j) Discard puts the lever back and clears the mark', (await monthly.inputValue()) === before && (await page.getByText('Unsaved changes').count()) === 0, `value ${await monthly.inputValue()}`)
 
-  const result = page.locator('[class*="leverResult"]')
+  // The figure only: the line under it (leverResultNote) has "leverResult" in its class too.
+  const result = page.locator('[class*="leverResult"]:not([class*="leverResultNote"])')
   const resultBefore = await result.textContent()
   const slider = page.getByRole('slider', { name: 'Real return (%/yr, after inflation)' })
   await slider.focus()
