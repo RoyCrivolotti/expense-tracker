@@ -54,7 +54,7 @@ export function AssumptionsView({
         brings check-ins, the house and the mortgage back to the {currencyWord(format)} of the plan&apos;s start year, and
         counts what you invest each month for less each year.
       </p>
-      <p className={goalStyles.chartHint}>Return, growth and housing are per scenario, in Scenarios.</p>
+      <p className={goalStyles.chartHint}>The return, the house and life after FI are set per scenario, in Scenarios.</p>
       <MilestonesSetting settings={settings} onChange={onSettingsChange} />
       <div ref={accountsCard} className={styles.landingTarget}>
         <WealthAccountsManager accounts={accounts} checkins={checkins} actions={actions} />

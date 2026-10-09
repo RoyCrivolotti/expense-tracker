@@ -96,7 +96,7 @@ describe('Goals copy that names the Assumptions tab', () => {
     expect(intro.textContent).not.toContain(';')
     expect(intro.textContent).toContain('assumed inflation rate')
     // A pointer to where other inputs are, not part of what the intro defines.
-    const pointer = screen.getByText('Return, growth and housing are per scenario, in Scenarios.')
+    const pointer = screen.getByText('The return, the house and life after FI are set per scenario, in Scenarios.')
     expect(pointer).not.toBe(intro)
   })
 })

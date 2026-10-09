@@ -19,7 +19,9 @@ export interface PlanFromToday {
  * The plan as it stands from the latest check-in, without touching the plan. The plan line
  * answers whether the plan was right, which ahead or behind measures and a re-baseline
  * would erase; this answers what happens now: the same assumptions projected from the
- * balance actually there, with life events and the house purchase kept on their dates, spending,
+ * balance actually there, with life events and the house purchase on the next anniversary of the check-in (plan years are
+ * whole, so a restart part way through a year moves them up to a year later, and each restart can again),
+ * spending,
  * rent, fees, event amounts and the house price in the euros of the check-in (`rebaseline`), and
  * the monthly amount in force at the check-in and the changes still to come, exactly as a
  * re-baseline would write them. The scenario is in the euros of the check-in's day, not of the
