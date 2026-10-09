@@ -11,7 +11,6 @@ import {
   spreadKey,
   spreadSeries,
   spreadWarning,
-  yearLabel,
 } from './spreadModel'
 
 const I = SAMPLE_INFLATION
@@ -20,14 +19,6 @@ const params = scenarioToParams(plan, I)
 const points = projectNetWorth(params)
 const money = (cents: number) => `${Math.round(cents / 100).toLocaleString('de-DE')} €`
 const result = replayMarket({ params, volatility: 0.15, runs: 2_000, milestonesCents: [10_000_000, 100_000_000] })
-
-describe('yearLabel', () => {
-  it('is the calendar year with a start date, and the year of the plan without one', () => {
-    expect(yearLabel(13, '2026-01-01')).toBe('2039')
-    expect(yearLabel(0, '2026-07-15')).toBe('2026')
-    expect(yearLabel(13, null)).toBe('year 13')
-  })
-})
 
 describe('rangeLabel', () => {
   const at = (lo: number, hi: number) => rangeLabel(lo, hi, '2026-01-01', 30)

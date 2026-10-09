@@ -1,6 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { makeScenario } from '../../../../testing/factories'
+import { AssumedInflationContext } from '../../../hooks/assumedInflationContext'
+import { formatMoneyShort } from '../chartTheme'
+import { onAccountCents } from '../bothMoneys'
+import { EU_MONEY_FORMAT } from '../../../../engine/money'
 import { FireChart } from './FireChart'
 
 function draftOf(overrides: Parameters<typeof makeScenario>[0]) {
@@ -60,8 +64,45 @@ describe('FireChart', () => {
 
     const { container } = render(<FireChart draft={draft} />)
 
-    expect(screen.getByText(/not reached in the horizon, so there is no drawdown to show/)).toBeInTheDocument()
+    expect(screen.getByText(/not reached in the horizon \(.*, when the plan ends\), so there is no drawdown to show/)).toBeInTheDocument()
     expect(screen.queryByText('Portfolio balance')).not.toBeInTheDocument()
     expect(container.querySelector('svg[role="img"]')).toBeNull()
+  })
+})
+
+describe('FireChart in both moneys', () => {
+  const short = (cents: number) => formatMoneyShort(cents, EU_MONEY_FORMAT)
+  const renderChart = (draft: ReturnType<typeof draftOf>, inflation = 0.02) =>
+    render(
+      <AssumedInflationContext.Provider value={inflation}>
+        <FireChart draft={draft} />
+      </AssumedInflationContext.Provider>,
+    )
+
+  it('says the target in the plan\'s euros and on the account in the year it is reached, and that the drawdown is in the plan\'s euros', () => {
+    // 24.000 a year at 4% is a 600.000 target, which 1.000.000 already passes: reached in year 0.
+    renderChart(draftOf({ startInvestedCents: 100_000_000, annualSpendCents: 2_400_000, safeWithdrawalRate: 0.04, planStartDate: '2026-01-01' }))
+    expect(screen.getByText(/^FI target 600k € in 2026 euros · reached year 0 \(the same on your account in 2026\)\./)).toBeInTheDocument()
+    expect(screen.getByText(/withdraws a constant amount in 2026 euros/)).toBeInTheDocument()
+  })
+
+  it('says what the target would be on the account at the end of the plan where FI is never reached', () => {
+    renderChart(
+      draftOf({ startInvestedCents: 0, monthlyContributionCents: 10_000, horizonYears: 10, annualSpendCents: 3_000_000, planStartDate: '2026-01-01' }),
+    )
+    expect(
+      screen.getByText(
+        `FI target 750k € in 2026 euros · not reached in the horizon (about ${short(onAccountCents(75_000_000, 10, 0.02))} on your account in 2036, when the plan ends), so there is no drawdown to show. The same spending needs 750k € at 4,0%, 857k € at 3,5% or 1,0M € at 3,0%.`,
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('says the target on the account where the plan reaches it later', () => {
+    const draft = draftOf({ startInvestedCents: 40_000_000, monthlyContributionCents: 500_000, horizonYears: 20, annualSpendCents: 3_000_000, planStartDate: '2026-01-01' })
+    renderChart(draft)
+    const text = screen.getByText(/^FI target 750k € in 2026 euros · reached year \d+ \(about /).textContent
+    const year = Number(/reached year (\d+)/.exec(text)?.[1])
+    expect(year).toBeGreaterThan(0)
+    expect(text).toContain(`(about ${short(onAccountCents(75_000_000, year, 0.02))} on your account in ${2026 + year})`)
   })
 })

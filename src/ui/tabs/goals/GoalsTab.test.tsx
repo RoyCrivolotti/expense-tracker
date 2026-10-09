@@ -788,16 +788,18 @@ describe('GoalsTab', () => {
   describe('the hero card', () => {
     it('has the display switch in its header and a line for FI and the milestone on a wide screen, with no summary box', () => {
       render(<GoalsTab model={makeModel()} />)
-      const header = screen.getByRole('heading', { name: 'Invested portfolio projection' }).parentElement!
+      const header = screen.getByRole('heading', { name: 'Invested portfolio projection' }).closest<HTMLElement>('[class*="chartHeaderRow"]')!
 
       // Beside the window buttons, where it is always in sight, not at the foot of the card.
       expect(within(header).getByRole('radiogroup', { name: 'Value display mode' })).toBeInTheDocument()
       expect(screen.queryByText('Scenario summary')).not.toBeInTheDocument()
-      // The net worth the box also gave is the levers bar's now, so it is not said twice.
+      // The levers bar names the net worth by its horizon, once. The line under the chart says it in both
+      // moneys under another name, which is not the box saying it twice.
       expect(screen.getAllByText(/^Net worth in 30 yrs$/)).toHaveLength(1)
+      expect(screen.getByText('Net worth at year 30')).toBeInTheDocument()
     })
 
-    it('says in a line when the plan reaches financial independence and its next milestone, and nothing when it reaches neither', () => {
+    it('says in a line when the plan reaches financial independence and its next milestone, and no FI when it never does', () => {
       const reaches = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true, annualSpendCents: 100_000 })
       const { unmount } = render(<GoalsTab model={buildExpenseModel(makeDataset({ goalScenarios: [reaches] }))} />)
       expect(screen.getByText('Financial independence').closest('p')).toHaveTextContent('Financial independence Year 0')
@@ -835,7 +837,7 @@ describe('GoalsTab', () => {
       render(<GoalsTab model={makeModel()} />)
 
       expect(screen.getByText('Scenario summary')).toBeInTheDocument()
-      const header = screen.getByRole('heading', { name: 'Invested portfolio projection' }).parentElement!
+      const header = screen.getByRole('heading', { name: 'Invested portfolio projection' }).closest<HTMLElement>('[class*="chartHeaderRow"]')!
       expect(within(header).queryByRole('radiogroup', { name: 'Value display mode' })).not.toBeInTheDocument()
       expect(screen.getByRole('radiogroup', { name: 'Value display mode' })).toBeInTheDocument()
       expect(screen.getByText(/select a year on the chart for values/)).toBeInTheDocument()
@@ -850,7 +852,7 @@ describe('GoalsTab', () => {
       await user.click(screen.getByRole('radio', { name: 'Nominal' }))
 
       expect(screen.getByText(/Milestones are amounts on your account, so they stay put in this view/)).toBeInTheDocument()
-      expect(screen.getByText(/the FI target is in today's money, so it rises with the inflation/)).toBeInTheDocument()
+      expect(screen.getByText(/the FI target is in .* euros, so it rises with the inflation/)).toBeInTheDocument()
     })
   })
 

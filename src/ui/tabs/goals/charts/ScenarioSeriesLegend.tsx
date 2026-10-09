@@ -23,7 +23,7 @@ interface ScenarioSeriesLegendProps {
   breakdowns: ScenarioLegendBreakdown[]
   /**
    * The breakdown is worked out on the real projection, so in the Nominal view its figures are in
-   * today's money while the values above it are inflated: it says so rather than leave the two to
+   * the plan's euros while the values above it are inflated: it says so rather than leave the two to
    * be read as one.
    */
   breakdownInTodaysMoney?: boolean
@@ -118,7 +118,7 @@ export function BreakdownExtras({
       {breakdowns.length > 0 ? (
         <div className={styles.breakdownStack}>
           {breakdownInTodaysMoney ? (
-            <p className={styles.breakdownNote}>The purchase breakdown is in today's money, not in the Nominal values above.</p>
+            <p className={styles.breakdownNote}>The purchase breakdown is in the plan's euros, not in the Nominal values above.</p>
           ) : null}
           {breakdowns.map((entry) => (
             <BreakdownRows key={entry.id} {...entry} format={format} />

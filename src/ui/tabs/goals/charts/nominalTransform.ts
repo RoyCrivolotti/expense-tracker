@@ -6,7 +6,7 @@ function factor(yearOffset: number, inflationRate: number): number {
 }
 
 /**
- * The plan in the money of each future year. The projection is real, in today's money,
+ * The plan in the money of each future year. The projection is real, in the plan's euros,
  * so the nominal view multiplies every drawn value and band edge up by the rate over its
  * year. Scatter points are left alone: check-ins are already nominal.
  */
@@ -34,7 +34,7 @@ export function inflateSeries(
 }
 
 /**
- * Check-in points brought to today's money, each by its own fractional `xIndex`, so an
+ * Check-in points brought to the plan's euros, each by its own fractional `xIndex`, so an
  * actual exactly on plan sits on the real line rather than reading as ahead of it.
  */
 export function deflatePoints(series: ChartSeries[], inflationRate: number): ChartSeries[] {
@@ -77,7 +77,7 @@ function nominalLines(
 }
 
 /**
- * The plan is real, so the default view is today's money with the check-in dots deflated
+ * The plan is real, so the default view is the plan's euros with the check-in dots deflated
  * to it; the nominal view inflates the plan instead and leaves the dots as they are.
  *
  * `inflationRate` is the owner's assumed inflation: it inflates the plan and its band in the

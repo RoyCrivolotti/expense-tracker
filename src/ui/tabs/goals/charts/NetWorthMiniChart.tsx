@@ -6,6 +6,7 @@ import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { formatMoneyShort } from '../chartTheme'
 import { useMediaQuery } from '../../../hooks/useMediaQuery'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
+import { chartMoneyLabel } from '../planMoneyLabel'
 import styles from './NetWorthMiniChart.module.css'
 
 /** Room above the plot: the top axis label's half height, and no more, since this chart is pinned. */
@@ -69,6 +70,7 @@ function NetWorthMiniChartImpl({ draft }: { draft: NewGoalScenario }) {
   // The pill and the chart's name read from the same figure, so a screen reader hears what a
   // sighted viewer sees, and the pill itself is hidden from it.
   const readout = end ? { year: end.year, money: formatMoneyShort(end.investedCents, format) } : null
+  const money = chartMoneyLabel(draft.planStartDate, false)
 
   return (
     <div className={styles.wrap}>
@@ -78,7 +80,7 @@ function NetWorthMiniChartImpl({ draft }: { draft: NewGoalScenario }) {
         series={series}
         xLabels={labels}
         formatValue={(c) => formatMoneyShort(c, format)}
-        ariaLabel={readout ? `${LABEL}, ending at ${readout.money} in year ${readout.year}` : LABEL}
+        ariaLabel={readout ? `${LABEL}, ${money}, ending at ${readout.money} in year ${readout.year}` : LABEL}
         tooltip={tooltip}
         tooltipMode="hidden"
       />

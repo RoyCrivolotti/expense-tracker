@@ -1,6 +1,7 @@
 import { INFLATION_MAX, INFLATION_MIN, formatPercent } from '../../../engine'
 import { PercentStepper } from '../../components/PercentStepper'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
+import { planMoneyLabel } from './planMoneyLabel'
 import styles from './goals.module.css'
 import progressStyles from './progress.module.css'
 
@@ -12,6 +13,8 @@ interface Props {
   onPreview: (rate: number | null) => void
   /** Takes the reader to where the rate is set; absent when they cannot change it. */
   onOpenAssumptions: (() => void) | undefined
+  /** The plan's start, which names the euros the net worth and the FI target stay in. */
+  planStartDate: string | null | undefined
 }
 
 /**
@@ -22,7 +25,7 @@ interface Props {
  * read the saved rate, so trying a rate here can never make them disagree with each other;
  * the note says so and points to Assumptions.
  */
-export function NominalPreview({ saved, preview, onPreview, onOpenAssumptions }: Props) {
+export function NominalPreview({ saved, preview, onPreview, onOpenAssumptions, planStartDate }: Props) {
   const format = useMoneyFormat()
   const rate = preview ?? saved
   return (
@@ -47,8 +50,9 @@ export function NominalPreview({ saved, preview, onPreview, onOpenAssumptions }:
         ) : null}
       </div>
       <p className={styles.chartHint}>
-        The net worth stays in today&apos;s money. Milestones are amounts on your account, so they stay put
-        in this view, and the FI target is in today&apos;s money, so it rises with the inflation. The
+        The net worth figure stays in {planMoneyLabel(planStartDate)}. Milestones are amounts on your account, so
+        they stay put in this view, and the FI target is in {planMoneyLabel(planStartDate)}, so it rises with the
+        inflation. The
         preview is not saved: the rest of Goals uses the saved {formatPercent(saved, format)}
         {onOpenAssumptions ? (
           <>

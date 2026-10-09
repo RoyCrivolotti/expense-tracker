@@ -17,7 +17,7 @@
  * from the price, which has risen to what the house costs then. It runs until ten years after the loan
  * is paid off, which is where the buyer's month changes most.
  *
- * Simplifications (documented for honesty): rent and carry costs are constant in today's money, both side
+ * Simplifications (documented for honesty): rent and carry costs are constant in the plan's euros, both side
  * portfolios earn the same real return, and selling costs are ignored.
  */
 import { pmt } from './finance'

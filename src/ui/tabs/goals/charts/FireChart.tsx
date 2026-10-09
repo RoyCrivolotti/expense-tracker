@@ -14,7 +14,9 @@ import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
 import { sparseLabels } from '../../../charts/linearScale'
+import { aboutOnAccount, bothMoneys } from '../bothMoneys'
 import { formatMoneyShort } from '../chartTheme'
+import { planMoneyLabel } from '../planMoneyLabel'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import styles from '../goals.module.css'
 
@@ -56,6 +58,15 @@ function FireChartImpl({
 
   const format = useMoneyFormat()
   const targets = fiTargetsLine(draft.annualSpendCents, (c) => formatMoneyShort(c, format), format)
+  // The target is in the plan's euros; on the account it is more, by the inflation up to where the plan
+  // reaches it, or up to the end of the plan when it does not.
+  const target = bothMoneys({
+    cents: fiTarget,
+    years: fiYear ?? draft.horizonYears,
+    planStartDate: draft.planStartDate,
+    inflationRate,
+    money: (c) => formatMoneyShort(c, format),
+  })
   const labels = useMemo(() => sparseLabels(balances.map((_, y) => y), 5), [balances])
   const series: ChartSeries[] = [{ id: 'balance', color: BALANCE_COLOR, values: balances, width: 2 }]
 
@@ -69,8 +80,8 @@ function FireChartImpl({
       <ChartShell embedded={embedded}>
         <h3 className={styles.chartTitle}>FI drawdown</h3>
         <p className={styles.chartHint}>
-          FI target {formatMoneyShort(fiTarget, format)} · not reached in the horizon, so there is no
-          drawdown to show. {targets}
+          FI target {target.plan} in {target.planLabel} · not reached in the horizon ({aboutOnAccount(target)}, when
+          the plan ends), so there is no drawdown to show. {targets}
         </p>
       </ChartShell>
     )
@@ -80,11 +91,11 @@ function FireChartImpl({
     <ChartShell embedded={embedded}>
       <h3 className={styles.chartTitle}>FI drawdown</h3>
       <p className={styles.chartHint}>
-        FI target {formatMoneyShort(fiTarget, format)} · reached year {fiYear}. {targets} Post-FI only: year 0
+        FI target {target.plan} in {target.planLabel} · reached year {fiYear} ({aboutOnAccount(target)}). {targets} Post-FI only: year 0
         on this chart is the FI year, not today, and it runs for the {draft.retirementYears} years the money
-        must last. After that it takes the plan's return every year and withdraws a constant amount in
-        today's money, so it illustrates the target and is not a forecast: a bad run of early years would
-        leave less.
+        must last. After that it takes the plan's return every year and withdraws a constant amount in{' '}
+        {planMoneyLabel(draft.planStartDate)}, so it illustrates the target and is not a forecast: a bad run of
+        early years would leave less.
       </p>
       <LinearChart
         height={height}

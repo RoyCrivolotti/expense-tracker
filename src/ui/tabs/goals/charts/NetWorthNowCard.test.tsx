@@ -1,7 +1,12 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { NetWorthNowCard } from './NetWorthNowCard'
+import { formatCents, nominalToReal, scenarioToParams, yearsToFi } from '../../../../engine'
+import { EU_MONEY_FORMAT } from '../../../../engine/money'
 import { makeScenario } from '../../../../testing/factories'
+import { AssumedInflationContext } from '../../../hooks/assumedInflationContext'
+import { formatMoneyShort } from '../chartTheme'
+import { onAccountCents } from '../bothMoneys'
 
 // startInvestedCents is €100k, so €80k is already passed and €150k is next.
 const passed = { amountCents: 8_000_000, label: 'House deposit' }
@@ -110,5 +115,65 @@ describe('NetWorthNowCard', () => {
     const draft = makeScenario({ annualSpendCents: 0 })
     render(<NetWorthNowCard draft={draft} milestones={[]} reached={noneReached} />)
     expect(screen.getByText(/Set annual spend at FI/)).toBeTruthy()
+  })
+})
+
+describe('NetWorthNowCard in both moneys', () => {
+  const short = (cents: number) => formatMoneyShort(cents, EU_MONEY_FORMAT)
+  // 25M cents of spending at 4%: a 25.000.000 target in the euros of 2020, and no growth or saving, so a plan
+  // of ten years never gets there.
+  const stuck = {
+    annualSpendCents: 1_000_000,
+    safeWithdrawalRate: 0.04,
+    planStartDate: '2020-01-01',
+    startInvestedCents: 10_000_000,
+    monthlyContributionCents: 0,
+    expectedRealReturn: 0,
+    horizonYears: 10,
+    housePurchaseYear: null,
+  }
+  const renderCard = (draft: ReturnType<typeof makeScenario>, latest: { investedCents: number; date: string } | null, inflation = 0.02) =>
+    render(
+      <AssumedInflationContext.Provider value={inflation}>
+        <NetWorthNowCard draft={draft} latest={latest} milestones={[]} reached={noneReached} />
+      </AssumedInflationContext.Provider>,
+    )
+
+  it('says what a check-in is worth in the plan\'s euros, which is the money the FI target is in', () => {
+    renderCard(makeScenario(stuck), { investedCents: 22_500_000, date: '2026-01-01' })
+    const real = nominalToReal(22_500_000, '2020-01-01', '2026-01-01', 0.02)
+    expect(screen.getByText(`worth about ${formatCents(real, EU_MONEY_FORMAT)} in 2020 euros, the money the FI target is in`)).toBeTruthy()
+  })
+
+  it('has no worth line before a check-in, as the plan start is already in the plan\'s euros', () => {
+    renderCard(makeScenario(stuck), null)
+    expect(screen.queryByText(/the money the FI target is in/)).toBeNull()
+  })
+
+  it('has no worth line for a check-in on the day the plan started', () => {
+    renderCard(makeScenario(stuck), { investedCents: 10_000_000, date: '2020-01-01' })
+    expect(screen.queryByText(/the money the FI target is in/)).toBeNull()
+  })
+
+  it('says the FI target is in the plan\'s euros and what it would be on the account at the end of the plan, when it is never reached', () => {
+    renderCard(makeScenario(stuck), { investedCents: 11_000_000, date: '2020-06-01' })
+    expect(
+      screen.getByText(`The target is in 2020 euros, about ${short(onAccountCents(25_000_000, 10, 0.02))} on your account in 2030, when the plan ends.`),
+    ).toBeTruthy()
+  })
+
+  it('says it on the account in the year the plan reaches it', () => {
+    const reaching = makeScenario({ ...stuck, startInvestedCents: 20_000_000, monthlyContributionCents: 500_000, horizonYears: 20 })
+    const fiYear = yearsToFi(scenarioToParams({ ...reaching, id: 0 }, 0.02), reaching.annualSpendCents, reaching.safeWithdrawalRate)
+    expect(fiYear).not.toBeNull()
+    renderCard(reaching, { investedCents: 20_000_000, date: '2020-06-01' })
+    expect(
+      screen.getByText(`The target is in 2020 euros, about ${short(onAccountCents(25_000_000, fiYear!, 0.02))} on your account in ${2020 + fiYear!}, the year the plan reaches it.`),
+    ).toBeTruthy()
+  })
+
+  it('says the same, once, with no inflation', () => {
+    renderCard(makeScenario(stuck), { investedCents: 11_000_000, date: '2020-06-01' }, 0)
+    expect(screen.getByText('The target is in 2020 euros, the same on your account in 2030, when the plan ends.')).toBeTruthy()
   })
 })

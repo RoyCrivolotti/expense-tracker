@@ -7,3 +7,8 @@ export function planMoneyLabel(planStartDate: string | null | undefined): string
   const year = planStartDate?.slice(0, 4)
   return year && /^\d{4}$/.test(year) ? `${year} euros` : "today's euros"
 }
+
+/** What a chart's euros are, in a few words: the plan's, or what the account will read in each year (Nominal). */
+export function chartMoneyLabel(planStartDate: string | null | undefined, nominal: boolean): string {
+  return nominal ? 'in euros on your account in each year' : `in ${planMoneyLabel(planStartDate)}`
+}

@@ -112,12 +112,14 @@ describe('comparisonRows', () => {
     render(
       <ScenarioComparison
         scenarios={[plan]}
-        draft={draft}
+        draft={{ ...draft, planStartDate: '2024-01-01' }}
         fromToday={planFromToday(plan, { investedCents: 1, date: '2026-01-01' }, 0.02)}
       />,
     )
     expect(screen.getByText('Path B, from today')).toBeInTheDocument()
-    expect(screen.getByText(/restarted from the balance in your latest check-in, Jan 1, 2026, and counts its years from there/)).toBeInTheDocument()
+    // Its money restarts too: the saved plan is in the euros of 2024, this row in those of 2026.
+    expect(screen.getByText(/restarted from the balance in your latest check-in, Jan 1, 2026, and counts its years and its euros from there \(2026 euros\)/)).toBeInTheDocument()
+    expect(screen.getByText(/Net worth and invested are .*, in 2024 euros/)).toBeInTheDocument()
   })
 
   it('says when FI is not reached within the horizon', () => {
@@ -171,9 +173,24 @@ describe('ScenarioComparison', () => {
     expect(screen.queryByText(/\(editing\)/)).not.toBeInTheDocument()
   })
 
-  it('says the figures are in today\'s money, as the whole plan is', () => {
-    render(<ScenarioComparison scenarios={[]} draft={draft} />)
-    expect(screen.getByText(/in today's money/)).toBeInTheDocument()
+  it('says which euros the figures are in, the plan\'s, as the whole plan is', () => {
+    render(<ScenarioComparison scenarios={[]} draft={{ ...draft, planStartDate: '2026-01-01' }} />)
+    expect(screen.getByText(/Net worth and invested are .*, in 2026 euros; FI and the house purchase/)).toBeInTheDocument()
+  })
+
+  it('says each plan is in the euros of its own start when the rows start in different years', () => {
+    render(<ScenarioComparison scenarios={[makeScenario({ id: 1, planStartDate: '2024-01-01' })]} draft={{ ...draft, planStartDate: '2026-01-01' }} />)
+    expect(screen.getByText(/, each in the euros of its own start date; FI and the house purchase/)).toBeInTheDocument()
+  })
+
+  it('names only the saved plans\' euros when the draft has a row of its own no more', () => {
+    render(<ScenarioComparison scenarios={[makeScenario({ id: 1, planStartDate: '2024-01-01' })]} draft={{ ...draft, planStartDate: '2026-01-01' }} includeDraft={false} />)
+    expect(screen.getByText(/, in 2024 euros; FI and the house purchase/)).toBeInTheDocument()
+  })
+
+  it('says today\'s euros for a plan with no start date', () => {
+    render(<ScenarioComparison scenarios={[]} draft={{ ...draft, planStartDate: null }} />)
+    expect(screen.getByText(/, in today's euros; FI and the house purchase/)).toBeInTheDocument()
   })
 
   it('keeps two scenarios with the same short name apart', () => {

@@ -14,6 +14,7 @@ import {
 import { todayIso } from '../../../components/transactionFormState'
 import { formatMoneyAxis } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
+import { planMoneyLabel } from '../planMoneyLabel'
 import { useGoalsNarrow } from '../useGoalsNarrow'
 import { buildCheckinTooltip, realCheckinPoints } from './checkinChartUtils'
 import { WINDOW_OPTIONS, defaultWindow, stepMonthsFor, windowSeries, type WindowKey } from './checkinWindow'
@@ -105,8 +106,8 @@ export function CheckinHistoryChart({ checkins, accounts, plan }: Props) {
         />
       </div>
       <p className={goalStyles.chartHint}>
-        In today&apos;s money: each check-in is brought back at {formatPercent(inflationRate)} a year to sit
-        against the plan.
+        In {planMoneyLabel(planStartDate)}: each check-in is brought back at {formatPercent(inflationRate)} a year
+        to sit against the plan.
       </p>
       <LinearChart
         height={narrow ? 180 : 220}

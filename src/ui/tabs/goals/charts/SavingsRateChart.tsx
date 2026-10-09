@@ -100,7 +100,7 @@ function SavingsRateChartImpl({
           ? `the plan, which goes from ${formatMoneyShort(planFirst, format)} to ${formatMoneyShort(planLast, format)}/mo over these months`
           : `the ${formatMoneyShort(planFirst, format)}/mo this scenario assumes`}
         . The fainter line is net saving, what was left after expenses; the gap is money that stayed in
-        the current account.
+        the current account. In euros as they went through the account.
       </p>
       <LinearChart
         height={height}

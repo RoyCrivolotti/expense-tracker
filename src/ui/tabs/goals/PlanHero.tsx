@@ -104,6 +104,7 @@ export function PlanHero({
           preview={preview}
           onPreview={onPreview}
           onOpenAssumptions={onOpenSetting}
+          planStartDate={deferredDraft.planStartDate}
         />
       ) : null
     return narrow ? (

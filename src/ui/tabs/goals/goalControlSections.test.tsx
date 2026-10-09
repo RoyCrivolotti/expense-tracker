@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { LeverKey } from '../../../engine'
 import { makeScenario } from '../../../testing/factories'
 import { samplePlan } from '../../../testing/samplePlan'
-import { FireFields, HousingFields, PortfolioFields } from './goalControlSections'
+import { ChangesFields, FireFields, HousingFields, PortfolioFields } from './goalControlSections'
 import { LEVER_SPECS, SECTION_KEYS } from './leverFields'
 
 function makeDraft() {
@@ -81,6 +81,34 @@ describe('the sections of the controls', () => {
     rerender(<HousingFields draft={draft} onChange={vi.fn()} omit={everything(['housePriceCents'])} />)
     expect(screen.queryByLabelText('House price')).not.toBeInTheDocument()
     expect(screen.getByText(/Enter today's price\. Bought in year 8/)).toBeInTheDocument()
+  })
+
+  it('says what the rent comes to on the account in the year the house is bought, under the rent', () => {
+    const { id, ...draft } = samplePlan()
+    void id
+    render(<HousingFields draft={draft} onChange={vi.fn()} />)
+    expect(
+      screen.getByText('Counted in 2026 euros and rising with inflation: about 1.172 € a month on your account in 2034, the year you buy.'),
+    ).toBeInTheDocument()
+  })
+
+  it('says what the spending comes to on the account where the plan reaches FI or ends, under the spending, and not once it is in the bar', () => {
+    const { id, ...draft } = samplePlan()
+    void id
+    const { rerender } = render(<FireFields draft={draft} onChange={vi.fn()} />)
+    expect(
+      screen.getByText('Counted in 2026 euros: about 54.341 € a year on your account in 2056, when the plan ends (FI is not reached).'),
+    ).toBeInTheDocument()
+
+    rerender(<FireFields draft={draft} onChange={vi.fn()} omit={everything(['annualSpendCents'])} />)
+    expect(screen.queryByText(/^Counted in 2026 euros: about/)).not.toBeInTheDocument()
+  })
+
+  it('says which euros the monthly amount is counted in, and that what you send counts for less each year', () => {
+    const { id, ...draft } = samplePlan()
+    void id
+    render(<ChangesFields draft={draft} onChange={vi.fn()} />)
+    expect(screen.getByText(/It is counted in 2026 euros at the assumed inflation, so an amount that stays the same counts for less each year/)).toBeInTheDocument()
   })
 
   it('takes what the purchase costs from the price it has risen to', () => {
