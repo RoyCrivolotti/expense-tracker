@@ -11,7 +11,7 @@ describe('rentVsBuyHeadline', () => {
       'Buying overtakes renting 7 years after you buy and stays ahead to the end.',
     )
     expect(rentVsBuyHeadline({ kind: 'rent-takes-over', buyAheadThrough: 4 }, last, gap)).toBe(
-      'Buying is ahead for the first 4 years after you buy, then renting leads for the rest, by 637 € after 30 years.',
+      'Renting overtakes buying 5 years after you buy and stays ahead to the end, by 637 € after 30 years.',
     )
     expect(rentVsBuyHeadline({ kind: 'rent-ahead' }, last, gap)).toBe('Renting and investing stays ahead the whole way.')
     expect(rentVsBuyHeadline(null, undefined, gap)).toBe('Renting and investing stays ahead the whole way.')
@@ -22,13 +22,22 @@ describe('rentVsBuyHeadline', () => {
       'Buying overtakes renting 1 year after you buy and stays ahead to the end.',
     )
     expect(rentVsBuyHeadline({ kind: 'rent-takes-over', buyAheadThrough: 1 }, undefined, gap)).toBe(
-      'Buying is ahead for the first year after you buy, then renting leads for the rest.',
+      'Renting overtakes buying 2 years after you buy and stays ahead to the end.',
     )
+  })
+
+  it('does not say buying was ahead from the start: it can be behind in the opening years, while the fees weigh, and lead later', () => {
+    // buyAheadThrough is the last year buying led, not a run of leading years from the first.
+    for (const through of [1, 4, 15]) {
+      const text = rentVsBuyHeadline({ kind: 'rent-takes-over', buyAheadThrough: through }, last, gap)
+      expect(text).not.toContain('first')
+      expect(text).not.toContain('Buying is ahead')
+    }
   })
 
   it('leaves the size of the lead out when there is no last year to read it from', () => {
     expect(rentVsBuyHeadline({ kind: 'rent-takes-over', buyAheadThrough: 4 }, undefined, gap)).toBe(
-      'Buying is ahead for the first 4 years after you buy, then renting leads for the rest.',
+      'Renting overtakes buying 5 years after you buy and stays ahead to the end.',
     )
   })
 })
