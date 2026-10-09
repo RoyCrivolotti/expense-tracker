@@ -196,10 +196,16 @@ Net worth = invested + house equity − mortgage balance.
 
 `goal_scenarios.plan_start_date` (ISO date, editable per scenario) anchors the projection to the calendar. Re-baselining (from the editor, or from the Progress snapshot's button, which asks first) sets it and `start_invested_cents` from the latest check-in and moves life events and the house purchase year by the whole years the start moved (`rebaseline` in `engine/rebaselinePatch.ts`), dropping an event now behind the new start, since its money is already in the balance the plan restarts from. A plan that changes its monthly amount from a date restarts from the amount in force at the check-in, drops the changes behind the new start (they are in that amount now) and keeps the ones still to come on their own months, which count from the new start by themselves. Used by:
 
-- `yearOffsetFromDate(planStartDate, date)` — converts a calendar date to a fractional projection-year offset.
-- `planValueAtOffset(scenario, offset)` — interpolates the projected invested value at a fractional year offset.
+- `yearOffsetFromDate(planStartDate, date)` — converts a calendar date to a fractional projection-year offset, counted on the calendar (`yearsBetween`): a whole number on each anniversary of the start, where the plan's yearly points and its steps are. `dateAtOffset` is the inverse (`dateAtYears`).
+- `planValueAtOffset(points, offset)` — the plan's line at a fractional year offset (see the next section); null before the start and after the last year.
 - `planValueAtDate(scenario, date)` — wraps the above with a calendar date.
-- `trackStatus(checkin, scenario, accounts)` — compares actual invested balance to plan projection at check-in date; returns delta in cents, and how many months along the plan's line the balance is ahead or behind.
+- `trackStatus(checkin, scenario, accounts)` — compares actual invested balance to the plan's line at the check-in date; returns delta in cents, and how many months along the line the balance is ahead or behind, when that can be said.
+
+### The plan's line
+
+The projection keeps two values for each year: `investedCents`, the portfolio at the end of the anniversary day (after a house payment and life events), and `preEventInvestedCents`, the day before them, which is what the year's return and contributions made of it. They differ only in a year with a payment or event. The line (`planLine.ts`) rises through each year from the last anniversary's value to the pre-event value and steps on the anniversary, so on the anniversary itself it already has the post value (the same end-of-day rule `portfolioReturn` uses for a flow dated a check-in). Drawing a chord from one year-end to the next put the step across the whole year before it: someone exactly on plan a week before a 70.871 € house payment read about 62.000 € ahead and years ahead, and the reverse for an inflow. Plans with no payment or event are the straight line they always were. One line serves the status, the dashboard badge, the history chart and the hero chart (`ChartSeries.preStep`, which the band's edges carry too, so the line stays inside it), and the line from today.
+
+A stretch is the run of the line between two steps. Months ahead or behind are only measured along the stretch the check-in is in; a balance the line only has on the far side of a purchase or event is not a number of months from it, so `trackStatus` gives `deltaMonths: null` with `monthsReason: 'across-event'` and the gap in money is all that is said. `onTrack` is true when the balance lies between what the line holds a month before and a month after the check-in date, kept to its own stretch, which is what "On track" means on the dashboard and in Progress (`trackVerdict`).
 
 ### Wealth accounts
 
@@ -233,12 +239,14 @@ wealth_checkin_entries: checkin_id, account_id, value_cents
 {
   deltaCents: number         // actual invested − plan invested (positive = ahead)
   deltaMonths: number | null // whole months from the check-in to the point on the plan's line that has the balance
+  monthsReason: 'across-event' | 'outside-line' | null // why there are no months
   planDate: string | null    // the day the line has it
-  planCents: number          // what the plan projected at this date
+  onTrack: boolean           // within a month of the line either way
+  projectedInvestedCents: number // what the plan projected at this date
 }
 ```
 
-`deltaMonths` is read along the plan's line (`planDistance` in `engine/planDistance.ts`), the horizontal gap on the chart. Dividing the gap in money by the monthly amount instead ignored what the portfolio earns by itself, so a gap read as more months than the line showed, and it jumped on the day the monthly amount changed and had no answer during a pause. The line is the one the hero chart draws, straight segments between the year points (`planValueAtOffset`), so a check-in sits where the chart shows it; a change part way through a year therefore shows as a gentler slope across that year, and the difference from the exact path is under three months of the change. The line is not always rising (a house purchase takes money out), so the point is the nearest one in the direction of the gap: ahead looks for the first time the line gets to the balance, behind for the last time it was at it. During a pause the line still rises with the return, so a pause has a distance. It is null before the plan starts, past its last year, for a balance the line never has (above where it ends, or below where it started, as after taking the down payment out early); the gap in money is always given, and the dashboard badge says it in money when there are no months. Past two years the months turn into "more than N years".
+`deltaMonths` is read along the plan's line (`planDistance` in `engine/planDistance.ts`), the horizontal gap on the chart. Dividing the gap in money by the monthly amount instead ignored what the portfolio earns by itself, so a gap read as more months than the line showed, and it jumped on the day the monthly amount changed and had no answer during a pause. The line is the one the hero chart draws (see The plan's line above), so a check-in sits where the chart shows it; a change part way through a year shows as a gentler slope across that year, and the difference from the exact path is under three months of the change. Inside a stretch the line is not always rising, so the point is the nearest one in the direction of the gap: ahead looks for the first time the line gets to the balance, behind for the last time it was at it. During a pause the line still rises with the return, so a pause has a distance. There are no months before the plan starts or past its last year (there is no line to read, and no status at all), for a balance the line never has (`outside-line`), or for one it has only across a step (`across-event`); the gap in money is always given, and the dashboard badge says it in money when there are no months. Past two years the months turn into "more than N years", and the day the line has the balance is given as a month ("around Jul 2033").
 
 Displayed in `WealthSummaryCard` (Progress view) and `GoalsCard` (dashboard badge), both against the plan (`activePlan` in `scenarioSelection.ts`), never against whatever the editor has loaded.
 
