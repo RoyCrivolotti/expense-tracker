@@ -2,6 +2,10 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (does the money last)
+
+- **The FI drawdown says in how many of 100 runs the money lasts.** A retirement that starts at the FI target, with the spending taken out each year for the years it must last, is replayed in the same 10.000 markets as the spread card. For 30.000 € a year over 30 years it says the money lasts in 86 of 100 runs at 4%, against 92 at 3,5% and 96 at 3%, and how long it lasts in the unluckiest tenth when it does not last in all. It uses your plan's own withdrawal rate first, the market bounce from Assumptions, and the typical return of the plan. It is shown where FI is never reached too: it is about how safe the target is.
+
 ## October 2026 (which euros, and both of them)
 
 - **Every figure says which euros it is in.** The plan counts in the euros of its start year, so "2026 euros" is what that many euros bought in 2026, and your account will show a bigger number later. The projection chart names its euros beside its title (and says "in euros on your account in each year" in the Nominal view), and so do the FI chart, the comparison, the history charts and the composition chart. "Today's money" is gone from the app.

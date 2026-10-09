@@ -9,14 +9,14 @@
  * half the runs are the mirror image of the other half, which keeps the middle of the replays on the typical
  * path. Runs are taken a year at a time, so only the runs of that year are held, not all years of all of them.
  */
-import { normalDraws } from './rng'
+import { DRAW_SEED, DRAW_YEARS, normalDraws } from './rng'
 import { stepInvested, yearFlows } from './investedStep'
 import type { ProjectionParams } from './projection'
 
 /** The most years a replay covers, whatever the plan's horizon is. */
 export const SPREAD_MAX_YEARS = 60
 /** The one seed, so the same plan is the same picture. */
-export const SPREAD_SEED = 20261009
+export const SPREAD_SEED = DRAW_SEED
 const PERCENTILES = [10, 25, 50, 75, 90] as const
 /** A run that has not crossed yet. */
 const NOT_YET = 255
@@ -190,7 +190,7 @@ function startReplay(input: SpreadInput, years: number): Replay {
   return {
     pairs,
     runs,
-    draws: normalDraws(pairs, SPREAD_MAX_YEARS, input.seed ?? SPREAD_SEED),
+    draws: normalDraws(pairs, DRAW_YEARS, input.seed ?? SPREAD_SEED),
     // What each year adds and takes is the plan's, the same for every run, so it is worked out once.
     flows: Array.from({ length: years + 1 }, (_, year) => yearFlows(params, year)),
     realReturn: params.expectedRealReturn,

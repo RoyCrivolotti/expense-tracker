@@ -2,6 +2,9 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { makeScenario } from '../../../../testing/factories'
 import { AssumedInflationContext } from '../../../hooks/assumedInflationContext'
+import { MarketVolatilityContext } from '../../../hooks/marketVolatilityContext'
+import { fireNumber, replayRetirement } from '../../../../engine'
+import { runsOfHundred } from './retirementOddsLine'
 import { formatMoneyShort } from '../chartTheme'
 import { onAccountCents } from '../bothMoneys'
 import { EU_MONEY_FORMAT } from '../../../../engine/money'
@@ -104,5 +107,71 @@ describe('FireChart in both moneys', () => {
     const year = Number(/reached year (\d+)/.exec(text)?.[1])
     expect(year).toBeGreaterThan(0)
     expect(text).toContain(`(about ${short(onAccountCents(75_000_000, year, 0.02))} on your account in ${2026 + year})`)
+  })
+})
+
+describe('FireChart chance the money lasts', () => {
+  // 24.000 a year at 4% is a 600.000 target, which 1.000.000 already passes.
+  const reaching = () => draftOf({ startInvestedCents: 100_000_000, annualSpendCents: 2_400_000, safeWithdrawalRate: 0.04, retirementYears: 30 })
+  const lasts = (draft: ReturnType<typeof draftOf>, rate: number, volatility = 0.15) =>
+    runsOfHundred(
+      replayRetirement({
+        startCents: fireNumber(draft.annualSpendCents, rate),
+        annualWithdrawalCents: draft.annualSpendCents,
+        realReturn: draft.expectedRealReturn,
+        volatility,
+        years: draft.retirementYears,
+        runs: 10_000,
+      }).lasts,
+    )
+
+  it('says in how many of 100 runs the money lasts at the plan\'s rate and at the usual ones, where FI is reached', () => {
+    const draft = reaching()
+    render(<FireChart draft={draft} />)
+    const text = screen.getByText(/^Started at the target, with the spending taken out each year/).textContent
+    expect(text).toContain(`the money lasts all 30 years in ${lasts(draft, 0.04)} of 100 runs at your 4,0%`)
+    expect(text).toContain(`${lasts(draft, 0.035)} at 3,5% and ${lasts(draft, 0.03)} at 3,0%.`)
+    expect(text).toContain('The typical return is')
+    // The plan's own 4% is said once, not again in the list of the others.
+    expect(text.match(/4,0%/g)).toHaveLength(1)
+  })
+
+  it('says it where FI is never reached too, as it is about how safe the target is', () => {
+    render(<FireChart draft={draftOf({ startInvestedCents: 0, monthlyContributionCents: 10_000, horizonYears: 10, annualSpendCents: 3_000_000 })} />)
+    expect(screen.getByText(/^Started at the target, with the spending taken out each year/)).toBeInTheDocument()
+  })
+
+  it('names the plan\'s own rate when it is not one of the usual three, and follows the years the money must last', () => {
+    const draft = draftOf({ startInvestedCents: 100_000_000, annualSpendCents: 2_400_000, safeWithdrawalRate: 0.0325, retirementYears: 50 })
+    render(<FireChart draft={draft} />)
+    const text = screen.getByText(/^Started at the target/).textContent
+    expect(text).toContain(`all 50 years in ${lasts(draft, 0.0325)} of 100 runs at your 3,25%`)
+    expect(text).toContain(`${lasts(draft, 0.04)} at 4,0%, ${lasts(draft, 0.035)} at 3,5% and ${lasts(draft, 0.03)} at 3,0%`)
+  })
+
+  it('uses the owner\'s market bounce: a calmer market lasts more often than a wilder one', () => {
+    const draft = reaching()
+    const at = (volatility: number) => {
+      const { unmount } = render(
+        <MarketVolatilityContext.Provider value={volatility}>
+          <FireChart draft={draft} />
+        </MarketVolatilityContext.Provider>,
+      )
+      const text = screen.getByText(/^Started at the target/).textContent
+      unmount()
+      return { text, own: Number(/lasts all 30 years in (\d+) of 100/.exec(text)?.[1]) }
+    }
+    const calm = at(0.05)
+    const wild = at(0.3)
+    expect(calm.text).toContain('bounce of 5,0%')
+    expect(wild.text).toContain('bounce of 30,0%')
+    expect(calm.own).toBe(lasts(draft, 0.04, 0.05))
+    expect(wild.own).toBe(lasts(draft, 0.04, 0.3))
+    expect(calm.own).toBeGreaterThan(wild.own)
+  })
+
+  it('has nothing to say without spending to cover', () => {
+    render(<FireChart draft={draftOf({ startInvestedCents: 100_000_000, annualSpendCents: 0 })} />)
+    expect(screen.queryByText(/Started at the target/)).not.toBeInTheDocument()
   })
 })
