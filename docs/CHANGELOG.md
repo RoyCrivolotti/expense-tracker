@@ -2,6 +2,12 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (the spread table's euros)
+
+- **The spread table says which euros each amount is in.** A 750.000 € milestone (an amount on your account) sat above a 750.000 € FI target (an amount in the plan's euros) with different answers and no reason. The milestone rows say "on your account", the FI row says "in 2026 euros", and the caption names the chart's euros and the table's.
+- **The runs that get there are counted out of 100 without rounding a risk away.** 4 runs in 10.000 missing a milestone read "100 of 100"; they read 99 now, as the retirement line already did.
+- **The spread card says what a run is and where the bounce is set** before it uses either word.
+
 ## October 2026 (one rounding for every path)
 
 - **A plan restarted on its own line reads the same as the plan.** The plan's years to a milestone were rounded up to a yearly step from its start and then again after taking today off, while the restart from a check-in was rounded once, so someone exactly on the plan read "1 year sooner" and the plan's cells could be up to two years later than the date on Progress. Every row is rounded once now, from the day the path reaches the amount, and "up to a year later" is what the caption says and what it is.
