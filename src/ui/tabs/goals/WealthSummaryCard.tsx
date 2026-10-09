@@ -1,5 +1,5 @@
 import type { GoalScenario, Transaction, WealthAccount, WealthCheckin } from '../../../types'
-import type { CashReserve, PortfolioReturn, ReturnReading, SteadyGap, TrackStatus } from '../../../engine'
+import type { CashReserve, PortfolioReturn, ReturnReading, TrackStatus } from '../../../engine'
 import { useMemo } from 'react'
 import { Card } from '../../components/primitives'
 import {
@@ -18,11 +18,12 @@ import {
   plannedMonthlyAverage,
   readReturn,
   shortMonthFullYearLabel,
-  steadyGap,
+  splitGap,
   trackStatus,
   trackVerdict,
 } from '../../../engine'
 import { formatCheckinDate } from './checkinDate'
+import { GapSplitHint } from './GapSplitHint'
 import { useAssumedInflation } from '../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import type { MoneyFormat } from '../../../engine/money'
@@ -129,38 +130,6 @@ function CashReserveHint({ reserve, format }: { reserve: CashReserve; format: Mo
       </strong>{' '}
       of spending, against a target of {reserve.targetMonths} months.
     </p>
-  )
-}
-
-/**
- * A gap that has held still for half a year is the plan's starting point being wrong,
- * not the saving. Said once, with the fix to hand, rather than left as a red number.
- */
-function SteadyGapHint({
-  gap,
-  format,
-  onRebaseline,
-}: {
-  gap: SteadyGap
-  format: MoneyFormat
-  onRebaseline: (() => void) | undefined
-}) {
-  const behind = gap.meanDeltaCents < 0
-  return (
-    <div className={styles.steadyGap}>
-      <p style={hintStyle}>
-        Every check-in since {formatCheckinDate(gap.sinceDate)} has sat about{' '}
-        {formatMoneyShort(Math.abs(gap.meanDeltaCents), format)} {behind ? 'behind' : 'ahead'}. A gap
-        that does not move is the plan's starting point, not your saving. Re-baselining sets the
-        plan's start to the latest check-in, so from here on the gap comes from what you invest
-        and how markets do, not from where the plan began.
-      </p>
-      {onRebaseline ? (
-        <button type="button" className={goalStyles.btn} onClick={onRebaseline}>
-          Re-baseline from latest check-in
-        </button>
-      ) : null}
-    </div>
   )
 }
 
@@ -390,15 +359,15 @@ function SnapshotHints({
 }) {
   const inflationRate = useAssumedInflation()
   const reading = readReturn(checkins, accounts, transactions, plan)
-  const stale = plan ? steadyGap(checkins, plan, accounts, inflationRate) : null
+  const gap = plan && status ? splitGap(plan, checkins, accounts, transactions, inflationRate) : null
   const reserve = cashReserve(latest, accounts, transactions, cashReserveMonths, openBudgetMonth)
   return (
     <>
       {status ? <PlanGapHint status={status} /> : null}
+      {gap ? <GapSplitHint reading={gap} planStartDate={plan?.planStartDate ?? null} format={format} onRebaseline={onRebaseline} /> : null}
       {plan ? <PaceHint plan={plan} transactions={transactions} openBudgetMonth={openBudgetMonth} format={format} /> : null}
       {reading ? <ReturnHint reading={reading} plan={plan} format={format} inflationRate={inflationRate} /> : null}
       {reserve ? <CashReserveHint reserve={reserve} format={format} /> : null}
-      {stale ? <SteadyGapHint gap={stale} format={format} onRebaseline={onRebaseline} /> : null}
     </>
   )
 }
