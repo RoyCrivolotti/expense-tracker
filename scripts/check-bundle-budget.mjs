@@ -207,8 +207,13 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // said at three rates in the FI chart and in Where you are today). The total stood at 262,218 bytes after the
 // Rent vs buy redesign and this takes it to 262,905 (the Goals chunk from 71,398 to 72,081). All of it is small
 // code, in the engine and the lazy Goals chunk, with no new library.
-const TOTAL_MAX_GZIP = 263_200
-const GOALS_MAX_GZIP = 72_380
+//
+// Raised from 263.2 KB to 263.78 KB, and the Goals chunk from 72.38 KB to 72.86 KB, for the market bounce card
+// in Assumptions (the stepper with its three usual choices, saved the way the assumed inflation is, which now
+// shares one hook with it). The total stood at 262,957 bytes after the replay engine and this takes it to 263,487
+// (the Goals chunk from 72,080 to 72,572). All of it is small code in the lazy Goals chunk, with no new library.
+const TOTAL_MAX_GZIP = 263_780
+const GOALS_MAX_GZIP = 72_860
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length
