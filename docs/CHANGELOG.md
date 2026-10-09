@@ -177,7 +177,7 @@ Checked in Chromium at 1280px and at 375px, in the light and the dark theme.
 
 ## October 2026 (the measured return, against like for like)
 
-- **A return under a year is set against what the plan expects over the same days.** It said "returned 7,3% so far against the 6,0% a year that the plan assumes", a total over a few weeks beside a yearly rate, which reads as ahead whatever the plan expects. It now says what the plan assumes over those days (about 1,7% for 71 days at 6% after inflation and 3% inflation), with the rate and the inflation it comes from. From a year on it is still a yearly rate, after inflation, against the plan's.
+- **A return under a year is set against what the plan expects over the same days.** It said "returned 3,0% so far against the 7,0% a year that the plan assumes", a total over a few weeks beside a yearly rate, which reads as behind or ahead whatever the plan expects. It now says what the plan assumes over those days (about 3,6% for 146 days at 7% after inflation and 2% inflation), with the rate and the inflation it comes from. From a year on it is still a yearly rate, after inflation, against the plan's.
 
 ## October 2026 (monthly investing, as a history)
 
