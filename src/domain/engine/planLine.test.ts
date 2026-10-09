@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { samplePlan, SAMPLE_INFLATION } from '../../testing/samplePlan'
-import { lineValues, planLineOf, planValueAt, stretchAround } from './planLine'
+import { lineValues, planLineOf, planValueAt, planValueBefore, stretchAround } from './planLine'
 import { projectNetWorth } from './projection'
 import { scenarioToParams } from './scenarioProjection'
 
@@ -105,5 +105,23 @@ describe('lineValues', () => {
     expect(result.values).toEqual(stepped.map((p) => p.investedCents))
     expect(result.preStep).toEqual(stepped.map((p) => p.preEventInvestedCents))
     expect(result.preStep![8]).toBeGreaterThan(result.values[8]!)
+  })
+})
+
+describe('planValueBefore', () => {
+  it('is the value the day before a step on the anniversary, and the plain value on any other day', () => {
+    const points = project()
+    const line = planLineOf(points)
+    expect(planValueBefore(line, 8)).toBe(points[8]!.preEventInvestedCents)
+    expect(planValueBefore(line, 8)).toBeGreaterThan(planValueAt(line, 8)!)
+    expect(planValueBefore(line, 7.5)).toBe(planValueAt(line, 7.5))
+    expect(planValueBefore(line, 3)).toBe(planValueAt(line, 3))
+  })
+
+  it('is the value at the start on the first day, and nothing outside the plan', () => {
+    const line = planLineOf(project())
+    expect(planValueBefore(line, 0)).toBe(planValueAt(line, 0))
+    expect(planValueBefore(line, -1)).toBeNull()
+    expect(planValueBefore(line, 31)).toBeNull()
   })
 })

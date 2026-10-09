@@ -89,3 +89,13 @@ export function lineValues(points: readonly PlanPoint[]): { values: number[]; pr
   const before = points.map((p) => p.preEventInvestedCents ?? p.investedCents)
   return before.some((v, i) => v !== values[i]) ? { values, preStep: before } : { values }
 }
+
+/**
+ * The value on the day before `years`: on an anniversary with a step, what the year reached before
+ * the payment or event landed; on any other day the same as `planValueAt`.
+ */
+export function planValueBefore(line: PlanLine, years: number): number | null {
+  const whole = Math.floor(years)
+  if (years === whole && whole >= 1 && whole <= line.horizon) return line.segments[whole - 1]?.end ?? null
+  return planValueAt(line, years)
+}
