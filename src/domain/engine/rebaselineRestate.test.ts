@@ -54,6 +54,15 @@ describe('rebaseline restates what is typed in the euros of the old start', () =
     const b = rebaseline({ ...plan }, checkin(7_000_000, '2029-01-01'), I).patch
     expect(a).toEqual(b)
   })
+
+  it('lands where one restart lands when it is made in two steps, to a cent', () => {
+    const first = apply(plan, rebaseline(plan, checkin(5_000_000, '2027-07-01'), I).patch)
+    const twice = rebaseline(first, checkin(7_000_000, '2029-01-01'), I).patch
+    const once = rebaseline(plan, checkin(7_000_000, '2029-01-01'), I).patch
+    for (const key of ['annualSpendCents', 'rentMonthlyCents', 'transactionCostsCents', 'housePriceCents'] as const) {
+      expect(Math.abs(twice[key] - once[key])).toBeLessThanOrEqual(2)
+    }
+  })
 })
 
 describe('rebaseline restates the price of a house not yet bought by the house’s own growth', () => {
@@ -179,6 +188,26 @@ describe('rebaseline of a house already bought', () => {
     const fromDayOne = samplePlan({ housePurchaseYear: 0, planStartDate: '2027-01-01' })
     const { patch } = rebaseline(fromDayOne, checkin(10_000_000, '2026-06-01'), I)
     expect(patch.housePurchaseYear).toBe(0)
+  })
+
+  it('lands where one restart lands when it is made in two steps: the same value, the same owed, the same term', () => {
+    const first = apply(owned, rebaseline(owned, checkin(10_000_000, '2028-07-01'), I).patch)
+    const twice = rebaseline(first, checkin(10_000_000, '2030-01-01'), I).patch
+    const once = rebaseline(owned, checkin(10_000_000, '2030-01-01'), I).patch
+    const owes = (p: typeof once) => p.housePriceCents * (1 - p.downPaymentFraction)
+    expect(Math.abs(twice.housePriceCents - once.housePriceCents) / once.housePriceCents).toBeLessThan(1e-4)
+    expect(Math.abs(owes(twice) - owes(once)) / owes(once)).toBeLessThan(1e-4)
+    expect(twice.mortgageTermYears).toBeCloseTo(once.mortgageTermYears, 2)
+  })
+
+  it('is held at what is owed when the house is worth less than the loan, and says so', () => {
+    const underwater = samplePlan({ housePurchaseYear: 2, houseAppreciationRate: -0.1, downPaymentFraction: 0 })
+    const r = rebaseline(underwater, checkin(10_000_000, date), I)
+    expect(r.ownedHouse!.raisedToOwed).toBe(true)
+    expect(r.patch.housePriceCents).toBe(r.ownedHouse!.owedCents)
+    expect(r.patch.downPaymentFraction).toBe(0)
+    expect(say(r).join(' ')).toContain('owes more than it is worth')
+    expect(say(rebaseline(owned, checkin(10_000_000, date), I)).join(' ')).not.toContain('owes more than it is worth')
   })
 
   it('says what it assumed is still owed, so a house the plan only expected can be spotted', () => {
