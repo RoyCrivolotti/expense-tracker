@@ -40,6 +40,8 @@ export interface HeroSheetModel {
     nominalMode: boolean
     onToggleVisible: ((scenarioId: number) => void) | undefined
   }
+  /** What the chart's euros are ("in 2026 euros", or the account's in the Nominal view), said in the sheet's bar. */
+  money: string
   /** The card's own window buttons, which change the card as well. */
   windowPicker: ReactNode
   /** Nominal or Purchasing power, which the page owns. */
