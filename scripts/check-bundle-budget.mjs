@@ -212,7 +212,14 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // in Assumptions (the stepper with its three usual choices, saved the way the assumed inflation is, which now
 // shares one hook with it). The total stood at 262,957 bytes after the replay engine and this takes it to 263,487
 // (the Goals chunk from 72,080 to 72,572). All of it is small code in the lazy Goals chunk, with no new library.
-const TOTAL_MAX_GZIP = 263_780
+//
+// Raised from 263.78 KB to 269.49 KB for the spread card (the replay, the card with its table and the lines for
+// the plan and the ranks, and the setting that feeds it). The card is a lazy chunk of its own (3,616 bytes), and
+// because the Goals tab and the card now share the chart shell and the media-query hook those two moved into
+// chunks of their own, which compress a little worse apart: the total stood at 263,487 bytes after the market
+// bounce card and this takes it to 269,214. The Goals chunk goes the other way, from 72,572 to 65,586, and its
+// limit stays where it was so that the rest of the stack still has room in it. No new library.
+const TOTAL_MAX_GZIP = 269_490
 const GOALS_MAX_GZIP = 72_860
 
 function gzipBytes(path) {

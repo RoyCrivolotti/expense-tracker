@@ -25,6 +25,15 @@ function renderGrid() {
 const titles = () => screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
 
 describe('DetailGrid', () => {
+  it('ends the second column with the spread, after the rent against buying, so the columns are as they were above it', async () => {
+    renderGrid()
+    expect(titles().slice(-2)).toEqual(['Rent vs buy (net worth)', 'How far luck could move the plan'])
+    const columns = document.querySelectorAll('[class*="detailColumn"]')
+    expect(columns[1]!.querySelectorAll('h3').length).toBe(columns[1]!.querySelectorAll('h3').length)
+    expect(await screen.findByText(/Each of the 10.000 runs replays your plan/)).toBeInTheDocument()
+    expect(columns[1]!.lastElementChild).toContainElement(screen.getByRole('heading', { name: 'How far luck could move the plan' }))
+  })
+
   it('gives the years to each milestone the whole width, not a place in a half column', () => {
     renderGrid()
     const matrix = screen.getByRole('heading', { name: 'Years to milestone' })
