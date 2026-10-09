@@ -195,8 +195,14 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // the rows with their wording, and the restart rule) net of the steady-gap hint it replaces. The total
 // stood at 258,331 bytes after the return guards and this takes it to 260,122 (the Goals chunk from
 // 67,529 to 69,318). All of it is small code, in the engine and the lazy Goals chunk, with no new library.
-const TOTAL_MAX_GZIP = 260_400
-const GOALS_MAX_GZIP = 69_600
+//
+// Raised from 260.4 KB to 262.4 KB, and the Goals chunk from 69.6 KB to 71.6 KB, for the redesigned Rent vs
+// buy (each side split into what it holds and pays, the comparison from the purchase year to ten years past
+// the loan, the readout and the note that say so, the turning points drawn on the chart). The total stood at
+// 260,3 KB after the upkeep input and this takes it to 262,218 bytes (the Goals chunk from 69,5 KB to 71,398).
+// All of it is small code, in the engine and the lazy Goals chunk, with no new library.
+const TOTAL_MAX_GZIP = 262_400
+const GOALS_MAX_GZIP = 71_600
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length

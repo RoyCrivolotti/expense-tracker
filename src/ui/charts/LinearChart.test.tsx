@@ -32,6 +32,22 @@ const defaultProps = {
 }
 
 describe('LinearChart', () => {
+  it('names the turning points it is given, at their places on the axis', () => {
+    render(
+      <LinearChart
+        {...defaultProps}
+        series={[makeLine('s1', [10, 20, 30])]}
+        labeledMarkers={[{ index: 1, label: 'Loan paid off' }]}
+      />,
+    )
+    expect(screen.getByText('Loan paid off')).toBeInTheDocument()
+  })
+
+  it('draws no turning points when it is given none', () => {
+    const { container } = render(<LinearChart {...defaultProps} series={[makeLine('s1', [10, 20, 30])]} />)
+    expect(container.querySelector(`.${chartStyles.markerLabel}`)).toBeNull()
+  })
+
   it('leaves 16px above the plot unless asked for less', () => {
     const plotTop = (props: { padTop?: number }) => {
       const { container, unmount } = render(

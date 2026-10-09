@@ -7,7 +7,7 @@ import {
   DEFAULT_REAL_RETURN,
   DEFAULT_TRANSACTION_COSTS_CENTS,
 } from './projectionConstants'
-import { paidShareOfYear, projectRentVsBuy, rentVsBuyVerdict, type RentVsBuyInput, type RentVsBuyPoint } from './rentVsBuy'
+import { paidShareOfYear, projectRentVsBuy, rentVsBuyVerdict, type RentVsBuyInput } from './rentVsBuy'
 import { monthlyMortgageCents, projectNetWorth, type ProjectionParams } from './projection'
 
 function baseParams(overrides: Partial<ProjectionParams> = {}): ProjectionParams {
@@ -40,9 +40,10 @@ describe('projectRentVsBuy', () => {
     expect(result.verdict).toBeNull()
   })
 
-  it('produces one point per projected year including year 0', () => {
+  it('produces one point per year from the purchase to ten years after the loan, year 0 included', () => {
     const result = projectRentVsBuy(input())
-    expect(result.points).toHaveLength(31)
+    // A 30-year loan: years 0 to 40.
+    expect(result.points).toHaveLength(41)
     expect(result.points[0]?.year).toBe(0)
   })
 
@@ -91,7 +92,7 @@ describe('projectRentVsBuy', () => {
   })
 
   it('counts the mortgage payment in today\'s money, so it shrinks against a constant rent', () => {
-    const params = baseParams({ housePurchaseYear: 5 })
+    const params = baseParams({ housePurchaseYear: null })
     const payment = monthlyMortgageCents({ ...params, housePurchaseYear: 0 })
     // Rent equal to the payment: at a fixed nominal payment the buyer is ahead in today's
     // money, so it is the buyer who has a surplus to invest from year one.
@@ -116,7 +117,7 @@ describe('projectRentVsBuy', () => {
 
   it('shrinks the payment by the inflation it is given', () => {
     const rate = 0.05
-    const params = baseParams({ housePurchaseYear: 5, inflationRate: rate })
+    const params = baseParams({ housePurchaseYear: null, inflationRate: rate })
     const payment = monthlyMortgageCents({ ...params, housePurchaseYear: 0 })
     const result = projectRentVsBuy({ params, rentMonthlyCents: payment, carryRate: 0 })
     const year1 = projectNetWorth({ ...params, housePurchaseYear: 0 })[1]!
@@ -127,7 +128,7 @@ describe('projectRentVsBuy', () => {
 })
 
 describe('rentVsBuyVerdict', () => {
-  const at = (diffs: number[]): RentVsBuyPoint[] =>
+  const at = (diffs: number[]): Parameters<typeof rentVsBuyVerdict>[0] =>
     [0, ...diffs].map((diff, year) => ({ year, rentNetWorthCents: 1_000, buyNetWorthCents: 1_000 + diff }))
 
   it('says nothing without a year after the purchase', () => {
