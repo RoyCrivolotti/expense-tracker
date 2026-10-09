@@ -162,8 +162,15 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // after the new default return, the three pieces add about 0.25 KB to 65,172 bytes, and the total
 // is still under its limit at 253,745. All of it is small code in the lazy Goals chunk, with no new
 // library.
-const TOTAL_MAX_GZIP = 254_000
-const GOALS_MAX_GZIP = 65_500
+//
+// Raised from 254 KB to 255.7 KB, and the Goals chunk from 65.5 KB to 66 KB, for the plan's line through a
+// house payment or event: the line and its stretches, the step the charts draw (a line and its band can
+// climb to the value before a payment and drop straight to the one after), the window around a step,
+// and the status wording that goes with them. The total stood at 253,745 bytes after the house price and
+// this takes it to 255,412 (the Goals chunk from 65,172 to 65,867). All of it is small code, in the engine
+// and the lazy Goals chunk, with no new library.
+const TOTAL_MAX_GZIP = 255_700
+const GOALS_MAX_GZIP = 66_000
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length
