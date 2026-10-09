@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { samplePlan, SAMPLE_INFLATION } from '../../testing/samplePlan'
 import { wholeYearsToAmount } from './milestoneOutlook'
-import { crossingRange, growthFor, percentile, replayMarket, SPREAD_MAX_YEARS } from './marketSpread'
+import { crossingRange, growthFor, percentile, replayMarket, SPREAD_MAX_YEARS, SPREAD_SEED } from './marketSpread'
+import { DRAW_YEARS, normalDraws } from './rng'
 import { fireNumber, projectNetWorth, yearsToFi, type ProjectionParams } from './projection'
 import { scenarioToParams } from './scenarioProjection'
 
@@ -11,6 +12,15 @@ const sample = (over = {}): ProjectionParams => scenarioToParams(samplePlan({ ..
 const bare = (over: Partial<ProjectionParams> = {}): ProjectionParams => ({
   ...sample({ housePurchaseYear: null, lifeEvents: [], monthlyContributionCents: 0, contributionSchedule: [] }),
   ...over,
+})
+
+describe('the draws a replay reads', () => {
+  it('are the hundred years a retirement can last, so the spread and a retirement share one matrix instead of making it twice', () => {
+    expect(DRAW_YEARS).toBe(100)
+    const before = normalDraws(50, DRAW_YEARS, SPREAD_SEED)
+    replayMarket({ params: bare(), volatility: 0.15, runs: 100 })
+    expect(normalDraws(50, DRAW_YEARS, SPREAD_SEED)).toBe(before)
+  })
 })
 
 describe('growthFor', () => {

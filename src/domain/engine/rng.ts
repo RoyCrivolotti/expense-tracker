@@ -26,6 +26,16 @@ export function boxMuller(u1: number, u2: number): [number, number] {
   return [r * Math.cos(angle), r * Math.sin(angle)]
 }
 
+/**
+ * How many years of draws a matrix has: the longest retirement the app allows, which is more than the spread of a
+ * plan needs (`SPREAD_MAX_YEARS`). One length for everything that reads the draws, since only the last matrix
+ * asked for is kept and two lengths would make it afresh each time the other asked.
+ */
+export const DRAW_YEARS = 100
+
+/** The seed of the one matrix of draws, so the spread of a plan and the chance a retirement lasts read the same futures. */
+export const DRAW_SEED = 20261009
+
 let cached: { key: string; draws: Float64Array } | null = null
 
 /**
