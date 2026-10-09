@@ -12,7 +12,8 @@ export function rentVsBuyHeadline(
 ): string {
   switch (verdict?.kind) {
     case 'buy-ahead':
-      return 'Buying stays ahead of renting the whole way.'
+      // Not "the whole way": the day of purchase is behind by the fees, which the legend shows, and the verdict starts after it.
+      return 'Buying is ahead of renting in every year after you buy.'
     case 'buy-takes-over':
       return `Buying overtakes renting ${years(verdict.year)} after you buy and stays ahead to the end.`
     case 'rent-takes-over': {

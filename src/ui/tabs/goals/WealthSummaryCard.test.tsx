@@ -89,7 +89,7 @@ describe('WealthSummaryCard', () => {
 
     it('says the net worth is every account on the account\'s euros, and keeps the balance as logged in the hover text', () => {
       render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={plan} />)
-      expect(screen.getByText('Net worth, all accounts').nextElementSibling).toHaveTextContent(short(20_200_000))
+      expect(screen.getByText('Net worth, as logged, all accounts').nextElementSibling).toHaveTextContent(short(20_200_000))
       expect(screen.getByText('Investments, in 2020 euros').nextElementSibling).toHaveAttribute('title', `As logged on your account: ${short(18_000_000)}`)
     })
 

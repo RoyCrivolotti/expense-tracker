@@ -4,7 +4,9 @@ import { AssumptionsView } from './AssumptionsView'
 import { GoalsExplainer } from './GoalsExplainer'
 import { GoalsTab } from './GoalsTab'
 import { buildExpenseModel } from '../../buildExpenseModel'
-import { defaultExpenseSettings, fireNumber, replayRetirement } from '../../../engine'
+import { defaultExpenseSettings, fireNumber, replayRetirement, resolveMoneyFormat } from '../../../engine'
+import { MoneyFormatContext } from '../../hooks/moneyFormatContext'
+import { SPREAD_RUNS } from './charts/spreadModel'
 import { ODDS_RUNS, runsOfHundred } from './charts/retirementOddsLine'
 import { makeDataset } from '../../../testing/factories'
 import { makeActions } from '../../../testing/makeActions'
@@ -33,6 +35,22 @@ describe('Goals copy that names the Assumptions tab', () => {
     expect(container.textContent).toContain('You set it in the Market bounce card in Assumptions.')
   })
 
+  it('writes every number of the glossary in the owner\'s number style, the guide and the count of runs as much as the worked example', () => {
+    const usd = render(<MoneyFormatContext.Provider value={resolveMoneyFormat('USD', 'en-US')}><GoalsExplainer /></MoneyFormatContext.Provider>).container.textContent ?? ''
+    expect(usd).toContain('4% up to 35 years, 3.5% up to 49 and 3.25% from 50')
+    expect(usd).toContain('replays the plan in 10,000 different markets')
+    expect(usd).toContain('default $500 in demo')
+    expect(usd).not.toContain('3,5%')
+    expect(usd).not.toContain('10.000')
+    const euro = render(<GoalsExplainer />).container.textContent ?? ''
+    expect(euro).toContain('4% up to 35 years, 3,5% up to 49 and 3,25% from 50')
+    expect(euro).toContain('replays the plan in 10.000 different markets')
+  })
+
+  it('says how many runs the glossary says, as many as the card runs', () => {
+    expect(SPREAD_RUNS).toBe(10_000)
+  })
+
   it('says that a mixed portfolio bounces less but also grows less, so the return comes down with the bounce', () => {
     const { container } = render(<GoalsExplainer />)
 
@@ -53,7 +71,7 @@ describe('Goals copy that names the Assumptions tab', () => {
 
     expect(runsOfHundred(lasts)).toBe(86)
     expect(container.textContent).toContain(
-      'With a typical return of 5% and a bounce of 15%, 4% over 30 years lasts in about 86 of 100: the other 14 are the runs with bad early years. A lower rate, a higher return or a smaller bounce lasts more often, and a longer retirement less often.',
+      'With a typical return of 5% and a bounce of 15%, 4% over 30 years lasts in about 86 of 100: the other 14 are the runs with bad early years. A lower rate or a higher return lasts more often, a smaller bounce does too at a return like this, and a longer retirement lasts less often.',
     )
   })
 

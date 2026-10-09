@@ -1,11 +1,13 @@
 import { currencyWord, formatCentsCompact, type MoneyFormat } from '../../../engine'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { onAccountCents } from './bothMoneys'
+import { guideText } from './retirementGuide'
 import styles from './goals.module.css'
 
 /** Said in the owner's money: the currency's name, and the one example worked out in their number style. */
 const buildTerms = (format: MoneyFormat): { term: string; body: string }[] => {
-  const cur = format.symbol
+  const runs = (10_000).toLocaleString(format.locale)
+  const guide = guideText(format)
   const word = currencyWord(format)
   const hundredK = formatCentsCompact(10_000_000, format)
   const grown = formatCentsCompact(onAccountCents(10_000_000, 10, 0.02), format)
@@ -20,7 +22,7 @@ const buildTerms = (format: MoneyFormat): { term: string; body: string }[] => {
   },
   {
     term: 'Purchase fees',
-    body: `Notary, agency, and closing costs (default ${cur}500 in demo). Withdrawn from the invested portfolio together with the down payment in the purchase year.`,
+    body: `Notary, agency, and closing costs (default ${formatCentsCompact(50_000, format)} in demo). Withdrawn from the invested portfolio together with the down payment in the purchase year.`,
   },
   {
     term: 'Scenario',
@@ -56,15 +58,15 @@ const buildTerms = (format: MoneyFormat): { term: string; body: string }[] => {
   },
   {
     term: 'Years the money must last',
-    body: 'How long the invested money has to pay for your spending after FI. The FI drawdown runs for it, and it sets the usual guide for the withdrawal rate: 4% up to 35 years, 3,5% up to 49 and 3,25% from 50. Changing it moves the rate to the guide, unless you have set the rate yourself.',
+    body: `How long the invested money has to pay for your spending after FI. The FI drawdown runs for it, and it sets the usual guide for the withdrawal rate: ${guide}. Changing it moves the rate to the guide, unless you have set the rate yourself.`,
   },
   {
     term: 'Market bounce',
-    body: "How far a single year's return strays from the typical one. The plan assumes the typical return every year, which no run of years pays. The spread card replays the plan in 10.000 different markets, each year's return the typical one times a luck factor with this bounce (15% by default, about world stocks), and shows where the middle half of them and 8 in 10 of them end up. You set it in the Market bounce card in Assumptions. A mixed portfolio bounces less but also grows less: choose a lower bounce here and a lower return on the plan.",
+    body: `How far a single year's return strays from the typical one. The plan assumes the typical return every year, which no run of years pays. The spread card replays the plan in ${runs} different markets, each year's return the typical one times a luck factor with this bounce (15% by default, about world stocks), and shows where the middle half of them and 8 in 10 of them end up. You set it in the Market bounce card in Assumptions. A mixed portfolio bounces less but also grows less: choose a lower bounce here and a lower return on the plan.`,
   },
   {
     term: 'Chance the money lasts',
-    body: "In how many of 100 different markets the money lasts all the years you asked for. Each run starts at the FI target, takes the spending out every year and grows what is left by the typical return times a luck factor with the market bounce. With a typical return of 5% and a bounce of 15%, 4% over 30 years lasts in about 86 of 100: the other 14 are the runs with bad early years. A lower rate, a higher return or a smaller bounce lasts more often, and a longer retirement less often. It is a picture of the plan's own market, not a promise.",
+    body: "In how many of 100 different markets the money lasts all the years you asked for. Each run starts at the FI target, takes the spending out every year and grows what is left by the typical return times a luck factor with the market bounce. With a typical return of 5% and a bounce of 15%, 4% over 30 years lasts in about 86 of 100: the other 14 are the runs with bad early years. A lower rate or a higher return lasts more often, a smaller bounce does too at a return like this, and a longer retirement lasts less often. It is a picture of the plan's own market, not a promise.",
   },
   {
     term: 'Drawdown',
