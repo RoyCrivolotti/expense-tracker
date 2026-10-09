@@ -118,9 +118,18 @@ describe('the sections of the controls', () => {
     render(<HousingFields draft={draft} onChange={vi.fn()} />)
     expect(
       screen.getByText(
-        'Purchase cost from portfolio, in 2026 euros: 64.871 € down + 6.000 € fees = 70.871 € (about 83.036 € on your account in 2034), dip on the invested line in year 8.',
+        'Purchase cost from portfolio, in 2026 euros: 64.871 € down + 6.000 € fees = 70.871 € (about 83.036 € on your account in 2034), dip on the invested line in year 8. The loan payments and upkeep are not taken from the portfolio: the plan pays them from the rest of your income. If they will lower what you invest, add a change under Monthly investing over time.',
       ),
     ).toBeInTheDocument()
+  })
+
+  it('says the same for a house you already own, which the plan does not charge the portfolio for either', () => {
+    const { id, ...draft } = samplePlan({ housePurchaseYear: 0 })
+    void id
+    render(<HousingFields draft={draft} onChange={vi.fn()} />)
+    expect(screen.getByText(/^Already own: the starting balance is counted as what is left after/)).toHaveTextContent(
+      'The loan payments and upkeep are not taken from the portfolio: the plan pays them from the rest of your income. If they will lower what you invest, add a change under Monthly investing over time.',
+    )
   })
 
   it('says what the fees come to on the account in the year the house is bought, under the fees', () => {
