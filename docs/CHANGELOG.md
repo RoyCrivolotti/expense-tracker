@@ -2,6 +2,13 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (the spread card loads and behaves)
+
+- **Dragging a control is no longer held up by the two market replays.** Every committed edit reran the spread card's 10.000 runs and the retirement replays for cards a screen or two down the page. On a laptop slowed to a quarter of its speed, 20 presses of the arrow key on the return slider made 7 or 8 pauses of 100 to 240 ms; now one of under 100 ms. The replays wait until the edits have stopped and the card is near the screen, and the spread card does not fetch its code before then.
+- **A spread card that does not load no longer blanks the page.** A failed fetch of the card's code unmounted the whole app, Dashboard and Settings included. Only the card says it could not be shown, with a Reload button.
+- **The spread card has the whole width under the two columns** on a wide screen instead of being a fourth card in one of them, which left the columns about 1.000px apart.
+- **Its table scrolls inside the card when the text is large** instead of spilling out of it.
+
 ## October 2026 (the spread table's euros)
 
 - **The spread table says which euros each amount is in.** A 750.000 € milestone (an amount on your account) sat above a 750.000 € FI target (an amount in the plan's euros) with different answers and no reason. The milestone rows say "on your account", the FI row says "in 2026 euros", and the caption names the chart's euros and the table's.
