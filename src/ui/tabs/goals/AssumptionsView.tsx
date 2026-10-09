@@ -4,6 +4,7 @@ import type { ExpenseActions } from '../../actions'
 import { MilestonesSetting } from '../../settings/MilestonesSetting'
 import { CashReserveSetting } from '../../settings/CashReserveSetting'
 import { InflationSetting } from '../../settings/InflationSetting'
+import { MarketBounceSetting } from '../../settings/MarketBounceSetting'
 import { WealthAccountsManager } from './WealthAccountsManager'
 import type { AssumptionsFocus } from './goalsView'
 import styles from './progress.module.css'
@@ -57,6 +58,7 @@ export function AssumptionsView({
       </div>
       <CashReserveSetting settings={settings} onChange={onSettingsChange} />
       <InflationSetting settings={settings} onChange={onSettingsChange} scrollIntoView={focus === 'inflation'} />
+      <MarketBounceSetting settings={settings} onChange={onSettingsChange} />
     </div>
   )
 }

@@ -607,6 +607,30 @@
 /* Groups related fields (e.g. currency + number format + preview) with even
    spacing; a border between consecutive groups makes it unambiguous which
    group a trailing hint paragraph belongs to. */
+/* The usual choices beside a stepper: small chips, the saved one filled. */
+.presetRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.presetChip {
+  padding: 0.35rem 0.75rem;
+  min-height: 2.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.presetChipOn {
+  border-color: var(--color-accent, var(--color-text));
+  background: color-mix(in srgb, var(--color-accent, var(--color-text)) 12%, var(--color-surface));
+  font-weight: 600;
+}
+
 .settingGroup {
   display: flex;
   flex-direction: column;
