@@ -222,3 +222,21 @@ export function splitGap(
     plannedMonthCents: Math.round(plannedMonthlyAt(plan, w.last.checkinDate) / Math.pow(1 + inflationRate, w.tb)),
   }
 }
+
+/** A restart is only worth suggesting when the gap is at least this many planned months of investing. */
+const RESTART_MIN_MONTHS = 3
+/** And when where the plan started explains between this share of the gap and its mirror above. */
+const RESTART_SHARE = [0.5, 1.5] as const
+
+/**
+ * Whether the gap is the plan's starting point rather than anything done since: the start part is on the
+ * same side as the gap and about the size of it (between half and one and a half times), and the gap is
+ * worth at least three months of what the plan invests, since a smaller one is noise and a plan that is
+ * paused has no month to count. Then restarting the plan from the latest check-in is the fix, not saving.
+ */
+export function startExplainsGap(split: GapSplit): boolean {
+  const { gapCents, parts, plannedMonthCents } = split
+  if (plannedMonthCents <= 0 || Math.abs(gapCents) < RESTART_MIN_MONTHS * plannedMonthCents) return false
+  const share = parts.start / gapCents
+  return share >= RESTART_SHARE[0] && share <= RESTART_SHARE[1]
+}

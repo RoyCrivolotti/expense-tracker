@@ -3,7 +3,7 @@ import { makeScenario, makeTransaction, makeWealthAccount, makeWealthCheckin } f
 import { samplePlan, SAMPLE_INFLATION } from '../../testing/samplePlan'
 import { plannedMonthlyAt } from './contributionSchedule'
 import { dateAtYears } from './dates'
-import { splitGap, wholeEuros, type GapSplit } from './gapSplit'
+import { splitGap, startExplainsGap, wholeEuros, type GapSplit } from './gapSplit'
 import { projectNetWorth } from './projection'
 import { scenarioToParams } from './scenarioProjection'
 import { trackStatus, yearOffsetFromDate } from './wealthTracking'
@@ -336,5 +336,44 @@ describe('the scenarios the oracles use are what they say', () => {
     expect(still().monthlyContributionCents).toBe(0)
     expect(paying().monthlyContributionCents).toBe(100_000)
     expect(makeScenario().planStartDate).toBeDefined()
+  })
+})
+
+describe('startExplainsGap', () => {
+  const base: GapSplit = {
+    kind: 'split',
+    gapCents: -5_000_000,
+    verdict: 'behind',
+    fromDate: '2026-03-01',
+    toDate: '2027-03-01',
+    beforeFirstCheckin: false,
+    parts: { timing: 0, start: -4_900_000, saving: -50_000, market: -50_000 },
+    merged: null,
+    recordedShort: false,
+    accountsChanged: false,
+    plannedMonthCents: 100_000,
+  }
+  const with_ = (over: Partial<GapSplit>, parts: Partial<GapSplit['parts']> = {}): GapSplit => ({ ...base, ...over, parts: { ...base.parts, ...parts } })
+
+  it('is true when the start is about the size of a gap that is worth several planned months', () => {
+    expect(startExplainsGap(base)).toBe(true)
+    expect(startExplainsGap(with_({ gapCents: 5_000_000, verdict: 'ahead' }, { start: 4_000_000 }))).toBe(true)
+  })
+
+  it('is false when the gap is small, since a few planned months of it is noise', () => {
+    expect(startExplainsGap(with_({ gapCents: -250_000 }, { start: -240_000 }))).toBe(false)
+  })
+
+  it('is false when the plan is paused: there is no planned month to count it in', () => {
+    expect(startExplainsGap(with_({ plannedMonthCents: 0 }))).toBe(false)
+  })
+
+  it('is false when the start is on the other side of the gap, or much larger than it because saving made it up', () => {
+    expect(startExplainsGap(with_({}, { start: 4_900_000 }))).toBe(false)
+    expect(startExplainsGap(with_({ gapCents: -500_000 }, { start: -9_400_000 }))).toBe(false)
+  })
+
+  it('is false when the start is a small part of the gap', () => {
+    expect(startExplainsGap(with_({}, { start: -1_000_000, saving: -4_000_000 }))).toBe(false)
   })
 })
