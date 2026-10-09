@@ -825,7 +825,7 @@ describe('GoalsTab', () => {
     it('explains the purchase years and the band once, under the legend, and not above the chart', () => {
       render(<GoalsTab model={makeModel()} />)
 
-      expect(screen.queryByText(/select a year on the chart for values/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/Select a year on the chart for values/)).not.toBeInTheDocument()
       const note = screen.getByText(/Dashed vertical lines mark purchase years/)
       // The 5% a new plan starts at, three points either side.
       expect(note).toHaveTextContent('The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.')
@@ -838,6 +838,15 @@ describe('GoalsTab', () => {
 
       // A plan at 2% has no plan at -1% to draw: the band's low edge is the 0% plan, two points down, not three.
       expect(screen.getByText(/Dashed vertical lines mark purchase years/)).toHaveTextContent('at a real return of 0,0% to 5,0%, up to three points either side.')
+    })
+
+    it('has no em dash in the explanation above the phone chart, in either view of it', () => {
+      mockPhoneWidth()
+      render(<GoalsTab model={makeModel()} />)
+
+      const hint = screen.getByText(/Select a year on the chart for values/)
+      expect(hint.textContent).toContain('is withdrawn. Select a year on the chart for values and the purchase breakdown.')
+      expect(hint.textContent).not.toContain('—')
     })
 
     it('says it on a phone too, above the chart', () => {
@@ -856,7 +865,7 @@ describe('GoalsTab', () => {
       const header = screen.getByRole('heading', { name: 'Invested portfolio projection' }).closest<HTMLElement>('[class*="chartHeaderRow"]')!
       expect(within(header).queryByRole('radiogroup', { name: 'Value display mode' })).not.toBeInTheDocument()
       expect(screen.getByRole('radiogroup', { name: 'Value display mode' })).toBeInTheDocument()
-      expect(screen.getByText(/select a year on the chart for values/)).toBeInTheDocument()
+      expect(screen.getByText(/Select a year on the chart for values/)).toBeInTheDocument()
       expect(screen.queryByText(/The shaded band is the line you are editing/)).not.toBeInTheDocument()
       expect(screen.getByText(/The shaded band is the edited plan at a return three points lower and higher/)).toBeInTheDocument()
     })
