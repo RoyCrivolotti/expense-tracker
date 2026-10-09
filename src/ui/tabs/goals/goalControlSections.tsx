@@ -8,6 +8,7 @@ import { DateField, MoneyField, NumberField, PercentField, PurchaseYearField } f
 import { ContributionStepsList } from './ContributionSteps'
 import { firstChangeNote } from './contributionText'
 import { housePriceHint } from './housePriceHint'
+import { rentMoneyHint, spendMoneyHint } from './moneyHints'
 import { LifeEventsList } from './LifeEvents'
 import { ADJUST_LABELS } from './adjustSections'
 import { LEVER_SPECS, NO_LEVERS } from './leverFields'
@@ -235,7 +236,9 @@ function PurchaseTimingFields({ draft, onChange, omit = NO_LEVERS, wrap = plain 
   // What the purchase takes from the portfolio is worked out from the draft, not from the year's
   // field, so it is still said while the year is in the levers bar, where it is the one place
   // the figure is.
-  const purchaseHint = purchaseSummary(draft, useAssumedInflation(), format)
+  const inflationRate = useAssumedInflation()
+  const purchaseHint = purchaseSummary(draft, inflationRate, format)
+  const rentHint = rentMoneyHint(draft, inflationRate, format)
   return (
     <>
       {omit.has('housePurchaseYear') ? null : (
@@ -256,6 +259,7 @@ function PurchaseTimingFields({ draft, onChange, omit = NO_LEVERS, wrap = plain 
           onChange={(v) => onChange({ rentMonthlyCents: v })}
         />)
       )}
+      {rentHint ? <p className={styles.fieldHint}>{rentHint}</p> : null}
       <HomeCarryField draft={draft} onChange={onChange} />
     </>
   )
@@ -274,6 +278,7 @@ export function HousingFields(props: SectionProps) {
 export function FireFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: SectionProps) {
   // The formula is about both inputs, so it stays while either is on the page.
   const explainsTarget = !omit.has('annualSpendCents') || !omit.has('safeWithdrawalRate')
+  const spendHint = spendMoneyHint(draft, useAssumedInflation(), useMoneyFormat())
   return (
     <>
       <p className={styles.fieldHint}>
@@ -290,6 +295,7 @@ export function FireFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: 
           <p className={styles.fieldHint}>
             Yearly cost of living you would need the portfolio to cover after FI (within the horizon).
           </p>
+          {spendHint ? <p className={styles.fieldHint}>{spendHint}</p> : null}
         </>
       )}
       <RetirementYearsField draft={draft} onChange={onChange} />

@@ -83,6 +83,27 @@ describe('the sections of the controls', () => {
     expect(screen.getByText(/Enter today's price\. Bought in year 8/)).toBeInTheDocument()
   })
 
+  it('says what the rent comes to on the account in the year the house is bought, under the rent', () => {
+    const { id, ...draft } = samplePlan()
+    void id
+    render(<HousingFields draft={draft} onChange={vi.fn()} />)
+    expect(
+      screen.getByText('Counted in 2026 euros and rising with inflation: about 1.172 € a month on your account in 2034, the year you buy.'),
+    ).toBeInTheDocument()
+  })
+
+  it('says what the spending comes to on the account where the plan reaches FI or ends, under the spending, and not once it is in the bar', () => {
+    const { id, ...draft } = samplePlan()
+    void id
+    const { rerender } = render(<FireFields draft={draft} onChange={vi.fn()} />)
+    expect(
+      screen.getByText('Counted in 2026 euros: about 54.341 € a year on your account in 2056, when the plan ends (FI is not reached).'),
+    ).toBeInTheDocument()
+
+    rerender(<FireFields draft={draft} onChange={vi.fn()} omit={everything(['annualSpendCents'])} />)
+    expect(screen.queryByText(/^Counted in 2026 euros: about/)).not.toBeInTheDocument()
+  })
+
   it('takes what the purchase costs from the price it has risen to', () => {
     // 20% of 324.353,02 in 2026 euros, and the 6.000 of fees.
     const { id, ...draft } = samplePlan()
