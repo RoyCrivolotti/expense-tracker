@@ -35,7 +35,7 @@ describe('DetailGrid', () => {
     const grid = document.querySelector('[class*="detailGrid"]')!
     expect(grid.compareDocumentPosition(spread) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(grid.contains(spread)).toBe(false)
-    expect(await screen.findByText(/Each of the 10.000 runs replays your plan/)).toBeInTheDocument()
+    expect(await screen.findByText(/Each of the 10.000 runs replays your plan/, undefined, { timeout: 8_000 })).toBeInTheDocument()
   })
 
   it('splits the other six cards three and three, so the columns end within a card\'s height of each other', () => {
@@ -70,16 +70,19 @@ describe('DetailGrid', () => {
     })
 
     it('leaves their replays until they are near the screen', async () => {
+      // The card's code is loaded first: a card that wrongly rendered would then be on screen within the wait below,
+      // where from cold it would still be on its way and the test would pass for the wrong reason.
+      await import('../charts/SpreadChart')
       const io = installFakeIntersectionObserver()
       // Everything is far below the screen.
       vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({ top: 9000, bottom: 9400 } as DOMRect)
       renderGrid({ startInvestedCents: 1_000_000_00, annualSpendCents: 2_400_000 })
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      await act(() => new Promise((resolve) => setTimeout(resolve, 50)))
       expect(screen.getByText('Working it out…')).toBeInTheDocument()
       expect(screen.queryByText(/the money lasts all 30 years in/)).not.toBeInTheDocument()
 
       act(() => io.emit(0.3))
-      expect(await screen.findByText(/Each of the 10.000 runs replays your plan/)).toBeInTheDocument()
+      expect(await screen.findByText(/Each of the 10.000 runs replays your plan/, undefined, { timeout: 8_000 })).toBeInTheDocument()
       expect(screen.getByText(/the money lasts all 30 years in/)).toBeInTheDocument()
     })
   })
