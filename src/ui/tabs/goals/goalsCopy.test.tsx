@@ -57,6 +57,12 @@ describe('Goals copy that names the Assumptions tab', () => {
     )
   })
 
+  it('says in the glossary that the drawdown card still gives the odds when FI is not reached', () => {
+    const { container } = render(<GoalsExplainer />)
+
+    expect(container.textContent).toContain('the drawdown chart shows the target only, and the chance the money lasts is still said under its title, since it starts at the target.')
+  })
+
   it('introduces the Assumptions view in plain sentences', () => {
     render(
       <AssumptionsView
