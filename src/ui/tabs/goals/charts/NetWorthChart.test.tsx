@@ -409,7 +409,7 @@ describe('NetWorthChart', () => {
 
   it('draws the plan from today as a dotted line in the plan\'s colour, with a legend row', () => {
     const plan = makeScenario({ id: 1, name: 'Path A', color: '#123456', planStartDate: '2024-01-01', isActive: true })
-    const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-01-01' })
+    const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-01-01' }, 0.02)
     const { container } = render(
       <NetWorthChart
         milestones={milestones}
@@ -433,7 +433,7 @@ describe('NetWorthChart', () => {
   it('reads the plan from today at the last year of the axis and of a window, and says where it has not started', () => {
     const plan = makeScenario({ id: 1, name: 'Path A', planStartDate: '2024-01-01', isActive: true })
     // Half a year past a whole one, so its steps fall between the axis' years, not on them.
-    const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-07-01' })
+    const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-07-01' }, 0.02)
     const { container } = render(
       <NetWorthChart
         milestones={milestones}

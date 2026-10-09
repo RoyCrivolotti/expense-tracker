@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { planFromToday } from './planFromToday'
+import { planFromToday, planFromTodayAt } from './planFromToday'
 import { projectNetWorth } from './projection'
 import { scenarioToParams } from './scenarioProjection'
 import { DEFAULT_INFLATION_RATE } from './projectionConstants'
@@ -60,3 +60,16 @@ describe('planFromToday', () => {
     expect(planFromToday(plan, { investedCents: 1, date: '2023-06-01' }, DEFAULT_INFLATION_RATE)).toBeNull()
   })
 })
+
+describe('planFromTodayAt', () => {
+  it('is the same restart when the rate is the one it was made at, and a fresh one at another', () => {
+    const latest = { investedCents: 160_000_00, date: '2027-01-01' }
+    const saved = planFromToday({ ...plan, annualSpendCents: 3_000_000 }, latest, 0.02)!
+    expect(planFromTodayAt(saved, 0.02)).toBe(saved)
+    const tried = planFromTodayAt(saved, 0.06)
+    expect(tried.scenario.annualSpendCents).toBe(Math.round(3_000_000 * 1.06 ** 3))
+    expect(tried.inflationRate).toBe(0.06)
+    expect(tried.offsetYears).toBe(saved.offsetYears)
+  })
+})
+

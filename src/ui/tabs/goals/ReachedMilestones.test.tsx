@@ -55,7 +55,7 @@ describe('ReachedMilestones', () => {
         reached={new Map()}
         plan={plan}
         latestCheckin={latest}
-        fromToday={planFromToday(plan, { investedCents: 10_950_000, date: '2027-01-01' })}
+        fromToday={planFromToday(plan, { investedCents: 10_950_000, date: '2027-01-01' }, 0.02)}
       />,
     )
     const soon = screen.getByText(/^expected .*; from today, .*$/)

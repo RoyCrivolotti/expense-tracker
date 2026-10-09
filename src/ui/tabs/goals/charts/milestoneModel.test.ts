@@ -324,7 +324,7 @@ describe('buildRows', () => {
       milestones,
       0,
       false,
-      planFromToday(plan, { investedCents: 1, date: '2026-01-01' }),
+      planFromToday(plan, { investedCents: 1, date: '2026-01-01' }, 0.02),
       '2026-10-03',
     )
 

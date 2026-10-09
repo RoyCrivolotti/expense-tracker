@@ -421,7 +421,9 @@ describe('GoalsTab', () => {
 
     // The write lands and the dataset refreshes; the draft must already agree with it,
     // or the header would offer to save the old start back over the re-baseline.
-    const saved = { ...plan, ...patch }
+    // What the plan is saved as is what was written, which counts the amounts in the euros of the new start too.
+    const written = vi.mocked(actions.updateScenario).mock.calls[0]![1]
+    const saved = { ...plan, ...patch, ...written }
     rerender(<GoalsTab model={buildExpenseModel({ ...dataset, goalScenarios: [saved] })} actions={actions} />)
     await user.click(screen.getByRole('tab', { name: 'Plan' }))
     expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
@@ -528,9 +530,10 @@ describe('GoalsTab', () => {
     expect(actions.updateScenario).toHaveBeenCalledWith(
       1,
       expect.objectContaining({
+        // Two years on at 2%: 20.000 and 30.000 of 2024 euros are a little more in the euros of the new start.
         lifeEvents: [
-          { year: 1, amountCents: -20_000_00, label: 'Car' },
-          { year: 3, amountCents: 30_000_00, label: 'Gift' },
+          { year: 1, amountCents: Math.round(-20_000_00 * 1.02 ** 2), label: 'Car' },
+          { year: 3, amountCents: Math.round(30_000_00 * 1.02 ** 2), label: 'Gift' },
         ],
       }),
     )
@@ -586,7 +589,7 @@ describe('GoalsTab', () => {
       1,
       expect.objectContaining({
         planStartDate: '2026-07-15',
-        lifeEvents: [{ year: 1, amountCents: -20_000_00, label: 'Car' }],
+        lifeEvents: [{ year: 1, amountCents: Math.round(-20_000_00 * 1.02 ** 2), label: 'Car' }],
         housePurchaseYear: 2,
       }),
     )

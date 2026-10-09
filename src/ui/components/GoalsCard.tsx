@@ -104,8 +104,9 @@ export function GoalsCard({ dataset, onOpenGoals, onLogCheckin }: GoalsCardProps
     return planFromToday(
       scenario,
       latest ? { investedCents: checkinInvestedCents(latest, dataset.wealthAccounts), date: latest.checkinDate } : null,
+      inflationRate,
     )
-  }, [scenario, dataset.wealthCheckins, dataset.wealthAccounts])
+  }, [scenario, dataset.wealthCheckins, dataset.wealthAccounts, inflationRate])
   const headline = useMemo(
     () =>
       scenario

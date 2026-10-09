@@ -25,6 +25,7 @@ import { HeroWindowPicker } from './HeroWindowPicker'
 import { HeroTitleRow } from './heroSheet/HeroTitleRow'
 import { useActiveIndex } from './heroSheet/useActiveIndex'
 import { useHeroSheet } from './heroSheet/useHeroSheet'
+import { fromTodayPoints } from './fromTodayLine'
 import { referenceLines, type ReferenceLines } from './referenceLines'
 import { HERO_WINDOWS, clipToWindow, heroWindowsFor, insideWindow, type HeroWindowKey } from './heroWindow'
 import progressStyles from '../progress.module.css'
@@ -201,12 +202,7 @@ function useFromTodaySeries(
   return useMemo(() => {
     if (!isHero || !fromToday) return null
     const limit = windowYears ?? extentYears
-    const all = projectNetWorth(scenarioToParams(fromToday.scenario, inflationRate)).flatMap((p) => {
-      const xIndex = fromToday.offsetYears + p.year
-      // A payment or event steps the line on its anniversary: up to what the year made of it, then straight to what it left.
-      const step = p.preEventInvestedCents !== p.investedCents ? [{ xIndex, value: p.preEventInvestedCents }] : []
-      return [...step, { xIndex, value: p.investedCents }]
-    })
+    const all = fromTodayPoints(fromToday, inflationRate)
     const points = all.filter((p) => p.xIndex <= limit)
     // The steps sit a fraction of a year past the axis' own (the check-in is not on a year), so
     // the last one inside the window stops short of it, and the line has no value at the final

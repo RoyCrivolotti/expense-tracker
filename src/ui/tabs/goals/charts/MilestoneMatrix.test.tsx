@@ -181,7 +181,7 @@ describe('MilestoneMatrix', () => {
         draft={draft}
         milestones={[{ amountCents: 10_000_000, label: '' }]}
         reached={noneReached}
-        fromToday={planFromToday(plan, { investedCents: 1, date: '2026-01-01' })}
+        fromToday={planFromToday(plan, { investedCents: 1, date: '2026-01-01' }, 0.02)}
       />,
     )
     const names = screen.getAllByRole('row').slice(1).map((r) => r.querySelector('th[scope="row"]')?.textContent)

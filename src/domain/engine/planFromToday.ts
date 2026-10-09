@@ -9,6 +9,10 @@ export interface PlanFromToday {
   offsetYears: number
   /** The check-in's date, which the restarted plan counts its years from. */
   since: string
+  /** The inflation the restart was counted at: spending, rent and the rest are in the euros of `since` by it. */
+  inflationRate: number
+  /** What it was made from, so it can be made again at another rate (a preview of the Nominal view). */
+  source: { plan: GoalScenario; latest: { investedCents: number; date: string } }
 }
 
 /**
@@ -31,5 +35,17 @@ export function planFromToday(
   if (!plan?.planStartDate || !latest) return null
   const offsetYears = yearOffsetFromDate(plan.planStartDate, latest.date)
   if (offsetYears === null || offsetYears < 0) return null
-  return { scenario: { ...plan, ...rebaseline(plan, latest, inflationRate).patch }, offsetYears, since: latest.date }
+  return {
+    scenario: { ...plan, ...rebaseline(plan, latest, inflationRate).patch },
+    offsetYears,
+    since: latest.date,
+    inflationRate,
+    source: { plan, latest },
+  }
+}
+
+/** The same restart counted at another inflation rate; itself when the rate is the one it was made at. */
+export function planFromTodayAt(fromToday: PlanFromToday, inflationRate: number): PlanFromToday {
+  if (inflationRate === fromToday.inflationRate) return fromToday
+  return planFromToday(fromToday.source.plan, fromToday.source.latest, inflationRate) ?? fromToday
 }
