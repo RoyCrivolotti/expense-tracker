@@ -631,6 +631,13 @@
   font-weight: 600;
 }
 
+/* Forced colours replace the fill that marks the saved choice, so the border carries it, as the other pressed chips. */
+@media (forced-colors: active) {
+  .presetChipOn {
+    border: 2px solid Highlight;
+  }
+}
+
 .settingGroup {
   display: flex;
   flex-direction: column;

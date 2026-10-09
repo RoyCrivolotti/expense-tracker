@@ -347,6 +347,15 @@ describe('WealthSummaryCard', () => {
       expect(within(block).queryByText(/Investing more than planned/)).not.toBeInTheDocument()
     })
 
+    it('draws a row that is more than planned in the success text colour and one that is less in the danger one, as classes', () => {
+      const checkins = [at(1, '2025-01-10', -50_000_00), at(2, '2026-07-15', -50_000_00)]
+      render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />)
+      const block = screen.getByText(/the plan by/).closest('div')!
+      const behind = within(block).getByText('You started behind the plan').parentElement!.querySelector('[class*="gapAmount"]')!
+      expect(behind.className).toMatch(/gapAmountDown/)
+      expect(behind).not.toHaveAttribute('style')
+    })
+
     it('suggests a re-baseline when where the plan started is what explains the gap', () => {
       const checkins = [at(1, '2025-01-10', -50_000_00), at(2, '2026-07-15', -50_000_00)]
       const onRebaseline = vi.fn()

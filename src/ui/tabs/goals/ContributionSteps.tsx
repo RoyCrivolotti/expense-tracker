@@ -65,7 +65,7 @@ export function ContributionStepsList({ steps, planStartDate, baseCents, startSe
     <div>
       <ul className={styles.lifeEventList}>
         <li className={styles.lifeEventRow}>
-          <span className={styles.lifeEventLabel}>
+          <span className={styles.lifeEventStepLabel}>
             {planStartDate === null ? 'at the start' : `from ${shortDateLabel(planStartDate)}`}
           </span>
           <span className={baseCents === 0 ? styles.lifeEventYear : styles.lifeEventInflow}>{amountLabel(baseCents, format)}</span>
@@ -85,7 +85,7 @@ export function ContributionStepsList({ steps, planStartDate, baseCents, startSe
             </li>
           ) : (
             <li key={step.from} className={styles.lifeEventRow}>
-              <span className={styles.lifeEventLabel}>from {shortMonthYearLabel(step.from)}</span>
+              <span className={styles.lifeEventStepLabel}>from {shortMonthYearLabel(step.from)}</span>
               <span className={step.monthlyCents === 0 ? styles.lifeEventYear : styles.lifeEventInflow}>
                 {amountLabel(step.monthlyCents, format)}
               </span>

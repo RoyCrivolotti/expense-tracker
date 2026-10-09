@@ -77,6 +77,8 @@ export function useRadioGroupKeys({
     event.preventDefault()
     onSelect(target)
     radios[target]?.focus()
+    // Focus does not scroll an option that is only partly in a scrolling row, and a row of chips on a phone often is.
+    radios[target]?.scrollIntoView?.({ inline: 'nearest', block: 'nearest' })
   }
 
   return { stop, onKeyDown }

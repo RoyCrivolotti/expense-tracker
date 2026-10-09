@@ -249,7 +249,12 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // Raised from 273.24 KB to 273.6 KB for the plain-language fixes (what the return and spending notes leave out, the
 // bounce card's note on bonds, the odds line's cut-off, the unrecorded-investing note and the band's reach): about 365
 // bytes gzip of text took the total from 272,945 to 273,310 bytes. No new library.
-const TOTAL_MAX_GZIP = 273_600
+//
+// Raised from 273.6 KB to 273.9 KB for the owner's currency in the notes (the money named by `currencyWord`, the
+// glossary built from the owner's format) and the layout fixes (the table's scroller, a boundary round the lazy card,
+// a scroll into view for the chip arrowed to): about 360 bytes gzip took the total from 273,310 to 273,672 bytes
+// across the last two changes. No new library.
+const TOTAL_MAX_GZIP = 273_900
 const GOALS_MAX_GZIP = 72_860
 
 function gzipBytes(path) {
