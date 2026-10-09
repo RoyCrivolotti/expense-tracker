@@ -1,9 +1,11 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { DEFAULT_LEVERS, type MoneyFormat } from '../../../../engine'
+import { DEFAULT_LEVERS, formatCentsCompact, type MoneyFormat } from '../../../../engine'
+import { EU_MONEY_FORMAT } from '../../../../engine/money'
 import { installFakeMatchMedia } from '../../../../testing/fakeMatchMedia'
 import { makeScenario } from '../../../../testing/factories'
+import { AssumedInflationContext } from '../../../hooks/assumedInflationContext'
 import { MoneyFormatContext } from '../../../hooks/moneyFormatContext'
 import { LeversBar } from './LeversBar'
 
@@ -378,25 +380,26 @@ describe('LeversBar', () => {
   it('names the invested part of the net worth when there is a house in the plan, so the chart and the bar do not look like a disagreement', () => {
     renderBar({ resultDraft: makeDraft({ housePurchaseYear: 0 }) })
 
-    expect(screen.getByText(/\d .* invested$/)).toBeInTheDocument()
+    expect(screen.getByText(/, .* invested$/)).toBeInTheDocument()
+  })
+
+  it('says the money and the invested part on one line, so the bar is no taller with a house than the held bar has room for', () => {
+    renderBar({ resultDraft: makeDraft({ housePurchaseYear: 0, planStartDate: '2026-01-01' }) })
+
+    const note = screen.getByText(/^2026 euros, .* invested$/)
+    expect(note.parentElement!.querySelectorAll('[class*="leverResultNote"]')).toHaveLength(1)
   })
 
   it('has no second figure for a plan with no house, where net worth and invested are the same', () => {
     renderBar({ resultDraft: makeDraft({ housePurchaseYear: null }) })
 
-    expect(screen.queryByText(/\d .* invested$/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/, .* invested$/)).not.toBeInTheDocument()
   })
 
   it('has no second figure for a purchase past the horizon, which the net worth does not include', () => {
     renderBar({ resultDraft: makeDraft({ horizonYears: 5, housePurchaseYear: 12 }) })
 
-    expect(screen.queryByText(/\d .* invested$/)).not.toBeInTheDocument()
-  })
-
-  it('says in a tooltip that the net worth is in today\'s money, which the label alone does not', () => {
-    renderBar()
-    // The tooltip is on the figure itself.
-    expect(screen.getByTitle("In today's money, after inflation")).toHaveTextContent(/€/)
+    expect(screen.queryByText(/, .* invested$/)).not.toBeInTheDocument()
   })
 
   it('opens and closes the rest of the inputs from one button that says which', async () => {
@@ -660,5 +663,38 @@ describe('LeversBar', () => {
     renderBar({ keys: ['rentMonthlyCents'] })
     expect(screen.getByLabelText('Rent (monthly)')).toBeInTheDocument()
     expect(screen.queryByLabelText('Monthly investing')).not.toBeInTheDocument()
+  })
+})
+
+describe('LeversBar result', () => {
+  // No return, no saving and no house: the net worth stays 100.000 euros, so what it comes to on the account
+  // is that grown by the inflation for the ten years.
+  const flat = { startInvestedCents: 10_000_000, monthlyContributionCents: 0, expectedRealReturn: 0, horizonYears: 10, housePurchaseYear: null, planStartDate: '2026-01-01' }
+  const renderWith = (inflation: number) => {
+    const draft = makeDraft(flat)
+    return render(
+      <AssumedInflationContext.Provider value={inflation}>
+        <LeversBar draft={draft} resultDraft={draft} keys={DEFAULT_LEVERS} expanded={false} panelId="p" onChange={vi.fn()} onToggle={vi.fn()} />
+      </AssumedInflationContext.Provider>,
+    )
+  }
+
+  it('says under the net worth which money it is in', () => {
+    renderWith(0.02)
+    expect(screen.getByText('Net worth in 10 yrs')).toBeInTheDocument()
+    expect(screen.getByText('2026 euros')).toBeInTheDocument()
+  })
+
+  it('puts both in full in the hover text of the figure too', () => {
+    renderWith(0.02)
+    const value = screen.getByText(formatCentsCompact(10_000_000, EU_MONEY_FORMAT))
+    expect(value).toHaveAttribute('title', `${formatCentsCompact(10_000_000, EU_MONEY_FORMAT)} in 2026 euros, about ${formatCentsCompact(12_189_944, EU_MONEY_FORMAT)} on your account in 2036`)
+  })
+
+  it('names a plan with no start date\'s money today\'s euros and its year by the plan year', () => {
+    const draft = makeDraft({ ...flat, planStartDate: null })
+    render(<LeversBar draft={draft} resultDraft={draft} keys={DEFAULT_LEVERS} expanded={false} panelId="p" onChange={vi.fn()} onToggle={vi.fn()} />)
+    expect(screen.getByText("today's euros")).toBeInTheDocument()
+    expect(screen.getByTitle(/on your account in year 10$/)).toBeInTheDocument()
   })
 })

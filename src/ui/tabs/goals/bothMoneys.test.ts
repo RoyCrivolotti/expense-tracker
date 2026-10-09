@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bothMoneys, bothMoneysSentence, onAccountCents, onAccountLabel } from './bothMoneys'
+import { bothMoneys, bothMoneysSentence, bothMoneysTail, onAccountCents, onAccountLabel, onAccountPhrase } from './bothMoneys'
 import { yearLabel } from './yearLabel'
 
 const money = (cents: number) => `${Math.round(cents / 100).toLocaleString('de-DE')} €`
@@ -50,6 +50,17 @@ describe('bothMoneys', () => {
 
   it('reads as one sentence, the plan\'s euros first', () => {
     expect(bothMoneysSentence(bothMoneys(args))).toBe('30.000 € in 2026 euros, about 36.570 € on your account in 2036')
+  })
+
+  it('has a tail for an amount already written out, which is the sentence without the amount', () => {
+    const b = bothMoneys(args)
+    expect(bothMoneysTail(b)).toBe('in 2026 euros, about 36.570 € on your account in 2036')
+    expect(bothMoneysSentence(b)).toBe(`${b.plan} ${bothMoneysTail(b)}`)
+  })
+
+  it('has the account half alone, for a place with little room', () => {
+    expect(onAccountPhrase(bothMoneys(args))).toBe('36.570 € on your account in 2036')
+    expect(onAccountPhrase(bothMoneys({ ...args, inflationRate: 0 }))).toBe('the same on your account in 2036')
   })
 
   it('says the two are the same, once, when there is no inflation or no time between', () => {

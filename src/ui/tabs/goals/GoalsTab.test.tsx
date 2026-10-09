@@ -793,11 +793,13 @@ describe('GoalsTab', () => {
       // Beside the window buttons, where it is always in sight, not at the foot of the card.
       expect(within(header).getByRole('radiogroup', { name: 'Value display mode' })).toBeInTheDocument()
       expect(screen.queryByText('Scenario summary')).not.toBeInTheDocument()
-      // The net worth the box also gave is the levers bar's now, so it is not said twice.
+      // The levers bar names the net worth by its horizon, once. The line under the chart says it in both
+      // moneys under another name, which is not the box saying it twice.
       expect(screen.getAllByText(/^Net worth in 30 yrs$/)).toHaveLength(1)
+      expect(screen.getByText('Net worth at year 30')).toBeInTheDocument()
     })
 
-    it('says in a line when the plan reaches financial independence and its next milestone, and nothing when it reaches neither', () => {
+    it('says in a line when the plan reaches financial independence and its next milestone, and no FI when it never does', () => {
       const reaches = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true, annualSpendCents: 100_000 })
       const { unmount } = render(<GoalsTab model={buildExpenseModel(makeDataset({ goalScenarios: [reaches] }))} />)
       expect(screen.getByText('Financial independence').closest('p')).toHaveTextContent('Financial independence Year 0')

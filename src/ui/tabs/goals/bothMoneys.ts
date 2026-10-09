@@ -54,9 +54,17 @@ export function bothMoneys({
   }
 }
 
+/** The account half alone, for where there is room for little: "36.570 € on your account in 2036". */
+export function onAccountPhrase(b: BothMoneys): string {
+  return b.same ? `the same ${b.accountLabel}` : `${b.account} ${b.accountLabel}`
+}
+
+/** What follows an amount already written out: "in 2026 euros, about 36.570 € on your account in 2036". */
+export function bothMoneysTail(b: BothMoneys): string {
+  return b.same ? `in ${b.planLabel}, ${onAccountPhrase(b)}` : `in ${b.planLabel}, about ${onAccountPhrase(b)}`
+}
+
 /** "30.000 € in 2026 euros, about 36.570 € on your account in 2036". */
 export function bothMoneysSentence(b: BothMoneys): string {
-  return b.same
-    ? `${b.plan} in ${b.planLabel}, the same ${b.accountLabel}`
-    : `${b.plan} in ${b.planLabel}, about ${b.account} ${b.accountLabel}`
+  return `${b.plan} ${bothMoneysTail(b)}`
 }
