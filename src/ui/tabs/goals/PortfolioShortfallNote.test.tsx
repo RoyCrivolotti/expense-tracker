@@ -37,6 +37,7 @@ describe('PortfolioShortfallNote', () => {
     const note = screen.getByRole('status')
     expect(note.textContent).toContain('The house needs more than the portfolio holds in year 5.')
     expect(note.textContent).toContain('It takes 80.000 € out (the down payment and the costs)')
+    expect(note.textContent).toMatch(/Figures are in (\d{4}|today's) euros\./)
     expect(note.textContent).toMatch(/leaves the portfolio 17\.\d{3} € below zero\./)
     expect(note.textContent).toContain('not a plan you could follow')
     expect(note.textContent).toContain('Buy later, put less down or invest more first.')

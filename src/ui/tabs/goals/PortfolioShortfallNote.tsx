@@ -3,6 +3,7 @@ import type { NewGoalScenario } from '../../../data/dataSource'
 import { formatCentsCompact, portfolioShortfall, scenarioToParams } from '../../../engine'
 import { useAssumedInflation } from '../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
+import { planMoneyLabel } from './planMoneyLabel'
 import styles from './goals.module.css'
 
 /**
@@ -29,7 +30,7 @@ export function PortfolioShortfallNote({ draft }: { draft: NewGoalScenario }) {
       {house
         ? `It takes ${money(shortfall.housePaymentCents)} out (the down payment and the costs) and leaves the portfolio ${money(shortfall.belowZeroCents)} below zero.`
         : `The portfolio ends that year ${money(shortfall.belowZeroCents)} below zero.`}{' '}
-      The chart carries that as a negative balance, so the figures from that year on are not a plan you could follow.{' '}
+      Figures are in {planMoneyLabel(draft.planStartDate, format)}. The chart carries that as a negative balance, so the figures from that year on are not a plan you could follow.{' '}
       {house
         ? 'Buy later, put less down or invest more first.'
         : 'Move the event, make it smaller or invest more first.'}

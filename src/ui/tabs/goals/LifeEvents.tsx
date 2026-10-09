@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { LifeEvent } from '../../../types'
 import { formatCents, type MoneyFormat } from '../../../engine'
 import { MoneyField, NumberField } from './goalControlFields'
+import { planMoneyLabel } from './planMoneyLabel'
 import { eventMoneyHint } from './moneyHints'
 import styles from './goals.module.css'
 
@@ -59,6 +60,7 @@ export function LifeEventsList({
           ))}
         </ul>
       )}
+      {events.length > 0 && <p className={styles.fieldHint}>Amounts in {planMoneyLabel(planStartDate, format)}.</p>}
       {adding ? (
         <LifeEventForm
           horizonYears={horizonYears}

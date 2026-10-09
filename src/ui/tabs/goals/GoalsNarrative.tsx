@@ -26,7 +26,7 @@ function milestoneSentences(
     .map((s) => {
       const label = milestoneLabelWithAmount(s.milestone, short)
       return s.year != null
-        ? `${label} invested lands around year ${s.year}.`
+        ? `${label} invested (on your account) lands around year ${s.year}.`
         : `${label} is not reached in the horizon.`
     })
   return parts.length > 0 ? ` ${parts.join(' ')}` : ''
@@ -67,6 +67,7 @@ function CompactNarrative({
       ? {
           label: `${milestoneLabelWithAmount(next.milestone, (c) => formatMoneyShort(c, format))} invested`,
           value: `Year ${next.year}`,
+          note: 'on your account',
         }
       : null,
     fiYear != null ? { label: 'Financial independence', value: `Year ${fiYear}` } : null,

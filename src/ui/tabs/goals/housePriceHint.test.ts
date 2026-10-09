@@ -11,7 +11,7 @@ describe('housePriceHint', () => {
     // 300.000 euros today, houses +3% a year, inflation 2%, bought in year 8: 324.353 euros of 2026,
     // which is 300.000 x 1.03^8 = 380.031 euros on the day.
     expect(hint()).toBe(
-      "Enter today's price. Bought in year 8 it costs about 324.353 € in 2026 euros (380.031 € when you pay it), as houses rise 3,0% a year and inflation is 2,0%.",
+      "Enter the price at the plan's start. Bought in year 8 it costs about 324.353 € in 2026 euros (380.031 € when you pay it), as houses rise 3,0% a year and inflation is 2,0%.",
     )
   })
 
@@ -21,6 +21,7 @@ describe('housePriceHint', () => {
 
   it('names today when the plan has no start date', () => {
     expect(hint({ planStartDate: null })).toContain("in today's euros")
+    expect(hint({ planStartDate: null })).toContain("Enter today's price.")
   })
 
   it.each([

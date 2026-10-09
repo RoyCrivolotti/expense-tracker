@@ -78,16 +78,25 @@ describe('the sections of the controls', () => {
     expect(screen.getByText(/Purchase cost from portfolio/)).toBeInTheDocument()
   })
 
+  it('names the money the saved life events are in, once, under the list', () => {
+    const { id, ...draft } = samplePlan({ lifeEvents: [{ year: 5, amountCents: 1_000_000, label: 'Inheritance' }] })
+    void id
+    const { rerender } = render(<EventsFields draft={draft} onChange={vi.fn()} />)
+    expect(screen.getByText('Amounts in 2026 euros.')).toBeInTheDocument()
+    rerender(<EventsFields draft={{ ...draft, lifeEvents: [] }} onChange={vi.fn()} />)
+    expect(screen.queryByText(/^Amounts in/)).not.toBeInTheDocument()
+  })
+
   it('says what the house costs when it is bought, under the price, and keeps saying it when the price is in the bar', () => {
     const { id, ...draft } = samplePlan()
     void id
     const { rerender } = render(<HousingFields draft={draft} onChange={vi.fn()} />)
-    expect(screen.getByText(/Enter today's price\. Bought in year 8 it costs about 324\.353 € in 2026 euros/)).toBeInTheDocument()
+    expect(screen.getByText(/Enter the price at the plan's start\. Bought in year 8 it costs about 324\.353 € in 2026 euros/)).toBeInTheDocument()
 
     // It is worked out from the draft and said nowhere else, so it does not leave with the input.
     rerender(<HousingFields draft={draft} onChange={vi.fn()} omit={everything(['housePriceCents'])} />)
     expect(screen.queryByLabelText('House price')).not.toBeInTheDocument()
-    expect(screen.getByText(/Enter today's price\. Bought in year 8/)).toBeInTheDocument()
+    expect(screen.getByText(/Enter the price at the plan's start\. Bought in year 8/)).toBeInTheDocument()
   })
 
   it('says what the rent comes to on the account in the year the house is bought, under the rent', () => {

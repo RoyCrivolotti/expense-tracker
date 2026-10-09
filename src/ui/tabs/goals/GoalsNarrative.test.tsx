@@ -21,13 +21,13 @@ describe('GoalsNarrative', () => {
 
   it('narrates both the next milestone and the top of the ladder in full mode', () => {
     render(<GoalsNarrative draft={makeScenario()} milestones={[next, top]} />)
-    expect(screen.getByText(/Coast FI \(.*\) invested lands around year/)).toBeTruthy()
-    expect(screen.getByText(/Two comma club \(.*\) invested lands around year/)).toBeTruthy()
+    expect(screen.getByText(/Coast FI \(.*\) invested \(on your account\) lands around year/)).toBeTruthy()
+    expect(screen.getByText(/Two comma club \(.*\) invested \(on your account\) lands around year/)).toBeTruthy()
   })
 
   it('narrates a single milestone when the next one is also the top', () => {
     render(<GoalsNarrative draft={makeScenario()} milestones={[next]} />)
-    const body = screen.getByText(/Coast FI \(.*\) invested lands around year/)
+    const body = screen.getByText(/Coast FI \(.*\) invested \(on your account\) lands around year/)
     expect(body.textContent?.match(/Coast FI/g)).toHaveLength(1)
   })
 
