@@ -86,24 +86,24 @@ describe('fiRow', () => {
   const withFi = replayMarket({ params, volatility: 0.15, runs: 2_000, fiTargetCents: 75_000_000 })
 
   it('says the FI target in the plan\'s euros, as every other screen names them, with its years and how many runs get there', () => {
-    const row = fiRow({ result: withFi, planStartDate: '2026-01-01', years: 30, money, targetCents: 75_000_000 })!
+    const row = fiRow({ result: withFi, planStartDate: '2026-01-01', years: 30, money, targetCents: 75_000_000, format: EU_MONEY_FORMAT })!
     expect(row.label).toBe('FI target (750.000 € in 2026 euros)')
     expect(row.middle).toMatch(/^\d{4}( to (after )?\d{4})?$|^not within 30 years$/)
     expect(row.gets).toMatch(/^\d+ of 100$/)
   })
 
   it('names the euros of today for a plan with no start date', () => {
-    const row = fiRow({ result: withFi, planStartDate: null, years: 30, money, targetCents: 75_000_000 })!
+    const row = fiRow({ result: withFi, planStartDate: null, years: 30, money, targetCents: 75_000_000, format: EU_MONEY_FORMAT })!
     expect(row.label).toBe("FI target (750.000 € in today's euros)")
   })
 
   it('has no row when there is no target', () => {
-    expect(fiRow({ result, planStartDate: null, years: 30, money, targetCents: 0 })).toBeNull()
+    expect(fiRow({ result, planStartDate: null, years: 30, money, targetCents: 0, format: EU_MONEY_FORMAT })).toBeNull()
   })
 
   it('does not round a run in a thousand that never gets there up to all of them', () => {
     const near = { ...withFi, fi: { ...withFi.fi!, share: 0.9991 } }
-    expect(fiRow({ result: near, planStartDate: null, years: 30, money, targetCents: 75_000_000 })!.gets).toBe('99 of 100')
+    expect(fiRow({ result: near, planStartDate: null, years: 30, money, targetCents: 75_000_000, format: EU_MONEY_FORMAT })!.gets).toBe('99 of 100')
   })
 })
 

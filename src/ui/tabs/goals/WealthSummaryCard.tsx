@@ -334,7 +334,7 @@ function PlanGapHint({ status }: { status: TrackStatus }) {
   return (
     <p style={hintStyle}>
       Months are not counted across a house purchase or a one-off event: the plan&apos;s line steps there, so
-      only the gap in euros is shown.
+      only the gap is shown.
     </p>
   )
 }
@@ -415,7 +415,7 @@ export function WealthSummaryCard({
           <span className={styles.summaryValue}>{formatMoneyShort(netWorth, format)}</span>
           {/* With a plan the balance is shown in the plan's euros, beside the plan's own figure, so that taking
               one from the other gives the gap above them. As logged on the account it is in the hover text. */}
-          <span>{status ? `Investments, in ${planMoneyLabel(plan?.planStartDate)}` : 'Investments'}</span>
+          <span>{status ? `Investments, in ${planMoneyLabel(plan?.planStartDate, format)}` : 'Investments'}</span>
           <span
             className={styles.summaryValue}
             title={status ? `As logged on your account: ${formatMoneyShort(invested, format)}` : undefined}
@@ -424,7 +424,7 @@ export function WealthSummaryCard({
           </span>
           {status ? (
             <>
-              <span>Plan projection, in {planMoneyLabel(plan?.planStartDate)}</span>
+              <span>Plan projection, in {planMoneyLabel(plan?.planStartDate, format)}</span>
               <span className={styles.summaryValue}>
                 {formatMoneyShort(status.projectedInvestedCents, format)}
               </span>

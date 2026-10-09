@@ -12,6 +12,7 @@ import {
   checkinNetWorthCents,
   hasDebtEntries,
   shortDateLabel,
+  currencyWord,
 } from '../../../../engine'
 import { todayIso } from '../../../components/transactionFormState'
 import { formatMoneyAxis, formatMoneyShort } from '../chartTheme'
@@ -159,7 +160,7 @@ export function NetWorthHistoryChart({ checkins, accounts }: Props) {
           layout="compact"
         />
       </div>
-      <p className={goalStyles.chartHint}>Balances as logged, in euros on your account on each day.</p>
+      <p className={goalStyles.chartHint}>Balances as logged, in {currencyWord(format)} on your account on each day.</p>
       {model.netWorth.length === 0 ? (
         // A window chosen by hand can miss every check-in; the carrier would then draw a
         // flat line at zero, which reads as a balance of nothing.

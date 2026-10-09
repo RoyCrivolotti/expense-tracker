@@ -2,6 +2,10 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (the plan's money in your currency)
+
+- **The plan's money is named after the currency you track in.** It said "2026 euros" to someone tracking in US dollars ("$8,080,343.70 in 2026 euros"), and the settings offer fourteen currencies. It says "2026 US dollars", "2026 British pounds" and so on now, in the settings text, the charts' hints, the notes, the re-baseline summary and the glossary (whose example is worked out in your number style). Nothing changes for euros.
+
 ## October 2026 (what the plan counts and what it leaves out)
 
 - **The return and spending notes say what the plan leaves out.** Enter the rate the money compounds at, not the average of yearly returns (higher by about a point for stocks), and the return after fund costs and tax; the spending is before the tax on what is withdrawn, so add it.

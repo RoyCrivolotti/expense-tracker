@@ -9,6 +9,7 @@ import {
   MILESTONE_MAX_COUNT,
   parseMoneyToCents,
   resolveMoneyFormat,
+  currencyWord,
   type MoneyFormat,
 } from '../../engine'
 import { Card } from '../components/primitives'
@@ -218,7 +219,7 @@ export function MilestonesSetting({ settings, onChange }: Props) {
           <p className={styles.settingHint}>
             Amounts you want to see on your account, shown on the Goals charts and the years-to-milestone
             matrix and measured against your invested portfolio. The plan is counted after inflation to
-            date them: euros on the account in ten years buy less than euros today. Names are optional,
+            date them: {currencyWord(format)} on the account in ten years buy less than {currencyWord(format)} today. Names are optional,
             and a named milestone is shown with its amount alongside; an unnamed one shows the amount
             on its own. Give one a target date and Progress will say whether the plan reaches it in time.
           </p>

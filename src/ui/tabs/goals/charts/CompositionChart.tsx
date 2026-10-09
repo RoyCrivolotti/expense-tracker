@@ -94,7 +94,7 @@ function CompositionChartImpl({
       <h3 className={styles.chartTitle}>Net worth composition</h3>
       <p className={styles.chartHint}>
         Invested portfolio + house value − mortgage owed, for the scenario you are editing, in{' '}
-        {planMoneyLabel(draft.planStartDate)}.
+        {planMoneyLabel(draft.planStartDate, format)}.
       </p>
       <LinearChart
         height={height}

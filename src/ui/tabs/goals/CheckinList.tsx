@@ -45,7 +45,7 @@ export function CheckinList({ checkins, accounts, plan, canWrite, actions }: Pro
       <h3 className={goalStyles.sectionTitle}>History</h3>
       {plan?.planStartDate && sorted.length > 0 ? (
         <p className={goalStyles.chartHint}>
-          The gap to the plan is for your investments, in {planMoneyLabel(plan.planStartDate)}.
+          The gap to the plan is for your investments, in {planMoneyLabel(plan.planStartDate, format)}.
         </p>
       ) : null}
 

@@ -39,6 +39,7 @@ const LeverResult = memo(function LeverResult({ draft }: ResultProps) {
     planStartDate: draft.planStartDate,
     inflationRate,
     money: (cents) => formatCentsCompact(cents, format),
+    format,
   })
   return (
     <>

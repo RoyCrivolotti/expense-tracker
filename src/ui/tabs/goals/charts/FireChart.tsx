@@ -104,6 +104,7 @@ function FireChartImpl({
     planStartDate: draft.planStartDate,
     inflationRate,
     money: (c) => formatMoneyShort(c, format),
+    format,
   })
   const labels = useMemo(() => sparseLabels(balances.map((_, y) => y), 5), [balances])
   const series: ChartSeries[] = [{ id: 'balance', color: BALANCE_COLOR, values: balances, width: 2 }]
@@ -133,7 +134,7 @@ function FireChartImpl({
         FI target {target.plan} in {target.planLabel} · reached year {fiYear} ({aboutOnAccount(target)}). {targets} Post-FI only: year 0
         on this chart is the FI year, not today, and it runs for the {draft.retirementYears} years the money
         must last. After that it takes the plan's return every year and withdraws a constant amount in{' '}
-        {planMoneyLabel(draft.planStartDate)}, so it illustrates the target and is not a forecast: a bad run of
+        {planMoneyLabel(draft.planStartDate, format)}, so it illustrates the target and is not a forecast: a bad run of
         early years would leave less.
       </p>
       {oddsLine ? <p className={styles.chartHint}>{oddsLine}</p> : null}

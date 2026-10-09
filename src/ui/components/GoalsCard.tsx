@@ -163,7 +163,7 @@ export function GoalsCard({ dataset, onOpenGoals, onLogCheckin }: GoalsCardProps
         <p className={styles.primary}>{headline.primary}</p>
         <p className={styles.secondary}>{headline.secondary}</p>
         {track ? (
-          <TrackBadge status={track} format={format} planMoney={planMoneyLabel(scenario?.planStartDate)} />
+          <TrackBadge status={track} format={format} planMoney={planMoneyLabel(scenario?.planStartDate, format)} />
         ) : null}
         {onLogCheckin ? <CheckinNudge dataset={dataset} onLogCheckin={onLogCheckin} /> : null}
         {onOpenGoals ? (

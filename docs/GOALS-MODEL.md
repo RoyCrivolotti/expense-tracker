@@ -32,7 +32,7 @@ A re-baseline is not needed to see what being ahead or behind does to the years 
 
 ## Money and terms
 
-Every euro the planner shows is in one of two moneys, and each input says which one it is typed in. The sections below rely on these meanings.
+Every euro the planner shows is in one of two moneys, and each input says which one it is typed in. The sections below rely on these meanings. ("Euro" is the owner's currency throughout: the money is named from the currency setting by `currencyWord`, so a plan started in 2026 is "2026 US dollars" for someone tracking in dollars, and the glossary's example is worked out in their number style. The sections use euros for short.)
 
 | Term | Meaning |
 |---|---|

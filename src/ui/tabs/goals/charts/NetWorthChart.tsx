@@ -736,7 +736,7 @@ function NetWorthChartImpl({
     }),
     [lines, displaySeries, names, years, scenarios, hiddenIds, fromTodayLine, fromTodayLabel, nominalMode, onToggleVisible],
   )
-  const money = chartMoneyLabel(draft.planStartDate, nominalMode)
+  const money = chartMoneyLabel(draft.planStartDate, nominalMode, format)
   const { onOpen: onOpenSheet, sheet } = useHeroSheet(
     {
       chart: sheetChart,

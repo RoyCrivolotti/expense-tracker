@@ -113,7 +113,7 @@ export function ReachedMilestones({
     .map((m) => {
       const standing = milestoneStanding(m, plan, reached.get(m.amountCents), inflationRate, asOf)
       const described = describe(standing)
-      const suffix = outlookText(standing, planMoneyLabel(plan?.planStartDate), format) + fromTodayText(m, standing, fromToday, inflationRate)
+      const suffix = outlookText(standing, planMoneyLabel(plan?.planStartDate, format), format) + fromTodayText(m, standing, fromToday, inflationRate)
       return { m, standing: described ? { ...described, text: described.text + suffix } : null }
     })
     .filter((r): r is { m: Milestone; standing: NonNullable<ReturnType<typeof describe>> } => r.standing !== null)
