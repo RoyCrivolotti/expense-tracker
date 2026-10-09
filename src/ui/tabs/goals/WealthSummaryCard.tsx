@@ -411,7 +411,7 @@ export function WealthSummaryCard({
       <div className={styles.summaryCardContent}>
         <StatusRow status={status} plan={plan} latestDate={latest.checkinDate} format={format} />
         <div className={styles.summaryRow}>
-          <span>Net worth, all accounts</span>
+          <span>Net worth, as logged, all accounts</span>
           <span className={styles.summaryValue}>{formatMoneyShort(netWorth, format)}</span>
           {/* With a plan the balance is shown in the plan's euros, beside the plan's own figure, so that taking
               one from the other gives the gap above them. As logged on the account it is in the hover text. */}
