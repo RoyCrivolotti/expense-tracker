@@ -469,6 +469,21 @@ describe('NetWorthChart', () => {
     expect(pointSeriesValueAt([], 1)).toBeNull()
   })
 
+  it('reads the value after a step on the day of it, not the one before, which the drop is from', () => {
+    // 500 on the way up to a payment, 200 once it is made, both at x = 4.
+    const points = [
+      { xIndex: 0, value: 100 },
+      { xIndex: 4, value: 500 },
+      { xIndex: 4, value: 200 },
+      { xIndex: 6, value: 300 },
+    ]
+    expect(pointSeriesValueAt(points, 4)).toBe(200)
+    expect(pointSeriesValueAt(points, 3.9)).toBe(490)
+    expect(pointSeriesValueAt(points, 5)).toBe(250)
+    expect(pointSeriesValueAt(points, 6)).toBe(300)
+    expect(pointSeriesValueAt(points, 0)).toBe(100)
+  })
+
   it('inflates a real point series by each point\'s own year in the nominal view', () => {
     const series: ChartSeries[] = [
       { id: 'from-today', color: '#000', values: [], kind: 'scatter', points: [{ xIndex: 2, value: 100_000_000 }] },
