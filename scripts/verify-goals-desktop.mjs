@@ -3387,48 +3387,58 @@ async function checkSpreadCard(browser, engine) {
   {
     const { page, context } = await openPlan(browser, { width: 1280, height: 800 }, { scheme: 'light' })
     const where = `${engine} wide 1280x800`
-    await page.getByRole('heading', { name: TITLE }).scrollIntoViewIfNeeded()
-    await page.getByRole('table', TABLE).waitFor({ timeout: 15000 })
-    await settled(page)
-    const m = await page.evaluate((title) => {
-      const heading = (text) => [...document.querySelectorAll('h3')].find((h) => h.textContent === text)
-      const rect = (el) => el.getBoundingClientRect()
-      const cols = [...document.querySelectorAll('[class*="detailColumn"]')].map(rect)
-      const spread = rect(heading(title).closest('[class*="detailWide"]'))
-      const matrix = rect(heading('Years to milestone').closest('[class*="detailWide"]'))
-      return { spreadTop: spread.top, spreadWidth: spread.width, matrixWidth: matrix.width, colsBottom: cols.map((c) => c.bottom), cols: cols.length }
-    }, TITLE)
-    check(where, '(sp) the spread card is under both columns', m.cols === 2 && m.spreadTop >= Math.max(...m.colsBottom) - 1, JSON.stringify(m))
-    check(where, '(sp) it has the whole width the milestone table has', near(m.spreadWidth, m.matrixWidth, 2), JSON.stringify(m))
-    check(where, '(sp) the two columns end within 150px of each other', Math.abs(m.colsBottom[0] - m.colsBottom[1]) <= 150, JSON.stringify(m))
-    await context.close()
+    try {
+      await page.getByRole('heading', { name: TITLE }).scrollIntoViewIfNeeded()
+      await page.getByRole('table', TABLE).waitFor({ timeout: 15000 })
+      await settled(page)
+      const m = await page.evaluate((title) => {
+        const heading = (text) => [...document.querySelectorAll('h3')].find((h) => h.textContent === text)
+        const rect = (el) => el.getBoundingClientRect()
+        const cols = [...document.querySelectorAll('[class*="detailColumn"]')].map(rect)
+        const spread = rect(heading(title).closest('[class*="detailWide"]'))
+        const matrix = rect(heading('Years to milestone').closest('[class*="detailWide"]'))
+        return { spreadTop: spread.top, spreadWidth: spread.width, matrixWidth: matrix.width, colsBottom: cols.map((c) => c.bottom), cols: cols.length }
+      }, TITLE)
+      check(where, '(sp) the spread card is under both columns', m.cols === 2 && m.spreadTop >= Math.max(...m.colsBottom) - 1, JSON.stringify(m))
+      check(where, '(sp) it has the whole width the milestone table has', near(m.spreadWidth, m.matrixWidth, 2), JSON.stringify(m))
+      check(where, '(sp) the two columns end within 150px of each other', Math.abs(m.colsBottom[0] - m.colsBottom[1]) <= 150, JSON.stringify(m))
+    } catch (e) {
+      check(`${engine} sp spread card`, '(sp) the section ran', false, String(e instanceof Error ? e.message : e).split('\n')[0])
+    } finally {
+      await context.close()
+    }
   }
   for (const size of [{ name: '320x640', width: 320, height: 640 }, { name: '375x812', width: 375, height: 812 }]) {
     const { page, context } = await openChartTab(browser, size)
     const where = `${engine} phone ${size.name} text at 200%`
-    await page.addStyleTag({ content: 'html { font-size: 200%; }' })
-    await page.getByRole('radio', { name: 'Spread', exact: true }).tap()
-    const table = page.getByRole('table', TABLE)
-    await table.waitFor({ timeout: 15000 })
-    await settled(page)
-    const m = await table.evaluate((el) => {
-      const card = el.closest('[class*="chartCard"]')
-      const region = el.closest('[role="region"]')
-      const box = card.getBoundingClientRect()
-      const style = getComputedStyle(card)
-      const r = region.getBoundingClientRect()
-      return {
-        regionRight: r.right,
-        cardInnerRight: box.right - parseFloat(style.paddingRight) - parseFloat(style.borderRightWidth),
-        regionTabIndex: region.tabIndex,
-        pageScrollWidth: document.documentElement.scrollWidth,
-        iw: window.innerWidth,
-      }
-    })
-    check(where, '(sp) the table is in a scroller that stays inside the card, not spilling out of it', m.regionRight <= m.cardInnerRight + 1, JSON.stringify(m))
-    check(where, '(sp) the scroller takes focus, so a keyboard can scroll to the right-hand column', m.regionTabIndex === 0, JSON.stringify(m))
-    check(where, '(sp) the page does not scroll sideways', m.pageScrollWidth <= m.iw, JSON.stringify(m))
-    await context.close()
+    try {
+      await page.addStyleTag({ content: 'html { font-size: 200%; }' })
+      await page.getByRole('radio', { name: 'Spread', exact: true }).tap()
+      const table = page.getByRole('table', TABLE)
+      await table.waitFor({ timeout: 15000 })
+      await settled(page)
+      const m = await table.evaluate((el) => {
+        const card = el.closest('[class*="chartCard"]')
+        const region = el.closest('[role="region"]')
+        const box = card.getBoundingClientRect()
+        const style = getComputedStyle(card)
+        const r = region.getBoundingClientRect()
+        return {
+          regionRight: r.right,
+          cardInnerRight: box.right - parseFloat(style.paddingRight) - parseFloat(style.borderRightWidth),
+          regionTabIndex: region.tabIndex,
+          pageScrollWidth: document.documentElement.scrollWidth,
+          iw: window.innerWidth,
+        }
+      })
+      check(where, '(sp) the table is in a scroller that stays inside the card, not spilling out of it', m.regionRight <= m.cardInnerRight + 1, JSON.stringify(m))
+      check(where, '(sp) the scroller takes focus, so a keyboard can scroll to the right-hand column', m.regionTabIndex === 0, JSON.stringify(m))
+      check(where, '(sp) the page does not scroll sideways', m.pageScrollWidth <= m.iw, JSON.stringify(m))
+    } catch (e) {
+      check(`${engine} sp spread card`, '(sp) the section ran', false, String(e instanceof Error ? e.message : e).split('\n')[0])
+    } finally {
+      await context.close()
+    }
   }
 }
 
@@ -3443,83 +3453,103 @@ async function checkLayoutFaults(browser, engine) {
   for (const size of [{ name: '1280x800', width: 1280, height: 800 }, { name: '1024x768', width: 1024, height: 768 }]) {
     const { page, context } = await openPlan(browser, size, { scheme: 'light' })
     const where = `${engine} wide ${size.name}`
-    await page.getByRole('button', { name: 'All inputs' }).click()
-    await page.getByRole('region', { name: 'All inputs' }).waitFor()
-    await page.getByRole('button', { name: /Add a change/ }).click()
-    const amount = page.locator('input[aria-label^="Monthly amount from then"]').locator('visible=true').first()
-    await amount.fill('12500')
-    await amount.press('Tab')
-    await page.getByRole('button', { name: 'Add', exact: true }).click()
-    await settled(page)
-    const labels = await page.evaluate(() =>
-      [...document.querySelectorAll('[class*="lifeEventStepLabel"]')].map((el) => ({ text: el.textContent, scroll: el.scrollWidth, client: el.clientWidth })),
-    )
-    const cut = labels.filter((l) => l.scroll > l.client + 1)
-    check(where, '(ly) the month a change in the monthly investing starts in is not cut off', labels.length >= 2 && cut.length === 0, JSON.stringify(labels))
-    await context.close()
+    try {
+      await page.getByRole('button', { name: 'All inputs' }).click()
+      await page.getByRole('region', { name: 'All inputs' }).waitFor()
+      await page.getByRole('button', { name: /Add a change/ }).click()
+      const amount = page.locator('input[aria-label^="Monthly amount from then"]').locator('visible=true').first()
+      await amount.fill('12500')
+      await amount.press('Tab')
+      await page.getByRole('button', { name: 'Add', exact: true }).click()
+      await settled(page)
+      const labels = await page.evaluate(() =>
+        [...document.querySelectorAll('[class*="lifeEventStepLabel"]')].map((el) => ({ text: el.textContent, scroll: el.scrollWidth, client: el.clientWidth })),
+      )
+      const cut = labels.filter((l) => l.scroll > l.client + 1)
+      check(where, '(ly) the month a change in the monthly investing starts in is not cut off', labels.length >= 2 && cut.length === 0, JSON.stringify(labels))
+    } catch (e) {
+      check(`${engine} ly layout faults`, '(ly) the section ran', false, String(e instanceof Error ? e.message : e).split('\n')[0])
+    } finally {
+      await context.close()
+    }
   }
 
   {
     const size = { width: 360, height: 800 }
     const context = await browser.newContext({ viewport: size, screen: size, deviceScaleFactor: 1, isMobile: true, hasTouch: true, colorScheme: 'light', reducedMotion: 'reduce' })
     const page = await context.newPage()
-    page.on('pageerror', (e) => failures.push(`page error: ${e.message}`))
-    await page.addInitScript(() => localStorage.setItem('exp-onboarding-skipped', '1'))
-    await page.goto(`${BASE}/`)
-    await page.waitForSelector('text=Recent activity', { timeout: 20000 })
-    await page.getByRole('button', { name: /Goals/ }).last().click()
-    await page.getByRole('tablist', { name: 'Goals view' }).waitFor({ timeout: 15000 })
-    await page.addStyleTag({ content: 'html { font-size: 200%; }' })
-    await page.getByRole('tab', { name: 'Progress', exact: true }).tap()
-    await page.locator('[class*="gapRows"]').first().waitFor({ timeout: 15000 })
-    await settled(page)
-    const out = await page.evaluate(() => {
-      const ul = document.querySelector('[class*="gapRows"]')
-      const box = ul.parentElement.getBoundingClientRect()
-      return [...ul.querySelectorAll('li')].map((li) => Math.round(li.querySelector('[class*="gapAmount"]').getBoundingClientRect().right - box.right))
-    })
-    check(`${engine} phone 360x800 text at 200%`, '(ly) the amounts in the gap split stay inside their box', out.length > 0 && out.every((n) => n <= 0), `past the box by ${out.join(', ')}px`)
-    await context.close()
+    try {
+      page.on('pageerror', (e) => failures.push(`page error: ${e.message}`))
+      await page.addInitScript(() => localStorage.setItem('exp-onboarding-skipped', '1'))
+      await page.goto(`${BASE}/`)
+      await page.waitForSelector('text=Recent activity', { timeout: 20000 })
+      await page.getByRole('button', { name: /Goals/ }).last().click()
+      await page.getByRole('tablist', { name: 'Goals view' }).waitFor({ timeout: 15000 })
+      await page.addStyleTag({ content: 'html { font-size: 200%; }' })
+      await page.getByRole('tab', { name: 'Progress', exact: true }).tap()
+      await page.locator('[class*="gapRows"]').first().waitFor({ timeout: 15000 })
+      await settled(page)
+      const out = await page.evaluate(() => {
+        const ul = document.querySelector('[class*="gapRows"]')
+        const box = ul.parentElement.getBoundingClientRect()
+        return [...ul.querySelectorAll('li')].map((li) => Math.round(li.querySelector('[class*="gapAmount"]').getBoundingClientRect().right - box.right))
+      })
+      check(`${engine} phone 360x800 text at 200%`, '(ly) the amounts in the gap split stay inside their box', out.length > 0 && out.every((n) => n <= 0), `past the box by ${out.join(', ')}px`)
+    } catch (e) {
+      check(`${engine} ly layout faults`, '(ly) the section ran', false, String(e instanceof Error ? e.message : e).split('\n')[0])
+    } finally {
+      await context.close()
+    }
   }
 
   for (const width of [360, 375]) {
     const { page, context } = await openChartTab(browser, { width, height: 812 })
-    await page.getByRole('radio', { name: 'Compare', exact: true }).focus()
-    for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowRight')
-    await settled(page)
-    const seen = await page.evaluate(() => {
-      const el = document.activeElement
-      const group = el.closest('[role="radiogroup"]').getBoundingClientRect()
-      const r = el.getBoundingClientRect()
-      return { name: el.textContent, share: Math.max(0, Math.min(r.right, group.right) - Math.max(r.left, group.left)) / r.width }
-    })
-    check(`${engine} phone ${width}px`, '(ly) the chip arrowed to is wholly in view', seen.name === 'Spread' && seen.share > 0.98, JSON.stringify(seen))
-    await context.close()
+    try {
+      await page.getByRole('radio', { name: 'Compare', exact: true }).focus()
+      for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowRight')
+      await settled(page)
+      const seen = await page.evaluate(() => {
+        const el = document.activeElement
+        const group = el.closest('[role="radiogroup"]').getBoundingClientRect()
+        const r = el.getBoundingClientRect()
+        return { name: el.textContent, share: Math.max(0, Math.min(r.right, group.right) - Math.max(r.left, group.left)) / r.width }
+      })
+      check(`${engine} phone ${width}px`, '(ly) the chip arrowed to is wholly in view', seen.name === 'Spread' && seen.share > 0.98, JSON.stringify(seen))
+    } catch (e) {
+      check(`${engine} ly layout faults`, '(ly) the section ran', false, String(e instanceof Error ? e.message : e).split('\n')[0])
+    } finally {
+      await context.close()
+    }
   }
 
   {
     const { page, context } = await openPhone(browser, { width: 375, height: 812 })
-    const spend = page.locator('input[aria-label^="Annual spend at FI"]').first()
-    const details = spend.locator('xpath=ancestor::details[1]')
-    if (!(await details.evaluate((d) => d.open))) {
-      await details.locator('summary').click()
+    try {
+      const spend = page.locator('input[aria-label^="Annual spend at FI"]').first()
+      const details = spend.locator('xpath=ancestor::details[1]')
+      if (!(await details.evaluate((d) => d.open))) {
+        await details.locator('summary').click()
+        await settled(page)
+      }
+      const years = page.locator('input[aria-label="Years the money must last"]').first()
+      const plus = page.getByRole('button', { name: 'Increase Years the money must last' })
+      await years.fill('33')
+      await years.press('Tab')
       await settled(page)
+      await plus.evaluate((el) => window.scrollBy(0, el.getBoundingClientRect().top - 420))
+      await settled(page)
+      const tops = []
+      for (let k = 0; k < 5; k++) {
+        await touchTap(page, plus)
+        await page.waitForTimeout(250)
+        tops.push(Math.round((await plus.boundingBox()).y))
+      }
+      check(`${engine} phone 375x812`, '(ly) the + under the spending does not move down when the line above it gains a digit', new Set(tops).size === 1, `the + was at ${tops.join(', ')}px after each tap from 33`)
+    } catch (e) {
+      check(`${engine} ly layout faults`, '(ly) the section ran', false, String(e instanceof Error ? e.message : e).split('\n')[0])
+    } finally {
+      await context.close()
     }
-    const years = page.locator('input[aria-label="Years the money must last"]').first()
-    const plus = page.getByRole('button', { name: 'Increase Years the money must last' })
-    await years.fill('33')
-    await years.press('Tab')
-    await settled(page)
-    await plus.evaluate((el) => window.scrollBy(0, el.getBoundingClientRect().top - 420))
-    await settled(page)
-    const tops = []
-    for (let k = 0; k < 5; k++) {
-      await touchTap(page, plus)
-      await page.waitForTimeout(250)
-      tops.push(Math.round((await plus.boundingBox()).y))
-    }
-    check(`${engine} phone 375x812`, '(ly) the + under the spending does not move down when the line above it gains a digit', new Set(tops).size === 1, `the + was at ${tops.join(', ')}px after each tap from 33`)
-    await context.close()
   }
 }
 
