@@ -134,7 +134,7 @@ Chart reference lines are drawn in both views, each in its own money (`reference
 
 ## Financial independence and withdrawal
 
-Safe withdrawal rate defaults to 4% (25× annual spend). Adjustable per scenario.
+Safe withdrawal rate defaults to 4% (25× annual spend). Adjustable per scenario. How long the money must last is the scenario's own too (`retirementYears`, whole years from 1 to 100, 30 for a scenario that never set one): the FI drawdown chart runs for it, and it gives the guide for the rate (`recommendedWithdrawalRate` in `engine/retirementYears.ts`): 4% for up to 35 years, 3,5% up to 49, 3,25% from 50. The rate follows the years only while it is the guide for the years it had (`fiPatchForYears`), so a rate someone set themselves stays theirs, and the guide is a hint under the field, not a limit. The FI target is also shown at 4%, 3,5% and 3% next to the one the plan uses (`fiTargetsCents`): 30.000 € of yearly spending needs 750.000 €, 857.143 € or 1.000.000 €. Not modelled: the chance that the money lasts, which a single drawdown at the plan's return cannot say.
 
 The FI year is the year the **invested portfolio** reaches the target (`yearsToFi` in `projection.ts`), not the net worth: a withdrawal rate draws on what can be sold and spent, and a house is not that. It is the same measure the milestones use, so a plan with a house cannot show "FI in year 0" beside a milestone of the same amount ten years off. The FI drawdown chart starts from the portfolio in the FI year for the same reason.
 
