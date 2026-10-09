@@ -2,6 +2,11 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (the return is not given when it is money moved in)
+
+- **A balance that grew by transfers nobody recorded no longer reads as a return.** The measured return counts any rise that is not an investment transaction as growth, so an account opened with a transfer a day before the next check-in read about 72% a year, and a year of unrecorded monthly deposits read 18%. When the plan expects investing and none is recorded in the period, or the period would be more than 30% a year, Progress says so and what to add (Investment transactions), instead of a percentage.
+- **Two check-ins on one day count as one.** A correction logged the same day was read as a return over no time at all. The one logged last is used.
+
 ## October 2026 (restarting a plan counts it in the new year's euros)
 
 - **Spending, rent, fees and one-off amounts are brought forward.** Re-baselining moves the start to today but left the amounts typed in the old start's euros as they were, so after 3 years at 2% inflation 30.000 € of spending still read 30.000 € where it is 31.836 €. The FI target came out about 6% low, and in the sample plan without its house someone exactly on plan was told FI is a year earlier than the plan says. They are now multiplied by the inflation of the years that passed, and the sheet says what each became.
