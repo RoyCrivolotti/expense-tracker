@@ -148,12 +148,12 @@ describe('PlanHero shortfall note', () => {
   it('is in the footer on a wide screen', () => {
     installFakeMatchMedia()
     renderFooter()
-    expect(screen.getByRole('note').textContent).toContain('The house needs more than the portfolio holds in year 5.')
+    expect(screen.getByRole('status').textContent).toContain('The house needs more than the portfolio holds in year 5.')
   })
 
   it('is in the footer on a phone too', () => {
     installFakeMatchMedia((q) => q === NARROW_MQ)
     renderFooter()
-    expect(screen.getByRole('note').textContent).toContain('The house needs more than the portfolio holds in year 5.')
+    expect(screen.getByRole('status').textContent).toContain('The house needs more than the portfolio holds in year 5.')
   })
 })

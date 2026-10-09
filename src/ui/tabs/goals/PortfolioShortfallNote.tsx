@@ -9,7 +9,8 @@ import styles from './goals.module.css'
  * Said under the hero when the plan takes the portfolio below zero: a house or a life event that
  * costs more than it holds. The chart carries that as a negative balance, which grows like a
  * debt, so the figures from that year on are not a plan to follow and the reader is told before
- * they rely on them. Nothing when the portfolio always covers what comes out of it.
+ * they rely on them. Nothing when the portfolio always covers what comes out of it. It appears as a
+ * draft is edited, so it is a status: a screen reader says it when it arrives.
  */
 export function PortfolioShortfallNote({ draft }: { draft: NewGoalScenario }) {
   const format = useMoneyFormat()
@@ -19,7 +20,7 @@ export function PortfolioShortfallNote({ draft }: { draft: NewGoalScenario }) {
   const money = (cents: number) => formatCentsCompact(cents, format)
   const house = shortfall.cause === 'house'
   return (
-    <div className={styles.shortfallNote} role="note">
+    <div className={styles.shortfallNote} role="status">
       <strong>
         {house
           ? `The house needs more than the portfolio holds in year ${shortfall.year}.`
