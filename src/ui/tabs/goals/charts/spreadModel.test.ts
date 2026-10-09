@@ -60,6 +60,22 @@ describe('milestoneRows', () => {
     expect(Number(rows[1]!.gets.split(' ')[0])).toBeLessThan(100)
   })
 
+  it('never says 0 or 100 of 100 for a share that is not, so a risk is not rounded away', () => {
+    const shared = (share: number) =>
+      milestoneRows({
+        milestones: [{ amountCents: 10_000_000, label: '' }],
+        result: { ...result, milestones: [{ ...result.milestones[0]!, share }] },
+        planStartDate: null,
+        years: 30,
+        money,
+      })[0]!.gets
+    expect(shared(0.9996)).toBe('99 of 100')
+    expect(shared(0.0004)).toBe('1 of 100')
+    expect(shared(1)).toBe('100 of 100')
+    expect(shared(0)).toBe('0 of 100')
+    expect(shared(0.855)).toBe('86 of 100')
+  })
+
   it('is empty without milestones', () => {
     expect(milestoneRows({ milestones: [], result, planStartDate: null, years: 30, money })).toEqual([])
   })
@@ -83,6 +99,11 @@ describe('fiRow', () => {
 describe('spreadSeries', () => {
   const series = spreadSeries({ plan: points, result, inflationRate: I, nominal: false })
 
+
+  it('does not round a run in a thousand that never gets there up to all of them', () => {
+    const near = { ...withFi, fi: { ...withFi.fi!, share: 0.9991 } }
+    expect(fiRow({ result: near, planStartDate: null, years: 30, money, targetCents: 75_000_000 })!.gets).toBe('99 of 100')
+  })
   it('draws the plan, the middle run, the middle half as a band, and the tenth and the ninetieth as dashed lines', () => {
     expect(series.map((s) => s.id)).toEqual(['p90', 'p10', 'band', 'median', 'plan'])
     expect(series.find((s) => s.id === 'plan')!.values).toEqual(points.map((p) => p.investedCents))
@@ -195,6 +216,10 @@ describe('spreadKey', () => {
     ]) {
       expect(key(over)).not.toBe(key())
     }
+  it('does not round nearly all of the runs up to all of them', () => {
+    expect(spreadWarning({ ...result, belowZero: [0, 0.9996] })).toContain('In 99% of the runs')
+  })
+
     expect(spreadKey(draft, 0.03, 0.15, 5_000)).not.toBe(key())
     expect(spreadKey(draft, I, 0.11, 5_000)).not.toBe(key())
     expect(spreadKey(draft, I, 0.15, 2_000)).not.toBe(key())

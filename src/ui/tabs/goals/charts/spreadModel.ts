@@ -11,6 +11,7 @@ import type { ChartSeries } from '../../../charts/LinearChart'
 import { yearLabel } from '../yearLabel'
 import { inflateSeries } from './nominalTransform'
 
+import { runsOfHundred } from './retirementOddsLine'
 /** How many runs the card replays: enough that the bands do not wobble, few enough to stay quick while typing. */
 export const SPREAD_RUNS = 10_000
 
@@ -60,7 +61,7 @@ export function milestoneRows({
       label: milestoneLabelWithAmount(m, money),
       middle: rangeLabel(range.p25, range.p75, planStartDate, years),
       wide: rangeLabel(range.p10, range.p90, planStartDate, years),
-      gets: `${Math.round(range.share * 100)} of 100`,
+      gets: `${runsOfHundred(range.share)} of 100`,
     }
   })
 }
@@ -85,7 +86,7 @@ export function fiRow({
     label: `FI target (${money(targetCents)} in the plan's money)`,
     middle: rangeLabel(range.p25, range.p75, planStartDate, years),
     wide: rangeLabel(range.p10, range.p90, planStartDate, years),
-    gets: `${Math.round(range.share * 100)} of 100`,
+    gets: `${runsOfHundred(range.share)} of 100`,
   }
 }
 
@@ -170,7 +171,7 @@ export function spreadCaption({
 export function spreadWarning(result: SpreadResult): string | null {
   const year = result.belowZero.findIndex((share) => share >= WARN_SHARE)
   if (year < 0) return null
-  const share = Math.round(result.belowZero[year]! * 100)
+  const share = runsOfHundred(result.belowZero[year]!)
   return `In ${share}% of the runs the portfolio is below nothing from year ${year}: the house payment or an event takes more than it holds when the market is unkind.`
 }
 
