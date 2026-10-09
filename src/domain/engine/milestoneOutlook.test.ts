@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { milestoneCrossingDate, milestoneStanding, wholeYearsToAmount, yearsToAmount } from './milestoneOutlook'
-import { projectNetWorth, scenarioToParams } from '.'
+import { fiYearsExact, milestoneCrossingDate, milestoneStanding, wholeYearsToAmount, yearsToAmount } from './milestoneOutlook'
+import { fireNumber, projectNetWorth, scenarioToParams, yearsToFi } from '.'
 import { makeScenario } from '../../testing/factories'
 import { DEFAULT_INFLATION_RATE } from './projectionConstants'
 import { samplePlan, SAMPLE_INFLATION } from '../../testing/samplePlan'
@@ -38,6 +38,45 @@ describe('yearsToAmount', () => {
 
   it('is null past the horizon', () => {
     expect(yearsToAmount(plan, 1_000_000_000_00, DEFAULT_INFLATION_RATE)).toBeNull()
+  })
+})
+
+describe('fiYearsExact', () => {
+  const fi = (over = {}) =>
+    scenarioToParams(
+      makeScenario({ startInvestedCents: 50_000_000, monthlyContributionCents: 0, expectedRealReturn: 0.05, housePurchaseYear: null, horizonYears: 20, annualSpendCents: 3_000_000, safeWithdrawalRate: 0.04, lifeEvents: [], ...over }),
+      0,
+    )
+
+  it('is the day inside the year FI is reached in: between the year before and that year', () => {
+    for (const over of [{}, { monthlyContributionCents: 200_000, startInvestedCents: 1_000_000 }, { annualSpendCents: 1_500_000, startInvestedCents: 2_000_000, monthlyContributionCents: 100_000 }]) {
+      const params = fi(over)
+      const spend = over && 'annualSpendCents' in over ? (over as { annualSpendCents: number }).annualSpendCents : 3_000_000
+      const year = yearsToFi(params, spend, 0.04)
+      const exact = fiYearsExact(params, spend, 0.04)
+      expect(year).not.toBeNull()
+      expect(exact!).toBeGreaterThan(year! - 1 - 1e-9)
+      expect(exact!).toBeLessThanOrEqual(year! + 1e-9)
+    }
+  })
+
+  it('is where the line passes the target, drawn straight between the year ends', () => {
+    // 500.000 growing at 5% against a 750.000 target: past it between year 8 and year 9.
+    const at = (year: number) => 50_000_000 * Math.pow(1.05, year)
+    const share = (fireNumber(3_000_000, 0.04) - at(8)) / (at(9) - at(8))
+    expect(fiYearsExact(fi(), 3_000_000, 0.04)!).toBeCloseTo(8 + share, 3)
+  })
+
+  it('is the anniversary when the target is only reached by a step up on it', () => {
+    // 100.000 with no growth, then a 700.000 inflow in year 5: 750.000 is first held after it.
+    const params = fi({ startInvestedCents: 10_000_000, expectedRealReturn: 0, lifeEvents: [{ label: 'Inheritance', year: 5, amountCents: 70_000_000 }] })
+    expect(yearsToFi(params, 3_000_000, 0.04)).toBe(5)
+    expect(fiYearsExact(params, 3_000_000, 0.04)).toBe(5)
+  })
+
+  it('is zero when the target is held at the start, and null when it is never reached', () => {
+    expect(fiYearsExact(fi({ startInvestedCents: 80_000_000 }), 3_000_000, 0.04)).toBe(0)
+    expect(fiYearsExact(fi({ startInvestedCents: 1_000_000, expectedRealReturn: 0 }), 3_000_000, 0.04)).toBeNull()
   })
 })
 
@@ -108,6 +147,12 @@ describe('milestoneStanding', () => {
 
   it('cannot be dated from a malformed start date', () => {
     expect(milestoneCrossingDate(makeScenario({ ...plan, planStartDate: 'garbage' }), 120_000_00, DEFAULT_INFLATION_RATE)).toBeNull()
+  })
+
+  it.each(['2026-13-45', '2026-02-30', '0000-00-00', '2026-04-31'])('cannot be dated from %s, which has the shape of a date and is not one', (planStartDate) => {
+    const impossible = makeScenario({ ...plan, planStartDate })
+    expect(milestoneCrossingDate(impossible, 120_000_00, DEFAULT_INFLATION_RATE)).toBeNull()
+    expect(milestoneStanding({ amountCents: 120_000_00, label: '' }, impossible, undefined, DEFAULT_INFLATION_RATE)).toMatchObject({ kind: 'unknown' })
   })
 
   it('gives the expected date alone without a target, and says so past the horizon', () => {

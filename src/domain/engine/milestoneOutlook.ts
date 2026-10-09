@@ -4,10 +4,10 @@
  * (`milestoneCrossing`), then placed on the calendar from the plan's start date.
  */
 import type { GoalScenario, Milestone } from '../types'
-import { DAY_MS, dateAtYears, utcDateMs } from './dates'
+import { DAY_MS, dateAtYears, isCalendarDate, utcDateMs } from './dates'
 import { milestoneCrossing, type MilestoneCrossing } from './milestoneCrossing'
 import { planLineOf } from './planLine'
-import { projectNetWorth, type ProjectionParams } from './projection'
+import { fireNumber, projectNetWorth, yearsToFi, type ProjectionParams } from './projection'
 import { scenarioToParams } from './scenarioProjection'
 
 const YEAR_DAYS = 365.25
@@ -23,22 +23,43 @@ export function yearsToAmount(plan: GoalScenario, amountCents: number, inflation
 }
 
 /**
+ * The fractional years from the plan's start at which it first has the amount on the account, from its own
+ * parameters: the day the chip gives, before any rounding. Null when it does not get there within its horizon.
+ */
+export function crossingYears(params: ProjectionParams, amountCents: number, inflationRate: number): number | null {
+  const crossing = milestoneCrossing(planLineOf(projectNetWorth(params)), amountCents, inflationRate)
+  return crossing === null ? null : Math.max(0, crossing.offset)
+}
+
+/**
  * The first yearly step at which the plan has the amount on the account: the whole years the table
  * and the narrative count in, rounded up from the day the chip gives so the two never disagree. Null
  * when the plan does not get there within its horizon.
  */
 export function wholeYearsToAmount(params: ProjectionParams, amountCents: number, inflationRate: number): number | null {
-  const crossing = milestoneCrossing(planLineOf(projectNetWorth(params)), amountCents, inflationRate)
+  const years = crossingYears(params, amountCents, inflationRate)
   // A crossing on an anniversary is a whole number up to the bisection's last digit.
-  return crossing === null ? null : Math.max(0, Math.ceil(crossing.offset - 1e-9))
+  return years === null ? null : Math.max(0, Math.ceil(years - 1e-9))
 }
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+/**
+ * The fractional years from the plan's start at which it reaches the FI target, which is in the plan's euros, so
+ * the line is read as it is: the day inside the year `yearsToFi` names. A target that is only held after a house
+ * payment or an event steps up on an anniversary is reached on that anniversary, which is that year itself. Null
+ * when it is not reached within the horizon.
+ */
+export function fiYearsExact(params: ProjectionParams, annualSpendCents: number, swr: number): number | null {
+  const year = yearsToFi(params, annualSpendCents, swr)
+  if (year === null || year === 0) return year
+  const crossing = milestoneCrossing(planLineOf(projectNetWorth(params)), fireNumber(annualSpendCents, swr), 0)
+  const inside = crossing !== null && crossing.offset > year - 1 - 1e-9 && crossing.offset <= year + 1e-9
+  return inside ? crossing.offset : year
+}
 
 /** The calendar date the plan crosses the amount, or null without a start date or within the horizon. */
 export function milestoneCrossingDate(plan: GoalScenario, amountCents: number, inflationRate: number): string | null {
-  // A start date only the API could have written malformed must not take Progress down.
-  if (!plan.planStartDate || !ISO_DATE.test(plan.planStartDate)) return null
+  // A start date only the API could have written malformed must not take Progress down, nor be dated as if it were a day.
+  if (!plan.planStartDate || !isCalendarDate(plan.planStartDate)) return null
   const years = yearsToAmount(plan, amountCents, inflationRate)
   return years === null ? null : dateAtYears(plan.planStartDate, years)
 }
@@ -53,7 +74,7 @@ interface Outlook {
 }
 
 function outlookOf(plan: GoalScenario, amountCents: number, inflationRate: number): Outlook | null {
-  if (!plan.planStartDate || !ISO_DATE.test(plan.planStartDate)) return null
+  if (!plan.planStartDate || !isCalendarDate(plan.planStartDate)) return null
   const crossing = crossingOf(plan, amountCents, inflationRate)
   if (crossing === null) return null
   return {
@@ -92,7 +113,7 @@ export function milestoneStanding(
   asOf: string | null = null,
 ): MilestoneStanding {
   if (reachedOn) return { kind: 'reached', on: reachedOn }
-  if (!plan?.planStartDate) return { kind: 'unknown' }
+  if (!plan?.planStartDate || !isCalendarDate(plan.planStartDate)) return { kind: 'unknown' }
   const outlook = outlookOf(plan, milestone.amountCents, inflationRate)
   const target = milestone.targetDate ?? null
   if (!outlook) return { kind: 'beyond-horizon', target }

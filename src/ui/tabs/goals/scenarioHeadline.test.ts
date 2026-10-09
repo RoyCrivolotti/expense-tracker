@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { GoalScenario } from '../../../types'
 import { scenarioHeadline } from './scenarioHeadline'
-import { DEFAULT_INFLATION_RATE, planFromToday } from '../../../engine'
+import { DEFAULT_INFLATION_RATE, planFromToday, planValueAtDate, realToNominal } from '../../../engine'
 
 const base: GoalScenario = {
   id: 1,
@@ -42,15 +42,24 @@ describe('scenarioHeadline', () => {
     expect(primary).toContain('FI year')
   })
 
-  it('adds the FI year counted from today when the plan is restarted from a check-in', () => {
+  it('adds the FI month counted from today when the plan is restarted from a check-in', () => {
     const plan = { ...base, planStartDate: '2024-01-01', isActive: true }
     const fromToday = planFromToday(plan, { investedCents: 900_000_00, date: '2026-01-01' }, 0.02)
     const { primary } = scenarioHeadline(plan, DEFAULT_INFLATION_RATE, undefined, undefined, fromToday)
-    expect(primary).toMatch(/from today, FI in \d+ years$/)
+    expect(primary).toMatch(/ · FI around [A-Z][a-z]{2} 20\d\d · from today, around [A-Z][a-z]{2} 20\d\d$/)
     // Already past the target at today's balance.
     const rich = planFromToday(plan, { investedCents: 2_000_000_00, date: '2026-01-01' }, 0.02)
     expect(scenarioHeadline(plan, DEFAULT_INFLATION_RATE, undefined, undefined, rich).primary).toMatch(/FI at today's balance$/)
     expect(scenarioHeadline(plan, DEFAULT_INFLATION_RATE).primary).not.toContain('from today')
+  })
+
+  it('gives the plan\'s FI and its restart\'s as the same month for a restart exactly on the plan, not as years from two starts', () => {
+    const plan = { ...base, planStartDate: '2024-01-01', isActive: true }
+    const date = '2027-03-05'
+    const onLine = realToNominal(planValueAtDate(plan, date, DEFAULT_INFLATION_RATE)!, '2024-01-01', date, DEFAULT_INFLATION_RATE)
+    const fromToday = planFromToday(plan, { investedCents: onLine, date }, DEFAULT_INFLATION_RATE)
+    const { primary } = scenarioHeadline(plan, DEFAULT_INFLATION_RATE, undefined, undefined, fromToday)
+    expect(primary).toMatch(/ · FI around ([A-Z][a-z]{2} 20\d\d) · from today, around \1$/)
   })
 
   it('shows plan and actual saving when they differ', () => {

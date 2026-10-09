@@ -129,8 +129,10 @@ describe('years from now and calendar year', () => {
     const own = Number((cell('Path S', 1).getAttribute('aria-label') ?? '').match(/by (\d{4})/)?.[1]) - 2023
     const fromNow = Number((cell('Path S', 1).textContent ?? '').replace('y', ''))
 
-    // Started two and a half years before today: the same step is that much nearer, rounded up.
-    expect(fromNow).toBe(Math.ceil(own - 2.5))
+    // Started two and a half years before today: the day it reaches the amount is that much nearer, rounded up once,
+    // so no later than the step's year less 2,5 rounded up and at most a year sooner than that.
+    expect(fromNow).toBeLessThanOrEqual(Math.ceil(own - 2.5))
+    expect(fromNow).toBeGreaterThanOrEqual(Math.ceil(own - 2.5) - 1)
     await userEvent.click(screen.getByRole('radio', { name: 'Calendar year' }))
     expect(cell('Path S', 1)).toHaveTextContent(String(2023 + own))
   })

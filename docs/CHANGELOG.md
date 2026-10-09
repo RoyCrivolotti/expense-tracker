@@ -2,6 +2,11 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (one rounding for every path)
+
+- **A plan restarted on its own line reads the same as the plan.** The plan's years to a milestone were rounded up to a yearly step from its start and then again after taking today off, while the restart from a check-in was rounded once, so someone exactly on the plan read "1 year sooner" and the plan's cells could be up to two years later than the date on Progress. Every row is rounded once now, from the day the path reaches the amount, and "up to a year later" is what the caption says and what it is.
+- **The plan's FI and its restart's are read on one axis.** Beside a restart the plan's FI year and the restart's were counted from two different days, so a restart that is behind could read a year sooner. Both are given as a month, on the dashboard card and in the comparison table.
+
 ## October 2026 (the last figures with no money named)
 
 - **The Progress snapshot adds up.** The balance was in euros on the account and the plan projection beside it in the plan's euros, so taking one from the other did not give the gap printed above them (180k and 158k under "On track, -438 €"). Both are in the plan's euros now and say so, the balance as logged is in the hover text, and the net worth tile is called "Net worth, all accounts". The History rows say their gap is for the investments, in the plan's euros.

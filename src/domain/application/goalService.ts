@@ -3,6 +3,7 @@ import {
   normalizeContributionSchedule,
   validateContributionSchedule,
 } from '../engine/contributionSchedule'
+import { isCalendarDate } from '../engine/dates'
 import { DEFAULT_HOME_CARRY_RATE, DEFAULT_RETIREMENT_YEARS, RETIREMENT_YEARS_MAX } from '../engine/projectionConstants'
 import type { ExpenseRepository } from '../ports/expenseRepository'
 import { ValidationError } from './validationError'
@@ -55,6 +56,15 @@ function assertInClosedRange(value: number, lo: number, hi: number, message: str
   if (!Number.isFinite(value) || value < lo || value > hi) throw new ValidationError(message)
 }
 
+/**
+ * The editor's date picker cannot write anything but a day, so only a hand-made request can: a start that does not exist
+ * would be dated as if it did.
+ */
+function validatePlanStartDate(value: unknown): void {
+  if (value === undefined || value === null) return
+  if (typeof value !== 'string' || !isCalendarDate(value)) throw new ValidationError('planStartDate must be a calendar date, or null')
+}
+
 export function validateScenarioNumbers(patch: Partial<NewGoalScenario>): void {
   const rec = patch as Record<string, unknown>
 
@@ -82,6 +92,8 @@ export function validateScenarioNumbers(patch: Partial<NewGoalScenario>): void {
   }
 
   validateScenarioFractions(patch)
+
+  validatePlanStartDate(rec.planStartDate)
 
   if (rec.contributionSchedule !== undefined) {
     const problem = validateContributionSchedule(rec.contributionSchedule)
