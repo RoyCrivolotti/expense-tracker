@@ -6,7 +6,8 @@
 -- Apply this before the code that saves it is deployed: a database without the column still loads
 -- settings (they read as 15%), but saving this one fails until the column is there.
 --
--- Run as one batch:
---   npx wrangler d1 execute roy-expenses --remote --file=migrations/0034_market_volatility.sql
+-- Applied by the deploy, which records it in _migrations (docs/DEPLOYMENT.md), or by hand with
+--   npm run migrate -- <database> --apply
+-- Running the file with wrangler on its own does not record it, and the next deploy then tries to add the column again.
 
 ALTER TABLE settings ADD COLUMN market_volatility REAL;

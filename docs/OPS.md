@@ -90,7 +90,7 @@ layer applies it to a payload that carries both fields, and the D1 adapter check
 that carries only one of them against the stored row, and refuses a bulk type change away
 from `investment` while any target row is a withdrawal.
 
-### Migrations run by hand
+### Applying migrations
 
 A merge to `main` applies a migration: dev automatically, then production once the `production`
 environment is approved in GitHub, and only then does the code that needs it ship (see

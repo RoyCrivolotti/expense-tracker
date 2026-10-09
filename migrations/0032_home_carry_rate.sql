@@ -9,7 +9,8 @@
 -- Apply this before the code that saves it is deployed: a database without the column still loads
 -- scenarios (they read as 1,5%), but creating or saving one fails until the column is there.
 --
--- Run as one batch:
---   npx wrangler d1 execute roy-expenses --remote --file=migrations/0032_home_carry_rate.sql
+-- Applied by the deploy, which records it in _migrations (docs/DEPLOYMENT.md), or by hand with
+--   npm run migrate -- <database> --apply
+-- Running the file with wrangler on its own does not record it, and the next deploy then tries to add the column again.
 
 ALTER TABLE goal_scenarios ADD COLUMN home_carry_rate REAL NOT NULL DEFAULT 0.015;
