@@ -2461,7 +2461,14 @@
   white-space: nowrap;
 }
 
+/* Edit and the cross are held to 24px each way (WCAG 2.2, target size): they were 26x15 and 13x16 with
+   4px between. A finger on the wide page gets 44px below. */
 .lifeEventRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
   background: none;
   border: none;
   color: var(--color-text-muted);
@@ -2477,6 +2484,11 @@
 }
 
 .lifeEventEdit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
   background: none;
   border: none;
   color: var(--color-accent);

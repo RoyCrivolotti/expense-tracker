@@ -312,6 +312,14 @@ describe('the inputs panel on a touch screen', () => {
     expect(goals.outside).not.toMatch(/lifeEventRemove[^}]*min-height:\s*2\.75rem/)
     expect(goals.outside).not.toMatch(/lifeEventEdit[^}]*min-height:\s*2\.75rem/)
   })
+
+  it('gives Edit and the remove cross of a change at least a 24px target on any screen, which is what WCAG 2.2 asks of a target', () => {
+    for (const name of ['lifeEventRemove', 'lifeEventEdit']) {
+      const base = goals.outside.match(new RegExp(`\\.${name}\\s*\\{([^}]*)\\}`))?.[1] ?? ''
+      expect(base, name).toMatch(/min-width:\s*1\.5rem/)
+      expect(base, name).toMatch(/min-height:\s*1\.5rem/)
+    }
+  })
 })
 
 describe('the sliders and the bar levers on a touch screen', () => {
