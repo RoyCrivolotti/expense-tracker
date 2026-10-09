@@ -12,6 +12,7 @@ import {
   type MoneyFormat,
   type PlanFromToday,
 } from '../../../engine'
+import { planMoneyLabel } from './planMoneyLabel'
 
 type ScenarioLike = GoalScenario | NewGoalScenario
 
@@ -93,7 +94,7 @@ export function scenarioHeadline(
 
   const actual = actualPhrase(scenario, actualMonthlyInvestingCents, pace, format)
   const secondaryParts = [
-    `${formatCents(end?.netWorthCents ?? 0, format)} net worth @ ${scenario.horizonYears}y`,
+    `${formatCents(end?.netWorthCents ?? 0, format)} net worth @ ${scenario.horizonYears}y in ${planMoneyLabel(scenario.planStartDate)}`,
     planPhrase(scenario, pace, format),
     ...(actual ? [actual] : []),
   ]

@@ -1,7 +1,9 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { WealthSummaryCard } from './WealthSummaryCard'
-import { planValueAtDate, realToNominal, DEFAULT_INFLATION_RATE } from '../../../engine'
+import { planValueAtDate, realToNominal, trackStatus, DEFAULT_INFLATION_RATE } from '../../../engine'
+import { EU_MONEY_FORMAT } from '../../../engine/money'
+import { formatMoneyShort } from './chartTheme'
 import { makeScenario, makeTransaction } from '../../../testing/factories'
 import { samplePlan } from '../../../testing/samplePlan'
 import { planLineOf, planValueAt, planValueBefore, projectNetWorth, scenarioToParams } from '../../../engine'
@@ -65,6 +67,37 @@ describe('WealthSummaryCard', () => {
     )
     // Should show "Ahead of plan" or "Behind plan" status text
     expect(screen.getByText(/ahead of plan|behind plan/i)).toBeInTheDocument()
+  })
+
+  describe('the tiles', () => {
+    // Started 1 January 2020, checked in 9 October 2026 with 180.000 on the account: at 2% that is about 158.000 in the
+    // euros of 2020, which is the money the plan and its gap are in.
+    const plan = makeScenario({ planStartDate: '2020-01-01', startInvestedCents: 5_000_000, monthlyContributionCents: 100_000, expectedRealReturn: 0.05, horizonYears: 30 })
+    const accounts = [makeAccount(1, 'investment'), makeAccount(2, 'cash')]
+    const checkins = [makeCheckin(1, '2026-10-09', [{ accountId: 1, valueCents: 18_000_000 }, { accountId: 2, valueCents: 2_200_000 }])]
+    const short = (cents: number) => formatMoneyShort(cents, EU_MONEY_FORMAT)
+
+    it('puts the investments and the plan projection in the same money, the plan\'s, and names it', () => {
+      render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={plan} />)
+      const status = trackStatus(checkins[0]!, plan, accounts, DEFAULT_INFLATION_RATE)!
+      const tile = (label: string) => screen.getByText(label).nextElementSibling!.textContent
+      expect(tile('Investments, in 2020 euros')).toBe(short(status.actualRealInvestedCents))
+      expect(tile('Plan projection, in 2020 euros')).toBe(short(status.projectedInvestedCents))
+      // So that the two tiles can be taken from each other to give the gap above them.
+      expect(status.actualRealInvestedCents - status.projectedInvestedCents).toBe(status.deltaCents)
+    })
+
+    it('says the net worth is every account on the account\'s euros, and keeps the balance as logged in the hover text', () => {
+      render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={plan} />)
+      expect(screen.getByText('Net worth, all accounts').nextElementSibling).toHaveTextContent(short(20_200_000))
+      expect(screen.getByText('Investments, in 2020 euros').nextElementSibling).toHaveAttribute('title', `As logged on your account: ${short(18_000_000)}`)
+    })
+
+    it('shows the balance as logged, unnamed, when there is no plan to compare it with', () => {
+      render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={null} />)
+      expect(screen.getByText('Investments').nextElementSibling).toHaveTextContent(short(18_000_000))
+      expect(screen.queryByText(/Plan projection/)).not.toBeInTheDocument()
+    })
   })
 
   describe('how far along the plan a balance is', () => {

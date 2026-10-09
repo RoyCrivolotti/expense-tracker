@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { LeverKey } from '../../../engine'
 import { makeScenario } from '../../../testing/factories'
 import { samplePlan } from '../../../testing/samplePlan'
-import { ChangesFields, FireFields, HousingFields, PortfolioFields } from './goalControlSections'
+import { ChangesFields, EventsFields, FireFields, HousingFields, PortfolioFields } from './goalControlSections'
 import { LEVER_SPECS, SECTION_KEYS } from './leverFields'
 
 function makeDraft() {
@@ -116,7 +116,29 @@ describe('the sections of the controls', () => {
     const { id, ...draft } = samplePlan()
     void id
     render(<HousingFields draft={draft} onChange={vi.fn()} />)
-    expect(screen.getByText(/Purchase cost from portfolio: 64\.870,56 € down \+ 6\.000,00 € fees = 70\.870,56 €/)).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Purchase cost from portfolio, in 2026 euros: 64.871 € down + 6.000 € fees = 70.871 € (about 83.036 € on your account in 2034), dip on the invested line in year 8.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('says what the fees come to on the account in the year the house is bought, under the fees', () => {
+    const { id, ...draft } = samplePlan()
+    void id
+    render(<HousingFields draft={draft} onChange={vi.fn()} />)
+    // 6.000 euros of 2026 times 1,02 to the 8th.
+    expect(screen.getByText('Counted in 2026 euros: about 7.030 € on your account in 2034, the year you buy.')).toBeInTheDocument()
+  })
+
+  it('names the money of the amounts that are typed for a one-off event, and what the one being added comes to on the account', () => {
+    const { id, ...draft } = samplePlan()
+    void id
+    render(<EventsFields draft={draft} onChange={vi.fn()} />)
+    expect(screen.getByText(/Amounts are counted in 2026 euros, like the rest of the plan/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '+ Add life event' }))
+    // The form starts at year 1 and 1.000.000 euros: 1.020.000 on the account a year on.
+    expect(screen.getByText('Counted in 2026 euros: about 1.020.000 € on your account in 2027.')).toBeInTheDocument()
   })
 
   it('has the yearly upkeep of the house, which Rent vs buy counts, beside the rent, and writes an edit to the draft', () => {

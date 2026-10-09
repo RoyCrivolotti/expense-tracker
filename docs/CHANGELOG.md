@@ -2,6 +2,12 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (the last figures with no money named)
+
+- **The Progress snapshot adds up.** The balance was in euros on the account and the plan projection beside it in the plan's euros, so taking one from the other did not give the gap printed above them (180k and 158k under "On track, -438 €"). Both are in the plan's euros now and say so, the balance as logged is in the hover text, and the net worth tile is called "Net worth, all accounts". The History rows say their gap is for the investments, in the plan's euros.
+- **The dashboard card and the full-screen chart name their euros**, as the Goals page does.
+- **The purchase cost, the fees and a one-off event say what they come to on the account** in the year they fall in, not only in the plan's euros.
+
 ## October 2026 (does the money last)
 
 - **The FI drawdown says in how many of 100 runs the money lasts.** A retirement that starts at the FI target, with the spending taken out each year for the years it must last, is replayed in the same 10.000 markets as the spread card. For 30.000 € a year over 30 years it says the money lasts in 86 of 100 runs at 4%, against 92 at 3,5% and 96 at 3%, and how long it lasts in the unluckiest tenth when it does not last in all. It uses your plan's own withdrawal rate first, the market bounce from Assumptions, and the typical return of the plan. It is shown where FI is never reached too: it is about how safe the target is.

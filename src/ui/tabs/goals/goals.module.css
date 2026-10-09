@@ -1299,6 +1299,12 @@
   composes: matrixTools;
 }
 
+/* What the sheet's chart is in, said once in its bar. */
+.sheetMoney {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
 .matrixToggle {
   appearance: none;
   border: 1px solid var(--color-border);

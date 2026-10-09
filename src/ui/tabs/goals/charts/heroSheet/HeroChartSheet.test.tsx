@@ -76,6 +76,19 @@ describe('the button that opens the hero chart full screen', () => {
 })
 
 describe('the full-screen hero chart', () => {
+  it('names the euros the chart is in, in either mode, as the card does', async () => {
+    phone()
+    const dated = { ...draft, planStartDate: '2026-01-01' }
+    const { unmount } = render(<Hero draft={dated} />)
+    await userEvent.click(screen.getByRole('button', OPEN))
+    expect(within(dialog()).getByText('in 2026 euros')).toBeInTheDocument()
+    unmount()
+
+    render(<Hero draft={dated} nominalMode />)
+    await userEvent.click(screen.getByRole('button', OPEN))
+    expect(within(dialog()).getByText('in euros on your account in each year')).toBeInTheDocument()
+  })
+
   it('opens as a dialog with the card\'s window buttons, the display switch, the chart and the readout', async () => {
     phone()
     render(<Hero />)

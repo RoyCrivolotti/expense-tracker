@@ -160,7 +160,7 @@ describe('GoalsCard', () => {
 
     it('gives the gap in money when the plan never has the balance', () => {
       badge(100_000_000_00)
-      expect(screen.getByText(/€ ahead$/)).toBeInTheDocument()
+      expect(screen.getByText(/€ ahead \(.* euros\)$/)).toBeInTheDocument()
     })
   })
 
@@ -252,7 +252,7 @@ describe('the track badge around a house purchase', () => {
 
   it('gives the gap in money, not months, for a lead the plan only has after the payment', () => {
     badge(500_000)
-    expect(screen.getByText(/€ ahead$/)).toBeInTheDocument()
+    expect(screen.getByText(/€ ahead \(.* euros\)$/)).toBeInTheDocument()
     expect(screen.queryByText(/(months?|years?) ahead$/)).not.toBeInTheDocument()
   })
 })

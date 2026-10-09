@@ -225,7 +225,11 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // its euros, and the glossary explains the two): about 1,6 KB gzip, all of it text and small helpers in the lazy
 // Goals chunk, took the total from 269,214 to 270,785 bytes. The Goals chunk's limit stays where it was. No new
 // library.
-const TOTAL_MAX_GZIP = 271_090
+//
+// Raised from 271.09 KB to 271.52 KB for naming the money on the figures that had none (the Progress snapshot's labels and
+// its History caption, the dashboard card, the full-screen chart's bar, the purchase cost, the fees and the one-off event
+// form): about 0,1 KB gzip took the total from 271,145 to 271,220 bytes. No new library.
+const TOTAL_MAX_GZIP = 271_520
 const GOALS_MAX_GZIP = 72_860
 
 function gzipBytes(path) {

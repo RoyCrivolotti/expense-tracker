@@ -29,15 +29,16 @@ export function useHeroSheet(
   const [shown, setShown] = useState<{ index: number | null } | null>(null)
   const onOpen = useCallback(() => setShown({ index: lastIndex.current }), [lastIndex])
   const onClose = useCallback(() => setShown(null), [])
-  const { chart, legend, displaySwitch } = rest
+  const { chart, legend, displaySwitch, money } = rest
   const model = useMemo<HeroSheetModel>(
     () => ({
       chart,
       legend,
       displaySwitch,
+      money,
       windowPicker: <HeroWindowPicker windows={windows} value={windowValue} onChange={onWindowChange} />,
     }),
-    [chart, legend, displaySwitch, windows, windowValue, onWindowChange],
+    [chart, legend, displaySwitch, money, windows, windowValue, onWindowChange],
   )
   const sheet = (
     <PresenceValue value={canOpen ? shown : null} exitMs={EXIT_MS.fade}>

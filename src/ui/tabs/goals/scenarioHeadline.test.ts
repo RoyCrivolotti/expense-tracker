@@ -31,6 +31,11 @@ const base: GoalScenario = {
 }
 
 describe('scenarioHeadline', () => {
+  it('says which euros the net worth at the end is in: the plan\'s, named by the year it starts', () => {
+    expect(scenarioHeadline({ ...base, planStartDate: '2026-01-01' }, DEFAULT_INFLATION_RATE).secondary).toContain(' net worth @ 30y in 2026 euros')
+    expect(scenarioHeadline(base, DEFAULT_INFLATION_RATE).secondary).toContain(" net worth @ 30y in today's euros")
+  })
+
   it('includes short name and FI year in primary line', () => {
     const { primary } = scenarioHeadline(base, DEFAULT_INFLATION_RATE)
     expect(primary).toMatch(/^Rent & invest/)

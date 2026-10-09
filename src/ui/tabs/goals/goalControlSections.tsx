@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import type { NewGoalScenario } from '../../../data/dataSource'
-import { formatCents, housePriceAtPurchaseCents, rebaseline, rebaselineSummary, type LeverKey, type MoneyFormat } from '../../../engine'
+import { formatCents, formatCentsCompact, housePriceAtPurchaseCents, rebaseline, rebaselineSummary, type LeverKey, type MoneyFormat } from '../../../engine'
 import { useAssumedInflation } from '../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { formatCheckinDate, type InvestedSnapshot } from './checkinDate'
@@ -8,7 +8,8 @@ import { DateField, MoneyField, NumberField, PercentField, PurchaseYearField } f
 import { ContributionStepsList } from './ContributionSteps'
 import { firstChangeNote } from './contributionText'
 import { housePriceHint } from './housePriceHint'
-import { rentMoneyHint, spendMoneyHint } from './moneyHints'
+import { aboutOnAccount, bothMoneys } from './bothMoneys'
+import { feesMoneyHint, rentMoneyHint, spendMoneyHint } from './moneyHints'
 import { planMoneyLabel } from './planMoneyLabel'
 import { LifeEventsList } from './LifeEvents'
 import { ADJUST_LABELS } from './adjustSections'
@@ -40,11 +41,16 @@ function purchaseSummary(draft: NewGoalScenario, inflationRate: number, format: 
   // Already owned, the house is yours from the start: nothing is taken out of the portfolio later, so
   // the starting balance is read as what is left after the down payment and fees. Without this, moving
   // the year from Never to Already own adds the whole house to the net worth and nothing says why.
+  const money = (cents: number) => formatCentsCompact(cents, format)
+  const label = planMoneyLabel(draft.planStartDate)
   if (purchaseYear === 0) {
-    return `Already own: the starting balance is counted as what is left after the ${formatCents(down, format)} down payment and ${formatCents(fees, format)} fees, so nothing comes out of the portfolio later.`
+    return `Already own: the starting balance is counted as what is left after the ${money(down)} down payment and ${money(fees)} fees (in ${label}), so nothing comes out of the portfolio later.`
   }
   const total = down + fees
-  return `Purchase cost from portfolio: ${formatCents(down, format)} down + ${formatCents(fees, format)} fees = ${formatCents(total, format)} (dip on the invested line in year ${purchaseYear}).`
+  // The three are in the plan's euros; the account pays more in the year it is paid, which is the figure a buyer sees.
+  const paid = bothMoneys({ cents: total, years: purchaseYear, planStartDate: draft.planStartDate, inflationRate, money })
+  const account = paid.same ? '' : ` (${aboutOnAccount(paid)})`
+  return `Purchase cost from portfolio, in ${label}: ${money(down)} down + ${money(fees)} fees = ${money(total)}${account}, dip on the invested line in year ${purchaseYear}.`
 }
 
 const L = LEVER_SPECS
@@ -131,7 +137,10 @@ function downPaymentMax(draft: Pick<NewGoalScenario, 'housePurchaseYear'>): numb
 
 function PurchaseCostFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: SectionProps) {
   // Worked out from the draft and said nowhere else, so it stays when the price is in the bar.
-  const priceHint = housePriceHint(draft, useAssumedInflation(), useMoneyFormat())
+  const inflationRate = useAssumedInflation()
+  const format = useMoneyFormat()
+  const priceHint = housePriceHint(draft, inflationRate, format)
+  const feesHint = feesMoneyHint(draft, inflationRate, format)
   return (
     <>
       {omit.has('housePriceCents') ? null : (
@@ -161,6 +170,7 @@ function PurchaseCostFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }:
             Notary, agency, and closing costs withdrawn with the down payment in the purchase
             year.
           </p>
+          {feesHint ? <p className={styles.fieldHint}>{feesHint}</p> : null}
         </>
       )}
     </>
@@ -418,15 +428,19 @@ export function ChangesFields({ draft, onChange, omit = NO_LEVERS }: Pick<Sectio
 
 export function EventsFields({ draft, onChange }: Pick<SectionProps, 'draft' | 'onChange'>) {
   const format = useMoneyFormat()
+  const inflationRate = useAssumedInflation()
   return (
     <>
       <p className={styles.fieldHint}>
         One-off cash events (bonuses, inheritances, large purchases) applied to the portfolio in a
-        specific projection year. Shown as diamond markers on the chart.
+        specific projection year. Shown as diamond markers on the chart. Amounts are counted in{' '}
+        {planMoneyLabel(draft.planStartDate)}, like the rest of the plan.
       </p>
       <LifeEventsList
         events={draft.lifeEvents ?? []}
         horizonYears={draft.horizonYears}
+        planStartDate={draft.planStartDate}
+        inflationRate={inflationRate}
         format={format}
         onChange={(events) => onChange({ lifeEvents: events })}
       />
