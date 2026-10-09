@@ -74,6 +74,13 @@ ESLint enforces `max-lines: 200`, `max-lines-per-function: 60`, `complexity: 12`
 (see `eslint.config.js`). These aren't arbitrary: they're a proxy for "this file/function is doing
 one thing." Split before disabling.
 
+These limits were silently inert for a long stretch: an unscoped block in `eslint.config.js`
+turned `max-lines` / `max-lines-per-function` off for every file. They are enforced again, with
+the 58 files that were already over the limit frozen in two grandfathered lists at the bottom of
+that config. Those lists are append-never: a new violation means splitting the file or function,
+and a file comes off the list once it fits. Each list exempts only one of the two rules, so a
+grandfathered file is still held to the other.
+
 ## Testing
 
 See [docs/TESTING.md](./TESTING.md) for the test pyramid and how to exercise each layer.
