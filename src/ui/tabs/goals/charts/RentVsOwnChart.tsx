@@ -40,7 +40,8 @@ function RentVsOwnChartImpl({
   const { points, verdict } = result
   const format = useMoneyFormat()
   const years = points.map((p) => p.year)
-  const labels = useMemo(() => sparseLabels(years, 5), [years])
+  // The years count from the purchase, not the plan start, so the axis says so with a unit.
+  const labels = useMemo(() => sparseLabels(years, 5).map((l) => (l === '' ? l : `${l}y`)), [years])
   const markers = useMemo(() => rentVsBuyMarkers(result, points.length - 1), [result, points.length])
 
   if (points.length === 0) {

@@ -17,6 +17,12 @@ describe('RentVsOwnChart', () => {
     expect(screen.getByText(/without your starting portfolio and contributions, so they will not match the plan's net worth/)).toBeInTheDocument()
   })
 
+  it('puts a unit on the years along the bottom, which count from the purchase and not from the plan start', () => {
+    render(<RentVsOwnChart draft={draftOf({ housePriceCents: 400_000_000, rentMonthlyCents: 120_000, housePurchaseYear: 8, horizonYears: 40 })} />)
+    expect(screen.getByText('10y')).toBeInTheDocument()
+    expect(screen.queryByText(/^10$/)).not.toBeInTheDocument()
+  })
+
   it('names the upkeep it assumes as the scenario\'s own, not a fixed one', () => {
     const { rerender } = render(<RentVsOwnChart draft={draftOf({ housePriceCents: 40_000_000, rentMonthlyCents: 120_000, homeCarryRate: 0.04 })} />)
     expect(screen.getByText(/upkeep, tax and insurance of 4,0% of the house's value a year/)).toBeInTheDocument()
