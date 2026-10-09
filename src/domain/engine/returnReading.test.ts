@@ -76,6 +76,16 @@ describe('readReturn', () => {
     expect(readReturn(year, accounts, [], null)?.kind).toBe('figure')
   })
 
+  it('asks whether the plan expects investing at the end of the period, not at its start: a plan that starts paying part way through does', () => {
+    // 0 a month until June 2026, then 1.000: the period (March 2026 to March 2027) ends in the paying part.
+    const later = makeScenario({ monthlyContributionCents: 0, planStartDate: '2026-01-01', contributionSchedule: [{ from: '2026-06', monthlyCents: 100_000 }] })
+    const march = [checkin(1, '2026-03-01', 100_000_00), checkin(2, '2027-03-01', 105_000_00)]
+    expect(readReturn(march, accounts, [], later)?.kind).toBe('no-investments')
+    // And the other way round: paying at the start and paused by the end expects nothing.
+    const paused = makeScenario({ monthlyContributionCents: 100_000, planStartDate: '2026-01-01', contributionSchedule: [{ from: '2026-06', monthlyCents: 0 }] })
+    expect(readReturn(march, accounts, [], paused)?.kind).toBe('figure')
+  })
+
   it('says no investments are recorded when the plan expects them, so the balance may include money moved in', () => {
     expect(readReturn(year, accounts, [], investing)?.kind).toBe('no-investments')
   })

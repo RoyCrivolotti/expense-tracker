@@ -1,17 +1,21 @@
 #!/usr/bin/env node
 /**
  * Fail verify if the production JS bundle grows past budget. Guards the win from
- * dropping Recharts (the lazy Goals chunk went 108 KB -> ~8 KB gzip, and is ~41 KB now that
- * Goals has grown): re-adding a heavy chart/vendor lib would blow these limits. Budgets are
- * gzip bytes with headroom; bump deliberately when a real feature needs the room.
+ * dropping Recharts (the lazy Goals chunk went 108 KB -> ~8 KB gzip): re-adding a heavy
+ * chart/vendor lib would blow these limits. Budgets are gzip bytes with headroom; bump
+ * deliberately when a real feature needs the room. Two are kept: the whole bundle, and the
+ * code only the Goals tab loads (its own chunk, the chunks split out of it and its lazy
+ * card, found from the imports in the built files by `bundleGraph.mjs`), which is what
+ * the second figure below counts.
  */
 import { readdirSync, readFileSync } from 'node:fs'
 import { gzipSync } from 'node:zlib'
 import { join } from 'node:path'
+import { goalsOnlyChunks } from './bundleGraph.mjs'
 
 const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 
-// gzip bytes. Today: total ~212 KB, GoalsTab ~41 KB.
+// gzip bytes. Today: total ~274 KB, Goals-only ~81 KB (GoalsTab 69, the shared chart shell 9, the spread card 4).
 //
 // Raised from 160 KB when flags, receipts and the claim pack landed: three
 // features' worth of UI took the total from ~146 KB to ~159 KB, leaving under
@@ -254,8 +258,14 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // glossary built from the owner's format) and the layout fixes (the table's scroller, a boundary round the lazy card,
 // a scroll into view for the chip arrowed to): about 360 bytes gzip took the total from 273,310 to 273,672 bytes
 // across the last two changes. No new library.
+//
+// The Goals limit used to count only the files named GoalsTab*, which left the chunks the bundler splits out of
+// the tab (named after the first module in them) and the lazy spread card outside it: 12.4 KB of Goals-only code,
+// with the limit left at 72.86 KB so that the total was the only thing watching it. It counts them now, found by
+// following the imports in the built files, and the limit is the 81,224 bytes they come to plus 276: GoalsTab
+// 68,846, the shared chart shell 8,802 and the spread card 3,576.
 const TOTAL_MAX_GZIP = 273_900
-const GOALS_MAX_GZIP = 72_860
+const GOALS_MAX_GZIP = 81_500
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length
@@ -274,12 +284,24 @@ if (jsFiles.length === 0) {
   process.exit(1)
 }
 
+const goalsOnly = new Set(
+  goalsOnlyChunks({
+    files: jsFiles,
+    read: (name) => readFileSync(join(assetsDir, name), 'utf8'),
+    indexHtml: readFileSync(join(assetsDir, '..', 'index.html'), 'utf8'),
+  }),
+)
+if (goalsOnly.size === 0) {
+  console.error('check-bundle-budget: found no Goals-only chunk in dist/assets, so the Goals limit would count nothing')
+  process.exit(1)
+}
+
 let total = 0
 let goals = 0
 for (const name of jsFiles) {
   const size = gzipBytes(join(assetsDir, name))
   total += size
-  if (name.startsWith('GoalsTab')) goals += size
+  if (goalsOnly.has(name)) goals += size
 }
 
 const kb = (n) => `${(n / 1000).toFixed(1)} KB`
@@ -288,7 +310,7 @@ if (total > TOTAL_MAX_GZIP) {
   failures.push(`total JS ${kb(total)} gzip exceeds budget ${kb(TOTAL_MAX_GZIP)}`)
 }
 if (goals > GOALS_MAX_GZIP) {
-  failures.push(`GoalsTab ${kb(goals)} gzip exceeds budget ${kb(GOALS_MAX_GZIP)}`)
+  failures.push(`Goals-only JS ${kb(goals)} gzip exceeds budget ${kb(GOALS_MAX_GZIP)}`)
 }
 
 if (failures.length > 0) {
@@ -296,4 +318,4 @@ if (failures.length > 0) {
   process.exit(1)
 }
 
-console.log(`bundle budget OK (total ${kb(total)} gzip, GoalsTab ${kb(goals)} gzip)`)
+console.log(`bundle budget OK (total ${kb(total)} gzip, Goals-only ${kb(goals)} gzip)`)

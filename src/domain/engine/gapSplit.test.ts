@@ -268,6 +268,39 @@ describe('splitGap: a plan flow the plan makes on an anniversary', () => {
   })
 })
 
+describe('splitGap: a recorded flow is the plan\'s house payment only when it matches in direction, date and size', () => {
+  const house = samplePlan({ housePurchaseYear: 2, lifeEvents: [], planStartDate: START })
+  const first = '2027-03-01'
+  const after = '2028-03-01'
+  const line = projectNetWorth(scenarioToParams(house, I))
+  const payment = line.find((p) => p.year === 2)!.preEventInvestedCents - line.find((p) => p.year === 2)!.investedCents
+  const nominalPayment = Math.round(payment * Math.pow(1 + I, 2))
+  // The account shows the payment taken out (and the 1.000 a month put in): the anniversary is 1 January 2028.
+  const reached = Math.round(12_000_000 * 1.05 - nominalPayment + 100_000)
+  const merged = (date: string, amount: number) =>
+    split(house, [checkin(1, first, 12_000_000), checkin(2, after, reached)], [deposit(date, amount), deposit('2027-06-01', 100_000)]).merged
+
+  it('counts a withdrawal of the payment near its date', () => {
+    expect(merged('2028-01-03', -nominalPayment)).toBeNull()
+  })
+
+  it('does not count a deposit of that size, which goes the other way', () => {
+    expect(merged('2028-01-03', nominalPayment)).toBe('event-unrecorded')
+  })
+
+  it('counts one 44 days from the anniversary and not one 46 days from it', () => {
+    expect(merged('2028-02-14', -nominalPayment)).toBeNull()
+    expect(merged('2028-02-16', -nominalPayment)).toBe('event-unrecorded')
+    expect(merged('2027-11-18', -nominalPayment)).toBeNull()
+    expect(merged('2027-11-16', -nominalPayment)).toBe('event-unrecorded')
+  })
+
+  it('counts one for half of it or more and not one for a little under half', () => {
+    expect(merged('2028-01-03', -Math.round(0.51 * nominalPayment))).toBeNull()
+    expect(merged('2028-01-03', -Math.round(0.49 * nominalPayment))).toBe('event-unrecorded')
+  })
+})
+
 describe('splitGap: when saving and the market cannot be told apart', () => {
   it('an account opened with a late transfer reads far too high a return, so it is held as one', () => {
     const plan = paying()
@@ -293,6 +326,38 @@ describe('splitGap: when saving and the market cannot be told apart', () => {
     expect(out.kind === 'split' && out.accountsChanged).toBe(true)
     const same = split(plan, [checkin(1, '2026-03-01', 5_000_000), checkin(2, '2027-03-01', 5_300_000)])
     expect(same.accountsChanged).toBe(false)
+  })
+})
+
+describe('splitGap: the edges of its window', () => {
+  it('needs the check-ins to be 30 days apart: 29 is too close and 30 is enough', () => {
+    const plan = still()
+    const at = (last: string) => splitGap(plan, [checkin(1, '2026-03-01', 5_100_000), checkin(2, last, 5_110_000)], accounts, [], I)
+    expect(at('2026-03-30')).toEqual({ kind: 'unavailable', reason: 'too-close' })
+    expect(at('2026-03-31')).toMatchObject({ kind: 'split' })
+  })
+
+  it('leaves out a flow dated the first check-in\'s day, which that balance already holds, and takes one the day after', () => {
+    const plan = paying()
+    const checkins = [checkin(1, '2026-03-01', 5_100_000), checkin(2, '2027-03-01', 5_900_000)]
+    // None counted: the plan invests, nothing is recorded in the window, so the saving and the market are held together.
+    expect(split(plan, checkins, [deposit('2026-03-01', 100_000)]).merged).toBe('none-recorded')
+    expect(split(plan, checkins, [deposit('2026-03-02', 100_000)]).merged).not.toBe('none-recorded')
+  })
+
+  it('takes one dated the last check-in\'s day, and leaves out one the day after', () => {
+    const plan = paying()
+    const checkins = [checkin(1, '2026-03-01', 5_100_000), checkin(2, '2027-03-01', 5_900_000)]
+    expect(split(plan, checkins, [deposit('2027-03-01', 100_000)]).merged).not.toBe('none-recorded')
+    expect(split(plan, checkins, [deposit('2027-03-02', 100_000)]).merged).toBe('none-recorded')
+  })
+
+  it('does not count an archived investment account as one that was opened or closed', () => {
+    const plan = still()
+    const archived = makeWealthAccount({ id: 3, kind: 'investment', archived: true })
+    const opened = makeWealthCheckin({ id: 2, checkinDate: '2027-03-01', entries: [{ accountId: 1, valueCents: 5_000_000 }, { accountId: 3, valueCents: 400_000 }] })
+    const out = splitGap(plan, [checkin(1, '2026-03-01', 5_000_000), opened], [...accounts, archived], [], I)
+    expect(out.kind === 'split' && out.accountsChanged).toBe(false)
   })
 })
 
@@ -404,5 +469,15 @@ describe('startExplainsGap', () => {
 
   it('is false when the start is a small part of the gap', () => {
     expect(startExplainsGap(with_({}, { start: -1_000_000, saving: -4_000_000 }))).toBe(false)
+  })
+
+  it('draws the lines where it says: the start between half and one and a half times the gap, the gap at least three planned months', () => {
+    // A gap of 5.000.000 cents: the start at 49% and 51% of it, 149% and 151%.
+    const startAt = (share: number) => startExplainsGap(with_({}, { start: -Math.round(5_000_000 * share) }))
+    expect([startAt(0.49), startAt(0.5), startAt(0.51)]).toEqual([false, true, true])
+    expect([startAt(1.49), startAt(1.5), startAt(1.51)]).toEqual([true, true, false])
+    // A planned month of 100.000 cents: a gap of 299.000 is under three of them, 300.000 is three.
+    const gapOf = (cents: number) => startExplainsGap(with_({ gapCents: -cents }, { start: -cents }))
+    expect([gapOf(299_000), gapOf(300_000), gapOf(301_000)]).toEqual([false, true, true])
   })
 })
