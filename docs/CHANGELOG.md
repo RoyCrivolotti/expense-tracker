@@ -2,6 +2,13 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (layout)
+
+- **The month a change in the monthly investing starts in is no longer cut.** In a half column on a laptop 1024 to 1366px wide the Edit button took the room of the label and it read "from Ma...". The row wraps instead.
+- **The gap split's amounts stay inside their box at large text.** At 200% text on a 360px phone they ended 23 to 45px past it; a row wraps its amount to the next line instead.
+- **The stepper under the spending stays where a thumb put it.** It moved down 17px as the figure above it gained a digit (35 to 36 years).
+- **Arrowing along the Chart tab's chips brings the one it lands on into view**, and the saved Market bounce preset has a border in forced colours.
+
 ## October 2026 (the plan's money in your currency)
 
 - **The plan's money is named after the currency you track in.** It said "2026 euros" to someone tracking in US dollars ("$8,080,343.70 in 2026 euros"), and the settings offer fourteen currencies. It says "2026 US dollars", "2026 British pounds" and so on now, in the settings text, the charts' hints, the notes, the re-baseline summary and the glossary (whose example is worked out in your number style). Nothing changes for euros.
