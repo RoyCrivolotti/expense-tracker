@@ -29,14 +29,15 @@ function shortName(name: string): string {
 }
 
 /** The FI year counted from the latest check-in, which is the one that moves as check-ins land. */
-function fiFromTodayLabel(fromToday: PlanFromToday, inflationRate: number): string {
+function fiFromTodayLabel(fromToday: PlanFromToday, inflationRate: number, planReachesFi: boolean): string {
   const params = scenarioToParams(fromToday.scenario, inflationRate)
   const years = yearsToFi(params, fromToday.scenario.annualSpendCents, fromToday.scenario.safeWithdrawalRate)
   if (years === null) return 'from today, FI beyond the horizon'
   if (years === 0) return "FI at today's balance"
   const month = fiAround(fromToday.scenario.planStartDate, fiYearsExact(params, fromToday.scenario.annualSpendCents, fromToday.scenario.safeWithdrawalRate))
   // Said as a month, as the plan's is beside it, since the two counts of years start on different days.
-  return month ? `from today, ${month}` : `from today, FI in ${years} year${years === 1 ? '' : 's'}`
+  // The word FI comes from the plan's own part when it has one; with none, the restart's part has to say it.
+  return month ? `from today, ${planReachesFi ? '' : 'FI '}${month}` : `from today, FI in ${years} year${years === 1 ? '' : 's'}`
 }
 
 /**
@@ -95,7 +96,7 @@ export function scenarioHeadline(
   const primary = [
     shortName(scenario.name),
     ...(fiYear != null ? [planMonth ? `FI ${planMonth}` : `FI year ${fiYear}`] : []),
-    ...(fromToday ? [fiFromTodayLabel(fromToday, inflationRate)] : []),
+    ...(fromToday ? [fiFromTodayLabel(fromToday, inflationRate, fiYear != null)] : []),
   ].join(' · ')
 
   const actual = actualPhrase(scenario, actualMonthlyInvestingCents, pace, format)

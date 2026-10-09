@@ -53,6 +53,14 @@ describe('scenarioHeadline', () => {
     expect(scenarioHeadline(plan, DEFAULT_INFLATION_RATE).primary).not.toContain('from today')
   })
 
+  it('still says FI for the restart when the plan itself does not reach it in its horizon', () => {
+    // 90.000 a year to live on is a 2,25M target that 1.000 a month on 50.000 never gets near in 25 years, but a restart from 1,9M does.
+    const plan = { ...base, planStartDate: '2024-01-01', horizonYears: 25, startInvestedCents: 50_000_00, annualSpendCents: 90_000_00, isActive: true }
+    const fromToday = planFromToday(plan, { investedCents: 1_900_000_00, date: '2028-06-01' }, DEFAULT_INFLATION_RATE)
+    const { primary } = scenarioHeadline(plan, DEFAULT_INFLATION_RATE, undefined, undefined, fromToday)
+    expect(primary).toMatch(/^Rent & invest · from today, FI around [A-Z][a-z]{2} 20\d\d$/)
+  })
+
   it('gives the plan\'s FI and its restart\'s as the same month for a restart exactly on the plan, not as years from two starts', () => {
     const plan = { ...base, planStartDate: '2024-01-01', isActive: true }
     const date = '2027-03-05'
