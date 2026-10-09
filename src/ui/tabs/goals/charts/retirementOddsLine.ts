@@ -11,6 +11,15 @@ export function runsOfHundred(share: number): number {
   return Math.min(99, Math.max(1, Math.round(share * 100)))
 }
 
+/**
+ * What the cut-off of the unluckiest tenth means: one run in ten lasts this many years or fewer, some of them fewer,
+ * which is not the same as the whole worst tenth lasting this long.
+ */
+function lastsLine(years: number): string {
+  if (years === 0) return 'the money runs out in the first year'
+  return `it lasts ${years} ${years === 1 ? 'year' : 'years'} or less`
+}
+
 /** A withdrawal rate as it is usually said: one decimal, two for a quarter point such as 3,25%. */
 function rateText(rate: number, format: MoneyFormat): string {
   const tenths = rate * 1000
@@ -19,7 +28,7 @@ function rateText(rate: number, format: MoneyFormat): string {
 
 /**
  * How often the money lasts, in a sentence: at the plan's own withdrawal rate first, with how long it lasts in the
- * unluckiest tenth when that is less than all of it, then the other usual rates. The first result is the plan's.
+ * worst tenth of runs when that is less than all of it, then the other usual rates. The first result is the plan's.
  * Null when there is nothing to say.
  */
 export function retirementOddsLine({
@@ -40,7 +49,7 @@ export function retirementOddsLine({
   const [own, ...others] = results
   if (!own) return null
   const unit = years === 1 ? 'year' : 'years'
-  const worst = own.odds.unluckiestTenth < years ? ` (in the unluckiest tenth it lasts ${own.odds.unluckiestTenth} ${own.odds.unluckiestTenth === 1 ? 'year' : 'years'})` : ''
+  const worst = own.odds.unluckiestTenth < years ? ` (in 10 of the 100 ${lastsLine(own.odds.unluckiestTenth)})` : ''
   const rest = others.map((r) => `${runsOfHundred(r.odds.lasts)} at ${rateText(r.rate, format)}`)
   const list = rest.length === 0 ? '' : rest.length === 1 ? `, ${rest[0]}` : `, ${rest.slice(0, -1).join(', ')} and ${rest[rest.length - 1]}`
   return (
