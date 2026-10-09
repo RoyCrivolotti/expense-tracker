@@ -6,6 +6,7 @@ import type {
   Milestone,
 } from '../domain/types'
 import { assumedInflationError } from '../domain/engine/assumedInflation'
+import { marketVolatilityError } from '../domain/engine/marketVolatility'
 import { leversError } from '../domain/engine/goalLevers'
 import { normalizeMilestones, validateMilestones } from '../domain/engine/milestones'
 import { DEFAULT_HOME_CARRY_RATE, DEFAULT_RETIREMENT_YEARS } from '../domain/engine/projectionConstants'
@@ -385,6 +386,7 @@ const SETTINGS_COLUMNS: ColumnMap<ExpenseSettings> = {
   milestones: 'milestones',
   cashReserveMonths: 'cash_reserve_months',
   assumedInflation: 'assumed_inflation',
+  marketVolatility: 'market_volatility',
   goalLevers: 'goal_levers',
 }
 const NULLABLE_SETTINGS = new Set<keyof ExpenseSettings>([
@@ -397,6 +399,7 @@ const NULLABLE_SETTINGS = new Set<keyof ExpenseSettings>([
   'milestones',
   'cashReserveMonths',
   'assumedInflation',
+  'marketVolatility',
   'goalLevers',
 ])
 /** Five years of spending in cash is already absurd; past it the number is a typo. */
@@ -409,7 +412,7 @@ const coerceSettings: Coerce<ExpenseSettings> = (key, value) => {
   return NULLABLE_SETTINGS.has(key) ? (value ?? null) : (value ?? 0)
 }
 
-/** The Goals tab's own settings: the cash reserve target, the assumed inflation and the bar's inputs. */
+/** The Goals tab's own settings: the cash reserve target, the assumed inflation, the market's bounce and the bar's inputs. */
 function assertGoalsSettings(patch: Partial<ExpenseSettings>): void {
   if (
     patch.cashReserveMonths !== undefined &&
@@ -421,6 +424,10 @@ function assertGoalsSettings(patch: Partial<ExpenseSettings>): void {
   }
   if (patch.assumedInflation !== undefined) {
     const error = assumedInflationError(patch.assumedInflation)
+    if (error) throw new HttpError(400, error)
+  }
+  if (patch.marketVolatility !== undefined) {
+    const error = marketVolatilityError(patch.marketVolatility)
     if (error) throw new HttpError(400, error)
   }
   if (patch.goalLevers !== undefined) {

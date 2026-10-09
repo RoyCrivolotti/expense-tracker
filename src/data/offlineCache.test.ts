@@ -22,6 +22,8 @@ describe('isCompatibleSnapshot', () => {
     expect(isCompatibleSnapshot({ version: 6 })).toBe(false)
     // Version 7 predates `GoalScenario.retirementYears`, which the drawdown chart and the editor's draft read.
     expect(isCompatibleSnapshot({ version: 7 })).toBe(false)
+    // Version 8 predates `settings.marketVolatility`, which the spread card and the Assumptions card read.
+    expect(isCompatibleSnapshot({ version: 8 })).toBe(false)
   })
 
   it('rejects a missing record', () => {
@@ -29,6 +31,6 @@ describe('isCompatibleSnapshot', () => {
   })
 
   it('accepts a snapshot written by this build', () => {
-    expect(isCompatibleSnapshot({ version: 8 })).toBe(true)
+    expect(isCompatibleSnapshot({ version: 9 })).toBe(true)
   })
 })
