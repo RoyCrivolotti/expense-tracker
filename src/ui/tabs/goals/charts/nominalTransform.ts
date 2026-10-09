@@ -1,4 +1,5 @@
 import type { ChartSeries } from '../../../charts/LinearChart'
+import { drawnValuesOf } from '../../../charts/steppedPoints'
 
 function factor(yearOffset: number, inflationRate: number): number {
   return Math.pow(1 + inflationRate, yearOffset)
@@ -130,9 +131,9 @@ export function computeChartDisplayData(
     displayExtraSeries,
     displayRealPoints,
     displayBand,
-    yDomainMax: nominalMode ? maxOf(nominalSeries.flatMap((s) => s.values)) : undefined,
+    yDomainMax: nominalMode ? maxOf(nominalSeries.flatMap(drawnValuesOf)) : undefined,
     drawnMax: maxOf([
-      ...displaySeries.flatMap((s) => s.values),
+      ...displaySeries.flatMap(drawnValuesOf),
       ...[...displayExtraSeries, ...displayRealPoints].flatMap((s) => s.points?.map((p) => p.value) ?? []),
     ]),
   }

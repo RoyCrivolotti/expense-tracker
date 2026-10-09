@@ -1091,6 +1091,16 @@ describe('computeChartDisplayData', () => {
     expect(nominal.displayExtraSeries[0]!.points![0]!.value).toBe(104_040_00)
   })
 
+  it('counts the value a line reaches before a step as the highest it draws, in both views', () => {
+    // A house payment takes the year down from 150 to 60, but the line climbs to 150 first.
+    const stepped: ChartSeries = { ...plan, values: [100_000_00, 110_000_00, 60_000_00, 70_000_00], preStep: [100_000_00, 110_000_00, 150_000_00, 70_000_00] }
+    const real = computeChartDisplayData([stepped], [], years, false, 0.02)
+    expect(real.drawnMax).toBe(150_000_00)
+    const nominal = computeChartDisplayData([stepped], [], years, true, 0.02)
+    expect(nominal.drawnMax).toBe(Math.round(150_000_00 * 1.02 ** 2))
+    expect(nominal.yDomainMax).toBe(Math.round(150_000_00 * 1.02 ** 2))
+  })
+
   it('draws a previewed rate but keeps the axis floor at the saved rate\'s, and the dots as they are', () => {
     const saved = computeChartDisplayData([plan], [dot], years, true, 0.02)
     const preview = computeChartDisplayData([plan], [dot], years, true, 0.02, null, 0.06)

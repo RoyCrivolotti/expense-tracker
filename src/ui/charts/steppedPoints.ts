@@ -20,3 +20,8 @@ export function steppedPoints(
   })
   return points
 }
+
+/** Every value a line is drawn through: its places, and what it reached before a step where it has one. */
+export function drawnValuesOf(series: { values: number[]; preStep?: number[] | undefined }): number[] {
+  return series.preStep ? [...series.values, ...series.preStep] : series.values
+}

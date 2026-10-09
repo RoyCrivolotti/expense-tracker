@@ -15,7 +15,7 @@ import {
   type LifeEventMarker,
 } from './linearChartParts'
 import { ChartValueTags } from './ChartValueTags'
-import { steppedPoints } from './steppedPoints'
+import { drawnValuesOf, steppedPoints } from './steppedPoints'
 import { useChartFocus, type ChartFocusOptions } from './useChartFocus'
 import { useSvgAnchor } from './useSvgAnchor'
 import {
@@ -106,11 +106,6 @@ interface Props {
   valueTags?: ValueTagSpec | undefined
 }
 
-/** Every value a line or band is drawn through, the ones before a step included, so the axis holds them. */
-function drawnValues(s: ChartSeries): number[] {
-  return [...s.values, ...(s.preStep ?? [])]
-}
-
 function envelopeOf(s: ChartSeries): number[] {
   return s.band ? [...s.band.lo, ...s.band.hi, ...(s.band.loPre ?? []), ...(s.band.hiPre ?? [])] : []
 }
@@ -145,7 +140,7 @@ function useGeometry(
       .flatMap((s) => s.points?.map((p) => p.value) ?? [])
     const lineValues = series
       .filter((s) => s.kind !== 'area' && s.kind !== 'band' && s.kind !== 'scatter')
-      .flatMap(drawnValues)
+      .flatMap(drawnValuesOf)
     // A band is the spread around a line, not the thing being read: a wide one would set
     // the axis and leave the lines squeezed under it. It is held to the height of what it
     // surrounds and clipped there, so the axis fits the lines.
