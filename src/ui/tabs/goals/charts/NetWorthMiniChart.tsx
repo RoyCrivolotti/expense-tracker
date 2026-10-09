@@ -1,7 +1,7 @@
 import { memo, useCallback, useMemo } from 'react'
 import { useAssumedInflation } from '../../..//hooks/assumedInflationContext'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { projectNetWorth, projectNetWorthBand, scenarioToParams } from '../../../../engine'
+import { lineValues, projectNetWorth, projectNetWorthBand, scenarioToParams } from '../../../../engine'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { formatMoneyShort } from '../chartTheme'
 import { useMediaQuery } from '../../../hooks/useMediaQuery'
@@ -44,18 +44,17 @@ function NetWorthMiniChartImpl({ draft }: { draft: NewGoalScenario }) {
   const { series, labels, end, side } = useMemo(() => {
     const params = scenarioToParams({ ...draft, id: 0 }, inflationRate)
     const points = projectNetWorth(params)
-    const { lo, hi } = projectNetWorthBand(params)
     const band: ChartSeries = {
       id: 'band',
       color: draft.color,
       values: [],
       kind: 'band',
-      band: { lo, hi },
+      band: projectNetWorthBand(params),
     }
     const line: ChartSeries = {
       id: 'draft',
       color: draft.color,
-      values: points.map((p) => p.investedCents),
+      ...lineValues(points),
       width: 2,
     }
     const last = points.length - 1

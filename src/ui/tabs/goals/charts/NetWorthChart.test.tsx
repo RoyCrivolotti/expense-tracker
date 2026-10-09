@@ -41,6 +41,23 @@ describe('inflateSeries and deflatePoints', () => {
     expect(result[1]!.band).toBeUndefined()
   })
 
+  it('inflates what a line and its band reached before a step by the same year\u2019s factor', () => {
+    const series: ChartSeries[] = [
+      {
+        id: 'b1',
+        color: '#000',
+        values: [0, 50_000_000],
+        preStep: [0, 100_000_000],
+        kind: 'line',
+        band: { lo: [0, 40_000_000], hi: [0, 60_000_000], loPre: [0, 90_000_000], hiPre: [0, 110_000_000] },
+      },
+    ]
+    const result = inflateSeries(series, [0, 1], 0.02)[0]!
+    expect(result.preStep).toEqual([0, Math.round(100_000_000 * 1.02)])
+    expect(result.band?.loPre).toEqual([0, Math.round(90_000_000 * 1.02)])
+    expect(result.band?.hiPre).toEqual([0, Math.round(110_000_000 * 1.02)])
+  })
+
   it('leaves scatter points as they are when inflating: check-ins are already nominal', () => {
     const series: ChartSeries[] = [
       { id: 'actuals', color: '#10b981', values: [], kind: 'scatter', points: [{ xIndex: 2.5, value: 200_000_000 }] },

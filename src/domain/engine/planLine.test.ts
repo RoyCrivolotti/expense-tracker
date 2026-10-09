@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { samplePlan, SAMPLE_INFLATION } from '../../testing/samplePlan'
-import { planLineOf, planValueAt, stretchAround } from './planLine'
+import { lineValues, planLineOf, planValueAt, stretchAround } from './planLine'
 import { projectNetWorth } from './projection'
 import { scenarioToParams } from './scenarioProjection'
 
@@ -93,5 +93,17 @@ describe('stretchAround', () => {
 
   it('does not call a step on a day that is not an anniversary a stretch of its own', () => {
     expect(stretchAround(planLineOf(project()), 7.99)).toEqual({ from: 0, to: 8 })
+  })
+})
+
+describe('lineValues', () => {
+  it('gives the year-end values, and the values before a step only where some year has one', () => {
+    const plain = lineValues(project({ housePurchaseYear: null }))
+    expect(plain.preStep).toBeUndefined()
+    const stepped = project()
+    const result = lineValues(stepped)
+    expect(result.values).toEqual(stepped.map((p) => p.investedCents))
+    expect(result.preStep).toEqual(stepped.map((p) => p.preEventInvestedCents))
+    expect(result.preStep![8]).toBeGreaterThan(result.values[8]!)
   })
 })

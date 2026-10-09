@@ -14,14 +14,18 @@ export function inflateSeries(
   years: number[],
   inflationRate: number,
 ): ChartSeries[] {
+  const inflate = (values: number[]) => values.map((v, i) => Math.round(v * factor(years[i] ?? i, inflationRate)))
   return series.map((s) => ({
     ...s,
-    values: s.values.map((v, i) => Math.round(v * factor(years[i] ?? i, inflationRate))),
+    values: inflate(s.values),
+    ...(s.preStep ? { preStep: inflate(s.preStep) } : {}),
     ...(s.band
       ? {
           band: {
-            lo: s.band.lo.map((v, i) => Math.round(v * factor(years[i] ?? i, inflationRate))),
-            hi: s.band.hi.map((v, i) => Math.round(v * factor(years[i] ?? i, inflationRate))),
+            lo: inflate(s.band.lo),
+            hi: inflate(s.band.hi),
+            ...(s.band.loPre ? { loPre: inflate(s.band.loPre) } : {}),
+            ...(s.band.hiPre ? { hiPre: inflate(s.band.hiPre) } : {}),
           },
         }
       : {}),

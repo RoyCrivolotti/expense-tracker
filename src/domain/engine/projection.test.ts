@@ -284,6 +284,20 @@ describe('the figure GOALS-MODEL.md states', () => {
     expect(hi).toEqual(projectNetWorthBand(params, 0.03).hi)
     expect(lo).not.toEqual(projectNetWorthBand(params, 0.02).lo)
   })
+
+  it('carries what each edge reached before a purchase, so the band steps where the line does', () => {
+    const params = baseParams({ housePurchaseYear: 5, startInvestedCents: 30_000_000 })
+    const band = projectNetWorthBand(params)
+    const hiPoints = projectNetWorth({ ...params, expectedRealReturn: params.expectedRealReturn + 0.03 })
+    const loPoints = projectNetWorth({ ...params, expectedRealReturn: Math.max(0, params.expectedRealReturn - 0.03) })
+    expect(band.hiPre).toEqual(hiPoints.map((p) => p.preEventInvestedCents))
+    expect(band.loPre).toEqual(loPoints.map((p) => p.preEventInvestedCents))
+    expect(band.hiPre[5]).toBeGreaterThan(band.hi[5]!)
+    // No purchase, no step.
+    const plain = projectNetWorthBand(baseParams())
+    expect(plain.hiPre).toEqual(plain.hi)
+    expect(plain.loPre).toEqual(plain.lo)
+  })
 })
 
 describe('the house and the mortgage in a real plan', () => {

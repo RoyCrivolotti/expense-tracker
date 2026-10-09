@@ -79,3 +79,13 @@ export function stretchAround(line: PlanLine, years: number): { from: number; to
   while (to < line.horizon && !stepsAt(line, to)) to += 1
   return { from, to: Math.min(to, line.horizon) }
 }
+
+/**
+ * What a chart draws for a projection: the year-end values, and the values before a step where any
+ * year has one. A plan with no payment or event has no steps to draw.
+ */
+export function lineValues(points: readonly PlanPoint[]): { values: number[]; preStep?: number[] } {
+  const values = points.map((p) => p.investedCents)
+  const before = points.map((p) => p.preEventInvestedCents ?? p.investedCents)
+  return before.some((v, i) => v !== values[i]) ? { values, preStep: before } : { values }
+}
