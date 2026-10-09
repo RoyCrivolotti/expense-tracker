@@ -1,7 +1,7 @@
 import type { GoalScenario, Milestone } from '../../../../types'
 import type { PlanFromToday } from '../../../../engine'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { scenarioToParams, shortMonthYearLabel, yearsBetween, yearsToTargetFromProjection } from '../../../../engine'
+import { scenarioToParams, shortMonthYearLabel, wholeYearsToAmount, yearsBetween } from '../../../../engine'
 
 export { yearsBetween }
 import { tableName } from '../scenarioNames'
@@ -120,7 +120,7 @@ export function buildRows(
     ({ id, kind, name, color, startDate, params }) => {
       const start = startDate ?? today
       const elapsedYears = yearsBetween(start, today)
-      const sinceStart = milestones.map((m) => yearsToTargetFromProjection(params, m.amountCents, false))
+      const sinceStart = milestones.map((m) => wholeYearsToAmount(params, m.amountCents, inflationRate))
       return {
         id,
         kind,

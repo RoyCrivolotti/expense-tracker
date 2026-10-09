@@ -17,7 +17,7 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-// 100k to start and 1.000 a month at 7% real: 1M is reached inside the 30 years.
+// 100k to start and 1.000 a month at 7% real: 2M on the account is reached inside the 30 years, in year 26.
 const plan = makeScenario({
   id: 1,
   name: 'Path A',
@@ -26,7 +26,7 @@ const plan = makeScenario({
   startInvestedCents: 10_000_000,
   monthlyContributionCents: 100_000,
 })
-// Saves a tenth as much, so every milestone is later than the plan's and 1M is out of reach in 30 years.
+// Saves a tenth as much, so every milestone is later than the plan's and 2M is out of reach in 30 years (1,5M by then).
 const slower = makeScenario({
   id: 2,
   name: 'Path B',
@@ -38,7 +38,7 @@ const slower = makeScenario({
 const milestones = [
   { amountCents: 10_000_000, label: '' },
   { amountCents: 20_000_000, label: 'House deposit' },
-  { amountCents: 100_000_000, label: '' },
+  { amountCents: 200_000_000, label: '' },
 ]
 const reached = new Map([[10_000_000, '2026-05-14']])
 
@@ -73,7 +73,7 @@ describe('the years to milestone grid', () => {
     renderTable()
 
     expect(cell('Path A', 0)).toHaveTextContent('✓')
-    // 1M at a tenth of the saving: not within 30 years.
+    // 2M at a tenth of the saving: not within 30 years.
     expect(cell('Path B', 2)).toHaveTextContent('30+')
   })
 
@@ -150,7 +150,7 @@ describe('years from now and calendar year', () => {
     renderTable([plan, started])
 
     expect(cell('Path B', 2)).toHaveTextContent('28+')
-    expect(cell('Path B', 2).getAttribute('aria-label')).toBe('Path B does not reach 1,0M € within its horizon (the next 28 years).')
+    expect(cell('Path B', 2).getAttribute('aria-label')).toBe('Path B does not reach 2,0M € within its horizon (the next 28 years).')
     expect(screen.getByText(/Darker: further away \(the darkest is 30 years\)/)).toBeInTheDocument()
   })
 
@@ -197,7 +197,7 @@ describe('vs plan', () => {
     renderTable()
     await userEvent.click(screen.getByRole('button', { name: 'vs plan' }))
 
-    // The plan reaches 1M within 30 years and the slower path does not.
+    // The plan reaches 2M within 30 years and the slower path does not.
     expect(within(cell('Path B', 2)).getByText('later')).toBeInTheDocument()
   })
 

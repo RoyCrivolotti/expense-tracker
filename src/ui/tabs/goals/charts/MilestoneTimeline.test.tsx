@@ -25,7 +25,7 @@ const plan = makeScenario({
   startInvestedCents: 10_000_000,
   monthlyContributionCents: 100_000,
 })
-// A tenth of the saving: 1M is out of reach within 30 years.
+// A tenth of the saving: 2M on the account is out of reach within 30 years (1,5M by then).
 const slower = makeScenario({
   id: 2,
   name: 'Path B',
@@ -33,11 +33,11 @@ const slower = makeScenario({
   startInvestedCents: 10_000_000,
   monthlyContributionCents: 10_000,
 })
-// Starts at 300k, so the 100k and 200k are already there, the 1M comes in the same year as the 750k at the plan's pace.
+// The 100k and 200k come early, and the 2M is reached by the plan in year 26 and not at all by the slower path.
 const milestones = [
   { amountCents: 10_000_000, label: '' },
   { amountCents: 20_000_000, label: 'House deposit' },
-  { amountCents: 100_000_000, label: '' },
+  { amountCents: 200_000_000, label: '' },
 ]
 const reached = new Map([[10_000_000, '2026-05-14']])
 
@@ -130,7 +130,7 @@ describe('the timeline', () => {
 
     expect(screen.getByRole('button', { name: "Path A already has 100k € (reached by May '26)." })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: "Path B already has 100k € (reached by May '26)." })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Path B does not reach 1,0M € within its horizon (the next 30 years).' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Path B does not reach 2,0M € within its horizon (the next 30 years).' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Path A does not reach/ })).toBeNull()
   })
 
@@ -181,7 +181,7 @@ describe('the timeline', () => {
       milestones: [
         { amountCents: 20_000_000, label: '' },
         { amountCents: 25_000_000, label: '' },
-        { amountCents: 100_000_000, label: '' },
+        { amountCents: 200_000_000, label: '' },
       ],
       reached: new Map(),
     })
@@ -197,7 +197,7 @@ describe('the timeline', () => {
     await openTimeline()
 
     expect(document.querySelectorAll('[class*="tlHatch"]')).toHaveLength(1)
-    expect(screen.getByRole('button', { name: 'Path D does not reach 1,0M € within its horizon (the next 20 years).' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Path D does not reach 2,0M € within its horizon (the next 20 years).' })).toBeInTheDocument()
   })
 
   it('draws the editing path\'s dots with a dashed ring, and says so in the key', async () => {
@@ -292,7 +292,7 @@ describe('following one milestone', () => {
     await openTimeline()
 
     const chips = within(screen.getByRole('group', { name: /Follow one milestone/ })).getAllByRole('button')
-    expect(chips.map((c) => c.textContent)).toEqual(['200k', '1,0M'])
+    expect(chips.map((c) => c.textContent)).toEqual(['200k', '2,0M'])
   })
 
   it('has a chip for each when every milestone has been reached', async () => {
@@ -300,7 +300,7 @@ describe('following one milestone', () => {
     await openTimeline()
 
     const chips = within(screen.getByRole('group', { name: /Follow one milestone/ })).getAllByRole('button')
-    expect(chips.map((c) => c.textContent)).toEqual(['100k', '200k', '1,0M'])
+    expect(chips.map((c) => c.textContent)).toEqual(['100k', '200k', '2,0M'])
   })
 
   it('marks the dot of the chosen milestone on each path, dims the rest and labels the year', async () => {
@@ -339,7 +339,7 @@ describe('following one milestone', () => {
     renderMatrix()
     await openTimeline()
 
-    await userEvent.click(screen.getByRole('button', { name: '1,0M' }))
+    await userEvent.click(screen.getByRole('button', { name: '2,0M' }))
 
     expect(document.querySelector('svg polyline')).toBeNull()
   })

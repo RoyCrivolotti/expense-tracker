@@ -7,7 +7,7 @@ import type { GoalScenario, Milestone } from '../types'
 import { DAY_MS, dateAtYears, utcDateMs } from './dates'
 import { milestoneCrossing, type MilestoneCrossing } from './milestoneCrossing'
 import { planLineOf } from './planLine'
-import { projectNetWorth } from './projection'
+import { projectNetWorth, type ProjectionParams } from './projection'
 import { scenarioToParams } from './scenarioProjection'
 
 const YEAR_DAYS = 365.25
@@ -20,6 +20,17 @@ function crossingOf(plan: GoalScenario, amountCents: number, inflationRate: numb
 /** The fractional year, from the plan start, at which the plan first has the amount on the account. */
 export function yearsToAmount(plan: GoalScenario, amountCents: number, inflationRate: number): number | null {
   return crossingOf(plan, amountCents, inflationRate)?.offset ?? null
+}
+
+/**
+ * The first yearly step at which the plan has the amount on the account: the whole years the table
+ * and the narrative count in, rounded up from the day the chip gives so the two never disagree. Null
+ * when the plan does not get there within its horizon.
+ */
+export function wholeYearsToAmount(params: ProjectionParams, amountCents: number, inflationRate: number): number | null {
+  const crossing = milestoneCrossing(planLineOf(projectNetWorth(params)), amountCents, inflationRate)
+  // A crossing on an anniversary is a whole number up to the bisection's last digit.
+  return crossing === null ? null : Math.max(0, Math.ceil(crossing.offset - 1e-9))
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { milestoneCrossingDate, milestoneStanding, yearsToAmount } from './milestoneOutlook'
+import { milestoneCrossingDate, milestoneStanding, wholeYearsToAmount, yearsToAmount } from './milestoneOutlook'
 import { projectNetWorth, scenarioToParams } from '.'
 import { makeScenario } from '../../testing/factories'
 import { DEFAULT_INFLATION_RATE } from './projectionConstants'
@@ -147,5 +147,26 @@ describe('milestoneStanding for a plan that falls back under an amount', () => {
   it('has no fall for an amount the plan reaches and keeps', () => {
     const standing = milestoneStanding({ amountCents: 50_000_000, label: '' }, house, undefined, SAMPLE_INFLATION)
     expect(standing).toMatchObject({ kind: 'expected', dipsOn: null })
+  })
+})
+
+describe('wholeYearsToAmount', () => {
+  const params = scenarioToParams(plan, DEFAULT_INFLATION_RATE)
+
+  it('is the first yearly step at which the account shows the amount, which is what the table and the narrative count in', () => {
+    expect(wholeYearsToAmount(params, onAccount(2), DEFAULT_INFLATION_RATE)).toBe(2)
+    expect(wholeYearsToAmount(params, onAccount(2) + 1, DEFAULT_INFLATION_RATE)).toBe(3)
+    expect(wholeYearsToAmount(params, onAccount(2) - 1, DEFAULT_INFLATION_RATE)).toBe(2)
+  })
+
+  it('is the whole years of the date the chip gives: rounded up from the crossing', () => {
+    const amount = Math.round((onAccount(4) + onAccount(5)) / 2)
+    const exact = yearsToAmount(plan, amount, DEFAULT_INFLATION_RATE)!
+    expect(wholeYearsToAmount(params, amount, DEFAULT_INFLATION_RATE)).toBe(Math.ceil(exact))
+  })
+
+  it('is 0 for an amount held at the start, and null past the horizon', () => {
+    expect(wholeYearsToAmount(params, 50_000_00, DEFAULT_INFLATION_RATE)).toBe(0)
+    expect(wholeYearsToAmount(params, 1_000_000_000_00, DEFAULT_INFLATION_RATE)).toBeNull()
   })
 })
