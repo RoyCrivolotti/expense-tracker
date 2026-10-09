@@ -2,6 +2,14 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (milestones are dated on the account)
+
+- **A milestone is reached when the account shows it.** A milestone is a number of euros you want to see on the account, but it was compared with the plan's line in the euros of the plan start, which are worth more than the euros of a later year, so every date came out later than the account would show it, by years for a far one. It is now compared with the line grown by the inflation since the start. In the demo plan, 1,5M moves from Nov 2031 to Aug 2030, 2,5M from Feb 2039 to Apr 2036 and 5M from Mar 2049 to Jan 2044.
+- **The chip says what the amount is worth by then.** "Expected Aug 21, 2030 (worth about 1.375.100 € in 2026 euros)", and when a house payment or event takes the plan back under it, the month it falls back below.
+- **The table, the timeline and the narrative agree with the chip.** Their years are the day the chip gives, rounded up.
+- **Both chart views draw the targets.** A milestone is flat in Nominal and falls with the inflation in Purchasing power, the FI target the other way round. Nominal drew neither before.
+- **The wording.** The glossary, the milestone settings, the table's hint and the Nominal note say a milestone is an amount on your account.
+
 ## October 2026 (ahead and behind follow the plan through a house purchase)
 
 - **Someone exactly on plan reads on track all year.** The plan's line sloped from one year-end to the next, but a house payment or a one-off event happens on the anniversary, so in the year before one the line was already falling while the portfolio was not. A week before a 70.871 € payment the badge showed about 69.500 € ahead and 51 months ahead, and a bonus did the same in reverse. The line now rises through the year and steps on the anniversary, in the badge, Progress, the Actual vs plan chart, the hero chart and its band, and the line from today.
