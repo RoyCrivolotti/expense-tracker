@@ -24,6 +24,11 @@ describe('MarketBounceSetting', () => {
     expect(screen.getByText(/The return you enter on a plan stays the typical growth/)).toBeInTheDocument()
   })
 
+  it('says that a portfolio with more bonds bounces less and grows less, so the plan\'s return should come down too, not only the bounce', () => {
+    render(<MarketBounceSetting settings={settings(0.07)} onChange={vi.fn()} />)
+    expect(screen.getByText(/A portfolio with more bonds bounces less but also grows less, so lower the return on your plan too\./)).toBeInTheDocument()
+  })
+
   it('shows the saved bounce, 15% until set, and saves a typed one as a setting', () => {
     const onChange = vi.fn().mockResolvedValue(undefined)
     render(<MarketBounceSetting settings={defaultExpenseSettings()} onChange={onChange} />)
