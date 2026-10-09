@@ -2,6 +2,13 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (words that were not true for every plan)
+
+- **Rent vs buy no longer says buying stays ahead "the whole way"** above a legend that shows the buyer starting lower by the fees. It says buying is ahead in every year after you buy, and the note on what the plan leaves out says while owning costs more a month than renting, which is when it is true.
+- **A restart that reaches FI beside a plan that does not still says FI** ("from today, FI around Apr 2052"); the word came only from the plan's own part.
+- **The Progress net worth tile says "as logged"**, since the investments tile under it is brought back to the plan's start and the two cannot be subtracted to find the cash.
+- **The glossary's guide and run count follow your number style**, as its worked example does ("3.5% up to 49" and "10,000 different markets" for the 1,234.56 style), and so does the inflation under Actual vs plan. A smaller bounce is said to last more often at a return like the default, since at about 1% or less luck is what rescues a plan.
+
 ## October 2026 (an app opened before the deploy keeps working)
 
 - **A client opened before this release no longer goes to NaN.** The API stopped sending a scenario's `annualContributionGrowth`, which the previous client still multiplies into every projection, so a session open across the deploy showed NaN on the Goals tab until it was reloaded. The API sends 0 for it for one release.
