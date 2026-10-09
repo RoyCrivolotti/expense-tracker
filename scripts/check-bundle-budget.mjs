@@ -183,8 +183,14 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // total stood at 256,461 bytes after dating milestones and this takes it to 257,876 (the Goals chunk from
 // 66,905 to 67,124, still under its limit). Most of it is engine code that the dashboard and Progress
 // also load, with no new library.
-const TOTAL_MAX_GZIP = 258_100
-const GOALS_MAX_GZIP = 67_200
+//
+// Raised from 258.1 KB to 258.6 KB, and the Goals chunk from 67.2 KB to 67.8 KB, for the return guards
+// (the reading that holds a return back when it would only be money moved in without a record, the
+// check-in a day is read once, and the two lines that say what to record). The total stood at 257,876
+// bytes after restating a re-baselined plan and this takes it to 258,331 (the Goals chunk from 67,124
+// to 67,529). All of it is small code, in the engine and the lazy Goals chunk, with no new library.
+const TOTAL_MAX_GZIP = 258_600
+const GOALS_MAX_GZIP = 67_800
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length

@@ -256,3 +256,19 @@ export function latestCheckin(checkins: WealthCheckin[]): WealthCheckin | null {
     c.checkinDate > best.checkinDate ? c : best,
   )
 }
+
+/**
+ * The check-ins in date order, one for each date: where several were logged on a day, the one logged
+ * last (by when it was created, then by id). A second check-in on a day is a correction or a newer
+ * balance, and read as a second reading it would be a return of the difference over no time at all.
+ */
+export function distinctCheckins(checkins: WealthCheckin[]): WealthCheckin[] {
+  const byDate = new Map<string, WealthCheckin>()
+  for (const c of checkins) {
+    const held = byDate.get(c.checkinDate)
+    if (!held || c.createdAt > held.createdAt || (c.createdAt === held.createdAt && c.id > held.id)) {
+      byDate.set(c.checkinDate, c)
+    }
+  }
+  return [...byDate.values()].sort((a, b) => a.checkinDate.localeCompare(b.checkinDate))
+}

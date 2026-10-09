@@ -15,9 +15,10 @@
  * coming back out (a sale to cash, a dividend paid out). A check-in records balances, so
  * a balance rise is either return or a flow, never both.
  */
-import type { Transaction, WealthAccount, WealthCheckin } from '../types'
+import type { GoalScenario, Transaction, WealthAccount, WealthCheckin } from '../types'
+import { plannedMonthlyAt } from './contributionSchedule'
 import { DAY_MS, utcDateMs } from './dates'
-import { checkinInvestedCents } from './wealthTracking'
+import { checkinInvestedCents, distinctCheckins } from './wealthTracking'
 
 const YEAR_DAYS = 365.25
 
@@ -26,6 +27,8 @@ export interface PortfolioReturn {
   periodReturn: number
   /** Compounded to a yearly rate, only once a full year is in; shorter periods mislead. */
   annualised: number | null
+  /** What the period would be over a year at that pace, whatever its length: for judging it, never for showing it. */
+  impliedYearly: number
   startDate: string
   endDate: string
   years: number
@@ -87,8 +90,9 @@ export function portfolioReturn(
   accounts: WealthAccount[],
   transactions: Transaction[],
 ): PortfolioReturn | null {
-  if (checkins.length < 2) return null
-  const sorted = [...checkins].sort((a, b) => a.checkinDate.localeCompare(b.checkinDate))
+  // One reading for a day: a second check-in on it is a correction, not a return over no time.
+  const sorted = distinctCheckins(checkins)
+  if (sorted.length < 2) return null
   const flows = transactions.filter(isFlow)
   let growth = 1
   let contributionsCents = 0
@@ -117,13 +121,50 @@ export function portfolioReturn(
   const years = days / YEAR_DAYS
   // A calendar year is 365 days, which is a hair under a year of 365.25.
   const annualised = days >= 365 ? Math.pow(1 + periodReturn, 1 / years) - 1 : null
+  const impliedYearly = annualised ?? Math.pow(1 + periodReturn, 1 / years) - 1
   return {
     periodReturn,
     annualised,
+    impliedYearly,
     startDate: first.checkinDate,
     endDate: last.checkinDate,
     years,
     contributionsCents,
     periods,
   }
+}
+
+/** A return above this a year is not markets: the balance grew by money that no transaction records. */
+export const SUSPECT_YEARLY_RETURN = 0.3
+
+/**
+ * What the return can honestly be said to be. A figure, or one of two reasons it is better not to
+ * give one, each of which comes down to money that arrived in the balance without being recorded as
+ * an investment, and which the return would then count as growth: no investments are recorded in the
+ * period although the plan expects some, or the period grew by more than 30% a year, which markets
+ * do not do for long and a transfer left out of the books does at once.
+ */
+export type ReturnReading =
+  | { kind: 'figure'; ret: PortfolioReturn }
+  | { kind: 'no-investments'; ret: PortfolioReturn }
+  | { kind: 'too-high'; ret: PortfolioReturn }
+
+type PlanExpectation = Pick<GoalScenario, 'monthlyContributionCents' | 'planStartDate' | 'contributionSchedule'>
+
+function investmentsRecorded(transactions: Transaction[], ret: PortfolioReturn): number {
+  return transactions.filter((t) => isFlow(t) && t.date > ret.startDate && t.date <= ret.endDate).length
+}
+
+export function readReturn(
+  checkins: WealthCheckin[],
+  accounts: WealthAccount[],
+  transactions: Transaction[],
+  plan: PlanExpectation | null,
+): ReturnReading | null {
+  const ret = portfolioReturn(checkins, accounts, transactions)
+  if (ret === null) return null
+  const expectsInvesting = plan !== null && plannedMonthlyAt(plan, ret.endDate) > 0
+  if (expectsInvesting && investmentsRecorded(transactions, ret) === 0) return { kind: 'no-investments', ret }
+  if (ret.impliedYearly > SUSPECT_YEARLY_RETURN) return { kind: 'too-high', ret }
+  return { kind: 'figure', ret }
 }
