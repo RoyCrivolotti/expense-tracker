@@ -111,9 +111,9 @@ Because the code now running keeps serving while a migration lands, a migration 
 with: additions only. A drop or rename ships in a later release, once nothing reads what it removes (see
 "Writing a migration"). Deploys queue and are never cancelled, so a migration is not cut off partway; a
 production migration left waiting for approval holds the queue, and rejecting it lets the next deploy through.
+`npm run migrate -- <database> --apply` still does the same by hand.
 
 The same holds for what the API sends. An installed app keeps its old code until its owner taps the update banner, and re-reads the data meanwhile, so a field the running client reads is dropped in a later release, once no client reads it. `annualContributionGrowth` was removed from scenarios, and the API still sends it as 0 (`GoalScenarioDto` in `functions/_shared/rows.ts`) for one release: without it a client opened before the deploy multiplies `undefined` into every projection and the Goals tab goes to NaN until reload.
-`npm run migrate -- <database> --apply` still does the same by hand.
 
 Apply through `0034_market_volatility.sql` on production, and record each file in `_migrations` as you go, by its name without `.sql`. `npm run migrate:dev` records for the dev database itself, and `npm run migrate -- roy-expenses --apply` does for production. The app never reads the table, so a missing row breaks nothing until someone trusts the record, which is how the drift described below happened.
 

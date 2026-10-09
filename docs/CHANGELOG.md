@@ -20,7 +20,7 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 ## October 2026 (what the plan counts and what it leaves out)
 
 - **The return and spending notes say what the plan leaves out.** Enter the rate the money compounds at, not the average of yearly returns (higher by about a point for stocks), and the return after fund costs and tax; the spending is before the tax on what is withdrawn, so add it.
-- **The withdrawal guide is called a rule of thumb**, not a safe rate: each rate in it fails in 13 to 24 of 100 simulated markets under the defaults, and the FI chart says how often.
+- **The withdrawal guide is called a rule of thumb**, not a safe rate: each rate in it fails in 13 to 24 of 100 simulated markets under the defaults once the money has to last 30 years or more (4% over 20 years fails in 4), and the FI chart says how often.
 - **Choosing a bond-heavy bounce says to lower the return too.** The usual bounces of 11% and 7% lower only the bounce, and with the return left at a stock-like 5% the chance of the money lasting jumped from 86 to 93 or 99 of 100. The glossary gives 86 for a 5% return and a 15% bounce, which is when it is true.
 - **The odds line says what its cut-off means.** "In the unluckiest tenth it lasts 25 years" read as what the worst tenth gets, when 25 is the best of that tenth. It says "in 10 of the 100 it lasts 25 years or less".
 - **The note that unrecorded investing counts as the market shows whenever the saving reads less than planned**, not only below half of the plan: someone who invested exactly the plan and recorded 60% of it read two false rows of about 5.000 euros each.
@@ -34,7 +34,7 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 
 ## October 2026 (the spread card loads and behaves)
 
-- **Dragging a control is no longer held up by the two market replays.** Every committed edit reran the spread card's 10.000 runs and the retirement replays for cards a screen or two down the page. On a laptop slowed to a quarter of its speed, 20 presses of the arrow key on the return slider made 7 or 8 pauses of 100 to 240 ms; now one of under 100 ms. The replays wait until the edits have stopped and the card is near the screen, and the spread card does not fetch its code before then.
+- **Dragging a control is no longer held up by the two market replays.** Every committed edit reran the spread card's 10.000 runs and the retirement replays for cards a screen or two down the page. On a laptop slowed to a quarter of its speed, 20 presses of the arrow key on the return slider made 6 or 7 pauses of 100 ms or more, the longest about 240 ms; now none. The replays wait until the edits have stopped and the card is near the screen, and the spread card does not fetch its code before then.
 - **A spread card that does not load no longer blanks the page.** A failed fetch of the card's code unmounted the whole app, Dashboard and Settings included. Only the card says it could not be shown, with a Reload button.
 - **The spread card has the whole width under the two columns** on a wide screen instead of being a fourth card in one of them, which left the columns about 1.000px apart.
 - **Its table scrolls inside the card when the text is large** instead of spilling out of it.
