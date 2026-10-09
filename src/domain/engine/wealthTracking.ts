@@ -6,7 +6,8 @@
  *   - An on/off-track status: delta in € and the months it is along the plan's line.
  */
 import { dateAtYears, yearsBetween } from './dates'
-import { planDistance } from './planDistance'
+import { measurePlanDistance, withinOneMonth } from './planDistance'
+import { planLineOf, planValueAt } from './planLine'
 import { projectNetWorth } from './projection'
 import { scenarioToParams } from './scenarioProjection'
 import type { GoalScenario, Milestone, WealthAccount, WealthCheckin } from '../types'
@@ -30,6 +31,19 @@ export interface TrackStatus {
   planDate: string | null
   /** The check-in's balance in the plan's money, which is what `deltaCents` is taken from. */
   actualRealInvestedCents: number
+  /**
+   * Why there are no months when `deltaMonths` is null: the line has the balance only across a
+   * house payment or event (`across-event`), or never (`outside-line`). Null when there are months.
+   */
+  monthsReason: 'across-event' | 'outside-line' | null
+  /** Within a month of the plan either way, along the line; what the dashboard and Progress call on track. */
+  onTrack: boolean
+}
+
+/** What a status is called: on track, or ahead or behind by the sign of the gap in money. */
+export function trackVerdict(status: Pick<TrackStatus, 'onTrack' | 'deltaCents'>): 'on-track' | 'ahead' | 'behind' {
+  if (status.onTrack) return 'on-track'
+  return status.deltaCents >= 0 ? 'ahead' : 'behind'
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -52,36 +66,16 @@ export function dateAtOffset(planStartDate: string, offsetYears: number): string
 }
 
 /**
- * Interpolate the projected invested-portfolio value at a fractional year offset.
- * Uses linear interpolation between the two surrounding integer year points.
- * Returns null when the offset is outside the projection horizon.
+ * The projected invested-portfolio value at a fractional year offset, on the plan's line: it rises
+ * through each year and steps on the anniversary of a house payment or event. Returns null before
+ * the plan starts or after its last year, where there is no line.
  */
 export function planValueAtOffset(
-  points: { year: number; investedCents: number }[],
+  points: { year: number; investedCents: number; preEventInvestedCents?: number }[],
   fractionalYear: number,
 ): number | null {
   if (points.length === 0) return null
-
-  const floor = Math.floor(fractionalYear)
-  const ceil = Math.ceil(fractionalYear)
-
-  if (fractionalYear < 0) {
-    // Before plan start — extrapolate backwards using year 0 and year 1.
-    const p0 = points.find((p) => p.year === 0)
-    const p1 = points.find((p) => p.year === 1)
-    if (!p0 || !p1) return null
-    const slope = p1.investedCents - p0.investedCents
-    return Math.round(p0.investedCents + fractionalYear * slope)
-  }
-
-  const pFloor = points.find((p) => p.year === floor)
-  const pCeil = points.find((p) => p.year === ceil)
-
-  if (!pFloor) return null
-  if (floor === ceil || !pCeil) return pFloor.investedCents
-
-  const frac = fractionalYear - floor
-  return Math.round(pFloor.investedCents + frac * (pCeil.investedCents - pFloor.investedCents))
+  return planValueAt(planLineOf(points), fractionalYear)
 }
 
 /**
@@ -184,8 +178,8 @@ export function trackStatus(
   if (!scenario.planStartDate) return null
   const offset = yearOffsetFromDate(scenario.planStartDate, checkin.checkinDate)
   if (offset === null) return null
-  const points = projectNetWorth(scenarioToParams(scenario, inflationRate))
-  const projected = planValueAtOffset(points, offset)
+  const line = planLineOf(projectNetWorth(scenarioToParams(scenario, inflationRate)))
+  const projected = planValueAt(line, offset)
   if (projected === null) return null
 
   const actualInvestedCents = checkinInvestedCents(checkin, accounts)
@@ -194,16 +188,19 @@ export function trackStatus(
 
   // A gap in money is read along the plan's line, not divided by a monthly amount: that way it
   // counts the plan's own growth, does not jump where the amount changes, and still means
-  // something during a pause.
-  const distance = planDistance(points, offset, actualRealInvestedCents)
+  // something during a pause. Across a house payment or event there are no months to read.
+  const measure = measurePlanDistance(line, offset, actualRealInvestedCents)
+  const along = measure.kind === 'along' ? measure : null
 
   return {
     projectedInvestedCents: projected,
     actualInvestedCents,
     actualRealInvestedCents,
     deltaCents,
-    deltaMonths: distance ? Math.round(distance.months) || 0 : null,
-    planDate: distance ? dateAtOffset(scenario.planStartDate, distance.atOffset) : null,
+    deltaMonths: along ? Math.round(along.months) || 0 : null,
+    monthsReason: measure.kind === 'unmeasured' ? measure.reason : null,
+    planDate: along ? dateAtOffset(scenario.planStartDate, along.atOffset) : null,
+    onTrack: withinOneMonth(line, offset, actualRealInvestedCents),
   }
 }
 

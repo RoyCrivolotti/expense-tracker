@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { samplePlan, SAMPLE_INFLATION } from '../../testing/samplePlan'
-import { measurePlanDistance, planDistance } from './planDistance'
+import { measurePlanDistance, planDistance, withinOneMonth } from './planDistance'
 import { planLineOf, planValueAt, stretchAround } from './planLine'
 import { projectNetWorth } from './projection'
 import { scenarioToParams } from './scenarioProjection'
@@ -99,6 +99,14 @@ describe('measurePlanDistance against a brute-force walk of the line', () => {
     }
   }
 
+  /** The first time on the way from `from` to `to` at which the line passes the test, found by walking it in small steps. */
+  function walk(line: ReturnType<typeof planLineOf>, from: number, to: number, step: number, passes: (v: number) => boolean): number | null {
+    for (let t = from; step > 0 ? t <= to : t >= to; t += step) {
+      if (passes(planValueAt(line, t)!)) return t
+    }
+    return null
+  }
+
   it('finds the same first and last time as walking the stretch in small steps', () => {
     const rand = rng(7)
     const STEP = 1 / 3650
@@ -118,12 +126,10 @@ describe('measurePlanDistance against a brute-force walk of the line', () => {
       const balance = Math.round(here * (0.7 + rand() * 0.6))
       const result = measurePlanDistance(line, offset, balance)
 
-      let expected: number | null = null
-      if (balance >= here) {
-        for (let t = offset; t <= stretch.to - STEP; t += STEP) if (planValueAt(line, t)! >= balance) { expected = t; break }
-      } else {
-        for (let t = offset; t >= stretch.from; t -= STEP) if (planValueAt(line, t)! <= balance) { expected = t; break }
-      }
+      const expected =
+        balance >= here
+          ? walk(line, offset, stretch.to - STEP, STEP, (v) => v >= balance)
+          : walk(line, offset, stretch.from, -STEP, (v) => v <= balance)
       if (expected === null) {
         expect(result.kind).toBe('unmeasured')
       } else {
@@ -146,5 +152,41 @@ describe('measurePlanDistance against a brute-force walk of the line', () => {
       expect(result.kind).toBe('along')
       if (result.kind === 'along') expect(result.months).toBeCloseTo((other - offset) * 12, 1)
     }
+  })
+})
+
+describe('withinOneMonth', () => {
+  const line = planLineOf(project())
+
+  it('holds for someone exactly on plan at any time, a week before a payment included', () => {
+    for (const t of [0, 0.01, 3.3, 8 - WEEK, 8, 8 + WEEK, 20, 29.99]) {
+      expect(withinOneMonth(line, t, planValueAt(line, t)!)).toBe(true)
+    }
+  })
+
+  it('holds for a balance the line has within a month either side, and not beyond', () => {
+    const t = 12
+    const inAMonth = planValueAt(line, t + 1 / 12)!
+    const afterTwo = planValueAt(line, t + 2 / 12)!
+    expect(withinOneMonth(line, t, inAMonth)).toBe(true)
+    expect(withinOneMonth(line, t, afterTwo)).toBe(false)
+    expect(withinOneMonth(line, t, planValueAt(line, t - 1 / 12)!)).toBe(true)
+    expect(withinOneMonth(line, t, planValueAt(line, t - 2 / 12)!)).toBe(false)
+  })
+
+  it('does not reach across the payment for the month after it, or the month before it', () => {
+    // A week before the payment the month ahead on the line is on the far side of the drop.
+    const t = 8 - WEEK
+    const reached = planValueAt(line, 8 - 1 / 365)!
+    expect(withinOneMonth(line, t, reached)).toBe(true)
+    // 5.000 euros more is not within a month of anything the line does before the step.
+    expect(withinOneMonth(line, t, reached + 500_000)).toBe(false)
+    // And a week after it, the balance the line held just before the drop is not "on track".
+    expect(withinOneMonth(line, 8 + WEEK, reached)).toBe(false)
+  })
+
+  it('has no answer outside the plan', () => {
+    expect(withinOneMonth(line, -1, 1)).toBe(false)
+    expect(withinOneMonth(line, 31, 1)).toBe(false)
   })
 })

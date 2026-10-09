@@ -69,6 +69,15 @@ describe('planLineOf and planValueAt', () => {
     expect(planValueAt(line, 0.5)).toBe(1500)
   })
 
+  it.each([
+    ['no points', []],
+    ['points that do not start at year 0', [{ year: 2, investedCents: 1000 }]],
+    ['a year missing', [{ year: 0, investedCents: 1000 }, { year: 2, investedCents: 3000 }]],
+  ])('is no line for %s', (_name, points) => {
+    expect(planValueAt(planLineOf(points), 0)).toBeNull()
+    expect(planValueAt(planLineOf(points), 1)).toBeNull()
+  })
+
   it('has no segments for a single point', () => {
     expect(planValueAt(planLineOf([{ year: 0, investedCents: 1000 }]), 0)).toBe(1000)
   })

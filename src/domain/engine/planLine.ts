@@ -31,8 +31,13 @@ export interface PlanLine {
   horizon: number
 }
 
+/** A line with nothing in it, for points that are not a plan: every day is outside it. */
+const NO_LINE: PlanLine = { segments: [], first: 0, horizon: -1 }
+
+/** Points from year 0 on with no year missing, which is what a projection is; anything else is no line. */
 export function planLineOf(points: readonly PlanPoint[]): PlanLine {
   const ordered = [...points].sort((a, b) => a.year - b.year)
+  if (!ordered.every((p, i) => p.year === i)) return NO_LINE
   const first = ordered[0]?.investedCents ?? 0
   const segments: PlanSegment[] = []
   for (let i = 1; i < ordered.length; i++) {
@@ -46,7 +51,7 @@ export function planLineOf(points: readonly PlanPoint[]): PlanLine {
       after: point.investedCents,
     })
   }
-  return { segments, first, horizon: ordered.length > 0 ? ordered[ordered.length - 1]!.year : 0 }
+  return { segments, first, horizon: ordered.length - 1 }
 }
 
 /**
