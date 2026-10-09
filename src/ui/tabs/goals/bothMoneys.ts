@@ -59,9 +59,14 @@ export function onAccountPhrase(b: BothMoneys): string {
   return b.same ? `the same ${b.accountLabel}` : `${b.account} ${b.accountLabel}`
 }
 
+/** The account half as it reads after a plan-euros figure: "about 36.570 € on your account in 2036". */
+export function aboutOnAccount(b: BothMoneys): string {
+  return b.same ? onAccountPhrase(b) : `about ${onAccountPhrase(b)}`
+}
+
 /** What follows an amount already written out: "in 2026 euros, about 36.570 € on your account in 2036". */
 export function bothMoneysTail(b: BothMoneys): string {
-  return b.same ? `in ${b.planLabel}, ${onAccountPhrase(b)}` : `in ${b.planLabel}, about ${onAccountPhrase(b)}`
+  return `in ${b.planLabel}, ${aboutOnAccount(b)}`
 }
 
 /** "30.000 € in 2026 euros, about 36.570 € on your account in 2036". */

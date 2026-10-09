@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bothMoneys, bothMoneysSentence, bothMoneysTail, onAccountCents, onAccountLabel, onAccountPhrase } from './bothMoneys'
+import { aboutOnAccount, bothMoneys, bothMoneysSentence, bothMoneysTail, onAccountCents, onAccountLabel, onAccountPhrase } from './bothMoneys'
 import { yearLabel } from './yearLabel'
 
 const money = (cents: number) => `${Math.round(cents / 100).toLocaleString('de-DE')} €`
@@ -61,6 +61,8 @@ describe('bothMoneys', () => {
   it('has the account half alone, for a place with little room', () => {
     expect(onAccountPhrase(bothMoneys(args))).toBe('36.570 € on your account in 2036')
     expect(onAccountPhrase(bothMoneys({ ...args, inflationRate: 0 }))).toBe('the same on your account in 2036')
+    expect(aboutOnAccount(bothMoneys(args))).toBe('about 36.570 € on your account in 2036')
+    expect(aboutOnAccount(bothMoneys({ ...args, inflationRate: 0 }))).toBe('the same on your account in 2036')
   })
 
   it('says the two are the same, once, when there is no inflation or no time between', () => {
