@@ -25,6 +25,7 @@ const base: GoalScenario = {
   planStartDate: null,
   lifeEvents: [],
   contributionSchedule: [],
+  homeCarryRate: 0.015,
   isActive: false,
 }
 

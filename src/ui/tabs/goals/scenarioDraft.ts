@@ -26,6 +26,7 @@ const EDIT_KEYS = [
   'mortgageRateAnnual',
   'houseAppreciationRate',
   'rentMonthlyCents',
+  'homeCarryRate',
   'annualSpendCents',
   'safeWithdrawalRate',
   'planStartDate',

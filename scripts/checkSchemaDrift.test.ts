@@ -30,6 +30,7 @@ describe('the columns the migrations produce', () => {
     expect(columns.has('settings.investment_category_id')).toBe(true)
     expect(columns.has('settings.goal_levers')).toBe(true)
     expect(columns.has('goal_scenarios.contribution_schedule')).toBe(true)
+    expect(columns.has('goal_scenarios.home_carry_rate')).toBe(true)
     expect(columns.has('transactions.description')).toBe(true)
   })
 
@@ -71,6 +72,7 @@ describe('migrationAdding', () => {
     expect(migrationAdding('settings.investment_category_id', files())).toBe('0026_investment_category.sql')
     expect(migrationAdding('settings.goal_levers', files())).toBe('0030_goal_levers.sql')
     expect(migrationAdding('goal_scenarios.contribution_schedule', files())).toBe('0031_contribution_schedule.sql')
+    expect(migrationAdding('goal_scenarios.home_carry_rate', files())).toBe('0032_home_carry_rate.sql')
   })
 
   it('names the file that created the table for a column that came with it', () => {

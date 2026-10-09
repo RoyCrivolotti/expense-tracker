@@ -15,6 +15,7 @@ import type {
   WealthCheckin,
 } from '../domain/types'
 import { defaultExpenseSettings } from '../domain/engine/defaults'
+import { DEFAULT_HOME_CARRY_RATE } from '../domain/engine/projectionConstants'
 import type { Lookup } from '../ui/format'
 
 /** Build a minimal valid ExpenseDataset, merging any provided overrides. */
@@ -141,6 +142,7 @@ export function makeScenario(overrides: Partial<GoalScenario> = {}): GoalScenari
     planStartDate: null,
     lifeEvents: [],
     contributionSchedule: [],
+    homeCarryRate: DEFAULT_HOME_CARRY_RATE,
     isActive: false,
     ...overrides,
   }

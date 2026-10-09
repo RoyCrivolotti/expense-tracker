@@ -29,6 +29,39 @@ describe('the mortgage term', () => {
   })
 })
 
+describe('the yearly upkeep of the house', () => {
+  it.each([0, 0.015, 0.1])('accepts %s of the value a year', (rate) => {
+    expect(() => validateScenarioNumbers({ homeCarryRate: rate })).not.toThrow()
+  })
+
+  it.each([
+    [-0.001, 'below zero'],
+    [0.1001, 'more than a tenth of the value a year'],
+    [Number.NaN, 'not a number'],
+    [Number.POSITIVE_INFINITY, 'not finite'],
+  ])('refuses %s, which is %s', (rate) => {
+    expect(() => validateScenarioNumbers({ homeCarryRate: rate })).toThrow('homeCarryRate must be between 0 and 0.1')
+  })
+
+  it('is 1,5% of the value for a scenario created without one, as a client that predates it sends', async () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    const input = newScenario()
+    delete (input as Partial<NewGoalScenario>).homeCarryRate
+    const saved = await createScenario(repo, OWNER, input)
+    expect(saved.homeCarryRate).toBe(0.015)
+  })
+
+  it('keeps one that is sent, on create and on edit, and leaves it alone when a patch has none', async () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    const saved = await createScenario(repo, OWNER, newScenario({ homeCarryRate: 0.02 }))
+    expect(saved.homeCarryRate).toBe(0.02)
+    expect((await patchScenario(repo, OWNER, saved.id, { homeCarryRate: 0.03 })).homeCarryRate).toBe(0.03)
+    expect((await patchScenario(repo, OWNER, saved.id, { horizonYears: 25 })).homeCarryRate).toBe(0.03)
+    await expect(patchScenario(repo, OWNER, saved.id, { homeCarryRate: 0.5 })).rejects.toThrow('homeCarryRate')
+    expect((await repo.loadDataset(OWNER)).goalScenarios[0]!.homeCarryRate).toBe(0.03)
+  })
+})
+
 describe('validateScenarioNumbers', () => {
   it('refuses a withdrawal rate of zero, which makes the FI target infinite', () => {
     // fireNumber returns Infinity for swr <= 0 by design, so this is the value that
