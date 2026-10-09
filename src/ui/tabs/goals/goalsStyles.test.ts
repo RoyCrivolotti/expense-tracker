@@ -60,11 +60,29 @@ describe('goals styles', () => {
     expect(reach?.body).toMatch(/position:\s*absolute/)
   })
 
+  it('draws the amounts in the monthly-investing list in the success and danger colours', () => {
+    const goals = rules('tabs/goals/goals.module.css')
+    const colour = (selector: string) => /(?:^|;|\s)color:\s*([^;]+);/.exec(goals.find((r) => r.selector === selector)?.body ?? '')?.[1]?.trim()
+
+    expect(colour('.lifeEventInflow')).toBe('var(--exp-success)')
+    expect(colour('.lifeEventOutflow')).toBe('var(--exp-danger)')
+  })
+
   it('extends the tap area of the section chips and the buttons beside them past their painted edges', () => {
     const css = stylesheet('tabs/goals/goals.module.css')
 
     expect(css).toContain('.sectionChips .chip::before')
     expect(css).toContain('.unsavedActions .btn::before')
+  })
+
+  it('never cuts the month a change in the monthly investing starts in, which is the point of its line: the row wraps instead', () => {
+    const all = rules('tabs/goals/goals.module.css')
+    const label = all.find((r) => r.selector === '.lifeEventStepLabel')
+    const row = all.find((r) => r.selector === '.lifeEventRow')
+
+    expect(label?.body).toMatch(/flex:\s*1 0 auto/)
+    expect(label?.body).not.toMatch(/overflow:\s*hidden|text-overflow/)
+    expect(row?.body).toMatch(/flex-wrap:\s*wrap/)
   })
 
   it('ends the chip strip with room as wide as the fade that Save and Discard bring, and keeps focus out of it', () => {
