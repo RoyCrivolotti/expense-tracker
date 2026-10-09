@@ -151,7 +151,7 @@ describe('NetWorthChart', () => {
 
   it('tags the plan from today beside its own line, once the line has started, and not before', () => {
     const plan = makeScenario({ id: 1, name: 'Path A', planStartDate: '2024-01-01', isActive: true })
-    const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-01-01' })
+    const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-01-01' }, 0.02)
     const { container } = render(
       <NetWorthChart
         milestones={milestones}
