@@ -1,7 +1,7 @@
 import { memo, useMemo } from 'react'
 import { useAssumedInflation } from '../../..//hooks/assumedInflationContext'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { formatCentsCompact, projectRentVsBuy, scenarioToParams } from '../../../../engine'
+import { formatCentsCompact, projectRentVsBuy, realHouseGrowth, scenarioToParams } from '../../../../engine'
 import { planMoneyLabel } from '../planMoneyLabel'
 import { rentVsBuyCaption } from './rentVsBuyCaption'
 import { rentVsBuyHeadline } from './rentVsBuyHeadline'
@@ -81,11 +81,16 @@ function RentVsOwnChartImpl({
       <p className={`${styles.chartHint} ${styles.chartCaption}`}>
         {rentVsBuyCaption({
           upfrontCents: result.upfrontCents,
+          feesCents: draft.transactionCostsCents,
           priceCents: result.priceCents,
           startYear: result.startYear,
           moneyLabel: planMoneyLabel(draft.planStartDate),
           carryRate: draft.homeCarryRate,
+          realReturn: draft.expectedRealReturn,
+          houseGrowth: realHouseGrowth(draft.houseAppreciationRate, inflationRate) - 1,
           paymentCents: result.paymentOnAccountCents,
+          ownCheaper: result.ownCheaper,
+          loanPaidOffYear: result.loanPaidOffYear,
           money: (c) => formatCentsCompact(c, format),
           format,
         })}

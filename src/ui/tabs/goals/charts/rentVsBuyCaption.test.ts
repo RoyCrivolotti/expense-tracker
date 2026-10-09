@@ -3,7 +3,21 @@ import { EU_MONEY_FORMAT } from '../../../../engine/money'
 import { rentVsBuyCaption } from './rentVsBuyCaption'
 
 const money = (cents: number) => `${(cents / 100).toLocaleString('de-DE')} €`
-const base = { upfrontCents: 6_600_000, priceCents: 32_435_282, startYear: 8, moneyLabel: '2026 euros', carryRate: 0.015, paymentCents: 144_172, money, format: EU_MONEY_FORMAT }
+const base = {
+  upfrontCents: 6_600_000,
+  feesCents: 600_000,
+  priceCents: 32_435_282,
+  startYear: 8,
+  moneyLabel: '2026 euros',
+  carryRate: 0.015,
+  realReturn: 0.05,
+  houseGrowth: 0.0098,
+  paymentCents: 144_172,
+  ownCheaper: { fromYear: 26, stays: true },
+  loanPaidOffYear: 25,
+  money,
+  format: EU_MONEY_FORMAT,
+}
 
 describe('rentVsBuyCaption', () => {
   it('says both start with the same cash and spend the same, what each does with it, and the money it is in', () => {
@@ -34,5 +48,37 @@ describe('rentVsBuyCaption', () => {
   it('says what the loan costs on the account, which is fixed, so it shrinks in the plan\'s euros, and nothing without a loan', () => {
     expect(rentVsBuyCaption(base)).toContain('The loan costs 1.441,72 € a month on the account and stays that, so in these euros it shrinks each year.')
     expect(rentVsBuyCaption({ ...base, paymentCents: 0 })).not.toContain('The loan costs')
+  })
+
+  it('says the buyer spends the fees at once, so the buyer\'s line starts lower, and nothing when there are none', () => {
+    expect(rentVsBuyCaption(base)).toContain("The buyer spends the 6.000 € fees at once, so the buyer's line starts lower.")
+    expect(rentVsBuyCaption({ ...base, feesCents: 0 })).not.toContain('fees at once')
+  })
+
+  it('says what the two sides grow at, since who leads depends on it', () => {
+    expect(rentVsBuyCaption(base)).toContain(
+      "Savings grow at the plan's 5,0% a year and the house gains 1,0% a year, both after inflation: a different return or house growth can change who leads.",
+    )
+    expect(rentVsBuyCaption({ ...base, realReturn: 0.07, houseGrowth: 0 })).toContain("the plan's 7,0% a year and the house gains 0,0% a year")
+  })
+
+  it('says that the plan takes only the down payment and the fees from the portfolio, so a house adds more to its net worth than here', () => {
+    expect(rentVsBuyCaption(base)).toContain(
+      "The plan only takes the down payment and fees from your portfolio, not the loan or upkeep, so a house adds more to its net worth than it does here.",
+    )
+  })
+
+  it('says when the loan is paid off, in the year after buying it falls in, part way through a year too', () => {
+    expect(rentVsBuyCaption(base)).toContain('The loan is paid off in year 25 after you buy.')
+    expect(rentVsBuyCaption({ ...base, loanPaidOffYear: 24 + 7 / 12 })).toContain('The loan is paid off in year 25 after you buy.')
+    expect(rentVsBuyCaption({ ...base, loanPaidOffYear: null })).not.toContain('The loan is paid off')
+  })
+
+  it('says what owning costs a month against renting, in the same words as the marker on the chart', () => {
+    expect(rentVsBuyCaption(base)).toContain('From year 26 owning costs less a month than renting, for the rest of the chart.')
+    expect(rentVsBuyCaption({ ...base, ownCheaper: { fromYear: 26, stays: false } })).toContain(
+      'Owning first costs less a month than renting in year 26, though not for the rest of the chart.',
+    )
+    expect(rentVsBuyCaption({ ...base, ownCheaper: null })).toContain('Owning costs at least as much a month as renting throughout.')
   })
 })

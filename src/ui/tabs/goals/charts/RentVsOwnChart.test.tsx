@@ -25,7 +25,7 @@ describe('RentVsOwnChart', () => {
     expect(screen.queryByText(/1\.5%/)).not.toBeInTheDocument()
   })
 
-  it('counts the scenario\'s own upkeep against the buyer: a dearer house to keep leaves buying ahead for fewer years', () => {
+  it('counts the scenario\'s own upkeep against the buyer: a dearer house to keep lets renting overtake sooner', () => {
     const headline = (homeCarryRate: number) => {
       const { unmount } = render(
         <RentVsOwnChart draft={draftOf({ housePriceCents: 40_000_000, rentMonthlyCents: 120_000, horizonYears: 30, homeCarryRate })} />,
@@ -34,17 +34,17 @@ describe('RentVsOwnChart', () => {
       unmount()
       return text
     }
-    // Years buying leads for, from the sentence at the top: all of them, or the first few, or none.
+    // How long renting takes to overtake, from the sentence at the top: never, or after some years, or from the start.
     const leads = (text: string) => {
       if (text.includes('Buying stays ahead of renting the whole way')) return Number.POSITIVE_INFINITY
-      return Number(text.match(/Buying is ahead for the first (\d+) years/)?.[1] ?? 0)
+      return Number(text.match(/Renting overtakes buying (\d+) years/)?.[1] ?? 0)
     }
     expect(leads(headline(0))).toBeGreaterThan(leads(headline(0.015)))
     expect(leads(headline(0.015))).toBeGreaterThan(leads(headline(0.04)))
   })
 
   it('says who leads and from when, not that buying overtakes renting in the first year it draws level', () => {
-    // A 400,000 house and 1,200 rent at the defaults: buying leads for four years, renting from the fifth.
+    // A 400,000 house and 1,200 rent at the defaults: buying leads through the fourth year, renting from the fifth.
     render(
       <RentVsOwnChart
         draft={draftOf({
@@ -61,7 +61,7 @@ describe('RentVsOwnChart', () => {
       />,
     )
 
-    expect(screen.getByText(/Buying is ahead for the first 4 years after you buy, then renting leads for the rest, by .* after 40 years\./)).toBeInTheDocument()
+    expect(screen.getByText(/Renting overtakes buying 5 years after you buy and stays ahead to the end, by .* after 40 years\./)).toBeInTheDocument()
     expect(screen.getByText(/no costs of selling/)).toBeInTheDocument()
     expect(screen.queryByText(/overtakes renting around year/)).not.toBeInTheDocument()
   })
@@ -82,7 +82,7 @@ describe('RentVsOwnChart', () => {
   it('names the loan being paid off on the chart, and when owning gets cheaper than renting', () => {
     render(<RentVsOwnChart draft={draftOf({ housePriceCents: 30_000_000, rentMonthlyCents: 150_000, mortgageTermYears: 20 })} />)
     expect(screen.getByText('Loan paid off')).toBeInTheDocument()
-    expect(screen.getByText(/Owning (first )?cheaper/)).toBeInTheDocument()
+    expect(screen.getByText(/^Owning (first )?costs less a month$/)).toBeInTheDocument()
   })
 
   it('says what each side holds and invests a month when a year is picked', () => {

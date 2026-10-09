@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { rentVsBuyMarkers } from './rentVsBuyMarkers'
 
 describe('rentVsBuyMarkers', () => {
-  it('marks when owning gets cheaper than renting, and says so when it stays so', () => {
+  it('marks when owning costs the buyer less a month than renting costs the renter (not that buying is cheaper), and says so when it stays so', () => {
     const stays = rentVsBuyMarkers({ ownCheaper: { fromYear: 12, stays: true }, loanPaidOffYear: null }, 40)
     expect(stays).toHaveLength(1)
-    expect(stays[0]).toMatchObject({ index: 12, label: 'Owning cheaper from here' })
+    expect(stays[0]).toMatchObject({ index: 12, label: 'Owning costs less a month' })
     expect(stays[0]!.title).toContain('for the rest of the chart')
     const comes = rentVsBuyMarkers({ ownCheaper: { fromYear: 12, stays: false }, loanPaidOffYear: null }, 40)
-    expect(comes[0]).toMatchObject({ index: 12, label: 'Owning first cheaper' })
+    expect(comes[0]).toMatchObject({ index: 12, label: 'Owning first costs less a month' })
     expect(comes[0]!.title).toContain('though not for the rest')
   })
 
@@ -21,7 +21,7 @@ describe('rentVsBuyMarkers', () => {
 
   it('marks both, and neither when there is nothing to name', () => {
     expect(rentVsBuyMarkers({ ownCheaper: { fromYear: 3, stays: true }, loanPaidOffYear: 25 }, 40).map((m) => m.label)).toEqual([
-      'Owning cheaper from here',
+      'Owning costs less a month',
       'Loan paid off',
     ])
     expect(rentVsBuyMarkers({ ownCheaper: null, loanPaidOffYear: null }, 40)).toEqual([])
