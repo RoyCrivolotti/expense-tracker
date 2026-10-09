@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { makeScenario } from '../../../../testing/factories'
 import { RentVsOwnChart } from './RentVsOwnChart'
@@ -25,8 +25,8 @@ describe('RentVsOwnChart', () => {
     expect(screen.queryByText(/1\.5%/)).not.toBeInTheDocument()
   })
 
-  it('counts the scenario\'s own upkeep against the buyer: a dearer house to keep leaves the buyer worse off', () => {
-    const verdict = (homeCarryRate: number) => {
+  it('counts the scenario\'s own upkeep against the buyer: a dearer house to keep leaves buying ahead for fewer years', () => {
+    const headline = (homeCarryRate: number) => {
       const { unmount } = render(
         <RentVsOwnChart draft={draftOf({ housePriceCents: 40_000_000, rentMonthlyCents: 120_000, horizonYears: 30, homeCarryRate })} />,
       )
@@ -34,10 +34,13 @@ describe('RentVsOwnChart', () => {
       unmount()
       return text
     }
-    // At no upkeep buying is ahead for longer than at 1,5%, which is longer than at 4%.
-    const through = (text: string) => Number(text.match(/ahead through year (\d+)/)?.[1] ?? 0)
-    expect(through(verdict(0))).toBeGreaterThan(through(verdict(0.015)))
-    expect(through(verdict(0.015))).toBeGreaterThan(through(verdict(0.04)))
+    // Years buying leads for, from the sentence at the top: all of them, or the first few, or none.
+    const leads = (text: string) => {
+      if (text.includes('Buying stays ahead of renting the whole way')) return Number.POSITIVE_INFINITY
+      return Number(text.match(/Buying is ahead for the first (\d+) years/)?.[1] ?? 0)
+    }
+    expect(leads(headline(0))).toBeGreaterThan(leads(headline(0.015)))
+    expect(leads(headline(0.015))).toBeGreaterThan(leads(headline(0.04)))
   })
 
   it('says who leads and from when, not that buying overtakes renting in the first year it draws level', () => {
@@ -58,15 +61,44 @@ describe('RentVsOwnChart', () => {
       />,
     )
 
-    expect(screen.getByText(/Buying is ahead through year 4, then renting leads for the rest of the horizon, by .* after 30 years\./)).toBeInTheDocument()
-    expect(screen.getByText(/before\s+the costs of selling/)).toBeInTheDocument()
+    expect(screen.getByText(/Buying is ahead for the first 4 years after you buy, then renting leads for the rest, by .* after 40 years\./)).toBeInTheDocument()
+    expect(screen.getByText(/no costs of selling/)).toBeInTheDocument()
     expect(screen.queryByText(/overtakes renting around year/)).not.toBeInTheDocument()
   })
 
   it('asks for a house price when there is none, with no lines to compare', () => {
     const { container } = render(<RentVsOwnChart draft={draftOf({ housePriceCents: 0 })} />)
 
-    expect(screen.getByText(/Set a house price to compare renting against buying now/)).toBeInTheDocument()
+    expect(screen.getByText(/Set a house price to compare renting against buying/)).toBeInTheDocument()
     expect(container.querySelector('svg[role="img"]')).toBeNull()
+  })
+
+  it('names its two lines and where each starts, so the chart says what it is drawing', () => {
+    render(<RentVsOwnChart draft={draftOf({ housePriceCents: 30_000_000, rentMonthlyCents: 100_000, downPaymentFraction: 0.2, transactionCostsCents: 600_000, housePurchaseYear: null })} />)
+    expect(screen.getByText('Renter: money invested (starts at 66k €)')).toBeInTheDocument()
+    expect(screen.getByText('Buyer: house less loan, plus savings (starts at 60k €)')).toBeInTheDocument()
+  })
+
+  it('names the loan being paid off on the chart, and when owning gets cheaper than renting', () => {
+    render(<RentVsOwnChart draft={draftOf({ housePriceCents: 30_000_000, rentMonthlyCents: 150_000, mortgageTermYears: 20 })} />)
+    expect(screen.getByText('Loan paid off')).toBeInTheDocument()
+    expect(screen.getByText(/Owning (first )?cheaper/)).toBeInTheDocument()
+  })
+
+  it('says what each side holds and invests a month when a year is picked', () => {
+    const { container } = render(<RentVsOwnChart draft={draftOf({ housePriceCents: 30_000_000, rentMonthlyCents: 100_000 })} />)
+    const svg = container.querySelector('svg[role="img"]')!
+    fireEvent.keyDown(svg, { key: 'Home' })
+    fireEvent.keyDown(svg, { key: 'ArrowRight' })
+    const tip = screen.getByRole('tooltip')
+    expect(tip).toHaveTextContent('1 year after buying')
+    expect(tip).toHaveTextContent('Renter total')
+    expect(tip).toHaveTextContent('Buyer: loan left')
+    expect(tip).toHaveTextContent('Buyer invests a month')
+  })
+
+  it('begins at the purchase year when the plan buys later, and says so', () => {
+    render(<RentVsOwnChart draft={draftOf({ housePriceCents: 30_000_000, rentMonthlyCents: 100_000, housePurchaseYear: 8 })} />)
+    expect(screen.getByText(/Compared from year 8 of the plan, when it buys/)).toBeInTheDocument()
   })
 })

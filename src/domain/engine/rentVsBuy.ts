@@ -67,6 +67,10 @@ export interface RentVsBuyResult {
   verdict: RentVsBuyVerdict | null
   /** The plan year the comparison starts in: the purchase year, or 0 when the house is bought today, owned or not planned. */
   startYear: number
+  /** What the house costs on the day, in the plan's money: today's price, grown to the purchase year. */
+  priceCents: number
+  /** The cash both sides start with: the down payment and the fees. */
+  upfrontCents: number
   /** The first year after buying that owning costs the buyer less a month than renting, and whether it stays so; null when it never does. */
   ownCheaper: { fromYear: number; stays: boolean } | null
   /** The year after buying the loan is paid off; null when there is no loan. */
@@ -80,6 +84,8 @@ const NO_COMPARISON: RentVsBuyResult = {
   breakevenYear: null,
   verdict: null,
   startYear: 0,
+  priceCents: 0,
+  upfrontCents: 0,
   ownCheaper: null,
   loanPaidOffYear: null,
   paymentOnAccountCents: 0,
@@ -255,6 +261,8 @@ export function projectRentVsBuy(input: RentVsBuyInput): RentVsBuyResult {
     breakevenYear: breakevenOf(verdict),
     verdict,
     startYear,
+    priceCents,
+    upfrontCents: context.upfrontCents,
     ownCheaper: ownCheaperFrom(points),
     loanPaidOffYear: loan > 0 ? params.mortgageTermYears : null,
     paymentOnAccountCents: paymentOnAccountCents(loan, startYear, params),

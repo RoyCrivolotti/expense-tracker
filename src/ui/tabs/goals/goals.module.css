@@ -895,6 +895,11 @@
 
 /* The wide hero's note under its legend: set off from the chips above it, which it would
    otherwise touch (the hint above the chart has the title's margin to stand off from). */
+/* A note under the chart and its legend: the legend runs straight into it without room. */
+.chartHint.chartCaption {
+  margin-top: 0.75rem;
+}
+
 .chartHint.heroNote {
   margin-top: 0.6rem;
 }

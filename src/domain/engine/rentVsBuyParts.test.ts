@@ -127,6 +127,16 @@ describe('the comparison starts when the plan buys', () => {
     expect(first.buyNetWorthCents).toBe(down)
   })
 
+  it('says what the house costs on the day and the cash both sides start with', () => {
+    const params = baseParams({ housePurchaseYear: 8 })
+    const risen = housePriceAtPurchaseCents(params)
+    const result = projectRentVsBuy({ params, rentMonthlyCents: 100_000 })
+    expect(result.priceCents).toBe(risen)
+    expect(result.upfrontCents).toBe(Math.round(risen * 0.2) + 600_000)
+    expect(result.points[0]!.rentNetWorthCents).toBe(result.upfrontCents)
+    expect(projectRentVsBuy(input()).priceCents).toBe(30_000_000)
+  })
+
   it('keeps a house bought today, owned already or never planned at its year zero', () => {
     for (const year of [null, 0]) {
       expect(projectRentVsBuy({ params: baseParams({ housePurchaseYear: year }), rentMonthlyCents: 100_000 }).startYear).toBe(0)

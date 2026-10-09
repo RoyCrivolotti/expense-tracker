@@ -2,6 +2,14 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (Rent vs buy says what it compares)
+
+- **It starts when you buy.** The chart compared buying today at today's price whatever year the plan buys in, so a house bought in year 8 looked as cheap as one bought now. It now starts at the purchase year at the price the house will cost then, and counts years after buying.
+- **It runs past the loan.** Until ten years after the loan is paid off, which is where a buyer's month changes most, and not only to the plan's horizon.
+- **The readout says what each side holds.** Renter: the cash they start with, grown, and what they have invested since. Buyer: house worth, loan left and savings. Under it, what each pays and invests a month, and what the year before had when the buyer's investing jumps, as it does when the loan is paid off.
+- **Two turning points are named on the chart**: when owning starts to cost less a month than renting, and the year the loan is paid off.
+- **The note says what is assumed**: the cash both start with, rent flat in real terms, the scenario's own upkeep rate, no costs of selling, the year it compares from, the money the figures are in, and that it is not the plan's own net worth.
+
 ## October 2026 (the upkeep of the house is an input)
 
 - **Rent vs buy shows what it assumes for owning costs.** It had counted 1,5% of the house's value a year (repairs, property tax and insurance) against the buyer without saying so. The Housing section now has "Upkeep, tax and insurance", per scenario, beside the rent, and the chart reads it and states the rate in its note. Existing scenarios keep 1,5%, so no figure moves until it is changed. Needs migration 0032 on production before this is deployed.

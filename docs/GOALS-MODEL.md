@@ -93,12 +93,18 @@ the right fix (a later year, less down, more invested) is the reader's to choose
 
 ## Rent vs buy
 
-Symmetric **net worth** comparison via `projectRentVsBuy` (`src/domain/engine/rentVsBuy.ts`):
+Symmetric **net worth** comparison via `projectRentVsBuy` (`src/domain/engine/rentVsBuy.ts`). Both sides start with the same cash, the down payment and the fees, and spend the same in total on housing and investing every year:
 
-- **Rent & invest:** starts with down payment + transaction costs in a side portfolio; each year invests the surplus when rent + invested cash beats buyer outlay.
-- **Buy now:** equity (appreciation − mortgage) plus any side portfolio when buying costs less than renting.
+- **Renter:** invests the cash, and each year whatever owning would have cost above the rent. Net worth is the start cash grown at the real return (`rentSeedCents`, in closed form) plus what was invested since and what that earned (`rentExtraCents`).
+- **Buyer:** owns the house, owes the loan, and invests each year whatever rent would have cost above owning (`buySavingsCents`). Net worth is house worth less loan left plus savings. The fees are spent, so the buyer starts at the down payment.
 
-The verdict (`rentVsBuyVerdict`) names who leads over the horizon and from when. Buying can lead for the first years (the renter pays the purchase costs first, and the owner's equity grows with the repayments) and then fall behind for good, so the first year it draws level is not called a breakeven. `breakevenYear` is the year buying gets ahead and stays ahead to the end, and null when it does not. Simplifications: constant rent, the carry rate is the scenario's own (`homeCarryRate`, the Housing section's upkeep input, 1,5% for a scenario that never set one) and the chart's note states it, no selling costs or transaction friction on resale, so the buyer's figure is before the costs of selling.
+Each year's housing outlay of the buyer is the loan payment, fixed in the bank's euros so in the plan's money it shrinks by the inflation since the purchase (`buyerOutlayCents`; the year the loan ends counts only the months left, `paidShareOfYear`), plus upkeep, tax and insurance as a share of the house's value. The points carry what each side pays and invests per month for the year just ended (`rentHousingMonthlyCents` and the rest), which is what the tooltip says; the bank's payment as it is on the account, in the euros of the purchase day, is `paymentOnAccountCents`.
+
+**It starts when the plan buys.** A plan that buys in year Y compares from then, at the price the house has risen to by then (`housePriceAtPurchaseCents`), and the years count from the purchase: that is the same comparison as buying today at that price, because the plan's money is the one the price is in, rent is constant in it, and the payment shrinks from the day it starts. A house owned already or no purchase planned compares as if bought today at the price entered (`startYear` 0). It runs until ten years after the loan is paid off (`rentVsBuyRunYears`, at most sixty), whatever the plan's horizon is.
+
+The chart names two turning points (`ownCheaper`, `loanPaidOffYear`): the first year owning costs the buyer less a month than renting, and whether it stays so, and the year the loan is paid off, after which the buyer's month has no payment in it and the investing jumps (the tooltip says what the year before had when it does). Its note states what it assumes: the cash both start with, what each does with it, where the comparison starts, which money it is in, rent constant in real terms, the scenario's own upkeep rate and no costs of selling, and that the two lines are the choices on their own, not the plan.
+
+The verdict (`rentVsBuyVerdict`) names who leads over the run and from when, in years after buying. Buying can lead for the first years (the renter pays the purchase costs first, and the owner's equity grows with the repayments) and then fall behind for good, so the first year it draws level is not called a breakeven. `breakevenYear` is the year buying gets ahead and stays ahead to the end, and null when it does not. Simplifications: constant rent, the carry rate is the scenario's own (`homeCarryRate`, the Housing section's upkeep input, 1,5% for a scenario that never set one) and the chart's note states it, no selling costs or transaction friction on resale, so the buyer's figure is before the costs of selling.
 
 ## Net worth over time
 
