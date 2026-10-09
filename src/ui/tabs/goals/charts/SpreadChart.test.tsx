@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { MarketVolatilityContext } from '../../../hooks/marketVolatilityContext'
 import type { makeScenario } from '../../../../testing/factories'
 import { samplePlan } from '../../../../testing/samplePlan'
@@ -79,6 +79,13 @@ describe('SpreadChart', () => {
     expect(screen.queryByText(/In the table/)).not.toBeInTheDocument()
   })
 
+  it('puts the table in a region that can be reached by keyboard and scrolled sideways, as the milestone table is, for text so large the columns do not fit', () => {
+    show()
+    const region = screen.getByRole('region', { name: /When the runs first reach each amount/ })
+    expect(region).toHaveAttribute('tabindex', '0')
+    expect(within(region).getByRole('table')).toBeInTheDocument()
+  })
+
   it('leaves the table out when there is nothing to reach', () => {
     show({ annualSpendCents: 0 }, { milestones: [] })
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
@@ -106,5 +113,32 @@ describe('SpreadChart', () => {
     expect(tip).toHaveTextContent('Year 30 (2056)')
     for (const label of ['Luckiest tenth above', 'Middle run', 'The plan', 'Unluckiest tenth below']) expect(tip).toHaveTextContent(label)
     expect(tip.querySelectorAll('[class*="tooltipSwatch"]')).toHaveLength(4)
+  })
+
+  describe('while the plan is being edited', () => {
+    afterEach(() => vi.useRealTimers())
+    const headline = () => screen.getByText(/In year 30, in 2026 euros: the middle run ends at/).textContent
+
+    it('keeps its figures until the edits have stopped for a moment, so a drag is not held up by the replay', () => {
+      vi.useFakeTimers()
+      const { rerender } = render(<SpreadChart draft={draftOf()} milestones={milestones} runs={400} />)
+      const before = headline()
+      rerender(<SpreadChart draft={draftOf({ expectedRealReturn: 0.01 })} milestones={milestones} runs={400} />)
+      expect(headline()).toBe(before)
+      act(() => void vi.advanceTimersByTime(250))
+      expect(headline()).not.toBe(before)
+    })
+
+    it('leaves the replay alone while the card is far from the screen, and catches up when it is near again', () => {
+      vi.useFakeTimers()
+      const { rerender } = render(<SpreadChart draft={draftOf()} milestones={milestones} runs={400} />)
+      const before = headline()
+      rerender(<SpreadChart draft={draftOf({ expectedRealReturn: 0.01 })} milestones={milestones} runs={400} paused />)
+      act(() => void vi.advanceTimersByTime(1000))
+      expect(headline()).toBe(before)
+      rerender(<SpreadChart draft={draftOf({ expectedRealReturn: 0.01 })} milestones={milestones} runs={400} />)
+      act(() => void vi.advanceTimersByTime(250))
+      expect(headline()).not.toBe(before)
+    })
   })
 })

@@ -19,6 +19,8 @@ import { formatMoneyShort } from '../chartTheme'
 import { planMoneyLabel } from '../planMoneyLabel'
 import { yearLabel } from '../yearLabel'
 import { ChartShell } from './ChartShell'
+import { ScrollRegion } from './ScrollRegion'
+import { useReplayInputOrLive } from './useReplayInput'
 import {
   SPREAD_RUNS,
   fiRow,
@@ -40,11 +42,14 @@ export interface SpreadChartProps {
   runs?: number
   height?: number
   embedded?: boolean
+  /** The card is far from the screen: leave the replay as it is until it is near again. */
+  paused?: boolean
 }
 
-function SpreadChartImpl({ draft: liveDraft, milestones, nominal = false, runs = SPREAD_RUNS, height = 210, embedded = false }: SpreadChartProps) {
+function SpreadChartImpl({ draft: liveDraft, milestones, nominal = false, runs = SPREAD_RUNS, height = 210, embedded = false, paused = false }: SpreadChartProps) {
+  // The replay waits until the edits have stopped for a moment, and until the card is near the screen.
   // The inputs are painted first and the replay follows, so typing is not held up by it.
-  const draft = useDeferredValue(liveDraft)
+  const draft = useDeferredValue(useReplayInputOrLive(liveDraft, paused))
   const inflationRate = useAssumedInflation()
   const volatility = useMarketVolatility()
   const format = useMoneyFormat()
@@ -114,28 +119,30 @@ function SpreadChartImpl({ draft: liveDraft, milestones, nominal = false, runs =
       />
       {warning ? <p className={`${styles.chartHint} ${styles.chartCaption}`}>{warning}</p> : null}
       {rows.length > 0 ? (
-        <table className={styles.spreadTable}>
-          <caption className={styles.spreadTableCaption}>When the runs first reach each amount</caption>
-          <thead>
-            <tr>
-              <th scope="col">Amount</th>
-              <th scope="col">Half of the runs</th>
-              <th scope="col">8 in 10</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.label}>
-                <th scope="row">
-                  {row.label}
-                  <span className={styles.spreadTableNote}>{row.gets} runs get there</span>
-                </th>
-                <td>{row.middle}</td>
-                <td>{row.wide}</td>
+        <ScrollRegion label="When the runs first reach each amount, scrolls sideways when the text is large">
+          <table className={styles.spreadTable}>
+            <caption className={styles.spreadTableCaption}>When the runs first reach each amount</caption>
+            <thead>
+              <tr>
+                <th scope="col">Amount</th>
+                <th scope="col">Half of the runs</th>
+                <th scope="col">8 in 10</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.label}>
+                  <th scope="row">
+                    {row.label}
+                    <span className={styles.spreadTableNote}>{row.gets} runs get there</span>
+                  </th>
+                  <td>{row.middle}</td>
+                  <td>{row.wide}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </ScrollRegion>
       ) : null}
       <p className={`${styles.chartHint} ${styles.chartCaption}`}>
         {spreadCaption({

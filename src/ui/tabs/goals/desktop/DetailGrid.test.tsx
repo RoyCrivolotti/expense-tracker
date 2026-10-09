@@ -1,10 +1,11 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { act, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { installFakeIntersectionObserver } from '../../../../testing/fakeIntersectionObserver'
 import { makeScenario } from '../../../../testing/factories'
 import { DetailGrid } from './DetailGrid'
 
-function renderGrid() {
-  const { id, ...draft } = makeScenario()
+function renderGrid(over: Parameters<typeof makeScenario>[0] = {}) {
+  const { id, ...draft } = makeScenario(over)
   void id
   return render(
     <DetailGrid
@@ -25,13 +26,22 @@ function renderGrid() {
 const titles = () => screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
 
 describe('DetailGrid', () => {
-  it('ends the second column with the spread, after the rent against buying, so the columns are as they were above it', async () => {
+  it('puts the spread card last, across the whole width under the two columns, not as a fourth card in one of them', async () => {
     renderGrid()
     expect(titles().slice(-2)).toEqual(['Rent vs buy (net worth)', 'How far luck could move the plan'])
-    const columns = document.querySelectorAll('[class*="detailColumn"]')
-    expect(columns[1]!.querySelectorAll('h3').length).toBe(columns[1]!.querySelectorAll('h3').length)
+    const spread = screen.getByRole('heading', { name: 'How far luck could move the plan' })
+    expect(spread.closest('[class*="detailColumn"]')).toBeNull()
+    expect(spread.closest('[class*="detailWide"]')).not.toBeNull()
+    const grid = document.querySelector('[class*="detailGrid"]')!
+    expect(grid.compareDocumentPosition(spread) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(grid.contains(spread)).toBe(false)
     expect(await screen.findByText(/Each of the 10.000 runs replays your plan/)).toBeInTheDocument()
-    expect(columns[1]!.lastElementChild).toContainElement(screen.getByRole('heading', { name: 'How far luck could move the plan' }))
+  })
+
+  it('splits the other six cards three and three, so the columns end within a card\'s height of each other', () => {
+    renderGrid()
+    const columns = document.querySelectorAll('[class*="detailColumn"]')
+    expect([...columns].map((c) => c.querySelectorAll('h3').length)).toEqual([3, 3])
   })
 
   it('gives the years to each milestone the whole width, not a place in a half column', () => {
@@ -51,5 +61,26 @@ describe('DetailGrid', () => {
     expect(titles()[1]).toBe('Years to milestone')
     const columns = document.querySelectorAll('[class*="detailColumn"]')
     expect(columns).toHaveLength(2)
+  })
+
+  describe('the two cards that replay the market', () => {
+    afterEach(() => {
+      vi.restoreAllMocks()
+      vi.unstubAllGlobals()
+    })
+
+    it('leaves their replays until they are near the screen', async () => {
+      const io = installFakeIntersectionObserver()
+      // Everything is far below the screen.
+      vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({ top: 9000, bottom: 9400 } as DOMRect)
+      renderGrid({ startInvestedCents: 1_000_000_00, annualSpendCents: 2_400_000 })
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(screen.getByText('Working it out…')).toBeInTheDocument()
+      expect(screen.queryByText(/the money lasts all 30 years in/)).not.toBeInTheDocument()
+
+      act(() => io.emit(0.3))
+      expect(await screen.findByText(/Each of the 10.000 runs replays your plan/)).toBeInTheDocument()
+      expect(screen.getByText(/the money lasts all 30 years in/)).toBeInTheDocument()
+    })
   })
 })

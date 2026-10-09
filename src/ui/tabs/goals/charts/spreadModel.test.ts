@@ -3,6 +3,7 @@ import { EU_MONEY_FORMAT } from '../../../../engine/money'
 import { projectNetWorth, replayMarket, scenarioToParams } from '../../../../engine'
 import { samplePlan, SAMPLE_INFLATION } from '../../../../testing/samplePlan'
 import {
+  type Replayed,
   fiRow,
   milestoneRows,
   rangeLabel,
@@ -241,20 +242,31 @@ describe('spreadKey', () => {
     expect(key({ name: 'Another name', color: '#123456', sortOrder: 9 })).toBe(key())
   })
 
-  it('differs for each thing the replay reads', () => {
-    for (const over of [
-      { startInvestedCents: 6_000_000 },
-      { monthlyContributionCents: 120_000 },
-      { expectedRealReturn: 0.06 },
-      { horizonYears: 25 },
-      { housePurchaseYear: 9 },
-      { housePriceCents: 31_000_000 },
-      { lifeEvents: [{ year: 5, amountCents: 100_000, label: 'x' }] },
-      { annualSpendCents: 3_100_000 },
-      { safeWithdrawalRate: 0.035 },
-    ]) {
-      expect(key(over)).not.toBe(key())
-    }
+  // One different value for every field the replay reads. Typed as the replay's fields, so a field added to the
+  // replay must be given one here, and one left out of the key is a card that keeps showing the old picture.
+  const OTHER: Replayed = {
+    startInvestedCents: 6_000_000,
+    monthlyContributionCents: 120_000,
+    contributionSchedule: [{ from: '2030-01', monthlyCents: 150_000 }],
+    expectedRealReturn: 0.06,
+    horizonYears: 25,
+    planStartDate: '2027-01-01',
+    housePriceCents: 31_000_000,
+    houseAppreciationRate: 0.04,
+    housePurchaseYear: 9,
+    downPaymentFraction: 0.25,
+    transactionCostsCents: 700_000,
+    lifeEvents: [{ year: 5, amountCents: 100_000, label: 'x' }],
+    annualSpendCents: 3_100_000,
+    safeWithdrawalRate: 0.035,
+  }
+
+  it.each(Object.keys(OTHER) as (keyof Replayed)[])('differs when the replay reads another %s', (field) => {
+    expect(OTHER[field]).not.toEqual(draft[field])
+    expect(key({ [field]: OTHER[field] })).not.toBe(key())
+  })
+
+  it('differs for the inflation, the bounce and the number of runs', () => {
     expect(spreadKey(draft, 0.03, 0.15, 5_000)).not.toBe(key())
     expect(spreadKey(draft, I, 0.11, 5_000)).not.toBe(key())
     expect(spreadKey(draft, I, 0.15, 2_000)).not.toBe(key())

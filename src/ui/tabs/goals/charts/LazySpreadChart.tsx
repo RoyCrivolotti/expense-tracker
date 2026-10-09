@@ -1,4 +1,5 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useState } from 'react'
+import { ChunkBoundary } from '../../../components/ChunkBoundary'
 import { ChartShell } from './ChartShell'
 import type { SpreadChartProps } from './SpreadChart'
 import styles from '../goals.module.css'
@@ -7,18 +8,39 @@ import styles from '../goals.module.css'
 // without waiting for them.
 const SpreadChart = lazy(() => import('./SpreadChart').then((m) => ({ default: m.SpreadChart })))
 
-/** The spread card, loaded when it is first shown. */
+/**
+ * The spread card, loaded when it is first near the screen. If its code does not load, only the card says so: it
+ * is fetched on its own, after the page, so a failure there must not take the rest of the page with it.
+ */
 export function LazySpreadChart(props: SpreadChartProps) {
+  const embedded = props.embedded ?? false
+  // A card that starts far from the screen does not even fetch its code until it has been near once.
+  const [seen, setSeen] = useState(!props.paused)
+  if (!props.paused && !seen) setSeen(true)
+  const waiting = (
+    <ChartShell embedded={embedded}>
+      <h3 className={styles.chartTitle}>How far luck could move the plan</h3>
+      <p className={styles.chartHint}>Working it out…</p>
+    </ChartShell>
+  )
+  if (!seen) return waiting
   return (
-    <Suspense
+    <ChunkBoundary
       fallback={
-        <ChartShell embedded={props.embedded ?? false}>
+        <ChartShell embedded={embedded}>
           <h3 className={styles.chartTitle}>How far luck could move the plan</h3>
-          <p className={styles.chartHint}>Working it out…</p>
+          <p role="status" className={styles.chartHint}>
+            This card could not be shown. Reload the page to try again.
+          </p>
+          <button type="button" className={styles.matrixToggle} onClick={() => window.location.reload()}>
+            Reload
+          </button>
         </ChartShell>
       }
     >
-      <SpreadChart {...props} />
-    </Suspense>
+      <Suspense fallback={waiting}>
+        <SpreadChart {...props} />
+      </Suspense>
+    </ChunkBoundary>
   )
 }

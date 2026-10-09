@@ -12,6 +12,7 @@ import {
 } from '../../../../engine'
 import { ChartShell } from './ChartShell'
 import { fiTargetsLine } from './fiTargetsLine'
+import { useReplayInput } from './useReplayInput'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
@@ -31,14 +32,46 @@ const FIRE_LEGEND: LegendItem[] = [
   { label: 'FI target', color: 'color-mix(in srgb, var(--color-text) 45%, transparent)' },
 ]
 
+/**
+ * How often the money lasts, from the target the plan is after: at its own rate and at the usual ones.
+ * The line before stays until the edits have stopped for a moment, and while the card is far from the
+ * screen (none if there was not one yet).
+ */
+function useOddsLine(draft: NewGoalScenario, paused: boolean): string | null {
+  const format = useMoneyFormat()
+  const volatility = useMarketVolatility()
+  const settled = useReplayInput(draft, paused)
+  const waiting = settled === undefined
+  const { annualSpendCents = 0, safeWithdrawalRate = 0, expectedRealReturn = 0, retirementYears = 0 } = settled ?? {}
+  return useMemo(() => {
+    if (waiting || annualSpendCents <= 0 || safeWithdrawalRate <= 0) return null
+    const rates = [safeWithdrawalRate, ...FI_TARGET_RATES.filter((rate) => Math.abs(rate - safeWithdrawalRate) > 1e-9)]
+    const results = rates.map((rate) => ({
+      rate,
+      odds: replayRetirement({
+        startCents: fireNumber(annualSpendCents, rate),
+        annualWithdrawalCents: annualSpendCents,
+        realReturn: expectedRealReturn,
+        volatility,
+        years: retirementYears,
+        runs: ODDS_RUNS,
+      }),
+    }))
+    return retirementOddsLine({ rate: safeWithdrawalRate, years: retirementYears, realReturn: expectedRealReturn, volatility, results, format })
+  }, [waiting, annualSpendCents, safeWithdrawalRate, expectedRealReturn, retirementYears, volatility, format])
+}
+
 function FireChartImpl({
   draft,
   height = 210,
   embedded = false,
+  paused = false,
 }: {
   draft: NewGoalScenario
   height?: number
   embedded?: boolean
+  /** The card is far from the screen: leave the odds as they are until it is near again. */
+  paused?: boolean
 }) {
   const inflationRate = useAssumedInflation()
   const { fiTarget, fiYear, balances } = useMemo(() => {
@@ -61,25 +94,7 @@ function FireChartImpl({
   }, [draft, inflationRate])
 
   const format = useMoneyFormat()
-  const volatility = useMarketVolatility()
-  const { annualSpendCents, safeWithdrawalRate, expectedRealReturn, retirementYears } = draft
-  // How often the money lasts, from the target the plan is after: at its own rate and at the usual ones.
-  const oddsLine = useMemo(() => {
-    if (annualSpendCents <= 0 || safeWithdrawalRate <= 0) return null
-    const rates = [safeWithdrawalRate, ...FI_TARGET_RATES.filter((rate) => Math.abs(rate - safeWithdrawalRate) > 1e-9)]
-    const results = rates.map((rate) => ({
-      rate,
-      odds: replayRetirement({
-        startCents: fireNumber(annualSpendCents, rate),
-        annualWithdrawalCents: annualSpendCents,
-        realReturn: expectedRealReturn,
-        volatility,
-        years: retirementYears,
-        runs: ODDS_RUNS,
-      }),
-    }))
-    return retirementOddsLine({ rate: safeWithdrawalRate, years: retirementYears, realReturn: expectedRealReturn, volatility, results, format })
-  }, [annualSpendCents, safeWithdrawalRate, expectedRealReturn, retirementYears, volatility, format])
+  const oddsLine = useOddsLine(draft, paused)
   const targets = fiTargetsLine(draft.annualSpendCents, (c) => formatMoneyShort(c, format), format)
   // The target is in the plan's euros; on the account it is more, by the inflation up to where the plan
   // reaches it, or up to the end of the plan when it does not.
