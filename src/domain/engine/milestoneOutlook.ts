@@ -1,32 +1,25 @@
 /**
- * When the plan says a milestone will be crossed, and how that sits against the date the
- * owner set for it. Projection points are yearly, so the crossing is interpolated within
- * the year it happens in, then placed on the calendar from the plan's start date.
+ * When the plan says a milestone will be crossed, and how that sits against the date the owner set
+ * for it. A milestone is an amount on the account, so the plan's line is read in euros on the account
+ * (`milestoneCrossing`), then placed on the calendar from the plan's start date.
  */
 import type { GoalScenario, Milestone } from '../types'
-import { DAY_MS, utcDateMs } from './dates'
+import { DAY_MS, dateAtYears, utcDateMs } from './dates'
+import { milestoneCrossing, type MilestoneCrossing } from './milestoneCrossing'
+import { planLineOf } from './planLine'
 import { projectNetWorth } from './projection'
 import { scenarioToParams } from './scenarioProjection'
 
 const YEAR_DAYS = 365.25
 
-function isoAt(ms: number): string {
-  return new Date(ms).toISOString().slice(0, 10)
+function crossingOf(plan: GoalScenario, amountCents: number, inflationRate: number): MilestoneCrossing | null {
+  const line = planLineOf(projectNetWorth(scenarioToParams(plan, inflationRate)))
+  return milestoneCrossing(line, amountCents, inflationRate)
 }
 
-/** The fractional year, from the plan start, at which the invested line first reaches the amount. */
+/** The fractional year, from the plan start, at which the plan first has the amount on the account. */
 export function yearsToAmount(plan: GoalScenario, amountCents: number, inflationRate: number): number | null {
-  const points = projectNetWorth(scenarioToParams(plan, inflationRate))
-  for (let i = 0; i < points.length; i++) {
-    const p = points[i]!
-    if (p.investedCents < amountCents) continue
-    if (i === 0) return 0
-    const prev = points[i - 1]!
-    const span = p.investedCents - prev.investedCents
-    const frac = span > 0 ? (amountCents - prev.investedCents) / span : 0
-    return prev.year + frac
-  }
-  return null
+  return crossingOf(plan, amountCents, inflationRate)?.offset ?? null
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
@@ -36,22 +29,39 @@ export function milestoneCrossingDate(plan: GoalScenario, amountCents: number, i
   // A start date only the API could have written malformed must not take Progress down.
   if (!plan.planStartDate || !ISO_DATE.test(plan.planStartDate)) return null
   const years = yearsToAmount(plan, amountCents, inflationRate)
-  if (years === null) return null
-  // Whole years by the calendar, so two years from 1 January is 1 January; only the part
-  // year inside the crossing year is counted in days.
-  const whole = Math.floor(years)
-  const start = new Date(utcDateMs(plan.planStartDate))
-  start.setUTCFullYear(start.getUTCFullYear() + whole)
-  return isoAt(start.getTime() + Math.round((years - whole) * YEAR_DAYS) * DAY_MS)
+  return years === null ? null : dateAtYears(plan.planStartDate, years)
 }
+
+/** When the plan has the amount, what it is worth in the plan's money on that day, and when it falls back under. */
+interface Outlook {
+  expected: string
+  /** The amount in the euros of the plan start, on the day the plan has it: what the 500.000 € is worth by then. */
+  worthCents: number
+  /** The date the plan falls back below it (a house payment, say), or null when it stays. */
+  dipsOn: string | null
+}
+
+function outlookOf(plan: GoalScenario, amountCents: number, inflationRate: number): Outlook | null {
+  if (!plan.planStartDate || !ISO_DATE.test(plan.planStartDate)) return null
+  const crossing = crossingOf(plan, amountCents, inflationRate)
+  if (crossing === null) return null
+  return {
+    expected: dateAtYears(plan.planStartDate, crossing.offset),
+    worthCents: Math.round(amountCents / Math.pow(1 + inflationRate, crossing.offset)),
+    dipsOn: crossing.dipsAt === null ? null : dateAtYears(plan.planStartDate, crossing.dipsAt),
+  }
+}
+
+/** What the plan says about a milestone it gets to: what the amount is worth by then, and whether it holds. */
+type PlanOutlook = Pick<Outlook, 'worthCents' | 'dipsOn'>
 
 export type MilestoneStanding =
   | { kind: 'reached'; on: string }
-  | { kind: 'on-track'; expected: string; target: string }
-  | { kind: 'late'; expected: string; target: string; monthsLate: number }
+  | ({ kind: 'on-track'; expected: string; target: string } & PlanOutlook)
+  | ({ kind: 'late'; expected: string; target: string; monthsLate: number } & PlanOutlook)
   /** The plan had it crossed by a date now past, and no check-in has reached it. */
-  | { kind: 'overdue'; expected: string; target: string | null }
-  | { kind: 'expected'; expected: string }
+  | ({ kind: 'overdue'; expected: string; target: string | null } & PlanOutlook)
+  | ({ kind: 'expected'; expected: string } & PlanOutlook)
   | { kind: 'beyond-horizon'; target: string | null }
   | { kind: 'unknown' }
 
@@ -72,12 +82,20 @@ export function milestoneStanding(
 ): MilestoneStanding {
   if (reachedOn) return { kind: 'reached', on: reachedOn }
   if (!plan?.planStartDate) return { kind: 'unknown' }
-  const expected = milestoneCrossingDate(plan, milestone.amountCents, inflationRate)
+  const outlook = outlookOf(plan, milestone.amountCents, inflationRate)
   const target = milestone.targetDate ?? null
-  if (!expected) return { kind: 'beyond-horizon', target }
-  if (asOf !== null && expected <= asOf) return { kind: 'overdue', expected, target }
-  if (!target) return { kind: 'expected', expected }
+  if (!outlook) return { kind: 'beyond-horizon', target }
+  const { expected, worthCents, dipsOn } = outlook
+  if (asOf !== null && expected <= asOf) return { kind: 'overdue', expected, target, worthCents, dipsOn }
+  if (!target) return { kind: 'expected', expected, worthCents, dipsOn }
   const lateMs = utcDateMs(expected) - utcDateMs(target)
-  if (lateMs <= 0) return { kind: 'on-track', expected, target }
-  return { kind: 'late', expected, target, monthsLate: Math.max(1, Math.round(lateMs / DAY_MS / (YEAR_DAYS / 12))) }
+  if (lateMs <= 0) return { kind: 'on-track', expected, target, worthCents, dipsOn }
+  return {
+    kind: 'late',
+    expected,
+    target,
+    monthsLate: Math.max(1, Math.round(lateMs / DAY_MS / (YEAR_DAYS / 12))),
+    worthCents,
+    dipsOn,
+  }
 }

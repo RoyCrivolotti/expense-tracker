@@ -45,15 +45,16 @@ describe('ReachedMilestones', () => {
       horizonYears: 10,
       housePurchaseYear: null,
     })
-    // Ahead of plan a year in: the crossing from today comes sooner than the plan said.
-    const latest = makeWealthCheckin({ id: 1, checkinDate: '2027-01-01', entries: [{ accountId: 1, valueCents: 10_800_000 }] })
+    // Ahead of plan a year in (the plan has about 108.300 euros on the account by then, this has 109.500):
+    // the crossing from today comes sooner than the plan said.
+    const latest = makeWealthCheckin({ id: 1, checkinDate: '2027-01-01', entries: [{ accountId: 1, valueCents: 10_950_000 }] })
     render(
       <ReachedMilestones
         milestones={[{ amountCents: 11_000_000, label: 'Soon' }, { amountCents: 900_000_000, label: 'Far' }]}
         reached={new Map()}
         plan={plan}
         latestCheckin={latest}
-        fromToday={planFromToday(plan, { investedCents: 10_800_000, date: '2027-01-01' })}
+        fromToday={planFromToday(plan, { investedCents: 10_950_000, date: '2027-01-01' })}
       />,
     )
     const soon = screen.getByText(/^expected .*; from today, .*$/)
