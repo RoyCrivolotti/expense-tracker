@@ -189,8 +189,14 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // check-in a day is read once, and the two lines that say what to record). The total stood at 257,876
 // bytes after restating a re-baselined plan and this takes it to 258,331 (the Goals chunk from 67,124
 // to 67,529). All of it is small code, in the engine and the lazy Goals chunk, with no new library.
-const TOTAL_MAX_GZIP = 258_600
-const GOALS_MAX_GZIP = 67_800
+//
+// Raised from 258.6 KB to 260.4 KB, and the Goals chunk from 67.8 KB to 69.6 KB, for the split of the gap
+// to the plan (the five paths and the checks that decide when saving and the market can be told apart,
+// the rows with their wording, and the restart rule) net of the steady-gap hint it replaces. The total
+// stood at 258,331 bytes after the return guards and this takes it to 260,122 (the Goals chunk from
+// 67,529 to 69,318). All of it is small code, in the engine and the lazy Goals chunk, with no new library.
+const TOTAL_MAX_GZIP = 260_400
+const GOALS_MAX_GZIP = 69_600
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length

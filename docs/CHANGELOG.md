@@ -2,6 +2,12 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (Progress says where the gap comes from)
+
+- **Ahead or behind now comes with the reasons.** Under the status line, rows in the plan's euros that add up to the gap: where you started, investing more or less than the plan puts in, the market doing better or worse than the plan assumes, and a small muted line for how the plan counts time within each year. A row that is nothing is left out. For example, 12.000 € ahead: +9.000 € from investing more than planned, +4.000 € from the market, -1.000 € from a lower start.
+- **Saving and the market are said together when they cannot be told apart.** Nothing recorded as an investment while the plan invests, a house payment with no withdrawal recorded, or a balance that grew faster than markets give: the market would otherwise take credit for money that only moved, so the row says so and what to record.
+- **The re-baseline hint no longer fires on noise.** It said the plan's starting point was wrong whenever the gap had held still for half a year, which is what a plan with a good start and an ordinary market does about half the time, and it said the same to someone who had stopped investing. The restart is offered now when where the plan started is what explains the gap, and the gap is worth at least three planned months.
+
 ## October 2026 (the return is not given when it is money moved in)
 
 - **A balance that grew by transfers nobody recorded no longer reads as a return.** The measured return counts any rise that is not an investment transaction as growth, so an account opened with a transfer a day before the next check-in read about 72% a year, and a year of unrecorded monthly deposits read 18%. When the plan expects investing and none is recorded in the period, or the period would be more than 30% a year, Progress says so and what to add (Investment transactions), instead of a percentage.

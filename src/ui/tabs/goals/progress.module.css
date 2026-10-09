@@ -61,8 +61,8 @@
   margin-top: 0.5rem;
 }
 
-/* The steady-gap note and its button, set apart from the figures above. */
-.steadyGap {
+/* Where the gap to the plan comes from: a few rows that add up to it, set apart from the figures above. */
+.gapSplit {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -70,6 +70,39 @@
   padding: 0.75rem;
   border-radius: var(--radius-sm, 6px);
   background: var(--color-surface-muted);
+}
+
+.gapRows {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+}
+
+.gapRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+}
+
+.gapAmount {
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* How the plan counts time is not something anyone did, so it is not coloured like the rest. */
+.gapRowMuted {
+  color: var(--color-text-muted);
+}
+
+.gapRowMuted .gapAmount {
+  font-weight: 400;
 }
 
 .summaryCard {

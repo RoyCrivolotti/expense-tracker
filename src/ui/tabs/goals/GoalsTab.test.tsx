@@ -436,7 +436,7 @@ describe('GoalsTab', () => {
     vi.mocked(actions.updateScenario).mockRejectedValue(new Error('boom'))
     const plan = makeScenario({ id: 1, name: 'Path A', isActive: true, planStartDate: '2025-01-01' })
     const accounts = [makeWealthAccount({ id: 1, name: 'Broker', kind: 'investment' })]
-    // The button belongs to the steady-gap hint, which needs three check-ins over half a year.
+    // The button comes with the gap's explanation, which needs two check-ins a month apart and a gap the start explains.
     const behind = (id: number, date: string) =>
       makeWealthCheckin({
         id,

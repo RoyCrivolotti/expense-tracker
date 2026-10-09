@@ -38,7 +38,8 @@ export interface PortfolioReturn {
   periods: number
 }
 
-function isFlow(t: Transaction): boolean {
+/** A transaction that moved money in or out of the invested portfolio and is not just a plan or a cancelled one. */
+export function isFlow(t: Transaction): boolean {
   return t.type === 'investment' && t.status !== 'cancelled' && t.status !== 'forecast'
 }
 

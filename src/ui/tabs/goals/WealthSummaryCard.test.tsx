@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { WealthSummaryCard } from './WealthSummaryCard'
 import { planValueAtDate, realToNominal, DEFAULT_INFLATION_RATE } from '../../../engine'
@@ -296,33 +296,67 @@ describe('WealthSummaryCard', () => {
     expect(screen.getByText(/a year$/)).toHaveStyle({ color: 'var(--exp-danger)' })
   })
 
-  it('suggests a re-baseline when the gap has held still for half a year', () => {
-    const scenario = makeScenario({ id: 1, name: 'Path A', planStartDate: '2025-01-01' })
-    const accounts = [makeAccount(1, 'investment')]
-    const behind = (id: number, date: string) =>
-      makeCheckin(id, date, [
-        { accountId: 1, valueCents: realToNominal(planValueAtDate(scenario, date, DEFAULT_INFLATION_RATE)! - 50_000_00, '2025-01-01', date, DEFAULT_INFLATION_RATE) },
-      ])
-    const checkins = [behind(1, '2026-01-01'), behind(2, '2026-04-01'), behind(3, '2026-07-15')]
-    const onRebaseline = vi.fn()
-    render(
-      <WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} onRebaseline={onRebaseline} />,
-    )
-
-    expect(screen.getByText(/Every check-in since .*2026 has sat about 50k € behind/)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
-    expect(onRebaseline).toHaveBeenCalled()
-  })
-
-  it('says nothing about re-baselining while the gap is still moving', () => {
-    const scenario = makeScenario({ id: 1, planStartDate: '2025-01-01' })
+  describe('where the gap comes from', () => {
+    const scenario = makeScenario({ id: 1, name: 'Path A', planStartDate: '2025-01-01', monthlyContributionCents: 100_000, contributionSchedule: [], housePurchaseYear: null, lifeEvents: [] })
     const accounts = [makeAccount(1, 'investment')]
     const at = (id: number, date: string, gap: number) =>
-      makeCheckin(id, date, [{ accountId: 1, valueCents: planValueAtDate(scenario, date, DEFAULT_INFLATION_RATE)! + gap }])
-    const checkins = [at(1, '2026-01-01', -90_000_00), at(2, '2026-04-01', -40_000_00), at(3, '2026-07-15', -5_000_00)]
-    render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} onRebaseline={vi.fn()} />)
+      makeCheckin(id, date, [
+        { accountId: 1, valueCents: realToNominal(planValueAtDate(scenario, date, DEFAULT_INFLATION_RATE)! + gap, '2025-01-01', date, DEFAULT_INFLATION_RATE) },
+      ])
 
-    expect(screen.queryByText(/Every check-in since/)).not.toBeInTheDocument()
+    it('names the rows that add up to the gap, in the plan’s euros, and leaves the empty ones out', () => {
+      const checkins = [at(1, '2025-01-10', -50_000_00), at(2, '2026-07-15', -50_000_00)]
+      render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />)
+      const block = screen.getByText(/the plan by/).closest('div')!
+      expect(within(block).getByText(/Behind the plan by .*€/)).toBeInTheDocument()
+      expect(within(block).getByText(/\(in 2025 euros\)/)).toBeInTheDocument()
+      expect(within(block).getByText('You started behind the plan')).toBeInTheDocument()
+      expect(within(block).queryByText(/Investing more than planned/)).not.toBeInTheDocument()
+    })
+
+    it('suggests a re-baseline when where the plan started is what explains the gap', () => {
+      const checkins = [at(1, '2025-01-10', -50_000_00), at(2, '2026-07-15', -50_000_00)]
+      const onRebaseline = vi.fn()
+      render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} onRebaseline={onRebaseline} />)
+
+      expect(screen.getByText(/At least half of this gap comes from where the plan started/)).toBeInTheDocument()
+      fireEvent.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
+      expect(onRebaseline).toHaveBeenCalled()
+    })
+
+    it('says nothing about re-baselining when saving has closed the gap that the start opened', () => {
+      const checkins = [at(1, '2025-01-10', -90_000_00), at(2, '2026-07-15', -5_000_00)]
+      render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} onRebaseline={vi.fn()} />)
+
+      expect(screen.queryByText(/At least half of this gap comes from where the plan started/)).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Re-baseline from latest check-in' })).not.toBeInTheDocument()
+    })
+
+    it('does not offer the button in a read-only session', () => {
+      const checkins = [at(1, '2025-01-10', -50_000_00), at(2, '2026-07-15', -50_000_00)]
+      render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />)
+      expect(screen.getByText(/At least half of this gap comes from where the plan started/)).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Re-baseline from latest check-in' })).not.toBeInTheDocument()
+    })
+
+    it('says investing and the market are together when nothing is recorded though the plan invests', () => {
+      const checkins = [at(1, '2025-01-10', 0), at(2, '2026-02-01', 0)]
+      render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />)
+      expect(screen.getByText('Your investing and the market together')).toBeInTheDocument()
+      expect(screen.getByText(/Shown together because nothing is recorded as an investment since/)).toBeInTheDocument()
+      expect(screen.queryByText('The market doing better than the plan assumes')).not.toBeInTheDocument()
+    })
+
+    it('calls the first row what happened before the first check-in when it came more than a month after the start', () => {
+      const checkins = [at(1, '2025-04-01', -50_000_00), at(2, '2026-07-15', -50_000_00)]
+      render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />)
+      expect(screen.getByText('Behind before your first check-in')).toBeInTheDocument()
+    })
+
+    it('asks for a second check-in a month or more after the first when there is only one', () => {
+      render(<WealthSummaryCard checkins={[at(1, '2026-01-01', -1_000_00)]} accounts={accounts} plan={scenario} />)
+      expect(screen.getByText(/Two check-ins a month or more apart/)).toBeInTheDocument()
+    })
   })
 
   it('reads the cash reserve as months of spending, against the target when set', () => {
