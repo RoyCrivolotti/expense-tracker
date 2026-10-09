@@ -58,7 +58,7 @@ describe('gapRows', () => {
     const rows = gapRows(split({ start: 500_000, timing: -30_000 }))
     expect(rows).toEqual([
       { key: 'start', label: 'You started ahead of the plan', euros: 5000 },
-      { key: 'timing', label: 'How the plan counts time within each year', euros: -300, muted: true },
+      { key: 'timing', label: "The plan's line moves a year at a time (not something you did)", euros: -300, muted: true },
     ])
   })
 

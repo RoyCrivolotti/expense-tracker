@@ -30,7 +30,7 @@ export function gapRows(split: GapSplit): Row[] {
     ...(merged
       ? []
       : [{ key: 'market', label: parts.market >= 0 ? 'The market doing better than the plan assumes' : 'The market doing worse than the plan assumes', cents: parts.market }]),
-    { key: 'timing', label: 'How the plan counts time within each year', cents: parts.timing, muted: true },
+    { key: 'timing', label: "The plan's line moves a year at a time (not something you did)", cents: parts.timing, muted: true },
   ]
   const euros = wholeEuros(labelled.map((r) => r.cents))
   return labelled
