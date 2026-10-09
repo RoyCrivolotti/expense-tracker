@@ -900,6 +900,45 @@
   margin-top: 0.75rem;
 }
 
+.spreadTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+}
+
+.spreadTableCaption {
+  caption-side: top;
+  text-align: left;
+  font-weight: 600;
+  padding-bottom: 0.35rem;
+}
+
+.spreadTable th,
+.spreadTable td {
+  padding: 0.35rem 0.5rem 0.35rem 0;
+  text-align: left;
+  vertical-align: top;
+  border-top: 1px solid var(--color-border);
+}
+
+.spreadTable thead th {
+  border-top: 0;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.spreadTable tbody th {
+  font-weight: 600;
+}
+
+/* How many of the hundred runs get there, small under the amount it is about. */
+.spreadTableNote {
+  display: block;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
 .chartHint.heroNote {
   margin-top: 0.6rem;
 }
