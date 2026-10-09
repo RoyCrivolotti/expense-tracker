@@ -90,6 +90,59 @@ describe('milestoneCrossing', () => {
   })
 })
 
+describe('milestoneCrossing on a line that falls', () => {
+  // At 10% inflation the account grows a year of the line's fall back: a line that falls by 9,1% in a year
+  // still has a little hump on the account in the middle of it, and one that falls by 20% only falls.
+  const inflation = 0.1
+  const g = 1 + inflation
+  const humped = planLineOf([
+    { year: 0, investedCents: 1_000_000 },
+    { year: 1, investedCents: 909_000 },
+  ])
+  const falling = planLineOf([
+    { year: 0, investedCents: 1_000_000 },
+    { year: 1, investedCents: 800_000 },
+  ])
+  const walk = (line: ReturnType<typeof planLineOf>, test: (screen: number) => boolean, from = 0) => {
+    for (let t = from; t <= 1; t += 1 / 100_000) if (test(planValueAt(line, t)! * Math.pow(g, t))) return t
+    return null
+  }
+
+  it('reaches an amount the hump gets over, and falls back below it before the year is out', () => {
+    // The account is at 1.000.000 at the start, about 1.001.100 at the top of the hump and 999.900 at the end.
+    const amount = 1_000_500
+    const found = milestoneCrossing(humped, amount, inflation)!
+    // The walk reads the line in whole cents, which on the flat top of a hump moves the day by a few thousandths of a year.
+    const rose = walk(humped, (v) => v >= amount)!
+    expect(Math.abs(found.offset - rose)).toBeLessThan(2e-3)
+    expect(found.staysAbove).toBe(false)
+    const fell = walk(humped, (v) => v < amount, found.offset + 1e-4)!
+    expect(Math.abs(found.dipsAt! - fell)).toBeLessThan(2e-3)
+    expect(found.dipsAt!).toBeGreaterThan(found.offset)
+  })
+
+  it('never reaches an amount above the hump', () => {
+    expect(milestoneCrossing(humped, 1_002_000, inflation)).toBeNull()
+  })
+
+  it('is above an amount the line starts over and falls back under it, with the day it does', () => {
+    const found = milestoneCrossing(falling, 900_000, inflation)!
+    expect(found.offset).toBe(0)
+    expect(found.staysAbove).toBe(false)
+    const fell = walk(falling, (v) => v < 900_000)!
+    expect(Math.abs(found.dipsAt! - fell)).toBeLessThan(1e-4)
+  })
+
+  it('does not reach an amount a falling line never gets back to', () => {
+    expect(milestoneCrossing(falling, 1_100_000, inflation)).toBeNull()
+  })
+
+  it('holds on a line that falls when the account does not fall below the amount by the end', () => {
+    expect(milestoneCrossing(falling, 700_000, inflation)).toMatchObject({ offset: 0, staysAbove: true })
+    expect(g).toBeCloseTo(1.1)
+  })
+})
+
 describe('milestoneCrossing against a walk of the account day by day', () => {
   function rng(seed: number) {
     let s = seed
