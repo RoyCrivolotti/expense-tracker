@@ -69,7 +69,7 @@ function NetWorthNowCardImpl({
     () => yearsToFi(scenarioToParams({ ...draft, id: 0 }, inflationRate), draft.annualSpendCents, draft.safeWithdrawalRate),
     [draft, inflationRate],
   )
-  const worth = worthInPlanMoneyNote({ latest, planStartDate: draft.planStartDate, inflationRate, money: (c) => formatCents(c, format) })
+  const worth = worthInPlanMoneyNote({ latest, planStartDate: draft.planStartDate, inflationRate, money: (c) => formatCents(c, format), format })
   const targetNote = fiTargetMoneyNote({
     targetCents: fiTarget,
     fiYear,
@@ -77,6 +77,7 @@ function NetWorthNowCardImpl({
     planStartDate: draft.planStartDate,
     inflationRate,
     money: (c) => formatMoneyShort(c, format),
+    format,
   })
   // Skip anything a check-in already recorded as reached, so a dip in the
   // portfolio does not re-suggest a milestone that was actually hit.

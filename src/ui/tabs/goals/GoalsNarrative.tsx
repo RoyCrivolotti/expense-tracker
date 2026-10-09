@@ -55,6 +55,7 @@ function CompactNarrative({
     planStartDate: draft.planStartDate,
     inflationRate,
     money: (cents) => formatMoneyShort(cents, format),
+    format,
   })
   const stats: PlanStat[] = [
     {
@@ -111,6 +112,7 @@ function fiSentence({
     planStartDate: draft.planStartDate,
     inflationRate,
     money: (c) => formatMoneyShort(c, format),
+    format,
   })
   const reached =
     fiYear != null
@@ -137,6 +139,7 @@ function FullNarrative({
     planStartDate,
     inflationRate,
     money: (c) => formatCents(c, format),
+    format,
   })
   return (
     <Card>

@@ -70,7 +70,7 @@ function NetWorthMiniChartImpl({ draft }: { draft: NewGoalScenario }) {
   // The pill and the chart's name read from the same figure, so a screen reader hears what a
   // sighted viewer sees, and the pill itself is hidden from it.
   const readout = end ? { year: end.year, money: formatMoneyShort(end.investedCents, format) } : null
-  const money = chartMoneyLabel(draft.planStartDate, false)
+  const money = chartMoneyLabel(draft.planStartDate, false, format)
 
   return (
     <div className={styles.wrap}>

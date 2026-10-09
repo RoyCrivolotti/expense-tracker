@@ -84,7 +84,7 @@ function RentVsOwnChartImpl({
           feesCents: draft.transactionCostsCents,
           priceCents: result.priceCents,
           startYear: result.startYear,
-          moneyLabel: planMoneyLabel(draft.planStartDate),
+          moneyLabel: planMoneyLabel(draft.planStartDate, format),
           carryRate: draft.homeCarryRate,
           realReturn: draft.expectedRealReturn,
           houseGrowth: realHouseGrowth(draft.houseAppreciationRate, inflationRate) - 1,

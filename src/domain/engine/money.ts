@@ -30,6 +30,11 @@ export interface MoneyFormat {
   symbolPosition: 'prefix' | 'suffix'
   /** Decimal separator, e.g. ',' (EU) or '.' (US). */
   decimalSeparator: string
+  /**
+   * The ISO 4217 code the format was made from, for the sentences that name the money ("2026 US dollars").
+   * A format written by hand may not have one.
+   */
+  currencyCode?: string
 }
 
 /** The original euros/de-DE convention; used as the default for every helper. */
@@ -38,6 +43,7 @@ export const EU_MONEY_FORMAT: MoneyFormat = {
   symbol: '€',
   symbolPosition: 'suffix',
   decimalSeparator: ',',
+  currencyCode: 'EUR',
 }
 
 /**
@@ -69,10 +75,34 @@ export function resolveMoneyFormat(
         seenDigit = true
       }
     }
-    return { locale, symbol, symbolPosition, decimalSeparator }
+    return { locale, symbol, symbolPosition, decimalSeparator, currencyCode }
   } catch {
     return EU_MONEY_FORMAT
   }
+}
+
+const WORDS = new Map<string, string>([['EUR', 'euros']])
+
+/**
+ * What the money is called in a sentence, in the plural: "euros", "US dollars", "British pounds". It is the
+ * currency's own name (in English, whatever the number style), so "2026 US dollars" is not called euros. A
+ * code the runtime has no name for is said as the code, and a format made by hand with no code is euros if its
+ * symbol is the euro's and money otherwise.
+ */
+export function currencyWord(format: MoneyFormat): string {
+  const code = format.currencyCode
+  if (code === undefined) return format.symbol === '€' ? 'euros' : 'money'
+  const known = WORDS.get(code)
+  if (known !== undefined) return known
+  let word = code
+  try {
+    const parts = new Intl.NumberFormat('en', { style: 'currency', currency: code, currencyDisplay: 'name' }).formatToParts(2)
+    word = parts.find((part) => part.type === 'currency')?.value ?? code
+  } catch {
+    // An ill-formed code: it is said as it is.
+  }
+  WORDS.set(code, word)
+  return word
 }
 
 /**

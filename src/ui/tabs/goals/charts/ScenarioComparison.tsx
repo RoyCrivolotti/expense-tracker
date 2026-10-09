@@ -1,7 +1,7 @@
 import { memo, useMemo, useState } from 'react'
 import type { GoalScenario } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import type { PlanFromToday } from '../../../../engine'
+import { currencyWord, type MoneyFormat, type PlanFromToday } from '../../../../engine'
 import { formatCheckinDate } from '../checkinDate'
 import { planMoneyLabel } from '../planMoneyLabel'
 import { SegmentedControl } from '../../../components/SegmentedControl'
@@ -55,10 +55,10 @@ function readAt(rows: ComparisonRow[], year: number | null): string {
  * The euros the figures are in: the plan's when every row starts in the same year, and the euros of each plan's
  * own start when they do not, as each plan counts in its own.
  */
-function figuresMoney(starts: readonly (string | null)[]): string {
-  const labels = new Set(starts.map((start) => planMoneyLabel(start)))
+function figuresMoney(starts: readonly (string | null)[], format: MoneyFormat): string {
+  const labels = new Set(starts.map((start) => planMoneyLabel(start, format)))
   const [only] = labels
-  return labels.size === 1 && only !== undefined ? `in ${only}` : 'each in the euros of its own start date'
+  return labels.size === 1 && only !== undefined ? `in ${only}` : `each in the ${currencyWord(format)} of its own start date`
 }
 
 function ScenarioComparisonImpl({
@@ -103,11 +103,11 @@ function ScenarioComparisonImpl({
         />
       </div>
       <p className={styles.chartHint}>
-        Net worth and invested are{readAt(rows, year)}, {figuresMoney([...scenarios.map((s) => s.planStartDate), ...(includeDraft ? [draft.planStartDate] : [])])}; FI and the house purchase are
+        Net worth and invested are{readAt(rows, year)}, {figuresMoney([...scenarios.map((s) => s.planStartDate), ...(includeDraft ? [draft.planStartDate] : [])], format)}; FI and the house purchase are
         counted in years from the plan start; monthly is what each path invests
         {rows.some((r) => r.monthlyLater) ? ', and what a change to it comes to' : ''}.
         {fromToday
-          ? ` "From today" is your plan restarted from the balance in your latest check-in, ${formatCheckinDate(fromToday.since)}, and counts its years and its euros from there (${planMoneyLabel(fromToday.scenario.planStartDate)}). FI is given as a month for the plan and its restart, since their years are counted from different days.`
+          ? ` "From today" is your plan restarted from the balance in your latest check-in, ${formatCheckinDate(fromToday.since)}, and counts its years and its ${currencyWord(format)} from there (${planMoneyLabel(fromToday.scenario.planStartDate, format)}). FI is given as a month for the plan and its restart, since their years are counted from different days.`
           : ''}
       </p>
       <ScrollRegion label="Scenarios side by side">

@@ -100,7 +100,7 @@ export function scenarioHeadline(
 
   const actual = actualPhrase(scenario, actualMonthlyInvestingCents, pace, format)
   const secondaryParts = [
-    `${formatCents(end?.netWorthCents ?? 0, format)} net worth @ ${scenario.horizonYears}y in ${planMoneyLabel(scenario.planStartDate)}`,
+    `${formatCents(end?.netWorthCents ?? 0, format)} net worth @ ${scenario.horizonYears}y in ${planMoneyLabel(scenario.planStartDate, format)}`,
     planPhrase(scenario, pace, format),
     ...(actual ? [actual] : []),
   ]

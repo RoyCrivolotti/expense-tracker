@@ -15,7 +15,7 @@ export function housePriceHint(draft: NewGoalScenario, inflationRate: number, fo
   const paid = Math.round(real * Math.pow(1 + inflationRate, year))
   const money = (cents: number) => formatCentsCompact(cents, format)
   return (
-    `Enter today's price. Bought in year ${year} it costs about ${money(real)} in ${planMoneyLabel(draft.planStartDate)} ` +
+    `Enter today's price. Bought in year ${year} it costs about ${money(real)} in ${planMoneyLabel(draft.planStartDate, format)} ` +
     `(${money(paid)} when you pay it), as houses rise ${formatPercent(draft.houseAppreciationRate, format)} a year ` +
     `and inflation is ${formatPercent(inflationRate, format)}.`
   )

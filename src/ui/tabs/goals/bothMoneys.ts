@@ -1,3 +1,4 @@
+import type { MoneyFormat } from '../../../engine/money'
 import { planMoneyLabel } from './planMoneyLabel'
 import { yearLabel } from './yearLabel'
 
@@ -36,19 +37,22 @@ export function bothMoneys({
   planStartDate,
   inflationRate,
   money,
+  format,
 }: {
   cents: number
   years: number
   planStartDate: string | null | undefined
   inflationRate: number
   money: (cents: number) => string
+  /** The owner's currency, which names the plan's money ("2026 US dollars"). */
+  format: MoneyFormat
 }): BothMoneys {
   const plan = money(cents)
   const account = money(onAccountCents(cents, years, inflationRate))
   return {
     plan,
     account,
-    planLabel: planMoneyLabel(planStartDate),
+    planLabel: planMoneyLabel(planStartDate, format),
     accountLabel: onAccountLabel(years, planStartDate),
     same: plan === account,
   }

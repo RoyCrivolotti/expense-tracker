@@ -93,7 +93,7 @@ export function GapSplitHint({
   return (
     <div className={styles.gapSplit}>
       <p style={{ ...hintStyle, color: 'inherit' }}>
-        <strong>{headline(reading, format)}</strong> (in {planMoneyLabel(planStartDate)}), from:
+        <strong>{headline(reading, format)}</strong> (in {planMoneyLabel(planStartDate, format)}), from:
       </p>
       <Rows split={reading} format={format} />
       <Notes split={reading} />

@@ -78,17 +78,19 @@ export function fiRow({
   years,
   money,
   targetCents,
+  format,
 }: {
   result: SpreadResult
   planStartDate: string | null
   years: number
   money: (cents: number) => string
   targetCents: number
+  format: MoneyFormat
 }): MilestoneRow | null {
   const range = result.fi
   if (!range) return null
   return {
-    label: `FI target (${money(targetCents)} in ${planMoneyLabel(planStartDate)})`,
+    label: `FI target (${money(targetCents)} in ${planMoneyLabel(planStartDate, format)})`,
     middle: rangeLabel(range.p25, range.p75, planStartDate, years),
     wide: rangeLabel(range.p10, range.p90, planStartDate, years),
     gets: `${runsOfHundred(range.share)} of 100`,

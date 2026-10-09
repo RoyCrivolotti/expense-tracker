@@ -23,6 +23,7 @@ export function PlanStrip({ draft, milestones }: { draft: NewGoalScenario; miles
     planStartDate: draft.planStartDate,
     inflationRate,
     money: (cents) => formatMoneyShort(cents, format),
+    format,
   })
   const items = [
     {

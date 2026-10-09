@@ -106,7 +106,7 @@ export function CheckinHistoryChart({ checkins, accounts, plan }: Props) {
         />
       </div>
       <p className={goalStyles.chartHint}>
-        In {planMoneyLabel(planStartDate)}: each check-in is brought back at {formatPercent(inflationRate)} a year
+        In {planMoneyLabel(planStartDate, format)}: each check-in is brought back at {formatPercent(inflationRate)} a year
         to sit against the plan.
       </p>
       <LinearChart

@@ -25,6 +25,7 @@ export function spendMoneyHint(draft: NewGoalScenario, inflationRate: number, fo
     planStartDate: draft.planStartDate,
     inflationRate,
     money: (cents) => formatCentsCompact(cents, format),
+    format,
   })
   const when = fiYear != null ? 'the year the plan reaches FI' : 'when the plan ends (FI is not reached)'
   return `Counted in ${spend.planLabel}: ${onAccountPer(spend, 'a year')}, ${when}.`
@@ -44,6 +45,7 @@ export function rentMoneyHint(draft: NewGoalScenario, inflationRate: number, for
     planStartDate: draft.planStartDate,
     inflationRate,
     money: (cents) => formatCentsCompact(cents, format),
+    format,
   })
   return `Counted in ${rent.planLabel} and rising with inflation: ${onAccountPer(rent, 'a month')}, ${buys ? 'the year you buy' : 'ten years on'}.`
 }
@@ -61,6 +63,7 @@ export function feesMoneyHint(draft: NewGoalScenario, inflationRate: number, for
     planStartDate: draft.planStartDate,
     inflationRate,
     money: (cents) => formatCentsCompact(cents, format),
+    format,
   })
   return `Counted in ${fees.planLabel}: ${onAccountPer(fees)}, the year you buy.`
 }
@@ -88,6 +91,7 @@ export function eventMoneyHint({
     planStartDate,
     inflationRate,
     money: (cents) => formatCentsCompact(cents, format),
+    format,
   })
   return `Counted in ${event.planLabel}: ${onAccountPer(event)}.`
 }

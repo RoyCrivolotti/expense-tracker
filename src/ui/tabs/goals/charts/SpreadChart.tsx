@@ -69,7 +69,7 @@ function SpreadChartImpl({ draft: liveDraft, milestones, nominal = false, runs =
 
   const money = (cents: number) => formatCentsCompact(cents, format)
   const short = (cents: number) => formatMoneyShort(cents, format)
-  const moneyLabel = nominal ? 'euros on your account in each year' : planMoneyLabel(draft.planStartDate)
+  const moneyLabel = nominal ? 'euros on your account in each year' : planMoneyLabel(draft.planStartDate, format)
   const series = useMemo(
     () => spreadSeries({ plan, result, inflationRate, nominal }),
     [plan, result, inflationRate, nominal],
@@ -93,7 +93,7 @@ function SpreadChartImpl({ draft: liveDraft, milestones, nominal = false, runs =
     }
   }
 
-  const fi = targetCents === null ? null : fiRow({ result, planStartDate: draft.planStartDate, years: result.years, money, targetCents })
+  const fi = targetCents === null ? null : fiRow({ result, planStartDate: draft.planStartDate, years: result.years, money, targetCents, format })
   const rows = [...milestoneRows({ milestones, result, planStartDate: draft.planStartDate, years: result.years, money }), ...(fi ? [fi] : [])]
   const warning = spreadWarning(result)
 
@@ -151,7 +151,7 @@ function SpreadChartImpl({ draft: liveDraft, milestones, nominal = false, runs =
           realReturn: draft.expectedRealReturn,
           format,
           chartMoney: moneyLabel,
-          tableMoney: rows.length > 0 ? planMoneyLabel(draft.planStartDate) : null,
+          tableMoney: rows.length > 0 ? planMoneyLabel(draft.planStartDate, format) : null,
         })}
       </p>
     </ChartShell>

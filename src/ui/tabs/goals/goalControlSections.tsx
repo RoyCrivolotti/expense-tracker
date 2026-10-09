@@ -42,7 +42,7 @@ function purchaseSummary(draft: NewGoalScenario, inflationRate: number, format: 
   // the starting balance is read as what is left after the down payment and fees. Without this, moving
   // the year from Never to Already own adds the whole house to the net worth and nothing says why.
   const money = (cents: number) => formatCentsCompact(cents, format)
-  const label = planMoneyLabel(draft.planStartDate)
+  const label = planMoneyLabel(draft.planStartDate, format)
   // The plan charges the portfolio for the down payment and the fees only: the loan and the upkeep are paid out
   // of the income the monthly investing is what is left of, so the person is told where to say otherwise.
   const rest = ` The loan payments and upkeep are not taken from the portfolio: the plan pays them from the rest of your income. If they will lower what you invest, add a change under ${ADJUST_LABELS.changes.title}.`
@@ -51,7 +51,7 @@ function purchaseSummary(draft: NewGoalScenario, inflationRate: number, format: 
   }
   const total = down + fees
   // The three are in the plan's euros; the account pays more in the year it is paid, which is the figure a buyer sees.
-  const paid = bothMoneys({ cents: total, years: purchaseYear, planStartDate: draft.planStartDate, inflationRate, money })
+  const paid = bothMoneys({ cents: total, years: purchaseYear, planStartDate: draft.planStartDate, inflationRate, money, format })
   const account = paid.same ? '' : ` (${aboutOnAccount(paid)})`
   return `Purchase cost from portfolio, in ${label}: ${money(down)} down + ${money(fees)} fees = ${money(total)}${account}, dip on the invested line in year ${purchaseYear}.${rest}`
 }
@@ -183,6 +183,7 @@ function PurchaseCostFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }:
 }
 
 function MortgageFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: SectionProps) {
+  const format = useMoneyFormat()
   // The note is about both rates, so it stays while either is on the page. With only one starred
   // it would otherwise go with it and leave the other with no word on what it means.
   const explainsRates = !omit.has('mortgageRateAnnual') || !omit.has('houseAppreciationRate')
@@ -218,7 +219,7 @@ function MortgageFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: Sec
         <p className={styles.fieldHint}>
           The mortgage rate and house appreciation are nominal, as a bank and the price index
           quote them. The plan takes inflation off both, so the house and the debt are in{' '}
-          {planMoneyLabel(draft.planStartDate)}, like the plan.
+          {planMoneyLabel(draft.planStartDate, format)}, like the plan.
         </p>
       ) : null}
     </>
@@ -417,7 +418,7 @@ export function ChangesFields({ draft, onChange, omit = NO_LEVERS }: Pick<Sectio
     <>
       <p className={styles.fieldHint}>
         What you send to your investments each month: the amount you start with, then each change from a month
-        on. It is counted in {planMoneyLabel(draft.planStartDate)} at the assumed inflation, so an amount that stays the same counts for
+        on. It is counted in {planMoneyLabel(draft.planStartDate, format)} at the assumed inflation, so an amount that stays the same counts for
         less each year. Enter 0 for a pause.
       </p>
       <ContributionStepsList
@@ -440,7 +441,7 @@ export function EventsFields({ draft, onChange }: Pick<SectionProps, 'draft' | '
       <p className={styles.fieldHint}>
         One-off cash events (bonuses, inheritances, large purchases) applied to the portfolio in a
         specific projection year. Shown as diamond markers on the chart. Amounts are counted in{' '}
-        {planMoneyLabel(draft.planStartDate)}, like the rest of the plan.
+        {planMoneyLabel(draft.planStartDate, format)}, like the rest of the plan.
       </p>
       <LifeEventsList
         events={draft.lifeEvents ?? []}
