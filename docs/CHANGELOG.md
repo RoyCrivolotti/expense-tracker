@@ -2,6 +2,10 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (an app opened before the deploy keeps working)
+
+- **A client opened before this release no longer goes to NaN.** The API stopped sending a scenario's `annualContributionGrowth`, which the previous client still multiplies into every projection, so a session open across the deploy showed NaN on the Goals tab until it was reloaded. The API sends 0 for it for one release.
+
 ## October 2026 (layout)
 
 - **The month a change in the monthly investing starts in is no longer cut.** In a half column on a laptop 1024 to 1366px wide the Edit button took the room of the label and it read "from Ma...". The row wraps instead.

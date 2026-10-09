@@ -42,6 +42,12 @@ describe('toGoalScenario', () => {
     expect(toGoalScenario(baseRow({ is_active: 1 })).isActive).toBe(true)
   })
 
+  it('still sends annualContributionGrowth as 0 for one release, so a client opened before the field was dropped stays finite', () => {
+    // The old client multiplies it into every projection: left out, it is undefined and the net worth is NaN from year 2.
+    expect(toGoalScenario(baseRow())).toMatchObject({ annualContributionGrowth: 0 })
+    expect(JSON.parse(JSON.stringify(toGoalScenario(baseRow()))).annualContributionGrowth).toBe(0)
+  })
+
   it('maps a row with empty life_events to lifeEvents: []', () => {
     const result = toGoalScenario(baseRow())
     expect(result.lifeEvents).toEqual([])

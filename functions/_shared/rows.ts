@@ -267,7 +267,16 @@ export interface GoalScenarioRow {
   is_active: number
 }
 
-export function toGoalScenario(r: GoalScenarioRow): GoalScenario {
+/**
+ * A scenario as the API sends it: the client's own type, and for one release `annualContributionGrowth`, which
+ * the client no longer has. A client opened before the field was dropped (an installed app keeps its old code
+ * until its owner taps the update banner) multiplies it into every projection, and undefined makes the net worth
+ * NaN from year 2. The column still exists with its default of 0, so 0 is what it would have read. Drop this
+ * once every client in use is newer than the release that removed the field.
+ */
+export type GoalScenarioDto = GoalScenario & { annualContributionGrowth: 0 }
+
+export function toGoalScenario(r: GoalScenarioRow): GoalScenarioDto {
   let lifeEvents: LifeEvent[] = []
   try {
     const parsed: unknown = JSON.parse(r.life_events)
@@ -300,6 +309,7 @@ export function toGoalScenario(r: GoalScenarioRow): GoalScenario {
     homeCarryRate: r.home_carry_rate ?? DEFAULT_HOME_CARRY_RATE,
     retirementYears: r.retirement_years ?? DEFAULT_RETIREMENT_YEARS,
     isActive: r.is_active === 1,
+    annualContributionGrowth: 0,
   }
 }
 
