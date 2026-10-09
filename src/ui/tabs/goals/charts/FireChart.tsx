@@ -9,6 +9,7 @@ import {
   yearsToFi,
 } from '../../../../engine'
 import { ChartShell } from './ChartShell'
+import { fiTargetsLine } from './fiTargetsLine'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
@@ -48,12 +49,13 @@ function FireChartImpl({
             growth[year]?.investedCents ?? target,
             draft.annualSpendCents,
             draft.expectedRealReturn,
-            Math.min(30, draft.horizonYears),
+            draft.retirementYears,
           )
     return { fiTarget: target, fiYear: year, balances: drawdown }
   }, [draft, inflationRate])
 
   const format = useMoneyFormat()
+  const targets = fiTargetsLine(draft.annualSpendCents, (c) => formatMoneyShort(c, format), format)
   const labels = useMemo(() => sparseLabels(balances.map((_, y) => y), 5), [balances])
   const series: ChartSeries[] = [{ id: 'balance', color: BALANCE_COLOR, values: balances, width: 2 }]
 
@@ -68,7 +70,7 @@ function FireChartImpl({
         <h3 className={styles.chartTitle}>FI drawdown</h3>
         <p className={styles.chartHint}>
           FI target {formatMoneyShort(fiTarget, format)} · not reached in the horizon, so there is no
-          drawdown to show.
+          drawdown to show. {targets}
         </p>
       </ChartShell>
     )
@@ -78,10 +80,11 @@ function FireChartImpl({
     <ChartShell embedded={embedded}>
       <h3 className={styles.chartTitle}>FI drawdown</h3>
       <p className={styles.chartHint}>
-        FI target {formatMoneyShort(fiTarget, format)} · reached year {fiYear}. Post-FI only: year 0 on
-        this chart is the FI year, not today. After that it takes the plan's return every year and
-        withdraws a constant amount in today's money, so it illustrates the target and is not a
-        forecast: a bad run of early years would leave less.
+        FI target {formatMoneyShort(fiTarget, format)} · reached year {fiYear}. {targets} Post-FI only: year 0
+        on this chart is the FI year, not today, and it runs for the {draft.retirementYears} years the money
+        must last. After that it takes the plan's return every year and withdraws a constant amount in
+        today's money, so it illustrates the target and is not a forecast: a bad run of early years would
+        leave less.
       </p>
       <LinearChart
         height={height}

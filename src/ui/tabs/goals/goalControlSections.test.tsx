@@ -47,9 +47,9 @@ describe('the sections of the controls', () => {
     expect(screen.queryByText(/FI target = annual spend/)).not.toBeInTheDocument()
     // What is about the section as a whole stays.
     expect(screen.getByText(/Models life after financial independence/)).toBeInTheDocument()
-    // Every input that can be in the bar is out of the sections; the upkeep of the house is not one of
-    // them (it has no star), so it is the only thing left.
-    const left = [...container.querySelectorAll('input')].filter((i) => !i.getAttribute('aria-label')?.startsWith('Upkeep'))
+    // Every input that can be in the bar is out of the sections; the upkeep of the house and the years
+    // the money must last are not among them (neither has a star), so they are all that is left.
+    const left = [...container.querySelectorAll('input')].filter((i) => !/^(Upkeep|Years the money)/.test(i.getAttribute('aria-label') ?? ''))
     expect(left).toHaveLength(0)
   })
 
@@ -137,11 +137,32 @@ describe('the sections of the controls', () => {
     const onChange = vi.fn()
     render(<FireFields draft={makeDraft()} onChange={onChange} />)
 
-    fireEvent.click(screen.getByRole('button', { name: /^Increase / }))
+    fireEvent.click(screen.getByRole('button', { name: /^Increase Withdrawal rate at FI/ }))
 
     expect(onChange).toHaveBeenCalledTimes(1)
     const patch = onChange.mock.calls[0]?.[0] as { safeWithdrawalRate: number } | undefined
     expect(patch?.safeWithdrawalRate).toBeGreaterThan(makeDraft().safeWithdrawalRate)
+  })
+
+  it('has the years the money must last, with the guide for them, even when the withdrawal rate is in the bar', () => {
+    render(<FireFields draft={{ ...makeDraft(), retirementYears: 40 }} onChange={vi.fn()} omit={everything(SECTION_KEYS.fire)} />)
+    expect(screen.getAllByLabelText('Years the money must last').length).toBeGreaterThan(0)
+    expect(screen.getByText(/the usual guide is 4% up to 35 years, 3,5% up to 49 and 3,25% from 50, so 40 years points to 3,5%/)).toBeInTheDocument()
+    expect(screen.getByText(/moves the rate to the guide unless you have set the rate yourself/)).toBeInTheDocument()
+  })
+
+  it('moves the withdrawal rate with the years while it is the guide, and leaves one set by hand alone', () => {
+    const years = (draft: ReturnType<typeof makeDraft>) => {
+      const onChange = vi.fn()
+      const { unmount } = render(<FireFields draft={draft} onChange={onChange} />)
+      fireEvent.click(screen.getAllByRole('button', { name: /^Increase Years the money must last/ })[0]!)
+      unmount()
+      return onChange.mock.calls[0]?.[0] as { retirementYears: number; safeWithdrawalRate?: number }
+    }
+    // 35 years at 4% is the guide, so 36 years brings 3,5% with it.
+    expect(years({ ...makeDraft(), retirementYears: 35, safeWithdrawalRate: 0.04 })).toEqual({ retirementYears: 36, safeWithdrawalRate: 0.035 })
+    // A rate set by hand stays.
+    expect(years({ ...makeDraft(), retirementYears: 35, safeWithdrawalRate: 0.045 })).toEqual({ retirementYears: 36 })
   })
 
   it('keeps the other inputs of a section when one is in the bar', () => {

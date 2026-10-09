@@ -40,7 +40,11 @@ const buildTerms = (cur: string): { term: string; body: string }[] => [
   },
   {
     term: 'Safe withdrawal rate (SWR)',
-    body: 'The share of your portfolio you would spend each year after FI. 4% is the common rule of thumb; lower is more conservative (spend less, higher FI target). Does not affect accumulation years before FI.',
+    body: 'The share of your portfolio you would spend each year after FI. 4% is the common rule of thumb for money that has to last about 30 years; lower is more conservative (spend less, higher FI target), and a longer retirement calls for a lower rate. Does not affect accumulation years before FI.',
+  },
+  {
+    term: 'Years the money must last',
+    body: 'How long the invested money has to pay for your spending after FI. The FI drawdown runs for it, and it sets the usual guide for the withdrawal rate: 4% up to 35 years, 3,5% up to 49 and 3,25% from 50. Changing it moves the rate to the guide, unless you have set the rate yourself.',
   },
   {
     term: 'Drawdown',

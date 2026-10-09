@@ -2,6 +2,7 @@ import { memo } from 'react'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import type { Milestone } from '../../../../types'
 import { fireNumber, formatCents, milestoneLabelWithAmount, nominalToReal } from '../../../../engine'
+import { fiTargetsLine } from './fiTargetsLine'
 import { Card } from '../../../components/primitives'
 import { useAssumedInflation } from '../../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
@@ -54,6 +55,7 @@ function NetWorthNowCardImpl({
     : 'at plan start, no check-in yet'
   const fiTarget = fireNumber(draft.annualSpendCents, draft.safeWithdrawalRate)
   const pct = fiShare(draft, latest, current, fiTarget, inflationRate)
+  const targets = fiTargetsLine(draft.annualSpendCents, (c) => formatCents(c, format), format)
   // Skip anything a check-in already recorded as reached, so a dip in the
   // portfolio does not re-suggest a milestone that was actually hit.
   const next =
@@ -75,6 +77,7 @@ function NetWorthNowCardImpl({
               <span className={styles.nowListNote}>
                 target is from future annual spend at FI, not current spending
               </span>
+              {targets ? <span className={styles.nowListNote}>{targets}</span> : null}
             </li>
             {nextMilestone != null ? (
               <li>
