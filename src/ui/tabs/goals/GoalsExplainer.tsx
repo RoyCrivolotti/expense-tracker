@@ -55,6 +55,10 @@ const buildTerms = (cur: string): { term: string; body: string }[] => [
     body: "How far a single year's return strays from the typical one. The plan assumes the typical return every year, which no run of years pays. The spread card replays the plan in 10.000 different markets, each year's return the typical one times a luck factor with this bounce (15% by default, about world stocks), and shows where the middle half of them and 8 in 10 of them end up. You set it in the Market bounce card. A mixed portfolio bounces less, so choose a lower one for it.",
   },
   {
+    term: 'Chance the money lasts',
+    body: "In how many of 100 different markets the money lasts all the years you asked for. Each run starts at the FI target, takes the spending out every year and grows what is left by the typical return times a luck factor with the market bounce. At 4% over 30 years it lasts in about 86 of 100: the other 14 are the runs with bad early years. A lower rate lasts more often, and a longer retirement less often. It is a picture of the plan's own market, not a promise.",
+  },
+  {
     term: 'Drawdown',
     body: "What happens to the portfolio after you reach FI: it keeps growing with returns while you withdraw your annual spend each year. It takes the plan's return every year, so it is an illustration, not a forecast: a bad run of early years would leave less. Chart years count from the FI year, not from today. If FI is not reached within the horizon, the drawdown chart shows the target only.",
   },
