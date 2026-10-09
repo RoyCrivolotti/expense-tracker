@@ -139,6 +139,7 @@ describe('createScenario', () => {
       lifeEvents: events,
       contributionSchedule: schedule,
       homeCarryRate: 0.021,
+      retirementYears: 42,
     })
 
     const { sql, values } = statements[0]!
@@ -160,6 +161,7 @@ describe('createScenario', () => {
     expect(bound('life_events')).toBe(JSON.stringify(events))
     expect(bound('contribution_schedule')).toBe(JSON.stringify(schedule))
     expect(bound('home_carry_rate')).toBe(0.021)
+    expect(bound('retirement_years')).toBe(42)
     expect(bound('plan_start_date')).toBe('2026-06-25')
   })
 })

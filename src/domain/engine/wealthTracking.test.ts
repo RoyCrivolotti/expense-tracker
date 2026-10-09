@@ -43,6 +43,7 @@ function makeScenario(overrides: Partial<GoalScenario> = {}): GoalScenario {
     lifeEvents: [],
     contributionSchedule: [],
     homeCarryRate: 0.015,
+    retirementYears: 30,
     isActive: false,
     ...overrides,
   }

@@ -3,7 +3,7 @@ import {
   normalizeContributionSchedule,
   validateContributionSchedule,
 } from '../engine/contributionSchedule'
-import { DEFAULT_HOME_CARRY_RATE } from '../engine/projectionConstants'
+import { DEFAULT_HOME_CARRY_RATE, DEFAULT_RETIREMENT_YEARS, RETIREMENT_YEARS_MAX } from '../engine/projectionConstants'
 import type { ExpenseRepository } from '../ports/expenseRepository'
 import { ValidationError } from './validationError'
 
@@ -24,7 +24,7 @@ const CENTS_FIELDS = [
 ] as const
 
 /** Counts of years: whole, at least one. */
-const YEAR_COUNT_FIELDS = ['horizonYears'] as const
+const YEAR_COUNT_FIELDS = ['horizonYears', 'retirementYears'] as const
 
 /** Rates and fractions. Free to be negative (a pessimistic return is a real scenario),
  *  but they must be numbers, because the projection multiplies by them. */
@@ -119,6 +119,11 @@ function validateScenarioFractions(patch: Partial<NewGoalScenario>): void {
     )
   }
 
+  // The drawdown loops over every one of these years, so an absurd number would hang the chart, and no plan runs this long.
+  if (patch.retirementYears !== undefined) {
+    assertInClosedRange(patch.retirementYears, 1, RETIREMENT_YEARS_MAX, `retirementYears must be between 1 and ${RETIREMENT_YEARS_MAX}`)
+  }
+
   // A tenth of the house's value a year is already more than owning costs anywhere; above it is a typo.
   if (patch.homeCarryRate !== undefined) {
     assertInClosedRange(patch.homeCarryRate, 0, 0.1, 'homeCarryRate must be between 0 and 0.1')
@@ -133,7 +138,7 @@ export async function createScenario(
   validateScenarioNumbers(input)
   const named = { ...input, name: validateScenarioName(input.name) }
   // A client that predates the field posts without it.
-  return repo.createScenario(owner, withSortedSchedule({ ...named, homeCarryRate: input.homeCarryRate ?? DEFAULT_HOME_CARRY_RATE }))
+  return repo.createScenario(owner, withSortedSchedule({ ...named, homeCarryRate: input.homeCarryRate ?? DEFAULT_HOME_CARRY_RATE, retirementYears: input.retirementYears ?? DEFAULT_RETIREMENT_YEARS }))
 }
 
 export async function patchScenario(

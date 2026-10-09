@@ -297,6 +297,11 @@ export interface GoalScenario {
    */
   homeCarryRate: number
   /**
+   * How many years the invested money must pay for the spending after FI, whole, from 1 to 100. The
+   * drawdown chart runs for it, and the withdrawal rate that is safe depends on it (longer, lower).
+   */
+  retirementYears: number
+  /**
    * The owner's plan: the one scenario that Progress, the dashboard and check-in
    * deltas measure against. At most one per owner; set through activation, never
    * through a create or patch, so the editor's selection and the plan stay separate.

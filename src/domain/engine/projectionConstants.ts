@@ -28,6 +28,10 @@ export const DEFAULT_MORTGAGE_RATE = 0.03
 export const DEFAULT_RENT_MONTHLY_CENTS = 120_000
 /** Annual home carry cost (maintenance + property tax + insurance) as a share of home value. */
 export const DEFAULT_HOME_CARRY_RATE = 0.015
+/** How many years the money must last after FI, until a scenario says otherwise: the length the drawdown was always drawn over. */
+export const DEFAULT_RETIREMENT_YEARS = 30
+/** No plan runs a retirement longer than this, and the drawdown loops over every year of it. */
+export const RETIREMENT_YEARS_MAX = 100
 export const DEFAULT_ANNUAL_SPEND_CENTS = 4_000_000
 export const DEFAULT_HORIZON_YEARS = 30
 export const DEFAULT_SWR = 0.04

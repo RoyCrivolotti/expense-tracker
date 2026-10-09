@@ -20,6 +20,8 @@ describe('isCompatibleSnapshot', () => {
     expect(isCompatibleSnapshot({ version: 5 })).toBe(false)
     // Version 6 predates `GoalScenario.homeCarryRate`, which Rent vs buy and the editor's draft read.
     expect(isCompatibleSnapshot({ version: 6 })).toBe(false)
+    // Version 7 predates `GoalScenario.retirementYears`, which the drawdown chart and the editor's draft read.
+    expect(isCompatibleSnapshot({ version: 7 })).toBe(false)
   })
 
   it('rejects a missing record', () => {
@@ -27,6 +29,6 @@ describe('isCompatibleSnapshot', () => {
   })
 
   it('accepts a snapshot written by this build', () => {
-    expect(isCompatibleSnapshot({ version: 7 })).toBe(true)
+    expect(isCompatibleSnapshot({ version: 8 })).toBe(true)
   })
 })
