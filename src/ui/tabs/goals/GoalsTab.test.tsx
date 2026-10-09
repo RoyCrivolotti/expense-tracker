@@ -840,13 +840,14 @@ describe('GoalsTab', () => {
       expect(screen.getByText(/The shaded band is the edited plan at a return three points lower and higher/)).toBeInTheDocument()
     })
 
-    it('names where the figures that stay in today\'s money are, in the Nominal view', async () => {
+    it('says what is flat and what rises in the Nominal view', async () => {
       const user = userEvent.setup()
       render(<GoalsTab model={makeModel()} />)
 
       await user.click(screen.getByRole('radio', { name: 'Nominal' }))
 
-      expect(screen.getByText(/The net worth, the FI target and the milestones stay in today's money/)).toBeInTheDocument()
+      expect(screen.getByText(/Milestones are amounts on your account, so they stay put in this view/)).toBeInTheDocument()
+      expect(screen.getByText(/the FI target is in today's money, so it rises with the inflation/)).toBeInTheDocument()
     })
   })
 
@@ -1130,10 +1131,10 @@ describe('GoalsTab', () => {
     render(<GoalsTab model={makeModel()} actions={makeActions()} />)
     await user.click(screen.getByRole('radio', { name: 'Nominal' }))
 
-    // One paragraph: what stays in today's money, and that the preview is not saved.
+    // One paragraph: what is flat and what rises in this view, and that the preview is not saved.
     const note = screen.getByText(/The preview is not saved/)
     expect(note).toHaveTextContent(/the rest of Goals uses the saved 2,0%, which you change in Assumptions/)
-    expect(note).toHaveTextContent(/target lines are only drawn in Purchasing power/)
+    expect(note).toHaveTextContent(/Milestones are amounts on your account, so they stay put in this view/)
   })
 
   it('previews without saving, and Progress and the saved rate stay where they were', async () => {
