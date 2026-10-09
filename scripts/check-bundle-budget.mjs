@@ -169,8 +169,15 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // and the status wording that goes with them. The total stood at 253,745 bytes after the house price and
 // this takes it to 255,412 (the Goals chunk from 65,172 to 65,867). All of it is small code, in the engine
 // and the lazy Goals chunk, with no new library.
-const TOTAL_MAX_GZIP = 255_700
-const GOALS_MAX_GZIP = 66_000
+//
+// Raised from 255.7 KB to 256.7 KB, and the Goals chunk from 66 KB to 67.2 KB, for dating milestones on
+// the account: the crossing search (a bisection per year of the line and the days a step jumps over an
+// amount), the worth and the fall-back the chips now say, the reference curves the chart draws in both
+// views, and the wording. The total stood at 255,412 bytes after the plan's line and this takes it to
+// 256,461 (the Goals chunk from 65,867 to 66,905). All of it is small code, in the engine and the lazy
+// Goals chunk, with no new library.
+const TOTAL_MAX_GZIP = 256_700
+const GOALS_MAX_GZIP = 67_200
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length

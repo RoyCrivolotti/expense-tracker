@@ -47,9 +47,9 @@ export function NominalPreview({ saved, preview, onPreview, onOpenAssumptions }:
         ) : null}
       </div>
       <p className={styles.chartHint}>
-        The net worth, the FI target and the milestones stay in today&apos;s money, so the target lines
-        are only drawn in Purchasing power. The preview is not saved: the rest of Goals uses the
-        saved {formatPercent(saved, format)}
+        The net worth stays in today&apos;s money. Milestones are amounts on your account, so they stay put
+        in this view, and the FI target is in today&apos;s money, so it rises with the inflation. The
+        preview is not saved: the rest of Goals uses the saved {formatPercent(saved, format)}
         {onOpenAssumptions ? (
           <>
             , which you change in Assumptions.{' '}

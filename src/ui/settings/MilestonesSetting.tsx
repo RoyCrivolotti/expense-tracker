@@ -216,10 +216,11 @@ export function MilestonesSetting({ settings, onChange }: Props) {
         <h3 className={goalStyles.sectionTitle}>Milestones</h3>
         <div className={styles.settingGroup}>
           <p className={styles.settingHint}>
-            Net-worth targets shown on the Goals charts and the years-to-milestone matrix, measured
-            against your invested portfolio. Names are optional, and a named milestone is shown with
-            its amount alongside; an unnamed one shows the amount on its own. Give one a target date
-            and Progress will say whether the plan reaches it in time.
+            Amounts you want to see on your account, shown on the Goals charts and the years-to-milestone
+            matrix and measured against your invested portfolio. The plan is counted after inflation to
+            date them: euros on the account in ten years buy less than euros today. Names are optional,
+            and a named milestone is shown with its amount alongside; an unnamed one shows the amount
+            on its own. Give one a target date and Progress will say whether the plan reaches it in time.
           </p>
           {error ? (
             <p ref={errorRef} className={styles.settingError} role="alert">

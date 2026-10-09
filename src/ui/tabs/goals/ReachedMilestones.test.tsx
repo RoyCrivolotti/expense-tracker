@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { ReachedMilestones } from './ReachedMilestones'
 import { makeScenario, makeWealthCheckin } from '../../../testing/factories'
+import { samplePlan } from '../../../testing/samplePlan'
 import { DEFAULT_INFLATION_RATE, addDaysIso, milestoneCrossingDate, planFromToday } from '../../../engine'
 
 const milestones = [
@@ -45,15 +46,16 @@ describe('ReachedMilestones', () => {
       horizonYears: 10,
       housePurchaseYear: null,
     })
-    // Ahead of plan a year in: the crossing from today comes sooner than the plan said.
-    const latest = makeWealthCheckin({ id: 1, checkinDate: '2027-01-01', entries: [{ accountId: 1, valueCents: 10_800_000 }] })
+    // Ahead of plan a year in (the plan has about 108.300 euros on the account by then, this has 109.500):
+    // the crossing from today comes sooner than the plan said.
+    const latest = makeWealthCheckin({ id: 1, checkinDate: '2027-01-01', entries: [{ accountId: 1, valueCents: 10_950_000 }] })
     render(
       <ReachedMilestones
         milestones={[{ amountCents: 11_000_000, label: 'Soon' }, { amountCents: 900_000_000, label: 'Far' }]}
         reached={new Map()}
         plan={plan}
         latestCheckin={latest}
-        fromToday={planFromToday(plan, { investedCents: 10_800_000, date: '2027-01-01' })}
+        fromToday={planFromToday(plan, { investedCents: 10_950_000, date: '2027-01-01' })}
       />,
     )
     const soon = screen.getByText(/^expected .*; from today, .*$/)
@@ -86,9 +88,9 @@ describe('ReachedMilestones', () => {
       />,
     )
     expect(screen.getByText('Milestones')).toBeInTheDocument()
-    expect(screen.getByText(/^on track: .*, target .*2031$/)).toBeInTheDocument()
-    expect(screen.getByText(/^\d+ months late: .*, target .*2026$/)).toBeInTheDocument()
-    expect(screen.getByText(/^expected .*20\d\d$/)).toBeInTheDocument()
+    expect(screen.getByText(/^on track: .*, target .*2031 \(worth about [\d.]+ € in 2026 euros\)$/)).toBeInTheDocument()
+    expect(screen.getByText(/^\d+ months late: .*, target .*2026 \(worth about [\d.]+ € in 2026 euros\)$/)).toBeInTheDocument()
+    expect(screen.getByText(/^expected .*20\d\d \(worth about [\d.]+ € in 2026 euros\)$/)).toBeInTheDocument()
     expect(screen.getByText(/^not within the horizon, target .*2040$/)).toBeInTheDocument()
   })
 
@@ -134,7 +136,7 @@ describe('ReachedMilestones', () => {
         latestCheckin={makeWealthCheckin({ checkinDate: '2026-09-01', entries: [] })}
       />,
     )
-    expect(screen.getByText(/^not reached yet; the plan had it by .*, target .*2030$/)).toBeInTheDocument()
+    expect(screen.getByText(/^not reached yet; the plan had it by .*, target .*2030 \(worth about [\d.]+ € in 2020 euros\)$/)).toBeInTheDocument()
     expect(screen.queryByText(/on track/)).not.toBeInTheDocument()
   })
 
@@ -157,7 +159,7 @@ describe('ReachedMilestones', () => {
       />,
     )
     expect(screen.queryByText(/not reached yet/)).not.toBeInTheDocument()
-    expect(screen.getByText(/^on track: .*, target .*2030$/)).toBeInTheDocument()
+    expect(screen.getByText(/^on track: .*, target .*2030 \(worth about [\d.]+ € in 2020 euros\)$/)).toBeInTheDocument()
   })
 
   it('keeps the reached heading when everything listed has been reached', () => {
@@ -180,5 +182,41 @@ describe('ReachedMilestones', () => {
     )
     expect(screen.getByText(/^by .*2026$/)).toBeTruthy()
     expect(screen.getAllByRole('listitem')).toHaveLength(1)
+  })
+})
+
+describe('ReachedMilestones on the account', () => {
+  const plan = samplePlan({ id: 1, isActive: true })
+  const render150and500 = () =>
+    render(
+      <ReachedMilestones
+        milestones={[{ amountCents: 15_000_000, label: 'Deposit' }, { amountCents: 50_000_000, label: 'Half' }]}
+        reached={new Map()}
+        plan={plan}
+      />,
+    )
+
+  it('says what an amount on the account is worth in the euros of the plan start on the day the plan has it', () => {
+    render150and500()
+    // 150.000 euros on the account some years in is 128.000 to 136.000 in the euros of 2026; 500.000 is about 300.000.
+    expect(screen.getByText(/\(worth about 1[23]\d\.\d{3} € in 2026 euros\)/)).toBeInTheDocument()
+    expect(screen.getByText(/\(worth about [23]\d\d\.\d{3} € in 2026 euros\)$/)).toBeInTheDocument()
+  })
+
+  it('says a milestone the plan loses again to a house payment, and when', () => {
+    render150and500()
+    expect(screen.getByText(/the plan falls back below it in Jan 2034/)).toBeInTheDocument()
+    expect(screen.getAllByText(/falls back below it/)).toHaveLength(1)
+  })
+
+  it('names the money by the plan start year, or today without one', () => {
+    render(
+      <ReachedMilestones
+        milestones={[{ amountCents: 15_000_000, label: 'Deposit' }]}
+        reached={new Map()}
+        plan={{ ...plan, planStartDate: '2031-06-01' }}
+      />,
+    )
+    expect(screen.getByText(/in 2031 euros\)/)).toBeInTheDocument()
   })
 })

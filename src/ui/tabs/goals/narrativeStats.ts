@@ -4,8 +4,8 @@ import {
   fireNumber,
   projectNetWorth,
   scenarioToParams,
+  wholeYearsToAmount,
   yearsToFi,
-  yearsToTargetFromProjection,
 } from '../../../engine'
 
 export interface MilestoneStat {
@@ -21,7 +21,7 @@ function narrativeMilestones(draft: NewGoalScenario, milestones: Milestone[], in
   const params = scenarioToParams({ ...draft, id: 0 }, inflationRate)
   const toStat = (milestone: Milestone): MilestoneStat => ({
     milestone,
-    year: yearsToTargetFromProjection(params, milestone.amountCents, false),
+    year: wholeYearsToAmount(params, milestone.amountCents, inflationRate),
   })
   const next = milestones.find((m) => m.amountCents > draft.startInvestedCents) ?? null
   const last = milestones[milestones.length - 1] ?? null

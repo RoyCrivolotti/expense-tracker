@@ -1899,9 +1899,11 @@ async function checkMilestoneWide(browser, engine, screen, scheme) {
   if (screen.width >= 1280) check(where, '(w) all seven milestones fit the table without its own scroll', fit.scroll <= fit.client + 1, JSON.stringify(fit))
 
   const tints = await readTints(page)
-  const shallow = tints.find((t) => t.text === '6y')
-  const deep = tints.find((t) => t.text === '30y')
-  check(where, '(w) cells that are years away are tinted, deeper the further', tints.length >= 3 && shallow !== undefined && deep !== undefined && deep.alpha > shallow.alpha, JSON.stringify(tints))
+  // The nearest and the furthest cell shown, whatever years the plans reach their milestones in.
+  const byYears = tints.map((t) => ({ ...t, years: parseInt(t.text, 10) })).filter((t) => Number.isFinite(t.years)).sort((a, b) => a.years - b.years)
+  const shallow = byYears[0]
+  const deep = byYears[byYears.length - 1]
+  check(where, '(w) cells that are years away are tinted, deeper the further', tints.length >= 3 && shallow !== undefined && deep.years > shallow.years && deep.alpha > shallow.alpha, JSON.stringify(tints))
   const worst = Math.min(...tints.map((t) => t.contrast))
   check(where, '(w) the text on every tint keeps 4.5:1', tints.length >= 3 && worst >= 4.5, `worst ${worst.toFixed(2)}:1`)
   const hatched = await page.evaluate(() => [...document.querySelectorAll('[class*="matrixBeyond"]')].map((el) => ({ text: el.textContent, border: getComputedStyle(el).borderTopStyle })))

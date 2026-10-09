@@ -89,6 +89,36 @@ describe('LinearChart', () => {
     expect(d.endsWith('Z')).toBe(true)
   })
 
+  it('draws a reference curve as a dashed path through one point per place, inside the plot', () => {
+    const { container } = render(
+      <LinearChart
+        {...defaultProps}
+        series={[makeLine('s1', [10, 20, 30])]}
+        refCurves={[{ id: 'target', values: [50, 40, 30] }]}
+      />,
+    )
+
+    const path = container.querySelector(`path.${chartStyles.refLine}`)
+    expect(path?.getAttribute('d')?.match(/[ML]/g)).toHaveLength(3)
+    expect(path?.closest('g')?.getAttribute('clip-path')).toMatch(/^url\(#/)
+  })
+
+  it('does not stretch the axis to a reference curve, which is clipped where it leaves the plot', () => {
+    const top = (refCurves: { id: string; values: number[] }[] | undefined) => {
+      const { container, unmount } = render(
+        <LinearChart {...defaultProps} series={[makeLine('s1', [10, 20, 30])]} {...(refCurves ? { refCurves } : {})} />,
+      )
+      const years = new Set(defaultProps.xLabels)
+      const ticks = [...container.querySelectorAll('text')]
+        .filter((t) => !years.has(t.textContent ?? ''))
+        .map((t) => Number(t.textContent))
+        .filter(Number.isFinite)
+      unmount()
+      return Math.max(...ticks)
+    }
+    expect(top([{ id: 'far', values: [9_000, 8_000, 7_000] }])).toBe(top(undefined))
+  })
+
   it('describes how to step through a chart that takes focus, which nothing on it says', () => {
     render(<LinearChart {...defaultProps} series={[makeLine('s1', [10, 20, 30])]} />)
 

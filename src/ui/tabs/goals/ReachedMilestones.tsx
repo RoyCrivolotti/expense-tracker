@@ -1,16 +1,20 @@
 import type { GoalScenario, Milestone, WealthCheckin } from '../../../types'
 import {
   formatCents,
+  formatCentsCompact,
   milestoneCrossingDate,
   milestoneLabelWithAmount,
   milestoneStanding,
+  shortMonthFullYearLabel,
   type MilestoneStanding,
+  type MoneyFormat,
   type PlanFromToday,
 } from '../../../engine'
 import { Card } from '../../components/primitives'
 import { useAssumedInflation } from '../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { formatCheckinDate } from './checkinDate'
+import { planMoneyLabel } from './planMoneyLabel'
 import styles from './goals.module.css'
 
 interface Props {
@@ -39,6 +43,18 @@ function fromTodayText(
   if (!fromToday || standing.kind === 'reached' || standing.kind === 'unknown') return ''
   const date = milestoneCrossingDate(fromToday.scenario, milestone.amountCents, inflationRate)
   return date ? `; from today, ${formatCheckinDate(date)}` : '; from today, not within the horizon'
+}
+
+/**
+ * What the plan adds about a milestone it gets to: what the amount is worth in the euros of the plan
+ * start on that day (the 500.000 on the account is less by then), and when a house payment or event
+ * takes the plan back under it.
+ */
+function outlookText(standing: MilestoneStanding, moneyLabel: string, format: MoneyFormat): string {
+  if (!('worthCents' in standing)) return ''
+  const worth = ` (worth about ${formatCentsCompact(standing.worthCents, format)} in ${moneyLabel})`
+  const dips = standing.dipsOn ? `; the plan falls back below it in ${shortMonthFullYearLabel(standing.dipsOn.slice(0, 7))}` : ''
+  return worth + dips
 }
 
 /** Words for where a milestone stands, and a mark for the chip. */
@@ -97,10 +113,8 @@ export function ReachedMilestones({
     .map((m) => {
       const standing = milestoneStanding(m, plan, reached.get(m.amountCents), inflationRate, asOf)
       const described = describe(standing)
-      return {
-        m,
-        standing: described ? { ...described, text: described.text + fromTodayText(m, standing, fromToday, inflationRate) } : null,
-      }
+      const suffix = outlookText(standing, planMoneyLabel(plan?.planStartDate), format) + fromTodayText(m, standing, fromToday, inflationRate)
+      return { m, standing: described ? { ...described, text: described.text + suffix } : null }
     })
     .filter((r): r is { m: Milestone; standing: NonNullable<ReturnType<typeof describe>> } => r.standing !== null)
   if (rows.length === 0) return null

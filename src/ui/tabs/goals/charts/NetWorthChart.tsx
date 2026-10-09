@@ -25,6 +25,7 @@ import { HeroWindowPicker } from './HeroWindowPicker'
 import { HeroTitleRow } from './heroSheet/HeroTitleRow'
 import { useActiveIndex } from './heroSheet/useActiveIndex'
 import { useHeroSheet } from './heroSheet/useHeroSheet'
+import { referenceLines, type ReferenceLines } from './referenceLines'
 import { HERO_WINDOWS, clipToWindow, heroWindowsFor, insideWindow, type HeroWindowKey } from './heroWindow'
 import progressStyles from '../progress.module.css'
 import {
@@ -327,28 +328,24 @@ function useFiTarget(isHero: boolean, draft: NewGoalScenario): number | null {
 }
 
 /**
- * Milestones the plan gets within reach of, plus the FI target when it is not one of them.
- * A target far above the plan is left off, and reported, rather than drawn: a reference
- * line sets the axis, so a 25M target over a plan that reaches 8M would leave the lines in
- * the bottom third of the chart. That holds in every window, All included.
+ * Milestones and the FI target as reference lines, in both views (see `referenceLines`): a milestone
+ * is an amount on the account and the FI target is in the plan's money, so each is flat in one view
+ * and moves with the inflation in the other. A target far above the plan is left off, and reported,
+ * rather than drawn: a reference line sets the axis, so a 25M target over a plan that reaches 8M would
+ * leave the lines in the bottom third of the chart. That holds in every window, All included.
  */
 function useRefLines(
   milestones: Milestone[],
   drawnMax: number | undefined,
   fiTargetCents: number | null,
   nominalMode: boolean,
-): { lines: number[]; fiAbove: number | null } {
-  return useMemo(() => {
-    // The targets are in today's money and a reference line is flat, while the nominal view
-    // inflates the plan past them: drawn there, the plan would seem to cross them early.
-    if (nominalMode) return { lines: [], fiAbove: null }
-    const ceiling = drawnMax != null && drawnMax > 0 ? drawnMax * 1.15 : Infinity
-    const base = milestones.map((m) => m.amountCents).filter((m) => m <= ceiling)
-    const fiFits = fiTargetCents !== null && fiTargetCents <= ceiling
-    const lines =
-      fiFits && !base.includes(fiTargetCents) ? [...base, fiTargetCents].sort((a, b) => a - b) : base
-    return { lines, fiAbove: fiTargetCents !== null && !fiFits ? fiTargetCents : null }
-  }, [milestones, drawnMax, fiTargetCents, nominalMode])
+  years: number[],
+  inflationRate: number,
+): ReferenceLines {
+  return useMemo(
+    () => referenceLines({ milestones, drawnMax, fiTargetCents, nominalMode, years, inflationRate }),
+    [milestones, drawnMax, fiTargetCents, nominalMode, years, inflationRate],
+  )
 }
 
 /** The FI target as a marker on the chart's top edge when it is above the chart, so leaving it off the axis is not a silent omission. */
@@ -631,7 +628,14 @@ function NetWorthChartImpl({
   )
   const { line: fromTodayLine, label: fromTodayLabel } = fromTodayDrawing(displayRealPoints, fromToday)
 
-  const { lines: refLines, fiAbove } = useRefLines(milestones, drawnMax, useFiTarget(isHero, draft), nominalMode)
+  const { lines: refLines, curves: refCurves, fiAbove } = useRefLines(
+    milestones,
+    drawnMax,
+    useFiTarget(isHero, draft),
+    nominalMode,
+    years,
+    projectionRate,
+  )
   const fiChartMarker = useMemo(() => fiMarker(fiAbove, format), [fiAbove, format])
   // Stable between renders, so a year pointed at, which re-renders this, does not make the chart
   // work out its axis and paths again from arrays that only look new.
@@ -689,6 +693,7 @@ function NetWorthChartImpl({
       series: chartSeries,
       xLabels: labels,
       refLines,
+      refCurves,
       markerYears,
       lifeEventMarkers,
       ...todayProp(todayIndex, windowYears),
@@ -698,7 +703,7 @@ function NetWorthChartImpl({
       formatValue,
       tooltip,
     }),
-    [chartSeries, labels, refLines, markerYears, lifeEventMarkers, todayIndex, windowYears, yDomainMax, fiChartMarker, formatValue, tooltip],
+    [chartSeries, labels, refLines, refCurves, markerYears, lifeEventMarkers, todayIndex, windowYears, yDomainMax, fiChartMarker, formatValue, tooltip],
   )
   const sheetLegend = useMemo(
     () => ({
@@ -747,6 +752,7 @@ function NetWorthChartImpl({
         series={chartSeries}
         xLabels={labels}
         refLines={refLines}
+        refCurves={refCurves}
         {...todayProp(todayIndex, windowYears)}
         yDomainMax={yDomainMax}
         formatValue={formatValue}
