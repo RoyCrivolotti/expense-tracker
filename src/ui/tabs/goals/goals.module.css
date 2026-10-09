@@ -301,6 +301,14 @@
   margin: 0 0 0.15rem;
 }
 
+/* The line under the spending says what it comes to on the account, two lines on a phone and three once the figure
+   has more digits, and the stepper below it moves down a line with it, away from a thumb that is tapping it. */
+@media (max-width: 899px) {
+  .fieldHintReserve {
+    min-height: calc(3 * 1.4em);
+  }
+}
+
 .fieldRow {
   display: flex;
   align-items: center;

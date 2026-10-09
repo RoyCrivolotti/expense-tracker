@@ -313,7 +313,7 @@ export function FireFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: 
             Yearly cost of living you would need the portfolio to cover after FI (within the horizon). Add the tax
             on what you withdraw: the plan does not.
           </p>
-          {spendHint ? <p className={styles.fieldHint}>{spendHint}</p> : null}
+          {spendHint ? <p className={`${styles.fieldHint} ${styles.fieldHintReserve}`}>{spendHint}</p> : null}
         </>
       )}
       <RetirementYearsField draft={draft} onChange={onChange} />

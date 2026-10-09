@@ -93,6 +93,12 @@ describe('goals styles', () => {
     expect(spacer?.body).toMatch(/width:\s*var\(--strip-fade\)/)
     expect(strip?.body).toMatch(/scroll-padding-inline-end:\s*var\(--strip-fade\)/)
   })
+
+  it('keeps the stepper under the spending where it is when the line above it grows from two lines to three, on a phone', () => {
+    const css = stylesheet('tabs/goals/goals.module.css')
+
+    expect(css).toMatch(/@media \(max-width: \d+px\) \{[^@]*\.fieldHintReserve\s*\{[^}]*min-height:\s*calc\(3 \* 1\.4em\)/)
+  })
 })
 
 describe('the width at which Goals changes from the phone layout to the wide one', () => {
