@@ -1,4 +1,4 @@
-import { formatPercent } from '../../../../engine'
+import { currencyWord, formatPercent } from '../../../../engine'
 import type { RentVsBuyResult } from '../../../../engine'
 import type { MoneyFormat } from '../../../../engine/money'
 
@@ -45,7 +45,7 @@ export function rentVsBuyCaption({
       : `Compared as if you bought today, at ${money(priceCents)}.`
   const payment =
     paymentCents > 0
-      ? `The loan costs ${money(paymentCents)} a month on the account and stays that, so in these euros it shrinks each year.`
+      ? `The loan costs ${money(paymentCents)} a month on the account and stays that, so in these ${currencyWord(format)} it shrinks each year.`
       : null
   return [
     `Both start with ${money(upfrontCents)} in cash (the down payment and fees) and spend the same in total on housing and investing every month.`,

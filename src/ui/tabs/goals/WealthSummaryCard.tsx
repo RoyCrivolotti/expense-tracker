@@ -334,7 +334,7 @@ function PlanGapHint({ status }: { status: TrackStatus }) {
   return (
     <p style={hintStyle}>
       Months are not counted across a house purchase or a one-off event: the plan&apos;s line steps there, so
-      only the gap in euros is shown.
+      only the gap is shown.
     </p>
   )
 }

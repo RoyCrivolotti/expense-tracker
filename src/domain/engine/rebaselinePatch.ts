@@ -20,7 +20,7 @@
 import type { ContributionStep, GoalScenario, LifeEvent } from '../types'
 import { isCalendarDate, utcDateMs, yearsBetween } from './dates'
 import { housePriceAtPurchaseCents } from './housePrice'
-import { formatCents, formatPercent, type MoneyFormat } from './money'
+import { currencyWord, formatCents, formatPercent, type MoneyFormat } from './money'
 
 export interface RebaselinePatch {
   startInvestedCents: number
@@ -362,7 +362,7 @@ function restatedLines(r: Rebaseline, format: MoneyFormat): string[] {
   if (restated) {
     const money = (pair: [number, number]) => `${formatCents(pair[0], format)} becomes ${formatCents(pair[1], format)}`
     lines.push(
-      `After ${yearsText(restated.years, format)} at ${formatPercent(restated.inflationRate, format)} inflation, the amounts typed in the euros of the old start are counted in the euros of the new one: spending ${money(restated.spend)}, rent ${money(restated.rent)}, fees ${money(restated.fees)}, and event amounts the same way.`,
+      `After ${yearsText(restated.years, format)} at ${formatPercent(restated.inflationRate, format)} inflation, the amounts typed in the ${currencyWord(format)} of the old start are counted in the ${currencyWord(format)} of the new one: spending ${money(restated.spend)}, rent ${money(restated.rent)}, fees ${money(restated.fees)}, and event amounts the same way.`,
     )
   }
   if (housePrice) {

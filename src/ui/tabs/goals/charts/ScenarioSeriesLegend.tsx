@@ -1,5 +1,5 @@
 import type { ReactNode, Ref } from 'react'
-import type { PurchaseYearBreakdown } from '../../../../engine'
+import { currencyWord, type PurchaseYearBreakdown } from '../../../../engine'
 import { LiveLegend, SeriesSwatch, type LiveLegendItem } from '../../../charts/LiveLegend'
 import { formatMoneyShort, formatSignedMoneyShort } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
@@ -118,7 +118,7 @@ export function BreakdownExtras({
       {breakdowns.length > 0 ? (
         <div className={styles.breakdownStack}>
           {breakdownInTodaysMoney ? (
-            <p className={styles.breakdownNote}>The purchase breakdown is in the plan's euros, not in the Nominal values above.</p>
+            <p className={styles.breakdownNote}>The purchase breakdown is in the plan's {currencyWord(format)}, not in the Nominal values above.</p>
           ) : null}
           {breakdowns.map((entry) => (
             <BreakdownRows key={entry.id} {...entry} format={format} />

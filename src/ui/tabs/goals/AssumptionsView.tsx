@@ -1,4 +1,6 @@
 import { useEffect, useRef } from 'react'
+import { currencyWord } from '../../../engine'
+import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import type { ExpenseSettings, WealthAccount, WealthCheckin } from '../../../types'
 import type { ExpenseActions } from '../../actions'
 import { MilestonesSetting } from '../../settings/MilestonesSetting'
@@ -33,6 +35,7 @@ export function AssumptionsView({
   onSettingsChange,
   focus = null,
 }: Props) {
+  const format = useMoneyFormat()
   const accountsCard = useRef<HTMLDivElement>(null)
   useEffect(() => {
     // Not every environment has it (jsdom does not).
@@ -48,7 +51,7 @@ export function AssumptionsView({
       <p className={goalStyles.intro}>
         Progress is measured with your milestones, the accounts each check-in records a balance
         for, the months of spending to hold in cash, and an assumed inflation rate. That rate
-        brings check-ins, the house and the mortgage back to the euros of the plan&apos;s start year, and
+        brings check-ins, the house and the mortgage back to the {currencyWord(format)} of the plan&apos;s start year, and
         counts what you invest each month for less each year.
       </p>
       <p className={goalStyles.chartHint}>Return, growth and housing are per scenario, in Scenarios.</p>

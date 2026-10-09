@@ -10,6 +10,7 @@ import {
   projectNetWorth,
   replayMarket,
   scenarioToParams,
+  currencyWord,
 } from '../../../../engine'
 import { ChartLegend } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
@@ -69,7 +70,7 @@ function SpreadChartImpl({ draft: liveDraft, milestones, nominal = false, runs =
 
   const money = (cents: number) => formatCentsCompact(cents, format)
   const short = (cents: number) => formatMoneyShort(cents, format)
-  const moneyLabel = nominal ? 'euros on your account in each year' : planMoneyLabel(draft.planStartDate, format)
+  const moneyLabel = nominal ? `${currencyWord(format)} on your account in each year` : planMoneyLabel(draft.planStartDate, format)
   const series = useMemo(
     () => spreadSeries({ plan, result, inflationRate, nominal }),
     [plan, result, inflationRate, nominal],

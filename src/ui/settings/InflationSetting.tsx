@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react'
-import { INFLATION_MAX, INFLATION_MIN } from '../../engine'
+import { INFLATION_MAX, INFLATION_MIN, currencyWord } from '../../engine'
 import type { ExpenseSettings } from '../../types'
 import { Card } from '../components/primitives'
 import { PercentStepper } from '../components/PercentStepper'
+import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { useSavedInflation } from '../hooks/useSavedInflation'
+import { planMoneyLabel } from '../tabs/goals/planMoneyLabel'
 import styles from '../tabs/tabs.module.css'
 import goalStyles from '../tabs/goals/goals.module.css'
 
@@ -23,6 +25,8 @@ interface Props {
  */
 export function InflationSetting({ settings, onChange, scrollIntoView = false }: Props) {
   const { draft, error, step } = useSavedInflation(settings.assumedInflation, onChange)
+  const format = useMoneyFormat()
+  const word = currencyWord(format)
   const card = useRef<HTMLDivElement>(null)
   useEffect(() => {
     // Not every environment has it (jsdom does not).
@@ -50,9 +54,9 @@ export function InflationSetting({ settings, onChange, scrollIntoView = false }:
             </p>
           ) : null}
           <p className={styles.settingHint}>
-            Goals counts in the euros of each plan&apos;s start date (2026 euros, say), so a euro there is
-            worth what it bought then. Check-ins, the house and the mortgage are brought back to those
-            euros at this rate. What you invest each month is what you send, so it counts for less each
+            Goals counts in the {word} of each plan&apos;s start date ({planMoneyLabel('2026-01-01', format)}, say), so an
+            amount there is worth what it bought then. Check-ins, the house and the mortgage are brought back to those{' '}
+            {word} at this rate. What you invest each month is what you send, so it counts for less each
             year at this rate, and the Nominal view inflates the plan by it to show what your account
             will read.
           </p>
