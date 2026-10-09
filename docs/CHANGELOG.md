@@ -2,6 +2,14 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (restarting a plan counts it in the new year's euros)
+
+- **Spending, rent, fees and one-off amounts are brought forward.** Re-baselining moves the start to today but left the amounts typed in the old start's euros as they were, so after 3 years at 2% inflation 30.000 € of spending still read 30.000 € where it is 31.836 €. The FI target came out about 6% low, and in the sample plan without its house someone exactly on plan was told FI is a year earlier than the plan says. They are now multiplied by the inflation of the years that passed, and the sheet says what each became.
+- **A house not yet bought is priced by houses, not by inflation.** A 300.000 € house with prices up 3% a year reads 327.818 € after 3 years.
+- **A house already bought is held as owned, with what is still owed.** It used to restart as a 300.000 € house with a full 25-year loan at 80% of that price. In the sample plan, restarted 2 years after the purchase, it is worth 403.175 € with 287.186 € left over 23 years, the loan's own schedule, which the sheet says is assumed.
+- **The dotted "from today" line is drawn in the plan's money.** It was plotted as if the check-in's euros were the plan start's.
+- **A mortgage term can be a part year**, and a number or percent field no longer rewrites a value you only tabbed through (a 22,5 year term became 23).
+
 ## October 2026 (milestones are dated on the account)
 
 - **A milestone is reached when the account shows it.** A milestone is a number of euros you want to see on the account, but it was compared with the plan's line in the euros of the plan start, which are worth more than the euros of a later year, so every date came out later than the account would show it, by years for a far one. It is now compared with the line grown by the inflation since the start. In the demo plan, 1,5M moves from Nov 2031 to Aug 2030, 2,5M from Feb 2039 to Apr 2036 and 5M from Mar 2049 to Jan 2044.
