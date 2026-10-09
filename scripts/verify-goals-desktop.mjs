@@ -11,7 +11,8 @@
  * how the milestone amount and the cash reserve read what is typed (`ONLY=settings-numbers`),
  * the hero chart full screen on a phone, upright and on its side (`ONLY=hero-sheet`),
  * its readout floated over the chart and dragged about it (`ONLY=hero-sheet-float`),
- * and the spread card, across the page under the columns and with a table that fits at 200% text on a phone (`ONLY=spread-card`).
+ * the spread card, across the page under the columns and with a table that fits at 200% text on a phone (`ONLY=spread-card`),
+ * and four layout faults of the later cards (`ONLY=layout-faults`).
  *
  * jsdom lays nothing out, so the unit tests cannot say any of this. It needs a browser and takes
  * a few minutes, so it is not part of `npm run verify`; CI runs it in its own job
@@ -3432,6 +3433,97 @@ async function checkSpreadCard(browser, engine) {
 }
 
 /**
+ * Four layout faults of the stack's later cards, each found with real text and a real pointer (check group ly):
+ * the month a change in the monthly investing starts in was cut to "from Ma..." beside its Edit button in a half
+ * column at 1024 to 1366px wide; the amounts in the gap split overflowed their box with the text at 200% on a
+ * 360px phone; the last chip of the Chart tab was focused with only a sliver of it on screen when arrowed to; and
+ * the stepper under the spending moved down a line away from a thumb when the figure above it gained a digit.
+ */
+async function checkLayoutFaults(browser, engine) {
+  for (const size of [{ name: '1280x800', width: 1280, height: 800 }, { name: '1024x768', width: 1024, height: 768 }]) {
+    const { page, context } = await openPlan(browser, size, { scheme: 'light' })
+    const where = `${engine} wide ${size.name}`
+    await page.getByRole('button', { name: 'All inputs' }).click()
+    await page.getByRole('region', { name: 'All inputs' }).waitFor()
+    await page.getByRole('button', { name: /Add a change/ }).click()
+    const amount = page.locator('input[aria-label^="Monthly amount from then"]').locator('visible=true').first()
+    await amount.fill('12500')
+    await amount.press('Tab')
+    await page.getByRole('button', { name: 'Add', exact: true }).click()
+    await settled(page)
+    const labels = await page.evaluate(() =>
+      [...document.querySelectorAll('[class*="lifeEventStepLabel"]')].map((el) => ({ text: el.textContent, scroll: el.scrollWidth, client: el.clientWidth })),
+    )
+    const cut = labels.filter((l) => l.scroll > l.client + 1)
+    check(where, '(ly) the month a change in the monthly investing starts in is not cut off', labels.length >= 2 && cut.length === 0, JSON.stringify(labels))
+    await context.close()
+  }
+
+  {
+    const size = { width: 360, height: 800 }
+    const context = await browser.newContext({ viewport: size, screen: size, deviceScaleFactor: 1, isMobile: true, hasTouch: true, colorScheme: 'light', reducedMotion: 'reduce' })
+    const page = await context.newPage()
+    page.on('pageerror', (e) => failures.push(`page error: ${e.message}`))
+    await page.addInitScript(() => localStorage.setItem('exp-onboarding-skipped', '1'))
+    await page.goto(`${BASE}/`)
+    await page.waitForSelector('text=Recent activity', { timeout: 20000 })
+    await page.getByRole('button', { name: /Goals/ }).last().click()
+    await page.getByRole('tablist', { name: 'Goals view' }).waitFor({ timeout: 15000 })
+    await page.addStyleTag({ content: 'html { font-size: 200%; }' })
+    await page.getByRole('tab', { name: 'Progress', exact: true }).tap()
+    await page.locator('[class*="gapRows"]').first().waitFor({ timeout: 15000 })
+    await settled(page)
+    const out = await page.evaluate(() => {
+      const ul = document.querySelector('[class*="gapRows"]')
+      const box = ul.parentElement.getBoundingClientRect()
+      return [...ul.querySelectorAll('li')].map((li) => Math.round(li.querySelector('[class*="gapAmount"]').getBoundingClientRect().right - box.right))
+    })
+    check(`${engine} phone 360x800 text at 200%`, '(ly) the amounts in the gap split stay inside their box', out.length > 0 && out.every((n) => n <= 0), `past the box by ${out.join(', ')}px`)
+    await context.close()
+  }
+
+  for (const width of [360, 375]) {
+    const { page, context } = await openChartTab(browser, { width, height: 812 })
+    await page.getByRole('radio', { name: 'Compare', exact: true }).focus()
+    for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowRight')
+    await settled(page)
+    const seen = await page.evaluate(() => {
+      const el = document.activeElement
+      const group = el.closest('[role="radiogroup"]').getBoundingClientRect()
+      const r = el.getBoundingClientRect()
+      return { name: el.textContent, share: Math.max(0, Math.min(r.right, group.right) - Math.max(r.left, group.left)) / r.width }
+    })
+    check(`${engine} phone ${width}px`, '(ly) the chip arrowed to is wholly in view', seen.name === 'Spread' && seen.share > 0.98, JSON.stringify(seen))
+    await context.close()
+  }
+
+  {
+    const { page, context } = await openPhone(browser, { width: 375, height: 812 })
+    const spend = page.locator('input[aria-label^="Annual spend at FI"]').first()
+    const details = spend.locator('xpath=ancestor::details[1]')
+    if (!(await details.evaluate((d) => d.open))) {
+      await details.locator('summary').click()
+      await settled(page)
+    }
+    const years = page.locator('input[aria-label="Years the money must last"]').first()
+    const plus = page.getByRole('button', { name: 'Increase Years the money must last' })
+    await years.fill('33')
+    await years.press('Tab')
+    await settled(page)
+    await plus.evaluate((el) => window.scrollBy(0, el.getBoundingClientRect().top - 420))
+    await settled(page)
+    const tops = []
+    for (let k = 0; k < 5; k++) {
+      await touchTap(page, plus)
+      await page.waitForTimeout(250)
+      tops.push(Math.round((await plus.boundingBox()).y))
+    }
+    check(`${engine} phone 375x812`, '(ly) the + under the spending does not move down when the line above it gains a digit', new Set(tops).size === 1, `the + was at ${tops.join(', ')}px after each tap from 33`)
+    await context.close()
+  }
+}
+
+/**
  * Every section of the default run, in the order it runs. Each opens its own browser contexts,
  * so any subset can run alone, which `SHARD` relies on. A new section goes in this list or it
  * does not run in CI. `weight` is roughly the seconds the section takes on a CI runner; it only
@@ -3467,6 +3559,7 @@ const SECTIONS = [
   { name: 'HeroSheet', weight: 11, run: checkHeroSheet },
   { name: 'HeroSheetFloat', weight: 10, run: checkHeroSheetFloat },
   { name: 'SpreadCard', weight: 8, run: checkSpreadCard },
+  { name: 'LayoutFaults', weight: 14, run: checkLayoutFaults },
 ]
 
 async function main() {
@@ -3537,6 +3630,10 @@ async function main() {
         }
         if (process.env.ONLY === 'settings-numbers') {
           await checkSettingsNumbers(browser, engine)
+          continue
+        }
+        if (process.env.ONLY === 'layout-faults') {
+          await checkLayoutFaults(browser, engine)
           continue
         }
         if (process.env.ONLY === 'spread-card') {
