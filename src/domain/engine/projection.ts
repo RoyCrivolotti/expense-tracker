@@ -2,9 +2,10 @@
  * Year-by-year wealth projection engine — reproduces the private workbook’s path models.
  * All money in integer cents; rates as fractions (0.07 = 7% real).
  */
-import { annualContributionCents, type ScheduleStep } from './contributionSchedule'
+import { type ScheduleStep } from './contributionSchedule'
 import { pmt } from './finance'
 import { housePriceAtPurchaseCents, realHouseGrowth } from './housePrice'
+import { purchaseWithdrawalCents, stepInvested, yearFlows } from './investedStep'
 import type { LifeEvent } from '../types'
 
 export interface YearPoint {
@@ -100,19 +101,6 @@ function mortgageBalanceAtYear(
   return Math.max(0, Math.round(balance / deflator))
 }
 
-function lifeEventImpact(events: LifeEvent[], year: number): number {
-  let total = 0
-  for (const ev of events) {
-    if (ev.year === year) total += ev.amountCents
-  }
-  return total
-}
-
-function purchaseWithdrawalCents(params: ProjectionParams): number {
-  const down = Math.round(housePriceAtPurchaseCents(params) * params.downPaymentFraction)
-  return down + params.transactionCostsCents
-}
-
 export interface PurchaseYearBreakdown {
   year: number
   startInvestedCents: number
@@ -174,32 +162,16 @@ export function projectNetWorth(params: ProjectionParams): YearPoint[] {
   let invested = params.startInvestedCents
 
   for (let year = 0; year <= params.horizonYears; year++) {
-    const contrib = annualContributionCents(
-      params.monthlyContributionCents,
-      params.contributionSteps ?? [],
-      year,
-      params.inflationRate,
-    )
+    const flows = yearFlows(params, year)
 
     let preEvent = invested
     if (year > 0) {
       // The year's payments land at its end and earn nothing until the next year, a little
       // cautious against paying each month (up to about 3% over thirty years at 7%). The plan
       // keeps that convention on purpose, and the glossary says so.
-      invested = Math.round(
-        invested * (1 + params.expectedRealReturn) + contrib,
-      )
-      preEvent = invested
-      if (
-        params.housePurchaseYear !== null &&
-        params.housePurchaseYear > 0 &&
-        year === params.housePurchaseYear
-      ) {
-        invested -= purchaseWithdrawalCents(params)
-      }
-      if (params.lifeEvents) {
-        invested += lifeEventImpact(params.lifeEvents, year)
-      }
+      const step = stepInvested(invested, 1 + params.expectedRealReturn, flows)
+      preEvent = step.pre
+      invested = step.post
     }
 
     const houseEquity = houseEquityAtYear(
@@ -225,7 +197,7 @@ export function projectNetWorth(params: ProjectionParams): YearPoint[] {
       houseEquityCents: houseEquity,
       mortgageBalanceCents: mortgageBalance,
       netWorthCents: invested + houseEquity - mortgageBalance,
-      annualContributionCents: contrib,
+      annualContributionCents: flows.contributionCents,
     })
   }
 
