@@ -15,7 +15,7 @@ export function rentVsBuyMarkers(
   if (ownCheaper && ownCheaper.fromYear <= lastYear) {
     markers.push({
       index: ownCheaper.fromYear,
-      label: ownCheaper.stays ? 'Owning cheaper from here' : 'Owning first cheaper',
+      label: ownCheaper.stays ? 'Owning costs less a month' : 'Owning first costs less a month',
       title: ownCheaper.stays
         ? 'From here, owning costs the buyer less a month than renting costs the renter, for the rest of the chart.'
         : 'From here, owning first costs the buyer less a month than renting costs the renter, though not for the rest of the chart.',

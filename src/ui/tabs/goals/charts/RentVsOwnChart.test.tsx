@@ -82,7 +82,7 @@ describe('RentVsOwnChart', () => {
   it('names the loan being paid off on the chart, and when owning gets cheaper than renting', () => {
     render(<RentVsOwnChart draft={draftOf({ housePriceCents: 30_000_000, rentMonthlyCents: 150_000, mortgageTermYears: 20 })} />)
     expect(screen.getByText('Loan paid off')).toBeInTheDocument()
-    expect(screen.getByText(/Owning (first )?cheaper/)).toBeInTheDocument()
+    expect(screen.getByText(/^Owning (first )?costs less a month$/)).toBeInTheDocument()
   })
 
   it('says what each side holds and invests a month when a year is picked', () => {
