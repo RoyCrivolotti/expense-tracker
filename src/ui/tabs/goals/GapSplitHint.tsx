@@ -37,10 +37,7 @@ function Rows({ split, format }: { split: GapSplit; format: MoneyFormat }) {
       {gapRows(split).map((row) => (
         <li key={row.key} className={`${styles.gapRow} ${row.muted ? styles.gapRowMuted : ''}`}>
           <span>{row.label}</span>
-          <span
-            className={styles.gapAmount}
-            style={row.muted ? undefined : { color: row.euros > 0 ? 'var(--exp-success)' : 'var(--exp-danger)' }}
-          >
+          <span className={`${styles.gapAmount} ${row.muted ? '' : row.euros > 0 ? styles.gapAmountUp : styles.gapAmountDown}`}>
             {signed(row.euros, format)}
           </span>
         </li>

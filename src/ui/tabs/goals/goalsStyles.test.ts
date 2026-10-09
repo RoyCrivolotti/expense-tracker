@@ -37,6 +37,20 @@ describe('goals styles', () => {
     expect(forced).toMatch(new RegExp(`\\${selector}\\s*\\{[^}]*border:\\s*2px solid Highlight`))
   })
 
+  it('draws the amounts in the gap split in the success and danger colours', () => {
+    const progress = rules('tabs/goals/progress.module.css')
+    const colour = (selector: string) => /(?:^|;|\s)color:\s*([^;]+);/.exec(progress.find((r) => r.selector === selector)?.body ?? '')?.[1]?.trim()
+
+    expect(colour('.gapAmountUp')).toBe('var(--exp-success)')
+    expect(colour('.gapAmountDown')).toBe('var(--exp-danger)')
+  })
+
+  it('lets a row of the gap split wrap, so an amount keeps its width at large text and stays inside its box', () => {
+    const row = rules('tabs/goals/progress.module.css').find((r) => r.selector === '.gapRow')
+
+    expect(row?.body).toMatch(/flex-wrap:\s*wrap/)
+  })
+
   it('lets a segment of the tall bar reach across the bar, which its own overflow would clip', () => {
     const tall = rules('components/SegmentedControl.module.css')
     const segment = tall.find((r) => r.selector === '.tall .seg')
