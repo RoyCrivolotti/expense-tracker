@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { samplePlan, SAMPLE_INFLATION } from '../../testing/samplePlan'
-import { measurePlanDistance, planDistance, withinOneMonth } from './planDistance'
-import { planLineOf, planValueAt, stretchAround } from './planLine'
+import { measurePlanDistance, planDistance } from './planDistance'
+import { monthBand, nearStep, readAgainst } from './planStepWindow'
+import { planLineOf, planValueAt, planValueBefore, stretchAround } from './planLine'
 import { projectNetWorth } from './projection'
 import { scenarioToParams } from './scenarioProjection'
 
@@ -155,38 +156,114 @@ describe('measurePlanDistance against a brute-force walk of the line', () => {
   })
 })
 
-describe('withinOneMonth', () => {
+describe('measurePlanDistance across a step too small to end a stretch', () => {
+  // 120 a year, with a step of +15 (under three months of that rise) on the anniversary of year 2.
+  const line = planLineOf([
+    { year: 0, investedCents: 1000 },
+    { year: 1, investedCents: 1120 },
+    { year: 2, investedCents: 1255, preEventInvestedCents: 1240 },
+    { year: 3, investedCents: 1375 },
+  ])
+
+  it('counts months ahead to a balance the step jumped over, as the day of the step', () => {
+    // 1.245 is between 1.240 (before the step) and 1.255 (after it): the line has it on the anniversary.
+    const result = measurePlanDistance(line, 1.5, 1245)
+    expect(result.kind).toBe('along')
+    if (result.kind === 'along') expect(result.atOffset).toBe(2)
+  })
+
+  it('counts months behind from a balance the step jumped over, as the day of the step', () => {
+    const result = measurePlanDistance(line, 2.5, 1245)
+    expect(result.kind).toBe('along')
+    if (result.kind === 'along') expect(result.atOffset).toBe(2)
+  })
+
+  it('still finds a balance on the way, either side of it', () => {
+    expect(measurePlanDistance(line, 1.5, 1200)).toMatchObject({ kind: 'along' })
+    expect(measurePlanDistance(line, 2.5, 1300)).toMatchObject({ kind: 'along' })
+  })
+})
+
+describe('monthBand', () => {
   const line = planLineOf(project())
 
-  it('holds for someone exactly on plan at any time, a week before a payment included', () => {
-    for (const t of [0, 0.01, 3.3, 8 - WEEK, 8, 8 + WEEK, 20, 29.99]) {
-      expect(withinOneMonth(line, t, planValueAt(line, t)!)).toBe(true)
+  it('is a month of what the line rises by in the year the date is in', () => {
+    const points = project()
+    expect(monthBand(line, 3.4)).toBeCloseTo((points[4]!.preEventInvestedCents - points[3]!.investedCents) / 12, 0)
+  })
+
+  it('has a floor, so a line that does not move still has a few cents of room for rounding', () => {
+    expect(monthBand(planLineOf([{ year: 0, investedCents: 5000 }, { year: 1, investedCents: 5000 }]), 0.5)).toBe(100)
+  })
+
+  it('reads the last year at the last day, where there is no year after it', () => {
+    expect(monthBand(line, 30)).toBeGreaterThan(0)
+  })
+})
+
+describe('readAgainst', () => {
+  const line = planLineOf(project())
+
+  it('is symmetric: a balance 0,9 months either side of the line is on track just after a stretch begins, as anywhere', () => {
+    const t = 8 + 0.12
+    const here = planValueAt(line, t)!
+    const band = monthBand(line, t)
+    expect(readAgainst(line, t, Math.round(here - band * 0.9))!.onTrack).toBe(true)
+    expect(readAgainst(line, t, Math.round(here + band * 0.9))!.onTrack).toBe(true)
+    expect(readAgainst(line, t, Math.round(here - band * 1.2))!.onTrack).toBe(false)
+  })
+
+  it('reads a balance on plan as on track everywhere along the line', () => {
+    for (const t of [0, 0.3, 3, 7.95, 8, 8.05, 20, 29.9, 30]) {
+      expect(readAgainst(line, t, planValueAt(line, t)!)).toMatchObject({ onTrack: true, nearStep: null })
     }
   })
 
-  it('holds for a balance the line has within a month either side, and not beyond', () => {
-    const t = 12
-    const inAMonth = planValueAt(line, t + 1 / 12)!
-    const afterTwo = planValueAt(line, t + 2 / 12)!
-    expect(withinOneMonth(line, t, inAMonth)).toBe(true)
-    expect(withinOneMonth(line, t, afterTwo)).toBe(false)
-    expect(withinOneMonth(line, t, planValueAt(line, t - 1 / 12)!)).toBe(true)
-    expect(withinOneMonth(line, t, planValueAt(line, t - 2 / 12)!)).toBe(false)
+  it('reads a purchase made a fortnight early against the plan with it made', () => {
+    const t = 8 - 14 / 365
+    const made = nearStep(line, t)!
+    expect(made).toMatchObject({ anniversary: 8, counted: 'made' })
+    const result = readAgainst(line, t, made.alternate)!
+    expect(result.nearStep).toMatchObject({ anniversary: 8, counted: 'made' })
+    expect(result.reference).toBe(made.alternate)
+    expect(result.onTrack).toBe(true)
   })
 
-  it('does not reach across the payment for the month after it, or the month before it', () => {
-    // A week before the payment the month ahead on the line is on the far side of the drop.
-    const t = 8 - WEEK
-    const reached = planValueAt(line, 8 - 1 / 365)!
-    expect(withinOneMonth(line, t, reached)).toBe(true)
-    // 5.000 euros more is not within a month of anything the line does before the step.
-    expect(withinOneMonth(line, t, reached + 500_000)).toBe(false)
-    // And a week after it, the balance the line held just before the drop is not "on track".
-    expect(withinOneMonth(line, 8 + WEEK, reached)).toBe(false)
+  it('reads a purchase a fortnight late, still not made, against the plan without it', () => {
+    const t = 8 + 14 / 365
+    const notYet = nearStep(line, t)!
+    expect(notYet).toMatchObject({ anniversary: 8, counted: 'not-made' })
+    const result = readAgainst(line, t, notYet.alternate)!
+    expect(result.nearStep).toMatchObject({ counted: 'not-made' })
+    expect(result.onTrack).toBe(true)
   })
 
-  it('has no answer outside the plan', () => {
-    expect(withinOneMonth(line, -1, 1)).toBe(false)
-    expect(withinOneMonth(line, 31, 1)).toBe(false)
+  it('reads a check-in on the anniversary that has not paid yet as on track too', () => {
+    const before = planValueBefore(line, 8)!
+    const result = readAgainst(line, 8, before)!
+    expect(result.nearStep).toMatchObject({ anniversary: 8, counted: 'not-made' })
+    expect(result.onTrack).toBe(true)
+  })
+
+  it('does not stretch the window past a month, or to a step that is too small to end a stretch', () => {
+    expect(nearStep(line, 8 - 45 / 365)).toBeNull()
+    expect(nearStep(line, 8 + 45 / 365)).toBeNull()
+    const bonus = planLineOf(project({ housePurchaseYear: null, lifeEvents: [{ year: 5, amountCents: 200_000, label: 'Bonus' }] }))
+    expect(nearStep(bonus, 5 - 7 / 365)).toBeNull()
+  })
+
+  it('keeps the plain reading for a balance that is on neither path', () => {
+    const t = 8 - 14 / 365
+    const main = planValueAt(line, t)!
+    // 10.000 euros under the line, more than a month of what it rises by (about 1.500).
+    const result = readAgainst(line, t, main - 1_000_000)!
+    expect(result.nearStep).toBeNull()
+    expect(result.reference).toBe(main)
+    expect(result.onTrack).toBe(false)
+  })
+
+  it('has nothing for a day outside the plan', () => {
+    expect(readAgainst(line, -1, 5)).toBeNull()
+    expect(readAgainst(line, 31, 5)).toBeNull()
   })
 })

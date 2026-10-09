@@ -6,8 +6,9 @@
  *   - An on/off-track status: delta in € and the months it is along the plan's line.
  */
 import { dateAtYears, yearsBetween } from './dates'
-import { measurePlanDistance, withinOneMonth } from './planDistance'
+import { measurePlanDistance } from './planDistance'
 import { planLineOf, planValueAt } from './planLine'
+import { readAgainst } from './planStepWindow'
 import { projectNetWorth } from './projection'
 import { scenarioToParams } from './scenarioProjection'
 import type { GoalScenario, Milestone, WealthAccount, WealthCheckin } from '../types'
@@ -38,7 +39,16 @@ export interface TrackStatus {
   monthsReason: 'across-event' | 'outside-line' | null
   /** Within a month of the plan either way, along the line; what the dashboard and Progress call on track. */
   onTrack: boolean
+  /**
+   * Set when the check-in is within a month of an anniversary with a house payment or event and its
+   * balance is on the other side of the step from the line: `projectedInvestedCents` is then the plan
+   * with the step `made` (the check-in is before it) or `not-made` (after it), not the line on the day.
+   */
+  nearStep: { date: string; counted: 'made' | 'not-made' } | null
 }
+
+/** Against the other side of a step there is no stretch to count months along. */
+const ACROSS_STEP = { kind: 'unmeasured', reason: 'across-event' } as const
 
 /** What a status is called: on track, or ahead or behind by the sign of the gap in money. */
 export function trackVerdict(status: Pick<TrackStatus, 'onTrack' | 'deltaCents'>): 'on-track' | 'ahead' | 'behind' {
@@ -54,10 +64,15 @@ export function trackVerdict(status: Pick<TrackStatus, 'onTrack' | 'deltaCents'>
  * missing or malformed.
  */
 export function yearOffsetFromDate(planStartDate: string, targetDate: string): number | null {
-  if (!planStartDate?.match(/^\d{4}-\d{2}-\d{2}$/) || !targetDate?.match(/^\d{4}-\d{2}-\d{2}$/)) {
-    return null
-  }
+  if (!isCalendarDate(planStartDate) || !isCalendarDate(targetDate)) return null
   return yearsBetween(planStartDate, targetDate)
+}
+
+/** A `YYYY-MM-DD` that is a day on the calendar: a date that merely looks like one would roll over into another. */
+function isCalendarDate(value: string): boolean {
+  if (!value?.match(/^\d{4}-\d{2}-\d{2}$/)) return false
+  const parsed = new Date(`${value}T00:00:00Z`)
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
 }
 
 /** The date a fractional year offset from the plan start falls on, counted as `yearOffsetFromDate` counts. */
@@ -179,17 +194,21 @@ export function trackStatus(
   const offset = yearOffsetFromDate(scenario.planStartDate, checkin.checkinDate)
   if (offset === null) return null
   const line = planLineOf(projectNetWorth(scenarioToParams(scenario, inflationRate)))
-  const projected = planValueAt(line, offset)
-  if (projected === null) return null
-
   const actualInvestedCents = checkinInvestedCents(checkin, accounts)
   const actualRealInvestedCents = nominalToReal(actualInvestedCents, scenario.planStartDate, checkin.checkinDate, inflationRate)
+  // Within a month of a step the balance is read against whichever side of it it is on: a house
+  // bought a fortnight early or late is not 70.000 euros ahead or behind.
+  const reading = readAgainst(line, offset, actualRealInvestedCents)
+  if (reading === null) return null
+  const projected = reading.reference
   const deltaCents = actualRealInvestedCents - projected
 
   // A gap in money is read along the plan's line, not divided by a monthly amount: that way it
   // counts the plan's own growth, does not jump where the amount changes, and still means
   // something during a pause. Across a house payment or event there are no months to read.
-  const measure = measurePlanDistance(line, offset, actualRealInvestedCents)
+  const measure = reading.nearStep
+    ? ACROSS_STEP
+    : measurePlanDistance(line, offset, actualRealInvestedCents)
   const along = measure.kind === 'along' ? measure : null
 
   return {
@@ -198,9 +217,12 @@ export function trackStatus(
     actualRealInvestedCents,
     deltaCents,
     deltaMonths: along ? Math.round(along.months) || 0 : null,
-    monthsReason: measure.kind === 'unmeasured' ? measure.reason : null,
+    monthsReason: measure.kind === 'unmeasured' && !reading.onTrack ? measure.reason : null,
     planDate: along ? dateAtOffset(scenario.planStartDate, along.atOffset) : null,
-    onTrack: withinOneMonth(line, offset, actualRealInvestedCents),
+    onTrack: reading.onTrack,
+    nearStep: reading.nearStep
+      ? { date: dateAtOffset(scenario.planStartDate, reading.nearStep.anniversary), counted: reading.nearStep.counted }
+      : null,
   }
 }
 

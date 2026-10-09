@@ -134,3 +134,31 @@ describe('planValueBefore', () => {
     expect(planValueBefore(line, 31)).toBeNull()
   })
 })
+
+describe('stretchAround and small steps', () => {
+  // A line that rises 120 a year (10 a month) with a step of the given size on the anniversary of year 2.
+  const withStep = (step: number) =>
+    planLineOf([
+      { year: 0, investedCents: 1000 },
+      { year: 1, investedCents: 1120 },
+      { year: 2, investedCents: 1240 + step, preEventInvestedCents: 1240 },
+      { year: 3, investedCents: 1360 + step },
+    ])
+
+  it('does not end a stretch at a step smaller than three months of the line\u2019s rise', () => {
+    // A 29 step is under 3 x 10, a bonus or a gift that months can still be counted across.
+    expect(stretchAround(withStep(29), 0.5)).toEqual({ from: 0, to: 3 })
+    expect(stretchAround(withStep(-29), 0.5)).toEqual({ from: 0, to: 3 })
+  })
+
+  it('ends one at a step of three months of the rise or more', () => {
+    expect(stretchAround(withStep(30), 0.5)).toEqual({ from: 0, to: 2 })
+    expect(stretchAround(withStep(-300), 2.5)).toEqual({ from: 2, to: 3 })
+  })
+
+  it('counts a 2.000 euro bonus as part of the stretch it is in, and a house payment as the end of it', () => {
+    const bonus = planLineOf(project({ housePurchaseYear: null, lifeEvents: [{ year: 5, amountCents: 200_000, label: 'Bonus' }] }))
+    expect(stretchAround(bonus, 3)).toEqual({ from: 0, to: 30 })
+    expect(stretchAround(planLineOf(project()), 3)).toEqual({ from: 0, to: 8 })
+  })
+})

@@ -286,12 +286,23 @@ function MonthsHint({ months, planDate }: { months: number; planDate: string }) 
   )
 }
 
+/** Said when the balance is read against the other side of a step within a month of it. */
+function NearStepHint({ nearStep }: { nearStep: NonNullable<TrackStatus['nearStep']> }) {
+  return (
+    <p style={hintStyle}>
+      The plan&apos;s house purchase or one-off event falls on {formatCheckinDate(nearStep.date)}, within a month of
+      this check-in, so your balance is read against the plan with it {nearStep.counted === 'made' ? 'already made' : 'not yet made'}.
+    </p>
+  )
+}
+
 /**
  * How far along the line the balance is, when it is not on track: in months and the month the line
  * has it, or, where the line only has it on the other side of a house purchase or a one-off event,
  * why there are no months.
  */
 function PlanGapHint({ status }: { status: TrackStatus }) {
+  if (status.nearStep) return <NearStepHint nearStep={status.nearStep} />
   if (status.onTrack) return null
   if (status.deltaMonths && status.planDate) return <MonthsHint months={status.deltaMonths} planDate={status.planDate} />
   if (status.monthsReason !== 'across-event') return null

@@ -62,4 +62,12 @@ describe('the plan axis', () => {
     expect(yearOffsetFromDate('2026-01-01', 'soon')).toBeNull()
     expect(yearOffsetFromDate('', '2031-01-01')).toBeNull()
   })
+
+  it('has no offset for a date that looks like one but is not on the calendar', () => {
+    // These would roll over into some other day and give a number that is wrong without looking it.
+    expect(yearOffsetFromDate('2026-01-01', '2026-13-45')).toBeNull()
+    expect(yearOffsetFromDate('2026-02-30', '2027-01-01')).toBeNull()
+    expect(yearOffsetFromDate('2026-01-01', '2027-02-29')).toBeNull()
+    expect(yearOffsetFromDate('2028-02-29', '2029-03-01')).toBe(1)
+  })
 })

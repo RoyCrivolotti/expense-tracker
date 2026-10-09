@@ -13,7 +13,7 @@
  * of the gap: ahead looks for the first time the line gets to the balance, behind for the last time
  * it was at it.
  */
-import { planLineOf, planValueAt, planValueBefore, stretchAround, type PlanLine, type PlanPoint, type PlanSegment } from './planLine'
+import { planLineOf, stretchAround, type PlanLine, type PlanPoint, type PlanSegment } from './planLine'
 
 export interface PlanDistance {
   /** Positive when the balance is ahead of the plan, negative when behind. */
@@ -43,25 +43,35 @@ function along(offset: number, t: number): PlanMeasure {
   return { kind: 'along', months: (t - offset) * 12, atOffset: t }
 }
 
-/** The first time at or after `offset`, inside the stretch, that the line gets up to `balance`. */
+/**
+ * The first time at or after `offset`, inside the stretch, that the line gets up to `balance`. A
+ * step too small to end the stretch can jump over the balance, which the line then has on the day of
+ * the step.
+ */
 function firstReaching(line: PlanLine, offset: number, to: number, balance: number): number | null {
   for (let i = Math.floor(offset); i < to; i++) {
     const segment = line.segments[i]
     if (!segment || segment.end < balance) continue
     const from = Math.max(segment.from, offset)
     const start = onSegment(segment, from)
+    if (start >= balance) return from
     return from + ((balance - start) / (segment.end - start)) * (segment.to - from)
   }
   return null
 }
 
-/** The last time at or before `offset`, inside the stretch, that the line was down at `balance`. */
+/**
+ * The last time at or before `offset`, inside the stretch, that the line was down at `balance`. A
+ * step too small to end the stretch can jump over the balance, which the line then left on the day of
+ * the step.
+ */
 function lastAt(line: PlanLine, offset: number, from: number, balance: number): number | null {
   for (let i = Math.floor(offset); i >= from; i--) {
     const segment = line.segments[i]
     if (!segment || segment.start > balance) continue
     const to = Math.min(segment.to, offset)
     const end = onSegment(segment, to)
+    if (end <= balance) return segment.to
     return segment.from + ((balance - segment.start) / (end - segment.start)) * (to - segment.from)
   }
   return null
@@ -102,23 +112,4 @@ export function planDistance(
 ): PlanDistance | null {
   const result = measurePlanDistance('segments' in line ? line : planLineOf(line), offset, balanceCents)
   return result.kind === 'along' ? { months: result.months, atOffset: result.atOffset } : null
-}
-
-/** One month, in years: what "on track" means along the line. */
-const ONE_MONTH = 1 / 12
-
-/**
- * Whether the balance is within a month of the plan either way: between what the line holds a month
- * before the date and a month after it, kept to the stretch the date is in. A step is not a
- * month of anything, so near a purchase this reads the balance against the line on its own side of
- * it, and it still answers where there are no months to count.
- */
-export function withinOneMonth(line: PlanLine, offset: number, balanceCents: number): boolean {
-  const here = planValueAt(line, offset)
-  if (here === null) return false
-  const stretch = stretchAround(line, offset)
-  const low = planValueAt(line, Math.max(stretch.from, offset - ONE_MONTH))
-  const high = planValueBefore(line, Math.min(stretch.to, offset + ONE_MONTH))
-  if (low === null || high === null) return false
-  return balanceCents >= Math.min(low, here) && balanceCents <= Math.max(high, here)
 }

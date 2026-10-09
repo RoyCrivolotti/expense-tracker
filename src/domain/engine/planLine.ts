@@ -67,15 +67,28 @@ export function planValueAt(line: PlanLine, years: number): number | null {
   return Math.round(segment.start + (years - segment.from) * (segment.end - segment.start))
 }
 
+/** How many months of the year's own rise a step has to be before it ends a stretch. */
+const BOUNDARY_MONTHS = 3
+
+/**
+ * Whether the step on the end of a segment ends a stretch. Counting months across a step is off by
+ * the size of the step in months of the line's rise, so a bonus or a gift of a month or two of it can
+ * be counted across and a house payment cannot. The chart draws every step, whatever its size.
+ */
+export function isBoundary(segment: PlanSegment): boolean {
+  const step = Math.abs(segment.after - segment.end)
+  return step >= Math.max(1, (BOUNDARY_MONTHS * Math.abs(segment.end - segment.start)) / 12)
+}
+
 function stepsAt(line: PlanLine, anniversary: number): boolean {
   const segment = line.segments[anniversary - 1]
-  return segment !== undefined && segment.end !== segment.after
+  return segment !== undefined && isBoundary(segment)
 }
 
 /**
- * The stretch of the line without a step that has `years` in it: from the anniversary where it
- * begins (that day's value is already after the step) to the next anniversary that steps, or the
- * last year. Months along the line are only measured inside one.
+ * The stretch of the line without a step that ends it that has `years` in it: from the anniversary
+ * where it begins (that day's value is already after the step) to the next anniversary with one, or
+ * the last year. Months along the line are only measured inside one.
  */
 export function stretchAround(line: PlanLine, years: number): { from: number; to: number } {
   let from = Math.floor(years)

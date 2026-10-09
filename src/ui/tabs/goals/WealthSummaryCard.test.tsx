@@ -4,6 +4,7 @@ import { WealthSummaryCard } from './WealthSummaryCard'
 import { planValueAtDate, realToNominal, DEFAULT_INFLATION_RATE } from '../../../engine'
 import { makeScenario, makeTransaction } from '../../../testing/factories'
 import { samplePlan } from '../../../testing/samplePlan'
+import { planLineOf, planValueAt, planValueBefore, projectNetWorth, scenarioToParams } from '../../../engine'
 import type { WealthAccount, WealthCheckin } from '../../../types'
 
 function makeAccount(id: number, kind: WealthAccount['kind'] = 'investment'): WealthAccount {
@@ -396,6 +397,17 @@ describe('the status around a house purchase and at the edges of the plan', () =
     expect(screen.getByText(/ahead of plan/i)).toBeInTheDocument()
     expect(screen.getByText(/Months are not counted across a house purchase or a one-off event/)).toBeInTheDocument()
     expect(screen.queryByText(/of the plan, which only reaches/)).not.toBeInTheDocument()
+  })
+
+  it('says a payment made a fortnight early is read against the plan with it made', () => {
+    // The line holds the portfolio before the 70.871 payment on 18 December; this one has paid it already.
+    const line = planLineOf(projectNetWorth(scenarioToParams(plan, inflation)))
+    const payment = planValueBefore(line, 8)! - planValueAt(line, 8)!
+    render(<WealthSummaryCard checkins={checkinFor('2033-12-18', -payment)} accounts={accounts} plan={plan} />)
+    expect(screen.getByText('On track')).toBeInTheDocument()
+    expect(screen.getByText(/within a month of this check-in/)).toHaveTextContent(
+      /falls on .*2034, within a month of this check-in, so your balance is read against the plan with it already made\./,
+    )
   })
 
   it('says the plan starts after the latest check-in, rather than that it has no start date', () => {
