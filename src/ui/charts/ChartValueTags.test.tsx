@@ -17,6 +17,7 @@ const props = {
     { id: 'b', color: '#123456', values: [1, 5] },
   ],
   bands: [{ color: '#00f', band: { lo: [0, 1], hi: [0, 9] } }],
+  pointLines: [],
 }
 
 const wrap = (ui: React.ReactElement) => <svg>{ui}</svg>
@@ -41,9 +42,20 @@ describe('ChartValueTags', () => {
       { id: 'b', color: '#123456', values: [1, 2] },
       { id: 'c', color: '#654321', values: [1, 2] },
     ]
-    const { container } = render(wrap(<ChartValueTags {...props} lines={lines} bands={[]} />))
+    const { container } = render(wrap(<ChartValueTags {...props} lines={lines} bands={[]} pointLines={[]} />))
     expect([...container.querySelectorAll('text')].map((t) => t.textContent)).toEqual(['2M €'])
     expect(container.querySelectorAll('circle')).toHaveLength(3)
+  })
+
+  it('draws the plan from today as a chip with a dotted edge and a hollow dot on its line', () => {
+    const pointLines = [{ id: 'from-today', color: '#654321', points: [{ xIndex: 0, value: 3 }, { xIndex: 2, value: 5 }] }]
+    const { container } = render(wrap(<ChartValueTags {...props} pointLines={pointLines} />))
+    expect([...container.querySelectorAll('text')].map((t) => t.textContent)).toContain('4M €')
+    const rects = [...container.querySelectorAll('rect')]
+    expect(rects.some((r) => /valueTagToday/.test(r.getAttribute('class') ?? ''))).toBe(true)
+    // The hollow dot is on the line at the focused year, level with its value (4 on this scale).
+    const dot = [...container.querySelectorAll('circle')].find((c) => /valueTagTodayDot/.test(c.getAttribute('class') ?? ''))
+    expect(dot?.getAttribute('cy')).toBe('160')
   })
 
   it('draws nothing with no year pointed at, or with no spec', () => {

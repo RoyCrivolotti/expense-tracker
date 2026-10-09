@@ -45,23 +45,7 @@ export function nearestScatter(points: ScatterPoint[], index: number): { value: 
   return { value: best.value, on: bestDist <= 0.5 ? null : (best.label ?? null) }
 }
 
-/**
- * A line given as points, read at `x` off the segment it crosses; null outside its run. Two points at
- * the same x are a step, and the day of it reads the later one: the value after the payment or event,
- * as the plan's line has it on the anniversary.
- */
-export function pointSeriesValueAt(points: { xIndex: number; value: number }[], x: number): number | null {
-  const sorted = [...points].sort((a, b) => a.xIndex - b.xIndex)
-  for (let i = sorted.length - 1; i >= 1; i--) {
-    const a = sorted[i - 1]!
-    const b = sorted[i]!
-    if (x >= a.xIndex && x <= b.xIndex) {
-      const t = b.xIndex === a.xIndex ? 0 : (x - a.xIndex) / (b.xIndex - a.xIndex)
-      return Math.round(a.value + t * (b.value - a.value))
-    }
-  }
-  return null
-}
+export { pointSeriesValueAt } from '../../../charts/linearScale'
 
 /** A tooltip label, with the reading's date when it is not the step's own. */
 export function readingLabel(label: string, on: string | null): string {
