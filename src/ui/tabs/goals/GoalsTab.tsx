@@ -126,7 +126,11 @@ export function GoalsTab({ model, actions, entry }: GoalsTabProps) {
   const plan = useMemo(() => activePlan(dataset.goalScenarios), [dataset.goalScenarios])
   // The plan as it stands from the latest check-in: derived, never saved, and null until
   // there is a dated plan and a check-in to restart it from.
-  const fromToday = useMemo(() => planFromToday(plan, latestSnapshot), [plan, latestSnapshot])
+  const savedInflation = dataset.settings.assumedInflation
+  const fromToday = useMemo(
+    () => planFromToday(plan, latestSnapshot, savedInflation),
+    [plan, latestSnapshot, savedInflation],
+  )
   // Seeds a new draft's monthly contribution: what has actually gone into the
   // portfolio, not what was left over after expenses.
   const avgSaving = useMemo(

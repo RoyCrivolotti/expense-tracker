@@ -66,6 +66,11 @@ export interface RentVsBuyInput {
   carryRate?: number
 }
 
+/** The share of year `t` the loan is still paid in: all of it, none of it, or the months left when it ends part way through one. */
+export function paidShareOfYear(t: number, termYears: number): number {
+  return Math.min(1, Math.max(0, termYears - (t - 1)))
+}
+
 export function projectRentVsBuy(input: RentVsBuyInput): RentVsBuyResult {
   const { params, rentMonthlyCents } = input
   const carryRate = input.carryRate ?? DEFAULT_HOME_CARRY_RATE
@@ -91,7 +96,7 @@ export function projectRentVsBuy(input: RentVsBuyInput): RentVsBuyResult {
       // The payment is fixed in the bank's money, so in today's it shrinks each year, while
       // rent is held constant in today's money.
       const buyerOutlay =
-        (t <= params.mortgageTermYears ? Math.round(annualMortgageCents / Math.pow(1 + params.inflationRate, t)) : 0) +
+        Math.round((annualMortgageCents * paidShareOfYear(t, params.mortgageTermYears)) / Math.pow(1 + params.inflationRate, t)) +
         Math.round(point.houseEquityCents * carryRate)
       const surplus = buyerOutlay - annualRentCents
       if (surplus > 0) rentPortfolio += surplus

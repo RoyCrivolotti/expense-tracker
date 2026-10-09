@@ -37,11 +37,11 @@ describe('scenarioHeadline', () => {
 
   it('adds the FI year counted from today when the plan is restarted from a check-in', () => {
     const plan = { ...base, planStartDate: '2024-01-01', isActive: true }
-    const fromToday = planFromToday(plan, { investedCents: 900_000_00, date: '2026-01-01' })
+    const fromToday = planFromToday(plan, { investedCents: 900_000_00, date: '2026-01-01' }, 0.02)
     const { primary } = scenarioHeadline(plan, DEFAULT_INFLATION_RATE, undefined, undefined, fromToday)
     expect(primary).toMatch(/from today, FI in \d+ years$/)
     // Already past the target at today's balance.
-    const rich = planFromToday(plan, { investedCents: 2_000_000_00, date: '2026-01-01' })
+    const rich = planFromToday(plan, { investedCents: 2_000_000_00, date: '2026-01-01' }, 0.02)
     expect(scenarioHeadline(plan, DEFAULT_INFLATION_RATE, undefined, undefined, rich).primary).toMatch(/FI at today's balance$/)
     expect(scenarioHeadline(plan, DEFAULT_INFLATION_RATE).primary).not.toContain('from today')
   })

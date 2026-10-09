@@ -98,7 +98,7 @@ describe('comparisonRows', () => {
   it('lists the plan from today under the plan, in its colour, counting years from the check-in', () => {
     const plan = makeScenario({ id: 2, name: 'Path B: Plan', color: '#abcdef', planStartDate: '2024-01-01', isActive: true, housePurchaseYear: null })
     const other = makeScenario({ id: 3, name: 'Path C', housePurchaseYear: null })
-    const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-01-01' })
+    const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-01-01' }, 0.02)
     const rows = comparisonRows([plan, other], draft, EU_MONEY_FORMAT, DEFAULT_INFLATION_RATE, false, 10, fromToday)
     expect(rows.map((r) => r.name)).toEqual(['Path B', 'Path B, from today', 'Path C'])
     expect(rows[1]!.color).toBe('#abcdef')
@@ -113,7 +113,7 @@ describe('comparisonRows', () => {
       <ScenarioComparison
         scenarios={[plan]}
         draft={draft}
-        fromToday={planFromToday(plan, { investedCents: 1, date: '2026-01-01' })}
+        fromToday={planFromToday(plan, { investedCents: 1, date: '2026-01-01' }, 0.02)}
       />,
     )
     expect(screen.getByText('Path B, from today')).toBeInTheDocument()

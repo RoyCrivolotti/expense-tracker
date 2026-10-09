@@ -23,7 +23,7 @@ const CENTS_FIELDS = [
 ] as const
 
 /** Counts of years: whole, at least one. */
-const YEAR_COUNT_FIELDS = ['horizonYears', 'mortgageTermYears'] as const
+const YEAR_COUNT_FIELDS = ['horizonYears'] as const
 
 /** Rates and fractions. Free to be negative (a pessimistic return is a real scenario),
  *  but they must be numbers, because the projection multiplies by them. */
@@ -67,6 +67,11 @@ export function validateScenarioNumbers(patch: Partial<NewGoalScenario>): void {
     if (rec[key] !== undefined) {
       assertWholeAtLeast(rec[key], 1, `${key} must be a whole number of years, at least 1`)
     }
+  }
+
+  // A loan can have months left, so its term is a number of years that need not be whole.
+  if (rec.mortgageTermYears !== undefined) {
+    assertInClosedRange(rec.mortgageTermYears as number, Number.MIN_VALUE, 100, 'mortgageTermYears must be a number of years above 0, at most 100')
   }
 
   for (const key of RATE_FIELDS) {

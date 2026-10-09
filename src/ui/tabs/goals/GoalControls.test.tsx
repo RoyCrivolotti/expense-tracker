@@ -174,14 +174,16 @@ describe('GoalControls', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
 
-    expect(onChange).toHaveBeenCalledWith({
-      startInvestedCents: 11_700_000,
-      planStartDate: '2026-09-11',
-      lifeEvents: [],
-      housePurchaseYear: null,
-      monthlyContributionCents: 100_000,
-      contributionSchedule: [],
-    })
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        startInvestedCents: 11_700_000,
+        planStartDate: '2026-09-11',
+        lifeEvents: [],
+        housePurchaseYear: null,
+        monthlyContributionCents: 100_000,
+        contributionSchedule: [],
+      }),
+    )
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
@@ -199,15 +201,16 @@ describe('GoalControls', () => {
     const latest = { investedCents: 11_700_000, date: '2026-09-11' }
     const { rerender } = render(<GoalControls draft={draft} latest={latest} onChange={onChange} />)
     fireEvent.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
-    const patch = {
+    const patch = onChange.mock.calls[0]![0] as Partial<typeof draft>
+    // The car is 20.000 of 2024 euros: two years of inflation make it a little more in the euros of the new start.
+    expect(patch).toMatchObject({
       startInvestedCents: 11_700_000,
       planStartDate: '2026-09-11',
-      lifeEvents: [{ year: 1, amountCents: -20_000_00, label: 'Car' }],
       housePurchaseYear: 3,
       monthlyContributionCents: 100_000,
       contributionSchedule: [],
-    }
-    expect(onChange).toHaveBeenCalledWith(patch)
+    })
+    expect(patch.lifeEvents).toEqual([{ year: 1, amountCents: Math.round(-20_000_00 * 1.02 ** 2), label: 'Car' }])
     // The parent applies the patch to the draft, and the note describes what it now holds.
     rerender(<GoalControls draft={{ ...draft, ...patch }} latest={latest} onChange={onChange} />)
     expect(screen.getByRole('status')).toHaveTextContent(/Bonus \(.*2025\) is already in the balance, so it is dropped\./)

@@ -118,6 +118,14 @@ export function PortfolioFields({ draft, onChange, omit = NO_LEVERS, wrap = plai
   )
 }
 
+/**
+ * How high the down payment goes. A house owned from the first day holds, as its down payment, the share
+ * that is no longer owed, which a re-baseline can work out above half, so the field has room for it.
+ */
+function downPaymentMax(draft: Pick<NewGoalScenario, 'housePurchaseYear'>): number {
+  return draft.housePurchaseYear === 0 ? 1 : (L.downPaymentFraction.max ?? 0.5)
+}
+
 function PurchaseCostFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: SectionProps) {
   // Worked out from the draft and said nowhere else, so it stays when the price is in the bar.
   const priceHint = housePriceHint(draft, useAssumedInflation(), useMoneyFormat())
@@ -135,7 +143,7 @@ function PurchaseCostFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }:
         wrap('downPaymentFraction', <PercentField
           label={L.downPaymentFraction.label}
           value={draft.downPaymentFraction}
-          max={L.downPaymentFraction.max ?? 0.5}
+          max={downPaymentMax(draft)}
           onChange={(v) => onChange({ downPaymentFraction: v })}
         />)
       )}
@@ -174,6 +182,7 @@ function MortgageFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: Sec
         wrap('mortgageTermYears', <NumberField
           label={L.mortgageTermYears.label}
           value={draft.mortgageTermYears}
+          decimals={2}
           min={L.mortgageTermYears.min ?? 1}
           max={L.mortgageTermYears.max ?? 40}
           onChange={(v) => onChange({ mortgageTermYears: v })}
@@ -287,6 +296,7 @@ interface TrackingProps {
 
 export function TrackingFields({ draft, latest, onChange }: TrackingProps) {
   const format = useMoneyFormat()
+  const inflationRate = useAssumedInflation()
   // What the last re-baseline moved, so a dropped event is not found out at Save. Kept with
   // the values it left in the draft: once the draft no longer holds them (Discard, another
   // scenario loaded) the note describes something that is not there and goes away.
@@ -321,7 +331,7 @@ export function TrackingFields({ draft, latest, onChange }: TrackingProps) {
           disabled={!latest}
           onClick={() => {
             if (!latest) return
-            const next = rebaseline(draft, latest)
+            const next = rebaseline(draft, latest, inflationRate)
             onChange(next.patch)
             const lines = rebaselineSummary(next, format, formatCheckinDate)
             setRebaselined(

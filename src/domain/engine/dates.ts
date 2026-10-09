@@ -264,3 +264,10 @@ export function dateAtYears(from: string, years: number): string {
   const days = Math.round(((years - whole) * (next - last)) / 86_400_000)
   return new Date(last + days * 86_400_000).toISOString().slice(0, 10)
 }
+
+/** A `YYYY-MM-DD` that is a day on the calendar: a date that merely looks like one would roll over into another. */
+export function isCalendarDate(value: string): boolean {
+  if (!value?.match(/^\d{4}-\d{2}-\d{2}$/)) return false
+  const parsed = new Date(`${value}T00:00:00Z`)
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
+}

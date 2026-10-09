@@ -176,7 +176,14 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // views, and the wording. The total stood at 255,412 bytes after the plan's line and this takes it to
 // 256,461 (the Goals chunk from 65,867 to 66,905). All of it is small code, in the engine and the lazy
 // Goals chunk, with no new library.
-const TOTAL_MAX_GZIP = 256_700
+//
+// Raised the total from 256.7 KB to 258.1 KB for restating a re-baselined plan: the amounts and the house
+// price counted in the euros of the new start, the owned house with its loan from the schedule, the
+// from-today line drawn in the plan's money, the part-year mortgage term and the sheet's new lines. The
+// total stood at 256,461 bytes after dating milestones and this takes it to 257,876 (the Goals chunk from
+// 66,905 to 67,124, still under its limit). Most of it is engine code that the dashboard and Progress
+// also load, with no new library.
+const TOTAL_MAX_GZIP = 258_100
 const GOALS_MAX_GZIP = 67_200
 
 function gzipBytes(path) {

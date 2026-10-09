@@ -13,6 +13,22 @@ function newScenario(overrides: Partial<NewGoalScenario> = {}): NewGoalScenario 
   return scenario as unknown as NewGoalScenario
 }
 
+describe('the mortgage term', () => {
+  it.each([25, 24.58333, 0.5, 1])('accepts %s years, a part of a year included, since a loan can have months left', (years) => {
+    expect(() => validateScenarioNumbers({ mortgageTermYears: years })).not.toThrow()
+  })
+
+  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY, 101])('refuses %s years', (years) => {
+    expect(() => validateScenarioNumbers({ mortgageTermYears: years })).toThrow(
+      'mortgageTermYears must be a number of years above 0, at most 100',
+    )
+  })
+
+  it('still asks for a whole number of years for the horizon', () => {
+    expect(() => validateScenarioNumbers({ horizonYears: 25.5 })).toThrow('horizonYears must be a whole number of years, at least 1')
+  })
+})
+
 describe('validateScenarioNumbers', () => {
   it('refuses a withdrawal rate of zero, which makes the FI target infinite', () => {
     // fireNumber returns Infinity for swr <= 0 by design, so this is the value that

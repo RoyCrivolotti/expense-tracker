@@ -35,9 +35,13 @@ export function PercentStepper({
   )
 
   // Nothing typed, or nothing with a digit in it, is not 0%: the box goes back to the value it had.
+  // Text that is what the box showed is not an edit: the box shows one place, so a value with more (a
+  // share a re-baseline worked out) would be rounded, and clamped, by tabbing through it.
   const commitText = (input: HTMLInputElement) => {
+    const shown = formatPercentInput(value, format)
+    if (input.value === shown) return
     if (!/\d/.test(input.value)) {
-      input.value = formatPercentInput(value, format)
+      input.value = shown
       return
     }
     commit(parsePercentToFraction(input.value, format))
