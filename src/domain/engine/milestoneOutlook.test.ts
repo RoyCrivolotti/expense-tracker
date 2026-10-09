@@ -149,6 +149,12 @@ describe('milestoneStanding', () => {
     expect(milestoneCrossingDate(makeScenario({ ...plan, planStartDate: 'garbage' }), 120_000_00, DEFAULT_INFLATION_RATE)).toBeNull()
   })
 
+  it.each(['2026-13-45', '2026-02-30', '0000-00-00', '2026-04-31'])('cannot be dated from %s, which has the shape of a date and is not one', (planStartDate) => {
+    const impossible = makeScenario({ ...plan, planStartDate })
+    expect(milestoneCrossingDate(impossible, 120_000_00, DEFAULT_INFLATION_RATE)).toBeNull()
+    expect(milestoneStanding({ amountCents: 120_000_00, label: '' }, impossible, undefined, DEFAULT_INFLATION_RATE)).toMatchObject({ kind: 'unknown' })
+  })
+
   it('gives the expected date alone without a target, and says so past the horizon', () => {
     expect(milestoneStanding(inYearTwo, plan, undefined, DEFAULT_INFLATION_RATE)).toEqual({
       kind: 'expected',

@@ -4,7 +4,7 @@
  * (`milestoneCrossing`), then placed on the calendar from the plan's start date.
  */
 import type { GoalScenario, Milestone } from '../types'
-import { DAY_MS, dateAtYears, utcDateMs } from './dates'
+import { DAY_MS, dateAtYears, isCalendarDate, utcDateMs } from './dates'
 import { milestoneCrossing, type MilestoneCrossing } from './milestoneCrossing'
 import { planLineOf } from './planLine'
 import { fireNumber, projectNetWorth, yearsToFi, type ProjectionParams } from './projection'
@@ -56,12 +56,10 @@ export function fiYearsExact(params: ProjectionParams, annualSpendCents: number,
   return inside ? crossing.offset : year
 }
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
-
 /** The calendar date the plan crosses the amount, or null without a start date or within the horizon. */
 export function milestoneCrossingDate(plan: GoalScenario, amountCents: number, inflationRate: number): string | null {
-  // A start date only the API could have written malformed must not take Progress down.
-  if (!plan.planStartDate || !ISO_DATE.test(plan.planStartDate)) return null
+  // A start date only the API could have written malformed must not take Progress down, nor be dated as if it were a day.
+  if (!plan.planStartDate || !isCalendarDate(plan.planStartDate)) return null
   const years = yearsToAmount(plan, amountCents, inflationRate)
   return years === null ? null : dateAtYears(plan.planStartDate, years)
 }
@@ -76,7 +74,7 @@ interface Outlook {
 }
 
 function outlookOf(plan: GoalScenario, amountCents: number, inflationRate: number): Outlook | null {
-  if (!plan.planStartDate || !ISO_DATE.test(plan.planStartDate)) return null
+  if (!plan.planStartDate || !isCalendarDate(plan.planStartDate)) return null
   const crossing = crossingOf(plan, amountCents, inflationRate)
   if (crossing === null) return null
   return {
@@ -115,7 +113,7 @@ export function milestoneStanding(
   asOf: string | null = null,
 ): MilestoneStanding {
   if (reachedOn) return { kind: 'reached', on: reachedOn }
-  if (!plan?.planStartDate) return { kind: 'unknown' }
+  if (!plan?.planStartDate || !isCalendarDate(plan.planStartDate)) return { kind: 'unknown' }
   const outlook = outlookOf(plan, milestone.amountCents, inflationRate)
   const target = milestone.targetDate ?? null
   if (!outlook) return { kind: 'beyond-horizon', target }

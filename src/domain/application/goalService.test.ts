@@ -94,6 +94,20 @@ describe('the yearly upkeep of the house', () => {
   })
 })
 
+describe('the plan start date', () => {
+  it.each(['2026-01-01', '2024-02-29', null])('accepts %s', (planStartDate) => {
+    expect(() => validateScenarioNumbers({ planStartDate })).not.toThrow()
+  })
+
+  it.each(['garbage', '2026-13-45', '2026-02-30', '2025-02-29', '', 20260101 as unknown as string])('refuses %s, which is not a calendar date', (planStartDate) => {
+    expect(() => validateScenarioNumbers({ planStartDate })).toThrow('planStartDate must be a calendar date, or null')
+  })
+
+  it('leaves a patch that does not mention it alone', () => {
+    expect(() => validateScenarioNumbers({ horizonYears: 20 })).not.toThrow()
+  })
+})
+
 describe('validateScenarioNumbers', () => {
   it('refuses a withdrawal rate of zero, which makes the FI target infinite', () => {
     // fireNumber returns Infinity for swr <= 0 by design, so this is the value that
