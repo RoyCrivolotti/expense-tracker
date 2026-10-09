@@ -79,6 +79,13 @@ describe('SpreadChart', () => {
     expect(screen.queryByText(/In the table/)).not.toBeInTheDocument()
   })
 
+  it('puts the table in a region that can be reached by keyboard and scrolled sideways, as the milestone table is, for text so large the columns do not fit', () => {
+    show()
+    const region = screen.getByRole('region', { name: /When the runs first reach each amount/ })
+    expect(region).toHaveAttribute('tabindex', '0')
+    expect(within(region).getByRole('table')).toBeInTheDocument()
+  })
+
   it('leaves the table out when there is nothing to reach', () => {
     show({ annualSpendCents: 0 }, { milestones: [] })
     expect(screen.queryByRole('table')).not.toBeInTheDocument()

@@ -10,7 +10,8 @@
  * why Save is off for a scenario with no name (`ONLY=s2`),
  * how the milestone amount and the cash reserve read what is typed (`ONLY=settings-numbers`),
  * the hero chart full screen on a phone, upright and on its side (`ONLY=hero-sheet`),
- * and its readout floated over the chart and dragged about it (`ONLY=hero-sheet-float`).
+ * its readout floated over the chart and dragged about it (`ONLY=hero-sheet-float`),
+ * and the spread card, across the page under the columns and with a table that fits at 200% text on a phone (`ONLY=spread-card`).
  *
  * jsdom lays nothing out, so the unit tests cannot say any of this. It needs a browser and takes
  * a few minutes, so it is not part of `npm run verify`; CI runs it in its own job
@@ -3374,6 +3375,63 @@ async function checkHeroSheetFloat(browser, engine) {
 }
 
 /**
+ * The spread card (check group sp). On a wide screen it is across the page under the two columns, not a fourth
+ * card in one of them (which left them 1.000px apart), and the columns end near each other. On a phone with the
+ * text at 200% its table scrolls inside the card, like the milestone table: it spilled out of the card, and the
+ * right-hand column was cut off at the page's edge with nothing to scroll to it.
+ */
+async function checkSpreadCard(browser, engine) {
+  const TITLE = 'How far luck could move the plan'
+  const TABLE = { name: 'When the runs first reach each amount' }
+  {
+    const { page, context } = await openPlan(browser, { width: 1280, height: 800 }, { scheme: 'light' })
+    const where = `${engine} wide 1280x800`
+    await page.getByRole('heading', { name: TITLE }).scrollIntoViewIfNeeded()
+    await page.getByRole('table', TABLE).waitFor({ timeout: 15000 })
+    await settled(page)
+    const m = await page.evaluate((title) => {
+      const heading = (text) => [...document.querySelectorAll('h3')].find((h) => h.textContent === text)
+      const rect = (el) => el.getBoundingClientRect()
+      const cols = [...document.querySelectorAll('[class*="detailColumn"]')].map(rect)
+      const spread = rect(heading(title).closest('[class*="detailWide"]'))
+      const matrix = rect(heading('Years to milestone').closest('[class*="detailWide"]'))
+      return { spreadTop: spread.top, spreadWidth: spread.width, matrixWidth: matrix.width, colsBottom: cols.map((c) => c.bottom), cols: cols.length }
+    }, TITLE)
+    check(where, '(sp) the spread card is under both columns', m.cols === 2 && m.spreadTop >= Math.max(...m.colsBottom) - 1, JSON.stringify(m))
+    check(where, '(sp) it has the whole width the milestone table has', near(m.spreadWidth, m.matrixWidth, 2), JSON.stringify(m))
+    check(where, '(sp) the two columns end within 150px of each other', Math.abs(m.colsBottom[0] - m.colsBottom[1]) <= 150, JSON.stringify(m))
+    await context.close()
+  }
+  for (const size of [{ name: '320x640', width: 320, height: 640 }, { name: '375x812', width: 375, height: 812 }]) {
+    const { page, context } = await openChartTab(browser, size)
+    const where = `${engine} phone ${size.name} text at 200%`
+    await page.addStyleTag({ content: 'html { font-size: 200%; }' })
+    await page.getByRole('radio', { name: 'Spread', exact: true }).tap()
+    const table = page.getByRole('table', TABLE)
+    await table.waitFor({ timeout: 15000 })
+    await settled(page)
+    const m = await table.evaluate((el) => {
+      const card = el.closest('[class*="chartCard"]')
+      const region = el.closest('[role="region"]')
+      const box = card.getBoundingClientRect()
+      const style = getComputedStyle(card)
+      const r = region.getBoundingClientRect()
+      return {
+        regionRight: r.right,
+        cardInnerRight: box.right - parseFloat(style.paddingRight) - parseFloat(style.borderRightWidth),
+        regionTabIndex: region.tabIndex,
+        pageScrollWidth: document.documentElement.scrollWidth,
+        iw: window.innerWidth,
+      }
+    })
+    check(where, '(sp) the table is in a scroller that stays inside the card, not spilling out of it', m.regionRight <= m.cardInnerRight + 1, JSON.stringify(m))
+    check(where, '(sp) the scroller takes focus, so a keyboard can scroll to the right-hand column', m.regionTabIndex === 0, JSON.stringify(m))
+    check(where, '(sp) the page does not scroll sideways', m.pageScrollWidth <= m.iw, JSON.stringify(m))
+    await context.close()
+  }
+}
+
+/**
  * Every section of the default run, in the order it runs. Each opens its own browser contexts,
  * so any subset can run alone, which `SHARD` relies on. A new section goes in this list or it
  * does not run in CI. `weight` is roughly the seconds the section takes on a CI runner; it only
@@ -3408,6 +3466,7 @@ const SECTIONS = [
   { name: 'SettingsNumbers', weight: 3, run: checkSettingsNumbers },
   { name: 'HeroSheet', weight: 11, run: checkHeroSheet },
   { name: 'HeroSheetFloat', weight: 10, run: checkHeroSheetFloat },
+  { name: 'SpreadCard', weight: 8, run: checkSpreadCard },
 ]
 
 async function main() {
@@ -3478,6 +3537,10 @@ async function main() {
         }
         if (process.env.ONLY === 'settings-numbers') {
           await checkSettingsNumbers(browser, engine)
+          continue
+        }
+        if (process.env.ONLY === 'spread-card') {
+          await checkSpreadCard(browser, engine)
           continue
         }
         if (process.env.ONLY === 'w2') {
