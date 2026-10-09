@@ -90,7 +90,9 @@ export function ReturnNote() {
   return (
     <p className={styles.fieldHint}>
       Real return: about 5% a year after inflation is what world stocks have returned over the very long
-      run, and many forecasts are lower. 6 to 7% is optimistic.
+      run, and many forecasts are lower. 6 to 7% is optimistic. Enter the rate your money compounds at, not the
+      simple average of yearly returns, which is higher by about a point for stocks. The plan takes out no fund
+      costs or tax, so enter the return after them.
     </p>
   )
 }
@@ -307,7 +309,8 @@ export function FireFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: 
             onChange={(v) => onChange({ annualSpendCents: v })}
           />)}
           <p className={styles.fieldHint}>
-            Yearly cost of living you would need the portfolio to cover after FI (within the horizon).
+            Yearly cost of living you would need the portfolio to cover after FI (within the horizon). Add the tax
+            on what you withdraw: the plan does not.
           </p>
           {spendHint ? <p className={styles.fieldHint}>{spendHint}</p> : null}
         </>
