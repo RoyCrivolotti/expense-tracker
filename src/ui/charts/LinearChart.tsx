@@ -12,7 +12,9 @@ import {
   ChartAboveMarker,
   ChartPurchaseMarkers,
   ChartLifeEventMarkers,
+  ChartLabeledMarkers,
   ChartFocusIndicator,
+  type LabeledMarker,
   type LifeEventMarker,
 } from './linearChartParts'
 import { ChartValueTags } from './ChartValueTags'
@@ -97,6 +99,8 @@ interface Props {
   markerYears?: { yearIndex: number }[]
   /** Life event markers: fractional x-axis indices with labels (e.g. year 3 → yearIndex 3). */
   lifeEventMarkers?: LifeEventMarker[]
+  /** Turning points the chart names: a dashed line across the plot with its label (see `ChartLabeledMarkers`). */
+  labeledMarkers?: readonly LabeledMarker[]
   /** Index of the current year in the x-axis for a "today" vertical marker. */
   todayIndex?: number
   tooltipMode?: 'full' | 'hidden'
@@ -247,6 +251,7 @@ export function LinearChart({
   refCurves,
   markerYears = [],
   lifeEventMarkers = [],
+  labeledMarkers,
   todayIndex,
   tooltipMode = 'full',
   dockBelow,
@@ -396,6 +401,14 @@ export function LinearChart({
           markers={lifeEventMarkers}
           xForIndex={geo.xForIndex}
           yTop={geo.padTop}
+        />
+        <ChartLabeledMarkers
+          markers={labeledMarkers}
+          xForIndex={geo.xForIndex}
+          yTop={geo.padTop}
+          innerH={geo.innerH}
+          left={PAD.left}
+          right={width - PAD.right}
         />
         {/* Above the year marks, or a dashed vertical mark runs through its text. */}
         <ChartAboveMarker marker={aboveTop} x={PAD.left + 8} y={geo.padTop} />
