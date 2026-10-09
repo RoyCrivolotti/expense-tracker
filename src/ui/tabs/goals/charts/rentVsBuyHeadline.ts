@@ -1,9 +1,11 @@
 import type { RentVsBuyPoint, RentVsBuyVerdict } from '../../../../engine'
 
+type Standing = Pick<RentVsBuyPoint, 'year' | 'rentNetWorthCents' | 'buyNetWorthCents'>
+
 /** Who is ahead, in a sentence that names the years: the first draw is not a breakeven if buying falls behind again. */
 export function rentVsBuyHeadline(
   verdict: RentVsBuyVerdict | null,
-  last: RentVsBuyPoint | undefined,
+  last: Standing | undefined,
   formatGap: (cents: number) => string,
 ): string {
   switch (verdict?.kind) {

@@ -83,9 +83,14 @@ describe('the house in the projection', () => {
   it('does not move a house bought on day one, or the comparison that buys today', () => {
     const owned = projectNetWorth(params({ housePurchaseYear: 0 }))
     expect(owned[0]!.houseEquityCents).toBe(30_000_000)
-    // Rent against buy starts from today's price whatever year the plan buys in.
+    // Rent against buy buys today, at today's price, when the plan owns the house already or buys none.
     const now = projectRentVsBuy({ params: params({ housePurchaseYear: 0 }), rentMonthlyCents: 100_000 })
+    const never = projectRentVsBuy({ params: params({ housePurchaseYear: null }), rentMonthlyCents: 100_000 })
+    expect(never.points).toEqual(now.points)
+    // A plan that buys in year 8 compares from then, at the price the house has risen to.
     const later = projectRentVsBuy({ params: params({ housePurchaseYear: 8 }), rentMonthlyCents: 100_000 })
-    expect(later.points).toEqual(now.points)
+    const risen = housePriceAtPurchaseCents(params({ housePurchaseYear: 8 }))
+    expect(later.points[0]!.buyNetWorthCents).toBe(Math.round(risen * 0.2))
+    expect(later.points[0]!.buyNetWorthCents).toBeGreaterThan(now.points[0]!.buyNetWorthCents)
   })
 })
