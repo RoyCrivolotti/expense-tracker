@@ -1,5 +1,5 @@
 import type { GoalScenario, Transaction, WealthAccount, WealthCheckin } from '../../../types'
-import type { CashReserve, PortfolioReturn, SteadyGap, TrackStatus } from '../../../engine'
+import type { CashReserve, PortfolioReturn, ReturnReading, SteadyGap, TrackStatus } from '../../../engine'
 import { useMemo } from 'react'
 import { Card } from '../../components/primitives'
 import {
@@ -16,7 +16,7 @@ import {
   paceMonths,
   plannedMonthlyAt,
   plannedMonthlyAverage,
-  portfolioReturn,
+  readReturn,
   shortMonthFullYearLabel,
   steadyGap,
   trackStatus,
@@ -173,17 +173,36 @@ const hintStyle = { fontSize: '0.8125rem', color: 'var(--color-text-muted)', mar
  * the same way on/off track above it deflates the balance before comparing.
  */
 function ReturnHint({
+  reading,
+  plan,
+  format,
+  inflationRate,
+}: {
+  reading: ReturnReading
+  plan: GoalScenario | null
+  format: MoneyFormat
+  inflationRate: number
+}) {
+  const since = formatCheckinDate(reading.ret.startDate)
+  if (reading.kind !== 'figure') {
+    return <UnrecordedHint kind={reading.kind} plan={plan} ret={reading.ret} since={since} format={format} />
+  }
+  return <FigureHint ret={reading.ret} plan={plan} since={since} format={format} inflationRate={inflationRate} />
+}
+
+function FigureHint({
   ret,
   plan,
+  since,
   format,
   inflationRate,
 }: {
   ret: PortfolioReturn
   plan: GoalScenario | null
+  since: string
   format: MoneyFormat
   inflationRate: number
 }) {
-  const since = formatCheckinDate(ret.startDate)
   const planRate = plan ? `${formatPercent(plan.expectedRealReturn, format)} a year` : ''
   if (ret.annualised === null) {
     // What is measured is a total over under a year, in the money of the day, and the plan's rate is
@@ -217,6 +236,42 @@ function ReturnHint({
       {formatPercent(inflationRate, format)} inflation is taken off
       {plan ? ` against the ${planRate}, after inflation, that ${plan.name} assumes` : ''}.
       {plan && !settled ? ` A few years of returns say little about a long-run ${planRate}.` : ''}
+    </p>
+  )
+}
+
+/**
+ * What is said in place of a return that cannot be believed: the balance grew by money that no
+ * investment transaction records, which a return would count as growth. Two ways to see it, and the
+ * same fix: record the transfers.
+ */
+function UnrecordedHint({
+  kind,
+  plan,
+  ret,
+  since,
+  format,
+}: {
+  kind: 'no-investments' | 'too-high'
+  plan: GoalScenario | null
+  ret: PortfolioReturn
+  since: string
+  format: MoneyFormat
+}) {
+  const fix = 'Add what you moved in as Investment transactions to see the return.'
+  if (kind === 'no-investments') {
+    const monthly = plan ? formatCents(plannedMonthlyAt(plan, ret.endDate), format) : ''
+    return (
+      <p style={hintStyle}>
+        {plan ? `${plan.name} expects ${monthly} a month, but ` : ''}no investments are recorded since {since}, so
+        the balance may include money you moved in, which a return would count as growth. {fix}
+      </p>
+    )
+  }
+  return (
+    <p style={hintStyle}>
+      Your balance has grown by more than 30% a year since {since}. That is more than markets give, and usually money
+      you moved in that is not recorded as an investment. {fix}
     </p>
   )
 }
@@ -334,14 +389,14 @@ function SnapshotHints({
   format: MoneyFormat
 }) {
   const inflationRate = useAssumedInflation()
-  const ret = portfolioReturn(checkins, accounts, transactions)
+  const reading = readReturn(checkins, accounts, transactions, plan)
   const stale = plan ? steadyGap(checkins, plan, accounts, inflationRate) : null
   const reserve = cashReserve(latest, accounts, transactions, cashReserveMonths, openBudgetMonth)
   return (
     <>
       {status ? <PlanGapHint status={status} /> : null}
       {plan ? <PaceHint plan={plan} transactions={transactions} openBudgetMonth={openBudgetMonth} format={format} /> : null}
-      {ret ? <ReturnHint ret={ret} plan={plan} format={format} inflationRate={inflationRate} /> : null}
+      {reading ? <ReturnHint reading={reading} plan={plan} format={format} inflationRate={inflationRate} /> : null}
       {reserve ? <CashReserveHint reserve={reserve} format={format} /> : null}
       {stale ? <SteadyGapHint gap={stale} format={format} onRebaseline={onRebaseline} /> : null}
     </>

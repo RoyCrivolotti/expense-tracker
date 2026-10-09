@@ -8,7 +8,7 @@ import { WealthSummaryCard } from './WealthSummaryCard'
 import { CheckinHistoryChart } from './charts/CheckinHistoryChart'
 import { NetWorthNowCard } from './charts/NetWorthNowCard'
 import { ScenarioComparison } from './charts/ScenarioComparison'
-import { makeDataset, makeScenario, makeWealthAccount, makeWealthCheckin } from '../../../testing/factories'
+import { makeDataset, makeScenario, makeTransaction, makeWealthAccount, makeWealthCheckin } from '../../../testing/factories'
 import { installFakeMatchMedia } from '../../../testing/fakeMatchMedia'
 
 /**
@@ -47,7 +47,9 @@ function textAt(rate: number, ui: ReactElement): string {
 
 describe('components read the assumed inflation from the owner\'s setting', () => {
   it('the Progress snapshot: the on-track figure and the return hint', () => {
-    const ui = <WealthSummaryCard checkins={checkins} accounts={accounts} plan={plan} />
+    // The plan expects investing, so one is recorded in the period: without it the return is not given at all.
+    const recorded = [makeTransaction({ date: '2025-01-15', budgetMonth: '2025-01', type: 'investment', amountCents: 100_000 })]
+    const ui = <WealthSummaryCard checkins={checkins} accounts={accounts} plan={plan} transactions={recorded} />
     const low = textAt(0.02, ui)
     const high = textAt(0.06, ui)
     expect(high).not.toBe(low)

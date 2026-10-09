@@ -244,7 +244,7 @@ describe('WealthSummaryCard', () => {
   })
 
   it('sets a return under a year against what the plan expects over the same days, not its yearly rate', () => {
-    const plan = makeScenario({ name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2025-01-01' })
+    const plan = makeScenario({ monthlyContributionCents: 0, name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2025-01-01' })
     const accounts = [makeAccount(1, 'investment')]
     const checkins = [
       makeCheckin(1, '2026-01-01', [{ accountId: 1, valueCents: 100_000_00 }]),
@@ -258,7 +258,7 @@ describe('WealthSummaryCard', () => {
   })
 
   it('reads a return over a year as a yearly rate, after inflation, against the plan', () => {
-    const plan = makeScenario({ name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2025-01-01' })
+    const plan = makeScenario({ monthlyContributionCents: 0, name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2025-01-01' })
     const accounts = [makeAccount(1, 'investment')]
     const checkins = [
       makeCheckin(1, '2025-01-01', [{ accountId: 1, valueCents: 100_000_00 }]),
@@ -270,7 +270,7 @@ describe('WealthSummaryCard', () => {
   })
 
   it('does not colour a yearly return from under ten years, and says why', () => {
-    const plan = makeScenario({ name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2025-01-01' })
+    const plan = makeScenario({ monthlyContributionCents: 0, name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2025-01-01' })
     const checkins = [
       makeCheckin(1, '2025-01-01', [{ accountId: 1, valueCents: 100_000_00 }]),
       makeCheckin(2, '2026-07-01', [{ accountId: 1, valueCents: 125_000_00 }]),
@@ -281,7 +281,7 @@ describe('WealthSummaryCard', () => {
   })
 
   it('colours a yearly return against the plan from ten years of history, with nothing to excuse it', () => {
-    const plan = makeScenario({ name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2015-01-01' })
+    const plan = makeScenario({ monthlyContributionCents: 0, name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2015-01-01' })
     const checkins = (end: number) => [
       makeCheckin(1, '2015-01-01', [{ accountId: 1, valueCents: 100_000_00 }]),
       makeCheckin(2, '2026-07-01', [{ accountId: 1, valueCents: end }]),
@@ -350,7 +350,7 @@ describe('WealthSummaryCard', () => {
   })
 
   it('compounds a year or more to a yearly rate and sets it against the plan', () => {
-    const scenario = makeScenario({ name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2025-01-01' })
+    const scenario = makeScenario({ monthlyContributionCents: 0, name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2025-01-01' })
     const accounts = [makeAccount(1, 'investment')]
     const checkins = [
       makeCheckin(1, '2025-01-01', [{ accountId: 1, valueCents: 100_000_00 }]),
@@ -363,7 +363,7 @@ describe('WealthSummaryCard', () => {
   })
 
   it('colours the return by its real rate, so a nominal match with the plan is still short', () => {
-    const scenario = makeScenario({ name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2015-01-01' })
+    const scenario = makeScenario({ monthlyContributionCents: 0, name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2015-01-01' })
     const accounts = [makeAccount(1, 'investment')]
     // Ten years at 7% a year in the money of the day, which is 4,9% once 2% inflation is taken off.
     const checkins = [
@@ -421,5 +421,38 @@ describe('the status around a house purchase and at the edges of the plan', () =
     const short = samplePlan({ name: 'Sample', horizonYears: 5 })
     render(<WealthSummaryCard checkins={[makeCheckin(1, '2033-06-01', [{ accountId: 1, valueCents: 5_000_000 }])]} accounts={accounts} plan={short} />)
     expect(screen.getByText(/Sample ends on .*2031, before your latest check-in/)).toBeInTheDocument()
+  })
+})
+
+describe('the return when money may have moved in without being recorded', () => {
+  const accounts = [makeAccount(1, 'investment')]
+  const plan = makeScenario({ name: 'Path A', planStartDate: '2024-01-01', monthlyContributionCents: 100_000 })
+  const year = (end: number) => [
+    makeCheckin(1, '2025-01-01', [{ accountId: 1, valueCents: 100_000_00 }]),
+    makeCheckin(2, '2026-01-01', [{ accountId: 1, valueCents: end }]),
+  ]
+
+  it('says no investments are recorded, and hides the percentage, when the plan expects some', () => {
+    // 18% a year with nothing recorded is 18.000 euros moved in, not 18.000 euros earned.
+    render(<WealthSummaryCard checkins={year(118_000_00)} accounts={accounts} plan={plan} transactions={[]} />)
+    const hint = screen.getByText(/no investments are recorded/i)
+    expect(hint).toHaveTextContent(/Path A expects 1\.000,00 € a month, but no investments are recorded since Jan 1, 2025/)
+    expect(hint).toHaveTextContent(/Add what you moved in as Investment transactions to see the return/)
+    expect(screen.queryByText(/% a year/)).not.toBeInTheDocument()
+  })
+
+  it('says the balance grew too fast to be a market return, when it did, and hides it', () => {
+    const idle = makeScenario({ name: 'Path A', planStartDate: '2024-01-01', monthlyContributionCents: 0, contributionSchedule: [] })
+    render(<WealthSummaryCard checkins={year(150_000_00)} accounts={accounts} plan={idle} transactions={[]} />)
+    const hint = screen.getByText(/more than 30% a year/)
+    expect(hint).toHaveTextContent(/usually money you moved in that is not recorded/)
+    expect(screen.queryByText(/returned/)).not.toBeInTheDocument()
+  })
+
+  it('still gives the return when the investments are recorded and it is believable', () => {
+    const deposit = makeTransaction({ date: '2025-06-01', budgetMonth: '2025-06', type: 'investment', amountCents: 1_000_00 })
+    render(<WealthSummaryCard checkins={year(108_000_00)} accounts={accounts} plan={plan} transactions={[deposit]} />)
+    expect(screen.getByText(/Your portfolio returned/)).toHaveTextContent(/returned 7,\d\s?% a year since/)
+    expect(screen.queryByText(/no investments are recorded|more than 30%/)).not.toBeInTheDocument()
   })
 })
