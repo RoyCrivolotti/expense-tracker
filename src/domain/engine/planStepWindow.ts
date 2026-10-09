@@ -10,6 +10,9 @@ import { isBoundary, planValueAt, type PlanLine, type PlanSegment } from './plan
 /** A month, in years: how near an anniversary a balance is read against either side of its step. */
 export const STEP_WINDOW = 1 / 12
 
+/** How many months of the line's rise a balance may be from the other path of a step and still be read against it. */
+const OTHER_PATH_MONTHS = 3
+
 /** At least this many cents of room, so rounding to cents cannot tip a balance on a flat line off it. */
 const MIN_BAND = 100
 
@@ -67,7 +70,8 @@ export function readAgainst(line: PlanLine, offset: number, balanceCents: number
   const main = planValueAt(line, offset)
   if (main === null) return null
   const near = nearStep(line, offset)
-  const other = near !== null && Math.abs(balanceCents - near.alternate) < Math.abs(balanceCents - main)
+  const gap = near === null ? Infinity : Math.abs(balanceCents - near.alternate)
+  const other = near !== null && gap < Math.abs(balanceCents - main) && gap <= OTHER_PATH_MONTHS * monthBand(line, offset)
   const reference = other ? near.alternate : main
   return {
     reference,

@@ -262,6 +262,19 @@ describe('readAgainst', () => {
     expect(result.onTrack).toBe(false)
   })
 
+  it('uses the other path only for a balance that is close to it, not merely nearer to it than to the line', () => {
+    // Half way between the two paths is on neither, so it is read against the line, whichever is nearer.
+    const t = 8 - 14 / 365
+    const main = planValueAt(line, t)!
+    const alternate = nearStep(line, t)!.alternate
+    const between = Math.round(alternate + (main - alternate) * 0.45)
+    expect(readAgainst(line, t, between)!.nearStep).toBeNull()
+    // A balance within three months of the line's rise of the other path is on it.
+    const close = alternate + Math.round(monthBand(line, t) * 2.5)
+    expect(readAgainst(line, t, close)!.nearStep).toMatchObject({ counted: 'made' })
+    expect(readAgainst(line, t, alternate + Math.round(monthBand(line, t) * 3.5))!.nearStep).toBeNull()
+  })
+
   it('has nothing for a day outside the plan', () => {
     expect(readAgainst(line, -1, 5)).toBeNull()
     expect(readAgainst(line, 31, 5)).toBeNull()
