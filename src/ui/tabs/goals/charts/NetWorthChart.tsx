@@ -416,10 +416,17 @@ function ChartFooter({ footer, bare }: { footer: ReactNode; bare: boolean }) {
  * legend instead (HeroNote), so the chart starts two lines higher and the page does not move
  * when a year is hovered.
  */
-function chartHint(isHero: boolean, narrow: boolean, money: string): string | null {
+function chartHint(isHero: boolean, narrow: boolean, money: string, expectedRealReturn: number): string | null {
   const said = (hint: string) => `${money.charAt(0).toUpperCase()}${money.slice(1)}. ${hint}`
   if (!isHero) return said(DEFAULT_HINT)
-  return narrow ? said(HERO_HINT) : null
+  return narrow ? said(heroHint(expectedRealReturn)) : null
+}
+
+/** How far the band reaches either side of the return: three points, or less down below a return of three, where it stops at zero. */
+function bandReach(expectedRealReturn: number): { either: string; lowerAndHigher: string } {
+  return expectedRealReturn >= RETURN_BAND_SPREAD
+    ? { either: 'three points either side', lowerAndHigher: 'three points lower and higher' }
+    : { either: 'up to three points either side', lowerAndHigher: 'up to three points lower and three points higher' }
 }
 
 /** The today marker, only while it lies inside the window. */
@@ -452,8 +459,9 @@ function variantProps(
     : { height: 210, markerYears: [], tooltipMode: 'full' as const }
 }
 
-const HERO_HINT =
-  'At a purchase year, return and contributions apply before the down payment is withdrawn — select a year on the chart for values and the purchase breakdown. Dashed vertical marks show purchase years. The shaded band is the edited plan at a return three points lower and higher: how much the return matters, not how likely an outcome is.'
+function heroHint(expectedRealReturn: number): string {
+  return `At a purchase year, return and contributions apply before the down payment is withdrawn — select a year on the chart for values and the purchase breakdown. Dashed vertical marks show purchase years. The shaded band is the edited plan at a return ${bandReach(expectedRealReturn).lowerAndHigher}: how much the return matters, not how likely an outcome is.`
+}
 const DEFAULT_HINT =
   'Compare saved scenarios plus your live edits. At a purchase year, return and contributions apply before the down payment is withdrawn — hover that year for the breakdown.'
 
@@ -485,7 +493,7 @@ function HeroNote({ draft, isHero, narrow }: { draft: NewGoalScenario; isHero: b
     <p className={`${styles.chartHint} ${styles.heroNote}`}>
       Dashed vertical lines mark purchase years: in one, return and contributions apply before the down payment
       comes out. The shaded band is the line you are editing at a real return of {formatPercent(low, format)} to{' '}
-      {formatPercent(high, format)}, three points either side. It shows how much the return matters, not how
+      {formatPercent(high, format)}, {bandReach(draft.expectedRealReturn).either}. It shows how much the return matters, not how
       likely an outcome is.
     </p>
   )
@@ -743,7 +751,7 @@ function NetWorthChartImpl({
     lastIndex,
   )
 
-  const hint = chartHint(isHero, narrow, money)
+  const hint = chartHint(isHero, narrow, money, draft.expectedRealReturn)
 
   return (
     <Card className={isHero ? `${styles.chartCard} ${styles.heroChart}` : styles.chartCard}>
