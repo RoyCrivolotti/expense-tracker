@@ -525,6 +525,18 @@ describe('the return when money may have moved in without being recorded', () =>
     expect(screen.queryByText(/returned/)).not.toBeInTheDocument()
   })
 
+  it('says the same for a stretch under a year without calling it a yearly rate', () => {
+    const idle = makeScenario({ name: 'Path A', planStartDate: '2024-01-01', monthlyContributionCents: 0, contributionSchedule: [] })
+    const quarter = [
+      makeCheckin(1, '2025-01-01', [{ accountId: 1, valueCents: 100_000_00 }]),
+      makeCheckin(2, '2025-04-01', [{ accountId: 1, valueCents: 140_000_00 }]),
+    ]
+    render(<WealthSummaryCard checkins={quarter} accounts={accounts} plan={idle} transactions={[]} />)
+    const hint = screen.getByText(/more than 30%/)
+    expect(hint).not.toHaveTextContent(/a year/)
+    expect(hint).toHaveTextContent(/more than markets usually give/)
+  })
+
   it('still gives the return when the investments are recorded and it is believable', () => {
     const deposit = makeTransaction({ date: '2025-06-01', budgetMonth: '2025-06', type: 'investment', amountCents: 1_000_00 })
     render(<WealthSummaryCard checkins={year(108_000_00)} accounts={accounts} plan={plan} transactions={[deposit]} />)

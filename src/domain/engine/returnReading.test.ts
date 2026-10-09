@@ -106,14 +106,18 @@ describe('readReturn', () => {
     const opened = [checkin(1, '2025-01-01', 0), checkin(2, '2025-01-31', 10_200_00), checkin(3, '2026-01-01', 11_000_00)]
     const reading = readReturn(opened, accounts, [deposit('2025-01-30', 10_000_00)], investing)
     expect(reading?.kind).toBe('too-high')
-    if (reading?.kind === 'too-high') expect(reading.ret.impliedYearly).toBeGreaterThan(0.5)
+    if (reading?.kind === 'too-high') expect(reading.ret.judgedReturn).toBeGreaterThan(0.5)
   })
 
-  it('applies the 30% line to a short stretch too, by what it would be over a year', () => {
-    const month = (end: number) => [checkin(1, '2025-01-01', 100_000_00), checkin(2, '2025-01-31', end)]
-    // +1% in 30 days is about 13% a year; +3% is about 43%.
-    expect(readReturn(month(101_000_00), accounts, [], idle)?.kind).toBe('figure')
-    expect(readReturn(month(103_000_00), accounts, [], idle)?.kind).toBe('too-high')
+  it('judges a stretch under a year by the growth it had, not by what it would be over a year', () => {
+    const window = (end: number, last = '2025-01-31') => [checkin(1, '2025-01-01', 100_000_00), checkin(2, last, end)]
+    // A good month or quarter is not money moved in: +3% in 30 days compounds to over 40% a year and
+    // is an ordinary market month; +7% in three months and +26% in eleven months likewise.
+    expect(readReturn(window(103_000_00), accounts, [], idle)?.kind).toBe('figure')
+    expect(readReturn(window(107_000_00, '2025-04-01'), accounts, [], idle)?.kind).toBe('figure')
+    expect(readReturn(window(126_000_00, '2025-12-01'), accounts, [], idle)?.kind).toBe('figure')
+    // Growth of more than 30% before a year is out is still money that nothing accounts for.
+    expect(readReturn(window(131_000_00, '2025-04-01'), accounts, [], idle)?.kind).toBe('too-high')
   })
 
   it('draws the line at 30% a year', () => {
@@ -151,6 +155,6 @@ describe('readReturn', () => {
   it('carries the return it read, and how it compares with a year, for either kind', () => {
     const reading = readReturn(year, accounts, [deposit('2025-06-01', 1_000_00)], investing)!
     expect(reading.ret.annualised).toBeCloseTo(0.07, 2)
-    expect(reading.ret.impliedYearly).toBeCloseTo(0.07, 2)
+    expect(reading.ret.judgedReturn).toBeCloseTo(0.07, 2)
   })
 })

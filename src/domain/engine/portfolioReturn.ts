@@ -27,8 +27,12 @@ export interface PortfolioReturn {
   periodReturn: number
   /** Compounded to a yearly rate, only once a full year is in; shorter periods mislead. */
   annualised: number | null
-  /** What the period would be over a year at that pace, whatever its length: for judging it, never for showing it. */
-  impliedYearly: number
+  /**
+   * The figure the 30% line is held against: the yearly rate once a year is in, and before that the
+   * growth the stretch had, not what it would compound to over a year. A good month annualises to
+   * well over 30% and is still an ordinary month. For judging the return, never for showing it.
+   */
+  judgedReturn: number
   startDate: string
   endDate: string
   years: number
@@ -122,11 +126,11 @@ export function portfolioReturn(
   const years = days / YEAR_DAYS
   // A calendar year is 365 days, which is a hair under a year of 365.25.
   const annualised = days >= 365 ? Math.pow(1 + periodReturn, 1 / years) - 1 : null
-  const impliedYearly = annualised ?? Math.pow(1 + periodReturn, 1 / years) - 1
+  const judgedReturn = annualised ?? periodReturn
   return {
     periodReturn,
     annualised,
-    impliedYearly,
+    judgedReturn,
     startDate: first.checkinDate,
     endDate: last.checkinDate,
     years,
@@ -135,15 +139,15 @@ export function portfolioReturn(
   }
 }
 
-/** A return above this a year is not markets: the balance grew by money that no transaction records. */
+/** A balance that grew by more than this, a year or in less, is not markets: it holds money that no transaction records. */
 export const SUSPECT_YEARLY_RETURN = 0.3
 
 /**
  * What the return can honestly be said to be. A figure, or one of two reasons it is better not to
  * give one, each of which comes down to money that arrived in the balance without being recorded as
  * an investment, and which the return would then count as growth: no investments are recorded in the
- * period although the plan expects some, or the period grew by more than 30% a year, which markets
- * do not do for long and a transfer left out of the books does at once.
+ * period although the plan expects some, or the balance grew by more than 30% a year (or by that much
+ * before a year is out), which markets do not do for long and a transfer left out of the books does at once.
  */
 export type ReturnReading =
   | { kind: 'figure'; ret: PortfolioReturn }
@@ -166,6 +170,6 @@ export function readReturn(
   if (ret === null) return null
   const expectsInvesting = plan !== null && plannedMonthlyAt(plan, ret.endDate) > 0
   if (expectsInvesting && investmentsRecorded(transactions, ret) === 0) return { kind: 'no-investments', ret }
-  if (ret.impliedYearly > SUSPECT_YEARLY_RETURN) return { kind: 'too-high', ret }
+  if (ret.judgedReturn > SUSPECT_YEARLY_RETURN) return { kind: 'too-high', ret }
   return { kind: 'figure', ret }
 }

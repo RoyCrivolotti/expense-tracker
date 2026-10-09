@@ -17,7 +17,7 @@ function mergedNote(reason: MergedReason, since: string): string {
   if (reason === 'event-unrecorded') {
     return 'Shown together because the plan has a house payment or a one-off amount in this period and no matching withdrawal is recorded. Record it as an investment withdrawal to tell investing from the market.'
   }
-  return 'Shown together because the balance grew faster than markets give, which is usually money moved in that is not recorded.'
+  return 'Shown together because the balance grew faster than markets usually give, which is usually money moved in that is not recorded.'
 }
 
 function signed(euros: number, format: MoneyFormat): string {

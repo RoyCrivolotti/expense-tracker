@@ -173,7 +173,7 @@ function mergedReason(
   const inWindow = events.filter((e) => eventHappened(e, w.tb, w.start, r.statusB.nearStep) && !eventHappened(e, w.ta, w.start, r.statusA.nearStep))
   if (inWindow.some((e) => !isRecorded(e, w, flows))) return 'event-unrecorded'
   const ret = portfolioReturn(w.between, [...accounts], [...flows])
-  return ret !== null && ret.impliedYearly > SUSPECT_YEARLY_RETURN ? 'too-high' : null
+  return ret !== null && ret.judgedReturn > SUSPECT_YEARLY_RETURN ? 'too-high' : null
 }
 
 /**

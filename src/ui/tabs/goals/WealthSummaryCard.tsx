@@ -240,8 +240,8 @@ function UnrecordedHint({
   }
   return (
     <p style={hintStyle}>
-      Your balance has grown by more than 30% a year since {since}. That is more than markets give, and usually money
-      you moved in that is not recorded as an investment. {fix}
+      Your balance has grown by more than 30%{ret.annualised === null ? '' : ' a year'} since {since}. That is more than
+      markets usually give, and usually money you moved in that is not recorded as an investment. {fix}
     </p>
   )
 }
