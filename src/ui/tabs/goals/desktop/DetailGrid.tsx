@@ -7,6 +7,7 @@ import { MilestoneMatrix } from '../charts/MilestoneMatrix'
 import { NetWorthNowCard } from '../charts/NetWorthNowCard'
 import { RentVsOwnChart } from '../charts/RentVsOwnChart'
 import { SavingsRateChart } from '../charts/SavingsRateChart'
+import { LazySpreadChart } from '../charts/LazySpreadChart'
 import { ScenarioComparison } from '../charts/ScenarioComparison'
 import type { InvestedSnapshot } from '../checkinDate'
 import { STACK_CHART_HEIGHT } from '../secondaryChartHeight'
@@ -23,6 +24,8 @@ interface DetailGridProps {
   activeId: number | null
   dirty: boolean
   fromToday: PlanFromToday | null
+  /** The Nominal view: the spread card draws in the money of each year, as the main chart does. */
+  nominal?: boolean
 }
 
 /**
@@ -45,6 +48,7 @@ export function DetailGrid({
   activeId,
   dirty,
   fromToday,
+  nominal = false,
 }: DetailGridProps) {
   // The live edits are a line of their own only while they differ from what is saved.
   const includeDraft = activeId === null || dirty
@@ -73,6 +77,7 @@ export function DetailGrid({
           <NetWorthNowCard draft={draft} latest={latest} milestones={milestones} reached={reached} />
           <CompositionChart draft={draft} height={STACK_CHART_HEIGHT} />
           <RentVsOwnChart draft={draft} height={STACK_CHART_HEIGHT} />
+          <LazySpreadChart draft={draft} milestones={milestones} nominal={nominal} height={STACK_CHART_HEIGHT} />
         </div>
       </div>
     </section>

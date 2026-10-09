@@ -97,6 +97,7 @@ export function PlanDesktop({ scenarios, editor, actions, latest, milestones, re
         activeId={editor.activeId}
         dirty={editor.dirty}
         fromToday={fromToday}
+        nominal={display.mode === 'nominal'}
       />
       <GoalsIntro />
     </div>
