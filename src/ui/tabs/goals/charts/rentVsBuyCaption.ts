@@ -59,7 +59,7 @@ export function rentVsBuyCaption({
     `Savings grow at the plan's ${formatPercent(realReturn, format)} a year and the house gains ${formatPercent(houseGrowth, format)} a year, both after inflation: a different return or house growth can change who leads.`,
     `Assumes rent stays the same in real terms, upkeep, tax and insurance of ${formatPercent(carryRate, format)} of the house's value a year, and no costs of selling.`,
     "These are the two choices on their own, without your starting portfolio and contributions, so they will not match the plan's net worth.",
-    'The plan only takes the down payment and fees from your portfolio, not the loan or upkeep, so a house adds more to its net worth than it does here.',
+    'The plan only takes the down payment and fees from your portfolio, not the loan or upkeep, so while owning costs more a month than renting, a house adds more to its net worth than it does here.',
   ].join(' ')
 }
 

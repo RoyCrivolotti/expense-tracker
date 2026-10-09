@@ -36,7 +36,7 @@ describe('RentVsOwnChart', () => {
     }
     // How long renting takes to overtake, from the sentence at the top: never, or after some years, or from the start.
     const leads = (text: string) => {
-      if (text.includes('Buying stays ahead of renting the whole way')) return Number.POSITIVE_INFINITY
+      if (text.includes('Buying is ahead of renting in every year after you buy')) return Number.POSITIVE_INFINITY
       return Number(text.match(/Renting overtakes buying (\d+) years/)?.[1] ?? 0)
     }
     expect(leads(headline(0))).toBeGreaterThan(leads(headline(0.015)))

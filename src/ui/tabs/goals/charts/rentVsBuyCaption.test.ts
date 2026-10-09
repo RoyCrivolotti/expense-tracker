@@ -62,10 +62,13 @@ describe('rentVsBuyCaption', () => {
     expect(rentVsBuyCaption({ ...base, realReturn: 0.07, houseGrowth: 0 })).toContain("the plan's 7,0% a year and the house gains 0,0% a year")
   })
 
-  it('says that the plan takes only the down payment and the fees from the portfolio, so a house adds more to its net worth than here', () => {
-    expect(rentVsBuyCaption(base)).toContain(
-      "The plan only takes the down payment and fees from your portfolio, not the loan or upkeep, so a house adds more to its net worth than it does here.",
+  it('says that the plan takes only the down payment and the fees from the portfolio, so while owning costs more a month than renting a house adds more to its net worth than here', () => {
+    const text = rentVsBuyCaption(base)
+    expect(text).toContain(
+      'The plan only takes the down payment and fees from your portfolio, not the loan or upkeep, so while owning costs more a month than renting, a house adds more to its net worth than it does here.',
     )
+    // True only while owning costs more: with a rent that makes owning the cheaper month, the buyer's line gains from it.
+    expect(text).not.toContain('so a house adds more')
   })
 
   it('says when the loan is paid off, in the year after buying it falls in, part way through a year too', () => {
