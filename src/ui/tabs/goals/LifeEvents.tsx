@@ -2,16 +2,21 @@ import { useState } from 'react'
 import type { LifeEvent } from '../../../types'
 import { formatCents, type MoneyFormat } from '../../../engine'
 import { MoneyField, NumberField } from './goalControlFields'
+import { eventMoneyHint } from './moneyHints'
 import styles from './goals.module.css'
 
 export function LifeEventsList({
   events,
   horizonYears,
+  planStartDate,
+  inflationRate,
   format,
   onChange,
 }: {
   events: LifeEvent[]
   horizonYears: number
+  planStartDate: string | null | undefined
+  inflationRate: number
   format: MoneyFormat
   onChange: (events: LifeEvent[]) => void
 }) {
@@ -57,6 +62,9 @@ export function LifeEventsList({
       {adding ? (
         <LifeEventForm
           horizonYears={horizonYears}
+          planStartDate={planStartDate}
+          inflationRate={inflationRate}
+          format={format}
           onAdd={addEvent}
           onCancel={() => setAdding(false)}
         />
@@ -77,10 +85,16 @@ const DEFAULT_AMOUNT_CENTS = 1_000_000_00
 
 function LifeEventForm({
   horizonYears,
+  planStartDate,
+  inflationRate,
+  format,
   onAdd,
   onCancel,
 }: {
   horizonYears: number
+  planStartDate: string | null | undefined
+  inflationRate: number
+  format: MoneyFormat
   onAdd: (ev: LifeEvent) => void
   onCancel: () => void
 }) {
@@ -116,6 +130,7 @@ function LifeEventForm({
         value={Math.abs(amountCents)}
         onChange={(v) => setAmountCents(amountCents < 0 ? -v : v)}
       />
+      <p className={styles.fieldHint}>{eventMoneyHint({ amountCents, year, planStartDate, inflationRate, format })}</p>
       <div className={styles.lifeEventSignRow}>
         <label className={styles.lifeEventSignLabel}>
           <input
