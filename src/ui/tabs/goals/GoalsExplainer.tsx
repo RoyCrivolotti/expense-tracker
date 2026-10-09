@@ -47,6 +47,10 @@ const buildTerms = (cur: string): { term: string; body: string }[] => [
     body: 'How long the invested money has to pay for your spending after FI. The FI drawdown runs for it, and it sets the usual guide for the withdrawal rate: 4% up to 35 years, 3,5% up to 49 and 3,25% from 50. Changing it moves the rate to the guide, unless you have set the rate yourself.',
   },
   {
+    term: 'Market bounce',
+    body: "How far a single year's return strays from the typical one. The plan assumes the typical return every year, which no run of years pays. The spread card replays the plan in 10.000 different markets, each year's return the typical one times a luck factor with this bounce (15% by default, about world stocks), and shows where the middle half of them and 8 in 10 of them end up. You set it in the Market bounce card. A mixed portfolio bounces less, so choose a lower one for it.",
+  },
+  {
     term: 'Drawdown',
     body: "What happens to the portfolio after you reach FI: it keeps growing with returns while you withdraw your annual spend each year. It takes the plan's return every year, so it is an illustration, not a forecast: a bad run of early years would leave less. Chart years count from the FI year, not from today. If FI is not reached within the horizon, the drawdown chart shows the target only.",
   },

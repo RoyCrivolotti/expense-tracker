@@ -2,9 +2,13 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (how far luck could move the plan)
+
+- **A new card shows the plan against 10.000 different markets.** The plan is one line, which is the middle of the futures and not a floor. The card replays it with random yearly returns around the typical one, draws the middle run, the middle half as a shaded band and the 10th and 90th rank as dashed lines, and says in a sentence where they end. A table gives the years in which the middle half of the runs and 8 in 10 of them first reach each milestone and the FI target ("2044 to 2049", or "not within 30 years"), and how many of 100 runs get there. It uses the Market bounce from Assumptions, shows in the Nominal view when that is chosen, and is last in the second column on a wide screen and last in the phone's chart picker, "Spread". Only the market changes in the replay: the saving, the house, the events and the inflation are as planned.
+
 ## October 2026 (the market's bounce is a setting)
 
-- **Assumptions has a Market bounce card.** How far a single year's return strays from the typical one, from 0 to 50%, with three usual choices beside the stepper: world stocks 15%, stocks and bonds 11%, mostly bonds 7%. It is one value for every scenario, 15% until set. Nothing uses it yet: the card that replays the plan with random returns comes next, and a plan's own return stays the typical growth. Needs migration 0034 on production before this is deployed.
+- **Assumptions has a Market bounce card.** How far a single year's return strays from the typical one, from 0 to 50%, with three usual choices beside the stepper: world stocks 15%, stocks and bonds 11%, mostly bonds 7%. It is one value for every scenario, 15% until set. The spread card uses it, and a plan's own return stays the typical growth. Needs migration 0034 on production before this is deployed.
 
 ## October 2026 (how long the money must last)
 
