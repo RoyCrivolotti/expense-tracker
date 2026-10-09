@@ -115,30 +115,32 @@ export function monthlyCentsAt(baseCents: number, steps: readonly ScheduleStep[]
  * then is worth in the money of the plan start, `(1 + inflation) ** -t`. With no inflation it is
  * the plain length of the span.
  */
-function discountedYears(from: number, to: number, inflationRate: number): number {
-  if (inflationRate === 0) return to - from
-  const k = Math.log1p(inflationRate)
+function discountedYears(from: number, to: number, rate: number): number {
+  if (rate === 0) return to - from
+  const k = Math.log1p(rate)
   return (Math.exp(-k * from) - Math.exp(-k * to)) / k
 }
 
 /**
  * The monthly amount summed over the plan offsets `from` to `to`, in cents-years of the plan's
  * money. The amount only changes at a step, so the span is cut there and each piece is the amount
- * in force times its discounted length.
+ * in force times its discounted length. `rate` is what a euro paid later is discounted by a year: the
+ * inflation for the plan's money, or the inflation and a return together for what the payments grow
+ * into.
  */
-function monthlyIntegral(
+export function monthlyIntegral(
   baseCents: number,
   steps: readonly ScheduleStep[],
   from: number,
   to: number,
-  inflationRate: number,
+  rate: number,
 ): number {
   const edges = [from, ...steps.map((s) => s.offsetYears).filter((o) => o > from && o < to), to]
   let sum = 0
   for (let i = 1; i < edges.length; i++) {
     const a = edges[i - 1]!
     const b = edges[i]!
-    sum += monthlyCentsAt(baseCents, steps, (a + b) / 2) * discountedYears(a, b, inflationRate)
+    sum += monthlyCentsAt(baseCents, steps, (a + b) / 2) * discountedYears(a, b, rate)
   }
   return sum
 }
