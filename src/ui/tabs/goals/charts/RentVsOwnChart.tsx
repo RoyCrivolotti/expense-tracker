@@ -1,7 +1,7 @@
 import { memo, useMemo } from 'react'
 import { useAssumedInflation } from '../../..//hooks/assumedInflationContext'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { projectRentVsBuy, scenarioToParams } from '../../../../engine'
+import { formatPercent, projectRentVsBuy, scenarioToParams } from '../../../../engine'
 import { rentVsBuyHeadline } from './rentVsBuyHeadline'
 import { ChartShell } from './ChartShell'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
@@ -71,8 +71,8 @@ function RentVsOwnChartImpl({
       <p className={styles.chartHint}>
         {rentVsBuyHeadline(verdict, points[points.length - 1], (c) => formatMoneyShort(c, format))}{' '}
         Higher is better. The renter invests the down payment plus any monthly surplus; assumes
-        constant rent in today's money and 1.5%/yr home carry costs, and the buyer's figure is before
-        the costs of selling. These are the two choices on their own, without your starting portfolio
+        constant rent in today's money and upkeep, tax and insurance of {formatPercent(draft.homeCarryRate, format)} of
+        the house's value a year, and the buyer's figure is before the costs of selling. These are the two choices on their own, without your starting portfolio
         and contributions, so they will not match the plan's net worth.
       </p>
       <LinearChart

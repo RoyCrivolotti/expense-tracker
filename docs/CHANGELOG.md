@@ -4,7 +4,7 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 
 ## October 2026 (the upkeep of the house is an input)
 
-- **Rent vs buy shows what it assumes for owning costs.** It had counted 1,5% of the house's value a year (repairs, property tax and insurance) against the buyer without saying so. The Housing section now has "Upkeep, tax and insurance", per scenario, beside the rent, and the chart reads it. Existing scenarios keep 1,5%, so no figure moves until it is changed. Needs migration 0032 on production before this is deployed.
+- **Rent vs buy shows what it assumes for owning costs.** It had counted 1,5% of the house's value a year (repairs, property tax and insurance) against the buyer without saying so. The Housing section now has "Upkeep, tax and insurance", per scenario, beside the rent, and the chart reads it and states the rate in its note. Existing scenarios keep 1,5%, so no figure moves until it is changed. Needs migration 0032 on production before this is deployed.
 
 ## October 2026 (Progress says where the gap comes from)
 
