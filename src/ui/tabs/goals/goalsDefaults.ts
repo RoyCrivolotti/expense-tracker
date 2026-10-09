@@ -3,6 +3,7 @@ import type { NewGoalScenario } from '../../../data/dataSource'
 import {
   DEFAULT_ANNUAL_SPEND_CENTS,
   DEFAULT_DOWN_PAYMENT_FRACTION,
+  DEFAULT_HOME_CARRY_RATE,
   DEFAULT_HOUSE_APPRECIATION,
   DEFAULT_HORIZON_YEARS,
   DEFAULT_MORTGAGE_RATE,
@@ -52,5 +53,6 @@ export function draftFromDataset(
     planStartDate: latest?.checkinDate ?? todayIso(),
     lifeEvents: [],
     contributionSchedule: [],
+    homeCarryRate: DEFAULT_HOME_CARRY_RATE,
   }
 }

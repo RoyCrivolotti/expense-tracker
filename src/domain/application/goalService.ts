@@ -3,6 +3,7 @@ import {
   normalizeContributionSchedule,
   validateContributionSchedule,
 } from '../engine/contributionSchedule'
+import { DEFAULT_HOME_CARRY_RATE } from '../engine/projectionConstants'
 import type { ExpenseRepository } from '../ports/expenseRepository'
 import { ValidationError } from './validationError'
 
@@ -117,6 +118,11 @@ function validateScenarioFractions(patch: Partial<NewGoalScenario>): void {
       'downPaymentFraction must be between 0 and 1',
     )
   }
+
+  // A tenth of the house's value a year is already more than owning costs anywhere; above it is a typo.
+  if (patch.homeCarryRate !== undefined) {
+    assertInClosedRange(patch.homeCarryRate, 0, 0.1, 'homeCarryRate must be between 0 and 0.1')
+  }
 }
 
 export async function createScenario(
@@ -125,7 +131,9 @@ export async function createScenario(
   input: NewGoalScenario,
 ) {
   validateScenarioNumbers(input)
-  return repo.createScenario(owner, withSortedSchedule({ ...input, name: validateScenarioName(input.name) }))
+  const named = { ...input, name: validateScenarioName(input.name) }
+  // A client that predates the field posts without it.
+  return repo.createScenario(owner, withSortedSchedule({ ...named, homeCarryRate: input.homeCarryRate ?? DEFAULT_HOME_CARRY_RATE }))
 }
 
 export async function patchScenario(

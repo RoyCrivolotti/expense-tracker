@@ -18,6 +18,8 @@ describe('isCompatibleSnapshot', () => {
     expect(isCompatibleSnapshot({ version: 4 })).toBe(false)
     // Version 5 predates `GoalScenario.contributionSchedule`, which every projection reads.
     expect(isCompatibleSnapshot({ version: 5 })).toBe(false)
+    // Version 6 predates `GoalScenario.homeCarryRate`, which Rent vs buy and the editor's draft read.
+    expect(isCompatibleSnapshot({ version: 6 })).toBe(false)
   })
 
   it('rejects a missing record', () => {
@@ -25,6 +27,6 @@ describe('isCompatibleSnapshot', () => {
   })
 
   it('accepts a snapshot written by this build', () => {
-    expect(isCompatibleSnapshot({ version: 6 })).toBe(true)
+    expect(isCompatibleSnapshot({ version: 7 })).toBe(true)
   })
 })

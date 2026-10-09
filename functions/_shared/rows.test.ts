@@ -61,6 +61,14 @@ describe('toGoalScenario', () => {
     expect(result.lifeEvents).toEqual([])
   })
 
+  it('reads home_carry_rate, and a missing or empty one as 1,5% of the value a year', () => {
+    expect(toGoalScenario(baseRow({ home_carry_rate: 0.025 })).homeCarryRate).toBe(0.025)
+    expect(toGoalScenario(baseRow({ home_carry_rate: 0 })).homeCarryRate).toBe(0)
+    // A database that has not had the column added yet returns no such key at all.
+    expect(toGoalScenario(baseRow()).homeCarryRate).toBe(0.015)
+    expect(toGoalScenario(baseRow({ home_carry_rate: null })).homeCarryRate).toBe(0.015)
+  })
+
   it('reads contribution_schedule into date order, and a missing, empty or unusable one as no changes', () => {
     const schedule = [
       { from: '2028-03', monthlyCents: 250_000 },

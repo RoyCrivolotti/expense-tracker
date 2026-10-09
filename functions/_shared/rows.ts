@@ -18,6 +18,7 @@ import type {
   WealthCheckinEntry,
 } from '../domain/types'
 import { parseContributionSchedule } from '../domain/engine/contributionSchedule'
+import { DEFAULT_HOME_CARRY_RATE } from '../domain/engine/projectionConstants'
 import { DEFAULT_BUDGET_ROLLOVER_DAY } from '../domain/engine/dates'
 import { DEFAULT_INFLATION_RATE } from '../domain/engine/projectionConstants'
 import { parseLevers } from '../domain/engine/goalLevers'
@@ -255,6 +256,8 @@ export interface GoalScenarioRow {
   life_events: string
   /** Undefined on a database that has not had the column added yet. */
   contribution_schedule?: string | null
+  /** Undefined on a database that has not had the column added yet. */
+  home_carry_rate?: number | null
   is_active: number
 }
 
@@ -288,6 +291,7 @@ export function toGoalScenario(r: GoalScenarioRow): GoalScenario {
     planStartDate: r.plan_start_date ?? null,
     lifeEvents,
     contributionSchedule: parseContributionSchedule(r.contribution_schedule),
+    homeCarryRate: r.home_carry_rate ?? DEFAULT_HOME_CARRY_RATE,
     isActive: r.is_active === 1,
   }
 }

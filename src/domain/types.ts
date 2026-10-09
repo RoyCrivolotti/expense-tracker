@@ -292,6 +292,11 @@ export interface GoalScenario {
    */
   contributionSchedule: ContributionStep[]
   /**
+   * What owning the house costs a year beyond the mortgage (repairs, property tax, insurance), as a
+   * fraction of its value: 0.015 is 1,5%. Rent vs buy counts it against the buyer. Between 0 and 0.1.
+   */
+  homeCarryRate: number
+  /**
    * The owner's plan: the one scenario that Progress, the dashboard and check-in
    * deltas measure against. At most one per owner; set through activation, never
    * through a create or patch, so the editor's selection and the plan stay separate.

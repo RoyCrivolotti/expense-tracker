@@ -113,7 +113,7 @@ with: additions only. A drop or rename ships in a later release, once nothing re
 production migration left waiting for approval holds the queue, and rejecting it lets the next deploy through.
 `npm run migrate -- <database> --apply` still does the same by hand.
 
-Apply through `0031_contribution_schedule.sql` on production, and record each file in `_migrations` as you go, by its name without `.sql`. `npm run migrate:dev` records for the dev database itself, and `npm run migrate -- roy-expenses --apply` does for production. The app never reads the table, so a missing row breaks nothing until someone trusts the record, which is how the drift described below happened.
+Apply through `0032_home_carry_rate.sql` on production, and record each file in `_migrations` as you go, by its name without `.sql`. `npm run migrate:dev` records for the dev database itself, and `npm run migrate -- roy-expenses --apply` does for production. The app never reads the table, so a missing row breaks nothing until someone trusts the record, which is how the drift described below happened.
 
 **Check what a database actually has before trusting this line.** It has been wrong: on
 2026-09-15 production turned out to have no `_migrations` table at all, `0020` never having
@@ -286,6 +286,8 @@ record on a database that already has a `transactions` table means the same thin
 `0030_goal_levers.sql` adds a nullable `goal_levers` text column to `settings`: a JSON array of up to five scenario input names, in the order the Goals page's bar shows them. NULL means the owner never chose and reads as the built-in five, so there is no backfill, and an empty array is a deliberate empty bar. Apply it before the code that saves a choice is deployed: a database without the column still reads as the defaults, but saving a choice fails until it is there.
 
 `0031_contribution_schedule.sql` adds a `contribution_schedule TEXT NOT NULL DEFAULT '[]'` column to `goal_scenarios`: a JSON array of `{from, monthlyCents}` changes to what a scenario invests each month, from the first of the month `from` on. Existing rows get the empty array, so every scenario reads as having no changes and nothing needs a backfill. Apply it before the code that saves a schedule is deployed: a database without the column still loads scenarios, but creating or saving one fails until it is there. Afterwards run `npm run check:schema` against the database, since `0013`, the same kind of column, was once recorded as applied and never ran.
+
+`0032_home_carry_rate.sql` adds a `home_carry_rate REAL NOT NULL DEFAULT 0.015` column to `goal_scenarios`: what owning the house costs a year beyond the mortgage (repairs, property tax, insurance), as a fraction of its value, which Rent vs buy counts against the buyer. It had been a rate of 1,5% written into the code and shown nowhere. Existing rows get 0.015, the rate they were always compared with, so nothing needs a backfill and no scenario's figures move. The server holds it between 0 and 0.1 and fills 0.015 in for a client that posts without it. Apply it before the code that saves it is deployed: a database without the column still loads scenarios (they read as 1,5%), but creating or saving one fails until it is there. Afterwards run `npm run check:schema`.
 
 ## Old URL
 

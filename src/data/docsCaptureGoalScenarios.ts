@@ -1,5 +1,5 @@
 import type { GoalScenario } from '../types'
-import { SCENARIO_COLORS, shiftBudgetMonth } from '../engine'
+import { DEFAULT_HOME_CARRY_RATE, SCENARIO_COLORS, shiftBudgetMonth } from '../engine'
 import { todayIso } from '../ui/components/transactionFormState'
 import seed from '../../fixtures/demo-goal-scenarios.json'
 
@@ -13,6 +13,7 @@ export function docsCaptureGoalScenarios(): GoalScenario[] {
     planStartDate,
     lifeEvents: [],
     contributionSchedule: [],
+    homeCarryRate: DEFAULT_HOME_CARRY_RATE,
     // The first path is the plan, so the gallery shows a Progress view with a status.
     isActive: index === 0,
     ...row,

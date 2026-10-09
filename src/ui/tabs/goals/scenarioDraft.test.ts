@@ -94,6 +94,15 @@ describe('editedKeys and editedPatch', () => {
   })
 })
 
+describe('editedKeys for the yearly upkeep of the house', () => {
+  it('counts a change to it as an edit, so a draft that changes only that can be saved', () => {
+    const saved = makeScenario({ id: 1 })
+    const draft = { ...scenarioToDraft(saved), homeCarryRate: 0.03 }
+    expect(editedKeys(draft, saved)).toEqual(['homeCarryRate'])
+    expect(editedPatch(draft, saved)).toEqual({ homeCarryRate: 0.03 })
+  })
+})
+
 describe('rebaseDraft', () => {
   const from = makeScenario({ id: 1, startInvestedCents: 100_000, monthlyContributionCents: 5_000 })
   // Another device changed the start balance and the date it counts from.
