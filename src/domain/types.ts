@@ -366,6 +366,11 @@ export interface ExpenseSettings {
    */
   assumedInflation: number
   /**
+   * How far a year's return strays from the typical one when the spread card replays the plan
+   * (0.15 = 15%): one value for the owner, volatility only, between 0 and 0.5.
+   */
+  marketVolatility: number
+  /**
    * The scenario inputs the Goals page keeps in its bar, in the order they are shown: at most
    * five, resolved to the built-in defaults when the owner has never chosen. An empty list is a
    * deliberate choice, not a missing value.

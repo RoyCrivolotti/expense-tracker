@@ -21,6 +21,7 @@ import { parseContributionSchedule } from '../domain/engine/contributionSchedule
 import { DEFAULT_HOME_CARRY_RATE, DEFAULT_RETIREMENT_YEARS } from '../domain/engine/projectionConstants'
 import { DEFAULT_BUDGET_ROLLOVER_DAY } from '../domain/engine/dates'
 import { DEFAULT_INFLATION_RATE } from '../domain/engine/projectionConstants'
+import { DEFAULT_MARKET_VOLATILITY } from '../domain/engine/marketVolatility'
 import { parseLevers } from '../domain/engine/goalLevers'
 import { parseMilestones } from '../domain/engine/milestones'
 import { DEFAULT_CURRENCY_CODE, DEFAULT_NUMBER_LOCALE } from '../domain/engine/money'
@@ -211,6 +212,8 @@ export interface SettingsRow {
   claimant_name: string | null
   cash_reserve_months: number | null
   assumed_inflation: number | null
+  /** Undefined on a database that has not had the column added yet. */
+  market_volatility?: number | null
   goal_levers: string | null
 }
 
@@ -219,6 +222,7 @@ export function toSettings(r: SettingsRow): ExpenseSettings {
     cashReserveMonths: r.cash_reserve_months ?? 0,
     // Undefined too, on a database that has not had the column added yet.
     assumedInflation: r.assumed_inflation ?? DEFAULT_INFLATION_RATE,
+    marketVolatility: r.market_volatility ?? DEFAULT_MARKET_VOLATILITY,
     openingCashCents: r.opening_cash_cents,
     openingInvestmentCents: r.opening_investment_cents,
     defaultAccountId: r.default_account_id ?? null,

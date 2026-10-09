@@ -15,8 +15,9 @@ const SNAPSHOT_KEY = 'latest'
 // `settings.goalLevers`, which the Goals page reads the length of. Version 5 predates
 // `GoalScenario.contributionSchedule`, which every projection and the editor's draft read. Version 6
 // predates `GoalScenario.homeCarryRate`, which Rent vs buy and the draft read. Version 7 predates
-// `GoalScenario.retirementYears`, which the drawdown chart and the draft read.
-const SNAPSHOT_VERSION = 8
+// `GoalScenario.retirementYears`, which the drawdown chart and the draft read. Version 8 predates
+// `settings.marketVolatility`, which the spread card and the Assumptions card read.
+const SNAPSHOT_VERSION = 9
 
 interface SnapshotRecord {
   key: string
