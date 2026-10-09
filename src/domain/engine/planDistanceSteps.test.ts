@@ -184,6 +184,20 @@ describe('measurePlanDistance across a step too small to end a stretch', () => {
   })
 })
 
+describe('measurePlanDistance when the balance is reached only after a step in the last year', () => {
+  it('says a step is why, not that the balance is off the line, when the line has it only just after the step', () => {
+    // A 300.000 euro bonus in year 9 of a 10-year plan: a balance a little above the value after it is on the line
+    // only in the year that follows the bonus, the last one.
+    const points = project({ housePurchaseYear: null, horizonYears: 10, lifeEvents: [{ year: 9, amountCents: 30_000_000, label: 'Bonus' }] })
+    const line = planLineOf(points)
+    const lead = points[9]!.investedCents + 100_000
+    expect(lead).toBeLessThan(points[10]!.preEventInvestedCents)
+    expect(measurePlanDistance(line, 9 - WEEK, lead)).toEqual({ kind: 'unmeasured', reason: 'across-event' })
+    // A balance far above anything the plan ever holds is not on the line at all.
+    expect(measurePlanDistance(line, 9 - WEEK, points[10]!.investedCents * 2)).toEqual({ kind: 'unmeasured', reason: 'outside-line' })
+  })
+})
+
 describe('monthBand', () => {
   const line = planLineOf(project())
 

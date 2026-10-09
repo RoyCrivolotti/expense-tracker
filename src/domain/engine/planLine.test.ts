@@ -127,6 +127,15 @@ describe('planValueBefore', () => {
     expect(planValueBefore(line, 3)).toBe(planValueAt(line, 3))
   })
 
+  it('is the value before the step on the plan\'s last anniversary too, where there is no year after it', () => {
+    // A 50.000 euro payment in the plan's last year: the day before it the portfolio still holds it.
+    const points = project({ housePurchaseYear: null, horizonYears: 10, lifeEvents: [{ year: 10, amountCents: -5_000_000, label: 'Car' }] })
+    const line = planLineOf(points)
+    expect(points[10]!.preEventInvestedCents).toBeGreaterThan(points[10]!.investedCents)
+    expect(planValueBefore(line, 10)).toBe(points[10]!.preEventInvestedCents)
+    expect(planValueAt(line, 10)).toBe(points[10]!.investedCents)
+  })
+
   it('is the value at the start on the first day, and nothing outside the plan', () => {
     const line = planLineOf(project())
     expect(planValueBefore(line, 0)).toBe(planValueAt(line, 0))
