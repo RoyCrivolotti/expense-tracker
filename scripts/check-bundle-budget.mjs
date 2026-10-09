@@ -259,13 +259,19 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // a scroll into view for the chip arrowed to): about 360 bytes gzip took the total from 273,310 to 273,672 bytes
 // across the last two changes. No new library.
 //
+// Raised from 273.9 KB to 274.9 KB (and the Goals limit from 81.5 KB to 82.3 KB) for what main added while the planning
+// changes were open (the from-today chip's value tags) and the last fixes before they land (the milestone chip against
+// the from-today date, the worked monthly figure, the money named in four more places, the lean sentence on Rent vs buy,
+// the spread card's preload): the total went from 273,672 to 274,605 bytes gzip and the Goals-only code to 81,974. No
+// new library.
+//
 // The Goals limit used to count only the files named GoalsTab*, which left the chunks the bundler splits out of
 // the tab (named after the first module in them) and the lazy spread card outside it: 12.4 KB of Goals-only code,
 // with the limit left at 72.86 KB so that the total was the only thing watching it. It counts them now, found by
 // following the imports in the built files, and the limit is the 81,224 bytes they come to plus 276: GoalsTab
 // 68,846, the shared chart shell 8,802 and the spread card 3,576.
-const TOTAL_MAX_GZIP = 273_900
-const GOALS_MAX_GZIP = 81_500
+const TOTAL_MAX_GZIP = 274_900
+const GOALS_MAX_GZIP = 82_300
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length
