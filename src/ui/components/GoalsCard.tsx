@@ -21,6 +21,7 @@ import { useAssumedInflation } from '../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { formatMoneyShort } from '../tabs/goals/chartTheme'
 import { planGapLabel } from '../tabs/goals/planGap'
+import { planMoneyLabel } from '../tabs/goals/planMoneyLabel'
 import { daysSinceCheckin } from './checkinAge'
 import { todayIso } from './transactionFormState'
 import styles from './GoalsCard.module.css'
@@ -57,9 +58,11 @@ function CheckinNudge({ dataset, onLogCheckin }: { dataset: ExpenseDataset; onLo
 interface TrackBadgeProps {
   status: TrackStatus
   format: ReturnType<typeof useMoneyFormat>
+  /** The euros the gap in money is in, named when it is the only thing said. */
+  planMoney: string
 }
 
-function TrackBadge({ status, format }: TrackBadgeProps) {
+function TrackBadge({ status, format, planMoney }: TrackBadgeProps) {
   const verdict = trackVerdict(status)
   // Within a month either way is on track, which is neither the green nor the red of a side.
   const ahead = verdict !== 'behind'
@@ -71,7 +74,7 @@ function TrackBadge({ status, format }: TrackBadgeProps) {
       ? 'On track'
       : status.deltaMonths
         ? planGapLabel(status.deltaMonths)
-        : `${money} ${verdict}`
+        : `${money} ${verdict} (${planMoney})`
   return (
     <div className={`${styles.trackBadge} ${ahead ? styles.trackBadgeAhead : styles.trackBadgeBehind}`}>
       <span className={dotClass} />
@@ -160,7 +163,7 @@ export function GoalsCard({ dataset, onOpenGoals, onLogCheckin }: GoalsCardProps
         <p className={styles.primary}>{headline.primary}</p>
         <p className={styles.secondary}>{headline.secondary}</p>
         {track ? (
-          <TrackBadge status={track} format={format} />
+          <TrackBadge status={track} format={format} planMoney={planMoneyLabel(scenario?.planStartDate)} />
         ) : null}
         {onLogCheckin ? <CheckinNudge dataset={dataset} onLogCheckin={onLogCheckin} /> : null}
         {onOpenGoals ? (
