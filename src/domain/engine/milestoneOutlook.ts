@@ -23,14 +23,23 @@ export function yearsToAmount(plan: GoalScenario, amountCents: number, inflation
 }
 
 /**
+ * The fractional years from the plan's start at which it first has the amount on the account, from its own
+ * parameters: the day the chip gives, before any rounding. Null when it does not get there within its horizon.
+ */
+export function crossingYears(params: ProjectionParams, amountCents: number, inflationRate: number): number | null {
+  const crossing = milestoneCrossing(planLineOf(projectNetWorth(params)), amountCents, inflationRate)
+  return crossing === null ? null : Math.max(0, crossing.offset)
+}
+
+/**
  * The first yearly step at which the plan has the amount on the account: the whole years the table
  * and the narrative count in, rounded up from the day the chip gives so the two never disagree. Null
  * when the plan does not get there within its horizon.
  */
 export function wholeYearsToAmount(params: ProjectionParams, amountCents: number, inflationRate: number): number | null {
-  const crossing = milestoneCrossing(planLineOf(projectNetWorth(params)), amountCents, inflationRate)
+  const years = crossingYears(params, amountCents, inflationRate)
   // A crossing on an anniversary is a whole number up to the bisection's last digit.
-  return crossing === null ? null : Math.max(0, Math.ceil(crossing.offset - 1e-9))
+  return years === null ? null : Math.max(0, Math.ceil(years - 1e-9))
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/

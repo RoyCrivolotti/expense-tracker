@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { planFromToday } from '../../../../engine'
+import { planFromToday, planValueAtDate, realToNominal } from '../../../../engine'
 import { makeScenario } from '../../../../testing/factories'
 import {
   buildRows,
@@ -20,7 +20,7 @@ import {
   splitPages,
   tintPercent,
   yearsBetween,
-  yearsFromNow,
+  cellFromOffset,
   type MilestoneRow,
 } from './milestoneModel'
 
@@ -37,6 +37,7 @@ function row(overrides: Partial<MilestoneRow>): MilestoneRow {
     elapsedYears: 0,
     horizonFromNow: overrides.horizonYears ?? 30,
     sinceStart: cells,
+    offsets: cells,
     cells,
     ...overrides,
   }
@@ -104,35 +105,66 @@ describe('yearsBetween', () => {
   })
 })
 
-describe('yearsFromNow', () => {
-  it("is the path's own figure for a path that started today or less than a year ago", () => {
-    expect(yearsFromNow(6, 0)).toBe(6)
-    expect(yearsFromNow(6, 0.4)).toBe(6)
-    expect(yearsFromNow(1, 0.99)).toBe(1)
+describe('cellFromOffset', () => {
+  it("is the path's own figure, rounded up, for a path that started today", () => {
+    expect(cellFromOffset(6, 0)).toBe(6)
+    expect(cellFromOffset(5.2, 0)).toBe(6)
+    expect(cellFromOffset(0.4, 0)).toBe(1)
   })
 
-  it('takes the years the path has run off the figure, rounding up', () => {
-    expect(yearsFromNow(6, 3.2)).toBe(3)
-    expect(yearsFromNow(6, 3)).toBe(3)
-    expect(yearsFromNow(6, 3.01)).toBe(3)
-    expect(yearsFromNow(6, 2.99)).toBe(4)
+  it('takes the years the path has run off the day it reaches the amount, and rounds up once', () => {
+    expect(cellFromOffset(6, 3.2)).toBe(3)
+    expect(cellFromOffset(6, 3)).toBe(3)
+    expect(cellFromOffset(5.4, 3.2)).toBe(3)
+    expect(cellFromOffset(5.4, 2.99)).toBe(3)
+    // The old two roundings made these 10 and 3 for a path 0,548 years in that reaches it 9,401 years from its start.
+    expect(cellFromOffset(9.401, 0.548)).toBe(9)
+    expect(cellFromOffset(8.85, 0)).toBe(9)
   })
 
   it('adds the wait for a path that starts later', () => {
-    expect(yearsFromNow(3, -0.5)).toBe(4)
-    expect(yearsFromNow(3, -2)).toBe(5)
+    expect(cellFromOffset(3, -0.5)).toBe(4)
+    expect(cellFromOffset(3, -2)).toBe(5)
   })
 
   it('keeps already there as 0, and a path that reached it before today is there too', () => {
-    expect(yearsFromNow(0, 3.2)).toBe(0)
-    expect(yearsFromNow(0, -1.5)).toBe(0)
-    expect(yearsFromNow(3, 3.2)).toBe(0)
-    expect(yearsFromNow(3, 3)).toBe(0)
-    expect(yearsFromNow(3, 40)).toBe(0)
+    expect(cellFromOffset(0, 3.2)).toBe(0)
+    expect(cellFromOffset(0, -1.5)).toBe(0)
+    expect(cellFromOffset(3, 3.2)).toBe(0)
+    expect(cellFromOffset(3, 3)).toBe(0)
+    expect(cellFromOffset(3, 40)).toBe(0)
   })
 
   it('keeps not within the horizon as null', () => {
-    expect(yearsFromNow(null, 3.2)).toBeNull()
+    expect(cellFromOffset(null, 3.2)).toBeNull()
+  })
+})
+
+describe('a path exactly on the plan, restarted from today', () => {
+  // The plan restarted on its own line changes nothing (GOALS-MODEL), so its cells are the plan's, whatever day it is.
+  const inflation = 0.02
+  const milestones = [100_000, 250_000, 500_000, 1_000_000].map((e) => ({ amountCents: e * 100, label: '' }))
+  const plan = makeScenario({ id: 1, name: 'Path A', isActive: true, planStartDate: '2026-01-01', housePurchaseYear: null })
+  const checkinsOnTheLine = ['2026-07-20', '2027-03-05', '2028-10-15', '2030-05-31', '2033-01-02', '2036-09-09']
+
+  it.each(checkinsOnTheLine)('gives the plan and its restart the same years on %s', (date) => {
+    const onLine = realToNominal(planValueAtDate(plan, date, inflation)!, '2026-01-01', date, inflation)
+    const restarted = planFromToday(plan, { investedCents: onLine, date }, inflation)
+    expect(restarted).not.toBeNull()
+    const [planRow, todayRow] = buildRows([plan], makeScenario({ id: 0 }), milestones, inflation, false, restarted, date)
+    expect(todayRow!.kind).toBe('fromToday')
+    expect(todayRow!.cells).toEqual(planRow!.cells)
+  })
+
+  it.each(checkinsOnTheLine)('is never more than a year later than the day the plan reaches it, counted from %s', (date) => {
+    const [planRow] = buildRows([plan], makeScenario({ id: 0 }), milestones, inflation, false, null, date)
+    planRow!.offsets.forEach((offset, i) => {
+      const cell = planRow!.cells[i]
+      if (offset === null || cell === null || cell === undefined) return
+      const exact = Math.max(0, offset - planRow!.elapsedYears)
+      expect(cell).toBeGreaterThanOrEqual(exact - 1e-9)
+      expect(cell - exact).toBeLessThan(1 + 1e-9)
+    })
   })
 })
 
@@ -338,14 +370,15 @@ describe('buildRows', () => {
     const old = makeScenario({ id: 1, planStartDate: '2023-07-01', startInvestedCents: 1_000_000, monthlyContributionCents: 50_000 })
     const fresh = makeScenario({ id: 2, planStartDate: '2026-10-03', startInvestedCents: 1_000_000, monthlyContributionCents: 50_000 })
     const [first, second] = buildRows([old, fresh], draft, milestones, 0, false, null, '2026-10-04')
+    const fromNow = (r: MilestoneRow | undefined) => [Math.ceil(r!.offsets[0]! - r!.elapsedYears)]
 
-    expect(first?.elapsedYears).toBeCloseTo(3.26, 2)
-    const n = first?.sinceStart[0] ?? 0
-    expect(n).toBeGreaterThan(4)
-    expect(first?.cells).toEqual([n - 3])
+    expect(first!.elapsedYears).toBeCloseTo(3.26, 2)
+    expect(first!.offsets[0]!).toBeGreaterThan(4)
+    // Rounded up once, from the day the path reaches the amount: not up to a yearly step from its start first.
+    expect(first!.cells).toEqual(fromNow(first))
     // Started yesterday: nothing has run, so the figure is the path's own.
-    expect(second?.sinceStart).toEqual([n])
-    expect(second?.cells).toEqual([n])
+    expect(second!.sinceStart).toEqual([Math.ceil(second!.offsets[0]!)])
+    expect(second!.cells).toEqual(fromNow(second))
   })
 
   it('counts the end of the horizon from today, at least a year', () => {
