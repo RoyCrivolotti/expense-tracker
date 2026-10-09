@@ -219,7 +219,13 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // chunks of their own, which compress a little worse apart: the total stood at 263,487 bytes after the market
 // bounce card and this takes it to 269,214. The Goals chunk goes the other way, from 72,572 to 65,586, and its
 // limit stays where it was so that the rest of the stack still has room in it. No new library.
-const TOTAL_MAX_GZIP = 269_490
+//
+// Raised from 269.49 KB to 271.09 KB for showing both moneys (the net worth, the FI target, and the spending and
+// rent under their fields say what they come to on the account as well as in the plan's euros, every chart names
+// its euros, and the glossary explains the two): about 1,6 KB gzip, all of it text and small helpers in the lazy
+// Goals chunk, took the total from 269,214 to 270,785 bytes. The Goals chunk's limit stays where it was. No new
+// library.
+const TOTAL_MAX_GZIP = 271_090
 const GOALS_MAX_GZIP = 72_860
 
 function gzipBytes(path) {
