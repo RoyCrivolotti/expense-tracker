@@ -1,4 +1,4 @@
-import { areaPath, type ScatterPoint } from './linearScale'
+import { areaPath, linePath, type ScatterPoint } from './linearScale'
 import { steppedPoints } from './steppedPoints'
 import styles from './charts.module.css'
 
@@ -181,6 +181,31 @@ export function ChartBandLayer({
       strokeWidth={1}
       aria-hidden
     />
+  )
+}
+
+/** Reference curves: thin dashed lines through one value per place, for a target that moves with the inflation. */
+export function ChartRefCurves({
+  curves,
+  xForIndex,
+  scaleY,
+}: {
+  curves: { id: string; values: number[] }[] | undefined
+  xForIndex: (i: number) => number
+  scaleY: (v: number) => number
+}) {
+  return (
+    <>
+      {curves?.map((c) => (
+        <path
+          key={c.id}
+          d={linePath(c.values.map((v, i) => ({ x: xForIndex(i), y: scaleY(v) })))}
+          className={styles.refLine}
+          fill="none"
+          aria-hidden
+        />
+      ))}
+    </>
   )
 }
 

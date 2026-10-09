@@ -17,6 +17,7 @@ export interface HeroSheetModel {
     | 'series'
     | 'xLabels'
     | 'refLines'
+    | 'refCurves'
     | 'markerYears'
     | 'lifeEventMarkers'
     | 'todayIndex'

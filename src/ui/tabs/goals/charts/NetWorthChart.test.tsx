@@ -251,10 +251,10 @@ describe('NetWorthChart', () => {
 
     /**
      * How many points each drawn line has, in the order they are drawn: the saved scenarios, then
-     * the draft. A path of one point is a marker, not a line.
+     * the draft. A path of one point is a marker, not a line, and a reference curve is not one of the lines.
      */
     const pointCounts = (container: HTMLElement) =>
-      [...container.querySelectorAll('path[fill="none"]')]
+      [...container.querySelectorAll('path[fill="none"]:not([class*="refLine"])')]
         .map((p) => (p.getAttribute('d') ?? '').match(/[ML]/g)?.length ?? 0)
         .filter((count) => count > 1)
 
@@ -771,9 +771,10 @@ describe('NetWorthChart', () => {
 
   it('draws only the milestones within reach of what is drawn in this view', () => {
     const realEnd = projectNetWorth(scenarioToParams(defaultDraft, 0.02)).at(-1)!.investedCents
+    // On the account the plan ends at 1,02^30 (1,81) times its end in the plan's money, so a milestone
+    // a little above that end is reached, and one at two and a half times is not.
     const near = Math.round(realEnd * 1.1)
-    // Out of reach of today's money, but under the nominal plan the axis used to be held to.
-    const far = Math.round(realEnd * 1.6)
+    const far = Math.round(realEnd * 2.5)
     const { container } = render(
       <NetWorthChart
         milestones={[near, far].map((amountCents) => ({ amountCents, label: '' }))}
@@ -783,7 +784,8 @@ describe('NetWorthChart', () => {
         variant="hero"
       />,
     )
-    expect(container.querySelectorAll(`line.${chartStyles.refLine}`)).toHaveLength(1)
+    expect(container.querySelectorAll(`path.${chartStyles.refLine}`)).toHaveLength(1)
+    expect(container.querySelectorAll(`line.${chartStyles.refLine}`)).toHaveLength(0)
   })
 
   it('draws the nominal view at the owner\'s assumed inflation', () => {
@@ -1044,7 +1046,7 @@ describe('NetWorthChart', () => {
     expect(container.querySelectorAll(`.${chartStyles.refLine}`)).toHaveLength(1)
   })
 
-  it('draws no target lines in the nominal view, where a flat line would be crossed early', () => {
+  it('draws a milestone as a curve in Purchasing power and as a flat line in Nominal, in the money each view is in', () => {
     const render1 = (nominalMode: boolean) =>
       render(
         <NetWorthChart
@@ -1056,9 +1058,14 @@ describe('NetWorthChart', () => {
           nominalMode={nominalMode}
         />,
       ).container
-    expect(render1(false).querySelectorAll(`.${chartStyles.refLine}`)).toHaveLength(1)
-    // Targets are in today's money and the nominal view inflates the plan past them.
-    expect(render1(true).querySelectorAll(`.${chartStyles.refLine}`)).toHaveLength(0)
+    // An amount on the account falls by the inflation in the plan's money, so it is a curve there.
+    const real = render1(false)
+    expect(real.querySelectorAll(`path.${chartStyles.refLine}`)).toHaveLength(1)
+    expect(real.querySelectorAll(`line.${chartStyles.refLine}`)).toHaveLength(0)
+    // In euros on the account it stays where it is.
+    const nominal = render1(true)
+    expect(nominal.querySelectorAll(`line.${chartStyles.refLine}`)).toHaveLength(1)
+    expect(nominal.querySelectorAll(`path.${chartStyles.refLine}`)).toHaveLength(0)
   })
 
   it('drops a milestone far above the projection so it cannot flatten the chart', () => {

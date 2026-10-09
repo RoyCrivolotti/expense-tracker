@@ -6,6 +6,7 @@ import {
   ChartGrid,
   ChartXLabels,
   ChartBandLayer,
+  ChartRefCurves,
   ChartScatterLayer,
   ChartTodayMarker,
   ChartAboveMarker,
@@ -38,6 +39,17 @@ const PAD = { top: 16, right: 16, bottom: 28, left: 56 }
 const REF_LINE_MIN_GAP = 8
 
 export type { ScatterPoint }
+
+/**
+ * A reference that moves across the chart, drawn as a thin dashed line: a target in the other money,
+ * which rises or falls with the inflation between one year and the next. One value per x place. It is
+ * not a series, so it has no focus dot and no tooltip row, and it does not set the axis (it is clipped
+ * where it leaves the plot).
+ */
+export interface ChartRefCurve {
+  id: string
+  values: number[]
+}
 
 export interface ChartSeries {
   id: string
@@ -80,6 +92,8 @@ interface Props {
   ariaLabel: string
   tooltip: (index: number) => { title: string; lines: TooltipLine[] }
   refLines?: number[]
+  /** Reference lines that are not flat; see `ChartRefCurve`. */
+  refCurves?: ChartRefCurve[]
   markerYears?: { yearIndex: number }[]
   /** Life event markers: fractional x-axis indices with labels (e.g. year 3 → yearIndex 3). */
   lifeEventMarkers?: LifeEventMarker[]
@@ -230,6 +244,7 @@ export function LinearChart({
   ariaLabel,
   tooltip,
   refLines = [],
+  refCurves,
   markerYears = [],
   lifeEventMarkers = [],
   todayIndex,
@@ -329,6 +344,7 @@ export function LinearChart({
               />
             ) : null,
           )}
+          <ChartRefCurves curves={refCurves} xForIndex={geo.xForIndex} scaleY={geo.scaleY} />
         </g>
         {lineSeries.map((s) => (
           <path
