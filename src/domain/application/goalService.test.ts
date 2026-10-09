@@ -14,13 +14,13 @@ function newScenario(overrides: Partial<NewGoalScenario> = {}): NewGoalScenario 
 }
 
 describe('the mortgage term', () => {
-  it.each([25, 24.58333, 0.5, 1])('accepts %s years, a part of a year included, since a loan can have months left', (years) => {
+  it.each([25, 24.58333, 0.5, 1, 0.0027, 0.001])('accepts %s years, a part of a year included, since a loan can have months or days left', (years) => {
     expect(() => validateScenarioNumbers({ mortgageTermYears: years })).not.toThrow()
   })
 
-  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY, 101])('refuses %s years', (years) => {
+  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY, 101, 5e-324, 1e-9, 0.0009])('refuses %s years', (years) => {
     expect(() => validateScenarioNumbers({ mortgageTermYears: years })).toThrow(
-      'mortgageTermYears must be a number of years above 0, at most 100',
+      'mortgageTermYears must be a number of years from 0.001 to 100',
     )
   })
 

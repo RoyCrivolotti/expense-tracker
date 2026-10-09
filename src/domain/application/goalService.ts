@@ -48,6 +48,8 @@ const RATE_FIELDS = [
  * with `safeWithdrawalRate: 0` rendered the FI target as garbage on the Goals screen.
  * Every field here was previously written straight to SQLite with only the name checked.
  */
+const MIN_MORTGAGE_TERM_YEARS = 0.001
+
 function assertWholeAtLeast(value: unknown, min: number, message: string): void {
   if (!Number.isInteger(value) || (value as number) < min) throw new ValidationError(message)
 }
@@ -80,9 +82,11 @@ export function validateScenarioNumbers(patch: Partial<NewGoalScenario>): void {
     }
   }
 
-  // A loan can have months left, so its term is a number of years that need not be whole.
+  // A loan can have months left, so its term is a number of years that need not be whole. A re-baseline in a
+  // loan's last month writes about 0.003, so the floor is a day or so, not a month: a term of 5e-324 makes the
+  // payment Infinity and the Goals screen NaN.
   if (rec.mortgageTermYears !== undefined) {
-    assertInClosedRange(rec.mortgageTermYears as number, Number.MIN_VALUE, 100, 'mortgageTermYears must be a number of years above 0, at most 100')
+    assertInClosedRange(rec.mortgageTermYears as number, MIN_MORTGAGE_TERM_YEARS, 100, 'mortgageTermYears must be a number of years from 0.001 to 100')
   }
 
   for (const key of RATE_FIELDS) {
