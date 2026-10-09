@@ -9,6 +9,7 @@ import { MilestoneMatrix } from './charts/MilestoneMatrix'
 import { FireChart } from './charts/FireChart'
 import { RentVsOwnChart } from './charts/RentVsOwnChart'
 import { LazySpreadChart } from './charts/LazySpreadChart'
+import { preloadSpreadChart } from './charts/spreadChartLoader'
 import { SavingsRateChart } from './charts/SavingsRateChart'
 import type { MonthlyFlow, PlanFromToday } from '../../../engine'
 import styles from './goals.module.css'
@@ -51,6 +52,8 @@ function useScrollEdges() {
   }, [update])
   return { ref, ...edges }
 }
+
+const PRELOAD_DELAY_MS = 1_500
 
 interface SecondaryChartsProps {
   scenarios: GoalScenario[]
@@ -223,6 +226,11 @@ export function SecondaryCharts({
 }: SecondaryChartsProps) {
   const [view, setView] = useState<SecondaryView>('compare')
   const includeDraft = activeId === null || dirty
+  // After the page has settled, so it does not compete with what the reader is looking at.
+  useEffect(() => {
+    const timer = setTimeout(preloadSpreadChart, PRELOAD_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [])
 
   return (
     <TabbedChart view={view} onViewChange={setView}>
