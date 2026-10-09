@@ -17,6 +17,7 @@ import { LinearChart } from '../../../charts/LinearChart'
 import { sparseLabels } from '../../../charts/linearScale'
 import { formatMoneyShort } from '../chartTheme'
 import { planMoneyLabel } from '../planMoneyLabel'
+import { yearLabel } from '../yearLabel'
 import { ChartShell } from './ChartShell'
 import {
   SPREAD_RUNS,
@@ -27,7 +28,6 @@ import {
   spreadKey,
   spreadSeries,
   spreadWarning,
-  yearLabel,
 } from './spreadModel'
 import styles from '../goals.module.css'
 

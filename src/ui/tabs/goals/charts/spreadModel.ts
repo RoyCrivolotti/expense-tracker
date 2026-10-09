@@ -8,6 +8,7 @@ import type { MoneyFormat } from '../../../../engine/money'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import type { Milestone } from '../../../../types'
 import type { ChartSeries } from '../../../charts/LinearChart'
+import { yearLabel } from '../yearLabel'
 import { inflateSeries } from './nominalTransform'
 
 /** How many runs the card replays: enough that the bands do not wobble, few enough to stay quick while typing. */
@@ -17,11 +18,6 @@ const MIDDLE_COLOR = 'var(--exp-investment)'
 const PLAN_COLOR = 'var(--color-text)'
 /** A tenth of the runs below nothing is worth saying; one in twenty is not yet. */
 const WARN_SHARE = 0.05
-
-/** The year of the calendar a plan year falls in, or the plan year when there is no start date. */
-export function yearLabel(years: number, planStartDate: string | null): string {
-  return planStartDate ? String(Number(planStartDate.slice(0, 4)) + years) : `year ${years}`
-}
 
 /**
  * A range of years from the lowest to the highest rank: "2044 to 2049", one year once, "2049 to after 2056"
