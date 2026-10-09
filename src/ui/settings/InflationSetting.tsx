@@ -50,9 +50,11 @@ export function InflationSetting({ settings, onChange, scrollIntoView = false }:
             </p>
           ) : null}
           <p className={styles.settingHint}>
-            Goals is in today&apos;s money. Check-ins, the house and the mortgage are brought back to
-            today&apos;s money at this rate. What you invest each month is what you send, so it counts
-            for less each year at this rate, and the Nominal view inflates the plan by it.
+            Goals counts in the euros of each plan&apos;s start date (2026 euros, say), so a euro there is
+            worth what it bought then. Check-ins, the house and the mortgage are brought back to those
+            euros at this rate. What you invest each month is what you send, so it counts for less each
+            year at this rate, and the Nominal view inflates the plan by it to show what your account
+            will read.
           </p>
         </div>
       </Card>

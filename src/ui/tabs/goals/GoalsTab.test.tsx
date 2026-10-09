@@ -852,7 +852,7 @@ describe('GoalsTab', () => {
       await user.click(screen.getByRole('radio', { name: 'Nominal' }))
 
       expect(screen.getByText(/Milestones are amounts on your account, so they stay put in this view/)).toBeInTheDocument()
-      expect(screen.getByText(/the FI target is in today's money, so it rises with the inflation/)).toBeInTheDocument()
+      expect(screen.getByText(/the FI target is in .* euros, so it rises with the inflation/)).toBeInTheDocument()
     })
   })
 

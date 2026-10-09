@@ -717,7 +717,7 @@ describe('NetWorthChart', () => {
     expect(container.querySelector('svg')).not.toBeNull()
   })
 
-  it("says the purchase breakdown is in today's money in the Nominal view, where the legend values above it are inflated", () => {
+  it("says the purchase breakdown is in the plan's euros in the Nominal view, where the legend values above it are inflated", () => {
     const buys = makeScenario({ housePurchaseYear: 5 })
     const stepToPurchase = (nominalMode: boolean) => {
       const { container, unmount } = render(
@@ -735,7 +735,7 @@ describe('NetWorthChart', () => {
       for (let i = 0; i < 5; i++) fireEvent.keyDown(svg, { key: 'ArrowRight' })
       const shown = {
         breakdown: screen.queryByText('Start of year') !== null,
-        note: screen.queryByText(/in today's money, not in the Nominal values/) !== null,
+        note: screen.queryByText(/in the plan's euros, not in the Nominal values/) !== null,
       }
       unmount()
       return shown

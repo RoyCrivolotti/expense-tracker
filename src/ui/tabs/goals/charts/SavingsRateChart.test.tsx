@@ -42,6 +42,11 @@ describe('SavingsRateChart', () => {
     expect(screen.getByText('Net saving')).toBeInTheDocument()
   })
 
+  it('says the amounts are in euros as they went through the account, not in the plan\'s euros', () => {
+    render(<SavingsRateChart draft={draft(null)} monthly={[flow('2026-06', 40_000, 285_695)]} />)
+    expect(screen.getByText(/In euros as they went through the account\./)).toBeInTheDocument()
+  })
+
   it('names where the plan goes when it changes its monthly amount, and draws it as a line of its own', () => {
     const months = [flow('2026-04', 1, 1), flow('2026-05', 2, 2), flow('2026-06', 3, 3), flow('2026-07', 4, 4)]
     const dashedPaths = (container: HTMLElement) => container.querySelectorAll('path[stroke-dasharray]').length

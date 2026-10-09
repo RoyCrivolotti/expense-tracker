@@ -66,17 +66,17 @@ describe('ScenarioSeriesLegend', () => {
     expect(error).not.toHaveBeenCalled()
   })
 
-  it("says the purchase breakdown is in today's money when the values above it are nominal, and only then", () => {
+  it("says the purchase breakdown is in the plan's euros when the values above it are nominal, and only then", () => {
     const props = {
       items: [{ label: 'Path A', color: '#6366f1', valueCents: 1_000_000 }],
       activeYear: 5,
       breakdowns: [entry('1', 'Path A')],
     }
     const { rerender } = render(<ScenarioSeriesLegend {...props} />)
-    expect(screen.queryByText(/in today's money, not in the Nominal values/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/in the plan's euros, not in the Nominal values/)).not.toBeInTheDocument()
 
     rerender(<ScenarioSeriesLegend {...props} breakdownInTodaysMoney />)
-    expect(screen.getByText(/in today's money, not in the Nominal values/)).toBeInTheDocument()
+    expect(screen.getByText(/in the plan's euros, not in the Nominal values/)).toBeInTheDocument()
   })
 
   it('is only the hint, the year and the breakdown where the chips above hold the scenarios', () => {

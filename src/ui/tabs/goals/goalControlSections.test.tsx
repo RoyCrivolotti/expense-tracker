@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { LeverKey } from '../../../engine'
 import { makeScenario } from '../../../testing/factories'
 import { samplePlan } from '../../../testing/samplePlan'
-import { FireFields, HousingFields, PortfolioFields } from './goalControlSections'
+import { ChangesFields, FireFields, HousingFields, PortfolioFields } from './goalControlSections'
 import { LEVER_SPECS, SECTION_KEYS } from './leverFields'
 
 function makeDraft() {
@@ -102,6 +102,13 @@ describe('the sections of the controls', () => {
 
     rerender(<FireFields draft={draft} onChange={vi.fn()} omit={everything(['annualSpendCents'])} />)
     expect(screen.queryByText(/^Counted in 2026 euros: about/)).not.toBeInTheDocument()
+  })
+
+  it('says which euros the monthly amount is counted in, and that what you send counts for less each year', () => {
+    const { id, ...draft } = samplePlan()
+    void id
+    render(<ChangesFields draft={draft} onChange={vi.fn()} />)
+    expect(screen.getByText(/It is counted in 2026 euros at the assumed inflation, so an amount that stays the same counts for less each year/)).toBeInTheDocument()
   })
 
   it('takes what the purchase costs from the price it has risen to', () => {

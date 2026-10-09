@@ -3,6 +3,7 @@ import type { GoalScenario } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import type { PlanFromToday } from '../../../../engine'
 import { formatCheckinDate } from '../checkinDate'
+import { planMoneyLabel } from '../planMoneyLabel'
 import { SegmentedControl } from '../../../components/SegmentedControl'
 import { ChartShell } from './ChartShell'
 import { comparisonRows, type ComparisonRow } from './comparisonRows'
@@ -50,6 +51,16 @@ function readAt(rows: ComparisonRow[], year: number | null): string {
   return year === null ? ' at each path’s horizon' : ` after ${year} years, or at a path’s horizon when it is shorter`
 }
 
+/**
+ * The euros the figures are in: the plan's when every row starts in the same year, and the euros of each plan's
+ * own start when they do not, as each plan counts in its own.
+ */
+function figuresMoney(starts: readonly (string | null)[]): string {
+  const labels = new Set(starts.map((start) => planMoneyLabel(start)))
+  const [only] = labels
+  return labels.size === 1 && only !== undefined ? `in ${only}` : 'each in the euros of its own start date'
+}
+
 function ScenarioComparisonImpl({
   scenarios,
   draft,
@@ -92,11 +103,11 @@ function ScenarioComparisonImpl({
         />
       </div>
       <p className={styles.chartHint}>
-        Net worth and invested are{readAt(rows, year)}, in today's money; FI and the house purchase are
+        Net worth and invested are{readAt(rows, year)}, {figuresMoney([...scenarios.map((s) => s.planStartDate), ...(includeDraft ? [draft.planStartDate] : [])])}; FI and the house purchase are
         counted in years from the plan start; monthly is what each path invests
         {rows.some((r) => r.monthlyLater) ? ', and what a change to it comes to' : ''}.
         {fromToday
-          ? ` "From today" is your plan restarted from the balance in your latest check-in, ${formatCheckinDate(fromToday.since)}, and counts its years from there.`
+          ? ` "From today" is your plan restarted from the balance in your latest check-in, ${formatCheckinDate(fromToday.since)}, and counts its years and its euros from there (${planMoneyLabel(fromToday.scenario.planStartDate)}).`
           : ''}
       </p>
       <ScrollRegion label="Scenarios side by side">

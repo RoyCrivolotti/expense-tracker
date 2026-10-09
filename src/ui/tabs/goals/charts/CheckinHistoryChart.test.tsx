@@ -52,6 +52,11 @@ describe('CheckinHistoryChart', () => {
     expect(container.firstChild).toBeNull()
   })
 
+  it('says which euros it is in: the plan\'s, to which each check-in is brought back at the inflation', () => {
+    render(<CheckinHistoryChart checkins={[]} accounts={[]} plan={makeScenario({ planStartDate: '2020-01-01' })} />)
+    expect(screen.getByText(/^In 2020 euros: each check-in is brought back at 2,0% a year to sit against the plan\.$/)).toBeInTheDocument()
+  })
+
   it('renders chart when scenario has planStartDate', () => {
     const scenario = makeScenario({ planStartDate: '2020-01-01' })
     const { container } = render(
@@ -72,11 +77,6 @@ describe('CheckinHistoryChart', () => {
     )
     const circles = container.querySelectorAll('circle')
     expect(circles.length).toBeGreaterThanOrEqual(2)
-  })
-
-  it('says the chart is in today\'s money, and at what rate check-ins are brought back', () => {
-    render(<CheckinHistoryChart checkins={[]} accounts={[]} plan={makeScenario({ planStartDate: '2020-01-01' })} />)
-    expect(screen.getByText(/In today's money: each check-in is brought back at 2,?0?%? a year/)).toBeInTheDocument()
   })
 
   it('renders a today marker line', () => {

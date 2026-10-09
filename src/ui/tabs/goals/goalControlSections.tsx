@@ -9,6 +9,7 @@ import { ContributionStepsList } from './ContributionSteps'
 import { firstChangeNote } from './contributionText'
 import { housePriceHint } from './housePriceHint'
 import { rentMoneyHint, spendMoneyHint } from './moneyHints'
+import { planMoneyLabel } from './planMoneyLabel'
 import { LifeEventsList } from './LifeEvents'
 import { ADJUST_LABELS } from './adjustSections'
 import { LEVER_SPECS, NO_LEVERS } from './leverFields'
@@ -400,7 +401,7 @@ export function ChangesFields({ draft, onChange, omit = NO_LEVERS }: Pick<Sectio
     <>
       <p className={styles.fieldHint}>
         What you send to your investments each month: the amount you start with, then each change from a month
-        on. It is counted in today's money at the assumed inflation, so an amount that stays the same counts for
+        on. It is counted in {planMoneyLabel(draft.planStartDate)} at the assumed inflation, so an amount that stays the same counts for
         less each year. Enter 0 for a pause.
       </p>
       <ContributionStepsList
