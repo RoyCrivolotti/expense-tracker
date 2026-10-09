@@ -94,6 +94,31 @@ describe('ReachedMilestones', () => {
     expect(screen.getByText(/^not within the horizon, target .*2040$/)).toBeInTheDocument()
   })
 
+  it('does not call a milestone on track in green when the check-ins put it past the target from today', () => {
+    const plan = makeScenario({
+      id: 1,
+      isActive: true,
+      planStartDate: '2026-01-01',
+      startInvestedCents: 9_000_000,
+      monthlyContributionCents: 100_000,
+      expectedRealReturn: 0.05,
+      horizonYears: 10,
+      housePurchaseYear: null,
+    })
+    const milestone = { amountCents: 11_000_000, label: 'Soon', targetDate: '2031-01-01' }
+    const props = { milestones: [milestone], reached: new Map<number, string>(), plan }
+    // The plan itself gets there before the target, so with no check-in it is on track.
+    const { unmount } = render(<ReachedMilestones {...props} />)
+    expect(screen.getByText(/^on track: /)).toBeInTheDocument()
+    unmount()
+    // A year in, with 40.000 where the plan has about 108.000: from today it comes after the target.
+    render(<ReachedMilestones {...props} fromToday={planFromToday(plan, { investedCents: 4_000_000, date: '2027-01-01' }, 0.02)} />)
+    const chip = screen.getByText(/^behind: from today, /)
+    expect(chip).toHaveTextContent(/after the target .*2031; the plan has .*20\d\d/)
+    expect(chip.closest('li')?.className).toMatch(/milestoneChipLate/)
+    expect(screen.queryByText(/on track/)).not.toBeInTheDocument()
+  })
+
   it('says "1 month late", not "1 months late"', () => {
     const plan = makeScenario({
       id: 1,
