@@ -25,13 +25,22 @@ function renderGrid() {
 const titles = () => screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
 
 describe('DetailGrid', () => {
-  it('ends the second column with the spread, after the rent against buying, so the columns are as they were above it', async () => {
+  it('puts the spread card last, across the whole width under the two columns, not as a fourth card in one of them', async () => {
     renderGrid()
     expect(titles().slice(-2)).toEqual(['Rent vs buy (net worth)', 'How far luck could move the plan'])
-    const columns = document.querySelectorAll('[class*="detailColumn"]')
-    expect(columns[1]!.querySelectorAll('h3').length).toBe(columns[1]!.querySelectorAll('h3').length)
+    const spread = screen.getByRole('heading', { name: 'How far luck could move the plan' })
+    expect(spread.closest('[class*="detailColumn"]')).toBeNull()
+    expect(spread.closest('[class*="detailWide"]')).not.toBeNull()
+    const grid = document.querySelector('[class*="detailGrid"]')!
+    expect(grid.compareDocumentPosition(spread) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(grid.contains(spread)).toBe(false)
     expect(await screen.findByText(/Each of the 10.000 runs replays your plan/)).toBeInTheDocument()
-    expect(columns[1]!.lastElementChild).toContainElement(screen.getByRole('heading', { name: 'How far luck could move the plan' }))
+  })
+
+  it('splits the other six cards three and three, so the columns end within a card\'s height of each other', () => {
+    renderGrid()
+    const columns = document.querySelectorAll('[class*="detailColumn"]')
+    expect([...columns].map((c) => c.querySelectorAll('h3').length)).toEqual([3, 3])
   })
 
   it('gives the years to each milestone the whole width, not a place in a half column', () => {
