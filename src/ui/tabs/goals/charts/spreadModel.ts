@@ -197,7 +197,8 @@ export function spreadWarning(result: SpreadResult): string | null {
   return `In ${share}% of the runs the portfolio is below nothing from year ${year}: the house payment or an event takes more than it holds when the market is unkind.`
 }
 
-type Replayed = Pick<
+/** The fields of a scenario the replay reads, which `spreadKey` must all carry. */
+export type Replayed = Pick<
   NewGoalScenario,
   | 'startInvestedCents'
   | 'monthlyContributionCents'
