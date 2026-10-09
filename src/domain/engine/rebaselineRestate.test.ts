@@ -253,7 +253,7 @@ describe('a plan restarted on its own path, at an anniversary, goes where it was
       const balance = Math.round(original[k]!.invested)
       const { patch } = rebaseline(plan, checkin(balance, date), I)
       // The restarted plan counts in the euros of its own start, so its years of inflation start from nothing.
-      const restarted = nominal({ ...plan, ...patch } as GoalScenario, 0)
+      const restarted = nominal({ ...plan, ...patch }, 0)
       const steps = Math.min(restarted.length, original.length - k) - 1
       for (let t = 0; t <= steps; t++) {
         for (const key of ['invested', 'house', 'loan'] as const) {

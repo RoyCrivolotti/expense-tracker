@@ -231,6 +231,52 @@ function ownedHouse(
   }
 }
 
+/** The life events on their calendar dates, in the euros of the new start, and what dropped out and moved. */
+function carryEvents(
+  events: LifeEvent[],
+  oldStart: string | null,
+  date: string,
+  restate: (cents: number) => number,
+): { lifeEvents: LifeEvent[]; droppedLifeEvents: LifeEvent[]; carried: CarriedEvent[] } {
+  const years = events.map((event) => (oldStart ? carriedYear(event.year, oldStart, date, date) : event.year))
+  const lifeEvents: LifeEvent[] = []
+  const droppedLifeEvents: LifeEvent[] = []
+  events.forEach((event, i) => {
+    const year = years[i] ?? null
+    if (year === null) droppedLifeEvents.push(event)
+    else lifeEvents.push({ ...event, year, amountCents: restate(event.amountCents) })
+  })
+  const carried: CarriedEvent[] = oldStart
+    ? events.map((event, i) => {
+        const year = years[i] ?? null
+        return { event, from: anniversary(oldStart, event.year), to: year === null ? null : anniversary(date, year) }
+      })
+    : []
+  return { lifeEvents, droppedLifeEvents, carried }
+}
+
+/**
+ * The purchase year on the new start, and its old and new date. A purchase now on or behind the start
+ * is a house owned from day one, which is year 0, and a house owned from day one stays so, whichever
+ * way the date moves.
+ */
+function carryPurchase(
+  purchase: number | null,
+  oldStart: string | null,
+  date: string,
+): { housePurchaseYear: number | null; house: Rebaseline['house'] } {
+  const housePurchaseYear =
+    purchase === null || purchase === 0 || !oldStart ? purchase : (carriedYear(purchase, oldStart, date, date) ?? 0)
+  const house =
+    oldStart && purchase !== null && purchase > 0 && housePurchaseYear !== null
+      ? {
+          from: anniversary(oldStart, purchase),
+          to: housePurchaseYear > 0 ? anniversary(date, housePurchaseYear) : null,
+        }
+      : null
+  return { housePurchaseYear, house }
+}
+
 export function rebaseline(
   scenario: Rebaselinable,
   latest: { investedCents: number; date: string },
@@ -242,38 +288,8 @@ export function rebaseline(
   // The euros of the new start: what was typed in the euros of the old one, by the inflation between.
   const factor = Math.pow(1 + inflationRate, moved)
   const restate = (cents: number) => Math.round(cents * factor)
-  const years = scenario.lifeEvents.map((event) =>
-    oldStart ? carriedYear(event.year, oldStart, latest.date, latest.date) : event.year,
-  )
-  const lifeEvents: LifeEvent[] = []
-  const droppedLifeEvents: LifeEvent[] = []
-  scenario.lifeEvents.forEach((event, i) => {
-    const year = years[i] ?? null
-    if (year === null) droppedLifeEvents.push(event)
-    else lifeEvents.push({ ...event, year, amountCents: restate(event.amountCents) })
-  })
-  const carried: CarriedEvent[] = oldStart
-    ? scenario.lifeEvents.map((event, i) => {
-        const year = years[i] ?? null
-        return {
-          event,
-          from: anniversary(oldStart, event.year),
-          to: year === null ? null : anniversary(latest.date, year),
-        }
-      })
-    : []
-  // A purchase now on or behind the start is a house owned from day one, which is year 0, and a house
-  // owned from day one stays so, whichever way the date moves.
-  const purchase = scenario.housePurchaseYear
-  const housePurchaseYear =
-    purchase === null || purchase === 0 || !oldStart ? purchase : (carriedYear(purchase, oldStart, latest.date, latest.date) ?? 0)
-  const house =
-    oldStart && purchase !== null && purchase > 0 && housePurchaseYear !== null
-      ? {
-          from: anniversary(oldStart, purchase),
-          to: housePurchaseYear > 0 ? anniversary(latest.date, housePurchaseYear) : null,
-        }
-      : null
+  const { lifeEvents, droppedLifeEvents, carried } = carryEvents(scenario.lifeEvents, oldStart, latest.date, restate)
+  const { housePurchaseYear, house } = carryPurchase(scenario.housePurchaseYear, oldStart, latest.date)
   const { monthlyContributionCents, contributionSchedule, droppedSteps } = restartContribution(
     scenario,
     oldStart,
