@@ -163,6 +163,35 @@ describe('splitGap: each kind of difference lands in its own part', () => {
     expect(out.merged).toBeNull()
     expect(out.recordedShort).toBe(true)
   })
+
+  // One deposit worth `share` of what the plan invests over the window, in the plan's euros at the end of it.
+  const withShare = (share: number) => {
+    const plan = paying()
+    const m = ownPath(plan, years(a))
+    const planned = ownPath(plan, years(b)) - m * growth(plan)
+    const date = '2027-01-02'
+    const grown = Math.pow(1 + plan.expectedRealReturn, years(b) - years(date))
+    const nominal = Math.round((share * planned * Math.pow(1 + I, years(date))) / grown)
+    const reached = m * growth(plan) + (nominal / Math.pow(1 + I, years(date))) * grown
+    return split(plan, [checkin(1, a, toNominal(m, a)), checkin(2, b, toNominal(reached, b))], [deposit(date, nominal)])
+  }
+
+  it('says the unrecorded part counts as the market whenever the saving reads as less than planned, not only below half', () => {
+    // 60% recorded: the saving row says "Investing less than planned", so the note that explains where the rest went shows.
+    expect(withShare(0.6).merged).toBeNull()
+    expect(withShare(0.6).recordedShort).toBe(true)
+    expect(withShare(0.8).recordedShort).toBe(true)
+  })
+
+  it('says nothing when the saving is within a planned month of the plan, which the row calls about as planned', () => {
+    const near = withShare(0.98)
+    expect(near.recordedShort).toBe(false)
+    expect(withShare(1).recordedShort).toBe(false)
+  })
+
+  it('says nothing for more than planned, whatever the share', () => {
+    expect(withShare(1.5).recordedShort).toBe(false)
+  })
 })
 
 describe('splitGap: a plan flow the plan makes on an anniversary', () => {
