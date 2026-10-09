@@ -241,7 +241,11 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // hooks that hold the two market replays until the edits settle and the card is near the screen, and the card's table
 // in the scroller the milestone table uses): about 720 bytes gzip took the total from 271,793 to 272,517 bytes. The
 // card still waits for the page before it loads. No new library.
-const TOTAL_MAX_GZIP = 272_800
+//
+// Raised from 272.8 KB to 273.24 KB for the rent vs buy note and the House section saying what moves the answer and
+// what the plan leaves out of the portfolio: about 430 bytes gzip of text took the total from 272,517 to 272,945 bytes.
+// No new library.
+const TOTAL_MAX_GZIP = 273_240
 const GOALS_MAX_GZIP = 72_860
 
 function gzipBytes(path) {
