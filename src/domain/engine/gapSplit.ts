@@ -10,8 +10,10 @@
  *   F  the balance at `a` carried on with the investments that were recorded, at the plan's return
  *   A  the balance actually there
  *
- *   timing  M - V   how the plan counts time within a year, not anything done
- *   start   S - M   what the first check-in already differed by, grown at the plan's return
+ *   start   what the first check-in already differed from the plan's line by (the status's own gap at
+ *           `a`), grown at the plan's return. Measured against V, not M: a balance exactly on the line
+ *           has no start part, however long after the start the first check-in is
+ *   timing  S - V - start   how the plan counts time within a year, not anything done
  *   saving  F - S   what was put in against what the plan puts in, compounded
  *   market  A - F   everything else: what the market paid against the plan's return, and any money
  *                   that moved without being recorded as an investment
@@ -199,7 +201,8 @@ export function splitGap(
 
   const carried = ownB + (statusA.actualRealInvestedCents - ownA) * growth
   const withFlows = statusA.actualRealInvestedCents * growth + recorded.grown
-  const [m, s, f] = [Math.round(ownB), Math.round(carried), Math.round(withFlows)]
+  const [s, f] = [Math.round(carried), Math.round(withFlows)]
+  const start = Math.round(statusA.deltaCents * growth)
   const plannedMonthCents = Math.round(plannedMonthlyAt(plan, w.last.checkinDate) / Math.pow(1 + inflationRate, w.tb))
   const merged = mergedReason(read, plan, events, flows, accounts, recorded.count)
 
@@ -211,8 +214,8 @@ export function splitGap(
     toDate: w.last.checkinDate,
     beforeFirstCheckin: daysBetween(w.start, w.first.checkinDate) > MIN_DAYS,
     parts: {
-      timing: m - statusB.projectedInvestedCents,
-      start: s - m,
+      start,
+      timing: s - statusB.projectedInvestedCents - start,
       saving: f - s,
       market: statusB.actualRealInvestedCents - f,
     },

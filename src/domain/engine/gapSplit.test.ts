@@ -92,16 +92,38 @@ describe('splitGap: each kind of difference lands in its own part', () => {
   const a = '2026-03-01'
   const b = '2028-03-01'
   const growth = (plan: GoalScenario) => Math.pow(1 + plan.expectedRealReturn, years(b) - years(a))
+  /**
+   * The start part for a first check-in at `a` holding `real` plan euros: its gap to the plan's line,
+   * carried on. The line is drawn straight between year ends, so a balance on the plan's exact own path
+   * is a little off it mid-year; that is how the status counts it too.
+   */
+  const startOf = (plan: GoalScenario, real: number) =>
+    Math.round(trackStatus(checkin(1, a, toNominal(real, a)), plan, accounts, I)!.deltaCents * growth(plan))
+
 
   it('a start that was off is the start part, grown at the plan return, and nothing else moves', () => {
     const plan = still()
     const m = ownPath(plan, years(a))
     const d = -0.1 * m // started ten percent short
     const out = split(plan, [checkin(1, a, toNominal(m + d, a)), checkin(2, b, toNominal((m + d) * growth(plan), b))])
-    expect(Math.abs(out.parts.start - d * growth(plan))).toBeLessThanOrEqual(3)
+    expect(Math.abs(out.parts.start - startOf(plan, m + d))).toBeLessThanOrEqual(3)
     expect(Math.abs(out.parts.saving)).toBeLessThanOrEqual(3)
     expect(Math.abs(out.parts.market)).toBeLessThanOrEqual(4)
     expect(out.merged).toBeNull()
+  })
+
+  it('a balance on the plan\'s line at both check-ins has no start part, however long after the start the first is', () => {
+    const plan = paying()
+    const onLine = (id: number, date: string) => {
+      const probe = trackStatus(checkin(id, date, 1), plan, accounts, I)!
+      return checkin(id, date, toNominal(probe.projectedInvestedCents, date))
+    }
+    for (const [first, last] of [['2026-07-01', '2027-01-01'], ['2031-07-01', '2032-01-01'], ['2035-07-01', '2036-01-01']] as const) {
+      const out = split(plan, [onLine(1, first), onLine(2, last)])
+      expect(Math.abs(out.gapCents)).toBeLessThanOrEqual(5)
+      expect(Math.abs(out.parts.start)).toBeLessThanOrEqual(5)
+      expect(startExplainsGap(out)).toBe(false)
+    }
   })
 
   it('a deposit nobody planned is the saving part, in the money of its day and grown to the check-in', () => {
@@ -113,7 +135,7 @@ describe('splitGap: each kind of difference lands in its own part', () => {
     const out = split(plan, [checkin(1, a, toNominal(m, a)), checkin(2, b, toNominal(reached, b))], [deposit(when, 5_000_000)])
     const expected = real * Math.pow(1 + plan.expectedRealReturn, years(b) - years(when))
     expect(Math.abs(out.parts.saving - expected)).toBeLessThanOrEqual(4)
-    expect(Math.abs(out.parts.start)).toBeLessThanOrEqual(3)
+    expect(Math.abs(out.parts.start - startOf(plan, m))).toBeLessThanOrEqual(3)
     expect(Math.abs(out.parts.market)).toBeLessThanOrEqual(5)
   })
 
@@ -123,7 +145,7 @@ describe('splitGap: each kind of difference lands in its own part', () => {
     const out = split(plan, [checkin(1, a, toNominal(m, a)), checkin(2, b, toNominal(m * growth(plan) * 0.7, b))])
     expect(Math.abs(out.parts.market - -0.3 * m * growth(plan))).toBeLessThanOrEqual(5)
     expect(Math.abs(out.parts.saving)).toBeLessThanOrEqual(3)
-    expect(Math.abs(out.parts.start)).toBeLessThanOrEqual(3)
+    expect(Math.abs(out.parts.start - startOf(plan, m))).toBeLessThanOrEqual(3)
   })
 
   it('stopping the monthly investing is less saving than planned, and says it cannot tell it from the market', () => {
@@ -134,7 +156,7 @@ describe('splitGap: each kind of difference lands in its own part', () => {
     const out = split(plan, [checkin(1, a, toNominal(m, a)), checkin(2, b, toNominal(m * growth(plan), b))])
     expect(out.merged).toBe('none-recorded')
     expect(Math.abs(out.parts.saving + out.parts.market - -planned) / planned).toBeLessThan(1e-3)
-    expect(Math.abs(out.parts.start)).toBeLessThanOrEqual(3)
+    expect(Math.abs(out.parts.start - startOf(plan, m))).toBeLessThanOrEqual(3)
   })
 
   it('investing exactly as planned, month by month, leaves only the way the plan counts time', () => {
@@ -147,7 +169,7 @@ describe('splitGap: each kind of difference lands in its own part', () => {
     const out = split(plan, [checkin(1, a, toNominal(m, a)), checkin(2, b, toNominal(reached, b))], flows)
     expect(out.merged).toBeNull()
     expect(out.recordedShort).toBe(false)
-    expect(Math.abs(out.parts.start)).toBeLessThanOrEqual(3)
+    expect(Math.abs(out.parts.start - startOf(plan, m))).toBeLessThanOrEqual(3)
     expect(Math.abs(out.parts.market)).toBeLessThanOrEqual(5)
     // Twelve euros paid on the first of each month against the same paid continuously.
     expect(Math.abs(out.parts.saving)).toBeLessThan(0.01 * recorded)
