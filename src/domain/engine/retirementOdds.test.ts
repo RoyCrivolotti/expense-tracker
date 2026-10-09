@@ -137,9 +137,14 @@ describe('replayRetirement in a bouncing market', () => {
   })
 
   it('keeps the first years of a longer retirement the same as a shorter one: a run short in year 10 is short in both', () => {
-    const short = odds({ years: 20, runs: 2_000 })
-    const long = odds({ years: 40, runs: 2_000 })
-    expect(long.lasts).toBeLessThanOrEqual(short.lasts)
-    expect(long.unluckiestTenth).toBeGreaterThanOrEqual(0)
+    // Funded well under the target, so a tenth of the runs fail within the first years: the year that tenth falls at
+    // is the same whether the money has to last 20 years or 40, since the runs and their draws are the same.
+    for (const startCents of [25_000_000, 30_000_000, 35_000_000]) {
+      const short = odds({ years: 20, runs: 2_000, startCents })
+      const long = odds({ years: 40, runs: 2_000, startCents })
+      expect(short.unluckiestTenth).toBeLessThan(20)
+      expect(long.unluckiestTenth).toBe(short.unluckiestTenth)
+      expect(long.lasts).toBeLessThanOrEqual(short.lasts)
+    }
   })
 })

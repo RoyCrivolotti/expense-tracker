@@ -256,7 +256,6 @@ describe('a plan restarted on its own path, at an anniversary, goes where it was
 
   it('holds for random plans with a house, events and a change of the monthly amount, restarted 1 to 10 years in', () => {
     const rand = rng(41)
-    let worst = 0
     for (let n = 0; n < 60; n++) {
       const purchase = [null, 0, 1, 3, 6, 9][Math.floor(rand() * 6)]!
       const plan = samplePlan({
@@ -289,12 +288,10 @@ describe('a plan restarted on its own path, at an anniversary, goes where it was
           const was = original[k + t]![key]
           const now = restarted[t]![key]
           const scale = Math.max(1, Math.abs(original[k + t]!.invested), 5_000_000)
-          worst = Math.max(worst, Math.abs(now - was) / scale)
           expect(Math.abs(now - was) / scale).toBeLessThan(2e-4)
         }
       }
     }
-    expect(worst).toBeGreaterThanOrEqual(0)
   })
 })
 
