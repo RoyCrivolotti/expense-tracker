@@ -1,6 +1,7 @@
 import type { GoalScenario } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { formatCents, projectNetWorth, scenarioToParams, yearsToFi } from '../../../../engine'
+import { fiYearsExact, formatCents, projectNetWorth, scenarioToParams, yearsToFi } from '../../../../engine'
+import { fiAround } from '../fiAround'
 import type { MoneyFormat, PlanFromToday } from '../../../../engine'
 import { formatMoneyShort } from '../chartTheme'
 import { tableName } from '../scenarioNames'
@@ -35,6 +36,16 @@ function houseLabel(year: number | null): string {
   if (year === null) return 'never'
   if (year === 0) return 'owned'
   return `year ${year}`
+}
+
+/**
+ * FI for a row: the years from its own plan start, or, for a plan and its restart from a check-in (whose years are
+ * counted from two different days), the month it is reached in, so the two can be read against each other.
+ */
+function fiCell(params: ReturnType<typeof scenarioToParams>, scenario: { annualSpendCents: number; safeWithdrawalRate: number; planStartDate: string | null }, asMonth: boolean): string {
+  const year = yearsToFi(params, scenario.annualSpendCents, scenario.safeWithdrawalRate)
+  const month = asMonth ? fiAround(scenario.planStartDate, fiYearsExact(params, scenario.annualSpendCents, scenario.safeWithdrawalRate)) : null
+  return month ?? fiLabel(year)
 }
 
 function fiLabel(year: number | null): string {
@@ -82,7 +93,7 @@ export function comparisonRows(
       color,
       horizonYears: last?.year ?? scenario.horizonYears,
       atYear,
-      fi: fiLabel(yearsToFi(params, scenario.annualSpendCents, scenario.safeWithdrawalRate)),
+      fi: fiCell(params, scenario, key === 'from-today' || (fromToday !== null && scenario.id === fromToday.scenario.id && key !== 'draft')),
       netWorth: end ? formatMoneyShort(end.netWorthCents, format) : '',
       invested: end ? formatMoneyShort(end.investedCents, format) : '',
       house: houseLabel(scenario.housePurchaseYear),

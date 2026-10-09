@@ -107,7 +107,7 @@ function ScenarioComparisonImpl({
         counted in years from the plan start; monthly is what each path invests
         {rows.some((r) => r.monthlyLater) ? ', and what a change to it comes to' : ''}.
         {fromToday
-          ? ` "From today" is your plan restarted from the balance in your latest check-in, ${formatCheckinDate(fromToday.since)}, and counts its years and its euros from there (${planMoneyLabel(fromToday.scenario.planStartDate)}).`
+          ? ` "From today" is your plan restarted from the balance in your latest check-in, ${formatCheckinDate(fromToday.since)}, and counts its years and its euros from there (${planMoneyLabel(fromToday.scenario.planStartDate)}). FI is given as a month for the plan and its restart, since their years are counted from different days.`
           : ''}
       </p>
       <ScrollRegion label="Scenarios side by side">

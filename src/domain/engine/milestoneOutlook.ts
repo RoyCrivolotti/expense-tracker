@@ -7,7 +7,7 @@ import type { GoalScenario, Milestone } from '../types'
 import { DAY_MS, dateAtYears, utcDateMs } from './dates'
 import { milestoneCrossing, type MilestoneCrossing } from './milestoneCrossing'
 import { planLineOf } from './planLine'
-import { projectNetWorth, type ProjectionParams } from './projection'
+import { fireNumber, projectNetWorth, yearsToFi, type ProjectionParams } from './projection'
 import { scenarioToParams } from './scenarioProjection'
 
 const YEAR_DAYS = 365.25
@@ -40,6 +40,20 @@ export function wholeYearsToAmount(params: ProjectionParams, amountCents: number
   const years = crossingYears(params, amountCents, inflationRate)
   // A crossing on an anniversary is a whole number up to the bisection's last digit.
   return years === null ? null : Math.max(0, Math.ceil(years - 1e-9))
+}
+
+/**
+ * The fractional years from the plan's start at which it reaches the FI target, which is in the plan's euros, so
+ * the line is read as it is: the day inside the year `yearsToFi` names. A target that is only held after a house
+ * payment or an event steps up on an anniversary is reached on that anniversary, which is that year itself. Null
+ * when it is not reached within the horizon.
+ */
+export function fiYearsExact(params: ProjectionParams, annualSpendCents: number, swr: number): number | null {
+  const year = yearsToFi(params, annualSpendCents, swr)
+  if (year === null || year === 0) return year
+  const crossing = milestoneCrossing(planLineOf(projectNetWorth(params)), fireNumber(annualSpendCents, swr), 0)
+  const inside = crossing !== null && crossing.offset > year - 1 - 1e-9 && crossing.offset <= year + 1e-9
+  return inside ? crossing.offset : year
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
