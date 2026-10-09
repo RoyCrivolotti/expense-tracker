@@ -13,6 +13,7 @@ import { useAssumedInflation } from '../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { formatMoneyShort } from './chartTheme'
 import { formatCheckinDate } from './checkinDate'
+import { planMoneyLabel } from './planMoneyLabel'
 import styles from './progress.module.css'
 import goalStyles from './goals.module.css'
 
@@ -42,6 +43,11 @@ export function CheckinList({ checkins, accounts, plan, canWrite, actions }: Pro
   return (
     <Card>
       <h3 className={goalStyles.sectionTitle}>History</h3>
+      {plan?.planStartDate && sorted.length > 0 ? (
+        <p className={goalStyles.chartHint}>
+          The gap to the plan is for your investments, in {planMoneyLabel(plan.planStartDate)}.
+        </p>
+      ) : null}
 
       {sorted.length === 0 ? (
         <p className={styles.emptyHint}>No check-ins yet. Log your first snapshot above.</p>

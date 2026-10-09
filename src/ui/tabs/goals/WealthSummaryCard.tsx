@@ -28,6 +28,7 @@ import { useAssumedInflation } from '../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import type { MoneyFormat } from '../../../engine/money'
 import { formatMoneyShort } from './chartTheme'
+import { planMoneyLabel } from './planMoneyLabel'
 import { planGapLabel } from './planGap'
 import { noStatusMessage } from './trackMessages'
 import styles from './progress.module.css'
@@ -410,13 +411,20 @@ export function WealthSummaryCard({
       <div className={styles.summaryCardContent}>
         <StatusRow status={status} plan={plan} latestDate={latest.checkinDate} format={format} />
         <div className={styles.summaryRow}>
-          <span>Net worth</span>
+          <span>Net worth, all accounts</span>
           <span className={styles.summaryValue}>{formatMoneyShort(netWorth, format)}</span>
-          <span>Investments</span>
-          <span className={styles.summaryValue}>{formatMoneyShort(invested, format)}</span>
+          {/* With a plan the balance is shown in the plan's euros, beside the plan's own figure, so that taking
+              one from the other gives the gap above them. As logged on the account it is in the hover text. */}
+          <span>{status ? `Investments, in ${planMoneyLabel(plan?.planStartDate)}` : 'Investments'}</span>
+          <span
+            className={styles.summaryValue}
+            title={status ? `As logged on your account: ${formatMoneyShort(invested, format)}` : undefined}
+          >
+            {formatMoneyShort(status ? status.actualRealInvestedCents : invested, format)}
+          </span>
           {status ? (
             <>
-              <span>Plan projection</span>
+              <span>Plan projection, in {planMoneyLabel(plan?.planStartDate)}</span>
               <span className={styles.summaryValue}>
                 {formatMoneyShort(status.projectedInvestedCents, format)}
               </span>
