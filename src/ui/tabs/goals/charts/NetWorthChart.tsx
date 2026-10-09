@@ -38,6 +38,7 @@ import styles from '../goals.module.css'
 import { computeChartDisplayData } from './nominalTransform'
 import { pointSeriesValueAt } from './checkinChartUtils'
 import { inkOn, scenarioInk } from '../scenarioInk'
+import { chartMoneyLabel } from '../planMoneyLabel'
 import { ChartKeys, type ChartKeyMarks } from './ChartKeys'
 import { BreakdownSlot } from './ScenarioSeriesLegend'
 import { NO_HIDDEN, useChartLegendState, withFromToday, type ScenarioLine } from './heroLegendState'
@@ -365,6 +366,7 @@ function fiMarker(cents: number | null, format: MoneyFormat): { label: string; t
  */
 function ChartHeader({
   isHero,
+  money,
   aside,
   windows,
   value,
@@ -372,6 +374,8 @@ function ChartHeader({
   onOpenSheet,
 }: {
   isHero: boolean
+  /** What the chart's euros are, said beside the title where the title has the room. */
+  money: string
   aside: ReactNode
   windows: ReturnType<typeof heroWindowsFor>
   value: HeroWindowKey
@@ -381,7 +385,14 @@ function ChartHeader({
   const picker = isHero ? <HeroWindowPicker windows={windows} value={value} onChange={onChange} /> : null
   return (
     <div className={progressStyles.chartHeaderRow}>
-      {onOpenSheet ? <HeroTitleRow onOpen={onOpenSheet} /> : <h3 className={styles.chartTitle}>Invested portfolio projection</h3>}
+      {onOpenSheet ? (
+        <HeroTitleRow onOpen={onOpenSheet} />
+      ) : (
+        <div className={styles.chartTitleBlock}>
+          <h3 className={styles.chartTitle}>Invested portfolio projection</h3>
+          <span className={styles.chartMoney}>{money}</span>
+        </div>
+      )}
       {isHero && aside ? (
         <div className={styles.chartTools}>
           {aside}
@@ -405,9 +416,10 @@ function ChartFooter({ footer, bare }: { footer: ReactNode; bare: boolean }) {
  * legend instead (HeroNote), so the chart starts two lines higher and the page does not move
  * when a year is hovered.
  */
-function chartHint(isHero: boolean, narrow: boolean): string | null {
-  if (!isHero) return DEFAULT_HINT
-  return narrow ? HERO_HINT : null
+function chartHint(isHero: boolean, narrow: boolean, money: string): string | null {
+  const said = (hint: string) => `${money.charAt(0).toUpperCase()}${money.slice(1)}. ${hint}`
+  if (!isHero) return said(DEFAULT_HINT)
+  return narrow ? said(HERO_HINT) : null
 }
 
 /** The today marker, only while it lies inside the window. */
@@ -729,12 +741,14 @@ function NetWorthChartImpl({
     lastIndex,
   )
 
-  const hint = chartHint(isHero, narrow)
+  const money = chartMoneyLabel(draft.planStartDate, nominalMode)
+  const hint = chartHint(isHero, narrow, money)
 
   return (
     <Card className={isHero ? `${styles.chartCard} ${styles.heroChart}` : styles.chartCard}>
       <ChartHeader
         isHero={isHero}
+        money={money}
         aside={headerAside}
         windows={heroWindows}
         value={heroWindow}

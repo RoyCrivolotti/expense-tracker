@@ -1154,3 +1154,61 @@ describe('computeChartDisplayData', () => {
     expect(at(0.08)).toBeLessThan(at(0.02))
   })
 })
+
+describe('NetWorthChart money label', () => {
+  const draft: typeof defaultDraft = { ...defaultDraft, planStartDate: '2026-01-01' }
+  const stubWidth = (narrow: boolean) =>
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: narrow && query === '(max-width: 899px)',
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+      onchange: null,
+    }))
+  const renderHero = (props: { nominalMode?: boolean; variant?: 'hero' | 'default'; draft?: typeof defaultDraft } = {}) =>
+    render(
+      <NetWorthChart
+        milestones={milestones}
+        scenarios={[props.draft ?? draft]}
+        draft={props.draft ?? draft}
+        activeId={(props.draft ?? draft).id}
+        variant={props.variant ?? 'hero'}
+        nominalMode={props.nominalMode ?? false}
+      />,
+    )
+
+  it('names the plan\'s euros beside the title of the wide hero, without changing the title', () => {
+    stubWidth(false)
+    renderHero()
+    expect(screen.getByRole('heading', { name: 'Invested portfolio projection' })).toBeInTheDocument()
+    expect(screen.getByText('in 2026 euros')).toBeInTheDocument()
+  })
+
+  it('names the account\'s euros in the Nominal view', () => {
+    stubWidth(false)
+    renderHero({ nominalMode: true })
+    expect(screen.getByText('in euros on your account in each year')).toBeInTheDocument()
+    expect(screen.queryByText('in 2026 euros')).not.toBeInTheDocument()
+  })
+
+  it('names today\'s euros for a plan with no start date', () => {
+    stubWidth(false)
+    renderHero({ draft: { ...defaultDraft, planStartDate: null } })
+    expect(screen.getByText("in today's euros")).toBeInTheDocument()
+  })
+
+  it('starts the phone\'s hint with it, as the title row there has the button for the full screen', () => {
+    stubWidth(true)
+    renderHero()
+    expect(screen.getByText(/^In 2026 euros\. At a purchase year/)).toBeInTheDocument()
+  })
+
+  it('starts the hint of a chart that is not the hero with it as well', () => {
+    stubWidth(false)
+    renderHero({ variant: 'default' })
+    expect(screen.getByText(/^In 2026 euros\. Compare saved scenarios/)).toBeInTheDocument()
+  })
+})

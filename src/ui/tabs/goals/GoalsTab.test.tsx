@@ -788,7 +788,7 @@ describe('GoalsTab', () => {
   describe('the hero card', () => {
     it('has the display switch in its header and a line for FI and the milestone on a wide screen, with no summary box', () => {
       render(<GoalsTab model={makeModel()} />)
-      const header = screen.getByRole('heading', { name: 'Invested portfolio projection' }).parentElement!
+      const header = screen.getByRole('heading', { name: 'Invested portfolio projection' }).closest<HTMLElement>('[class*="chartHeaderRow"]')!
 
       // Beside the window buttons, where it is always in sight, not at the foot of the card.
       expect(within(header).getByRole('radiogroup', { name: 'Value display mode' })).toBeInTheDocument()
@@ -837,7 +837,7 @@ describe('GoalsTab', () => {
       render(<GoalsTab model={makeModel()} />)
 
       expect(screen.getByText('Scenario summary')).toBeInTheDocument()
-      const header = screen.getByRole('heading', { name: 'Invested portfolio projection' }).parentElement!
+      const header = screen.getByRole('heading', { name: 'Invested portfolio projection' }).closest<HTMLElement>('[class*="chartHeaderRow"]')!
       expect(within(header).queryByRole('radiogroup', { name: 'Value display mode' })).not.toBeInTheDocument()
       expect(screen.getByRole('radiogroup', { name: 'Value display mode' })).toBeInTheDocument()
       expect(screen.getByText(/select a year on the chart for values/)).toBeInTheDocument()
