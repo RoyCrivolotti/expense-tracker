@@ -229,7 +229,11 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // Raised from 271.09 KB to 271.52 KB for naming the money on the figures that had none (the Progress snapshot's labels and
 // its History caption, the dashboard card, the full-screen chart's bar, the purchase cost, the fees and the one-off event
 // form): about 0,1 KB gzip took the total from 271,145 to 271,220 bytes. No new library.
-const TOTAL_MAX_GZIP = 271_520
+//
+// Raised from 271.52 KB to 271.72 KB for the single rounding of the milestone years and FI as a month beside a
+// restart (the exact crossing of the FI target, the month label, and the start-date check): about 390 bytes gzip took the total
+// from 271,220 to 271,610 bytes. No new library.
+const TOTAL_MAX_GZIP = 271_720
 const GOALS_MAX_GZIP = 72_860
 
 function gzipBytes(path) {
