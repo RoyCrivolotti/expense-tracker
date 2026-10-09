@@ -11,6 +11,7 @@ import { housePriceHint } from './housePriceHint'
 import { LifeEventsList } from './LifeEvents'
 import { ADJUST_LABELS } from './adjustSections'
 import { LEVER_SPECS, NO_LEVERS } from './leverFields'
+import { RetirementYearsField } from './RetirementYearsField'
 import styles from './goals.module.css'
 
 /**
@@ -291,6 +292,7 @@ export function FireFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: 
           </p>
         </>
       )}
+      <RetirementYearsField draft={draft} onChange={onChange} />
       {omit.has('safeWithdrawalRate') ? null : (
         wrap('safeWithdrawalRate', <PercentField
           label={L.safeWithdrawalRate.label}

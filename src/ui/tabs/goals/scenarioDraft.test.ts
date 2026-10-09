@@ -94,6 +94,15 @@ describe('editedKeys and editedPatch', () => {
   })
 })
 
+describe('editedKeys for the years the money must last', () => {
+  it('counts a change to it as an edit, so a draft that changes only that can be saved', () => {
+    const saved = makeScenario({ id: 1 })
+    const draft = { ...scenarioToDraft(saved), retirementYears: 45 }
+    expect(editedKeys(draft, saved)).toEqual(['retirementYears'])
+    expect(editedPatch(draft, saved)).toEqual({ retirementYears: 45 })
+  })
+})
+
 describe('editedKeys for the yearly upkeep of the house', () => {
   it('counts a change to it as an edit, so a draft that changes only that can be saved', () => {
     const saved = makeScenario({ id: 1 })

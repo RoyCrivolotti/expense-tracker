@@ -8,7 +8,7 @@ import type {
 import { assumedInflationError } from '../domain/engine/assumedInflation'
 import { leversError } from '../domain/engine/goalLevers'
 import { normalizeMilestones, validateMilestones } from '../domain/engine/milestones'
-import { DEFAULT_HOME_CARRY_RATE } from '../domain/engine/projectionConstants'
+import { DEFAULT_HOME_CARRY_RATE, DEFAULT_RETIREMENT_YEARS } from '../domain/engine/projectionConstants'
 import type {
   DeleteAccountOptions,
   DeleteAccountResult,
@@ -489,6 +489,7 @@ const SCENARIO_COLUMNS: ColumnMap<NewGoalScenario> = {
   lifeEvents: 'life_events',
   contributionSchedule: 'contribution_schedule',
   homeCarryRate: 'home_carry_rate',
+  retirementYears: 'retirement_years',
 }
 
 const coerceScenario: Coerce<NewGoalScenario> = (k, v) => {
@@ -510,9 +511,9 @@ export async function createScenario(
        house_price_cents, down_payment_fraction, house_purchase_year, transaction_costs_cents,
        mortgage_term_years, mortgage_rate_annual, house_appreciation_rate,
        rent_monthly_cents, annual_spend_cents, safe_withdrawal_rate, life_events,
-       contribution_schedule, home_carry_rate, plan_start_date, is_active
+       contribution_schedule, home_carry_rate, retirement_years, plan_start_date, is_active
      ) VALUES (
-       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
        CASE WHEN EXISTS (SELECT 1 FROM goal_scenarios WHERE owner = ? AND is_active = 1)
          THEN 0 ELSE 1 END
      )
@@ -541,6 +542,7 @@ export async function createScenario(
       JSON.stringify(input.contributionSchedule ?? []),
       // A client that predates the field posts without it, and the column has no NULL.
       input.homeCarryRate ?? DEFAULT_HOME_CARRY_RATE,
+      input.retirementYears ?? DEFAULT_RETIREMENT_YEARS,
       // No DEFAULT on this column, and trackStatus() returns null without it — a
       // scenario missing it silently loses its on/off-track badge and chart markers.
       input.planStartDate ?? null,

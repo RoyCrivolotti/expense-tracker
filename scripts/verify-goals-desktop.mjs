@@ -565,7 +565,10 @@ async function checkStability(page, where, held) {
   }
   if (shown) grew = (await geometry()).docHeight - c.docHeight
   check(where, '(r) the purchase breakdown shows at the purchase year', shown)
-  check(where, '(r) the breakdown takes no room from the page', shown && Math.abs(grew) <= 1, `page grew ${grew}px`)
+  // The legend rows and the note under the chart swap text when a year is pointed at, and in the fonts of a
+  // Linux runner the swap is 1,6px shorter (a line of 16,8px against one of 16,22px). The page height is a whole
+  // number of pixels, so that reads as 1 or 2 depending on where the rest of the page puts the fraction.
+  check(where, '(r) the breakdown takes no room from the page', shown && Math.abs(grew) <= 2, `page grew ${grew}px`)
   if (shown) {
     // It is under the chart, in the place the chart's note is when no year is pointed at, so it
     // covers neither the lines nor the axis labels.

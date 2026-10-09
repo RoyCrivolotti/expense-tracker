@@ -29,6 +29,38 @@ describe('the mortgage term', () => {
   })
 })
 
+describe('the years the money must last', () => {
+  it.each([1, 30, 60, 100])('accepts %s years', (years) => {
+    expect(() => validateScenarioNumbers({ retirementYears: years })).not.toThrow()
+  })
+
+  it.each([0, -5, 30.5, Number.NaN, Number.POSITIVE_INFINITY])('refuses %s years: a whole number of them, at least one', (years) => {
+    expect(() => validateScenarioNumbers({ retirementYears: years })).toThrow('retirementYears must be a whole number of years, at least 1')
+  })
+
+  it('refuses a number the drawdown would loop over for ever, and says the most', () => {
+    expect(() => validateScenarioNumbers({ retirementYears: 101 })).toThrow('retirementYears must be between 1 and 100')
+    expect(() => validateScenarioNumbers({ retirementYears: 1_000_000_000 })).toThrow('retirementYears must be between 1 and 100')
+  })
+
+  it('is 30 years for a scenario created without one, as a client that predates it sends', async () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    const input = newScenario()
+    delete (input as Partial<NewGoalScenario>).retirementYears
+    expect((await createScenario(repo, OWNER, input)).retirementYears).toBe(30)
+  })
+
+  it('keeps one that is sent, on create and on edit, and leaves it alone when a patch has none', async () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    const saved = await createScenario(repo, OWNER, newScenario({ retirementYears: 45 }))
+    expect(saved.retirementYears).toBe(45)
+    expect((await patchScenario(repo, OWNER, saved.id, { retirementYears: 50 })).retirementYears).toBe(50)
+    expect((await patchScenario(repo, OWNER, saved.id, { horizonYears: 25 })).retirementYears).toBe(50)
+    await expect(patchScenario(repo, OWNER, saved.id, { retirementYears: 500 })).rejects.toThrow('retirementYears')
+    expect((await repo.loadDataset(OWNER)).goalScenarios[0]!.retirementYears).toBe(50)
+  })
+})
+
 describe('the yearly upkeep of the house', () => {
   it.each([0, 0.015, 0.1])('accepts %s of the value a year', (rate) => {
     expect(() => validateScenarioNumbers({ homeCarryRate: rate })).not.toThrow()

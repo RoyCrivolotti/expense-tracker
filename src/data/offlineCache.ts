@@ -14,8 +14,9 @@ const SNAPSHOT_KEY = 'latest'
 // Version 3 predates `labels`, which buildLookup now maps over. Version 4 predates
 // `settings.goalLevers`, which the Goals page reads the length of. Version 5 predates
 // `GoalScenario.contributionSchedule`, which every projection and the editor's draft read. Version 6
-// predates `GoalScenario.homeCarryRate`, which Rent vs buy and the draft read.
-const SNAPSHOT_VERSION = 7
+// predates `GoalScenario.homeCarryRate`, which Rent vs buy and the draft read. Version 7 predates
+// `GoalScenario.retirementYears`, which the drawdown chart and the draft read.
+const SNAPSHOT_VERSION = 8
 
 interface SnapshotRecord {
   key: string

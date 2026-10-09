@@ -69,6 +69,13 @@ describe('toGoalScenario', () => {
     expect(toGoalScenario(baseRow({ home_carry_rate: null })).homeCarryRate).toBe(0.015)
   })
 
+  it('reads retirement_years, and a missing or empty one as the 30 years the drawdown was always drawn over', () => {
+    expect(toGoalScenario(baseRow({ retirement_years: 45 })).retirementYears).toBe(45)
+    // A database that has not had the column added yet returns no such key at all.
+    expect(toGoalScenario(baseRow()).retirementYears).toBe(30)
+    expect(toGoalScenario(baseRow({ retirement_years: null })).retirementYears).toBe(30)
+  })
+
   it('reads contribution_schedule into date order, and a missing, empty or unusable one as no changes', () => {
     const schedule = [
       { from: '2028-03', monthlyCents: 250_000 },

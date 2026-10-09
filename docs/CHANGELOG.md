@@ -2,6 +2,12 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (how long the money must last)
+
+- **"Years the money must last" is an input.** The FI drawdown was drawn over 30 years, or the plan's horizon if that was shorter, written into the code. It is a per-scenario input next to the withdrawal rate now, from 1 to 100 years, and the drawdown runs for it. Existing scenarios keep 30, so nothing moves except a plan with a horizon under 30 years, whose drawdown is no longer cut short by it. Needs migration 0033 on production before this is deployed.
+- **The withdrawal rate gets a guide that follows the years.** 4% up to 35 years, 3,5% up to 49, 3,25% from 50: money that has to last longer can be spent more slowly. Changing the years moves the rate to the guide, unless you have set the rate yourself, in which case it stays.
+- **The FI target is shown at 4%, 3,5% and 3%.** Beside the target the plan uses, "the same spending needs 750k € at 4,0%, 857k € at 3,5% or 1,0M € at 3,0%", in the FI chart and in Where you are today.
+
 ## October 2026 (Rent vs buy says what it compares)
 
 - **It starts when you buy.** The chart compared buying today at today's price whatever year the plan buys in, so a house bought in year 8 looked as cheap as one bought now. It now starts at the purchase year at the price the house will cost then, and counts years after buying.

@@ -41,6 +41,12 @@ describe('NetWorthNowCard', () => {
     expect(screen.getByText('80%')).toBeTruthy()
   })
 
+  it('says what the same spending needs at 4%, 3,5% and 3%, beside the target it uses', () => {
+    const draft = makeScenario({ annualSpendCents: 3_000_000, safeWithdrawalRate: 0.04 })
+    render(<NetWorthNowCard draft={draft} latest={{ investedCents: 11_700_000, date: '2026-09-11' }} milestones={[]} reached={noneReached} />)
+    expect(screen.getByText(/The same spending needs 750\.000,00 € at 4,0%, 857\.142,86 € at 3,5% or 1\.000\.000,00 € at 3,0%\./)).toBeTruthy()
+  })
+
   it('says it is showing the plan start when there is no check-in yet', () => {
     const draft = makeScenario({ annualSpendCents: 4_000_000 })
     render(<NetWorthNowCard draft={draft} latest={null} milestones={[]} reached={noneReached} />)
