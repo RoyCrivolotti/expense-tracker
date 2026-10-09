@@ -192,6 +192,14 @@ describe('monthBand', () => {
     expect(monthBand(line, 3.4)).toBeCloseTo((points[4]!.preEventInvestedCents - points[3]!.investedCents) / 12, 0)
   })
 
+  it('is a month of the rise of the year before a house payment too, up to the value before the payment and not the one after it', () => {
+    const points = project()
+    // In year 8 the purchase takes 71.000 euros off the portfolio, so the two readings of the year's rise differ by a great deal.
+    const rise = points[8]!.preEventInvestedCents - points[7]!.investedCents
+    expect(rise).not.toBe(points[8]!.investedCents - points[7]!.investedCents)
+    expect(monthBand(line, 7.5)).toBeCloseTo(rise / 12, 0)
+  })
+
   it('has a floor, so a line that does not move still has a few cents of room for rounding', () => {
     expect(monthBand(planLineOf([{ year: 0, investedCents: 5000 }, { year: 1, investedCents: 5000 }]), 0.5)).toBe(100)
   })
@@ -227,6 +235,27 @@ describe('readAgainst', () => {
     expect(result.nearStep).toMatchObject({ anniversary: 8, counted: 'made' })
     expect(result.reference).toBe(made.alternate)
     expect(result.onTrack).toBe(true)
+  })
+
+  it('carries the line from after the step back by the rise of the year after it, to a balance ten days before the purchase', () => {
+    const points = project()
+    const t = 8 - 10 / 365
+    // The plan with the purchase already made: the value after it, less ten days of the year's rise that follows it.
+    const rise = points[9]!.preEventInvestedCents - points[8]!.investedCents
+    const made = Math.round(points[8]!.investedCents - (10 / 365) * rise)
+    expect(Math.abs(nearStep(line, t)!.alternate - made)).toBeLessThanOrEqual(1)
+    const result = readAgainst(line, t, made)!
+    expect(result.nearStep).toMatchObject({ anniversary: 8, counted: 'made' })
+    expect(Math.abs(result.reference - made)).toBeLessThanOrEqual(1)
+    expect(result.onTrack).toBe(true)
+  })
+
+  it('carries the line from before the step on by the rise of the year before it, to a balance ten days after the purchase', () => {
+    const points = project()
+    const t = 8 + 10 / 365
+    const rise = points[8]!.preEventInvestedCents - points[7]!.investedCents
+    const notMade = Math.round(points[8]!.preEventInvestedCents + (10 / 365) * rise)
+    expect(Math.abs(nearStep(line, t)!.alternate - notMade)).toBeLessThanOrEqual(1)
   })
 
   it('reads a purchase a fortnight late, still not made, against the plan without it', () => {
