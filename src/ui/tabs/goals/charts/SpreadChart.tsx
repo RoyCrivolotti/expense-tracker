@@ -138,7 +138,14 @@ function SpreadChartImpl({ draft: liveDraft, milestones, nominal = false, runs =
         </table>
       ) : null}
       <p className={`${styles.chartHint} ${styles.chartCaption}`}>
-        {spreadCaption({ runs: result.runs, volatility, realReturn: draft.expectedRealReturn, format })} In {moneyLabel}.
+        {spreadCaption({
+          runs: result.runs,
+          volatility,
+          realReturn: draft.expectedRealReturn,
+          format,
+          chartMoney: moneyLabel,
+          tableMoney: rows.length > 0 ? planMoneyLabel(draft.planStartDate) : null,
+        })}
       </p>
     </ChartShell>
   )

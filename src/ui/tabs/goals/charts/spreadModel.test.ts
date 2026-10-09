@@ -48,8 +48,8 @@ describe('milestoneRows', () => {
     money,
   })
 
-  it('names each milestone with its amount, as the other milestone views do', () => {
-    expect(rows.map((r) => r.label)).toEqual(['100.000 €', 'A million (1.000.000 €)'])
+  it('names each milestone with its amount, as the other milestone views do, and says they are amounts on the account', () => {
+    expect(rows.map((r) => r.label)).toEqual(['100.000 € on your account', 'A million (1.000.000 €) on your account'])
   })
 
   it('gives the middle half and the 8 in 10 as years, and how many of 100 runs get there', () => {
@@ -84,11 +84,16 @@ describe('milestoneRows', () => {
 describe('fiRow', () => {
   const withFi = replayMarket({ params, volatility: 0.15, runs: 2_000, fiTargetCents: 75_000_000 })
 
-  it('says the FI target in the plan\'s money, with its years and how many runs get there', () => {
+  it('says the FI target in the plan\'s euros, as every other screen names them, with its years and how many runs get there', () => {
     const row = fiRow({ result: withFi, planStartDate: '2026-01-01', years: 30, money, targetCents: 75_000_000 })!
-    expect(row.label).toBe("FI target (750.000 € in the plan's money)")
+    expect(row.label).toBe('FI target (750.000 € in 2026 euros)')
     expect(row.middle).toMatch(/^\d{4}( to (after )?\d{4})?$|^not within 30 years$/)
     expect(row.gets).toMatch(/^\d+ of 100$/)
+  })
+
+  it('names the euros of today for a plan with no start date', () => {
+    const row = fiRow({ result: withFi, planStartDate: null, years: 30, money, targetCents: 75_000_000 })!
+    expect(row.label).toBe("FI target (750.000 € in today's euros)")
   })
 
   it('has no row when there is no target', () => {
@@ -153,7 +158,21 @@ describe('spreadHeadline', () => {
 })
 
 describe('spreadCaption', () => {
-  const text = spreadCaption({ runs: 5_000, volatility: 0.15, realReturn: 0.05, format: EU_MONEY_FORMAT })
+  const caption = (over = {}) => spreadCaption({ runs: 5_000, volatility: 0.15, realReturn: 0.05, format: EU_MONEY_FORMAT, chartMoney: '2026 euros', tableMoney: '2026 euros', ...over })
+  const text = caption()
+
+  it('says which euros the chart is in and which the table is in, since they are not the same', () => {
+    expect(text).toContain('The chart is in 2026 euros. In the table, milestone amounts are on your account and the FI target is in 2026 euros.')
+    expect(caption({ chartMoney: 'euros on your account in each year', tableMoney: "today's euros" })).toContain(
+      "The chart is in euros on your account in each year. In the table, milestone amounts are on your account and the FI target is in today's euros.",
+    )
+  })
+
+  it('says nothing about a table when there is none', () => {
+    const none = caption({ tableMoney: null })
+    expect(none).toContain('The chart is in 2026 euros.')
+    expect(none).not.toContain('In the table')
+  })
 
   it('says what is replayed: the same plan with a different market each time, and how many times', () => {
     expect(text).toContain('5.000 runs')

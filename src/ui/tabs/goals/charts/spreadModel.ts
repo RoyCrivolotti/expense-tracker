@@ -8,6 +8,7 @@ import type { MoneyFormat } from '../../../../engine/money'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import type { Milestone } from '../../../../types'
 import type { ChartSeries } from '../../../charts/LinearChart'
+import { planMoneyLabel } from '../planMoneyLabel'
 import { yearLabel } from '../yearLabel'
 import { inflateSeries } from './nominalTransform'
 
@@ -58,7 +59,7 @@ export function milestoneRows({
   return milestones.map((m, k) => {
     const range = result.milestones[k]!
     return {
-      label: milestoneLabelWithAmount(m, money),
+      label: `${milestoneLabelWithAmount(m, money)} on your account`,
       middle: rangeLabel(range.p25, range.p75, planStartDate, years),
       wide: rangeLabel(range.p10, range.p90, planStartDate, years),
       gets: `${runsOfHundred(range.share)} of 100`,
@@ -66,7 +67,7 @@ export function milestoneRows({
   })
 }
 
-/** The row for the FI target, which is an amount in the plan's money and not on the account. */
+/** The row for the FI target, which is an amount in the plan's euros and not on the account. */
 export function fiRow({
   result,
   planStartDate,
@@ -83,7 +84,7 @@ export function fiRow({
   const range = result.fi
   if (!range) return null
   return {
-    label: `FI target (${money(targetCents)} in the plan's money)`,
+    label: `FI target (${money(targetCents)} in ${planMoneyLabel(planStartDate)})`,
     middle: rangeLabel(range.p25, range.p75, planStartDate, years),
     wide: rangeLabel(range.p10, range.p90, planStartDate, years),
     gets: `${runsOfHundred(range.share)} of 100`,
@@ -147,7 +148,11 @@ export function spreadHeadline({
   return `In year ${year}, in ${moneyLabel}: the middle run ends at ${at(result.after.p50[year]!)}, the plan's line at ${at(plan[year]?.investedCents ?? 0)}, the luckiest tenth above ${at(result.after.p90[year]!)} and the unluckiest tenth below ${at(result.after.p10[year]!)}.`
 }
 
-/** What is replayed and what is left as planned: the assumptions a reader should be able to check. */
+/**
+ * What is replayed and what is left as planned: the assumptions a reader should be able to check, and which
+ * euros the chart and the table are in, since they are not the same ones. `tableMoney` is the plan's euros, and
+ * null where there is no table.
+ */
 export function spreadCaption({
   runs,
   volatility,
@@ -164,17 +169,23 @@ export function spreadCaption({
     'Only the market changes: the saving, the house, the events and the inflation are as planned.',
     'The line is the plan, half of the runs end in the shaded middle and 8 in 10 between the dashed lines.',
     'The picture is the same every time, so it moves only when you change something.',
+  chartMoney,
+  tableMoney,
   ].join(' ')
 }
 
 /** Said when more than one run in twenty has run out of money, which is what the lowest lines going under zero means. */
 export function spreadWarning(result: SpreadResult): string | null {
+  chartMoney: string
+  tableMoney: string | null
   const year = result.belowZero.findIndex((share) => share >= WARN_SHARE)
+  const table = tableMoney === null ? '' : ` In the table, milestone amounts are on your account and the FI target is in ${tableMoney}.`
   if (year < 0) return null
   const share = runsOfHundred(result.belowZero[year]!)
   return `In ${share}% of the runs the portfolio is below nothing from year ${year}: the house payment or an event takes more than it holds when the market is unkind.`
 }
 
+    `The chart is in ${chartMoney}.${table}`,
 type Replayed = Pick<
   NewGoalScenario,
   | 'startInvestedCents'

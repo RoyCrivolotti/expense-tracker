@@ -56,7 +56,9 @@ describe('SpreadChart', () => {
     // Two milestones, then the FI target.
     expect(rows).toHaveLength(3)
     expect(within(rows[0]!).getByRole('rowheader')).toHaveTextContent('100.000')
-    expect(within(rows[2]!).getByRole('rowheader')).toHaveTextContent(/FI target \(.* in the plan's money\)/)
+    expect(within(rows[0]!).getByRole('rowheader')).toHaveTextContent('on your account')
+    expect(within(rows[2]!).getByRole('rowheader')).toHaveTextContent(/FI target \(.* in 2026 euros\)/)
+    expect(within(rows[2]!).getByRole('rowheader')).not.toHaveTextContent('on your account')
     for (const row of rows) expect(row).toHaveTextContent(/\d+ of 100 runs get there/)
     expect(rows[0]!).toHaveTextContent(/\d{4}/)
   })
@@ -64,6 +66,17 @@ describe('SpreadChart', () => {
   it('leaves the table out when there is nothing to reach', () => {
     show({ annualSpendCents: 0 }, { milestones: [] })
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
+  })
+
+  it('says under the table that the milestones are on the account and the FI target is in the plan\'s euros', () => {
+    show()
+    expect(screen.getByText(/The chart is in 2026 euros\. In the table, milestone amounts are on your account and the FI target is in 2026 euros\./)).toBeInTheDocument()
+  })
+
+  it('names the chart\'s euros alone when there is no table', () => {
+    show({ annualSpendCents: 0 }, { milestones: [] })
+    expect(screen.getByText(/The chart is in 2026 euros\./)).toBeInTheDocument()
+    expect(screen.queryByText(/In the table/)).not.toBeInTheDocument()
   })
 
   it('warns when a house takes more than the portfolio holds in more than one run in twenty, and not otherwise', () => {
