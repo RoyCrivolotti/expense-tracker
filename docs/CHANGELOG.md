@@ -4,9 +4,10 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 
 ## October 2026 (ahead and behind follow the plan through a house purchase)
 
-- **Someone exactly on plan reads on track all year.** The plan's line sloped from one year-end to the next, but a house payment or a one-off event happens on the anniversary, so in the year before one the line was already falling while the portfolio was not. A week before a 70.871 € payment the badge showed about 62.000 € ahead and years ahead, and a bonus did the same in reverse. The line now rises through the year and steps on the anniversary, in the badge, Progress, the Actual vs plan chart, the hero chart and its band, and the line from today.
+- **Someone exactly on plan reads on track all year.** The plan's line sloped from one year-end to the next, but a house payment or a one-off event happens on the anniversary, so in the year before one the line was already falling while the portfolio was not. A week before a 70.871 € payment the badge showed about 69.500 € ahead and 51 months ahead, and a bonus did the same in reverse. The line now rises through the year and steps on the anniversary, in the badge, Progress, the Actual vs plan chart, the hero chart and its band, and the line from today.
 - **No months across a purchase.** A balance the line only has on the other side of a house payment or event is not "three years ahead". The gap in euros is shown, with a line saying months are not counted across it.
 - **On track means within a month either way.** A balance a few euros behind the line used to read "€ behind" in red. It reads On track now, in the badge and in Progress.
+- **A purchase a fortnight early or late is not 70.000 € off.** Within a month of the anniversary a balance is read against the plan with the payment made, or not yet made, whichever it is nearer, and Progress says so.
 - **A date is a month.** The point on the line reads "around Jul 2033", not a day it cannot know.
 - **The plan's years are counted on the calendar.** A year of 365,25 days put the fifth anniversary 0,7 of a day short of 5, which mattered once the steps sat on the anniversaries. A check-in before the start or after the last year has no line to read, and Progress says which, instead of saying there is no start date.
 
