@@ -329,6 +329,38 @@ describe('splitGap: when saving and the market cannot be told apart', () => {
   })
 })
 
+describe('splitGap: the edges of its window', () => {
+  it('needs the check-ins to be 30 days apart: 29 is too close and 30 is enough', () => {
+    const plan = still()
+    const at = (last: string) => splitGap(plan, [checkin(1, '2026-03-01', 5_100_000), checkin(2, last, 5_110_000)], accounts, [], I)
+    expect(at('2026-03-30')).toEqual({ kind: 'unavailable', reason: 'too-close' })
+    expect(at('2026-03-31')).toMatchObject({ kind: 'split' })
+  })
+
+  it('leaves out a flow dated the first check-in\'s day, which that balance already holds, and takes one the day after', () => {
+    const plan = paying()
+    const checkins = [checkin(1, '2026-03-01', 5_100_000), checkin(2, '2027-03-01', 5_900_000)]
+    // None counted: the plan invests, nothing is recorded in the window, so the saving and the market are held together.
+    expect(split(plan, checkins, [deposit('2026-03-01', 100_000)]).merged).toBe('none-recorded')
+    expect(split(plan, checkins, [deposit('2026-03-02', 100_000)]).merged).not.toBe('none-recorded')
+  })
+
+  it('takes one dated the last check-in\'s day, and leaves out one the day after', () => {
+    const plan = paying()
+    const checkins = [checkin(1, '2026-03-01', 5_100_000), checkin(2, '2027-03-01', 5_900_000)]
+    expect(split(plan, checkins, [deposit('2027-03-01', 100_000)]).merged).not.toBe('none-recorded')
+    expect(split(plan, checkins, [deposit('2027-03-02', 100_000)]).merged).toBe('none-recorded')
+  })
+
+  it('does not count an archived investment account as one that was opened or closed', () => {
+    const plan = still()
+    const archived = makeWealthAccount({ id: 3, kind: 'investment', archived: true })
+    const opened = makeWealthCheckin({ id: 2, checkinDate: '2027-03-01', entries: [{ accountId: 1, valueCents: 5_000_000 }, { accountId: 3, valueCents: 400_000 }] })
+    const out = splitGap(plan, [checkin(1, '2026-03-01', 5_000_000), opened], [...accounts, archived], [], I)
+    expect(out.kind === 'split' && out.accountsChanged).toBe(false)
+  })
+})
+
 describe('splitGap: what it says about itself', () => {
   it('names the check-ins it measures from and to, the verdict, and what a planned month is in the plan’s money', () => {
     const plan = paying()
