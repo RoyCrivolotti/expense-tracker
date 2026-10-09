@@ -108,6 +108,36 @@ describe('replayMarket at no spread', () => {
     expect([out.fi!.p10, out.fi!.p50, out.fi!.p90]).toEqual(Array(3).fill(fi ?? Infinity))
   })
 
+  it('crosses an amount that falls between the value before a bonus and the value after it in the year of the bonus, as the plan does', () => {
+    // The sample plan has only a house payment, which takes the value down, so the value before it always reaches
+    // an amount the value after it does too: only a bonus tells the two apart.
+    const params = sample({ housePurchaseYear: null, lifeEvents: [{ year: 5, amountCents: 20_000_000, label: 'Bonus' }] })
+    const plan = projectNetWorth(params)
+    const grown = Math.pow(1 + I, 5)
+    const amount = Math.round(((plan[5]!.preEventInvestedCents + plan[5]!.investedCents) / 2) * grown)
+    expect(plan[5]!.preEventInvestedCents * grown).toBeLessThan(amount)
+    expect(plan[5]!.investedCents * grown).toBeGreaterThan(amount)
+
+    expect(wholeYearsToAmount(params, amount, I)).toBe(5)
+    const range = replayMarket({ params, volatility: 0, runs: 100, milestonesCents: [amount] }).milestones[0]!
+    expect([range.p10, range.p50, range.p90]).toEqual([5, 5, 5])
+  })
+
+  it('reads the year FI is reached from the value at the end of the year, after a house payment, not the value before it', () => {
+    const params = sample()
+    const plan = projectNetWorth(params)
+    // A target just under what the portfolio holds before paying for the house in year 8, which it no longer holds after.
+    const spend = Math.floor(((plan[8]!.preEventInvestedCents - 100) * 0.04))
+    const target = fireNumber(spend, 0.04)
+    expect(target).toBeLessThan(plan[8]!.preEventInvestedCents)
+    expect(target).toBeGreaterThan(plan[8]!.investedCents)
+
+    const fi = yearsToFi(params, spend, 0.04)
+    expect(fi).toBeGreaterThan(8)
+    const range = replayMarket({ params, volatility: 0, runs: 100, fiTargetCents: target }).fi!
+    expect([range.p10, range.p50, range.p90]).toEqual([fi, fi, fi])
+  })
+
   it('has nobody below nothing in the plan the sample plan makes', () => {
     expect(replayMarket({ params: sample(), volatility: 0, runs: 100 }).belowZero.every((s) => s === 0)).toBe(true)
   })
