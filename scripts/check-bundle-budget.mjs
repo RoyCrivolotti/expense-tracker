@@ -201,8 +201,14 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // the loan, the readout and the note that say so, the turning points drawn on the chart). The total stood at
 // 260,3 KB after the upkeep input and this takes it to 262,218 bytes (the Goals chunk from 69,5 KB to 71,398).
 // All of it is small code, in the engine and the lazy Goals chunk, with no new library.
-const TOTAL_MAX_GZIP = 262_400
-const GOALS_MAX_GZIP = 71_600
+//
+// Raised from 262.4 KB to 263.2 KB, and the Goals chunk from 71.6 KB to 72.38 KB, for the years the money must
+// last (the field with its guide for the withdrawal rate, the drawdown that runs for them, and the FI target
+// said at three rates in the FI chart and in Where you are today). The total stood at 262,218 bytes after the
+// Rent vs buy redesign and this takes it to 262,905 (the Goals chunk from 71,398 to 72,081). All of it is small
+// code, in the engine and the lazy Goals chunk, with no new library.
+const TOTAL_MAX_GZIP = 263_200
+const GOALS_MAX_GZIP = 72_380
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length
