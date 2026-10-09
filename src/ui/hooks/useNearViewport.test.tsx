@@ -29,11 +29,33 @@ describe('useNearViewport', () => {
     expect(screen.getByText('near')).toBeInTheDocument()
   })
 
+  it('reads the newest report when the observer delivers several at once: a box that left and came back between two frames is near', () => {
+    const io = installFakeIntersectionObserver()
+    render(<Probe />)
+    act(() => io.emitBatch([0, 0.3]))
+    expect(screen.getByText('near')).toBeInTheDocument()
+    act(() => io.emitBatch([0.3, 0]))
+    expect(screen.getByText('far')).toBeInTheDocument()
+  })
+
   it('measures the box as it is first watched, so a card on screen is not shown as far for a frame', () => {
     installFakeIntersectionObserver()
     // jsdom reports every box as 0 by 0 at the top of the page: on screen.
     render(<Probe />)
     expect(screen.getByText('near')).toBeInTheDocument()
+  })
+
+  it('measures a box well above the screen as far too, and one just inside the margin above it as near', () => {
+    installFakeIntersectionObserver()
+    const box = vi.spyOn(Element.prototype, 'getBoundingClientRect')
+    box.mockReturnValue({ top: -1_000, bottom: -900 } as DOMRect)
+    const far = render(<Probe />)
+    expect(screen.getByText('far')).toBeInTheDocument()
+    far.unmount()
+    box.mockReturnValue({ top: -600, bottom: -450 } as DOMRect)
+    render(<Probe />)
+    expect(screen.getByText('near')).toBeInTheDocument()
+    box.mockRestore()
   })
 
   it('measures a box well below the screen as far, and one just inside the margin as near', () => {

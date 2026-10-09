@@ -15,6 +15,8 @@ import { AssumptionsView } from './AssumptionsView'
 import { GoalsExplainer } from './GoalsExplainer'
 import { GoalsTab } from './GoalsTab'
 import { rentVsBuyCaption } from './charts/rentVsBuyCaption'
+import { ChangesFields, EventsFields, FireFields, HousingFields, PortfolioFields, TrackingFields } from './goalControlSections'
+import { GoalsCard } from '../../components/GoalsCard'
 import { NetWorthHistoryChart } from './charts/NetWorthHistoryChart'
 import { SavingsRateChart } from './charts/SavingsRateChart'
 import { SpreadChart } from './charts/SpreadChart'
@@ -139,5 +141,40 @@ describe('the Goals screens in another currency', () => {
     }
     const note = render(inUsd(<BreakdownExtras breakdowns={[{ id: '1', label: 'Path A', color: '#6366f1', breakdown }]} breakdownInTodaysMoney yearZeroHint={false} format={USD} />))
     expect(note.container.textContent).toContain("The purchase breakdown is in the plan's US dollars, not in the Nominal values above.")
+  })
+
+  it('names the owner\'s money in every group of the Scenarios inputs: portfolio, housing, FI, the changes in the monthly investing, events and the plan start', () => {
+    const { id, isActive, ...draft } = samplePlan({ planStartDate: '2020-01-01', lifeEvents: [{ year: 3, amountCents: 500_000, label: 'Bonus' }] })
+    void id
+    void isActive
+    const noop = vi.fn()
+    const { container } = render(
+      inUsd(
+        <>
+          <PortfolioFields draft={draft} onChange={noop} />
+          <HousingFields draft={draft} onChange={noop} />
+          <FireFields draft={draft} onChange={noop} />
+          <ChangesFields draft={draft} onChange={noop} />
+          <EventsFields draft={draft} onChange={noop} />
+          <TrackingFields draft={draft} latest={{ investedCents: 20_000_000, date: '2026-06-01' }} onChange={noop} />
+        </>,
+      ),
+    )
+    const text = container.textContent ?? ''
+    expect(text).not.toMatch(NOT_EURO)
+    expect(text).toContain('2020 US dollars')
+  })
+
+  it('names it on the dashboard card, in the headline\'s net worth and the badge', () => {
+    const scenario = makeScenario({ id: 1, isActive: true, name: 'Sample', planStartDate: '2024-01-01' })
+    const dataset = makeDataset({
+      goalScenarios: [scenario],
+      wealthAccounts: [makeWealthAccount({ id: 1, kind: 'investment' })],
+      wealthCheckins: [makeWealthCheckin({ id: 1, checkinDate: '2026-06-01', entries: [{ accountId: 1, valueCents: 20_000_000 }] })],
+    })
+    dataset.settings = { ...dataset.settings, currencyCode: 'USD', numberLocale: 'en-US' }
+    const { container } = render(inUsd(<GoalsCard dataset={dataset} />))
+    expect(container.textContent).toContain('2024 US dollars')
+    expect(container.textContent).not.toMatch(NOT_EURO)
   })
 })

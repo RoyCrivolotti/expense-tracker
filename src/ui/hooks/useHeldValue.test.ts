@@ -18,6 +18,13 @@ describe('useHeldValue', () => {
     expect(result.current).toBe(4)
   })
 
+  it('keeps the last value it was live for, not the first: what it held at the start must not stay when it was live for a later one', () => {
+    const { result, rerender } = renderHook(({ v, live }) => useHeldValue(v, live), { initialProps: { v: 1, live: true } })
+    rerender({ v: 2, live: true })
+    rerender({ v: 3, live: false })
+    expect(result.current).toBe(2)
+  })
+
   it('has nothing to give if it was never live', () => {
     const { result, rerender } = renderHook(({ v, live }) => useHeldValue(v, live), { initialProps: { v: 1, live: false } })
     expect(result.current).toBeUndefined()

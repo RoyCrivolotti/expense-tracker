@@ -19,7 +19,8 @@ export function useNearViewport(target: RefObject<Element | null>, margin: numbe
     if (!el || !observable) return undefined
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setNear(isNear(el, margin))
-    const io = new IntersectionObserver(([entry]) => setNear(entry?.isIntersecting ?? false), { rootMargin: `${margin}px 0px` })
+    // Entries come oldest first, and a box that left and came back between two frames brings both: the newest is where it is now.
+    const io = new IntersectionObserver((entries) => setNear(entries[entries.length - 1]?.isIntersecting ?? false), { rootMargin: `${margin}px 0px` })
     io.observe(el)
     return () => io.disconnect()
   }, [target, margin, observable])

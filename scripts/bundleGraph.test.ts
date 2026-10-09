@@ -28,13 +28,27 @@ describe('goalsOnlyChunks', () => {
   })
 
   it('does not walk through the entry, which holds the other tabs\' lazy imports', () => {
-    // Goals imports the entry back, and the entry imports Analytics lazily: Analytics' own chunk is not Goals'.
-    expect(run(base)).not.toContain('AnalyticsTab-c.js')
+    // Goals imports the entry back, and the entry imports every tab lazily. A tab only the entry loads, and that
+    // Analytics does not reach, would be counted as Goals' if the walk went through the entry.
+    const withSettings = {
+      ...base,
+      'index-a.js': `${base['index-a.js']};const s=lazy(()=>load(()=>import(\`./SettingsTab-g.js\`)))`,
+      'SettingsTab-g.js': 'export const s=1',
+    }
+    expect(run(withSettings)).not.toContain('SettingsTab-g.js')
+    expect(run(withSettings)).not.toContain('AnalyticsTab-c.js')
   })
 
-  it('counts a chunk that only Analytics loads as not Goals\', and one only Goals loads as Goals\' whatever it is called', () => {
-    const renamed = { ...base, 'Chart-9.js': 'export const z=1', 'GoalsTab-b.js': `${base['GoalsTab-b.js']};import{z}from"./Chart-9.js"` }
+  it('counts a chunk only Goals loads as Goals\' whatever it is called, and one only Analytics loads as not', () => {
+    const renamed = {
+      ...base,
+      'Chart-9.js': 'export const z=1',
+      'Tooltip-8.js': 'export const t=1',
+      'GoalsTab-b.js': `${base['GoalsTab-b.js']};import{z}from"./Chart-9.js"`,
+      'AnalyticsTab-c.js': `${base['AnalyticsTab-c.js']};import{t}from"./Tooltip-8.js"`,
+    }
     expect(run(renamed)).toContain('Chart-9.js')
+    expect(run(renamed)).not.toContain('Tooltip-8.js')
   })
 
   it('leaves out a chunk both tabs load, and one the entry loads statically', () => {

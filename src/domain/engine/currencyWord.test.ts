@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { CURRENCIES } from '../../ui/settings/moneyOptions'
 import { EU_MONEY_FORMAT, currencyWord, resolveMoneyFormat } from './money'
 
@@ -30,9 +30,13 @@ describe('currencyWord', () => {
     expect(currencyWord(resolveMoneyFormat())).toBe('euros')
   })
 
-  it('does not depend on the number style: the word is the currency\'s, not the locale\'s', () => {
-    expect(currencyWord(resolveMoneyFormat('USD', 'de-DE'))).toBe('US dollars')
-    expect(currencyWord(resolveMoneyFormat('EUR', 'en-US'))).toBe('euros')
+  it('does not depend on the number style: the word is the currency\'s, not the locale\'s', async () => {
+    // A module of its own, since the words are kept once found and an earlier test would have found every one of them.
+    vi.resetModules()
+    const fresh = await import('./money')
+    expect(fresh.currencyWord(fresh.resolveMoneyFormat('USD', 'de-DE'))).toBe('US dollars')
+    expect(fresh.currencyWord(fresh.resolveMoneyFormat('GBP', 'fr-FR'))).toBe('British pounds')
+    expect(fresh.currencyWord(fresh.resolveMoneyFormat('EUR', 'en-US'))).toBe('euros')
   })
 
   it('says the code itself for one the runtime has no name for, and money for a format made by hand with no code and no euro', () => {

@@ -242,8 +242,9 @@ describe('spreadKey', () => {
     expect(key({ name: 'Another name', color: '#123456', sortOrder: 9 })).toBe(key())
   })
 
-  // One different value for every field the replay reads. Typed as the replay's fields, so a field added to the
-  // replay must be given one here, and one left out of the key is a card that keeps showing the old picture.
+  // One different value for every field the replay reads that `Replayed` lists. Typed as that list, so a field added to
+  // it must be given one here; a field the replay starts to read must be added to the list and to the key, since
+  // nothing here sees it, and one left out of the key is a card that keeps showing the old picture.
   const OTHER: Replayed = {
     startInvestedCents: 6_000_000,
     monthlyContributionCents: 120_000,

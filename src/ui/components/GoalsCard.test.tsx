@@ -1,7 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { GoalsCard } from './GoalsCard'
-import { DEFAULT_INFLATION_RATE, planValueAtDate, realToNominal } from '../../engine'
+import { DEFAULT_INFLATION_RATE, planValueAtDate, realToNominal, resolveMoneyFormat } from '../../engine'
+import { MoneyFormatContext } from '../hooks/moneyFormatContext'
 import { makeDataset, makeScenario, makeTransaction, makeWealthAccount, makeWealthCheckin } from '../../testing/factories'
 import { samplePlan } from '../../testing/samplePlan'
 
@@ -254,5 +255,20 @@ describe('the track badge around a house purchase', () => {
     badge(500_000)
     expect(screen.getByText(/€ ahead \(.* euros\)$/)).toBeInTheDocument()
     expect(screen.queryByText(/(months?|years?) ahead$/)).not.toBeInTheDocument()
+  })
+
+  it('names the plan\'s money in the owner\'s currency in that gap', () => {
+    const nominal = realToNominal(real + 500_000, '2026-01-01', date, inflation)
+    const dataset = makeDataset({
+      goalScenarios: [scenario],
+      wealthAccounts: [account],
+      wealthCheckins: [makeWealthCheckin({ id: 1, checkinDate: date, entries: [{ accountId: 1, valueCents: nominal }] })],
+    })
+    render(
+      <MoneyFormatContext.Provider value={resolveMoneyFormat('USD', 'en-US')}>
+        <GoalsCard dataset={dataset} />
+      </MoneyFormatContext.Provider>,
+    )
+    expect(screen.getByText(/\$.* ahead \(2026 US dollars\)$/)).toBeInTheDocument()
   })
 })
