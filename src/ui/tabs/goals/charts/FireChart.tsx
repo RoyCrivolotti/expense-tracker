@@ -2,9 +2,11 @@ import { memo, useMemo } from 'react'
 import { useAssumedInflation } from '../../..//hooks/assumedInflationContext'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import {
+  FI_TARGET_RATES,
   fireNumber,
   projectDrawdown,
   projectNetWorth,
+  replayRetirement,
   scenarioToParams,
   yearsToFi,
 } from '../../../../engine'
@@ -15,6 +17,8 @@ import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
 import type { TooltipLine } from '../../../charts/ChartTooltip'
 import { sparseLabels } from '../../../charts/linearScale'
 import { aboutOnAccount, bothMoneys } from '../bothMoneys'
+import { useMarketVolatility } from '../../../hooks/marketVolatilityContext'
+import { ODDS_RUNS, retirementOddsLine } from './retirementOddsLine'
 import { formatMoneyShort } from '../chartTheme'
 import { planMoneyLabel } from '../planMoneyLabel'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
@@ -57,6 +61,25 @@ function FireChartImpl({
   }, [draft, inflationRate])
 
   const format = useMoneyFormat()
+  const volatility = useMarketVolatility()
+  const { annualSpendCents, safeWithdrawalRate, expectedRealReturn, retirementYears } = draft
+  // How often the money lasts, from the target the plan is after: at its own rate and at the usual ones.
+  const oddsLine = useMemo(() => {
+    if (annualSpendCents <= 0 || safeWithdrawalRate <= 0) return null
+    const rates = [safeWithdrawalRate, ...FI_TARGET_RATES.filter((rate) => Math.abs(rate - safeWithdrawalRate) > 1e-9)]
+    const results = rates.map((rate) => ({
+      rate,
+      odds: replayRetirement({
+        startCents: fireNumber(annualSpendCents, rate),
+        annualWithdrawalCents: annualSpendCents,
+        realReturn: expectedRealReturn,
+        volatility,
+        years: retirementYears,
+        runs: ODDS_RUNS,
+      }),
+    }))
+    return retirementOddsLine({ rate: safeWithdrawalRate, years: retirementYears, realReturn: expectedRealReturn, volatility, results, format })
+  }, [annualSpendCents, safeWithdrawalRate, expectedRealReturn, retirementYears, volatility, format])
   const targets = fiTargetsLine(draft.annualSpendCents, (c) => formatMoneyShort(c, format), format)
   // The target is in the plan's euros; on the account it is more, by the inflation up to where the plan
   // reaches it, or up to the end of the plan when it does not.
@@ -83,6 +106,7 @@ function FireChartImpl({
           FI target {target.plan} in {target.planLabel} · not reached in the horizon ({aboutOnAccount(target)}, when
           the plan ends), so there is no drawdown to show. {targets}
         </p>
+        {oddsLine ? <p className={styles.chartHint}>{oddsLine}</p> : null}
       </ChartShell>
     )
   }
@@ -97,6 +121,7 @@ function FireChartImpl({
         {planMoneyLabel(draft.planStartDate)}, so it illustrates the target and is not a forecast: a bad run of
         early years would leave less.
       </p>
+      {oddsLine ? <p className={styles.chartHint}>{oddsLine}</p> : null}
       <LinearChart
         height={height}
         series={series}
