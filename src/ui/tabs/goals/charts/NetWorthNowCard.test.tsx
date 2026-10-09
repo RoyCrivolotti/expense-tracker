@@ -145,6 +145,12 @@ describe('NetWorthNowCard in both moneys', () => {
     expect(screen.getByText(`worth about ${formatCents(real, EU_MONEY_FORMAT)} in 2020 euros, the money the FI target is in`)).toBeTruthy()
   })
 
+  it('names the date, not the year, when the check-in is in the year the plan started: two moneys of one year', () => {
+    renderCard(makeScenario({ ...stuck, planStartDate: '2026-01-01' }), { investedCents: 11_000_000, date: '2026-10-09' })
+    expect(screen.getByText(/worth about .* in euros of .*2026, the money the FI target is in/)).toBeTruthy()
+    expect(screen.queryByText(/in 2026 euros, the money the FI target is in/)).toBeNull()
+  })
+
   it('has no worth line before a check-in, as the plan start is already in the plan\'s euros', () => {
     renderCard(makeScenario(stuck), null)
     expect(screen.queryByText(/the money the FI target is in/)).toBeNull()

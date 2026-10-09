@@ -1,7 +1,7 @@
 import { nominalToReal } from '../../../../engine'
 import { aboutOnAccount, bothMoneys } from '../bothMoneys'
 import { planMoneyLabel } from '../planMoneyLabel'
-import type { InvestedSnapshot } from '../checkinDate'
+import { formatCheckinDate, type InvestedSnapshot } from '../checkinDate'
 
 /**
  * What the balance of the latest check-in is worth in the plan's euros, which is the money the FI target is in.
@@ -22,7 +22,11 @@ export function worthInPlanMoneyNote({
   if (!latest || !planStartDate) return null
   const real = money(nominalToReal(latest.investedCents, planStartDate, latest.date, inflationRate))
   if (real === money(latest.investedCents)) return null
-  return `worth about ${real} in ${planMoneyLabel(planStartDate)}, the money the FI target is in`
+  // A check-in in the year the plan started is a different money from the plan's, though it has the same year in
+  // its name, so the day is named instead.
+  const sameYear = latest.date.slice(0, 4) === planStartDate.slice(0, 4)
+  const euros = sameYear ? `euros of ${formatCheckinDate(planStartDate)}` : planMoneyLabel(planStartDate)
+  return `worth about ${real} in ${euros}, the money the FI target is in`
 }
 
 /**
