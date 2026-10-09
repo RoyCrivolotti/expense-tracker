@@ -66,6 +66,7 @@ export function CheckinHistoryChart({ checkins, accounts, plan }: Props) {
         format,
         planColor,
         ACTUAL_COLOR,
+        model?.series.preStep,
       ),
     [model, format, planColor],
   )

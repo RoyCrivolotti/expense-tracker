@@ -89,10 +89,19 @@ export function buildCheckinTooltip(
   format: MoneyFormat,
   planColor?: string,
   actualColor?: string,
+  /** What the plan reached before a payment or event on each step, where it steps (see `windowSeries`). */
+  preStep?: number[],
 ): { title: string; lines: TooltipLine[] } {
-  const lines: TooltipLine[] = [
-    { label: 'Plan', value: formatMoneyShort(planValues[i] ?? 0, format), color: planColor },
-  ]
+  const plan = planValues[i] ?? 0
+  const before = preStep?.[i]
+  // Where the plan steps, a reading just before it is on the higher side, so both are given.
+  const lines: TooltipLine[] =
+    before !== undefined && before !== plan
+      ? [
+          { label: 'Plan, the day before', value: formatMoneyShort(before, format), color: planColor },
+          { label: 'Plan, that day', value: formatMoneyShort(plan, format), color: planColor },
+        ]
+      : [{ label: 'Plan', value: formatMoneyShort(plan, format), color: planColor }]
   const actual = nearestScatter(scatterPoints, i)
   if (actual !== null) {
     lines.push({ label: readingLabel('Actual', actual.on), value: formatMoneyShort(actual.value, format), color: actualColor })
