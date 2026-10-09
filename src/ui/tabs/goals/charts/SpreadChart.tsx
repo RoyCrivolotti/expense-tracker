@@ -96,7 +96,7 @@ function SpreadChartImpl({ draft: liveDraft, milestones, nominal = false, runs =
     <ChartShell embedded={embedded}>
       <h3 className={styles.chartTitle}>How far luck could move the plan</h3>
       <p className={styles.chartHint}>
-        {spreadHeadline({ result, plan, money: short, moneyLabel, nominal, inflationRate })}
+        {spreadHeadline({ result, plan, money: short, moneyLabel, nominal, inflationRate, runs: result.runs, format })}
       </p>
       <LinearChart
         height={height}
@@ -138,7 +138,14 @@ function SpreadChartImpl({ draft: liveDraft, milestones, nominal = false, runs =
         </table>
       ) : null}
       <p className={`${styles.chartHint} ${styles.chartCaption}`}>
-        {spreadCaption({ runs: result.runs, volatility, realReturn: draft.expectedRealReturn, format })} In {moneyLabel}.
+        {spreadCaption({
+          runs: result.runs,
+          volatility,
+          realReturn: draft.expectedRealReturn,
+          format,
+          chartMoney: moneyLabel,
+          tableMoney: rows.length > 0 ? planMoneyLabel(draft.planStartDate) : null,
+        })}
       </p>
     </ChartShell>
   )

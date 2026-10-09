@@ -8,8 +8,10 @@ import type { MoneyFormat } from '../../../../engine/money'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import type { Milestone } from '../../../../types'
 import type { ChartSeries } from '../../../charts/LinearChart'
+import { planMoneyLabel } from '../planMoneyLabel'
 import { yearLabel } from '../yearLabel'
 import { inflateSeries } from './nominalTransform'
+import { runsOfHundred } from './retirementOddsLine'
 
 /** How many runs the card replays: enough that the bands do not wobble, few enough to stay quick while typing. */
 export const SPREAD_RUNS = 10_000
@@ -40,7 +42,11 @@ export interface MilestoneRow {
   gets: string
 }
 
-/** The years each milestone is reached in, one row each, in the order of the replay's milestones. */
+/**
+ * The years each milestone is reached in, one row each, in the order of the replay's milestones. A milestone is
+ * an amount on the account, which is how the replay tests it, so the row says so: the same number as the FI
+ * target is an easier bar, since the account's euros are worth less each year.
+ */
 export function milestoneRows({
   milestones,
   result,
@@ -57,15 +63,15 @@ export function milestoneRows({
   return milestones.map((m, k) => {
     const range = result.milestones[k]!
     return {
-      label: milestoneLabelWithAmount(m, money),
+      label: `${milestoneLabelWithAmount(m, money)} on your account`,
       middle: rangeLabel(range.p25, range.p75, planStartDate, years),
       wide: rangeLabel(range.p10, range.p90, planStartDate, years),
-      gets: `${Math.round(range.share * 100)} of 100`,
+      gets: `${runsOfHundred(range.share)} of 100`,
     }
   })
 }
 
-/** The row for the FI target, which is an amount in the plan's money and not on the account. */
+/** The row for the FI target, which is an amount in the plan's euros and not on the account. */
 export function fiRow({
   result,
   planStartDate,
@@ -82,10 +88,10 @@ export function fiRow({
   const range = result.fi
   if (!range) return null
   return {
-    label: `FI target (${money(targetCents)} in the plan's money)`,
+    label: `FI target (${money(targetCents)} in ${planMoneyLabel(planStartDate)})`,
     middle: rangeLabel(range.p25, range.p75, planStartDate, years),
     wide: rangeLabel(range.p10, range.p90, planStartDate, years),
-    gets: `${Math.round(range.share * 100)} of 100`,
+    gets: `${runsOfHundred(range.share)} of 100`,
   }
 }
 
@@ -124,7 +130,10 @@ export function spreadSeries({
   return nominal ? inflateSeries(series, series[0]!.values.map((_, i) => i), inflationRate) : series
 }
 
-/** Where the replay ends, against the plan's line, in a sentence. */
+/**
+ * Where the replay ends, against the plan's line, in a sentence. It opens by saying what a run is, since the
+ * card uses the word before it has explained itself.
+ */
 export function spreadHeadline({
   result,
   plan,
@@ -132,6 +141,8 @@ export function spreadHeadline({
   moneyLabel,
   nominal,
   inflationRate = 0,
+  runs,
+  format,
 }: {
   result: SpreadResult
   plan: readonly YearPoint[]
@@ -139,30 +150,42 @@ export function spreadHeadline({
   moneyLabel: string
   nominal: boolean
   inflationRate?: number
+  runs: number
+  format: MoneyFormat
 }): string {
   const year = result.years
   const grow = nominal ? Math.pow(1 + inflationRate, year) : 1
   const at = (cents: number) => money(Math.round(cents * grow))
-  return `In year ${year}, in ${moneyLabel}: the middle run ends at ${at(result.after.p50[year]!)}, the plan's line at ${at(plan[year]?.investedCents ?? 0)}, the luckiest tenth above ${at(result.after.p90[year]!)} and the unluckiest tenth below ${at(result.after.p10[year]!)}.`
+  return `The plan replayed in ${runs.toLocaleString(format.locale)} different markets, each one a run. In year ${year}, in ${moneyLabel}: the middle run ends at ${at(result.after.p50[year]!)}, the plan's line at ${at(plan[year]?.investedCents ?? 0)}, the luckiest tenth of runs above ${at(result.after.p90[year]!)} and the unluckiest tenth of runs below ${at(result.after.p10[year]!)}.`
 }
 
-/** What is replayed and what is left as planned: the assumptions a reader should be able to check. */
+/**
+ * What is replayed and what is left as planned: the assumptions a reader should be able to check, and which
+ * euros the chart and the table are in, since they are not the same ones. `tableMoney` is the plan's euros, and
+ * null where there is no table.
+ */
 export function spreadCaption({
   runs,
   volatility,
   realReturn,
   format,
+  chartMoney,
+  tableMoney,
 }: {
   runs: number
   volatility: number
   realReturn: number
   format: MoneyFormat
+  chartMoney: string
+  tableMoney: string | null
 }): string {
+  const table = tableMoney === null ? '' : ` In the table, milestone amounts are on your account and the FI target is in ${tableMoney}.`
   return [
-    `Each of the ${runs.toLocaleString(format.locale)} runs replays your plan in a different market: every year's return is the typical ${formatPercent(realReturn, format)} a year times a luck factor with a bounce of ${formatPercent(volatility, format)}.`,
+    `Each of the ${runs.toLocaleString(format.locale)} runs replays your plan in a different market: every year's return is the typical ${formatPercent(realReturn, format)} a year times a luck factor with a bounce of ${formatPercent(volatility, format)} (the Market bounce in Assumptions).`,
     'Only the market changes: the saving, the house, the events and the inflation are as planned.',
     'The line is the plan, half of the runs end in the shaded middle and 8 in 10 between the dashed lines.',
     'The picture is the same every time, so it moves only when you change something.',
+    `The chart is in ${chartMoney}.${table}`,
   ].join(' ')
 }
 
@@ -170,7 +193,7 @@ export function spreadCaption({
 export function spreadWarning(result: SpreadResult): string | null {
   const year = result.belowZero.findIndex((share) => share >= WARN_SHARE)
   if (year < 0) return null
-  const share = Math.round(result.belowZero[year]! * 100)
+  const share = runsOfHundred(result.belowZero[year]!)
   return `In ${share}% of the runs the portfolio is below nothing from year ${year}: the house payment or an event takes more than it holds when the market is unkind.`
 }
 

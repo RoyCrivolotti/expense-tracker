@@ -22,7 +22,12 @@ describe('SpreadChart', () => {
   it('says where the middle run and the two tenths end against the plan\'s line, and what the euros are', () => {
     show()
     expect(screen.getByRole('heading', { name: 'How far luck could move the plan' })).toBeInTheDocument()
-    expect(screen.getByText(/In year 30, in 2026 euros: the middle run ends at .*, the plan's line at .*, the luckiest tenth above .* and the unluckiest tenth below/)).toBeInTheDocument()
+    expect(screen.getByText(/In year 30, in 2026 euros: the middle run ends at .*, the plan's line at .*, the luckiest tenth of runs above .* and the unluckiest tenth of runs below/)).toBeInTheDocument()
+  })
+
+  it('opens by saying what a run is', () => {
+    show({}, { runs: 400 })
+    expect(screen.getByText(/^The plan replayed in 400 different markets, each one a run\./)).toBeInTheDocument()
   })
 
   it('draws a chart with the plan and the replay, and names what each line is', () => {
@@ -56,9 +61,22 @@ describe('SpreadChart', () => {
     // Two milestones, then the FI target.
     expect(rows).toHaveLength(3)
     expect(within(rows[0]!).getByRole('rowheader')).toHaveTextContent('100.000')
-    expect(within(rows[2]!).getByRole('rowheader')).toHaveTextContent(/FI target \(.* in the plan's money\)/)
+    expect(within(rows[0]!).getByRole('rowheader')).toHaveTextContent('on your account')
+    expect(within(rows[2]!).getByRole('rowheader')).toHaveTextContent(/FI target \(.* in 2026 euros\)/)
+    expect(within(rows[2]!).getByRole('rowheader')).not.toHaveTextContent('on your account')
     for (const row of rows) expect(row).toHaveTextContent(/\d+ of 100 runs get there/)
     expect(rows[0]!).toHaveTextContent(/\d{4}/)
+  })
+
+  it('says under the table that the milestones are on the account and the FI target is in the plan\'s euros', () => {
+    show()
+    expect(screen.getByText(/The chart is in 2026 euros\. In the table, milestone amounts are on your account and the FI target is in 2026 euros\./)).toBeInTheDocument()
+  })
+
+  it('names the chart\'s euros alone when there is no table', () => {
+    show({ annualSpendCents: 0 }, { milestones: [] })
+    expect(screen.getByText(/The chart is in 2026 euros\./)).toBeInTheDocument()
+    expect(screen.queryByText(/In the table/)).not.toBeInTheDocument()
   })
 
   it('leaves the table out when there is nothing to reach', () => {

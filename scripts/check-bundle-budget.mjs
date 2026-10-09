@@ -233,7 +233,10 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // Raised from 271.52 KB to 271.72 KB for the single rounding of the milestone years and FI as a month beside a
 // restart (the exact crossing of the FI target, the month label, and the start-date check): about 390 bytes gzip took the total
 // from 271,220 to 271,610 bytes. No new library.
-const TOTAL_MAX_GZIP = 271_720
+//
+// Raised from 271.72 KB to 271.99 KB for the spread table's wording (which euros each amount is in, what a run is,
+// where the bounce is set): about 180 bytes gzip took the total from 271,610 to 271,793 bytes. No new library.
+const TOTAL_MAX_GZIP = 271_990
 const GOALS_MAX_GZIP = 72_860
 
 function gzipBytes(path) {
