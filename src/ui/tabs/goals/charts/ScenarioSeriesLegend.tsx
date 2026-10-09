@@ -23,7 +23,7 @@ interface ScenarioSeriesLegendProps {
   breakdowns: ScenarioLegendBreakdown[]
   /**
    * The breakdown is worked out on the real projection, so in the Nominal view its figures are in
-   * today's money while the values above it are inflated: it says so rather than leave the two to
+   * the plan's euros while the values above it are inflated: it says so rather than leave the two to
    * be read as one.
    */
   breakdownInTodaysMoney?: boolean

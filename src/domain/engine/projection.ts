@@ -18,7 +18,7 @@ export interface YearPoint {
    * in a year with no payment or event, so the plan's line rises to this and steps to the next.
    */
   preEventInvestedCents: number
-  /** What the house is worth, in today's money: not net of the mortgage, which is `mortgageBalanceCents`. */
+  /** What the house is worth, in the plan's euros: not net of the mortgage, which is `mortgageBalanceCents`. */
   houseEquityCents: number
   mortgageBalanceCents: number
   netWorthCents: number
@@ -42,7 +42,7 @@ export interface ProjectionParams {
   houseAppreciationRate: number
   /**
    * The yearly inflation the plan assumes (0.02 = 2%), from the owner's setting. Required, with
-   * no fallback: the house and the mortgage are brought back to today's money by it.
+   * no fallback: the house and the mortgage are brought back to the plan's euros by it.
    */
   inflationRate: number
   /** One-off cash flows applied at specific projection years. Default: none. */
@@ -50,7 +50,7 @@ export interface ProjectionParams {
   /**
    * Changes to the monthly amount from a point on the plan's axis, in order (see
    * `scheduleSteps`). Default: none, so the monthly amount stays what it starts as. Amounts are
-   * euros as sent, not today's money: the projection brings them back by `inflationRate`.
+   * euros as sent, not the plan's euros: the projection brings them back by `inflationRate`.
    */
   contributionSteps?: ScheduleStep[]
 }
@@ -73,7 +73,7 @@ function houseEquityAtYear(
 }
 
 /**
- * What is still owed, in today's money. The loan is a fixed schedule at the bank's
+ * What is still owed, in the plan's euros. The loan is a fixed schedule at the bank's
  * (nominal) rate, so its balance is deflated by the years since purchase: inflation eats
  * into a debt that does not grow with it.
  */
@@ -273,7 +273,7 @@ export function monthlyMortgageCents(params: ProjectionParams): number {
   )
 }
 
-/** Year-by-year drawdown after reaching FI (a constant withdrawal in today's money, like the rest of the plan). */
+/** Year-by-year drawdown after reaching FI (a constant withdrawal in the plan's euros, like the rest of the plan). */
 export function projectDrawdown(
   startPortfolioCents: number,
   annualWithdrawalCents: number,

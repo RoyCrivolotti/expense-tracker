@@ -143,7 +143,7 @@ function PortfolioLegend({
   activeYear: number | null
   breakdowns: ScenarioLegendBreakdown[]
   yearZeroHint: boolean
-  /** The purchase breakdown is worked out in today's money, whichever way the lines are drawn. */
+  /** The purchase breakdown is worked out in the plan's euros, whichever way the lines are drawn. */
   breakdownInTodaysMoney: boolean
   /** Which side of the chart the wide layout's floating breakdown sits on. */
   floatSide: 'start' | 'end'

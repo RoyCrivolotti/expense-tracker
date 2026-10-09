@@ -48,8 +48,8 @@ export function AssumptionsView({
       <p className={goalStyles.intro}>
         Progress is measured with your milestones, the accounts each check-in records a balance
         for, the months of spending to hold in cash, and an assumed inflation rate. That rate
-        brings check-ins, the house and the mortgage back to today&apos;s money, and counts what
-        you invest each month for less each year.
+        brings check-ins, the house and the mortgage back to the euros of the plan&apos;s start year, and
+        counts what you invest each month for less each year.
       </p>
       <p className={goalStyles.chartHint}>Return, growth and housing are per scenario, in Scenarios.</p>
       <MilestonesSetting settings={settings} onChange={onSettingsChange} />

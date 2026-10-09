@@ -20,11 +20,15 @@ const buildTerms = (cur: string): { term: string; body: string }[] => [
   },
   {
     term: 'Monthly investing',
-    body: "What leaves your account for your investments each month, as you send it. The plan is in today's money, so each year's payments are brought back by the assumed inflation: an amount that stays the same counts for less every year. A change from a date sets a new amount from that month on. Each year's payments are added at the end of that year, a little cautious: money sent through the year would earn a bit more.",
+    body: "What leaves your account for your investments each month, as you send it. The plan counts in the euros of its start year, so each year's payments are brought back by the assumed inflation: an amount that stays the same counts for less every year. A change from a date sets a new amount from that month on. Each year's payments are added at the end of that year, a little cautious: money sent through the year would earn a bit more.",
+  },
+  {
+    term: "The plan's euros and your account",
+    body: "Two ways to write the same amount. The plan counts in the euros of its start year, so '2026 euros' means what that many euros bought in 2026, and an amount in them does not shrink as time passes. Your account shows the euros of the day, so the same worth is a bigger number later: at 2% a year, 100.000 € of 2026 euros reads about 121.899 € on your account in 2036. Charts and figures say which one they use. The Nominal view draws what the account will read, and the Purchasing power view draws the plan's euros.",
   },
   {
     term: 'Real return',
-    body: "The yearly growth the plan assumes for the invested portfolio after inflation, so every projected figure and the FI target are in today's money. Milestones are the exception: they are amounts you want to see on your account, so the plan is counted after inflation to date them. Check-ins are broker balances in the money of their day, and Progress deflates them before comparing, at the assumed inflation set in Assumptions. The chart's Nominal view does the reverse and inflates the projection at that same rate, and can preview another one without saving it. A new plan starts at 5%, about what world stocks have returned over the very long run after inflation; many forecasts are lower.",
+    body: "The yearly growth the plan assumes for the invested portfolio after inflation, so every projected figure and the FI target are in the plan's euros (the euros of its start year). Milestones are the exception: they are amounts you want to see on your account, so the plan is counted after inflation to date them. Check-ins are broker balances in the money of their day, and Progress deflates them before comparing, at the assumed inflation set in Assumptions. The chart's Nominal view does the reverse and inflates the projection at that same rate, and can preview another one without saving it. A new plan starts at 5%, about what world stocks have returned over the very long run after inflation; many forecasts are lower.",
   },
   {
     term: 'Horizon (years)',
