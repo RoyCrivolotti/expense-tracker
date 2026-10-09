@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { WealthSummaryCard } from './WealthSummaryCard'
 import { planValueAtDate, realToNominal, DEFAULT_INFLATION_RATE } from '../../../engine'
 import { makeScenario, makeTransaction } from '../../../testing/factories'
+import { samplePlan } from '../../../testing/samplePlan'
 import type { WealthAccount, WealthCheckin } from '../../../types'
 
 function makeAccount(id: number, kind: WealthAccount['kind'] = 'investment'): WealthAccount {
@@ -83,15 +84,15 @@ describe('WealthSummaryCard', () => {
 
     it('says how many months ahead of the plan a balance is, and the day the plan reaches it', () => {
       render(<WealthSummaryCard checkins={withGap(2_000_000)} accounts={accounts} plan={scenario} />)
-      expect(screen.getByText(/which only reaches this balance on/)).toHaveTextContent(
-        /^\d+ months? ahead of the plan, which only reaches this balance on .*20\d\d\.$/,
+      expect(screen.getByText(/which only reaches this balance around/)).toHaveTextContent(
+        /^\d+ months? ahead of the plan, which only reaches this balance around [A-Z][a-z]{2} 20\d\d\.$/,
       )
     })
 
     it('says how many months behind, and the day the plan had the balance', () => {
       render(<WealthSummaryCard checkins={withGap(-2_000_000)} accounts={accounts} plan={scenario} />)
-      expect(screen.getByText(/which already had this balance on/)).toHaveTextContent(
-        /^\d+ months? behind the plan, which already had this balance on .*20\d\d\.$/,
+      expect(screen.getByText(/which already had this balance around/)).toHaveTextContent(
+        /^\d+ months? behind the plan, which already had this balance around [A-Z][a-z]{2} 20\d\d\.$/,
       )
     })
 
@@ -371,5 +372,42 @@ describe('WealthSummaryCard', () => {
     render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />)
     const rate = screen.getByText(/7,0\s?% a year$/)
     expect(rate).toHaveStyle({ color: 'var(--exp-danger)' })
+  })
+})
+
+describe('the status around a house purchase and at the edges of the plan', () => {
+  const accounts = [makeAccount(1, 'investment')]
+  const plan = samplePlan({ name: 'Sample', id: 1, isActive: true })
+  const inflation = 0.02
+  const checkinFor = (date: string, gapCents = 0) => {
+    const real = planValueAtDate(plan, date, inflation) ?? 0
+    return [makeCheckin(1, date, [{ accountId: 1, valueCents: realToNominal(real + gapCents, '2026-01-01', date, inflation) }])]
+  }
+
+  it('says on track, with the gap in money, for someone exactly on plan a week before the payment', () => {
+    render(<WealthSummaryCard checkins={checkinFor('2033-12-25')} accounts={accounts} plan={plan} />)
+    expect(screen.getByText('On track')).toBeInTheDocument()
+    expect(screen.queryByText(/ahead of plan|behind plan/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/of the plan, which/)).not.toBeInTheDocument()
+  })
+
+  it('says why there are no months for a lead only the far side of the payment has', () => {
+    render(<WealthSummaryCard checkins={checkinFor('2033-12-25', 500_000)} accounts={accounts} plan={plan} />)
+    expect(screen.getByText(/ahead of plan/i)).toBeInTheDocument()
+    expect(screen.getByText(/Months are not counted across a house purchase or a one-off event/)).toBeInTheDocument()
+    expect(screen.queryByText(/of the plan, which only reaches/)).not.toBeInTheDocument()
+  })
+
+  it('says the plan starts after the latest check-in, rather than that it has no start date', () => {
+    const later = samplePlan({ name: 'Sample', planStartDate: '2027-01-01' })
+    render(<WealthSummaryCard checkins={[makeCheckin(1, '2026-06-01', [{ accountId: 1, valueCents: 5_000_000 }])]} accounts={accounts} plan={later} />)
+    expect(screen.getByText(/Sample starts on .*2027, after your latest check-in/)).toBeInTheDocument()
+    expect(screen.queryByText(/no start date/)).not.toBeInTheDocument()
+  })
+
+  it('says the plan has ended when the latest check-in is past its last year', () => {
+    const short = samplePlan({ name: 'Sample', horizonYears: 5 })
+    render(<WealthSummaryCard checkins={[makeCheckin(1, '2033-06-01', [{ accountId: 1, valueCents: 5_000_000 }])]} accounts={accounts} plan={short} />)
+    expect(screen.getByText(/Sample ends on .*2031, before your latest check-in/)).toBeInTheDocument()
   })
 })

@@ -17,8 +17,10 @@ import {
   plannedMonthlyAt,
   plannedMonthlyAverage,
   portfolioReturn,
+  shortMonthFullYearLabel,
   steadyGap,
   trackStatus,
+  trackVerdict,
 } from '../../../engine'
 import { formatCheckinDate } from './checkinDate'
 import { useAssumedInflation } from '../../hooks/assumedInflationContext'
@@ -26,6 +28,7 @@ import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import type { MoneyFormat } from '../../../engine/money'
 import { formatMoneyShort } from './chartTheme'
 import { planGapLabel } from './planGap'
+import { noStatusMessage } from './trackMessages'
 import styles from './progress.module.css'
 import goalStyles from './goals.module.css'
 
@@ -221,18 +224,18 @@ function ReturnHint({
 function StatusRow({
   status,
   plan,
+  latestDate,
   format,
 }: {
   status: TrackStatus | null
   plan: GoalScenario | null
+  latestDate: string
   format: MoneyFormat
 }) {
   if (!status) {
-    // Two different gaps: no plan at all, or a plan the projection cannot be dated
-    // against. Telling the second user to go choose a plan sends them the wrong way.
-    const why = !plan
-      ? 'No plan chosen yet. Open a scenario under Plan and choose Use as my plan.'
-      : `${plan.name} has no start date yet. Set one under Plan start, or re-baseline it from this check-in, to see whether you are ahead or behind.`
+    // Different gaps: no plan at all, a plan with no start date, or a plan whose line does not
+    // reach the latest check-in. Telling one user the reason of another sends them the wrong way.
+    const why = noStatusMessage(plan, latestDate)
     return (
       <div className={styles.summaryStatus}>
         <span className={[styles.statusDot, styles.statusDotNeutral].join(' ')} />
@@ -241,21 +244,24 @@ function StatusRow({
     )
   }
   const planName = plan?.name ?? null
+  const verdict = trackVerdict(status)
   const ahead = status.deltaCents >= 0
+  // Within a month either way is on track, which is not red or green for the side it is on.
+  const good = verdict !== 'behind'
   return (
     <div className={styles.summaryStatus}>
       <span
         className={[
           styles.statusDot,
-          ahead ? styles.statusDotAhead : styles.statusDotBehind,
+          good ? styles.statusDotAhead : styles.statusDotBehind,
         ].join(' ')}
       />
       <span>
-        {ahead ? 'Ahead of plan' : 'Behind plan'}{' '}
+        {STATUS_WORDS[verdict]}{' '}
         <span
           className={[
             styles.summaryDelta,
-            ahead ? styles.summaryDeltaAhead : styles.summaryDeltaBehind,
+            good ? styles.summaryDeltaAhead : styles.summaryDeltaBehind,
           ].join(' ')}
         >
           ({ahead ? '+' : ''}{formatMoneyShort(status.deltaCents, format)})
@@ -266,14 +272,33 @@ function StatusRow({
   )
 }
 
-/** Where the plan's line has the balance, said as months and as the day it falls on. */
+const STATUS_WORDS = { 'on-track': 'On track', ahead: 'Ahead of plan', behind: 'Behind plan' } as const
+
+/** Where the plan's line has the balance, said as months and the month it falls in. */
 function MonthsHint({ months, planDate }: { months: number; planDate: string }) {
   const ahead = months > 0
   return (
     <p style={hintStyle}>
       <strong style={{ color: ahead ? 'var(--exp-success)' : 'var(--exp-danger)' }}>{planGapLabel(months)}</strong>
-      {ahead ? ' of the plan, which only reaches' : ' the plan, which already had'} this balance on{' '}
-      {formatCheckinDate(planDate)}.
+      {ahead ? ' of the plan, which only reaches' : ' the plan, which already had'} this balance around{' '}
+      {shortMonthFullYearLabel(planDate.slice(0, 7))}.
+    </p>
+  )
+}
+
+/**
+ * How far along the line the balance is, when it is not on track: in months and the month the line
+ * has it, or, where the line only has it on the other side of a house purchase or a one-off event,
+ * why there are no months.
+ */
+function PlanGapHint({ status }: { status: TrackStatus }) {
+  if (status.onTrack) return null
+  if (status.deltaMonths && status.planDate) return <MonthsHint months={status.deltaMonths} planDate={status.planDate} />
+  if (status.monthsReason !== 'across-event') return null
+  return (
+    <p style={hintStyle}>
+      Months are not counted across a house purchase or a one-off event: the plan&apos;s line steps there, so
+      only the gap in euros is shown.
     </p>
   )
 }
@@ -303,9 +328,7 @@ function SnapshotHints({
   const reserve = cashReserve(latest, accounts, transactions, cashReserveMonths, openBudgetMonth)
   return (
     <>
-      {status?.deltaMonths && status.planDate ? (
-        <MonthsHint months={status.deltaMonths} planDate={status.planDate} />
-      ) : null}
+      {status ? <PlanGapHint status={status} /> : null}
       {plan ? <PaceHint plan={plan} transactions={transactions} openBudgetMonth={openBudgetMonth} format={format} /> : null}
       {ret ? <ReturnHint ret={ret} plan={plan} format={format} inflationRate={inflationRate} /> : null}
       {reserve ? <CashReserveHint reserve={reserve} format={format} /> : null}
@@ -350,7 +373,7 @@ export function WealthSummaryCard({
     <Card>
       <h3 className={goalStyles.sectionTitle}>Progress snapshot</h3>
       <div className={styles.summaryCardContent}>
-        <StatusRow status={status} plan={plan} format={format} />
+        <StatusRow status={status} plan={plan} latestDate={latest.checkinDate} format={format} />
         <div className={styles.summaryRow}>
           <span>Net worth</span>
           <span className={styles.summaryValue}>{formatMoneyShort(netWorth, format)}</span>
