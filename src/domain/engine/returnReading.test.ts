@@ -92,7 +92,7 @@ describe('readReturn', () => {
   })
 
   it('hides a return above 30% a year, which is money moved in that nothing accounts for', () => {
-    // The audit's case: an account opened with 10k put in on day 29 of 30, then 10.2k, then 11k a year on.
+    // An account opened with 10k put in on day 29 of 30, then 10.2k, then 11k a year on, which a return of about 2% over that month annualises to well over 30% a year.
     const opened = [checkin(1, '2025-01-01', 0), checkin(2, '2025-01-31', 10_200_00), checkin(3, '2026-01-01', 11_000_00)]
     const reading = readReturn(opened, accounts, [deposit('2025-01-30', 10_000_00)], investing)
     expect(reading?.kind).toBe('too-high')

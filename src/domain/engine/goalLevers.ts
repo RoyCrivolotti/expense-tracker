@@ -1,8 +1,10 @@
 import type { GoalScenario } from '../types'
 
 /**
- * The scenario inputs that can sit in the Goals page's levers bar: every number the controls
- * edit. The plan start date and the life events are not dials, so they cannot.
+ * The scenario inputs that can sit in the Goals page's levers bar: the numbers a person steers a
+ * plan with. The plan start date and the life events are not dials, nor are the upkeep rate
+ * (`homeCarryRate`) and the years the money must last (`retirementYears`), which have no star and
+ * are always on the page, so none of them can sit in the bar.
  */
 export const LEVER_KEYS = [
   'startInvestedCents',

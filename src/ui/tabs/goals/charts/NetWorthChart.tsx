@@ -460,10 +460,10 @@ function variantProps(
 }
 
 function heroHint(expectedRealReturn: number): string {
-  return `At a purchase year, return and contributions apply before the down payment is withdrawn — select a year on the chart for values and the purchase breakdown. Dashed vertical marks show purchase years. The shaded band is the edited plan at a return ${bandReach(expectedRealReturn).lowerAndHigher}: how much the return matters, not how likely an outcome is.`
+  return `At a purchase year, return and contributions apply before the down payment is withdrawn. Select a year on the chart for values and the purchase breakdown. Dashed vertical marks show purchase years. The shaded band is the edited plan at a return ${bandReach(expectedRealReturn).lowerAndHigher}: how much the return matters, not how likely an outcome is.`
 }
 const DEFAULT_HINT =
-  'Compare saved scenarios plus your live edits. At a purchase year, return and contributions apply before the down payment is withdrawn — hover that year for the breakdown.'
+  'Compare saved scenarios plus your live edits. At a purchase year, return and contributions apply before the down payment is withdrawn. Hover that year for the breakdown.'
 
 /**
  * What the wide hero's marks mean, under its legend: the purchase years, why a purchase dips the
