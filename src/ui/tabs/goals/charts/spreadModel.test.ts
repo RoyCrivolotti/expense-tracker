@@ -99,16 +99,16 @@ describe('fiRow', () => {
   it('has no row when there is no target', () => {
     expect(fiRow({ result, planStartDate: null, years: 30, money, targetCents: 0 })).toBeNull()
   })
-})
-
-describe('spreadSeries', () => {
-  const series = spreadSeries({ plan: points, result, inflationRate: I, nominal: false })
-
 
   it('does not round a run in a thousand that never gets there up to all of them', () => {
     const near = { ...withFi, fi: { ...withFi.fi!, share: 0.9991 } }
     expect(fiRow({ result: near, planStartDate: null, years: 30, money, targetCents: 75_000_000 })!.gets).toBe('99 of 100')
   })
+})
+
+describe('spreadSeries', () => {
+  const series = spreadSeries({ plan: points, result, inflationRate: I, nominal: false })
+
   it('draws the plan, the middle run, the middle half as a band, and the tenth and the ninetieth as dashed lines', () => {
     expect(series.map((s) => s.id)).toEqual(['p90', 'p10', 'band', 'median', 'plan'])
     expect(series.find((s) => s.id === 'plan')!.values).toEqual(points.map((p) => p.investedCents))
@@ -133,27 +133,39 @@ describe('spreadSeries', () => {
 })
 
 describe('spreadHeadline', () => {
+  const headline = (over = {}) => spreadHeadline({ result, plan: points, money, moneyLabel: '2026 euros', nominal: false, runs: 10_000, format: EU_MONEY_FORMAT, ...over })
+
+  it('opens by saying what a run is, before the figures use the word', () => {
+    expect(headline()).toMatch(/^The plan replayed in 10\.000 different markets, each one a run\. In year 30/)
+    expect(headline({ runs: 2_000 })).toContain('replayed in 2.000 different markets')
+  })
+
+  it('says it is the luckiest and the unluckiest tenth of runs', () => {
+    expect(headline()).toContain('the luckiest tenth of runs above')
+    expect(headline()).toContain('the unluckiest tenth of runs below')
+  })
+
   it('says where the middle run and the two tenths end, against the plan\'s line, in the money it is drawn in', () => {
-    const text = spreadHeadline({ result, plan: points, money, moneyLabel: '2026 euros', nominal: false })
+    const text = headline()
     expect(text).toContain('In year 30, in 2026 euros')
     expect(text).toContain(`the middle run ends at ${money(result.after.p50[30]!)}`)
     expect(text).toContain(`the plan's line at ${money(points[30]!.investedCents)}`)
-    expect(text).toContain(`the luckiest tenth above ${money(result.after.p90[30]!)}`)
-    expect(text).toContain(`the unluckiest tenth below ${money(result.after.p10[30]!)}`)
+    expect(text).toContain(`the luckiest tenth of runs above ${money(result.after.p90[30]!)}`)
+    expect(text).toContain(`the unluckiest tenth of runs below ${money(result.after.p10[30]!)}`)
   })
 
   it('names the euros of the year in the nominal view and says the line is in them too', () => {
-    const text = spreadHeadline({ result, plan: points, money, moneyLabel: 'euros on your account in 2056', nominal: true, inflationRate: I })
+    const text = headline({ moneyLabel: 'euros on your account in 2056', nominal: true, inflationRate: I })
     expect(text).toContain('euros on your account in 2056')
     const grown = (cents: number) => money(Math.round(cents * Math.pow(1 + I, 30)))
     expect(text).toContain(`the middle run ends at ${grown(result.after.p50[30]!)}`)
     expect(text).toContain(`the plan's line at ${grown(points[30]!.investedCents)}`)
-    expect(text).toContain(`the luckiest tenth above ${grown(result.after.p90[30]!)}`)
-    expect(text).toContain(`the unluckiest tenth below ${grown(result.after.p10[30]!)}`)
+    expect(text).toContain(`the luckiest tenth of runs above ${grown(result.after.p90[30]!)}`)
+    expect(text).toContain(`the unluckiest tenth of runs below ${grown(result.after.p10[30]!)}`)
   })
 
   it('never says average', () => {
-    expect(spreadHeadline({ result, plan: points, money, moneyLabel: 'x', nominal: false }).toLowerCase()).not.toContain('average')
+    expect(headline({ moneyLabel: 'x' }).toLowerCase()).not.toContain('average')
   })
 })
 
@@ -190,6 +202,10 @@ describe('spreadCaption', () => {
     expect(text).toContain('half of the runs end in the shaded middle')
     expect(text).toContain('8 in 10 between the dashed lines')
   })
+
+  it('says where the bounce is set', () => {
+    expect(text).toContain('a bounce of 15,0% (the Market bounce in Assumptions)')
+  })
 })
 
 describe('spreadWarning', () => {
@@ -198,6 +214,10 @@ describe('spreadWarning', () => {
     expect(spreadWarning({ ...result, belowZero: [0, 0.049, 0.05, 0.4] })).toBe(
       'In 5% of the runs the portfolio is below nothing from year 2: the house payment or an event takes more than it holds when the market is unkind.',
     )
+  })
+
+  it('does not round nearly all of the runs up to all of them', () => {
+    expect(spreadWarning({ ...result, belowZero: [0, 0.9996] })).toContain('In 99% of the runs')
   })
 
   it('says nothing for a plan where the portfolio holds', () => {
@@ -235,10 +255,6 @@ describe('spreadKey', () => {
     ]) {
       expect(key(over)).not.toBe(key())
     }
-  it('does not round nearly all of the runs up to all of them', () => {
-    expect(spreadWarning({ ...result, belowZero: [0, 0.9996] })).toContain('In 99% of the runs')
-  })
-
     expect(spreadKey(draft, 0.03, 0.15, 5_000)).not.toBe(key())
     expect(spreadKey(draft, I, 0.11, 5_000)).not.toBe(key())
     expect(spreadKey(draft, I, 0.15, 2_000)).not.toBe(key())

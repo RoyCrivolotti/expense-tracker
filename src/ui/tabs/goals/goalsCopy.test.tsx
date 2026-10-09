@@ -23,7 +23,13 @@ describe('Goals copy that names the Assumptions tab', () => {
 
     const text = container.textContent ?? ''
     expect(text).toContain('the assumed inflation set in Assumptions')
-    expect(text.replace('the assumed inflation set in Assumptions', '')).not.toMatch(/assumptions/i)
+    expect(text.replace('the assumed inflation set in Assumptions', '').replace('the Market bounce card in Assumptions', '')).not.toMatch(/assumptions/i)
+  })
+
+  it('says where the market bounce is set, since the spread card uses it before anything says what it is', () => {
+    const { container } = render(<GoalsExplainer />)
+
+    expect(container.textContent).toContain('You set it in the Market bounce card in Assumptions.')
   })
 
   it('introduces the Assumptions view in plain sentences', () => {
