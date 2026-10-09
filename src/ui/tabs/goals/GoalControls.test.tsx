@@ -295,10 +295,11 @@ describe('GoalControls', () => {
         'Mortgage rate (%/yr)',
         'House appreciation (%/yr)',
         'Withdrawal rate at FI',
+        'Upkeep, tax and insurance (%/yr)',
       ]),
     )
-    // Five percent sliders plus the unlabelled purchase-year one; no money or year slider.
-    expect(sliders).toHaveLength(6)
+    // Six percent sliders plus the unlabelled purchase-year one; no money or year slider.
+    expect(sliders).toHaveLength(7)
   })
 
   it('accepts a starting balance above the old slider cap', async () => {

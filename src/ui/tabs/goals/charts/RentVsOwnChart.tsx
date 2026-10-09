@@ -35,6 +35,7 @@ function RentVsOwnChartImpl({
       projectRentVsBuy({
         params: scenarioToParams({ ...draft, id: 0 }, inflationRate),
         rentMonthlyCents: draft.rentMonthlyCents,
+        carryRate: draft.homeCarryRate,
       }),
     [draft, inflationRate],
   )

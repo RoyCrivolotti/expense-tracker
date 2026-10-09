@@ -47,7 +47,10 @@ describe('the sections of the controls', () => {
     expect(screen.queryByText(/FI target = annual spend/)).not.toBeInTheDocument()
     // What is about the section as a whole stays.
     expect(screen.getByText(/Models life after financial independence/)).toBeInTheDocument()
-    expect(container.querySelectorAll('input')).toHaveLength(0)
+    // Every input that can be in the bar is out of the sections; the upkeep of the house is not one of
+    // them (it has no star), so it is the only thing left.
+    const left = [...container.querySelectorAll('input')].filter((i) => !i.getAttribute('aria-label')?.startsWith('Upkeep'))
+    expect(left).toHaveLength(0)
   })
 
   it('says what return to expect beside the real return, and keeps saying it when the return is in the bar', () => {
@@ -86,6 +89,28 @@ describe('the sections of the controls', () => {
     void id
     render(<HousingFields draft={draft} onChange={vi.fn()} />)
     expect(screen.getByText(/Purchase cost from portfolio: 64\.870,56 € down \+ 6\.000,00 € fees = 70\.870,56 €/)).toBeInTheDocument()
+  })
+
+  it('has the yearly upkeep of the house, which Rent vs buy counts, beside the rent, and writes an edit to the draft', () => {
+    const onChange = vi.fn()
+    const { id, ...draft } = samplePlan()
+    void id
+    render(<HousingFields draft={draft} onChange={onChange} />)
+
+    expect(screen.getAllByLabelText('Upkeep, tax and insurance (%/yr)').length).toBeGreaterThan(0)
+    expect(screen.getByText(/What owning costs a year beyond the mortgage/)).toBeInTheDocument()
+    expect(screen.getByText(/Rent vs buy counts it against buying/)).toBeInTheDocument()
+    fireEvent.click(screen.getAllByRole('button', { name: /^Increase Upkeep, tax and insurance/ })[0]!)
+    const patch = onChange.mock.calls[0]?.[0] as { homeCarryRate: number } | undefined
+    expect(patch?.homeCarryRate).toBeGreaterThan(draft.homeCarryRate)
+  })
+
+  it('shows the upkeep even with no house planned, since Rent vs buy compares buying today', () => {
+    const never = makeScenario({ housePurchaseYear: null })
+    const { id, ...rest } = never
+    void id
+    render(<HousingFields draft={rest} onChange={vi.fn()} />)
+    expect(screen.getAllByLabelText('Upkeep, tax and insurance (%/yr)').length).toBeGreaterThan(0)
   })
 
   it('says what already owning the house means for the starting balance, which the year alone does not', () => {

@@ -207,6 +207,28 @@ function MortgageFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: Sec
   )
 }
 
+/**
+ * What owning the house costs a year beyond the mortgage. Not an input of the plan's own line: Rent vs
+ * buy counts it against the buyer, so it is always shown, with or without a purchase planned, and it
+ * has no star since it is not one of the inputs that can sit in the bar.
+ */
+function HomeCarryField({ draft, onChange }: Pick<SectionProps, 'draft' | 'onChange'>) {
+  return (
+    <>
+      <PercentField
+        label="Upkeep, tax and insurance (%/yr)"
+        value={draft.homeCarryRate}
+        max={0.1}
+        onChange={(v) => onChange({ homeCarryRate: v })}
+      />
+      <p className={styles.fieldHint}>
+        What owning costs a year beyond the mortgage, as a share of the house&apos;s value: repairs, property tax
+        and insurance. Rent vs buy counts it against buying. 1 to 2% is usual.
+      </p>
+    </>
+  )
+}
+
 function PurchaseTimingFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: SectionProps) {
   const format = useMoneyFormat()
   // What the purchase takes from the portfolio is worked out from the draft, not from the year's
@@ -233,6 +255,7 @@ function PurchaseTimingFields({ draft, onChange, omit = NO_LEVERS, wrap = plain 
           onChange={(v) => onChange({ rentMonthlyCents: v })}
         />)
       )}
+      <HomeCarryField draft={draft} onChange={onChange} />
     </>
   )
 }
