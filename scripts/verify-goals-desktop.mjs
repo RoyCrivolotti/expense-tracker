@@ -3450,7 +3450,13 @@ async function checkSpreadCard(browser, engine) {
  * the stepper under the spending moved down a line away from a thumb when the figure above it gained a digit.
  */
 async function checkLayoutFaults(browser, engine) {
-  for (const size of [{ name: '1280x800', width: 1280, height: 800 }, { name: '1024x768', width: 1024, height: 768 }]) {
+  // The amounts are the ones the second review found the cross stranded alone at: an ordinary one at 1280 and 1024, and a
+  // five-figure one where the row wraps at 1366.
+  for (const size of [
+    { name: '1280x800', width: 1280, height: 800, amount: '1250' },
+    { name: '1024x768', width: 1024, height: 768, amount: '2500' },
+    { name: '1366x768', width: 1366, height: 768, amount: '12500' },
+  ]) {
     const { page, context } = await openPlan(browser, size, { scheme: 'light' })
     const where = `${engine} wide ${size.name}`
     try {
@@ -3458,7 +3464,7 @@ async function checkLayoutFaults(browser, engine) {
       await page.getByRole('region', { name: 'All inputs' }).waitFor()
       await page.getByRole('button', { name: /Add a change/ }).click()
       const amount = page.locator('input[aria-label^="Monthly amount from then"]').locator('visible=true').first()
-      await amount.fill('12500')
+      await amount.fill(size.amount)
       await amount.press('Tab')
       await page.getByRole('button', { name: 'Add', exact: true }).click()
       await settled(page)
@@ -3467,6 +3473,13 @@ async function checkLayoutFaults(browser, engine) {
       )
       const cut = labels.filter((l) => l.scroll > l.client + 1)
       check(where, '(ly) the month a change in the monthly investing starts in is not cut off', labels.length >= 2 && cut.length === 0, JSON.stringify(labels))
+      const apart = await page.evaluate(() =>
+        [...document.querySelectorAll('[class*="lifeEventRowButtons"]')].map((group) => {
+          const [edit, remove] = [...group.querySelectorAll('button')].map((b) => b.getBoundingClientRect())
+          return edit && remove ? Math.round(Math.abs(edit.top + edit.height / 2 - (remove.top + remove.height / 2))) : null
+        }),
+      )
+      check(where, '(ly) Edit and the remove cross of a change stay on one line', apart.length >= 1 && apart.every((n) => n !== null && n <= 4), `centres apart by ${apart.join(', ')}px`)
     } catch (e) {
       check(`${engine} ly layout faults`, '(ly) the section ran', false, String(e instanceof Error ? e.message : e).split('\n')[0])
     } finally {

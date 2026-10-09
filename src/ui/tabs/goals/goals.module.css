@@ -2451,6 +2451,16 @@
   flex-shrink: 0;
 }
 
+/* Edit and the remove cross are one unit: when the row wraps they move to the next line together, and the
+   cross is never left alone under the month. */
+.lifeEventRowButtons {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .lifeEventRemove {
   background: none;
   border: none;

@@ -89,27 +89,29 @@ export function ContributionStepsList({ steps, planStartDate, baseCents, startSe
               <span className={step.monthlyCents === 0 ? styles.lifeEventYear : styles.lifeEventInflow}>
                 {amountLabel(step.monthlyCents, format)}
               </span>
-              {planStartDate !== null ? (
+              <span className={styles.lifeEventRowButtons}>
+                {planStartDate !== null ? (
+                  <button
+                    type="button"
+                    className={styles.lifeEventEdit}
+                    aria-label={`Edit the change from ${shortMonthYearLabel(step.from)}`}
+                    onClick={() => {
+                      setAdding(false)
+                      setEditing(index)
+                    }}
+                  >
+                    Edit
+                  </button>
+                ) : null}
                 <button
                   type="button"
-                  className={styles.lifeEventEdit}
-                  aria-label={`Edit the change from ${shortMonthYearLabel(step.from)}`}
-                  onClick={() => {
-                    setAdding(false)
-                    setEditing(index)
-                  }}
+                  className={styles.lifeEventRemove}
+                  aria-label={`Remove the change from ${shortMonthYearLabel(step.from)}`}
+                  onClick={() => removeStep(index)}
                 >
-                  Edit
+                  ×
                 </button>
-              ) : null}
-              <button
-                type="button"
-                className={styles.lifeEventRemove}
-                aria-label={`Remove the change from ${shortMonthYearLabel(step.from)}`}
-                onClick={() => removeStep(index)}
-              >
-                ×
-              </button>
+              </span>
             </li>
           ),
         )}
