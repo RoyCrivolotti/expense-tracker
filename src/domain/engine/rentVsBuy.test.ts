@@ -7,7 +7,7 @@ import {
   DEFAULT_REAL_RETURN,
   DEFAULT_TRANSACTION_COSTS_CENTS,
 } from './projectionConstants'
-import { projectRentVsBuy, rentVsBuyVerdict, type RentVsBuyInput, type RentVsBuyPoint } from './rentVsBuy'
+import { paidShareOfYear, projectRentVsBuy, rentVsBuyVerdict, type RentVsBuyInput, type RentVsBuyPoint } from './rentVsBuy'
 import { monthlyMortgageCents, projectNetWorth, type ProjectionParams } from './projection'
 
 function baseParams(overrides: Partial<ProjectionParams> = {}): ProjectionParams {
@@ -101,6 +101,17 @@ describe('projectRentVsBuy', () => {
     const annual = payment * 12
     expect(buySidePortfolio).toBe(annual - Math.round(annual / (1 + DEFAULT_INFLATION_RATE)))
     expect(buySidePortfolio).toBeGreaterThan(0)
+  })
+
+  it('pays the months a loan has left in the year it ends in, not the whole year and not none of it', () => {
+    // 24 years and 7 months left: the 25th year has seven payments in it.
+    expect(paidShareOfYear(25, 24 + 7 / 12)).toBeCloseTo(7 / 12, 10)
+    expect(paidShareOfYear(24, 24 + 7 / 12)).toBe(1)
+    expect(paidShareOfYear(26, 24 + 7 / 12)).toBe(0)
+    // A whole term is as it was: every year up to it in full, none after.
+    expect(paidShareOfYear(30, 30)).toBe(1)
+    expect(paidShareOfYear(31, 30)).toBe(0)
+    expect(paidShareOfYear(1, 30)).toBe(1)
   })
 
   it('shrinks the payment by the inflation it is given', () => {
