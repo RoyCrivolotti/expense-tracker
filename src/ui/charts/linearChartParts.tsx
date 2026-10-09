@@ -1,4 +1,5 @@
 import { areaPath, type ScatterPoint } from './linearScale'
+import { steppedPoints } from './steppedPoints'
 import styles from './charts.module.css'
 
 export interface LifeEventMarker {
@@ -153,6 +154,8 @@ export function ChartBandLayer({
   color,
   lo,
   hi,
+  loPre,
+  hiPre,
   xForIndex,
   scaleY,
   fillOpacity = 0.18,
@@ -160,12 +163,15 @@ export function ChartBandLayer({
   color: string
   lo: number[]
   hi: number[]
+  /** What each edge reached just before its value, where a payment or event steps it (see `steppedPoints`). */
+  loPre?: number[] | undefined
+  hiPre?: number[] | undefined
   xForIndex: (i: number) => number
   scaleY: (v: number) => number
   fillOpacity?: number
 }) {
-  const top = hi.map((v, i) => ({ x: xForIndex(i), y: scaleY(v) }))
-  const bottom = lo.map((v, i) => ({ x: xForIndex(i), y: scaleY(v) }))
+  const top = steppedPoints(hi, hiPre, xForIndex, scaleY)
+  const bottom = steppedPoints(lo, loPre, xForIndex, scaleY)
   return (
     <path
       d={areaPath(top, bottom)}
