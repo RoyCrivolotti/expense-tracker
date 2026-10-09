@@ -33,6 +33,12 @@ describe('rentVsBuyCaption', () => {
     expect(rentVsBuyCaption({ ...base, startYear: 0 })).toContain('Compared as if you bought today, at 324.352,82 €.')
   })
 
+  it('says which way what it leaves out leans, so a close result can be read against it', () => {
+    const text = rentVsBuyCaption(base)
+    expect(text).toContain('Rent that rises faster than prices favours buying; selling costs and renovation favour renting')
+    expect(text).toContain('mortgage interest relief and tax on investment gains depend on your country and are not counted')
+  })
+
   it("states the assumptions it makes: rent flat in real terms, the scenario's own upkeep, no costs of selling", () => {
     const text = rentVsBuyCaption({ ...base, carryRate: 0.04 })
     expect(text).toContain("Assumes rent stays the same in real terms, upkeep, tax and insurance of 4,0% of the house's value a year, and no costs of selling.")
