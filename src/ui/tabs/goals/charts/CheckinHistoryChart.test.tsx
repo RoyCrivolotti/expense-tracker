@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { CheckinHistoryChart } from './CheckinHistoryChart'
 import { nearestScatter,
   nearestScatterValue, buildCheckinTooltip, realCheckinPoints } from './checkinChartUtils'
@@ -99,7 +99,12 @@ describe('CheckinHistoryChart', () => {
     expect(screen.getByRole('radio', { name: '5Y' })).toBeChecked()
   })
 
+  afterEach(() => vi.useRealTimers())
+
   it('opens wide enough to keep today off the right edge of an older plan', () => {
+    // Today is fixed: a plan that started in 2020 is a 10 year plan only until 2030, and the test read the real date.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-06-15T12:00:00Z'))
     const scenario = makeScenario({ planStartDate: '2020-01-01', horizonYears: 30 })
     render(<CheckinHistoryChart checkins={[]} accounts={[]} plan={scenario} />)
     expect(screen.getByRole('radio', { name: '10Y' })).toBeChecked()
