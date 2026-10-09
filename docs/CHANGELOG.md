@@ -2,6 +2,12 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (rent vs buy says what it assumes)
+
+- **Rent vs buy no longer says buying was ahead for years it was not.** "Buying is ahead for the first 15 years" was written from the last year buying led, so a buyer who trailed in the opening years (the fees weigh) was said to lead them. It says "Renting overtakes buying 16 years after you buy and stays ahead to the end", which is always true.
+- **The note says what moves the answer.** What savings and the house grow at, that the buyer spends the fees at once, when the loan is paid off, and what owning costs a month against renting, in the words of the marker ("Owning costs less a month", not "Owning cheaper", which read as buying being cheaper).
+- **The plan says what it does not charge the portfolio for.** A house takes the down payment and the fees out of the plan's portfolio and nothing else: the loan and the upkeep come out of the rest of the income. The House section and the chart's note say so, and where to say otherwise (Monthly investing over time).
+
 ## October 2026 (the spread card loads and behaves)
 
 - **Dragging a control is no longer held up by the two market replays.** Every committed edit reran the spread card's 10.000 runs and the retirement replays for cards a screen or two down the page. On a laptop slowed to a quarter of its speed, 20 presses of the arrow key on the return slider made 7 or 8 pauses of 100 to 240 ms; now one of under 100 ms. The replays wait until the edits have stopped and the card is near the screen, and the spread card does not fetch its code before then.
