@@ -31,6 +31,7 @@ describe('goals styles', () => {
   it.each([
     ['components/SegmentedControl.module.css', '.active'],
     ['tabs/goals/goals.module.css', '.chipActive'],
+    ['tabs/tabs.module.css', '.presetChipOn'],
   ])('gives %s %s a border in forced colours, where its fill is replaced', (file, selector) => {
     const forced = /@media \(forced-colors: active\) \{([\s\S]*?)\n\}/.exec(stylesheet(file))?.[1] ?? ''
 
