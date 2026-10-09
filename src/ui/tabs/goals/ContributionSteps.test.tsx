@@ -60,6 +60,23 @@ describe('ContributionStepsList', () => {
     expect(onChange).toHaveBeenCalledWith([{ from: '2029-01', monthlyCents: 0 }])
   })
 
+  it('puts Edit and the remove cross in one wrapper, so a row that wraps moves them together and never leaves the cross alone', () => {
+    setup({ steps: [{ from: '2027-03', monthlyCents: 2_000_00 }] })
+    const edit = screen.getByRole('button', { name: "Edit the change from Mar '27" })
+    const remove = screen.getByRole('button', { name: "Remove the change from Mar '27" })
+
+    expect(edit.parentElement).toBe(remove.parentElement)
+    expect(edit.parentElement).not.toBe(edit.closest('li'))
+    expect(edit.parentElement?.children).toHaveLength(2)
+  })
+
+  it('keeps the remove cross in its own wrapper where there is no Edit, a plan with no start date', () => {
+    setup({ steps: [{ from: '2027-03', monthlyCents: 2_000_00 }], planStartDate: null })
+    const remove = screen.getByRole('button', { name: "Remove the change from Mar '27" })
+
+    expect(remove.parentElement).not.toBe(remove.closest('li'))
+  })
+
   it('names where the starting amount is edited, which is the bar when it is in the bar', () => {
     setup({ startSetIn: 'the bar above' })
     expect(screen.getByText('The first line is the amount you start with, set in the bar above.')).toBeInTheDocument()

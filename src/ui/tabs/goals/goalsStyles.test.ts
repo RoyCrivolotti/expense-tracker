@@ -86,6 +86,14 @@ describe('goals styles', () => {
     expect(row?.body).toMatch(/flex-wrap:\s*wrap/)
   })
 
+  it('keeps Edit and the remove cross of a change together on one line when the row wraps', () => {
+    const buttons = rules('tabs/goals/goals.module.css').find((r) => r.selector === '.lifeEventRowButtons')
+
+    expect(buttons?.body).toMatch(/display:\s*inline-flex/)
+    expect(buttons?.body).toMatch(/flex-shrink:\s*0/)
+    expect(buttons?.body).toMatch(/white-space:\s*nowrap/)
+  })
+
   it('ends the chip strip with room as wide as the fade that Save and Discard bring, and keeps focus out of it', () => {
     const all = rules('tabs/goals/goals.module.css')
     const spacer = all.find((r) => r.selector === '.sectionRowActions .sectionChips::after')
