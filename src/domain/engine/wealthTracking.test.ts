@@ -121,10 +121,10 @@ describe('planValueAtOffset', () => {
     expect(planValueAtOffset(sparse, 1)).toBeNull()
   })
 
-  it('extrapolates backwards for negative offset', () => {
-    const v = planValueAtOffset(points, -0.5)
-    // Should be below year 0 value
-    expect(v).toBeLessThan(10_000_000)
+  it('has no value before the plan starts or after its last year, rather than a line carried on', () => {
+    expect(planValueAtOffset(points, -0.5)).toBeNull()
+    expect(planValueAtOffset(points, 2.5)).toBeNull()
+    expect(planValueAtOffset(points, 2)).toBe(13_900_000)
   })
 })
 
@@ -328,11 +328,12 @@ describe('trackStatus', () => {
       expect(below.deltaCents).toBeLessThan(0)
     })
 
-    it('gives no months for a check-in from before the plan starts, which has no line to be read along', () => {
-      const scenario = makeScenario({ planStartDate: '2024-01-01' })
-      const early = trackStatus(makeCheckin('2023-06-01', [{ accountId: 1, valueCents: 10_500_000 }]), scenario, accounts, DEFAULT_INFLATION_RATE)
-      expect(early!.deltaMonths).toBeNull()
-      expect(early!.planDate).toBeNull()
+    it('has no status for a check-in from before the plan starts or after it ends, where there is no line to read', () => {
+      const scenario = makeScenario({ planStartDate: '2024-01-01', horizonYears: 10 })
+      const at = (date: string) => trackStatus(makeCheckin(date, [{ accountId: 1, valueCents: 10_500_000 }]), scenario, accounts, DEFAULT_INFLATION_RATE)
+      expect(at('2023-06-01')).toBeNull()
+      expect(at('2034-06-01')).toBeNull()
+      expect(at('2034-01-01')).not.toBeNull()
     })
 
     it('never reports minus zero for a balance on the line', () => {

@@ -5,6 +5,7 @@ import { nearestScatter,
   nearestScatterValue, buildCheckinTooltip, realCheckinPoints } from './checkinChartUtils'
 import { makeScenario } from '../../../../testing/factories'
 import { EU_MONEY_FORMAT } from '../../../../engine/money'
+import { formatMoneyShort } from '../chartTheme'
 import type { WealthAccount, WealthCheckin } from '../../../../types'
 import { DEFAULT_INFLATION_RATE } from '../../../../engine'
 
@@ -168,6 +169,18 @@ describe('buildCheckinTooltip', () => {
     const result = buildCheckinTooltip(1, ['Year 0', 'Year 1'], [100_000, 200_000], scatter, format)
     expect(result.lines).toHaveLength(2)
     expect(result.lines[1]!.label).toBe('Actual, 11 Sep 2026')
+  })
+
+  it('gives the plan on both sides of a payment where the plan steps, so a reading before it is not set against the value after it', () => {
+    const result = buildCheckinTooltip(1, ['Year 0', 'Year 1'], [100_000, 40_000], [{ xIndex: 1, value: 95_000 }], format, undefined, undefined, [100_000, 90_000])
+    expect(result.lines.map((l) => l.label)).toEqual(['Plan, the day before', 'Plan, that day', 'Actual'])
+    expect(result.lines[0]!.value).toBe(formatMoneyShort(90_000, format))
+    expect(result.lines[1]!.value).toBe(formatMoneyShort(40_000, format))
+  })
+
+  it('has one Plan line where the plan does not step', () => {
+    const result = buildCheckinTooltip(1, ['Year 0', 'Year 1'], [100_000, 200_000], [], format, undefined, undefined, [100_000, 200_000])
+    expect(result.lines.map((l) => l.label)).toEqual(['Plan'])
   })
 
   it('omits the Actual line only when there is no reading at all', () => {

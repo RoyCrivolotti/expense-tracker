@@ -41,6 +41,23 @@ describe('inflateSeries and deflatePoints', () => {
     expect(result[1]!.band).toBeUndefined()
   })
 
+  it('inflates what a line and its band reached before a step by the same year\u2019s factor', () => {
+    const series: ChartSeries[] = [
+      {
+        id: 'b1',
+        color: '#000',
+        values: [0, 50_000_000],
+        preStep: [0, 100_000_000],
+        kind: 'line',
+        band: { lo: [0, 40_000_000], hi: [0, 60_000_000], loPre: [0, 90_000_000], hiPre: [0, 110_000_000] },
+      },
+    ]
+    const result = inflateSeries(series, [0, 1], 0.02)[0]!
+    expect(result.preStep).toEqual([0, Math.round(100_000_000 * 1.02)])
+    expect(result.band?.loPre).toEqual([0, Math.round(90_000_000 * 1.02)])
+    expect(result.band?.hiPre).toEqual([0, Math.round(110_000_000 * 1.02)])
+  })
+
   it('leaves scatter points as they are when inflating: check-ins are already nominal', () => {
     const series: ChartSeries[] = [
       { id: 'actuals', color: '#10b981', values: [], kind: 'scatter', points: [{ xIndex: 2.5, value: 200_000_000 }] },
@@ -450,6 +467,21 @@ describe('NetWorthChart', () => {
     // Before the check-in the plan from today does not exist yet.
     expect(pointSeriesValueAt(points, 1)).toBeNull()
     expect(pointSeriesValueAt([], 1)).toBeNull()
+  })
+
+  it('reads the value after a step on the day of it, not the one before, which the drop is from', () => {
+    // 500 on the way up to a payment, 200 once it is made, both at x = 4.
+    const points = [
+      { xIndex: 0, value: 100 },
+      { xIndex: 4, value: 500 },
+      { xIndex: 4, value: 200 },
+      { xIndex: 6, value: 300 },
+    ]
+    expect(pointSeriesValueAt(points, 4)).toBe(200)
+    expect(pointSeriesValueAt(points, 3.9)).toBe(490)
+    expect(pointSeriesValueAt(points, 5)).toBe(250)
+    expect(pointSeriesValueAt(points, 6)).toBe(300)
+    expect(pointSeriesValueAt(points, 0)).toBe(100)
   })
 
   it('inflates a real point series by each point\'s own year in the nominal view', () => {
@@ -1072,6 +1104,16 @@ describe('computeChartDisplayData', () => {
     const nominal = computeChartDisplayData([plan], [dot], years, true, rate)
     expect(nominal.displaySeries[0]!.values[2]).toBe(Math.round(120_000_00 * 1.05 ** 2))
     expect(nominal.displayExtraSeries[0]!.points![0]!.value).toBe(104_040_00)
+  })
+
+  it('counts the value a line reaches before a step as the highest it draws, in both views', () => {
+    // A house payment takes the year down from 150 to 60, but the line climbs to 150 first.
+    const stepped: ChartSeries = { ...plan, values: [100_000_00, 110_000_00, 60_000_00, 70_000_00], preStep: [100_000_00, 110_000_00, 150_000_00, 70_000_00] }
+    const real = computeChartDisplayData([stepped], [], years, false, 0.02)
+    expect(real.drawnMax).toBe(150_000_00)
+    const nominal = computeChartDisplayData([stepped], [], years, true, 0.02)
+    expect(nominal.drawnMax).toBe(Math.round(150_000_00 * 1.02 ** 2))
+    expect(nominal.yDomainMax).toBe(Math.round(150_000_00 * 1.02 ** 2))
   })
 
   it('draws a previewed rate but keeps the axis floor at the saved rate\'s, and the dots as they are', () => {

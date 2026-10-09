@@ -66,6 +66,7 @@ export function CheckinHistoryChart({ checkins, accounts, plan }: Props) {
         format,
         planColor,
         ACTUAL_COLOR,
+        model?.series.preStep,
       ),
     [model, format, planColor],
   )
@@ -73,7 +74,13 @@ export function CheckinHistoryChart({ checkins, accounts, plan }: Props) {
   if (!plan || !planStartDate || !model) return null
 
   const chartSeries: ChartSeries[] = [
-    { id: 'plan', color: plan.color, values: model.series.values, dashed: false },
+    {
+      id: 'plan',
+      color: plan.color,
+      values: model.series.values,
+      ...(model.series.preStep ? { preStep: model.series.preStep } : {}),
+      dashed: false,
+    },
     {
       id: 'actuals',
       color: ACTUAL_COLOR,

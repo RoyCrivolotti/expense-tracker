@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { GoalsCard } from './GoalsCard'
 import { DEFAULT_INFLATION_RATE, planValueAtDate, realToNominal } from '../../engine'
 import { makeDataset, makeScenario, makeTransaction, makeWealthAccount, makeWealthCheckin } from '../../testing/factories'
+import { samplePlan } from '../../testing/samplePlan'
 
 /** The local calendar date `n` days ago; the card counts days in local time too. */
 function daysAgoIso(n: number): string {
@@ -141,15 +142,20 @@ describe('GoalsCard', () => {
       expect(screen.getByText(/^\d+ months? ahead$/)).toBeInTheDocument()
     })
 
-    it('says on track within half a month of the line', () => {
+    it('says on track within a month of the line, ahead or behind', () => {
       badge(nominalWithGap(1_000))
       expect(screen.getByText('On track')).toBeInTheDocument()
     })
 
-    it('says how far behind in money when it is under half a month and behind', () => {
+    it('says on track for a little behind too, instead of how far behind in money', () => {
       badge(nominalWithGap(-1_000))
-      expect(screen.getByText(/ behind$/)).toBeInTheDocument()
-      expect(screen.queryByText(/month/)).not.toBeInTheDocument()
+      expect(screen.getByText('On track')).toBeInTheDocument()
+      expect(screen.queryByText(/behind/)).not.toBeInTheDocument()
+    })
+
+    it('counts months once the balance is more than a month from the line', () => {
+      badge(nominalWithGap(-1_500_000))
+      expect(screen.getByText(/^\d+ months? behind$/)).toBeInTheDocument()
     })
 
     it('gives the gap in money when the plan never has the balance', () => {
@@ -214,5 +220,39 @@ describe('GoalsCard', () => {
       />,
     )
     expect(screen.getByRole('button', { name: 'Open Goals' })).toBeInTheDocument()
+  })
+})
+
+describe('the track badge around a house purchase', () => {
+  // The sample plan buys a house in year 8, on 1 January 2034. A week before, the line is still
+  // climbing; it drops by the payment on the day.
+  const account = makeWealthAccount({ id: 1, kind: 'investment' })
+  const scenario = samplePlan({ id: 1, isActive: true })
+  const date = '2033-12-25'
+  const inflation = 0.02
+  const real = planValueAtDate(scenario, date, inflation)!
+  const badge = (gapCents: number) => {
+    const nominal = realToNominal(real + gapCents, '2026-01-01', date, inflation)
+    render(
+      <GoalsCard
+        dataset={makeDataset({
+          goalScenarios: [scenario],
+          wealthAccounts: [account],
+          wealthCheckins: [makeWealthCheckin({ id: 1, checkinDate: date, entries: [{ accountId: 1, valueCents: nominal }] })],
+        })}
+      />,
+    )
+  }
+
+  it('says on track for someone exactly on plan the week before the payment', () => {
+    // Before the line followed the engine through the year, this read about 62.000 euros ahead.
+    badge(0)
+    expect(screen.getByText('On track')).toBeInTheDocument()
+  })
+
+  it('gives the gap in money, not months, for a lead the plan only has after the payment', () => {
+    badge(500_000)
+    expect(screen.getByText(/€ ahead$/)).toBeInTheDocument()
+    expect(screen.queryByText(/(months?|years?) ahead$/)).not.toBeInTheDocument()
   })
 })

@@ -9,7 +9,14 @@ import type { LifeEvent } from '../types'
 
 export interface YearPoint {
   year: number
+  /** The portfolio at the end of the year's anniversary, after a house payment and life events that year. */
   investedCents: number
+  /**
+   * The portfolio on the day before the year's house payment and life events, which land on the
+   * anniversary: what the year's return and contributions made of it. The same as `investedCents`
+   * in a year with no payment or event, so the plan's line rises to this and steps to the next.
+   */
+  preEventInvestedCents: number
   /** What the house is worth, in today's money: not net of the mortgage, which is `mortgageBalanceCents`. */
   houseEquityCents: number
   mortgageBalanceCents: number
@@ -134,9 +141,8 @@ export function purchaseYearBreakdown(
 
   const startInvestedCents = prior.investedCents
   const contributionCents = current.annualContributionCents
-  const afterGrowthCents = Math.round(startInvestedCents * (1 + params.expectedRealReturn))
-  const growthCents = afterGrowthCents - startInvestedCents
-  const beforePurchaseCents = afterGrowthCents + contributionCents
+  const beforePurchaseCents = current.preEventInvestedCents
+  const growthCents = beforePurchaseCents - contributionCents - startInvestedCents
   const downPaymentCents = Math.round(housePriceAtPurchaseCents(params) * params.downPaymentFraction)
   const transactionCostsCents = params.transactionCostsCents
   const totalWithdrawalCents = purchaseWithdrawalCents(params)
@@ -175,6 +181,7 @@ export function projectNetWorth(params: ProjectionParams): YearPoint[] {
       params.inflationRate,
     )
 
+    let preEvent = invested
     if (year > 0) {
       // The year's payments land at its end and earn nothing until the next year, a little
       // cautious against paying each month (up to about 3% over thirty years at 7%). The plan
@@ -182,6 +189,7 @@ export function projectNetWorth(params: ProjectionParams): YearPoint[] {
       invested = Math.round(
         invested * (1 + params.expectedRealReturn) + contrib,
       )
+      preEvent = invested
       if (
         params.housePurchaseYear !== null &&
         params.housePurchaseYear > 0 &&
@@ -213,6 +221,7 @@ export function projectNetWorth(params: ProjectionParams): YearPoint[] {
     points.push({
       year,
       investedCents: invested,
+      preEventInvestedCents: preEvent,
       houseEquityCents: houseEquity,
       mortgageBalanceCents: mortgageBalance,
       netWorthCents: invested + houseEquity - mortgageBalance,

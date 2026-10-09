@@ -46,6 +46,49 @@ describe('LinearChart', () => {
     expect(plotTop({ padTop: 8 })).toBe('8')
   })
 
+  it('draws a step as a straight drop on the anniversary, not a slope across the year', () => {
+    const line = { ...makeLine('s1', [10, 20, 25]), preStep: [10, 20, 60] }
+    const { container } = render(<LinearChart {...defaultProps} series={[line]} />)
+
+    const d = container.querySelector('path[stroke-width="2"]')?.getAttribute('d') ?? ''
+    const xs = [...d.matchAll(/[ML]([\d.]+),/g)].map((m) => m[1])
+    // Four points: the three years and the one before the step, which shares the last year's x.
+    expect(xs).toHaveLength(4)
+    expect(xs[2]).toBe(xs[3])
+  })
+
+  it('makes room for the value before a step, which is higher than anything the line ends at', () => {
+    const flat = { ...makeLine('s1', [10, 20, 25]) }
+    const stepped = { ...flat, preStep: [10, 20, 600] }
+    const top = (series: ChartSeries) => {
+      const { container, unmount } = render(<LinearChart {...defaultProps} series={[series]} />)
+      const years = new Set(defaultProps.xLabels)
+      const labels = [...container.querySelectorAll('text')]
+        .filter((t) => !years.has(t.textContent ?? ''))
+        .map((t) => Number(t.textContent))
+        .filter(Number.isFinite)
+      unmount()
+      return Math.max(...labels)
+    }
+    expect(top(stepped)).toBeGreaterThan(top(flat))
+  })
+
+  it('draws the edges of a band through a step too', () => {
+    const band: ChartSeries = {
+      id: 'band',
+      color: '#6366f1',
+      values: [],
+      kind: 'band',
+      band: { lo: [10, 20, 15], hi: [10, 30, 35], loPre: [10, 20, 40], hiPre: [10, 30, 70] },
+    }
+    const { container } = render(<LinearChart {...defaultProps} series={[makeLine('s1', [10, 25, 25]), band]} />)
+
+    const d = container.querySelector('clipPath + g path')?.getAttribute('d') ?? ''
+    // Three years and a point before the step on each edge, and the path is closed.
+    expect(d.match(/[ML]/g)).toHaveLength(8)
+    expect(d.endsWith('Z')).toBe(true)
+  })
+
   it('describes how to step through a chart that takes focus, which nothing on it says', () => {
     render(<LinearChart {...defaultProps} series={[makeLine('s1', [10, 20, 30])]} />)
 

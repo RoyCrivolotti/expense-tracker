@@ -11,6 +11,8 @@ import {
   paceMonths,
   plannedMonthlyAverage,
   trackStatus,
+  trackVerdict,
+  type TrackStatus,
 } from '../../engine'
 import { Card, EmptyState, SectionTitle } from './primitives'
 import { scenarioHeadline } from '../tabs/goals/scenarioHeadline'
@@ -53,24 +55,23 @@ function CheckinNudge({ dataset, onLogCheckin }: { dataset: ExpenseDataset; onLo
 }
 
 interface TrackBadgeProps {
-  deltaCents: number
-  deltaMonths: number | null
+  status: TrackStatus
   format: ReturnType<typeof useMoneyFormat>
 }
 
-function TrackBadge({ deltaCents, deltaMonths, format }: TrackBadgeProps) {
-  const ahead = deltaCents >= 0
+function TrackBadge({ status, format }: TrackBadgeProps) {
+  const verdict = trackVerdict(status)
+  // Within a month either way is on track, which is neither the green nor the red of a side.
+  const ahead = verdict !== 'behind'
   const dotClass = `${styles.trackDot} ${ahead ? styles.trackDotAhead : styles.trackDotBehind}`
-  const money = formatMoneyShort(Math.abs(deltaCents), format)
-  // Without a month count the plan's line has no point at this balance, so the gap in money is all there is.
+  const money = formatMoneyShort(Math.abs(status.deltaCents), format)
+  // Without a month count the plan's line has no point at this balance on this side of a step, so the gap in money is all there is.
   const label =
-    deltaMonths === null
-      ? `${money} ${ahead ? 'ahead' : 'behind'}`
-      : deltaMonths === 0
-        ? ahead
-          ? 'On track'
-          : `${money} behind`
-        : planGapLabel(deltaMonths)
+    verdict === 'on-track'
+      ? 'On track'
+      : status.deltaMonths
+        ? planGapLabel(status.deltaMonths)
+        : `${money} ${verdict}`
   return (
     <div className={`${styles.trackBadge} ${ahead ? styles.trackBadgeAhead : styles.trackBadgeBehind}`}>
       <span className={dotClass} />
@@ -158,7 +159,7 @@ export function GoalsCard({ dataset, onOpenGoals, onLogCheckin }: GoalsCardProps
         <p className={styles.primary}>{headline.primary}</p>
         <p className={styles.secondary}>{headline.secondary}</p>
         {track ? (
-          <TrackBadge deltaCents={track.deltaCents} deltaMonths={track.deltaMonths} format={format} />
+          <TrackBadge status={track} format={format} />
         ) : null}
         {onLogCheckin ? <CheckinNudge dataset={dataset} onLogCheckin={onLogCheckin} /> : null}
         {onOpenGoals ? (

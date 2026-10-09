@@ -45,10 +45,14 @@ export function nearestScatter(points: ScatterPoint[], index: number): { value: 
   return { value: best.value, on: bestDist <= 0.5 ? null : (best.label ?? null) }
 }
 
-/** A line given as points, read at `x` off the segment it crosses; null outside its run. */
+/**
+ * A line given as points, read at `x` off the segment it crosses; null outside its run. Two points at
+ * the same x are a step, and the day of it reads the later one: the value after the payment or event,
+ * as the plan's line has it on the anniversary.
+ */
 export function pointSeriesValueAt(points: { xIndex: number; value: number }[], x: number): number | null {
   const sorted = [...points].sort((a, b) => a.xIndex - b.xIndex)
-  for (let i = 1; i < sorted.length; i++) {
+  for (let i = sorted.length - 1; i >= 1; i--) {
     const a = sorted[i - 1]!
     const b = sorted[i]!
     if (x >= a.xIndex && x <= b.xIndex) {
@@ -85,10 +89,19 @@ export function buildCheckinTooltip(
   format: MoneyFormat,
   planColor?: string,
   actualColor?: string,
+  /** What the plan reached before a payment or event on each step, where it steps (see `windowSeries`). */
+  preStep?: number[],
 ): { title: string; lines: TooltipLine[] } {
-  const lines: TooltipLine[] = [
-    { label: 'Plan', value: formatMoneyShort(planValues[i] ?? 0, format), color: planColor },
-  ]
+  const plan = planValues[i] ?? 0
+  const before = preStep?.[i]
+  // Where the plan steps, a reading just before it is on the higher side, so both are given.
+  const lines: TooltipLine[] =
+    before !== undefined && before !== plan
+      ? [
+          { label: 'Plan, the day before', value: formatMoneyShort(before, format), color: planColor },
+          { label: 'Plan, that day', value: formatMoneyShort(plan, format), color: planColor },
+        ]
+      : [{ label: 'Plan', value: formatMoneyShort(plan, format), color: planColor }]
   const actual = nearestScatter(scatterPoints, i)
   if (actual !== null) {
     lines.push({ label: readingLabel('Actual', actual.on), value: formatMoneyShort(actual.value, format), color: actualColor })

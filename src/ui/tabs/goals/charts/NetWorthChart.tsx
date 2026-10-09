@@ -5,6 +5,7 @@ import type { MoneyFormat, PlanFromToday } from '../../../../engine'
 import {
   RETURN_BAND_SPREAD,
   formatPercent,
+  lineValues,
   projectNetWorth,
   projectNetWorthBand,
   scenarioToParams,
@@ -80,20 +81,13 @@ function buildSeries(
   projected.forEach(({ points }) => points.forEach((p) => yearSet.add(p.year)))
   const years = [...yearSet].sort((a, b) => a - b)
   const series: ChartSeries[] = projected.map(({ line, points }) => {
-    const byYear = new Map(points.map((p) => [p.year, p.investedCents]))
     // A line runs from year 0 to its own horizon and stops there. Filling the years after it with
     // zero drew the portfolio falling to nothing at the end of a shorter scenario, which is what
     // setting a longer horizon on the one being edited did to the saved ones.
-    const values: number[] = []
-    for (const year of years) {
-      const value = byYear.get(year)
-      if (value === undefined) break
-      values.push(value)
-    }
     return {
       id: line.id,
       color: line.color,
-      values,
+      ...lineValues(points),
       dashed: line.dashed,
       ...(line.id === 'draft' ? { width: 2.5 } : {}),
     }
@@ -206,10 +200,12 @@ function useFromTodaySeries(
   return useMemo(() => {
     if (!isHero || !fromToday) return null
     const limit = windowYears ?? extentYears
-    const all = projectNetWorth(scenarioToParams(fromToday.scenario, inflationRate)).map((p) => ({
-      xIndex: fromToday.offsetYears + p.year,
-      value: p.investedCents,
-    }))
+    const all = projectNetWorth(scenarioToParams(fromToday.scenario, inflationRate)).flatMap((p) => {
+      const xIndex = fromToday.offsetYears + p.year
+      // A payment or event steps the line on its anniversary: up to what the year made of it, then straight to what it left.
+      const step = p.preEventInvestedCents !== p.investedCents ? [{ xIndex, value: p.preEventInvestedCents }] : []
+      return [...step, { xIndex, value: p.investedCents }]
+    })
     const points = all.filter((p) => p.xIndex <= limit)
     // The steps sit a fraction of a year past the axis' own (the check-in is not on a year), so
     // the last one inside the window stops short of it, and the line has no value at the final
@@ -247,8 +243,13 @@ function fromTodayDrawing(
 function useBandSeries(isHero: boolean, draft: NewGoalScenario, inflationRate: number): ChartSeries | null {
   return useMemo(() => {
     if (!isHero) return null
-    const { lo, hi } = projectNetWorthBand(scenarioToParams(draft, inflationRate))
-    return { id: 'uncertainty-band', color: scenarioInk(draft.color), values: [], kind: 'band', band: { lo, hi } }
+    return {
+      id: 'uncertainty-band',
+      color: scenarioInk(draft.color),
+      values: [],
+      kind: 'band',
+      band: projectNetWorthBand(scenarioToParams(draft, inflationRate)),
+    }
   }, [isHero, draft, inflationRate])
 }
 

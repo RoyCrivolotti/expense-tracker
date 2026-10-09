@@ -32,9 +32,20 @@ export function clipToWindow(
     series: series.map((s) => ({
       ...s,
       values: s.values.slice(0, keep),
-      ...(s.band ? { band: { lo: s.band.lo.slice(0, keep), hi: s.band.hi.slice(0, keep) } } : {}),
+      ...(s.preStep ? { preStep: s.preStep.slice(0, keep) } : {}),
+      ...(s.band ? { band: clipBand(s.band, keep) } : {}),
       ...(s.points ? { points: s.points.filter((p) => p.xIndex <= windowYears) } : {}),
     })),
+  }
+}
+
+/** A band cut to `keep` places, with the edges' steps cut alongside so the line stays inside it. */
+function clipBand(band: NonNullable<ChartSeries['band']>, keep: number): NonNullable<ChartSeries['band']> {
+  return {
+    lo: band.lo.slice(0, keep),
+    hi: band.hi.slice(0, keep),
+    ...(band.loPre ? { loPre: band.loPre.slice(0, keep) } : {}),
+    ...(band.hiPre ? { hiPre: band.hiPre.slice(0, keep) } : {}),
   }
 }
 
