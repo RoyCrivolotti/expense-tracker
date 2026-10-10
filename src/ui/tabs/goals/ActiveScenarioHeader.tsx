@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import type { ExpenseActions } from '../../actions'
+import { SCENARIO_NAME_MAX_LENGTH } from '../../../engine'
 import { ColorSwatchPicker } from '../../components/ColorSwatchPicker'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { Presence } from '../../components/Presence'
@@ -92,6 +93,7 @@ export function ActiveScenarioHeader({
           className={styles.renameInput}
           value={draft.name}
           aria-label="Scenario name"
+        maxLength={SCENARIO_NAME_MAX_LENGTH}
           placeholder="Scenario name"
           onChange={(e) => onPatch({ name: e.target.value })}
         />

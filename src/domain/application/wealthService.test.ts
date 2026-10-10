@@ -155,3 +155,49 @@ describe('removeWealthCheckin', () => {
     expect(dataset.wealthCheckins.find((c) => c.id === checkin.id)).toBeUndefined()
   })
 })
+
+describe('the balances of a check-in', () => {
+  async function withAccount() {
+    const repo = inMemoryExpenseRepository()
+    const account = await createWealthAccount(repo, OWNER, { name: 'Broker', kind: 'investment', sortOrder: 0, archived: false })
+    const checkin = (entries: unknown) =>
+      ({ checkinDate: '2026-06-01', entries }) as unknown as Parameters<typeof createWealthCheckin>[2]
+    const entry = (valueCents: unknown) => [{ accountId: account.id, valueCents }]
+    return { repo, checkin, entry }
+  }
+
+  it('saves a balance, so the refusals below are about the balance and not the account', async () => {
+    const { repo, checkin, entry } = await withAccount()
+    await expect(createWealthCheckin(repo, OWNER, checkin(entry(5_000_00)))).resolves.toBeDefined()
+  })
+
+  it.each([
+    ['a balance that is text', '5000'],
+    ['a balance with cents in the cents', 10.5],
+    ['a balance that is not finite', Number.POSITIVE_INFINITY],
+    ['a balance beyond any account', 1e14],
+    ['a debt past any account', -1e14],
+  ])('refuses %s, which would be stored and then summed into a net worth', async (_name, value) => {
+    const { repo, checkin, entry } = await withAccount()
+    await expect(createWealthCheckin(repo, OWNER, checkin(entry(value)))).rejects.toThrow(/valueCents/)
+  })
+
+  it.each([
+    ['an entry that is null', [null]],
+    ['entries that are not a list', 'abc'],
+  ])('refuses %s', async (_name, entries) => {
+    const { repo, checkin } = await withAccount()
+    await expect(createWealthCheckin(repo, OWNER, checkin(entries))).rejects.toThrow(/entries/)
+  })
+
+  it('takes a negative balance, which an overdrawn account really has', async () => {
+    const { repo, checkin, entry } = await withAccount()
+    await expect(createWealthCheckin(repo, OWNER, checkin(entry(-250_000)))).resolves.toBeDefined()
+  })
+
+  it('checks the balances of an edit as well', async () => {
+    const { repo, checkin, entry } = await withAccount()
+    const saved = await createWealthCheckin(repo, OWNER, checkin(entry(5_000_00)))
+    await expect(patchWealthCheckin(repo, OWNER, saved.id, { entries: entry(1e14) as never })).rejects.toThrow(/valueCents/)
+  })
+})

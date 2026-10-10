@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import type { GoalScenario } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
+import { SCENARIO_NAME_MAX_LENGTH } from '../../../../engine'
 import { ColorSwatchPicker } from '../../../components/ColorSwatchPicker'
 import { Presence } from '../../../components/Presence'
 import { EXIT_MS } from '../../../hooks/motion'
@@ -120,6 +121,7 @@ function MenuPopover(props: PopoverProps) {
         className={`${goalStyles.renameInput} ${styles.menuInput}`}
         value={draft.name}
         aria-label="Scenario name"
+        maxLength={SCENARIO_NAME_MAX_LENGTH}
         placeholder="Scenario name"
         onChange={(e) => props.onPatch({ name: e.target.value })}
       />
