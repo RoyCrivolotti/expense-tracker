@@ -9,6 +9,7 @@ import { CONTRIBUTION_STEP_MAX_COUNT, EU_MONEY_FORMAT } from '../../../engine'
 import { setMotionDisabledForTests } from '../../hooks/motion'
 import { MoneyFormatContext } from '../../hooks/moneyFormatContext'
 import { ContributionStepsList } from './ContributionSteps'
+import { openFormCount } from './openForms'
 
 beforeEach(() => setMotionDisabledForTests(true))
 afterEach(() => setMotionDisabledForTests(false))
@@ -261,5 +262,20 @@ describe('ContributionStepsList', () => {
     const { user } = setup({ planStartDate: '2026-12-10' })
     await user.click(screen.getByRole('button', { name: '+ Add a change' }))
     expect(screen.getByRole('button', { name: /Change starts in/ })).toHaveTextContent("Jan '27")
+  })
+})
+
+describe('the form for a change counts as open while it is', () => {
+  it('is open from Add a change until it is added or cancelled, and from Edit until it is saved', async () => {
+    const { user } = setup({ steps: [{ from: '2026-09', monthlyCents: 2_000_00 }] })
+    expect(openFormCount()).toBe(0)
+    await user.click(screen.getByRole('button', { name: '+ Add a change' }))
+    expect(openFormCount()).toBe(1)
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(openFormCount()).toBe(0)
+    await user.click(screen.getByRole('button', { name: /^Edit the change from/ }))
+    expect(openFormCount()).toBe(1)
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(openFormCount()).toBe(0)
   })
 })

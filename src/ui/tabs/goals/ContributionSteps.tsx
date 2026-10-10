@@ -10,6 +10,7 @@ import {
 } from '../../../engine'
 import { MonthInput } from '../../components/MonthInput'
 import { MoneyField } from './goalControlFields'
+import { useRegisterOpenForm } from './openForms'
 import styles from './goals.module.css'
 
 interface StepsProps {
@@ -168,6 +169,7 @@ function StepForm({
   onSubmit: (step: ContributionStep) => void
   onCancel: () => void
 }) {
+  useRegisterOpenForm()
   const earliest = firstMonthAfter(planStartDate)
   const [from, setFrom] = useState(initial.from)
   const [monthlyCents, setMonthlyCents] = useState(initial.monthlyCents)
