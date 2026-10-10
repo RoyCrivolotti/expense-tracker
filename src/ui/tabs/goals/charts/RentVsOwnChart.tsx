@@ -2,8 +2,9 @@ import { memo, useMemo } from 'react'
 import { useAssumedInflation } from '../../..//hooks/assumedInflationContext'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import { formatCentsCompact, projectRentVsBuy, realHouseGrowth, scenarioToParams } from '../../../../engine'
+import { Disclosure } from '../Disclosure'
 import { planMoneyLabel } from '../planMoneyLabel'
-import { rentVsBuyCaption } from './rentVsBuyCaption'
+import { rentVsBuyCaptionParts } from './rentVsBuyCaption'
 import { rentVsBuyHeadline } from './rentVsBuyHeadline'
 import { rentVsBuyMarkers } from './rentVsBuyMarkers'
 import { rentVsBuyTooltip } from './rentVsBuyTooltip'
@@ -60,6 +61,22 @@ function RentVsOwnChartImpl({
   const short = (c: number) => formatMoneyShort(c, format)
   const first = points[0]!
 
+  const caption = rentVsBuyCaptionParts({
+    upfrontCents: result.upfrontCents,
+    feesCents: draft.transactionCostsCents,
+    priceCents: result.priceCents,
+    startYear: result.startYear,
+    moneyLabel: planMoneyLabel(draft.planStartDate, format),
+    carryRate: draft.homeCarryRate,
+    realReturn: draft.expectedRealReturn,
+    houseGrowth: realHouseGrowth(draft.houseAppreciationRate, inflationRate) - 1,
+    paymentCents: result.paymentOnAccountCents,
+    ownCheaper: result.ownCheaper,
+    loanPaidOffYear: result.loanPaidOffYear,
+    money: (c) => formatCentsCompact(c, format),
+    format,
+  })
+
   return (
     <ChartShell embedded={embedded}>
       <h3 className={styles.chartTitle}>Rent vs buy (net worth)</h3>
@@ -79,23 +96,12 @@ function RentVsOwnChartImpl({
           { label: `Buyer: house less loan, plus savings (starts at ${short(first.buyNetWorthCents)})`, color: BUY_COLOR },
         ]}
       />
-      <p className={`${styles.chartHint} ${styles.chartCaption}`}>
-        {rentVsBuyCaption({
-          upfrontCents: result.upfrontCents,
-          feesCents: draft.transactionCostsCents,
-          priceCents: result.priceCents,
-          startYear: result.startYear,
-          moneyLabel: planMoneyLabel(draft.planStartDate, format),
-          carryRate: draft.homeCarryRate,
-          realReturn: draft.expectedRealReturn,
-          houseGrowth: realHouseGrowth(draft.houseAppreciationRate, inflationRate) - 1,
-          paymentCents: result.paymentOnAccountCents,
-          ownCheaper: result.ownCheaper,
-          loanPaidOffYear: result.loanPaidOffYear,
-          money: (c) => formatCentsCompact(c, format),
-          format,
-        })}
-      </p>
+      <p className={`${styles.chartHint} ${styles.chartCaption}`}>{caption.lead}</p>
+      <Disclosure title="What this assumes">
+        {caption.details.map((sentence) => (
+          <p key={sentence}>{sentence}</p>
+        ))}
+      </Disclosure>
     </ChartShell>
   )
 }
