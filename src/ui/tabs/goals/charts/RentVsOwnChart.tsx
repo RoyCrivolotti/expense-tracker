@@ -48,7 +48,7 @@ function RentVsOwnChartImpl({
     return (
       <ChartShell embedded={embedded}>
         <h3 className={styles.chartTitle}>Rent vs buy</h3>
-        <p className={styles.chartHint}>Set a house price to compare renting against buying.</p>
+        <p className={styles.chartHint}>Set a house price under Housing to compare renting against buying.</p>
       </ChartShell>
     )
   }

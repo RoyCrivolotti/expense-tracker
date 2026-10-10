@@ -2,6 +2,11 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (first-run texts point at things that are there)
+
+- **Three empty-state sentences now point where the thing is.** With no plan, Progress said to open a scenario "under Plan" and choose Use as my plan, which does not exist before a scenario is saved: it now says to save one on the Plan page (Scenarios on a phone). With no account, the history said "Log your first snapshot above" although nothing is above: it says to set up an account in Assumptions. Rent vs buy with no house price says where the price is set.
+- **The spread card is not replayed while the phone shows the Scenarios half**, where it is hidden under the controls being edited.
+
 ## October 2026 (found by the last review before the planning changes landed)
 
 - **A balance exactly on the plan's line no longer reads as started behind.** The gap split took the start part from the plan's own path and not from the line the status compares with, so a first check-in a few years in, exactly on the line, showed thousands behind "at the start" and offered to restart the plan. The start part is now the first check-in's gap to the line.
