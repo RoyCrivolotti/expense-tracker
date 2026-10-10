@@ -16,6 +16,7 @@ import { LifeEventsList } from './LifeEvents'
 import { ADJUST_LABELS } from './adjustSections'
 import { LEVER_SPECS, NO_LEVERS } from './leverFields'
 import { RetirementYearsField } from './RetirementYearsField'
+import { retirementYearsNotes } from './retirementGuide'
 import styles from './goals.module.css'
 
 /**
@@ -313,10 +314,6 @@ export function FireFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: 
   const spendHint = spendMoneyHint(draft, useAssumedInflation(), useMoneyFormat())
   return (
     <>
-      <p className={styles.fieldHint}>
-        Models life after financial independence, not withdrawals today. FI is searched within
-        your Horizon (years); if never reached, drawdown charts show the target only.
-      </p>
       {omit.has('annualSpendCents') ? null : (
         <>
           {wrap('annualSpendCents', <MoneyField
@@ -325,8 +322,7 @@ export function FireFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: 
             onChange={(v) => onChange({ annualSpendCents: v })}
           />)}
           <p className={styles.fieldHint}>
-            Yearly cost of living you would need the portfolio to cover after FI (within the horizon). Add the tax
-            on what you withdraw: the plan does not.
+            Yearly cost of living after FI. Add the tax on what you withdraw: the plan does not.
           </p>
           {spendHint ? <p className={`${styles.fieldHint} ${styles.fieldHintReserve}`}>{spendHint}</p> : null}
         </>
@@ -343,11 +339,32 @@ export function FireFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: 
       )}
       {explainsTarget ? (
         <p className={styles.fieldHint}>
-          Share of the portfolio you would spend each year once FI (4% is the usual rule of thumb).
-          Lower rate = spend less = higher FI target. FI target = annual spend ÷ this rate.
+          Share of the portfolio spent each year after FI. FI target = annual spend ÷ this rate.
         </p>
       ) : null}
+      <FireNotes explainsTarget={explainsTarget} />
     </>
+  )
+}
+
+/**
+ * How the FI figures are worked out, behind one closed note: where FI is looked for, what the guide for the years is and
+ * how the chart tests it, and why a lower rate is a higher target. The one about the rate leaves with it when neither
+ * input of the formula is on the page.
+ */
+function FireNotes({ explainsTarget }: { explainsTarget: boolean }) {
+  const format = useMoneyFormat()
+  const notes = [
+    'FI is searched within your Horizon (years); if it is never reached, the drawdown charts show the target only.',
+    ...retirementYearsNotes(format),
+    ...(explainsTarget ? ['4% is the usual rule of thumb. A lower rate means spending less, which is a higher FI target.'] : []),
+  ]
+  return (
+    <Disclosure title="How FI is worked out">
+      {notes.map((note) => (
+        <p key={note}>{note}</p>
+      ))}
+    </Disclosure>
   )
 }
 
