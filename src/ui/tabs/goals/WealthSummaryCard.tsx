@@ -10,6 +10,7 @@ import {
   computeMonthlyTotals,
   formatCents,
   formatPercent,
+  type GapReading,
   latestCheckin,
   medianMonthlyCents,
   monthlyFlows,
@@ -24,6 +25,7 @@ import {
 } from '../../../engine'
 import { formatCheckinDate } from './checkinDate'
 import { GapSplitHint } from './GapSplitHint'
+import { behindFromTheMarket } from './gapRows'
 import { useAssumedInflation } from '../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import type { MoneyFormat } from '../../../engine/money'
@@ -251,11 +253,14 @@ function StatusRow({
   plan,
   latestDate,
   format,
+  fromTheMarket,
 }: {
   status: TrackStatus | null
   plan: GoalScenario | null
   latestDate: string
   format: MoneyFormat
+  /** Behind, with the investing at least what the plan asks: the market and the start explain it. */
+  fromTheMarket: boolean
 }) {
   if (!status) {
     // Different gaps: no plan at all, a plan with no start date, or a plan whose line does not
@@ -271,26 +276,20 @@ function StatusRow({
   const planName = plan?.name ?? null
   const verdict = trackVerdict(status)
   const ahead = status.deltaCents >= 0
-  // Within a month either way is on track, which is not red or green for the side it is on.
+  // Within a month either way is on track, which is not red or green for the side it is on. Behind because of
+  // the market is a fact and not an alarm: nothing the reader did is what red would ask them to change.
   const good = verdict !== 'behind'
+  const dot = fromTheMarket ? styles.statusDotNeutral : good ? styles.statusDotAhead : styles.statusDotBehind
+  const delta = fromTheMarket ? styles.summaryDeltaNeutral : good ? styles.summaryDeltaAhead : styles.summaryDeltaBehind
   return (
     <div className={styles.summaryStatus}>
-      <span
-        className={[
-          styles.statusDot,
-          good ? styles.statusDotAhead : styles.statusDotBehind,
-        ].join(' ')}
-      />
+      <span className={[styles.statusDot, dot].join(' ')} />
       <span>
         {STATUS_WORDS[verdict]}{' '}
-        <span
-          className={[
-            styles.summaryDelta,
-            good ? styles.summaryDeltaAhead : styles.summaryDeltaBehind,
-          ].join(' ')}
-        >
+        <span className={[styles.summaryDelta, delta].join(' ')}>
           ({ahead ? '+' : ''}{formatMoneyShort(status.deltaCents, format)})
         </span>
+        {fromTheMarket ? <span className={styles.summaryPlanName}> · not from your investing</span> : null}
         {planName ? <span className={styles.summaryPlanName}> · measured against {planName}</span> : null}
       </span>
     </div>
@@ -300,11 +299,12 @@ function StatusRow({
 const STATUS_WORDS = { 'on-track': 'On track', ahead: 'Ahead of plan', behind: 'Behind plan' } as const
 
 /** Where the plan's line has the balance, said as months and the month it falls in. */
-function MonthsHint({ months, planDate }: { months: number; planDate: string }) {
+function MonthsHint({ months, planDate, muted }: { months: number; planDate: string; muted: boolean }) {
   const ahead = months > 0
+  const color = ahead ? 'var(--exp-success)' : muted ? 'var(--color-text-muted)' : 'var(--exp-danger)'
   return (
     <p style={hintStyle}>
-      <strong style={{ color: ahead ? 'var(--exp-success)' : 'var(--exp-danger)' }}>{planGapLabel(months)}</strong>
+      <strong style={{ color }}>{planGapLabel(months)}</strong>
       {ahead ? ' of the plan, which only reaches' : ' the plan, which already had'} this balance around{' '}
       {shortMonthFullYearLabel(planDate.slice(0, 7))}.
     </p>
@@ -326,10 +326,10 @@ function NearStepHint({ nearStep }: { nearStep: NonNullable<TrackStatus['nearSte
  * has it, or, where the line only has it on the other side of a house purchase or a one-off event,
  * why there are no months.
  */
-function PlanGapHint({ status }: { status: TrackStatus }) {
+function PlanGapHint({ status, fromTheMarket }: { status: TrackStatus; fromTheMarket: boolean }) {
   if (status.nearStep) return <NearStepHint nearStep={status.nearStep} />
   if (status.onTrack) return null
-  if (status.deltaMonths && status.planDate) return <MonthsHint months={status.deltaMonths} planDate={status.planDate} />
+  if (status.deltaMonths && status.planDate) return <MonthsHint months={status.deltaMonths} planDate={status.planDate} muted={fromTheMarket} />
   if (status.monthsReason !== 'across-event') return null
   return (
     <p style={hintStyle}>
@@ -343,6 +343,7 @@ function PlanGapHint({ status }: { status: TrackStatus }) {
 function SnapshotHints({
   latest,
   status,
+  gap,
   checkins,
   accounts,
   plan,
@@ -355,22 +356,41 @@ function SnapshotHints({
   openBudgetMonth: string | undefined
   latest: WealthCheckin
   status: TrackStatus | null
+  gap: GapReading | null
   onRebaseline: (() => void) | undefined
   format: MoneyFormat
 }) {
   const inflationRate = useAssumedInflation()
   const reading = readReturn(checkins, accounts, transactions, plan)
-  const gap = plan && status ? splitGap(plan, checkins, accounts, transactions, inflationRate) : null
   const reserve = cashReserve(latest, accounts, transactions, cashReserveMonths, openBudgetMonth)
   return (
     <>
-      {status ? <PlanGapHint status={status} /> : null}
+      {status ? <PlanGapHint status={status} fromTheMarket={isBehindFromTheMarket(gap)} /> : null}
       {gap ? <GapSplitHint reading={gap} planStartDate={plan?.planStartDate ?? null} format={format} onRebaseline={onRebaseline} /> : null}
       {plan ? <PaceHint plan={plan} transactions={transactions} openBudgetMonth={openBudgetMonth} format={format} /> : null}
       {reading ? <ReturnHint reading={reading} plan={plan} format={format} inflationRate={inflationRate} /> : null}
       {reserve ? <CashReserveHint reserve={reserve} format={format} /> : null}
     </>
   )
+}
+
+/** Where the latest check-in stands against the plan, and where the gap to it comes from; neither without a plan to read against. */
+function readStanding(
+  latest: WealthCheckin,
+  checkins: WealthCheckin[],
+  accounts: WealthAccount[],
+  plan: GoalScenario | null,
+  transactions: Transaction[],
+  inflationRate: number,
+): { status: TrackStatus | null; gap: GapReading | null } {
+  const status = plan ? trackStatus(latest, plan, accounts, inflationRate) : null
+  const gap = plan && status ? splitGap(plan, checkins, accounts, transactions, inflationRate) : null
+  return { status, gap }
+}
+
+/** Whether the gap read is a split that puts the shortfall on the market and the plan's start. */
+function isBehindFromTheMarket(gap: GapReading | null): boolean {
+  return gap?.kind === 'split' && behindFromTheMarket(gap)
 }
 
 export function WealthSummaryCard({
@@ -403,13 +423,19 @@ export function WealthSummaryCard({
 
   const netWorth = checkinNetWorthCents(latest, accounts)
   const invested = checkinInvestedCents(latest, accounts)
-  const status = plan ? trackStatus(latest, plan, accounts, inflationRate) : null
+  const { status, gap } = readStanding(latest, checkins, accounts, plan, transactions, inflationRate)
 
   return (
     <Card>
       <h3 className={goalStyles.sectionTitle}>Progress snapshot</h3>
       <div className={styles.summaryCardContent}>
-        <StatusRow status={status} plan={plan} latestDate={latest.checkinDate} format={format} />
+        <StatusRow
+          status={status}
+          plan={plan}
+          latestDate={latest.checkinDate}
+          format={format}
+          fromTheMarket={isBehindFromTheMarket(gap)}
+        />
         <div className={styles.summaryRow}>
           <span>Net worth, as logged, all accounts</span>
           <span className={styles.summaryValue}>{formatMoneyShort(netWorth, format)}</span>
@@ -434,6 +460,7 @@ export function WealthSummaryCard({
         <SnapshotHints
           latest={latest}
           status={status}
+          gap={gap}
           checkins={checkins}
           accounts={accounts}
           plan={plan}
