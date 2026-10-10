@@ -2,6 +2,10 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (moving the plan start past a monthly change)
+
+- **A monthly change dated before the new plan start becomes the starting amount.** Moving the start date later left the change where it was, and the plan quietly used its amount while the starting amount in the box and the first line of the history still showed the old one (500 € shown, 800 € used). The change now folds into the starting amount, as a re-baseline already did, and leaves the history.
+
 ## October 2026 (found by the last review before the planning changes landed)
 
 - **A balance exactly on the plan's line no longer reads as started behind.** The gap split took the start part from the plan's own path and not from the line the status compares with, so a first check-in a few years in, exactly on the line, showed thousands behind "at the start" and offered to restart the plan. The start part is now the first check-in's gap to the line.

@@ -60,6 +60,27 @@ export function normalizeContributionSchedule(steps: readonly ContributionStep[]
 }
 
 /**
+ * Moving the plan start past some changes: the engine reads a change at or before the start as the amount the plan starts
+ * with, so the starting amount in the box and the first line of the history would show what the plan no longer uses. This
+ * folds them in as a re-baseline does: the latest change that has begun by the new start becomes the amount the plan starts
+ * with, and it and the ones before it are dropped. A change begins on the 1st of its month, so one in the start's own
+ * month has begun. Nothing changes when none has.
+ */
+export function foldChangesAtOrBefore(
+  baseCents: number,
+  schedule: readonly ContributionStep[],
+  planStartDate: string,
+): { monthlyContributionCents: number; contributionSchedule: ContributionStep[]; folded: ContributionStep[] } {
+  const ordered = [...schedule].sort((a, b) => a.from.localeCompare(b.from))
+  const begun = ordered.filter((step) => `${step.from}-01` <= planStartDate)
+  return {
+    monthlyContributionCents: begun.length > 0 ? begun[begun.length - 1]!.monthlyCents : baseCents,
+    contributionSchedule: begun.length > 0 ? ordered.slice(begun.length) : [...schedule],
+    folded: begun,
+  }
+}
+
+/**
  * The stored column as a list. Anything that is not a valid schedule (a database that has not had
  * the column added, malformed JSON) reads as no changes, so a bad row degrades to the plain plan
  * instead of an error on the Goals screen.

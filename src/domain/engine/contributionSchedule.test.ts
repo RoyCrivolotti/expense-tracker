@@ -3,6 +3,7 @@ import {
   CONTRIBUTION_STEP_MAX_CENTS,
   CONTRIBUTION_STEP_MAX_COUNT,
   annualContributionCents,
+  foldChangesAtOrBefore,
   monthlyCentsAt,
   nextContributionStep,
   normalizeContributionSchedule,
@@ -356,5 +357,50 @@ describe('what the plan invests on a date', () => {
     expect(nextContributionStep(plan, '2027-03-01')).toEqual({ from: '2029-01', monthlyCents: 0 })
     expect(nextContributionStep(plan, '2029-01-01')).toBeNull()
     expect(nextContributionStep({ contributionSchedule: undefined } as never, '2026-06-15')).toBeNull()
+  })
+})
+
+describe('foldChangesAtOrBefore: moving the plan start past some changes', () => {
+  const steps = [
+    { from: '2026-03', monthlyCents: 800_00 },
+    { from: '2027-01', monthlyCents: 1_200_00 },
+    { from: '2028-06', monthlyCents: 0 },
+  ]
+
+  it('makes the latest change that has begun by the new start the amount the plan starts with, and drops it and the ones before', () => {
+    const out = foldChangesAtOrBefore(500_00, steps, '2027-09-01')
+    expect(out.monthlyContributionCents).toBe(1_200_00)
+    expect(out.contributionSchedule).toEqual([{ from: '2028-06', monthlyCents: 0 }])
+    expect(out.folded).toEqual([steps[0], steps[1]])
+  })
+
+  it('reads a change in the start\'s own month as begun, as the engine does (it begins on the 1st)', () => {
+    expect(foldChangesAtOrBefore(500_00, steps, '2026-03-15').monthlyContributionCents).toBe(800_00)
+    expect(foldChangesAtOrBefore(500_00, steps, '2026-03-01').monthlyContributionCents).toBe(800_00)
+    expect(foldChangesAtOrBefore(500_00, steps, '2026-02-28').monthlyContributionCents).toBe(500_00)
+  })
+
+  it('leaves everything alone when no change has begun by the start', () => {
+    const out = foldChangesAtOrBefore(500_00, steps, '2026-01-01')
+    expect(out).toEqual({ monthlyContributionCents: 500_00, contributionSchedule: steps, folded: [] })
+  })
+
+  it('folds a pause into the starting amount as 0, and every change when the start is past them all', () => {
+    const out = foldChangesAtOrBefore(500_00, steps, '2030-01-01')
+    expect(out.monthlyContributionCents).toBe(0)
+    expect(out.contributionSchedule).toEqual([])
+  })
+
+  it('does the same whatever order the changes arrive in', () => {
+    const shuffled = [steps[2]!, steps[0]!, steps[1]!]
+    expect(foldChangesAtOrBefore(500_00, shuffled, '2027-09-01')).toEqual(foldChangesAtOrBefore(500_00, steps, '2027-09-01'))
+  })
+
+  it('agrees with what the projection reads at the new start: the amount it folds to is the amount in force there', () => {
+    for (const start of ['2026-02-01', '2026-03-01', '2026-09-15', '2027-01-01', '2028-06-01', '2031-01-01']) {
+      const folded = foldChangesAtOrBefore(500_00, steps, start)
+      const inForce = monthlyCentsAt(500_00, scheduleSteps(start, steps), 0)
+      expect(folded.monthlyContributionCents, start).toBe(inForce)
+    }
   })
 })
