@@ -98,6 +98,29 @@ describe('CheckinFormSheet', () => {
     expect(actions.createWealthCheckin).toHaveBeenCalled()
   })
 
+  it('does not read the digits out of a balance typed with a letter in it: it keeps the last amount and the box goes back', async () => {
+    const actions = makeActions()
+    const user = userEvent.setup()
+    render(<CheckinFormSheet accounts={[makeAccount(1)]} actions={actions} />)
+    const field = screen.getByLabelText('Value for Account 1')
+    fireEvent.change(field, { target: { value: '1000' } })
+    fireEvent.change(field, { target: { value: '250k' } })
+    fireEvent.blur(field)
+    expect(field).toHaveValue('1.000,00')
+    await user.click(screen.getByRole('button', { name: /save check-in/i }))
+    expect(actions.createWealthCheckin).toHaveBeenCalledWith(
+      expect.objectContaining({ entries: [{ accountId: 1, valueCents: 100_000 }] }),
+    )
+  })
+
+  it('holds a balance of hundreds of digits to the ceiling and shows the ceiling, not Infinity', () => {
+    render(<CheckinFormSheet accounts={[makeAccount(1)]} actions={makeActions()} />)
+    const field = screen.getByLabelText('Value for Account 1')
+    fireEvent.change(field, { target: { value: '9'.repeat(310) } })
+    fireEvent.blur(field)
+    expect(field).toHaveValue('100.000.000.000,00')
+  })
+
   it('will not save a check-in with every balance at zero, and says why', () => {
     const actions = makeActions()
     render(<CheckinFormSheet accounts={[makeAccount(1)]} actions={actions} />)

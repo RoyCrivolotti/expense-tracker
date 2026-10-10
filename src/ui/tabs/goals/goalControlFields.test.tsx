@@ -2,6 +2,7 @@ import type { ReactElement } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { MAX_MONEY_CENTS } from '../../../engine'
 import { MoneyFormatContext } from '../../hooks/moneyFormatContext'
 
 vi.mock('../../hooks/isNativeDatePicker', () => ({ isNativeDatePicker: () => true }))
@@ -213,6 +214,90 @@ describe('typing nothing, or something that is not a number, into a field', () =
     await user.type(input, '%{Enter}')
     expect(onChange).not.toHaveBeenCalled()
     expect(input).toHaveValue('3,5')
+  })
+})
+
+describe('typing a number with a letter in it, or too many digits, into a field', () => {
+  it.each(['250k', '1e9', '1.5M'])('takes %s for no amount at all and puts the amount back, not the digits in it', async (typed) => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<MoneyField label="House price" value={400_000_00} onChange={onChange} />)
+    const input = screen.getByRole('textbox', { name: 'House price' })
+    const shown = (input as HTMLInputElement).value
+
+    await user.clear(input)
+    await user.type(input, `${typed}{Enter}`)
+    expect(onChange).not.toHaveBeenCalled()
+    expect(input).toHaveValue(shown)
+  })
+
+  it('reads an amount written the other way round, with the point for thousands in a comma format', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<MoneyField label="House price" value={400_000_00} onChange={onChange} />)
+    const input = screen.getByRole('textbox', { name: 'House price' })
+    await user.clear(input)
+    await user.type(input, '1,234.56{Enter}')
+    expect(onChange).toHaveBeenCalledWith(123_456)
+  })
+
+  it('holds a number with hundreds of digits to the ceiling, which the box then shows', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<MoneyField label="House price" value={400_000_00} onChange={onChange} />)
+    const input = screen.getByRole('textbox', { name: 'House price' })
+    await user.clear(input)
+    await user.click(input)
+    await user.paste('9'.repeat(310))
+    await user.tab()
+    expect(onChange).toHaveBeenCalledWith(MAX_MONEY_CENTS)
+    expect(input).not.toHaveValue('9'.repeat(310))
+    expect((input as HTMLInputElement).value).not.toMatch(/∞|Infinity/)
+  })
+
+  it('takes "about 4" for no percentage, not for the least the field allows', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<PercentField label="Withdrawal rate (%)" value={0.04} min={0.005} max={0.2} onChange={onChange} />)
+    const input = screen.getByRole('textbox', { name: 'Withdrawal rate (%)' })
+    await user.clear(input)
+    await user.type(input, 'about 4{Enter}')
+    expect(onChange).not.toHaveBeenCalled()
+    expect(input).toHaveValue('4,0')
+  })
+
+  it('shows the value a number was held to, not the text it was typed as', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<NumberField label="Horizon (years)" value={60} min={1} max={60} onChange={onChange} />)
+    const input = screen.getByRole('textbox', { name: 'Horizon (years)' })
+    await user.clear(input)
+    await user.type(input, '100{Enter}')
+    // The value did not change (60 was already the most), so nothing re-renders the box: it has to be told.
+    expect(onChange).toHaveBeenCalledWith(60)
+    expect(input).toHaveValue('60')
+  })
+
+  it('shows the value a percentage was held to', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<PercentField label="Return (%/yr)" value={0.2} min={0} max={0.2} onChange={onChange} />)
+    const input = screen.getByRole('textbox', { name: 'Return (%/yr)' })
+    await user.clear(input)
+    await user.type(input, '50{Enter}')
+    expect(onChange).toHaveBeenCalledWith(0.2)
+    expect(input).toHaveValue('20,0')
+  })
+
+  it.each(['1e9', '0x10', 'Infinity'])('takes %s for no number of years', async (typed) => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<NumberField label="Horizon (years)" value={30} min={1} max={60} onChange={onChange} />)
+    const input = screen.getByRole('textbox', { name: 'Horizon (years)' })
+    await user.clear(input)
+    await user.type(input, `${typed}{Enter}`)
+    expect(onChange).not.toHaveBeenCalled()
+    expect(input).toHaveValue('30')
   })
 })
 

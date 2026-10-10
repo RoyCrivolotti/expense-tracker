@@ -241,6 +241,25 @@ describe('LeversBar', () => {
       expect(percent).toHaveValue('7,0')
     })
 
+    it('ignores a number with a letter in it rather than reading the digits out of it', async () => {
+      const { onChange } = renderBar()
+      const horizon = screen.getByLabelText('Horizon (years)')
+      const amount = screen.getByLabelText('Monthly investing')
+      const percent = screen.getByRole('textbox', { name: RETURN })
+
+      await userEvent.clear(amount)
+      await userEvent.type(amount, '250k{Enter}')
+      await userEvent.clear(horizon)
+      await userEvent.type(horizon, '1e9{Enter}')
+      await userEvent.clear(percent)
+      await userEvent.type(percent, 'about 4{Enter}')
+
+      expect(onChange).not.toHaveBeenCalled()
+      expect(amount).toHaveValue('500')
+      expect(horizon).toHaveValue('30')
+      expect(percent).toHaveValue('7,0')
+    })
+
     it('takes a comma or a point as the decimal mark of a percentage', async () => {
       const { onChange } = renderBar()
       const field = screen.getByRole('textbox', { name: RETURN })
