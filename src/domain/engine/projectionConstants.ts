@@ -46,3 +46,6 @@ export const SCENARIO_COLORS = [
   '#ec4899',
   '#84cc16',
 ] as const
+
+/** The longest a scenario's name may be: the boxes stop there and the server refuses more. */
+export const SCENARIO_NAME_MAX_LENGTH = 100

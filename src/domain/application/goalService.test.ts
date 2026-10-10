@@ -317,3 +317,87 @@ describe('the plan', () => {
     )
   })
 })
+
+describe('what a scenario may hold', () => {
+  const refuses = (patch: Record<string, unknown>) => expect(() => validateScenarioNumbers(patch as Partial<NewGoalScenario>)).toThrow()
+  const accepts = (patch: Record<string, unknown>) => expect(() => validateScenarioNumbers(patch as Partial<NewGoalScenario>)).not.toThrow()
+
+  it.each([
+    ['horizonYears', 9e15],
+    ['horizonYears', 1e9],
+    ['horizonYears', 101],
+    ['startInvestedCents', 1e300],
+    ['startInvestedCents', 1e14],
+    ['monthlyContributionCents', Number.MAX_SAFE_INTEGER],
+    ['expectedRealReturn', 50],
+    ['expectedRealReturn', -0.6],
+    ['houseAppreciationRate', 1e6],
+    ['mortgageRateAnnual', 3],
+    ['mortgageRateAnnual', -0.1],
+    ['housePurchaseYear', 5000],
+    ['planStartDate', '1900-01-01'],
+    ['planStartDate', '2101-01-01'],
+    ['name', 'x'.repeat(101)],
+  ])('refuses %s of %s, which no plan has and which only a hand-made request can send', (key, value) => {
+    refuses({ [key]: value })
+  })
+
+  it.each([
+    ['horizonYears', 100],
+    ['startInvestedCents', 1e13],
+    ['expectedRealReturn', -0.5],
+    ['expectedRealReturn', 1],
+    ['houseAppreciationRate', -0.5],
+    ['mortgageRateAnnual', 0],
+    ['mortgageRateAnnual', 1],
+    ['housePurchaseYear', 200],
+    ['housePurchaseYear', null],
+    ['planStartDate', '2000-01-01'],
+    ['planStartDate', '2100-12-31'],
+    ['name', 'x'.repeat(100)],
+  ])('still takes %s of %s, the far end of what a plan can say', (key, value) => {
+    accepts({ [key]: value })
+  })
+
+  it('refuses a life event that is not an event, which would blank the Goals screen when it was read back', () => {
+    refuses({ lifeEvents: [null] })
+    refuses({ lifeEvents: [{ amountCents: 'x', year: 1, label: 'a' }] })
+    accepts({ lifeEvents: [{ amountCents: -5_000_000, year: 4, label: 'Car' }] })
+    accepts({ lifeEvents: [] })
+  })
+
+  it('refuses a name that is only spaces and one that is far too long, when it is created or renamed', async () => {
+    const repo = inMemoryExpenseRepository()
+    await expect(createScenario(repo, OWNER, newScenario({ name: '   ' }))).rejects.toThrow('Scenario name is required')
+    await expect(createScenario(repo, OWNER, newScenario({ name: 'x'.repeat(101) }))).rejects.toThrow(/at most 100/)
+    const saved = await createScenario(repo, OWNER, newScenario())
+    await expect(patchScenario(repo, OWNER, saved.id, { name: 'x'.repeat(101) })).rejects.toThrow(/at most 100/)
+  })
+})
+
+describe('creating a scenario with a number left out', () => {
+  it.each(['horizonYears', 'startInvestedCents', 'expectedRealReturn', 'housePriceCents', 'mortgageTermYears', 'safeWithdrawalRate', 'annualSpendCents'])(
+    'says %s is required, as a bad request, instead of failing in the database',
+    async (key) => {
+      const repo = inMemoryExpenseRepository()
+      const input = newScenario() as unknown as Record<string, unknown>
+      delete input[key]
+      await expect(createScenario(repo, OWNER, input as unknown as NewGoalScenario)).rejects.toThrow(`${key} is required`)
+    },
+  )
+
+  it('still takes a request from a client that predates the newer fields', async () => {
+    const repo = inMemoryExpenseRepository()
+    const input = newScenario() as unknown as Record<string, unknown>
+    delete input.homeCarryRate
+    delete input.retirementYears
+    delete input.contributionSchedule
+    delete input.lifeEvents
+    delete input.planStartDate
+    await expect(createScenario(repo, OWNER, input as unknown as NewGoalScenario)).resolves.toBeDefined()
+  })
+
+  it('does not ask a patch for every number', () => {
+    expect(() => validateScenarioNumbers({ horizonYears: 30 })).not.toThrow()
+  })
+})

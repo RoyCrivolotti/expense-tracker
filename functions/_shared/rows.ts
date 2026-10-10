@@ -18,6 +18,7 @@ import type {
   WealthCheckinEntry,
 } from '../domain/types'
 import { parseContributionSchedule } from '../domain/engine/contributionSchedule'
+import { lifeEventsFrom } from '../domain/engine/lifeEvents'
 import { DEFAULT_HOME_CARRY_RATE, DEFAULT_RETIREMENT_YEARS } from '../domain/engine/projectionConstants'
 import { DEFAULT_BUDGET_ROLLOVER_DAY } from '../domain/engine/dates'
 import { DEFAULT_INFLATION_RATE } from '../domain/engine/projectionConstants'
@@ -279,8 +280,7 @@ export type GoalScenarioDto = GoalScenario & { annualContributionGrowth: 0 }
 export function toGoalScenario(r: GoalScenarioRow): GoalScenarioDto {
   let lifeEvents: LifeEvent[] = []
   try {
-    const parsed: unknown = JSON.parse(r.life_events)
-    if (Array.isArray(parsed)) lifeEvents = parsed as LifeEvent[]
+    lifeEvents = lifeEventsFrom(JSON.parse(r.life_events))
   } catch {
     // malformed JSON falls back to empty
   }

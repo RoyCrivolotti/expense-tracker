@@ -2,6 +2,12 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (the server checks what it stores)
+
+- **A malformed life event can no longer blank the app.** A stored `[null]` or an amount that was text made the Goals screen throw, with nothing above it to catch it and no way to repair the row from the app. The server now refuses a life event that is not a year from 0 to 100, a whole number of cents and a label, and a stored row that already holds one reads without the bad entries.
+- **The server refuses numbers no plan has**: a horizon past 100 years, amounts past a hundred billion euros, a return or house growth outside -50% to +100%, a mortgage rate outside 0 to 100%, a purchase year past 200, a plan start outside 2000 to 2100 and a name past 100 characters (the name boxes stop there). A request that leaves out a number a scenario needs now says which one, instead of failing as an unexplained error.
+- **Check-in balances and the opening balances are checked.** A balance must be a whole number of cents, a hundred billion euros at most either way (a negative one is an overdrawn account), and the opening investments cannot be negative.
+
 ## October 2026 (found by the last review before the planning changes landed)
 
 - **A balance exactly on the plan's line no longer reads as started behind.** The gap split took the start part from the plan's own path and not from the line the status compares with, so a first check-in a few years in, exactly on the line, showed thousands behind "at the start" and offered to restart the plan. The start part is now the first check-in's gap to the line.

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { updateSettings } from './dbConfig'
 import { HttpError } from './http'
+import type { ExpenseSettings } from '../domain/types'
 import type { Env } from './env'
 import type { SettingsRow } from './rows'
 
@@ -227,5 +228,26 @@ describe('updateSettings with milestones', () => {
     const result = await updateSettings(env, OWNER, { openingCashCents: 5000 })
 
     expect(result.openingCashCents).toBe(5000)
+  })
+})
+
+describe('updateSettings with the opening balances', () => {
+  it('takes a whole number of cents, and an overdrawn cash balance, up to a hundred billion euros', async () => {
+    const { env } = stubEnv(makeRow({ opening_investment_cents: 5_000_000, opening_cash_cents: -20_000 }))
+    await expect(updateSettings(env, OWNER, { openingInvestmentCents: 5_000_000, openingCashCents: -20_000 })).resolves.toBeDefined()
+    await expect(updateSettings(env, OWNER, { openingInvestmentCents: 1e13 })).resolves.toBeDefined()
+  })
+
+  it.each([
+    ['openingInvestmentCents', -1],
+    ['openingInvestmentCents', 10.5],
+    ['openingInvestmentCents', 1e14],
+    ['openingInvestmentCents', Number.POSITIVE_INFINITY],
+    ['openingCashCents', 1e14],
+    ['openingCashCents', -1e14],
+    ['openingCashCents', 0.5],
+  ])('refuses %s of %s with a 400', async (key, value) => {
+    const { env } = stubEnv(makeRow())
+    await expect(updateSettings(env, OWNER, { [key]: value } as Partial<ExpenseSettings>)).rejects.toMatchObject({ status: 400 })
   })
 })
