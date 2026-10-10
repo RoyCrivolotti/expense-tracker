@@ -20,6 +20,14 @@ export const RETIREMENT_RATE_BANDS = [
 /** The rates the FI target is shown at side by side, from the usual one down. */
 export const FI_TARGET_RATES = [0.04, 0.035, 0.03] as const
 
+/**
+ * What a plan made from now on starts with: the money lasting 40 years, which is the length of a retirement that begins
+ * early, and the rate that is the guide for it. Not `DEFAULT_RETIREMENT_YEARS` (30), which is what a scenario that says
+ * nothing is read as, so every saved one that predates the field keeps the 30 years it was always drawn over.
+ */
+export const NEW_PLAN_RETIREMENT_YEARS = 40
+export const NEW_PLAN_WITHDRAWAL_RATE = 0.035
+
 /** Two rates this close are the same rate: one that was typed in as a percentage is not exactly the constant. */
 const SAME_RATE = 1e-9
 
