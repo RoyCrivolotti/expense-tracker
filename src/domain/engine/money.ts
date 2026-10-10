@@ -46,6 +46,11 @@ export const EU_MONEY_FORMAT: MoneyFormat = {
   currencyCode: 'EUR',
 }
 
+/** The decimal mark a number style writes ("," in de-DE, "." in en-US), or a point when the runtime has none to say. */
+function localeDecimalMark(locale: string): string {
+  return new Intl.NumberFormat(locale).formatToParts(1.1).find((part) => part.type === 'decimal')?.value ?? '.'
+}
+
 /**
  * Derive symbol, position, and decimal separator from an ISO currency code and
  * locale using Intl. Grouping still goes through `toLocaleString(locale)` at
@@ -62,7 +67,9 @@ export function resolveMoneyFormat(
       currency: currencyCode,
     }).formatToParts(-1111.11)
     let symbol = currencyCode
-    let decimalSeparator = '.'
+    // The mark is the number style's, not the currency's: a currency with no minor unit (the yen) writes no decimal
+    // part, so a sample of it has none to read, and a point left as the default is a thousands mark in a comma style.
+    let decimalSeparator = localeDecimalMark(locale)
     let symbolPosition: 'prefix' | 'suffix' = 'prefix'
     let seenDigit = false
     for (const part of parts) {

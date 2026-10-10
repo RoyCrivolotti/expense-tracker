@@ -2,6 +2,10 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (yen and won in a comma number style)
+
+- **An amount in a currency with no cents (yen, won) no longer reads as nothing under the German number style.** The decimal mark was read off a sample of the currency, which has no decimal part, so it was left as a point, the thousands mark of that style: the box showed 123.456.00 and tabbing through it saved 0. The mark now comes from the number style.
+
 ## October 2026 (found by the last review before the planning changes landed)
 
 - **A balance exactly on the plan's line no longer reads as started behind.** The gap split took the start part from the plan's own path and not from the line the status compares with, so a first check-in a few years in, exactly on the line, showed thousands behind "at the start" and offered to restart the plan. The start part is now the first check-in's gap to the line.
