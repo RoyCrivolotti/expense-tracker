@@ -49,6 +49,19 @@ describe('inMemoryExpenseRepository settings milestones', () => {
   })
 })
 
+describe('inMemoryExpenseRepository settings marketVolatility', () => {
+  it('is 15% until set, takes a value from none up to half, and refuses the rest, as the API does', async () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    expect((await repo.loadDataset(OWNER)).settings.marketVolatility).toBe(0.15)
+    expect((await repo.updateSettings(OWNER, { marketVolatility: 0.11 })).marketVolatility).toBe(0.11)
+    expect((await repo.updateSettings(OWNER, { marketVolatility: 0 })).marketVolatility).toBe(0)
+    for (const bad of [-0.01, 0.51, NaN]) {
+      expect(() => repo.updateSettings(OWNER, { marketVolatility: bad })).toThrow(RepoHttpError)
+    }
+    expect((await repo.loadDataset(OWNER)).settings.marketVolatility).toBe(0)
+  })
+})
+
 describe('inMemoryExpenseRepository settings assumedInflation', () => {
   it('starts at 2% and keeps a value it is given', async () => {
     const repo = inMemoryExpenseRepository({}, OWNER)

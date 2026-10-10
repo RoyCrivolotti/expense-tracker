@@ -1,11 +1,12 @@
 import { memo, useCallback, useMemo } from 'react'
 import { useAssumedInflation } from '../../..//hooks/assumedInflationContext'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { projectNetWorth, projectNetWorthBand, scenarioToParams } from '../../../../engine'
+import { lineValues, projectNetWorth, projectNetWorthBand, scenarioToParams } from '../../../../engine'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { formatMoneyShort } from '../chartTheme'
 import { useMediaQuery } from '../../../hooks/useMediaQuery'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
+import { chartMoneyLabel } from '../planMoneyLabel'
 import styles from './NetWorthMiniChart.module.css'
 
 /** Room above the plot: the top axis label's half height, and no more, since this chart is pinned. */
@@ -33,7 +34,7 @@ function readoutSide(values: number[]): 'top' | 'bottom' {
 }
 
 /**
- * The scenario being edited, and nothing else: its line and its uncertainty band, with the
+ * The scenario being edited, and nothing else: its line and its return band, with the
  * first and last year labelled. Pinned above the controls on a phone so a slider can be tuned
  * against the line it moves; the hero chart carries the legend, milestones and markers.
  */
@@ -44,18 +45,17 @@ function NetWorthMiniChartImpl({ draft }: { draft: NewGoalScenario }) {
   const { series, labels, end, side } = useMemo(() => {
     const params = scenarioToParams({ ...draft, id: 0 }, inflationRate)
     const points = projectNetWorth(params)
-    const { lo, hi } = projectNetWorthBand(params)
     const band: ChartSeries = {
       id: 'band',
       color: draft.color,
       values: [],
       kind: 'band',
-      band: { lo, hi },
+      band: projectNetWorthBand(params),
     }
     const line: ChartSeries = {
       id: 'draft',
       color: draft.color,
-      values: points.map((p) => p.investedCents),
+      ...lineValues(points),
       width: 2,
     }
     const last = points.length - 1
@@ -70,6 +70,7 @@ function NetWorthMiniChartImpl({ draft }: { draft: NewGoalScenario }) {
   // The pill and the chart's name read from the same figure, so a screen reader hears what a
   // sighted viewer sees, and the pill itself is hidden from it.
   const readout = end ? { year: end.year, money: formatMoneyShort(end.investedCents, format) } : null
+  const money = chartMoneyLabel(draft.planStartDate, false, format)
 
   return (
     <div className={styles.wrap}>
@@ -79,7 +80,7 @@ function NetWorthMiniChartImpl({ draft }: { draft: NewGoalScenario }) {
         series={series}
         xLabels={labels}
         formatValue={(c) => formatMoneyShort(c, format)}
-        ariaLabel={readout ? `${LABEL}, ending at ${readout.money} in year ${readout.year}` : LABEL}
+        ariaLabel={readout ? `${LABEL}, ${money}, ending at ${readout.money} in year ${readout.year}` : LABEL}
         tooltip={tooltip}
         tooltipMode="hidden"
       />

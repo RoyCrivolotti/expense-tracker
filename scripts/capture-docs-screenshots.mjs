@@ -288,6 +288,17 @@ async function captureGoalsDesktop(page) {
   await page.screenshot({ path: join(OUT, 'goals-desktop-menu.png') })
 
   await goToGoals(page)
+  // The two cards that replay the market do so once they are near the screen, and a full-page shot never
+  // scrolls: walk down the page, so the shot has the spread card and the odds line, and back up.
+  await page.evaluate(async () => {
+    for (let y = 0; y < document.documentElement.scrollHeight; y += 500) {
+      window.scrollTo(0, y)
+      await new Promise((resolve) => setTimeout(resolve, 150))
+    }
+  })
+  await page.getByRole('table', { name: 'When the runs first reach each amount' }).waitFor({ timeout: 15000 })
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await page.waitForTimeout(400)
   await page.screenshot({ path: join(OUT, 'goals-desktop-full.png'), fullPage: true })
 
   await captureGoalsProgressAndAssumptions(page, 'desktop', true)

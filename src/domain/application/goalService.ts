@@ -3,6 +3,8 @@ import {
   normalizeContributionSchedule,
   validateContributionSchedule,
 } from '../engine/contributionSchedule'
+import { isCalendarDate } from '../engine/dates'
+import { DEFAULT_HOME_CARRY_RATE, DEFAULT_RETIREMENT_YEARS, RETIREMENT_YEARS_MAX } from '../engine/projectionConstants'
 import type { ExpenseRepository } from '../ports/expenseRepository'
 import { ValidationError } from './validationError'
 
@@ -23,12 +25,11 @@ const CENTS_FIELDS = [
 ] as const
 
 /** Counts of years: whole, at least one. */
-const YEAR_COUNT_FIELDS = ['horizonYears', 'mortgageTermYears'] as const
+const YEAR_COUNT_FIELDS = ['horizonYears', 'retirementYears'] as const
 
 /** Rates and fractions. Free to be negative (a pessimistic return is a real scenario),
  *  but they must be numbers, because the projection multiplies by them. */
 const RATE_FIELDS = [
-  'annualContributionGrowth',
   'expectedRealReturn',
   'mortgageRateAnnual',
   'houseAppreciationRate',
@@ -47,12 +48,23 @@ const RATE_FIELDS = [
  * with `safeWithdrawalRate: 0` rendered the FI target as garbage on the Goals screen.
  * Every field here was previously written straight to SQLite with only the name checked.
  */
+const MIN_MORTGAGE_TERM_YEARS = 0.001
+
 function assertWholeAtLeast(value: unknown, min: number, message: string): void {
   if (!Number.isInteger(value) || (value as number) < min) throw new ValidationError(message)
 }
 
 function assertInClosedRange(value: number, lo: number, hi: number, message: string): void {
   if (!Number.isFinite(value) || value < lo || value > hi) throw new ValidationError(message)
+}
+
+/**
+ * The editor's date picker cannot write anything but a day, so only a hand-made request can: a start that does not exist
+ * would be dated as if it did.
+ */
+function validatePlanStartDate(value: unknown): void {
+  if (value === undefined || value === null) return
+  if (typeof value !== 'string' || !isCalendarDate(value)) throw new ValidationError('planStartDate must be a calendar date, or null')
 }
 
 export function validateScenarioNumbers(patch: Partial<NewGoalScenario>): void {
@@ -70,6 +82,13 @@ export function validateScenarioNumbers(patch: Partial<NewGoalScenario>): void {
     }
   }
 
+  // A loan can have months left, so its term is a number of years that need not be whole. A re-baseline in a
+  // loan's last month writes about 0.003, so the floor is a day or so, not a month: a term of 5e-324 makes the
+  // payment Infinity and the Goals screen NaN.
+  if (rec.mortgageTermYears !== undefined) {
+    assertInClosedRange(rec.mortgageTermYears as number, MIN_MORTGAGE_TERM_YEARS, 100, 'mortgageTermYears must be a number of years from 0.001 to 100')
+  }
+
   for (const key of RATE_FIELDS) {
     if (rec[key] !== undefined && !Number.isFinite(rec[key])) {
       throw new ValidationError(`${key} must be a number`)
@@ -77,6 +96,8 @@ export function validateScenarioNumbers(patch: Partial<NewGoalScenario>): void {
   }
 
   validateScenarioFractions(patch)
+
+  validatePlanStartDate(rec.planStartDate)
 
   if (rec.contributionSchedule !== undefined) {
     const problem = validateContributionSchedule(rec.contributionSchedule)
@@ -113,6 +134,16 @@ function validateScenarioFractions(patch: Partial<NewGoalScenario>): void {
       'downPaymentFraction must be between 0 and 1',
     )
   }
+
+  // The drawdown loops over every one of these years, so an absurd number would hang the chart, and no plan runs this long.
+  if (patch.retirementYears !== undefined) {
+    assertInClosedRange(patch.retirementYears, 1, RETIREMENT_YEARS_MAX, `retirementYears must be between 1 and ${RETIREMENT_YEARS_MAX}`)
+  }
+
+  // A tenth of the house's value a year is already more than owning costs anywhere; above it is a typo.
+  if (patch.homeCarryRate !== undefined) {
+    assertInClosedRange(patch.homeCarryRate, 0, 0.1, 'homeCarryRate must be between 0 and 0.1')
+  }
 }
 
 export async function createScenario(
@@ -121,7 +152,9 @@ export async function createScenario(
   input: NewGoalScenario,
 ) {
   validateScenarioNumbers(input)
-  return repo.createScenario(owner, withSortedSchedule({ ...input, name: validateScenarioName(input.name) }))
+  const named = { ...input, name: validateScenarioName(input.name) }
+  // A client that predates the field posts without it.
+  return repo.createScenario(owner, withSortedSchedule({ ...named, homeCarryRate: input.homeCarryRate ?? DEFAULT_HOME_CARRY_RATE, retirementYears: input.retirementYears ?? DEFAULT_RETIREMENT_YEARS }))
 }
 
 export async function patchScenario(

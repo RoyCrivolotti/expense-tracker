@@ -41,10 +41,12 @@ describe('AllInputsPanel', () => {
   it('lays the sections out in columns, without what is in the levers bar', () => {
     renderPanel(true)
     const panel = screen.getByRole('region', { name: 'All inputs' })
-    for (const title of ['Portfolio', 'Housing', 'Financial independence', 'Plan start', 'Monthly investing changes', 'Life events']) {
+    for (const title of ['Housing', 'Financial independence', 'Plan start', 'Monthly investing over time', 'Life events']) {
       expect(within(panel).getByRole('heading', { name: title })).toBeInTheDocument()
     }
-    expect(within(panel).getByRole('textbox', { name: 'Contribution growth (%/yr)' })).toBeInTheDocument()
+    // All four portfolio inputs are in the bar by default, so there is no column of them.
+    expect(within(panel).queryByRole('heading', { name: 'Portfolio' })).not.toBeInTheDocument()
+    expect(within(panel).getByRole('textbox', { name: 'Mortgage rate (%/yr)' })).toBeInTheDocument()
     expect(within(panel).getByLabelText('House price')).toBeInTheDocument()
     expect(within(panel).queryByLabelText('Monthly investing')).not.toBeInTheDocument()
     expect(within(panel).queryByLabelText('Starting invested')).not.toBeInTheDocument()
@@ -58,7 +60,7 @@ describe('AllInputsPanel', () => {
   })
 
   it('keeps the portfolio column while any of its inputs is left in it', () => {
-    renderPanel(true, makeStarred(SECTION_KEYS.portfolio.slice(0, 4)))
+    renderPanel(true, makeStarred(SECTION_KEYS.portfolio.slice(0, 3)))
     expect(screen.getByRole('heading', { name: 'Portfolio' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Plan start' })).toBeInTheDocument()
   })
@@ -67,6 +69,15 @@ describe('AllInputsPanel', () => {
     renderPanel(true, makeStarred(SECTION_KEYS.portfolio))
     expect(screen.queryByRole('heading', { name: 'Portfolio' })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Plan start' })).toBeInTheDocument()
+  })
+
+  it('says where the starting amount is set: the bar while it is in the bar, Portfolio when it is not', () => {
+    const { view } = renderPanel(true)
+    expect(screen.getByText('The first line is the amount you start with, set in the bar above.')).toBeInTheDocument()
+    view.unmount()
+
+    renderPanel(true, makeStarred([]))
+    expect(screen.getByText('The first line is the amount you start with, set in Portfolio.')).toBeInTheDocument()
   })
 
   it('is not on the page while closed', () => {
@@ -93,6 +104,18 @@ describe('AllInputsPanel explanations of what is in the bar', () => {
 
     expect(screen.queryByLabelText('Purchase year')).not.toBeInTheDocument()
     expect(screen.getByText(/Purchase cost from portfolio/)).toBeInTheDocument()
+  })
+
+  it('keeps what return to expect when every portfolio input, the return among them, is in the bar', () => {
+    // The default five put all four portfolio inputs in the bar, so this is the layout a new plan opens in.
+    renderPanel(true, makeStarred(SECTION_KEYS.portfolio))
+    expect(screen.queryByLabelText('Real return (%/yr, after inflation)')).not.toBeInTheDocument()
+    expect(screen.getByText(/about 5% a year after inflation is what world stocks have returned/)).toBeInTheDocument()
+  })
+
+  it('says it once when the return is left in the panel', () => {
+    renderPanel(true, makeStarred([]))
+    expect(screen.getAllByText(/about 5% a year after inflation is what world stocks have returned/)).toHaveLength(1)
   })
 
   it('keeps the note on the two rates while either is on the page, and drops it when neither is', () => {
@@ -134,7 +157,7 @@ describe('AllInputsPanel stars', () => {
   it('stars every one of the inputs that can be starred, once each', () => {
     renderPanel(true, makeStarred([]))
     const stars = screen.getAllByRole('button', { name: /^Add .* to the bar$/ })
-    expect(stars).toHaveLength(15)
+    expect(stars).toHaveLength(14)
   })
 
   it('holds the stars back, and says why, once the bar is full', () => {

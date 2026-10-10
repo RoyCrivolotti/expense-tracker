@@ -14,6 +14,7 @@ import {
   FireFields,
   HousingFields,
   PortfolioFields,
+  ReturnNote,
   TrackingFields,
 } from '../goalControlSections'
 import { SECTION_KEYS } from '../leverFields'
@@ -49,14 +50,14 @@ function hasInputs(keys: readonly LeverKey[], omit: ReadonlySet<LeverKey>): bool
 /**
  * The portfolio's column: what is left of its inputs, and the start date and the re-baseline under
  * them, since they set where the starting balance is from. With every input in the bar it is the
- * plan start's column alone.
+ * plan start's column alone, which still carries the note on what return to expect.
  */
 function PortfolioColumn({ draft, latest, onChange, omit, wrap }: ColumnProps) {
   const labels = ADJUST_LABELS
   const inputs = hasInputs(SECTION_KEYS.portfolio, omit)
   return (
     <Column title={inputs ? labels.portfolio.title : labels.tracking.title}>
-      {inputs ? <PortfolioFields draft={draft} onChange={onChange} omit={omit} wrap={wrap} /> : null}
+      {inputs ? <PortfolioFields draft={draft} onChange={onChange} omit={omit} wrap={wrap} /> : <ReturnNote />}
       {inputs ? <h3 className={styles.columnTitle}>{labels.tracking.title}</h3> : null}
       <TrackingFields draft={draft} latest={latest} onChange={onChange} />
     </Column>
@@ -68,11 +69,11 @@ function PortfolioColumn({ draft, latest, onChange, omit, wrap }: ColumnProps) {
  * one-off events. Two columns for them made five, which the panel has no room for at laptop widths
  * (it would wrap to two rows), and both are short.
  */
-function OverTimeColumn({ draft, onChange }: Pick<ColumnProps, 'draft' | 'onChange'>) {
+function OverTimeColumn({ draft, onChange, omit }: Pick<ColumnProps, 'draft' | 'onChange' | 'omit'>) {
   const labels = ADJUST_LABELS
   return (
     <Column title={labels.changes.title}>
-      <ChangesFields draft={draft} onChange={onChange} />
+      <ChangesFields draft={draft} onChange={onChange} omit={omit} />
       <h3 className={styles.columnTitle}>{labels.events.title}</h3>
       <EventsFields draft={draft} onChange={onChange} />
     </Column>
@@ -136,7 +137,7 @@ function PanelBody({ id, draft, latest, onChange, starred }: PanelProps) {
             <Column title={labels.fire.title}>
               <FireFields draft={draft} onChange={onChange} omit={omit} wrap={wrap} />
             </Column>
-            <OverTimeColumn draft={draft} onChange={onChange} />
+            <OverTimeColumn draft={draft} onChange={onChange} omit={omit} />
           </div>
         </Card>
       </div>

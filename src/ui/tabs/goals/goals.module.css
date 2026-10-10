@@ -301,6 +301,14 @@
   margin: 0 0 0.15rem;
 }
 
+/* The line under the spending says what it comes to on the account, two lines on a phone and three once the figure
+   has more digits, and the stepper below it moves down a line with it, away from a thumb that is tapping it. */
+@media (max-width: 899px) {
+  .fieldHintReserve {
+    min-height: calc(3 * 1.4em);
+  }
+}
+
 .fieldRow {
   display: flex;
   align-items: center;
@@ -700,6 +708,22 @@
   margin-bottom: 0;
 }
 
+/* A plan that spends more than the portfolio holds: a warning tint, since what follows it is not a plan to follow. */
+.shortfallNote {
+  margin: 0.5rem 0;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--exp-warning) 55%, var(--color-border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--exp-warning) 10%, var(--color-surface));
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--color-text);
+}
+
+.shortfallNote strong {
+  color: var(--exp-warning-text);
+}
+
 .intro {
   font-size: 0.9375rem;
   line-height: 1.5;
@@ -862,6 +886,24 @@
   margin: 0 0 0.25rem;
 }
 
+.chartTitleBlock {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 0.5rem;
+  min-width: 0;
+}
+
+.chartTitleBlock .chartTitle {
+  margin-bottom: 0;
+}
+
+/* What the chart's euros are, said once beside its title. */
+.chartMoney {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
 .chartHint {
   font-size: 0.8125rem;
   color: var(--color-text-muted);
@@ -879,6 +921,50 @@
 
 /* The wide hero's note under its legend: set off from the chips above it, which it would
    otherwise touch (the hint above the chart has the title's margin to stand off from). */
+/* A note under the chart and its legend: the legend runs straight into it without room. */
+.chartHint.chartCaption {
+  margin-top: 0.75rem;
+}
+
+.spreadTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+}
+
+.spreadTableCaption {
+  caption-side: top;
+  text-align: left;
+  font-weight: 600;
+  padding-bottom: 0.35rem;
+}
+
+.spreadTable th,
+.spreadTable td {
+  padding: 0.35rem 0.5rem 0.35rem 0;
+  text-align: left;
+  vertical-align: top;
+  border-top: 1px solid var(--color-border);
+}
+
+.spreadTable thead th {
+  border-top: 0;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.spreadTable tbody th {
+  font-weight: 600;
+}
+
+/* How many of the hundred runs get there, small under the amount it is about. */
+.spreadTableNote {
+  display: block;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
 .chartHint.heroNote {
   margin-top: 0.6rem;
 }
@@ -1219,6 +1305,12 @@
    sheet's bar already knows how to place. */
 .sheetTools {
   composes: matrixTools;
+}
+
+/* What the sheet's chart is in, said once in its bar. */
+.sheetMoney {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
 }
 
 .matrixToggle {
@@ -2318,8 +2410,11 @@
 
 .lifeEventRow {
   display: flex;
+  /* A change in the monthly investing has an Edit and a remove button after its amount; where they do not fit in
+     a half column the row wraps, rather than the month it starts in being cut. */
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.25rem 0.5rem;
   padding: 0.25rem 0;
   border-bottom: 1px solid var(--color-divider);
   font-size: 0.8125rem;
@@ -2329,6 +2424,12 @@
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The month a change starts in is what the line is for, so it is never ellipsised. */
+.lifeEventStepLabel {
+  flex: 1 0 auto;
   white-space: nowrap;
 }
 
@@ -2350,7 +2451,24 @@
   flex-shrink: 0;
 }
 
+/* Edit and the remove cross are one unit: when the row wraps they move to the next line together, and the
+   cross is never left alone under the month. */
+.lifeEventRowButtons {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Edit and the cross are held to 24px each way (WCAG 2.2, target size): they were 26x15 and 13x16 with
+   4px between. A finger on the wide page gets 44px below. */
 .lifeEventRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
   background: none;
   border: none;
   color: var(--color-text-muted);
@@ -2363,6 +2481,26 @@
 
 .lifeEventRemove:hover {
   color: var(--exp-danger);
+}
+
+.lifeEventEdit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  padding: 0 0.125rem;
+  flex-shrink: 0;
+}
+
+.lifeEventRow > .lifeEventForm {
+  flex: 1;
+  min-width: 0;
 }
 
 .addLifeEventBtn {
@@ -2488,6 +2626,11 @@
   }
 
   .stack .lifeEventRemove {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  .stack .lifeEventEdit {
     min-width: 2.75rem;
     min-height: 2.75rem;
   }

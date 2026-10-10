@@ -254,7 +254,7 @@ export interface LifeEvent {
 export interface ContributionStep {
   /** The month the new amount starts in, `YYYY-MM`. */
   from: string
-  /** The monthly amount from then on, in today's money like the base (0 is a pause). */
+  /** The monthly amount from then on, as you send it, like the base (0 is a pause). */
   monthlyCents: number
 }
 
@@ -265,7 +265,6 @@ export interface GoalScenario {
   sortOrder: number
   startInvestedCents: number
   monthlyContributionCents: number
-  annualContributionGrowth: number
   expectedRealReturn: number
   horizonYears: number
   housePriceCents: number
@@ -292,6 +291,16 @@ export interface GoalScenario {
    * mean anything: without one there is no date for a plan year to start on, so none is applied.
    */
   contributionSchedule: ContributionStep[]
+  /**
+   * What owning the house costs a year beyond the mortgage (repairs, property tax, insurance), as a
+   * fraction of its value: 0.015 is 1,5%. Rent vs buy counts it against the buyer. Between 0 and 0.1.
+   */
+  homeCarryRate: number
+  /**
+   * How many years the invested money must pay for the spending after FI, whole, from 1 to 100. The
+   * drawdown chart runs for it, and the withdrawal rate that is safe depends on it (longer, lower).
+   */
+  retirementYears: number
   /**
    * The owner's plan: the one scenario that Progress, the dashboard and check-in
    * deltas measure against. At most one per owner; set through activation, never
@@ -351,10 +360,16 @@ export interface ExpenseSettings {
   cashReserveMonths: number
   /**
    * The yearly inflation the Goals tab assumes (0.02 = 2%): check-in balances are brought back
-   * to today's money by it before they meet the plan, as are the house and the mortgage, and
+   * to the plan's euros by it before they meet the plan, as are the house and the mortgage, the
+   * monthly amount (which is what leaves the account) counts for less each year by it, and
    * the nominal view inflates the plan by it. One value for the owner, not per plan.
    */
   assumedInflation: number
+  /**
+   * How far a year's return strays from the typical one when the spread card replays the plan
+   * (0.15 = 15%): one value for the owner, volatility only, between 0 and 0.5.
+   */
+  marketVolatility: number
   /**
    * The scenario inputs the Goals page keeps in its bar, in the order they are shown: at most
    * five, resolved to the built-in defaults when the owner has never chosen. An empty list is a

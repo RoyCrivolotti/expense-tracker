@@ -33,7 +33,6 @@ interface ScenarioSeed {
   sortOrder: number
   startInvestedCents: number
   monthlyContributionCents: number
-  annualContributionGrowth: number
   expectedRealReturn: number
   horizonYears: number
   housePriceCents: number
@@ -115,14 +114,14 @@ for (const s of scenarioFile.scenarios) {
   lines.push(
     `INSERT INTO goal_scenarios (
        owner, name, color, sort_order,
-       start_invested_cents, monthly_contribution_cents, annual_contribution_growth,
+       start_invested_cents, monthly_contribution_cents,
        expected_real_return, horizon_years,
        house_price_cents, down_payment_fraction, house_purchase_year, transaction_costs_cents,
        mortgage_term_years, mortgage_rate_annual, house_appreciation_rate,
        rent_monthly_cents, annual_spend_cents, safe_withdrawal_rate, is_active
      ) VALUES (
        ${owner}, ${str(s.name)}, ${str(color)}, ${s.sortOrder},
-       ${s.startInvestedCents}, ${s.monthlyContributionCents}, ${s.annualContributionGrowth},
+       ${s.startInvestedCents}, ${s.monthlyContributionCents},
        ${s.expectedRealReturn}, ${s.horizonYears},
        ${s.housePriceCents}, ${s.downPaymentFraction}, ${purchaseYear}, ${s.transactionCostsCents},
        ${s.mortgageTermYears}, ${s.mortgageRateAnnual}, ${s.houseAppreciationRate},

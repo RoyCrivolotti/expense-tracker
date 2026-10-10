@@ -13,7 +13,6 @@ function row(overrides: Partial<GoalScenarioRow> = {}): GoalScenarioRow {
     sort_order: 0,
     start_invested_cents: 0,
     monthly_contribution_cents: 100_000,
-    annual_contribution_growth: 0,
     expected_real_return: 0.07,
     horizon_years: 30,
     house_price_cents: 0,
@@ -87,7 +86,6 @@ describe('createScenario', () => {
       sortOrder: 0,
       startInvestedCents: 0,
       monthlyContributionCents: 100_000,
-      annualContributionGrowth: 0,
       expectedRealReturn: 0.07,
       horizonYears: 30,
       housePriceCents: 0,
@@ -125,7 +123,6 @@ describe('createScenario', () => {
       sortOrder: 4,
       startInvestedCents: 111,
       monthlyContributionCents: 222,
-      annualContributionGrowth: 0.01,
       expectedRealReturn: 0.02,
       horizonYears: 33,
       housePriceCents: 444,
@@ -141,6 +138,8 @@ describe('createScenario', () => {
       planStartDate: '2026-06-25',
       lifeEvents: events,
       contributionSchedule: schedule,
+      homeCarryRate: 0.021,
+      retirementYears: 42,
     })
 
     const { sql, values } = statements[0]!
@@ -161,6 +160,8 @@ describe('createScenario', () => {
     expect(bound('safe_withdrawal_rate')).toBe(0.05)
     expect(bound('life_events')).toBe(JSON.stringify(events))
     expect(bound('contribution_schedule')).toBe(JSON.stringify(schedule))
+    expect(bound('home_carry_rate')).toBe(0.021)
+    expect(bound('retirement_years')).toBe(42)
     expect(bound('plan_start_date')).toBe('2026-06-25')
   })
 })

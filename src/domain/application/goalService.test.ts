@@ -13,6 +13,101 @@ function newScenario(overrides: Partial<NewGoalScenario> = {}): NewGoalScenario 
   return scenario as unknown as NewGoalScenario
 }
 
+describe('the mortgage term', () => {
+  it.each([25, 24.58333, 0.5, 1, 0.0027, 0.001])('accepts %s years, a part of a year included, since a loan can have months or days left', (years) => {
+    expect(() => validateScenarioNumbers({ mortgageTermYears: years })).not.toThrow()
+  })
+
+  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY, 101, 5e-324, 1e-9, 0.0009])('refuses %s years', (years) => {
+    expect(() => validateScenarioNumbers({ mortgageTermYears: years })).toThrow(
+      'mortgageTermYears must be a number of years from 0.001 to 100',
+    )
+  })
+
+  it('still asks for a whole number of years for the horizon', () => {
+    expect(() => validateScenarioNumbers({ horizonYears: 25.5 })).toThrow('horizonYears must be a whole number of years, at least 1')
+  })
+})
+
+describe('the years the money must last', () => {
+  it.each([1, 30, 60, 100])('accepts %s years', (years) => {
+    expect(() => validateScenarioNumbers({ retirementYears: years })).not.toThrow()
+  })
+
+  it.each([0, -5, 30.5, Number.NaN, Number.POSITIVE_INFINITY])('refuses %s years: a whole number of them, at least one', (years) => {
+    expect(() => validateScenarioNumbers({ retirementYears: years })).toThrow('retirementYears must be a whole number of years, at least 1')
+  })
+
+  it('refuses a number the drawdown would loop over for ever, and says the most', () => {
+    expect(() => validateScenarioNumbers({ retirementYears: 101 })).toThrow('retirementYears must be between 1 and 100')
+    expect(() => validateScenarioNumbers({ retirementYears: 1_000_000_000 })).toThrow('retirementYears must be between 1 and 100')
+  })
+
+  it('is 30 years for a scenario created without one, as a client that predates it sends', async () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    const input = newScenario()
+    delete (input as Partial<NewGoalScenario>).retirementYears
+    expect((await createScenario(repo, OWNER, input)).retirementYears).toBe(30)
+  })
+
+  it('keeps one that is sent, on create and on edit, and leaves it alone when a patch has none', async () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    const saved = await createScenario(repo, OWNER, newScenario({ retirementYears: 45 }))
+    expect(saved.retirementYears).toBe(45)
+    expect((await patchScenario(repo, OWNER, saved.id, { retirementYears: 50 })).retirementYears).toBe(50)
+    expect((await patchScenario(repo, OWNER, saved.id, { horizonYears: 25 })).retirementYears).toBe(50)
+    await expect(patchScenario(repo, OWNER, saved.id, { retirementYears: 500 })).rejects.toThrow('retirementYears')
+    expect((await repo.loadDataset(OWNER)).goalScenarios[0]!.retirementYears).toBe(50)
+  })
+})
+
+describe('the yearly upkeep of the house', () => {
+  it.each([0, 0.015, 0.1])('accepts %s of the value a year', (rate) => {
+    expect(() => validateScenarioNumbers({ homeCarryRate: rate })).not.toThrow()
+  })
+
+  it.each([
+    [-0.001, 'below zero'],
+    [0.1001, 'more than a tenth of the value a year'],
+    [Number.NaN, 'not a number'],
+    [Number.POSITIVE_INFINITY, 'not finite'],
+  ])('refuses %s, which is %s', (rate) => {
+    expect(() => validateScenarioNumbers({ homeCarryRate: rate })).toThrow('homeCarryRate must be between 0 and 0.1')
+  })
+
+  it('is 1,5% of the value for a scenario created without one, as a client that predates it sends', async () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    const input = newScenario()
+    delete (input as Partial<NewGoalScenario>).homeCarryRate
+    const saved = await createScenario(repo, OWNER, input)
+    expect(saved.homeCarryRate).toBe(0.015)
+  })
+
+  it('keeps one that is sent, on create and on edit, and leaves it alone when a patch has none', async () => {
+    const repo = inMemoryExpenseRepository({}, OWNER)
+    const saved = await createScenario(repo, OWNER, newScenario({ homeCarryRate: 0.02 }))
+    expect(saved.homeCarryRate).toBe(0.02)
+    expect((await patchScenario(repo, OWNER, saved.id, { homeCarryRate: 0.03 })).homeCarryRate).toBe(0.03)
+    expect((await patchScenario(repo, OWNER, saved.id, { horizonYears: 25 })).homeCarryRate).toBe(0.03)
+    await expect(patchScenario(repo, OWNER, saved.id, { homeCarryRate: 0.5 })).rejects.toThrow('homeCarryRate')
+    expect((await repo.loadDataset(OWNER)).goalScenarios[0]!.homeCarryRate).toBe(0.03)
+  })
+})
+
+describe('the plan start date', () => {
+  it.each(['2026-01-01', '2024-02-29', null])('accepts %s', (planStartDate) => {
+    expect(() => validateScenarioNumbers({ planStartDate })).not.toThrow()
+  })
+
+  it.each(['garbage', '2026-13-45', '2026-02-30', '2025-02-29', '', 20260101 as unknown as string])('refuses %s, which is not a calendar date', (planStartDate) => {
+    expect(() => validateScenarioNumbers({ planStartDate })).toThrow('planStartDate must be a calendar date, or null')
+  })
+
+  it('leaves a patch that does not mention it alone', () => {
+    expect(() => validateScenarioNumbers({ horizonYears: 20 })).not.toThrow()
+  })
+})
+
 describe('validateScenarioNumbers', () => {
   it('refuses a withdrawal rate of zero, which makes the FI target infinite', () => {
     // fireNumber returns Infinity for swr <= 0 by design, so this is the value that

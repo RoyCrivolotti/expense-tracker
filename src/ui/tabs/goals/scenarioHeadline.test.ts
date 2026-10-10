@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { GoalScenario } from '../../../types'
 import { scenarioHeadline } from './scenarioHeadline'
-import { DEFAULT_INFLATION_RATE, planFromToday } from '../../../engine'
+import { DEFAULT_INFLATION_RATE, planFromToday, planValueAtDate, realToNominal } from '../../../engine'
 
 const base: GoalScenario = {
   id: 1,
@@ -10,7 +10,6 @@ const base: GoalScenario = {
   sortOrder: 0,
   startInvestedCents: 500_000_00,
   monthlyContributionCents: 100_000,
-  annualContributionGrowth: 0,
   expectedRealReturn: 0.06,
   horizonYears: 30,
   housePriceCents: 0,
@@ -26,25 +25,49 @@ const base: GoalScenario = {
   planStartDate: null,
   lifeEvents: [],
   contributionSchedule: [],
+  homeCarryRate: 0.015,
+  retirementYears: 30,
   isActive: false,
 }
 
 describe('scenarioHeadline', () => {
+  it('says which euros the net worth at the end is in: the plan\'s, named by the year it starts', () => {
+    expect(scenarioHeadline({ ...base, planStartDate: '2026-01-01' }, DEFAULT_INFLATION_RATE).secondary).toContain(' net worth @ 30y in 2026 euros')
+    expect(scenarioHeadline(base, DEFAULT_INFLATION_RATE).secondary).toContain(" net worth @ 30y in today's euros")
+  })
+
   it('includes short name and FI year in primary line', () => {
     const { primary } = scenarioHeadline(base, DEFAULT_INFLATION_RATE)
     expect(primary).toMatch(/^Rent & invest/)
     expect(primary).toContain('FI year')
   })
 
-  it('adds the FI year counted from today when the plan is restarted from a check-in', () => {
+  it('adds the FI month counted from today when the plan is restarted from a check-in', () => {
     const plan = { ...base, planStartDate: '2024-01-01', isActive: true }
-    const fromToday = planFromToday(plan, { investedCents: 900_000_00, date: '2026-01-01' })
+    const fromToday = planFromToday(plan, { investedCents: 900_000_00, date: '2026-01-01' }, 0.02)
     const { primary } = scenarioHeadline(plan, DEFAULT_INFLATION_RATE, undefined, undefined, fromToday)
-    expect(primary).toMatch(/from today, FI in \d+ years$/)
+    expect(primary).toMatch(/ · FI around [A-Z][a-z]{2} 20\d\d · from today, around [A-Z][a-z]{2} 20\d\d$/)
     // Already past the target at today's balance.
-    const rich = planFromToday(plan, { investedCents: 2_000_000_00, date: '2026-01-01' })
+    const rich = planFromToday(plan, { investedCents: 2_000_000_00, date: '2026-01-01' }, 0.02)
     expect(scenarioHeadline(plan, DEFAULT_INFLATION_RATE, undefined, undefined, rich).primary).toMatch(/FI at today's balance$/)
     expect(scenarioHeadline(plan, DEFAULT_INFLATION_RATE).primary).not.toContain('from today')
+  })
+
+  it('still says FI for the restart when the plan itself does not reach it in its horizon', () => {
+    // 90.000 a year to live on is a 2,25M target that 1.000 a month on 50.000 never gets near in 25 years, but a restart from 1,9M does.
+    const plan = { ...base, planStartDate: '2024-01-01', horizonYears: 25, startInvestedCents: 50_000_00, annualSpendCents: 90_000_00, isActive: true }
+    const fromToday = planFromToday(plan, { investedCents: 1_900_000_00, date: '2028-06-01' }, DEFAULT_INFLATION_RATE)
+    const { primary } = scenarioHeadline(plan, DEFAULT_INFLATION_RATE, undefined, undefined, fromToday)
+    expect(primary).toMatch(/^Rent & invest · from today, FI around [A-Z][a-z]{2} 20\d\d$/)
+  })
+
+  it('gives the plan\'s FI and its restart\'s as the same month for a restart exactly on the plan, not as years from two starts', () => {
+    const plan = { ...base, planStartDate: '2024-01-01', isActive: true }
+    const date = '2027-03-05'
+    const onLine = realToNominal(planValueAtDate(plan, date, DEFAULT_INFLATION_RATE)!, '2024-01-01', date, DEFAULT_INFLATION_RATE)
+    const fromToday = planFromToday(plan, { investedCents: onLine, date }, DEFAULT_INFLATION_RATE)
+    const { primary } = scenarioHeadline(plan, DEFAULT_INFLATION_RATE, undefined, undefined, fromToday)
+    expect(primary).toMatch(/ · FI around ([A-Z][a-z]{2} 20\d\d) · from today, around \1$/)
   })
 
   it('shows plan and actual saving when they differ', () => {

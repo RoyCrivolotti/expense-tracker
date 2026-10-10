@@ -1,12 +1,14 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { CheckinHistoryChart } from './CheckinHistoryChart'
 import { nearestScatter,
   nearestScatterValue, buildCheckinTooltip, realCheckinPoints } from './checkinChartUtils'
 import { makeScenario } from '../../../../testing/factories'
 import { EU_MONEY_FORMAT } from '../../../../engine/money'
+import { formatMoneyShort } from '../chartTheme'
 import type { WealthAccount, WealthCheckin } from '../../../../types'
-import { DEFAULT_INFLATION_RATE } from '../../../../engine'
+import { DEFAULT_INFLATION_RATE, resolveMoneyFormat } from '../../../../engine'
+import { MoneyFormatContext } from '../../../hooks/moneyFormatContext'
 
 beforeAll(() => {
   Object.defineProperty(window, 'matchMedia', {
@@ -51,6 +53,11 @@ describe('CheckinHistoryChart', () => {
     expect(container.firstChild).toBeNull()
   })
 
+  it('says which euros it is in: the plan\'s, to which each check-in is brought back at the inflation', () => {
+    render(<CheckinHistoryChart checkins={[]} accounts={[]} plan={makeScenario({ planStartDate: '2020-01-01' })} />)
+    expect(screen.getByText(/^In 2020 euros: each check-in is brought back at 2,0% a year to sit against the plan\.$/)).toBeInTheDocument()
+  })
+
   it('renders chart when scenario has planStartDate', () => {
     const scenario = makeScenario({ planStartDate: '2020-01-01' })
     const { container } = render(
@@ -73,11 +80,6 @@ describe('CheckinHistoryChart', () => {
     expect(circles.length).toBeGreaterThanOrEqual(2)
   })
 
-  it('says the chart is in today\'s money, and at what rate check-ins are brought back', () => {
-    render(<CheckinHistoryChart checkins={[]} accounts={[]} plan={makeScenario({ planStartDate: '2020-01-01' })} />)
-    expect(screen.getByText(/In today's money: each check-in is brought back at 2,?0?%? a year/)).toBeInTheDocument()
-  })
-
   it('renders a today marker line', () => {
     const scenario = makeScenario({ planStartDate: '2020-01-01' })
     const { container } = render(
@@ -98,10 +100,27 @@ describe('CheckinHistoryChart', () => {
     expect(screen.getByRole('radio', { name: '5Y' })).toBeChecked()
   })
 
+  afterEach(() => vi.useRealTimers())
+
   it('opens wide enough to keep today off the right edge of an older plan', () => {
+    // Today is fixed: a plan that started in 2020 is a 10 year plan only until 2030, and the test read the real date.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-06-15T12:00:00Z'))
     const scenario = makeScenario({ planStartDate: '2020-01-01', horizonYears: 30 })
     render(<CheckinHistoryChart checkins={[]} accounts={[]} plan={scenario} />)
     expect(screen.getByRole('radio', { name: '10Y' })).toBeChecked()
+  })
+
+  it('writes the inflation in the owner\'s number style in the line under the title', () => {
+    const scenario = makeScenario({ planStartDate: '2020-01-01' })
+    const usd = resolveMoneyFormat('USD', 'en-US')
+    const { container } = render(
+      <MoneyFormatContext.Provider value={usd}>
+        <CheckinHistoryChart checkins={[]} accounts={[]} plan={scenario} />
+      </MoneyFormatContext.Provider>,
+    )
+    expect(container.textContent).toContain('each check-in is brought back at 2.0% a year')
+    expect(container.textContent).not.toContain('2,0%')
   })
 
   it('renders a legend with Plan and Actual entries', () => {
@@ -168,6 +187,18 @@ describe('buildCheckinTooltip', () => {
     const result = buildCheckinTooltip(1, ['Year 0', 'Year 1'], [100_000, 200_000], scatter, format)
     expect(result.lines).toHaveLength(2)
     expect(result.lines[1]!.label).toBe('Actual, 11 Sep 2026')
+  })
+
+  it('gives the plan on both sides of a payment where the plan steps, so a reading before it is not set against the value after it', () => {
+    const result = buildCheckinTooltip(1, ['Year 0', 'Year 1'], [100_000, 40_000], [{ xIndex: 1, value: 95_000 }], format, undefined, undefined, [100_000, 90_000])
+    expect(result.lines.map((l) => l.label)).toEqual(['Plan, the day before', 'Plan, that day', 'Actual'])
+    expect(result.lines[0]!.value).toBe(formatMoneyShort(90_000, format))
+    expect(result.lines[1]!.value).toBe(formatMoneyShort(40_000, format))
+  })
+
+  it('has one Plan line where the plan does not step', () => {
+    const result = buildCheckinTooltip(1, ['Year 0', 'Year 1'], [100_000, 200_000], [], format, undefined, undefined, [100_000, 200_000])
+    expect(result.lines.map((l) => l.label)).toEqual(['Plan'])
   })
 
   it('omits the Actual line only when there is no reading at all', () => {

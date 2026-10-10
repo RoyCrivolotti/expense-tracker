@@ -18,8 +18,10 @@ import type {
   WealthCheckinEntry,
 } from '../domain/types'
 import { parseContributionSchedule } from '../domain/engine/contributionSchedule'
+import { DEFAULT_HOME_CARRY_RATE, DEFAULT_RETIREMENT_YEARS } from '../domain/engine/projectionConstants'
 import { DEFAULT_BUDGET_ROLLOVER_DAY } from '../domain/engine/dates'
 import { DEFAULT_INFLATION_RATE } from '../domain/engine/projectionConstants'
+import { DEFAULT_MARKET_VOLATILITY } from '../domain/engine/marketVolatility'
 import { parseLevers } from '../domain/engine/goalLevers'
 import { parseMilestones } from '../domain/engine/milestones'
 import { DEFAULT_CURRENCY_CODE, DEFAULT_NUMBER_LOCALE } from '../domain/engine/money'
@@ -210,6 +212,8 @@ export interface SettingsRow {
   claimant_name: string | null
   cash_reserve_months: number | null
   assumed_inflation: number | null
+  /** Undefined on a database that has not had the column added yet. */
+  market_volatility?: number | null
   goal_levers: string | null
 }
 
@@ -218,6 +222,7 @@ export function toSettings(r: SettingsRow): ExpenseSettings {
     cashReserveMonths: r.cash_reserve_months ?? 0,
     // Undefined too, on a database that has not had the column added yet.
     assumedInflation: r.assumed_inflation ?? DEFAULT_INFLATION_RATE,
+    marketVolatility: r.market_volatility ?? DEFAULT_MARKET_VOLATILITY,
     openingCashCents: r.opening_cash_cents,
     openingInvestmentCents: r.opening_investment_cents,
     defaultAccountId: r.default_account_id ?? null,
@@ -239,7 +244,6 @@ export interface GoalScenarioRow {
   sort_order: number
   start_invested_cents: number
   monthly_contribution_cents: number
-  annual_contribution_growth: number
   expected_real_return: number
   horizon_years: number
   house_price_cents: number
@@ -256,10 +260,23 @@ export interface GoalScenarioRow {
   life_events: string
   /** Undefined on a database that has not had the column added yet. */
   contribution_schedule?: string | null
+  /** Undefined on a database that has not had the column added yet. */
+  home_carry_rate?: number | null
+  /** Undefined on a database that has not had the column added yet. */
+  retirement_years?: number | null
   is_active: number
 }
 
-export function toGoalScenario(r: GoalScenarioRow): GoalScenario {
+/**
+ * A scenario as the API sends it: the client's own type, and for one release `annualContributionGrowth`, which
+ * the client no longer has. A client opened before the field was dropped (an installed app keeps its old code
+ * until its owner taps the update banner) multiplies it into every projection, and undefined makes the net worth
+ * NaN from year 2. The column still exists with its default of 0, so 0 is what it would have read. Drop this
+ * once every client in use is newer than the release that removed the field.
+ */
+export type GoalScenarioDto = GoalScenario & { annualContributionGrowth: 0 }
+
+export function toGoalScenario(r: GoalScenarioRow): GoalScenarioDto {
   let lifeEvents: LifeEvent[] = []
   try {
     const parsed: unknown = JSON.parse(r.life_events)
@@ -274,7 +291,6 @@ export function toGoalScenario(r: GoalScenarioRow): GoalScenario {
     sortOrder: r.sort_order,
     startInvestedCents: r.start_invested_cents,
     monthlyContributionCents: r.monthly_contribution_cents,
-    annualContributionGrowth: r.annual_contribution_growth,
     expectedRealReturn: r.expected_real_return,
     horizonYears: r.horizon_years,
     housePriceCents: r.house_price_cents,
@@ -290,7 +306,10 @@ export function toGoalScenario(r: GoalScenarioRow): GoalScenario {
     planStartDate: r.plan_start_date ?? null,
     lifeEvents,
     contributionSchedule: parseContributionSchedule(r.contribution_schedule),
+    homeCarryRate: r.home_carry_rate ?? DEFAULT_HOME_CARRY_RATE,
+    retirementYears: r.retirement_years ?? DEFAULT_RETIREMENT_YEARS,
     isActive: r.is_active === 1,
+    annualContributionGrowth: 0,
   }
 }
 

@@ -1,13 +1,20 @@
 import { useState, type ReactNode } from 'react'
 import type { NewGoalScenario } from '../../../data/dataSource'
-import { formatCents, rebaseline, rebaselineSummary, type LeverKey, type MoneyFormat } from '../../../engine'
+import { formatCents, formatCentsCompact, housePriceAtPurchaseCents, rebaseline, rebaselineSummary, type LeverKey, type MoneyFormat } from '../../../engine'
+import { useAssumedInflation } from '../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { formatCheckinDate, type InvestedSnapshot } from './checkinDate'
 import { DateField, MoneyField, NumberField, PercentField, PurchaseYearField } from './goalControlFields'
 import { ContributionStepsList } from './ContributionSteps'
 import { firstChangeNote } from './contributionText'
+import { housePriceHint } from './housePriceHint'
+import { aboutOnAccount, bothMoneys } from './bothMoneys'
+import { feesMoneyHint, monthlyAmountMoneyHint, rentMoneyHint, spendMoneyHint } from './moneyHints'
+import { planMoneyLabel } from './planMoneyLabel'
 import { LifeEventsList } from './LifeEvents'
+import { ADJUST_LABELS } from './adjustSections'
 import { LEVER_SPECS, NO_LEVERS } from './leverFields'
+import { RetirementYearsField } from './RetirementYearsField'
 import styles from './goals.module.css'
 
 /**
@@ -26,19 +33,27 @@ export interface SectionProps {
 
 const plain = (_key: LeverKey, field: ReactNode): ReactNode => field
 
-function purchaseSummary(draft: NewGoalScenario, format: MoneyFormat): string | null {
+function purchaseSummary(draft: NewGoalScenario, inflationRate: number, format: MoneyFormat): string | null {
   const purchaseYear = draft.housePurchaseYear
   if (purchaseYear === null) return null
-  const down = Math.round(draft.housePriceCents * draft.downPaymentFraction)
+  const down = Math.round(housePriceAtPurchaseCents({ ...draft, inflationRate }) * draft.downPaymentFraction)
   const fees = draft.transactionCostsCents
   // Already owned, the house is yours from the start: nothing is taken out of the portfolio later, so
   // the starting balance is read as what is left after the down payment and fees. Without this, moving
   // the year from Never to Already own adds the whole house to the net worth and nothing says why.
+  const money = (cents: number) => formatCentsCompact(cents, format)
+  const label = planMoneyLabel(draft.planStartDate, format)
+  // The plan charges the portfolio for the down payment and the fees only: the loan and the upkeep are paid out
+  // of the income the monthly investing is what is left of, so the person is told where to say otherwise.
+  const rest = ` The loan payments and upkeep are not taken from the portfolio: the plan pays them from the rest of your income. If they will lower what you invest, add a change under ${ADJUST_LABELS.changes.title}.`
   if (purchaseYear === 0) {
-    return `Already own: the starting balance is counted as what is left after the ${formatCents(down, format)} down payment and ${formatCents(fees, format)} fees, so nothing comes out of the portfolio later.`
+    return `Already own: the starting balance is counted as what is left after the ${money(down)} down payment and ${money(fees)} fees (in ${label}), so nothing comes out of the portfolio later.${rest}`
   }
   const total = down + fees
-  return `Purchase cost from portfolio: ${formatCents(down, format)} down + ${formatCents(fees, format)} fees = ${formatCents(total, format)} (dip on the invested line in year ${purchaseYear}).`
+  // The three are in the plan's euros; the account pays more in the year it is paid, which is the figure a buyer sees.
+  const paid = bothMoneys({ cents: total, years: purchaseYear, planStartDate: draft.planStartDate, inflationRate, money, format })
+  const account = paid.same ? '' : ` (${aboutOnAccount(paid)})`
+  return `Purchase cost from portfolio, in ${label}: ${money(down)} down + ${money(fees)} fees = ${money(total)}${account}, dip on the invested line in year ${purchaseYear}.${rest}`
 }
 
 const L = LEVER_SPECS
@@ -62,8 +77,23 @@ function MonthlyInvestingField({
         value={draft.monthlyContributionCents}
         onChange={(v) => onChange({ monthlyContributionCents: v })}
       />)}
-      {note ? <p className={styles.fieldHint}>{note}. Set under Monthly investing changes.</p> : null}
+      {note ? <p className={styles.fieldHint}>{note}. Set under {ADJUST_LABELS.changes.title}.</p> : null}
     </>
+  )
+}
+
+/**
+ * What return is reasonable to type. It is said nowhere else, so it stays when the return itself is
+ * in the bar, and it names the input so it still reads on its own there.
+ */
+export function ReturnNote() {
+  return (
+    <p className={styles.fieldHint}>
+      Real return: about 5% a year after inflation is what world stocks have returned over the very long
+      run, and many forecasts are lower. 6 to 7% is optimistic. Enter the rate your money compounds at, not the
+      simple average of yearly returns, which is higher by about a point for stocks. The plan takes out no fund
+      costs or tax, so enter the return after them.
+    </p>
   )
 }
 
@@ -80,14 +110,6 @@ export function PortfolioFields({ draft, onChange, omit = NO_LEVERS, wrap = plai
       {omit.has('monthlyContributionCents') ? null : (
         <MonthlyInvestingField draft={draft} onChange={onChange} wrap={wrap} />
       )}
-      {omit.has('annualContributionGrowth') ? null : (
-        wrap('annualContributionGrowth', <PercentField
-          label={L.annualContributionGrowth.label}
-          value={draft.annualContributionGrowth}
-          max={L.annualContributionGrowth.max ?? 0.1}
-          onChange={(v) => onChange({ annualContributionGrowth: v })}
-        />)
-      )}
       {omit.has('expectedRealReturn') ? null : (
         wrap('expectedRealReturn', <PercentField
           label={L.expectedRealReturn.label}
@@ -96,6 +118,7 @@ export function PortfolioFields({ draft, onChange, omit = NO_LEVERS, wrap = plai
           onChange={(v) => onChange({ expectedRealReturn: v })}
         />)
       )}
+      <ReturnNote />
       {omit.has('horizonYears') ? null : (
         wrap('horizonYears', <NumberField
           label={L.horizonYears.label}
@@ -109,7 +132,20 @@ export function PortfolioFields({ draft, onChange, omit = NO_LEVERS, wrap = plai
   )
 }
 
+/**
+ * How high the down payment goes. A house owned from the first day holds, as its down payment, the share
+ * that is no longer owed, which a re-baseline can work out above half, so the field has room for it.
+ */
+function downPaymentMax(draft: Pick<NewGoalScenario, 'housePurchaseYear'>): number {
+  return draft.housePurchaseYear === 0 ? 1 : (L.downPaymentFraction.max ?? 0.5)
+}
+
 function PurchaseCostFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: SectionProps) {
+  // Worked out from the draft and said nowhere else, so it stays when the price is in the bar.
+  const inflationRate = useAssumedInflation()
+  const format = useMoneyFormat()
+  const priceHint = housePriceHint(draft, inflationRate, format)
+  const feesHint = feesMoneyHint(draft, inflationRate, format)
   return (
     <>
       {omit.has('housePriceCents') ? null : (
@@ -119,11 +155,12 @@ function PurchaseCostFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }:
           onChange={(v) => onChange({ housePriceCents: v })}
         />)
       )}
+      {priceHint ? <p className={styles.fieldHint}>{priceHint}</p> : null}
       {omit.has('downPaymentFraction') ? null : (
         wrap('downPaymentFraction', <PercentField
           label={L.downPaymentFraction.label}
           value={draft.downPaymentFraction}
-          max={L.downPaymentFraction.max ?? 0.5}
+          max={downPaymentMax(draft)}
           onChange={(v) => onChange({ downPaymentFraction: v })}
         />)
       )}
@@ -138,6 +175,7 @@ function PurchaseCostFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }:
             Notary, agency, and closing costs withdrawn with the down payment in the purchase
             year.
           </p>
+          {feesHint ? <p className={styles.fieldHint}>{feesHint}</p> : null}
         </>
       )}
     </>
@@ -145,6 +183,7 @@ function PurchaseCostFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }:
 }
 
 function MortgageFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: SectionProps) {
+  const format = useMoneyFormat()
   // The note is about both rates, so it stays while either is on the page. With only one starred
   // it would otherwise go with it and leave the other with no word on what it means.
   const explainsRates = !omit.has('mortgageRateAnnual') || !omit.has('houseAppreciationRate')
@@ -162,6 +201,7 @@ function MortgageFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: Sec
         wrap('mortgageTermYears', <NumberField
           label={L.mortgageTermYears.label}
           value={draft.mortgageTermYears}
+          decimals={2}
           min={L.mortgageTermYears.min ?? 1}
           max={L.mortgageTermYears.max ?? 40}
           onChange={(v) => onChange({ mortgageTermYears: v })}
@@ -178,10 +218,32 @@ function MortgageFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: Sec
       {explainsRates ? (
         <p className={styles.fieldHint}>
           The mortgage rate and house appreciation are nominal, as a bank and the price index
-          quote them. The plan takes inflation off both, so the house and the debt are in
-          today&apos;s money like everything else.
+          quote them. The plan takes inflation off both, so the house and the debt are in{' '}
+          {planMoneyLabel(draft.planStartDate, format)}, like the plan.
         </p>
       ) : null}
+    </>
+  )
+}
+
+/**
+ * What owning the house costs a year beyond the mortgage. Not an input of the plan's own line: Rent vs
+ * buy counts it against the buyer, so it is always shown, with or without a purchase planned, and it
+ * has no star since it is not one of the inputs that can sit in the bar.
+ */
+function HomeCarryField({ draft, onChange }: Pick<SectionProps, 'draft' | 'onChange'>) {
+  return (
+    <>
+      <PercentField
+        label="Upkeep, tax and insurance (%/yr)"
+        value={draft.homeCarryRate}
+        max={0.1}
+        onChange={(v) => onChange({ homeCarryRate: v })}
+      />
+      <p className={styles.fieldHint}>
+        What owning costs a year beyond the mortgage, as a share of the house&apos;s value: repairs, property tax
+        and insurance. Rent vs buy counts it against buying. 1 to 2% is usual.
+      </p>
     </>
   )
 }
@@ -191,7 +253,9 @@ function PurchaseTimingFields({ draft, onChange, omit = NO_LEVERS, wrap = plain 
   // What the purchase takes from the portfolio is worked out from the draft, not from the year's
   // field, so it is still said while the year is in the levers bar, where it is the one place
   // the figure is.
-  const purchaseHint = purchaseSummary(draft, format)
+  const inflationRate = useAssumedInflation()
+  const purchaseHint = purchaseSummary(draft, inflationRate, format)
+  const rentHint = rentMoneyHint(draft, inflationRate, format)
   return (
     <>
       {omit.has('housePurchaseYear') ? null : (
@@ -212,6 +276,8 @@ function PurchaseTimingFields({ draft, onChange, omit = NO_LEVERS, wrap = plain 
           onChange={(v) => onChange({ rentMonthlyCents: v })}
         />)
       )}
+      {rentHint ? <p className={styles.fieldHint}>{rentHint}</p> : null}
+      <HomeCarryField draft={draft} onChange={onChange} />
     </>
   )
 }
@@ -229,6 +295,7 @@ export function HousingFields(props: SectionProps) {
 export function FireFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: SectionProps) {
   // The formula is about both inputs, so it stays while either is on the page.
   const explainsTarget = !omit.has('annualSpendCents') || !omit.has('safeWithdrawalRate')
+  const spendHint = spendMoneyHint(draft, useAssumedInflation(), useMoneyFormat())
   return (
     <>
       <p className={styles.fieldHint}>
@@ -243,10 +310,13 @@ export function FireFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: 
             onChange={(v) => onChange({ annualSpendCents: v })}
           />)}
           <p className={styles.fieldHint}>
-            Yearly cost of living you would need the portfolio to cover after FI (within the horizon).
+            Yearly cost of living you would need the portfolio to cover after FI (within the horizon). Add the tax
+            on what you withdraw: the plan does not.
           </p>
+          {spendHint ? <p className={`${styles.fieldHint} ${styles.fieldHintReserve}`}>{spendHint}</p> : null}
         </>
       )}
+      <RetirementYearsField draft={draft} onChange={onChange} />
       {omit.has('safeWithdrawalRate') ? null : (
         wrap('safeWithdrawalRate', <PercentField
           label={L.safeWithdrawalRate.label}
@@ -275,6 +345,7 @@ interface TrackingProps {
 
 export function TrackingFields({ draft, latest, onChange }: TrackingProps) {
   const format = useMoneyFormat()
+  const inflationRate = useAssumedInflation()
   // What the last re-baseline moved, so a dropped event is not found out at Save. Kept with
   // the values it left in the draft: once the draft no longer holds them (Discard, another
   // scenario loaded) the note describes something that is not there and goes away.
@@ -292,7 +363,7 @@ export function TrackingFields({ draft, latest, onChange }: TrackingProps) {
       ? rebaselined.lines
       : null
   const rebaselineHint = latest
-    ? `Sets the starting balance to ${formatCents(latest.investedCents, format)} and the start date to ${formatCheckinDate(latest.date)}, your latest check-in. From then on ahead or behind measures only what you did after that date, which is the reset to reach for after a one-off inflow, or when the plan was made from a guess.`
+    ? `Sets the starting balance to ${formatCents(latest.investedCents, format)} and the start date to ${formatCheckinDate(latest.date)}, your latest check-in. From then on ahead or behind starts again from zero at that date, so it shows what you invest and how markets do from there. It is the reset to reach for after a one-off inflow, or when the plan was made from a guess.`
     : 'Log a wealth check-in first; re-baselining sets the starting balance and start date from it.'
   return (
     <>
@@ -309,7 +380,7 @@ export function TrackingFields({ draft, latest, onChange }: TrackingProps) {
           disabled={!latest}
           onClick={() => {
             if (!latest) return
-            const next = rebaseline(draft, latest)
+            const next = rebaseline(draft, latest, inflationRate)
             onChange(next.patch)
             const lines = rebaselineSummary(next, format, formatCheckinDate)
             setRebaselined(
@@ -341,19 +412,21 @@ export function TrackingFields({ draft, latest, onChange }: TrackingProps) {
   )
 }
 
-export function ChangesFields({ draft, onChange }: Pick<SectionProps, 'draft' | 'onChange'>) {
+export function ChangesFields({ draft, onChange, omit = NO_LEVERS }: Pick<SectionProps, 'draft' | 'onChange' | 'omit'>) {
   const format = useMoneyFormat()
+  const example = monthlyAmountMoneyHint(draft, useAssumedInflation(), format)
   return (
     <>
       <p className={styles.fieldHint}>
-        What you invest each month, from a month on. Before the first change the scenario is exactly as it is.
-        After one, the monthly amount is the one you give, so a pause is a change to nothing.
+        What you send to your investments each month: the amount you start with, then each change from a month
+        on. It is counted in {planMoneyLabel(draft.planStartDate, format)} at the assumed inflation, so an amount that stays the same counts for
+        less each year.{example ? ` ${example}` : ''} Enter 0 for a pause.
       </p>
       <ContributionStepsList
         steps={draft.contributionSchedule ?? []}
         planStartDate={draft.planStartDate}
         baseCents={draft.monthlyContributionCents}
-        growth={draft.annualContributionGrowth}
+        startSetIn={omit.has('monthlyContributionCents') ? 'the bar above' : 'Portfolio'}
         format={format}
         onChange={(steps) => onChange({ contributionSchedule: steps })}
       />
@@ -363,15 +436,19 @@ export function ChangesFields({ draft, onChange }: Pick<SectionProps, 'draft' | 
 
 export function EventsFields({ draft, onChange }: Pick<SectionProps, 'draft' | 'onChange'>) {
   const format = useMoneyFormat()
+  const inflationRate = useAssumedInflation()
   return (
     <>
       <p className={styles.fieldHint}>
         One-off cash events (bonuses, inheritances, large purchases) applied to the portfolio in a
-        specific projection year. Shown as diamond markers on the chart.
+        specific projection year. Shown as diamond markers on the chart. Amounts are counted in{' '}
+        {planMoneyLabel(draft.planStartDate, format)}, like the rest of the plan.
       </p>
       <LifeEventsList
         events={draft.lifeEvents ?? []}
         horizonYears={draft.horizonYears}
+        planStartDate={draft.planStartDate}
+        inflationRate={inflationRate}
         format={format}
         onChange={(events) => onChange({ lifeEvents: events })}
       />

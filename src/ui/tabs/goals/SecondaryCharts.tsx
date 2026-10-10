@@ -8,6 +8,8 @@ import { CompositionChart } from './charts/CompositionChart'
 import { MilestoneMatrix } from './charts/MilestoneMatrix'
 import { FireChart } from './charts/FireChart'
 import { RentVsOwnChart } from './charts/RentVsOwnChart'
+import { LazySpreadChart } from './charts/LazySpreadChart'
+import { preloadSpreadChart } from './charts/spreadChartLoader'
 import { SavingsRateChart } from './charts/SavingsRateChart'
 import type { MonthlyFlow, PlanFromToday } from '../../../engine'
 import styles from './goals.module.css'
@@ -19,6 +21,7 @@ const VIEWS = [
   { value: 'fire', label: 'FI' },
   { value: 'rent', label: 'Rent vs buy' },
   { value: 'savings', label: 'Investing' },
+  { value: 'spread', label: 'Spread' },
 ] as const
 
 type SecondaryView = (typeof VIEWS)[number]['value']
@@ -50,6 +53,8 @@ function useScrollEdges() {
   return { ref, ...edges }
 }
 
+const PRELOAD_DELAY_MS = 1_500
+
 interface SecondaryChartsProps {
   scenarios: GoalScenario[]
   draft: NewGoalScenario
@@ -65,6 +70,8 @@ interface SecondaryChartsProps {
   dirty: boolean
   /** The plan restarted from the latest check-in, for the tables that list scenarios. */
   fromToday: PlanFromToday | null
+  /** The Nominal view: the spread is drawn in the money of each year, as the main chart is. */
+  nominal?: boolean
 }
 
 function SecondaryViewChart({
@@ -76,6 +83,7 @@ function SecondaryViewChart({
   reached,
   includeDraft,
   fromToday,
+  nominal,
 }: {
   view: SecondaryView
   scenarios: GoalScenario[]
@@ -85,6 +93,7 @@ function SecondaryViewChart({
   reached: Map<number, string>
   includeDraft: boolean
   fromToday: PlanFromToday | null
+  nominal: boolean
 }) {
   switch (view) {
     case 'compare':
@@ -109,6 +118,8 @@ function SecondaryViewChart({
       return <RentVsOwnChart draft={draft} embedded />
     case 'savings':
       return <SavingsRateChart draft={draft} monthly={monthly} embedded />
+    case 'spread':
+      return <LazySpreadChart draft={draft} milestones={milestones} nominal={nominal} embedded />
   }
 }
 
@@ -211,9 +222,15 @@ export function SecondaryCharts({
   activeId,
   dirty,
   fromToday,
+  nominal = false,
 }: SecondaryChartsProps) {
   const [view, setView] = useState<SecondaryView>('compare')
   const includeDraft = activeId === null || dirty
+  // After the page has settled, so it does not compete with what the reader is looking at.
+  useEffect(() => {
+    const timer = setTimeout(preloadSpreadChart, PRELOAD_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [])
 
   return (
     <TabbedChart view={view} onViewChange={setView}>
@@ -226,6 +243,7 @@ export function SecondaryCharts({
         reached={reached}
         includeDraft={includeDraft}
         fromToday={fromToday}
+        nominal={nominal}
       />
     </TabbedChart>
   )

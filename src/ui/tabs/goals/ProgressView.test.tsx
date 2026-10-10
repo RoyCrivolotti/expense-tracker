@@ -50,7 +50,7 @@ describe('ProgressView', () => {
     expect(screen.queryByText('Milestones')).not.toBeInTheDocument()
   })
 
-  it('hands the steady-gap button to the tab, which owns the plan and its draft', () => {
+  it('hands the re-baseline button to the tab, which owns the plan and its draft', () => {
     const actions = makeActions()
     const onRebaseline = vi.fn()
     const plan = makeScenario({ id: 7, isActive: true, planStartDate: '2025-01-01' })

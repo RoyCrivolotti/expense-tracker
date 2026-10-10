@@ -6,8 +6,10 @@ import type {
   Milestone,
 } from '../domain/types'
 import { assumedInflationError } from '../domain/engine/assumedInflation'
+import { marketVolatilityError } from '../domain/engine/marketVolatility'
 import { leversError } from '../domain/engine/goalLevers'
 import { normalizeMilestones, validateMilestones } from '../domain/engine/milestones'
+import { DEFAULT_HOME_CARRY_RATE, DEFAULT_RETIREMENT_YEARS } from '../domain/engine/projectionConstants'
 import type {
   DeleteAccountOptions,
   DeleteAccountResult,
@@ -384,6 +386,7 @@ const SETTINGS_COLUMNS: ColumnMap<ExpenseSettings> = {
   milestones: 'milestones',
   cashReserveMonths: 'cash_reserve_months',
   assumedInflation: 'assumed_inflation',
+  marketVolatility: 'market_volatility',
   goalLevers: 'goal_levers',
 }
 const NULLABLE_SETTINGS = new Set<keyof ExpenseSettings>([
@@ -396,6 +399,7 @@ const NULLABLE_SETTINGS = new Set<keyof ExpenseSettings>([
   'milestones',
   'cashReserveMonths',
   'assumedInflation',
+  'marketVolatility',
   'goalLevers',
 ])
 /** Five years of spending in cash is already absurd; past it the number is a typo. */
@@ -408,7 +412,7 @@ const coerceSettings: Coerce<ExpenseSettings> = (key, value) => {
   return NULLABLE_SETTINGS.has(key) ? (value ?? null) : (value ?? 0)
 }
 
-/** The Goals tab's own settings: the cash reserve target, the assumed inflation and the bar's inputs. */
+/** The Goals tab's own settings: the cash reserve target, the assumed inflation, the market's bounce and the bar's inputs. */
 function assertGoalsSettings(patch: Partial<ExpenseSettings>): void {
   if (
     patch.cashReserveMonths !== undefined &&
@@ -420,6 +424,10 @@ function assertGoalsSettings(patch: Partial<ExpenseSettings>): void {
   }
   if (patch.assumedInflation !== undefined) {
     const error = assumedInflationError(patch.assumedInflation)
+    if (error) throw new HttpError(400, error)
+  }
+  if (patch.marketVolatility !== undefined) {
+    const error = marketVolatilityError(patch.marketVolatility)
     if (error) throw new HttpError(400, error)
   }
   if (patch.goalLevers !== undefined) {
@@ -472,7 +480,6 @@ const SCENARIO_COLUMNS: ColumnMap<NewGoalScenario> = {
   sortOrder: 'sort_order',
   startInvestedCents: 'start_invested_cents',
   monthlyContributionCents: 'monthly_contribution_cents',
-  annualContributionGrowth: 'annual_contribution_growth',
   expectedRealReturn: 'expected_real_return',
   horizonYears: 'horizon_years',
   housePriceCents: 'house_price_cents',
@@ -488,6 +495,8 @@ const SCENARIO_COLUMNS: ColumnMap<NewGoalScenario> = {
   planStartDate: 'plan_start_date',
   lifeEvents: 'life_events',
   contributionSchedule: 'contribution_schedule',
+  homeCarryRate: 'home_carry_rate',
+  retirementYears: 'retirement_years',
 }
 
 const coerceScenario: Coerce<NewGoalScenario> = (k, v) => {
@@ -504,14 +513,14 @@ export async function createScenario(
   const row = await env.DB.prepare(
     `INSERT INTO goal_scenarios (
        owner, name, color, sort_order,
-       start_invested_cents, monthly_contribution_cents, annual_contribution_growth,
+       start_invested_cents, monthly_contribution_cents,
        expected_real_return, horizon_years,
        house_price_cents, down_payment_fraction, house_purchase_year, transaction_costs_cents,
        mortgage_term_years, mortgage_rate_annual, house_appreciation_rate,
        rent_monthly_cents, annual_spend_cents, safe_withdrawal_rate, life_events,
-       contribution_schedule, plan_start_date, is_active
+       contribution_schedule, home_carry_rate, retirement_years, plan_start_date, is_active
      ) VALUES (
-       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
        CASE WHEN EXISTS (SELECT 1 FROM goal_scenarios WHERE owner = ? AND is_active = 1)
          THEN 0 ELSE 1 END
      )
@@ -524,7 +533,6 @@ export async function createScenario(
       input.sortOrder,
       input.startInvestedCents,
       input.monthlyContributionCents,
-      input.annualContributionGrowth,
       input.expectedRealReturn,
       input.horizonYears,
       input.housePriceCents,
@@ -539,6 +547,9 @@ export async function createScenario(
       input.safeWithdrawalRate,
       JSON.stringify(input.lifeEvents ?? []),
       JSON.stringify(input.contributionSchedule ?? []),
+      // A client that predates the field posts without it, and the column has no NULL.
+      input.homeCarryRate ?? DEFAULT_HOME_CARRY_RATE,
+      input.retirementYears ?? DEFAULT_RETIREMENT_YEARS,
       // No DEFAULT on this column, and trackStatus() returns null without it — a
       // scenario missing it silently loses its on/off-track badge and chart markers.
       input.planStartDate ?? null,

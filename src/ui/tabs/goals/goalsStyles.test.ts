@@ -31,10 +31,25 @@ describe('goals styles', () => {
   it.each([
     ['components/SegmentedControl.module.css', '.active'],
     ['tabs/goals/goals.module.css', '.chipActive'],
+    ['tabs/tabs.module.css', '.presetChipOn'],
   ])('gives %s %s a border in forced colours, where its fill is replaced', (file, selector) => {
     const forced = /@media \(forced-colors: active\) \{([\s\S]*?)\n\}/.exec(stylesheet(file))?.[1] ?? ''
 
     expect(forced).toMatch(new RegExp(`\\${selector}\\s*\\{[^}]*border:\\s*2px solid Highlight`))
+  })
+
+  it('draws the amounts in the gap split in the success and danger colours', () => {
+    const progress = rules('tabs/goals/progress.module.css')
+    const colour = (selector: string) => /(?:^|;|\s)color:\s*([^;]+);/.exec(progress.find((r) => r.selector === selector)?.body ?? '')?.[1]?.trim()
+
+    expect(colour('.gapAmountUp')).toBe('var(--exp-success)')
+    expect(colour('.gapAmountDown')).toBe('var(--exp-danger)')
+  })
+
+  it('lets a row of the gap split wrap, so an amount keeps its width at large text and stays inside its box', () => {
+    const row = rules('tabs/goals/progress.module.css').find((r) => r.selector === '.gapRow')
+
+    expect(row?.body).toMatch(/flex-wrap:\s*wrap/)
   })
 
   it('lets a segment of the tall bar reach across the bar, which its own overflow would clip', () => {
@@ -46,11 +61,37 @@ describe('goals styles', () => {
     expect(reach?.body).toMatch(/position:\s*absolute/)
   })
 
+  it('draws the amounts in the monthly-investing list in the success and danger colours', () => {
+    const goals = rules('tabs/goals/goals.module.css')
+    const colour = (selector: string) => /(?:^|;|\s)color:\s*([^;]+);/.exec(goals.find((r) => r.selector === selector)?.body ?? '')?.[1]?.trim()
+
+    expect(colour('.lifeEventInflow')).toBe('var(--exp-success)')
+    expect(colour('.lifeEventOutflow')).toBe('var(--exp-danger)')
+  })
+
   it('extends the tap area of the section chips and the buttons beside them past their painted edges', () => {
     const css = stylesheet('tabs/goals/goals.module.css')
 
     expect(css).toContain('.sectionChips .chip::before')
     expect(css).toContain('.unsavedActions .btn::before')
+  })
+
+  it('never cuts the month a change in the monthly investing starts in, which is the point of its line: the row wraps instead', () => {
+    const all = rules('tabs/goals/goals.module.css')
+    const label = all.find((r) => r.selector === '.lifeEventStepLabel')
+    const row = all.find((r) => r.selector === '.lifeEventRow')
+
+    expect(label?.body).toMatch(/flex:\s*1 0 auto/)
+    expect(label?.body).not.toMatch(/overflow:\s*hidden|text-overflow/)
+    expect(row?.body).toMatch(/flex-wrap:\s*wrap/)
+  })
+
+  it('keeps Edit and the remove cross of a change together on one line when the row wraps', () => {
+    const buttons = rules('tabs/goals/goals.module.css').find((r) => r.selector === '.lifeEventRowButtons')
+
+    expect(buttons?.body).toMatch(/display:\s*inline-flex/)
+    expect(buttons?.body).toMatch(/flex-shrink:\s*0/)
+    expect(buttons?.body).toMatch(/white-space:\s*nowrap/)
   })
 
   it('ends the chip strip with room as wide as the fade that Save and Discard bring, and keeps focus out of it', () => {
@@ -60,6 +101,12 @@ describe('goals styles', () => {
 
     expect(spacer?.body).toMatch(/width:\s*var\(--strip-fade\)/)
     expect(strip?.body).toMatch(/scroll-padding-inline-end:\s*var\(--strip-fade\)/)
+  })
+
+  it('keeps the stepper under the spending where it is when the line above it grows from two lines to three, on a phone', () => {
+    const css = stylesheet('tabs/goals/goals.module.css')
+
+    expect(css).toMatch(/@media \(max-width: \d+px\) \{[^@]*\.fieldHintReserve\s*\{[^}]*min-height:\s*calc\(3 \* 1\.4em\)/)
   })
 })
 
@@ -261,7 +308,17 @@ describe('the inputs panel on a touch screen', () => {
 
     expect(sized?.body).toMatch(/min-height:\s*2\.75rem/)
     expect(rule('.stack .lifeEventRemove')).toMatch(/min-width:\s*2\.75rem/)
+    expect(rule('.stack .lifeEventEdit')).toMatch(/min-width:\s*2\.75rem/)
     expect(goals.outside).not.toMatch(/lifeEventRemove[^}]*min-height:\s*2\.75rem/)
+    expect(goals.outside).not.toMatch(/lifeEventEdit[^}]*min-height:\s*2\.75rem/)
+  })
+
+  it('gives Edit and the remove cross of a change at least a 24px target on any screen, which is what WCAG 2.2 asks of a target', () => {
+    for (const name of ['lifeEventRemove', 'lifeEventEdit']) {
+      const base = goals.outside.match(new RegExp(`\\.${name}\\s*\\{([^}]*)\\}`))?.[1] ?? ''
+      expect(base, name).toMatch(/min-width:\s*1\.5rem/)
+      expect(base, name).toMatch(/min-height:\s*1\.5rem/)
+    }
   })
 })
 

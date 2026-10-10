@@ -6,6 +6,7 @@ import {
   ChartTodayMarker,
   ChartPurchaseMarkers,
   ChartLifeEventMarkers,
+  ChartLabeledMarkers,
   ChartFocusIndicator,
 } from './linearChartParts'
 
@@ -248,5 +249,90 @@ describe('ChartFocusIndicator', () => {
     expect(circles).toHaveLength(1)
     expect(circles[0]!.getAttribute('cy')).toBe(String(scaleY(300)))
     expect(svg.querySelector('line')).not.toBeNull()
+  })
+})
+
+describe('ChartLabeledMarkers', () => {
+  const place = { xForIndex, yTop: 10, innerH: 100, left: 0, right: 200 }
+
+  it('draws a dashed line the height of the plot and a label beside it, for each marker', () => {
+    const svg = renderInSvg(
+      <ChartLabeledMarkers {...place} markers={[{ index: 5, label: 'Loan paid off' }]} />,
+    )
+    const line = svg.querySelector('line')!
+    expect(line.getAttribute('x1')).toBe('50')
+    expect(line.getAttribute('y1')).toBe('10')
+    expect(line.getAttribute('y2')).toBe('110')
+    const text = svg.querySelector('text')!
+    expect(text.textContent).toBe('Loan paid off')
+    expect(Number(text.getAttribute('x'))).toBeGreaterThan(50)
+    expect(text.getAttribute('text-anchor')).toBe('start')
+  })
+
+  it('puts a label that would run off the right edge on the left of its line', () => {
+    const svg = renderInSvg(
+      <ChartLabeledMarkers {...place} markers={[{ index: 19, label: 'Loan paid off' }]} />,
+    )
+    const text = svg.querySelector('text')!
+    expect(text.getAttribute('text-anchor')).toBe('end')
+    expect(Number(text.getAttribute('x'))).toBeLessThan(190)
+  })
+
+  it('puts a label that would run into the one before it on a second row', () => {
+    const svg = renderInSvg(
+      <ChartLabeledMarkers
+        {...place}
+        right={400}
+        markers={[
+          { index: 4, label: 'Owning costs less than renting' },
+          { index: 6, label: 'Loan paid off' },
+        ]}
+      />,
+    )
+    const [first, second] = [...svg.querySelectorAll('text')]
+    expect(Number(second!.getAttribute('y'))).toBeGreaterThan(Number(first!.getAttribute('y')))
+  })
+
+  it('keeps two labels that are far apart on one row', () => {
+    const svg = renderInSvg(
+      <ChartLabeledMarkers
+        {...place}
+        right={400}
+        markers={[
+          { index: 1, label: 'Loan paid off' },
+          { index: 12, label: 'Owning costs less than renting' },
+        ]}
+      />,
+    )
+    const [first, second] = [...svg.querySelectorAll('text')]
+    expect(second!.getAttribute('y')).toBe(first!.getAttribute('y'))
+  })
+
+  it('draws nothing without markers', () => {
+    expect(renderInSvg(<ChartLabeledMarkers {...place} markers={undefined} />).querySelector('line')).toBeNull()
+    expect(renderInSvg(<ChartLabeledMarkers {...place} markers={[]} />).querySelector('text')).toBeNull()
+  })
+
+  it('leaves the lines to the pointer and the label to the reader of the chart', () => {
+    const svg = renderInSvg(<ChartLabeledMarkers {...place} markers={[{ index: 5, label: 'Loan paid off' }]} />)
+    expect(svg.querySelector('line')!.getAttribute('aria-hidden')).toBe('true')
+    expect(svg.querySelector('text')!.getAttribute('aria-hidden')).toBeNull()
+  })
+
+  it('keeps a label that fits on neither side of its line inside the plot, from its left edge', () => {
+    const svg = renderInSvg(
+      <ChartLabeledMarkers {...place} left={56} right={200} markers={[{ index: 10, label: 'Owning costs less than renting' }]} />,
+    )
+    const text = svg.querySelector('text')!
+    expect(text.getAttribute('text-anchor')).toBe('start')
+    expect(Number(text.getAttribute('x'))).toBeGreaterThanOrEqual(56)
+  })
+
+  it('gives a marker the long form of its label as a title', () => {
+    const svg = renderInSvg(
+      <ChartLabeledMarkers {...place} markers={[{ index: 5, label: 'Loan paid off', title: 'The loan is paid off here.' }]} />,
+    )
+    expect(svg.querySelector('title')!.textContent).toBe('The loan is paid off here.')
+    expect(renderInSvg(<ChartLabeledMarkers {...place} markers={[{ index: 5, label: 'Loan paid off' }]} />).querySelector('title')).toBeNull()
   })
 })

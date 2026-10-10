@@ -123,26 +123,15 @@ describe('scheduleSteps', () => {
 describe('monthlyCentsAt', () => {
   const steps = scheduleSteps('2026-01-01', [{ from: '2027-01', monthlyCents: X }])
 
-  it('is the base grown by whole years before any step, as it always was', () => {
-    expect(monthlyCentsAt(B, 0.1, [], 0)).toBe(B)
-    expect(monthlyCentsAt(B, 0.1, [], 0.99)).toBe(B)
-    expect(monthlyCentsAt(B, 0.1, [], 1)).toBeCloseTo(B * 1.1, 6)
-    expect(monthlyCentsAt(B, 0.1, [], 2.5)).toBeCloseTo(B * 1.21, 6)
+  it('is the base before any step', () => {
+    expect(monthlyCentsAt(B, [], 0)).toBe(B)
+    expect(monthlyCentsAt(B, [], 7.5)).toBe(B)
   })
 
-  it('is exactly the step from its month, and grows from there, not from the plan start', () => {
-    expect(monthlyCentsAt(B, 0.1, steps, 0.99)).toBeCloseTo(B, 6)
-    expect(monthlyCentsAt(B, 0.1, steps, 1)).toBe(X)
-    expect(monthlyCentsAt(B, 0.1, steps, 1.99)).toBe(X)
-    expect(monthlyCentsAt(B, 0.1, steps, 2)).toBeCloseTo(X * 1.1, 6)
-    expect(monthlyCentsAt(B, 0.1, steps, 3.5)).toBeCloseTo(X * 1.21, 6)
-  })
-
-  it('anchors growth to a step that is part way through the year', () => {
-    const mid = scheduleSteps('2026-01-01', [{ from: '2026-07', monthlyCents: X }])
-    const at = mid[0]!.offsetYears
-    expect(monthlyCentsAt(B, 0.1, mid, at + 0.99)).toBe(X)
-    expect(monthlyCentsAt(B, 0.1, mid, at + 1)).toBeCloseTo(X * 1.1, 6)
+  it('is exactly the step from its month, and stays there', () => {
+    expect(monthlyCentsAt(B, steps, 0.99)).toBe(B)
+    expect(monthlyCentsAt(B, steps, 1)).toBe(X)
+    expect(monthlyCentsAt(B, steps, 3.5)).toBe(X)
   })
 
   it('takes the latest step in force, and treats a step at or before the start as the starting amount', () => {
@@ -150,52 +139,50 @@ describe('monthlyCentsAt', () => {
       { from: '2027-01', monthlyCents: X },
       { from: '2028-01', monthlyCents: 3_000_00 },
     ])
-    expect(monthlyCentsAt(B, 0, two, 1.5)).toBe(X)
-    expect(monthlyCentsAt(B, 0, two, 2.5)).toBe(3_000_00)
+    expect(monthlyCentsAt(B, two, 1.5)).toBe(X)
+    expect(monthlyCentsAt(B, two, 2.5)).toBe(3_000_00)
 
     const before = scheduleSteps('2026-01-01', [{ from: '2025-06', monthlyCents: X }])
     expect(before[0]!.offsetYears).toBeLessThan(0)
-    expect(monthlyCentsAt(B, 0.1, before, 0)).toBe(X)
-    expect(monthlyCentsAt(B, 0.1, before, 1)).toBeCloseTo(X * 1.1, 6)
+    expect(monthlyCentsAt(B, before, 0)).toBe(X)
   })
 })
 
 describe('annualContributionCents', () => {
-  it('is twelve times the base grown by whole years with no steps, exactly as before', () => {
-    expect(annualContributionCents(B, 0, [], 0)).toBe(0)
-    expect(annualContributionCents(B, 0, [], 1)).toBe(12 * B)
-    expect(annualContributionCents(B, 0.05, [], 3)).toBe(Math.round(B * 12 * 1.05 ** 2))
+  it('is twelve times the base with no steps and no inflation', () => {
+    expect(annualContributionCents(B, [], 0, 0)).toBe(0)
+    expect(annualContributionCents(B, [], 1, 0)).toBe(12 * B)
+    expect(annualContributionCents(B, [], 3, 0)).toBe(12 * B)
   })
 
   it('does not change a year before the first step reaches it', () => {
     const steps = scheduleSteps('2026-01-01', [{ from: '2028-03', monthlyCents: X }])
-    expect(annualContributionCents(B, 0.05, steps, 1)).toBe(annualContributionCents(B, 0.05, [], 1))
-    expect(annualContributionCents(B, 0.05, steps, 2)).toBe(annualContributionCents(B, 0.05, [], 2))
+    expect(annualContributionCents(B, steps, 1, 0)).toBe(annualContributionCents(B, [], 1, 0))
+    expect(annualContributionCents(B, steps, 2, 0)).toBe(annualContributionCents(B, [], 2, 0))
   })
 
   it('switches at a year boundary: the old amount for the year before, the new one after', () => {
     const steps = scheduleSteps('2026-01-01', [{ from: '2027-01', monthlyCents: X }])
-    expect(annualContributionCents(B, 0, steps, 1)).toBe(12 * B)
-    expect(annualContributionCents(B, 0, steps, 2)).toBe(12 * X)
-    expect(annualContributionCents(B, 0, steps, 3)).toBe(12 * X)
+    expect(annualContributionCents(B, steps, 1, 0)).toBe(12 * B)
+    expect(annualContributionCents(B, steps, 2, 0)).toBe(12 * X)
+    expect(annualContributionCents(B, steps, 3, 0)).toBe(12 * X)
   })
 
   it('weights a step part way through a year by the share of the year each amount was in force', () => {
     // 1 March 2027 is 59 days into the second plan year of a plan that began on 1 January 2026.
     const steps = scheduleSteps('2026-01-01', [{ from: '2027-03', monthlyCents: X }])
     const early = 59 / 365
-    expect(annualContributionCents(B, 0, steps, 2)).toBe(Math.round(12 * (B * early + X * (1 - early))))
+    expect(annualContributionCents(B, steps, 2, 0)).toBe(Math.round(12 * (B * early + X * (1 - early))))
   })
 
-  it('grows a step on its own anniversaries, which can fall inside a plan year', () => {
-    // Step at offset 0.5; with 10% growth the new amount grows at 1.5, in the middle of year 2.
-    const steps = scheduleSteps('2026-01-01', [{ from: '2026-07', monthlyCents: X }])
-    const at = steps[0]!.offsetYears
-    expect(annualContributionCents(B, 0.1, steps, 1)).toBe(Math.round(12 * (B * at + X * (1 - at))))
-    // Year 2 spans offsets 1 to 2: X until the anniversary at `at + 1`, X * 1.1 after it.
-    const anniversary = at + 1
-    expect(annualContributionCents(B, 0.1, steps, 2)).toBe(
-      Math.round(12 * (X * (anniversary - 1) + X * 1.1 * (2 - anniversary))),
+  it('weights two steps in the same year by the days each was in force', () => {
+    const steps = scheduleSteps('2026-01-01', [
+      { from: '2027-03', monthlyCents: X },
+      { from: '2027-09', monthlyCents: 0 },
+    ])
+    const [first, second] = steps
+    expect(annualContributionCents(B, steps, 2, 0)).toBe(
+      Math.round(12 * (B * (first!.offsetYears - 1) + X * (second!.offsetYears - first!.offsetYears) + 0)),
     )
   })
 
@@ -204,8 +191,40 @@ describe('annualContributionCents', () => {
       { from: '2027-01', monthlyCents: 0 },
       { from: '2028-01', monthlyCents: X },
     ])
-    expect(annualContributionCents(B, 0, steps, 2)).toBe(0)
-    expect(annualContributionCents(B, 0, steps, 3)).toBe(12 * X)
+    expect(annualContributionCents(B, steps, 2, 0)).toBe(0)
+    expect(annualContributionCents(B, steps, 3, 0)).toBe(12 * X)
+  })
+  describe('with inflation, the amounts being euros as sent', () => {
+    const pi = 0.03
+
+    it('brings each year back to the money of the plan start, so a flat amount counts for less each year', () => {
+      const deflator = (year: number) => ((1 + pi) ** -(year - 1) - (1 + pi) ** -year) / Math.log(1 + pi)
+      for (const year of [1, 2, 10, 30]) {
+        expect(annualContributionCents(B, [], year, pi)).toBe(Math.round(12 * B * deflator(year)))
+      }
+      expect(annualContributionCents(B, [], 10, pi)).toBeLessThan(annualContributionCents(B, [], 1, pi))
+      expect(annualContributionCents(B, [], 1, pi)).toBeLessThan(12 * B)
+    })
+
+    it('agrees with discounting the twelve payments of a year one by one', () => {
+      for (const year of [1, 5, 20]) {
+        let months = 0
+        for (let i = 0; i < 12; i++) months += B / (1 + pi) ** (year - 1 + (i + 0.5) / 12)
+        expect(Math.abs(annualContributionCents(B, [], year, pi) - months) / months).toBeLessThan(1e-4)
+      }
+    })
+
+    it('discounts each amount of a year with a change in it by the days it was in force', () => {
+      const steps = scheduleSteps('2026-01-01', [{ from: '2027-03', monthlyCents: X }])
+      const at = steps[0]!.offsetYears
+      const k = Math.log(1 + pi)
+      const weight = (from: number, to: number) => ((1 + pi) ** -from - (1 + pi) ** -to) / k
+      expect(annualContributionCents(B, steps, 2, pi)).toBe(Math.round(12 * (B * weight(1, at) + X * weight(at, 2))))
+    })
+
+    it('is the plain amount when there is no inflation', () => {
+      expect(annualContributionCents(B, [], 7, 0)).toBe(12 * B)
+    })
   })
 })
 
@@ -214,7 +233,6 @@ describe('projecting with a schedule', () => {
   const plan = makeScenario({
     startInvestedCents: 50_000_00,
     monthlyContributionCents: B,
-    annualContributionGrowth: 0,
     expectedRealReturn: r,
     horizonYears: 10,
     housePurchaseYear: null,
@@ -222,7 +240,7 @@ describe('projecting with a schedule', () => {
     lifeEvents: [],
   })
   const invested = (s: ReturnType<typeof makeScenario>) =>
-    projectNetWorth(scenarioToParams(s, DEFAULT_INFLATION_RATE)).map((p) => p.investedCents)
+    projectNetWorth(scenarioToParams(s, 0)).map((p) => p.investedCents)
 
   it('is the plan as it was with no schedule, and with a schedule it cannot apply', () => {
     const base = invested(plan)
@@ -264,13 +282,8 @@ describe('projecting with a schedule', () => {
     expect(stepped[3]! - base[3]!).toBeCloseTo(extra3, -1)
   })
 
-  it('is unchanged by a step to the amount already in force, with or without growth', () => {
+  it('is unchanged by a step to the amount already in force', () => {
     expect(invested({ ...plan, contributionSchedule: [{ from: '2027-01', monthlyCents: B }] })).toEqual(invested(plan))
-    // With 10% growth the base is 1,100 from the start of year 2, which is where a step at that date would put it.
-    const growing = { ...plan, annualContributionGrowth: 0.1 }
-    expect(
-      invested({ ...growing, contributionSchedule: [{ from: '2027-01', monthlyCents: Math.round(B * 1.1) }] }),
-    ).toEqual(invested(growing))
   })
 
   it('stops investing for a pause, and leaves the portfolio to grow', () => {
@@ -290,7 +303,7 @@ describe('projecting with a schedule', () => {
 
   it('reports what each year contributed', () => {
     const points = projectNetWorth(
-      scenarioToParams({ ...plan, contributionSchedule: [{ from: '2027-01', monthlyCents: X }] }, DEFAULT_INFLATION_RATE),
+      scenarioToParams({ ...plan, contributionSchedule: [{ from: '2027-01', monthlyCents: X }] }, 0),
     )
     expect(points.map((p) => p.annualContributionCents).slice(0, 4)).toEqual([0, 12 * B, 12 * X, 12 * X])
   })
@@ -313,22 +326,17 @@ describe('what the plan invests on a date', () => {
   const plan = makeScenario({
     planStartDate: '2026-01-01',
     monthlyContributionCents: B,
-    annualContributionGrowth: 0.1,
     contributionSchedule: [
       { from: '2027-03', monthlyCents: X },
       { from: '2029-01', monthlyCents: 0 },
     ],
   })
 
-  it('is the base grown by whole years, then the change in force grown from its own month', () => {
+  it('is the base, then the change in force from the first of its month', () => {
     expect(plannedMonthlyAt(plan, '2026-01-01')).toBe(B)
-    expect(plannedMonthlyAt(plan, '2026-12-31')).toBe(B)
-    expect(plannedMonthlyAt(plan, '2027-01-01')).toBe(Math.round(B * 1.1))
-    // A change takes effect on the first of its month, at its own amount, not grown.
-    expect(plannedMonthlyAt(plan, '2027-02-28')).toBe(Math.round(B * 1.1))
+    expect(plannedMonthlyAt(plan, '2027-02-28')).toBe(B)
     expect(plannedMonthlyAt(plan, '2027-03-01')).toBe(X)
-    expect(plannedMonthlyAt(plan, '2028-02-28')).toBe(X)
-    expect(plannedMonthlyAt(plan, '2028-03-01')).toBe(Math.round(X * 1.1))
+    expect(plannedMonthlyAt(plan, '2028-12-31')).toBe(X)
     expect(plannedMonthlyAt(plan, '2029-01-01')).toBe(0)
   })
 
@@ -340,7 +348,7 @@ describe('what the plan invests on a date', () => {
   it('averages the months it is asked about, each read in its middle', () => {
     expect(plannedMonthlyAverage(plan, [])).toBe(0)
     expect(plannedMonthlyAverage(plan, ['2026-06'])).toBe(B)
-    expect(plannedMonthlyAverage(plan, ['2027-02', '2027-03'])).toBe(Math.round((Math.round(B * 1.1) + X) / 2))
+    expect(plannedMonthlyAverage(plan, ['2027-02', '2027-03'])).toBe(Math.round((B + X) / 2))
   })
 
   it('says what change is coming after a date', () => {

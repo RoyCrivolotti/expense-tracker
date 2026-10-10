@@ -4,20 +4,32 @@ import { milestoneLabelWithAmount } from '../../../../engine'
 import { useAssumedInflation } from '../../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { formatMoneyShort } from '../chartTheme'
+import { bothMoneys, bothMoneysTail } from '../bothMoneys'
 import { getNarrativeStats } from '../narrativeStats'
 import styles from './planDesktop.module.css'
 
 /**
- * Where the plan gets to, in a line under the hero's legend: the year it reaches financial
- * independence and the year it crosses the next milestone. These are what the phone's summary box
- * says besides the net worth, which on a wide screen is in the levers bar, beside the inputs that
- * move it, so the box would only say it twice. Nothing when the plan reaches neither.
+ * Where the plan gets to, in a line under the hero's legend: the net worth it ends at, in the plan's euros
+ * and on the account in that year (the levers bar beside the inputs has room for the first only), the year
+ * it reaches financial independence and the year it crosses the next milestone.
  */
 export function PlanStrip({ draft, milestones }: { draft: NewGoalScenario; milestones: Milestone[] }) {
   const format = useMoneyFormat()
   const inflationRate = useAssumedInflation()
-  const { next, fiYear } = getNarrativeStats(draft, milestones, inflationRate)
+  const { end, next, fiYear } = getNarrativeStats(draft, milestones, inflationRate)
+  const worth = bothMoneys({
+    cents: end?.netWorthCents ?? 0,
+    years: end?.year ?? 0,
+    planStartDate: draft.planStartDate,
+    inflationRate,
+    money: (cents) => formatMoneyShort(cents, format),
+    format,
+  })
   const items = [
+    {
+      label: `Net worth at year ${draft.horizonYears}`,
+      value: `${worth.plan} ${bothMoneysTail(worth)}`,
+    },
     fiYear != null ? { label: 'Financial independence', value: `Year ${fiYear}` } : null,
     next?.year != null
       ? {
@@ -26,7 +38,6 @@ export function PlanStrip({ draft, milestones }: { draft: NewGoalScenario; miles
         }
       : null,
   ].filter((item): item is { label: string; value: string } => item !== null)
-  if (items.length === 0) return null
   return (
     <p className={styles.planStrip}>
       {items.map((item) => (

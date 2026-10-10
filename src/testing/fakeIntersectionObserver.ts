@@ -37,6 +37,15 @@ export function installFakeIntersectionObserver() {
   return {
     observers,
     live,
+    /** One callback with several entries, oldest first, as a browser delivers them when a box left and came back between two frames. */
+    emitBatch(ratios: number[]) {
+      for (const o of live()) {
+        o.callback(
+          ratios.map((ratio) => ({ intersectionRatio: ratio, isIntersecting: ratio > 0, target: o.targets[0] }) as unknown as IntersectionObserverEntry),
+          {} as IntersectionObserver,
+        )
+      }
+    },
     emit(ratio: number, index?: number) {
       const targets = index === undefined ? live() : [live()[index]!]
       for (const o of targets) {

@@ -10,7 +10,9 @@
  * why Save is off for a scenario with no name (`ONLY=s2`),
  * how the milestone amount and the cash reserve read what is typed (`ONLY=settings-numbers`),
  * the hero chart full screen on a phone, upright and on its side (`ONLY=hero-sheet`),
- * and its readout floated over the chart and dragged about it (`ONLY=hero-sheet-float`).
+ * its readout floated over the chart and dragged about it (`ONLY=hero-sheet-float`),
+ * the spread card, across the page under the columns and with a table that fits at 200% text on a phone (`ONLY=spread-card`),
+ * and four layout faults of the later cards (`ONLY=layout-faults`).
  *
  * jsdom lays nothing out, so the unit tests cannot say any of this. It needs a browser and takes
  * a few minutes, so it is not part of `npm run verify`; CI runs it in its own job
@@ -358,7 +360,8 @@ async function checkEdit(page, where) {
   await page.waitForTimeout(300)
   check(where, '(j) Discard puts the lever back and clears the mark', (await monthly.inputValue()) === before && (await page.getByText('Unsaved changes').count()) === 0, `value ${await monthly.inputValue()}`)
 
-  const result = page.locator('[class*="leverResult"]')
+  // The figure only: the line under it (leverResultNote) has "leverResult" in its class too.
+  const result = page.locator('[class*="leverResult"]:not([class*="leverResultNote"])')
   const resultBefore = await result.textContent()
   const slider = page.getByRole('slider', { name: 'Real return (%/yr, after inflation)' })
   await slider.focus()
@@ -565,7 +568,10 @@ async function checkStability(page, where, held) {
   }
   if (shown) grew = (await geometry()).docHeight - c.docHeight
   check(where, '(r) the purchase breakdown shows at the purchase year', shown)
-  check(where, '(r) the breakdown takes no room from the page', shown && Math.abs(grew) <= 1, `page grew ${grew}px`)
+  // The legend rows and the note under the chart swap text when a year is pointed at, and in the fonts of a
+  // Linux runner the swap is 1,6px shorter (a line of 16,8px against one of 16,22px). The page height is a whole
+  // number of pixels, so that reads as 1 or 2 depending on where the rest of the page puts the fraction.
+  check(where, '(r) the breakdown takes no room from the page', shown && Math.abs(grew) <= 2, `page grew ${grew}px`)
   if (shown) {
     // It is under the chart, in the place the chart's note is when no year is pointed at, so it
     // covers neither the lines nor the axis labels.
@@ -1204,7 +1210,7 @@ async function checkTouchTargets(browser, engine) {
   await fine.page.waitForTimeout(400)
   const small = await fine.page.evaluate(() => {
     const h = (sel) => Math.round(document.querySelector(sel).getBoundingClientRect().height * 10) / 10
-    return { stepper: h('[aria-label^="Decrease "]'), field: h('[role="region"] input[type="text"]'), chip: Math.min(...[...document.querySelectorAll('[role="tablist"][aria-label="Scenarios"] > *')].map((c) => c.getBoundingClientRect().height)), range: h('input[type="range"]'), digits: h('[class*="leverValue"]') }
+    return { stepper: h('[aria-label^="Decrease "]'), field: h('[role="region"] input[aria-label="Mortgage rate (%/yr)"]'), chip: Math.min(...[...document.querySelectorAll('[role="tablist"][aria-label="Scenarios"] > *')].map((c) => c.getBoundingClientRect().height)), range: h('input[type="range"]'), digits: h('[class*="leverValue"]') }
   })
   check(`${engine} mouse`, '(t) with a fine pointer the controls keep their size (stepper 25.6, field 26, chip 44.6 (the row of the tagged chip), slider 16 or 17, digits row under 40)', near(small.stepper, 25.6, 0.7) && near(small.chip, 44.6, 1.5) && near(small.range, 16.5, 1) && near(small.field, 26, 0.5) && small.digits < 40, JSON.stringify(small))
   await fine.context.close()
@@ -1846,7 +1852,7 @@ const matrixCard = (page) => page.getByRole('heading', { name: 'Years to milesto
 async function lowDraft(page) {
   await page.getByRole('button', { name: 'All inputs' }).click()
   await page.waitForTimeout(400)
-  for (const [label, value] of [['Monthly investing', '150'], ['Starting invested', '5000']]) {
+  for (const [label, value] of [['Monthly investing', '180'], ['Starting invested', '5000']]) {
     const input = page.getByLabel(label, { exact: true }).last()
     await input.fill(value)
     await input.press('Enter')
@@ -1905,9 +1911,11 @@ async function checkMilestoneWide(browser, engine, screen, scheme) {
   if (screen.width >= 1280) check(where, '(w) all seven milestones fit the table without its own scroll', fit.scroll <= fit.client + 1, JSON.stringify(fit))
 
   const tints = await readTints(page)
-  const shallow = tints.find((t) => t.text === '6y')
-  const deep = tints.find((t) => t.text === '30y')
-  check(where, '(w) cells that are years away are tinted, deeper the further', tints.length >= 3 && shallow !== undefined && deep !== undefined && deep.alpha > shallow.alpha, JSON.stringify(tints))
+  // The nearest and the furthest cell shown, whatever years the plans reach their milestones in.
+  const byYears = tints.map((t) => ({ ...t, years: parseInt(t.text, 10) })).filter((t) => Number.isFinite(t.years)).sort((a, b) => a.years - b.years)
+  const shallow = byYears[0]
+  const deep = byYears[byYears.length - 1]
+  check(where, '(w) cells that are years away are tinted, deeper the further', tints.length >= 3 && shallow !== undefined && deep.years > shallow.years && deep.alpha > shallow.alpha, JSON.stringify(tints))
   const worst = Math.min(...tints.map((t) => t.contrast))
   check(where, '(w) the text on every tint keeps 4.5:1', tints.length >= 3 && worst >= 4.5, `worst ${worst.toFixed(2)}:1`)
   const hatched = await page.evaluate(() => [...document.querySelectorAll('[class*="matrixBeyond"]')].map((el) => ({ text: el.textContent, border: getComputedStyle(el).borderTopStyle })))
@@ -2269,7 +2277,7 @@ async function checkStarOverlap(browser, engine) {
       const bar = r.areas.filter((a) => !a.inPanel)
       // 23, not 24: the gap between two columns is 24px and a pixel is counted when its middle is inside it.
       const wide = screen.touch ? panel.filter((a) => a.w < 23 || a.h < 43) : panel.filter((a) => a.w < 23 || a.h < 23)
-      check(where, `(k2) every panel star keeps a tap area of at least 23px wide${screen.touch ? ' and 43px high' : ''} at ${label} (${panel.length} measured)`, panel.length >= 10 && wide.length === 0, JSON.stringify(wide))
+      check(where, `(k2) every panel star keeps a tap area of at least 23px wide${screen.touch ? ' and 43px high' : ''} at ${label} (${panel.length} measured)`, panel.length >= 9 && wide.length === 0, JSON.stringify(wide))
       const short = screen.touch ? bar.filter((a) => a.w < 40 || a.h < 43) : bar.filter((a) => a.w < 23 || a.h < 23)
       check(where, `(k2) every bar star keeps its tap area at ${label} (${bar.length} measured)`, bar.length >= 4 && short.length === 0, JSON.stringify(short))
     }
@@ -3374,6 +3382,197 @@ async function checkHeroSheetFloat(browser, engine) {
 }
 
 /**
+ * The spread card (check group sp). On a wide screen it is across the page under the two columns, not a fourth
+ * card in one of them (which left them 1.000px apart), and the columns end near each other. On a phone with the
+ * text at 200% its table scrolls inside the card, like the milestone table: it spilled out of the card, and the
+ * right-hand column was cut off at the page's edge with nothing to scroll to it.
+ */
+async function checkSpreadCard(browser, engine) {
+  const TITLE = 'How far luck could move the plan'
+  const TABLE = { name: 'When the runs first reach each amount' }
+  {
+    const { page, context } = await openPlan(browser, { width: 1280, height: 800 }, { scheme: 'light' })
+    const where = `${engine} wide 1280x800`
+    try {
+      await page.getByRole('heading', { name: TITLE }).scrollIntoViewIfNeeded()
+      await page.getByRole('table', TABLE).waitFor({ timeout: 15000 })
+      await settled(page)
+      const m = await page.evaluate((title) => {
+        const heading = (text) => [...document.querySelectorAll('h3')].find((h) => h.textContent === text)
+        const rect = (el) => el.getBoundingClientRect()
+        const cols = [...document.querySelectorAll('[class*="detailColumn"]')].map(rect)
+        const spread = rect(heading(title).closest('[class*="detailWide"]'))
+        const matrix = rect(heading('Years to milestone').closest('[class*="detailWide"]'))
+        return { spreadTop: spread.top, spreadWidth: spread.width, matrixWidth: matrix.width, colsBottom: cols.map((c) => c.bottom), cols: cols.length }
+      }, TITLE)
+      check(where, '(sp) the spread card is under both columns', m.cols === 2 && m.spreadTop >= Math.max(...m.colsBottom) - 1, JSON.stringify(m))
+      check(where, '(sp) it has the whole width the milestone table has', near(m.spreadWidth, m.matrixWidth, 2), JSON.stringify(m))
+      check(where, '(sp) the two columns end within 150px of each other', Math.abs(m.colsBottom[0] - m.colsBottom[1]) <= 150, JSON.stringify(m))
+    } catch (e) {
+      check(`${engine} sp spread card`, '(sp) the section ran', false, String(e instanceof Error ? e.message : e).split('\n')[0])
+    } finally {
+      await context.close()
+    }
+  }
+  for (const size of [{ name: '320x640', width: 320, height: 640 }, { name: '375x812', width: 375, height: 812 }]) {
+    const { page, context } = await openChartTab(browser, size)
+    const where = `${engine} phone ${size.name} text at 200%`
+    try {
+      await page.addStyleTag({ content: 'html { font-size: 200%; }' })
+      await page.getByRole('radio', { name: 'Spread', exact: true }).tap()
+      const table = page.getByRole('table', TABLE)
+      await table.waitFor({ timeout: 15000 })
+      await settled(page)
+      const m = await table.evaluate((el) => {
+        const card = el.closest('[class*="chartCard"]')
+        const region = el.closest('[role="region"]')
+        const box = card.getBoundingClientRect()
+        const style = getComputedStyle(card)
+        const r = region.getBoundingClientRect()
+        return {
+          regionRight: r.right,
+          cardInnerRight: box.right - parseFloat(style.paddingRight) - parseFloat(style.borderRightWidth),
+          regionTabIndex: region.tabIndex,
+          pageScrollWidth: document.documentElement.scrollWidth,
+          iw: window.innerWidth,
+        }
+      })
+      check(where, '(sp) the table is in a scroller that stays inside the card, not spilling out of it', m.regionRight <= m.cardInnerRight + 1, JSON.stringify(m))
+      check(where, '(sp) the scroller takes focus, so a keyboard can scroll to the right-hand column', m.regionTabIndex === 0, JSON.stringify(m))
+      check(where, '(sp) the page does not scroll sideways', m.pageScrollWidth <= m.iw, JSON.stringify(m))
+    } catch (e) {
+      check(`${engine} sp spread card`, '(sp) the section ran', false, String(e instanceof Error ? e.message : e).split('\n')[0])
+    } finally {
+      await context.close()
+    }
+  }
+}
+
+/**
+ * Four layout faults of the stack's later cards, each found with real text and a real pointer (check group ly):
+ * the month a change in the monthly investing starts in was cut to "from Ma..." beside its Edit button in a half
+ * column at 1024 to 1366px wide; the amounts in the gap split overflowed their box with the text at 200% on a
+ * 360px phone; the last chip of the Chart tab was focused with only a sliver of it on screen when arrowed to; and
+ * the stepper under the spending moved down a line away from a thumb when the figure above it gained a digit.
+ */
+async function checkLayoutFaults(browser, engine) {
+  // The amounts are the ones the second review found the cross stranded alone at: an ordinary one at 1280 and 1024, and a
+  // five-figure one where the row wraps at 1366.
+  for (const size of [
+    { name: '1280x800', width: 1280, height: 800, amount: '1250' },
+    { name: '1024x768', width: 1024, height: 768, amount: '2500' },
+    { name: '1366x768', width: 1366, height: 768, amount: '12500' },
+  ]) {
+    const { page, context } = await openPlan(browser, size, { scheme: 'light' })
+    const where = `${engine} wide ${size.name}`
+    try {
+      await page.getByRole('button', { name: 'All inputs' }).click()
+      await page.getByRole('region', { name: 'All inputs' }).waitFor()
+      await page.getByRole('button', { name: /Add a change/ }).click()
+      const amount = page.locator('input[aria-label^="Monthly amount from then"]').locator('visible=true').first()
+      await amount.fill(size.amount)
+      await amount.press('Tab')
+      await page.getByRole('button', { name: 'Add', exact: true }).click()
+      await settled(page)
+      const labels = await page.evaluate(() =>
+        [...document.querySelectorAll('[class*="lifeEventStepLabel"]')].map((el) => ({ text: el.textContent, scroll: el.scrollWidth, client: el.clientWidth })),
+      )
+      const cut = labels.filter((l) => l.scroll > l.client + 1)
+      check(where, '(ly) the month a change in the monthly investing starts in is not cut off', labels.length >= 2 && cut.length === 0, JSON.stringify(labels))
+      const apart = await page.evaluate(() =>
+        [...document.querySelectorAll('[class*="lifeEventRowButtons"]')].map((group) => {
+          const [edit, remove] = [...group.querySelectorAll('button')].map((b) => b.getBoundingClientRect())
+          return edit && remove ? Math.round(Math.abs(edit.top + edit.height / 2 - (remove.top + remove.height / 2))) : null
+        }),
+      )
+      check(where, '(ly) Edit and the remove cross of a change stay on one line', apart.length >= 1 && apart.every((n) => n !== null && n <= 4), `centres apart by ${apart.join(', ')}px`)
+    } catch (e) {
+      check(`${engine} ly layout faults`, '(ly) the section ran', false, String(e instanceof Error ? e.message : e).split('\n')[0])
+    } finally {
+      await context.close()
+    }
+  }
+
+  {
+    const size = { width: 360, height: 800 }
+    const context = await browser.newContext({ viewport: size, screen: size, deviceScaleFactor: 1, isMobile: true, hasTouch: true, colorScheme: 'light', reducedMotion: 'reduce' })
+    const page = await context.newPage()
+    try {
+      page.on('pageerror', (e) => failures.push(`page error: ${e.message}`))
+      await page.addInitScript(() => localStorage.setItem('exp-onboarding-skipped', '1'))
+      await page.goto(`${BASE}/`)
+      await page.waitForSelector('text=Recent activity', { timeout: 20000 })
+      await page.getByRole('button', { name: /Goals/ }).last().click()
+      await page.getByRole('tablist', { name: 'Goals view' }).waitFor({ timeout: 15000 })
+      await page.addStyleTag({ content: 'html { font-size: 200%; }' })
+      await page.getByRole('tab', { name: 'Progress', exact: true }).tap()
+      await page.locator('[class*="gapRows"]').first().waitFor({ timeout: 15000 })
+      await settled(page)
+      const out = await page.evaluate(() => {
+        const ul = document.querySelector('[class*="gapRows"]')
+        const box = ul.parentElement.getBoundingClientRect()
+        return [...ul.querySelectorAll('li')].map((li) => Math.round(li.querySelector('[class*="gapAmount"]').getBoundingClientRect().right - box.right))
+      })
+      check(`${engine} phone 360x800 text at 200%`, '(ly) the amounts in the gap split stay inside their box', out.length > 0 && out.every((n) => n <= 0), `past the box by ${out.join(', ')}px`)
+    } catch (e) {
+      check(`${engine} ly layout faults`, '(ly) the section ran', false, String(e instanceof Error ? e.message : e).split('\n')[0])
+    } finally {
+      await context.close()
+    }
+  }
+
+  for (const width of [360, 375]) {
+    const { page, context } = await openChartTab(browser, { width, height: 812 })
+    try {
+      await page.getByRole('radio', { name: 'Compare', exact: true }).focus()
+      for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowRight')
+      await settled(page)
+      const seen = await page.evaluate(() => {
+        const el = document.activeElement
+        const group = el.closest('[role="radiogroup"]').getBoundingClientRect()
+        const r = el.getBoundingClientRect()
+        return { name: el.textContent, share: Math.max(0, Math.min(r.right, group.right) - Math.max(r.left, group.left)) / r.width }
+      })
+      check(`${engine} phone ${width}px`, '(ly) the chip arrowed to is wholly in view', seen.name === 'Spread' && seen.share > 0.98, JSON.stringify(seen))
+    } catch (e) {
+      check(`${engine} ly layout faults`, '(ly) the section ran', false, String(e instanceof Error ? e.message : e).split('\n')[0])
+    } finally {
+      await context.close()
+    }
+  }
+
+  {
+    const { page, context } = await openPhone(browser, { width: 375, height: 812 })
+    try {
+      const spend = page.locator('input[aria-label^="Annual spend at FI"]').first()
+      const details = spend.locator('xpath=ancestor::details[1]')
+      if (!(await details.evaluate((d) => d.open))) {
+        await details.locator('summary').click()
+        await settled(page)
+      }
+      const years = page.locator('input[aria-label="Years the money must last"]').first()
+      const plus = page.getByRole('button', { name: 'Increase Years the money must last' })
+      await years.fill('33')
+      await years.press('Tab')
+      await settled(page)
+      await plus.evaluate((el) => window.scrollBy(0, el.getBoundingClientRect().top - 420))
+      await settled(page)
+      const tops = []
+      for (let k = 0; k < 5; k++) {
+        await touchTap(page, plus)
+        await page.waitForTimeout(250)
+        tops.push(Math.round((await plus.boundingBox()).y))
+      }
+      check(`${engine} phone 375x812`, '(ly) the + under the spending does not move down when the line above it gains a digit', new Set(tops).size === 1, `the + was at ${tops.join(', ')}px after each tap from 33`)
+    } catch (e) {
+      check(`${engine} ly layout faults`, '(ly) the section ran', false, String(e instanceof Error ? e.message : e).split('\n')[0])
+    } finally {
+      await context.close()
+    }
+  }
+}
+
+/**
  * Every section of the default run, in the order it runs. Each opens its own browser contexts,
  * so any subset can run alone, which `SHARD` relies on. A new section goes in this list or it
  * does not run in CI. `weight` is roughly the seconds the section takes on a CI runner; it only
@@ -3408,6 +3607,8 @@ const SECTIONS = [
   { name: 'SettingsNumbers', weight: 3, run: checkSettingsNumbers },
   { name: 'HeroSheet', weight: 11, run: checkHeroSheet },
   { name: 'HeroSheetFloat', weight: 10, run: checkHeroSheetFloat },
+  { name: 'SpreadCard', weight: 8, run: checkSpreadCard },
+  { name: 'LayoutFaults', weight: 14, run: checkLayoutFaults },
 ]
 
 async function main() {
@@ -3478,6 +3679,14 @@ async function main() {
         }
         if (process.env.ONLY === 'settings-numbers') {
           await checkSettingsNumbers(browser, engine)
+          continue
+        }
+        if (process.env.ONLY === 'layout-faults') {
+          await checkLayoutFaults(browser, engine)
+          continue
+        }
+        if (process.env.ONLY === 'spread-card') {
+          await checkSpreadCard(browser, engine)
           continue
         }
         if (process.env.ONLY === 'w2') {

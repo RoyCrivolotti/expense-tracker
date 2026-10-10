@@ -10,6 +10,8 @@ import { ChevronIcon } from '../../../icons'
 import { useAssumedInflation } from '../../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { Card } from '../../../components/primitives'
+import { bothMoneys, bothMoneysSentence } from '../bothMoneys'
+import { formatMoneyShort } from '../chartTheme'
 import goalStyles from '../goals.module.css'
 import { LEVER_SPECS } from '../leverFields'
 import { Lever } from './Lever'
@@ -22,15 +24,23 @@ interface ResultProps {
   draft: NewGoalScenario
 }
 
-/** The net worth the plan ends at, in today's money, as the narrative under the chart gives it. */
+/** The net worth the plan ends at, in the plan's money and on the account, as the narrative under the chart gives it. */
 const LeverResult = memo(function LeverResult({ draft }: ResultProps) {
   const format = useMoneyFormat()
   const inflationRate = useAssumedInflation()
-  const { netWorth, invested } = useMemo(() => {
+  const { netWorth, invested, years } = useMemo(() => {
     const series = projectNetWorth(scenarioToParams({ ...draft, id: 0 }, inflationRate))
     const last = series[series.length - 1]
-    return { netWorth: last?.netWorthCents ?? 0, invested: last?.investedCents ?? 0 }
+    return { netWorth: last?.netWorthCents ?? 0, invested: last?.investedCents ?? 0, years: last?.year ?? 0 }
   }, [draft, inflationRate])
+  const worth = bothMoneys({
+    cents: netWorth,
+    years,
+    planStartDate: draft.planStartDate,
+    inflationRate,
+    money: (cents) => formatCentsCompact(cents, format),
+    format,
+  })
   return (
     <>
       <div className={styles.leverHead}>
@@ -40,15 +50,19 @@ const LeverResult = memo(function LeverResult({ draft }: ResultProps) {
           Net worth in {draft.horizonYears} {draft.horizonYears === 1 ? 'yr' : 'yrs'}
         </span>
       </div>
-      {/* Always today's money, whichever way the chart above is showing it. */}
-      <span className={styles.leverResult} title="In today's money, after inflation">
-        {formatCentsCompact(netWorth, format)}
+      {/* Always the plan's money, whichever way the chart above is showing it, and said so under it.
+          What it comes to on the account when the plan ends is in the hover text and, in full, in the
+          line under the chart: there is no room for it here without taking it from the levers. */}
+      <span className={styles.leverResult} title={bothMoneysSentence(worth)}>
+        {worth.plan}
       </span>
       {/* The chart above draws the invested portfolio. With a house in the plan the net worth is
-          more than that, and the two figures would otherwise look like a disagreement. */}
-      {invested !== netWorth ? (
-        <span className={styles.leverResultNote}>{formatCentsCompact(invested, format)} invested</span>
-      ) : null}
+          more than that, and the two figures would otherwise look like a disagreement. One line for
+          both: the held bar is sized for the result column's height with a house, which is one
+          note, and has no room for another. */}
+      <span className={styles.leverResultNote}>
+        {invested !== netWorth ? `${worth.planLabel}, ${formatMoneyShort(invested, format)} invested` : worth.planLabel}
+      </span>
     </>
   )
 })

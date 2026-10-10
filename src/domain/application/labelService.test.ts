@@ -67,7 +67,8 @@ describe('labelService — name and colour', () => {
 
   it('drops a blank description rather than storing an empty string', async () => {
     await createLabel(repo, 'owner@example.com', { ...valid, description: '   ' })
-    const [, sent] = createLabelMock.mock.calls[0] as [string, { description?: string }]
+    // The latest call: the mock is shared, so the first one is whichever test ran before this.
+    const [, sent] = createLabelMock.mock.calls.at(-1) as [string, { description?: string }]
     expect(sent).not.toHaveProperty('description')
   })
 

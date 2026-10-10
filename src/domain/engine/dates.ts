@@ -250,3 +250,24 @@ export function yearsBetween(from: string, to: string): number {
   const next = utcDay(fy + whole + 1, fm, fd)
   return whole + (end - last) / (next - last)
 }
+
+/**
+ * The date `years` after a start, counted as `yearsBetween` counts: the whole anniversaries, then the
+ * part of the year since the last one, to the day. It is the inverse of `yearsBetween` for a date on or
+ * after the start. A start on 29 February has its anniversary on 1 March in a year without one.
+ */
+export function dateAtYears(from: string, years: number): string {
+  const [fy = 0, fm = 1, fd = 1] = from.split('-').map(Number)
+  const whole = Math.floor(years)
+  const last = utcDay(fy + whole, fm, fd)
+  const next = utcDay(fy + whole + 1, fm, fd)
+  const days = Math.round(((years - whole) * (next - last)) / 86_400_000)
+  return new Date(last + days * 86_400_000).toISOString().slice(0, 10)
+}
+
+/** A `YYYY-MM-DD` that is a day on the calendar: a date that merely looks like one would roll over into another. */
+export function isCalendarDate(value: string): boolean {
+  if (!value?.match(/^\d{4}-\d{2}-\d{2}$/)) return false
+  const parsed = new Date(`${value}T00:00:00Z`)
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
+}

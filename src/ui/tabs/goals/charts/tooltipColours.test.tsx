@@ -65,7 +65,7 @@ describe('the colour of each series in its tooltip', () => {
     // (now never docking below, with a legend to fall back to instead) would not show at all.
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ top: 600, bottom: 700, height: 100 } as DOMRect)
     const plan = makeScenario({ id: 1, name: 'Path A', planStartDate: '2024-01-01', isActive: true })
-    const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-07-01' })
+    const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-07-01' }, 0.02)
     const chart = (
       <NetWorthChart
         milestones={defaultMilestones()}

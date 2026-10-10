@@ -6,15 +6,19 @@ import {
   ChartGrid,
   ChartXLabels,
   ChartBandLayer,
+  ChartRefCurves,
   ChartScatterLayer,
   ChartTodayMarker,
   ChartAboveMarker,
   ChartPurchaseMarkers,
   ChartLifeEventMarkers,
+  ChartLabeledMarkers,
   ChartFocusIndicator,
+  type LabeledMarker,
   type LifeEventMarker,
 } from './linearChartParts'
 import { ChartValueTags } from './ChartValueTags'
+import { drawnValuesOf, steppedPoints } from './steppedPoints'
 import { useChartFocus, type ChartFocusOptions } from './useChartFocus'
 import { useSvgAnchor } from './useSvgAnchor'
 import {
@@ -24,7 +28,6 @@ import {
   niceScale,
   spacedRefLines,
   stackAreas,
-  type Pt,
   type ScatterPoint,
 } from './linearScale'
 import type { ValueTagSpec } from './valueTags'
@@ -39,6 +42,17 @@ const REF_LINE_MIN_GAP = 8
 
 export type { ScatterPoint }
 
+/**
+ * A reference that moves across the chart, drawn as a thin dashed line: a target in the other money,
+ * which rises or falls with the inflation between one year and the next. One value per x place. It is
+ * not a series, so it has no focus dot and no tooltip row, and it does not set the axis (it is clipped
+ * where it leaves the plot).
+ */
+export interface ChartRefCurve {
+  id: string
+  values: number[]
+}
+
 export interface ChartSeries {
   id: string
   color: string
@@ -48,11 +62,17 @@ export interface ChartSeries {
    * the axis is as long as the longest one.
    */
   values: number[]
+  /**
+   * For a line: what each place reached just before its value, where a payment or event lands on
+   * it. The line climbs to this and drops straight to `values`, instead of sloping across the year.
+   * Aligned to `values`; a place with nothing to say, or no entry, has no step.
+   */
+  preStep?: number[]
   kind?: 'line' | 'area' | 'scatter' | 'band'
   dashed?: boolean
   width?: number
-  /** Paired lower/upper envelope values. Used only when kind === 'band'. */
-  band?: { lo: number[]; hi: number[] }
+  /** Paired lower/upper envelope values, and what each reached just before (as `preStep`). Used only when kind === 'band'. */
+  band?: { lo: number[]; hi: number[]; loPre?: number[]; hiPre?: number[] }
   /** Sparse check-in actuals. Used only when kind === 'scatter'. */
   points?: ScatterPoint[]
   /** Join scatter points in x order, so readings over time read as a line. */
@@ -79,9 +99,13 @@ interface Props {
   ariaLabel: string
   tooltip: (index: number) => { title: string; lines: TooltipLine[] }
   refLines?: number[]
+  /** Reference lines that are not flat; see `ChartRefCurve`. */
+  refCurves?: ChartRefCurve[]
   markerYears?: { yearIndex: number }[]
   /** Life event markers: fractional x-axis indices with labels (e.g. year 3 → yearIndex 3). */
   lifeEventMarkers?: LifeEventMarker[]
+  /** Turning points the chart names: a dashed line across the plot with its label (see `ChartLabeledMarkers`). */
+  labeledMarkers?: readonly LabeledMarker[]
   /** Index of the current year in the x-axis for a "today" vertical marker. */
   todayIndex?: number
   tooltipMode?: 'full' | 'hidden'
@@ -105,8 +129,8 @@ interface Props {
   valueTags?: ValueTagSpec | undefined
 }
 
-function pointsOf(values: number[], x: (i: number) => number, y: (v: number) => number): Pt[] {
-  return values.map((v, i) => ({ x: x(i), y: y(v) }))
+function envelopeOf(s: ChartSeries): number[] {
+  return s.band ? [...s.band.lo, ...s.band.hi, ...(s.band.loPre ?? []), ...(s.band.hiPre ?? [])] : []
 }
 
 function useGeometry(
@@ -133,13 +157,13 @@ function useGeometry(
     const stackedValues = stackedBands.flatMap((b) => [...b.lo, ...b.hi])
     const envelopeValues = series
       .filter((s) => s.kind === 'band')
-      .flatMap((s) => (s.band ? [...s.band.lo, ...s.band.hi] : []))
+      .flatMap(envelopeOf)
     const scatterValues = series
       .filter((s) => s.kind === 'scatter')
       .flatMap((s) => s.points?.map((p) => p.value) ?? [])
     const lineValues = series
       .filter((s) => s.kind !== 'area' && s.kind !== 'band' && s.kind !== 'scatter')
-      .flatMap((s) => s.values)
+      .flatMap(drawnValuesOf)
     // A band is the spread around a line, not the thing being read: a wide one would set
     // the axis and leave the lines squeezed under it. It is held to the height of what it
     // surrounds and clipped there, so the axis fits the lines.
@@ -229,8 +253,10 @@ export function LinearChart({
   ariaLabel,
   tooltip,
   refLines = [],
+  refCurves,
   markerYears = [],
   lifeEventMarkers = [],
+  labeledMarkers,
   todayIndex,
   tooltipMode = 'full',
   dockBelow,
@@ -320,17 +346,20 @@ export function LinearChart({
                 color={s.color}
                 lo={s.band.lo}
                 hi={s.band.hi}
+                loPre={s.band.loPre}
+                hiPre={s.band.hiPre}
                 xForIndex={geo.xForIndex}
                 scaleY={geo.scaleY}
                 fillOpacity={0.18}
               />
             ) : null,
           )}
+          <ChartRefCurves curves={refCurves} xForIndex={geo.xForIndex} scaleY={geo.scaleY} />
         </g>
         {lineSeries.map((s) => (
           <path
             key={s.id}
-            d={linePath(pointsOf(s.values, geo.xForIndex, geo.scaleY))}
+            d={linePath(steppedPoints(s.values, s.preStep, geo.xForIndex, geo.scaleY))}
             style={{ stroke: s.color }}
             fill="none"
             strokeWidth={s.width ?? 2}
@@ -377,6 +406,14 @@ export function LinearChart({
           markers={lifeEventMarkers}
           xForIndex={geo.xForIndex}
           yTop={geo.padTop}
+        />
+        <ChartLabeledMarkers
+          markers={labeledMarkers}
+          xForIndex={geo.xForIndex}
+          yTop={geo.padTop}
+          innerH={geo.innerH}
+          left={PAD.left}
+          right={width - PAD.right}
         />
         {/* Above the year marks, or a dashed vertical mark runs through its text. */}
         <ChartAboveMarker marker={aboveTop} x={PAD.left + 8} y={geo.padTop} />

@@ -1,7 +1,17 @@
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import type { Milestone } from '../../../../types'
-import { fireNumber, formatCents, milestoneLabelWithAmount, nominalToReal } from '../../../../engine'
+import {
+  fireNumber,
+  formatCents,
+  milestoneLabelWithAmount,
+  nominalToReal,
+  scenarioToParams,
+  yearsToFi,
+} from '../../../../engine'
+import { fiTargetsLine } from './fiTargetsLine'
+import { fiTargetMoneyNote, worthInPlanMoneyNote } from './nowCardMoney'
+import { formatMoneyShort } from '../chartTheme'
 import { Card } from '../../../components/primitives'
 import { useAssumedInflation } from '../../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
@@ -9,7 +19,7 @@ import { formatCheckinDate, type InvestedSnapshot } from '../checkinDate'
 import styles from '../goals.module.css'
 
 /**
- * The share of the FI target reached. The target is in today's money and a check-in is
+ * The share of the FI target reached. The target is in the plan's euros and a check-in is
  * in the money of its day, so the balance is deflated to the plan start first. Milestones
  * stay nominal, as the check-in history that marks them reached is.
  */
@@ -54,6 +64,21 @@ function NetWorthNowCardImpl({
     : 'at plan start, no check-in yet'
   const fiTarget = fireNumber(draft.annualSpendCents, draft.safeWithdrawalRate)
   const pct = fiShare(draft, latest, current, fiTarget, inflationRate)
+  const targets = fiTargetsLine(draft.annualSpendCents, (c) => formatCents(c, format), format)
+  const fiYear = useMemo(
+    () => yearsToFi(scenarioToParams({ ...draft, id: 0 }, inflationRate), draft.annualSpendCents, draft.safeWithdrawalRate),
+    [draft, inflationRate],
+  )
+  const worth = worthInPlanMoneyNote({ latest, planStartDate: draft.planStartDate, inflationRate, money: (c) => formatCents(c, format), format })
+  const targetNote = fiTargetMoneyNote({
+    targetCents: fiTarget,
+    fiYear,
+    horizonYears: draft.horizonYears,
+    planStartDate: draft.planStartDate,
+    inflationRate,
+    money: (c) => formatMoneyShort(c, format),
+    format,
+  })
   // Skip anything a check-in already recorded as reached, so a dip in the
   // portfolio does not re-suggest a milestone that was actually hit.
   const next =
@@ -69,12 +94,15 @@ function NetWorthNowCardImpl({
             <li>
               <strong>{formatCents(current, format)}</strong> invested
               <span className={styles.nowListNote}>{measured}</span>
+              {worth ? <span className={styles.nowListNote}>{worth}</span> : null}
             </li>
             <li>
               <strong>{pct.toFixed(0)}%</strong> of your {formatCents(fiTarget, format)} FI target
               <span className={styles.nowListNote}>
                 target is from future annual spend at FI, not current spending
               </span>
+              <span className={styles.nowListNote}>{targetNote}</span>
+              {targets ? <span className={styles.nowListNote}>{targets}</span> : null}
             </li>
             {nextMilestone != null ? (
               <li>

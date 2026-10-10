@@ -1,4 +1,4 @@
-import { render, renderHook } from '@testing-library/react'
+import { render, renderHook, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { makeActions } from '../../../testing/makeActions'
 import { makeDataset, makeScenario } from '../../../testing/factories'
@@ -8,17 +8,19 @@ import { NARROW_MQ } from './useGoalsNarrow'
 import { useScenarioEditor } from './useScenarioEditor'
 
 const hero = vi.hoisted(
-  (): { todayIndex: number | undefined; headerAside: unknown; displaySwitch: unknown } => ({
+  (): { todayIndex: number | undefined; headerAside: unknown; displaySwitch: unknown; footer: unknown } => ({
     todayIndex: undefined,
     headerAside: undefined,
     displaySwitch: undefined,
+    footer: undefined,
   }),
 )
 vi.mock('./charts/NetWorthChart', () => ({
-  NetWorthChart: (props: { todayIndex?: number; headerAside?: unknown; displaySwitch?: unknown }) => {
+  NetWorthChart: (props: { todayIndex?: number; headerAside?: unknown; displaySwitch?: unknown; footer?: unknown }) => {
     hero.todayIndex = props.todayIndex
     hero.headerAside = props.headerAside
     hero.displaySwitch = props.displaySwitch
+    hero.footer = props.footer
     return null
   },
 }))
@@ -102,5 +104,56 @@ describe('PlanHero display switch', () => {
     renderHero()
     expect(hero.headerAside).toBeDefined()
     expect(hero.headerAside).toBe(hero.displaySwitch)
+  })
+})
+
+describe('PlanHero shortfall note', () => {
+  afterEach(() => installFakeMatchMedia())
+
+  // 20.000 € and 500 € a month cannot pay the 80.000 € down payment in year 5.
+  function renderFooter() {
+    const plan = makeScenario({
+      id: 1,
+      name: 'Path A',
+      sortOrder: 0,
+      isActive: true,
+      startInvestedCents: 2_000_000,
+      monthlyContributionCents: 50_000,
+      housePriceCents: 40_000_000,
+      housePurchaseYear: 5,
+    })
+    const dataset = makeDataset({ goalScenarios: [plan] })
+    const { result } = renderHook(() => useScenarioEditor(dataset, makeActions(), 0))
+    render(
+      <PlanHero
+        scenarios={[plan]}
+        editor={result.current}
+        milestones={[]}
+        checkins={[]}
+        accounts={[]}
+        fromToday={null}
+        display={{
+          mode: 'purchasing-power',
+          onModeChange: vi.fn(),
+          assumedInflation: 0,
+          preview: null,
+          onPreview: vi.fn(),
+          onOpenSetting: undefined,
+        }}
+      />,
+    )
+    render(<>{hero.footer}</>)
+  }
+
+  it('is in the footer on a wide screen', () => {
+    installFakeMatchMedia()
+    renderFooter()
+    expect(screen.getByRole('status').textContent).toContain('The house needs more than the portfolio holds in year 5.')
+  })
+
+  it('is in the footer on a phone too', () => {
+    installFakeMatchMedia((q) => q === NARROW_MQ)
+    renderFooter()
+    expect(screen.getByRole('status').textContent).toContain('The house needs more than the portfolio holds in year 5.')
   })
 })

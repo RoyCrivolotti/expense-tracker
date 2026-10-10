@@ -41,6 +41,23 @@ describe('inflateSeries and deflatePoints', () => {
     expect(result[1]!.band).toBeUndefined()
   })
 
+  it('inflates what a line and its band reached before a step by the same year\u2019s factor', () => {
+    const series: ChartSeries[] = [
+      {
+        id: 'b1',
+        color: '#000',
+        values: [0, 50_000_000],
+        preStep: [0, 100_000_000],
+        kind: 'line',
+        band: { lo: [0, 40_000_000], hi: [0, 60_000_000], loPre: [0, 90_000_000], hiPre: [0, 110_000_000] },
+      },
+    ]
+    const result = inflateSeries(series, [0, 1], 0.02)[0]!
+    expect(result.preStep).toEqual([0, Math.round(100_000_000 * 1.02)])
+    expect(result.band?.loPre).toEqual([0, Math.round(90_000_000 * 1.02)])
+    expect(result.band?.hiPre).toEqual([0, Math.round(110_000_000 * 1.02)])
+  })
+
   it('leaves scatter points as they are when inflating: check-ins are already nominal', () => {
     const series: ChartSeries[] = [
       { id: 'actuals', color: '#10b981', values: [], kind: 'scatter', points: [{ xIndex: 2.5, value: 200_000_000 }] },
@@ -134,7 +151,7 @@ describe('NetWorthChart', () => {
 
   it('tags the plan from today beside its own line, once the line has started, and not before', () => {
     const plan = makeScenario({ id: 1, name: 'Path A', planStartDate: '2024-01-01', isActive: true })
-    const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-01-01' })
+    const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-01-01' }, 0.02)
     const { container } = render(
       <NetWorthChart
         milestones={milestones}
@@ -258,10 +275,10 @@ describe('NetWorthChart', () => {
 
     /**
      * How many points each drawn line has, in the order they are drawn: the saved scenarios, then
-     * the draft. A path of one point is a marker, not a line.
+     * the draft. A path of one point is a marker, not a line, and a reference curve is not one of the lines.
      */
     const pointCounts = (container: HTMLElement) =>
-      [...container.querySelectorAll('path[fill="none"]')]
+      [...container.querySelectorAll('path[fill="none"]:not([class*="refLine"])')]
         .map((p) => (p.getAttribute('d') ?? '').match(/[ML]/g)?.length ?? 0)
         .filter((count) => count > 1)
 
@@ -416,7 +433,7 @@ describe('NetWorthChart', () => {
 
   it('draws the plan from today as a dotted line in the plan\'s colour, with a legend row', () => {
     const plan = makeScenario({ id: 1, name: 'Path A', color: '#123456', planStartDate: '2024-01-01', isActive: true })
-    const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-01-01' })
+    const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-01-01' }, 0.02)
     const { container } = render(
       <NetWorthChart
         milestones={milestones}
@@ -440,7 +457,7 @@ describe('NetWorthChart', () => {
   it('reads the plan from today at the last year of the axis and of a window, and says where it has not started', () => {
     const plan = makeScenario({ id: 1, name: 'Path A', planStartDate: '2024-01-01', isActive: true })
     // Half a year past a whole one, so its steps fall between the axis' years, not on them.
-    const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-07-01' })
+    const fromToday = planFromToday(plan, { investedCents: 160_000_00, date: '2026-07-01' }, 0.02)
     const { container } = render(
       <NetWorthChart
         milestones={milestones}
@@ -474,6 +491,21 @@ describe('NetWorthChart', () => {
     // Before the check-in the plan from today does not exist yet.
     expect(pointSeriesValueAt(points, 1)).toBeNull()
     expect(pointSeriesValueAt([], 1)).toBeNull()
+  })
+
+  it('reads the value after a step on the day of it, not the one before, which the drop is from', () => {
+    // 500 on the way up to a payment, 200 once it is made, both at x = 4.
+    const points = [
+      { xIndex: 0, value: 100 },
+      { xIndex: 4, value: 500 },
+      { xIndex: 4, value: 200 },
+      { xIndex: 6, value: 300 },
+    ]
+    expect(pointSeriesValueAt(points, 4)).toBe(200)
+    expect(pointSeriesValueAt(points, 3.9)).toBe(490)
+    expect(pointSeriesValueAt(points, 5)).toBe(250)
+    expect(pointSeriesValueAt(points, 6)).toBe(300)
+    expect(pointSeriesValueAt(points, 0)).toBe(100)
   })
 
   it('inflates a real point series by each point\'s own year in the nominal view', () => {
@@ -709,7 +741,7 @@ describe('NetWorthChart', () => {
     expect(container.querySelector('svg')).not.toBeNull()
   })
 
-  it("says the purchase breakdown is in today's money in the Nominal view, where the legend values above it are inflated", () => {
+  it("says the purchase breakdown is in the plan's euros in the Nominal view, where the legend values above it are inflated", () => {
     const buys = makeScenario({ housePurchaseYear: 5 })
     const stepToPurchase = (nominalMode: boolean) => {
       const { container, unmount } = render(
@@ -727,7 +759,7 @@ describe('NetWorthChart', () => {
       for (let i = 0; i < 5; i++) fireEvent.keyDown(svg, { key: 'ArrowRight' })
       const shown = {
         breakdown: screen.queryByText('Start of year') !== null,
-        note: screen.queryByText(/in today's money, not in the Nominal values/) !== null,
+        note: screen.queryByText(/in the plan's euros, not in the Nominal values/) !== null,
       }
       unmount()
       return shown
@@ -763,9 +795,10 @@ describe('NetWorthChart', () => {
 
   it('draws only the milestones within reach of what is drawn in this view', () => {
     const realEnd = projectNetWorth(scenarioToParams(defaultDraft, 0.02)).at(-1)!.investedCents
+    // On the account the plan ends at 1,02^30 (1,81) times its end in the plan's money, so a milestone
+    // a little above that end is reached, and one at two and a half times is not.
     const near = Math.round(realEnd * 1.1)
-    // Out of reach of today's money, but under the nominal plan the axis used to be held to.
-    const far = Math.round(realEnd * 1.6)
+    const far = Math.round(realEnd * 2.5)
     const { container } = render(
       <NetWorthChart
         milestones={[near, far].map((amountCents) => ({ amountCents, label: '' }))}
@@ -775,7 +808,8 @@ describe('NetWorthChart', () => {
         variant="hero"
       />,
     )
-    expect(container.querySelectorAll(`line.${chartStyles.refLine}`)).toHaveLength(1)
+    expect(container.querySelectorAll(`path.${chartStyles.refLine}`)).toHaveLength(1)
+    expect(container.querySelectorAll(`line.${chartStyles.refLine}`)).toHaveLength(0)
   })
 
   it('draws the nominal view at the owner\'s assumed inflation', () => {
@@ -826,6 +860,32 @@ describe('NetWorthChart', () => {
     expect(drawing(true, 0.0).text).toBe(drawing(true).text)
     // In Today's money the plan is not inflated, so a rate left over from a preview does nothing.
     expect(drawing(false, 0.06)).toEqual(drawing(false))
+  })
+
+  it('draws a previewed rate as the plan projected at that rate, not the saved plan drawn higher', () => {
+    // The monthly amount is euros as sent, so a plan at 6% inflation is a different real line from the one
+    // at 2%. Previewing 6% over a saved 2% must draw what a saved 6% draws (the axis grows to fit it).
+    const draw = (saved: number, nominalMode: boolean, viewInflation?: number) => {
+      const { container, unmount } = render(
+        <AssumedInflationContext.Provider value={saved}>
+          <NetWorthChart
+            milestones={milestones}
+            scenarios={[defaultDraft]}
+            draft={defaultDraft}
+            activeId={defaultDraft.id}
+            variant="hero"
+            nominalMode={nominalMode}
+            viewInflation={viewInflation}
+          />
+        </AssumedInflationContext.Provider>,
+      )
+      const paths = [...container.querySelectorAll('path')].map((p) => p.getAttribute('d') ?? '').join('|')
+      const text = [...container.querySelectorAll('text')].map((t) => t.textContent ?? '').join('|')
+      unmount()
+      return { paths, text }
+    }
+    expect(draw(0.02, true, 0.06)).toEqual(draw(0.06, true))
+    expect(draw(0.02, true, 0.06)).not.toEqual(draw(0.02, true))
   })
 
   it('renders uncertainty band path on hero variant', () => {
@@ -1010,7 +1070,7 @@ describe('NetWorthChart', () => {
     expect(container.querySelectorAll(`.${chartStyles.refLine}`)).toHaveLength(1)
   })
 
-  it('draws no target lines in the nominal view, where a flat line would be crossed early', () => {
+  it('draws a milestone as a curve in Purchasing power and as a flat line in Nominal, in the money each view is in', () => {
     const render1 = (nominalMode: boolean) =>
       render(
         <NetWorthChart
@@ -1022,9 +1082,14 @@ describe('NetWorthChart', () => {
           nominalMode={nominalMode}
         />,
       ).container
-    expect(render1(false).querySelectorAll(`.${chartStyles.refLine}`)).toHaveLength(1)
-    // Targets are in today's money and the nominal view inflates the plan past them.
-    expect(render1(true).querySelectorAll(`.${chartStyles.refLine}`)).toHaveLength(0)
+    // An amount on the account falls by the inflation in the plan's money, so it is a curve there.
+    const real = render1(false)
+    expect(real.querySelectorAll(`path.${chartStyles.refLine}`)).toHaveLength(1)
+    expect(real.querySelectorAll(`line.${chartStyles.refLine}`)).toHaveLength(0)
+    // In euros on the account it stays where it is.
+    const nominal = render1(true)
+    expect(nominal.querySelectorAll(`line.${chartStyles.refLine}`)).toHaveLength(1)
+    expect(nominal.querySelectorAll(`path.${chartStyles.refLine}`)).toHaveLength(0)
   })
 
   it('drops a milestone far above the projection so it cannot flatten the chart', () => {
@@ -1072,6 +1137,16 @@ describe('computeChartDisplayData', () => {
     expect(nominal.displayExtraSeries[0]!.points![0]!.value).toBe(104_040_00)
   })
 
+  it('counts the value a line reaches before a step as the highest it draws, in both views', () => {
+    // A house payment takes the year down from 150 to 60, but the line climbs to 150 first.
+    const stepped: ChartSeries = { ...plan, values: [100_000_00, 110_000_00, 60_000_00, 70_000_00], preStep: [100_000_00, 110_000_00, 150_000_00, 70_000_00] }
+    const real = computeChartDisplayData([stepped], [], years, false, 0.02)
+    expect(real.drawnMax).toBe(150_000_00)
+    const nominal = computeChartDisplayData([stepped], [], years, true, 0.02)
+    expect(nominal.drawnMax).toBe(Math.round(150_000_00 * 1.02 ** 2))
+    expect(nominal.yDomainMax).toBe(Math.round(150_000_00 * 1.02 ** 2))
+  })
+
   it('draws a previewed rate but keeps the axis floor at the saved rate\'s, and the dots as they are', () => {
     const saved = computeChartDisplayData([plan], [dot], years, true, 0.02)
     const preview = computeChartDisplayData([plan], [dot], years, true, 0.02, null, 0.06)
@@ -1085,9 +1160,79 @@ describe('computeChartDisplayData', () => {
     expect(computeChartDisplayData([plan], [dot], years, true, 0.02, null, 0.02)).toEqual(saved)
   })
 
+  it('reads the axis floor from the lines projected at the saved rate when it is given them', () => {
+    // `previewed` is the plan projected at 6%: the plan the axis was built for is the 2% one.
+    const previewed: ChartSeries = { ...plan, values: [100_000_00, 108_000_00, 116_000_00, 124_000_00] }
+    const savedHeight = computeChartDisplayData([plan], [dot], years, true, 0.02).yDomainMax
+    const shown = computeChartDisplayData([previewed], [dot], years, true, 0.02, null, 0.06, [], [plan])
+
+    // Drawn at the previewed rate from the previewed projection...
+    expect(shown.displaySeries[0]!.values[3]).toBe(Math.round(124_000_00 * 1.06 ** 3))
+    // ...against the height the saved rate gives the saved projection.
+    expect(shown.yDomainMax).toBe(savedHeight)
+  })
+
   it('has no rate of its own to fall back on', () => {
     // A different rate moves both, so nothing in the chart is fixed at 2%.
     const at = (rate: number) => computeChartDisplayData([plan], [dot], years, false, rate).displayExtraSeries[0]!.points![0]!.value
     expect(at(0.08)).toBeLessThan(at(0.02))
+  })
+})
+
+describe('NetWorthChart money label', () => {
+  const draft: typeof defaultDraft = { ...defaultDraft, planStartDate: '2026-01-01' }
+  const stubWidth = (narrow: boolean) =>
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: narrow && query === '(max-width: 899px)',
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+      onchange: null,
+    }))
+  const renderHero = (props: { nominalMode?: boolean; variant?: 'hero' | 'default'; draft?: typeof defaultDraft } = {}) =>
+    render(
+      <NetWorthChart
+        milestones={milestones}
+        scenarios={[props.draft ?? draft]}
+        draft={props.draft ?? draft}
+        activeId={(props.draft ?? draft).id}
+        variant={props.variant ?? 'hero'}
+        nominalMode={props.nominalMode ?? false}
+      />,
+    )
+
+  it('names the plan\'s euros beside the title of the wide hero, without changing the title', () => {
+    stubWidth(false)
+    renderHero()
+    expect(screen.getByRole('heading', { name: 'Invested portfolio projection' })).toBeInTheDocument()
+    expect(screen.getByText('in 2026 euros')).toBeInTheDocument()
+  })
+
+  it('names the account\'s euros in the Nominal view', () => {
+    stubWidth(false)
+    renderHero({ nominalMode: true })
+    expect(screen.getByText('in euros on your account in each year')).toBeInTheDocument()
+    expect(screen.queryByText('in 2026 euros')).not.toBeInTheDocument()
+  })
+
+  it('names today\'s euros for a plan with no start date', () => {
+    stubWidth(false)
+    renderHero({ draft: { ...defaultDraft, planStartDate: null } })
+    expect(screen.getByText("in today's euros")).toBeInTheDocument()
+  })
+
+  it('starts the phone\'s hint with it, as the title row there has the button for the full screen', () => {
+    stubWidth(true)
+    renderHero()
+    expect(screen.getByText(/^In 2026 euros\. At a purchase year/)).toBeInTheDocument()
+  })
+
+  it('starts the hint of a chart that is not the hero with it as well', () => {
+    stubWidth(false)
+    renderHero({ variant: 'default' })
+    expect(screen.getByText(/^In 2026 euros\. Compare saved scenarios/)).toBeInTheDocument()
   })
 })

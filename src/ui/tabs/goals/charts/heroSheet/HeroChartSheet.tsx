@@ -66,6 +66,7 @@ export const HeroChartSheet = memo(function HeroChartSheet({
       label="Invested portfolio projection, full screen"
       toolbar={
         <div className={goalsStyles.sheetTools}>
+          <span className={goalsStyles.sheetMoney}>{model.money}</span>
           {model.displaySwitch}
           {model.windowPicker}
         </div>
