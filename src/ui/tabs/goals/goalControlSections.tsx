@@ -7,7 +7,8 @@ import { formatCheckinDate, type InvestedSnapshot } from './checkinDate'
 import { DateField, MoneyField, NumberField, PercentField, PurchaseYearField } from './goalControlFields'
 import { ContributionStepsList } from './ContributionSteps'
 import { firstChangeNote } from './contributionText'
-import { housePriceHint } from './housePriceHint'
+import { housePriceDetail, housePriceHint } from './housePriceHint'
+import { Disclosure } from './Disclosure'
 import { aboutOnAccount, bothMoneys } from './bothMoneys'
 import { feesMoneyHint, monthlyAmountMoneyHint, rentMoneyHint, spendMoneyHint } from './moneyHints'
 import { planMoneyLabel } from './planMoneyLabel'
@@ -45,7 +46,7 @@ function purchaseSummary(draft: NewGoalScenario, inflationRate: number, format: 
   const label = planMoneyLabel(draft.planStartDate, format)
   // The plan charges the portfolio for the down payment and the fees only: the loan and the upkeep are paid out
   // of the income the monthly investing is what is left of, so the person is told where to say otherwise.
-  const rest = ` The loan payments and upkeep are not taken from the portfolio: the plan pays them from the rest of your income. If they will lower what you invest, add a change under ${ADJUST_LABELS.changes.title}.`
+  const rest = ` The loan and upkeep come from your income instead: if that lowers what you invest, add a change under ${ADJUST_LABELS.changes.title}.`
   if (purchaseYear === 0) {
     return `Already own: the starting balance is counted as what is left after the ${money(down)} down payment and ${money(fees)} fees (in ${label}), so nothing comes out of the portfolio later.${rest}`
   }
@@ -53,7 +54,7 @@ function purchaseSummary(draft: NewGoalScenario, inflationRate: number, format: 
   // The three are in the plan's euros; the account pays more in the year it is paid, which is the figure a buyer sees.
   const paid = bothMoneys({ cents: total, years: purchaseYear, planStartDate: draft.planStartDate, inflationRate, money, format })
   const account = paid.same ? '' : ` (${aboutOnAccount(paid)})`
-  return `Purchase cost from portfolio, in ${label}: ${money(down)} down + ${money(fees)} fees = ${money(total)}${account}, dip on the invested line in year ${purchaseYear}.${rest}`
+  return `Year ${purchaseYear} takes ${money(total)} from the portfolio: ${money(down)} down + ${money(fees)} fees, in ${label}${account}.${rest}`
 }
 
 const L = LEVER_SPECS
@@ -145,7 +146,6 @@ function PurchaseCostFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }:
   const inflationRate = useAssumedInflation()
   const format = useMoneyFormat()
   const priceHint = housePriceHint(draft, inflationRate, format)
-  const feesHint = feesMoneyHint(draft, inflationRate, format)
   return (
     <>
       {omit.has('housePriceCents') ? null : (
@@ -171,11 +171,6 @@ function PurchaseCostFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }:
             value={draft.transactionCostsCents}
             onChange={(v) => onChange({ transactionCostsCents: v })}
           />)}
-          <p className={styles.fieldHint}>
-            Notary, agency, and closing costs withdrawn with the down payment in the purchase
-            year.
-          </p>
-          {feesHint ? <p className={styles.fieldHint}>{feesHint}</p> : null}
         </>
       )}
     </>
@@ -183,7 +178,6 @@ function PurchaseCostFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }:
 }
 
 function MortgageFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: SectionProps) {
-  const format = useMoneyFormat()
   // The note is about both rates, so it stays while either is on the page. With only one starred
   // it would otherwise go with it and leave the other with no word on what it means.
   const explainsRates = !omit.has('mortgageRateAnnual') || !omit.has('houseAppreciationRate')
@@ -216,11 +210,7 @@ function MortgageFields({ draft, onChange, omit = NO_LEVERS, wrap = plain }: Sec
         />)
       )}
       {explainsRates ? (
-        <p className={styles.fieldHint}>
-          The mortgage rate and house appreciation are nominal, as a bank and the price index
-          quote them. The plan takes inflation off both, so the house and the debt are in{' '}
-          {planMoneyLabel(draft.planStartDate, format)}, like the plan.
-        </p>
+        <p className={styles.fieldHint}>Enter both as quoted, before inflation. The plan takes inflation off.</p>
       ) : null}
     </>
   )
@@ -240,10 +230,7 @@ function HomeCarryField({ draft, onChange }: Pick<SectionProps, 'draft' | 'onCha
         max={0.1}
         onChange={(v) => onChange({ homeCarryRate: v })}
       />
-      <p className={styles.fieldHint}>
-        What owning costs a year beyond the mortgage, as a share of the house&apos;s value: repairs, property tax
-        and insurance. Rent vs buy counts it against buying. 1 to 2% is usual.
-      </p>
+      <p className={styles.fieldHint}>1 to 2% is usual.</p>
     </>
   )
 }
@@ -255,7 +242,6 @@ function PurchaseTimingFields({ draft, onChange, omit = NO_LEVERS, wrap = plain 
   // the figure is.
   const inflationRate = useAssumedInflation()
   const purchaseHint = purchaseSummary(draft, inflationRate, format)
-  const rentHint = rentMoneyHint(draft, inflationRate, format)
   return (
     <>
       {omit.has('housePurchaseYear') ? null : (
@@ -276,9 +262,37 @@ function PurchaseTimingFields({ draft, onChange, omit = NO_LEVERS, wrap = plain 
           onChange={(v) => onChange({ rentMonthlyCents: v })}
         />)
       )}
-      {rentHint ? <p className={styles.fieldHint}>{rentHint}</p> : null}
       <HomeCarryField draft={draft} onChange={onChange} />
     </>
+  )
+}
+
+/**
+ * How the housing figures are counted: what the plan did to what was typed. Behind one closed note, since they are for
+ * checking the numbers and not for entering them, and said once for the section whichever inputs are in the bar.
+ */
+function HousingNotes({ draft, omit = NO_LEVERS }: Pick<SectionProps, 'draft' | 'omit'>) {
+  const inflationRate = useAssumedInflation()
+  const format = useMoneyFormat()
+  // What explains one input leaves with it when it is in the bar; what is worked out from the draft stays.
+  const feesShown = !omit.has('transactionCostsCents')
+  const ratesShown = !omit.has('mortgageRateAnnual') || !omit.has('houseAppreciationRate')
+  const notes = [
+    housePriceDetail(draft, inflationRate, format),
+    feesShown ? 'Fees are notary, agency and closing costs, withdrawn with the down payment in the year you buy.' : null,
+    feesShown ? feesMoneyHint(draft, inflationRate, format) : null,
+    rentMoneyHint(draft, inflationRate, format),
+    ratesShown
+      ? `The mortgage rate and house appreciation are nominal, as a bank and the price index quote them. The plan takes inflation off both, so the house and the debt are in ${planMoneyLabel(draft.planStartDate, format)}, like the plan.`
+      : null,
+    "Upkeep is what owning costs a year beyond the mortgage, as a share of the house's value: repairs, property tax and insurance. Rent vs buy counts it against buying.",
+  ].filter((note): note is string => note !== null)
+  return (
+    <Disclosure title="How these are counted">
+      {notes.map((note) => (
+        <p key={note}>{note}</p>
+      ))}
+    </Disclosure>
   )
 }
 
@@ -288,6 +302,7 @@ export function HousingFields(props: SectionProps) {
       <PurchaseCostFields {...props} />
       <MortgageFields {...props} />
       <PurchaseTimingFields {...props} />
+      <HousingNotes draft={props.draft} omit={props.omit ?? NO_LEVERS} />
     </>
   )
 }
