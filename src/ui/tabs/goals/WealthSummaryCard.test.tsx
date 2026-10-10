@@ -347,6 +347,41 @@ describe('WealthSummaryCard', () => {
       expect(within(block).queryByText(/Investing more than planned/)).not.toBeInTheDocument()
     })
 
+    describe('when the market, not the investing, is behind', () => {
+      // 1.000 € on the 10th of each month, exactly what the plan asks, from February 2025 to the second check-in.
+      const months = Array.from({ length: 19 }, (_, k) => `${2025 + Math.floor(k / 12)}-${String((k % 12) + 1).padStart(2, '0')}`).slice(1)
+      const planned = months.map((month, id) =>
+        makeTransaction({ id: id + 1, type: 'investment', budgetMonth: month, date: `${month}-10`, amountCents: 100_000 }),
+      )
+      const checkins = [at(1, '2025-01-10', 0), at(2, '2026-07-15', -5_000_00)]
+      const status = () => screen.getByText(/Behind plan/).closest('div')!
+
+      it('says so beside the verdict and does not paint it red, since investing more would not close it', () => {
+        render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} transactions={planned} />)
+        expect(status()).toHaveTextContent(/Behind plan .*not from your investing/)
+        expect(status().querySelector('[class*="statusDot"]')?.className).toMatch(/statusDotNeutral/)
+        expect(status().querySelector('[class*="summaryDelta"]')?.className).toMatch(/summaryDeltaNeutral/)
+        // The months line under the figures is the same fact in other words, and is muted with it.
+        expect(screen.getByText(/months? behind/)).toHaveStyle({ color: 'var(--color-text-muted)' })
+        expect(screen.getByText(/about what the plan asks, or more, so this gap comes from the market and where the plan started/)).toBeInTheDocument()
+      })
+
+      it('keeps it red when little was invested, or when what was invested is not recorded', () => {
+        const { rerender } = render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} transactions={planned.slice(0, 6)} />)
+        expect(status().querySelector('[class*="statusDot"]')?.className).toMatch(/statusDotBehind/)
+        expect(status()).not.toHaveTextContent(/not from your investing/)
+        expect(screen.getByText(/months? behind/)).toHaveStyle({ color: 'var(--exp-danger)' })
+        rerender(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} transactions={[]} />)
+        expect(status().querySelector('[class*="statusDot"]')?.className).toMatch(/statusDotBehind/)
+        expect(screen.queryByText(/about what the plan asks, or more/)).not.toBeInTheDocument()
+      })
+
+      it('leaves Ahead and On track as they were', () => {
+        render(<WealthSummaryCard checkins={[at(1, '2025-01-10', 0), at(2, '2026-07-15', 5_000_00)]} accounts={accounts} plan={scenario} transactions={planned} />)
+        expect(screen.queryByText(/not from your investing/)).not.toBeInTheDocument()
+      })
+    })
+
     it('draws a row that is more than planned in the success text colour and one that is less in the danger one, as classes', () => {
       const checkins = [at(1, '2025-01-10', -50_000_00), at(2, '2026-07-15', -50_000_00)]
       render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />)

@@ -2,7 +2,7 @@ import type { GapReading, GapSplit, MergedReason } from '../../../engine'
 import { formatCentsCompact, startExplainsGap, wholeEuros } from '../../../engine'
 import type { MoneyFormat } from '../../../engine/money'
 import { formatCheckinDate } from './checkinDate'
-import { gapRows } from './gapRows'
+import { behindFromTheMarket, gapRows } from './gapRows'
 import { planMoneyLabel } from './planMoneyLabel'
 import styles from './progress.module.css'
 import goalStyles from './goals.module.css'
@@ -93,6 +93,12 @@ export function GapSplitHint({
         <strong>{headline(reading, format)}</strong> (in {planMoneyLabel(planStartDate, format)}), from:
       </p>
       <Rows split={reading} format={format} />
+      {behindFromTheMarket(reading) ? (
+        <p style={hintStyle}>
+          What you put in is about what the plan asks, or more, so this gap comes from the market and where the plan started,
+          not from your investing.
+        </p>
+      ) : null}
       <Notes split={reading} />
       {startExplainsGap(reading) ? (
         <>
