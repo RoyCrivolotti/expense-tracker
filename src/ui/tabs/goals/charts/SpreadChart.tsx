@@ -18,6 +18,7 @@ import { LinearChart } from '../../../charts/LinearChart'
 import { sparseLabels } from '../../../charts/linearScale'
 import { formatMoneyShort } from '../chartTheme'
 import { planMoneyLabel } from '../planMoneyLabel'
+import { Disclosure } from '../Disclosure'
 import { yearLabel } from '../yearLabel'
 import { ChartShell } from './ChartShell'
 import { ScrollRegion } from './ScrollRegion'
@@ -97,6 +98,7 @@ function SpreadChartImpl({ draft: liveDraft, milestones, nominal = false, runs =
   const fi = targetCents === null ? null : fiRow({ result, planStartDate: draft.planStartDate, years: result.years, money, targetCents, format })
   const rows = [...milestoneRows({ milestones, result, planStartDate: draft.planStartDate, years: result.years, money }), ...(fi ? [fi] : [])]
   const warning = spreadWarning(result)
+  const caption = spreadCaption({ runs: result.runs, volatility, realReturn: draft.expectedRealReturn, format })
 
   return (
     <ChartShell embedded={embedded}>
@@ -145,16 +147,12 @@ function SpreadChartImpl({ draft: liveDraft, milestones, nominal = false, runs =
           </table>
         </ScrollRegion>
       ) : null}
-      <p className={`${styles.chartHint} ${styles.chartCaption}`}>
-        {spreadCaption({
-          runs: result.runs,
-          volatility,
-          realReturn: draft.expectedRealReturn,
-          format,
-          chartMoney: moneyLabel,
-          tableMoney: rows.length > 0 ? planMoneyLabel(draft.planStartDate, format) : null,
-        })}
-      </p>
+      <p className={`${styles.chartHint} ${styles.chartCaption}`}>{caption.lead}</p>
+      <Disclosure title="How to read it">
+        {caption.details.map((sentence) => (
+          <p key={sentence}>{sentence}</p>
+        ))}
+      </Disclosure>
     </ChartShell>
   )
 }

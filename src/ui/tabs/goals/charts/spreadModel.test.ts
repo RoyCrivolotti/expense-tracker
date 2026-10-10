@@ -137,22 +137,22 @@ describe('spreadHeadline', () => {
   const headline = (over = {}) => spreadHeadline({ result, plan: points, money, moneyLabel: '2026 euros', nominal: false, runs: 10_000, format: EU_MONEY_FORMAT, ...over })
 
   it('opens by saying what a run is, before the figures use the word', () => {
-    expect(headline()).toMatch(/^The plan replayed in 10\.000 different markets, each one a run\. In year 30/)
-    expect(headline({ runs: 2_000 })).toContain('replayed in 2.000 different markets')
+    expect(headline()).toMatch(/^The plan replayed in 10\.000 markets, each one a run\. In year 30/)
+    expect(headline({ runs: 2_000 })).toContain('replayed in 2.000 markets')
   })
 
   it('says it is the luckiest and the unluckiest tenth of runs', () => {
     expect(headline()).toContain('the luckiest tenth of runs above')
-    expect(headline()).toContain('the unluckiest tenth of runs below')
+    expect(headline()).toContain('the unluckiest tenth below')
   })
 
   it('says where the middle run and the two tenths end, against the plan\'s line, in the money it is drawn in', () => {
     const text = headline()
     expect(text).toContain('In year 30, in 2026 euros')
     expect(text).toContain(`the middle run ends at ${money(result.after.p50[30]!)}`)
-    expect(text).toContain(`the plan's line at ${money(points[30]!.investedCents)}`)
+    expect(text).toContain(`the plan at ${money(points[30]!.investedCents)}`)
     expect(text).toContain(`the luckiest tenth of runs above ${money(result.after.p90[30]!)}`)
-    expect(text).toContain(`the unluckiest tenth of runs below ${money(result.after.p10[30]!)}`)
+    expect(text).toContain(`the unluckiest tenth below ${money(result.after.p10[30]!)}`)
   })
 
   it('names the euros of the year in the nominal view and says the line is in them too', () => {
@@ -160,9 +160,9 @@ describe('spreadHeadline', () => {
     expect(text).toContain('euros on your account in 2056')
     const grown = (cents: number) => money(Math.round(cents * Math.pow(1 + I, 30)))
     expect(text).toContain(`the middle run ends at ${grown(result.after.p50[30]!)}`)
-    expect(text).toContain(`the plan's line at ${grown(points[30]!.investedCents)}`)
+    expect(text).toContain(`the plan at ${grown(points[30]!.investedCents)}`)
     expect(text).toContain(`the luckiest tenth of runs above ${grown(result.after.p90[30]!)}`)
-    expect(text).toContain(`the unluckiest tenth of runs below ${grown(result.after.p10[30]!)}`)
+    expect(text).toContain(`the unluckiest tenth below ${grown(result.after.p10[30]!)}`)
   })
 
   it('never says average', () => {
@@ -171,41 +171,33 @@ describe('spreadHeadline', () => {
 })
 
 describe('spreadCaption', () => {
-  const caption = (over = {}) => spreadCaption({ runs: 5_000, volatility: 0.15, realReturn: 0.05, format: EU_MONEY_FORMAT, chartMoney: '2026 euros', tableMoney: '2026 euros', ...over })
-  const text = caption()
+  const caption = (over = {}) => spreadCaption({ runs: 5_000, volatility: 0.15, realReturn: 0.05, format: EU_MONEY_FORMAT, ...over })
+  const { lead, details } = caption()
 
-  it('says which euros the chart is in and which the table is in, since they are not the same', () => {
-    expect(text).toContain('The chart is in 2026 euros. In the table, milestone amounts are on your account and the FI target is in 2026 euros.')
-    expect(caption({ chartMoney: 'euros on your account in each year', tableMoney: "today's euros" })).toContain(
-      "The chart is in euros on your account in each year. In the table, milestone amounts are on your account and the FI target is in today's euros.",
-    )
+  it('leads with what stays as planned, which is what stops the card being read as a forecast of everything', () => {
+    expect(lead).toBe('Only the market changes: the saving, the house, the events and the inflation are as planned.')
   })
 
-  it('says nothing about a table when there is none', () => {
-    const none = caption({ tableMoney: null })
-    expect(none).toContain('The chart is in 2026 euros.')
-    expect(none).not.toContain('In the table')
-  })
-
-  it('says what is replayed: the same plan with a different market each time, and how many times', () => {
-    expect(text).toContain('5.000 runs')
+  it('says what is replayed behind it: the same plan with a different market each time, how many times, and where the bounce is set', () => {
+    const text = details.join(' ')
+    expect(text).toContain('Each of the 5.000 runs replays your plan in a different market')
     expect(text).toContain('the typical 5,0% a year')
-    expect(text).toContain('a bounce of 15,0%')
-  })
-
-  it('says what stays as planned, and that the picture is the same every time it is drawn', () => {
-    expect(text).toContain('Only the market changes')
-    expect(text).toContain('saving, the house, the events and the inflation are as planned')
-    expect(text).toContain('the same every time')
-  })
-
-  it('says what the shading is: where half of the runs end, and 8 in 10', () => {
-    expect(text).toContain('half of the runs end in the shaded middle')
-    expect(text).toContain('8 in 10 between the dashed lines')
-  })
-
-  it('says where the bounce is set', () => {
     expect(text).toContain('a bounce of 15,0% (the Market bounce in Assumptions)')
+  })
+
+  it('says that the picture is the same every time it is drawn', () => {
+    expect(details.join(' ')).toContain('the same every time')
+  })
+
+  it('does not say again what the legend and the rows of the table already say', () => {
+    const text = [lead, ...details].join(' ')
+    expect(text).not.toContain('shaded middle')
+    expect(text).not.toContain('In the table')
+    expect(text).not.toContain('The chart is in')
+  })
+
+  it('uses the volatility and the return it is given', () => {
+    expect(caption({ volatility: 0.11, realReturn: 0.07 }).details.join(' ')).toContain('the typical 7,0% a year times a luck factor with a bounce of 11,0%')
   })
 })
 
