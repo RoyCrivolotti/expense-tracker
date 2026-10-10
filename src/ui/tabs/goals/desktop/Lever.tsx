@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState, type MouseEvent } from 'react'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { formatMoneyInput, formatPercent, formatPercentInput, parseMoneyToCents } from '../../../../engine'
+import { formatMoneyInput, formatPercent, formatPercentInput, tryParseDecimal, tryParseMoneyToCents } from '../../../../engine'
 import type { MoneyFormat } from '../../../../engine'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
 import { useMediaQuery } from '../../../hooks/useMediaQuery'
@@ -110,10 +110,7 @@ function clamp(value: number, min: number, max: number): number {
  * the decimal mark (a percentage or a year count has no thousands), and nothing typed is not zero.
  */
 function typedNumber(raw: string): number | null {
-  const cleaned = raw.replace(/[%\s]/g, '').replace(',', '.')
-  if (cleaned === '') return null
-  const n = Number(cleaned)
-  return Number.isFinite(n) ? n : null
+  return tryParseDecimal(raw.replace(/%\s*$/, ''))
 }
 
 /**
@@ -164,7 +161,8 @@ export function Lever({ spec, draft, onChange, onUnstar }: LeverProps) {
           unitFirst={format.symbolPosition === 'prefix'}
           inputMode="decimal"
           onCommit={(raw) => {
-            if (/\d/.test(raw)) patch(Math.max(0, parseMoneyToCents(raw, format)))
+            const cents = tryParseMoneyToCents(raw, format)
+            if (cents !== null) patch(Math.max(0, cents))
           }}
         />
         <MoneyTrack leverKey={key} draft={draft} />

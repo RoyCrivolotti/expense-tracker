@@ -2,6 +2,12 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (the number boxes stop guessing)
+
+- **A number with a letter in it is no longer read as the digits in it.** "250k" in an amount became 250, "1e9" became 19 and "1.5M" became 1,50; "about 4" in a percentage became the least the field allows, which for the withdrawal rate multiplied the FI target by eight. The box now goes back to what it had, as it already did for text with no digit. This covers the amounts, years and percentages on the Plan page, the levers bar, a milestone's amount and a check-in's balances.
+- **"1,234.56" is read as one thousand two hundred and thirty-four and fifty-six cents in a comma format**, and "1.234,56" in a point format, where each was read as 1,23. With both marks in the text, the later one is the decimal mark.
+- **A very long number is held to 100 billion** instead of becoming Infinity, and a number held to the most or least a field takes shows that value in the box instead of what was typed (100 years in the horizon box stays "100" over a 60 it was already at).
+
 ## October 2026 (found by the last review before the planning changes landed)
 
 - **A balance exactly on the plan's line no longer reads as started behind.** The gap split took the start part from the plan's own path and not from the line the status compares with, so a first check-in a few years in, exactly on the line, showed thousands behind "at the start" and offered to restart the plan. The start part is now the first check-in's gap to the line.

@@ -121,6 +121,49 @@ export function parseMoneyToCents(raw: string, format: MoneyFormat = EU_MONEY_FO
 }
 
 /**
+ * The most an amount typed into a box may be, in cents: 100 billion. No balance, price or milestone is more, and a
+ * number with hundreds of digits would otherwise reach the engine as Infinity.
+ */
+export const MAX_MONEY_CENTS = 1e13
+
+/**
+ * An amount typed into a box, or null when what was typed is not one. Unlike `parseMoneyToCents`, which drops what it
+ * does not understand, text with a letter in it ("250k", "1e9", "1.5M", "about 4") is not an amount: reading the digits
+ * out of it turned 250k into 250 and 1e9 into 19, and a box that quietly does that is worse than one that goes back to
+ * what it had. A currency symbol, spaces and the group marks are fine. A number past `MAX_MONEY_CENTS` is held there.
+ */
+export function tryParseMoneyToCents(raw: string, format: MoneyFormat = EU_MONEY_FORMAT): number | null {
+  const typed = raw.trim()
+  if (!/\d/.test(typed)) return null
+  const symbol = format.symbol
+  // Digits, the two marks, spaces, a sign, apostrophes as group marks, and any currency symbol or the format's own.
+  for (const ch of typed) {
+    if (/[\d.,\s\u00a0'\u2019-]/.test(ch) || /\p{Sc}/u.test(ch) || symbol.includes(ch)) continue
+    return null
+  }
+  const cents = parseCents(typed.replace(/'|\u2019/g, ''), format, true)
+  return Math.max(-MAX_MONEY_CENTS, Math.min(MAX_MONEY_CENTS, cents))
+}
+
+/**
+ * A plain number typed into a box (years, a percentage's digits), or null when it is not one. A comma or a point is
+ * the decimal mark, since such a number has no thousands. Text, "1e9", "0x10", "Infinity" and a number with two
+ * marks are not numbers here, so a box takes none of them for a different number.
+ */
+export function tryParseDecimal(raw: string): number | null {
+  const typed = raw.trim()
+  if (!/^[+-]?(\d+([.,]\d*)?|[.,]\d+)$/.test(typed)) return null
+  const value = Number(typed.replace(',', '.'))
+  return Number.isFinite(value) ? value : null
+}
+
+/** A percentage typed into a box as a fraction, or null when it is not a plain number with an optional % sign. */
+export function tryParsePercentToFraction(raw: string): number | null {
+  const value = tryParseDecimal(raw.replace(/%\s*$/, ''))
+  return value === null ? null : value / 100
+}
+
+/**
  * Only one separator in the text, the one a format does not write its decimals with, and one or
  * two digits after it: "2500.75" in a comma format, "12,5" in a point format. That is a decimal
  * mark typed on a numeric keypad that has the other key; three digits ("1.500") is a thousands
@@ -130,6 +173,9 @@ const LONE_POINT = /^[^.,]*\.\d{1,2}(?!\d)[^.,]*$/
 const LONE_COMMA = /^[^.,]*,\d{1,2}(?!\d)[^.,]*$/
 
 function decimalMark(body: string, format: MoneyFormat, otherMayBeDecimal: boolean): string {
+  // Both marks in one amount: the earlier is a group mark and the later the decimal one, whichever the format
+  // writes its decimals with ("1,234.56" in a comma format is 1.234,56, not 1,23).
+  if (otherMayBeDecimal && body.includes('.') && body.includes(',')) return body.lastIndexOf('.') > body.lastIndexOf(',') ? '.' : ','
   if (otherMayBeDecimal) {
     if (format.decimalSeparator === ',' && LONE_POINT.test(body)) return '.'
     if (format.decimalSeparator === '.' && LONE_COMMA.test(body)) return ','
