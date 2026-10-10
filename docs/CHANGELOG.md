@@ -2,6 +2,11 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (less to read on the Plan page)
+
+- **Rent vs buy, Housing, FI inputs and the spread card say what a reader needs and keep the rest behind a note.** On a house plan the Plan page had about 800 words of prose against about 340 before the changes, most of it explaining how each figure was counted. What stops a wrong decision stays in view: the loan and upkeep come from your income and not the portfolio, rates are entered as quoted, spend is before the tax on what you withdraw, the years the money must last point to a rule of thumb and not a promise, selling costs and tax are left out of Rent vs buy, and only the market changes in the spread. How the price, fees, rent and rates are counted, the guide for the years and the FI formula, what Rent vs buy assumes and how to read the spread are in closed notes ("How these are counted", "How FI is worked out", "What this assumes", "How to read it").
+- **Purchase cost reads "Year 8 takes 70.871 € from the portfolio"** instead of "Purchase cost from portfolio, in 2026 euros: ... dip on the invested line in year 8", with the account figure in brackets.
+
 ## October 2026 (found by the last review before the planning changes landed)
 
 - **A balance exactly on the plan's line no longer reads as started behind.** The gap split took the start part from the plan's own path and not from the line the status compares with, so a first check-in a few years in, exactly on the line, showed thousands behind "at the start" and offered to restart the plan. The start part is now the first check-in's gap to the line.
