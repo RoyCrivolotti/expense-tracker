@@ -2,6 +2,10 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (new plans start for a long retirement)
+
+- **A new plan starts with the money lasting 40 years at a 3,5% withdrawal rate**, where it started at 30 years and 4%. In the app's own replay, 4% for 30 years lasts in about 86 of 100 simulated markets and 3,5% for 40 years in about 85, so the default no longer looks safer than it is for a retirement that begins early. The FI target for the same spending is higher (30.000 € a year needs 857.143 € at 3,5% and 750.000 € at 4%). Only a plan created from now on starts there: every saved scenario keeps its years and rate, and either can be changed on any plan.
+
 ## October 2026 (found by the last review before the planning changes landed)
 
 - **A balance exactly on the plan's line no longer reads as started behind.** The gap split took the start part from the plan's own path and not from the line the status compares with, so a first check-in a few years in, exactly on the line, showed thousands behind "at the start" and offered to restart the plan. The start part is now the first check-in's gap to the line.
