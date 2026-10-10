@@ -75,7 +75,7 @@ describe('RentVsOwnChart', () => {
   it('asks for a house price when there is none, with no lines to compare', () => {
     const { container } = render(<RentVsOwnChart draft={draftOf({ housePriceCents: 0 })} />)
 
-    expect(screen.getByText(/Set a house price to compare renting against buying/)).toBeInTheDocument()
+    expect(screen.getByText('Set a house price under Housing to compare renting against buying.')).toBeInTheDocument()
     expect(container.querySelector('svg[role="img"]')).toBeNull()
   })
 

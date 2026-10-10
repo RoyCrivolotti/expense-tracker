@@ -72,6 +72,8 @@ interface SecondaryChartsProps {
   fromToday: PlanFromToday | null
   /** The Nominal view: the spread is drawn in the money of each year, as the main chart is. */
   nominal?: boolean
+  /** The card is hidden under the controls (the phone's Scenarios half): its replays wait until it is back. */
+  paused?: boolean
 }
 
 function SecondaryViewChart({
@@ -84,6 +86,7 @@ function SecondaryViewChart({
   includeDraft,
   fromToday,
   nominal,
+  paused,
 }: {
   view: SecondaryView
   scenarios: GoalScenario[]
@@ -94,6 +97,7 @@ function SecondaryViewChart({
   includeDraft: boolean
   fromToday: PlanFromToday | null
   nominal: boolean
+  paused: boolean
 }) {
   switch (view) {
     case 'compare':
@@ -119,7 +123,7 @@ function SecondaryViewChart({
     case 'savings':
       return <SavingsRateChart draft={draft} monthly={monthly} embedded />
     case 'spread':
-      return <LazySpreadChart draft={draft} milestones={milestones} nominal={nominal} embedded />
+      return <LazySpreadChart draft={draft} milestones={milestones} nominal={nominal} paused={paused} embedded />
   }
 }
 
@@ -223,6 +227,7 @@ export function SecondaryCharts({
   dirty,
   fromToday,
   nominal = false,
+  paused = false,
 }: SecondaryChartsProps) {
   const [view, setView] = useState<SecondaryView>('compare')
   const includeDraft = activeId === null || dirty
@@ -244,6 +249,7 @@ export function SecondaryCharts({
         includeDraft={includeDraft}
         fromToday={fromToday}
         nominal={nominal}
+        paused={paused}
       />
     </TabbedChart>
   )
