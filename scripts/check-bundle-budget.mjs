@@ -273,9 +273,9 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 //
 // Raised from 274.9 KB to 275.3 KB (and the Goals limit from 82.3 KB to 82.6 KB) for the follow-up fixes merged after
 // the planning changes (the behind-from-the-market wording and the plan start folding earlier monthly changes): the
-// total measured 274,977 bytes gzip and the Goals-only code 82,275. The stricter number parser then took it to 276.2 KB, and the plan page's "More info" disclosures (a small component and the text kept behind them) to 276.6 KB total and 83.1 KB Goals-only. No new library.
-const TOTAL_MAX_GZIP = 276_600
-const GOALS_MAX_GZIP = 83_100
+// total measured 274,977 bytes gzip and the Goals-only code 82,275. The stricter number parser then took it to 276.2 KB, and the plan page's "More info" disclosures (a small component and the text kept behind them) to 276.6 KB total and 83.1 KB Goals-only, and the milestone picker (chips, the crossing dates and the highlight) to 278.2 KB and 84.6 KB. No new library.
+const TOTAL_MAX_GZIP = 278_600
+const GOALS_MAX_GZIP = 85_100
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length

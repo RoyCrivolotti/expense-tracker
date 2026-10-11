@@ -7,6 +7,11 @@ import {
   ChartXLabels,
   ChartBandLayer,
   ChartRefCurves,
+  ChartRefLines,
+  ChartAnnotationLayer,
+  type AnnotationDot,
+  type ChartAnnotations,
+  type RefHighlight,
   ChartScatterLayer,
   ChartTodayMarker,
   ChartAboveMarker,
@@ -26,7 +31,6 @@ import {
   linePath,
   makeScale,
   niceScale,
-  spacedRefLines,
   stackAreas,
   type ScatterPoint,
 } from './linearScale'
@@ -40,7 +44,7 @@ const PAD = { top: 16, right: 16, bottom: 28, left: 56 }
 /** Reference lines closer than this run together into one dashed smear, so the nearer one is left out. */
 const REF_LINE_MIN_GAP = 8
 
-export type { ScatterPoint }
+export type { ScatterPoint, AnnotationDot, ChartAnnotations }
 
 /**
  * A reference that moves across the chart, drawn as a thin dashed line: a target in the other money,
@@ -101,6 +105,10 @@ interface Props {
   refLines?: number[]
   /** Reference lines that are not flat; see `ChartRefCurve`. */
   refCurves?: ChartRefCurve[]
+  /** The reference line picked to stand out, drawn bright and solid while the others fade: a flat line's value, or a curve's id. */
+  refHighlight?: RefHighlight
+  /** Marks on the picked line: where each path reaches it, and a note at its right end. */
+  annotations?: ChartAnnotations | undefined
   markerYears?: { yearIndex: number }[]
   /** Life event markers: fractional x-axis indices with labels (e.g. year 3 → yearIndex 3). */
   lifeEventMarkers?: LifeEventMarker[]
@@ -254,6 +262,8 @@ export function LinearChart({
   tooltip,
   refLines = [],
   refCurves,
+  refHighlight,
+  annotations,
   markerYears = [],
   lifeEventMarkers = [],
   labeledMarkers,
@@ -354,7 +364,12 @@ export function LinearChart({
               />
             ) : null,
           )}
-          <ChartRefCurves curves={refCurves} xForIndex={geo.xForIndex} scaleY={geo.scaleY} />
+          <ChartRefCurves
+            curves={refCurves}
+            xForIndex={geo.xForIndex}
+            scaleY={geo.scaleY}
+            highlight={refHighlight}
+          />
         </g>
         {lineSeries.map((s) => (
           <path
@@ -378,16 +393,21 @@ export function LinearChart({
             dots={s.dots ?? true}
           />
         ))}
-        {spacedRefLines(refLines, geo.scaleY, REF_LINE_MIN_GAP).map((v) => (
-          <line
-            key={v}
-            x1={PAD.left}
-            x2={width - PAD.right}
-            y1={geo.scaleY(v)}
-            y2={geo.scaleY(v)}
-            className={styles.refLine}
-          />
-        ))}
+        <ChartRefLines
+          values={refLines}
+          scaleY={geo.scaleY}
+          x1={PAD.left}
+          x2={width - PAD.right}
+          minGap={REF_LINE_MIN_GAP}
+          highlight={refHighlight}
+        />
+        <ChartAnnotationLayer
+          annotations={annotations}
+          xForIndex={geo.xForIndex}
+          scaleY={geo.scaleY}
+          top={geo.padTop}
+          right={width - PAD.right}
+        />
         {todayIndex !== undefined && (
           <ChartTodayMarker
             x={geo.xForIndex(todayIndex)}

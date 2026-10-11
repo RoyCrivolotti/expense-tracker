@@ -75,6 +75,19 @@ describe('referenceLines with nothing to go on', () => {
   })
 
   it('draws nothing for no milestones and no target', () => {
-    expect(referenceLines({ ...base, milestones: [], nominalMode: false })).toEqual({ lines: [], curves: [], fiAbove: null })
+    expect(referenceLines({ ...base, milestones: [], nominalMode: false })).toEqual({ lines: [], curves: [], fiAbove: null, highlight: null })
+  })
+})
+
+describe('referenceLines highlight', () => {
+  it('names the picked milestone\'s curve in Purchasing power and its flat line in Nominal', () => {
+    expect(referenceLines({ ...base, nominalMode: false, pickedCents: 20_000_000 }).highlight).toEqual({ curveId: 'milestone-20000000' })
+    expect(referenceLines({ ...base, nominalMode: true, pickedCents: 20_000_000 }).highlight).toEqual({ line: 20_000_000 })
+  })
+
+  it('has none when nothing is picked or the picked one is not drawn', () => {
+    expect(referenceLines({ ...base, nominalMode: false }).highlight).toBeNull()
+    expect(referenceLines({ ...base, nominalMode: false, pickedCents: 99 }).highlight).toBeNull()
+    expect(referenceLines({ ...base, nominalMode: true, pickedCents: 50_000_000, drawnMax: 1_000_000 }).highlight).toBeNull()
   })
 })

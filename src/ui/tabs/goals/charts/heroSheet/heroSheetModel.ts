@@ -18,6 +18,8 @@ export interface HeroSheetModel {
     | 'xLabels'
     | 'refLines'
     | 'refCurves'
+    | 'refHighlight'
+    | 'annotations'
     | 'markerYears'
     | 'lifeEventMarkers'
     | 'todayIndex'

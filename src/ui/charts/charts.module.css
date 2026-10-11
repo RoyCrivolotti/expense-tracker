@@ -178,6 +178,44 @@
   pointer-events: none;
 }
 
+/* The reference line picked to stand out: solid and bright. The others fade while one is picked. */
+.refLineOn {
+  stroke: var(--color-text);
+  stroke-width: 2;
+  stroke-dasharray: none;
+}
+.refLineDim {
+  opacity: 0.3;
+}
+
+/* Where a path reaches the picked line, and the note at the line's right end. */
+.annotationDot {
+  fill: var(--color-bg);
+  stroke-width: 2;
+  pointer-events: none;
+}
+.annotationEnd {
+  fill: var(--color-text);
+  pointer-events: none;
+}
+.annotationLabel,
+.annotationNote,
+.annotationNoteSub {
+  fill: var(--color-text);
+  font-size: 11px;
+  font-weight: 600;
+  pointer-events: none;
+  stroke: var(--color-bg-subtle, color-mix(in srgb, var(--color-text) 4%, var(--color-bg)));
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  paint-order: stroke;
+}
+.annotationNoteSub {
+  fill: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 400;
+}
+
 /* A target off the top of the chart: the same grey as the reference lines it stands in for. */
 .aboveMarker {
   fill: color-mix(in srgb, var(--color-text) 60%, transparent);

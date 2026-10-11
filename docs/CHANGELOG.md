@@ -2,6 +2,11 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (pick a milestone on the chart)
+
+- **The grey dotted lines say what they are, and one can be picked.** In Purchasing power the milestone lines slope down (an amount on your account is worth less of the plan's euros each year) and nothing said why. A note under the chart now says what the lines are in each view, and chips list the milestones. Picking one draws its line white, puts a dot with the year where each path reaches it, says at its right end what it is worth there ("= 110k € in 2026 euros"), and lists the month and how long from today for each path. With none picked the chart has no labels.
+- **The milestone lines can be switched off.** A Milestones switch at the start of the chip row takes the lines, the chips and the note off the chart (the FI target stays), and the choice is kept on that device.
+
 ## October 2026 (new plans start for a long retirement)
 
 - **A new plan starts with the money lasting 40 years at a 3,5% withdrawal rate**, where it started at 30 years and 4%. In the app's own replay, 4% for 30 years lasts in about 86 of 100 simulated markets and 3,5% for 40 years in about 85, so the default no longer looks safer than it is for a retirement that begins early. The FI target for the same spending is higher (30.000 € a year needs 857.143 € at 3,5% and 750.000 € at 4%). Only a plan created from now on starts there: every saved scenario keeps its years and rate, and either can be changed on any plan.

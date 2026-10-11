@@ -26,7 +26,11 @@ import { HeroTitleRow } from './heroSheet/HeroTitleRow'
 import { useActiveIndex } from './heroSheet/useActiveIndex'
 import { useHeroSheet } from './heroSheet/useHeroSheet'
 import { fromTodayPoints } from './fromTodayLine'
-import { referenceLines, type ReferenceLines } from './referenceLines'
+import { referenceLines } from './referenceLines'
+import { MilestonePicker } from './MilestonePicker'
+import { useShowMilestones } from './useShowMilestones'
+import { endNoteFor, pickCrossings, type PickLine } from './milestonePick'
+import { todayIso } from '../../../components/transactionFormState'
 import { HERO_WINDOWS, clipToWindow, heroWindowsFor, insideWindow, type HeroWindowKey } from './heroWindow'
 import progressStyles from '../progress.module.css'
 import {
@@ -331,19 +335,86 @@ function useFiTarget(isHero: boolean, draft: NewGoalScenario): number | null {
  * and moves with the inflation in the other. A target far above the plan is left off, and reported,
  * rather than drawn: a reference line sets the axis, so a 25M target over a plan that reaches 8M would
  * leave the lines in the bottom third of the chart. That holds in every window, All included.
+ *
+ * On the hero chart one milestone can be picked. Its line is drawn bright, a dot marks where each path
+ * reaches it and a note ends the line; the rows say when. Nothing is labelled until one is picked.
  */
-function useRefLines(
-  milestones: Milestone[],
-  drawnMax: number | undefined,
-  fiTargetCents: number | null,
-  nominalMode: boolean,
-  years: number[],
-  inflationRate: number,
-): ReferenceLines {
-  return useMemo(
-    () => referenceLines({ milestones, drawnMax, fiTargetCents, nominalMode, years, inflationRate }),
-    [milestones, drawnMax, fiTargetCents, nominalMode, years, inflationRate],
+function useMilestonePick({
+  isHero,
+  milestones,
+  drawnMax,
+  fiTargetCents,
+  nominalMode,
+  years,
+  inflationRate,
+  lines,
+  scenarios,
+  draft,
+}: {
+  isHero: boolean
+  milestones: Milestone[]
+  drawnMax: number | undefined
+  fiTargetCents: number | null
+  nominalMode: boolean
+  years: number[]
+  inflationRate: number
+  lines: ScenarioLine[]
+  scenarios: GoalScenario[]
+  draft: NewGoalScenario
+}) {
+  const format = useMoneyFormat()
+  const [pickedAmount, setPicked] = useState<number | null>(null)
+  const [shown, setShown] = useShowMilestones()
+  const amounts = useMemo(() => [...new Set(milestones.map((m) => m.amountCents))].sort((a, b) => a - b), [milestones])
+  // The picker is the hero chart's alone, and offers no chips while the lines are off.
+  const offered = useMemo(() => (isHero && shown ? amounts : []), [isHero, shown, amounts])
+  const drawn = useMemo(() => (shown ? milestones : []), [shown, milestones])
+  // Only the hero chart offers the picker, and a milestone that has since been removed is no longer picked.
+  const picked = pickedAmount !== null && offered.includes(pickedAmount) ? pickedAmount : null
+  const refs = useMemo(
+    () => referenceLines({ milestones: drawn, drawnMax, fiTargetCents, nominalMode, years, inflationRate, pickedCents: picked }),
+    [drawn, drawnMax, fiTargetCents, nominalMode, years, inflationRate, picked],
   )
+  const pick = useMemo(
+    () =>
+      picked === null
+        ? null
+        : pickCrossings({
+            lines: pickLinesOf(lines, scenarios, draft),
+            amountCents: picked,
+            inflationRate,
+            nominalMode,
+            years,
+            today: todayIso(),
+            locale: format.locale,
+          }),
+    [picked, lines, scenarios, draft, inflationRate, nominalMode, years, format.locale],
+  )
+  // Marks only on a picked line that is drawn: dots where each path reaches it, and a note at its right end.
+  const annotations = useMemo(
+    () =>
+      pick && refs.highlight && picked !== null
+        ? { dots: pick.dots, endNote: endNoteFor({ amountCents: picked, inflationRate, nominalMode, years, planStartDate: draft.planStartDate, format }) }
+        : undefined,
+    [pick, refs.highlight, picked, inflationRate, nominalMode, years, draft.planStartDate, format],
+  )
+  // Turning the lines off takes a pick with them.
+  const setShownAndClear = (next: boolean) => {
+    setShown(next)
+    if (!next) setPicked(null)
+  }
+  return { ...refs, amounts: offered, available: isHero && amounts.length > 0, shown, setShown: setShownAndClear, picked, setPicked, rows: pick?.rows ?? [], pick, annotations }
+}
+
+/** The paths as the milestone picker needs them: each with the date its plan starts on. */
+function pickLinesOf(lines: ScenarioLine[], scenarios: GoalScenario[], draft: NewGoalScenario): PickLine[] {
+  return lines.map((l) => ({
+    id: l.id,
+    name: l.name,
+    color: l.color,
+    params: l.params,
+    planStartDate: (l.scenarioId === null ? draft.planStartDate : scenarios.find((s) => s.id === l.scenarioId)?.planStartDate) ?? null,
+  }))
 }
 
 /** The FI target as a marker on the chart's top edge when it is above the chart, so leaving it off the axis is not a silent omission. */
@@ -645,14 +716,19 @@ function NetWorthChartImpl({
   )
   const { line: fromTodayLine, label: fromTodayLabel } = fromTodayDrawing(displayRealPoints, fromToday)
 
-  const { lines: refLines, curves: refCurves, fiAbove } = useRefLines(
-    milestones,
-    drawnMax,
-    useFiTarget(isHero, draft),
-    nominalMode,
-    years,
-    projectionRate,
-  )
+  const { amounts: milestoneAmounts, available: milestonesAvailable, shown: milestonesShown, setShown: setMilestonesShown, picked, setPicked, rows: milestoneRows, lines: refLines, curves: refCurves, fiAbove, highlight: refHighlight, annotations } =
+    useMilestonePick({
+      isHero,
+      milestones,
+      drawnMax,
+      fiTargetCents: useFiTarget(isHero, draft),
+      nominalMode,
+      years,
+      inflationRate: projectionRate,
+      lines,
+      scenarios,
+      draft,
+    })
   const fiChartMarker = useMemo(() => fiMarker(fiAbove, format), [fiAbove, format])
   // Stable between renders, so a year pointed at, which re-renders this, does not make the chart
   // work out its axis and paths again from arrays that only look new.
@@ -711,6 +787,8 @@ function NetWorthChartImpl({
       xLabels: labels,
       refLines,
       refCurves,
+      refHighlight,
+      annotations,
       markerYears,
       lifeEventMarkers,
       ...todayProp(todayIndex, windowYears),
@@ -720,7 +798,7 @@ function NetWorthChartImpl({
       formatValue,
       tooltip,
     }),
-    [chartSeries, labels, refLines, refCurves, markerYears, lifeEventMarkers, todayIndex, windowYears, yDomainMax, fiChartMarker, formatValue, tooltip],
+    [chartSeries, labels, refLines, refCurves, refHighlight, annotations, markerYears, lifeEventMarkers, todayIndex, windowYears, yDomainMax, fiChartMarker, formatValue, tooltip],
   )
   const sheetLegend = useMemo(
     () => ({
@@ -773,6 +851,8 @@ function NetWorthChartImpl({
         xLabels={labels}
         refLines={refLines}
         refCurves={refCurves}
+        refHighlight={refHighlight}
+        annotations={annotations}
         {...todayProp(todayIndex, windowYears)}
         yDomainMax={yDomainMax}
         formatValue={formatValue}
@@ -795,6 +875,17 @@ function NetWorthChartImpl({
         listRef={listRef}
       />
       <ChartKeys {...chartKeyMarks(isHero, displayExtraSeries.length, lifeEventMarkers)} />
+      <MilestonePicker
+        available={milestonesAvailable}
+        shown={milestonesShown}
+        onShown={setMilestonesShown}
+        amounts={milestoneAmounts}
+        picked={picked}
+        onPick={setPicked}
+        rows={milestoneRows}
+        nominalMode={nominalMode}
+        format={format}
+      />
       <HeroFootnote
         draft={draft}
         isHero={isHero}
