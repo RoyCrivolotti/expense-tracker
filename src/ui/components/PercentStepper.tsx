@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { formatPercent, formatPercentInput, parsePercentToFraction } from '../../engine'
+import { formatPercent, formatPercentInput, tryParsePercentToFraction } from '../../engine'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import styles from './PercentStepper.module.css'
 
@@ -27,24 +27,27 @@ export function PercentStepper({
   const readOnly = disabled || onChange == null
 
   const commit = useCallback(
-    (next: number) => {
+    (next: number): number => {
       const clamped = Math.min(max, Math.max(min, next))
       onChange?.(clamped)
+      return clamped
     },
     [max, min, onChange],
   )
 
-  // Nothing typed, or nothing with a digit in it, is not 0%: the box goes back to the value it had.
+  // Nothing typed, or text that is not a number ("about 4"), is not 0%: the box goes back to the value it had.
   // Text that is what the box showed is not an edit: the box shows one place, so a value with more (a
   // share a re-baseline worked out) would be rounded, and clamped, by tabbing through it.
   const commitText = (input: HTMLInputElement) => {
     const shown = formatPercentInput(value, format)
     if (input.value === shown) return
-    if (!/\d/.test(input.value)) {
+    const typed = tryParsePercentToFraction(input.value)
+    if (typed === null) {
       input.value = shown
       return
     }
-    commit(parsePercentToFraction(input.value, format))
+    // Shows what it was held to, which is not re-rendered when it is what the field already had.
+    input.value = formatPercentInput(commit(typed), format)
   }
 
   if (readOnly) {
