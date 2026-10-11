@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import type { GoalScenario } from '../../../../types'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { SCENARIO_NAME_MAX_LENGTH } from '../../../../engine'
+import { SCENARIO_NAME_MAX_LENGTH, saveAsNewName } from '../../../../engine'
 import { ColorSwatchPicker } from '../../../components/ColorSwatchPicker'
 import { Presence } from '../../../components/Presence'
 import { EXIT_MS } from '../../../hooks/motion'
@@ -36,13 +36,14 @@ interface PopoverProps extends ScenarioMenuActions {
 }
 
 function SaveAsNew({ name, onSave, onCancel }: { name: string; onSave: (name: string) => void; onCancel: () => void }) {
-  const [copyName, setCopyName] = useState(`${name} copy`)
+  const [copyName, setCopyName] = useState(saveAsNewName(name))
   return (
     <div className={styles.menuRow}>
       <input
         className={`${goalStyles.renameInput} ${styles.menuInput}`}
         value={copyName}
         aria-label="Name for new scenario"
+        maxLength={SCENARIO_NAME_MAX_LENGTH}
         autoFocus
         onChange={(e) => setCopyName(e.target.value)}
         onKeyDown={(e) => {

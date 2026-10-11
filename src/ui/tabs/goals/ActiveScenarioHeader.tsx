@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import type { ExpenseActions } from '../../actions'
-import { SCENARIO_NAME_MAX_LENGTH } from '../../../engine'
+import { SCENARIO_NAME_MAX_LENGTH, saveAsNewName } from '../../../engine'
 import { ColorSwatchPicker } from '../../components/ColorSwatchPicker'
 import { ConfirmSheet } from '../../components/ConfirmSheet'
 import { Presence } from '../../components/Presence'
@@ -64,7 +64,7 @@ export function ActiveScenarioHeader({
   onDuplicate,
 }: ActiveScenarioHeaderProps) {
   const [saveAsNewOpen, setSaveAsNewOpen] = useState(false)
-  const [copyName, setCopyName] = useState(`${draft.name} copy`)
+  const [copyName, setCopyName] = useState(saveAsNewName(draft.name))
   const [deleteOpen, setDeleteOpen] = useState(false)
   const unnamed = draft.name.trim().length === 0
 
@@ -162,6 +162,7 @@ export function ActiveScenarioHeader({
                 className={styles.renameInput}
                 value={copyName}
                 aria-label="Name for new scenario"
+                maxLength={SCENARIO_NAME_MAX_LENGTH}
                 onChange={(e) => setCopyName(e.target.value)}
               />
               <SaveButton
