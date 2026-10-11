@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { formatMoneyInput, formatPercent, parseMoneyToCents } from '../../../engine'
+import { formatMoneyInput, formatPercent, tryParseDecimal, tryParseMoneyToCents } from '../../../engine'
 import { DateInput } from '../../components/DateInput'
 import { PercentStepper } from '../../components/PercentStepper'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
@@ -20,15 +20,19 @@ interface MoneyFieldProps {
  */
 export function MoneyField({ label, value, onChange }: MoneyFieldProps) {
   const format = useMoneyFormat()
-  // Nothing typed, or nothing with a digit in it, is not an amount of nothing: the box goes back to
-  // the value it had, as the levers bar's fields do.
+  // Nothing typed, or text that is not an amount ("250k", "1e9"), is not an amount of nothing and is not the
+  // digits in it: the box goes back to the value it had, as the levers bar's fields do. What is typed is
+  // held to the ceiling and below zero, and the box shows what it was held to.
   const commit = useCallback(
     (input: HTMLInputElement) => {
-      if (!/\d/.test(input.value)) {
+      const cents = tryParseMoneyToCents(input.value, format)
+      if (cents === null) {
         input.value = formatMoneyInput(value, format)
         return
       }
-      onChange(Math.max(0, parseMoneyToCents(input.value, format)))
+      const next = Math.max(0, cents)
+      input.value = formatMoneyInput(next, format)
+      onChange(next)
     },
     [format, onChange, value],
   )
@@ -69,9 +73,10 @@ export function NumberField({ label, value, min, max, decimals = 0, onChange }: 
   const format = useMoneyFormat()
   const scale = Math.pow(10, decimals)
   const commit = useCallback(
-    (next: number) => {
-      if (Number.isNaN(next)) return
-      onChange(Math.min(max, Math.max(min, Math.round(next * scale) / scale)))
+    (next: number): number => {
+      const held = Math.min(max, Math.max(min, Math.round(next * scale) / scale))
+      onChange(held)
+      return held
     },
     [max, min, onChange, scale],
   )
@@ -82,12 +87,14 @@ export function NumberField({ label, value, min, max, decimals = 0, onChange }: 
   // after a re-baseline) is not rounded by tabbing through it.
   const commitText = (input: HTMLInputElement) => {
     if (input.value === shown) return
-    const next = Number(input.value.replace(',', '.'))
-    if (input.value.trim() === '' || Number.isNaN(next)) {
+    const next = tryParseDecimal(input.value)
+    if (next === null) {
       input.value = shown
       return
     }
-    commit(next)
+    // The value it was held to, which is what the box shows even when that is the value it already had (a
+    // number past the most the field takes, typed over the most): nothing re-renders the box then.
+    input.value = String(commit(next)).replace('.', format.decimalSeparator)
   }
 
   return (

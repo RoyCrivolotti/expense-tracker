@@ -7,7 +7,7 @@ import {
   MILESTONE_LABEL_MAX_LENGTH,
   MILESTONE_MAX_CENTS,
   MILESTONE_MAX_COUNT,
-  parseMoneyToCents,
+  tryParseMoneyToCents,
   resolveMoneyFormat,
   currencyWord,
   type MoneyFormat,
@@ -83,8 +83,8 @@ function MilestoneRow({
     // Read the way the rest of the app reads an amount, by the currency's format: "150.000" is a
     // hundred and fifty thousand where the group mark is the point, and "1,5" is one and a half
     // where it is not. A plain Number() read the first as 150 and dropped the second.
-    const cents = /\d/.test(amount) ? parseMoneyToCents(amount, format) : 0
-    if (cents <= 0) return milestone.amountCents
+    const cents = tryParseMoneyToCents(amount, format)
+    if (cents === null || cents <= 0) return milestone.amountCents
     const next = Math.min(MILESTONE_MAX_CENTS, cents)
     // Saving a duplicate would let the server's de-duplication drop this row and
     // its label without the edit ever being visible, so collisions revert. The row's

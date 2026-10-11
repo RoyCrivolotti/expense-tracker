@@ -5,6 +5,19 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 ## October 2026 (a house paid early or late in the gap split)
 
 - **A house bought a few weeks before its anniversary no longer reads as under-saving by its price.** The split counted the plan's payment on the plan's anniversary and the recorded withdrawal on its own date, so the weeks between showed the whole payment as money not saved (or, paid just after a check-in, as saved). A recorded payment now counts from the day it was made; the gap to the plan's line still shows it, as timing.
+## October 2026 (the server checks what it stores)
+
+- **A malformed life event can no longer blank the app.** A stored `[null]` or an amount that was text made the Goals screen throw, with nothing above it to catch it and no way to repair the row from the app. The server now refuses a life event that is not a year from 0 to 100, a whole number of cents and a label, and a stored row that already holds one reads without the bad entries.
+- **The server refuses numbers no plan has**: a horizon past 100 years, amounts past a hundred billion euros, a return or house growth outside -50% to +100%, a mortgage rate outside 0 to 100%, a purchase year past 200, a plan start outside 2000 to 2100 and a name past 100 characters (the name boxes stop there, and a copy of a long name is cut to fit instead of being refused). A request that leaves out a number a scenario needs now says which one, instead of failing as an unexplained error.
+- **Check-in balances and the opening balances are checked.** A balance must be a whole number of cents, a hundred billion euros at most either way (a negative one is an overdrawn account), and the opening investments cannot be negative.
+## October 2026 (the number boxes stop guessing)
+
+- **A number with a letter in it is no longer read as the digits in it.** "250k" in an amount became 250, "1e9" became 19 and "1.5M" became 1,50; "about 4" in a percentage became the least the field allows, which for the withdrawal rate multiplied the FI target by eight. The box now goes back to what it had, as it already did for text with no digit. This covers the amounts, years and percentages on the Plan page, the levers bar, a milestone's amount and a check-in's balances.
+- **"1,234.56" is read as one thousand two hundred and thirty-four and fifty-six cents in a comma format**, and "1.234,56" in a point format, where each was read as 1,23. With both marks in the text, the later one is the decimal mark.
+- **An amount must be written as one.** "1..5", "1,2,3", "5-5", "1 2" and "15CHF00" are refused and the box goes back, where they were read as 1,5, 1,23, 55, 12 and 1.500. A currency symbol may stand at either end, once.
+- **A check-in balance typed into and left as text goes back to what it held when you entered it**, not to the first digit typed ("1e9" had left 1).
+- **A percentage box shows a second decimal when the value has one**: 3.25% reads "3,25", not "3,3", and tabbing through it no longer writes 3.3% back.
+- **A very long number is held to 100 billion** instead of becoming Infinity, and a number held to the most or least a field takes shows that value in the box instead of what was typed (100 years in the horizon box stays "100" over a 60 it was already at).
 ## October 2026 (first-run texts point at things that are there)
 
 - **Three empty-state sentences now point where the thing is.** With no plan, Progress said to open a scenario "under Plan" and choose Use as my plan, which does not exist before a scenario is saved: it now says to save one on the Plan page (Scenarios on a phone). With no account, the history said "Log your first snapshot above" although nothing is above: it says to set up an account in Assumptions. Rent vs buy with no house price says where the price is set.

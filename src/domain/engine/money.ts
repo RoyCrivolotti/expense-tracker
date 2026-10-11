@@ -128,6 +128,115 @@ export function parseMoneyToCents(raw: string, format: MoneyFormat = EU_MONEY_FO
 }
 
 /**
+ * The most an amount typed into a box may be, in cents: 100 billion. No balance, price or milestone is more, and a
+ * number with hundreds of digits would otherwise reach the engine as Infinity.
+ */
+export const MAX_MONEY_CENTS = 1e13
+
+/**
+ * An amount typed into a box, or null when what was typed is not one. Unlike `parseMoneyToCents`, which drops what it
+ * does not understand, text with a letter in it ("250k", "1e9", "1.5M", "about 4") is not an amount: reading the digits
+ * out of it turned 250k into 250 and 1e9 into 19, and a box that quietly does that is worse than one that goes back to
+ * what it had. Nor is a number with its marks in the wrong places ("1..5", "1,2,3", "5-5", "1 2"): the grammar is an
+ * optional sign, one currency symbol before or after, then digits in groups of three with one kind of group mark and at
+ * most one decimal mark. A number past `MAX_MONEY_CENTS` is held there.
+ */
+export function tryParseMoneyToCents(raw: string, format: MoneyFormat = EU_MONEY_FORMAT): number | null {
+  const edge = splitSymbolAndSign(raw.trim().replace(/\u2212/g, '-'), format.symbol)
+  if (edge === null || !/\d/.test(edge.number)) return null
+  const cents = centsFromNumber(edge.number, format)
+  if (cents === null) return null
+  const signed = edge.negative ? -cents : cents
+  return Math.max(-MAX_MONEY_CENTS, Math.min(MAX_MONEY_CENTS, signed))
+}
+
+/**
+ * The sign and the one currency symbol taken off the edges of what was typed, leaving the number. The sign may sit
+ * before or after a leading symbol ("-€5", "€-5"); a symbol may lead or trail but not both, and a second one is left
+ * in the number where it fails.
+ */
+function splitSymbolAndSign(typed: string, symbol: string): { number: string; negative: boolean } | null {
+  let rest = typed
+  let negative = false
+  let signs = 0
+  const takeSign = () => {
+    if (rest.startsWith('-') || rest.startsWith('+')) {
+      negative = rest.startsWith('-')
+      rest = rest.slice(1).trimStart()
+      signs += 1
+    }
+  }
+  const named = symbol === '' ? '' : `${escapeRegExp(symbol)}|`
+  const symbolAtStart = new RegExp(`^(?:${named}\\p{Sc})`, 'u')
+  const symbolAtEnd = new RegExp(`(?:${named}\\p{Sc})$`, 'u')
+  takeSign()
+  let symbols = 0
+  const lead = symbolAtStart.exec(rest)
+  if (lead) {
+    rest = rest.slice(lead[0].length).trimStart()
+    symbols += 1
+    takeSign()
+  }
+  const trail = symbolAtEnd.exec(rest)
+  if (trail) {
+    rest = rest.slice(0, rest.length - trail[0].length).trimEnd()
+    symbols += 1
+  }
+  return symbols > 1 || signs > 1 ? null : { number: rest, negative }
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+const GROUP_MARK = /[.,\s\u00a0\u202f'\u2019]/
+const sameMark = (a: string, b: string) => a.replace(/[\u00a0\u202f]/g, ' ') === b.replace(/[\u00a0\u202f]/g, ' ')
+
+/** The digits of an integer part written with group marks, or null: one run of digits, or 1 to 3 then groups of 3 joined by one kind of mark. */
+function wholeDigits(whole: string): string | null {
+  const groups = whole.split(new RegExp(GROUP_MARK))
+  if (groups.length === 1) return /^\d*$/.test(whole) ? whole : null
+  const joiners = whole.match(new RegExp(GROUP_MARK, 'g')) ?? []
+  const first = joiners[0] ?? ''
+  const grouped = /^\d{1,3}$/.test(groups[0] ?? '') && groups.slice(1).every((g) => /^\d{3}$/.test(g))
+  return grouped && joiners.every((j) => sameMark(j, first)) ? groups.join('') : null
+}
+
+/**
+ * Cents from digits with group marks and at most one decimal mark, or null when the marks are not placed as a number
+ * is written: the integer part is one run of digits, or 1 to 3 digits then groups of exactly 3 joined by one kind of
+ * mark (a point, comma, space or apostrophe); the decimal mark, picked as `parseMoneyToCents` picks it, comes once.
+ */
+function centsFromNumber(number: string, format: MoneyFormat): number | null {
+  if (!/^[\d.,\s\u00a0\u202f'\u2019]+$/.test(number)) return null
+  const typed = number.replace(/^(\d+)[.,]$/, '$1')
+  const mark = decimalMark(typed.replace(/[\s\u00a0\u202f]/g, ' '), format, true)
+  const halves = typed.split(mark)
+  const [whole = '', fraction = ''] = halves
+  const digits = wholeDigits(whole)
+  if (halves.length > 2 || digits === null || !/^\d*$/.test(fraction) || digits + fraction === '') return null
+  return Math.round(Number(`${digits === '' ? '0' : digits}${fraction === '' ? '' : `.${fraction}`}`) * 100)
+}
+
+/**
+ * A plain number typed into a box (years, a percentage's digits), or null when it is not one. A comma or a point is
+ * the decimal mark, since such a number has no thousands. Text, "1e9", "0x10", "Infinity" and a number with two
+ * marks are not numbers here, so a box takes none of them for a different number.
+ */
+export function tryParseDecimal(raw: string): number | null {
+  const typed = raw.trim()
+  if (!/^[+-]?(\d+([.,]\d*)?|[.,]\d+)$/.test(typed)) return null
+  const value = Number(typed.replace(',', '.'))
+  return Number.isFinite(value) ? value : null
+}
+
+/** A percentage typed into a box as a fraction, or null when it is not a plain number with an optional % sign. */
+export function tryParsePercentToFraction(raw: string): number | null {
+  const value = tryParseDecimal(raw.replace(/%\s*$/, ''))
+  return value === null ? null : value / 100
+}
+
+/**
  * Only one separator in the text, the one a format does not write its decimals with, and one or
  * two digits after it: "2500.75" in a comma format, "12,5" in a point format. That is a decimal
  * mark typed on a numeric keypad that has the other key; three digits ("1.500") is a thousands
@@ -137,6 +246,9 @@ const LONE_POINT = /^[^.,]*\.\d{1,2}(?!\d)[^.,]*$/
 const LONE_COMMA = /^[^.,]*,\d{1,2}(?!\d)[^.,]*$/
 
 function decimalMark(body: string, format: MoneyFormat, otherMayBeDecimal: boolean): string {
+  // Both marks in one amount: the earlier is a group mark and the later the decimal one, whichever the format
+  // writes its decimals with ("1,234.56" in a comma format is 1.234,56, not 1,23).
+  if (otherMayBeDecimal && body.includes('.') && body.includes(',')) return body.lastIndexOf('.') > body.lastIndexOf(',') ? '.' : ','
   if (otherMayBeDecimal) {
     if (format.decimalSeparator === ',' && LONE_POINT.test(body)) return '.'
     if (format.decimalSeparator === '.' && LONE_COMMA.test(body)) return ','
@@ -191,13 +303,18 @@ export function formatPercent(
   })}%`
 }
 
-/** Localized string for editable percent inputs (no '%' sign), e.g. 0.05 -> "5,0". */
+/**
+ * Localized string for editable percent inputs (no '%' sign), e.g. 0.05 -> "5,0". One decimal, or two when the value
+ * has a second one that matters (0.0325 -> "3,25"): a box that showed "3,3" for a stored 3.25% was a rate nobody typed.
+ */
 export function formatPercentInput(
   fraction: number,
   format: MoneyFormat = EU_MONEY_FORMAT,
-  decimals = 1,
+  decimals?: number,
 ): string {
-  return (fraction * 100).toFixed(decimals).replace('.', format.decimalSeparator)
+  const pct = fraction * 100
+  const places = decimals ?? (Math.abs(Number(pct.toFixed(2)) - Number(pct.toFixed(1))) > 1e-9 ? 2 : 1)
+  return pct.toFixed(places).replace('.', format.decimalSeparator)
 }
 
 /**
