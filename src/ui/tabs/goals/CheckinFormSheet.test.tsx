@@ -113,6 +113,25 @@ describe('CheckinFormSheet', () => {
     )
   })
 
+  it('puts back what a box held when it was entered, not a half-typed prefix of what ended up not an amount', async () => {
+    const actions = makeActions()
+    const user = userEvent.setup()
+    render(<CheckinFormSheet accounts={[makeAccount(1)]} actions={actions} />)
+    const field = screen.getByLabelText('Value for Account 1')
+    fireEvent.change(field, { target: { value: '5000' } })
+    fireEvent.blur(field)
+    fireEvent.focus(field)
+    // "1" is an amount on the way to "1e9", which is not one.
+    fireEvent.change(field, { target: { value: '1' } })
+    fireEvent.change(field, { target: { value: '1e9' } })
+    fireEvent.blur(field)
+    expect(field).toHaveValue('5.000,00')
+    await user.click(screen.getByRole('button', { name: /save check-in/i }))
+    expect(actions.createWealthCheckin).toHaveBeenCalledWith(
+      expect.objectContaining({ entries: [{ accountId: 1, valueCents: 500_000 }] }),
+    )
+  })
+
   it('holds a balance of hundreds of digits to the ceiling and shows the ceiling, not Infinity', () => {
     render(<CheckinFormSheet accounts={[makeAccount(1)]} actions={makeActions()} />)
     const field = screen.getByLabelText('Value for Account 1')

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { WealthAccount, WealthCheckin } from '../../../types'
 import type { ExpenseActions } from '../../actions'
 import { Card } from '../../components/primitives'
@@ -53,12 +53,15 @@ export function CheckinFormSheet({ accounts, previous = null, actions, onDone }:
     )
     setTouched((prev) => (prev.has(accountId) ? prev : new Set(prev).add(accountId)))
   }
+  // What each box held when it was entered. Typing "1e9" passes through "1", which is an amount, so the last amount
+  // seen while typing is a keystroke's, not the one the person had; text that ends up not an amount goes back to this.
+  const heldOnEntry = useRef(new Map<number, number>())
   // An empty box is a balance of nothing, which a check-in may say. Text that is not an amount is none at all.
   const readBalance = (raw: string): number | null => (raw.trim() === '' ? 0 : tryParseMoneyToCents(raw, format))
   // Leaving the box (or Enter): the amount it holds, written back as the form will use it. Text that is not an
-  // amount puts the last one back, and a zero is an empty box with the zero as its placeholder.
+  // amount puts back what the box held when it was entered, and a zero is an empty box with the zero as its placeholder.
   const commitBalance = (input: HTMLInputElement, entry: EntryDraft) => {
-    const cents = readBalance(input.value) ?? entry.valueCents
+    const cents = readBalance(input.value) ?? heldOnEntry.current.get(entry.accountId) ?? entry.valueCents
     setEntry(entry.accountId, cents)
     input.value = cents === 0 ? '' : formatMoneyInput(cents, format)
   }
@@ -138,10 +141,13 @@ export function CheckinFormSheet({ accounts, previous = null, actions, onDone }:
                   // ("0,005000"), and an empty field says plainly that nothing is entered yet.
                   defaultValue={entry.valueCents === 0 ? '' : formatMoneyInput(entry.valueCents, format)}
                   placeholder={formatMoneyInput(0, format)}
-                  onFocus={(e) => e.currentTarget.select()}
+                  onFocus={(e) => {
+                    heldOnEntry.current.set(entry.accountId, entry.valueCents)
+                    e.currentTarget.select()
+                  }}
                   // On every keystroke too, so Save wakes up as the first balance is typed
                   // rather than only once the field is left. Text that is not an amount ("250k") is no
-                  // keystroke's amount: the last one stands, and leaving the field puts it back in the box.
+                  // keystroke's amount: leaving the field puts back what the box held when it was entered.
                   onChange={(e) => {
                     const cents = readBalance(e.target.value)
                     if (cents !== null) setEntry(entry.accountId, cents)
