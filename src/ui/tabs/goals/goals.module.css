@@ -970,6 +970,43 @@
 }
 
 /* The marks on the hero chart, one line under the legend: a dot is a check-in, a diamond a life event. */
+/* The milestone chips under the chart, and the list of when each path reaches the picked one. */
+.milestonePicker {
+  margin-top: 0.25rem;
+}
+.milestoneChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0;
+}
+.milestoneRows {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--color-text);
+}
+.milestoneRows li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.5rem;
+}
+.milestoneSwatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  align-self: center;
+  forced-color-adjust: none;
+}
+.milestoneRowName {
+  color: var(--color-text-muted);
+}
+
 .chartKeys {
   display: flex;
   flex-wrap: wrap;

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { installFakeIntersectionObserver } from '../../../../testing/fakeIntersectionObserver'
 import { NetWorthChart } from './NetWorthChart'
@@ -1234,5 +1234,72 @@ describe('NetWorthChart money label', () => {
     stubWidth(false)
     renderHero({ variant: 'default' })
     expect(screen.getByText(/^In 2026 euros\. Compare saved scenarios/)).toBeInTheDocument()
+  })
+})
+
+describe('NetWorthChart: picking a milestone', () => {
+  const draft = { ...defaultDraft, horizonYears: 30, planStartDate: '2026-01-01' }
+  const hero = (nominalMode = false) => (
+    <NetWorthChart milestones={milestones} scenarios={[]} draft={draft} variant="hero" nominalMode={nominalMode} />
+  )
+  const chips = () => within(screen.getByRole('group', { name: 'Milestones' })).getAllByRole('button')
+  const svgText = (container: HTMLElement) => [...container.querySelectorAll('svg text')].map((t) => t.textContent ?? '')
+
+  it('has no labels on the chart until a milestone is picked, and the note says what the lines are', () => {
+    const { container } = render(hero())
+    expect(chips().length).toBe(milestones.length)
+    expect(chips().every((c) => c.getAttribute('aria-pressed') === 'false')).toBe(true)
+    expect(svgText(container).some((t) => /on account/.test(t))).toBe(false)
+    expect(container.querySelector(`.${chartStyles.refLineOn}`)).toBeNull()
+    expect(container.querySelector(`.${chartStyles.refLineDim}`)).toBeNull()
+    expect(screen.getByText(/Grey dotted lines are your milestones/)).toBeInTheDocument()
+  })
+
+  it('draws the picked one bright and the rest faded, labels its right end, dots where the path reaches it, and lists when', () => {
+    const { container } = render(hero())
+    const chip = chips()[2]!
+    fireEvent.click(chip)
+    expect(chip).toHaveAttribute('aria-pressed', 'true')
+    expect(container.querySelectorAll(`.${chartStyles.refLineOn}`)).toHaveLength(1)
+    expect(container.querySelectorAll(`.${chartStyles.refLineDim}`).length).toBeGreaterThan(0)
+    const text = svgText(container)
+    expect(text.some((t) => /on account$/.test(t))).toBe(true)
+    expect(text.some((t) => /^= .* in 2026 euros$/.test(t))).toBe(true)
+    expect(container.querySelectorAll(`.${chartStyles.annotationDot}`)).toHaveLength(1)
+    const list = screen.getByRole('list', { name: /When each path reaches/ })
+    expect(within(list).getAllByRole('listitem')).toHaveLength(1)
+    expect(list.textContent).toMatch(/[A-Z][a-z]{2}\.? \d{4}, in /)
+  })
+
+  it('clears the pick when the chip is pressed again', () => {
+    const { container } = render(hero())
+    fireEvent.click(chips()[2]!)
+    fireEvent.click(chips()[2]!)
+    expect(container.querySelector(`.${chartStyles.refLineOn}`)).toBeNull()
+    expect(screen.queryByRole('list', { name: /When each path reaches/ })).not.toBeInTheDocument()
+  })
+
+  it('moves one at a time: picking another takes the first away', () => {
+    const { container } = render(hero())
+    fireEvent.click(chips()[1]!)
+    fireEvent.click(chips()[3]!)
+    expect(chips()[1]).toHaveAttribute('aria-pressed', 'false')
+    expect(chips()[3]).toHaveAttribute('aria-pressed', 'true')
+    expect(container.querySelectorAll(`.${chartStyles.refLineOn}`)).toHaveLength(1)
+  })
+
+  it('in Nominal says only the amount, since the line is level at it, and the note says so', () => {
+    const { container } = render(hero(true))
+    expect(screen.getByText(/so they stay level here/)).toBeInTheDocument()
+    fireEvent.click(chips()[2]!)
+    const text = svgText(container)
+    expect(text.some((t) => /on account$/.test(t))).toBe(true)
+    expect(text.some((t) => /^= /.test(t))).toBe(false)
+    expect(container.querySelectorAll(`.${chartStyles.refLineOn}`)).toHaveLength(1)
+  })
+
+  it('is a hero chart’s alone', () => {
+    render(<NetWorthChart milestones={milestones} scenarios={[]} draft={draft} />)
+    expect(screen.queryByRole('group', { name: 'Milestones' })).not.toBeInTheDocument()
   })
 })
