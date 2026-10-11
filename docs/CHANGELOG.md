@@ -2,6 +2,10 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (yen and won in a comma number style)
+
+- **An amount in a currency with no cents (yen, won) no longer reads as nothing under the German number style.** The decimal mark was read off a sample of the currency, which has no decimal part, so it was left as a point, the thousands mark of that style: the box showed 123.456.00 and tabbing through it saved 0. The mark now comes from the number style.
+
 ## October 2026 (Save says what it left out)
 
 - **Save no longer says just "Saved" while a change or an event is still open to add.** The form for a monthly change or a life event keeps what is typed in it until Add, and Save writes the scenario without it, so "Saved Path A" read as if the half-typed change were in. The toast now says "What you are still adding or editing is not in it yet."
