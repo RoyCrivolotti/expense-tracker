@@ -1003,6 +1003,8 @@
   height: 14px;
   border-radius: 8px;
   background: color-mix(in srgb, var(--color-text) 25%, var(--color-surface));
+  /* The knob is the track's text colour: the page's own when off, the contrast colour on the accent when on. */
+  color: var(--color-text);
   transition: background-color 0.15s ease;
   forced-color-adjust: none;
 }
@@ -1014,11 +1016,12 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--color-text);
+  background: currentColor;
   transition: left 0.15s ease;
 }
 .milestoneSwitchOn .milestoneTrack {
   background: var(--color-accent);
+  color: var(--color-accent-contrast);
 }
 .milestoneSwitchOn .milestoneTrack::after {
   left: 14px;
