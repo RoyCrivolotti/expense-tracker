@@ -5,6 +5,7 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 ## October 2026 (pick a milestone on the chart)
 
 - **The grey dotted lines say what they are, and one can be picked.** In Purchasing power the milestone lines slope down (an amount on your account is worth less of the plan's euros each year) and nothing said why. A note under the chart now says what the lines are in each view, and chips list the milestones. Picking one draws its line white, puts a dot with the year where each path reaches it, says at its right end what it is worth there ("= 110k € in 2026 euros"), and lists the month and how long from today for each path. With none picked the chart has no labels.
+- **The milestone lines can be switched off.** A Milestones switch at the start of the chip row takes the lines, the chips and the note off the chart (the FI target stays), and the choice is kept on that device.
 
 ## October 2026 (new plans start for a long retirement)
 
