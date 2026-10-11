@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { GapSplit } from '../../../engine'
-import { gapRows } from './gapRows'
+import { behindFromTheMarket, gapRows } from './gapRows'
 
 const split = (parts: Partial<GapSplit['parts']>, over: Partial<GapSplit> = {}): GapSplit => {
   const all = { timing: 0, start: 0, saving: 0, market: 0, ...parts }
@@ -71,5 +71,23 @@ describe('gapRows', () => {
 
   it('has no rows when every part rounds to nothing', () => {
     expect(gapRows(split({ start: 30, saving: -20, market: 10, timing: -20 }))).toEqual([])
+  })
+})
+
+describe('behindFromTheMarket', () => {
+  const behind = (over: Partial<GapSplit> = {}) => split({ market: -500_000 }, { verdict: 'behind', ...over })
+
+  it('is true for a gap behind the plan with the recorded investing not short', () => {
+    expect(behindFromTheMarket(behind())).toBe(true)
+  })
+
+  it.each([
+    ['ahead', { verdict: 'ahead' as const }],
+    ['on track', { verdict: 'on-track' as const }],
+    ['saving and the market said together', { merged: 'none-recorded' as const }],
+    ['what was invested is short of the plan', { recordedShort: true }],
+    ['a plan that invests nothing, with no month to compare', { plannedMonthCents: 0 }],
+  ])('is false when %s', (_name, over) => {
+    expect(behindFromTheMarket(behind(over))).toBe(false)
   })
 })
