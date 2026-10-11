@@ -2,6 +2,11 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (the server checks what it stores)
+
+- **A malformed life event can no longer blank the app.** A stored `[null]` or an amount that was text made the Goals screen throw, with nothing above it to catch it and no way to repair the row from the app. The server now refuses a life event that is not a year from 0 to 100, a whole number of cents and a label, and a stored row that already holds one reads without the bad entries.
+- **The server refuses numbers no plan has**: a horizon past 100 years, amounts past a hundred billion euros, a return or house growth outside -50% to +100%, a mortgage rate outside 0 to 100%, a purchase year past 200, a plan start outside 2000 to 2100 and a name past 100 characters (the name boxes stop there, and a copy of a long name is cut to fit instead of being refused). A request that leaves out a number a scenario needs now says which one, instead of failing as an unexplained error.
+- **Check-in balances and the opening balances are checked.** A balance must be a whole number of cents, a hundred billion euros at most either way (a negative one is an overdrawn account), and the opening investments cannot be negative.
 ## October 2026 (the number boxes stop guessing)
 
 - **A number with a letter in it is no longer read as the digits in it.** "250k" in an amount became 250, "1e9" became 19 and "1.5M" became 1,50; "about 4" in a percentage became the least the field allows, which for the withdrawal rate multiplied the FI target by eight. The box now goes back to what it had, as it already did for text with no digit. This covers the amounts, years and percentages on the Plan page, the levers bar, a milestone's amount and a check-in's balances.

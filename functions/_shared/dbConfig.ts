@@ -436,8 +436,27 @@ function assertGoalsSettings(patch: Partial<ExpenseSettings>): void {
   }
 }
 
+/** No balance is more than this, in cents: a hundred billion euros. */
+const MAX_OPENING_CENTS = 1e13
+
+/**
+ * What the books start from: whole cents, and not past the ceiling either way. The investments cannot start below zero,
+ * and cash can (an overdrawn account), so only the investments are held to zero or more.
+ */
+function assertOpeningBalances(patch: Partial<ExpenseSettings>): void {
+  const invested = patch.openingInvestmentCents
+  if (invested !== undefined && (!Number.isSafeInteger(invested) || invested < 0 || invested > MAX_OPENING_CENTS)) {
+    throw new HttpError(400, 'openingInvestmentCents must be a whole number of cents, zero or more, at most a hundred billion euros')
+  }
+  const cash = patch.openingCashCents
+  if (cash !== undefined && (!Number.isSafeInteger(cash) || Math.abs(cash) > MAX_OPENING_CENTS)) {
+    throw new HttpError(400, 'openingCashCents must be a whole number of cents, a hundred billion euros at most either way')
+  }
+}
+
 /** The scalar checks that need no database; the account check stays with the query. */
 function assertSettingsPatch(patch: Partial<ExpenseSettings>): void {
+  assertOpeningBalances(patch)
   if (
     patch.budgetRolloverDay != null &&
     (!Number.isInteger(patch.budgetRolloverDay) ||
