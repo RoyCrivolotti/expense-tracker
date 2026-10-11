@@ -2,6 +2,10 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (a house paid early or late in the gap split)
+
+- **A house bought a few weeks before its anniversary no longer reads as under-saving by its price.** The split counted the plan's payment on the plan's anniversary and the recorded withdrawal on its own date, so the weeks between showed the whole payment as money not saved (or, paid just after a check-in, as saved). A recorded payment now counts from the day it was made; the gap to the plan's line still shows it, as timing.
+
 ## October 2026 (found by the last review before the planning changes landed)
 
 - **A balance exactly on the plan's line no longer reads as started behind.** The gap split took the start part from the plan's own path and not from the line the status compares with, so a first check-in a few years in, exactly on the line, showed thousands behind "at the start" and offered to restart the plan. The start part is now the first check-in's gap to the line.
