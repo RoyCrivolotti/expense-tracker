@@ -8,6 +8,9 @@ import { milestoneNote, type PickRow } from './milestonePick'
  * dots where each path reaches it, and the list here says when. With none picked the chart has no labels at all.
  */
 export function MilestonePicker({
+  available,
+  shown,
+  onShown,
   amounts,
   picked,
   onPick,
@@ -15,6 +18,11 @@ export function MilestonePicker({
   nominalMode,
   format,
 }: {
+  /** There are milestones to switch and pick from. */
+  available: boolean
+  /** The milestone lines are drawn. */
+  shown: boolean
+  onShown: (shown: boolean) => void
   amounts: readonly number[]
   picked: number | null
   onPick: (cents: number | null) => void
@@ -22,11 +30,21 @@ export function MilestonePicker({
   nominalMode: boolean
   format: MoneyFormat
 }) {
-  if (amounts.length === 0) return null
+  if (!available) return null
   return (
     <div className={styles.milestonePicker}>
-      <p className={`${styles.chartHint} ${styles.chartCaption}`}>{milestoneNote(nominalMode, format)}</p>
+      {shown ? <p className={`${styles.chartHint} ${styles.chartCaption}`}>{milestoneNote(nominalMode, format)}</p> : null}
       <div className={styles.milestoneChips} role="group" aria-label="Milestones">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={shown}
+          className={shown ? `${styles.milestoneSwitch} ${styles.milestoneSwitchOn}` : styles.milestoneSwitch}
+          onClick={() => onShown(!shown)}
+        >
+          <span className={styles.milestoneTrack} aria-hidden />
+          Milestones
+        </button>
         {amounts.map((cents) => {
           const on = cents === picked
           return (

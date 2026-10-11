@@ -1307,6 +1307,72 @@ describe('NetWorthChart: picking a milestone', () => {
     expect(list.textContent).toContain('Saved plan')
   })
 
+  describe('the Milestones switch', () => {
+    const STORAGE_KEY = 'exp-goals-show-milestones'
+    const milestoneSwitch = () => screen.getByRole('switch', { name: 'Milestones' })
+    const dotted = (container: HTMLElement) => container.querySelectorAll(`.${chartStyles.refLine}`).length
+
+    afterEach(() => localStorage.clear())
+
+    it('is on by default, with the lines, the note and a chip for each milestone', () => {
+      const { container } = render(hero())
+      expect(milestoneSwitch()).toHaveAttribute('aria-checked', 'true')
+      expect(dotted(container)).toBeGreaterThan(milestones.length - 1)
+      expect(chips()).toHaveLength(milestones.length)
+    })
+
+    it('takes the milestone lines, the chips and the note off the chart when turned off, and keeps the FI target', () => {
+      const { container } = render(hero())
+      const before = dotted(container)
+      fireEvent.click(milestoneSwitch())
+      expect(milestoneSwitch()).toHaveAttribute('aria-checked', 'false')
+      expect(dotted(container)).toBe(before - milestones.length)
+      expect(screen.queryByRole('button', { name: /€$/ })).not.toBeInTheDocument()
+      expect(screen.queryByText(/Grey dotted lines are your milestones/)).not.toBeInTheDocument()
+    })
+
+    it('takes a picked milestone with it, and brings the lines back unpicked', () => {
+      const { container } = render(hero())
+      fireEvent.click(chips()[2]!)
+      fireEvent.click(milestoneSwitch())
+      expect(container.querySelector(`.${chartStyles.refLineOn}`)).toBeNull()
+      expect(screen.queryByRole('list', { name: /When each path reaches/ })).not.toBeInTheDocument()
+      fireEvent.click(milestoneSwitch())
+      expect(milestoneSwitch()).toHaveAttribute('aria-checked', 'true')
+      expect(chips().every((c) => c.getAttribute('aria-pressed') === 'false')).toBe(true)
+      expect(container.querySelector(`.${chartStyles.refLineOn}`)).toBeNull()
+    })
+
+    it('remembers the choice on the device, and starts off when it was left off', () => {
+      const first = render(hero())
+      fireEvent.click(milestoneSwitch())
+      expect(localStorage.getItem(STORAGE_KEY)).toBe('off')
+      first.unmount()
+      render(hero())
+      expect(milestoneSwitch()).toHaveAttribute('aria-checked', 'false')
+      fireEvent.click(milestoneSwitch())
+      expect(localStorage.getItem(STORAGE_KEY)).toBeNull()
+    })
+
+    it('still works when the browser will not store it', () => {
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('blocked')
+      })
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new Error('blocked')
+      })
+      render(hero())
+      expect(milestoneSwitch()).toHaveAttribute('aria-checked', 'true')
+      fireEvent.click(milestoneSwitch())
+      expect(milestoneSwitch()).toHaveAttribute('aria-checked', 'false')
+    })
+
+    it('is offered only on a hero chart', () => {
+      render(<NetWorthChart milestones={milestones} scenarios={[]} draft={draft} />)
+      expect(screen.queryByRole('switch', { name: 'Milestones' })).not.toBeInTheDocument()
+    })
+  })
+
   it('is a hero chart’s alone', () => {
     render(<NetWorthChart milestones={milestones} scenarios={[]} draft={draft} />)
     expect(screen.queryByRole('group', { name: 'Milestones' })).not.toBeInTheDocument()
