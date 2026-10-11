@@ -101,16 +101,28 @@ function recordedFlows(w: Window, flows: readonly Transaction[]): { grown: numbe
   return { grown, count }
 }
 
-/** Whether some recorded flow is this event: the same direction, on its anniversary give or take a month and a half, and at least half its size. */
-function isRecorded(event: PlanEvent, w: Window, flows: readonly Transaction[]): boolean {
+/** The recorded flow that is this event, if any: the same direction, on its anniversary give or take a month and a half, and at least half its size. */
+function matchingFlow(event: PlanEvent, w: Window, flows: readonly Transaction[]): Transaction | undefined {
   const expected = event.cents * Math.pow(1 + w.inflation, event.year)
   const anniversary = utcDateMs(dateAtAnniversary(w.start, event.year))
-  return flows.some(
+  return flows.find(
     (t) =>
       Math.sign(t.amountCents) === Math.sign(expected) &&
       Math.abs(utcDateMs(t.date) - anniversary) <= EVENT_MATCH_DAYS * DAY_MS &&
       Math.abs(t.amountCents) >= MATCH_SHARE * Math.abs(expected),
   )
+}
+
+const isRecorded = (event: PlanEvent, w: Window, flows: readonly Transaction[]) => matchingFlow(event, w, flows) !== undefined
+
+/**
+ * Whether an event is in the balance of a check-in. A payment that was recorded is in it from the day it was made,
+ * whatever the anniversary says, so one made a month early is not under-saving and one a month late is not
+ * over-saving; with nothing recorded it is the plan's own reading (`eventHappened`).
+ */
+function eventCounted(event: PlanEvent, at: number, checkinDate: string, nearStep: TrackStatus['nearStep'], w: Window, flows: readonly Transaction[]): boolean {
+  const flow = matchingFlow(event, w, flows)
+  return flow !== undefined ? flow.date <= checkinDate : eventHappened(event, at, w.start, nearStep)
 }
 
 function dateAtAnniversary(start: string, year: number): string {
@@ -170,7 +182,10 @@ function mergedReason(
 ): MergedReason | null {
   const { w } = r
   if (recorded === 0 && plannedMonthlyAt(plan, w.last.checkinDate) > 0) return 'none-recorded'
-  const inWindow = events.filter((e) => eventHappened(e, w.tb, w.start, r.statusB.nearStep) && !eventHappened(e, w.ta, w.start, r.statusA.nearStep))
+  const inWindow = events.filter(
+    (e) =>
+      eventCounted(e, w.tb, w.last.checkinDate, r.statusB.nearStep, w, flows) && !eventCounted(e, w.ta, w.first.checkinDate, r.statusA.nearStep, w, flows),
+  )
   if (inWindow.some((e) => !isRecorded(e, w, flows))) return 'event-unrecorded'
   const ret = portfolioReturn(w.between, [...accounts], [...flows])
   return ret !== null && ret.judgedReturn > SUSPECT_YEARLY_RETURN ? 'too-high' : null
@@ -193,10 +208,10 @@ export function splitGap(
   const { w, statusA, statusB } = read
   const params = scenarioToParams(plan, inflationRate)
   const events = planEvents(projectNetWorth(params))
-  const ownA = planOwnPath(params, events, w.ta, (e) => eventHappened(e, w.ta, w.start, statusA.nearStep))
-  const ownB = planOwnPath(params, events, w.tb, (e) => eventHappened(e, w.tb, w.start, statusB.nearStep))
-  const growth = Math.pow(1 + w.rate, w.tb - w.ta)
   const flows = transactions.filter(isFlow)
+  const ownA = planOwnPath(params, events, w.ta, (e) => eventCounted(e, w.ta, w.first.checkinDate, statusA.nearStep, w, flows))
+  const ownB = planOwnPath(params, events, w.tb, (e) => eventCounted(e, w.tb, w.last.checkinDate, statusB.nearStep, w, flows))
+  const growth = Math.pow(1 + w.rate, w.tb - w.ta)
   const recorded = recordedFlows(w, flows)
 
   const carried = ownB + (statusA.actualRealInvestedCents - ownA) * growth
