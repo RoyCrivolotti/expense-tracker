@@ -4,6 +4,7 @@ import { formatCents, type MoneyFormat } from '../../../engine'
 import { MoneyField, NumberField } from './goalControlFields'
 import { planMoneyLabel } from './planMoneyLabel'
 import { eventMoneyHint } from './moneyHints'
+import { useRegisterOpenForm } from './openForms'
 import styles from './goals.module.css'
 
 export function LifeEventsList({
@@ -100,6 +101,7 @@ function LifeEventForm({
   onAdd: (ev: LifeEvent) => void
   onCancel: () => void
 }) {
+  useRegisterOpenForm()
   const [label, setLabel] = useState('')
   const [year, setYear] = useState(1)
   const [amountCents, setAmountCents] = useState(DEFAULT_AMOUNT_CENTS)

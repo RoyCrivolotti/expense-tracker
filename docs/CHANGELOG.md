@@ -2,6 +2,10 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (Save says what it left out)
+
+- **Save no longer says just "Saved" while a change or an event is still open to add.** The form for a monthly change or a life event keeps what is typed in it until Add, and Save writes the scenario without it, so "Saved Path A" read as if the half-typed change were in. The toast now says "What you are still adding or editing is not in it yet."
+
 ## October 2026 (moving the plan start past a monthly change)
 
 - **A monthly change dated before the new plan start becomes the starting amount.** Moving the start date later left the change where it was, and the plan quietly used its amount while the starting amount in the box and the first line of the history still showed the old one (500 € shown, 800 € used). The change now folds into the starting amount, as a re-baseline already did, and leaves the history.
