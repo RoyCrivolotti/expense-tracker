@@ -182,6 +182,10 @@
   color: var(--exp-danger);
 }
 
+.summaryDeltaNeutral {
+  color: var(--color-text-muted);
+}
+
 .chartHeaderRow {
   display: flex;
   align-items: center;

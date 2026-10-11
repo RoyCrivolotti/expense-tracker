@@ -38,6 +38,17 @@ describe('CheckinList', () => {
     expect(screen.getByText(/no check-ins yet/i)).toBeInTheDocument()
   })
 
+  it('points at Assumptions, where an account is made, when there is none to log a balance against', () => {
+    render(<CheckinList checkins={[]} accounts={[]} plan={null} canWrite={true} actions={makeActions()} />)
+    expect(screen.getByText('No check-ins yet. Set up an account in Assumptions first, then log a balance.')).toBeInTheDocument()
+    expect(screen.queryByText(/above/)).not.toBeInTheDocument()
+  })
+
+  it('points at the form above only when there is an account for it to log against', () => {
+    render(<CheckinList checkins={[]} accounts={[makeAccount(1)]} plan={null} canWrite={true} actions={makeActions()} />)
+    expect(screen.getByText('No check-ins yet. Log your first snapshot above.')).toBeInTheDocument()
+  })
+
   it('says what the gap on a row is of: the investments, in the plan\'s euros, not the total beside it', () => {
     const plan = makeScenario({ planStartDate: '2020-01-01' })
     const checkins = [makeCheckin(1, '2025-06-01', [{ accountId: 1, valueCents: 100_000_00 }])]

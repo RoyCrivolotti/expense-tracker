@@ -7,10 +7,11 @@ import { draftFromDataset } from './goalsDefaults'
 import { SecondaryCharts } from './SecondaryCharts'
 import { NARROW_MQ } from './useGoalsNarrow'
 
-function renderOnPhone() {
+function renderOnPhone(extra: { paused?: boolean } = {}) {
   installFakeMatchMedia().setMatching((query) => query === NARROW_MQ)
   return render(
     <SecondaryCharts
+      {...extra}
       scenarios={[]}
       draft={draftFromDataset(makeDataset(), 0)}
       monthly={[]}
@@ -39,6 +40,28 @@ describe('the phone chart picker', () => {
     await user.click(radio('Spread'))
     expect(await screen.findByText(/Each of the 10.000 runs replays your plan/)).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'How far luck could move the plan' })).toBeInTheDocument()
+  })
+
+  it('does not replay the spread while the Scenarios half is showing, where the card is hidden under the controls being edited', async () => {
+    const user = userEvent.setup()
+    const { rerender } = renderOnPhone({ paused: true })
+    await user.click(radio('Spread'))
+    expect(screen.getByText('Working it out…')).toBeInTheDocument()
+    expect(screen.queryByText(/Each of the 10.000 runs replays your plan/)).not.toBeInTheDocument()
+
+    rerender(
+      <SecondaryCharts
+        scenarios={[]}
+        draft={draftFromDataset(makeDataset(), 0)}
+        monthly={[]}
+        milestones={[]}
+        reached={new Map()}
+        activeId={null}
+        dirty={false}
+        fromToday={null}
+      />,
+    )
+    expect(await screen.findByText(/Each of the 10.000 runs replays your plan/)).toBeInTheDocument()
   })
 
   it('is one tab stop, on the chart that is showing', () => {
