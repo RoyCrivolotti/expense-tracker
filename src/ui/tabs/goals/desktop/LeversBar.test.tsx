@@ -180,10 +180,10 @@ describe('LeversBar', () => {
     const RETURN = 'Real return (%/yr, after inflation)'
 
     it('commits nothing when it is only tabbed through, whatever it shows', async () => {
-      // 4.25% is shown as "4,3", and writing that back would change the plan's numbers.
-      const { onChange } = renderBar({}, { expectedRealReturn: 0.0425 })
+      // 4.251% is shown as "4,25", and writing that back would change the plan's numbers.
+      const { onChange } = renderBar({}, { expectedRealReturn: 0.04251 })
       const field = screen.getByRole('textbox', { name: RETURN })
-      expect(field).toHaveValue('4,3')
+      expect(field).toHaveValue('4,25')
 
       await userEvent.click(field)
       await userEvent.tab()
@@ -192,13 +192,13 @@ describe('LeversBar', () => {
     })
 
     it('still commits what is typed, even when that is what the field shows', async () => {
-      const { onChange } = renderBar({}, { expectedRealReturn: 0.0425 })
+      const { onChange } = renderBar({}, { expectedRealReturn: 0.04251 })
       const field = screen.getByRole('textbox', { name: RETURN })
 
       await userEvent.clear(field)
-      await userEvent.type(field, '4,3{Enter}')
+      await userEvent.type(field, '4,25{Enter}')
 
-      expect(onChange).toHaveBeenLastCalledWith({ expectedRealReturn: 0.043 })
+      expect(onChange).toHaveBeenLastCalledWith({ expectedRealReturn: 0.0425 })
     })
 
     it('does not commit a value the plan already has', async () => {
@@ -238,6 +238,25 @@ describe('LeversBar', () => {
       expect(onChange).not.toHaveBeenCalled()
       expect(horizon).toHaveValue('30')
       expect(amount).toHaveValue('500')
+      expect(percent).toHaveValue('7,0')
+    })
+
+    it('ignores a number with a letter in it rather than reading the digits out of it', async () => {
+      const { onChange } = renderBar()
+      const horizon = screen.getByLabelText('Horizon (years)')
+      const amount = screen.getByLabelText('Monthly investing')
+      const percent = screen.getByRole('textbox', { name: RETURN })
+
+      await userEvent.clear(amount)
+      await userEvent.type(amount, '250k{Enter}')
+      await userEvent.clear(horizon)
+      await userEvent.type(horizon, '1e9{Enter}')
+      await userEvent.clear(percent)
+      await userEvent.type(percent, 'about 4{Enter}')
+
+      expect(onChange).not.toHaveBeenCalled()
+      expect(amount).toHaveValue('500')
+      expect(horizon).toHaveValue('30')
       expect(percent).toHaveValue('7,0')
     })
 
