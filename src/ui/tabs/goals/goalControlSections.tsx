@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import type { NewGoalScenario } from '../../../data/dataSource'
-import { formatCents, formatCentsCompact, housePriceAtPurchaseCents, rebaseline, rebaselineSummary, type LeverKey, type MoneyFormat } from '../../../engine'
+import { foldChangesAtOrBefore, formatCents, formatCentsCompact, housePriceAtPurchaseCents, rebaseline, rebaselineSummary, type LeverKey, type MoneyFormat } from '../../../engine'
 import { useAssumedInflation } from '../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { formatCheckinDate, type InvestedSnapshot } from './checkinDate'
@@ -343,6 +343,18 @@ interface TrackingProps {
   onChange: (patch: Partial<NewGoalScenario>) => void
 }
 
+/**
+ * What moving the plan start writes. Changes to the monthly amount that have begun by the new start are what the plan
+ * starts with (the engine reads them so), so they fold into the starting amount and leave the history, and the box and
+ * the first line say what the plan uses instead of an amount it no longer does.
+ */
+function planStartPatch(draft: NewGoalScenario, date: string | null): Partial<NewGoalScenario> {
+  const schedule = draft.contributionSchedule ?? []
+  if (!date || schedule.length === 0) return { planStartDate: date }
+  const { monthlyContributionCents, contributionSchedule, folded } = foldChangesAtOrBefore(draft.monthlyContributionCents, schedule, date)
+  return folded.length === 0 ? { planStartDate: date } : { planStartDate: date, monthlyContributionCents, contributionSchedule }
+}
+
 export function TrackingFields({ draft, latest, onChange }: TrackingProps) {
   const format = useMoneyFormat()
   const inflationRate = useAssumedInflation()
@@ -370,8 +382,8 @@ export function TrackingFields({ draft, latest, onChange }: TrackingProps) {
       <DateField
         label="Plan start date"
         value={draft.planStartDate ?? null}
-        hint="Anchors the projection to a calendar date so wealth check-ins can show whether you are ahead or behind. Changes to the monthly amount count from it too."
-        onChange={(v) => onChange({ planStartDate: v })}
+        hint="Anchors the projection to a calendar date so wealth check-ins can show whether you are ahead or behind. Changes to the monthly amount count from it too, and one that has begun by it becomes the amount you start with."
+        onChange={(v) => onChange(planStartPatch(draft, v))}
       />
       <div className={styles.field}>
         <button
