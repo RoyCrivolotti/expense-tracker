@@ -269,6 +269,35 @@ describe('splitGap: a plan flow the plan makes on an anniversary', () => {
     expect(Math.abs(out.parts.saving)).toBeLessThan(0.02 * payment())
   })
 
+  it('a house bought six weeks early is the payment happening early, not under-saving by its size', () => {
+    const first = '2027-03-01'
+    const when = '2027-11-20'
+    const last = '2027-11-25'
+    const r = bought.expectedRealReturn
+    const before = ownPath({ ...bought, housePurchaseYear: null }, years(first))
+    const reached = before * Math.pow(1 + r, years(last) - years(first)) - payment() * Math.pow(1 + r, years(last) - 2)
+    const paid = Math.round(payment() * Math.pow(1 + I, years(when)))
+    const out = split(bought, [checkin(1, first, toNominal(before, first)), checkin(2, last, toNominal(reached, last))], [deposit(when, -paid)])
+    expect(out.merged).toBeNull()
+    expect(Math.abs(out.parts.saving)).toBeLessThan(0.05 * payment())
+    expect(Math.abs(out.parts.market)).toBeLessThan(0.05 * payment())
+    expect(sum(out)).toBe(out.gapCents)
+  })
+
+  it('a payment recorded after the last check-in is not in that check-in, so it is not counted as made', () => {
+    const first = '2027-03-01'
+    const last = '2028-02-03'
+    const when = '2028-02-10'
+    const r = bought.expectedRealReturn
+    const before = ownPath({ ...bought, housePurchaseYear: null }, years(first))
+    // The account still holds the house money on 3 February: the withdrawal is a week away.
+    const reached = before * Math.pow(1 + r, years(last) - years(first))
+    const paid = Math.round(payment() * Math.pow(1 + I, years(when)))
+    const out = split(bought, [checkin(1, first, toNominal(before, first)), checkin(2, last, toNominal(reached, last))], [deposit(when, -paid)])
+    expect(Math.abs(out.parts.saving)).toBeLessThan(0.05 * payment())
+    expect(Math.abs(out.parts.market)).toBeLessThan(0.05 * payment())
+  })
+
   it('a house payment the account shows but no transaction records is held with the saving and the market', () => {
     const after = '2028-03-01'
     const first = '2027-03-01'

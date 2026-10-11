@@ -2,6 +2,9 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (a house paid early or late in the gap split)
+
+- **A house bought a few weeks before its anniversary no longer reads as under-saving by its price.** The split counted the plan's payment on the plan's anniversary and the recorded withdrawal on its own date, so the weeks between showed the whole payment as money not saved (or, paid just after a check-in, as saved). A recorded payment now counts from the day it was made; the gap to the plan's line still shows it, as timing.
 ## October 2026 (the server checks what it stores)
 
 - **A malformed life event can no longer blank the app.** A stored `[null]` or an amount that was text made the Goals screen throw, with nothing above it to catch it and no way to repair the row from the app. The server now refuses a life event that is not a year from 0 to 100, a whole number of cents and a label, and a stored row that already holds one reads without the bad entries.
