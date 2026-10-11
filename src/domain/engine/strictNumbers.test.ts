@@ -43,6 +43,92 @@ describe('tryParseMoneyToCents: an amount, or null when what was typed is not on
   })
 })
 
+describe('tryParseMoneyToCents: the shape of the number, not only its characters', () => {
+  it.each([
+    '1..5',
+    '1,,5',
+    '1.5.5',
+    '1,2,3',
+    '12.34.56',
+    '1.234,567.89',
+    '5-5',
+    '5-',
+    '--5',
+    '1 2',
+    '1 23 456',
+    '12,34 56',
+    "1'2",
+    '1.5,5',
+    '€€5',
+    '€5€',
+    '5 € €',
+    '-€-5',
+    '.',
+    ',',
+    '-',
+    '$',
+    '€ -',
+  ])('is null for %j, which has the right characters in the wrong places', (typed) => {
+    expect(tryParseMoneyToCents(typed, eur)).toBeNull()
+    expect(tryParseMoneyToCents(typed, usd)).toBeNull()
+  })
+
+  it('does not take a letter of the currency symbol for a letter inside the number', () => {
+    const chf = resolveMoneyFormat('CHF', 'de-CH')
+    expect(tryParseMoneyToCents('CHF 1500', chf)).toBe(150_000)
+    expect(tryParseMoneyToCents('1500 CHF', chf)).toBe(150_000)
+    expect(tryParseMoneyToCents('15CHF00', chf)).toBeNull()
+    expect(tryParseMoneyToCents('C1500', chf)).toBeNull()
+    expect(tryParseMoneyToCents('1H5F00', chf)).toBeNull()
+  })
+
+  it.each([
+    ['€5', 500],
+    ['5€', 500],
+    ['5 €', 500],
+    ['€ 5', 500],
+    ['-€5', -500],
+    ['€-5', -500],
+    ['-5 €', -500],
+    ['\u22125', -500],
+    ["1'234'567.89", 123_456_789],
+    ['1 234 567,89', 123_456_789],
+    ['1\u00a0234', 123_400],
+    ['  250  ', 25_000],
+    ['5.', 500],
+    ['.5', 50],
+    ['0,5', 50],
+  ])('still reads %j as %i cents', (typed, cents) => {
+    expect(tryParseMoneyToCents(typed, eur)).toBe(cents)
+  })
+})
+
+describe('tryParseMoneyToCents against a plain statement of the grammar', () => {
+  // A number is 1 to 3 digits then groups of 3 with one kind of mark, or one run of digits; then at most one decimal mark.
+  const wellFormed = /^(?:\d+|\d{1,3}(?:([.,' ])\d{3})+)(?:[.,]\d+)?$|^[.,]\d+$/
+  const alphabet = ['0', '1', '5', '9', '.', ',', ' ', "'", '-', '€']
+
+  it('reads a random string only when it is well formed, and as the cents it states', () => {
+    let seed = 12345
+    const next = () => (seed = (seed * 1_103_515_245 + 12_345) % 2_147_483_648)
+    let accepted = 0
+    for (let n = 0; n < 20_000; n += 1) {
+      const length = 1 + (next() % 7)
+      let typed = ''
+      for (let i = 0; i < length; i += 1) typed += alphabet[next() % alphabet.length]
+      const got = tryParseMoneyToCents(typed, eur)
+      const body = typed.trim().replace(/^-\s*/, '').replace(/^€\s*/, '').replace(/\s*€$/, '').trim()
+      if (got !== null) {
+        accepted += 1
+        expect(wellFormed.test(body.replace(/^(\d+)[.,]$/, '$1')), typed).toBe(true)
+      } else if (/^\s*-?\d+\s*$/.test(typed)) {
+        throw new Error(`${typed} is a plain integer and must be read`)
+      }
+    }
+    expect(accepted).toBeGreaterThan(500)
+  })
+})
+
 describe('parseMoneyToCents with both marks in the text', () => {
   it('reads the last mark as the decimal one, whichever format it is read by', () => {
     // 1,234.56 read by a comma format was 1,23 euros: the point was dropped as a group mark.
