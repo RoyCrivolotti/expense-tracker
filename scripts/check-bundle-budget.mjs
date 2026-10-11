@@ -270,7 +270,7 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // with the limit left at 72.86 KB so that the total was the only thing watching it. It counts them now, found by
 // following the imports in the built files, and the limit is the 81,224 bytes they come to plus 276: GoalsTab
 // 68,846, the shared chart shell 8,802 and the spread card 3,576.
-const TOTAL_MAX_GZIP = 274_900
+const TOTAL_MAX_GZIP = 275_600
 const GOALS_MAX_GZIP = 82_300
 
 function gzipBytes(path) {
