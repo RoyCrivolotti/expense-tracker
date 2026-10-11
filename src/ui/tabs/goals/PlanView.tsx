@@ -143,6 +143,7 @@ function planBlocks(props: PlanViewProps): Record<PlanBlock, ReactNode> {
           dirty={dirty}
           fromToday={props.fromToday}
           nominal={props.display.mode === 'nominal'}
+          paused={half === 'adjust'}
         />
       </div>
     ),
