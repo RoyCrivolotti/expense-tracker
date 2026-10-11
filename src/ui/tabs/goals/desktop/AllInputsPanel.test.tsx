@@ -103,7 +103,7 @@ describe('AllInputsPanel explanations of what is in the bar', () => {
     renderPanel(true, makeStarred(), { ...makeDraft(), housePurchaseYear: 5 })
 
     expect(screen.queryByLabelText('Purchase year')).not.toBeInTheDocument()
-    expect(screen.getByText(/Purchase cost from portfolio/)).toBeInTheDocument()
+    expect(screen.getByText(/takes .* from the portfolio/)).toBeInTheDocument()
   })
 
   it('keeps what return to expect when every portfolio input, the return among them, is in the bar', () => {

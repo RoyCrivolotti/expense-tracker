@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { makeScenario } from '../../testing/factories'
-import { copyName, duplicateScenario, pickScenarioColor } from './projectionPresets'
+import { SCENARIO_NAME_MAX_LENGTH } from './projectionConstants'
+import { copyName, duplicateScenario, pickScenarioColor, saveAsNewName } from './projectionPresets'
 
 describe('copyName', () => {
   it('adds "(copy)" to a name that has none', () => {
@@ -36,5 +37,33 @@ describe('duplicateScenario', () => {
     expect(copy.expectedRealReturn).toBe(0.05)
     expect(copy.color).toBe(pickScenarioColor(['#6366f1']))
     expect(copy.color).not.toBe('#6366f1')
+  })
+})
+
+describe('names at the length limit', () => {
+  const long = 'x'.repeat(SCENARIO_NAME_MAX_LENGTH)
+
+  it('cuts the base so a copy of a 100-character name still fits', () => {
+    const copy = copyName(long)
+    expect(copy.length).toBeLessThanOrEqual(SCENARIO_NAME_MAX_LENGTH)
+    expect(copy.endsWith(' (copy)')).toBe(true)
+  })
+
+  it('counts on from a long copy without growing past the limit', () => {
+    const first = copyName(long)
+    const second = copyName(first, [first])
+    expect(second.length).toBeLessThanOrEqual(SCENARIO_NAME_MAX_LENGTH)
+    expect(second.endsWith(' (copy 2)')).toBe(true)
+  })
+
+  it('keeps the whole name when it fits', () => {
+    expect(copyName('Path A')).toBe('Path A (copy)')
+    expect(saveAsNewName('Path A')).toBe('Path A copy')
+  })
+
+  it('cuts the Save as new default to fit', () => {
+    const name = saveAsNewName(long)
+    expect(name.length).toBeLessThanOrEqual(SCENARIO_NAME_MAX_LENGTH)
+    expect(name.endsWith(' copy')).toBe(true)
   })
 })

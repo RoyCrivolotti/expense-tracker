@@ -62,6 +62,12 @@ describe('toGoalScenario', () => {
     expect(result.lifeEvents).toEqual(events)
   })
 
+  it('leaves out a stored event that is not an event instead of passing it on to crash the Goals screen', () => {
+    const good = { year: 3, amountCents: 10_000_000, label: 'Bonus' }
+    const stored = JSON.stringify([null, good, { year: 'x', amountCents: 1, label: 'a' }, { year: 2, amountCents: 'x', label: 'b' }, 'abc'])
+    expect(toGoalScenario(baseRow({ life_events: stored })).lifeEvents).toEqual([good])
+  })
+
   it('falls back to [] for malformed life_events JSON', () => {
     const result = toGoalScenario(baseRow({ life_events: 'not-json' }))
     expect(result.lifeEvents).toEqual([])

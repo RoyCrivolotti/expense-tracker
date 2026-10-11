@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { EU_MONEY_FORMAT } from '../../../../engine/money'
-import { rentVsBuyCaption } from './rentVsBuyCaption'
+import { rentVsBuyCaption, rentVsBuyCaptionParts } from './rentVsBuyCaption'
 
 const money = (cents: number) => `${(cents / 100).toLocaleString('de-DE')} €`
 const base = {
@@ -20,17 +20,31 @@ const base = {
 }
 
 describe('rentVsBuyCaption', () => {
-  it('says both start with the same cash and spend the same, what each does with it, and the money it is in', () => {
-    const text = rentVsBuyCaption(base)
-    expect(text).toContain('Both start with 66.000 € in cash (the down payment and fees) and spend the same in total on housing and investing every month.')
-    expect(text).toContain('The renter invests the cash and whatever owning would cost above the rent')
-    expect(text).toContain('the buyer owns the house, owes the loan and invests whatever rent would cost above owning')
-    expect(text).toContain('In 2026 euros.')
+  it('leads with what both sides start with, what each does with it, what it is priced at, which euros, and what it leaves out', () => {
+    const { lead } = rentVsBuyCaptionParts(base)
+    expect(lead).toBe(
+      "Both start with 66.000 € and spend the same each month: the renter invests the difference, the buyer owns the house. Compared from year 8, at the 324.352,82 € the house will cost then, in 2026 euros, with selling costs left out. Who leads depends on the return and house growth; this is not the plan's net worth.",
+    )
   })
 
-  it('says when it compares from: the purchase year at the price then, or as if bought today', () => {
-    expect(rentVsBuyCaption(base)).toContain('Compared from year 8 of the plan, when it buys, at the 324.352,82 € the house will cost then.')
-    expect(rentVsBuyCaption({ ...base, startYear: 0 })).toContain('Compared as if you bought today, at 324.352,82 €.')
+  it('prices a purchase today at the price today, and a later one at what the house costs then', () => {
+    expect(rentVsBuyCaptionParts({ ...base, startYear: 0 }).lead).toContain('Priced as if bought today, at 324.352,82 €, in 2026 euros')
+    expect(rentVsBuyCaptionParts(base).lead).toContain('Compared from year 8, at the 324.352,82 € the house will cost then')
+  })
+
+  it('keeps what stops a wrong decision in view and the long assumptions behind the disclosure: the lead is about 50 words', () => {
+    const { lead, details } = rentVsBuyCaptionParts(base)
+    expect(lead.split(/\s+/).length).toBeLessThanOrEqual(60)
+    // Said in the lead, so not said again behind it.
+    expect(details.join(' ')).not.toContain('Both start with')
+    expect(details.join(' ')).not.toContain('Compared from year')
+    // The detail is still all there, for whoever opens it.
+    expect(details.length).toBeGreaterThanOrEqual(6)
+  })
+
+  it('is the lead and the detail together as one text', () => {
+    const parts = rentVsBuyCaptionParts(base)
+    expect(rentVsBuyCaption(base)).toBe([parts.lead, ...parts.details].join(' '))
   })
 
   it('says which way what it leaves out leans, so a close result can be read against it', () => {
@@ -43,12 +57,6 @@ describe('rentVsBuyCaption', () => {
     const text = rentVsBuyCaption({ ...base, carryRate: 0.04 })
     expect(text).toContain("Assumes rent stays the same in real terms, upkeep, tax and insurance of 4,0% of the house's value a year, and no costs of selling.")
     expect(rentVsBuyCaption({ ...base, carryRate: 0 })).toContain("upkeep, tax and insurance of 0,0% of the house's value a year")
-  })
-
-  it("says these are the two choices on their own, so they are not compared with the plan's net worth", () => {
-    expect(rentVsBuyCaption(base)).toContain(
-      "These are the two choices on their own, without your starting portfolio and contributions, so they will not match the plan's net worth.",
-    )
   })
 
   it('says what the loan costs on the account, which is fixed, so it shrinks in the plan\'s euros, and nothing without a loan', () => {

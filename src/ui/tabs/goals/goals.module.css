@@ -2644,3 +2644,36 @@
     margin-block: -0.5rem;
   }
 }
+
+/* A closed note under a card or an input (Disclosure): the summary is a quiet link, the body the muted small text the
+   hints around it use. On a touch screen the summary is a 44px target like the other controls. */
+.moreInfo {
+  margin-top: 0.25rem;
+}
+
+.moreInfoSummary {
+  cursor: pointer;
+  font-size: 0.8125rem;
+  color: var(--color-accent);
+  padding: 0.25rem 0;
+}
+
+.moreInfoBody {
+  display: grid;
+  gap: 0.375rem;
+  padding-top: 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.moreInfoBody p {
+  margin: 0;
+}
+
+@media (pointer: coarse) {
+  .moreInfoSummary {
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem;
+  }
+}

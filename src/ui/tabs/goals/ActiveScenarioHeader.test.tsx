@@ -52,6 +52,11 @@ function renderHeader(
 }
 
 describe('ActiveScenarioHeader', () => {
+  it('stops the name at the length the server takes, so a save is not refused for it', () => {
+    renderHeader(makeScenario({ id: 1, name: 'Path A', isActive: true }))
+    expect(screen.getByLabelText('Scenario name')).toHaveAttribute('maxLength', '100')
+  })
+
   it('asks before deleting a scenario, and only deletes once confirmed', () => {
     const { actions } = renderHeader(makeScenario({ id: 7, name: 'Path B' }))
 

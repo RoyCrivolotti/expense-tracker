@@ -1,5 +1,5 @@
 import type { NewGoalScenario } from '../data/dataSource'
-import { SCENARIO_COLORS } from './projectionConstants'
+import { SCENARIO_COLORS, SCENARIO_NAME_MAX_LENGTH } from './projectionConstants'
 
 /**
  * Pick a chart color that is distinct from the ones already in use. Walks the
@@ -15,11 +15,21 @@ export function pickScenarioColor(usedColors: readonly string[]): string {
   return `hsl(${hue} 70% 55%)`
 }
 
+/** The base cut so base plus suffix fits the name limit the server enforces, which a copy of a long name would otherwise break. */
+function withSuffix(base: string, suffix: string): string {
+  return `${base.slice(0, SCENARIO_NAME_MAX_LENGTH - suffix.length).trimEnd()}${suffix}`
+}
+
 /** The name one copy on from this one: "Path A" becomes "Path A (copy)", and a copy of a copy counts up ("Path A (copy 2)"). */
 function nextCopyName(name: string): string {
   const match = /^(.*) \(copy(?: (\d+))?\)$/.exec(name)
-  if (!match) return `${name} (copy)`
-  return `${match[1] ?? ''} (copy ${Number(match[2] ?? 1) + 1})`
+  if (!match) return withSuffix(name, ' (copy)')
+  return withSuffix(match[1] ?? '', ` (copy ${Number(match[2] ?? 1) + 1})`)
+}
+
+/** What the Save as new box starts with: the name and "copy", cut to fit the limit. */
+export function saveAsNewName(name: string): string {
+  return withSuffix(name, ' copy')
 }
 
 /** A copy's name, counting on past the copies that already exist so no two are alike. */
