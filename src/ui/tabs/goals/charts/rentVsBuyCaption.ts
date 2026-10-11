@@ -3,11 +3,13 @@ import type { RentVsBuyResult } from '../../../../engine'
 import type { MoneyFormat } from '../../../../engine/money'
 
 /**
- * What the chart assumes, in words a person can check against their own situation: the cash both
- * sides start with, what each does with it, where the comparison starts, which money the figures are
- * in, and what is held constant or left out.
+ * What the chart says about itself, in two parts. The lead is what a reader needs on first sight and what stops a wrong
+ * decision: the cash both sides start with, what each does with it, what the house is priced at, which euros the figures
+ * are in, that selling costs are left out, and that who leads depends on the return and house growth and is not the plan's
+ * net worth. The details are the rest of what it assumes, in words a person can check against their own situation, and sit
+ * behind a disclosure.
  */
-export function rentVsBuyCaption({
+export function rentVsBuyCaptionParts({
   upfrontCents,
   feesCents,
   priceCents,
@@ -38,21 +40,22 @@ export function rentVsBuyCaption({
   loanPaidOffYear: RentVsBuyResult['loanPaidOffYear']
   money: (cents: number) => string
   format: MoneyFormat
-}): string {
-  const start =
+}): { lead: string; details: string[] } {
+  const priced =
     startYear > 0
-      ? `Compared from year ${startYear} of the plan, when it buys, at the ${money(priceCents)} the house will cost then.`
-      : `Compared as if you bought today, at ${money(priceCents)}.`
+      ? `Compared from year ${startYear}, at the ${money(priceCents)} the house will cost then`
+      : `Priced as if bought today, at ${money(priceCents)}`
+  const lead =
+    `Both start with ${money(upfrontCents)} and spend the same each month: the renter invests the difference, the buyer owns the house. ` +
+    `${priced}, in ${moneyLabel}, with selling costs left out. ` +
+    "Who leads depends on the return and house growth; this is not the plan's net worth."
   const payment =
     paymentCents > 0
       ? `The loan costs ${money(paymentCents)} a month on the account and stays that, so in these ${currencyWord(format)} it shrinks each year.`
       : null
-  return [
-    `Both start with ${money(upfrontCents)} in cash (the down payment and fees) and spend the same in total on housing and investing every month.`,
+  const details = [
     'The renter invests the cash and whatever owning would cost above the rent; the buyer owns the house, owes the loan and invests whatever rent would cost above owning.',
     ...(feesCents > 0 ? [`The buyer spends the ${money(feesCents)} fees at once, so the buyer's line starts lower.`] : []),
-    start,
-    `In ${moneyLabel}.`,
     ...(payment ? [payment] : []),
     ...(loanPaidOffYear === null ? [] : [`The loan is paid off in year ${Math.ceil(loanPaidOffYear)} after you buy.`]),
     monthlyCostSentence(ownCheaper),
@@ -61,7 +64,14 @@ export function rentVsBuyCaption({
     'Rent that rises faster than prices favours buying; selling costs and renovation favour renting; mortgage interest relief and tax on investment gains depend on your country and are not counted.',
     "These are the two choices on their own, without your starting portfolio and contributions, so they will not match the plan's net worth.",
     'The plan only takes the down payment and fees from your portfolio, not the loan or upkeep, so while owning costs more a month than renting, a house adds more to its net worth than it does here.',
-  ].join(' ')
+  ]
+  return { lead, details }
+}
+
+/** The lead and the details as one text, for what reads the whole of it. */
+export function rentVsBuyCaption(args: Parameters<typeof rentVsBuyCaptionParts>[0]): string {
+  const { lead, details } = rentVsBuyCaptionParts(args)
+  return [lead, ...details].join(' ')
 }
 
 /** What owning costs a month against renting, in the words of the marker on the chart. */

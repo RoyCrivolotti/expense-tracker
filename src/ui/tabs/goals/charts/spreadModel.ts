@@ -158,37 +158,32 @@ export function spreadHeadline({
   const year = result.years
   const grow = nominal ? Math.pow(1 + inflationRate, year) : 1
   const at = (cents: number) => money(Math.round(cents * grow))
-  return `The plan replayed in ${runs.toLocaleString(format.locale)} different markets, each one a run. In year ${year}, in ${moneyLabel}: the middle run ends at ${at(result.after.p50[year]!)}, the plan's line at ${at(plan[year]?.investedCents ?? 0)}, the luckiest tenth of runs above ${at(result.after.p90[year]!)} and the unluckiest tenth of runs below ${at(result.after.p10[year]!)}.`
+  return `The plan replayed in ${runs.toLocaleString(format.locale)} markets, each one a run. In year ${year}, in ${moneyLabel}, the middle run ends at ${at(result.after.p50[year]!)}, the plan at ${at(plan[year]?.investedCents ?? 0)}, the luckiest tenth of runs above ${at(result.after.p90[year]!)} and the unluckiest tenth below ${at(result.after.p10[year]!)}.`
 }
 
 /**
- * What is replayed and what is left as planned: the assumptions a reader should be able to check, and which
- * euros the chart and the table are in, since they are not the same ones. `tableMoney` is the plan's euros, and
- * null where there is no table.
+ * What is replayed and what is left as planned, in two parts. The lead is the caveat that stops the card being read as a
+ * forecast of everything: only the market changes. The details are the assumptions a reader can check, behind a
+ * disclosure. Which euros the chart and the table are in is said by the headline and by each row of the table.
  */
 export function spreadCaption({
   runs,
   volatility,
   realReturn,
   format,
-  chartMoney,
-  tableMoney,
 }: {
   runs: number
   volatility: number
   realReturn: number
   format: MoneyFormat
-  chartMoney: string
-  tableMoney: string | null
-}): string {
-  const table = tableMoney === null ? '' : ` In the table, milestone amounts are on your account and the FI target is in ${tableMoney}.`
-  return [
-    `Each of the ${runs.toLocaleString(format.locale)} runs replays your plan in a different market: every year's return is the typical ${formatPercent(realReturn, format)} a year times a luck factor with a bounce of ${formatPercent(volatility, format)} (the Market bounce in Assumptions).`,
-    'Only the market changes: the saving, the house, the events and the inflation are as planned.',
-    'The line is the plan, half of the runs end in the shaded middle and 8 in 10 between the dashed lines.',
-    'The picture is the same every time, so it moves only when you change something.',
-    `The chart is in ${chartMoney}.${table}`,
-  ].join(' ')
+}): { lead: string; details: string[] } {
+  return {
+    lead: 'Only the market changes: the saving, the house, the events and the inflation are as planned.',
+    details: [
+      `Each of the ${runs.toLocaleString(format.locale)} runs replays your plan in a different market: every year's return is the typical ${formatPercent(realReturn, format)} a year times a luck factor with a bounce of ${formatPercent(volatility, format)} (the Market bounce in Assumptions).`,
+      'The picture is the same every time, so it moves only when you change something.',
+    ],
+  }
 }
 
 /** Said when more than one run in twenty has run out of money, which is what the lowest lines going under zero means. */

@@ -23,6 +23,17 @@ describe('RentVsOwnChart', () => {
     expect(screen.queryByText(/^10$/)).not.toBeInTheDocument()
   })
 
+  it('shows a short lead and keeps the rest of what it assumes in a closed disclosure', () => {
+    const { container } = render(<RentVsOwnChart draft={draftOf({ housePriceCents: 400_000_000, rentMonthlyCents: 120_000 })} />)
+    expect(screen.getByText(/this is not the plan's net worth\.$/)).toBeInTheDocument()
+    const details = container.querySelector('details')!
+    expect(details.open).toBe(false)
+    expect(details.querySelector('summary')).toHaveTextContent('What this assumes')
+    expect(details).toHaveTextContent(/upkeep, tax and insurance/)
+    // What is said in the lead is not said again behind it.
+    expect(details).not.toHaveTextContent('Both start with')
+  })
+
   it('names the upkeep it assumes as the scenario\'s own, not a fixed one', () => {
     const { rerender } = render(<RentVsOwnChart draft={draftOf({ housePriceCents: 40_000_000, rentMonthlyCents: 120_000, homeCarryRate: 0.04 })} />)
     expect(screen.getByText(/upkeep, tax and insurance of 4,0% of the house's value a year/)).toBeInTheDocument()
@@ -105,6 +116,6 @@ describe('RentVsOwnChart', () => {
 
   it('begins at the purchase year when the plan buys later, and says so', () => {
     render(<RentVsOwnChart draft={draftOf({ housePriceCents: 30_000_000, rentMonthlyCents: 100_000, housePurchaseYear: 8 })} />)
-    expect(screen.getByText(/Compared from year 8 of the plan, when it buys/)).toBeInTheDocument()
+    expect(screen.getByText(/Compared from year 8, at the .* the house will cost then/)).toBeInTheDocument()
   })
 })

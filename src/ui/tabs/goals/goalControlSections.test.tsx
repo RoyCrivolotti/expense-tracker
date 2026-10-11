@@ -27,7 +27,7 @@ describe('the sections of the controls', () => {
       expect(screen.getAllByLabelText(LEVER_SPECS[key].label).length).toBeGreaterThan(0)
     }
     expect(screen.getByText('Purchase year')).toBeInTheDocument()
-    expect(screen.getByText(/Purchase cost from portfolio/)).toBeInTheDocument()
+    expect(screen.getByText(/takes .* from the portfolio/)).toBeInTheDocument()
   })
 
   it('leaves out the inputs that are in the bar, with the hints that explain only them', () => {
@@ -45,8 +45,8 @@ describe('the sections of the controls', () => {
     expect(screen.queryByText(/Notary, agency/)).not.toBeInTheDocument()
     expect(screen.queryByText(/nominal, as a bank/)).not.toBeInTheDocument()
     expect(screen.queryByText(/FI target = annual spend/)).not.toBeInTheDocument()
-    // What is about the section as a whole stays.
-    expect(screen.getByText(/Models life after financial independence/)).toBeInTheDocument()
+    // What is about the section as a whole stays, behind one closed note.
+    expect(screen.getByText('How FI is worked out')).toBeInTheDocument()
     // Every input that can be in the bar is out of the sections; the upkeep of the house and the years
     // the money must last are not among them (neither has a star), so they are all that is left.
     const left = [...container.querySelectorAll('input')].filter((i) => !/^(Upkeep|Years the money)/.test(i.getAttribute('aria-label') ?? ''))
@@ -75,7 +75,28 @@ describe('the sections of the controls', () => {
     // It is worked out from the draft and is said nowhere else, so it does not leave with the year.
     render(<HousingFields draft={makeDraft()} onChange={vi.fn()} omit={everything(['housePurchaseYear'])} />)
     expect(screen.queryByText('Purchase year')).not.toBeInTheDocument()
-    expect(screen.getByText(/Purchase cost from portfolio/)).toBeInTheDocument()
+    expect(screen.getByText(/takes .* from the portfolio/)).toBeInTheDocument()
+  })
+
+  it('keeps the Housing hints short, the caveat that the loan and upkeep are not taken from the portfolio in view, and the rest behind a closed note', () => {
+    const { id, ...draft } = samplePlan()
+    void id
+    const { container } = render(<HousingFields draft={draft} onChange={vi.fn()} />)
+    const details = container.querySelector('details')!
+    expect(details.open).toBe(false)
+    expect(details.querySelector('summary')).toHaveTextContent('How these are counted')
+    // What is behind the note: how each figure was counted.
+    expect(details).toHaveTextContent('When you pay it that is about')
+    expect(details).toHaveTextContent('Fees are notary, agency and closing costs')
+    expect(details).toHaveTextContent(/nominal, as a bank and the price index quote them/)
+    // What is in view: short, and the caveat that stops a wrong plan.
+    const clone = container.cloneNode(true) as HTMLElement
+    clone.querySelector('details')!.remove()
+    const prose = [...clone.querySelectorAll('p')].map((p) => p.textContent ?? '').join(' ')
+    expect(prose.split(/\s+/).filter(Boolean).length).toBeLessThanOrEqual(95)
+    expect(prose).toContain('The loan and upkeep come from your income instead')
+    expect(prose).toContain('Enter both as quoted, before inflation. The plan takes inflation off.')
+    expect(prose).toContain('1 to 2% is usual.')
   })
 
   it('names the money the saved life events are in, once, under the list', () => {
@@ -134,7 +155,7 @@ describe('the sections of the controls', () => {
     render(<HousingFields draft={draft} onChange={vi.fn()} />)
     expect(
       screen.getByText(
-        'Purchase cost from portfolio, in 2026 euros: 64.871 € down + 6.000 € fees = 70.871 € (about 83.036 € on your account in 2034), dip on the invested line in year 8. The loan payments and upkeep are not taken from the portfolio: the plan pays them from the rest of your income. If they will lower what you invest, add a change under Monthly investing over time.',
+        'Year 8 takes 70.871 € from the portfolio: 64.871 € down + 6.000 € fees, in 2026 euros (about 83.036 € on your account in 2034). The loan and upkeep come from your income instead: if that lowers what you invest, add a change under Monthly investing over time.',
       ),
     ).toBeInTheDocument()
   })
@@ -144,7 +165,7 @@ describe('the sections of the controls', () => {
     void id
     render(<HousingFields draft={draft} onChange={vi.fn()} />)
     expect(screen.getByText(/^Already own: the starting balance is counted as what is left after/)).toHaveTextContent(
-      'The loan payments and upkeep are not taken from the portfolio: the plan pays them from the rest of your income. If they will lower what you invest, add a change under Monthly investing over time.',
+      'The loan and upkeep come from your income instead: if that lowers what you invest, add a change under Monthly investing over time.',
     )
   })
 
@@ -173,7 +194,7 @@ describe('the sections of the controls', () => {
     render(<HousingFields draft={draft} onChange={onChange} />)
 
     expect(screen.getAllByLabelText('Upkeep, tax and insurance (%/yr)').length).toBeGreaterThan(0)
-    expect(screen.getByText(/What owning costs a year beyond the mortgage/)).toBeInTheDocument()
+    expect(screen.getByText(/what owning costs a year beyond the mortgage/i)).toBeInTheDocument()
     expect(screen.getByText(/Rent vs buy counts it against buying/)).toBeInTheDocument()
     fireEvent.click(screen.getAllByRole('button', { name: /^Increase Upkeep, tax and insurance/ })[0]!)
     const patch = onChange.mock.calls[0]?.[0] as { homeCarryRate: number } | undefined
@@ -195,7 +216,7 @@ describe('the sections of the controls', () => {
     render(<HousingFields draft={rest} onChange={vi.fn()} />)
 
     expect(screen.getByText(/Already own: the starting balance is counted as what is left after the/)).toBeInTheDocument()
-    expect(screen.queryByText(/Purchase cost from portfolio/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/takes .* from the portfolio/)).not.toBeInTheDocument()
   })
 
   it('says nothing about a purchase when there is none', () => {
@@ -205,7 +226,7 @@ describe('the sections of the controls', () => {
     render(<HousingFields draft={rest} onChange={vi.fn()} />)
 
     expect(screen.queryByText(/Already own:/)).not.toBeInTheDocument()
-    expect(screen.queryByText(/Purchase cost from portfolio/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/takes .* from the portfolio/)).not.toBeInTheDocument()
   })
 
   it('writes an edit to the withdrawal rate to the draft', () => {
@@ -222,21 +243,37 @@ describe('the sections of the controls', () => {
   it('has the years the money must last, with the guide for them, even when the withdrawal rate is in the bar', () => {
     render(<FireFields draft={{ ...makeDraft(), retirementYears: 40 }} onChange={vi.fn()} omit={everything(SECTION_KEYS.fire)} />)
     expect(screen.getAllByLabelText('Years the money must last').length).toBeGreaterThan(0)
-    expect(screen.getByText(/the usual guide is 4% up to 35 years, 3,5% up to 49 and 3,25% from 50, so 40 years points to 3,5%/)).toBeInTheDocument()
+    expect(screen.getByText(/40 years points to 3,5%/)).toBeInTheDocument()
+    expect(screen.getByText(/the usual guide is 4% up to 35 years, 3,5% up to 49 and 3,25% from 50/)).toBeInTheDocument()
     expect(screen.getByText(/moves the rate to the guide unless you have set the rate yourself/)).toBeInTheDocument()
   })
 
-  it('calls the guide a rule of thumb, not a safe rate, and points to the chart that shows how often the money lasts', () => {
+  it('calls the guide a rule of thumb, not a safe rate, in view, and points to the chart that shows how often the money lasts behind the note', () => {
     render(<FireFields draft={{ ...makeDraft(), retirementYears: 30 }} onChange={vi.fn()} omit={everything(SECTION_KEYS.fire)} />)
-    const hint = screen.getByText(/How long the invested money has to pay for your spending after FI/)
-    expect(hint).toHaveTextContent('The longer, the lower the withdrawal rate has to be: the usual guide is 4% up to 35 years, 3,5% up to 49 and 3,25% from 50, so 30 years points to 4%.')
-    expect(hint).toHaveTextContent('It is a rule of thumb, not a promise: the FI chart shows how often the money lasts in simulated markets.')
+    const hint = screen.getByText(/How long the money must last\./)
+    expect(hint).toHaveTextContent('How long the money must last. 30 years points to 4%, a rule of thumb, not a promise.')
     expect(hint).not.toHaveTextContent('that is safe')
+    expect(screen.getByText('The FI chart shows how often the money lasts in simulated markets.')).toBeInTheDocument()
+  })
+
+  it('keeps the FI section short, with the guide, the horizon and the formula behind a closed note', () => {
+    const { container } = render(<FireFields draft={{ ...makeDraft(), retirementYears: 30 }} onChange={vi.fn()} />)
+    const details = container.querySelector('details')!
+    expect(details.open).toBe(false)
+    expect(details.querySelector('summary')).toHaveTextContent('How FI is worked out')
+    expect(details).toHaveTextContent('FI is searched within your Horizon (years)')
+    expect(details).toHaveTextContent('4% is the usual rule of thumb')
+    const clone = container.cloneNode(true) as HTMLElement
+    clone.querySelector('details')!.remove()
+    const prose = [...clone.querySelectorAll('p')].map((p) => p.textContent ?? '').join(' ')
+    expect(prose.split(/\s+/).filter(Boolean).length).toBeLessThanOrEqual(75)
+    // What stops a wrong input stays in view.
+    expect(prose).toContain('Add the tax on what you withdraw: the plan does not.')
   })
 
   it('says to add the tax on what is withdrawn, since the plan does not, under the spending', () => {
     render(<FireFields draft={makeDraft()} onChange={vi.fn()} />)
-    expect(screen.getByText(/Yearly cost of living you would need the portfolio to cover after FI/)).toHaveTextContent('Add the tax on what you withdraw: the plan does not.')
+    expect(screen.getByText(/Yearly cost of living after FI/)).toHaveTextContent('Add the tax on what you withdraw: the plan does not.')
   })
 
   it('moves the withdrawal rate with the years while it is the guide, and leaves one set by hand alone', () => {
