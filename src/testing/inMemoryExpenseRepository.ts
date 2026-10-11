@@ -17,6 +17,7 @@ import { addDaysIso } from '../domain/engine/dates'
 import { withoutFlag, withoutSettlement } from '../domain/engine/flagGroups'
 import { defaultExpenseSettings } from '../domain/engine/defaults'
 import { assumedInflationError } from '../domain/engine/assumedInflation'
+import { marketVolatilityError } from '../domain/engine/marketVolatility'
 import { leversError } from '../domain/engine/goalLevers'
 import { normalizeMilestones, validateMilestones } from '../domain/engine/milestones'
 import type {
@@ -135,6 +136,7 @@ function emptyStore(seed: ExpenseRepositorySeed = {}): OwnerStore {
 function assertGoalsSettings(patch: Partial<ExpenseSettings>): void {
   const error =
     (patch.assumedInflation !== undefined ? assumedInflationError(patch.assumedInflation) : null) ??
+    (patch.marketVolatility !== undefined ? marketVolatilityError(patch.marketVolatility) : null) ??
     (patch.goalLevers !== undefined ? leversError(patch.goalLevers) : null)
   if (error) throw new RepoHttpError(400, error)
 }

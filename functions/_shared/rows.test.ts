@@ -17,7 +17,6 @@ function baseRow(overrides: Partial<GoalScenarioRow> = {}): GoalScenarioRow {
     sort_order: 0,
     start_invested_cents: 10_000_000,
     monthly_contribution_cents: 100_000,
-    annual_contribution_growth: 0,
     expected_real_return: 0.07,
     horizon_years: 30,
     house_price_cents: 0,
@@ -43,6 +42,12 @@ describe('toGoalScenario', () => {
     expect(toGoalScenario(baseRow({ is_active: 1 })).isActive).toBe(true)
   })
 
+  it('still sends annualContributionGrowth as 0 for one release, so a client opened before the field was dropped stays finite', () => {
+    // The old client multiplies it into every projection: left out, it is undefined and the net worth is NaN from year 2.
+    expect(toGoalScenario(baseRow())).toMatchObject({ annualContributionGrowth: 0 })
+    expect(JSON.parse(JSON.stringify(toGoalScenario(baseRow()))).annualContributionGrowth).toBe(0)
+  })
+
   it('maps a row with empty life_events to lifeEvents: []', () => {
     const result = toGoalScenario(baseRow())
     expect(result.lifeEvents).toEqual([])
@@ -60,6 +65,21 @@ describe('toGoalScenario', () => {
   it('falls back to [] for malformed life_events JSON', () => {
     const result = toGoalScenario(baseRow({ life_events: 'not-json' }))
     expect(result.lifeEvents).toEqual([])
+  })
+
+  it('reads home_carry_rate, and a missing or empty one as 1,5% of the value a year', () => {
+    expect(toGoalScenario(baseRow({ home_carry_rate: 0.025 })).homeCarryRate).toBe(0.025)
+    expect(toGoalScenario(baseRow({ home_carry_rate: 0 })).homeCarryRate).toBe(0)
+    // A database that has not had the column added yet returns no such key at all.
+    expect(toGoalScenario(baseRow()).homeCarryRate).toBe(0.015)
+    expect(toGoalScenario(baseRow({ home_carry_rate: null })).homeCarryRate).toBe(0.015)
+  })
+
+  it('reads retirement_years, and a missing or empty one as the 30 years the drawdown was always drawn over', () => {
+    expect(toGoalScenario(baseRow({ retirement_years: 45 })).retirementYears).toBe(45)
+    // A database that has not had the column added yet returns no such key at all.
+    expect(toGoalScenario(baseRow()).retirementYears).toBe(30)
+    expect(toGoalScenario(baseRow({ retirement_years: null })).retirementYears).toBe(30)
   })
 
   it('reads contribution_schedule into date order, and a missing, empty or unusable one as no changes', () => {

@@ -3,6 +3,8 @@ import type { NewGoalScenario } from '../../../data/dataSource'
 import {
   DEFAULT_ANNUAL_SPEND_CENTS,
   DEFAULT_DOWN_PAYMENT_FRACTION,
+  DEFAULT_HOME_CARRY_RATE,
+  DEFAULT_RETIREMENT_YEARS,
   DEFAULT_HOUSE_APPRECIATION,
   DEFAULT_HORIZON_YEARS,
   DEFAULT_MORTGAGE_RATE,
@@ -37,7 +39,6 @@ export function draftFromDataset(
     startInvestedCents: latest ? checkinInvestedCents(latest, dataset.wealthAccounts) : 0,
     // A month of net withdrawals can leave the average below zero, which no plan can save.
     monthlyContributionCents: Math.max(0, avgMonthlySavingCents),
-    annualContributionGrowth: 0,
     expectedRealReturn: DEFAULT_REAL_RETURN,
     horizonYears: DEFAULT_HORIZON_YEARS,
     housePriceCents: 0,
@@ -53,5 +54,7 @@ export function draftFromDataset(
     planStartDate: latest?.checkinDate ?? todayIso(),
     lifeEvents: [],
     contributionSchedule: [],
+    homeCarryRate: DEFAULT_HOME_CARRY_RATE,
+    retirementYears: DEFAULT_RETIREMENT_YEARS,
   }
 }

@@ -1,11 +1,15 @@
 import { memo, useMemo } from 'react'
 import { useAssumedInflation } from '../../..//hooks/assumedInflationContext'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { projectRentVsBuy, scenarioToParams } from '../../../../engine'
+import { formatCentsCompact, projectRentVsBuy, realHouseGrowth, scenarioToParams } from '../../../../engine'
+import { planMoneyLabel } from '../planMoneyLabel'
+import { rentVsBuyCaption } from './rentVsBuyCaption'
+import { rentVsBuyHeadline } from './rentVsBuyHeadline'
+import { rentVsBuyMarkers } from './rentVsBuyMarkers'
+import { rentVsBuyTooltip } from './rentVsBuyTooltip'
 import { ChartShell } from './ChartShell'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
-import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
-import type { TooltipLine } from '../../../charts/ChartTooltip'
+import { ChartLegend } from '../../../charts/ChartLegend'
 import { sparseLabels } from '../../../charts/linearScale'
 import { formatMoneyShort } from '../chartTheme'
 import { useMoneyFormat } from '../../../hooks/moneyFormatContext'
@@ -13,11 +17,6 @@ import styles from '../goals.module.css'
 
 const RENT_COLOR = 'var(--exp-warning)'
 const BUY_COLOR = 'var(--exp-investment)'
-
-const LEGEND: LegendItem[] = [
-  { label: 'Rent & invest', color: RENT_COLOR },
-  { label: 'Buy now', color: BUY_COLOR },
-]
 
 function RentVsOwnChartImpl({
   draft,
@@ -29,61 +28,74 @@ function RentVsOwnChartImpl({
   embedded?: boolean
 }) {
   const inflationRate = useAssumedInflation()
-  const { points, breakevenYear } = useMemo(
+  const result = useMemo(
     () =>
       projectRentVsBuy({
         params: scenarioToParams({ ...draft, id: 0 }, inflationRate),
         rentMonthlyCents: draft.rentMonthlyCents,
+        carryRate: draft.homeCarryRate,
       }),
     [draft, inflationRate],
   )
+  const { points, verdict } = result
   const format = useMoneyFormat()
   const years = points.map((p) => p.year)
-  const labels = useMemo(() => sparseLabels(years, 5), [years])
-
-  const series: ChartSeries[] = [
-    { id: 'rent', color: RENT_COLOR, values: points.map((p) => p.rentNetWorthCents) },
-    { id: 'buy', color: BUY_COLOR, values: points.map((p) => p.buyNetWorthCents) },
-  ]
-
-  const tooltip = (i: number): { title: string; lines: TooltipLine[] } => ({
-    title: `Year ${years[i] ?? i}`,
-    lines: [
-      { label: 'Rent & invest', value: formatMoneyShort(points[i]?.rentNetWorthCents ?? 0, format), color: RENT_COLOR, tone: 'neutral' },
-      { label: 'Buy now', value: formatMoneyShort(points[i]?.buyNetWorthCents ?? 0, format), color: BUY_COLOR, tone: 'neutral' },
-    ],
-  })
+  // The years count from the purchase, not the plan start, so the axis says so with a unit.
+  const labels = useMemo(() => sparseLabels(years, 5).map((l) => (l === '' ? l : `${l}y`)), [years])
+  const markers = useMemo(() => rentVsBuyMarkers(result, points.length - 1), [result, points.length])
 
   if (points.length === 0) {
     return (
       <ChartShell embedded={embedded}>
         <h3 className={styles.chartTitle}>Rent vs buy</h3>
-        <p className={styles.chartHint}>Set a house price to compare renting against buying now.</p>
+        <p className={styles.chartHint}>Set a house price to compare renting against buying.</p>
       </ChartShell>
     )
   }
 
+  const series: ChartSeries[] = [
+    { id: 'rent', color: RENT_COLOR, values: points.map((p) => p.rentNetWorthCents) },
+    { id: 'buy', color: BUY_COLOR, values: points.map((p) => p.buyNetWorthCents) },
+  ]
+  const short = (c: number) => formatMoneyShort(c, format)
+  const first = points[0]!
+
   return (
     <ChartShell embedded={embedded}>
       <h3 className={styles.chartTitle}>Rent vs buy (net worth)</h3>
-      <p className={styles.chartHint}>
-        {breakevenYear != null
-          ? `Buying overtakes renting around year ${breakevenYear}.`
-          : 'Renting and investing stays ahead across the whole horizon.'}{' '}
-        Higher is better. The renter invests the down payment plus any monthly surplus; assumes
-        constant rent in today's money and 1.5%/yr home carry costs. These are the two choices on
-        their own, without your starting portfolio and contributions, so they will not match the
-        plan's net worth.
-      </p>
+      <p className={styles.chartHint}>{rentVsBuyHeadline(verdict, points[points.length - 1], short)}</p>
       <LinearChart
         height={height}
         series={series}
         xLabels={labels}
-        formatValue={(c) => formatMoneyShort(c, format)}
-        ariaLabel="Net worth from renting versus buying by year"
-        tooltip={tooltip}
+        formatValue={short}
+        ariaLabel="Net worth from renting versus buying, by year after buying"
+        tooltip={(i) => rentVsBuyTooltip(points, i, { format, rentColor: RENT_COLOR, buyColor: BUY_COLOR })}
+        labeledMarkers={markers}
       />
-      <ChartLegend items={LEGEND} />
+      <ChartLegend
+        items={[
+          { label: `Renter: money invested (starts at ${short(first.rentNetWorthCents)})`, color: RENT_COLOR },
+          { label: `Buyer: house less loan, plus savings (starts at ${short(first.buyNetWorthCents)})`, color: BUY_COLOR },
+        ]}
+      />
+      <p className={`${styles.chartHint} ${styles.chartCaption}`}>
+        {rentVsBuyCaption({
+          upfrontCents: result.upfrontCents,
+          feesCents: draft.transactionCostsCents,
+          priceCents: result.priceCents,
+          startYear: result.startYear,
+          moneyLabel: planMoneyLabel(draft.planStartDate, format),
+          carryRate: draft.homeCarryRate,
+          realReturn: draft.expectedRealReturn,
+          houseGrowth: realHouseGrowth(draft.houseAppreciationRate, inflationRate) - 1,
+          paymentCents: result.paymentOnAccountCents,
+          ownCheaper: result.ownCheaper,
+          loanPaidOffYear: result.loanPaidOffYear,
+          money: (c) => formatCentsCompact(c, format),
+          format,
+        })}
+      </p>
     </ChartShell>
   )
 }

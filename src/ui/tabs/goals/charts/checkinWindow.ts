@@ -1,5 +1,4 @@
-import { shiftBudgetMonth, shortMonthYearLabel } from '../../../../engine'
-import { planValueAtOffset } from '../../../../engine'
+import { planLineOf, planValueAt, planValueBefore, shiftBudgetMonth, shortMonthYearLabel, type PlanPoint } from '../../../../engine'
 
 /**
  * How much of the plan the Actual vs plan chart shows. A thirty-year projection
@@ -33,6 +32,11 @@ export function stepMonthsFor(windowYears: number): number {
 export interface WindowSeries {
   /** Projected invested value at each step. */
   values: number[]
+  /**
+   * Where a step is an anniversary with a house payment or event, what the plan reached the day
+   * before it: the line climbs to this and drops straight to `values`. Absent for a plan with none.
+   */
+  preStep?: number[]
   /** Axis label per step, blanked where the axis would crowd. */
   labels: string[]
   /** Full label per step, for the tooltip title. */
@@ -42,27 +46,33 @@ export interface WindowSeries {
 }
 
 /**
- * Resample the yearly projection onto a window of `windowYears` from the plan start,
- * one point every `stepMonths`, interpolating between the engine's yearly values.
+ * Resample the plan's line onto a window of `windowYears` from the plan start, one point every
+ * `stepMonths`. The line rises through each year and steps on the anniversary of a house payment
+ * or event; every `stepMonths` divides a year, so an anniversary is always a place on the axis.
  */
 export function windowSeries(
-  points: { year: number; investedCents: number }[],
+  points: readonly PlanPoint[],
   planStartDate: string,
   windowYears: number,
   stepMonths: number,
 ): WindowSeries {
   const startMonth = planStartDate.slice(0, 7)
   const steps = Math.round((windowYears * 12) / stepMonths)
+  const line = planLineOf(points)
   const values: number[] = []
+  const before: number[] = []
   const titles: string[] = []
   for (let i = 0; i <= steps; i++) {
     const offset = (i * stepMonths) / 12
-    values.push(planValueAtOffset(points, offset) ?? 0)
+    const value = planValueAt(line, offset) ?? 0
+    values.push(value)
+    before.push(planValueBefore(line, offset) ?? value)
     titles.push(shortMonthYearLabel(shiftBudgetMonth(startMonth, i * stepMonths)))
   }
   // About five labels: the end ones are anchored to the plot's edges, and more than
   // that on a phone runs them into each other.
   const every = Math.max(1, Math.ceil(steps / 4))
   const labels = titles.map((t, i) => (i % every === 0 || i === steps ? t : ''))
-  return { values, labels, titles, stepYears: stepMonths / 12 }
+  const stepped = before.some((v, i) => v !== values[i])
+  return { values, ...(stepped ? { preStep: before } : {}), labels, titles, stepYears: stepMonths / 12 }
 }

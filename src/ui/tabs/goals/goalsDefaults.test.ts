@@ -38,6 +38,11 @@ describe('draftFromDataset', () => {
     expect(draft.monthlyContributionCents).toBe(40_000)
   })
 
+  it('starts a new plan at a 5% return after inflation, the long-run record for world stocks', () => {
+    expect(draftFromDataset(makeDataset(), 0).expectedRealReturn).toBe(0.05)
+    expect(DEFAULT_REAL_RETURN).toBe(0.05)
+  })
+
   it('never seeds a contribution below zero', () => {
     expect(draftFromDataset(makeDataset(), -40_000).monthlyContributionCents).toBe(0)
   })

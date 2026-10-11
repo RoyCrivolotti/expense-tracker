@@ -421,7 +421,9 @@ describe('GoalsTab', () => {
 
     // The write lands and the dataset refreshes; the draft must already agree with it,
     // or the header would offer to save the old start back over the re-baseline.
-    const saved = { ...plan, ...patch }
+    // What the plan is saved as is what was written, which counts the amounts in the euros of the new start too.
+    const written = vi.mocked(actions.updateScenario).mock.calls[0]![1]
+    const saved = { ...plan, ...patch, ...written }
     rerender(<GoalsTab model={buildExpenseModel({ ...dataset, goalScenarios: [saved] })} actions={actions} />)
     await user.click(screen.getByRole('tab', { name: 'Plan' }))
     expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
@@ -434,7 +436,7 @@ describe('GoalsTab', () => {
     vi.mocked(actions.updateScenario).mockRejectedValue(new Error('boom'))
     const plan = makeScenario({ id: 1, name: 'Path A', isActive: true, planStartDate: '2025-01-01' })
     const accounts = [makeWealthAccount({ id: 1, name: 'Broker', kind: 'investment' })]
-    // The button belongs to the steady-gap hint, which needs three check-ins over half a year.
+    // The button comes with the gap's explanation, which needs two check-ins a month apart and a gap the start explains.
     const behind = (id: number, date: string) =>
       makeWealthCheckin({
         id,
@@ -528,9 +530,10 @@ describe('GoalsTab', () => {
     expect(actions.updateScenario).toHaveBeenCalledWith(
       1,
       expect.objectContaining({
+        // Two years on at 2%: 20.000 and 30.000 of 2024 euros are a little more in the euros of the new start.
         lifeEvents: [
-          { year: 1, amountCents: -20_000_00, label: 'Car' },
-          { year: 3, amountCents: 30_000_00, label: 'Gift' },
+          { year: 1, amountCents: Math.round(-20_000_00 * 1.02 ** 2), label: 'Car' },
+          { year: 3, amountCents: Math.round(30_000_00 * 1.02 ** 2), label: 'Gift' },
         ],
       }),
     )
@@ -586,7 +589,7 @@ describe('GoalsTab', () => {
       1,
       expect.objectContaining({
         planStartDate: '2026-07-15',
-        lifeEvents: [{ year: 1, amountCents: -20_000_00, label: 'Car' }],
+        lifeEvents: [{ year: 1, amountCents: Math.round(-20_000_00 * 1.02 ** 2), label: 'Car' }],
         housePurchaseYear: 2,
       }),
     )
@@ -785,16 +788,18 @@ describe('GoalsTab', () => {
   describe('the hero card', () => {
     it('has the display switch in its header and a line for FI and the milestone on a wide screen, with no summary box', () => {
       render(<GoalsTab model={makeModel()} />)
-      const header = screen.getByRole('heading', { name: 'Invested portfolio projection' }).parentElement!
+      const header = screen.getByRole('heading', { name: 'Invested portfolio projection' }).closest<HTMLElement>('[class*="chartHeaderRow"]')!
 
       // Beside the window buttons, where it is always in sight, not at the foot of the card.
       expect(within(header).getByRole('radiogroup', { name: 'Value display mode' })).toBeInTheDocument()
       expect(screen.queryByText('Scenario summary')).not.toBeInTheDocument()
-      // The net worth the box also gave is the levers bar's now, so it is not said twice.
+      // The levers bar names the net worth by its horizon, once. The line under the chart says it in both
+      // moneys under another name, which is not the box saying it twice.
       expect(screen.getAllByText(/^Net worth in 30 yrs$/)).toHaveLength(1)
+      expect(screen.getByText('Net worth at year 30')).toBeInTheDocument()
     })
 
-    it('says in a line when the plan reaches financial independence and its next milestone, and nothing when it reaches neither', () => {
+    it('says in a line when the plan reaches financial independence and its next milestone, and no FI when it never does', () => {
       const reaches = makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true, annualSpendCents: 100_000 })
       const { unmount } = render(<GoalsTab model={buildExpenseModel(makeDataset({ goalScenarios: [reaches] }))} />)
       expect(screen.getByText('Financial independence').closest('p')).toHaveTextContent('Financial independence Year 0')
@@ -820,11 +825,36 @@ describe('GoalsTab', () => {
     it('explains the purchase years and the band once, under the legend, and not above the chart', () => {
       render(<GoalsTab model={makeModel()} />)
 
-      expect(screen.queryByText(/select a year on the chart for values/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/Select a year on the chart for values/)).not.toBeInTheDocument()
       const note = screen.getByText(/Dashed vertical lines mark purchase years/)
-      // 7% real return, three points either side.
-      expect(note).toHaveTextContent('The shaded band is the line you are editing at a real return of 4,0% to 10,0%, three points either side.')
+      // The 5% a new plan starts at, three points either side.
+      expect(note).toHaveTextContent('The shaded band is the line you are editing at a real return of 2,0% to 8,0%, three points either side. It shows how much the return matters, not how likely an outcome is.')
       expect(note).toHaveTextContent('return and contributions apply before the down payment comes out')
+    })
+
+    it('says up to three points when the return is under three, since the band stops at zero', () => {
+      const dataset = makeDataset({ goalScenarios: [makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true, expectedRealReturn: 0.02 })] })
+      render(<GoalsTab model={buildExpenseModel(dataset)} />)
+
+      // A plan at 2% has no plan at -1% to draw: the band's low edge is the 0% plan, two points down, not three.
+      expect(screen.getByText(/Dashed vertical lines mark purchase years/)).toHaveTextContent('at a real return of 0,0% to 5,0%, up to three points either side.')
+    })
+
+    it('has no em dash in the explanation above the phone chart, in either view of it', () => {
+      mockPhoneWidth()
+      render(<GoalsTab model={makeModel()} />)
+
+      const hint = screen.getByText(/Select a year on the chart for values/)
+      expect(hint.textContent).toContain('is withdrawn. Select a year on the chart for values and the purchase breakdown.')
+      expect(hint.textContent).not.toContain('—')
+    })
+
+    it('says it on a phone too, above the chart', () => {
+      mockPhoneWidth()
+      const dataset = makeDataset({ goalScenarios: [makeScenario({ id: 1, name: 'Path A', sortOrder: 0, isActive: true, expectedRealReturn: 0.02 })] })
+      render(<GoalsTab model={buildExpenseModel(dataset)} />)
+
+      expect(screen.getByText(/The shaded band is the edited plan at a return up to three points lower and three points higher/)).toBeInTheDocument()
     })
 
     it('keeps the summary box, the switch under it and the explanation above the chart on a phone', () => {
@@ -832,20 +862,22 @@ describe('GoalsTab', () => {
       render(<GoalsTab model={makeModel()} />)
 
       expect(screen.getByText('Scenario summary')).toBeInTheDocument()
-      const header = screen.getByRole('heading', { name: 'Invested portfolio projection' }).parentElement!
+      const header = screen.getByRole('heading', { name: 'Invested portfolio projection' }).closest<HTMLElement>('[class*="chartHeaderRow"]')!
       expect(within(header).queryByRole('radiogroup', { name: 'Value display mode' })).not.toBeInTheDocument()
       expect(screen.getByRole('radiogroup', { name: 'Value display mode' })).toBeInTheDocument()
-      expect(screen.getByText(/select a year on the chart for values/)).toBeInTheDocument()
+      expect(screen.getByText(/Select a year on the chart for values/)).toBeInTheDocument()
       expect(screen.queryByText(/The shaded band is the line you are editing/)).not.toBeInTheDocument()
+      expect(screen.getByText(/The shaded band is the edited plan at a return three points lower and higher/)).toBeInTheDocument()
     })
 
-    it('names where the figures that stay in today\'s money are, in the Nominal view', async () => {
+    it('says what is flat and what rises in the Nominal view', async () => {
       const user = userEvent.setup()
       render(<GoalsTab model={makeModel()} />)
 
       await user.click(screen.getByRole('radio', { name: 'Nominal' }))
 
-      expect(screen.getByText(/The net worth, the FI target and the milestones stay in today's money/)).toBeInTheDocument()
+      expect(screen.getByText(/Milestones are amounts on your account, so they stay put in this view/)).toBeInTheDocument()
+      expect(screen.getByText(/the FI target is in .* euros, so it rises with the inflation/)).toBeInTheDocument()
     })
   })
 
@@ -1129,10 +1161,10 @@ describe('GoalsTab', () => {
     render(<GoalsTab model={makeModel()} actions={makeActions()} />)
     await user.click(screen.getByRole('radio', { name: 'Nominal' }))
 
-    // One paragraph: what stays in today's money, and that the preview is not saved.
+    // One paragraph: what is flat and what rises in this view, and that the preview is not saved.
     const note = screen.getByText(/The preview is not saved/)
     expect(note).toHaveTextContent(/the rest of Goals uses the saved 2,0%, which you change in Assumptions/)
-    expect(note).toHaveTextContent(/target lines are only drawn in Purchasing power/)
+    expect(note).toHaveTextContent(/Milestones are amounts on your account, so they stay put in this view/)
   })
 
   it('previews without saving, and Progress and the saved rate stay where they were', async () => {

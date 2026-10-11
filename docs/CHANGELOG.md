@@ -2,6 +2,220 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (found by the last review before the planning changes landed)
+
+- **A balance exactly on the plan's line no longer reads as started behind.** The gap split took the start part from the plan's own path and not from the line the status compares with, so a first check-in a few years in, exactly on the line, showed thousands behind "at the start" and offered to restart the plan. The start part is now the first check-in's gap to the line.
+- **A good month is no longer "more than markets give".** The 30% line was held against what a short stretch would compound to over a year, so +3% in five weeks tripped it. Under a year it is held against the growth the stretch had.
+- **A milestone is not on track in green when your check-ins put it past its target.** The chip judged the plan's own date; once the plan restarted from your latest check-in reaches it after the target, or not at all, the chip says behind and shows both dates.
+- **Edit and the remove cross of a change are 24px, and stay together when the row wraps.** They were 26 by 15 and 13 by 16 pixels, 4px apart.
+- **The shortfall note is announced when it appears**, the years under the rent vs buy chart say they count from the purchase ("10y"), and the house price hint says the price is the one at the plan's start.
+- **The spread card on a phone no longer makes the page jump on its first tap in Safari**: its code is fetched ahead of its chip. A card scrolling near the screen reads the last sighting of a batch, not the first.
+- **A mortgage term shorter than a day is refused**, where 5e-324 years made the payment infinite.
+
+## October 2026 (words that were not true for every plan)
+
+- **Rent vs buy no longer says buying stays ahead "the whole way"** above a legend that shows the buyer starting lower by the fees. It says buying is ahead in every year after you buy, and the note on what the plan leaves out says while owning costs more a month than renting, which is when it is true.
+- **A restart that reaches FI beside a plan that does not still says FI** ("from today, FI around Apr 2052"); the word came only from the plan's own part.
+- **The Progress net worth tile says "as logged"**, since the investments tile under it is brought back to the plan's start and the two cannot be subtracted to find the cash.
+- **The glossary's guide and run count follow your number style**, as its worked example does ("3.5% up to 49" and "10,000 different markets" for the 1,234.56 style), and so does the inflation under Actual vs plan. A smaller bounce is said to last more often at a return like the default, since at about 1% or less luck is what rescues a plan.
+
+## October 2026 (an app opened before the deploy keeps working)
+
+- **A client opened before this release no longer goes to NaN.** The API stopped sending a scenario's `annualContributionGrowth`, which the previous client still multiplies into every projection, so a session open across the deploy showed NaN on the Goals tab until it was reloaded. The API sends 0 for it for one release.
+
+## October 2026 (layout)
+
+- **The month a change in the monthly investing starts in is no longer cut.** In a half column on a laptop 1024 to 1366px wide the Edit button took the room of the label and it read "from Ma...". The row wraps instead.
+- **The gap split's amounts stay inside their box at large text.** At 200% text on a 360px phone they ended 23 to 45px past it; a row wraps its amount to the next line instead.
+- **The stepper under the spending stays where a thumb put it.** It moved down 17px as the figure above it gained a digit (35 to 36 years).
+- **Arrowing along the Chart tab's chips brings the one it lands on into view**, and the saved Market bounce preset has a border in forced colours.
+
+## October 2026 (the plan's money in your currency)
+
+- **The plan's money is named after the currency you track in.** It said "2026 euros" to someone tracking in US dollars ("$8,080,343.70 in 2026 euros"), and the settings offer fourteen currencies. It says "2026 US dollars", "2026 British pounds" and so on now, in the settings text, the charts' hints, the notes, the re-baseline summary and the glossary (whose example is worked out in your number style). Nothing changes for euros.
+
+## October 2026 (what the plan counts and what it leaves out)
+
+- **The return and spending notes say what the plan leaves out.** Enter the rate the money compounds at, not the average of yearly returns (higher by about a point for stocks), and the return after fund costs and tax; the spending is before the tax on what is withdrawn, so add it.
+- **The withdrawal guide is called a rule of thumb**, not a safe rate: each rate in it fails in 13 to 24 of 100 simulated markets under the defaults once the money has to last 30 years or more (4% over 20 years fails in 4), and the FI chart says how often.
+- **Choosing a bond-heavy bounce says to lower the return too.** The usual bounces of 11% and 7% lower only the bounce, and with the return left at a stock-like 5% the chance of the money lasting jumped from 86 to 93 or 99 of 100. The glossary gives 86 for a 5% return and a 15% bounce, which is when it is true.
+- **The odds line says what its cut-off means.** "In the unluckiest tenth it lasts 26 years" read as what the worst tenth gets, when 26 is the best of that tenth. It says "in 10 of the 100 it lasts 26 years or less".
+- **The note that unrecorded investing counts as the market shows whenever the saving reads less than planned**, not only below half of the plan: someone who invested exactly the plan and recorded 60% of it read two false rows of about 5.000 euros each.
+- **The shaded band says "up to three points" below a 3% return**, where it stops at zero. The timing row of the gap split says it is not something you did.
+
+## October 2026 (rent vs buy says what it assumes)
+
+- **Rent vs buy no longer says buying was ahead for years it was not.** "Buying is ahead for the first 15 years" was written from the last year buying led, so a buyer who trailed in the opening years (the fees weigh) was said to lead them. It says "Renting overtakes buying 16 years after you buy and stays ahead to the end", which is always true.
+- **The note says what moves the answer.** What savings and the house grow at, that the buyer spends the fees at once, when the loan is paid off, and what owning costs a month against renting, in the words of the marker ("Owning costs less a month", not "Owning cheaper", which read as buying being cheaper).
+- **The plan says what it does not charge the portfolio for.** A house takes the down payment and the fees out of the plan's portfolio and nothing else: the loan and the upkeep come out of the rest of the income. The House section and the chart's note say so, and where to say otherwise (Monthly investing over time).
+
+## October 2026 (the spread card loads and behaves)
+
+- **Dragging a control is no longer held up by the two market replays.** Every committed edit reran the spread card's 10.000 runs and the retirement replays for cards a screen or two down the page. On a laptop slowed to a quarter of its speed, 20 presses of the arrow key on the return slider made 6 or 7 pauses of 100 ms or more, the longest about 240 ms; now none. The replays wait until the edits have stopped and the card is near the screen, and the spread card does not fetch its code before then.
+- **A spread card that does not load no longer blanks the page.** A failed fetch of the card's code unmounted the whole app, Dashboard and Settings included. Only the card says it could not be shown, with a Reload button.
+- **The spread card has the whole width under the two columns** on a wide screen instead of being a fourth card in one of them, which left the columns about 1.000px apart.
+- **Its table scrolls inside the card when the text is large** instead of spilling out of it.
+
+## October 2026 (the spread table's euros)
+
+- **The spread table says which euros each amount is in.** A 750.000 € milestone (an amount on your account) sat above a 750.000 € FI target (an amount in the plan's euros) with different answers and no reason. The milestone rows say "on your account", the FI row says "in 2026 euros", and the caption names the chart's euros and the table's.
+- **The runs that get there are counted out of 100 without rounding a risk away.** 4 runs in 10.000 missing a milestone read "100 of 100"; they read 99 now, as the retirement line already did.
+- **The spread card says what a run is and where the bounce is set** before it uses either word.
+
+## October 2026 (one rounding for every path)
+
+- **A plan restarted on its own line reads the same as the plan.** The plan's years to a milestone were rounded up to a yearly step from its start and then again after taking today off, while the restart from a check-in was rounded once, so someone exactly on the plan read "1 year sooner" and the plan's cells could be up to two years later than the date on Progress. Every row is rounded once now, from the day the path reaches the amount, and "up to a year later" is what the caption says and what it is.
+- **The plan's FI and its restart's are read on one axis.** Beside a restart the plan's FI year and the restart's were counted from two different days, so a restart that is behind could read a year sooner. Both are given as a month, on the dashboard card and in the comparison table.
+
+## October 2026 (the last figures with no money named)
+
+- **The Progress snapshot adds up.** The balance was in euros on the account and the plan projection beside it in the plan's euros, so taking one from the other did not give the gap printed above them (180k and 158k under "On track, -438 €"). Both are in the plan's euros now and say so, the balance as logged is in the hover text, and the net worth tile is called "Net worth, all accounts". The History rows say their gap is for the investments, in the plan's euros.
+- **The dashboard card and the full-screen chart name their euros**, as the Goals page does.
+- **The purchase cost, the fees and a one-off event say what they come to on the account** in the year they fall in, not only in the plan's euros.
+
+## October 2026 (does the money last)
+
+- **The FI drawdown says in how many of 100 runs the money lasts.** A retirement that starts at the FI target, with the spending taken out each year for the years it must last, is replayed in the same 10.000 markets as the spread card. For 30.000 € a year over 30 years it says the money lasts in 86 of 100 runs at 4%, against 92 at 3,5% and 96 at 3%, and how long it lasts in the unluckiest tenth when it does not last in all. It uses your plan's own withdrawal rate first, the market bounce from Assumptions, and the typical return of the plan. It is shown where FI is never reached too: it is about how safe the target is.
+
+## October 2026 (which euros, and both of them)
+
+- **Every figure says which euros it is in.** The plan counts in the euros of its start year, so "2026 euros" is what that many euros bought in 2026, and your account will show a bigger number later. The projection chart names its euros beside its title (and says "in euros on your account in each year" in the Nominal view), and so do the FI chart, the comparison, the history charts and the composition chart. "Today's money" is gone from the app.
+- **The numbers that matter are given both ways.** The net worth where the plan ends, in 2026 euros and on your account in that year (under the chart on a wide screen, in the summary and the narrative on a phone). The FI target the same, where the plan reaches it. Spending and rent under their fields say what they come to on the account where it counts. "Where you are today" says what your latest check-in is worth in the money the FI target is in.
+- **The glossary explains the two.** "The plan's euros and your account" has a worked amount.
+
+## October 2026 (how far luck could move the plan)
+
+- **A new card shows the plan against 10.000 different markets.** The plan is one line, which is the middle of the futures and not a floor. The card replays it with random yearly returns around the typical one, draws the middle run, the middle half as a shaded band and the 10th and 90th rank as dashed lines, and says in a sentence where they end. A table gives the years in which the middle half of the runs and 8 in 10 of them first reach each milestone and the FI target ("2044 to 2049", or "not within 30 years"), and how many of 100 runs get there. It uses the Market bounce from Assumptions, shows in the Nominal view when that is chosen, and has the whole width under the two columns on a wide screen and is last in the phone's chart picker, "Spread". Only the market changes in the replay: the saving, the house, the events and the inflation are as planned.
+
+## October 2026 (the market's bounce is a setting)
+
+- **Assumptions has a Market bounce card.** How far a single year's return strays from the typical one, from 0 to 50%, with three usual choices beside the stepper: world stocks 15%, stocks and bonds 11%, mostly bonds 7%. It is one value for every scenario, 15% until set. The spread card uses it, and a plan's own return stays the typical growth. Needs migration 0034 on production before this is deployed.
+
+## October 2026 (how long the money must last)
+
+- **"Years the money must last" is an input.** The FI drawdown was drawn over 30 years, or the plan's horizon if that was shorter, written into the code. It is a per-scenario input next to the withdrawal rate now, from 1 to 100 years, and the drawdown runs for it. Existing scenarios keep 30, so nothing moves except a plan with a horizon under 30 years, whose drawdown is no longer cut short by it. Needs migration 0033 on production before this is deployed.
+- **The withdrawal rate gets a guide that follows the years.** 4% up to 35 years, 3,5% up to 49, 3,25% from 50: money that has to last longer can be spent more slowly. Changing the years moves the rate to the guide, unless you have set the rate yourself, in which case it stays.
+- **The FI target is shown at 4%, 3,5% and 3%.** Beside the target the plan uses, "the same spending needs 750k € at 4,0%, 857k € at 3,5% or 1,0M € at 3,0%", in the FI chart and in Where you are today.
+
+## October 2026 (Rent vs buy says what it compares)
+
+- **It starts when you buy.** The chart compared buying today at today's price whatever year the plan buys in, so a house bought in year 8 looked as cheap as one bought now. It now starts at the purchase year at the price the house will cost then, and counts years after buying.
+- **It runs past the loan.** Until ten years after the loan is paid off, which is where a buyer's month changes most, and not only to the plan's horizon.
+- **The readout says what each side holds.** Renter: the cash they start with, grown, and what they have invested since. Buyer: house worth, loan left and savings. Under it, what each pays and invests a month, and what the year before had when the buyer's investing jumps, as it does when the loan is paid off.
+- **Two turning points are named on the chart**: when owning starts to cost less a month than renting, and the year the loan is paid off.
+- **The note says what is assumed**: the cash both start with, rent flat in real terms, the scenario's own upkeep rate, no costs of selling, the year it compares from, the money the figures are in, and that it is not the plan's own net worth.
+
+## October 2026 (the upkeep of the house is an input)
+
+- **Rent vs buy shows what it assumes for owning costs.** It had counted 1,5% of the house's value a year (repairs, property tax and insurance) against the buyer without saying so. The Housing section now has "Upkeep, tax and insurance", per scenario, beside the rent, and the chart reads it and states the rate in its note. Existing scenarios keep 1,5%, so no figure moves until it is changed. Needs migration 0032 on production before this is deployed.
+
+## October 2026 (Progress says where the gap comes from)
+
+- **Ahead or behind now comes with the reasons.** Under the status line, rows in the plan's euros that add up to the gap: where you started, investing more or less than the plan puts in, the market doing better or worse than the plan assumes, and a small muted line for how the plan counts time within each year. A row that is nothing is left out. For example, 12.000 € ahead: +9.000 € from investing more than planned, +4.000 € from the market, -1.000 € from a lower start.
+- **Saving and the market are said together when they cannot be told apart.** Nothing recorded as an investment while the plan invests, a house payment with no withdrawal recorded, or a balance that grew faster than markets give: the market would otherwise take credit for money that only moved, so the row says so and what to record.
+- **The re-baseline hint no longer fires on noise.** It said the plan's starting point was wrong whenever the gap had held still for half a year, which is what a plan with a good start and an ordinary market does about half the time, and it said the same to someone who had stopped investing. The restart is offered now when where the plan started is what explains the gap, and the gap is worth at least three planned months.
+
+## October 2026 (the return is not given when it is money moved in)
+
+- **A balance that grew by transfers nobody recorded no longer reads as a return.** The measured return counts any rise that is not an investment transaction as growth, so an account opened with a transfer a day before the next check-in read about 72% a year, and a year of unrecorded monthly deposits read 18%. When the plan expects investing and none is recorded in the period, or the period would be more than 30% a year, Progress says so and what to add (Investment transactions), instead of a percentage.
+- **Two check-ins on one day count as one.** A correction logged the same day was read as a return over no time at all. The one logged last is used.
+
+## October 2026 (restarting a plan counts it in the new year's euros)
+
+- **Spending, rent, fees and one-off amounts are brought forward.** Re-baselining moves the start to today but left the amounts typed in the old start's euros as they were, so after 3 years at 2% inflation 30.000 € of spending still read 30.000 € where it is 31.836 €. The FI target came out about 6% low, and in the sample plan without its house someone exactly on plan was told FI is a year earlier than the plan says. They are now multiplied by the inflation of the years that passed, and the sheet says what each became.
+- **A house not yet bought is priced by houses, not by inflation.** A 300.000 € house with prices up 3% a year reads 327.818 € after 3 years.
+- **A house already bought is held as owned, with what is still owed.** It used to restart as a 300.000 € house with a full 25-year loan at 80% of that price. In the sample plan, restarted 2 years after the purchase, it is worth 403.175 € with 287.186 € left over 23 years, the loan's own schedule, which the sheet says is assumed.
+- **The dotted "from today" line is drawn in the plan's money.** It was plotted as if the check-in's euros were the plan start's.
+- **A mortgage term can be a part year**, and a number or percent field no longer rewrites a value you only tabbed through (a 22,5 year term became 23).
+
+## October 2026 (milestones are dated on the account)
+
+- **A milestone is reached when the account shows it.** A milestone is a number of euros you want to see on the account, but it was compared with the plan's line in the euros of the plan start, which are worth more than the euros of a later year, so every date came out later than the account would show it, by years for a far one. It is now compared with the line grown by the inflation since the start. In the demo plan, 1,5M moves from Nov 2031 to Aug 2030, 2,5M from Feb 2039 to Apr 2036 and 5M from Mar 2049 to Jan 2044.
+- **The chip says what the amount is worth by then.** "Expected Aug 21, 2030 (worth about 1.375.100 € in 2026 euros)", and when a house payment or event takes the plan back under it, the month it falls back below.
+- **The table, the timeline and the narrative agree with the chip.** Their years are the day the chip gives, rounded up.
+- **Both chart views draw the targets.** A milestone is flat in Nominal and falls with the inflation in Purchasing power, the FI target the other way round. Nominal drew neither before.
+- **The wording.** The glossary, the milestone settings, the table's hint and the Nominal note say a milestone is an amount on your account.
+
+## October 2026 (ahead and behind follow the plan through a house purchase)
+
+- **Someone exactly on plan reads on track all year.** The plan's line sloped from one year-end to the next, but a house payment or a one-off event happens on the anniversary, so in the year before one the line was already falling while the portfolio was not. A week before a 70.871 € payment the badge showed about 69.500 € ahead and 51 months ahead, and a bonus did the same in reverse. The line now rises through the year and steps on the anniversary, in the badge, Progress, the Actual vs plan chart, the hero chart and its band, and the line from today.
+- **No months across a purchase.** A balance the line only has on the other side of a house payment or event is not "three years ahead". The gap in euros is shown, with a line saying months are not counted across it.
+- **On track means within a month either way.** A balance a few euros behind the line used to read "€ behind" in red. It reads On track now, in the badge and in Progress.
+- **A purchase a fortnight early or late is not 70.000 € off.** Within a month of the anniversary a balance is read against the plan with the payment made, or not yet made, whichever it is nearer, and Progress says so.
+- **A date is a month.** The point on the line reads "around Jul 2033", not a day it cannot know.
+- **The plan's years are counted on the calendar.** A year of 365,25 days put the fifth anniversary 0,7 of a day short of 5, which mattered once the steps sat on the anniversaries. A check-in before the start or after the last year has no line to read, and Progress says which, instead of saying there is no start date.
+
+## October 2026 (the house is bought at the price it has risen to)
+
+- **A house bought later costs what it will cost then.** The price you enter is today's, but the plan took the down payment, the loan and the withdrawal from that same price whenever the house was bought, so a house bought in year 8 cost no more than one bought today. It now rises by what houses beat inflation by until the purchase year: a 300.000 € house with prices up 3% a year and inflation at 2% costs about 324.353 € in 2026 euros in year 8 (380.031 € when you pay it), not 300.000 €. The price field says so under it. Plans with no house, or a house already owned, do not move; a house bought later in a plan where houses rise faster than inflation now needs a larger down payment, which can show up as a bigger dip on the invested line.
+
+## October 2026 (new plans start at a cautious return)
+
+- **A new plan starts at a 5% real return, not 7%.** Over the very long run world stocks returned about 5% a year after inflation, and many forecasts are lower, so 7% was the optimistic end and it was what everyone who did not change the field got. A note under Real return says so. Plans already saved keep their own return.
+
+## October 2026 (the pace and the return say no more than they know)
+
+- **The pace is read on whole months.** The month still under way counted as a full one, so someone who invests on the 25th read 833 against 1.000, in red, from the 1st to the 24th of every month. It is left out now, a month with no transactions at all counts as a month of nothing invested (it was skipped, which flattered the average), and within 2% of the plan's figure is on pace where any shortfall read red. The dashboard headline uses the same months.
+- **The sentence is true of its months.** "Since the plan started" is said only when the months start there; when the record begins later it says "recorded", and with only the month under way there is no pace line at all.
+- **A yearly return from under ten years is not coloured.** At 17% volatility the standard error of a yearly return is about 12 points after two years and 5 after ten, so green or red said ahead or behind where the figure cannot tell. It is shown plain, with "A few years of returns say little about a long-run 7,0% a year", and keeps its colour from ten years of check-ins.
+
+## October 2026 (plainer wording on the plan screens)
+
+Text only; no figure moves.
+
+- **The shaded band says what it shows.** It is the plan at a return three points either side, which reads like a confidence interval and is not one. The caption now says it shows how much the return matters, not how likely an outcome is, and the phone caption, which said nothing about the band, has a sentence for it.
+- **The FI drawdown says it is an illustration.** It takes the plan's return every year, so it shows how the target works and not what a bad first decade would do. The caption and the glossary say so.
+- **The glossary says payments land at the end of the year.** That is a little cautious against paying every month, up to about 3% over thirty years at 7%, and it is what the plan has always done.
+- **Re-baselining no longer promises the gap measures only what you do next.** The gap restarts from zero but still moves with markets, so the three places that explain a re-baseline now say it follows what you invest and how markets do.
+- **The inflation texts say the monthly amount is what you send.** The Assumptions intro and the inflation setting still described a plan where the monthly amount was in today's money.
+- **"2 years ahead", not "more than 2 years ahead", at exactly 24 months, and "1 month late", not "1 months late".**
+
+## October 2026 (a plan the portfolio cannot pay for says so)
+
+Checked in Chromium at 1280px and at 375px, in the light and the dark theme.
+
+- **A house or a life event that costs more than the portfolio holds is flagged under the chart.** The plan took the money out anyway and carried a negative balance that compounded like a debt, with nothing on the screen saying so: 20.000 € and 500 € a month has 62.555 € by year 5, so it cannot pay the 80.000 € down payment on a 400.000 € house, yet the chart drew a line and a net worth. The note names the year and how far below zero it goes ("The house needs more than the portfolio holds in year 5. It takes 80.000 € out (the down payment and the costs) and leaves the portfolio 17.445 € below zero"), and blames the life event instead when the house alone fits. The figures do not change; a plan that fits shows nothing.
+
+## October 2026 (the inflation preview shows the plan at that rate)
+
+- **Trying another inflation rate in the Nominal view draws the plan at that rate.** Since the monthly amount became what you send, the plan itself depends on the inflation, but the preview only drew the saved line higher, which counted each payment as if it grew with prices. With 2% saved and 6% tried, a plan of 20.000 € and 1.000 € a month read 6,25M € at year 30; at 6% it is 4,81M €, the figure the chart shows when 6% is saved. The rest of Goals keeps the saved rate, as before.
+
+## October 2026 (rent vs buy says who leads)
+
+- **Rent vs buy names who is ahead and from when.** At the defaults (a 400.000 € house, 1.200 € rent) it said "Buying overtakes renting around year 1" while renting led by about 640.000 € after thirty years: the first year buying drew level was called a breakeven, though renting pulled ahead again from year 5. It now says "Renting overtakes buying 5 years after you buy and stays ahead to the end", or the year buying gets ahead and stays ahead.
+- **The note says the buyer's figure is before the costs of selling**, which the comparison does not include.
+
+## October 2026 (the measured return, against like for like)
+
+- **A return under a year is set against what the plan expects over the same days.** It said "returned 3,0% so far against the 7,0% a year that the plan assumes", a total over a few weeks beside a yearly rate, which reads as behind or ahead whatever the plan expects. It now says what the plan assumes over those days (about 3,6% for 146 days at 7% after inflation and 2% inflation), with the rate and the inflation it comes from. From a year on it is still a yearly rate, after inflation, against the plan's.
+
+## October 2026 (monthly investing, as a history)
+
+Checked in Chromium and in Safari's engine, at 1280px and at 375px.
+
+- **The monthly amount reads as a history.** The section, now called "Monthly investing over time", starts with the amount the plan starts with, on the plan's start date, and then lists each change from a month on: 1.000 € from 25 Jun 2026, 1.500 € from Mar '28, a pause from Jan '30. The line under it says the first line is the amount you start with and where it is set, which is the bar when it is in the bar and Portfolio when it is not.
+- **A change can be edited where it is.** Its month and its amount, with Save and Cancel, instead of removing it and adding it again.
+- **A scenario can have thirty changes, not ten**, enough for a change a year over a thirty-year plan.
+- **A pause says "pause"** rather than 0,00 €/mo, and the text above the list says to enter 0 for one.
+
+## October 2026 (monthly investing is what you send)
+
+- **The monthly amount is what leaves your account, and the plan counts it in the euros of its start year.** The plan used to read 1.000 € a month as 1.000 € of today's money every year, which meant sending more each year: 3% inflation takes it to about 2.400 € by year 30. Someone who sends the same 1.000 € for thirty years was shown a plan that needs those larger payments. Now 1.000 € means 1.000 € each month, and each year's payments are brought back by the assumed inflation, so by year 30 a payment counts for about 55% of what the same amount did at the start at 2% inflation (41% at 3%). The figures of every saved scenario come out lower when inflation is above 0%, by more the longer the horizon.
+- **The editor and the glossary say so.** "Monthly investing" has an entry under "What do these terms mean?", and the section for changes starts with what the amount is and how it is counted.
+- **The pace comparison is in one money.** What the plan invests each month and what the transactions show are both what left the account, where before the plan's figure was in the plan's euros.
+
+## October 2026 (Contribution growth removed)
+
+- **Contribution growth is gone from the inputs.** It raised the monthly amount by a percentage on each anniversary of the plan start, which was easy to set without seeing what it did: 3% a year turned 1.000 € a month into about 2.400 € by year 30. A raise is now a dated change under "Monthly investing over time", which says the month and the amount. The setting was at 0% on every saved scenario, so no figure moves.
+- **A saved levers bar that had it drops it.** The five inputs the bar keeps are unchanged otherwise.
+- **A re-baseline takes the amount you are investing at the check-in.** It used to count the raises so far, rounded to the nearest whole year, so the amount could come out one raise ahead for up to six months.
+
+## October 2026 (months ahead or behind, along the plan)
+
+- **"Months ahead" is now the distance along the plan's line.** It used to divide the gap in money by what the plan invests each month. That left out what the portfolio earns by itself, so a gap read as more months than the chart shows (10.000 € ahead on 1.400 € a month said 7 months, where the plan's line gets there in 5), and it jumped on the day the monthly amount changed. The figure is now the months between the check-in and the point on the plan's line that has your balance, and the Progress snapshot says when that is: "12 months ahead of the plan, which only reaches this balance around Oct 2027".
+- **A pause no longer takes it away.** With a month of nothing there was no monthly amount to divide by, so no months were shown and the dashboard badge said "On track" however far ahead you were. The line keeps rising with the return during a pause, so it has a distance.
+- **When the plan's line never has your balance there are no months, and the gap in money is said instead.** That is a balance above where the plan ends or below where it started, as after taking a house deposit out earlier than planned. The dashboard badge then reads "5k € behind" rather than a month count that was never measured.
+
 ## October 2026 (values on the chart)
 
 Checked in Chromium and in Safari's engine, at 1280x800 and wider.
@@ -50,7 +264,7 @@ single line. The confirmation names the new description ("Renamed 14 transaction
 ## October 2026 (Goals: monthly investing that changes)
 
 - **A scenario can change what it invests each month, from a date.** "From March 2028, 2,500 a
-  month", or a pause, added under "Monthly investing changes" on the Goals plan. Before the first
+  month", or a pause, added under "Monthly investing over time" on the Goals plan. Before the first
   change the scenario is exactly as it was, so nothing you have saved moves. After one, the line,
   the milestone dates, the comparison table and the "What this means" sentence follow it.
 - **The figures that compare you with the plan follow it too.** Months ahead or behind, the pace

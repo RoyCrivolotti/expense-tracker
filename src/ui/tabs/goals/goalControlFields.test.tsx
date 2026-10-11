@@ -249,3 +249,69 @@ describe('a comma typed into a field written with a decimal point', () => {
     expect(onChange).toHaveBeenLastCalledWith(0.055)
   })
 })
+
+describe('fields holding a value the person did not type', () => {
+  // A re-baselined house holds the loan as a fraction of a year left and a share that is no round number.
+  it('does not rewrite a number of years that has a fraction when tabbed through', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<NumberField label="Mortgage term (years)" value={22.5} decimals={2} min={1} max={40} onChange={onChange} />)
+
+    await user.click(screen.getByRole('textbox', { name: 'Mortgage term (years)' }))
+    await user.tab()
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('shows a fraction of a year to two places, and steps by a whole year from it', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<NumberField label="Mortgage term (years)" value={24.5833} decimals={2} min={1} max={40} onChange={onChange} />)
+
+    expect(screen.getByRole('textbox', { name: 'Mortgage term (years)' })).toHaveValue('24,58')
+    await user.click(screen.getByRole('button', { name: 'Increase Mortgage term (years)' }))
+    expect(onChange).toHaveBeenLastCalledWith(25.58)
+    await user.click(screen.getByRole('button', { name: 'Decrease Mortgage term (years)' }))
+    expect(onChange).toHaveBeenLastCalledWith(23.58)
+  })
+
+  it('takes a fraction of a year that is typed, to the places it shows', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<NumberField label="Mortgage term (years)" value={20} decimals={2} min={1} max={40} onChange={onChange} />)
+    const input = screen.getByRole('textbox', { name: 'Mortgage term (years)' })
+    await user.clear(input)
+    await user.type(input, '22,567{Enter}')
+    expect(onChange).toHaveBeenLastCalledWith(22.57)
+  })
+
+  it('does not rewrite a percentage with more places than it shows when tabbed through', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<PercentField label="Down payment" value={0.28769} max={1} onChange={onChange} />)
+
+    await user.click(screen.getByRole('textbox', { name: 'Down payment' }))
+    await user.tab()
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('can go above half, when the field is given room for it', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<PercentField label="Down payment" value={0.59} max={1} onChange={onChange} />)
+
+    await user.click(screen.getByRole('button', { name: 'Increase Down payment' }))
+    expect(onChange).toHaveBeenLastCalledWith(0.595)
+    expect(screen.getByRole('slider', { name: 'Down payment' })).toHaveAttribute('max', '1')
+  })
+
+  it('still takes a percentage that is typed over one it did not write', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<PercentField label="Down payment" value={0.28769} max={1} onChange={onChange} />)
+    const input = screen.getByRole('textbox', { name: 'Down payment' })
+    await user.clear(input)
+    await user.type(input, '30{Enter}')
+    expect(onChange).toHaveBeenLastCalledWith(0.3)
+  })
+})
+

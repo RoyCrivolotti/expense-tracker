@@ -1,6 +1,7 @@
 import { INFLATION_MAX, INFLATION_MIN, formatPercent } from '../../../engine'
 import { PercentStepper } from '../../components/PercentStepper'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
+import { planMoneyLabel } from './planMoneyLabel'
 import styles from './goals.module.css'
 import progressStyles from './progress.module.css'
 
@@ -12,15 +13,19 @@ interface Props {
   onPreview: (rate: number | null) => void
   /** Takes the reader to where the rate is set; absent when they cannot change it. */
   onOpenAssumptions: (() => void) | undefined
+  /** The plan's start, which names the euros the net worth and the FI target stay in. */
+  planStartDate: string | null | undefined
 }
 
 /**
  * A way to look at the Nominal view under another inflation without touching the setting.
- * It only re-inflates the plan line and its band drawn on the chart. The status, Progress,
- * the comparison table and the dashboard read the saved rate, so trying a rate here can
- * never make them disagree with each other; the note says so and points to Assumptions.
+ * The chart projects the plan and its band again at that rate and inflates them by it: the
+ * monthly amount is euros as sent, so the plan itself depends on the rate, and the saved line
+ * drawn higher would not be it. The status, Progress, the comparison table and the dashboard
+ * read the saved rate, so trying a rate here can never make them disagree with each other;
+ * the note says so and points to Assumptions.
  */
-export function NominalPreview({ saved, preview, onPreview, onOpenAssumptions }: Props) {
+export function NominalPreview({ saved, preview, onPreview, onOpenAssumptions, planStartDate }: Props) {
   const format = useMoneyFormat()
   const rate = preview ?? saved
   return (
@@ -45,9 +50,10 @@ export function NominalPreview({ saved, preview, onPreview, onOpenAssumptions }:
         ) : null}
       </div>
       <p className={styles.chartHint}>
-        The net worth, the FI target and the milestones stay in today&apos;s money, so the target lines
-        are only drawn in Purchasing power. The preview is not saved: the rest of Goals uses the
-        saved {formatPercent(saved, format)}
+        The net worth figure stays in {planMoneyLabel(planStartDate, format)}. Milestones are amounts on your account, so
+        they stay put in this view, and the FI target is in {planMoneyLabel(planStartDate, format)}, so it rises with the
+        inflation. The
+        preview is not saved: the rest of Goals uses the saved {formatPercent(saved, format)}
         {onOpenAssumptions ? (
           <>
             , which you change in Assumptions.{' '}

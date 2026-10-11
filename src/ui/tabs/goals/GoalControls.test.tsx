@@ -30,11 +30,6 @@ describe('GoalControls', () => {
     expect(screen.getByLabelText('Monthly investing')).toBeInTheDocument()
   })
 
-  it('renders the newly exposed contribution growth control', () => {
-    render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
-    expect(screen.getByRole('textbox', { name: 'Contribution growth (%/yr)' })).toBeInTheDocument()
-  })
-
   it('says the mortgage rate and house appreciation are nominal and what the plan does with them', () => {
     render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
     expect(
@@ -73,14 +68,14 @@ describe('GoalControls', () => {
     expect(screen.getByLabelText('Plan start date')).toHaveValue('2024-03-15')
   })
 
-  it('has a folded section for the monthly investing changes, between the plan start and the life events', () => {
+  it('has a folded section for the monthly investing over time, between the plan start and the life events', () => {
     const { container } = render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
     const sections = Array.from(container.querySelectorAll('details[id^="goals-adjust-"]'))
     const ids = sections.map((el) => el.id.replace('goals-adjust-', ''))
     expect(ids.indexOf('changes')).toBe(ids.indexOf('tracking') + 1)
     expect(ids.indexOf('events')).toBe(ids.indexOf('changes') + 1)
     expect((sections[ids.indexOf('changes')] as HTMLDetailsElement).open).toBe(false)
-    expect(screen.getByText('Monthly investing changes')).toBeInTheDocument()
+    expect(screen.getByText('Monthly investing over time')).toBeInTheDocument()
   })
 
   it('writes a change to the monthly amount through the draft, in date order', () => {
@@ -119,6 +114,39 @@ describe('GoalControls', () => {
     expect(onChange).toHaveBeenCalledWith({ contributionSchedule: [] })
   })
 
+  it('edits a change through the draft, keeping the others', () => {
+    const onChange = vi.fn()
+    const draft = {
+      ...makeDraft(),
+      planStartDate: '2026-06-25',
+      contributionSchedule: [
+        { from: '2027-03', monthlyCents: 200_000 },
+        { from: '2029-01', monthlyCents: 0 },
+      ],
+    }
+    render(<GoalControls draft={draft} onChange={onChange} />)
+
+    fireEvent.click(screen.getByRole('button', { name: "Edit the change from Mar '27" }))
+    const amount = screen.getByLabelText('Monthly amount from then')
+    fireEvent.change(amount, { target: { value: '2600' } })
+    fireEvent.blur(amount)
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(onChange).toHaveBeenCalledWith({
+      contributionSchedule: [
+        { from: '2027-03', monthlyCents: 260_000 },
+        { from: '2029-01', monthlyCents: 0 },
+      ],
+    })
+  })
+
+  it('lists the starting amount first, and says it is set under Portfolio', () => {
+    const draft = { ...makeDraft(), planStartDate: '2026-06-25', monthlyContributionCents: 140_000 }
+    render(<GoalControls draft={draft} onChange={vi.fn()} />)
+    expect(screen.getByText('The first line is the amount you start with, set in Portfolio.')).toBeInTheDocument()
+    expect(screen.getByText('1.400,00 €/mo')).toBeInTheDocument()
+  })
+
   it('says under the monthly amount that it changes later, and where to set that', () => {
     const draft = {
       ...makeDraft(),
@@ -126,12 +154,12 @@ describe('GoalControls', () => {
       contributionSchedule: [{ from: '2027-03', monthlyCents: 200_000 }],
     }
     render(<GoalControls draft={draft} onChange={vi.fn()} />)
-    expect(screen.getByText("then 2.000,00 € from Mar '27. Set under Monthly investing changes.")).toBeInTheDocument()
+    expect(screen.getByText("then 2.000,00 € from Mar '27. Set under Monthly investing over time.")).toBeInTheDocument()
   })
 
   it('has no such note when the amount never changes', () => {
     render(<GoalControls draft={makeDraft()} onChange={vi.fn()} />)
-    expect(screen.queryByText(/Set under Monthly investing changes/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Set under Monthly investing over time/)).not.toBeInTheDocument()
   })
 
   it('re-baselines the start balance and date from the latest check-in', () => {
@@ -146,14 +174,16 @@ describe('GoalControls', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
 
-    expect(onChange).toHaveBeenCalledWith({
-      startInvestedCents: 11_700_000,
-      planStartDate: '2026-09-11',
-      lifeEvents: [],
-      housePurchaseYear: null,
-      monthlyContributionCents: 100_000,
-      contributionSchedule: [],
-    })
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        startInvestedCents: 11_700_000,
+        planStartDate: '2026-09-11',
+        lifeEvents: [],
+        housePurchaseYear: null,
+        monthlyContributionCents: 100_000,
+        contributionSchedule: [],
+      }),
+    )
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
@@ -171,15 +201,16 @@ describe('GoalControls', () => {
     const latest = { investedCents: 11_700_000, date: '2026-09-11' }
     const { rerender } = render(<GoalControls draft={draft} latest={latest} onChange={onChange} />)
     fireEvent.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
-    const patch = {
+    const patch = onChange.mock.calls[0]![0] as Partial<typeof draft>
+    // The car is 20.000 of 2024 euros: two years of inflation make it a little more in the euros of the new start.
+    expect(patch).toMatchObject({
       startInvestedCents: 11_700_000,
       planStartDate: '2026-09-11',
-      lifeEvents: [{ year: 1, amountCents: -20_000_00, label: 'Car' }],
       housePurchaseYear: 3,
       monthlyContributionCents: 100_000,
       contributionSchedule: [],
-    }
-    expect(onChange).toHaveBeenCalledWith(patch)
+    })
+    expect(patch.lifeEvents).toEqual([{ year: 1, amountCents: Math.round(-20_000_00 * 1.02 ** 2), label: 'Car' }])
     // The parent applies the patch to the draft, and the note describes what it now holds.
     rerender(<GoalControls draft={{ ...draft, ...patch }} latest={latest} onChange={onChange} />)
     expect(screen.getByRole('status')).toHaveTextContent(/Bonus \(.*2025\) is already in the balance, so it is dropped\./)
@@ -259,12 +290,12 @@ describe('GoalControls', () => {
     const named = sliders.map((s) => s.getAttribute('aria-label'))
     expect(named).toEqual(
       expect.arrayContaining([
-        'Contribution growth (%/yr)',
         'Real return (%/yr, after inflation)',
         'Down payment',
         'Mortgage rate (%/yr)',
         'House appreciation (%/yr)',
         'Withdrawal rate at FI',
+        'Upkeep, tax and insurance (%/yr)',
       ]),
     )
     // Six percent sliders plus the unlabelled purchase-year one; no money or year slider.
@@ -292,14 +323,6 @@ describe('GoalControls', () => {
     await user.click(screen.getByRole('button', { name: 'Increase Horizon (years)' }))
 
     expect(onChange).toHaveBeenCalledWith({ horizonYears: 30 })
-  })
-
-  it('calls onChange with annualContributionGrowth when slider changes', () => {
-    const onChange = vi.fn()
-    render(<GoalControls draft={makeDraft()} onChange={onChange} />)
-    const slider = screen.getByRole('slider', { name: 'Contribution growth (%/yr)' })
-    fireEvent.change(slider, { target: { value: '0.03' } })
-    expect(onChange).toHaveBeenCalledWith({ annualContributionGrowth: 0.03 })
   })
 
   it('calls onChange with mortgageRateAnnual when mortgage rate slider changes', () => {

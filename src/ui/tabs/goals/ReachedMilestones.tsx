@@ -1,16 +1,20 @@
 import type { GoalScenario, Milestone, WealthCheckin } from '../../../types'
 import {
   formatCents,
+  formatCentsCompact,
   milestoneCrossingDate,
   milestoneLabelWithAmount,
   milestoneStanding,
+  shortMonthFullYearLabel,
   type MilestoneStanding,
+  type MoneyFormat,
   type PlanFromToday,
 } from '../../../engine'
 import { Card } from '../../components/primitives'
 import { useAssumedInflation } from '../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { formatCheckinDate } from './checkinDate'
+import { planMoneyLabel } from './planMoneyLabel'
 import styles from './goals.module.css'
 
 interface Props {
@@ -30,15 +34,40 @@ interface Props {
  * date says whether the plan was right; this says when to expect it now, which is the
  * question once you are ahead or behind.
  */
-function fromTodayText(
+function fromTodayDate(
   milestone: Milestone,
   standing: MilestoneStanding,
   fromToday: PlanFromToday | null | undefined,
   inflationRate: number,
-): string {
-  if (!fromToday || standing.kind === 'reached' || standing.kind === 'unknown') return ''
-  const date = milestoneCrossingDate(fromToday.scenario, milestone.amountCents, inflationRate)
+): string | null | undefined {
+  if (!fromToday || standing.kind === 'reached' || standing.kind === 'unknown') return undefined
+  return milestoneCrossingDate(fromToday.scenario, milestone.amountCents, inflationRate)
+}
+
+function fromTodayText(date: string | null | undefined): string {
+  if (date === undefined) return ''
   return date ? `; from today, ${formatCheckinDate(date)}` : '; from today, not within the horizon'
+}
+
+/**
+ * A milestone the plan reaches before its target is only on track while the check-ins agree: once the
+ * plan restarted from the latest one reaches it after the target (or not at all), the plan's own date
+ * is no longer what to expect, and a green chip beside a "Behind plan" page would say the opposite.
+ */
+function slipsPastTarget(standing: MilestoneStanding, date: string | null | undefined): standing is Extract<MilestoneStanding, { kind: 'on-track' }> {
+  return standing.kind === 'on-track' && date !== undefined && (date === null || date > standing.target)
+}
+
+/**
+ * What the plan adds about a milestone it gets to: what the amount is worth in the euros of the plan
+ * start on that day (the 500.000 on the account is less by then), and when a house payment or event
+ * takes the plan back under it.
+ */
+function outlookText(standing: MilestoneStanding, moneyLabel: string, format: MoneyFormat): string {
+  if (!('worthCents' in standing)) return ''
+  const worth = ` (worth about ${formatCentsCompact(standing.worthCents, format)} in ${moneyLabel})`
+  const dips = standing.dipsOn ? `; the plan falls back below it in ${shortMonthFullYearLabel(standing.dipsOn.slice(0, 7))}` : ''
+  return worth + dips
 }
 
 /** Words for where a milestone stands, and a mark for the chip. */
@@ -55,7 +84,7 @@ function describe(standing: MilestoneStanding): { mark: string; text: string; to
     case 'late':
       return {
         mark: '→',
-        text: `${standing.monthsLate} months late: ${formatCheckinDate(standing.expected)}, target ${formatCheckinDate(standing.target)}`,
+        text: `${standing.monthsLate} month${standing.monthsLate === 1 ? '' : 's'} late: ${formatCheckinDate(standing.expected)}, target ${formatCheckinDate(standing.target)}`,
         tone: 'bad',
       }
     case 'expected':
@@ -96,11 +125,15 @@ export function ReachedMilestones({
   const rows = milestones
     .map((m) => {
       const standing = milestoneStanding(m, plan, reached.get(m.amountCents), inflationRate, asOf)
-      const described = describe(standing)
-      return {
-        m,
-        standing: described ? { ...described, text: described.text + fromTodayText(m, standing, fromToday, inflationRate) } : null,
+      const date = fromTodayDate(m, standing, fromToday, inflationRate)
+      const outlook = outlookText(standing, planMoneyLabel(plan?.planStartDate, format), format)
+      if (slipsPastTarget(standing, date)) {
+        const from = date ? formatCheckinDate(date) : 'not within the horizon'
+        const text = `behind: from today, ${from}, after the target ${formatCheckinDate(standing.target)}; the plan has ${formatCheckinDate(standing.expected)}${outlook}`
+        return { m, standing: { mark: '→', text, tone: 'bad' as const } }
       }
+      const described = describe(standing)
+      return { m, standing: described ? { ...described, text: described.text + outlook + fromTodayText(date) } : null }
     })
     .filter((r): r is { m: Milestone; standing: NonNullable<ReturnType<typeof describe>> } => r.standing !== null)
   if (rows.length === 0) return null

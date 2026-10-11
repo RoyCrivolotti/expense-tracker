@@ -705,6 +705,13 @@
   margin-bottom: 0.25rem;
 }
 
+/* The same, closing the page under the columns: the gap above it is the columns' own, so it makes up
+   the difference on its top edge instead. */
+.detailWideLast {
+  margin-top: 0.25rem;
+  margin-bottom: 0;
+}
+
 /* Two columns, each its own stack, so a short card is never stretched to match the chart beside
    it. A card in a half column may be narrower than its table, which then scrolls inside the card
    as it does on a phone. */

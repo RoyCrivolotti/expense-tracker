@@ -53,3 +53,39 @@ describe('windowSeries', () => {
     expect(s.labels[s.labels.length - 1]).toBe("Jan '28")
   })
 })
+
+describe('windowSeries through a house payment', () => {
+  // Year 1 reaches 6.000 before a payment of 3.600 on its anniversary and ends at 2.400.
+  const stepped = [
+    { year: 0, investedCents: 1_200 },
+    { year: 1, investedCents: 2_400, preEventInvestedCents: 6_000 },
+    { year: 2, investedCents: 4_800 },
+  ]
+
+  it('rises through the year to the value before the payment and is the value after it on the anniversary', () => {
+    const s = windowSeries(stepped, '2026-01-01', 2, 1)
+    expect(s.values[6]).toBe(3_600)
+    expect(s.values[11]).toBeGreaterThan(5_000)
+    expect(s.values[12]).toBe(2_400)
+    // The month before the anniversary is a month of the climb, not of the drop.
+    expect(s.values[11]!).toBeLessThan(6_000)
+    expect(s.values[11]!).toBeGreaterThan(s.values[6]!)
+  })
+
+  it('says what the anniversary reached before the payment, so the chart can drop straight down', () => {
+    const s = windowSeries(stepped, '2026-01-01', 2, 1)
+    expect(s.preStep?.[12]).toBe(6_000)
+    expect(s.preStep?.[11]).toBe(s.values[11])
+    expect(s.preStep).toHaveLength(s.values.length)
+  })
+
+  it('does the same on a coarse step, where the anniversary is still a place on the axis', () => {
+    const s = windowSeries(stepped, '2026-01-01', 2, 12)
+    expect(s.values).toEqual([1_200, 2_400, 4_800])
+    expect(s.preStep).toEqual([1_200, 6_000, 4_800])
+  })
+
+  it('has nothing to step for a plan without a payment', () => {
+    expect(windowSeries([{ year: 0, investedCents: 1_200 }, { year: 1, investedCents: 2_400 }], '2026-01-01', 1, 1).preStep).toBeUndefined()
+  })
+})

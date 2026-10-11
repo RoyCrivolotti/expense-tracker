@@ -90,12 +90,14 @@ layer applies it to a payload that carries both fields, and the D1 adapter check
 that carries only one of them against the stored row, and refuses a bulk type change away
 from `investment` while any target row is a withdrawal.
 
-### Migrations run by hand
+### Applying migrations
 
-Deploy does not apply migrations. `0025` (`settings.cash_reserve_months`), `0026`
-(`settings.investment_category_id`) and `0027` (`settings.assumed_inflation`) must be applied
-to prod before the settings they hold ship, or saving that one setting fails. Reading is safe
-without them: a missing column reads as its default.
+A merge to `main` applies a migration: dev automatically, then production once the `production`
+environment is approved in GitHub, and only then does the code that needs it ship (see
+`docs/DEPLOYMENT.md`). A PR's preview deploy applies nothing and uses the dev database, so a preview
+of a change that adds a column fails to save until dev has had it (`npm run migrate:dev`). To apply
+one by hand, `npm run migrate -- <database> --apply`. Reading is safe without a column: a missing
+one reads as its default.
 
 ## Scripts (expense-tracker)
 

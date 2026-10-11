@@ -142,6 +142,7 @@ function planBlocks(props: PlanViewProps): Record<PlanBlock, ReactNode> {
           activeId={activeId}
           dirty={dirty}
           fromToday={props.fromToday}
+          nominal={props.display.mode === 'nominal'}
         />
       </div>
     ),

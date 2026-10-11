@@ -19,6 +19,7 @@ function makeRow(overrides: Partial<SettingsRow> = {}): SettingsRow {
     claimant_name: null,
     cash_reserve_months: null,
     assumed_inflation: null,
+    market_volatility: null,
     goal_levers: null,
     ...overrides,
   }
@@ -80,6 +81,33 @@ describe('updateSettings with assumedInflation', () => {
     await expect(updateSettings(oldEnv, OWNER, { claimantName: 'Alex' })).resolves.toMatchObject({
       assumedInflation: 0.02,
     })
+  })
+})
+
+describe('updateSettings with marketVolatility', () => {
+  it('accepts a yearly spread from none up to half, and nothing else', async () => {
+    const { env } = stubEnv(makeRow({ market_volatility: 0.11 }))
+    await expect(updateSettings(env, OWNER, { marketVolatility: 0.11 })).resolves.toMatchObject({ marketVolatility: 0.11 })
+    for (const ok of [0, 0.5]) {
+      await expect(updateSettings(env, OWNER, { marketVolatility: ok })).resolves.toBeDefined()
+    }
+    for (const bad of [-0.01, 0.51, NaN, '0.15' as unknown as number, null as unknown as number]) {
+      await expect(updateSettings(env, OWNER, { marketVolatility: bad })).rejects.toBeInstanceOf(HttpError)
+    }
+  })
+
+  it('reads as 15% until one is set, including on a database without the column', async () => {
+    const { env } = stubEnv(makeRow({ market_volatility: null }))
+    await expect(updateSettings(env, OWNER, { claimantName: 'Alex' })).resolves.toMatchObject({ marketVolatility: 0.15 })
+    const { market_volatility: omitted, ...before } = makeRow()
+    void omitted
+    const { env: oldEnv } = stubEnv(before as SettingsRow)
+    await expect(updateSettings(oldEnv, OWNER, { claimantName: 'Alex' })).resolves.toMatchObject({ marketVolatility: 0.15 })
+  })
+
+  it('keeps zero, which is a spread of none and not a missing one', async () => {
+    const { env } = stubEnv(makeRow({ market_volatility: 0 }))
+    await expect(updateSettings(env, OWNER, { marketVolatility: 0 })).resolves.toMatchObject({ marketVolatility: 0 })
   })
 })
 

@@ -32,6 +32,15 @@ describe('the phone chart picker', () => {
     installFakeMatchMedia().setMatching(() => false)
   })
 
+  it('has the spread as its last view, which loads when it is chosen', async () => {
+    const user = userEvent.setup()
+    renderOnPhone()
+    expect(chips().at(-1)).toBe(radio('Spread'))
+    await user.click(radio('Spread'))
+    expect(await screen.findByText(/Each of the 10.000 runs replays your plan/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'How far luck could move the plan' })).toBeInTheDocument()
+  })
+
   it('is one tab stop, on the chart that is showing', () => {
     renderOnPhone()
 

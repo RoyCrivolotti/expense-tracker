@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { monthsSincePlanStart, plannedMonthlyAt, type MonthlyFlow } from '../../../../engine'
+import { currencyWord, monthsSincePlanStart, plannedMonthlyAt, type MonthlyFlow } from '../../../../engine'
 import { ChartShell } from './ChartShell'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { ChartLegend, type LegendItem } from '../../../charts/ChartLegend'
@@ -100,7 +100,7 @@ function SavingsRateChartImpl({
           ? `the plan, which goes from ${formatMoneyShort(planFirst, format)} to ${formatMoneyShort(planLast, format)}/mo over these months`
           : `the ${formatMoneyShort(planFirst, format)}/mo this scenario assumes`}
         . The fainter line is net saving, what was left after expenses; the gap is money that stayed in
-        the current account.
+        the current account. In {currencyWord(format)} as they went through the account.
       </p>
       <LinearChart
         height={height}

@@ -27,6 +27,7 @@ function row(overrides: Partial<MilestoneRow>): MilestoneRow {
     elapsedYears: 0,
     horizonFromNow: overrides.horizonYears ?? 30,
     sinceStart: cells,
+    offsets: cells,
     cells,
     ...overrides,
   }

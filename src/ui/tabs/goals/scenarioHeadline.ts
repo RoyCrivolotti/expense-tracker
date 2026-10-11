@@ -2,6 +2,7 @@ import type { GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import {
   EU_MONEY_FORMAT,
+  fiYearsExact,
   formatCents,
   nextContributionStep,
   plannedMonthlyAt,
@@ -12,6 +13,8 @@ import {
   type MoneyFormat,
   type PlanFromToday,
 } from '../../../engine'
+import { fiAround } from './fiAround'
+import { planMoneyLabel } from './planMoneyLabel'
 
 type ScenarioLike = GoalScenario | NewGoalScenario
 
@@ -26,12 +29,15 @@ function shortName(name: string): string {
 }
 
 /** The FI year counted from the latest check-in, which is the one that moves as check-ins land. */
-function fiFromTodayLabel(fromToday: PlanFromToday, inflationRate: number): string {
+function fiFromTodayLabel(fromToday: PlanFromToday, inflationRate: number, planReachesFi: boolean): string {
   const params = scenarioToParams(fromToday.scenario, inflationRate)
   const years = yearsToFi(params, fromToday.scenario.annualSpendCents, fromToday.scenario.safeWithdrawalRate)
   if (years === null) return 'from today, FI beyond the horizon'
   if (years === 0) return "FI at today's balance"
-  return `from today, FI in ${years} year${years === 1 ? '' : 's'}`
+  const month = fiAround(fromToday.scenario.planStartDate, fiYearsExact(params, fromToday.scenario.annualSpendCents, fromToday.scenario.safeWithdrawalRate))
+  // Said as a month, as the plan's is beside it, since the two counts of years start on different days.
+  // The word FI comes from the plan's own part when it has one; with none, the restart's part has to say it.
+  return month ? `from today, ${planReachesFi ? '' : 'FI '}${month}` : `from today, FI in ${years} year${years === 1 ? '' : 's'}`
 }
 
 /**
@@ -85,15 +91,17 @@ export function scenarioHeadline(
   const end = series[series.length - 1]
   const fiYear = yearsToFi(params, scenario.annualSpendCents, scenario.safeWithdrawalRate)
 
+  // With a restart from a check-in beside it, the plan's FI is a month too, so that the two can be compared.
+  const planMonth = fromToday ? fiAround(scenario.planStartDate, fiYearsExact(params, scenario.annualSpendCents, scenario.safeWithdrawalRate)) : null
   const primary = [
     shortName(scenario.name),
-    ...(fiYear != null ? [`FI year ${fiYear}`] : []),
-    ...(fromToday ? [fiFromTodayLabel(fromToday, inflationRate)] : []),
+    ...(fiYear != null ? [planMonth ? `FI ${planMonth}` : `FI year ${fiYear}`] : []),
+    ...(fromToday ? [fiFromTodayLabel(fromToday, inflationRate, fiYear != null)] : []),
   ].join(' · ')
 
   const actual = actualPhrase(scenario, actualMonthlyInvestingCents, pace, format)
   const secondaryParts = [
-    `${formatCents(end?.netWorthCents ?? 0, format)} net worth @ ${scenario.horizonYears}y`,
+    `${formatCents(end?.netWorthCents ?? 0, format)} net worth @ ${scenario.horizonYears}y in ${planMoneyLabel(scenario.planStartDate, format)}`,
     planPhrase(scenario, pace, format),
     ...(actual ? [actual] : []),
   ]

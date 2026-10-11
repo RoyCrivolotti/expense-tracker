@@ -3,9 +3,12 @@
  *
  * Given a scenario (with planStartDate) and historical check-ins, computes:
  *   - The projected invested-portfolio value at any calendar date.
- *   - An on/off-track status: delta in € and in equivalent months.
+ *   - An on/off-track status: delta in € and the months it is along the plan's line.
  */
-import { plannedMonthlyAt } from './contributionSchedule'
+import { dateAtYears, isCalendarDate, yearsBetween } from './dates'
+import { measurePlanDistance } from './planDistance'
+import { planLineOf, planValueAt } from './planLine'
+import { readAgainst } from './planStepWindow'
 import { projectNetWorth } from './projection'
 import { scenarioToParams } from './scenarioProjection'
 import type { GoalScenario, Milestone, WealthAccount, WealthCheckin } from '../types'
@@ -20,62 +23,67 @@ export interface TrackStatus {
   /** delta = actual − projected; positive = ahead, negative = behind. */
   deltaCents: number
   /**
-   * Months ahead (positive) or behind (negative) of the projection slope.
-   * Computed as delta / monthly-contribution, clamped to ±horizonYears×12.
+   * Whole months ahead (positive) or behind (negative) of the plan: the distance along the plan's
+   * line from the check-in to the point that has this balance (`planDistance`). Null when the
+   * line never has it, which `deltaCents` still says.
    */
-  deltaMonths: number
+  deltaMonths: number | null
+  /** The day the plan's line has the check-in's balance, in step with `deltaMonths`; null when it is. */
+  planDate: string | null
   /** The check-in's balance in the plan's money, which is what `deltaCents` is taken from. */
   actualRealInvestedCents: number
+  /**
+   * Why there are no months when `deltaMonths` is null: the line has the balance only across a
+   * house payment or event (`across-event`), or never (`outside-line`). Null when there are months.
+   */
+  monthsReason: 'across-event' | 'outside-line' | null
+  /** Within a month of the plan either way, along the line; what the dashboard and Progress call on track. */
+  onTrack: boolean
+  /**
+   * Set when the check-in is within a month of an anniversary with a house payment or event and its
+   * balance is on the other side of the step from the line: `projectedInvestedCents` is then the plan
+   * with the step `made` (the check-in is before it) or `not-made` (after it), not the line on the day.
+   */
+  nearStep: { date: string; counted: 'made' | 'not-made' } | null
+}
+
+/** Against the other side of a step there is no stretch to count months along. */
+const ACROSS_STEP = { kind: 'unmeasured', reason: 'across-event' } as const
+
+/** What a status is called: on track, or ahead or behind by the sign of the gap in money. */
+export function trackVerdict(status: Pick<TrackStatus, 'onTrack' | 'deltaCents'>): 'on-track' | 'ahead' | 'behind' {
+  if (status.onTrack) return 'on-track'
+  return status.deltaCents >= 0 ? 'ahead' : 'behind'
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
- * Parse a YYYY-MM-DD string into a fractional year offset from planStartDate.
- * Returns null if either date is missing or malformed.
+ * The years from the plan start to a date, counted on the calendar: a whole number on each
+ * anniversary, which is where the plan's yearly points and its steps are. Null if either date is
+ * missing or malformed.
  */
 export function yearOffsetFromDate(planStartDate: string, targetDate: string): number | null {
-  if (!planStartDate?.match(/^\d{4}-\d{2}-\d{2}$/) || !targetDate?.match(/^\d{4}-\d{2}-\d{2}$/)) {
-    return null
-  }
-  const start = new Date(planStartDate).getTime()
-  const target = new Date(targetDate).getTime()
-  const msPerYear = 365.25 * 24 * 60 * 60 * 1000
-  const offset = (target - start) / msPerYear
-  return offset
+  if (!isCalendarDate(planStartDate) || !isCalendarDate(targetDate)) return null
+  return yearsBetween(planStartDate, targetDate)
+}
+
+/** The date a fractional year offset from the plan start falls on, counted as `yearOffsetFromDate` counts. */
+export function dateAtOffset(planStartDate: string, offsetYears: number): string {
+  return dateAtYears(planStartDate, offsetYears)
 }
 
 /**
- * Interpolate the projected invested-portfolio value at a fractional year offset.
- * Uses linear interpolation between the two surrounding integer year points.
- * Returns null when the offset is outside the projection horizon.
+ * The projected invested-portfolio value at a fractional year offset, on the plan's line: it rises
+ * through each year and steps on the anniversary of a house payment or event. Returns null before
+ * the plan starts or after its last year, where there is no line.
  */
 export function planValueAtOffset(
-  points: { year: number; investedCents: number }[],
+  points: { year: number; investedCents: number; preEventInvestedCents?: number }[],
   fractionalYear: number,
 ): number | null {
   if (points.length === 0) return null
-
-  const floor = Math.floor(fractionalYear)
-  const ceil = Math.ceil(fractionalYear)
-
-  if (fractionalYear < 0) {
-    // Before plan start — extrapolate backwards using year 0 and year 1.
-    const p0 = points.find((p) => p.year === 0)
-    const p1 = points.find((p) => p.year === 1)
-    if (!p0 || !p1) return null
-    const slope = p1.investedCents - p0.investedCents
-    return Math.round(p0.investedCents + fractionalYear * slope)
-  }
-
-  const pFloor = points.find((p) => p.year === floor)
-  const pCeil = points.find((p) => p.year === ceil)
-
-  if (!pFloor) return null
-  if (floor === ceil || !pCeil) return pFloor.investedCents
-
-  const frac = fractionalYear - floor
-  return Math.round(pFloor.investedCents + frac * (pCeil.investedCents - pFloor.investedCents))
+  return planValueAt(planLineOf(points), fractionalYear)
 }
 
 /**
@@ -176,28 +184,38 @@ export function trackStatus(
   inflationRate: number,
 ): TrackStatus | null {
   if (!scenario.planStartDate) return null
-  const projected = planValueAtDate(scenario, checkin.checkinDate, inflationRate)
-  if (projected === null) return null
-
+  const offset = yearOffsetFromDate(scenario.planStartDate, checkin.checkinDate)
+  if (offset === null) return null
+  const line = planLineOf(projectNetWorth(scenarioToParams(scenario, inflationRate)))
   const actualInvestedCents = checkinInvestedCents(checkin, accounts)
   const actualRealInvestedCents = nominalToReal(actualInvestedCents, scenario.planStartDate, checkin.checkinDate, inflationRate)
+  // Within a month of a step the balance is read against whichever side of it it is on: a house
+  // bought a fortnight early or late is not 70.000 euros ahead or behind.
+  const reading = readAgainst(line, offset, actualRealInvestedCents)
+  if (reading === null) return null
+  const projected = reading.reference
   const deltaCents = actualRealInvestedCents - projected
 
-  // A gap in money, as months of what the plan was putting in when the check-in was made. During a
-  // pause that is nothing, and a gap is not a number of months of nothing: no figure is given.
-  const monthlyContrib = plannedMonthlyAt(scenario, checkin.checkinDate)
-  const maxMonths = Math.round(scenario.horizonYears * 12)
-  const deltaMonths =
-    monthlyContrib > 0
-      ? Math.max(-maxMonths, Math.min(maxMonths, Math.round(deltaCents / monthlyContrib)))
-      : 0
+  // A gap in money is read along the plan's line, not divided by a monthly amount: that way it
+  // counts the plan's own growth, does not jump where the amount changes, and still means
+  // something during a pause. Across a house payment or event there are no months to read.
+  const measure = reading.nearStep
+    ? ACROSS_STEP
+    : measurePlanDistance(line, offset, actualRealInvestedCents)
+  const along = measure.kind === 'along' ? measure : null
 
   return {
     projectedInvestedCents: projected,
     actualInvestedCents,
     actualRealInvestedCents,
     deltaCents,
-    deltaMonths,
+    deltaMonths: along ? Math.round(along.months) || 0 : null,
+    monthsReason: measure.kind === 'unmeasured' && !reading.onTrack ? measure.reason : null,
+    planDate: along ? dateAtOffset(scenario.planStartDate, along.atOffset) : null,
+    onTrack: reading.onTrack,
+    nearStep: reading.nearStep
+      ? { date: dateAtOffset(scenario.planStartDate, reading.nearStep.anniversary), counted: reading.nearStep.counted }
+      : null,
   }
 }
 
@@ -237,4 +255,20 @@ export function latestCheckin(checkins: WealthCheckin[]): WealthCheckin | null {
   return checkins.reduce((best, c) =>
     c.checkinDate > best.checkinDate ? c : best,
   )
+}
+
+/**
+ * The check-ins in date order, one for each date: where several were logged on a day, the one logged
+ * last (by when it was created, then by id). A second check-in on a day is a correction or a newer
+ * balance, and read as a second reading it would be a return of the difference over no time at all.
+ */
+export function distinctCheckins(checkins: WealthCheckin[]): WealthCheckin[] {
+  const byDate = new Map<string, WealthCheckin>()
+  for (const c of checkins) {
+    const held = byDate.get(c.checkinDate)
+    if (!held || c.createdAt > held.createdAt || (c.createdAt === held.createdAt && c.id > held.id)) {
+      byDate.set(c.checkinDate, c)
+    }
+  }
+  return [...byDate.values()].sort((a, b) => a.checkinDate.localeCompare(b.checkinDate))
 }

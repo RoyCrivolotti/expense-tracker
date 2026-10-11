@@ -3,13 +3,16 @@ import type { ExpenseDataset } from '../../types'
 import {
   averageMonthlyCents,
   computeMonthlyTotals,
+  defaultBudgetMonth,
   latestCheckin,
   checkinInvestedCents,
   planFromToday,
   monthlyFlows,
-  monthsSincePlanStart,
+  paceMonths,
   plannedMonthlyAverage,
   trackStatus,
+  trackVerdict,
+  type TrackStatus,
 } from '../../engine'
 import { Card, EmptyState, SectionTitle } from './primitives'
 import { scenarioHeadline } from '../tabs/goals/scenarioHeadline'
@@ -17,7 +20,8 @@ import { activePlan } from '../tabs/goals/scenarioSelection'
 import { useAssumedInflation } from '../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
 import { formatMoneyShort } from '../tabs/goals/chartTheme'
-import { contributionGapLabel } from '../tabs/goals/contributionGap'
+import { planGapLabel } from '../tabs/goals/planGap'
+import { planMoneyLabel } from '../tabs/goals/planMoneyLabel'
 import { daysSinceCheckin } from './checkinAge'
 import { todayIso } from './transactionFormState'
 import styles from './GoalsCard.module.css'
@@ -52,20 +56,25 @@ function CheckinNudge({ dataset, onLogCheckin }: { dataset: ExpenseDataset; onLo
 }
 
 interface TrackBadgeProps {
-  deltaCents: number
-  deltaMonths: number
+  status: TrackStatus
   format: ReturnType<typeof useMoneyFormat>
+  /** The euros the gap in money is in, named when it is the only thing said. */
+  planMoney: string
 }
 
-function TrackBadge({ deltaCents, deltaMonths, format }: TrackBadgeProps) {
-  const ahead = deltaCents >= 0
+function TrackBadge({ status, format, planMoney }: TrackBadgeProps) {
+  const verdict = trackVerdict(status)
+  // Within a month either way is on track, which is neither the green nor the red of a side.
+  const ahead = verdict !== 'behind'
   const dotClass = `${styles.trackDot} ${ahead ? styles.trackDotAhead : styles.trackDotBehind}`
+  const money = formatMoneyShort(Math.abs(status.deltaCents), format)
+  // Without a month count the plan's line has no point at this balance on this side of a step, so the gap in money is all there is.
   const label =
-    deltaMonths === 0
-      ? ahead
-        ? 'On track'
-        : `${formatMoneyShort(Math.abs(deltaCents), format)} behind`
-      : contributionGapLabel(deltaMonths)
+    verdict === 'on-track'
+      ? 'On track'
+      : status.deltaMonths
+        ? planGapLabel(status.deltaMonths)
+        : `${money} ${verdict} (${planMoney})`
   return (
     <div className={`${styles.trackBadge} ${ahead ? styles.trackBadgeAhead : styles.trackBadgeBehind}`}>
       <span className={dotClass} />
@@ -82,20 +91,25 @@ export function GoalsCard({ dataset, onOpenGoals, onLogCheckin }: GoalsCardProps
   // what the plan's monthly figure promises, rather than net saving.
   const { avgInvesting, plannedAverage } = useMemo(() => {
     const flows = monthlyFlows(computeMonthlyTotals(dataset.transactions))
-    const since = monthsSincePlanStart(flows, scenario?.planStartDate ?? null)
+    const { months } = paceMonths(
+      flows,
+      scenario?.planStartDate ?? null,
+      defaultBudgetMonth(todayIso(), dataset.settings.budgetRolloverDay),
+    )
     return {
-      avgInvesting: averageMonthlyCents(since.map((m) => m.investedCents)),
+      avgInvesting: averageMonthlyCents(months.map((m) => m.investedCents)),
       // What the plan averages over those same months, which is what the pace is set against.
-      plannedAverage: scenario ? plannedMonthlyAverage(scenario, since.map((m) => m.month)) : 0,
+      plannedAverage: scenario ? plannedMonthlyAverage(scenario, months.map((m) => m.month)) : 0,
     }
-  }, [dataset.transactions, scenario])
+  }, [dataset.transactions, dataset.settings.budgetRolloverDay, scenario])
   const fromToday = useMemo(() => {
     const latest = latestCheckin(dataset.wealthCheckins)
     return planFromToday(
       scenario,
       latest ? { investedCents: checkinInvestedCents(latest, dataset.wealthAccounts), date: latest.checkinDate } : null,
+      inflationRate,
     )
-  }, [scenario, dataset.wealthCheckins, dataset.wealthAccounts])
+  }, [scenario, dataset.wealthCheckins, dataset.wealthAccounts, inflationRate])
   const headline = useMemo(
     () =>
       scenario
@@ -149,7 +163,7 @@ export function GoalsCard({ dataset, onOpenGoals, onLogCheckin }: GoalsCardProps
         <p className={styles.primary}>{headline.primary}</p>
         <p className={styles.secondary}>{headline.secondary}</p>
         {track ? (
-          <TrackBadge deltaCents={track.deltaCents} deltaMonths={track.deltaMonths} format={format} />
+          <TrackBadge status={track} format={format} planMoney={planMoneyLabel(scenario?.planStartDate, format)} />
         ) : null}
         {onLogCheckin ? <CheckinNudge dataset={dataset} onLogCheckin={onLogCheckin} /> : null}
         {onOpenGoals ? (

@@ -2,6 +2,7 @@ import { memo, useMemo, useState } from 'react'
 import { useAssumedInflation } from '../../..//hooks/assumedInflationContext'
 import type { NewGoalScenario } from '../../../../data/dataSource'
 import { projectNetWorth, purchaseYearBreakdown, scenarioToParams } from '../../../../engine'
+import { planMoneyLabel } from '../planMoneyLabel'
 import { ChartShell } from './ChartShell'
 import { LinearChart, type ChartSeries } from '../../../charts/LinearChart'
 import { LiveLegend, type LiveLegendItem } from '../../../charts/LiveLegend'
@@ -92,7 +93,8 @@ function CompositionChartImpl({
     <ChartShell embedded={embedded}>
       <h3 className={styles.chartTitle}>Net worth composition</h3>
       <p className={styles.chartHint}>
-        Invested portfolio + house value − mortgage owed, for the scenario you are editing.
+        Invested portfolio + house value − mortgage owed, for the scenario you are editing, in{' '}
+        {planMoneyLabel(draft.planStartDate, format)}.
       </p>
       <LinearChart
         height={height}

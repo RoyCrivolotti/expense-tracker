@@ -2,14 +2,23 @@
  * Year-by-year wealth projection engine — reproduces the private workbook’s path models.
  * All money in integer cents; rates as fractions (0.07 = 7% real).
  */
-import { annualContributionCents, type ScheduleStep } from './contributionSchedule'
+import { type ScheduleStep } from './contributionSchedule'
 import { pmt } from './finance'
+import { housePriceAtPurchaseCents, realHouseGrowth } from './housePrice'
+import { purchaseWithdrawalCents, stepInvested, yearFlows } from './investedStep'
 import type { LifeEvent } from '../types'
 
 export interface YearPoint {
   year: number
+  /** The portfolio at the end of the year's anniversary, after a house payment and life events that year. */
   investedCents: number
-  /** What the house is worth, in today's money: not net of the mortgage, which is `mortgageBalanceCents`. */
+  /**
+   * The portfolio on the day before the year's house payment and life events, which land on the
+   * anniversary: what the year's return and contributions made of it. The same as `investedCents`
+   * in a year with no payment or event, so the plan's line rises to this and steps to the next.
+   */
+  preEventInvestedCents: number
+  /** What the house is worth, in the plan's euros: not net of the mortgage, which is `mortgageBalanceCents`. */
   houseEquityCents: number
   mortgageBalanceCents: number
   netWorthCents: number
@@ -22,7 +31,6 @@ export type HousePurchaseYear = number | null
 export interface ProjectionParams {
   startInvestedCents: number
   monthlyContributionCents: number
-  annualContributionGrowth: number
   expectedRealReturn: number
   horizonYears: number
   housePriceCents: number
@@ -34,24 +42,26 @@ export interface ProjectionParams {
   houseAppreciationRate: number
   /**
    * The yearly inflation the plan assumes (0.02 = 2%), from the owner's setting. Required, with
-   * no fallback: the house and the mortgage are brought back to today's money by it.
+   * no fallback: the house and the mortgage are brought back to the plan's euros by it.
    */
   inflationRate: number
   /** One-off cash flows applied at specific projection years. Default: none. */
   lifeEvents?: LifeEvent[]
   /**
    * Changes to the monthly amount from a point on the plan's axis, in order (see
-   * `scheduleSteps`). Default: none, so the monthly amount only grows by `annualContributionGrowth`.
+   * `scheduleSteps`). Default: none, so the monthly amount stays what it starts as. Amounts are
+   * euros as sent, not the plan's euros: the projection brings them back by `inflationRate`.
    */
   contributionSteps?: ScheduleStep[]
 }
 
 /**
- * The house price is in today's money, like everything in a real plan, so the appreciation
- * a user enters (nominal, as prices are quoted) counts only for what it beats inflation by.
+ * What the house is worth in a year, in the plan's money, from the price it was bought at
+ * (`housePriceAtPurchaseCents`). It grows by what it beats inflation by, so it is worth the
+ * price entered today grown the whole way, and nothing before it is bought.
  */
 function houseEquityAtYear(
-  housePriceCents: number,
+  priceAtPurchaseCents: number,
   appreciation: number,
   inflationRate: number,
   purchaseYear: HousePurchaseYear,
@@ -59,12 +69,11 @@ function houseEquityAtYear(
 ): number {
   if (purchaseYear === null || year < purchaseYear) return 0
   const yearsOwned = year - purchaseYear
-  const realGrowth = (1 + appreciation) / (1 + inflationRate)
-  return Math.round(housePriceCents * Math.pow(realGrowth, yearsOwned))
+  return Math.round(priceAtPurchaseCents * Math.pow(realHouseGrowth(appreciation, inflationRate), yearsOwned))
 }
 
 /**
- * What is still owed, in today's money. The loan is a fixed schedule at the bank's
+ * What is still owed, in the plan's euros. The loan is a fixed schedule at the bank's
  * (nominal) rate, so its balance is deflated by the years since purchase: inflation eats
  * into a debt that does not grow with it.
  */
@@ -90,19 +99,6 @@ function mortgageBalanceAtYear(
   const growth = Math.pow(1 + monthlyRate, monthsElapsed)
   const balance = loanCents * growth - payment * ((growth - 1) / monthlyRate)
   return Math.max(0, Math.round(balance / deflator))
-}
-
-function lifeEventImpact(events: LifeEvent[], year: number): number {
-  let total = 0
-  for (const ev of events) {
-    if (ev.year === year) total += ev.amountCents
-  }
-  return total
-}
-
-function purchaseWithdrawalCents(params: ProjectionParams): number {
-  const down = Math.round(params.housePriceCents * params.downPaymentFraction)
-  return down + params.transactionCostsCents
 }
 
 export interface PurchaseYearBreakdown {
@@ -133,10 +129,9 @@ export function purchaseYearBreakdown(
 
   const startInvestedCents = prior.investedCents
   const contributionCents = current.annualContributionCents
-  const afterGrowthCents = Math.round(startInvestedCents * (1 + params.expectedRealReturn))
-  const growthCents = afterGrowthCents - startInvestedCents
-  const beforePurchaseCents = afterGrowthCents + contributionCents
-  const downPaymentCents = Math.round(params.housePriceCents * params.downPaymentFraction)
+  const beforePurchaseCents = current.preEventInvestedCents
+  const growthCents = beforePurchaseCents - contributionCents - startInvestedCents
+  const downPaymentCents = Math.round(housePriceAtPurchaseCents(params) * params.downPaymentFraction)
   const transactionCostsCents = params.transactionCostsCents
   const totalWithdrawalCents = purchaseWithdrawalCents(params)
   const endInvestedCents = current.investedCents
@@ -157,41 +152,30 @@ export function purchaseYearBreakdown(
 
 /** Simulate invested portfolio + housing net worth year-by-year. */
 export function projectNetWorth(params: ProjectionParams): YearPoint[] {
+  const priceCents = housePriceAtPurchaseCents(params)
   const loanCents =
     params.housePurchaseYear !== null
-      ? params.housePriceCents -
-        Math.round(params.housePriceCents * params.downPaymentFraction)
+      ? priceCents - Math.round(priceCents * params.downPaymentFraction)
       : 0
 
   const points: YearPoint[] = []
   let invested = params.startInvestedCents
 
   for (let year = 0; year <= params.horizonYears; year++) {
-    const contrib = annualContributionCents(
-      params.monthlyContributionCents,
-      params.annualContributionGrowth,
-      params.contributionSteps ?? [],
-      year,
-    )
+    const flows = yearFlows(params, year)
 
+    let preEvent = invested
     if (year > 0) {
-      invested = Math.round(
-        invested * (1 + params.expectedRealReturn) + contrib,
-      )
-      if (
-        params.housePurchaseYear !== null &&
-        params.housePurchaseYear > 0 &&
-        year === params.housePurchaseYear
-      ) {
-        invested -= purchaseWithdrawalCents(params)
-      }
-      if (params.lifeEvents) {
-        invested += lifeEventImpact(params.lifeEvents, year)
-      }
+      // The year's payments land at its end and earn nothing until the next year, a little
+      // cautious against paying each month (up to about 3% over thirty years at 7%). The plan
+      // keeps that convention on purpose, and the glossary says so.
+      const step = stepInvested(invested, 1 + params.expectedRealReturn, flows)
+      preEvent = step.pre
+      invested = step.post
     }
 
     const houseEquity = houseEquityAtYear(
-      params.housePriceCents,
+      priceCents,
       params.houseAppreciationRate,
       params.inflationRate,
       params.housePurchaseYear,
@@ -209,10 +193,11 @@ export function projectNetWorth(params: ProjectionParams): YearPoint[] {
     points.push({
       year,
       investedCents: invested,
+      preEventInvestedCents: preEvent,
       houseEquityCents: houseEquity,
       mortgageBalanceCents: mortgageBalance,
       netWorthCents: invested + houseEquity - mortgageBalance,
-      annualContributionCents: contrib,
+      annualContributionCents: flows.contributionCents,
     })
   }
 
@@ -276,9 +261,8 @@ export function yearsToFi(
 /** Monthly mortgage payment for rent-vs-own comparison. */
 export function monthlyMortgageCents(params: ProjectionParams): number {
   if (params.housePurchaseYear === null) return 0
-  const loan =
-    params.housePriceCents -
-    Math.round(params.housePriceCents * params.downPaymentFraction)
+  const priceCents = housePriceAtPurchaseCents(params)
+  const loan = priceCents - Math.round(priceCents * params.downPaymentFraction)
   if (loan <= 0) return 0
   return Math.round(
     pmt(
@@ -289,7 +273,7 @@ export function monthlyMortgageCents(params: ProjectionParams): number {
   )
 }
 
-/** Year-by-year drawdown after reaching FI (a constant withdrawal in today's money, like the rest of the plan). */
+/** Year-by-year drawdown after reaching FI (a constant withdrawal in the plan's euros, like the rest of the plan). */
 export function projectDrawdown(
   startPortfolioCents: number,
   annualWithdrawalCents: number,

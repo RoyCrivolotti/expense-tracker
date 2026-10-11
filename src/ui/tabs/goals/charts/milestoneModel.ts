@@ -1,7 +1,7 @@
 import type { GoalScenario, Milestone } from '../../../../types'
 import type { PlanFromToday } from '../../../../engine'
 import type { NewGoalScenario } from '../../../../data/dataSource'
-import { scenarioToParams, shortMonthYearLabel, yearsBetween, yearsToTargetFromProjection } from '../../../../engine'
+import { crossingYears, scenarioToParams, shortMonthYearLabel, wholeYearsToAmount, yearsBetween } from '../../../../engine'
 
 export { yearsBetween }
 import { tableName } from '../scenarioNames'
@@ -27,9 +27,12 @@ export interface MilestoneRow {
    * null when it is not within the horizon. Only the calendar year is read from these.
    */
   sinceStart: (number | null)[]
+  /** The day each milestone is first reached, in years from the row's own start, before any rounding. */
+  offsets: (number | null)[]
   /**
-   * The same steps counted from today (see `yearsFromNow`), which is what every row shows, what
-   * the tint and the gap are made from and where the timeline puts a dot. 0 is already there.
+   * The years from today to that day, rounded up once (see `cellFromOffset`), which is what every
+   * row shows, what the tint and the gap are made from and where the timeline puts a dot. 0 is
+   * already there.
    */
   cells: (number | null)[]
 }
@@ -92,18 +95,20 @@ function sourcesOf(
   ]
 }
 
+const SAME_DAY = 1e-9
+
 /**
  * A cell counted from today, so that every row is on one footing whatever day its scenario
- * started: the first whole year from now at or after the step the path reaches the amount in.
- * Rounded up on purpose: the step is the first yearly one at or above the amount, so the real
- * date is within the year before it and "within N years" is the claim that is safe to make. For a
- * path that started less than a year ago it is the number the path itself gives. 0 is already
- * there: the path had it at its start, or reached it before today.
+ * started: the years from now to the day the path reaches the amount, rounded up once. Rounded up
+ * on purpose, so "within N years" is the claim that is safe to make. Rounded once for every row: a
+ * path restarted on its own line reaches the amount on the same day as before, so it gets the same
+ * cell, which two roundings (to a yearly step from its start, and again from today) did not give it.
+ * 0 is already there: the path had it at its start, or reached it before today.
  */
-export function yearsFromNow(sinceStart: number | null, elapsedYears: number): number | null {
-  if (sinceStart === null) return null
-  if (sinceStart === 0) return 0
-  return Math.max(0, Math.ceil(sinceStart - elapsedYears))
+export function cellFromOffset(offset: number | null, elapsedYears: number): number | null {
+  if (offset === null) return null
+  if (offset <= SAME_DAY) return 0
+  return Math.max(0, Math.ceil(offset - elapsedYears - SAME_DAY))
 }
 
 /** A scenario with no start date starts today, which is what its projection's year 0 is. */
@@ -120,7 +125,8 @@ export function buildRows(
     ({ id, kind, name, color, startDate, params }) => {
       const start = startDate ?? today
       const elapsedYears = yearsBetween(start, today)
-      const sinceStart = milestones.map((m) => yearsToTargetFromProjection(params, m.amountCents, false))
+      const offsets = milestones.map((m) => crossingYears(params, m.amountCents, inflationRate))
+      const sinceStart = milestones.map((m) => wholeYearsToAmount(params, m.amountCents, inflationRate))
       return {
         id,
         kind,
@@ -131,7 +137,8 @@ export function buildRows(
         elapsedYears,
         horizonFromNow: Math.max(1, Math.ceil(params.horizonYears - elapsedYears)),
         sinceStart,
-        cells: sinceStart.map((n) => yearsFromNow(n, elapsedYears)),
+        offsets,
+        cells: offsets.map((offset) => cellFromOffset(offset, elapsedYears)),
       }
     },
   )

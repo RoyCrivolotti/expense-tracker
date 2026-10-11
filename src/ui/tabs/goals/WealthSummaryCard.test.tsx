@@ -1,8 +1,12 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { WealthSummaryCard } from './WealthSummaryCard'
-import { planValueAtDate, realToNominal, DEFAULT_INFLATION_RATE } from '../../../engine'
+import { planValueAtDate, realToNominal, trackStatus, DEFAULT_INFLATION_RATE } from '../../../engine'
+import { EU_MONEY_FORMAT } from '../../../engine/money'
+import { formatMoneyShort } from './chartTheme'
 import { makeScenario, makeTransaction } from '../../../testing/factories'
+import { samplePlan } from '../../../testing/samplePlan'
+import { planLineOf, planValueAt, planValueBefore, projectNetWorth, scenarioToParams } from '../../../engine'
 import type { WealthAccount, WealthCheckin } from '../../../types'
 
 function makeAccount(id: number, kind: WealthAccount['kind'] = 'investment'): WealthAccount {
@@ -65,7 +69,38 @@ describe('WealthSummaryCard', () => {
     expect(screen.getByText(/ahead of plan|behind plan/i)).toBeInTheDocument()
   })
 
-  it('shows months-ahead hint when delta is non-zero', () => {
+  describe('the tiles', () => {
+    // Started 1 January 2020, checked in 9 October 2026 with 180.000 on the account: at 2% that is about 158.000 in the
+    // euros of 2020, which is the money the plan and its gap are in.
+    const plan = makeScenario({ planStartDate: '2020-01-01', startInvestedCents: 5_000_000, monthlyContributionCents: 100_000, expectedRealReturn: 0.05, horizonYears: 30 })
+    const accounts = [makeAccount(1, 'investment'), makeAccount(2, 'cash')]
+    const checkins = [makeCheckin(1, '2026-10-09', [{ accountId: 1, valueCents: 18_000_000 }, { accountId: 2, valueCents: 2_200_000 }])]
+    const short = (cents: number) => formatMoneyShort(cents, EU_MONEY_FORMAT)
+
+    it('puts the investments and the plan projection in the same money, the plan\'s, and names it', () => {
+      render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={plan} />)
+      const status = trackStatus(checkins[0]!, plan, accounts, DEFAULT_INFLATION_RATE)!
+      const tile = (label: string) => screen.getByText(label).nextElementSibling!.textContent
+      expect(tile('Investments, in 2020 euros')).toBe(short(status.actualRealInvestedCents))
+      expect(tile('Plan projection, in 2020 euros')).toBe(short(status.projectedInvestedCents))
+      // So that the two tiles can be taken from each other to give the gap above them.
+      expect(status.actualRealInvestedCents - status.projectedInvestedCents).toBe(status.deltaCents)
+    })
+
+    it('says the net worth is every account on the account\'s euros, and keeps the balance as logged in the hover text', () => {
+      render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={plan} />)
+      expect(screen.getByText('Net worth, as logged, all accounts').nextElementSibling).toHaveTextContent(short(20_200_000))
+      expect(screen.getByText('Investments, in 2020 euros').nextElementSibling).toHaveAttribute('title', `As logged on your account: ${short(18_000_000)}`)
+    })
+
+    it('shows the balance as logged, unnamed, when there is no plan to compare it with', () => {
+      render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={null} />)
+      expect(screen.getByText('Investments').nextElementSibling).toHaveTextContent(short(18_000_000))
+      expect(screen.queryByText(/Plan projection/)).not.toBeInTheDocument()
+    })
+  })
+
+  describe('how far along the plan a balance is', () => {
     const scenario = makeScenario({
       planStartDate: '2020-01-01',
       startInvestedCents: 0,
@@ -74,15 +109,34 @@ describe('WealthSummaryCard', () => {
       horizonYears: 30,
     })
     const accounts = [makeAccount(1, 'investment')]
-    // Huge value to ensure positive delta and non-zero months
-    const checkins = [
-      makeCheckin(1, '2025-06-01', [{ accountId: 1, valueCents: 100_000_000_00 }]),
-    ]
-    render(
-      <WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />,
-    )
-    // A hundred million against a 1,000 a month plan is decades, not a month count.
-    expect(screen.getByText(/more than \d+ years ahead/)).toBeInTheDocument()
+    const date = '2025-06-01'
+    const withGap = (gapCents: number) => {
+      const projected = planValueAtDate(scenario, date, DEFAULT_INFLATION_RATE)!
+      const nominal = realToNominal(projected + gapCents, scenario.planStartDate!, date, DEFAULT_INFLATION_RATE)
+      return [makeCheckin(1, date, [{ accountId: 1, valueCents: nominal }])]
+    }
+
+    it('says how many months ahead of the plan a balance is, and the day the plan reaches it', () => {
+      render(<WealthSummaryCard checkins={withGap(2_000_000)} accounts={accounts} plan={scenario} />)
+      expect(screen.getByText(/which only reaches this balance around/)).toHaveTextContent(
+        /^\d+ months? ahead of the plan, which only reaches this balance around [A-Z][a-z]{2} 20\d\d\.$/,
+      )
+    })
+
+    it('says how many months behind, and the day the plan had the balance', () => {
+      render(<WealthSummaryCard checkins={withGap(-2_000_000)} accounts={accounts} plan={scenario} />)
+      expect(screen.getByText(/which already had this balance around/)).toHaveTextContent(
+        /^\d+ months? behind the plan, which already had this balance around [A-Z][a-z]{2} 20\d\d\.$/,
+      )
+    })
+
+    it('leaves the months out when the plan never has the balance, and still gives the gap in money', () => {
+      // A hundred million against a plan that ends far below it: the plan has no point to read it at.
+      const checkins = [makeCheckin(1, date, [{ accountId: 1, valueCents: 100_000_000_00 }])]
+      render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />)
+      expect(screen.getByText(/ahead of plan/i)).toBeInTheDocument()
+      expect(screen.queryByText(/of the plan, which only reaches/)).not.toBeInTheDocument()
+    })
   })
 
   it('reads the pace kept against the plan, naming a typical month when a lump sum skews the mean', () => {
@@ -141,6 +195,59 @@ describe('WealthSummaryCard', () => {
     expect(screen.getByText(/1\.400,00 € a month$/)).toHaveStyle({ color: 'var(--exp-success)' })
   })
 
+  describe('the pace is read on whole months', () => {
+    const scenario = makeScenario({ name: 'Path A', planStartDate: '2025-02-01', monthlyContributionCents: 100_000 })
+    const checkins = [makeCheckin(1, '2025-06-01', [{ accountId: 1, valueCents: 10_000_000 }])]
+    const invest = (id: number, month: string, amountCents: number) =>
+      makeTransaction({ id, type: 'investment', budgetMonth: month, date: `${month}-10`, amountCents })
+    const renderPace = (transactions: ReturnType<typeof invest>[], openBudgetMonth?: string) =>
+      render(
+        <WealthSummaryCard
+          checkins={checkins}
+          accounts={[makeAccount(1)]}
+          plan={scenario}
+          transactions={transactions}
+          openBudgetMonth={openBudgetMonth}
+        />,
+      )
+
+    it('leaves the month under way out, and says the months are full ones', () => {
+      renderPace([invest(1, '2025-02', 100_000), invest(2, '2025-03', 100_000), invest(3, '2025-04', 83_300)], '2025-04')
+      expect(screen.getByText(/a month it assumes/)).toHaveTextContent(
+        /Investing 1\.000,00 € a month on average over the 2 full months since the plan started, against the 1\.000,00 € a month it assumes/,
+      )
+    })
+
+    it('counts a month with nothing recorded as a month of nothing invested', () => {
+      renderPace([invest(1, '2025-02', 100_000), invest(2, '2025-04', 100_000)])
+      expect(screen.getByText(/a month it assumes/)).toHaveTextContent(
+        /Investing 666,67 € a month on average over the 3 months since the plan started/,
+      )
+    })
+
+    it('does not call a pace a few euros short behind', () => {
+      renderPace([invest(1, '2025-02', 99_000), invest(2, '2025-03', 99_000)])
+      expect(screen.getByText(/990,00 € a month$/)).toHaveStyle({ color: 'var(--exp-success)' })
+    })
+
+    it('is behind once the shortfall is more than that', () => {
+      renderPace([invest(1, '2025-02', 97_000), invest(2, '2025-03', 97_000)])
+      expect(screen.getByText(/970,00 € a month$/)).toHaveStyle({ color: 'var(--exp-danger)' })
+    })
+
+    it('says the months are the ones recorded when they do not start at the plan', () => {
+      // The record starts in March, a month after the plan did.
+      renderPace([invest(1, '2025-03', 100_000), invest(2, '2025-04', 100_000)])
+      expect(screen.getByText(/a month it assumes/)).toHaveTextContent(/over the 2 months recorded, against/)
+      expect(screen.queryByText(/since the plan started/)).not.toBeInTheDocument()
+    })
+
+    it('says nothing when the only month on record is the one under way', () => {
+      renderPace([invest(1, '2025-04', 83_300)], '2025-04')
+      expect(screen.queryByText(/a month it assumes/)).not.toBeInTheDocument()
+    })
+  })
+
   it('says nothing about pace for a plan that pauses over every month it is compared on', () => {
     const scenario = makeScenario({
       planStartDate: '2025-01-01',
@@ -169,33 +276,129 @@ describe('WealthSummaryCard', () => {
     expect(screen.queryByText(/a year/)).not.toBeInTheDocument()
   })
 
-  it('suggests a re-baseline when the gap has held still for half a year', () => {
-    const scenario = makeScenario({ id: 1, name: 'Path A', planStartDate: '2025-01-01' })
+  it('sets a return under a year against what the plan expects over the same days, not its yearly rate', () => {
+    const plan = makeScenario({ monthlyContributionCents: 0, name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2025-01-01' })
     const accounts = [makeAccount(1, 'investment')]
-    const behind = (id: number, date: string) =>
-      makeCheckin(id, date, [
-        { accountId: 1, valueCents: realToNominal(planValueAtDate(scenario, date, DEFAULT_INFLATION_RATE)! - 50_000_00, '2025-01-01', date, DEFAULT_INFLATION_RATE) },
-      ])
-    const checkins = [behind(1, '2026-01-01'), behind(2, '2026-04-01'), behind(3, '2026-07-15')]
-    const onRebaseline = vi.fn()
-    render(
-      <WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} onRebaseline={onRebaseline} />,
+    const checkins = [
+      makeCheckin(1, '2026-01-01', [{ accountId: 1, valueCents: 100_000_00 }]),
+      makeCheckin(2, '2026-07-01', [{ accountId: 1, valueCents: 105_000_00 }]),
+    ]
+    render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={plan} />)
+    // 181 days at 7% after inflation and 2% inflation is (1.07 x 1.02) ^ (181 / 365.25) - 1, about 4.4%.
+    expect(screen.getByText(/returned/)).toHaveTextContent(
+      /returned 5,0\s?% so far since .*, where Path A assumes about 4,4\s?% over the same days \(7,0\s?% a year after inflation, with 2,0\s?% inflation\)\./,
     )
-
-    expect(screen.getByText(/Every check-in since .*2026 has sat about 50k € behind/)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
-    expect(onRebaseline).toHaveBeenCalled()
   })
 
-  it('says nothing about re-baselining while the gap is still moving', () => {
-    const scenario = makeScenario({ id: 1, planStartDate: '2025-01-01' })
+  it('reads a return over a year as a yearly rate, after inflation, against the plan', () => {
+    const plan = makeScenario({ monthlyContributionCents: 0, name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2025-01-01' })
+    const accounts = [makeAccount(1, 'investment')]
+    const checkins = [
+      makeCheckin(1, '2025-01-01', [{ accountId: 1, valueCents: 100_000_00 }]),
+      makeCheckin(2, '2026-07-01', [{ accountId: 1, valueCents: 125_000_00 }]),
+    ]
+    render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={plan} />)
+    const hint = screen.getByText(/returned/)
+    expect(hint).toHaveTextContent(/returned 16,\d\s?% a year since .*, about 13,\d\s?% once 2,0\s?% inflation is taken off against the 7,0\s?% a year, after inflation, that Path A assumes\./)
+  })
+
+  it('does not colour a yearly return from under ten years, and says why', () => {
+    const plan = makeScenario({ monthlyContributionCents: 0, name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2025-01-01' })
+    const checkins = [
+      makeCheckin(1, '2025-01-01', [{ accountId: 1, valueCents: 100_000_00 }]),
+      makeCheckin(2, '2026-07-01', [{ accountId: 1, valueCents: 125_000_00 }]),
+    ]
+    render(<WealthSummaryCard checkins={checkins} accounts={[makeAccount(1, 'investment')]} plan={plan} />)
+    expect(screen.getByText(/a year$/).style.color).toBe('')
+    expect(screen.getByText(/returned/)).toHaveTextContent('A few years of returns say little about a long-run 7,0% a year.')
+  })
+
+  it('colours a yearly return against the plan from ten years of history, with nothing to excuse it', () => {
+    const plan = makeScenario({ monthlyContributionCents: 0, name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2015-01-01' })
+    const checkins = (end: number) => [
+      makeCheckin(1, '2015-01-01', [{ accountId: 1, valueCents: 100_000_00 }]),
+      makeCheckin(2, '2026-07-01', [{ accountId: 1, valueCents: end }]),
+    ]
+    const { rerender } = render(
+      <WealthSummaryCard checkins={checkins(400_000_00)} accounts={[makeAccount(1, 'investment')]} plan={plan} />,
+    )
+    expect(screen.getByText(/a year$/)).toHaveStyle({ color: 'var(--exp-success)' })
+    expect(screen.getByText(/returned/)).not.toHaveTextContent('say little')
+
+    rerender(<WealthSummaryCard checkins={checkins(120_000_00)} accounts={[makeAccount(1, 'investment')]} plan={plan} />)
+    expect(screen.getByText(/a year$/)).toHaveStyle({ color: 'var(--exp-danger)' })
+  })
+
+  describe('where the gap comes from', () => {
+    const scenario = makeScenario({ id: 1, name: 'Path A', planStartDate: '2025-01-01', monthlyContributionCents: 100_000, contributionSchedule: [], housePurchaseYear: null, lifeEvents: [] })
     const accounts = [makeAccount(1, 'investment')]
     const at = (id: number, date: string, gap: number) =>
-      makeCheckin(id, date, [{ accountId: 1, valueCents: planValueAtDate(scenario, date, DEFAULT_INFLATION_RATE)! + gap }])
-    const checkins = [at(1, '2026-01-01', -90_000_00), at(2, '2026-04-01', -40_000_00), at(3, '2026-07-15', -5_000_00)]
-    render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} onRebaseline={vi.fn()} />)
+      makeCheckin(id, date, [
+        { accountId: 1, valueCents: realToNominal(planValueAtDate(scenario, date, DEFAULT_INFLATION_RATE)! + gap, '2025-01-01', date, DEFAULT_INFLATION_RATE) },
+      ])
 
-    expect(screen.queryByText(/Every check-in since/)).not.toBeInTheDocument()
+    it('names the rows that add up to the gap, in the plan’s euros, and leaves the empty ones out', () => {
+      const checkins = [at(1, '2025-01-10', -50_000_00), at(2, '2026-07-15', -50_000_00)]
+      render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />)
+      const block = screen.getByText(/the plan by/).closest('div')!
+      expect(within(block).getByText(/Behind the plan by .*€/)).toBeInTheDocument()
+      expect(within(block).getByText(/\(in 2025 euros\)/)).toBeInTheDocument()
+      expect(within(block).getByText('You started behind the plan')).toBeInTheDocument()
+      expect(within(block).queryByText(/Investing more than planned/)).not.toBeInTheDocument()
+    })
+
+    it('draws a row that is more than planned in the success text colour and one that is less in the danger one, as classes', () => {
+      const checkins = [at(1, '2025-01-10', -50_000_00), at(2, '2026-07-15', -50_000_00)]
+      render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />)
+      const block = screen.getByText(/the plan by/).closest('div')!
+      const behind = within(block).getByText('You started behind the plan').parentElement!.querySelector('[class*="gapAmount"]')!
+      expect(behind.className).toMatch(/gapAmountDown/)
+      expect(behind).not.toHaveAttribute('style')
+    })
+
+    it('suggests a re-baseline when where the plan started is what explains the gap', () => {
+      const checkins = [at(1, '2025-01-10', -50_000_00), at(2, '2026-07-15', -50_000_00)]
+      const onRebaseline = vi.fn()
+      render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} onRebaseline={onRebaseline} />)
+
+      expect(screen.getByText(/At least half of this gap comes from where the plan started/)).toBeInTheDocument()
+      fireEvent.click(screen.getByRole('button', { name: 'Re-baseline from latest check-in' }))
+      expect(onRebaseline).toHaveBeenCalled()
+    })
+
+    it('says nothing about re-baselining when saving has closed the gap that the start opened', () => {
+      const checkins = [at(1, '2025-01-10', -90_000_00), at(2, '2026-07-15', -5_000_00)]
+      render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} onRebaseline={vi.fn()} />)
+
+      expect(screen.queryByText(/At least half of this gap comes from where the plan started/)).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Re-baseline from latest check-in' })).not.toBeInTheDocument()
+    })
+
+    it('does not offer the button in a read-only session', () => {
+      const checkins = [at(1, '2025-01-10', -50_000_00), at(2, '2026-07-15', -50_000_00)]
+      render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />)
+      expect(screen.getByText(/At least half of this gap comes from where the plan started/)).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Re-baseline from latest check-in' })).not.toBeInTheDocument()
+    })
+
+    it('says investing and the market are together when nothing is recorded though the plan invests', () => {
+      const checkins = [at(1, '2025-01-10', 0), at(2, '2026-02-01', 0)]
+      render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />)
+      expect(screen.getByText('Your investing and the market together')).toBeInTheDocument()
+      expect(screen.getByText(/Shown together because nothing is recorded as an investment since/)).toBeInTheDocument()
+      expect(screen.queryByText('The market doing better than the plan assumes')).not.toBeInTheDocument()
+    })
+
+    it('calls the first row what happened before the first check-in when it came more than a month after the start', () => {
+      const checkins = [at(1, '2025-04-01', -50_000_00), at(2, '2026-07-15', -50_000_00)]
+      render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />)
+      expect(screen.getByText('Behind before your first check-in')).toBeInTheDocument()
+    })
+
+    it('asks for a second check-in a month or more after the first when there is only one', () => {
+      render(<WealthSummaryCard checkins={[at(1, '2026-01-01', -1_000_00)]} accounts={accounts} plan={scenario} />)
+      expect(screen.getByText(/Two check-ins a month or more apart/)).toBeInTheDocument()
+    })
   })
 
   it('reads the cash reserve as months of spending, against the target when set', () => {
@@ -223,7 +426,7 @@ describe('WealthSummaryCard', () => {
   })
 
   it('compounds a year or more to a yearly rate and sets it against the plan', () => {
-    const scenario = makeScenario({ name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2025-01-01' })
+    const scenario = makeScenario({ monthlyContributionCents: 0, name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2025-01-01' })
     const accounts = [makeAccount(1, 'investment')]
     const checkins = [
       makeCheckin(1, '2025-01-01', [{ accountId: 1, valueCents: 100_000_00 }]),
@@ -233,18 +436,111 @@ describe('WealthSummaryCard', () => {
     const line = screen.getByText(/Your portfolio returned/)
     expect(line).toHaveTextContent(/4,0\s?% a year since Jan 1, 2025, about 2,0\s?% once 2,0\s?% inflation is taken off/)
     expect(line).toHaveTextContent(/against the 7,0\s?% a year, after inflation, that Path A assumes/)
-    expect(screen.getByText(/4,0\s?% a year$/)).toHaveStyle({ color: 'var(--exp-danger)' })
   })
 
   it('colours the return by its real rate, so a nominal match with the plan is still short', () => {
-    const scenario = makeScenario({ name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2025-01-01' })
+    const scenario = makeScenario({ monthlyContributionCents: 0, name: 'Path A', expectedRealReturn: 0.07, planStartDate: '2015-01-01' })
     const accounts = [makeAccount(1, 'investment')]
+    // Ten years at 7% a year in the money of the day, which is 4,9% once 2% inflation is taken off.
     const checkins = [
-      makeCheckin(1, '2025-01-01', [{ accountId: 1, valueCents: 100_000_00 }]),
-      makeCheckin(2, '2026-01-01', [{ accountId: 1, valueCents: 107_000_00 }]),
+      makeCheckin(1, '2015-01-01', [{ accountId: 1, valueCents: 100_000_00 }]),
+      makeCheckin(2, '2025-01-01', [{ accountId: 1, valueCents: 196_715_14 }]),
     ]
     render(<WealthSummaryCard checkins={checkins} accounts={accounts} plan={scenario} />)
     const rate = screen.getByText(/7,0\s?% a year$/)
     expect(rate).toHaveStyle({ color: 'var(--exp-danger)' })
+  })
+})
+
+describe('the status around a house purchase and at the edges of the plan', () => {
+  const accounts = [makeAccount(1, 'investment')]
+  const plan = samplePlan({ name: 'Sample', id: 1, isActive: true })
+  const inflation = 0.02
+  const checkinFor = (date: string, gapCents = 0) => {
+    const real = planValueAtDate(plan, date, inflation) ?? 0
+    return [makeCheckin(1, date, [{ accountId: 1, valueCents: realToNominal(real + gapCents, '2026-01-01', date, inflation) }])]
+  }
+
+  it('says on track, with the gap in money, for someone exactly on plan a week before the payment', () => {
+    render(<WealthSummaryCard checkins={checkinFor('2033-12-25')} accounts={accounts} plan={plan} />)
+    expect(screen.getByText('On track')).toBeInTheDocument()
+    expect(screen.queryByText(/ahead of plan|behind plan/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/of the plan, which/)).not.toBeInTheDocument()
+  })
+
+  it('says why there are no months for a lead only the far side of the payment has', () => {
+    render(<WealthSummaryCard checkins={checkinFor('2033-12-25', 500_000)} accounts={accounts} plan={plan} />)
+    expect(screen.getByText(/ahead of plan/i)).toBeInTheDocument()
+    expect(screen.getByText(/Months are not counted across a house purchase or a one-off event/)).toBeInTheDocument()
+    expect(screen.queryByText(/of the plan, which only reaches/)).not.toBeInTheDocument()
+  })
+
+  it('says a payment made a fortnight early is read against the plan with it made', () => {
+    // The line holds the portfolio before the 70.871 payment on 18 December; this one has paid it already.
+    const line = planLineOf(projectNetWorth(scenarioToParams(plan, inflation)))
+    const payment = planValueBefore(line, 8)! - planValueAt(line, 8)!
+    render(<WealthSummaryCard checkins={checkinFor('2033-12-18', -payment)} accounts={accounts} plan={plan} />)
+    expect(screen.getByText('On track')).toBeInTheDocument()
+    expect(screen.getByText(/within a month of this check-in/)).toHaveTextContent(
+      /falls on .*2034, within a month of this check-in, so your balance is read against the plan with it already made\./,
+    )
+  })
+
+  it('says the plan starts after the latest check-in, rather than that it has no start date', () => {
+    const later = samplePlan({ name: 'Sample', planStartDate: '2027-01-01' })
+    render(<WealthSummaryCard checkins={[makeCheckin(1, '2026-06-01', [{ accountId: 1, valueCents: 5_000_000 }])]} accounts={accounts} plan={later} />)
+    expect(screen.getByText(/Sample starts on .*2027, after your latest check-in/)).toBeInTheDocument()
+    expect(screen.queryByText(/no start date/)).not.toBeInTheDocument()
+  })
+
+  it('says the plan has ended when the latest check-in is past its last year', () => {
+    const short = samplePlan({ name: 'Sample', horizonYears: 5 })
+    render(<WealthSummaryCard checkins={[makeCheckin(1, '2033-06-01', [{ accountId: 1, valueCents: 5_000_000 }])]} accounts={accounts} plan={short} />)
+    expect(screen.getByText(/Sample ends on .*2031, before your latest check-in/)).toBeInTheDocument()
+  })
+})
+
+describe('the return when money may have moved in without being recorded', () => {
+  const accounts = [makeAccount(1, 'investment')]
+  const plan = makeScenario({ name: 'Path A', planStartDate: '2024-01-01', monthlyContributionCents: 100_000 })
+  const year = (end: number) => [
+    makeCheckin(1, '2025-01-01', [{ accountId: 1, valueCents: 100_000_00 }]),
+    makeCheckin(2, '2026-01-01', [{ accountId: 1, valueCents: end }]),
+  ]
+
+  it('says no investments are recorded, and hides the percentage, when the plan expects some', () => {
+    // 18% a year with nothing recorded is 18.000 euros moved in, not 18.000 euros earned.
+    render(<WealthSummaryCard checkins={year(118_000_00)} accounts={accounts} plan={plan} transactions={[]} />)
+    const hint = screen.getByText(/no investments are recorded/i)
+    expect(hint).toHaveTextContent(/Path A expects 1\.000,00 € a month, but no investments are recorded since Jan 1, 2025/)
+    expect(hint).toHaveTextContent(/Add what you moved in as Investment transactions to see the return/)
+    expect(screen.queryByText(/% a year/)).not.toBeInTheDocument()
+  })
+
+  it('says the balance grew too fast to be a market return, when it did, and hides it', () => {
+    const idle = makeScenario({ name: 'Path A', planStartDate: '2024-01-01', monthlyContributionCents: 0, contributionSchedule: [] })
+    render(<WealthSummaryCard checkins={year(150_000_00)} accounts={accounts} plan={idle} transactions={[]} />)
+    const hint = screen.getByText(/more than 30% a year/)
+    expect(hint).toHaveTextContent(/usually money you moved in that is not recorded/)
+    expect(screen.queryByText(/returned/)).not.toBeInTheDocument()
+  })
+
+  it('says the same for a stretch under a year without calling it a yearly rate', () => {
+    const idle = makeScenario({ name: 'Path A', planStartDate: '2024-01-01', monthlyContributionCents: 0, contributionSchedule: [] })
+    const quarter = [
+      makeCheckin(1, '2025-01-01', [{ accountId: 1, valueCents: 100_000_00 }]),
+      makeCheckin(2, '2025-04-01', [{ accountId: 1, valueCents: 140_000_00 }]),
+    ]
+    render(<WealthSummaryCard checkins={quarter} accounts={accounts} plan={idle} transactions={[]} />)
+    const hint = screen.getByText(/more than 30%/)
+    expect(hint).not.toHaveTextContent(/a year/)
+    expect(hint).toHaveTextContent(/more than markets usually give/)
+  })
+
+  it('still gives the return when the investments are recorded and it is believable', () => {
+    const deposit = makeTransaction({ date: '2025-06-01', budgetMonth: '2025-06', type: 'investment', amountCents: 1_000_00 })
+    render(<WealthSummaryCard checkins={year(108_000_00)} accounts={accounts} plan={plan} transactions={[deposit]} />)
+    expect(screen.getByText(/Your portfolio returned/)).toHaveTextContent(/returned 7,\d\s?% a year since/)
+    expect(screen.queryByText(/no investments are recorded|more than 30%/)).not.toBeInTheDocument()
   })
 })

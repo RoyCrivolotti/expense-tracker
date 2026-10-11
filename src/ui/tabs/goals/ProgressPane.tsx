@@ -15,6 +15,7 @@ import { Presence } from '../../components/Presence'
 import { todayIso } from '../../components/transactionFormState'
 import { EXIT_MS } from '../../hooks/motion'
 import { failureMessage } from '../../hooks/useFailureToast'
+import { useAssumedInflation } from '../../hooks/assumedInflationContext'
 import { useMoneyFormat } from '../../hooks/moneyFormatContext'
 import { useToast } from '../../hooks/useToast'
 import { formatCheckinDate, type InvestedSnapshot } from './checkinDate'
@@ -42,7 +43,7 @@ function RebaselineSheet({
     ? `, instead of ${formatCheckinDate(preview.previous.planStartDate)} from ${formatCents(preview.previous.investedCents, format)}`
     : ''
   const start = preview
-    ? `The plan restarts on ${formatCheckinDate(preview.patch.planStartDate)} from ${formatCents(preview.patch.startInvestedCents, format)}${replaced}. From then on ahead or behind measures only what you do next.`
+    ? `The plan restarts on ${formatCheckinDate(preview.patch.planStartDate)} from ${formatCents(preview.patch.startInvestedCents, format)}${replaced}. From then on ahead or behind starts again from zero at that date, and follows what you invest and how markets do.`
     : ''
   return (
     <Presence show={preview !== null} exitMs={EXIT_MS.sheet}>
@@ -70,17 +71,18 @@ function useRebaselinePrompt(
   latestSnapshot: InvestedSnapshot | null,
   { activeId, draft, patchDraft }: Pick<ScenarioEditor, 'activeId' | 'draft' | 'patchDraft'>,
 ) {
+  const inflationRate = useAssumedInflation()
   const [preview, setPreview] = useState<Rebaseline | null>(null)
   const onRebaseline = useCallback(() => {
     if (!actions || !plan || !latestSnapshot) return
-    setPreview(rebaseline(plan, latestSnapshot))
-  }, [actions, plan, latestSnapshot])
+    setPreview(rebaseline(plan, latestSnapshot, inflationRate))
+  }, [actions, plan, latestSnapshot, inflationRate])
   const { showToast } = useToast()
   const onConfirm = useCallback(async () => {
     if (!actions || !plan || !latestSnapshot || !preview) return
     // The draft is re-baselined from its own values, so an unsaved life-event or house
     // edit in the editor moves with the start rather than being overwritten by the plan's.
-    const draftPatch = activeId === plan.id ? rebaseline(draft, latestSnapshot).patch : null
+    const draftPatch = activeId === plan.id ? rebaseline(draft, latestSnapshot, inflationRate).patch : null
     setPreview(null)
     try {
       await actions.updateScenario(plan.id, preview.patch)
@@ -91,7 +93,7 @@ function useRebaselinePrompt(
       return
     }
     if (draftPatch) patchDraft(draftPatch)
-  }, [actions, plan, latestSnapshot, preview, activeId, patchDraft, draft, showToast])
+  }, [actions, plan, latestSnapshot, preview, activeId, patchDraft, draft, showToast, inflationRate])
   const onCancel = useCallback(() => setPreview(null), [])
   return { preview, onRebaseline, onConfirm, onCancel }
 }

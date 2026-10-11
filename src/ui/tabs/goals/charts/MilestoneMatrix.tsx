@@ -332,9 +332,9 @@ function MilestoneMatrixImpl({
         )}
       </div>
       <p className={styles.chartHint}>
-        Invested portfolio only. Edit the list in Assumptions. Every path is counted in whole years from today, as the
-        yearly step at which it first reaches the amount, so it can be up to a year later than the date on the Progress
-        tab.{fromToday ? ' "From today" is the plan started again from your latest check-in.' : ''}
+        Invested portfolio only. Edit the list in Assumptions. A milestone is an amount on your account, so each path is
+        counted after inflation. Every path is counted in whole years from today, rounded up from the day it first
+        reaches the amount, so it can be up to a year later than the date on the Progress tab.{fromToday ? ' "From today" is the plan started again from your latest check-in.' : ''}
         {view === 'timeline' ? ' Each dot is a milestone, at the years from now the path reaches it.' : ''}
       </p>
       {milestones.length === 0 ? (

@@ -24,6 +24,7 @@ import { SettingsTab } from './tabs/SettingsTab'
 import { clearOnboardingSkip, isOnboardingSkipped } from './onboarding/onboardingStorage'
 import { ConnectivityProvider } from './hooks/ConnectivityProvider'
 import { AssumedInflationContext } from './hooks/assumedInflationContext'
+import { MarketVolatilityContext } from './hooks/marketVolatilityContext'
 import { MoneyFormatProvider } from './hooks/MoneyFormatProvider'
 import { useConnectivityState } from './hooks/useConnectivityState'
 import { useConnectivity } from './hooks/useConnectivity'
@@ -223,19 +224,21 @@ function ExpensesAppLoaded({
         numberLocale={model.dataset.settings.numberLocale}
       >
         <AssumedInflationContext.Provider value={model.dataset.settings.assumedInflation}>
-          <LeaveGuardProvider>
-            <ExpensesAppReady
-              source={source}
-              model={model}
-              applyPatch={applyPatch}
-              reload={reload}
-              refreshing={refreshing}
-              refreshOutcome={refreshOutcome}
-              hubGrants={hubGrants}
-              {...(ownerAccess ? { ownerAccess } : {})}
-              {...(accountEmail ? { accountEmail } : {})}
-            />
-          </LeaveGuardProvider>
+          <MarketVolatilityContext.Provider value={model.dataset.settings.marketVolatility}>
+            <LeaveGuardProvider>
+              <ExpensesAppReady
+                source={source}
+                model={model}
+                applyPatch={applyPatch}
+                reload={reload}
+                refreshing={refreshing}
+                refreshOutcome={refreshOutcome}
+                hubGrants={hubGrants}
+                {...(ownerAccess ? { ownerAccess } : {})}
+                {...(accountEmail ? { accountEmail } : {})}
+              />
+            </LeaveGuardProvider>
+          </MarketVolatilityContext.Provider>
         </AssumedInflationContext.Provider>
       </MoneyFormatProvider>
     </ConnectivityProvider>

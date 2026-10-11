@@ -24,7 +24,6 @@ function baseParams(overrides: Partial<ProjectionParams> = {}): ProjectionParams
   return {
     startInvestedCents: 10_000_000,
     monthlyContributionCents: 100_000,
-    annualContributionGrowth: 0,
     expectedRealReturn: DEFAULT_REAL_RETURN,
     horizonYears: 40,
     housePriceCents: 400_000_000,
@@ -79,11 +78,13 @@ describe('projection invested milestones', () => {
       downPaymentFraction: 0.35,
       housePurchaseYear: 10,
       transactionCostsCents: 50_000,
-      annualContributionGrowth: 0,
     })
     const breakdown = purchaseYearBreakdown(params, 10)
     expect(breakdown).not.toBeNull()
-    expect(breakdown!.totalWithdrawalCents).toBe(12_950_000 + 50_000)
+    // 370.000 € today, bought in year 10: DEFAULT_HOUSE_APPRECIATION against DEFAULT_INFLATION_RATE for ten years.
+    const priceAtPurchase = Math.round(37_000_000 * (1.025 / 1.02) ** 10)
+    expect(breakdown!.downPaymentCents).toBe(Math.round(priceAtPurchase * 0.35))
+    expect(breakdown!.totalWithdrawalCents).toBe(Math.round(priceAtPurchase * 0.35) + 50_000)
     expect(breakdown!.endInvestedCents).toBe(projectInvested(params)[10])
     expect(breakdown!.netChangeCents).toBe(
       breakdown!.endInvestedCents - breakdown!.startInvestedCents,
@@ -133,7 +134,6 @@ describe.skipIf(!hasFrParity)('workbook milestone parity (local only)', () => {
       name: string
       startInvestedCents: number
       monthlyContributionCents: number
-      annualContributionGrowth: number
       expectedRealReturn: number
       housePriceCents: number
       downPaymentFraction: number
@@ -155,7 +155,6 @@ describe.skipIf(!hasFrParity)('workbook milestone parity (local only)', () => {
       const params: ProjectionParams = {
         startInvestedCents: scenario.startInvestedCents,
         monthlyContributionCents: scenario.monthlyContributionCents,
-        annualContributionGrowth: scenario.annualContributionGrowth,
         expectedRealReturn: scenario.expectedRealReturn,
         horizonYears: 40,
         housePriceCents: scenario.housePriceCents,
@@ -228,16 +227,43 @@ describe('life events', () => {
   })
 })
 
-describe('the two figures GOALS-MODEL.md states', () => {
+describe('monthly amounts as euros sent', () => {
+  const paying = { expectedRealReturn: 0, startInvestedCents: 0, monthlyContributionCents: 100_000, horizonYears: 20 }
+
+  it('counts a flat amount for less each year in the plan\'s money, and for the full amount with no inflation', () => {
+    const none = projectNetWorth(baseParams({ ...paying, inflationRate: 0 }))
+    expect(none.map((p) => p.annualContributionCents).slice(1)).toEqual(Array(20).fill(1_200_000))
+
+    const some = projectNetWorth(baseParams({ ...paying, inflationRate: 0.03 }))
+    const yearly = some.map((p) => p.annualContributionCents).slice(1)
+    expect(yearly[0]!).toBeLessThan(1_200_000)
+    for (let i = 1; i < yearly.length; i++) expect(yearly[i]!).toBeLessThan(yearly[i - 1]!)
+  })
+
+  it('adds up to what twelve payments a year are worth when each is brought back one by one', () => {
+    const inflation = 0.03
+    const points = projectNetWorth(baseParams({ ...paying, inflationRate: inflation }))
+    let paid = 0
+    for (let month = 0; month < 12 * 10; month++) paid += 100_000 / (1 + inflation) ** ((month + 0.5) / 12)
+    expect(Math.abs(points[10]!.investedCents - paid) / paid).toBeLessThan(1e-4)
+  })
+
+  it('leaves a plan with a higher inflation lower at the end, since the same euros buy less', () => {
+    const at = (inflationRate: number) => projectNetWorth(baseParams({ horizonYears: 30, inflationRate }))[30]!.investedCents
+    expect(at(0.03)).toBeLessThan(at(0.02))
+    expect(at(0.02)).toBeLessThan(at(0))
+  })
+})
+
+describe('the figure GOALS-MODEL.md states', () => {
   /**
-   * Both of these were written down wrong and stayed wrong, because nothing failed when
-   * the doc and the code disagreed. These pin the code, so the next person to change
-   * either one has to decide deliberately rather than leave the page stale.
+   * The band's spread was written down wrong and stayed wrong, because nothing failed when the
+   * doc and the code disagreed. This pins the code, so the next person to change it has to decide
+   * deliberately rather than leave the page stale.
    */
   const flat = {
     startInvestedCents: 0,
     monthlyContributionCents: 100_000,
-    annualContributionGrowth: 0.1,
     expectedRealReturn: 0,
     horizonYears: 3,
     housePriceCents: 0,
@@ -250,43 +276,50 @@ describe('the two figures GOALS-MODEL.md states', () => {
     inflationRate: DEFAULT_INFLATION_RATE,
   }
 
-  it('starts contribution growth in year 2, not year 1', () => {
-    // Zero return, so each year's invested total is just the contributions so far.
-    const points = projectNetWorth(flat)
-    const yearly = 100_000 * 12
-
-    // Year 1 is the amount entered, ungrown: (1 + g)^(y - 1), not (1 + g)^y.
-    expect(points[1]?.investedCents).toBe(yearly)
-    expect(points[2]?.investedCents).toBe(yearly + Math.round(yearly * 1.1))
-    expect(points[3]?.investedCents).toBe(
-      yearly + Math.round(yearly * 1.1) + Math.round(yearly * 1.1 * 1.1),
-    )
-  })
-
   it('spreads the uncertainty band 3 points either side by default', () => {
-    const params = { ...flat, expectedRealReturn: 0.07, annualContributionGrowth: 0 }
+    const params = { ...flat, expectedRealReturn: 0.07 }
     const { lo, hi } = projectNetWorthBand(params)
 
     expect(lo).toEqual(projectNetWorthBand(params, 0.03).lo)
     expect(hi).toEqual(projectNetWorthBand(params, 0.03).hi)
     expect(lo).not.toEqual(projectNetWorthBand(params, 0.02).lo)
   })
+
+  it('carries what each edge reached before a purchase, so the band steps where the line does', () => {
+    const params = baseParams({ housePurchaseYear: 5, startInvestedCents: 30_000_000 })
+    const band = projectNetWorthBand(params)
+    const hiPoints = projectNetWorth({ ...params, expectedRealReturn: params.expectedRealReturn + 0.03 })
+    const loPoints = projectNetWorth({ ...params, expectedRealReturn: Math.max(0, params.expectedRealReturn - 0.03) })
+    expect(band.hiPre).toEqual(hiPoints.map((p) => p.preEventInvestedCents))
+    expect(band.loPre).toEqual(loPoints.map((p) => p.preEventInvestedCents))
+    expect(band.hiPre[5]).toBeGreaterThan(band.hi[5]!)
+    // No purchase, no step.
+    const plain = projectNetWorthBand(baseParams())
+    expect(plain.hiPre).toEqual(plain.hi)
+    expect(plain.loPre).toEqual(plain.lo)
+  })
 })
 
 describe('the house and the mortgage in a real plan', () => {
-  const price = 400_000_000
-  const loan = price * 0.8
+  // The price is today's. Bought in year 5, the house has risen for five years by what it beats
+  // inflation by, and the loan is what is left after the down payment on that price.
+  const todaysPrice = 400_000_000
+  const priceAt = (year: number, appreciation = DEFAULT_HOUSE_APPRECIATION, inflation = DEFAULT_INFLATION_RATE) =>
+    Math.round(todaysPrice * ((1 + appreciation) / (1 + inflation)) ** year)
+  const price = priceAt(5)
+  const loan = price - Math.round(price * 0.2)
 
   it('grows the house only by what its appreciation beats inflation by', () => {
     // Appreciation equal to inflation is no growth in today's money at all.
     const flat = projectNetWorth(
       baseParams({ housePurchaseYear: 5, houseAppreciationRate: DEFAULT_INFLATION_RATE }),
     )
-    expect(flat[5]!.houseEquityCents).toBe(price)
-    expect(flat[25]!.houseEquityCents).toBe(price)
+    expect(flat[5]!.houseEquityCents).toBe(todaysPrice)
+    expect(flat[25]!.houseEquityCents).toBe(todaysPrice)
 
-    // 2.5% against 2% inflation: ten years owned is (1.025 / 1.02) ten times over.
+    // 2.5% against 2% inflation: fifteen years from today, five of them waiting to buy and ten owned.
     const grown = projectNetWorth(baseParams({ housePurchaseYear: 5, houseAppreciationRate: 0.025 }))
+    expect(grown[5]!.houseEquityCents).toBe(price)
     expect(grown[15]!.houseEquityCents).toBe(Math.round(price * (1.025 / 1.02) ** 10))
     // Nothing is owned before the purchase.
     expect(grown[4]!.houseEquityCents).toBe(0)
@@ -310,8 +343,10 @@ describe('the house and the mortgage in a real plan', () => {
 
   it('takes inflation off a loan with no interest too', () => {
     const points = projectNetWorth(baseParams({ housePurchaseYear: 0, mortgageRateAnnual: 0, mortgageTermYears: 20 }))
-    // Half repaid after ten years, and what is left counted in today's money.
-    expect(points[10]!.mortgageBalanceCents).toBe(Math.round((loan / 2) / (1 + DEFAULT_INFLATION_RATE) ** 10))
+    // Owned from day one, so the loan is on today's price. Half repaid after ten years, and what is
+    // left counted in today's money.
+    const ownedLoan = todaysPrice - Math.round(todaysPrice * 0.2)
+    expect(points[10]!.mortgageBalanceCents).toBe(Math.round((ownedLoan / 2) / (1 + DEFAULT_INFLATION_RATE) ** 10))
   })
 
   it('uses the inflation it is given, not a default', () => {
@@ -319,11 +354,14 @@ describe('the house and the mortgage in a real plan', () => {
     const points = projectNetWorth(
       baseParams({ housePurchaseYear: 5, houseAppreciationRate: 0.025, inflationRate: rate }),
     )
-    expect(points[15]!.houseEquityCents).toBe(Math.round(price * (1.025 / (1 + rate)) ** 10))
+    const priceAtRate = priceAt(5, 0.025, rate)
+    expect(points[5]!.houseEquityCents).toBe(priceAtRate)
+    expect(points[15]!.houseEquityCents).toBe(Math.round(priceAtRate * (1.025 / (1 + rate)) ** 10))
 
+    const loanAtRate = priceAtRate - Math.round(priceAtRate * 0.2)
     const i = 0.03 / 12
-    const payment = (loan * i) / (1 - (1 + i) ** -360)
-    const nominal = loan * (1 + i) ** 120 - payment * (((1 + i) ** 120 - 1) / i)
+    const payment = (loanAtRate * i) / (1 - (1 + i) ** -360)
+    const nominal = loanAtRate * (1 + i) ** 120 - payment * (((1 + i) ** 120 - 1) / i)
     expect(Math.abs(points[15]!.mortgageBalanceCents - nominal / (1 + rate) ** 10)).toBeLessThanOrEqual(2)
     // More inflation is a smaller house and a smaller debt in today's money.
     const atTwo = projectNetWorth(baseParams({ housePurchaseYear: 5 }))

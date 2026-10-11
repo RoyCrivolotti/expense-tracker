@@ -73,15 +73,17 @@ describe('NetWorthMiniChart', () => {
       expect(screen.getByText(/^Year 20 · 3\d\dk €$/)).toBeInTheDocument()
     })
 
-    it('puts the same figure in the chart\'s accessible name', () => {
-      const { rerender } = render(<NetWorthMiniChart draft={draftOf(flat)} />)
-      expect(screen.getByRole('img', { name: 'Projection of the scenario being edited, ending at 100k € in year 10' })).toBeInTheDocument()
+    it('puts the same figure in the chart\'s accessible name, with the euros it is in', () => {
+      const { rerender } = render(<NetWorthMiniChart draft={draftOf({ ...flat, planStartDate: '2026-01-01' })} />)
+      expect(
+        screen.getByRole('img', { name: 'Projection of the scenario being edited, in 2026 euros, ending at 100k € in year 10' }),
+      ).toBeInTheDocument()
 
       rerender(<NetWorthMiniChart draft={draftOf({ ...flat, expectedRealReturn: 0.07, horizonYears: 20 })} />)
 
       const name = screen.getByRole('img').getAttribute('aria-label')
       const readout = screen.getByText(/^Year 20 · /).textContent ?? ''
-      expect(name).toBe(`Projection of the scenario being edited, ending at ${readout.slice('Year 20 · '.length)} in year 20`)
+      expect(name).toBe(`Projection of the scenario being edited, in today's euros, ending at ${readout.slice('Year 20 · '.length)} in year 20`)
     })
 
     it('does not change the chart height', () => {

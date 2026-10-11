@@ -13,6 +13,18 @@ function legendValues(container: HTMLElement): string[] {
   return [...container.querySelectorAll('ul li span:last-child')].map((el) => el.textContent ?? '')
 }
 
+describe('CompositionChart money', () => {
+  it('says the figures are in the plan\'s euros', () => {
+    render(<CompositionChart draft={{ ...draft, planStartDate: '2026-01-01' }} />)
+    expect(screen.getByText(/mortgage owed, for the scenario you are editing, in 2026 euros\./)).toBeInTheDocument()
+  })
+
+  it('says today\'s euros for a plan with no start date', () => {
+    render(<CompositionChart draft={{ ...draft, planStartDate: null }} />)
+    expect(screen.getByText(/for the scenario you are editing, in today's euros\./)).toBeInTheDocument()
+  })
+})
+
 describe('CompositionChart legend', () => {
   it('shows blank values until a point is focused', () => {
     const { container } = render(<CompositionChart draft={draft} />)

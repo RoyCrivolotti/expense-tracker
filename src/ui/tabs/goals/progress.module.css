@@ -61,8 +61,8 @@
   margin-top: 0.5rem;
 }
 
-/* The steady-gap note and its button, set apart from the figures above. */
-.steadyGap {
+/* Where the gap to the plan comes from: a few rows that add up to it, set apart from the figures above. */
+.gapSplit {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -70,6 +70,55 @@
   padding: 0.75rem;
   border-radius: var(--radius-sm, 6px);
   background: var(--color-surface-muted);
+}
+
+.gapRows {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+}
+
+.gapRow {
+  display: flex;
+  /* At 200% text on a phone the label's longest word and the amount are wider than the box, and the amount does
+     not shrink: it goes to the next line instead of out of the box. */
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.15rem 1rem;
+}
+
+/* The label may wrap its text before the amount leaves the line: it asks for little, and takes what is left. */
+.gapRow > span:first-child {
+  flex: 1 1 8rem;
+}
+
+.gapAmount {
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.gapAmountUp {
+  color: var(--exp-success);
+}
+
+.gapAmountDown {
+  color: var(--exp-danger);
+}
+
+/* How the plan counts time is not something anyone did, so it is not coloured like the rest. */
+.gapRowMuted {
+  color: var(--color-text-muted);
+}
+
+.gapRowMuted .gapAmount {
+  font-weight: 400;
 }
 
 .summaryCard {

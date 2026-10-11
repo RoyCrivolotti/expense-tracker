@@ -1,11 +1,12 @@
 import type { ChartSeries } from '../../../charts/LinearChart'
+import { drawnValuesOf } from '../../../charts/steppedPoints'
 
 function factor(yearOffset: number, inflationRate: number): number {
   return Math.pow(1 + inflationRate, yearOffset)
 }
 
 /**
- * The plan in the money of each future year. The projection is real, in today's money,
+ * The plan in the money of each future year. The projection is real, in the plan's euros,
  * so the nominal view multiplies every drawn value and band edge up by the rate over its
  * year. Scatter points are left alone: check-ins are already nominal.
  */
@@ -14,14 +15,18 @@ export function inflateSeries(
   years: number[],
   inflationRate: number,
 ): ChartSeries[] {
+  const inflate = (values: number[]) => values.map((v, i) => Math.round(v * factor(years[i] ?? i, inflationRate)))
   return series.map((s) => ({
     ...s,
-    values: s.values.map((v, i) => Math.round(v * factor(years[i] ?? i, inflationRate))),
+    values: inflate(s.values),
+    ...(s.preStep ? { preStep: inflate(s.preStep) } : {}),
     ...(s.band
       ? {
           band: {
-            lo: s.band.lo.map((v, i) => Math.round(v * factor(years[i] ?? i, inflationRate))),
-            hi: s.band.hi.map((v, i) => Math.round(v * factor(years[i] ?? i, inflationRate))),
+            lo: inflate(s.band.lo),
+            hi: inflate(s.band.hi),
+            ...(s.band.loPre ? { loPre: inflate(s.band.loPre) } : {}),
+            ...(s.band.hiPre ? { hiPre: inflate(s.band.hiPre) } : {}),
           },
         }
       : {}),
@@ -29,7 +34,7 @@ export function inflateSeries(
 }
 
 /**
- * Check-in points brought to today's money, each by its own fractional `xIndex`, so an
+ * Check-in points brought to the plan's euros, each by its own fractional `xIndex`, so an
  * actual exactly on plan sits on the real line rather than reading as ahead of it.
  */
 export function deflatePoints(series: ChartSeries[], inflationRate: number): ChartSeries[] {
@@ -55,7 +60,24 @@ function drawnRealPoints(realPoints: ChartSeries[], nominalMode: boolean, rate: 
 }
 
 /**
- * The plan is real, so the default view is today's money with the check-in dots deflated
+ * The plan's lines in the nominal view: `drawn` at the rate being looked at, and `floor`, the
+ * lines at the saved rate, which the axis is held to. They are the same lines unless a previewed
+ * rate came with a projection of its own (`floorSeries` is the saved rate's).
+ */
+function nominalLines(
+  series: ChartSeries[],
+  floorSeries: ChartSeries[] | null,
+  years: number[],
+  savedRate: number,
+  drawnRate: number,
+): { floor: ChartSeries[]; drawn: ChartSeries[] } {
+  const floor = inflateSeries(floorSeries ?? series, years, savedRate)
+  const drawn = floorSeries === null && drawnRate === savedRate ? floor : inflateSeries(series, years, drawnRate)
+  return { floor, drawn }
+}
+
+/**
+ * The plan is real, so the default view is the plan's euros with the check-in dots deflated
  * to it; the nominal view inflates the plan instead and leaves the dots as they are.
  *
  * `inflationRate` is the owner's assumed inflation: it inflates the plan and its band in the
@@ -63,9 +85,13 @@ function drawnRealPoints(realPoints: ChartSeries[], nominalMode: boolean, rate: 
  * actuals uses, so the chart cannot disagree with the status beside it.
  *
  * `viewInflation` is a preview of the nominal view under another rate. It changes what is
- * drawn there and nothing else. The axis floor is the height the saved rate gives that view,
- * so stepping the preview moves the plan against a scale that holds still. The chart itself
- * grows the axis when a drawn line no longer fits, which it does rather than clip.
+ * drawn there and nothing else. `series` must already be projected at that rate, since the
+ * monthly amount is euros as sent and the real line depends on the inflation it is brought
+ * back by: inflating a line projected at the saved rate would not be the plan at the other
+ * rate. The axis floor is the height the saved rate gives that view (`floorSeries`, the lines
+ * projected at the saved rate), so stepping the preview moves the plan against a scale that
+ * holds still. The chart itself grows the axis when a drawn line no longer fits, which it does
+ * rather than clip.
  *
  * Each view fits its own axis: Purchasing power has no floor, so it is not stretched to make
  * room for the nominal plan, which runs far higher over thirty years. The band does not set
@@ -81,6 +107,8 @@ export function computeChartDisplayData(
   viewInflation: number | null = null,
   /** Real projections drawn as points (the plan from today): inflated with the lines, never deflated. */
   realPoints: ChartSeries[] = [],
+  /** The lines projected at the saved rate, when `series` is projected at a previewed one: what the axis floor is read from. */
+  floorSeries: ChartSeries[] | null = null,
 ): {
   displaySeries: ChartSeries[]
   displayExtraSeries: ChartSeries[]
@@ -91,9 +119,8 @@ export function computeChartDisplayData(
   /** The highest value drawn in this view, band aside; what the reference lines are held to. */
   drawnMax: number | undefined
 } {
-  const nominalSeries = inflateSeries(series, years, inflationRate)
   const drawnRate = viewInflation ?? inflationRate
-  const drawnSeries = drawnRate === inflationRate ? nominalSeries : inflateSeries(series, years, drawnRate)
+  const { floor: nominalSeries, drawn: drawnSeries } = nominalLines(series, floorSeries, years, inflationRate, drawnRate)
   const displaySeries = nominalMode ? drawnSeries : series
   const displayExtraSeries = nominalMode ? extraSeries : deflatePoints(extraSeries, inflationRate)
   const displayRealPoints = drawnRealPoints(realPoints, nominalMode, drawnRate)
@@ -104,9 +131,9 @@ export function computeChartDisplayData(
     displayExtraSeries,
     displayRealPoints,
     displayBand,
-    yDomainMax: nominalMode ? maxOf(nominalSeries.flatMap((s) => s.values)) : undefined,
+    yDomainMax: nominalMode ? maxOf(nominalSeries.flatMap(drawnValuesOf)) : undefined,
     drawnMax: maxOf([
-      ...displaySeries.flatMap((s) => s.values),
+      ...displaySeries.flatMap(drawnValuesOf),
       ...[...displayExtraSeries, ...displayRealPoints].flatMap((s) => s.points?.map((p) => p.value) ?? []),
     ]),
   }

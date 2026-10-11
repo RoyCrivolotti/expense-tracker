@@ -36,3 +36,37 @@ describe('insideWindow', () => {
     expect(insideWindow(undefined, null)).toBe(false)
   })
 })
+
+describe('clipToWindow through a step', () => {
+  const stepped: ChartSeries[] = [
+    { id: 'line', color: '#000', values: [0, 1, 2, 3, 4, 5, 6], preStep: [0, 1, 2, 9, 4, 5, 6] },
+    {
+      id: 'band',
+      color: '#000',
+      values: [],
+      kind: 'band',
+      band: { lo: [0, 1, 2, 3, 4, 5, 6], hi: [1, 2, 3, 4, 5, 6, 7], loPre: [0, 1, 2, 8, 4, 5, 6], hiPre: [1, 2, 3, 10, 5, 6, 7] },
+    },
+  ]
+
+  it('cuts what a line and its band reached before a step to the same length as their values', () => {
+    // Left at full length they would stretch the axis to a payment past the window, and a band without
+    // its steps would let the line climb out of it at a purchase.
+    const cut = clipToWindow(years, stepped, 2)
+    expect(cut.series[0]!.values).toEqual([0, 1, 2])
+    expect(cut.series[0]!.preStep).toEqual([0, 1, 2])
+    expect(cut.series[1]!.band).toEqual({ lo: [0, 1, 2], hi: [1, 2, 3], loPre: [0, 1, 2], hiPre: [1, 2, 3] })
+  })
+
+  it('keeps a step that is inside the window', () => {
+    const cut = clipToWindow(years, stepped, 4)
+    expect(cut.series[0]!.preStep).toEqual([0, 1, 2, 9, 4])
+    expect(cut.series[1]!.band?.hiPre).toEqual([1, 2, 3, 10, 5])
+  })
+
+  it('does not invent steps for a line that has none', () => {
+    const cut = clipToWindow(years, series, 3)
+    expect(cut.series[0]).not.toHaveProperty('preStep')
+    expect(cut.series[1]!.band).not.toHaveProperty('loPre')
+  })
+})

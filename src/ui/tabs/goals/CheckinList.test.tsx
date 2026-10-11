@@ -38,6 +38,21 @@ describe('CheckinList', () => {
     expect(screen.getByText(/no check-ins yet/i)).toBeInTheDocument()
   })
 
+  it('says what the gap on a row is of: the investments, in the plan\'s euros, not the total beside it', () => {
+    const plan = makeScenario({ planStartDate: '2020-01-01' })
+    const checkins = [makeCheckin(1, '2025-06-01', [{ accountId: 1, valueCents: 100_000_00 }])]
+    render(<CheckinList checkins={checkins} accounts={[makeAccount(1)]} plan={plan} canWrite={true} actions={makeActions()} />)
+    expect(screen.getByText('The gap to the plan is for your investments, in 2020 euros.')).toBeInTheDocument()
+  })
+
+  it('has no such line without a plan to take a gap from, and names today\'s euros for a plan with no start date', () => {
+    const checkins = [makeCheckin(1, '2025-06-01', [{ accountId: 1, valueCents: 100_000_00 }])]
+    const { rerender } = render(<CheckinList checkins={checkins} accounts={[makeAccount(1)]} plan={null} canWrite={true} actions={makeActions()} />)
+    expect(screen.queryByText(/The gap to the plan/)).not.toBeInTheDocument()
+    rerender(<CheckinList checkins={checkins} accounts={[makeAccount(1)]} plan={makeScenario({ planStartDate: null })} canWrite={true} actions={makeActions()} />)
+    expect(screen.queryByText(/The gap to the plan/)).not.toBeInTheDocument()
+  })
+
   it('renders check-in entries sorted newest first', () => {
     const accounts = [makeAccount(1)]
     const checkins = [

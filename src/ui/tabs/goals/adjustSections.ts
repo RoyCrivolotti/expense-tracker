@@ -10,7 +10,7 @@ export const ADJUST_LABELS: Record<AdjustSection, { title: string; chip: string 
   housing: { title: 'Housing', chip: 'Housing' },
   fire: { title: 'Financial independence', chip: 'FI' },
   tracking: { title: 'Plan start', chip: 'Start date' },
-  changes: { title: 'Monthly investing changes', chip: 'Monthly changes' },
+  changes: { title: 'Monthly investing over time', chip: 'Monthly' },
   events: { title: 'Life events', chip: 'Events' },
 }
 

@@ -1,17 +1,21 @@
 #!/usr/bin/env node
 /**
  * Fail verify if the production JS bundle grows past budget. Guards the win from
- * dropping Recharts (the lazy Goals chunk went 108 KB -> ~8 KB gzip, and is ~41 KB now that
- * Goals has grown): re-adding a heavy chart/vendor lib would blow these limits. Budgets are
- * gzip bytes with headroom; bump deliberately when a real feature needs the room.
+ * dropping Recharts (the lazy Goals chunk went 108 KB -> ~8 KB gzip): re-adding a heavy
+ * chart/vendor lib would blow these limits. Budgets are gzip bytes with headroom; bump
+ * deliberately when a real feature needs the room. Two are kept: the whole bundle, and the
+ * code only the Goals tab loads (its own chunk, the chunks split out of it and its lazy
+ * card, found from the imports in the built files by `bundleGraph.mjs`), which is what
+ * the second figure below counts.
  */
 import { readdirSync, readFileSync } from 'node:fs'
 import { gzipSync } from 'node:zlib'
 import { join } from 'node:path'
+import { goalsOnlyChunks } from './bundleGraph.mjs'
 
 const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 
-// gzip bytes. Today: total ~212 KB, GoalsTab ~41 KB.
+// gzip bytes. Today: total ~274 KB, Goals-only ~81 KB (GoalsTab 69, the shared chart shell 9, the spread card 4).
 //
 // Raised from 160 KB when flags, receipts and the claim pack landed: three
 // features' worth of UI took the total from ~146 KB to ~159 KB, leaving under
@@ -156,8 +160,118 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // wide chart (their layout, the merge of lines that read the same figure, the text colour that reads
 // on each line colour and the chips' CSS): main stood at 250.1 KB with the Goals chunk at 61.9 KB, and
 // the chips add about 1.3 KB, all of it small code in the lazy Goals chunk, with no new library.
-const TOTAL_MAX_GZIP = 254_000
-const GOALS_MAX_GZIP = 65_000
+//
+// Raised the Goals chunk from 65 KB to 65.5 KB for the house price at purchase (the line under the
+// price, the name for the plan's money and the helper both read): the chunk stood at about 64.9 KB
+// after the new default return, the three pieces add about 0.25 KB to 65,172 bytes, and the total
+// is still under its limit at 253,745. All of it is small code in the lazy Goals chunk, with no new
+// library.
+//
+// Raised from 254 KB to 255.7 KB, and the Goals chunk from 65.5 KB to 66 KB, for the plan's line through a
+// house payment or event: the line and its stretches, the step the charts draw (a line and its band can
+// climb to the value before a payment and drop straight to the one after), the window around a step,
+// and the status wording that goes with them. The total stood at 253,745 bytes after the house price and
+// this takes it to 255,412 (the Goals chunk from 65,172 to 65,867). All of it is small code, in the engine
+// and the lazy Goals chunk, with no new library.
+//
+// Raised from 255.7 KB to 256.7 KB, and the Goals chunk from 66 KB to 67.2 KB, for dating milestones on
+// the account: the crossing search (a bisection per year of the line and the days a step jumps over an
+// amount), the worth and the fall-back the chips now say, the reference curves the chart draws in both
+// views, and the wording. The total stood at 255,412 bytes after the plan's line and this takes it to
+// 256,461 (the Goals chunk from 65,867 to 66,905). All of it is small code, in the engine and the lazy
+// Goals chunk, with no new library.
+//
+// Raised the total from 256.7 KB to 258.1 KB for restating a re-baselined plan: the amounts and the house
+// price counted in the euros of the new start, the owned house with its loan from the schedule, the
+// from-today line drawn in the plan's money, the part-year mortgage term and the sheet's new lines. The
+// total stood at 256,461 bytes after dating milestones and this takes it to 257,876 (the Goals chunk from
+// 66,905 to 67,124, still under its limit). Most of it is engine code that the dashboard and Progress
+// also load, with no new library.
+//
+// Raised from 258.1 KB to 258.6 KB, and the Goals chunk from 67.2 KB to 67.8 KB, for the return guards
+// (the reading that holds a return back when it would only be money moved in without a record, the
+// check-in a day is read once, and the two lines that say what to record). The total stood at 257,876
+// bytes after restating a re-baselined plan and this takes it to 258,331 (the Goals chunk from 67,124
+// to 67,529). All of it is small code, in the engine and the lazy Goals chunk, with no new library.
+//
+// Raised from 258.6 KB to 260.4 KB, and the Goals chunk from 67.8 KB to 69.6 KB, for the split of the gap
+// to the plan (the five paths and the checks that decide when saving and the market can be told apart,
+// the rows with their wording, and the restart rule) net of the steady-gap hint it replaces. The total
+// stood at 258,331 bytes after the return guards and this takes it to 260,122 (the Goals chunk from
+// 67,529 to 69,318). All of it is small code, in the engine and the lazy Goals chunk, with no new library.
+//
+// Raised from 260.4 KB to 262.4 KB, and the Goals chunk from 69.6 KB to 71.6 KB, for the redesigned Rent vs
+// buy (each side split into what it holds and pays, the comparison from the purchase year to ten years past
+// the loan, the readout and the note that say so, the turning points drawn on the chart). The total stood at
+// 260,3 KB after the upkeep input and this takes it to 262,218 bytes (the Goals chunk from 69,5 KB to 71,398).
+// All of it is small code, in the engine and the lazy Goals chunk, with no new library.
+//
+// Raised from 262.4 KB to 263.2 KB, and the Goals chunk from 71.6 KB to 72.38 KB, for the years the money must
+// last (the field with its guide for the withdrawal rate, the drawdown that runs for them, and the FI target
+// said at three rates in the FI chart and in Where you are today). The total stood at 262,218 bytes after the
+// Rent vs buy redesign and this takes it to 262,905 (the Goals chunk from 71,398 to 72,081). All of it is small
+// code, in the engine and the lazy Goals chunk, with no new library.
+//
+// Raised from 263.2 KB to 263.78 KB, and the Goals chunk from 72.38 KB to 72.86 KB, for the market bounce card
+// in Assumptions (the stepper with its three usual choices, saved the way the assumed inflation is, which now
+// shares one hook with it). The total stood at 262,957 bytes after the replay engine and this takes it to 263,487
+// (the Goals chunk from 72,080 to 72,572). All of it is small code in the lazy Goals chunk, with no new library.
+//
+// Raised from 263.78 KB to 269.49 KB for the spread card (the replay, the card with its table and the lines for
+// the plan and the ranks, and the setting that feeds it). The card is a lazy chunk of its own (3,616 bytes), and
+// because the Goals tab and the card now share the chart shell and the media-query hook those two moved into
+// chunks of their own, which compress a little worse apart: the total stood at 263,487 bytes after the market
+// bounce card and this takes it to 269,214. The Goals chunk goes the other way, from 72,572 to 65,586, and its
+// limit stays where it was so that the rest of the stack still has room in it. No new library.
+//
+// Raised from 269.49 KB to 271.09 KB for showing both moneys (the net worth, the FI target, and the spending and
+// rent under their fields say what they come to on the account as well as in the plan's euros, every chart names
+// its euros, and the glossary explains the two): about 1,6 KB gzip, all of it text and small helpers in the lazy
+// Goals chunk, took the total from 269,214 to 270,785 bytes. The Goals chunk's limit stays where it was. No new
+// library.
+//
+// Raised from 271.09 KB to 271.52 KB for naming the money on the figures that had none (the Progress snapshot's labels and
+// its History caption, the dashboard card, the full-screen chart's bar, the purchase cost, the fees and the one-off event
+// form): about 0,1 KB gzip took the total from 271,145 to 271,220 bytes. No new library.
+//
+// Raised from 271.52 KB to 271.72 KB for the single rounding of the milestone years and FI as a month beside a
+// restart (the exact crossing of the FI target, the month label, and the start-date check): about 390 bytes gzip took the total
+// from 271,220 to 271,610 bytes. No new library.
+//
+// Raised from 271.72 KB to 271.99 KB for the spread table's wording (which euros each amount is in, what a run is,
+// where the bounce is set): about 180 bytes gzip took the total from 271,610 to 271,793 bytes. No new library.
+//
+// Raised from 271.99 KB to 272.8 KB for the spread card's fixes (a boundary that keeps a failed load to the card, the
+// hooks that hold the two market replays until the edits settle and the card is near the screen, and the card's table
+// in the scroller the milestone table uses): about 720 bytes gzip took the total from 271,793 to 272,517 bytes. The
+// card still waits for the page before it loads. No new library.
+//
+// Raised from 272.8 KB to 273.24 KB for the rent vs buy note and the House section saying what moves the answer and
+// what the plan leaves out of the portfolio: about 430 bytes gzip of text took the total from 272,517 to 272,945 bytes.
+// No new library.
+//
+// Raised from 273.24 KB to 273.6 KB for the plain-language fixes (what the return and spending notes leave out, the
+// bounce card's note on bonds, the odds line's cut-off, the unrecorded-investing note and the band's reach): about 365
+// bytes gzip of text took the total from 272,945 to 273,310 bytes. No new library.
+//
+// Raised from 273.6 KB to 273.9 KB for the owner's currency in the notes (the money named by `currencyWord`, the
+// glossary built from the owner's format) and the layout fixes (the table's scroller, a boundary round the lazy card,
+// a scroll into view for the chip arrowed to): about 360 bytes gzip took the total from 273,310 to 273,672 bytes
+// across the last two changes. No new library.
+//
+// Raised from 273.9 KB to 274.9 KB (and the Goals limit from 81.5 KB to 82.3 KB) for what main added while the planning
+// changes were open (the from-today chip's value tags) and the last fixes before they land (the milestone chip against
+// the from-today date, the worked monthly figure, the money named in four more places, the lean sentence on Rent vs buy,
+// the spread card's preload): the total went from 273,672 to 274,605 bytes gzip and the Goals-only code to 81,974. No
+// new library.
+//
+// The Goals limit used to count only the files named GoalsTab*, which left the chunks the bundler splits out of
+// the tab (named after the first module in them) and the lazy spread card outside it: 12.4 KB of Goals-only code,
+// with the limit left at 72.86 KB so that the total was the only thing watching it. It counts them now, found by
+// following the imports in the built files, and the limit is the 81,224 bytes they come to plus 276: GoalsTab
+// 68,846, the shared chart shell 8,802 and the spread card 3,576.
+const TOTAL_MAX_GZIP = 274_900
+const GOALS_MAX_GZIP = 82_300
 
 function gzipBytes(path) {
   return gzipSync(readFileSync(path)).length
@@ -176,12 +290,24 @@ if (jsFiles.length === 0) {
   process.exit(1)
 }
 
+const goalsOnly = new Set(
+  goalsOnlyChunks({
+    files: jsFiles,
+    read: (name) => readFileSync(join(assetsDir, name), 'utf8'),
+    indexHtml: readFileSync(join(assetsDir, '..', 'index.html'), 'utf8'),
+  }),
+)
+if (goalsOnly.size === 0) {
+  console.error('check-bundle-budget: found no Goals-only chunk in dist/assets, so the Goals limit would count nothing')
+  process.exit(1)
+}
+
 let total = 0
 let goals = 0
 for (const name of jsFiles) {
   const size = gzipBytes(join(assetsDir, name))
   total += size
-  if (name.startsWith('GoalsTab')) goals += size
+  if (goalsOnly.has(name)) goals += size
 }
 
 const kb = (n) => `${(n / 1000).toFixed(1)} KB`
@@ -190,7 +316,7 @@ if (total > TOTAL_MAX_GZIP) {
   failures.push(`total JS ${kb(total)} gzip exceeds budget ${kb(TOTAL_MAX_GZIP)}`)
 }
 if (goals > GOALS_MAX_GZIP) {
-  failures.push(`GoalsTab ${kb(goals)} gzip exceeds budget ${kb(GOALS_MAX_GZIP)}`)
+  failures.push(`Goals-only JS ${kb(goals)} gzip exceeds budget ${kb(GOALS_MAX_GZIP)}`)
 }
 
 if (failures.length > 0) {
@@ -198,4 +324,4 @@ if (failures.length > 0) {
   process.exit(1)
 }
 
-console.log(`bundle budget OK (total ${kb(total)} gzip, GoalsTab ${kb(goals)} gzip)`)
+console.log(`bundle budget OK (total ${kb(total)} gzip, Goals-only ${kb(goals)} gzip)`)

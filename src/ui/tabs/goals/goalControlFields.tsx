@@ -59,23 +59,32 @@ interface NumberFieldProps {
   value: number
   min: number
   max: number
+  /** Places kept after the point: none for a count, two for a term that has a part year left. */
+  decimals?: number
   onChange: (v: number) => void
 }
 
-/** A whole number with a −/+ stepper, the same shape as the percent stepper. */
-export function NumberField({ label, value, min, max, onChange }: NumberFieldProps) {
+/** A number with a −/+ stepper, the same shape as the percent stepper; whole unless it is given places. */
+export function NumberField({ label, value, min, max, decimals = 0, onChange }: NumberFieldProps) {
+  const format = useMoneyFormat()
+  const scale = Math.pow(10, decimals)
   const commit = useCallback(
     (next: number) => {
       if (Number.isNaN(next)) return
-      onChange(Math.min(max, Math.max(min, Math.round(next))))
+      onChange(Math.min(max, Math.max(min, Math.round(next * scale) / scale)))
     },
-    [max, min, onChange],
+    [max, min, onChange, scale],
   )
-  // An empty box is not a zero, and text that is not a number goes back to the value it had.
+  // What the box shows: the value to the places it keeps, in the mark the owner writes numbers with.
+  const shown = String(Math.round(value * scale) / scale).replace('.', format.decimalSeparator)
+  // An empty box is not a zero, and text that is not a number goes back to the value it had. Text that
+  // is what the box showed is not an edit, so a value written by something else (a loan's years left
+  // after a re-baseline) is not rounded by tabbing through it.
   const commitText = (input: HTMLInputElement) => {
+    if (input.value === shown) return
     const next = Number(input.value.replace(',', '.'))
     if (input.value.trim() === '' || Number.isNaN(next)) {
-      input.value = String(value)
+      input.value = shown
       return
     }
     commit(next)
@@ -99,9 +108,9 @@ export function NumberField({ label, value, min, max, onChange }: NumberFieldPro
             key={value}
             className={stepperStyles.input}
             type="text"
-            inputMode="numeric"
+            inputMode={decimals > 0 ? 'decimal' : 'numeric'}
             aria-label={label}
-            defaultValue={String(value)}
+            defaultValue={shown}
             onBlur={(e) => commitText(e.target)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') commitText(e.currentTarget)
