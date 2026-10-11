@@ -1298,6 +1298,15 @@ describe('NetWorthChart: picking a milestone', () => {
     expect(container.querySelectorAll(`.${chartStyles.refLineOn}`)).toHaveLength(1)
   })
 
+  it('lists a saved scenario beside the one being edited, each dated from its own plan start', () => {
+    const saved = makeScenario({ id: 7, name: 'Saved plan', planStartDate: '2024-01-01' })
+    render(<NetWorthChart milestones={milestones} scenarios={[saved]} draft={draft} variant="hero" activeId={null} />)
+    fireEvent.click(chips()[2]!)
+    const list = screen.getByRole('list', { name: /When each path reaches/ })
+    expect(within(list).getAllByRole('listitem')).toHaveLength(2)
+    expect(list.textContent).toContain('Saved plan')
+  })
+
   it('is a hero chart’s alone', () => {
     render(<NetWorthChart milestones={milestones} scenarios={[]} draft={draft} />)
     expect(screen.queryByRole('group', { name: 'Milestones' })).not.toBeInTheDocument()
