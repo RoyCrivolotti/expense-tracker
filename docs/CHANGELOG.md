@@ -6,6 +6,9 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 
 - **A number with a letter in it is no longer read as the digits in it.** "250k" in an amount became 250, "1e9" became 19 and "1.5M" became 1,50; "about 4" in a percentage became the least the field allows, which for the withdrawal rate multiplied the FI target by eight. The box now goes back to what it had, as it already did for text with no digit. This covers the amounts, years and percentages on the Plan page, the levers bar, a milestone's amount and a check-in's balances.
 - **"1,234.56" is read as one thousand two hundred and thirty-four and fifty-six cents in a comma format**, and "1.234,56" in a point format, where each was read as 1,23. With both marks in the text, the later one is the decimal mark.
+- **An amount must be written as one.** "1..5", "1,2,3", "5-5", "1 2" and "15CHF00" are refused and the box goes back, where they were read as 1,5, 1,23, 55, 12 and 1.500. A currency symbol may stand at either end, once.
+- **A check-in balance typed into and left as text goes back to what it held when you entered it**, not to the first digit typed ("1e9" had left 1).
+- **A percentage box shows a second decimal when the value has one**: 3.25% reads "3,25", not "3,3", and tabbing through it no longer writes 3.3% back.
 - **A very long number is held to 100 billion** instead of becoming Infinity, and a number held to the most or least a field takes shows that value in the box instead of what was typed (100 years in the horizon box stays "100" over a 60 it was already at).
 
 ## October 2026 (found by the last review before the planning changes landed)
