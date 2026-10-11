@@ -37,3 +37,13 @@ export function gapRows(split: GapSplit): Row[] {
     .map((r, k) => ({ key: r.key, label: r.label, euros: euros[k]!, ...(r.muted ? { muted: true } : {}) }))
     .filter((r) => r.euros !== 0)
 }
+
+/**
+ * Whether the gap is behind the plan and what was put in is about what the plan asks (within a planned month of it) or more, so it comes from
+ * the market and from where the plan started, and investing more would not be what closes it. Said only when
+ * saving and the market can be told apart and the recorded investing is not short; an unrecorded transfer or a
+ * low saving leaves the verdict as it was.
+ */
+export function behindFromTheMarket(split: GapSplit): boolean {
+  return split.verdict === 'behind' && split.merged === null && !split.recordedShort && split.plannedMonthCents > 0
+}
