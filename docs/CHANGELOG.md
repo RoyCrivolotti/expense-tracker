@@ -2,6 +2,11 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (first-run texts point at things that are there)
+
+- **Three empty-state sentences now point where the thing is.** With no plan, Progress said to open a scenario "under Plan" and choose Use as my plan, which does not exist before a scenario is saved: it now says to save one on the Plan page (Scenarios on a phone). With no account, the history said "Log your first snapshot above" although nothing is above: it says to set up an account in Assumptions. Rent vs buy with no house price says where the price is set.
+- **The spread card is not replayed while the phone shows the Scenarios half**, where it is hidden under the controls being edited.
+
 ## October 2026 (yen and won in a comma number style)
 
 - **An amount in a currency with no cents (yen, won) no longer reads as nothing under the German number style.** The decimal mark was read off a sample of the currency, which has no decimal part, so it was left as a point, the thousands mark of that style: the box showed 123.456.00 and tabbing through it saved 0. The mark now comes from the number style.

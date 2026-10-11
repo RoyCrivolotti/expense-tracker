@@ -50,7 +50,11 @@ export function CheckinList({ checkins, accounts, plan, canWrite, actions }: Pro
       ) : null}
 
       {sorted.length === 0 ? (
-        <p className={styles.emptyHint}>No check-ins yet. Log your first snapshot above.</p>
+        <p className={styles.emptyHint}>
+          {accounts.some((a) => !a.archived)
+            ? 'No check-ins yet. Log your first snapshot above.'
+            : 'No check-ins yet. Set up an account in Assumptions first, then log a balance.'}
+        </p>
       ) : (
         <div className={styles.checkinTimeline}>
           {sorted.map((c) => {
