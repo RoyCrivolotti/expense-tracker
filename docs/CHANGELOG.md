@@ -6,6 +6,18 @@ High-signal UX and reliability changes on `main`. Internal refactors omitted unl
 
 - **An amount in a currency with no cents (yen, won) no longer reads as nothing under the German number style.** The decimal mark was read off a sample of the currency, which has no decimal part, so it was left as a point, the thousands mark of that style: the box showed 123.456.00 and tabbing through it saved 0. The mark now comes from the number style.
 
+## October 2026 (Save says what it left out)
+
+- **Save no longer says just "Saved" while a change or an event is still open to add.** The form for a monthly change or a life event keeps what is typed in it until Add, and Save writes the scenario without it, so "Saved Path A" read as if the half-typed change were in. The toast now says "What you are still adding or editing is not in it yet."
+
+## October 2026 (moving the plan start past a monthly change)
+
+- **A monthly change dated before the new plan start becomes the starting amount.** Moving the start date later left the change where it was, and the plan quietly used its amount while the starting amount in the box and the first line of the history still showed the old one (500 € shown, 800 € used). The change now folds into the starting amount, as a re-baseline already did, and leaves the history.
+
+## October 2026 (behind because of the market is not an alarm)
+
+- **Behind plan is no longer red when your investing is what the plan asks.** Someone who puts in exactly the plan reads Behind in a lot of ordinary markets (about 4 in 10 over a year, in a simulation with a 15% yearly bounce), because the balance is compared with a straight line and a market is not one. When the split shows what you put in is at least the plan's, the verdict keeps its figure and its words, is drawn muted with "not from your investing" beside it, and the split says the gap comes from the market and where the plan started. A low or unrecorded saving stays red.
+
 ## October 2026 (found by the last review before the planning changes landed)
 
 - **A balance exactly on the plan's line no longer reads as started behind.** The gap split took the start part from the plan's own path and not from the line the status compares with, so a first check-in a few years in, exactly on the line, showed thousands behind "at the start" and offered to restart the plan. The start part is now the first check-in's gap to the line.
