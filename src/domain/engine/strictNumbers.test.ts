@@ -6,6 +6,7 @@ import {
   tryParseDecimal,
   tryParseMoneyToCents,
   tryParsePercentToFraction,
+  formatPercentInput,
 } from './money'
 
 const eur = resolveMoneyFormat('EUR', 'de-DE')
@@ -174,5 +175,30 @@ describe('tryParsePercentToFraction', () => {
 
   it.each(['about 4', '4k', '', '%', '1e1'])('is null for %j, so a withdrawal rate is not turned into its minimum', (typed) => {
     expect(tryParsePercentToFraction(typed)).toBeNull()
+  })
+})
+
+describe('formatPercentInput shows the second decimal when the value has one', () => {
+  it.each([
+    [0.05, '5,0', '5.0'],
+    [0.0325, '3,25', '3.25'],
+    [0.035, '3,5', '3.5'],
+    [0.0275, '2,75', '2.75'],
+    [0.0001, '0,01', '0.01'],
+    [0, '0,0', '0.0'],
+  ])('writes %d as %s in a comma format and %s in a point format', (fraction, comma, point) => {
+    expect(formatPercentInput(fraction, eur)).toBe(comma)
+    expect(formatPercentInput(fraction, usd)).toBe(point)
+  })
+
+  it('reads back to the same fraction', () => {
+    for (const fraction of [0.0325, 0.0275, 0.05, 0.0001, 0.12345]) {
+      const shown = formatPercentInput(fraction, eur)
+      expect(Math.abs((tryParsePercentToFraction(shown) ?? NaN) - fraction)).toBeLessThan(0.00006)
+    }
+  })
+
+  it('still takes an explicit number of decimals', () => {
+    expect(formatPercentInput(0.0325, eur, 1)).toBe('3,3')
   })
 })

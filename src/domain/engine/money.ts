@@ -296,13 +296,18 @@ export function formatPercent(
   })}%`
 }
 
-/** Localized string for editable percent inputs (no '%' sign), e.g. 0.05 -> "5,0". */
+/**
+ * Localized string for editable percent inputs (no '%' sign), e.g. 0.05 -> "5,0". One decimal, or two when the value
+ * has a second one that matters (0.0325 -> "3,25"): a box that showed "3,3" for a stored 3.25% was a rate nobody typed.
+ */
 export function formatPercentInput(
   fraction: number,
   format: MoneyFormat = EU_MONEY_FORMAT,
-  decimals = 1,
+  decimals?: number,
 ): string {
-  return (fraction * 100).toFixed(decimals).replace('.', format.decimalSeparator)
+  const pct = fraction * 100
+  const places = decimals ?? (Math.abs(Number(pct.toFixed(2)) - Number(pct.toFixed(1))) > 1e-9 ? 2 : 1)
+  return pct.toFixed(places).replace('.', format.decimalSeparator)
 }
 
 /**
