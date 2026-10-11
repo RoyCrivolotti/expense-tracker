@@ -2,6 +2,10 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (moving the plan start past a monthly change)
+
+- **A monthly change dated before the new plan start becomes the starting amount.** Moving the start date later left the change where it was, and the plan quietly used its amount while the starting amount in the box and the first line of the history still showed the old one (500 € shown, 800 € used). The change now folds into the starting amount, as a re-baseline already did, and leaves the history.
+
 ## October 2026 (behind because of the market is not an alarm)
 
 - **Behind plan is no longer red when your investing is what the plan asks.** Someone who puts in exactly the plan reads Behind in a lot of ordinary markets (about 4 in 10 over a year, in a simulation with a 15% yearly bounce), because the balance is compared with a straight line and a market is not one. When the split shows what you put in is at least the plan's, the verdict keeps its figure and its words, is drawn muted with "not from your investing" beside it, and the split says the gap comes from the market and where the plan started. A low or unrecorded saving stays red.
