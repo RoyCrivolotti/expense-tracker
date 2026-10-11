@@ -2,6 +2,9 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (new plans start for a long retirement)
+
+- **A new plan starts with the money lasting 40 years at a 3,5% withdrawal rate**, where it started at 30 years and 4%. In the app's own replay, 4% for 30 years lasts in about 86 of 100 simulated markets and 3,5% for 40 years in about 85, so the default no longer looks safer than it is for a retirement that begins early. The FI target for the same spending is higher (30.000 € a year needs 857.143 € at 3,5% and 750.000 € at 4%). Only a plan created from now on starts there: every saved scenario keeps its years and rate, and either can be changed on any plan.
 ## October 2026 (less to read on the Plan page)
 
 - **Rent vs buy, Housing, FI inputs and the spread card say what a reader needs and keep the rest behind a note.** On a house plan the Plan page had about 800 words of prose against about 340 before the changes, most of it explaining how each figure was counted. What stops a wrong decision stays in view: the loan and upkeep come from your income and not the portfolio, rates are entered as quoted, spend is before the tax on what you withdraw, the years the money must last point to a rule of thumb and not a promise, selling costs and tax are left out of Rent vs buy, and only the market changes in the spread. How the price, fees, rent and rates are counted, the guide for the years and the FI formula, what Rent vs buy assumes and how to read the spread are in closed notes ("How these are counted", "How FI is worked out", "What this assumes", "How to read it").

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_HORIZON_YEARS, DEFAULT_REAL_RETURN } from '../../../engine'
+import { DEFAULT_HORIZON_YEARS, DEFAULT_REAL_RETURN, DEFAULT_RETIREMENT_YEARS, NEW_PLAN_RETIREMENT_YEARS, NEW_PLAN_WITHDRAWAL_RATE, recommendedWithdrawalRate } from '../../../engine'
 import { makeDataset, makeWealthAccount, makeWealthCheckin } from '../../../testing/factories'
 import { todayIso } from '../../components/transactionFormState'
 import { draftFromDataset } from './goalsDefaults'
@@ -41,6 +41,19 @@ describe('draftFromDataset', () => {
   it('starts a new plan at a 5% return after inflation, the long-run record for world stocks', () => {
     expect(draftFromDataset(makeDataset(), 0).expectedRealReturn).toBe(0.05)
     expect(DEFAULT_REAL_RETURN).toBe(0.05)
+  })
+
+  it('starts a new plan with the money lasting 40 years at 3,5%, since a retirement that early is long and 4% was the rule for 30', () => {
+    const draft = draftFromDataset(makeDataset(), 0)
+    expect(draft.retirementYears).toBe(40)
+    expect(draft.safeWithdrawalRate).toBe(0.035)
+    expect(NEW_PLAN_RETIREMENT_YEARS).toBe(40)
+    // The rate is the guide for those years, so changing the years later still moves it with them until it is set by hand.
+    expect(NEW_PLAN_WITHDRAWAL_RATE).toBe(recommendedWithdrawalRate(NEW_PLAN_RETIREMENT_YEARS))
+  })
+
+  it('leaves 30 years for a scenario that says nothing, as every saved one that predates the field was drawn', () => {
+    expect(DEFAULT_RETIREMENT_YEARS).toBe(30)
   })
 
   it('never seeds a contribution below zero', () => {
