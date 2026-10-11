@@ -3,6 +3,7 @@ import type { GoalScenario } from '../../../types'
 import type { NewGoalScenario } from '../../../data/dataSource'
 import type { ExpenseActions } from '../../actions'
 import { useToast } from '../../hooks/useToast'
+import { openFormCount } from './openForms'
 import { editedPatch } from './scenarioDraft'
 
 /**
@@ -31,7 +32,11 @@ export function useScenarioSave(
     setSaving(true)
     void actions
       .updateScenario(activeId, saved ? editedPatch(draft, saved) : draft)
-      .then(() => showToast(`Saved ${name}`, 'success'))
+      .then(() => {
+        // A change or an event still open to add is not in the draft that was written.
+        const open = openFormCount() > 0
+        showToast(open ? `Saved ${name}. What you are still adding or editing is not in it yet.` : `Saved ${name}`, 'success')
+      })
       .finally(() => {
         inFlight.current = false
         setSaving(false)

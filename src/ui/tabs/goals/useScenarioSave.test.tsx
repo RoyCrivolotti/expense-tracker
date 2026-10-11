@@ -2,6 +2,7 @@ import { act, renderHook } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { useScenarioSave } from './useScenarioSave'
+import { registerOpenForm } from './openForms'
 import { draftFromDataset } from './goalsDefaults'
 import { ToastContext } from '../../hooks/useToast'
 import type { GoalScenario } from '../../../types'
@@ -68,6 +69,17 @@ describe('useScenarioSave', () => {
     expect(actions.updateScenario).toHaveBeenCalledWith(7, draft)
     expect(showToast).toHaveBeenCalledTimes(1)
     expect(showToast).toHaveBeenCalledWith('Saved Path A', 'success')
+  })
+
+  it('says what is still open, which Save did not take: a change or an event being added or edited', async () => {
+    const { result, showToast } = setup()
+    const release = registerOpenForm()
+    await pressSave(result)
+    release()
+    expect(showToast).toHaveBeenCalledWith('Saved Path A. What you are still adding or editing is not in it yet.', 'success')
+
+    await pressSave(result)
+    expect(showToast).toHaveBeenLastCalledWith('Saved Path A', 'success')
   })
 
   it('writes only what was edited when it knows the scenario as saved, not the whole draft', async () => {
