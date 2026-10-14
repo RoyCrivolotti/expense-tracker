@@ -114,6 +114,84 @@ describe('useSwipeDismiss', () => {
     expect(view.result.current.offset).toBe(0)
   })
 
+  describe('a touch that starts in a text field', () => {
+    /** Press in `field`, drag well past the dead zone, lift. Returns the last move event. */
+    function dragFrom(field: Element, distance = THRESHOLD + 20): Event {
+      const move = touch('touchmove', distance)
+      act(() => {
+        field.dispatchEvent(touch('touchstart', 0))
+      })
+      act(() => {
+        now += DELIBERATE_MS
+        field.dispatchEvent(move)
+      })
+      act(() => {
+        field.dispatchEvent(touch('touchend', distance))
+      })
+      return move
+    }
+
+    it.each([['input'], ['textarea']])('is left to the %s', (tag) => {
+      const { body, onDismiss, view } = setup()
+      const field = document.createElement(tag)
+      body.appendChild(field)
+
+      const move = dragFrom(field)
+
+      expect(onDismiss).not.toHaveBeenCalled()
+      expect(view.result.current.offset).toBe(0)
+      expect(view.result.current.isDragging).toBe(false)
+      expect(move.defaultPrevented).toBe(false)
+    })
+
+    it('is left to a contenteditable region and anything inside it', () => {
+      const { body, onDismiss } = setup()
+      const region = document.createElement('div')
+      region.setAttribute('contenteditable', 'true')
+      const inner = document.createElement('span')
+      region.appendChild(inner)
+      body.appendChild(region)
+
+      dragFrom(region)
+      dragFrom(inner)
+
+      expect(onDismiss).not.toHaveBeenCalled()
+    })
+
+    it('stays left to the field when the sheet is scrolled to its top', () => {
+      // The case that mattered: at the top, a body drag is a dismissal, so a field there
+      // is where the two gestures used to collide.
+      const { body, onDismiss } = setup({ scrollTop: 0 })
+      const field = document.createElement('input')
+      body.appendChild(field)
+
+      dragFrom(field, THRESHOLD + 200)
+
+      expect(onDismiss).not.toHaveBeenCalled()
+    })
+
+    it('does not make contenteditable="false" a field', () => {
+      const { body, onDismiss } = setup()
+      const region = document.createElement('div')
+      region.setAttribute('contenteditable', 'false')
+      body.appendChild(region)
+
+      dragFrom(region)
+
+      expect(onDismiss).toHaveBeenCalledTimes(1)
+    })
+
+    it('still dismisses from a body control that is not a field', () => {
+      const { body, onDismiss } = setup()
+      const button = document.createElement('button')
+      body.appendChild(button)
+
+      dragFrom(button)
+
+      expect(onDismiss).toHaveBeenCalledTimes(1)
+    })
+  })
+
   it('still dismisses from the grab handle while the body is scrolled down', () => {
     const { handle, onDismiss } = setup({ scrollTop: 120 })
 
