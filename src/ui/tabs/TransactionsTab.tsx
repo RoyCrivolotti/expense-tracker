@@ -21,6 +21,7 @@ import { scrollToResults } from './scrollToResults'
 import { useDebouncedAnnouncement } from '../hooks/useDebouncedAnnouncement'
 import { EXIT_MS } from '../hooks/motion'
 import { useToast } from '../hooks/useToast'
+import { todayLocalIso } from '../dates'
 import { FILTERS_LOCKED_HINT } from './selectionLockHints'
 import { useReimbursement } from './useReimbursement'
 import { usePastReports } from './usePastReports'
@@ -79,9 +80,10 @@ export function TransactionsTab({
   const announcement = useDebouncedAnnouncement(
     `${state.listRows.length} transactions match`,
   )
+  const today = todayLocalIso()
   const upcoming = useMemo(
-    () => detectUpcoming(model.dataset.transactions, { forBudgetMonth: month, rolloverDay }),
-    [model.dataset, month, rolloverDay],
+    () => detectUpcoming(model.dataset.transactions, { today }),
+    [model.dataset.transactions, today],
   )
   const { showToast } = useToast()
   const explainFilterLock = () => showToast(FILTERS_LOCKED_HINT)
@@ -116,7 +118,12 @@ export function TransactionsTab({
           />
           <InstallmentsCard model={model} actions={actions} month={month} />
           {upcoming.length > 0 && (
-            <UpcomingCard suggestions={upcoming} month={month} lookup={model.lookup} onAdd={actions.onAdd} />
+            <UpcomingCard
+              suggestions={upcoming}
+              currentMonth={defaultBudgetMonth(today, rolloverDay)}
+              lookup={model.lookup}
+              onAdd={actions.onAdd}
+            />
           )}
         </>
       )}

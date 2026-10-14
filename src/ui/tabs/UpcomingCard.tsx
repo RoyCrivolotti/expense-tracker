@@ -1,19 +1,19 @@
 import { useCallback, useState } from 'react'
 import type { RecurringSuggestion } from '../../engine'
-import { isSuggestionDue, shortMonthLabel } from '../../engine'
+import { shortMonthLabel } from '../../engine'
 import type { TransactionSeed } from '../actions'
 import type { Lookup } from '../format'
 import { formatDayLabel } from '../format'
 import { formatCents } from '../../engine/money'
 import { Card, SectionTitle } from '../components/primitives'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
-import { todayLocalIso } from '../dates'
 import styles from './UpcomingCard.module.css'
 
 interface Props {
+  /** The charges due today; the engine has already dropped the ones that are too early or too late. */
   suggestions: RecurringSuggestion[]
-  /** The budget month on screen; a suggestion for another one is marked with its own. */
-  month: string
+  /** The budget month today falls in; a suggestion that files under another one is marked with its own. */
+  currentMonth: string
   lookup: Lookup
   onAdd: (seed: TransactionSeed) => void
 }
@@ -72,7 +72,7 @@ function SuggestionRow({
   onDismiss,
 }: {
   suggestion: RecurringSuggestion
-  /** The suggestion's budget month when it is not the one on screen. */
+  /** The suggestion's budget month when it is not the current one. */
   forMonth: string | null
   lookup: Lookup
   onAdd: () => void
@@ -108,12 +108,11 @@ function SuggestionRow({
   )
 }
 
-export function UpcomingCard({ suggestions, month, lookup, onAdd }: Props) {
+export function UpcomingCard({ suggestions, currentMonth, lookup, onAdd }: Props) {
   const [dismissed, setDismissed] = useState(loadDismissed)
 
-  const today = todayLocalIso()
   const visible = suggestions.filter(
-    (s) => !dismissed.has(dismissKey(s)) && !dismissed.has(legacyDismissKey(s)) && isSuggestionDue(s, today, month),
+    (s) => !dismissed.has(dismissKey(s)) && !dismissed.has(legacyDismissKey(s)),
   )
 
   const handleDismiss = useCallback((s: RecurringSuggestion) => {
@@ -135,7 +134,7 @@ export function UpcomingCard({ suggestions, month, lookup, onAdd }: Props) {
           <SuggestionRow
             key={dismissKey(s)}
             suggestion={s}
-            forMonth={s.predictedBudgetMonth === month ? null : s.predictedBudgetMonth}
+            forMonth={s.predictedBudgetMonth === currentMonth ? null : s.predictedBudgetMonth}
             lookup={lookup}
             onAdd={() => onAdd(toSeed(s))}
             onDismiss={() => handleDismiss(s)}
