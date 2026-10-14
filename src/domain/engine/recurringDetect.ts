@@ -24,43 +24,44 @@ function byDateThenId(a: Transaction, b: Transaction): number {
 }
 
 /**
- * Transactions grouped by identity, with at least three occurrences. A group's dates and offsets
- * run oldest to newest whatever order the rows arrive in (the API sends them newest first), and
- * the group speaks for its newest occurrence.
+ * Transactions grouped by identity, with at least three occurrences, in the order the groups first
+ * appear in `transactions` (the Analytics fixed-cost list breaks ties by it). Within a group the
+ * dates and offsets run oldest to newest whatever order the rows arrive in (the API sends them
+ * newest first), and the group speaks for its newest row.
  */
 export function groupTransactions(transactions: Transaction[]): OccurrenceGroup[] {
-  const map = new Map<string, OccurrenceGroup>()
-
-  for (const txn of [...transactions].sort(byDateThenId)) {
+  const rowsByKey = new Map<string, Transaction[]>()
+  for (const txn of transactions) {
     if (txn.cancelled) continue
     if (!txn.description.trim()) continue
     // Installment-plan payments are a declared schedule, not a detected pattern.
     if (txn.planId != null) continue
 
     const key = occurrenceKey(txn)
-    const existing = map.get(key)
-    if (existing) {
-      existing.dates.push(txn.date)
-      existing.budgetMonths.add(txn.budgetMonth)
-      existing.budgetOffsets.push(budgetOffset(txn))
-      existing.amountCents = txn.amountCents
-      existing.label = txn.description
-    } else {
-      map.set(key, {
-        key: {
-          normalizedDesc: normalizeDesc(txn.description),
-          accountId: txn.accountId,
-          categoryId: txn.categoryId,
-          type: txn.type,
-        },
-        label: txn.description,
-        categoryId: txn.categoryId,
-        amountCents: txn.amountCents,
-        dates: [txn.date],
-        budgetMonths: new Set([txn.budgetMonth]),
-        budgetOffsets: [budgetOffset(txn)],
-      })
-    }
+    const rows = rowsByKey.get(key)
+    if (rows) rows.push(txn)
+    else rowsByKey.set(key, [txn])
   }
-  return [...map.values()].filter((g) => g.dates.length >= MIN_OCCURRENCES)
+
+  const groups: OccurrenceGroup[] = []
+  for (const rows of rowsByKey.values()) {
+    if (rows.length < MIN_OCCURRENCES) continue
+    const oldestFirst = [...rows].sort(byDateThenId)
+    const newest = oldestFirst[oldestFirst.length - 1]!
+    groups.push({
+      key: {
+        normalizedDesc: normalizeDesc(newest.description),
+        accountId: newest.accountId,
+        categoryId: newest.categoryId,
+        type: newest.type,
+      },
+      label: newest.description,
+      categoryId: newest.categoryId,
+      amountCents: newest.amountCents,
+      dates: oldestFirst.map((txn) => txn.date),
+      budgetMonths: new Set(oldestFirst.map((txn) => txn.budgetMonth)),
+      budgetOffsets: oldestFirst.map(budgetOffset),
+    })
+  }
+  return groups
 }

@@ -92,4 +92,12 @@ describe('groupTransactions', () => {
     const rows = monthlyDates(2026, 1, 5, 4).map((date) => makeTxn({ date, description: '   ' }))
     expect(groupTransactions(rows)).toHaveLength(0)
   })
+
+  it('lists the groups in the order they first appear in the rows, which the fixed-cost list breaks ties by', () => {
+    const alpha = monthlyDates(2026, 1, 5, 3).map((date) => makeTxn({ date, description: 'Alpha' }))
+    const beta = monthlyDates(2026, 3, 5, 3).map((date) => makeTxn({ date, description: 'Beta' }))
+    const newestFirst = [...alpha, ...beta].sort((a, b) => b.date.localeCompare(a.date))
+    expect(groupTransactions(newestFirst).map((g) => g.label)).toEqual(['Beta', 'Alpha'])
+    expect(groupTransactions([...alpha, ...beta]).map((g) => g.label)).toEqual(['Alpha', 'Beta'])
+  })
 })
