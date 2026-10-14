@@ -42,6 +42,22 @@
      frame. Fixed upstream in iOS 26.1; keep this until that's the floor. */
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
+  transition:
+    opacity var(--motion-enter-fade) var(--motion-ease-out),
+    visibility 0s linear 0s;
+}
+
+/* A phone keyboard pans the page up and carries every bottom-fixed surface with it, so the bar
+   would be drawn over the keyboard's accessory strip. It is under the keyboard anyway: hide it
+   while the keyboard is up (useKeyboardOpen). Hidden, not just transparent, so it leaves the
+   Tab order and takes no taps. Leaving mirrors arriving, and the visibility flip waits for the fade. */
+:global(html[data-keyboard-open]) .bottomBar {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity var(--motion-enter-fade) var(--motion-ease-in),
+    visibility 0s linear var(--motion-enter-fade);
 }
 
 .barList {
@@ -263,7 +279,8 @@
 /* Fade out while scrolling on mobile, where the fixed FAB otherwise sits on
    top of list rows passing underneath it. Not needed on desktop — the fab
    there floats in the sidebar's margin, past the content column's edge. */
-.fabHidden {
+.fabHidden,
+:global(html[data-keyboard-open]) .fab {
   opacity: 0;
   pointer-events: none;
 }
