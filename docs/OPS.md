@@ -176,6 +176,8 @@ A monthly pattern is predicted from its day of the month (the `calendar` rhythm)
 
 A suggestion carries `leadDays`, how many days before its predicted date the Upcoming card starts to show it: one day, plus, for a monthly pattern, how early the newest five occurrences (`WINDOW_HISTORY`) landed before the usual day, capped at four more. Earliness is measured around the nearest occurrence of the day, so a charge billed on the 31st or the 1st counts as a day apart, and a short month's clamped day is not early. The card shows a suggestion from `predictedDate - leadDays` and keeps it until a matching transaction is entered for that budget month or it is dismissed. Dismissals are kept in the browser's local storage, per device.
 
+The card also lists the budget month before the viewed one (`detectUpcoming`), because the view moves on at the rollover while a charge dated just before it may not have arrived yet, and it would drop out of sight with the month it belongs to. Such a charge carries a "For Oct" tag, stays for a week after its date (`PREVIOUS_MONTH_GRACE_DAYS`, `isSuggestionDue`), and its "+" adds it to that month, on its own date. Only the month before is looked at: a charge for the next month falls due after the view has already moved on to it, and anything older is more likely a series that stopped than a forgotten entry.
+
 ## Renaming many descriptions at once
 
 Analytics groups recurring spend by description, so "NETFLIX.COM", "Netflix 0912" and "Netflix"
