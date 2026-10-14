@@ -20,7 +20,7 @@ const MIN_REGULARITY = 0.6
  * a day or two, so one still missing after a week is more likely a series that stopped than an
  * entry that was forgotten, and a longer wait mostly shows cancelled subscriptions.
  */
-export const OVERDUE_EXPIRY_DAYS = 7
+const OVERDUE_EXPIRY_DAYS = 7
 
 /**
  * How many charges the card waits for. The first is the one due next; the second is there for a
@@ -30,9 +30,9 @@ export const OVERDUE_EXPIRY_DAYS = 7
 const EXPECTED_CHARGES = 2
 
 /**
- * A charge booked to the same budget month as a usual date, and dated within this many days of
+ * A charge booked to the same budget month as a usual date, and dated up to this many days before
  * it, is the charge for that date even if it came earlier than the reminder window reaches: a
- * bill logged on the 3rd for the 10th. Further off, a row in the same month is as likely to be an
+ * bill logged on the 3rd for the 10th. Further back, a row in the same month is as likely to be an
  * adjustment, or the previous cycle's charge booked to the month after it.
  */
 const SAME_MONTH_WITHIN_DAYS = 20
@@ -42,21 +42,26 @@ interface LoggedCharge {
   budgetMonth: string
 }
 
+interface Series {
+  /** The series' charges, oldest first. */
+  logged: LoggedCharge[]
+  usual: UsualDay
+  /** Days before a usual date that its reminder opens. */
+  lead: number
+  /** Months from a date's month to the budget month the series books it to. */
+  budgetOffset: number
+}
+
 /**
  * The date of the charge a series is waiting for: the first of its usual dates that no logged
  * charge covers. A charge covers a date when it was logged from the start of the date's reminder
- * window on, or when it is booked to the same budget month and dated close to it, so a charge
+ * window on, or when it is booked to the same budget month and dated shortly before it, so a charge
  * logged ahead of time, or booked to another budget month, counts as the one it was for. A date
  * more than a week past is given up on and the next one is looked at, up to `EXPECTED_CHARGES`.
  */
-function pendingDate(
-  logged: LoggedCharge[],
-  usual: UsualDay,
-  lead: number,
-  budgetOffset: number,
-  today: string,
-): string | null {
+function pendingDate({ logged, usual, lead, budgetOffset }: Series, today: string): string | null {
   const newest = logged[logged.length - 1]!.date
+  // Start a month early: a usual date a few days past the month's end belongs to the month before.
   let month = shiftBudgetMonth(newest.slice(0, 7), -1)
   let waitedFor = 0
   while (waitedFor < EXPECTED_CHARGES) {
@@ -67,7 +72,7 @@ function pendingDate(
       addDaysIso(date, -lead) <= newest ||
       logged.some(
         (charge) =>
-          charge.budgetMonth === budgetMonth && Math.abs(daysBetween(charge.date, date)) <= SAME_MONTH_WITHIN_DAYS,
+          charge.budgetMonth === budgetMonth && daysBetween(charge.date, date) <= SAME_MONTH_WITHIN_DAYS,
       )
     if (covered) continue
     waitedFor++
@@ -91,7 +96,7 @@ function suggestionFor(group: OccurrenceGroup, today: string): RecurringSuggesti
     date,
     budgetMonth: shiftBudgetMonth(date.slice(0, 7), group.budgetOffsets[i]!),
   }))
-  const predictedDate = pendingDate(logged, usual, lead, offset, today)
+  const predictedDate = pendingDate({ logged, usual, lead, budgetOffset: offset }, today)
   if (!predictedDate || !isDueSoon(predictedDate, today, lead)) return null
 
   return {

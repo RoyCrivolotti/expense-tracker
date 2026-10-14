@@ -22,6 +22,21 @@ function datesOf(rows: Transaction[], today: string): string[] {
   return upcoming(rows, today).map((s) => s.predictedDate)
 }
 
+/** The mornings, counting from the day after the newest row, on which the card lists anything. */
+function mornings(rows: Transaction[], count: number): string[] {
+  const newest = rows.map((r) => r.date).sort().pop()!
+  return Array.from({ length: count }, (_, i) => addDaysIso(newest, i + 1)).filter(
+    (today) => upcoming(rows, today).length > 0,
+  )
+}
+
+/** A series whose charges are `gaps` days apart, starting on `start`. */
+function withGaps(start: string, gaps: number[]): Transaction[] {
+  const dates = [start]
+  for (const gap of gaps) dates.push(addDaysIso(dates[dates.length - 1]!, gap))
+  return dates.map((date) => row(date))
+}
+
 describe('detectUpcoming', () => {
   describe('what it suggests', () => {
     it('suggests the next charge of a monthly series on its usual day', () => {
@@ -108,14 +123,25 @@ describe('detectUpcoming', () => {
       expect(datesOf(rows, '2026-07-05')).toEqual(['2026-07-05'])
     })
 
-    it('suggests monthly series only: weekly, quarterly and yearly ones are not on the card', () => {
+    it('suggests monthly series only: weekly, quarterly and yearly ones never reach the card', () => {
       const weekly = ['2026-06-01', '2026-06-08', '2026-06-15', '2026-06-22', '2026-06-29'].map((d) => row(d, { description: 'Weekly' }))
       const quarterly = ['2025-01-10', '2025-04-10', '2025-07-10', '2025-10-10'].map((d) => row(d, { description: 'Quarterly' }))
       const yearly = ['2023-06-20', '2024-06-20', '2025-06-20'].map((d) => row(d, { description: 'Yearly' }))
-      for (const today of ['2026-01-09', '2026-06-19', '2026-07-05', '2026-07-06']) {
-        expect(upcoming([...weekly, ...quarterly, ...yearly], today)).toEqual([])
-      }
+      expect(mornings(weekly, 120)).toEqual([])
+      expect(mornings(quarterly, 400)).toEqual([])
+      expect(mornings(yearly, 800)).toEqual([])
     })
+
+    it('needs a regular rhythm: a scattered series never reaches the card', () => {
+      // Monthly by its median gap, but only two of its five gaps are near it.
+      expect(mornings(withGaps('2026-01-01', [10, 45, 31, 20, 29]), 90)).toEqual([])
+    })
+
+    it('needs three in five gaps near the median, and not two in four', () => {
+      expect(mornings(withGaps('2026-01-01', [30, 30, 30, 10, 50]), 60)).not.toEqual([])
+      expect(mornings(withGaps('2026-01-01', [30, 30, 10, 50]), 60)).toEqual([])
+    })
+
   })
 
   describe('when it shows a charge', () => {
@@ -189,6 +215,23 @@ describe('detectUpcoming', () => {
       expect(datesOf(sameMonth, '2026-07-05')).toEqual([])
     })
 
+    it('counts a charge up to twenty days before the usual date and not a day further back', () => {
+      // Gym on the 25th; a row on 5 October is twenty days before 25 October, one on the 4th is 21.
+      const gym25 = monthlyDates(2026, 1, 25, 9).map((date) => row(date))
+      expect(datesOf([...gym25, row('2026-10-05')], '2026-10-25')).toEqual([])
+      expect(datesOf([...gym25, row('2026-10-04')], '2026-10-25')).toEqual(['2026-10-25'])
+    })
+
+    it('reads a charge booked to the next month the way the series books them', () => {
+      // Every charge on the 25th is booked to the month after. The one on 18 October is booked to
+      // November, as 25 October will be, so it is that charge; booked to October it is not.
+      const booked = monthlyDates(2026, 1, 25, 9).map((date) =>
+        row(date, { budgetMonth: `${addDaysIso(date, 10).slice(0, 7)}` }),
+      )
+      expect(datesOf([...booked, row('2026-10-18', { budgetMonth: '2026-11' })], '2026-10-25')).toEqual([])
+      expect(datesOf([...booked, row('2026-10-18', { budgetMonth: '2026-10' })], '2026-10-25')).toEqual(['2026-10-25'])
+    })
+
     it('does not count a charge in the same budget month that is more than twenty days off', () => {
       // 14 Sep booked to October is September's charge, a month before 14 October.
       const rows = [
@@ -244,6 +287,16 @@ describe('detectUpcoming', () => {
   })
 
   describe('which budget month a suggestion belongs to', () => {
+    it('follows the newest three charges when the booking habit has changed', () => {
+      // Four booked to their own month, then three to the month after.
+      const rows = monthlyDates(2026, 1, 5, 7).map((date, i) =>
+        row(date, { budgetMonth: i < 4 ? date.slice(0, 7) : `${addDaysIso(date, 31).slice(0, 7)}` }),
+      )
+      expect(upcoming(rows, '2026-08-05')).toMatchObject([
+        { predictedDate: '2026-08-05', predictedBudgetMonth: '2026-09' },
+      ])
+    })
+
     it('follows how the series is booked: a pay date on the 25th that rolls into the next month', () => {
       const rows = monthlyDates(2026, 1, 25, 6).map((date) =>
         row(date, { description: 'Payroll', type: 'income', budgetMonth: `${addDaysIso(date, 7).slice(0, 7)}` }),
@@ -290,24 +343,34 @@ describe('detectUpcoming', () => {
   })
 
   describe('time zones', () => {
-    it('gives the same answer wherever the device is, including across a clock change', () => {
-      const rows = [
-        row('2025-12-08'),
-        row('2026-01-08'),
-        row('2026-02-08'),
-      ]
+    function inEachZone<T>(compute: () => T): T[] {
       const originalTz = process.env.TZ
-      const answers: string[][] = []
       try {
-        for (const tz of ['UTC', 'America/Los_Angeles', 'Pacific/Apia', 'Australia/Lord_Howe']) {
+        return ['UTC', 'America/Los_Angeles', 'Pacific/Apia', 'Australia/Lord_Howe'].map((tz) => {
           process.env.TZ = tz
-          answers.push(['2026-03-07', '2026-03-08', '2026-03-09', '2026-03-16'].map((d) => datesOf(rows, d).join()))
-        }
+          return compute()
+        })
       } finally {
         if (originalTz === undefined) delete process.env.TZ
         else process.env.TZ = originalTz
       }
-      expect(answers[0]).toEqual(['2026-03-08', '2026-03-08', '2026-03-08', ''])
+    }
+
+    it('gives the same answer wherever the device is, across the day the clocks go forward', () => {
+      // Billed on the 9th; the clocks went forward on Sunday 8 March in Los Angeles.
+      const rows = [row('2025-12-09'), row('2026-01-09'), row('2026-02-09')]
+      const days = ['2026-03-07', '2026-03-08', '2026-03-09', '2026-03-16', '2026-03-17']
+      const answers = inEachZone(() => days.map((d) => datesOf(rows, d).join()))
+      expect(answers[0]).toEqual(['', '2026-03-09', '2026-03-09', '2026-03-09', ''])
+      for (const answer of answers) expect(answer).toEqual(answers[0])
+    })
+
+    it('gives the same answer wherever the device is, across the day the clocks go back', () => {
+      // Billed on the 1st; the clocks went back on Sunday 1 November in Los Angeles.
+      const rows = [row('2026-08-01'), row('2026-09-01'), row('2026-10-01')]
+      const days = ['2026-10-30', '2026-10-31', '2026-11-01', '2026-11-08', '2026-11-09']
+      const answers = inEachZone(() => days.map((d) => datesOf(rows, d).join()))
+      expect(answers[0]).toEqual(['', '2026-11-01', '2026-11-01', '2026-11-01', ''])
       for (const answer of answers) expect(answer).toEqual(answers[0])
     })
   })

@@ -43,7 +43,6 @@ export function groupTransactions(transactions: Transaction[]): OccurrenceGroup[
       existing.dates.push(txn.date)
       existing.budgetMonths.add(txn.budgetMonth)
       existing.budgetOffsets.push(budgetOffset(txn))
-      existing.categoryId = txn.categoryId
       existing.amountCents = txn.amountCents
       existing.label = txn.description
     } else {

@@ -87,4 +87,9 @@ describe('groupTransactions', () => {
     expect(groupTransactions(rows)[0]!.amountCents).toBe(9_900)
     expect(groupTransactions([...rows].reverse())[0]!.amountCents).toBe(9_900)
   })
+
+  it('skips a row with a blank description', () => {
+    const rows = monthlyDates(2026, 1, 5, 4).map((date) => makeTxn({ date, description: '   ' }))
+    expect(groupTransactions(rows)).toHaveLength(0)
+  })
 })
