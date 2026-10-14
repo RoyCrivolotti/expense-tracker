@@ -96,7 +96,10 @@
   scroll-margin-top: calc(-1 * var(--scroll-pad-top, 0px));
 }
 
+/* Both header forms share one height, so turning select mode on does not move the rows under
+   a finger that is still holding one of them. */
 .dayHeaderRow {
+  min-height: 1.75rem;
   position: sticky;
   top: calc(
     var(--exp-header) - var(--exp-header-tuck) + env(safe-area-inset-top, 0px) +
@@ -156,7 +159,8 @@
   align-items: center;
   gap: 0.35rem;
   width: 100%;
-  padding: 0.45rem 0.25rem;
+  min-height: 1.75rem;
+  padding: 0 0.25rem;
   background: var(--color-bg);
   color: var(--color-text-muted);
 }
