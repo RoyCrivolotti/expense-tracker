@@ -1,5 +1,5 @@
 import type { Transaction } from '../types'
-import { defaultBudgetMonth, isDueSoon, monthsBetweenBudget, priorBudgetMonth } from './dates'
+import { addDaysIso, defaultBudgetMonth, isDueSoon, monthsBetweenBudget, priorBudgetMonth } from './dates'
 import {
   PREDICT_HISTORY,
   classifyFrequency,
@@ -191,13 +191,18 @@ function trySuggestGroup(
   if (!prediction) return null
   if (isAlreadyEntered(group.key, prediction.predictedBM, transactions)) return null
 
+  // A charge logged from the start of this suggestion's window on is the one it is about, whichever
+  // budget month it was booked to, and a series that skips a month would otherwise keep a card for it.
+  const lead = leadDays(frequency, sorted)
+  if (sorted[sorted.length - 1]! >= addDaysIso(prediction.predictedDate, -lead)) return null
+
   return buildSuggestion(
     group,
     frequency,
     Math.min(regularity, 1),
     prediction.predictedDate,
     prediction.predictedBM,
-    leadDays(frequency, sorted),
+    lead,
   )
 }
 
