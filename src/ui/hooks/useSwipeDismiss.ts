@@ -12,6 +12,13 @@ export const SHEET_GRAB_ATTR = 'data-sheet-grab'
 /** Spread onto whichever parts of a sheet should always start a dismissal. */
 export const sheetGrabProps = { [SHEET_GRAB_ATTR]: '' } as const
 
+/**
+ * Where a touch is working the text rather than the sheet. Press-hold-drag there selects or
+ * moves the caret, and a finger that drifts down by a few pixels mid-gesture must not carry
+ * the sheet with it or have the touch taken from the field.
+ */
+const EDITABLE = 'input, textarea, [contenteditable]:not([contenteditable="false"])'
+
 /** Enough recent positions to cover the velocity window at any sane frame rate. */
 const MAX_SAMPLES = 12
 
@@ -31,6 +38,7 @@ export interface SwipeDismissState {
  * moving down the same surface. The decision is made once, at `touchstart`, and
  * latched for the whole sequence — a gesture never changes meaning halfway through:
  *
+ *  - started in a text field          → never a dismissal, whatever the scroll;
  *  - started on the handle or header  → always a dismissal;
  *  - started in the body              → a dismissal only if the sheet is already
  *                                       scrolled to its top;
@@ -88,7 +96,8 @@ export function useSwipeDismiss(
       if (!touch) return
       const target = e.target instanceof Element ? e.target : null
       const onGrab = target?.closest(`[${SHEET_GRAB_ATTR}]`) != null
-      armed.current = onGrab || sheet.scrollTop <= 0
+      const inField = target?.closest(EDITABLE) != null
+      armed.current = !inField && (onGrab || sheet.scrollTop <= 0)
       if (!armed.current) return
       committed.current = false
       startY.current = touch.clientY
