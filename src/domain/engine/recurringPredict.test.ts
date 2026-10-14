@@ -151,8 +151,14 @@ describe('leadDays', () => {
     expect(leadDays('monthly', dates)).toBe(1)
   })
 
-  it('ignores charges older than the history it reads', () => {
-    const dates = ['2025-12-15', '2026-01-02', '2026-02-02', '2026-03-02', '2026-04-02', '2026-05-02']
+  it('ignores an early charge older than the history it reads', () => {
+    // 27 Dec is six days before the usual 2nd; it is the sixth newest, so it does not count.
+    const dates = ['2025-12-27', '2026-01-02', '2026-02-02', '2026-03-02', '2026-04-02', '2026-05-02']
+    expect(leadDays('monthly', dates)).toBe(1)
+  })
+
+  it('counts a charge on the 1st as a day after a usual day of the 31st, not thirty days before it', () => {
+    const dates = ['2026-05-31', '2026-07-01', '2026-07-31', '2026-08-31']
     expect(leadDays('monthly', dates)).toBe(1)
   })
 
