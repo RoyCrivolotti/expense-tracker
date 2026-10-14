@@ -1,5 +1,5 @@
 import type { Transaction } from '../types'
-import { defaultBudgetMonth, monthsBetweenBudget, priorBudgetMonth, shiftBudgetMonth } from './dates'
+import { defaultBudgetMonth, isDueSoon, monthsBetweenBudget, priorBudgetMonth, shiftBudgetMonth } from './dates'
 import {
   PREDICT_HISTORY,
   chooseRhythm,
@@ -276,4 +276,41 @@ export function detectRecurring(
   }
 
   return suggestions.sort((a, b) => a.predictedDate.localeCompare(b.predictedDate))
+}
+
+/**
+ * Days after its date that a charge for the month before the viewed one stays on the card. By
+ * then nearly every real charge has been logged, so what is still missing is more likely a
+ * series that stopped than an entry that was forgotten.
+ */
+export const PREVIOUS_MONTH_GRACE_DAYS = 7
+
+/**
+ * Suggestions for the viewed budget month and for the one before it. The view moves on at the
+ * rollover, while a charge dated just before it may not have arrived yet, and it would drop out
+ * of sight with the month it belongs to.
+ */
+export function detectUpcoming(
+  transactions: Transaction[],
+  options: DetectRecurringOptions & { forBudgetMonth: string },
+): RecurringSuggestion[] {
+  const previous = detectRecurring(transactions, {
+    ...options,
+    forBudgetMonth: priorBudgetMonth(options.forBudgetMonth),
+  })
+  return [...previous, ...detectRecurring(transactions, options)].sort((a, b) =>
+    a.predictedDate.localeCompare(b.predictedDate),
+  )
+}
+
+/**
+ * Whether the card shows a suggestion on `today` while `month` is viewed: it is due within its
+ * window or overdue, and a charge for the month before is overdue by no more than a week.
+ */
+export function isSuggestionDue(suggestion: RecurringSuggestion, today: string, month: string): boolean {
+  if (!isDueSoon(suggestion.predictedDate, today, suggestion.leadDays)) return false
+  return (
+    suggestion.predictedBudgetMonth === month ||
+    daysBetween(suggestion.predictedDate, today) <= PREVIOUS_MONTH_GRACE_DAYS
+  )
 }

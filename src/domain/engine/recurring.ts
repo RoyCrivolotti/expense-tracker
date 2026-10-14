@@ -10,4 +10,10 @@ export {
   predictNextDate,
   regularityScore,
 } from './recurringPredict'
-export { detectRecurring, groupTransactions } from './recurringDetect'
+export {
+  PREVIOUS_MONTH_GRACE_DAYS,
+  detectRecurring,
+  detectUpcoming,
+  groupTransactions,
+  isSuggestionDue,
+} from './recurringDetect'

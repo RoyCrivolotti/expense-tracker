@@ -34,6 +34,14 @@
   font-size: 0.7rem;
 }
 
+.forMonth {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 0.7rem;
+  color: var(--color-accent);
+}
+
 .actions {
   display: flex;
   align-items: center;
