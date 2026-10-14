@@ -3,6 +3,17 @@
   flex-direction: column;
   gap: 1rem;
 }
+/* Holding a row selects it, and the touch is still down afterwards: the browser's own
+   press-and-hold fires shortly after ours and highlights whatever word is under the finger. A
+   tap opens the editor, so there is nothing to copy by touch. A mouse can still select. Leave
+   out `-webkit-touch-callout: none`: with it the iOS 27 simulator reloaded the page whenever
+   the held row was replaced. */
+@media (pointer: coarse) {
+  .list {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
 .group {
   display: flex;
   flex-direction: column;
