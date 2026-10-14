@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { detectRecurring, groupTransactions } from './recurringDetect'
-import { isDueSoon } from './dates'
+import { addDaysIso, defaultBudgetMonth, isDueSoon } from './dates'
 import { makeTxn, monthlyDates } from './recurringTestHelpers'
 
 describe('groupTransactions', () => {
@@ -322,6 +322,82 @@ describe('detectRecurring', () => {
     const july = detectRecurring(txns, { forBudgetMonth: '2026-07' })
     expect(july.find((s) => s.categoryId === 7)).toBeDefined()
   })
+  describe('a charge that repeats a fixed number of days apart', () => {
+    /** `count` charges `gap` days apart, the last on `end`, booked by the rollover rule unless told otherwise. */
+    function everyDaysEnding(end: string, gap: number, count: number, rolloverDay = 1) {
+      return Array.from({ length: count }, (_, i) => addDaysIso(end, -gap * (count - 1 - i))).map((date) =>
+        makeTxn({ date, budgetMonth: defaultBudgetMonth(date, rolloverDay), description: 'Top-up' }),
+      )
+    }
+
+    it('predicts the next charge the typical gap after the last, not on its day of the month', () => {
+      // Every 35 days; the last was 5 Jun 2026, so the next is 10 Jul.
+      const txns = everyDaysEnding('2026-06-05', 35, 8)
+      const [july] = detectRecurring(txns, { forBudgetMonth: '2026-07' })
+      expect(july!.predictedDate).toBe('2026-07-10')
+      expect(july!.predictedBudgetMonth).toBe('2026-07')
+    })
+
+    it('has no suggestion for a month the series skips', () => {
+      // Every 35 days, the last on 27 Nov 2026: the next are 1 Jan and 5 Feb, so nothing lands in December.
+      const txns = everyDaysEnding('2026-11-27', 35, 8)
+      expect(detectRecurring(txns, { forBudgetMonth: '2026-12' })).toHaveLength(0)
+      const [january] = detectRecurring(txns, { forBudgetMonth: '2027-01' })
+      expect(january!.predictedDate).toBe('2027-01-01')
+    })
+
+    it('suggests a second charge in the same month when the series repeats every four weeks', () => {
+      // 3 Oct 2026 is followed 28 days later by 31 Oct, in the same October budget month.
+      const txns = everyDaysEnding('2026-10-03', 28, 8)
+      const [october] = detectRecurring(txns, { forBudgetMonth: '2026-10' })
+      expect(october!.predictedDate).toBe('2026-10-31')
+    })
+
+    it('stops suggesting it once the charge is entered, however far from the predicted day', () => {
+      const txns = everyDaysEnding('2026-06-05', 35, 8)
+      txns.push(makeTxn({ date: '2026-07-04', budgetMonth: '2026-07', description: 'Top-up' }))
+      expect(detectRecurring(txns, { forBudgetMonth: '2026-07' })).toHaveLength(0)
+    })
+
+    it('puts a charge in the budget month the rollover day gives its date, as the series was booked', () => {
+      // With a 13th rollover, 14 Aug 2026 counts toward September and 18 Sep toward October.
+      const txns = everyDaysEnding('2026-07-10', 35, 8, 13)
+      const [september] = detectRecurring(txns, { forBudgetMonth: '2026-09', rolloverDay: 13 })
+      expect(september!.predictedDate).toBe('2026-08-14')
+      expect(september!.predictedBudgetMonth).toBe('2026-09')
+    })
+
+    it('keeps the series own offset when it was not booked by the rollover rule', () => {
+      // The newest charge, on 14 Aug, is booked to August although the 13th rolls it into September.
+      const txns = everyDaysEnding('2026-08-14', 35, 8, 13).map((t, i, all) =>
+        i === all.length - 1 ? { ...t, budgetMonth: '2026-08' } : t,
+      )
+      const [september] = detectRecurring(txns, { forBudgetMonth: '2026-09', rolloverDay: 13 })
+      expect(september!.predictedDate).toBe('2026-09-18')
+      expect(september!.predictedBudgetMonth).toBe('2026-09')
+    })
+
+    it('shows it a day before the predicted date and not a week before', () => {
+      const txns = everyDaysEnding('2026-06-05', 35, 8)
+      const [july] = detectRecurring(txns, { forBudgetMonth: '2026-07' })
+      expect(isDueSoon(july!.predictedDate, '2026-07-09', july!.leadDays)).toBe(true)
+      expect(isDueSoon(july!.predictedDate, '2026-07-03', july!.leadDays)).toBe(false)
+    })
+
+    it('keeps predicting from the day of the month with fewer than six charges', () => {
+      // Five charges every 35 days, the last on 20 Feb: the day of the month (the 16th) is used, not 27 Mar.
+      const txns = everyDaysEnding('2026-02-20', 35, 5)
+      const [march] = detectRecurring(txns, { forBudgetMonth: '2026-03' })
+      expect(march!.predictedDate).toBe('2026-03-16')
+    })
+
+    it('leaves a steady day of the month on the calendar', () => {
+      const txns = monthlyDates(2025, 10, 15, 8).map((date) => makeTxn({ date, description: 'Rent' }))
+      const [prediction] = detectRecurring(txns, { forBudgetMonth: '2026-06' })
+      expect(prediction!.predictedDate).toBe('2026-06-15')
+    })
+  })
+
   describe('when the card decides what is due', () => {
     // The card shows a suggestion when its predicted date is at most `leadDays` away (or past).
     function visibleOn(today: string, forBudgetMonth: string, txns: ReturnType<typeof makeTxn>[]) {
