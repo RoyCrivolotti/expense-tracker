@@ -1,7 +1,9 @@
 import type { Transaction } from '../types'
 import { defaultBudgetMonth, monthsBetweenBudget, priorBudgetMonth } from './dates'
 import {
+  PREDICT_HISTORY,
   classifyFrequency,
+  leadDays,
   predictDateInBudgetMonth,
   predictNextDate,
   regularityScore,
@@ -107,19 +109,13 @@ function isAlreadyEntered(
   )
 }
 
-function computeDaySpread(sortedDates: string[]): number {
-  if (sortedDates.length === 0) return 0
-  const days = sortedDates.map((d) => parseInt(d.slice(8), 10))
-  return Math.max(...days) - Math.min(...days)
-}
-
 function buildSuggestion(
   group: OccurrenceGroup,
   frequency: RecurringFrequency,
   confidence: number,
   predictedDate: string,
   predictedBudgetMonth: string,
-  daySpread: number,
+  lead: number,
 ): RecurringSuggestion {
   return {
     description: group.label,
@@ -132,13 +128,17 @@ function buildSuggestion(
     frequency,
     confidence,
     occurrences: group.dates.length,
-    daySpread,
+    leadDays: lead,
   }
 }
 
-/** Typical months from calendar month to budget month for a group (rounded median). */
-function canonicalMonthOffset(offsets: number[]): number {
-  return offsets.length === 0 ? 0 : Math.round(median(offsets))
+/** Typical months from calendar month to budget month, from the group's newest occurrences. */
+function canonicalMonthOffset(group: OccurrenceGroup): number {
+  const newest = group.dates
+    .map((date, i) => ({ date, offset: group.budgetOffsets[i]! }))
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-PREDICT_HISTORY)
+  return newest.length === 0 ? 0 : Math.round(median(newest.map((p) => p.offset)))
 }
 
 function resolvePrediction(
@@ -186,7 +186,7 @@ function trySuggestGroup(
   const regularity = regularityScore(gaps)
   if (regularity < MIN_REGULARITY) return null
 
-  const monthOffset = canonicalMonthOffset(group.budgetOffsets)
+  const monthOffset = canonicalMonthOffset(group)
   const prediction = resolvePrediction(sorted, frequency, forMonth, monthOffset, rolloverDay)
   if (!prediction) return null
   if (isAlreadyEntered(group.key, prediction.predictedBM, transactions)) return null
@@ -197,7 +197,7 @@ function trySuggestGroup(
     Math.min(regularity, 1),
     prediction.predictedDate,
     prediction.predictedBM,
-    computeDaySpread(sorted),
+    leadDays(frequency, sorted),
   )
 }
 

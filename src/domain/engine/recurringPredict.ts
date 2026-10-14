@@ -1,4 +1,4 @@
-import { addDaysIso, shiftBudgetMonth } from './dates'
+import { addDaysIso, daysBetween, shiftBudgetMonth } from './dates'
 import type { RecurringFrequency } from './recurringTypes'
 
 const DAY_TOLERANCE = 2
@@ -31,9 +31,62 @@ export function regularityScore(gaps: number[]): number {
   return inRange / gaps.length
 }
 
-/** Median day-of-month from historical dates (tolerates weekend drift). */
+/**
+ * How many of a series' newest occurrences say where it lands next. Older ones describe a
+ * billing day it has since left, and a median over all of them keeps predicting the old day
+ * until the new one outnumbers it.
+ */
+export const PREDICT_HISTORY = 3
+
+/** Median day-of-month of the newest occurrences (tolerates weekend drift). */
 export function canonicalDayOfMonth(sortedDates: string[]): number {
-  return Math.round(median(sortedDates.map(dayOfMonth)))
+  return Math.round(median(sortedDates.slice(-PREDICT_HISTORY).map(dayOfMonth)))
+}
+
+/** How many of a series' newest occurrences say how early it can land. */
+export const WINDOW_HISTORY = 5
+
+/** A suggestion shows this many days before its predicted date at the least. */
+const BASE_LEAD_DAYS = 1
+
+/**
+ * The most a series' earliness can add to that. Past this a reminder is mostly noise: an
+ * erratic series is better shown late than every day of the month.
+ */
+const MAX_EARLY_DAYS = 4
+
+/** Signed days from `iso` to the nearest occurrence of day-of-month `day` (clamped to short months). */
+function daysFromDay(iso: string, day: number): number {
+  const yearMonth = iso.slice(0, 7)
+  let nearest = Infinity
+  for (const shift of [-1, 0, 1]) {
+    const month = shiftBudgetMonth(yearMonth, shift)
+    const [y, m] = month.split('-').map(Number) as [number, number]
+    const clamped = Math.min(day, new Date(y, m, 0).getDate())
+    const delta = daysBetween(`${month}-${String(clamped).padStart(2, '0')}`, iso)
+    if (Math.abs(delta) < Math.abs(nearest)) nearest = delta
+  }
+  return nearest
+}
+
+/**
+ * How many days before the usual day a monthly series has recently turned up. Measured around
+ * the nearest occurrence of the day, not as a spread of day-of-month numbers, so a charge billed
+ * on the 31st or the 1st is a day apart rather than thirty.
+ */
+function recentEarlyDays(sortedDates: string[]): number {
+  const day = canonicalDayOfMonth(sortedDates)
+  return Math.max(0, ...sortedDates.slice(-WINDOW_HISTORY).map((d) => -daysFromDay(d, day)))
+}
+
+/**
+ * Days before `predictedDate` that a suggestion starts to show: a day's notice, plus for a
+ * monthly series how early it has recently landed, up to a cap. A weekly, quarterly or yearly
+ * one lands a fixed span after the last, so the day's notice is all it needs.
+ */
+export function leadDays(frequency: RecurringFrequency, sortedDates: string[]): number {
+  if (frequency !== 'monthly') return BASE_LEAD_DAYS
+  return BASE_LEAD_DAYS + Math.min(MAX_EARLY_DAYS, recentEarlyDays(sortedDates))
 }
 
 /**

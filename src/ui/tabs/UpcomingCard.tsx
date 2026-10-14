@@ -97,7 +97,7 @@ export function UpcomingCard({ suggestions, lookup, onAdd }: Props) {
 
   const today = todayLocalIso()
   const visible = suggestions.filter(
-    (s) => !dismissed.has(dismissKey(s)) && isDueSoon(s.predictedDate, today, s.daySpread + 1),
+    (s) => !dismissed.has(dismissKey(s)) && isDueSoon(s.predictedDate, today, s.leadDays),
   )
 
   const handleDismiss = useCallback((s: RecurringSuggestion) => {

@@ -106,23 +106,23 @@ describe('detectRecurring', () => {
     expect(suggestions).toHaveLength(0)
   })
 
-  it('sets daySpread to max minus min day-of-month across occurrences', () => {
+  it('opens the window by how early the newest charges landed', () => {
     const txns = [
-      makeTxn({ date: '2026-01-25', description: 'Crunchyroll' }),
-      makeTxn({ date: '2026-02-27', description: 'Crunchyroll' }),
-      makeTxn({ date: '2026-03-30', description: 'Crunchyroll' }),
-      makeTxn({ date: '2026-04-26', description: 'Crunchyroll' }),
+      makeTxn({ date: '2026-01-25', description: 'Streaming' }),
+      makeTxn({ date: '2026-02-27', description: 'Streaming' }),
+      makeTxn({ date: '2026-03-30', description: 'Streaming' }),
+      makeTxn({ date: '2026-04-26', description: 'Streaming' }),
     ]
     const suggestions = detectRecurring(txns)
-    expect(suggestions[0]!.daySpread).toBe(5) // 30 - 25
+    expect(suggestions[0]!.leadDays).toBe(3)
   })
 
-  it('sets daySpread to 0 when all occurrences fall on the same day', () => {
+  it('gives a day of notice when every occurrence falls on the same day', () => {
     const txns = monthlyDates(2026, 1, 15, 4).map((date) =>
       makeTxn({ date, description: 'Netflix' }),
     )
     const suggestions = detectRecurring(txns)
-    expect(suggestions[0]!.daySpread).toBe(0)
+    expect(suggestions[0]!.leadDays).toBe(1)
   })
 
   it('uses most recent amount within a group', () => {
@@ -225,6 +225,24 @@ describe('detectRecurring', () => {
     expect(detectRecurring(iconTxns, { forBudgetMonth: '2026-07' })).toHaveLength(0)
   })
 
+  it('predicts a moved pay date from its newest occurrences, not its whole history', () => {
+    // Paid on the 1st for five months, then on the 21st or 22nd (which rolls into the next budget month).
+    const txns = [
+      ['2026-01-01', '2026-01'],
+      ['2026-02-01', '2026-02'],
+      ['2026-03-01', '2026-03'],
+      ['2026-04-01', '2026-04'],
+      ['2026-05-01', '2026-05'],
+      ['2026-05-22', '2026-06'],
+      ['2026-06-21', '2026-07'],
+    ].map(([date, bm]) =>
+      makeTxn({ date: date!, budgetMonth: bm!, description: 'Payroll', type: 'income' }),
+    )
+    const [august] = detectRecurring(txns, { forBudgetMonth: '2026-08', rolloverDay: 13 })
+    expect(august!.predictedDate).toBe('2026-07-21')
+    expect(august!.predictedBudgetMonth).toBe('2026-08')
+  })
+
   it('suggests July when prior BM is June but last calendar date is late May', () => {
     const txns = [
       ...monthlyDates(2026, 1, 1, 4).map((date) =>
@@ -303,5 +321,64 @@ describe('detectRecurring', () => {
     ]
     const july = detectRecurring(txns, { forBudgetMonth: '2026-07' })
     expect(july.find((s) => s.categoryId === 7)).toBeDefined()
+  })
+  describe('when the card decides what is due', () => {
+    // The card shows a suggestion when its predicted date is at most `leadDays` away (or past).
+    function visibleOn(today: string, forBudgetMonth: string, txns: ReturnType<typeof makeTxn>[]) {
+      return detectRecurring(txns, { forBudgetMonth, rolloverDay: 13 }).filter((s) =>
+        isDueSoon(s.predictedDate, today, s.leadDays),
+      )
+    }
+
+    it('keeps a charge billed on the 1st or the 31st off the card until the end of the month', () => {
+      const txns = [
+        ['2026-01-01', '2026-01'],
+        ['2026-02-01', '2026-02'],
+        ['2026-03-01', '2026-03'],
+        ['2026-04-01', '2026-04'],
+        ['2026-05-01', '2026-05'],
+        ['2026-05-31', '2026-06'],
+        ['2026-07-01', '2026-07'],
+        ['2026-08-01', '2026-08'],
+        ['2026-08-31', '2026-09'],
+        ['2026-09-30', '2026-10'],
+      ].map(([date, bm]) => makeTxn({ date: date!, budgetMonth: bm!, description: 'App subscription' }))
+      expect(visibleOn('2026-10-14', '2026-11', txns)).toHaveLength(0)
+      expect(visibleOn('2026-10-29', '2026-11', txns)).toHaveLength(1)
+      expect(visibleOn('2026-11-01', '2026-11', txns)).toHaveLength(1)
+    })
+
+    it('does not let one early outlier row keep a steady charge on the card for weeks', () => {
+      const txns = [
+        makeTxn({ date: '2025-12-17', budgetMonth: '2026-01', description: 'Lessons', amountCents: 4_200 }),
+        ...['2026-02-04', '2026-03-02', '2026-04-02', '2026-05-04', '2026-06-02', '2026-07-03', '2026-08-04', '2026-09-02'].map(
+          (date) => makeTxn({ date, description: 'Lessons', amountCents: 4_200 }),
+        ),
+      ]
+      expect(visibleOn('2026-09-18', '2026-10', txns)).toHaveLength(0)
+      expect(visibleOn('2026-10-02', '2026-10', txns)).toHaveLength(1)
+    })
+
+    it('shows a pay date that moved near its new day and not near its old one', () => {
+      const txns = [
+        ['2026-01-01', '2026-01'],
+        ['2026-02-01', '2026-02'],
+        ['2026-03-01', '2026-03'],
+        ['2026-04-01', '2026-04'],
+        ['2026-05-01', '2026-05'],
+        ['2026-05-22', '2026-06'],
+        ['2026-06-21', '2026-07'],
+        ['2026-07-21', '2026-08'],
+      ].map(([date, bm]) =>
+        makeTxn({ date: date!, budgetMonth: bm!, description: 'Payroll', type: 'income' }),
+      )
+      expect(visibleOn('2026-08-14', '2026-09', txns)).toHaveLength(0)
+      expect(visibleOn('2026-08-21', '2026-09', txns)).toHaveLength(1)
+    })
+
+    it('keeps a charge that nobody logged on the card past its date', () => {
+      const txns = monthlyDates(2026, 1, 15, 6).map((date) => makeTxn({ date, description: 'Rent' }))
+      expect(visibleOn('2026-07-24', '2026-07', txns)).toHaveLength(1)
+    })
   })
 })

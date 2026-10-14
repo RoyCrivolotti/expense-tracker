@@ -2,6 +2,11 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (Upcoming shows a charge when it is due)
+
+- **A recurring charge no longer shows up weeks before it is due.** The Upcoming card opened its window by the gap between the earliest and the latest day of the month the charge had ever landed on, so one billed on the 1st or the 31st (a spread of 30 days) or a pay date that had moved showed up two to three weeks early. The window is now a day before the predicted date plus however early the last five charges landed, at most four more days. A charge you have not logged stays on the card past its date, as before.
+- **A pay date or billing day that moved is followed sooner.** The predicted day and budget month come from the newest three occurrences instead of all of them, so a salary that moved from the 1st to the 20th is expected around the 20th after two payments. Before, it was expected on the 1st until the new day outnumbered the old one.
+
 ## October 2026 (pick a milestone on the chart)
 
 - **The grey dotted lines say what they are, and one can be picked.** In Purchasing power the milestone lines slope down (an amount on your account is worth less of the plan's euros each year) and nothing said why. A note under the chart now says what the lines are in each view, and chips list the milestones. Picking one draws its line white, puts a dot with the year where each path reaches it, says at its right end what it is worth there ("= 110k € in 2026 euros"), and lists the month and how long from today for each path. With none picked the chart has no labels.

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   canonicalDayOfMonth,
   classifyFrequency,
+  leadDays,
   predictDateInBudgetMonth,
   predictNextDate,
   regularityScore,
@@ -40,6 +41,23 @@ describe('canonicalDayOfMonth', () => {
   it('uses median day with weekend jitter', () => {
     const dates = ['2026-01-01', '2026-02-02', '2026-03-03', '2026-04-02', '2026-05-01']
     expect(canonicalDayOfMonth(dates)).toBe(2)
+  })
+
+  it('follows the newest occurrences once the billing day has moved', () => {
+    const dates = [
+      '2026-01-01',
+      '2026-02-01',
+      '2026-03-01',
+      '2026-04-01',
+      '2026-05-01',
+      '2026-05-22',
+      '2026-06-21',
+    ]
+    expect(canonicalDayOfMonth(dates)).toBe(21)
+  })
+
+  it('takes all of them when there are fewer than the history it reads', () => {
+    expect(canonicalDayOfMonth(['2026-01-10', '2026-02-12'])).toBe(11)
   })
 })
 
@@ -110,4 +128,43 @@ describe('predictNextDate', () => {
       process.env.TZ = originalTz
     }
   })
+})
+
+describe('leadDays', () => {
+  it('is a day when the series always lands on the same day', () => {
+    expect(leadDays('monthly', ['2026-03-15', '2026-04-15', '2026-05-15', '2026-06-15'])).toBe(1)
+  })
+
+  it('adds how early the newest charges landed before the usual day', () => {
+    // Usual day is the 27th; the 25th is two days early.
+    const dates = ['2026-01-28', '2026-02-27', '2026-03-25', '2026-04-29', '2026-05-27']
+    expect(leadDays('monthly', dates)).toBe(3)
+  })
+
+  it('counts the 31st and the 1st as a day apart, not thirty', () => {
+    const dates = ['2026-05-01', '2026-05-31', '2026-07-01', '2026-08-01', '2026-08-31']
+    expect(leadDays('monthly', dates)).toBe(2)
+  })
+
+  it('does not call a short month early when the day is clamped to its end', () => {
+    const dates = ['2026-01-31', '2026-02-28', '2026-03-31', '2026-04-30', '2026-05-31']
+    expect(leadDays('monthly', dates)).toBe(1)
+  })
+
+  it('ignores charges older than the history it reads', () => {
+    const dates = ['2025-12-15', '2026-01-02', '2026-02-02', '2026-03-02', '2026-04-02', '2026-05-02']
+    expect(leadDays('monthly', dates)).toBe(1)
+  })
+
+  it('stops adding days at the cap however early one charge landed', () => {
+    const dates = ['2026-01-10', '2026-02-20', '2026-03-20', '2026-04-20', '2026-05-20']
+    expect(leadDays('monthly', dates)).toBe(5)
+  })
+
+  it('gives weekly, quarterly and yearly series a day of notice, however their gaps vary', () => {
+    expect(leadDays('weekly', ['2026-06-05', '2026-06-12', '2026-06-18', '2026-06-25', '2026-07-03'])).toBe(1)
+    expect(leadDays('quarterly', ['2025-01-10', '2025-04-10', '2025-07-10', '2025-10-10'])).toBe(1)
+    expect(leadDays('yearly', ['2023-06-20', '2024-06-20', '2025-06-20'])).toBe(1)
+  })
+
 })
