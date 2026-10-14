@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  OVERDUE_EXPIRY_DAYS,
   PREVIOUS_MONTH_GRACE_DAYS,
   detectRecurring,
   detectUpcoming,
@@ -405,10 +406,10 @@ describe('detectRecurring', () => {
   })
 
   describe('when the card decides what is due', () => {
-    // The card shows a suggestion when its predicted date is at most `leadDays` away (or past).
+    // What the card lists: a suggestion within `leadDays` of its date, or overdue by a fortnight at most.
     function visibleOn(today: string, forBudgetMonth: string, txns: ReturnType<typeof makeTxn>[]) {
       return detectRecurring(txns, { forBudgetMonth, rolloverDay: 13 }).filter((s) =>
-        isDueSoon(s.predictedDate, today, s.leadDays),
+        isSuggestionDue(s, today, forBudgetMonth),
       )
     }
 
@@ -458,9 +459,15 @@ describe('detectRecurring', () => {
       expect(visibleOn('2026-08-21', '2026-09', txns)).toHaveLength(1)
     })
 
-    it('keeps a charge that nobody logged on the card past its date', () => {
+    it('keeps a charge that nobody logged on the card for a fortnight past its date', () => {
       const txns = monthlyDates(2026, 1, 15, 6).map((date) => makeTxn({ date, description: 'Rent' }))
       expect(visibleOn('2026-07-24', '2026-07', txns)).toHaveLength(1)
+      expect(visibleOn('2026-07-30', '2026-07', txns)).toHaveLength(1)
+    })
+
+    it('drops a charge that is still not logged a fortnight past its date', () => {
+      const txns = monthlyDates(2026, 1, 15, 6).map((date) => makeTxn({ date, description: 'Rent' }))
+      expect(visibleOn('2026-07-31', '2026-07', txns)).toHaveLength(0)
     })
   })
 })
@@ -517,8 +524,10 @@ describe('isSuggestionDue', () => {
     expect(isSuggestionDue(october!, '2026-10-05', '2026-10')).toBe(false)
   })
 
-  it('stays due however long overdue while its month is on screen', () => {
-    expect(isSuggestionDue(october!, '2026-10-31', '2026-10')).toBe(true)
+  it('stays due for a fortnight past its date while its month is on screen, then not', () => {
+    const lastDay = addDaysIso('2026-10-13', OVERDUE_EXPIRY_DAYS)
+    expect(isSuggestionDue(october!, lastDay, '2026-10')).toBe(true)
+    expect(isSuggestionDue(october!, addDaysIso(lastDay, 1), '2026-10')).toBe(false)
   })
 
   it('is due for a week after its date when the next month is on screen, then not', () => {

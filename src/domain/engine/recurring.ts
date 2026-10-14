@@ -11,6 +11,7 @@ export {
   regularityScore,
 } from './recurringPredict'
 export {
+  OVERDUE_EXPIRY_DAYS,
   PREVIOUS_MONTH_GRACE_DAYS,
   detectRecurring,
   detectUpcoming,
