@@ -2,6 +2,13 @@
 
 High-signal UX and reliability changes on `main`. Internal refactors omitted unless they affect behavior.
 
+## October 2026 (Upcoming follows the dates, not the month on screen)
+
+- **The Upcoming card is the same whichever month is open.** It used to look at the month on screen and the one before, so a charge could show under one month and be gone under the next, and a charge due on the first day of a new budget month could not be reminded until something was logged in that month. It now looks only at the dates of each series' own charges, and a charge that files under another month than today's keeps its "For Oct" tag.
+- **A charge booked to an unusual month no longer hides the next reminder.** A bill normally filed under one month but once filed under the next (or one paid a couple of days early that landed in the previous month) used to make the card believe the next charge was already in, or that the series had gone quiet. The card now asks only whether a charge was logged around the usual date.
+- **Forgetting to log one charge no longer silences the month after it.** The card waits for two charges: the next one and, if it never gets logged, the one after. On one real history, the reminder after a forgotten entry went missing in about a quarter of the cases, against four in five before this change. A cancelled subscription is now offered for its next two charges before it leaves the card.
+- **An unlogged charge leaves the card after a week.** It was 15 days (a week for last month's). The longer wait caught no late-logged charge in the history it was measured on and mostly kept cancelled subscriptions on screen.
+
 ## October 2026 (Upcoming shows a charge when it is due)
 
 - **A charge you have logged no longer comes back as last month's.** A rent due on a Saturday and paid on the Monday, or a charge booked to the next budget month, kept a "For Oct" card after you had logged it, because it was only matched against the exact budget month. A charge logged from the start of a card's window on now counts as the one it is about.
