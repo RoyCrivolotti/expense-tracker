@@ -170,9 +170,34 @@ describe('detectUpcoming', () => {
       expect(datesOf(gymOnThe5th([row('2026-07-08')]), '2026-07-05')).toEqual([])
     })
 
-    it('counts when it was logged ahead of time, as far as five days before the usual day', () => {
+    it('counts a charge logged up to five days before the usual day, whichever month it is booked to', () => {
       expect(datesOf(gymOnThe5th([row('2026-06-30')]), '2026-07-05')).toEqual([])
       expect(datesOf(gymOnThe5th([row('2026-06-29')]), '2026-07-05')).toEqual(['2026-07-05'])
+    })
+
+    it('counts a charge logged a week or more early when it is booked to the same budget month', () => {
+      // Streaming bills on the 10th and this month's was logged on the 3rd.
+      const rows = [...monthlyDates(2026, 1, 10, 9).map((date) => row(date)), row('2026-10-03')]
+      expect(datesOf(rows, '2026-10-10')).toEqual([])
+      expect(datesOf(rows, '2026-10-17')).toEqual([])
+      expect(datesOf(rows, '2026-11-09')).toEqual(['2026-11-10'])
+    })
+
+    it('does not count a charge logged that early when it is booked to the month before', () => {
+      const early = gymOnThe5th([row('2026-06-28', { budgetMonth: '2026-06' })])
+      expect(datesOf(early, '2026-07-05')).toEqual(['2026-07-05'])
+      const sameMonth = gymOnThe5th([row('2026-06-28', { budgetMonth: '2026-07' })])
+      expect(datesOf(sameMonth, '2026-07-05')).toEqual([])
+    })
+
+    it('does not count a charge in the same budget month that is more than twenty days off', () => {
+      // 14 Sep booked to October is September's charge, a month before 14 October.
+      const rows = [
+        row('2026-07-14', { budgetMonth: '2026-07' }),
+        row('2026-08-14', { budgetMonth: '2026-08' }),
+        row('2026-09-14', { budgetMonth: '2026-10' }),
+      ]
+      expect(datesOf(rows, '2026-10-14')).toEqual(['2026-10-14'])
     })
 
     it('is not taken for the next charge by an extra row logged in the middle of the month', () => {

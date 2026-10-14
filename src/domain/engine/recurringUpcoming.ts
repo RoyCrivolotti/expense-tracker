@@ -30,18 +30,46 @@ export const OVERDUE_EXPIRY_DAYS = 7
 const EXPECTED_CHARGES = 2
 
 /**
- * The date of the charge a series is waiting for: the first of its usual dates whose reminder
- * window opens after the newest logged charge, so a charge logged ahead of time, or booked to
- * another budget month, counts as the one it was for. A date more than a week past is given up on
- * and the next one is looked at, up to `EXPECTED_CHARGES`.
+ * A charge booked to the same budget month as a usual date, and dated within this many days of
+ * it, is the charge for that date even if it came earlier than the reminder window reaches: a
+ * bill logged on the 3rd for the 10th. Further off, a row in the same month is as likely to be an
+ * adjustment, or the previous cycle's charge booked to the month after it.
  */
-function pendingDate(newest: string, usual: UsualDay, lead: number, today: string): string | null {
+const SAME_MONTH_WITHIN_DAYS = 20
+
+interface LoggedCharge {
+  date: string
+  budgetMonth: string
+}
+
+/**
+ * The date of the charge a series is waiting for: the first of its usual dates that no logged
+ * charge covers. A charge covers a date when it was logged from the start of the date's reminder
+ * window on, or when it is booked to the same budget month and dated close to it, so a charge
+ * logged ahead of time, or booked to another budget month, counts as the one it was for. A date
+ * more than a week past is given up on and the next one is looked at, up to `EXPECTED_CHARGES`.
+ */
+function pendingDate(
+  logged: LoggedCharge[],
+  usual: UsualDay,
+  lead: number,
+  budgetOffset: number,
+  today: string,
+): string | null {
+  const newest = logged[logged.length - 1]!.date
   let month = shiftBudgetMonth(newest.slice(0, 7), -1)
   let waitedFor = 0
   while (waitedFor < EXPECTED_CHARGES) {
     const date = usualDate(month, usual)
     month = shiftBudgetMonth(month, 1)
-    if (addDaysIso(date, -lead) <= newest) continue
+    const budgetMonth = shiftBudgetMonth(date.slice(0, 7), budgetOffset)
+    const covered =
+      addDaysIso(date, -lead) <= newest ||
+      logged.some(
+        (charge) =>
+          charge.budgetMonth === budgetMonth && Math.abs(daysBetween(charge.date, date)) <= SAME_MONTH_WITHIN_DAYS,
+      )
+    if (covered) continue
     waitedFor++
     if (daysBetween(date, today) <= OVERDUE_EXPIRY_DAYS) return date
   }
@@ -56,12 +84,16 @@ function suggestionFor(group: OccurrenceGroup, today: string): RecurringSuggesti
 
   const usual = usualDay(dates)
   const lead = leadFromHistory(dates, usual)
-  const predictedDate = pendingDate(dates[dates.length - 1]!, usual, lead, today)
-  if (!predictedDate || !isDueSoon(predictedDate, today, lead)) return null
-
   // The budget month is the series' own habit (the date's month, or the next one), not a
   // property of the date, so a pay date that rolls into the next month is filed there.
   const offset = Math.round(median(group.budgetOffsets.slice(-PREDICT_HISTORY)))
+  const logged = dates.map((date, i) => ({
+    date,
+    budgetMonth: shiftBudgetMonth(date.slice(0, 7), group.budgetOffsets[i]!),
+  }))
+  const predictedDate = pendingDate(logged, usual, lead, offset, today)
+  if (!predictedDate || !isDueSoon(predictedDate, today, lead)) return null
+
   return {
     description: group.label,
     type: group.key.type,
