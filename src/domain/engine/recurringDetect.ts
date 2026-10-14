@@ -1,15 +1,12 @@
 import type { Transaction } from '../types'
-import { defaultBudgetMonth, isDueSoon, monthsBetweenBudget, priorBudgetMonth, shiftBudgetMonth } from './dates'
+import { defaultBudgetMonth, isDueSoon, monthsBetweenBudget, priorBudgetMonth } from './dates'
 import {
   PREDICT_HISTORY,
-  chooseRhythm,
   classifyFrequency,
-  dateByInterval,
   leadDays,
   predictDateInBudgetMonth,
   predictNextDate,
   regularityScore,
-  type Rhythm,
 } from './recurringPredict'
 import type {
   DetectRecurringOptions,
@@ -22,8 +19,6 @@ import type {
 const MIN_OCCURRENCES = 3
 const MIN_REGULARITY = 0.6
 const MS_PER_DAY = 86_400_000
-/** How many typical gaps past the newest occurrence an interval prediction looks for the viewed month. */
-const INTERVAL_LOOKAHEAD = 3
 
 /** Also the identity of a description in the Spending group-by: trimmed, case-folded text. */
 export function normalizeDesc(description: string): string {
@@ -137,69 +132,22 @@ function buildSuggestion(
   }
 }
 
-/** A group's newest occurrences with the months from each one's calendar month to its budget month. */
-function newestOccurrences(group: OccurrenceGroup): { date: string; offset: number }[] {
-  return group.dates
+/** Typical months from calendar month to budget month, from the group's newest occurrences. */
+function canonicalMonthOffset(group: OccurrenceGroup): number {
+  const newest = group.dates
     .map((date, i) => ({ date, offset: group.budgetOffsets[i]! }))
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(-PREDICT_HISTORY)
-}
-
-/** Typical months from calendar month to budget month, from the group's newest occurrences. */
-function canonicalMonthOffset(group: OccurrenceGroup): number {
-  const newest = newestOccurrences(group)
   return newest.length === 0 ? 0 : Math.round(median(newest.map((p) => p.offset)))
-}
-
-/**
- * Whether the newest occurrences were all booked to the budget month the rollover day gives their
- * date. A series that drifts through the calendar crosses the rollover day, so a fixed offset would
- * put some of its charges in the wrong month; the rollover rule follows the date instead.
- */
-function followsRolloverRule(group: OccurrenceGroup, rolloverDay: number | undefined): boolean {
-  return newestOccurrences(group).every(
-    ({ date, offset }) =>
-      offset === monthsBetweenBudget(date.slice(0, 7), defaultBudgetMonth(date, rolloverDay)),
-  )
-}
-
-interface PredictionContext {
-  forMonth: string | undefined
-  monthOffset: number
-  rolloverDay: number | undefined
-  followsRule: boolean
-}
-
-/**
- * The next occurrence of a series that repeats a fixed number of days after the last, placed in
- * the viewed budget month. It always falls after the newest occurrence, so nothing it predicts
- * can already be entered; a month the series skips has no prediction.
- */
-function resolveIntervalPrediction(
-  sorted: string[],
-  { forMonth, monthOffset, rolloverDay, followsRule }: PredictionContext,
-): { predictedDate: string; predictedBM: string } | null {
-  for (let step = 1; step <= INTERVAL_LOOKAHEAD; step++) {
-    const predictedDate = dateByInterval(sorted, step)
-    const predictedBM =
-      forMonth && !followsRule
-        ? shiftBudgetMonth(predictedDate.slice(0, 7), monthOffset)
-        : defaultBudgetMonth(predictedDate, rolloverDay)
-    if (!forMonth || predictedBM === forMonth) return { predictedDate, predictedBM }
-  }
-  return null
 }
 
 function resolvePrediction(
   sorted: string[],
   frequency: RecurringFrequency,
-  rhythm: Rhythm,
-  context: PredictionContext,
+  forMonth: string | undefined,
+  monthOffset: number,
+  rolloverDay: number | undefined,
 ): { predictedDate: string; predictedBM: string } | null {
-  const { forMonth, monthOffset, rolloverDay } = context
-  if (frequency === 'monthly' && rhythm === 'interval') {
-    return resolveIntervalPrediction(sorted, context)
-  }
   if (forMonth && frequency === 'monthly') {
     // Force viewed budget month; derive the calendar date from this group's own
     // date→budget-month offset so deferred-card charges (budget month equals the
@@ -238,15 +186,10 @@ function trySuggestGroup(
   const regularity = regularityScore(gaps)
   if (regularity < MIN_REGULARITY) return null
 
-  const rhythm = frequency === 'monthly' ? chooseRhythm(sorted) : 'calendar'
-  const prediction = resolvePrediction(sorted, frequency, rhythm, {
-    forMonth,
-    monthOffset: canonicalMonthOffset(group),
-    rolloverDay,
-    followsRule: followsRolloverRule(group, rolloverDay),
-  })
+  const monthOffset = canonicalMonthOffset(group)
+  const prediction = resolvePrediction(sorted, frequency, forMonth, monthOffset, rolloverDay)
   if (!prediction) return null
-  if (rhythm === 'calendar' && isAlreadyEntered(group.key, prediction.predictedBM, transactions)) return null
+  if (isAlreadyEntered(group.key, prediction.predictedBM, transactions)) return null
 
   return buildSuggestion(
     group,
@@ -254,7 +197,7 @@ function trySuggestGroup(
     Math.min(regularity, 1),
     prediction.predictedDate,
     prediction.predictedBM,
-    leadDays(frequency, sorted, rhythm),
+    leadDays(frequency, sorted),
   )
 }
 

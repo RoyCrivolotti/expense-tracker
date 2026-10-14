@@ -278,11 +278,7 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // Raised from 278.6 KB to 279 KB for the Upcoming card's window and prediction fix (the earliness measured around
 // the usual day, and the day and budget-month offset read from the newest three occurrences): about 130 bytes gzip
 // took the total from 278,469 to 278,599, which left a single byte. No new library.
-//
-// Raised from 279 KB to 279.5 KB for predicting a charge every four or five weeks from the days since its last one
-// (choosing between that and the day of the month, and placing it in a budget month): about 430 bytes gzip took the
-// total from 278,599 to 279,032. No new library.
-const TOTAL_MAX_GZIP = 279_500
+const TOTAL_MAX_GZIP = 279_000
 const GOALS_MAX_GZIP = 85_100
 
 function gzipBytes(path) {

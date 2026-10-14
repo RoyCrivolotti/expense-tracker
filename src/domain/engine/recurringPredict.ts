@@ -79,85 +79,14 @@ function recentEarlyDays(sortedDates: string[]): number {
   return Math.max(0, ...sortedDates.slice(-WINDOW_HISTORY).map((d) => -daysFromDay(d, day)))
 }
 
-/** How a monthly series repeats: on a day of the month, or a fixed number of days after the last one. */
-export type Rhythm = 'calendar' | 'interval'
-
-/** Days a series typically waits between occurrences: the median of its newest gaps. */
-export function typicalGap(sortedDates: string[]): number {
-  const gaps = sortedDates.slice(1).map((d, i) => daysBetween(sortedDates[i]!, d))
-  return gaps.length === 0 ? 0 : Math.round(median(gaps.slice(-PREDICT_HISTORY)))
-}
-
-/** The date `steps` typical gaps after the newest occurrence. */
-export function dateByInterval(sortedDates: string[], steps = 1): string {
-  return addDaysIso(sortedDates[sortedDates.length - 1]!, steps * typicalGap(sortedDates))
-}
-
-/** How many days sooner than the typical gap the newest occurrences have followed the one before. */
-function recentEarlyByInterval(sortedDates: string[]): number {
-  const typical = typicalGap(sortedDates)
-  const recent = sortedDates.slice(-(WINDOW_HISTORY + 1))
-  const gaps = recent.slice(1).map((d, i) => daysBetween(recent[i]!, d))
-  return Math.max(0, ...gaps.map((gap) => typical - gap))
-}
-
 /**
  * Days before `predictedDate` that a suggestion starts to show: a day's notice, plus for a
  * monthly series how early it has recently landed, up to a cap. A weekly, quarterly or yearly
  * one lands a fixed span after the last, so the day's notice is all it needs.
  */
-export function leadDays(
-  frequency: RecurringFrequency,
-  sortedDates: string[],
-  rhythm: Rhythm = 'calendar',
-): number {
+export function leadDays(frequency: RecurringFrequency, sortedDates: string[]): number {
   if (frequency !== 'monthly') return BASE_LEAD_DAYS
-  const early = rhythm === 'interval' ? recentEarlyByInterval(sortedDates) : recentEarlyDays(sortedDates)
-  return BASE_LEAD_DAYS + Math.min(MAX_EARLY_DAYS, early)
-}
-
-/** Earlier occurrences a prediction needs, and how many of the newest ones judge the two rhythms. */
-const RHYTHM_MIN_PRIOR = 3
-const RHYTHM_JUDGED = 4
-const RHYTHM_MIN_JUDGED = 3
-
-/**
- * The interval has to beat the day of the month by this many days and by this share of its error,
- * the day of the month has to be at least this far off, and the interval itself this close.
- */
-const INTERVAL_MARGIN_DAYS = 2
-const INTERVAL_MAX_SHARE = 0.5
-const INTERVAL_MIN_CALENDAR_ERROR_DAYS = 3
-const INTERVAL_MAX_ERROR_DAYS = 2
-
-/**
- * Whether a monthly series is better predicted from the day of the month or from the days since
- * its last occurrence. A charge every 4 or 5 weeks drifts through the calendar, so its day of
- * month predicts it days late, while one billed on the 15th is predicted to the day by the
- * calendar and only roughly by the interval, which carries the jitter of two charges instead of
- * one. Each rhythm predicts the newest occurrences from the ones before them. The interval is
- * chosen only when the day of the month is clearly off and the interval is clearly closer, and
- * with fewer than six occurrences the day of the month stays.
- */
-export function chooseRhythm(sortedDates: string[]): Rhythm {
-  const first = Math.max(RHYTHM_MIN_PRIOR, sortedDates.length - RHYTHM_JUDGED)
-  const judged = sortedDates.length - first
-  if (judged < RHYTHM_MIN_JUDGED) return 'calendar'
-  let calendar = 0
-  let interval = 0
-  for (let k = first; k < sortedDates.length; k++) {
-    const prior = sortedDates.slice(0, k)
-    const actual = sortedDates[k]!
-    calendar += Math.abs(daysFromDay(actual, canonicalDayOfMonth(prior)))
-    interval += Math.abs(daysBetween(dateByInterval(prior), actual))
-  }
-  const calendarError = calendar / judged
-  const intervalError = interval / judged
-  const wins =
-    intervalError + INTERVAL_MARGIN_DAYS <= calendarError &&
-    intervalError <= calendarError * INTERVAL_MAX_SHARE &&
-    calendarError >= INTERVAL_MIN_CALENDAR_ERROR_DAYS
-  return wins && intervalError <= INTERVAL_MAX_ERROR_DAYS ? 'interval' : 'calendar'
+  return BASE_LEAD_DAYS + Math.min(MAX_EARLY_DAYS, recentEarlyDays(sortedDates))
 }
 
 /**
