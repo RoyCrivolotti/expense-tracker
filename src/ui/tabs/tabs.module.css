@@ -690,6 +690,13 @@
   font-size: 0.88rem;
   animation: batchBarIn var(--motion-enter-sheet) var(--motion-ease-out);
 }
+/* Rides up with the page when a phone keyboard pans it, like the tab bar under it: hidden while
+   the keyboard is up (useKeyboardOpen). */
+:global(html[data-keyboard-open]) .batchBar {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
 /* Leaving is the arrival played backwards, over the time `Presence` keeps it mounted. */
 .batchBarLeaving {
   animation: batchBarOut var(--exit-ms, 150ms) var(--motion-ease-in) forwards;
