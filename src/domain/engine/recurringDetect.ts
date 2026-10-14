@@ -3,6 +3,7 @@ import { defaultBudgetMonth, monthsBetweenBudget, priorBudgetMonth } from './dat
 import {
   PREDICT_HISTORY,
   classifyFrequency,
+  leadDays,
   predictDateInBudgetMonth,
   predictNextDate,
   regularityScore,
@@ -108,19 +109,13 @@ function isAlreadyEntered(
   )
 }
 
-function computeDaySpread(sortedDates: string[]): number {
-  if (sortedDates.length === 0) return 0
-  const days = sortedDates.map((d) => parseInt(d.slice(8), 10))
-  return Math.max(...days) - Math.min(...days)
-}
-
 function buildSuggestion(
   group: OccurrenceGroup,
   frequency: RecurringFrequency,
   confidence: number,
   predictedDate: string,
   predictedBudgetMonth: string,
-  daySpread: number,
+  lead: number,
 ): RecurringSuggestion {
   return {
     description: group.label,
@@ -133,7 +128,7 @@ function buildSuggestion(
     frequency,
     confidence,
     occurrences: group.dates.length,
-    daySpread,
+    leadDays: lead,
   }
 }
 
@@ -202,7 +197,7 @@ function trySuggestGroup(
     Math.min(regularity, 1),
     prediction.predictedDate,
     prediction.predictedBM,
-    computeDaySpread(sorted),
+    leadDays(frequency, sorted),
   )
 }
 

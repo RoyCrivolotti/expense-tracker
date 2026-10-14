@@ -32,7 +32,7 @@ function makeSuggestion(overrides: Partial<RecurringSuggestion> = {}): Recurring
     frequency: 'monthly',
     confidence: 1,
     occurrences: 6,
-    daySpread: 0,
+    leadDays: 1,
     ...overrides,
   }
 }
@@ -47,29 +47,29 @@ function renderCard(suggestions: RecurringSuggestion[]) {
 
 describe('UpcomingCard', () => {
   it('shows a suggestion when predictedDate is today', () => {
-    renderCard([makeSuggestion({ predictedDate: '2026-09-24', daySpread: 0 })])
+    renderCard([makeSuggestion({ predictedDate: '2026-09-24' })])
     expect(screen.getByText('Netflix')).toBeDefined()
   })
 
-  it('hides a suggestion when predictedDate is far in the future and daySpread is small', () => {
-    renderCard([makeSuggestion({ predictedDate: '2026-10-15', daySpread: 0 })])
+  it('hides a suggestion when predictedDate is far in the future', () => {
+    renderCard([makeSuggestion({ predictedDate: '2026-10-15' })])
     expect(screen.queryByText('Netflix')).toBeNull()
   })
 
-  it('shows a suggestion when predictedDate is within daySpread days ahead', () => {
-    // predictedDate=Sep 27 is 3 days away; daySpread=4 → aheadDays=5, so 3 ≤ 5 → visible
-    renderCard([makeSuggestion({ predictedDate: '2026-09-27', daySpread: 4 })])
+  it('shows a suggestion when predictedDate is within leadDays ahead', () => {
+    // predictedDate=Sep 27 is 3 days away; leadDays=5, so 3 ≤ 5 → visible
+    renderCard([makeSuggestion({ predictedDate: '2026-09-27', leadDays: 5 })])
     expect(screen.getByText('Netflix')).toBeDefined()
   })
 
-  it('hides a suggestion when predictedDate is beyond daySpread days ahead', () => {
-    // predictedDate=Sep 27 is 3 days away; daySpread=1 → aheadDays=2, so 3 > 2 → hidden
-    renderCard([makeSuggestion({ predictedDate: '2026-09-27', daySpread: 1 })])
+  it('hides a suggestion when predictedDate is beyond leadDays ahead', () => {
+    // predictedDate=Sep 27 is 3 days away; leadDays=2, so 3 > 2 → hidden
+    renderCard([makeSuggestion({ predictedDate: '2026-09-27', leadDays: 2 })])
     expect(screen.queryByText('Netflix')).toBeNull()
   })
 
   it('renders nothing when no suggestions are due', () => {
-    const { container } = renderCard([makeSuggestion({ predictedDate: '2026-10-15', daySpread: 0 })])
+    const { container } = renderCard([makeSuggestion({ predictedDate: '2026-10-15' })])
     expect(container.firstChild).toBeNull()
   })
 })
