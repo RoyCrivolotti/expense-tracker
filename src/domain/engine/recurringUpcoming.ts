@@ -30,50 +30,39 @@ const OVERDUE_EXPIRY_DAYS = 7
 const EXPECTED_CHARGES = 2
 
 /**
- * A charge booked to the same budget month as a usual date, and dated up to this many days before
- * it, is the charge for that date even if it came earlier than the reminder window reaches: a
- * bill logged on the 3rd for the 10th. Further back, a row in the same month is as likely to be an
- * adjustment, or the previous cycle's charge booked to the month after it.
+ * A charge logged up to this many days before a usual date is the charge for that date even if it
+ * came earlier than the reminder window reaches: a bill logged on the 3rd for the 10th. Whichever
+ * budget month it was booked to, because the label is the one thing a bill logged early, or an
+ * edited date, is likely to get differently. It stops short of half a month: a row further back is
+ * nearer the previous usual date, or an adjustment, and must not hide the next reminder.
  */
-const SAME_MONTH_WITHIN_DAYS = 20
-
-interface LoggedCharge {
-  date: string
-  budgetMonth: string
-}
+const LOGGED_EARLY_WITHIN_DAYS = 14
 
 interface Series {
-  /** The series' charges, oldest first. */
-  logged: LoggedCharge[]
+  /** The dates of the series' charges, oldest first. */
+  dates: string[]
   usual: UsualDay
   /** Days before a usual date that its reminder opens. */
   lead: number
-  /** Months from a date's month to the budget month the series books it to. */
-  budgetOffset: number
 }
 
 /**
  * The date of the charge a series is waiting for: the first of its usual dates that no logged
  * charge covers. A charge covers a date when it was logged from the start of the date's reminder
- * window on, or when it is booked to the same budget month and dated shortly before it, so a charge
- * logged ahead of time, or booked to another budget month, counts as the one it was for. A date
- * more than a week past is given up on and the next one is looked at, up to `EXPECTED_CHARGES`.
+ * window on, or up to `LOGGED_EARLY_WITHIN_DAYS` before it, so a charge logged ahead of time, or
+ * booked to another budget month, counts as the one it was for. A date more than a week past is
+ * given up on and the next one is looked at, up to `EXPECTED_CHARGES`.
  */
-function pendingDate({ logged, usual, lead, budgetOffset }: Series, today: string): string | null {
-  const newest = logged[logged.length - 1]!.date
+function pendingDate({ dates, usual, lead }: Series, today: string): string | null {
+  const newest = dates[dates.length - 1]!
   // Start a month early: a usual date a few days past the month's end belongs to the month before.
   let month = shiftBudgetMonth(newest.slice(0, 7), -1)
   let waitedFor = 0
   while (waitedFor < EXPECTED_CHARGES) {
     const date = usualDate(month, usual)
     month = shiftBudgetMonth(month, 1)
-    const budgetMonth = shiftBudgetMonth(date.slice(0, 7), budgetOffset)
     const covered =
-      addDaysIso(date, -lead) <= newest ||
-      logged.some(
-        (charge) =>
-          charge.budgetMonth === budgetMonth && daysBetween(charge.date, date) <= SAME_MONTH_WITHIN_DAYS,
-      )
+      addDaysIso(date, -lead) <= newest || dates.some((d) => daysBetween(d, date) <= LOGGED_EARLY_WITHIN_DAYS)
     if (covered) continue
     waitedFor++
     if (daysBetween(date, today) <= OVERDUE_EXPIRY_DAYS) return date
@@ -92,11 +81,7 @@ function suggestionFor(group: OccurrenceGroup, today: string): RecurringSuggesti
   // The budget month is the series' own habit (the date's month, or the next one), not a
   // property of the date, so a pay date that rolls into the next month is filed there.
   const offset = Math.round(median(group.budgetOffsets.slice(-PREDICT_HISTORY)))
-  const logged = dates.map((date, i) => ({
-    date,
-    budgetMonth: shiftBudgetMonth(date.slice(0, 7), group.budgetOffsets[i]!),
-  }))
-  const predictedDate = pendingDate({ logged, usual, lead, budgetOffset: offset }, today)
+  const predictedDate = pendingDate({ dates, usual, lead }, today)
   if (!predictedDate || !isDueSoon(predictedDate, today, lead)) return null
 
   return {

@@ -195,44 +195,31 @@ describe('detectUpcoming', () => {
       expect(datesOf(gymOnThe5th([row('2026-07-08')]), '2026-07-05')).toEqual([])
     })
 
-    it('counts a charge logged up to five days before the usual day, whichever month it is booked to', () => {
-      expect(datesOf(gymOnThe5th([row('2026-06-30')]), '2026-07-05')).toEqual([])
-      expect(datesOf(gymOnThe5th([row('2026-06-29')]), '2026-07-05')).toEqual(['2026-07-05'])
-    })
-
-    it('counts a charge logged a week or more early when it is booked to the same budget month', () => {
+    it('counts a charge logged a week or more early, whichever budget month it is booked to', () => {
       // Streaming bills on the 10th and this month's was logged on the 3rd.
-      const rows = [...monthlyDates(2026, 1, 10, 9).map((date) => row(date)), row('2026-10-03')]
-      expect(datesOf(rows, '2026-10-10')).toEqual([])
-      expect(datesOf(rows, '2026-10-17')).toEqual([])
-      expect(datesOf(rows, '2026-11-09')).toEqual(['2026-11-10'])
+      const streaming = monthlyDates(2026, 1, 10, 9).map((date) => row(date))
+      for (const budgetMonth of ['2026-10', '2026-09', '2026-11']) {
+        const rows = [...streaming, row('2026-10-03', { budgetMonth })]
+        expect(datesOf(rows, '2026-10-10')).toEqual([])
+        expect(datesOf(rows, '2026-10-17')).toEqual([])
+        expect(datesOf(rows, '2026-11-09')).toEqual(['2026-11-10'])
+      }
     })
 
-    it('does not count a charge logged that early when it is booked to the month before', () => {
-      const early = gymOnThe5th([row('2026-06-28', { budgetMonth: '2026-06' })])
-      expect(datesOf(early, '2026-07-05')).toEqual(['2026-07-05'])
-      const sameMonth = gymOnThe5th([row('2026-06-28', { budgetMonth: '2026-07' })])
-      expect(datesOf(sameMonth, '2026-07-05')).toEqual([])
+    it('counts a charge logged up to fourteen days before the usual date and not a day further back', () => {
+      // Gym on the 5th: 21 June is fourteen days before 5 July, 20 June is fifteen.
+      expect(datesOf(gymOnThe5th([row('2026-06-21')]), '2026-07-05')).toEqual([])
+      expect(datesOf(gymOnThe5th([row('2026-06-20')]), '2026-07-05')).toEqual(['2026-07-05'])
     })
 
-    it('counts a charge up to twenty days before the usual date and not a day further back', () => {
-      // Gym on the 25th; a row on 5 October is twenty days before 25 October, one on the 4th is 21.
-      const gym25 = monthlyDates(2026, 1, 25, 9).map((date) => row(date))
-      expect(datesOf([...gym25, row('2026-10-05')], '2026-10-25')).toEqual([])
-      expect(datesOf([...gym25, row('2026-10-04')], '2026-10-25')).toEqual(['2026-10-25'])
+    it('counts the seed of a card that was logged a few days early with its budget month worked out again', () => {
+      // The add form works the month out from the date it is given: 28 June books to June.
+      const rows = gymOnThe5th([row('2026-06-28', { budgetMonth: '2026-06' })])
+      expect(datesOf(rows, '2026-07-05')).toEqual([])
+      expect(datesOf(rows, '2026-08-04')).toEqual(['2026-08-05'])
     })
 
-    it('reads a charge booked to the next month the way the series books them', () => {
-      // Every charge on the 25th is booked to the month after. The one on 18 October is booked to
-      // November, as 25 October will be, so it is that charge; booked to October it is not.
-      const booked = monthlyDates(2026, 1, 25, 9).map((date) =>
-        row(date, { budgetMonth: `${addDaysIso(date, 10).slice(0, 7)}` }),
-      )
-      expect(datesOf([...booked, row('2026-10-18', { budgetMonth: '2026-11' })], '2026-10-25')).toEqual([])
-      expect(datesOf([...booked, row('2026-10-18', { budgetMonth: '2026-10' })], '2026-10-25')).toEqual(['2026-10-25'])
-    })
-
-    it('does not count a charge in the same budget month that is more than twenty days off', () => {
+    it('does not count a charge a month before the usual date even when it is booked to the same month', () => {
       // 14 Sep booked to October is September's charge, a month before 14 October.
       const rows = [
         row('2026-07-14', { budgetMonth: '2026-07' }),
