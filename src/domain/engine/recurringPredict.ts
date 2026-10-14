@@ -31,9 +31,16 @@ export function regularityScore(gaps: number[]): number {
   return inRange / gaps.length
 }
 
-/** Median day-of-month from historical dates (tolerates weekend drift). */
+/**
+ * How many of a series' newest occurrences say where it lands next. Older ones describe a
+ * billing day it has since left, and a median over all of them keeps predicting the old day
+ * until the new one outnumbers it.
+ */
+export const PREDICT_HISTORY = 3
+
+/** Median day-of-month of the newest occurrences (tolerates weekend drift). */
 export function canonicalDayOfMonth(sortedDates: string[]): number {
-  return Math.round(median(sortedDates.map(dayOfMonth)))
+  return Math.round(median(sortedDates.slice(-PREDICT_HISTORY).map(dayOfMonth)))
 }
 
 /**

@@ -225,6 +225,24 @@ describe('detectRecurring', () => {
     expect(detectRecurring(iconTxns, { forBudgetMonth: '2026-07' })).toHaveLength(0)
   })
 
+  it('predicts a moved pay date from its newest occurrences, not its whole history', () => {
+    // Paid on the 1st for five months, then on the 21st or 22nd (which rolls into the next budget month).
+    const txns = [
+      ['2026-01-01', '2026-01'],
+      ['2026-02-01', '2026-02'],
+      ['2026-03-01', '2026-03'],
+      ['2026-04-01', '2026-04'],
+      ['2026-05-01', '2026-05'],
+      ['2026-05-22', '2026-06'],
+      ['2026-06-21', '2026-07'],
+    ].map(([date, bm]) =>
+      makeTxn({ date: date!, budgetMonth: bm!, description: 'Payroll', type: 'income' }),
+    )
+    const [august] = detectRecurring(txns, { forBudgetMonth: '2026-08', rolloverDay: 13 })
+    expect(august!.predictedDate).toBe('2026-07-21')
+    expect(august!.predictedBudgetMonth).toBe('2026-08')
+  })
+
   it('suggests July when prior BM is June but last calendar date is late May', () => {
     const txns = [
       ...monthlyDates(2026, 1, 1, 4).map((date) =>

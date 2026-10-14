@@ -1,6 +1,7 @@
 import type { Transaction } from '../types'
 import { defaultBudgetMonth, monthsBetweenBudget, priorBudgetMonth } from './dates'
 import {
+  PREDICT_HISTORY,
   classifyFrequency,
   predictDateInBudgetMonth,
   predictNextDate,
@@ -136,9 +137,13 @@ function buildSuggestion(
   }
 }
 
-/** Typical months from calendar month to budget month for a group (rounded median). */
-function canonicalMonthOffset(offsets: number[]): number {
-  return offsets.length === 0 ? 0 : Math.round(median(offsets))
+/** Typical months from calendar month to budget month, from the group's newest occurrences. */
+function canonicalMonthOffset(group: OccurrenceGroup): number {
+  const newest = group.dates
+    .map((date, i) => ({ date, offset: group.budgetOffsets[i]! }))
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-PREDICT_HISTORY)
+  return newest.length === 0 ? 0 : Math.round(median(newest.map((p) => p.offset)))
 }
 
 function resolvePrediction(
@@ -186,7 +191,7 @@ function trySuggestGroup(
   const regularity = regularityScore(gaps)
   if (regularity < MIN_REGULARITY) return null
 
-  const monthOffset = canonicalMonthOffset(group.budgetOffsets)
+  const monthOffset = canonicalMonthOffset(group)
   const prediction = resolvePrediction(sorted, frequency, forMonth, monthOffset, rolloverDay)
   if (!prediction) return null
   if (isAlreadyEntered(group.key, prediction.predictedBM, transactions)) return null

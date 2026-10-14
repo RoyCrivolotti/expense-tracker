@@ -41,6 +41,23 @@ describe('canonicalDayOfMonth', () => {
     const dates = ['2026-01-01', '2026-02-02', '2026-03-03', '2026-04-02', '2026-05-01']
     expect(canonicalDayOfMonth(dates)).toBe(2)
   })
+
+  it('follows the newest occurrences once the billing day has moved', () => {
+    const dates = [
+      '2026-01-01',
+      '2026-02-01',
+      '2026-03-01',
+      '2026-04-01',
+      '2026-05-01',
+      '2026-05-22',
+      '2026-06-21',
+    ]
+    expect(canonicalDayOfMonth(dates)).toBe(21)
+  })
+
+  it('takes all of them when there are fewer than the history it reads', () => {
+    expect(canonicalDayOfMonth(['2026-01-10', '2026-02-12'])).toBe(11)
+  })
 })
 
 describe('predictDateInBudgetMonth', () => {
