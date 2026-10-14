@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { detectRecurring, groupTransactions } from './recurringDetect'
+import {
+  PREVIOUS_MONTH_GRACE_DAYS,
+  detectRecurring,
+  detectUpcoming,
+  groupTransactions,
+  isSuggestionDue,
+} from './recurringDetect'
 import { addDaysIso, defaultBudgetMonth, isDueSoon } from './dates'
 import { makeTxn, monthlyDates } from './recurringTestHelpers'
 
@@ -456,5 +462,68 @@ describe('detectRecurring', () => {
       const txns = monthlyDates(2026, 1, 15, 6).map((date) => makeTxn({ date, description: 'Rent' }))
       expect(visibleOn('2026-07-24', '2026-07', txns)).toHaveLength(1)
     })
+  })
+})
+
+describe('detectUpcoming', () => {
+  // A charge on the 13th booked to the calendar month, logged January to September.
+  const txns = monthlyDates(2026, 1, 13, 9).map((date) =>
+    makeTxn({ date, description: 'Card fee', budgetMonth: date.slice(0, 7) }),
+  )
+
+  it('adds the charge of the month before that nobody has logged', () => {
+    const upcoming = detectUpcoming(txns, { forBudgetMonth: '2026-11', rolloverDay: 13 })
+    expect(upcoming.map((s) => [s.predictedBudgetMonth, s.predictedDate])).toEqual([
+      ['2026-10', '2026-10-13'],
+      ['2026-11', '2026-11-13'],
+    ])
+  })
+
+  it('looks back one month and no further', () => {
+    // Nothing was logged in October or November, so December itself is dropped as a quiet
+    // series; November is still one month back, and October is two.
+    const upcoming = detectUpcoming(txns, { forBudgetMonth: '2026-12', rolloverDay: 13 })
+    expect(upcoming.map((s) => s.predictedBudgetMonth)).toEqual(['2026-11'])
+  })
+
+  it('leaves out the month before once its charge is logged', () => {
+    const logged = [...txns, makeTxn({ date: '2026-10-14', description: 'Card fee', budgetMonth: '2026-10' })]
+    const upcoming = detectUpcoming(logged, { forBudgetMonth: '2026-11', rolloverDay: 13 })
+    expect(upcoming.map((s) => s.predictedBudgetMonth)).toEqual(['2026-11'])
+  })
+
+  it('returns what detectRecurring does for the viewed month', () => {
+    const viewed = detectRecurring(txns, { forBudgetMonth: '2026-10', rolloverDay: 13 })
+    const upcoming = detectUpcoming(txns, { forBudgetMonth: '2026-10', rolloverDay: 13 })
+    expect(upcoming.filter((s) => s.predictedBudgetMonth === '2026-10')).toEqual(viewed)
+  })
+
+  it('orders everything by its date', () => {
+    const dates = detectUpcoming(txns, { forBudgetMonth: '2026-11', rolloverDay: 13 }).map((s) => s.predictedDate)
+    expect(dates).toEqual([...dates].sort())
+  })
+})
+
+describe('isSuggestionDue', () => {
+  const [october] = detectRecurring(
+    monthlyDates(2026, 1, 13, 9).map((date) =>
+      makeTxn({ date, description: 'Card fee', budgetMonth: date.slice(0, 7) }),
+    ),
+    { forBudgetMonth: '2026-10', rolloverDay: 13 },
+  )
+
+  it('is due on its date and the day before, not a week before', () => {
+    expect(isSuggestionDue(october!, '2026-10-12', '2026-10')).toBe(true)
+    expect(isSuggestionDue(october!, '2026-10-05', '2026-10')).toBe(false)
+  })
+
+  it('stays due however long overdue while its month is on screen', () => {
+    expect(isSuggestionDue(october!, '2026-10-31', '2026-10')).toBe(true)
+  })
+
+  it('is due for a week after its date when the next month is on screen, then not', () => {
+    const lastDay = addDaysIso('2026-10-13', PREVIOUS_MONTH_GRACE_DAYS)
+    expect(isSuggestionDue(october!, lastDay, '2026-11')).toBe(true)
+    expect(isSuggestionDue(october!, addDaysIso(lastDay, 1), '2026-11')).toBe(false)
   })
 })

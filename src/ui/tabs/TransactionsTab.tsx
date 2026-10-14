@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import type { FlagGroup } from '../../domain/engine/flagGroups'
-import { detectRecurring, defaultBudgetMonth, type StatementPaymentRow } from '../../engine'
+import { detectUpcoming, defaultBudgetMonth, type StatementPaymentRow } from '../../engine'
 import { Money } from '../components/Money'
 import { TransactionList } from '../components/TransactionList'
 import { ConfirmSheet } from '../components/ConfirmSheet'
@@ -80,7 +80,7 @@ export function TransactionsTab({
     `${state.listRows.length} transactions match`,
   )
   const upcoming = useMemo(
-    () => detectRecurring(model.dataset.transactions, { forBudgetMonth: month, rolloverDay }),
+    () => detectUpcoming(model.dataset.transactions, { forBudgetMonth: month, rolloverDay }),
     [model.dataset, month, rolloverDay],
   )
   const { showToast } = useToast()
@@ -116,7 +116,7 @@ export function TransactionsTab({
           />
           <InstallmentsCard model={model} actions={actions} month={month} />
           {upcoming.length > 0 && (
-            <UpcomingCard suggestions={upcoming} lookup={model.lookup} onAdd={actions.onAdd} />
+            <UpcomingCard suggestions={upcoming} month={month} lookup={model.lookup} onAdd={actions.onAdd} />
           )}
         </>
       )}
