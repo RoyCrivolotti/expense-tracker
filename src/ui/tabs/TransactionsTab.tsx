@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import type { FlagGroup } from '../../domain/engine/flagGroups'
-import { detectUpcoming, defaultBudgetMonth, type StatementPaymentRow } from '../../engine'
+import { defaultBudgetMonth, type StatementPaymentRow } from '../../engine'
 import { Money } from '../components/Money'
 import { TransactionList } from '../components/TransactionList'
 import { ConfirmSheet } from '../components/ConfirmSheet'
@@ -21,10 +21,10 @@ import { scrollToResults } from './scrollToResults'
 import { useDebouncedAnnouncement } from '../hooks/useDebouncedAnnouncement'
 import { EXIT_MS } from '../hooks/motion'
 import { useToast } from '../hooks/useToast'
-import { todayLocalIso } from '../dates'
 import { FILTERS_LOCKED_HINT } from './selectionLockHints'
 import { useReimbursement } from './useReimbursement'
 import { usePastReports } from './usePastReports'
+import { useUpcoming } from './useUpcoming'
 import { RecordReimbursementSheet } from './RecordReimbursementSheet'
 import styles from './tabs.module.css'
 
@@ -80,11 +80,7 @@ export function TransactionsTab({
   const announcement = useDebouncedAnnouncement(
     `${state.listRows.length} transactions match`,
   )
-  const today = todayLocalIso()
-  const upcoming = useMemo(
-    () => detectUpcoming(model.dataset.transactions, { today }),
-    [model.dataset.transactions, today],
-  )
+  const upcoming = useUpcoming(model, month)
   const { showToast } = useToast()
   const explainFilterLock = () => showToast(FILTERS_LOCKED_HINT)
 
@@ -118,12 +114,7 @@ export function TransactionsTab({
           />
           <InstallmentsCard model={model} actions={actions} month={month} />
           {upcoming.length > 0 && (
-            <UpcomingCard
-              suggestions={upcoming}
-              currentMonth={defaultBudgetMonth(today, rolloverDay)}
-              lookup={model.lookup}
-              onAdd={actions.onAdd}
-            />
+            <UpcomingCard suggestions={upcoming} month={month} lookup={model.lookup} onAdd={actions.onAdd} />
           )}
         </>
       )}

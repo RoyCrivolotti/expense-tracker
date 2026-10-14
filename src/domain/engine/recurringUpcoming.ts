@@ -102,7 +102,6 @@ function suggestionFor(group: OccurrenceGroup, today: string): RecurringSuggesti
     amountCents: group.amountCents,
     predictedDate,
     predictedBudgetMonth: shiftBudgetMonth(predictedDate.slice(0, 7), offset),
-    frequency: 'monthly',
     leadDays: lead,
   }
 }

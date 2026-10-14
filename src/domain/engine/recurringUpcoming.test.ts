@@ -37,7 +37,6 @@ describe('detectUpcoming', () => {
           amountCents: 1_005,
           predictedDate: '2026-07-05',
           predictedBudgetMonth: '2026-07',
-          frequency: 'monthly',
           leadDays: 1,
         },
       ])

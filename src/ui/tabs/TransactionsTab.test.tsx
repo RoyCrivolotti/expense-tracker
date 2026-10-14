@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Account, ExpenseDataset } from '../../types'
 import { makeDataset, makeFlag, makeTransaction } from '../../testing/factories'
 import { makeActions } from '../../testing/makeActions'
@@ -421,5 +421,74 @@ describe('TransactionsTab — keyboard focus', () => {
 
     unmount()
     expect(document.documentElement.style.scrollPaddingTop).toBe('')
+  })
+})
+
+describe('TransactionsTab upcoming charges', () => {
+  /** Gym, on the 20th from January to September; the next charge is on 20 October. */
+  const gym = Array.from({ length: 9 }, (_, i) =>
+    makeTransaction({
+      id: i + 1,
+      description: 'Gym',
+      date: `2026-${String(i + 1).padStart(2, '0')}-20`,
+      budgetMonth: `2026-${String(i + 1).padStart(2, '0')}`,
+    }),
+  )
+  const months = ['2026-07', '2026-08', '2026-09', '2026-10']
+  const modelWithGym = (): ExpenseModel => ({ ...modelFor(gym), months })
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-19T12:00:00'))
+  })
+  afterEach(() => vi.useRealTimers())
+
+  it('offers the charge that is due, and adds it from the card', () => {
+    const actions = makeActions()
+    render(<TransactionsTab model={modelWithGym()} month="2026-10" actions={actions} />)
+
+    expect(screen.getByText('Upcoming')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Add Gym' }))
+
+    expect(actions.onAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ description: 'Gym', date: '2026-10-20', budgetMonth: '2026-10' }),
+    )
+  })
+
+  it('offers it again once the owner is back on the newest month from an older one', () => {
+    const actions = makeActions()
+    const { rerender } = render(<TransactionsTab model={modelWithGym()} month="2026-08" actions={actions} />)
+    expect(screen.queryByText('Upcoming')).not.toBeInTheDocument()
+
+    rerender(<TransactionsTab model={modelWithGym()} month="2026-10" actions={actions} />)
+    expect(screen.getByText('Upcoming')).toBeInTheDocument()
+  })
+
+  it('marks a charge that files under another month than the one on screen', () => {
+    // 20 Oct books to November here, as for a month that starts on the 13th.
+    const months = ['2026-08', '2026-09', '2026-10']
+    const booked = gym.map((t) => ({
+      ...t,
+      budgetMonth: `2026-${String(Number(t.date.slice(5, 7)) + 1).padStart(2, '0')}`,
+    }))
+    render(<TransactionsTab model={{ ...modelFor(booked), months }} month="2026-10" actions={makeActions()} />)
+
+    expect(screen.getByText('For Nov')).toBeInTheDocument()
+  })
+
+  it('is not there in read-only mode, where nothing could be added', () => {
+    render(<TransactionsTab model={modelWithGym()} month="2026-10" />)
+
+    expect(screen.queryByText('Upcoming')).not.toBeInTheDocument()
+  })
+
+  it('goes once the charge is logged', () => {
+    const actions = makeActions()
+    const { rerender } = render(<TransactionsTab model={modelWithGym()} month="2026-10" actions={actions} />)
+    expect(screen.getByText('Upcoming')).toBeInTheDocument()
+
+    const logged = [...gym, makeTransaction({ id: 30, description: 'Gym', date: '2026-10-19', budgetMonth: '2026-10' })]
+    rerender(<TransactionsTab model={{ ...modelFor(logged), months }} month="2026-10" actions={actions} />)
+    expect(screen.queryByText('Upcoming')).not.toBeInTheDocument()
   })
 })

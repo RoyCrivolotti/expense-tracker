@@ -13,7 +13,6 @@ export interface RecurringSuggestion {
   predictedDate: string
   /** Where the charge belongs by this series' own booking habit; the month "+" files it under. */
   predictedBudgetMonth: string
-  frequency: RecurringFrequency
   /** Days before `predictedDate` that the suggestion starts to show: a day's notice plus how early the series has recently landed. */
   leadDays: number
 }

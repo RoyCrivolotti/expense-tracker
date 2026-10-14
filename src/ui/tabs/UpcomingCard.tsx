@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { RecurringSuggestion } from '../../engine'
 import { shortMonthLabel } from '../../engine'
 import type { TransactionSeed } from '../actions'
@@ -6,14 +6,16 @@ import type { Lookup } from '../format'
 import { formatDayLabel } from '../format'
 import { formatCents } from '../../engine/money'
 import { Card, SectionTitle } from '../components/primitives'
+import { UNDO_SHORTCUT } from '../components/toastShortcuts'
 import { useMoneyFormat } from '../hooks/moneyFormatContext'
+import { useToast } from '../hooks/useToast'
 import styles from './UpcomingCard.module.css'
 
 interface Props {
   /** The charges due today; the engine has already dropped the ones that are too early or too late. */
   suggestions: RecurringSuggestion[]
-  /** The budget month today falls in; a suggestion that files under another one is marked with its own. */
-  currentMonth: string
+  /** The budget month on screen; a suggestion that files under another one is marked with its own. */
+  month: string
   lookup: Lookup
   onAdd: (seed: TransactionSeed) => void
 }
@@ -54,16 +56,6 @@ function toSeed(s: RecurringSuggestion): TransactionSeed {
   }
 }
 
-function FrequencyLabel({ frequency }: { frequency: RecurringSuggestion['frequency'] }) {
-  const labels: Record<RecurringSuggestion['frequency'], string> = {
-    weekly: 'Weekly',
-    monthly: 'Monthly',
-    quarterly: 'Quarterly',
-    yearly: 'Yearly',
-  }
-  return <span className={styles.freq}>{labels[frequency]}</span>
-}
-
 function SuggestionRow({
   suggestion,
   forMonth,
@@ -81,13 +73,12 @@ function SuggestionRow({
   const format = useMoneyFormat()
   const categoryName = lookup.categoryName(suggestion.categoryId)
   return (
-    <div className={styles.row}>
+    <div className={styles.row} data-row>
       <div className={styles.info}>
         <span className={styles.desc}>{suggestion.description}</span>
         <span className={styles.meta}>
           {categoryName} · {formatCents(suggestion.amountCents, format)} ·{' '}
-          {formatDayLabel(suggestion.predictedDate)} ·{' '}
-          <FrequencyLabel frequency={suggestion.frequency} />
+          {formatDayLabel(suggestion.predictedDate)}
           {forMonth && (
             <>
               {' · '}
@@ -97,10 +88,20 @@ function SuggestionRow({
         </span>
       </div>
       <div className={styles.actions}>
-        <button type="button" className={styles.addBtn} onClick={onAdd} aria-label="Add">
+        <button
+          type="button"
+          className={styles.addBtn}
+          onClick={onAdd}
+          aria-label={`Add ${suggestion.description}`}
+        >
           +
         </button>
-        <button type="button" className={styles.dismissBtn} onClick={onDismiss} aria-label="Dismiss">
+        <button
+          type="button"
+          className={styles.dismissBtn}
+          onClick={onDismiss}
+          aria-label={`Dismiss ${suggestion.description}`}
+        >
           ×
         </button>
       </div>
@@ -108,21 +109,39 @@ function SuggestionRow({
   )
 }
 
-export function UpcomingCard({ suggestions, currentMonth, lookup, onAdd }: Props) {
+export function UpcomingCard({ suggestions, month, lookup, onAdd }: Props) {
   const [dismissed, setDismissed] = useState(loadDismissed)
+  const { showToast } = useToast()
+  const rows = useRef<HTMLDivElement>(null)
 
   const visible = suggestions.filter(
     (s) => !dismissed.has(dismissKey(s)) && !dismissed.has(legacyDismissKey(s)),
   )
 
-  const handleDismiss = useCallback((s: RecurringSuggestion) => {
+  const setHidden = useCallback((s: RecurringSuggestion, hidden: boolean) => {
     setDismissed((prev) => {
       const next = new Set(prev)
-      next.add(dismissKey(s))
+      if (hidden) next.add(dismissKey(s))
+      else next.delete(dismissKey(s))
       persistDismissed(next)
       return next
     })
   }, [])
+
+  const handleDismiss = (s: RecurringSuggestion, index: number) => {
+    setHidden(s, true)
+    showToast(`Dismissed ${s.description}`, 'info', {
+      label: 'Undo',
+      onAction: () => setHidden(s, false),
+      shortcut: UNDO_SHORTCUT,
+    })
+    // The row the focus was on is gone; the one that takes its place, or the one before it when
+    // it was the last, gets the focus.
+    requestAnimationFrame(() => {
+      const remaining = rows.current?.querySelectorAll<HTMLElement>('[data-row]')
+      remaining?.[Math.min(index, remaining.length - 1)]?.querySelector('button')?.focus()
+    })
+  }
 
   if (visible.length === 0) return null
 
@@ -130,16 +149,18 @@ export function UpcomingCard({ suggestions, currentMonth, lookup, onAdd }: Props
     <>
       <SectionTitle>Upcoming</SectionTitle>
       <Card>
-        {visible.map((s) => (
-          <SuggestionRow
-            key={dismissKey(s)}
-            suggestion={s}
-            forMonth={s.predictedBudgetMonth === currentMonth ? null : s.predictedBudgetMonth}
-            lookup={lookup}
-            onAdd={() => onAdd(toSeed(s))}
-            onDismiss={() => handleDismiss(s)}
-          />
-        ))}
+        <div ref={rows}>
+          {visible.map((s, index) => (
+            <SuggestionRow
+              key={dismissKey(s)}
+              suggestion={s}
+              forMonth={s.predictedBudgetMonth === month ? null : s.predictedBudgetMonth}
+              lookup={lookup}
+              onAdd={() => onAdd(toSeed(s))}
+              onDismiss={() => handleDismiss(s, index)}
+            />
+          ))}
+        </div>
       </Card>
     </>
   )

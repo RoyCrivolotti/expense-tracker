@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RecurringSuggestion } from '../../engine'
 import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
+import { ToastContext, type ToastApi } from '../hooks/useToast'
 import type { TransactionSeed } from '../actions'
 import type { Lookup } from '../format'
 import { UpcomingCard } from './UpcomingCard'
@@ -30,7 +31,6 @@ function makeSuggestion(overrides: Partial<RecurringSuggestion> = {}): Recurring
     amountCents: 1500,
     predictedDate: '2026-09-24',
     predictedBudgetMonth: '2026-09',
-    frequency: 'monthly',
     leadDays: 1,
     ...overrides,
   }
@@ -38,11 +38,17 @@ function makeSuggestion(overrides: Partial<RecurringSuggestion> = {}): Recurring
 
 function renderCard(
   suggestions: RecurringSuggestion[],
-  { currentMonth = '2026-09', onAdd = () => {} }: { currentMonth?: string; onAdd?: (seed?: TransactionSeed) => void } = {},
+  {
+    month = '2026-09',
+    onAdd = () => {},
+    showToast = () => {},
+  }: { month?: string; onAdd?: (seed?: TransactionSeed) => void; showToast?: ToastApi['showToast'] } = {},
 ) {
   return render(
     <MoneyFormatProvider currencyCode="EUR" numberLocale="en-US">
-      <UpcomingCard suggestions={suggestions} currentMonth={currentMonth} lookup={lookup} onAdd={onAdd} />
+      <ToastContext.Provider value={{ showToast }}>
+        <UpcomingCard suggestions={suggestions} month={month} lookup={lookup} onAdd={onAdd} />
+      </ToastContext.Provider>
     </MoneyFormatProvider>,
   )
 }
@@ -51,9 +57,9 @@ describe('UpcomingCard', () => {
   beforeEach(() => localStorage.clear())
 
   it('lists each suggestion with its category, amount and date', () => {
-    renderCard([makeSuggestion({ amountCents: 1599 })])
+    renderCard([makeSuggestion({ amountCents: 1599, predictedDate: '2026-09-24' })])
     const info = screen.getByText('Netflix').parentElement!
-    expect(info.textContent).toMatch(/^NetflixSubscriptions · .*15\.99.* · .* · Monthly$/)
+    expect(info.textContent).toBe('NetflixSubscriptions · €15.99 · Thu 24 Sept')
   })
 
   it('renders nothing when there is nothing to suggest', () => {
@@ -62,26 +68,35 @@ describe('UpcomingCard', () => {
   })
 
   describe('a charge that files under another budget month', () => {
-    it('is marked with its own month, and one for the current month is not', () => {
+    it('is marked with its own month, and one for the month on screen is not', () => {
       renderCard(
         [
           makeSuggestion({ description: 'Gym', predictedDate: '2026-09-20', predictedBudgetMonth: '2026-09' }),
           makeSuggestion({ description: 'Rent', predictedDate: '2026-09-25', predictedBudgetMonth: '2026-10' }),
         ],
-        { currentMonth: '2026-10' },
+        { month: '2026-10' },
       )
       expect(screen.getByText('For Sep')).toBeDefined()
       expect(screen.getAllByText(/^For /)).toHaveLength(1)
     })
 
-    it('names the month before the year turns', () => {
-      renderCard([makeSuggestion({ predictedBudgetMonth: '2026-12' })], { currentMonth: '2027-01' })
-      expect(screen.getByText('For Dec')).toBeDefined()
+    it('marks the one that files out of sight when the screen is behind the calendar', () => {
+      // The newest month with data is still October after the rollover, so a charge due now that
+      // files under November is the one that needs saying.
+      renderCard(
+        [
+          makeSuggestion({ description: 'Insurance', predictedBudgetMonth: '2026-10' }),
+          makeSuggestion({ description: 'Streaming', predictedBudgetMonth: '2026-11' }),
+        ],
+        { month: '2026-10' },
+      )
+      expect(screen.getByText('For Nov')).toBeDefined()
+      expect(screen.queryByText('For Oct')).toBeNull()
     })
 
-    it('names a month ahead as well, for a charge that is due just before the month changes', () => {
-      renderCard([makeSuggestion({ predictedBudgetMonth: '2026-10' })], { currentMonth: '2026-09' })
-      expect(screen.getByText('For Oct')).toBeDefined()
+    it('names the month before the year turns', () => {
+      renderCard([makeSuggestion({ predictedBudgetMonth: '2026-12' })], { month: '2027-01' })
+      expect(screen.getByText('For Dec')).toBeDefined()
     })
   })
 
@@ -102,7 +117,7 @@ describe('UpcomingCard', () => {
         ],
         { onAdd },
       )
-      fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Add Payroll' }))
       expect(onAdd).toHaveBeenCalledWith({
         description: 'Payroll',
         type: 'income',
@@ -118,30 +133,69 @@ describe('UpcomingCard', () => {
   describe('dismissing a suggestion', () => {
     it('hides it and keeps it hidden the next time the card is shown', () => {
       const { unmount } = renderCard([makeSuggestion()])
-      fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Dismiss Netflix' }))
       expect(screen.queryByText('Netflix')).toBeNull()
       unmount()
       renderCard([makeSuggestion()])
       expect(screen.queryByText('Netflix')).toBeNull()
     })
 
-    it.each([
+    it('says so, with an Undo that brings it back and keeps it back', () => {
+      const showToast = vi.fn<ToastApi['showToast']>()
+      const { unmount } = renderCard([makeSuggestion()], { showToast })
+      fireEvent.click(screen.getByRole('button', { name: 'Dismiss Netflix' }))
+      expect(showToast).toHaveBeenCalledWith(
+        'Dismissed Netflix',
+        'info',
+        expect.objectContaining({ label: 'Undo' }),
+      )
+      act(() => showToast.mock.calls[0]![2]!.onAction())
+      expect(screen.getByText('Netflix')).toBeDefined()
+      unmount()
+      renderCard([makeSuggestion()])
+      expect(screen.getByText('Netflix')).toBeDefined()
+    })
+
+    it.each<[string, Partial<RecurringSuggestion>]>([
+      ['description', { description: 'Disney' }],
       ['category', { categoryId: 3 }],
       ['account', { accountId: 2 }],
-      ['type', { type: 'income' as const }],
+      ['type', { type: 'income' }],
       ['budget month', { predictedBudgetMonth: '2026-10' }],
-    ])('does not hide the same text when the %s differs', (_name, other) => {
+    ])('does not hide a charge that differs in its %s', (_name, other) => {
       const { unmount } = renderCard([makeSuggestion()])
-      fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Dismiss Netflix' }))
       unmount()
       renderCard([makeSuggestion(other)])
-      expect(screen.getByText('Netflix')).toBeDefined()
+      expect(screen.getByText(other.description ?? 'Netflix')).toBeDefined()
     })
 
     it('hides only the one that was dismissed when two share a name', () => {
       renderCard([makeSuggestion({ categoryId: 7 }), makeSuggestion({ categoryId: 3, amountCents: 2400 })])
-      fireEvent.click(screen.getAllByRole('button', { name: 'Dismiss' })[0]!)
+      fireEvent.click(screen.getAllByRole('button', { name: 'Dismiss Netflix' })[0]!)
       expect(screen.getAllByText('Netflix')).toHaveLength(1)
+    })
+
+    it('moves the focus to the row that takes its place', async () => {
+      renderCard([
+        makeSuggestion({ description: 'Gym' }),
+        makeSuggestion({ description: 'Rent' }),
+        makeSuggestion({ description: 'Streaming' }),
+      ])
+      fireEvent.click(screen.getByRole('button', { name: 'Dismiss Rent' }))
+      await act(async () => {
+        await new Promise((resolve) => requestAnimationFrame(resolve))
+      })
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Add Streaming' }))
+    })
+
+    it('moves the focus up when the last row was dismissed', async () => {
+      renderCard([makeSuggestion({ description: 'Gym' }), makeSuggestion({ description: 'Rent' })])
+      fireEvent.click(screen.getByRole('button', { name: 'Dismiss Rent' }))
+      await act(async () => {
+        await new Promise((resolve) => requestAnimationFrame(resolve))
+      })
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Add Gym' }))
     })
 
     it('still honours a dismissal saved under the key from before it carried the category', () => {
