@@ -282,7 +282,10 @@ const assetsDir = join(import.meta.dirname, '..', 'dist', 'assets')
 // Raised from 279 KB to 279.5 KB for predicting a charge every four or five weeks from the days since its last one
 // (choosing between that and the day of the month, and placing it in a budget month): about 430 bytes gzip took the
 // total from 278,599 to 279,032. No new library.
-const TOTAL_MAX_GZIP = 279_500
+//
+// Raised from 279.5 KB to 280 KB for hiding the tab bar while a phone keyboard is up (the focus and visual viewport
+// reading, and the stylesheet rules): about 480 bytes gzip took the total from 279,032 to 279,511. No new library.
+const TOTAL_MAX_GZIP = 280_000
 const GOALS_MAX_GZIP = 85_100
 
 function gzipBytes(path) {

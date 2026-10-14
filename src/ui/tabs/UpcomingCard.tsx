@@ -34,6 +34,11 @@ function persistDismissed(set: Set<string>): void {
 }
 
 function dismissKey(s: RecurringSuggestion): string {
+  return `${s.description}|${s.accountId}|${s.categoryId}|${s.type}|${s.predictedBudgetMonth}`
+}
+
+/** The key as it was before it carried the category and type, so a dismissal saved then still applies. */
+function legacyDismissKey(s: RecurringSuggestion): string {
   return `${s.description}|${s.accountId}|${s.predictedBudgetMonth}`
 }
 
@@ -108,7 +113,7 @@ export function UpcomingCard({ suggestions, month, lookup, onAdd }: Props) {
 
   const today = todayLocalIso()
   const visible = suggestions.filter(
-    (s) => !dismissed.has(dismissKey(s)) && isSuggestionDue(s, today, month),
+    (s) => !dismissed.has(dismissKey(s)) && !dismissed.has(legacyDismissKey(s)) && isSuggestionDue(s, today, month),
   )
 
   const handleDismiss = useCallback((s: RecurringSuggestion) => {

@@ -86,6 +86,30 @@ describe('the page scroll padding', () => {
     expect(stylesheet('nav/AppShell.module.css')).toMatch(/@media \(min-width: 768px\) \{\s*\.shell/)
   })
 
+  it('is dropped while a phone keyboard is up, and beats the padding a page sets inline', () => {
+    const rule = declarations(theme, 'html[data-keyboard-open]')
+
+    // A page that pins more at the top sets scroll-padding-top on the root element's style
+    // attribute (trackScrollPadding), and an inline declaration outranks any rule without
+    // !important, so a plain 0 here would leave that page's padding in force.
+    expect(rule).toMatch(/scroll-padding-top:\s*0 !important;/)
+    expect(rule).toMatch(/scroll-padding-bottom:\s*0 !important;/)
+  })
+
+  it('takes the property the jump targets subtract to 0 with it, or they land that far too high', () => {
+    const rule = declarations(theme, 'html[data-keyboard-open]')
+
+    // The landing margins below are "offset minus --scroll-pad-top" and rely on the browser
+    // adding the same amount as padding. Dropping only the padding would leave them short by it.
+    expect(rule).toMatch(/--scroll-pad-top:\s*0px !important;/)
+  })
+
+  it('is dropped on the attribute the keyboard hook keeps on the root element', () => {
+    const hook = readFileSync(resolve(process.cwd(), 'src/ui/hooks/useKeyboardOpen.ts'), 'utf8')
+
+    expect(hook).toContain("toggleAttribute('data-keyboard-open'")
+  })
+
   it('is taken back out by the app header and the rail, which are stuck, so focus in them does not scroll the page', () => {
     const shell = stylesheet('nav/AppShell.module.css')
 
@@ -139,7 +163,8 @@ describe('a jump to the content under a stuck row of tabs', () => {
     expect(margin).toBeDefined()
 
     for (const inset of [0, 47]) {
-      for (const pad of [60, rowBottom(inset) + PINNED_AIR_PX, 300]) {
+      // 0 is the page with its padding dropped for a phone keyboard (theme.css).
+      for (const pad of [0, 60, rowBottom(inset) + PINNED_AIR_PX, 300]) {
         const landing = pad + lengthPx(margin ?? '', vars, { inset, pad })
         expect(landing).toBe(rowBottom(inset) + PINNED_AIR_PX)
       }

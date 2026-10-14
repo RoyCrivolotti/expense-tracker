@@ -1,15 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { addDaysIso } from './dates'
 import {
   canonicalDayOfMonth,
-  chooseRhythm,
   classifyFrequency,
-  dateByInterval,
   leadDays,
   predictDateInBudgetMonth,
   predictNextDate,
   regularityScore,
-  typicalGap,
 } from './recurringPredict'
 
 describe('classifyFrequency', () => {
@@ -155,8 +151,14 @@ describe('leadDays', () => {
     expect(leadDays('monthly', dates)).toBe(1)
   })
 
-  it('ignores charges older than the history it reads', () => {
-    const dates = ['2025-12-15', '2026-01-02', '2026-02-02', '2026-03-02', '2026-04-02', '2026-05-02']
+  it('ignores an early charge older than the history it reads', () => {
+    // 27 Dec is six days before the usual 2nd; it is the sixth newest, so it does not count.
+    const dates = ['2025-12-27', '2026-01-02', '2026-02-02', '2026-03-02', '2026-04-02', '2026-05-02']
+    expect(leadDays('monthly', dates)).toBe(1)
+  })
+
+  it('counts a charge on the 1st as a day after a usual day of the 31st, not thirty days before it', () => {
+    const dates = ['2026-05-31', '2026-07-01', '2026-07-31', '2026-08-31']
     expect(leadDays('monthly', dates)).toBe(1)
   })
 
@@ -171,83 +173,4 @@ describe('leadDays', () => {
     expect(leadDays('yearly', ['2023-06-20', '2024-06-20', '2025-06-20'])).toBe(1)
   })
 
-})
-
-function everyDays(start: string, gap: number, count: number): string[] {
-  return Array.from({ length: count }, (_, i) => addDaysIso(start, gap * i))
-}
-
-describe('typicalGap and dateByInterval', () => {
-  it('uses the median of the newest three gaps', () => {
-    // Gaps 40, 30, 35, 35: the newest three are 30, 35, 35.
-    const dates = ['2026-01-01', '2026-02-10', '2026-03-12', '2026-04-16', '2026-05-21']
-    expect(typicalGap(dates)).toBe(35)
-    expect(dateByInterval(dates)).toBe('2026-06-25')
-    expect(dateByInterval(dates, 2)).toBe('2026-07-30')
-  })
-
-  it('is zero for a single date rather than NaN', () => {
-    expect(typicalGap(['2026-01-01'])).toBe(0)
-  })
-
-  it('counts days across a US daylight-saving change', () => {
-    const originalTz = process.env.TZ
-    process.env.TZ = 'America/Los_Angeles'
-    try {
-      expect(dateByInterval(['2026-02-14', '2026-03-14', '2026-04-11'])).toBe('2026-05-09')
-    } finally {
-      process.env.TZ = originalTz
-    }
-  })
-})
-
-describe('chooseRhythm', () => {
-  it('keeps the day of the month for a steady day', () => {
-    const dates = ['2025-10-15', '2025-11-15', '2025-12-15', '2026-01-15', '2026-02-15', '2026-03-15', '2026-04-15']
-    expect(chooseRhythm(dates)).toBe('calendar')
-  })
-
-  it.each([
-    ['every four weeks', 28],
-    ['every five weeks', 35],
-  ])('picks the interval for a charge %s', (_label, gap) => {
-    expect(chooseRhythm(everyDays('2025-10-03', gap, 8))).toBe('interval')
-  })
-
-  it('keeps the day of the month with fewer than six occurrences, however it drifts', () => {
-    expect(chooseRhythm(everyDays('2025-10-03', 35, 5))).toBe('calendar')
-  })
-
-  it('keeps the day of the month for the first Friday of the month', () => {
-    const dates = ['2025-10-03', '2025-11-07', '2025-12-05', '2026-01-02', '2026-02-06', '2026-03-06', '2026-04-03']
-    expect(chooseRhythm(dates)).toBe('calendar')
-  })
-
-  it('keeps the day of the month through a day or two of jitter', () => {
-    const dates = ['2025-10-10', '2025-11-12', '2025-12-09', '2026-01-10', '2026-02-11', '2026-03-09', '2026-04-10']
-    expect(chooseRhythm(dates)).toBe('calendar')
-  })
-
-  it('keeps the day of the month when one charge was a week late', () => {
-    const dates = ['2025-10-15', '2025-11-15', '2025-12-15', '2026-01-22', '2026-02-15', '2026-03-15', '2026-04-15']
-    expect(chooseRhythm(dates)).toBe('calendar')
-  })
-
-  it('follows a series that changes from a calendar day to an interval', () => {
-    const calendar = ['2025-05-15', '2025-06-15', '2025-07-15', '2025-08-15']
-    const interval = everyDays('2025-09-12', 35, 6)
-    expect(chooseRhythm([...calendar, ...interval])).toBe('interval')
-  })
-})
-
-describe('leadDays for an interval series', () => {
-  it('adds how much sooner than the typical gap the newest charges followed one another', () => {
-    // Typical gap 35; one charge came 33 days after the one before it.
-    const dates = ['2026-01-01', '2026-02-05', '2026-03-12', '2026-04-14', '2026-05-19']
-    expect(leadDays('monthly', dates, 'interval')).toBe(3)
-  })
-
-  it('is a day when every gap is the same', () => {
-    expect(leadDays('monthly', everyDays('2026-01-01', 35, 6), 'interval')).toBe(1)
-  })
 })

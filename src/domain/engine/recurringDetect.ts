@@ -1,15 +1,12 @@
 import type { Transaction } from '../types'
-import { defaultBudgetMonth, isDueSoon, monthsBetweenBudget, priorBudgetMonth, shiftBudgetMonth } from './dates'
+import { addDaysIso, daysBetween, defaultBudgetMonth, isDueSoon, monthsBetweenBudget, priorBudgetMonth } from './dates'
 import {
   PREDICT_HISTORY,
-  chooseRhythm,
   classifyFrequency,
-  dateByInterval,
   leadDays,
   predictDateInBudgetMonth,
   predictNextDate,
   regularityScore,
-  type Rhythm,
 } from './recurringPredict'
 import type {
   DetectRecurringOptions,
@@ -21,21 +18,10 @@ import type {
 
 const MIN_OCCURRENCES = 3
 const MIN_REGULARITY = 0.6
-const MS_PER_DAY = 86_400_000
-/** How many typical gaps past the newest occurrence an interval prediction looks for the viewed month. */
-const INTERVAL_LOOKAHEAD = 3
 
 /** Also the identity of a description in the Spending group-by: trimmed, case-folded text. */
 export function normalizeDesc(description: string): string {
   return description.trim().toLowerCase()
-}
-
-function toMs(iso: string): number {
-  return new Date(iso).getTime()
-}
-
-function daysBetween(a: string, b: string): number {
-  return Math.round((toMs(b) - toMs(a)) / MS_PER_DAY)
 }
 
 function median(nums: number[]): number {
@@ -137,69 +123,22 @@ function buildSuggestion(
   }
 }
 
-/** A group's newest occurrences with the months from each one's calendar month to its budget month. */
-function newestOccurrences(group: OccurrenceGroup): { date: string; offset: number }[] {
-  return group.dates
+/** Typical months from calendar month to budget month, from the group's newest occurrences. */
+function canonicalMonthOffset(group: OccurrenceGroup): number {
+  const newest = group.dates
     .map((date, i) => ({ date, offset: group.budgetOffsets[i]! }))
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(-PREDICT_HISTORY)
-}
-
-/** Typical months from calendar month to budget month, from the group's newest occurrences. */
-function canonicalMonthOffset(group: OccurrenceGroup): number {
-  const newest = newestOccurrences(group)
   return newest.length === 0 ? 0 : Math.round(median(newest.map((p) => p.offset)))
-}
-
-/**
- * Whether the newest occurrences were all booked to the budget month the rollover day gives their
- * date. A series that drifts through the calendar crosses the rollover day, so a fixed offset would
- * put some of its charges in the wrong month; the rollover rule follows the date instead.
- */
-function followsRolloverRule(group: OccurrenceGroup, rolloverDay: number | undefined): boolean {
-  return newestOccurrences(group).every(
-    ({ date, offset }) =>
-      offset === monthsBetweenBudget(date.slice(0, 7), defaultBudgetMonth(date, rolloverDay)),
-  )
-}
-
-interface PredictionContext {
-  forMonth: string | undefined
-  monthOffset: number
-  rolloverDay: number | undefined
-  followsRule: boolean
-}
-
-/**
- * The next occurrence of a series that repeats a fixed number of days after the last, placed in
- * the viewed budget month. It always falls after the newest occurrence, so nothing it predicts
- * can already be entered; a month the series skips has no prediction.
- */
-function resolveIntervalPrediction(
-  sorted: string[],
-  { forMonth, monthOffset, rolloverDay, followsRule }: PredictionContext,
-): { predictedDate: string; predictedBM: string } | null {
-  for (let step = 1; step <= INTERVAL_LOOKAHEAD; step++) {
-    const predictedDate = dateByInterval(sorted, step)
-    const predictedBM =
-      forMonth && !followsRule
-        ? shiftBudgetMonth(predictedDate.slice(0, 7), monthOffset)
-        : defaultBudgetMonth(predictedDate, rolloverDay)
-    if (!forMonth || predictedBM === forMonth) return { predictedDate, predictedBM }
-  }
-  return null
 }
 
 function resolvePrediction(
   sorted: string[],
   frequency: RecurringFrequency,
-  rhythm: Rhythm,
-  context: PredictionContext,
+  forMonth: string | undefined,
+  monthOffset: number,
+  rolloverDay: number | undefined,
 ): { predictedDate: string; predictedBM: string } | null {
-  const { forMonth, monthOffset, rolloverDay } = context
-  if (frequency === 'monthly' && rhythm === 'interval') {
-    return resolveIntervalPrediction(sorted, context)
-  }
   if (forMonth && frequency === 'monthly') {
     // Force viewed budget month; derive the calendar date from this group's own
     // date→budget-month offset so deferred-card charges (budget month equals the
@@ -221,11 +160,12 @@ function trySuggestGroup(
   transactions: Transaction[],
   forMonth: string | undefined,
   priorMonth: string | null,
-  priorPriorMonth: string | null,
   rolloverDay: number | undefined,
 ): RecurringSuggestion | null {
-  if (priorMonth && !group.budgetMonths.has(priorMonth) && !group.budgetMonths.has(priorPriorMonth ?? ''))
-    return null
+  // A series with no charge in the month before the viewed one has stopped or been forgotten.
+  // Suggesting it anyway shows a cancelled subscription for another month; a forgotten one is
+  // suggested again as soon as that charge is logged.
+  if (priorMonth && !group.budgetMonths.has(priorMonth)) return null
 
   const sorted = [...group.dates].sort()
   const gaps = sorted.slice(1).map((d, i) => daysBetween(sorted[i]!, d))
@@ -238,15 +178,15 @@ function trySuggestGroup(
   const regularity = regularityScore(gaps)
   if (regularity < MIN_REGULARITY) return null
 
-  const rhythm = frequency === 'monthly' ? chooseRhythm(sorted) : 'calendar'
-  const prediction = resolvePrediction(sorted, frequency, rhythm, {
-    forMonth,
-    monthOffset: canonicalMonthOffset(group),
-    rolloverDay,
-    followsRule: followsRolloverRule(group, rolloverDay),
-  })
+  const monthOffset = canonicalMonthOffset(group)
+  const prediction = resolvePrediction(sorted, frequency, forMonth, monthOffset, rolloverDay)
   if (!prediction) return null
-  if (rhythm === 'calendar' && isAlreadyEntered(group.key, prediction.predictedBM, transactions)) return null
+  if (isAlreadyEntered(group.key, prediction.predictedBM, transactions)) return null
+
+  // A charge logged from the start of this suggestion's window on is the one it is about, whichever
+  // budget month it was booked to, and a series that skips a month would otherwise keep a card for it.
+  const lead = leadDays(frequency, sorted)
+  if (sorted[sorted.length - 1]! >= addDaysIso(prediction.predictedDate, -lead)) return null
 
   return buildSuggestion(
     group,
@@ -254,7 +194,7 @@ function trySuggestGroup(
     Math.min(regularity, 1),
     prediction.predictedDate,
     prediction.predictedBM,
-    leadDays(frequency, sorted, rhythm),
+    lead,
   )
 }
 
@@ -266,12 +206,11 @@ export function detectRecurring(
   const forMonth = options?.forBudgetMonth
   const rolloverDay = options?.rolloverDay
   const priorMonth = forMonth ? priorBudgetMonth(forMonth) : null
-  const priorPriorMonth = priorMonth ? priorBudgetMonth(priorMonth) : null
   const groups = groupTransactions(transactions)
   const suggestions: RecurringSuggestion[] = []
 
   for (const group of groups) {
-    const suggestion = trySuggestGroup(group, transactions, forMonth, priorMonth, priorPriorMonth, rolloverDay)
+    const suggestion = trySuggestGroup(group, transactions, forMonth, priorMonth, rolloverDay)
     if (suggestion) suggestions.push(suggestion)
   }
 
@@ -305,14 +244,14 @@ export function detectUpcoming(
 
 /**
  * Days after its date that a charge nobody has logged stays on the card. Charges are logged within
- * a day or two, so one still missing after a fortnight is more likely a series that stopped than an
+ * a day or two, so one still missing after 15 days is more likely a series that stopped than an
  * entry that was forgotten, and without a limit it would stay until its month was over.
  */
 export const OVERDUE_EXPIRY_DAYS = 15
 
 /**
  * Whether the card shows a suggestion on `today` while `month` is viewed: it is due within its
- * window or overdue, no more than a fortnight overdue, and a charge for the month before is
+ * window or overdue, no more than 15 days overdue, and a charge for the month before is
  * overdue by no more than a week.
  */
 export function isSuggestionDue(suggestion: RecurringSuggestion, today: string, month: string): boolean {

@@ -7,6 +7,7 @@ import { PresenceValue } from '../components/Presence'
 import { PlusIcon } from '../icons'
 import { EXIT_MS, exitVars } from '../hooks/motion'
 import { useAutoHideFab } from '../hooks/useAutoHideFab'
+import { useKeyboardOpen } from '../hooks/useKeyboardOpen'
 import { useExit } from '../hooks/usePresence'
 import styles from './AppShell.module.css'
 
@@ -104,6 +105,8 @@ export function AppShell({
   children,
 }: AppShellProps) {
   const fabVisible = useAutoHideFab(Boolean(onAdd))
+  // Sets data-keyboard-open on <html>, which the bottom surfaces' stylesheets hide themselves by.
+  useKeyboardOpen()
   return (
     <HubMenuRoot anchor="inline" navItems={getExpenseHubNavItems(hubGrants)}>
       <div className={styles.shell}>
