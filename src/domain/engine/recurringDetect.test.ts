@@ -330,7 +330,7 @@ describe('detectRecurring', () => {
     expect(july.find((s) => s.categoryId === 7)).toBeDefined()
   })
   describe('when the card decides what is due', () => {
-    // What the card lists: a suggestion within `leadDays` of its date, or overdue by a fortnight at most.
+    // What the card lists: a suggestion within `leadDays` of its date, or overdue by 15 days at most.
     function visibleOn(today: string, forBudgetMonth: string, txns: ReturnType<typeof makeTxn>[]) {
       return detectRecurring(txns, { forBudgetMonth, rolloverDay: 13 }).filter((s) =>
         isSuggestionDue(s, today, forBudgetMonth),
@@ -383,13 +383,13 @@ describe('detectRecurring', () => {
       expect(visibleOn('2026-08-21', '2026-09', txns)).toHaveLength(1)
     })
 
-    it('keeps a charge that nobody logged on the card for a fortnight past its date', () => {
+    it('keeps a charge that nobody logged on the card for 15 days past its date', () => {
       const txns = monthlyDates(2026, 1, 15, 6).map((date) => makeTxn({ date, description: 'Rent' }))
       expect(visibleOn('2026-07-24', '2026-07', txns)).toHaveLength(1)
       expect(visibleOn('2026-07-30', '2026-07', txns)).toHaveLength(1)
     })
 
-    it('drops a charge that is still not logged a fortnight past its date', () => {
+    it('drops a charge that is still not logged 15 days past its date', () => {
       const txns = monthlyDates(2026, 1, 15, 6).map((date) => makeTxn({ date, description: 'Rent' }))
       expect(visibleOn('2026-07-31', '2026-07', txns)).toHaveLength(0)
     })
@@ -448,7 +448,7 @@ describe('isSuggestionDue', () => {
     expect(isSuggestionDue(october!, '2026-10-05', '2026-10')).toBe(false)
   })
 
-  it('stays due for a fortnight past its date while its month is on screen, then not', () => {
+  it('stays due for 15 days past its date while its month is on screen, then not', () => {
     const lastDay = addDaysIso('2026-10-13', OVERDUE_EXPIRY_DAYS)
     expect(isSuggestionDue(october!, lastDay, '2026-10')).toBe(true)
     expect(isSuggestionDue(october!, addDaysIso(lastDay, 1), '2026-10')).toBe(false)
@@ -458,5 +458,47 @@ describe('isSuggestionDue', () => {
     const lastDay = addDaysIso('2026-10-13', PREVIOUS_MONTH_GRACE_DAYS)
     expect(isSuggestionDue(october!, lastDay, '2026-11')).toBe(true)
     expect(isSuggestionDue(october!, addDaysIso(lastDay, 1), '2026-11')).toBe(false)
+  })
+})
+
+describe('a charge that is already logged for its cycle', () => {
+  // Paid on the 15th and booked to the calendar month, then the last one booked elsewhere.
+  const earlier = monthlyDates(2026, 2, 15, 7).map((date) =>
+    makeTxn({ date, description: 'Licence', budgetMonth: date.slice(0, 7) }),
+  )
+  const withLast = (date: string, budgetMonth: string) => [
+    ...earlier,
+    makeTxn({ date, description: 'Licence', budgetMonth }),
+  ]
+
+  it('does not come back for last month when the charge was paid a few days late', () => {
+    // Rent on the 29th; 29 Nov 2025 was a Saturday, so it was paid on Monday 1 Dec.
+    const rent = ['2025-07-29', '2025-08-29', '2025-09-29', '2025-10-29', '2025-12-01'].map((date) =>
+      makeTxn({ date, description: 'Rent', budgetMonth: date.slice(0, 7) }),
+    )
+    expect(detectUpcoming(rent, { forBudgetMonth: '2025-12' })).toEqual([])
+  })
+
+  it('does not come back when the charge was booked to the next budget month', () => {
+    const txns = withLast('2026-09-15', '2026-10')
+    expect(detectUpcoming(txns, { forBudgetMonth: '2026-10', rolloverDay: 13 })).toEqual([])
+  })
+
+  it('counts a charge logged a day before its predicted date as that cycle', () => {
+    const txns = withLast('2026-09-14', '2026-10')
+    expect(detectUpcoming(txns, { forBudgetMonth: '2026-10', rolloverDay: 13 })).toEqual([])
+  })
+
+  it('counts a charge logged up to five days early, and not six, as that cycle', () => {
+    const fiveEarly = detectUpcoming(withLast('2026-09-10', '2026-10'), { forBudgetMonth: '2026-10', rolloverDay: 13 })
+    expect(fiveEarly).toEqual([])
+    const sixEarly = detectUpcoming(withLast('2026-09-09', '2026-10'), { forBudgetMonth: '2026-10', rolloverDay: 13 })
+    expect(sixEarly.map((s) => [s.predictedBudgetMonth, s.predictedDate])).toEqual([['2026-09', '2026-09-15']])
+  })
+
+  it('still suggests the charge that has not been logged yet', () => {
+    const txns = withLast('2026-08-15', '2026-08')
+    const upcoming = detectUpcoming(txns, { forBudgetMonth: '2026-09', rolloverDay: 13 })
+    expect(upcoming.map((s) => [s.predictedBudgetMonth, s.predictedDate])).toEqual([['2026-09', '2026-09-15']])
   })
 })

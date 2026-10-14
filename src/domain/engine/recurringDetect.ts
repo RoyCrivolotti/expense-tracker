@@ -1,5 +1,5 @@
 import type { Transaction } from '../types'
-import { defaultBudgetMonth, isDueSoon, monthsBetweenBudget, priorBudgetMonth } from './dates'
+import { addDaysIso, daysBetween, defaultBudgetMonth, isDueSoon, monthsBetweenBudget, priorBudgetMonth } from './dates'
 import {
   PREDICT_HISTORY,
   classifyFrequency,
@@ -18,19 +18,10 @@ import type {
 
 const MIN_OCCURRENCES = 3
 const MIN_REGULARITY = 0.6
-const MS_PER_DAY = 86_400_000
 
 /** Also the identity of a description in the Spending group-by: trimmed, case-folded text. */
 export function normalizeDesc(description: string): string {
   return description.trim().toLowerCase()
-}
-
-function toMs(iso: string): number {
-  return new Date(iso).getTime()
-}
-
-function daysBetween(a: string, b: string): number {
-  return Math.round((toMs(b) - toMs(a)) / MS_PER_DAY)
 }
 
 function median(nums: number[]): number {
@@ -191,13 +182,18 @@ function trySuggestGroup(
   if (!prediction) return null
   if (isAlreadyEntered(group.key, prediction.predictedBM, transactions)) return null
 
+  // A charge logged from the start of this suggestion's window on is the one it is about, whichever
+  // budget month it was booked to, and a series that skips a month would otherwise keep a card for it.
+  const lead = leadDays(frequency, sorted)
+  if (sorted[sorted.length - 1]! >= addDaysIso(prediction.predictedDate, -lead)) return null
+
   return buildSuggestion(
     group,
     frequency,
     Math.min(regularity, 1),
     prediction.predictedDate,
     prediction.predictedBM,
-    leadDays(frequency, sorted),
+    lead,
   )
 }
 
@@ -248,14 +244,14 @@ export function detectUpcoming(
 
 /**
  * Days after its date that a charge nobody has logged stays on the card. Charges are logged within
- * a day or two, so one still missing after a fortnight is more likely a series that stopped than an
+ * a day or two, so one still missing after 15 days is more likely a series that stopped than an
  * entry that was forgotten, and without a limit it would stay until its month was over.
  */
 export const OVERDUE_EXPIRY_DAYS = 15
 
 /**
  * Whether the card shows a suggestion on `today` while `month` is viewed: it is due within its
- * window or overdue, no more than a fortnight overdue, and a charge for the month before is
+ * window or overdue, no more than 15 days overdue, and a charge for the month before is
  * overdue by no more than a week.
  */
 export function isSuggestionDue(suggestion: RecurringSuggestion, today: string, month: string): boolean {

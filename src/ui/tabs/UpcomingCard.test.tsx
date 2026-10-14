@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RecurringSuggestion } from '../../engine'
 import { MoneyFormatProvider } from '../hooks/MoneyFormatProvider'
 import type { TransactionSeed } from '../actions'
@@ -113,6 +113,37 @@ describe('UpcomingCard', () => {
       expect(onAdd).toHaveBeenCalledWith(
         expect.objectContaining({ date: '2026-09-20', budgetMonth: '2026-09', description: 'Gym' }),
       )
+    })
+  })
+
+  describe('dismissing a suggestion', () => {
+    beforeEach(() => localStorage.clear())
+
+    it('hides it and keeps it hidden the next time the card is shown', () => {
+      const { unmount } = renderCard([makeSuggestion()])
+      fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+      expect(screen.queryByText('Netflix')).toBeNull()
+      unmount()
+      renderCard([makeSuggestion()])
+      expect(screen.queryByText('Netflix')).toBeNull()
+    })
+
+    it('does not hide another series with the same name and account but another category', () => {
+      renderCard([makeSuggestion({ categoryId: 7 }), makeSuggestion({ categoryId: 3, amountCents: 2400 })])
+      fireEvent.click(screen.getAllByRole('button', { name: 'Dismiss' })[0]!)
+      expect(screen.getAllByText('Netflix')).toHaveLength(1)
+    })
+
+    it('still honours a dismissal saved under the key from before it carried the category', () => {
+      localStorage.setItem('expense:dismissed-recurring', JSON.stringify(['Netflix|1|2026-09']))
+      renderCard([makeSuggestion()])
+      expect(screen.queryByText('Netflix')).toBeNull()
+    })
+
+    it('does not carry over to the same series in another budget month', () => {
+      localStorage.setItem('expense:dismissed-recurring', JSON.stringify(['Netflix|1|1|expense|2026-08']))
+      renderCard([makeSuggestion()])
+      expect(screen.getByText('Netflix')).toBeDefined()
     })
   })
 })
