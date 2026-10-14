@@ -95,6 +95,26 @@ html {
   }
 }
 
+/*
+ * Not while a phone keyboard is up. With this padding in force, holding a finger in a focused
+ * field to place the caret scrolled the page by itself, hundreds of pixels in under a second, and
+ * with it removed on the same page it did not (iOS 27 simulator, Goals and the add sheet). Why is
+ * not known. `!important` because a page that pins more at the top sets its own padding inline
+ * (hooks/scrollPadding.ts), which a plain rule here would lose to. The attribute is the one
+ * useKeyboardOpen keeps on <html>: it needs a text field in focus and the visible area clearly
+ * shorter than the page, so a hardware keyboard keeps the padding.
+ *
+ * --scroll-pad-top goes to 0 with it. The jump targets (a section's first content, the Flagged
+ * card's result bar) are written as their own offset minus that property, because the browser adds
+ * the page's padding on top; with the padding gone and the property left at its size they would
+ * land that far too high, under the header.
+ */
+html[data-keyboard-open] {
+  --scroll-pad-top: 0px !important;
+  scroll-padding-top: 0 !important;
+  scroll-padding-bottom: 0 !important;
+}
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-exp-theme='light']) {
     /* Without this, a user whose dark mode comes from the OS preference alone
