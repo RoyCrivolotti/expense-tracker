@@ -35,10 +35,7 @@
 }
 
 .forMonth {
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  font-size: 0.7rem;
+  composes: freq;
   color: var(--color-accent);
 }
 
