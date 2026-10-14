@@ -7,7 +7,7 @@ import {
   groupTransactions,
   isSuggestionDue,
 } from './recurringDetect'
-import { addDaysIso, isDueSoon } from './dates'
+import { addDaysIso, isDueSoon, shiftBudgetMonth } from './dates'
 import { makeTxn, monthlyDates } from './recurringTestHelpers'
 
 describe('groupTransactions', () => {
@@ -147,8 +147,8 @@ describe('detectRecurring', () => {
     expect(suggestions[0]!.categoryId).toBe(5)
   })
 
-  it('excludes groups absent from both of the last two prior budget months', () => {
-    // Last entry is 2026-04, requesting 2026-07: prior=2026-06, priorPrior=2026-05 — both missing.
+  it('excludes groups absent from the prior budget month', () => {
+    // Last entry is 2026-04, requesting 2026-07: prior=2026-06 is missing.
     const txns = monthlyDates(2026, 1, 5, 4).map((date) =>
       makeTxn({ date, description: 'Psicólogo', budgetMonth: date.slice(0, 7) }),
     )
@@ -156,14 +156,24 @@ describe('detectRecurring', () => {
     expect(suggestions.find((s) => s.description === 'Psicólogo')).toBeUndefined()
   })
 
-  it('still suggests when the immediately prior month was skipped but the one before was present', () => {
-    // Logged Jan–Aug, nothing in Sep (forgot to log it), requesting Oct.
-    // priorMonth=2026-09 absent, priorPriorMonth=2026-08 present → should surface.
+  it('stops suggesting a series once a budget month has gone by without its charge', () => {
+    // Logged Jan–Aug, nothing in Sep, requesting Oct: whether it was forgotten or cancelled,
+    // there is no charge in the month before.
     const txns = monthlyDates(2026, 1, 17, 8).map((date) =>
       makeTxn({ date, description: '1Password', budgetMonth: date.slice(0, 7), amountCents: 447 }),
     )
+    expect(detectRecurring(txns, { forBudgetMonth: '2026-10' })).toEqual([])
+  })
+
+  it('suggests it again as soon as the skipped charge is logged', () => {
+    const txns = [
+      ...monthlyDates(2026, 1, 17, 8).map((date) =>
+        makeTxn({ date, description: '1Password', budgetMonth: date.slice(0, 7), amountCents: 447 }),
+      ),
+      makeTxn({ date: '2026-09-18', description: '1Password', budgetMonth: '2026-09', amountCents: 447 }),
+    ]
     const suggestions = detectRecurring(txns, { forBudgetMonth: '2026-10' })
-    expect(suggestions.find((s) => s.description === '1Password')).toBeDefined()
+    expect(suggestions.map((s) => s.description)).toEqual(['1Password'])
   })
 
   it('includes groups present in the prior budget month', () => {
@@ -402,19 +412,22 @@ describe('detectUpcoming', () => {
     makeTxn({ date, description: 'Card fee', budgetMonth: date.slice(0, 7) }),
   )
 
-  it('adds the charge of the month before that nobody has logged', () => {
+  it('shows the charge of the month before that nobody has logged, and not the one after it', () => {
+    // October has no charge, so November is dropped as a series that went quiet: only October's remains.
     const upcoming = detectUpcoming(txns, { forBudgetMonth: '2026-11', rolloverDay: 13 })
-    expect(upcoming.map((s) => [s.predictedBudgetMonth, s.predictedDate])).toEqual([
-      ['2026-10', '2026-10-13'],
-      ['2026-11', '2026-11-13'],
-    ])
+    expect(upcoming.map((s) => [s.predictedBudgetMonth, s.predictedDate])).toEqual([['2026-10', '2026-10-13']])
   })
 
   it('looks back one month and no further', () => {
-    // Nothing was logged in October or November, so December itself is dropped as a quiet
-    // series; November is still one month back, and October is two.
-    const upcoming = detectUpcoming(txns, { forBudgetMonth: '2026-12', rolloverDay: 13 })
+    // October is logged and November is not: December is dropped as a series that went quiet,
+    // November is one month back and still shown, and October is not looked at.
+    const logged = [...txns, makeTxn({ date: '2026-10-14', description: 'Card fee', budgetMonth: '2026-10' })]
+    const upcoming = detectUpcoming(logged, { forBudgetMonth: '2026-12', rolloverDay: 13 })
     expect(upcoming.map((s) => s.predictedBudgetMonth)).toEqual(['2026-11'])
+  })
+
+  it('is empty once two budget months in a row have gone by without a charge', () => {
+    expect(detectUpcoming(txns, { forBudgetMonth: '2026-12', rolloverDay: 13 })).toEqual([])
   })
 
   it('leaves out the month before once its charge is logged', () => {
@@ -427,6 +440,21 @@ describe('detectUpcoming', () => {
     const viewed = detectRecurring(txns, { forBudgetMonth: '2026-10', rolloverDay: 13 })
     const upcoming = detectUpcoming(txns, { forBudgetMonth: '2026-10', rolloverDay: 13 })
     expect(upcoming.filter((s) => s.predictedBudgetMonth === '2026-10')).toEqual(viewed)
+  })
+
+  it('orders a series for last month after one for this month when its date is later', () => {
+    // Paid on the 20th of the month after the one it is booked to (booked 1 month earlier than dated).
+    const late = monthlyDates(2026, 3, 20, 8).map((date) =>
+      makeTxn({ date, description: 'Settlement', budgetMonth: shiftBudgetMonth(date.slice(0, 7), -1) }),
+    )
+    const early = monthlyDates(2026, 3, 2, 8).map((date) =>
+      makeTxn({ date, description: 'Gym', budgetMonth: date.slice(0, 7) }),
+    )
+    const upcoming = detectUpcoming([...late, ...early], { forBudgetMonth: '2026-11', rolloverDay: 13 })
+    expect(upcoming.map((s) => [s.description, s.predictedBudgetMonth, s.predictedDate])).toEqual([
+      ['Gym', '2026-11', '2026-11-02'],
+      ['Settlement', '2026-10', '2026-11-20'],
+    ])
   })
 
   it('orders everything by its date', () => {

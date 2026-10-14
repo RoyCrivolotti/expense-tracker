@@ -160,11 +160,12 @@ function trySuggestGroup(
   transactions: Transaction[],
   forMonth: string | undefined,
   priorMonth: string | null,
-  priorPriorMonth: string | null,
   rolloverDay: number | undefined,
 ): RecurringSuggestion | null {
-  if (priorMonth && !group.budgetMonths.has(priorMonth) && !group.budgetMonths.has(priorPriorMonth ?? ''))
-    return null
+  // A series with no charge in the month before the viewed one has stopped or been forgotten.
+  // Suggesting it anyway shows a cancelled subscription for another month; a forgotten one is
+  // suggested again as soon as that charge is logged.
+  if (priorMonth && !group.budgetMonths.has(priorMonth)) return null
 
   const sorted = [...group.dates].sort()
   const gaps = sorted.slice(1).map((d, i) => daysBetween(sorted[i]!, d))
@@ -205,12 +206,11 @@ export function detectRecurring(
   const forMonth = options?.forBudgetMonth
   const rolloverDay = options?.rolloverDay
   const priorMonth = forMonth ? priorBudgetMonth(forMonth) : null
-  const priorPriorMonth = priorMonth ? priorBudgetMonth(priorMonth) : null
   const groups = groupTransactions(transactions)
   const suggestions: RecurringSuggestion[] = []
 
   for (const group of groups) {
-    const suggestion = trySuggestGroup(group, transactions, forMonth, priorMonth, priorPriorMonth, rolloverDay)
+    const suggestion = trySuggestGroup(group, transactions, forMonth, priorMonth, rolloverDay)
     if (suggestion) suggestions.push(suggestion)
   }
 
