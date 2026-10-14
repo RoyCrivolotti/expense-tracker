@@ -1,5 +1,5 @@
 import type { Transaction } from '../types'
-import { addDaysIso, defaultBudgetMonth, isDueSoon, monthsBetweenBudget, priorBudgetMonth } from './dates'
+import { addDaysIso, daysBetween, defaultBudgetMonth, isDueSoon, monthsBetweenBudget, priorBudgetMonth } from './dates'
 import {
   PREDICT_HISTORY,
   classifyFrequency,
@@ -18,19 +18,10 @@ import type {
 
 const MIN_OCCURRENCES = 3
 const MIN_REGULARITY = 0.6
-const MS_PER_DAY = 86_400_000
 
 /** Also the identity of a description in the Spending group-by: trimmed, case-folded text. */
 export function normalizeDesc(description: string): string {
   return description.trim().toLowerCase()
-}
-
-function toMs(iso: string): number {
-  return new Date(iso).getTime()
-}
-
-function daysBetween(a: string, b: string): number {
-  return Math.round((toMs(b) - toMs(a)) / MS_PER_DAY)
 }
 
 function median(nums: number[]): number {
