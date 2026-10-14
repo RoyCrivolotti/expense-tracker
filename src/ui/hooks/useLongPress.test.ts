@@ -32,6 +32,9 @@ describe('useLongPress', () => {
   })
 
   afterEach(() => {
+    // A fired long press arms a window-level click catcher; a touch stands it down, so one
+    // test's leftover cannot swallow the next test's click.
+    window.dispatchEvent(new Event('touchstart'))
     vi.useRealTimers()
   })
 
@@ -124,5 +127,54 @@ describe('useLongPress', () => {
     expect(onLongPress).not.toHaveBeenCalled()
     await act(() => vi.advanceTimersByTime(1))
     expect(onLongPress).toHaveBeenCalledOnce()
+  })
+
+  describe('the click after a long press', () => {
+    const fire = async () => {
+      const { result } = renderHook(() => useLongPress({ onLongPress: vi.fn() }))
+      act(() => result.current.onTouchStart(touch(100, 200)))
+      await act(() => vi.advanceTimersByTime(400))
+    }
+    const click = () => {
+      const event = new MouseEvent('click', { bubbles: true, cancelable: true })
+      document.body.dispatchEvent(event)
+      return event
+    }
+
+    it('is dropped before it reaches the page, even when touchend never arrived', async () => {
+      const seen = vi.fn()
+      document.addEventListener('click', seen)
+      await fire()
+
+      const lift = click()
+      expect(lift.defaultPrevented).toBe(true)
+      expect(seen).not.toHaveBeenCalled()
+      document.removeEventListener('click', seen)
+    })
+
+    it('is the only click dropped', async () => {
+      await fire()
+      click()
+      expect(click().defaultPrevented).toBe(false)
+    })
+
+    it('is not waited for once a new touch starts', async () => {
+      await fire()
+      window.dispatchEvent(new Event('touchstart'))
+      expect(click().defaultPrevented).toBe(false)
+    })
+
+    it('is not waited for past the window', async () => {
+      await fire()
+      await act(() => vi.advanceTimersByTime(5000))
+      expect(click().defaultPrevented).toBe(false)
+    })
+
+    it('leaves clicks alone when no long press fired', () => {
+      const { result } = renderHook(() => useLongPress({ onLongPress: vi.fn() }))
+      act(() => result.current.onTouchStart(touch(100, 200)))
+      act(() => result.current.onTouchMove(touch(150, 200)))
+      expect(click().defaultPrevented).toBe(false)
+    })
   })
 })
