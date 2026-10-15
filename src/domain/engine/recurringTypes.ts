@@ -7,12 +7,12 @@ export interface RecurringSuggestion {
   type: TxnType
   accountId: number
   categoryId: number
+  /** The amount of the newest charge in the series. */
   amountCents: number
+  /** The date the charge is expected on. */
   predictedDate: string
+  /** Where the charge belongs by this series' own booking habit; the month "+" files it under. */
   predictedBudgetMonth: string
-  frequency: RecurringFrequency
-  confidence: number
-  occurrences: number
   /** Days before `predictedDate` that the suggestion starts to show: a day's notice plus how early the series has recently landed. */
   leadDays: number
 }
@@ -33,19 +33,4 @@ export interface OccurrenceGroup {
   budgetMonths: Set<string>
   /** Per-occurrence months from the date's calendar month to its budget month. */
   budgetOffsets: number[]
-}
-
-export interface DetectRecurringOptions {
-  /**
-   * Scope suggestions to this budget month (requires prior-month activity).
-   * Monthly patterns predict on the canonical day within this budget month.
-   */
-  forBudgetMonth?: string
-  /**
-   * Owner's budget-month rollover day, used only when a non-monthly prediction
-   * has to derive its budget month from a predicted calendar date. Monthly
-   * patterns use each group's learned offset instead. Defaults to calendar
-   * months (day 1).
-   */
-  rolloverDay?: number
 }

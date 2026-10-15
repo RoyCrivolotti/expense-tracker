@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import type { ExpenseModel } from '../useExpenseData'
 import type { ExpenseActions } from '../actions'
 import type { FlagGroup } from '../../domain/engine/flagGroups'
-import { detectUpcoming, defaultBudgetMonth, type StatementPaymentRow } from '../../engine'
+import { defaultBudgetMonth, type StatementPaymentRow } from '../../engine'
 import { Money } from '../components/Money'
 import { TransactionList } from '../components/TransactionList'
 import { ConfirmSheet } from '../components/ConfirmSheet'
@@ -24,6 +24,7 @@ import { useToast } from '../hooks/useToast'
 import { FILTERS_LOCKED_HINT } from './selectionLockHints'
 import { useReimbursement } from './useReimbursement'
 import { usePastReports } from './usePastReports'
+import { useUpcoming } from './useUpcoming'
 import { RecordReimbursementSheet } from './RecordReimbursementSheet'
 import styles from './tabs.module.css'
 
@@ -79,10 +80,7 @@ export function TransactionsTab({
   const announcement = useDebouncedAnnouncement(
     `${state.listRows.length} transactions match`,
   )
-  const upcoming = useMemo(
-    () => detectUpcoming(model.dataset.transactions, { forBudgetMonth: month, rolloverDay }),
-    [model.dataset, month, rolloverDay],
-  )
+  const upcoming = useUpcoming(model, month)
   const { showToast } = useToast()
   const explainFilterLock = () => showToast(FILTERS_LOCKED_HINT)
 

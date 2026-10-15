@@ -4,7 +4,7 @@ export function makeTxn(
   overrides: Partial<Transaction> & { date: string; description: string },
 ): Transaction {
   const base: Transaction = {
-    id: Math.random() * 10000,
+    id: overrides.id ?? Math.random() * 10000,
     date: overrides.date,
     budgetMonth: overrides.budgetMonth ?? overrides.date.slice(0, 7),
     description: overrides.description,
